@@ -58,7 +58,6 @@ while the generated `src/yygram.cpp` calls into it unconditionally. Build with
 | Issue | Notes |
 |---|---|
 | Screen flicker, whole window dims or brightens | Intermittent, correlated with keypresses, **not periodic**. The earlier "~300ms `BlinkCursor()`" hypothesis is **disproved**: a build with the blink interval at 1200ms looked identical, and a probe on the surface libtcod presents shows mean luminance flat at 8.99 (range 8.987–9.041) with alpha 255 everywhere. The drawn image is correct; the change happens after it. The game presents only ~2 frames/sec with gaps up to 3.4s, and the renderer is Metal. One run recorded with screen capture showed no flicker, which fits a present-timing artefact. Instrumentation is in `src/Wlibtcod.cpp` behind `-DFLICKER_PROBE`. |
-| Out-of-bounds map reads | `src/Monster.cpp:547` scans a hiding monster's 8 neighbours with no bounds check, so a monster at the map edge reads off the grid every turn — 343 occurrences in 13 seconds of play. `Map::At()` returns `Grid[0]` for out-of-bounds, so the answer is silently the (0,0) square. Upstream defect; `Map::besideWall()` already carries a comment about exactly this trap. |
 | `Thing::Remove` list corruption | `Contents list wierdless in Thing::Remove!`, `src/Display.cpp:1145`, 57 occurrences, reached via `Creature::Death()`. Not investigated. |
 | `FI_SIZE` inconsistency | `Map::GetAt()` finds `FieldAt(x,y,FI_SIZE)` true with no matching entry in `Fields[]`, `src/Display.cpp:669`. Fired during monster AI; not seen since. |
 | Negative map scroll offsets | The clamp that would stop `XOff`/`YOff` going negative is commented out at `src/Term.cpp:1005-1015`. Harmless once positions are correct, but it turned the save bug into a fully blank screen instead of a visibly wrong one. |
@@ -67,6 +66,27 @@ while the generated `src/yygram.cpp` calls into it unconditionally. Build with
 | No headless mode | `src/Wcurses.cpp` is still Windows/pdcurses only. Porting it to ncurses would make the game text-capturable and scriptable. |
 | No x86_64 slice, no universal binary, no Linux run, no CI | |
 | Unresolved content references | Module compile warns: `Blood;Domain, Dryad, Snow Angel`. Pre-existing. Ruleset work, not engine work. |
+
+## Work tracking
+
+Work lives in **Beads** (`bd`), not in this file and not in markdown TODOs.
+
+```
+bd ready          # what can be worked on now
+bd show <id>      # detail, including why something is blocked
+bd list           # everything
+```
+
+Issue prefix is `inc`. The graph mirrors Brian's three goals: **A** port to
+mac/linux/universal, **B** fix the bugs, **C** expand the game (reach). Three
+items are deliberately blocked — the Linux build waits on the type-width audit,
+the Steam Deck waits on Linux, and ruleset expansion waits on all four
+comprehension passes.
+
+GitHub issues on `mine` hold only the defects that are genuinely upstream bugs
+rather than port artefacts, so they can be reported to `rmtew`/`HexDecimal`
+later. Those are cross-linked from Beads via `external-ref` (`gh-2`, `gh-3`,
+`gh-4`).
 
 ## Who verifies what
 
