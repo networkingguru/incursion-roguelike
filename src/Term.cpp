@@ -911,31 +911,62 @@ void TextTerm::ShowMap() {
     const int16 sy = MSizeY();
     const int16 msx = m->SizeX();
 
+    /* Diagnostic: set INCURSION_MAP_PROBE=1 to record what ShowMap actually
+       drew. A blank map area is either "never called", "all cells off the
+       grid", or "no cell is visible and none is remembered", and these
+       counters tell the three apart. */
+    int32 nOffGrid = 0, nExterior = 0, nVisible = 0, nRemembered = 0, nUnseen = 0;
+
     ResetWViewList();
     for (y = 0; y < sy; y++)
         for (x = 0; x < sx; x++) {
             if (!m->InBounds(x + XOff, y + YOff)) {
                 PutChar(x, y, ' ');
+                nOffGrid++;
                 continue;
             }
 
             LocationInfo & mAt = m->At(x + XOff, y + YOff);
             if (mAt.Visibility & VI_EXTERIOR) /*later, >> player*4 */
-                PutGlyph(x + XOff, y + YOff, GLYPH_VALUE(GLYPH_WALL, GREY));
+                { PutGlyph(x + XOff, y + YOff, GLYPH_VALUE(GLYPH_WALL, GREY)); nExterior++; }
             else if (mAt.Visibility & VI_VISIBLE) { /*later, >> player*4 */
                 PutGlyph(x + XOff, y + YOff, gr[(y + YOff)*msx + (x + XOff)].Glyph);
                 WViewThing(m->FirstAt(x + XOff, y + YOff),
                     dist(x + XOff, y + YOff, p->x, p->y), true);
+                nVisible++;
             } else {
                 g = (Glyph)mAt.Memory;
                 if (g) {
                     PutGlyph(x + XOff, y + YOff, g);
                     WViewThing(m->FirstAt(x + XOff, y + YOff),
                         dist(x + XOff, y + YOff, p->x, p->y), false);
+                    nRemembered++;
                 } else
-                    PutGlyph(x + XOff, y + YOff, GLYPH_UNSEEN);
+                    { PutGlyph(x + XOff, y + YOff, GLYPH_UNSEEN); nUnseen++; }
             }
         }
+
+    if (getenv("INCURSION_MAP_PROBE")) {
+        static FILE *mapLog = NULL;
+        if (!mapLog) {
+            /* Absolute path: the game chdir()s constantly, so a relative one
+               lands wherever it happens to be and usually fails. */
+            char path[1024];
+            snprintf(path, sizeof(path), "%slogs/mapprobe.log",
+                (const char*)IncursionDirectory);
+            mapLog = fopen(path, "a");
+        }
+        if (mapLog) {
+            fprintf(mapLog,
+                "ShowMap player=(%d,%d) offset=(%d,%d) window=%dx%d map=%dx%d "
+                "offgrid=%d exterior=%d visible=%d remembered=%d unseen=%d\n",
+                (int)p->x, (int)p->y, (int)XOff, (int)YOff, (int)sx, (int)sy,
+                (int)m->SizeX(), (int)m->SizeY(),
+                (int)nOffGrid, (int)nExterior, (int)nVisible,
+                (int)nRemembered, (int)nUnseen);
+            fflush(mapLog);
+        }
+    }
 
     ShowThings();
 

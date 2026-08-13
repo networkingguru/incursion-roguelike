@@ -30,3 +30,4 @@ logs/
 save/
 *.o
 incursion-fullblit
+incursion-debug

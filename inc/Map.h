@@ -645,10 +645,15 @@ typedef struct StatiCollection {
 class Thing: public Object
 	{
     ARCHIVE_CLASS(Thing,Object,r)
+      /* These were *((long*)&hm) and (long)hm. hObj is 4 bytes but long is 8
+         on any LP64 system, so the write covered hm AND the x,y that follow
+         it, zeroing the position of everything saved. Windows is LLP64, where
+         long is 4 bytes, so the cast was harmless there. hm is already the
+         right type; no cast is needed. */
       if (isSave)
-        *((long*)&hm) = m ? m->myHandle : 0; 
+        hm = m ? m->myHandle : 0;
       else
-        m = oMap((long)hm);
+        m = oMap(hm);
       Named.Serialize(r);
       __Stati.Serialize(r);
       backRefs.Serialize(r); 

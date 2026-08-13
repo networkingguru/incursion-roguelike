@@ -869,14 +869,19 @@ int32 cursesTerm::ConvertChar(Glyph g, char **out) {
 
 
 void Fatal(const char*fmt,...) {
-	va_list argptr; 
+	va_list argptr;
+
+	/* The message was formatted after the !T1 branch printed it, so that
+	   branch printed whatever the previous error left in __buffer. */
 	va_start(argptr, fmt);
-	if (!T1)
-		{ printf(__buffer); exit(1); }
-	T1->Clear();
-	vsprintf(__buffer, fmt, argptr);
+	vsnprintf(__buffer, sizeof(__buffer), fmt, argptr);
 	va_end(argptr);
-	sprintf(__buff2, "Fatal Error: %s\nPress [ENTER] to exit...",__buffer);
+
+	if (!T1)
+		{ printf("%s\n", __buffer); exit(1); }
+	T1->Clear();
+	/* snprintf, not sprintf: __buff2 is 80 bytes and __buffer is 1600. */
+	snprintf(__buff2, sizeof(__buff2), "Fatal Error: %s\nPress [ENTER] to exit...",__buffer);
 	((cursesTerm*)T1)->Box(WIN_SCREEN,BOX_NOPAUSE|BOX_NOSAVE,RED,PINK,__buff2);
 	T1->Update();
 	readkey(1);
@@ -889,15 +894,17 @@ void Fatal(const char*fmt,...) {
 
 void Error(const char*fmt,...) {
 	va_list argptr;
-	va_start(argptr, fmt); 
 	char ch;
 #ifdef USE_BREAKPAD
     int attempts = 0;
 #endif
 
-    vsprintf(__buffer, fmt, argptr);
+	va_start(argptr, fmt);
+    vsnprintf(__buffer, sizeof(__buffer), fmt, argptr);
+	va_end(argptr);
+
 	if (!T1) {
-        printf(__buffer);
+        printf("%s\n", __buffer);
         exit(1);
     }
 
@@ -906,16 +913,17 @@ retry:
     attempts += 1;
 #endif
 
+	/* snprintf, not sprintf: __buff2 is 80 bytes and __buffer is 1600. */
 #ifdef DEBUG
-	sprintf(__buff2, "Error: %s\n[B]reak, [E]xit or [C]ontinue?",__buffer);
+	snprintf(__buff2, sizeof(__buff2), "Error: %s\n[B]reak, [E]xit or [C]ontinue?",__buffer);
 #else
 #ifdef USE_BREAKPAD
     if (attempts > 1)
-        sprintf(__buff2, "Error: %s\n[E]xit or [C]ontinue?", __buffer);
+        snprintf(__buff2, sizeof(__buff2), "Error: %s\n[E]xit or [C]ontinue?", __buffer);
     else
-        sprintf(__buff2, "Error: %s\n[M]inidump, [E]xit or [C]ontinue?", __buffer);
+        snprintf(__buff2, sizeof(__buff2), "Error: %s\n[M]inidump, [E]xit or [C]ontinue?", __buffer);
 #else
-    sprintf(__buff2, "Error: %s\n[E]xit or [C]ontinue?", __buffer);
+    snprintf(__buff2, sizeof(__buff2), "Error: %s\n[E]xit or [C]ontinue?", __buffer);
 #endif
 #endif
     ((cursesTerm*)T1)->Save();
@@ -953,7 +961,6 @@ retry:
 #endif
 
 	((cursesTerm*)T1)->Restore();
-	va_end(argptr);
 }
 
 void cursesTerm::Reset() {

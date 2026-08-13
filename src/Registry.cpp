@@ -709,6 +709,31 @@ foundGroup:
     return 0;
 }
 
+/* Diagnostic: set INCURSION_SAVE_PROBE=1 to record the player's map position
+   on both sides of the save/load boundary. Tells apart "the coordinates were
+   never written" from "they were written and not read back". */
+static void SaveLoadProbe(const char *what, Player *pl) {
+    static FILE *f = NULL;
+    if (!getenv("INCURSION_SAVE_PROBE"))
+        return;
+    if (!f) {
+        /* Absolute path: the game chdir()s constantly, so a relative one
+           lands wherever it happens to be and usually fails. */
+        char path[1024];
+        snprintf(path, sizeof(path), "%slogs/saveprobe.log",
+            (const char*)T1->IncursionDirectory);
+        f = fopen(path, "a");
+    }
+    if (!f)
+        return;
+    fprintf(f, "%-20s player=(%d,%d) map=%p size=%dx%d\n", what,
+        pl ? (int)pl->x : -999, pl ? (int)pl->y : -999,
+        (void*)(pl ? pl->m : NULL),
+        (pl && pl->m) ? (int)pl->m->SizeX() : -1,
+        (pl && pl->m) ? (int)pl->m->SizeY() : -1);
+    fflush(f);
+}
+
 bool Game::SaveGame(Player &p) {
       fileHeader fh; int32 i;
       String fn, base, desc;
@@ -800,7 +825,9 @@ failed:
           fh.numGroups = 1;
           strncpy(fh.Name,desc,71);
           T1->FWrite(&fh,sizeof(fh));
+          SaveLoadProbe("save: before write", &p);
           theRegistry->SaveGroup(*T1,0,false,true);
+          SaveLoadProbe("save: after write", &p);
           T1->Close();
           T1->ChangeDirectory(T1->IncursionDirectory);
       }
@@ -899,6 +926,7 @@ NoSaved:
         Error("Null map/player after saved game loaded!");
         return false;
     }
+    SaveLoadProbe("load: after read", oPlayer(p[0]));
     /* Here, we look what resource files this saved game depends
     on, and restore them each in order. */
     theRegistry = &ResourceRegistry;
@@ -932,6 +960,7 @@ NoSaved:
     T1->SetMode(MO_PLAY);
     oPlayer(p[0])->CalcValues();
     oPlayer(p[0])->CalcVision();
+    SaveLoadProbe("load: after modules", oPlayer(p[0]));
     T1->AdjustMap(oPlayer(p[0])->x, oPlayer(p[0])->y, true);
     T1->ShowStatus();
     T1->ShowTraits();
