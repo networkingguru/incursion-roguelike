@@ -399,6 +399,25 @@ int main(int argc, char *argv[]) {
             Error("Failed to locate Incursion directory under debugger (error 23)");
     }
 
+    /* The path must be absolute. ChangeDirectory() returns to the game folder by
+       chdir()ing to IncursionDirectory, so a relative path like "./" makes that
+       call a no-op: the game stays inside whichever subdirectory it last entered,
+       and the next LoadModules() looks for mod/mod and hits Fatal(). Launching as
+       './incursion' yields exactly that. Windows never saw this because the
+       debugger always supplied an absolute argv[0]. */
+    {
+        char resolvedPath[MAX_PATH_LENGTH];
+#ifdef _WIN32
+        if (_fullpath(resolvedPath, executablePath, MAX_PATH_LENGTH))
+#else
+        if (realpath(executablePath, resolvedPath))
+#endif
+          {
+            strncpy(executablePath, resolvedPath, MAX_PATH_LENGTH - 1);
+            executablePath[MAX_PATH_LENGTH - 1] = '\0';
+          }
+    }
+
     /* Google Breakpad is only compiled into Release builds, which get distributed.
      * Debug builds get the option to break out into the debugger, which makes it
      * superfluous in that case. */
