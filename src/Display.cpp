@@ -615,12 +615,27 @@ Thing* Map::GetAt(int16 x, int16 y, int16 t, bool first)
     static Thing* curr = NULL;
     
     static int32 count = 0;
-    
+
     //count++;
     //if (count > 1000000L)
     //  __asm int 3;
-    
-    if (first == true) 
+
+    /* Nothing exists outside the map. Callers scan neighbouring squares
+       without checking first -- Monster::ChooseAction() does it for all eight
+       neighbours of a hiding monster -- and At() answers an out-of-bounds
+       query with the (0,0) square instead of failing, so the wrong answer
+       looks like a real one. Refuse here: every FCreatureAt/NCreatureAt/
+       FTrapAt/FirstAt accessor funnels through this function, so one guard
+       covers them all. */
+    if (!InBounds(x,y)) {
+        if (first) {
+            doneflag = true;
+            curr = NULL;
+        }
+        return NULL;
+    }
+
+    if (first == true)
       {
         doneflag = false;
         curr = oThing(At(x,y).Contents);
