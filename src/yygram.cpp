@@ -48,9 +48,9 @@ extern SymbolTable theSymTab;
 int32    CurrAttk, CurrFeat;
 int file(), resource(), monster_def(), item_def(), map_def(),
   room_def(), feature_def(), quest_def(), spell_def(), mon_entry(),
-  mflag_entry(), color(long*), save_entry(), attack_entry(), attrib_entry(),
+  mflag_entry(), color(int32*), save_entry(), attack_entry(), attrib_entry(),
   arm_type(), item_entry(), arm_entry(), iflag_entry(), eff_entry(),
-  feat_entry(), numlist(long*), effect_def(), map_entry(), tile_entry(),
+  feat_entry(), numlist(int32*), effect_def(), map_entry(), tile_entry(),
   region_entry(), object_entry(), race_def(), race_entry(), class_def(),
   class_entry(),  abil_level(), dungeon_def(), god_def(), arti_entry(),
   art_power(), dun_entry(), dconst_entry(), list_entry(), artifact_def(), 
@@ -64,12 +64,12 @@ int  event_entry(), event_desc(), prototype(), s_prototype(),
   s_object_decl(), l_declaration(VBlock*), s_declaration(), g_declaration(), 
   r_declaration(), sg_prototype();
 
-int  res_ref(long*),
-     abil_param(long*),
-     abil_level(long*,long*),
-     special_ability(long*,long*,long*,long*,long*);
+int  res_ref(int32*),
+     abil_param(int32*),
+     abil_level(int32*,int32*),
+     special_ability(int32*,int32*,int32*,int32*,int32*);
 
-int cexpr(long*), cexpr2(long*), cexpr3(long*), cexpr4(long*),
+int cexpr(int32*), cexpr2(int32*), cexpr3(int32*), cexpr4(int32*),
     dice_val(Dice*), mval(MVal*);
 
 int expr(PExp*), expr150(PExp*), expr140(PExp*), expr130(PExp*), 
@@ -78,7 +78,7 @@ int expr(PExp*), expr150(PExp*), expr140(PExp*), expr130(PExp*),
       expr40(PExp*), expr30(PExp*), expr20(PExp*), expr10(PExp*),
       fund_expr(PExp*), lvalue(PExp*);
 int block(VBlock*), statement(VBlock*), routine(VBlock*),
-      param_list(BSysFunc*,long,VBlock*,int*), sep_expr(hCode *hc),
+      param_list(BSysFunc*,int32,VBlock*,int*), sep_expr(hCode *hc),
       sep_stat(hCode *hc);
 
 extern jmp_buf jb;

@@ -3548,7 +3548,7 @@ void VMachine::SetMemberVar(int16 varid, hObj h, int32 val)
           pe->ESpellNum = (int16)val;
          break;
         case 48:
-          pe->EParam = val;
+          pe->EParam = (int16)val;
          break;
         case 49:
           pe->EDir = (int16)val;

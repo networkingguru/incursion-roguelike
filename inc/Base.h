@@ -136,7 +136,7 @@ class String
 
 
 extern String & VFormat(const char*fmt,va_list ap);
-extern String & Format(const char*fmt,...);
+extern String & Format(const char*fmt,...) __attribute__((format(printf,1,2)));
 
 String & Pluralize(const char* s, rID iID=0);
 String & Replace(const char* str, const char* find, const char* rep);

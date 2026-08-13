@@ -500,7 +500,7 @@ Restart:
                 StatiIterEnd(t)
 #ifdef DEBUG
                 Error(Format("Backref leak from %s/%d to %s/%d",
-                    (const char *)this->Name(0),this->myHandle,
+                    (const char *)(const char*)this->Name(0),this->myHandle,
                     (const char *)t->Name(0),t->myHandle));
 #endif
                 backRefs.Remove(i--);
@@ -574,10 +574,10 @@ void Thing::SetEffStatiObj(int16 n,rID xID,Thing *t, int16 Val) {
             /* Remove the backref for the existing stati object. */
             if (!RemoveBackref(myHandle, tReferer))
                 Error("%s->SetEffStatiObj(effect='%s',nature='%s',referrer='%s') failed",
-                    this->Name(0),
+                    (const char*)this->Name(0),
                     NAME(xID),
                     Lookup(STATI_CONSTNAMES,n),
-                    tReferer->Name(0));
+                    (const char*)tReferer->Name(0));
         }
         ES->h = t ? t->myHandle : NULL;
         if (t && t != this)

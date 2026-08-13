@@ -235,7 +235,7 @@ public:
             envLibPath = getenv("INCURSIONLIBPATH");
             if (envLibPath != NULL && strlen(envLibPath)) {
                 if (strcat(s, envLibPath)) {
-                    if (s[strlen(s) - 1] == '\\')
+                    if (s[strlen(s) - 1] == '/')
                         s[strlen(s) - 1] = '\0';
                 }
             }
@@ -369,8 +369,8 @@ int main(int argc, char *argv[]) {
 
     if (envPath != NULL) {
         if (strlen(envPath) > 0 && strcat(executablePath, envPath)) {
-            if (executablePath[strlen(executablePath) - 1] != '\\')
-                strncat(executablePath, "\\", 1);
+            if (executablePath[strlen(executablePath) - 1] != '/')
+                strncat(executablePath, "/", 1);
         }
     }
 
@@ -382,7 +382,7 @@ int main(int argc, char *argv[]) {
         if (argc >= 1) {
 #endif
             /* argv[0] is the filename and maybe the path before it, if the path is there grab it. */
-            const char *str = strrchr(argv[0], '\\');
+            const char *str = strrchr(argv[0], '/');
             if (str != NULL) {
                 size_t n = str - argv[0]; /* Copy the separator too. */
                 if (!strncpy(executablePath, argv[0], n))
@@ -943,13 +943,13 @@ RetryFont:
     envFontPath = getenv("INCURSIONFONTPATH");
     if (envFontPath != NULL) {
         if (strcat(fontName, envFontPath)) {
-            if (fontName[strlen(fontName) - 1] != '\\')
-                strcat(fontName, "\\");
+            if (fontName[strlen(fontName) - 1] != '/')
+                strcat(fontName, "/");
         }
     }
     if (strlen(fontName) == 0) {
         strcat(fontName, IncursionDirectory);
-        strcat(fontName, "fonts\\");
+        strcat(fontName, "fonts/");
     }
     i = strlen(fontName);
 
@@ -1068,19 +1068,19 @@ void libtcodTerm::ShutDown() {
 void libtcodTerm::SetIncursionDirectory(const char *s) {
     char tmp[MAX_PATH_LENGTH] = "";
     IncursionDirectory = (const char *)s;
-    if (IncursionDirectory.Right(1) != "\\")
-        IncursionDirectory += "\\";
+    if (IncursionDirectory.Right(1) != "/")
+        IncursionDirectory += "/";
 
     strcpy(tmp, s);
-    strcat(tmp, "\\mod");
+    strcat(tmp, "/mod");
     _mkdir(tmp);
 
     strcpy(tmp, s);
-    strcat(tmp, "\\logs");
+    strcat(tmp, "/logs");
     _mkdir(tmp);
 
     strcpy(tmp, s);
-    strcat(tmp, "\\save");
+    strcat(tmp, "/save");
     _mkdir(tmp);
 }
 

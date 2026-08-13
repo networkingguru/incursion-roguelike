@@ -245,7 +245,7 @@ void Map::GenEncounterStats(Term *t)
     t->SetWin(WIN_SCREEN);
     t->Clear();
     t->Color(YELLOW);
-    t->Write(0,0,"Writing .\\EncStats.txt...\n");
+    t->Write(0,0,"Writing ./EncStats.txt...\n");
     t->Color(BROWN);
     
     first_mID = theGame->Modules[0]->MonsterID(0);

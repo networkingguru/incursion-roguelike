@@ -1,5 +1,5 @@
 #ifndef YYSTYPE
-#define YYSTYPE long
+#define YYSTYPE int32
 #endif
 extern YYSTYPE yylval;
 extern long yypos;

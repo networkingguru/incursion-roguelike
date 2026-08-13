@@ -22,3 +22,10 @@ x64_Release
 
 # Incursion specific temporary files.
 lib/program.i
+build/
+incursion
+incursion32
+mod/*.Mod
+logs/
+save/
+*.o

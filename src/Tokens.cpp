@@ -577,7 +577,7 @@ char *yytext;
 #include "Incursion.h"
 #include "yygram.h"
 #ifdef WIN32
-#include <io.h>
+#include <unistd.h>
 #endif
 #include <string.h>
 #include <setjmp.h>
@@ -802,9 +802,9 @@ YYSTYPE DoKeywords(const char *text)
 #define string 2
 
 /*windows compatibility case*/
-#include <io.h>
-#define isatty _isatty
-#define fileno _fileno
+#include <unistd.h>
+
+
     
 #ifndef YY_EXTRA_TYPE
 #define YY_EXTRA_TYPE void *

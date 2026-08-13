@@ -2047,7 +2047,7 @@ void Game::ListItemsByLevel()
 
     T1->Box(WIN_SCREEN,BOX_WIDEBOX,YELLOW,GREY,full);
 
-    String path = T1->IncursionDirectory + "\\notes\\itemlist.txt";
+    String path = T1->IncursionDirectory + "/notes/itemlist.txt";
 
     FILE * fp;
     fp = fopen((const char *)path,"wt");
@@ -2207,11 +2207,11 @@ const char* GravestoneImage =
                                               \n\
                                               \n\
             -----------------------           \n\
-           /                       \\         \n\
-          /                         \\        \n\
-         /                           \\       \n\
-        /                             \\      \n\
-       /                               \\     \n\
+           /                       /         \n\
+          /                         /        \n\
+         /                           /       \n\
+        /                             /      \n\
+       /                               /     \n\
       |                                 |     \n\
       |       <8>REQUISCANT IN PACE,<7>       |     \n\
       |                                 |     \n\
@@ -2260,7 +2260,7 @@ void Player::Gravestone()
     for (int i=0; i<=9999; i++) {
       String filespec;
 
-      filespec = Format("%s\\dump%04d.txt",(const char*)MyTerm->LogSubDir(),i);
+      filespec = Format("%s/dump%04d.txt",(const char*)MyTerm->LogSubDir(),i);
 
       FILE * fp = fopen(filespec,"rt");
       if (fp) { 
@@ -2360,7 +2360,7 @@ void BuildSpellList()
         te = TEFF(theGame->SpellID(i));
         if (!te->HasSource(AI_WIZARDRY))
           continue;
-        fprintf(f1,"\n\n      \\n\\n\n      <7>%s (<1>",NAME(theGame->SpellID(i)));
+        fprintf(f1,"\n\n      /n/n\n      <7>%s (<1>",NAME(theGame->SpellID(i)));
         if (te->Schools & SC_ABJ)
           fprintf(f1,"Abjuration");
         if (te->Schools & SC_ARC)
@@ -2379,7 +2379,7 @@ void BuildSpellList()
           fprintf(f1,"Necromancy");
         if (te->Schools & SC_WEA)
           fprintf(f1,"Weavecraft");
-        fprintf(f1," <9>%d<7>)\\n\n      __<2>",te->Level);
+        fprintf(f1," <9>%d<7>)/n\n      __<2>",te->Level);
         fprintf(f1,DESC(theGame->SpellID(i)));
       }
     fprintf(f1,"\"; }\n\n");
@@ -2390,7 +2390,7 @@ void BuildSpellList()
         te = TEFF(theGame->SpellID(i));
         if (!te->HasSource(AI_THEURGY))
           continue;
-        fprintf(f1,"\n\n      \\n\\n\n      <7>%s (<1>",NAME(theGame->SpellID(i)));
+        fprintf(f1,"\n\n      /n/n\n      <7>%s (<1>",NAME(theGame->SpellID(i)));
         if (te->Schools & SC_ABJ)
           fprintf(f1,"Abjuration");
         if (te->Schools & SC_ARC)
@@ -2409,7 +2409,7 @@ void BuildSpellList()
           fprintf(f1,"Necromancy");
         if (te->Schools & SC_WEA)
           fprintf(f1,"Weavecraft");
-        fprintf(f1," <9>%d<7>)\\n\n      __<2>",te->Level);
+        fprintf(f1," <9>%d<7>)/n\n      __<2>",te->Level);
         fprintf(f1,DESC(theGame->SpellID(i)));
       }
     fprintf(f1,"\"; }\n\n");
@@ -2420,7 +2420,7 @@ void BuildSpellList()
         te = TEFF(theGame->SpellID(i));
         if (!te->HasSource(AI_DRUIDIC))
           continue;
-        fprintf(f1,"\n\n      \\n\\n\n      <7>%s (<1>",NAME(theGame->SpellID(i)));
+        fprintf(f1,"\n\n      /n/n\n      <7>%s (<1>",NAME(theGame->SpellID(i)));
         if (te->Schools & SC_ABJ)
           fprintf(f1,"Abjuration");
         if (te->Schools & SC_ARC)
@@ -2439,7 +2439,7 @@ void BuildSpellList()
           fprintf(f1,"Necromancy");
         if (te->Schools & SC_WEA)
           fprintf(f1,"Weavecraft");
-        fprintf(f1," <9>%d<7>)\\n\n      __<2>",te->Level);
+        fprintf(f1," <9>%d<7>)/n\n      __<2>",te->Level);
         fprintf(f1,DESC(theGame->SpellID(i)));
       }
     fprintf(f1,"\"; }\n\n");

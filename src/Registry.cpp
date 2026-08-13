@@ -73,7 +73,7 @@ Registry::Registry()
     memset(DataTable,0,sizeof(DataNode)*DATA_TABLE_SIZE);
     LastUsedHandle = 128;
     #ifdef DEBUG_OBJECTS
-    String path = T1->IncursionDirectory + "\\reglog.txt";
+    String path = T1->IncursionDirectory + "/reglog.txt";
     reg_log = fopen((const char *)path,"wt");
     #endif
   }

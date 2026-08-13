@@ -29,18 +29,18 @@ typedef signed char       int8;
 typedef signed short      int16;
 typedef unsigned char     uint8;
 typedef unsigned short    uint16;
-typedef unsigned long     uint32;
-typedef signed long       int32;
-typedef unsigned long     rID;
+typedef unsigned int      uint32;
+typedef signed int        int32;
+typedef unsigned int      rID;
 typedef signed char       Dir;
 typedef void*             Param;
 typedef uint32            Glyph;
 typedef int8              EvReturn;
 
-typedef signed long       hText;
-typedef signed long       hCode;
-typedef signed long       hData;
-typedef signed long       hObj;
+typedef signed int        hText;
+typedef signed int        hCode;
+typedef signed int        hData;
+typedef signed int        hObj;
 
 #define OBJ_TABLE_SIZE   65536
 /* ww: was 4096, but a recent profile revealed Registry::Get() to be 
@@ -75,7 +75,7 @@ typedef signed long       hObj;
 #ifdef WIN32
   #define BREAKOUT __debugbreak();
 #else
-  #define BREAKOUT asm("int $3");
+  #define BREAKOUT __builtin_debugtrap();
 #endif
 
 

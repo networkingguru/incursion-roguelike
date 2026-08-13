@@ -20,7 +20,7 @@
 #include <time.h>
 
 #ifdef WIN32
-  #define OPT_FILE "\\Options.Dat"
+  #define OPT_FILE "/Options.Dat"
 #else
   #define OPT_FILE "/Options.Dat"
 #endif

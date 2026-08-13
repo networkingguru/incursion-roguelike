@@ -423,7 +423,7 @@ bool Magic::isTarget(EventInfo &_e, Thing *t) {
       e.EMagic = te->Vals(e.efNum);
       // TODO: Remove when bug has been tracked down.  Reported on bay12forums, access violation down below where this is the case.
       if ((e.isSpell || (e.isItem && e.EItem->isType(T_SCROLL))) && e.EMagic == NULL)
-          Error("Crash imminent, id=%l, effect='%s', num=%d, actor='%s'", e.EActor->myHandle, NAME(e.eID), e.efNum, e.EActor->Name());
+          Error("Crash imminent, id=%l, effect='%s', num=%d, actor='%s'", e.EActor->myHandle, NAME(e.eID), e.efNum, (const char*)e.EActor->Name());
 
       if (e.isItem && e.EItem->isItem()) {
           if (e.EItem->isBlessed())
