@@ -98,7 +98,13 @@ comprehension passes.
 GitHub issues on `mine` hold only the defects that are genuinely upstream bugs
 rather than port artefacts, so they can be reported to `rmtew`/`HexDecimal`
 later. Those are cross-linked from Beads via `external-ref` (`gh-2`, `gh-3`,
-`gh-4`).
+`gh-4`, `gh-5`).
+
+**Read `docs/REPORTING-GATE.md` before writing anything public.** It holds the
+four questions every claim must answer — reachability chain, provenance, blast
+radius, confidence tier — and the rule that only Observed-tier findings may go
+to `rmtew` or `HexDecimal`. Nothing has been sent to either yet: no issue, no
+pull request. Of what we hold, only `gh-1` currently qualifies.
 
 ## Who verifies what
 
