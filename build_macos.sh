@@ -20,7 +20,17 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-OBJ="$ROOT/build/obj"
+# A diagnostic build gets its own binary and its own object directory, so it
+# never leaves half-instrumented objects behind for the next ordinary build:
+#     EXTRA_CXXFLAGS=-DFLICKER_PROBE OUT=incursion-flicker ./build_macos.sh
+OUT="${OUT:-incursion}"
+EXTRA_CXXFLAGS="${EXTRA_CXXFLAGS:-}"
+
+if [ "$OUT" = "incursion" ] && [ -z "$EXTRA_CXXFLAGS" ]; then
+    OBJ="$ROOT/build/obj"
+else
+    OBJ="$ROOT/build/obj-$OUT"
+fi
 mkdir -p "$OBJ" "$ROOT/mod" "$ROOT/logs" "$ROOT/save"
 
 SDL_CFLAGS="$(pkg-config --cflags sdl2)"
@@ -51,7 +61,7 @@ fi
 
 # ------------------------------------------------------------------ game -----
 echo "--- compiling Incursion ---"
-CXXFLAGS="-O2 -w -fpermissive -Wno-narrowing $DEFINES $INCLUDES"
+CXXFLAGS="-O2 -w -fpermissive -Wno-narrowing $DEFINES $INCLUDES $EXTRA_CXXFLAGS"
 CFLAGS="-O2 -w -Wno-implicit-function-declaration -Wno-implicit-int -Wno-return-mismatch -DDEBUG -Iinc -Ilib -Icompat"
 
 for f in src/*.cpp; do
@@ -69,14 +79,14 @@ for f in src/*.c; do
 done
 
 echo "--- linking ---"
-clang++ -std=c++17 -o "$ROOT/incursion" "$OBJ"/*.o "$TCODLIB" $SDL_LIBS -lz -framework OpenGL
+clang++ -std=c++17 -o "$ROOT/$OUT" "$OBJ"/*.o "$TCODLIB" $SDL_LIBS -lz -framework OpenGL
 
 # ------------------------------------------------------------- game data -----
 if [ ! -f "$ROOT/mod/Incursion.Mod" ]; then
     echo "--- compiling game data module (this takes ~5s) ---"
-    "$ROOT/incursion" -compile main.irc
+    "$ROOT/$OUT" -compile main.irc
 fi
 
 echo
-echo "Built: $ROOT/incursion"
+echo "Built: $ROOT/$OUT"
 echo "Data:  $ROOT/mod/Incursion.Mod"
