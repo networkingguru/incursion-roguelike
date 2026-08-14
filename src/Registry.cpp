@@ -163,11 +163,19 @@ void Registry::Block(void **Block, size_t sz)
   {
     ASSERT(theRegistry->Get(hCurrent));
 
+    /* The handle is parked in the object's own pointer field while the object
+       is written out, then swapped back for the real pointer afterwards.
+
+       These were *((long*)Block) on both sides. That assumed sizeof(long) ==
+       sizeof(void*), which holds on LP64 and on Win32 but not on Win64. Going
+       through intptr_t drops the assumption without changing a single byte on
+       disk: the handle is a small positive int, so it sits in the low half of
+       the slot either way. src/AbiCheck.cpp asserts the slot is wide enough. */
     if (saveMode)
-      *((long*)Block) = RegisterBlock(*Block,hCurrent,sz);
+      *Block = (void*)(intptr_t)RegisterBlock(*Block,hCurrent,sz);
      else
-      *Block = GetData(*((long*)Block));
-  } 
+      *Block = GetData((hData)(intptr_t)*Block);
+  }
 
 
 Object * Registry::Get(hObj h)

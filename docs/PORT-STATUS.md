@@ -15,6 +15,7 @@ brew install sdl2 pkg-config     # once
 ./incursion                      # play
 ./tools/check_abs_path.sh        # regression check, exits 0 on pass
 ./tools/check_error_handling.sh  # regression check, exits 0 on pass
+./tools/check_abi.sh             # regression check, exits 0 on pass
 ```
 
 Upstream is `rmtew/incursion-roguelike`, dormant since 2015 apart from a trickle.
@@ -45,8 +46,19 @@ death, and the view centred on (0,0) so 91% of the map window was off-grid and b
 Fixed by dropping the cast. **Any save written before 2026-08-13 17:42 is
 unrecoverable** and all such files have been deleted.
 Lesson: after changing a typedef's width, audit every cast that assumed the old one.
-There were three `(long*)` casts in the tree; the two in `src/Registry.cpp` write
-into a `void*` and are size-correct on LP64.
+There were three `(long*)` casts in the tree; the two in `src/Registry.cpp` wrote
+into a `void*` and were size-correct on LP64. They now go through `intptr_t`
+instead, so no `(long*)` cast remains. The audit that swept for the rest of this
+class is below.
+
+**The width audit is done and every serialised type is arch-independent.** A
+layout probe compiled for arm64 and x86_64 produced identical sizes and offsets
+for all 22 resource tables, all 22 serialised object types and every scalar
+typedef. No serialised struct contains a `long`, `long double`, `float` or
+`double`, which is why. Linux x86-64 shares the LP64 model and the Itanium C++
+ABI, so it should match too; that is inference, not measurement, until a Linux
+box runs `tools/check_abi.sh`. `src/AbiCheck.cpp` now pins every width at
+compile time, so the next ABI surprise fails the build instead of the save file.
 
 **The upstream README's diagnosis is wrong.** It says POSIX builds fail to locate
 exported symbols. The real cause is that `src/RComp.cpp` is wrapped in `#ifdef DEBUG`
