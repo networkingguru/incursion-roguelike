@@ -802,6 +802,7 @@ int32 libtcodTerm::ConvertChar(Glyph g, char **out) {
 
 
 #include <execinfo.h>   /* backtrace(), for the error log */
+#include "ErrorLog.h"   /* rotation and retention for logs/errors.log */
 
 static void LogError(const char *msg);
 
@@ -844,11 +845,18 @@ static void LogError(const char *msg) {
 
     if (!errLog) {
         char path[1024];
-        snprintf(path, sizeof(path), "%slogs/errors.log",
-            (const char*)((libtcodTerm*)T1)->IncursionDirectory);
+        const char *dir = (const char*)((libtcodTerm*)T1)->IncursionDirectory;
+        snprintf(path, sizeof(path), "%slogs/errors.log", dir);
+        RotateErrorLog(dir, path);
         errLog = fopen(path, "a");
         if (!errLog)
             return;
+        /* Head the file with what produced it. A log that does not say which
+           build wrote it cannot be compared against another run. */
+        time(&now);
+        strftime(stamp, sizeof(stamp), "%Y-%m-%d %H:%M:%S", localtime(&now));
+        fprintf(errLog, "=== session %s  Incursion %s  built %s %s ===\n",
+            stamp, VERSION_STRING, __DATE__, __TIME__);
     }
     time(&now);
     strftime(stamp, sizeof(stamp), "%Y-%m-%d %H:%M:%S", localtime(&now));
