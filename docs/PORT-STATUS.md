@@ -89,11 +89,21 @@ bd show <id>      # detail, including why something is blocked
 bd list           # everything
 ```
 
-Issue prefix is `inc`. The graph mirrors Brian's three goals: **A** port to
-mac/linux/universal, **B** fix the bugs, **C** expand the game (reach). Three
-items are deliberately blocked — the Linux build waits on the type-width audit,
-the Steam Deck waits on Linux, and ruleset expansion waits on all four
-comprehension passes.
+Issue prefix is `inc`. The graph mirrors the README roadmap, in three tiers.
+
+**SHORT — engineering, none of it changes the game.** **A** port to
+mac/linux/universal, **B** fix the engine bugs, **C** understand the engine
+(four comprehension passes).
+
+**MID — finish the shipped ruleset.** **D** (`inc-tek`), the real work: eight
+races whose subraces the game's own help marks `(Unimplemented)`, the Fighter
+capstone feat trees, and 64 markers of unfinished work across `lib/`. Not gated
+on C — Brian can fix content today without an engine map.
+
+**LONG — addons.** **E** (`inc-pw1`): world mode, more dungeons. Content beyond
+what Mensch shipped rather than completing it.
+
+The Steam Deck waits on Linux.
 
 GitHub issues on `mine` hold only the defects that are genuinely upstream bugs
 rather than port artefacts, so they can be reported to `rmtew`/`HexDecimal`

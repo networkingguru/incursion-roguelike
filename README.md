@@ -1,117 +1,201 @@
-Incursion
-=========
+# iNCURSION
 
-Incursion is a roguelike developed by Julian Mensch.  He has kindly released the source he has for some of the later versions.  This file is intended for people viewing the project repository where the source code can be obtained.
+A fork of [Incursion](http://incursion-roguelike.net), Julian Mensch's D&D 3.5
+roguelike, brought to macOS and POSIX.
 
-At this time building is only supported on Windows using Visual Studio x64 native command-line tools.  You should be able to substitute other versions of Visual Studio, or write a makefile if you plan to compile on another platform.
+The original runs on Windows only. This fork builds, runs, and plays natively on
+macOS ARM64 — and compiles its own game data along the way.
 
-The Incursion website can be [found here](http://incursion-roguelike.net).
-
-Links
------
-
- * Page on [Rogue Basin](http://www.roguebasin.com/index.php?title=Incursion).
-
-This used to be the go to place for discussion:
-
- * Thread on [Bay12](http://bay12forums.com/smf/index.php?topic=139289).
-
-Windows build instructions
---------------------------
-
-Pre-compiled binaries are included for all dependencies. However if you need to re-compile them
-or fix bugs then the included scripts allow you to:
-
-* Run `build_sdl2.bat` to compile SDL2.
-* Run `build_libtcod.bat` to compile libtcod.
-* Run `build_pdcurses.bat` to compile pdcurses.
-
-For recompiling Incursion itself:
-
-* Run `build.bat` to compile Incursion.
-   * `modaccent.exe` will be only be compiled for Debug configuration.
-   * `IncursionLibtcod.exe` will be compiled with libtcod used for terminal UI.
-   * `IncursionCurses.exe` will be compiled with pdcurses used for terminal UI.
-
-Linux/MacOS build instructions
-------------------------------
-
-Incursion was developed a long time ago and for primarily for Windows. While it was coded
-appropriately for the time and is an even more impressive project for that, the code is now dated.
-And worse, the code it incorporated is even more dated. ACCENT dates from 1999 at best and
-produces 1980's C code. The CPP compiler it includes is actually from the 1980's.
-
-If you run `modaccent` you may find that it produces corrupt "# line" directives in `yygram.cpp`.
-This is a sporadic problem and seems to relate to dated code and certain specific values.
-
-I almost got it to build an Incursion executable. It just failed to find exported symbols it should
-have been able to find (libtcod and SDL2), and symbols it couldn't know it wouldn't find (no
-function declarations in CPP/modaccent code?).
-
-If an executable were produced, then there are the other problems. Like Incursion was written with
-code that never conceived of having to deal with a 64-bit architecture. But then, Windows has
-this problem as well.
-
-No save game, no bug fix
-------------------------
-
-Bug fixes to gameplay require a save game. Often players save regularly, and on encountering a
-bug might load an earlier save and work out how to save again just before it occurs. This allows
-the developer to immediately reproduce a problem they would have no hope of reproducing on their
-own. However the build of Incursion uses needs to be the one the save game was made with. This is
-a reason why we keep everything, binaries and source code.
-
-* Even when it isn't because of some obscure game scenario, or something else happening in the
-   background in some other part of the level where a goblin is fighting an orc or whatever
-   debugging the save game can pick it up.
-* Character creation choices can be very varied in Incursion. The player might not even remember
-   what they selected, meaning that reproducing any problem involving it would be a wild goose
-   chase.
-
-Binaries and source code for dependencies
------------------------------------------
-
-Different programmers have different philosophies when it comes to managing dependencies. Some
-prefer build tools and package managers. Incursion used to take this approach in one form
-of another, and returning to it after many years the ability to compile it was lost.
-
-This is especially problematic in the case of Incursion given the aspects described in the "No save
-game, no bug fix" section above. We want to be able to debug a save game for an old game build
-and know that we have both source code available for it, and all exact versions of dependencies,
-and the ability to view source all the way down. The current build architecture ensures this,
-with the sole point preventing us from having hermetic builds being inability to easily lock to
-specific VS compiler and platform SDK versions without checking them in.
-
-An example of this is the change in the platform SDKs to require 64 bit struct packing.
-
-```c
-#elif _MSC_VER >= 1300
-#pragma warning(push)
-#pragma warning(disable: 4116)
-C_ASSERT(TYPE_ALIGNMENT(LARGE_INTEGER) == 8);
-#pragma warning(pop)
-#endif
-#endif
+```
+brew install sdl2 pkg-config
+./build_macos.sh
+./incursion
 ```
 
-Even with VS 2015 this was a problem and required platform SDK pinning, it isn't something new
-with VS 2022.
+Two minutes from a clean checkout.
 
-Building the module
--------------------
+---
 
-Module building is built into the Debug build. It is provided as an option in the game menu
-when running the Debug executable. Something something modaccent and the GPL license and how not
-including it in the release build helps us with that.
+## Status
 
-The module is generally built into the with the debug build and included with the release build
-when we distribute a version of the game.
+| | |
+|---|---|
+| **macOS ARM64** | Builds, plays, saves, loads |
+| **macOS x86_64 / universal** | Not yet |
+| **Linux** | Not yet — unblocked, next up |
+| **Steam Deck** | The target. Waits on Linux. |
+| **Windows** | Still works; see below |
 
-Miscellaneous
--------------
+Character creation, exploration, combat, save and load all work. The game
+compiles its own 82,768-line ruleset into a data module on first build.
 
-* The font used by libtcod is more square and compact. The benefit in map visibility and fitting
-  more on the screen is a good reason in using libtcod over curses.
-* Modaccent was generated by ACCENT compiler compiler which uses Gentle. In one rare situation
-  I had to track down the references source code in "gen.l", "gen.y" and "lex.yy.c" from the right
-  distribution of one of ACCENT and Gentle. I should have checked them in.
+---
+
+## What this fork fixed
+
+The upstream README says a POSIX build *"just failed to find exported symbols it
+should have been able to find"*. That diagnosis is wrong, and believing it is
+what kept the port stuck.
+
+**The real cause: `src/RComp.cpp` is wrapped in `#ifdef DEBUG`, while the
+generated `src/yygram.cpp` calls into it unconditionally.** Build with `-DDEBUG`
+and it links. One consequence worth knowing: every macOS build is a DEBUG build.
+
+Three more findings, each of which had to be fixed before the game was playable:
+
+**`int32` was `typedef signed long`.** Windows is LLP64, so `long` is 4 bytes
+there. macOS and Linux are LP64, where it is 8. Every "32-bit" type in the
+codebase — `int32`, `uint32`, `rID`, `hObj`, `hText`, `hCode`, `hData` — was
+silently 64-bit off Windows. Narrowing the typedefs dropped printf format
+mismatches from 325 to 26.
+
+**Narrowing the typedefs then destroyed every save.** `inc/Map.h` did
+`*((long*)&hm)`, writing 8 bytes into what had become a 4-byte field. The
+overrun covered the `int16 x,y` declared immediately after it, so **every save
+zeroed the player's position**. Loading placed the character at (0,0) — the
+map's solid outer corner — where the game crushed them to death on the first
+turn. Fixed, and now guarded at compile time by `src/AbiCheck.cpp`.
+
+**Monster AI read off the edge of the map, 343 times in 13 seconds.**
+`Map::At()` answers an out-of-bounds query by returning the square at (0,0)
+rather than failing, so wrong answers looked real. Guarding the single function
+every accessor funnels through took the error log from 444 entries in 13 seconds
+to **zero across 877 turns**.
+
+That last one is an upstream defect, not a port artefact, and it has been sent
+back: [rmtew#40](https://github.com/rmtew/incursion-roguelike/issues/40) and
+[rmtew#41](https://github.com/rmtew/incursion-roguelike/pull/41).
+
+---
+
+## Roadmap
+
+### Short — make it run everywhere
+
+All engineering. None of it changes the game.
+
+- Linux x86_64 build. Unblocked: the ABI audit that gated it is done, and every
+  serialised type is proven byte-identical on arm64 and x86_64.
+- macOS x86_64 slice and a universal binary.
+- **Steam Deck.** The concrete platform target, and why Linux comes first.
+- An ncurses backend, which would make the game text-capturable and scriptable —
+  and therefore testable without a human at the keyboard.
+- HiDPI and resolution handling. Options currently top out at 1920x1200.
+- Drain `logs/errors.log` through real play, and clear the known defects:
+  contents-list corruption in `Thing::Remove`, a `FI_SIZE` inconsistency,
+  window flicker on Metal, 58 format-string defects.
+- Four comprehension passes over the engine — map and creature model,
+  serialisation, the IncursionScript compiler, and event dispatch — because
+  everything below this line needs a map of the engine first.
+
+### Mid — finish the game that is already here
+
+This is the real work. Incursion ships with a great deal of content that is
+described but not built, and the game says so itself.
+
+- **Complete the incomplete.** Eight playable races — kobold, gnome, dwarf, elf,
+  drow, halfling, lizardfolk, orc — have their subrace sections labelled
+  `(Unimplemented)` in the game's own help text, while `lib/subraces.irh`
+  compiles 924 lines of subrace definitions. Whole feat trees, including every
+  Fighter capstone line, carry the same label. Across `lib/` there are 64
+  markers of unfinished work.
+- **Fix the core ruleset bugs.** Every entity's prose specification sits in the
+  same file as its implementation, so a mismatch between the two is a provable
+  defect that needs no C++ at all. That is the richest bug seam in the project.
+- Finish the skills and classes that advertise more than they deliver.
+
+### Long — build past it
+
+- **Addons.** World mode. More dungeons. New content that goes beyond what
+  Julian Mensch shipped, rather than completing it.
+
+Work is tracked in [Beads](https://github.com/gastownhall/beads) (`bd ready`),
+not in this file.
+
+---
+
+## How this project works
+
+**Agents own the C++.** Port, engine, build and harness are all
+machine-checkable, and three regression checks run on demand:
+
+```
+./tools/check_abs_path.sh        # the relative-directory bug
+./tools/check_error_handling.sh  # error reporting stays non-blocking
+./tools/check_abi.sh             # type widths + handle/pointer confusion
+```
+
+Each has been proven to *fail* when its defect is reintroduced, not merely to
+pass.
+
+**A human owns the ruleset.** `lib/` holds 82,768 lines of IncursionScript —
+1,469 event handlers, 522 monsters, 264 items, 191 effects, 39 classes, 17
+races. Every entity's prose specification sits in the same file as its
+implementation, so a mismatch between them is a provable bug. But no agent can
+tell an intentional Incursion divergence from D&D 3.5 apart from a defect. A
+person who knows 3.5 can.
+
+**Nothing goes upstream on reasoning alone.** `docs/REPORTING-GATE.md` holds the
+four questions any public claim must answer, and the rule that only findings
+where an oracle changed state — with numbers on both sides — get sent to the
+parent project.
+
+More detail: [`docs/PORT-STATUS.md`](docs/PORT-STATUS.md) is the running state of
+the port and should be read before touching anything.
+
+---
+
+## Upstream
+
+This is a fork of [rmtew/incursion-roguelike](https://github.com/rmtew/incursion-roguelike),
+which remains the parent project and where fixes are sent.
+
+- **Julian Mensch** wrote Incursion and released the source.
+- **Richard Tew** has maintained it since, and vendored the dependencies that
+  make old builds reproducible.
+- **Kyle Benesch** (HexDecimal) did substantial modernisation work in 2024 —
+  standard types, `std::min`/`max`, dead-code removal, CI. A sibling fork worth
+  reading before writing anything new.
+
+Port artefacts stay here. Genuine upstream defects go back to rmtew.
+
+---
+
+## Windows
+
+The original build still works and is unchanged by this fork. Pre-compiled
+dependencies are included; the scripts below rebuild them if needed.
+
+```
+build_sdl2.bat        # SDL2
+build_libtcod.bat     # libtcod
+build_pdcurses.bat    # pdcurses
+build.bat             # Incursion itself
+```
+
+`build.bat` produces `IncursionLibtcod.exe` and `IncursionCurses.exe`.
+`modaccent.exe` builds in Debug configuration only.
+
+**Why the dependencies are checked in, in Richard Tew's words:** bug fixes to
+gameplay require a save game, and a save game only loads in the build that wrote
+it. Character creation in Incursion is varied enough that a player often cannot
+remember what they picked, so reproducing a report without their save is a wild
+goose chase. Keeping every binary and every source version is what makes an old
+save debuggable at all.
+
+Module compilation is built into the Debug build and offered in the game menu.
+It is kept out of Release builds for GPL reasons.
+
+---
+
+## Links
+
+- [Incursion website](http://incursion-roguelike.net)
+- [RogueBasin page](http://www.roguebasin.com/index.php?title=Incursion)
+- [Bay12 thread](http://bay12forums.com/smf/index.php?topic=139289) — the old
+  discussion home
+
+## Licence
+
+See [LICENSE](LICENSE). Incursion is Julian Mensch's work; this fork changes
+nothing about that.
