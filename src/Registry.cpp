@@ -742,11 +742,39 @@ static void SaveLoadProbe(const char *what, Player *pl) {
     fflush(f);
 }
 
+/* Diagnostic: set INCURSION_CHAR_PROBE=1 to write a full character sheet
+   next to every save, as logs/charprobe.txt and .html. The save file itself
+   cannot be read from outside the game -- Registry::SaveGroup writes whole
+   C++ objects as raw bytes, vptrs and padding included -- so answering
+   "which feats does this character actually have" otherwise means finishing
+   the game and reading the end-of-game dump.
+
+   This formats nothing of its own. It calls the game's own dump writer, so
+   it shows exactly what the end-of-game dump shows, and cannot drift from
+   it. It overwrites, so the file always describes the most recent save.
+
+   DumpCharacter chdir()s to the log directory and does not change back.
+   That is safe here: ChangeDirectory rebuilds an absolute path from
+   IncursionDirectory (src/Wlibtcod.cpp:307), so the save that follows still
+   lands in save/ wherever this leaves the working directory. It still runs
+   first, so a failure in the dump cannot land midway through writing a
+   save. */
+static void CharacterProbe(void) {
+    String base;
+
+    if (!getenv("INCURSION_CHAR_PROBE"))
+        return;
+    base = "charprobe";
+    T1->DumpCharacter(base);
+}
+
 bool Game::SaveGame(Player &p) {
       fileHeader fh; int32 i;
       String fn, base, desc;
 
       p.TouchGallery(true);
+
+      CharacterProbe();
 
       T1->ChangeDirectory(T1->SaveSubDir());
 

@@ -12,6 +12,12 @@
 #                        save and load. Cheap, and the bug it watches for
 #                        destroyed a set of save files once already.
 #                        -> logs/saveprobe.log
+#   INCURSION_CHAR_PROBE Writes a full character sheet beside every save, so
+#                        feats, weapon skills and gear can be read without
+#                        ending the game. The save file itself is raw C++
+#                        object bytes and cannot be read from outside.
+#                        Overwrites, so it always describes the last save.
+#                        -> logs/charprobe.txt and .html
 #
 # OFF by default, because it writes a line per drawn frame and buries
 # everything else. Turn it on only when chasing a display fault:
@@ -34,6 +40,7 @@ cd "$ROOT"
 
 export INCURSION_MAP_AUDIT=1
 export INCURSION_SAVE_PROBE=1
+export INCURSION_CHAR_PROBE=1
 
 if [ "${1:-}" = "--map-probe" ]; then
     export INCURSION_MAP_PROBE=1
