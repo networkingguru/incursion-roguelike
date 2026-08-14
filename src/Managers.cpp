@@ -472,7 +472,6 @@ int sortItemsAlpha(const void *a, const void *b) {
 }
 
 void TextTerm::InvShowSlots(bool changed) {
-    Container *con;
     int16 i, j, y;
     int32 k;
     String str, wgt;
@@ -517,7 +516,9 @@ void TextTerm::InvShowSlots(bool changed) {
 
     if (currCon && changed) {
         Color(PURPLE);
-        con = (Container*)(p->Inv[i]);
+        /* Dropped: con = (Container*)(p->Inv[i]). Inv[] holds hObj handles,
+           not pointers. con was never read afterwards -- the code below uses
+           currCon -- so this was a dead store, not a crash. */
         SGotoXY(0, 0);
         if (currCon == theChest)
             SWrite(Format("In the %s:\n", (const char*)currCon->Name(NA_INSC | NA_MONO)));

@@ -1291,7 +1291,14 @@ FoundCorpse:
     MapIterate(m,t,i)
       if (t->isCreature()) {
         // later, scan creatures' inventories
-      } else if (((Item*)m->Things[i])->ItemLevel() > high) {
+      } else if (t->isItem() && ((Item*)t)->ItemLevel() > high) {
+          /* Was ((Item*)m->Things[i]). Things[] holds hObj handles, not
+             pointers, so that cast produced a wild pointer and ItemLevel()
+             was a virtual call through it. MapIterate already resolves the
+             handle into t. The isItem() guard is needed too: the else branch
+             also catches doors, traps and portals, and ItemLevel() is
+             declared on Item, not on Thing. This now mirrors the creature
+             scan above, which had the pattern right. */
           o = t;
           high = (int8)((Item*)o)->ItemLevel();
       }
@@ -1299,7 +1306,11 @@ FoundCorpse:
     if (o == NULL)
       {
         Text += "Little benefit awaits you on this endeavour. ";
-        goto DoneAdversity;
+        /* Was goto DoneAdversity, which is the label ABOVE this scan. On a
+           map with no items that jumped back, found nothing again, appended
+           this sentence again, and looped forever while Text grew. The
+           augury is finished at this point, so leave it. */
+        goto DoneAugury;
       }
 
 

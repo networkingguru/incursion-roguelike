@@ -16,9 +16,10 @@
 #    -Wint-to-pointer-cast, but the build passes -w, so the warnings never
 #    appear. This step re-runs the compiler with just those two warnings on.
 #
-# The KNOWN list below records the sites that already existed when this check
-# was written. Both are tracked as inc-upw.1 / gh-5. When that is fixed, empty
-# the list -- do not add new entries to it.
+# The KNOWN list below is an allowlist of sites that are already reported and
+# accepted. It held two entries when this check was written; both were fixed
+# under inc-upw.1 / gh-5, so it is now empty. Keep it that way -- a new hit is
+# a bug to fix, not an entry to add.
 #
 # Usage: tools/check_abi.sh      (exits 0 on pass, 1 on fail)
 set -uo pipefail
@@ -26,8 +27,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-KNOWN="src/Effects.cpp:1294
-src/Managers.cpp:520"
+KNOWN=""
 
 command -v pkg-config >/dev/null || { echo "FAIL: pkg-config not found"; exit 1; }
 SDL_CFLAGS="$(pkg-config --cflags sdl2)" || { echo "FAIL: sdl2 not installed"; exit 1; }
@@ -61,10 +61,10 @@ sweep() {
     done
 }
 
-FOUND="$(sweep | grep "warning:" | cut -d: -f1,2 | sort -u)"
+FOUND="$(sweep | grep "warning:" | cut -d: -f1,2 | sort -u | grep . || true)"
+ALLOWED="$(echo "$KNOWN" | sort -u | grep . || true)"
 
-NEW="$(comm -23 <(echo "$FOUND" | grep . | sort -u) <(echo "$KNOWN" | sort -u))"
-
+NEW="$(comm -23 <(echo "$FOUND") <(echo "$ALLOWED"))"
 if [ -n "$NEW" ]; then
     echo "FAIL: a handle is cast to a pointer at a new site:"
     echo "$NEW" | sed 's/^/  /'
@@ -73,12 +73,17 @@ if [ -n "$NEW" ]; then
     exit 1
 fi
 
-GONE="$(comm -13 <(echo "$FOUND" | grep . | sort -u) <(echo "$KNOWN" | sort -u))"
+# An allowlist entry that no longer matches is stale. Say so, so the list does
+# not quietly outlive the bug it was recording.
+GONE="$(comm -13 <(echo "$FOUND") <(echo "$ALLOWED"))"
 if [ -n "$GONE" ]; then
-    echo "PASS: no new handle/pointer casts (and these known ones are now gone:"
-    echo "$GONE" | sed 's/^/  /'
-    echo " -- remove them from KNOWN in this script)"
+    echo "PASS: no handle/pointer casts outside the allowlist."
+    echo "      These allowlist entries no longer match anything:"
+    echo "$GONE" | sed 's/^/        /'
+    echo "      Delete them from KNOWN in this script."
+elif [ -n "$ALLOWED" ]; then
+    echo "PASS: no new handle/pointer casts ($(echo "$ALLOWED" | wc -l | tr -d ' ') allowlisted, see inc-upw.1)"
 else
-    echo "PASS: no new handle/pointer casts (2 known sites remain, see inc-upw.1)"
+    echo "PASS: no handle is cast to a pointer anywhere in src/"
 fi
 exit 0
