@@ -22,6 +22,7 @@
 #endif
 
 #include "Incursion.h"
+#include "MapAudit.h"
 #include <time.h>
 
 #include <stdio.h>  /* defines FILENAME_MAX */
@@ -351,12 +352,19 @@ restartDestroyCount:
             }
         }
 
-        if (!(Turn%60)) { // refill AoO's; Terrain SPFX 
+        if (!(Turn%60)) { // refill AoO's; Terrain SPFX
             mp->UpdateFields();
-            mp->UpdateTerra();          
-            for(i=0;mp->Things[i];i++) 
+            mp->UpdateTerra();
+            for(i=0;mp->Things[i];i++)
                 Throw(EV_TURN, oThing(mp->Things[i]));
         }
+
+        /* Sweep the map for state that disagrees with itself. Off unless
+           INCURSION_MAP_AUDIT is set. Every ten turns rather than every turn:
+           the sweep walks every square and every live handle, and a drift this
+           slow does not need finer resolution to be caught. */
+        if (MapAuditEnabled() && !(Turn % 10))
+            AuditMap(mp, "end of turn");
 
         Turn++;
     } while(1);

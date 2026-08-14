@@ -41,6 +41,7 @@
 */ 
 
 #include "Incursion.h"
+#include "MapAudit.h"
 
 Thing::Thing(Glyph _Image,int16 _Type)
     : Object(_Type)
@@ -1158,6 +1159,12 @@ FoundAndRemoved:
                     // time, and I don't know why. I'm changing it to Error so
                     // it doesn't kill the game. -- Julian
                     Error("Contents list wierdless in Thing::Remove!");
+                    /* Audit here, before the early return leaves this Thing in
+                       neither list while it still holds m/x/y. Catching the map
+                       at the moment of failure says far more than sampling it
+                       later. Set INCURSION_MAP_AUDIT=1. See bead inc-6d5. */
+                    if (MapAuditEnabled())
+                        AuditMap(m, "Thing::Remove, contents unlink failed");
                     return;
                 }
                 th = oThing(th->Next);
