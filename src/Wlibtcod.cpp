@@ -113,6 +113,12 @@
 #define CURSOR_BLINK_MS 300
 #endif
 #define INPUT_IDLE_MS 50
+/* How often to repaint while waiting for a key with the cursor switched off.
+   300ms is not a guess: with the cursor ON the game already repaints at this
+   rate, and that state is the one that demonstrably does not flicker. */
+#ifndef IDLE_REPAINT_MS
+#define IDLE_REPAINT_MS 300
+#endif
 
 #ifdef USE_BREAKPAD
 using google_breakpad::ExceptionHandler;
@@ -158,6 +164,46 @@ TCOD_color_t RGBSofter[MAX_COLOURS] = {
   { 230, 230, 230 }, // WHITE
   };
 
+#ifdef PALETTE_LOG
+/* Diagnostic only. Separates two explanations of the whole-screen brighten/dim:
+   the game re-applied a palette (RGBValues 255 vs RGBSofter 230), or the game
+   did nothing and the display changed the picture on its own. Every line is
+   flushed, so a run that ends in a kill still leaves a readable log. */
+#ifndef PALETTE_LOG_FILE
+#define PALETTE_LOG_FILE "logs/palette.log"
+#endif
+#include <sys/time.h>
+static FILE *paletteLog = NULL;
+static void PaletteLogEvent(const char *event, const char *detail) {
+    if (!paletteLog) {
+        struct timeval tv;
+        paletteLog = fopen(PALETTE_LOG_FILE, "w");
+        if (!paletteLog)
+            return;
+        /* Anchor the game clock to wall clock. tools/flickerscan.py stamps its
+           captures in the same epoch ms, so the two traces merge on one line. */
+        gettimeofday(&tv, NULL);
+        fprintf(paletteLog, "# game_ms %u == epoch_ms %lld\n",
+            (unsigned)TCOD_sys_elapsed_milli(),
+            (long long)tv.tv_sec * 1000 + (long long)tv.tv_usec / 1000);
+        fprintf(paletteLog, "ms\tevent\tdetail\n");
+    }
+    fprintf(paletteLog, "%u\t%s\t%s\n",
+        (unsigned)TCOD_sys_elapsed_milli(), event, detail ? detail : "");
+    fflush(paletteLog);
+}
+/* Defined further down, next to the other SDL-facing diagnostic, so that
+   <SDL.h> is not dragged in above the game headers. Logs the game window's
+   rectangle whenever it moves or resizes, so the screen captures can be
+   cropped to the game instead of averaging the whole desktop. */
+static void PaletteLogWindowRect(void);
+#define PALETTE_LOG_EVENT(e,d) PaletteLogEvent((e),(d))
+#define PALETTE_LOG_RECT()     PaletteLogWindowRect()
+#else
+#define PALETTE_LOG_EVENT(e,d) ((void)0)
+#define PALETTE_LOG_RECT()     ((void)0)
+#endif
+
 char __buffer[1600];
 char __buff2[80];
 
@@ -172,6 +218,9 @@ private:
     TCOD_color_t Colors[MAX_COLOURS];
     int16 resX, resY, fontX, fontY, ocx, ocy;
     uint32 ticks_blink_last;
+    /* Separate from ticks_blink_last, which only CursorOn() initialises and
+       so is indeterminate before the first prompt. */
+    uint32 ticks_idle_last;
     int oldResX, oldResY;
     String debugText;
     /* File I/O Stuff */
@@ -657,6 +706,8 @@ void libtcodTerm::Update() {
         debugText = "";
     }
     TCOD_console_flush();
+    PALETTE_LOG_RECT();
+    PALETTE_LOG_EVENT("present", "Update");
 
     updated = true;
 }
@@ -695,6 +746,8 @@ void libtcodTerm::BlinkCursor() {
         TCOD_console_blit(bScreen, ocx, ocy, 1, 1, NULL, ocx, ocy, 1.0f, 1.0f);
     /* Won't get an update necessarily otherwise */
     TCOD_console_flush();
+    PALETTE_LOG_RECT();
+    PALETTE_LOG_EVENT("present", "BlinkCursor");
 }
   
 void libtcodTerm::Save() { 
@@ -965,6 +1018,46 @@ retry:
 	((libtcodTerm*)T1)->Restore();
 }
 
+#ifdef PALETTE_LOG
+#include <SDL.h>
+/* Declared in sys.h only when TCOD_SDL2 is defined, which the game build does
+   not define. Declaring it here avoids changing header semantics for a probe. */
+extern "C" void *TCOD_sys_get_SDL_window(void);
+extern "C" void *TCOD_sys_get_SDL_renderer(void);
+static void PaletteLogWindowRect(void) {
+    static int lx = -99999, ly = -99999, lw = 0, lh = 0;
+    SDL_Window *w = (SDL_Window *)TCOD_sys_get_SDL_window();
+    SDL_Rect bounds;
+    char buf[192];
+    int x = 0, y = 0, cw = 0, ch = 0, pw = 0, ph = 0;
+
+    if (!w)
+        return;
+    SDL_GetWindowPosition(w, &x, &y);
+    SDL_GetWindowSize(w, &cw, &ch);
+    if (x == lx && y == ly && cw == lw && ch == lh)
+        return;                 /* Only log the rectangle when it moves. */
+    lx = x; ly = y; lw = cw; lh = ch;
+
+    /* The captures are in backing pixels and these are in points, so the
+       reader needs both the desktop size and the drawable size to work out
+       the scale. Do not guess a 2x Retina factor -- log it. */
+    {
+        SDL_Renderer *r = (SDL_Renderer *)TCOD_sys_get_SDL_renderer();
+        if (r)
+            SDL_GetRendererOutputSize(r, &pw, &ph);
+    }
+    if (SDL_GetDisplayBounds(SDL_GetWindowDisplayIndex(w), &bounds) != 0) {
+        bounds.w = 0;
+        bounds.h = 0;
+    }
+    snprintf(buf, sizeof buf,
+        "win %d,%d %dx%d drawable %dx%d display %dx%d",
+        x, y, cw, ch, pw, ph, bounds.w, bounds.h);
+    PaletteLogEvent("winrect", buf);
+}
+#endif
+
 #ifdef FLICKER_PROBE
 /* Diagnostic only. libtcod calls this from actual_rendering() with the exact
    surface it is about to upload and present, so it separates "the game drew a
@@ -1025,6 +1118,8 @@ void libtcodTerm::Reset() {
     char fontName[MAX_PATH_LENGTH] = "";
     bool scaled_res, scaled_font;
     int res_w, res_h;
+
+    PALETTE_LOG_EVENT("reset-enter", isWindowed ? "windowed" : "fullscreen");
 
     if (bScreen != NULL) {
         TCOD_console_delete(bScreen);
@@ -1116,6 +1211,9 @@ RetryFont:
     else
         for (i=0;i!=MAX_COLOURS;i++)
             Colors[i] = RGBValues[i];
+    PALETTE_LOG_EVENT("palette-apply", theGame->Opt(OPT_SOFT_PALETTE)
+        ? "RGBSofter  (WHITE 230) -- the dim palette"
+        : "RGBValues  (WHITE 255) -- the bright palette");
 
     bScreen = TCOD_console_new(sizeX, sizeY);
     TCOD_console_set_default_background(bScreen, TCOD_black);
@@ -1181,6 +1279,7 @@ void libtcodTerm::Initialize() {
     p = NULL;
     m = NULL;
     isHelp = false;
+    ticks_idle_last = TCOD_sys_elapsed_milli();
     ActionsSinceLastAutoSave = 0;
     cx = cy = 0;
     showCursor = false;
@@ -1415,6 +1514,18 @@ int16 libtcodTerm::GetCharCmd(KeyCmdMode mode) {
         if (showCursor && ticks1 > ticks_blink_last + CURSOR_BLINK_MS) {
             BlinkCursor();
             ticks_blink_last = ticks1;
+        } else if (!showCursor && ticks1 > ticks_idle_last + IDLE_REPAINT_MS) {
+            /* ponytail: repaint on a tick so the window never sits still.
+               With the cursor off nothing else presents while we wait for a
+               key, and the window can go quiet for seconds -- which is when
+               the display dims it. The pixels are identical across that gap
+               (measured over 957 frames), so this fixes a symptom, not a
+               cause. Ceiling: one wasted repaint every 300ms forever, which
+               is battery on a handheld. Upgrade path: find why the window
+               server treats a quiet window this way and set whatever window
+               or renderer flag prevents it, then delete this branch. */
+            TCOD_console_flush();
+            ticks_idle_last = ticks1;
         }
           
         if (TCOD_console_is_window_closed()) {
@@ -1446,6 +1557,22 @@ CtrlBreak:
             ClearMsgOK = true;
             continue;
         }
+
+#ifdef PALETTE_LOG
+        /* Log the key itself, not just the repaint it causes. This is what
+           makes a session reconstructable afterwards, and it gives the tester
+           a way to mark "I can see it dimming now" without leaving the game:
+           press a key that does nothing, and it lands in the log. */
+        {
+            char kb[64];
+            int printable = (tcodKey.c >= 32 && tcodKey.c < 127);
+            snprintf(kb, sizeof kb, "vk %d c %d %s%c%s",
+                (int)tcodKey.vk, (int)tcodKey.c,
+                printable ? "'" : "", printable ? tcodKey.c : ' ',
+                printable ? "'" : "");
+            PALETTE_LOG_EVENT("key", kb);
+        }
+#endif
         
         if (theGame->Opt(OPT_CLEAR_EVERY_TURN) && ClearMsgOK && mode == KY_CMD_NORMAL_MODE && GetMode() == MO_PLAY) {
             ox = cx; oy = cy; wn = activeWin;
@@ -1458,6 +1585,9 @@ CtrlBreak:
         }
         
         ticks_blink_last = TCOD_sys_elapsed_milli();
+        /* A key repaints the screen anyway, so restart the idle tick from
+           here rather than firing a redundant repaint straight after it. */
+        ticks_idle_last = ticks_blink_last;
 
         if (tcodKey.vk == TCODK_TEXT) {
             ch = tcodKey.text[0];
