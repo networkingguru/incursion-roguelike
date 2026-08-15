@@ -1,0 +1,136 @@
+# Headless terminal backend — specification
+
+Tracked as `inc-73g`. Sized: Medium.
+
+## Why
+
+Incursion has two terminal backends: `src/Wlibtcod.cpp` (SDL window, the one
+macOS uses) and `src/Wcurses.cpp` (pdcurses, Windows only, excluded from the
+macOS build). Both need a human at a keyboard.
+
+That is the binding constraint on this project. `inc-nch` — drain
+`logs/errors.log` through play — is the best defect finder here: three
+confirmed defects in one evening, zero false positives. Its procedure ends
+"play, then hand over the log". A person has to play. So the log only grows
+when Brian is at the machine, and agents cannot test their own work at all.
+
+A backend that takes its keystrokes from a file and writes its screen to a file
+removes the person from that loop.
+
+## What this is not
+
+Not a replacement for the libtcod backend. The window build stays the way to
+play. This is a second binary for testing, and a terminal build for people who
+want one.
+
+## Design
+
+### One new file, one new binary
+
+`src/Wposix.cpp` defines `posixTerm : public TextTerm`, guarded by
+`#ifdef POSIX_TERM`, in the same shape as the two existing backends: it
+implements the ~50 platform virtuals TextTerm leaves pure, defines `main()`,
+`Error()` and `Fatal()`, and owns file I/O.
+
+`build_macos.sh BACKEND=posix` compiles it instead of `Wlibtcod.cpp` and
+produces `./incursion-headless`. It links `-lncurses` and nothing else — no
+SDL, no libtcod.
+
+### The screen is a plain array
+
+Both existing backends store the screen in their graphics library's own buffer
+(a `TCOD_console_t`, a curses `WINDOW`) and read it back with library calls.
+`posixTerm` stores `Glyph scr[48][80]` directly.
+
+A `Glyph` is a `uint32`: 12 bits of glyph id, 4 of foreground, 4 of background
+(`inc/Defines.h:4137`). Storing it verbatim makes `AGetChar` exact. The libtcod
+backend cannot do that — it stores the character its glyph table produced, so
+`GetGlyph` → `PutGlyph` round trips lose the glyph id. The three callers
+(`src/Term.cpp:1969`, `src/Magic.cpp:1324`, `src/Skills.cpp:1931`) mask with
+`GLYPH_ID_MASK` and put the result back, so exactness is what they want.
+
+This also means the rendering target is not the screen model. The same array
+serves both output modes.
+
+### Two output modes
+
+| mode | Update() | when |
+|---|---|---|
+| headless | marks the frame clean, nothing else | `-headless`, or stdout is not a tty |
+| ncurses | blits `scr` to `stdscr`, refreshes | a tty |
+
+### Input comes from a script
+
+`-keys FILE` supplies keystrokes. The file is a token stream; `#` starts a
+comment. Tokens:
+
+| token | meaning |
+|---|---|
+| `a` `Z` `7` | that character. An uppercase letter or shifted symbol also sets SHIFT, as a real keyboard does. |
+| `"a string"` | each character in turn |
+| `ESC ENTER TAB SPACE BKSP` | named keys |
+| `UP DOWN LEFT RIGHT HOME END PGUP PGDN` | named keys |
+| `F1`…`F12` | named keys |
+| `^D` | that letter with CONTROL held |
+| `TOKEN*12` | repeat the token 12 times |
+| `@dump` `@dump:label` | write the current screen to `logs/screens/` |
+| `@quit` | leave the game at the next key read |
+
+SHIFT matters and is not cosmetic. `StandardKeySet` (`src/Tables.cpp:4558`)
+matches `toupper(ch)` against `raw_key` and then compares the modifier flags
+exactly, so `{ KY_CMD_ALL_ALLIES, 'A', 0 }` is reached by lowercase `a` and
+*not* by `A`. A script that ignored SHIFT would silently dispatch the wrong
+commands.
+
+### The screen dump
+
+`@dump` writes `logs/screens/NNNN[-label].txt`: 48 lines of 80 ASCII
+characters, followed by the non-blank message and status lines. Glyph ids
+become ASCII (`GLYPH_WALL` → `#`, `GLYPH_FLOOR` → `.`, `GLYPH_PLAYER` → `@`),
+because the consumer is `grep`, not a font.
+
+Dumps happen when the game asks for a key. That is the moment the screen is
+settled, so a dump never catches a half-drawn frame.
+
+### Ending a run
+
+Unattended runs must end. Three ways out:
+
+1. `@quit`, or the script running out — dump the final screen, exit 0.
+2. `INCURSION_MAX_KEYS` (default 20000) reached — dump, log, exit 3.
+3. `Fatal()` — log, dump, exit 1.
+
+`StopWatch()` never sleeps in headless mode, and `Error()` never prompts.
+
+### Errors
+
+`LogError()` currently lives inside `src/Wlibtcod.cpp` as a static. Two
+backends need it, so it moves to `src/ErrorLog.cpp` beside the rotation code
+that already serves it. Its caller passes the directory and the session banner,
+so `ErrorLog.cpp` keeps depending on nothing from the game and
+`tools/check_logrotate.sh` keeps compiling it on its own.
+
+## Definition of done
+
+1. `BACKEND=posix ./build_macos.sh` links with no SDL and no libtcod.
+2. `./incursion-headless -headless -keys tools/keys/smoke.keys` reaches the
+   start menu, creates a character, takes turns, and exits 0 with no human
+   present and no tty.
+3. The dumped screen contains a map: a `@` and the wall and floor glyphs.
+4. `tools/check_headless.sh` passes, and fails when the backend is broken on
+   purpose.
+5. The existing libtcod build still builds and still plays.
+
+## Phases — one commit each
+
+1. Move `LogError` into `src/ErrorLog.cpp`; libtcod build unchanged and rebuilt.
+2. `src/Wposix.cpp` headless: screen array, glyph→ASCII, file I/O, stub input.
+   Build via `BACKEND=posix`. Proof: the binary reaches the start menu.
+3. Key script and screen dump. Proof: a scripted run creates a character and
+   dumps a map.
+4. `tools/headless.sh` harness plus `tools/check_headless.sh` regression check,
+   proven to fail.
+5. ncurses rendering path, so the same binary is playable in a terminal.
+
+Phases 1–4 stand on their own. Phase 5 is the part with no automated oracle,
+so it comes last.

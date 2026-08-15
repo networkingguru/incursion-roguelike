@@ -854,10 +854,21 @@ int32 libtcodTerm::ConvertChar(Glyph g, char **out) {
 \*****************************************************************************/
 
 
-#include <execinfo.h>   /* backtrace(), for the error log */
-#include "ErrorLog.h"   /* rotation and retention for logs/errors.log */
+#include "ErrorLog.h"   /* rotation, retention and writing of logs/errors.log */
 
-static void LogError(const char *msg);
+/* One line of setup around the shared logger: only the backend knows which
+   build it is, and IncursionDirectory lives on the terminal object. */
+static void LogGameError(const char *msg) {
+    char banner[256], stamp[32];
+    time_t now;
+
+    time(&now);
+    strftime(stamp, sizeof(stamp), "%Y-%m-%d %H:%M:%S", localtime(&now));
+    snprintf(banner, sizeof(banner),
+        "=== session %s  Incursion %s  built %s %s ===",
+        stamp, VERSION_STRING, __DATE__, __TIME__);
+    LogError((const char*)((libtcodTerm*)T1)->IncursionDirectory, msg, banner);
+}
 
 void Fatal(const char*fmt,...) {
 	va_list argptr;
@@ -871,7 +882,7 @@ void Fatal(const char*fmt,...) {
         exit(1);
     }
 
-    LogError(__buffer);
+    LogGameError(__buffer);
     T1->Clear();
 	/* snprintf, not sprintf: __buff2 is 80 bytes and __buffer is 1600. */
 	snprintf(__buff2, sizeof(__buff2), "Fatal Error: %s\nPress [ENTER] to exit...",__buffer);
@@ -884,59 +895,6 @@ void Fatal(const char*fmt,...) {
 	T1->ShutDown();
 
     exit(1);
-}
-
-/* Append one error to logs/errors.log. Flushed immediately so the record
-   survives a later crash. */
-static void LogError(const char *msg) {
-    static FILE *errLog = NULL;
-    static char seen[24][160];
-    static int seenCount = 0;
-    char stamp[32];
-    time_t now;
-    int i;
-
-    if (!errLog) {
-        char path[1024];
-        const char *dir = (const char*)((libtcodTerm*)T1)->IncursionDirectory;
-        snprintf(path, sizeof(path), "%slogs/errors.log", dir);
-        RotateErrorLog(dir, path);
-        errLog = fopen(path, "a");
-        if (!errLog)
-            return;
-        /* Head the file with what produced it. A log that does not say which
-           build wrote it cannot be compared against another run. */
-        time(&now);
-        strftime(stamp, sizeof(stamp), "%Y-%m-%d %H:%M:%S", localtime(&now));
-        fprintf(errLog, "=== session %s  Incursion %s  built %s %s ===\n",
-            stamp, VERSION_STRING, __DATE__, __TIME__);
-    }
-    time(&now);
-    strftime(stamp, sizeof(stamp), "%Y-%m-%d %H:%M:%S", localtime(&now));
-    fprintf(errLog, "%s  %s\n", stamp, msg);
-
-    /* One backtrace per distinct message. Without it the log says what went
-       wrong but not which caller did it, and these fire hundreds of times. */
-    for (i = 0; i < seenCount; i++)
-        if (!strcmp(seen[i], msg))
-            break;
-    if (i == seenCount && seenCount < (int)(sizeof(seen)/sizeof(seen[0]))) {
-        void *frames[24];
-        int n = backtrace(frames, 24);
-        char **names = backtrace_symbols(frames, n);
-
-        snprintf(seen[seenCount++], sizeof(seen[0]), "%s", msg);
-        fprintf(errLog, "    --- first occurrence, call stack ---\n");
-        if (names) {
-            for (i = 0; i < n; i++)
-                fprintf(errLog, "    %s\n", names[i]);
-            free(names);
-        }
-        fprintf(errLog, "    --- end ---\n");
-    }
-
-    fflush(errLog);
-    fprintf(stderr, "Incursion error: %s\n", msg);
 }
 
 /* Errors used to open a modal prompt that blocked until the player pressed
@@ -957,7 +915,7 @@ void Error(const char*fmt,...) {
         return;
     }
 
-    LogError(__buffer);
+    LogGameError(__buffer);
 
     if (!getenv("INCURSION_ERROR_PROMPT"))
         return;

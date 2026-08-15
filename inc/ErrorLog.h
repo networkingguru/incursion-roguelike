@@ -21,4 +21,15 @@ bool isRotatedLogName(const char *name);
    when `live` is absent or empty. `dir` must end in a path separator. */
 void RotateErrorLog(const char *dir, const char *live);
 
+/* Append one error to `dir`logs/errors.log, and echo it to stderr. Rotates on
+   the first call of a run, then writes `banner` as the session header. Records
+   one call stack per distinct message: without it the log says what went wrong
+   but not which caller did it, and these fire hundreds of times.
+
+     `banner` carries the version and build stamp rather than this file reading
+   them, because every backend has its own, and because ErrorLog.cpp depends on
+   nothing from the game -- which is what lets tools/check_logrotate.sh compile
+   it on its own. `dir` must end in a path separator. */
+void LogError(const char *dir, const char *msg, const char *banner);
+
 #endif

@@ -18,10 +18,12 @@
 #include "ErrorLog.h"
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <cctype>
 #include <ctime>
 #include <dirent.h>
+#include <execinfo.h>   /* backtrace(), for the call stack in the log */
 #include <unistd.h>
 #include <sys/stat.h>
 
@@ -103,4 +105,51 @@ void RotateErrorLog(const char *dir, const char *live) {
     }
 
     PruneArchive(dir);
+}
+
+/* Moved here from src/Wlibtcod.cpp, where it was a static: the headless
+   backend needs the same logger, and two copies of an error log would drift. */
+void LogError(const char *dir, const char *msg, const char *banner) {
+    static FILE *errLog = NULL;
+    static char seen[24][160];
+    static int seenCount = 0;
+    char stamp[32];
+    time_t now;
+    int i;
+
+    if (!errLog) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%slogs/errors.log", dir);
+        RotateErrorLog(dir, path);
+        errLog = fopen(path, "a");
+        if (!errLog)
+            return;
+        /* Head the file with what produced it. A log that does not say which
+           build wrote it cannot be compared against another run. */
+        fprintf(errLog, "%s\n", banner ? banner : "=== session ===");
+    }
+    time(&now);
+    strftime(stamp, sizeof(stamp), "%Y-%m-%d %H:%M:%S", localtime(&now));
+    fprintf(errLog, "%s  %s\n", stamp, msg);
+
+    for (i = 0; i < seenCount; i++)
+        if (!strcmp(seen[i], msg))
+            break;
+    if (i == seenCount && seenCount < (int)(sizeof(seen)/sizeof(seen[0]))) {
+        void *frames[24];
+        int n = backtrace(frames, 24);
+        char **names = backtrace_symbols(frames, n);
+
+        snprintf(seen[seenCount++], sizeof(seen[0]), "%s", msg);
+        fprintf(errLog, "    --- first occurrence, call stack ---\n");
+        if (names) {
+            for (i = 0; i < n; i++)
+                fprintf(errLog, "    %s\n", names[i]);
+            free(names);
+        }
+        fprintf(errLog, "    --- end ---\n");
+    }
+
+    fflush(errLog);
+    fprintf(stderr, "Incursion error: %s\n", msg);
 }
