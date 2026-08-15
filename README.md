@@ -147,9 +147,16 @@ keeps, and it keeps *moving* for thousands of turns afterwards.
 
 The same backend runs the game's own ruleset checker, which had never been part
 of anyone's workflow because it drew its report into a scrollable box on
-screen. It now also writes `logs/consistency.txt`: 136 distinct effects that do
-nothing when they fire, six effect names declared more than once, and a spell
-in no spellbook.
+screen. It now also writes `logs/consistency.txt`.
+
+Reading that report carefully was worth more than running it. Its largest
+section is headed *Purposeless Effects*, and the name is a trap: `Purpose` is
+the monster-AI spell-selection hint, not an implementation flag. A zero there
+means *no monster will ever choose to cast this*, not *this does nothing* —
+and `EP_PLAYER_ONLY` is `0x00000`, so a deliberate player-only spell is
+indistinguishable from an unfinished one. Of the 136 entries, none were found
+to be unimplemented. Nine are the real finding: spells that appear only on a
+monster's list, which that monster can therefore never cast.
 
 ## How this project works
 
