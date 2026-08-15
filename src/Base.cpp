@@ -65,9 +65,43 @@ String * tmpstr(const char *data, bool newbuff)
         s->Length = strlen(data); }
     
     s->Canary = 0xABCDEF12;
-    StrBufDelQueue[iStrBufDelQueue++] = s;
-    ASSERT(iStrBufDelQueue < STRING_QUEUE_SIZE - 10);
-        
+
+    /* The bound is tested BEFORE the write. It used to be tested after, as an
+       ASSERT -- and ASSERT here only calls Error(), which logs and returns
+       (inc/Defines.h). So a full queue wrote one pointer past the end of this
+       64000-entry global on every call, into whatever globals follow it, while
+       reporting the same failed assert each time and changing nothing. That is
+       how a real session died on 2026-08-15: twelve identical assert lines in
+       one second, then SIGSEGV on a wild address.
+
+       When the queue is full the string is NOT queued and is still returned.
+       That leaks one String, and a leak is better than corrupting memory.
+
+       PurgeStrings() must NOT be called from here. It deletes the queued
+       Strings, and a tmpstr result is normally a temporary inside the
+       expression that called it, so purging part-way through would free a
+       String the caller is about to read.
+
+       The warning stays at the old threshold so the queue filling is still
+       reported before it is full, but it is reported ONCE. The crash it
+       replaced was loud, and a silent cap would be a worse diagnostic. */
+    if (iStrBufDelQueue < STRING_QUEUE_SIZE)
+      StrBufDelQueue[iStrBufDelQueue++] = s;
+
+    if (iStrBufDelQueue >= STRING_QUEUE_SIZE - 10)
+      {
+        static bool reported = false;
+        if (!reported)
+          {
+            reported = true;
+            Error("String queue is full at %d of %d. Strings are now leaked "
+                  "rather than queued. PurgeStrings() is driven by drawing, "
+                  "so an event storm between two draws -- a long monster "
+                  "pathfind, for one -- can fill it inside a single turn.",
+                  (int)iStrBufDelQueue, (int)STRING_QUEUE_SIZE);
+          }
+      }
+
     return s;
   }
 

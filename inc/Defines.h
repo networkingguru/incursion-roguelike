@@ -58,7 +58,12 @@ typedef signed int        hObj;
 #define MAX_MONSTER_ACTIONS 15
 #define MAX_GALLERY_SIZE    16
 #define EVENT_STACK_SIZE    128
+/* Overridable so a probe build can force the queue full in seconds instead of
+   waiting for a monster to path far enough to allocate 64000 temporaries.
+   tools/check_strqueue.sh uses that to prove the bound in tmpstr bites. */
+#ifndef STRING_QUEUE_SIZE
 #define STRING_QUEUE_SIZE   64000
+#endif
 
 
 #ifdef ASSERT
