@@ -691,7 +691,7 @@ SkipShifting:
       int16 ic;
       ic = 0;
       for (it=m->FItemAt(x,y);it;it=m->NItemAt(x,y)) {
-        Target newT;
+        Target newT = {};
         ts.RateAsTarget(this,it,newT);
         i = newT.priority;
         if (ic > 20)

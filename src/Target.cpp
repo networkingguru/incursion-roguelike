@@ -974,7 +974,7 @@ bool TargetSystem::addTarget(Target &newT)
 
 bool TargetSystem::addCreatureTarget(Creature *targ, TargetType type)
 {
-  Target newT;
+  Target newT = {};
   newT.type = type;
   newT.data.Creature.c = targ->myHandle;
   newT.priority = 30; 
@@ -1019,7 +1019,7 @@ bool TargetSystem::giveOrder(Creature * me, Creature *master, TargetType order, 
    
   } 
 
-  Target newT;
+  Target newT = {};
   newT.type = order;
   if (victim && victim->isCreature()) 
     newT.data.Creature.c = victim->myHandle; 
@@ -1302,7 +1302,7 @@ void TargetSystem::Consider(Creature *me, Thing *t)
   if (hasTargetThing(t))
     return;
 
-  Target newT;
+  Target newT = {};
 
   RateAsTarget(me,t,newT);
 
@@ -1321,7 +1321,7 @@ void TargetSystem::HearNoise(Creature *me, uint8 x, uint8 y)
     Consider(me,c);
   } else {
     // investigate!
-    Target newT;
+    Target newT = {};
     newT.type = TargetArea;
     newT.priority = 1;
     newT.why.Set(TargetHeardNoise);
@@ -1349,7 +1349,7 @@ void TargetSystem::Wanderlust(Creature *me, Thing *wander_to)
       }
     if (me->m->SolidAt(x,y))
       continue;
-    Target newT;
+    Target newT = {};
     newT.type = TargetWander;
     newT.priority = wander_to ? 40 : 1;
     newT.why.Set(TargetWanderlust);
@@ -1383,7 +1383,7 @@ void TargetSystem::Liberate(Creature *me, Creature *lib)
       }
     else
       {
-        Target newT;
+        Target newT = {};
         newT.type = TargetEnemy;
         newT.priority = 50;
         newT.why.Set(TargetLiberated);
@@ -1491,7 +1491,7 @@ void TargetSystem::ItHitMe(Creature *me, Creature *t, int16 damage) {
     MapIterate(me->m,cr,i)
         if (cr->isCreature())
             if (cr->isFriendlyTo(me) && !cr->isHostileTo(t)) {
-                Target newT;
+                Target newT = {};
                 newT.type = TargetEnemy;
                 newT.priority = 20;
                 newT.why.Set(TargetHitMe);
