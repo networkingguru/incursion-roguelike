@@ -318,6 +318,22 @@ Thing * Target::GetThingOrNULL()
     case TargetMount:
     case OrderAttackTarget:
     default:
+#ifdef TARGET_PROBE
+      /* Diagnostic only. Names the target type behind every bad handle that
+         reaches this branch, which is the difference between "the code says
+         this could happen" and "this is what happens". */
+      if (data.Creature.c) {
+        if (!theRegistry->Exists(data.Creature.c))
+          Error("TARGET_PROBE: type %d holds handle %d, which is no object",
+            (int)type, (int)data.Creature.c);
+        else {
+          Object *o = theRegistry->Get(data.Creature.c);
+          if (o && !o->isCreature())
+            Error("TARGET_PROBE: type %d holds handle %d, an object that is "
+              "not a creature", (int)type, (int)data.Creature.c);
+        }
+      }
+#endif
       if (data.Creature.c && theRegistry->Exists(data.Creature.c))
         return oCreature(data.Creature.c);
       else
@@ -974,7 +990,7 @@ bool TargetSystem::addTarget(Target &newT)
 
 bool TargetSystem::addCreatureTarget(Creature *targ, TargetType type)
 {
-  Target newT;
+  Target newT = {};
   newT.type = type;
   newT.data.Creature.c = targ->myHandle;
   newT.priority = 30; 
@@ -1019,10 +1035,22 @@ bool TargetSystem::giveOrder(Creature * me, Creature *master, TargetType order, 
    
   } 
 
-  Target newT;
+  /* Zero-initialised, and that is the whole of a defect that fired 32,614
+     times in a single session. An order often has neither a victim nor a
+     point -- Encounter.cpp:1119 gives a formation's escorts OrderWalkNearMe
+     with neither, and six sites in Social.cpp do the same -- so both
+     assignments below were skipped and newT.data kept whatever was on the
+     stack. Monster::Movement then read that as the handle of the creature to
+     follow (Monster.cpp:1778, and again at 1622): it sets `follow` correctly
+     from getLeader() first, and then overrides it whenever the garbage
+     happens to resolve to a live object, casting an Item to a Creature and
+     reading ->x and ->y off it. Zero is the answer the reader already
+     handles, because GetThingOrNULL returns NULL for a zero handle and the
+     getLeader() value stands. */
+  Target newT = {};
   newT.type = order;
-  if (victim && victim->isCreature()) 
-    newT.data.Creature.c = victim->myHandle; 
+  if (victim && victim->isCreature())
+    newT.data.Creature.c = victim->myHandle;
   if (x != -1) {
     newT.data.Area.x = x;
     newT.data.Area.y = y;
@@ -1302,7 +1330,7 @@ void TargetSystem::Consider(Creature *me, Thing *t)
   if (hasTargetThing(t))
     return;
 
-  Target newT;
+  Target newT = {};
 
   RateAsTarget(me,t,newT);
 
@@ -1321,7 +1349,7 @@ void TargetSystem::HearNoise(Creature *me, uint8 x, uint8 y)
     Consider(me,c);
   } else {
     // investigate!
-    Target newT;
+    Target newT = {};
     newT.type = TargetArea;
     newT.priority = 1;
     newT.why.Set(TargetHeardNoise);
@@ -1349,7 +1377,7 @@ void TargetSystem::Wanderlust(Creature *me, Thing *wander_to)
       }
     if (me->m->SolidAt(x,y))
       continue;
-    Target newT;
+    Target newT = {};
     newT.type = TargetWander;
     newT.priority = wander_to ? 40 : 1;
     newT.why.Set(TargetWanderlust);
@@ -1383,7 +1411,7 @@ void TargetSystem::Liberate(Creature *me, Creature *lib)
       }
     else
       {
-        Target newT;
+        Target newT = {};
         newT.type = TargetEnemy;
         newT.priority = 50;
         newT.why.Set(TargetLiberated);
@@ -1491,7 +1519,7 @@ void TargetSystem::ItHitMe(Creature *me, Creature *t, int16 damage) {
     MapIterate(me->m,cr,i)
         if (cr->isCreature())
             if (cr->isFriendlyTo(me) && !cr->isHostileTo(t)) {
-                Target newT;
+                Target newT = {};
                 newT.type = TargetEnemy;
                 newT.priority = 20;
                 newT.why.Set(TargetHitMe);
