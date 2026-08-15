@@ -21,6 +21,7 @@ Two minutes from a clean checkout.
 | | |
 |---|---|
 | **macOS ARM64** | Builds, plays, saves, loads |
+| **Terminal (curses)** | Plays in any POSIX terminal — no SDL, no libtcod |
 | **Headless** | Plays itself from a key script, with no display |
 | **macOS x86_64 / universal** | Not yet |
 | **Linux** | Not yet — unblocked, next up |
@@ -118,21 +119,51 @@ not in this file.
 
 ## Playing itself
 
-The game now has a third terminal backend that needs no terminal. It reads its
-keystrokes from a file and writes its screen to a file, so a session runs with
-no display, no keyboard and nobody watching.
+The game now has a third terminal backend, and it does two jobs. `src/Wposix.cpp`
+looks at its own standard input and output. Given a real terminal it runs a live
+curses UI. Given anything else it takes its keystrokes from a file and writes its
+screen to a file, so a session runs with no display, no keyboard and nobody
+watching.
 
 ```
 BACKEND=posix ./build_macos.sh                    # links no SDL, no libtcod
 tools/headless.sh tools/keys/smoke.keys 1         # one session
+tools/headless.sh --tty tools/keys/smoke.keys 1   # the same, drawn by curses
 tools/soak.sh 200 1                               # two hundred dungeons
 ```
+
+The curses UI was not a goal. It fell out of building the harness, and it is the
+first way to play Incursion in a terminal on any platform — the existing
+`src/Wcurses.cpp` is Windows and pdcurses only.
+
+It also leaves the engine unusually easy to re-skin. The backend narrowed the
+game to two chokepoints: output is one plain array of `Glyph`, and input is one
+`ScriptKey`, which a live keystroke and a script token both become before
+anything downstream sees them. A new front end has to satisfy those two and
+nothing else.
 
 Runs repeat exactly. The game used to reach for the clock as a source of
 randomness in six places, so no two sessions ever matched and no screen could
 be compared with an earlier one; `INCURSION_SEED` now replaces all six. The
 same seed and the same key script produce byte-identical screens, and a
 different seed produces a different game — both checked, in both directions.
+
+That determinism holds for one binary. It does **not** survive a code change, and
+a measurement on 2026-08-15 settled how to compare two builds. Almost any correct
+fix shifts the game state a little, and from the first changed decision onward the
+screens diverge and the crashing seeds move: across two controlled A/B pairs the
+seed that segfaulted moved between 3362 and 3387 depending on which fix was
+present. So neither screen equality nor "does seed N crash" is a usable
+regression signal here. Error volume and message-set membership are. Those held
+still and stayed readable — 89,545 asserts to zero for one fix, with the
+post-change message set a strict subset of the pre-change one.
+
+**A run that measures nothing now says so.** A session whose keystrokes are all
+eaten by character generation never enters a map, and the game exits 0. The
+harness used to report that as a clean pass, and 250 such sessions were once read
+as evidence that a fix worked. `tools/headless.sh` now promotes that ending to
+exit 5, `NO GAMEPLAY`; `tools/soak.sh` counts it by name and warns; and
+`check_headless.sh` asserts it, having been shown to fail without the guard.
 
 This is what makes `logs/errors.log` — the best defect finder this project has
 — fill up without a person. The first six-session soak produced a one-line
@@ -157,6 +188,36 @@ and `EP_PLAYER_ONLY` is `0x00000`, so a deliberate player-only spell is
 indistinguishable from an unfinished one. Of the 136 entries, none were found
 to be unimplemented. Nine are the real finding: spells that appear only on a
 monster's list, which that monster can therefore never cast.
+
+### What the soaks have found so far
+
+About 1,100 unattended sessions have run. One engine defect is fixed and
+measured, eight more are diagnosed to root cause with a reproducing seed, and
+one claim had to be withdrawn.
+
+**Fixed and verified.** `TargetSystem::giveOrder` built its `Target`
+uninitialised, so an escort read stack garbage as the handle of the creature to
+follow and walked toward an arbitrary object instead of its leader. Two of the
+eight construction sites also left `damageDoneToMe` uninitialised, which turned
+escorts hostile to their own leaders after a stray hit. Zero-initialising all
+eight, measured over 250 seeds against a build differing in nothing else:
+
+| | asserts at `Base.h:577` | total error lines |
+|---|---|---|
+| before | 89,545 | 139,948 |
+| after | 0 | 48,245 |
+
+**Withdrawn.** A second change — making `Player::MoveDepth`'s follower array
+re-entrant — was committed as a segfault fix. It is not one. A controlled A/B
+showed the same seed segfaulting identically with and without it, on the same
+stack. The re-entrancy it describes is real and the stack proves it, so the
+change is kept as hardening, but the crash claim was wrong and is retracted in
+the history.
+
+The original measurement passed because the scratch worktree it ran in lacked
+the modified `Options.Dat` this tree uses, so no session in either arm ever
+entered a map. Two runs that both did nothing agreed perfectly. That is the
+whole reason for the `NO GAMEPLAY` exit code above.
 
 ## How this project works
 
