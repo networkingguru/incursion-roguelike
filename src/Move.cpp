@@ -1258,8 +1258,37 @@ SkipConfirms:
 	return DONE;
 }
 
+/* Who is in the middle of falling down a level, so that the damage is paid on
+   arrival rather than on departure.
+
+   THIS USED TO BE A Creature*, AND THAT MADE THE SAME SEED PLAY A DIFFERENT
+   GAME. The creature that falls is not always the creature that arrives: it
+   can die on the way or be removed, and then nothing clears these and the
+   pointer dangles. The test below is `Falling == this`, so the next creature
+   the allocator happens to place on that freed address answers to another
+   creature's fall and takes 3d6 for each level of it. Whether any creature
+   lands there is decided by the allocator, which puts objects somewhere
+   different on every launch.
+
+   Measured on seed 3, two runs identical in everything except memory layout,
+   both reaching a newly generated monster on shallow water with FallDepth at
+   2 and the same 204,218 random numbers drawn. One run answered `Falling ==
+   this` yes and rolled 6d6 of damage the monster had not earned; the other
+   answered no and walked on. From there the two games parted for good.
+
+   A handle is an identity the game assigns itself and never gives to a second
+   object, so it still answers "is this the same creature" after the first one
+   is gone. Same fix as TargetSort in commit 2f0100b, and the same reason.
+
+   NOT FIXED HERE, and worth its own look: FallDepth was 2 at a moment when a
+   newly generated monster was being placed, and that monster had not fallen.
+   So a fall outlived itself. These are cleared on one path only -- the faller
+   arriving and paying -- and a faller that dies or is removed on the way never
+   reaches it. The next creature to fall then pays its own 3d6 and the leftover
+   too. See inc-tsf. This change stops the leftover being charged to a creature
+   that never fell at all; it does not stop it being left behind. */
 int16 FallDepth = 0;
-Creature *Falling = NULL;
+hObj  Falling = 0;
 rID FallTerrain = 0;
 
 void Creature::TerrainEffects() {
@@ -1373,7 +1402,7 @@ void Creature::TerrainEffects() {
 				thisp->MyTerm->Clear();
 			}
 			FallDepth += 1;
-			Falling = this;
+			Falling = myHandle;
 			FallTerrain = m->TerrainAt(x, y);
 			if (isPlayer())
 				thisp->MyTerm->ShowStatus();
@@ -1381,12 +1410,12 @@ void Creature::TerrainEffects() {
 			return;
 		}
 
-	if (FallDepth && Falling == this) {
+	if (FallDepth && Falling == myHandle) {
 		ThrowDmg(EV_DAMAGE, AD_FALL, Dice::Roll(3 * FallDepth, 6), XPrint("falling into a <Res>", FallTerrain), this, this);
 		if (isDead())
 			return;
 		FallDepth = 0;
-		Falling = NULL;
+		Falling = 0;
 		FallTerrain = 0;
 	}
 
