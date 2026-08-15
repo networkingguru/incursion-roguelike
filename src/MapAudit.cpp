@@ -30,8 +30,16 @@
 
 bool MapAuditEnabled() {
     static int on = -1;
-    if (on < 0)
-        on = getenv("INCURSION_MAP_AUDIT") ? 1 : 0;
+    if (on < 0) {
+        /* The VALUE decides, not the mere presence of the variable. This used
+           to be `getenv(...) ? 1 : 0`, so INCURSION_MAP_AUDIT=0 switched the
+           audit ON, and a caller who wrote 0 to turn it off got it anyway.
+           That matters because the audit is not free: a sample of a headless
+           run on 2026-08-15 put 75% of the process inside AuditMap, so a
+           timing run that could not turn it off was measuring the audit. */
+        const char *s = getenv("INCURSION_MAP_AUDIT");
+        on = (s && *s && strcmp(s, "0")) ? 1 : 0;
+    }
     return on != 0;
 }
 

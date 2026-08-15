@@ -66,10 +66,13 @@ ln -sfn "$ROOT/mod" "$RUN/mod"
 ln -sfn "$ROOT/lib" "$RUN/lib"
 [ -f "$ROOT/Options.Dat" ] && cp "$ROOT/Options.Dat" "$RUN/Options.Dat"
 
-# The probes that cost nothing and have already caught real defects. The map
-# audit is the one that can turn inc-6d5 from code-reading into observation.
-export INCURSION_MAP_AUDIT=1
-export INCURSION_SAVE_PROBE=1
+# The probes that have already caught real defects. They do NOT cost nothing,
+# which is why they can be turned off: a sample of a headless run on 2026-08-15
+# put 75% of it inside AuditMap, so a session with the audit on measures the
+# audit and not the game. Anything timing the engine must set
+# INCURSION_MAP_AUDIT=0, and anything hunting defects should leave it alone.
+export INCURSION_MAP_AUDIT="${INCURSION_MAP_AUDIT:-1}"
+export INCURSION_SAVE_PROBE="${INCURSION_SAVE_PROBE:-1}"
 export INCURSIONPATH="$RUN/"
 [ -n "$SEED" ] && export INCURSION_SEED="$SEED"
 
