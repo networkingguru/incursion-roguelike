@@ -206,20 +206,54 @@ int32  VMachine::szMemory;
 Breakpoint VMachine::Breakpoints[64];
 int16  VMachine::nBreakpoints;
 
-char CurrentRoutine[64];
 extern String & EventName(int16 Ev);
+
+/* The breadcrumb that names the script the VM is running, so a crash inside a
+   script can be blamed on the right one.
+
+   It used to be built as a formatted string on EVERY event, in Execute below.
+   That is a debug-build cost, except that every macOS build is a DEBUG build:
+   build_macos.sh must pass -DDEBUG because src/RComp.cpp is wrapped in it while
+   the generated src/yygram.cpp calls into it unconditionally, so the port does
+   not link without it. The cost therefore shipped.
+
+   It is not a small cost. EventName builds three Strings, each of which goes
+   through tmpstr and onto the delete queue. Map::ShortestPath fires an event
+   per square it examines, so one monster pathfinding across a large map spends
+   several allocations per square, per monster, per turn. Measured on
+   2026-08-15: about 190 MB of allocation churn per turn, and a single turn
+   filling the 64000-entry string queue.
+
+   Nothing reads this except the eight Error() sites below, all of which are
+   failure paths that almost never run. So the ids are recorded and the string
+   is built only when one of them actually reports. */
+static rID   CurrentRoutineID    = 0;
+static int16 CurrentRoutineEvent = 0;
+
+/* Also fixes an unbounded write. This was a 64-byte global filled by strcpy
+   and two strcats with no length check, on the hottest path in the engine: a
+   resource name plus "::" plus an event name longer than 63 characters wrote
+   past it into whatever globals followed. snprintf truncates instead. */
+const char *CurrentRoutineName()
+  {
+    static char buf[192];
+    snprintf(buf, sizeof(buf), "%s::%s",
+             NAME(CurrentRoutineID),
+             (const char*)EventName(CurrentRoutineEvent));
+    return buf;
+  }
 
 int32* VMachine::getMemorySafe(int32 a)
   {
     static int32 scratch;
     if (a < 0)
       { Error(Format("%s: Invalid (negative) memory reference!",
-                       CurrentRoutine));
+                       CurrentRoutineName()));
         isTracing = true;
         return &scratch; }
     if (a >= szMemory)
       { Error(Format("%s: Invalid (out of bounds) memory reference!",
-                       CurrentRoutine));
+                       CurrentRoutineName()));
         isTracing = true;
         return &scratch; }
     return &(Memory[a]);
@@ -230,12 +264,12 @@ int32* VMachine::getStackSafe(int32 a)
     static int32 scratch;
     if (a < 0)
       { Error(Format("%s: Invalid (negative) stack reference!",
-                       CurrentRoutine));
+                       CurrentRoutineName()));
         isTracing = true;
         return &scratch; }
     if (a >= 8192)
       { Error(Format("%s: Invalid (out of bounds) stack reference!",
-                       CurrentRoutine));
+                       CurrentRoutineName()));
         isTracing = true;
         return &scratch; }
     return &(Stack[a]);  
@@ -248,7 +282,7 @@ String & VMachine::getStringSafe(hText ht)
       { 
         if (ht > theGame->Modules[0]->szTextSeg)
           { Error(Format("%s: Out of bounds text segment reference!",
-                                CurrentRoutine));
+                                CurrentRoutineName()));
             isTracing = true;
             scratch = "<badtext>";
             return *tmpstr(scratch); }
@@ -257,7 +291,7 @@ String & VMachine::getStringSafe(hText ht)
       }
     if (ht <= -64)
       { Error(Format("%s: Invalid string register reference!",
-                       CurrentRoutine));
+                       CurrentRoutineName()));
         isTracing = true;
         scratch = "<badstr>";
         return *tmpstr(scratch); }
@@ -269,13 +303,13 @@ int32* VMachine::getRegSafe(int32 n)
     static int32 badReg;
     if (n < 0)
       { Error(Format("%s: Invalid (negative) register number!",
-                       CurrentRoutine));
+                       CurrentRoutineName()));
         isTracing = true;
         badReg = 0;
         return &badReg; }
     if (n >= 64)
       { Error(Format("%s: Invalid (above 63) register number!",
-                       CurrentRoutine));
+                       CurrentRoutineName()));
         isTracing = true;
         return &badReg; }
     return &(Regs[n]);  
@@ -398,11 +432,13 @@ int32 VMachine::Execute(EventInfo *e, rID _xID, hCode CP)
     
     #ifdef DEBUG
     /* We're doing this so when a script causes an access violation, we
-       can quickly discover WHAT script did it. */
+       can quickly discover WHAT script did it. Recording the two ids costs two
+       stores; CurrentRoutineName() turns them into the same string, and only
+       when something reports. The condition is unchanged, so the breadcrumb
+       still names the last event that was neither ISTARGET nor CRITERIA. */
     if (e->Event != EV_ISTARGET && e->Event != EV_CRITERIA) {
-      strcpy(CurrentRoutine,NAME(_xID));
-      strcat(CurrentRoutine,"::");
-      strcat(CurrentRoutine,EventName(e->Event));
+      CurrentRoutineID    = _xID;
+      CurrentRoutineEvent = e->Event;
       }
     #endif
     

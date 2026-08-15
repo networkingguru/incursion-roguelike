@@ -54,9 +54,26 @@ int32    iStrBufDelQueue;
   ASSERT(Canary == 0xABCDEF12 || !Canary); \
   ASSERT((!Length) || Length == strlen(Buffer));
 
+#ifdef TMPSTR_COUNT
+/* Counts every temporary String a session builds, and reports the total on
+   exit. Not compiled by default. This exists because two attempts to measure
+   allocation pressure by shrinking STRING_QUEUE_SIZE both measured the wrong
+   thing -- character generation alone exhausts a small queue, long before the
+   gameplay the question was about. A count is not a threshold and cannot be
+   fooled that way. Build with EXTRA_CXXFLAGS=-DTMPSTR_COUNT. */
+static long long tmpstrCalls = 0;
+static void ReportTmpstrCount(void)
+  { fprintf(stderr, "TMPSTR_COUNT: %lld temporary strings\n", tmpstrCalls); }
+#endif
+
 String * tmpstr(const char *data, bool newbuff)
   {
     String *s;
+#ifdef TMPSTR_COUNT
+    { static bool armed = false;
+      if (!armed) { armed = true; atexit(ReportTmpstrCount); } }
+    tmpstrCalls++;
+#endif
     if (newbuff)
       s = new String(data);
     else
