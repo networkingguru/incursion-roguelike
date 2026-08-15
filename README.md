@@ -142,11 +142,48 @@ game to two chokepoints: output is one plain array of `Glyph`, and input is one
 anything downstream sees them. A new front end has to satisfy those two and
 nothing else.
 
-Runs repeat exactly. The game used to reach for the clock as a source of
+Short runs repeat exactly. The game used to reach for the clock as a source of
 randomness in six places, so no two sessions ever matched and no screen could
 be compared with an earlier one; `INCURSION_SEED` now replaces all six. The
 same seed and the same key script produce byte-identical screens, and a
 different seed produces a different game — both checked, in both directions.
+
+**Long runs do not**, and that was measured on 2026-08-15, after this section
+first claimed otherwise. Over a full dive, seed 8 stays byte-identical for two
+screens and then parts company: at depth 12 one run has the character alive
+with the map drawn, and the other has `You are drowning!` and `You die...`.
+
+The dice are not the cause. The same binary run thirty times with address
+randomisation switched off was identical thirty times; the same binary with it
+switched on was not, four runs in fifteen. So the game reads a memory address
+as if it were data. One of the places it does that is now known, and it is not
+subtle — `TargetSort` in `src/Target.cpp` ordered two equally-rated targets by
+**subtracting their objects' addresses**. Every reader of that list takes the
+first match, so the address ordering chose which target a monster attacked, and
+one decision was enough to end the game differently. `git blame` puts the line
+in the 2014 import: it is original Incursion, not a port defect, and it is
+wrong on Windows and Linux too, both of which randomise addresses as standard.
+
+Fixing it makes seed 8 repeat, eighteen runs out of eighteen. It does **not**
+close the subject: seed 3 still produces four outcomes in twenty-four runs, and
+diverges inside `Map::Generate` instead. It is the same class of fault — that
+binary is also identical ten times out of ten with randomisation off. So this
+is a defect class rather than a bug, tracked in `inc-dhc`.
+
+The tool that finds them is in the tree, behind `#ifdef DIVERGE_PROBE` and
+compiled into nothing by default:
+
+```
+EXTRA_CXXFLAGS=-DDIVERGE_PROBE OUT=incursion-probe BACKEND=posix ./build_macos.sh
+tools/keys/dive12.keys      # the six-second reproducer, seed 8
+```
+
+It counts every random number the game draws and prints the running total at
+map generation, at each creature's action, and at the monster's target list.
+Two runs of one seed draw the same numbers in the same order until something
+outside the generator changes a decision, so **the first probe where the counts
+differ is the first place the two runs stopped playing the same game.** That is
+what located the sort, starting from nothing more than a screen that differed.
 
 That determinism holds for one binary. It does **not** survive a code change, and
 a measurement on 2026-08-15 settled how to compare two builds. Almost any correct
@@ -157,6 +194,33 @@ present. So neither screen equality nor "does seed N crash" is a usable
 regression signal here. Error volume and message-set membership are. Those held
 still and stayed readable — 89,545 asserts to zero for one fix, with the
 post-change message set a strict subset of the pre-change one.
+
+That is now a gate rather than an argument:
+
+```
+tools/gate_record.sh tools/keys/dive.keys 40 1   # what this build complains about
+tools/gate_compare.sh                            # what the next one complains about
+```
+
+`record` plays the seeds and writes `tools/gates/dive.baseline`, which is
+committed. `compare` plays them again on the current build and fails on a
+message the baseline has never seen, on sessions that stopped reaching a map,
+and on new `Fatal()` or watchdog endings. A message that has *gone* is reported
+as a fix, not a failure. Volume is reported and never failed on, because a
+change that keeps the character alive longer produces more turns and therefore
+more of everything.
+
+Two things it deliberately tolerates. A message seen in only one or two
+sessions is printed but not failed on, because the engine produces those by
+itself (`inc-dhc`); a real regression of this kind arrives in many sessions at
+once, as the 89,545 did. And it detects only what reaches a log — a defect that
+silently does the wrong thing and says nothing passes clean. It never replaces
+a play-test.
+
+It was shown to fail, not merely to pass: reverting the `Target` zero-init and
+rebuilding moved the gate from `PASS` to `FAIL` with 378 assertions at
+`inc/Base.h:577` across 18 of 40 sessions, and restoring the fix returned it to
+`PASS`.
 
 **A run that measures nothing now says so.** A session whose keystrokes are all
 eaten by character generation never enters a map, and the game exits 0. The
@@ -222,13 +286,15 @@ whole reason for the `NO GAMEPLAY` exit code above.
 ## How this project works
 
 **Agents own the C++.** Port, engine, build and harness are all
-machine-checkable, and four regression checks run on demand:
+machine-checkable, and six regression checks run on demand:
 
 ```
 ./tools/check_abs_path.sh        # the relative-directory bug
 ./tools/check_error_handling.sh  # error reporting stays non-blocking
 ./tools/check_abi.sh             # type widths + handle/pointer confusion
-./tools/check_headless.sh        # unattended play, and that runs repeat
+./tools/check_headless.sh        # unattended play, and that short runs repeat
+./tools/check_strqueue.sh        # the string queue's bound
+./tools/check_gate.sh            # the regression gate reaches the right verdict
 ```
 
 Each has been proven to *fail* when its defect is reintroduced, not merely to

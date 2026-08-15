@@ -1355,10 +1355,22 @@ void init_by_array(unsigned long init_key[], int KY_length)
     mt[0] = 0x80000000UL; /* MSB is 1; assuring non-zero initial array */ 
 }
 
+#ifdef DIVERGE_PROBE
+/* Counts every random number the game has drawn. Two runs of one seed draw the
+   same numbers in the same order unless something outside the generator has
+   changed a decision, so the first place this count differs between two runs
+   is the first place they stopped playing the same game. See inc-dhc. Not
+   compiled into any shipped binary. */
+unsigned long long RNGCalls = 0;
+#endif
+
 /* generates a random number on [0,0xffffffff]-interval */
 unsigned long genrand_int32(void)
 {
     unsigned long y;
+#ifdef DIVERGE_PROBE
+    RNGCalls++;
+#endif
     static unsigned long mag01[2]={0x0UL, MATRIX_A};
     /* mag01[x] = x * MATRIX_A  for x=0,1 */
 

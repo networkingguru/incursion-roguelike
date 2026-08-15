@@ -292,6 +292,12 @@ NowDoTheMount:
                         t->Timeout += 30; 
                     else do {
                         ASSERT(t->__Stati.Nested == 0);
+#ifdef DIVERGE_PROBE
+                        { extern unsigned long long RNGCalls;
+                          fprintf(stderr, "PROBE act turn=%ld thing=%lu type=%d rng=%llu\n",
+                                  (long)Turn, (unsigned long)t->myHandle,
+                                  (int)t->Type, RNGCalls); fflush(stderr); }
+#endif
                         ((Creature*)t)->ChooseAction();
                         ASSERT(t->__Stati.Nested == 0);
                     } while (t->Type == T_PLAYER && !t->Timeout && !t->HasStati(ACTING));

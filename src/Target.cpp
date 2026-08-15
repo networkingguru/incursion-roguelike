@@ -1213,8 +1213,31 @@ static int TargetSort(const void *a, const void *b)
   else if (l->type == TargetInvalid) return 999;
   else if (r->priority == l->priority) {
     if (r->type == l->type) {
-      return (r->GetThingOrNULL() - l->GetThingOrNULL());
-    } else return (r->type - l->type); 
+      /* Two targets that tie on priority and type were ordered by SUBTRACTING
+         THE TWO OBJECTS' ADDRESSES. Every platform places the heap somewhere
+         different on each launch, so equal targets sorted into a different
+         order on every run of the same seed. Readers of this list take the
+         first match, so a monster picked a different target, and from that one
+         decision the game went a different way: seed 8 left the character
+         alive at depth 12 in one run and drowned in the next, with identical
+         input. Thirty runs with address randomisation disabled were identical;
+         the same binary with it enabled was not.
+
+         A handle is an identity the game assigns itself, so it answers the
+         same question and gives the same answer every time. The direction is
+         unchanged -- the larger of the two still sorts first.
+
+         The subtraction was wrong a second way: it is a 64-bit pointer
+         difference returned as an int, so on a large enough heap even its sign
+         was not dependable. */
+      Thing *lt = l->GetThingOrNULL(),
+            *rt = r->GetThingOrNULL();
+      hObj lh = lt ? lt->myHandle : 0,
+           rh = rt ? rt->myHandle : 0;
+      if (rh == lh)
+        return 0;
+      return rh > lh ? 1 : -1;
+    } else return (r->type - l->type);
   } else return (r->priority - l->priority); 
 }
 

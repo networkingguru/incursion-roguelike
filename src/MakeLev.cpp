@@ -1327,6 +1327,17 @@ void Map::LoadFixedMap(rID mID, int16 _Depth, Map *Above, int8 _Luck) {
             At(x, y).Priority = 0;
 }
 
+#ifdef DIVERGE_PROBE
+extern unsigned long long RNGCalls;
+#define PROBE(where) fprintf(stderr, "PROBE %-10s depth=%-3d rng=%llu\n", \
+                             where, (int)_Depth, RNGCalls), fflush(stderr)
+#define PROBE2(where) fprintf(stderr, "PROBE %-10s depth=%-3d rng=%llu\n", \
+                              where, (int)Depth, RNGCalls), fflush(stderr)
+#else
+#define PROBE(where)
+#define PROBE2(where)
+#endif
+
 void Map::Generate(rID _dID, int16 _Depth, Map *Above, int8 Luck) {
     int16 i, j, n, fCount, tot, c;
     int16 x, y, sx, sy, dx, dy, cx, cy, px, py, Streamers, Tries;
@@ -1334,6 +1345,8 @@ void Map::Generate(rID _dID, int16 _Depth, Map *Above, int8 Luck) {
     Rect r;
     Annotation *a;
     Thing *t, *t2;
+
+    PROBE("gen-in");
     Item *it;
     Portal *st;
     bool NarrowChasm = false;
@@ -2276,6 +2289,8 @@ StartAgain:
         for (y = 0; y < sizeY; y++)
             At(x, y).Priority = 0;
 
+    PROBE2("cull-in");
+
     /* HACKFIX */
     // TODO(design-decision-difficulty): Remove all monsters above the level's challenge rating.
     int16 capCR = Depth + (theGame->Opt(OPT_OOD_MONSTERS) ? 3 : 1);
@@ -2306,6 +2321,8 @@ RestartVerifyMon:
                 cr->ts.Retarget(cr, true);
             }
     }
+
+    PROBE2("gen-out");
 
     inGenerate = false;
 

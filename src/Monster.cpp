@@ -448,6 +448,22 @@ RestartTargetLoop:
     }
   } 
 
+#ifdef DIVERGE_PROBE
+  /* The target list as the monster sees it, before anything reads it. Two runs
+     of one seed used to reach this line with the same targets in a different
+     ORDER, and that is what inc-dhc turned out to be. */
+  { extern unsigned long long RNGCalls; int q;
+    fprintf(stderr, "PROBE tgt h=%lu n=%d rng=%llu", (unsigned long)myHandle,
+            (int)ts.tCount, RNGCalls);
+    for (q = 0; q < ts.tCount; q++)
+      fprintf(stderr, " [t=%d h=%lu p=%d v=%d]", (int)ts.t[q].type,
+              (unsigned long)ts.t[q].data.Creature.c,
+              (int)ts.t[q].priority, (int)ts.t[q].vis);
+    fprintf(stderr, " mtarg=%lu rtarg=%lu\n",
+            (unsigned long)(mtarg ? mtarg->myHandle : 0),
+            (unsigned long)(rtarg ? rtarg->myHandle : 0));
+    fflush(stderr); }
+#endif
   isPoisoned = HasStati(POISONED);
   isDiseased = HasStati(DISEASED);
   StatiIterNature(this,AFRAID)
