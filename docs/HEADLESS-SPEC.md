@@ -134,3 +134,46 @@ so `ErrorLog.cpp` keeps depending on nothing from the game and
 
 Phases 1–4 stand on their own. Phase 5 is the part with no automated oracle,
 so it comes last.
+
+---
+
+## What was actually built
+
+All five phases are done. Phases 2 and 3 landed as one commit: splitting them
+would have left a commit whose binary could not take a keystroke.
+
+Three things were needed that this specification did not anticipate.
+
+**The seed.** Runs were not reproducible, and the cause was bigger than
+expected: the game reached for the clock as a source of randomness in six
+places, not one — twice in `src/Main.cpp`, twice while a character is built
+(`src/Create.cpp`), once per equipment roll (`src/Annot.cpp`) and once after
+spell formulas are chosen (`src/Skills.cpp`). All six now call `NextSeed()`,
+which returns `time(NULL)` unless `INCURSION_SEED` is set. Without this the
+harness would have been a smoke test and never a regression test.
+
+**The sandbox.** `tools/headless.sh` runs each session in its own directory
+under `logs/runs`. This was not in the plan and it should have been: a run
+made outside it wrote a scripted character into `save/` beside real ones. Use
+`tools/headless.sh --tty` to test terminal drawing, never the binary directly.
+
+**`@include`.** Every script begins by making a character, and that sequence is
+about forty keystrokes. Without an include, changing it meant editing every
+script that exists.
+
+One thing was added beyond the specification: `Game::CheckConsistency` now
+writes `logs/consistency.txt` as well as drawing its report on screen. The
+game's own ruleset checker was unusable by anything but a person scrolling a
+box, which defeats the point of a backend that has no person.
+
+### Known limits
+
+- The terminal drawing is ASCII only, using the same letters as the screen
+  dumps. Box-drawing and shading glyphs come out as `-`, `|` and `#`. The
+  upgrade path is marked `ponytail:` in `src/Wposix.cpp`.
+- `CheckEscape`, `ClearKeyBuff` and `PrePrompt` do nothing in a scripted run.
+  They exist to drain keys already typed, and draining a script would eat the
+  next real keystroke. The only thing they could skip is an animation.
+- A bright background colour cannot be drawn in a terminal and appears as its
+  dark twin. A terminal offers bold for the foreground and nothing for the
+  background.

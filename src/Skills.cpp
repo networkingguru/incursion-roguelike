@@ -3850,8 +3850,7 @@ void Character::RecalcCraftFormulas() {
 	}
 	//if (outOfFormulas)
 	//  IPrint("Out of formulas!");
-	time(&t);
-	srand((unsigned long)t);
+	srand(NextSeed());
 }
 
 int16 Creature::getFavEnemyBonus(Creature *cr)

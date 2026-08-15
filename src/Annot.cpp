@@ -581,8 +581,7 @@ void Resource::GrantGear(Creature *c, rID xID, bool doRanged)
     bool random_depth_effect = false; 
     ic = 0;
 
-    time(&t);
-
+    t = (time_t)NextSeed();
 
     switch(T1->GetMode())
       {

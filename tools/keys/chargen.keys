@@ -1,0 +1,40 @@
+# Make a character and get into the dungeon. Included by every other script.
+#
+# The character is a standard male orc barbarian, neutral, worshipping
+# whichever god the game offers. Orc barbarian is deliberate: it is the
+# hardiest starting combination the game recommends to a new player, so a
+# scripted walk survives long enough to be worth watching.
+#
+# Every choice here is a menu letter, and menu letters move when the list
+# changes. Run with a fixed seed (tools/headless.sh <script> <seed>) or the
+# attribute rolls change, the offered feats change with them, and these
+# letters choose something else.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+i       # Race:     [i] Orc
+a       # Subrace:  [a] Orc (Standard)
+a       # Class:    [a] Barbarian
+a       # Attributes: the first of the five offered sets
+c       # Alignment: [c] Neutral
+a       # First feat
+a       # Second feat
+
+# Skill Manager, twice: once for the class pool and once for the pool that
+# follows the choice of god. RIGHT spends a rank on the selected skill and
+# stops at the skill's maximum, DOWN moves to the next skill, so three RIGHTs
+# per skill spends everything available without needing to know how many
+# ranks this character has. Character generation will not let go until the
+# pool is empty.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+y       # Do you wish to worship <god>? -- yes
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+# The next keystroke lands in the dungeon, in play mode.

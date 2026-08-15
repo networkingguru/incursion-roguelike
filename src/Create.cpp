@@ -94,7 +94,7 @@ bool isExploreMode(Player *p) {
 
 void Player::Create(bool reincarnate) {
     rID xID, endID; int16 i, q, rv; char ch;
-    static rID Choices[32]; bool b; time_t tm;
+    static rID Choices[32]; bool b;
 
     ClassID[0] = ClassID[1] = ClassID[2] = 0;
     RaceID = 0; BAttr[A_STR] = -1;
@@ -136,9 +136,8 @@ RedoOptions:
 
     if (reincarnate == false) {
         MyTerm->SetMode(MO_CREATE);
-        memset(&RInf,0,sizeof(ReincarnationInfo)); 
-        time(&tm);
-        formulaSeed = RInf.formulaSeed = (int32)tm;
+        memset(&RInf,0,sizeof(ReincarnationInfo));
+        formulaSeed = RInf.formulaSeed = (int32)NextSeed();
     } else {
         MyTerm->SetMode(MO_RECREATE);
         formulaSeed = RInf.formulaSeed;
@@ -666,8 +665,7 @@ SkipThisFocus:;
     /* Hist.Create(this,MyTerm); */
     MyTerm->SetMode(MO_PLAY);
 
-    time(&tm);
-    storeSeed = (int32)tm;
+    storeSeed = (int32)NextSeed();
 
     if (reincarnate) {
         Named = RInf.Name;

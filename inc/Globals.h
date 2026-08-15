@@ -278,4 +278,12 @@ extern int16 nGods;
 
 extern Term *T1;
 
+/* Every place the game reaches for the clock as a source of randomness calls
+   this instead. Normally it returns time(NULL), exactly as those places did
+   before. When INCURSION_SEED is set it returns that number, then that number
+   plus one, and so on -- still a different value at each call, as the clock
+   gave, but the same series in every run. That is what makes a scripted
+   session repeatable and therefore a regression test. See src/Main.cpp. */
+unsigned long NextSeed(void);
+
 extern "C" int yyerror(const char*);

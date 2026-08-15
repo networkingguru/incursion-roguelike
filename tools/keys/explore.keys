@@ -1,0 +1,74 @@
+# A long unattended walk, to fill logs/errors.log.
+#
+#   tools/headless.sh tools/keys/explore.keys 1
+#
+# This is the point of the headless backend. The best defect finder this
+# project has is a play session that reaches unusual game states and lets
+# Error() record what it did not like; before this, that needed a person.
+#
+# The walk is deliberately undirected: long runs in one of the eight
+# directions, with a search, a rest, a pick-up, a try at the stairs and an ESC
+# mixed in. Walking into rock still spends a turn, so the monsters still move
+# and their AI still runs -- which is where the out-of-bounds map reads that
+# filled the log 343 times in 13 seconds were found. ESC appears regularly so
+# that a command which unexpectedly opens a menu cannot swallow the rest of
+# the script.
+#
+# Generated, and regenerable: the generator is quoted in the commit that added
+# this file, and it seeds itself with 20260814 so it produces this same file.
+
+@include chargen.keys
+
+@dump:arrival
+
+END*5 UP*3 UP*5 ESC PGUP*6 s DOWN*1 > LEFT*3 .*3
+UP*2 LEFT*6 ESC UP*2 LEFT*6 g RIGHT*4 s PGUP*5 UP*6
+ESC END*3 LEFT*1 END*4 DOWN*3 .*3 UP*1 s ESC DOWN*1
+DOWN*1 UP*1 PGUP*4 > END*3 g ESC END*3 UP*1 s
+PGDN*2 DOWN*1 DOWN*1 .*3 ESC PGUP*4 PGUP*5 PGDN*1 HOME*2 s
+PGUP*3 ESC UP*6 HOME*2 END*5 g END*4 LEFT*6 ESC PGDN*2
+s .*3 > DOWN*4 RIGHT*3 RIGHT*3 UP*5 ESC DOWN*3 RIGHT*4
+RIGHT*5 s UP*4 LEFT*6 ESC HOME*1 g LEFT*6 .*3 @dump:walk49
+PGDN*6 DOWN*5 LEFT*1 s ESC HOME*1 HOME*4 PGDN*3 > RIGHT*2
+UP*1 ESC PGDN*5 PGUP*2 s DOWN*1 .*3 PGUP*5 g LEFT*2
+ESC UP*6 RIGHT*3 HOME*2 RIGHT*5 s UP*1 ESC PGUP*2 LEFT*4
+HOME*3 RIGHT*2 .*3 RIGHT*3 > ESC RIGHT*3 s RIGHT*1 g
+RIGHT*6 END*1 DOWN*5 ESC DOWN*3 LEFT*5 PGUP*3 s LEFT*1 PGDN*1
+.*3 ESC LEFT*5 LEFT*2 PGDN*4 END*1 HOME*1 s g ESC
+LEFT*2 PGDN*5 > END*2 DOWN*1 HOME*6 ESC END*3 .*3 DOWN*6
+s END*6 UP*4 DOWN*6 ESC PGDN*3 LEFT*4 @dump:walk99 DOWN*3 g
+PGDN*5 s LEFT*6 ESC END*2 LEFT*5 .*3 PGUP*6 HOME*2 >
+END*1 ESC UP*6 s PGDN*6 UP*2 LEFT*5 RIGHT*2 ESC UP*2
+g LEFT*2 DOWN*4 s .*3 END*5 PGUP*5 ESC RIGHT*1 END*3
+LEFT*2 HOME*5 PGUP*5 s ESC PGDN*4 > HOME*1 RIGHT*5 END*1
+.*3 g HOME*2 ESC END*1 DOWN*4 s PGDN*2 PGUP*6 END*3
+ESC UP*4 PGDN*1 UP*5 END*1 s END*2 .*3 ESC LEFT*1
+PGUP*5 g PGDN*3 > RIGHT*3 HOME*6 ESC PGUP*6 s LEFT*3
+END*2 END*2 END*5 ESC HOME*4 .*3 PGDN*4 @dump:walk149 PGDN*6 s
+DOWN*4 RIGHT*4 g ESC DOWN*2 UP*4 PGDN*5 RIGHT*6 DOWN*4 s
+> ESC DOWN*5 HOME*3 .*3 END*5 HOME*5 END*6 ESC PGUP*2
+END*1 s UP*1 g END*6 LEFT*1 ESC END*2 PGDN*4 DOWN*3
+.*3 PGUP*5 s UP*4 ESC PGDN*3 RIGHT*2 > HOME*4 DOWN*1
+RIGHT*2 ESC HOME*6 s g UP*6 PGUP*1 DOWN*6 .*3 UP*4
+ESC PGUP*2 PGDN*4 HOME*4 s LEFT*3 RIGHT*3 ESC LEFT*2 HOME*4
+DOWN*4 PGUP*1 g > END*6 s .*3 ESC LEFT*5 PGUP*6
+HOME*6 RIGHT*1 END*4 ESC HOME*3 DOWN*1 s @dump:walk199 RIGHT*3 RIGHT*6
+RIGHT*1 ESC PGDN*3 .*3 UP*4 g LEFT*4 DOWN*5 s UP*2
+ESC RIGHT*4 > END*3 RIGHT*2 RIGHT*5 UP*1 ESC HOME*6 s
+PGDN*5 .*3 PGDN*2 HOME*3 PGDN*2 g ESC UP*1 END*4 DOWN*4
+s LEFT*5 HOME*4 ESC PGUP*2 UP*5 END*2 .*3 > DOWN*3
+PGDN*1 s ESC HOME*6 DOWN*1 HOME*2 g PGUP*2 DOWN*6 ESC
+LEFT*6 HOME*5 s HOME*4 HOME*5 .*3 END*5 ESC UP*3 DOWN*3
+LEFT*1 DOWN*5 s DOWN*5 > ESC END*5 g END*5 HOME*1
+PGUP*1 PGDN*4 .*3 ESC PGUP*1 s HOME*5 @dump:walk249 PGDN*1 HOME*6
+UP*5 ESC END*1 LEFT*5 LEFT*5 s UP*4 g PGDN*5 ESC
+LEFT*6 .*3 DOWN*5 > HOME*5 END*5 PGUP*5 s ESC UP*1
+DOWN*4 RIGHT*2 LEFT*3 PGDN*2 ESC PGUP*4 DOWN*5 s .*3 g
+PGUP*2 HOME*5 HOME*2 ESC PGUP*4 PGDN*3 PGUP*1 HOME*5 s >
+LEFT*2 ESC PGUP*6 END*1 UP*1 .*3 PGUP*4 PGDN*2 g ESC
+END*2 s END*4 END*4 PGUP*6 RIGHT*2 ESC UP*5 PGUP*6 RIGHT*4
+s HOME*2 .*3 PGDN*4 ESC PGUP*4 > UP*3 HOME*1 g
+UP*5 PGDN*5 s ESC RIGHT*1 PGUP*6 @dump:walk299
+
+@dump:final
+@quit

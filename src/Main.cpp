@@ -34,6 +34,25 @@
     #define platf_getcwd getcwd
 #endif
 
+/* A scripted session is only a regression test if it plays the same game
+   twice, and the game could not: it reached for the clock as a source of
+   randomness in six places -- twice here, twice while a character is built
+   (src/Create.cpp), once per equipment roll (src/Annot.cpp) and once after
+   choosing spell formulas (src/Skills.cpp). Every one of them now calls this.
+
+   Unset, which is the normal case for anybody playing the game, this is
+   time(NULL) and nothing has changed. Set, it counts up from the given
+   number: each call still sees a different value, as it did from the clock,
+   but the series repeats exactly on the next run. */
+unsigned long NextSeed(void) {
+    static unsigned long tick = 0;
+    const char *s = getenv("INCURSION_SEED");
+
+    if (s && *s)
+        return strtoul(s, NULL, 10) + tick++;
+    return (unsigned long)time(NULL);
+}
+
 Map* TheMainMap;
 extern bool QuestMode;
 Tile *MapLetterArray[127];
@@ -62,7 +81,7 @@ Game::Game() : Object(T_GAME) {
     PlayMode = false;
     ItemGenNum = 10;
     DestroyCount = 0;
-    srand((unsigned)time(NULL));
+    srand((unsigned)NextSeed());
 }
 
 
@@ -154,7 +173,7 @@ void Game::NewGame(rID mID, bool reincarnate) {
 
 void Game::Play() {
     Thing *t, *t2; int16 i,j,c;
-    uint32 relative_turn; time_t tm;
+    uint32 relative_turn;
     int16 MaxDist;
     Map    *mp = oMap(m[0]);
     Player *pp = oPlayer(p[0]);
@@ -178,8 +197,7 @@ Resurrected:
     MaxDist = 30;
     pp->MyTerm->RefreshMap();
 
-    time(&tm);
-    srand((unsigned long)tm);
+    srand(NextSeed());
 
     /* NOTE(rmtew): This is the main game loop.  Once we're in here, we have to
                     pretty much die or save and exit the game, to exit the
@@ -1817,11 +1835,29 @@ void Game::CheckConsistency(void)
   T1->Write(Format(".\n"));
   Report += "\n\n";
 
-done: 
+done:
   T1->Color(GREY);
-  
+
+  /* Also to a file. This report is a complete inventory of what the ruleset
+     declares but does not implement -- hundreds of purposeless effects, the
+     duplicate names, the spells no spellbook contains -- and until now the
+     only way to read it was to sit at the keyboard and scroll a box. Nothing
+     could count it, diff it against last week's, or turn it into work items. */
+  {
+    char path[MAX_PATH_LENGTH];
+    FILE *f;
+
+    snprintf(path, sizeof(path), "%slogs/consistency.txt",
+      (const char*)T1->IncursionDirectory);
+    f = fopen(path, "w");
+    if (f) {
+      fputs((const char*)Report, f);
+      fclose(f);
+    }
+  }
+
   T1->Box(Report);
-  return ; 
+  return ;
 }
 
 void Game::GenerateRarityTable()

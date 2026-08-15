@@ -23,7 +23,18 @@ cd "$ROOT"
 # A diagnostic build gets its own binary and its own object directory, so it
 # never leaves half-instrumented objects behind for the next ordinary build:
 #     EXTRA_CXXFLAGS=-DFLICKER_PROBE OUT=incursion-flicker ./build_macos.sh
-OUT="${OUT:-incursion}"
+# Which terminal backend to compile in. Only one can be linked at a time --
+# each defines main(), Error() and Fatal().
+#   libtcod  the SDL window build; the way to play.
+#   posix    src/Wposix.cpp, which needs neither SDL nor libtcod and can run
+#            with no display and no keyboard. See docs/HEADLESS-SPEC.md.
+BACKEND="${BACKEND:-libtcod}"
+
+case "$BACKEND" in
+    libtcod) OUT="${OUT:-incursion}" ;;
+    posix)   OUT="${OUT:-incursion-headless}" ;;
+    *)       echo "Unknown BACKEND '$BACKEND' (want libtcod or posix)"; exit 1 ;;
+esac
 EXTRA_CXXFLAGS="${EXTRA_CXXFLAGS:-}"
 
 if [ "$OUT" = "incursion" ] && [ -z "$EXTRA_CXXFLAGS" ]; then
@@ -33,16 +44,32 @@ else
 fi
 mkdir -p "$OBJ" "$ROOT/mod" "$ROOT/logs" "$ROOT/save"
 
-SDL_CFLAGS="$(pkg-config --cflags sdl2)"
-SDL_LIBS="$(pkg-config --libs sdl2)"
-INCLUDES="-Iinc -Ilib -Ilibtcod/include -Icompat $SDL_CFLAGS"
-DEFINES="-DDEBUG -DLIBTCOD_TERM"
+if [ "$BACKEND" = posix ]; then
+    SDL_CFLAGS=""
+    SDL_LIBS=""
+    INCLUDES="-Iinc -Ilib -Icompat"
+    DEFINES="-DDEBUG -DPOSIX_TERM"
+    SKIP_BACKENDS="Wlibtcod Wcurses"
+    # ncurses ships with macOS and with every Linux distribution, so this adds
+    # no dependency to install. It is used only to draw to a real terminal;
+    # a headless run never calls into it.
+    LINK_LIBS="-lz -lncurses"
+else
+    SDL_CFLAGS="$(pkg-config --cflags sdl2)"
+    SDL_LIBS="$(pkg-config --libs sdl2)"
+    INCLUDES="-Iinc -Ilib -Ilibtcod/include -Icompat $SDL_CFLAGS"
+    DEFINES="-DDEBUG -DLIBTCOD_TERM"
+    SKIP_BACKENDS="Wcurses Wposix"
+    LINK_LIBS="-lz -framework OpenGL"
+fi
 
 # ---------------------------------------------------------------- libtcod ----
 # Built from the vendored copy. The bundled zlib is too old to compile against
 # a modern SDK (it redefines fdopen), so it is skipped in favour of system -lz.
 TCODLIB="$ROOT/build/libtcod_local.a"
-if [ ! -f "$TCODLIB" ]; then
+if [ "$BACKEND" = posix ]; then
+    TCODLIB=""
+elif [ ! -f "$TCODLIB" ]; then
     echo "--- building vendored libtcod ---"
     TOBJ="$ROOT/build/tcodobj"
     mkdir -p "$TOBJ"
@@ -66,8 +93,10 @@ CFLAGS="-O2 -w -Wno-implicit-function-declaration -Wno-implicit-int -Wno-return-
 
 for f in src/*.cpp; do
     n="$(basename "$f" .cpp)"
-    # Wcurses is the Windows/pdcurses terminal backend; the libtcod one is used here.
-    [ "$n" = "Wcurses" ] && continue
+    # Only one backend links: each defines main(), Error() and Fatal().
+    skip=
+    for b in $SKIP_BACKENDS; do [ "$n" = "$b" ] && skip=1; done
+    [ -n "$skip" ] && continue
     std="c++17"
     case "$n" in Tokens|Art) std="c++14" ;; esac
     clang++ -std=$std $CXXFLAGS -c "$f" -o "$OBJ/$n.o"
@@ -79,7 +108,7 @@ for f in src/*.c; do
 done
 
 echo "--- linking ---"
-clang++ -std=c++17 -o "$ROOT/$OUT" "$OBJ"/*.o "$TCODLIB" $SDL_LIBS -lz -framework OpenGL
+clang++ -std=c++17 -o "$ROOT/$OUT" "$OBJ"/*.o $TCODLIB $SDL_LIBS $LINK_LIBS
 
 # ------------------------------------------------------------- game data -----
 if [ ! -f "$ROOT/mod/Incursion.Mod" ]; then

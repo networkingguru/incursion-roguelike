@@ -37,3 +37,6 @@ incursion-debug
 *.db
 .beads-credential-key
 .beads/proxieddb/
+
+# Alternative backends and diagnostic builds of the game binary.
+incursion-*

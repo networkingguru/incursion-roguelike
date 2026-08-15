@@ -1,0 +1,3 @@
+# Run the built-in module consistency checker.
+i b @dump:consistency
+ENTER @dump:after

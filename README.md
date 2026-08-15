@@ -21,6 +21,7 @@ Two minutes from a clean checkout.
 | | |
 |---|---|
 | **macOS ARM64** | Builds, plays, saves, loads |
+| **Headless** | Plays itself from a key script, with no display |
 | **macOS x86_64 / universal** | Not yet |
 | **Linux** | Not yet — unblocked, next up |
 | **Steam Deck** | The target. Waits on Linux. |
@@ -78,8 +79,9 @@ All engineering. None of it changes the game.
   serialised type is proven byte-identical on arm64 and x86_64.
 - macOS x86_64 slice and a universal binary.
 - **Steam Deck.** The concrete platform target, and why Linux comes first.
-- An ncurses backend, which would make the game text-capturable and scriptable —
-  and therefore testable without a human at the keyboard.
+- ~~An ncurses backend, which would make the game text-capturable and
+  scriptable~~ — **done**, see *Playing itself* below. What remains is drawing
+  to a real terminal, so the same binary can be played over ssh.
 - HiDPI and resolution handling. Options currently top out at 1920x1200.
 - Drain `logs/errors.log` through real play, and clear the known defects:
   contents-list corruption in `Thing::Remove`, a `FI_SIZE` inconsistency,
@@ -114,19 +116,56 @@ not in this file.
 
 ---
 
+## Playing itself
+
+The game now has a third terminal backend that needs no terminal. It reads its
+keystrokes from a file and writes its screen to a file, so a session runs with
+no display, no keyboard and nobody watching.
+
+```
+BACKEND=posix ./build_macos.sh                    # links no SDL, no libtcod
+tools/headless.sh tools/keys/smoke.keys 1         # one session
+tools/soak.sh 200 1                               # two hundred dungeons
+```
+
+Runs repeat exactly. The game used to reach for the clock as a source of
+randomness in six places, so no two sessions ever matched and no screen could
+be compared with an earlier one; `INCURSION_SEED` now replaces all six. The
+same seed and the same key script produce byte-identical screens, and a
+different seed produces a different game — both checked, in both directions.
+
+This is what makes `logs/errors.log` — the best defect finder this project has
+— fill up without a person. The first six-session soak produced a one-line
+recipe for a defect that previously had none:
+
+```
+tools/headless.sh tools/keys/explore.keys 101
+```
+
+A celestial mastiff claims the map while appearing in neither list the map
+keeps, and it keeps *moving* for thousands of turns afterwards.
+
+The same backend runs the game's own ruleset checker, which had never been part
+of anyone's workflow because it drew its report into a scrollable box on
+screen. It now also writes `logs/consistency.txt`: 136 distinct effects that do
+nothing when they fire, six effect names declared more than once, and a spell
+in no spellbook.
+
 ## How this project works
 
 **Agents own the C++.** Port, engine, build and harness are all
-machine-checkable, and three regression checks run on demand:
+machine-checkable, and four regression checks run on demand:
 
 ```
 ./tools/check_abs_path.sh        # the relative-directory bug
 ./tools/check_error_handling.sh  # error reporting stays non-blocking
 ./tools/check_abi.sh             # type widths + handle/pointer confusion
+./tools/check_headless.sh        # unattended play, and that runs repeat
 ```
 
 Each has been proven to *fail* when its defect is reintroduced, not merely to
-pass.
+pass. `check_headless.sh --selftest` demonstrates its own assertions rejecting
+known-bad input.
 
 **A human owns the ruleset.** `lib/` holds 82,768 lines of IncursionScript —
 1,469 event handlers, 522 monsters, 264 items, 191 effects, 39 classes, 17

@@ -1,0 +1,21 @@
+# The shortest run that proves the game still works: make a character, reach
+# the dungeon, take a few dozen turns, photograph the result.
+#
+#   tools/headless.sh tools/keys/smoke.keys 1
+#
+# tools/check_headless.sh runs exactly this and checks the last screen.
+
+@include chargen.keys
+
+@dump:arrival
+
+# A short walk. Walking into rock costs nothing and still runs a turn, so the
+# monsters move and their AI is exercised either way -- which is where the
+# out-of-bounds map reads were found.
+DOWN*4 RIGHT*4 UP*4 LEFT*4
+DOWN*4 RIGHT*4 UP*4 LEFT*4
+s*3     # search
+.*5     # rest
+
+@dump:walked
+@quit
