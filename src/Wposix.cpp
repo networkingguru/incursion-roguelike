@@ -468,6 +468,16 @@ int main(int argc, char *argv[]) {
     bool forceHeadless = false;
     unsigned timeout = DEFAULT_TIMEOUT_S;
 
+#ifdef DIVERGE_PROBE
+    /* First thing, before the game builds anything: read INCURSION_LAYOUT, so
+       that every Object allocated after this lands where that number says.
+       Unset, this returns at once and nothing changes. See src/Base.cpp and
+       tools/check_layout.sh. Only this backend calls it -- the hunt runs
+       headless, and a knob nobody uses in the window build is a knob that
+       rots. */
+    { extern void SetHeapLayout(void); SetHeapLayout(); }
+#endif
+
     if (envPath != NULL) {
         if (strlen(envPath) > 0 && strcat(executablePath, envPath)) {
             if (executablePath[strlen(executablePath) - 1] != '/')

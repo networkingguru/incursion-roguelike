@@ -20,6 +20,19 @@
 
 #define SC(xx) (*tmpstr((const char*)xx))
 
+/* Object::operator new adds HEAP_PAD bytes to every allocation. In an ordinary
+   build that is the constant 0 and the compiler removes it: no symbol, no
+   call, no cost. In the DIVERGE_PROBE build it asks src/Base.cpp for a number
+   that depends on INCURSION_LAYOUT, which moves objects past each other and
+   makes an address-dependent decision split a pair of runs on demand. Read the
+   long comment on HeapPad before changing this. See inc-1vg. */
+#ifdef DIVERGE_PROBE
+  size_t HeapPad(void);
+  #define HEAP_PAD HeapPad()
+#else
+  #define HEAP_PAD 0
+#endif
+
 template<class S, int32 Initial, int32 Delta>
   class Array
 	{
@@ -495,19 +508,21 @@ class Object
     void* operator new(size_t sz)
       {
         void *vp;
-        vp = malloc(sz);
+        size_t pad = HEAP_PAD;
+        vp = malloc(sz + pad);
         if (!vp)
           Fatal("Memory allocation error!");
-        memset(vp,0,sz);
+        memset(vp,0,sz + pad);
         return vp;
       }
     void* operator new[](size_t sz)
       {
         void *vp;
-        vp = malloc(sz);
+        size_t pad = HEAP_PAD;
+        vp = malloc(sz + pad);
         if (!vp)
           Fatal("Memory allocation error!");
-        memset(vp,0,sz);
+        memset(vp,0,sz + pad);
         return vp;
       }
     void* operator new(size_t sz,Object *o)

@@ -1362,6 +1362,81 @@ void init_by_array(unsigned long init_key[], int KY_length)
    is the first place they stopped playing the same game. See inc-dhc. Not
    compiled into any shipped binary. */
 unsigned long long RNGCalls = 0;
+
+/* The layout knob. See inc-1vg.
+
+   inc-dhc is a defect CLASS: the game reads a memory address as if it were
+   data, so the same seed plays a different game when its objects land
+   somewhere else. Finding one of those sites by running a seed twenty times
+   and hoping it splits costs about an hour. This turns that into an
+   experiment.
+
+   Run the game with address randomisation switched off and every run is
+   identical, which is useless on its own -- nothing ever diverges. Run it with
+   randomisation on and every run differs in a way nobody controls, so a
+   divergence names no cause. INCURSION_LAYOUT states the difference instead.
+   Two runs with different layout numbers are each internally repeatable and
+   differ ONLY in where objects sit, so an address-dependent site splits them
+   on demand, in a pair of runs, rather than in one run out of six.
+
+   WHAT DOES NOT WORK, measured on 2026-08-15 before this was written, because
+   it is the obvious thing to try and it costs an afternoon. Allocating a block
+   of memory at startup and never freeing it moves every later address, and
+   changes nothing: 100,000 blocks moved the heap by gigabytes and seed 3 still
+   played the identical game seven times out of seven, while real address
+   randomisation gave three different games in twelve runs. A uniform shift
+   moves every object by the same amount, so it preserves the ORDER of any two
+   of them -- and an order is what a comparison of two addresses reads. The
+   knob has to change which object sits in front of which.
+
+   So it pads each allocation by an amount that depends on the layout number
+   and on how many objects have been allocated so far. Two objects of the same
+   size then land in different size classes, and the allocator can place the
+   second in front of the first. Unset, or set to 0, HeapPad returns 0 on its
+   first line and the game allocates exactly as it always did.
+
+   Object::operator new in inc/Base.h is the only caller. That is deliberate:
+   every creature, item and map the engine compares by address is an Object,
+   and padding the whole program instead would move library memory that no game
+   decision can see. Resources -- Res.h has its own operator new -- are loaded
+   once from the module and are not padded.
+
+   The padding is zeroed with the object, so it carries no data. This matters
+   for what a difference between two runs is allowed to prove. If the padding
+   held whatever the allocator left there, then a run that reads past the end
+   of an object -- a real and separate defect -- would read different bytes in
+   each arm, and the check would report that as an address dependence. Zeroed,
+   the arms differ in geometry and in nothing else.
+
+   For the same reason tools/check_layout.sh compares two NON-ZERO layout
+   numbers. Layout 0 is stock: no padding at all. Comparing 0 against 3 would
+   change both the geometry and whether any padding exists, which are two
+   changes; comparing 1 against 3 changes only the geometry. */
+static unsigned long HeapLayout = 0;
+static unsigned long long HeapAllocs = 0;
+
+size_t HeapPad(void) {
+    unsigned long long h;
+
+    if (!HeapLayout)
+        return 0;
+
+    HeapAllocs++;
+    h = HeapAllocs * 2654435761ULL + (unsigned long long)HeapLayout * 2246822519ULL;
+    h ^= h >> 15;
+    return (size_t)((h % 32) * 16);
+}
+
+void SetHeapLayout(void) {
+    const char *s = getenv("INCURSION_LAYOUT");
+
+    if (!s || !*s)
+        return;
+
+    HeapLayout = strtoul(s, NULL, 10);
+    fprintf(stderr, "LAYOUT %lu\n", HeapLayout);
+    fflush(stderr);
+}
 #endif
 
 /* generates a random number on [0,0xffffffff]-interval */

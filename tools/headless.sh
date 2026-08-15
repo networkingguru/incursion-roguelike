@@ -43,8 +43,20 @@ if [ -z "$KEYS" ] || [ ! -f "$KEYS" ]; then
     echo "key scripts live in tools/keys/"
     exit 2
 fi
-[ -x ./incursion-headless ] || {
-    echo "./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
+# INCURSION_BIN picks a different build -- the DIVERGE_PROBE one, say -- and
+# INCURSION_LAUNCHER puts something in front of it. Both exist for
+# tools/check_layout.sh, which has to run the probe build under lldb to switch
+# address randomisation off. They are deliberately thin: everything that keeps
+# a session from touching the real save files stays in one place, here, and a
+# caller that needed a different binary would otherwise have written its own
+# copy of that sandbox. Note that a launcher swallows the exit code -- lldb
+# reports its own -- so a caller that uses one must judge the run by what it
+# left behind, not by $?.
+BIN="${INCURSION_BIN:-./incursion-headless}"
+LAUNCHER="${INCURSION_LAUNCHER:-}"
+
+[ -x "$BIN" ] || {
+    echo "$BIN not built. Run: BACKEND=posix ./build_macos.sh"
     exit 2
 }
 
@@ -72,11 +84,11 @@ if [ "$TTY" -eq 1 ]; then
     # nothing. The drawing is captured rather than shown, so the run stays
     # unattended and the escape sequences can be read afterwards.
     LINES=48 COLUMNS=80 TERM="${TERM:-xterm}" \
-        script -q "$RUN/logs/terminal.out" ./incursion-headless -keys "$KEYS" "${@:3}"
+        script -q "$RUN/logs/terminal.out" $LAUNCHER "$BIN" -keys "$KEYS" "${@:3}"
     STATUS=$?
     echo "terminal drawing captured in $RUN/logs/terminal.out"
 else
-    ./incursion-headless -keys "$KEYS" "${@:3}" < /dev/null
+    $LAUNCHER "$BIN" -keys "$KEYS" "${@:3}" < /dev/null
     STATUS=$?
 fi
 

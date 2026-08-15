@@ -185,6 +185,58 @@ outside the generator changes a decision, so **the first probe where the counts
 differ is the first place the two runs stopped playing the same game.** That is
 what located the sort, starting from nothing more than a screen that differed.
 
+Waiting for a seed to split by itself costs about an hour a site, so the same
+build carries a knob that makes it split on demand:
+
+```
+tools/check_layout.sh 3                     # one seed, two layouts, six seconds
+tools/check_layout.sh 3 tools/keys/dive.keys
+tools/sweep_ptr_order.sh                    # every pointer ordering in src/
+```
+
+`check_layout.sh` runs one seed twice in each of two memory layouts and
+requires the four screens to match. `INCURSION_LAYOUT=<n>` sets the layout: it
+pads every object's allocation by an amount derived from `n`, so two objects of
+the same size land in different size classes and the allocator can put the
+second in front of the first. Each layout runs **twice**, and a layout that does
+not repeat itself makes the tool refuse to give a verdict rather than report
+noise. lldb switches the machine's own address randomisation off for the four
+runs; nothing is debugged, it is used as a launcher.
+
+The obvious version of that knob does not work, which is worth stating because
+it is the version anybody would write first. Allocating a big block at startup
+and never freeing it moves every later address and changes nothing: 100,000
+blocks moved the heap by gigabytes and seed 3 still played the identical game
+seven times out of seven. A uniform shift moves every object by the same
+amount, so it preserves the *order* of any two of them — and an order is what a
+comparison of two addresses reads.
+
+The check was shown to fail, not merely to pass. With `TargetSort` reverted to
+the pointer subtraction, seed 6 fails; on the current build the same seed
+passes. On the current build the only seed of the first twelve that fails is
+**seed 3**, which is the remaining site.
+
+`sweep_ptr_order.sh` asks clang for the parse tree and lists every place two
+pointers are ordered — `-`, `<`, `>`, `<=`, `>=` — which grep cannot do, since
+`a - b` is address arithmetic or plain subtraction depending on how `a` and `b`
+were declared. It reports 63 candidates and it does not judge them: ordering
+two pointers into one array is legal and looks identical, and a table walked in
+allocation order reads an address without comparing one, so a clean sweep does
+not close the class. `tools/check_ptr_sweep.sh` checks the sweep itself against
+a fixture in about a second, because a sweep that is broken and a codebase that
+is clean produce the same empty output — and on 2026-08-15 this one was broken
+exactly that way.
+
+`tools/sweep_ptr_order.sh --stored` asks the other half of the question, and it
+exists because the ordering sweep could not have found the second defect of the
+class. That one compared two pointers for *equality* — `Falling == this` — which
+the ordering sweep ignores on purpose, since equality between two live pointers
+really is stable. It is not stable when one of them has been dead for a while.
+So `--stored` lists the pointers to game objects that are kept in a global or a
+static, because those are the ones that can outlive what they point at. It finds
+85; the thirteen that point at something which can die are triaged in `inc-wdi`.
+The triage question is always the same: what clears this, and on which paths?
+
 That determinism holds for one binary. It does **not** survive a code change, and
 a measurement on 2026-08-15 settled how to compare two builds. Almost any correct
 fix shifts the game state a little, and from the first changed decision onward the
