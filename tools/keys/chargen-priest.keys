@@ -1,14 +1,33 @@
-# Make a character and get into the dungeon. Included by every other script.
+# Make an orc priest and get into the dungeon.
 #
-# The character is a standard male orc barbarian, neutral, worshipping
-# whichever god the game offers. Orc barbarian is deliberate: it is the
-# hardiest starting combination the game recommends to a new player, so a
-# scripted walk survives long enough to be worth watching.
+# The character is a male orc priest, neutral, worshipping whichever god the
+# game offers. A priest is the most demanding class to script: it has more
+# choices than any other, and which choices it has depends on the god.
 #
-# Every choice here is a menu letter, and menu letters move when the list
-# changes. Run with a fixed seed (tools/headless.sh <script> <seed>) or the
-# attribute rolls change, the offered feats change with them, and these
-# letters choose something else.
+# WHY THIS SCRIPT USES CONDITIONALS AND THE OTHERS DO NOT.
+#
+# A key script is a fixed stream, and a fixed stream cannot answer a question
+# that only sometimes gets asked. Two things vary here with the seed:
+#
+#   * "Choose a Domain:" appears for some gods and not others, and the list of
+#     domains is the god's own. Measured 2026-08-15: seeds 852 and 893 both
+#     died because of this one prompt. It had no answer in the stream, so the
+#     keystroke meant for the next question answered the domain instead, and
+#     everything after it was off by one.
+#
+#   * The size of the skill rank pool follows the god, so no fixed number of
+#     RIGHT presses drains it. Character generation will not let go while a
+#     rank is unspent, and a run that cannot leave the Skill Manager burns
+#     every remaining key against it and reaches no map at all.
+#
+# Before: 98 of 100 seeds reached the dungeon. After: 100 of 100. The whole
+# character now takes about 65 keystrokes rather than 200, because the loops
+# stop when the work is done instead of pressing a worst-case number of times.
+#
+# The rank loop matches "|  *" -- the stars that count unspent ranks -- and NOT
+# the "Unspent Skill Ranks" header, which stays on screen when the pool is
+# empty and so never becomes false. Matching the header works but runs to the
+# 200-pass limit every time.
 
 a       # Initial Choices: [a] Create a New Character
 n       # Alter the character generation options? -- no
@@ -21,29 +40,24 @@ c       # Alignment: [c] Neutral
 a       # First feat
 a       # Second feat
 
-# Skill Manager, twice: once for the class pool and once for the pool that
-# follows the choice of god. RIGHT spends a rank on the selected skill and
-# stops at the skill's maximum, DOWN moves to the next skill, so three RIGHTs
-# per skill spends everything available without needing to know how many
-# ranks this character has. Character generation will not let go until the
-# pool is empty.
-RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
-RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+# Skill Manager, once for the class pool. RIGHT spends a rank on the selected
+# skill and stops at that skill's maximum; DOWN moves to the next skill.
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
 ENTER y # Done, and confirm keeping the ranks
 
 y       # Do you wish to worship <god>? -- yes
 
-RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
-RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+# Again, for the pool that follows the choice of god.
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
 ENTER y
-
-# The next keystroke lands in the dungeon, in play mode.
 
 # A priest has more to choose than a barbarian: two further feats, and a third
 # pool of skill ranks that only appears once the god is known.
 a a
-RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
-RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
 ENTER y
 
 a       # Personality archetype

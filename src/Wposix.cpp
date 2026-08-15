@@ -88,13 +88,32 @@ char __buff2[80];
 
 /* Script tokens that are instructions to the harness rather than keystrokes.
    They are outside the range of any KY_ value. */
-#define SK_DUMP (-1)
-#define SK_QUIT (-2)
+#define SK_DUMP  (-1)
+#define SK_QUIT  (-2)
+#define SK_WHILE (-3)
+#define SK_UNTIL (-4)
+
+/* A conditional that never ends would hang the run in place of the watchdog,
+   which measures the gap between keystrokes and would never fire. The limit
+   counts passes over the body, not keystrokes. */
+#define SK_LOOP_MAX  200
+#define SK_BODY_MAX  8
 
 typedef struct ScriptKey {
     int16 ch;        /* a KY_ value, a character, or SK_ above */
     uint8 mods;      /* SHIFT | CONTROL | ALT, as the keyset expects */
-    char  label[24]; /* for SK_DUMP only */
+    char  label[64]; /* SK_DUMP: the dump label. SK_WHILE/UNTIL: screen text. */
+
+    /* SK_WHILE and SK_UNTIL only. The body is a sequence rather than a single
+       key because the case this exists for needs one: draining the Skill
+       Manager takes RIGHT to spend a rank and DOWN to move to the next skill,
+       and neither alone makes progress. The screen is tested once per pass,
+       at the top, so a pass always completes. */
+    int16 bodyCh[SK_BODY_MAX];
+    uint8 bodyMods[SK_BODY_MAX];
+    int8  bodyCount;
+    int8  bodyPos;
+    int16 iter;      /* passes completed */
 } ScriptKey;
 
 class posixTerm : public TextTerm {
@@ -193,6 +212,7 @@ public:
 
     /* Screen Capture */
     void DumpScreen(const char *label);
+    bool ScreenShows(const char *text);
     void LoadKeyScript(const char *fn);
     void SetMaxKeys(int32 n) { maxKeys = n; }
     void UseTerminal(bool on) { useCurses = on; }
@@ -748,6 +768,32 @@ void posixTerm::DumpScreen(const char *label) {
     fclose(f);
 }
 
+/* Is this text anywhere on the screen right now?
+
+   The match is per row, so a phrase that wraps across two lines will not be
+   found. Keep the text short and take it from the middle of a prompt rather
+   than its ends: a prompt is often drawn with a border, a colour change or a
+   trailing count, and any of those can sit between the words.
+
+   This reads the same buffer DumpScreen writes, through the same conversion,
+   so what a script can match is exactly what appears in logs/screens. */
+bool posixTerm::ScreenShows(const char *text) {
+    char line[SCREEN_W + 1];
+    int16 x, y;
+
+    if (!text || !*text)
+        return false;
+
+    for (y = 0; y < SCREEN_H; y++) {
+        for (x = 0; x < SCREEN_W; x++)
+            line[x] = glyph_to_ascii(scr[y][x]);
+        line[SCREEN_W] = '\0';
+        if (strstr(line, text))
+            return true;
+    }
+    return false;
+}
+
 /*****************************************************************************\
 *                                  posixTerm                                  *
 *                              Input Functions                                *
@@ -826,7 +872,30 @@ static bool TokenToKey(const char *tok, ScriptKey *out) {
    @include pulls in another script, resolved next to the file that names it.
    Every test script starts by making a character, and that sequence is forty
    keystrokes long; without an include, changing it would mean editing every
-   script that exists. */
+   script that exists.
+
+   @while "text" KEY and @until "text" KEY are the only conditionals, and they
+   exist because a fixed stream cannot make a character reliably. Character
+   generation does not ask the same questions every time: the number of feats
+   offered varies with the class roll, and the god question appears only for
+   some. One extra prompt puts every later keystroke against the wrong
+   question, which is why 27 sessions in 906 never escaped chargen. A script
+   that waits for the prompt it means to answer stays synchronised no matter
+   what came before it.
+
+       @until "Choose a domain" ENTER      # press ENTER until that appears
+       d 3 ENTER                           # then answer it
+       @while "wish to worship" y          # answer it only if it is asked
+
+   The body is the rest of the line and may be several keys, because the case
+   this was built for needs that: the Skill Manager will not let go while any
+   rank is unspent, the size of the pool varies with the god, and draining it
+   takes RIGHT to spend and DOWN to move on.
+
+       @while "Unspent Skill Ranks" RIGHT RIGHT RIGHT DOWN
+
+   Both are bounded by SK_LOOP_MAX passes and then give up, so a script cannot
+   hang on a prompt that never comes or never clears. */
 void posixTerm::AppendKey(const ScriptKey &k) {
     if (keyCount == keyAlloc) {
         ScriptKey *bigger;
@@ -910,6 +979,86 @@ void posixTerm::LoadKeyScript(const char *fn) {
                 snprintf(resolved, sizeof(resolved), "%.*s%s",
                     (int)(slash - fn + 1), fn, inc);
             LoadKeyScript(resolved);
+            continue;
+        }
+
+        /* @while "text" KEY  -- send KEY for as long as the screen shows text.
+           @until "text" KEY  -- send KEY until the screen shows text.
+
+           Both take one quoted screen text and exactly one ordinary key. */
+        if (!strcmp(tok, "@while") || !strcmp(tok, "@until")) {
+            char keytok[MAX_PATH_LENGTH];
+            ScriptKey loop;
+
+            memset(&k, 0, sizeof(k));
+            k.ch = !strcmp(tok, "@while") ? SK_WHILE : SK_UNTIL;
+
+            while ((c = fgetc(f)) != EOF && isspace(c))
+                ;
+            if (c != '"') {
+                printf("Key script '%s': %s needs a quoted screen text.\n",
+                    fn, tok);
+                exit(2);
+            }
+            n = 0;
+            while ((c = fgetc(f)) != EOF && c != '"' &&
+                   n < (int)sizeof(k.label) - 1)
+                k.label[n++] = (char)c;
+            k.label[n] = '\0';
+            if (!n) {
+                printf("Key script '%s': %s was given an empty text.\n",
+                    fn, tok);
+                exit(2);
+            }
+
+            /* The body is the rest of the LINE, so the newline is what ends
+               it -- every other token in this format is whitespace-delimited
+               and a body of one key would otherwise be indistinguishable from
+               a body of the whole remaining script. */
+            for (;;) {
+                while ((c = fgetc(f)) != EOF && (c == ' ' || c == '\t'))
+                    ;
+                if (c == EOF || c == '\n')
+                    break;
+                if (c == '#') {
+                    while ((c = fgetc(f)) != EOF && c != '\n')
+                        ;
+                    break;
+                }
+
+                n = 0;
+                while (c != EOF && !isspace(c) && n < (int)sizeof(keytok) - 1) {
+                    keytok[n++] = (char)c;
+                    c = fgetc(f);
+                }
+                keytok[n] = '\0';
+
+                /* A @dump or a @quit in a body would fire once per pass and is
+                   always a mistake. */
+                if (!TokenToKey(keytok, &loop) || loop.ch < 0) {
+                    printf("Key script '%s': %s takes ordinary keys after its "
+                        "text, and got '%s'.\n", fn, tok, keytok);
+                    exit(2);
+                }
+                if (k.bodyCount >= SK_BODY_MAX) {
+                    printf("Key script '%s': %s \"%s\" has more than %d keys "
+                        "in its body.\n", fn, tok, k.label, SK_BODY_MAX);
+                    exit(2);
+                }
+                k.bodyCh[k.bodyCount] = loop.ch;
+                k.bodyMods[k.bodyCount] = loop.mods;
+                k.bodyCount++;
+
+                if (c == '\n' || c == EOF)
+                    break;
+            }
+
+            if (!k.bodyCount) {
+                printf("Key script '%s': %s \"%s\" has no keys after it.\n",
+                    fn, tok, k.label);
+                exit(2);
+            }
+            AppendKey(k);
             continue;
         }
 
@@ -1010,8 +1159,51 @@ ScriptKey posixTerm::NextKey() {
         fprintf(stderr, "incursion: key budget of %ld reached\n", (long)maxKeys);
         exit(EXIT_OUT_OF_KEYS);
     }
-    if (!keys || keyNext >= keyCount)
-        OutOfKeys();
+
+    /* A conditional stays put until its condition flips, so keyNext is not
+       advanced while it is still firing. The screen it reads is the one the
+       caller has just drawn -- GetCharCmd calls Update() before asking. */
+    for (;;) {
+        ScriptKey *e;
+
+        if (!keys || keyNext >= keyCount)
+            OutOfKeys();
+
+        e = &keys[keyNext];
+        if (e->ch != SK_WHILE && e->ch != SK_UNTIL)
+            break;
+
+        /* The condition is tested only at the top of a pass. Testing between
+           the keys of one pass could stop halfway through RIGHT RIGHT RIGHT
+           DOWN and leave the cursor on a half-spent skill. */
+        if (e->bodyPos == 0) {
+            bool shown = ScreenShows(e->label);
+            bool fire = (e->ch == SK_WHILE) ? shown : !shown;
+
+            if (!fire || e->iter >= SK_LOOP_MAX) {
+                if (fire)
+                    fprintf(stderr, "incursion: %s \"%s\" gave up after %d "
+                        "passes\n", e->ch == SK_WHILE ? "@while" : "@until",
+                        e->label, SK_LOOP_MAX);
+                e->iter = 0;
+                keyNext++;
+                continue;
+            }
+            e->iter++;
+        }
+
+        memset(&k, 0, sizeof(k));
+        k.ch = e->bodyCh[e->bodyPos];
+        k.mods = e->bodyMods[e->bodyPos];
+        e->bodyPos++;
+        if (e->bodyPos >= e->bodyCount)
+            e->bodyPos = 0;
+
+        keysRead++;
+        if (!useCurses)
+            alarm(DEFAULT_TIMEOUT_S);
+        return k;
+    }
 
     keysRead++;
     k = keys[keyNext++];
