@@ -18,7 +18,8 @@
 #
 # Ends: 0 the script ran out or asked to quit, 1 Fatal(), 2 bad key script,
 #       3 the key budget ran out, 4 the watchdog fired (the game stopped
-#       asking for keys, which is the signature of a hang).
+#       asking for keys, which is the signature of a hang), 5 the run never
+#       entered a map and so measured nothing.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -81,12 +82,34 @@ fi
 
 echo
 echo "--- after the session ---"
+
+# Did the game ever actually play? MapAudit.cpp opens logs/mapaudit.log on the
+# FIRST audit rather than at startup, and audits run only while turns pass on a
+# map, so the file exists if and only if the session reached gameplay.
+#
+# This has to change the exit code, not just print a line. A session whose keys
+# are all eaten by character generation exits 0, and every caller that reads the
+# exit code -- soak.sh, and any A/B comparison -- counts it as a clean pass. On
+# 2026-08-14 that turned 250 sessions that played nothing into the evidence for
+# a fix, and the false result was written into a commit message. Two runs that
+# both did nothing agree perfectly, which is what made it convincing.
+#
+# Only a normal ending is promoted. A FATAL or a watchdog stop says more about
+# the run than "no gameplay" does, so those keep their own code.
+PLAYED=1
+[ -f "$RUN/logs/mapaudit.log" ] || PLAYED=0
+if [ "$PLAYED" -eq 0 ] && { [ "$STATUS" -eq 0 ] || [ "$STATUS" -eq 3 ]; }; then
+    STATUS=5
+fi
+
 case $STATUS in
     0) echo "ended:      cleanly (script finished or asked to quit)" ;;
     1) echo "ended:      FATAL -- see the log below" ;;
     2) echo "ended:      the key script could not be read" ;;
     3) echo "ended:      out of keys or budget" ;;
     4) echo "ended:      WATCHDOG -- the game stopped asking for keystrokes" ;;
+    5) echo "ended:      NO GAMEPLAY -- the run never entered a map, so it" ;
+       echo "            measured nothing. Do not count it as a pass." ;;
     *) echo "ended:      exit $STATUS" ;;
 esac
 

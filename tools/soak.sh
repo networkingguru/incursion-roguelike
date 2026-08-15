@@ -35,7 +35,13 @@ JOBS="${SOAK_JOBS:-4}"
     exit 2
 }
 
-SOAK="$ROOT/logs/soak/$(date +%Y%m%d-%H%M%S)"
+# The process id is part of the name because the timestamp alone is only good
+# to the second. Two soaks started in the same second used to land in one
+# directory and append to one `exits` file, silently merging two experiments
+# into one set of numbers -- and an A/B is exactly two soaks started back to
+# back. Observed on 2026-08-15: a 4-session run and a 4-session run reported
+# eight sessions, four of them from the wrong experiment.
+SOAK="$ROOT/logs/soak/$(date +%Y%m%d-%H%M%S)-$$"
 mkdir -p "$SOAK"
 
 echo "sessions:  $SESSIONS  (seeds $FIRST..$((FIRST + SESSIONS - 1)))"
@@ -63,7 +69,8 @@ done
 wait
 
 echo "--- how the sessions ended ---"
-# 0 clean, 1 Fatal(), 2 bad script, 3 out of keys/budget, 4 watchdog.
+# 0 clean, 1 Fatal(), 2 bad script, 3 out of keys/budget, 4 watchdog,
+# 5 no gameplay.
 sort -n "$SOAK/exits" | awk '{print $2}' | sort | uniq -c | while read -r n code; do
     case "$code" in
         0) what="clean" ;;
@@ -71,10 +78,24 @@ sort -n "$SOAK/exits" | awk '{print $2}' | sort | uniq -c | while read -r n code
         2) what="could not start" ;;
         3) what="out of keys" ;;
         4) what="WATCHDOG -- the game stopped asking for keystrokes" ;;
+        5) what="NO GAMEPLAY -- never entered a map, measured nothing" ;;
         *) what="exit $code" ;;
     esac
     printf '  %4d  %s\n' "$n" "$what"
 done
+
+# A soak whose sessions never played is worthless, and it is worth saying so at
+# the top rather than leaving it to be inferred from a code in a table. This is
+# the check that would have caught the false A/B result of 2026-08-14.
+VOID="$(awk '$2==5' "$SOAK/exits" | wc -l | tr -d ' ')"
+if [ "$VOID" -gt 0 ]; then
+    echo
+    echo "  WARNING: $VOID of $SESSIONS sessions produced NO GAMEPLAY."
+    echo "  Those sessions measure nothing. Any total below is drawn from the"
+    echo "  remaining $((SESSIONS - VOID)). If this number is large, fix the run"
+    echo "  before drawing any conclusion from it -- and check that Options.Dat"
+    echo "  in this tree is the one you meant to test with."
+fi
 
 echo
 echo "--- distinct errors, and how many sessions hit each ---"
@@ -101,16 +122,26 @@ fi
 
 echo
 echo "--- map audit ---"
+# ARMED counts the sessions that actually produced an audit log. Sessions that
+# never entered a map produce none, and skipping them silently is how "no
+# findings" gets reported as "armed in every session, nothing wrong" -- a clean
+# bill of health from a run that never looked at anything.
 AUDIT=0
+ARMED=0
 for log in "$SOAK"/seed-*/logs/mapaudit.log; do
     [ -f "$log" ] || continue
+    ARMED=$((ARMED + 1))
     if [ "$(grep -vc '^=== map audit armed' "$log")" != "0" ]; then
         AUDIT=$((AUDIT + 1))
         echo "  $(dirname "$(dirname "$log")" | xargs basename):"
         grep -v '^=== map audit armed' "$log" | head -3 | sed 's/^/    /'
     fi
 done
-[ "$AUDIT" -eq 0 ] && echo "  armed in every session, no inconsistencies found"
+if [ "$ARMED" -eq 0 ]; then
+    echo "  NEVER RAN -- no session entered a map, so nothing was audited"
+elif [ "$AUDIT" -eq 0 ]; then
+    echo "  armed in $ARMED of $SESSIONS sessions, no inconsistencies found"
+fi
 
 echo
 echo "report kept in $SOAK"

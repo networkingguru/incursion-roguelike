@@ -131,8 +131,25 @@ if assert_reproducible "$WORK/run1/logs/screens" "$WORK/run3/logs/screens"; then
     fail "two different seeds drew identical screens; the seed is being ignored"
 fi
 
+# 5. A session that never reaches gameplay must NOT report success. An empty
+#    key script runs the game out of keys at the very first prompt, so it exits
+#    having generated no character and entered no map -- and the game's own exit
+#    code for that is 0. Before the harness promoted it, soak.sh counted such a
+#    session as "clean", and 250 of them were once read as evidence that a fix
+#    worked. This assertion is the reason that cannot happen again.
+printf '# no keys at all: the session must not reach a map\n' > "$WORK/empty.keys"
+INCURSION_RUN_DIR="$WORK/run4" ./tools/headless.sh "$WORK/empty.keys" "$SEED" \
+    > "$WORK/out4" 2>&1 < /dev/null
+STATUS=$?
+if [ "$STATUS" -ne 5 ]; then
+    echo "--- session output ---"
+    tail -10 "$WORK/out4"
+    fail "a session that never entered a map exited $STATUS, wanted 5 (NO GAMEPLAY)"
+fi
+
 if [ "$FAILED" -eq 0 ]; then
-    echo "PASS: a scripted session runs unattended, draws a map, and repeats itself"
+    echo "PASS: a scripted session runs unattended, draws a map, repeats itself,"
+    echo "      and a session that plays nothing is reported as playing nothing"
     exit 0
 fi
 exit 1
