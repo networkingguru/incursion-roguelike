@@ -84,6 +84,40 @@ bool Map::PQPopMin()
   }
 
 
+#ifdef PATH_PROBE
+/* Sizing inc-2k3. Counts what one pathfinding call actually does, so a fix can
+   be argued from numbers rather than from reading. Not compiled by default. */
+unsigned long long PP_Calls=0, PP_RunOver=0, PP_TerrEvent=0, PP_FeatEvent=0,
+                   PP_Cells=0, PP_DistinctTer=0, PP_MCHit=0, PP_MCMiss=0;
+static rID PP_seen[64]; static int PP_nseen;
+void PP_Report(void);
+#endif
+
+/* THE MONSTER-CONSIDER CACHE. See inc-2k3.
+
+   While a monster works out a route it asks, for every square it considers,
+   "is this ground dangerous?". The game answers by running a script attached to
+   that kind of ground. Measured on Brian's live game on 2026-08-15, that script
+   was the single largest cost in the engine: of the work the game was actually
+   doing, pathfinding was 82%, and running this script was the biggest piece
+   inside it -- three times the cost of the route search itself.
+
+   The answer cannot change from square to square within one route calculation.
+   The script is never told which square is being asked about: Resource::PEvent
+   fills the event in from the CREATURE -- actor, victim, map, and the creature's
+   own position -- and nothing from the square. So for a fixed creature the
+   answer depends only on the kind of ground. Ask once per kind, and reuse it.
+
+   Scoped deliberately. RunOver has other callers in src/Creature.cpp that ask
+   about one or two squares; the cache is off for those. It is emptied when a
+   route calculation starts and switched off again on every exit from it, so an
+   answer can never outlive the calculation that produced it. */
+#define MC_CACHE_MAX 32
+static bool     MCCacheOn = false;
+static int      MCCacheN  = 0;
+static rID      MCCacheID[MC_CACHE_MAX];
+static EvReturn MCCacheVal[MC_CACHE_MAX];
+
 bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
                        Creature *runner, int32 dangerFactor, 
                        uint16 *ThePath)
@@ -95,9 +129,16 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
     if (!ThePath)
       ThePath = ::ThePath;
 
+#ifdef PATH_PROBE
+    { if (!PP_Calls) { extern int atexit(void (*)(void)); atexit(PP_Report); }
+      PP_Calls++; PP_Cells += (unsigned long long)sizeX * sizeY; PP_nseen = 0; }
+#endif
     ASSERT(InBounds(sx,sy))
     ASSERT(InBounds(tx,ty))
     PHead = NULL;
+
+    MCCacheOn = true;
+    MCCacheN  = 0;
 
     bool Incor = 
       runner->HasMFlag(M_INCOR) ||
@@ -105,12 +146,21 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
     bool Meld = 
       runner->HasAbility(CA_EARTHMELD);
 
-    for (x=0;x!=256;x++)
-      for(y=0;y!=256;y++)
-        {
-          Dist[x][y]   = 30000;
-          Parent[x][y] = 0;
-        }
+    /* Only the squares this map has. The arrays are dimensioned for the
+       largest map the engine allows and this loop used to clear all of both,
+       65,536 cells and 131,072 writes, whatever the level's real size. A
+       128x128 level uses a quarter of that, and the search that follows looks
+       at eight squares on average. Measured over one long session: 1,045,755
+       calls, 8.0 squares examined per call. See inc-2k3. */
+    {
+      int16 lx = min((int16)256, sizeX), ly = min((int16)256, sizeY);
+      for (x = 0; x != lx; x++)
+        for (y = 0; y != ly; y++)
+          {
+            Dist[x][y]   = 30000;
+            Parent[x][y] = 0;
+          }
+    }
 
     Dist[sx][sy] = 0;
 
@@ -131,6 +181,9 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
             continue;
           if (!InBounds(nx,ny))
             continue;
+#ifdef PATH_PROBE
+          PP_RunOver++;
+#endif
           int baseCost = RunOver(nx&0xFF,ny&0xFF,true,runner,dangerFactor,Incor,Meld);
           if (!baseCost)
             continue;
@@ -163,6 +216,7 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
               At(x,y).Shade = false;
             }              
       #endif
+      MCCacheOn = false;
       return false;
       }
 
@@ -198,6 +252,7 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
       }
     #endif
 
+    MCCacheOn = false;
     return true;
 
 
@@ -256,7 +311,11 @@ uint16 Map::RunOver(uint8 x, uint8 y, bool memonly, Creature *c,
 
   Feature * f; 
   for (f=FFeatureAt(x,y);f;f=NFeatureAt(x,y)) 
+#ifdef PATH_PROBE
+    if ((PP_FeatEvent++), TFEAT(f->fID)->PEvent(EV_MON_CONSIDER,c,f,f->fID) == ABORT) {
+#else
     if (TFEAT(f->fID)->PEvent(EV_MON_CONSIDER,c,f,f->fID) == ABORT) {
+#endif
       if (dangerFactor & DF_IGNORE_TERRAIN) 
         return (sizeX * 3);
       else
@@ -265,7 +324,30 @@ uint16 Map::RunOver(uint8 x, uint8 y, bool memonly, Creature *c,
   if (At(x,y).Terrain) { 
     rID t = PTerrainAt(x,y,c);
     if (TTER(t)->HasFlag(TF_WARN)) {
-      if (TTER(t)->PEvent(EV_MON_CONSIDER,c,t) == ABORT) {
+#ifdef PATH_PROBE
+      { int _i; bool _f = false;
+        PP_TerrEvent++;
+        for (_i = 0; _i < PP_nseen; _i++) if (PP_seen[_i] == t) { _f = true; break; }
+        if (!_f && PP_nseen < 64) { PP_seen[PP_nseen++] = t; PP_DistinctTer++; } }
+#endif
+      EvReturn mc = NOTHING;
+      int ci, found = 0;
+      if (MCCacheOn)
+        for (ci = 0; ci < MCCacheN; ci++)
+          if (MCCacheID[ci] == t)
+            { mc = MCCacheVal[ci]; found = 1; break; }
+#ifdef PATH_PROBE
+      if (found) PP_MCHit++; else PP_MCMiss++;
+#endif
+      if (!found) {
+        mc = TTER(t)->PEvent(EV_MON_CONSIDER,c,t);
+        if (MCCacheOn && MCCacheN < MC_CACHE_MAX) {
+          MCCacheID[MCCacheN]  = t;
+          MCCacheVal[MCCacheN] = mc;
+          MCCacheN++;
+        }
+      }
+      if (mc == ABORT) {
         if (dangerFactor & DF_IGNORE_TERRAIN) 
             return (sizeX * 3);
         else
@@ -279,3 +361,21 @@ uint16 Map::RunOver(uint8 x, uint8 y, bool memonly, Creature *c,
   }
   return 2;
 }
+
+#ifdef PATH_PROBE
+#include <stdio.h>
+void PP_Report(void) {
+  if (!PP_Calls) return;
+  fprintf(stderr,
+    "PATHPROBE calls=%llu runover=%llu (%.1f/call) terrain-events=%llu (%.1f/call)"
+    " distinct-terrains=%llu (%.2f/call) feature-events=%llu (%.1f/call)"
+    " live-cells=%llu (%.0f/call, vs 65536 cleared)"
+    " consider-cache: reused=%llu ran=%llu\n",
+    PP_Calls, PP_RunOver, (double)PP_RunOver/PP_Calls,
+    PP_TerrEvent, (double)PP_TerrEvent/PP_Calls,
+    PP_DistinctTer, (double)PP_DistinctTer/PP_Calls,
+    PP_FeatEvent, (double)PP_FeatEvent/PP_Calls,
+    PP_Cells, (double)PP_Cells/PP_Calls, PP_MCHit, PP_MCMiss);
+  fflush(stderr);
+}
+#endif
