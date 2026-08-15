@@ -1,5 +1,32 @@
 # Agent Instructions
 
+## Publishing anything outward-facing
+
+Two rules, and neither has an exception.
+
+1. **Brian reads the literal text before it is published.** Not a diff, not a
+   summary of what it claims — the exact body and title that will be posted.
+   This covers pull requests, issues, review comments, and anything else that
+   leaves this machine or appears under his name. A "go" that answers a plan is
+   NOT approval of wording he has not seen. Paste the text, wait for a yes on
+   that text.
+
+2. **Always disclose AI assistance on public contributions.** Every commit
+   carries a `Co-Authored-By` trailer; so must anything sent to another
+   project. Put the disclosure in before showing him the draft, so what he
+   approves is the disclosed version.
+
+Both were broken on 2026-08-15: two PRs went to the parent project with text he
+had never read and no disclosure, while his own branch commits carried the
+trailer. If a published item must be corrected, prefer adding a comment over
+silently editing the body — a silent edit leaves an "edited" marker and reads
+as concealment.
+
+See `docs/REPORTING-GATE.md` for the separate rule that a public claim needs an
+oracle that changed state, with numbers on both sides.
+
+## Issue tracking
+
 This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
 
 > **Architecture in one line:** Issues live in a local Dolt database
