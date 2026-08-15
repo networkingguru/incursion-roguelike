@@ -1,0 +1,111 @@
+# The same undirected walk as explore.keys, with an orc mage instead of an orc
+# barbarian, and with spellcasting mixed in.
+#
+#   tools/headless.sh tools/keys/explore-mage.keys 1
+#
+# Why a third character: 200 sessions of one barbarian walk the same code. A
+# mage reaches the Spell Manager, the mana accounting and the arcane spell
+# effects. The priest walk does not cover those: divine and arcane casting go
+# through different tables.
+#
+# READ THIS BEFORE ADDING AN 'ESC'. ESC does not cancel. In play mode it
+# OPENS the System Menu -- [a] Save and Quit, [b] Save and Continue, [c] Quit
+# Game -- and a second ESC closes it again. Three things follow, all of them
+# observed while writing this file:
+#
+#   1. A lone ESC leaves the System Menu open. Arrow keys only move its
+#      highlight, so it stays open until another ESC arrives.
+#   2. While it is open, 'a' means Save and Quit and ENTER means the same
+#      thing, because Save and Quit is the highlighted option. This script
+#      casts with 'm a'. So one stray ESC can end the session, save the
+#      character, and exit 0 -- which reads exactly like a healthy run.
+#   3. A pair of ESCs is only safe if the block in front of it left no menu
+#      of its own open, and a walk cannot know that: 'g' over loot opens a
+#      container view, and monsters and doors raise prompts of their own.
+#
+# So the walk below uses ESC in exactly one shape, described next, and the
+# System Menu on its own is exercised once in the prologue, where the state
+# of the screen is known. An earlier draft that sprinkled bare ESC pairs
+# through the walk did save and quit on its own at block 150 of 300 in the
+# rogue version of this file.
+#
+# The two multi-key blocks, both of which end back in play mode whatever the
+# game was showing:
+#
+#   m a               The cast. 'm' opens the Spell Manager and [a] is Shield
+#                     on seeds 1, 7 and 42. Shield is a self-buff: it resolves
+#                     at once and asks nothing further, where an attack spell
+#                     would leave a target prompt open. Once the mana runs out
+#                     the same block exercises the not-enough-mana path
+#                     instead, which is also worth having.
+#
+#   g d ESC DOWN ENTER
+#                     The pick-up, and the only ESC in the walk. It is five
+#                     keys because 'g' can leave the screen in either of two
+#                     states and this sequence lands in play mode from both:
+#                       container view open, because 'g' found loot: 'd' drops
+#                         whatever is held in the In-the-Air slot -- the view
+#                         REFUSES to close while that slot is full, and says
+#                         so -- ESC is then its Done key, DOWN walks a step,
+#                         ENTER answers 'You can't go in anything here'.
+#                       nothing open, because the floor was bare: 'd' shows
+#                         the character sheet, ESC closes it, DOWN walks a
+#                         step, ENTER answers as above.
+#                     Dropping what was just picked up sounds pointless. It is
+#                     not: the pick-up, the encumbrance check and the drop all
+#                     run, and the walk does not slow to a crawl under the
+#                     weight of everything it has ever stood on.
+#
+# Generated, and regenerable: a fixed seed, a weighted pool of blocks, 300 of
+# them, a screen dump every 50.
+
+@include chargen-mage.keys
+
+@dump:arrival
+
+# The arrival room description is still on the screen, and it eats the first
+# keystroke. Spend one on it deliberately, then open and close the System
+# Menu once. This is the only place in the file where ESC is safe, because it
+# is the only place where the state of the screen is known; see the note
+# above. The dump proves the game came back to play mode.
+SPACE
+ESC ESC
+@dump:sysmenu
+
+> m a UP*5 RIGHT*6 LEFT*2 PGDN*4 HOME*4 DOWN*5 UP*2
+s DOWN*5 s DOWN*1 m a UP*5 m a m a .*3
+END*4 PGDN*5 s PGDN*3 PGUP*6 LEFT*6 g d ESC DOWN ENTER s HOME*6
+PGDN*4 s m a s UP*5 s .*3 m a .*3
+s PGUP*1 END*6 END*2 LEFT*4 PGUP*5 .*3 LEFT*6 m a
+PGDN*5 m a m a m a s @dump:walk50 s s >
+m a PGDN*1 .*3 PGDN*4 s m a HOME*1 m a g d ESC DOWN ENTER
+LEFT*1 HOME*5 m a s DOWN*6 PGDN*2 .*3 s s
+PGDN*5 s END*3 HOME*3 m a > PGUP*2 s m a
+g d ESC DOWN ENTER END*2 UP*2 PGUP*4 m a PGDN*3 DOWN*3 RIGHT*4 HOME*6
+s s UP*4 m a HOME*6 m a DOWN*1 HOME*6 PGUP*5
+> m a @dump:walk100 s DOWN*4 RIGHT*5 g d ESC DOWN ENTER m a UP*6
+LEFT*6 g d ESC DOWN ENTER m a s g d ESC DOWN ENTER .*3 PGUP*6 m a s
+s s PGDN*1 DOWN*5 PGDN*2 m a LEFT*5 m a PGUP*1
+m a .*3 g d ESC DOWN ENTER RIGHT*2 LEFT*6 DOWN*4 s s m a
+RIGHT*2 g d ESC DOWN ENTER PGUP*3 .*3 s UP*3 m a s PGUP*3
+m a m a > LEFT*4 m a DOWN*2 s s @dump:walk150
+DOWN*3 m a .*3 END*4 m a DOWN*6 RIGHT*4 PGDN*2 PGUP*3
+RIGHT*4 s s PGDN*5 m a LEFT*3 m a DOWN*2 DOWN*1
+s m a PGDN*2 s m a PGDN*3 DOWN*3 s HOME*3
+g d ESC DOWN ENTER UP*3 s END*2 PGUP*2 HOME*3 LEFT*6 > s
+s m a RIGHT*3 HOME*5 UP*6 m a m a s s
+PGUP*6 DOWN*2 s UP*5 g d ESC DOWN ENTER @dump:walk200 HOME*1 m a LEFT*6
+PGUP*6 s HOME*4 s PGDN*3 g d ESC DOWN ENTER PGDN*5 RIGHT*1 DOWN*6
+g d ESC DOWN ENTER s PGUP*6 m a END*5 PGUP*5 g d ESC DOWN ENTER s LEFT*6
+PGUP*1 > HOME*4 .*3 > m a m a DOWN*4 END*2
+RIGHT*4 END*5 LEFT*6 g d ESC DOWN ENTER HOME*5 m a m a g d ESC DOWN ENTER g d ESC DOWN ENTER
+g d ESC DOWN ENTER m a PGDN*1 m a m a m a m a m a DOWN*4
+g d ESC DOWN ENTER m a @dump:walk250 LEFT*4 UP*2 s .*3 LEFT*3 UP*1
+HOME*2 END*1 m a .*3 > m a RIGHT*6 PGUP*1 PGUP*2
+g d ESC DOWN ENTER END*3 .*3 g d ESC DOWN ENTER g d ESC DOWN ENTER RIGHT*4 END*2 PGUP*1 m a
+HOME*3 UP*6 PGUP*2 RIGHT*1 UP*1 HOME*4 s .*3 DOWN*4
+DOWN*3 DOWN*2 HOME*2 RIGHT*4 END*3 LEFT*6 PGDN*4 DOWN*4 s
+m a .*3 g d ESC DOWN ENTER m a .*3 s g d ESC DOWN ENTER >
+
+@dump:final
+@quit

@@ -1,0 +1,53 @@
+# Make a rogue and get into the dungeon.
+#
+# The character is a male orc rogue, neutral, worshipping whichever god the
+# game offers. The race is the same orc the other chargen scripts use, on
+# purpose: it keeps the race and subrace letters identical across the family
+# of scripts, so only the class-specific part of this file differs from
+# chargen.keys and only that part can rot.
+#
+# Why a rogue: the game's own class screen calls rogue the flavour of
+# character that exercises the skill system, and the skill system is what a
+# barbarian walk never touches. A rogue starts with fourteen skill ranks
+# against the barbarian's five, so searching, hiding and moving silently
+# actually resolve instead of failing on every roll.
+#
+# Every choice here is a menu letter, and menu letters move when the list
+# changes. Run with a fixed seed (tools/headless.sh <script> <seed>) or the
+# attribute rolls change, the offered feats change with them, and these
+# letters choose something else.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+i       # Race:     [i] Orc
+a       # Subrace:  [a] Orc (Standard)
+i       # Class:    [i] Rogue
+a       # Attributes: the first of the five offered sets
+e       # Alignment: [e] Neutral
+        #   NOTE: this is not the [c] that chargen.keys uses. A barbarian may
+        #   not be lawful, so the game offers a barbarian a shortened list of
+        #   six alignments and Neutral falls on [c]. A rogue may be any
+        #   alignment, so the list is the full nine and Neutral falls on [e].
+a       # First feat
+a       # Second feat
+
+# Skill Manager. RIGHT spends a rank on the selected skill and stops at the
+# skill's maximum, DOWN moves to the next skill, so three RIGHTs per skill
+# spends everything available without needing to know how many ranks this
+# character has. Twelve skills at two ranks each covers the rogue's fourteen
+# ranks with room to spare. Character generation will not let go until the
+# pool is empty.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+y       # Do you wish to worship <god>? -- yes
+        #   A rogue gains no second pool of skill ranks from the choice of
+        #   god, so no second Skill Manager pass follows here.
+
+a       # Personality archetype
+
+# A rogue learns no spells, so generation ends here.
+# The next keystroke dismisses the arrival room description and lands in the
+# dungeon, in play mode.

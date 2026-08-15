@@ -1277,16 +1277,30 @@ void TargetSystem::Retarget(Creature *me, bool force)
             me->m->FCreatureAt(xx,yy)->x != yy)
           continue;
       for (Thing * it = me->m->FirstAt(xx,yy);it;it=me->m->NextAt(xx,yy)) {
-        if (!it->isCreature() && !it->isItem()) continue; 
+        if (!it->isCreature() && !it->isItem()) continue;
+
+        /* targets[] is a 44KB stack array and this loop covers 37x37 squares,
+           counting every item as well as every creature. Nothing bounded it:
+           RateAsTarget writes at targets[count] before the priority test, so
+           the first write past the end happens the moment count reaches the
+           limit -- a stack smash with no log and no assert. */
+        if (count >= (int)(sizeof(targets)/sizeof(targets[0]))) {
+#ifdef RETARGET_PROBE
+          Error("RETARGET_PROBE: target list full at %d, square (%d,%d)",
+            count, xx, yy);
+#endif
+          goto FullList;
+        }
 
         RateAsTarget(me,it,targets[count]);
 
-        if (targets[count].priority <= 0) continue; 
+        if (targets[count].priority <= 0) continue;
 
         count++;
       }
     } 
 
+FullList:
   qsort(targets, count, sizeof(targets[0]), TargetSort);
 
   for (i=0;i<tCount;i++) {

@@ -852,7 +852,15 @@ void Thing::MoveDepth(int16 NewDepth, bool safe) {
 }
 
 void Player::MoveDepth(int16 NewDepth, bool safe) {
-    static Thing *GoWith[64]; Creature *c;
+    /* Not static. This function re-enters itself: PlaceAt below fires the new
+       square's terrain, and terrain can move the player another level
+       (Feature.cpp:260, Move.cpp:1380). With one shared array the inner call
+       refilled it, and the outer call then walked its OWN count over the
+       inner call's contents and dereferenced a creature that had already been
+       moved -- a NULL dereference inside MoveDepth, with MoveDepth further
+       down the same stack, and no log at all because nothing calls Error().
+       512 bytes of stack is a small price for re-entrancy. */
+    Thing *GoWith[64]; Creature *c;
     rID mID; Map *new_m = NULL; int16 nx, ny, i, gwc;
     StoreLevelStats((uint8)m->Depth);
     theGame->SaveGame(*this);
@@ -906,6 +914,10 @@ void Player::MoveDepth(int16 NewDepth, bool safe) {
         MapIterate(m, c, i)
             if (c->isMonster())
                 if (c->ts.isLeader(this)) {
+                    /* A player with more than 64 followers leaves the rest
+                       behind rather than writing past the array. */
+                    if (gwc >= (int16)(sizeof(GoWith)/sizeof(GoWith[0])))
+                        break;
                     GoWith[gwc++] = c;
                     c->Remove(false);
                 }

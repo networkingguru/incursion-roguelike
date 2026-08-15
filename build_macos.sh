@@ -36,6 +36,11 @@ case "$BACKEND" in
     *)       echo "Unknown BACKEND '$BACKEND' (want libtcod or posix)"; exit 1 ;;
 esac
 EXTRA_CXXFLAGS="${EXTRA_CXXFLAGS:-}"
+# Some diagnostics have to reach the linker as well as the compiler --
+# AddressSanitizer is the one that made this necessary:
+#   EXTRA_CXXFLAGS="-fsanitize=address -g" EXTRA_LDFLAGS=-fsanitize=address \
+#   BACKEND=posix OUT=incursion-asan ./build_macos.sh
+EXTRA_LDFLAGS="${EXTRA_LDFLAGS:-}"
 
 if [ "$OUT" = "incursion" ] && [ -z "$EXTRA_CXXFLAGS" ]; then
     OBJ="$ROOT/build/obj"
@@ -108,7 +113,7 @@ for f in src/*.c; do
 done
 
 echo "--- linking ---"
-clang++ -std=c++17 -o "$ROOT/$OUT" "$OBJ"/*.o $TCODLIB $SDL_LIBS $LINK_LIBS
+clang++ -std=c++17 $EXTRA_LDFLAGS -o "$ROOT/$OUT" "$OBJ"/*.o $TCODLIB $SDL_LIBS $LINK_LIBS
 
 # ------------------------------------------------------------- game data -----
 if [ ! -f "$ROOT/mod/Incursion.Mod" ]; then

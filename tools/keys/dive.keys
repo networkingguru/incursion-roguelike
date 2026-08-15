@@ -1,0 +1,105 @@
+# Generate as many dungeon levels as one session can, and walk each one.
+#
+#   tools/headless.sh tools/keys/dive.keys 1
+#
+# Where explore.keys stays on one level and fills logs/errors.log with what
+# happens during play, this fills it with what happens during MAP GENERATION.
+# That is a different body of code and a different set of defects -- the first
+# one found, inc-upw.3, fires inside Map::Generate and only once per game,
+# so an ordinary session gives it a single chance to appear.
+#
+# Wizard mode's 'Ascend / Descend Depth' is what makes this possible: it
+# generates a level on demand instead of waiting for the player to find the
+# stairs. Entering wizard mode needs a confirmation the first time and not
+# afterwards, which is why the first line differs from the rest.
+#
+# Roughly 45 levels per session, down to depth 25 and back up.
+#
+# Generated the same way as explore.keys, seeded 20260816.
+
+@include chargen.keys
+
+@dump:arrival
+
+w y p "2" ENTER
+PGDN*3 PGDN*3 UP*3 PGUP*2 END*4 END*4 s .*2
+w p "3" ENTER
+PGUP*2 UP*2 LEFT*4 LEFT*3 HOME*5 PGUP*1 s .*2
+w p "4" ENTER
+LEFT*1 HOME*3 UP*2 END*1 RIGHT*1 UP*5 s .*2
+w p "5" ENTER
+PGUP*3 RIGHT*4 HOME*5 END*2 UP*5 RIGHT*5 s .*2
+w p "6" ENTER
+@dump:depth6
+UP*5 END*1 RIGHT*1 LEFT*4 LEFT*1 UP*5 s .*2
+w p "7" ENTER
+RIGHT*4 PGUP*2 RIGHT*2 UP*3 PGDN*1 HOME*5 s .*2
+w p "8" ENTER
+RIGHT*3 LEFT*4 HOME*1 PGDN*1 END*3 END*1 s .*2
+w p "9" ENTER
+DOWN*3 END*1 LEFT*5 PGUP*3 DOWN*2 DOWN*3 s .*2
+w p "10" ENTER
+HOME*2 END*4 HOME*1 UP*2 LEFT*3 HOME*5 s .*2
+w p "11" ENTER
+HOME*4 LEFT*2 DOWN*5 END*5 RIGHT*5 HOME*2 s .*2
+w p "12" ENTER
+@dump:depth12
+PGUP*3 END*5 END*3 END*1 PGDN*3 RIGHT*3 s .*2
+w p "13" ENTER
+PGUP*4 DOWN*1 PGDN*3 UP*1 UP*4 PGUP*5 s .*2
+w p "14" ENTER
+LEFT*2 PGDN*4 UP*5 END*1 UP*2 UP*3 s .*2
+w p "15" ENTER
+UP*3 PGDN*4 UP*3 DOWN*4 PGDN*2 RIGHT*4 s .*2
+w p "16" ENTER
+UP*2 LEFT*4 PGDN*4 HOME*4 END*3 END*5 s .*2
+w p "17" ENTER
+END*4 END*3 PGUP*3 RIGHT*4 PGUP*2 DOWN*2 s .*2
+w p "18" ENTER
+@dump:depth18
+LEFT*5 DOWN*3 HOME*3 PGDN*2 PGDN*3 PGDN*5 s .*2
+w p "19" ENTER
+HOME*5 DOWN*2 RIGHT*1 LEFT*4 RIGHT*3 UP*2 s .*2
+w p "20" ENTER
+RIGHT*2 END*2 HOME*2 PGDN*1 HOME*1 PGDN*4 s .*2
+w p "21" ENTER
+PGUP*2 RIGHT*3 DOWN*2 END*5 PGDN*2 PGUP*1 s .*2
+w p "22" ENTER
+LEFT*2 PGUP*3 PGDN*5 DOWN*2 UP*1 LEFT*5 s .*2
+w p "23" ENTER
+PGUP*4 UP*4 HOME*4 RIGHT*2 END*2 PGDN*5 s .*2
+w p "24" ENTER
+@dump:depth24
+LEFT*3 LEFT*3 END*5 PGDN*1 LEFT*2 PGDN*5 s .*2
+w p "25" ENTER
+DOWN*3 PGUP*5 DOWN*4 PGUP*3 PGUP*3 PGDN*4 s .*2
+w p "24" ENTER
+@dump:depth24
+END*5 HOME*1 LEFT*5 LEFT*4 LEFT*2 UP*2 s .*2
+w p "22" ENTER
+PGDN*2 PGDN*2 END*1 DOWN*3 PGDN*2 HOME*1 s .*2
+w p "20" ENTER
+HOME*1 PGDN*1 UP*3 DOWN*1 LEFT*1 PGDN*2 s .*2
+w p "18" ENTER
+@dump:depth18
+RIGHT*1 LEFT*4 PGUP*1 UP*5 UP*3 END*3 s .*2
+w p "16" ENTER
+PGDN*5 HOME*5 PGDN*4 DOWN*1 END*5 PGDN*5 s .*2
+w p "14" ENTER
+DOWN*3 PGUP*4 PGDN*5 PGUP*2 RIGHT*4 UP*4 s .*2
+w p "12" ENTER
+@dump:depth12
+HOME*3 END*3 END*5 DOWN*4 LEFT*3 LEFT*5 s .*2
+w p "10" ENTER
+PGUP*2 HOME*3 RIGHT*4 END*5 HOME*5 UP*3 s .*2
+w p "8" ENTER
+END*1 DOWN*2 DOWN*2 UP*4 RIGHT*3 PGUP*3 s .*2
+w p "6" ENTER
+@dump:depth6
+DOWN*4 DOWN*2 PGUP*5 UP*2 PGUP*1 DOWN*5 s .*2
+w p "4" ENTER
+PGUP*1 PGUP*4 PGDN*2 RIGHT*5 PGDN*5 PGDN*2 s .*2
+w p "2" ENTER
+
+@dump:final
+@quit

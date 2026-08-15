@@ -1,0 +1,102 @@
+# The same undirected walk as explore.keys, with an orc rogue instead of an
+# orc barbarian, and with searching, hiding and picking up mixed in.
+#
+#   tools/headless.sh tools/keys/explore-rogue.keys 1
+#
+# Why a fourth character: the game's own class screen calls the rogue the
+# character that exercises the skill system. A rogue starts with fourteen
+# skill ranks against a barbarian's five, so searching, hiding and the
+# stealth checks that follow the player around actually succeed sometimes
+# instead of failing every roll.
+#
+#   s   search        h   hide in shadows        .   rest
+#   >   try the stairs
+#
+#   g d ESC DOWN ENTER   pick up; see below for why it is five keys, not one.
+#
+# READ THIS BEFORE ADDING AN 'ESC'. ESC does not cancel. In play mode it
+# OPENS the System Menu -- [a] Save and Quit, [b] Save and Continue, [c] Quit
+# Game -- and a second ESC closes it again. A lone ESC therefore leaves that
+# menu open, and while it is open ENTER means Save and Quit, because Save and
+# Quit is the highlighted option. A pair of ESCs is only safe when the block
+# in front of it left no menu of its own open, and a walk cannot know that.
+#
+# This is not a theory. Three earlier drafts of this file died of it. The
+# first wrote bare ESC pairs through the walk; a 'g' over loot opened the
+# container view, the pairing went out of step around block 150 of 300, and
+# the last third of the run was swallowed by an open menu. The second closed
+# the container view with ENTER; that worked from the container view but meant
+# Save and Quit whenever the System Menu was the thing on screen instead, so
+# the run saved, quit and exited 0 at block 150 -- which reads as a healthy
+# session unless you look at the last screen dump. The third used
+# 'g ESC DOWN ENTER', which handled both of those and still stuck on seed 42,
+# because the container view REFUSES to close while an item sits in the
+# In-the-Air slot, and says so.
+#
+# Hence 'g d ESC DOWN ENTER', the only ESC in the walk. After 'g' the screen
+# is in one of two states, and these five keys land in play mode from both:
+#   container view open, because 'g' found loot: 'd' drops whatever is in the
+#     In-the-Air slot, ESC is then its Done key, DOWN walks a step, ENTER
+#     answers 'You can't go in anything here'.
+#   nothing open, because the floor was bare: 'd' shows the character sheet,
+#     ESC closes it, DOWN walks a step, ENTER answers as above.
+# Dropping what was just picked up sounds pointless. It is not: the pick-up,
+# the encumbrance check and the drop all run, and the walk does not slow to a
+# crawl under the weight of everything it has ever stood on.
+#
+# The System Menu itself is exercised once, in the prologue, where the state
+# of the screen is known.
+#
+# Generated, and regenerable: a fixed seed, a weighted pool of blocks, 300 of
+# them, a screen dump every 50.
+
+@include chargen-rogue.keys
+
+@dump:arrival
+
+# The arrival room description is still on the screen, and it eats the first
+# keystroke. Spend one on it deliberately, then open and close the System
+# Menu once. This is the only place in the file where ESC is safe, because it
+# is the only place where the state of the screen is known; see the note
+# above. The dump proves the game came back to play mode.
+SPACE
+ESC ESC
+@dump:sysmenu
+
+PGDN*2 HOME*6 s s h RIGHT*5 DOWN*1 h DOWN*6
+LEFT*4 h PGDN*6 PGUP*4 h RIGHT*1 PGUP*1 .*3 PGDN*3
+s s > s h g d ESC DOWN ENTER PGDN*2 h PGUP*5
+UP*3 .*3 HOME*5 > g d ESC DOWN ENTER g d ESC DOWN ENTER h h DOWN*5
+PGDN*5 .*3 DOWN*4 h > PGUP*1 HOME*5 > PGDN*4
+END*2 LEFT*3 h s PGUP*6 @dump:walk50 LEFT*4 h LEFT*3
+PGUP*6 PGUP*4 g d ESC DOWN ENTER g d ESC DOWN ENTER DOWN*4 HOME*6 g d ESC DOWN ENTER > >
+RIGHT*5 .*3 g d ESC DOWN ENTER DOWN*4 RIGHT*6 UP*4 HOME*1 UP*5 s
+END*4 RIGHT*5 DOWN*4 s g d ESC DOWN ENTER .*3 LEFT*4 h HOME*3
+g d ESC DOWN ENTER h DOWN*3 g d ESC DOWN ENTER g d ESC DOWN ENTER RIGHT*1 s PGUP*2 s
+PGUP*1 HOME*2 s DOWN*1 LEFT*1 g d ESC DOWN ENTER s s PGDN*5
+s LEFT*6 @dump:walk100 LEFT*1 DOWN*3 s LEFT*4 s DOWN*4
+LEFT*2 UP*3 DOWN*4 UP*4 h LEFT*2 h PGUP*2 h
+h PGUP*2 PGDN*3 s h PGDN*1 h s RIGHT*1
+END*3 .*3 g d ESC DOWN ENTER LEFT*4 .*3 .*3 HOME*1 RIGHT*4 DOWN*1
+END*5 h h g d ESC DOWN ENTER h h h PGUP*2 s
+g d ESC DOWN ENTER PGUP*4 s h DOWN*3 HOME*1 g d ESC DOWN ENTER s @dump:walk150
+END*4 PGDN*2 HOME*1 s h g d ESC DOWN ENTER LEFT*5 g d ESC DOWN ENTER g d ESC DOWN ENTER
+UP*6 PGUP*6 h DOWN*5 END*2 h h h h
+g d ESC DOWN ENTER .*3 g d ESC DOWN ENTER .*3 UP*5 h PGUP*5 END*2 LEFT*4
+h PGUP*1 g d ESC DOWN ENTER HOME*1 g d ESC DOWN ENTER UP*5 .*3 UP*1 h
+g d ESC DOWN ENTER PGDN*6 .*3 UP*1 s PGUP*5 PGUP*1 LEFT*4 s
+g d ESC DOWN ENTER > h UP*2 s @dump:walk200 h h g d ESC DOWN ENTER
+END*4 s LEFT*6 g d ESC DOWN ENTER PGUP*3 PGUP*4 h .*3 s
+> s g d ESC DOWN ENTER PGDN*6 h RIGHT*1 s LEFT*2 s
+s g d ESC DOWN ENTER .*3 > .*3 RIGHT*5 .*3 UP*4 s
+UP*6 END*6 s HOME*5 DOWN*6 g d ESC DOWN ENTER g d ESC DOWN ENTER g d ESC DOWN ENTER PGDN*2
+END*1 h g d ESC DOWN ENTER PGUP*1 HOME*4 h .*3 > UP*6
+.*3 g d ESC DOWN ENTER @dump:walk250 s g d ESC DOWN ENTER PGDN*3 g d ESC DOWN ENTER DOWN*3 LEFT*6
+h h RIGHT*2 DOWN*6 RIGHT*1 s PGDN*5 s HOME*2
+HOME*4 > END*6 h UP*6 END*5 s HOME*2 DOWN*6
+RIGHT*3 h PGUP*1 s PGUP*1 RIGHT*5 LEFT*1 h PGDN*5
+UP*6 s END*4 HOME*4 s END*5 s s h
+LEFT*5 g d ESC DOWN ENTER > s s DOWN*4 END*1 HOME*2
+
+@dump:final
+@quit

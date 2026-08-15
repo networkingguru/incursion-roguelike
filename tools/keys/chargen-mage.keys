@@ -1,0 +1,59 @@
+# Make an arcane spellcaster and get into the dungeon.
+#
+# The character is a male orc mage, neutral, specialised in Evocation, and
+# worshipping whichever god the game offers. The race is the same orc the
+# other chargen scripts use, on purpose: it keeps the race and subrace letters
+# identical across the family of scripts, so only the class-specific part of
+# this file differs from chargen.keys and only that part can rot.
+#
+# Why a mage at all: a barbarian never touches the spell system. A mage
+# reaches spell selection during generation, then the casting code, the mana
+# code and the targeting code during play, which is a large body of the
+# ruleset that no melee script exercises.
+#
+# Evocation is chosen over the other eight schools because evocation spells
+# are the ones that take a target and do damage. A specialist in, say,
+# Divination would cast spells that end without touching combat resolution.
+#
+# Every choice here is a menu letter, and menu letters move when the list
+# changes. Run with a fixed seed (tools/headless.sh <script> <seed>) or the
+# attribute rolls change, the offered feats change with them, and these
+# letters choose something else.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+i       # Race:     [i] Orc
+a       # Subrace:  [a] Orc (Standard)
+d       # Class:    [d] Mage
+a       # Attributes: the first of the five offered sets
+e       # Alignment: [e] Neutral
+        #   NOTE: this is not the [c] that chargen.keys uses. A barbarian may
+        #   not be lawful, so the game offers a barbarian a shortened list of
+        #   six alignments and Neutral falls on [c]. A mage may be anything,
+        #   so the list is the full nine and Neutral falls on [e].
+e       # Wizard specialty: [e] Evocation
+a       # First feat
+a       # Second feat
+
+# Skill Manager. RIGHT spends a rank on the selected skill and stops at the
+# skill's maximum, DOWN moves to the next skill, so three RIGHTs per skill
+# spends everything available without needing to know how many ranks this
+# character has. Character generation will not let go until the pool is empty.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+y       # Do you wish to worship <god>? -- yes
+        #   Unlike a priest, a mage gains no second pool of skill ranks from
+        #   the choice of god, so no second Skill Manager pass follows here.
+
+a       # Personality archetype
+
+# Three starting spells. A first-level mage is offered exactly three picks on
+# every seed tested; the menu says how many are left, and the run ends on the
+# room description rather than on a spell list when the count is right.
+a a a
+
+# The next keystroke dismisses the arrival room description and lands in the
+# dungeon, in play mode.
