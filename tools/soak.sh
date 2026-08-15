@@ -41,7 +41,11 @@ JOBS="${SOAK_JOBS:-4}"
 # into one set of numbers -- and an A/B is exactly two soaks started back to
 # back. Observed on 2026-08-15: a 4-session run and a 4-session run reported
 # eight sessions, four of them from the wrong experiment.
-SOAK="$ROOT/logs/soak/$(date +%Y%m%d-%H%M%S)-$$"
+#
+# SOAK_DIR overrides the name, so a caller that has to read `exits` and
+# `messages` afterwards -- the regression gate does -- can say where they go
+# instead of parsing this script's output for the path.
+SOAK="${SOAK_DIR:-$ROOT/logs/soak/$(date +%Y%m%d-%H%M%S)-$$}"
 mkdir -p "$SOAK"
 
 echo "sessions:  $SESSIONS  (seeds $FIRST..$((FIRST + SESSIONS - 1)))"
