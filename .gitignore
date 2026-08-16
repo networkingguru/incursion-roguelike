@@ -40,3 +40,6 @@ incursion-debug
 
 # Alternative backends and diagnostic builds of the game binary.
 incursion-*
+
+# Release artifacts, produced by tools/package_macos.sh.
+dist/
