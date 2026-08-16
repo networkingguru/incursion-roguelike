@@ -621,7 +621,17 @@ Thing* Map::GetAt(int16 x, int16 y, int16 t, bool first)
     //if (count > 1000000L)
     //  __asm int 3;
 
-    /* Nothing exists outside the map. Callers scan neighbouring squares
+    /* upstream: base-code defect, the fix is ours. It is upstream's because
+       nothing here is platform, compiler or width dependent -- At() returns
+       the (0,0) square for an out-of-bounds coordinate on Win32 with the
+       original typedefs exactly as it does on POSIX. The codebase argues
+       against itself: Map::besideWall() carries a comment about the same trap
+       that Monster::ChooseAction() walks into. Tier Observed -- the error log
+       went from 444 entries in 13 seconds to zero across 877 turns. Tracked as
+       inc-f13. SENT to rmtew as issue #40 and pull request #41; open with no
+       comment or review since 2026-08-14.
+
+       Nothing exists outside the map. Callers scan neighbouring squares
        without checking first -- Monster::ChooseAction() does it for all eight
        neighbours of a hiding monster -- and At() answers an out-of-bounds
        query with the (0,0) square instead of failing, so the wrong answer

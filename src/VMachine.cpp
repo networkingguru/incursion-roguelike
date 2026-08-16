@@ -233,7 +233,21 @@ static int16 CurrentRoutineEvent = 0;
 /* Also fixes an unbounded write. This was a 64-byte global filled by strcpy
    and two strcats with no length check, on the hottest path in the engine: a
    resource name plus "::" plus an event name longer than 63 characters wrote
-   past it into whatever globals followed. snprintf truncates instead. */
+   past it into whatever globals followed. snprintf truncates instead.
+
+   upstream: that unbounded write is a base-code defect and the fix is ours. It
+   is upstream's because strcpy into a fixed 64-byte buffer with no length
+   check overruns on Win32 with the original typedefs exactly as it does here;
+   nothing depends on platform, compiler or type width. Tier Observed for the
+   allocation cost this block sat on -- 6040 of 6785 samples of a live stall,
+   89% of a pathfinding burst -- and Traced for the overrun itself, which was
+   read out of the code and never seen to fire. Tracked as inc-upw.20. NOT SENT
+   to rmtew.
+
+   The SPEED half of inc-upw.20 is NOT marked, because it is ours rather than
+   upstream's: the breadcrumb is inside #ifdef DEBUG, upstream ships without
+   DEBUG, and it reached players only because build_macos.sh must pass -DDEBUG
+   for src/RComp.cpp to link (inc-9df.3). Upstream would never have paid it. */
 const char *CurrentRoutineName()
   {
     static char buf[192];

@@ -1258,7 +1258,15 @@ SkipConfirms:
 	return DONE;
 }
 
-/* Who is in the middle of falling down a level, so that the damage is paid on
+/* upstream: base-code defect, the fix is ours. It is upstream's because a
+   dangling raw pointer compared against a live object misbehaves on Win32 with
+   the original typedefs exactly as it does here; nothing about it is platform,
+   compiler or width dependent. Tier Observed -- see the seed 3 measurement
+   below, and 40 of 40 seeds passing across two memory layouts afterwards where
+   seed 3 had failed a dozen attempts before. Tracked as inc-yml. NOT SENT to
+   rmtew.
+
+   Who is in the middle of falling down a level, so that the damage is paid on
    arrival rather than on departure.
 
    THIS USED TO BE A Creature*, AND THAT MADE THE SAME SEED PLAY A DIFFERENT

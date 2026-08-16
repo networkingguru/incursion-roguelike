@@ -852,7 +852,18 @@ void Thing::MoveDepth(int16 NewDepth, bool safe) {
 }
 
 void Player::MoveDepth(int16 NewDepth, bool safe) {
-    /* Not static. This function re-enters itself: PlaceAt below fires the new
+    /* upstream: base-code defect, the fix is ours. It is upstream's because a
+       static array in a function that re-enters itself is clobbered on Win32
+       with the original typedefs exactly as it is here; nothing depends on
+       platform, compiler or type width. Tier Reasoned, and deliberately so --
+       this was committed as a segfault fix in b3b5351 and that claim was
+       RETRACTED in 668043c. A controlled A/B over 250 seeds had the same seed
+       crashing identically with and without the change, on the same stack. The
+       re-entrancy is real and the stack proves it, so this is kept as
+       hardening and nothing more. Tracked as inc-upw.15. SENT to rmtew as pull
+       request #43, explicitly as hardening and NOT as a crash fix; still open.
+
+       Not static. This function re-enters itself: PlaceAt below fires the new
        square's terrain, and terrain can move the player another level
        (Feature.cpp:260, Move.cpp:1380). With one shared array the inner call
        refilled it, and the outer call then walked its OWN count over the

@@ -1292,7 +1292,24 @@ FoundCorpse:
       if (t->isCreature()) {
         // later, scan creatures' inventories
       } else if (t->isItem() && ((Item*)t)->ItemLevel() > high) {
-          /* Was ((Item*)m->Things[i]). Things[] holds hObj handles, not
+          /* upstream: base-code defect, the fix is ours. Three defects in six
+             lines, all upstream's: a handle cast to a pointer, a missing
+             isItem() guard that let doors, traps and portals reach a method
+             declared only on Item, and a no-items path that used `goto
+             DoneAdversity` -- a label ABOVE this scan -- so an item-free map
+             re-scanned, re-appended its message and never terminated. The
+             wrong-type virtual call and the backwards goto misbehave on Win32
+             with the original typedefs exactly as they do here; none of the
+             three depends on platform, compiler or type width. The handle-to-
+             pointer cast is the one to be careful about, because a wider
+             pointer makes it louder off Win32 -- but it was already a wild
+             pointer at 32 bits, so the defect is theirs and only its noise is
+             ours. Tier Traced -- read out of the code, never seen to run.
+             Augury has therefore never worked, which is also why there is no
+             regression risk. Tracked as inc-upw.1. NOT SENT to rmtew, because
+             the gate admits only Observed.
+
+             Was ((Item*)m->Things[i]). Things[] holds hObj handles, not
              pointers, so that cast produced a wild pointer and ItemLevel()
              was a virtual call through it. MapIterate already resolves the
              handle into t. The isItem() guard is needed too: the else branch

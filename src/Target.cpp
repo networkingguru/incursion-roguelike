@@ -1035,7 +1035,16 @@ bool TargetSystem::giveOrder(Creature * me, Creature *master, TargetType order, 
    
   } 
 
-  /* Zero-initialised, and that is the whole of a defect that fired 32,614
+  /* upstream: base-code defect, the fix is ours. It is upstream's because an
+     uninitialised struct read as an object handle misbehaves on Win32 with the
+     original typedefs exactly as it does here; nothing depends on platform,
+     compiler or type width. Tier Observed -- 250 seeds against a build
+     differing in nothing else, asserts at Base.h:577 89,545 -> 0 and total
+     error lines 139,948 -> 48,245. Tracked as inc-zmk. SENT to rmtew as pull
+     request #42 and MERGED on 2026-08-15, the first change from this fork
+     accepted into the parent project.
+
+     Zero-initialised, and that is the whole of a defect that fired 32,614
      times in a single session. An order often has neither a victim nor a
      point -- Encounter.cpp:1119 gives a formation's escorts OrderWalkNearMe
      with neither, and six sites in Social.cpp do the same -- so both
@@ -1213,7 +1222,20 @@ static int TargetSort(const void *a, const void *b)
   else if (l->type == TargetInvalid) return 999;
   else if (r->priority == l->priority) {
     if (r->type == l->type) {
-      /* Two targets that tie on priority and type were ordered by SUBTRACTING
+      /* upstream: base-code defect, the fix is ours. git blame puts the line
+         in Richard Tew's 2014 import. It is upstream's because Windows
+         randomises the heap too, so the same seed diverges there as well; the
+         ordering defect does not depend on platform, compiler or type width.
+         (The second half -- an int-truncated 64-bit pointer difference -- does
+         need a heap above 2GB and so is likelier to bite off Win32. The
+         ordering defect alone is enough.) Tier Observed -- address
+         randomisation off under lldb gave 30 identical runs of 30, on gave 4
+         divergences in 15, and no debugger gave 1 in 6; chance of all five
+         divergent runs landing in the randomisation-on group is 0.9%. Tracked
+         as inc-qik. SENT to rmtew as pull request #44 on 2026-08-16, without
+         this marker block.
+
+         Two targets that tie on priority and type were ordered by SUBTRACTING
          THE TWO OBJECTS' ADDRESSES. Every platform places the heap somewhere
          different on each launch, so equal targets sorted into a different
          order on every run of the same seed. Readers of this list take the

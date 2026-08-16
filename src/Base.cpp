@@ -83,7 +83,16 @@ String * tmpstr(const char *data, bool newbuff)
     
     s->Canary = 0xABCDEF12;
 
-    /* The bound is tested BEFORE the write. It used to be tested after, as an
+    /* upstream: base-code defect, the fix is ours. It is upstream's because
+       ASSERT is non-fatal in the original too -- it calls Error(), which logs
+       and returns -- so a full queue writes one pointer past the end of this
+       global on Win32 with the original typedefs exactly as it does here.
+       Nothing depends on platform, compiler or type width. Tier Observed --
+       A/B on the same probe build with STRING_QUEUE_SIZE forced to 400, same
+       seed, reproducing the twelve assert lines the live crash produced and
+       then not producing them. Tracked as inc-upw.18. NOT SENT to rmtew.
+
+       The bound is tested BEFORE the write. It used to be tested after, as an
        ASSERT -- and ASSERT here only calls Error(), which logs and returns
        (inc/Defines.h). So a full queue wrote one pointer past the end of this
        64000-entry global on every call, into whatever globals follow it, while
