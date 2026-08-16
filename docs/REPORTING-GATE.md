@@ -139,19 +139,32 @@ past diffs were bug fixes. Closing that gap is inc-iqh.
 
 ## Current status of our issues
 
-**Line 106 below is stale.** Material has since gone to the parent project; see
-the top of `CLAUDE.md`, which records that two pull requests went out on
-2026-08-15. As of 2026-08-16 three submitted items are awaiting a maintainer
-response, and nothing further goes out until they are answered. Update this
-table with the specifics when somebody has them to hand.
+### Sent to rmtew
 
-
-| Issue | Tier | Upstream? |
+| PR | Tier when sent | Status as of 2026-08-16 |
 |---|---|---|
-| gh-1 out-of-bounds map reads | **Observed** -- 444 errors in 13s, then 0 in 877 turns | eligible, not yet sent |
-| gh-2 `Thing::Remove` corruption | **Observed** -- 57 occurrences logged; no diagnosis, so no patch | eligible as an observation |
-| gh-3 `FI_SIZE` inconsistency | **Observed** once; not reproduced | eligible as an observation |
-| gh-4 window flicker | **Reasoned** -- cause unknown, one hypothesis already disproved | no; also macOS-only |
-| gh-5 `Magic::Augury`, 3 defects | **Traced** -- never executed | not until Observed |
+| [#42](https://github.com/rmtew/incursion-roguelike/pull/42) zero-initialise `Target` at its eight construction sites | **Observed** -- 89,545 asserts to 0 over 250 seeds, against a build differing in nothing else | **MERGED** 2026-08-15 |
+| [#41](https://github.com/rmtew/incursion-roguelike/pull/41) bounds-check `Map::GetAt()` | **Observed** -- 444 errors in 13s, then 0 across 877 turns | open, no comment or review since 2026-08-14 |
+| [#43](https://github.com/rmtew/incursion-roguelike/pull/43) `MoveDepth` re-entrancy | **Reasoned** -- sent as hardening, explicitly NOT as a crash fix, after the crash claim was retracted | open |
 
-Nothing has been sent to `rmtew` or `HexDecimal`. No issue, no pull request.
+**Read the pattern before sending anything else.** The one that merged is the one
+whose evidence was a number that moved on both sides of a controlled run. The
+other two have sat without a word. That is exactly what this document predicts,
+and it is the first real-world confirmation the gate has had -- so the answer for
+#41 and #43 is better evidence, not a reminder email.
+
+Note that #41's tier is Observed and it still has not moved. Meeting the bar buys
+a fair hearing, not a merge. Nothing is owed by a maintainer who never asked for
+our help.
+
+### Not sent
+
+| Issue | Tier | Why not |
+|---|---|---|
+| `Thing::Remove` corruption | **Observed** -- 57 occurrences logged | no diagnosis, so no patch; fileable as an observation |
+| `FI_SIZE` inconsistency | **Observed** once; not reproduced | one sighting is not a report |
+| window flicker | **Reasoned** -- cause unknown, one hypothesis already disproved | fails the gate; also macOS-only |
+| `Magic::Augury`, 3 defects | **Traced** -- never executed | not until Observed |
+
+Base-code defects fixed here but never submitted are marked in the source and
+listed above under *Base-code bugs fixed locally*. Marking is not sending.

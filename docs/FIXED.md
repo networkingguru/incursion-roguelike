@@ -37,9 +37,11 @@ rather than failing, so wrong answers looked real. Guarding the single function
 every accessor funnels through took the error log from 444 entries in 13 seconds
 to zero across 877 turns.
 
-That last one is an upstream defect, not a port artefact, and it was sent back:
-[rmtew#40](https://github.com/rmtew/incursion-roguelike/issues/40) and
-[rmtew#41](https://github.com/rmtew/incursion-roguelike/pull/41).
+That last one is an upstream defect, not a port artefact, so it went back to the
+parent project as [rmtew#40](https://github.com/rmtew/incursion-roguelike/issues/40)
+and [rmtew#41](https://github.com/rmtew/incursion-roguelike/pull/41). **Still
+open, with no comment or review.** Sending a fix and having it accepted are
+different things, and this page says which is which.
 
 ---
 
@@ -60,6 +62,12 @@ over 250 seeds against a build differing in nothing else:
 |---|---|---|
 | before | 89,545 | 139,948 |
 | after | 0 | 48,245 |
+
+That fix was sent upstream as
+[rmtew#42](https://github.com/rmtew/incursion-roguelike/pull/42) and **merged on
+2026-08-15** — the first change from this fork accepted into the parent project.
+It is also the only one of three submissions to have moved, and the only one
+whose evidence was a number that changed on both sides of a controlled run.
 
 **The game got slower the longer it ran.** Every VM event built a debug string,
 and every macOS build was a DEBUG build. That single line was 89% of a
