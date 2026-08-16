@@ -9,12 +9,19 @@
 # the save files in the game folder -- an unattended run must not be able to
 # destroy a character that took somebody an evening to make.
 #
-# Determinism: the seed is passed as INCURSION_SEED, which replaces the two
-# clock reads the game normally seeds itself from (src/Main.cpp). The same
-# seed and the same key script play the same game, so a screen dump can be
-# compared against a previous one. Without a seed the run is a smoke test
-# only, because the attribute rolls -- and therefore the offered feats, and
-# therefore which letter chooses what -- change on every run.
+# Determinism: the seed is passed as INCURSION_SEED. Nothing is faked or
+# intercepted -- the game asks NextSeed() (src/Main.cpp:47) for randomness, and
+# that function returns time(NULL) when the variable is unset and the given
+# number plus a counter when it is set. Six sites used to read the clock
+# directly and all six now go through it. The same seed and the same key script
+# play the same game, so a screen dump can be compared against a previous one.
+# Without a seed the run is a smoke test only, because the attribute rolls --
+# and therefore the offered feats, and therefore which letter chooses what --
+# change on every run.
+#
+# Reproducible is NOT the same as representative. A run can repeat perfectly and
+# still measure the wrong thing: see inc-loa.2 (most depth commands are refused)
+# and the death-blindness issue beside it.
 #
 # Ends: 0 the script ran out or asked to quit, 1 Fatal(), 2 bad key script,
 #       3 the key budget ran out, 4 the watchdog fired (the game stopped
