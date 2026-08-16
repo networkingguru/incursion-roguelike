@@ -7,6 +7,8 @@ feats, classes, prestige paths, spell schools and a tactical combat model that
 rewards knowing the rules. It has only ever run on Windows. This fork brings it
 to macOS, and it is meant to be played, not built.
 
+![iNCURSION release 1 running on macOS](docs/media/incursion-macos.png)
+
 ---
 
 ## Get it

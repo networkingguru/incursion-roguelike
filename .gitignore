@@ -38,8 +38,11 @@ incursion-debug
 .beads-credential-key
 .beads/proxieddb/
 
-# Alternative backends and diagnostic builds of the game binary.
-incursion-*
+# Alternative backends and diagnostic builds of the game binary. Anchored with a
+# leading slash so it matches only the repository root: unanchored, a gitignore
+# pattern matches at every level, and this one silently swallowed
+# docs/media/incursion-macos.png.
+/incursion-*
 
 # Release artifacts, produced by tools/package_macos.sh.
 dist/
