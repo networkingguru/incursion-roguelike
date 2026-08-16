@@ -82,6 +82,34 @@ for d in save logs; do
     fi
 done
 
+# --- 4. the binary must be able to READ the module it ships with -------------
+# Checks 1-3 all passed on a package that could not start a game. The shipped
+# folder went out with a module the shipping binary rejects: the developer
+# binary compiles the module with -DDEBUG, the shipping binary is built
+# COMPILER=no and therefore WITHOUT it, and inc/Base.h gave class Registry a
+# DEBUG-only member -- so sizeof(Registry), an input to SaveLayoutDigest()
+# (src/AbiCheck.cpp), differed between the two halves of the same release. The
+# game reported "File Version Mismatch" only after the title screen, so it
+# looked like a runtime fault on the user's Mac. Reported as networkingguru#6,
+# tracked as inc-tm4.
+#
+# Asking the binary is the point. A check that recomputed the digest from these
+# sources would agree with itself and pass while the artifact stayed broken.
+STAMP_BIN="$("$BIN" -formatid 2>/dev/null | tr -d '\r' | head -1)"
+STAMP_MOD="$(dd if="$PKG/mod/Incursion.Mod" bs=1 skip=4 count=10 2>/dev/null | tr -d '\0')"
+
+if [ -z "$STAMP_BIN" ]; then
+    note_fail "binary does not answer -formatid; it predates this check, so the module cannot be verified"
+elif [ -z "$STAMP_MOD" ]; then
+    note_fail "could not read a format stamp from mod/Incursion.Mod"
+elif [ "$STAMP_BIN" != "$STAMP_MOD" ]; then
+    note_fail "the binary cannot load its own module: it demands $STAMP_BIN, the module carries $STAMP_MOD"
+    echo "      Both halves of the release must be built from one layout. Check"
+    echo "      that no member of a digested class sits inside #ifdef DEBUG."
+else
+    echo "PASS: binary and module agree on the save layout ($STAMP_BIN)"
+fi
+
 echo
 if [ "$FAIL" -ne 0 ]; then
     echo "PACKAGE REJECTED: $PKG"

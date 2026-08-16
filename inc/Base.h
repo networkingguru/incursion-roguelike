@@ -561,9 +561,24 @@ class Registry
     bool saveMode, loadMode;
     hObj hCurrent;
     FILE *fp;
-    #ifdef DEBUG
-      FILE *reg_log;
-    #endif
+    /* DECLARED UNCONDITIONALLY, AND IT MUST STAY THAT WAY. This member used to
+       sit inside #ifdef DEBUG, which made sizeof(Registry) 8 bytes smaller in a
+       shipping build -- and sizeof(Registry) is an input to SaveLayoutDigest()
+       (src/AbiCheck.cpp), which stamps every module and save file. So the
+       developer binary wrote Incursion.Mod stamped SF0F7B6EDC and the shipping
+       binary demanded SFD3A51B74, and the released package could not load its
+       own module: "Error loading module 'Incursion.Mod' (File Version
+       Mismatch)". Reported by an outside user as networkingguru#6, tracked as
+       inc-tm4.
+
+       Note the guards never even agreed: every USE of reg_log is under
+       DEBUG_OBJECTS (src/Registry.cpp:102,118), not DEBUG, so a plain DEBUG
+       build carried the field and never touched it.
+
+       Any member added here changes the save format's identity. If a member
+       must be conditional, take it out of the digest deliberately rather than
+       letting a build flag move it by accident. */
+    FILE *reg_log;
     public:
     hObj LastUsedHandle, hModule;
 

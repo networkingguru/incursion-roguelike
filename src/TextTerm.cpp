@@ -73,6 +73,18 @@ bool TextTerm::RunOnCommandLine(int argc, char *argv[], int *retval) {
                    FORK_NAME, FORK_RELEASE, FORK_BASE_REPO, VERSION_STRING,
                    FORK_BASE_HASH, FORK_BASE_DATE);
             return true;
+        } else if (stricmp(option_names[j], "formatid") == 0) {
+            /* Print the save-layout stamp this binary demands, and exit.
+               tools/check_package.sh compares it against the stamp written
+               into mod/Incursion.Mod, because a packaged game whose two build
+               halves disagree cannot load its own module and says so only
+               after the title screen -- which is how networkingguru#6 reached
+               an outside user (inc-tm4). This is the smallest question that
+               catches it, and unlike a key script it works in every backend:
+               -keys exists only in the curses build (src/Wposix.cpp:518), and
+               the shipped binary is the libtcod one. */
+            printf("%s\n", SaveFormatID());
+            return true;
         }
     }
     return false;
