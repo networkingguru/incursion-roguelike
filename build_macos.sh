@@ -8,9 +8,9 @@
 #            ./mod/Incursion.Mod the compiled game data module
 #
 # Notes on the flags below -- each one exists for a specific reason:
-#   -DDEBUG          src/RComp.cpp is wrapped in #ifdef DEBUG, but src/yygram.cpp
-#                    calls into it unconditionally. Without this the link fails
-#                    with undefined symbols (AllocString, LockString, ...).
+#   -DDEBUG          builds the DEVELOPER binary: it carries the resource
+#                    compiler, so it can turn lib/*.irh into mod/Incursion.Mod.
+#                    See COMPILER below for why a shipped binary must not.
 #   -Icompat         supplies <malloc.h>, which macOS does not have.
 #   c++14 for two    src/Tokens.cpp and src/Art.cpp use the `register` keyword,
 #   files            which C++17 removed. They are flex/ACCENT output.
@@ -35,6 +35,42 @@ case "$BACKEND" in
     posix)   OUT="${OUT:-incursion-headless}" ;;
     *)       echo "Unknown BACKEND '$BACKEND' (want libtcod or posix)"; exit 1 ;;
 esac
+
+# Is the resource compiler part of this binary?
+#
+#   COMPILER=yes  (default)  the developer build. It can run -compile main.irc
+#                            to produce mod/Incursion.Mod, and it is what every
+#                            tool in tools/ expects.
+#   COMPILER=no              a SHIPPABLE build. No compiler, no parser, no
+#                            preprocessor.
+#
+# THIS IS NOT A SIZE OPTIMISATION. src/Art.cpp is the ACCENT parser runtime, and
+# its own header says, at src/Art.cpp:2-7, that it is GPLv2 and "cannot be
+# compiled into any distributed binaries, otherwise it will be a GPL violation".
+# Every macOS binary built before 2026-08-16 contained it, because -DDEBUG was
+# unconditional here. See inc-9df.5.
+#
+# WHY WHOLE FILES ARE EXCLUDED RATHER THAN LEFT TO #ifdef. src/RComp.cpp and
+# src/Art.cpp are each wrapped in one #ifdef DEBUG and would compile to nothing
+# anyway -- but src/yygram.cpp and src/Tokens.cpp are NOT wrapped, and they call
+# AllocString() and AllocRegister() (src/yygram.cpp:7857, :8548), which live
+# inside the block that just vanished. That undefined-symbol link failure is the
+# whole reason -DDEBUG was pinned on here in the first place. Windows solved it
+# the same way: build.bat:93 filters yygram.cpp, tokens.cpp and cpp*.c out of a
+# Release build.
+#
+# WHAT ELSE DROPPING -DDEBUG CHANGES, and all three are what a shipped game
+# should do:
+#   src/Player.cpp:683    wizard mode starts honouring the OPT_DISALLOW game
+#                         option instead of ignoring it
+#   src/Main.cpp:2174     the "(Debugging Commands)" entry leaves the start menu
+#   src/Wlibtcod.cpp:476  Breakpad crash reporting is enabled -- Windows only,
+#                         since USE_BREAKPAD is not defined here
+COMPILER="${COMPILER:-yes}"
+case "$COMPILER" in
+    yes|no) ;;
+    *) echo "Unknown COMPILER '$COMPILER' (want yes or no)"; exit 1 ;;
+esac
 EXTRA_CXXFLAGS="${EXTRA_CXXFLAGS:-}"
 # Some diagnostics have to reach the linker as well as the compiler --
 # AddressSanitizer is the one that made this necessary:
@@ -42,18 +78,33 @@ EXTRA_CXXFLAGS="${EXTRA_CXXFLAGS:-}"
 #   BACKEND=posix OUT=incursion-asan ./build_macos.sh
 EXTRA_LDFLAGS="${EXTRA_LDFLAGS:-}"
 
-if [ "$OUT" = "incursion" ] && [ -z "$EXTRA_CXXFLAGS" ]; then
+# The object directory must encode every flag that changes what an object IS.
+# COMPILER belongs in it: a shipping build and a developer build differ by
+# -DDEBUG, and -DDEBUG changes real code in Player.cpp and Main.cpp, so sharing
+# a directory would link a mixture of the two and the result would be neither.
+if [ "$OUT" = "incursion" ] && [ -z "$EXTRA_CXXFLAGS" ] && [ "$COMPILER" = yes ]; then
     OBJ="$ROOT/build/obj"
+elif [ "$COMPILER" = no ]; then
+    OBJ="$ROOT/build/obj-$OUT-nocompiler"
 else
     OBJ="$ROOT/build/obj-$OUT"
 fi
 mkdir -p "$OBJ" "$ROOT/mod" "$ROOT/logs" "$ROOT/save"
 
+if [ "$COMPILER" = yes ]; then
+    DEBUG_DEFINE="-DDEBUG"
+    # The compiler, the parser it generates, and the preprocessor it feeds.
+    SKIP_SOURCES=""
+else
+    DEBUG_DEFINE=""
+    SKIP_SOURCES="RComp Art yygram Tokens"
+fi
+
 if [ "$BACKEND" = posix ]; then
     SDL_CFLAGS=""
     SDL_LIBS=""
     INCLUDES="-Iinc -Ilib -Icompat"
-    DEFINES="-DDEBUG -DPOSIX_TERM"
+    DEFINES="$DEBUG_DEFINE -DPOSIX_TERM"
     SKIP_BACKENDS="Wlibtcod Wcurses"
     # ncurses ships with macOS and with every Linux distribution, so this adds
     # no dependency to install. It is used only to draw to a real terminal;
@@ -63,7 +114,7 @@ else
     SDL_CFLAGS="$(pkg-config --cflags sdl2)"
     SDL_LIBS="$(pkg-config --libs sdl2)"
     INCLUDES="-Iinc -Ilib -Ilibtcod/include -Icompat $SDL_CFLAGS"
-    DEFINES="-DDEBUG -DLIBTCOD_TERM"
+    DEFINES="$DEBUG_DEFINE -DLIBTCOD_TERM"
     SKIP_BACKENDS="Wcurses Wposix"
     LINK_LIBS="-lz -framework OpenGL"
 fi
@@ -94,21 +145,31 @@ fi
 # ------------------------------------------------------------------ game -----
 echo "--- compiling Incursion ---"
 CXXFLAGS="-O2 -w -fpermissive -Wno-narrowing $DEFINES $INCLUDES $EXTRA_CXXFLAGS"
-CFLAGS="-O2 -w -Wno-implicit-function-declaration -Wno-implicit-int -Wno-return-mismatch -DDEBUG -Iinc -Ilib -Icompat"
+CFLAGS="-O2 -w -Wno-implicit-function-declaration -Wno-implicit-int -Wno-return-mismatch $DEBUG_DEFINE -Iinc -Ilib -Icompat"
 
 for f in src/*.cpp; do
     n="$(basename "$f" .cpp)"
     # Only one backend links: each defines main(), Error() and Fatal().
     skip=
     for b in $SKIP_BACKENDS; do [ "$n" = "$b" ] && skip=1; done
+    # And, in a shipping build, the resource compiler and everything it drags in.
+    for b in $SKIP_SOURCES; do [ "$n" = "$b" ] && skip=1; done
     [ -n "$skip" ] && continue
     std="c++17"
     case "$n" in Tokens|Art) std="c++14" ;; esac
     clang++ -std=$std $CXXFLAGS -c "$f" -o "$OBJ/$n.o"
 done
 
+# src/cpp1-6.c are the DECUS preprocessor, used only by -compile, so a shipping
+# binary leaves them out. src/lz.c and src/rle.c must NOT go with them: they are
+# the compression Registry uses to read a save or a module at run time
+# (src/Term.cpp, CFile::LoadCompressed), and dropping them fails the link with
+# four undefined symbols that look like compiler leftovers and are not.
 for f in src/*.c; do
     n="$(basename "$f" .c)"
+    if [ "$COMPILER" = no ]; then
+        case "$n" in cpp[1-6]) continue ;; esac
+    fi
     clang -std=gnu89 $CFLAGS -c "$f" -o "$OBJ/c_$n.o"
 done
 
@@ -116,7 +177,18 @@ echo "--- linking ---"
 clang++ -std=c++17 $EXTRA_LDFLAGS -o "$ROOT/$OUT" "$OBJ"/*.o $TCODLIB $SDL_LIBS $LINK_LIBS
 
 # ------------------------------------------------------------- game data -----
+# A shipping binary cannot build its own data: that is the point of it. The
+# module has to come from a developer build of the SAME source, because
+# Registry writes raw struct bytes and the file is welded to the layout of the
+# binary that produced it.
 if [ ! -f "$ROOT/mod/Incursion.Mod" ]; then
+    if [ "$COMPILER" = no ]; then
+        echo
+        echo "No mod/Incursion.Mod, and this build has no resource compiler."
+        echo "Build the developer binary first, which will produce it:"
+        echo "    ./build_macos.sh"
+        exit 1
+    fi
     echo "--- compiling game data module (this takes ~5s) ---"
     "$ROOT/$OUT" -compile main.irc
 fi
@@ -124,3 +196,12 @@ fi
 echo
 echo "Built: $ROOT/$OUT"
 echo "Data:  $ROOT/mod/Incursion.Mod"
+if [ "$COMPILER" = no ]; then
+    echo
+    echo "This is a SHIPPING build: no resource compiler, no GPLv2 ACCENT"
+    echo "runtime, and -compile will not work. Confirm with:"
+    echo "    nm '$ROOT/$OUT' | grep -c 'yyparse\|yyselect\|yymallocerror'"
+    echo "expecting 0. Those three are every function src/Art.cpp defines, and"
+    echo "Art.cpp is the GPLv2 file. Do not grep for 'accent' -- none of the"
+    echo "symbols carry that word, so it reports 0 either way."
+fi
