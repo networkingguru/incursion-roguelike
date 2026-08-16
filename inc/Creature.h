@@ -351,6 +351,11 @@ class Creature: public Thing, public Magic
       
       public:
       int ListAttacks(TAttack * buf, int numEltsInBuf);
+      bool TwoFistFighting();
+      bool MartialTwoWeapon();
+      /* Monsters are built by hand rather than by buying feats, so whatever a
+         monster is written as having simply works. Character overrides this. */
+      virtual bool TwoWeaponFeatWorks() { return true; }
 
       bool     HasAttk(int8 typ) { return GetAttk(typ) != NULL; }
                                   
@@ -695,6 +700,7 @@ class Character: public Creature
       virtual void GainAbility(int16 ab, uint32 pa, rID sourceID,int16 statiSource)=0;
       bool FeatPrereq(int16 n, bool fail_if_feat_requires_a_feat = false);
       virtual bool HasFeat(int16 n, bool inh=false, bool list=false);
+      virtual bool TwoWeaponFeatWorks();
       virtual void GainXP(uint32);
       virtual int32 TotalXP() { return XP; }
       virtual void KillXP(Creature*,int16 percent=100);

@@ -3461,6 +3461,22 @@ int8 Creature::WepSkill(rID wID, bool ignore_str)
 }
 
 
+/* Florentine Style and Two-Weapon Tempest both name FT_TWO_WEAPON_STYLE as a
+   prerequisite, and a monk reaches them without paying for it (see HasFeat
+   below). He may buy them, but they work only while he fights the way that
+   granted him the prerequisite -- fists, or a martial-arts weapon in each hand.
+
+   Anyone who genuinely PURCHASED Two-Weapon Style is untouched and keeps those
+   feats working with any pair of weapons. That is why this reads the raw Feats[]
+   bit instead of calling HasFeat(): HasFeat() is precisely the function the monk
+   grant makes answer yes, so asking it here would defeat the distinction. */
+bool Character::TwoWeaponFeatWorks()
+{
+    if (Feats[FT_TWO_WEAPON_STYLE/8] & (1 << (FT_TWO_WEAPON_STYLE%8)))
+        return true;
+    return MartialTwoWeapon();
+}
+
 bool Character::HasFeat(int16 ft, bool inh, bool list)
 {
     /*
@@ -3548,6 +3564,30 @@ bool Character::HasFeat(int16 ft, bool inh, bool list)
                                 Feats: list may hold either. */
                                 if (ft >= FT_FIRST && TMON(tmID)->HasFeat(ft))
                                     return true;
+
+                                /* A monk's training IS Two-Weapon Style and
+                                   Ambidexterity. The two questions are answered
+                                   differently on purpose:
+
+                                   inh -- "may he BUY something gated behind
+                                   this?" Always yes. A monk qualifies for
+                                   Florentine Style at 1st level without
+                                   spending two feat slots reaching it. (Only
+                                   FT_TWO_WEAPON_STYLE is ever a prerequisite;
+                                   nothing in FeatTab.cpp gates on
+                                   Ambidexterity, which needs only DEX 15.)
+
+                                   !inh -- "does it apply RIGHT NOW?" Only while
+                                   he fights the way the training covers: two
+                                   fists, or a martial-arts weapon in each hand.
+                                   A monk holding two greatswords pays the
+                                   ordinary two-weapon penalties like anyone
+                                   else, which is what MartialTwoWeapon() is
+                                   for. */
+                                if (ft == FT_TWO_WEAPON_STYLE || ft == FT_AMBIDEXTERITY)
+                                    if (HasAbility(CA_UNARMED_STRIKE))
+                                        if (inh || MartialTwoWeapon())
+                                            return true;
 
                                 return (Feats[ft/8] & (1 << (ft%8))) != 0;
 }

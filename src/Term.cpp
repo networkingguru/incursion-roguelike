@@ -549,7 +549,11 @@ void TextTerm::ShowTraits() {
           } 
           if (at->AType != A_ALSO) {
             Dmg.Bonus += p->KAttr[A_DMG_BRAWL];
-            if (count && !p->HasFeat(FT_REND))
+            /* The same exemption Fight.cpp makes for the second fist. Without
+               it the sidebar advertises a halved-Strength second punch that the
+               strike code does not actually deliver, and the panel becomes a
+               liar about the one number a player checks it for. */
+            if (count && !p->HasFeat(FT_REND) && !p->TwoFistFighting())
               Dmg.Bonus -= p->KMod(A_STR)/2;
             dstr = Dmg.Str(); 
           } 
@@ -576,9 +580,16 @@ void TextTerm::ShowTraits() {
       }
       // ww: the old brawl show was vastly wrong for polymorphed PCs
       if (multi)
+        /* The secondary-attack penalty, mirroring src/Fight.cpp:1255-1256 --
+           including its exemption for two-fist fighting, where a monk counts as
+           having Two-Weapon Style and Ambidexterity and therefore takes none.
+           This line and that one are two copies of the same rule, so a change
+           to either without the other makes the panel misreport the number a
+           player reads it for. */
         Write(Format("Hit:%d / %d\r",p->KAttr[A_HIT_BRAWL],
                        p->KAttr[A_HIT_BRAWL] -
-                      (p->HasFeat(FT_MULTIATTACK) ? 2 : 5)));
+                      (p->TwoFistFighting() ? 0 :
+                       p->HasFeat(FT_MULTIATTACK) ? 2 : 5)));
       else
         Write(Format("Hit:%d\r",p->KAttr[A_HIT_BRAWL]));
       Write(attks);

@@ -1182,12 +1182,25 @@ Restart:
             StackBonus(BONUS_DUAL,A_HIT_OFFHAND,-2);
         }
 
-        if (!HasFeat(FT_TWIN_WEAPON_STYLE) && offhandWep->Size(this) >= meleeWep->Size(this)) { 
+        /* The size clause punishes an off-hand that is not SMALLER than the
+           main hand, which caught two daggers: both are tiny, neither is
+           unwieldy, and the pair was charged an extra -2/-2 for it anyway. The
+           question worth asking is whether the off-hand weapon is LIGHT, which
+           the data already answers -- WG_LIGHT, inc/Defines.h:2090, carried by
+           the dagger, the siangham, the quarterstaff and the rest. A light
+           off-hand is exempt now; a second greatsword is not.
+
+           Florentine Style still waives this outright. Its own description
+           (src/FeatTab.cpp:1006-1009) is about wielding two LONG SWORDS, which
+           is the case that survives the gate. */
+        if (!(HasFeat(FT_TWIN_WEAPON_STYLE) && TwoWeaponFeatWorks())
+            && !offhandWep->isGroup(WG_LIGHT)
+            && offhandWep->Size(this) >= meleeWep->Size(this)) {
             StackBonus(BONUS_DUAL,A_HIT_MELEE,  -2);
             StackBonus(BONUS_DUAL,A_HIT_OFFHAND,-2);
         }
 
-        if (HasFeat(FT_TWO_WEAPON_TEMPEST)) {
+        if (HasFeat(FT_TWO_WEAPON_TEMPEST) && TwoWeaponFeatWorks()) {
             StackBonus(BONUS_DUAL,A_SPD, +10);
             StackBonus(BONUS_DUAL,A_SPD_OFFHAND, +10);
         }

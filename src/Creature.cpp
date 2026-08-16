@@ -2514,6 +2514,57 @@ void Creature::AddTemplate(rID tID)
       m->Update(x,y);
   }
 
+/* upstream: base-code defect, fix is ours. Tier Traced at the time of writing --
+   see inc-dzz for the measurement that replaces this note. Not sent to rmtew.
+
+   Fighting with two empty hands produced ONE strike per swing, forever, while
+   fighting with two weapons produced two (src/Fight.cpp:443-458). No feat could
+   close that: AttackMode() returns S_BRAWL the instant the weapon slot is empty
+   (src/Fight.cpp:7700), before the S_DUAL test at :7706 is ever evaluated, so
+   Two-Weapon Fighting and Ambidexterity did nothing at all bare-handed. The 3.5
+   SRD says the opposite -- "an unarmed strike is always considered a light
+   weapon" -- so two fists qualify for two-weapon fighting exactly as two daggers
+   do, and a monk was left strictly worse off punching than holding nunchaku.
+
+   Nothing platform, compiler or width dependent is involved, so this misbehaves
+   identically on Win32 with the original typedefs. */
+bool Creature::TwoFistFighting()
+{
+    /* The same three conditions the martial-arts branch of ListAttacks already
+       requires: you need the training, and you need hands to use it with. */
+    if (!HasAbility(CA_UNARMED_STRIKE))
+        return false;
+    if (HasMFlag(M_NOHANDS) || !HasMFlag(M_HUMANOID))
+        return false;
+    /* And both hands actually free. A shield or a torch in the off hand is not
+       a fist, and SL_READY holds either. */
+    if (EInSlot(SL_WEAPON) || EInSlot(SL_READY))
+        return false;
+    return true;
+}
+
+/* Is this creature fighting the way a monk's training covers -- two empty fists,
+   or a martial-arts weapon in each hand? WG_MARTIAL is not D&D's "martial
+   weapon" proficiency category; inc/Defines.h:2087 defines it as "Martial Arts
+   weapons", and the items carrying it are the monk's kit: nunchaku, siangham,
+   shuriken, chakram, fighting stick, tiger claws, quarterstaff. Flurry of Blows
+   already keys off the same flag (src/Values.cpp:1137).
+
+   A monk fighting this way counts as having Two-Weapon Style and Ambidexterity.
+   A monk holding two greatswords does NOT, which is the whole reason this asks
+   about the weapon group rather than just about the class. */
+bool Creature::MartialTwoWeapon()
+{
+    if (!HasAbility(CA_UNARMED_STRIKE))
+        return false;
+    if (TwoFistFighting())
+        return true;
+    Item *mainWep = EInSlot(SL_WEAPON), *offWep = EInSlot(SL_READY);
+    if (!mainWep || !offWep)
+        return false;
+    return mainWep->isGroup(WG_MARTIAL) && offWep->isGroup(WG_MARTIAL);
+}
+
 int Creature::ListAttacks(TAttack * buf, int max)
 {
   int i = 0, out = 0, db = 0;
@@ -2551,6 +2602,17 @@ int Creature::ListAttacks(TAttack * buf, int max)
       buf[0].DType = AD_BLUNT;
       buf[0].u.a.Dmg = MonkDamage[ AbilityLevel(CA_UNARMED_STRIKE) ];
       buf[0].u.a.DC = 0;
+      /* Two free hands are two weapons. See TwoFistFighting() above for why
+         this was impossible before, and src/Fight.cpp for the two things that
+         keep it from overshooting: the second fist costs extra time, and it
+         does NOT take the halved-Strength penalty that a secondary claw takes,
+         because the SRD says there is no off-hand attack for a monk striking
+         unarmed. */
+      if (max >= 2 && TwoFistFighting())
+        {
+          buf[1] = buf[0];
+          return 2;
+        }
       return 1;
     }
 

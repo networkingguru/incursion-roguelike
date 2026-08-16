@@ -1252,7 +1252,14 @@ EvReturn Creature::NAttack(EventInfo &e) /* this == EActor */
         e.isPartiallyEvaded = false;  
       e.EItem     = NULL;
       e.vHit      = (int8)Attr[A_HIT_BRAWL];
-      if (OneAttack && !(isFF && e.EActor->HasFeat(FT_POUNCE)))
+      /* The second fist is not a secondary natural attack and does not take
+         the -5. A monk counts as having Two-Weapon Style and Ambidexterity
+         while fighting bare-handed (src/Create.cpp, Character::HasFeat), and in
+         Incursion that pair zeroes the two-weapon penalty outright -- so two
+         fists are 0/0, matching what two nunchaku give the same monk. A second
+         CLAW is untouched and still takes the -5. */
+      if (OneAttack && !(isFF && e.EActor->HasFeat(FT_POUNCE))
+          && !TwoFistFighting())
         e.vHit -= e.EActor->HasFeat(FT_MULTIATTACK) ? 2 : 5;
       e.vDef      = e.ETarget->isCreature() ? e.EVictim->getDef() : 0;
       e.Dmg       = at->u.a.Dmg;
@@ -1273,7 +1280,11 @@ EvReturn Creature::NAttack(EventInfo &e) /* this == EActor */
          however, and is either striking a held victim or has already
          hit the victim once this attack sequence, the creature may add
          his full Strength bonus to the damage of all attacks. */
-      if (OneAttack && e.EActor->Mod(A_STR) > 0)
+      /* The second fist is exempt. SRD Monk: "there is no such thing as an
+         off-hand attack for a monk striking unarmed", which exists precisely to
+         give full Strength on every unarmed swing. A second claw is still
+         halved; only two-fist fighting is spared. See TwoFistFighting(). */
+      if (OneAttack && e.EActor->Mod(A_STR) > 0 && !TwoFistFighting())
         if (!e.EActor->HasFeat(FT_REND) || !(e.vicHeld || HitCount))
           e.Dmg.Bonus -= e.EActor->Mod(A_STR)/2;
       e.isNAttack = true;
@@ -1374,6 +1385,17 @@ DoneSequence:
       && !e.EActor->HasStati(TRIED,FT_EXPERT_TACTICIAN,e.EVictim)) { 
     e.EActor->GainTempStati(TRIED,e.EVictim,1,SS_MISC,FT_EXPERT_TACTICIAN);
     // takes no time
+  } else if (TwoFistFighting()) {
+    /* Two fists cost what two weapons cost. WAttack charges a dual-wielder the
+       full price of the slower hand plus half the faster (src/Fight.cpp:546-548),
+       so two strikes take one and a half swings rather than one. Matching it
+       here is the difference between fixing the injustice and inventing the
+       opposite one: charged as a single swing, two fists would land 2.0 strikes
+       in the time two daggers land 1.333, and bare hands would become the best
+       melee option in the game. Both hands are fists, so both speeds are
+       A_SPD_BRAWL and the WAttack min/max collapses to t + t/2. */
+    int32 t = 3000 / max((100 + Attr[A_SPD_BRAWL]*5),10);
+    Timeout += t + t/2;
   } else Timeout += 3000 / max((100 + Attr[A_SPD_BRAWL]*5),10);
 
   if (startedAfraid)
