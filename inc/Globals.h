@@ -286,4 +286,11 @@ extern Term *T1;
    session repeatable and therefore a regression test. See src/Main.cpp. */
 unsigned long NextSeed(void);
 
+/* The identity a save file and a module are actually keyed on: a digest of the
+   memory layout they were written with. Registry::SaveGroup() writes whole C++
+   objects as raw bytes, so what makes a file readable is sizeof and field
+   offsets, not a release number. See src/AbiCheck.cpp for what goes into it and
+   why VERSION_STRING used to do this job badly. Fits char Version[12]. */
+const char* SaveFormatID(void);
+
 extern "C" int yyerror(const char*);

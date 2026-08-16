@@ -206,7 +206,8 @@ static void NoteGameplayReached() {
         return;
     time(&now);
     strftime(stamp, sizeof(stamp), "%Y-%m-%d %H:%M:%S", localtime(&now));
-    fprintf(f, "=== entered a map %s  Incursion %s  built %s %s ===\n",
+    fprintf(f, "=== entered a map %s  " FORK_NAME " release " FORK_RELEASE
+               " (base %s)  built %s %s ===\n",
         stamp, VERSION_STRING, __DATE__, __TIME__);
     fclose(f);
 }

@@ -2972,7 +2972,7 @@ const char* IntroScreen[] = {
  "                <9>*********************************************<7>                    ", 
  "                <9>*********************************************<7>                    ", 
  "                <9>**                                         **<1>*<7>                  ", 
- "                <9>**         <15>INCURSION (OPEN SOURCE)<9>         **<1>*<7>                  ", 
+ "                <9>**         <15>iNCURSION (OPEN SOURCE)<9>         **<1>*<7>                  ",
  "                <9>**                                         **<1>*<7>                  ", 
  "                <9>**        <13>Halls of the Goblin King<9>         **<1>*<7>                  ", 
  "                <9>**                                         **<1>*<7>                  ", 
@@ -2984,13 +2984,18 @@ const char* IntroScreen[] = {
  "                               By Julian Mensch                                ", 
  "          with additional concepts and material by Westley Weimer              ",
  "                                                                               ", 
- "            Copyright 1999-2007 Julian Mensch, 2014 Richard Tew                ", 
+ "      Copyright 1999-2007 Julian Mensch, 2014 Richard Tew, 2026 Brian Hill      ",
  "                                                                               ", 
  "                          See Help for License Info                            ", 
  "                                                                               ", 
- "                               <14>Version " VERSION_STRING "<7>                                 ", 
- "                                                                               ", 
- "                                                                               ", 
+/* Two lines, and they answer different questions. The first is what this build
+   calls itself; the second is what it was built on top of, named by commit so
+   it can be looked up rather than guessed at. The leading spaces centre the
+   VISIBLE text in 80 columns -- the <14> and <7> markers are consumed by
+   XPrint and take no width, so do not count them when re-centring. */
+ "                              <14>" FORK_NAME " release " FORK_RELEASE "<7>                               ",
+ "                  fork of " FORK_BASE_REPO " " VERSION_STRING " (" FORK_BASE_HASH ", " FORK_BASE_DATE ")                  ",
+ "                                                                               ",
  "                                                                               ", 
  "     <15>With Inspiration and Derivative Source Material drawn from:<7>               ", 
  "       * <13>The Mines of Moria<7>, by Robert Alan Koenkhe                            ", 

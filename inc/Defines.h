@@ -14,7 +14,27 @@
 
 #define SIGNATURE 0x1234ABCD
 #define SIGNATURE_TWO 0xF1F2F3F4
+/* VERSION_STRING is UPSTREAM's version -- the release this fork was taken from.
+   It no longer decides whether a save or a module can be read; a digest of the
+   memory layout does that now (SaveFormatID(), src/AbiCheck.cpp). Its only
+   remaining jobs are to say what we branched from and to let files written
+   before the digest existed still load. See src/Registry.cpp,
+   SaveFormatMatches(). */
 #define VERSION_STRING "0.6.9Y19"
+
+/* This fork's own identity. FORK_RELEASE is a plain counter, not a version: it
+   goes up by one every time something is published, and it cannot collide with
+   whatever rmtew numbers his next release, which matters because fixes from
+   here are meant to go back to him. A real version number can replace it once
+   this is more than "the one that runs on a Mac" -- when Linux and x86_64 land.
+
+   FORK_BASE_HASH is the commit, not just the version, so that anyone can run
+   git log 961c54b and see exactly what this was built on top of. */
+#define FORK_NAME      "iNCURSION"
+#define FORK_RELEASE   "1"
+#define FORK_BASE_REPO "rmtew"
+#define FORK_BASE_HASH "961c54b"
+#define FORK_BASE_DATE "2025-06-28"
 
 #define SAVE_SUFFIX ".sav"
 #define BACKUP_SUFFIX ".backup"

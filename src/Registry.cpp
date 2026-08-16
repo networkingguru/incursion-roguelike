@@ -56,6 +56,33 @@ struct dependHeader
     char Filename[32];
   };
 
+/* Can a file carrying this stamp be read by the layout we compile to?
+   SaveFormatID() (src/AbiCheck.cpp) is a digest of every size the save format
+   depends on, so it answers that question directly -- unlike VERSION_STRING,
+   which used to stand in for it and got it wrong both ways: a cosmetic release
+   hid every save, while two builds sharing a version but not a layout misread
+   each other's files in silence. */
+static bool SaveFormatMatches(const char *stamp)
+  {
+    if (!stricmp(stamp, SaveFormatID()))
+        return true;
+
+    /* MIGRATION ALLOWANCE, AND IT IS MEANT TO BE DELETED. Files written before
+       the digest existed carry VERSION_STRING instead. Rejecting them outright
+       would have made every character created up to 2026-08-16 vanish from the
+       load list -- silently, because src/Registry.cpp:907 skips a mismatch
+       without saying anything. Accepting them is a bet that they came from a
+       binary built from this source, which was true of every such file in
+       existence at the time. It is NOT true in general: a file stamped
+       "0.6.9Y19" could have come from any build of any layout, which is exactly
+       the weakness the digest replaces. Nothing written from now on takes this
+       path, so delete this branch once the old saves are gone. */
+    if (!stricmp(stamp, VERSION_STRING))
+        return true;
+
+    return false;
+  }
+
 struct groupHeader
   {
     uint32 Signature;
@@ -407,7 +434,7 @@ int16 Registry::SaveGroup(Term &t, hObj hGroup, bool use_lz, bool newFile) {
         t.FRead(&fh,sizeof(fh));
         if (fh.Sig != SIGNATURE)
             throw ENOTARC;
-        if (strcmp(fh.Version,VERSION_STRING))
+        if (!SaveFormatMatches(fh.Version))
             throw EBADVER;
 
         /* Run through a list of group headers. When/if we find the header
@@ -572,7 +599,7 @@ int16 Registry::LoadGroup(Term &t, hObj hGroup, bool use_lz) {
     t.FRead(&fh,sizeof(fh));
 
     /* Check Version Number */
-    if (strcmp(fh.Version,VERSION_STRING))
+    if (!SaveFormatMatches(fh.Version))
       throw EBADVER;
     
     /* Scan through the saved groups for the specific one that we're
@@ -856,7 +883,7 @@ failed:
           T1->OpenWrite(fn);
 
           memset(&fh,0,sizeof(fh));
-          strcpy(fh.Version,VERSION_STRING);
+          strcpy(fh.Version,SaveFormatID());
           fh.Sig = SIGNATURE;
           fh.numGroups = 1;
           strncpy(fh.Name,desc,71);
@@ -904,7 +931,7 @@ NoSaved:
         do {
             T1->FRead(&fh, sizeof(fh));
             T1->Close();
-            if (stricmp(VERSION_STRING, fh.Version))
+            if (!SaveFormatMatches(fh.Version))
                 continue;
 
             Filenames[i] = T1->GetFileName();
@@ -1027,7 +1054,7 @@ void Game::SaveModule(int16 mn) {
         T1->ChangeDirectory(T1->ModuleSubDir());
         T1->OpenWrite(filespec);
         memset(&fh, 0, sizeof(fh));
-        strcpy(fh.Version, VERSION_STRING);
+        strcpy(fh.Version, SaveFormatID());
         fh.Sig = SIGNATURE;
         fh.numGroups = 1;
         strncpy(fh.Name, Modules[mn]->GetText(Modules[mn]->Name), 71);

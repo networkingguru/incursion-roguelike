@@ -103,3 +103,71 @@ static_assert(sizeof(void*) >= sizeof(hData),
    a normal and expected edit. Pinning them would produce a failing build for
    ordinary work and teach everyone to edit the number instead of reading it.
    What matters here is the width of the primitives, which must never move. */
+
+/* ========================= the save format identity ======================= */
+/*
+     Those whole-object sizes are not asserted, but they ARE what decides
+   whether a save file can be read: Registry::SaveGroup() writes each object as
+   sizeof(T) raw bytes (src/Registry.cpp:474) and reads it straight back. So the
+   thing a file must be keyed on is its LAYOUT, and the digest below is that key.
+
+     VERSION_STRING used to do this job and did it badly in both directions. Too
+   broad: any release, however cosmetic, hid every existing save, because a
+   mismatch is silently skipped at src/Registry.cpp:907 -- no error, the
+   character simply is not in the load list. Too narrow: two builds stamped with
+   the SAME version but different layouts loaded each other's files and misread
+   them, which is the hazard inc-9df.4 records for modules.
+
+     A digest fixes both. Add a field to Player and it changes by itself, so old
+   saves are rejected without anyone remembering to bump anything. Rename the
+   release and it does not move, so shipping a new version costs nobody their
+   character. This is why the version string is now free to be whatever the
+   project wants to call itself.
+
+     It is NOT a checksum of the file and NOT a security measure. It answers one
+   question: was this written by a binary that lays memory out the way I do? */
+
+static constexpr uint32 fnv_add(uint32 h, size_t v)
+  {
+    for (int i = 0; i != (int)sizeof(size_t); i++)
+      {
+        h ^= (uint32)((v >> (i*8)) & 0xFFu);
+        h *= 16777619u;
+      }
+    return h;
+  }
+
+/* Every type Registry::typeSize() can return, plus the primitives and the two
+   structs written raw inside other objects. If you add a case to typeSize(),
+   add it here as well -- a serialised type missing from this list is a layout
+   change the digest cannot see. */
+static constexpr uint32 SaveLayoutDigest()
+  {
+    uint32 h = 2166136261u;
+    h = fnv_add(h, sizeof(int8));   h = fnv_add(h, sizeof(int16));
+    h = fnv_add(h, sizeof(int32));  h = fnv_add(h, sizeof(uint8));
+    h = fnv_add(h, sizeof(uint16)); h = fnv_add(h, sizeof(uint32));
+    h = fnv_add(h, sizeof(void*));  h = fnv_add(h, sizeof(hData));
+    h = fnv_add(h, sizeof(LocationInfo));
+    h = fnv_add(h, sizeof(TAttack));
+    h = fnv_add(h, sizeof(Game));       h = fnv_add(h, sizeof(Term));
+    h = fnv_add(h, sizeof(Map));        h = fnv_add(h, sizeof(Registry));
+    h = fnv_add(h, sizeof(Monster));    h = fnv_add(h, sizeof(Player));
+    h = fnv_add(h, sizeof(Module));     h = fnv_add(h, sizeof(Portal));
+    h = fnv_add(h, sizeof(Door));       h = fnv_add(h, sizeof(Trap));
+    h = fnv_add(h, sizeof(Feature));    h = fnv_add(h, sizeof(Container));
+    h = fnv_add(h, sizeof(Food));       h = fnv_add(h, sizeof(Corpse));
+    h = fnv_add(h, sizeof(Weapon));     h = fnv_add(h, sizeof(Armour));
+    h = fnv_add(h, sizeof(Annotation)); h = fnv_add(h, sizeof(Item));
+    return h;
+  }
+
+/* Ten characters and a terminator, which fits the char Version[12] field in
+   the file header without changing that header's own layout. */
+const char* SaveFormatID(void)
+  {
+    static char id[12];
+    if (!id[0])
+      snprintf(id, sizeof(id), "SF%08X", (unsigned)SaveLayoutDigest());
+    return id;
+  }

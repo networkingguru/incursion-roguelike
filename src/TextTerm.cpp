@@ -67,7 +67,11 @@ bool TextTerm::RunOnCommandLine(int argc, char *argv[], int *retval) {
 #endif
             return true;
         } else if (stricmp(option_names[j], "version") == 0) {
-            printf("%s\n", VERSION_STRING);
+            /* Report what this build IS, and what it came from. A bare
+               upstream version here would misidentify the binary. */
+            printf("%s release %s (fork of %s %s, %s %s)\n",
+                   FORK_NAME, FORK_RELEASE, FORK_BASE_REPO, VERSION_STRING,
+                   FORK_BASE_HASH, FORK_BASE_DATE);
             return true;
         }
     }

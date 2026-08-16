@@ -130,6 +130,7 @@ literal text that will be published.
 | Fix | Tier | Sent? | Tracked |
 |---|---|---|---|
 | `Character::HasFeat` never read a race's Monster template, so players silently lost every racial feat that was not also an explicit `Grants:` entry -- 8 feats across 6 races (`src/Create.cpp`) | **Observed** -- same seed and key script; Dragonkin sheet had no Mantis Leap before, has it after | no | inc-2a0 |
+| Two empty hands produced one strike per swing forever, while two weapons produced two. `AttackMode()` returns `S_BRAWL` before the `S_DUAL` test is reached, so no feat could ever apply to fists (`src/Creature.cpp`, `src/Fight.cpp`) | **Observed** -- same seed; `Hit:2 / -3` and one Punch before, `Hit:2 / 2` and two Punches after | no | inc-dzz |
 
 **This table is incomplete, and knowingly so.** The convention dates from
 2026-08-16; every defect this port fixed before that is unmarked and unlisted.
