@@ -93,7 +93,57 @@ Keep them apart, in the report and in your head:
 Filing an observation as an observation is honest and useful. Filing an
 observation dressed as a diagnosis is how you lose a maintainer's attention.
 
+## Marking a base-code bug that we have fixed
+
+The rules above govern what we SEND. This section governs what we KEEP. They are
+different problems: a fix can sit in our tree for years without ever being
+reported, and if nothing marks it, the knowledge that it was upstream's bug and
+not our port's dies with the session that found it.
+
+**Every fix to a base-code defect MUST carry an `upstream:` comment at the fix
+site.** Lowercase tag, same shape as `ponytail:`. Greppable:
+
+```
+grep -rn "upstream:" src/ inc/
+```
+
+The comment MUST state four things, because a maintainer who wakes up years from
+now has none of our context:
+
+1. **That the defect is upstream's, and why.** Answer question 2 of the gate:
+   would this misbehave on Win32, with the original typedefs, on the upstream
+   compiler? If the answer is no, it is a port artefact and MUST NOT carry this
+   marker -- mislabelling ours as theirs is exactly the credibility cost the top
+   of this document is about.
+2. **The evidence tier**, in the words of the table above: Observed, Traced or
+   Reasoned.
+3. **The tracking id**, so the full reasoning is recoverable.
+4. **Whether it has been sent**, so nobody re-sends it and nobody assumes it
+   went out when it did not.
+
+Marking is NOT reporting, and marking creates no obligation to report. A marked
+fix goes out only through the gate above, and only when Brian has read the
+literal text that will be published.
+
+### Base-code bugs fixed locally
+
+| Fix | Tier | Sent? | Tracked |
+|---|---|---|---|
+| `Character::HasFeat` never read a race's Monster template, so players silently lost every racial feat that was not also an explicit `Grants:` entry -- 8 feats across 6 races (`src/Create.cpp`) | **Observed** -- same seed and key script; Dragonkin sheet had no Mantis Leap before, has it after | no | inc-2a0 |
+
+**This table is incomplete, and knowingly so.** The convention dates from
+2026-08-16; every defect this port fixed before that is unmarked and unlisted.
+`tools/check_upstream_marks.sh` cannot find them, because nothing tells it which
+past diffs were bug fixes. Closing that gap is inc-iqh.
+
 ## Current status of our issues
+
+**Line 106 below is stale.** Material has since gone to the parent project; see
+the top of `CLAUDE.md`, which records that two pull requests went out on
+2026-08-15. As of 2026-08-16 three submitted items are awaiting a maintainer
+response, and nothing further goes out until they are answered. Update this
+table with the specifics when somebody has them to hand.
+
 
 | Issue | Tier | Upstream? |
 |---|---|---|

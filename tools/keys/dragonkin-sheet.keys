@@ -1,0 +1,42 @@
+# Make a Dragonkin and photograph the character sheet.
+#
+# This exists for one assertion: a Dragonkin must have Mantis Leap. The feat is
+# on the species template (lib/subraces.irh:731) and for years no player ever
+# received it, because Character::HasFeat did not read the template. See inc-2a0.
+#
+# Every choice below is a menu letter, and menu letters move when a list
+# changes. Run with a fixed seed or the attribute rolls change, the offered
+# feats change with them, and these letters choose something else.
+# tools/check_race_feats.sh supplies the seed.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+h       # Race:     [h] Lizardfolk
+b       # Subrace:  [b] Dragonkin
+a       # Class:    [a] Barbarian
+a       # Attributes: the first of the five offered sets
+c       # Alignment: [c] Neutral
+a       # First feat
+a       # Second feat
+
+# Skill Manager, twice. Three RIGHTs per skill spends everything available
+# without needing to know how many ranks this character has.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+y       # Do you wish to worship <god>? -- yes
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+# In the dungeon now. The sheet is two screens; the feats block is on the
+# second, so both are dumped and the check greps across them.
+d
+@dump:sheet1
+DOWN*20
+@dump:sheet2
+ESC
+@quit

@@ -27,6 +27,31 @@ as concealment.
 See `docs/REPORTING-GATE.md` for the separate rule that a public claim needs an
 oracle that changed state, with numbers on both sides.
 
+## Marking base-code bugs
+
+**Every fix to a defect that is upstream's rather than the port's MUST be marked
+at the fix site with a lowercase `upstream:` comment, and MUST get a row in the
+"Base-code bugs fixed locally" table in `docs/REPORTING-GATE.md`.** Most defects
+in this codebase are upstream's, so assume a fix needs this unless you can say
+why it does not.
+
+The comment states four things, because a maintainer reading it years from now
+has none of your context:
+
+1. that the defect is upstream's, **and why** — would it misbehave on Win32,
+   with the original typedefs, on the upstream compiler? If no, it is a port
+   artefact and MUST NOT be marked; claiming ours is theirs costs credibility.
+2. the evidence tier — Observed, Traced or Reasoned.
+3. the tracking id.
+4. whether it has been sent, so nobody re-sends it and nobody assumes it went.
+
+**Marking is not reporting and creates no obligation to report.** It exists so
+the work is findable if the original maintainer ever returns. Sending still goes
+through the gate, and still needs Brian to read the literal text.
+
+Verify with `tools/check_upstream_marks.sh`. Find them all with
+`grep -rn "upstream:" src/ inc/`.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:6cd5cc61 -->
 ## Beads Issue Tracker
 

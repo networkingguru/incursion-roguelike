@@ -3510,15 +3510,44 @@ bool Character::HasFeat(int16 ft, bool inh, bool list)
                                     StatiIterBreakout(this,return true);
                             StatiIterEnd(this)
 
-#if 0
-                                /* You *aren't* supposed to get a creature's feats when you
-                                change into it. Exception for Natural Grapple? */
-                                if (HasStati(POLYMORPH)) {
-                                    if (TMON(mID)->HasFeat(ft))
-                                        return true; 
-                                } else if (TMON(tmID)->HasFeat(ft))
-                                    return true; 
-#endif
+                                /* upstream: this is a defect in the BASE CODE, not a port
+                                artefact, and the fix below is ours. It misbehaves
+                                identically on Win32 with the original typedefs -- nothing
+                                here is platform, compiler or width dependent; the #if 0
+                                that caused it is in the original source. Evidence tier is
+                                Observed: same seed and key script, the Dragonkin character
+                                sheet had no Mantis Leap before this change and has it
+                                after (tools/check_race_feats.sh). Tracked as inc-2a0. Not
+                                sent to rmtew. See docs/REPORTING-GATE.md.
+
+                                Feats the character's own species is born with. A Race
+                                resource has no feat field of its own (inc/Res.h:535), so
+                                its Monster: template is the only place a racial feat can
+                                be written other than an explicit Grants: Feat[...] entry.
+                                Without this line the template list is read by nobody and
+                                the player silently never gets the feat: Dragonkin lost
+                                FT_MANTIS_LEAP (lib/subraces.irh:731), dwarves lost
+                                FT_LOADBEARER, halflings lost FT_SLIPAWAY, and grey dwarves
+                                lost three. Monsters were never affected, because
+                                Creature::HasFeat (src/Creature.cpp:2664) does read the
+                                template; only this Character override dropped it.
+
+                                YOU STILL DO NOT GET A CREATURE'S FEATS WHEN YOU CHANGE
+                                INTO IT, which is what the old comment here was protecting.
+                                tmID is the body you were BORN in, and mID is the body you
+                                are WEARING. Shapeshift writes mID (src/Effects.cpp:1034)
+                                and never tmID; tmID is assigned in exactly two places, the
+                                Creature constructor (src/Creature.cpp:55) and race
+                                selection (src/Create.cpp:264). So reading tmID is safe
+                                under polymorph and reading mID would not be. This code was
+                                disabled rather than fixed because its polymorph branch had
+                                them the wrong way round. Never read mID here.
+
+                                The range guard keeps skill ids out: Feats[] is shared
+                                between feats and class/race skills, and a template's
+                                Feats: list may hold either. */
+                                if (ft >= FT_FIRST && TMON(tmID)->HasFeat(ft))
+                                    return true;
 
                                 return (Feats[ft/8] & (1 << (ft%8))) != 0;
 }
