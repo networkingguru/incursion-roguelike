@@ -98,7 +98,19 @@ for BASE in "${BASELINES[@]}"; do
         SOAK="$FROM"
         echo "    reading the run in $SOAK instead of playing the seeds again"
     else
-        SOAK_DIR="$SOAK" ./tools/soak.sh "$SESSIONS" "$FIRST" "$KEYS" > "$SOAK.log" 2>&1
+        # Refuse rather than report. A comparison across two sets of settings
+        # measures the settings as much as the build, and it reaches a verdict
+        # anyway -- which is worse than reaching none. Exit 2 is "could not be
+        # run", not "failed": nothing here says the build is bad.
+        if ! gate_options_check "$BASE" "$GATE_OPTIONS"; then
+            echo
+            echo "REFUSED: the settings this run would use are not the settings"
+            echo "         the baseline was recorded with."
+            exit 2
+        fi
+        echo "    options:  $GATE_OPTIONS"
+        SOAK_DIR="$SOAK" INCURSION_OPTIONS="$GATE_OPTIONS" \
+            ./tools/soak.sh "$SESSIONS" "$FIRST" "$KEYS" > "$SOAK.log" 2>&1
     fi
     gate_collect "$SOAK" > "$WORK/new" || exit 2
 

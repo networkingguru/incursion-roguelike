@@ -24,6 +24,16 @@ FIRST="${3:-1}"
 
 [ -f "$KEYS" ] || { echo "no such key script: $KEYS"; exit 2; }
 
+# Every session plays with the pinned settings file rather than the live one,
+# and its checksum goes into the baseline. See the note in tools/gate_lib.sh.
+[ -f "$GATE_OPTIONS" ] || {
+    echo "the pinned settings file is missing: $GATE_OPTIONS"
+    echo "restore it from git -- it is committed so that a baseline and the"
+    echo "runs measured against it share one set of options."
+    exit 2
+}
+export INCURSION_OPTIONS="$GATE_OPTIONS"
+
 NAME="$(basename "$KEYS" .keys)"
 OUT="$ROOT/tools/gates/$NAME.baseline"
 SOAK="$ROOT/logs/gate/record-$NAME-$$"
@@ -33,6 +43,7 @@ mkdir -p "$ROOT/tools/gates" "$(dirname "$SOAK")"
 echo "recording a baseline from the build in this tree"
 echo "  keys:     $KEYS"
 echo "  seeds:    $FIRST..$((FIRST + SESSIONS - 1))"
+echo "  options:  $GATE_OPTIONS"
 echo "  into:     $OUT"
 echo
 
@@ -64,6 +75,7 @@ fi
     echo "# not in this file is a regression; a message that has left it is a fix."
     printf 'keys\t%s\n' "$KEYS"
     printf 'first\t%s\n' "$FIRST"
+    printf 'options\t%s\n' "$(gate_options_sum "$GATE_OPTIONS")"
     printf '%s\n' "$BODY"
 } > "$OUT"
 

@@ -43,11 +43,12 @@ make_soak() { # <dir> <how many sessions ended in NO GAMEPLAY> [seed:message ...
 
 # The baseline is written by the real collector, so this checks the format the
 # gate actually reads rather than one invented here.
-make_baseline() { # <file> <soakdir>
+make_baseline() { # <file> <soakdir> [settings-checksum]
     {
         echo "# made by tools/check_gate.sh"
         printf 'keys\ttools/keys/dive.keys\n'
         printf 'first\t1\n'
+        [ -n "${3:-}" ] && printf 'options\t%s\n' "$3"
         gate_collect "$2"
     } > "$1"
 }
@@ -106,10 +107,41 @@ elif ! grep -q "quieter than the baseline" "$W/out5"; then
     fail "a run with fewer messages did not report the improvement"
 fi
 
+# 6. The settings the run plays with are an input to the result, so a baseline
+#    recorded with different ones cannot be compared against. See inc-w43: the
+#    finding count moved 4386 -> 4416 because Brian played mid-session and the
+#    game rewrote Options.Dat. These check the rule that stops that, without
+#    running the game.
+echo "settings for the check" > "$W/opts"
+SUM="$(gate_options_sum "$W/opts")"
+
+make_baseline "$W/pinned.baseline" "$W/base" "$SUM"
+if ! gate_options_check "$W/pinned.baseline" "$W/opts" > "$W/out6" 2>&1; then
+    cat "$W/out6"
+    fail "a baseline recorded with the very settings in use was refused"
+fi
+
+echo "somebody changed a setting" > "$W/opts2"
+if gate_options_check "$W/pinned.baseline" "$W/opts2" > "$W/out7" 2>&1; then
+    fail "a baseline recorded with DIFFERENT settings was accepted"
+elif ! grep -q "not comparable" "$W/out7"; then
+    fail "the settings mismatch was refused without saying why"
+fi
+
+if gate_options_check "$W/base.baseline" "$W/opts" > "$W/out8" 2>&1; then
+    fail "a baseline with no settings checksum was accepted; every baseline"
+    fail "recorded before the settings were pinned is that shape"
+fi
+
+if gate_options_check "$W/pinned.baseline" "$W/gone" > "$W/out9" 2>&1; then
+    fail "a missing settings file was accepted"
+fi
+
 if [ "$FAILED" -eq 0 ]; then
     echo "PASS: the gate fails on an unseen message in many sessions, tolerates"
     echo "      one in a single session, fails when sessions stop reaching the"
-    echo "      map, and reports a message that has gone as an improvement"
+    echo "      map, reports a message that has gone as an improvement, and"
+    echo "      refuses to compare across two different sets of settings"
     exit 0
 fi
 exit 1

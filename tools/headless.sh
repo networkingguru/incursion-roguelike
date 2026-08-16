@@ -64,7 +64,25 @@ RUN="${INCURSION_RUN_DIR:-$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$(basename "$KE
 mkdir -p "$RUN/save" "$RUN/logs"
 ln -sfn "$ROOT/mod" "$RUN/mod"
 ln -sfn "$ROOT/lib" "$RUN/lib"
-[ -f "$ROOT/Options.Dat" ] && cp "$ROOT/Options.Dat" "$RUN/Options.Dat"
+# Which settings the session plays with. The default is the live file, because
+# a session with NO options file never finishes character generation and so
+# measures nothing -- that produced two false passes on 2026-08-14.
+#
+# But the live file is whatever Brian last used, and the game rewrites it every
+# time he plays. Settings change the game: on 2026-08-15 the same binary, seed
+# and key script gave different screens either side of a rewrite at 17:49, and
+# the regression tool's finding count moved 4386 -> 4416 with no code change.
+# So anything that compares one run against another must pass
+# INCURSION_OPTIONS and pin a file. The gate does; see tools/gate_lib.sh.
+#
+# A caller that asks for a file it cannot have gets an error, not the live one.
+# Falling back would put the defect straight back, and quietly.
+OPTIONS="${INCURSION_OPTIONS:-$ROOT/Options.Dat}"
+if [ -n "${INCURSION_OPTIONS:-}" ] && [ ! -f "$OPTIONS" ]; then
+    echo "INCURSION_OPTIONS names a file that is not there: $OPTIONS"
+    exit 2
+fi
+[ -f "$OPTIONS" ] && cp "$OPTIONS" "$RUN/Options.Dat"
 
 # The probes that have already caught real defects. They do NOT cost nothing,
 # which is why they can be turned off: a sample of a headless run on 2026-08-15
@@ -78,6 +96,9 @@ export INCURSIONPATH="$RUN/"
 
 echo "keys:  $KEYS"
 echo "seed:  ${SEED:-<clock -- this run is not reproducible>}"
+# Printed because it is an input to the result. A run whose numbers surprise
+# somebody later should say on its own face which settings produced them.
+echo "opts:  $OPTIONS"
 echo "run:   $RUN"
 echo
 

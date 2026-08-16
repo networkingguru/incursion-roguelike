@@ -28,6 +28,59 @@
 # silently does the wrong thing and logs nothing passes clean. It never
 # replaces a play-test.
 
+# THE SETTINGS FILE IS AN INPUT, AND IT IS PINNED HERE.
+#
+# tools/headless.sh copies a settings file into every session. Left alone it
+# copies the live one, which the game rewrites every time Brian plays. Settings
+# change the game -- proved on 2026-08-15 by building sandboxes by hand for
+# seeds 3, 5 and 9 with the old file and the new one: same binary, same seed,
+# same keys, different screens in all three. The gate's finding count moved
+# 4386 -> 4416 across a play session with no code change at all.
+#
+# So the gate plays with the committed file below and never the live one. The
+# baseline records its checksum, and a comparison stops if the two disagree.
+# Change the file when you mean to change it, then record a new baseline.
+GATE_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GATE_OPTIONS="${GATE_OPTIONS:-$GATE_LIB_DIR/gates/Options.Dat}"
+
+gate_options_sum() { # <file>
+    [ -f "$1" ] || { echo "missing"; return 0; }
+    shasum -a 256 "$1" | awk '{print $1}'
+}
+
+# Does this baseline describe the settings the run is about to use? Returns 0
+# when they match, 1 when the comparison would measure the settings as much as
+# the build. Prints the reason either way; the caller decides what to do.
+gate_options_check() { # <baseline> <optionsfile>
+    local base="$1" opts="$2" want have
+
+    want="$(gate_field "$base" options)"
+    have="$(gate_options_sum "$opts")"
+
+    if [ -z "$want" ]; then
+        echo "  This baseline records no settings checksum, so it was recorded"
+        echo "  before the settings were pinned -- with whatever Brian last"
+        echo "  played with. Its numbers cannot be compared against anything."
+        echo "  Record it again:  tools/gate_record.sh $(gate_field "$base" keys)"
+        return 1
+    fi
+    if [ "$have" = "missing" ]; then
+        echo "  The pinned settings file is gone: $opts"
+        echo "  Restore it from git; it is committed for exactly this reason."
+        return 1
+    fi
+    if [ "$want" != "$have" ]; then
+        echo "  The pinned settings file has changed since this baseline was"
+        echo "  recorded:"
+        echo "    baseline: $want"
+        echo "    now:      $have"
+        echo "  Settings change the game, so the two runs are not comparable."
+        echo "  Record a new baseline, or put the old file back."
+        return 1
+    fi
+    return 0
+}
+
 # Emit the baseline body for a finished soak directory on stdout.
 #
 #   played    sessions that reached a map. A change that breaks character

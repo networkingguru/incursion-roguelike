@@ -1,13 +1,14 @@
 # Incursion regression baseline -- see tools/gate_compare.sh.
-# Recorded 2026-08-15 11:38 from bf73cdd.
+# Recorded 2026-08-15 20:47 from 23b7afa.
 # Metric: error volume and message-set membership. A message that is
 # not in this file is a regression; a message that has left it is a fix.
 keys	tools/keys/dive.keys
 first	1
+options	43ae68c8c4b9af6b195b4f89746c351e5e7387bd99bf95c044a976cd1d7e5471
 sessions	40
 played	40
 exits	0=40
 lines	1
-findings	5902
-message	32	5902	audit: orphan: claims this map but is in neither list
+findings	6001
+message	31	6001	audit: orphan: claims this map but is in neither list
 message	1	1	err: Contents list wierdless in Thing::Remove!
