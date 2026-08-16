@@ -147,9 +147,34 @@ if [ "$STATUS" -ne 5 ]; then
     fail "a session that never entered a map exited $STATUS, wanted 5 (NO GAMEPLAY)"
 fi
 
+# 6. Turning a DIAGNOSTIC off must not change the verdict on whether the game
+#    played. This is inc-duz. The harness used to answer "did it play?" by
+#    asking whether logs/mapaudit.log existed, which stopped being true the day
+#    the audit gained a switch: a disabled audit writes no log, so every session
+#    with INCURSION_MAP_AUDIT=0 called itself vacuous. That hit hardest in the
+#    one case the switch exists for -- a timing run must set it, and would then
+#    throw away all of its own data. Same seed and script on 2026-08-15: audit
+#    on reached turn 199900, audit off was called NO GAMEPLAY.
+#
+#    Note what this must NOT be rewritten to use: screens are no evidence of
+#    gameplay, because they come from @dump lines in the key script. The vacuous
+#    run above leaves 11 of them.
+INCURSION_MAP_AUDIT=0 INCURSION_RUN_DIR="$WORK/run5" ./tools/headless.sh "$KEYS" "$SEED" \
+    > "$WORK/out5" 2>&1 < /dev/null
+STATUS=$?
+if [ "$STATUS" -ne 0 ]; then
+    echo "--- session output ---"
+    tail -10 "$WORK/out5"
+    fail "with the map audit off, a session that played exited $STATUS, wanted 0"
+fi
+if [ ! -f "$WORK/run5/logs/session.log" ]; then
+    fail "no logs/session.log with the audit off; the gameplay marker is gone"
+fi
+
 if [ "$FAILED" -eq 0 ]; then
     echo "PASS: a scripted session runs unattended, draws a map, repeats itself,"
-    echo "      and a session that plays nothing is reported as playing nothing"
+    echo "      a session that plays nothing is reported as playing nothing, and"
+    echo "      switching the map audit off does not change either verdict"
     exit 0
 fi
 exit 1

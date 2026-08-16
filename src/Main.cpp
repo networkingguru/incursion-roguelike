@@ -171,6 +171,46 @@ void Game::NewGame(rID mID, bool reincarnate) {
         }
 }
 
+/* Say, once per session, that the game reached actual play.
+
+     An unattended run has to be able to tell a session that played from one
+   whose keystrokes were all eaten by character generation. The second kind
+   exits cleanly, draws screens and measures NOTHING, and counting it as a pass
+   is how 250 empty sessions became the evidence for a fix on 2026-08-14.
+
+     tools/headless.sh used to answer that question by asking whether
+   logs/mapaudit.log existed. That worked only while the audit could not be
+   turned off. It can now, and a disabled audit writes no log, so every timing
+   run -- the exact case the switch exists for -- reported itself as having
+   played nothing. Same seed and script on 2026-08-15: audit on reached turn
+   199900, audit off was called NO GAMEPLAY.
+
+     So the marker lives here instead, beside the turn counter it describes,
+   and no diagnostic switch can silence it. It is written from inside the turn
+   loop rather than on entry to Play(), because reaching this function is not
+   the same as completing a turn. */
+static void NoteGameplayReached() {
+    static bool noted = false;
+    char path[1024], stamp[32];
+    time_t now;
+    FILE *f;
+
+    if (noted)
+        return;
+    noted = true;
+
+    snprintf(path, sizeof(path), "%slogs/session.log",
+        (const char*)T1->IncursionDirectory);
+    f = fopen(path, "a");
+    if (!f)
+        return;
+    time(&now);
+    strftime(stamp, sizeof(stamp), "%Y-%m-%d %H:%M:%S", localtime(&now));
+    fprintf(f, "=== entered a map %s  Incursion %s  built %s %s ===\n",
+        stamp, VERSION_STRING, __DATE__, __TIME__);
+    fclose(f);
+}
+
 void Game::Play() {
     Thing *t, *t2; int16 i,j,c;
     uint32 relative_turn;
@@ -389,6 +429,10 @@ restartDestroyCount:
            slow does not need finer resolution to be caught. */
         if (MapAuditEnabled() && !(Turn % 10))
             AuditMap(mp, "end of turn");
+
+        /* Unconditional, and deliberately not beside the audit's switch: this
+           is what tells an unattended run that the session played at all. */
+        NoteGameplayReached();
 
         Turn++;
     } while(1);

@@ -119,9 +119,17 @@ fi
 echo
 echo "--- after the session ---"
 
-# Did the game ever actually play? MapAudit.cpp opens logs/mapaudit.log on the
-# FIRST audit rather than at startup, and audits run only while turns pass on a
-# map, so the file exists if and only if the session reached gameplay.
+# Did the game ever actually play? Game::Play writes logs/session.log on the
+# first completed turn, unconditionally, so the file exists if and only if the
+# session reached gameplay.
+#
+# It used to ask logs/mapaudit.log the same question. That was right only while
+# the audit could not be switched off. Once it could, a disabled audit wrote no
+# log and every session reported NO GAMEPLAY -- which hit hardest in the one
+# case the switch exists for, timing, because a timing run MUST set
+# INCURSION_MAP_AUDIT=0 and would then discard all of its own data. Proved on
+# 2026-08-15 with one seed ten seconds apart: audit on reached turn 199900,
+# audit off was called vacuous. See inc-duz.
 #
 # This has to change the exit code, not just print a line. A session whose keys
 # are all eaten by character generation exits 0, and every caller that reads the
@@ -130,10 +138,14 @@ echo "--- after the session ---"
 # a fix, and the false result was written into a commit message. Two runs that
 # both did nothing agree perfectly, which is what made it convincing.
 #
+# Do NOT be tempted to count screens instead. Screens come from @dump lines in
+# the key script, so a session that never entered a map still produces them --
+# the vacuous run of 2026-08-15 left 11.
+#
 # Only a normal ending is promoted. A FATAL or a watchdog stop says more about
 # the run than "no gameplay" does, so those keep their own code.
 PLAYED=1
-[ -f "$RUN/logs/mapaudit.log" ] || PLAYED=0
+[ -f "$RUN/logs/session.log" ] || PLAYED=0
 if [ "$PLAYED" -eq 0 ] && { [ "$STATUS" -eq 0 ] || [ "$STATUS" -eq 3 ]; }; then
     STATUS=5
 fi
@@ -160,11 +172,18 @@ else
     echo "errors:     none"
 fi
 
-# The audit log always carries a header when armed, so its absence means the
-# switch did not take -- which is worth saying out loud rather than reading as
-# a clean run.
+# The audit log always carries a header when armed, so its absence means either
+# that the caller turned the audit off or that the switch did not take. Those
+# are different things and the report must not merge them: reading "no log" as
+# "never played" is the defect this file used to have (inc-duz).
 if [ ! -f "$RUN/logs/mapaudit.log" ]; then
-    echo "map audit:  no log (the run never entered a map)"
+    if [ "$INCURSION_MAP_AUDIT" = "0" ]; then
+        echo "map audit:  off (INCURSION_MAP_AUDIT=0), nothing was checked"
+    elif [ "$PLAYED" -eq 0 ]; then
+        echo "map audit:  no log, and the run never entered a map"
+    else
+        echo "map audit:  NO LOG despite gameplay -- the switch did not take"
+    fi
 elif [ "$(grep -vc '^=== map audit armed' "$RUN/logs/mapaudit.log")" = "0" ]; then
     echo "map audit:  armed, no inconsistencies found"
 else
