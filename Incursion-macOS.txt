@@ -1,0 +1,66 @@
+iNCURSION for macOS
+===================
+
+This is Julian Mensch's Incursion, ported to run natively on the Mac.
+
+Incursion.txt, beside this file, is the original project's readme. Read it for
+the game itself — but note that it predates this port, and the source and issue
+links in it point at a Bitbucket repository that is no longer where the work
+happens. Use the addresses below instead.
+
+
+Where your files live
+---------------------
+
+    ~/Library/Application Support/Incursion/
+
+Saves, options and logs are all in there. Deleting the app does not remove them;
+delete that folder too if you want a clean sweep.
+
+They are deliberately kept outside the app. An app bundle that writes inside
+itself breaks its own code signature, and macOS then refuses to launch it with
+"the app has been modified or damaged".
+
+Inside that folder you will find "mod" and "fonts" as symbolic links pointing
+back into the app. That is intentional: the game keeps one directory for both
+reading and writing, so the writable copy is the real one and the read-only game
+data is linked in.
+
+
+Requirements
+------------
+
+macOS on Apple Silicon. Intel and Linux builds are planned.
+
+
+Reporting a problem
+-------------------
+
+For anything about the Mac build — it will not launch, it crashes, saves do not
+load — report it here:
+
+    https://github.com/networkingguru/incursion-roguelike/issues
+
+Please say which macOS version and which Mac you are on, and paste any output.
+If a crash produced a report, macOS keeps it in
+~/Library/Logs/DiagnosticReports and that file is the single most useful thing
+you can attach.
+
+For questions about the game's rules or content rather than this port, the
+parent project is:
+
+    https://github.com/rmtew/incursion-roguelike
+
+
+Credits
+-------
+
+Incursion is Julian Mensch's work, with additional concepts and material by
+Westley Weimer. Richard Tew has maintained it since 2014 and vendored the
+dependencies that keep old builds reproducible. Kyle Benesch (HexDecimal) did
+substantial modernisation work in 2024.
+
+This fork changes nothing about that. Defects belonging to the base game are
+sent back to the parent project rather than kept here.
+
+Built with AI assistance (Claude).

@@ -44,5 +44,12 @@ incursion-debug
 # docs/media/incursion-macos.png.
 /incursion-*
 
+# ...but NOT the shipped readme. Git matches this pattern case-insensitively on a
+# case-insensitive filesystem, so /incursion-* swallowed Incursion-macOS.txt --
+# which tools/package_macos_app.sh copies into the bundle and tools/check_app.sh
+# requires, so a fresh clone would have failed to build a release. Second time
+# this pattern has eaten a real file; the first was docs/media/incursion-macos.png.
+!/Incursion-macOS.txt
+
 # Release artifacts, produced by tools/package_macos.sh.
 dist/
