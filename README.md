@@ -15,17 +15,21 @@ to macOS, and it is meant to be played, not built.
 
 Download the disk image from
 [Releases](https://github.com/networkingguru/incursion-roguelike/releases), open
-it, and drag the folder anywhere you like. Double-click `incursion` and play.
+it, drag **Incursion.app** to Applications, and double-click it.
 
-There is no installer, no dependency to fetch, and no compiler. The image is
-signed and notarised by Apple, so it opens without a Gatekeeper warning and
-without right-click gymnastics.
+There is no installer, no dependency to fetch, and no compiler. The app is signed
+and notarised by Apple, and the notarisation ticket is stapled to the app itself
+rather than only to the disk image — so it still launches after you drag it out,
+with no Gatekeeper warning and no right-click gymnastics.
 
 **Requires** macOS on Apple Silicon. Intel and Linux builds are coming; see
 *What's next*.
 
-Your saves, options and logs live in the folder beside the game, so moving the
-folder moves everything, and deleting it leaves nothing behind.
+Your saves, options and logs live in `~/Library/Application Support/Incursion/`.
+Deleting the app leaves them alone; delete that folder as well for a clean sweep.
+They are kept outside the app because an app bundle that writes inside itself
+breaks its own code signature, which macOS then reports as the app having been
+modified or damaged.
 
 ---
 
@@ -96,6 +100,10 @@ claim that had to be retracted — is in [`docs/FIXED.md`](docs/FIXED.md).
 
 You do not need this to play. It is here for people who want to change something.
 
+`master` is the development tip. A `release-N` tag (e.g. `release-1`) marks the
+exact commit a shipped image was built from. Check out a release tag for the
+build that matches a downloaded image; stay on `master` for current work.
+
 ```
 brew install sdl2 pkg-config
 ./build_macos.sh
@@ -105,17 +113,44 @@ brew install sdl2 pkg-config
 Two minutes from a clean checkout. `BACKEND=posix ./build_macos.sh` builds the
 terminal and headless binary instead.
 
-To produce a release image the way one is actually shipped:
+### Packaging a release
 
 ```
-DMG=yes tools/package_macos.sh
+DMG=yes tools/package_macos_app.sh
 ```
 
-That builds twice on purpose — a developer binary to compile the game module,
-then a shipping binary without the resource compiler, because the compiler
-carries a GPLv2 runtime that must not be distributed. It then bundles SDL2,
-signs, notarises and staples the result, and refuses to produce an image that
-fails its own checks.
+That produces `Incursion.app` inside a disk image. It builds twice on purpose — a
+developer binary to compile the game module, then a shipping binary without the
+resource compiler, because the compiler carries a GPLv2 runtime that must not be
+distributed. It bundles SDL2, signs, notarises and staples **both the app and the
+image**, and `tools/check_app.sh` refuses to let a broken one out.
+
+`tools/package_macos.sh` still exists and builds the older plain-folder layout. Do
+not ship that: a bare executable cannot be approved by Gatekeeper no matter how
+correctly it is signed, which is what broke the first release.
+
+**Anyone can run this; not everyone can produce a distributable result.** Without
+an Apple signing identity the script prints `SKIPPED`, produces an unsigned image,
+and carries on. That image runs fine on the machine that built it, because a file
+you create yourself carries no quarantine attribute — which is exactly why this
+class of bug is invisible locally. It will be refused on any machine that
+downloads it.
+
+To produce something another Mac will launch you need:
+
+- a paid Apple Developer Program membership;
+- a **Developer ID Application** certificate. An *Apple Development* certificate
+  cannot sign anything distributed outside the App Store — different type, and the
+  distinction is easy to lose a day to;
+- notarisation credentials. Run `tools/setup_notary.sh` once, in a real terminal,
+  and it stores an app-specific password at `~/.config/incursion/notary.env`,
+  mode 600, after validating it against Apple.
+
+Use `setup_notary.sh` rather than `notarytool store-credentials`. A keychain
+profile is only readable by processes on the keychain item's ACL, so a release
+built from anything other than the terminal that created the profile fails with
+`No Keychain password item found` — which means *found but not permitted*, and
+reads like a missing credential. A file has no ACL.
 
 Development notes live in [`docs/PORT-STATUS.md`](docs/PORT-STATUS.md), and work
 is tracked in the repository with [Beads](https://github.com/gastownhall/beads)

@@ -40,8 +40,22 @@ to zero across 877 turns.
 That last one is an upstream defect, not a port artefact, so it went back to the
 parent project as [rmtew#40](https://github.com/rmtew/incursion-roguelike/issues/40)
 and [rmtew#41](https://github.com/rmtew/incursion-roguelike/pull/41). **Still
-open, with no comment or review.** Sending a fix and having it accepted are
-different things, and this page says which is which.
+open, with no comment or review as of 2026-08-17.** Sending a fix and having it
+accepted are different things, and this page says which is which.
+
+### Everything sent upstream, and what became of it
+
+| PR | What it is | Status as of 2026-08-17 |
+|---|---|---|
+| [#41](https://github.com/rmtew/incursion-roguelike/pull/41) | bounds-check `Map::GetAt()` | open, no comment |
+| [#42](https://github.com/rmtew/incursion-roguelike/pull/42) | zero-initialise `Target` at its eight construction sites | **merged** 2026-08-15 |
+| [#43](https://github.com/rmtew/incursion-roguelike/pull/43) | `MoveDepth` re-entrancy, sent as hardening | open — **the maintainer has asked three technical questions and they are not yet answered** |
+| [#44](https://github.com/rmtew/incursion-roguelike/pull/44) | compare handles, not addresses, in `TargetSort` | open, no comment |
+
+One merged of four. The one that merged is the one whose evidence was a number
+that moved on both sides of a controlled run, which is what
+[`REPORTING-GATE.md`](REPORTING-GATE.md) predicted before there was any evidence
+for it.
 
 ---
 
@@ -99,6 +113,60 @@ monk was strictly better off holding nunchaku than punching.
 
 ---
 
+## Two defects that shipped, and were found by a stranger
+
+Both of these were in the released download, both were invisible on the machine
+that built it, and both were reported from outside
+([networkingguru#6](https://github.com/networkingguru/incursion-roguelike/issues/6)).
+They are recorded together because they share one cause: every check ran against
+local files, and a file you build yourself is not the file a user gets.
+
+**The release could not load its own module.** The game reported *"Error loading
+module 'Incursion.Mod' (File Version Mismatch)"* on the first action. Module files
+carry a digest of the memory layout that wrote them, and the release is built
+twice — a developer binary to compile the module, a shipping binary without the
+GPLv2 resource compiler. Those two disagreed, because `class Registry` had a data
+member declared only in debug builds and `sizeof(Registry)` is one of the digest's
+inputs. The developer binary stamped `SF0F7B6EDC`; the shipping binary demanded
+`SFD3A51B74`.
+
+Measured with one probe compiled against the headers twice, changing only
+`-DDEBUG`:
+
+| | `sizeof(Registry)` | stamp |
+|---|---|---|
+| developer build | 1,065,016 | `SF0F7B6EDC` |
+| shipping build | 1,065,008 | `SFD3A51B74` |
+| after the fix, both | 1,065,016 | `SF0F7B6EDC` |
+
+The developer stamp did not move, so no existing save was invalidated. The guards
+never even agreed: every *use* of that member is under `DEBUG_OBJECTS`, not
+`DEBUG`, so a plain developer build carried the field and never touched it.
+
+**The replacement release would not launch at all.** It was correctly signed and
+correctly notarised, and macOS still refused it with *"the app has been modified
+or damaged"*. Nothing was wrong with the signature — `codesign --verify --strict`
+passed. The problem was the shape: a bare executable in a plain folder. Gatekeeper
+cannot approve a bare executable, answering *"the code is valid but does not seem
+to be an app"*, and a notarisation ticket can only be stapled to a disk image, an
+installer or an app bundle — never to a loose binary. So the ticket covered the
+image and nothing covered the game.
+
+It now ships as `Incursion.app` with its own stapled ticket, which is what makes
+it survive being dragged out of the image. Writable state moved to
+`~/Library/Application Support/Incursion/`, because a bundle that writes inside
+itself breaks its own signature and produces the same refusal by another route.
+
+**What actually let both of these out.** The packaging gate inspected the
+artifact's contents and never ran it, and it assessed unquarantined local files.
+A downloaded file carries `com.apple.quarantine` and is judged differently, so the
+failure was structurally invisible where it was built. `tools/check_app.sh` now
+asks the binary for its own save-layout stamp and compares it to the module's,
+assesses a **quarantined** copy, and asserts the signature survives a run. All
+three would have failed on what shipped.
+
+---
+
 ## A claim that was withdrawn
 
 Making `Player::MoveDepth`'s follower array re-entrant was committed as a
@@ -126,9 +194,10 @@ bd ready                    # what is available to work on now
 bd show <id>                # one issue, with its evidence
 ```
 
-Twenty-three issues are closed as of iNCURSION release 1. Each carries the
-evidence that closed it, including the controls that were run and, where one
-exists, the regression check left behind.
+Forty-five issues are closed as of 2026-08-17. Each carries the evidence that
+closed it, including the controls that were run and, where one exists, the
+regression check left behind. Twenty-three of those were closed by iNCURSION
+release 1; the rest came after it, including the two packaging defects above.
 
 ## Fixes that belong to upstream
 

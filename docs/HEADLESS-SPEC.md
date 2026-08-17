@@ -1,5 +1,12 @@
 # Headless terminal backend — specification
 
+**STATUS: IMPLEMENTED AND SHIPPED.** `inc-73g` is closed. This document is the
+original specification and is kept for the reasoning, not as pending work —
+everything below in the future tense now exists. Build it with
+`BACKEND=posix ./build_macos.sh` and drive it with `tools/headless.sh`. Roughly
+1,100 unattended sessions have run through it, and it is how most defects in this
+port were found.
+
 Tracked as `inc-73g`. Sized: Medium.
 
 ## Why
