@@ -978,6 +978,25 @@ void Player::MoveDepth(int16 NewDepth, bool safe) {
            from $"Mines of Moria", the player is always placed at the
            feature $"ancient passage". */
 
+        /* Temporary diagnostic: set INCURSION_FOLLOWER_PROBE=1 to test whether
+           the collection loop below actually collects every follower. It walks
+           m->Things by index and calls Remove() as it goes; Array::Remove
+           memmoves the tail left, so the entry after each removal slides into
+           the index the loop has just finished with, and i++ steps over it.
+           Two followers adjacent in Things should therefore leave one behind.
+
+           This pre-pass only counts and never removes, so it cannot change the
+           outcome it is measuring. The post-pass then asks the old map what is
+           still standing on it. Delete with the bead that records this. */
+        int16 probeBefore = 0;
+        if (getenv("INCURSION_FOLLOWER_PROBE")) {
+            Creature *pc; int32 pi;
+            MapIterate(m, pc, pi)
+                if (pc->isMonster())
+                    if (pc->ts.isLeader(this))
+                        probeBefore++;
+        }
+
         gwc = 0;
         MapIterate(m, c, i)
             if (c->isMonster())
@@ -989,6 +1008,29 @@ void Player::MoveDepth(int16 NewDepth, bool safe) {
                     GoWith[gwc++] = c;
                     c->Remove(false);
                 }
+
+        if (getenv("INCURSION_FOLLOWER_PROBE")) {
+            static FILE *folLog = NULL;
+            if (!folLog) {
+                char path[1024];
+                snprintf(path, sizeof(path), "%slogs/followerprobe.log",
+                    (const char*)T1->IncursionDirectory);
+                folLog = fopen(path, "a");
+            }
+            if (folLog) {
+                int16 leftBehind = 0;
+                Creature *pc; int32 pi;
+                MapIterate(m, pc, pi)
+                    if (pc->isMonster())
+                        if (pc->ts.isLeader(this))
+                            leftBehind++;
+                fprintf(folLog,
+                    "MoveDepth depth=%d followers_before=%d collected=%d "
+                    "left_behind=%d\n",
+                    (int)m->Depth, (int)probeBefore, (int)gwc, (int)leftBehind);
+                fflush(folLog);
+            }
+        }
 
         if (c = (Creature*)GetStatiObj(DWARVEN_FOCUS))
             if (c->m == m) {

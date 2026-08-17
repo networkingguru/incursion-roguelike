@@ -1,0 +1,40 @@
+# Give the player several followers standing together, then change level, so
+# INCURSION_FOLLOWER_PROBE can report whether every follower came along.
+#
+#   INCURSION_FOLLOWER_PROBE=1 tools/headless.sh tools/keys/followers.keys 3362
+#
+# Why several, and why together: the collection loop in Player::MoveDepth walks
+# m->Things by index and removes as it goes. Array::Remove shifts the tail
+# left, so the entry that slides into the index just vacated is never examined.
+# A single follower therefore always survives. The defect needs two followers
+# adjacent in Things, which is what summoning several in a row produces --
+# creatures are appended to Things in creation order.
+#
+# Wizard menu letters are positional (src/TextTerm.cpp:941):
+#   g = Monster Summoning              (7th option)
+#   p = Ascend / Descend Depth         (16th option)
+#   C = Make Player Master of Monster  (29th option)
+# and inside Monster Summoning: [J] Kobolds, then [c] kobold. Wizard mode asks
+# for a confirmation the first time only, which is the 'y' below.
+#
+# The wizard summon does NOT make the monster a companion -- that only happens
+# on the spell and wand path (src/Encounter.cpp:2511) -- so each kobold is made
+# a follower afterwards with the master command.
+
+@include chargen.keys
+
+w y g J c l UP ENTER
+w g J c l UP ENTER
+w g J c l UP ENTER
+
+@dump:summoned
+
+w C UP ENTER
+w C UP LEFT ENTER
+w C RIGHT ENTER
+
+@dump:mastered
+
+w p "2" ENTER
+
+@dump:descended

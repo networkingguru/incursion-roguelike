@@ -1,0 +1,11 @@
+seed 3362:
+MoveDepth depth=1 followers_before=3 collected=2 left_behind=1
+seed 4242:
+MoveDepth depth=1 followers_before=3 collected=2 left_behind=1
+seed 111:
+MoveDepth depth=1 followers_before=3 collected=2 left_behind=1
+MoveDepth depth=1 followers_before=3 collected=2 left_behind=1
+seed 555:
+MoveDepth depth=1 followers_before=3 collected=2 left_behind=1
+MoveDepth depth=1 followers_before=3 collected=2 left_behind=1
+MoveDepth depth=1 followers_before=3 collected=2 left_behind=1

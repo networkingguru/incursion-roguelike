@@ -1,0 +1,49 @@
+=== screen 0001 summoned  key 134  mode 2 ===
+A kobold (reach)                                                |Rathak
+  (wielding a ? whip)                                           |Male Orc
+Seen With: infra.                                               |Barbarian 1
+                                                                |0/1000 XP
+                                                                |
+                                                                |12:00 AM
+                                                                |1st of Suntide
+                               ,..                              |
+                             ......,                            |Exploring
+                            .........                           |Satiated
+                           ....%......                          |Afoot
+                           ..........,                          |Healthy
+                          .....kkk%...%                         |Vigorous
+                          ......@......                         |
+                          ..%..........                         |STR: 21
+                           ....%...%.,                          |DEX: 10
+                           %...%......                          |CON: 12
+                            .,..%.,..                           |INT: 12
+                             .......                            |WIS: 18
+                               ...                              |CHA: 12
+                                                                |LUC: 17
+                                                                |
+                                                                |Mod:Melee
+                                                                |Hit:6
+                                                                |Dmg:1d3+6
+                                                                |Spd:140%
+                                                                |Enc:Light
+                                                                |Def:10 Cov:8
+                                                                |Arm: 5 Slash
+                                                                |     6 Pierce
+                                                                |     6 Blunt
+                                                                |Mov:90%
+                                                                |
+                                                                |Things in View:
+                                                                |k kobold
+                                                                |k kobold
+                                                                |k kobold
+                                                                |< cave entrance
+                                                                |% lizardman
+                                                                |% cave orc
+                                                                |% elf corpse
+                                                                |% gnome corpse
+                                                                |% kobold corpse
+                                                                |% dwarf corpse
+                                                                |% human corpse
+                                                                |% dwarf corpse
+The Goblin Caves: Entry Chamber                             010m|[*************]
+HP:42/42 Mana:18/18 FP:8/8 GP:34                                |[*************]
