@@ -380,9 +380,20 @@ Restart:
         int16 BAB;
         for(i = 0;i != 5; i++) {
             BAB = AttrAdj[A_HIT_ARCHERY+i][BONUS_BASE] + AttrAdj[A_HIT_ARCHERY+i][BONUS_CLASS2] + AttrAdj[A_HIT_ARCHERY+i][BONUS_CLASS3];
-            if (GetBAB(i) > BAB) {
-                AttrAdj[A_HIT_ARCHERY+i][BONUS_STUDY] = GetBAB(i) - BAB;
-                AttrAdj[A_HIT_ARCHERY+i][BONUS_STUDY] = GetBAB(i) - BAB;
+            // upstream: i runs 0-4 over the 5 A_HIT_*/A_SPD_* slots
+            // (ARCHERY,BRAWL,MELEE,THROWN,OFFHAND), but Character::GetBAB's
+            // "mode" indexes TClass::AttkVal[4], which has no OFFHAND entry
+            // (there are only 4 combat modes: S_ARCHERY..S_THROWN). Calling
+            // GetBAB(i) at i==4 (OFFHAND) read AttkVal[4], one past the end.
+            // Offhand already borrows the MELEE value everywhere else in
+            // this function (see A_HIT_OFFHAND/A_SPD_OFFHAND above), so do
+            // the same here. UBSan, Traced, inc-bd2, not sent.
+            int16 babMode = (i == 4 /* OFFHAND slot; not to be confused with
+                                       the unrelated S_DUAL==4 attack mode */)
+                ? S_MELEE : i;
+            if (GetBAB(babMode) > BAB) {
+                AttrAdj[A_HIT_ARCHERY+i][BONUS_STUDY] = GetBAB(babMode) - BAB;
+                AttrAdj[A_HIT_ARCHERY+i][BONUS_STUDY] = GetBAB(babMode) - BAB;
             }
         }
     } else {
@@ -2161,9 +2172,22 @@ bool Creature::isMType(int32 mt)
       return false;
     
 
-  if (TMON(tmID)->MType[0] == mt || 
-      TMON(tmID)->MType[1] == mt ||
-      TMON(tmID)->MType[2] == mt)
+  /* upstream: tmID can name a resource id that Get() cannot resolve (a
+     wild/out-of-range module slot). TMON(tmID) then returns NULL, and this
+     function used to dereference it unchecked -- a plain C++ NULL-pointer
+     bug present on any platform/compiler, not a port artefact. Traced,
+     inc-upw.24, not sent. A creature whose template can't be resolved isn't
+     a match for any type, so return false rather than crash. This also
+     guards every other TMON(tmID) use later in this same function (e.g. the
+     MA_PERSON case below), since they're now unreachable once we've
+     returned here. */
+  TMonster *tm = TMON(tmID);
+  if (!tm)
+    return false;
+
+  if (tm->MType[0] == mt ||
+      tm->MType[1] == mt ||
+      tm->MType[2] == mt)
     return true;
 
   StatiIterNature(this,TEMPLATE)
@@ -2245,7 +2269,7 @@ bool Creature::isMType(int32 mt)
          and thus is immune to charm person. However, a human who has
          benefitted from Enlarge or Righteous Might is still a person,
          and can still be charmed. Strange, neh? */
-      if (TMON(tmID)->Size > SZ_MEDIUM)
+      if (tm->Size > SZ_MEDIUM)
         return false;
       if (HasMFlag(M_UNDEAD))
         return false;

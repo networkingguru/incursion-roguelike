@@ -1654,8 +1654,6 @@ EvReturn Food::Eat(EventInfo &e)
     int16 nut, full; rID dID;
     static bool confirm = false;
 
-    Eaten += 5; 
-
     if (e.EActor->HasAbility(CA_BURNING_HUNGER)) {
       bool okFood = false;
       if (isType(T_CORPSE)) {
@@ -1676,11 +1674,27 @@ EvReturn Food::Eat(EventInfo &e)
           okFood = true;
         delete m; 
       } 
-      if (!okFood) { 
+      if (!okFood) {
         e.EActor->IPrint("Only the blood of a carnivorous creature will feed your burning hunger.");
-        return ABORT; 
-      } 
-    } 
+        // upstream: this is a plain control-flow bug in game logic, not a
+        // port artefact -- no typedef, pointer width, endianness or compiler
+        // extension is involved, so it would misbehave identically on the
+        // original Win32/MSVC build. The eat menu (Player.cpp) already
+        // TakeOne()s the food off the stack before EV_EAT fires, and the
+        // sibling vomit/full branches below both give that split-off unit
+        // back via "goto StopEating" -- this refusal branch used to
+        // "return ABORT" instead, skipping the give-back, so every refused
+        // bite destroyed one ration even though nothing was eaten.
+        // Evidence: Observed -- tools/keys/dragonkin-ration.keys, seed 1:
+        // pre-fix, "9 food rations" decremented by one on every refusal,
+        // reaching quantity 1 ("food ration") after 8 refused attempts;
+        // post-fix, the same 8 refusals leave "9 food rations" unchanged.
+        // inc-i9q.1. Not sent.
+        goto StopEating;
+      }
+    }
+
+    Eaten += 5;
 
     if (isType(T_CORPSE))
       nut = CorpseNut[((Corpse *)this)->Size()];

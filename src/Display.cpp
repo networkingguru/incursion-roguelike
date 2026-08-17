@@ -43,6 +43,114 @@
 #include "Incursion.h"
 #include "MapAudit.h"
 
+/* Diagnostic only, for bead inc-6d5 ("Contents list wierdless in
+   Thing::Remove!"). Logs every Move/Remove/PlaceAt transition for a
+   name-matched creature (default "Volgar,Gell" -- the two specimens a fresh
+   40-seed dive.keys sweep produced; override with INC6D5_PROBE_NAMES, a
+   comma-separated list) to logs/inc6d5-probe.log, with a call stack, so the
+   exact site that leaves m/x/y set while dropping the object from both
+   Things[] and the square's Contents chain can be read off directly instead
+   of guessed at. Build with:
+     EXTRA_CXXFLAGS=-DINC6D5_PROBE OUT=incursion-inc6d5probe BACKEND=posix ./build_macos.sh
+   Not wired into any normal build. */
+#ifdef INC6D5_PROBE
+#include <execinfo.h>
+#include <cstring>
+static FILE *Inc6d5ProbeLog() {
+    static FILE *f = NULL;
+    if (!f) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%slogs/inc6d5-probe.log",
+            (const char*)T1->IncursionDirectory);
+        f = fopen(path, "a");
+    }
+    return f;
+}
+static bool Inc6d5ProbeNameMatch(Thing *t) {
+    char buf[256], *tok, *save = NULL;
+    const char *names;
+    String nm;
+    if (!t || !t->isCreature())
+        return false;
+    names = getenv("INC6D5_PROBE_NAMES");
+    if (!names || !*names)
+        names = "Volgar,Gell";
+    snprintf(buf, sizeof(buf), "%s", names);
+    nm = t->Name(0);
+    for (tok = strtok_r(buf, ",", &save); tok; tok = strtok_r(NULL, ",", &save))
+        if (strstr((const char*)nm, tok))
+            return true;
+    return false;
+}
+/* Once a name-matched creature's resting square is known, anyone else who
+   touches that exact (map,x,y) also gets logged -- not just the specimen
+   itself -- so a second object corrupting the specimen's square shows up
+   even though it never matches by name. Updated only from
+   Inc6d5ProbeWatchUpdate(), called at confirmed-settled points (not from
+   mid-transition states where x/y are transiently -1 or stale). */
+static Map *g_watchMap = NULL;
+static int16 g_watchX = -1, g_watchY = -1;
+static void Inc6d5ProbeWatchUpdate(Thing *t) {
+    if (!Inc6d5ProbeNameMatch(t) || !t->m || t->x < 0 || t->y < 0)
+        return;
+    g_watchMap = t->m;
+    g_watchX = t->x;
+    g_watchY = t->y;
+}
+static bool Inc6d5ProbeMatch(Thing *t) {
+    if (!t || !t->isCreature())
+        return false;
+    if (Inc6d5ProbeNameMatch(t))
+        return true;
+    if (g_watchMap && t->m == g_watchMap && t->x == g_watchX && t->y == g_watchY)
+        return true;
+    return false;
+}
+static void Inc6d5Probe(const char *site, Thing *t, const char *extra) {
+    FILE *f; void *frames[16]; int n, i; char **syms;
+    if (!Inc6d5ProbeMatch(t))
+        return;
+    f = Inc6d5ProbeLog();
+    if (!f)
+        return;
+    fprintf(f, "turn %u  %-28s %s/%d  m=%p x=%d y=%d  %s\n",
+        (unsigned)(theGame ? theGame->Turn : 0), site,
+        (const char*)t->Name(0), (int)t->myHandle, (void*)t->m,
+        (int)t->x, (int)t->y, extra ? extra : "");
+    n = backtrace(frames, 16);
+    syms = backtrace_symbols(frames, n);
+    if (syms) {
+        for (i = 0; i < n; i++)
+            fprintf(f, "    %s\n", syms[i]);
+        free(syms);
+    }
+    fflush(f);
+}
+/* Unconditional (not name-filtered): the MoveDepth followers loop mutates
+   m->Things[] while iterating it by index (see the call site) -- log every
+   handle it visits, and every Remove(false) it issues, so a skipped index
+   shows up as a gap between what MapIterate visited and what actually left
+   the map. */
+static void Inc6d5ProbeIter(const char *site, int16 idx, hObj h) {
+    FILE *f = Inc6d5ProbeLog();
+    const char *nm = "?";
+    if (!f)
+        return;
+    if (theRegistry->Exists(h) && oThing(h)->isCreature())
+        nm = (const char*)oThing(h)->Name(0);
+    fprintf(f, "turn %u  %-28s idx=%d handle=%d %s\n",
+        (unsigned)(theGame ? theGame->Turn : 0), site, (int)idx, (int)h, nm);
+    fflush(f);
+}
+#define INC6D5_PROBE_CALL(site,t,extra) Inc6d5Probe(site,t,extra)
+#define INC6D5_PROBE_ITER(site,idx,h) Inc6d5ProbeIter(site,idx,h)
+#define INC6D5_PROBE_SETTLED(t) Inc6d5ProbeWatchUpdate(t)
+#else
+#define INC6D5_PROBE_CALL(site,t,extra) ((void)0)
+#define INC6D5_PROBE_ITER(site,idx,h) ((void)0)
+#define INC6D5_PROBE_SETTLED(t) ((void)0)
+#endif
+
 Thing::Thing(Glyph _Image,int16 _Type)
     : Object(_Type)
   {
@@ -64,6 +172,8 @@ void Thing::PlaceAt(Map*_m,int16 _x,int16 _y, bool share_square)
   const int oy = y; 
 
   if (!_m) return;
+
+    INC6D5_PROBE_CALL("PlaceAt:entry", this, "");
 
     if (isCreature())
       {
@@ -112,9 +222,11 @@ void Thing::PlaceAt(Map*_m,int16 _x,int16 _y, bool share_square)
       }
 
     if (ThrowXY(EV_PLACE,_x,_y,this) == ABORT)
-      { m = NULL; return; }
-    if (isDead())
+      { INC6D5_PROBE_CALL("PlaceAt:earlyAbort1(m<-NULL,stillOldLists)", this, ""); m = NULL; return; }
+    if (isDead()) {
+      INC6D5_PROBE_CALL("PlaceAt:earlyDead1(stillOldLists)", this, "");
       return;
+    }
 
     fc = 0;
     if (isCreature() && m)
@@ -131,14 +243,17 @@ void Thing::PlaceAt(Map*_m,int16 _x,int16 _y, bool share_square)
 
     Remove(false);
     m  = _m;
+    INC6D5_PROBE_CALL("PlaceAt:afterRemoveSetM", this, "");
 
     if (ThrowXY(EV_PLACE,_x,_y,this) == ABORT)
-      { m = NULL; return; }
+      { INC6D5_PROBE_CALL("PlaceAt:earlyAbort2(m<-NULL)", this, ""); m = NULL; return; }
     if (mount && ThrowXY(EV_PLACE,_x,_y,mount) == ABORT)
-      { m = NULL; return; }
-    if (isDead())
+      { INC6D5_PROBE_CALL("PlaceAt:earlyAbort3(m<-NULL)", this, ""); m = NULL; return; }
+    if (isDead()) {
+      INC6D5_PROBE_CALL("PlaceAt:earlyDead2(m=new,unregistered!)", this, "");
       return;
-     
+    }
+
     if (isPlayer()) {
       if (m->Day != theGame->Day)
         m->DaysPassed();
@@ -173,6 +288,8 @@ void Thing::PlaceAt(Map*_m,int16 _x,int16 _y, bool share_square)
     Next = m->At(x,y).Contents;
     m->At(x,y).Contents = myHandle;
     DoneContentsAdd:
+    INC6D5_PROBE_CALL("PlaceAt:registered", this, "");
+    INC6D5_PROBE_SETTLED(this);
 
     if (isPlayer()) {
       m->RegisterPlayer(myHandle);
@@ -838,8 +955,9 @@ void Thing::DoTurn()
 void Thing::Move(int16 newx,int16 newy, bool is_walk)
 	{
 		int16 ox,oy,i; Thing *th; Creature *mount;
-		ox=x; oy=y; 
+		ox=x; oy=y;
     Map *M = m;
+    INC6D5_PROBE_CALL("Move:entry", this, "");
 
     if (!m)
       return;
@@ -887,8 +1005,10 @@ void Thing::Move(int16 newx,int16 newy, bool is_walk)
       }
 
     /* If moving a field caused our death, don't put us back on the map! */
-    if (isDead() || !m)
+    if (isDead() || !m) {
+      INC6D5_PROBE_CALL("Move:deadOrGoneSkip", this, "");
       goto DoneContentsAdd;
+    }
 
 		x=newx; y=newy;
     /* Remove this Thing from the old Contents list */
@@ -898,13 +1018,16 @@ void Thing::Move(int16 newx,int16 newy, bool is_walk)
       {
         th = oThing(M->At(ox,oy).Contents);
         while(th && th->Next != myHandle) {
-          if (!th->Next)
+          if (!th->Next) {
+            INC6D5_PROBE_CALL("Move:contentsUnlinkFailed(Fatal-next)", this, "");
             Fatal("Contents list wierdless in Thing::Move!");
+          }
           th = oThing(th->Next);
           }
-    if (th) 
+    if (th)
         th->Next = Next;
       }
+    INC6D5_PROBE_CALL("Move:unlinkedOldList", this, "");
     /* ... and add it to the new one. */
     AddToList:
 		x=newx; y=newy;
@@ -918,6 +1041,8 @@ void Thing::Move(int16 newx,int16 newy, bool is_walk)
     Next = M->At(x,y).Contents;
     M->At(x,y).Contents = myHandle;
     DoneContentsAdd:
+    INC6D5_PROBE_CALL("Move:doneContentsAdd", this, "");
+    INC6D5_PROBE_SETTLED(this);
 
     if (mount) {
       mount->m = M;

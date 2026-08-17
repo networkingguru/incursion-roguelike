@@ -20,13 +20,25 @@
 # change on every run.
 #
 # Reproducible is NOT the same as representative. A run can repeat perfectly and
-# still measure the wrong thing: see inc-loa.2 (most depth commands are refused)
-# and the death-blindness issue beside it.
+# still measure the wrong thing: see inc-loa.2 (most depth commands are refused).
+# inc-loa.3 was the same trap in a sharper form -- a session whose character
+# died, or got stuck at the death prompt, still exited 0 and looked exactly
+# like a full session. See the "death:" line near the end of this script's
+# report, which is how that stopped being invisible. inc-loa.5 is the same
+# trap again at a different, unguarded prompt ("Abort, Flee or Disengage?");
+# see the "stuck-prompt:" line beside it.
 #
 # Ends: 0 the script ran out or asked to quit, 1 Fatal(), 2 bad key script,
 #       3 the key budget ran out, 4 the watchdog fired (the game stopped
 #       asking for keys, which is the signature of a hang), 5 the run never
 #       entered a map and so measured nothing.
+#
+# A death, or a session stuck at the threat-disengage prompt, is deliberately
+# NOT its own exit code: whether either should FAIL a run, versus merely be
+# counted, is a product decision (inc-loa.3, inc-loa.5) that this script does
+# not make. Both are always reported and always countable (logs/death.log or
+# "Die? [yn]" on the last screen; "threatened area" on the last screen) so a
+# caller that cares can decide for itself. See tools/gate_lib.sh, which does.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -170,6 +182,86 @@ esac
 
 SCREENS="$(ls "$RUN/logs/screens" 2>/dev/null | wc -l | tr -d ' ')"
 echo "screens:    $SCREENS in $RUN/logs/screens"
+
+# Shared by both freeze checks below (inc-loa.3's death prompt and
+# inc-loa.5's threat-disengage prompt): does the run's LAST screen dump still
+# show the given text? Both are TextTerm::ChoicePrompt loops (src/Term.cpp)
+# that block forever on a character tools/keys/dive.keys never sends, and
+# @dump directives keep firing even while the game loop itself is stuck
+# inside that call (they are read by the same key-consuming layer, not by
+# the game loop the prompt has frozen) -- see inc-loa.5's bd note for the
+# byte-identical-screens evidence. So the prompt's text sits unchanged on
+# every screen dumped after it fires, and checking only the last one is
+# enough to tell a session was still parked there when its key budget ran
+# out.
+_last_screen_shows() { # <text>
+    local last
+    last="$(ls "$RUN/logs/screens" 2>/dev/null | sort | tail -1)"
+    [ -n "$last" ] && grep -q "$1" "$RUN/logs/screens/$last" 2>/dev/null
+}
+
+# Did the character die, or come within one accidentally-unanswered keystroke
+# of it? See inc-loa.3. The pinned settings run with OPT_NODEATH on, so a
+# killing blow does not end the game -- src/Fight.cpp asks "You die... Die?
+# [yn]" instead, and the key script answers it with whatever token comes
+# next, because the key script has no idea what is on screen. Two distinct
+# things can happen from there, and a plain exit code cannot tell them apart
+# from an ordinary clean run:
+#
+#   confirmed  the prompt got answered 'y' (for real, or OPT_ELUDE_DEATH ran
+#              out of budgeted escapes): Player::Death() reached the real
+#              death path (src/Fight.cpp) and logged it to logs/death.log.
+#   stuck      the prompt never got answered at all before the run's key
+#              budget ran out. The last screen still shows it. Measured with
+#              tools/keys/dive.keys, seed 11 (logs/gate/compare-dive-87655):
+#              once the prompt appears there is no further 'y' or 'n' left
+#              anywhere in the rest of the script, so every remaining key --
+#              hundreds of them -- is silently swallowed trying to answer it,
+#              and the run reports "ended: cleanly" regardless.
+#
+# Either way the character generated no more real gameplay after the prompt
+# appeared, so a session like this logs fewer errors and fewer audit findings
+# than a live one -- exactly the shape that made 12 of 40 sessions in that
+# baseline read as "quieter than the baseline" (an improvement) instead of
+# as stumps. See tools/gate_lib.sh and tools/gate_compare.sh, which count
+# this instead of letting it hide.
+DEATHS=0
+[ -f "$RUN/logs/death.log" ] && DEATHS="$(grep -c '^=== character died' "$RUN/logs/death.log")"
+STUCK_AT_PROMPT=0
+_last_screen_shows 'Die? \[yn\]' && STUCK_AT_PROMPT=1
+if [ "$DEATHS" -gt 0 ]; then
+    echo "death:      $DEATHS confirmed -- see $RUN/logs/death.log"
+fi
+if [ "$STUCK_AT_PROMPT" -eq 1 ]; then
+    echo "death:      STUCK -- the run ended with 'Die? [yn]' still on screen,"
+    echo "            unanswered. The character's fate was never settled, and"
+    echo "            nothing after the prompt appeared is real gameplay."
+fi
+if [ "$DEATHS" -eq 0 ] && [ "$STUCK_AT_PROMPT" -eq 0 ]; then
+    echo "death:      none"
+fi
+
+# inc-loa.5: "You are in a threatened area. Abort, Flee or Disengage? [afd?]"
+# (src/Move.cpp:841) has no OPT_ gate at all -- it fires unconditionally
+# whenever a player-controlled creature moves away from a hostile creature
+# that perceives it and is not charging. Its ChoicePrompt only accepts
+# 'a'/'f'/'d'/'?'/ESC, and tools/keys/dive.keys has none of those in its
+# vocabulary (digits, w/p/s, HOME/END/PGUP/PGDN, arrows, ENTER), so once it
+# fires every remaining scripted keystroke is silently swallowed trying to
+# answer it -- unlike the death prompt above, there is no "confirmed" shape
+# for this one, because dive.keys can never supply the key that would
+# resolve it. Proved on 7 of 40 seeds under tools/gates/Options.Dat
+# (1,15,16,31,32,37,38); see logs/gate/record-dive-89305 for the run that
+# found them.
+THREAT_STUCK=0
+_last_screen_shows 'threatened area' && THREAT_STUCK=1
+if [ "$THREAT_STUCK" -eq 1 ]; then
+    echo "stuck-prompt: threat-disengage -- the run ended with 'Abort, Flee or"
+    echo "              Disengage?' still on screen, unanswered (inc-loa.5)."
+    echo "              Nothing after this point is real gameplay."
+else
+    echo "stuck-prompt: none"
+fi
 
 if [ -f "$RUN/logs/errors.log" ]; then
     echo "errors:     $(grep -c '^[0-9]' "$RUN/logs/errors.log") logged, distinct messages:"

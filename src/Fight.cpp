@@ -7145,6 +7145,40 @@ EvReturn Creature::Death(EventInfo &e)
   return DONE;
 }
 
+/* Say, distinctly from an ordinary journal entry, that a character died for
+   real -- reached the code below, past both escape hatches (OPT_NODEATH's
+   "You die... Die? [yn]" and OPT_ELUDE_DEATH's budgeted version of the same
+   prompt). See inc-loa.3: the scripted test harness answers that prompt with
+   whatever key the key script sends next, because the key script has no idea
+   what is on screen. A run that lands on 'y' kills the character while the
+   process still exits 0, so a session that died on turn one looked identical
+   to one that played the whole script. This marker is how the harness
+   (tools/headless.sh) tells the two apart. It does not change whether the
+   game asks the question, or how the question is answered -- it only notices
+   the answer that was already given.
+
+   Mirrors NoteGameplayReached() in src/Main.cpp: unconditional, one line per
+   event, written beside the turn counter it describes. */
+static void NoteCharacterDied(Player *pp)
+{
+    char path[1024], stamp[32];
+    time_t now;
+    FILE *f;
+
+    snprintf(path, sizeof(path), "%slogs/death.log",
+        (const char*)T1->IncursionDirectory);
+    f = fopen(path, "a");
+    if (!f)
+        return;
+    time(&now);
+    strftime(stamp, sizeof(stamp), "%Y-%m-%d %H:%M:%S", localtime(&now));
+    fprintf(f, "=== character died %s  turn %u  depth %d  xp %d ===\n",
+        stamp, (unsigned)theGame->Turn,
+        (pp && pp->m) ? (int)pp->m->Depth : -1,
+        pp ? (int)pp->TotalXP() : -1);
+    fclose(f);
+}
+
 EvReturn Player::Death(EventInfo &e)
 {
   if (e.EVictim->isDead())
@@ -7210,9 +7244,10 @@ EvReturn Player::Death(EventInfo &e)
       }    
     }
   else
-  { 
+  {
     SetSilence();
   }
+  NoteCharacterDied(this);
   (new Corpse(this))->PlaceAt(m,x,y);
   DropAll();
   e.EVictim->Flags |= F_INVIS;

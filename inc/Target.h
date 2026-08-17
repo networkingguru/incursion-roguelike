@@ -283,5 +283,15 @@ public:
 
   String        & Dump();
   void          Serialize(Registry &r);
+
+  /* One-time cleanup for Targets just loaded from a save or module.
+     Registry::SaveGroup/LoadGroup copy whole C++ objects as raw bytes, so a
+     Target's `data` union comes back exactly as it was written -- including,
+     for anything saved before c9201dd (inc-zmk's Target zero-init fix),
+     whatever was on the stack when that Target was constructed. Clears
+     data.Creature.c wherever `type` doesn't legitimately carry a creature
+     handle (see the matching list in Target::GetThingOrNULL), so a stale
+     value can't later be misread as a handle. See inc-upw.13. */
+  void          SanitizeLoadedTargets();
 } TargetSystem;
 

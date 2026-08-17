@@ -788,6 +788,19 @@ public:
 
 #endif
 
+/* upstream: compSize and groupSize (and the compressed/uncompressed sizes
+   they become inside CFile::LoadCompressed) are signed int32 fields read
+   straight out of a save/module file with no sanity test in the original
+   code -- a save file is a trust boundary the original Win32 build crosses
+   with the same missing check, since this is data-flow logic, not anything
+   platform-specific. A single shared ceiling, used by both Registry.cpp
+   (the header fields) and Term.cpp (the sizes LoadCompressed allocates
+   from), rejects a zero, negative, or absurd value before it reaches
+   malloc(). 512MB is far above any save/module this game has ever produced.
+   Evidence: Traced (read Registry::LoadGroup and CFile::LoadCompressed
+   directly). Tracking: inc-l0t. Not sent. */
+#define CFILE_SANE_MAX_SIZE ((int32)(512L * 1024L * 1024L))
+
 class CFile {
 private:
     void *data;

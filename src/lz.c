@@ -147,10 +147,16 @@ static int _LZ_WriteVarSize( unsigned int x, unsigned char * buf )
 
 /*************************************************************************
 * _LZ_ReadVarSize() - Read unsigned integer with variable number of
-* bytes depending on value.
+* bytes depending on value. Never reads past 'avail' bytes of 'buf'.
+* Returns the number of bytes read, or -1 if the value runs past 'avail'
+* before the terminating (high-bit-clear) byte is found -- i.e. the
+* stream is truncated. (upstream: added for inc-l0t; the original had no
+* 'avail' and could read past the end of the compressed buffer on a
+* truncated stream. Traced. Not sent.)
 *************************************************************************/
 
-static int _LZ_ReadVarSize( unsigned int * x, unsigned char * buf )
+static int _LZ_ReadVarSize( unsigned int * x, unsigned char * buf,
+    unsigned int avail )
 {
     unsigned int y, b, num_bytes;
 
@@ -159,7 +165,11 @@ static int _LZ_ReadVarSize( unsigned int * x, unsigned char * buf )
     num_bytes = 0;
     do
     {
-        b = (unsigned int) (*buf ++);
+        if( num_bytes >= avail )
+        {
+            return -1;
+        }
+        b = (unsigned int) (buf[ num_bytes ]);
         y = (y << 7) | (b & 0x0000007f);
         ++ num_bytes;
     }
@@ -169,7 +179,7 @@ static int _LZ_ReadVarSize( unsigned int * x, unsigned char * buf )
     *x = y;
 
     /* Return number of bytes read */
-    return num_bytes;
+    return (int) num_bytes;
 }
 
 
@@ -481,21 +491,32 @@ int LZ_CompressFast( unsigned char *in, unsigned char *out,
 /*************************************************************************
 * LZ_Uncompress() - Uncompress a block of data using an LZ77 decoder.
 *  in      - Input (compressed) buffer.
-*  out     - Output (uncompressed) buffer. This buffer must be large
-*            enough to hold the uncompressed data.
-*  insize  - Number of input bytes.
+*  out     - Output (uncompressed) buffer.
+*  insize  - Number of input (compressed) bytes.
+*  outsize - Capacity of 'out', in bytes. See inc/lz.h.
+*  outposp - See inc/lz.h.
+* Returns 0 on success, -1 if the stream is corrupt. See inc/lz.h.
+*
+* upstream (inc-l0t, Traced, not sent): every bound check in this function
+* is new. The original trusted 'insize' and the caller's promise that 'out'
+* was big enough, both of which are just the contents of a file the game
+* did not produce itself once a save or module is corrupt or hostile.
 *************************************************************************/
 
-void LZ_Uncompress( unsigned char *in, unsigned char *out,
-    unsigned int insize )
+int LZ_Uncompress( unsigned char *in, unsigned char *out,
+    unsigned int insize, unsigned int outsize, unsigned int *outposp )
 {
     unsigned char marker, symbol;
     unsigned int  i, inpos, outpos, length, offset;
+    int           n;
+
+    outpos = 0;
+    if( outposp ) *outposp = 0;
 
     /* Do we have anything to uncompress? */
     if( insize < 1 )
     {
-        return;
+        return 0;
     }
 
     /* Get marker symbol from input stream */
@@ -503,24 +524,43 @@ void LZ_Uncompress( unsigned char *in, unsigned char *out,
     inpos = 1;
 
     /* Main decompression loop */
-    outpos = 0;
     do
     {
+        if( inpos >= insize ) goto corrupt;
         symbol = in[ inpos ++ ];
         if( symbol == marker )
         {
-            /* We had a marker byte */
+            /* We had a marker byte -- there must be at least one more
+               input byte to say what kind. */
+            if( inpos >= insize ) goto corrupt;
+
             if( in[ inpos ] == 0 )
             {
                 /* It was a single occurrence of the marker byte */
+                if( outpos >= outsize ) goto corrupt;
                 out[ outpos ++ ] = marker;
                 ++ inpos;
             }
             else
             {
-                /* Extract true length and offset */
-                inpos += _LZ_ReadVarSize( &length, &in[ inpos ] );
-                inpos += _LZ_ReadVarSize( &offset, &in[ inpos ] );
+                /* Extract true length and offset, without reading past
+                   insize even if either field is truncated. */
+                n = _LZ_ReadVarSize( &length, &in[ inpos ], insize - inpos );
+                if( n < 0 ) goto corrupt;
+                inpos += (unsigned int) n;
+
+                if( inpos >= insize ) goto corrupt;
+                n = _LZ_ReadVarSize( &offset, &in[ inpos ], insize - inpos );
+                if( n < 0 ) goto corrupt;
+                inpos += (unsigned int) n;
+
+                /* A back-reference can only point at bytes already
+                   produced. Offset 0 or an offset past the start of the
+                   output produced so far is not a stream this encoder
+                   could have written; treat it as corrupt rather than
+                   read before the start of 'out'. */
+                if( (offset == 0) || (offset > outpos) ) goto corrupt;
+                if( (outsize - outpos) < length ) goto corrupt;
 
                 /* Copy corresponding data from history window */
                 for( i = 0; i < length; ++ i )
@@ -533,8 +573,16 @@ void LZ_Uncompress( unsigned char *in, unsigned char *out,
         else
         {
             /* No marker, plain copy */
+            if( outpos >= outsize ) goto corrupt;
             out[ outpos ++ ] = symbol;
         }
     }
     while( inpos < insize );
+
+    if( outposp ) *outposp = outpos;
+    return 0;
+
+corrupt:
+    if( outposp ) *outposp = outpos;
+    return -1;
 }

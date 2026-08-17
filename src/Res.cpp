@@ -310,8 +310,40 @@ rID Module::FindResource(const char*n)
 Resource* Game::Get(rID xID)
 	{
     if (!xID) return NULL;
-    ASSERT(Modules[(xID >> 24)-1]);
-    return Modules[(xID >> 24)-1]->GetResource(xID);
+    /* upstream: base-code defect, the fix is ours. It is upstream's because
+       the missing range check is pure C++ arithmetic on the id's top byte,
+       nothing platform-specific -- it would run off the same array on Win32
+       with the original typedefs. Tier: Traced -- read directly (this
+       function, plus ASSERT's fall-through definition at inc/Defines.h:73),
+       and reproduced: tools/headless.sh tools/keys/dive.keys 3387 went from
+       SIGBUS with no errors.log to a logged "out of range" miss at this
+       exact call. (That seed still crashes one call further downstream, on
+       a separate, pre-existing, previously-masked defect -- an unchecked
+       NULL dereference of this function's result in Creature::isMType,
+       src/Values.cpp:2163 -- tracked separately as inc-upw.24 and
+       deliberately not fixed here.) Tracked as inc-upw.16. Not sent.
+
+       Two defects compounded here. First, the module slot is the id's top
+       byte minus one, computed with NO range check: an id whose top byte is
+       0 (any small integer that wandered into an rID field) wraps around in
+       unsigned arithmetic to a huge slot, and an id whose top byte exceeds
+       MAX_MODULES (inc/Defines.h:4350) runs off the other end. Second,
+       ASSERT (inc/Defines.h:73) is 'if (!(a)) Error(...)' -- it logs and
+       FALLS THROUGH, so on an out-of-range slot that happens to hold
+       non-zero garbage, ASSERT doesn't even complain, and the very next
+       line dereferences a garbage Module*. That is the SIGBUS with nothing
+       in errors.log. This fix range-checks the slot itself and returns NULL
+       -- a logged miss -- instead of ever indexing Modules[] out of bounds.
+       Deliberately not touched: the ASSERT macro's fall-through behaviour
+       is a project-wide hazard, but rewriting it is out of this fix's scope
+       -- other call sites may rely on it, however unintentionally. */
+    int32 slot = (int32)(xID >> 24) - 1;
+    if (slot < 0 || slot >= MAX_MODULES || !Modules[slot]) {
+      Error("Game::Get: resource id %u names module slot %d, out of range",
+        (unsigned)xID, (int)slot);
+      return NULL;
+    }
+    return Modules[slot]->GetResource(xID);
 	}
 
 

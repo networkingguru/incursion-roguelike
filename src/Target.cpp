@@ -310,6 +310,12 @@ uint8 Target::X()
 Thing * Target::GetThingOrNULL()
 {
   switch (type) {
+    /* These legitimately carry a creature handle in data.Creature.c. Kept
+       as one enumeration with TargetSystem::SanitizeLoadedTargets() (see
+       inc-upw.13) -- both read this exact list. OrderWalkInFront/InBack/
+       OrderWalkNearMe carry it too, but only optionally: giveOrder() only
+       sets data.Creature.c when a victim was given (Monster::Movement
+       falls back to ts.getLeader() when this returns NULL). */
     case TargetEnemy:
     case TargetAlly:
     case TargetLeader:
@@ -317,7 +323,10 @@ Thing * Target::GetThingOrNULL()
     case TargetMaster:
     case TargetMount:
     case OrderAttackTarget:
-    default:
+    case OrderWalkInFront:
+    case OrderWalkInBack:
+    case OrderWalkNearMe:
+    {
 #ifdef TARGET_PROBE
       /* Diagnostic only. Names the target type behind every bad handle that
          reaches this branch, which is the difference between "the code says
@@ -334,21 +343,51 @@ Thing * Target::GetThingOrNULL()
         }
       }
 #endif
-      if (data.Creature.c && theRegistry->Exists(data.Creature.c))
-        return oCreature(data.Creature.c);
-      else
-        return NULL;
+      /* upstream: base-code defect. This branch used to be reached by
+         `default:` too, i.e. by every TargetType with no case of its own --
+         including OrderWalkToPoint, whose data.Area.x/y (map coordinates)
+         sat in the same union bytes this code was about to read as a
+         creature handle. Even for the types that do carry a handle here,
+         the old code was `if (Exists(h)) return oCreature(h);`, and
+         oCreature()/GetCreature() has its own ASSERT that the object is
+         actually a Creature -- but ASSERT logs and keeps running in this
+         codebase (Defines.h), so a handle that happened to Exist() as some
+         *other* live object (an Item, a Map...) got cast to Creature* and
+         returned anyway. That is the real shape of the "bad handle" asserts
+         this function has been logging: not a missing object, a
+         wrong-typed one. Fixed here to check the object's actual type
+         before returning it, and to give OrderWalkToPoint its own case
+         instead of falling in here by accident. Evidence: Traced (this
+         function, GetCreature()'s ASSERT, and ASSERT's log-and-continue
+         definition, read together). Tracking: inc-upw.13. Not sent. */
+      if (!data.Creature.c) return NULL;
+      {
+        Object *o = theRegistry->Get(data.Creature.c);
+        if (o && o->isCreature()) return (Thing*)o;
+      }
+      return NULL;
+    }
 
     case TargetItem:
-      if (theRegistry->Exists(data.Item.i))
-        return oItem(data.Item.i);
-      else
-        return NULL;
+      /* Same wrong-type risk as above, for the item handle in data.Item.i. */
+      if (!data.Item.i) return NULL;
+      {
+        Object *o = theRegistry->Get(data.Item.i);
+        if (o && o->isItem()) return (Thing*)o;
+      }
+      return NULL;
 
+    /* No creature handle lives in data for any of these: TargetArea/
+       TargetWander/OrderWalkToPoint use data.Area.x/y (plain coordinates),
+       and TargetInvalid/every unlisted order or memory type never has a
+       payload once TargetSystem::SanitizeLoadedTargets() (or, for a Target
+       built after c9201dd, zero-initialisation at construction) has run. */
     case TargetArea:
     case TargetWander:
     case TargetInvalid:
-      return NULL; 
+    case OrderWalkToPoint:
+    default:
+      return NULL;
   }
 }
 
@@ -1378,7 +1417,54 @@ FullList:
 
 
 void TargetSystem::Serialize(Registry &r)
-{ 
+{
+}
+
+/* See the declaration in inc/Target.h and inc-upw.13. Called once per
+   TargetSystem right after Registry::LoadGroup finishes loading its owning
+   Creature (Registry.cpp) -- for a save written entirely by a binary that
+   already zero-inits new Targets (c9201dd / inc-zmk), every Target here
+   already has data.Creature.c == 0 wherever it isn't legitimately a handle,
+   so this is a no-op walk over the array, not a behaviour change. */
+void TargetSystem::SanitizeLoadedTargets()
+{
+  for (int i = 0; i < tCount; i++) {
+    switch (t[i].type) {
+      /* Legitimately holds a creature handle in data.Creature.c -- same
+         list as Target::GetThingOrNULL. Leave it alone. */
+      case TargetEnemy:
+      case TargetAlly:
+      case TargetLeader:
+      case TargetSummoner:
+      case TargetMaster:
+      case TargetMount:
+      case OrderAttackTarget:
+      case OrderWalkInFront:
+      case OrderWalkInBack:
+      case OrderWalkNearMe:
+        break;
+
+      /* Legitimately non-handle data: TargetItem's data.Item.i is an item
+         handle, not a creature one, and TargetArea/TargetWander/
+         OrderWalkToPoint use data.Area.x/y, plain map coordinates. Zeroing
+         either would throw away real target state, not garbage. */
+      case TargetItem:
+      case TargetArea:
+      case TargetWander:
+      case OrderWalkToPoint:
+        break;
+
+      /* Everything else (TargetInvalid, the flag-only orders, and the
+         unused Memory* types) never carries a payload once constructed
+         under the zero-init fix. In anything saved before that fix, this
+         field held whatever was on the stack, and it survived the save
+         byte-for-byte -- clear it so it can't be misread later as a
+         creature handle. */
+      default:
+        memset(&t[i].data, 0, sizeof(t[i].data));
+        break;
+    }
+  }
 }
 
 /**************************************************************************\

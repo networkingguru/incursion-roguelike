@@ -26,6 +26,103 @@
 
 #include "Incursion.h"
 
+/* Diagnostic only, for bead inc-6d5. src/Display.cpp's INC6D5_PROBE catches
+   every m/x/y change made through Thing::Move/PlaceAt/Remove for a
+   name-matched creature, but a fresh 40-seed dive.keys sweep on seed 21
+   showed Volgar/129's x field changing from 38 to 39 on the same map between
+   two of those calls, with NONE of them firing in between -- meaning
+   something writes x/y directly, bypassing all three. This wraps
+   RealThrow(), the single choke point every event (including ones no other
+   probe hooks) passes through, and diffs the watched creature's (m,x,y)
+   across each call. A jump with no matching Move/PlaceAt/Remove log at the
+   same turn is that direct write, and the event id + backtrace here is the
+   site. Same opt-in build flag as Display.cpp's probe:
+     EXTRA_CXXFLAGS=-DINC6D5_PROBE OUT=incursion-inc6d5probe BACKEND=posix ./build_macos.sh */
+#ifdef INC6D5_PROBE
+#include <execinfo.h>
+#include <cstring>
+#include <cstdio>
+static hObj g_inc6d5DriftHandle = 0;
+static Map *g_inc6d5DriftM = NULL;
+static int16 g_inc6d5DriftX = -999, g_inc6d5DriftY = -999;
+static FILE *Inc6d5EventProbeLog() {
+    static FILE *f = NULL;
+    if (!f) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%slogs/inc6d5-probe.log",
+            (const char*)T1->IncursionDirectory);
+        f = fopen(path, "a");
+    }
+    return f;
+}
+static void Inc6d5EventDriftCheck(const char *where, EventInfo &e) {
+    Thing *t; FILE *f; void *frames[16]; int n, i; char **syms;
+    const char *names, *nm2;
+    char buf[256], *tok, *save = NULL;
+    String nm;
+    /* Resolve the watched handle once, the first time any name-matched
+       creature is seen anywhere in the registry. Cheap relative to a whole
+       diagnostic build: only runs until g_inc6d5DriftHandle is set. */
+    if (!g_inc6d5DriftHandle) {
+        names = getenv("INC6D5_PROBE_NAMES");
+        if (!names || !*names)
+            names = "Volgar,Gell";
+        for (hObj h = 128; h <= theRegistry->LastUsedHandle; h++) {
+            if (!theRegistry->Exists(h))
+                continue;
+            Object *o = theRegistry->Get(h);
+            if (!o || !o->isCreature())
+                continue;
+            nm2 = (const char*)((Thing*)o)->Name(0);
+            snprintf(buf, sizeof(buf), "%s", names);
+            for (tok = strtok_r(buf, ",", &save); tok; tok = strtok_r(NULL, ",", &save))
+                if (strstr(nm2, tok)) {
+                    g_inc6d5DriftHandle = h;
+                    break;
+                }
+            if (g_inc6d5DriftHandle)
+                break;
+        }
+        if (!g_inc6d5DriftHandle)
+            return;
+        t = (Thing*)theRegistry->Get(g_inc6d5DriftHandle);
+        g_inc6d5DriftM = t->m; g_inc6d5DriftX = t->x; g_inc6d5DriftY = t->y;
+        return;
+    }
+    if (!theRegistry->Exists(g_inc6d5DriftHandle))
+        return;
+    t = (Thing*)theRegistry->Get(g_inc6d5DriftHandle);
+    if (t->m == g_inc6d5DriftM && t->x == g_inc6d5DriftX && t->y == g_inc6d5DriftY)
+        return;
+    f = Inc6d5EventProbeLog();
+    if (f) {
+        nm = t->Name(0);
+        fprintf(f, "turn %u  DRIFT %-8s ev=%d actor=%s (MOUNTED=%d ENGULFER=%d)  %s/%d (MOUNT=%d MOUNTED=%d ENGULFED=%d ENGULFER=%d)  m %p->%p  x %d->%d  y %d->%d\n",
+            (unsigned)(theGame ? theGame->Turn : 0), where, (int)e.Event,
+            e.EActor ? (const char*)e.EActor->Name(0) : "(none)",
+            (e.EActor && e.EActor->isCreature()) ? (int)((Creature*)e.EActor)->HasStati(87) : -1,
+            (e.EActor && e.EActor->isCreature()) ? (int)((Creature*)e.EActor)->HasStati(95) : -1,
+            (const char*)nm, (int)g_inc6d5DriftHandle,
+            (int)((Creature*)t)->HasStati(88), (int)((Creature*)t)->HasStati(87),
+            (int)((Creature*)t)->HasStati(94), (int)((Creature*)t)->HasStati(95),
+            (void*)g_inc6d5DriftM, (void*)t->m,
+            (int)g_inc6d5DriftX, (int)t->x, (int)g_inc6d5DriftY, (int)t->y);
+        n = backtrace(frames, 20);
+        syms = backtrace_symbols(frames, n);
+        if (syms) {
+            for (i = 0; i < n; i++)
+                fprintf(f, "    %s\n", syms[i]);
+            free(syms);
+        }
+        fflush(f);
+    }
+    g_inc6d5DriftM = t->m; g_inc6d5DriftX = t->x; g_inc6d5DriftY = t->y;
+}
+#define INC6D5_EVENT_DRIFT(where,e) Inc6d5EventDriftCheck(where,e)
+#else
+#define INC6D5_EVENT_DRIFT(where,e) ((void)0)
+#endif
+
 // ww: this used to be 32, but I actually went over that in normal gameplay
 // @ Thu Feb 19 22:19:43 PST 2004
 #define CHECK_OVERFLOW          if (EventSP > EVENT_STACK_SIZE-1) Fatal("Event Stack Overflow!");
@@ -318,6 +415,8 @@ EvReturn RealThrow(EventInfo &e) {
     EvReturn r;
     int16 Ev;
 
+    INC6D5_EVENT_DRIFT("enter", e);
+
     if (EventSP > 0) {
         int16 ev = EventStack[EventSP-1].Event % 500;
         if (ev == EV_RETRIBUTION || ev == EV_GIVE_AID ||
@@ -339,13 +438,16 @@ EvReturn RealThrow(EventInfo &e) {
     Ev = e.Event;
     e.Event=PRE(Ev);
     r=ThrowEvent(e);
+    INC6D5_EVENT_DRIFT("afterPRE", e);
     if (r != ABORT && r != DONE) {
         e.Event=Ev;
         r=ThrowEvent(e);
+        INC6D5_EVENT_DRIFT("afterMAIN", e);
     }
     if (r != ABORT) {
         e.Event=POST(Ev);
         ThrowEvent(e);
+        INC6D5_EVENT_DRIFT("afterPOST", e);
     }
     if(r==NOTHING) {
         /* For now, PRE and POST events don't *need* to be handled. */

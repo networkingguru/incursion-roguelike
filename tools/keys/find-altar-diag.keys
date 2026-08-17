@@ -1,0 +1,15 @@
+# SCRATCH/TEMPORARY diagnostic for inc-52b -- single-stepping wizard depth
+# jump to see exactly what "mode 9" after MoveDepth is and what dismisses it.
+
+@include chargen-priest.keys
+
+@dump:arrival
+w y p "3" ENTER
+@dump:afterjump
+.
+@dump:afterdot
+.
+@dump:afterdot2
+UP
+@dump:afterup
+@quit

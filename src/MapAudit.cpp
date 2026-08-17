@@ -214,6 +214,11 @@ void AuditMap(Map *m, const char *when) {
         t = (Thing*)o;
         if (t->m != m)
             continue;
+        /* upstream: A mounted or engulfed creature is deliberately absent from
+           both Things[] and the Contents chain -- see check 1's exemption above
+           and Creature::DoEngulf in src/Display.cpp. Traced, inc-rx0, not sent. */
+        if (t->HasStati(MOUNT) || t->HasStati(ENGULFED))
+            continue;
         if (inThingsArray(m, h))
             continue;
         REPORT("orphan: claims this map but is in neither list",

@@ -1,0 +1,48 @@
+# SCRATCH/TEMPORARY -- scouting script for inc-52b live repro, written by an
+# overnight agent. Not meant to be a permanent addition to the key-script
+# suite; delete after inc-52b's repro is done (or keep if it proves useful --
+# see the bd note on inc-52b for why it exists).
+#
+# Dive through several levels via wizard depth-jump, wandering more per level
+# than dive.keys does, dumping the screen after each wander so the "Things in
+# View" panel can be grepped for "altar".
+
+@include chargen-priest.keys
+
+@dump:arrival
+
+w y p "3" ENTER
+@dump:d3a
+UP*8 RIGHT*8 DOWN*8 LEFT*8 UP*8
+@dump:d3b
+w p "5" ENTER
+@dump:d5a
+UP*8 RIGHT*8 DOWN*8 LEFT*8 UP*8
+@dump:d5b
+w p "7" ENTER
+@dump:d7a
+UP*8 RIGHT*8 DOWN*8 LEFT*8 UP*8
+@dump:d7b
+w p "9" ENTER
+@dump:d9a
+UP*8 RIGHT*8 DOWN*8 LEFT*8 UP*8
+@dump:d9b
+w p "11" ENTER
+@dump:d11a
+UP*8 RIGHT*8 DOWN*8 LEFT*8 UP*8
+@dump:d11b
+w p "13" ENTER
+@dump:d13a
+UP*8 RIGHT*8 DOWN*8 LEFT*8 UP*8
+@dump:d13b
+w p "15" ENTER
+@dump:d15a
+UP*8 RIGHT*8 DOWN*8 LEFT*8 UP*8
+@dump:d15b
+w p "17" ENTER
+@dump:d17a
+UP*8 RIGHT*8 DOWN*8 LEFT*8 UP*8
+@dump:d17b
+
+@dump:final
+@quit

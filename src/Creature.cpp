@@ -402,10 +402,68 @@ void Creature::RippleCheck(int16 range)
   }
     
 
+/* upstream: base-code defect, the fix is ours. It is upstream's because the
+   recursion below is pure C++ event-dispatch logic with nothing platform-
+   specific about it -- it would run away identically on Win32 with the
+   original typedefs. Tier: Traced -- read directly, PLUS an instrumented
+   probe build that logged every Creature::Multiply entry, every child
+   created and its stamped GENERATION, and every Magic::Blast entry's
+   EActor/EVictim, across tools/headless.sh tools/keys/dive.keys 3104.
+   Tracked as inc-upw.5. Not sent.
+
+   THE ORIGINAL HYPOTHESIS, AND WHY IT WAS WRONG. The bead's notes proposed
+   that GENERATION being stamped on the child AFTER PlaceAt (not before) let
+   the recursion bypass the "GetStatiMag(GENERATION) > 1" cap below, because
+   the still-unstamped child would read as generation 0. That fix is applied
+   below (the GainPermStati call now runs before PlaceAt) and it IS a real
+   correctness improvement -- but the probe proved it is not what causes
+   seed 3104's Fatal. Every "enter Multiply" line in the probe log named the
+   SAME object, the ORIGINAL parent creature (always generation 0), never
+   any of the children. The children are created but their own Multiply is
+   never entered.
+
+   THE ACTUAL MECHANISM. Creature::FieldOn's FI_MODIFIER case
+   (src/Status.cpp) builds the re-thrown EV_EFFECT with
+   e2.EActor = oCreature(e.EField->Creator) -- the field's original creator,
+   i.e. the parent -- while e2.EVictim = this, the creature actually standing
+   in the field (each new child, in turn). Magic::Blast receives that EVictim
+   correctly (the probe confirmed EVictim cycles through each child), but the
+   monster script that reacts to the resulting EV_DAMAGE (e.g. brown mold,
+   lib/program.i around line 45324) calls EActor->Multiply(...), not
+   EVictim->Multiply(...). EActor is always the field's creator, so it is
+   always the same parent, forever generation 0, and the cap below can never
+   apply to it -- each new child placed in the parent's own field re-triggers
+   the PARENT's Multiply, unbounded, regardless of any per-child generation
+   bookkeeping. That script call is deliberate for the mold's "attacks cause
+   IT to multiply" flavour and is out of scope here -- rewriting monster
+   script triggers is a much larger change than this task covers.
+
+   THE FIX. A reentrancy guard on Multiply itself: refuse to breed while
+   already nested inside another Multiply call past a small, generous depth.
+   This is the second option the bead's own description named as valid --
+   "Multiply must not recurse within one event chain" -- and it stops the
+   defect at its actual site regardless of which object the runaway chain
+   keeps landing on. */
+static int16 MultiplyNesting = 0;
+struct MultiplyNestGuard {
+  MultiplyNestGuard()  { MultiplyNesting++; }
+  ~MultiplyNestGuard() { MultiplyNesting--; }
+};
+
 void Creature::Multiply(int16 val, bool split, bool msg)
-  { 
+  {
     int16 c;
     Monster *mn;
+    MultiplyNestGuard nestGuard;
+    // A blast that lands a child in the field its own parent created can
+    // re-trigger the parent's Multiply before this call returns (see the
+    // comment above). Legitimate play never nests this call more than one
+    // or two deep; four is a generous ceiling that stops runaway recursion
+    // tens of events short of the 128-frame event stack (EVENT_STACK_SIZE,
+    // inc/Defines.h:80), instead of Fatal("Event Stack Overflow!") ending
+    // the session.
+    if (MultiplyNesting > 4)
+      return;
     if (!m)
       return;
     if (HasStati(POLYMORPH))
@@ -452,13 +510,20 @@ void Creature::Multiply(int16 val, bool split, bool msg)
             RES(S->eID)->GrantGear(mn,S->eID,true);
         StatiIterEnd(this)
 
+        // Secondary correctness fix, part of the same upstream mark above
+        // this function (inc-upw.5). GENERATION is now stamped on the
+        // child BEFORE PlaceAt/PlaceNear rather than after, so that if a
+        // reentrant Multiply call ever does land on this child (the nesting
+        // guard above is the fix that actually stops seed 3104; this is
+        // belt-and-suspenders for the child's own future generation cap)
+        // it sees the real value instead of an unstamped "generation 0".
+        mn->GainPermStati(GENERATION,NULL,SS_MISC,0,GetStatiMag(GENERATION)+val);
         /* ww: PlaceNear doesn't "initialize" things the same way that
-         * PlaceAt() does, which was causing that Weirdness in Remove() */ 
+         * PlaceAt() does, which was causing that Weirdness in Remove() */
         /* ww: ok, The Weirdness is back! */
         mn->PlaceAt(m,x,y);
-        mn->m = m; // ww: important! 
+        mn->m = m; // ww: important!
         mn->PlaceNear(x,y);
-        mn->GainPermStati(GENERATION,NULL,SS_MISC,0,GetStatiMag(GENERATION)+val);
         // ww: we had forgotten this important call ...
         mn->Initialize(true);
 

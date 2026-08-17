@@ -89,12 +89,25 @@ gate_options_check() { # <baseline> <optionsfile>
 #   exits     the tally by exit code, so a build that starts crashing shows up
 #             even if it crashes before it can log anything.
 #   lines     total error lines, across sessions that played.
+#   findings  total map-audit findings, across sessions that played.
+#   died      sessions where OPT_NODEATH's death prompt decided, or nearly
+#             decided, the session's fate by accident (inc-loa.3). These
+#             sessions "played" by the metric above but generated no real
+#             gameplay from that point on, which is exactly what would make a
+#             build LOOK improved in lines/findings without being one.
+#   threat_frozen  sessions where the threat-disengage prompt (inc-loa.5,
+#             "Abort, Flee or Disengage?", src/Move.cpp:841) froze the
+#             session -- same disease as 'died' above, a different unguarded
+#             prompt. No settings gate exists for it, so unlike 'died' there
+#             is no "confirmed, resolved cleanly" shape to also count: if
+#             tools/keys/dive.keys never supplies 'a'/'f'/'d'/'?'/ESC, every
+#             session that hits it is stuck by definition.
 #   message   one line per distinct message: how many sessions hit it, how many
 #             times in total, and the text. Sorted by text so two baselines
 #             can be read side by side.
 gate_collect() { # <soakdir>
     local soak="$1"
-    local seen log seed sessions played code n
+    local seen log seed sessions played died threat_frozen code n scr last
 
     [ -f "$soak/exits" ] || { echo "gate_collect: no exits file in $soak" >&2; return 1; }
 
@@ -145,6 +158,50 @@ gate_collect() { # <soakdir>
     done
 
     printf 'findings\t%s\n' "$(awk -F'\t' '$2 ~ /^audit: /' "$seen" | wc -l | tr -d ' ')"
+
+    # Sessions the OPT_NODEATH prompt (src/Fight.cpp, "You die... Die? [yn]")
+    # decided, or nearly decided, by accident -- see inc-loa.3. Two shapes
+    # both count as one 'died' tally, because both mean the session generated
+    # no more real gameplay after the prompt appeared and so undercounts its
+    # own errors and audit findings, exactly like a healthy quiet run would
+    # not:
+    #   confirmed  logs/death.log exists: the character genuinely died.
+    #   stuck      no death.log, but the session's last screen still shows
+    #              the prompt unanswered: it ran out of key budget parked
+    #              there. Measured with tools/keys/dive.keys, seed 11
+    #              (logs/gate/compare-dive-87655) -- see tools/headless.sh.
+    # This is why gate_compare.sh no longer reads a quieter run as a plain
+    # improvement without also saying how many of its sessions died.
+    died=0
+    for log in "$soak"/seed-*/logs/death.log; do
+        [ -f "$log" ] || continue
+        died=$((died + 1))
+    done
+    for scr in "$soak"/seed-*/logs/screens; do
+        [ -d "$scr" ] || continue
+        seed="$(basename "$(dirname "$(dirname "$scr")")")"
+        [ -f "$soak/$seed/logs/death.log" ] && continue
+        last="$(ls "$scr" 2>/dev/null | sort | tail -1)"
+        [ -n "$last" ] || continue
+        grep -q 'Die? \[yn\]' "$scr/$last" 2>/dev/null || continue
+        died=$((died + 1))
+    done
+    printf 'died\t%s\n' "$died"
+
+    # inc-loa.5: sessions frozen at the unguarded threat-disengage prompt
+    # (src/Move.cpp:841, "Abort, Flee or Disengage?"). Same shape as 'died'
+    # above -- checked by the same "text still on the last screen" signal --
+    # but this prompt has no settings gate and, given dive.keys' vocabulary,
+    # no way to resolve once it fires, so there is only one shape to count.
+    threat_frozen=0
+    for scr in "$soak"/seed-*/logs/screens; do
+        [ -d "$scr" ] || continue
+        last="$(ls "$scr" 2>/dev/null | sort | tail -1)"
+        [ -n "$last" ] || continue
+        grep -q 'threatened area' "$scr/$last" 2>/dev/null || continue
+        threat_frozen=$((threat_frozen + 1))
+    done
+    printf 'threat_frozen\t%s\n' "$threat_frozen"
 
     awk -F'\t' '
         { total[$2]++; if (!(($1 SUBSEP $2) in hit)) { hit[$1 SUBSEP $2] = 1; sess[$2]++ } }

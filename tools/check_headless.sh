@@ -2,7 +2,7 @@
 # Regression check for the headless backend (src/Wposix.cpp, inc-73g).
 #
 # What it protects. Everything else in this project that runs without a person
-# depends on three properties, and each of them is easy to lose by accident:
+# depends on five properties, and each of them is easy to lose by accident:
 #
 #   1. A scripted session runs to the end with no display and no keyboard,
 #      and ends by itself. A backend that blocks waiting for a key would hang
@@ -13,6 +13,20 @@
 #   3. The same seed plays the same game. Without that a dump cannot be
 #      compared with an earlier one, so no regression can ever be detected --
 #      and the failure is silent, because every individual run still passes.
+#   4. A session whose character died is reported as having died, not as an
+#      ordinary clean exit (inc-loa.3). The pinned gate settings run with
+#      OPT_NODEATH on, so a killing blow asks "Die? [yn]" instead of ending
+#      the session, and the key script answers it blind -- with whatever
+#      token comes next, because it cannot see the screen. 12 of 40 sessions
+#      in the kept baseline (logs/gate/compare-dive-87655) hit that prompt and
+#      exited 0 regardless, which every existing caller reads as "played".
+#   5. A session frozen at the threat-disengage prompt is reported as frozen,
+#      not as an ordinary clean exit (inc-loa.5). "You are in a threatened
+#      area. Abort, Flee or Disengage?" (src/Move.cpp:841) has no OPT_ gate
+#      at all, and tools/keys/dive.keys has no 'a'/'f'/'d'/'?'/ESC to answer
+#      it with, so once it fires every remaining scripted keystroke is
+#      silently swallowed. 7 of 40 sessions in the kept baseline
+#      (logs/gate/record-dive-89305) hit it and exited 0 regardless.
 #
 # Each assertion below is exercised against known-bad input by --selftest, so
 # a check that has quietly stopped testing anything says so.
@@ -42,6 +56,41 @@ assert_shows_map() { # <dumpfile>
 
 assert_reproducible() { # <dirA> <dirB>
     diff -r "$1" "$2" > /dev/null 2>&1
+}
+
+# inc-loa.3: the pinned settings run with OPT_NODEATH on, so a killing blow
+# asks "You die... Die? [yn]" (src/Fight.cpp) instead of ending the session,
+# and the key script -- which cannot see the screen -- answers it with
+# whatever token comes next. A session can leave that prompt two ways, and a
+# plain exit code cannot tell either apart from an ordinary clean run.
+#
+# Confirmed: the prompt got answered 'y', for real or on OPT_ELUDE_DEATH's
+# last try, and Player::Death() (src/Fight.cpp) logged it.
+assert_died_confirmed() { # <rundir>
+    [ -f "$1/logs/death.log" ] && grep -q '^=== character died' "$1/logs/death.log"
+}
+
+# Stuck: the run's last screen still shows the prompt, unanswered. The exact
+# bracket text matters -- a screen from AFTER a confirmed death still says
+# "You die..." (it is the game's own message), but never "Die? [yn]" again,
+# because the prompt already resolved. Losing the "[yn]" half of the match
+# would call every confirmed death "stuck" too.
+assert_stuck_at_prompt() { # <rundir>
+    local last
+    last="$(ls "$1/logs/screens" 2>/dev/null | sort | tail -1)"
+    [ -n "$last" ] && grep -q 'Die? \[yn\]' "$1/logs/screens/$last" 2>/dev/null
+}
+
+# inc-loa.5: "You are in a threatened area. Abort, Flee or Disengage?"
+# (src/Move.cpp:841) has no OPT_ gate and no settings-driven escape, and
+# tools/keys/dive.keys has no 'a'/'f'/'d'/'?'/ESC in its vocabulary, so a
+# session that hits it is frozen for the rest of its key budget -- there is
+# no "confirmed, resolved cleanly" counterpart the way there is for the death
+# prompt, because dive.keys can never supply the key that would resolve it.
+assert_stuck_at_threat_prompt() { # <rundir>
+    local last
+    last="$(ls "$1/logs/screens" 2>/dev/null | sort | tail -1)"
+    [ -n "$last" ] && grep -q 'threatened area' "$1/logs/screens/$last" 2>/dev/null
 }
 
 if [ "${1:-}" = "--selftest" ]; then
@@ -80,6 +129,81 @@ if [ "${1:-}" = "--selftest" ]; then
     else
         echo "SELFTEST FAIL: the reproducibility assertion rejected two identical runs"
         ok=1
+    fi
+
+    mkdir -p "$WORK/nodeath/logs/screens" "$WORK/confirmed/logs/screens" \
+        "$WORK/stuck/logs/screens"
+
+    printf '=== screen ===\nYou walk on.\n' > "$WORK/nodeath/logs/screens/0001-final.txt"
+    if assert_died_confirmed "$WORK/nodeath" || assert_stuck_at_prompt "$WORK/nodeath"; then
+        echo "SELFTEST FAIL: a death assertion accepted an ordinary screen"
+        ok=1
+    else
+        echo "  death assertions reject a session with no death prompt: good"
+    fi
+
+    printf '=== character died 2026-08-16 00:00:00  turn 1  depth 1  xp 0 ===\n' \
+        > "$WORK/confirmed/logs/death.log"
+    printf '=== screen ===\nYou die...\nPress [ENTER] to continue...\n' \
+        > "$WORK/confirmed/logs/screens/0001-final.txt"
+    if assert_died_confirmed "$WORK/confirmed"; then
+        echo "  confirmed-death assertion accepts logs/death.log: good"
+    else
+        echo "SELFTEST FAIL: the confirmed-death assertion rejected a real death.log"
+        ok=1
+    fi
+    if assert_stuck_at_prompt "$WORK/confirmed"; then
+        echo "SELFTEST FAIL: a resolved death's own 'You die...' message was read as"
+        echo "  an unanswered prompt -- every confirmed death would double as stuck"
+        ok=1
+    else
+        echo "  stuck-at-prompt assertion does not mistake a resolved death for one: good"
+    fi
+
+    printf '=== screen ===\nYou die... Die? [yn]\n' > "$WORK/stuck/logs/screens/0001-final.txt"
+    if assert_stuck_at_prompt "$WORK/stuck"; then
+        echo "  stuck-at-prompt assertion accepts an unanswered prompt: good"
+    else
+        echo "SELFTEST FAIL: the stuck-at-prompt assertion rejected 'Die? [yn]' on screen"
+        ok=1
+    fi
+    if assert_died_confirmed "$WORK/stuck"; then
+        echo "SELFTEST FAIL: a stuck session with no death.log was read as confirmed"
+        ok=1
+    else
+        echo "  confirmed-death assertion does not mistake a stuck prompt for one: good"
+    fi
+
+    # inc-loa.5: the threat-disengage assertion, checked the same way and
+    # against the same fixtures as the death-prompt ones above, so it must
+    # neither miss its own prompt nor fire on the death prompt's screens.
+    if assert_stuck_at_threat_prompt "$WORK/nodeath"; then
+        echo "SELFTEST FAIL: the threat-prompt assertion accepted an ordinary screen"
+        ok=1
+    else
+        echo "  threat-prompt assertion rejects a session with no threat prompt: good"
+    fi
+    if assert_stuck_at_threat_prompt "$WORK/stuck" || assert_stuck_at_threat_prompt "$WORK/confirmed"; then
+        echo "SELFTEST FAIL: the threat-prompt assertion fired on a death-prompt screen"
+        ok=1
+    else
+        echo "  threat-prompt assertion does not mistake the death prompt for its own: good"
+    fi
+
+    mkdir -p "$WORK/threat/logs/screens"
+    printf '=== screen ===\nYou are in a threatened area. Abort, Flee or Disengage? [afd?]\n' \
+        > "$WORK/threat/logs/screens/0001-final.txt"
+    if assert_stuck_at_threat_prompt "$WORK/threat"; then
+        echo "  threat-prompt assertion accepts an unanswered prompt: good"
+    else
+        echo "SELFTEST FAIL: the threat-prompt assertion rejected its own prompt on screen"
+        ok=1
+    fi
+    if assert_died_confirmed "$WORK/threat" || assert_stuck_at_prompt "$WORK/threat"; then
+        echo "SELFTEST FAIL: the death-prompt assertions fired on a threat-prompt screen"
+        ok=1
+    else
+        echo "  death-prompt assertions do not mistake the threat prompt for their own: good"
     fi
 
     [ "$ok" -eq 0 ] && echo "PASS: the assertions bite" && exit 0
@@ -171,10 +295,114 @@ if [ ! -f "$WORK/run5/logs/session.log" ]; then
     fail "no logs/session.log with the audit off; the gameplay marker is gone"
 fi
 
+# 7. An ordinary healthy session must not be reported as dead or stuck. Read
+#    against run1 from assertion 1 above, which never touches OPT_NODEATH's
+#    prompt at all -- if either death assertion fires here, they fire on
+#    everything and inc-loa.3's fix is worse than having nothing. Same for
+#    the threat-disengage prompt (inc-loa.5): tools/keys/smoke.keys does not
+#    reach a threatened area either.
+if assert_died_confirmed "$WORK/run1" || assert_stuck_at_prompt "$WORK/run1"; then
+    fail "an ordinary session with no death prompt was reported as died or stuck"
+fi
+if assert_stuck_at_threat_prompt "$WORK/run1"; then
+    fail "an ordinary session with no threat prompt was reported as threat-frozen"
+fi
+
+# 8 and 9. inc-loa.3: the harness must be able to tell "died" and "stuck at
+# the unanswered prompt" apart from an ordinary clean exit, because both
+# currently share its exit code (0) and its "ended: cleanly" text. Both
+# scenarios below are the SAME reproducible case that measured the bug --
+# tools/keys/dive.keys, seed 11, the pinned gate settings
+# (tools/gates/Options.Dat, OPT_NODEATH on) -- kept in
+# logs/gate/compare-dive-87655 as the original evidence. See src/Fight.cpp
+# for where the prompt lives and where the confirmed-death marker is written.
+GATE_OPTS="$ROOT/tools/gates/Options.Dat"
+if [ ! -f "$GATE_OPTS" ]; then
+    fail "the pinned gate settings are missing: $GATE_OPTS"
+else
+    # 8. Stuck: unmodified dive.keys at seed 11 hits the prompt and then has
+    #    no further 'y' or 'n' anywhere in the rest of the script (only the
+    #    wizard-mode entry line has one, and that fires earlier), so it runs
+    #    out of its whole remaining key budget still parked there.
+    INCURSION_RUN_DIR="$WORK/stuck" INCURSION_OPTIONS="$GATE_OPTS" \
+        ./tools/headless.sh tools/keys/dive.keys 11 > "$WORK/out-stuck" 2>&1 < /dev/null
+    STATUS=$?
+    if [ "$STATUS" -ne 0 ]; then
+        echo "--- session output ---"
+        tail -10 "$WORK/out-stuck"
+        fail "the stuck-at-prompt scenario exited $STATUS, wanted 0 (its own exit code does not change)"
+    fi
+    if ! grep -q '^death:.*STUCK' "$WORK/out-stuck"; then
+        echo "--- session output ---"
+        tail -10 "$WORK/out-stuck"
+        fail "headless.sh did not report the stuck-at-prompt session as STUCK"
+    fi
+    if ! assert_stuck_at_prompt "$WORK/stuck"; then
+        fail "the stuck-at-prompt assertion did not fire on the reproduced scenario"
+    fi
+    if assert_died_confirmed "$WORK/stuck"; then
+        fail "the stuck-at-prompt scenario also logged a confirmed death; it should not"
+    fi
+
+    # 9. Confirmed: the same run, but with enough trailing 'y' keys appended
+    #    for the still-unanswered prompt to finally land on one. @include
+    #    replays dive.keys in full first, so this is the identical scenario
+    #    up to the point it would otherwise get stuck.
+    printf '@include %s/tools/keys/dive.keys\ny y y y y y y y y y\n@dump:died\n@quit\n' \
+        "$ROOT" > "$WORK/die-for-real.keys"
+    INCURSION_RUN_DIR="$WORK/confirmed" INCURSION_OPTIONS="$GATE_OPTS" \
+        ./tools/headless.sh "$WORK/die-for-real.keys" 11 > "$WORK/out-confirmed" 2>&1 < /dev/null
+    STATUS=$?
+    if [ "$STATUS" -ne 0 ]; then
+        echo "--- session output ---"
+        tail -10 "$WORK/out-confirmed"
+        fail "the confirmed-death scenario exited $STATUS, wanted 0 (its own exit code does not change)"
+    fi
+    if ! grep -q '^death:.*confirmed' "$WORK/out-confirmed"; then
+        echo "--- session output ---"
+        tail -10 "$WORK/out-confirmed"
+        fail "headless.sh did not report the confirmed-death session as confirmed"
+    fi
+    if ! assert_died_confirmed "$WORK/confirmed"; then
+        fail "the confirmed-death assertion did not fire on the reproduced scenario"
+    fi
+    if assert_stuck_at_prompt "$WORK/confirmed"; then
+        fail "the confirmed-death scenario was also read as stuck; the prompt did resolve"
+    fi
+
+    # 10. inc-loa.5: the harness must be able to tell "frozen at the
+    # threat-disengage prompt" apart from an ordinary clean exit too, the
+    # same way it does for the death prompt above. Reproduced with
+    # tools/keys/dive.keys, seed 1, the pinned gate settings -- the same
+    # scenario recorded as evidence in logs/gate/record-dive-89305.
+    INCURSION_RUN_DIR="$WORK/threatened" INCURSION_OPTIONS="$GATE_OPTS" \
+        ./tools/headless.sh tools/keys/dive.keys 1 > "$WORK/out-threatened" 2>&1 < /dev/null
+    STATUS=$?
+    if [ "$STATUS" -ne 0 ]; then
+        echo "--- session output ---"
+        tail -10 "$WORK/out-threatened"
+        fail "the threat-disengage scenario exited $STATUS, wanted 0 (its own exit code does not change)"
+    fi
+    if ! grep -q '^stuck-prompt:.*threat-disengage' "$WORK/out-threatened"; then
+        echo "--- session output ---"
+        tail -10 "$WORK/out-threatened"
+        fail "headless.sh did not report the threat-disengage session as stuck"
+    fi
+    if ! assert_stuck_at_threat_prompt "$WORK/threatened"; then
+        fail "the threat-prompt assertion did not fire on the reproduced scenario"
+    fi
+    if assert_died_confirmed "$WORK/threatened" || assert_stuck_at_prompt "$WORK/threatened"; then
+        fail "the threat-disengage scenario was also read as a death-prompt freeze; it should not be"
+    fi
+fi
+
 if [ "$FAILED" -eq 0 ]; then
     echo "PASS: a scripted session runs unattended, draws a map, repeats itself,"
-    echo "      a session that plays nothing is reported as playing nothing, and"
-    echo "      switching the map audit off does not change either verdict"
+    echo "      a session that plays nothing is reported as playing nothing,"
+    echo "      switching the map audit off does not change either verdict, a"
+    echo "      session whose character died -- for real, or stuck at the"
+    echo "      question -- is told apart from an ordinary clean exit, and so is"
+    echo "      a session frozen at the unguarded threat-disengage prompt"
     exit 0
 fi
 exit 1

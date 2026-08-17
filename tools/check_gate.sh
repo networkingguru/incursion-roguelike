@@ -41,6 +41,28 @@ make_soak() { # <dir> <how many sessions ended in NO GAMEPLAY> [seed:message ...
     done
 }
 
+# inc-loa.3: give a session either shape of the death-prompt bug, the same way
+# make_soak's errors.log lines stand in for a real run.
+make_confirmed_death() { # <dir> <seed>
+    mkdir -p "$1/seed-$2/logs"
+    echo "=== character died 2026-08-16 00:00:00  turn 1  depth 1  xp 0 ===" \
+        > "$1/seed-$2/logs/death.log"
+}
+make_stuck_death() { # <dir> <seed>
+    mkdir -p "$1/seed-$2/logs/screens"
+    printf '=== screen ===\nYou die... Die? [yn]\n' \
+        > "$1/seed-$2/logs/screens/0001-final.txt"
+}
+
+# inc-loa.5: same idea, for the unguarded threat-disengage prompt. Only one
+# shape exists for this one -- see tools/gate_lib.sh's comment on why there
+# is no "confirmed" counterpart.
+make_threat_frozen() { # <dir> <seed>
+    mkdir -p "$1/seed-$2/logs/screens"
+    printf '=== screen ===\nYou are in a threatened area. Abort, Flee or Disengage? [afd?]\n' \
+        > "$1/seed-$2/logs/screens/0001-final.txt"
+}
+
 # The baseline is written by the real collector, so this checks the format the
 # gate actually reads rather than one invented here.
 make_baseline() { # <file> <soakdir> [settings-checksum]
@@ -107,7 +129,84 @@ elif ! grep -q "quieter than the baseline" "$W/out5"; then
     fail "a run with fewer messages did not report the improvement"
 fi
 
-# 6. The settings the run plays with are an input to the result, so a baseline
+# 6. inc-loa.3: more sessions dying or getting stuck at the OPT_NODEATH
+#    prompt than the baseline must fail, even though it can log LESS -- a
+#    dead session generates no more real gameplay, so its errors and audit
+#    findings undercount exactly like a genuinely quieter build would. This is
+#    the same disease as the void check above (4), one prompt over: a build
+#    that kills characters earlier must not read as a fix.
+make_soak "$W/died" 0 "1:$QUIET" "2:$QUIET" "3:$QUIET"
+make_confirmed_death "$W/died" 10
+make_stuck_death "$W/died" 11
+make_baseline "$W/died.baseline" "$W/died"
+if ! grep -q '^died	2$' "$W/died.baseline"; then
+    fail "gate_collect did not count one confirmed and one stuck death as 2"
+fi
+
+make_soak "$W/died-more" 0 "1:$QUIET" "2:$QUIET" "3:$QUIET"
+make_confirmed_death "$W/died-more" 10
+make_stuck_death "$W/died-more" 11
+make_stuck_death "$W/died-more" 12
+if ./tools/gate_compare.sh --from "$W/died-more" "$W/died.baseline" > "$W/out6a" 2>&1; then
+    tail -20 "$W/out6a"
+    fail "a run with more dead/stuck sessions than the baseline was reported as a pass"
+elif ! grep -q "died or got stuck" "$W/out6a"; then
+    fail "the extra dead/stuck sessions were not named as the reason for the fail"
+fi
+
+# The same run against itself must still pass -- this rule fires on an
+# INCREASE, not on the mere presence of a death.
+if ! ./tools/gate_compare.sh --from "$W/died" "$W/died.baseline" > "$W/out6b" 2>&1; then
+    tail -20 "$W/out6b"
+    fail "a run with the same dead/stuck count as its own baseline did not pass"
+fi
+
+# A baseline recorded before this fix existed has no 'died' field at all.
+# That must not silently read as 0 -- a fresh run's real death count would
+# then look like a regression every time, on baselines that said nothing
+# false, they just never asked. It must warn and still pass.
+grep -v '^died	' "$W/died.baseline" > "$W/died-old.baseline"
+if ! ./tools/gate_compare.sh --from "$W/died" "$W/died-old.baseline" > "$W/out6c" 2>&1; then
+    tail -20 "$W/out6c"
+    fail "a baseline with no 'died' field failed the comparison instead of warning"
+elif ! grep -q "predates death-counting" "$W/out6c"; then
+    fail "a baseline with no 'died' field gave no warning about the missing count"
+fi
+
+# 6b. inc-loa.5: the same rule again, for the unguarded threat-disengage
+#    prompt. A frozen session generates no more real gameplay either, so it
+#    must not be allowed to read as a quieter, healthier build.
+make_soak "$W/threat" 0 "1:$QUIET" "2:$QUIET" "3:$QUIET"
+make_threat_frozen "$W/threat" 20
+make_baseline "$W/threat.baseline" "$W/threat"
+if ! grep -q '^threat_frozen	1$' "$W/threat.baseline"; then
+    fail "gate_collect did not count one threat-disengage freeze"
+fi
+
+make_soak "$W/threat-more" 0 "1:$QUIET" "2:$QUIET" "3:$QUIET"
+make_threat_frozen "$W/threat-more" 20
+make_threat_frozen "$W/threat-more" 21
+if ./tools/gate_compare.sh --from "$W/threat-more" "$W/threat.baseline" > "$W/out6d" 2>&1; then
+    tail -20 "$W/out6d"
+    fail "a run with more threat-frozen sessions than the baseline was reported as a pass"
+elif ! grep -q "threat-disengage prompt" "$W/out6d"; then
+    fail "the extra threat-frozen sessions were not named as the reason for the fail"
+fi
+
+if ! ./tools/gate_compare.sh --from "$W/threat" "$W/threat.baseline" > "$W/out6e" 2>&1; then
+    tail -20 "$W/out6e"
+    fail "a run with the same threat-frozen count as its own baseline did not pass"
+fi
+
+grep -v '^threat_frozen	' "$W/threat.baseline" > "$W/threat-old.baseline"
+if ! ./tools/gate_compare.sh --from "$W/threat" "$W/threat-old.baseline" > "$W/out6f" 2>&1; then
+    tail -20 "$W/out6f"
+    fail "a baseline with no 'threat_frozen' field failed the comparison instead of warning"
+elif ! grep -q "predates that count" "$W/out6f"; then
+    fail "a baseline with no 'threat_frozen' field gave no warning about the missing count"
+fi
+
+# 7. The settings the run plays with are an input to the result, so a baseline
 #    recorded with different ones cannot be compared against. See inc-w43: the
 #    finding count moved 4386 -> 4416 because Brian played mid-session and the
 #    game rewrote Options.Dat. These check the rule that stops that, without
@@ -140,7 +239,10 @@ fi
 if [ "$FAILED" -eq 0 ]; then
     echo "PASS: the gate fails on an unseen message in many sessions, tolerates"
     echo "      one in a single session, fails when sessions stop reaching the"
-    echo "      map, reports a message that has gone as an improvement, and"
+    echo "      map, reports a message that has gone as an improvement, fails"
+    echo "      when more sessions die or get stuck at the death prompt or the"
+    echo "      threat-disengage prompt than the baseline while warning rather"
+    echo "      than guessing when a baseline never counted one at all, and"
     echo "      refuses to compare across two different sets of settings"
     exit 0
 fi

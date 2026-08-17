@@ -3197,9 +3197,19 @@ void CFile::FWrite(const void *vp, size_t write_size) {
 }
   
 void CFile::FRead(void *vp, size_t read_size) {
-    memset(vp, 0, read_size);
-    memcpy(vp, &bytes[pos], min((int32)read_size, size - pos));
-    pos = min(size, pos + (int32)read_size);
+    /* upstream: this used to memset(vp,0,read_size) and then memcpy only as
+       many real bytes as were left, so a read that ran past the end of the
+       decompressed buffer silently came back as zeros instead of as a
+       failure. Every caller (Registry::LoadGroup) expects an exact-size
+       field and has no legitimate use for a short read -- confirmed by
+       reading every CFile::FRead call site before making this change, per
+       inc-l0t's own instruction to check for one first. A group whose
+       objCount/dataCount walks past its real data now fails loudly instead
+       of fabricating fields. Evidence: Traced. Tracking: inc-l0t. Not sent. */
+    if (pos < 0 || pos > size || read_size > (size_t)(size - pos))
+        throw ECORRUPT;
+    memcpy(vp, &bytes[pos], read_size);
+    pos += (int32)read_size;
 }
 
 void CFile::Seek(int32 val, int8 seek_type) {
@@ -3209,8 +3219,21 @@ void CFile::Seek(int32 val, int8 seek_type) {
     case SEEK_END: pos = size - val; break;
     }
     if (pos > alloc) {
-        alloc = (((pos - 1) / CFILE_DELTA) + 1) * CFILE_DELTA;
-        realloc(data, alloc);
+        int32 newAlloc = (((pos - 1) / CFILE_DELTA) + 1) * CFILE_DELTA;
+        void *newData = realloc(data, newAlloc);
+        /* upstream: realloc()'s return value used to be discarded here, so
+           whenever realloc had to move the block, 'data' kept pointing at
+           memory that had just been freed out from under it -- every access
+           after a growing Seek() was a use-after-free, and on allocation
+           failure the same discarded NULL meant 'data' silently kept
+           pointing at a block sized for the OLD (too-small) alloc. The
+           original Win32 build makes the identical mistake; nothing about
+           it is platform-specific. Evidence: Traced. Tracking: inc-l0t.
+           Not sent. */
+        if (!newData)
+            throw EMEMORY;
+        data = newData;
+        alloc = newAlloc;
     }
     size = max(pos, size);
 }
@@ -3234,10 +3257,28 @@ int32 CFile::CommitCompressed(int32 offset, bool use_lz) {
 }
 
 void CFile::LoadCompressed(int32 offset, int32 compressed_size, int32 uncompressed_size, bool use_lz) {
-    void *compressed_data; 
+    void *compressed_data;
+    unsigned int actual_size;
+    int lzResult;
+
+    /* upstream: compressed_size/uncompressed_size are whatever the caller
+       read out of a save/module's group header (see the matching check in
+       Registry::LoadGroup, which is the earlier and preferred place to
+       catch this) -- signed int32 fields off disk, with no sanity test in
+       the original code before they drove a malloc(). A negative value
+       here becomes a huge size_t once malloc() takes it; zero or an
+       absurd value is just as ungrounded. This is CFile::LoadCompressed's
+       own defence, independent of any one caller getting the earlier check
+       right. Evidence: Traced. Tracking: inc-l0t. Not sent. */
+    if (compressed_size <= 0 || uncompressed_size <= 0 ||
+        compressed_size > CFILE_SANE_MAX_SIZE ||
+        uncompressed_size > CFILE_SANE_MAX_SIZE)
+        throw ECORRUPT;
 
     t->Seek(offset,SEEK_SET);
     compressed_data = malloc(compressed_size);
+    if (!compressed_data)
+        throw EMEMORY;
     t->FRead(compressed_data, compressed_size);
 
     alloc = (((uncompressed_size - 1) / CFILE_DELTA) + 1) * CFILE_DELTA;
@@ -3245,14 +3286,37 @@ void CFile::LoadCompressed(int32 offset, int32 compressed_size, int32 uncompress
         data = realloc(data, alloc);
     else
         data = malloc(alloc);
+    if (!data) {
+        free(compressed_data);
+        throw EMEMORY;
+    }
     memset(data, 0, alloc);
 
+    /* upstream: the original decompressor calls below were handed only the
+       INPUT length -- nothing told them how big 'data' actually was, and
+       nothing afterwards compared what they produced against
+       uncompressed_size. How many bytes got written was decided entirely
+       by the (possibly corrupt or hostile) compressed stream; a stream
+       that expands past what its own header claimed wrote past the end of
+       this heap block. Both decoders now take 'alloc' (the real buffer
+       capacity) and stop at it; 'actual_size' is compared against
+       uncompressed_size below, because a stream that decompresses to FEWER
+       bytes than it claims is lying about its contents just as much as one
+       that overflows. This is the defect inc-l0t was filed for. Evidence:
+       Traced (src/lz.c, src/rle.c, and this call site read together).
+       Tracking: inc-l0t. Not sent. */
     if (use_lz)
-        LZ_Uncompress((unsigned char*)compressed_data, (unsigned char*)data, compressed_size);
+        lzResult = LZ_Uncompress((unsigned char*)compressed_data, (unsigned char*)data,
+            (unsigned int)compressed_size, (unsigned int)alloc, &actual_size);
     else
-        RLE_Uncompress((unsigned char*)compressed_data, (unsigned char*)data, compressed_size);
+        lzResult = RLE_Uncompress((unsigned char*)compressed_data, (unsigned char*)data,
+            (unsigned int)compressed_size, (unsigned int)alloc, &actual_size);
 
     free(compressed_data);
+
+    if (lzResult != 0 || actual_size != (unsigned int)uncompressed_size)
+        throw ECORRUPT;
+
     size = uncompressed_size;
     pos = 0;
 }

@@ -460,10 +460,16 @@ static void OnTimeout(int sig) {
     _exit(EXIT_OUT_OF_TIME);
 }
 
+/* src/Dump.cpp. Declared here rather than added to a header because it is
+   used from exactly one call site, main(), the same way InitGodArrays() is
+   forward-declared locally in src/Registry.cpp. */
+extern bool RunSaveDump(const char *path);
+
 int main(int argc, char *argv[]) {
     char executablePath[MAX_PATH_LENGTH] = "";
     char *envPath = getenv("INCURSIONPATH");
     const char *keyScript = NULL;
+    const char *dumpSave = NULL;
     int i, retval = 0;
     bool forceHeadless = false;
     unsigned timeout = DEFAULT_TIMEOUT_S;
@@ -513,7 +519,14 @@ int main(int argc, char *argv[]) {
 
     /* Parsed here rather than in TextTerm::RunOnCommandLine, which stops at ten
        options and knows nothing about a terminal. Unknown options are ignored
-       there, so both parsers can read the same command line. */
+       there, so both parsers can read the same command line.
+
+       -dump belongs here for the same reason -keys does: RunOnCommandLine's
+       own parser (src/TextTerm.cpp:39) caps an option's value at 49 chars
+       (option_values[10][50]), and a real save path -- an absolute one
+       especially, which is what a sandboxed caller must pass -- routinely
+       runs longer than that and would be silently truncated to a path that
+       does not exist. */
     for (i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-keys") && i + 1 < argc)
             keyScript = argv[++i];
@@ -521,6 +534,8 @@ int main(int argc, char *argv[]) {
             timeout = (unsigned)atoi(argv[++i]);
         else if (!strcmp(argv[i], "-headless"))
             forceHeadless = true;
+        else if (!strcmp(argv[i], "-dump") && i + 1 < argc)
+            dumpSave = argv[++i];
     }
 
     theGame = new Game();
@@ -546,8 +561,15 @@ int main(int argc, char *argv[]) {
         alarm(timeout);
     }
 
-    /* Anything that runs at this point should not use the display. */
-    if (!AT1->RunOnCommandLine(argc, argv, &retval)) {
+    /* Anything that runs at this point should not use the display. -dump
+       skips RunOnCommandLine entirely (see the comment above the -dump
+       parse, on the 49-char option-value cap) but follows the same rule
+       its sibling flags do: it exits before Initialize()/StartMenu() run,
+       exactly the way -compile and -formatid do by returning true from
+       RunOnCommandLine (src/TextTerm.cpp:39). */
+    if (dumpSave) {
+        retval = RunSaveDump(dumpSave) ? 0 : 22;
+    } else if (!AT1->RunOnCommandLine(argc, argv, &retval)) {
         T1->Initialize();
         theGame->StartMenu();
         T1->ShutDown();

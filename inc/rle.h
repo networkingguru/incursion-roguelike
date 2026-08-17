@@ -43,8 +43,15 @@ extern "C" {
 
 int RLE_Compress( unsigned char *in, unsigned char *out,
                   unsigned int insize );
-void RLE_Uncompress( unsigned char *in, unsigned char *out,
-                     unsigned int insize );
+
+/* upstream: same defect as LZ_Uncompress() in lz.h/lz.c, and the more
+   exposed of the two -- Registry::LoadGroup's default (use_lz=false) load
+   path runs this decoder, not the LZ one. No output-buffer size, no bound
+   on reading 'insize'. Traced. Tracking: inc-l0t. Not sent.
+   outsize/outposp/return value: see LZ_Uncompress() in lz.h. */
+int RLE_Uncompress( unsigned char *in, unsigned char *out,
+                    unsigned int insize, unsigned int outsize,
+                    unsigned int *outposp );
 
 
 #ifdef __cplusplus

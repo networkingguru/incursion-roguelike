@@ -620,6 +620,35 @@ int16 Registry::LoadGroup(Term &t, hObj hGroup, bool use_lz) {
     throw ENOCHUNK;
 
 foundGroup:
+    /* upstream: gh.compSize and gh.groupSize are signed int32 fields read
+       straight out of the group header a few lines up (t.FRead(&gh,...))
+       with no sanity test in the original code -- a save file or .Mod is
+       data the game merely trusts, and both sizes flow straight into
+       CFile::LoadCompressed()'s malloc()s below. A corrupt or truncated
+       file can make either one zero, negative (both are signed), or larger
+       than the file that is supposed to contain it; nothing stopped that
+       from reaching malloc(). compSize is bounded here by how many bytes
+       are actually left in the file to read it from -- the tightest bound
+       available -- and groupSize (the DECOMPRESSED size, which is not and
+       should not be bounded by the compressed file's size) by the shared
+       CFILE_SANE_MAX_SIZE ceiling in inc/Term.h. CFile::LoadCompressed
+       repeats the zero/negative/ceiling half of this check on its own, so
+       this file is not the only thing standing between a corrupt header
+       and a bad allocation. Evidence: Traced (this function and
+       CFile::LoadCompressed read together). Tracking: inc-l0t. Not sent. */
+    {
+        int32 herePos = t.Tell();
+        int32 fileEnd;
+        t.Seek(0, SEEK_END);
+        fileEnd = t.Tell();
+        t.Seek(herePos, SEEK_SET);
+
+        if (gh.compSize <= 0 || gh.groupSize <= 0 ||
+            gh.compSize > (fileEnd - herePos) ||
+            gh.groupSize > CFILE_SANE_MAX_SIZE)
+            throw ECORRUPT;
+    }
+
     CFile *cf = new CFile(&t);
     cf->LoadCompressed(t.Tell(), gh.compSize, gh.groupSize, use_lz);
 
@@ -693,6 +722,28 @@ foundGroup:
         /* Verify it is in fact the correct type. */
         if (o->Type != oType)
           throw ECORRUPT;
+
+        /* upstream: base-code defect. SaveGroup writes whole C++ objects as
+           raw bytes (typeSize() per object, right above), so a Creature's
+           embedded TargetSystem (Creature::ts) comes back exactly as it was
+           written, including -- for anything saved before c9201dd (inc-zmk's
+           Target zero-init fix) -- whatever was on the stack when each
+           Target was constructed. That fix only stops NEW Targets from
+           carrying garbage; it does nothing for ones already on disk, and
+           re-saving doesn't clean them either, since the same bytes just get
+           read back into the same fields. Sanitizing here, once, right after
+           every Creature is loaded, covers both save files and modules
+           (both go through this same loop) without caring which one this
+           load is. Evidence: Observed (inc-upw.13 itself measured 1,944 such
+           asserts on a soak save; a 20-turn walk on a sandboxed copy of
+           Brian's own save/Jaoin.sav, loaded under a binary with c9201dd but
+           without this fix, logged 74 -- ASSERT failed:
+           '...Get(h)->isCreature()' at inc/Base.h:607, called from
+           Target::GetThingOrNULL from Monster::Movement. 0 with this and the
+           matching GetThingOrNULL fix in place, same save, same walk).
+           Tracking: inc-upw.13. Not sent. */
+        if (o->isCreature())
+          ((Creature*)o)->ts.SanitizeLoadedTargets();
 
         /* And register our new object in the Registry. */
         RegisterObject(o,true);

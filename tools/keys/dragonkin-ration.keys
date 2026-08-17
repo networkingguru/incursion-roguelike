@@ -1,0 +1,74 @@
+# Make a Dragonkin, open the eat menu, refuse to eat a food ration (Dragonkin
+# have CA_BURNING_HUNGER and can only feed on blood), and reopen the eat menu.
+# This exists for one assertion, inc-i9q.1: a refused meal must not destroy
+# the food. Every eat-menu dump below must show the SAME ration count as the
+# very first one. Before the fix (src/Item.cpp, Food::Eat) each refusal took
+# one ration anyway -- 9 food rations -> 8 -> 7 -> ... -> "food ration"
+# (quantity 1) after 8 refusals, on this exact seed and script. See
+# tools/check_dragonkin_ration.sh, which reads these dumps and enforces it.
+#
+# Every choice below is a menu letter, and menu letters move when a list
+# changes. Run with a fixed seed or the attribute rolls change, the offered
+# feats change with them, and these letters choose something else.
+#
+# Dragonkin start with a random handful of food rations already in pack (part
+# of the shared adventurer starting kit, not race- or class-specific gear --
+# see src/Create.cpp). Seed 1 gives 9. Nothing needs to be granted by hand.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+h       # Race:     [h] Lizardfolk
+b       # Subrace:  [b] Dragonkin
+a       # Class:    [a] Barbarian
+a       # Attributes: the first of the five offered sets
+c       # Alignment: [c] Neutral
+a       # First feat
+a       # Second feat
+
+# Skill Manager, twice. Three RIGHTs per skill spends everything available
+# without needing to know how many ranks this character has.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+y       # Do you wish to worship <god>? -- yes
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+# In the dungeon now. [e] opens "What do you want to eat?"; the only edible
+# item Dragonkin start with is the food ration stack, always at [a]. Selecting
+# it fires EV_EAT, CA_BURNING_HUNGER refuses it ("Only the blood of a
+# carnivorous creature..."), and control returns straight to the map -- no
+# further key is needed to dismiss anything. Reopen the menu and dump it, then
+# repeat. Eight refusals, matching the bead's measured run.
+e
+@dump:menu01
+a
+e
+@dump:menu02
+a
+e
+@dump:menu03
+a
+e
+@dump:menu04
+a
+e
+@dump:menu05
+a
+e
+@dump:menu06
+a
+e
+@dump:menu07
+a
+e
+@dump:menu08
+a
+e
+@dump:menu09
+ESC
+@quit

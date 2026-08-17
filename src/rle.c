@@ -261,21 +261,30 @@ int RLE_Compress( unsigned char *in, unsigned char *out,
 /*************************************************************************
 * RLE_Uncompress() - Uncompress a block of data using an RLE decoder.
 *  in      - Input (compressed) buffer.
-*  out     - Output (uncompressed) buffer. This buffer must be large
-*            enough to hold the uncompressed data.
-*  insize  - Number of input bytes.
+*  out     - Output (uncompressed) buffer.
+*  insize  - Number of input (compressed) bytes.
+*  outsize - Capacity of 'out', in bytes. See inc/rle.h.
+*  outposp - See inc/rle.h.
+* Returns 0 on success, -1 if the stream is corrupt. See inc/rle.h.
+*
+* upstream (inc-l0t, Traced, not sent): every bound check in this function
+* is new -- see the matching note on LZ_Uncompress() in src/lz.c. This is
+* the decoder Registry::LoadGroup's default load path actually runs.
 *************************************************************************/
 
-void RLE_Uncompress( unsigned char *in, unsigned char *out,
-    unsigned int insize )
+int RLE_Uncompress( unsigned char *in, unsigned char *out,
+    unsigned int insize, unsigned int outsize, unsigned int *outposp )
 {
     unsigned char marker, symbol;
     unsigned int  i, inpos, outpos, count;
 
+    outpos = 0;
+    if( outposp ) *outposp = 0;
+
     /* Do we have anything to uncompress? */
     if( insize < 1 )
     {
-        return;
+        return 0;
     }
 
     /* Get marker symbol from input stream */
@@ -283,18 +292,20 @@ void RLE_Uncompress( unsigned char *in, unsigned char *out,
     marker = in[ inpos ++ ];
 
     /* Main decompression loop */
-    outpos = 0;
     do
     {
+        if( inpos >= insize ) goto corrupt;
         symbol = in[ inpos ++ ];
         if( symbol == marker )
         {
             /* We had a marker byte */
+            if( inpos >= insize ) goto corrupt;
             count = in[ inpos ++ ];
             if( count <= 2 )
             {
                 /* Counts 0, 1 and 2 are used for marker byte repetition
                    only */
+                if( (outsize - outpos) < (count + 1) ) goto corrupt;
                 for( i = 0; i <= count; ++ i )
                 {
                     out[ outpos ++ ] = marker;
@@ -304,9 +315,12 @@ void RLE_Uncompress( unsigned char *in, unsigned char *out,
             {
                 if( count & 0x80 )
                 {
+                    if( inpos >= insize ) goto corrupt;
                     count = ((count & 0x7f) << 8) + in[ inpos ++ ];
                 }
+                if( inpos >= insize ) goto corrupt;
                 symbol = in[ inpos ++ ];
+                if( (outsize - outpos) < (count + 1) ) goto corrupt;
                 for( i = 0; i <= count; ++ i )
                 {
                     out[ outpos ++ ] = symbol;
@@ -316,8 +330,16 @@ void RLE_Uncompress( unsigned char *in, unsigned char *out,
         else
         {
             /* No marker, plain copy */
+            if( outpos >= outsize ) goto corrupt;
             out[ outpos ++ ] = symbol;
         }
     }
     while( inpos < insize );
+
+    if( outposp ) *outposp = outpos;
+    return 0;
+
+corrupt:
+    if( outposp ) *outposp = outpos;
+    return -1;
 }
