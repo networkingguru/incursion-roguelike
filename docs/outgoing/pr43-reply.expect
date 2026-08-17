@@ -1,0 +1,47 @@
+# path:line <TAB> substring the line must contain. One per claim that matters.
+src/Feature.cpp:260	MoveDepth(m->Depth + DepthMod, true)
+src/Feature.cpp:850	void Thing::MoveDepth
+src/Feature.cpp:873	ABOVE_DUNGEON
+src/Feature.cpp:874	if (!mID)
+src/Feature.cpp:886	BELOW_DUNGEON
+src/Feature.cpp:909	GoWith[gwc++]
+src/Feature.cpp:927	safe && new_m->FallAt
+src/Feature.cpp:935	PlaceAt(new_m
+inc/Creature.h:1103	MoveDepth
+inc/Map.h:719	safe=false
+inc/Map.h:184	NArray<hObj,1000,10> Things
+src/Move.cpp:1380	MoveDepth(m->Depth + 1)
+src/Display.cpp:219	TerrainEffects
+src/Display.cpp:1130	Things.Remove(i)
+inc/Base.h:78	MapIterate
+src/Base.cpp:535	memmove
+src/Res.cpp:312	return NULL
+src/Annot.cpp:365	ROOM_WEIGHTS
+src/Annot.cpp:470	return 15
+src/Annot.cpp:539	MIN_CHASM_DEPTH
+src/MakeLev.cpp:1449	MIN_CHASM_DEPTH
+src/MakeLev.cpp:1452	No chasms on the last dungeon level
+src/MakeLev.cpp:1879	MAX_STAIRS
+src/MakeLev.cpp:2398	DepthCR >=
+src/Main.cpp:220	MapIterate(mp,t,i)
+src/Registry.cpp:561	loadMode = true
+src/Registry.cpp:705	loadMode = false
+inc/Api.h:226	MoveDepth(int16 NewDepth)
+lib/dispatch.h:680	MoveDepth((int16)STACK(1))
+lib/dungeon.irh:17	DUN_DEPTH 10
+lib/dungeon.irh:3497	Twisting Chasm
+lib/dungeon.irh:3644	Jagged Chasm
+lib/dungeon.irh:3651	BLOB_WITH
+lib/dungeon.irh:3660	Floating Rock;1
+lib/religion.irh:2992	MoveDepth
+lib/wspells.irh:6673	chasm
+lib/wspells.irh:7065	MoveDepth
+src/Skills.cpp:4008	MoveDepth(m->Depth - 1, true)
+src/Prayer.cpp:1482	MoveDepth(1,true)
+src/Debug.cpp:810	MoveDepth(i);
+src/Move.cpp:1122	TerrainEffects();
+src/Display.cpp:109	TerrainEffects();
+src/MakeLev.cpp:2397	RoomTypes
+src/MakeLev.cpp:2400	RF_CORRIDOR
+inc/Base.h:79	i++
+lib/religion.irh:2993	true

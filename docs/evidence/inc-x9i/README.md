@@ -1,8 +1,8 @@
 # Evidence for inc-x9i
 
 `Player::MoveDepth` dereferences `RES(BELOW_DUNGEON)` without a zero check, on
-the down path only. The up path thirteen lines earlier guards the identical case
-(`Feature.cpp:873` against `:886`, upstream numbering). Falling through a chasm
+the down path only. The up path reads its constant thirteen lines
+earlier and tests it (`Feature.cpp:873-875` against `:886`, upstream numbering). Falling through a chasm
 on the deepest level of a dungeon reaches it, because nothing below exists and
 the constant is 0.
 
@@ -95,7 +95,8 @@ levels:
 | 10 | 3 | **3** | **0** |
 
 Every session that reached the bottom level found chasm there — 16, 282 and 21
-squares — and none of those levels has a down-staircase. Sixteen of the 31
+squares — and on each the generator was asked for no down-stairs
+(`stairs_down=0`). Sixteen of the 31
 generated levels shallower than `MIN_CHASM_DEPTH` (5) carry chasm as well.
 
 ## Why the author's own guard does not prevent this
@@ -105,17 +106,20 @@ dungeon level, because there is nowhere to fall to!"* and the test below it does
 exactly that. It is in the **streamer** picker, and so is the `MIN_CHASM_DEPTH`
 test at `:1449`.
 
-Chasm floor also arrives as an ordinary **room**. The room picker at `:2398`
-applies neither rule; it gates only on the region's own `Depth`. Two shipped
-regions place chasm — `"Twisting Chasm"` (`lib/dungeon.irh:3497`, `Depth: 2`),
-whose `Floor:` is `$"chasm"`, and `"Floating Rock;1"` (`:3660`, `Depth: 3`),
-whose floor is obsidian but whose grid tiles `'X'` to `$"chasm"` — neither is
+Chasm floor also arrives as an ordinary **room**. The room picker at
+`:2397-2400` applies neither rule; its gates are `RoomTypes`, then `DepthCR`
+against the region's own `Depth`, then `MIN_VAULT_DEPTH`, then `RF_CORRIDOR`.
+Three shipped regions place chasm — `"Twisting Chasm"` (`lib/dungeon.irh:3497`,
+`Depth: 2`), whose `Floor:` is `$"chasm"`; `"Floating Rock;1"` (`:3660`,
+`Depth: 3`), whose floor is obsidian but whose grid tiles `'X'` to `$"chasm"`;
+and `"Jagged Chasm"` (`:3644`), which sets `* BLOB_WITH $"chasm"` and declares
+no `Depth:` at all, so that gate passes for it at every level. None is
 `RF_NOGEN`, and no dungeon defines a `ROOM_WEIGHTS` list, so `Resource::GetList`
 falls through to its default (`src/Annot.cpp:365`) and puts every `RF_ROOM`
 region into every dungeon's pool.
 
 Measured across 8 seeded sessions and 60 generated levels, one run directory
-each: chasm appears on 16 of the 31 levels generated above `MIN_CHASM_DEPTH`,
+each: chasm appears on 16 of the 31 levels generated shallower than `MIN_CHASM_DEPTH`,
 and on the bottom level in all three sessions that reached it. Down-stairs stop
 at level 9, which `:1879` intends. An earlier version of this file said "7
 sessions and 51 levels"; those runs shared directories (inc-uh0) and the totals

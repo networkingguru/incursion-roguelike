@@ -76,11 +76,13 @@ is the same session sixty turns later — one kobold and one kobold corpse, kill
 by a black orc. The count only falls. No third kobold appears.
 
 The code says why. The turn loop iterates the player's current map only
-(`MapIterate(mp,t,i)`, `src/Main.cpp:280`), so a creature on any other level
+(`MapIterate(mp,t,i)`, `src/Main.cpp:220` upstream), so a creature on any other level
 receives no turns at all. Even if it could act, the stairs handler sends a
 non-player through `Thing::MoveDepth`, which is `Remove(true)` — a monster that
-takes stairs is deleted, not moved. `Player::MoveDepth`'s collection loop is the
-only code in the game that moves a creature between maps.
+takes stairs is deleted, not moved. Other code does move creatures between maps -- dungeon entry and return at
+`src/Feature.cpp:270` and `:278`, `Game::LimboCheck`, several spells -- but
+`Player::MoveDepth`'s collection loop is the only thing that brings a player's
+followers with him.
 
 ## Scope
 
