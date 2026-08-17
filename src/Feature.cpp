@@ -851,6 +851,62 @@ void Thing::MoveDepth(int16 NewDepth, bool safe) {
     Remove(true);
 }
 
+/* Temporary diagnostic: set INCURSION_STACK_PROBE=1 to measure what one level
+   of the MoveDepth -> PlaceAt -> TerrainEffects -> MoveDepth cycle really
+   costs in stack, instead of reading it off the function prologues. Each entry
+   to Player::MoveDepth records its own frame address and the distance to the
+   frame of the call that is still open above it; that distance IS the cost of
+   one level descended, including everything the compiler did that the prologue
+   does not show. Writes logs/stackprobe.log.
+
+   READ THE NUMBERS WITH THIS IN MIND. The probe is a local of the function it
+   measures, so it inflates that frame by its own size. On arm64 -O2 that is 16
+   bytes, and it is visible in the binary: a build carrying this probe allocates
+   'sub sp, sp, #0x240' where a build without it allocates '#0x230'. So the
+   logged per_level of 2416 means 2400 in a shipping build. Subtract the
+   difference between those two immediates before quoting a figure anywhere.
+
+   A per_level of 0 is not a measurement. It means nest=1, an outermost call
+   with nothing above it to measure against -- an ordinary stairway descent
+   rather than a chained fall. Only nest>=2 lines carry a cost.
+
+   Delete with inc-upw.15. */
+struct MoveDepthStackProbe {
+    static int16 Nest;
+    static char *Frames[64];
+    bool On;
+    MoveDepthStackProbe(int16 mapDepth, char *frame) {
+        On = getenv("INCURSION_STACK_PROBE") != NULL;
+        if (!On)
+            return;
+        static FILE *log = NULL;
+        if (!log) {
+            char path[1024];
+            snprintf(path, sizeof(path), "%slogs/stackprobe.log",
+                (const char*)T1->IncursionDirectory);
+            log = fopen(path, "a");
+        }
+        if (log) {
+            /* The stack grows downward, so an outer frame sits at a HIGHER
+               address than the inner one it called. */
+            long delta = (Nest > 0 && Nest <= 64) ?
+                (long)(Frames[Nest - 1] - frame) : 0;
+            fprintf(log, "MoveDepth nest=%d map_depth=%d frame=%p per_level=%ld\n",
+                (int)Nest + 1, (int)mapDepth, (void*)frame, delta);
+            fflush(log);
+        }
+        if (Nest < 64)
+            Frames[Nest] = frame;
+        Nest++;
+    }
+    ~MoveDepthStackProbe() {
+        if (On)
+            Nest--;
+    }
+};
+int16 MoveDepthStackProbe::Nest = 0;
+char *MoveDepthStackProbe::Frames[64];
+
 void Player::MoveDepth(int16 NewDepth, bool safe) {
     /* upstream: base-code defect, the fix is ours. It is upstream's because a
        static array in a function that re-enters itself is clobbered on Win32
@@ -873,6 +929,7 @@ void Player::MoveDepth(int16 NewDepth, bool safe) {
        512 bytes of stack is a small price for re-entrancy. */
     Thing *GoWith[64]; Creature *c;
     rID mID; Map *new_m = NULL; int16 nx, ny, i, gwc;
+    MoveDepthStackProbe stackProbe(m->Depth, (char*)__builtin_frame_address(0));
     StoreLevelStats((uint8)m->Depth);
     theGame->SaveGame(*this);
 
