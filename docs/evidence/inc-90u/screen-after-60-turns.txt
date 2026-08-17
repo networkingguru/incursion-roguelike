@@ -1,0 +1,49 @@
+=== screen 0005 after60  key 217  mode 2 ===
+Something points at you and says, 'kneel'! You drop to your     |Kesh
+feet.                                                           |Male Orc
+                                                                |Barbarian 1
+Do you want to stop searching (tripping: a black orc)? [yn]     |0/1000 XP
+                                                                |
+                                                                |12:03 AM
+                                                                |1st of Suntide
+                                                                |
+                               #####                            |Searching
+                               #,,,,,                           |Satiated
+                           ####,,,,,,,                          |Afoot
+                           ,,,,,,,,,,,                          |Healthy
+                          ,,,,,,,,,,,,,                         |Vigorous
+                          ,,,,,,@,,,,,,                         |
+                          o,,,,,,,,,,##                         |STR: 20
+                           ,(k,,,,,,##                          |DEX: 13
+                           ,,,######                            |CON: 14
+                            #                                   |INT: 12
+                                                                |WIS: 12
+                                                                |CHA: 16
+                                                                |LUC: 13
+                                                                |
+                                                                |Mod:Melee
+                                                                |Hit:6
+                                                                |Dmg:1d3+6
+                                                                |Spd:140%
+                                                                |Enc:Light
+                                                                |Def:11 Cov:8
+                                                                |Arm: 5 Slash
+                                                                |     6 Pierce
+                                                                |     6 Blunt
+                                                                |Mov:90%
+                                                                |
+                                                                |Things in View:
+                                                                |k kobold
+                                                                |% kobold corpse
+                                                                |  (fresh, DC
+                                                                |  20)
+                                                                |( ? orcish
+                                                                |  dagger
+                                                                |
+                                                                |
+                                                                |
+                                                                |
+Will Save: 1d20 (7) +1 base = 8 vs DC 14 [failure].             |
+                                                                |
+The Goblin Caves: Crumbled Crevice                          020m|[*************]
+HP:45/45 Mana:15/15 FP:9/9 GP:24                                |[*************]

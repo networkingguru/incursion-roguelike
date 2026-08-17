@@ -66,3 +66,4 @@
 {"id":"int-a7d38dc147ed8301e24a576ce933ccc8","kind":"field_change","created_at":"2026-08-17T04:12:44.491366Z","actor":"Brian Hill","issue_id":"inc-upw.13","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}
 {"id":"int-6dde50873a4b309fa8cdcf07d20a8786","kind":"field_change","created_at":"2026-08-17T04:29:06.284752Z","actor":"Brian Hill","issue_id":"inc-i9q.1","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}
 {"id":"int-46b2ec68d64c1e68893e89277bb8066b","kind":"field_change","created_at":"2026-08-17T16:40:17.896661Z","actor":"Brian Hill","issue_id":"inc-upw.15","extra":{"field":"priority","new_value":"0","old_value":"1"}}
+{"id":"int-dcd1646979108eb16a0ba9e8d4f37dba","kind":"field_change","created_at":"2026-08-17T20:25:02.200732Z","actor":"Brian Hill","issue_id":"inc-x9i","extra":{"field":"priority","new_value":"1","old_value":"2"}}

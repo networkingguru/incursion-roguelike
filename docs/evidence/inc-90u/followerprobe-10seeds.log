@@ -1,0 +1,20 @@
+seed 3362:
+MoveDepth depth=1 followers_before=3 at=[393,394,395] collected=2 left_behind=1
+seed 4242:
+(no level change in this session)
+seed 111:
+MoveDepth depth=1 followers_before=3 at=[440,441,442] collected=2 left_behind=1
+seed 555:
+MoveDepth depth=1 followers_before=3 at=[183,184,185] collected=2 left_behind=1
+seed 777:
+MoveDepth depth=1 followers_before=2 at=[395,397] collected=2 left_behind=0
+seed 888:
+MoveDepth depth=1 followers_before=3 at=[667,668,669] collected=2 left_behind=1
+seed 999:
+MoveDepth depth=1 followers_before=3 at=[306,307,308] collected=2 left_behind=1
+seed 1234:
+MoveDepth depth=1 followers_before=3 at=[815,816,817] collected=2 left_behind=1
+seed 2468:
+MoveDepth depth=1 followers_before=3 at=[490,491,492] collected=2 left_behind=1
+seed 13579:
+MoveDepth depth=1 followers_before=2 at=[236,237] collected=1 left_behind=1

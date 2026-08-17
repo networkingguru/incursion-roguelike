@@ -989,12 +989,21 @@ void Player::MoveDepth(int16 NewDepth, bool safe) {
            outcome it is measuring. The post-pass then asks the old map what is
            still standing on it. Delete with the bead that records this. */
         int16 probeBefore = 0;
+        char probeIdx[128];
+        probeIdx[0] = '\0';
         if (getenv("INCURSION_FOLLOWER_PROBE")) {
-            Creature *pc; int32 pi;
+            Creature *pc; int32 pi; size_t pn = 0;
             MapIterate(m, pc, pi)
                 if (pc->isMonster())
-                    if (pc->ts.isLeader(this))
+                    if (pc->ts.isLeader(this)) {
                         probeBefore++;
+                        /* The index in m->Things is the whole story: only a
+                           follower sitting directly after another one gets
+                           skipped, so record where each of them sits. */
+                        if (pn < sizeof(probeIdx) - 12)
+                            pn += snprintf(probeIdx + pn, sizeof(probeIdx) - pn,
+                                pn ? ",%d" : "%d", (int)pi);
+                    }
         }
 
         gwc = 0;
@@ -1025,9 +1034,10 @@ void Player::MoveDepth(int16 NewDepth, bool safe) {
                         if (pc->ts.isLeader(this))
                             leftBehind++;
                 fprintf(folLog,
-                    "MoveDepth depth=%d followers_before=%d collected=%d "
-                    "left_behind=%d\n",
-                    (int)m->Depth, (int)probeBefore, (int)gwc, (int)leftBehind);
+                    "MoveDepth depth=%d followers_before=%d at=[%s] "
+                    "collected=%d left_behind=%d\n",
+                    (int)m->Depth, (int)probeBefore, probeIdx,
+                    (int)gwc, (int)leftBehind);
                 fflush(folLog);
             }
         }
