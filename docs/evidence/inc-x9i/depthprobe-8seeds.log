@@ -1,0 +1,68 @@
+seed 3362:
+gen depth=1 dun_depth=10 fall_squares=30 stairs_down=4
+gen depth=2 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=3 dun_depth=10 fall_squares=48 stairs_down=4
+gen depth=4 dun_depth=10 fall_squares=254 stairs_down=4
+gen depth=5 dun_depth=10 fall_squares=246 stairs_down=4
+gen depth=6 dun_depth=10 fall_squares=246 stairs_down=4
+gen depth=7 dun_depth=10 fall_squares=246 stairs_down=4
+gen depth=8 dun_depth=10 fall_squares=525 stairs_down=4
+gen depth=9 dun_depth=10 fall_squares=246 stairs_down=4
+gen depth=10 dun_depth=10 fall_squares=282 stairs_down=0
+seed 4242:
+gen depth=1 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=2 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=3 dun_depth=10 fall_squares=300 stairs_down=4
+gen depth=4 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=5 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=6 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=7 dun_depth=10 fall_squares=514 stairs_down=4
+seed 111:
+gen depth=1 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=2 dun_depth=10 fall_squares=73 stairs_down=4
+gen depth=3 dun_depth=10 fall_squares=285 stairs_down=4
+gen depth=4 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=5 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=6 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=7 dun_depth=10 fall_squares=310 stairs_down=4
+gen depth=8 dun_depth=10 fall_squares=48 stairs_down=4
+gen depth=9 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=10 dun_depth=10 fall_squares=16 stairs_down=0
+seed 555:
+gen depth=1 dun_depth=10 fall_squares=10 stairs_down=4
+gen depth=2 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=3 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=4 dun_depth=10 fall_squares=306 stairs_down=4
+gen depth=5 dun_depth=10 fall_squares=0 stairs_down=4
+seed 777:
+gen depth=1 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=2 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=3 dun_depth=10 fall_squares=24 stairs_down=4
+gen depth=4 dun_depth=10 fall_squares=277 stairs_down=4
+gen depth=5 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=6 dun_depth=10 fall_squares=242 stairs_down=4
+gen depth=7 dun_depth=10 fall_squares=121 stairs_down=4
+gen depth=8 dun_depth=10 fall_squares=48 stairs_down=4
+gen depth=9 dun_depth=10 fall_squares=229 stairs_down=4
+gen depth=10 dun_depth=10 fall_squares=21 stairs_down=0
+seed 888:
+gen depth=1 dun_depth=10 fall_squares=6 stairs_down=4
+gen depth=2 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=3 dun_depth=10 fall_squares=48 stairs_down=4
+gen depth=4 dun_depth=10 fall_squares=226 stairs_down=4
+gen depth=5 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=6 dun_depth=10 fall_squares=283 stairs_down=4
+gen depth=7 dun_depth=10 fall_squares=48 stairs_down=4
+gen depth=8 dun_depth=10 fall_squares=410 stairs_down=4
+seed 999:
+gen depth=1 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=2 dun_depth=10 fall_squares=266 stairs_down=4
+gen depth=3 dun_depth=10 fall_squares=0 stairs_down=4
+seed 1234:
+gen depth=1 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=2 dun_depth=10 fall_squares=0 stairs_down=4
+gen depth=3 dun_depth=10 fall_squares=226 stairs_down=4
+gen depth=4 dun_depth=10 fall_squares=48 stairs_down=4
+gen depth=5 dun_depth=10 fall_squares=48 stairs_down=4
+gen depth=6 dun_depth=10 fall_squares=237 stairs_down=4
+gen depth=7 dun_depth=10 fall_squares=13 stairs_down=4
