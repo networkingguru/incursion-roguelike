@@ -1,0 +1,53 @@
+# Sacrifice a dwarf corpse at an altar of Khasrach, the orc god.
+#
+#   tools/headless.sh tools/keys/sacrifice-wildcard.keys 1
+#
+# This is the oracle for inc-upw.27. Khasrach's SACRIFICE_LIST
+# (lib/religion.irh:2828) is seven rows: MA_ORC, MA_GOBLINOID, then five
+# MA_ALL rows. MA_ALL is 0, and Character::Sacrifice used to stop the list at
+# the first zero in the left slot, so the five MA_ALL rows were unreachable
+# and a dwarf -- neither orc nor goblinoid -- matched nothing.
+#
+#   before the fix:  "Khasrach seems uninterested in your offering."
+#   after the fix:   "Khasrach is impressed" and, because wizard mode is on,
+#                    "(sacVal 88, gained 88, favour 88, ...)"
+#
+# Run with tools/check_sacrifice.sh, which asserts both of those.
+#
+# WHY THIS SCRIPT IS SEED-LOCKED. It only works at seed 1, and every step
+# below depends on that:
+#  * chargen.keys makes a male orc barbarian, and at this seed the game hands
+#    him Khasrach -- the character sheet shows a "Holy symbol of Khasrach".
+#    The fix is about Khasrach's list specifically, so a different patron
+#    measures nothing.
+#  * The Goblin Caves entry chamber at this seed is littered with corpses.
+#    END then LEFT*5 walks onto a dwarf corpse. There is no way to ask the
+#    game "walk to the nearest dwarf corpse", so the moves are counted.
+#  * [w] is the dwarf corpse's letter in the "Offer what?" menu. Menu letters
+#    move when the item list changes, exactly as chargen.keys warns.
+# If any of that drifts, the run will fail loudly on the asserted text rather
+# than quietly measure the wrong thing.
+#
+# The altar is made by wizard option [M] "Create Altar" (src/Debug.cpp),
+# which exists for this: a sacrifice needs the player to be standing on an
+# altar, and the only other source of one is MakeLev's random placement
+# (src/MakeLev.cpp:2093-2105), which cannot be asked for a particular god.
+
+@include chargen.keys
+
+END                 # step south-west, off the arrival square
+LEFT*5              # ...and west onto the dwarf corpse
+
+w                   # wizard mode -- lowercase, see the SHIFT note in
+y                   # Wposix.cpp TokenToKey; 'W' is a different keystroke
+M                   # [M] Create Altar
+"Khasrach"
+ENTER
+
+p                   # pray; patron and altar agree, so the prompt is [abis]
+s                   # ...sacrifice
+@dump:offer            # so the check can prove WHICH corpse [w] is
+w                   # [w] dwarf corpse (on floor)
+
+@dump:sacrifice
+@quit

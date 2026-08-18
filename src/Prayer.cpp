@@ -378,7 +378,24 @@ EvReturn Character::Sacrifice(EventInfo &e)
     sacCat = -1;
     
     lowestVal = 100000000L;
-    for (i=0;i!=20 && SacList[i];i+=2) {
+    /* upstream: this loop used to stop at `SacList[i]`, the LEFT slot of a
+       (category, value) pair. MA_ALL is 0 (inc/Defines.h), so a MA_ALL row
+       terminated the list instead of matching every creature, and every row
+       after it was unreachable. Khasrach's list (lib/religion.irh:2828) is
+       seven rows of which five are MA_ALL, so his altar refused every corpse
+       that was not an orc or a goblinoid, and his only two live rows are
+       punishments. Base-code defect, not a port artefact: nothing here depends
+       on integer width, the typedefs or the compiler, and it fails the same way
+       on Win32. Two other pieces of base code say this loop is the wrong side
+       of the contract -- Resource::GetList pads every list with THREE zeros
+       precisely so a multi-slot loop sees a whole zero ROW (src/Annot.cpp:351),
+       and Creature::isMType opens with `if (!mt) return true;` (src/Values.cpp)
+       which exists only to make MA_ALL a wildcard and was unreachable from
+       here. Terminating on a zero row is safe: every SAC_* code is negative
+       (-100..-103) and every numeric weight in religion.irh is positive, so no
+       real row has zero on the right. Observed. Tracked as inc-upw.27. Not
+       sent. */
+    for (i=0;i!=20 && (SacList[i] || SacList[i+1]);i+=2) {
         int16 sacValue = (int16)SacList[i];
       if ((sacType == sacValue) ||
           (sacType == -1 && e.EVictim && e.EVictim->isMType(sacValue)) ||

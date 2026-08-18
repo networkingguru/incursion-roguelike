@@ -1,0 +1,45 @@
+# Sacrifice a kobold corpse at an altar of Khasrach, the orc god.
+#
+#   tools/headless.sh tools/keys/sacrifice-goblinoid.keys 1
+#
+# The control for tools/keys/sacrifice-wildcard.keys. A kobold is a goblinoid
+# (MA_GOBLINOID is orc OR goblin OR kobold, src/Values.cpp), so it matches
+# row 1 of Khasrach's SACRIFICE_LIST -- MA_GOBLINOID SAC_ANGRY. Row 1 is
+# BEFORE the first MA_ALL row, so the inc-upw.27 fix must not change this
+# result at all:
+#
+#   both builds:  "Anger: Khasrach +1 (offensive sacrifice)."
+#
+# Measured on both sides on 2026-08-18 and identical. Without this control the
+# wildcard script alone cannot tell "MA_ALL now matches" from "the loop now
+# matches anything".
+#
+# Seed-locked for the same reasons as sacrifice-wildcard.keys; read that
+# header first. The extra moves here (RIGHT*4 HOME UP*2) walk from the dwarf
+# corpse to the kobold corpse.
+#
+# Khasrach has no text for MSG_BADSAC2, so the run also prints "Khasrach says
+# something, but you aren't sure what it is!". That is a content gap in
+# lib/religion.irh, not a fault in this script, and it predates the fix.
+
+@include chargen.keys
+
+END                 # walk to the dwarf corpse first, as the wildcard script
+LEFT*5              # does, then on to the kobold corpse
+RIGHT*4
+HOME
+UP*2
+
+w                   # wizard mode; lowercase, see sacrifice-wildcard.keys
+y
+M                   # [M] Create Altar
+"Khasrach"
+ENTER
+
+p                   # pray -- [abis]
+s                   # ...sacrifice
+@dump:offer            # so the check can prove WHICH corpse [w] is
+w                   # [w] kobold corpse (on floor)
+
+@dump:angry
+@quit

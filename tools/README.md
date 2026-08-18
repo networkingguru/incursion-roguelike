@@ -77,6 +77,23 @@ both failed (`gate_lib.sh:5-19`).
 The `check_*` scripts are the regression checks. Each defends one defect or one
 property that was lost by accident at least once.
 
+Some game state cannot be walked to. Wizard mode is how a key script reaches
+it: send lowercase `w`, answer `y`, and the wizard menu is a plain `LMenu`
+whose letters a script can select. Two things about that menu bite. Its
+letters run `a`..`z` then `A`..`Z` in the order `Player::WizardOptions` adds
+them (`src/Debug.cpp`), so adding an option renumbers everything after it —
+dump the menu and read the letter rather than counting. And `w`, not `W`: an
+uppercase token sets SHIFT, and both key tables bind `KY_CMD_WIZMODE` with
+modifier flags of 0, so `W` is a different keystroke that reaches nothing
+(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:4626`/`4746`).
+
+`[M] Create Altar` is there for the harness. A sacrifice needs the player to
+be standing on an altar, and the only other source of one is `MakeLev`'s
+random assignment (`src/MakeLev.cpp:2093-2105`), which picks from seven gods
+and cannot be asked for a particular one. The command prompts for a god name
+and builds the feature exactly as `MakeLev.cpp:1123-1125` does.
+`check_sacrifice.sh` is the first thing to use it.
+
 Everything else is a diagnostic, a packaging step, or superseded.
 
 ---
@@ -327,6 +344,7 @@ verdict independently. It is left in place, unmodified, per the marking rule.
 | `check_package.sh` | Is the packaged folder free of ACCENT symbols and Homebrew paths, and does it carry its data? | LIVE |
 | `check_ptr_sweep.sh` | Does `sweep_ptr_order.sh` still find a pointer ordering, and still ignore a pointer equality? | LIVE |
 | `check_race_feats.sh` | Does a Dragonkin get Mantis Leap on the character sheet? | LIVE |
+| `check_sacrifice.sh` | Does a god's altar still accept the corpses his `MA_ALL` rows are supposed to cover? | LIVE |
 | `check_strqueue.sh` | Is the string queue's bound still tested before the write? | LIVE |
 | `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? | LIVE |
 
@@ -390,7 +408,7 @@ one (`package_macos_app.sh:5-13`).
 
 | Path | What it is |
 |---|---|
-| `keys/*.keys` | 18 key scripts — the inputs `headless.sh` plays. Read the header of one before you use it. |
+| `keys/*.keys` | 20 key scripts — the inputs `headless.sh` plays. Read the header of one before you use it. |
 | `gates/dive.baseline` | The committed regression baseline. `gate_record.sh` overwrites it. |
 | `gates/Options.Dat` | The pinned settings file every gate run plays with. Committed on purpose. |
 | `gates/Options.Dat.md` | What is in that settings file and why. |
@@ -457,10 +475,17 @@ tools/check_headless.sh             # run this one FIRST of the tier
 tools/check_dump_save.sh
 tools/check_load_corrupt.sh
 tools/check_race_feats.sh
+tools/check_sacrifice.sh
 ```
 
-Run `check_headless.sh` before the other three. They all drive `headless.sh`,
+Run `check_headless.sh` before the other four. They all drive `headless.sh`,
 and if the harness itself is broken their results are meaningless.
+
+`check_sacrifice.sh` runs two sessions, not one, and the second is the point:
+`sacrifice-wildcard.keys` proves the changed row now matches, and
+`sacrifice-goblinoid.keys` proves a row that already matched still behaves
+identically. A check with only the first half cannot tell a fixed wildcard
+from a loop that matches everything.
 
 `check_load_corrupt.sh:37-41` prefers `./incursion-ubsan` when it exists and
 falls back to `./incursion-headless`. Build the sanitizer variant with the line

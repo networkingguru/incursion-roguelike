@@ -569,6 +569,7 @@ void Player::WizardOptions() {
     MyTerm->LOption("Generate 50 XP Ticks", 35);
     MyTerm->LOption("Change terrain type", 36);
 	MyTerm->LOption("View glyphs", 37);
+    MyTerm->LOption("Create Altar", 38);
 
     switch(MyTerm->LMenu(MENU_ESC|MENU_BORDER|MENU_2COLS,"Wizard Mode Options:",WIN_MENUBOX)) {
     case -1:
@@ -1048,6 +1049,31 @@ Restart:
             t->PlaceAt(m,e.EXVal,e.EYVal);
         } else IPrint("Aborting Trap Summoning.");
         break;
+    case 38: {
+        /* Put an altar of a named god under the player. This exists so the
+           religion code can be exercised on demand: a sacrifice needs the
+           player to be standing on an altar, and the only other way to get
+           one is to walk the dungeon until MakeLev's random assignment
+           (src/MakeLev.cpp:2093-2105) happens to place the god you want. It
+           creates the feature exactly the way MakeLev.cpp:1123-1125 does. */
+        rID aID; Feature *ft;
+        MyTerm->SetWin(WIN_INPUT);
+        MyTerm->Color(YELLOW);
+        MyTerm->Write(0,0,"Enter God Name: ");
+        MyTerm->Color(MAGENTA);
+        MyTerm->ReadLine();
+        MyTerm->Clear();
+        xID = FIND(MyTerm->GetTypedString());
+        if (!xID || RES(xID)->Type != T_TGOD)
+          { IPrint("Can't find god."); break; }
+        aID = FIND("altar");
+        if (!aID)
+          { IPrint("Can't find the altar feature."); break; }
+        ft = new Feature(TFEAT(aID)->Image, aID, T_FEATURE);
+        ft->GainPermStati(MY_GOD, NULL, SS_MISC, 0, 0, xID);
+        ft->PlaceAt(m, x, y);
+        IPrint(Format("Created an altar to %s.", NAME(xID)));
+        } break;
     case 23:       
         /*
         bool mul; int16 mt, dp;
