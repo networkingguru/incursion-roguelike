@@ -59,3 +59,6 @@ src/Target.cpp:903	getLeader
 src/Feature.cpp:858	SaveGame
 src/Debug.cpp:805	DUN_DEPTH
 src/Skills.cpp:4161	MoveDepth(m->Depth + 1, true)
+src/Display.cpp:131	Remove(false)
+src/Status.cpp:675	CH_DOMINATE
+src/Social.cpp:2414	TargetSummoner
