@@ -16,6 +16,9 @@ __ZN8Creature14TerrainEffectsEv
     000000010011152c sub sp, sp, #0x460
 ```
 
+Each function opens with the same register save, `stp x28, x27, [sp, #-0x60]!`,
+which is the 0x60 term below; the `sub sp` immediate is the locals.
+
     Player::MoveDepth          0x60 +  0x230 =  656
     Thing::PlaceAt             0x60 +  0x1b0 =  528
     Creature::TerrainEffects   0x60 +  0x460 = 1216
@@ -68,3 +71,9 @@ sources. Two builds that differ in more than one thing cannot measure one thing.
 The A/B above changes exactly one keyword, and 512 is both the measured delta
 and the size the array must have. Anyone re-deriving these figures should build
 the pair rather than compare whatever binaries are lying around.
+
+__ZN5Thing7PlaceAtEP3Mapssb (incursion-ship)
+    0000000100042dbc stp x28, x27, [sp, #-0x60]!
+
+__ZN8Creature14TerrainEffectsEv (incursion-ship)
+    0000000100111510 stp x28, x27, [sp, #-0x60]!

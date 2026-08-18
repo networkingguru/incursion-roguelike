@@ -95,13 +95,20 @@ that first leader-type target -- not merely present in the list.
 
 That covers summoned creatures, animal companions and mounts, all of which
 reach it through `Monster::MakeCompanion` adding `TargetSummoner`
-(`src/Social.cpp:2414`) rather than through any `ANIMAL_COMPANION` stati. It
-also covers dominated, allied and commanded creatures: `Status.cpp:673-676`
-routes exactly `CH_DOMINATE`, `CH_ALLY` and `CH_COMMAND` into `MakeCompanion`.
-A creature under plain `CH_CHARM` gets no leader-type target and is not
-collected. A sixth review pass claimed domination and command do not qualify;
-the `Status.cpp` routing above is why that is wrong, and it is recorded here so
-the question is not re-opened a third time. Creatures created
+(`src/Social.cpp:2414`) rather than through any `ANIMAL_COMPANION` stati. No charmed creature is collected, whatever the value.
+`Status.cpp:675` does route `CH_DOMINATE`, `CH_ALLY` and `CH_COMMAND` into
+`MakeCompanion`, which adds the `TargetSummoner` -- and then `:677` calls
+`ts.removeCreatureTarget(player, TargetAny)` on the very next line, which
+invalidates every entry naming the player, the new one included
+(`Target.cpp:1036-1042`), after which `Retarget(force)` rebuilds the list
+skipping invalid entries (`:1264-1282`).
+
+An earlier version of this file said the opposite and told future readers not to
+re-open the question. That was wrong twice over: the conclusion, and the idea
+that a note can settle something two lines of code decide. The wizard command
+used by `tools/keys/followers.keys` -- 'Make Player Master of Monster',
+`Debug.cpp:1019` -- calls `MakeCompanion` directly and never passes through
+`Status.cpp:677`, which is why the measured runs collect their followers. Creatures created
 together — a summoned group, an encounter — are appended to `Things` together,
 which is exactly the adjacency the defect needs. Nothing tells the player that
 anything was left behind.
