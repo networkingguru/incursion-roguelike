@@ -35,6 +35,26 @@
 
 #include "Incursion.h"
 
+#ifdef INCURSION_OOB_PROBE
+/* inc-5xn / upstream issue #40, diagnostic only. Defined in src/Display.cpp. */
+extern void OobProbeRmDouble(int x1,int y1,int x2,int y2,int sx,int sy);
+extern void OobProbeRmOuter(int x1,int y1,int x2,int y2,int sx,int sy);
+extern void OobProbeDoor(int x,int y,int sizeX,int sizeY);
+extern void OobProbeDoorPlaced(int rawx,int rawy,int sizeX,int sizeY,
+                               int tx,int ty,
+                               int featBefore,int doorAfter,
+                               int rx1,int ry1,int rx2,int ry2);
+extern int  OobProbeDoorNoteCount(void);
+extern void OobProbeDoorNoteGet(int i,int *rawx,int *rawy,int *tx,int *ty);
+extern void OobProbeDoorNoteRoom(int i,int *rx1,int *ry1,int *rx2,int *ry2);
+extern void OobProbeDoorNoteClear(void);
+extern void OobProbeNote(const char *line);
+extern void OobProbeRoomRecord(int rx1,int ry1,int rx2,int ry2);
+extern int  OobProbeRoomCount(void);
+extern void OobProbeRoomGet(int i,int *rx1,int *ry1,int *rx2,int *ry2,int *inverted);
+extern void OobProbeRoomClear(void);
+#endif
+
 static LocationInfo * GridBackup;
 
 Fraction Map::slope1, Map::slope2, Map::slope3, Map::test;
@@ -2369,6 +2389,100 @@ RestartVerifyMon:
         }
     }
 
+#ifdef INCURSION_OOB_PROBE
+    /* inc-b5b: print the FINISHED level around every door that was built at a
+       truncated coordinate, so the artefact can be seen rather than argued.
+       '+' is the door in question, 'd' another door, '#' solid, '.' open. */
+    if (OobProbeDoorNoteCount()) {
+        char obline[256];
+        int obi, obdx, obdy, obx, oby, obn;
+        for (obi = 0; obi < OobProbeDoorNoteCount(); obi++) {
+            int obrx, obry, obtx, obty;
+            OobProbeDoorNoteGet(obi, &obrx, &obry, &obtx, &obty);
+            snprintf(obline, sizeof(obline),
+                "DOOR_MAP door at (%d,%d) came from raw (%d,%d); 13x9 of the finished level:",
+                obtx, obty, obrx, obry);
+            OobProbeNote(obline);
+            for (obdy = -4; obdy <= 4; obdy++) {
+                obn = 0;
+                for (obdx = -6; obdx <= 6; obdx++) {
+                    obx = obtx + obdx; oby = obty + obdy;
+                    if (obx < 0 || oby < 0 || obx >= sizeX || oby >= sizeY)
+                        obline[obn++] = ' ';
+                    else if (FDoorAt((int16)obx, (int16)oby))
+                        obline[obn++] = (obdx == 0 && obdy == 0) ? '+' : 'd';
+                    else if (SolidAt((int16)obx, (int16)oby))
+                        obline[obn++] = '#';
+                    else
+                        obline[obn++] = '.';
+                }
+                obline[obn] = 0;
+                OobProbeNote(obline);
+            }
+            /* And the room this door was meant to belong to, in the finished
+               level: 24 wide by 14 tall around its centre. */
+            { int obq1, obq2, obq3, obq4, obcx, obcy;
+              OobProbeDoorNoteRoom(obi, &obq1, &obq2, &obq3, &obq4);
+              obcx = (obq1 + obq3) / 2; obcy = (obq2 + obq4) / 2;
+              snprintf(obline, sizeof(obline),
+                  "ROOM_MAP the room it belonged to was (%d,%d)-(%d,%d); 25x15 of the finished level around (%d,%d):",
+                  obq1, obq2, obq3, obq4, obcx, obcy);
+              OobProbeNote(obline);
+              for (obdy = -7; obdy <= 7; obdy++) {
+                  obn = 0;
+                  for (obdx = -12; obdx <= 12; obdx++) {
+                      obx = obcx + obdx; oby = obcy + obdy;
+                      if (obx < 0 || oby < 0 || obx >= sizeX || oby >= sizeY)
+                          obline[obn++] = ' ';
+                      else if (FDoorAt((int16)obx, (int16)oby))
+                          obline[obn++] = 'd';
+                      else if (SolidAt((int16)obx, (int16)oby))
+                          obline[obn++] = '#';
+                      else
+                          obline[obn++] = '.';
+                  }
+                  obline[obn] = 0;
+                  OobProbeNote(obline);
+              }
+            }
+        }
+        OobProbeDoorNoteClear();
+    }
+    /* Every inner rectangle the double-room case produced this level, healthy
+       and inverted alike, printed on the finished map. */
+    if (OobProbeRoomCount()) {
+        char obline[256];
+        int obi, obdx, obdy, obx, oby, obn;
+        for (obi = 0; obi < OobProbeRoomCount(); obi++) {
+            int obq1, obq2, obq3, obq4, obinv, obcx, obcy;
+            OobProbeRoomGet(obi, &obq1, &obq2, &obq3, &obq4, &obinv);
+            obcx = (obq1 + obq3) / 2; obcy = (obq2 + obq4) / 2;
+            snprintf(obline, sizeof(obline),
+                "INNER_ROOM %s rect=(%d,%d)-(%d,%d) %dx%d; 25x15 of the finished level around (%d,%d):",
+                obinv ? "INVERTED" : "healthy", obq1, obq2, obq3, obq4,
+                obq3 - obq1, obq4 - obq2, obcx, obcy);
+            OobProbeNote(obline);
+            for (obdy = -7; obdy <= 7; obdy++) {
+                obn = 0;
+                for (obdx = -12; obdx <= 12; obdx++) {
+                    obx = obcx + obdx; oby = obcy + obdy;
+                    if (obx < 0 || oby < 0 || obx >= sizeX || oby >= sizeY)
+                        obline[obn++] = ' ';
+                    else if (FDoorAt((int16)obx, (int16)oby))
+                        obline[obn++] = 'd';
+                    else if (SolidAt((int16)obx, (int16)oby))
+                        obline[obn++] = '#';
+                    else
+                        obline[obn++] = '.';
+                }
+                obline[obn] = 0;
+                OobProbeNote(obline);
+            }
+        }
+        OobProbeRoomClear();
+    }
+#endif
+
     inGenerate = false;
 
     T1->SetWin(WIN_INPUT);
@@ -2818,10 +2932,19 @@ DoBasicRoom:
             r.x1 += 2; r.y1 += 2;
             r.x2 -= 2; r.y2 -= 2;
         } else {
+#ifdef INCURSION_OOB_PROBE
+            OobProbeRmOuter(r.x1,r.y1,r.x2,r.y2,sx,sy);
+#endif
             r.x1 += 2; r.x2 -= 2;
             r.y1 += 2; r.y2 -= 2;
             sx -= 4 + random(5);
             sy -= 4 + random(5);
+#ifdef INCURSION_OOB_PROBE
+            /* inc-5xn, diagnostic only: capture the two unchecked steps that
+               feed PlaceWithin -- the shrink by two on every side, and sx/sy
+               reduced with no floor and then cast to uint8. */
+            OobProbeRmDouble(r.x1,r.y1,r.x2,r.y2,sx,sy);
+#endif
             r = r.PlaceWithin((uint8)sx, (uint8)sy);
         }
         if (r.x1 + 1 == r.x2) {
@@ -2832,6 +2955,9 @@ DoBasicRoom:
         }
 
         WallID = TREG(regID)->Walls;
+#ifdef INCURSION_OOB_PROBE
+        OobProbeRoomRecord(r.x1, r.y1, r.x2, r.y2);
+#endif
         for (x = r.x1; x <= r.x2; x++) {
             WriteAt(r, x, r.y1, WallID, regID, PRIO_PILLARS);
             WriteAt(r, x, r.y2, WallID, regID, PRIO_PILLARS);
@@ -2851,7 +2977,30 @@ DoBasicRoom:
                 x = r.x1 + random(r.x2 - r.x1);
                 y = random(2) ? r.y1 : r.y2;
             }
+#ifdef INCURSION_OOB_PROBE
+            /* inc-5xn: MakeDoor takes uint8 and FDoorAt takes int16. When the
+               inverted rectangle makes y garbage, the truncation can land back
+               inside the map -- so a door is built at an arbitrary square with
+               no assert and no log -- while FDoorAt sees the raw value, fails,
+               and no floor is carved. Measure both halves. */
+            OobProbeDoor(x, y, sizeX, sizeY);
+            { /* inc-b5b: the arguments are not the effect. MakeDoor returns
+                 early when a feature already stands there, so read the square
+                 before and after to see whether a door really appeared. The
+                 square to read is where the door LANDS: the (uint8) truncation,
+                 and then Thing::PlaceAt's own repair to (1,1) when even that is
+                 off the map (src/Display.cpp, 'Patch to prevent crashes'). */
+              int obtx = (int)(uint8)x, obty = (int)(uint8)y, obFeatBefore;
+              if (!InBounds((int16)obtx, (int16)obty))
+                { obtx = 1; obty = 1; }
+              obFeatBefore = FFeatureAt((int16)obtx, (int16)obty) ? 1 : 0;
+              MakeDoor((uint8)x, (uint8)y, TREG(regID)->Door);
+              OobProbeDoorPlaced(x, y, sizeX, sizeY, obtx, obty, obFeatBefore,
+                  FDoorAt((int16)obtx, (int16)obty) ? 1 : 0,
+                  r.x1, r.y1, r.x2, r.y2); }
+#else
             MakeDoor((uint8)x, (uint8)y, TREG(regID)->Door);
+#endif
             if (FDoorAt(x, y))
                 WriteAt(r, x, y, TREG(regID)->Floor, regID, PRIO_FEATURE_FLOOR);
         } while (random(3));
@@ -2938,10 +3087,20 @@ DoBasicRoom:
         {
             bool anything = false;
             FindOpenAreas(cPanel, regID, 0);
+#ifdef INCURSION_OOB_RECTFIX
+            /* inc-5xn, experiment only: the same test on the y extent that the
+               line below already makes on x. Built both ways to measure what
+               the inverted rect costs the player. */
+            if (r.x1 < r.x2 && r.y1 < r.y2) { anything = true; FurnishArea(r); }
+            if (r2.x1 < r2.x2 && r2.y1 < r2.y2) { anything = true; FurnishArea(r2); }
+            if (r3.x1 < r3.x2 && r3.y1 < r3.y2) { anything = true; FurnishArea(r3); }
+            if (r4.x1 < r4.x2 && r4.y1 < r4.y2) { anything = true; FurnishArea(r4); }
+#else
             if (r.x1 < r.x2) { anything = true; FurnishArea(r); }
             if (r2.x1 < r2.x2) { anything = true; FurnishArea(r2); }
             if (r3.x1 < r3.x2) { anything = true; FurnishArea(r3); }
             if (r4.x1 < r4.x2) { anything = true; FurnishArea(r4); }
+#endif
 
             if (!anything)
                 FurnishArea(NULL_RECT);
@@ -3021,7 +3180,18 @@ void Map::FurnishArea(Rect &r) {
 
     /* Macro to _quickly_ give us a random open point
        in the room or subroom we're supposed to fill. */
+    /* inc-5xn / upstream issue #40, diagnostic only. */
+#ifdef INCURSION_OOB_PROBE
+    extern void OobProbeRect(int line, int x1, int y1, int x2, int y2);
+    #define OOB_RECT_CHECK OobProbeRect(__LINE__,r.x1,r.y1,r.x2,r.y2);
+    extern void OobProbeGaveUp(void);
+    #define OOB_GAVE_UP OobProbeGaveUp();
+#else
+    #define OOB_RECT_CHECK
+    #define OOB_GAVE_UP
+#endif
     #define RANDOM_OPEN                          \
+      OOB_RECT_CHECK                             \
       roCount = 0;                               \
       do {                                       \
         if (r.x2) {                              \
@@ -3035,7 +3205,7 @@ void Map::FurnishArea(Rect &r) {
           }                                      \
         roCount++;                               \
         if (roCount == 100)                      \
-          { x = -1; break; }                     \
+          { x = -1; OOB_GAVE_UP break; }         \
         }                                        \
       while(SolidAt(x,y) || TTER(TerrainAt(x,y))->HasFlag(TF_FALL) || \
                             TTER(TerrainAt(x,y))->HasFlag(TF_DEEP_LIQ));   

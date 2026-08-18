@@ -1,0 +1,32 @@
+=== session 2026-08-18 11:38:33  Incursion 0.6.9Y19 headless  built Aug 18 2026 11:37:31 ===
+2026-08-18 11:38:33  Registry::Get -- invalid object handle (55538)!
+    --- first occurrence, call stack ---
+    0   incursion-oob-widen                 0x00000001004df2d4 _Z8LogErrorPKcS0_S0_ + 332
+    1   incursion-oob-widen                 0x000000010064e5e8 _Z5ErrorPKcz + 220
+    2   incursion-oob-widen                 0x00000001005ac2d8 _ZN8Registry3GetEi + 188
+    3   incursion-oob-widen                 0x00000001005ed400 _ZN12TargetSystem14hasTargetThingEP5Thing + 112
+    4   incursion-oob-widen                 0x0000000100581968 _ZN7Monster12ChooseActionEv + 616
+    5   incursion-oob-widen                 0x000000010053f0a0 _ZN4Game4PlayEv + 2692
+    6   incursion-oob-widen                 0x0000000100549378 _ZN4Game9StartMenuEv + 136
+    7   incursion-oob-widen                 0x000000010064e3f4 main + 860
+    8   dyld                                0x0000000183babe00 start + 6992
+    --- end ---
+2026-08-18 11:38:33  Registry::Get -- invalid object handle (55538)!
+2026-08-18 11:38:33  Registry::Get -- invalid object handle (55538)!
+2026-08-18 11:38:34  ASSERT failed: 'InBounds(x,y)' in file inc/Map.h, line 223.
+    --- first occurrence, call stack ---
+    0   incursion-oob-widen                 0x00000001004df2d4 _Z8LogErrorPKcS0_S0_ + 332
+    1   incursion-oob-widen                 0x000000010064e5e8 _Z5ErrorPKcz + 220
+    2   incursion-oob-widen                 0x00000001004a2b6c _ZN3Map7FieldAtEssj + 356
+    3   incursion-oob-widen                 0x00000001004a28b8 _ZN3Map11MakeNoiseXYEsss + 68
+    4   incursion-oob-widen                 0x00000001005389a8 _ZN8Creature4CastER9EventInfo + 5960
+    5   incursion-oob-widen                 0x00000001004e05d4 _Z7ThrowToR9EventInfoP6Object + 500
+    6   incursion-oob-widen                 0x00000001004dfe2c _Z10ThrowEventR9EventInfo + 2412
+    7   incursion-oob-widen                 0x00000001004e0718 _Z9RealThrowR9EventInfo + 252
+    8   incursion-oob-widen                 0x00000001004e0d48 _Z8ThrowEffsjP6ObjectS0_S0_S0_ + 148
+    9   incursion-oob-widen                 0x00000001005857ac _ZN7Monster12ChooseActionEv + 16556
+    10  incursion-oob-widen                 0x000000010053f0a0 _ZN4Game4PlayEv + 2692
+    11  incursion-oob-widen                 0x0000000100549378 _ZN4Game9StartMenuEv + 136
+    12  incursion-oob-widen                 0x000000010064e3f4 main + 860
+    13  dyld                                0x0000000183babe00 start + 6992
+    --- end ---

@@ -1,0 +1,123 @@
+{"app_name":"incursion-oob-widen","timestamp":"2026-08-18 11:38:34.00 -0400","app_version":"","slice_uuid":"9534addb-2cb1-32ce-9db1-6bd4e6cbf3c2","build_version":"","platform":1,"share_with_app_devs":0,"is_first_party":1,"bug_type":"309","os_version":"macOS 26.5.2 (25F84)","roots_installed":0,"incident_id":"80B6B733-2749-4ACA-824B-D7AD055F9677","name":"incursion-oob-widen"}
+{
+  "uptime" : 280000,
+  "procRole" : "Unspecified",
+  "version" : 2,
+  "userID" : 501,
+  "deployVersion" : 210,
+  "modelCode" : "Mac16,13",
+  "coalitionID" : 697,
+  "osVersion" : {
+    "train" : "macOS 26.5.2",
+    "build" : "25F84",
+    "releaseType" : "User"
+  },
+  "captureTime" : "2026-08-18 11:38:34.2792 -0400",
+  "codeSigningMonitor" : 2,
+  "incident" : "80B6B733-2749-4ACA-824B-D7AD055F9677",
+  "pid" : 17970,
+  "translated" : false,
+  "cpuType" : "ARM-64",
+  "procLaunch" : "2026-08-18 11:38:33.5729 -0400",
+  "procStartAbsTime" : 6958658047158,
+  "procExitAbsTime" : 6958674944170,
+  "procName" : "incursion-oob-widen",
+  "procPath" : "\/Users\/USER\/*\/incursion-oob-widen",
+  "parentProc" : "bash",
+  "parentPid" : 17959,
+  "coalitionName" : "com.mitchellh.ghostty",
+  "crashReporterKey" : "F448512C-DFA9-8DCC-B9EE-EA8A02D3BFE8",
+  "appleIntelligenceStatus" : {"state":"available"},
+  "developerMode" : 1,
+  "responsiblePid" : 643,
+  "responsibleProc" : "ghostty",
+  "codeSigningID" : "incursion-oob-widen",
+  "codeSigningTeamID" : "",
+  "codeSigningFlags" : 570556929,
+  "codeSigningValidationCategory" : 10,
+  "codeSigningTrustLevel" : 4294967295,
+  "codeSigningAuxiliaryInfo" : 0,
+  "instructionByteStream" : {"beforePC":"YPz\/VCAAgFISAAAUyA4A8Ai9I5HpG4BS6CcAqcAOAPAA7CKRaa4GlA==","atPC":"iCJAeQI9ABODJsB54AMWquEDFapDhQCUiA5A+QgZQDno+Dc3AACAUg=="},
+  "bootSessionUUID" : "09D98AF9-EB95-4727-B72C-0789AD89A666",
+  "wakeTime" : 21005,
+  "sleepWakeUUID" : "ADFE9B55-7235-44F0-90FB-9F35C862D1D2",
+  "sip" : "enabled",
+  "vmRegionInfo" : "0x10 is not in any region.  Bytes before following region: 4299653104\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      UNUSED SPACE AT START\n--->  \n      __TEXT                      100478000-1006f0000    [ 2528K] r-x\/r-x SM=COW  \/Users\/USER\/*\/incursion-oob-widen",
+  "exception" : {"codes":"0x0000000000000001, 0x0000000000000010","rawCodes":[1,16],"type":"EXC_BAD_ACCESS","signal":"SIGSEGV","subtype":"KERN_INVALID_ADDRESS at 0x0000000000000010"},
+  "termination" : {"flags":0,"code":11,"namespace":"SIGNAL","indicator":"Segmentation fault: 11","byProc":"exc handler","byPid":17970},
+  "vmregioninfo" : "0x10 is not in any region.  Bytes before following region: 4299653104\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      UNUSED SPACE AT START\n--->  \n      __TEXT                      100478000-1006f0000    [ 2528K] r-x\/r-x SM=COW  \/Users\/USER\/*\/incursion-oob-widen",
+  "extMods" : {"caller":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"system":{"thread_create":0,"thread_set_state":8440,"task_for_pid":856},"targeted":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"warnings":0},
+  "faultingThread" : 0,
+  "threads" : [{"triggered":true,"id":23000155,"threadState":{"x":[{"value":77},{"value":0},{"value":73896},{"value":6167209029},{"value":4301790990},{"value":6167210320},{"value":10},{"value":18446726482597246976},{"value":13974315765581807734},{"value":13974315765581807734},{"value":2},{"value":4294967293},{"value":0},{"value":0},{"value":0},{"value":0},{"value":6508668440,"symbolLocation":0,"symbol":"__error"},{"value":8346333016},{"value":0},{"value":4096},{"value":0},{"value":4294967295},{"value":4294967295},{"value":86},{"value":304},{"value":4232},{"value":0},{"value":0},{"value":4303566904,"symbolLocation":0,"symbol":"theGame"}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4299828076},"cpsr":{"value":1610612736},"fp":{"value":6167211968},"sp":{"value":6167211888},"esr":{"value":2449473542,"description":"(Data Abort) byte read Translation fault"},"pc":{"value":4299828076,"matchesCrashFrame":1},"far":{"value":16}},"queue":"com.apple.main-thread","frames":[{"symbol":"Map::At(short, short)","inline":true,"imageIndex":0,"imageOffset":174956,"symbolLocation":28,"sourceLine":227,"sourceFile":"Map.h"},{"imageOffset":174956,"sourceLine":408,"sourceFile":"Inline.h","symbol":"Map::FieldAt(short, short, unsigned int)","imageIndex":0,"symbolLocation":356},{"imageOffset":174264,"sourceLine":314,"sourceFile":"Creature.cpp","symbol":"Map::MakeNoiseXY(short, short, short)","imageIndex":0,"symbolLocation":68},{"imageOffset":788904,"sourceLine":2671,"sourceFile":"Magic.cpp","symbol":"Creature::Cast(EventInfo&)","imageIndex":0,"symbolLocation":5960},{"imageOffset":427476,"sourceLine":382,"sourceFile":"Event.cpp","symbol":"ThrowTo(EventInfo&, Object*)","imageIndex":0,"symbolLocation":500},{"imageOffset":425516,"sourceLine":341,"sourceFile":"Event.cpp","symbol":"ThrowEvent(EventInfo&)","imageIndex":0,"symbolLocation":2412},{"imageOffset":427800,"sourceLine":444,"sourceFile":"Event.cpp","symbol":"RealThrow(EventInfo&)","imageIndex":0,"symbolLocation":252},{"imageOffset":429384,"sourceLine":595,"sourceFile":"Event.cpp","symbol":"ThrowEff(short, unsigned int, Object*, Object*, Object*, Object*)","imageIndex":0,"symbolLocation":148},{"imageOffset":1103788,"sourceLine":1388,"sourceFile":"Monster.cpp","symbol":"Monster::ChooseAction()","imageIndex":0,"symbolLocation":16556},{"imageOffset":815264,"sourceLine":342,"sourceFile":"Main.cpp","symbol":"Game::Play()","imageIndex":0,"symbolLocation":2692},{"imageOffset":856952,"sourceFile":"Main.cpp","symbol":"Game::StartMenu()","symbolLocation":136,"imageIndex":0},{"imageOffset":1926132,"sourceLine":574,"sourceFile":"Wposix.cpp","symbol":"main","imageIndex":0,"symbolLocation":860},{"imageOffset":130560,"symbol":"start","symbolLocation":6992,"imageIndex":1}]}],
+  "usedImages" : [
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4299653120,
+    "size" : 2588672,
+    "uuid" : "9534addb-2cb1-32ce-9db1-6bd4e6cbf3c2",
+    "path" : "\/Users\/USER\/*\/incursion-oob-widen",
+    "name" : "incursion-oob-widen"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6504890368,
+    "size" : 680472,
+    "uuid" : "f924bdd3-4365-3466-9580-8b1b3fa8f857",
+    "path" : "\/usr\/lib\/dyld",
+    "name" : "dyld"
+  },
+  {
+    "size" : 0,
+    "source" : "A",
+    "base" : 0,
+    "uuid" : "00000000-0000-0000-0000-000000000000"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6508662784,
+    "size" : 250544,
+    "uuid" : "fca53b98-3d6a-38b2-a0ec-df0f7e05f171",
+    "path" : "\/usr\/lib\/system\/libsystem_kernel.dylib",
+    "name" : "libsystem_kernel.dylib"
+  }
+],
+  "sharedCache" : {
+  "base" : 6503759872,
+  "size" : 5990973440,
+  "uuid" : "157e6d2e-2e5c-39b1-8f2a-8866ee228bed"
+},
+  "vmSummary" : "ReadOnly portion of Libraries: Total=582.1M resident=0K(0%) swapped_out_or_unallocated=582.1M(100%)\nWritable regions: Total=173.0M written=304K(0%) resident=304K(0%) swapped_out=0K(0%) unallocated=172.7M(100%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nKernel Alloc Once                   32K        1 \nMALLOC                            93.8M       28 \nMALLOC guard page                 3728K        4 \nMemory Tag 22                     64.0M        1 \nSTACK GUARD                       56.0M        1 \nStack                             8176K        1 \n__AUTH                              35K       13 \n__AUTH_CONST                       225K       47 \n__DATA                            7376K       36 \n__DATA_CONST                       150K       45 \n__DATA_DIRTY                       154K       36 \n__LINKEDIT                       573.3M        2 \n__OBJC_RO                         79.1M        1 \n__OBJC_RW                         2598K        1 \n__TEXT                            8928K       48 \n__TPRO_CONST                       128K        2 \npage table in kernel               304K        1 \nshared memory                       48K        2 \n===========                     =======  ======= \nTOTAL                            897.5M      270 \n",
+  "legacyInfo" : {
+  "threadTriggered" : {
+    "queue" : "com.apple.main-thread"
+  }
+},
+  "logWritingSignature" : "13f0955d0c2fc4ff2f3cb9c240c48b6c44b820be",
+  "roots_installed" : 0,
+  "bug_type" : "309",
+  "trmStatus" : 1,
+  "trialInfo" : {
+  "rollouts" : [
+    {
+      "rolloutId" : "5fb4245a1bbfe8005e33a1e1",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 240000021
+    },
+    {
+      "rolloutId" : "645eb1d0417dab722a215927",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 240000005
+    }
+  ],
+  "experiments" : [
+
+  ]
+}
+}

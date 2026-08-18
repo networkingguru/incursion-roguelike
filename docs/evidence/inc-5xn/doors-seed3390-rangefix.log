@@ -1,0 +1,17 @@
+START build=guarded (issue #40 fix)
+PWS_SHORT panel=(64,64)-(95,95) 31x31 asked=25x31 placed=(67,66)-(92,97) 25x31 -> clamped=(67,66)-(92,93) 25x27  fired: x1=no y1=no x2=no y2=YES
+PWS_SHORT panel=(32,32)-(63,63) 31x31 asked=30x30 placed=(34,34)-(64,64) 30x30 -> clamped=(34,34)-(61,61) 27x27  fired: x1=no y1=no x2=YES y2=YES
+PWS_SHORT panel=(64,64)-(95,95) 31x31 asked=25x28 placed=(67,66)-(92,94) 25x28 -> clamped=(67,66)-(92,93) 25x27  fired: x1=no y1=no x2=no y2=YES
+PWS_SHORT panel=(96,32)-(127,63) 31x31 asked=28x27 placed=(98,34)-(126,61) 28x27 -> clamped=(98,34)-(125,61) 27x27  fired: x1=no y1=no x2=YES y2=no
+PWS_SHORT panel=(32,0)-(63,31) 31x31 asked=25x30 placed=(34,2)-(59,32) 25x30 -> clamped=(34,2)-(59,29) 25x27  fired: x1=no y1=no x2=no y2=YES
+PWS_SHORT panel=(96,32)-(127,63) 31x31 asked=30x26 placed=(98,34)-(128,60) 30x26 -> clamped=(98,34)-(125,60) 27x26  fired: x1=no y1=no x2=YES y2=no
+PWS_SHORT panel=(96,64)-(127,95) 31x31 asked=27x29 placed=(98,66)-(125,95) 27x29 -> clamped=(98,66)-(125,93) 27x27  fired: x1=no y1=no x2=no y2=YES
+TOTALS atexit   oob_calls=0 would_return_thing=0 ambushes=0
+DOORS calls=5 raw_out_of_bounds=0 silently_placed_in_bounds=0 built=0 blocked_by_existing_feature=0 outside_intended_room=0
+PWS_GEOM panel=(64,64)-(95,95) 31x31  asked=25x31  before_clamp=(67,66)-(92,97) 25x31  after_clamp=(67,66)-(92,93) 25x27  clamps_fired: x1=no y1=no x2=no y2=YES
+RM_OUTER none flattened
+RM_DOUBLE inner_room_calls=0 area_squeezed_flat=0 requested_size_negative=0
+PLACEWITHIN_PLAIN calls=0 returned_inverted=0
+PLACEWITHIN calls=45 returned_inverted=0
+RECTS random_open_calls=453 inverted=0 gave_up=0 worst_dx=0 worst_dy=0 first_at_line=0 first_rect=(0,0)-(0,0)
+CENSUS out_of_bounds_At_calls=0 distinct_stacks=0 uncounted_over_cap=0

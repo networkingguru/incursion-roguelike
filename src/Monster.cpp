@@ -29,6 +29,25 @@
 
 #include "Incursion.h"
 
+#ifdef INCURSION_OOB_PROBE
+/* Diagnostic only, for bead inc-5xn and upstream issue #40. Defined in
+   src/Display.cpp, beside the guard this probe measures. Records the case
+   rmtew asked about: a hiding monster that picked its ambush victim out of a
+   square that is not on the map. Delete with the Display.cpp block. */
+extern void OobProbeAmbushed(Creature *hider, Creature *victim,
+                             int16 askx, int16 asky, const char *act);
+static const char *OobActName(int8 act)
+  {
+    switch (act)
+      {
+        case ACT_COUPDEGRACE: return "COUPDEGRACE";
+        case ACT_NATTACK:     return "NATTACK";
+        case ACT_WATTACK:     return "WATTACK";
+        default:              return "other";
+      }
+  }
+#endif
+
 bool thousandItemsError = false;
 
 ActionInfo Monster::Acts[64];
@@ -559,6 +578,9 @@ RestartTargetLoop:
 
     best = 0; bc = NULL;
     if (isHiding && !isEnraged) {
+#ifdef INCURSION_OOB_PROBE
+      bool bcOob = false; int16 bcAskX = 0, bcAskY = 0;
+#endif
       for(i=0;i!=8;i++)
         for (c = m->FCreatureAt(x+DirX[i],y+DirY[i]);c;
              c = m->NCreatureAt(x+DirX[i],y+DirY[i]))
@@ -567,6 +589,10 @@ RestartTargetLoop:
           {
             best = isHostileTo(c);
             bc = c;
+#ifdef INCURSION_OOB_PROBE
+            bcOob = !m->InBounds(x+DirX[i],y+DirY[i]);
+            bcAskX = x+DirX[i]; bcAskY = y+DirY[i];
+#endif
           }
       if (bc) {
         if (bc->HasStati(SLEEPING) || 
@@ -578,6 +604,11 @@ RestartTargetLoop:
           AddAct(ACT_NATTACK,P_URGENT,bc);
         else if (AttackMode() == S_MELEE)
           AddAct(ACT_WATTACK,P_URGENT,bc);
+#ifdef INCURSION_OOB_PROBE
+        if (bcOob)
+          OobProbeAmbushed(this,bc,bcAskX,bcAskY,
+              nAct ? OobActName(Acts[nAct-1].Act) : "none");
+#endif
       }
     }
 

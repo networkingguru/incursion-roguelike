@@ -37,8 +37,17 @@ compiler?
   bug fails here: `*((long*)&hm)` was harmless on Windows, because `long` is 4
   bytes there. Our typedef narrowing created the overrun.
 - **Yes** -> it is upstream's. Say what makes you certain. Best evidence is the
-  codebase arguing against itself: `Map::besideWall()` carries a comment about
-  the same out-of-bounds trap that `Monster::ChooseAction()` walks into.
+  codebase arguing against itself -- a comment or guard that shows a previous
+  maintainer met the same trap elsewhere.
+
+  The example that used to sit here was `Map::besideWall()`'s comment about an
+  out-of-bounds check, offered as evidence that `Monster::ChooseAction()` walks
+  into the same trap. **That was withdrawn on 2026-08-18** (inc-5xn): measurement
+  showed the ambush scan never made an out-of-bounds read in 79 sessions, and
+  `Creature::Walk` rejects the ring by coordinate. A comment proving somebody
+  once hit a trap does not prove the site you are blaming reaches it. Use such a
+  comment to establish the defect is upstream's, never to establish which caller
+  triggers it.
 
 ### 3. Blast radius
 
@@ -46,8 +55,14 @@ Two checks, both after the fix compiles:
 
 - **Siblings.** Grep every caller of the function you touched. Fixing the one
   call site named in the report, while a sibling has the same defect, is a
-  band-aid. Prefer the funnel: guarding `Map::GetAt()` fixed every unguarded
-  neighbour scan at once, not only `Monster::ChooseAction()`.
+  band-aid. Prefer the funnel where one exists.
+
+  The worked example here used to be `Map::GetAt()`, described as "the funnel
+  every accessor uses". **Both halves were wrong** (inc-5xn, 2026-08-18):
+  `Map::GetAt` walks a square's contents list, and the lookup that actually goes
+  out of bounds is `Map::At` beneath it, so guarding `GetAt` covered 8 reads out
+  of 47,962. Counting callers is not enough -- confirm the function you guard is
+  the one on the failing path.
 - **What is newly reachable.** A fix changes which branches run. Re-read the
   surrounding code and ask what now executes that did not before.
 
@@ -131,7 +146,7 @@ literal text that will be published.
 |---|---|---|---|
 | `Character::HasFeat` never read a race's Monster template, so players silently lost every racial feat that was not also an explicit `Grants:` entry -- 8 feats across 6 races (`src/Create.cpp`) | **Observed** -- same seed and key script; Dragonkin sheet had no Mantis Leap before, has it after | no | inc-2a0 |
 | Two empty hands produced one strike per swing forever, while two weapons produced two. `AttackMode()` returns `S_BRAWL` before the `S_DUAL` test is reached, so no feat could ever apply to fists (`src/Creature.cpp`, `src/Fight.cpp`) | **Observed** -- same seed; `Hit:2 / -3` and one Punch before, `Hit:2 / 2` and two Punches after | no | inc-dzz |
-| `Map::At()` answered an out-of-bounds query with the (0,0) square instead of failing, so monster AI read off the edge of the map 343 times in 13 seconds. Guarded at `Map::GetAt`, the funnel every accessor uses (`src/Display.cpp`) | **Observed** -- 444 error lines in 13s, then 0 across 877 turns | **yes**, rmtew#40 + #41, open | inc-f13 |
+| `Map::At()` answers an out-of-bounds query with the (0,0) square instead of failing. Guarded at `Map::GetAt` (`src/Display.cpp`). **The original claim -- that monster AI read off the map 343 times in 13 seconds -- is withdrawn**: measured 2026-08-18, the reads come from level generation and the guard covers 8 of 47,962 | **Observed**, but far smaller than first reported: 8 reads stopped, no player-visible change, byte-identical screen dumps | **yes**, rmtew#40 + #41, open; correction drafted | inc-f13, inc-5xn |
 | `TargetSystem::giveOrder` built its `Target` uninitialised, so an escort read stack garbage as the handle of the creature to follow. Two of the eight sites also left `damageDoneToMe` uninitialised, turning escorts hostile to their own leaders (`src/Target.cpp`) | **Observed** -- 250 seeds against a build differing in nothing else; asserts 89,545 -> 0, error lines 139,948 -> 48,245 | **yes**, rmtew#42, **MERGED** | inc-zmk |
 | `TargetSort` ordered targets tied on priority and type by subtracting the two objects' addresses, so the same seed played a different game on every launch. The only comparator in `src/` doing pointer arithmetic (`src/Target.cpp`) | **Observed** -- randomisation off: 30 of 30 runs identical; on: 4 of 15 diverged; p = 0.9% | **yes**, rmtew#44, open | inc-qik |
 | The `Falling` global was a raw `Creature*` carried across a level change. A faller that died on the way left it dangling, and the next creature the allocator placed on that address paid 3d6 per level it never fell (`src/Move.cpp`) | **Observed** -- seed 3, two layouts, same 204,218 draws: one rolled 6d6, the other did not. 40 of 40 seeds pass after; seed 3 failed a dozen attempts before | no | inc-yml |
@@ -192,8 +207,8 @@ AGENTS.md and CLAUDE.md remains the only thing that keeps this table current.
 | PR | Tier when sent | Status as of 2026-08-17 |
 |---|---|---|
 | [#42](https://github.com/rmtew/incursion-roguelike/pull/42) zero-initialise `Target` at its eight construction sites | **Observed** -- 89,545 asserts to 0 over 250 seeds, against a build differing in nothing else | **MERGED** 2026-08-15 |
-| [#41](https://github.com/rmtew/incursion-roguelike/pull/41) bounds-check `Map::GetAt()` | **Observed** -- 444 errors in 13s, then 0 across 877 turns | open, no comment or review since 2026-08-14 |
-| [#43](https://github.com/rmtew/incursion-roguelike/pull/43) `MoveDepth` re-entrancy | **Reasoned** -- sent as hardening, explicitly NOT as a crash fix, after the crash claim was retracted | open. **rmtew replied on 2026-08-15 with three technical questions and they are not yet answered.** See inc-upw.15 |
+| [#41](https://github.com/rmtew/incursion-roguelike/pull/41) bounds-check `Map::GetAt()` | **Tier as sent: Observed** -- 444 errors in 13s, then 0 across 877 turns. **That tier is withdrawn** (inc-5xn, 2026-08-18): the guard is in `GetAt` and those reads arrive through `Map::At` by another route, so it cannot have caused the difference. Re-measured: 8 reads of 47,962, no player-visible change | open. rmtew asked on 2026-08-15 what the player observes; a correction is drafted at `docs/outgoing/issue40-reply.md` and unsent |
+| [#43](https://github.com/rmtew/incursion-roguelike/pull/43) `MoveDepth` re-entrancy | **Reasoned** -- sent as hardening, explicitly NOT as a crash fix, after the crash claim was retracted | open. rmtew's three questions were answered 2026-08-18, [comment 5329016046](https://github.com/rmtew/incursion-roguelike/pull/43#issuecomment-5329016046). See inc-upw.15 |
 | [#44](https://github.com/rmtew/incursion-roguelike/pull/44) compare handles, not addresses, in `TargetSort` | **Observed** -- seed 8 went 1 divergence in 6 runs to 18 identical in 18; randomisation off gave 30 of 30 identical against 4 of 15 diverging with it on | sent 2026-08-16 |
 
 **Read the pattern before sending anything else.** The one that merged is the one

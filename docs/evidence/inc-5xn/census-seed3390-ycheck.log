@@ -1,0 +1,60 @@
+START build=unguarded (upstream behaviour)
+PWS_SHORT panel=(32,0)-(63,31) 31x31 asked=28x28 placed=(32,1)-(60,29) 28x28 -> clamped=(34,2)-(60,29) 26x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(32,32)-(63,63) 31x31 asked=13x9 placed=(32,44)-(45,53) 13x9 -> clamped=(34,44)-(45,53) 11x9  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(96,0)-(127,31) 31x31 asked=24x29 placed=(96,0)-(120,29) 24x29 -> clamped=(98,2)-(120,29) 22x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(32,32)-(63,63) 31x31 asked=23x25 placed=(33,32)-(56,57) 23x25 -> clamped=(34,34)-(56,57) 22x23  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(0,64)-(31,95) 31x31 asked=28x25 placed=(0,66)-(28,91) 28x25 -> clamped=(2,66)-(28,91) 26x25  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(64,96)-(95,127) 31x31 asked=12x9 placed=(65,104)-(77,113) 12x9 -> clamped=(66,104)-(77,113) 11x9  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(96,0)-(127,31) 31x31 asked=12x7 placed=(113,0)-(125,7) 12x7 -> clamped=(113,2)-(125,7) 12x5  fired: x1=no y1=YES x2=no y2=no
+PW_FIRED area=(115,4)-(123,5) want=7x1 would_be=(116,5)-(123,4) variant=none
+DOOR_SILENT raw=(116,-7151) truncated=(116,17) map=128x128  -> door built off-plan, FDoorAt fails on the raw value
+DOOR_SILENT raw=(123,14601) truncated=(123,9) map=128x128  -> door built off-plan, FDoorAt fails on the raw value
+PWS_SHORT panel=(0,0)-(31,31) 31x31 asked=24x27 placed=(2,1)-(26,28) 24x27 -> clamped=(2,2)-(26,28) 24x26  fired: x1=no y1=YES x2=no y2=no
+PWS_SHORT panel=(0,96)-(31,127) 31x31 asked=27x25 placed=(1,96)-(28,121) 27x25 -> clamped=(2,98)-(28,121) 26x23  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(32,0)-(63,31) 31x31 asked=30x27 placed=(32,0)-(62,27) 30x27 -> clamped=(34,2)-(61,27) 27x25  fired: x1=YES y1=YES x2=YES y2=no
+PWS_SHORT panel=(96,32)-(127,63) 31x31 asked=12x13 placed=(108,32)-(120,45) 12x13 -> clamped=(108,34)-(120,45) 12x11  fired: x1=no y1=YES x2=no y2=no
+TOTALS atexit   oob_calls=4 would_return_thing=0 ambushes=0
+DOORS calls=5 raw_out_of_bounds=3 silently_placed_in_bounds=2
+PWS_GEOM panel=(32,0)-(63,31) 31x31  asked=28x28  before_clamp=(32,1)-(60,29) 28x28  after_clamp=(34,2)-(60,29) 26x27  clamps_fired: x1=YES y1=YES x2=no y2=no
+RM_OUTER first flattened: outer_room=(113,2)-(125,7) 12x5 asked_for=12x7 -> after shrink 8x1
+RM_DOUBLE inner_room_calls=2 area_squeezed_flat=1 requested_size_negative=0  first: area=(115,4)-(123,5) want=7x1 (as uint8: 7x1)
+PLACEWITHIN_PLAIN calls=2 returned_inverted=1  first: area=(115,4)-(123,5) want=7x1 -> rect=(116,5)-(123,4)
+PLACEWITHIN calls=34 returned_inverted=0
+RECTS random_open_calls=178 inverted=0 gave_up=0 worst_dx=0 worst_dy=0 first_at_line=0 first_rect=(0,0)-(0,0)
+CENSUS out_of_bounds_At_calls=8 distinct_stacks=4 uncounted_over_cap=0
+
+  3 calls  (37.50% of 8)  x=116..123 y=-25691..14601 map=128x128
+    1   incursion-oob-ycheck                0x0000000100bf99cc _ZN3Map5GetAtEsssb + 356
+    2   incursion-oob-ycheck                0x0000000100c9409c _ZN3Map9DrawPanelEhhj + 12036
+    3   incursion-oob-ycheck                0x0000000100c89030 _ZN3Map8GenerateEjsPS_a + 6768
+    4   incursion-oob-ycheck                0x0000000100c17564 _ZN4Game13GetDungeonMapEjsP6PlayerP3Map + 880
+    5   incursion-oob-ycheck                0x0000000100c19f9c _ZN6Player9MoveDepthEsb + 892
+    6   incursion-oob-ycheck                0x0000000100beae54 _ZN6Player13WizardOptionsEv + 11668
+    7   incursion-oob-ycheck                0x0000000100cc72c0 _ZN6Player12ChooseActionEv + 3228
+
+  3 calls  (37.50% of 8)  x=116..123 y=-25691..14601 map=128x128
+    1   incursion-oob-ycheck                0x0000000100bf9d3c _ZN3Map5GetAtEsssb + 1236
+    2   incursion-oob-ycheck                0x0000000100c9409c _ZN3Map9DrawPanelEhhj + 12036
+    3   incursion-oob-ycheck                0x0000000100c89030 _ZN3Map8GenerateEjsPS_a + 6768
+    4   incursion-oob-ycheck                0x0000000100c17564 _ZN4Game13GetDungeonMapEjsP6PlayerP3Map + 880
+    5   incursion-oob-ycheck                0x0000000100c19f9c _ZN6Player9MoveDepthEsb + 892
+    6   incursion-oob-ycheck                0x0000000100beae54 _ZN6Player13WizardOptionsEv + 11668
+    7   incursion-oob-ycheck                0x0000000100cc72c0 _ZN6Player12ChooseActionEv + 3228
+
+  1 calls  (12.50% of 8)  x=123..123 y=165..165 map=128x128
+    1   incursion-oob-ycheck                0x0000000100bf99cc _ZN3Map5GetAtEsssb + 356
+    2   incursion-oob-ycheck                0x0000000100c81d30 _ZN3Map8MakeDoorEhhj + 192
+    3   incursion-oob-ycheck                0x0000000100c94084 _ZN3Map9DrawPanelEhhj + 12012
+    4   incursion-oob-ycheck                0x0000000100c89030 _ZN3Map8GenerateEjsPS_a + 6768
+    5   incursion-oob-ycheck                0x0000000100c17564 _ZN4Game13GetDungeonMapEjsP6PlayerP3Map + 880
+    6   incursion-oob-ycheck                0x0000000100c19f9c _ZN6Player9MoveDepthEsb + 892
+    7   incursion-oob-ycheck                0x0000000100beae54 _ZN6Player13WizardOptionsEv + 11668
+
+  1 calls  (12.50% of 8)  x=123..123 y=165..165 map=128x128
+    1   incursion-oob-ycheck                0x0000000100bf9d3c _ZN3Map5GetAtEsssb + 1236
+    2   incursion-oob-ycheck                0x0000000100c81d30 _ZN3Map8MakeDoorEhhj + 192
+    3   incursion-oob-ycheck                0x0000000100c94084 _ZN3Map9DrawPanelEhhj + 12012
+    4   incursion-oob-ycheck                0x0000000100c89030 _ZN3Map8GenerateEjsPS_a + 6768
+    5   incursion-oob-ycheck                0x0000000100c17564 _ZN4Game13GetDungeonMapEjsP6PlayerP3Map + 880
+    6   incursion-oob-ycheck                0x0000000100c19f9c _ZN6Player9MoveDepthEsb + 892
+    7   incursion-oob-ycheck                0x0000000100beae54 _ZN6Player13WizardOptionsEv + 11668

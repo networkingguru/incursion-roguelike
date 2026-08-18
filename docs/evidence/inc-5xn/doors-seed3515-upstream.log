@@ -1,0 +1,87 @@
+START build=guarded (issue #40 fix)
+PWS_SHORT panel=(32,0)-(63,31) 31x31 asked=25x25 placed=(32,0)-(57,25) 25x25 -> clamped=(34,2)-(57,25) 23x23  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(32,32)-(63,63) 31x31 asked=28x30 placed=(32,32)-(60,62) 28x30 -> clamped=(34,34)-(60,61) 26x27  fired: x1=YES y1=YES x2=no y2=YES
+PWS_SHORT panel=(64,64)-(95,95) 31x31 asked=27x29 placed=(64,64)-(91,93) 27x29 -> clamped=(66,66)-(91,93) 25x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(96,96)-(127,127) 31x31 asked=27x29 placed=(97,96)-(124,125) 27x29 -> clamped=(98,98)-(124,125) 26x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(32,96)-(63,127) 31x31 asked=23x27 placed=(32,98)-(55,125) 23x27 -> clamped=(34,98)-(55,125) 21x27  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(0,96)-(31,127) 31x31 asked=16x13 placed=(12,97)-(28,110) 16x13 -> clamped=(12,98)-(28,110) 16x12  fired: x1=no y1=YES x2=no y2=no
+PWS_SHORT panel=(64,64)-(95,95) 31x31 asked=14x18 placed=(76,65)-(90,83) 14x18 -> clamped=(76,66)-(90,83) 14x17  fired: x1=no y1=YES x2=no y2=no
+PWS_SHORT panel=(96,64)-(127,95) 31x31 asked=11x15 placed=(96,67)-(107,82) 11x15 -> clamped=(98,67)-(107,82) 9x15  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(0,0)-(31,31) 31x31 asked=25x30 placed=(2,0)-(27,30) 25x30 -> clamped=(2,2)-(27,29) 25x27  fired: x1=no y1=YES x2=no y2=YES
+PWS_SHORT panel=(32,0)-(63,31) 31x31 asked=6x14 placed=(33,1)-(39,15) 6x14 -> clamped=(34,2)-(39,15) 5x13  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(32,32)-(63,63) 31x31 asked=12x12 placed=(47,33)-(59,45) 12x12 -> clamped=(47,34)-(59,45) 12x11  fired: x1=no y1=YES x2=no y2=no
+PWS_SHORT panel=(64,32)-(95,63) 31x31 asked=23x28 placed=(64,33)-(87,61) 23x28 -> clamped=(66,34)-(87,61) 21x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(96,32)-(127,63) 31x31 asked=27x26 placed=(96,33)-(123,59) 27x26 -> clamped=(98,34)-(123,59) 25x25  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(0,0)-(31,31) 31x31 asked=26x29 placed=(1,0)-(27,29) 26x29 -> clamped=(2,2)-(27,29) 25x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(32,0)-(63,31) 31x31 asked=17x7 placed=(38,0)-(55,7) 17x7 -> clamped=(38,2)-(55,7) 17x5  fired: x1=no y1=YES x2=no y2=no
+PW_FIRED area=(40,4)-(53,5) want=12x3 would_be=(41,5)-(53,4) variant=none
+DOOR_SILENT raw=(53,-8389) truncated=(53,59) map=128x128  -> door built off-plan, FDoorAt fails on the raw value
+DOOR_PLACED raw=(53,-8389) truncated=(53,59) feature_before=0 door_after=1 room=(41,5)-(53,4) truncated_inside_room=0
+PWS_SHORT panel=(32,64)-(63,95) 31x31 asked=15x9 placed=(33,72)-(48,81) 15x9 -> clamped=(34,72)-(48,81) 14x9  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(64,32)-(95,63) 31x31 asked=29x30 placed=(64,32)-(93,62) 29x30 -> clamped=(66,34)-(93,61) 27x27  fired: x1=YES y1=YES x2=no y2=YES
+PWS_SHORT panel=(96,0)-(127,31) 31x31 asked=26x24 placed=(97,4)-(123,28) 26x24 -> clamped=(98,4)-(123,28) 25x24  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(96,32)-(127,63) 31x31 asked=26x23 placed=(97,36)-(123,59) 26x23 -> clamped=(98,36)-(123,59) 25x23  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(96,64)-(127,95) 31x31 asked=25x27 placed=(98,65)-(123,92) 25x27 -> clamped=(98,66)-(123,92) 25x26  fired: x1=no y1=YES x2=no y2=no
+DOOR_MAP door at (53,59) came from raw (53,-8389); 13x9 of the finished level:
+######.######
+######.######
+######.######
+######.......
+.............
+#######.#####
+#######.#####
+#######.#####
+#######.#####
+ROOM_MAP the room it belonged to was (41,5)-(53,4); 25x15 of the finished level around (47,4):
+                         
+                         
+                         
+#########################
+#########################
+#########################
+....................#####
+####................#####
+####................d....
+####................#####
+#################.#######
+#################d#######
+#################.#######
+#################.#######
+#################.#######
+PWS_SHORT panel=(0,96)-(31,127) 31x31 asked=7x11 placed=(0,111)-(7,122) 7x11 -> clamped=(2,111)-(7,122) 5x11  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(64,96)-(95,127) 31x31 asked=29x28 placed=(64,97)-(93,125) 29x28 -> clamped=(66,98)-(93,125) 27x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(96,0)-(127,31) 31x31 asked=28x23 placed=(97,5)-(125,28) 28x23 -> clamped=(98,5)-(125,28) 27x23  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(0,64)-(31,95) 31x31 asked=27x30 placed=(2,64)-(29,94) 27x30 -> clamped=(2,66)-(29,93) 27x27  fired: x1=no y1=YES x2=no y2=YES
+PWS_SHORT panel=(32,0)-(63,31) 31x31 asked=12x9 placed=(33,18)-(45,27) 12x9 -> clamped=(34,18)-(45,27) 11x9  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(32,64)-(63,95) 31x31 asked=12x12 placed=(32,71)-(44,83) 12x12 -> clamped=(34,71)-(44,83) 10x12  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(64,0)-(95,31) 31x31 asked=7x10 placed=(65,18)-(72,28) 7x10 -> clamped=(66,18)-(72,28) 6x10  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(64,96)-(95,127) 31x31 asked=15x5 placed=(66,96)-(81,101) 15x5 -> clamped=(66,98)-(81,101) 15x3  fired: x1=no y1=YES x2=no y2=no
+PWS_SHORT panel=(0,96)-(31,127) 31x31 asked=5x11 placed=(1,96)-(6,107) 5x11 -> clamped=(2,98)-(6,107) 4x9  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(64,32)-(95,63) 31x31 asked=8x7 placed=(68,33)-(76,40) 8x7 -> clamped=(68,34)-(76,40) 8x6  fired: x1=no y1=YES x2=no y2=no
+PWS_SHORT panel=(32,0)-(63,31) 31x31 asked=27x27 placed=(34,1)-(61,28) 27x27 -> clamped=(34,2)-(61,28) 27x26  fired: x1=no y1=YES x2=no y2=no
+PWS_SHORT panel=(32,96)-(63,127) 31x31 asked=29x28 placed=(32,97)-(61,125) 29x28 -> clamped=(34,98)-(61,125) 27x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(64,0)-(95,31) 31x31 asked=20x26 placed=(71,0)-(91,26) 20x26 -> clamped=(71,2)-(91,26) 20x24  fired: x1=no y1=YES x2=no y2=no
+PWS_SHORT panel=(64,64)-(95,95) 31x31 asked=29x27 placed=(64,65)-(93,92) 29x27 -> clamped=(66,66)-(93,92) 27x26  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(64,96)-(95,127) 31x31 asked=24x25 placed=(65,100)-(89,125) 24x25 -> clamped=(66,100)-(89,125) 23x25  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(96,0)-(127,31) 31x31 asked=30x27 placed=(96,2)-(126,29) 30x27 -> clamped=(98,2)-(125,29) 27x27  fired: x1=YES y1=no x2=YES y2=no
+PWS_SHORT panel=(96,32)-(127,63) 31x31 asked=28x29 placed=(97,32)-(125,61) 28x29 -> clamped=(98,34)-(125,61) 27x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(96,64)-(127,95) 31x31 asked=25x27 placed=(98,65)-(123,92) 25x27 -> clamped=(98,66)-(123,92) 25x26  fired: x1=no y1=YES x2=no y2=no
+PWS_SHORT panel=(96,96)-(127,127) 31x31 asked=25x23 placed=(97,102)-(122,125) 25x23 -> clamped=(98,102)-(122,125) 24x23  fired: x1=YES y1=no x2=no y2=no
+TOTALS atexit   oob_calls=1 would_return_thing=0 ambushes=0
+DOORS calls=24 raw_out_of_bounds=1 silently_placed_in_bounds=1 built=1 blocked_by_existing_feature=0 outside_intended_room=1
+PWS_GEOM panel=(32,0)-(63,31) 31x31  asked=25x25  before_clamp=(32,0)-(57,25) 25x25  after_clamp=(34,2)-(57,25) 23x23  clamps_fired: x1=YES y1=YES x2=no y2=no
+RM_OUTER first flattened: outer_room=(38,2)-(55,7) 17x5 asked_for=17x7 -> after shrink 13x1
+RM_DOUBLE inner_room_calls=3 area_squeezed_flat=1 requested_size_negative=0  first: area=(40,4)-(53,5) want=12x3 (as uint8: 12x3)
+PLACEWITHIN_PLAIN calls=3 returned_inverted=1  first: area=(40,4)-(53,5) want=12x3 -> rect=(41,5)-(53,4)
+PLACEWITHIN calls=81 returned_inverted=0
+RECTS random_open_calls=786 inverted=0 gave_up=26 worst_dx=0 worst_dy=0 first_at_line=0 first_rect=(0,0)-(0,0)
+CENSUS out_of_bounds_At_calls=398 distinct_stacks=1 uncounted_over_cap=0
+
+  398 calls  (100.00% of 398)  x=41..52 y=-32740..32763 map=128x128
+    1   incursion-oob-r4                    0x0000000102d8b66c _ZN3Map7SolidAtEss + 228
+    2   incursion-oob-r4                    0x0000000102da9690 _ZN3Map11FurnishAreaER4Rect + 22172
+    3   incursion-oob-r4                    0x0000000102da06c4 _ZN3Map9DrawPanelEhhj + 12308
+    4   incursion-oob-r4                    0x0000000102d952b0 _ZN3Map8GenerateEjsPS_a + 6768
+    5   incursion-oob-r4                    0x0000000102d237e4 _ZN4Game13GetDungeonMapEjsP6PlayerP3Map + 880
+    6   incursion-oob-r4                    0x0000000102d2621c _ZN6Player9MoveDepthEsb + 892
+    7   incursion-oob-r4                    0x0000000102cf6e54 _ZN6Player13WizardOptionsEv + 11668

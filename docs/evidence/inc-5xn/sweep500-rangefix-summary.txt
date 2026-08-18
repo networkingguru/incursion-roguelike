@@ -1,0 +1,9 @@
+lines  6241
+x1     0
+y1     0
+x2     3984
+y2     4010
+logs                 500
+PlaceWithinSafely    40414 calls, 0 returned inverted
+out-of-bounds reads  0
+decorator calls      289014, gave up 2583

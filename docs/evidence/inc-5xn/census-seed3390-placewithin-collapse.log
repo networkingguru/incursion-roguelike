@@ -1,0 +1,42 @@
+START build=unguarded (upstream behaviour)
+PWS_SHORT panel=(32,0)-(63,31) 31x31 asked=28x28 placed=(32,1)-(60,29) 28x28 -> clamped=(34,2)-(60,29) 26x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(32,32)-(63,63) 31x31 asked=13x9 placed=(32,44)-(45,53) 13x9 -> clamped=(34,44)-(45,53) 11x9  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(96,0)-(127,31) 31x31 asked=24x29 placed=(96,0)-(120,29) 24x29 -> clamped=(98,2)-(120,29) 22x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(32,32)-(63,63) 31x31 asked=23x25 placed=(33,32)-(56,57) 23x25 -> clamped=(34,34)-(56,57) 22x23  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(0,64)-(31,95) 31x31 asked=28x25 placed=(0,66)-(28,91) 28x25 -> clamped=(2,66)-(28,91) 26x25  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(64,96)-(95,127) 31x31 asked=12x9 placed=(65,104)-(77,113) 12x9 -> clamped=(66,104)-(77,113) 11x9  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(96,0)-(127,31) 31x31 asked=12x7 placed=(113,0)-(125,7) 12x7 -> clamped=(113,2)-(125,7) 12x5  fired: x1=no y1=YES x2=no y2=no
+PW_FIRED area=(115,4)-(123,5) want=7x1 would_be=(116,5)-(123,4) variant=collapse
+PWS_SHORT panel=(0,64)-(31,95) 31x31 asked=29x30 placed=(0,64)-(29,94) 29x30 -> clamped=(2,66)-(29,93) 27x27  fired: x1=YES y1=YES x2=no y2=YES
+PWS_SHORT panel=(0,96)-(31,127) 31x31 asked=10x12 placed=(17,97)-(27,109) 10x12 -> clamped=(17,98)-(27,109) 10x11  fired: x1=no y1=YES x2=no y2=no
+PWS_SHORT panel=(32,64)-(63,95) 31x31 asked=28x27 placed=(32,64)-(60,91) 28x27 -> clamped=(34,66)-(60,91) 26x25  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(96,0)-(127,31) 31x31 asked=12x12 placed=(96,16)-(108,28) 12x12 -> clamped=(98,16)-(108,28) 10x12  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(96,96)-(127,127) 31x31 asked=11x14 placed=(97,99)-(108,113) 11x14 -> clamped=(98,99)-(108,113) 10x14  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(32,0)-(63,31) 31x31 asked=28x30 placed=(33,0)-(61,30) 28x30 -> clamped=(34,2)-(61,29) 27x27  fired: x1=YES y1=YES x2=no y2=YES
+PWS_SHORT panel=(32,96)-(63,127) 31x31 asked=13x9 placed=(32,101)-(45,110) 13x9 -> clamped=(34,101)-(45,110) 11x9  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(64,64)-(95,95) 31x31 asked=25x28 placed=(64,65)-(89,93) 25x28 -> clamped=(66,66)-(89,93) 23x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(96,0)-(127,31) 31x31 asked=30x26 placed=(96,0)-(126,26) 30x26 -> clamped=(98,2)-(125,26) 27x24  fired: x1=YES y1=YES x2=YES y2=no
+PWS_SHORT panel=(96,32)-(127,63) 31x31 asked=26x29 placed=(97,32)-(123,61) 26x29 -> clamped=(98,34)-(123,61) 25x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(96,64)-(127,95) 31x31 asked=23x29 placed=(98,64)-(121,93) 23x29 -> clamped=(98,66)-(121,93) 23x27  fired: x1=no y1=YES x2=no y2=no
+PWS_SHORT panel=(96,96)-(127,127) 31x31 asked=25x28 placed=(97,97)-(122,125) 25x28 -> clamped=(98,98)-(122,125) 24x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(0,96)-(31,127) 31x31 asked=28x25 placed=(1,100)-(29,125) 28x25 -> clamped=(2,100)-(29,125) 27x25  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(32,0)-(63,31) 31x31 asked=15x7 placed=(32,14)-(47,21) 15x7 -> clamped=(34,14)-(47,21) 13x7  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(32,64)-(63,95) 31x31 asked=9x7 placed=(38,64)-(47,71) 9x7 -> clamped=(38,66)-(47,71) 9x5  fired: x1=no y1=YES x2=no y2=no
+PWS_SHORT panel=(64,0)-(95,31) 31x31 asked=25x23 placed=(65,5)-(90,28) 25x23 -> clamped=(66,5)-(90,28) 24x23  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(64,96)-(95,127) 31x31 asked=24x28 placed=(64,97)-(88,125) 24x28 -> clamped=(66,98)-(88,125) 22x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(96,0)-(127,31) 31x31 asked=24x29 placed=(98,0)-(122,29) 24x29 -> clamped=(98,2)-(122,29) 24x27  fired: x1=no y1=YES x2=no y2=no
+PWS_SHORT panel=(96,32)-(127,63) 31x31 asked=17x11 placed=(96,39)-(113,50) 17x11 -> clamped=(98,39)-(113,50) 15x11  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(96,64)-(127,95) 31x31 asked=14x8 placed=(96,68)-(110,76) 14x8 -> clamped=(98,68)-(110,76) 12x8  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(96,64)-(127,95) 31x31 asked=10x9 placed=(97,73)-(107,82) 10x9 -> clamped=(98,73)-(107,82) 9x9  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(0,64)-(31,95) 31x31 asked=23x23 placed=(0,66)-(23,89) 23x23 -> clamped=(2,66)-(23,89) 21x23  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(0,96)-(31,127) 31x31 asked=10x14 placed=(1,111)-(11,125) 10x14 -> clamped=(2,111)-(11,125) 9x14  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(64,64)-(95,95) 31x31 asked=10x10 placed=(64,67)-(74,77) 10x10 -> clamped=(66,67)-(74,77) 8x10  fired: x1=YES y1=no x2=no y2=no
+TOTALS atexit   oob_calls=0 would_return_thing=0 ambushes=0
+DOORS calls=5 raw_out_of_bounds=0 silently_placed_in_bounds=0
+PWS_GEOM panel=(32,0)-(63,31) 31x31  asked=28x28  before_clamp=(32,1)-(60,29) 28x28  after_clamp=(34,2)-(60,29) 26x27  clamps_fired: x1=YES y1=YES x2=no y2=no
+RM_OUTER first flattened: outer_room=(113,2)-(125,7) 12x5 asked_for=12x7 -> after shrink 8x1
+RM_DOUBLE inner_room_calls=2 area_squeezed_flat=1 requested_size_negative=0  first: area=(115,4)-(123,5) want=7x1 (as uint8: 7x1)
+PLACEWITHIN_PLAIN calls=2 returned_inverted=0
+PLACEWITHIN calls=66 returned_inverted=0
+RECTS random_open_calls=550 inverted=0 gave_up=6 worst_dx=0 worst_dy=0 first_at_line=0 first_rect=(0,0)-(0,0)
+CENSUS out_of_bounds_At_calls=0 distinct_stacks=0 uncounted_over_cap=0

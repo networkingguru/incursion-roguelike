@@ -266,6 +266,18 @@ struct GroupNode
 
 
 
+#ifdef INCURSION_OOB_PROBE
+/* inc-5xn / upstream issue #40, diagnostic only. Defined in src/Display.cpp. */
+extern void OobProbePlaceWithin(int x1,int y1,int x2,int y2,int sx,int sy,
+                                int rx1,int ry1,int rx2,int ry2);
+extern void OobProbePlaceWithinPlain(int x1,int y1,int x2,int y2,int sx,int sy,
+                                     int rx1,int ry1,int rx2,int ry2);
+extern void OobProbePwsGeom(int px1,int py1,int px2,int py2,int sx,int sy,
+                            int rx1,int ry1,int rx2,int ry2);
+extern void OobProbePwFired(int x1,int y1,int x2,int y2,int sx,int sy,
+                            int rx1,int ry1,int rx2,int ry2);
+#endif
+
 struct Rect
   {
     uint8 x1,x2,y1,y2;
@@ -280,33 +292,90 @@ struct Rect
       { 
         static Rect r;
         if (sx>=(x2-x1))
-          { r.x1 = x1+1; r.x2 = x2-1; }
+          { r.x1 = x1+1; r.x2 = x2-1;
+#if defined(INCURSION_OOB_PWFIX) || defined(INCURSION_OOB_PWFIX_WIDEN)
+#if defined(INCURSION_OOB_PWFIX_WIDEN)
+            if (r.x2 < r.x1) { r.x1 = x1; r.x2 = x2; }
+#else
+            if (r.x2 < r.x1) { r.x2 = r.x1; }
+#endif
+#endif
+          }
         else
           {
             r.x1 = (uint8)(x1 + 1 + random(max(0,((x2-x1)-2)-sx)));
             r.x2 = r.x1 + sx;
           }
         if (sy >= (y2-y1)) 
-          { r.y1 = y1+1; r.y2 = y2-1; }
+          { r.y1 = y1+1; r.y2 = y2-1;
+#ifdef INCURSION_OOB_PROBE
+            /* inc-5xn: record the condition BEFORE any repair is applied.
+               Putting this after the repair made a fixed build report zero
+               firings, which is indistinguishable from "the branch is rare"
+               and is how a no-op flag looked like 19 clean runs. */
+            if (r.y2 < r.y1)
+              OobProbePwFired(x1,y1,x2,y2,sx,sy,r.x1,r.y1,r.x2,r.y2);
+#endif
+#if defined(INCURSION_OOB_PWFIX) || defined(INCURSION_OOB_PWFIX_WIDEN)
+            /* inc-5xn experiment: insetting by one on each side inverts the
+               rectangle when the area is 2 or less tall. */
+#if defined(INCURSION_OOB_PWFIX_WIDEN)
+            if (r.y2 < r.y1) { r.y1 = y1; r.y2 = y2; }
+#else
+            if (r.y2 < r.y1) { r.y2 = r.y1; }
+#endif
+#endif
+          }
         else
           {
             r.y1 = (uint8)(y1 + 1 + random(max(0,((y2-y1)-2)-sy)));
             r.y2 = r.y1 + sy;
           }
+#ifdef INCURSION_OOB_PROBE
+        /* inc-5xn, diagnostic only: the sy >= (y2-y1) branch sets
+           y1+1 .. y2-1, which inverts whenever the available height is 2 or
+           less. Same shape in x. Delete with the Display.cpp block. */
+        OobProbePlaceWithinPlain(x1,y1,x2,y2,sx,sy,r.x1,r.y1,r.x2,r.y2);
+#endif
         return r;
       }
     Rect& PlaceWithinSafely(uint8 sx, uint8 sy)
       { 
         static Rect r;
+#ifdef INCURSION_OOB_RANGEFIX
+        /* inc-5xn experiment: the clamps below demand 2 clear of the border,
+           but this range reserves nothing on the near edge, so a rectangle can
+           be placed flush and then trimmed by the clamp. Reserve the same 2
+           here and the clamps stop having anything to repair. No signature
+           change, no caller changes. */
+        r.x1 = (uint8)(x1 + 2 + random(max(0,((x2-x1)-3)-sx)));
+        r.x2 = r.x1 + sx;
+        r.y1 = (uint8)(y1 + 2 + random(max(0,((y2-y1)-3)-sy)));
+        r.y2 = r.y1 + sy;
+#else
         r.x1 = (uint8)(x1 + random(max(0,((x2-x1)-1)-sx)));
         r.x2 = r.x1 + sx;
         r.y1 = (uint8)(y1 + random(max(0,((y2-y1)-1)-sy)));
         r.y2 = r.y1 + sy;
+#endif
 
+#ifdef INCURSION_OOB_PROBE
+        /* inc-5xn: the whole geometry, before the four clamps -- the panel we
+           are placing into, the size asked for, and where the rectangle landed.
+           Without the panel the numbers cannot be checked by a reader. */
+        OobProbePwsGeom(x1,y1,x2,y2,sx,sy,r.x1,r.y1,r.x2,r.y2);
+#endif
         r.x1 = max(r.x1, x1 + 2);
         r.y1 = max(r.y1, y1 + 2);
         r.x2 = min(r.x2, x2 - 2);
         r.y2 = min(r.y2, y2 - 2);
+#ifdef INCURSION_OOB_PROBE
+        /* inc-5xn, diagnostic only: does the inverted rectangle leave here,
+           or is it inverted later by a caller? The four clamps above are
+           applied independently, so the y1 clamp can raise the top past the
+           y2 clamp's lowered bottom. Delete with the Display.cpp block. */
+        OobProbePlaceWithin(x1,y1,x2,y2,sx,sy,r.x1,r.y1,r.x2,r.y2);
+#endif
         return r;
       }
     bool Within(uint8 x,uint8 y)

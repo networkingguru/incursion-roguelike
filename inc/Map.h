@@ -5,6 +5,14 @@
 */
 
 
+#ifdef INCURSION_OOB_PROBE
+/* Diagnostic only, for bead inc-5xn and upstream issue #40. Defined in
+   src/Display.cpp. Counts every out-of-bounds Map::At() by the call stack that
+   made it, so the callers can be named instead of inferred from the one stack
+   the error log keeps per message. Delete with the Display.cpp block. */
+extern void OobProbeAtCensus(int x, int y, int sizeX, int sizeY);
+#endif
+
 class Map;
 class Thing;
 class Creature;
@@ -214,7 +222,12 @@ class Map: public Object
 		inline LocationInfo & At(int16 x,int16 y)
 		  { ASSERT(InBounds(x,y));
         if (!InBounds(x,y))
-          return Grid[0];
+          {
+#ifdef INCURSION_OOB_PROBE
+            OobProbeAtCensus(x,y,sizeX,sizeY);
+#endif
+            return Grid[0];
+          }
         return Grid[y*sizeX + x]; }
 		rID inline RegionAt(int16 x,int16 y)
 		  { ASSERT(InBounds(x,y));

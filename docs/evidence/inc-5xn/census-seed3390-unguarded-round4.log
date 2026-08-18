@@ -1,0 +1,207 @@
+START build=unguarded (upstream behaviour)
+PWS_SHORT panel=(32,0)-(63,31) 31x31 asked=28x28 placed=(32,1)-(60,29) 28x28 -> clamped=(34,2)-(60,29) 26x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(32,32)-(63,63) 31x31 asked=13x9 placed=(32,44)-(45,53) 13x9 -> clamped=(34,44)-(45,53) 11x9  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(96,0)-(127,31) 31x31 asked=24x29 placed=(96,0)-(120,29) 24x29 -> clamped=(98,2)-(120,29) 22x27  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(32,32)-(63,63) 31x31 asked=23x25 placed=(33,32)-(56,57) 23x25 -> clamped=(34,34)-(56,57) 22x23  fired: x1=YES y1=YES x2=no y2=no
+PWS_SHORT panel=(0,64)-(31,95) 31x31 asked=28x25 placed=(0,66)-(28,91) 28x25 -> clamped=(2,66)-(28,91) 26x25  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(64,96)-(95,127) 31x31 asked=12x9 placed=(65,104)-(77,113) 12x9 -> clamped=(66,104)-(77,113) 11x9  fired: x1=YES y1=no x2=no y2=no
+PWS_SHORT panel=(96,0)-(127,31) 31x31 asked=12x7 placed=(113,0)-(125,7) 12x7 -> clamped=(113,2)-(125,7) 12x5  fired: x1=no y1=YES x2=no y2=no
+PW_FIRED area=(115,4)-(123,5) want=7x1 would_be=(116,5)-(123,4) variant=none
+DOOR_SILENT raw=(116,-7151) truncated=(116,17) map=128x128  -> door built off-plan, FDoorAt fails on the raw value
+DOOR_PLACED raw=(116,-7151) truncated=(116,17) feature_before=0 door_after=1 room=(116,5)-(123,4) truncated_inside_room=0
+DOOR_SILENT raw=(123,14601) truncated=(123,9) map=128x128  -> door built off-plan, FDoorAt fails on the raw value
+DOOR_PLACED raw=(123,14601) truncated=(123,9) feature_before=0 door_after=1 room=(116,5)-(123,4) truncated_inside_room=0
+DOOR_MAP door at (116,17) came from raw (116,-7151); 13x9 of the finished level:
+###......####
+###.####...##
+###.#########
+###.#########
+###.##+######
+###.#########
+###.#########
+###.#########
+###.#########
+ROOM_MAP the room it belonged to was (116,5)-(123,4); 25x15 of the finished level around (119,4):
+                         
+                         
+                         
+#####################    
+#####################    
+#####################    
+#######...........###    
+#######...........###    
+..................###    
+######............###    
+######d##############    
+######.##############    
+######.#########d####    
+######.##############    
+######.##############    
+DOOR_MAP door at (123,9) came from raw (123,14601); 13x9 of the finished level:
+........###  
+........###  
+###########  
+###########  
+######+####  
+###########  
+###########  
+###########  
+..#########  
+ROOM_MAP the room it belonged to was (116,5)-(123,4); 25x15 of the finished level around (119,4):
+                         
+                         
+                         
+#####################    
+#####################    
+#####################    
+#######...........###    
+#######...........###    
+..................###    
+######............###    
+######d##############    
+######.##############    
+######.#########d####    
+######.##############    
+######.##############    
+INNER_ROOM healthy rect=(5,14)-(10,20) 5x6; 25x15 of the finished level around (7,17):
+     ####################
+     ####################
+     ####################
+     ####........########
+     ####........########
+     ####........########
+     ####........########
+     ####........d.......
+     ####........########
+     ####........########
+     ####........########
+     ####........########
+     #########..#########
+     ##########d#########
+     ##########.#########
+INNER_ROOM healthy rect=(69,107)-(74,109) 5x2; 25x15 of the finished level around (71,108):
+########.#####.##########
+########.#####.##########
+########.#####.##########
+########.#####.##########
+########..........#######
+########..........#######
+########..........#######
+########..........#######
+########..........#######
+########..........#######
+########..........#######
+###...............#######
+....#############.#######
+#################........
+#########################
+INNER_ROOM INVERTED rect=(116,5)-(123,4) 7x-1; 25x15 of the finished level around (119,4):
+                         
+                         
+                         
+#####################    
+#####################    
+#####################    
+#######...........###    
+#######...........###    
+..................###    
+######............###    
+######d##############    
+######.##############    
+######.#########d####    
+######.##############    
+######.##############    
+PWS_SHORT panel=(0,96)-(31,127) 31x31 asked=13x12 placed=(12,97)-(25,109) 13x12 -> clamped=(12,98)-(25,109) 13x11  fired: x1=no y1=YES x2=no y2=no
+PWS_SHORT panel=(32,32)-(63,63) 31x31 asked=4x15 placed=(37,33)-(41,48) 4x15 -> clamped=(37,34)-(41,48) 4x14  fired: x1=no y1=YES x2=no y2=no
+PWS_SHORT panel=(32,96)-(63,127) 31x31 asked=25x26 placed=(36,96)-(61,122) 25x26 -> clamped=(36,98)-(61,122) 25x24  fired: x1=no y1=YES x2=no y2=no
+PWS_SHORT panel=(64,64)-(95,95) 31x31 asked=10x12 placed=(79,65)-(89,77) 10x12 -> clamped=(79,66)-(89,77) 10x11  fired: x1=no y1=YES x2=no y2=no
+TOTALS atexit   oob_calls=6 would_return_thing=0 ambushes=0
+DOORS calls=5 raw_out_of_bounds=3 silently_placed_in_bounds=2 built=2 blocked_by_existing_feature=0 outside_intended_room=2
+PWS_GEOM panel=(32,0)-(63,31) 31x31  asked=28x28  before_clamp=(32,1)-(60,29) 28x28  after_clamp=(34,2)-(60,29) 26x27  clamps_fired: x1=YES y1=YES x2=no y2=no
+RM_OUTER first flattened: outer_room=(113,2)-(125,7) 12x5 asked_for=12x7 -> after shrink 8x1
+RM_DOUBLE inner_room_calls=2 area_squeezed_flat=1 requested_size_negative=0  first: area=(115,4)-(123,5) want=7x1 (as uint8: 7x1)
+PLACEWITHIN_PLAIN calls=2 returned_inverted=1  first: area=(115,4)-(123,5) want=7x1 -> rect=(116,5)-(123,4)
+PLACEWITHIN calls=30 returned_inverted=0
+RECTS random_open_calls=720 inverted=487 gave_up=494 worst_dx=0 worst_dy=-1 first_at_line=3290 first_rect=(116,5)-(123,4)
+CENSUS out_of_bounds_At_calls=47966 distinct_stacks=9 uncounted_over_cap=0
+
+  47954 calls  (99.97% of 47966)  x=116..122 y=-32768..32767 map=128x128
+    1   incursion-oob-r4-unguarded          0x000000010066f914 _ZN3Map7SolidAtEss + 228
+    2   incursion-oob-r4-unguarded          0x000000010068c04c _ZN3Map11FurnishAreaER4Rect + 15356
+    3   incursion-oob-r4-unguarded          0x0000000100684b20 _ZN3Map9DrawPanelEhhj + 12336
+    4   incursion-oob-r4-unguarded          0x0000000100679558 _ZN3Map8GenerateEjsPS_a + 6768
+    5   incursion-oob-r4-unguarded          0x0000000100607a8c _ZN4Game13GetDungeonMapEjsP6PlayerP3Map + 880
+    6   incursion-oob-r4-unguarded          0x000000010060a4c4 _ZN6Player9MoveDepthEsb + 892
+    7   incursion-oob-r4-unguarded          0x00000001005dae54 _ZN6Player13WizardOptionsEv + 11668
+
+  3 calls  (0.01% of 47966)  x=116..123 y=-25691..14601 map=128x128
+    1   incursion-oob-r4-unguarded          0x00000001005e9ef4 _ZN3Map5GetAtEsssb + 356
+    2   incursion-oob-r4-unguarded          0x0000000100684a8c _ZN3Map9DrawPanelEhhj + 12188
+    3   incursion-oob-r4-unguarded          0x0000000100679558 _ZN3Map8GenerateEjsPS_a + 6768
+    4   incursion-oob-r4-unguarded          0x0000000100607a8c _ZN4Game13GetDungeonMapEjsP6PlayerP3Map + 880
+    5   incursion-oob-r4-unguarded          0x000000010060a4c4 _ZN6Player9MoveDepthEsb + 892
+    6   incursion-oob-r4-unguarded          0x00000001005dae54 _ZN6Player13WizardOptionsEv + 11668
+    7   incursion-oob-r4-unguarded          0x00000001006b7c6c _ZN6Player12ChooseActionEv + 3228
+
+  3 calls  (0.01% of 47966)  x=116..123 y=-25691..14601 map=128x128
+    1   incursion-oob-r4-unguarded          0x00000001005ea264 _ZN3Map5GetAtEsssb + 1236
+    2   incursion-oob-r4-unguarded          0x0000000100684a8c _ZN3Map9DrawPanelEhhj + 12188
+    3   incursion-oob-r4-unguarded          0x0000000100679558 _ZN3Map8GenerateEjsPS_a + 6768
+    4   incursion-oob-r4-unguarded          0x0000000100607a8c _ZN4Game13GetDungeonMapEjsP6PlayerP3Map + 880
+    5   incursion-oob-r4-unguarded          0x000000010060a4c4 _ZN6Player9MoveDepthEsb + 892
+    6   incursion-oob-r4-unguarded          0x00000001005dae54 _ZN6Player13WizardOptionsEv + 11668
+    7   incursion-oob-r4-unguarded          0x00000001006b7c6c _ZN6Player12ChooseActionEv + 3228
+
+  1 calls  (0.00% of 47966)  x=123..123 y=165..165 map=128x128
+    1   incursion-oob-r4-unguarded          0x00000001005e9ef4 _ZN3Map5GetAtEsssb + 356
+    2   incursion-oob-r4-unguarded          0x00000001006849f0 _ZN3Map9DrawPanelEhhj + 12032
+    3   incursion-oob-r4-unguarded          0x0000000100679558 _ZN3Map8GenerateEjsPS_a + 6768
+    4   incursion-oob-r4-unguarded          0x0000000100607a8c _ZN4Game13GetDungeonMapEjsP6PlayerP3Map + 880
+    5   incursion-oob-r4-unguarded          0x000000010060a4c4 _ZN6Player9MoveDepthEsb + 892
+    6   incursion-oob-r4-unguarded          0x00000001005dae54 _ZN6Player13WizardOptionsEv + 11668
+    7   incursion-oob-r4-unguarded          0x00000001006b7c6c _ZN6Player12ChooseActionEv + 3228
+
+  1 calls  (0.00% of 47966)  x=123..123 y=165..165 map=128x128
+    1   incursion-oob-r4-unguarded          0x00000001005ea264 _ZN3Map5GetAtEsssb + 1236
+    2   incursion-oob-r4-unguarded          0x00000001006849f0 _ZN3Map9DrawPanelEhhj + 12032
+    3   incursion-oob-r4-unguarded          0x0000000100679558 _ZN3Map8GenerateEjsPS_a + 6768
+    4   incursion-oob-r4-unguarded          0x0000000100607a8c _ZN4Game13GetDungeonMapEjsP6PlayerP3Map + 880
+    5   incursion-oob-r4-unguarded          0x000000010060a4c4 _ZN6Player9MoveDepthEsb + 892
+    6   incursion-oob-r4-unguarded          0x00000001005dae54 _ZN6Player13WizardOptionsEv + 11668
+    7   incursion-oob-r4-unguarded          0x00000001006b7c6c _ZN6Player12ChooseActionEv + 3228
+
+  1 calls  (0.00% of 47966)  x=123..123 y=165..165 map=128x128
+    1   incursion-oob-r4-unguarded          0x00000001005e9ef4 _ZN3Map5GetAtEsssb + 356
+    2   incursion-oob-r4-unguarded          0x0000000100672258 _ZN3Map8MakeDoorEhhj + 192
+    3   incursion-oob-r4-unguarded          0x0000000100684a20 _ZN3Map9DrawPanelEhhj + 12080
+    4   incursion-oob-r4-unguarded          0x0000000100679558 _ZN3Map8GenerateEjsPS_a + 6768
+    5   incursion-oob-r4-unguarded          0x0000000100607a8c _ZN4Game13GetDungeonMapEjsP6PlayerP3Map + 880
+    6   incursion-oob-r4-unguarded          0x000000010060a4c4 _ZN6Player9MoveDepthEsb + 892
+    7   incursion-oob-r4-unguarded          0x00000001005dae54 _ZN6Player13WizardOptionsEv + 11668
+
+  1 calls  (0.00% of 47966)  x=123..123 y=165..165 map=128x128
+    1   incursion-oob-r4-unguarded          0x00000001005ea264 _ZN3Map5GetAtEsssb + 1236
+    2   incursion-oob-r4-unguarded          0x0000000100672258 _ZN3Map8MakeDoorEhhj + 192
+    3   incursion-oob-r4-unguarded          0x0000000100684a20 _ZN3Map9DrawPanelEhhj + 12080
+    4   incursion-oob-r4-unguarded          0x0000000100679558 _ZN3Map8GenerateEjsPS_a + 6768
+    5   incursion-oob-r4-unguarded          0x0000000100607a8c _ZN4Game13GetDungeonMapEjsP6PlayerP3Map + 880
+    6   incursion-oob-r4-unguarded          0x000000010060a4c4 _ZN6Player9MoveDepthEsb + 892
+    7   incursion-oob-r4-unguarded          0x00000001005dae54 _ZN6Player13WizardOptionsEv + 11668
+
+  1 calls  (0.00% of 47966)  x=123..123 y=165..165 map=128x128
+    1   incursion-oob-r4-unguarded          0x00000001005e9ef4 _ZN3Map5GetAtEsssb + 356
+    2   incursion-oob-r4-unguarded          0x0000000100684a40 _ZN3Map9DrawPanelEhhj + 12112
+    3   incursion-oob-r4-unguarded          0x0000000100679558 _ZN3Map8GenerateEjsPS_a + 6768
+    4   incursion-oob-r4-unguarded          0x0000000100607a8c _ZN4Game13GetDungeonMapEjsP6PlayerP3Map + 880
+    5   incursion-oob-r4-unguarded          0x000000010060a4c4 _ZN6Player9MoveDepthEsb + 892
+    6   incursion-oob-r4-unguarded          0x00000001005dae54 _ZN6Player13WizardOptionsEv + 11668
+    7   incursion-oob-r4-unguarded          0x00000001006b7c6c _ZN6Player12ChooseActionEv + 3228
+
+  1 calls  (0.00% of 47966)  x=123..123 y=165..165 map=128x128
+    1   incursion-oob-r4-unguarded          0x00000001005ea264 _ZN3Map5GetAtEsssb + 1236
+    2   incursion-oob-r4-unguarded          0x0000000100684a40 _ZN3Map9DrawPanelEhhj + 12112
+    3   incursion-oob-r4-unguarded          0x0000000100679558 _ZN3Map8GenerateEjsPS_a + 6768
+    4   incursion-oob-r4-unguarded          0x0000000100607a8c _ZN4Game13GetDungeonMapEjsP6PlayerP3Map + 880
+    5   incursion-oob-r4-unguarded          0x000000010060a4c4 _ZN6Player9MoveDepthEsb + 892
+    6   incursion-oob-r4-unguarded          0x00000001005dae54 _ZN6Player13WizardOptionsEv + 11668
+    7   incursion-oob-r4-unguarded          0x00000001006b7c6c _ZN6Player12ChooseActionEv + 3228
