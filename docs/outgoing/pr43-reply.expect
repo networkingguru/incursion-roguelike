@@ -86,3 +86,5 @@ src/Skills.cpp:3990	isSkylight
 src/Skills.cpp:4066	MoveDepth(m->Depth - 1, true)
 src/Annot.cpp:371	RF_ROOM
 src/Skills.cpp:4169	Climb down the chasm?
+src/Effects.cpp:1601	Terrain = e.terrainListIndex
+src/Effects.cpp:1624	TerrainEffects();
