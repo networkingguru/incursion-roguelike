@@ -61,9 +61,14 @@ never reaching `PlaceAt`, so it contributes `MoveDepth` alone:
     15 completed moves + the faulting entry, patched    15 x 2400 + 656 = 36,656
     15 completed moves + the faulting entry, unpatched  15 x 1888 + 144 = 28,464
 
-The chain reaches sixteen entries only when the outermost one arrives on level 1
-(wizard Ascend/Descend, or resurrection at src/Prayer.cpp:1482); a chain that
-starts by falling from level 1 is one shorter.
+The chain reaches sixteen entries only when the outermost one arrives on level 1.
+Several call sites do that: the up-staircase (src/Feature.cpp:260 with
+DepthMod = -1), the spell Shift Level (lib/wspells.irh:7065, which reaches
+MoveDepth through the binding that drops the safe argument, so it arrives
+unsafe), wizard Ascend/Descend (src/Debug.cpp:810), and resurrection
+(src/Prayer.cpp:1482, safe=true, so it needs the landing square and all eight
+neighbours to be chasm). A chain that instead starts by falling from level 1 is
+one entry shorter.
 
 The 144 is the patched 656 less the measured 512, not a disassembled figure.
 
