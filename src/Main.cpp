@@ -2302,11 +2302,11 @@ const char* GravestoneImage =
                                               \n\
                                               \n\
             -----------------------           \n\
-           /                       /         \n\
-          /                         /        \n\
-         /                           /       \n\
-        /                             /      \n\
-       /                               /     \n\
+           /                       \\         \n\
+          /                         \\        \n\
+         /                           \\       \n\
+        /                             \\      \n\
+       /                               \\     \n\
       |                                 |     \n\
       |       <8>REQUISCANT IN PACE,<7>       |     \n\
       |                                 |     \n\
