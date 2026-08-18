@@ -6,8 +6,12 @@ re-made from scratch in a month. This is that list.
 
 **What this covers.** Steps 1 to 3 of inc-4pt: find every instrument, judge it,
 and flag the ones that are actively misleading. Nothing has been moved to
-`devtools/`, nothing has been deleted, and `src/Dump.cpp` has not been touched.
-Those are steps 4 and 5 and they need a decision that is not recorded here.
+`devtools/` and `src/Dump.cpp` has not been touched. Those are steps 4 and 5 and
+they need a decision that is not recorded here.
+
+Two things have been deleted since, each on Brian's explicit decision as he went
+through the list item by item: `FLICKER_PROBE` and `tools/run_probe.sh`. Both
+are recorded in place below.
 
 **The two axes**, both from inc-4pt, and an item must score on both to be worth
 keeping:
@@ -112,7 +116,7 @@ stricter about the ones that are finished.
 | Name | Added | The question it answers | Verdict |
 |---|---|---|---|
 | `INCURSION_SAVE_PROBE` | 2026-08-13 | Records the player's map position on both sides of the save/load boundary. Tells apart "never written" from "written and not read back". | **KEEP.** It settled the save-corruption defect that made every loaded character die at (0,0). Small, and the placement on both sides of the boundary is the whole trick. |
-| `INCURSION_CHAR_PROBE` | 2026-08-14 | Writes a readable character sheet beside every save. | **KEEP**, and note it overlaps `src/Dump.cpp`. inc-4pt step 5 has to decide which of the two survives; that decision is not made here. |
+| `INCURSION_CHAR_PROBE` | 2026-08-14 | Writes a readable character sheet beside every save. | **KEEP.** See the correction below: it does *not* compete with `src/Dump.cpp`. |
 | `INCURSION_MAP_PROBE` | 2026-08-13 | Counts remembered against unseen glyphs per draw. | **KEEP.** Ten lines, and it is the only thing that distinguishes "the map is wrong" from "the map is right and the drawing is wrong". |
 | `INCURSION_ERROR_PROMPT` | — | Makes `Error()` stop and wait instead of logging and continuing. | **KEEP.** A developer convenience with no cost, and the modal-freeze defect it was written around is in `docs/FIXED.md`. |
 
@@ -124,6 +128,41 @@ stricter about the ones that are finished.
 `INCURSION_DESCEND_PROBE`, `INC6D5_PROBE_NAMES`.
 
 All belong to the crash and chasm investigations that are open right now.
+
+### Correction: `src/Dump.cpp` and `INCURSION_CHAR_PROBE` do not compete
+
+An earlier draft of this audit said one of the two should survive and the other
+should go. That was written before either was read properly, and it is wrong.
+Acting on it would have removed a capability.
+
+- `INCURSION_CHAR_PROBE` (`src/Registry.cpp:841-848`, eight lines) hooks
+  `Game::SaveGame`. It fires automatically, needs no one to remember it, and
+  describes only the save just written, overwriting the last report.
+- `src/Dump.cpp` (268 lines, `-dump`, bd inc-loa.1) loads *any* existing save
+  read-only, with no play at all, and adds current HP, position, depth,
+  equipped slots and each object's own stati and raw ids.
+
+Neither is a superset of the other in access, so both stay.
+
+**What the audit did miss.** `src/Dump.cpp` compiles into every binary the
+project builds, but until 2026-08-18 only `src/Wposix.cpp:538` parsed `-dump`.
+The shipped graphical release therefore carried the save decoder and could not
+reach it — `nm -C incursion | grep RunSaveDump` found the symbol at
+`T RunSaveDump(char const*)` with no caller in that backend.
+
+Brian's decision was to wire it up rather than remove it, since the code was
+already paying its full cost in the release. `src/Wlibtcod.cpp`'s `main()` now
+parses `-dump` the same way and for the same stated reason as the posix
+backend: `TextTerm::RunOnCommandLine` caps an option value at 49 characters
+(`src/TextTerm.cpp:39`), which silently truncates a real save path.
+
+Observed, both sides. With the parse in place both binaries dump the same save
+to a byte-identical report and `tools/check_dump_save.sh` prints *"Both backends
+were checked and their reports are identical."* With the parse commented out and
+the binary rebuilt, the same check exits 1 with *"./incursion could not run
+-dump"* — the graphical build falls through to normal startup and looks for a
+font. This is a port addition, not an upstream defect, so it carries no
+`upstream:` mark.
 
 ## 3. Scripts under tools/
 
@@ -145,16 +184,18 @@ inc-4pt asks to draw explicitly is this:
   Note the trap: `flickerscan_selftest.py` is a check on a diagnostic, and
   `craft_corrupt_saves.py` is *called by* `check_load_corrupt.sh`, so moving it
   means editing that check. Neither is free.
-- **Already marked SUPERSEDED and still not deleted** — `run_probe.sh` and
-  `flickerscan.sh`. `run_probe.sh` says in its own header that it should have
-  gone once its bug was fixed, and the bug was fixed.
+- **Already marked SUPERSEDED** — `run_probe.sh` and `flickerscan.sh`.
+  `run_probe.sh` was **deleted 2026-08-18** on Brian's decision: its own header
+  said it should have gone once its bug was fixed, the bug is fixed
+  (`src/AbiCheck.cpp:11` now guards it at compile time), `play.sh` does
+  everything it did and more, and nothing invoked it. `flickerscan.sh` is still
+  present and is item 3 of this walkthrough.
 
 ## 4. What this audit did not do
 
-- Nothing moved, nothing deleted.
-- `src/Dump.cpp` was not touched. It is in the build path, unlike the scripts,
-  and inc-4pt step 5 wants a decision on whether it stays compiled into the
-  developer binary, moves behind a flag, or becomes a separate tool.
+- Nothing moved. Two deletions so far, both on Brian's explicit decision:
+  `FLICKER_PROBE` and `tools/run_probe.sh`. Nothing else has been removed.
+- `src/Dump.cpp` — settled 2026-08-18. See the section below.
 - No `devtools/README.md` was written. That is step 6 and it describes a
   directory that does not exist yet.
 - The verdicts above are recommendations. Acting on them means editing files

@@ -306,5 +306,7 @@ All environment-gated and off by default:
   refuses to reach a verdict on black frames, which is the failure that had the
   older scan confidently reporting results from captures macOS had blocked.
   `tools/flickerscan_selftest.py` checks that refusal still works.
-- `tools/run_probe.sh` — older launcher. Its own header says to delete it once the
-  saved-game position bug is fixed, which it is. Superseded by `tools/play.sh`.
+- `tools/run_probe.sh` — **deleted 2026-08-18.** An older launcher, superseded by
+  `tools/play.sh`. Its own header said to delete it once the saved-game position
+  bug was fixed, and that bug is fixed. Nothing invoked it. See
+  `docs/DEVTOOLS-AUDIT.md`.

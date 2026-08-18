@@ -93,6 +93,34 @@ grep -qE '^Format:    SF[0-9A-F]+$' "$WORK/dump.txt" ||
 grep -qE 'Race   Orc' "$WORK/dump.txt" ||
     fail "the engine's own character-sheet dump (CreateCharDump) did not include the expected race line"
 
+# 3b. The SAME save, through the graphical binary. src/Dump.cpp has always been
+#     linked into ./incursion, but until 2026-08-18 nothing there parsed -dump,
+#     so the capability was in the shipped release and unreachable. The parse
+#     now lives in src/Wlibtcod.cpp's main(), mirroring src/Wposix.cpp:530-539.
+#     If anyone removes it, this step goes red -- which is the only reason the
+#     step exists. The two backends share every line of Dump.cpp and Sheet.cpp,
+#     so the reports must be byte-identical; a difference means one backend is
+#     walking the save differently and that is a defect either way.
+GUI_CHECKED=no
+if [ -x ./incursion ]; then
+    GUI_CHECKED=yes
+    if ! INCURSION_BIN=./incursion \
+            INCURSION_DUMP_SANDBOX="$WORK/dumpsandbox-gui" \
+            ./tools/dump_save.sh "$SAVE" \
+            > "$WORK/dump-gui.txt" 2> "$WORK/dump-gui.stderr"; then
+        echo "--- graphical -dump stderr ---"
+        cat "$WORK/dump-gui.stderr"
+        fail "./incursion could not run -dump; the parse in src/Wlibtcod.cpp's main() is missing or broken"
+    elif ! diff -q "$WORK/dump.txt" "$WORK/dump-gui.txt" > /dev/null; then
+        echo "--- first 20 differing lines ---"
+        diff "$WORK/dump.txt" "$WORK/dump-gui.txt" | head -20
+        fail "the two backends disagree about the same save; they share Dump.cpp, so one of them walks it wrongly"
+    fi
+else
+    echo "SKIP: ./incursion is not built, so the graphical -dump path was NOT"
+    echo "      checked. Run ./build_macos.sh to cover it."
+fi
+
 # 4. The safety claim, re-asserted independently of dump_save.sh's own check:
 #    nothing must have been written to, removed from, or changed in the real
 #    save/ directory by any of this -- not by the game session in step 1
@@ -102,13 +130,20 @@ REAL_SAVE_AFTER="$(find "$ROOT/save" -type f 2>/dev/null | sort)"
 if [ "$REAL_SAVE_BEFORE" != "$REAL_SAVE_AFTER" ]; then
     fail "the real save/ directory's file list changed during this check"
 fi
-if [ -d "$WORK/dumpsandbox" ]; then
-    fail "tools/dump_save.sh left its sandbox behind: something was written where nothing should be"
-fi
+for sandbox in "$WORK/dumpsandbox" "$WORK/dumpsandbox-gui"; do
+    if [ -d "$sandbox" ]; then
+        fail "tools/dump_save.sh left $(basename "$sandbox") behind: something was written where nothing should be"
+    fi
+done
 
 if [ "$FAILED" -eq 0 ]; then
     echo "PASS: -dump produced every required section, the exact expected"
     echo "      fields for a deterministic seed, and wrote nothing"
+    if [ "$GUI_CHECKED" = yes ]; then
+        echo "      Both backends were checked and their reports are identical."
+    else
+        echo "      HEADLESS BACKEND ONLY -- the graphical -dump path was skipped."
+    fi
     exit 0
 fi
 exit 1

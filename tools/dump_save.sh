@@ -51,11 +51,20 @@ SAVE="$(cd "$(dirname "$SAVE")" && pwd)/$(basename "$SAVE")"
 
 # See tools/headless.sh for the reasoning behind INCURSION_BIN and why a
 # launcher, if given one, must not be trusted for its own exit code.
+#
+# Either binary works. ./incursion-headless stays the default because it needs
+# no SDL and is what a harness has to hand, but since 2026-08-18 the graphical
+# ./incursion parses -dump too (src/Wlibtcod.cpp main(), mirroring
+# src/Wposix.cpp:530-539) and prints a byte-identical report -- both walk the
+# same src/Dump.cpp, and tools/check_dump_save.sh asserts they agree. So a
+# person with only the release build can inspect a save without building a
+# second binary: INCURSION_BIN=./incursion tools/dump_save.sh <save>
 BIN="${INCURSION_BIN:-./incursion-headless}"
 LAUNCHER="${INCURSION_LAUNCHER:-}"
 
 [ -x "$BIN" ] || {
     echo "$BIN not built. Run: BACKEND=posix ./build_macos.sh"
+    echo "Or use the graphical build: INCURSION_BIN=./incursion $0 <save>"
     exit 2
 }
 

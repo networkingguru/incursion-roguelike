@@ -27,6 +27,27 @@ reading and writing, so the writable copy is the real one and the read-only game
 data is linked in.
 
 
+Reading a character without playing
+-----------------------------------
+
+This port can print a full character report from a save file, straight to a
+Terminal window, without starting the game. No window opens and nothing is
+written -- the save is opened for reading only.
+
+    /Applications/Incursion.app/Contents/MacOS/Incursion -dump \
+        ~/Library/Application\ Support/Incursion/save/YourCharacter.sav
+
+You get current and maximum hit points, position and depth, every equipped
+slot, every effect on the character, the whole inventory including what is
+inside containers, what is on the floor underneath, and the complete character
+sheet with feats, skills and saving throws.
+
+Add "> character.txt" to the end to keep it as a file.
+
+The report is produced by the game's own character-sheet code reading the real
+save, so it always agrees with what the game itself believes.
+
+
 Requirements
 ------------
 

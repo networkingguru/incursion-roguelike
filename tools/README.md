@@ -157,8 +157,7 @@ because merging them is the exact defect this code used to have.
 `check_headless.sh:38-39`, and 22 more). So you may call any of them from any
 working directory, and the path arguments they take are relative to the REPO
 ROOT, not to where you are standing. `gate_lib.sh:43` uses `BASH_SOURCE` instead
-because it is sourced, not executed. `run_probe.sh:7` uses a bare `cd` with no
-`ROOT` variable.
+because it is sourced, not executed.
 
 **Trap 2 — `headless.sh` copies the LIVE `Options.Dat` unless you say
 otherwise.** `headless.sh:99` defaults `INCURSION_OPTIONS` to `$ROOT/Options.Dat`
@@ -305,16 +304,16 @@ marking is the job, and both still explain an older log or an older commit.
 | `headless.sh` | What did one scripted session of this build do? | LIVE |
 | `soak.sh` | What do N sessions over N seeds complain about? | LIVE |
 | `play.sh` | Interactive launcher for a real session, with the map audit, save probe and character probe on. Uses the real `save/`, by design. | LIVE |
-| `dump_save.sh` | What is in this `.sav`, without playing the game? Wraps the binary's `-dump` in the same sandbox `headless.sh` uses. | LIVE |
-| `run_probe.sh` | Nothing that `play.sh` does not. | **SUPERSEDED** |
+| `dump_save.sh` | What is in this `.sav`, without playing the game? Wraps the binary's `-dump` in the same sandbox `headless.sh` uses. Defaults to `./incursion-headless`; `INCURSION_BIN=./incursion` works too since 2026-08-18 and gives a byte-identical report. | LIVE |
 
-`run_probe.sh:6` says "Delete this script once the saved-game position bug is
-fixed." That bug is fixed: `docs/REPORTING-GATE.md:162` records
-`*((long*)&hm)` destroying the player's position as a closed fix, and
-`src/AbiCheck.cpp:11` now gates the type widths it depended on. `play.sh` sets
-the same two probes and more (`play.sh:41-49`), and prints a report afterwards,
-which `run_probe.sh` does not. `docs/PORT-STATUS.md:311-312` reaches the same
-verdict independently. It is left in place, unmodified, per the marking rule.
+`run_probe.sh` was **deleted on 2026-08-18**. Its own header said "Delete this
+script once the saved-game position bug is fixed", and that bug is fixed:
+`docs/REPORTING-GATE.md:162` records `*((long*)&hm)` destroying the player's
+position as a closed fix, and `src/AbiCheck.cpp:11` now gates the type widths it
+depended on. It was also redundant — `play.sh` sets the same two probes and more
+(`play.sh:41-49`) and prints a report afterwards, which `run_probe.sh` did not.
+Nothing invoked it; the only references were documentation. See
+`docs/DEVTOOLS-AUDIT.md` for the audit that removed it.
 
 ### The regression gate
 
@@ -335,7 +334,7 @@ verdict independently. It is left in place, unmodified, per the marking rule.
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? | LIVE |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? | LIVE |
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? | LIVE |
-| `check_dump_save.sh` | Does `-dump` still walk a real save and report the right fields? | LIVE |
+| `check_dump_save.sh` | Does `-dump` still walk a real save and report the right fields, from BOTH backends? | LIVE |
 | `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? | LIVE |
 | `check_layout.sh` | Does this build play the same game when its objects sit at different addresses? | LIVE |
 | `check_load_corrupt.sh` | Does the real binary refuse ten hand-corrupted saves cleanly and still load two genuine ones? | LIVE |

@@ -413,10 +413,17 @@ ExceptionHandler* crashdumpHandler;
 *                              main() Function                               *
 \*****************************************************************************/
 
+/* src/Dump.cpp. Declared here rather than added to a header because it is
+   used from exactly one call site, main() -- the same way src/Wposix.cpp:465
+   declares it for the other backend. */
+extern bool RunSaveDump(const char *path);
+
 int main(int argc, char *argv[]) {
     /* This path code is currently present in libtcod and curses code. */
     char executablePath[MAX_PATH_LENGTH] = "";
     char *envPath = getenv("INCURSIONPATH");
+    const char *dumpSave = NULL;
+    int i;
 
     if (envPath != NULL) {
         if (strlen(envPath) > 0 && strcat(executablePath, envPath)) {
@@ -485,6 +492,17 @@ int main(int argc, char *argv[]) {
 #endif
 #endif
 
+    /* -dump is parsed here rather than in TextTerm::RunOnCommandLine because
+       that parser caps an option's value at 49 characters (option_values[10]
+       [50], src/TextTerm.cpp:39), and a real save path -- an absolute one
+       especially -- routinely runs longer and would be silently truncated to a
+       path that does not exist. src/Wposix.cpp:530-539 parses it the same way
+       for the same reason; unknown options are ignored by RunOnCommandLine, so
+       both parsers can read the same command line. */
+    for (i = 1; i < argc; i++)
+        if (!strcmp(argv[i], "-dump") && i + 1 < argc)
+            dumpSave = argv[++i];
+
     theGame = new Game();
     AT1 = new libtcodTerm;
     AT1->SetIncursionDirectory(executablePath);
@@ -492,7 +510,13 @@ int main(int argc, char *argv[]) {
     int retval = 0;
 
     // Anything that runs at this point should not use the display, but rather standard C functions.
-    if (!AT1->RunOnCommandLine(argc, argv, &retval)) {
+    /* -dump obeys that rule literally: it never calls Initialize(), so no SDL
+       window opens and the report goes to stdout. It is the graphical build's
+       door to src/Dump.cpp, which has always been linked into this binary and
+       until now was reachable only from the posix build. */
+    if (dumpSave) {
+        retval = RunSaveDump(dumpSave) ? 0 : 22;
+    } else if (!AT1->RunOnCommandLine(argc, argv, &retval)) {
         T1->Initialize();
         theGame->StartMenu();
         T1->ShutDown();

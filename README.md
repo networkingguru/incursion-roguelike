@@ -52,6 +52,35 @@ data module, so what you are playing is the real thing and not a subset.
 terminal build that needs no graphics at all and works over ssh, and a headless
 mode that plays from a script — which is how this fork finds its own bugs.
 
+### Read your character without loading the game
+
+New in this fork, and not something the original could do. Point the app at one
+of your save files and it prints a full character report to the terminal, then
+exits. No window opens, the game does not start, and nothing is written — your
+save is opened for reading only.
+
+```
+/Applications/Incursion.app/Contents/MacOS/Incursion -dump \
+    ~/Library/Application\ Support/Incursion/save/YourCharacter.sav
+```
+
+You get current and maximum hit points, where she is standing and how deep,
+every equipped slot, every effect currently on her, the full inventory including
+the contents of containers, what is lying on the floor beneath her, and then the
+complete character sheet — the same sheet the game shows at the end of a game,
+with every feat, skill and save.
+
+It is useful for three things: settling an argument about what a character
+actually has, checking a save that will not load, and keeping a record of a
+character before you take her somewhere dangerous. Redirect it to a file and it
+is a plain-text snapshot you can keep or post.
+
+The report comes from the game's own character-sheet code walking the real save,
+not from a separate reader guessing at the file format, so it cannot drift out of
+step with what the game believes.
+
+*Available from the next release. Release 1 cannot do this.*
+
 ---
 
 ## Why this fork
@@ -71,6 +100,11 @@ never had Loadbearer. They do now.
 **Bare-handed monks are no longer punished.** Two empty hands produced one attack
 per swing while two weapons produced two, so a monk was better off holding
 nunchaku than using his fists. Fixed to match the 3.5 rules.
+
+**You can read a save without playing it.** `-dump` prints a full character
+report — inventory, effects, equipment, the whole sheet — straight to the
+terminal from any save file. See *Read your character without loading the game*
+above. The original had no way to see this short of finishing the game.
 
 **It is measurably more stable.** The game plays itself unattended, thousands of
 sessions at a time, and each defect that finds is fixed against a control run
@@ -112,6 +146,11 @@ brew install sdl2 pkg-config
 
 Two minutes from a clean checkout. `BACKEND=posix ./build_macos.sh` builds the
 terminal and headless binary instead.
+
+Both binaries accept `-dump`, so from a source tree the character report is
+`./incursion -dump save/YourCharacter.sav`, and `tools/dump_save.sh` wraps the
+same thing in a disposable sandbox. `tools/check_dump_save.sh` asserts that the
+two builds produce byte-identical reports for the same save.
 
 ### Packaging a release
 
