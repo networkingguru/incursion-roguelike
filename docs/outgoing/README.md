@@ -28,6 +28,12 @@ tree is a 404 for the reader.
 citation is its line number, and `master` moves under it. Put the SHA in the
 URLs and name it once in the opening sentence, as `pr43-reply.md` does.
 
+**Repin last, after the evidence is final.** Pinning has a trap: pin the links,
+then edit an evidence file, and the pin now serves the superseded text — which
+is worse than a branch link, because it looks deliberate. The order is: finish
+the evidence, commit it, then rewrite every fork URL to that commit and commit
+again. It cost two rounds here to learn that, both recorded in the log.
+
 The gate cannot tell whether the sentence around a citation is true. That still
 needs a reader. What it does is close the one class of error that recurred three
 times in a single day: citing our tree's line numbers as theirs.
