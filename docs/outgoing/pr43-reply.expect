@@ -79,3 +79,6 @@ inc/Defines.h:4324	MAX_DUNGEON_LEVELS 50
 src/Feature.cpp:983	MAX_DUNGEON_LEVELS
 src/Feature.cpp:1017	return oMap(DungeonLevels
 src/Feature.cpp:885	NewDepth -= 
+src/Feature.cpp:814	OldDepth = lr->OldDepth
+src/Feature.cpp:827	Limbo[i]->Target
+src/Feature.cpp:842	PlaceAt(p->m

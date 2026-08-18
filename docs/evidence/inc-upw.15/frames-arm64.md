@@ -54,7 +54,9 @@ also carries `__ZZN6Player9MoveDepthEsbE6GoWith` in `.bss`; the other does not.
 So the recursion costs 2400 bytes a level with the patch, of which 512 is the
 array it moved onto the stack. Without the patch a level costs 1888.
 
-A provable maximum adds one more frame. The entry that asks for `DUN_DEPTH + 1`
+The provable maximum of the recursion's own frames adds one more frame. It is a
+floor on the process's peak, not the peak itself: MoveDepth calls SaveGame on
+every entry (src/Feature.cpp:858) and that subtree is not counted here. The entry that asks for `DUN_DEPTH + 1`
 allocates its prologue before it reads anything and faults at `Feature.cpp:887`,
 never reaching `PlaceAt`, so it contributes `MoveDepth` alone:
 
@@ -66,9 +68,10 @@ Two call sites arrive there with safe=false and so need only the one chasm
 square: the spell Shift Level (lib/wspells.irh:7065, which reaches MoveDepth
 through the binding that drops the safe argument) and wizard Ascend/Descend
 (src/Debug.cpp:810). The ordinary arrivals -- the up-staircase
-(src/Feature.cpp:260), the skylight and rope routes (src/Skills.cpp:4008,
-:4066) and resurrection (src/Prayer.cpp:1482) -- all pass safe=true, so each
-needs the landing square AND all eight neighbours to be chasm. A chain that instead starts by falling from level 1 is
+(src/Feature.cpp:260), the two skylight routes -- by levitation and by rope,
+both inside the one isSkylight block at src/Skills.cpp:3990 (:4008, :4066) --
+and resurrection (src/Prayer.cpp:1482) all pass safe=true, so each needs the
+landing square AND all eight neighbours to be chasm. A chain that instead starts by falling from level 1 is
 one entry shorter.
 
 The 144 is the patched 656 less the measured 512, not a disassembled figure.
