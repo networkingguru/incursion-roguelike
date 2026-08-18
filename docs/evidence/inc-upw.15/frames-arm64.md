@@ -48,8 +48,17 @@ incursion-ab-static   __ZN6Player9MoveDepthEsb
 1856 - 1344 = **512 bytes**, which is 64 pointers of 8 bytes. The static build
 also carries `__ZZN6Player9MoveDepthEsbE6GoWith` in `.bss`; the other does not.
 
-So the recursion costs 2400 bytes a level as shipped, of which 512 is the array
-this patch moved onto the stack. Without the patch a level costs 1888.
+So the recursion costs 2400 bytes a level with the patch, of which 512 is the
+array it moved onto the stack. Without the patch a level costs 1888.
+
+A provable maximum adds one more frame. The entry that asks for `DUN_DEPTH + 1`
+allocates its prologue before it reads anything and faults at `Feature.cpp:887`,
+never reaching `PlaceAt`, so it contributes `MoveDepth` alone:
+
+    14 descents + the faulting entry, patched    14 x 2400 + 656 = 34,256
+    14 descents + the faulting entry, unpatched  14 x 1888 + 144 = 26,576
+
+The 144 is the patched 656 less the measured 512, not a disassembled figure.
 
 ## A correction, recorded because the wrong number was nearly sent
 

@@ -62,3 +62,4 @@ src/Skills.cpp:4161	MoveDepth(m->Depth + 1, true)
 src/Display.cpp:131	Remove(false)
 src/Status.cpp:675	CH_DOMINATE
 src/Social.cpp:2414	TargetSummoner
+src/MakeLev.cpp:2401	usedInThisLevel
