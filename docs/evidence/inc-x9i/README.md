@@ -107,8 +107,9 @@ exactly that. It is in the **streamer** picker, and so is the `MIN_CHASM_DEPTH`
 test at `:1449`.
 
 Chasm floor also arrives as an ordinary **room**. The room picker at
-`:2397-2400` applies neither rule; its gates are `RoomTypes`, then `DepthCR`
-against the region's own `Depth`, then `MIN_VAULT_DEPTH`, then `RF_CORRIDOR`.
+`:2397-2404` applies neither rule; its gates are `RoomTypes`, then `DepthCR`
+against the region's own `Depth`, then `MIN_VAULT_DEPTH`, then `RF_CORRIDOR`,
+then a scan of what has already been used on this level.
 Three shipped regions place chasm — `"Twisting Chasm"` (`lib/dungeon.irh:3497`,
 `Depth: 2`), whose `Floor:` is `$"chasm"`; `"Floating Rock;1"` (`:3660`,
 `Depth: 3`), whose floor is obsidian but whose grid tiles `'X'` to `$"chasm"`;

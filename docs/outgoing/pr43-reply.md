@@ -1,8 +1,8 @@
-(c) is right and I will change it. All line numbers are against master. I have split each answer into what I measured and what I only read, because each answer has a measured core and an inferred edge, and you should be able to tell which is which without taking my word for it.
+(c) is right that the fixed 64 has to go, and I will change it — though I would grow the list rather than size it from a count, for reasons under (c) below. All line numbers are against master. I have split each answer into what I measured and what I only read, because each answer has a measured core and an inferred edge, and you should be able to tell which is which without taking my word for it.
 
 ## a) How many times can it call itself.
 
-**Answer.** The chain descends at most `DUN_DEPTH - 1` levels — 9 in The Goblin Caves, 14 if the player selects Challenge difficulty — and the call after the last of those faults on a null resource instead of returning.
+**Answer.** It calls itself at most `DUN_DEPTH - 1` times — 9 in The Goblin Caves, 14 if the player selects Challenge difficulty — because each self-call descends exactly one level and the entry after the last of them faults on a null resource instead of returning. Counting entries rather than self-calls gives one more, which is why section (b) below totals fifteen frames for fourteen descents.
 
 **Measured.**
 
@@ -52,7 +52,7 @@ The scripted ones are a different matter, and I think a second defect. The scrip
 
 **Answer.** 2,400 bytes for each level descended with this patch applied, of which 512 is the array it moves onto the stack. Master as it stands today, with the `static`, costs 1,888 — and that second figure is subtraction, not disassembly: I measured 2,400 and 512 separately and took one from the other.
 
-**Measured, two ways that agree.** A probe recorded the stack pointer on entry to `MoveDepth` and its distance from the frame still open above it: **2,416 bytes**, of which that probe accounted for 16 ([stackprobe-seed3362.log](https://github.com/networkingguru/incursion-roguelike/blob/master/docs/evidence/inc-x9i/stackprobe-seed3362.log)). That log holds one nested entry, not many — the `nest=1` lines have nothing above them to measure against.
+**Measured, two ways that agree.** A probe recorded its own frame address on entry to `MoveDepth` — `__builtin_frame_address(0)` — and the distance from the frame still open above it: **2,416 bytes**, of which that probe accounted for 16 ([stackprobe-seed3362.log](https://github.com/networkingguru/incursion-roguelike/blob/master/docs/evidence/inc-x9i/stackprobe-seed3362.log)). That log holds one nested entry, not many — the `nest=1` lines have nothing above them to measure against.
 
 The prologues of a build carrying the patch and no probe give the same total independently. One level costs three frames, not one, because the recursion runs through `PlaceAt` and `TerrainEffects` ([frames-arm64.md](https://github.com/networkingguru/incursion-roguelike/blob/master/docs/evidence/inc-upw.15/frames-arm64.md) has the disassembly):
 
@@ -80,7 +80,7 @@ One thing about what those 512 bytes buy, because I sent this as hardening and I
 
 **Answer.** Happy to, and I will send it in whatever shape you prefer — it is your call. One thing worth knowing before I do: sizing it from a count has a catch here.
 
-To size the array you must count the followers in a pass of its own, and whenever two followers sit next to each other in `Things` the collecting pass produces **fewer** than the count, so code that trusts the count as its bound reads entries that were never filled. The allocation would be right and the collection would still be wrong. My patch took the cheap route instead and added a `break`, which turns an overflow into a silent drop and leaves the magic number where it was. `GoWith[gwc++]` ([Feature.cpp:909](https://github.com/rmtew/incursion-roguelike/blob/master/src/Feature.cpp#L909)) is not tested against 64 at all today, which is why I touched the function.
+To size the array you must count the followers in a pass of its own, and whenever two followers sit next to each other in `Things` the collecting pass gathers **fewer** than the count. The allocation itself stays safe — the placement loop is bounded by `gwc`, not by the count, so over-allocating harms nothing — but the two passes disagree, and the gap between them is a defect of its own that sizing the array does not touch. My patch took the cheap route instead and added a `break`, which turns an overflow into a silent drop and leaves the magic number where it was. `GoWith[gwc++]` ([Feature.cpp:909](https://github.com/rmtew/incursion-roguelike/blob/master/src/Feature.cpp#L909)) is not tested against 64 at all today, which is why I touched the function.
 
 **Measured.** The collecting loop is already losing followers. I instrumented it to record each follower's index in `Things` before it ran, what it gathered, and what was still standing on the old level afterwards, then gave a wizard-mode character kobolds and made each one a follower:
 
