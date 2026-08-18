@@ -1,0 +1,8 @@
+collected nest=1 depth=1 array=0x16da74a00 gwc=2 entries=[0x1033408a0,0x1033416a0]
+placing   nest=1 depth=7 array=0x16da74a00 gwc=2 entries=[0x1033408a0,0x1033416a0]
+collected nest=1 depth=7 array=0x16da74a00 gwc=1 entries=[0x1033408a0]
+placing   nest=1 depth=6 array=0x16da74a00 gwc=1 entries=[0x1033408a0]
+collected nest=1 depth=6 array=0x16da74a00 gwc=1 entries=[0x1033408a0]
+collected nest=2 depth=7 array=0x16da73bc0 gwc=1 entries=[0x1033416a0]
+placing   nest=2 depth=8 array=0x16da73bc0 gwc=1 entries=[0x1033416a0]
+placing   nest=1 depth=8 array=0x16da74a00 gwc=1 entries=[0x1033408a0]

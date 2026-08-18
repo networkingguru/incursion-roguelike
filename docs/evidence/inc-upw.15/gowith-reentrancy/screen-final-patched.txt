@@ -1,0 +1,49 @@
+=== screen 0005 final  key 178  mode 9 ===
+You leave the unnaturally shadowed region. Flames sear you!     |Kesh
+Done.                                                           |Male Orc
+                                                                |Barbarian 1
+                                                                |0/1000 XP
+                                                                |
+                                                                |12:00 AM
+                                                                |1st of Suntide
+                                                                |
+                                                                |Fighting
+                                                                |Satiated
+               #------------------------------------------------#Afoot
+               |           What do you want to apply?           |Healthy
+               |                                                |Vigorous
+               |  [a] orcish knife                              |
+               |  [b] orcish longspear                          |STR: 20
+               |  [c] orcish greatsword                         |DEX: 13
+               |  [d] loincloth                                 |CON: 14
+               |  [e] orcish hide armour                        |INT: 12
+               |  [f] Holy symbol of Khasrach                   |WIS: 12
+               |  [g] 24 gold pieces                            |CHA: 16
+               |  [h] 4 Potions of See Invisibility             |LUC: 13
+               |  [i] 7 Potions of Remove Curse                 |
+               |  [j] 4 Potions of Cure Disease [0]             |Mod:Melee
+               |  [k] 4 Antitoxins [+3]                         |Hit:6
+               |  [l] medium backpack                           |Dmg:1d3+6
+               |  [m] 9 food rations                            |Spd:140%
+               |  [n] 11 strips of cured meat                   |Enc:Light
+               |  [o] 2 Potions of Detect Stairs                |Def:11 Cov:8
+               |  [p] 2 Potions of Restoration [4d6]            |Arm: 5 Slash
+               |  [q] 2 Potions of Restore Constitution [6d8]   |     6 Pierce
+               |  [r] 2 Potions of Restore Strength [6d8]       |     6 Blunt
+               |  [s] craftsman's tools                         |Mov:90%
+               |  [t] healing kit                               |
+               |  [u] Wand of Identify (50 charges)             |Things in View:
+               |  [v] 7 orcish shotputs                         |k kobold
+               |                                                |v ? glaive
+               #------------------------------------------------#
+                                                                |
+                                                                |
+                                                                |
+                                                                |
+                                                                |
+                                                                |
+                                                                |
+                                                                |
+                                                                |
+The Goblin Caves: Fiery Prison                              080m|[*************]
+HP:35/45 Mana:15/15 FP:9/9 GP:24                                |[*************]

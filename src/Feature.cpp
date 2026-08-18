@@ -907,6 +907,44 @@ struct MoveDepthStackProbe {
 int16 MoveDepthStackProbe::Nest = 0;
 char *MoveDepthStackProbe::Frames[64];
 
+/* Temporary diagnostic: set INCURSION_GOWITH_PROBE=1 to watch the GoWith array
+   across a nested MoveDepth. It prints the array's ADDRESS, so a build carrying
+   `static Thing *GoWith[64]` shows the same address at every nesting level and
+   a build without the static shows a different one per frame. It prints the
+   entries twice per call -- once when collection finishes, once immediately
+   before the placement loop reads them -- so a value that changed in between
+   is visible without any inference.
+
+   The nest counter is separate from MoveDepthStackProbe's, which only counts
+   when its own variable is set. Delete with inc-upw.15. */
+struct MoveDepthNest {
+    static int16 Level;
+    MoveDepthNest()  { Level++; }
+    ~MoveDepthNest() { Level--; }
+};
+int16 MoveDepthNest::Level = 0;
+
+static void GoWithProbe(const char *when, int16 mapDepth, Thing **arr, int16 gwc)
+{
+    if (!getenv("INCURSION_GOWITH_PROBE"))
+        return;
+    static FILE *log = NULL;
+    if (!log) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%slogs/gowithprobe.log",
+            (const char*)T1->IncursionDirectory);
+        log = fopen(path, "a");
+    }
+    if (!log)
+        return;
+    fprintf(log, "%-9s nest=%d depth=%d array=%p gwc=%d entries=[",
+        when, (int)MoveDepthNest::Level, (int)mapDepth, (void*)arr, (int)gwc);
+    for (int16 j = 0; j < gwc && j < 8; j++)
+        fprintf(log, j ? ",%p" : "%p", (void*)arr[j]);
+    fprintf(log, "]\n");
+    fflush(log);
+}
+
 void Player::MoveDepth(int16 NewDepth, bool safe) {
     /* upstream: base-code defect, the fix is ours. It is upstream's because a
        static array in a function that re-enters itself is clobbered on Win32
@@ -930,6 +968,7 @@ void Player::MoveDepth(int16 NewDepth, bool safe) {
     Thing *GoWith[64]; Creature *c;
     rID mID; Map *new_m = NULL; int16 nx, ny, i, gwc;
     MoveDepthStackProbe stackProbe(m->Depth, (char*)__builtin_frame_address(0));
+    MoveDepthNest nestTracker;
     StoreLevelStats((uint8)m->Depth);
     theGame->SaveGame(*this);
 
@@ -1042,6 +1081,8 @@ void Player::MoveDepth(int16 NewDepth, bool safe) {
             }
         }
 
+        GoWithProbe("collected", m->Depth, GoWith, gwc);
+
         if (c = (Creature*)GetStatiObj(DWARVEN_FOCUS))
             if (c->m == m) {
                 LoseXP(TotalLevel() * 200);
@@ -1064,10 +1105,132 @@ void Player::MoveDepth(int16 NewDepth, bool safe) {
                     break;
                 }
 
+        /* Temporary diagnostic: set INCURSION_FALL_CHAIN to a depth, or to
+           'all', to steer the arrival square onto a real chasm square already
+           present on the arrival level. It creates no terrain and moves nothing
+           else; it only chooses where the arriving player lands, which is what
+           makes the fall chain reachable on demand instead of by luck. With
+           'all' each arrival lands on chasm again, so the recursion runs to the
+           bottom of the dungeon. Delete with inc-upw.15. */
+        if (const char *fc = getenv("INCURSION_FALL_CHAIN"))
+            if (!strcmp(fc, "all") || new_m->Depth == (int16)atoi(fc)) {
+                /* INCURSION_FALL_CHAIN_SKIP ignores the first N matching
+                   arrivals, so a test can walk a level, leave it, and steer
+                   only the RETURN to it. */
+                static int seen = 0;
+                const char *sk = getenv("INCURSION_FALL_CHAIN_SKIP");
+                if (sk && seen++ < atoi(sk))
+                    goto no_steer;
+                int16 fx, fy; bool found = false;
+                for (fy = 1; fy < new_m->SizeY() - 1 && !found; fy++)
+                    for (fx = 1; fx < new_m->SizeX() - 1 && !found; fx++)
+                        if (new_m->FallAt(fx, fy) && !new_m->SolidAt(fx, fy)) {
+                            nx = fx; ny = fy; found = true;
+                        }
+                static FILE *chainLog = NULL;
+                if (!chainLog) {
+                    char path[1024];
+                    snprintf(path, sizeof(path), "%slogs/fallchain.log",
+                        (const char*)T1->IncursionDirectory);
+                    chainLog = fopen(path, "a");
+                }
+                if (chainLog) {
+                    fprintf(chainLog, "arrival depth=%d chasm_found=%d at=%d,%d\n",
+                        (int)new_m->Depth, (int)found, (int)nx, (int)ny);
+                    fflush(chainLog);
+                }
+            }
+        no_steer:
+
         PlaceAt(new_m, nx, ny, true);
+
+        GoWithProbe("placing", m->Depth, GoWith, gwc);
 
         for (i = 0; i != gwc; i++)
             GoWith[i]->PlaceAt(new_m, nx, ny);
+
+        /* Temporary diagnostic: set INCURSION_CHASM_WALK=1 to stand the player
+           immediately west of a real chasm square on the deepest level of the
+           dungeon, so that a key script can walk east into it and the fall,
+           the confirmation and MoveDepth all run as they normally would.
+
+           Nothing here manufactures terrain -- it only chooses where the
+           player stands, which is what a wizard teleport would do by hand. It
+           fires only on the bottom level and only once per arrival. Delete
+           with the bead that records this. */
+        /* Temporary diagnostic: set INCURSION_LEVITATE_CHASM=1 to grant
+           LEVITATION and stand the player ON a chasm square on the deepest
+           level, which is what Creature::Descend's levitation branch
+           (Skills.cpp:4155-4161) requires. A potion or a spell would produce
+           the same state; this only saves the harness from casting one.
+           Delete with the bead that records this. */
+        if (getenv("INCURSION_LEVITATE_CHASM") &&
+            new_m->Depth == (int16)RES(new_m->dID)->GetConst(DUN_DEPTH)) {
+            static FILE *levLog = NULL;
+            int16 lx, ly;
+            if (!levLog) {
+                char path[1024];
+                snprintf(path, sizeof(path), "%slogs/levitate.log",
+                    (const char*)T1->IncursionDirectory);
+                levLog = fopen(path, "a");
+            }
+            if (!HasStati(LEVITATION))
+                GainPermStati(LEVITATION, NULL, SS_MISC);
+            for (lx = 2; lx < new_m->SizeX() - 2; lx++)
+                for (ly = 2; ly < new_m->SizeY() - 2; ly++)
+                    if (TTER(new_m->TerrainAt(lx, ly))->HasFlag(TF_FALL)) {
+                        if (levLog) {
+                            fprintf(levLog,
+                                "levitating on chasm at %d,%d, depth %d, "
+                                "dun_depth %d\n", (int)lx, (int)ly,
+                                (int)new_m->Depth,
+                                (int)RES(new_m->dID)->GetConst(DUN_DEPTH));
+                            fflush(levLog);
+                        }
+                        Move(lx, ly, false);
+                        lx = new_m->SizeX();
+                        break;
+                    }
+        }
+
+        if (getenv("INCURSION_CHASM_WALK") &&
+            new_m->Depth == (int16)RES(new_m->dID)->GetConst(DUN_DEPTH)) {
+            static FILE *walkLog = NULL;
+            int16 cx, cy;
+            if (!walkLog) {
+                char path[1024];
+                snprintf(path, sizeof(path), "%slogs/chasmwalk.log",
+                    (const char*)T1->IncursionDirectory);
+                walkLog = fopen(path, "a");
+            }
+            int32 fallSeen = 0, edgeSeen = 0;
+            for (cx = 2; cx < new_m->SizeX() - 2; cx++)
+                for (cy = 2; cy < new_m->SizeY() - 2; cy++)
+                    if (TTER(new_m->TerrainAt(cx, cy))->HasFlag(TF_FALL)) {
+                        fallSeen++;
+                        if (!new_m->SolidAt(cx - 1, cy) &&
+                            !TTER(new_m->TerrainAt(cx - 1, cy))->HasFlag(TF_FALL)) {
+                            edgeSeen++;
+                            if (edgeSeen == 1) {
+                                if (walkLog) {
+                                    fprintf(walkLog,
+                                        "chasm at %d,%d; standing player at %d,%d "
+                                        "on depth %d (terrain west: %s)\n",
+                                        (int)cx, (int)cy, (int)(cx - 1), (int)cy,
+                                        (int)new_m->Depth,
+                                        (const char*)NAME(new_m->TerrainAt(cx - 1, cy)));
+                                    fflush(walkLog);
+                                }
+                                Move(cx - 1, cy, false);
+                            }
+                        }
+                    }
+            if (walkLog) {
+                fprintf(walkLog, "scan on depth %d: %d fall squares, %d with a walkable west neighbour\n",
+                    (int)new_m->Depth, (int)fallSeen, (int)edgeSeen);
+                fflush(walkLog);
+            }
+        }
     }
 
     MyTerm->RefreshMap();
@@ -1121,6 +1284,33 @@ Map* Game::GetDungeonMap(rID dID, int16 Depth, Player *pl, Map*TownLevel) {
     memset(DungeonLevels[i], 0, sizeof(hObj)*(RES(dID)->GetConst(DUN_DEPTH) + 1));
 Found:
     n = i;
+
+    /* Temporary diagnostic: set INCURSION_DUNGEONMAP_PROBE=1 to report a request
+       for a level outside the array this function allocated. DungeonLevels[n]
+       holds min(MAX_DUNGEON_LEVELS, DUN_DEPTH + 1) handles, so the last valid
+       index is DUN_DEPTH -- but the loop below runs i <= Depth and the return
+       reads [Depth]. The levitation guard in Creature::Descend asks for
+       DUN_DEPTH + 1 while standing on the bottom level. Delete with inc-tos. */
+    if (getenv("INCURSION_DUNGEONMAP_PROBE")) {
+        int32 allocated = min((int32)MAX_DUNGEON_LEVELS,
+            (int32)(RES(dID)->GetConst(DUN_DEPTH)) + 1);
+        if ((int32)Depth >= allocated) {
+            static FILE *dmLog = NULL;
+            if (!dmLog) {
+                char path[1024];
+                snprintf(path, sizeof(path), "%slogs/dungeonmapprobe.log",
+                    (const char*)T1->IncursionDirectory);
+                dmLog = fopen(path, "a");
+            }
+            if (dmLog) {
+                fprintf(dmLog,
+                    "GetDungeonMap depth=%d allocated=%d last_valid_index=%d "
+                    "reads_index=%d\n",
+                    (int)Depth, (int)allocated, (int)allocated - 1, (int)Depth);
+                fflush(dmLog);
+            }
+        }
+    }
 
     /* Set DungeonLevels[n][0] to whatever is directly, geographically
        above the first dungeon level. This will allow us to match up stair

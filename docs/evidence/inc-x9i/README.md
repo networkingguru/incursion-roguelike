@@ -126,6 +126,30 @@ at level 9, which `:1879` intends. An earlier version of this file said "7
 sessions and 51 levels"; those runs shared directories (inc-uh0) and the totals
 were unreliable.
 
+## Challenge difficulty really does make the dungeon 15 deep
+
+Measured 2026-08-18. `Annot.cpp:468-470` returns 15 for `DUN_DEPTH` on an
+annotated resource once difficulty reaches `DIFF_CHALLENGE`. That is a source
+reading; this is the run.
+
+`OPT_DIFFICULTY` is byte 117 of `Options.Dat`. The shipped file here holds 2
+(`DIFF_BASELINE`). Copy it, set byte 117 to 3, and point the harness at the
+copy:
+
+```
+INCURSION_OPTIONS=<copy> INCURSION_DEPTH_PROBE=1 \
+    tools/headless.sh tools/keys/dive.keys 3362
+```
+
+`depthprobe-challenge-seed3362.log` reports `dun_depth=15` on every generated
+level, and levels 11, 12, 13 and 14 generate -- depths the same script cannot
+reach at baseline, because wizard Ascend/Descend refuses any depth above
+`DUN_DEPTH` (`Debug.cpp:804-808`). At baseline the same script stops at 10.
+
+The session ran out of keys before it asked for 15, so the deepest level in the
+log is 14. The figure that matters is `dun_depth=15`, which the game reports at
+run time on every line.
+
 ## Other ways chasm reaches the bottom level
 
 Generated chasm is measured above. Two more routes are read from the source and

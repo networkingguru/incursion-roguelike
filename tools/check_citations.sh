@@ -127,8 +127,15 @@ check_document() {
                 url_ref=${path%%/*}
                 path=${path#*/}
                 path=${path%/}
+                # No silent fallback to ORIGIN_REF. A ref this clone cannot
+                # resolve is usually a placeholder that was never repinned, and
+                # falling back hides it: the path exists on origin/master, the
+                # check passes, and the document goes out carrying a URL that
+                # 404s. Found on 2026-08-18, when three placeholders were
+                # reported and a fourth was not.
                 if ! git -C "$ROOT" rev-parse --verify --quiet "$url_ref^{commit}" > /dev/null; then
-                    url_ref="$ORIGIN_REF"
+                    fail "link names a ref this clone cannot resolve: $url_ref ($url)"
+                    continue
                 fi
                 if list_ref "$url_ref" | grep -qE "^$(printf '%s' "$path" | sed 's/[.[\*^$]/\\&/g')(/|$)"; then
                     printf 'ours     %s  present at %s\n' "$path" "${url_ref:0:10}"
@@ -156,7 +163,87 @@ check_document() {
         fi
     done < <(grep -oE '\b[A-Za-z_][A-Za-z0-9_]*\.(cpp|h|irh):[0-9]+' "$doc" | sort -u)
 
-    # 4. Expectations.
+    # 4. Bare continuation citations -- a `:NNNN` with no file in front of it.
+    #
+    # The prose writes `Skills.cpp:4161` once and then `:4181` for the next
+    # reference, so a bare number inherits whatever file was named last. Move a
+    # paragraph, or write a new one between them, and the number silently
+    # re-points at a different file. That has now happened twice in this
+    # document: `:887` and `:927` inherited Skills.cpp when they meant
+    # Feature.cpp, and `:4161` inherited Feature.cpp, which has 1049 lines.
+    # Neither is catchable by eye and both survive a full read.
+    #
+    # The check walks the document in order, tracks the last file named, and
+    # resolves each bare number against it. A number past the end of that file
+    # is certainly wrong. A number inside it may still be wrong, so the resolved
+    # line is printed for reading.
+    python3 - "$doc" "$UPSTREAM_REF" "$ROOT" <<'PYCHECK' || defects=$((defects + 1))
+import re, subprocess, sys
+
+doc, ref, root = sys.argv[1], sys.argv[2], sys.argv[3]
+text = open(doc).read()
+
+named = re.compile(r'\b([A-Za-z_][A-Za-z0-9_]*\.(?:cpp|h|irh)):(\d+)')
+bare  = re.compile(r'(?<![\w.])(?<!\.cpp)(?<!\.h)(?<!\.irh):(\d+)')
+
+lengths = {}
+def length_of(base):
+    if base not in lengths:
+        out = subprocess.run(['git', '-C', root, 'ls-tree', '-r', '--name-only', ref],
+                             capture_output=True, text=True).stdout.split()
+        hits = [p for p in out if p.split('/')[-1] == base]
+        if len(hits) != 1:
+            lengths[base] = (None, 0)
+        else:
+            body = subprocess.run(['git', '-C', root, 'show', f'{ref}:{hits[0]}'],
+                                  capture_output=True, text=True).stdout
+            lengths[base] = (hits[0], body.count('\n'))
+    return lengths[base]
+
+events = []
+for m in named.finditer(text):
+    events.append((m.start(), 'named', m.group(1), int(m.group(2))))
+for m in bare.finditer(text):
+    events.append((m.start(), 'bare', None, int(m.group(1))))
+events.sort()
+
+FAR = int(__import__('os').environ.get('CITATION_FAR', '400'))
+last, bad, cited = None, 0, {}
+for _, kind, base, num in events:
+    if kind == 'named':
+        last = base
+        cited.setdefault(base, set()).add(num)
+        continue
+    if last is None:
+        continue
+    path, n = length_of(last)
+    if path is None:
+        continue
+    if num > n:
+        print(f"DEFECT  bare ':{num}' follows {last}, which has only {n} lines "
+              f"-- it inherited the wrong file")
+        bad += 1
+        continue
+    # A continuation that lands thousands of lines from anything else cited in
+    # that file has almost certainly inherited the wrong file and happened to
+    # be in range. In this document every honest continuation sits within a
+    # hundred lines of its anchor, and all three real errors were over three
+    # thousand away.
+    seen = cited.get(last)
+    if seen:
+        gap = min(abs(num - c) for c in seen)
+        if gap > FAR:
+            print(f"DEFECT  bare ':{num}' follows {last}, but the nearest other "
+                  f"{last} citation is {gap} lines away -- check it did not "
+                  f"inherit the wrong file")
+            bad += 1
+            continue
+    cited.setdefault(last, set()).add(num)
+
+sys.exit(1 if bad else 0)
+PYCHECK
+
+    # 5. Expectations.
     if [ -n "$expect" ]; then
         [ -r "$expect" ] || { echo "cannot read $expect" >&2; exit 2; }
         local want key sub got

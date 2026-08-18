@@ -1,0 +1,35 @@
+# Put a follower on the level the player is about to arrive at, then arrive on a
+# chasm square there, so the nested MoveDepth runs its own collection loop while
+# the outer call still holds live entries in GoWith.
+#
+#   INCURSION_GOWITH_PROBE=1 INCURSION_FALL_CHAIN=7 INCURSION_FALL_CHAIN_SKIP=1
+#
+# Wizard letters are the ones followers.keys documents: g summon, C make master,
+# p ascend/descend depth.
+@include /Users/brianhill/Scripts/Incursion/tools/keys/chargen.keys
+
+w y g J c l UP ENTER
+w g J c l UP ENTER
+w g J c l UP ENTER
+
+w C UP ENTER
+w C UP LEFT ENTER
+w C RIGHT ENTER
+
+@dump:mastered
+
+w p "7" ENTER
+@dump:at7
+
+ENTER ENTER . .
+w p "6" ENTER
+@dump:at6
+
+ENTER ENTER . .
+w p "7" ENTER
+@dump:returned
+
+y ENTER y ENTER . . .
+
+@dump:final
+@quit

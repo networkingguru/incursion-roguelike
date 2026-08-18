@@ -1,0 +1,14 @@
+gen depth=1 dun_depth=15 fall_squares=30 stairs_down=4
+gen depth=2 dun_depth=15 fall_squares=0 stairs_down=4
+gen depth=3 dun_depth=15 fall_squares=48 stairs_down=4
+gen depth=4 dun_depth=15 fall_squares=240 stairs_down=4
+gen depth=5 dun_depth=15 fall_squares=48 stairs_down=4
+gen depth=6 dun_depth=15 fall_squares=295 stairs_down=4
+gen depth=7 dun_depth=15 fall_squares=317 stairs_down=4
+gen depth=8 dun_depth=15 fall_squares=845 stairs_down=4
+gen depth=9 dun_depth=15 fall_squares=479 stairs_down=4
+gen depth=10 dun_depth=15 fall_squares=479 stairs_down=4
+gen depth=11 dun_depth=15 fall_squares=528 stairs_down=4
+gen depth=12 dun_depth=15 fall_squares=466 stairs_down=4
+gen depth=13 dun_depth=15 fall_squares=41 stairs_down=4
+gen depth=14 dun_depth=15 fall_squares=41 stairs_down=4

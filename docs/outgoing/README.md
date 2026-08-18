@@ -34,6 +34,20 @@ is worse than a branch link, because it looks deliberate. The order is: finish
 the evidence, commit it, then rewrite every fork URL to that commit and commit
 again. It cost two rounds here to learn that, both recorded in the log.
 
+**All fork links point at ONE commit, and the prose names that commit.** The
+reply's opening sentence says which commit the evidence links resolve to. Add a
+new evidence file and the links to it need a LATER commit than the ones already
+pinned -- so the document would quietly carry two, while the sentence still names
+one, and an older link would serve superseded text. The fix is to move every
+fork link and the sentence together, at the same moment.
+
+The mechanism is a placeholder. While evidence is still being written, every
+fork URL and the commit named in the opening sentence read `PINME`, which no
+clone can resolve, so the gate fails and the document cannot go out. When the
+evidence is final and committed, replace every `PINME` in one pass with the new
+SHA and run the gate again. Do not pin some links early: a half-pinned document
+passes the gate and is wrong.
+
 The gate cannot tell whether the sentence around a citation is true. That still
 needs a reader. What it does is close the one class of error that recurred three
 times in a single day: citing our tree's line numbers as theirs.

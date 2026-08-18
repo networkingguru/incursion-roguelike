@@ -1,0 +1,55 @@
+# Generate as many dungeon levels as one session can, and walk each one.
+#
+#   tools/headless.sh tools/keys/dive.keys 1
+#
+# Where explore.keys stays on one level and fills logs/errors.log with what
+# happens during play, this fills it with what happens during MAP GENERATION.
+# That is a different body of code and a different set of defects -- the first
+# one found, inc-upw.3, fires inside Map::Generate and only once per game,
+# so an ordinary session gives it a single chance to appear.
+#
+# Wizard mode's 'Ascend / Descend Depth' is what makes this possible: it
+# generates a level on demand instead of waiting for the player to find the
+# stairs. Entering wizard mode needs a confirmation the first time and not
+# afterwards, which is why the first line differs from the rest.
+#
+# THE DEPTH CEILING. This file asks for 36 depth jumps -- 2 down to 25, then
+# 24 back up to 2 -- but only 14 of them are accepted. Wizard 'Ascend / Descend
+# Depth' rejects any depth above the dungeon's DUN_DEPTH (src/Debug.cpp:804-808)
+# and The Goblin Caves declares DUN_DEPTH 10 (lib/dungeon.irh:17), so every
+# request for 11 or deeper prints "Invalid depth." and generates nothing. The
+# session never goes below depth 10, and it visits at most 10 distinct levels.
+# This paragraph replaced the claim "Roughly 45 levels per session, down to
+# depth 25 and back up", which was wrong; corrected 2026-08-17. Do not size a
+# measurement on the number of jump lines in this file.
+#
+# Generated the same way as explore.keys, seeded 20260816.
+
+@include /Users/brianhill/Scripts/Incursion/tools/keys/chargen.keys
+
+@dump:arrival
+
+w y p "2" ENTER
+PGDN*3 PGDN*3 UP*3 PGUP*2 END*4 END*4 s .*2
+w p "3" ENTER
+PGUP*2 UP*2 LEFT*4 LEFT*3 HOME*5 PGUP*1 s .*2
+w p "4" ENTER
+LEFT*1 HOME*3 UP*2 END*1 RIGHT*1 UP*5 s .*2
+w p "5" ENTER
+PGUP*3 RIGHT*4 HOME*5 END*2 UP*5 RIGHT*5 s .*2
+w p "6" ENTER
+@dump:depth6
+UP*5 END*1 RIGHT*1 LEFT*4 LEFT*1 UP*5 s .*2
+w p "7" ENTER
+RIGHT*4 PGUP*2 RIGHT*2 UP*3 PGDN*1 HOME*5 s .*2
+w p "8" ENTER
+RIGHT*3 LEFT*4 HOME*1 PGDN*1 END*3 END*1 s .*2
+w p "9" ENTER
+DOWN*3 END*1 LEFT*5 PGUP*3 DOWN*2 DOWN*3 s .*2
+w p "10" ENTER
+@dump:on-bottom
+>
+ENTER
+ENTER
+@dump:after
+@quit

@@ -1,0 +1,4 @@
+MoveDepth depth=1 followers_before=3 at=[393,394,395] collected=2 left_behind=1
+MoveDepth depth=7 followers_before=2 at=[256,257] collected=1 left_behind=1
+MoveDepth depth=6 followers_before=1 at=[224] collected=1 left_behind=0
+MoveDepth depth=7 followers_before=1 at=[255] collected=1 left_behind=0

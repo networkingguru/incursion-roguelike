@@ -1,0 +1,114 @@
+{"app_name":"incursion-headless","timestamp":"2026-08-18 06:33:07.00 -0400","app_version":"","slice_uuid":"1ab99329-debe-3022-9212-b2d8373767e0","build_version":"","platform":1,"share_with_app_devs":0,"is_first_party":1,"bug_type":"309","os_version":"macOS 26.5.2 (25F84)","roots_installed":0,"incident_id":"61DBBCED-FF31-4BC4-8F9A-F8E17F4B34F1","name":"incursion-headless"}
+{
+  "uptime" : 270000,
+  "procRole" : "Unspecified",
+  "version" : 2,
+  "userID" : 501,
+  "deployVersion" : 210,
+  "modelCode" : "Mac16,13",
+  "coalitionID" : 697,
+  "osVersion" : {
+    "train" : "macOS 26.5.2",
+    "build" : "25F84",
+    "releaseType" : "User"
+  },
+  "captureTime" : "2026-08-18 06:33:07.9022 -0400",
+  "codeSigningMonitor" : 2,
+  "incident" : "61DBBCED-FF31-4BC4-8F9A-F8E17F4B34F1",
+  "pid" : 43764,
+  "translated" : false,
+  "cpuType" : "ARM-64",
+  "procLaunch" : "2026-08-18 06:33:06.8251 -0400",
+  "procStartAbsTime" : 6518817747347,
+  "procExitAbsTime" : 6518843592388,
+  "procName" : "incursion-headless",
+  "procPath" : "\/Users\/USER\/*\/incursion-headless",
+  "parentProc" : "bash",
+  "parentPid" : 43753,
+  "coalitionName" : "com.mitchellh.ghostty",
+  "crashReporterKey" : "F448512C-DFA9-8DCC-B9EE-EA8A02D3BFE8",
+  "appleIntelligenceStatus" : {"state":"available"},
+  "developerMode" : 1,
+  "responsiblePid" : 643,
+  "responsibleProc" : "ghostty",
+  "codeSigningID" : "incursion-headless",
+  "codeSigningTeamID" : "",
+  "codeSigningFlags" : 570556929,
+  "codeSigningValidationCategory" : 10,
+  "codeSigningTrustLevel" : 4294967295,
+  "codeSigningAuxiliaryInfo" : 0,
+  "instructionByteStream" : {"beforePC":"AVVIuUoyA5QBB4BSUVX+l\/YDAKpoGgCwCMEgkQABQPnhAxaqQjIDlA==","atPC":"CABAeWkaALApwSCRIAFA+R8RAXEBHABUtQIXS0UAABTgO0D5CABA+Q=="},
+  "bootSessionUUID" : "09D98AF9-EB95-4727-B72C-0789AD89A666",
+  "wakeTime" : 2678,
+  "sleepWakeUUID" : "ADFE9B55-7235-44F0-90FB-9F35C862D1D2",
+  "sip" : "enabled",
+  "vmRegionInfo" : "0 is not in any region.  Bytes before following region: 4364075008\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      UNUSED SPACE AT START\n--->  \n      __TEXT                      1041e8000-104460000    [ 2528K] r-x\/r-x SM=COW  \/Users\/USER\/*\/incursion-headless",
+  "exception" : {"codes":"0x0000000000000001, 0x0000000000000000","rawCodes":[1,0],"type":"EXC_BAD_ACCESS","signal":"SIGSEGV","subtype":"KERN_INVALID_ADDRESS at 0x0000000000000000"},
+  "termination" : {"flags":0,"code":11,"namespace":"SIGNAL","indicator":"Segmentation fault: 11","byProc":"exc handler","byPid":43764},
+  "vmregioninfo" : "0 is not in any region.  Bytes before following region: 4364075008\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      UNUSED SPACE AT START\n--->  \n      __TEXT                      1041e8000-104460000    [ 2528K] r-x\/r-x SM=COW  \/Users\/USER\/*\/incursion-headless",
+  "extMods" : {"caller":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"system":{"thread_create":0,"thread_set_state":8400,"task_for_pid":852},"targeted":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"warnings":0},
+  "faultingThread" : 0,
+  "threads" : [{"triggered":true,"id":20845176,"threadState":{"x":[{"value":0},{"value":0},{"value":4294967295},{"value":4294967295},{"value":4294967295},{"value":0},{"value":18446744072631617535},{"value":18446726482597246976},{"value":4367980592,"symbolLocation":0,"symbol":"theGame"},{"value":4366563040},{"value":4364082492,"symbolLocation":280,"symbol":"Resource::GetConst(short)"},{"value":52},{"value":42780652992},{"value":42780652960},{"value":673792},{"value":5},{"value":4364126908,"symbolLocation":0,"symbol":"Array<Annotation, 50, 20>::_Paren(unsigned int)"},{"value":91849689942},{"value":0},{"value":42794762256},{"value":42794762240},{"value":11},{"value":0},{"value":10},{"value":65532},{"value":65534},{"value":65535},{"value":4366566748,"symbolLocation":408,"symbol":"TMonster::HasSlot(short)::SlotMFlags"},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4364519164},"cpsr":{"value":2147483648},"fp":{"value":6102798304},"sp":{"value":6102796416},"esr":{"value":2449473542,"description":"(Data Abort) byte read Translation fault"},"pc":{"value":4364519164,"matchesCrashFrame":1},"far":{"value":0}},"queue":"com.apple.main-thread","frames":[{"imageOffset":444156,"symbol":"Player::MoveDepth(short, bool)","symbolLocation":536,"imageIndex":0},{"imageOffset":1409796,"symbol":"Creature::Descend(EventInfo&)","symbolLocation":596,"imageIndex":0},{"imageOffset":423540,"symbol":"ThrowTo(EventInfo&, Object*)","symbolLocation":500,"imageIndex":0},{"imageOffset":421316,"symbol":"ThrowEvent(EventInfo&)","symbolLocation":2380,"imageIndex":0},{"imageOffset":423864,"symbol":"RealThrow(EventInfo&)","symbolLocation":252,"imageIndex":0},{"imageOffset":424488,"symbol":"Throw(short, Object*, Object*, Object*, Object*)","symbolLocation":136,"imageIndex":0},{"imageOffset":1158032,"symbol":"Player::ChooseAction()","symbolLocation":3544,"imageIndex":0},{"imageOffset":813428,"symbol":"Game::Play()","symbolLocation":2692,"imageIndex":0},{"imageOffset":855116,"symbol":"Game::StartMenu()","symbolLocation":136,"imageIndex":0},{"imageOffset":1925296,"symbol":"main","symbolLocation":860,"imageIndex":0},{"imageOffset":130560,"symbol":"start","symbolLocation":6992,"imageIndex":1}]}],
+  "usedImages" : [
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4364075008,
+    "size" : 2588672,
+    "uuid" : "1ab99329-debe-3022-9212-b2d8373767e0",
+    "path" : "\/Users\/USER\/*\/incursion-headless",
+    "name" : "incursion-headless"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6504890368,
+    "size" : 680472,
+    "uuid" : "f924bdd3-4365-3466-9580-8b1b3fa8f857",
+    "path" : "\/usr\/lib\/dyld",
+    "name" : "dyld"
+  },
+  {
+    "size" : 0,
+    "source" : "A",
+    "base" : 0,
+    "uuid" : "00000000-0000-0000-0000-000000000000"
+  }
+],
+  "sharedCache" : {
+  "base" : 6503759872,
+  "size" : 5990973440,
+  "uuid" : "157e6d2e-2e5c-39b1-8f2a-8866ee228bed"
+},
+  "vmSummary" : "ReadOnly portion of Libraries: Total=581.9M resident=0K(0%) swapped_out_or_unallocated=581.9M(100%)\nWritable regions: Total=238.0M written=320K(0%) resident=320K(0%) swapped_out=0K(0%) unallocated=237.6M(100%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nKernel Alloc Once                   32K        1 \nMALLOC                           158.8M       41 \nMALLOC guard page                 3856K        4 \nMemory Tag 22                     64.0M        1 \nSTACK GUARD                       56.0M        1 \nStack                             8176K        1 \n__AUTH                              35K       13 \n__AUTH_CONST                       225K       47 \n__DATA                            7376K       36 \n__DATA_CONST                       150K       45 \n__DATA_DIRTY                       154K       36 \n__LINKEDIT                       573.2M        2 \n__OBJC_RO                         79.1M        1 \n__OBJC_RW                         2598K        1 \n__TEXT                            8928K       48 \n__TPRO_CONST                       128K        2 \npage table in kernel               320K        1 \nshared memory                       48K        2 \n===========                     =======  ======= \nTOTAL                            962.5M      283 \n",
+  "legacyInfo" : {
+  "threadTriggered" : {
+    "queue" : "com.apple.main-thread"
+  }
+},
+  "logWritingSignature" : "0428a1f3bee9aeef9c32cd4c69e865390bfdd5b4",
+  "roots_installed" : 0,
+  "bug_type" : "309",
+  "trmStatus" : 1,
+  "trialInfo" : {
+  "rollouts" : [
+    {
+      "rolloutId" : "5fb4245a1bbfe8005e33a1e1",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 240000021
+    },
+    {
+      "rolloutId" : "645eb1d0417dab722a215927",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 240000005
+    }
+  ],
+  "experiments" : [
+
+  ]
+}
+}
