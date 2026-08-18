@@ -56,3 +56,6 @@ src/MakeLev.cpp:2184	AI_TRAP
 src/Feature.cpp:938	GoWith[i]->PlaceAt
 src/Skills.cpp:4181	MoveDepth(m->Depth + 1, true)
 src/Target.cpp:903	getLeader
+src/Feature.cpp:858	SaveGame
+src/Debug.cpp:805	DUN_DEPTH
+src/Skills.cpp:4161	MoveDepth(m->Depth + 1, true)

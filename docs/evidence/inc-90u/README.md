@@ -80,18 +80,28 @@ The code says why. The turn loop iterates the player's current map only
 receives no turns at all. Even if it could act, the stairs handler sends a
 non-player through `Thing::MoveDepth`, which is `Remove(true)` — a monster that
 takes stairs is deleted, not moved. Other code does move creatures between maps -- dungeon entry and return at
-`src/Feature.cpp:270` and `:278`, `Game::LimboCheck`, several spells -- but
+`src/Feature.cpp:270` and `:278`, several spells, and `Game::LimboCheck`,
+which re-places a parked Thing on the player's current map (`Feature.cpp:827-834`)
+though nothing in `lib/` calls `EnterLimbo` to park one -- but
 `Player::MoveDepth`'s collection loop is the only thing that brings a player's
 followers with him.
 
 ## Scope
 
-The loop collects whatever `ts.isLeader(this)` accepts, which is a creature
-whose target list names the player as leader, summoner, master or mount
-(`src/Target.cpp:903-921` upstream). That covers summoned creatures, animal
-companions (which reach it through `MakeCompanion` adding `TargetSummoner`,
-not through the `ANIMAL_COMPANION` stati), mounts, and creatures dominated or
-commanded. A merely charmed creature is not collected. Creatures created
+The loop collects whatever `ts.isLeader(this)` accepts. `getLeader` returns the
+FIRST valid `TargetLeader`, `TargetSummoner`, `TargetMaster` or `TargetMount`
+entry (`src/Target.cpp:903-921` upstream), so the test is whether the player is
+that first leader-type target -- not merely present in the list.
+
+That covers summoned creatures, animal companions and mounts, all of which
+reach it through `Monster::MakeCompanion` adding `TargetSummoner`
+(`src/Social.cpp:2414`) rather than through any `ANIMAL_COMPANION` stati. It
+also covers dominated, allied and commanded creatures: `Status.cpp:673-676`
+routes exactly `CH_DOMINATE`, `CH_ALLY` and `CH_COMMAND` into `MakeCompanion`.
+A creature under plain `CH_CHARM` gets no leader-type target and is not
+collected. A sixth review pass claimed domination and command do not qualify;
+the `Status.cpp` routing above is why that is wrong, and it is recorded here so
+the question is not re-opened a third time. Creatures created
 together — a summoned group, an encounter — are appended to `Things` together,
 which is exactly the adjacency the defect needs. Nothing tells the player that
 anything was left behind.
