@@ -11,16 +11,23 @@
 # ever read, so his altar refused every ordinary corpse and his two live rows
 # were both punishments.
 #
-# Two runs, because one is not enough:
+# Three runs, because one is not enough:
 #
 #   sacrifice-wildcard.keys   a dwarf corpse -- matches ONLY through MA_ALL.
 #                             Must be accepted. This is the bug.
 #   sacrifice-goblinoid.keys  a kobold corpse -- matches row 1, which is
 #                             BEFORE the first MA_ALL and was always read.
 #                             Must still anger him, exactly as before.
+#   sacrifice-aiswin.keys     a dwarf corpse at an AISWIN altar. Aiswin's own
+#                             script forces the category to MA_CHOICE1, whose
+#                             row sits BELOW his MA_ALL rows. This is the only
+#                             run that proves the rows below MA_ALL are read.
+#                             It is the case Brian hit in play, inc-52b.
 #
 # Without the second run this check cannot tell "MA_ALL matches now" from
-# "the loop matches anything now".
+# "the loop matches anything now". Without the third it cannot see a loop
+# that stops one row too early, because Khasrach has nothing below his
+# MA_ALL rows to lose.
 #
 # Measured 2026-08-18, seed 1, same key script, one line of src/Prayer.cpp
 # different between the two builds:
@@ -48,7 +55,7 @@ SEED=1
 # measured nothing, and reporting nothing as a regression sends somebody
 # hunting a bug that is not there. That mistake is inc-loa.3.
 run_script() {
-    local keys="$1" corpse="$2" out run
+    local keys="$1" corpse="$2" god="$3" out run
     out="$(tools/headless.sh "$keys" "$SEED" 2>&1)"
     run="$(echo "$out" | awk '/^run:/ {print $2}')"
     SCREENS="$run/logs/screens"
@@ -61,8 +68,8 @@ run_script() {
         echo "INCONCLUSIVE: $keys left no screen dumps at $SCREENS"
         return 1
     fi
-    if ! grep -qh "Created an altar to Khasrach" "$SCREENS"/*.txt; then
-        echo "INCONCLUSIVE: $keys did not create the altar."
+    if ! grep -qh "Created an altar to $god" "$SCREENS"/*.txt; then
+        echo "INCONCLUSIVE: $keys did not create the $god altar."
         echo "  Wizard option [M] Create Altar has moved, or the character is"
         echo "  not in wizard mode. Fix the key script. Screens: $SCREENS"
         return 1
@@ -79,7 +86,7 @@ run_script() {
 
 # 1. The bug itself. A dwarf is neither orc nor goblinoid, so it can only be
 #    caught by a MA_ALL row.
-run_script tools/keys/sacrifice-wildcard.keys dwarf || exit 1
+run_script tools/keys/sacrifice-wildcard.keys dwarf Khasrach || exit 1
 WILD="$SCREENS"
 
 if grep -qh "seems uninterested" "$WILD"/*.txt; then
@@ -97,7 +104,7 @@ if ! grep -qh "is impressed" "$WILD"/*.txt; then
 fi
 
 # 2. The control. Row 1 was always read; the fix must not have touched it.
-run_script tools/keys/sacrifice-goblinoid.keys kobold || exit 1
+run_script tools/keys/sacrifice-goblinoid.keys kobold Khasrach || exit 1
 GOB="$SCREENS"
 
 if ! grep -qh "offensive sacrifice" "$GOB"/*.txt; then
@@ -109,5 +116,33 @@ if ! grep -qh "offensive sacrifice" "$GOB"/*.txt; then
     exit 1
 fi
 
-echo "PASS: MA_ALL matches a dwarf corpse, and MA_GOBLINOID still angers"
+# 3. The rows BELOW the MA_ALL rows. Aiswin's PRE(EV_SACRIFICE) handler sets
+#    e.EParam = MA_CHOICE1 for any corpse that is not a blood-vengeance kill
+#    (lib/religion.irh:299-315). That makes sacType 125, which switches off
+#    the isMType branch entirely, so the ONLY row that can match is row 6,
+#    MA_CHOICE1 SAC_UNWORTHY -- and it sits below both MA_ALL rows. With the
+#    old loop it was unreachable and the player got the wrong message. This
+#    is inc-52b, the bug Brian reported from play.
+run_script tools/keys/sacrifice-aiswin.keys dwarf Aiswin || exit 1
+AIS="$SCREENS"
+
+if grep -qh "seems uninterested" "$AIS"/*.txt; then
+    echo "FAIL: Aiswin said he was uninterested in a dwarf corpse."
+    echo "  His MA_CHOICE1 row (lib/religion.irh:140) is unreachable again, so"
+    echo "  the loop in src/Prayer.cpp is stopping at the left slot of a pair"
+    echo "  instead of at a whole zero row. See inc-52b and inc-upw.27."
+    echo "  Screens: $AIS"
+    exit 1
+fi
+if ! grep -qh "Insufficient" "$AIS"/*.txt; then
+    echo "FAIL: Aiswin neither refused the corpse nor called it insufficient."
+    echo "  Expected MSG_INSUFFICIENT, from the SAC_UNWORTHY arm of"
+    echo "  Character::Sacrifice. Either his classification handler no longer"
+    echo "  sets MA_CHOICE1, or the dwarf corpse now carries a CORPSE_FLAG and"
+    echo "  counts as blood vengeance. Screens: $AIS"
+    exit 1
+fi
+
+echo "PASS: MA_ALL matches a dwarf corpse, MA_GOBLINOID still angers, and"
+echo "      Aiswin's MA_CHOICE1 row below the MA_ALL rows is reachable"
 exit 0

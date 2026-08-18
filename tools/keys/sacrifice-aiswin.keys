@@ -1,0 +1,73 @@
+# Offer a corpse Aiswin does not want, at an altar of Aiswin.
+# Oracle for inc-52b. Run it with tools/check_sacrifice.sh.
+#
+#   tools/headless.sh tools/keys/sacrifice-aiswin.keys 1
+#
+# WHAT THIS COVERS THAT sacrifice-wildcard.keys DOES NOT. That script proves
+# a MA_ALL row can match a corpse. This one proves the rows BELOW the MA_ALL
+# rows are reachable at all. They are a different mechanism, and Aiswin is
+# the god who uses it.
+#
+# THE PATH. Aiswin accepts only blood vengeance -- a hostile creature that
+# wounded the player before the player killed it. His GODWATCH handler
+# (lib/religion.irh:240-248) tags such a creature with CORPSE_FLAG eID=Aiswin.
+# At sacrifice time his PRE(EV_SACRIFICE) handler (lib/religion.irh:299-315)
+# checks that tag, and when it is absent it sets e.EParam = MA_CHOICE1.
+#
+# Character::Sacrifice takes the default arm of its switch on e.EParam and
+# sets sacType = 125. That DISABLES the isMType branch of the match test,
+# because that branch runs only when sacType is -1. So the four MA_SAPIENT
+# rows and the two MA_ALL rows can no longer match anything, whatever the
+# corpse is. Only a row whose category is literally 125 can match, and in
+# Aiswin's list (lib/religion.irh:133-141) that is row 6, MA_CHOICE1
+# SAC_UNWORTHY -- which sits BELOW both MA_ALL rows.
+#
+# The old loop stopped at the first zero in the left slot, and MA_ALL is 0,
+# so row 6 was unreachable. sacCat stayed -1 and the player got
+# MSG_UNINTERESTED, which is the wrong message: the god is not uninterested,
+# he has judged the offering unworthy.
+#
+# MEASURED 2026-08-18, seed 1, this key script, one line of src/Prayer.cpp
+# different between the two builds:
+#
+#   before: "Aiswin seems uninterested in your offering."
+#   after:  "A silky whisper mindspeaks: |Insufficient.|"
+#
+# WHY THE DWARF CORPSE IS THE RIGHT OFFERING. It is a corpse that was already
+# lying on the floor at level generation. The player never fought it, so it
+# carries no CORPSE_FLAG, so Aiswin classifies it MA_CHOICE1. That is exactly
+# the case this script needs. Do not swap it for a corpse the player killed.
+#
+# WHY THE PATRON IS NOT AISWIN. chargen.keys makes an orc barbarian, and at
+# this seed the game gives him Khasrach. Converting to Aiswin needs a
+# devotion quest, which a key script cannot drive. It does not matter here:
+# Aiswin's classification and the row matching both ignore who the player
+# worships. Praying at another god's altar only adds the god picker below
+# and changes the prompt from "abis" to "cas".
+#
+# SEED-LOCKED, for the same reasons as sacrifice-wildcard.keys: the walk onto
+# the dwarf corpse is counted moves, and [w] is that corpse's menu letter.
+# tools/check_sacrifice.sh asserts both, and calls a drift INCONCLUSIVE
+# rather than FAIL.
+
+@include chargen.keys
+
+END                 # step south-west, off the arrival square
+LEFT*5              # ...and west onto the dwarf corpse
+
+w                   # wizard mode -- lowercase, see the SHIFT note in
+y                   # Wposix.cpp TokenToKey; 'W' is a different keystroke
+M                   # [M] Create Altar
+"Aiswin"
+ENTER
+
+@dump:altar
+
+p                   # pray; the altar is Aiswin, the patron is Khasrach
+1                   # "Pray to [1] Aiswin or [2] Khasrach?" -- take the altar
+s                   # prompt is "cas"; [s] sacrifice
+@dump:offer         # so the check can prove WHICH corpse [w] is
+w                   # [w] dwarf corpse (on floor)
+
+@dump:sacrifice
+@quit
