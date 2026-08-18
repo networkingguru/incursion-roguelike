@@ -118,14 +118,22 @@ check_document() {
                     fail "$path is not in $url_ref (link: $url)"
                 fi
                 ;;
-            "$ORIGIN_HOST"/blob/master/*|"$ORIGIN_HOST"/tree/master/*)
-                path=${path#"$ORIGIN_HOST"/blob/master/}
-                path=${path#"$ORIGIN_HOST"/tree/master/}
+            "$ORIGIN_HOST"/blob/*|"$ORIGIN_HOST"/tree/*)
+                # Same rule as upstream: honour the ref in the URL. An evidence
+                # link on a branch shows the reader whatever the branch says
+                # later, which is not what was reviewed.
+                path=${path#"$ORIGIN_HOST"/blob/}
+                path=${path#"$ORIGIN_HOST"/tree/}
+                url_ref=${path%%/*}
+                path=${path#*/}
                 path=${path%/}
-                if list_ref "$ORIGIN_REF" | grep -qE "^$(printf '%s' "$path" | sed 's/[.[\*^$]/\\&/g')(/|$)"; then
-                    printf 'ours     %s  present on %s\n' "$path" "$ORIGIN_REF"
+                if ! git -C "$ROOT" rev-parse --verify --quiet "$url_ref^{commit}" > /dev/null; then
+                    url_ref="$ORIGIN_REF"
+                fi
+                if list_ref "$url_ref" | grep -qE "^$(printf '%s' "$path" | sed 's/[.[\*^$]/\\&/g')(/|$)"; then
+                    printf 'ours     %s  present at %s\n' "$path" "${url_ref:0:10}"
                 else
-                    fail "$path is not on $ORIGIN_REF -- unpushed or misspelt (link: $url)"
+                    fail "$path is not at $url_ref -- unpushed or misspelt (link: $url)"
                 fi
                 ;;
             *)
