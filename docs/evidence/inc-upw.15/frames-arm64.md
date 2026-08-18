@@ -58,8 +58,12 @@ A provable maximum adds one more frame. The entry that asks for `DUN_DEPTH + 1`
 allocates its prologue before it reads anything and faults at `Feature.cpp:887`,
 never reaching `PlaceAt`, so it contributes `MoveDepth` alone:
 
-    14 descents + the faulting entry, patched    14 x 2400 + 656 = 34,256
-    14 descents + the faulting entry, unpatched  14 x 1888 + 144 = 26,576
+    15 completed moves + the faulting entry, patched    15 x 2400 + 656 = 36,656
+    15 completed moves + the faulting entry, unpatched  15 x 1888 + 144 = 28,464
+
+The chain reaches sixteen entries only when the outermost one arrives on level 1
+(wizard Ascend/Descend, or resurrection at src/Prayer.cpp:1482); a chain that
+starts by falling from level 1 is one shorter.
 
 The 144 is the patched 656 less the measured 512, not a disassembled figure.
 

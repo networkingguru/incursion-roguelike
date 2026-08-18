@@ -68,3 +68,9 @@ src/Skills.cpp:4158	GetDungeonMap
 src/Feature.cpp:988	DungeonLevels
 src/Feature.cpp:1004	for (i = 1; i <= Depth; i++)
 lib/dispatch.h:2174	EnterLimbo
+src/Skills.cpp:1172	MakeCompanion
+src/Social.cpp:743	MakeCompanion
+src/Skills.cpp:4272	Remove(false)
+src/Feature.cpp:1005	if (!DungeonLevels
+src/Feature.cpp:1007	DungeonLevels[n][i] = m->myHandle
+src/Prayer.cpp:1482	MoveDepth(1,true)

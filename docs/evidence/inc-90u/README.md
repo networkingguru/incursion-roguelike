@@ -93,15 +93,22 @@ FIRST valid `TargetLeader`, `TargetSummoner`, `TargetMaster` or `TargetMount`
 entry (`src/Target.cpp:903-921` upstream), so the test is whether the player is
 that first leader-type target -- not merely present in the list.
 
-That covers summoned creatures, animal companions and mounts, all of which
-reach it through `Monster::MakeCompanion` adding `TargetSummoner`
-(`src/Social.cpp:2414`) rather than through any `ANIMAL_COMPANION` stati. No charmed creature is collected, whatever the value.
+That covers summoned creatures and animal companions, which reach it through
+`Monster::MakeCompanion` adding `TargetSummoner` (`src/Social.cpp:2414`) rather
+than through any `ANIMAL_COMPANION` stati. It does NOT cover mounts: `Mount`
+removes the creature from `m->Things` (`src/Skills.cpp:4272`) and re-attaches it
+by assigning `m`, `x` and `y` without re-adding it, so `MapIterate` never sees
+it. `TargetMount` is added at `:4287`, not by `MakeCompanion`. No charmed creature is collected, whatever the value.
 `Status.cpp:675` does route `CH_DOMINATE`, `CH_ALLY` and `CH_COMMAND` into
 `MakeCompanion`, which adds the `TargetSummoner` -- and then `:677` calls
 `ts.removeCreatureTarget(player, TargetAny)` on the very next line, which
 invalidates every entry naming the player, the new one included
 (`Target.cpp:1036-1042`), after which `Retarget(force)` rebuilds the list
 skipping invalid entries (`:1264-1282`).
+
+A charmed creature can still become a follower later by a route that does not go
+through `StatiOn` -- Animal Empathy at `src/Skills.cpp:1172` or Enlist at
+`src/Social.cpp:743` -- and is then collected like any other companion.
 
 An earlier version of this file said the opposite and told future readers not to
 re-open the question. That was wrong twice over: the conclusion, and the idea
