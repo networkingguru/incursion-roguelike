@@ -85,3 +85,4 @@ src/Feature.cpp:842	PlaceAt(p->m
 src/Skills.cpp:3990	isSkylight
 src/Skills.cpp:4066	MoveDepth(m->Depth - 1, true)
 src/Annot.cpp:371	RF_ROOM
+src/Skills.cpp:4169	Climb down the chasm?
