@@ -1,19 +1,29 @@
-# The short reproducer for inc-dhc: character generation, then straight down to
-# depth 12, and stop.
+# The short reproducer for inc-dhc: character generation, then straight down as
+# far as the dungeon goes, and stop.
 #
 #   tools/headless.sh tools/keys/dive12.keys 8
 #
-# Why this exists. dive.keys walks 45 levels and takes about ten seconds. The
-# nondeterminism it exposes appears between depth 6 and depth 12, so everything
-# after that is cost with no information. This is the same keystrokes, cut at
-# the first screen past the divergence.
+# THE NAME IS OLDER THAN THE MEASUREMENT. This file asks for depths 2 to 12 in
+# order, but the last two requests are refused. Wizard 'Ascend / Descend Depth'
+# rejects any depth above the dungeon's DUN_DEPTH (src/Debug.cpp:804-808), and
+# The Goblin Caves declares DUN_DEPTH 10 (lib/dungeon.irh:17). So depths 11 and
+# 12 print "Invalid depth." and the session stops at depth 10. The screen this
+# file dumps as "depth12" is a depth 10 screen carrying that message; corrected
+# 2026-08-17 after reading the dump. Do not read a depth deeper than 10 out of
+# any run of this script.
+#
+# Why this exists. dive.keys asks for 36 depth jumps and takes about ten
+# seconds. The nondeterminism it exposes appears between depth 6 and the
+# bottom, so everything after that is cost with no information. This is the
+# same keystrokes, cut at the first screen past the divergence.
 #
 # It is also a BETTER reproducer, not just a cheaper one. Measured 2026-08-15 on
 # seed 8: this script split into two different games in 4 runs of 12, where the
 # full dive split in 1 of 6.
 #
-# Generated from dive.keys; the keystrokes through depth 12 are identical, so a
-# screen dumped here matches the same dump from dive.keys on the same seed.
+# Generated from dive.keys; the keystrokes through the depth 12 request are
+# identical, so a screen dumped here matches the same dump from dive.keys on
+# the same seed.
 
 @include chargen.keys
 

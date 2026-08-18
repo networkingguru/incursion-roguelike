@@ -13,7 +13,15 @@
 # stairs. Entering wizard mode needs a confirmation the first time and not
 # afterwards, which is why the first line differs from the rest.
 #
-# Roughly 45 levels per session, down to depth 25 and back up.
+# THE DEPTH CEILING. This file asks for 36 depth jumps -- 2 down to 25, then
+# 24 back up to 2 -- but only 14 of them are accepted. Wizard 'Ascend / Descend
+# Depth' rejects any depth above the dungeon's DUN_DEPTH (src/Debug.cpp:804-808)
+# and The Goblin Caves declares DUN_DEPTH 10 (lib/dungeon.irh:17), so every
+# request for 11 or deeper prints "Invalid depth." and generates nothing. The
+# session never goes below depth 10, and it visits at most 10 distinct levels.
+# This paragraph replaced the claim "Roughly 45 levels per session, down to
+# depth 25 and back up", which was wrong; corrected 2026-08-17. Do not size a
+# measurement on the number of jump lines in this file.
 #
 # Generated the same way as explore.keys, seeded 20260816.
 

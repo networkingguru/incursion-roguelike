@@ -4,8 +4,13 @@
 # the food. Every eat-menu dump below must show the SAME ration count as the
 # very first one. Before the fix (src/Item.cpp, Food::Eat) each refusal took
 # one ration anyway -- 9 food rations -> 8 -> 7 -> ... -> "food ration"
-# (quantity 1) after 8 refusals, on this exact seed and script. See
-# tools/check_dragonkin_ration.sh, which reads these dumps and enforces it.
+# (quantity 1) after 8 refusals, on this exact seed and script.
+#
+# NO CHECK SCRIPT READS THESE DUMPS. This header cited
+# tools/check_dragonkin_ration.sh as the enforcing check. That file has never
+# existed; corrected 2026-08-17. The assertion is enforced by a person reading
+# the dumps, and the measurement is recorded in the inc-i9q.1 row of
+# docs/REPORTING-GATE.md. Write the check if the assertion is worth a gate.
 #
 # Every choice below is a menu letter, and menu letters move when a list
 # changes. Run with a fixed seed or the attribute rolls change, the offered

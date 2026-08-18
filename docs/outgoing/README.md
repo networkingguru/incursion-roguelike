@@ -18,10 +18,15 @@ Run the citation gate over the document and its expectations file:
 tools/check_citations.sh docs/outgoing/pr43-reply.md --expect docs/outgoing/pr43-reply.expect
 ```
 
-It resolves every `File.ext:NNNN` and every GitHub `#L` anchor against
-`upstream/master` — **their** line numbers, not ours, which have drifted — and
-it fails if an evidence link points at a path that is not yet on `origin/master`.
-An evidence link that is only in the working tree is a 404 for the reader.
+It resolves every `File.ext:NNNN` against `upstream/master` — **their** line
+numbers, not ours, which have drifted — and every GitHub `#L` anchor against the
+ref named in the URL itself. It fails if an evidence link points at a path that
+is not yet on `origin/master`, because a link that exists only in the working
+tree is a 404 for the reader.
+
+**Pin outgoing links to a commit, not to a branch.** The whole value of a
+citation is its line number, and `master` moves under it. Put the SHA in the
+URLs and name it once in the opening sentence, as `pr43-reply.md` does.
 
 The gate cannot tell whether the sentence around a citation is true. That still
 needs a reader. What it does is close the one class of error that recurred three

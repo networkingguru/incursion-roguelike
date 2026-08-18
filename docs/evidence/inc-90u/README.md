@@ -80,11 +80,14 @@ The code says why. The turn loop iterates the player's current map only
 receives no turns at all. Even if it could act, the stairs handler sends a
 non-player through `Thing::MoveDepth`, which is `Remove(true)` — a monster that
 takes stairs is deleted, not moved. Other code does move creatures between maps -- dungeon entry and return at
-`src/Feature.cpp:270` and `:278`, several spells, and `Game::LimboCheck`,
-which re-places a parked Thing on the player's current map (`Feature.cpp:827-834`)
-though nothing in `lib/` calls `EnterLimbo` to park one -- but
+`src/Feature.cpp:270` and `:278`, and several spells -- but
 `Player::MoveDepth`'s collection loop is the only thing that brings a player's
 followers with him.
+
+`Game::LimboCheck` (`src/Feature.cpp:820`) would re-place a parked Thing on the
+player's current map, but it is dead code: nothing calls it, and nothing could
+feed it anyway, since parking needs `EnterLimbo` and no shipped script calls
+that either (`lib/dispatch.h:2174` is its only entry point).
 
 ## Scope
 

@@ -1,13 +1,15 @@
 # A MARATHON walk, for defects that only appear after a long session.
 #
-#   INCURSION_MAX_KEYS=60000 tools/headless.sh tools/keys/marathon.keys 1
+#   tools/headless.sh tools/keys/marathon.keys 1
 #
 # Why this exists, and why explore.keys is not enough for it. inc-2k3 is
 # Brian's report that the game gets slower the longer it runs, until a run
 # takes long enough to crash, and that killing a group of monsters gave the
 # speed back. Nothing about that shape can be seen in a session of a few
-# hundred turns: explore.keys spends about 500 keystrokes and dive.keys about
-# 400, and the slowdown he describes builds over thousands.
+# hundred turns: explore.keys spends 1259 keystrokes and dive.keys 886, and
+# the slowdown he describes builds over thousands. (Those two counts read
+# "about 500" and "about 400" until 2026-08-17; both were wrong. Recount with
+# the expansion rule below whenever a walk file changes.)
 #
 # So this is the same undirected walk, held for roughly 10500 keystrokes. It
 # still walks into rock, which still spends a turn, so monsters still move and
@@ -15,12 +17,35 @@
 # ESC still appears regularly, so a command that unexpectedly opens a menu
 # cannot swallow the rest of the file.
 #
-# The default key budget is 20000 (DEFAULT_MAX_KEYS in src/Wposix.cpp), which
-# this exceeds on purpose. Set INCURSION_MAX_KEYS above it or the session stops
-# early and exits 3, and a session that stopped early is not a long session.
+# THE DEFAULT KEY BUDGET IS ENOUGH. THIS FILE DOES NOT NEED A RAISED CAP.
 #
-# Generated, and regenerable: seeded with 20260815, 380 lines of 10 tokens, and
-# the generator is quoted in the commit that added this file.
+# This header used to read: "The default key budget is 20000 (DEFAULT_MAX_KEYS
+# in src/Wposix.cpp), which this exceeds on purpose. Set INCURSION_MAX_KEYS
+# above it or the session stops early and exits 3." That was wrong from the
+# day the file was written, and it contradicted the 10500 figure eight lines
+# above it. Corrected 2026-08-17.
+#
+# The arithmetic. DEFAULT_MAX_KEYS is 20000 (src/Wposix.cpp:78) and has been
+# since this harness was added (commit 058ba87). The budget counts keys READ
+# (keysRead, src/Wposix.cpp:1189), one per GetChar call. Expanding every
+# `TOKEN*N` in this file gives 10500 keystrokes, and the included
+# chargen.keys gives 111, so a session reads at most 10611. It runs out of
+# SCRIPT long before it runs out of BUDGET, and exits 0, not 3.
+#
+# Setting INCURSION_MAX_KEYS higher is harmless and buys nothing. Raise it
+# only if this file is regenerated longer than 20000 expanded keystrokes.
+# Count them, do not guess:
+#   python3 -c "import re,sys; print(sum(int(m.group(2)) if (m:=re.match(r'^(.+?)\*(\d+)$',t)) else 1 for l in open(sys.argv[1]) if not l.lstrip().startswith('@') for t in l.split('#')[0].split() if not t.startswith('@')))" tools/keys/marathon.keys
+#
+# Generated with a seed of 20260815, 380 lines of 10 tokens. NOT regenerable:
+# the generator is lost.
+#
+# This header used to say "the generator is quoted in the commit that added
+# this file". It is not. The adding commit is f76271f, its body quotes no
+# generator, and no commit in the history does (checked 2026-08-17 with
+# git log --format=%B). Note that f76271f is also where the false key-budget
+# claim above came from, so this file inherited two wrong statements from one
+# commit message. Tracked as inc-buq.
 
 @include chargen.keys
 

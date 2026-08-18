@@ -1,4 +1,8 @@
-# Make a character and get into the dungeon. Included by every other script.
+# Make a character and get into the dungeon. Included by six of the eighteen
+# files in this directory: dive.keys, dive12.keys, explore.keys, followers.keys,
+# marathon.keys and smoke.keys. The header used to claim every other script
+# included it, which is wrong; check with
+# grep -l "@include chargen.keys" tools/keys/*.keys before relying on it.
 #
 # The character is a standard male orc barbarian, neutral, worshipping
 # whichever god the game offers. Orc barbarian is deliberate: it is the

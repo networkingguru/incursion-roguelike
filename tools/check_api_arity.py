@@ -44,13 +44,49 @@ So the report is:
   extra-only   the shared slots all agree and C++ merely has more, all
                defaulted. Benign by design; shown with --all.
 
-Names carry the intent, so a pure rename on one side is a false positive. Read
-each hit. This tool reports and does not judge: it exits 0 unless it could parse
-nothing at all.
+The comparison is on the TYPE CLASS of each slot, not on the name: a name
+difference is house style ('fl' against 'flags'), while a slot that is an
+integer to the script and an rID to the C++ is the defect the compiler cannot
+see. `norm()` and the name columns survive only to make the report readable.
+
+THIS IS A GATE, AND IT CAN FAIL. It used to return 0 on every path, printing
+two MISALIGNED slots and exiting green, so anything running it as a gate got a
+pass no matter what happened. It now compares what it finds against a checked-in
+BASELINE of the misalignments we already know about and have filed.
+
+    a MISALIGNED slot in the BASELINE   reported as KNOWN, tolerated
+    a MISALIGNED slot not in it         FAIL: a new defect, or a real change
+    a BASELINE entry that no longer
+      misaligns, or whose types moved   FAIL: a stale suppression
+
+The last one is the part usually forgotten, and it is how a gate rots: an entry
+kept after its defect is gone quietly widens the hole for the next one.
+
+WHY A BASELINE AND NOT A HARD ZERO. About a fifth of the declarations (94 of
+460 at the time of writing) find no C++ declaration this parser can match, so a
+clean run is not a clean bill of health, and the two known slots are separately
+tracked engine bugs that are not this tool's to fix. The baseline makes the
+tolerance explicit, dated and attributable instead of implicit in an exit code.
+
+EXIT CODES
+    0   every misalignment found is in the baseline, and every baseline entry
+        still misaligns exactly as recorded
+    1   a misalignment outside the baseline, a baseline entry whose slots moved,
+        or a baseline entry that no longer fires
+    2   the tool could not parse inc/Api.h, so it examined nothing
+
+ADDING OR REMOVING A BASELINE ENTRY. Add one only for a misalignment that is
+real, filed and deliberately not being fixed now: run the tool, copy the symbol
+and the `slots` tuple it prints in the FAIL message, and give it the `issue` id
+and a `why` that says what the defect is and why it is tolerated. Never add one
+to silence a hit you have not read. Remove an entry the moment the tool reports
+it stale -- that report means the underlying defect is fixed, and the entry is
+now hiding the next one.
 
 USAGE
     tools/check_api_arity.py            report every disagreement
     tools/check_api_arity.py --all      also list the pairs that agree
+    tools/check_api_arity.py --selftest prove the baseline logic still fires
 """
 
 import re
@@ -58,6 +94,42 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+
+# THE BASELINE. Every misalignment we already know about, have filed, and are
+# deliberately not fixing in this tool's run. Anything else fails the run, and
+# so does an entry here that stops firing. See the module docstring for how to
+# add or remove one.
+#
+# key    "T_CLASS::Method" as inc/Api.h declares it
+# slots  every misaligned slot, exactly as reported: (slot number counting from
+#        1, the script's type class, the C++ type class). The types are part of
+#        the key on purpose: if a slot starts disagreeing in a DIFFERENT way,
+#        that is a new fact and must not inherit this entry's tolerance.
+# issue  the bd id that tracks the underlying defect
+# why    what the defect is, and why it is tolerated rather than fixed
+BASELINE = {
+    "T_MAP::FindOpenAreas": {
+        "slots": ((2, "int", "rid"),),
+        "issue": "inc-xkd",
+        "why": (
+            "The script's second argument is its Flags; in C++ it lands in "
+            "regID. Live: Tree Stride asks for trees-only, the engine hears "
+            "'region 128', and the spell fails for any caster not already "
+            "standing under a tree. Fixing it means changing either inc/Api.h "
+            "or Map::FindOpenAreas and every caller, which is an engine change "
+            "tracked on its own bead, not a tooling change."
+        ),
+    },
+    "T_MAP::SetGlyphAt": {
+        "slots": ((3, "int", "glyph"),),
+        "issue": "inc-upw.22",
+        "why": (
+            "Glyph is 32 bits; inc/Api.h declares the slot uint16, so the "
+            "generated call truncates. Not live -- no script in lib/ calls "
+            "SetGlyphAt -- which is why it is tolerated rather than urgent."
+        ),
+    },
+}
 
 # The script's type names to the C++ classes that implement them. Read from the
 # dispatch macros in lib/dispatch.h (oMap, oCreature ...) and from the class
@@ -265,8 +337,88 @@ def cpp_declarations(headers):
     return found
 
 
-def main():
-    show_all = "--all" in sys.argv
+def audit(found, baseline):
+    """Compare what this run found against the checked-in baseline.
+
+    `found` maps "T_CLASS::Method" to a tuple of misaligned slots, each
+    (slot, api_type, cpp_type). Pure: it touches no files and no globals, which
+    is what lets --selftest drive it with synthetic input.
+
+    Returns (known, unexpected, changed, stale):
+        known       symbols whose misalignment is exactly what the baseline records
+        unexpected  symbols that misalign and are not in the baseline at all
+        changed     baseline symbols that misalign in some OTHER way now
+        stale       baseline symbols that do not misalign any more
+    """
+    known, unexpected, changed, stale = [], [], [], []
+    for sym, slots in sorted(found.items()):
+        entry = baseline.get(sym)
+        if entry is None:
+            unexpected.append(sym)
+        elif tuple(entry["slots"]) == tuple(slots):
+            known.append(sym)
+        else:
+            changed.append(sym)
+    for sym in sorted(baseline):
+        if sym not in found:
+            stale.append(sym)
+    return known, unexpected, changed, stale
+
+
+def selftest():
+    """Prove the baseline logic still fires. No framework, no fixtures.
+
+    Same shape as tools/check_citations.sh --selftest and
+    tools/check_upstream_marks.sh --selftest: synthetic inputs inline, one
+    pass/fail line each, and an end-to-end run against the real tree at the end.
+    """
+    rc = 0
+
+    def case(name, found, base, want):
+        nonlocal rc
+        got = tuple(tuple(x) for x in audit(found, base))
+        if got == want:
+            print(f"selftest ok    {name}")
+        else:
+            print(f"selftest FAIL  {name}\n  wanted: {want}\n  got:    {got}")
+            rc = 1
+
+    base = {
+        "T_X::Known": {"slots": ((2, "int", "rid"),), "issue": "inc-000", "why": "x"},
+    }
+    exact = {"T_X::Known": ((2, "int", "rid"),)}
+
+    case("baseline entry still fires -> known",
+         exact, base, (("T_X::Known",), (), (), ()))
+    case("a slot outside the baseline -> unexpected",
+         {**exact, "T_Y::Fresh": ((1, "int", "string"),)}, base,
+         (("T_X::Known",), ("T_Y::Fresh",), (), ()))
+    case("a baseline entry that stopped firing -> stale",
+         {}, base, ((), (), (), ("T_X::Known",)))
+    case("a baseline entry that moved -> changed, not tolerated",
+         {"T_X::Known": ((3, "int", "handle"),)}, base,
+         ((), (), ("T_X::Known",), ()))
+    case("empty baseline, empty run -> nothing at all",
+         {}, {}, ((), (), (), ()))
+
+    # End to end, against the real headers: the tree as it stands must pass,
+    # otherwise the four cases above prove nothing about the wiring.
+    real = main(["--quiet"])
+    if real == 0:
+        print("selftest ok    real tree passes                 -> exit 0")
+    else:
+        print(f"selftest FAIL  real tree passes                 -> exit {real}")
+        rc = 1
+
+    print()
+    print("selftest: pass" if rc == 0 else "selftest: FAIL")
+    return rc
+
+
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    show_all = "--all" in argv
+    quiet = "--quiet" in argv
     api_path = ROOT / "inc" / "Api.h"
     # Api.h is the thing under test, not evidence about C++. Leaving it in the
     # scan makes the free-function forms in it (Left(String s, int32 sz)) look
@@ -278,7 +430,9 @@ def main():
 
     if not api:
         print("check_api_arity: parsed nothing out of inc/Api.h", file=sys.stderr)
-        return 1
+        print("check_api_arity: nothing was examined, so this is not a pass",
+              file=sys.stderr)
+        return 2
 
     misaligned, extra_only, unmatched, agreed = [], [], [], 0
 
@@ -342,51 +496,115 @@ def main():
         else:
             agreed += 1
 
-    print(f"inc/Api.h: {len(api)} method declarations checked against inc/*.h")
-    print(f"  every shared slot agrees:            {agreed}")
-    print(f"  MISALIGNED, a slot means two things: {len(misaligned)}")
-    print(f"  C++ has extra trailing params only:  {len(extra_only)}")
-    print(f"  no C++ declaration found to compare: {len(unmatched)}")
-    print()
+    def say(*a):
+        if not quiet:
+            print(*a)
 
-    if misaligned:
-        print("=== MISALIGNED: a script argument lands in the wrong parameter ===")
-        print("The script names a slot one thing and the C++ names it another, so")
-        print("the value goes somewhere the script did not intend. Default")
-        print("arguments keep the compiler silent about all of it.")
-        print()
-        for (ln, cls, nm, raw, fn, fl, fraw, na, nc, mism) in misaligned:
-            where = "; ".join(
-                f"slot {i}: script {at} '{an}' vs C++ {ct} '{cn}'"
-                for i, at, ct, an, cn in mism
-            )
-            print(f"{cls}::{nm}   script {na} params, C++ {nc}")
-            print(f"    {where}")
-            print(f"    inc/Api.h:{ln}   {raw}")
-            print(f"    inc/{fn}:{fl}   {fraw}")
-            print()
+    # One record per misaligned symbol, in the shape the baseline stores. The
+    # detail for the report is kept alongside, keyed the same way.
+    found, detail = {}, {}
+    for rec in misaligned:
+        (ln, cls, nm, raw, fn, fl, fraw, na, nc, mism) = rec
+        sym = f"{cls}::{nm}"
+        # inc/Api.h should declare each method once. If it does not, do not let
+        # the second one vanish into the first one's baseline tolerance -- give
+        # it a key of its own so it reports as unexpected and fails the run.
+        if sym in found:
+            sym = f"{sym}@Api.h:{ln}"
+        found[sym] = tuple((i, at, ct) for i, at, ct, an, cn in mism)
+        detail[sym] = rec
+
+    known, unexpected, changed, stale = audit(found, BASELINE)
+
+    say(f"inc/Api.h: {len(api)} method declarations checked against inc/*.h")
+    say(f"  every shared slot agrees:            {agreed}")
+    say(f"  MISALIGNED, a slot means two things: {len(misaligned)}"
+        f"   ({len(known)} known, {len(unexpected) + len(changed)} not)")
+    say(f"  C++ has extra trailing params only:  {len(extra_only)}")
+    say(f"  no C++ declaration found to compare: {len(unmatched)}")
+    say()
+
+    def show(sym, prefix=""):
+        (ln, cls, nm, raw, fn, fl, fraw, na, nc, mism) = detail[sym]
+        where = "; ".join(
+            f"slot {i}: script {at} '{an}' vs C++ {ct} '{cn}'"
+            for i, at, ct, an, cn in mism
+        )
+        say(f"{prefix}{cls}::{nm}   script {na} params, C++ {nc}")
+        say(f"{prefix}    {where}")
+        say(f"{prefix}    inc/Api.h:{ln}   {raw}")
+        say(f"{prefix}    inc/{fn}:{fl}   {fraw}")
+        say()
+
+    if unexpected or changed:
+        say("=== MISALIGNED, AND NOT IN THE BASELINE ===")
+        say("The script names a slot one kind of thing and the C++ names it")
+        say("another, so the value goes somewhere the script did not intend.")
+        say("Default arguments keep the compiler silent about all of it. Read")
+        say("each one: fix it, or file it and add a BASELINE entry saying why")
+        say("it is tolerated.")
+        say()
+        for sym in unexpected:
+            show(sym)
+        for sym in changed:
+            say(f"{sym} IS in the baseline, but not with these slots.")
+            say(f"    baseline records: {tuple(BASELINE[sym]['slots'])}")
+            say(f"    this run found:   {found[sym]}")
+            say("    A slot that disagrees in a new way is a new fact. Read it,")
+            say("    then update the entry deliberately.")
+            say()
+            show(sym, "    ")
+
+    if stale:
+        say("=== STALE BASELINE ENTRIES ===")
+        say("These are recorded as known misalignments and no longer misalign.")
+        say("The defect is fixed, or the parser stopped matching the C++")
+        say("declaration. Either way the entry is now a suppression covering")
+        say("nothing, and the next real defect would hide behind it. Delete it,")
+        say("or find out why the tool stopped seeing it.")
+        say()
+        for sym in stale:
+            say(f"    {sym}   (baseline cites {BASELINE[sym]['issue']})")
+        say()
+
+    if known:
+        say("=== MISALIGNED, KNOWN AND TOLERATED ===")
+        say("In the baseline, with a tracked issue. Not a pass for the defect --")
+        say("only a statement that this run found nothing new about it.")
+        say()
+        for sym in known:
+            say(f"    {sym}   {BASELINE[sym]['issue']}")
+            show(sym, "    ")
 
     if show_all and extra_only:
-        print("=== C++ HAS EXTRA TRAILING PARAMETERS, shared slots agree ===")
-        print("Benign by design: the script does not expose an option that")
-        print("defaults. Listed so a future change to one of them is visible.")
-        print()
+        say("=== C++ HAS EXTRA TRAILING PARAMETERS, shared slots agree ===")
+        say("Benign by design: the script does not expose an option that")
+        say("defaults. Listed so a future change to one of them is visible.")
+        say()
         for (ln, cls, nm, raw, fn, fl, fraw, na, nc, defaulted) in extra_only:
             note = "" if defaulted else "   <-- surplus is NOT all defaulted"
-            print(f"    {cls}::{nm}  script {na}, C++ {nc}{note}")
-            print(f"      inc/Api.h:{ln}   {raw}")
-            print(f"      inc/{fn}:{fl}   {fraw}")
+            say(f"    {cls}::{nm}  script {na}, C++ {nc}{note}")
+            say(f"      inc/Api.h:{ln}   {raw}")
+            say(f"      inc/{fn}:{fl}   {fraw}")
 
     if show_all and unmatched:
-        print("=== NO C++ DECLARATION FOUND ===")
-        print("Not necessarily a defect: the method may be declared in a form this")
-        print("tool does not parse, or on a class it could not map.")
-        print()
+        say("=== NO C++ DECLARATION FOUND ===")
+        say("Not necessarily a defect: the method may be declared in a form this")
+        say("tool does not parse, or on a class it could not map.")
+        say()
         for (ln, cls, nm, raw) in unmatched:
-            print(f"    inc/Api.h:{ln}   {cls}::{nm}")
+            say(f"    inc/Api.h:{ln}   {cls}::{nm}")
 
+    if unexpected or changed or stale:
+        say(f"FAIL: {len(unexpected)} misalignment(s) outside the baseline, "
+            f"{len(changed)} changed, {len(stale)} stale entr(ies).")
+        return 1
+    say(f"PASS: every misalignment found ({len(known)}) is in the baseline, "
+        f"and every baseline entry still fires.")
     return 0
 
 
 if __name__ == "__main__":
+    if "--selftest" in sys.argv[1:]:
+        sys.exit(selftest())
     sys.exit(main())

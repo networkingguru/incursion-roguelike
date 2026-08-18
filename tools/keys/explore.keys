@@ -14,8 +14,14 @@
 # that a command which unexpectedly opens a menu cannot swallow the rest of
 # the script.
 #
-# Generated, and regenerable: the generator is quoted in the commit that added
-# this file, and it seeds itself with 20260814 so it produces this same file.
+# Generated with a seed of 20260814. NOT regenerable: the generator is lost.
+#
+# This header used to say "the generator is quoted in the commit that added
+# this file". It is not. The adding commit is 058ba87, its body quotes no
+# generator, and no commit in the history does (checked 2026-08-17 with
+# git log --format=%B). Seven key scripts chained their provenance to that
+# sentence. Treat this file as the artefact itself: edit it directly, or write
+# a new generator and say so here. Tracked as inc-buq.
 
 @include chargen.keys
 

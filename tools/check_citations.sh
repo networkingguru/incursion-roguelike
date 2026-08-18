@@ -14,8 +14,11 @@
 # fix a mistake that recurs; a gate does.
 #
 # WHAT IT CHECKS
-#   1. Every GitHub blob/tree link to the UPSTREAM repo -- the path exists in
-#      the upstream ref, and the #L anchor is printed with its actual content.
+#   1. Every GitHub blob/tree link to the UPSTREAM repo -- the path exists at
+#      the ref NAMED IN THE URL, and the #L anchor is printed with its actual
+#      content at that ref. Pinning links to a commit rather than to master is
+#      what keeps a comment's line numbers true after the branch moves, so the
+#      check follows whatever ref the reader would follow.
 #   2. Every GitHub link to OUR fork -- the path exists on the published ref,
 #      because an evidence link that is only in the working tree 404s for the
 #      reader. This is the check that fails when we forget to push.
@@ -73,9 +76,10 @@ resolve_basename() {
 }
 
 line_at() { git -C "$ROOT" show "$UPSTREAM_REF:$1" 2>/dev/null | sed -n "${2}p"; }
+line_at_ref() { git -C "$ROOT" show "$1:$2" 2>/dev/null | sed -n "${3}p"; }
 
 check_document() {
-    local doc=$1 expect=${2:-}
+    local doc=$1 expect=${2:-} url_ref
     [ -r "$doc" ] || { echo "cannot read $doc" >&2; exit 2; }
 
     local resolved="${TMPDIR:-/tmp}/checkcit-resolved.$$"
@@ -90,18 +94,28 @@ check_document() {
         [ "$anchor" = "$path" ] && anchor=""
         path=${path%%\#*}
         case "$path" in
-            "$UPSTREAM_HOST"/blob/master/*)
-                path=${path#"$UPSTREAM_HOST"/blob/master/}
-                if path_in_ref "$UPSTREAM_REF" "$path"; then
+            "$UPSTREAM_HOST"/blob/*)
+                # Accept any ref in the URL, not just master: a link meant to
+                # outlive the branch is pinned to a commit. Resolve the content
+                # at the ref the READER will follow, which is the whole point.
+                path=${path#"$UPSTREAM_HOST"/blob/}
+                url_ref=${path%%/*}
+                path=${path#*/}
+                if ! git -C "$ROOT" rev-parse --verify --quiet "$url_ref^{commit}" > /dev/null; then
+                    fail "link names a ref this clone cannot resolve: $url_ref ($url)"
+                    continue
+                fi
+                if path_in_ref "$url_ref" "$path"; then
                     if [ -n "$anchor" ]; then
                         local n=${anchor#L}; n=${n%%-*}
-                        printf '%s:%s\t%s\n' "$path" "$n" "$(line_at "$path" "$n")" >> "$resolved"
-                        printf 'upstream %s:%s  %s\n' "$path" "$n" "$(line_at "$path" "$n")"
+                        printf '%s:%s\t%s\n' "$path" "$n" "$(line_at_ref "$url_ref" "$path" "$n")" >> "$resolved"
+                        printf 'upstream %s@%s:%s  %s\n' "$path" "${url_ref:0:10}" "$n" \
+                            "$(line_at_ref "$url_ref" "$path" "$n")"
                     else
-                        printf 'upstream %s  (no anchor)\n' "$path"
+                        printf 'upstream %s@%s  (no anchor)\n' "$path" "${url_ref:0:10}"
                     fi
                 else
-                    fail "$path is not in $UPSTREAM_REF (link: $url)"
+                    fail "$path is not in $url_ref (link: $url)"
                 fi
                 ;;
             "$ORIGIN_HOST"/blob/master/*|"$ORIGIN_HOST"/tree/master/*)
