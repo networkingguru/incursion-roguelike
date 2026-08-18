@@ -86,8 +86,12 @@ followers with him.
 
 ## Scope
 
-The same loop carries animal companions (`ANIMAL_COMPANION` with `TA_LEADER`),
-Leadership followers and charmed creatures between levels. Creatures created
+The loop collects whatever `ts.isLeader(this)` accepts, which is a creature
+whose target list names the player as leader, summoner, master or mount
+(`src/Target.cpp:903-921` upstream). That covers summoned creatures, animal
+companions (which reach it through `MakeCompanion` adding `TargetSummoner`,
+not through the `ANIMAL_COMPANION` stati), mounts, and creatures dominated or
+commanded. A merely charmed creature is not collected. Creatures created
 together — a summoned group, an encounter — are appended to `Things` together,
 which is exactly the adjacency the defect needs. Nothing tells the player that
 anything was left behind.

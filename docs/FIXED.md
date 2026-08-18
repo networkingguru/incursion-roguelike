@@ -194,7 +194,7 @@ bd ready                    # what is available to work on now
 bd show <id>                # one issue, with its evidence
 ```
 
-Forty-five issues are closed as of 2026-08-17. Each carries the evidence that
+Forty-four issues are closed as of 2026-08-17 (`bd list --status closed`). Each carries the evidence that
 closed it, including the controls that were run and, where one exists, the
 regression check left behind. Twenty-three of those were closed by iNCURSION
 release 1; the rest came after it, including the two packaging defects above.

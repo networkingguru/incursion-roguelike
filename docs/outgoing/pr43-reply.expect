@@ -51,3 +51,8 @@ lib/dungeon.irh:682	TF_FALL, TF_WARN
 src/Move.cpp:476	TF_WARN
 src/Feature.cpp:898	nx = x;
 src/Display.cpp:1171	isDelete
+src/MakeLev.cpp:2171	AI_TRAP
+src/MakeLev.cpp:2184	AI_TRAP
+src/Feature.cpp:938	GoWith[i]->PlaceAt
+src/Skills.cpp:4181	MoveDepth(m->Depth + 1, true)
+src/Target.cpp:903	getLeader

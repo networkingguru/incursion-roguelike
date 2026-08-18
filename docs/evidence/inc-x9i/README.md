@@ -133,7 +133,10 @@ not yet observed:
 - **Trapdoor traps.** `"small trapdoor trap"` (`lib/threats.irh:799`) and
   `"large trapdoor trap"` (`:1085`) are `EA_TERRAFORM` effects with
   `xval: TERRA_FLOOR; rval: $"chasm"`, flagged `EF_MUNDANE`. They turn real
-  floor into real chasm during play. Tracked as inc-8b8.
+  floor into real chasm. The generator places traps itself, picking a random
+  `AI_TRAP` effect for the level's `DepthCR` (`src/MakeLev.cpp:2171` and
+  `:2184`, upstream numbering), so a trapdoor trap can be sitting on the bottom
+  level from the moment it is generated. Tracked as inc-8b8.
 - **Scripted `MoveDepth`.** Every scripted call runs with `safe=false`, because
   the script API takes one parameter (`inc/Api.h:226`) and the binding passes
   one (`lib/dispatch.h:680`). `lib/religion.irh:2992-2993` moves the player as
