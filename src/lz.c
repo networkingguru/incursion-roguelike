@@ -497,10 +497,10 @@ int LZ_CompressFast( unsigned char *in, unsigned char *out,
 *  outposp - See inc/lz.h.
 * Returns 0 on success, -1 if the stream is corrupt. See inc/lz.h.
 *
-* upstream (inc-l0t, Traced, not sent): every bound check in this function
-* is new. The original trusted 'insize' and the caller's promise that 'out'
-* was big enough, both of which are just the contents of a file the game
-* did not produce itself once a save or module is corrupt or hostile.
+* upstream: every bound check in this function is new. The original trusted
+* 'insize' and the caller's promise that 'out' was big enough, both of which
+* are just the contents of a file the game did not produce itself once a save
+* or module is corrupt or hostile. Traced. Tracked as inc-l0t. Not sent.
 *************************************************************************/
 
 int LZ_Uncompress( unsigned char *in, unsigned char *out,

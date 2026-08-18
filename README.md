@@ -45,7 +45,7 @@ Every monster, item, spell and class carries its own written description in the
 game, so the ruleset is readable from inside it rather than requiring a manual.
 
 What works today: character creation, exploration, the full combat model, magic,
-shops, saving and loading. The game builds its own 82,768-line ruleset into a
+shops, saving and loading. The game builds its own 82,297-line ruleset into a
 data module, so what you are playing is the real thing and not a subset.
 
 **Three ways to run it.** A windowed SDL build (the way to play), a plain

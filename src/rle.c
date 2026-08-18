@@ -267,9 +267,10 @@ int RLE_Compress( unsigned char *in, unsigned char *out,
 *  outposp - See inc/rle.h.
 * Returns 0 on success, -1 if the stream is corrupt. See inc/rle.h.
 *
-* upstream (inc-l0t, Traced, not sent): every bound check in this function
-* is new -- see the matching note on LZ_Uncompress() in src/lz.c. This is
-* the decoder Registry::LoadGroup's default load path actually runs.
+* upstream: every bound check in this function is new -- see the matching
+* note on LZ_Uncompress() in src/lz.c. This is the decoder
+* Registry::LoadGroup's default load path actually runs. Traced. Tracked as
+* inc-l0t. Not sent.
 *************************************************************************/
 
 int RLE_Uncompress( unsigned char *in, unsigned char *out,
