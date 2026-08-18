@@ -22,7 +22,12 @@ cd "$ROOT"
 
 # A diagnostic build gets its own binary and its own object directory, so it
 # never leaves half-instrumented objects behind for the next ordinary build:
-#     EXTRA_CXXFLAGS=-DFLICKER_PROBE OUT=incursion-flicker ./build_macos.sh
+#     EXTRA_CXXFLAGS=-DPATH_PROBE OUT=incursion-path ./build_macos.sh
+#
+# Pick a real probe as the example, not a broken one. This line used to name
+# -DFLICKER_PROBE, which was the only probe the build script mentioned and was
+# also the one instrument in the tree that could not see the defect it was
+# built for. It is deleted now; see docs/DEVTOOLS-AUDIT.md.
 # Which terminal backend to compile in. Only one can be linked at a time --
 # each defines main(), Error() and Fatal().
 #   libtcod  the SDL window build; the way to play.

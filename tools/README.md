@@ -162,7 +162,7 @@ because it is sourced, not executed. `run_probe.sh:7` uses a bare `cd` with no
 
 **Trap 2 — `headless.sh` copies the LIVE `Options.Dat` unless you say
 otherwise.** `headless.sh:99` defaults `INCURSION_OPTIONS` to `$ROOT/Options.Dat`
-and `:104` copies it into the session. The default is deliberate: a session with
+and `headless.sh:104` copies it into the session. The default is deliberate: a session with
 no options file never finishes character generation, which produced two false
 passes on 2026-08-14 (`headless.sh:86-88`). But the live file is whatever the
 owner last played with, and the game rewrites it every session. Settings change
@@ -377,12 +377,13 @@ reporting results from captures macOS had blocked
 so it is not broken — it is the weaker instrument, and it is kept only so its
 older logs stay interpretable.
 
-**What no flicker tool can tell you, and the general lesson.** The compile-time
-`-DFLICKER_PROBE` samples luminance only inside libtcod's `actual_rendering()`,
-so it fires only when the game PRESENTS a frame. The game presenting at about
+**What no flicker tool can tell you, and the general lesson.** There used to be
+a compile-time `-DFLICKER_PROBE`. It was deleted on 2026-08-18 and the reason is
+the lesson. It sampled luminance only inside libtcod's `actual_rendering()`,
+so it fired only when the game PRESENTED a frame. The game presenting at about
 2 per second, with gaps to 3.4 seconds, WAS the bug. The instrument was
 structurally blind to the defect it was built for, and its flat 8.99 reading was
-true and irrelevant (`docs/PORT-STATUS.md:288-296`). Read every diagnostic in
+true and irrelevant (`docs/DEVTOOLS-AUDIT.md`). Read every diagnostic in
 this directory the same way: ask what it samples before you trust what it says.
 An instrument that answers confidently about the wrong thing costs more than no
 instrument. `gate_lib.sh:26-28` states its own version of this limit — the gate
@@ -519,9 +520,9 @@ replace that baseline — see below.
 ### The two you must not run casually
 
 **`tools/check_abs_path.sh` runs the real game from the repo root, and moves the
-live `Options.Dat` aside.** Verified: `:22-27` renames `Options.Dat` to
-`Options.Dat.checktmp` and installs an `EXIT` trap to move it back; `:32` runs
-`./incursion` in the background from the repo root, and `:34-35` sleep 8 seconds
+live `Options.Dat` aside.** Verified: `check_abs_path.sh:22-27` renames `Options.Dat` to
+`Options.Dat.checktmp` and installs an `EXIT` trap to move it back; `check_abs_path.sh:32` runs
+`./incursion` in the background from the repo root, and `check_abs_path.sh:34-35` sleep 8 seconds
 and kill it. Two consequences. First, the game resolves the repo root as its own
 directory, so it reads and can write the owner's real `save/`. Second, if the
 script is killed with a signal the trap cannot catch, the live `Options.Dat`
@@ -550,15 +551,15 @@ marker — a comment shaped like a marker whose tag is not spelled as the
 documented `upstream: ` and is therefore invisible to
 `grep -rn "upstream:" src/ inc/`. `src/rle.c:270` and `src/lz.c:500` both wrote
 it as `upstream (inc-l0t, Traced, not sent):` and were skipped in silence for
-months (`:16-23`). Both of those two sites are now spelled correctly, so reading
+months (`check_upstream_marks.sh:16-23`). Both of those two sites are now spelled correctly, so reading
 them today shows the fix and not the defect; the check is what keeps the next
 one from happening. Pass 3 is new and checks the REVERSE direction: for every fix
 site the table names, the named file must carry a marker mentioning that row's
-id (`:35-39`). Pass 3 WARNS rather than fails, because two rows are unmatched
+id (`check_upstream_marks.sh:35-39`). Pass 3 WARNS rather than fails, because two rows are unmatched
 today and resolving them is a provenance judgement, not this script's call
-(`:41-47`). `--strict` promotes those warnings to failures, and that is the mode
-CI should adopt once the backlog clears (`:59`). `--selftest` proves the
-detectors still detect (`:60`).
+(`check_upstream_marks.sh:41-47`). `--strict` promotes those warnings to failures, and that is the mode
+CI should adopt once the backlog clears (`check_upstream_marks.sh:59`). `--selftest` proves the
+detectors still detect (`check_upstream_marks.sh:60`).
 
 **`check_api_arity.py` now has a checked-in baseline and can fail.** It used to
 return 0 on every path, printing two MISALIGNED slots and exiting green, so

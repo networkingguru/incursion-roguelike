@@ -1016,59 +1016,6 @@ static void PaletteLogWindowRect(void) {
 }
 #endif
 
-#ifdef FLICKER_PROBE
-/* Diagnostic only. libtcod calls this from actual_rendering() with the exact
-   surface it is about to upload and present, so it separates "the game drew a
-   different picture" from "the picture was fine and the display changed it". */
-#include <SDL.h>
-/* Declared in sys.h only when TCOD_SDL2 is defined, which the game build does
-   not define. Declaring it here avoids changing header semantics for one probe. */
-extern "C" void TCOD_sys_register_SDL_renderer(void (*cbk)(void *));
-#ifndef FLICKER_PROBE_LOG
-#define FLICKER_PROBE_LOG "/tmp/flicker.log"
-#endif
-static FILE *probeLog = NULL;
-static void FlickerProbe(void *vsurface) {
-    SDL_Surface *s = (SDL_Surface*)vsurface;
-    static unsigned long frame = 0;
-    double sum = 0.0;
-    unsigned long n = 0;
-    int minA = 255, maxA = 0, x, y;
-
-    if (!s)
-        return;
-    if (!probeLog) {
-        probeLog = fopen(FLICKER_PROBE_LOG, "w");
-        if (!probeLog)
-            return;
-        fprintf(probeLog, "# surface %dx%d bytes/pixel %d format %s\n",
-            s->w, s->h, (int)s->format->BytesPerPixel,
-            SDL_GetPixelFormatName(s->format->format));
-        fprintf(probeLog, "frame\tms\tmean_luma\tmin_alpha\tmax_alpha\n");
-    }
-    if (s->format->BytesPerPixel != 4) {
-        fprintf(probeLog, "# unexpected bytes/pixel %d, giving up\n",
-            (int)s->format->BytesPerPixel);
-        fflush(probeLog);
-        return;
-    }
-    /* Stride 2 in both axes: 4x cheaper, same answer for a global brightness. */
-    for (y = 0; y < s->h; y += 2)
-        for (x = 0; x < s->w; x += 2) {
-            Uint32 px = *(Uint32*)((Uint8*)s->pixels + y*s->pitch + x*4);
-            Uint8 r, g, b, a;
-            SDL_GetRGBA(px, s->format, &r, &g, &b, &a);
-            sum += 0.299*r + 0.587*g + 0.114*b;
-            n++;
-            if (a < minA) minA = a;
-            if (a > maxA) maxA = a;
-        }
-    fprintf(probeLog, "%lu\t%u\t%.3f\t%d\t%d\n", frame++,
-        (unsigned)TCOD_sys_elapsed_milli(), n ? sum/n : 0.0, minA, maxA);
-    fflush(probeLog);
-}
-#endif
-
 void libtcodTerm::Reset() {
     int16 optRes, optFont;
     size_t i;
@@ -1156,10 +1103,6 @@ RetryFont:
     sprintf(fontName + i, "%dx%d.png", fontX, fontY);
 	TCOD_console_set_custom_font(fontName, TCOD_FONT_LAYOUT_ASCII_INROW, 16, 16);
 	TCOD_console_init_root(sizeX, sizeY, "Incursion: Halls of the Goblin King", !isWindowed, TCOD_RENDERER_SDL);
-
-#ifdef FLICKER_PROBE
-    TCOD_sys_register_SDL_renderer(FlickerProbe);
-#endif
 
     InitWindows();
 
