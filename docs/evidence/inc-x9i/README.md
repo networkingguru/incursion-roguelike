@@ -125,6 +125,24 @@ at level 9, which `:1879` intends. An earlier version of this file said "7
 sessions and 51 levels"; those runs shared directories (inc-uh0) and the totals
 were unreliable.
 
+## Other ways chasm reaches the bottom level
+
+Generated chasm is measured above. Two more routes are read from the source and
+not yet observed:
+
+- **Trapdoor traps.** `"small trapdoor trap"` (`lib/threats.irh:799`) and
+  `"large trapdoor trap"` (`:1085`) are `EA_TERRAFORM` effects with
+  `xval: TERRA_FLOOR; rval: $"chasm"`, flagged `EF_MUNDANE`. They turn real
+  floor into real chasm during play. Tracked as inc-8b8.
+- **Scripted `MoveDepth`.** Every scripted call runs with `safe=false`, because
+  the script API takes one parameter (`inc/Api.h:226`) and the binding passes
+  one (`lib/dispatch.h:680`). `lib/religion.irh:2992-2993` moves the player as
+  deep as 10. Tracked as inc-3i3.
+
+Hallucinatory Terrain does **not** belong on this list. It sets perceived
+terrain, and `Creature::TerrainEffects` re-points at the real terrain for an
+illusory square (`src/Move.cpp:1303-1305`) before testing `TF_FALL` at `:1348`.
+
 ## Relationship to inc-upw.15 and PR #43
 
 Seed 3362 is the crash that PR #43's original description could not explain: it

@@ -45,3 +45,9 @@ src/MakeLev.cpp:2397	RoomTypes
 src/MakeLev.cpp:2400	RF_CORRIDOR
 inc/Base.h:79	i++
 lib/religion.irh:2993	true
+lib/threats.irh:799	trapdoor
+lib/threats.irh:1085	trapdoor
+lib/dungeon.irh:682	TF_FALL, TF_WARN
+src/Move.cpp:476	TF_WARN
+src/Feature.cpp:898	nx = x;
+src/Display.cpp:1171	isDelete
