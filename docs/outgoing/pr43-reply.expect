@@ -82,3 +82,6 @@ src/Feature.cpp:885	NewDepth -=
 src/Feature.cpp:814	OldDepth = lr->OldDepth
 src/Feature.cpp:827	Limbo[i]->Target
 src/Feature.cpp:842	PlaceAt(p->m
+src/Skills.cpp:3990	isSkylight
+src/Skills.cpp:4066	MoveDepth(m->Depth - 1, true)
+src/Annot.cpp:371	RF_ROOM

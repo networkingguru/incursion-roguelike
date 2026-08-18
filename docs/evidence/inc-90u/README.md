@@ -72,8 +72,10 @@ the consumed slot.
 
 `screen-arrived-depth2.txt` is the arrival on depth 2 of seed 3362: `@` with two
 `k` beside it and "Things in View: k kobold, k kobold". `screen-after-60-turns.txt`
-is the same session sixty turns later — one kobold and one kobold corpse, killed
-by a black orc. The count only falls. No third kobold appears.
+is the same session sixty turns later -- one live kobold and one kobold corpse,
+with a black orc named in the interrupt prompt above them. Nothing in the dump
+attributes the kill; the orc is simply on the screen. The count only falls, and
+no third kobold appears.
 
 The code says why. The turn loop iterates the player's current map only
 (`MapIterate(mp,t,i)`, `src/Main.cpp:220` upstream), so a creature on any other level
@@ -84,10 +86,12 @@ takes stairs is deleted, not moved. Other code does move creatures between maps 
 `Player::MoveDepth`'s collection loop is the only thing that brings a player's
 followers with him.
 
-`Game::LimboCheck` (`src/Feature.cpp:820`) would re-place a parked Thing on the
-player's current map, but it is dead code: nothing calls it, and nothing could
-feed it anyway, since parking needs `EnterLimbo` and no shipped script calls
-that either (`lib/dispatch.h:2174` is its only entry point).
+`Game::LimboCheck` (`src/Feature.cpp:820`) looks like the mechanism that would
+bring a parked Thing back to the player's map, and it is inert three times over:
+nothing calls it; no shipped script calls `EnterLimbo` to park anything
+(`lib/dispatch.h:2174` is its only entry point); and `EnterLimbo` never assigns
+the `Target` that `LimboCheck` tests at `:827`, so that branch cannot run and the
+fallback at `:842` would read an uninitialised `p`. Tracked as inc-ujn.
 
 ## Scope
 
@@ -128,8 +132,8 @@ anything was left behind.
 This is why the answer to rmtew's question (c) — why not size the array from the
 number of followers — is not a simple yes. The obvious implementation counts in
 one pass and collects in a second, and the two cannot agree while the collect
-pass mutates the list it is walking. A growable container removes the counting
-pass instead of trying to fix it. The index skip is a separate defect from the
+pass mutates the list it is walking. A growable container never adds the counting
+pass -- there is none in the code today to remove. The index skip is a separate defect from the
 container choice and wants its own patch.
 
 ## Provenance

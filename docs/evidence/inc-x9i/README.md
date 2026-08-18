@@ -117,7 +117,7 @@ and `"Jagged Chasm"` (`:3644`), which sets `* BLOB_WITH $"chasm"` and declares
 no `Depth:` at all, so that gate passes for it at every level. None is
 `RF_NOGEN`, and no dungeon defines a `ROOM_WEIGHTS` list, so `Resource::GetList`
 falls through to its default (`src/Annot.cpp:365`) and puts every `RF_ROOM`
-region into every dungeon's pool.
+region that is not `RF_NOGEN` into every dungeon's pool (`:371-372`).
 
 Measured across 8 seeded sessions and 60 generated levels, one run directory
 each: chasm appears on 16 of the 31 levels generated shallower than `MIN_CHASM_DEPTH`,
