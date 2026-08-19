@@ -1094,7 +1094,7 @@ void TextTerm::BarterManager(Creature *Seller) {
     hObj Wares[500];
     Item *it;
     rID spID;
-    int16 i, c, n, width, lItem, lSpell, curr;
+    int16 i, c, n, width, lItem, lSpell, curr, top, vRows;
     String ShopName, SellerName;
     int16 ch, digit;
     int32 cost;
@@ -1175,6 +1175,7 @@ Redraw:
 
     curr = 0;
     offset = 0;
+    top = 0;
     digit = 0;
 
 PartialRedraw:
@@ -1183,6 +1184,7 @@ PartialRedraw:
     SetWin(WIN_INVEN);
     SizeWin(WIN_CUSTOM, WinLeft(), WinTop() + 4, WinRight(), WinBottom() - 3);
     SetWin(WIN_CUSTOM);
+    vRows = WinSizeY();
 
 
     for (i = 0; i != c; i++) {
@@ -1205,7 +1207,25 @@ PartialRedraw:
         }
     }
 
-    UpdateScrollArea(offset, WIN_CUSTOM);
+    /* upstream: the shop list never scrolled at all. ClearScroll(true) at the
+       top of PartialRedraw zeroes TextTerm::offset (src/TextTerm.cpp:720-728),
+       every arrow key returns here, and this is the only draw -- so whatever
+       offset the NORTH/SOUTH cases had just worked out was thrown away and row
+       0 was redrawn at the top of the page every time. Those cases also
+       compared against a hardcoded 32 rows, while the window is WinSizeY()
+       tall. Keep the scroll position in a local the redraw cannot reach, and
+       take the page height from the window, the way TextTerm::LMenu does at
+       src/TextTerm.cpp:1052-1055. Nothing here is a port artefact: the reset
+       and the constant are both upstream source and behave the same on Win32
+       with the original typedefs. Observed -- 40 DOWN presses left the page
+       byte-identical while the selection provably moved 40 rows; see
+       tools/check_store_scroll.sh. inc-upw.23, not sent. */
+    if (curr < top)
+        top = curr;
+    if (curr > top + vRows - 1)
+        top = curr - (vRows - 1);
+    UpdateScrollArea(top, WIN_CUSTOM);
+    top = offset;
     do {
         ClearKeyBuff();
         ch = GetCharRaw();
@@ -1221,29 +1241,27 @@ PartialRedraw:
         case '?':
             HelpTopic("help::adventuring", "SB");
             goto PartialRedraw;
+        /* upstream: the currCon test is copied from InventoryManager
+           (src/Managers.cpp:703-710), where it asks "is a container pane
+           open". BarterManager never assigns currCon, so these two keys
+           scrolled or did nothing according to whether the inventory screen
+           had been opened earlier in the same session. Reasoned, inc-upw.23,
+           not sent. */
         case 200 + NORTHEAST:
-            if (currCon)
-                UpdateScrollArea(offset - (1 + p->Opt(OPT_SCROLL_MAG)));
+            UpdateScrollArea(offset - (1 + p->Opt(OPT_SCROLL_MAG)));
+            top = offset;
             break;
         case 200 + SOUTHEAST:
-            if (currCon)
-                UpdateScrollArea(offset + (1 + p->Opt(OPT_SCROLL_MAG)));
+            UpdateScrollArea(offset + (1 + p->Opt(OPT_SCROLL_MAG)));
+            top = offset;
             break;
         case 200 + NORTH:
             if (curr > 0)
                 curr--;
-            if (curr < offset) {
-                offset = curr;
-                UpdateScrollArea(offset);
-            }
             goto PartialRedraw;
         case 200 + SOUTH:
             if (curr < lSpell)
                 curr++;
-            if (curr > offset + 32) {
-                offset = curr - 32;
-                UpdateScrollArea(offset);
-            }
             goto PartialRedraw;
         case 'b': case KY_ENTER:
             if (curr <= lSpell)

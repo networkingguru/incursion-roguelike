@@ -1,0 +1,47 @@
+# Open Roark Ironbeard's shop and walk the selection down the list, then back
+# up to the top. This is the oracle for inc-upw.23.
+#
+#   tools/headless.sh tools/keys/store-scroll.keys 1
+#
+# The shop is reached without wizard mode: the cave entrance in
+# lib/dungeon.irh:203 asks "Store, Inn, Retire or Descend?" on EV_ENTER, and
+# [s] calls InitShopkeeper($"Roark Ironbeard",100000) and throws EV_BARTER.
+# Roark's Gear list (lib/dungeon.irh:308) is long enough to overflow the
+# window, which is what the bug needs.
+#
+# Five screen dumps. The comparison between them is the whole test:
+#
+#   store-open    the list as it first appears, selection on row 00.
+#   examine-top   [x] on row 00, so the check knows what row 00 looks like.
+#   store-down    after 40 DOWN presses. The selection is far below row 00,
+#                 so the page MUST have scrolled and row 00 MUST be gone.
+#   examine-down  [x] again. It MUST differ from examine-top, or the DOWN
+#                 keys never reached the menu and the run measured nothing.
+#   store-up      after 40 UP presses. The selection is back on row 00, so
+#                 the page MUST have scrolled back and row 00 MUST be there.
+#
+# Before the fix, all three are the same page: PartialRedraw calls
+# ClearScroll(true), which zeroes TextTerm::offset, and every arrow key jumps
+# back to PartialRedraw. See tools/check_store_scroll.sh.
+
+@include chargen.keys
+
+@until "Store, Inn, Retire or Descend" <
+s                   # [s] Store
+
+@dump:store-open
+x                   # [x] examine the selected row -- row 00
+@dump:examine-top
+ESC                 # close the description box
+
+DOWN*40
+@dump:store-down
+x                   # examine again: a DIFFERENT description proves curr moved
+@dump:examine-down
+ESC
+
+UP*40
+@dump:store-up
+
+ESC                 # leave the shop
+@quit
