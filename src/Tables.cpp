@@ -2108,6 +2108,20 @@ Option OptionList[] = {
       "This option causes the game to not count the actions of your allies against "
       "your own alignment. It is a short-term fix until the issue with allies "
       "and mounts attacking neutral creatures can be fixed." },
+  { OPT_NATURAL_SPEED, "Natural Weapon Speed", "ORIGINAL/FLOORED", 1, 1, 0,
+      "__This option changes a rule of the original game, and is a deliberate "
+      "balance change rather than a bug fix.\n"
+      "__Every weapon in Incursion carries a speed rating, and unarmed and natural "
+      "attacks carry none. A monk therefore punches at 100~ speed while the nunchaku "
+      "in his pack strike at 160~, and a lizardfolk's claws are slower than the "
+      "dagger she could hold in the same hand.\n"
+      "__Set to FLOORED, any creature that can hold a weapon attacks with its fists, "
+      "claws and bite at no less than 175~ speed, which matches the fastest weapon in "
+      "the game. The reasoning is physical: adding the mass of a weapon to a limb "
+      "cannot make that limb move faster, so an empty hand sets the upper bound. "
+      "Creatures that cannot hold weapons, such as dragons and oozes, are untouched "
+      "and keep the individual speeds their entries already specify.\n"
+      "__Set to ORIGINAL, the game behaves as it always has." },
 /* Terminal Options */
   { OPT_ROGUELIKE, "Roguelike Keyset", "OFF/ON", 1, 0, 0,
       "__This option causes the traditional roguelike movement keys (hjklyubn) "

@@ -3987,6 +3987,17 @@ typedef signed int        hObj;
 #define OPT_POWER_STATS         118
 #define OPT_ELUDE_DEATH         119
 #define OPT_NO_ALLY_TRANS       120       
+#define OPT_NATURAL_SPEED       121
+
+/* Floor applied to A_SPD_BRAWL by OPT_NATURAL_SPEED. A creature that can hold a
+   weapon cannot attack faster by adding mass to its limb, so its fists, claws
+   and bite are never slower than the fastest weapon it could pick up instead.
+   The fastest weapon in lib/weapons.irh is the shuriken at 175%, which the
+   grammar at lang/Grammar.acc:556 stores as (175-100)/5 = 15.
+   ponytail: hard-coded rather than derived by scanning every T_WEAPON template
+   at load. If the data ever gains a faster weapon this constant must be bumped;
+   tools/check_natural_speed.sh fails when the two disagree. */
+#define NATURAL_SPD_FLOOR       15
 
 // what you have to input
 #define OPC_INPUT               200

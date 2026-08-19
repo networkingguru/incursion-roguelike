@@ -1,0 +1,57 @@
+# Make a Lizardfolk monk and photograph the character sheet.
+#
+# One assertion: with OPT_NATURAL_SPEED set to FLOORED, a creature that can
+# hold a weapon never attacks more slowly with an empty limb than the fastest
+# weapon it could hold instead. Lizardfolk are the sharpest case, because they
+# have real natural attacks -- two claws and a bite -- which lib/races.irh:1634
+# rates at 100%, slower than most weapons the same hands can pick up.
+#
+# The sheet is the oracle. src/Sheet.cpp:151 lists every attack mode with its
+# speed, and it draws the Brawl row from KAttr[A_SPD_BRAWL], which is the value
+# the floor clamps. src/Term.cpp:597 prints the same number in the traits panel.
+#
+# Menu letters move when a list changes. Run with a fixed seed; the callers
+# tools/check_natural_speed_live.sh supplies one.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+h       # Race:     [h] Lizardfolk
+a       # Subrace:  [a] Lizardfolk (Standard)
+e       # Class:    [e] Monk
+a       # Attributes: the first of the five offered sets
+c       # Alignment: [c] Neutral
+a       # First feat
+a       # Second feat
+
+# Skill Manager, twice. Three RIGHTs per skill spends everything available
+# without needing to know how many ranks this character has.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+y       # Do you wish to worship <god>? -- yes
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+# In the dungeon now. Three keys settle the opening: the room description
+# wants dismissing, then two messages want acknowledging. A fourth ESC here
+# opens the System Menu instead and every later key lands in it.
+ESC ENTER SPACE
+
+# Chargen perks can hand even a monk a real weapon -- this character starts
+# with a long sword +3 in the weapon hand. src/Sheet.cpp:162 hides the Brawl
+# row whenever SL_WEAPON holds a T_WEAPON, and src/Values.cpp:462 feeds the
+# held weapon into the brawl slot anyway, so the hands must be empty before
+# the sheet can answer anything about unarmed speed.
+i               # Inventory
+b s             # Weapon Hand, then Stow: the long sword goes to the pack
+@dump:stowed
+ESC             # leave the inventory
+
+d               # Display Character Sheet
+@dump:sheet1
+@quit
+

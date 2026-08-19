@@ -230,6 +230,28 @@ tm:
 
 int8 MonGoodSaves(int8 MType);
 
+/* The lower bound for a creature's unarmed and natural attack speed.
+
+     Incursion gives every weapon a speed rating in the data files and gives
+   unarmed and natural attacks none, so a monk's fists are slower than the
+   nunchaku in his pack and a lizardfolk's claws are slower than a dagger. The
+   OPT_NATURAL_SPEED switch corrects that: a creature that can hold a weapon
+   cannot attack faster by adding the mass of that weapon to its limb, so the
+   empty limb sets the upper bound and must never be the slower of the two.
+     The test for "can hold a weapon" is the one Encounter.cpp:2700 already uses
+   to decide whether a monster is given equipment. Creatures that fail it keep
+   the speeds their own entries specify, which range from 50% to 300%.
+     Returns the existing -15 clamp when the rule does not apply, so the call
+   sites stay a single max(). This is a deliberate balance change, not a fix to
+   a defect, and it MUST NOT be marked upstream:. */
+static int16 NaturalSpeedFloor(Creature *c) {
+    if (!theGame->Opt(OPT_NATURAL_SPEED))
+        return -15;
+    if (!c->HasMFlag(M_HUMANOID) || c->HasMFlag(M_NOHANDS))
+        return -15;
+    return NATURAL_SPD_FLOOR;
+    }
+
 int8 Creature::AttrAdj[ATTR_LAST][BONUS_LAST]; 
 Item *Creature::missileWep, *Creature::thrownWep, *Creature::offhandWep, *Creature::meleeWep;
 
@@ -1377,7 +1399,7 @@ Restart:
         else
             thisp->KAttr[A_MOV]       = -20;
         thisp->KAttr[A_SPD_MELEE]   = max(-15,thisp->KAttr[A_SPD_MELEE]);
-        thisp->KAttr[A_SPD_BRAWL]   = max(-15,thisp->KAttr[A_SPD_BRAWL]);
+        thisp->KAttr[A_SPD_BRAWL]   = max(NaturalSpeedFloor(this),thisp->KAttr[A_SPD_BRAWL]);
         thisp->KAttr[A_SPD_ARCHERY] = max(-15,thisp->KAttr[A_SPD_ARCHERY]);
         thisp->KAttr[A_SPD_THROWN]  = max(-15,thisp->KAttr[A_SPD_THROWN]);
         thisp->KAttr[A_SPD_OFFHAND] = max(-15,thisp->KAttr[A_SPD_OFFHAND]);
@@ -1402,7 +1424,7 @@ Restart:
         else
             thisp->Attr[A_MOV]       = -20;
         thisp->Attr[A_SPD_MELEE]   = max(-15,thisp->Attr[A_SPD_MELEE]);
-        thisp->Attr[A_SPD_BRAWL]   = max(-15,thisp->Attr[A_SPD_BRAWL]);
+        thisp->Attr[A_SPD_BRAWL]   = max(NaturalSpeedFloor(this),thisp->Attr[A_SPD_BRAWL]);
         thisp->Attr[A_SPD_ARCHERY] = max(-15,thisp->Attr[A_SPD_ARCHERY]);
         thisp->Attr[A_SPD_THROWN]  = max(-15,thisp->Attr[A_SPD_THROWN]);
         thisp->Attr[A_SPD_OFFHAND] = max(-15,thisp->Attr[A_SPD_OFFHAND]);
