@@ -40,8 +40,8 @@ implements the ~50 platform virtuals TextTerm leaves pure, defines `main()`,
 `Error()` and `Fatal()`, and owns file I/O.
 
 `build_macos.sh BACKEND=posix` compiles it instead of `Wlibtcod.cpp` and
-produces `./incursion-headless`. It links `-lncurses` and nothing else — no
-SDL, no libtcod.
+produces `./incursion-headless`. It links `-lz` and `-lncurses` and nothing
+else — no SDL, no libtcod.
 
 ### The screen is a plain array
 
@@ -91,8 +91,10 @@ commands.
 
 ### The screen dump
 
-`@dump` writes `logs/screens/NNNN[-label].txt`: 48 lines of 80 ASCII
-characters, followed by the non-blank message and status lines. Glyph ids
+`@dump` writes `logs/screens/NNNN[-label].txt`: a header line naming the dump
+and the key count, then 48 screen rows with their trailing blanks stripped, so
+no row is a fixed 80 characters wide. The message and status lines are rows
+within those 48 and are not written again at the end. Glyph ids
 become ASCII (`GLYPH_WALL` → `#`, `GLYPH_FLOOR` → `.`, `GLYPH_PLAYER` → `@`),
 because the consumer is `grep`, not a font.
 

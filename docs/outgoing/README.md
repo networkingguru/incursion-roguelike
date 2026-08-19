@@ -63,5 +63,21 @@ which is the only place it is read.
 
 - `pr43-reply.md` — the reply to rmtew's three questions on PR #43 (how deep the
   recursion goes, its stack cost, and why the array is not sized from the
-  follower count). **Not sent.**
+  follower count). **Sent 2026-08-18**, comment 5329016046.
 - `pr43-reply.expect` — the claims the gate enforces for that reply.
+- `issue40-reply.md` — the reply to rmtew's question on issue #40, which asks
+  what the player observes before and after. It is largely a correction: the
+  reads come from level generation, not monster AI, and #41 covers 8 of 47,962.
+  The player-facing effect it reports is doors built on squares the code never
+  chose — two sealed in rock and one moved to (1,1) by `Thing::PlaceAt` — in 2
+  of 500 scripted sessions. **Not sent, and not yet read by Brian.** Evidence in
+  `docs/evidence/inc-5xn/`.
+- `issue40-reply.expect` — the claims the gate enforces for that reply.
+
+**A limit worth knowing before you trust a green gate.** The `PINME` mechanism
+described above only bites on refs inside `https://github.com/` URLs. A document
+whose only fork reference is a bare prose placeholder passes the gate completely
+unpinned, and `issue40-reply.md` is such a document. The `.expect` file is the
+only part that reads content rather than addresses — write one for every
+outgoing document, because the gate proving a line exists is not the gate
+proving your sentence about it is true.

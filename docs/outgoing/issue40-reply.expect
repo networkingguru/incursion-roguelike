@@ -1,0 +1,47 @@
+# Expectations for docs/outgoing/issue40-reply.md
+#
+# The citation gate proves a cited line EXISTS. It cannot prove the sentence
+# around it is true. This file is the part that reads content: each row asserts
+# that a cited line in rmtew's tree contains a given substring. Five real
+# defects in this document were of exactly this class: a line cited for the
+# wrong statement, a clamp described as a conditional test when it is
+# unconditional, a parameter type cited at a call site instead of a
+# declaration, an out-of-bounds read described as "finds nothing" when Map::At
+# answers with the (0,0) square, and the same read described as silent when the
+# ASSERT one line above it is what fills the error log.
+#
+# Format: path:line <TAB> substring that must appear on that line.
+
+inc/Base.h:269	if (sx>=(x2-x1))
+inc/Base.h:276	if (sy >= (y2-y1))
+inc/Base.h:285	Rect& PlaceWithinSafely(uint8 sx, uint8 sy)
+inc/Base.h:290	r.y1 = (uint8)(y1 + random(max(0,((y2-y1)-1)-sy)));
+inc/Base.h:293	r.x1 = max(r.x1, x1 + 2);
+inc/Base.h:296	r.y2 = min(r.y2, y2 - 2);
+inc/Inline.h:38	inline int16 random(int16 mx)
+inc/Map.h:215	ASSERT(InBounds(x,y));
+inc/Map.h:217	return Grid[0];
+inc/Map.h:284	Door* FDoorAt(int16 x, int16 y)
+inc/Map.h:348	void MakeDoor(uint8 x,uint8 y, rID fID);
+src/Display.cpp:151	if (!m->InBounds(_x,_y))
+src/Display.cpp:152	_x = _y = 1;
+src/Display.cpp:612	Thing* Map::GetAt(int16 x, int16 y, int16 t, bool first)
+src/MakeLev.cpp:1283	if (FFeatureAt(x, y))
+src/MakeLev.cpp:1284	return;
+src/MakeLev.cpp:2752	r = cPanel.PlaceWithinSafely((uint8)sx, (uint8)sy);
+src/MakeLev.cpp:2759	r.x1 += 2; r.x2 -= 2;
+src/MakeLev.cpp:2760	r.y1 += 2; r.y2 -= 2;
+src/MakeLev.cpp:2761	sx -= 4 + random(5);
+src/MakeLev.cpp:2762	sy -= 4 + random(5);
+src/MakeLev.cpp:2763	r = r.PlaceWithin((uint8)sx, (uint8)sy);
+src/MakeLev.cpp:2786	y = r.y1 + random(r.y2 - r.y1);
+src/MakeLev.cpp:2967	y = r.y1 + random(r.y2-r.y1);
+src/MakeLev.cpp:2975	if (roCount == 100)
+src/Monster.cpp:547	for (c = m->FCreatureAt(x+DirX[i],y+DirY[i]);c;
+src/Move.cpp:271	if (tx <= 0 || ty <= 0 || tx >= m->SizeX() - 1 || ty >= m->SizeY() - 1)
+src/MakeLev.cpp:2753	WriteRoom(r, regID);
+src/MakeLev.cpp:2755	if (random(2))
+src/MakeLev.cpp:332	void Map::WriteRoom(Rect &r, rID regID)
+src/MakeLev.cpp:334	if (r.x2 - r.x1 <= 1)
+src/MakeLev.cpp:2773	for (x = r.x1; x <= r.x2; x++)
+inc/Base.h:266	Rect& PlaceWithin(uint8 sx, uint8 sy)
