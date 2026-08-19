@@ -19,8 +19,10 @@
 
 #include <time.h>
 
+// The port's path sweep turned the Win32 separator into a forward slash and so
+// made both branches of this test identical. Win32 keeps its own separator.
 #ifdef WIN32
-  #define OPT_FILE "/Options.Dat"
+  #define OPT_FILE "\\Options.Dat"
 #else
   #define OPT_FILE "/Options.Dat"
 #endif

@@ -576,8 +576,11 @@ char *yytext;
 
 #include "Incursion.h"
 #include "yygram.h"
+// io.h, not unistd.h: the port's sweep swapped the header inside a guard that
+// admits only the platform where unistd.h does not exist. POSIX builds take
+// neither, and have never needed either.
 #ifdef WIN32
-#include <unistd.h>
+#include <io.h>
 #endif
 #include <string.h>
 #include <setjmp.h>

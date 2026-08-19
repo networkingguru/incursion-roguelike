@@ -2438,6 +2438,14 @@ void Player::Gravestone()
 
 #ifdef BUILD_SPELL_LIST
 
+// What this writes is IncursionScript resource text, not plain prose: the body
+// it opens below is a quoted Text block, and the resource compiler reads the
+// two characters \n inside that block as a line break. So the file must receive
+// a literal backslash-n, which is why the format string says \\n\\n. The port's
+// backslash-to-forward-slash sweep once read those as paths and wrote /n/n,
+// which is no escape at all and would have appeared verbatim in every spell
+// entry. Restored to what upstream shipped. Nothing here has run since: the
+// block is behind BUILD_SPELL_LIST, which src/Main.cpp:63 leaves commented out.
 void BuildSpellList()
   {
     FILE *f1, *f2, *f3; int32 i;
@@ -2455,7 +2463,7 @@ void BuildSpellList()
         te = TEFF(theGame->SpellID(i));
         if (!te->HasSource(AI_WIZARDRY))
           continue;
-        fprintf(f1,"\n\n      /n/n\n      <7>%s (<1>",NAME(theGame->SpellID(i)));
+        fprintf(f1,"\n\n      \\n\\n\n      <7>%s (<1>",NAME(theGame->SpellID(i)));
         if (te->Schools & SC_ABJ)
           fprintf(f1,"Abjuration");
         if (te->Schools & SC_ARC)
@@ -2474,7 +2482,7 @@ void BuildSpellList()
           fprintf(f1,"Necromancy");
         if (te->Schools & SC_WEA)
           fprintf(f1,"Weavecraft");
-        fprintf(f1," <9>%d<7>)/n\n      __<2>",te->Level);
+        fprintf(f1," <9>%d<7>)\\n\n      __<2>",te->Level);
         fprintf(f1,DESC(theGame->SpellID(i)));
       }
     fprintf(f1,"\"; }\n\n");
@@ -2485,7 +2493,7 @@ void BuildSpellList()
         te = TEFF(theGame->SpellID(i));
         if (!te->HasSource(AI_THEURGY))
           continue;
-        fprintf(f1,"\n\n      /n/n\n      <7>%s (<1>",NAME(theGame->SpellID(i)));
+        fprintf(f1,"\n\n      \\n\\n\n      <7>%s (<1>",NAME(theGame->SpellID(i)));
         if (te->Schools & SC_ABJ)
           fprintf(f1,"Abjuration");
         if (te->Schools & SC_ARC)
@@ -2504,7 +2512,7 @@ void BuildSpellList()
           fprintf(f1,"Necromancy");
         if (te->Schools & SC_WEA)
           fprintf(f1,"Weavecraft");
-        fprintf(f1," <9>%d<7>)/n\n      __<2>",te->Level);
+        fprintf(f1," <9>%d<7>)\\n\n      __<2>",te->Level);
         fprintf(f1,DESC(theGame->SpellID(i)));
       }
     fprintf(f1,"\"; }\n\n");
@@ -2515,7 +2523,7 @@ void BuildSpellList()
         te = TEFF(theGame->SpellID(i));
         if (!te->HasSource(AI_DRUIDIC))
           continue;
-        fprintf(f1,"\n\n      /n/n\n      <7>%s (<1>",NAME(theGame->SpellID(i)));
+        fprintf(f1,"\n\n      \\n\\n\n      <7>%s (<1>",NAME(theGame->SpellID(i)));
         if (te->Schools & SC_ABJ)
           fprintf(f1,"Abjuration");
         if (te->Schools & SC_ARC)
@@ -2534,7 +2542,7 @@ void BuildSpellList()
           fprintf(f1,"Necromancy");
         if (te->Schools & SC_WEA)
           fprintf(f1,"Weavecraft");
-        fprintf(f1," <9>%d<7>)/n\n      __<2>",te->Level);
+        fprintf(f1," <9>%d<7>)\\n\n      __<2>",te->Level);
         fprintf(f1,DESC(theGame->SpellID(i)));
       }
     fprintf(f1,"\"; }\n\n");

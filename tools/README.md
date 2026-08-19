@@ -343,6 +343,7 @@ Nothing invoked it; the only references were documentation. See
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? | LIVE |
 | `check_dump_save.sh` | Does `-dump` still walk a real save and report the right fields, from BOTH backends? | LIVE |
 | `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? | LIVE |
+| `check_escape_sweep.sh` | Does any string literal still spell a C escape with a forward slash, the way the port's path sweep wrote `/n` for `\n`? | LIVE |
 | `check_layout.sh` | Does this build play the same game when its objects sit at different addresses? | LIVE |
 | `check_load_corrupt.sh` | Does the real binary refuse ten hand-corrupted saves cleanly and still load two genuine ones? | LIVE |
 | `check_logrotate.sh` | Does log rotation keep the right archives and prune only names it made itself? | LIVE |
