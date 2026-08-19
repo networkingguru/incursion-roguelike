@@ -68,7 +68,10 @@ LAUNCHER="${INCURSION_LAUNCHER:-}"
     exit 2
 }
 
-SANDBOX="${INCURSION_DUMP_SANDBOX:-$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-dump}"
+# The process id is part of the name for the reason headless.sh:82 gives: the
+# stamp resolves to the second, and two dumps started inside one second would
+# otherwise share one sandbox (inc-uh0).
+SANDBOX="${INCURSION_DUMP_SANDBOX:-$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$$-dump}"
 mkdir -p "$SANDBOX/save" "$SANDBOX/logs"
 ln -sfn "$ROOT/mod" "$SANDBOX/mod"
 ln -sfn "$ROOT/lib" "$SANDBOX/lib"

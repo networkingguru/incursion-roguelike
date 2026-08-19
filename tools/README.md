@@ -211,25 +211,32 @@ Measured with that line: `marathon.keys` 10500, `explore.keys` 1259,
 `explore.keys` as "about 500" and `dive.keys` as "about 400"; both were low by a
 factor of about 2.5, and both are now the measured numbers.
 
-**Trap 5 — two runs started in the same second SHARE a run directory.**
-`headless.sh:82` names the default run directory
-`logs/runs/$(date +%Y%m%d-%H%M%S)-<script>`. The stamp resolves to the SECOND.
-A loop that starts several sessions inside one second gives them all the same
-directory, and any probe that APPENDS to a log writes into the same file. The
-result is one directory whose log reads like a single long session, and every
-per-seed figure drawn from it is wrong. This produced a false count on
-2026-08-17: a 7-session, 51-level survey figure had to be withdrawn and
-re-measured at 60 levels over eight isolated seeds (commit `0b5b59b`, bd
-`inc-uh0`).
+**Trap 5 — two runs started in the same second used to SHARE a run directory.
+Fixed; the history is here because the number it corrupted was published.**
+`headless.sh:89` now names the default run directory
+`logs/runs/$(date +%Y%m%d-%H%M%S)-<pid>-<script>`. The stamp alone resolves to
+the SECOND, so before the process id joined it, a loop that started several
+sessions inside one second gave them all the same directory, and any probe that
+APPENDS to a log wrote into the same file. The result was one directory whose
+log read like a single long session, and every per-seed figure drawn from it was
+wrong. This produced a false count on 2026-08-17: a 7-session, 51-level survey
+figure had to be withdrawn and re-measured at 60 levels over eight isolated
+seeds (commit `0b5b59b`, bd `inc-uh0`). `dump_save.sh:74` carried the same
+defect and got the same fix. `check_headless.sh` assertion 11 is what stops it
+coming back: it starts two sessions at once with no `INCURSION_RUN_DIR` and
+fails if they report one path.
 
-**The rule: pass a unique `INCURSION_RUN_DIR` for every run in a loop, then
-count the run directories and confirm the count equals the number of runs before
-you believe any per-seed number.** `soak.sh:59` does this, and so does every
-check that drives more than one session (`check_headless.sh:221`, `:244`, `:253`,
-`:265`, `:286`; `check_layout.sh:88`; `check_dump_save.sh:46`;
+**The rule still holds: pass a unique `INCURSION_RUN_DIR` for every run in a
+loop, then count the run directories and confirm the count equals the number of
+runs before you believe any per-seed number.** A name you chose says what the
+run was for, which a pid does not, and the count is the only thing that proves
+the runs stayed apart. `soak.sh:59` does this, and so does every check that
+drives more than one session (`check_headless.sh:255`, `:278`, `:287`, `:299`,
+`:320`; `check_layout.sh:88`; `check_dump_save.sh:46`;
 `check_load_corrupt.sh:60`). `check_race_feats.sh:28-29` does NOT — it takes the
-timestamped default and parses the `run:` line out of the harness output. That is
-safe for one session and unsafe in a loop.
+timestamped default and parses the `run:` line out of the harness output. That
+is now safe in a loop as well, because the default name is unique, but it still
+tells you nothing about which run was which.
 
 ---
 

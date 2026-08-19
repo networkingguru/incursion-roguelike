@@ -79,7 +79,14 @@ LAUNCHER="${INCURSION_LAUNCHER:-}"
     exit 2
 }
 
-RUN="${INCURSION_RUN_DIR:-$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$(basename "$KEYS" .keys)}"
+# The stamp resolves to the SECOND, so the process id is part of the name too.
+# Without it, two sessions started inside one second shared a directory: one
+# save/, one logs/, and any append-mode probe log holding the lines of both.
+# The merged log then reads as a single long session, which is how the first
+# inc-90u follower count came out wrong (five runs, one directory, four lines).
+# soak.sh:48 and check_layout.sh:71 already named their directories this way.
+# The id goes BEFORE the script name so that a "*-<script>" match still works.
+RUN="${INCURSION_RUN_DIR:-$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$$-$(basename "$KEYS" .keys)}"
 mkdir -p "$RUN/save" "$RUN/logs"
 ln -sfn "$ROOT/mod" "$RUN/mod"
 ln -sfn "$ROOT/lib" "$RUN/lib"

@@ -93,6 +93,17 @@ assert_stuck_at_threat_prompt() { # <rundir>
     [ -n "$last" ] && grep -q 'threatened area' "$1/logs/screens/$last" 2>/dev/null
 }
 
+# inc-uh0: two sessions started in the same second must each get their own
+# directory. The default name is built from a clock that resolves to the
+# second, so before the process id joined it (headless.sh:82) a loop that
+# started several sessions inside one second gave them all one directory --
+# one save/, one logs/, and one append-mode probe log holding every session's
+# lines. Both paths must exist, because "different" is also true of a name
+# that was never created.
+assert_distinct_run_dirs() { # <dirA> <dirB>
+    [ -n "$1" ] && [ -n "$2" ] && [ "$1" != "$2" ] && [ -d "$1" ] && [ -d "$2" ]
+}
+
 if [ "${1:-}" = "--selftest" ]; then
     echo "--- selftest: each assertion must reject known-bad input ---"
     ok=0
@@ -204,6 +215,29 @@ if [ "${1:-}" = "--selftest" ]; then
         ok=1
     else
         echo "  death-prompt assertions do not mistake the threat prompt for their own: good"
+    fi
+
+    # inc-uh0: the run-directory assertion must reject the collision it exists
+    # to catch -- one name for two runs -- and must not be satisfied by two
+    # names that differ but were never created.
+    mkdir -p "$WORK/rundir-a" "$WORK/rundir-b"
+    if assert_distinct_run_dirs "$WORK/rundir-a" "$WORK/rundir-a"; then
+        echo "SELFTEST FAIL: the run-directory assertion accepted one directory for two runs"
+        ok=1
+    else
+        echo "  run-directory assertion rejects two runs sharing one directory: good"
+    fi
+    if assert_distinct_run_dirs "$WORK/rundir-a" "$WORK/rundir-missing"; then
+        echo "SELFTEST FAIL: the run-directory assertion accepted a directory that is not there"
+        ok=1
+    else
+        echo "  run-directory assertion rejects a name that was never created: good"
+    fi
+    if assert_distinct_run_dirs "$WORK/rundir-a" "$WORK/rundir-b"; then
+        echo "  run-directory assertion accepts two separate directories: good"
+    else
+        echo "SELFTEST FAIL: the run-directory assertion rejected two separate directories"
+        ok=1
     fi
 
     [ "$ok" -eq 0 ] && echo "PASS: the assertions bite" && exit 0
@@ -396,6 +430,34 @@ else
     fi
 fi
 
+# 11. inc-uh0: two sessions started at the same moment must not share a run
+#     directory. This is the one assertion that must NOT pass
+#     INCURSION_RUN_DIR, because the defect was in the DEFAULT name -- every
+#     other check here hands the harness a directory and so could never see
+#     it. The two sessions run at once, so they take their stamp from the same
+#     second. Both directories are removed afterwards: they are the only two
+#     this check writes outside its own temporary tree, and it knows their
+#     exact paths because the harness printed them.
+./tools/headless.sh "$KEYS" "$SEED" > "$WORK/out-par1" 2>&1 < /dev/null &
+P1=$!
+./tools/headless.sh "$KEYS" "$SEED" > "$WORK/out-par2" 2>&1 < /dev/null &
+P2=$!
+wait $P1
+wait $P2
+DIR1="$(sed -n 's/^run:  *//p' "$WORK/out-par1" | tail -1)"
+DIR2="$(sed -n 's/^run:  *//p' "$WORK/out-par2" | tail -1)"
+if ! assert_distinct_run_dirs "$DIR1" "$DIR2"; then
+    echo "--- what the two runs reported ---"
+    echo "run 1: $DIR1"
+    echo "run 2: $DIR2"
+    fail "two sessions started in the same second shared a run directory"
+fi
+for d in "$DIR1" "$DIR2"; do
+    case "$d" in
+        "$ROOT/logs/runs/"*) [ -d "$d" ] && rm -rf "$d" ;;
+    esac
+done
+
 if [ "$FAILED" -eq 0 ]; then
     echo "PASS: a scripted session runs unattended, draws a map, repeats itself,"
     echo "      a session that plays nothing is reported as playing nothing,"
@@ -403,6 +465,7 @@ if [ "$FAILED" -eq 0 ]; then
     echo "      session whose character died -- for real, or stuck at the"
     echo "      question -- is told apart from an ordinary clean exit, and so is"
     echo "      a session frozen at the unguarded threat-disengage prompt"
+    echo "      -- and two sessions started at once keep their runs apart"
     exit 0
 fi
 exit 1
