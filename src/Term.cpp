@@ -1831,6 +1831,57 @@ inline String & DescribeResource(rID xID) {
       return *tmpstr(XPrint("You see nothing exceptional about the <Res>.",xID));
 }
 
+/* Diagnostic: set INCURSION_TARGET_PROBE=1 to record every arrow press made
+   in target mode -- the place on the ring the cursor started from, every
+   candidate the scan accepted with its bearing from the player, and the one
+   the press moved to. It tells apart "the candidate list is wrong" from "the
+   order is wrong", which is the distinction inc-upw.26 turned on, and it is
+   the oracle tools/check_target_order.sh reads. */
+static void TargetProbe(const char *fmt, ...) {
+    static FILE *f = NULL;
+    va_list ap;
+    if (!getenv("INCURSION_TARGET_PROBE"))
+        return;
+    if (!f) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%slogs/targetprobe.log",
+            (const char*)T1->IncursionDirectory);
+        f = fopen(path, "a");
+    }
+    if (!f)
+        return;
+    va_start(ap, fmt);
+    vfprintf(f, fmt, ap);
+    va_end(ap);
+    fflush(f);
+}
+
+/* Order two offsets from the player by bearing, clockwise from north. The
+   screen's y axis points down, so a positive cross product means the first
+   offset comes first. The compass is cut into an east half, which holds
+   bearings 0 up to but not including 180, and a west half, which holds the
+   rest; within one half no two bearings are more than 180 apart, so the
+   cross product alone orders them.
+
+   Two things on the same bearing order nearest-to-the-player first. Two
+   things in the same square compare equal, and the ring treats them as one
+   place -- [n] is the key that steps between them. Integers throughout: the
+   offsets are map coordinates, so the products cannot overflow a long. */
+static int BearingCompare(int ax, int ay, int ad, int bx, int by, int bd) {
+    int ha = (ax > 0 || (ax == 0 && ay < 0)) ? 0 : 1;
+    int hb = (bx > 0 || (bx == 0 && by < 0)) ? 0 : 1;
+    long cross;
+
+    if (ha != hb)
+        return ha < hb ? -1 : 1;
+    cross = (long)ax * by - (long)ay * bx;
+    if (cross)
+        return cross > 0 ? -1 : 1;
+    if (ad != bd)
+        return ad < bd ? -1 : 1;
+    return 0;
+}
+
 bool TextTerm::EffectPrompt(EventInfo &e,uint16 fl,bool is_look, const char* PromptText) {
     int16 i, j, ch, t, dist, best, bestd, typ, mod, tx, ty, range;
     Thing *th, *cr = NULL;
@@ -2282,9 +2333,51 @@ TargetChosen:
                 if (ty >= YOff+WinSizeY())
                     ty = YOff+WinSizeY()-1;
                 break;
-            case Q_TAR:
+            /* upstream: the arrow keys in target mode scored every candidate
+               on ONE axis only. RIGHT added the column gap and never looked at
+               the row, UP added the row gap and never looked at the column, so
+               "right" meant "the nearest column to my right" and every row in
+               it was equally good. The cursor jumped by stride, the way a
+               mis-set tab stop does, and ties -- which were the normal case,
+               since a whole column scored the same -- fell to the order things
+               happen to sit in Map::Things. Nothing here is a port artefact:
+               the arithmetic is byte-identical in 215a7b54^, before rmtew
+               reformatted the file, and behaves the same on Win32 with the
+               original typedefs. Observed: with the cursor on the player, one
+               RIGHT press scored three corpses at (112,107), (112,108) and
+               (112,113) all equal and took the furthest of the three; one UP
+               press from (116,107) moved the cursor one row up and five
+               columns sideways. See tools/check_target_order.sh. inc-upw.26,
+               not sent.
+
+               What replaces it is this fork's own design, not a repair of the
+               old sum: the candidates form a ring around the player, ordered
+               by bearing, and an arrow steps one place round it. UP, RIGHT and
+               the two east diagonals go clockwise; DOWN, LEFT and the two west
+               diagonals go counter-clockwise. The cursor starts on the player,
+               which is not a place on the ring, so the first press after it
+               enters the ring at the nearest candidate in the direction
+               pressed. WHICH things are candidates is not changed by any of
+               this -- the filters below are untouched, and they are what the
+               calling prompt decides. */
+            case Q_TAR: {
+                Dir kdir = DIR_OF_KY_CMD(ch);
+                bool clockwise = (kdir == NORTH || kdir == NORTHEAST ||
+                                  kdir == EAST || kdir == SOUTHEAST);
+                /* The cursor sits on the player until a press moves it. */
+                bool aiming = (cr == p);
+                int16 curdx = cr->x - p->x, curdy = cr->y - p->y;
+                int16 curd = ::dist(p->x, p->y, cr->x, cr->y);
+                int16 tdx, tdy, td, c;
+                int16 bdx = 0, bdy = 0, bd = 0;
+                int16 wrap = -1, wdx = 0, wdy = 0, wd = 0;
+
                 best = -1;
                 bestd = 1000;
+                TargetProbe("arrow %s cursor=(%d,%d) player=(%d,%d) %s\n",
+                    clockwise ? "clockwise" : "widdershins",
+                    (int)cr->x, (int)cr->y, (int)p->x, (int)p->y,
+                    aiming ? "-- entering the ring" : "");
                 MapIterate(m,th,i)
                     if (XOff < th->x && YOff < th->y)
                         if (XOff+Windows[WIN_MAP].Right >= th->x && YOff+(Windows[WIN_MAP].Bottom-Windows[WIN_MAP].Top) >= th->y)
@@ -2309,38 +2402,76 @@ TargetChosen:
                                     if ((fl & Q_CRE) && !th->isCreature())
                                         continue; 
 
-                                    dist = 0;
-                                    if (DirX[DIR_OF_KY_CMD(ch)] == 1) {
-                                        if (th->x <= cr->x)
+                                    /* The player's own square is the ring's
+                                       centre and has no bearing, so nothing
+                                       standing or lying in it is a place on
+                                       the ring. [*] is how you target
+                                       yourself, and the location cursor is how
+                                       you reach what you are standing on. */
+                                    if (th->x == p->x && th->y == p->y)
+                                        continue;
+
+                                    tdx = th->x - p->x;
+                                    tdy = th->y - p->y;
+                                    td = ::dist(p->x, p->y, th->x, th->y);
+
+                                    if (aiming) {
+                                        /* Strictly in the direction pressed,
+                                           and then nearest to the player. */
+                                        if (DirX[kdir] == 1 && th->x <= p->x)
                                             continue;
-                                        dist += (th->x - cr->x);
-                                    }
-                                    if (DirX[DIR_OF_KY_CMD(ch)] == -1) {
-                                        if (th->x >= cr->x)
+                                        if (DirX[kdir] == -1 && th->x >= p->x)
                                             continue;
-                                        dist += -(th->x - cr->x);
-                                    }
-                                    if (DirY[DIR_OF_KY_CMD(ch)] == 1) {
-                                        if (th->y <= cr->y)
+                                        if (DirY[kdir] == 1 && th->y <= p->y)
                                             continue;
-                                        dist += (th->y - cr->y);
-                                    }
-                                    if (DirY[DIR_OF_KY_CMD(ch)] == -1) {
-                                        if (th->y >= cr->y)
+                                        if (DirY[kdir] == -1 && th->y >= p->y)
                                             continue;
-                                        dist += -(th->y - cr->y);
+                                        TargetProbe("  aim  (%2d,%2d) dist=%-3d %s\n",
+                                            (int)th->x, (int)th->y, (int)td,
+                                            (const char*)th->Name(NA_A|NA_LONG));
+                                        if (td < bestd) {
+                                            best = i;
+                                            bestd = td;
+                                        }
+                                        continue;
                                     }
 
-                                    if (dist < bestd) {
-                                        best = i;
-                                        bestd = dist;
+                                    c = BearingCompare(tdx,tdy,td, curdx,curdy,curd);
+                                    TargetProbe("  ring (%2d,%2d) dist=%-3d %s %s\n",
+                                        (int)th->x, (int)th->y, (int)td,
+                                        c < 0 ? "before" : c > 0 ? "after " : "here  ",
+                                        (const char*)th->Name(NA_A|NA_LONG));
+
+                                    /* The next place round in the chosen
+                                       direction, and separately the place the
+                                       ring wraps to when there is no next. */
+                                    if (c && (clockwise ? c > 0 : c < 0))
+                                        if (best == -1 ||
+                                            (clockwise ? BearingCompare(tdx,tdy,td, bdx,bdy,bd) < 0
+                                                       : BearingCompare(tdx,tdy,td, bdx,bdy,bd) > 0)) {
+                                            best = i; bdx = tdx; bdy = tdy; bd = td;
+                                        }
+                                    if (wrap == -1 ||
+                                        (clockwise ? BearingCompare(tdx,tdy,td, wdx,wdy,wd) < 0
+                                                   : BearingCompare(tdx,tdy,td, wdx,wdy,wd) > 0)) {
+                                        wrap = i; wdx = tdx; wdy = tdy; wd = td;
                                     }
                                 }
+
+                /* Past the last place on the ring, come round to the first. */
+                if (best == -1)
+                    best = wrap;
+
                 if (best != -1) {
                     t = best; 
                     cr = oThing(m->Things[t]);
                     if (m->FCreatureAt(cr->x,cr->y))
                         cr = m->FCreatureAt(cr->x,cr->y);
+                    TargetProbe("  CHOSE (%2d,%2d) %s\n",
+                        (int)cr->x, (int)cr->y,
+                        (const char*)cr->Name(NA_A|NA_LONG));
+                } else
+                    TargetProbe("  CHOSE nothing\n");
                 }
             }
         } else if (ch == KY_CMD_NEXT) {

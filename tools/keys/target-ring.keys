@@ -1,0 +1,37 @@
+# Walk the target cursor round the ring of things about the player, clockwise
+# and then counter-clockwise. This is the oracle for inc-upw.26.
+#
+#   INCURSION_TARGET_PROBE=1 tools/headless.sh tools/keys/target-ring.keys 1
+#
+# Seed 1 puts the character in the Goblin Caves entry chamber with nine
+# corpses in view and no live monster, which is all the test needs: the
+# arrows cycle whatever the prompt considers a target, and Look considers
+# all of them.
+#
+# [l] opens the Look prompt on the location cursor. [t] switches it to the
+# target cursor, which starts on the player. The first arrow press after that
+# enters the ring; every press after it steps one place round.
+#
+# Twelve presses each way, for a ring of nine: enough to prove the lap closes
+# and to see it start round again. tools/check_target_order.sh works the ring
+# size out from the probe log rather than trusting the nine.
+
+@include chargen.keys
+
+# A few turns first, so the level is settled and the view is populated.
+DOWN*4 RIGHT*4 UP*4 LEFT*4 s*3 .*5
+@dump:arrival
+
+l                   # Look -- the location cursor
+t                   # switch to the target cursor, on the player
+@dump:target-on-player
+
+RIGHT               # enter the ring: the nearest thing to the right
+@dump:entered
+UP*12               # clockwise, more than one full lap
+@dump:clockwise
+DOWN*12             # counter-clockwise, back the way it came
+@dump:widdershins
+
+ESC
+@quit
