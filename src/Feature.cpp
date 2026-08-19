@@ -999,6 +999,37 @@ void Player::MoveDepth(int16 NewDepth, bool safe) {
     } else if (RES(m->dID)->GetConst(DUN_DEPTH) && (int16)(RES(m->dID)->GetConst(DUN_DEPTH)) < NewDepth) {
         NewDepth -= (int16)(RES(m->dID)->GetConst(DUN_DEPTH));
         mID = RES(m->dID)->GetConst(BELOW_DUNGEON);
+        /* upstream: base-code defect, the fix is ours. It is upstream's
+           because the missing zero check is plain C++: Game::Get returns NULL
+           for a zero id (src/Res.cpp:312), so the RES(mID)->Type below reads
+           through NULL on Win32 with the original typedefs exactly as it does
+           here, and nothing depends on platform, compiler or type width. The
+           codebase argues against itself -- the up path thirteen lines above
+           guards the identical case on ABOVE_DUNGEON. Tier Observed:
+           INCURSION_STACK_PROBE=1 tools/headless.sh tools/keys/dive.keys 3362
+           exits 139 without this guard and 0 with it, one file between the two
+           builds, EXC_BAD_ACCESS / KERN_INVALID_ADDRESS at 0x0 faulting in
+           Player::MoveDepth (docs/evidence/inc-x9i/crash-seed3362.ips). Three
+           further routes crashed real sessions on seeds 111 and 777 --
+           walking into a bottom-level chasm, the '>' climb-down, and
+           levitating down (docs/evidence/inc-x9i/observed-routes/). Tracked as
+           inc-x9i. NOT SENT to rmtew.
+
+           No dungeon in lib/ defines BELOW_DUNGEON, so leaving the bottom
+           level of a dungeon downwards always reads RES(0). The climb-down
+           route needs no wizard mode, no script and no recursion: Descend
+           calls MoveDepth straight (src/Skills.cpp:4181) with safe=true, and
+           safe=true does not help. This read happens before the function ever
+           looks at safe: the first test of it sits over a hundred lines below,
+           inside the if (new_m) block that a null mID never reaches.
+
+           Returning here leaves exactly what the up path's return leaves --
+           the stati already removed, the level stats already stored, the game
+           already saved -- because both returns sit below that block and above
+           every assignment to new_m. */
+        if (!mID)
+            return;
+
         if (RES(mID)->Type == T_TDUNGEON)
             new_m = theGame->GetDungeonMap(mID, NewDepth, this);
         else if (RES(mID)->Type == T_TREGION)

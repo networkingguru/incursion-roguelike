@@ -243,7 +243,7 @@ int8 MonGoodSaves(int8 MType);
    the speeds their own entries specify, which range from 50% to 300%.
      Returns the existing -15 clamp when the rule does not apply, so the call
    sites stay a single max(). This is a deliberate balance change, not a fix to
-   a defect, and it MUST NOT be marked upstream:. */
+   a defect, and it MUST NOT carry a base-code marker. */
 static int16 NaturalSpeedFloor(Creature *c) {
     if (!theGame->Opt(OPT_NATURAL_SPEED))
         return -15;
