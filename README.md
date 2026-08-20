@@ -2,12 +2,22 @@
 
 Julian Mensch's D&D 3.5 roguelike, running natively on the Mac.
 
-Incursion is one of the deepest roguelikes ever written — a real 3.5 ruleset with
-feats, classes, prestige paths, spell schools and a tactical combat model that
-rewards knowing the rules. It has only ever run on Windows. This fork brings it
-to macOS, and it is meant to be played, not built.
+Incursion is one of the deepest roguelikes ever written. Not a game with a few
+D&D words borrowed for flavour — a real, implemented 3.5 ruleset, with feats that
+combine, classes that branch into prestige paths, and a tactical combat model
+that pays you back for every rule you actually know. The magic is not even
+straight 3.5: Mensch threw out the SRD's eight schools and wrote his own eleven,
+Arcana and Thaumaturgy and Weavecraft among them. He built something enormous and
+then very nearly finished it.
+
+It has only ever run on Windows. This fork brings it to macOS, and it is meant to
+be played, not built.
 
 ![iNCURSION release 1 running on macOS](docs/media/incursion-macos.png)
+
+**Jump to:** [Get it](#get-it) · [What is new](#what-is-new) ·
+[What is fixed](#what-is-fixed) · [What is next](#what-is-next) ·
+[Build from source](#building-from-source) · [For developers](#for-developers)
 
 ---
 
@@ -19,11 +29,11 @@ it, drag **Incursion.app** to Applications, and double-click it.
 
 There is no installer, no dependency to fetch, and no compiler. The app is signed
 and notarised by Apple, and the notarisation ticket is stapled to the app itself
-rather than only to the disk image — so it still launches after you drag it out,
-with no Gatekeeper warning and no right-click gymnastics.
+rather than only to the disk image, so it still launches after you drag it out of
+the image.
 
-**Requires** macOS on Apple Silicon. Intel and Linux builds are coming; see
-*What's next*.
+**Requires** macOS on Apple Silicon. Intel and Linux builds are planned; see
+*What is next*.
 
 Your saves, options and logs live in `~/Library/Application Support/Incursion/`.
 Deleting the app leaves them alone; delete that folder as well for a clean sweep.
@@ -31,32 +41,139 @@ They are kept outside the app because an app bundle that writes inside itself
 breaks its own code signature, which macOS then reports as the app having been
 modified or damaged.
 
+**Three ways to run it.** A windowed SDL build (the way to play), a plain
+terminal build that needs no graphics at all and works over ssh, and a headless
+mode that plays from a script, which is how this fork finds its own bugs.
+
 ---
 
 ## What playing it is like
 
-You roll a character through a long, opinionated creation flow — race, subrace,
-class, attributes, alignment, feats, skills, a god — and then you go down into
-the Halls of the Goblin King. Combat is turn-based and genuinely tactical:
-positioning, attacks of opportunity, two-weapon fighting, spell components and
-saving throws all matter, and the game will happily kill you for ignoring them.
+You roll a character through a long, gloriously opinionated creation flow — race,
+subrace, class, attributes, alignment, feats, skills, a god — and then you go
+down into the Halls of the Goblin King. Combat is turn-based and genuinely
+tactical. Positioning matters. Attacks of opportunity matter. Two-weapon
+fighting, spell components and saving throws all matter, and the game will
+happily kill you for ignoring any of them. Play it like a hack-and-slash and it
+will teach you otherwise in about ten minutes.
 
-Every monster, item, spell and class carries its own written description in the
-game, so the ruleset is readable from inside it rather than requiring a manual.
+The writing is the other half of it. Every monster, item, spell and class carries
+its own description inside the game — not a stat line, a paragraph with a voice.
+You can read the entire ruleset from inside the game, and it is worth reading.
 
 What works today: character creation, exploration, the full combat model, magic,
-shops, saving and loading. The game builds its own 82,297-line ruleset into a
-data module, so what you are playing is the real thing and not a subset.
+shops, saving and loading. The game compiles its own 82,363-line ruleset into a
+data module at build time, so what you are playing is the whole of Mensch's game
+and not a subset of it.
 
-**Three ways to run it.** A windowed SDL build (the way to play), a plain
-terminal build that needs no graphics at all and works over ssh, and a headless
-mode that plays from a script — which is how this fork finds its own bugs.
+---
 
-### Read your character without loading the game
+## What is new
 
-New in this fork, and not something the original could do. Point the app at one
-of your save files and it prints a full character report to the terminal, then
-exits. No window opens, the game does not start, and nothing is written — your
+Two lists, because they reach you at different times.
+
+### In the current download
+
+**Your saves survive an update.** Save compatibility is keyed on a digest of the
+actual data layout rather than on a version number, so shipping a new release
+does not hide your characters. Previously any version change made every save
+vanish from the load menu without a word.
+
+**Your species' feats are granted.** Eight racial feats across six races were
+never reaching players. A Dragonkin never had Mantis Leap, a dwarf never had
+Loadbearer. They do now.
+
+**Bare hands are no longer worse than two weapons.** Two empty hands produced one
+attack per swing while two weapons produced two, so a monk was better off holding
+nunchaku than using his fists. Fixed to match the 3.5 rules.
+
+### On `master`, not in the download yet
+
+These are built and checked but have not been through a release. Build from
+source to play them today.
+
+**Read a save without loading the game.** Point the binary at a save file with
+`-dump` and it prints a full character report to the terminal, then exits. No
+window opens and nothing is written. See
+[Reading a save](#reading-a-save-without-loading-the-game) below.
+
+**The target cursor follows a ring, not an axis.** Arrow keys in target mode
+scored candidates on one axis only, so RIGHT meant "the nearest column to my
+right" and every row in that column tied. The cursor moved sideways while going
+up, skipped near creatures for far ones, and reached places from which most
+presses did nothing. Candidates now form a ring around you ordered by bearing,
+and an arrow steps one place round it. Which things are candidates is unchanged.
+
+**The shop list scrolls.** The store menu never scrolled at all: its redraw
+cleared the scroll offset before every draw, so the selection walked off the page
+and stayed there. It also read a hardcoded 32 visible rows instead of asking the
+window, and its two manual-scroll keys worked only if you had opened the
+inventory screen earlier in the same session.
+
+**`<` and `>` work on the overview map, and find the nearest staircase.** Both
+keys used to close the map instead of doing anything. The search behind them also
+took the next staircase in reading order rather than the near one; each remembered
+staircase is now ranked by what it costs to walk there, so the square the cursor
+lands on is the square `R` will really reach. Repeated presses step down the
+ranked list and wrap.
+
+**A natural-weapon speed option.** Every weapon carries a speed rating; unarmed
+and natural attacks carried none, so a monk punched at 100% while the nunchaku in
+his pack struck at 160%. The new **Natural Weapon Speed** option floors a
+weapon-capable creature's brawl speed at the fastest weapon in the data. Dragons
+and oozes are untouched and keep their own speeds. This is a balance change
+rather than a defect fix, so it is a switch: fresh installs get FLOORED, and an
+existing `Options.Dat` reads ORIGINAL until you flip it once.
+
+**A failed save leaves the game standing.** Saving converted every object's
+internal pointers to handles and converted them back afterwards. Any failure
+part-way skipped the conversion back, and the game then crashed on the way out.
+The report now reaches you and play continues.
+
+**A refused file can be refused twice.** A load that threw left the registry
+claiming it was still loading, which made the *next* load build its object list
+out of stack garbage and hand it to `free()`. Ported by hand from Eugene
+Archibald's fix; the root cause and evidence are his.
+
+**Three crashes at the bottom of a dungeon and in combat.** Moving down from the
+deepest level dereferenced a null dungeon on four separate routes, including the
+plain `>` climb. A hiding monster casting a spell could delete itself mid-call
+and leave the caller holding a dangling map pointer. And a room-building
+rectangle inverted itself in a narrow space, which put doors in solid rock and
+was what exposed the second crash.
+
+---
+
+## What is fixed
+
+The engineering record is [`docs/FIXED.md`](docs/FIXED.md): every defect, how it
+was verified, what was measured on each side, and the one claim that had to be
+retracted.
+
+Sixty-three issues are closed. The short version:
+
+| Area | What was wrong | Where |
+|---|---|---|
+| Build | Four defects blocked any POSIX build from linking | [FIXED](docs/FIXED.md#the-four-defects-that-blocked-a-posix-build) |
+| Saves | Narrowed typedefs overran the player's position and zeroed it in every save | [FIXED](docs/FIXED.md#the-four-defects-that-blocked-a-posix-build) |
+| Saves | A failed save or a refused load could take the process with it | [FIXED](docs/FIXED.md#robustness-a-failure-should-not-take-the-process-with-it) |
+| Crashes | Bottom-of-dungeon descent, self-deleting caster, inverted room rectangle | [FIXED](docs/FIXED.md#crashes-found-by-playing-and-by-the-harness) |
+| Monster AI | Out-of-bounds map reads answered with the (0,0) square instead of failing | [FIXED](docs/FIXED.md#the-four-defects-that-blocked-a-posix-build) |
+| Followers | Escorts read stack garbage as the handle of the creature to follow | [FIXED](docs/FIXED.md#found-by-the-game-playing-itself) |
+| Rules | Racial feats, bare-handed attacks, sacrifice tables, natural weapon speed | [FIXED](docs/FIXED.md#rules-defects) |
+| Interface | Target cursor, store scrolling, overview-map staircase keys | [FIXED](docs/FIXED.md#interface-defects) |
+| Packaging | Two defects that shipped and were reported by a stranger | [FIXED](docs/FIXED.md#two-defects-that-shipped-and-were-found-by-a-stranger) |
+| Port artefacts | Six C escapes eaten by the port's path sweep; colliding run directories | [FIXED](docs/FIXED.md#defects-this-port-introduced-and-then-removed) |
+
+Defects that belong to the base game rather than to this port are marked in the
+source with an `upstream:` comment — 45 of them today — and listed in
+[`docs/REPORTING-GATE.md`](docs/REPORTING-GATE.md), so they can be sent on. Four
+have gone to the parent project and one is merged.
+
+### Reading a save without loading the game
+
+Point the app at one of your save files and it prints a full character report to
+the terminal, then exits. The game does not start, and nothing is written — your
 save is opened for reading only.
 
 ```
@@ -64,67 +181,36 @@ save is opened for reading only.
     ~/Library/Application\ Support/Incursion/save/YourCharacter.sav
 ```
 
-You get current and maximum hit points, where she is standing and how deep,
-every equipped slot, every effect currently on her, the full inventory including
-the contents of containers, what is lying on the floor beneath her, and then the
-complete character sheet — the same sheet the game shows at the end of a game,
-with every feat, skill and save.
+You get current and maximum hit points, where she is standing and how deep, every
+equipped slot, every effect currently on her, the full inventory including the
+contents of containers, what is lying on the floor beneath her, and then the
+complete character sheet with every feat, skill and save.
 
 It is useful for three things: settling an argument about what a character
 actually has, checking a save that will not load, and keeping a record of a
-character before you take her somewhere dangerous. Redirect it to a file and it
-is a plain-text snapshot you can keep or post.
+character before you take her somewhere dangerous. Redirect it to a file and it is
+a plain-text snapshot you can keep or post.
 
 The report comes from the game's own character-sheet code walking the real save,
 not from a separate reader guessing at the file format, so it cannot drift out of
 step with what the game believes.
 
-*Available from the next release. Release 1 cannot do this.*
+*Not in the current download. Build from source, or wait for the next release.*
 
 ---
 
-## Why this fork
-
-**It runs on a Mac.** That is the headline, and it took fixing four defects in
-the base code before a POSIX build would even link.
-
-**Your saves survive an update.** Save compatibility is keyed on a digest of the
-actual data layout rather than on a version number, so shipping a new release
-does not hide your characters. Previously any version change made every save
-silently vanish from the load menu.
-
-**Your species finally works.** Eight racial feats across six races were never
-being granted to players at all — a Dragonkin never had Mantis Leap, a dwarf
-never had Loadbearer. They do now.
-
-**Bare-handed monks are no longer punished.** Two empty hands produced one attack
-per swing while two weapons produced two, so a monk was better off holding
-nunchaku than using his fists. Fixed to match the 3.5 rules.
-
-**You can read a save without playing it.** `-dump` prints a full character
-report — inventory, effects, equipment, the whole sheet — straight to the
-terminal from any save file. See *Read your character without loading the game*
-above. The original had no way to see this short of finishing the game.
-
-**It is measurably more stable.** The game plays itself unattended, thousands of
-sessions at a time, and each defect that finds is fixed against a control run
-rather than against a hunch.
-
-The full engineering record — every defect, how it was verified, and the one
-claim that had to be retracted — is in [`docs/FIXED.md`](docs/FIXED.md).
-
----
-
-## What's next
+## What is next
 
 - **Linux and Steam Deck.** The concrete target. The work that gated it is done.
 - **Intel and universal Macs**, so this runs on hardware older than Apple Silicon.
-- **Finish the content that is already written.** Incursion ships with a great
-  deal that is described but not built: eight races have subrace sections marked
-  *(Unimplemented)* in the game's own help, and whole feat trees carry the same
-  label. Because every entity's description sits beside its implementation, a
-  mismatch between them is a provable bug — which makes this the richest seam in
-  the project.
+- **Finish the content Mensch already wrote.** This is the exciting one. The game
+  describes a great deal it never quite got round to building: eight races have
+  subrace sections marked *(Unimplemented)* in the game's own help, and whole
+  Fighter capstone feat trees carry the same label. The designs are all there, in
+  his words, waiting. Because every entity's description sits beside its
+  implementation, a mismatch between them is a provable bug rather than a matter
+  of taste. A full read of `lib/` against the code found 480 such disagreements,
+  and they are now filed and being worked.
 - **Play over ssh**, using the terminal build.
 - **More than was shipped** — world mode, new dungeons — but only after the above.
 
@@ -134,9 +220,10 @@ claim that had to be retracted — is in [`docs/FIXED.md`](docs/FIXED.md).
 
 You do not need this to play. It is here for people who want to change something.
 
-`master` is the development tip. A `release-N` tag (e.g. `release-1`) marks the
-exact commit a shipped image was built from. Check out a release tag for the
-build that matches a downloaded image; stay on `master` for current work.
+`master` is the development tip. The `release-1` tag marks this fork's first
+release. Note that the image currently on the Releases page was rebuilt after
+that tag, to carry the module-load and Gatekeeper fixes described in
+[`docs/FIXED.md`](docs/FIXED.md); the tag is not a byte-for-byte match for it.
 
 ```
 brew install sdl2 pkg-config
@@ -145,7 +232,8 @@ brew install sdl2 pkg-config
 ```
 
 Two minutes from a clean checkout. `BACKEND=posix ./build_macos.sh` builds the
-terminal and headless binary instead.
+terminal and headless binary instead. Only one backend can be linked at a time,
+because each defines `main()`, `Error()` and `Fatal()`.
 
 Both binaries accept `-dump`, so from a source tree the character report is
 `./incursion -dump save/YourCharacter.sav`, and `tools/dump_save.sh` wraps the
@@ -158,7 +246,7 @@ two builds produce byte-identical reports for the same save.
 DMG=yes tools/package_macos_app.sh
 ```
 
-That produces `Incursion.app` inside a disk image. It builds twice on purpose — a
+That produces `Incursion.app` inside a disk image. It builds twice on purpose: a
 developer binary to compile the game module, then a shipping binary without the
 resource compiler, because the compiler carries a GPLv2 runtime that must not be
 distributed. It bundles SDL2, signs, notarises and staples **both the app and the
@@ -191,9 +279,136 @@ built from anything other than the terminal that created the profile fails with
 `No Keychain password item found` — which means *found but not permitted*, and
 reads like a missing credential. A file has no ACL.
 
-Development notes live in [`docs/PORT-STATUS.md`](docs/PORT-STATUS.md), and work
-is tracked in the repository with [Beads](https://github.com/gastownhall/beads)
-(`bd ready`).
+---
+
+## For developers
+
+There is no test suite and no CI. What there is instead is a harness that plays
+the game unattended, a regression gate, twenty-eight checks that each defend one
+defect, and a set of instruments you switch on with an environment variable or a
+compile flag. Nearly all of it is new in this fork.
+
+Start with [`tools/README.md`](tools/README.md), which documents every file with
+a status and cites a line number for each claim. What follows is the map.
+
+### The harness
+
+| Tool | What it does |
+|---|---|
+| `tools/headless.sh` | Plays one scripted session with no display and no keyboard, in its own sandbox with its own `save/` and `logs/`. Everything else that plays the game calls it. |
+| `tools/soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about by message rather than by session. |
+| `tools/play.sh` | Interactive launcher for a real session with the map audit, save probe and character probe armed. |
+| `tools/dump_save.sh` | Runs `-dump` against a save in the same sandbox, without playing. |
+| `tools/keys/*.keys` | Twenty-eight key scripts: the inputs a session plays. Read the header of one before using it. |
+
+Sessions are seeded through `INCURSION_SEED`, so two runs of one seed play the
+same game. That determinism is what every measurement in the project rests on.
+A run that never entered a map exits `NO GAMEPLAY` rather than passing, because a
+session that measured nothing must never be read as a pass — that rule exists
+because a measurement once passed on two runs that both did nothing.
+
+### The regression gate
+
+`tools/gate_record.sh` freezes a build's behaviour into `tools/gates/*.baseline`;
+`tools/gate_compare.sh` re-runs the same seeds and reports what got worse;
+`tools/gate_lib.sh` reduces a soak directory to the numbers being compared;
+`tools/check_gate.sh` proves the gate still bites by feeding it made-up logs.
+
+The gate measures error volume and message-set membership. Screen dumps and
+crashing-seed identity were both tried and both failed, because screens diverge
+from the first changed decision onward, so a gate built on them goes red on every
+correct fix. The gate plays with a pinned `tools/gates/Options.Dat`, so playing
+the game cannot move its numbers.
+
+### The checks
+
+Twenty-seven of them are below; the twenty-eighth is `check_gate.sh` above,
+which checks the gate rather than the game. Each defends one defect or one
+property that was lost by accident at least once, and each is proved red against
+the unfixed tree before it is trusted.
+
+| Check | The question it answers |
+|---|---|
+| `check_headless.sh` | Do the properties every unattended run depends on still hold, including that two simultaneous runs get separate directories? |
+| `check_abi.sh` | Did any save-format type width move, and does anything cast a handle to a pointer? |
+| `check_abs_path.sh` | Does the game still resolve `argv[0]` to an absolute path? |
+| `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? |
+| `check_app.sh` | Can a stranger download `Incursion.app` and open it? Assesses a **quarantined** copy, asks the binary for its own save-layout stamp, and asserts the signature survives a run. |
+| `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? |
+| `check_dump_save.sh` | Does `-dump` walk a real save and report the same bytes from both backends? |
+| `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? |
+| `check_escape_sweep.sh` | Does any string literal still spell a C escape with a forward slash, the way the port's path sweep wrote `/n` for `\n`? |
+| `check_layout.sh` | Does this build play the same game when its objects sit at different addresses? |
+| `check_load_corrupt.sh` | Does the binary refuse ten hand-corrupted saves cleanly and still load two genuine ones? |
+| `check_logrotate.sh` | Does log rotation keep the right archives and prune only names it made itself? |
+| `check_lz_uncompress.sh` | Can the LZ77 and RLE decoders be made to write past their output buffer? |
+| `check_natural_speed.sh` | Has the hard-coded brawl-speed floor drifted from the fastest weapon in `lib/weapons.irh`? |
+| `check_natural_speed_live.sh` | Does flipping one byte of `Options.Dat` really move the Brawl row on the character sheet, from 100% to 175%? |
+| `check_package.sh` | Is the packaged folder free of ACCENT symbols and Homebrew paths, and does it carry its data? |
+| `check_ptr_sweep.sh` | Does the pointer-ordering sweep still find an ordering, and still ignore an equality? |
+| `check_quiet_lookup.sh` | Does a dead object handle still resolve silently where silence is correct, and still complain where a complaint is correct? |
+| `check_race_feats.sh` | Does a Dragonkin get Mantis Leap on the character sheet? |
+| `check_reveal_delete.sh` | Can a monster still delete itself inside `Reveal()` and leave the caller holding a dangling map pointer? |
+| `check_sacrifice.sh` | Does a god's altar read the rows below `MA_ALL`, and does it refuse what it should refuse? |
+| `check_save_fail.sh` | Does a save that fails part-way leave the game playable? Drives real and staged failures. |
+| `check_stair_cycle.sh` | Does the overview map's staircase search run, pick the cheapest, and wrap? |
+| `check_store_scroll.sh` | Does the shop list follow the selection, in both directions, without wizard mode? |
+| `check_strqueue.sh` | Is the string queue's bound still tested before the write? |
+| `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? |
+| `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? |
+
+`tools/README.md` §7 groups these into five tiers by what each needs — a clean
+clone, a compiler, a POSIX build, a built artefact, or a recorded baseline — and
+names the two you must not run casually.
+
+### Instruments
+
+All are off by default. The environment-gated ones cost nothing when unset, so
+they ship in every binary; the compile-time ones need
+`EXTRA_CXXFLAGS=-D<SYMBOL> ./build_macos.sh` and reach no shipped build.
+
+| Switch | What it answers |
+|---|---|
+| `INCURSION_SEED` | Determinism. Every measurement rests on it. |
+| `INCURSION_MAP_AUDIT=1` | Does every Thing appear both in `m->Things[]` and in the Contents chain of the square it claims? Runs every tenth turn and the instant an unlink fails. |
+| `INCURSION_SAVE_PROBE=1` | Where was the player either side of the save/load boundary? Tells "never written" apart from "written and not read back". |
+| `INCURSION_MAP_PROBE=1` | Remembered against unseen glyphs per draw. Distinguishes "the map is wrong" from "the map is right and the drawing is wrong". |
+| `INCURSION_CHAR_PROBE=1` | Writes a readable character sheet beside every save, automatically. |
+| `INCURSION_ERROR_PROMPT=1` | Restores the blocking error dialog instead of logging and continuing. |
+| `INCURSION_TARGET_PROBE=1` | Records each target-cursor press and where it landed. Behind `check_target_order.sh`. |
+| `INCURSION_STAIR_PROBE=1` | Logs the staircase candidate list and its ranking. Behind `check_stair_cycle.sh`. |
+| `INCURSION_QUIET_PROBE=1` | Logs whether a handle lookup spoke. Behind `check_quiet_lookup.sh`. |
+| `INCURSION_SAVE_FAIL_AT=N` | Stages a save failure at a chosen point, throwing exactly what a short write throws. A real full disk cannot reach the interesting case, because both write loops write into memory first. |
+| `INCURSION_STACK_PROBE=1` | Logs nested entries into depth changes. Found the bottom-of-dungeon crash. |
+| `INCURSION_MAX_KEYS=N` | The headless key budget. |
+| `-DDIVERGE_PROBE` | Counts every random number drawn. Two runs of one seed draw the same numbers in the same order unless something outside the generator changed a decision, so the first differing count is the first place two runs stopped playing the same game. |
+| `-DINCURSION_LAYOUT` | Shifts every heap allocation by a seeded offset, so an address-dependent decision splits on demand instead of by luck. The other half of `DIVERGE_PROBE`. |
+| `-DPATH_PROBE` | Pathfinding work per call. Showed one line to be 89% of a burst. |
+| `-DPALETTE_LOG` | Separates "the game re-applied a palette" from "the game did nothing and the display changed the picture". |
+| `-DINCURSION_OOB_PROBE` | Names the creature and code path behind each out-of-bounds map read. |
+
+[`docs/DEVTOOLS-AUDIT.md`](docs/DEVTOOLS-AUDIT.md) carries a verdict on every one
+of these, on two axes: did it settle something, and is it expensive to rebuild.
+It also records the instrument that was deleted for failing a third test, which
+overrides both — an instrument that answers confidently about the wrong thing
+costs more than no instrument. Read that entry before adding one of your own.
+
+### Where the documentation is
+
+| Question | Read |
+|---|---|
+| What is broken, and how each fix was verified | [`docs/FIXED.md`](docs/FIXED.md) |
+| The running state of the port, and what is still open | [`docs/PORT-STATUS.md`](docs/PORT-STATUS.md) |
+| Every file under `tools/`, with a status and a citation | [`tools/README.md`](tools/README.md) |
+| A verdict on every instrument in the tree | [`docs/DEVTOOLS-AUDIT.md`](docs/DEVTOOLS-AUDIT.md) |
+| What must be true before a claim goes public | [`docs/REPORTING-GATE.md`](docs/REPORTING-GATE.md) |
+| How the engine fits together | [`docs/ENGINE-MAP.md`](docs/ENGINE-MAP.md) and its four companions |
+| The scripting language the ruleset is written in | [`docs/incursionscript.md`](docs/incursionscript.md) |
+| How the headless backend behaves | [`docs/HEADLESS-SPEC.md`](docs/HEADLESS-SPEC.md) |
+
+Work is tracked in the repository with
+[Beads](https://github.com/gastownhall/beads) — `bd ready` for what is available,
+`bd show <id>` for one issue and its evidence.
 
 ---
 
@@ -216,7 +431,9 @@ debuggable at all.
 ## Credits
 
 Incursion is **Julian Mensch's** work, with additional concepts and material by
-**Westley Weimer**. This fork changes nothing about that.
+**Westley Weimer**. It is a remarkable piece of design and a remarkable piece of
+writing, and it deserves to be played on more than one operating system. That is
+the entire reason this fork exists. Nothing here changes whose game it is.
 
 - **Richard Tew** has maintained it since, and vendored the dependencies that
   make old builds reproducible. His
@@ -226,9 +443,11 @@ Incursion is **Julian Mensch's** work, with additional concepts and material by
 - **Kyle Benesch** (HexDecimal) did substantial modernisation work in 2024 —
   standard types, `std::min`/`max`, dead-code removal, CI. A sibling fork worth
   reading before writing anything new.
+- **Eugene Archibald** found and fixed the registry load-failure defect that this
+  fork carries as a hand-port. The fix and its evidence are his.
 
-This release is iNCURSION release 1, forked from rmtew 0.6.9Y19 at commit
-`961c54b` (2025-06-28).
+This fork is iNCURSION, forked from rmtew 0.6.9Y19 at commit `961c54b`
+(2025-06-28).
 
 ## Links
 

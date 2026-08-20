@@ -296,7 +296,7 @@ defect that needs depth 11 or deeper cannot find it with these scripts at all.
 
 ## 6. Every file in tools/
 
-39 files, and not all of them are alive. Statuses: **LIVE** — use it.
+49 files, and not all of them are alive. Statuses: **LIVE** — use it.
 **BUILD INFRASTRUCTURE** — part of producing or shipping a binary, not a
 diagnostic. **SUPERSEDED** — something else does the job better; kept for
 history. **DEAD** — its reason to exist is gone.
@@ -348,11 +348,19 @@ Nothing invoked it; the only references were documentation. See
 | `check_load_corrupt.sh` | Does the real binary refuse ten hand-corrupted saves cleanly and still load two genuine ones? | LIVE |
 | `check_logrotate.sh` | Does log rotation keep the right archives and prune only names it made itself? | LIVE |
 | `check_lz_uncompress.sh` | Can the LZ77 and RLE decoders be made to write past their output buffer? | LIVE |
+| `check_natural_speed.sh` | Has the hard-coded brawl-speed floor drifted from the fastest weapon in `lib/weapons.irh`? Reads the data; runs nothing. | LIVE |
+| `check_natural_speed_live.sh` | Does flipping one byte of `Options.Dat` really move the Brawl row on the character sheet, 100% to 175%? Refuses to pass if a run never entered a map. | LIVE |
 | `check_package.sh` | Is the packaged folder free of ACCENT symbols and Homebrew paths, and does it carry its data? | LIVE |
 | `check_ptr_sweep.sh` | Does `sweep_ptr_order.sh` still find a pointer ordering, and still ignore a pointer equality? | LIVE |
+| `check_quiet_lookup.sh` | Does a dead object handle resolve silently where silence is correct, and still complain where a complaint is correct? | LIVE |
 | `check_race_feats.sh` | Does a Dragonkin get Mantis Leap on the character sheet? | LIVE |
-| `check_sacrifice.sh` | Does a god's altar still accept the corpses his `MA_ALL` rows are supposed to cover? | LIVE |
+| `check_reveal_delete.sh` | Can a monster still delete itself inside `Reveal()` and leave the caller holding a dangling map pointer? | LIVE |
+| `check_sacrifice.sh` | Does a god's altar read the rows BELOW `MA_ALL`, and refuse what it should refuse? | LIVE |
+| `check_save_fail.sh` | Does a save that fails part-way leave the game playable? Drives a real disk-full and eight staged failure points. | LIVE |
+| `check_stair_cycle.sh` | Does the overview map's staircase search run, pick the cheapest, and wrap? | LIVE |
+| `check_store_scroll.sh` | Does the shop list follow the selection in both directions, reached without wizard mode? | LIVE |
 | `check_strqueue.sh` | Is the string queue's bound still tested before the write? | LIVE |
+| `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? | LIVE |
 | `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? | LIVE |
 
 ### Diagnostics
@@ -416,7 +424,7 @@ one (`package_macos_app.sh:5-13`).
 
 | Path | What it is |
 |---|---|
-| `keys/*.keys` | 20 key scripts — the inputs `headless.sh` plays. Read the header of one before you use it. |
+| `keys/*.keys` | 28 key scripts — the inputs `headless.sh` plays. Read the header of one before you use it. |
 | `gates/dive.baseline` | The committed regression baseline. `gate_record.sh` overwrites it. |
 | `gates/Options.Dat` | The pinned settings file every gate run plays with. Committed on purpose. |
 | `gates/Options.Dat.md` | What is in that settings file and why. |
@@ -438,15 +446,18 @@ tools/check_error_handling.sh       # greps src/*.cpp for the unbounded writes
 tools/check_upstream_marks.sh       # reads src/, inc/ and docs/REPORTING-GATE.md
 tools/check_api_arity.py            # reads inc/Api.h against the C++ headers
 tools/check_gate.sh                 # feeds gate_lib.sh made-up logs
+tools/check_escape_sweep.sh         # greps src/ and inc/ for a C escape spelled /n
+tools/check_natural_speed.sh        # reads lib/weapons.irh against inc/Defines.h
 ```
 
-Five tools prove themselves against known-bad input on demand:
+Six tools prove themselves against known-bad input on demand:
 
 ```sh
 tools/check_upstream_marks.sh --selftest
 tools/check_api_arity.py --selftest
 tools/check_headless.sh --selftest
 tools/check_citations.sh --selftest
+tools/check_escape_sweep.sh --selftest
 python3 tools/flickerscan_selftest.py
 ```
 
@@ -484,10 +495,22 @@ tools/check_dump_save.sh
 tools/check_load_corrupt.sh
 tools/check_race_feats.sh
 tools/check_sacrifice.sh
+tools/check_natural_speed_live.sh
+tools/check_quiet_lookup.sh
+tools/check_reveal_delete.sh
+tools/check_save_fail.sh
+tools/check_stair_cycle.sh
+tools/check_store_scroll.sh
+tools/check_target_order.sh
 ```
 
-Run `check_headless.sh` before the other four. They all drive `headless.sh`,
-and if the harness itself is broken their results are meaningless.
+Run `check_headless.sh` before the rest of the tier. They all drive
+`headless.sh`, and if the harness itself is broken their results are
+meaningless.
+
+`check_natural_speed.sh` is Tier 1, not Tier 3: it reads `lib/weapons.irh` and
+`inc/Defines.h` and runs nothing. Its live twin,
+`check_natural_speed_live.sh`, is the one that needs a build.
 
 `check_sacrifice.sh` runs two sessions, not one, and the second is the point:
 `sacrifice-wildcard.keys` proves the changed row now matches, and

@@ -13,6 +13,12 @@ Two things have been deleted since, each on Brian's explicit decision as he went
 through the list item by item: `FLICKER_PROBE` and `tools/run_probe.sh`. Both
 are recorded in place below.
 
+**Updated 2026-08-20.** The investigations that owned the ACTIVE items have
+mostly closed, so those items now carry a status. Nothing further has been moved
+or deleted: the verdicts here stay recommendations, and acting on one is still
+Brian's call. Four instruments were added after the audit was written and are
+listed in their own section at the end.
+
 **The two axes**, both from inc-4pt, and an item must score on both to be worth
 keeping:
 
@@ -33,10 +39,12 @@ files gained a seventh **while this audit was being written** — `src/Display.c
 and `src/Monster.cpp` were clean at 09:12 and dirty with a new
 `INCURSION_OOB_PROBE` by 09:53, from a session running in parallel.
 
-So the list below marks anything introduced in the last 24 hours as **ACTIVE**
-and gives it no verdict. Judging a colleague's in-flight instrument as
-"discard" is how an audit destroys work. Re-run the dating command before any
-move:
+So the list below marked anything introduced in the last 24 hours as **ACTIVE**
+and gave it no verdict. Judging a colleague's in-flight instrument as
+"discard" is how an audit destroys work. Those items were re-judged on
+2026-08-20, once the investigations that owned them had closed. The rule stands
+for the next instrument that appears mid-audit. Re-run the dating command before
+any move:
 
 ```sh
 git log --format='%ad %s' --date=short -S<SYMBOL> -- src/ inc/ | tail -1
@@ -61,7 +69,7 @@ needs an explicit `EXTRA_CXXFLAGS=-D<SYMBOL>` build, which is the mechanism
 | `PATH_PROBE` | 39 | 2026-08-15 | Counts pathfinding work per call: terrain events, distinct terrains, live cells against the 65,536 cleared, and consider-cache hits against misses. | **KEEP.** It is what showed one line to be 89% of a pathfinding burst. Cheap to re-add in principle, but the counters are placed exactly where they have to be, and getting that wrong gives a confident wrong number. |
 | `TARGET_PROBE` | 15 | 2026-08-14 | Names the target type behind every bad handle that reaches the failing branch — the difference between "the code says this could happen" and "this is what happens". | **KEEP.** Fifteen lines, and it settled inc-zmk, the only change this fork has had merged upstream. Cheap to rebuild, but the value of keeping fifteen lines is higher than the cost. |
 | `RETARGET_PROBE` | 3 | 2026-08-15 | Three lines beside `TARGET_PROBE`. | **KEEP** with it; separating them is not worth a decision. |
-| `INCURSION_OOB_PROBE` | 157 | uncommitted | — | **ACTIVE.** Appeared in the working tree during this audit. No verdict. |
+| `INCURSION_OOB_PROBE` | 157 | 2026-08-18 | Names the creature and the code path behind each out-of-bounds map read. | **KEEP, and read its own history first.** It settled the level-builder cause behind the withdrawn `Map::At()` report (inc-upw.37, inc-65j), and the fix shipped in `3208aa7`. Two of its own early readings were wrong in ways that read as measurements: one recorded a call's arguments and was quoted as its effect, the other counted its own out-of-bounds reads into the totals it reported. Both are recorded beside the results. It is the worked example of a probe that was useful *and* produced two false numbers on the way. |
 
 ### `FLICKER_PROBE`, and what its deletion touched
 
@@ -78,22 +86,28 @@ inc-4bh), so the probe was finished as well as blind. What went with it:
 - `build_macos.sh:25` -- the example now names `-DPATH_PROBE`, and says why it
   changed. Verified by building it: `EXTRA_CXXFLAGS=-DPATH_PROBE
   OUT=incursion-path ./build_macos.sh` links.
-- `docs/PORT-STATUS.md:288` -- was a "do not reach for this" entry in the list of
-  live diagnostics; now records the deletion and points here.
+- `docs/PORT-STATUS.md`, under *Diagnostic instrumentation* -- was a "do not
+  reach for this" entry in the list of live diagnostics; now records the deletion
+  and points here. That section was rewritten on 2026-08-20, so this reference
+  names the heading rather than a line, which is what the line citation used to
+  do and no longer could.
 - `tools/README.md` -- the lesson paragraph is kept word for word, because the
   lesson outlives the instrument. Only its tense changed.
-- `docs/PORT-STATUS.md:180` and `:71` are pre-fix history and were left alone.
-  Rewriting a record of what was investigated is worse than a stale tense.
+- The flicker row under *Known open* in `docs/PORT-STATUS.md`, and the
+  "Stale `-DFLICKER_PROBE` objects" row under *Ruled out on 2026-08-14*, are
+  pre-fix history and were left alone. Rewriting a record of what was
+  investigated is worse than a stale tense.
 
 `strings ./incursion | grep -i flicker` now finds only four lines of game prose
-about blinking, and no probe symbols -- the same check `docs/PORT-STATUS.md:71`
-used to confirm the objects were clean.
+about blinking, and no probe symbols -- the same check the "Stale
+`-DFLICKER_PROBE` objects" row used to confirm the objects were clean.
 
 ## 2. Environment-gated diagnostics
 
-Twenty-four names. `getenv` costs nothing when the variable is unset, so unlike
-the compile-time probes these ship in every binary. That is the reason to be
-stricter about the ones that are finished.
+Twenty-seven names, counted 2026-08-20 with
+`grep -rho 'getenv *( *"[A-Za-z_0-9]*"' src/ inc/`. `getenv` costs nothing when
+the variable is unset, so unlike the compile-time probes these ship in every
+binary. That is the reason to be stricter about the ones that are finished.
 
 **Infrastructure, not dev tools. These stay exactly where they are.**
 
@@ -109,7 +123,7 @@ stricter about the ones that are finished.
 
 | Name | Added | Verdict |
 |---|---|---|
-| `INCURSION_DEPTH_PROBE` | 2026-08-17 | Its own comment says *"Delete once inc-x9i is settled"*. inc-x9i is still open (P1) and is the parallel session's current work. **HOLD** — the instruction is clear, the condition is not met. |
+| `INCURSION_DEPTH_PROBE` | 2026-08-17 | Its own comment says *"Delete once inc-x9i is settled"*. **2026-08-20: the condition is now met.** inc-x9i closed on 2026-08-19, fixed in `a8f298a`, and `INCURSION_STACK_PROBE` rather than this one carried the before/after evidence. **DELETE** is the recommendation, and it is Brian's to take. |
 
 **Candidates with a verdict.**
 
@@ -120,14 +134,38 @@ stricter about the ones that are finished.
 | `INCURSION_MAP_PROBE` | 2026-08-13 | Counts remembered against unseen glyphs per draw. | **KEEP.** Ten lines, and it is the only thing that distinguishes "the map is wrong" from "the map is right and the drawing is wrong". |
 | `INCURSION_ERROR_PROMPT` | — | Makes `Error()` stop and wait instead of logging and continuing. | **KEEP.** A developer convenience with no cost, and the modal-freeze defect it was written around is in `docs/FIXED.md`. |
 
-**ACTIVE — introduced 2026-08-17 or 2026-08-18, no verdict given.**
+**Was ACTIVE on 2026-08-18. Status re-taken 2026-08-20.**
 
-`INCURSION_STACK_PROBE`, `INCURSION_FOLLOWER_PROBE`, `INCURSION_GOWITH_PROBE`,
-`INCURSION_FALL_CHAIN`, `INCURSION_FALL_CHAIN_SKIP`, `INCURSION_CHASM_WALK`,
-`INCURSION_LEVITATE_CHASM`, `INCURSION_DUNGEONMAP_PROBE`,
-`INCURSION_DESCEND_PROBE`, `INC6D5_PROBE_NAMES`.
+The crash and chasm investigations these belonged to have closed. None has been
+moved or deleted.
 
-All belong to the crash and chasm investigations that are open right now.
+| Name | What it did | Status |
+|---|---|---|
+| `INCURSION_STACK_PROBE` | Logged nested entries into depth changes, with the nesting level and map depth. | **KEEP.** It carried the before/after for inc-x9i: seed 3362, exit 139 to exit 0, with the same nested bottom-level entry on both runs, which is what proved the branch was entered and not avoided. That is the whole shape this document asks for. |
+| `INCURSION_FOLLOWER_PROBE`, `INCURSION_GOWITH_PROBE` | Follower loss across a level change. | **KEEP.** They measured the follower loss properly after the first count was withdrawn — and the withdrawal was caused by five runs sharing one directory, not by the probes. |
+| `INCURSION_FALL_CHAIN`, `INCURSION_FALL_CHAIN_SKIP`, `INCURSION_CHASM_WALK`, `INCURSION_LEVITATE_CHASM` | The chasm and falling routes into `MoveDepth`. | **KEEP for now.** They are how the four routes into the bottom-of-dungeon crash were each shown to be reachable without a debugger. Cheap, and the routes are still the ones anyone re-testing that fix would use. |
+| `INCURSION_DUNGEONMAP_PROBE`, `INCURSION_DESCEND_PROBE` | Dungeon and descent structure. | **CANDIDATE for deletion.** Neither is cited in the evidence that closed inc-x9i. Confirm against `bd show inc-x9i` before removing either. |
+| `INC6D5_PROBE_NAMES` | Names the creatures `INC6D5_PROBE` follows. | **KEEP** with `INC6D5_PROBE`. inc-6d5 is still open. |
+
+## Added after this audit was written
+
+Four instruments arrived with the fixes of 2026-08-19 and 2026-08-20. Each was
+built to drive one check, which is the pattern this document argues for: an
+instrument whose only consumer is a committed check cannot quietly rot into a
+confident wrong number, because the check fails when it does.
+
+| Name | The question it answers | Its check |
+|---|---|---|
+| `INCURSION_TARGET_PROBE` | Which candidate did each target-cursor press land on? | `tools/check_target_order.sh` |
+| `INCURSION_STAIR_PROBE` | What was the staircase candidate list, and how was it ranked? | `tools/check_stair_cycle.sh` |
+| `INCURSION_QUIET_PROBE` | Did this handle lookup speak, and should it have? | `tools/check_quiet_lookup.sh` |
+| `INCURSION_SAVE_FAIL_AT` | Not a probe but a fault injector: it stages a save failure at a chosen point, throwing exactly what a short write throws, and fires once per process. It exists because a real full disk cannot reach the case the design turns on — both write loops write into memory and the disk is untouched until the commit. | `tools/check_save_fail.sh` |
+
+`INCURSION_SAVE_FAIL_AT` is the one to look at twice. A fault injector ships in
+every binary the same way a `getenv` probe does, and it changes behaviour rather
+than only observing it. It is gated, it fires once, and it throws the same error
+the real failure throws — but it belongs on any list of things that must never
+be reachable by accident.
 
 ### Correction: `src/Dump.cpp` and `INCURSION_CHAR_PROBE` do not compete
 

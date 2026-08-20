@@ -1,6 +1,6 @@
 # Port status
 
-Last reviewed 2026-08-17. This is the running state of the macOS/POSIX port.
+Last reviewed 2026-08-20. This is the running state of the macOS/POSIX port.
 
 **Where the current truth lives.** This file drifts, because it is written during
 investigations and not revisited when they end. Before trusting anything here:
@@ -12,10 +12,21 @@ investigations and not revisited when they end. Before trusting anything here:
 | What went upstream and what became of it | [`REPORTING-GATE.md`](REPORTING-GATE.md) |
 | How to build, package and ship | [`../README.md`](../README.md) |
 
-As of 2026-08-17: 44 issues closed (`bd list --status closed`). The port ships as a signed and notarised
-`Incursion.app`; the plain-folder layout this document describes in places was
-withdrawn because a bare executable cannot be approved by Gatekeeper (inc-g1y).
-Saves now live in `~/Library/Application Support/Incursion/`, not beside the game.
+As of 2026-08-20: 63 issues closed (`bd list --status closed`). The port ships as a
+signed and notarised `Incursion.app`; the plain-folder layout this document
+describes in places was withdrawn because a bare executable cannot be approved by
+Gatekeeper (inc-g1y). Saves now live in
+`~/Library/Application Support/Incursion/`, not beside the game.
+
+**Closed since 2026-08-17**, all with their evidence in
+[`FIXED.md`](FIXED.md): the bottom-of-dungeon null dereference on all four
+routes that reach it; a hiding monster deleting itself inside `Reveal()`; the
+`Rect::PlaceWithin` inversion that put doors in solid rock, which is also the
+real cause behind the withdrawn `Map::At()` report; a failed save and a refused
+load each taking the process with it; the target cursor's one-axis scoring; the
+store menu never scrolling; `<` and `>` doing nothing on the overview map; the
+six C escapes the port's path sweep ate; colliding run directories; and the
+`Natural Weapon Speed` balance option.
 
 ## RESOLVED 2026-08-14: keyboard input dies — it was the machine, not the game
 
@@ -183,7 +194,7 @@ while the generated `src/yygram.cpp` calls into it unconditionally. Build with
 | Negative map scroll offsets | The clamp that would stop `XOff`/`YOff` going negative is commented out at `src/Term.cpp:1005-1015`. Harmless once positions are correct, but it turned the save bug into a fully blank screen instead of a visibly wrong one. **2026-08-17, first attempt, WRONG — retracted the same day.** It said "there is no commented-out `XOff` clamp anywhere in `src/Term.cpp` now". There is: the whole clamp block is inside `/* */` at `src/Term.cpp:1043-1057`. Only the line number had drifted, and the original entry was true. Two lessons, both cheap: a failed grep is not an absence, and a retraction needs the same evidence bar as the claim it retracts. Note also that the commented-out code is malformed — `if(XOff<0 &&` at `:1044` has no right-hand operand — so it could never have compiled as written, which suggests it was disabled part-way through an edit rather than deliberately retired. Note also that a negative `XOff` is deliberate in one case — `src/Term.cpp:1012` sets `XOff = -((MSizeX() - m->SizeX())/2)` on purpose to centre a map smaller than the window — so "negative is wrong" is too strong as written. Re-derive this entry from the code before acting on it.** |
 | Resolution warning on startup | `Wlibtcod.cpp`. Pre-existing, matches an open upstream issue. Options top out at 1920x1200; no Retina/HiDPI handling. |
 | 58 format-string defects | 26 residual type mismatches, plus 32 that are live bugs on Windows too. **2026-08-17: the enumeration step written here is already done and is now a no-op.** `Format()` carries `__attribute__((format(printf,1,2)))` at `inc/Base.h:151`, as does `Error()`. So the 58-defect count cannot be reproduced by "add the attribute"; it needs a compile with the attributes already in place. Note that `build_macos.sh:147-148` puts `-w` in both `CXXFLAGS` and `CFLAGS`, which silences every warning, so a normal build shows none of these. Compile with `-Wformat` and without `-w` to see them. |
-| ~~No headless mode~~ | **DONE.** The ncurses backend exists (`BACKEND=posix`), and the harness drives the game from key scripts with no display. Closed as inc-73g; roughly 1,100 unattended sessions have run since. |
+| ~~No headless mode~~ | **DONE.** The ncurses backend exists (`BACKEND=posix`), and the harness drives the game from key scripts with no display. Closed as inc-73g; roughly 1,100 unattended sessions had run by 2026-08-17, and the gate has added to that on every change since. |
 | No x86_64 slice, no universal binary, no Linux run, no CI | |
 | Unresolved content references | Module compile warns: `Blood;Domain, Dryad, Snow Angel`. Pre-existing. Ruleset work, not engine work. |
 
@@ -226,7 +237,9 @@ to `rmtew` or `HexDecimal`.
 
 **Four pull requests have been sent to rmtew, and one is merged.** See the table
 under "Sent to rmtew" in `docs/REPORTING-GATE.md` for the current state of #41,
-#42, #43 and #44. An earlier version of this paragraph said nothing had been
+#42, #43 and #44. As of 2026-08-19 both of his open threads are answered: the
+#40 correction that withdraws the monster-AI cause, and issue #8 on automated
+testing, open since 2024. An earlier version of this paragraph said nothing had been
 sent; that was wrong, and it was wrong on the one subject this paragraph exists
 to govern.
 
@@ -240,9 +253,10 @@ draft. Both were broken on 2026-08-15. See `CLAUDE.md`.
 
 Agents own the C++: port, engine, build, harness. All machine-checkable.
 
-Brian owns the ruleset in `lib/*.irh` — 82,297 lines of IncursionScript, 1,450
+Brian owns the ruleset in `lib/*.irh` — 82,363 lines of IncursionScript, 1,450
 `On Event` handlers, 517 monsters, 264 items, 191 effects, 39 classes, 17 races.
-(Counted over `lib/*.irh` on 2026-08-17: `cat lib/*.irh | wc -l`, and
+(Line count re-taken 2026-08-20; the entity counts are from 2026-08-17.
+`cat lib/*.irh | wc -l`, and
 `grep -ch '^Monster "' lib/*.irh` for each entity kind. Do not compare these
 against `lib/program.i`, which is the preprocessed live set and differs.)
 It is C-lite with dice notation (`1d2`, `A_STR`), and each entity's prose spec sits
@@ -279,34 +293,76 @@ use this for unattended verification, not for things he can check in ten seconds
 
 ## Diagnostic instrumentation
 
-All environment-gated and off by default:
+**The full inventory is in the README's
+[For developers](../README.md#for-developers) section**, which lists every switch
+with the question it answers, and in [`DEVTOOLS-AUDIT.md`](DEVTOOLS-AUDIT.md),
+which carries a verdict on each. What follows is the part specific to this
+document: how they are armed, and the two that were deleted.
 
-- `INCURSION_ERROR_PROMPT=1` — restore the old blocking error dialog.
-- `INCURSION_SAVE_PROBE=1` — log player position either side of save/load
-  (`logs/saveprobe.log`).
-- `INCURSION_MAP_PROBE=1` — log what `ShowMap()` drew (`logs/mapprobe.log`).
-- `-DFLICKER_PROBE` — **deleted 2026-08-18, and not by accident.** It logged
-  luminance per presented frame, sampling only inside `actual_rendering()`, so it
-  could not see anything happening between presents — and the game presenting
-  only ~2/sec was the flicker itself. The instrument was structurally blind to
-  the defect it was built for, and its flat 8.99 reading was true and
-  irrelevant. Use `tools/flickercapture.sh` with `tools/flickerscan.py`, which
-  capture and crop the real window. See docs/DEVTOOLS-AUDIT.md.
-- `-DPALETTE_LOG` at compile time — the instrumentation that actually settled the
-  flicker: repaint, keypress, palette and window-rect logging.
-- `INCURSION_MAP_AUDIT=1` — check the map against itself: every Thing must appear
-  both in `m->Things[]` and in the Contents chain of the square it claims
-  (`logs/mapaudit.log`). Runs every 10th turn and the instant `Thing::Remove`
-  fails to unlink. The log carries a header when armed, so a silent log means
-  "clean" and an absent log means "never ran".
-- `tools/play.sh` — launcher, turns on the map audit and the save probe.
-- `tools/flickercapture.sh` and `tools/flickerscan.py` — capture the game window,
-  crop to it, and correlate brightness against repaints. These replaced
-  `tools/flickerscan.sh`, which sampled the whole composited screen. `flickerscan.py`
-  refuses to reach a verdict on black frames, which is the failure that had the
-  older scan confidently reporting results from captures macOS had blocked.
-  `tools/flickerscan_selftest.py` checks that refusal still works.
-- `tools/run_probe.sh` — **deleted 2026-08-18.** An older launcher, superseded by
+Environment-gated diagnostics cost nothing when the variable is unset, so they
+ship in every binary. Compile-time probes need
+`EXTRA_CXXFLAGS=-D<SYMBOL> ./build_macos.sh` and reach no shipped build.
+
+```sh
+INCURSION_MAP_AUDIT=1 tools/play.sh                       # env-gated
+EXTRA_CXXFLAGS=-DPATH_PROBE OUT=incursion-path ./build_macos.sh   # compile-time
+```
+
+Environment-gated, as of 2026-08-20:
+
+| Variable | What it answers |
+|---|---|
+| `INCURSION_SEED` | Determinism. Every measurement in this project rests on it. |
+| `INCURSION_MAX_KEYS` | The headless key budget. |
+| `INCURSION_MAP_AUDIT=1` | Every Thing must appear both in `m->Things[]` and in the Contents chain of the square it claims (`logs/mapaudit.log`). Runs every tenth turn and the instant `Thing::Remove` fails to unlink. The log carries a header when armed, so a silent log means "clean" and an absent log means "never ran". |
+| `INCURSION_SAVE_PROBE=1` | Player position either side of save/load (`logs/saveprobe.log`). |
+| `INCURSION_MAP_PROBE=1` | What `ShowMap()` drew (`logs/mapprobe.log`). |
+| `INCURSION_CHAR_PROBE=1` | Writes a readable character sheet beside every save, automatically. |
+| `INCURSION_ERROR_PROMPT=1` | Restores the old blocking error dialog. |
+| `INCURSION_TARGET_PROBE=1` | Each target-cursor press and where it landed. Behind `check_target_order.sh`. |
+| `INCURSION_STAIR_PROBE=1` | The staircase candidate list and its ranking. Behind `check_stair_cycle.sh`. |
+| `INCURSION_QUIET_PROBE=1` | Whether a handle lookup spoke. Behind `check_quiet_lookup.sh`. |
+| `INCURSION_SAVE_FAIL_AT=N` | Stages a save failure at a chosen point, throwing what a short write throws. Fires once per process. A real full disk cannot reach the interesting case, because both write loops write into memory first. |
+| `INCURSION_STACK_PROBE=1` | Nested entries into depth changes. Found the bottom-of-dungeon crash. |
+| `INCURSION_DEPTH_PROBE=1` | Depth-change accounting. Its own comment says to delete it once inc-x9i is settled. |
+| `INCURSION_FOLLOWER_PROBE`, `INCURSION_GOWITH_PROBE` | Follower loss across a level change. |
+| `INCURSION_FALL_CHAIN`, `INCURSION_FALL_CHAIN_SKIP`, `INCURSION_CHASM_WALK`, `INCURSION_LEVITATE_CHASM` | The chasm and falling investigations. |
+| `INCURSION_DUNGEONMAP_PROBE`, `INCURSION_DESCEND_PROBE` | Dungeon and descent structure. |
+| `INC6D5_PROBE_NAMES` | Names the creatures `INC6D5_PROBE` follows. |
+
+Compile-time:
+
+| Symbol | What it answers |
+|---|---|
+| `-DDIVERGE_PROBE` | Counts every random number drawn. Two runs of one seed draw the same numbers in the same order unless something outside the generator changed a decision, so the first differing count is the first place two runs stopped playing the same game. |
+| `-DINCURSION_LAYOUT` | Shifts every heap allocation by a seeded offset, so an address-dependent decision splits on demand instead of by luck. The other half of `DIVERGE_PROBE`; `tools/check_layout.sh` depends on it. |
+| `-DPATH_PROBE` | Pathfinding work per call. Showed one line to be 89% of a burst. |
+| `-DPALETTE_LOG` | Repaint, keypress, palette and window-rect logging. This is the instrumentation that settled the flicker. |
+| `-DINC6D5_PROBE` | Names the creature and the code path behind each orphan the map audit reports. |
+| `-DTARGET_PROBE`, `-DRETARGET_PROBE` | Names the target type behind every bad handle reaching the failing branch. Settled the one change merged upstream. |
+| `-DINCURSION_OOB_PROBE` | Names the creature and code path behind each out-of-bounds map read. |
+| `-DINCURSION_OOB_UNGUARDED` | Removes the `Map::GetAt` guard, restoring the original behaviour for an A/B. |
+| `-DINCURSION_OOB_RECTFIX`, `-DINCURSION_OOB_RANGEFIX` | Behaviour variants from the level-builder investigation. The widening variant is no longer a variant: it shipped in `3208aa7`. |
+| `-DSTRING_QUEUE_SIZE=N` | A size override, not a `getenv`. `tools/check_strqueue.sh` builds against it. |
+
+Two instruments were deleted, and both deletions are the record rather than
+housekeeping:
+
+- **`-DFLICKER_PROBE`, deleted 2026-08-18.** It logged luminance per presented
+  frame, sampling only inside libtcod's `actual_rendering()`, so it could not see
+  anything happening between presents — and the game presenting only about twice
+  a second was the flicker itself. The instrument was structurally blind to the
+  defect it was built for, and its flat 8.99 reading was true and irrelevant. Use
+  `tools/flickercapture.sh` with `tools/flickerscan.py`, which capture and crop
+  the real window. See [`DEVTOOLS-AUDIT.md`](DEVTOOLS-AUDIT.md).
+- **`tools/run_probe.sh`, deleted 2026-08-18.** An older launcher, superseded by
   `tools/play.sh`. Its own header said to delete it once the saved-game position
-  bug was fixed, and that bug is fixed. Nothing invoked it. See
-  `docs/DEVTOOLS-AUDIT.md`.
+  bug was fixed, and that bug is fixed. Nothing invoked it.
+
+`tools/play.sh` is the launcher for a real session; it arms the map audit, the
+save probe and the character probe. `tools/flickercapture.sh` and
+`tools/flickerscan.py` capture the game window, crop to it, and correlate
+brightness against repaints; `flickerscan.py` refuses to reach a verdict on black
+frames, which is the failure that had the older whole-screen scan confidently
+reporting results from captures macOS had blocked, and
+`tools/flickerscan_selftest.py` checks that the refusal still works.
