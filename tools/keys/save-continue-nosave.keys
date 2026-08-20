@@ -1,0 +1,54 @@
+# tools/keys/save-continue.keys with the three saves taken out, for a
+# same-binary control: does a mid-session save leave the game where it was?
+#
+#   tools/headless.sh tools/keys/save-continue-nosave.keys 1
+#
+# Every keystroke matches the twin except that each `ESC b` is `ESC ESC`, which
+# opens the System Menu and closes it again. Two keys either way, so the key
+# stream stays aligned.
+#
+# ONE KNOWN, DELIBERATE DIFFERENCE. Save and Continue sets Timeout = 1
+# (src/Player.cpp:746) and so spends a tick of game time; closing the menu
+# spends none (src/Player.cpp:756, the default arm, leaves Timeout alone). The
+# tick is charged by the MENU and not by Registry::SaveGroup, so a screen that
+# differs after the first save may be that tick and not the save. Read this
+# control on both builds and compare the two answers; it cannot on its own
+# separate the tick from the object restore. See bd inc-i0r.
+
+@include chargen.keys
+
+@dump:arrival
+
+DOWN*4 RIGHT*4 UP*4 LEFT*4
+s*3     # search
+
+@dump:pre-save-1
+
+ESC ESC # System Menu, opened and closed. No save.
+
+@dump:post-save-1
+
+DOWN*4 RIGHT*4 UP*4 LEFT*4
+.*5     # rest
+
+@dump:mid-1
+
+ESC ESC
+
+@dump:post-save-2
+
+RIGHT*4 DOWN*4 LEFT*4 UP*4
+s*3 .*5
+
+@dump:mid-2
+
+ESC ESC
+
+@dump:post-save-3
+
+LEFT*4 UP*4 RIGHT*4 DOWN*4
+s*3 .*5
+
+@dump:final
+
+@quit

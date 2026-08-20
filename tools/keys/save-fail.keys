@@ -1,0 +1,45 @@
+# Make a character, save WITHOUT quitting, keep playing, then save again on the
+# way out. The point is the middle save: with INCURSION_SAVE_FAIL_AT set, that
+# one throws part way through Registry::SaveGroup, and everything after it
+# measures whether the game survived a failed save and stayed usable.
+#
+#   INCURSION_SAVE_FAIL_AT=5 tools/headless.sh tools/keys/save-fail.keys 1
+#
+# tools/check_save_fail.sh runs exactly this, at several failure points, and
+# compares the character it ends with against the same session run with no
+# failure staged. See bd inc-i0r.
+#
+# ESC b is the System Menu's [b] Save and Continue (src/Player.cpp:734-747).
+# It is the only save the game offers that does not also end the session, so
+# it is the only way a key script can carry on past one. READ THE WARNING IN
+# tools/keys/explore-mage.keys BEFORE MOVING IT: ESC opens that menu rather
+# than cancelling anything, [a] is Save and Quit, and a stray ESC therefore
+# ends the run and still exits 0.
+#
+# The block below is placed where the screen is known -- straight after the
+# arrival dump, with no other menu or prompt open -- for that reason.
+
+@include chargen.keys
+
+@dump:arrival
+
+# A short walk before the save, so the character has moved and the save has
+# something to be wrong about.
+DOWN*4 RIGHT*4 UP*4 LEFT*4
+
+ESC b   # System Menu -> Save and Continue. THIS is the save that is staged
+        # to fail; the game must report the failure and keep playing.
+
+@dump:after-save
+
+# Play on. If the failed save left a handle where a data-block pointer belongs,
+# the map walk below reads through it long before the session ends.
+DOWN*4 RIGHT*4 UP*4 LEFT*4
+DOWN*4 RIGHT*4 UP*4 LEFT*4
+s*3     # search
+.*5     # rest
+
+@dump:walked
+
+@quit   # Saves again on the way out. The staged failure fires once, so this
+        # save must succeed and must produce a loadable file.

@@ -146,6 +146,107 @@ class RegistryScope
             { delete *cf; *cf = NULL; } }
   };
 
+/* upstream: the second half of the same hole, and the half RegistryScope
+   cannot close. Restoring the mode flag puts the Registry back; it does not
+   put the OBJECTS back. A save that throws part way -- a full disk is the
+   ordinary way -- leaves every object it had reached holding a data-block
+   HANDLE where a POINTER belongs, and Game::Cleanup then dereferences it.
+
+   The defect is upstream's: the ordering of the two Serialize loops is
+   original code, and it depends on no typedef, compiler or platform of this
+   port. The codebase argues against itself here, which is the evidence:
+   Registry::LoadGroup (src/Registry.cpp:955) restores its objects from a
+   recorded list, LoadedObjects, for exactly this reason, while the saving half
+   re-walks the table and does it last.
+   Evidence: Observed -- an 8 MB HFS+ volume with 76 KB free, save/ symlinked
+   onto it, tools/headless.sh tools/keys/smoke.keys 1: EXC_BAD_ACCESS at 0x7f3
+   in Game::Cleanup and exit 139 before, the error reported and exit 0 after.
+   Tracking: inc-i0r. Not sent.
+
+   THE MECHANISM. Registry::SaveGroup writes each object by first calling
+   Serialize(*this,true) on it, which sends every data-block pointer the object
+   owns through Registry::Block. With saveMode set, Block REPLACES the pointer
+   with the block's handle (a small integer), because that is what has to go on
+   disk. The matching Serialize(*this,false) loop that swaps the pointers back
+   sits after every write in the function, so any throw from the write path
+   skips it. Every object the loop had reached is then left with a handle where
+   a pointer belongs, and the first walk over them dereferences it:
+   Game::Cleanup, EXC_BAD_ACCESS at 0x7f3, which is the handle 2035 and not an
+   address.
+
+   WHY THE OLD LOOP CANNOT SIMPLY BE MOVED OR REPEATED. A throw part way
+   through the write loop leaves the objects already visited holding handles
+   and the objects not yet reached holding real pointers. Running the fixup
+   loop over the whole group would hand a genuine pointer to GetData(), which
+   is a fresh corruption on top of the one being repaired. So the objects are
+   RECORDED as they are converted and exactly that record is unwound. The
+   success path and the failure path both call Restore(), so there is one
+   restore and not two that can drift apart.
+
+   saveMode MUST be off while the restore runs -- that is what makes
+   Registry::Block take its GetData branch -- so Restore() clears it itself
+   rather than depending on the order two guards happen to be destroyed in. */
+class SaveFixupScope
+  {
+    Registry &reg;
+    bool     &flag;
+    /* <Object*,10,10> is the instantiation src/Base.cpp:667 already provides
+       for LoadGroup's LoadedObjects. Array's members are defined there and
+       nowhere else, so a different Initial/Delta pair would not link. */
+    OArray<Object*,10,10> Converted;
+    public:
+      SaveFixupScope(Registry &r, bool &f) : reg(r), flag(f) { }
+      /* Call immediately after Serialize(reg,true) has run on o. */
+      void Record(Object *o)
+        { Converted.Add(o); }
+      /* Swap the recorded objects' handles back for pointers. Idempotent: the
+         record is emptied as it is consumed, so the destructor is a no-op
+         after the success path has already called this. */
+      void Restore()
+        { Object **o;
+          flag = false;
+          for (int32 i = 0; (o = Converted[i]) != NULL; i++)
+            (*o)->Serialize(reg,false);
+          Converted.Clear(); }
+      ~SaveFixupScope()
+        { Restore(); }
+  };
+
+/* Diagnostic: set INCURSION_SAVE_FAIL_AT to stage a write failure inside
+   Registry::SaveGroup. The value is "<n>" to fail as the n'th object is
+   written, or "d<n>" to fail as the n'th data block is written; n starts at 1.
+   It throws EWRIERR, the code posixTerm::FWrite (src/Wposix.cpp:1542) raises
+   on a short write, and it fires once per process so that the save AFTER the
+   failed one still succeeds.
+
+   Why a hook exists at all. A full disk cannot reach the case that matters.
+   Every write in SaveGroup's two loops goes into a CFile, which is a memory
+   file; the disk is not touched until CFile::CommitCompressed, which runs
+   after both loops have finished. So a real full disk always fails with EVERY
+   object already converted, and the half-converted group -- the case
+   SaveFixupScope above exists for -- has no other way in.
+   tools/check_save_fail.sh drives it. inc-i0r. */
+static void SaveFailProbe(bool isData, int32 index)
+  {
+    static const char *want = NULL;
+    static bool asked = false, fired = false;
+    const char *n;
+
+    if (!asked)
+      { want = getenv("INCURSION_SAVE_FAIL_AT"); asked = true; }
+    if (!want || !*want || fired)
+      return;
+    n = want;
+    if (*n == 'd' || *n == 'D')
+      { if (!isData) return; n++; }
+    else if (isData)
+      return;
+    if (index != atoi(n))
+      return;
+    fired = true;
+    throw EWRIERR;
+  }
+
 Registry::Registry()
   {
     memset(ObjTable,0,sizeof(RegNode)*OBJ_TABLE_SIZE);
@@ -478,6 +579,10 @@ int16 Registry::SaveGroup(Term &t, hObj hGroup, bool use_lz, bool newFile) {
     groupHeader gh; fileHeader fh;
     RegNode *r; DataNode *d;
     uint32 ghPos;
+    /* Declared before the CFile and before RegistryScope, so that it is
+       destroyed after them: the objects go back however this function leaves.
+       See SaveFixupScope. inc-i0r. */
+    SaveFixupScope fixup(*this, saveMode);
 
     ClearDataTable();
 
@@ -555,8 +660,12 @@ DoneDeletion:
 
                 hCurrent = r->pObj->myHandle;
                 r->pObj->Serialize(*this,true);
+                /* Recorded the instant it is converted, and never before: the
+                   restore must cover exactly the converted objects. inc-i0r. */
+                fixup.Record(r->pObj);
 
                 gh.objCount++;
+                SaveFailProbe(false, gh.objCount);
                 /* Write the object type */
                 cf->FWrite(&(r->pObj->Type),1);
                 /* Write the object itself */
@@ -589,6 +698,7 @@ DoneDeletion:
                     continue;
                 }
                 gh.dataCount++;
+                SaveFailProbe(true, gh.dataCount);
                 ASSERT(d->hOwner > 127);
                 ASSERT(d->myHandle > 127);
                 /* Write the handle of the data */
@@ -621,23 +731,13 @@ DoneDeletion:
     cf = NULL;
 
     /* Fix all the pointers in memory to data blocks, so that they point
-    properly again. This loop MUST run with saveMode off, so the flag is
-    cleared here and not left to the guard. */
-    saveMode = 0;
-    for(i=0;i!=OBJ_TABLE_SIZE;i++) {
-        if (ObjTable[i].pObj) {
-            r = &(ObjTable[i]);
-            while (r) {
-                if (!r->pObj->inGroup(hGroup)) {
-                    r = r->Next;
-                    continue;
-                }
-
-                r->pObj->Serialize(*this,false);
-                r = r->Next;
-            }
-        }
-    }
+    properly again. This used to be a second walk of the whole object table,
+    which was right only when nothing had thrown; it is now driven from the
+    record of what was actually converted, and the destructor drives the same
+    call on every throw above. Restore() clears saveMode itself, because the
+    swap-back branch of Registry::Block is the one guarded by that flag.
+    inc-i0r. */
+    fixup.Restore();
 
     return 0;
 }

@@ -1,0 +1,66 @@
+# Save three times in the middle of a session and keep playing after each one.
+#
+#   tools/headless.sh tools/keys/save-continue.keys 1
+#
+# WHY THIS EXISTS. Registry::SaveGroup is not read-only: it turns every data
+# block POINTER in every object of the group into that block's HANDLE while it
+# writes, then swaps them back. A session that saves and carries on is
+# therefore the only session that can show a restore which does not put back
+# exactly what it took. tools/keys/smoke.keys and tools/keys/explore.keys
+# contain no save command at all, so neither of them has any power over that
+# question. See bd inc-i0r.
+#
+# ESC b is the System Menu's [b] Save and Continue (src/Player.cpp:734-747).
+# It is the only save the game offers that does not also end the session.
+# READ THE WARNING IN tools/keys/explore-mage.keys BEFORE MOVING IT: ESC opens
+# that menu rather than cancelling anything, [a] is Save and Quit, and a stray
+# ESC therefore ends the run and still exits 0. Each ESC b below sits straight
+# after a screen dump, where the screen is known and no other menu is open.
+#
+# Save and Continue costs the player one tick of game time
+# (src/Player.cpp:746 sets Timeout = 1), so this script and its twin
+# tools/keys/save-continue-nosave.keys do NOT play the same game. The twin
+# exists to be compared against this one on ONE binary, not to match it.
+#
+# LENGTH. About 110 player commands after character generation. Two limits set
+# that: the game autosaves itself every 200 commands (src/Player.cpp:159), which
+# would put a save into the no-save twin as well, and bd inc-dhc records that a
+# long session stops repeating exactly from one run to the next.
+
+@include chargen.keys
+
+@dump:arrival
+
+DOWN*4 RIGHT*4 UP*4 LEFT*4
+s*3     # search
+
+@dump:pre-save-1
+
+ESC b   # System Menu -> Save and Continue
+
+@dump:post-save-1
+
+DOWN*4 RIGHT*4 UP*4 LEFT*4
+.*5     # rest
+
+@dump:mid-1
+
+ESC b
+
+@dump:post-save-2
+
+RIGHT*4 DOWN*4 LEFT*4 UP*4
+s*3 .*5
+
+@dump:mid-2
+
+ESC b
+
+@dump:post-save-3
+
+LEFT*4 UP*4 RIGHT*4 DOWN*4
+s*3 .*5
+
+@dump:final
+
+@quit
