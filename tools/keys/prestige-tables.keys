@@ -1,0 +1,73 @@
+# Photograph the level table printed by five prestige classes.
+#
+# The tables are player-facing prose that sits in the same file as the class's
+# own Flags and Def: field, so the three can disagree -- and in these five they
+# did. See bd inc-tek.8.3, findings PA-03-F16 (three classes printed their save
+# columns transposed) and PA-03-F17 (two printed a defence track their class
+# does not grant). tools/check_prestige_tables.sh reads these dumps.
+#
+# The prestige menu is the right screen to read them from because it shows the
+# class's Desc: exactly as a player choosing a class sees it. Nothing here
+# takes a prestige class; the menu only highlights.
+#
+# HOW IT GETS THERE. Free Advancement is a wizard-mode switch, so the script
+# enters wizard mode (lowercase w -- 'W' is a different keystroke, see
+# TokenToKey in src/Wposix.cpp), turns the switch on, and then uses the
+# character sheet's [G] to reach the three core levels that
+# src/Managers.cpp:2252 demands before it will open the prestige list.
+#
+# SEED-INDEPENDENT for what it asserts. The menu letters and the DOWN counts
+# below depend on the number of prestige classes in lib/, not on the seed, and
+# the descriptions are static text. The chargen it includes is seed-locked,
+# which is why a seed is still passed.
+
+@include chargen-rogue.keys
+
+ESC             # dismiss the arrival-room description
+w               # wizard mode
+y               # "Enter wizard mode?" -- yes
+w               # [w] Wizard Mode Switches
+DOWN DOWN       # Cheat Death -> Auto-Identify Items -> Free Advancement
+SPACE           # NO -> YES
+ESC             # leave the options manager
+
+d               # character sheet
+G G G           # three core levels; the prestige list refuses fewer
+
+# The list opens on [a] Alienist. DOWN walks it in letter order:
+#   a Alienist   b Assassin   c Blackguard   d Bladesinger  e Celestial Initiate
+#   f Crimson Adept  g Duelist  h Earthsinger  i Elementalist  j Horizon Walker
+#   k Inquisitor  l Loremaster  m Master Archer  n Sentinel  o Shadowdancer
+#   p Tattoo Mystic  q Twilight Huntsman  r Undead Slayer  s Underdark Warrior
+#
+# Each class scrolls to its own table with @until, which is proof against the
+# descriptions changing length. The extra PGDNs bring the rows themselves into
+# view; the @until stops as soon as the header appears on the last line.
+P
+
+@until "Special Abilities" PGDN
+PGDN*8
+@dump:alienist
+
+DOWN DOWN                       # [c] Blackguard
+@until "Special Abilities" PGDN
+PGDN*8
+@dump:blackguard
+
+DOWN*9                          # [l] Loremaster
+@until "Special Abilities" PGDN
+PGDN*8
+@dump:loremaster
+
+DOWN DOWN                       # [n] Sentinel
+@until "Special Abilities" PGDN
+PGDN*4                          # this table is four rows and then "..."
+@dump:sentinel
+
+DOWN*3                          # [q] Twilight Huntsman
+@until "Special Abilities" PGDN
+PGDN*8
+@dump:twilight
+
+ESC
+@quit

@@ -316,11 +316,14 @@ Class "Alienist"
            __*_<7>Sanity-Blasting Spellcasting<2> -- At 9th level, the alienist's
            methods of spellcasting are so otherworldly and alien that any creature
            of CR 7 or lower who sees her cast a spell takes 1d2 points of Wisdom
-           damage.\n
+           damage. (Not yet implemented: nothing takes Wisdom damage from her
+           spellcasting.)\n
            __*_<7>Distant Apotheosis<2> -- At 10th level, the alienist becomes a
            fundamentally alien creature herself, developing trememdously increased
            physical resistance. She gains immunity to critical hits, no longer needs
-           to breathe or eat and does not age.\n\n 
+           to breathe or eat and does not age. (Only the immunity to critical
+           hits is implemented. She still breathes and eats, and nothing in the
+           game ages her.)\n\n
 
            <10>SPELL LIST<2>\n
            <15>__1st level -- <1> grease, obscurement, spiritwrack, true strike.\n
@@ -334,16 +337,16 @@ Class "Alienist"
       
            \n\n<10>THE ALIENIST<15>\n
            __Level__Def__Fort_Refl_Will_CL_Special Abilities<1>\n
-           ____1____+0____+2___+2___+0__-- In. Wisdom, Uneasy Mind\n
-           ____2____+0____+3___+3___+0__+1 Outer Pathways\n
-           ____3____+0____+3___+3___+1__+2 Surreal Presence\n
-           ____4____+1____+4___+4___+1__-- Mad Certainty\n
-           ____5____+1____+4___+4___+1__+3 Visitation\n
-           ____6____+1____+5___+5___+2__+4 Inhuman Allies\n
-           ____7____+1____+5___+5___+2__+5 Feverish Obsession\n
-           ____8____+2____+6___+6___+2__+6 Psychic Mortification\n
-           ____9____+2____+6___+6___+3__+7 Sanity-Blasting Sp.\n
-           ____10___+2____+7___+7___+3__+8 Distant Apotheosis\n
+           ____1____+0____+2___+0___+2__-- In. Wisdom, Uneasy Mind\n
+           ____2____+0____+3___+0___+3__+1 Outer Pathways\n
+           ____3____+0____+3___+1___+3__+2 Surreal Presence\n
+           ____4____+1____+4___+1___+4__-- Mad Certainty\n
+           ____5____+1____+4___+1___+4__+3 Visitation\n
+           ____6____+1____+5___+2___+5__+4 Inhuman Allies\n
+           ____7____+1____+5___+2___+5__+5 Feverish Obsession\n
+           ____8____+2____+6___+2___+6__+6 Psychic Mortification\n
+           ____9____+2____+6___+3___+6__+7 Sanity-Blasting Sp.\n
+           ____10___+2____+7___+3___+7__+8 Distant Apotheosis\n
            \n";
     HitDice: 4; Mana: 12; Def: 1/4;
     Attk:  S_BRAWL    50,
@@ -372,7 +375,8 @@ Class "Alienist"
       Stati[SUSTAIN,A_INT,+5]            at 8th level,
       Stati[SUSTAIN,A_WIS,+5]            at 8th level,
       Stati[SUSTAIN,A_CHA,+5]            at 8th level,
-      Stati[TRAP_EVENT,POST(EV_CAST)]    at 9th level;
+      Stati[TRAP_EVENT,POST(EV_CAST)]    at 9th level,
+      Stati[IMMUNITY,AD_CRIT]            at 10th level;
    Flags: CF_PRESTIGE, CF_GOOD_FORT, CF_GOOD_WILL, CF_FAVOURED;
    Lists:
      * SPELL_LIST
@@ -385,7 +389,10 @@ Class "Alienist"
        5 $"banishment" $"distance distortion" $"dream" $"nightmare;spell"
          $"open the third eye";
     On Event EV_ADVANCE {
-      
+
+      if (EActor->LevelAs($"Alienist") == 3)
+        ThrowEff(EV_EFFECT,$"Surreal Presence",EActor,EActor);
+
       /* Advance Spell Access -- Wow, Complexy-Like! */
       if (EActor->HasEffStati(SPELL_ACCESS,$"Mage")) {
 
@@ -573,6 +580,7 @@ Class "Assassin"
            S_MELEE    75,
            S_THROWN   100,
            S_ARCHERY  100;    
+    Proficiencies: WG_CROSSBOWS, WG_LIGHT;
     Skills[8]: SK_ALCHEMY, SK_BALANCE, SK_BLUFF, SK_CLIMB, SK_DISGUISE, SK_ESCAPE_ART,
       SK_FIND_WEAKNESS, /*SK_GATHER_INF,*/ SK_HANDLE_DEV, SK_HIDE, SK_INTIMIDATE,
       SK_INTUITION, SK_JUMP, SK_LISTEN, SK_LOCKPICKING, SK_MOVE_SIL, 
@@ -758,7 +766,8 @@ Class "Blackguard"
 
       \n\n<10>CLASS FEATURES<2>\n
       __*_<7>Proficiencies<2> -- The blackguard is proficient with blades,
-      impact weapons, polearms and spears, and with all classes of armour.\n
+      impact weapons, polearms and spears, and with all classes of armour
+      and with shields.\n
       __*_<7>Spellcasting<2> -- Blackguards practice certain diabolical magic.
       They gain one caster level for every even blackguard level, and choose
       their spells from the special blackguard list. Blackguards cast spells
@@ -811,23 +820,25 @@ Class "Blackguard"
       \n\n<10>THE BLACKGUARD<15>\n
       __Level__Def__Fort_Refl_Will_Special Abilities<1>\n
       ____1____+0____+2___+0___+0__Sense Light, Smite Good\n
-      ____2____+1____+3___+0___+0__+1 caster level,\n
+      ____2____+0____+3___+0___+0__+1 caster level,\n
       _____________________________Unholy Grace\n
-      ____3____+1____+3___+1___+1__Command Undead\n
-      ____4____+2____+4___+1___+1__Aura of Despair,\n
+      ____3____+0____+3___+1___+1__Command Undead\n
+      ____4____+1____+4___+1___+1__Aura of Despair,\n
       _____________________________+1 caster level \n
-      ____5____+2____+4___+1___+1__Sneak Attack +1d6,\n
+      ____5____+1____+4___+1___+1__Sneak Attack +1d6,\n
       _____________________________Fiendish Servant\n
-      ____6____+3____+5___+2___+2__+1 caster level\n
-      ____7____+3____+5___+2___+2__Sneak Attack +2d6\n
-      ____8____+4____+6___+2___+2__+1 caster level\n
-      ____9____+4____+6___+3___+3__Sneak Attack +3d6\n
-      ____10___+5____+7___+3___+3__+1 caster level\n";
+      ____6____+1____+5___+2___+2__+1 caster level\n
+      ____7____+1____+5___+2___+2__Sneak Attack +2d6\n
+      ____8____+2____+6___+2___+2__+1 caster level\n
+      ____9____+2____+6___+3___+3__Sneak Attack +3d6\n
+      ____10___+2____+7___+3___+3__+1 caster level\n";
     HitDice: 10; Mana: 6; Def: 1/4;
     Attk:  S_BRAWL    100,
            S_MELEE    100,
            S_THROWN   100,
            S_ARCHERY  100;    
+    Proficiencies: WG_SBLADES, WG_LBLADES, WG_IMPACT, WG_POLEARMS,
+      WG_SPEARS, WG_LARMOUR, WG_MARMOUR, WG_HARMOUR, WG_SHIELDS;
     Skills[4]: SK_CRAFT, SK_FIND_WEAKNESS, SK_INTIMIDATE, SK_KNOW_INF,
       SK_KNOW_THEO, SK_KNOW_PLANES, SK_POISON_USE, SK_RIDE;
     Grants:
@@ -889,8 +900,13 @@ Effect "Aura of Despair" : EA_INFLICT
   }
 
 Effect "Fiendish Servant" : EA_SUMMON
-  { SC_WEA; rval: $"babau"; pval: 6; Purpose: EP_SUMMON;
-    Flags: EF_ACTIVATE, EF_XSUMMON, EF_EVIL, EF_LAWFUL, EF_DLONG,
+  /* rval was $"babau", a CR 6 demon that is neither creature the description
+     names. See bd inc-tek.16 for the "or quasit, as suits his alignment" half,
+     which needs a second effect to branch on. */
+  { SC_WEA; rval: $"true imp"; pval: 6; Purpose: EP_SUMMON;
+    /* EF_PERMANANT, not EF_DLONG: the description below says twice that the
+       servant remains until dismissed. EF_CANCEL is what dismisses it. */
+    Flags: EF_ACTIVATE, EF_XSUMMON, EF_EVIL, EF_LAWFUL, EF_PERMANANT,
            EF_3PERDAY, EF_CANCEL;
     Desc: "Starting at 5th level, a blackguard
       can summon an imp or quasit, as suits his alignment, who will serve
@@ -898,8 +914,6 @@ Effect "Fiendish Servant" : EA_SUMMON
       be summoned anew the next day.";
     On Event MSG_XSUMMON
       "You call upon the Lower Planes for aid!",
-    EV_ELAPSED
-      "Your fiendish servant returns Below.",
     POST(EV_MAGIC_HIT) {
       hObj hImp;
       hImp = EMap->GetEncounterCreature(0);
@@ -1404,11 +1418,16 @@ Class "Duelist"
 Class "Earthsinger"
   {
     On Event EV_ISTARGET {
-      bool failed;
+      bool failed; rID baseID;
       failed = false;
-      
-      if (!EActor->isMType(MA_DWARF) /*&& EActor->RaceID != $"Gnome, Rock" &&
-             EActor->RaceID != $"Gnome, Deep"*/)
+
+      /* Collapse a subrace to its parent, so a grey dwarf counts as a dwarf
+         and a deep gnome as a gnome. Both gnome kinds qualify, which is what
+         the refusal message below has always said. */
+      baseID = EActor->RaceID;
+      if (baseID->BaseRace != NULL_ID)
+        baseID = baseID->BaseRace;
+      if (!EActor->isMType(MA_DWARF) && baseID != $"gnome;race")
         {
           EActor->IPrint("You must be of a race that has spiritual ties to
             elemental earth, such as a dwarf, rock gnome or deep gnome.");
@@ -1499,7 +1518,10 @@ Class "Earthsinger"
       into stone<2>, <9>spike stones<9>, <9>earthmaw<2>, <9>wall of stone<2>,
       <9>transmute rock to mud<2>, <9>stoneskin<2>, <9>animate rock<2>,
       <9>conjure earth elemental<2>, <9>transmute flesh to stone<2> and
-      <9>elemental aura<2> (the earth version only).\n
+      <9>elemental aura<2> (the earth version only). (The last four of these
+      -- <9>animate rock<2>, <9>conjure earth elemental<2>, <9>transmute flesh
+      to stone<2> and <9>elemental aura<2> -- are not yet implemented, so
+      levels 7 through 10 of this class grant no new spell-like ability.)\n
       __*_<7>Geomancy<2> -- Starting at 3rd level, a Earthsinger can tap
       into the primal energies of the earth in order to replenish her own
       magical energies. By spending two fatigue points, she can instantly
@@ -1512,8 +1534,10 @@ Class "Earthsinger"
       the ground -- she is not levitating, ethereal or standing on 
       non-earthen terrain, and she is not wearing magical boots -- she
       may add her Earthsinger level to the damage of her melee or
-      unarmed attacks.
-      
+      unarmed attacks. (The terrain clause is not yet implemented: any
+      floor counts as earthen, except deep liquid and a square she is
+      falling through.)
+
       \n\n<10>THE EARTHSINGER<15>\n
       _Level_Def_Fort_Refl_Will_NA_GS__Special Abilities<1>\n
       ___1___+0___+2___+0___+2__+1 +1__Grounded Stance, Stone Tell\n
@@ -1569,7 +1593,10 @@ Effect "Grounded Stance" : EA_INFLICT
       int16 mat;
       if (EActor->isAerial())
         return NOTHING;
-      if (EActor->InSlot(SL_BOOTS) != NULL_OBJ)
+      if (EActor->onPlane() != PHASE_MATERIAL)
+        return NOTHING;
+      if (EActor->InSlot(SL_BOOTS) != NULL_OBJ &&
+          EActor->InSlot(SL_BOOTS)->isMagic())
         return NOTHING;
       /*
       mat = EMap->TerrainAt(EActor->x,EActor->y)->Material;
@@ -2046,16 +2073,16 @@ Class "Loremaster"
       
       \n\n<10>THE LOREMASTER<15>\n
       __Level__Def__Fort_Refl_Will_Bonus_Special Abilities<1>\n
-      ____1____+0____+0___+2___+0__+1 In_Lore, See Invisible \n
-      ____2____+0____+0___+3___+0__+1 DC_Bonus Spellbook   \n
-      ____3____+0____+1___+3___+1__+2 In_Fatesense\n
-      ____4____+1____+1___+4___+1__+2 DC_Bonus Spellbook  \n
-      ____5____+1____+1___+4___+1__+3 In_Bibliographic Insight\n
-      ____6____+1____+2___+5___+2__+3 DC_Glyph of Warding\n
-      ____7____+1____+2___+5___+2__+4 In_True Seeing\n
-      ____8____+2____+2___+6___+2__+4 DC_Bonus Spellbook \n
-      ____9____+2____+3___+6___+3__+5 In_Skill Mastery \n
-      ____10___+2____+3___+7___+3__+5 DC_Greater Glyph of W.\n      
+      ____1____+0____+0___+0___+2__+1 In_Lore, See Invisible \n
+      ____2____+0____+0___+0___+3__+1 DC_Bonus Spellbook   \n
+      ____3____+0____+1___+1___+3__+2 In_Fatesense\n
+      ____4____+1____+1___+1___+4__+2 DC_Bonus Spellbook  \n
+      ____5____+1____+1___+1___+4__+3 In_Bibliographic Insight\n
+      ____6____+1____+2___+2___+5__+3 DC_Glyph of Warding\n
+      ____7____+1____+2___+2___+5__+4 In_True Seeing\n
+      ____8____+2____+2___+2___+6__+4 DC_Bonus Spellbook \n
+      ____9____+2____+3___+3___+6__+5 In_Skill Mastery \n
+      ____10___+2____+3___+3___+7__+5 DC_Greater Glyph of W.\n
       \n";
     HitDice: 4; Mana: 12; Def: 1/4;
     Attk:  S_BRAWL    50,
@@ -2263,8 +2290,9 @@ Class "Master Archer"
       traversing fewer squares than the outside limit of her bow's range, and the
       shot is made at a -4 penalty, not including any range modifier. The archer
       must have some ability to perceive her target without a clear line of sight,
-      such as the blindsight ability above.
-      
+      such as the blindsight ability above. (Not yet implemented: no shot can be
+      banked, and 10th level gives only the usual blindsight increase.)
+
       \n\n<10>THE MASTER ARCHER<15>\n
       __Level__Def__Fort_Refl_Will_AStorm_Special Abilities<1>\n
       ____1____+0____+0___+2___+2___+5~___Ranged Sneak +1d6\n
@@ -2306,8 +2334,22 @@ Class "Master Archer"
 Effect "Ranged Sneak Attack" : EA_INFLICT
   {
     On Event META(PRE(EV_STRIKE)) {
+      hObj hBow;
       EActor->RemoveEffStati($"Ranged Sneak Attack;2");
       if (e.AType != A_FIRE)
+        return NOTHING;
+      /* A_FIRE is the generic launcher attack type, inc/Defines.h:1185, so it
+         also carries the three crossbows, the sling and the blowpipe -- every
+         one of them declared T_BOW in lib/weapons.irh. The description above
+         says a long bow or short bow, so name the bows.
+         ponytail: a whitelist by name. Any bow added later silently loses the
+         ability. The upgrade path is an item flag that marks a true bow, the
+         way WT_CROSSBOW already marks the three crossbows. */
+      hBow = EActor->InSlot(SL_WEAPON);
+      if (hBow == NULL_OBJ)
+        return NOTHING;
+      if (hBow->iID != $"long bow" && hBow->iID != $"short bow" &&
+          hBow->iID != $"sprite bow")
         return NOTHING;
       EActor->GainTempStati(EXTRA_ABILITY,NULL,1,SS_MISC,
         CA_SNEAK_ATTACK,(EActor->LevelAs($"Master Archer")+1)/2,$"Ranged Sneak Attack;2");
@@ -2421,10 +2463,10 @@ Class "Sentinel"
      off-guard.\n
       \n\n<10>THE SENTINEL<15>\n
       __Level__Def__Fort_Refl_Will_Special Abilities<1>\n
-      ____1____+0____+2___+0___+0__Superior Senses\n
-      ____2____+0____+3___+0___+0__Sharp Senses\n
-      ____3____+0____+3___+1___+1__Detect Unnat, Acute Senses\n
-      ____4____+1____+4___+1___+1__Blindsight, Uncanny Dodge\n
+      ____1____+0____+0___+2___+0__Superior Senses\n
+      ____2____+0____+0___+3___+0__Sharp Senses\n
+      ____3____+0____+1___+3___+1__Detect Unnat, Acute Senses\n
+      ____4____+1____+1___+4___+1__Blindsight, Uncanny Dodge\n
       ..."; 
     HitDice: 6; Mana: 4; Def: 1/4;
     Attk:  S_BRAWL    75,
@@ -2883,10 +2925,10 @@ Class "Twilight Huntsman"
       ____4____+1____+4___+4___+1__+1 CL, Noble Aegis\n
       ____5____+1____+4___+4___+1__Scent\n
       ____6____+1____+5___+5___+2__+1 CL, Freedom of Movement\n
-      ____7____+2____+5___+5___+2__Twilight Walking\n
+      ____7____+1____+5___+5___+2__Twilight Walking\n
       ____8____+2____+6___+6___+2__+1 CL, <9>spook<1>\n
       ____9____+2____+6___+6___+3__Feed Upon Pain\n 
-      ____10___+3____+7___+7___+3__+1 CL, One Body, One Soul\n"; 
+      ____10___+2____+7___+7___+3__+1 CL, One Body, One Soul\n"; 
     HitDice: 6; Mana: 6; Def: 1/4;
     Attk:  S_BRAWL    50,
            S_MELEE    100,
@@ -2900,8 +2942,10 @@ Class "Twilight Huntsman"
       Ability[CA_INCREASED_MOVE,+1] at every level starting at 1st,
       Ability[CA_RAPID_RIDING,+1]   at every level starting at 1st,
       Ability[CA_SPELLCASTING]      at every 2nd level starting at 2nd,
-      Ability[CA_TRACKING,+10]      at every level starting at 2nd,
-      Ability[CA_SMITE,MA_GOOD,+2]  at every level starting at 3rd,
+      Stati[SPELL_ACCESS,SP_DIVINE,+1] at every 2nd level starting at 2nd,
+      Ability[CA_TRACKING,+10]      at 2nd level,
+      Ability[CA_TRACKING,+2]       at every level starting at 3rd,
+      Ability[CA_SMITE,MA_LAWFUL,+2]  at every level starting at 3rd,
       Ability[CA_DWARVEN_FOCUS,+1]  at 3rd level,
       Ability[CA_NOBLE_AEGIS,+1]    at every level starting at 4th,
       Ability[CA_SCENT,+3]          at 5th level,
@@ -2969,10 +3013,23 @@ Class "Undead Slayer"
 Class "Underdark Warrior"
   {
     On Event EV_ISTARGET {
-      bool failed;
+      bool failed; rID baseID;
       failed = false;
-      if (EActor->ISkillLevel(SK_MOVE_SIL) < 10) { 
-        failed = true; 
+      /* Collapse a subrace to its parent, so a female drow counts as a drow
+         and a black orc as an orc. Deep gnomes and grey dwarves are tested
+         unreduced, because their parents are the surface races. */
+      baseID = EActor->RaceID;
+      if (baseID->BaseRace != NULL_ID)
+        baseID = baseID->BaseRace;
+      if (!(baseID == $"drow;race" || baseID == $"kobold;race" ||
+            baseID == $"orc;race" ||
+            EActor->RaceID == $"Deep Gnome;race" ||
+            EActor->RaceID == $"Grey Dwarf;race")) {
+        failed = true;
+        EActor->IPrint("You must be of a race native to the Underdark.");
+        }
+      if (EActor->ISkillLevel(SK_MOVE_SIL) < 10) {
+        failed = true;
         EActor->IPrint("You need to have Move Silently 10+.");
         } 
       if (EActor->ISkillLevel(SK_HIDE) < 10) { 
@@ -3023,9 +3080,9 @@ Class "Underdark Warrior"
       class for all characters. In order to become an underdark warrior, 
       you must have:\n
       __*_<7>Race<2> -- You must be of a race native to the Underdark -- drow,
-      deep gnomes, cave orcs and kobolds all qualify among the player races,
-      but goblins and illithids are known to become underdark warrior on occasion
-      as well.\n
+      deep gnomes, grey dwarves, orcs and kobolds all qualify among the player
+      races, but goblins and illithids are known to become underdark warrior on
+      occasion as well.\n
       __*_<7>Skills Levels<2> -- Move Silently +10, Hide in Shadows +10, Climb +10.\n
       __*_<7>Feats<2> -- Blind-Fighting, Toughness.\n
       __*_<7>Attributes<2> -- Good instincts are an absolute prerequisite of this
@@ -3094,7 +3151,7 @@ Class "Underdark Warrior"
       Ability[CA_UNCANNY_DODGE,+1]       at every level starting at 2nd,
       Ability[CA_STONEWORK_SENSE,+1]     at 4th,
       Ability[CA_DEFENSIVE_ROLL,+1]      at 5th;
-    Flags: CF_GOOD_FORT, CF_FAVOURED, CF_PRESTIGE;
+    Flags: CF_GOOD_REF, CF_GOOD_FORT, CF_FAVOURED, CF_PRESTIGE;
     Constants:
       * TOTAL_CLASS_LEVELS 5;
   }

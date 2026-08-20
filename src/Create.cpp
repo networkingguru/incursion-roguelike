@@ -3809,7 +3809,17 @@ int16 Creature::SkillLevel(int16 sk)
         s_inh = AbilityLevel(CA_SHARP_SENSES);
 
     if (sk == SK_SEARCH)
-        s_inh = AbilityLevel(CA_STONEWORK_SENSE);
+        /* upstream: Sharp Senses was left out of this line, though the two
+           entities whose prose describes it both name Search beside Spot and
+           Listen -- the elf, lib/races.irh:1067-1068, and the sentinel,
+           lib/prestige.irh:2434-2435 -- and the line above already grants it to
+           those two skills. Nothing here is port-specific: the omission is in
+           the rule, so it misbehaves identically on Win32 with the original
+           typedefs. Traced. inc-tek.8.3, finding PA-03-F18. Not sent upstream.
+           max, not addition, because s_inh is the single inherent-bonus slot
+           and inherent bonuses do not stack. */
+        s_inh = max(AbilityLevel(CA_STONEWORK_SENSE),
+                    AbilityLevel(CA_SHARP_SENSES));
 
     if (sk == SK_KNOW_GEO || sk == SK_KNOW_INF || sk == SK_KNOW_MAGIC ||
         sk == SK_KNOW_MYTH || sk == SK_KNOW_NATURE || sk == SK_KNOW_OCEANS ||

@@ -1,0 +1,35 @@
+# Make an elf rogue and photograph the character sheet.
+#
+# One assertion: an elf's Search must carry the Sharp Senses inherent bonus,
+# the same one its Spot and Listen already carry. lib/races.irh:1067-1068
+# promises "+2 insight bonus to all sensory-based skills (Search, Spot, and
+# Listen)" and grants only ABILITY(CA_SHARP_SENSES,2), lib/races.irh:952.
+#
+# A rogue, because a rogue has Search as a class skill and enough ranks that
+# the line appears on the sheet at all.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+e       # Race:     [e] Elf
+a       # Subrace:  [a] Elf (Standard)
+i       # Class:    [i] Rogue
+a       # Attributes: the first of the five offered sets
+e       # Alignment: [e] Neutral
+a       # First feat
+a       # Second feat
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+y       # Do you wish to worship <god>? -- yes
+a       # Personality archetype
+
+ESC     # dismiss the arrival-room description; now in play
+d       # character sheet
+W                       # Write Dump
+s h e e t ENTER         # filename: "sheet"
+@dump:afterdump
+ESC
+@quit

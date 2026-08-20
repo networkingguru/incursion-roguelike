@@ -47,6 +47,10 @@ AI_TOME Effect "Manual of Gainful Exercise" : EA_GENERIC
       if (EActor->HasAbility(CA_INHERANT_POTENTIAL))
         e.vDmg += 1d2;
       */
+      /* Loremaster "Bibliographic Insight", 5th level: an extra 1d2 points
+         from any tome. lib/prestige.irh:2052-2053 promises it. */
+      if (EActor->LevelAs($"Loremaster") >= 5)
+        e.vDmg += 1d2;
       EActor->GainInherentBonus(A_STR,e.vDmg,true);
       EActor->IdentByTrial(EItem);
       EItem->Remove(true);
@@ -66,6 +70,10 @@ AI_TOME Effect "Treatise of Efficious Celerity" : EA_GENERIC
       if (EActor->HasAbility(CA_INHERANT_POTENTIAL))
         e.vDmg += 1d2;
       */
+      /* Loremaster "Bibliographic Insight", 5th level: an extra 1d2 points
+         from any tome. lib/prestige.irh:2052-2053 promises it. */
+      if (EActor->LevelAs($"Loremaster") >= 5)
+        e.vDmg += 1d2;
       EActor->GainInherentBonus(A_DEX,e.vDmg,true);
       EActor->IdentByTrial(EItem);
       EItem->Remove(true);
@@ -85,6 +93,10 @@ AI_TOME Effect "Libram of Bodily Health" : EA_GENERIC
       if (EActor->HasAbility(CA_INHERANT_POTENTIAL))
         e.vDmg += 1d2;
       */
+      /* Loremaster "Bibliographic Insight", 5th level: an extra 1d2 points
+         from any tome. lib/prestige.irh:2052-2053 promises it. */
+      if (EActor->LevelAs($"Loremaster") >= 5)
+        e.vDmg += 1d2;
       EActor->GainInherentBonus(A_CON,e.vDmg,true);
       EActor->IdentByTrial(EItem);
       EItem->Remove(true);
@@ -104,6 +116,10 @@ AI_TOME Effect "Clear Thought" : EA_GENERIC
       if (EActor->HasAbility(CA_INHERANT_POTENTIAL))
         e.vDmg += 1d2;
       */
+      /* Loremaster "Bibliographic Insight", 5th level: an extra 1d2 points
+         from any tome. lib/prestige.irh:2052-2053 promises it. */
+      if (EActor->LevelAs($"Loremaster") >= 5)
+        e.vDmg += 1d2;
       EActor->GainInherentBonus(A_INT,e.vDmg,true);
       EActor->IdentByTrial(EItem);
       EItem->Remove(true);
@@ -123,6 +139,10 @@ AI_TOME Effect "Treatise of Revealed Enlightenment" : EA_GENERIC
       if (EActor->HasAbility(CA_INHERANT_POTENTIAL))
         e.vDmg += 1d2;
       */
+      /* Loremaster "Bibliographic Insight", 5th level: an extra 1d2 points
+         from any tome. lib/prestige.irh:2052-2053 promises it. */
+      if (EActor->LevelAs($"Loremaster") >= 5)
+        e.vDmg += 1d2;
       EActor->GainInherentBonus(A_WIS,e.vDmg,true);
       EActor->IdentByTrial(EItem);
       EItem->Remove(true);
@@ -142,6 +162,10 @@ AI_TOME Effect "Leadership and Influence" : EA_GENERIC
       if (EActor->HasAbility(CA_INHERANT_POTENTIAL))
         e.vDmg += 1d2;
       */
+      /* Loremaster "Bibliographic Insight", 5th level: an extra 1d2 points
+         from any tome. lib/prestige.irh:2052-2053 promises it. */
+      if (EActor->LevelAs($"Loremaster") >= 5)
+        e.vDmg += 1d2;
       EActor->GainInherentBonus(A_CHA,e.vDmg,true);
       EActor->IdentByTrial(EItem);
       EItem->Remove(true);
@@ -161,6 +185,10 @@ AI_TOME Effect "Manual of Fortuitous Methodology" : EA_GENERIC
       if (EActor->HasAbility(CA_INHERANT_POTENTIAL))
         e.vDmg += 1d2;
       */
+      /* Loremaster "Bibliographic Insight", 5th level: an extra 1d2 points
+         from any tome. lib/prestige.irh:2052-2053 promises it. */
+      if (EActor->LevelAs($"Loremaster") >= 5)
+        e.vDmg += 1d2;
       EActor->GainInherentBonus(A_LUC,e.vDmg,true);
       EActor->IdentByTrial(EItem);
       EItem->Remove(true);

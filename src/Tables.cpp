@@ -1326,6 +1326,7 @@ TextVal WeaponGroupNames[] = {
   { WG_FLEXIBLE, "Flexible" },
   { WG_FIREARMS, "Firearms" },
   { WG_FLAILS, "Flails" },
+  { WG_CROSSBOWS, "Crossbows" },
   { WG_SHIELDS, "Shields" },
   { WG_LARMOUR, "Light Armour" },
   { WG_MARMOUR, "Medium Armour" },

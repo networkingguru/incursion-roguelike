@@ -2109,6 +2109,7 @@ typedef signed int        hObj;
 #define WG_FIREARMS      0x00008000
 #define WG_LIGHT         0x00010000 /* Light-weight weapons */
 #define WG_FLAILS        0x00020000
+#define WG_CROSSBOWS     0x00040000 /* arbalest, cranquin, hand crossbow */
 #define WG_SHIELDS       0x10000000
 #define WG_LARMOUR        0x20000000
 #define WG_MARMOUR        0x40000000

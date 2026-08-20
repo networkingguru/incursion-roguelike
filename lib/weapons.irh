@@ -962,7 +962,7 @@ Item "flight arrow" : T_MISSILE {
 }
 
 Item "arbalest" : T_BOW {
-    Image: green ')'; Group: WG_SIMPLE | WG_ARCHERY; Range: 12;
+    Image: green ')'; Group: WG_SIMPLE | WG_ARCHERY | WG_CROSSBOWS; Range: 12;
     Mat: MAT_WOOD; Size: SZ_MEDIUM; Weight: 20; Cost: 35;
     SDmg: 1d10; LDmg: 1d4; Acc: +4; Crit: x5; Threat: 3; Spd: 135%;
     Flags: WT_TWO_HANDED, WT_CROSSBOW, WT_PENETRATING, WT_NO_STRENGTH, WT_NO_MELEE, WT_PIERCING;
@@ -977,7 +977,7 @@ Item "arbalest" : T_BOW {
 }
 
 Item "cranquin" : T_BOW {
-    Image: bright green ')'; Group: WG_EXOTIC; Range: 14;
+    Image: bright green ')'; Group: WG_EXOTIC | WG_CROSSBOWS; Range: 14;
     Mat: MAT_WOOD; Size: SZ_MEDIUM; Weight: 40; Cost: 35;
     SDmg: 1d12; LDmg: 1d8; Acc: +5; Crit: x5; Threat: 3; Spd: 135%;
     Flags: WT_TWO_HANDED, WT_CROSSBOW, WT_PENETRATING, WT_NO_STRENGTH, WT_NO_MELEE, WT_PIERCING, WT_STUNNING;
@@ -994,7 +994,7 @@ Item "cranquin" : T_BOW {
 }
 
 Item "hand crossbow" : T_BOW {
-    Image: bright purple ')'; Group: WG_EXOTIC; Range: 8;
+    Image: bright purple ')'; Group: WG_EXOTIC | WG_CROSSBOWS; Range: 8;
     Mat: MAT_MITHRIL; Size: SZ_TINY; Weight: 10; Cost: 1000;
     SDmg: 1d6; LDmg: 1d3; Acc: +5; Crit: x3; Threat: 3; Spd: 135%;
     Flags: WT_RACIAL, WT_CROSSBOW, WT_PENETRATING, WT_NO_STRENGTH, WT_WOOD_PARTS, WT_NO_MELEE, WT_PIERCING, WT_SUPER_SNEAK;
