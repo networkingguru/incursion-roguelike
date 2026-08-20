@@ -359,31 +359,102 @@ void Registry::Block(void **Block, size_t sz)
   }
 
 
-Object * Registry::Get(hObj h)
+/* The lookup, with no opinion about whether a missing object is a problem.
+   Every branch below is the body Get() used to have; the Error() call moved
+   out to Get(), which is now this plus the complaint. Splitting them lets a
+   caller that legitimately holds a stale handle avoid the log line without
+   paying for a second chain walk. See the header comment on this function in
+   inc/Base.h and Target::GetThingOrNULL in src/Target.cpp. inc-upw.39. */
+Object * Registry::GetQuiet(hObj h)
   {
-    RegNode *r ; 
+    RegNode *r ;
     ASSERT(h <= LastUsedHandle);
-    if (h <= 0) // ww: ouch, use to be !h || h<-1 ! 
+    if (h <= 0) // ww: ouch, use to be !h || h<-1 !
       return NULL;
-    else if (h < 128) // ww: && h > -1) -> implied by above "if" 
+    else if (h < 128) // ww: && h > -1) -> implied by above "if"
       return theGame->VM.GetSystemObject(h);
     r = &(ObjTable[h & OBJ_TABLE_MASK]);
     do {
       if (r->pObj && r->pObj->myHandle == h)
           return r->pObj;
-      else 
+      else
           r = r->Next;
-    } while (r); 
+    } while (r);
     //LoadObject(h);
+    return NULL;
+  }
+
+/* INCURSION_QUIET_PROBE -- the runnable check behind the Get()/GetQuiet()
+   split. tools/check_quiet_lookup.sh drives it; read that script for what the
+   pass condition is.
+
+   The 40-seed gate already catches the half of this that would change the
+   game: if GetQuiet() ever stops resolving a handle the way Get() does,
+   screens diverge. Nothing catches the other half. Get() is still what
+   oThing(), oCreature() and every ordinary caller use, and if its complaint
+   were lost in some later edit the loss would be silent -- diagnostics simply
+   stop arriving, and a quiet log reads as a healthy one.
+
+   So this probe asserts both halves against one live handle and one dead one,
+   and reports through Error() because errors.log is the channel under test.
+   Off unless the variable is set, like the other probes in this codebase. */
+void Registry::QuietProbe()
+  {
+    hObj live = 0, dead = 0, h;
+    Object *a, *b;
+
+    if (!getenv("INCURSION_QUIET_PROBE"))
+      return;
+
+    for (h = 128; h <= LastUsedHandle; h++)
+      { if (!live && Exists(h)) live = h;
+        if (!dead && !Exists(h)) dead = h;
+        if (live && dead) break;
+      }
+
+    /* A registry with no gap in it has nothing dead to look up. Say so rather
+       than inventing a handle above LastUsedHandle, which would trip Get()'s
+       own ASSERT and muddle the very log line this probe is reading. */
+    if (!live || !dead)
+      { Error("QUIET_PROBE: INCONCLUSIVE -- live=%d dead=%d of %d handles",
+          (int)live,(int)dead,(int)LastUsedHandle);
+        return;
+      }
+
+    a = Get(live); b = GetQuiet(live);
+    Error("QUIET_PROBE: live=%d resolves=%d agree=%d",
+      (int)live, a ? 1 : 0, (a == b) ? 1 : 0);
+
+    /* Order matters to the script: GetQuiet() must add nothing between this
+       line and the next, and Get() must add exactly one line after it. */
+    b = GetQuiet(dead);
+    Error("QUIET_PROBE: GetQuiet(%d) resolves=%d, and said nothing above",
+      (int)dead, b ? 1 : 0);
+    Error("QUIET_PROBE: calling Get(%d) now; one invalid-handle line must follow",
+      (int)dead);
+    a = Get(dead);
+    Error("QUIET_PROBE: Get(%d) resolves=%d, done", (int)dead, a ? 1 : 0);
+  }
+
+Object * Registry::Get(hObj h)
+  {
     /* If you arrived here from an "invalid object handle" line in
        logs/errors.log, read Target::GetThingOrNULL in src/Target.cpp first.
-       Every such line in the 40-seed gate as of 2026-08-20 came from there,
-       and none of them is a defect -- see inc-upw.39. This function is not
-       the right probe for "is this handle still alive"; Registry::Exists is,
-       and it answers in silence. Get() assumes its caller believes the
-       handle is live, and says so when it is not. */
-    Error("Registry::Get -- invalid object handle (%d)!",h);
-    return NULL;
+       Every such line in the 40-seed gate before 2026-08-20 came from there,
+       and none of them was a defect -- see inc-upw.39. This function is not
+       the right probe for "is this handle still alive". GetQuiet() is, and it
+       answers in silence. Get() assumes its caller believes the handle is
+       live, and says so when it is not.
+
+       The condition below reproduces exactly when the old single-function
+       Get() complained: a handle at or above 128 that reached the end of its
+       chain. A handle of 0 or less, and a system-object handle under 128 that
+       resolves to nothing, both returned NULL without a word before and still
+       do. */
+    Object *o = GetQuiet(h);
+    if (!o && h >= 128)
+      Error("Registry::Get -- invalid object handle (%d)!",h);
+    return o;
   }
 
 bool Registry::Exists(hObj h)

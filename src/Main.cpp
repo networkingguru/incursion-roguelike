@@ -221,6 +221,11 @@ void Game::Play() {
     static int16 MonsterDensity[256];
     ASSERT(mp && pp)
 
+    /* Off unless INCURSION_QUIET_PROBE is set, and run here because it needs a
+       registry with objects in it. See Registry::QuietProbe and
+       tools/check_quiet_lookup.sh. inc-upw.39. */
+    theRegistry->QuietProbe();
+
     doSave = false;
     doLoad = true;
     doAutoSave = false;

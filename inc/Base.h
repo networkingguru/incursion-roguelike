@@ -713,6 +713,19 @@ class Registry
     hObj  RegisterObject(Object*o,bool loaded=false);
     void  RemoveObject(Object*);
     Object * Get(hObj h);
+    /* Get() without the complaint. Identical lookup and identical result; the
+       only difference is that a handle whose object is gone returns NULL in
+       silence instead of logging "invalid object handle". For a caller that
+       keeps a handle across the object's lifetime -- a monster's target list
+       above all -- a dead handle is the ordinary state and not a fault. See
+       Target::GetThingOrNULL in src/Target.cpp, and inc-upw.39. Do NOT reach
+       for Exists()-then-Get() instead: both walk the same hash chain, and
+       Registry::Get is upstream's second-hottest function -- see the note
+       above OBJ_TABLE_SIZE in inc/Defines.h. */
+    Object * GetQuiet(hObj h);
+    /* Self-check for the split above. Off unless INCURSION_QUIET_PROBE is set.
+       Driven by tools/check_quiet_lookup.sh. */
+    void  QuietProbe();
     bool   Exists(hObj h);
     void * GetData(hData h);
     hObj   GetModuleHandle() { return hModule; }
