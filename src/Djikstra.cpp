@@ -119,8 +119,8 @@ static rID      MCCacheID[MC_CACHE_MAX];
 static EvReturn MCCacheVal[MC_CACHE_MAX];
 
 bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
-                       Creature *runner, int32 dangerFactor, 
-                       uint16 *ThePath)
+                       Creature *runner, int32 dangerFactor,
+                       uint16 *ThePath, int32 *outCost)
   {
     int32 xy, i, c; int16 x, y, nx, ny;
     static int16 Dist[256][256];
@@ -219,6 +219,9 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
       MCCacheOn = false;
       return false;
       }
+
+    if (outCost)
+      *outCost = Dist[tx][ty];
 
     do {
       c++;

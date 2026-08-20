@@ -445,9 +445,12 @@ class Map: public Object
     void   PQInsert(uint16 Node, int16 Weight);
     int32  PQPeekMin();
     bool   PQPopMin();
+    /* outCost, when given, receives the total cost of the route found. It is
+       written only when the function returns true. Callers that must compare
+       two destinations need this; the path itself does not carry the cost. */
     bool   ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
                         Creature *c, int32 dangerFactor,
-                        uint16 *ThePath = NULL); 
+                        uint16 *ThePath = NULL, int32 *outCost = NULL);
 #define DF_ALL_SAFE             0
 #define DF_IGNORE_TRAPS         1
 #define DF_IGNORE_TERRAIN       2

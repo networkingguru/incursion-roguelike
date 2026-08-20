@@ -1240,6 +1240,75 @@ Glyph TextTerm::GetGlyph(int16 x, int16 y) {
     return AGetChar(x - XOff + Windows[WIN_MAP].Left, y - YOff + Windows[WIN_MAP].Top);
 }
 
+/* Does the player remember a staircase of this kind at this square?
+   xval is POR_UP_STAIR or POR_DOWN_STAIR. */
+static bool KnownStairAt(Map *m, int16 x, int16 y, int16 xval) {
+    if (!m->InBounds(x, y))
+        return false;
+    if (!m->At(x, y).Memory)
+        return false;
+    Feature *f = m->KnownFeatureAt(x, y);
+    return f && f->Type == T_PORTAL && TFEAT(f->fID)->xval == xval;
+}
+
+/* Each safety level the route search has to give up costs this much rank.
+   Dijkstra caps a real route cost at 30000, so the penalty always dominates:
+   a staircase the player can reach safely sorts before one that needs the
+   trap-ignoring search, however much further away it is. */
+#define STAIR_TIER_PENALTY 100000
+
+/* How good a destination is this staircase? Lower is better. The number is
+   the cost of walking there, plus a penalty for each safety level given up.
+   Player::RunTo tries exactly these three danger settings in exactly this
+   order, so the square this ranks first is the square 'R' will really take.
+   A staircase reachable under none of them ranks last but still ranks, so
+   the player can still put the cursor on it and look. */
+static int32 StairRank(Map *m, Player *p, int16 tx, int16 ty) {
+    static const int32 Tier[3] = { DF_ALL_SAFE, DF_IGNORE_TRAPS,
+                                   DF_IGNORE_TRAPS | DF_IGNORE_TERRAIN };
+    static uint16 scratch[MAX_PATH_LENGTH];
+    int16 i; int32 cost;
+
+    for (i = 0; i != 3; i++)
+        if (m->ShortestPath((uint8)p->x, (uint8)p->y, (uint8)tx, (uint8)ty,
+                            p, Tier[i], scratch, &cost))
+            return i * STAIR_TIER_PENALTY + cost;
+
+    return 3 * STAIR_TIER_PENALTY;
+}
+
+/* Order two staircases. Rank decides; the square's own map index breaks a
+   tie, so two equally costly staircases still have a definite order and the
+   player can step through both of them. */
+static bool StairBefore(int32 r1, int32 i1, int32 r2, int32 i2) {
+    return r1 < r2 || (r1 == r2 && i1 < i2);
+}
+
+/* Diagnostic: set INCURSION_STAIR_PROBE=1 to record every '<' and '>' press
+   made on the overview map -- the square the cursor came from, every
+   staircase the scan accepted with the rank StairRank gave it, and the
+   square the press moved to. It tells apart "the wrong staircases are
+   candidates" from "the candidates are in the wrong order", and it is the
+   oracle tools/check_stair_cycle.sh reads. */
+static void StairProbe(const char *fmt, ...) {
+    static FILE *f = NULL;
+    va_list ap;
+    if (!getenv("INCURSION_STAIR_PROBE"))
+        return;
+    if (!f) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%slogs/stairprobe.log",
+            (const char*)T1->IncursionDirectory);
+        f = fopen(path, "a");
+    }
+    if (!f)
+        return;
+    va_start(ap, fmt);
+    vfprintf(f, fmt, ap);
+    va_end(ap);
+    fflush(f);
+}
+
 void TextTerm::ShowMapOverview() {
     int16 sx, sy, x, y, mx, my, x1, x2, y1, y2, vx, vy, tx, ty;
     bool open, seen, onmap; int16 ch, mag, magn;
@@ -1261,6 +1330,11 @@ void TextTerm::ShowMapOverview() {
 
     SetWin(WIN_BIGMAP);
     SetMode(MO_SPLASH);
+
+    /* The check script needs to tell "the map never opened" from "the map
+       opened and the staircase keys did nothing". Only the first of those
+       is an inconclusive session; the second is the inc-pw1.5 regression. */
+    StairProbe("open at=%d,%d\n", (int)p->x, (int)p->y);
 
     vx = p->x;
     vy = p->y;
@@ -1342,11 +1416,26 @@ void TextTerm::ShowMapOverview() {
         switch (ch)
         {
             // ww: find Stairs going up ...
+            /* upstream: '<' and '>' never reached this switch, so the two
+               keys a player reaches for closed the map instead of finding a
+               staircase. GetCharCmd in KY_CMD_ARROW_MODE returns no command
+               outside the eight compass arrows -- src/Wposix.cpp:1351, and
+               the same three lines in Wcurses.cpp:1382 and Wlibtcod.cpp:1618
+               -- so the keyset hit on KY_CMD_UP is dropped and the raw
+               character comes back instead. The two command labels were
+               therefore dead and both keys fell to default:. ',' and '.'
+               worked all along because KY_COMMA and KY_PERIOD are the raw
+               characters. The raw '<' and '>' are added beside them.
+               Not a port artefact: the filter, the keysets and this switch
+               are all upstream's, and the Win32 build drops the command at
+               the same line. Observed 2026-08-20. inc-pw1.5. Not sent. */
         case KY_CMD_UP:
         case KY_COMMA:
+        case '<':
             searching = SEARCH_UP; break;
         case KY_CMD_DOWN:
         case KY_PERIOD:
+        case '>':
             searching = SEARCH_DOWN; break;
 
         case KY_TAB:
@@ -1426,13 +1515,73 @@ void TextTerm::ShowMapOverview() {
 
         }
 
-        if (searching != SEARCH_NONE) {
+        if (searching == SEARCH_UP || searching == SEARCH_DOWN) {
+            /* Offer the staircases in the order they really cost to walk to,
+               closest first, and step to the next one on each further press.
+               The reading-order scan below, which this replaced for stairs,
+               took whichever staircase came next down the rows of the map.
+               On a level with two of them that was rarely the near one. */
+            int16 want = (searching == SEARCH_UP) ? POR_UP_STAIR : POR_DOWN_STAIR;
+            int16 wx, wy;
+            int16 bestX = -1, bestY = -1, nextX = -1, nextY = -1;
+            int32 bestRank = 0, bestIndex = 0, nextRank = 0, nextIndex = 0;
+            int32 curRank = 0, curIndex = vy * m->SizeX() + vx;
+            bool onStair = KnownStairAt(m, vx, vy, want);
+
+            if (onStair)
+                curRank = StairRank(m, p, vx, vy);
+
+            StairProbe("press dir=%s cur=%d,%d currank=%d onstair=%d\n",
+                searching == SEARCH_UP ? "up" : "down",
+                (int)vx, (int)vy, (int)curRank, (int)onStair);
+
+            for (wy = 0; wy < m->SizeY(); wy++)
+                for (wx = 0; wx < m->SizeX(); wx++) {
+                    if (!KnownStairAt(m, wx, wy, want))
+                        continue;
+
+                    int32 rank = StairRank(m, p, wx, wy);
+                    int32 index = wy * m->SizeX() + wx;
+
+                    StairProbe("cand x=%d y=%d rank=%d\n",
+                        (int)wx, (int)wy, (int)rank);
+
+                    if (bestX == -1 || StairBefore(rank, index, bestRank, bestIndex)) {
+                        bestRank = rank; bestIndex = index;
+                        bestX = wx; bestY = wy;
+                    }
+
+                    /* the nearest staircase the player has not been shown yet */
+                    if (onStair && StairBefore(curRank, curIndex, rank, index))
+                        if (nextX == -1 || StairBefore(rank, index, nextRank, nextIndex)) {
+                            nextRank = rank; nextIndex = index;
+                            nextX = wx; nextY = wy;
+                        }
+                }
+
+            if (bestX == -1) {
+                StairProbe("chose none\n");
+                Message(searching == SEARCH_UP ? "No ascending stairs found!"
+                                               : "No descending stairs found!");
+            } else {
+                /* off the end of the list: start again at the closest one */
+                if (nextX == -1) {
+                    nextX = bestX;
+                    nextY = bestY;
+                    nextRank = bestRank;
+                }
+                StairProbe("chose x=%d y=%d rank=%d\n",
+                    (int)nextX, (int)nextY, (int)nextRank);
+                x1 = x2 = vx = nextX;
+                y1 = y2 = vy = nextY;
+            }
+        } else if (searching == SEARCH_UNEXPLORED) {
             int wx, wy, iter;
             int good_x = -1, good_y = -1;
             // go through the map twice, first looking for things *after* this
             // point, then looking for things *before* this point -- this
             // allows the player to cycle through all things matching this
-            // description by pressing the key over and over 
+            // description by pressing the key over and over
             int current_index = vy * m->SizeX() + vx;
             for (iter = 0; iter < 2 && good_x == -1; iter++)
                 for (wy = 0; wy < m->SizeY() && good_x == -1; wy++)
@@ -1445,18 +1594,8 @@ void TextTerm::ShowMapOverview() {
                         if (iter == 0 && w_index <= current_index) continue;
                         else if (iter == 1 && w_index >= current_index) continue;
 
-                        Feature * f = m->KnownFeatureAt(wx, wy);
-
-                        if (searching == SEARCH_UP)
-                            if (!f || f->Type != T_PORTAL ||
-                                TFEAT(f->fID)->xval != POR_UP_STAIR) continue;
-
-                        if (searching == SEARCH_DOWN)
-                            if (!f || f->Type != T_PORTAL ||
-                                TFEAT(f->fID)->xval != POR_DOWN_STAIR) continue;
-
-                        if (searching == SEARCH_UNEXPLORED) {
-                            // find a place we do know that 
+                        {
+                            // find a place we do know that
                             // (1) is not solid
                             // (2) touches a place we don't know ...
                             // (3) ... or touches a door that touches a place we don't know
@@ -1488,13 +1627,7 @@ void TextTerm::ShowMapOverview() {
                         good_y = wy;
                     }
             if (good_x == -1) {
-                switch (searching) {
-                case SEARCH_NONE: Message("Not found!"); break;  // !? 
-                case SEARCH_UP: Message("No ascending stairs found!"); break;
-                case SEARCH_DOWN: Message("No descending stairs found!"); break;
-                case SEARCH_UNEXPLORED:
-                    Message("No explored areas found!"); break;
-                }
+                Message("No explored areas found!");
             } else {
                 x1 = x2 = vx = good_x;
                 y1 = y2 = vy = good_y;

@@ -1,0 +1,52 @@
+# Press the overview map's staircase keys and record what they choose. This
+# is the oracle for two changes made on 2026-08-20: the fix that let '<' and
+# '>' reach the staircase search at all (inc-pw1.5), and the change that made
+# the search offer staircases in the order they cost to walk to (inc-pw1.4).
+#
+#   INCURSION_STAIR_PROBE=1 tools/headless.sh tools/keys/stair-cycle.keys 1
+#
+# Read the result with tools/check_stair_cycle.sh, which is what asserts on
+# the probe log. This file only produces the log.
+#
+# THE ROUTE IN IS [l] THEN [o], AND [o] ALONE DOES NOT WORK. In play mode
+# GetCharCmd walks the keyset backwards (src/Wposix.cpp:1270), so 'o' reaches
+# KY_CMD_OPEN at src/Tables.cpp:4636 and never KY_CMD_OVERVIEW_MAP at :4616.
+# In the Look prompt it walks forwards and finds the overview entry first.
+# Both keysets are built the same way, so the map has one route in.
+#
+# Every letter here is lowercase on purpose. TokenToKey (src/Wposix.cpp:892)
+# sets SHIFT for an uppercase token, and these bindings demand no modifier,
+# so 'O' matches nothing at all.
+#
+# '<' comes before '>' because seed 1 knows an ascending staircase on arrival
+# and no descending one. A press that finds nothing opens a message box, and
+# the box eats the next key; putting the fruitless presses last keeps that
+# from swallowing the presses the check wants to read.
+#
+# ponytail: seed 1 knows exactly ONE staircase of each kind, so this session
+# proves the search runs, proves the choice is the cheapest candidate, and
+# proves the cursor wraps -- but it cannot prove the ORDER of two candidates,
+# because it never has two. To lift that ceiling the session needs a level
+# where the character remembers two staircases of one kind. A blind walk does
+# not get there: the character stays boxed in the entry chamber, and 55
+# rounds of the map's own Tab-then-Run explore did not either. A potion or
+# spell of detect stairs would do it in one keystroke, and the wizard menu
+# can conjure one ([w] y [e]), but its acquisition prompt is an interactive
+# picker that this key format cannot drive yet.
+
+@include chargen.keys
+
+# A few turns so the level settles, then a short walk away from the arrival
+# staircase. The walk matters: standing on the staircase makes its path cost
+# zero, and a zero tells the check nothing about whether the cost is real.
+.*3
+DOWN*4 LEFT*4
+@dump:arrival
+
+l o                 # Look, then the overview map
+<*6                 # ascending staircases: more presses than the level has
+>*6                 # descending staircases: seed 1 knows none of these
+ESC
+@dump:left-the-map
+
+@quit
