@@ -375,6 +375,13 @@ Object * Registry::Get(hObj h)
           r = r->Next;
     } while (r); 
     //LoadObject(h);
+    /* If you arrived here from an "invalid object handle" line in
+       logs/errors.log, read Target::GetThingOrNULL in src/Target.cpp first.
+       Every such line in the 40-seed gate as of 2026-08-20 came from there,
+       and none of them is a defect -- see inc-upw.39. This function is not
+       the right probe for "is this handle still alive"; Registry::Exists is,
+       and it answers in silence. Get() assumes its caller believes the
+       handle is live, and says so when it is not. */
     Error("Registry::Get -- invalid object handle (%d)!",h);
     return NULL;
   }

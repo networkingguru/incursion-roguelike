@@ -360,6 +360,34 @@ Thing * Target::GetThingOrNULL()
          instead of falling in here by accident. Evidence: Traced (this
          function, GetCreature()'s ASSERT, and ASSERT's log-and-continue
          definition, read together). Tracking: inc-upw.13. Not sent. */
+
+      /* READ THIS BEFORE CHASING "Registry::Get -- invalid object handle".
+         Those lines in logs/errors.log come from here, and they are OURS, not
+         a defect in the game. Diagnosed 2026-08-20 as inc-upw.39; the
+         backtraces are in that bead.
+
+         A target keeps the handle of whatever the monster was interested in.
+         Nothing clears that handle when the target dies -- TargetSystem::
+         Retarget simply builds a fresh list later -- so between retargets a
+         dead handle here is the ordinary state of affairs, not a fault.
+
+         The old code asked Registry::Exists() first, and Exists() answers
+         "no" in silence. The inc-upw.13 fix above needs the object itself to
+         test its type, so it asks Registry::Get() instead, and Get() prints
+         "invalid object handle" (src/Registry.cpp) before returning NULL.
+         Both versions hand this function back nothing and both return NULL to
+         the caller. The behaviour did not change; only the noise did.
+
+         Measured cost: eight lines across seeds 3, 25 and 26 of the 40-seed
+         gate, which is why tools/gates/dive.baseline no longer matches. The
+         cure is to test Exists() before calling Get(), keeping the type check:
+
+             if (!data.Creature.c || !theRegistry->Exists(data.Creature.c))
+               return NULL;
+
+         Not applied yet -- see inc-upw.39 for why the decision is open. Do NOT
+         re-record the gate baseline before it is settled, or the noise becomes
+         expected output and this stops being findable. */
       if (!data.Creature.c) return NULL;
       {
         Object *o = theRegistry->Get(data.Creature.c);
@@ -369,7 +397,8 @@ Thing * Target::GetThingOrNULL()
     }
 
     case TargetItem:
-      /* Same wrong-type risk as above, for the item handle in data.Item.i. */
+      /* Same wrong-type risk as above, for the item handle in data.Item.i,
+         and the same "invalid object handle" noise for a dead one. */
       if (!data.Item.i) return NULL;
       {
         Object *o = theRegistry->Get(data.Item.i);
