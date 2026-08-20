@@ -94,6 +94,58 @@ struct groupHeader
     int32  LastHandle;
   };
 
+/* upstream: LoadGroup and SaveGroup leak their Registry mode flag on every
+   throw, and the next load then frees stack garbage. Base-code defect, not a
+   port artefact: no typedef, compiler or platform of this port is involved --
+   the throw sites, the two flags and the constructors' loading test below are
+   all original code, and the same source built for Win32 fails the same way.
+   Tracking: inc-w7q. Not sent.
+
+   Evidence: Observed here on 2026-08-19, both directions. A sandboxed copy of
+   mod/Incursion.Mod with its fileHeader.Version patched to a stamp this binary
+   refuses, driven by a key script that asks the start menu for a new character
+   six times (each ask runs Game::LoadModules -> LoadGroup). Before: one "File
+   Version Mismatch" line, then exit 134, and under lldb the abort reads
+   "pointer being freed was not allocated" with frame #6 in
+   Registry::LoadGroup. After: six refusals and exit 0.
+
+   Credit: the fix, the root cause and the first evidence are Eugene
+   Archibald's, in commit 7ab1ae8 of the downstream fork
+   earchibald/incursion-roguelike. This tree re-derived the change by hand,
+   against its own header size checks below, and re-measured it. That fork
+   tracks the defect under an id of its own which means something else in this
+   tracker, so it is deliberately not repeated.
+
+   THE MECHANISM. Both functions announce what they are doing by setting a
+   Registry mode flag, and both clear it only where they succeed. Every throw
+   in between -- a version mismatch, a corrupt chunk, a missing group, a failed
+   allocation -- leaves the Registry claiming it is still loading or still
+   saving, and leaks the memory file with it.
+
+   A stuck loadMode is not a cosmetic leak. Array<>::Array()
+   (src/Base.cpp:546) and String::String() (src/Base.cpp:136) both return
+   WITHOUT initialising themselves while theRegistry->Loading() is true,
+   because an object rebuilt from a file must keep the array and the strings it
+   was saved with, not fresh empty ones. So every Array and every String built
+   anywhere in the process afterwards is uninitialised. The first casualty is
+   the NEXT LoadGroup's own LoadedObjects, which is stack garbage from the
+   moment it is declared; unwinding the next throw hands that garbage to
+   free(): "pointer being freed was not allocated", abort.
+
+   The flag is restored however the function leaves, which is the only way to
+   state the invariant once instead of at every exit. */
+class RegistryScope
+  {
+    bool  &flag;
+    CFile **cf;
+    public:
+      RegistryScope(bool &f, CFile **c) : flag(f), cf(c) { }
+      ~RegistryScope()
+        { flag = false;
+          if (*cf)
+            { delete *cf; *cf = NULL; } }
+  };
+
 Registry::Registry()
   {
     memset(ObjTable,0,sizeof(RegNode)*OBJ_TABLE_SIZE);
@@ -478,6 +530,15 @@ DoneDeletion:
 
     /* Initialize the Memory File */
     CFile *cf = new CFile(&t);
+    /* upstream: the same guard LoadGroup uses, for the same reason. A write
+       that fails -- a full disk is the ordinary way -- must not leave the
+       Registry stuck in saving mode, where Registry::Block takes the wrong
+       branch for every object serialised afterwards. Evidence: Observed for
+       the loading half (see RegistryScope above), Traced for this half -- no
+       write failure was staged here. Ported from Eugene Archibald's commit
+       7ab1ae8 in earchibald/incursion-roguelike. Tracking: inc-w7q. Not
+       sent. */
+    RegistryScope guard(saveMode, &cf);
 
     /* Write the objects in sequential order, each with a single byte in
     front of it to tell its type. */
@@ -557,9 +618,11 @@ DoneDeletion:
     t.FWrite(&gh,sizeof(gh));
 
     delete cf;
+    cf = NULL;
 
     /* Fix all the pointers in memory to data blocks, so that they point
-    properly again. */
+    properly again. This loop MUST run with saveMode off, so the flag is
+    cleared here and not left to the guard. */
     saveMode = 0;
     for(i=0;i!=OBJ_TABLE_SIZE;i++) {
         if (ObjTable[i].pObj) {
@@ -591,6 +654,11 @@ int16 Registry::LoadGroup(Term &t, hObj hGroup, bool use_lz) {
     hData  DataHandle;
     uint32 DataSize;
     uint32 Seperator;
+    /* Declared here, and NOT at the label below, so that the guard covers the
+       throws above it and so that "goto foundGroup" no longer jumps across an
+       initialisation. See RegistryScope. inc-w7q. */
+    CFile *cf = NULL;
+    RegistryScope guard(loadMode, &cf);
 
     ClearDataTable();
 
@@ -649,7 +717,7 @@ foundGroup:
             throw ECORRUPT;
     }
 
-    CFile *cf = new CFile(&t);
+    cf = new CFile(&t);
     cf->LoadCompressed(t.Tell(), gh.compSize, gh.groupSize, use_lz);
 
     LastUsedHandle = max(LastUsedHandle, gh.LastHandle);
@@ -789,10 +857,8 @@ foundGroup:
       (*(LoadedObjects[i]))->Serialize(*this,false);
       }
 
-    loadMode = false;
-    
-    delete cf;
-    
+    /* loadMode and cf are cleared by the guard, on this path and on every
+       throw above. Clearing them here as well would only say it twice. */
     return 0;
 }
 
