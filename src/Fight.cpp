@@ -1592,8 +1592,24 @@ OvercomeNausea:
             return ABORT;
 
         Reveal(true);
+        /* upstream: base-code defect, the fix is ours. Reveal() can delete this
+           creature -- see the full account at the fix site in src/Creature.cpp
+           (Creature::MakeNoise) -- and everything below here reads this->m and
+           this->x/y: two MapIterate loops and a m->LineOfFire. MapIterate is
+           worse than it looks, because its initialiser dereferences m before
+           the two null checks the macro already carries (inc/Base.h:92,
+           tracked as inc-upw.38). Upstream's for the same reason as the parent
+           site: plain C++ evaluation order, no platform, compiler or width
+           dependence. Returning DONE is right rather than ABORT -- the roar
+           happened and the action is spent; only the reactions of creatures
+           near a roarer that no longer exists are skipped.
+           Tier Traced: read out of the code. This site has NOT been observed
+           to fire; the observed crash is the src/Creature.cpp one.
+           inc-upw.37. NOT SENT upstream. */
+        if (!m || x == -1)
+            return DONE;
         if (e.AType == A_ROAR)
-            MapIterate(m,t,i) 
+            MapIterate(m,t,i)
                 if (t->isCreature() && DistFrom(t) <= 20)
                     if (t->HasStati(SINGING))
                         if (t->GetStati(SINGING)->Val == BARD_COUNTER) {

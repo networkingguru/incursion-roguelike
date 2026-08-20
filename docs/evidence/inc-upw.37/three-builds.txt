@@ -1,0 +1,35 @@
+Three builds, commit 2f58be3, seed 3390, tools/keys/dive.keys, live Options.Dat,
+INCURSION_OOB_PROBE=1. One compile flag between them. Run 2026-08-20.
+
+=== unmodified (-DINCURSION_OOB_PROBE only)
+--- after the session ---
+ended:      cleanly (script finished or asked to quit)
+screens:    11 in /private/tmp/claude-501/-Users-brianhill-Scripts-Incursion/92e8f69c-5f00-40dd-ba98-e1b9f5252249/scratchpad/wt-2f58be3/logs/runs/20260820-113019-dive/logs/screens
+death:      none
+stuck-prompt: none
+errors:     47955 logged, distinct messages:
+  47954 ASSERT failed: 'InBounds(x,y)' in file inc/Map.h, line 223.
+     1 ASSERT failed: 'm->InBounds(_x,_y)' in file src/Display.cpp, line 265.
+map audit:  armed, no inconsistencies found
+
+=== widen (-DINCURSION_OOB_PWFIX_WIDEN)
+--- after the session ---
+ended:      exit 139
+screens:    2 in /private/tmp/claude-501/-Users-brianhill-Scripts-Incursion/92e8f69c-5f00-40dd-ba98-e1b9f5252249/scratchpad/wt-2f58be3/logs/runs/20260820-112421-dive/logs/screens
+death:      none
+stuck-prompt: none
+errors:     4 logged, distinct messages:
+     3 Registry::Get -- invalid object handle (55538)!
+     1 ASSERT failed: 'InBounds(x,y)' in file inc/Map.h, line 223.
+map audit:  armed, no inconsistencies found
+
+=== collapse (-DINCURSION_OOB_PWFIX)
+--- after the session ---
+ended:      cleanly (script finished or asked to quit)
+screens:    11 in /private/tmp/claude-501/-Users-brianhill-Scripts-Incursion/92e8f69c-5f00-40dd-ba98-e1b9f5252249/scratchpad/wt-2f58be3/logs/runs/20260820-114421-dive/logs/screens
+death:      STUCK -- the run ended with 'Die? [yn]' still on screen,
+            unanswered. The character's fate was never settled, and
+            nothing after the prompt appeared is real gameplay.
+stuck-prompt: none
+errors:     none
+map audit:  armed, no inconsistencies found

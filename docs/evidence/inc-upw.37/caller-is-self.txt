@@ -1,0 +1,15 @@
+(lldb) print c
+(Monster *) 0x0000000999df8700
+(lldb) print (void*)c
+(Monster *) 0x0000000999df8700
+(lldb) print (void*)this
+(Monster *) 0x0000000999df8700
+(lldb) print c == this
+(bool) true
+(lldb) print c->m
+(Map *) nullptr
+(lldb) print c->x
+(int16) -1
+(lldb) print this->HasStati(MOUNT)
+                            ^
+                            error: use of undeclared identifier 'MOUNT'

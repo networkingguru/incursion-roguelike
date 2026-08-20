@@ -1,0 +1,27 @@
+Process 92136 launched: '/private/tmp/claude-501/-Users-brianhill-Scripts-Incursion/92e8f69c-5f00-40dd-ba98-e1b9f5252249/scratchpad/wt-2f58be3/incursion-oob-widen' (arm64)
+Process 92136 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x10)
+    frame #0: 0x0000000100042d38 incursion-oob-widen`Map::At(this=0x0000000000000000, x=-1, y=-1) at Map.h:227:34
+   224 	        if (!InBounds(x,y))
+   225 	          {
+   226 	#ifdef INCURSION_OOB_PROBE
+-> 227 	            OobProbeAtCensus(x,y,sizeX,sizeY);
+    	                                 ^
+   228 	#endif
+   229 	            return Grid[0];
+   230 	          }
+Target 0: (incursion-oob-widen) stopped.
+(lldb) bt
+* thread #1, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x10)
+  * frame #0: 0x0000000100042d38 incursion-oob-widen`Map::At(this=0x0000000000000000, x=-1, y=-1) at Map.h:227:34
+    frame #1: 0x000000010003c654 incursion-oob-widen`Map::FieldAt(this=0x0000000000000000, x=-1, y=-1, FType=4096) at Inline.h:408:10
+    frame #2: 0x000000010003c484 incursion-oob-widen`Map::MakeNoiseXY(this=0x0000000000000000, x=-1, y=-1, radius=12) at Creature.cpp:314:7
+    frame #3: 0x000000010003ca20 incursion-oob-widen`Creature::MakeNoise(this=0x00000009efdf8700, radius=12) at Creature.cpp:349:11
+    frame #4: 0x0000000100122394 incursion-oob-widen`Creature::Cast(this=0x00000009efdf8700, e=0x0000000100493850) at Magic.cpp:2671:19
+    frame #5: 0x000000010003f658 incursion-oob-widen`Creature::Event(this=0x00000009efdf8700, e=0x0000000100493850) at Creature.cpp:741:20
+    frame #6: 0x0000000100093f18 incursion-oob-widen`ThrowTo(e=0x0000000100493850, t=0x00000009efdf8700) at Event.cpp:382:9
+    frame #7: 0x0000000100093c48 incursion-oob-widen`ThrowEvent(e=0x0000000100493850) at Event.cpp:341:20
+    frame #8: 0x000000010009486c incursion-oob-widen`RealThrow(e=0x0000000100493850) at Event.cpp:444:11
+    frame #9: 0x00000001000953d0 incursion-oob-widen`ThrowEff(Ev=37, eID=16778523, p1=0x00000009efdf8700, p2=0x00000009eefe1500, p3=0x0000000000000000, p4=0x0000000000000000) at Event.cpp:595:7
+    frame #10: 0x00000001001851f4 incursion-oob-widen`Monster::ChooseAction(this=0x00000009efdf8700) at Monster.cpp:1388:21
+    frame #11: 0x000000010012ad18 incursion-oob-widen`Game::Play(this=0x00000009eec00000) at Main.cpp:342:41

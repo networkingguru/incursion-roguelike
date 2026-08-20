@@ -1,0 +1,10 @@
+frame select 3
+print c
+print (void*)c
+print (void*)this
+print c == this
+print c->m
+print c->x
+print this->HasStati(MOUNT)
+print this->GetStatiObj(MOUNT)
+quit

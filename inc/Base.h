@@ -88,8 +88,19 @@ template<class S,int32 Initial,int32 Delta>
   };
 
 
+/* upstream: base-code defect, the fix is ours. The condition tests 'm &&' and
+   the increment tests 'm ?', and the initialiser -- which runs before either --
+   tested nothing and dereferenced m->Things[0]. Guarding m twice and not a
+   third time is not a design: the two guards say plainly that the author
+   expected m to be null sometimes, and this is the missing third. It is
+   upstream's because it is plain C macro expansion and C++ evaluation order,
+   identical on Win32 with the original typedefs. Reachable: src/Fight.cpp runs
+   MapIterate two lines after a Reveal(true) that can delete the creature and
+   null its m (inc-upw.37).
+   Tier Traced: read out of the macro, never observed to fire.
+   inc-upw.38. NOT SENT upstream. */
 #define MapIterate(m,t,i) \
-    for (i = 0, t = (Creature*)oThing(m->Things[0]); m && m->Things[i]; i++, (t = m ? (Creature*)oThing(m->Things[i]) : NULL))
+    for (i = 0, t = m ? (Creature*)oThing(m->Things[0]) : NULL; m && m->Things[i]; i++, (t = m ? (Creature*)oThing(m->Things[i]) : NULL))
 
 void* x_realloc(void *block, size_t unit, size_t sz, size_t osz);
 
@@ -293,13 +304,58 @@ struct Rect
         static Rect r;
         if (sx>=(x2-x1))
           { r.x1 = x1+1; r.x2 = x2-1;
-#if defined(INCURSION_OOB_PWFIX) || defined(INCURSION_OOB_PWFIX_WIDEN)
-#if defined(INCURSION_OOB_PWFIX_WIDEN)
+            /* upstream: base-code defect, the fix is ours. inc-65j, tier
+               Observed, NOT SENT in this form -- see the provenance note at the
+               end of this comment. The same repair is applied to the y branch
+               below; this is the only marker for both.
+
+               THE DEFECT. When the wanted size does not fit, this branch insets
+               by one on each side instead. With a space two squares across or
+               less that puts the far edge BEFORE the near edge, and the
+               function has no way to report failure, so it returns an
+               inside-out rectangle. Upstream's because it is plain integer
+               arithmetic on uint8 fields: it inverts on Win32 with the original
+               typedefs exactly as it does here.
+
+               WHAT THE CALLER DOES WITH IT, which is why this matters.
+               PlaceWithin has exactly one caller, src/MakeLev.cpp:2948, and the
+               rectangle it returns is the WALL RING of a room's inner chamber:
+               the caller walks its four edges writing wall, then punches a door
+               into one of them. An inside-out ring is walked backwards, and
+               that is the birthplace of the 47,954 out-of-bounds Map::At()
+               reads measured on seed 3390 (docs/evidence/inc-5xn/).
+
+               WHY WIDEN AND NOT COLLAPSE. Two repairs were built and measured;
+               both take that seed's out-of-bounds reads to zero. Collapsing to
+               a single row leaves a ring one square thick -- a bare line of
+               wall with a door onto nothing -- and it slips past the caller's
+               OWN too-thin corrector twelve lines below the call
+               ('if (r.y1 + 1 == r.y2)'), which tests for a ring exactly two
+               across and so never sees a ring of one. Widening to the whole
+               area feeds that corrector a two-row ring, which it recognises and
+               expands into a real chamber. Collapsing is also wrong in the
+               degenerate case: where the space is a single square it returns a
+               row at y1+1, outside the space entirely, while widening stays
+               inside. The cost of widening is the one-square margin every other
+               path here keeps; the caller has already inset this area by two,
+               so that margin is affordable. Brian chose this variant on
+               2026-08-20 with both measurements in front of him.
+
+               PROVENANCE OF THE REPORT. The out-of-bounds reads are reported
+               upstream as rmtew#40 with a patch in rmtew#41, both open. Neither
+               names THIS repair site: the reply posted on #40 on 2026-08-19
+               recommends reserving two squares in PlaceWithinSafely and ends by
+               asking rmtew which site he prefers, and he has not answered. So
+               the defect is public and this repair is not.
+
+               Tier Observed: seed 3390 under tools/keys/dive.keys, one file
+               between the builds, 47,954 out-of-bounds Map::At() reads before
+               and 0 after. Note that changing the rectangle changes which
+               levels get generated, so the zero is measured on a different set
+               of levels rather than on the same levels minus the defect;
+               docs/evidence/inc-5xn/README.md says so at length and no way
+               round it has been found. */
             if (r.x2 < r.x1) { r.x1 = x1; r.x2 = x2; }
-#else
-            if (r.x2 < r.x1) { r.x2 = r.x1; }
-#endif
-#endif
           }
         else
           {
@@ -316,15 +372,10 @@ struct Rect
             if (r.y2 < r.y1)
               OobProbePwFired(x1,y1,x2,y2,sx,sy,r.x1,r.y1,r.x2,r.y2);
 #endif
-#if defined(INCURSION_OOB_PWFIX) || defined(INCURSION_OOB_PWFIX_WIDEN)
-            /* inc-5xn experiment: insetting by one on each side inverts the
-               rectangle when the area is 2 or less tall. */
-#if defined(INCURSION_OOB_PWFIX_WIDEN)
+            /* The y half of the inc-65j repair marked on the x branch above.
+               Insetting by one on each side inverts the rectangle when the
+               area is two squares tall or less. */
             if (r.y2 < r.y1) { r.y1 = y1; r.y2 = y2; }
-#else
-            if (r.y2 < r.y1) { r.y2 = r.y1; }
-#endif
-#endif
           }
         else
           {

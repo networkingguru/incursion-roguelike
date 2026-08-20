@@ -1,0 +1,8 @@
+breakpoint set --file Creature.cpp --line 346 --condition "this->myHandle == 83003"
+run
+print this->m
+print this->x
+watchpoint set expression -- &this->m
+continue
+bt
+quit

@@ -1,0 +1,9 @@
+(lldb) print oldSize
+(int16) 5
+(lldb) print this->Attr[25]
+(int16) 6
+(lldb) print (int)FaceRadius[this->Attr[25]]
+(int) 1
+(lldb) print (int)FaceRadius[oldSize]
+(int) 0
+(lldb) quit

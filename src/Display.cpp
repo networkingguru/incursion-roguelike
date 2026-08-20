@@ -1076,14 +1076,12 @@ void OobProbePwFired(int x1,int y1,int x2,int y2,int sx,int sy,
     fprintf(f, "PW_FIRED area=(%d,%d)-(%d,%d) want=%dx%d would_be=(%d,%d)-(%d,%d)"
                " variant=%s\n",
         x1,y1,x2,y2,sx,sy,rx1,ry1,rx2,ry2,
-#if defined(INCURSION_OOB_PWFIX_WIDEN)
-        "widen"
-#elif defined(INCURSION_OOB_PWFIX)
-        "collapse"
-#else
-        "none"
-#endif
-        );
+        /* Was a compile-time choice between "widen", "collapse" and "none"
+           while inc-65j was being measured. Widening shipped, so the field is
+           now a constant. It is kept, and kept spelled the same, so these logs
+           still line up column-for-column with the ones recorded during the
+           comparison in docs/evidence/inc-5xn/. */
+        "widen");
   }
 
 void OobProbePwsGeom(int px1,int py1,int px2,int py2,int sx,int sy,

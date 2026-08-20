@@ -1382,6 +1382,22 @@ void Creature::TerrainEffects() {
 				Reveal(true);
 	}
 
+	/* upstream: base-code defect, the fix is ours. Any of the three Reveal()
+	   calls in the block above can delete this creature -- see the full account
+	   at the fix site in src/Creature.cpp (Creature::MakeNoise) -- and the fall
+	   path immediately below reads m->PTerrainAt(x,y,this), m->TerrainAt(x,y)
+	   and MapIterate(m,t,i). This is the same function that carried inc-x9i.
+	   Upstream's for the same reason as the parent site: plain C++ control
+	   flow, no platform, compiler or width dependence. The line is a verbatim
+	   repeat of the guard twelve lines above, which this file already runs
+	   before the HIDING block for exactly this class of hazard; the block
+	   itself is what re-arms it.
+	   Tier Traced: read out of the code. This site has NOT been observed to
+	   fire; the observed crash is the src/Creature.cpp one.
+	   inc-upw.37. NOT SENT upstream. */
+	if (isDead() || !m || x == -1)
+		return;
+
 	if (tt->HasFlag(TF_FALL))
 		if (!isAerial()) {
 			if (isIllTer && !tt2->HasFlag(TF_FALL)) {

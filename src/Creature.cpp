@@ -346,7 +346,39 @@ void Creature::MakeNoise(int16 radius)
     Reveal(true);
     if (HasStati(INVIS) || HasStati(INVIS_TO))
       RippleCheck(radius);
-    c->m->MakeNoiseXY(c->x,c->y,radius); 
+    /* upstream: base-code defect, the fix is ours. inc-upw.37, tier Observed,
+       NOT SENT upstream. It is upstream's because it
+       is plain C++ control flow: the guard eleven lines above runs BEFORE the
+       call that invalidates it, and Reveal() can delete this creature. Nothing
+       depends on platform, compiler or type width, so it misbehaves on Win32
+       with the original typedefs exactly as it does here. The codebase argues
+       against itself -- src/Status.cpp:629 guards the identical hazard four
+       lines after a RippleCheck, and spells it the same way:
+       'if (m && x != -1) m->VUpdate(x,y);'.
+
+       HOW Reveal DELETES US. Reveal removes the HIDING stati; removing it runs
+       StatiOff -> CalcValues, which recomputes our size; if the size now has a
+       face radius (SZ_HUGE and above, src/Tables.cpp:24) CalcValues calls
+       PlaceNear to re-seat us on the larger footprint; and PlaceNear deletes
+       any non-player thing it cannot seat (src/Display.cpp:513). Thing::Remove
+       then sets m = NULL and x = y = -1 (src/Display.cpp:2020). The object is
+       queued on theGame->DestroyQueue rather than freed, so what follows is a
+       null dereference and not a use-after-free.
+
+       Tier Observed: seed 3390 under tools/keys/dive.keys on a build carrying
+       -DINCURSION_OOB_PWFIX_WIDEN exits 139 without this guard, faulting at
+       KERN_INVALID_ADDRESS 0x10 in Map::At(this=0x0, x=-1, y=-1), and exits 0
+       with it. A hardware watchpoint on this creature's m caught the write of
+       null and named every frame; the trace, the size change (SZ_LARGE ->
+       SZ_HUGE) and the three-build comparison are in
+       docs/evidence/inc-upw.37/.
+
+       Three further callers of Reveal() have the same hole and are fixed
+       alongside this one: src/Fight.cpp (A_ROAR) and src/Move.cpp
+       (TerrainEffects' fall path). inc-upw.37. NOT SENT upstream. */
+    if (!c->m || c->x == -1)
+      return;
+    c->m->MakeNoiseXY(c->x,c->y,radius);
   }
 
 void Creature::RippleCheck(int16 range)

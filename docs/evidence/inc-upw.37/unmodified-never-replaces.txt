@@ -1,0 +1,10 @@
+NEGATIVE RESULT. On the unmodified build, seed 3390, the size-growth
+re-placement that deletes the monster is never reached at all.
+
+Breakpoint: Values.cpp:1556 (the PlaceNear(x,y) call in CalcValues, at 2f58be3;
+the same line is 1578 at HEAD). Command file pn2.lldb. It never fired.
+
+12:Breakpoint 1: where = incursion-oob-plain`Creature::CalcValues(bool, Item*) + 53500 at Values.cpp:1556:19, address = 0x0000000100253480
+47971:Process 30105 exited with status = 0 (0x00000000)
+
+The full log is 3.7 MB of the 47,954 out-of-bounds asserts and is not kept.

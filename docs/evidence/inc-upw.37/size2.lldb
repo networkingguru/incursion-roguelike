@@ -1,0 +1,7 @@
+breakpoint set --file Values.cpp --line 1556 --condition "this->myHandle == 83003"
+run
+print oldSize
+print this->Attr[25]
+print (int)FaceRadius[this->Attr[25]]
+print (int)FaceRadius[oldSize]
+quit
