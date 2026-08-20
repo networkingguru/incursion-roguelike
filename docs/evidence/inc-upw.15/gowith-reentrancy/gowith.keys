@@ -6,7 +6,7 @@
 #
 # Wizard letters are the ones followers.keys documents: g summon, C make master,
 # p ascend/descend depth.
-@include /Users/brianhill/Scripts/Incursion/tools/keys/chargen.keys
+@include tools/keys/chargen.keys
 
 w y g J c l UP ENTER
 w g J c l UP ENTER

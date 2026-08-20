@@ -25,7 +25,7 @@
 #
 # Generated the same way as explore.keys, seeded 20260816.
 
-@include /Users/brianhill/Scripts/Incursion/tools/keys/chargen.keys
+@include tools/keys/chargen.keys
 
 @dump:arrival
 

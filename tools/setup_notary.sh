@@ -17,17 +17,45 @@
 set -uo pipefail
 
 DEST="$HOME/.config/incursion/notary.env"
-APPLE_ID_DEFAULT="alfageek@gmail.com"
-TEAM_ID_DEFAULT="GPV5U7WW59"
+
+# No identity is hardcoded here. This file is public, and a maintainer's Apple ID
+# and Team ID have no business shipping in it. Both defaults come off the machine
+# instead: the Apple ID from a credential file written by an earlier run, and the
+# Team ID from the Developer ID certificate in the keychain, which is where the
+# authoritative value lives in any case -- the Team ID must match that
+# certificate, and reading it from there cannot disagree with it.
+APPLE_ID_DEFAULT=""
+if [ -r "$DEST" ]; then
+    APPLE_ID_DEFAULT="$(sed -n 's/^NOTARY_APPLE_ID=//p' "$DEST" | head -1)"
+fi
+TEAM_ID_DEFAULT="$(security find-identity -v -p codesigning 2>/dev/null \
+    | grep 'Developer ID Application' | sed 's/.*(\(.*\))\"/\1/' | head -1)"
 
 echo "Notarisation credential setup"
 echo
 
-read -r -p "Apple ID [$APPLE_ID_DEFAULT]: " APPLE_ID
-APPLE_ID="${APPLE_ID:-$APPLE_ID_DEFAULT}"
+if [ -n "$APPLE_ID_DEFAULT" ]; then
+    read -r -p "Apple ID [$APPLE_ID_DEFAULT]: " APPLE_ID
+    APPLE_ID="${APPLE_ID:-$APPLE_ID_DEFAULT}"
+else
+    read -r -p "Apple ID: " APPLE_ID
+fi
 
-read -r -p "Team ID [$TEAM_ID_DEFAULT]: " TEAM_ID
-TEAM_ID="${TEAM_ID:-$TEAM_ID_DEFAULT}"
+if [ -n "$TEAM_ID_DEFAULT" ]; then
+    read -r -p "Team ID [$TEAM_ID_DEFAULT]: " TEAM_ID
+    TEAM_ID="${TEAM_ID:-$TEAM_ID_DEFAULT}"
+else
+    read -r -p "Team ID: " TEAM_ID
+fi
+
+# Neither has a fallback any more, so an empty answer must stop here rather than
+# reach Apple as a blank field and come back as an unexplained 401.
+if [ -z "$APPLE_ID" ] || [ -z "$TEAM_ID" ]; then
+    echo "Apple ID and Team ID are both required. Nothing was saved."
+    echo "The Team ID is the parenthesised code in:"
+    echo "  security find-identity -v -p codesigning"
+    exit 1
+fi
 
 echo
 echo "App-specific password (NOT your Apple ID password)."

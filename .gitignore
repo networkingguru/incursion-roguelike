@@ -53,3 +53,18 @@ incursion-debug
 
 # Release artifacts, produced by tools/package_macos.sh.
 dist/
+
+# Credentials. None of these has ever been committed; these lines exist so a
+# stray copy cannot be. The real notarisation credential lives at
+# ~/.config/incursion/notary.env, outside this tree, written mode 600 by
+# tools/setup_notary.sh.
+*.p12
+*.pem
+*.cer
+*.pfx
+*.mobileprovision
+*.env
+notary.env
+.netrc
+id_rsa
+id_ed25519

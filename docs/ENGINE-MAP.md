@@ -70,7 +70,7 @@ There is no headless class. `posixTerm` is headless at run time: `useCurses` (`s
 ## How to check this page
 
 ```sh
-cd /Users/brianhill/Scripts/Incursion
+cd /path/to/incursion-roguelike
 ls src/*.cpp src/*.c | wc -l                 # 60 files
 wc -l src/*.cpp src/*.c | tail -1            # 146882 lines
 find src -size 0                             # the 4 empty files

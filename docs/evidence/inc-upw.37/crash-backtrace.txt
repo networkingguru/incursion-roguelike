@@ -1,4 +1,6 @@
-Process 92136 launched: '/private/tmp/claude-501/-Users-brianhill-Scripts-Incursion/92e8f69c-5f00-40dd-ba98-e1b9f5252249/scratchpad/wt-2f58be3/incursion-oob-widen' (arm64)
+# Paths redacted 2026-08-20: the agent scratchpad prefix became <scratch> and
+# the repository path became <repo>. Nothing else in this capture was touched.
+Process 92136 launched: '<scratch>/wt-2f58be3/incursion-oob-widen' (arm64)
 Process 92136 stopped
 * thread #1, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x10)
     frame #0: 0x0000000100042d38 incursion-oob-widen`Map::At(this=0x0000000000000000, x=-1, y=-1) at Map.h:227:34
