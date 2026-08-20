@@ -32,6 +32,13 @@ and notarised by Apple, and the notarisation ticket is stapled to the app itself
 rather than only to the disk image, so it still launches after you drag it out of
 the image.
 
+macOS asks once whether you are sure you want to open an app downloaded from the
+Internet, and then never again. That prompt is normal: it is macOS asking for
+consent, and every notarised app gets it on first launch. Two other messages are
+not normal, and mean something is genuinely wrong — *"the developer cannot be
+verified"* and *"the app has been modified or damaged"*. If you see either,
+please open an issue.
+
 **Requires** macOS on Apple Silicon. Intel and Linux builds are planned; see
 *What is next*.
 
