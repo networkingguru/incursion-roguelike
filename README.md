@@ -13,7 +13,7 @@ then very nearly finished it.
 It has only ever run on Windows. This fork brings it to macOS, and it is meant to
 be played, not built.
 
-![iNCURSION release 1 running on macOS](docs/media/incursion-macos.png)
+![iNCURSION running on macOS](docs/media/incursion-macos.png)
 
 **Jump to:** [Get it](#get-it) · [What is new](#what-is-new) ·
 [What is fixed](#what-is-fixed) · [What is next](#what-is-next) ·
@@ -77,30 +77,18 @@ and not a subset of it.
 
 ## What is new
 
-### In the current download
+Everything below is in the current download, **release 2**. The newest work is
+first.
 
-**Your saves survive an update.** Save compatibility is keyed on a digest of the
-actual data layout rather than on a version number, so shipping a new release
-does not hide your characters. Previously any version change made every save
-vanish from the load menu without a word.
+### New in release 2
 
-**Your species' feats are granted.** Eight racial feats across six races were
-never reaching players. A Dragonkin never had Mantis Leap, a dwarf never had
-Loadbearer. They do now.
-
-**Bare hands are no longer worse than two weapons.** Two empty hands produced one
-attack per swing while two weapons produced two, so a monk was better off holding
-nunchaku than using his fists. Fixed to match the 3.5 rules.
-
-### On `master`, not in the download yet
-
-These are built and checked but have not been through a release. Build from
-source to play them today.
-
-**Read a save without loading the game.** Point the binary at a save file with
-`-dump` and it prints a full character report to the terminal, then exits. No
-window opens and nothing is written. See
-[Reading a save](#reading-a-save-without-loading-the-game) below.
+**The game no longer dies at the bottom of a dungeon.** Moving down from the
+deepest level dereferenced a null dungeon, on all four routes that reach it:
+falling into a chasm there, the plain `>` climb, levitating down, and a scripted
+move. The climb needs no wizard mode and no script. Two more crashes went with
+it — a hiding monster that could delete itself mid-spell and leave the caller
+holding a dangling map pointer, and a room-building rectangle that inverted
+itself in a narrow space and put doors in solid rock.
 
 **The target cursor follows a ring, not an axis.** Arrow keys in target mode
 scored candidates on one axis only, so RIGHT meant "the nearest column to my
@@ -122,40 +110,56 @@ staircase is now ranked by what it costs to walk there, so the square the cursor
 lands on is the square `R` will really reach. Repeated presses step down the
 ranked list and wrap.
 
-**A natural-weapon speed option.** Every weapon carries a speed rating; unarmed
-and natural attacks carried none, so a monk punched at 100% while the nunchaku in
-his pack struck at 160%. The new **Natural Weapon Speed** option floors a
-weapon-capable creature's brawl speed at the fastest weapon in the data. Dragons
-and oozes are untouched and keep their own speeds. This is a balance change
-rather than a defect fix, so it is a switch: fresh installs get FLOORED, and an
-existing `Options.Dat` reads ORIGINAL until you flip it once.
+**Read a save without loading the game.** Point the binary at a save file with
+`-dump` and it prints a full character report to the terminal, then exits. No
+window opens and nothing is written. See
+[Reading a save](#reading-a-save-without-loading-the-game) below.
 
 **A failed save leaves the game standing.** Saving converted every object's
 internal pointers to handles and converted them back afterwards. Any failure
 part-way skipped the conversion back, and the game then crashed on the way out.
-The report now reaches you and play continues.
+The report now reaches you and play continues. A file the game refuses to load no
+longer takes the process with it either — that fix is a hand-port of Eugene
+Archibald's work, and the root cause and evidence are his.
 
-**A refused file can be refused twice.** A load that threw left the registry
-claiming it was still loading, which made the *next* load build its object list
-out of stack garbage and hand it to `free()`. Ported by hand from Eugene
-Archibald's fix; the root cause and evidence are his.
+**Natural Weapon Speed, a new option.** Every weapon carries a speed rating;
+unarmed and natural attacks carried none, so a monk punched at 100% while the
+nunchaku in his pack struck at 160%. The option floors a weapon-capable
+creature's brawl speed at the fastest weapon in the data. Dragons and oozes are
+untouched and keep their own speeds. This is a balance change rather than a
+defect fix, so it is a switch: fresh installs get FLOORED, and an existing
+`Options.Dat` reads ORIGINAL until you flip it once.
 
-**Three crashes at the bottom of a dungeon and in combat.** Moving down from the
-deepest level dereferenced a null dungeon on four separate routes, including the
-plain `>` climb. A hiding monster casting a spell could delete itself mid-call
-and leave the caller holding a dangling map pointer. And a room-building
-rectangle inverted itself in a narrow space, which put doors in solid rock and
-was what exposed the second crash.
+**Twenty prestige-class descriptions are now true.** Each was a place where a
+class promised something its own script never did. The Twilight Huntsman shipped
+sixty spells nothing could reach, the Blackguard could not use a shield, and the
+Master Archer's ranged sneak attack fired with a sling.
+
+### Already there, since release 1
+
+**Your saves survive an update.** Save compatibility is keyed on a digest of the
+actual data layout rather than on a version number, so shipping a new release
+does not hide your characters. Previously any version change made every save
+vanish from the load menu without a word. Release 2 does not move that digest,
+so characters rolled under release 1 still load.
+
+**Your species' feats are granted.** Eight racial feats across six races were
+never reaching players. A Dragonkin never had Mantis Leap, a dwarf never had
+Loadbearer. They do now.
+
+**Bare hands are no longer worse than two weapons.** Two empty hands produced one
+attack per swing while two weapons produced two, so a monk was better off holding
+nunchaku than using his fists. Fixed to match the 3.5 rules.
 
 ---
 
 ## What is fixed
 
 The engineering record is [`docs/FIXED.md`](docs/FIXED.md): every defect, how it
-was verified, what was measured on each side, and the one claim that had to be
+was verified, what was measured on each side, and the two claims that had to be
 retracted.
 
-Sixty-three issues are closed. The short version:
+Sixty-four issues are closed. The short version:
 
 | Area | What was wrong | Where |
 |---|---|---|
@@ -200,7 +204,7 @@ The report comes from the game's own character-sheet code walking the real save,
 not from a separate reader guessing at the file format, so it cannot drift out of
 step with what the game believes.
 
-*Not in the current download. Build from source, or wait for the next release.*
+*Available in release 2. Release 1 could not do this.*
 
 ---
 

@@ -6,7 +6,7 @@ the game; this is about what was broken and what was done to it.
 Every entry states how it was verified. Where a claim was wrong, the retraction
 is here too — `docs/REPORTING-GATE.md` is the rule that requires it.
 
-Sixty-three issues are closed as of 2026-08-20. Each carries its evidence in
+Sixty-four issues are closed as of 2026-08-20. Each carries its evidence in
 Beads, including the controls that were run and, where one exists, the check left
 behind.
 
@@ -495,7 +495,7 @@ bd ready                    # what is available to work on now
 bd show <id>                # one issue, with its evidence
 ```
 
-Sixty-three issues are closed as of 2026-08-20. Twenty-three of those were closed
+Sixty-four issues are closed as of 2026-08-20. Twenty-three of those were closed
 by iNCURSION release 1; the rest came after it.
 
 ## Fixes that belong to upstream
