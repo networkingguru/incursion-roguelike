@@ -70,8 +70,6 @@ and not a subset of it.
 
 ## What is new
 
-Two lists, because they reach you at different times.
-
 ### In the current download
 
 **Your saves survive an update.** Save compatibility is keyed on a digest of the
