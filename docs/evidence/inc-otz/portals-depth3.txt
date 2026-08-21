@@ -1,0 +1,101 @@
+=== Map Portals ===
+  Map 128x128, depth 3. Open squares 4105, reachable from the player 2932.
+  Player at (74,71).
+
+  Portal 1: "up stairs" at (60,83)
+    terrain      : "Floor"
+    At().Solid   : false
+    SolidAt()    : false
+    isVault      : false
+    portal Flags : 0x0
+    neighbourhood ('#' solid, '.' open, '@' player):
+      ###
+      .P#
+      .##
+    reachable    : NO -- no open path from the player
+
+  Portal 2: "up stairs" at (74,70)
+    terrain      : "Dungeon Wall"
+    At().Solid   : TRUE
+    SolidAt()    : TRUE
+    isVault      : false
+    portal Flags : 0x0
+    neighbourhood ('#' solid, '.' open, '@' player):
+      ###
+      #P#
+      .@.
+    reachable    : NO -- no open path from the player
+
+  Portal 3: "up stairs" at (44,27)
+    terrain      : "Floor"
+    At().Solid   : false
+    SolidAt()    : false
+    isVault      : false
+    portal Flags : 0x0
+    neighbourhood ('#' solid, '.' open, '@' player):
+      ##.
+      #P.
+      ###
+    reachable    : yes, 168 steps from the player
+
+  Portal 4: "up stairs" at (30,83)
+    terrain      : "Floor"
+    At().Solid   : false
+    SolidAt()    : false
+    isVault      : false
+    portal Flags : 0x0
+    neighbourhood ('#' solid, '.' open, '@' player):
+      .##
+      .P#
+      ###
+    reachable    : yes, 93 steps from the player
+
+  Portal 5: "down stairs" at (112,119)  [down stairs]
+    terrain      : "Floor"
+    At().Solid   : false
+    SolidAt()    : false
+    isVault      : false
+    portal Flags : 0x0
+    neighbourhood ('#' solid, '.' open, '@' player):
+      ..#
+      .P#
+      .##
+    reachable    : NO -- no open path from the player
+
+  Portal 6: "down stairs" at (106,76)  [down stairs]
+    terrain      : "Floor"
+    At().Solid   : false
+    SolidAt()    : false
+    isVault      : false
+    portal Flags : 0x0
+    neighbourhood ('#' solid, '.' open, '@' player):
+      ...
+      .P.
+      ###
+    reachable    : NO -- no open path from the player
+
+  Portal 7: "down stairs" at (42,108)  [down stairs]
+    terrain      : "Floor"
+    At().Solid   : false
+    SolidAt()    : false
+    isVault      : false
+    portal Flags : 0x0
+    neighbourhood ('#' solid, '.' open, '@' player):
+      ...
+      .P.
+      ...
+    reachable    : NO -- no open path from the player
+
+  Portal 8: "down stairs" at (18,9)  [down stairs]
+    terrain      : "Floor"
+    At().Solid   : false
+    SolidAt()    : false
+    isVault      : false
+    portal Flags : 0x0
+    neighbourhood ('#' solid, '.' open, '@' player):
+      ..#
+      .P#
+      ...
+    reachable    : yes, 131 steps from the player
+
+

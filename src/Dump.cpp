@@ -252,6 +252,125 @@ bool RunSaveDump(const char *path) {
         printf("  (player position is out of map bounds)\n");
     printf("\n");
 
+    /* Temporary diagnostic (inc-otz): report every portal on the player's map,
+       the solidity of its own square and of the eight around it, and whether
+       the player can walk to it at all.
+
+       Brian reported a staircase that looks like it sits inside a wall and
+       that he cannot enter from the square directly south of it. Three
+       explanations fitted that description and only a reading of the map
+       separates them: the stair square is solid; the stair square is walkable
+       but no open path reaches it; or the stair glyph is drawn on a square
+       that is really rock. Delete with inc-otz. */
+    printf("=== Map Portals ===\n");
+    if (!m)
+        printf("  (no map)\n");
+    else {
+        int16 sx = m->SizeX(), sy = m->SizeY();
+        int32 cells = (int32)sx * (int32)sy;
+
+        /* Reachability from the player, over squares that Map::SolidAt calls
+           open. SolidAt (src/MakeLev.cpp:4016) is the same test MoveDepth uses
+           to reject an arrival square: it counts solid terrain and any feature
+           flagged F_SOLID or F_XSOLID. A closed door is NOT solid by that test,
+           so this walk passes through doors the player would first have to
+           open. It therefore OVERSTATES reachability, which is the safe
+           direction here: a portal this walk cannot reach is unreachable by
+           any route the player has. */
+        int16 *dist = new int16[cells];
+        int32 *queue = new int32[cells];
+        int32 qh = 0, qt = 0, k;
+        for (k = 0; k < cells; k++)
+            dist[k] = -1;
+        if (m->InBounds(p->x, p->y) && !m->SolidAt(p->x, p->y)) {
+            dist[(int32)p->y * sx + p->x] = 0;
+            queue[qt++] = (int32)p->y * sx + p->x;
+        }
+        while (qh < qt) {
+            int32 cur = queue[qh++];
+            int16 cx = (int16)(cur % sx), cy = (int16)(cur / sx);
+            for (int16 d = 0; d != 8; d++) {
+                int16 ax = cx + DirX[d], ay = cy + DirY[d];
+                if (!m->InBounds(ax, ay))
+                    continue;
+                int32 ai = (int32)ay * sx + ax;
+                if (dist[ai] != -1)
+                    continue;
+                if (m->SolidAt(ax, ay))
+                    continue;
+                dist[ai] = (int16)(dist[cur] + 1);
+                queue[qt++] = ai;
+            }
+        }
+
+        int32 open = 0;
+        for (k = 0; k < cells; k++) {
+            int16 cx = (int16)(k % sx), cy = (int16)(k / sx);
+            if (m->InBounds(cx, cy) && !m->SolidAt(cx, cy))
+                open++;
+        }
+        printf("  Map %dx%d, depth %d. Open squares %d, reachable from the "
+               "player %d.\n", (int)sx, (int)sy, (int)m->Depth,
+               (int)open, (int)qt);
+        printf("  Player at (%d,%d).\n\n", (int)p->x, (int)p->y);
+
+        Thing *t; int32 i;
+        int found = 0;
+        MapIterate(m, t, i)
+            if (t->Type == T_PORTAL) {
+                Portal *po = (Portal*)t;
+                int16 px = t->x, py = t->y;
+                found++;
+                printf("  Portal %d: \"%s\" at (%d,%d)%s\n", found,
+                    NAME(po->fID), (int)px, (int)py,
+                    po->isDownStairs() ? "  [down stairs]" : "");
+                if (!m->InBounds(px, py)) {
+                    printf("    OUT OF BOUNDS.\n\n");
+                    continue;
+                }
+                printf("    terrain      : \"%s\"\n", NAME(m->TerrainAt(px, py)));
+                printf("    At().Solid   : %s\n", m->At(px, py).Solid ? "TRUE" : "false");
+                printf("    SolidAt()    : %s\n", m->SolidAt(px, py) ? "TRUE" : "false");
+                printf("    isVault      : %s\n", m->At(px, py).isVault ? "TRUE" : "false");
+                printf("    portal Flags : 0x%lx%s\n", (unsigned long)t->Flags,
+                    (t->Flags & (F_SOLID | F_XSOLID)) ? "  [F_SOLID or F_XSOLID]" : "");
+
+                /* The 3x3 around the portal. '#' is SolidAt, '.' is open,
+                   '@' is the player, 'P' is the portal itself. */
+                printf("    neighbourhood ('#' solid, '.' open, '@' player):\n");
+                for (int16 ny2 = py - 1; ny2 <= py + 1; ny2++) {
+                    printf("      ");
+                    for (int16 nx2 = px - 1; nx2 <= px + 1; nx2++) {
+                        char ch;
+                        if (!m->InBounds(nx2, ny2))
+                            ch = '?';
+                        else if (nx2 == p->x && ny2 == p->y)
+                            ch = '@';
+                        else if (nx2 == px && ny2 == py)
+                            ch = 'P';
+                        else
+                            ch = m->SolidAt(nx2, ny2) ? '#' : '.';
+                        putchar(ch);
+                    }
+                    printf("\n");
+                }
+
+                int32 pi = (int32)py * sx + px;
+                if (dist[pi] >= 0)
+                    printf("    reachable    : yes, %d steps from the player\n",
+                        (int)dist[pi]);
+                else
+                    printf("    reachable    : NO -- no open path from the player\n");
+                printf("\n");
+            }
+        if (!found)
+            printf("  (no portals on this map)\n");
+
+        delete [] dist;
+        delete [] queue;
+    }
+    printf("\n");
+
     printf("=== Full Character Sheet ===\n");
     printf("(the engine's own dump: attributes, saves, combat stats, feats, "
            "skills, resistances, specials, known spells, top-level "
