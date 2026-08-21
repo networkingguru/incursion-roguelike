@@ -361,10 +361,13 @@ Text "help::chargen"
      a particular aptitude for. These skills are treated as if they were
      class skills for every class the character has. Some races also grant
      racial bonuses to certain skills.\n
-     __<13>Favoured Classes:<5> Each race (except Humans) have two classes
-     as their favoured classes. If a multiclass character's highest class
-     (or one of his equally high classes) is not a racially favoured class, then
-     she receives a 20~ penalty to all Experience Points earned.\n
+     __<13>Favoured Classes:<5> Each race (except Humans) has two or three
+     classes as its favoured classes. To work out a multiclass character's
+     experience penalty, set aside every class her race favours, and set
+     aside every prestige class as well. Of the classes that remain, each
+     one that stands two or more levels below the highest of them costs a
+     20~ penalty to all Experience Points earned, and these penalties add.
+     A character with one remaining class, or none, pays nothing.\n
      __Humans treat all classes as favoured classes, and thus never receive
      an Experience penalty for multiclassing.\n
      __<13>Special Abilities:<5> Each race offers a few unique powers or

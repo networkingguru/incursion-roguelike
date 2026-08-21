@@ -2162,12 +2162,13 @@ void Character::KillXP(Creature *kill, int16 percent)
 int16 Character::XPPenalty()
 {
     rID f1, f2, f3; int16 alignXP;
-    /* Here's how we figure the XP penalty. Humans with Versatility and
-    single classed characters never suffer a penalty. Multi-classed
-    characters whose highest class (or one of their highest classes,
-    for evenly matched characters) is a favoured class of their race
-    also do not suffer a penalty. Other multi-class characters suffer
-    a -25% experience penalty. */
+    int16 n, counted, highest, penalty; int8 kept[3];
+    /* Here's how we figure the XP penalty. Humans with Versatility never
+    suffer one. Every class that is a favoured class of the character's race
+    leaves the comparison, and so does every prestige class. Of the classes
+    that are left, each one standing two or more levels below the highest of
+    them costs 20% of all experience earned, and those costs add. A character
+    with one class left, or none, pays nothing. */
     alignXP = 0;
     if ((-alignLC) > 40)
         alignXP = alignLC + 40;
@@ -2181,62 +2182,102 @@ int16 Character::XPPenalty()
     f2 = TRACE(RaceID)->FavouredClass[1];
     f3 = TRACE(RaceID)->FavouredClass[2];
 
-    if (!Level[1] && !Level[2])
-        return 0 + SumStatiMag(XP_PENALTY) + alignXP;
-
-    /* upstream: this is a defect in the BASE CODE, not a port artefact, and
-       the three ClassID[n] guards below are ours. Tracked as inc-5y8; tier
-       Observed; not sent upstream. Each of the three tests
-       calls TCLASS(ClassID[n])->HasFlag(CF_FAVOURED) on a class slot that may
-       be empty. Game::Get returns NULL for a zero id (src/Res.cpp:312), so a
-       character who holds fewer than three classes dereferences NULL and the
-       process dies. Nothing about that is platform, compiler or width
-       dependent -- the missing NULL check is plain C++ and misbehaves
+    /* upstream: base-code defect, the fix is ours. It is upstream's because
+       the rule and the number are both wrong in the original, and wrongly in
+       a way that has nothing to do with this port: the arithmetic is plain
+       C++ on int8 level counts and rID class ids, so it misbehaves
        identically on Win32 with the original typedefs and the original
-       compiler. Only the third test is reachable today, because the early
-       return above covers the case where Level[1] and Level[2] are both zero;
-       the first two are guarded anyway, since they have the same shape and are
-       safe only by accident of that return.
+       compiler. Tier Observed. Tracked as inc-by8. NOT SENT to rmtew.
 
-       The evidence is Observed. tools/headless.sh
-       tools/keys/xp-penalty-crash.keys 7 builds a Wood Elf Rogue 2 / Warrior 1
-       and asks for his character sheet. Before this change the run ended in
-       SIGSEGV, exit 139, with EXC_BAD_ACCESS at 0x4d in Character::XPPenalty
-       under TextTerm::CreateCharSheet, and wrote no dump. After it the run
-       ends 0 and writes the sheet. tools/check_xp_penalty.sh holds that
-       measurement.
+       The original asked whether the character's HIGHEST class was one his
+       race favours, and charged a flat 25% when it was not. Three things
+       follow from that and all three are wrong. A favoured class that is not
+       the highest one did nothing at all, so a dwarf Fighter 7 / Cleric 2 --
+       the Player's Handbook's own worked example, which is supposed to cost
+       nothing -- paid. A prestige class carrying CF_FAVOURED, the flag that
+       says the class counts as favoured for everybody, was honoured only
+       while it was also the highest, and a prestige class can never be the
+       highest because its entry requirements guarantee core levels beneath
+       it; so every prestige character paid from the level he entered the
+       class, against his own class description. And the manual said 20%
+       while the code took 25% (lib/help.irh).
 
-       The guards change no result for a character who does not crash. An
-       unfilled FavouredClass slot holds zero -- measured, all 17 races in the
-       module, and only the Wood Elf fills the third -- so for every other race
-       the old third test matched a zero id against a zero f3, short-circuited
-       the || before TCLASS, and reached the inner level test. That test then
-       failed anyway: a class slot carries a level only when it carries a class
-       (src/Create.cpp:1990), so ClassID[n] == 0 implies Level[n] == 0, and the
-       early return above means Level[1] is already non-zero by the time the
-       third block runs, so Level[2] >= Level[1] cannot hold. The block fell
-       through before and is skipped now, which is the same answer. This
-       deliberately leaves the favoured-class rule itself alone; that is a
-       separate question, tracked as inc-by8. */
-    if (ClassID[0] &&
-        (ClassID[0] == f1 || ClassID[0] == f2 || ClassID[0] == f3 ||
-         TCLASS(ClassID[0])->HasFlag(CF_FAVOURED)))
-        if (Level[0] >= Level[1] && Level[0] >= Level[2])
-            return 0 + SumStatiMag(XP_PENALTY) + alignXP;
+       The rule built here is the one Brian ruled on, which is the OGL rule
+       with one deliberate difference. Remove ALL of the race's favoured
+       classes, not the single one D&D grants: Incursion gives each race two
+       and the Wood Elf three (lib/races.irh, lib/subraces.irh), and D&D
+       assumes a party where Incursion sends the player in alone. Remove every
+       prestige class. Then charge 20% for EACH remaining class that stands
+       two or more levels below the highest remaining class. The costs add, so
+       a three-class character can reach 40%.
 
-    if (ClassID[1] &&
-        (ClassID[1] == f1 || ClassID[1] == f2 || ClassID[1] == f3 ||
-         TCLASS(ClassID[1])->HasFlag(CF_FAVOURED)))
-        if (Level[1] >= Level[0] && Level[1] >= Level[2])
-            return 0 + SumStatiMag(XP_PENALTY) + alignXP;
+       It reproduces both of the Player's Handbook worked examples. A gnome
+       Rogue 9 / Bard 2 with bard favoured pays nothing, because only the
+       rogue is left; add Fighter 1 and he pays 20%; add a fourth class at 1st
+       level and he pays 40%. A dwarf Fighter 7 / Cleric 2 with fighter
+       favoured pays nothing, and still pays nothing when Rogue 1 is added,
+       because the fighter leaves the comparison and the cleric and the rogue
+       are one level apart -- the favoured class does not set the bar for the
+       others.
 
-    if (ClassID[2] &&
-        (ClassID[2] == f1 || ClassID[2] == f2 || ClassID[2] == f3 ||
-         TCLASS(ClassID[2])->HasFlag(CF_FAVOURED)))
-        if (Level[2] >= Level[0] && Level[2] >= Level[1])
-            return 0 + SumStatiMag(XP_PENALTY) + alignXP;
+       The evidence is Observed, and tools/check_xp_penalty_rule.sh holds the
+       measurement. On builds differing only in this function, an Elf
+       Barbarian 3 / Rogue 1 read 25% and now reads 20%; the same character
+       with Warrior 1 added read 25% and now reads 40%; at Barbarian 3 /
+       Rogue 2 / Warrior 2 he read 25% and now reads nothing; an Elf Rogue 5
+       / Assassin 2 read 25% and now reads nothing; and a Wood Elf Rogue 2 /
+       Warrior 1 read 25% and now reads nothing. A single-classed Elf
+       Barbarian 3 read nothing on both sides. */
+    counted = 0; highest = 0;
+    for (n = 0; n != 3; n++) {
+        /* upstream: this NULL test is a second base-code defect, tracked
+           separately as inc-5y8; tier Observed; not sent upstream. The
+           original asked TCLASS(ClassID[n])->HasFlag(CF_FAVOURED) of every
+           class slot, including an empty one. Game::Get returns NULL for a
+           zero id (src/Res.cpp:312), so a character who holds fewer than
+           three classes dereferenced NULL and the process died. Nothing about
+           that is platform, compiler or width dependent -- the missing NULL
+           check is plain C++ and misbehaves identically on Win32 with the
+           original typedefs and the original compiler.
 
-    return 25 + SumStatiMag(XP_PENALTY) + alignXP;
+           The evidence is Observed. tools/headless.sh
+           tools/keys/xp-penalty-crash.keys 7 builds a Wood Elf Rogue 2 /
+           Warrior 1 and asks for his character sheet. Before the guard the
+           run ended in SIGSEGV, exit 139, with EXC_BAD_ACCESS at 0x4d in
+           Character::XPPenalty under TextTerm::CreateCharSheet, and wrote no
+           dump. After it the run ends 0 and writes the sheet.
+           tools/check_xp_penalty.sh holds that measurement.
+
+           The guard changes no result for a character who does not crash. A
+           class slot carries a level only when it carries a class --
+           Player::AdvanceLevel reads TCLASS(ClassID[c]) before it reaches
+           Level[c]++, and Player::Create starts the two spare slots at zero
+           id and zero level -- so a zero id implies a zero level, and an
+           empty slot could never have joined the counted set anyway. (The
+           inc-5y8 marker this replaces cited src/Create.cpp:1990 for that
+           sentence. That line is the pseudoclass bonus-skill allocation and
+           says nothing about it, so the citation is dropped rather than
+           carried forward.) */
+        if (!ClassID[n] || Level[n] <= 0)
+            continue;
+        if (ClassID[n] == f1 || ClassID[n] == f2 || ClassID[n] == f3)
+            continue;
+        if (TCLASS(ClassID[n])->HasFlag(CF_PRESTIGE) ||
+            TCLASS(ClassID[n])->HasFlag(CF_FAVOURED))
+            continue;
+        kept[counted++] = Level[n];
+        if (Level[n] > highest)
+            highest = Level[n];
+    }
+
+    /* One class left, or none, leaves this loop at zero: its own level is the
+       highest, so nothing is two below it. */
+    penalty = 0;
+    for (n = 0; n != counted; n++)
+        if (kept[n] <= highest - 2)
+            penalty += 20;
+
+    return penalty + SumStatiMag(XP_PENALTY) + alignXP;
 }
 
 void Character::DrainXP(int32 amt)

@@ -1,0 +1,216 @@
+# Build one Elf who walks through every shape of the multiclass experience
+# penalty, and photograph his character sheet four times on the way.
+#
+# WHY THIS EXISTS. bd inc-by8. Character::XPPenalty (src/Create.cpp) used to
+# ask whether the character's HIGHEST class was one his race favours and charge
+# a flat 25% when it was not. The rule Brian ruled on removes every favoured
+# class and every prestige class from the comparison, then charges 20% for each
+# class that is left standing two or more levels below the highest class that
+# is left. The costs add.
+#
+# THE ORACLE is the sheet's Basics block. src/Sheet.cpp:62-67 prints a
+# " Penal <n>%" line when the penalty is positive and prints nothing at all
+# when it is zero, so the absence of the line is as readable as its presence.
+#
+# WHY AN ELF, AND WHY THESE THREE CLASSES. A standard Elf favours Mage and
+# Ranger (lib/races.irh:967). Barbarian, Rogue and Warrior are therefore all
+# counted, none of them is a prestige class, and none of them has an attribute
+# gate or an alignment that fights the other two. One character can then hold
+# every shape the rule has:
+#
+#   xpa  Barbarian 3                 THE CONTROL. One counted class, so there
+#                                    is nothing to compare it against and no
+#                                    penalty. He must read the same on a build
+#                                    with the defect and a build without it.
+#   xpb  Barbarian 3 / Rogue 1       20%. The rogue stands two below the
+#                                    barbarian.
+#   xpc  + Warrior 1                 40%. Two classes stand two below the
+#                                    barbarian, and the costs add. This is the
+#                                    case that proves the stacking, and the
+#                                    only one the old flat figure could never
+#                                    produce.
+#   xpd  Barbarian 3 / Rogue 2 /     Nothing. Every counted class is now
+#        Warrior 2                   within one level of the highest.
+#
+# Measured on builds differing only in src/Create.cpp:
+#                                        before      after
+#   Barbarian 3                          none        none
+#   Barbarian 3 / Rogue 1                25%         20%
+#   Barbarian 3 / Rogue 1 / Warrior 1    25%         40%
+#   Barbarian 3 / Rogue 2 / Warrior 2    25%         none
+#
+# tools/check_xp_penalty_rule.sh reads these four dumps. It also reads the two
+# characters this script does not build: the prestige case
+# (tools/keys/prestige-assassin.keys) and the within-one-level case
+# (tools/keys/xp-penalty-crash.keys).
+#
+# THE TWO IDIOMS THAT LOOK ODD, and both are the game, not the script.
+#
+# 1. After a level is gained the character sheet is stale, and whether a dialog
+#    is still open depends on whether that level asked for a feat. So every
+#    level ends with one ESC -- which closes the dialog if there is one, and
+#    otherwise leaves the sheet for the map -- followed by
+#    @until "Gender" d, which opens the sheet again only if it is not already
+#    there. Pressing ESC blindly until the map appears is NOT safe: ESC on the
+#    map opens the System Menu, which this script has no key to leave.
+# 2. A level can ask three different questions and each class words its feat
+#    menu differently ("Advancing as a Warrior, choose a Warrior Feat:"), so
+#    the whole group of @while lines is written out twice. A menu that opens
+#    after the group has been passed would otherwise swallow every later key.
+#
+# SEED. The attribute rolls and the offered feats vary with the seed, so the
+# feat picks stay positional and a seed is passed.
+
+a
+n
+y
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Barbarian"
+a
+@choose "Neutral"
+@until "Unspent Skill Ranks" a
+@cursorto:mark "Athletics" DOWN
+RIGHT*3
+@cursorto:mark "Climb" DOWN
+RIGHT*3
+@cursorto:mark "Craft" DOWN
+RIGHT*3
+@cursorto:mark "Healing" DOWN
+RIGHT*3
+@cursorto:mark "Intimidate" DOWN
+RIGHT*3
+ENTER y
+a
+@until "Afoot" ESC
+s
+w
+@expect "Enter wizard mode"
+y
+w
+DOWN DOWN
+SPACE
+ESC
+
+@until "Gender" d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Barbarian Feat" a
+@while "Rogue Feat" a
+@while "Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Barbarian Feat" a
+@while "Rogue Feat" a
+@while "Warrior Feat" a
+@while "Focus on which Weapon" a
+ESC
+@until "Gender" d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Barbarian Feat" a
+@while "Rogue Feat" a
+@while "Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Barbarian Feat" a
+@while "Rogue Feat" a
+@while "Warrior Feat" a
+@while "Focus on which Weapon" a
+ESC
+@until "Gender" d
+@expect "Class  Barbarian 3"
+@dump:xpa
+
+M
+@choose "Rogue"
+ESC
+@until "Gender" d
+@expect "Rogue 0"
+G
+@choose "Rogue"
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Barbarian Feat" a
+@while "Rogue Feat" a
+@while "Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Barbarian Feat" a
+@while "Rogue Feat" a
+@while "Warrior Feat" a
+@while "Focus on which Weapon" a
+ESC
+@until "Gender" d
+@expect "Class  Barbarian 3"
+@expect "Rogue 1"
+@dump:xpb
+
+M
+@choose "Warrior"
+ESC
+@until "Gender" d
+@expect "Warrior 0"
+G
+@choose "Warrior"
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Barbarian Feat" a
+@while "Rogue Feat" a
+@while "Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Barbarian Feat" a
+@while "Rogue Feat" a
+@while "Warrior Feat" a
+@while "Focus on which Weapon" a
+ESC
+@until "Gender" d
+@expect "Class  Barbarian 3"
+@expect "Warrior 1"
+@dump:xpc
+
+G
+@choose "Rogue"
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Barbarian Feat" a
+@while "Rogue Feat" a
+@while "Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Barbarian Feat" a
+@while "Rogue Feat" a
+@while "Warrior Feat" a
+@while "Focus on which Weapon" a
+ESC
+@until "Gender" d
+@expect "Rogue 2"
+G
+@choose "Warrior"
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Barbarian Feat" a
+@while "Rogue Feat" a
+@while "Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Barbarian Feat" a
+@while "Rogue Feat" a
+@while "Warrior Feat" a
+@while "Focus on which Weapon" a
+ESC
+@until "Gender" d
+@expect "Class  Barbarian 3"
+@expect "Warrior 2"
+@dump:xpd
+ESC
+@quit

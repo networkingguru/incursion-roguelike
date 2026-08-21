@@ -498,6 +498,8 @@ tools/check_upstream_marks.sh	REPORTING-GATE
 tools/check_upstream_marks.sh	TOOLS
 tools/check_xp_penalty.sh	REPORTING-GATE
 tools/check_xp_penalty.sh	TOOLS
+tools/check_xp_penalty_rule.sh	REPORTING-GATE
+tools/check_xp_penalty_rule.sh	TOOLS
 tools/craft_corrupt_saves.py	TOOLS
 tools/dump_save.sh	README
 tools/dump_save.sh	TOOLS
@@ -584,6 +586,8 @@ tools/keys/underdark-deepgnome.keys	TOOLS
 tools/keys/underdark-greyelf.keys	TOOLS
 tools/keys/xp-penalty-crash.keys	REPORTING-GATE
 tools/keys/xp-penalty-crash.keys	TOOLS
+tools/keys/xp-penalty-rule.keys	REPORTING-GATE
+tools/keys/xp-penalty-rule.keys	TOOLS
 tools/lz_uncompress_selftest.c	TOOLS
 tools/package_macos_app.sh	FIXED
 tools/package_macos_app.sh	README

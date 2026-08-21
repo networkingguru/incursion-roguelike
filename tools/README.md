@@ -381,6 +381,7 @@ Nothing invoked it; the only references were documentation. See
 | `check_underdark_live.sh` | Does the Underdark Warrior check the race it requires, and give the Reflex save it advertises? | LIVE |
 | `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? | LIVE |
 | `check_xp_penalty.sh` | Can a character who holds only two classes read his own sheet? A Wood Elf Rogue 2 / Warrior 1, whose empty third class slot used to segfault `Character::XPPenalty`. | LIVE |
+| `check_xp_penalty_rule.sh` | Does the multiclass experience penalty follow the rule? Favoured and prestige classes leave the comparison, then each remaining class two or more levels below the highest remaining class costs 20% and the costs add. Six characters: an Elf photographed at Barbarian 3, Barbarian 3 / Rogue 1, + Warrior 1 and Barbarian 3 / Rogue 2 / Warrior 2, plus an Elf Rogue 5 / Assassin 2 and a Wood Elf Rogue 2 / Warrior 1. | LIVE |
 
 ### Diagnostics
 
@@ -528,6 +529,7 @@ tools/check_menu_value.sh
 tools/check_sharp_senses.sh
 tools/check_stacked_abilities.sh
 tools/check_xp_penalty.sh
+tools/check_xp_penalty_rule.sh
 tools/check_prestige_profs.sh
 tools/check_prestige_tables.sh
 tools/check_alienist_live.sh
