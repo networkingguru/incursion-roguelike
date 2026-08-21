@@ -16,8 +16,8 @@ are recorded in place below.
 **Updated 2026-08-20.** The investigations that owned the ACTIVE items have
 mostly closed, so those items now carry a status. Nothing further has been moved
 or deleted: the verdicts here stay recommendations, and acting on one is still
-Brian's call. Four instruments were added after the audit was written and are
-listed in their own section at the end.
+Brian's call. Instruments added after the audit was written are listed in their
+own section at the end.
 
 **The two axes**, both from inc-4pt, and an item must score on both to be worth
 keeping:
@@ -54,9 +54,9 @@ git log --format='%ad %s' --date=short -S<SYMBOL> -- src/ inc/ | tail -1
 
 ## 1. Compile-time probes
 
-Nine symbols, 672 guarded lines. None is compiled into any shipped binary; each
-needs an explicit `EXTRA_CXXFLAGS=-D<SYMBOL>` build, which is the mechanism
-`build_macos.sh:23-25` documents.
+None is compiled into any shipped binary; each needs an explicit
+`EXTRA_CXXFLAGS=-D<SYMBOL>` build, which is the mechanism `build_macos.sh:23-25`
+documents.
 
 | Symbol | Lines | Added | The question it answers | Verdict |
 |---|---|---|---|---|
@@ -104,7 +104,7 @@ about blinking, and no probe symbols -- the same check the "Stale
 
 ## 2. Environment-gated diagnostics
 
-Twenty-seven names, counted 2026-08-20 with
+Twenty-eight names, counted 2026-08-20 with
 `grep -rho 'getenv *( *"[A-Za-z_0-9]*"' src/ inc/`. `getenv` costs nothing when
 the variable is unset, so unlike the compile-time probes these ship in every
 binary. That is the reason to be stricter about the ones that are finished.
@@ -149,8 +149,8 @@ moved or deleted.
 
 ## Added after this audit was written
 
-Four instruments arrived with the fixes of 2026-08-19 and 2026-08-20. Each was
-built to drive one check, which is the pattern this document argues for: an
+The instruments below arrived with the fixes of 2026-08-19 and 2026-08-20. Each
+was built to drive one check, which is the pattern this document argues for: an
 instrument whose only consumer is a committed check cannot quietly rot into a
 confident wrong number, because the check fails when it does.
 
@@ -159,6 +159,7 @@ confident wrong number, because the check fails when it does.
 | `INCURSION_TARGET_PROBE` | Which candidate did each target-cursor press land on? | `tools/check_target_order.sh` |
 | `INCURSION_STAIR_PROBE` | What was the staircase candidate list, and how was it ranked? | `tools/check_stair_cycle.sh` |
 | `INCURSION_QUIET_PROBE` | Did this handle lookup speak, and should it have? | `tools/check_quiet_lookup.sh` |
+| `INCURSION_HANDLE_BASE` | Does a defect appear only once an object handle stops fitting in sixteen bits? It starts the handle counter at a chosen number instead of at 128 (`src/Registry.cpp:250-272`), so a one-second session reaches a state that otherwise needs an evening of play. | `tools/check_menu_value.sh` |
 | `INCURSION_SAVE_FAIL_AT` | Not a probe but a fault injector: it stages a save failure at a chosen point, throwing exactly what a short write throws, and fires once per process. It exists because a real full disk cannot reach the case the design turns on — both write loops write into memory and the disk is untouched until the commit. | `tools/check_save_fail.sh` |
 
 `INCURSION_SAVE_FAIL_AT` is the one to look at twice. A fault injector ships in
@@ -173,7 +174,7 @@ An earlier draft of this audit said one of the two should survive and the other
 should go. That was written before either was read properly, and it is wrong.
 Acting on it would have removed a capability.
 
-- `INCURSION_CHAR_PROBE` (`src/Registry.cpp:841-848`, eight lines) hooks
+- `INCURSION_CHAR_PROBE` (`src/Registry.cpp:1109-1116`, eight lines) hooks
   `Game::SaveGame`. It fires automatically, needs no one to remember it, and
   describes only the save just written, overwriting the last report.
 - `src/Dump.cpp` (268 lines, `-dump`, bd inc-loa.1) loads *any* existing save
@@ -183,7 +184,7 @@ Acting on it would have removed a capability.
 Neither is a superset of the other in access, so both stay.
 
 **What the audit did miss.** `src/Dump.cpp` compiles into every binary the
-project builds, but until 2026-08-18 only `src/Wposix.cpp:538` parsed `-dump`.
+project builds, but until 2026-08-18 only `src/Wposix.cpp:556` parsed `-dump`.
 The shipped graphical release therefore carried the save decoder and could not
 reach it — `nm -C incursion | grep RunSaveDump` found the symbol at
 `T RunSaveDump(char const*)` with no caller in that backend.
@@ -204,7 +205,7 @@ font. This is a port addition, not an upstream defect, so it carries no
 
 ## 3. Scripts under tools/
 
-`tools/README.md` already carries the full 41-file table with a LIVE / BUILD
+`tools/README.md` already carries the full file table with a LIVE / BUILD
 INFRASTRUCTURE / SUPERSEDED status on every row, so it is not repeated here.
 What that table does not answer is the `devtools/` question, and the boundary
 inc-4pt asks to draw explicitly is this:

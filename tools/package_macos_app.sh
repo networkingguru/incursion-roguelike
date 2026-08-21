@@ -16,8 +16,11 @@
 # keeps the writes out -- read its header for the layout and the ceiling.
 #
 # Usage:
-#     tools/package_macos_app.sh            build, assemble, sign, verify
-#     DMG=yes tools/package_macos_app.sh    also notarise a disk image
+#     VERSION=2.0 tools/package_macos_app.sh            build, assemble, sign, verify
+#     VERSION=2.0 DMG=yes tools/package_macos_app.sh    also notarise a disk image
+#
+# VERSION is required. The script refuses to build without it; see the check
+# below for why.
 #
 # Signing is automatic when a Developer ID Application certificate is present,
 # and skipped with a note when it is not.
@@ -80,7 +83,18 @@ else
 fi
 
 BUNDLE_ID="${BUNDLE_ID:-com.brianhill.incursion}"
-VERSION="${VERSION:-1.0}"
+
+# VERSION IS REQUIRED, AND THAT IS DELIBERATE. This used to default to 1.0, so
+# release 2 shipped a bundle whose CFBundleShortVersionString said 1.0 -- in
+# Finder's Get Info, in the About panel and in every crash report. Nothing
+# caught it: no document quotes a version string, so there was no wrong claim
+# for a reader or a checker to notice. A default that is silently wrong is worse
+# than no default, because the build still succeeds. Found 2026-08-20.
+if [ -z "${VERSION:-}" ]; then
+    echo "VERSION is not set. Refusing to build a bundle with a made-up version." >&2
+    echo "  VERSION=2.0 tools/package_macos_app.sh" >&2
+    exit 2
+fi
 
 # ------------------------------------------------------------------ build ----
 echo "=== 1/7  developer binary ==="

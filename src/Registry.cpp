@@ -155,7 +155,7 @@ class RegistryScope
    The defect is upstream's: the ordering of the two Serialize loops is
    original code, and it depends on no typedef, compiler or platform of this
    port. The codebase argues against itself here, which is the evidence:
-   Registry::LoadGroup (src/Registry.cpp:955) restores its objects from a
+   Registry::LoadGroup (src/Registry.cpp:1055-1060) restores its objects from a
    recorded list, LoadedObjects, for exactly this reason, while the saving half
    re-walks the table and does it last.
    Evidence: Observed -- an 8 MB HFS+ volume with 76 KB free, save/ symlinked

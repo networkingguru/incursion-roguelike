@@ -1,7 +1,12 @@
 # User defined modules
 
-TODO: RComp.cpp: Game::ResourceCompiler()
-    if (FIND("mage") && FIND("shocker lizard") && !Errors) {
+The resource compiler writes a compiled module file only if the module it just
+compiled defines both a resource named `mage` and a resource named `shocker
+lizard`.  Both belong to the core ruleset: `Class "Mage"` in `lib/classes.irh`
+and `Monster "shocker lizard"` in `lib/mon1.irh`.  The test stops a
+syntax-only test compile from overwriting a module file.  A user module
+defines neither resource, so the compiler prints `Forgoing save.`, writes no
+file, and still reports success.
 
 ## Which modules are loaded
 
@@ -18,8 +23,11 @@ the user will be shown an error dialog.
 
 ## Creating a Module
 
-A module is defined using a file with the suffix `.irc`.  At this time only
-the top level of the `mod` subdirectory is searched for these files.
+A module is defined using a file with the suffix `.irc`.  The resource
+compiler reads it from the library directory: `lib`, or the directory which
+the `INCURSIONLIBPATH` environment variable names.  It writes the compiled
+module into the `mod` subdirectory.  At this time only the top level of the
+`mod` subdirectory is searched for the compiled `.Mod` files.
 
 ### Keyword: Module
 
@@ -29,7 +37,7 @@ This is a required definition.  It specifies the module name, as presented to
 the player.
 
     Module "<module name>";
-	e.g. Module "Bong Bong's Magical Tower"
+	e.g. Module "Bong Bong's Magical Tower";
 
 ### Keyword: File
 

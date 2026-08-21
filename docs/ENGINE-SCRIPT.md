@@ -13,34 +13,41 @@ is `docs/incursionscript.md`; the module format `docs/modules.md`.
 | 4 | Pass 1, count | `src/RComp.cpp:248` `CountResources()` | lex-only scan; sizes and names 21 resource arrays |
 | 5 | Pass 2, parse | `src/RComp.cpp:184` `yyparse()`, `src/yygram.cpp` + `src/Tokens.cpp` | tokens -> filled `Module` object |
 | 6 | Emit dispatch | `src/RComp.cpp:504` `GenerateDispatch()` | symbol table -> `lib/dispatch.h`, a C++ **source** file |
-| 7 | Serialise | `src/RComp.cpp:223` -> `src/Registry.cpp:1014` | `Module` -> `mod/Incursion.Mod` |
-| 8 | Load | `src/Registry.cpp:1049` scans `mod/*.Mod` | file -> live `Module*` in `Modules[slot]` |
+| 7 | Serialise | `src/RComp.cpp:223` -> `src/Registry.cpp:1361` | `Module` -> `mod/Incursion.Mod` |
+| 8 | Load | `src/Registry.cpp:1408` scans `mod/*.Mod` | file -> live `Module*` in `Modules[slot]` (`:1438`) |
 | 9 | Execute | `src/VMachine.cpp`, `#include "dispatch.h"` at `:175` | `VCode` bytecode -> C++ calls |
 
 Generator sources are kept: `lang/Tokens.lex` (flex -> `src/Tokens.cpp`) and
 `lang/Grammar.acc` (ACCENT -> `src/yygram.cpp`, whose `#line 1` points back to
-it). ACCENT is vendored in `modaccent/`, built only by the Windows Debug
-configuration (`build.bat:66-68`). Stage 3 has no `-I`: the include path is four
-hardcoded entries, `../inc`, `../lib`, `./inc`, `./lib` (`src/cpp3.c:66-69`),
-which with stage 2 is why `#include "Api.h"` at `lib/main.irc:2` resolves to
-`inc/Api.h`. `ICOMP` is predefined on every run (`src/cpp1.c:458`) and is the
-switch that lets one header serve both compilers (`inc/Defines.h:25`, `:4575`).
+it). ACCENT is vendored in `modaccent/`, built by the Windows Debug
+configuration (`build.bat:67-74`) and by `build.sh:125-129`. Stage 3 has no
+`-I`: the include path is four hardcoded entries, `../inc`, `../lib`, `./inc`,
+`./lib` (`src/cpp3.c:66-69`), which with stage 2 is why `#include "Api.h"` at
+`lib/main.irc:2` resolves to `inc/Api.h`. `ICOMP` is predefined on every run
+(`src/cpp1.c:458`) and is the switch that lets one header serve both compilers
+(`inc/Defines.h:45`, `:4607`).
 
 ## What ships and what does not
 
 `src/RComp.cpp` is a single `#ifdef DEBUG` block, line 1 to line 1440. So is
 `src/Art.cpp`, line 1 to 1578 -- the ACCENT runtime that defines `yyparse`
 (`:1524`), and which its own header calls GPLv2 code that "cannot be compiled
-into any distributed binaries" (`:3`). Compiled in every configuration:
-`src/Tokens.cpp`, `src/yygram.cpp`, `src/cpp1-6.c`, `src/Registry.cpp`,
-`src/VMachine.cpp`, `lib/dispatch.h`. `src/yygram.cpp` calls `AllocString()`
-and `AllocRegister()` unconditionally (`:7857`, `:8548`), so a non-DEBUG link
-fails (`build_macos.sh:11-13`).
-**The macOS build defines `DEBUG` unconditionally, for both backends**
-(`build_macos.sh:56`, `:66`, `:97`); Windows Debug adds `/DDEBUG`, Release does
-not (`build.bat:60`, `:63`). Every binary here therefore carries the compiler
-and the GPLv2 runtime, so `src/TextTerm.cpp:65` -- "-compile only works in
-debug builds" -- holds for Windows Release alone.
+into any distributed binaries" (`:3`). `src/Tokens.cpp` and `src/yygram.cpp`
+carry no such guard, and `src/yygram.cpp` calls `AllocString()` and
+`AllocRegister()` unconditionally (`:7857`, `:8548`). Both functions live
+inside the guarded block (`src/RComp.cpp:1413`, `:1395`), so dropping `DEBUG`
+alone fails the link. Each build answers that by excluding whole files.
+**The macOS build takes a `COMPILER` switch** (`build_macos.sh:74`).
+`COMPILER=yes`, the default, defines `DEBUG` and compiles every source
+(`:99-102`). `COMPILER=no` defines nothing and skips `src/RComp.cpp`,
+`src/Art.cpp`, `src/yygram.cpp` and `src/Tokens.cpp` (`:104-105`), and
+`src/cpp1-6.c` as well (`:175-177`). Windows splits the same way by
+configuration: Debug adds `/DDEBUG` (`build.bat:60`), Release does not (`:63`)
+and filters `cpp*.c`, `yygram.cpp` and `tokens.cpp` out of the source list
+(`:93`). Compiled in every configuration: `src/Registry.cpp`,
+`src/VMachine.cpp`, `lib/dispatch.h`. So `src/TextTerm.cpp:65` -- "-compile
+only works in debug builds" -- holds for Windows Release and for
+`COMPILER=no` on macOS.
 
 ## Invariants a port must not break
 
@@ -51,20 +58,25 @@ debug builds" -- holds for Windows Release alone.
 2. **Function IDs are positional.** `MemFuncID` and `MemVarID` are counters
    bumped in declaration order (`lang/Grammar.acc:1262`, `:1270`, `:1291`,
    `:1312`), reset per run (`:190`). Reordering `inc/Api.h` renumbers every ID,
-   as its own warning at `inc/Api.h:6-13` says.
+   as its own warning at `inc/Api.h:6-12` says.
 3. **`rID` is the module slot in the top byte, a flat index below.** `Game::Get`
-   does `Modules[(xID >> 24) - 1]` (`src/Res.cpp:310`); `__GetResource` masks
-   with `0x00FFFFFF` and walks the 21 arrays in the fixed order at
+   takes the slot as `(xID >> 24) - 1`, range-checks it, then calls
+   `Modules[slot]->GetResource(xID)` (`src/Res.cpp:340-346`); `__GetResource`
+   masks with `0x00FFFFFF` and walks the 21 arrays in the fixed order at
    `inc/Res.h:876-896` (`src/Res.cpp:102`).
 4. **The module is raw struct bytes.** `SaveGroup` writes `typeSize(Type)` bytes
-   straight out of the object (`src/Registry.cpp:474`); `Module::ARCHIVE_CLASS`
+   straight out of the object (`src/Registry.cpp:774`); `Module::ARCHIVE_CLASS`
    hands each resource array over as one block of `sizeof(TMonster)*szMon` and
    so on (`inc/Res.h:820-840`). Rebuild per platform, per ABI. `src/AbiCheck.cpp`
    pins the widths and five bitfield structs, and says plainly it does not make
    the format portable (`:21-24`).
-5. **The only gate on the file is a version string**: `LoadGroup` throws
-   `EBADVER` on `strcmp(fh.Version, VERSION_STRING)`, `"0.6.9Y19"`
-   (`src/Registry.cpp:575`, `inc/Defines.h:17`). No struct sizes are recorded.
+5. **The only gate on the file is a layout digest**: `LoadGroup` throws
+   `EBADVER` when `SaveFormatMatches(fh.Version)` fails (`src/Registry.cpp:873`,
+   `:65`). The stamp is `SaveFormatID()`, an FNV digest of every size the save
+   format depends on (`src/AbiCheck.cpp:167`, `:144`), so adding a field to a
+   serialised class rejects old files by itself. The old stamp `VERSION_STRING`,
+   `"0.6.9Y19"` (`inc/Defines.h:23`), is still accepted as a migration
+   allowance, and that branch is marked for deletion (`src/Registry.cpp:80`).
    The text segment is also stored bitwise-inverted, negated on save and again
    on load (`inc/Res.h:819`, `:847`), so `strings` on the file shows nothing.
 
@@ -76,9 +88,7 @@ debug builds" -- holds for Windows Release alone.
 | `#include` in main.irc | 29 | `grep -c '^#include' lib/main.irc` |
 | `system` declarations, the whole script API | 785 | `grep -c '^system' inc/Api.h` |
 | `case` labels generated into dispatch.h | 976 | `grep -c "^    case \|^        case " lib/dispatch.h` |
-| Lines of preprocessed source | 76621 | `wc -l < lib/program.i` |
-| `#line` records in it | 842 | `grep -c '^#line' lib/program.i` |
-| Comment openers / surviving directives in it | 0 / 0 | `grep -c '/\*' lib/program.i` ; `grep -c '^#if' lib/program.i` |
+| Comment openers / surviving directives in `lib/program.i` | 0 / 0 | `grep -c '/\*' lib/program.i` ; `grep -c '^#if' lib/program.i` |
 | Keywords valid anywhere (`Keywords1`) | 33 | `sed -n '58,72p' lang/Tokens.lex \| grep -o '{ *[A-Za-z_0-9]*, *"' \| wc -l` |
 | Keywords valid outside code blocks (`Keywords2`) | 231 | `sed -n '73,300p' lang/Tokens.lex \| awk '/^};/{exit} {print}' \| grep -o '{ *[A-Za-z_0-9]*, *"' \| wc -l` |
 | Top-level resource declarations | 1636 | `grep -cE '^(Monster\|Item\|Feature\|Effect\|Disease\|Poison\|Spell\|Artifact\|Quest\|Dungeon\|NPC\|Class\|Race\|Domain\|God\|Region\|Terrain\|Text\|Template\|Flavor\|Behaviour\|Encounter) ' lib/program.i` |

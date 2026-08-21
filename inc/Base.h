@@ -305,9 +305,10 @@ struct Rect
         if (sx>=(x2-x1))
           { r.x1 = x1+1; r.x2 = x2-1;
             /* upstream: base-code defect, the fix is ours. inc-65j, tier
-               Observed, NOT SENT in this form -- see the provenance note at the
-               end of this comment. The same repair is applied to the y branch
-               below; this is the only marker for both.
+               Observed, SENT 2026-08-20 as rmtew#40 comment 5358799776 -- see
+               the provenance note at the end of this comment. The same repair
+               is applied to the y branch below; this is the only marker for
+               both.
 
                THE DEFECT. When the wanted size does not fit, this branch insets
                by one on each side instead. With a space two squares across or
@@ -342,11 +343,13 @@ struct Rect
                2026-08-20 with both measurements in front of him.
 
                PROVENANCE OF THE REPORT. The out-of-bounds reads are reported
-               upstream as rmtew#40 with a patch in rmtew#41, both open. Neither
-               names THIS repair site: the reply posted on #40 on 2026-08-19
-               recommends reserving two squares in PlaceWithinSafely and ends by
-               asking rmtew which site he prefers, and he has not answered. So
-               the defect is public and this repair is not.
+               upstream as rmtew#40 with a patch in rmtew#41, both open. The
+               reply posted on #40 on 2026-08-19 recommends reserving two
+               squares in PlaceWithinSafely and ends by asking rmtew which site
+               he prefers; he has not answered. The addendum posted on #40 on
+               2026-08-20, comment 5358799776, then names THIS repair site and
+               describes this fix. So both the defect and this repair are
+               public, and rmtew has answered neither.
 
                Tier Observed: seed 3390 under tools/keys/dive.keys, one file
                between the builds, 47,954 out-of-bounds Map::At() reads before

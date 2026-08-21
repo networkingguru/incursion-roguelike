@@ -12,7 +12,7 @@ investigations and not revisited when they end. Before trusting anything here:
 | What went upstream and what became of it | [`REPORTING-GATE.md`](REPORTING-GATE.md) |
 | How to build, package and ship | [`../README.md`](../README.md) |
 
-As of 2026-08-20: 63 issues closed (`bd list --status closed`). The port ships as a
+`bd list --status closed` shows the closed issues. The port ships as a
 signed and notarised `Incursion.app`; the plain-folder layout this document
 describes in places was withdrawn because a bare executable cannot be approved by
 Gatekeeper (inc-g1y). Saves now live in
@@ -33,8 +33,8 @@ six C escapes the port's path sweep ate; colliding run directories; and the
 **Outcome: not our bug.** Confirmed and closed as inc-4bh / commit `9284bb8`,
 "Move the input failure out of the engine and onto the machine". The window
 session was degraded; the game was healthy throughout. The investigation is kept
-below because the method is reusable and because six suspects were eliminated,
-which is worth not re-doing.
+below because the method is reusable and because the suspects below were
+eliminated, which is worth not re-doing.
 
 The single most useful takeaway: **use `lsappinfo`, not AppleScript/System
 Events**, when asking which application is frontmost or whether a process owns a
@@ -118,10 +118,10 @@ it was dormant since 2015 was wrong.
 **Thirteen of Kyle Benesch's pull requests show as MERGED on GitHub but are not
 ancestors of `rmtew/master`.** Master jumps straight from 2018-12-15 to 2025-06-28;
 the whole August 2024 block is absent. Verify with
-`git merge-base --is-ancestor c5bfa41 origin/master`. This may well have been
+`git merge-base --is-ancestor c5bfa41 upstream/master`. This may well have been
 deliberate on Richard's part, so it has NOT been raised with him.
 `HexDecimal/incursion-roguelike` (Kyle Benesch, the current libtcod maintainer) has
-16 unmerged topic branches from Aug 2024 — `standard-types`, `libtcod-1.24.0`,
+unmerged topic branches from Aug 2024 — `standard-types`, `libtcod-1.24.0`,
 `minmax`, `char-funcs`, `mod-arch`, `vcpkg-manifest` and others. That is real work
 already done, but **most of it is Windows plumbing**: MSVC project files, CI
 workflows, vcpkg. Measured 2026-08-14 -- the full stack touches 124 files and
@@ -150,7 +150,7 @@ The codebase catches this itself: `inc/RComp.h:221` asserts
 emits. Narrowing the typedefs in `inc/Defines.h` dropped printf format mismatches
 from 325 to 26.
 
-**Narrowing the typedefs then broke saving.** `inc/Map.h:649` did
+**Narrowing the typedefs then broke saving.** `inc/Map.h:664` did
 `*((long*)&hm) = ...`, writing 8 bytes into what had become a 4-byte `hObj`. The
 overrun covered the `int16 x,y` declared immediately after it, so **every save
 zeroed the player's position**, in memory and on disk. Loading placed the character
@@ -188,12 +188,12 @@ while the generated `src/yygram.cpp` calls into it unconditionally. Build with
 | Issue | Notes |
 |---|---|
 | Agent damage to be aware of | On 2026-08-14 an agent overwrote `logs/errors-17-15.log` and `logs/errors-before-boundsfix.log` with test fixtures while building `tools/check_logrotate.sh`. Both are unrecoverable; `logs/` is gitignored and there were no snapshots. Each file now holds a note saying what it was. The same agent also loaded `save/Jaoin.sav` and drove 24 moves to verify the map audit, so that save is no longer the one Brian left at 08:39. Use `mktemp -d` for fixtures; never use real `logs/` or `save/`. |
-| ~~Screen flicker, whole window dims or brightens~~ | **FIXED 2026-08-14 by `c564e6d`. inc-4bh closed, GitHub #4 closed 2026-08-17.** The cause and the one residual are at the END of this cell; everything between here and there is the pre-fix investigation, kept because the eliminations are reusable. **Repeatable trigger found 2026-08-14: on the options screens, move the selection up and down. The whole screen brightens, then dims a few seconds later.** Two hypotheses are dead: the `BlinkCursor()` theory (disproved by a 1200ms build), and a display-level content-adaptive backlight (disproved by Brian's control test -- other apps on the same display, including black-background terminals, never do it). **`-DFLICKER_PROBE` cannot answer this**: it runs inside libtcod's `actual_rendering()`, so it samples only when the game presents, and the game presents ~2/sec with gaps to 3.4s. Anything changing between presents is invisible to it, which explains both its flat 8.99 reading and the multi-second ramp. Replacement instrument is `tools/flickerscan.sh`, which samples the composited screen every 500ms; noise floor measured at 0.011 against a 0.5 threshold. **Untested against the real bug** -- blocked by the input problem above. **2026-08-14: the flicker may not be ours either.** With input dead, hovering the window's close/minimise buttons brightens the whole window and dims it seconds later. That is a window gaining and losing the active appearance, which fits "correlated with keypresses, not periodic" better than any renderer theory. **FIXED 2026-08-14 by `c564e6d`, and everything above this line is the pre-fix investigation — read it as history, not as open work.** inc-4bh is closed. The cause was that on menus the game waits for a key with the cursor off and *nothing presents at all*; the window sits unchanged for seconds and macOS dims it. Loading a game appeared to fix it only because `CursorOn()` then makes the cursor blink repaint every 300ms forever. The fix repaints on that same 300ms tick when the cursor is off — not a guessed rate, since the cursor-on state already used it and demonstrably never flickered. Brian confirmed the flicker is gone in play. It treats the symptom: the pixels were proven clean over 957 frames, and why the window server dims a quiet window is still unidentified, so `src/Wlibtcod.cpp:1419` carries a `ponytail:` marker naming the ceiling (one wasted repaint every 300ms forever, which is battery on a handheld and therefore matters for the Steam Deck target) and the upgrade path. **One residual, never retested:** an unfocused instance still showed a 10s repaint gap on the startup screen, so at least one screen does not run the tick. |
-| `Thing::Remove` list corruption | **Line numbers below have drifted; as of 2026-08-17 the message is at `src/Display.cpp:1296`, and there is a sibling at `:1023` for `Thing::Move` that calls `Fatal()` instead of `Error()` — the same inconsistency is fatal on one path and survivable on the other. Two things now make this tractable that did not exist when this was written: an instrumented build behind `-DINC6D5_PROBE` (`src/Display.cpp:46-152`) that logs every Move/Remove/PlaceAt for a named creature with a call stack and also watches its square, and the map audit's orphan check finally having the mount/engulf exemption its own first check has — that was burying this signal under thousands of by-design findings per run, and orphan counts are now single digits per seed. Frequency in scripted play: 2 occurrences across a 40-seed run, which is NOT comparable to the 57-in-13-seconds figure below because the exposure is completely different.** `Contents list wierdless in Thing::Remove!`, `src/Display.cpp:1160`, 57 occurrences in one session. **The name misleads: the list is not corrupt.** The Thing simply is not in the chain of the square it claims. The damage is the bare `return` at :1161, which skips the rest of teardown -- `m`/`x`/`y`/`Next` keep stale values, `CleanupRefedStati()` never runs so other creatures keep dangling references, and `F_DELETE` plus the destroy-queue push never happen. It has already been dropped from `Things[]`, so it becomes a zombie in neither list, never destroyed. An engulf-related root cause was hypothesised and **disproved** (`Thing::Remove` handles ENGULFED and nulls `m`, so the Contents walk never runs). **2026-08-17: that disproof cited `:1084`, which has drifted and now holds a `LineOfSight` test. The real site is `src/Display.cpp:1220-1223`, inside `Thing::Remove` which begins at `:1213`. The disproof still stands; only the citation was wrong. It matters because this line number is the whole evidence for ruling engulf out of inc-6d5.** Root cause still unknown. `src/MapAudit.cpp` detects the zombie signature; run with `INCURSION_MAP_AUDIT=1`. See bead inc-6d5. |
-| `FI_SIZE` inconsistency | `Map::GetAt()` finds `FieldAt(x,y,FI_SIZE)` true with no matching entry in `Fields[]`. Fired during monster AI; not seen since. **2026-08-17: there are TWO such `Error()` sites, `src/Display.cpp:680` and `:812`, not the one this entry originally named. And it has appeared zero times across the kept 40-seed gate runs since `Map::GetAt()` started refusing out-of-bounds coordinates — weak support for the theory that it was a consequence of that bug, not proof, since it was only ever seen once and absence in scripted play is not absence.** |
-| Negative map scroll offsets | The clamp that would stop `XOff`/`YOff` going negative is commented out at `src/Term.cpp:1005-1015`. Harmless once positions are correct, but it turned the save bug into a fully blank screen instead of a visibly wrong one. **2026-08-17, first attempt, WRONG — retracted the same day.** It said "there is no commented-out `XOff` clamp anywhere in `src/Term.cpp` now". There is: the whole clamp block is inside `/* */` at `src/Term.cpp:1043-1057`. Only the line number had drifted, and the original entry was true. Two lessons, both cheap: a failed grep is not an absence, and a retraction needs the same evidence bar as the claim it retracts. Note also that the commented-out code is malformed — `if(XOff<0 &&` at `:1044` has no right-hand operand — so it could never have compiled as written, which suggests it was disabled part-way through an edit rather than deliberately retired. Note also that a negative `XOff` is deliberate in one case — `src/Term.cpp:1012` sets `XOff = -((MSizeX() - m->SizeX())/2)` on purpose to centre a map smaller than the window — so "negative is wrong" is too strong as written. Re-derive this entry from the code before acting on it.** |
+| ~~Screen flicker, whole window dims or brightens~~ | **FIXED 2026-08-14 by `c564e6d`. inc-4bh closed, GitHub #4 closed 2026-08-17.** The cause and the one residual are at the END of this cell; everything between here and there is the pre-fix investigation, kept because the eliminations are reusable. **Repeatable trigger found 2026-08-14: on the options screens, move the selection up and down. The whole screen brightens, then dims a few seconds later.** Two hypotheses are dead: the `BlinkCursor()` theory (disproved by a 1200ms build), and a display-level content-adaptive backlight (disproved by Brian's control test -- other apps on the same display, including black-background terminals, never do it). **`-DFLICKER_PROBE` cannot answer this**: it runs inside libtcod's `actual_rendering()`, so it samples only when the game presents, and the game presents ~2/sec with gaps to 3.4s. Anything changing between presents is invisible to it, which explains both its flat 8.99 reading and the multi-second ramp. Replacement instrument is `tools/flickerscan.sh`, which samples the composited screen every 500ms; noise floor measured at 0.011 against a 0.5 threshold. **Untested against the real bug** -- blocked by the input problem above. **2026-08-14: the flicker may not be ours either.** With input dead, hovering the window's close/minimise buttons brightens the whole window and dims it seconds later. That is a window gaining and losing the active appearance, which fits "correlated with keypresses, not periodic" better than any renderer theory. **FIXED 2026-08-14 by `c564e6d`, and everything above this line is the pre-fix investigation — read it as history, not as open work.** inc-4bh is closed. The cause was that on menus the game waits for a key with the cursor off and *nothing presents at all*; the window sits unchanged for seconds and macOS dims it. Loading a game appeared to fix it only because `CursorOn()` then makes the cursor blink repaint every 300ms forever. The fix repaints on that same 300ms tick when the cursor is off — not a guessed rate, since the cursor-on state already used it and demonstrably never flickered. Brian confirmed the flicker is gone in play. It treats the symptom: the pixels were proven clean over 957 frames, and why the window server dims a quiet window is still unidentified, so `src/Wlibtcod.cpp:1443` carries a `ponytail:` marker naming the ceiling (one wasted repaint every 300ms forever, which is battery on a handheld and therefore matters for the Steam Deck target) and the upgrade path. **One residual, never retested:** an unfocused instance still showed a 10s repaint gap on the startup screen, so at least one screen does not run the tick. |
+| `Thing::Remove` list corruption | **Line numbers below have drifted; as of 2026-08-20 the message is at `src/Display.cpp:2001`, and there is a sibling at `:1728` for `Thing::Move` that calls `Fatal()` instead of `Error()` — the same inconsistency is fatal on one path and survivable on the other. Two things now make this tractable that did not exist when this was written: an instrumented build behind `-DINC6D5_PROBE` (`src/Display.cpp:46-152`) that logs every Move/Remove/PlaceAt for a named creature with a call stack and also watches its square, and the map audit's orphan check finally having the mount/engulf exemption its own first check has — that was burying this signal under thousands of by-design findings per run, and orphan counts are now single digits per seed. Frequency in scripted play: 2 occurrences across a 40-seed run, which is NOT comparable to the 57-in-13-seconds figure below because the exposure is completely different.** `Contents list wierdless in Thing::Remove!`, `src/Display.cpp:1160`, 57 occurrences in one session. **The name misleads: the list is not corrupt.** The Thing simply is not in the chain of the square it claims. The damage is the bare `return` at :1161, which skips the rest of teardown -- `m`/`x`/`y`/`Next` keep stale values, `CleanupRefedStati()` never runs so other creatures keep dangling references, and `F_DELETE` plus the destroy-queue push never happen. It has already been dropped from `Things[]`, so it becomes a zombie in neither list, never destroyed. An engulf-related root cause was hypothesised and **disproved** (`Thing::Remove` handles ENGULFED and nulls `m`, so the Contents walk never runs). **2026-08-17: that disproof cited `:1084`, which has drifted and now holds a `LineOfSight` test. The real site is `src/Display.cpp:1925-1928`, inside `Thing::Remove` which begins at `:1918`. The disproof still stands; only the citation was wrong. It matters because this line number is the whole evidence for ruling engulf out of inc-6d5.** Root cause still unknown. `src/MapAudit.cpp` detects the zombie signature; run with `INCURSION_MAP_AUDIT=1`. See bead inc-6d5. |
+| `FI_SIZE` inconsistency | `Map::GetAt()` finds `FieldAt(x,y,FI_SIZE)` true with no matching entry in `Fields[]`. Fired during monster AI; not seen since. **2026-08-17: there are TWO such `Error()` sites, `src/Display.cpp:680` and `:1517`, not the one this entry originally named. And it has appeared zero times across the kept 40-seed gate runs since `Map::GetAt()` started refusing out-of-bounds coordinates — weak support for the theory that it was a consequence of that bug, not proof, since it was only ever seen once and absence in scripted play is not absence.** |
+| Negative map scroll offsets | The clamp that would stop `XOff`/`YOff` going negative is commented out at `src/Term.cpp:1005-1015`. Harmless once positions are correct, but it turned the save bug into a fully blank screen instead of a visibly wrong one. **2026-08-17, first attempt, WRONG — retracted the same day.** It said "there is no commented-out `XOff` clamp anywhere in `src/Term.cpp` now". There is: the whole clamp block is inside `/* */` at `src/Term.cpp:1043-1057`. Only the line number had drifted, and the original entry was true. Two lessons, both cheap: a failed grep is not an absence, and a retraction needs the same evidence bar as the claim it retracts. Note also that the commented-out code is malformed — `if(XOff<0 &&` at `:1044` has no right-hand operand — so it could never have compiled as written, which suggests it was disabled part-way through an edit rather than deliberately retired. Note also that a negative `XOff` is deliberate in one case — `src/Term.cpp:1013` sets `XOff = -((MSizeX() - m->SizeX())/2)` on purpose to centre a map smaller than the window — so "negative is wrong" is too strong as written. Re-derive this entry from the code before acting on it.** |
 | Resolution warning on startup | `Wlibtcod.cpp`. Pre-existing, matches an open upstream issue. Options top out at 1920x1200; no Retina/HiDPI handling. |
-| 58 format-string defects | 26 residual type mismatches, plus 32 that are live bugs on Windows too. **2026-08-17: the enumeration step written here is already done and is now a no-op.** `Format()` carries `__attribute__((format(printf,1,2)))` at `inc/Base.h:151`, as does `Error()`. So the 58-defect count cannot be reproduced by "add the attribute"; it needs a compile with the attributes already in place. Note that `build_macos.sh:147-148` puts `-w` in both `CXXFLAGS` and `CFLAGS`, which silences every warning, so a normal build shows none of these. Compile with `-Wformat` and without `-w` to see them. |
+| 58 format-string defects | 26 residual type mismatches, plus 32 that are live bugs on Windows too. **2026-08-17: the enumeration step written here is already done and is now a no-op.** `Format()` carries `__attribute__((format(printf,1,2)))` at `inc/Base.h:163`, as does `Error()`. So the 58-defect count cannot be reproduced by "add the attribute"; it needs a compile with the attributes already in place. Note that `build_macos.sh:152-153` puts `-w` in both `CXXFLAGS` and `CFLAGS`, which silences every warning, so a normal build shows none of these. Compile with `-Wformat` and without `-w` to see them. |
 | ~~No headless mode~~ | **DONE.** The ncurses backend exists (`BACKEND=posix`), and the harness drives the game from key scripts with no display. Closed as inc-73g; roughly 1,100 unattended sessions had run by 2026-08-17, and the gate has added to that on every change since. |
 | No x86_64 slice, no universal binary, no Linux run, no CI | |
 | `build.sh` does not build on macOS | **Held on purpose, not a regression.** It is upstream's: Richard Tew added it in `ab1053f` (2025-06-28) with the Windows batch scripts, this fork has never touched it, and it carries no `darwin`/`macos`/`uname` handling at all. It compiles libtcod's vendored zlib, which `build_macos.sh:139` deliberately skips for the reason at `:128`. Measured 2026-08-20: dropping to `-std=gnu89` does NOT rescue it, because `libtcod/src/zlib/zutil.c` fails at every standard inside the SDK's `_stdio.h:322` on the `fdopen` redefinition. Use `build_macos.sh`. Whether `build.sh` is repaired as the Linux on-ramp or retired is a decision deferred to the Linux/Steam Deck work: bead inc-7ud.1. Do not repair it as a drive-by. |
@@ -215,9 +215,9 @@ Issue prefix is `inc`. The graph mirrors the README roadmap, in three tiers.
 mac/linux/universal, **B** fix the engine bugs, **C** understand the engine
 (four comprehension passes).
 
-**MID — finish the shipped ruleset.** **D** (`inc-tek`), the real work: eight
+**MID — finish the shipped ruleset.** **D** (`inc-tek`), the real work: the
 races whose subraces the game's own help marks `(Unimplemented)`, the Fighter
-capstone feat trees, and 64 markers of unfinished work across `lib/`. Not gated
+capstone feat trees, and the markers of unfinished work across `lib/`. Not gated
 on C — Brian can fix content today without an engine map.
 
 **LONG — addons.** **E** (`inc-pw1`): world mode, more dungeons. Content beyond
@@ -236,7 +236,7 @@ four questions every claim must answer — reachability chain, provenance, blast
 radius, confidence tier — and the rule that only Observed-tier findings may go
 to `rmtew` or `HexDecimal`.
 
-**Four pull requests have been sent to rmtew, and one is merged.** See the table
+**Pull requests have been sent to rmtew, and one is merged.** See the table
 under "Sent to rmtew" in `docs/REPORTING-GATE.md` for the current state of #41,
 #42, #43 and #44. As of 2026-08-19 both of his open threads are answered: the
 #40 correction that withdraws the monster-AI cause, and issue #8 on automated
@@ -254,11 +254,10 @@ draft. Both were broken on 2026-08-15. See `CLAUDE.md`.
 
 Agents own the C++: port, engine, build, harness. All machine-checkable.
 
-Brian owns the ruleset in `lib/*.irh` — 82,363 lines of IncursionScript, 1,450
-`On Event` handlers, 517 monsters, 264 items, 191 effects, 39 classes, 17 races.
-(Line count re-taken 2026-08-20; the entity counts are from 2026-08-17.
-`cat lib/*.irh | wc -l`, and
-`grep -ch '^Monster "' lib/*.irh` for each entity kind. Do not compare these
+Brian owns the ruleset in `lib/*.irh` — the IncursionScript that holds the
+`On Event` handlers, the monsters, the items, the effects, the classes and the
+races. (Count the lines with `cat lib/*.irh | wc -l`, and each entity kind with
+`grep -ch '^Monster "' lib/*.irh`. Do not compare these counts
 against `lib/program.i`, which is the preprocessed live set and differs.)
 It is C-lite with dice notation (`1d2`, `A_STR`), and each entity's prose spec sits
 in the same file as its implementation, so a mismatch between them is a provable bug
@@ -295,8 +294,8 @@ use this for unattended verification, not for things he can check in ten seconds
 ## Diagnostic instrumentation
 
 **The full inventory is in the README's
-[For developers](../README.md#for-developers) section**, which lists every switch
-with the question it answers, and in [`DEVTOOLS-AUDIT.md`](DEVTOOLS-AUDIT.md),
+[For developers](../README.md#for-developers) section**, which lists the main
+switches with the question each answers, and in [`DEVTOOLS-AUDIT.md`](DEVTOOLS-AUDIT.md),
 which carries a verdict on each. What follows is the part specific to this
 document: how they are armed, and the two that were deleted.
 
@@ -346,7 +345,7 @@ Compile-time:
 | `-DINCURSION_OOB_RECTFIX`, `-DINCURSION_OOB_RANGEFIX` | Behaviour variants from the level-builder investigation. The widening variant is no longer a variant: it shipped in `3208aa7`. |
 | `-DSTRING_QUEUE_SIZE=N` | A size override, not a `getenv`. `tools/check_strqueue.sh` builds against it. |
 
-Two instruments were deleted, and both deletions are the record rather than
+Instruments have been deleted, and each deletion is the record rather than
 housekeeping:
 
 - **`-DFLICKER_PROBE`, deleted 2026-08-18.** It logged luminance per presented

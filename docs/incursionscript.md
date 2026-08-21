@@ -39,11 +39,11 @@ When an item receives an event:
 
 #### META
 
-For every event processed, a targeted further modified event 'META(event)' is sent to all involved objects.  Except for the victim/target which is sent 'META(EVICTIM(event))'.
+For every event processed, each object involved in the event is examined for TRAP_EVENT statis.  A stati whose event code matches sends 'META(event)' to the script class which granted that stati.  Except for the victim/target, whose statis are sent 'META(EVICTIM(event))'.
 
 #### GODWATCH
 
-For every event processed, a targeted further modified event 'GODWATCH(event)' is sent to each god.  Next the process is repeated with 'GODWATCH(EVICTIM(event))' sent to each god.
+If the actor is a character, a targeted further modified event 'GODWATCH(event)' is sent to each god.  Next, if the victim is a character, the process is repeated with 'GODWATCH(EVICTIM(event))' sent to each god.
 
 ### Event Types
 
@@ -117,7 +117,7 @@ Invoked prioritised forced action for a charmed and compelled player or monster,
 
 #### EV_CONDITION
 
-Not implemented.
+Never thrown.  The resource compiler uses this code as the event scope while it compiles a standalone condition expression or statement.
 
 #### EV_CONVERT
 
@@ -151,11 +151,10 @@ Invoked when the user chooses to attempt to cow a creature, or a group of creatu
 
 Handled in: Script hook possibility.
 
-If game logic wishes to determine if a script class is suitable for a given use, it invokes this event against that class.  There are three possible return values:
+If game logic wishes to determine if a script class is suitable for a given use, it invokes this event against that class.  The game engine reads the return value differently in each context:
 
- * SHOULD_CAST_IT: valid.
- * CAN_CAST_IT: valid.
- * CANNOT_CAST_IT: invalid.
+ * Encounter and template selection: CANNOT_CAST_IT rejects the class.  Any other value accepts it.
+ * User dialogs: zero rejects the class.  Any other value accepts it.  SHOULD_CAST_IT is zero, so it rejects.
 
 This event is used in the game engine for the selection of templates to apply to monsters, encounters to spawn, and also in user dialogs to narrow down a selection of script classes to choose from (e.g. when using the Oil of Transformation).
 
@@ -218,7 +217,7 @@ Called to go down a level, climb down from a tree, descend from levitation or cl
 Invoked in: Creature.
 Handled in: Various god script classes.
 
-Invoked during a creature's turn, as an indication of an angry god.
+Invoked during a creature's turn, as an intervention by a god which is not angry with the character.  If the god is angry, EV_ANGER_PULSE is invoked in its place.
 
 #### EV_GOD_RAISE
 
@@ -246,7 +245,7 @@ Invoked when a player dies, first against their god if they have one.  Otherwise
 
 Handled in: Script hook possibility.
 
-If game logic wishes to determine if a script class can be applied to a given object, it invokes this event against that class.  There are three possible return values:
+If game logic wishes to determine if a script class can be applied to a given object, it invokes this event against that class.  The possible return values are:
 
  * SHOULD_CAST_IT: Autobuff and monster AI will do so.
  * CAN_CAST_IT: Player can, monsters won't.
@@ -320,9 +319,8 @@ Applies to: Q_INV
 
 Used to filter which inventory items are shown in a menu for the user to select from.
 
- * SHOULD_CAST_IT: Autobuff and monster AI will do so.
- * CAN_CAST_IT: Player can, monsters won't.
- * CANNOT_CAST_IT: Invalid target.
+ * ABORT: Do not show the item.
+ * Otherwise: Show the item.
 
 #### EV_RATE_SAC
 #### EV_RATTACK
@@ -475,7 +473,7 @@ Handled in: Script hook possiblity.
 
 #### EV_WEAR
 
-Not implemented.
+EV_WEAR is defined as the same event code as EV_WIELD.  A handler for EV_WEAR is a handler for EV_WIELD.
 
 #### EV_WIELD
 

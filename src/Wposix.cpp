@@ -696,10 +696,11 @@ void posixTerm::PutChar(int16 x, int16 y, Glyph g) {
 }
 
 /* Exact, where the other backends are not: they store the character their
-   glyph table produced and cannot recover the glyph id from it. The three
-   callers (Term.cpp:1969, Magic.cpp, Skills.cpp) mask the result with
-   GLYPH_ID_MASK and put it straight back, so an exact round trip is what they
-   were written to expect. */
+   glyph table produced and cannot recover the glyph id from it. The five call
+   sites (Term.cpp:2164, Term.cpp:2167, Magic.cpp:1324, Skills.cpp:1931 and
+   Skills.cpp:2844)
+   mask the result with GLYPH_ID_MASK and put it straight back, so an exact
+   round trip is what they were written to expect. */
 Glyph posixTerm::AGetChar(int16 x, int16 y) {
     if (x < 0 || x >= SCREEN_W || y < 0 || y >= SCREEN_H)
         return ' ';

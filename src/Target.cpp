@@ -1102,7 +1102,9 @@ bool TargetSystem::giveOrder(Creature * me, Creature *master, TargetType order, 
      original typedefs exactly as it does here; nothing depends on platform,
      compiler or type width. Tier Observed -- 250 seeds against a build
      differing in nothing else, asserts at Base.h:577 89,545 -> 0 and total
-     error lines 139,948 -> 48,245. Tracked as inc-zmk. SENT to rmtew as pull
+     error lines 139,948 -> 48,245. That line number is what ASSERT printed in
+     the measured build, so it is left as the run reported it; the same assert
+     is at inc/Base.h:734-740 today. Tracked as inc-zmk. SENT to rmtew as pull
      request #42 and MERGED on 2026-08-15, the first change from this fork
      accepted into the parent project.
 

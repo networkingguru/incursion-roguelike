@@ -347,7 +347,7 @@ void Creature::MakeNoise(int16 radius)
     if (HasStati(INVIS) || HasStati(INVIS_TO))
       RippleCheck(radius);
     /* upstream: base-code defect, the fix is ours. inc-upw.37, tier Observed,
-       NOT SENT upstream. It is upstream's because it
+       SENT 2026-08-20 as rmtew#40 comment 5358799776. It is upstream's because it
        is plain C++ control flow: the guard eleven lines above runs BEFORE the
        call that invalidates it, and Reveal() can delete this creature. Nothing
        depends on platform, compiler or type width, so it misbehaves on Win32

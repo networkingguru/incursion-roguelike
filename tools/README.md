@@ -3,7 +3,7 @@
 This directory holds the unattended-testing harness for the macOS/Linux port of
 Incursion. Read this page before you run anything in it.
 
-**Five files carry almost all of the value.** Learn these and you can ignore the
+**A few files carry almost all of the value.** Learn these and you can ignore the
 rest until you need them.
 
 | File | Why it matters |
@@ -23,33 +23,33 @@ trust the sentence. About a third of this project's older citations have rotted.
 
 Two build lines exist. They differ only in the terminal backend, and only one
 backend can be linked at a time, because each defines `main()`, `Error()` and
-`Fatal()` (`build_macos.sh:26-31`).
+`Fatal()` (`build_macos.sh:31-32`).
 
 ```sh
 ./build_macos.sh                 # -> ./incursion           the SDL/libtcod game
 BACKEND=posix ./build_macos.sh   # -> ./incursion-headless  the POSIX/ncurses build
 ```
 
-`build_macos.sh:31` defaults `BACKEND` to `libtcod`; `:34` maps that to
-`OUT=incursion` and `:35` maps `posix` to `OUT=incursion-headless`. Either line
-also writes `mod/Incursion.Mod` when that file is absent (`build_macos.sh:184-194`),
+`build_macos.sh:36` defaults `BACKEND` to `libtcod`; `:39` maps that to
+`OUT=incursion` and `:40` maps `posix` to `OUT=incursion-headless`. Either line
+also writes `mod/Incursion.Mod` when that file is absent (`build_macos.sh:189-199`),
 because both builds carry the resource compiler by default.
 
 The `posix` build compiles `src/Wposix.cpp` and links `-lz -lncurses`
-(`build_macos.sh:103-112`). ncurses ships with macOS and with every Linux
+(`build_macos.sh:108-117`). ncurses ships with macOS and with every Linux
 distribution, so it adds nothing to install, and it draws only to a real
 terminal — a headless run never calls into it
-(`build_macos.sh:109-111`). The `libtcod` build links SDL2 and OpenGL instead
-(`build_macos.sh:114-119`), and needs `sdl2` and `pkg-config` from Homebrew.
+(`build_macos.sh:114-116`). The `libtcod` build links SDL2 and OpenGL instead
+(`build_macos.sh:119-124`), and needs `sdl2` and `pkg-config` from Homebrew.
 
-**The harness needs the second line.** `headless.sh:74` defaults its binary to
-`./incursion-headless`, and `:77-80` refuses to run without it, printing that
+**The harness needs the second line.** `headless.sh:75` defaults its binary to
+`./incursion-headless`, and `:78-81` refuses to run without it, printing that
 exact build command. `soak.sh:33-35`, `check_race_feats.sh:23-26` and
 `check_load_corrupt.sh:47-48` all say the same.
 
 Requirements: Xcode command line tools, plus `sdl2` and `pkg-config` from
 Homebrew (`build_macos.sh:4-5`). The POSIX build needs neither SDL nor libtcod
-(`build_macos.sh:29-30`).
+(`build_macos.sh:34-35`).
 
 ---
 
@@ -59,7 +59,7 @@ Homebrew (`build_macos.sh:4-5`). The POSIX build needs neither SDL nor libtcod
 `tools/keys/` inside its own directory under `logs/runs/`, with its own `save/`
 and `logs/`, and with `mod/` and `lib/` symlinked in (`headless.sh:7-10`). It
 exists so that an unattended run cannot destroy a real character. Use it and
-never the binary directly (`headless.sh:47-50`).
+never the binary directly (`headless.sh:48-51`).
 
 `soak.sh` calls `headless.sh` once per seed, several at a time, and reports the
 errors grouped by message rather than by session (`soak.sh:19-21`).
@@ -85,13 +85,13 @@ them (`src/Debug.cpp`), so adding an option renumbers everything after it —
 dump the menu and read the letter rather than counting. And `w`, not `W`: an
 uppercase token sets SHIFT, and both key tables bind `KY_CMD_WIZMODE` with
 modifier flags of 0, so `W` is a different keystroke that reaches nothing
-(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:4626`/`4746`).
+(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:4641`/`4761`).
 
 `[M] Create Altar` is there for the harness. A sacrifice needs the player to
 be standing on an altar, and the only other source of one is `MakeLev`'s
-random assignment (`src/MakeLev.cpp:2093-2105`), which picks from seven gods
+random assignment (`src/MakeLev.cpp:2109-2125`), which picks from seven gods
 and cannot be asked for a particular one. The command prompts for a god name
-and builds the feature exactly as `MakeLev.cpp:1123-1125` does.
+and builds the feature exactly as `MakeLev.cpp:1143-1145` does.
 `check_sacrifice.sh` is the first thing to use it.
 
 Everything else is a diagnostic, a packaging step, or superseded.
@@ -105,69 +105,69 @@ self-explanatory.
 
 **`ended: NO GAMEPLAY`** — the run never entered a map, so it measured nothing.
 `Game::Play` writes `logs/session.log` on the first completed turn, so that file
-exists if and only if the session reached gameplay (`headless.sh:141-143`). When
-it is missing and the run would otherwise have exited 0 or 3, `headless.sh:166-170`
+exists if and only if the session reached gameplay (`headless.sh:149-151`). When
+it is missing and the run would otherwise have exited 0 or 3, `headless.sh:174-178`
 rewrites the exit code to 5. Do not count such a run as a pass. Screens are not
 a substitute test: `@dump` lines fire even in a session that never entered a map,
-and one vacuous run left 11 of them (`headless.sh:160-162`).
+and one vacuous run left 11 of them (`headless.sh:168-170`).
 
 **`ended: WATCHDOG`** — exit 4. The game stopped asking for keystrokes, which is
-the signature of a hang (`headless.sh:33-34`). `SIGALRM` fires in
-`src/Wposix.cpp:455-460`, which writes `incursion: watchdog timeout, no key read
+the signature of a hang (`headless.sh:32-33`). `SIGALRM` fires in
+`src/Wposix.cpp:471-479`, which writes `incursion: watchdog timeout, no key read
 in time` and exits with `EXIT_OUT_OF_TIME`, defined as 4 at `src/Wposix.cpp:84`.
 The alarm is 300 seconds (`src/Wposix.cpp:79`) and it measures the GAP between
 keystrokes, not the length of the run, so a long honest session is safe
-(`src/Wposix.cpp:1243-1247`). It is never armed when a person is at the keyboard
-(`src/Wposix.cpp:556-561`).
+(`src/Wposix.cpp:1593-1597`). It is never armed when a person is at the keyboard
+(`src/Wposix.cpp:576-580`).
 
 **`death: STUCK`** — the run ended with `Die? [yn]` still on the last screen,
-unanswered (`headless.sh:235-239`). The pinned settings run with `OPT_NODEATH`
+unanswered (`headless.sh:245-249`). The pinned settings run with `OPT_NODEATH`
 on, so a killing blow asks that question instead of ending the game, and a key
 script answers it blind with whatever token comes next
-(`headless.sh:204-208`). If no `y` or `n` remains in the script, every later
+(`headless.sh:214-217`). If no `y` or `n` remains in the script, every later
 keystroke is swallowed and the run still reports `ended: cleanly`
-(`headless.sh:214-220`). A confirmed death prints `death: N confirmed` instead
+(`headless.sh:224-230`). A confirmed death prints `death: N confirmed` instead
 and is logged to `logs/death.log`. Neither gets its own exit code, on purpose:
 whether a death should fail a run is a product decision the script does not make
-(`headless.sh:36-41`).
+(`headless.sh:37-42`).
 
 **`stuck-prompt: threat-disengage`** — the run ended with `You are in a
 threatened area. Abort, Flee or Disengage?` still on screen
-(`headless.sh:258-261`). That prompt has no option gate at all and fires
+(`headless.sh:268-271`). That prompt has no option gate at all and fires
 whenever a player-controlled creature moves away from a hostile creature that
-perceives it (`src/Move.cpp:841`, quoted at `headless.sh:244-248`).
+perceives it (`src/Move.cpp:841`, quoted at `headless.sh:254-257`).
 `tools/keys/dive.keys` contains none of `a`, `f`, `d`, `?` or ESC, so once the
 prompt fires the rest of the script is swallowed. Measured on 7 of 40 seeds
-(`headless.sh:252-255`).
+(`headless.sh:263-265`).
 
 **`map audit: armed, no inconsistencies found`** — the audit ran and found
 nothing. `src/MapAudit.cpp:64` writes an `=== map audit armed ... ===` header
 whenever the audit is on, so the log carries a line even on a clean run. That is
-what lets `headless.sh:286-288` tell "clean" apart from "never ran". A missing
-log is reported three different ways depending on why (`headless.sh:278-285`),
+what lets `headless.sh:296-297` tell "clean" apart from "never ran". A missing
+log is reported three different ways depending on why (`headless.sh:288-295`),
 because merging them is the exact defect this code used to have.
 
 ---
 
-## 4. Five traps that have already produced a false measurement
+## 4. Traps that have already produced a false measurement
 
 **Trap 1 — every script resolves the repo root itself.** The idiom is
 `ROOT="$(cd "$(dirname "$0")/.." && pwd)"` followed by `cd "$ROOT"`
-(`headless.sh:44-45`, `soak.sh:24-25`, `gate_record.sh:17-18`,
-`check_headless.sh:38-39`, and 22 more). So you may call any of them from any
-working directory, and the path arguments they take are relative to the REPO
-ROOT, not to where you are standing. `gate_lib.sh:43` uses `BASH_SOURCE` instead
+(`headless.sh:45-46`, `soak.sh:24-25`, `gate_record.sh:17-18`,
+`check_headless.sh:38-39`, and most other scripts here). So you may call any of
+them from any working directory, and the path arguments they take are relative
+to the REPO ROOT, not to where you are standing. `gate_lib.sh:43` uses `BASH_SOURCE` instead
 because it is sourced, not executed.
 
 **Trap 2 — `headless.sh` copies the LIVE `Options.Dat` unless you say
-otherwise.** `headless.sh:99` defaults `INCURSION_OPTIONS` to `$ROOT/Options.Dat`
-and `headless.sh:104` copies it into the session. The default is deliberate: a session with
+otherwise.** `headless.sh:107` defaults `INCURSION_OPTIONS` to `$ROOT/Options.Dat`
+and `headless.sh:112` copies it into the session. The default is deliberate: a session with
 no options file never finishes character generation, which produced two false
-passes on 2026-08-14 (`headless.sh:86-88`). But the live file is whatever the
+passes on 2026-08-14 (`headless.sh:94-96`). But the live file is whatever the
 owner last played with, and the game rewrites it every session. Settings change
 the game. On 2026-08-15 the same binary, seed and key script gave different
 screens either side of a rewrite, and the gate's finding count moved 4386 to
-4416 with no code change (`headless.sh:90-94`, `gate_lib.sh:31-41`).
+4416 with no code change (`headless.sh:98-101`, `gate_lib.sh:31-41`).
 
 This matters more than it sounds, because the key scripts choose menu items by
 FIXED LETTERS. One extra prompt slides every later keystroke out of step. Two
@@ -176,21 +176,21 @@ answer for (`tools/keys/chargen-priest.keys:12-16`). Anything that compares one
 run against another MUST pass `INCURSION_OPTIONS`. The gate pins
 `tools/gates/Options.Dat` and records its checksum in the baseline
 (`gate_lib.sh:43-44`, `gate_record.sh:28-34`). A file you name and cannot have is
-an error, never a silent fall back to the live one (`headless.sh:100-103`).
+an error, never a silent fall back to the live one (`headless.sh:105-111`).
 
 **Trap 3 — the map audit is ON by default and it is expensive.**
-`headless.sh:111` sets `INCURSION_MAP_AUDIT` to 1 unless you override it. A
+`headless.sh:119` sets `INCURSION_MAP_AUDIT` to 1 unless you override it. A
 sample of a headless run on 2026-08-15 put 75 percent of the run inside
 `AuditMap`, so a session with the audit on measures the audit and not the game
-(`headless.sh:106-110`). **Anything timing the engine MUST set
+(`headless.sh:114-118`). **Anything timing the engine MUST set
 `INCURSION_MAP_AUDIT=0`. Anything hunting defects MUST leave it on.**
 
 **Trap 4 — a key script longer than the budget stops early and exits 3, and
 that looks like a short run rather than a failure.** The budget is
-`DEFAULT_MAX_KEYS 20000` (`src/Wposix.cpp:78`, applied at `:157`). It counts keys
-READ, one per `GetChar` call (`src/Wposix.cpp:1189-1192`), and when it runs out
+`DEFAULT_MAX_KEYS 20000` (`src/Wposix.cpp:78`, applied at `:171`). It counts keys
+READ, one per `GetChar` call (`src/Wposix.cpp:1590`), and when it runs out
 the game dumps a screen named `maxkeys` and exits with `EXIT_OUT_OF_KEYS`, which
-is 3. Raise it with `INCURSION_MAX_KEYS` (`src/Wposix.cpp:551-552`).
+is 3. Raise it with `INCURSION_MAX_KEYS` (`src/Wposix.cpp:570-571`).
 
 **Correction, 2026-08-17: `marathon.keys` does NOT need a raised cap, and the
 usage line in its own header was wrong.** That header told everyone to run
@@ -213,7 +213,7 @@ factor of about 2.5, and both are now the measured numbers.
 
 **Trap 5 — two runs started in the same second used to SHARE a run directory.
 Fixed; the history is here because the number it corrupted was published.**
-`headless.sh:89` now names the default run directory
+`headless.sh:90` now names the default run directory
 `logs/runs/$(date +%Y%m%d-%H%M%S)-<pid>-<script>`. The stamp alone resolves to
 the SECOND, so before the process id joined it, a loop that started several
 sessions inside one second gave them all the same directory, and any probe that
@@ -243,7 +243,7 @@ tells you nothing about which run was which.
 ## 5. The depth ceiling: no session reaches depth 11
 
 Wizard mode's `Ascend / Descend Depth` refuses any depth above the dungeon's
-`DUN_DEPTH` constant. `src/Debug.cpp:804-808` reads:
+`DUN_DEPTH` constant. `src/Debug.cpp:805-808` reads:
 
 ```c
 if (i < 1 || RES(m->dID)->Type != T_TDUNGEON ||
@@ -267,7 +267,11 @@ The other key scripts under `tools/keys/` make no depth claim, and I checked
 each one. `find-altar-scout.keys` says only "dive through several levels", which
 is true. `explore*.keys`, `chargen*.keys`, `smoke.keys`, `followers.keys`,
 `marathon.keys`, `modcheck.keys`, `dragonkin-*.keys` and `find-altar-diag.keys`
-name no depth.
+name no depth, and neither does any of the `prestige-*`, `sacrifice-*`,
+`save-*`, `underdark-*` or single-purpose scripts added since. Re-check with
+`grep -il depth tools/keys/`, which names five files: `dive.keys`,
+`dive12.keys`, `followers.keys`, `find-altar-scout.keys` and
+`find-altar-diag.keys`.
 
 Evidence, tier Observed. A `dive12.keys` run leaves four screen dumps, and their
 own status lines settle it:
@@ -296,13 +300,13 @@ defect that needs depth 11 or deeper cannot find it with these scripts at all.
 
 ## 6. Every file in tools/
 
-49 files, and not all of them are alive. Statuses: **LIVE** — use it.
+Not every file here is alive. Statuses: **LIVE** — use it.
 **BUILD INFRASTRUCTURE** — part of producing or shipping a binary, not a
 diagnostic. **SUPERSEDED** — something else does the job better; kept for
 history. **DEAD** — its reason to exist is gone.
 
-No file is marked DEAD today. Two are SUPERSEDED, and neither is deleted:
-marking is the job, and both still explain an older log or an older commit.
+No file is marked DEAD today. Nothing marked SUPERSEDED is deleted: marking is
+the job, and each still explains an older log or an older commit.
 
 ### The harness
 
@@ -315,7 +319,7 @@ marking is the job, and both still explain an older log or an older commit.
 
 `run_probe.sh` was **deleted on 2026-08-18**. Its own header said "Delete this
 script once the saved-game position bug is fixed", and that bug is fixed:
-`docs/REPORTING-GATE.md:162` records `*((long*)&hm)` destroying the player's
+`docs/REPORTING-GATE.md:189` records `*((long*)&hm)` destroying the player's
 position as a closed fix, and `src/AbiCheck.cpp:11` now gates the type widths it
 depended on. It was also redundant — `play.sh` sets the same two probes and more
 (`play.sh:41-49`) and prints a report afterwards, which `run_probe.sh` did not.
@@ -338,29 +342,41 @@ Nothing invoked it; the only references were documentation. See
 | `check_headless.sh` | Do the five properties every unattended run depends on still hold? | LIVE |
 | `check_abi.sh` | Did any save-format type width move, and does anything cast a handle to a pointer? | LIVE |
 | `check_abs_path.sh` | Does the game still resolve `argv[0]` to an absolute path? **Unsafe, see §7.** | LIVE |
+| `check_alienist_live.sh` | Does the Alienist's Surreal Presence field exist and speak? A kobold summoned beside her must read "seems unsettled". | LIVE |
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? | LIVE |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? | LIVE |
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? | LIVE |
 | `check_dump_save.sh` | Does `-dump` still walk a real save and report the right fields, from BOTH backends? | LIVE |
+| `check_earthsinger_live.sh` | Does the Earthsinger admit the rock gnome its own refusal message names? | LIVE |
 | `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? | LIVE |
 | `check_escape_sweep.sh` | Does any string literal still spell a C escape with a forward slash, the way the port's path sweep wrote `/n` for `\n`? | LIVE |
+| `check_huntsman_live.sh` | Does the Twilight Huntsman reach his own spell list, smite Law rather than Good, and track at the ranger's rate? | LIVE |
+| `check_key_directives.sh` | Do the screen-driven key-script directives `@choose`, `@cursorto`, `@cursorto:mark` and `@expect` reach a menu entry that counting could not? | LIVE |
 | `check_layout.sh` | Does this build play the same game when its objects sit at different addresses? | LIVE |
 | `check_load_corrupt.sh` | Does the real binary refuse ten hand-corrupted saves cleanly and still load two genuine ones? | LIVE |
 | `check_logrotate.sh` | Does log rotation keep the right archives and prune only names it made itself? | LIVE |
+| `check_loremaster_live.sh` | Does the Loremaster's Bibliographic Insight add its extra attribute points when he reads a tome? | LIVE |
 | `check_lz_uncompress.sh` | Can the LZ77 and RLE decoders be made to write past their output buffer? | LIVE |
+| `check_masterarcher_live.sh` | Does the Master Archer's Ranged Sneak Attack fire only with a long bow or a short bow, and not with every launcher? | LIVE |
+| `check_menu_value.sh` | Does a script menu give back the same object handle it was handed, above the 16-bit line? | LIVE |
 | `check_natural_speed.sh` | Has the hard-coded brawl-speed floor drifted from the fastest weapon in `lib/weapons.irh`? Reads the data; runs nothing. | LIVE |
 | `check_natural_speed_live.sh` | Does flipping one byte of `Options.Dat` really move the Brawl row on the character sheet, 100% to 175%? Refuses to pass if a run never entered a map. | LIVE |
 | `check_package.sh` | Is the packaged folder free of ACCENT symbols and Homebrew paths, and does it carry its data? | LIVE |
+| `check_prestige_profs.sh` | Does a prestige class grant the weapon and armour proficiencies its own prose promises? | LIVE |
+| `check_prestige_tables.sh` | Does each prestige class print the save columns and the defence track its own fields give? | LIVE |
 | `check_ptr_sweep.sh` | Does `sweep_ptr_order.sh` still find a pointer ordering, and still ignore a pointer equality? | LIVE |
 | `check_quiet_lookup.sh` | Does a dead object handle resolve silently where silence is correct, and still complain where a complaint is correct? | LIVE |
 | `check_race_feats.sh` | Does a Dragonkin get Mantis Leap on the character sheet? | LIVE |
 | `check_reveal_delete.sh` | Can a monster still delete itself inside `Reveal()` and leave the caller holding a dangling map pointer? | LIVE |
 | `check_sacrifice.sh` | Does a god's altar read the rows BELOW `MA_ALL`, and refuse what it should refuse? | LIVE |
-| `check_save_fail.sh` | Does a save that fails part-way leave the game playable? Drives a real disk-full and eight staged failure points. | LIVE |
+| `check_save_fail.sh` | Does a save that fails part-way leave the game playable? Stages the throw with `INCURSION_SAVE_FAIL_AT` at a chosen object or data block. It does not drive a real disk-full, and cannot: every write goes into a memory `CFile` and the disk is untouched until `CommitCompressed`, so a full disk can only fail once every object is already converted. That case was reproduced by hand instead. | LIVE |
+| `check_sentinel_live.sh` | Does the Sentinel's engine-side save track match the table it prints? Makes one, four levels deep. | LIVE |
+| `check_sharp_senses.sh` | Does the Sharp Senses bonus reach Search, and not only Spot and Listen? | LIVE |
 | `check_stair_cycle.sh` | Does the overview map's staircase search run, pick the cheapest, and wrap? | LIVE |
 | `check_store_scroll.sh` | Does the shop list follow the selection in both directions, reached without wizard mode? | LIVE |
 | `check_strqueue.sh` | Is the string queue's bound still tested before the write? | LIVE |
 | `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? | LIVE |
+| `check_underdark_live.sh` | Does the Underdark Warrior check the race it requires, and give the Reflex save it advertises? | LIVE |
 | `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? | LIVE |
 
 ### Diagnostics
@@ -388,7 +404,7 @@ so averaging the whole desktop halves any real signal and lets unrelated windows
 swamp it (`flickerscan.py:5-8`). `flickerscan.py` also refuses to reach a verdict
 on black frames, which is the failure that had the older scan confidently
 reporting results from captures macOS had blocked
-(`docs/PORT-STATUS.md:305-310`). `flickerscan.sh` still calls `flickerscan.py`,
+(`docs/PORT-STATUS.md:366`). `flickerscan.sh` still calls `flickerscan.py`,
 so it is not broken — it is the weaker instrument, and it is kept only so its
 older logs stay interpretable.
 
@@ -401,7 +417,7 @@ structurally blind to the defect it was built for, and its flat 8.99 reading was
 true and irrelevant (`docs/DEVTOOLS-AUDIT.md`). Read every diagnostic in
 this directory the same way: ask what it samples before you trust what it says.
 An instrument that answers confidently about the wrong thing costs more than no
-instrument. `gate_lib.sh:26-28` states its own version of this limit — the gate
+instrument. `gate_lib.sh:27-29` states its own version of this limit — the gate
 detects only regressions that produce log output, and never replaces a
 play-test. `check_upstream_marks.sh:48-56` and `check_api_arity.py:65-69` each
 state theirs.
@@ -424,7 +440,7 @@ one (`package_macos_app.sh:5-13`).
 
 | Path | What it is |
 |---|---|
-| `keys/*.keys` | 28 key scripts — the inputs `headless.sh` plays. Read the header of one before you use it. |
+| `keys/*.keys` | The key scripts `headless.sh` plays. Read the header of one before you use it. |
 | `gates/dive.baseline` | The committed regression baseline. `gate_record.sh` overwrites it. |
 | `gates/Options.Dat` | The pinned settings file every gate run plays with. Committed on purpose. |
 | `gates/Options.Dat.md` | What is in that settings file and why. |
@@ -450,7 +466,7 @@ tools/check_escape_sweep.sh         # greps src/ and inc/ for a C escape spelled
 tools/check_natural_speed.sh        # reads lib/weapons.irh against inc/Defines.h
 ```
 
-Six tools prove themselves against known-bad input on demand:
+These tools prove themselves against known-bad input on demand:
 
 ```sh
 tools/check_upstream_marks.sh --selftest
@@ -458,6 +474,7 @@ tools/check_api_arity.py --selftest
 tools/check_headless.sh --selftest
 tools/check_citations.sh --selftest
 tools/check_escape_sweep.sh --selftest
+tools/check_lz_uncompress.sh --selftest
 python3 tools/flickerscan_selftest.py
 ```
 
@@ -466,7 +483,7 @@ checking anything looks exactly like a check that passes.
 
 `tools/check_citations.sh <document>` also belongs in this tier, but it resolves
 citations against the git refs `upstream/master` and `origin/master`
-(`check_citations.sh:34-36`). Fetch those remotes first, or it reports failures
+(`check_citations.sh:81-82`). Fetch those remotes first, or it reports failures
 that are only missing refs. It is read-only on git.
 
 ### Tier 2 — needs a compiler but no prior build
@@ -502,6 +519,18 @@ tools/check_save_fail.sh
 tools/check_stair_cycle.sh
 tools/check_store_scroll.sh
 tools/check_target_order.sh
+tools/check_key_directives.sh
+tools/check_menu_value.sh
+tools/check_sharp_senses.sh
+tools/check_prestige_profs.sh
+tools/check_prestige_tables.sh
+tools/check_alienist_live.sh
+tools/check_earthsinger_live.sh
+tools/check_huntsman_live.sh
+tools/check_loremaster_live.sh
+tools/check_masterarcher_live.sh
+tools/check_sentinel_live.sh
+tools/check_underdark_live.sh
 ```
 
 Run `check_headless.sh` before the rest of the tier. They all drive
@@ -512,15 +541,17 @@ meaningless.
 `inc/Defines.h` and runs nothing. Its live twin,
 `check_natural_speed_live.sh`, is the one that needs a build.
 
-`check_sacrifice.sh` runs two sessions, not one, and the second is the point:
-`sacrifice-wildcard.keys` proves the changed row now matches, and
+`check_sacrifice.sh` runs three sessions, not one, and each later one is the
+point: `sacrifice-wildcard.keys` proves the changed row now matches,
 `sacrifice-goblinoid.keys` proves a row that already matched still behaves
-identically. A check with only the first half cannot tell a fixed wildcard
-from a loop that matches everything.
+identically, and `sacrifice-aiswin.keys` proves the rows BELOW `MA_ALL` are
+read at all. Without the second, the check cannot tell a fixed wildcard from a
+loop that matches everything. Without the third, it cannot see a loop that
+stops one row too early.
 
 `check_load_corrupt.sh:37-41` prefers `./incursion-ubsan` when it exists and
 falls back to `./incursion-headless`. Build the sanitizer variant with the line
-in `build_macos.sh:75-79` if you want the stronger run.
+in `build_macos.sh:80-84` if you want the stronger run.
 
 ### Tier 4 — needs an artefact you built on purpose
 
@@ -547,7 +578,7 @@ tools/gate_compare.sh               # re-runs every recorded baseline
 without recording anything. Do NOT run `gate_record.sh` unless you mean to
 replace that baseline — see below.
 
-### The two you must not run casually
+### The ones you must not run casually
 
 **`tools/check_abs_path.sh` runs the real game from the repo root, and moves the
 live `Options.Dat` aside.** Verified: `check_abs_path.sh:22-27` renames `Options.Dat` to
@@ -624,8 +655,8 @@ its parser can match, so a clean run is not a clean bill of health
       sort -u
   ```
 
-  That returns 34, of which 6 are self-test fixtures (`inc-000`, `inc-aaa`,
-  `inc-abc`, `inc-bbb`, `inc-ccc`, `inc-ddd`), leaving 28 real ids. The
+  That returns 52, of which 6 are self-test fixtures (`inc-000`, `inc-aaa`,
+  `inc-abc`, `inc-bbb`, `inc-ccc`, `inc-ddd`), leaving 46 real ids. The
   tracker's export `.beads/issues.jsonl` is neither present nor tracked
   (`git ls-files .beads/`). Run `bd show <id>` on a machine that has the local
   Dolt database, or the reasoning behind the harness is unreachable.

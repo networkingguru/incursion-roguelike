@@ -6,9 +6,8 @@ the game; this is about what was broken and what was done to it.
 Every entry states how it was verified. Where a claim was wrong, the retraction
 is here too — `docs/REPORTING-GATE.md` is the rule that requires it.
 
-Sixty-four issues are closed as of 2026-08-20. Each carries its evidence in
-Beads, including the controls that were run and, where one exists, the check left
-behind.
+Every closed issue carries its evidence in Beads, including the controls that
+were run and, where one exists, the check left behind.
 
 ## Index
 
@@ -23,7 +22,7 @@ behind.
 | [Two defects that shipped, and were found by a stranger](#two-defects-that-shipped-and-were-found-by-a-stranger) | The packaging failures, and why local checks could not see them |
 | [Defects this port introduced, and then removed](#defects-this-port-introduced-and-then-removed) | Ours, not the base game's |
 | [Claims that were withdrawn](#claims-that-were-withdrawn) | Two of them, with what replaced each |
-| [Everything sent upstream](#everything-sent-upstream-and-what-became-of-it) | Four submissions, one merged |
+| [Everything sent upstream](#everything-sent-upstream-and-what-became-of-it) | What went to the parent project, and where each submission stands |
 
 ---
 
@@ -273,6 +272,40 @@ switch off and 175% with it on.
 lets brawl inherit the held weapon's speed. Fixing it would change what players
 who leave this switch off already experience, so it is filed and not touched.
 
+**Twenty prestige-class descriptions promised things their scripts did not do.**
+These are findings PA-03-F1 through F20 of the prose-versus-script audit. Each is
+a place where a class's own description tells the player one thing and the script
+the engine runs does another. The rule used throughout: the prose wins unless the
+script has two independent sources agreeing with it, and every ruling is recorded
+with its evidence.
+
+The mechanical failures. The Twilight Huntsman shipped sixty spells and a
+"+1 caster level" column but no `SPELL_ACCESS` grant, so nothing ever read its
+spell list; its Smite Law smote Good; and its Tracking advanced four times as
+fast as the ranger's it claims to stack with. Sharp Senses gave its bonus to Spot
+and Listen but not to Search, although the elf and the sentinel both name all
+three — fixed in the engine rather than in `lib/`, because the bonus already
+lived there for two of the three skills. The Master Archer's Ranged Sneak Attack
+fired with anything, because `T_BOW` is not a discriminator: the sling and all
+three crossbows are declared `T_BOW` too, so the three real bows are named
+instead. The Blackguard could not use a shield and the Assassin could not use the
+drow hand crossbow.
+
+Five classes printed saves or a defence track their class does not grant. The
+tables lose in each case, because the header line and the field the engine reads
+agree against them.
+
+Observed for five of the twenty, red-before and green-after on builds differing
+in nothing else. `tools/check_sharp_senses.sh` reads an elf's Searching at +5
+before and +7 after, with Spot and Listen unmoved as the control.
+`tools/check_prestige_tables.sh` covers twenty table rows across five classes,
+seventeen of which fail against a module built from the old prose.
+
+The other fifteen are Traced, not Observed. Each needs a character who actually
+holds the class, which needs the skill manager, which is not written yet. Where a
+feature cannot be written now, the class description says so in its own text, and
+the bead that eventually writes it must delete that line.
+
 ---
 
 ## Interface defects
@@ -344,6 +377,51 @@ game logs, and is red on a build differing only in those two case labels. Its
 ceiling is in its header: seed 1 knows one staircase of each kind, so it proves
 the search runs, the choice is the cheapest and the cursor wraps, but not the
 order of two candidates.
+
+**The menu threw away the top half of every handle a script gave it.** AutoLoot
+took nothing from a chest, said "finished looting", and named nothing it had
+skipped. The first diagnosis was wrong: it blamed `Item::Owner()` walking up
+through a chest that had kept the player as its parent, and a Parent/Owner probe
+refuted that — the oak chest is `Parent=0` and every item in it is `Owner=0`,
+exactly like the ground items that worked.
+
+The handle was destroyed going *into* the menu, not read wrongly coming out.
+`inc/Api.h` declares the script side of every engine call, and the resource
+compiler turns those declarations into the virtual machine's dispatcher. The
+declaration for `LOption` — the call every script uses to add one line to a menu
+— said its value parameter was an `int16`. That value is the caller's own cookie
+and AutoLoot puts the item's handle in it, but an `hObj` is a signed 32-bit
+handle. `TextTerm::LOption` itself takes an `int32` and `Option::Val` is an
+`int32`, so only the declaration was ever narrow.
+
+Handles are handed out in order from 128, so the first 32,639 objects of a game
+are untouched and the defect switches on partway through a character's life.
+That is why the first chest looted and the second did not, and why the earlier
+experiment pointed at "in a chest": the ground items it compared against were old
+inventory objects carrying low handles. The same declaration also narrowed
+AutoDrop and every resource id a script puts in a menu — the undead-form menus
+put ids past sixteen million through it.
+
+Observed twice. A probe on `TextTerm::FirstSelected` read the loss directly:
+handle 44177 came back out of the menu as −21359, which is 44177 as a signed
+16-bit number. No object answers to that, AutoLoot's own first guard is
+`!isValidHandle`, and the macro walked past every marked item without a word.
+Then on a sandboxed copy of a real save — never on `save/` itself — the keys that
+printed "You stop AutoLoot (finished looting)" and took nothing now print
+"? spellbook [Conjurations and Summonings] taken.", and four marked items come
+across in four ticks.
+
+`tools/check_menu_value.sh` is the check. No scripted run is long enough to reach
+a wide handle, so `INCURSION_HANDLE_BASE` starts the counter wherever the caller
+asks; the check sets it to 40,000 and drives AutoDrop through the same menu round
+trip. Red on a build differing in nothing but that cast, green with it. The same
+script at the ordinary base of 128 passes on both builds, which is the control —
+without it, an AutoDrop broken for some other reason would fail this check and be
+read as the truncation returning.
+
+Upstream, and marked as such: `hObj` is 32 bits on Win32 too, the cast truncates
+identically on the upstream compiler, and `inc/Api.h` has not been touched since
+2014-2015. Not sent.
 
 ---
 
@@ -471,8 +549,8 @@ that sentence cited.
 | [#43](https://github.com/rmtew/incursion-roguelike/pull/43) | `MoveDepth` re-entrancy, sent as hardening | open. His three technical questions were answered 2026-08-18 |
 | [#44](https://github.com/rmtew/incursion-roguelike/pull/44) | compare handles, not addresses, in `TargetSort` | open, sent 2026-08-16 |
 
-One merged of four. The one that merged is the one whose evidence was a number
-that moved on both sides of a controlled run, which is what
+The one that merged is the one whose evidence was a number that moved on both
+sides of a controlled run, which is what
 [`REPORTING-GATE.md`](REPORTING-GATE.md) predicted before there was any evidence
 for it.
 
@@ -495,15 +573,15 @@ bd ready                    # what is available to work on now
 bd show <id>                # one issue, with its evidence
 ```
 
-Sixty-four issues are closed as of 2026-08-20. Twenty-three of those were closed
-by iNCURSION release 1; the rest came after it.
+Twenty-three of the closed issues were closed by iNCURSION release 1; the rest
+came after it.
 
 ## Fixes that belong to upstream
 
-Defects that are the base game's rather than this port's are marked in the source
-with an `upstream:` comment — 45 of them today — and listed in
-[`REPORTING-GATE.md`](REPORTING-GATE.md), so they can be found and sent on if the
-original maintainer ever wants them:
+Defects that are the base game's rather than this port's are marked in the
+source with an `upstream:` comment, and listed in
+[`REPORTING-GATE.md`](REPORTING-GATE.md), so they can be found and sent on if
+the original maintainer ever wants them:
 
 ```
 grep -rn "upstream:" src/ inc/

@@ -1054,8 +1054,8 @@ Restart:
            religion code can be exercised on demand: a sacrifice needs the
            player to be standing on an altar, and the only other way to get
            one is to walk the dungeon until MakeLev's random assignment
-           (src/MakeLev.cpp:2093-2105) happens to place the god you want. It
-           creates the feature exactly the way MakeLev.cpp:1123-1125 does. */
+           (src/MakeLev.cpp:2109-2125) happens to place the god you want. It
+           creates the feature exactly the way MakeLev.cpp:1143-1145 does. */
         rID aID; Feature *ft;
         MyTerm->SetWin(WIN_INPUT);
         MyTerm->Color(YELLOW);

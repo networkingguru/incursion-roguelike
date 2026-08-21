@@ -3,9 +3,8 @@
 **STATUS: IMPLEMENTED AND SHIPPED.** `inc-73g` is closed. This document is the
 original specification and is kept for the reasoning, not as pending work —
 everything below in the future tense now exists. Build it with
-`BACKEND=posix ./build_macos.sh` and drive it with `tools/headless.sh`. Roughly
-1,100 unattended sessions have run through it, and it is how most defects in this
-port were found.
+`BACKEND=posix ./build_macos.sh` and drive it with `tools/headless.sh`. It is how
+most defects in this port were found.
 
 Tracked as `inc-73g`. Sized: Medium.
 
@@ -36,7 +35,7 @@ want one.
 
 `src/Wposix.cpp` defines `posixTerm : public TextTerm`, guarded by
 `#ifdef POSIX_TERM`, in the same shape as the two existing backends: it
-implements the ~50 platform virtuals TextTerm leaves pure, defines `main()`,
+implements the platform virtuals TextTerm leaves pure, defines `main()`,
 `Error()` and `Fatal()`, and owns file I/O.
 
 `build_macos.sh BACKEND=posix` compiles it instead of `Wlibtcod.cpp` and
@@ -50,20 +49,21 @@ Both existing backends store the screen in their graphics library's own buffer
 `posixTerm` stores `Glyph scr[48][80]` directly.
 
 A `Glyph` is a `uint32`: 12 bits of glyph id, 4 of foreground, 4 of background
-(`inc/Defines.h:4137`). Storing it verbatim makes `AGetChar` exact. The libtcod
+(`inc/Defines.h:4174`). Storing it verbatim makes `AGetChar` exact. The libtcod
 backend cannot do that — it stores the character its glyph table produced, so
-`GetGlyph` → `PutGlyph` round trips lose the glyph id. The three callers
-(`src/Term.cpp:1969`, `src/Magic.cpp:1324`, `src/Skills.cpp:1931`) mask with
-`GLYPH_ID_MASK` and put the result back, so exactness is what they want.
+`GetGlyph` → `PutGlyph` round trips lose the glyph id. The callers
+(`src/Term.cpp:2164`, `src/Magic.cpp:1324`, `src/Skills.cpp:1931`,
+`src/Skills.cpp:2844`) mask with `GLYPH_ID_MASK` and put the result back, so
+exactness is what they want.
 
 This also means the rendering target is not the screen model. The same array
 serves both output modes.
 
-### Two output modes
+### The output modes
 
 | mode | Update() | when |
 |---|---|---|
-| headless | marks the frame clean, nothing else | `-headless`, or stdout is not a tty |
+| headless | marks the frame clean, nothing else | `-headless`, or stdin or stdout is not a tty |
 | ncurses | blits `scr` to `stdscr`, refreshes | a tty |
 
 ### Input comes from a script
@@ -83,7 +83,7 @@ comment. Tokens:
 | `@dump` `@dump:label` | write the current screen to `logs/screens/` |
 | `@quit` | leave the game at the next key read |
 
-SHIFT matters and is not cosmetic. `StandardKeySet` (`src/Tables.cpp:4558`)
+SHIFT matters and is not cosmetic. `StandardKeySet` (`src/Tables.cpp:4573`)
 matches `toupper(ch)` against `raw_key` and then compares the modifier flags
 exactly, so `{ KY_CMD_ALL_ALLIES, 'A', 0 }` is reached by lowercase `a` and
 *not* by `A`. A script that ignored SHIFT would silently dispatch the wrong
@@ -103,7 +103,7 @@ settled, so a dump never catches a half-drawn frame.
 
 ### Ending a run
 
-Unattended runs must end. Three ways out:
+Unattended runs must end. The run ends in one of these ways:
 
 1. `@quit`, or the script running out — dump the final screen, exit 0.
 2. `INCURSION_MAX_KEYS` (default 20000) reached — dump, log, exit 3.
@@ -151,7 +151,7 @@ so it comes last.
 All five phases are done. Phases 2 and 3 landed as one commit: splitting them
 would have left a commit whose binary could not take a keystroke.
 
-Three things were needed that this specification did not anticipate.
+This specification did not anticipate the needs below.
 
 **The seed.** Runs were not reproducible, and the cause was bigger than
 expected: the game reached for the clock as a source of randomness in six
@@ -167,8 +167,27 @@ made outside it wrote a scripted character into `save/` beside real ones. Use
 `tools/headless.sh --tty` to test terminal drawing, never the binary directly.
 
 **`@include`.** Every script begins by making a character, and that sequence is
-about forty keystrokes. Without an include, changing it meant editing every
-script that exists.
+long. Without an include, changing it meant editing every script that exists.
+
+**The script language and the exits both grew after this was written.** Read
+the two tables above as the starting point, not as the current list.
+
+- More directives joined `@dump` and `@quit`: `@include FILE`;
+  `@choose "name"`, which presses whatever letter the game printed beside
+  *name*; `@expect "text"`, which stops the run unless the screen shows
+  *text*; `@while "text" KEY` and `@until "text" KEY`; and `@cursorto "name"
+  KEY` with its `@cursorto:mark` variant. All are parsed in
+  `src/Wposix.cpp:1283-1345`.
+- The command line also takes `-timeout SECONDS`, the watchdog for an
+  unattended run, and `-dump SAVEFILE`, which prints a save file and exits
+  without starting the game.
+- The ways out above became these exit codes: 0 clean, 1 `Fatal()`, 2 the key
+  script could not be read or parsed, 3 out of keys or budget, 4 the watchdog
+  fired, 6 an `@expect`, `@choose` or `@cursorto` assertion failed. `@while`
+  and `@until` do not stop a run: they give up after a fixed number of passes,
+  warn on stderr and step over. `-dump` adds 22 for a save it could not read.
+  `tools/headless.sh` prints one line per code and adds one of its own,
+  5, for a session that never entered a map.
 
 One thing was added beyond the specification: `Game::CheckConsistency` now
 writes `logs/consistency.txt` as well as drawing its report on screen. The

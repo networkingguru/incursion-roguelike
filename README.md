@@ -48,9 +48,10 @@ They are kept outside the app because an app bundle that writes inside itself
 breaks its own code signature, which macOS then reports as the app having been
 modified or damaged.
 
-**Three ways to run it.** A windowed SDL build (the way to play), a plain
-terminal build that needs no graphics at all and works over ssh, and a headless
-mode that plays from a script, which is how this fork finds its own bugs.
+**Three ways to run it.** The download is the windowed SDL build, which is the
+way to play. Building from source also gives you a plain terminal build that
+needs no graphics at all and works over ssh, and a headless mode that plays from
+a script, which is how this fork finds its own bugs.
 
 ---
 
@@ -69,9 +70,9 @@ its own description inside the game — not a stat line, a paragraph with a voic
 You can read the entire ruleset from inside the game, and it is worth reading.
 
 What works today: character creation, exploration, the full combat model, magic,
-shops, saving and loading. The game compiles its own 82,363-line ruleset into a
-data module at build time, so what you are playing is the whole of Mensch's game
-and not a subset of it.
+shops, saving and loading. The game compiles its own ruleset into a data module
+at build time, so what you are playing is the whole of Mensch's game and not a
+subset of it.
 
 ---
 
@@ -159,7 +160,7 @@ The engineering record is [`docs/FIXED.md`](docs/FIXED.md): every defect, how it
 was verified, what was measured on each side, and the two claims that had to be
 retracted.
 
-Sixty-four issues are closed. The short version:
+The short version:
 
 | Area | What was wrong | Where |
 |---|---|---|
@@ -175,7 +176,7 @@ Sixty-four issues are closed. The short version:
 | Port artefacts | Six C escapes eaten by the port's path sweep; colliding run directories | [FIXED](docs/FIXED.md#defects-this-port-introduced-and-then-removed) |
 
 Defects that belong to the base game rather than to this port are marked in the
-source with an `upstream:` comment — 45 of them today — and listed in
+source with an `upstream:` comment and listed in
 [`docs/REPORTING-GATE.md`](docs/REPORTING-GATE.md), so they can be sent on. Four
 have gone to the parent project and one is merged.
 
@@ -229,10 +230,11 @@ step with what the game believes.
 
 You do not need this to play. It is here for people who want to change something.
 
-`master` is the development tip. The `release-1` tag marks this fork's first
-release. Note that the image currently on the Releases page was rebuilt after
-that tag, to carry the module-load and Gatekeeper fixes described in
-[`docs/FIXED.md`](docs/FIXED.md); the tag is not a byte-for-byte match for it.
+`master` is the development tip. The `release-2` tag marks the commit the
+current download was built from. The `release-1` tag marks this fork's first
+release, but the release-1 image was rebuilt after that tag, to carry the
+module-load and Gatekeeper fixes described in [`docs/FIXED.md`](docs/FIXED.md);
+that tag is not a byte-for-byte match for it.
 
 ```
 brew install sdl2 pkg-config
@@ -293,7 +295,7 @@ reads like a missing credential. A file has no ACL.
 ## For developers
 
 There is no test suite and no CI. What there is instead is a harness that plays
-the game unattended, a regression gate, twenty-eight checks that each defend one
+the game unattended, a regression gate, a set of checks that each defend one
 defect, and a set of instruments you switch on with an environment variable or a
 compile flag. Nearly all of it is new in this fork.
 
@@ -308,7 +310,7 @@ a status and cites a line number for each claim. What follows is the map.
 | `tools/soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about by message rather than by session. |
 | `tools/play.sh` | Interactive launcher for a real session with the map audit, save probe and character probe armed. |
 | `tools/dump_save.sh` | Runs `-dump` against a save in the same sandbox, without playing. |
-| `tools/keys/*.keys` | Twenty-eight key scripts: the inputs a session plays. Read the header of one before using it. |
+| `tools/keys/*.keys` | The key scripts: the inputs a session plays. Read the header of one before using it. |
 
 Sessions are seeded through `INCURSION_SEED`, so two runs of one seed play the
 same game. That determinism is what every measurement in the project rests on.
@@ -331,8 +333,8 @@ the game cannot move its numbers.
 
 ### The checks
 
-Twenty-seven of them are below; the twenty-eighth is `check_gate.sh` above,
-which checks the gate rather than the game. Each defends one defect or one
+The table below lists them. `check_gate.sh` above is not in it, because it
+checks the gate rather than the game. Each check defends one defect or one
 property that was lost by accident at least once, and each is proved red against
 the unfixed tree before it is trusted.
 
@@ -341,29 +343,41 @@ the unfixed tree before it is trusted.
 | `check_headless.sh` | Do the properties every unattended run depends on still hold, including that two simultaneous runs get separate directories? |
 | `check_abi.sh` | Did any save-format type width move, and does anything cast a handle to a pointer? |
 | `check_abs_path.sh` | Does the game still resolve `argv[0]` to an absolute path? |
+| `check_alienist_live.sh` | Does an Alienist get Surreal Presence, the ability her own description promises? |
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? Assesses a **quarantined** copy, asks the binary for its own save-layout stamp, and asserts the signature survives a run. |
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? |
 | `check_dump_save.sh` | Does `-dump` walk a real save and report the same bytes from both backends? |
+| `check_earthsinger_live.sh` | Does the Earthsinger admit the gnomes its own refusal message names? |
 | `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? |
 | `check_escape_sweep.sh` | Does any string literal still spell a C escape with a forward slash, the way the port's path sweep wrote `/n` for `\n`? |
+| `check_huntsman_live.sh` | Does the Twilight Huntsman reach its own spell list, smite Law rather than Good, and track at the rate it claims to stack with? |
+| `check_key_directives.sh` | Do the key-script directives reach a menu entry by name, where counting rows could not? |
 | `check_layout.sh` | Does this build play the same game when its objects sit at different addresses? |
 | `check_load_corrupt.sh` | Does the binary refuse ten hand-corrupted saves cleanly and still load two genuine ones? |
 | `check_logrotate.sh` | Does log rotation keep the right archives and prune only names it made itself? |
+| `check_loremaster_live.sh` | Does a Loremaster gain the extra attribute points a tome promises her? |
 | `check_lz_uncompress.sh` | Can the LZ77 and RLE decoders be made to write past their output buffer? |
+| `check_masterarcher_live.sh` | Does the Master Archer's ranged sneak attack fire with a bow only, and not with a sling? |
+| `check_menu_value.sh` | Does a script menu give back the same object handle it was handed? |
 | `check_natural_speed.sh` | Has the hard-coded brawl-speed floor drifted from the fastest weapon in `lib/weapons.irh`? |
 | `check_natural_speed_live.sh` | Does flipping one byte of `Options.Dat` really move the Brawl row on the character sheet, from 100% to 175%? |
 | `check_package.sh` | Is the packaged folder free of ACCENT symbols and Homebrew paths, and does it carry its data? |
+| `check_prestige_profs.sh` | Do the Assassin and the Blackguard hold the proficiencies their prose promises? |
+| `check_prestige_tables.sh` | Does each prestige class print the saves and the defence track it really grants? |
 | `check_ptr_sweep.sh` | Does the pointer-ordering sweep still find an ordering, and still ignore an equality? |
 | `check_quiet_lookup.sh` | Does a dead object handle still resolve silently where silence is correct, and still complain where a complaint is correct? |
 | `check_race_feats.sh` | Does a Dragonkin get Mantis Leap on the character sheet? |
 | `check_reveal_delete.sh` | Can a monster still delete itself inside `Reveal()` and leave the caller holding a dangling map pointer? |
 | `check_sacrifice.sh` | Does a god's altar read the rows below `MA_ALL`, and does it refuse what it should refuse? |
 | `check_save_fail.sh` | Does a save that fails part-way leave the game playable? Drives real and staged failures. |
+| `check_sentinel_live.sh` | Does a live Sentinel get the saves its corrected level table names? |
+| `check_sharp_senses.sh` | Does Sharp Senses reach Search, and not only Spot and Listen? |
 | `check_stair_cycle.sh` | Does the overview map's staircase search run, pick the cheapest, and wrap? |
 | `check_store_scroll.sh` | Does the shop list follow the selection, in both directions, without wizard mode? |
 | `check_strqueue.sh` | Is the string queue's bound still tested before the write? |
 | `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? |
+| `check_underdark_live.sh` | Does the Underdark Warrior check its race requirement, and refuse the grey elf? |
 | `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? |
 
 `tools/README.md` §7 groups these into five tiers by what each needs — a clean

@@ -70,9 +70,19 @@ which is the only place it is read.
   reads come from level generation, not monster AI, and #41 covers 8 of 47,962.
   The player-facing effect it reports is doors built on squares the code never
   chose — two sealed in rock and one moved to (1,1) by `Thing::PlaceAt` — in 2
-  of 500 scripted sessions. **Not sent, and not yet read by Brian.** Evidence in
+  of 500 scripted sessions. **Sent 2026-08-19**, comment 5345710784. Evidence in
   `docs/evidence/inc-5xn/`.
 - `issue40-reply.expect` — the claims the gate enforces for that reply.
+- `issue40-addendum.md` — a follow-up on issue #40 recording what the fork
+  settled on: the repair went into `Rect::PlaceWithin` rather than the
+  `PlaceWithinSafely` change the earlier reply proposed, plus the
+  `Creature::MakeNoise` crash found while testing it. Cites no line numbers, by
+  choice, because the two trees have drifted. **Sent 2026-08-20**, comment
+  5358799776. Nothing is asked of rmtew.
+- `issue8-reply.md` — the reply to rmtew's issue #8, which asks for automated
+  play. It reports the headless harness built for this port, what it measures,
+  the one idea in that thread that was tried and abandoned, and what was got
+  wrong on the way. **Sent 2026-08-19**, comment 5345774328.
 
 **A limit worth knowing before you trust a green gate.** The `PINME` mechanism
 described above only bites on refs inside `https://github.com/` URLs. A document
