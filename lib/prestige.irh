@@ -541,7 +541,7 @@ Class "Assassin"
       their own spellbooks, though in a pinch they can use normal arcane
       spellbooks for spellcasting as well.\n
       __*_<7>Skill Mastery<2> -- Assassins gain a +1 competance bonus to
-      Disguise and Poison Use for every Assassin class level.\n
+      Disguise and +2 to Poison Use for every Assassin class level.\n
       __*_<7>Uncanny Dodge<2> -- Assassins gain this ability at the same
       rate that Rogues do, and a character's Rogue and Assassin levels
       stack to determine her effective Rogue level for the purposes of
@@ -558,7 +558,7 @@ Class "Assassin"
       darkness, deep slumber, displacement, gaseous form, greater magic
       weapon, illusory stance, nondetection.\n
       <15>__4th level -- <1>enervation, free action, improved invisibility,
-      phantasmal killer, poison, premonition, track monster.\n
+      phantasmal killer, premonition, track monster.\n
       <15>__5th level -- <1>cloudkill, dream, lower resistance, misdirection,
       power word: stop, telekinesis, wizard sight.\n
       <15>__6th level -- <1>disintegrate, power word: stun.
@@ -600,7 +600,7 @@ Class "Assassin"
       /* Stati[TRAP_EVENT,PRE(EV_HIT),+1,$"Death Attack"] 
            at every level starting at 1st, */
       Stati[SKILL_BONUS,SK_DISGUISE,+1] at every level starting at 1st,
-      Stati[SKILL_BONUS,SK_POISON_USE,+1] at every level starting at 1st,
+      Stati[SKILL_BONUS,SK_POISON_USE,+2] at every level starting at 1st,
       Stati[SPELL_ACCESS,SP_ARCANE,+1] at every level starting at 1st;
     On Event EV_ADVANCE {
       hObj hBook;
