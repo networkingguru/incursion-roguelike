@@ -295,7 +295,14 @@ uint16 Map::RunOver(uint8 x, uint8 y, bool memonly, Creature *c,
         } 
     } 
     for (dr=FDoorAt(x,y);dr;dr=NDoorAt(x,y))
-      if (!(dr->DoorFlags & DF_OPEN))
+      /* upstream: base-code defect. Observed. inc-8zu. Not sent.
+           A broken door is a hole you walk through, and this test used to ask
+         only for DF_OPEN -- so a door carrying DF_BROKEN without DF_OPEN was a
+         wall to every route search while the player and the monsters walked
+         straight through it. Door::isPassable (inc/Feature.h) holds the
+         engine's own answer; see the mark there for why it is upstream's, for
+         the measurements, and for the other reader this fixed. */
+      if (!dr->isPassable())
         return 0;
   }
   rID stickyID = StickyAt(x,y); 

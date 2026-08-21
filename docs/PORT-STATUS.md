@@ -321,6 +321,7 @@ Environment-gated, as of 2026-08-20:
 | `INCURSION_ERROR_PROMPT=1` | Restores the old blocking error dialog. |
 | `INCURSION_TARGET_PROBE=1` | Each target-cursor press and where it landed. Behind `check_target_order.sh`. |
 | `INCURSION_STAIR_PROBE=1` | The staircase candidate list and its ranking. Behind `check_stair_cycle.sh`. |
+| `INCURSION_DOOR_PROBE=1` | `DoorFlags` either side of `Door::SetImage`'s orientation branch. Behind `check_broken_door.sh`. |
 | `INCURSION_QUIET_PROBE=1` | Whether a handle lookup spoke. Behind `check_quiet_lookup.sh`. |
 | `INCURSION_SAVE_FAIL_AT=N` | Stages a save failure at a chosen point, throwing what a short write throws. Fires once per process. A real full disk cannot reach the interesting case, because both write loops write into memory first. |
 | `INCURSION_STACK_PROBE=1` | Nested entries into depth changes. Found the bottom-of-dungeon crash. |

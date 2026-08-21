@@ -345,6 +345,7 @@ Nothing invoked it; the only references were documentation. See
 | `check_alienist_live.sh` | Does the Alienist's Surreal Presence field exist and speak? A kobold summoned beside her must read "seems unsettled". | LIVE |
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? | LIVE |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? | LIVE |
+| `check_broken_door.sh` | Does a door still lie about being broken? Asserts the one predicate every reader asks, and runs a generated level to prove no door ends it closed and branded broken in a readable doorframe. | LIVE |
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? | LIVE |
 | `check_dump_save.sh` | Does `-dump` still walk a real save and report the right fields, from BOTH backends? | LIVE |
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the rock gnome its own refusal message names? | LIVE |
@@ -517,6 +518,7 @@ tools/check_quiet_lookup.sh
 tools/check_reveal_delete.sh
 tools/check_save_fail.sh
 tools/check_stair_cycle.sh
+tools/check_broken_door.sh
 tools/check_store_scroll.sh
 tools/check_target_order.sh
 tools/check_key_directives.sh

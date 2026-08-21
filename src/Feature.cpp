@@ -33,6 +33,42 @@
 
 #include "Incursion.h"
 
+/* Door redraw probe. Off unless INCURSION_DOOR_PROBE is set to something other
+   than 0; writes logs/doorprobe.log, one line per Door::SetImage call.
+     It exists because the door bugs of 2026-08-21 -- inc-8zu, inc-wj8, inc-95d
+   -- are all about DoorFlags disagreeing with the map, and a screen dump
+   cannot tell you which flag bit is wrong. tools/check_broken_door.sh reads
+   this log and is the regression check for all three. Reporting only: it never
+   repairs, because a check that quietly fixes what it finds destroys the
+   evidence it exists to collect.
+     Format, one line per redraw:
+       door X,Y before=0xBB after=0xAA N=n S=n W=n E=n vert=n horiz=n occ=n
+   before and after are DoorFlags either side of the orientation branch; N S W
+   E are m->SolidAt of the four neighbours; vert and horiz say which arm of the
+   branch the geometry allows; occ says whether a creature stood in the doorway,
+   which is the one case where a stale brand is deliberately kept. */
+static bool DoorProbeEnabled() {
+    static int on = -1;
+    if (on < 0) {
+        /* The VALUE decides, not the mere presence of the variable -- the same
+           trap MapAuditEnabled() documents (src/MapAudit.cpp:34). */
+        const char *s = getenv("INCURSION_DOOR_PROBE");
+        on = (s && *s && strcmp(s, "0")) ? 1 : 0;
+    }
+    return on != 0;
+}
+
+static FILE *doorProbeLog() {
+    static FILE *f = NULL;
+    if (!f) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%slogs/doorprobe.log",
+            (const char*)T1->IncursionDirectory);
+        f = fopen(path, "a");
+    }
+    return f;
+}
+
 EvReturn Feature::Event(EventInfo &e) {
     EvReturn res;
     res = TFEAT(fID)->Event(e, fID);
@@ -352,12 +388,65 @@ void Door::SetImage() {
     if (DoorFlags & DF_OPEN)
         DoorFlags &= ~(DF_LOCKED | DF_SECRET);
 
-    if (m->SolidAt(x, y - 1) && m->SolidAt(x, y + 1))
+    /* upstream: base-code defect. Observed. inc-95d. Not sent.
+         This brands a door DF_BROKEN when it can read no doorframe, and the
+       brand used to be permanent. SetImage runs during level generation,
+       before the walls beside a door exist, so an ordinary door got branded
+       and then kept the brand for the rest of the game after its frame was
+       built. From that point the engine treated a whole door as a
+       hole: At(x,y).Solid went false, EV_CLOSE refused it forever ("That door
+       is broken, and no longer closes."), isDead() called it destroyed, and
+       the route search would not path through it (inc-8zu).
+         Clearing the brand is safe because of an invariant the tree keeps:
+       a door that was really smashed always carries DF_OPEN as well. Only two
+       places set DF_BROKEN -- this branch, alone, and the damage path below,
+       which sets DF_OPEN | DF_BROKEN together (src/Feature.cpp:732). Only two
+       places clear DF_OPEN -- the constructor, before any door can be broken,
+       and EV_CLOSE, which refuses a broken door before it gets there
+       (src/Feature.cpp:630-650). So DF_BROKEN without DF_OPEN can only be this
+       branch's own mark, and only that combination is cleared here.
+         The doorway must be empty first. Un-branding turns the square solid,
+       and doing that under a creature would bury it in a wall. A door whose
+       doorway is occupied simply keeps the brand until the square clears,
+       which is what a real door does.
+         Not a port artefact: the branch, the flag and the stickiness are all
+       upstream's, and a Win32 build with the original typedefs brands the same
+       doors. The evidence is seed 7 through tools/keys/dive12.keys, 3029
+       redraws over 446 doors, against a build differing in nothing else:
+       stale brands surviving a readable-frame redraw 42 -> 0, doors ending
+       closed and branded broken 6 -> 0, and 14 of the 63 brand events hit a
+       LOCKED door and so made a locked door walkable. Guarded by
+       tools/check_broken_door.sh. */
+    int8 wasFlags = DoorFlags;
+
+    if (m->SolidAt(x, y - 1) && m->SolidAt(x, y + 1)) {
         DoorFlags |= DF_VERTICAL;
-    else if (m->SolidAt(x - 1, y) && m->SolidAt(x + 1, y))
+        if ((DoorFlags & DF_BROKEN) && !(DoorFlags & DF_OPEN) &&
+            !m->MCreatureAt(x, y))
+            DoorFlags &= ~DF_BROKEN;
+    } else if (m->SolidAt(x - 1, y) && m->SolidAt(x + 1, y)) {
         DoorFlags &= ~DF_VERTICAL;
-    else
+        if ((DoorFlags & DF_BROKEN) && !(DoorFlags & DF_OPEN) &&
+            !m->MCreatureAt(x, y))
+            DoorFlags &= ~DF_BROKEN;
+    } else
         DoorFlags |= DF_BROKEN;
+
+    if (DoorProbeEnabled()) {
+        FILE *pf = doorProbeLog();
+        if (pf) {
+            bool vert  = m->SolidAt(x, y - 1) && m->SolidAt(x, y + 1);
+            bool horiz = m->SolidAt(x - 1, y) && m->SolidAt(x + 1, y);
+            fprintf(pf, "door %d,%d before=0x%02x after=0x%02x "
+                "N=%d S=%d W=%d E=%d vert=%d horiz=%d occ=%d\n",
+                (int)x, (int)y, (unsigned char)wasFlags,
+                (unsigned char)DoorFlags,
+                (int)m->SolidAt(x, y - 1), (int)m->SolidAt(x, y + 1),
+                (int)m->SolidAt(x - 1, y), (int)m->SolidAt(x + 1, y),
+                (int)vert, (int)horiz, (int)m->MCreatureAt(x, y));
+            fflush(pf);
+        }
+    }
 
     if (DoorFlags & DF_SECRET) {
         Flags |= F_INVIS;
@@ -386,6 +475,15 @@ void Door::SetImage() {
         } else {
             m->At(x, y).Solid = true;
             m->At(x, y).Opaque = true;
+            /* upstream: the passable arm above clears F_SOLID, and nothing
+               here put it back, so a door that stopped being passable left the
+               map square solid and the feature not. EV_CLOSE sets it by hand
+               (src/Feature.cpp:649), which is the tree admitting the two views
+               have to agree; this is the same line at the place that decides.
+               It matters now because un-branding a stale DF_BROKEN above takes
+               exactly this arm. Reasoned from the two views' other users.
+               inc-95d. Not sent. */
+            Flags |= F_SOLID;
         }
 
         if (DoorFlags & DF_BROKEN)

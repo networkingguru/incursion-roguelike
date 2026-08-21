@@ -1923,7 +1923,23 @@ DoneFollow:
         if (f = m->FDoorAt(tx,ty)) {
             if (!isIncor && f->Type == T_DOOR) {
                 /* Assumption: no Incor creatures can open doors. */
-                if (!(((Door*)f)->DoorFlags & DF_OPEN))
+                /* upstream: this asked for DF_OPEN, so a monster meeting a
+                   broken doorway -- a hole, DF_BROKEN with no DF_OPEN -- tried
+                   to open it. Monster::OpenDoor throws EV_OPEN, and the
+                   DF_BROKEN arm of Door::Event answers "It's open,
+                   permanently." and returns ABORT without spending any time
+                   (src/Feature.cpp:521-532). OpenDoor tests Timeout to decide
+                   whether the attempt cost a turn, sees zero, and falls
+                   through to TryToDestroyThing -- so the monster attacks an
+                   empty doorway, up to five times, one turn each. Asking
+                   isPassable() stops the call being made at all.
+                     Not a port artefact: the flag test, OpenDoor's Timeout
+                   test and both DF_BROKEN sites are upstream's, and a Win32
+                   build with the original typedefs behaves the same. Traced
+                   2026-08-21 through the three call sites; the doors that
+                   reach it are the same ones measured for inc-8zu. inc-wj8.
+                   Not sent. */
+                if (!((Door*)f)->isPassable())
                     OpenDoor((Door*)f);
                 if (Timeout || !m)
                     return ABORT;

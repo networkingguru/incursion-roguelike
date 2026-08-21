@@ -53,6 +53,26 @@ class Door: public Feature
 		EvReturn Event(EventInfo &e);
 		void SetImage();
 		int8 DoorFlags;
+    /* upstream: one answer to "can a creature walk through this door", so that
+       no caller has to reconstruct it from the flag bits and get it wrong.
+       Door::SetImage is the authority -- it decides what At(x,y).Solid becomes
+       (src/Feature.cpp:451-478) -- and this reproduces that decision exactly:
+       a secret door is solid whatever else it carries, and otherwise the
+       square is a hole when the door is open OR broken.
+         Every caller that asked for DF_OPEN alone disagreed with SetImage
+       about a broken doorway, which the player and the monsters walk straight
+       through. Map::RunOver called it a wall and refused to route through it
+       (inc-8zu); Monster::MoveTowards called OpenDoor on it (inc-wj8).
+         Not a port artefact: the flags, both places that set DF_BROKEN and
+       every reader are upstream's, and a Win32 build with the original
+       typedefs answers the same. Observed 2026-08-21 -- three doors of flags
+       0x40 sealed a temple on a real save, and 62 of 446 doors on one
+       generated level carried DF_BROKEN. inc-8zu, inc-wj8. Not sent. */
+    bool isPassable() {
+      if (DoorFlags & DF_SECRET)
+        return false;
+      return (DoorFlags & (DF_OPEN | DF_BROKEN)) != 0;
+    }
     virtual bool isDead() { 
       return (Flags & F_DELETE) || (DoorFlags & DF_BROKEN); 
     }

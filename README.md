@@ -346,6 +346,7 @@ the unfixed tree before it is trusted.
 | `check_alienist_live.sh` | Does an Alienist get Surreal Presence, the ability her own description promises? |
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? Assesses a **quarantined** copy, asks the binary for its own save-layout stamp, and asserts the signature survives a run. |
+| `check_broken_door.sh` | Does a door still lie about being broken? Covers the stale orientation brand and every reader that asks whether a door is a hole. |
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? |
 | `check_dump_save.sh` | Does `-dump` walk a real save and report the same bytes from both backends? |
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the gnomes its own refusal message names? |
@@ -400,6 +401,7 @@ they ship in every binary; the compile-time ones need
 | `INCURSION_ERROR_PROMPT=1` | Restores the blocking error dialog instead of logging and continuing. |
 | `INCURSION_TARGET_PROBE=1` | Records each target-cursor press and where it landed. Behind `check_target_order.sh`. |
 | `INCURSION_STAIR_PROBE=1` | Logs the staircase candidate list and its ranking. Behind `check_stair_cycle.sh`. |
+| `INCURSION_DOOR_PROBE=1` | Logs `DoorFlags` either side of `Door::SetImage`'s orientation branch, with the four neighbours' solidity. Behind `check_broken_door.sh`. |
 | `INCURSION_QUIET_PROBE=1` | Logs whether a handle lookup spoke. Behind `check_quiet_lookup.sh`. |
 | `INCURSION_SAVE_FAIL_AT=N` | Stages a save failure at a chosen point, throwing exactly what a short write throws. A real full disk cannot reach the interesting case, because both write loops write into memory first. |
 | `INCURSION_STACK_PROBE=1` | Logs nested entries into depth changes. Found the bottom-of-dungeon crash. |
