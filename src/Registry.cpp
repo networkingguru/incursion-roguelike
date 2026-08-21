@@ -247,11 +247,35 @@ static void SaveFailProbe(bool isData, int32 index)
     throw EWRIERR;
   }
 
+/* INCURSION_HANDLE_BASE -- start handing out object handles from a given
+   number instead of from 128. Off unless the variable is set.
+
+   It exists because a whole class of defect only appears once a handle stops
+   fitting in sixteen bits, and no scripted run is long enough to get there:
+   a fresh character's own gear carries handle 139, while the save that found
+   inc-802 was at 44175 after four levels of play. Without this, the only way
+   to test that class of defect is to play for an evening. See
+   tools/check_menu_value.sh, which sets it to 40000 and drives AutoDrop.
+
+   Nothing else about a handle changes with its size: it is hashed into the
+   object table with OBJ_TABLE_MASK either way, and a save already stores
+   whatever numbers it was given. */
+static hObj StartingHandle()
+  {
+    const char *e = getenv("INCURSION_HANDLE_BASE");
+    hObj h;
+
+    if (!e)
+      return 128;
+    h = (hObj)atol(e);
+    return h < 128 ? 128 : h;
+  }
+
 Registry::Registry()
   {
     memset(ObjTable,0,sizeof(RegNode)*OBJ_TABLE_SIZE);
     memset(DataTable,0,sizeof(DataNode)*DATA_TABLE_SIZE);
-    LastUsedHandle = 128;
+    LastUsedHandle = StartingHandle();
     reg_log = NULL;
     #ifdef DEBUG_OBJECTS
     String path = T1->IncursionDirectory + "/reglog.txt";
@@ -264,7 +288,7 @@ void Registry::Empty()
     /* This should tail after Game::Cleanup() */
     memset(ObjTable,0,sizeof(RegNode)*OBJ_TABLE_SIZE);
     memset(DataTable,0,sizeof(DataNode)*DATA_TABLE_SIZE);
-    LastUsedHandle = 128;
+    LastUsedHandle = StartingHandle();
   }
 
 Registry::~Registry()

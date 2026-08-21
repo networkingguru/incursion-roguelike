@@ -2095,7 +2095,7 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         return;
     case 412:
         ASSERT(REGS(63) >= 3)
-        T1->LOption(GETSTR(STACK(1)), (int16)STACK(2), GETSTR(STACK(3)));
+        T1->LOption(GETSTR(STACK(1)), STACK(2), GETSTR(STACK(3)));
         return;
     case 413:
         ASSERT(REGS(63) >= 0)

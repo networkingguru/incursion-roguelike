@@ -1,0 +1,20 @@
+# Drive AutoDrop far enough to prove that a menu gives back the same object
+# it was given. tools/check_menu_value.sh runs this with seed 1 and with
+# INCURSION_HANDLE_BASE set, so every object in the session carries a handle
+# too wide for sixteen bits.
+#
+# The character is chargen.keys' orc barbarian, whose first inventory line is
+# an orcish knife. F9 is AutoDrop: SPACE marks the current row, ENTER accepts.
+# A session that dropped the knife prints "Orcish knife dropped."; a session
+# whose handle was truncated on the way into the menu prints nothing at all,
+# because the macro is then holding a number that names no object.
+
+@include chargen.keys
+
+F9              # AutoDrop
+@dump:dropmenu
+
+SPACE           # mark the first row -- an orcish knife
+ENTER
+
+@dump:after-drop

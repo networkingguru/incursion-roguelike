@@ -638,7 +638,21 @@ system bool    T_TERM::EffectPrompt(hObj:T_EVENTINFO,int16 qv,bool islook, Strin
 system hObj    T_TERM::AcquisitionPrompt(int8 Reason, int8 minlev, int8 maxlev, int8 MType);
 system string  T_TERM::StringPrompt(int8 col, string msg);
 system rID     T_TERM::ChooseResource(string prompt, int16 RType, rID eID);
-system void    T_TERM::LOption(string txt, int16 val, string des=0);
+/* upstream: val is the caller's own cookie, and every script that opens a
+   menu over objects puts an object handle or a resource id in it -- see
+   lib/alchemy.irh:1062, :1241 (AutoDrop and AutoLoot) and lib/abilities.irh:
+   98-237 (the undead-form menus). Both are wider than 16 bits: an hObj is a
+   signed 32-bit handle and an rID runs past 16 million. Declaring the
+   parameter int16 made the generated dispatcher truncate it -- lib/dispatch.h
+   said "(int16)STACK(2)" -- so AutoLoot silently looted nothing once the
+   game had handed out more than 32767 handles. TextTerm::LOption itself takes
+   an int32 and Option::Val is an int32 (inc/Term.h:236, :637), so only this
+   declaration was ever narrow. Not a port artefact: hObj is 32 bits on Win32
+   too (signed long there, signed int here), the same truncation happens on
+   the upstream compiler, and nothing here depends on the port's typedefs.
+   Observed -- the marked item arrived as -21359 for handle 44177; see
+   tools/check_menu_value.sh. inc-802, not sent. */
+system void    T_TERM::LOption(string txt, int32 val, string des=0);
 system void    T_TERM::LOptionClear();
 system int32   T_TERM::LMenu(int16 fl, string title, int8 MWin=WIN_MENUBOX,string help=0);
 system bool    T_TERM::LMultiSelect(int16 fl, string title, int8 MWin=WIN_MENUBOX,string help=0);
