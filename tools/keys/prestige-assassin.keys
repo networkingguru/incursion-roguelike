@@ -1,0 +1,116 @@
+# Build an Assassin and photograph his weapon proficiencies, which is half of
+# bd inc-tek.8.3 finding PA-03-F11: seven prestige classes promise
+# proficiencies in their prose and only one of them declares the field.
+#
+# The Assassin's prose promises "crossbows and light weapons"
+# (lib/prestige.irh:509). Before the fix the class had no Proficiencies: line
+# at all, so it granted neither. The fix declares
+#   Proficiencies: WG_CROSSBOWS, WG_LIGHT;      lib/prestige.irh:583
+# and WG_CROSSBOWS is a group that had to be invented, because the three
+# crossbows sat in WG_SIMPLE|WG_ARCHERY and WG_EXOTIC and no group named them.
+#
+# THE ORACLE is the sheet's Proficiencies line, which src/Sheet.cpp:861-876
+# builds by walking the character's proficiency bits against
+# WeaponGroupNames[] (src/Tables.cpp:1329). "Crossbows" is the row added for
+# the new bit.
+#
+# KNOWN AND EXPECTED: only Crossbows will print, not "light weapons".
+# WG_LIGHT has no row in WeaponGroupNames at all, so it never prints for
+# anybody -- that is bd inc-tek.15, a separate defect found while fixing this
+# one. The grant is real either way; it just cannot be read off this line.
+#
+# SEED. The attribute rolls and the offered feats vary with the seed, so the
+# feat picks stay positional and a seed is passed.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Rogue"
+a                       # Attributes: the first of the offered sets
+@choose "Neutral"       # the class refuses a Good alignment
+@choose "Alertness"
+@until "Unspent Skill Ranks" a          # however many feats are asked for
+
+# Eighteen ranks, two to a skill. The four the Assassin's gate reads first;
+# the rest only because character generation will not release a character
+# with a rank unspent.
+@cursorto:mark "Disguise" DOWN
+RIGHT*3
+@cursorto:mark "Poison Use" DOWN
+RIGHT*3
+@cursorto:mark "Move Silently" UP
+RIGHT*3
+@cursorto:mark "Hide in Shadows" UP
+RIGHT*3
+@cursorto:mark "Bluff" UP
+RIGHT*3
+@cursorto:mark "Alchemy" UP
+RIGHT*3
+@cursorto:mark "Appraise" DOWN
+RIGHT*3
+@cursorto:mark "Balance" DOWN
+RIGHT*3
+@cursorto:mark "Climb" DOWN
+RIGHT*3
+ENTER y # Done, and confirm keeping the ranks
+
+a       # Personality archetype
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d                               # character sheet
+@until "Class  Rogue 5" G       # five core levels, for the ranks they carry
+
+# The gate wants Disguise 10, Poison Use 10, Hide 7 and Move Silently 7.
+# ISkillLevel (src/Create.cpp:3955) counts training and the inherent
+# attribute bonus as well as ranks, so filling each to its cap clears them.
+S
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Disguise" DOWN
+RIGHT*8
+@cursorto:mark "Poison Use" DOWN
+RIGHT*8
+@cursorto:mark "Move Silently" UP
+RIGHT*8
+@cursorto:mark "Hide in Shadows" UP
+RIGHT*8
+ENTER y
+
+P                               # [P]restige Classes
+@expect "Choose a class:"
+@choose "Assassin"
+@expect "Assassin 0"            # the gate let him in
+
+@until "class do you wish to advance" G
+@choose "Assassin"
+@while "Choose a feat" a
+
+# The Assassin's 1st level hands over a spellbook (lib/prestige.irh:597-607).
+# The item lands in the In-the-Air slot, and the game will not leave
+# inventory mode while anything is there -- so it must be stowed before any
+# further keystroke is spent, or every key after it goes into the inventory
+# screen instead. Leave the sheet to let the prompt surface, stow, leave
+# inventory, and come back.
+ESC
+@while "Air':?" s
+@while "ESC:Done" ESC
+@until "Skill Ratings" d
+
+@until "class do you wish to advance" G
+@choose "Assassin"
+@while "Choose a feat" a
+@expect "Assassin 2"
+
+W                       # Write Dump
+a s s n ENTER           # filename: "assn"
+ESC
+@quit

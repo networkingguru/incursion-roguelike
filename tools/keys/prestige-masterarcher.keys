@@ -1,0 +1,324 @@
+# Build a Master Archer and shoot the same target twice, once with a sling
+# and once with a long bow. That is bd inc-tek.8.3 finding PA-03-F20: the
+# class's Ranged Sneak Attack fired with every launcher in the game, not
+# only with the bows its own description names.
+#
+# THE BUILD. The gate (lib/prestige.irh:2195-2232) wants an archery BAB of
+# +5, Weapon Focus in a long bow or short bow, the Point Blank Shot, Rapid
+# Shot and Zen Archery feats, Concentration 7, and either elven blood or
+# Wisdom 17.
+#   * A ranger attacks at 100% in archery, so five ranger levels are the
+#     cheapest +5 (lib/classes.irh:2119).
+#   * The archery combat style hands over Rapid Shot at 1st and Point Blank
+#     Shot at 3rd for free (lib/classes.irh:2025-2027).
+#   * Zen Archery needs Far Shot and Blind Fight first (src/FeatTab.cpp:1426),
+#     and Blind Fight needs Wisdom 13 (:1392). Both are taken at creation.
+#   * The ranger does NOT carry Concentration (lib/classes.irh:2120-2123), and
+#     Character::MaxRanks caps a skill no class of yours carries at zero
+#     ranks. The bard does carry it (lib/classes.irh:440), so three bard
+#     levels open the skill.
+#   * An elf needs no Wisdom score for the gate.
+# Ranger 5 / Bard 3 / Master Archer 1 is nine levels, inside MAX_CHAR_LEVEL.
+#
+# Feats arrive at total level 1, 3, 6 and 9 (src/Create.cpp:2370), so the
+# order is forced: Far Shot and Blind Fight at creation, Weapon Focus (long
+# bow) at 3rd, Zen Archery at 6th.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Ranger"
+
+# Point buy, 75 points, spent to the last one.
+p
+RIGHT*5         # STR 13
+DOWN
+RIGHT*10        # DEX 18
+DOWN
+RIGHT*7         # CON 15
+DOWN
+RIGHT*8         # INT 16
+DOWN
+RIGHT*10        # WIS 18, which Blind Fight and the Zen Archery chain want
+DOWN
+RIGHT*8         # CHA 16
+DOWN
+RIGHT*8         # LUC 16
+ENTER y         # "Are these your final stats?"
+
+@choose "Neutral"
+@choose "Goblinkin"     # favoured enemy; any will do
+a                       # Combat style: [a] archery
+@choose "Far Shot"      # Zen Archery needs this one
+@choose "Blind Fight"   # and this one
+@while "Choose a feat" a
+
+@expect "Unspent Skill Ranks"
+# The list is alphabetical and the cursor only ever moves one way per
+# directive, so the skills are visited in alphabetical order.
+@cursorto:mark "Animal Empathy" DOWN
+RIGHT*2
+@cursorto:mark "Climb" DOWN
+RIGHT*2
+@cursorto:mark "Hide in Shadows" DOWN
+RIGHT*2
+@cursorto:mark "Listen" DOWN
+RIGHT*2
+@cursorto:mark "Move Silently" DOWN
+RIGHT*2
+@cursorto:mark "Ride" DOWN
+RIGHT*2
+@cursorto:mark "Searching" DOWN
+RIGHT*2
+ENTER y
+
+a       # Personality archetype
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+DOWN*8
+SPACE   # Freeze Monsters: NO -> YES. A frozen monster never takes a turn, so
+        #   its FFCount never resets and it stays off-guard, which is the
+        #   condition a sneak attack needs. It also cannot kill the archer
+        #   between the three shots.
+DOWN
+SPACE   # Show All Combat Rolls: NO -> YES. This is what makes the engine
+        #   print the "Damage:" line (src/Fight.cpp:8038), which is where
+        #   a sneak attack writes its own " +Nd6 SA" term.
+ESC
+
+d       # character sheet
+G       # Ranger 2
+@while "Choose a feat" a
+G       # Ranger 3 -- total level 3, so a feat is offered
+# Weapon Focus sits past the 52nd row of the feat list, where LMenu has run
+# out of letters and draws "[ ] Weapon Focus". Only the cursor can reach it.
+@cursorto "Weapon Focus" DOWN
+ENTER
+@choose "long bow"
+@while "Choose a feat" a
+G       # Ranger 4 -- total level 4, so the attribute bonus is offered
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC   # the pop-up that announces it eats the next key
+@while "Choose a feat" a
+@until "Class  Ranger 5" G
+@expect "Ranger 5"
+
+M       # [M]ulticlass
+@choose "Bard"
+
+# Bard 1 is total level 6, so this level offers the last feat the gate needs.
+@until "class do you wish to advance" G
+@choose "Bard"
+@while "Learn which spell" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC   # the pop-up that announces it eats the next key
+@cursorto "Zen Archery" DOWN
+ENTER
+@while "Choose a feat" a
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Bard"
+@while "Learn which spell" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC   # the pop-up that announces it eats the next key
+@while "Choose a feat" a
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Bard"
+@while "Learn which spell" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC   # the pop-up that announces it eats the next key
+@while "Choose a feat" a
+@until "Skill Ratings" d
+@expect "Bard 3"
+
+# Concentration lives in the bard's list, not the ranger's, so the Skill
+# Manager has to be turned to the bard page with TAB before the ranks show a
+# cap above zero.
+S
+@expect "Unspent Skill Ranks"
+TAB                             # turn the page from the ranger to the bard
+# Three bard levels bring 36 ranks and the screen will not close while any
+# are unspent, so eight skills are listed: enough capacity to absorb them all
+# whatever the exact pool turns out to be. Concentration is the one the gate
+# reads; the rest are ballast. The list is alphabetical and the cursor moves
+# one way per directive, so they are visited in that order.
+@cursorto:mark "Alchemy" DOWN
+RIGHT*6
+@cursorto:mark "Appraise" DOWN
+RIGHT*6
+@cursorto:mark "Bluff" DOWN
+RIGHT*6
+@cursorto:mark "Concentration" DOWN
+RIGHT*6
+@cursorto:mark "Decipher Script" DOWN
+RIGHT*6
+@cursorto:mark "Diplomacy" DOWN
+RIGHT*6
+@cursorto:mark "Disguise" DOWN
+RIGHT*6
+@cursorto:mark "Escape Artist" DOWN
+RIGHT*6
+ENTER y
+
+P                               # [P]restige Classes
+@expect "Choose a class:"
+@choose "Master Archer"
+@expect "Archer 0"              # the gate let him in
+
+@until "class do you wish to advance" G
+@choose "Master Archer"
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@while "Choose a feat" a
+@until "Skill Ratings" d
+@expect "Archer 1"
+@dump:archer
+# THE MEASUREMENT. The archer shoots the same kind of target twice: once with
+# the long bow the class description names, and once with a sling. A sneak
+# attack writes its own term into the damage line, " +Nd6 SA"
+# (src/Fight.cpp:5135), and the wizard switch above makes that line print.
+#
+# WHY THE TARGET IS A FRESHLY SUMMONED MONSTER. Sneak attack damage needs the
+# victim off-guard, flanked or surprised, and the attacker within three
+# squares (src/Fight.cpp:5113-5115). Monster::Initialize sets FFCount to 20
+# on every new monster (src/Monster.cpp:1446) and isFlatFooted() is
+# FFCount > 5, so a monster is off-guard on the turn it appears. Summoning
+# one beside the archer makes the condition certain rather than lucky.
+#
+# EVERY ITEM IS MADE IN WIZARD MODE AND PLACED STRAIGHT FROM THE AIR. Nothing
+# is fetched out of the pack: the pack list scrolls, and a cursor directive
+# cannot reach a row that has scrolled off it.
+@until "HP:" ESC
+
+# The elven long bow +2 he was born with goes into the Weapon Hand. Its iID
+# is still $"long bow", which is the name the corrected test looks for.
+# A slot letter only moves the cursor; SPACE lifts an item into the
+# In-the-Air slot and puts it down again, so each move is a pair.
+i
+e SPACE         # lift the long bow out of the L. Shoulder slot
+b SPACE         # put it in the Weapon Hand; the long sword comes out
+@until "Air':Empty" s
+@while "ESC:Done" ESC
+
+# Arrows in the pack are not "ready" -- the fire command says so in as many
+# words -- so a fresh sheaf goes straight into the L. Shoulder slot the bow
+# has just left. Sheaf arrows are the first entry under Missiles.
+w
+@choose "Item Acquisition"
+@until "]: Missiles" RIGHT
+ENTER
+e SPACE
+@until "Air':Empty" s
+@while "ESC:Done" ESC
+
+# THE CONTROL SHOT: a long bow, which is what the class description allows.
+w
+@choose "Monster Summoning"
+@choose "Giants"
+@choose "ogre"
+RIGHT ENTER
+f
+RIGHT ENTER
+@while "Take opportunity" n
+@while "Confirm bludgeon" n
+@while "Abort, Flee or Disengage" d
+@while "--More--" ENTER
+v
+@dump:bowlog
+ESC
+
+# TEST SHOT ONE: a sling. Each shot gets its own freshly summoned ogre,
+# because a strike resets the victim's FFCount to zero (src/Fight.cpp:3040)
+# and a monster that has been shot at once is no longer off-guard.
+w
+@choose "Item Acquisition"
+@until "]: Missile Weapons" RIGHT
+DOWN*6
+ENTER
+b SPACE         # the sling into the Weapon Hand; the bow comes out
+d               # and the bow on the floor. It will neither stow nor go in
+                #   the Ready Hand -- it is two-handed -- and the game
+                #   refuses to leave inventory mode with anything in the air.
+@while "ESC:Done" ESC
+
+w
+@choose "Item Acquisition"
+@until "]: Missiles" RIGHT
+DOWN*5
+ENTER
+e SPACE         # stones into the L. Shoulder slot, where the arrows were
+d               # and the arrows on the floor, beside the bow that fired them
+@while "ESC:Done" ESC
+
+w
+@choose "Monster Summoning"
+@choose "Giants"
+@choose "ogre"
+LEFT ENTER
+f
+LEFT ENTER
+@while "Take opportunity" n
+@while "Confirm bludgeon" n
+@while "Abort, Flee or Disengage" d
+@while "--More--" ENTER
+v
+@dump:slinglog
+ESC
+
+# TEST SHOT TWO: an arbalest. A crossbow is unambiguously the generic
+# launcher attack type -- inc/Defines.h:1185 names the constant
+# "Fire [Cross]bow". The arbalest rather than the hand crossbow, because the
+# acquisition list offers no hand crossbow darts and that weapon will not
+# shoot a bolt.
+w
+@choose "Item Acquisition"
+@until "]: Missile Weapons" RIGHT
+DOWN*2
+ENTER
+b SPACE         # the arbalest into the Weapon Hand; the sling comes out
+d               # and the sling on the floor beside the bow
+@while "ESC:Done" ESC
+
+w
+@choose "Item Acquisition"
+@until "]: Missiles" RIGHT
+DOWN*2
+ENTER
+e SPACE
+d
+@while "ESC:Done" ESC
+
+# A crossbow has to be cranked before it will shoot, and cranking costs one
+# fire command, so it is spent before the third ogre exists.
+f
+RIGHT ENTER
+@while "Take opportunity" n
+@while "Confirm bludgeon" n
+@while "Abort, Flee or Disengage" d
+@while "--More--" ENTER
+
+w
+@choose "Monster Summoning"
+@choose "Giants"
+@choose "ogre"
+DOWN ENTER
+f
+DOWN ENTER
+@while "Take opportunity" n
+@while "Confirm bludgeon" n
+@while "Abort, Flee or Disengage" d
+@while "--More--" ENTER
+v
+@dump:crossbowlog
+ESC
+
+@quit

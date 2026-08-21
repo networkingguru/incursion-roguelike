@@ -16,10 +16,10 @@
 # character sheet's [G] to reach the three core levels that
 # src/Managers.cpp:2252 demands before it will open the prestige list.
 #
-# SEED-INDEPENDENT for what it asserts. The menu letters and the DOWN counts
-# below depend on the number of prestige classes in lib/, not on the seed, and
-# the descriptions are static text. The chargen it includes is seed-locked,
-# which is why a seed is still passed.
+# SEED-INDEPENDENT for what it asserts. Each class is named rather than
+# counted, so the number of prestige classes in lib/ does not matter, and the
+# descriptions are static text. The chargen it includes is seed-locked, which
+# is why a seed is still passed.
 
 @include chargen-rogue.keys
 
@@ -34,40 +34,53 @@ ESC             # leave the options manager
 d               # character sheet
 G G G           # three core levels; the prestige list refuses fewer
 
-# The list opens on [a] Alienist. DOWN walks it in letter order:
-#   a Alienist   b Assassin   c Blackguard   d Bladesinger  e Celestial Initiate
-#   f Crimson Adept  g Duelist  h Earthsinger  i Elementalist  j Horizon Walker
-#   k Inquisitor  l Loremaster  m Master Archer  n Sentinel  o Shadowdancer
-#   p Tattoo Mystic  q Twilight Huntsman  r Undead Slayer  s Underdark Warrior
+# WHY @cursorto AND NOT @choose. Pressing a menu letter TAKES the class:
+# LMenu returns the moment its letter arrives, src/TextTerm.cpp:1217-1231.
+# This script only reads the descriptions, and a character may hold one
+# prestige class at most, so it must move the highlight without pressing a
+# letter. @cursorto sends DOWN until the named entry is the highlighted one.
 #
-# Each class scrolls to its own table with @until, which is proof against the
-# descriptions changing length. The extra PGDNs bring the rows themselves into
-# view; the @until stops as soon as the header appears on the last line.
-P
+# This used to be counted -- DOWN*9 to reach the Loremaster -- and one class
+# added to lib/prestige.irh moved every count after it. The script would then
+# photograph a different class, under the old name, and pass.
+#
+# Each class then scrolls to its own table with @until, which is proof against
+# the descriptions changing length. The extra PGDNs bring the rows themselves
+# into view; the @until stops as soon as the header appears on the last line.
+@choose "Prestige Classes"
+@expect "Choose a class:"
 
+@cursorto "Alienist" DOWN
 @until "Special Abilities" PGDN
 PGDN*8
 @dump:alienist
 
-DOWN DOWN                       # [c] Blackguard
+@cursorto "Blackguard" DOWN
 @until "Special Abilities" PGDN
 PGDN*8
 @dump:blackguard
 
-DOWN*9                          # [l] Loremaster
+@cursorto "Loremaster" DOWN
 @until "Special Abilities" PGDN
 PGDN*8
 @dump:loremaster
 
-DOWN DOWN                       # [n] Sentinel
+@cursorto "Sentinel" DOWN
 @until "Special Abilities" PGDN
 PGDN*4                          # this table is four rows and then "..."
 @dump:sentinel
 
-DOWN*3                          # [q] Twilight Huntsman
+@cursorto "Twilight Huntsman" DOWN
 @until "Special Abilities" PGDN
 PGDN*8
 @dump:twilight
+
+# Not a table: this one proves the naming survives a truncated menu. LMenu
+# cuts every entry to the column width (src/TextTerm.cpp:1022), so this class
+# is drawn "[e] Celestial Initiat" and the full name is nowhere on the screen.
+# tools/check_key_directives.sh reads this dump.
+@cursorto "Celestial Initiate" DOWN
+@dump:truncated
 
 ESC
 @quit

@@ -1,0 +1,120 @@
+# Build a Blackguard and photograph two things bd inc-tek.8.3 changed about
+# him: his weapon and armour proficiencies (PA-03-F11) and the creature his
+# Fiendish Servant summons (PA-03-F15).
+#
+# PA-03-F11. The class prose promised "blades, impact weapons, polearms and
+# spears, and with all classes of armour" and the class declared no
+# Proficiencies: field at all, so it granted none of them. Shields were added
+# to the prose and the grant together, on Brian's ruling, which also brings
+# Incursion into line with the SRD blackguard. The field is now
+#   Proficiencies: WG_SBLADES, WG_LBLADES, WG_IMPACT, WG_POLEARMS,
+#                  WG_SPEARS, WG_LARMOUR, WG_MARMOUR, WG_HARMOUR, WG_SHIELDS;
+# and the sheet's Proficiencies line (src/Sheet.cpp:861-876) reports it.
+#
+# PA-03-F15 is NOT tested here, and the reason is a hard limit rather than a
+# choice. The Fiendish Servant arrives at Blackguard 5, and this character
+# cannot get there. MAX_CHAR_LEVEL is 11 (inc/Defines.h:4367) and
+# src/Create.cpp:2210 enforces it, so the eight core levels this gate costs
+# leave room for three. Entering with fewer core levels is not possible
+# either: the gate wants a base attack bonus of +6, which only a class
+# attacking at 100% reaches inside six levels, and no such class carries
+# Knowledge (Infernal). See tools/keys/fiendish-servant.keys, which reaches
+# the same effect by another road.
+#
+# THE BUILD. The gate wants an Evil alignment, Intimidate 12, Knowledge
+# (Infernal) 10 and a base attack bonus of +6 in some category
+# (lib/prestige.irh:687-712). A rogue carries both skills -- SK_KNOW_ALL in
+# its skill list expands to every Knowledge id, including SK_KNOW_INF
+# (inc/Defines.h:1888) -- and reaches melee BAB +6 at 8th level. So: Rogue 8.
+#
+# SEED. The attribute rolls and the offered feats vary with the seed, so the
+# feat picks stay positional and a seed is passed.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Rogue"
+a                       # Attributes: the first of the offered sets
+@choose "Neutral Evil"  # the class refuses anyone who is not Evil
+@choose "Alertness"
+@until "Unspent Skill Ranks" a          # however many feats are asked for
+
+# Eighteen ranks, two to a skill. The two the gate reads first; the rest only
+# because character generation will not release a character with a rank
+# unspent.
+@cursorto:mark "Intimidate" DOWN
+RIGHT*3
+@cursorto:mark "Knowledge (Infern" DOWN
+RIGHT*3
+@cursorto:mark "Bluff" UP
+RIGHT*3
+@cursorto:mark "Alchemy" UP
+RIGHT*3
+@cursorto:mark "Appraise" DOWN
+RIGHT*3
+@cursorto:mark "Athletics" DOWN
+RIGHT*3
+@cursorto:mark "Balance" DOWN
+RIGHT*3
+@cursorto:mark "Climb" DOWN
+RIGHT*3
+@cursorto:mark "Craft" DOWN
+RIGHT*3
+ENTER y # Done, and confirm keeping the ranks
+
+a       # Personality archetype
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d                               # character sheet
+@until "Class  Rogue 8" G       # eight core levels, for BAB +6
+
+S
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Intimidate" DOWN
+RIGHT*10
+@cursorto:mark "Knowledge (Infern" DOWN
+RIGHT*10
+ENTER y
+
+P                               # [P]restige Classes
+@expect "Choose a class:"
+@choose "Blackguard"
+@expect "Blackguard 0"          # the gate let him in
+
+@until "class do you wish to advance" G
+@choose "Blackguard"
+@while "Choose a feat" a
+ESC
+@while "Air':?" s
+@while "ESC:Done" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Blackguard"
+@while "Choose a feat" a
+ESC
+@while "Air':?" s
+@while "ESC:Done" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Blackguard"
+@while "Choose a feat" a
+ESC
+@while "Air':?" s
+@while "ESC:Done" ESC
+@until "Skill Ratings" d
+@expect "Blackguard 3"
+
+W                       # Write Dump
+b g u a r d ENTER       # filename: "bguard"
+ESC
+@quit

@@ -1,0 +1,166 @@
+# Build an Underdark Warrior and photograph his saving throws, which is bd
+# inc-tek.8.3 finding PA-03-F13: the class header and its level table both
+# advertise a good Reflex save, and the class flags gave the poor track.
+#
+# The header at lib/prestige.irh:3038 reads Saves: *<9>FR<1>w*, so Fortitude
+# and Reflex are highlighted and Will is not. The level table prints
+# +2 +3 +3 +4 +4 in the Reflex column, which is GoodSave[1..5] digit for
+# digit (src/Tables.cpp:100-103). The flags said only CF_GOOD_FORT, and
+# src/Values.cpp:395 picks the track from that flag, so a 5th-level
+# Underdark Warrior had Reflex +1 -- PoorSave[5] -- where his own page
+# printed +4. The fix adds CF_GOOD_REF.
+#
+# THE ORACLE is the sheet's Reflex line, which names each class's own
+# contribution separately: "Reflex +N (Rogue +N/ Underdark Warrior +N, ...)".
+# The rogue's share is the control -- it must not move.
+#
+# This character also proves the ADMITTING half of PA-03-F12, the race gate
+# that was never checked. A deep gnome is one of the five races the fix
+# admits, and he is tested UNREDUCED: collapsing him to his parent race
+# would yield the surface gnome, whom the gate must refuse. The refusing
+# half is tools/keys/underdark-greyelf.keys.
+#
+# THE BUILD, and why every number in it is forced.
+#   * Race. The gate wants drow, kobold, orc, deep gnome or grey dwarf.
+#   * Wisdom 17 base. A deep gnome carries Wis +2, so 15 bought is enough.
+#     Point buy is used rather than a rolled set, so the character does not
+#     depend on the seed at all.
+#   * Move Silently, Hide and Climb at 10. All three are rogue skills.
+#   * Blind Fighting and Toughness. Toughness is the expensive one: it needs
+#     Con 13 AND Endurance AND Roll With It (src/FeatTab.cpp:1237-1242), so
+#     three of the four feats are spent reaching it. Two feats arrive during
+#     character generation and one each at 3rd and 6th level, which is why
+#     the character is a Rogue 6 and not a Rogue 5.
+#   * Six core levels plus five prestige levels is exactly 11, which is
+#     MAX_CHAR_LEVEL (inc/Defines.h:4367). There is no room to spare.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Gnome"
+@choose "Deep Gnome"
+@choose "Rogue"
+
+# Point buy, 75 points, spent to the last one. The seven rows are the
+# engine's own attribute list (src/Create.cpp:1617-1622), fixed at seven and
+# in a fixed order, so counting DOWN here cannot rot the way counting
+# through a list built from lib/ can.
+p
+RIGHT*6         # STR 14
+DOWN
+RIGHT*10        # DEX 18
+DOWN
+RIGHT*10        # CON 18, because Toughness wants a Constitution of 13 and
+                #   both races here carry a penalty to it
+DOWN
+RIGHT*8         # INT 16
+DOWN
+RIGHT*7         # WIS 15, which the deep gnome's +2 turns into 17
+DOWN
+RIGHT*9         # CHA 17
+DOWN
+RIGHT*6         # LUC 14
+ENTER y         # "Are these your final stats?"
+
+@choose "Neutral"
+@choose "Endurance"     # Toughness needs it
+@choose "Roll With It"  # and it needs this too
+@while "Choose a feat" a        # some races are given a third feat; spend it
+
+# Eighteen ranks, two to a skill. The three the gate reads first; the rest
+# only because character generation will not release a character with a rank
+# unspent.
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Move Silently" DOWN
+RIGHT*3
+@cursorto:mark "Hide in Shadows" UP
+RIGHT*3
+@cursorto:mark "Climb" UP
+RIGHT*3
+@cursorto:mark "Alchemy" UP
+RIGHT*3
+@cursorto:mark "Appraise" DOWN
+RIGHT*3
+@cursorto:mark "Athletics" DOWN
+RIGHT*3
+@cursorto:mark "Balance" DOWN
+RIGHT*3
+@cursorto:mark "Bluff" DOWN
+RIGHT*3
+@cursorto:mark "Craft" DOWN
+RIGHT*3
+@cursorto:mark "Decipher Script" DOWN
+RIGHT*3
+@cursorto:mark "Diplomacy" DOWN
+RIGHT*3
+@cursorto:mark "Disguise" DOWN
+RIGHT*3
+ENTER y # Done, and confirm keeping the ranks. A high Intelligence buys more
+        #   ranks, so more skills are named here than the smallest character
+        #   needs; a RIGHT with no rank left to spend does nothing.
+
+a       # Personality archetype
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d                       # character sheet
+
+# Level to 3, where the third feat is offered, and to 6 for the fourth.
+# Pressing G until the menu appears is safer than counting levels: it does
+# not care which levels a rogue is given a feat at.
+@until "Choose a feat" G
+# Toughness is drawn as "[ ] Toughness": the feat list is longer than the 52
+# letters LMenu has to give out, so the entries past the 52nd get a blank
+# bracket. A menu ignores the space bar, so the only way in is to put the
+# cursor on the row and press ENTER. DOWN walks the whole list, column by
+# column, and wraps (src/TextTerm.cpp:1145-1152).
+@cursorto "Toughness" DOWN
+ENTER
+@until "Choose a feat" G
+@choose "Blind Fight"
+@expect "Rogue 6"
+
+S
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Move Silently" DOWN
+RIGHT*9
+@cursorto:mark "Hide in Shadows" UP
+RIGHT*9
+@cursorto:mark "Climb" UP
+RIGHT*9
+ENTER y
+
+P                       # [P]restige Classes
+@expect "Choose a class:"
+@choose "Underdark Warrior"
+@expect "Warrior 0"     # the gate admitted him. The sheet wraps the
+                        #   class name, so only the tail is looked for.
+
+@until "class do you wish to advance" G
+@choose "Underdark Warrior"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Underdark Warrior"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Underdark Warrior"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Underdark Warrior"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Underdark Warrior"
+@while "Choose a feat" a
+@expect "Warrior 5"
+
+W                       # Write Dump
+u d w a r ENTER         # filename: "udwar"
+ESC
+@quit

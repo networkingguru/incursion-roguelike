@@ -82,6 +82,10 @@
    the log: 0 clean, 1 Fatal(), 3 out of budget, 4 out of time. */
 #define EXIT_OUT_OF_KEYS 3
 #define EXIT_OUT_OF_TIME 4
+/* 5 is tools/headless.sh's own "the run never entered a map", assigned after
+   the fact, so a code the binary raises itself starts at 6. This one says a
+   directive was told to find something the screen never showed. */
+#define EXIT_SCRIPT_FAILED 6
 
 char __buffer[1600];
 char __buff2[80];
@@ -92,6 +96,15 @@ char __buff2[80];
 #define SK_QUIT  (-2)
 #define SK_WHILE (-3)
 #define SK_UNTIL (-4)
+#define SK_CHOOSE (-5)
+#define SK_CURSOR (-6)
+#define SK_EXPECT (-7)
+
+/* How the two managers that a script has to drive mark their current row, and
+   why a script must say which one it is looking at rather than let this file
+   guess. See CursorOnRow. */
+#define SK_CURSOR_MARK   '>'
+#define SK_MENU_CURSOR   AZURE
 
 /* A conditional that never ends would hang the run in place of the watchdog,
    which measures the gap between keystrokes and would never fire. The limit
@@ -102,7 +115,8 @@ char __buff2[80];
 typedef struct ScriptKey {
     int16 ch;        /* a KY_ value, a character, or SK_ above */
     uint8 mods;      /* SHIFT | CONTROL | ALT, as the keyset expects */
-    char  label[64]; /* SK_DUMP: the dump label. SK_WHILE/UNTIL: screen text. */
+    char  label[64]; /* SK_DUMP: the dump label. Every other SK_: screen text. */
+    bool  byMark;    /* SK_CURSOR: look for a marker, not a highlight. */
 
     /* SK_WHILE and SK_UNTIL only. The body is a sequence rather than a single
        key because the case this exists for needs one: draining the Skill
@@ -212,7 +226,12 @@ public:
 
     /* Screen Capture */
     void DumpScreen(const char *label);
+    void RenderRow(int16 y, char *line);
     bool ScreenShows(const char *text);
+    bool FindMenuEntry(const char *name, char *key, int16 *ey, int16 *ex,
+                       const char **why);
+    bool CursorOnRow(const char *text, bool byMark);
+    void ScriptFailed(const char *what, const char *detail);
     void LoadKeyScript(const char *fn);
     void SetMaxKeys(int32 n) { maxKeys = n; }
     void UseTerminal(bool on) { useCurses = on; }
@@ -768,10 +787,22 @@ void posixTerm::BlitScrollLine(int16 wn, int32 buffline, int32 winline) {
 /* One numbered file per dump, under logs/screens. The path is built from
    IncursionDirectory because the game chdir()s into its own subdirectories
    while it runs, so the current directory is not a fixed point. */
+/* One row of the screen as ASCII, NUL-terminated.
+
+   Every screen-reading feature goes through this, so what a script can match
+   is exactly what a dump in logs/screens shows. */
+void posixTerm::RenderRow(int16 y, char *line) {
+    int16 x;
+
+    for (x = 0; x < SCREEN_W; x++)
+        line[x] = glyph_to_ascii(scr[y][x]);
+    line[SCREEN_W] = '\0';
+}
+
 void posixTerm::DumpScreen(const char *label) {
     char path[MAX_PATH_LENGTH], dir[MAX_PATH_LENGTH];
     char line[SCREEN_W + 2];
-    int16 x, y, last;
+    int16 y, last;
     FILE *f;
 
     snprintf(dir, sizeof(dir), "%slogs/screens", (const char*)IncursionDirectory);
@@ -787,8 +818,7 @@ void posixTerm::DumpScreen(const char *label) {
         (int)dumpCount, (label && *label) ? label : "", (long)keysRead, (int)Mode);
 
     for (y = 0; y < SCREEN_H; y++) {
-        for (x = 0; x < SCREEN_W; x++)
-            line[x] = glyph_to_ascii(scr[y][x]);
+        RenderRow(y, line);
         /* Trailing blanks carry no information and make the file three times
            the size it needs to be. */
         for (last = SCREEN_W - 1; last >= 0 && line[last] == ' '; last--)
@@ -811,19 +841,238 @@ void posixTerm::DumpScreen(const char *label) {
    so what a script can match is exactly what appears in logs/screens. */
 bool posixTerm::ScreenShows(const char *text) {
     char line[SCREEN_W + 1];
-    int16 x, y;
+    int16 y;
 
     if (!text || !*text)
         return false;
 
     for (y = 0; y < SCREEN_H; y++) {
-        for (x = 0; x < SCREEN_W; x++)
-            line[x] = glyph_to_ascii(scr[y][x]);
-        line[SCREEN_W] = '\0';
+        RenderRow(y, line);
         if (strstr(line, text))
             return true;
     }
     return false;
+}
+
+/* Compare only the overlap, and ignore case.
+
+   The menus truncate. LMenu cuts every entry to the column width at
+   src/TextTerm.cpp:1022, so the prestige list draws "[e] Celestial Initiat"
+   for a class whose name is longer. A directive that reports "not found" for
+   a name plainly on the screen is worse than the counting it replaces, so the
+   comparison stops when either side runs out.
+
+   The cost is that a short name is also a prefix of longer ones, and on the
+   alignment screen that is not hypothetical: "[e] Neutral" sits beside
+   "[b] Neutral Good" and "[h] Neutral Evil". So an overlap match is the
+   weaker answer, and an entry that matches the name outright beats it.
+   FindMenuEntry keeps the two apart and takes the exact one when there is
+   one. Only a genuine tie stops the run.
+
+   Returns 2 for an exact match, 1 for an overlap, 0 for neither. */
+static int NameMatches(const char *want, const char *shown) {
+    const char *w = want, *h = shown;
+
+    if (!*w || !*h)
+        return 0;
+
+    while (*w && *h) {
+        if (tolower((unsigned char)*w) != tolower((unsigned char)*h))
+            return 0;
+        w++;
+        h++;
+    }
+    return (!*w && !*h) ? 2 : 1;
+}
+
+/* Where a menu entry's name ends: at two spaces, at the next '[', or at the
+   end of the row. Menus put their second and third columns after a gap, and
+   the character sheet writes "[P]restige Classes [PGUP/PGDN] Scroll" on one
+   row, so both have to end a name. */
+static void MenuLabel(const char *from, char *out, size_t sz) {
+    size_t n = 0;
+
+    while (*from && n < sz - 1) {
+        if (from[0] == '[')
+            break;
+        if (from[0] == ' ' && from[1] == ' ')
+            break;
+        out[n++] = *from++;
+    }
+    while (n && out[n - 1] == ' ')
+        n--;
+    out[n] = '\0';
+}
+
+/* Find "[X] name" on the screen: report the letter, and where the name starts.
+
+   The menu IS the mapping, and it is the only copy of it that is true at
+   runtime. A script that names the entry it wants reads the letter the game
+   has just printed beside that name, so adding a class to lib/ cannot make
+   the script pick a different one. Counting keystrokes to the same place --
+   DOWN nine times for the Loremaster -- silently picks the neighbour instead.
+
+   Only "[X]" with exactly one character between the brackets is a menu key.
+   That rejects "[ESC]", "[PGUP/PGDN]" and "[yn]", which share rows with real
+   entries on the character sheet.
+
+   A BLANK bracket, "[ ]", counts. It is not a decoration: LMenu draws it for
+   every entry past the 52nd, because MenuLetters (src/TextTerm.cpp) runs out
+   of letters there, and the feat list is long enough to reach it -- Toughness
+   is drawn as "[ ] Toughness". Such an entry can be selected only by moving
+   the cursor onto it and pressing ENTER (src/TextTerm.cpp:1164-1172); the
+   space bar does nothing at all in a menu (:1198). So @cursorto must be able
+   to find it, and @choose must refuse it rather than send a key that would
+   land somewhere else.
+
+   Two forms of name are tried per bracket, because the game writes both:
+   "[e] Elf" puts the name after a space, and "[P]restige Classes" runs the
+   bracketed letter straight into it. */
+bool posixTerm::FindMenuEntry(const char *name, char *key, int16 *ey,
+                              int16 *ex, const char **why) {
+    char line[SCREEN_W + 1], label[SCREEN_W + 2], joined[SCREEN_W + 3];
+    char best[2] = { 0, 0 };
+    int16 bestY[2] = { 0, 0 }, bestX[2] = { 0, 0 };
+    bool tied[2] = { false, false };
+    const char *after;
+    int16 x, y;
+    int rank;
+
+    *why = "@choose";
+    for (y = 0; y < SCREEN_H; y++) {
+        RenderRow(y, line);
+        for (x = 0; x + 3 <= SCREEN_W; x++) {
+            if (line[x] != '[' || line[x + 2] != ']')
+                continue;
+            if (line[x + 1] == '[' || line[x + 1] == ']')
+                continue;
+
+            MenuLabel(line + x + 3, label, sizeof(label));
+            snprintf(joined, sizeof(joined), "%c%s", line[x + 1], label);
+            for (after = label; *after == ' '; after++)
+                ;
+
+            rank = NameMatches(name, after);
+            if (NameMatches(name, joined) > rank)
+                rank = NameMatches(name, joined);
+            if (!rank)
+                continue;
+            rank--;                             /* 0 overlap, 1 exact */
+
+            /* The same letter twice is still one answer -- a menu may repeat
+               an entry, and the character sheet draws its command bar on
+               every page. Two different letters at the same strength is a
+               name that does not pick one entry out. */
+            if (best[rank] && best[rank] != line[x + 1]) {
+                tied[rank] = true;
+                continue;
+            }
+            best[rank] = line[x + 1];
+            bestY[rank] = y;
+            bestX[rank] = (int16)(x + 3 + (after - label));
+        }
+    }
+
+    for (rank = 1; rank >= 0; rank--) {
+        if (!best[rank])
+            continue;
+        if (tied[rank]) {
+            *why = "@choose (the name matches two entries)";
+            return false;
+        }
+        *key = best[rank];
+        *ey = bestY[rank];
+        *ex = bestX[rank];
+        return true;
+    }
+
+    *why = "@choose (no entry with that name is on screen)";
+    return false;
+}
+
+/* Is the cursor on the row that holds this text?
+
+   Two ways of marking a row, and they cannot be merged, so a script says
+   which one it is looking at. Guessing would drive the wrong row in silence,
+   which is the failure this whole directive exists to end.
+
+   A HIGHLIGHT is what a menu uses. LMenu draws the current entry's name in
+   AZURE, having stripped its colour codes with Decolorize first, and every
+   other entry in whatever colour its own text asks for
+   (src/TextTerm.cpp:1094-1100). So the test is "this name is AZURE", and it
+   must be that way round. The obvious alternative -- "this name is not the
+   dim GREY the other entries use" -- is wrong, and the feat menu proves it:
+   Player::GainFeat builds every entry as "<YELLOW>name<GREY>"
+   (src/Create.cpp:2580-2584), so on that screen no name is GREY and a
+   not-dimmed test reports the cursor as already arrived on the first row it
+   is asked about, having moved nothing.
+
+   It is anchored on the "[X] " bracket, which matters for the same reason:
+   MENU_DESC menus print a description beside the list, and that description
+   is neither highlighted nor bracketed. Without the anchor, a class whose
+   description repeats its own name would satisfy the test by accident.
+
+   A MARKER is what the Skill Manager uses. It writes a literal '>' beside the
+   current skill (src/Managers.cpp:1664, and the two arrow cases at :1711 and
+   :1724) and colours every in-class skill EMERALD whether it is current or
+   not -- so colour means nothing there, and there is no bracket either. The
+   test walks left from the name over the gap: on the current row the first
+   thing it meets is the marker, and on any other row it is the window border,
+   which stops the walk before it can reach the map behind the window and find
+   a down-staircase '>'. The Spell Manager marks its rows the same way but
+   puts a bracketed spell key between the marker and the name, so the walk
+   steps over a "[X]" group as well as over spaces.
+
+   Both fail closed. A mode used on the wrong screen finds nothing, so the
+   caller keeps pressing and then stops with a message, rather than reporting
+   an arrival that did not happen. */
+bool posixTerm::CursorOnRow(const char *text, bool byMark) {
+    char line[SCREEN_W + 1];
+    const char *at, *why;
+    char key;
+    int16 x, y;
+
+    if (!byMark) {
+        if (!FindMenuEntry(text, &key, &y, &x, &why))
+            return false;
+        return GLYPH_FORE_VALUE(scr[y][x]) == SK_MENU_CURSOR;
+    }
+
+    for (y = 0; y < SCREEN_H; y++) {
+        RenderRow(y, line);
+        at = strstr(line, text);
+        if (!at)
+            continue;
+        for (x = (int16)(at - line) - 1; x >= 0; x--) {
+            if (line[x] == ' ')
+                continue;
+            if (line[x] == SK_CURSOR_MARK)
+                return true;
+            /* A bracketed key may sit between the marker and the name. The
+               Spell Manager writes "> [b] Fiendish Servant": the marker at
+               column 0 (src/Managers.cpp:313) and the spell's own key beside
+               the name. Step over the whole "[X]" group and keep walking, so
+               one directive reads both managers. Anything else stops the
+               walk, which is what keeps it off the map behind the window. */
+            if (line[x] == ']' && x >= 2 && line[x - 2] == '[') {
+                x -= 2;
+                continue;
+            }
+            break;
+        }
+    }
+    return false;
+}
+
+/* A directive that could not do what it was told stops the run, and takes the
+   screen it was reading with it. The alternative is the thing these
+   directives exist to end: a script that misses its target, carries on, and
+   produces a plausible run of the wrong character. */
+void posixTerm::ScriptFailed(const char *what, const char *detail) {
+    DumpScreen("script-failed");
+    fprintf(stderr, "incursion: %s \"%s\" failed; see the last screen dump\n",
+        what, detail);
+    exit(EXIT_SCRIPT_FAILED);
 }
 
 /*****************************************************************************\
@@ -927,7 +1176,49 @@ static bool TokenToKey(const char *tok, ScriptKey *out) {
        @while "Unspent Skill Ranks" RIGHT RIGHT RIGHT DOWN
 
    Both are bounded by SK_LOOP_MAX passes and then give up, so a script cannot
-   hang on a prompt that never comes or never clears. */
+   hang on a prompt that never comes or never clears.
+
+   @choose, @cursorto and @expect read the screen the same way, and exist
+   because counting does not survive the game changing. A menu letter is a
+   position in a list built from lib/, so adding one prestige class moves
+   every letter after it -- and a script that counted DOWN nine times to reach
+   the Loremaster then reads a different class and passes.
+
+       @choose "Loremaster"                 # press the letter beside the name
+       @cursorto "Loremaster" DOWN          # highlight it without taking it
+       @cursorto:mark "Ride" DOWN           # the Skill Manager's '>' cursor
+       @expect "Choose a class:"            # stop here if this is the wrong screen
+
+   Use @choose to pick from a menu: LMenu returns the moment its letter is
+   pressed (src/TextTerm.cpp:1217-1231), so the entry is taken, not merely
+   highlighted. Use @cursorto when the point is to look rather than to choose,
+   or on a list that has no letters at all. See CursorOnRow for why the two
+   cursor styles are named separately instead of being guessed at.
+
+   A name is matched against what the menu drew, ignoring case, over the
+   shorter of the two -- the menus truncate. A name that fits two entries, or
+   fits none, stops the run with EXIT_SCRIPT_FAILED and a screen dump. */
+/* The one argument every screen-driven directive takes: a quoted run of
+   screen text. Reads up to and including the closing quote. */
+static void ReadQuoted(FILE *f, const char *fn, const char *tok,
+                       char *out, size_t sz) {
+    int c, n = 0;
+
+    while ((c = fgetc(f)) != EOF && isspace(c))
+        ;
+    if (c != '"') {
+        printf("Key script '%s': %s needs a quoted screen text.\n", fn, tok);
+        exit(2);
+    }
+    while ((c = fgetc(f)) != EOF && c != '"' && n < (int)sz - 1)
+        out[n++] = (char)c;
+    out[n] = '\0';
+    if (!n) {
+        printf("Key script '%s': %s was given an empty text.\n", fn, tok);
+        exit(2);
+    }
+}
+
 void posixTerm::AppendKey(const ScriptKey &k) {
     if (keyCount == keyAlloc) {
         ScriptKey *bigger;
@@ -1014,34 +1305,42 @@ void posixTerm::LoadKeyScript(const char *fn) {
             continue;
         }
 
+        /* @choose "name"  -- press the letter the game printed beside name.
+           @expect "text"   -- stop the run unless the screen shows text.
+
+           Neither takes a key: @choose works out its own, and @expect is an
+           assertion rather than a keystroke. */
+        if (!strcmp(tok, "@choose") || !strcmp(tok, "@expect")) {
+            memset(&k, 0, sizeof(k));
+            k.ch = !strcmp(tok, "@choose") ? SK_CHOOSE : SK_EXPECT;
+            ReadQuoted(f, fn, tok, k.label, sizeof(k.label));
+            AppendKey(k);
+            continue;
+        }
+
         /* @while "text" KEY  -- send KEY for as long as the screen shows text.
            @until "text" KEY  -- send KEY until the screen shows text.
+           @cursorto "name" KEY       -- send KEY until name is highlighted.
+           @cursorto:mark "name" KEY  -- ...until a '>' marks name's row.
 
-           Both take one quoted screen text and exactly one ordinary key. */
-        if (!strcmp(tok, "@while") || !strcmp(tok, "@until")) {
+           Each takes one quoted screen text and then a body of ordinary
+           keys. */
+        if (!strcmp(tok, "@while") || !strcmp(tok, "@until") ||
+            !strcmp(tok, "@cursorto") || !strcmp(tok, "@cursorto:mark")) {
             char keytok[MAX_PATH_LENGTH];
             ScriptKey loop;
 
             memset(&k, 0, sizeof(k));
-            k.ch = !strcmp(tok, "@while") ? SK_WHILE : SK_UNTIL;
+            if (!strcmp(tok, "@while"))
+                k.ch = SK_WHILE;
+            else if (!strcmp(tok, "@until"))
+                k.ch = SK_UNTIL;
+            else {
+                k.ch = SK_CURSOR;
+                k.byMark = !strcmp(tok, "@cursorto:mark");
+            }
 
-            while ((c = fgetc(f)) != EOF && isspace(c))
-                ;
-            if (c != '"') {
-                printf("Key script '%s': %s needs a quoted screen text.\n",
-                    fn, tok);
-                exit(2);
-            }
-            n = 0;
-            while ((c = fgetc(f)) != EOF && c != '"' &&
-                   n < (int)sizeof(k.label) - 1)
-                k.label[n++] = (char)c;
-            k.label[n] = '\0';
-            if (!n) {
-                printf("Key script '%s': %s was given an empty text.\n",
-                    fn, tok);
-                exit(2);
-            }
+            ReadQuoted(f, fn, tok, k.label, sizeof(k.label));
 
             /* The body is the rest of the LINE, so the newline is what ends
                it -- every other token in this format is whitespace-delimited
@@ -1202,21 +1501,72 @@ ScriptKey posixTerm::NextKey() {
             OutOfKeys();
 
         e = &keys[keyNext];
-        if (e->ch != SK_WHILE && e->ch != SK_UNTIL)
+
+        /* Neither of these is a keystroke. @expect asserts and steps aside;
+           @choose reads the menu and becomes the letter it found there. */
+        if (e->ch == SK_EXPECT) {
+            if (!ScreenShows(e->label))
+                ScriptFailed("@expect", e->label);
+            keyNext++;
+            continue;
+        }
+        if (e->ch == SK_CHOOSE) {
+            const char *why;
+            int16 ey, ex;
+            char letter = 0;
+
+            if (!FindMenuEntry(e->label, &letter, &ey, &ex, &why))
+                ScriptFailed(why, e->label);
+
+            /* The entry is there, but the menu ran out of letters before it
+               reached it. Pressing space would not choose it -- a menu
+               ignores the space bar -- so say so instead of sending a key
+               that goes nowhere. */
+            if (letter == ' ')
+                ScriptFailed("@choose (that entry has no letter; use "
+                             "@cursorto and ENTER)", e->label);
+
+            memset(&k, 0, sizeof(k));
+            k.ch = (unsigned char)letter;
+            if (isupper((unsigned char)letter))
+                k.mods = SHIFT;
+            keyNext++;
+            keysRead++;
+            if (!useCurses)
+                alarm(DEFAULT_TIMEOUT_S);
+            return k;
+        }
+
+        if (e->ch != SK_WHILE && e->ch != SK_UNTIL && e->ch != SK_CURSOR)
             break;
 
         /* The condition is tested only at the top of a pass. Testing between
            the keys of one pass could stop halfway through RIGHT RIGHT RIGHT
            DOWN and leave the cursor on a half-spent skill. */
         if (e->bodyPos == 0) {
-            bool shown = ScreenShows(e->label);
-            bool fire = (e->ch == SK_WHILE) ? shown : !shown;
+            bool fire;
+
+            if (e->ch == SK_WHILE)
+                fire = ScreenShows(e->label);
+            else if (e->ch == SK_UNTIL)
+                fire = !ScreenShows(e->label);
+            else
+                fire = !CursorOnRow(e->label, e->byMark);
 
             if (!fire || e->iter >= SK_LOOP_MAX) {
-                if (fire)
+                if (fire) {
+                    /* @while and @until shrug and move on, because a prompt
+                       that never came is often a prompt that was never going
+                       to be asked. @cursorto cannot shrug: the cursor is then
+                       sitting on some other row, and every key after this one
+                       would be spent on the wrong thing. */
+                    if (e->ch == SK_CURSOR)
+                        ScriptFailed(e->byMark ? "@cursorto:mark" : "@cursorto",
+                            e->label);
                     fprintf(stderr, "incursion: %s \"%s\" gave up after %d "
                         "passes\n", e->ch == SK_WHILE ? "@while" : "@until",
                         e->label, SK_LOOP_MAX);
+                }
                 e->iter = 0;
                 keyNext++;
                 continue;

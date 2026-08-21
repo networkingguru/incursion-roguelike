@@ -11,13 +11,17 @@
 a       # Initial Choices: [a] Create a New Character
 n       # Alter the character generation options? -- no
 y       # Your options will place the game in Explore Mode. Continue? -- yes
-e       # Race:     [e] Elf
-a       # Subrace:  [a] Elf (Standard)
-i       # Class:    [i] Rogue
-a       # Attributes: the first of the five offered sets
-e       # Alignment: [e] Neutral
-a       # First feat
-a       # Second feat
+
+# The choices are named, not counted, so a race or class added to lib/ cannot
+# make this script build a different character. See @choose in src/Wposix.cpp.
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Rogue"
+a                       # Attributes: the first of the five offered sets. The
+                        #   sets have no names, so this one stays positional.
+@choose "Neutral"       # and not [b] Neutral Good or [h] Neutral Evil
+a                       # First feat.  Which feats are offered depends on the
+a                       # Second feat. attribute rolls, so these stay counted.
 
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
@@ -28,6 +32,7 @@ a       # Personality archetype
 
 ESC     # dismiss the arrival-room description; now in play
 d       # character sheet
+@expect "Race   Elf"    # the whole point of the run; stop here if it is wrong
 W                       # Write Dump
 s h e e t ENTER         # filename: "sheet"
 @dump:afterdump

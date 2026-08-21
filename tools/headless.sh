@@ -31,7 +31,8 @@
 # Ends: 0 the script ran out or asked to quit, 1 Fatal(), 2 bad key script,
 #       3 the key budget ran out, 4 the watchdog fired (the game stopped
 #       asking for keys, which is the signature of a hang), 5 the run never
-#       entered a map and so measured nothing.
+#       entered a map and so measured nothing, 6 a @choose, @cursorto or
+#       @expect was told to find something the screen never showed.
 #
 # A death, or a session stuck at the threat-disengage prompt, is deliberately
 # NOT its own exit code: whether either should FAIL a run, versus merely be
@@ -184,6 +185,8 @@ case $STATUS in
     4) echo "ended:      WATCHDOG -- the game stopped asking for keystrokes" ;;
     5) echo "ended:      NO GAMEPLAY -- the run never entered a map, so it" ;
        echo "            measured nothing. Do not count it as a pass." ;;
+    6) echo "ended:      the key script looked for something the screen never" ;
+       echo "            showed. The last screen dump is what it was reading." ;;
     *) echo "ended:      exit $STATUS" ;;
 esac
 

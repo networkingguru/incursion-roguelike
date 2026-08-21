@@ -1,0 +1,138 @@
+# Build a Twilight Huntsman and photograph the three things bd inc-tek.8.3
+# changed about that class: its spell access (PA-03-F1), the target of its
+# Smite (PA-03-F2) and the rate its Tracking advances (PA-03-F19).
+#
+# WHY A CHARACTER IS NEEDED. All three fixes are grants in the class's Grants:
+# block. A grant does nothing until somebody holds the class, so reading the
+# class description -- which is all tools/keys/prestige-tables.keys does --
+# cannot see any of them. The character sheet reports all three:
+#   "Smite Lawful Creatures"    src/Sheet.cpp:501-509
+#   "Tracking (280 feet)"       src/Sheet.cpp:719, AbilityLevel(CA_TRACKING)*10
+#   the [L]earn Spells menu     src/Create.cpp:4190-4198 builds it from the
+#                               SPELL_ACCESS stati this fix added
+#
+# THE BUILD, and why it is a multiclass. The class wants Ride 8, Athletics 8,
+# Hide 5, Animal Empathy 5, Move Silently 5 and Maeve as patron
+# (lib/prestige.irh:2802-2818). No single class covers those five skills:
+# Character::MaxRanks (src/Create.cpp:3600-3629) allows ranks only in a skill
+# one of your classes carries, so a skill no class of yours has is capped at
+# zero ranks and can never be raised. The ranger has Animal Empathy and the
+# rogue has Athletics; neither has both. Hence Ranger 3 / Rogue 3, which is
+# also the cheapest total: ranks are capped by the levels of the classes that
+# carry the skill, and six levels buy nine ranks in a shared skill.
+#
+# An elf is given Maeve at birth (lib/races.irh:1144-1147), so no conversion
+# is needed.
+#
+# SEED. The attribute rolls and the offered feats vary with the seed, so the
+# feat picks stay positional and a seed is passed.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Ranger"
+a                       # Attributes: the first of the offered sets
+@choose "Neutral"
+@choose "Goblinkin"     # favoured enemy. Goblinkin are the early-dungeon
+                        #   staple and they are Lawful, so this is also the
+                        #   creature type the corrected Smite now bites.
+a                       # Combat style: [a] archery
+@until "Unspent Skill Ranks" a          # however many feats are asked for
+
+# Twelve ranks, two to a skill, in the ranger list. Athletics cannot be
+# bought here -- the ranger does not carry it, so its cap is zero until the
+# rogue levels arrive.
+@cursorto:mark "Animal Empathy" DOWN
+RIGHT*2
+@cursorto:mark "Hide in Shadows" DOWN
+RIGHT*2
+@cursorto:mark "Move Silently" DOWN
+RIGHT*2
+@cursorto:mark "Ride" DOWN
+RIGHT*2
+@cursorto:mark "Searching" DOWN
+RIGHT*2
+@cursorto:mark "Listen" UP
+RIGHT*2
+ENTER y # Done, and confirm keeping the ranks
+
+a       # Personality archetype
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d       # character sheet
+M       # [M]ulticlass
+@choose "Rogue"
+
+# Five levels: three rogue, two ranger, reaching Ranger 3 / Rogue 3.
+# @until presses G through whatever the level-up asks first; @choose answers
+# the class question by name; @while clears a feat menu when one appears.
+@until "class do you wish to advance" G
+@choose "Rogue"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Rogue"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Rogue"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Ranger"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Ranger"
+@while "Choose a feat" a
+@expect "Ranger 3"
+
+# Ride to its cap in the ranger view, then TAB to the rogue view for
+# Athletics. The Skill Manager keeps one pool and one list per class.
+S
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Ride" DOWN
+RIGHT*7
+TAB
+@cursorto:mark "Athletics" DOWN
+RIGHT*6
+ENTER y
+
+P                               # [P]restige Classes
+@expect "Choose a class:"
+@choose "Twilight Huntsman"
+@expect "Huntsman 0"            # the gate let him in
+
+# Five huntsman levels. Smite arrives at 3rd, Scent at 5th, and Tracking
+# has had three of its +2 steps by then.
+@until "class do you wish to advance" G
+@choose "Twilight Huntsman"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Twilight Huntsman"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Twilight Huntsman"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Twilight Huntsman"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Twilight Huntsman"
+@while "Choose a feat" a
+@expect "Huntsman 5"
+
+W                       # Write Dump
+h u n t ENTER           # filename: "hunt"
+
+L                       # [L]earn Spells -- the spell list oracle
+@dump:learn
+ESC
+ESC
+@quit

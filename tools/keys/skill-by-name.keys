@@ -1,0 +1,70 @@
+# Spend skill ranks on skills chosen BY NAME, and photograph the result.
+#
+# This is the check behind @cursorto:mark (bd inc-cso). The Skill Manager has
+# no menu letters at all -- it is a scrolling list with a '>' beside the
+# current row (src/Managers.cpp:1664) -- so until now the only way a script
+# could reach a skill was to count DOWN keystrokes to it. A skill added to
+# lib/, or a character with a different class list, moved every count after
+# it, and the script then spent the ranks somewhere else and still finished.
+#
+# WHY THESE NINE SKILLS. They all sit late in the list, and the positional
+# script this one is derived from (tools/keys/chargen-rogue.keys) reaches only
+# the first nine: Alchemy through Diplomacy. So the assertion is not merely
+# "the ranks were spent" -- it is "the ranks were spent where no amount of
+# counting from the top would have put them". tools/check_key_directives.sh
+# checks both halves: these nine carry ranks, and Alchemy carries none.
+#
+# The names are given in list order because DOWN does not wrap here: the
+# Skill Manager stops at the end of the list (src/Managers.cpp:1713-1720)
+# rather than returning to the top, so @cursorto:mark can only walk forward.
+#
+# Nine skills at a maximum of two ranks each is exactly the eighteen an elf
+# rogue starts with, and character generation will not let go while any rank
+# is unspent.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Rogue"
+a                       # Attributes: the first of the five offered sets
+@choose "Neutral"
+a                       # First feat
+a                       # Second feat
+
+@expect "Unspent Skill Ranks"
+
+@cursorto:mark "Listen" DOWN
+RIGHT*3
+@cursorto:mark "Lockpicking" DOWN
+RIGHT*3
+@cursorto:mark "Move Silently" DOWN
+RIGHT*3
+@cursorto:mark "Perform" DOWN
+RIGHT*3
+@cursorto:mark "Pick Pockets" DOWN
+RIGHT*3
+@cursorto:mark "Poison Use" DOWN
+RIGHT*3
+@cursorto:mark "Ride" DOWN
+RIGHT*3
+@cursorto:mark "Spot" DOWN
+RIGHT*3
+@cursorto:mark "Tumble" DOWN
+RIGHT*3
+
+ENTER y # Done, and confirm keeping the ranks
+
+y       # Do you wish to worship <god>? -- yes
+a       # Personality archetype
+
+ESC     # dismiss the arrival-room description; now in play
+d       # character sheet
+@expect "Race   Elf"
+W                       # Write Dump
+s h e e t ENTER         # filename: "sheet"
+@dump:afterdump
+ESC
+@quit

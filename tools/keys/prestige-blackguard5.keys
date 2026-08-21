@@ -1,0 +1,218 @@
+# Build a Blackguard of 5th level and call his Fiendish Servant. That is
+# bd inc-tek.8.3 finding PA-03-F15: the ability summoned a babau, which is
+# neither creature its own description names, and gave it a finite duration
+# although the description says twice that it stays until dismissed.
+#
+# WHY THIS BUILD AND NOT THE OBVIOUS ONE. The gate (lib/prestige.irh:681-715)
+# wants Evil, Intimidate 12, Knowledge (The Infernal) 10, and a base attack
+# bonus of +6 in one category. The reading that made this finding look
+# unreachable was: BAB +6 needs six levels of a class that attacks at 100%,
+# no such class carries Knowledge (The Infernal), so the skill needs a second
+# class on top, and eight core levels plus five blackguard levels is thirteen
+# in a game that stops at eleven.
+#
+# That reading is wrong, and Character::MaxRanks says why
+# (src/Create.cpp:3620-3651). A skill's rank cap is normally set by the
+# summed levels of the CLASSES that carry it -- which is what makes a second
+# class necessary -- but a skill held as an EXTRA_SKILL stati returns
+# ClassLevelRanks[TotalLevel()] instead, the full character-level cap. A
+# human chooses two skills of any kind at birth (lib/races.irh:197,
+# "Skills: SK_ANY, SK_ANY"), and those are held that way. So a human warrior
+# can carry Knowledge (The Infernal) at his own level with no second class,
+# and Warrior 6 plus Blackguard 5 is eleven exactly.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Human"
+@choose "Knowledge (Infernal)"  # the two skills a human chooses at birth,
+@choose "Intimidate"            #   and the two the blackguard's gate reads
+@while "Choose a skill:" a
+@choose "Warrior"
+
+# Point buy, 75 points, spent to the last one. Intelligence and Charisma
+# carry the two gate skills; Strength is there so the warrior is a warrior.
+p
+RIGHT*8         # STR 16
+DOWN
+RIGHT*7         # DEX 15
+DOWN
+RIGHT*8         # CON 16
+DOWN
+RIGHT*10        # INT 18, for Knowledge (The Infernal)
+DOWN
+RIGHT*5         # WIS 13
+DOWN
+RIGHT*10        # CHA 18, for Intimidate
+DOWN
+RIGHT*8         # LUC 16
+ENTER y         # "Are these your final stats?"
+
+@choose "Neutral Evil"          # the gate wants Evil and no more than that
+@while "Choose a feat" a
+@while "Focus on which Weapon" a  # the warrior's free Weapon Focus
+@while "Choose a feat" a
+
+@expect "Unspent Skill Ranks"
+# The screen will not close while a rank is unspent. The cursor moves one way
+# per directive, so the skills are visited in the order the list draws them --
+# which is not alphabetical: the bonus skills sit in their own group at the
+# end.
+@cursorto:mark "Athletics" DOWN
+RIGHT*2
+@cursorto:mark "Bluff" DOWN
+RIGHT*2
+@cursorto:mark "Climb" DOWN
+RIGHT*2
+@cursorto:mark "Intimidate" DOWN
+RIGHT*2
+@cursorto:mark "Knowledge (Infernal" DOWN
+RIGHT*2
+ENTER y
+
+a       # Personality archetype
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d       # character sheet
+# Five levels. A warrior is offered a bonus feat at EVERY level, and that
+# menu covers the sheet, so "press G until the level shows" cannot work here:
+# the level never becomes visible and 'g' is itself a menu letter, so the
+# stray presses take feats at random.
+G
+@while "choose a Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "choose a Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "choose a Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "choose a Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "choose a Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "choose a Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@expect "Warrior 6"
+
+# Both gate skills to their cap. At character level 6 that is nine ranks:
+# Intimidate because the warrior carries it, Knowledge (The Infernal) because
+# the human bonus skill is held as an EXTRA_SKILL stati and so takes the
+# character-level cap rather than a class-level one.
+S
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Intimidate" DOWN
+RIGHT*7
+@cursorto:mark "Knowledge (Infernal" DOWN
+RIGHT*7
+# The rest is ballast. Six levels bring 36 ranks and the screen will not close
+# while one is unspent, so more capacity is listed than there are ranks; the
+# surplus RIGHT presses do nothing once the pool is empty. The cursor has run
+# to the end of the list, so it comes back up for the first of them.
+@cursorto:mark "Athletics" UP
+RIGHT*7
+@cursorto:mark "Bluff" DOWN
+RIGHT*7
+@cursorto:mark "Climb" DOWN
+RIGHT*7
+@cursorto:mark "Craft" DOWN
+RIGHT*9
+@cursorto:mark "Find Weakness" DOWN
+RIGHT*9
+ENTER y
+
+P                               # [P]restige Classes
+@expect "Choose a class:"
+@choose "Blackguard"
+@expect "Blackguard 0"          # the gate let him in
+
+# Five blackguard levels. The character has two classes now, so each level
+# asks which one to advance in and the answer is given by name.
+@until "class do you wish to advance" G
+@choose "Blackguard"
+@while "Learn which spell" a
+@while "choose a Warrior Feat" a
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Blackguard"
+@while "Learn which spell" a
+@while "choose a Warrior Feat" a
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Blackguard"
+@while "Learn which spell" a
+@while "choose a Warrior Feat" a
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Blackguard"
+@while "Learn which spell" a
+@while "choose a Warrior Feat" a
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Blackguard"
+@while "Learn which spell" a
+@while "choose a Warrior Feat" a
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Skill Ratings" d
+@expect "Blackguard 5"
+
+# THE ORACLE is the creature that appears. The effect names it in its rval:
+# a babau is a CR 6 demon and neither creature the description mentions; a
+# true imp is the imp it does mention. The map's Things in View panel prints
+# whichever one turns up.
+@until "HP:" ESC
+m
+@cursorto:mark "Fiendish Servant" DOWN
+@dump:selected
+ENTER
+@while "--More--" ENTER
+@dump:servant
+@quit

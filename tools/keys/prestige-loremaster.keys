@@ -1,0 +1,253 @@
+# Build a Loremaster, hand him tomes, and read what they give him. That is
+# bd inc-tek.8.3 finding PA-03-F10: "Bibliographic Insight", the class's
+# 5th-level ability, had no implementation of any kind.
+#
+# The prose promises "an extra +1d2 attribute points from any tome they read"
+# (lib/prestige.irh:2052-2053) and the level table lists the ability at 5th.
+# The Grants block jumped from 3rd level to 6th, the class's EV_ADVANCE
+# handler branched only on levels 2, 4 and 8, and a search for
+# "Bibliographic" across lib/ found nothing but the table row.
+#
+# THE FIX is not in the class, because it cannot be: the attribute gain
+# happens inside each tome's own EV_MAGIC_HIT handler, which calls
+# GainInherentBonus with e.vDmg. A grant on the class cannot reach into that
+# roll, so the bonus is added where the roll is consumed -- in all seven
+# tomes, one per attribute (lib/m_items.irh).
+#
+# THE ORACLE is the character sheet's attribute line, which itemises where
+# each point came from: "STR: 16/00 [+3/+2] (base 13, +3 inherent)".
+# GainInherentBonus is what writes that "+N inherent" term.
+#
+# THE BUILD. The gate (lib/prestige.irh:1972-2010) wants four Knowledge
+# skills at 10, ten levels of known Divination spells, the Scribe Scroll feat
+# and a neutral component in the alignment. A mage carries every Knowledge
+# skill, and wizard mode's Learn Any Spell supplies the four Divination
+# spells by name so that nothing depends on which spells a seed offers.
+# Mage 5 plus Loremaster 5 is 10 levels, inside the cap of 11.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Human"
+@choose "Knowledge (Planes)"    # humans choose two bonus skills
+@while "Choose a skill:" a
+@choose "Mage"
+
+# Point buy, 75 points, spent to the last one.
+p
+RIGHT*5         # STR 13
+DOWN
+RIGHT*8         # DEX 16
+DOWN
+RIGHT*8         # CON 16
+DOWN
+RIGHT*10        # INT 18
+DOWN
+RIGHT*8         # WIS 16
+DOWN
+RIGHT*7         # CHA 15
+DOWN
+RIGHT*10        # LUC 18
+ENTER y         # "Are these your final stats?"
+
+@choose "Neutral"               # the gate wants a neutral component
+@choose "Divination"            # the wizard specialty
+# Scribe Scroll is not chosen here, and must not be: a mage is given it at
+# 1st level already (lib/classes.irh:870), so it never appears on the feat
+# list at all.
+@while "Choose a feat" a
+
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Knowledge (Planes" DOWN
+RIGHT*3
+@cursorto:mark "Knowledge (Magic" UP
+RIGHT*3
+@cursorto:mark "Knowledge (Mytho" DOWN
+RIGHT*3
+@cursorto:mark "Knowledge (Nature" DOWN
+RIGHT*3
+@cursorto:mark "Alchemy" UP
+RIGHT*3
+@cursorto:mark "Appraise" DOWN
+RIGHT*3
+@cursorto:mark "Concentration" DOWN
+RIGHT*3
+ENTER y
+
+a       # Personality archetype
+@while "Learn which spell" a
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d                               # character sheet
+
+# Four levels, one G at a time, each followed by the two menus a mage level
+# can open. "Press G until the level shows" does not work: those menus cover
+# the sheet, so the level never becomes visible, and 'g' is itself a menu
+# letter, so the stray presses pick spells at random.
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@expect "Mage 5"
+
+# Four Knowledge skills to 10. ISkillLevel counts ranks, training and
+# (attribute-11)/2, so four ranks apiece clears the bar with Intelligence 18.
+S
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Knowledge (Planes" DOWN
+RIGHT*6
+@cursorto:mark "Knowledge (Magic" UP
+RIGHT*6
+@cursorto:mark "Knowledge (Mytho" DOWN
+RIGHT*6
+@cursorto:mark "Knowledge (Nature" DOWN
+RIGHT*6
+ENTER y
+
+# Ten levels of Divination: 3 + 3 + 2 + 2.
+@until "HP:" ESC
+w
+@choose "Learn Any Spell"
+"Clairvoyance" ENTER
+w
+@choose "Learn Any Spell"
+"Magic Mapping" ENTER
+w
+@choose "Learn Any Spell"
+"Detect Objects" ENTER
+w
+@choose "Learn Any Spell"
+"Identify" ENTER
+
+@until "Skill Ratings" d
+P                               # [P]restige Classes
+@expect "Choose a class:"
+@choose "Loremaster"
+@expect "Loremaster 0"          # the gate let him in
+
+# Five levels. Each level-up opens "Which class do you wish to advance in?",
+# and G is pressed until it does rather than once, because a stray message
+# window -- "You feel luckier." -- can eat the first press.
+# because the character has two classes, so the answer is given by name. The
+# Loremaster also hands over a book at 2nd and 4th level; it lands in the
+# In-the-Air slot and the game will not leave inventory mode while anything
+# is there, so it has to be stowed before any other key is spent.
+@until "class do you wish to advance" G
+@choose "Loremaster"
+@while "Learn which spell" a
+@while "Choose a feat" a
+ESC
+@while "Air':?" s
+@while "ESC:Done" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Loremaster"
+@while "Learn which spell" a
+@while "Choose a feat" a
+ESC
+@while "Air':?" s
+@while "ESC:Done" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Loremaster"
+@while "Learn which spell" a
+@while "Choose a feat" a
+ESC
+@while "Air':?" s
+@while "ESC:Done" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Loremaster"
+@while "Learn which spell" a
+@while "Choose a feat" a
+ESC
+@while "Air':?" s
+@while "ESC:Done" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Loremaster"
+@while "Learn which spell" a
+@while "Choose a feat" a
+ESC
+@while "Air':?" s
+@while "ESC:Done" ESC
+@until "Skill Ratings" d
+@expect "Loremaster 5"
+
+# THE MEASUREMENT. Two Manuals of Gainful Exercise, acquired through wizard
+# mode with the plus TYPED IN as 1 rather than rolled, so each one gives a
+# fixed base of exactly 1 point. A reader without the ability therefore ends
+# on +2 inherent Strength, and on nothing else. A Loremaster of 5th level or
+# better ends on +2 plus two rolls of 1d2, so between +4 and +6. The two
+# ranges do not touch.
+#
+# WHY THE PLUS IS 1 AND NOT MORE. Creature::GainInherentBonus caps the total
+# at 5 + CA_INHERANT_POTENTIAL (src/Creature.cpp:1950), and a human carries
+# +3 of that ability (lib/races.irh:205), so this character saturates at +8.
+# Three tomes at plus 2 reach the cap with or without the fix and measure
+# nothing. Two at plus 1 top out at +6, inside it.
+#
+# The tomes are taken one at a time rather than both at once, because the
+# pack stacks them: two in hand are drawn "2 Manuals of Gainful Exercise",
+# and @choose matches a name from its start. One at a time the name is always
+# the same, and reading a tome destroys it (lib/m_items.irh:56) before the
+# next one is acquired.
+#
+# The read command is lowercase 'r'. Uppercase would be wrong: the key tables
+# store { KY_CMD_READ, 'R', 0 } with no modifier flag, and StandardKeySet
+# matches toupper(ch) against the raw key and then compares the flags
+# exactly, so shift+R matches nothing at all.
+@until "HP:" ESC
+w
+@choose "Item Acquisition"
+@until "]: Tomes" RIGHT
+ENTER
+"1" ENTER                       # the tome's plus, so the base gain is fixed
+@while "Air':Manual" s          # stow it; the game will not leave inventory
+@while "ESC:Done" ESC           #   mode while the In-the-Air slot is full
+r
+@choose "(in pack) Manual of Gainful Exercise"
+@while "--More--" ENTER
+w
+@choose "Item Acquisition"
+@until "]: Tomes" RIGHT
+ENTER
+"1" ENTER                       # the tome's plus, so the base gain is fixed
+@while "Air':Manual" s          # stow it; the game will not leave inventory
+@while "ESC:Done" ESC           #   mode while the In-the-Air slot is full
+r
+@choose "(in pack) Manual of Gainful Exercise"
+@while "--More--" ENTER
+
+@until "Skill Ratings" d
+@dump:sheet
+@until "HP:" ESC
+@quit

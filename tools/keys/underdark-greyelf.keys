@@ -1,0 +1,140 @@
+# The REFUSING half of bd inc-tek.8.3 finding PA-03-F12: the Underdark
+# Warrior's race requirement was never checked.
+#
+# The class prose lists the race requirement FIRST among its requirements
+# (lib/prestige.irh:3058-3061) and the gate tested only skills, feats and
+# Wisdom. A surface-dwelling character who met those walked in.
+#
+# This character is built to meet EVERY OTHER requirement and to fail only on
+# race. He is a grey elf, so he is not drow, kobold, orc, deep gnome or grey
+# dwarf; everything else about him is the same build as
+# tools/keys/underdark-deepgnome.keys, who is admitted. The grey elf was
+# chosen over a surface gnome for a reason: a gnome carries Wis -2 and could
+# not reach the base Wisdom 17 the gate also wants even with 18 bought, so he
+# would be refused twice and prove nothing about the race clause. A grey elf
+# carries Wis +4.
+#
+# THE ORACLE is the refusal itself: "You must be of a race native to the
+# Underdark." on screen, and no Underdark Warrior on the character sheet. On
+# a module compiled from the pre-fix lib/prestige.irh this same character is
+# admitted and the sheet reads "Underdark Warrior 0".
+#
+# Nothing here is asserted with @expect, deliberately. The script has to run
+# to the end on BOTH modules so that the two screens can be compared; an
+# assertion would stop the pre-fix run before it photographed the thing that
+# proves the point.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Elf"
+@choose "Grey Elf"
+@choose "Rogue"
+
+# Point buy, 75 points, spent to the last one. The seven rows are the
+# engine's own attribute list (src/Create.cpp:1617-1622), fixed at seven and
+# in a fixed order, so counting DOWN here cannot rot the way counting
+# through a list built from lib/ can.
+p
+RIGHT*6         # STR 14
+DOWN
+RIGHT*10        # DEX 18
+DOWN
+RIGHT*10        # CON 18, because Toughness wants a Constitution of 13 and
+                #   both races here carry a penalty to it
+DOWN
+RIGHT*8         # INT 16
+DOWN
+RIGHT*7         # WIS 15, which the grey elf's +4 turns into 19
+DOWN
+RIGHT*9         # CHA 17
+DOWN
+RIGHT*6         # LUC 14
+ENTER y         # "Are these your final stats?"
+
+@choose "Neutral"
+@choose "Endurance"     # Toughness needs it
+@choose "Roll With It"  # and it needs this too
+@while "Choose a feat" a        # some races are given a third feat; spend it
+
+# Eighteen ranks, two to a skill. The three the gate reads first; the rest
+# only because character generation will not release a character with a rank
+# unspent.
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Move Silently" DOWN
+RIGHT*3
+@cursorto:mark "Hide in Shadows" UP
+RIGHT*3
+@cursorto:mark "Climb" UP
+RIGHT*3
+@cursorto:mark "Alchemy" UP
+RIGHT*3
+@cursorto:mark "Appraise" DOWN
+RIGHT*3
+@cursorto:mark "Athletics" DOWN
+RIGHT*3
+@cursorto:mark "Balance" DOWN
+RIGHT*3
+@cursorto:mark "Bluff" DOWN
+RIGHT*3
+@cursorto:mark "Craft" DOWN
+RIGHT*3
+@cursorto:mark "Decipher Script" DOWN
+RIGHT*3
+@cursorto:mark "Diplomacy" DOWN
+RIGHT*3
+@cursorto:mark "Disguise" DOWN
+RIGHT*3
+ENTER y # Done, and confirm keeping the ranks. A high Intelligence buys more
+        #   ranks, so more skills are named here than the smallest character
+        #   needs; a RIGHT with no rank left to spend does nothing.
+
+a       # Personality archetype
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d                       # character sheet
+
+# Level to 3, where the third feat is offered, and to 6 for the fourth.
+# Pressing G until the menu appears is safer than counting levels: it does
+# not care which levels a rogue is given a feat at.
+@until "Choose a feat" G
+# Toughness is drawn as "[ ] Toughness": the feat list is longer than the 52
+# letters LMenu has to give out, so the entries past the 52nd get a blank
+# bracket. A menu ignores the space bar, so the only way in is to put the
+# cursor on the row and press ENTER. DOWN walks the whole list, column by
+# column, and wraps (src/TextTerm.cpp:1145-1152).
+@cursorto "Toughness" DOWN
+ENTER
+@until "Choose a feat" G
+@choose "Blind Fight"
+@expect "Rogue 6"
+
+S
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Move Silently" DOWN
+RIGHT*9
+@cursorto:mark "Hide in Shadows" UP
+RIGHT*9
+@cursorto:mark "Climb" UP
+RIGHT*9
+ENTER y
+
+P                       # [P]restige Classes
+@expect "Choose a class:"
+@choose "Underdark Warrior"
+@dump:refused           # the refusal, and the class list behind it, in one
+                        #   picture: the message names the race clause and
+                        #   the sheet still says "Class  Rogue 6" alone
+# @quit is only obeyed while the game is in play (src/Wposix.cpp:1643-1653),
+# so the run has to leave the sheet first. "HP:" is on the map's status line
+# and on no character-sheet page, so it is the test for having arrived.
+@until "HP:" ESC
+@quit

@@ -1,0 +1,138 @@
+# Summon the Blackguard's Fiendish Servant and look at what turns up. That is
+# bd inc-tek.8.3 finding PA-03-F15: the effect summoned a babau, which is
+# neither of the two creatures its own description names, and gave it a
+# finite duration although the description says twice that it stays until
+# dismissed.
+#
+# WHY THERE IS NO BLACKGUARD HERE. The ability arrives at Blackguard 5. The
+# class gate wants a base attack bonus of +6 and Knowledge (Infernal) 8, and
+# no class with a 100%% attack rate carries that skill, so entry costs eight
+# core levels. Eight plus five is thirteen, in a game that stops at eleven
+# (MAX_CHAR_LEVEL, inc/Defines.h:4367). No character can hold the ability.
+#
+# WHAT IS DONE INSTEAD. The class grants it as
+#   Ability[CA_INNATE_SPELL,$"fiendish servant"] at 5th level
+# (lib/prestige.irh:852), so the thing being tested is an effect that a
+# creature casts, not a passive the class computes. Wizard mode's Learn Any
+# Spell takes a resource name, checks it is a T_TEFFECT and marks it
+# SP_KNOWN|SP_PRIMAL|SP_INNATE (src/Debug.cpp:850-863). That is the same
+# state the class grant produces, reached without the class.
+#
+# THE ORACLE is the creature that appears. A babau is a CR 6 demon; a true
+# imp is the imp the description names. The name is printed on the map's
+# Things in View panel and in the summoning message.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Human"
+@choose "Knowledge (Infernal)"  # humans choose two bonus skills
+@while "Choose a skill:" a
+@choose "Warrior"
+a                               # Attributes: the first of the offered sets
+@choose "Neutral"
+@while "Choose a feat" a
+@while "Focus on which Weapon" a  # the warrior's free Weapon Focus
+@while "Choose a feat" a
+@expect "Unspent Skill Ranks"
+# The screen will not close while a rank is unspent. Eight of them, two to a
+# skill; which skills does not matter here.
+@cursorto:mark "Athletics" DOWN
+RIGHT*2
+@cursorto:mark "Bluff" DOWN
+RIGHT*2
+@cursorto:mark "Climb" DOWN
+RIGHT*2
+@cursorto:mark "Craft" DOWN
+RIGHT*2
+ENTER y
+
+a                               # Personality archetype
+ESC                             # dismiss the arrival-room description
+w                               # wizard mode
+y
+@dump:wizmenu
+w                               # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE                           # Free Advancement: NO -> YES
+ESC
+
+# The effect is cast at the caster's level, and "Nothing happens." is what a
+# level 1 caster gets: the summon's own pval is 6. The blackguard who would
+# really hold it is 13th level by the time he does, so the character is taken
+# to the cap.
+d
+@dump:sheet0
+G
+@dump:afterG
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "Unspent Skill Ranks" ESC
+G
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "Unspent Skill Ranks" ESC
+G
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "Unspent Skill Ranks" ESC
+G
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "Unspent Skill Ranks" ESC
+G
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "Unspent Skill Ranks" ESC
+G
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "Unspent Skill Ranks" ESC
+G
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "Unspent Skill Ranks" ESC
+G
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "Unspent Skill Ranks" ESC
+G
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "Unspent Skill Ranks" ESC
+G
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "Unspent Skill Ranks" ESC
+@expect "Warrior 11"
+@until "HP:" ESC
+
+w
+@choose "Learn Any Spell"
+"Fiendish Servant" ENTER
+m                               # the magic menu; an innate effect is listed
+@cursorto:mark "Fiendish Servant" DOWN
+ENTER
+@while "--More--" ENTER
+@dump:summoned

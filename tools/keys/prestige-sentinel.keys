@@ -1,0 +1,127 @@
+# Build a character who actually HOLDS a prestige class, and photograph what
+# the engine gives him.
+#
+# WHY THIS EXISTS. bd inc-tek.8.3 corrected the level tables printed by five
+# prestige classes, the Sentinel among them: its prose listed the save columns
+# in the wrong order, so the table promised a good Fortitude save the class
+# does not grant and a poor Reflex save it does. tools/check_prestige_tables.sh
+# proves the corrected TABLE is on screen. It cannot prove the table is RIGHT,
+# because it never makes a Sentinel -- it only reads the menu description.
+#
+# This script makes one. The character sheet then breaks every save down by
+# class -- "Fortitude +2 (Rogue +1/ Sentinel +1)" -- so the engine states the
+# prestige class's own contribution, separately, in numbers. That is the
+# oracle, and tools/check_sentinel_live.sh compares it against the table.
+#
+# WHY IT COULD NOT BE WRITTEN BEFORE. Every step below that picks something is
+# named rather than counted, and three of them had no counted equivalent worth
+# writing (bd inc-cso):
+#
+#   * The Skill Manager has no menu letters, and the Sentinel wants Listen,
+#     Spot and Search at 10. Counting DOWN to a skill breaks the moment a
+#     class list changes, and spends the ranks somewhere else in silence.
+#   * Levelling a multiclass character opens two menus that appear only at
+#     some levels -- "Which class do you wish to advance in?" and the feat
+#     list. A fixed run of G keystrokes desynchronises on the first one and
+#     then picks feats at random with the leftovers. That is not a guess: a
+#     run of "G*12" reached level 7, and a bare @until pressing G reached 11
+#     of a wanted 13 before giving up, because 'g' is itself a valid menu
+#     letter and kept choosing things.
+#   * The prestige list must be entered by name. Its letters are positions in
+#     a list built from lib/prestige.irh.
+#
+# SEED. The attribute rolls and the offered feats vary with the seed, so the
+# two chargen feat picks stay positional and a seed is passed.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Rogue"
+a                       # Attributes: the first of the five offered sets
+@choose "Neutral"
+@choose "Alertness"     # the Sentinel requires this feat
+@until "Unspent Skill Ranks" a          # however many feats are asked for
+
+# Eighteen ranks, two to a skill. The three the Sentinel cares about first;
+# the rest only because character generation will not let go of a character
+# with a rank unspent. UP and DOWN both work -- the Skill Manager does not
+# wrap, so the names are given in the direction of travel.
+@cursorto:mark "Listen" DOWN
+RIGHT*3
+@cursorto:mark "Searching" DOWN
+RIGHT*3
+@cursorto:mark "Spot" DOWN
+RIGHT*3
+@cursorto:mark "Move Silently" UP
+RIGHT*3
+@cursorto:mark "Lockpicking" UP
+RIGHT*3
+@cursorto:mark "Intuition" UP
+RIGHT*3
+@cursorto:mark "Bluff" UP
+RIGHT*3
+@cursorto:mark "Alchemy" UP
+RIGHT*3
+@cursorto:mark "Appraise" DOWN
+RIGHT*3
+ENTER y # Done, and confirm keeping the ranks
+
+y       # Do you wish to worship Maeve? -- yes. An elf is given Maeve at birth
+        #   anyway (lib/races.irh:1144-1147); the Twilight Huntsman is the
+        #   prestige class that needs her, not this one.
+a       # Personality archetype
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d                               # character sheet
+@until "Class  Rogue 5" G       # five core levels, for the ranks they carry
+
+# Top the three sensory skills up to their maximum. The class wants each at
+# 10, and ISkillLevel (src/Create.cpp:3955) counts training and the inherent
+# attribute bonus as well as ranks, so eight ranks clears it.
+S
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Listen" DOWN
+RIGHT*8
+@cursorto:mark "Searching" DOWN
+RIGHT*8
+@cursorto:mark "Spot" DOWN
+RIGHT*8
+ENTER y
+
+P                               # [P]restige Classes
+@expect "Choose a class:"
+@choose "Sentinel"
+@dump:taken
+
+# Four Sentinel levels, which is as far as the printed table is checked.
+# @until presses G through whatever the level-up asks first; @choose answers
+# the class question by name; @while clears a feat menu when one appears.
+@until "class do you wish to advance" G
+@choose "Sentinel"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Sentinel"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Sentinel"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Sentinel"
+@while "Choose a feat" a
+
+@expect "Sentinel 4"
+@dump:sentinel4
+W                       # Write Dump
+s h e e t ENTER         # filename: "sheet"
+ESC
+@quit
