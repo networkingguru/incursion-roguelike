@@ -1,0 +1,77 @@
+# Build a 4th-level monk and photograph the Special Abilities block.
+#
+# One assertion: lib/classes.irh grants Ability[CA_KI_STRIKE] at every 4th
+# level starting at 4th, so a Monk 4 carries Ki Strike +1 and a Monk 1 does
+# not. src/Sheet.cpp:546 renders the ability as "Ki Strike +1" in the sheet's
+# Special Abilities block, and src/Tables.cpp:3476 supplies that name, so the
+# sheet is a true oracle for what the module granted.
+#
+# The chargen prefix is tools/keys/monk-brawl-speed.keys, letter for letter,
+# because that path is already proven at seed 1. Menu letters move when a list
+# changes, so run this with the seed its caller supplies and no other.
+#
+# Levels come from wizard mode's Free Advancement switch, the same mechanism
+# tools/keys/prestige-blackguard5.keys uses. Nothing else can reach 4th level
+# in a scripted session of reasonable length.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+h       # Race:     [h] Lizardfolk
+a       # Subrace:  [a] Lizardfolk (Standard)
+e       # Class:    [e] Monk
+a       # Attributes: the first of the five offered sets
+c       # Alignment: [c] Neutral
+a       # First feat
+a       # Second feat
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+y       # Do you wish to worship <god>? -- yes
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+# In the dungeon now. Three keys settle the opening.
+ESC ENTER SPACE
+
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d       # Display Character Sheet
+# The Special Abilities block sits below the fold, drawn in the right-hand
+# column beside the feat list. DOWN pages the sheet (src/Managers.cpp:2213);
+# PGDN moves it one line only, which is not enough.
+DOWN
+@dump:specials1
+UP
+
+# Three levels. A monk is not offered a bonus feat at every level the way a
+# warrior is, but character level 3 offers a general feat and level 4 offers
+# an attribute bump, so both are guarded.
+G
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+
+@until "Monk 4" ESC
+@expect "Monk 4"
+@dump:level4
+DOWN
+@dump:specials4
+@quit

@@ -1,0 +1,93 @@
+# Punch a weapon-immune creature bare-handed, first without Ki Strike and then
+# with it.
+#
+# The subject is a lemure (lib/mon4.irh:1205-1213), a CR 1 devil carrying
+# ABILITY(CA_WEAPON_IMMUNITY,1). It is the cheapest true subject in the module:
+# the immunity level is 1, so a Monk 4's Ki Strike +1 is exactly enough to beat
+# it and a Monk 1's nothing is exactly not enough.
+#
+# The oracle is the message src/Fight.cpp:8510 prints when e.isWImmune is set:
+# "Your weapon fails to penetrate." Nothing else in the game prints that line.
+#
+# The chargen prefix is tools/keys/monk-brawl-speed.keys, letter for letter,
+# because that path is already proven at seed 1. The monk must fight with empty
+# hands, so the starting long sword is stowed before anything is summoned.
+#
+# Menu letters move when a list changes; run this with the seed its caller
+# supplies and no other.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+h       # Race:     [h] Lizardfolk
+a       # Subrace:  [a] Lizardfolk (Standard)
+e       # Class:    [e] Monk
+a       # Attributes: the first of the five offered sets
+c       # Alignment: [c] Neutral
+a       # First feat
+a       # Second feat
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+y       # Do you wish to worship <god>? -- yes
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+# In the dungeon now.
+ESC ENTER SPACE
+
+# Empty both hands. Chargen hands this character a long sword +3, and a held
+# weapon would answer the question with its own plus instead of with Ki Strike.
+i
+b s
+ESC
+
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+@choose "Wizard Mode Switches"
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+# --- FIRST HALF: Monk 1, no Ki Strike, punching a weapon-immune devil -------
+w
+@choose "Monster Summoning"
+@choose "Devils"
+@choose "lemure"
+RIGHT   # the location cursor starts on the player; one step east
+ENTER
+@dump:summoned-lvl1
+
+RIGHT   # walk into it, which is to attack it
+@dump:punch-lvl1
+SPACE SPACE SPACE SPACE
+
+# --- LEVEL TO 4, WHICH IS WHERE KI STRIKE ARRIVES ---------------------------
+# The character sheet is a menu, so no game time passes and the lemure is still
+# standing to the east when this is done.
+d
+G
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Monk 4" ESC
+@expect "Monk 4"
+ESC     # back to the map
+
+# --- SECOND HALF: Monk 4, Ki Strike +1, same fist, same devil ---------------
+SPACE SPACE SPACE SPACE
+RIGHT
+@dump:punch-lvl4
+@quit

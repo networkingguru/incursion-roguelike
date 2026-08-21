@@ -1,0 +1,163 @@
+# Give a bare-handed monk Two-Weapon Tempest and read the Brawl row twice.
+#
+# THE POINT. Two-Weapon Tempest is the largest two-weapon payoff in the game:
+# +10 to speed, which the character sheet renders as +50 percentage points
+# (src/Values.cpp, src/Sheet.cpp:191-198). Character::HasFeat grants a monk
+# Two-Weapon Style for the express purpose of letting him buy it, and until
+# inc-nie the feat then did nothing with empty hands, because the whole
+# two-weapon block was gated on two Item pointers and fists are not Items.
+#
+# WHY THIS BUILD. Tempest wants Two-Weapon Style plus melee base attack bonus 9
+# (src/FeatTab.cpp:1022-1026). A monk attacks at 75% in melee, so eleven monk
+# levels reach 8 and no monk can ever qualify alone. Character::GetBAB sums the
+# classes and a warrior attacks at 100%, so Monk 1 / Warrior 10 reaches 10 --
+# eleven levels, which is the game's cap. Monk 1 is what carries
+# CA_UNARMED_STRIKE, and so the fists, the Two-Weapon Style grant and
+# TwoFistFighting().
+#
+# The chargen prefix is tools/keys/monk-brawl-speed.keys, letter for letter,
+# because that path is already proven at seed 1. Levels come from wizard mode's
+# Free Advancement switch, as in tools/keys/prestige-blackguard5.keys.
+#
+# The hands must be empty: chargen hands this character a long sword, and
+# src/Sheet.cpp:162 hides the Brawl row entirely while a weapon is held.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+h       # Race:     [h] Lizardfolk
+a       # Subrace:  [a] Lizardfolk (Standard)
+e       # Class:    [e] Monk
+a       # Attributes: the first of the five offered sets
+c       # Alignment: [c] Neutral
+a       # First feat
+a       # Second feat
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+y       # Do you wish to worship <god>? -- yes
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+ESC ENTER SPACE     # settle the arrival room; now in play
+
+i
+b s             # Weapon Hand, then Stow: the long sword goes to the pack
+ESC
+
+# The sidebar is the regression oracle for inc-dzz: two Punch lines, equal
+# to-hit numbers either side of the slash, and full Strength on both.
+@dump:sidebar-monk1
+
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+@choose "Wizard Mode Switches"
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d       # character sheet
+M       # [M]ulticlass
+@choose "Warrior"
+
+# Ten warrior levels. A warrior is offered a bonus feat at every level, and
+# general feats and attribute bumps arrive on the character-level schedule, so
+# all of them are guarded by name rather than by letter.
+@until "class do you wish to advance" G
+@choose "Warrior"
+@while "choose a Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Warrior"
+@while "choose a Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Warrior"
+@while "choose a Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Warrior"
+@while "choose a Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Warrior"
+@while "choose a Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Warrior"
+@while "choose a Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Warrior"
+@while "choose a Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Warrior"
+@while "choose a Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Skill Ratings" d
+@until "class do you wish to advance" G
+@choose "Warrior"
+@while "choose a Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Skill Ratings" d
+
+# Warrior 9 now: melee base attack bonus 9, which is Tempest's gate. The Brawl
+# row here is the BEFORE measurement.
+@expect "Warrior 9"
+@dump:sheet-before
+
+# One more level, and this time the warrior's bonus feat is spent on Tempest.
+# The level-up menu truncates a feat name to 18 characters, so the text asked
+# for here is one character shorter than the feat's real name.
+@until "class do you wish to advance" G
+@choose "Warrior"
+@expect "choose a Warrior Feat"
+@choose "Two-Weapon Tempes"
+@while "choose a Warrior Feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Skill Ratings" d
+@expect "Warrior 10"
+@dump:sheet-after
+@quit

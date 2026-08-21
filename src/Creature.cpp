@@ -2699,12 +2699,12 @@ int Creature::ListAttacks(TAttack * buf, int max)
       buf[0].DType = AD_BLUNT;
       buf[0].u.a.Dmg = MonkDamage[ AbilityLevel(CA_UNARMED_STRIKE) ];
       buf[0].u.a.DC = 0;
-      /* Two free hands are two weapons. See TwoFistFighting() above for why
-         this was impossible before, and src/Fight.cpp for the two things that
-         keep it from overshooting: the second fist costs extra time, and it
-         does NOT take the halved-Strength penalty that a secondary claw takes,
-         because the SRD says there is no off-hand attack for a monk striking
-         unarmed. */
+      /* Two free hands are two weapons. See TwoFistFighting() above for why this
+         was impossible before. buf[1] is the OFF hand, and src/Fight.cpp's brawl
+         loop treats it as one: it reads the off-hand attributes, which
+         Creature::CalcValues fills from the brawl track and then adjusts by
+         whichever two-weapon feats the creature actually holds. The second fist
+         also costs extra time, which is what keeps it from overshooting. */
       if (max >= 2 && TwoFistFighting())
         {
           buf[1] = buf[0];

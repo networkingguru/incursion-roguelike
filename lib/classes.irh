@@ -1398,7 +1398,24 @@ Class "Monk"
       Stati[SAVE_BONUS,SN_ENCH,+2]   at 3rd level,
       Stati[ADJUST_INH,A_MOV,+4]     at every 2nd level starting at 3rd,
       Ability[CA_SLOW_FALL]          at every 2nd level starting at 4th,
-      // Ability[CA_KI_STRIKE]          at every 4th level starting at 4th,
+      /* upstream: base-code defect, fix is ours. Tier Observed -- a Monk 4 built
+         by tools/keys/monk-ki-strike.keys listed no Ki Strike in the character
+         sheet's Special Abilities block before this line was restored, and
+         lists "Ki Strike +1" after. Tracking inc-qep. Not sent to rmtew.
+
+         Commenting this line out left CA_KI_STRIKE granted by no class at all,
+         and the engine reads the ability at two places that then became dead.
+         src/Fight.cpp:4112 is the only thing that lets an unarmed attacker hurt
+         an incorporeal creature, so every monk's fist passed clean through a
+         ghost forever. This is module data, not code, so it misbehaves
+         identically on Win32 with the original typedefs and the upstream
+         compiler.
+
+         Ki Strike is damage reduction only. It adds no damage, no element and
+         no to-hit: src/Help.cpp:2041 and src/Sheet.cpp:546 merely display it,
+         and no other site reads it. Restoring it therefore cannot make a monk
+         hit harder, only let him hit what he could not touch at all. */
+      Ability[CA_KI_STRIKE]          at every 4th level starting at 4th,
       // ww: monks still seem weak, let's try both of these!
       Feat[FT_MASTER_TRIP]           at 5th level,
       Feat[FT_MASTER_DISARM]         at 5th level,

@@ -434,6 +434,8 @@ tools/check_headless.sh	VERBS-HEADLESS
 tools/check_huntsman_live.sh	REPORTING-GATE
 tools/check_huntsman_live.sh	TOOLS
 tools/check_key_directives.sh	TOOLS
+tools/check_ki_strike_live.sh	REPORTING-GATE
+tools/check_ki_strike_live.sh	TOOLS
 tools/check_layout.sh	PORT-STATUS
 tools/check_layout.sh	TOOLS
 tools/check_load_corrupt.sh	PORT-STATUS
@@ -490,12 +492,16 @@ tools/check_target_order.sh	FIXED
 tools/check_target_order.sh	PORT-STATUS
 tools/check_target_order.sh	REPORTING-GATE
 tools/check_target_order.sh	TOOLS
+tools/check_two_fist_feats_live.sh	REPORTING-GATE
+tools/check_two_fist_feats_live.sh	TOOLS
 tools/check_underdark_live.sh	TOOLS
 tools/check_upstream_marks.sh	AGENTS
 tools/check_upstream_marks.sh	FIXED
 tools/check_upstream_marks.sh	README
 tools/check_upstream_marks.sh	REPORTING-GATE
 tools/check_upstream_marks.sh	TOOLS
+tools/check_weapon_immunity_live.sh	REPORTING-GATE
+tools/check_weapon_immunity_live.sh	TOOLS
 tools/check_xp_penalty.sh	REPORTING-GATE
 tools/check_xp_penalty.sh	TOOLS
 tools/check_xp_penalty_rule.sh	REPORTING-GATE
@@ -559,6 +565,9 @@ tools/keys/marathon.keys	TOOLS
 tools/keys/menu-value.keys	TOOLS
 tools/keys/modcheck.keys	TOOLS
 tools/keys/monk-brawl-speed.keys	TOOLS
+tools/keys/monk-ki-strike.keys	TOOLS
+tools/keys/monk-tempest.keys	TOOLS
+tools/keys/monk-weapon-immunity.keys	TOOLS
 tools/keys/prestige-alienist.keys	TOOLS
 tools/keys/prestige-assassin.keys	TOOLS
 tools/keys/prestige-blackguard.keys	TOOLS

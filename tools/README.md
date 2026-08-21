@@ -353,6 +353,7 @@ Nothing invoked it; the only references were documentation. See
 | `check_escape_sweep.sh` | Does any string literal still spell a C escape with a forward slash, the way the port's path sweep wrote `/n` for `\n`? | LIVE |
 | `check_huntsman_live.sh` | Does the Twilight Huntsman reach his own spell list, smite Law rather than Good, and track at the ranger's rate, serving the ranger's opening bonus once rather than twice? | LIVE |
 | `check_key_directives.sh` | Do the screen-driven key-script directives `@choose`, `@cursorto`, `@cursorto:mark` and `@expect` reach a menu entry that counting could not? | LIVE |
+| `check_ki_strike_live.sh` | Does the module grant a Monk Ki Strike? One session photographs the character sheet's Special Abilities block at 1st level and again at 4th: nothing, then `Ki Strike +1`. Reads a compiled module, so a red run after editing `lib/` usually means `./incursion -compile main.irc` was not run. | LIVE |
 | `check_layout.sh` | Does this build play the same game when its objects sit at different addresses? | LIVE |
 | `check_load_corrupt.sh` | Does the real binary refuse ten hand-corrupted saves cleanly and still load two genuine ones? | LIVE |
 | `check_logrotate.sh` | Does log rotation keep the right archives and prune only names it made itself? | LIVE |
@@ -378,8 +379,10 @@ Nothing invoked it; the only references were documentation. See
 | `check_store_scroll.sh` | Does the shop list follow the selection in both directions, reached without wizard mode? | LIVE |
 | `check_strqueue.sh` | Is the string queue's bound still tested before the write? | LIVE |
 | `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? | LIVE |
+| `check_two_fist_feats_live.sh` | Do the two-weapon feats reach two empty hands? A Monk 1 / Warrior 10 buys Two-Weapon Tempest and the sheet's Brawl row moves 125% to 175%; the 1st-level sidebar must still read two equal fists at full Strength. | LIVE |
 | `check_underdark_live.sh` | Does the Underdark Warrior check the race it requires, and give the Reflex save it advertises? | LIVE |
 | `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? | LIVE |
+| `check_weapon_immunity_live.sh` | Is a bare fist tested against Weapon Immunity, and does Ki Strike beat it? One wizard-mode-summoned lemure, punched by the same character at Monk 1 and at Monk 4: `Your weapon fails to penetrate.` then no such line. | LIVE |
 | `check_xp_penalty.sh` | Can a character who holds only two classes read his own sheet? A Wood Elf Rogue 2 / Warrior 1, whose empty third class slot used to segfault `Character::XPPenalty`. | LIVE |
 | `check_xp_penalty_rule.sh` | Does the multiclass experience penalty follow the rule? Favoured and prestige classes leave the comparison, then each remaining class two or more levels below the highest remaining class costs 20% and the costs add. Six characters: an Elf photographed at Barbarian 3, Barbarian 3 / Rogue 1, + Warrior 1 and Barbarian 3 / Rogue 2 / Warrior 2, plus an Elf Rogue 5 / Assassin 2 and a Wood Elf Rogue 2 / Warrior 1. | LIVE |
 
@@ -515,6 +518,9 @@ tools/check_headless.sh             # run this one FIRST of the tier
 tools/check_dump_save.sh
 tools/check_load_corrupt.sh
 tools/check_race_feats.sh
+tools/check_ki_strike_live.sh
+tools/check_weapon_immunity_live.sh
+tools/check_two_fist_feats_live.sh
 tools/check_sacrifice.sh
 tools/check_natural_speed_live.sh
 tools/check_quiet_lookup.sh

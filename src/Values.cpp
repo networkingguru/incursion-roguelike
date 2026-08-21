@@ -1204,14 +1204,76 @@ Restart:
     if (HasAbility(CA_INCREASED_MOVE))
         AddBonus(BONUS_CLASS, A_MOV, AbilityLevel(CA_INCREASED_MOVE));
 
-    if (offhandWep && meleeWep) {
-        if (!HasFeat(FT_AMBIDEXTERITY) && !(offhandWep == meleeWep && HasFeat(FT_DOUBLE_WEAPON_FIGHTING))){
+    /* upstream: base-code defect, fix is ours. Tier Observed -- see the
+       measurement in docs/REPORTING-GATE.md's row for inc-nie. Tracking inc-nie.
+       Not sent to rmtew.
+
+       This block is the whole of the two-weapon rule, and it was gated on two
+       Item pointers. Fists are not Items, so both pointers are NULL bare-handed
+       and every clause below was dead -- including Two-Weapon Tempest, the
+       largest two-weapon payoff in the game. Meanwhile Character::HasFeat
+       (src/Create.cpp) grants a monk Two-Weapon Style for the express purpose of
+       letting him BUY Tempest, whose prerequisites are Two-Weapon Style plus
+       melee BAB 9 (src/FeatTab.cpp:1022-1026). So the monk qualified, could
+       spend a feat slot, and got nothing: he had to put down his fists and pick
+       up two nunchaku to use the feat his fists had earned him.
+
+       The SRD settles what a fist is: "an unarmed strike is always considered a
+       light weapon". Two of them are two light weapons, so they belong in this
+       block, and the gate now admits them.
+
+       Nothing platform, compiler or width dependent is involved -- the gate, the
+       pointers and the feats are all upstream content -- so this misbehaves
+       identically on Win32 with the original typedefs and the upstream compiler.
+
+       THE OFF-HAND ATTRIBUTES HAVE TO MEAN SOMETHING FIRST. Everything below
+       writes its off-hand half into A_HIT_OFFHAND and A_SPD_OFFHAND, and those
+       attributes are built for a WEAPON in the off hand: A_HIT_OFFHAND takes its
+       base from AttkVal[S_MELEE] (see the class loop above), and a monk attacks
+       at 75% in melee and 100% brawling. Point a fist at them unchanged and the
+       second fist would strike worse than the first for no reason anyone chose.
+
+       So when the off hand IS a fist, the off-hand track is made a copy of the
+       brawl track before the two-weapon adjustments go on top of it. The copy is
+       of the whole AttrAdj row, bonus type by bonus type, so the sheet's
+       BonusBreakdown still names where each part came from, and so that
+       everything already accumulated -- the S_BRAWL base attack bonus, Strength,
+       Weapon Finesse, Lightning Fists, Flurry of Blows, template modifiers --
+       carries across intact. Placing it HERE rather than earlier is deliberate:
+       every one of those contributors runs above this line, and the only things
+       that touch the brawl track below it are the speed floors at the end of
+       CalcValues, which are handled there. */
+    bool twoFists = TwoFistFighting();
+
+    if (twoFists) {
+        for (int8 b = 0; b != BONUS_LAST; b++) {
+            AttrAdj[A_HIT_OFFHAND][b] = AttrAdj[A_HIT_BRAWL][b];
+            AttrAdj[A_DMG_OFFHAND][b] = AttrAdj[A_DMG_BRAWL][b];
+            AttrAdj[A_SPD_OFFHAND][b] = AttrAdj[A_SPD_BRAWL][b];
+        }
+    }
+
+    if ((offhandWep && meleeWep) || twoFists) {
+        /* With both pointers NULL, offhandWep == meleeWep is TRUE, so a
+           bare-handed character holding Double Weapon Fighting would read as
+           wielding a double weapon and skip the two clauses below. Ask the
+           question the clauses mean to ask instead: is there ONE ITEM filling
+           both hands? */
+        bool doubleWep = (offhandWep && offhandWep == meleeWep);
+
+        /* Which attribute is the MAIN hand? For two fists it is the brawl track,
+           not the melee track -- src/Fight.cpp's brawl path reads A_HIT_BRAWL for
+           the leading punch, so a penalty written to A_HIT_MELEE would land where
+           no fist ever looks. */
+        int8 mainHit = twoFists ? A_HIT_BRAWL : A_HIT_MELEE;
+
+        if (!HasFeat(FT_AMBIDEXTERITY) && !(doubleWep && HasFeat(FT_DOUBLE_WEAPON_FIGHTING))){
             StackBonus(BONUS_DUAL,A_HIT_OFFHAND,-2);
             StackBonus(BONUS_DUAL,A_SPD_OFFHAND,-2);
         }
 
-        if (!HasFeat(FT_TWO_WEAPON_STYLE) && !(offhandWep == meleeWep && HasFeat(FT_DOUBLE_WEAPON_FIGHTING))) {
-            StackBonus(BONUS_DUAL,A_HIT_MELEE  ,-2);
+        if (!HasFeat(FT_TWO_WEAPON_STYLE) && !(doubleWep && HasFeat(FT_DOUBLE_WEAPON_FIGHTING))) {
+            StackBonus(BONUS_DUAL,mainHit       ,-2);
             StackBonus(BONUS_DUAL,A_HIT_OFFHAND,-2);
         }
 
@@ -1223,13 +1285,18 @@ Restart:
            the dagger, the siangham, the quarterstaff and the rest. A light
            off-hand is exempt now; a second greatsword is not.
 
+           Two fists skip it outright, and not merely because the two pointers it
+           dereferences are NULL: the SRD calls an unarmed strike a light weapon,
+           so a fist is on the exempt side of the very test this clause makes.
+
            Florentine Style still waives this outright. Its own description
            (src/FeatTab.cpp:1006-1009) is about wielding two LONG SWORDS, which
            is the case that survives the gate. */
-        if (!(HasFeat(FT_TWIN_WEAPON_STYLE) && TwoWeaponFeatWorks())
+        if (!twoFists
+            && !(HasFeat(FT_TWIN_WEAPON_STYLE) && TwoWeaponFeatWorks())
             && !offhandWep->isGroup(WG_LIGHT)
             && offhandWep->Size(this) >= meleeWep->Size(this)) {
-            StackBonus(BONUS_DUAL,A_HIT_MELEE,  -2);
+            StackBonus(BONUS_DUAL,mainHit,     -2);
             StackBonus(BONUS_DUAL,A_HIT_OFFHAND,-2);
         }
 
@@ -1402,7 +1469,12 @@ Restart:
         thisp->KAttr[A_SPD_BRAWL]   = max(NaturalSpeedFloor(this),thisp->KAttr[A_SPD_BRAWL]);
         thisp->KAttr[A_SPD_ARCHERY] = max(-15,thisp->KAttr[A_SPD_ARCHERY]);
         thisp->KAttr[A_SPD_THROWN]  = max(-15,thisp->KAttr[A_SPD_THROWN]);
-        thisp->KAttr[A_SPD_OFFHAND] = max(-15,thisp->KAttr[A_SPD_OFFHAND]);
+        /* An off hand holding nothing is an empty limb, so it takes the same
+           floor the brawl track takes. Without this the two fists of one
+           character would swing at different speeds the moment
+           OPT_NATURAL_SPEED raised one of them. */
+        thisp->KAttr[A_SPD_OFFHAND] = max(twoFists ? NaturalSpeedFloor(this) : -15,
+                                          thisp->KAttr[A_SPD_OFFHAND]);
     } else {
         /* If you do not naturally have an attribute of 0, and are not about
         to die as a result of having that attribute at 0, set it to a minimum
@@ -1427,7 +1499,9 @@ Restart:
         thisp->Attr[A_SPD_BRAWL]   = max(NaturalSpeedFloor(this),thisp->Attr[A_SPD_BRAWL]);
         thisp->Attr[A_SPD_ARCHERY] = max(-15,thisp->Attr[A_SPD_ARCHERY]);
         thisp->Attr[A_SPD_THROWN]  = max(-15,thisp->Attr[A_SPD_THROWN]);
-        thisp->Attr[A_SPD_OFFHAND] = max(-15,thisp->Attr[A_SPD_OFFHAND]);
+        /* See the matching line in the KnownOnly branch above. */
+        thisp->Attr[A_SPD_OFFHAND] = max(twoFists ? NaturalSpeedFloor(this) : -15,
+                                         thisp->Attr[A_SPD_OFFHAND]);
 
         Creature *lead;
         if ((lead = getLeader()) && !isHalted)

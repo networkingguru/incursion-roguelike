@@ -580,16 +580,27 @@ void TextTerm::ShowTraits() {
       }
       // ww: the old brawl show was vastly wrong for polymorphed PCs
       if (multi)
-        /* The secondary-attack penalty, mirroring src/Fight.cpp:1255-1256 --
-           including its exemption for two-fist fighting, where a monk counts as
-           having Two-Weapon Style and Ambidexterity and therefore takes none.
-           This line and that one are two copies of the same rule, so a change
-           to either without the other makes the panel misreport the number a
-           player reads it for. */
+        /* upstream: base-code defect, fix is ours. Tier Observed -- the panel
+           read Hit:5 / 5 for a two-fist fighter with no two-weapon feats at all,
+           where the engine now strikes at 5 and 1. Tracking inc-nie. Not sent to
+           rmtew.
+
+           The second number is the second hand. For a two-fist fighter that IS
+           the off hand, so the panel reads the off-hand attribute rather than
+           re-deriving a rule -- which is what it used to do, and what made it a
+           third copy of the arithmetic in src/Fight.cpp's brawl loop. Three
+           copies of one rule is how the panel came to misreport the very number
+           a player opens it for. For everything else the second number is a
+           secondary NATURAL attack and still carries that path's -5, or -2 with
+           Multiattack.
+
+           Nothing platform, compiler or width dependent is involved, so the old
+           panel misreported identically on Win32 with the original typedefs. */
         Write(Format("Hit:%d / %d\r",p->KAttr[A_HIT_BRAWL],
-                       p->KAttr[A_HIT_BRAWL] -
-                      (p->TwoFistFighting() ? 0 :
-                       p->HasFeat(FT_MULTIATTACK) ? 2 : 5)));
+                     p->TwoFistFighting()
+                       ? p->KAttr[A_HIT_OFFHAND]
+                       : p->KAttr[A_HIT_BRAWL] -
+                         (p->HasFeat(FT_MULTIATTACK) ? 2 : 5)));
       else
         Write(Format("Hit:%d\r",p->KAttr[A_HIT_BRAWL]));
       Write(attks);

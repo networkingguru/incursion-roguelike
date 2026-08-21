@@ -227,6 +227,24 @@ bool attackSanity(EventInfo &e) {
     return true;
   }     
 
+/* What one round of fighting with two hands costs in segments: the full price of
+   the slower hand plus half the price of the faster, so a pair of strikes costs
+   one and a half swings rather than one.
+
+   Both hands go through here -- two weapons in WAttack, two fists in the brawl
+   path -- because the rule is the same rule and having it written twice is how
+   the two copies drifted apart before (inc-nie). Each caller passes the two
+   speed attributes its own hands actually use.
+
+   The 3000 and the *5 are the engine's segment scale: an attribute of 0 is 100%
+   speed, each point is another 5 percentage points, and the max(...,10) stops a
+   deeply penalised fighter dividing by zero or going backwards. */
+static int32 DualWieldTimeout(int16 spdA, int16 spdB)
+{
+    return 3000 / max((100 + min(spdA,spdB)*5),10) +
+           3000 / max((100 + max(spdA,spdB)*5),10) / 2;
+}
+
 EvReturn Creature::WAttack(EventInfo &e)
 {
     int8 CleaveCount,j; Creature *CleaveList[64], *c;
@@ -543,9 +561,7 @@ SkipThisTarget:;
         e.EActor->GainTempStati(TRIED,e.EVictim,1,SS_MISC,FT_EXPERT_TACTICIAN);
       // attack takes no time
     } else  if (isTWF) {
-      Timeout += 
-          3000 / max((100 + min(Attr[A_SPD_MELEE],Attr[A_SPD_OFFHAND])*5),10) +
-          3000 / max((100 + max(Attr[A_SPD_MELEE],Attr[A_SPD_OFFHAND])*5),10) / 2;
+      Timeout += DualWieldTimeout(Attr[A_SPD_MELEE],Attr[A_SPD_OFFHAND]);
       }
     else
       Timeout += 3000 / 
@@ -1250,16 +1266,40 @@ EvReturn Creature::NAttack(EventInfo &e) /* this == EActor */
       e.vHit = e.isHit = e.isCrit = e.isFumble = e.Immune = 
         e.MagicRes = e.Resist = e.isWImmune = e.isEvaded = 
         e.isPartiallyEvaded = false;  
+      /* upstream: base-code defect, fix is ours. Tier Observed -- see the
+         measurement in docs/REPORTING-GATE.md's row for inc-nie. Tracking
+         inc-nie. Not sent to rmtew.
+
+         WHICH HAND IS THIS? A two-fist fighter's two punches are a main hand and
+         an off hand. They are NOT a primary and a secondary natural attack, so
+         neither of the two secondary-natural rules in this loop -- the -5 to hit
+         here, and the halved Strength on damage below -- applies to the second
+         one. Those rules exist for a wolf's bite following its claws.
+
+         This replaces a pair of hand-written exemptions that asked whether both
+         hands were empty and then skipped both penalties outright (inc-dzz).
+         Skipping them imitated the RESULT of holding Two-Weapon Style and
+         Ambidexterity without ever asking whether the character held them, so a
+         creature with two fists and neither feat -- every monster carrying the
+         "monk;template" of lib/mon2.irh:4482, since Creature::HasFeat grants
+         nothing -- got the feats' benefit for free. Now the second fist simply
+         reads the off-hand attributes, and what those attributes contain is
+         decided by the feats, in Creature::CalcValues, with every other
+         two-weapon fighter in the game.
+
+         Creature::ListAttacks' martial-arts branch returns exactly two entries,
+         buf[0] and buf[1], both A_PUNC, and returns before any natural attack
+         can be added (src/Creature.cpp), so the index is the hand. A lizardfolk
+         monk whose claws take over that branch gets no fists at all and is
+         untouched by any of this.
+
+         Nothing platform, compiler or width dependent is involved, so this
+         misbehaves identically on Win32 with the original typedefs. */
+      bool offFist = TwoFistFighting() && at->AType == A_PUNC && i == 1;
+
       e.EItem     = NULL;
-      e.vHit      = (int8)Attr[A_HIT_BRAWL];
-      /* The second fist is not a secondary natural attack and does not take
-         the -5. A monk counts as having Two-Weapon Style and Ambidexterity
-         while fighting bare-handed (src/Create.cpp, Character::HasFeat), and in
-         Incursion that pair zeroes the two-weapon penalty outright -- so two
-         fists are 0/0, matching what two nunchaku give the same monk. A second
-         CLAW is untouched and still takes the -5. */
-      if (OneAttack && !(isFF && e.EActor->HasFeat(FT_POUNCE))
-          && !TwoFistFighting())
+      e.vHit      = (int8)Attr[offFist ? A_HIT_OFFHAND : A_HIT_BRAWL];
+      if (!offFist && OneAttack && !(isFF && e.EActor->HasFeat(FT_POUNCE)))
         e.vHit -= e.EActor->HasFeat(FT_MULTIATTACK) ? 2 : 5;
       e.vDef      = e.ETarget->isCreature() ? e.EVictim->getDef() : 0;
       e.Dmg       = at->u.a.Dmg;
@@ -1267,8 +1307,8 @@ EvReturn Creature::NAttack(EventInfo &e) /* this == EActor */
       // ww: wow, evil typo: e.Dmg.Bonus += e.EVictim->Attr[A_DMG_BRAWL]; 
       // ww: this check seems necessary, otherwise fire damage is
       // related to STR and whatnot ...
-      if (at->DType >= AD_SLASH && at->DType <= AD_BLUNT) 
-        e.Dmg.Bonus += e.EActor->Attr[A_DMG_BRAWL];
+      if (at->DType >= AD_SLASH && at->DType <= AD_BLUNT)
+        e.Dmg.Bonus += e.EActor->Attr[offFist ? A_DMG_OFFHAND : A_DMG_BRAWL];
       e.saveDC = (int8)e.EActor->GetPower(at->u.a.DC);
       e.AType   = at->AType;
       e.DType   = at->DType;
@@ -1280,11 +1320,12 @@ EvReturn Creature::NAttack(EventInfo &e) /* this == EActor */
          however, and is either striking a held victim or has already
          hit the victim once this attack sequence, the creature may add
          his full Strength bonus to the damage of all attacks. */
-      /* The second fist is exempt. SRD Monk: "there is no such thing as an
-         off-hand attack for a monk striking unarmed", which exists precisely to
-         give full Strength on every unarmed swing. A second claw is still
-         halved; only two-fist fighting is spared. See TwoFistFighting(). */
-      if (OneAttack && e.EActor->Mod(A_STR) > 0 && !TwoFistFighting())
+      /* The off hand is not a secondary natural attack -- see the note on
+         offFist above -- and its Strength has already been settled by the
+         off-hand damage attribute this loop just read. The SRD agrees for the
+         case that matters: "there is no such thing as an off-hand attack for a
+         monk striking unarmed". A second CLAW is still halved. */
+      if (!offFist && OneAttack && e.EActor->Mod(A_STR) > 0)
         if (!e.EActor->HasFeat(FT_REND) || !(e.vicHeld || HitCount))
           e.Dmg.Bonus -= e.EActor->Mod(A_STR)/2;
       e.isNAttack = true;
@@ -1386,16 +1427,18 @@ DoneSequence:
     e.EActor->GainTempStati(TRIED,e.EVictim,1,SS_MISC,FT_EXPERT_TACTICIAN);
     // takes no time
   } else if (TwoFistFighting()) {
-    /* Two fists cost what two weapons cost. WAttack charges a dual-wielder the
-       full price of the slower hand plus half the faster (src/Fight.cpp:546-548),
-       so two strikes take one and a half swings rather than one. Matching it
-       here is the difference between fixing the injustice and inventing the
-       opposite one: charged as a single swing, two fists would land 2.0 strikes
-       in the time two daggers land 1.333, and bare hands would become the best
-       melee option in the game. Both hands are fists, so both speeds are
-       A_SPD_BRAWL and the WAttack min/max collapses to t + t/2. */
-    int32 t = 3000 / max((100 + Attr[A_SPD_BRAWL]*5),10);
-    Timeout += t + t/2;
+    /* Two fists cost what two weapons cost: the full price of the slower hand
+       plus half the faster, so two strikes take one and a half swings rather
+       than one. Charged as a single swing, two fists would land 2.0 strikes in
+       the time two daggers land 1.333, and bare hands would become the best
+       melee option in the game.
+
+       This used to be a hand copy of WAttack's arithmetic that read A_SPD_BRAWL
+       for both hands. Two copies of one rule drift, and the copy could not see
+       an off-hand bonus at all -- Two-Weapon Tempest's +10 to A_SPD_OFFHAND
+       included. Both sites now call DualWieldTimeout with their own pair of
+       speeds. */
+    Timeout += DualWieldTimeout(Attr[A_SPD_BRAWL], Attr[A_SPD_OFFHAND]);
   } else Timeout += 3000 / max((100 + Attr[A_SPD_BRAWL]*5),10);
 
   if (startedAfraid)
@@ -5404,8 +5447,62 @@ EvReturn Creature::Miss(EventInfo &e)
 		return DONE;
 }
 
+/* Is this attack a blow struck by a creature -- a limb, or a weapon it holds
+   or throws -- as opposed to a spell, a breath, a gaze, a trap or an act of
+   god? Weapon Immunity is the rule about such blows, and this answers the only
+   question that rule needs to ask about the attack type.
+
+   The answer is given in RANGES, using the four is_*_attk macros
+   (inc/Defines.h:1138-1203) that inc/Defines.h already defines beside the
+   attack constants themselves, and NOT as a list of individual constants. That
+   is the whole point of the shape and it is why it cannot rot the way the list
+   it replaces rotted: a new natural attack is numbered below A_LAST_STANDARD,
+   a new post-grab attack below A_LAST_POSTGRAB and a new melee or missile
+   manoeuvre below A_LAST_MANEUVER, so each is caught here on the day it is
+   added, by the same act that adds it. A list of names is caught only if
+   somebody remembers this file exists, and for A_PUNC, A_CLAW and A_BITE
+   nobody ever did.
+
+   Two members are named individually, and both are named because the DATA is
+   irregular, not because the rule is:
+
+     A_HURL, throwing a weapon, is numbered 41, inside the "special" band with
+     breath weapons, gazes and death throes. That is where the constant happened
+     to be put; it does not stop a hurled axe being a weapon blow, and the list
+     this replaces already tested it.
+
+     A_COUP, a coup de grace, is numbered 62 and so falls inside the manoeuvre
+     range. It is EXCLUDED ON PURPOSE. Brian ruled on 2026-08-21 that a coup de
+     grace bypassing weapon immunity is intended -- a helpless creature's throat
+     is cut whatever the blade is made of. It was absent from the list this
+     replaces, it is absent from this test, and it MUST stay absent. Do not
+     "fix" it.
+
+   Spells (A_SPEL, A_SPE1, A_SPE2 -- 112 to 114), monster ability attacks
+   (is_ability_attk, 90 to 102) and response effects (is_response_attk, 54 to
+   60) all fall outside every range tested here, so none of them is newly
+   caught. Nor are traps or acts of god: nothing outside this file assigns
+   EventInfo::AType, so a trap's damage arrives with AType 0 and fails
+   is_standard_attk's own (a) > 0 test. The caller checks e.isTrap and
+   e.isActOfGod anyway, which costs nothing and says out loud what would
+   otherwise only be true by accident. */
+static bool isBlowStruckByACreature(int8 AType)
+{
+    if (is_standard_attk(AType))            // A_PUNC, A_CLAW, A_BITE, and the
+        return true;                        //   rest of the natural attacks
+    if (is_postgrab_attk(AType))            // A_CRUS, A_CONS, A_REND ...
+        return true;
+    if (AType == A_COUP)                    // read the note above before touching
+        return false;
+    if (is_maneuver(AType))                 // A_SWNG, A_THRU, A_FIRE, A_PREC ...
+        return true;
+    if (AType == A_HURL)                    // a thrown weapon, oddly numbered
+        return true;
+    return false;
+}
+
 EvReturn Creature::Damage(EventInfo &e) {
-    int8 subtype = 0, lv, at, Percent; 
+    int8 subtype = 0, lv, at, Percent;
     uint8 Col;
     int16 n, c, EDType;
     EvReturn r;
@@ -5724,19 +5821,69 @@ DoneResistMsg:
                                         * even a +5 bow with +5 arrows wouldn't hurt something with
                                         * +1 weapon immunity ... */
                                         /* ww: finally, Monks with Ki Strike count as +X weapons */
+
+                                        /* upstream: base-code defect, fix is ours. Tier Observed --
+                                           see the measurement in docs/REPORTING-GATE.md's row for
+                                           inc-bei. Tracking inc-bei. Not sent to rmtew.
+
+                                           This is the ONLY test of CA_WEAPON_IMMUNITY in the engine,
+                                           and it was gated on a hand-written list of seven attack
+                                           types: A_SWNG, A_FIRE, A_HURL, A_GREA, A_LUNG, A_CALL,
+                                           A_PREC. A_PUNC (1), A_CLAW (6) and A_BITE (7) were not on
+                                           it, and neither was any other natural attack, so a monk's
+                                           fist and a housecat's claw never met the rule at all. Not
+                                           beaten -- never asked. src/Help.cpp:2060 meanwhile tells
+                                           the player the monster "is unaffected by weapons with a
+                                           plus less than %d", which was false for every one of those
+                                           attackers.
+
+                                           The list was also missing half of its own category. A_THRU
+                                           (Thrust), A_CHAR (Charge), A_RIPO (Riposte), A_WHIR
+                                           (Whirlwind) and A_SPRI (Spring Attack) are manoeuvres a
+                                           character makes with the weapon in his hand, and every one
+                                           of them bypassed weapon immunity too. That is the signature
+                                           of a list that rotted rather than a rule that was written:
+                                           it names the attack types that existed when somebody typed
+                                           it, and nothing has added to it since.
+
+                                           Replaced with isBlowStruckByACreature(), a range test --
+                                           read the note on that function for why a range cannot rot
+                                           the same way, and for why A_COUP is deliberately outside
+                                           it. The commented-out Ki Strike branch three lines below is
+                                           restored at the same time: it could never have fired even
+                                           uncommented, because A_PUNC never reached this block, and
+                                           it is the thing that lets a trained monk through.
+
+                                           Nothing platform, compiler or width dependent is involved:
+                                           the list, the attack constants and the commented branch are
+                                           all upstream content, so this misbehaves identically on
+                                           Win32 with the original typedefs and the upstream compiler.
+
+                                           e.isTrap and e.isActOfGod are belt and braces. Nothing
+                                           outside this file assigns EventInfo::AType, so a trap's
+                                           damage arrives with AType 0 and is rejected by the range
+                                           test on its own; the two flags make that a stated rule
+                                           rather than a lucky one. */
                                         if (is_wepdmg(EDType) && e.EActor &&
-                                            (e.AType == A_SWNG || e.AType == A_FIRE || e.AType == A_HURL || e.AType == A_GREA || e.AType == A_LUNG || e.AType == A_CALL ||
-                                            e.AType == A_PREC)) {
+                                            !e.isTrap && !e.isActOfGod &&
+                                            isBlowStruckByACreature(e.AType)) {
                                                 int16 wil = e.EVictim->AbilityLevel(CA_WEAPON_IMMUNITY);
                                                 if (wil > 0 && !e.EActor->HasStati(IGNORES_WEAPON_IMMUNITY)) {
                                                     if (e.EItem && e.EItem->GetPlus() >= wil)
-                                                        goto NotWImmune; 
+                                                        goto NotWImmune;
                                                     else if (e.EItem2 && e.EItem2->GetPlus() >= wil)
-                                                        goto NotWImmune; 
-                                                    /*else if (!e.EItem && !e.EItem2 &&
-                                                    e.EActor->AbilityLevel(CA_KI_STRIKE) >= wil)
-                                                    goto NotWImmune;*/ 
-                                                    else if ((e.EVictim->isMType(MA_DEVIL) || 
+                                                        goto NotWImmune;
+                                                    /* Bare hands. A monk whose Ki Strike is at least the
+                                                       victim's immunity level punches through it, which is
+                                                       what "your fists count as +X magical weapons" means
+                                                       and what src/Help.cpp:2041 already promises the
+                                                       player. Nothing granted CA_KI_STRIKE until inc-qep
+                                                       restored the Monk's grant (lib/classes.irh:1401), so
+                                                       this branch needs that fix to do anything. */
+                                                    else if (!e.EItem && !e.EItem2 &&
+                                                        e.EActor->AbilityLevel(CA_KI_STRIKE) >= wil)
+                                                        goto NotWImmune;
+                                                    else if ((e.EVictim->isMType(MA_DEVIL) ||
                                                         e.EVictim->isMType(MA_UNDEAD) ||
                                                         e.EVictim->isMType(MA_LYCANTHROPE) ||
                                                         e.EVictim->isMType(MA_DEMON)) &&
