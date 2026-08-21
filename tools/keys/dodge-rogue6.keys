@@ -1,0 +1,105 @@
+# Control for tools/keys/dodge-barb-rogue.keys: the same six levels, all
+# of them in one class. A Rogue 6 reaches Uncanny Dodge 4 and prints
+# "Improved Uncanny Dodge"; the Barbarian 3 / Rogue 3 does not.
+# to read what the engine gives him when their levels are supposed to stack.
+#
+# Barbarian and Rogue both carry the sentence "Levels of this ability from the
+# barbarian and rogue classes stack" -- lib/classes.irh:118 and :2395. The
+# rogue's own prose ties the thresholds to its class level: off-guard immunity
+# at 3rd, forewarning at 5th, flanking immunity at 6th (lib/classes.irh:2383-
+# 2394). So six levels of the two classes together should reach the flanking
+# threshold, which src/Creature.cpp:637 reads as the number 4.
+#
+# THE ORACLE is the sheet's Special Abilities block: src/Sheet.cpp:580-582
+# prints "Improved Uncanny Dodge" at 4 or more and plain "Uncanny Dodge"
+# below it.
+#
+# Barbarian 3 gives 2 (its grant starts at its 2nd level) and Rogue 3 gives 1
+# (starting at its 3rd), so the character holds 3 and is still flankable.
+
+a
+n
+y
+@choose "Human"
+@choose "Spot"
+@choose "Searching"
+@choose "Rogue"
+a
+@choose "Neutral"
+@until "Unspent Skill Ranks" a
+# Ten ranks, two to a skill. No skill gate matters here, but character
+# generation will not release a character with a rank unspent.
+@cursorto:mark "Alchemy" DOWN
+RIGHT*3
+@cursorto:mark "Appraise" DOWN
+RIGHT*3
+@cursorto:mark "Balance" DOWN
+RIGHT*3
+@cursorto:mark "Bluff" DOWN
+RIGHT*3
+@cursorto:mark "Climb" DOWN
+RIGHT*3
+@cursorto:mark "Craft" DOWN
+RIGHT*3
+@cursorto:mark "Decipher Script" DOWN
+RIGHT*3
+@cursorto:mark "Diplomacy" DOWN
+RIGHT*3
+@cursorto:mark "Disguise" DOWN
+RIGHT*3
+ENTER y
+a                       # personality archetype
+@until "Afoot" ESC
+w
+@expect "Enter wizard mode"
+y
+w
+DOWN DOWN
+SPACE                   # Free Advancement: NO -> YES
+ESC
+
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+ESC
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+ESC
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+ESC
+d
+
+
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+ESC
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+ESC
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+ESC
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+ESC
+d
+@expect "Rogue 6"
+@dump:rogue6
+
+W
+r g 6 ENTER
+ESC
+@quit

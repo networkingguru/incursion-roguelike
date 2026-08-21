@@ -22,7 +22,9 @@
 # the same character reads "Smite Good Creatures" and "Tracking (520 feet)",
 # and his spell menu holds 26 ranger spells and none of the huntsman's own.
 # 520 is the old +10-per-level grant: huntsman 40 plus ranger 12, times ten.
-# 280 is the corrected one: huntsman 16 plus ranger 12, times ten.
+# 280 is the corrected grant with each class still counting only itself.
+# 220 is the corrected grant with the two classes stacked, which is what the
+# huntsman's description asks for. See bd inc-0rw.
 #
 # Usage: tools/check_huntsman_live.sh      (exits 0 on pass, 1 on fail)
 set -uo pipefail
@@ -81,12 +83,21 @@ if grep -q "Smite Good Creatures" "$DUMP"; then
     fail=1
 fi
 
-# PA-03-F19. The grant now copies the ranger's own two-line shape, so the
-# huntsman's share is 10 + 2 per level after the 2nd rather than 10 per level.
-if grep -q "Tracking (280 feet)" "$DUMP"; then
-    echo "  ok: Tracking (280 feet)"
+# PA-03-F19, and the stacking rule of bd inc-0rw on top of it. The grant now
+# copies the ranger's own two-line shape, so the huntsman's share is 10 + 2
+# per level after the 2nd rather than 10 per level. That alone gave this
+# character 280 feet: ranger 12 plus huntsman 16, times ten.
+#
+# 220 is what Character::CorrectStackedAbilities (src/Create.cpp) then takes
+# off. Both classes open with a one-off +10 at their own 2nd level
+# (lib/classes.irh:2127, lib/prestige.irh:2954), and the huntsman's
+# description stacks his levels with the ranger's, so the character is owed
+# that opening bonus once and not twice. Eight levels at 2 a level is 16,
+# plus the 10, is 22.
+if grep -q "Tracking (220 feet)" "$DUMP"; then
+    echo "  ok: Tracking (220 feet)"
 else
-    echo "FAIL: the tracking range is not the ranger-paced 280 feet"
+    echo "FAIL: the tracking range is not the once-stacked 220 feet"
     grep -m1 "Tracking" "$DUMP" || echo "      (no Tracking line at all)"
     fail=1
 fi
@@ -121,7 +132,7 @@ fi
 
 if [ "$fail" = 0 ]; then
     echo "PASS: a live Twilight Huntsman smites Law, tracks at the ranger's"
-    echo "      pace, and is offered his own spell list"
+    echo "      pace once and not twice, and is offered his own spell list"
     exit 0
 fi
 exit 1

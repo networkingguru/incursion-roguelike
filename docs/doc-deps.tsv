@@ -431,6 +431,7 @@ tools/check_headless.sh	PORT-STATUS
 tools/check_headless.sh	REPORTING-GATE
 tools/check_headless.sh	TOOLS
 tools/check_headless.sh	VERBS-HEADLESS
+tools/check_huntsman_live.sh	REPORTING-GATE
 tools/check_huntsman_live.sh	TOOLS
 tools/check_key_directives.sh	TOOLS
 tools/check_layout.sh	PORT-STATUS
@@ -473,6 +474,8 @@ tools/check_save_fail.sh	TOOLS
 tools/check_sentinel_live.sh	TOOLS
 tools/check_sharp_senses.sh	REPORTING-GATE
 tools/check_sharp_senses.sh	TOOLS
+tools/check_stacked_abilities.sh	REPORTING-GATE
+tools/check_stacked_abilities.sh	TOOLS
 tools/check_stair_cycle.sh	FIXED
 tools/check_stair_cycle.sh	PORT-STATUS
 tools/check_stair_cycle.sh	REPORTING-GATE
@@ -493,6 +496,8 @@ tools/check_upstream_marks.sh	FIXED
 tools/check_upstream_marks.sh	README
 tools/check_upstream_marks.sh	REPORTING-GATE
 tools/check_upstream_marks.sh	TOOLS
+tools/check_xp_penalty.sh	REPORTING-GATE
+tools/check_xp_penalty.sh	TOOLS
 tools/craft_corrupt_saves.py	TOOLS
 tools/dump_save.sh	README
 tools/dump_save.sh	TOOLS
@@ -523,6 +528,9 @@ tools/headless.sh	REPORTING-GATE
 tools/headless.sh	TOOLS
 tools/headless.sh	VERBS-HEADLESS
 tools/keys/	README
+tools/keys/assassin-bard.keys	TOOLS
+tools/keys/assassin-rogue7.keys	REPORTING-GATE
+tools/keys/assassin-rogue7.keys	TOOLS
 tools/keys/blackguard-servant.keys	TOOLS
 tools/keys/chargen-mage.keys	TOOLS
 tools/keys/chargen-priest.keys	TOOLS
@@ -532,6 +540,8 @@ tools/keys/chargen.keys	VERBS-HEADLESS
 tools/keys/dive.keys	REPORTING-GATE
 tools/keys/dive.keys	TOOLS
 tools/keys/dive12.keys	TOOLS
+tools/keys/dodge-barb-rogue.keys	TOOLS
+tools/keys/dodge-rogue6.keys	TOOLS
 tools/keys/dragonkin-ration.keys	REPORTING-GATE
 tools/keys/dragonkin-ration.keys	TOOLS
 tools/keys/dragonkin-sheet.keys	TOOLS
@@ -572,6 +582,8 @@ tools/keys/store-scroll.keys	TOOLS
 tools/keys/target-ring.keys	TOOLS
 tools/keys/underdark-deepgnome.keys	TOOLS
 tools/keys/underdark-greyelf.keys	TOOLS
+tools/keys/xp-penalty-crash.keys	REPORTING-GATE
+tools/keys/xp-penalty-crash.keys	TOOLS
 tools/lz_uncompress_selftest.c	TOOLS
 tools/package_macos_app.sh	FIXED
 tools/package_macos_app.sh	README

@@ -588,7 +588,15 @@ Class "Assassin"
     Grants:
       Ability[CA_SPELLCASTING,+1] at every 2nd level starting at 2nd,
       Ability[CA_SNEAK_ATTACK,+1] at every 2nd level starting at 1st,
-      Ability[CA_UNCANNY_DODGE,+1] at every level starting at 1st,
+      /* The prose at line 545 gives this at the ROGUE's rate, which starts
+         at a 3rd level, not a 1st. It used to start here at 1st, which is
+         the right total only for a character who is already a rogue: his
+         rogue grant has withheld the two levels this one does not. The
+         engine now serves that waiting period once per CHARACTER rather
+         than once per class -- see CorrectStackedAbilities in
+         src/Create.cpp -- so this line states the assassin's own rate and
+         nothing more. */
+      Ability[CA_UNCANNY_DODGE,+1] at every level starting at 3rd,
       /* Stati[TRAP_EVENT,PRE(EV_HIT),+1,$"Death Attack"] 
            at every level starting at 1st, */
       Stati[SKILL_BONUS,SK_DISGUISE,+1] at every level starting at 1st,
@@ -2966,10 +2974,10 @@ Class "Twilight Huntsman"
         2 $"animate rope" $"bladethirst" $"globe of shadow" $"heal mount"
           $"hypnotic pattern" $"improved phantasmal force" $"inflict moderate wounds"
           $"phantom steed" $"scare" $"see invisibility" $"silence"
-        3 $"adamant facade" $"animate shadows" $"blackmantle" $"confusion"
-          $"fly" $"hold person" $"illusory stance" $"inflict serious wounds"
-          $"insightful stroke" $"lorecall" $"spectral force" $"track monster"
-          $"vampiric touch"
+        3 $"adamant facade" $"animate shadows" $"bestow curse" $"blackmantle"
+          $"confusion" $"fly" $"hold person" $"illusory stance"
+          $"inflict serious wounds" $"insightful stroke" $"lorecall"
+          $"spectral force" $"track monster" $"vampiric touch"
         4 $"crushing despair" $"dimensional anchor" $"enervation"
           $"hallucinatory terrain" $"improved spectral force"
           $"inflict critical wounds" $"mooncloak" $"music of the spheres"

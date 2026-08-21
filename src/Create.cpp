@@ -1755,6 +1755,163 @@ void Player::ChooseDomains()
     }
 }
 
+/* --- Abilities whose levels stack across classes ------------------------
+
+   Six classes grant Uncanny Dodge, four grant Sneak Attack, and nearly every
+   one of them tells the player that levels of the ability from the other
+   classes stack -- lib/classes.irh:118, lib/classes.irh:2395,
+   lib/prestige.irh:526, lib/prestige.irh:547, lib/prestige.irh:802,
+   lib/prestige.irh:2566 and lib/prestige.irh:3125 among others. A Grants: line cannot say that. It counts
+   the levels of its own class and nothing else, so:
+
+     * A character who splits his levels between two of them serves BOTH
+       classes' waiting periods. Barbarian 3 / Rogue 3 held Uncanny Dodge 3
+       where a Rogue 6 holds 4, so splitting six levels cost him the ability
+       his two class descriptions both promised him.
+     * Two half-rate classes each round their own odd level up. Rogue 7 /
+       Assassin 3 held Sneak Attack +6d6 where ten rogue levels earn +5d6.
+     * Two classes with a one-off grant both fire it. Both the ranger and
+       the twilight huntsman open with +10 at their own 2nd level, and the
+       huntsman's description stacks his levels with the ranger's, so the
+       character is owed that opening once. Ranger 3 / Twilight Huntsman 5
+       held Tracking 28 where the rule gives him 22.
+
+   The rule this restores, in the player's words: the character serves ONE
+   waiting period, the shortest his classes offer, and only once he has
+   actually reached the level in that class where it starts. After that every
+   level in every granting class counts at that class's own rate, fractions
+   included, and the total is rounded down.
+
+   So a class that gives one point per two levels starting at its 2nd, held
+   at level 1, is worth half a point -- but it is worth nothing at all unless
+   some class has reached its own starting level. That is why a character
+   with one level of each of two such classes has nothing, and why adding a
+   third level of the slower one gives 1.5 and not 1 or 2.
+
+   The two quantities each class contributes:
+
+     rate      points per level, summed over its repeating grant lines.
+     penalty   the points its waiting period costs: its starting level
+               multiplied by its rate, less the points it actually holds at
+               that level. A rogue's Uncanny Dodge starts at his 3rd and is
+               worth 1 there, so his penalty is 3 - 1 = 2. A barbarian's
+               starts at his 2nd, so his is 1. A rogue's Sneak Attack starts
+               at his 1st and is worth 1 there, so his penalty is -1/2: a
+               head start rather than a wait, and it too is counted once.
+
+   Nothing here is remembered between level-ups. Both totals are rebuilt from
+   the character's class levels every time, so the ORDER the levels were
+   taken in cannot matter -- Monk 5, Sorcerer 1, Monk 6 lands where Monk 11
+   would. The difference between the rule and what the grant lines actually
+   handed out is carried by one EXTRA_ABILITY stati per ability, which
+   Creature::AbilityLevel already adds in (src/Creature.cpp:2981), so no
+   other reader needs to know about any of this.
+
+   upstream: the defect is Julian Mensch's, not the port's -- it is in the
+   class data and the grant machinery, identical on Win32 and under the
+   original typedefs. Evidence tier: Observed -- all three failure modes above
+   are measured on both sides, not argued. tools/check_stacked_abilities.sh
+   covers the first two and tools/check_huntsman_live.sh covers the third.
+   Tracking id inc-tek.8.3, finding PA-03-F21, and bd inc-0rw for the general
+   defect. NOT SENT upstream. */
+
+#define STACK_SCALE 60   /* whole halves, thirds, quarters and fifths */
+
+static const int16 StackedAbilities[] = {
+    CA_UNCANNY_DODGE, CA_SNEAK_ATTACK, CA_EVASION, CA_TRACKING,
+    CA_LORE_OF_ARMS, 0 };
+
+/* Points one grant line has handed over by class level L. Mirrors the
+   arithmetic of AddAbilities below, which is what actually hands them out. */
+static int32 StackedGrantPoints(int16 lev1, int16 lev2, int32 par, int16 L) {
+    if (L < lev1)
+        return 0;
+    if (!lev2)
+        return par;
+    return par * (((L - lev1) / lev2) + 1);
+}
+
+void Character::CorrectStackedAbilities() {
+    const int16 *ab;
+
+    for (ab = StackedAbilities; *ab; ab++) {
+        int32 sum = 0, best = 0, held = 0, wanted = 0;
+        bool any = false, reached = false;
+        int16 c;
+
+        for (c = 0; c != 3; c++) {
+            Annotation *a;
+            int16 i, first = 0;
+            int32 rate = 0, atFirst = 0, now = 0;
+            Resource *r;
+
+            if (!ClassID[c] || Level[c] <= 0)
+                continue;
+            r = RES(ClassID[c]);
+
+            /* First pass: the class's rate, and the earliest level at which
+               it gives anything. */
+            for (a = r->Annot(r->AnHead); a; a = r->Annot(a->Next)) {
+                if (a->AnType != AN_ABILITY)
+                    continue;
+                for (i = 0; i != 4; i++) {
+                    if (a->u.ab[i].AbType != AB_ABILITY)
+                        continue;
+                    if (a->u.ab[i].Ability != *ab)
+                        continue;
+                    if (a->u.ab[i].Lev2)
+                        rate += max((int32)a->u.ab[i].Param,(int32)1)
+                                * (STACK_SCALE / a->u.ab[i].Lev2);
+                    if (!first || a->u.ab[i].Lev1 < first)
+                        first = a->u.ab[i].Lev1;
+                }
+            }
+            if (!first)
+                continue;   /* this class does not grant it at all */
+
+            /* Second pass, now that the starting level is known: what the
+               class holds at that level, and what it holds right now. */
+            for (a = r->Annot(r->AnHead); a; a = r->Annot(a->Next)) {
+                if (a->AnType != AN_ABILITY)
+                    continue;
+                for (i = 0; i != 4; i++) {
+                    if (a->u.ab[i].AbType != AB_ABILITY)
+                        continue;
+                    if (a->u.ab[i].Ability != *ab)
+                        continue;
+                    atFirst += StackedGrantPoints(a->u.ab[i].Lev1,
+                        a->u.ab[i].Lev2, max((int32)a->u.ab[i].Param,(int32)1),
+                        first);
+                    now += StackedGrantPoints(a->u.ab[i].Lev1,
+                        a->u.ab[i].Lev2, max((int32)a->u.ab[i].Param,(int32)1),
+                        Level[c]);
+                }
+            }
+
+            any = true;
+            sum += (int32)Level[c] * rate;
+            held += now;
+            if (Level[c] >= first) {
+                int32 pen = (int32)first * rate - atFirst * STACK_SCALE;
+                if (!reached || pen < best) {
+                    best = pen;
+                    reached = true;
+                }
+            }
+        }
+
+        if (!any)
+            continue;
+        if (reached && sum - best > 0)
+            wanted = (sum - best) / STACK_SCALE;
+
+        RemoveStati(EXTRA_ABILITY,SS_CLAS,*ab,-1,NULL);
+        if (wanted != held)
+            GainPermStati(EXTRA_ABILITY,NULL,SS_CLAS,*ab,
+                          (int16)(wanted - held),0);
+    }
+}
+
 void Character::AddAbilities(rID resID,int16 Lev) {
     Annotation *a; int16 i, ss;
     Resource *r = RES(resID);
@@ -2027,18 +2184,55 @@ int16 Character::XPPenalty()
     if (!Level[1] && !Level[2])
         return 0 + SumStatiMag(XP_PENALTY) + alignXP;
 
-    if (ClassID[0] == f1 || ClassID[0] == f2 || ClassID[0] == f3 ||
-        TCLASS(ClassID[0])->HasFlag(CF_FAVOURED))
+    /* upstream: this is a defect in the BASE CODE, not a port artefact, and
+       the three ClassID[n] guards below are ours. Tracked as inc-5y8; tier
+       Observed; not sent upstream. Each of the three tests
+       calls TCLASS(ClassID[n])->HasFlag(CF_FAVOURED) on a class slot that may
+       be empty. Game::Get returns NULL for a zero id (src/Res.cpp:312), so a
+       character who holds fewer than three classes dereferences NULL and the
+       process dies. Nothing about that is platform, compiler or width
+       dependent -- the missing NULL check is plain C++ and misbehaves
+       identically on Win32 with the original typedefs and the original
+       compiler. Only the third test is reachable today, because the early
+       return above covers the case where Level[1] and Level[2] are both zero;
+       the first two are guarded anyway, since they have the same shape and are
+       safe only by accident of that return.
+
+       The evidence is Observed. tools/headless.sh
+       tools/keys/xp-penalty-crash.keys 7 builds a Wood Elf Rogue 2 / Warrior 1
+       and asks for his character sheet. Before this change the run ended in
+       SIGSEGV, exit 139, with EXC_BAD_ACCESS at 0x4d in Character::XPPenalty
+       under TextTerm::CreateCharSheet, and wrote no dump. After it the run
+       ends 0 and writes the sheet. tools/check_xp_penalty.sh holds that
+       measurement.
+
+       The guards change no result for a character who does not crash. An
+       unfilled FavouredClass slot holds zero -- measured, all 17 races in the
+       module, and only the Wood Elf fills the third -- so for every other race
+       the old third test matched a zero id against a zero f3, short-circuited
+       the || before TCLASS, and reached the inner level test. That test then
+       failed anyway: a class slot carries a level only when it carries a class
+       (src/Create.cpp:1990), so ClassID[n] == 0 implies Level[n] == 0, and the
+       early return above means Level[1] is already non-zero by the time the
+       third block runs, so Level[2] >= Level[1] cannot hold. The block fell
+       through before and is skipped now, which is the same answer. This
+       deliberately leaves the favoured-class rule itself alone; that is a
+       separate question, tracked as inc-by8. */
+    if (ClassID[0] &&
+        (ClassID[0] == f1 || ClassID[0] == f2 || ClassID[0] == f3 ||
+         TCLASS(ClassID[0])->HasFlag(CF_FAVOURED)))
         if (Level[0] >= Level[1] && Level[0] >= Level[2])
             return 0 + SumStatiMag(XP_PENALTY) + alignXP;
 
-    if (ClassID[1] == f1 || ClassID[1] == f2 || ClassID[1] == f3 ||
-        TCLASS(ClassID[1])->HasFlag(CF_FAVOURED))
+    if (ClassID[1] &&
+        (ClassID[1] == f1 || ClassID[1] == f2 || ClassID[1] == f3 ||
+         TCLASS(ClassID[1])->HasFlag(CF_FAVOURED)))
         if (Level[1] >= Level[0] && Level[1] >= Level[2])
             return 0 + SumStatiMag(XP_PENALTY) + alignXP;
 
-    if (ClassID[2] == f1 || ClassID[2] == f2 || ClassID[2] == f3 ||
-        TCLASS(ClassID[2])->HasFlag(CF_FAVOURED))
+    if (ClassID[2] &&
+        (ClassID[2] == f1 || ClassID[2] == f2 || ClassID[2] == f3 ||
+         TCLASS(ClassID[2])->HasFlag(CF_FAVOURED)))
         if (Level[2] >= Level[0] && Level[2] >= Level[1])
             return 0 + SumStatiMag(XP_PENALTY) + alignXP;
 
@@ -2326,6 +2520,9 @@ GodIsOkay:;
     as their bonus human feat at 1st level. */
     AddAbilities(ClassID[c],Level[c]);
     AddAbilities(RaceID,TotalLevel());
+    /* Rebuilt from the class levels, so it does not matter which order the
+       levels were taken in. See CorrectStackedAbilities above. */
+    CorrectStackedAbilities();
     CalcValues(); // For Attribute-based feat prereqs
 
 #if 0

@@ -1,0 +1,175 @@
+# Build the deepest Twilight Huntsman this game allows and photograph his
+# [L]earn Spells menu. bd inc-tek.8.3 finding PA-03-F22, and bd inc-f34.
+#
+# WHAT THIS SCRIPT PROVED, and it is not what it set out to prove. The
+# huntsman's printed spell list names bestow curse at 3rd level
+# (lib/prestige.irh:2916) and his SPELL_LIST omitted it. The spell was added
+# (lib/prestige.irh:2977). NO CHARACTER CAN SEE THAT, and three numbers say
+# so before any run does:
+#
+#   * A caster needs caster level 5 to learn a 3rd-level spell. The Learn
+#     Spells menu skips any spell whose SAL exceeds AbilityLevel(
+#     CA_SPELLCASTING) (src/Create.cpp:4505-4507), and __SAL is
+#     { 0, 1, 3, 5, 7, 9, 12, 14, 16, 18 } (src/Tables.cpp:48).
+#   * The huntsman gains one caster level at every 2nd class level
+#     (lib/prestige.irh:2953), so caster level 5 needs TEN class levels.
+#   * No prestige class may be taken before three core levels
+#     (src/Managers.cpp:2251), and MAX_CHAR_LEVEL is 11
+#     (inc/Defines.h:4367). 10 + 3 = 13.
+#
+# So the 3rd, 4th and 5th level entries of this class's spell list are dead
+# data in this build, and the bestow curse fix is Traced, not Observed. This
+# script is kept because it builds the deepest huntsman the rules allow --
+# three core levels, which is the engine minimum, and eight class levels,
+# which is every level the cap leaves -- and it becomes the oracle the day
+# the cap moves. He reaches caster level 4, one short.
+#
+# THE THREE-LEVEL ENTRY. The gate wants Ride 8, Athletics 8, Hide 5, Move
+# Silently 5, Animal Empathy 5 and Maeve (lib/prestige.irh:2807-2827). The
+# ranger carries every one of those skills except Athletics, and three ranger
+# levels buy six ranks in each, which clears them all once the attribute and
+# training terms are added.
+#
+# ATHLETICS COMES FROM A FEAT. Natural Aptitude (src/FeatTab.cpp:60) is
+# FF_MULTIPLE, so it can be taken again and again, and each one grants an
+# EXTRA_SKILL stati with source SS_CLAS (src/Create.cpp:2832).
+# Character::MaxRanks (src/Create.cpp:3802-3810) answers such a stati with
+# ClassLevelRanks[TotalLevel()] -- the full character-level cap, the same
+# term a racial skill gets, and it does not care which classes the character
+# holds. One feat therefore replaces the three rogue levels the older script
+# spent on Athletics.
+#
+# WHY A RANGER AND NOT A ROGUE, which would also carry Athletics.
+# Character::XPPenalty (src/Create.cpp:2196-2199) reads
+# TCLASS(ClassID[2])->HasFlag(CF_FAVOURED) without checking that a third
+# class exists, and RES(0) is NULL. A two-class character reaches that line
+# whenever his first class is not favoured for his race AND his
+# CF_FAVOURED class is not his highest. An Elf Rogue 3 / Twilight Huntsman 1
+# is exactly that, and drawing his sheet segfaults. The ranger is a favoured
+# class of elves (lib/races.irh:967), so he answers the first test while he
+# is the higher of the two, and the huntsman -- which is CF_FAVOURED -- answers
+# the second test from his 4th level on. The null line is never reached.
+#
+# An elf is given Maeve at birth (lib/races.irh:1144-1147).
+#
+# THE ORACLE is the [L]earn Spells menu, which src/Create.cpp:4356-4375
+# builds by walking the SPELL_ACCESS stati and reading each granting
+# resource's SPELL_LIST. The menu is that list, filtered by caster level.
+#
+# SEED. The attribute rolls and the offered feats vary with the seed, so the
+# feat picks stay positional and a seed is passed.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Ranger"
+a                       # Attributes: the first of the offered sets
+@choose "Neutral"
+@choose "Goblinkin"     # favoured enemy
+a                       # combat style: [a] archery
+
+# The menu truncates the label to fit its column, so the name matched here
+# is the truncated one. @choose reads what is drawn, not what it stands for.
+@choose "Natural Aptitud"       # the feat that opens the gate
+@choose "Athletics"             # and the skill it opens it with
+@until "Unspent Skill Ranks" a  # however many further feats are asked for
+
+# Twelve ranks, two to a skill, taken in the order the list prints them so
+# the view only ever scrolls forward. @cursorto:mark reads the visible page,
+# and a mark that has already scrolled off the top cannot be found again.
+@cursorto:mark "Animal Empathy" DOWN
+RIGHT*2
+@cursorto:mark "Hide in Shadows" DOWN
+RIGHT*2
+@cursorto:mark "Listen" DOWN
+RIGHT*2
+@cursorto:mark "Move Silently" DOWN
+RIGHT*2
+@cursorto:mark "Ride" DOWN
+RIGHT*2
+@cursorto:mark "Searching" DOWN
+RIGHT*2
+ENTER y # Done, and confirm keeping the ranks
+
+a       # Personality archetype
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d                               # character sheet
+@until "Class  Ranger 3" G      # three core levels, and no class menu:
+                                #   Player::AdvanceLevel only asks which
+                                #   class when a second one exists.
+
+# Fill the gate skills to their caps.
+S
+@expect "Unspent Skill Ranks"
+
+# In the order the list prints them. The ranger's own skills come first,
+# alphabetically; Athletics is not one of his, so the feat's grant is
+# appended after them and has to be marked last.
+@cursorto:mark "Animal Empathy" DOWN
+RIGHT*8
+@cursorto:mark "Hide in Shadows" DOWN
+RIGHT*8
+@cursorto:mark "Move Silently" DOWN
+RIGHT*8
+@cursorto:mark "Ride" DOWN
+RIGHT*8
+@cursorto:mark "Athletics" DOWN
+RIGHT*8
+ENTER y
+
+P                               # [P]restige Classes
+@expect "Choose a class:"
+@choose "Twilight Huntsman"
+@expect "Huntsman 0"            # the gate let him in
+
+# Eight huntsman levels, which is every level the character cap leaves.
+# The sheet does not repaint while a level-up menu is open, so a directive
+# that only reads the screen would be looking at a picture of the old
+# character. @until presses a key on every pass, which answers the menu and
+# lets the sheet repaint. 'a' is Strength on the attribute menu and the first
+# entry on the feat menu, and it is not a character-sheet command, so the
+# presses that land on the sheet do nothing.
+@until "class do you wish to advance" G
+@choose "Twilight Huntsman"
+@until "Huntsman 1" a
+@until "class do you wish to advance" G
+@choose "Twilight Huntsman"
+@until "Huntsman 2" a
+@until "class do you wish to advance" G
+@choose "Twilight Huntsman"
+@until "Huntsman 3" a
+@until "class do you wish to advance" G
+@choose "Twilight Huntsman"
+@until "Huntsman 4" a
+@until "class do you wish to advance" G
+@choose "Twilight Huntsman"
+@until "Huntsman 5" a
+@until "class do you wish to advance" G
+@choose "Twilight Huntsman"
+@until "Huntsman 6" a
+@until "class do you wish to advance" G
+@choose "Twilight Huntsman"
+@until "Huntsman 7" a
+@until "class do you wish to advance" G
+@choose "Twilight Huntsman"
+@until "Huntsman 8" a
+
+W                       # Write Dump
+c u r s e ENTER         # filename: "curse"
+
+L                       # [L]earn Spells -- the spell list oracle
+@dump:learn3
+ESC
+ESC
+@quit

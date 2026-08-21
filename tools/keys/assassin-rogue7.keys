@@ -1,0 +1,134 @@
+# Build an Elf Rogue 7 / Assassin 3 and photograph his Sneak Attack dice.
+#
+# WHY THIS EXISTS. bd inc-0rw, the parity half of the stacking defect. The
+# Assassin's prose (lib/prestige.irh:547) adds his assassin levels to his
+# rogue levels for Sneak Attack. Both grants read
+#   Ability[CA_SNEAK_ATTACK,+1] at every 2nd level starting at 1st
+# (lib/classes.irh:2561 and lib/prestige.irh:590), and each one counts only
+# its own class. Seven rogue levels round up to four dice and three assassin
+# levels round up to two, so the pre-fix character holds six. Ten levels at
+# one die per two levels, with the first level's die given once, is five and
+# a half, which floors to five. The rounding was happening twice.
+#
+# THE ORACLE is the sheet's Specials block, which prints the dice as
+# "Sneak Attack +Nd6" from AbilityLevel(CA_SNEAK_ATTACK).
+#
+# WHY SEVEN AND THREE. Both numbers are odd, which is the only shape that
+# shows the defect: an odd level count is where a class rounds its own half
+# die up to a whole one. Rogue 5 / Assassin 2 -- the control this suite
+# already runs -- is odd plus even, and its arithmetic is the same either way.
+#
+# SEED. The attribute rolls and the offered feats vary with the seed, so the
+# feat picks stay positional and a seed is passed.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Rogue"
+a                       # Attributes: the first of the offered sets
+@choose "Neutral"       # the class refuses a Good alignment
+@choose "Alertness"
+@until "Unspent Skill Ranks" a          # however many feats are asked for
+
+# Eighteen ranks, two to a skill. The four the Assassin's gate reads first;
+# the rest only because character generation will not release a character
+# with a rank unspent.
+@cursorto:mark "Disguise" DOWN
+RIGHT*3
+@cursorto:mark "Poison Use" DOWN
+RIGHT*3
+@cursorto:mark "Move Silently" UP
+RIGHT*3
+@cursorto:mark "Hide in Shadows" UP
+RIGHT*3
+@cursorto:mark "Bluff" UP
+RIGHT*3
+@cursorto:mark "Alchemy" UP
+RIGHT*3
+@cursorto:mark "Appraise" DOWN
+RIGHT*3
+@cursorto:mark "Balance" DOWN
+RIGHT*3
+@cursorto:mark "Climb" DOWN
+RIGHT*3
+ENTER y # Done, and confirm keeping the ranks
+
+a       # Personality archetype
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d                               # character sheet
+@until "Class  Rogue 7" G       # seven core levels
+@dump:rogue7
+
+# The gate wants Disguise 10, Poison Use 10, Hide 7 and Move Silently 7.
+# ISkillLevel (src/Create.cpp:3955) counts training and the inherent
+# attribute bonus as well as ranks, so filling each to its cap clears them.
+S
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Disguise" DOWN
+RIGHT*10
+@cursorto:mark "Poison Use" DOWN
+RIGHT*10
+@cursorto:mark "Move Silently" UP
+RIGHT*10
+@cursorto:mark "Hide in Shadows" UP
+RIGHT*10
+ENTER y
+
+P                               # [P]restige Classes
+@expect "Choose a class:"
+@choose "Assassin"
+@expect "Assassin 0"            # the gate let him in
+
+# TWO THINGS MAKE THIS LOOP LOOK ODD, and both are the game, not the script.
+#
+# 1. The sheet does not redraw itself once a prestige class is on it. A level
+#    gained while it is on screen leaves the old class line in place, so every
+#    level below leaves the sheet and re-opens it, and the class line is read
+#    only from a fresh one.
+# 2. The Assassin's 1st level hands over a spellbook
+#    (lib/prestige.irh:609-619). The item lands in the In-the-Air slot, and
+#    the game will not leave inventory mode while anything is there -- so it
+#    must be stowed before any further keystroke is spent, or every key after
+#    it goes into the inventory screen instead. That is the lone 's' below.
+@until "class do you wish to advance" G
+@choose "Assassin"
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+ESC                             # leave the sheet
+s                               # stow the spellbook
+ESC                             # leave the inventory
+d                               # sheet again, freshly drawn
+@expect "Assassin 1"
+
+@until "class do you wish to advance" G
+@choose "Assassin"
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+ESC
+d
+@expect "Assassin 2"
+
+@until "class do you wish to advance" G
+@choose "Assassin"
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+ESC
+d
+@expect "Assassin 3"
+@dump:assassin3
+
+W                       # Write Dump
+a s s n 7 ENTER         # filename: "assn7"
+ESC
+@quit

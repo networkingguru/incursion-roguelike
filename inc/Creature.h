@@ -695,6 +695,7 @@ class Character: public Creature
       /* Trait Management Functions */
       public:
       void AddAbilities(rID,int16);
+      void CorrectStackedAbilities();
       virtual void AdvanceLevel()=0;
       virtual void GainFeat(int16 list, int32 param=0)=0;
       virtual void GainAbility(int16 ab, uint32 pa, rID sourceID,int16 statiSource)=0;

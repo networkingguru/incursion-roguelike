@@ -351,7 +351,7 @@ Nothing invoked it; the only references were documentation. See
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the rock gnome its own refusal message names? | LIVE |
 | `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? | LIVE |
 | `check_escape_sweep.sh` | Does any string literal still spell a C escape with a forward slash, the way the port's path sweep wrote `/n` for `\n`? | LIVE |
-| `check_huntsman_live.sh` | Does the Twilight Huntsman reach his own spell list, smite Law rather than Good, and track at the ranger's rate? | LIVE |
+| `check_huntsman_live.sh` | Does the Twilight Huntsman reach his own spell list, smite Law rather than Good, and track at the ranger's rate, serving the ranger's opening bonus once rather than twice? | LIVE |
 | `check_key_directives.sh` | Do the screen-driven key-script directives `@choose`, `@cursorto`, `@cursorto:mark` and `@expect` reach a menu entry that counting could not? | LIVE |
 | `check_layout.sh` | Does this build play the same game when its objects sit at different addresses? | LIVE |
 | `check_load_corrupt.sh` | Does the real binary refuse ten hand-corrupted saves cleanly and still load two genuine ones? | LIVE |
@@ -373,12 +373,14 @@ Nothing invoked it; the only references were documentation. See
 | `check_save_fail.sh` | Does a save that fails part-way leave the game playable? Stages the throw with `INCURSION_SAVE_FAIL_AT` at a chosen object or data block. It does not drive a real disk-full, and cannot: every write goes into a memory `CFile` and the disk is untouched until `CommitCompressed`, so a full disk can only fail once every object is already converted. That case was reproduced by hand instead. | LIVE |
 | `check_sentinel_live.sh` | Does the Sentinel's engine-side save track match the table it prints? Makes one, four levels deep. | LIVE |
 | `check_sharp_senses.sh` | Does the Sharp Senses bonus reach Search, and not only Spot and Listen? | LIVE |
+| `check_stacked_abilities.sh` | Do abilities whose prose says their levels stack across classes actually stack, charging one waiting period rather than one per class? Five characters: a Rogue 6 invariant, a Barbarian 3 / Rogue 3, a Bard 7 / Assassin 4, an Elf Rogue 7 / Assassin 3 and a control. | LIVE |
 | `check_stair_cycle.sh` | Does the overview map's staircase search run, pick the cheapest, and wrap? | LIVE |
 | `check_store_scroll.sh` | Does the shop list follow the selection in both directions, reached without wizard mode? | LIVE |
 | `check_strqueue.sh` | Is the string queue's bound still tested before the write? | LIVE |
 | `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? | LIVE |
 | `check_underdark_live.sh` | Does the Underdark Warrior check the race it requires, and give the Reflex save it advertises? | LIVE |
 | `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? | LIVE |
+| `check_xp_penalty.sh` | Can a character who holds only two classes read his own sheet? A Wood Elf Rogue 2 / Warrior 1, whose empty third class slot used to segfault `Character::XPPenalty`. | LIVE |
 
 ### Diagnostics
 
@@ -524,6 +526,8 @@ tools/check_target_order.sh
 tools/check_key_directives.sh
 tools/check_menu_value.sh
 tools/check_sharp_senses.sh
+tools/check_stacked_abilities.sh
+tools/check_xp_penalty.sh
 tools/check_prestige_profs.sh
 tools/check_prestige_tables.sh
 tools/check_alienist_live.sh

@@ -1,0 +1,41 @@
+a
+n
+y
+@choose "Elf"
+@choose "Wood Elf"
+@choose "Rogue"
+a
+@choose "Neutral"
+@until "Unspent Skill Ranks" a
+@cursorto:mark "Athletics" DOWN
+RIGHT*2
+@cursorto:mark "Hide in Shadows" DOWN
+RIGHT*2
+@cursorto:mark "Move Silently" DOWN
+RIGHT*2
+@cursorto:mark "Ride" DOWN
+RIGHT*2
+@cursorto:mark "Searching" DOWN
+RIGHT*2
+@cursorto:mark "Animal Empathy" DOWN
+RIGHT*2
+@cursorto:mark "Wilderness Lore" DOWN
+RIGHT*2
+ENTER y
+a
+ESC
+w
+y
+w
+DOWN DOWN
+SPACE
+ESC
+d
+@until "Class  Rogue 2" G
+M
+@choose "Warrior"
+@until "class do you wish to advance" G
+@choose "Warrior"
+@until "Warrior 1" a
+@dump:crashed
+@quit
