@@ -815,8 +815,16 @@ void posixTerm::DumpScreen(const char *label) {
     if (!f)
         return;
 
-    fprintf(f, "=== screen %04d %s  key %ld  mode %d ===\n",
-        (int)dumpCount, (label && *label) ? label : "", (long)keysRead, (int)Mode);
+    /* The turn counter goes in the header because a dump is otherwise blind
+       to whether the session is still playing. A run can consume every
+       keystroke it has while parked in a modal screen -- Inventory Mode, the
+       death prompt, the threat-disengage prompt -- and produce a full set of
+       dumps that look like a session and contain no gameplay. Comparing this
+       number between two dumps is the only cheap way to tell the difference,
+       and it is what tools/check_clock_advance.sh reads. See inc-2k3. */
+    fprintf(f, "=== screen %04d %s  key %ld  mode %d  turn %u ===\n",
+        (int)dumpCount, (label && *label) ? label : "", (long)keysRead,
+        (int)Mode, theGame ? (unsigned)theGame->Turn : 0u);
 
     for (y = 0; y < SCREEN_H; y++) {
         RenderRow(y, line);

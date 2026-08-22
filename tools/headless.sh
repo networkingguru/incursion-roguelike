@@ -273,6 +273,38 @@ else
     echo "stuck-prompt: none"
 fi
 
+# GAME TIME. Every freeze check above matches one prompt's literal text, and
+# each was written after that prompt had already wasted a soak: inc-loa.3 the
+# death prompt, inc-loa.5 the threat-disengage prompt. The class kept coming
+# back because a string match only ever catches the string it was given.
+#
+# This check is the general form. All of those failures, and the refused
+# commands of inc-loa.2, share one signature -- the session reads keys and
+# spends no game time. The turn counter in each screen dump's header
+# (src/Wposix.cpp, posixTerm::DumpScreen) makes that directly measurable, so
+# a new trap needs no new detector.
+#
+# It reports rather than fails. Some intervals are legitimately still: a walk
+# that spends its keys inside a menu it then leaves has done nothing wrong.
+# What is never right is a run whose LAST interval is frozen, because nothing
+# after that point is gameplay -- that is the shape marathon.keys had when
+# this was written (inc-2k3): 6,059 of its 10,621 keys parked in Inventory
+# Mode, while the report above said "ended: cleanly".
+_turn_series() { # -> "key turn" per screen, in order
+    local f
+    for f in $(ls "$RUN/logs/screens"/*.txt 2>/dev/null | sort); do
+        sed -n '1s/.*key \([0-9]*\).*turn \([0-9]*\).*/\1 \2/p' "$f"
+    done
+}
+GAMETIME="$(_turn_series)"
+if [ -z "$GAMETIME" ]; then
+    echo "game time:  unknown -- no screen dump carries a turn stamp. Either the"
+    echo "            run made no dumps, or the binary predates the turn field"
+    echo "            in the dump header (src/Wposix.cpp)."
+else
+    echo "$GAMETIME" | awk -f tools/gametime.awk
+fi
+
 if [ -f "$RUN/logs/errors.log" ]; then
     echo "errors:     $(grep -c '^[0-9]' "$RUN/logs/errors.log") logged, distinct messages:"
     grep '^[0-9]' "$RUN/logs/errors.log" | sed 's/^[0-9-]* [0-9:]*  //' | sort | uniq -c |
