@@ -1,0 +1,19 @@
+$ tools/check_stair_warn.sh          # build WITHOUT the fix, 2026-08-22
+FAIL: the descent still asks the player to confirm an unsafe action.
+      On this staircase the square the player would keep is solid, so
+      MoveDepth refuses it and lands her on a random open square
+      instead -- the terrain the message names is one she can never
+      arrive on. This is inc-wcf. The message was:
+        The stair leads to Dungeon Wall. Confirm unsafe action? [yn]    |6576/10000 XP
+FAIL: the character is at 020m after pressing
+      '>' on a down staircase, not 030m. The descent did not happen.
+loaded on depth 2, pressed '>' on the down staircase at (74,70)
+no probe log: this build carries no INCURSION_STAIR_WARN_PROBE, so
+only the screens were read
+depth after the descent: 020m
+note: this session's arrival square is refused by MoveDepth, so it does
+      not exercise a warning that SHOULD fire. See the ponytail note in
+      this script.
+
+Run dir: logs/runs/20260822-125329-66413-stair-warn
+exit=1

@@ -258,6 +258,62 @@ EvReturn Portal::Event(EventInfo &e) {
     }
 }
 
+/* Where a creature arriving on new_m will really stand, given the square it
+   keeps from the level it is leaving. Player::MoveDepth refuses a square that
+   is out of bounds, solid, or part of a vault, and re-rolls a random open one
+   instead; a refused square therefore cannot be named in advance, and this
+   returns false and leaves nx,ny untouched. A safe arrival then steps off a
+   falling square when a neighbour is not one.
+
+   Both the placement in Player::MoveDepth and the descent warning in
+   Portal::Enter go through here, so the square the player is warned about is
+   the square the player gets. They disagreed before: see the upstream note at
+   the warning. */
+static bool ArrivalSquare(Map *new_m, int16 &nx, int16 &ny, bool safe) {
+    int16 i;
+
+    if (!new_m->InBounds(nx, ny) || new_m->SolidAt(nx, ny) ||
+        new_m->At(nx, ny).isVault)
+        return false;
+
+    if (safe && new_m->FallAt(nx, ny))
+        for (i = 0; i != 8; i++)
+            if (!new_m->FallAt(nx + DirX[i], ny + DirY[i])) {
+                nx += DirX[i];
+                ny += DirY[i];
+                break;
+            }
+
+    return true;
+}
+
+/* Diagnostic: set INCURSION_STAIR_WARN_PROBE=1 to record what the descent
+   warning in Portal::Enter decided and what it decided it from -- whether the
+   square the player keeps survives MoveDepth's placement rules, what terrain
+   sits there, whether the terrain itself calls the square unsafe, and whether
+   the player was asked to confirm. tools/check_stair_warn.sh recomputes the
+   rule from these facts, so a warning that fires on a safe square and a
+   warning that never fires at all both show up as a disagreement rather than
+   as a screen somebody has to read. Writes logs/stairwarn.log. */
+static void StairWarnProbe(int16 depth, int16 nx, int16 ny, bool usable,
+                           rID terID, bool unsafe, bool asked) {
+    if (!getenv("INCURSION_STAIR_WARN_PROBE"))
+        return;
+    static FILE *log = NULL;
+    if (!log) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%slogs/stairwarn.log",
+            (const char*)T1->IncursionDirectory);
+        log = fopen(path, "a");
+    }
+    if (!log)
+        return;
+    fprintf(log, "descend from_depth=%d at=%d,%d usable=%d terrain=\"%s\" "
+        "unsafe=%d asked=%d\n", (int)depth, (int)nx, (int)ny, (int)usable,
+        terID ? (const char*)NAME(terID) : "-", (int)unsafe, (int)asked);
+    fflush(log);
+}
+
 EvReturn Portal::Enter(EventInfo &e) {
     int8 DepthMod;
     Map * new_m;
@@ -284,12 +340,53 @@ EvReturn Portal::Enter(EventInfo &e) {
             new_m = theGame->GetDungeonMap(m->dID, m->Depth + DepthMod, e.EPActor, NULL);
             if (new_m != NULL){
                 int16 nx = e.EActor->x, ny = e.EActor->y;
-                /* Out of bounds will result in random placement. Should be safe. HACK ALERT. */
-                if (new_m->InBounds(nx, ny)) {
-                    //if ((TTER(new_m->PTerrainAt(nx,ny,e.EActor))->PEvent(EV_MON_CONSIDER,e.EActor,new_m->TerrainAt(nx,ny)) == ABORT))
-                    if (!e.EActor->yn(XPrint("The stair leads to <Res>. Confirm unsafe action?", new_m->TerrainAt(nx, ny)), true))
+                /* upstream: base-code defect, the fix is ours. Tracked as
+                   inc-wcf. NOT SENT to rmtew. Tier Observed: restoring the
+                   repro save on a down staircase and pressing '>' printed
+                   "The stair leads to Dungeon Wall. Confirm unsafe action?",
+                   and the square named is solid (docs/evidence/inc-wcf/).
+                   It is upstream's and not a port artefact: the prompt, the
+                   commented-out test and MoveDepth's placement are all plain
+                   C++ with no dependence on platform, compiler or type width,
+                   so a Win32 build with the original typedefs prompts the same
+                   way. Run tools/check_stair_warn.sh.
+
+                   The warning asked about every square, and about the wrong
+                   square. It tested only InBounds, because the test that
+                   decided whether the square was unsafe was commented out
+                   above the prompt (rmtew, a731043, 2014-07-15). And the
+                   square it named is one Player::MoveDepth throws away:
+                   MoveDepth refuses a solid or vault square and re-rolls a
+                   random open one, so the one terrain that makes the warning
+                   frightening is the one terrain that guarantees the warning
+                   is wrong. The square now comes from ArrivalSquare, which is
+                   what MoveDepth places with, and the terrain's own
+                   EV_MON_CONSIDER -- the test that was commented out, and the
+                   same one Move.cpp:477 uses to ask a walking player about
+                   deep water -- decides whether to ask at all.
+
+                   A refused square cannot be named: MoveDepth re-rolls it at
+                   random, after this point and with this map's RNG, so there
+                   is nothing honest to put in the message. Saying nothing is
+                   right, because a re-rolled square is never solid. */
+                bool usable = ArrivalSquare(new_m, nx, ny, true);
+                rID terID = usable ? new_m->TerrainAt(nx, ny) : 0;
+                bool unsafe = usable &&
+                    TTER(new_m->PTerrainAt(nx, ny, e.EActor))->PEvent(
+                        EV_MON_CONSIDER, e.EActor, terID) == ABORT;
+                bool asked = false;
+
+                if (unsafe) {
+                    asked = true;
+                    if (!e.EActor->yn(XPrint("The stair leads to <Res>. "
+                            "Confirm unsafe action?", terID), true)) {
+                        StairWarnProbe(m->Depth, nx, ny, usable, terID,
+                            unsafe, asked);
                         return ABORT;
+                    }
                 }
+
+                StairWarnProbe(m->Depth, nx, ny, usable, terID, unsafe, asked);
             }
         }
 
@@ -1268,19 +1365,14 @@ void Player::MoveDepth(int16 NewDepth, bool safe) {
                 SetStatiObj(DWARVEN_FOCUS, -1, NULL);
             }
 
-        while ((!new_m->InBounds(nx, ny)) || new_m->SolidAt(nx, ny) ||
-                new_m->At(nx, ny).isVault)  {
+        /* ArrivalSquare holds both placement rules -- the refusal and the step
+           off a falling square -- so that the descent warning in Portal::Enter
+           can name the square this places the player on without keeping a
+           second copy of them. */
+        while (!ArrivalSquare(new_m, nx, ny, safe))  {
             nx = 2 + random(new_m->SizeX() - 4);
             ny = 2 + random(new_m->SizeY() - 4);
         }
-
-        if (safe && new_m->FallAt(nx, ny))
-            for (i = 0; i != 8; i++)
-                if (!new_m->FallAt(nx + DirX[i], ny + DirY[i])) {
-                    nx += DirX[i];
-                    ny += DirY[i];
-                    break;
-                }
 
         /* Temporary diagnostic: set INCURSION_FALL_CHAIN to a depth, or to
            'all', to steer the arrival square onto a real chasm square already

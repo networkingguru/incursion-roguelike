@@ -1,0 +1,49 @@
+=== Incursion save dump ===
+File:      /Users/brianhill/Scripts/incursion-repro-stairwall/Furious_Fox.sav
+Format:    SF0F7B6EDC
+Name:      Furious_Fox
+HP:        44 / 64
+Position:  (74,70) on The Goblin Caves (dID=16779233), depth 2
+
+=== Map Portals ===
+  Map 128x128, depth 2. Open squares 3522, reachable from the player 3510.
+  Player at (74,70).
+
+  Portal 1: "up stairs" at (46,102)
+    terrain      : "Floor"
+    At().Solid   : false
+    SolidAt()    : false
+    isVault      : false
+    portal Flags : 0x0
+    neighbourhood ('#' solid, '.' open, '@' player):
+      ###
+      #P.
+      ###
+    reachable    : yes, 74 steps from the player
+
+  Portal 2: "up stairs" at (50,19)
+  Portal 5: "down stairs" at (60,83)  [down stairs]
+    terrain      : "Floor"
+    At().Solid   : false
+    SolidAt()    : false
+    isVault      : false
+    portal Flags : 0x0
+    neighbourhood ('#' solid, '.' open, '@' player):
+      ...
+      .P.
+      ...
+    reachable    : yes, 55 steps from the player
+
+  Portal 6: "down stairs" at (74,70)  [down stairs]
+    terrain      : "Floor"
+    At().Solid   : false
+    SolidAt()    : false
+    isVault      : false
+    portal Flags : 0x0
+    neighbourhood ('#' solid, '.' open, '@' player):
+      #.#
+      #@#
+      #.#
+    reachable    : yes, 0 steps from the player
+
+  Portal 7: "down stairs" at (44,27)  [down stairs]

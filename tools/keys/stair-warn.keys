@@ -1,0 +1,37 @@
+# Restore the character who is standing on a down staircase and climb down it.
+# This is the oracle for inc-wcf, the false "The stair leads to <terrain>.
+# Confirm unsafe action?" that fired on every descent. Read the result with
+# tools/check_stair_warn.sh, which stages the save and asserts on what this
+# session leaves behind. This file only plays the session.
+#
+#   tools/check_stair_warn.sh
+#
+# WHY A SAVED CHARACTER AND NOT A GENERATED ONE. The prompt lives in
+# Portal::Enter (src/Feature.cpp), which only a player standing on a real down
+# staircase can reach: '>' is Creature::Descend (src/Skills.cpp), and it looks
+# for a T_PORTAL under the player's own feet. Wizard mode's 'Ascend / Descend
+# Depth' calls MoveDepth directly and never enters the portal, so dive.keys
+# cannot reach this code at all. A blind walk does not get there either --
+# forty rounds of the overview map's own Tab-then-Run explore on six seeds
+# found no down staircase, because the character stays boxed in by locked
+# doors and deep water. The saved character is already on one.
+#
+# [b] is "Restore a Saved Game" on the Initial Choices menu (Game::StartMenu,
+# src/Main.cpp). The character picker prints the name with a SPACE, not the
+# underscore the file uses, so @choose asks for "Furious Fox".
+#
+# The two rests after '>' matter. A descent generates the arrival level, and
+# the screen dumped in the same instant shows the message line and no map;
+# two turns of game time let the arrival settle so the status line carries
+# the new depth. That depth is how the check knows the descent really
+# happened rather than being refused at a prompt.
+
+b
+@choose "Furious Fox"
+@dump:loaded
+
+>
+.*2
+@dump:descend
+
+@quit
