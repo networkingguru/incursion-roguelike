@@ -942,6 +942,31 @@ int32 TextTerm::LMenu(uint16 fl, const char*_title,int8 MWin,const char*help, in
     int16 ch, i,c,p,qk, szCol, Rows, Cols, Width, Height, DY;
     char let[5]; int16 vStart, vRows;
     String title = _title;
+    /* upstream: a menu longer than the alphabet loses every option past it.
+       MenuLetters is 52 letters (36 in the roguelike keyset) padded with
+       spaces, and the draw wrote MenuLetters[min(53,i)] while the keypress
+       resolved through strchr() into the same string. Every option from the
+       53rd on therefore drew "[ ]" and no key could name it: a space is
+       caught by `case ' '` before the strchr, so the pad was never a key.
+       This is base-code, not a port artefact -- the string, the clamp and
+       the strchr are plain C++ with no typedef, no width and no platform
+       call in them, so a Win32 build on the original compiler loses the
+       same options. Observed: a Wood Elf Druid at seed 7 is offered 88
+       feats and cannot take 36 of them -- Natural Aptitude, Skill Focus,
+       Quicken Spell and the "(Show All Feats)" escape hatch among them.
+       Tracked as inc-ysa. NOT sent upstream.
+       Guarded by tools/check_menu_overflow.sh.
+
+       The fix keeps the letters absolute for every menu that fits -- those
+       are unchanged to the byte -- and pages a menu that does not, so each
+       drawn row always carries the letter that selects it. Paging reuses
+       LMenu's own scroll window (vStart/vRows) rather than adding a second
+       mechanism; it only quantises vStart to whole pages so a letter does
+       not change meaning under the cursor. letterCount is measured from the
+       string, so the 36-letter roguelike keyset pages at 36. */
+    int16 letterCount = (int16)strcspn(MenuLetters, " ");
+    bool  paged = OptionCount > letterCount;
+    int16 pageSize;
     if (Mode == MO_RECREATE) {
         ASSERT(strncmp(RInf.Rsp[RInf.cRsp].Question,title,31) == 0);
         LOptionClear();
@@ -971,6 +996,10 @@ Restart:
         if (OptionCount % Cols)
             Rows++;
     vRows = min((fl & MENU_BORDER) ? 32 : 34,Rows);
+    /* A paged menu never draws more rows than it has letters for. */
+    if (paged)
+        vRows = min(vRows, (int16)max(1, letterCount / Cols));
+    pageSize = vRows * Cols;
     vStart = 0;
 
     DY = 0;
@@ -998,14 +1027,14 @@ Restart:
             Width = 4 + szCol * Cols;
         else
             Width = 2 + max(min(45,(int16)strlen(title)),szCol*Cols);
-        Height = vRows + (title ? DY+1 : 0) + 1;
+        Height = vRows + (title ? DY+1 : 0) + 1 + (paged ? 1 : 0);
         if (fl & MENU_LARGEBOX) {
             SetWin(WIN_SCREEN);
             Height = WinSizeY() - 8;
         } else if (fl & MENU_DESC)
             Height += 9;
 
-        if (fl & MENU_DESC) {          
+        if (fl & MENU_DESC) {
             SizeWin(WIN_MENUBOX, Width, Height);
             SetWin(WIN_MENUBOX);
             SizeWin(WIN_MENUDESC,WinLeft(),WinTop()+(Height-9),WinRight(),WinBottom());
@@ -1064,16 +1093,26 @@ Restart:
             SizeWin(WIN_MENUDESC, WinLeft(),min(WinTop()+vRows+DY+1,WinBottom()-5),WinRight(),WinBottom());
         }
 
-        /* center things nicely */ 
-        if (c >= vStart + vRows*Cols)
-            vStart = c - (vRows*Cols-1);
-        if (c < vStart) 
-            vStart = c; 
+        /* center things nicely */
+        if (paged)
+            /* Whole pages only, so a letter keeps its meaning while the
+               page is up. The cursor is the only page state there is. */
+            vStart = (c / pageSize) * pageSize;
+        else {
+            if (c >= vStart + vRows*Cols)
+                vStart = c - (vRows*Cols-1);
+            if (c < vStart)
+                vStart = c;
+        }
 
         SetWin(MWin);
         for (i = vStart; i != min(OptionCount, vStart + vRows*Cols); i++) {
             GotoXY(((i - vStart) / vRows)*szCol, ((i - vStart) % vRows) + DY);
-            let[0] = MenuLetters[min(53, i)];
+            /* Absolute while the alphabet reaches, page-relative once it
+               does not. Either way the index is inside the letters, so the
+               pad at the end of MenuLetters is never drawn as a key. */
+            let[0] = MenuLetters[min((int16)(letterCount - 1),
+                                     (int16)(paged ? i - vStart : i))];
             let[1] = 0;
             if (fl & MENU_QKEY)
                 for (qk=0;qk!=MAX_QKEYS;qk++)
@@ -1100,6 +1139,15 @@ Restart:
                 Color(GREY);
                 Write(Format("  [%s] %.*s", let, szCol - 5, (const char*)Option[i].Text));
             }
+        }
+        /* Say so. A page that hid two thirds of the list without a word
+           would read exactly like the defect this replaces. */
+        if (paged && DY + vRows < WinSizeY()) {
+            GotoXY(0, DY + vRows);
+            Color(EMERALD);
+            Write(Format("  %d-%d of %d  [TAB] next page",
+                vStart + 1, min(OptionCount, vStart + pageSize), OptionCount));
+            Color(GREY);
         }
         if (fl & MENU_DESC) {
             ClearScroll();
@@ -1160,7 +1208,17 @@ InvalidChar:
         case KY_CMD_EAST:
             if (c + vRows <= min(OptionCount-1,vStart+(vRows*Cols-1)))
                 c += vRows;
-            break;   
+            break;
+        case KY_TAB:
+            /* Next page, wrapping. Only a paged menu has one, and TAB is
+               free in this switch. PGUP/PGDN are not: they already scroll
+               the description pane above (KY_CMD_NORTHEAST/SOUTHEAST). */
+            if (paged) {
+                c += pageSize - (c % pageSize);
+                if (c >= OptionCount)
+                    c = 0;
+            }
+            break;
         case KY_ENTER:
             Restore();
             OptionCount=0;
@@ -1214,21 +1272,35 @@ InvalidChar:
                         c = i; 
                         break; 
                     } 
-            } else { 
-                if (strchr(MenuLetters,ch) == NULL)
+            } else {
+                const char *hit = strchr(MenuLetters, ch);
+                int16 pick;
+
+                /* The pad at the end of MenuLetters is not a key. Space
+                   never gets this far -- `case ' '` above eats it -- but a
+                   letter that is not in the roguelike set must not resolve
+                   into the pad either. */
+                if (hit == NULL || (int16)(hit - MenuLetters) >= letterCount)
                     goto InvalidChar;
-                if (strchr(MenuLetters,ch) - MenuLetters >= OptionCount)
+                pick = (int16)(hit - MenuLetters);
+                /* One page's letters name that page's options, and nothing
+                   past its last row. */
+                if (paged) {
+                    if (pick >= pageSize)
+                        goto InvalidChar;
+                    pick += vStart;
+                }
+                if (pick >= OptionCount)
                     goto InvalidChar;
 
                 Restore();
                 OptionCount = 0;
                 if (Mode == MO_CREATE) {
                     strncpy(RInf.Rsp[RInf.nRsp].Question,title,31);
-                    RInf.Rsp[RInf.nRsp].Answer =
-                        Option[strchr(MenuLetters,ch)-MenuLetters].Val;
+                    RInf.Rsp[RInf.nRsp].Answer = Option[pick].Val;
                     RInf.nRsp++;
-                }              
-                return Option[strchr(MenuLetters,ch)-MenuLetters].Val;
+                }
+                return Option[pick].Val;
             }
         }
     } while(1);

@@ -1,0 +1,56 @@
+# Take the feat a menu longer than the alphabet used to hide: inc-ysa.
+#
+# A Wood Elf Druid at seed 7 is offered 88 feats. TextTerm::LMenu draws a
+# selection letter beside each one, and it has 52 to give (a-z then A-Z), so
+# 36 of those feats used to be drawn "[ ]" and no keypress could name them.
+# Natural Aptitude was one of them.
+#
+# WHY THIS CHARACTER. Metamagic is what pushes the list past the alphabet, so
+# a full spellcaster is the shortest route to the defect; a fighter's list is
+# short enough to fit. A druid also gets his feats at first level, before any
+# levelling is needed, and Natural Aptitude asks a second question -- "Choose
+# a skill:" -- which proves the menu really returned that feat and not its
+# neighbour.
+#
+# WHAT MAKES IT AN ORACLE. @choose reads the letter the game has just printed
+# beside the name and presses it. On a build with the defect there is no
+# letter to read, so @choose refuses and the run ends with exit 6. It cannot
+# quietly press the wrong key and pass.
+#
+# TAB is the page key. It exists only on a menu that overflows, and @until
+# sends it no more than it must: on a build with the defect the name is
+# already on screen (all 88 are drawn, 36 of them unselectable) so no TAB is
+# sent at all, and the failure that follows is the missing letter and nothing
+# else.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Elf"
+@choose "Wood Elf"
+@choose "Druid"
+a       # Attributes: the first of the offered sets
+e       # Alignment: [e] Neutral. Nine fixed entries, so the letter is safe,
+        #   and "Neutral" by name would match four of them.
+
+@expect "Choose a feat"
+@until "Natural Aptitud" TAB     # the menu truncates the name to the column
+@choose "Natural Aptitude"
+@expect "Choose a skill"
+@choose "Alchemy"                # a skill no druid carries, so the sheet
+                                 #   showing it is the feat having worked
+
+@while "Choose a feat" a         # whatever else the class asks for
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y                          # Done, and confirm keeping the ranks
+a                                # Personality archetype
+@while "Choose a feat" a
+a a a a                          # starting spells
+
+@until "Entry Chamber" ESC       # in play
+d                                # character sheet
+@until "Natural Aptitude" PGDN   # scroll to the Feats block
+@dump:sheet-feats
+ESC
+@quit
