@@ -1020,7 +1020,25 @@ DisbeliefMessageDone:
         if (e.isActivation != te->HasFlag(EF_ACTIVATE+min(e.efNum,4)))
             goto SkipSegment;
 
+        /* upstream: base-code defect, fix is ours. Tier Observed -- a leave or
+           an unwield UNDOES what an enter or a wield applied (Magic::Grant and
+           Magic::Inflict both open with an isRemove/isLeave branch that only
+           calls RemoveEffStati). Testing immunity on that pass asks the wrong
+           question: it decides whether the effect may be APPLIED, and the
+           answer is irrelevant to taking it away. A creature that becomes
+           immune while standing in a field -- by gaining a resistance, by
+           being polymorphed, or, as here, by becoming friendly to the field's
+           caster -- was refused the removal and kept a permanent stati it
+           could never shed. Seen directly: adding EF_ALLIES_IMMUNE to Spook
+           (inc-9mhh) made a tamed caster's -2 stick to its master for ever,
+           with 'You are unaffected.' printed on the way out. Only EA_GRANT and
+           AR_MFIELD segments reach this on a leave (see the filter at
+           Magic.cpp:714), so no blast or save is skipped by this. The defect
+           is upstream's: plain control flow, no dependence on integer width,
+           the typedefs or the compiler. Tracking inc-9mhh. Not sent. */
         e.Immune = e.MagicRes || doResistDeath || !isTarget(e,e.ETarget);
+        if (e.isLeave || e.isRemove)
+            e.Immune = false;
 
         /* Changed to accomidate Magic C vs. E */
         if (e.Immune)

@@ -744,7 +744,11 @@ class Thing: public Object
       void PlaceOpen(Map* _m)
         { uint16 xy = _m->GetOpenXY();
           PlaceAt(_m,xy%256,xy/256); }
-      virtual void Remove(bool isDelete);
+      /* keepMobileFields spares the mobile fields this Thing created, for the
+         one caller that takes a creature off the map without it going
+         anywhere: Creature::Mount. Size fields are never spared -- a carried
+         body fills no squares of its own. See bd inc-izzy. */
+      virtual void Remove(bool isDelete, bool keepMobileFields = false);
       virtual void NotifyGone(hObj h);
       void BoostRetry(int16 sk, Creature *c);
       Thing* ProjectDir(Dir d, int8 range=127)

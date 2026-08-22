@@ -408,11 +408,23 @@ and EA_INFLICT
 
 /* Endure Fire / Cold / Acid / Lightning / Poison under Wiz Spells */
 
+/* upstream: base-code defect, fix is ours. Tier Traced -- the engine's own
+   one-at-a-time summon limiter, EF_XSUMMON (src/Effects.cpp:1371-1379),
+   is set on the wizard summoning line and on Dust Devil, Spiritual Hammer
+   and Flaming Sphere, but on no rank of holy summoning. The omission is
+   upstream's: lib/ is unchanged by the port, and a Win32 build reads the
+   same missing Flags clause. It matters here because Incursion replaced
+   Vancian spell slots with a regenerating mana pool, which deleted the
+   only other brake on repeat summoning. Tracking inc-j6ni. Not sent. */
 Priest Spell "Holy Summoning I" : EA_SUMMON
   { SC_WEA; Base: SP_MEDIUM; Cost: 3; Level: 1; qval: Q_LOC;
     Purpose: EP_SUMMON; rval: $"Holy Summons"; pval: 1; 
+    Flags: EF_XSUMMON;
     Desc: "Summons an outsider of CR 1 to fight in the 
-      caster's name.";  
+      caster's name. The caster can have only one creature summoned
+      with this spell at a time, though other summoning spells are
+      unaffected.";  
+    On Event MSG_XSUMMON "The outsider you called before still serves you.";
     ALIENIST_CLAUSE(1) }
 
 Priest Spell "Inflict Light Wounds" : EA_BLAST
@@ -1074,11 +1086,23 @@ Wizard / Druid  Spell "Obscurement" : EA_INFLICT
   } 
 
 
+/* upstream: base-code defect, fix is ours. Tier Traced -- the engine's own
+   one-at-a-time summon limiter, EF_XSUMMON (src/Effects.cpp:1371-1379),
+   is set on the wizard summoning line and on Dust Devil, Spiritual Hammer
+   and Flaming Sphere, but on no rank of summon nature's ally. The omission is
+   upstream's: lib/ is unchanged by the port, and a Win32 build reads the
+   same missing Flags clause. It matters here because Incursion replaced
+   Vancian spell slots with a regenerating mana pool, which deleted the
+   only other brake on repeat summoning. Tracking inc-j6ni. Not sent. */
 Druid Spell "Summon Nature's Ally I" : EA_SUMMON
   { SC_WEA; Base: SP_MEDIUM; Cost: 2; Level: 1; qval: Q_LOC;
     Purpose: EP_SUMMON; rval: $"Nature's Ally"; pval: 1; 
+    Flags: EF_XSUMMON;
     Desc: "Summons a natural creature of CR 1 to fight in the 
-      caster's name.";  
+      caster's name. The caster can have only one creature summoned
+      with this spell at a time, though other summoning spells are
+      unaffected.";  
+    On Event MSG_XSUMMON "The creature you called before still serves you.";
     ALIENIST_CLAUSE(1) }
     
 Druid / Sorcerer Spell "Pass without Trace" : EA_INFLICT
@@ -1834,11 +1858,16 @@ Priest Spell "Find Traps" : EA_INFLICT
   */
 
 
+// upstream: same omission as the mark on rank I. inc-j6ni, Traced, not sent.
 Priest Spell "Holy Summoning II" : EA_SUMMON
   { SC_WEA; Base: SP_MEDIUM; Cost: 5; Level: 2; qval: Q_LOC;
     Purpose: EP_SUMMON; rval: $"Holy Summons"; pval: 2; 
+    Flags: EF_XSUMMON;
     Desc: "Summons an outsider of CR 2 to fight in the 
-      caster's name.";  
+      caster's name. The caster can have only one creature summoned
+      with this spell at a time, though other summoning spells are
+      unaffected.";  
+    On Event MSG_XSUMMON "The outsider you called before still serves you.";
     ALIENIST_CLAUSE(2) }
 
 
@@ -2461,11 +2490,16 @@ Druid Spell "Forestation" : EA_TERRAFORM
       "A grove of trees appears!";
   }
 
+// upstream: same omission as the mark on rank I. inc-j6ni, Traced, not sent.
 Druid Spell "Summon Nature's Ally II" : EA_SUMMON
   { SC_WEA; Base: SP_MEDIUM; Cost: 4; Level: 2; qval: Q_LOC;
     Purpose: EP_SUMMON; rval: $"Nature's Ally"; pval: 2; 
+    Flags: EF_XSUMMON;
     Desc: "Summons a natural creature of CR 2 to fight in the 
-      caster's name.";  
+      caster's name. The caster can have only one creature summoned
+      with this spell at a time, though other summoning spells are
+      unaffected.";  
+    On Event MSG_XSUMMON "The creature you called before still serves you.";
     ALIENIST_CLAUSE(2) }
 
 Item "produced flame" : T_WEAPON
@@ -2916,11 +2950,16 @@ Priest  Spell "Glyph of Warding" : EA_TERRAFORM
     On Event MSG_CAST
       "A strange rune materializes on the ground."; }
 
+// upstream: same omission as the mark on rank I. inc-j6ni, Traced, not sent.
 Priest Spell "Holy Summoning III" : EA_SUMMON
   { SC_WEA; Base: SP_MEDIUM; Cost: 7; Level: 3; qval: Q_LOC;
     Purpose: EP_SUMMON; rval: $"Holy Summons"; pval: 3; 
+    Flags: EF_XSUMMON;
     Desc: "Summons an outsider of CR 3 to fight in the 
-      caster's name.";  
+      caster's name. The caster can have only one creature summoned
+      with this spell at a time, though other summoning spells are
+      unaffected.";  
+    On Event MSG_XSUMMON "The outsider you called before still serves you.";
     ALIENIST_CLAUSE(3) }
 
 
@@ -3299,11 +3338,16 @@ Druid Spell "Waterspout" : EA_BLAST
     MSG_BLASTNAME "waterspout";
   }
 
+// upstream: same omission as the mark on rank I. inc-j6ni, Traced, not sent.
 Druid Spell "Summon Nature's Ally III" : EA_SUMMON
   { SC_WEA; Base: SP_MEDIUM; Cost: 6; Level: 3; qval: Q_LOC;
     Purpose: EP_SUMMON; rval: $"Nature's Ally"; pval: 3; 
+    Flags: EF_XSUMMON;
     Desc: "Summons a natural creature of CR 3 to fight in the 
-      caster's name.";  
+      caster's name. The caster can have only one creature summoned
+      with this spell at a time, though other summoning spells are
+      unaffected.";  
+    On Event MSG_XSUMMON "The creature you called before still serves you.";
     ALIENIST_CLAUSE(3) }
 
 /* Copied directly from Phantom Steed, with changes to the
@@ -3842,11 +3886,16 @@ Priest / Druid / Sorcerer Spell "Free Action;spell" : EA_INFLICT
       * SERVICE_SPELL_COST 450;    
     } 
 
+// upstream: same omission as the mark on rank I. inc-j6ni, Traced, not sent.
 Priest Spell "Holy Summoning IV" : EA_SUMMON
   { SC_WEA; Base: SP_MEDIUM; Cost: 9; Level: 4; qval: Q_LOC;
     Purpose: EP_SUMMON; rval: $"Holy Summons"; pval: 4; 
+    Flags: EF_XSUMMON;
     Desc: "Summons an outsider of CR 4 to fight in the 
-      caster's name.";  
+      caster's name. The caster can have only one creature summoned
+      with this spell at a time, though other summoning spells are
+      unaffected.";  
+    On Event MSG_XSUMMON "The outsider you called before still serves you.";
     ALIENIST_CLAUSE(4) }
 
 
@@ -4080,11 +4129,16 @@ Druid / Sorcerer Spell "Repel Vermin" : EA_GENERIC
     Desc: "Evokes a 30 foot (3 square) radius globe around you
       into which vermin (spiders, snakes, insects, etc.) may not enter."; }
 
+// upstream: same omission as the mark on rank I. inc-j6ni, Traced, not sent.
 Druid Spell "Summon Nature's Ally IV" : EA_SUMMON
   { SC_WEA; Base: SP_MEDIUM; Cost: 8; Level: 4; qval: Q_LOC;
     Purpose: EP_SUMMON; rval: $"Nature's Ally"; pval: 4; 
+    Flags: EF_XSUMMON;
     Desc: "Summons a natural creature of CR 4 to fight in the 
-      caster's name.";  
+      caster's name. The caster can have only one creature summoned
+      with this spell at a time, though other summoning spells are
+      unaffected.";  
+    On Event MSG_XSUMMON "The creature you called before still serves you.";
     ALIENIST_CLAUSE(4) }
 
 Druid Spell "Control Plant" : EA_INFLICT
@@ -4566,11 +4620,16 @@ Priest Spell "Slay Living" : EA_DRAIN
       "The <EActor>'s hands glow with a black aura.";
 	}
 
+// upstream: same omission as the mark on rank I. inc-j6ni, Traced, not sent.
 Priest Spell "Holy Summoning V" : EA_SUMMON
   { SC_WEA; Base: SP_MEDIUM; Cost: 11; Level: 5; qval: Q_LOC;
     Purpose: EP_SUMMON; rval: $"Holy Summons"; pval: 5; 
+    Flags: EF_XSUMMON;
     Desc: "Summons an outsider of CR 5 to fight in the 
-      caster's name.";  
+      caster's name. The caster can have only one creature summoned
+      with this spell at a time, though other summoning spells are
+      unaffected.";  
+    On Event MSG_XSUMMON "The outsider you called before still serves you.";
     ALIENIST_CLAUSE(5) }
       
 Priest Spell "Righteous Might" : EA_INFLICT
@@ -4640,11 +4699,16 @@ Desc: "Turns aside the claw attacks of animals, humanoids and monsters
         of damage that would normally be taken from such attacks.";
   }
 
+// upstream: same omission as the mark on rank I. inc-j6ni, Traced, not sent.
 Druid Spell "Summon Nature's Ally V" : EA_SUMMON
   { SC_WEA; Base: SP_MEDIUM; Cost: 10; Level: 5; qval: Q_LOC;
     Purpose: EP_SUMMON; rval: $"Nature's Ally"; pval: 5; 
+    Flags: EF_XSUMMON;
     Desc: "Summons a natural creature of CR 5 to fight in the 
-      caster's name.";  
+      caster's name. The caster can have only one creature summoned
+      with this spell at a time, though other summoning spells are
+      unaffected.";  
+    On Event MSG_XSUMMON "The creature you called before still serves you.";
     ALIENIST_CLAUSE(5) }
 
 Druid Spell "Corrupt Animal" : EA_GENERIC
@@ -5114,11 +5178,16 @@ Item "fire seeds" : T_WEAPON
       };
   }
 
+// upstream: same omission as the mark on rank I. inc-j6ni, Traced, not sent.
 Druid Spell "Summon Nature's Ally VI" : EA_SUMMON
   { SC_WEA; Base: SP_MEDIUM; Cost: 12; Level: 6; qval: Q_LOC;
     Purpose: EP_SUMMON; rval: $"Nature's Ally"; pval: 6; 
+    Flags: EF_XSUMMON;
     Desc: "Summons a natural creature of CR 6 to fight in the 
-      caster's name.";  
+      caster's name. The caster can have only one creature summoned
+      with this spell at a time, though other summoning spells are
+      unaffected.";  
+    On Event MSG_XSUMMON "The creature you called before still serves you.";
     ALIENIST_CLAUSE(6) }
 
 /*
@@ -5534,11 +5603,16 @@ and EA_HEALING
   { xval: HEAL_FATIGUE; }
       
 
+// upstream: same omission as the mark on rank I. inc-j6ni, Traced, not sent.
 Priest Spell "Holy Summoning VI" : EA_SUMMON
   { SC_WEA; Base: SP_MEDIUM; Cost: 13; Level: 6; qval: Q_LOC;
     Purpose: EP_SUMMON; rval: $"Holy Summons"; pval: 6; 
+    Flags: EF_XSUMMON;
     Desc: "Summons an outsider of CR 6 to fight in the 
-      caster's name.";  
+      caster's name. The caster can have only one creature summoned
+      with this spell at a time, though other summoning spells are
+      unaffected.";  
+    On Event MSG_XSUMMON "The outsider you called before still serves you.";
     ALIENIST_CLAUSE(6) }
 
 Wizard / Priest Spell "Undeath to Death" : EA_BLAST

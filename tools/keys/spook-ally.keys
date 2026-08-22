@@ -1,0 +1,78 @@
+# Does a tamed Spook caster still demoralize its own master?
+#
+# bd inc-9mhh. Spook is a mobile field centred on its caster, radius 3, that
+# gives every creature inside it a -2 morale penalty to all rolls
+# (lib/wspells.irh:967-976). It carries EF_CASTER_IMMUNE, so the caster is
+# spared, and it does NOT carry EF_ALLIES_IMMUNE, so everyone on the caster's
+# own side is not. A night hunter taken as a companion therefore stands beside
+# its master and holds him at -2 for as long as it lives, and the penalty is
+# permanent because the field is EF_PERSISTANT.
+#
+# THE ORACLE is the character sheet's Hit line, which prints the morale term.
+# The run measures four states in order, and the first of them is the control:
+#
+#   1 no bat                       Hit 6
+#   2 a HOSTILE night hunter       Hit 4    <- must stay 4 after any fix
+#   3 the same bat, tamed, and the player walked out of its radius   Hit 6
+#   4 walked back in, still tamed  Hit 4 before the fix, 6 after
+#
+# State 2 is what stops a "fix" that merely switches the spell off from
+# passing. State 3 proves the walk really leaves the field, so state 4 is a
+# fresh entry and not a stale stati nobody recomputed.
+#
+# Freeze Monsters is on so the bat neither attacks nor follows. It still
+# raises its aura, because Monster::Initialize runs PreBuff when the creature
+# is created, not on its turn.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Explore Mode -- yes
+i       # Race:  [i] Orc
+a       # Subrace: [a] Orc (Standard)
+j       # Class: [j] Warrior -- a class with Ride and no spell menus
+a       # Attributes: the first offered set
+c       # Alignment: [c] Neutral
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "wish to worship" y
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+a       # Personality archetype
+@until "Things in View" ESC
+
+@dump:no-bat
+
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+# The list draws no cursor a screen dump can see, so this counts rows:
+# Freeze Monsters is the eleventh, and the cursor opens on the first.
+DOWN*10
+SPACE   # Freeze Monsters: NO -> YES
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Bats"
+@choose "night hunter"
+RIGHT ENTER
+@dump:hostile-bat
+
+w
+@choose "Make Player Master of Monster"
+RIGHT ENTER
+
+# Out of the radius, then back into it. Four squares is past a radius of 3.
+LEFT LEFT LEFT LEFT LEFT
+@dump:walked-away
+RIGHT RIGHT RIGHT RIGHT RIGHT
+@dump:walked-back
+
+@quit

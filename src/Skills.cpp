@@ -4293,13 +4293,22 @@ EvReturn Creature::Mount(EventInfo &e) {
 		}
 	}
 
-	e.EVictim->Remove(false);
+	/* The animal is going under you, not away. Keep the auras it is emitting
+	   (see the mark in Thing::Remove) and re-centre them on the square the two
+	   of you now share. MoveField notifies only the creatures that actually
+	   cross the edge, so a mount that raised an aura and was then ridden does
+	   not spray field-on and field-off messages over everyone in range. */
+	e.EVictim->Remove(false, true);
 	e.EVictim->x = x;
 	e.EVictim->y = y;
 	e.EVictim->m = m;
 	e.EVictim->GainPermStati(MOUNT, e.EActor, SS_MISC, 0, 0);
 	e.EVictim->RemoveStati(HIDING);
 	e.EActor->GainPermStati(MOUNTED, e.EVictim, SS_MISC, 0, 0);
+	for (int16 fi = 0; m->Fields[fi]; fi++)
+		if (m->Fields[fi]->Creator == e.EVictim->myHandle)
+			if (m->Fields[fi]->FType & FI_MOBILE)
+				m->MoveField(m->Fields[fi], x, y, false);
 	//Throw(EV_INIT_FIELDS,e.EVictim);
 	if (e.EVictim->ts.getLeader() != e.EActor) {
 		/* VERY IMPORTANT CORRECTION -- add the mount target only if

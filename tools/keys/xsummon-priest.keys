@@ -1,0 +1,86 @@
+# Prove that a priest cannot stack summons from one summoning spell.
+#
+# THE DEFECT (bd inc-j6ni). The engine carries its own one-at-a-time summon
+# limiter: Magic::Summon aborts a cast when the caster still holds a live
+# creature summoned by the SAME effect, but only for an effect flagged
+# EF_XSUMMON (src/Effects.cpp:1371-1379). The wizard summoning line sets that
+# flag. Holy Summoning I through VI and Summon Nature's Ally I through VI set
+# no Flags clause at all, so a priest or druid could recast without limit --
+# which is what Brian met in play on 2026-08-22, from a monster priest sitting
+# behind Sanctuary.
+#
+# THE ORACLE is the spell's own refusal message, "The outsider you called
+# before still serves you.", thrown as MSG_XSUMMON by the abort path and by
+# nothing else. It appears on the SECOND cast and not on the first. On a module
+# compiled from the pre-fix lib/pspells.irh the second cast summons a second
+# outsider and says nothing.
+#
+# WHY WIZARD MODE. Two switches, and each removes a reason the run could fail
+# for something other than the thing measured:
+#   * Learn Any Spell puts Holy Summoning I in the book whatever god the seed
+#     gave this priest, and whatever four spells generation offered.
+#   * Infinite Mana keeps the second cast from being refused for 3 mana
+#     (src/Magic.cpp:2567) before it ever reaches the summon guard.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+i       # Race:     [i] Orc
+a       # Subrace:  [a] Orc (Standard)
+g       # Class:    [g] Priest
+a       # Attributes: the first of the five offered sets
+c       # Alignment: [c] Neutral
+a       # First feat
+a       # Second feat
+
+# The Skill Manager, three times -- once for the class pool, once for the pool
+# that follows the choice of god, and once more. The conditionals are copied
+# from chargen-priest.keys, where the reasons are written out: the domain
+# prompt and the size of the rank pool both vary with the god.
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+
+y       # Do you wish to worship <god>? -- yes
+
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+
+a a
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+
+a       # Personality archetype
+a a a a # Four starting spells
+
+ESC     # dismiss the arrival-room description; now in play
+
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+# The switch list draws no cursor a screen dump can see, so this counts rows
+# instead: Infinite Mana is the eighth, and the cursor opens on the first.
+DOWN*7
+SPACE   # Infinite Mana: NO -> YES
+ESC
+
+w
+@choose "Learn Any Spell"
+"Holy Summoning I" ENTER
+
+# FIRST CAST. It must succeed, or the second proves nothing.
+@until "HP:" ESC
+m
+@choose "Holy Summoning I"
+RIGHT ENTER    # aim one square east of the caster; his own square is refused
+@dump:cast1
+
+# SECOND CAST, on the next turn, while the first outsider is still alive.
+m
+@choose "Holy Summoning I"
+RIGHT ENTER    # aim one square east of the caster; his own square is refused
+@dump:cast2
+
+@quit

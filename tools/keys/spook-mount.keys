@@ -1,0 +1,127 @@
+# Does a mount keep its own aura when you climb on it?
+#
+# bd inc-izzy item 2. Spook is a mobile field centred on its caster
+# (lib/wspells.irh:967-976). A night hunter that a player has tamed stands on
+# the map and holds its aura. Creature::Mount (src/Skills.cpp:4310) takes the
+# steed off the map with Remove(false) before it sets the MOUNT stati, and
+# Thing::Remove destroys every mobile field created by the thing it removes
+# (src/Display.cpp:1968-1973). So climbing on kills the aura the animal is
+# still emitting from underneath you.
+#
+# A second defect lives at the other end of the same journey. Thing::PlaceAt
+# carries a mount's fields to the new level but re-creates them under the
+# RIDER's name, so the aura changes hands at every staircase.
+#
+# THE ORACLES are the character sheet's Hit line, which prints the morale
+# term, and the dismiss menu ('x'), which lists a field only when the player
+# is its recorded creator (src/Skills.cpp:398). Three states, in order:
+#
+#   1 tamed bat beside the player, on foot   Hit 4, "Spook" on the status line
+#   2 the same bat, now ridden               Hit 7 and no Spook before the fix,
+#                                            Hit 5 and Spook after it
+#   3 dismounted, stepped out of the radius  Hit 6 and no Spook
+#     and back in
+#   4 mounted again after that               Hit 7 and no Spook
+#   5 one staircase later, still ridden      the dismiss menu offers "Drop
+#                                            Spook" before the fix and only
+#                                            "Dismount" after it
+#
+# READ STATES 3 AND 4 FIRST. They are the ones that describe play. A night
+# hunter you own must never demoralize you, on foot or in the saddle, and
+# these two states are what says so.
+#
+# The -2 in states 1 and 2 is an artefact of how this run gets its bat. Wizard
+# mode summons it HOSTILE, it spooks the player, and Make Player Master of
+# Monster then tames it -- and taming does not scrub a penalty already taken.
+# So the player walks into state 1 carrying a debt from before the bat was
+# his. That debt is the only witness available to the aura's survival across
+# the climb: he is immune on entry, so an aura that is alive and an aura that
+# is gone look identical on his sheet unless he was already carrying one.
+# States 3 and 4 clear the debt by stepping out and back in, and they read 6
+# and 7 -- no penalty either way.
+#
+# State 1 is also the control. It must keep its -2 after any fix, or the "fix"
+# merely stopped the bat casting. The "Dismount" row is the control for state
+# 5: it proves the menu drew at all. State 5 reads the menu rather than a
+# number because by then the player is immune and his sheet says nothing.
+#
+# Freeze Monsters is on so the bat neither attacks nor wanders off. It still
+# raises its aura, because Monster::Initialize runs PreBuff at creation.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Explore Mode -- yes
+i       # Race:  [i] Orc
+a       # Subrace: [a] Orc (Standard)
+j       # Class: [j] Warrior -- a class with Ride and no spell menus
+a       # Attributes: the first offered set
+c       # Alignment: [c] Neutral
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "wish to worship" y
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+a       # Personality archetype
+@until "Things in View" ESC
+
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN*10 # Freeze Monsters is the eleventh row; the cursor opens on the first
+SPACE   # Freeze Monsters: NO -> YES
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Bats"
+@choose "night hunter"
+RIGHT ENTER
+
+w
+@choose "Make Player Master of Monster"
+RIGHT ENTER
+SPACE   # flush the message line, so the next command is not eaten by it
+
+# The player stands inside the bat's aura, on foot.
+@dump:on-foot
+
+# Climb on. The bat is one square to the right.
+y
+@choose "Mount"
+RIGHT ENTER
+@dump:mounted
+
+# Get off, step out of the radius and back in, then get on again. Re-entry is
+# the state that matters to a player: the bat is his now, so EF_ALLIES_IMMUNE
+# must spare him, on foot and mounted alike.
+x
+@choose "Dismount"
+SPACE
+LEFT LEFT LEFT LEFT LEFT
+RIGHT RIGHT RIGHT RIGHT RIGHT
+@dump:re-entered
+y
+@choose "Mount"
+RIGHT ENTER
+@dump:mounted-clean
+
+# Now change level. The rider carries the animal, and the animal's aura with
+# it. Thing::PlaceAt used to hand that aura to the rider on the way.
+w
+@choose "Ascend / Descend Depth"
+2
+ENTER
+SPACE
+SPACE
+x
+@dump:dismiss-after-stairs
+ESC
+
+@quit

@@ -66,7 +66,9 @@ class Item: public Thing, public Magic
           return oThing(Parent)->isCreature() ? 
             oCreature(Parent) : oItem(Parent)->Owner(); }
       virtual Thing* GetParent() { return oThing(Parent); }
-      virtual void Remove(bool isDelete);
+      /* The signature must track Thing::Remove exactly, or this stops being an
+         override and item removal silently runs the base body instead. */
+      virtual void Remove(bool isDelete, bool keepMobileFields = false);
       virtual rID  GetCurrentRegion();
       virtual rID  GetHomeRegion() { return homeID; }
       virtual bool isActivatable();

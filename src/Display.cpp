@@ -35,8 +35,8 @@
      Thing* Thing::ProjectTo(int16 tx, int16 ty, int8 range)
      void Thing::Show()
      EvReturn Thing::Event(EventInfo &e)
-     void Thing::Remove(bool isDelete)
-     void Item::Remove(bool isDelete)
+     void Thing::Remove(bool isDelete, bool keepMobileFields)
+     void Item::Remove(bool isDelete, bool keepMobileFields)
 
 */ 
 
@@ -319,9 +319,30 @@ void Thing::PlaceAt(Map*_m,int16 _x,int16 _y, bool share_square)
           }
 
     if (isCreature() && m) {
-      for(i=0;i!=fc;i++)
+      /* upstream: base-code defect, the fix is ours. Tier Traced -- the
+         harvest above collects fields created by this creature OR BY ITS
+         MOUNT (line 234), and this line re-created every one of them with
+         the RIDER as creator. So a steed's aura changed hands at every
+         staircase. Three things follow, and all three were reported from
+         play: the rider stops being affected, because the spell spares its
+         own caster and the caster is now him; the steed starts being
+         affected, because it no longer counts as the caster; and the steed
+         recasts without end, because the guard that asks "is my aura already
+         up?" looks for a field IT created (src/Monster.cpp:2350,
+         src/Magic.cpp:2362) and every one of them now names the rider. The
+         count grows by one per level, which is where four Spook rows in one
+         dismiss menu came from (src/Skills.cpp:398 lists only the player's
+         own fields). Upstream's rather than the port's: plain control flow,
+         no dependence on integer width, the typedefs or the compiler.
+         Tracking inc-izzy. Not sent. */
+      for(i=0;i!=fc;i++) {
+        Creature *fCreator = (Creature*)this;
+        if (MyFields[i].Creator && theRegistry->Exists(MyFields[i].Creator) &&
+            oThing(MyFields[i].Creator)->isCreature())
+          fCreator = (Creature*)oThing(MyFields[i].Creator);
         m->NewField(MyFields[i].FType,x,y,MyFields[i].rad,MyFields[i].Image,
-          MyFields[i].Dur, MyFields[i].eID,(Creature*)this);
+          MyFields[i].Dur, MyFields[i].eID,fCreator);
+      }
       if (thisc->HasAbility(CA_AURA_OF_VALOUR)) {
         rID vID = FIND("Aura of Valour");
         ASSERT(vID);
@@ -1915,7 +1936,7 @@ EvReturn Thing::Event(EventInfo &e) {
     return ERROR;
 }
 
-void Thing::Remove(bool isDelete) {
+void Thing::Remove(bool isDelete, bool keepMobileFields) {
     int16 ox = x, oy = y,i; Thing *th;
     Creature *mount;
 
@@ -1964,10 +1985,32 @@ FoundAndRemoved2:
         SetImage();
     }
 
+    /* upstream: base-code defect, the fix is ours. Tier Observed -- a creature
+       that is taken up as a mount leaves the map through this function, so its
+       aura is destroyed the moment you climb on. Creature::Mount calls
+       Remove(false) to unlink the animal from the map's lists
+       (src/Skills.cpp:4310), and this sweep cannot tell that from a creature
+       walking off the level. Measured on seed 5: a tamed night hunter holds
+       its rider at Hit 4 on foot and Hit 7 once ridden, and the dismiss menu
+       loses its Spook row. The engine's own intent is the other way -- both
+       Thing::Move (line 1685) and Thing::PlaceAt (line 234) deliberately carry
+       a field created by the mover OR ITS MOUNT, and the comment at line 307
+       admits the gap: "Temporary assumption: mounts don't emit mobile fields.
+       This is a very, very shaky assumption (dragons casting Spook, etc.)".
+       Upstream's rather than the port's: plain control flow, no dependence on
+       integer width, the typedefs or the compiler. Tracking inc-izzy. Not
+       sent.
+       A size field is never spared. It marks the squares a body fills, and a
+       body being carried fills none of its own; keeping one would make
+       Map::MoveField try to fit a Huge mount's footprint around its rider. */
     if (m)
         for (i=0;m->Fields[i];i++)
             if (m->Fields[i]->Creator == myHandle || (mount && m->Fields[i]->Creator == mount->myHandle))
                 if (isDelete || m->Fields[i]->FType & FI_MOBILE) {
+                    if (keepMobileFields && !isDelete &&
+                        (m->Fields[i]->FType & FI_MOBILE) &&
+                        !(m->Fields[i]->FType & FI_SIZE))
+                        continue;
                     m->RemoveField(m->Fields[i]);
                     i--;
                 }
@@ -2048,7 +2091,7 @@ SkipQueueAdd:;
     }
 }
 
-  void Item::Remove(bool isDelete) {
+  void Item::Remove(bool isDelete, bool keepMobileFields) {
       int16 i; Character *c; Monster *m; String str;
       if (Parent) {
           if (oThing(Parent)->isCreature()) {
@@ -2115,7 +2158,7 @@ SkipQueueAdd:;
 NoMoreParent:
       IFlags &= ~IF_WORN;
       RemoveEffStati(FIND("soulblade"));
-      Thing::Remove(isDelete);
+      Thing::Remove(isDelete, keepMobileFields);
   }
 
 void Creature::DoEngulf(Creature *engulfer)

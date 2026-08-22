@@ -964,9 +964,21 @@ Wizard / Scroll Spell "Sleep" : EA_INFLICT
       their level.";
   }
 
+/* upstream: base-code defect, fix is ours. Tier Observed -- EF_ALLIES_IMMUNE
+   was missing. Spook is a permanent mobile aura centred on its caster, and
+   Magic::isTarget spares the caster's own side only when that flag is set
+   (src/Magic.cpp:340). Without it a night hunter taken as a companion holds
+   its own master, and every party member, at -2 on all rolls for as long as
+   it lives -- the field is EF_PERSISTANT, so nothing times it out. Paralyzing
+   Aura, the closest thing in the game (a permanent monster debuff aura,
+   lib/mon4.irh:519), already sets the flag. The omission is upstream's: lib/
+   is unchanged by the port, and a Win32 build reads the same missing flag.
+   EF_NOTBAD is deliberately left alone -- despite its name it gates
+   friendly-fire retaliation (src/Monster.cpp:2695), and clearing it would set
+   allied casters against each other. Tracking inc-9mhh. Not sent. */
 Wizard Spell "Spook" : EA_INFLICT
   { SC_ENC; IS_A_BUFF(COST_1); Level: 1; 
-    Flags: EF_CASTER_IMMUNE, EF_MENTAL, EF_FEAR, EF_NOTBAD,
+    Flags: EF_CASTER_IMMUNE, EF_ALLIES_IMMUNE, EF_MENTAL, EF_FEAR, EF_NOTBAD,
            EF_PERSISTANT;
     rval: FI_MODIFIER|FI_MOBILE; aval: AR_MFIELD; lval: 3; cval: SHADOW;
     xval: ADJUST_MOR; yval: A_AID; pval: -2;  
