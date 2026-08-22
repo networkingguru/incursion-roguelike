@@ -1508,6 +1508,34 @@ DoYuse:
             e.ETarget = NULL;
         }
 
+    /* Ask the chosen item where its magic wants to be aimed.
+     *
+     * The Activate row of YuseCommands (src/Tables.cpp:3052) carries QTarget
+     * 0, and it has to: which prompt an activation needs is a property of the
+     * item, not of the verb, and the item is not known until the menu above
+     * has run. Nothing afterwards asked for it, so a Circlet of Blasting fired
+     * with no target at all, and Magic::MagicEvent (src/Magic.cpp:734) makes
+     * the activator the victim when none was picked. That is the self-hit.
+     *
+     * The same query on the 'a' command's route is Player::ItemMenu's
+     * EffectPrompt at :1435, and this is that line, in the one place on this
+     * route where the item is settled and the event has not yet been thrown.
+     * e.eID is set first for the same reason ItemMenu sets it: EffectPrompt
+     * calls CalcEffect through it to work out the effect's range.
+     *
+     * upstream: the defect is the base code's, not the port's. It is plain
+     * control flow -- no typedef, no width, nothing platform-specific -- and
+     * both halves of it (the zero in the verb table and the missing prompt
+     * here) are unchanged from the v0.6.5B source, so Win32 behaves the same
+     * way. Evidence: Observed; tools/check_yuse_activate.sh drives the y menu
+     * onto a Circlet of Blasting and reads "Your own beam strikes you!" off
+     * the screen with no prompt in front of it. inc-azc. NOT sent upstream. */
+    if (YuseCommands[c].Event == EV_ACTIVATE && e.EItem && e.EItem->eID) {
+        e.eID = e.EItem->eID;
+        if (!MyTerm->EffectPrompt(e, TEFF(e.eID)->ef.qval))
+            return;
+    }
+
     e.isVerb = true;
     ReThrow(YuseCommands[c].Event,e);
 

@@ -1,0 +1,14 @@
+# The same circlet, the same turn, activated with the 'a' command instead of
+# the y menu. Read by tools/check_yuse_activate.sh, bd inc-azc.
+#
+# Player::ItemMenu (src/Player.cpp) has always asked the item for its qval, so
+# this route prompted even while the y route did not. It is here to keep the
+# two routes honest about each other: a "fix" that stopped asking would turn
+# this half red.
+
+@include acquire-blast-circlet.keys
+
+a
+@dump:activate-menu
+@choose "Circlet of Blasting"
+@dump:after-activate
