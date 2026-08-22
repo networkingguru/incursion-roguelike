@@ -1071,7 +1071,37 @@ void Player::MoveDepth(int16 NewDepth, bool safe) {
     theGame->SaveGame(*this);
 
     RemoveStati(SPRINTING);
-    RemoveStati(ENGULFED);
+    /* upstream: base-code defect, the fix is ours. inc-6d5. Tier Observed:
+       tools/soak.sh 24 1 tools/keys/dive.keys, seed 21, turn 198048 -- the
+       error below is present before this change and absent after, and the
+       40-seed gate loses both its "wierdless" sessions. NOT SENT to rmtew.
+       It is upstream's because it is the same two stati, the same Remove and
+       the same list on Win32 with the original typedefs. Nothing here depends
+       on the port. Reachable without wizard mode: Feature.cpp:296 calls
+       MoveDepth for any staircase, so being swallowed and then taking the
+       stairs is enough.
+
+       A swallowed creature is NOT an ordinary map object. DoEngulf
+       (src/Display.cpp:2145) unlinks it from its square's Contents chain on
+       purpose, keeps it in m->Things, and copies the engulfer's x/y onto it;
+       its own comment says so. Thing::Remove's engulfed branch
+       (src/Display.cpp:1925) is then the only path that unlinks it correctly,
+       and Thing::Move's tail (src/Display.cpp:1763) is what carries it along.
+       Both read the ENGULFED stati.
+
+       A bare RemoveStati(ENGULFED) dropped the player out of that state while
+       leaving him where DoEngulf put him -- in Things, in no Contents chain,
+       on the engulfer's square -- and left the matching ENGULFER stati
+       standing on the engulfer. The PlaceAt further down then called Remove,
+       Remove took the ordinary path because the stati was gone, the Contents
+       walk could not find the player, and it printed "Contents list wierdless
+       in Thing::Remove!" and abandoned the rest of its work. DropEngulfed
+       removes both halves of the pair and puts the victim back on the map
+       properly, which is what this line always meant. */
+    if (Creature *engulfer = (Creature*)GetStatiObj(ENGULFED))
+        engulfer->DropEngulfed(this);
+    else
+        RemoveStati(ENGULFED);
     RemoveStati(GRAPPLED);
     RemoveStati(GRAPPLING);
     RemoveStati(ELEVATED);
@@ -1184,6 +1214,24 @@ void Player::MoveDepth(int16 NewDepth, bool safe) {
                         break;
                     GoWith[gwc++] = c;
                     c->Remove(false);
+                    /* upstream: base-code defect, the fix is ours. Remove()
+                       deletes this creature from m->Things (Display.cpp:1990),
+                       Array::Remove memmoves the tail one place left
+                       (Base.cpp:595), and MapIterate advances with i++
+                       (Base.h:102). So the entry that follows a collected
+                       follower slides into the index just finished with, and
+                       the loop steps straight over it: a player who changes
+                       level with two adjacent followers arrives with one.
+                       Stepping back cancels the slide. It is upstream's
+                       because it is plain array indexing and a memmove --
+                       identical on Win32, with the original typedefs, on the
+                       upstream compiler; nothing here depends on the port.
+                       Tier Observed: INCURSION_FOLLOWER_PROBE=1 with
+                       tools/keys/followers.keys reported
+                       "followers_before=3 collected=2 left_behind=1" on three
+                       seeds before this line and collects all three after it.
+                       Tracked as inc-90u. NOT SENT to rmtew. */
+                    i--;
                 }
 
         if (getenv("INCURSION_FOLLOWER_PROBE")) {
