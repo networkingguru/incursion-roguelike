@@ -1,0 +1,133 @@
+# Prove that a consumable a character refuses to use stays in the pack, and
+# that one he does use still leaves it. This is the oracle for inc-bp2.
+#
+#   tools/headless.sh tools/keys/consumable-abort.keys 5
+#
+# THE SEED MATTERS AND IT MUST BE 5. The refusal this script needs is only
+# offered after a Will save: Item::ReadScroll (src/Magic.cpp) prints "This
+# scroll is powerful, and possibly beyond you!", rolls SavingThrow(WILL,15),
+# and asks "Stop reading?" only when that roll succeeds. Most seeds fail the
+# roll, and then the scroll is simply read, which measures nothing. Of seeds 1
+# to 8 only 5 and 7 make it; 5 is the one this script and
+# tools/check_consumable_abort.sh use. Changing ANY key before the read moves
+# the die rolls under it, so a seed that works today stops working if this
+# script gains or loses a keystroke -- re-hunt the seed rather than assuming.
+# tools/check_consumable_abort.sh reports a run whose prompt never appeared as
+# INCONCLUSIVE, not as a pass and not as a failure.
+#
+# Wizard mode supplies the two consumables, because neither can be walked to.
+# [e] Item Acquisition opens TextTerm::AcquisitionPrompt (src/Term.cpp), whose
+# list has NO menu letters and NO '>' marker, so neither @choose nor @cursorto
+# can reach a row in it -- counting DOWN is the only way in. That makes the two
+# counts below fragile: they are positions in the list the resource compiler
+# builds from lib/, and adding a potion or a scroll effect moves everything
+# after it. @expect nails each one to the name it is supposed to have landed
+# on, so a drifted count stops the run instead of quietly acquiring the
+# neighbour, and the check script re-reads both names out of the pack.
+#
+#   potions  are the first glyph category, so no RIGHT is needed.
+#     DOWN*4      Potion of Healing        -- the control: no target prompt,
+#                                             quaffing it must still spend it.
+#   scrolls  are one RIGHT away.
+#     DOWN*116    Scroll of Wizard Sight   -- level 5 and not EF_STAPLE, so
+#                                             sLevel is 9 and beats any Decipher
+#                                             a 1st-level barbarian can have,
+#                                             which is what makes the "powerful"
+#                                             branch fire at all. qval is 0, so
+#                                             reading it asks for no target.
+#
+# An acquired item that will not stack lands in the In-the-Air slot and opens
+# the inventory manager, which refuses to close while that slot is full; the
+# two @while lines stow it and leave. An item that stacks never opens it, and
+# then both lines fire zero times.
+#
+# Three pack dumps. The comparison between them is the whole test:
+#
+#   pack-before   3 Scrolls of Wizard Sight, 2 Potions of Healing.
+#   pack-refused  after answering yes to "Stop reading?". BOTH counts MUST be
+#                 unchanged: nothing was read, so nothing was spent.
+#   pack-quaffed  after drinking one Potion of Healing. The potion count MUST
+#                 have dropped. Without this half, a build that never consumes
+#                 anything would pass.
+
+@include chargen.keys
+
+# --- two Potions of Healing ------------------------------------------------
+w
+@until "Wizard Mode Options" y
+@choose "Item Acquisition"
+DOWN*4
+@expect "Potion of Healing"
+ENTER
+@while "In the Air':Potion" s
+@while "Ready Hand" ESC
+
+w
+@until "Wizard Mode Options" y
+@choose "Item Acquisition"
+DOWN*4
+ENTER
+@while "In the Air':Potion" s
+@while "Ready Hand" ESC
+
+# --- three Scrolls of Wizard Sight -----------------------------------------
+w
+@until "Wizard Mode Options" y
+@choose "Item Acquisition"
+RIGHT
+DOWN*116
+@expect "Scroll of Wizard Sight"
+ENTER
+@while "In the Air':Scroll" s
+@while "Ready Hand" ESC
+
+w
+@until "Wizard Mode Options" y
+@choose "Item Acquisition"
+RIGHT
+DOWN*116
+ENTER
+@while "In the Air':Scroll" s
+@while "Ready Hand" ESC
+
+w
+@until "Wizard Mode Options" y
+@choose "Item Acquisition"
+RIGHT
+DOWN*116
+ENTER
+@while "In the Air':Scroll" s
+@while "Ready Hand" ESC
+
+i
+@dump:pack-before
+ESC
+
+# --- refuse to read a scroll ------------------------------------------------
+# The two use menus are ordinary LMenus, so they DO carry letters and @choose
+# reads the one the game printed. Do not go back to a hardcoded [a] here: the
+# adventurer starting kit already puts several potions in the pack, the menu
+# is MENU_SORTED, and [a] is whichever of them sorts first -- which is how an
+# earlier version of this script drank a Potion of See Invisibility and
+# measured nothing. @choose matches from the START of the entry, and
+# Player::UseItemMenu writes an item held in a container as "(in pack) 3
+# Scrolls of ...", so the count is part of the name it must be given. Both
+# counts below are the counts at that moment in a PASSING run; in a failing
+# run they are still right, because nothing has been spent yet when either
+# menu opens.
+r
+@choose "(in pack) 3 Scrolls of Wizard Sight"
+@dump:offer         # "Stop reading? [yn]" MUST be on this screen
+y                   # yes, stop -- nothing is read
+i
+@dump:pack-refused
+ESC
+
+# --- drink a potion, which must still spend it ------------------------------
+q
+@choose "(in pack) 2 Potions of Healing"
+i
+@dump:pack-quaffed
+ESC
+
+@quit

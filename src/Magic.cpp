@@ -3515,7 +3515,10 @@ EvReturn Item::DrinkPotion(EventInfo &e)
        e.EActor->ProvokeAoO();  // ww: SRD, Combat I
      */
     if (e.EActor->isDead())
-      return ABORT; 
+      {
+        e.EItem->Remove(true);
+        return ABORT;
+      }
 
     e.eID = eID;
 
@@ -3525,6 +3528,7 @@ EvReturn Item::DrinkPotion(EventInfo &e)
         {
           e.EActor->Timeout += 30;
           e.EActor->IPrint("Nothing happens.");
+          e.EItem->Remove(true);
           return DONE;
         }
 
@@ -3533,10 +3537,43 @@ EvReturn Item::DrinkPotion(EventInfo &e)
     if (!e.EItem->isKnown(KN_MAGIC) && e.EActor->HasSkill(SK_ALCHEMY))
       if (e.EActor->SkillCheck(SK_ALCHEMY, 10 + e.EItem->ItemLevel(),true))
         e.EActor->IdentByTrial(e.EItem);
-    
-    e.EItem->Remove(true);
-    
+
+    // upstream: plain control-flow, not a port artefact -- no typedef,
+    // pointer width, endianness or compiler extension is involved, so a
+    // Win32/MSVC build of the original source loses the unit in exactly the
+    // same places. TakeOne() above always leaves its unit outside the pack,
+    // and this function used to end with an unconditional Remove(true) plus
+    // two early returns that disposed of nothing: an ABORT from EV_EFFECT
+    // destroyed the potion the effect had refused to produce, and the dead
+    // and elf branches leaked their unit out of the world instead. The
+    // sibling defect in Food::Eat is inc-i9q.1 at src/Item.cpp; Food::Eat's
+    // StopEating branch is the give-back this path never had.
+    // Evidence: Traced for the potion -- the ABORT is unreachable with the
+    // effects lib/ ships today, so it is proved on Item::ReadScroll below,
+    // which is the same function shape and whose ABORT a player can reach
+    // with two keystrokes. See tools/check_consumable_abort.sh. inc-bp2.
+    // Not sent.
+    if (result == ABORT)
+      e.EItem->GiveBackTo(e.EActor);
+    else
+      e.EItem->Remove(true);
+
     return result;
+  }
+
+/* How a scroll unit leaves ReadScroll, in one place because there is one rule.
+   TakeOne() at the top of ReadScroll always puts the unit outside the pack, so
+   every exit owes it a disposal, and the exits must not be able to disagree
+   about preservation. They DID disagree: the counterspell exit disposed of the
+   unit with a bare Remove and never read preserved, so a reader whose scroll
+   preservation should have saved the scroll lost it whenever an opponent
+   countered him. inc-bp2. */
+static void DisposeScroll(Item *it, Creature *cr, bool preserved)
+  {
+    if (preserved)
+      it->GiveBackTo(cr);
+    else
+      it->Remove(true);
   }
 
 EvReturn Item::ReadScroll(EventInfo &e)
@@ -3553,6 +3590,7 @@ EvReturn Item::ReadScroll(EventInfo &e)
         {
           e.EActor->Timeout += 30;
           e.EActor->IPrint("Nothing happens.");
+          e.EItem->Remove(true);
           return DONE;
         }
 
@@ -3578,7 +3616,22 @@ EvReturn Item::ReadScroll(EventInfo &e)
           Inscrip = "scary";  
         if (e.EActor->SavingThrow(WILL,15))
           if (e.EActor->yn("Stop reading?",false))
-            return ABORT;
+            {
+              // upstream: plain control-flow, not a port artefact -- no
+              // typedef, pointer width, endianness or compiler extension is
+              // involved, so a Win32/MSVC build of the original source loses
+              // the scroll here too. TakeOne() above has already taken this
+              // unit out of the pack, and this branch returned without
+              // giving it back, so a reader who accepted the offer to stop
+              // paid a scroll for reading nothing. Same defect as inc-i9q.1
+              // in Food::Eat (src/Item.cpp), whose refusal branch had to be
+              // routed through StopEating for the same reason.
+              // Evidence: Observed -- tools/check_consumable_abort.sh, seed
+              // 5: before, "3 Scrolls of Wizard Sight" became 2 on answering
+              // yes; after, the stack stays at 3. inc-bp2. Not sent.
+              e.EItem->GiveBackTo(e.EActor);
+              return ABORT;
+            }
       }
       
     if (!e.EActor->SkillCheck(SK_DECIPHER,10 + sLevel,true))
@@ -3604,7 +3657,13 @@ EvReturn Item::ReadScroll(EventInfo &e)
 
     csr = e.EActor->Counterspell(e,NULL);
     if (csr == ABORT)
-      return DONE;
+      {
+        /* The scroll was read and then countered, so it is spent -- unless
+           this reader preserves his scrolls, which the exit below honours
+           and this one used to ignore. */
+        DisposeScroll(e.EItem, e.EActor, preserved);
+        return DONE;
+      }
 
     result = ReThrow(EV_EFFECT,e);
 
@@ -3622,12 +3681,7 @@ Failed:
             "scroll strain",e.EActor,e.EActor,e.EItem);
         e.EActor->LoseMana((TEFF(eID)->ManaCost*2)/3,TEFF(eID)->HasFlag(EF_LOSEMANA));
       }   
-    if (preserved) {
-      if (e.EItem->Owner() != e.EActor)
-        e.EActor->GainItem(e.EItem,true);
-      }
-    else
-      e.EItem->Remove(true);
+    DisposeScroll(e.EItem, e.EActor, preserved);
     return result;
   }
       

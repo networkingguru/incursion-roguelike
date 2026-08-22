@@ -37,6 +37,10 @@ incursion-debug
 *.db
 .beads-credential-key
 .beads/proxieddb/
+# Per-run state written by tools/doc_freshness_cron.sh: the commit it last
+# checked. Tracking it would dirty the tree every night and conflict on every
+# merge. An agent worktree committed it once; that is what this prevents.
+.beads/.doc-freshness-last
 
 # Alternative backends and diagnostic builds of the game binary. Anchored with a
 # leading slash so it matches only the repository root: unanchored, a gitignore
