@@ -1597,7 +1597,32 @@ Effect "Grounded Stance" : EA_INFLICT
   {
     xval: TRAP_EVENT; yval: PRE(EV_HIT);
     Flags: EF_PERMANANT, EF_SPECABIL, EF_MUNDANE;
-    On Event PRE(EV_HIT) {
+    /* upstream: base-code defect, fix is ours. Tier Observed -- a Bard 7 /
+       Earthsinger 2 built by tools/keys/prestige-earthsinger.keys, barefoot,
+       Afoot, on the material plane and on cave floor, rolled three damage
+       rolls reading "1d6 = 6" before this line changed and three reading
+       "1d6 +2 GS = 8" after. tools/check_grounded_stance_live.sh, red on the
+       pre-fix module and green on the rebuilt one. Tracking inc-brp. Not sent
+       to rmtew.
+
+       The handler was named PRE(EV_HIT), which is a name no dispatch ever
+       asks for, so the whole ability did nothing. A TRAP_EVENT stati is
+       dispatched by src/Event.cpp:325-336, which rewrites e.Event to
+       META(e.Event) and only then calls the effect, so the handler a trap
+       needs is META(<yval>). Every other trap in lib/ is written that way --
+       Divine Sacrifice (lib/pspells.irh:1117,1132) and Death Attack
+       (lib/prestige.irh:600,652) both pair yval: PRE(EV_HIT) with
+       On Event META(PRE(EV_HIT)).
+
+       This is module data read by platform-independent integer arithmetic --
+       inc/Defines.h gives PRE +500 and META +10000, and the dispatch compares
+       the sums directly -- so the name misses by 10000 on Win32, with the
+       original typedefs and on the upstream compiler exactly as it does here.
+
+       lib/m_items.irh:5285 (Frostbite) and 5297 (Fireburn) carry the same
+       defect against EVICTIM(EV_DAMAGE) and are NOT fixed here; they have not
+       been measured. */
+    On Event META(PRE(EV_HIT)) {
       int16 mat;
       if (EActor->isAerial())
         return NOTHING;

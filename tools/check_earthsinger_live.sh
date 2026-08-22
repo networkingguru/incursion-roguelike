@@ -27,14 +27,12 @@
 #      cannot make one either: the acquisition prompt has no plain-T_BOOTS
 #      category, only the magical -AI_BOOTS one (src/Tables.cpp:341). So the
 #      corrected test has no reachable input.
-#   2. Grounded Stance does not appear to fire even when every condition it
-#      states is met. A barefoot Earthsinger 2 on ordinary cave floor, not
-#      levitating and on the material plane, hit a stone jelly for
-#      "Damage: 1d6 = 6 vs. Arm 10 = 0" -- no " +2 GS" term, though the
-#      effect appends one at lib/prestige.irh:1610 and the trap that carries
-#      it is installed and permanent on the character (wizard mode's Examine
-#      Player Data shows "TRAP EVENT ... (eID:Grounded Stance) [Dur -1]").
-#      That is a separate defect underneath this one and has its own bead.
+#   2. Grounded Stance did not fire at all, whatever the boots did, because
+#      its handler was named PRE(EV_HIT) where a trap dispatch calls
+#      META(PRE(EV_HIT)). That was a separate defect underneath this one, bd
+#      inc-brp, and it is fixed. Whether the ability fires is now measured by
+#      tools/check_grounded_stance_live.sh, which runs the same key script and
+#      reads the damage rolls it ends with.
 #
 # Usage: tools/check_earthsinger_live.sh      (exits 0 on pass, 1 on fail)
 set -uo pipefail

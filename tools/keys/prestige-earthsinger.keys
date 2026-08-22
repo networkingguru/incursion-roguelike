@@ -136,4 +136,52 @@ P                               # [P]restige Classes
 W                       # Write Dump
 e s n g ENTER           # filename: "esng"
 @until "HP:" ESC
+
+# --- GROUNDED STANCE IN COMBAT, bd inc-brp ---------------------------------
+# The dump above photographs the class. It cannot photograph the ability,
+# because Grounded Stance writes only into a damage roll. So hit something.
+#
+# The subject is a stone jelly (lib/mon3.irh:2652). It is sessile, so it
+# cannot walk away between blows, and its armour is high enough that the
+# character takes no risk standing beside it.
+#
+# Every condition the ability names is met here and none of it is arranged:
+# the gnome is Afoot, on the material plane, on ordinary cave floor, and the
+# boot slot is empty because chargen gave him no boots. So a hit either
+# carries the " +2 GS" term the effect appends (lib/prestige.irh:1610) or the
+# ability did not fire.
+#
+# Three blows, because one can miss. "Show All Combat Rolls" is already on,
+# switched beside Free Advancement above, so each blow rolls its own
+# "Attack:" and "Damage:" lines.
+#
+# The two-line roll panel at the foot of the map keeps only the newest roll,
+# and the jelly answers every blow, so by the time the screen is dumped the
+# panel is showing the JELLY's attack. The message log is where the rolls
+# accumulate ("Store Rolls in Log", src/Tables.cpp:2229), so the last thing
+# this script does is open it with 'v' and photograph it.
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "stone jelly"
+RIGHT                   # the location cursor starts on the player; one east
+ENTER
+@dump:gs-summoned
+
+RIGHT                   # walk into it, which is to attack it
+@while "Confirm attack" y
+@dump:gs-blow1
+SPACE SPACE SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+@dump:gs-blow2
+SPACE SPACE SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+@dump:gs-blow3
+SPACE SPACE SPACE SPACE
+
+v                       # [v] show the message log, rolls and all
+@dump:gs-log
+ESC
 @quit
