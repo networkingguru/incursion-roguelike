@@ -1,0 +1,10 @@
+$ tools/check_stair_warn.sh          # build WITH the fix, 2026-08-22
+loaded on depth 2, pressed '>' on the down staircase at (74,70)
+1 descent(s) recorded by the probe:
+  descend from_depth=2 at=74,70 usable=0 terrain="-" unsafe=0 asked=0
+depth after the descent: 030m
+note: this session's arrival square is refused by MoveDepth, so it does
+      not exercise a warning that SHOULD fire. See the ponytail note in
+      this script.
+PASS
+exit=0
