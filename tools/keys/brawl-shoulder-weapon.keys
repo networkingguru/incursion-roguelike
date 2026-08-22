@@ -1,0 +1,63 @@
+# Make an elf ranger, put his bow in his hands and his sword on his back, and
+# photograph the character sheet.
+#
+# ONE ASSERTION, bd inc-nwk: a fist is not a sword. The Brawl block of the
+# sheet must not carry the accuracy, the speed or the enchantment of a weapon
+# the character is not even holding.
+#
+# WHY THIS EXACT ARRANGEMENT. src/Values.cpp builds the five attack modes in
+# one loop, and the sheet hides the Brawl block whenever the weapon hand holds
+# a T_WEAPON (src/Sheet.cpp:162), so a plain sword-in-hand character cannot
+# answer the question. A BOW is type T_BOW, not T_WEAPON, so the block is
+# shown; and src/Values.cpp:301-308 moves a bow to the archery slot and then
+# takes the melee weapon from the LEFT SHOULDER instead. That is an ordinary
+# way to walk around -- bow in hand, sword on the back -- and it is the one
+# arrangement in which the sheet will say what the brawl slot contains.
+#
+# The elf ranger starts with the sword in his hands and the bow on his back,
+# so the two are exchanged below through the inventory manager: SPACE lifts
+# the item under the cursor 'In the Air', and SPACE over another slot puts it
+# down and lifts whatever was there.
+#
+# Menu letters move when a list changes. Run with a fixed seed;
+# tools/check_brawl_weapon.sh supplies one.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Ranger"
+
+a       # Attributes: the first of the five offered sets
+@choose "Neutral"
+@choose "Goblinkin"     # favoured enemy; any will do
+a                       # Combat style: [a] archery
+@while "Choose a feat" a
+
+# Skill Manager. Three RIGHTs per skill spends everything available without
+# needing to know how many ranks this character has.
+@expect "Unspent Skill Ranks"
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+a       # Personality archetype
+ESC     # dismiss the arrival-room description; now in play
+
+i       # Inventory
+e       # cursor to L. Shoulder, which holds the long bow
+SPACE   # lift the bow
+b       # cursor to Weapon Hand, which holds the long sword
+SPACE   # put the bow there and lift the sword
+e       # cursor back to L. Shoulder, now empty
+SPACE   # put the sword on his back
+@expect "L. Shoulder  :elven long sword"
+@dump:packed
+ESC     # leave the inventory
+
+d       # Display Character Sheet
+@expect "Brawl"
+@dump:sheet1
+@quit

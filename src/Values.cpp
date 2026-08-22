@@ -483,7 +483,21 @@ Restart:
     for(i=0;i!=5;i++) {
         switch(i) {
         case S_ARCHERY: it = missileWep; break;
-        case S_BRAWL: it = NULL;
+        /* upstream: base-code defect, fix is ours. The brawl arm had no break,
+           so it fell into the melee arm, "it = NULL" was dead, and the brawl
+           slot was handed the melee weapon -- a fist collected that weapon's
+           Acc, Spd, enchantment plus and weapon-skill bonuses. Every other arm
+           of this switch breaks, and the loop's own "if (!it) continue" below
+           is the no-item path the ww: comment under this switch describes, so
+           NULL is what the brawl arm was written to leave here. Nothing
+           platform, compiler or width dependent is involved: a missing break in
+           plain C++ falls through identically on Win32 with the original
+           typedefs. Tier Observed -- seed 1, elf ranger, bow in hand and sword
+           on his back: the sheet read "Brawl +toHit +2 (Ranger +0, +2 weapon),
+           Speed 130% ... x 125% weapon" before, "+toHit +0 (Ranger +0), Speed
+           105%" after; tools/check_brawl_weapon.sh. Tracking inc-nwk. Not sent
+           to rmtew. */
+        case S_BRAWL: it = NULL; break;
         case S_MELEE: it = meleeWep; break;
         case S_DUAL: it = offhandWep; break;
         case S_THROWN: it = thrownWep; break;
@@ -632,6 +646,19 @@ Restart:
         AddBonus(BONUS_HUNGER, A_FAT, -1);
         AddBonus(BONUS_HUNGER, A_STR, -1);
         AddBonus(BONUS_HUNGER, A_CON, -1);
+        /* upstream: base-code defect, fix is ours. The Hungry arm had no break,
+           so a Hungry character paid the Starving penalty as well and came out
+           at FAT/STR/CON -3 where Starving costs -2 -- getting hungrier made
+           him stronger. The arms are meant to be exclusive: Bloated breaks, and
+           the Weak/Fainting arm states its own -2/-4/-4 in full rather than
+           adding to the arm above it. Nothing platform, compiler or width
+           dependent is involved: a missing break in plain C++ falls through
+           identically on Win32 with the original typedefs. Tier Observed --
+           seed 1, Dragonkin barbarian, sidebar STR/CON 16/15 fed, 13/12 Hungry,
+           14/13 Starving before; 16/15, 15/14, 14/13 after;
+           tools/check_hunger_penalty.sh. Tracking inc-i9q.3. Not sent to
+           rmtew. */
+        break;
     case STARVING:
         AddBonus(BONUS_HUNGER, A_MAG,-3);
         AddBonus(BONUS_HUNGER, A_FAT, -2);

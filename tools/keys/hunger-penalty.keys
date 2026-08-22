@@ -1,0 +1,63 @@
+# Make a Dragonkin, let him grow Hungry, photograph him, let him grow
+# Starving, photograph him again.
+#
+# ONE ASSERTION, bd inc-i9q.3: getting hungrier must never make a character
+# stronger. The sidebar prints STR and CON (src/Term.cpp), and those two
+# numbers must not go UP between the two photographs.
+#
+# WHY A DRAGONKIN. The ordinary once-per-turn hunger tick does nothing at all
+# for anybody -- that is bd inc-i9q.2, a separate defect, still open. A
+# Dragonkin has Burning Hunger, which calls Creature::GetHungrier with 6
+# rather than 1 and so takes the arm of that function which works. He is
+# therefore the only character in the game who can be made hungry in a
+# scripted session of any reasonable length. When inc-i9q.2 is fixed this
+# script will still work; it will simply arrive sooner.
+#
+# THE COUNTS. Each Search command spends about 100 points of hunger, from a
+# starting 2490. Hungry runs from 1000 down to 481 and Starving from 480 down
+# to 241 (inc/Defines.h:3471-3479), so eleven Searches land inside Hungry and
+# four more land inside Starving. The sidebar prints the state as a word, and
+# tools/check_hunger_penalty.sh refuses to compare two photographs that are
+# not one Hungry and one Starving.
+#
+# Menu letters move when a list changes. Run with a fixed seed;
+# tools/check_hunger_penalty.sh supplies one.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+h       # Race:     [h] Lizardfolk
+b       # Subrace:  [b] Dragonkin
+a       # Class:    [a] Barbarian
+a       # Attributes: the first of the five offered sets
+c       # Alignment: [c] Neutral
+a       # First feat
+a       # Second feat
+
+# Skill Manager, twice. Three RIGHTs per skill spends everything available
+# without needing to know how many ranks this character has.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+y       # Do you wish to worship <god>? -- yes
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+# In the dungeon now, and Satiated. This first photograph is the baseline: it
+# carries no hunger penalty at all, and it is what says the two below have
+# moved.
+@expect "Satiated"
+@dump:fed
+
+s*11    # Search, eleven times
+@expect "Hungry"
+@dump:hungry
+
+s*4     # four more
+@expect "Starving"
+@dump:starving
+
+@quit
