@@ -123,6 +123,7 @@ class Item: public Thing, public Magic
       void SetQuantity(uint32 _q) { Quantity = _q; }
       void SetOwner(hObj h) { Parent = h; }
       Item* TakeOne();
+      void  GiveBackTo(Creature *cr);
       Item* TryStack(Item *i);
       Item* TryStack(Map *m, int16 x, int16 y);
       int16 MaxHP();

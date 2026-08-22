@@ -442,6 +442,22 @@ Item* Item::TakeOne()
       }
   }
 
+/* The other half of TakeOne(): put a split-off unit back where it came from.
+
+   TakeOne() always leaves its unit outside the actor's pack -- it either
+   Remove(false)s the last one of a stack or hands back a fresh, parentless
+   copy -- so every caller owes that unit a disposal on every path it can
+   take. A caller that returns without one loses the unit, which is the same
+   thing to the player as destroying it. GainItem's `starting` flag is set so
+   giving a consumable back cannot open the inventory manager in the middle of
+   somebody's turn; Item::ReadScroll's preserve branch already does it that
+   way. */
+void Item::GiveBackTo(Creature *cr)
+  {
+    if (Owner() != cr)
+      cr->GainItem(this,true);
+  }
+
 Item* Item::TryStack(Item*i)
   {
     if (*this == *i)
