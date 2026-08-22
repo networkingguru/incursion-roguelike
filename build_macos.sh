@@ -186,7 +186,25 @@ clang++ -std=c++17 $EXTRA_LDFLAGS -o "$ROOT/$OUT" "$OBJ"/*.o $TCODLIB $SDL_LIBS 
 # module has to come from a developer build of the SAME source, because
 # Registry writes raw struct bytes and the file is welded to the layout of the
 # binary that produced it.
-if [ ! -f "$ROOT/mod/Incursion.Mod" ]; then
+# NOTHING DETECTS A MODULE THAT HAS FALLEN BEHIND ITS SCRIPTS. Registry stamps
+# every file with a layout digest (src/Registry.cpp:65) and refuses a mismatch,
+# so a module built by a DIFFERENT struct layout is caught. A module with the
+# right layout and last week's rules is not: it loads in silence. Gating the
+# compile on the file being ABSENT therefore let a script-only fix build clean
+# and change nothing in the game -- twice on 2026-08-22, once nearly reported
+# as a fix. See inc-nx6c.
+#
+# So an ordinary developer build recompiles it every time. Five seconds is
+# cheaper than one fix that fixed nothing, and it needs no freshness test to be
+# right: it also covers the case that a date stamp or a hash of the scripts
+# would BOTH miss, which is a change to the resource compiler itself building a
+# different module out of identical scripts.
+#
+# Instrumented builds (EXTRA_CXXFLAGS set) keep the old absence-gate on
+# purpose. They share this one module file with the ordinary build, so a flag
+# that moved a struct would leave behind a module the ordinary binary then
+# refuses to load.
+if [ ! -f "$ROOT/mod/Incursion.Mod" ] || { [ -z "$EXTRA_CXXFLAGS" ] && [ "$COMPILER" = yes ]; }; then
     if [ "$COMPILER" = no ]; then
         echo
         echo "No mod/Incursion.Mod, and this build has no resource compiler."

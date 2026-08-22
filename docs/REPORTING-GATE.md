@@ -108,6 +108,38 @@ Keep them apart, in the report and in your head:
 Filing an observation as an observation is honest and useful. Filing an
 observation dressed as a diagnosis is how you lose a maintainer's attention.
 
+## Reconstructing a removed probe
+
+Several defects in this port were found with a **probe**: a small block of
+diagnostic code, switched on by an environment variable, that records what the
+engine actually did. Some of them exist because the state cannot be reached any
+other way -- no scripted session can drive the wizard menu's glyph pickers, for
+instance -- so for those bugs the probe is not a convenience. It **is** the
+reproduction, and the evidence in the table below rests on it.
+
+That creates an obligation. A probe deleted from the source takes the
+reproduction with it, and a reader who asks "how do you know?" a year from now
+has no way to run what we ran.
+
+**So a probe is never simply deleted.** When one has served its purpose:
+
+1. Save it as a patch under `docs/evidence/<bead-id>/`, against the commit it
+   last applied to. `docs/evidence/inc-ijs/destroy-probe.patch` is the worked
+   example -- apply it with `git apply`, rebuild, and the probe is back.
+2. Name that patch in the bead, and in this document's row for the defect, so
+   the path is reachable from the public claim rather than only from our
+   tracker.
+3. Only then remove it from `src/`.
+
+`tools/check_probe_hooks.sh` reports the state of every one of them. A hook
+whose bead is finished but whose patch does not yet exist is reported as
+**HELD**, which means exactly this: it may not be removed yet. One whose patch
+exists is reported as **RETIRED**, and the source copy can go.
+
+The same script requires that every hook name the bead it serves, in a comment
+above its `getenv`. Hooks that predate the rule are listed in
+`tools/probe_hooks.baseline`; new ones must declare themselves.
+
 ## Marking a base-code bug that we have fixed
 
 The rules above govern what we SEND. This section governs what we KEEP. They are
@@ -281,6 +313,9 @@ our help.
 | `FI_SIZE` inconsistency | **Observed** once; not reproduced | one sighting is not a report |
 | window flicker | **Reasoned** -- cause unknown, one hypothesis already disproved | fails the gate; also macOS-only |
 | `Magic::Augury`, 3 defects | **Traced** -- never executed | not until Observed |
+| Holy Summoning I to VI and Summon Nature's Ally I to VI carried no `Flags` clause at all, so none of the twelve set `EF_XSUMMON` -- the engine's own one-live-summon-per-spell limiter, which `Magic::Summon` enforces at `src/Effects.cpp:1371-1379`. The wizard summoning line sets it, and so do Dust Devil, Spiritual Hammer and Flaming Sphere, so a mage was limited and a priest or druid was not. Incursion replaced Vancian spell slots with a regenerating mana pool, which removed the only other brake, so a monster priest could summon without limit -- which is how this was met, in play. Added the flag and an `MSG_XSUMMON` refusal message to all twelve, and wrote the limit into each spell's own `Desc` the way lesser planar conjuration already does (`lib/pspells.irh`) | **Observed** -- seed 5, `tools/keys/xsummon-priest.keys`, one file between the two builds. Two casts of Holy Summoning I on consecutive turns, with wizard-mode Infinite Mana on so the second cast cannot be refused for mana before it reaches the guard: "Your protectar appears!" twice before, and "Your protectar appears!" then "The outsider you called before still serves you." after. `tools/check_xsummon_live.sh`, confirmed red on a module rebuilt from the pre-fix `lib/pspells.irh` and green on the post-fix one; it also asserts that all twelve ranks still carry the flag, because the live half exercises one of them. Not a port artefact: `lib/` is unchanged by the port, and a Win32 build reads the same missing clause | no | inc-j6ni |
+| Spook did not set `EF_ALLIES_IMMUNE`. It is a permanent mobile aura centred on its caster (`EF_PERSISTANT`, `FI_MODIFIER|FI_MOBILE`, radius 3) giving a -2 morale penalty on every roll, and `Magic::isTarget` spares the caster's own side only for an effect carrying that flag (`src/Magic.cpp:340`). `EF_CASTER_IMMUNE` spares the caster alone. So a night hunter taken as a companion held its own master, and every party member, at -2 for as long as it lived, with nothing to time it out. Paralyzing Aura, the closest thing in the game -- a permanent monster debuff aura at `lib/mon4.irh:519` -- already sets the flag. `EF_NOTBAD` was deliberately left alone: despite its name it gates friendly-fire retaliation (`src/Monster.cpp:2695`), and clearing it would set allied casters against each other (`lib/wspells.irh`) | **Observed** -- seed 5, `tools/keys/spook-ally.keys`, one file between the two builds. Orc warrior, Freeze Monsters on so the bat neither attacks nor follows, four states read off the character sheet's Hit line: bare 6; a HOSTILE night hunter beside him 4; tamed with wizard mode's Make Player Master of Monster and walked out of radius 6; walked back in 4 before and 6 after. The hostile state is the control and reads 4 on both builds, so the spell was aimed and not switched off. `tools/check_spook_ally.sh`, confirmed red on the pre-fix module and green on the post-fix one. Not a port artefact: `lib/` is unchanged by the port, and a Win32 build reads the same missing flag | no | inc-9mhh |
+| `Magic::MagicHit` tested immunity before running a field LEAVE or an item UNWIELD. Those passes only undo what the matching enter or wield applied -- `Magic::Grant` and `Magic::Inflict` both open with an `isRemove || isLeave` branch whose whole body is `RemoveEffStati`. Asking whether the effect may be APPLIED is the wrong question there, and a creature that became immune while standing inside a field was refused the removal and kept a stati it could never shed, with "You are unaffected." printed on the way out. Routes in: gaining a resistance, being polymorphed, or becoming friendly to the field's caster. Immunity is now skipped when `isLeave` or `isRemove` is set; only `EA_GRANT` and `AR_MFIELD` segments reach this line on such a pass, per the filter at `src/Magic.cpp:714`, so no blast and no saving throw is bypassed (`src/Magic.cpp`) | **Observed** -- found by fixing the row above, which turned the defect from latent into permanent. Same seed 5 and `tools/keys/spook-ally.keys`: with `EF_ALLIES_IMMUNE` added and this line untouched, the tamed bat's -2 followed the player out of the field and never left (walked-out state Hit 4, and the screen carries "You are unaffected."); with both fixes the same state reads Hit 6 and the message is gone. Guarded by `tools/check_spook_ally.sh`, whose walked-out assertion exists for this defect alone. Regression: `tools/check_headless.sh` and `tools/check_alienist_live.sh` -- the latter being the other mobile modifier field in the game -- both green after | no | inc-9mhh |
 
 Base-code defects fixed here but never submitted are marked in the source and
 listed above under *Base-code bugs fixed locally*. Marking is not sending.
