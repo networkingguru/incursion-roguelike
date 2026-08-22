@@ -1,0 +1,14 @@
+# Activate a blast item from the y menu, and let the screen say whether the
+# game asked where to aim it. Read by tools/check_yuse_activate.sh, bd inc-azc.
+#
+# Both dumps are assertions: activate-menu proves the right item was activated,
+# and after-activate is where a targeting prompt would be if the game asked for
+# one.
+
+@include acquire-blast-circlet.keys
+
+y
+@choose "Activate"
+@dump:activate-menu
+@choose "Circlet of Blasting"
+@dump:after-activate

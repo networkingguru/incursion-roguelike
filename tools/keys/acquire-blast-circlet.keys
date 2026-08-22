@@ -1,0 +1,38 @@
+# Make chargen.keys' orc barbarian and put a Circlet of Blasting on his head.
+# Included by yuse-activate-blast.keys and a-activate-blast.keys, which differ
+# only in which command they then use to activate it. bd inc-azc.
+#
+# The character owns nothing that blasts, so the item is made in wizard mode:
+#
+#   w y                      enter wizard mode and open its menu
+#   Item Acquisition         the acquisition browser
+#   RIGHT*19                 walk the glyph row to Headbands. ItemGlyphs
+#                            (src/Tables.cpp:320) puts -AI_HEADBAND 19 steps
+#                            along, and the header line names the category, so
+#                            a miscount shows up in a dump as some other word
+#                            after "Acquisition -- [...]:".
+#   @until ... DOWN          the candidate list has no menu letters, so the
+#                            cursor is walked instead. The window shows three
+#                            rows and highlights the middle one, so the run
+#                            stops on the pass where the row BELOW the wanted
+#                            one first appears. That is an ordering assumption
+#                            about lib/m_items.irh, and the check does not
+#                            trust it: tools/check_yuse_activate.sh reads the
+#                            item's name back off the activate menu before
+#                            believing anything else.
+#   ENTER q SPACE ENTER      take it, put it in the helmet slot, leave the
+#                            inventory manager. SPACE is the swap
+#                            (src/Managers.cpp:873); the manager refuses to
+#                            close while anything is still in the air.
+
+@include chargen.keys
+
+w
+y
+@choose "Item Acquisition"
+RIGHT*19
+@until "Headband of Tactical Combat" DOWN
+ENTER
+q
+SPACE
+ENTER
