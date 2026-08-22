@@ -1,0 +1,158 @@
+diff --git a/inc/Inline.h b/inc/Inline.h
+index b142691..e5fcd0f 100644
+--- a/inc/Inline.h
++++ b/inc/Inline.h
+@@ -534,7 +534,21 @@ inline Object::Object(int16 _Type)
+   }
+ 
+ inline Object::~Object()
+-  { if (Type == T_MODULE)
++  {
++#ifdef DESTROY_PROBE
++    /* Temporary probe, 2026-08-21: is this object still sitting in the pending
++       destroy queue while somebody else frees it? If so the queue is left
++       holding a dangling pointer. */
++    extern void DestroyProbe(const char *fmt, ...);
++    if (theGame)
++      for (int16 __k = 0; __k != (int16)Game::DestroyCount; __k++)
++        if ((Object*)Game::DestroyQueue[__k] == this)
++          DestroyProbe("DANGLING: freed while queued. ptr=%p handle=%d "
++                       "type=%d slot=%d DestroyCount=%d",
++                       (void*)this, (int)myHandle, (int)Type, (int)__k,
++                       (int)Game::DestroyCount);
++#endif
++    if (Type == T_MODULE)
+       ResourceRegistry.RemoveObject(this);
+     else
+       MainRegistry.RemoveObject(this); }
+diff --git a/src/Display.cpp b/src/Display.cpp
+index 1278165..0202f2e 100644
+--- a/src/Display.cpp
++++ b/src/Display.cpp
+@@ -2040,6 +2040,22 @@ FoundAndRemoved:
+                         /* Error("Object being destroyed twice!"); */
+                         goto SkipQueueAdd;
+                     }
++#ifdef DESTROY_PROBE
++            {
++                extern void DestroyProbe(const char *fmt, ...);
++                DestroyProbe("QUEUE-ADD: ptr=%p handle=%d type=%d slot=%d "
++                             "inPlay=%d",
++                             (void*)this, (int)myHandle, (int)Type,
++                             (int)theGame->DestroyCount,
++                             (int)theGame->InPlay());
++                for (int16 __k = 0; __k != theGame->cDestroyCount; __k++)
++                    if (theGame->cDestroyQueue[__k] == this)
++                        DestroyProbe("REQUEUE while pending: ptr=%p handle=%d "
++                                     "type=%d cIdx=%d cDestroyCount=%d",
++                                     (void*)this, (int)myHandle, (int)Type,
++                                     (int)__k, (int)theGame->cDestroyCount);
++            }
++#endif
+             theGame->DestroyQueue[theGame->DestroyCount++] = this;
+ SkipQueueAdd:;
+         }
+diff --git a/src/Main.cpp b/src/Main.cpp
+index 2088bbf..b75a834 100644
+--- a/src/Main.cpp
++++ b/src/Main.cpp
+@@ -212,6 +212,25 @@ static void NoteGameplayReached() {
+     fclose(f);
+ }
+ 
++#ifdef DESTROY_PROBE
++/* Temporary probe for the char-creation crash of 2026-08-21. Writes beside the
++   run's other logs so a headless session under logs/runs/<id>/ keeps its own
++   copy. Remove with the diagnosis. */
++#include <stdarg.h>
++void DestroyProbe(const char *fmt, ...) {
++    const char *path = getenv("DESTROY_PROBE_LOG");
++    FILE *fp = fopen(path ? path : "/tmp/destroyprobe.log", "at");
++    if (!fp)
++        return;
++    va_list ap;
++    va_start(ap, fmt);
++    vfprintf(fp, fmt, ap);
++    va_end(ap);
++    fputc('\n', fp);
++    fclose(fp);
++}
++#endif
++
+ void Game::Play() {
+     Thing *t, *t2; int16 i,j,c;
+     uint32 relative_turn;
+@@ -220,6 +239,20 @@ void Game::Play() {
+     Player *pp = oPlayer(p[0]);
+     static int16 MonsterDensity[256];
+     ASSERT(mp && pp)
++#ifdef DESTROY_PROBE
++    DestroyProbe("Play entry: DestroyCount=%d cDestroyCount=%d "
++                 "MainLastUsedHandle=%d",
++                 (int)DestroyCount, (int)cDestroyCount,
++                 (int)MainRegistry.LastUsedHandle);
++    for (int16 __k = 0; __k != (int16)DestroyCount; __k++) {
++        Thing *__q = DestroyQueue[__k];
++        if (!__q) { DestroyProbe("  q[%d] = NULL", (int)__k); continue; }
++        DestroyProbe("  q[%d] ptr=%p handle=%d type=%d exists=%d inMap=%d",
++                     (int)__k, (void*)__q, (int)__q->myHandle, (int)__q->Type,
++                     (int)theRegistry->Exists(__q->myHandle),
++                     (int)(__q->m != NULL));
++    }
++#endif
+ 
+     /* Off unless INCURSION_QUIET_PROBE is set, and run here because it needs a
+        registry with objects in it. See Registry::QuietProbe and
+@@ -388,6 +421,16 @@ FauxContinue:
+                 j = -1;
+                 if (!cDestroyQueue[cDestroyCount])
+                     continue;
++#ifdef DESTROY_PROBE
++                if (!theRegistry->Exists(cDestroyQueue[cDestroyCount]->myHandle))
++                    DestroyProbe("STALE entry: turn=%d idx=%d ptr=%p handle=%d "
++                                 "type=%d LastUsedHandle=%d",
++                                 (int)Turn, (int)cDestroyCount,
++                                 (void*)cDestroyQueue[cDestroyCount],
++                                 (int)cDestroyQueue[cDestroyCount]->myHandle,
++                                 (int)cDestroyQueue[cDestroyCount]->Type,
++                                 (int)theRegistry->LastUsedHandle);
++#endif
+ 
+                 MapIterate(mp,t,i) {
+                     if (t == cDestroyQueue[cDestroyCount])
+diff --git a/src/Res.cpp b/src/Res.cpp
+index ee906f0..1a92d0c 100644
+--- a/src/Res.cpp
++++ b/src/Res.cpp
+@@ -816,6 +816,19 @@ void Game::Cleanup()
+   {
+     int16 i,j,n;
+ 
++#ifdef DESTROY_PROBE
++  { extern void DestroyProbe(const char *fmt, ...);
++    DestroyProbe("Cleanup ENTRY: DestroyCount=%d", (int)DestroyCount);
++    for (int16 __k = 0; __k != (int16)DestroyCount; __k++)
++      if (DestroyQueue[__k])
++        DestroyProbe("  cq[%d] ptr=%p handle=%d type=%d exists=%d",
++                     (int)__k, (void*)DestroyQueue[__k],
++                     (int)DestroyQueue[__k]->myHandle,
++                     (int)DestroyQueue[__k]->Type,
++                     (int)theRegistry->Exists(DestroyQueue[__k]->myHandle));
++  }
++#endif
++
+     /* Later, this should be adapted to scan through the registry
+        to delete /all/ maps still in memory, including ones like
+        interiors of buildings in the town. For now, this is good.
+@@ -868,6 +881,11 @@ void Game::Cleanup()
+ 
+     /* Re-register the main Game object */
+     myHandle = MainRegistry.RegisterObject(this);
++#ifdef DESTROY_PROBE
++    { extern void DestroyProbe(const char *fmt, ...);
++      DestroyProbe("Cleanup EXIT: DestroyCount=%d", (int)DestroyCount);
++    }
++#endif
+   }
+ 
+ Map::~Map()                   

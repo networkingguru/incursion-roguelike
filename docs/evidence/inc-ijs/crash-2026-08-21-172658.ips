@@ -1,0 +1,195 @@
+{"app_name":"incursion","timestamp":"2026-08-21 17:26:58.00 -0400","app_version":"","slice_uuid":"dab67bc6-7966-35a7-a4f1-1374ca0d519c","build_version":"","platform":1,"share_with_app_devs":0,"is_first_party":1,"bug_type":"309","os_version":"macOS 26.5.2 (25F84)","roots_installed":0,"incident_id":"FA68D6D2-2AD2-4581-9765-960FCFE6A99C","name":"incursion"}
+{
+  "uptime" : 540000,
+  "procRole" : "Foreground",
+  "version" : 2,
+  "userID" : 501,
+  "deployVersion" : 210,
+  "modelCode" : "Mac16,13",
+  "coalitionID" : 697,
+  "osVersion" : {
+    "train" : "macOS 26.5.2",
+    "build" : "25F84",
+    "releaseType" : "User"
+  },
+  "captureTime" : "2026-08-21 17:26:55.0467 -0400",
+  "codeSigningMonitor" : 2,
+  "incident" : "FA68D6D2-2AD2-4581-9765-960FCFE6A99C",
+  "pid" : 5047,
+  "translated" : false,
+  "cpuType" : "ARM-64",
+  "procLaunch" : "2026-08-21 15:37:49.5052 -0400",
+  "procStartAbsTime" : 13039175083548,
+  "procExitAbsTime" : 13196267322298,
+  "procName" : "incursion",
+  "procPath" : "\/Users\/USER\/*\/incursion",
+  "parentProc" : "bash",
+  "parentPid" : 5043,
+  "coalitionName" : "com.mitchellh.ghostty",
+  "crashReporterKey" : "F448512C-DFA9-8DCC-B9EE-EA8A02D3BFE8",
+  "appleIntelligenceStatus" : {"state":"available"},
+  "developerMode" : 1,
+  "responsiblePid" : 643,
+  "responsibleProc" : "ghostty",
+  "codeSigningID" : "incursion",
+  "codeSigningTeamID" : "",
+  "codeSigningFlags" : 570556929,
+  "codeSigningValidationCategory" : 10,
+  "codeSigningTrustLevel" : 4294967295,
+  "codeSigningAuxiliaryInfo" : 0,
+  "instructionByteStream" : {"beforePC":"IGnAPeAHgD35gxGRBAAAFGkmQPnUJjibdAgAtIkCQDmpBgA0iRJAuQ==","atPC":"qg5AuT8BCmshBgBUgALAPYgSQLnoYwC54BeAPWjaQHkIBQARaNoAeQ=="},
+  "bootSessionUUID" : "09D98AF9-EB95-4727-B72C-0789AD89A666",
+  "wakeTime" : 89325,
+  "sleepWakeUUID" : "6FEDCEF4-FCCB-4273-8361-898979715633",
+  "sip" : "enabled",
+  "vmRegionInfo" : "0xc is not in any region.  Bytes before following region: 4295081972\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      UNUSED SPACE AT START\n--->  \n      __TEXT                      10001c000-1002d0000    [ 2768K] r-x\/r-x SM=COW  \/Users\/USER\/*\/incursion",
+  "exception" : {"codes":"0x0000000000000001, 0x000000000000000c","rawCodes":[1,12],"type":"EXC_BAD_ACCESS","signal":"SIGSEGV","subtype":"KERN_INVALID_ADDRESS at 0x000000000000000c"},
+  "termination" : {"flags":0,"code":11,"namespace":"SIGNAL","indicator":"Segmentation fault: 11","byProc":"exc handler","byPid":5047},
+  "vmregioninfo" : "0xc is not in any region.  Bytes before following region: 4295081972\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      UNUSED SPACE AT START\n--->  \n      __TEXT                      10001c000-1002d0000    [ 2768K] r-x\/r-x SM=COW  \/Users\/USER\/*\/incursion",
+  "extMods" : {"caller":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"system":{"thread_create":0,"thread_set_state":8936,"task_for_pid":882},"targeted":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"warnings":0},
+  "faultingThread" : 0,
+  "threads" : [{"triggered":true,"id":46242918,"threadState":{"x":[{"value":53730287488},{"value":0},{"value":84},{"value":259},{"value":4297445845},{"value":6171793856},{"value":10},{"value":7424},{"value":1},{"value":0},{"value":4294967274},{"value":6171801080},{"value":21},{"value":6171803226},{"value":4294967274},{"value":4297794463,"symbolLocation":166944,"symbol":"Creature::DevourMonster(Monster*)::AttrMTypes"},{"value":6508972228,"symbolLocation":0,"symbol":"os_unfair_lock_unlock"},{"value":8346342152},{"value":0},{"value":53730287488},{"value":53674008784},{"value":0},{"value":0},{"value":0},{"value":20},{"value":6171794144},{"value":65535},{"value":4299081360,"symbolLocation":0,"symbol":"ZeroValue"},{"value":4302115664,"symbolLocation":0,"symbol":"Game::cDestroyCount"}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4295903384},"cpsr":{"value":1610612736},"fp":{"value":6171795520},"sp":{"value":6171793024},"esr":{"value":2449473542,"description":"(Data Abort) byte read Translation fault"},"pc":{"value":4296581264,"matchesCrashFrame":1},"far":{"value":12}},"queue":"com.apple.main-thread","frames":[{"imageOffset":1499280,"symbol":"Thing::RemoveStatiFrom(Thing*, short)","symbolLocation":220,"imageIndex":0},{"imageOffset":821400,"symbol":"Game::Play()","symbolLocation":4208,"imageIndex":0},{"imageOffset":861580,"symbol":"Game::StartMenu()","symbolLocation":136,"imageIndex":0},{"imageOffset":1937020,"symbol":"main","symbolLocation":612,"imageIndex":0},{"imageOffset":130560,"symbol":"start","symbolLocation":6992,"imageIndex":4}]},{"id":46242923,"name":"com.apple.NSEventThread","threadState":{"x":[{"value":268451845},{"value":21592279046},{"value":8589934592,"objc-selector":"lerForPluginIdentifier:dataSource:"},{"value":98968931401728},{"value":0},{"value":98968931401728},{"value":2},{"value":4294967295},{"value":0},{"value":17179869184},{"value":0},{"value":2},{"value":0},{"value":0},{"value":23043},{"value":0},{"value":18446744073709551569},{"value":8346335128},{"value":0},{"value":4294967295},{"value":2},{"value":98968931401728},{"value":0},{"value":98968931401728},{"value":21592279046},{"value":6173499528},{"value":8589934592,"objc-selector":"lerForPluginIdentifier:dataSource:"},{"value":18446744073709550527},{"value":4412409862}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6508742004},"cpsr":{"value":0},"fp":{"value":6173499376},"sp":{"value":6173499296},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6508665908},"far":{"value":0}},"frames":[{"imageOffset":3124,"symbol":"mach_msg2_trap","symbolLocation":8,"imageIndex":7},{"imageOffset":79220,"symbol":"mach_msg2_internal","symbolLocation":76,"imageIndex":7},{"imageOffset":39360,"symbol":"mach_msg_overwrite","symbolLocation":480,"imageIndex":7},{"imageOffset":4032,"symbol":"mach_msg","symbolLocation":24,"imageIndex":7},{"imageOffset":516312,"symbol":"__CFRunLoopServiceMachPort","symbolLocation":160,"imageIndex":8},{"imageOffset":510404,"symbol":"__CFRunLoopRun","symbolLocation":1188,"imageIndex":8},{"imageOffset":1372612,"symbol":"_CFRunLoopRunSpecificWithOptions","symbolLocation":532,"imageIndex":8},{"imageOffset":1420412,"symbol":"_NSEventThread","symbolLocation":184,"imageIndex":9},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":10},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":10}]},{"id":46807267,"frames":[],"threadState":{"x":[{"value":6174076928},{"value":65643},{"value":6173540352},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":0},"cpsr":{"value":0},"fp":{"value":0},"sp":{"value":6174076928},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6508923912},"far":{"value":0}}},{"id":46833419,"frames":[],"threadState":{"x":[{"value":6172930048},{"value":85099},{"value":6172393472},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":0},"cpsr":{"value":0},"fp":{"value":0},"sp":{"value":6172930048},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6508923912},"far":{"value":0}}},{"id":46836182,"frames":[],"threadState":{"x":[{"value":6172356608},{"value":42839},{"value":6171820032},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":0},"cpsr":{"value":0},"fp":{"value":0},"sp":{"value":6172356608},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6508923912},"far":{"value":0}}}],
+  "usedImages" : [
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4295081984,
+    "size" : 2834432,
+    "uuid" : "dab67bc6-7966-35a7-a4f1-1374ca0d519c",
+    "path" : "\/Users\/USER\/*\/incursion",
+    "name" : "incursion"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4307140608,
+    "size" : 1097728,
+    "uuid" : "a7322e43-de04-3933-8c0e-2c8c0d8ad1f4",
+    "path" : "\/opt\/homebrew\/*\/libSDL2-2.0.0.dylib",
+    "name" : "libSDL2-2.0.0.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 4309385216,
+    "size" : 49152,
+    "uuid" : "ca58aa96-b997-3a6d-9132-19d49be4b3e9",
+    "path" : "\/usr\/lib\/libobjc-trampolines.dylib",
+    "name" : "libobjc-trampolines.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 4658626560,
+    "CFBundleShortVersionString" : "351.2",
+    "CFBundleIdentifier" : "com.apple.AGXMetalG16G-B0",
+    "size" : 8880128,
+    "uuid" : "f763c26f-f4b8-3a78-858d-23e30c8e2485",
+    "path" : "\/System\/Library\/Extensions\/AGXMetalG16G_B0.bundle\/Contents\/MacOS\/AGXMetalG16G_B0",
+    "name" : "AGXMetalG16G_B0",
+    "CFBundleVersion" : "351.2"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6504890368,
+    "size" : 680472,
+    "uuid" : "f924bdd3-4365-3466-9580-8b1b3fa8f857",
+    "path" : "\/usr\/lib\/dyld",
+    "name" : "dyld"
+  },
+  {
+    "size" : 0,
+    "source" : "A",
+    "base" : 0,
+    "uuid" : "00000000-0000-0000-0000-000000000000"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6508969984,
+    "size" : 35172,
+    "uuid" : "160fd864-8d15-36fc-9e97-9725388cfafe",
+    "path" : "\/usr\/lib\/system\/libsystem_platform.dylib",
+    "name" : "libsystem_platform.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6508662784,
+    "size" : 250544,
+    "uuid" : "fca53b98-3d6a-38b2-a0ec-df0f7e05f171",
+    "path" : "\/usr\/lib\/system\/libsystem_kernel.dylib",
+    "name" : "libsystem_kernel.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6509203456,
+    "CFBundleShortVersionString" : "6.9",
+    "CFBundleIdentifier" : "com.apple.CoreFoundation",
+    "size" : 5628704,
+    "uuid" : "4bbd0da8-c600-3f3a-a38b-6664652fa04a",
+    "path" : "\/System\/Library\/Frameworks\/CoreFoundation.framework\/Versions\/A\/CoreFoundation",
+    "name" : "CoreFoundation",
+    "CFBundleVersion" : "5026.5.4.1.402"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6580973568,
+    "CFBundleShortVersionString" : "6.9",
+    "CFBundleIdentifier" : "com.apple.AppKit",
+    "size" : 24260512,
+    "uuid" : "c92cc156-d767-322b-b79b-433f56e72561",
+    "path" : "\/System\/Library\/Frameworks\/AppKit.framework\/Versions\/C\/AppKit",
+    "name" : "AppKit",
+    "CFBundleVersion" : "2685.60.104"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6508916736,
+    "size" : 52028,
+    "uuid" : "4f33683c-18c8-39a1-800b-2e3bd43bcc13",
+    "path" : "\/usr\/lib\/system\/libsystem_pthread.dylib",
+    "name" : "libsystem_pthread.dylib"
+  }
+],
+  "sharedCache" : {
+  "base" : 6503759872,
+  "size" : 5990973440,
+  "uuid" : "157e6d2e-2e5c-39b1-8f2a-8866ee228bed"
+},
+  "vmSummary" : "ReadOnly portion of Libraries: Total=1.8G resident=0K(0%) swapped_out_or_unallocated=1.8G(100%)\nWritable regions: Total=200.5M written=833K(0%) resident=641K(0%) swapped_out=192K(0%) unallocated=199.7M(100%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nActivity Tracing                   256K        1 \nAttributeGraph Data               1024K        1 \nColorSync                           16K        1 \nCoreAnimation                      432K       21 \nCoreGraphics                        32K        2 \nCoreUI image data                  496K        4 \nFoundation                          48K        2 \nKernel Alloc Once                   32K        1 \nMALLOC                           117.2M       37 \nMALLOC guard page                 4032K        4 \nMemory Tag 22                     64.0M        1 \nSTACK GUARD                       56.1M        5 \nStack                             10.1M        5 \nVM_ALLOCATE                        144K        9 \n__AUTH                            5992K      630 \n__AUTH_CONST                      89.1M     1017 \n__CTF                               824        1 \n__DATA                            41.1M      967 \n__DATA_CONST                      34.5M     1025 \n__DATA_DIRTY                      8317K      872 \n__FONT_DATA                        2352        1 \n__LINKEDIT                       576.1M        5 \n__OBJC_RO                         79.1M        1 \n__OBJC_RW                         2598K        1 \n__TEXT                             1.2G     1048 \n__TPRO_CONST                       128K        2 \nmapped file                      257.4M       29 \npage table in kernel               641K        1 \nshared memory                      864K       13 \n===========                     =======  ======= \nTOTAL                              2.5G     5707 \n",
+  "legacyInfo" : {
+  "threadTriggered" : {
+    "queue" : "com.apple.main-thread"
+  }
+},
+  "logWritingSignature" : "ef06c680614f22e597d099b7e875a654b7cc57c1",
+  "bug_type" : "309",
+  "roots_installed" : 0,
+  "trmStatus" : 1,
+  "trialInfo" : {
+  "rollouts" : [
+    {
+      "rolloutId" : "5fb4245a1bbfe8005e33a1e1",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 240000021
+    },
+    {
+      "rolloutId" : "645eb1d0417dab722a215927",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 240000005
+    }
+  ],
+  "experiments" : [
+
+  ]
+}
+}

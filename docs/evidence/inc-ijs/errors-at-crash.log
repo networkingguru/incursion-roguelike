@@ -1,0 +1,35 @@
+=== session 2026-08-21 17:26:55  Incursion 0.6.9Y19  built Aug 21 2026 15:29:49 ===
+2026-08-21 17:26:55  ASSERT failed: 'h <= LastUsedHandle' in file src/Registry.cpp, line 395.
+    --- first occurrence, call stack ---
+    0   incursion                           0x0000000100083418 _Z8LogErrorPKcS0_S0_ + 332
+    1   incursion                           0x00000001001f50a4 _Z5ErrorPKcz + 228
+    2   incursion                           0x0000000100151d88 _ZN8Registry3GetEi + 72
+    3   incursion                           0x0000000100067d98 _ZN5Thing10NotifyGoneEi + 56
+    4   incursion                           0x00000001000e4898 _ZN4Game4PlayEv + 4208
+    5   incursion                           0x00000001000ee58c _ZN4Game9StartMenuEv + 136
+    6   incursion                           0x00000001001f4e7c main + 612
+    7   dyld                                0x0000000183babe00 start + 6992
+    --- end ---
+2026-08-21 17:26:55  Registry::Get -- invalid object handle (34929)!
+    --- first occurrence, call stack ---
+    0   incursion                           0x0000000100083418 _Z8LogErrorPKcS0_S0_ + 332
+    1   incursion                           0x00000001001f50a4 _Z5ErrorPKcz + 228
+    2   incursion                           0x0000000100151dfc _ZN8Registry3GetEi + 188
+    3   incursion                           0x0000000100067d98 _ZN5Thing10NotifyGoneEi + 56
+    4   incursion                           0x00000001000e4898 _ZN4Game4PlayEv + 4208
+    5   incursion                           0x00000001000ee58c _ZN4Game9StartMenuEv + 136
+    6   incursion                           0x00000001001f4e7c main + 612
+    7   dyld                                0x0000000183babe00 start + 6992
+    --- end ---
+2026-08-21 17:26:55  ASSERT failed: '(!h) || (h > 0 && h < 128) || Get(h)' in file inc/Base.h, line 737.
+    --- first occurrence, call stack ---
+    0   incursion                           0x0000000100083418 _Z8LogErrorPKcS0_S0_ + 332
+    1   incursion                           0x00000001001f50a4 _Z5ErrorPKcz + 228
+    2   incursion                           0x0000000100067dbc _ZN5Thing10NotifyGoneEi + 92
+    3   incursion                           0x00000001000e4898 _ZN4Game4PlayEv + 4208
+    4   incursion                           0x00000001000ee58c _ZN4Game9StartMenuEv + 136
+    5   incursion                           0x00000001001f4e7c main + 612
+    6   dyld                                0x0000000183babe00 start + 6992
+    --- end ---
+2026-08-21 17:26:55  ASSERT failed: 'h <= LastUsedHandle' in file src/Registry.cpp, line 395.
+2026-08-21 17:26:55  Registry::Get -- invalid object handle (34929)!
