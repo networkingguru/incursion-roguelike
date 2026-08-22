@@ -128,6 +128,94 @@ void Player::ResetOptions() {
 Character::Character(rID mID, int16 _Type) : Creature(mID, _Type) {
 }
 
+/* Temporary diagnostic: set INCURSION_RIDER_PROBE=1 to arrange, once, the one
+   state inc-upw.32 is about -- a natural attack whose primary blow kills the
+   victim before its rider is thrown.
+
+   The player becomes a giant spider, whose single attack is
+   "A_BITE for 1d8 AD_PIERCE and AD_POIS (DC 16)" (lib/mon3.irh:3098). The
+   "and" clause is the A_ALSO record that Creature::Strike re-throws as a
+   second EV_HIT. A hostile giant rat stands east of him. The key script only
+   presses RIGHT.
+
+   The rat is given 25 hit points and not 1, on purpose. A one-hit-point rat
+   would prove only that the rider stops at a corpse; the session must also
+   show the rider still going out while the rat lives, or a fix that suppressed
+   every rider would pass the check. 25 is about four bites of 1d8+2, so the
+   run sees several riders land and then the kill.
+
+   Nothing here is manufactured that the wizard menu cannot do by hand:
+   src/Debug.cpp case 9 shapeshifts the player, case 6 summons a monster and
+   case 29 makes every monster hostile. It fires once per session and only
+   with the variable set. Delete with the bead that records this. */
+static void RiderProbeArrange(Player *pp)
+{
+    static int done = -1;
+    rID sID, rID_rat;
+    Monster *rat;
+    int16 rx, ry, rad, dx, dy;
+    FILE *f;
+    char path[1024];
+
+    if (done == -1)
+        done = getenv("INCURSION_RIDER_PROBE") ? 0 : 1;
+    if (done || !pp->m)
+        return;
+    done = 1;
+
+    sID = FIND("giant spider");
+    rID_rat = FIND("giant rat");
+    if (!sID || !rID_rat)
+        return;
+
+    /* Two walkable squares side by side, as near the player as they can be
+       found, so that one RIGHT press is an attack and not a walk into a wall.
+       The search starts on the square he already stands on and widens by one
+       ring at a time, which keeps him in the room he arrived in. */
+    for (rad = 0; rad < 30; rad++) {
+        for (dy = -rad; dy <= rad; dy++)
+            for (dx = -rad; dx <= rad; dx++) {
+                if (max(abs(dx), abs(dy)) != rad)
+                    continue;
+                rx = pp->x + dx;
+                ry = pp->y + dy;
+                if (rx < 2 || ry < 2 ||
+                    rx >= pp->m->SizeX() - 3 || ry >= pp->m->SizeY() - 2)
+                    continue;
+                if (!pp->m->SolidAt(rx, ry) && !pp->m->SolidAt(rx + 1, ry) &&
+                    !pp->m->MCreatureAt(rx + 1, ry) &&
+                    (pp->m->FCreatureAt(rx, ry) == pp ||
+                     !pp->m->MCreatureAt(rx, ry)))
+                    goto Found;
+            }
+    }
+    return;
+
+Found:
+    if (rx != pp->x || ry != pp->y)
+        pp->Move(rx, ry, false);
+    pp->Shapeshift(sID, false, NULL);
+    pp->GainTempStati(POLYMORPH, NULL, 1000, SS_MISC, 0, 0, sID);
+
+    rat = new Monster(rID_rat);
+    TMON(rat->tmID)->GrantGear(rat, rat->tmID, true);
+    TMON(rat->tmID)->PEvent(EV_BIRTH, rat, rat->tmID);
+    rat->PlaceAt(pp->m, rx + 1, ry);
+    rat->Initialize(true);
+    rat->GainPermStati(ENEMY_TO, rat, SS_PERM, -1, -1, 0, 9);
+    rat->mHP = rat->cHP = 25;
+
+    snprintf(path, sizeof(path), "%slogs/rider.log",
+        (const char*)T1->IncursionDirectory);
+    f = fopen(path, "a");
+    if (f) {
+        fprintf(f, "arranged: spider at %d,%d, giant rat with %d hp at %d,%d, "
+            "depth %d, turn %u\n", (int)rx, (int)ry, (int)rat->cHP,
+            (int)rx + 1, (int)ry, (int)pp->m->Depth, (unsigned)theGame->Turn);
+        fclose(f);
+    }
+}
+
 void Player::ChooseAction() {
     int16 k, ch, sp, cdir, n, gx, gy;
     int16 dx, dy;
@@ -144,6 +232,8 @@ void Player::ChooseAction() {
     int16 look_dx = 0, look_dy = 0;
 
     GameTimeInfo.actions++;
+
+    RiderProbeArrange(this);
 
     //IPrint(Format("Chill Shield: %d/%d %d %d.",
     //  TEFF(FIND("chill shield")) - theGame->Modules[0]->QEff,
