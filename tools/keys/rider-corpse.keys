@@ -1,0 +1,33 @@
+# Bite a giant rat to death and see whether the poison rider keeps hitting the
+# corpse. This is the session for inc-upw.32.
+#
+#   INCURSION_RIDER_PROBE=1 tools/headless.sh tools/keys/rider-corpse.keys 1
+#
+# Read the result with tools/check_rider_corpse.sh, which is what asserts on
+# the probe log. This file only produces the log.
+#
+# THE SCENARIO IS ARRANGED IN THE ENGINE, not here, because no key script can
+# reach it: the wizard menu's polymorph and summon prompts are interactive
+# glyph pickers that this key format cannot drive. With INCURSION_RIDER_PROBE
+# set, Player::ChooseAction (src/Player.cpp) turns the player into a giant
+# spider on his first action and stands a one-hit-point giant rat east of him.
+# The spider's only attack is "A_BITE for 1d8 AD_PIERCE and AD_POIS (DC 16)",
+# and the "and" clause is the A_ALSO rider whose loop this bead is about.
+#
+# So the whole script is RIGHT. The first bite that lands kills the rat, and
+# the rider is thrown at whatever is left. The presses after the kill walk
+# east over the corpse and cost nothing.
+
+@include chargen.keys
+
+@dump:arrival
+
+# The shapeshift drops every carried weapon and says so, and the message pile
+# opens a "-- more --" prompt that eats whatever key comes next. Clear it
+# before the first attack, or all the RIGHTs are spent on the prompt.
+SPACE*10
+
+RIGHT*24
+
+@dump:after-the-kill
+@quit

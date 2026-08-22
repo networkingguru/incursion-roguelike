@@ -32,6 +32,74 @@
 
 #include "Incursion.h"
 
+/* Temporary diagnostic: set INCURSION_RIDER_PROBE=1 to record what an attack
+   sequence does to its victim. Three lines can appear.
+
+     "hit-on-corpse"    a blow landed on a creature already dead. Creature::Hit
+                        writes it, so it counts blows whichever loop sent them.
+                        This is the defect of inc-upw.32.
+     "rider-stopped"    a rider loop found the victim dead and gave up. This is
+                        the fix working.
+     "rider-thrown"     a rider went out at a victim still alive. This is the
+                        behaviour the fix must NOT take away.
+
+   A session that produces the second and third but never the first did what it
+   should. The scenario is arranged in Player::ChooseAction (src/Player.cpp)
+   and asserted on by tools/check_rider_corpse.sh.
+
+   Delete with the bead that records this. */
+static void RiderProbeNote(const char *what, EventInfo &e)
+{
+    static int on = -1;
+    static FILE *f = NULL;
+    char path[1024];
+
+    if (on == -1)
+        on = getenv("INCURSION_RIDER_PROBE") ? 1 : 0;
+    if (!on || !e.EVictim)
+        return;
+    if (!f) {
+        snprintf(path, sizeof(path), "%slogs/rider.log",
+            (const char*)T1->IncursionDirectory);
+        f = fopen(path, "a");
+        if (!f)
+            return;
+    }
+    fprintf(f, "turn %u: %s <%s> (%s); AType %d DType %d\n",
+        (unsigned)theGame->Turn, what, (const char*)e.EVictim->Name(0),
+        e.EVictim->isDead() ? "dead" : "alive",
+        (int)e.AType, (int)e.DType);
+    fflush(f);
+}
+
+/* upstream: base-code defect, and the fix is upstream's own -- esran's
+   ee51c8a, reported in rmtew/incursion-roguelike discussion #38 and never
+   merged. Nothing here is platform, width or compiler dependent: the loops
+   that call this throw a second attack event at a creature that the first one
+   has already killed, and they do that identically on Win32, with the
+   original typedefs and on the original compiler. Tier Traced -- read the
+   loops and Thing::isDead, then measured one of them with the probe above;
+   we have no reproduction of the crash itself. Tracking inc-upw.32. NOT sent
+   to rmtew.
+
+   isDead() is the liveness test the rest of the engine already uses (there
+   are forty-odd calls in this file alone). It reads the F_DELETE flag
+   (inc/Map.h:733) rather than following a pointer, and death sets that flag
+   long before the object is reaped, so the victim is still safe to read here.
+
+   BE CLEAR ABOUT WHAT THIS FIXES. rmtew's objection in that discussion is
+   that stopping the rider hides the root cause, which is handlers that
+   dereference a creature after it has left the map. He is right, and we track
+   that separately as inc-wdi. This is the narrower, independent rule: a rider
+   attack should stop when its target dies. */
+static bool RiderStopsAtCorpse(EventInfo &e)
+{
+    if (!e.EVictim || !e.EVictim->isDead())
+        return false;
+    RiderProbeNote("rider-stopped", e);
+    return true;
+}
+
 /* Occasional messages:
    Name screams in agony
    Your Weapon crushes Name's skull!
@@ -1684,9 +1752,9 @@ OvercomeNausea:
                                 e.vDmg   = max(1,e.Dmg.Roll());
                                 e.DType  = ta->DType;
                                 e.saveDC = (int8)e.EActor->GetPower(ta->u.a.DC);
-                                e.isHit = true; 
+                                e.isHit = true;
                                 ReThrow(EV_HIT,e);
-                                if (j++ == max) break; 
+                                if (j++ == max) break;
                                 ta = &buf[j];
                             }
                             while ((ta->AType == A_ALSO));
@@ -1711,7 +1779,7 @@ SkipSoundAttack:
             TAttack buf[1024];
             int max = ListAttacks(buf,1024); 
             for (i=0;i<max;i++) {
-                TAttack * ta = &buf[i]; 
+                TAttack * ta = &buf[i];
                 if ((ta->AType == e.AType) ||
                     // all normal attacks from a swarm are not
                     // proximity attacks
@@ -4336,7 +4404,11 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
         } 
         for (i++ ; i<max ; i++) {
           TAttack * at = &buf[i];
-          if (at->AType == A_ALSO || at->AType == A_CRIT) { 
+          /* A bite that kills is the end of the sequence: see
+             RiderStopsAtCorpse above for why, and for inc-upw.32. */
+          if (RiderStopsAtCorpse(e))
+            break;
+          if (at->AType == A_ALSO || at->AType == A_CRIT) {
             if (at->AType == A_ALSO || e.isCrit)
               {
                 EventInfo eCopy = e; 
@@ -4345,6 +4417,7 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
                 eCopy.Immune = false;
                 eCopy.Resist = false;
                 eCopy.saveDC = (int8)e.EActor->GetPower(at->u.a.DC);
+                RiderProbeNote("rider-thrown", eCopy);
                 ReThrow(EV_HIT,eCopy);
               }
             } 
@@ -4701,6 +4774,9 @@ EvReturn Creature::Hit(EventInfo &e) /* this == EVictim!! */
 {
   EvReturn r; int16 oHP, i;
 
+  if (e.EVictim && e.EVictim->isDead())
+    RiderProbeNote("hit-on-corpse", e);
+
   oHP = e.EVictim->cHP;
 
     /* Watch out for Traps in EItem! */ 
@@ -4724,9 +4800,14 @@ EvReturn Creature::Hit(EventInfo &e) /* this == EVictim!! */
           break;
       if (i < max) { 
         for (i++; i<max; i++) {
-          at = &buf[i]; 
-          if (at->AType != A_ALSO) break; 
-          e.AType = at->AType; 
+          at = &buf[i];
+          if (at->AType != A_ALSO) break;
+          /* The same rule as the rider loop in Creature::Strike: a breath
+             weapon that kills does not go on to apply its riders to the
+             corpse. See RiderStopsAtCorpse above, and inc-upw.32. */
+          if (RiderStopsAtCorpse(e))
+            break;
+          e.AType = at->AType;
           e.DType  = at->DType;
           e.Dmg    = at->u.a.Dmg;
           e.saveDC = (int8)e.EActor->GetPower(at->u.a.DC);
