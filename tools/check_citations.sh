@@ -106,6 +106,14 @@ FALLBACK_REF=${FALLBACK_REF:-HEAD}
 ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || {
     echo "not inside a git repository" >&2; exit 2; }
 
+# The selftest needs to re-run this script as a whole, not just call
+# check_document. The summary line -- "N defect(s)" -- is printed by the
+# dispatcher at the bottom of the file, and on 2026-08-23 the summary was the
+# thing under test: it said 4 for a run that printed 6. A case that calls
+# check_document directly never sees that line and cannot catch it. Resolved to
+# an absolute path so the re-run does not depend on the caller's directory.
+SELF=$(cd -- "$(dirname -- "$0")" 2>/dev/null && pwd -P)/$(basename -- "$0")
+
 defects=0
 unchecked=0
 
@@ -215,7 +223,7 @@ non_file_link() {
 }
 
 check_document() {
-    local doc=$1 expect=${2:-} url_ref
+    local doc=$1 expect=${2:-} url_ref py_rc
     [ -r "$doc" ] || { echo "cannot read $doc" >&2; exit 2; }
 
     local resolved="${TMPDIR:-/tmp}/checkcit-resolved.$$"
@@ -414,8 +422,16 @@ check_document() {
     # A checker that validates a citation against the wrong file is worse than
     # no checker, because it produces evidence of a check that never happened.
     # So a number whose file cannot be established now fails the run.
+    #
+    # THE COUNT COMES BACK BY FILE, NOT BY EXIT STATUS. It used to come back as
+    # `|| defects=$((defects + 1))`, which added exactly ONE however many
+    # defects the block had printed. On 2026-08-23 docs/PORT-STATUS.md printed
+    # six DEFECT lines and the summary claimed four. A tool that prints a number
+    # it did not measure is the same fault this file exists to stop, and the run
+    # that removed the hardcoded case count from the selftest summary had
+    # already applied that rule one screen further down.
     python3 - "$doc" "$UPSTREAM_REF" "$ROOT" "$FALLBACK_REF" "$CACHE_DIR" \
-        <<'PYCHECK' || defects=$((defects + 1))
+        <<'PYCHECK'
 import os, re, subprocess, sys
 
 doc, ref, root, fallback, cache = sys.argv[1:6]
@@ -624,8 +640,17 @@ for start, end, kind, name, num in events:
     # context, so `base` is always a text file at this point.
     r, path, n, _ = length_of(base)
     if num > n:
+        # Two sentences, because they send the writer to two different fixes.
+        # Where the number INHERITED its file, the file is the thing that is
+        # wrong and the wording has to say so -- that diagnosis is the whole
+        # point of this check. Where the prose named the file outright, with no
+        # line number, nothing was inherited at all: the writer chose that file
+        # and the number is simply past the end of it. Telling him he inherited
+        # the wrong file there sends him to re-read a paragraph that is correct.
+        why = ("the number is past the end of the file the prose names"
+               if scoped else "it inherited the wrong file")
         print(f"DEFECT  bare ':{num}' follows {base}, which has only {n} lines "
-              f"-- it inherited the wrong file")
+              f"-- {why}")
         bad += 1
         ctx = [base, end, scoped]
         continue
@@ -669,8 +694,25 @@ for start, end, kind, name, num in events:
 # reads, so it cannot also be a return channel, and an exit status carries one
 # number badly.
 open(os.path.join(cache, 'unchecked'), 'w').write(str(unchecked))
+open(os.path.join(cache, 'defects'), 'w').write(str(bad))
 sys.exit(1 if bad else 0)
 PYCHECK
+    # `py_rc=$?` and nothing before it. `local py_rc` on its own line SUCCEEDS,
+    # which sets `$?` to 0, so the declaration must live with the other locals
+    # at the top of the function or the crash below can never be seen. That
+    # mistake was made and caught on 2026-08-23, in the very commit that added
+    # this branch: a deliberately crashed block reported no crash.
+    py_rc=$?
+    if [ -s "$CACHE_DIR/defects" ]; then
+        defects=$((defects + $(cat "$CACHE_DIR/defects")))
+        rm -f "$CACHE_DIR/defects"
+    elif [ "$py_rc" != 0 ]; then
+        # The block died before it could say how many it found. Silence here
+        # would turn a crash into "no defects", so the crash itself is reported
+        # as one -- through `fail`, so the line count and the summary still
+        # agree, which a bare increment would have broken.
+        fail "the bare-continuation check did not finish (python exit $py_rc)"
+    fi
     if [ -s "$CACHE_DIR/unchecked" ]; then
         unchecked=$((unchecked + $(cat "$CACHE_DIR/unchecked")))
         rm -f "$CACHE_DIR/unchecked"
@@ -738,6 +780,25 @@ selftest() {
     printf 'The cast at `inc/Map.h:649` was dropped. Eight survive, all in\n' \
         > "$dir/adopt.md"
     printf '`src/Art.cpp` (`:550`, `:552`, `:1337`, `:1343`).\n' >> "$dir/adopt.md"
+
+    # THE FALSE-NEGATIVE HALF of the same 2026-08-18 sentence, and the half the
+    # fixture above cannot see. `adopt.md` wants exit 0, so an implementation
+    # that named the file, set the context and then SKIPPED every bare number
+    # under it would pass that case while checking nothing at all. Silence and
+    # correctness are the same colour there. This fixture wants exit 1 instead,
+    # so silence fails it.
+    #
+    # The numbers are chosen so that only the right file gives the right answer.
+    # src/Art.cpp runs to 1578 lines and inc/Map.h stops at 981, so `:1000` is
+    # comfortably inside the STALE file and past the end of the one the prose
+    # actually names. The gap from `:900` is 100 lines, inside CITATION_FAR, so
+    # the distance heuristic cannot catch it either. Before 2026-08-18 a run on
+    # this shape printed no defects: the tool measured the number against a file
+    # the sentence never mentioned and reported that as a check. That is the
+    # defect inc-loa.6 was filed for, and it is the one nothing was watching.
+    printf 'The cast at `src/Art.cpp:900` was dropped. The rest are in `inc/Map.h`\n' \
+        > "$dir/stale-short.md"
+    printf '(`:1000`).\n' >> "$dir/stale-short.md"
 
     # A bare number with no file named anywhere before it. The old code skipped
     # it in silence and the run passed.
@@ -818,6 +879,7 @@ selftest() {
     selftest_case "a resolving citation and its expectation" 0 "$dir/good.md" "$dir/good.expect"
     selftest_case "a link to a path that cannot exist"       1 "$dir/bad.md"
     selftest_case "a file named without a line number"       0 "$dir/adopt.md"
+    selftest_case "a named file shorter than the stale one"  1 "$dir/stale-short.md"
     selftest_case "a bare number with no file context"       1 "$dir/nocontext.md"
     selftest_case "a continuation into a non-upstream file"  3 "$dir/otherext.md"
     CITATION_FAR_CHARS=100 \
@@ -849,6 +911,32 @@ selftest() {
         printf 'selftest FAIL: bare and named forms disagree -- bare=%s named=%s\n' \
             "$rc_bare" "$rc_named"
         sed 's/^/    | /' "$dir/pair-bare.out"
+        selftest_failures=$((selftest_failures + 1))
+    fi
+
+    # THE SUMMARY MUST EQUAL WHAT THE RUN PRINTED. It did not. The embedded
+    # python block reports every bare-number defect it finds, but the shell
+    # collected its verdict through `|| defects=$((defects + 1))`, which adds
+    # exactly ONE however many the block printed. So on 2026-08-23
+    # docs/PORT-STATUS.md printed six DEFECT lines and the summary claimed four.
+    # This tool has no business printing a number it did not measure -- the same
+    # rule that took the hardcoded case count out of the summary above.
+    #
+    # The fixture needs TWO python-side defects and no shell-side ones, because
+    # one of each would have agreed by accident. Two bare numbers with no file
+    # named anywhere before them are both lost, and nothing else in the document
+    # is a citation at all.
+    local printed claimed
+    selftest_total=$((selftest_total + 1))
+    printf 'The loop at `:4161` reads past the end, and `:99` does too.\n' \
+        > "$dir/count.md"
+    "$SELF" "$dir/count.md" > "$dir/count.out" 2>&1
+    printed=$(grep -c '^DEFECT' "$dir/count.out")
+    claimed=$(sed -n 's/^\([0-9][0-9]*\) defect(s).*/\1/p' "$dir/count.out")
+    if [ "$printed" -lt 2 ] || [ "$printed" != "$claimed" ]; then
+        printf 'selftest FAIL: the summary count is not the count printed -- %s DEFECT lines, summary says %s\n' \
+            "$printed" "${claimed:-nothing}"
+        sed 's/^/    | /' "$dir/count.out"
         selftest_failures=$((selftest_failures + 1))
     fi
 
