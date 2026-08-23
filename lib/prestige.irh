@@ -2535,14 +2535,22 @@ Class "Sentinel"
       within 120 feet (12 squares). Blindsight is reduced by metallic
       helmets and large objects held in the hands.\n
       __*_<6>4th Level: <7>Uncanny Dodge<2> -- The sentinel is never caught
-     off-guard.\n
+      off-guard. This ability rises by one level for every sentinel level from
+      4th, so a sentinel of 7th level or higher can no longer be flanked,
+      except by a foe whose own Uncanny Dodge stands four levels above hers.
+      Levels of this ability from sentinel and other classes stack.\n
       \n\n<10>THE SENTINEL<15>\n
       __Level__Def__Fort_Refl_Will_Special Abilities<1>\n
       ____1____+0____+0___+2___+0__Superior Senses\n
       ____2____+0____+0___+3___+0__Sharp Senses\n
       ____3____+0____+1___+3___+1__Detect Unnat, Acute Senses\n
       ____4____+1____+1___+4___+1__Blindsight, Uncanny Dodge\n
-      ..."; 
+      ____5____+1____+1___+4___+1__\n
+      ____6____+1____+2___+5___+2__\n
+      ____7____+1____+2___+5___+2__Improved Uncanny Dodge\n
+      ____8____+2____+2___+6___+2__\n
+      ____9____+2____+3___+6___+3__\n
+      ____10___+2____+3___+7___+3__\n"; 
     HitDice: 6; Mana: 4; Def: 1/4;
     Attk:  S_BRAWL    75,
            S_MELEE    75,

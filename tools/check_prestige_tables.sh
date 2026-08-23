@@ -98,10 +98,14 @@ check alienist "THE ALIENIST" \
 check loremaster "THE LOREMASTER" \
     "1 +0 +0 +0 +2" "2 +0 +0 +0 +3" "3 +0 +1 +1 +3" "4 +1 +1 +1 +4"
 
-# Reflex alone is good: CF_GOOD_REF, header "fRw". This table stops after four
-# rows and prints "..." -- that truncation is a separate finding, PA-03-F37.
+# Reflex alone is good: CF_GOOD_REF, header "fRw". This table used to stop
+# after four rows and print "..." -- PA-03-F37. It now runs to 10, which is
+# what the class runs to: it declares no TOTAL_CLASS_LEVELS, and
+# src/Create.cpp:2440 gives every CF_PRESTIGE class 10 levels by default.
 check sentinel "THE SENTINEL" \
-    "1 +0 +0 +2 +0" "2 +0 +0 +3 +0" "3 +0 +1 +3 +1" "4 +1 +1 +4 +1"
+    "1 +0 +0 +2 +0" "2 +0 +0 +3 +0" "3 +0 +1 +3 +1" "4 +1 +1 +4 +1" \
+    "5 +1 +1 +4 +1" "6 +1 +2 +5 +2" "7 +1 +2 +5 +2" "8 +2 +2 +6 +2" \
+    "9 +2 +3 +6 +3" "10 +2 +3 +7 +3"
 
 # PA-03-F17. Def: 1/4 means one point per four class levels, so the column
 # must read +0 +0 +0 +1 +1 ... and not the 1/2 track it used to print.

@@ -67,7 +67,7 @@ PGDN*8
 
 @cursorto "Sentinel" DOWN
 @until "Special Abilities" PGDN
-PGDN*4                          # this table is four rows and then "..."
+PGDN*10
 @dump:sentinel
 
 @cursorto "Twilight Huntsman" DOWN
