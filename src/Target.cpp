@@ -357,9 +357,12 @@ Thing * Target::GetThingOrNULL()
          this function has been logging: not a missing object, a
          wrong-typed one. Fixed here to check the object's actual type
          before returning it, and to give OrderWalkToPoint its own case
-         instead of falling in here by accident. Evidence: Traced (this
-         function, GetCreature()'s ASSERT, and ASSERT's log-and-continue
-         definition, read together). Tracking: inc-upw.13. Not sent. */
+         instead of falling in here by accident. Evidence: Observed -- the
+         asserts the row for inc-upw.13 counts are this function's own, logged
+         from here through Monster::Movement: 74 on a 20-turn walk over a real
+         save before the fix, 0 after. Written as Traced when the reasoning was
+         all there was, and raised when the measurement arrived. Tracking:
+         inc-upw.13. Not sent. */
 
       /* WHY GetQuiet AND NOT Get. A target keeps the handle of whatever the
          monster was interested in, and nothing clears that handle when the

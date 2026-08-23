@@ -4053,7 +4053,10 @@ int16 Creature::SkillLevel(int16 sk)
            lib/prestige.irh:2434-2435 -- and the line above already grants it to
            those two skills. Nothing here is port-specific: the omission is in
            the rule, so it misbehaves identically on Win32 with the original
-           typedefs. Traced. inc-tek.8.3, finding PA-03-F18. Not sent upstream.
+           typedefs. Observed -- tools/check_sharp_senses.sh on seed 1, two
+           builds differing in nothing but this hunk: the same elf rogue reads
+           Searching +5 before and Searching +7 after, while Spot and Listen are
+           identical on both. inc-tek.8.3, finding PA-03-F18. Not sent upstream.
            max, not addition, because s_inh is the single inherent-bonus slot
            and inherent bonuses do not stack. */
         s_inh = max(AbilityLevel(CA_STONEWORK_SENSE),

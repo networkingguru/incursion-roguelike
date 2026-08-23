@@ -2611,8 +2611,10 @@ void Creature::AddTemplate(rID tID)
       m->Update(x,y);
   }
 
-/* upstream: base-code defect, fix is ours. Tier Traced at the time of writing --
-   see inc-dzz for the measurement that replaces this note. Not sent to rmtew.
+/* upstream: base-code defect, fix is ours. Tier Observed -- same seed on two
+   builds differing in nothing but this: the sidebar reads Hit:2 / -3 with one
+   Punch before and Hit:2 / 2 with two Punches after. See the row for inc-dzz in
+   docs/REPORTING-GATE.md. Tracking inc-dzz. Not sent to rmtew.
 
    Fighting with two empty hands produced ONE strike per swing, forever, while
    fighting with two weapons produced two (src/Fight.cpp:443-458). No feat could
