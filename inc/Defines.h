@@ -4008,6 +4008,18 @@ typedef signed int        hObj;
    tools/check_natural_speed.sh fails when the two disagree. */
 #define NATURAL_SPD_FLOOR       15
 
+/* Coverage of natural armour: hide, scale, chitin and bone cover the whole body,
+   so natural armour sits at whatever full coverage is. Full coverage for a worn
+   harness is 10 from a body suit -- eleven suits in lib/weapons.irh sit exactly
+   on 10 and none exceeds it -- plus helm 2, gauntlets 1 and boots 1.
+   A magical shield's absorption is folded into A_ARM at Values.cpp:887 and so
+   inherits this number. That is deliberate: the absorption is a force effect
+   rather than the plank, and a field surrounds its bearer. Do not "fix" it.
+   ponytail: hard-coded rather than derived from the armour data at load, for
+   the same reason NATURAL_SPD_FLOOR is; tools/check_armour_model.sh fails when
+   the constant and the heaviest suit in the data disagree. */
+#define NATURAL_COVERAGE        14
+
 // what you have to input
 #define OPC_INPUT               200
 #define OPT_AUTOMORE            201

@@ -1,0 +1,182 @@
+# Fight an armoured monster long enough to check every term of the armour
+# model: graded penetration of coverage, and subtractive damage (inc-b0w2).
+#
+# The subject is a cave ankylosaurus (lib/mon1.irh:4644): Arm 18, Def 10.
+# Heavy armour behind a low Defense Class is what makes it the right subject.
+# Natural armour sits behind NATURAL_COVERAGE, so the bar an attacker must
+# clear to start turning it aside is 10 + 14 = 24, which a levelled barbarian
+# reaches on a middling roll rather than never or always. Every roll from
+# there up turns aside one more point, so one fight sweeps the whole ramp.
+#
+# It swings back for 3d6 blunt, which is the other half of the measurement:
+# those blows meet the player's WORN armour behind the player's own Coverage,
+# so a single fight exercises both bars and both buckets.
+#
+# The character is levelled to 7 first, in wizard mode, for two reasons. A
+# level 1 barbarian dies to the second tail swipe, and barbarian natural armour
+# does not arrive until 7th (lib/classes.irh:180) -- and a creature carrying BOTH
+# natural armour and a worn suit is the only case where the two bars differ.
+#
+# The oracle is logs/armour.log, written by ArmourProbeNote in src/Fight.cpp
+# under INCURSION_ARMOUR_PROBE. tools/check_armour_model.sh does the
+# arithmetic on it. Nothing here reads the screen, so menu letters below the
+# chargen prefix are the only fragile part.
+#
+# NOT covered: penetrating weapons (WT_PENETRATING), because nothing in the
+# starting kit has the flag and wizard mode cannot add it. The arm*2/5 term
+# is checked by inspection only. Say so rather than let the check imply it.
+#
+# Menu letters move when a list changes; run this at the seed its caller
+# supplies and no other.
+
+@include chargen.keys
+
+# Into play. ESC until the arrival-room description is gone; "Afoot" is on the
+# status panel and appears only once the map is up. This is the entry
+# tools/keys/assassin-bard.keys uses, and it is proven.
+@until "Afoot" ESC
+@dump:inplay
+
+w       # wizard mode
+@expect "Enter wizard mode"
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+# --- LEVEL TO 7 -----------------------------------------------------------
+# The character sheet is a menu, so no game time passes while this happens.
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel hardier" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel hardier" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel hardier" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel hardier" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel hardier" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel hardier" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel hardier" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel hardier" ESC
+@expect "Barbarian 7"
+@dump:sheet     # the Coverage row and its breakdown; inc-vifx reads this
+ESC     # back to the map
+
+# --- THE FIGHT -------------------------------------------------------------
+# Walk east, which is to attack whatever stands there. A summoned monster
+# starts neutral, so the first blow needs confirming; from then on it is
+# hostile and swings back, and those blows are what measure the player's WORN
+# armour behind the player's own Coverage. One bout of this is enough: it
+# yields around fifty resolved attacks, in both directions.
+#
+# The beast wins. That is expected and is not a failure -- 3d6 blunt against a
+# barbarian 7 gets there in about ten exchanges, and every measurement this
+# file exists for has already been written to logs/armour.log by then. The
+# death prompt is answered so the session still ends cleanly.
+
+w
+@choose "Monster Summoning"
+@choose "Dinosaur"
+@choose "cave ankylosaurus"
+RIGHT   # the location cursor starts on the player; one step east
+ENTER
+@dump:summoned
+
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+RIGHT
+@while "Confirm attack" y
+SPACE SPACE
+@dump:fought
+@while "Die?" y
+SPACE SPACE SPACE
+@quit

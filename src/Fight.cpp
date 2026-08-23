@@ -72,6 +72,48 @@ static void RiderProbeNote(const char *what, EventInfo &e)
     fflush(f);
 }
 
+/* Probe for the graded-penetration and subtractive-damage armour model
+   (inc-b0w2). Set INCURSION_ARMOUR_PROBE and every resolved attack writes one
+   line to logs/armour.log naming every term the model uses, so a scripted
+   session can be checked arithmetically rather than by eye. Off and free
+   otherwise, and it follows RiderProbeNote above rather than inventing a
+   second way of doing this.
+
+   nat/worn    each source's rating before anything was taken off it
+   cov         the worn Coverage bar; natural armour always uses
+               NATURAL_COVERAGE
+   natIgn/wornIgn  points of each turned aside by this attack roll
+   arm         what survived and stacked, which is what damage meets
+   raw -> got  damage before and after armour
+
+   tools/check_armour_model.sh asserts on these. Delete with that check. */
+static void ArmourProbeNote(EventInfo &e, int natArm, int wornArm,
+                            int natIgn, int wornIgn)
+{
+    static int on = -1;
+    static FILE *f = NULL;
+    char path[1024];
+
+    if (on == -1)
+        on = getenv("INCURSION_ARMOUR_PROBE") ? 1 : 0;
+    if (!on || !e.EVictim)
+        return;
+    if (!f) {
+        snprintf(path, sizeof(path), "%slogs/armour.log",
+            (const char*)T1->IncursionDirectory);
+        f = fopen(path, "a");
+        if (!f)
+            return;
+    }
+    fprintf(f, "turn %u: <%s> DType %d hit %d+%d vs def %d cov %d; "
+        "nat %d natIgn %d; worn %d wornIgn %d; arm %d; raw %d -> got %d\n",
+        (unsigned)theGame->Turn, (const char*)e.EVictim->Name(0), (int)e.DType,
+        (int)e.vHit, (int)(e.isCrit ? e.vtRoll : e.vRoll), (int)e.vDef,
+        (int)e.EVictim->Attr[A_COV], natArm, natIgn, wornArm, wornIgn,
+        (int)e.vArm, (int)e.vDmg, (int)e.aDmg);
+    fflush(f);
+}
+
 /* upstream: base-code defect, and the fix is upstream's own -- esran's
    ee51c8a, reported in rmtew/incursion-roguelike discussion #38 and never
    merged. Nothing here is platform, width or compiler dependent: the loops
@@ -5333,7 +5375,7 @@ AfterEffects:
               e.EActor,e.EVictim,e.EItem,e.EItem2);
           if ((e.EItem && e.EItem->HasQuality(WQ_NIGHT) ||
                 (e.EItem2 && e.EItem2->HasQuality(WQ_NIGHT)))) {
-            int16 DC; DC = 20 - e.EVictim->ResistLevel(AD_SLEE,false);
+            int16 DC; DC = 20 - e.EVictim->ResistLevel(AD_SLEE);
             if (DC <= 20 && DC > 0 && !e.EVictim->isDead() && 
                 !e.EVictim->SavingThrow(WILL,DC,SA_MAGIC))
               // ww: should be two hours
@@ -6045,56 +6087,93 @@ DoneResistMsg:
                                         } 
 NotWImmune:
 
-                                        if (is_wepdmg(EDType) && e.vRoll && e.EVictim->Attr[A_COV]) {
-                                            /* On a critical hit, we use the critical roll, rather than the
-                                            attack roll, to determine if armour is bypassed. This can 
-                                            (very rarely) lead to the illogical situation where a lower
-                                            threat range is better, because you would rather bypass the
-                                            tough armour on a roll of a 19 rather than "just" score a
-                                            critical hit. This is sufficiently rare as to not be a serious
-                                            issue.
-                                            The reason crits don't automatically bypass armour is that
-                                            this pushes them too far into the range of being stupid player
-                                            instakills -- they can end up doing x4 or x5 damage on average
-                                            to a heavily armoured player.
-                                            */
-                                            if (e.vHit + (e.isCrit ? e.vtRoll : e.vRoll) + e.vPenetrateBonus >= 
-                                                e.vDef + e.EVictim->Attr[A_COV])
-                                                e.isBypass = true;
-                                            if (e.EItem && e.EItem->isItem() && e.EItem->HasQuality(WQ_ENERGY))
-                                                e.isBypass = true;
-                                            if (e.AType != A_SUND && e.EItem2 && e.EItem2->isItem() && e.EItem2->HasQuality(WQ_ENERGY))
-                                                e.isBypass = true;
-
-                                        }
-
-                                        e.vArm = (int8)e.EVictim->ResistLevel(EDType,e.isBypass);
-
-                                        /* ww: replaced for now by the weimer alternate penetration system 
-                                        if (is_wepdmg(e.DType)) {
-                                        if (e.EActor->Mod2(A_STR) > 0)
-                                        e.vPen = min(e.EActor->Mod2(A_STR),e.vArm/2);
-                                        else
-                                        e.vPen = 0;
-                                        if (e.EItem && e.EItem->isItem() && e.EItem->HasIFlag(WT_PENETRATING))
-                                        e.vPen += 2;
-                                        else if (e.AType != A_SUND && e.EItem2 && e.EItem2->isItem() && e.EItem2->HasIFlag(WT_PENETRATING))
-                                        e.vPen += 2;
-                                        }
+                                        /* Armour is found rather than beaten. Two bars are read off the same
+                                           attack roll: clear the Defense Class and you hit; clear the Defense
+                                           Class plus that armour's Coverage and you have found a seam in it,
+                                           and every further point you rolled above that second bar turns one
+                                           more point of that armour aside.
+                                           Natural armour and a worn suit have different Coverage, so they have
+                                           different second bars, and each is penetrated on its own account.
+                                           On a critical hit, we use the critical roll, rather than the
+                                           attack roll, to decide how far into the armour the blow got. This can
+                                           (very rarely) lead to the illogical situation where a lower
+                                           threat range is better, because you would rather bypass the
+                                           tough armour on a roll of a 19 rather than "just" score a
+                                           critical hit. This is sufficiently rare as to not be a serious
+                                           issue.
+                                           The reason crits don't automatically bypass armour is that
+                                           this pushes them too far into the range of being stupid player
+                                           instakills -- they can end up doing x4 or x5 damage on average
+                                           to a heavily armoured player.
                                         */
+                                        /* Declared bare and assigned on the next
+                                           line, not initialised here: this block
+                                           sits inside a switch, and a later case
+                                           label may not jump past an initialiser. */
+                                        int16 natIgnored, wornIgnored, natArm, wornArm;
+                                        natIgnored = wornIgnored = natArm = wornArm = 0;
 
-                                        if (e.vDmg < 5)
-                                            Col = 0;
-                                        else if (e.vDmg < 10)
-                                            Col = 1;
-                                        else if (e.vDmg < 100)
-                                            Col = (e.vDmg / 10) + 1;
-                                        else if (e.vDmg < 200)
-                                            Col = ((e.vDmg - 100)/20) + 11;
-                                        else
-                                            Col = 15;
+                                        if (is_wepdmg(EDType) && e.vRoll) {
+                                            Item *vSuit = e.EVictim->EInSlot(SL_ARMOUR);
+                                            natArm  = max(0,(int16)e.EVictim->Attr[A_ARM]);
+                                            wornArm = vSuit ? ((Armour *)vSuit)->ArmVal(EDType - AD_SLASH) : 0;
+                                            int16 total   = e.vHit + (e.isCrit ? e.vtRoll : e.vRoll) + e.vPenetrateBonus;
 
-                                        if (e.vArm > 0) {
+                                            natIgnored  = max(0, total - (e.vDef + NATURAL_COVERAGE));
+                                            wornIgnored = max(0, total - (e.vDef + e.EVictim->Attr[A_COV]));
+
+                                            /* A penetrating weapon turns aside two points in five of whatever it
+                                               faces, on top of any seam it found. Two in five rather than a flat
+                                               number of points, because a flat number fades against exactly the
+                                               heavy armour such a weapon exists to answer. */
+                                            if ((e.EItem && e.EItem->isItem() && e.EItem->HasIFlag(WT_PENETRATING))
+                                                || (e.AType != A_SUND && e.EItem2 && e.EItem2->isItem()
+                                                    && e.EItem2->HasIFlag(WT_PENETRATING))) {
+                                                natIgnored  += (natArm  * 2) / 5;
+                                                wornIgnored += (wornArm * 2) / 5;
+                                            }
+
+                                            /* An energy weapon has no edge to catch on armour at all. */
+                                            if ((e.EItem && e.EItem->isItem() && e.EItem->HasQuality(WQ_ENERGY))
+                                                || (e.AType != A_SUND && e.EItem2 && e.EItem2->isItem()
+                                                    && e.EItem2->HasQuality(WQ_ENERGY))) {
+                                                natIgnored  = natArm;
+                                                wornIgnored = wornArm;
+                                            }
+
+                                            if (natIgnored >= natArm && wornIgnored >= wornArm)
+                                                e.isBypass = true;
+                                        }
+
+                                        e.vArm = (int8)e.EVictim->ResistLevel(EDType,natIgnored,wornIgnored);
+
+
+                                        if (e.vArm > 0 && is_wepdmg(EDType)) {
+                                            /* Subtractive. Armour turns aside a fixed number of points and
+                                               whatever is left over lands. e.vArm is what survived the
+                                               penetration above, so it already answers this attack roll.
+                                               A blow that connects always does something -- everything has weak
+                                               spots -- so the floor is 1 point, never 0. */
+                                            e.aDmg = max(1, (int)e.vDmg - (int)e.vArm);
+                                            e.vPen = e.vDmg ? (int8)((100L * e.aDmg) / e.vDmg) : 100;
+                                        } else if (e.vArm > 0) {
+                                            /* Elemental and other non-weapon damage still meets the old threshold
+                                               and percentage tables below. Nothing in here is armour: for these
+                                               types e.vArm is a resistance level, which runs near 7 + CR/2
+                                               (Skills.cpp:2976), and nobody has ever measured what subtraction
+                                               would do to those. inc-swg5 settles it, because it has to decide
+                                               whether armour applies to elemental damage at all. */
+                                            if (e.vDmg < 5)
+                                                Col = 0;
+                                            else if (e.vDmg < 10)
+                                                Col = 1;
+                                            else if (e.vDmg < 100)
+                                                Col = (e.vDmg / 10) + 1;
+                                            else if (e.vDmg < 200)
+                                                Col = ((e.vDmg - 100)/20) + 11;
+                                            else
+                                                Col = 15;
+
                                             // ww: I'm having serious consistency problems with the way
                                             // this plays out. Imagine that you (critically) hit something
                                             // for 180 points of damage (this is not unreasonable, just
@@ -6165,6 +6244,8 @@ Absorbed:
                                         else 
                                             e.aDmg = e.vDmg;
 
+                                        if (is_wepdmg(EDType))
+                                            ArmourProbeNote(e,natArm,wornArm,natIgnored,wornIgnored);
 
                                         if (is_wepdmg(EDType))
                                             if (e.vDef > e.vHit + 14)
@@ -8332,15 +8413,15 @@ EvReturn Creature::AttackMsg(EventInfo &e) {
                 s2 = Format("%cDamage:%c %s%s %s= %d", -MAGENTA, -GREY,
                     (const char*)e.Dmg.Str(),(const char*)e.strDmg, (const char*)chargeStr, (int)e.vDmg);
             }
-            if (e.isBypass) {
-                if (e.vPen)
-                    s2 += Format(" bypassed Cov %d (%d other %s, %d%% Pen) = %d",
-                        e.EVictim->Attr[A_COV], e.vArm, is_wepdmg(e.DType) ? "Arm" : "Res", e.vPen, e.aDmg);
-                else
-                    s2 += Format(" bypassed Cov %d = %d",e.EVictim->Attr[A_COV], e.aDmg);
+            if (e.isHit && is_wepdmg(e.DType)) {
+                /* Armour left standing after penetration, then what got through it.
+                   Printed even at 0, because 0 is the interesting case. */
+                s2 += Format(" vs. Arm %d",e.vArm);
+                if (e.isBypass)
+                    s2 += " (bypassed)";
+                s2 += Format(" = %d",e.aDmg);
             } else if (e.isHit && e.vArm) {
-                s2 += Format(" vs. %s %d",is_wepdmg(e.DType) ? 
-                    "Arm" : "Res", e.vArm);
+                s2 += Format(" vs. Res %d",e.vArm);
                 if (e.vPen)
                     s2 += Format(" (%d%% Pen)",e.vPen);
                 s2 += Format(" = %d",e.aDmg);

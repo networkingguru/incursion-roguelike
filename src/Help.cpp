@@ -1212,7 +1212,7 @@ void HelpWeaponTable(String &helpText)
       "<15>C:<3> This weapon deals double damage when used in a charge attack.\n"
       "<15>M:<3> This weapon can only be used while mounted unless you are one size "
                     "larger than it is.\n"
-      "<15>P:<3> This weapon grants a x2 bonus to penetrating armour.\n"
+      "<15>P:<3> This weapon ignores two points in every five of any armour it faces.\n"
       "<15>T:<3> This weapon grants a +4 bonus to trip attempts.\n"
       "<15>D:<3> This weapon grants a +4 bonus to disarm attempts.\n"
       "<15>2:<3> This is a double weapon, and may be used as if wielding two "
@@ -3827,7 +3827,7 @@ String & Weapon::Describe(Player *p) {
     if (TITEM(iID)->HasFlag(WT_SUBDUAL))
         Desc += " This weapon inflicts <11>subdual<7> damage instead of normal damage.";
     if (TITEM(iID)->HasFlag(WT_PENETRATING))
-        Desc += " This weapon grants a x2 bonus to <11>penetrating<7> armour.";
+        Desc += " This weapon <11>ignores two points in every five<7> of any armour it faces, natural or worn.";
     if (TITEM(iID)->HasFlag(WT_SUPER_TRIP))
         Desc += " This weapon grants a +4 bonus to <11>trip<7> attempts.";
     if (TITEM(iID)->HasFlag(WT_SUPER_DISARM))

@@ -3023,60 +3023,74 @@ Text "help::combat"
       \n<11>
       \nARMOUR AND RESISTANCES {AR}\n
       =====================<3>\n
-      __In Incursion, armour reduces damage rather than just adding a set value
+      __In Incursion, armour subtracts damage rather than just adding a set value
       to defense that must be beaten on the attack roll. Every type of armour
       has three ratings -- resistance to slashing, piercing and blunt damage.
       Similarly, all weapons inflict one of these types of damage, determining
       which armour value is used against them. Some weapons inflict two types
       of damage -- slashing and piercing, for example. In this case, whichever
       damage type is more beneficial to the attacker is used.\n
-      __The amount of damage a given armour type removes is calculated based on
-      an internal table by the game. In practice, you can quickly get a feel
-      for how much damage armour of a given type will protect you from. Note 
-      that armours of lower ratings are less effective against greater amounts
-      of damage -- an armour level that takes 50% of the damage off of a 27-point
-      hit might only take 30% off of a 46-point hit.\n
-      __Resistances are gained from magical items. They work exactly the same
-      as armour ratings, but instead of applying against slashing, piercing or
-      blunt damage, resistances lower damage from the elemental types: fire,
-      cold, acid, lightning, toxic damage or sonic damage. Resistances are 
-      typically a little higher than armour values, simply because elemental
-      damage is usually doled out in larger amounts at once, coming from sources
-      such as a wizard's spell or a dragon's breath weapon, and thus needs a
-      higher value to protect against it effectively.\n
+      __Armour takes points straight off the damage of every blow that lands on
+      it. Twelve points of damage against four points of armour does eight.
+      There is no table and no dice in that subtraction: whatever the armour is
+      worth against a blow, it takes off in full.\n
+      __How much it is worth against a blow is not fixed. A good attack roll
+      finds a gap and turns part of the armour aside before the subtraction ever
+      happens, so the same suit that stops four points against one blow may stop
+      only one against the next. Coverage, below, is the rule that decides it.\n
+      __A blow that lands always does at least one point, however heavily
+      armoured its target -- everything has a weak spot, and no armour in the
+      game makes its wearer immune to being hit.\n
+      __<11>Resistances<3> are gained from magical items. Instead of applying
+      against slashing, piercing or blunt damage, resistances lower damage from
+      the elemental types: fire, cold, acid, lightning, toxic damage or sonic
+      damage. Resistances do NOT work the way armour does. A resistance removes
+      a share of the damage rather than a fixed number of points, and a large
+      enough resistance can stop a small attack outright. They are typically a
+      little higher than armour values, because elemental damage is usually
+      doled out in larger amounts at once, coming from sources such as a
+      wizard's spell or a dragon's breath weapon.\n
       __<11>Stacking Armour:<3> Armour and resistances can be gained from multiple
       sources in Incursion -- for example, a lizardman in a chainmail hauberk 
       has both his natural armour rating and the armour values of the chainmail.
       Similarly, a Mage might have fire resistance both from an amulet he wears
       and from a spell he just cast. In these cases, the final applicable value
-      is determined by taking the largest armour or resistance value and adding 
-      to it half of the second largest value, a third of the third largest, a
-      fourth of the fourth largest, and so forth.\n
+      is the largest of them, plus half of the second largest, plus a third of
+      each one after that.\n
       __Note that like all things in Incursion, values from similar sources 
       overlap, rather than stacking. Specifically, resistances may benefit at
       most from A) one permanent item granting that resistance, and B) one
       spell, potion or scroll granting that resistance. Thus, the fire resistance
       of a Ring of Fire Resistance does not stack with a second ring, but it
       would stack with a Resist Fire spell.\n
-      __<11>Coverage:<3> Coverage is an addition to Defense Class that describes
-      the amount of the body covered by armour. Every suit of armour has a coverage
-      rating, and coverage can be increased by wearing protective items such as
-      armoured helmets and boots. If an attack roll exceeds the sum of the armour
-      wearer's Defense Class and coverage, that attack has bypassed the armour
-      completely, and the armour ratings from physical armour are ignored when 
-      calculating damage. Natural armour and other sources of resistance to physical
-      damage still apply normally, however.\n
-      __<11>Penetration:<3> While energy is energy, weapons are driven by their
-      wielder's Strength, and a powerful blow can cleave through armour's protection.
-      In game terms, a positive secondary Strength modifier reduces armour's effective
-      protection by its magnitude, to a maximum reduction of half. For example, if a
-      character with 20 Strength (secondary modifier +4) strikes a character with 5
-      points of armour rating against the relevant type of damage, that character has
-      an effective armour of 3 after Penetration is factored in.\n
-      __Certain weapons are able to penetrate armour (natural or otherwise) more
-      effectively than most. These weapons grant a +2 bonus to Penetration, and this
-      bonus is applied after the half-only cap is applied, meaning that such a weapon
-      can negate more than half of an enemy's armour rating.\n\n
+      __<11>Coverage:<3> Coverage describes how much of the body a suit of armour
+      actually covers. Every suit has a coverage rating, and an armoured helmet,
+      gauntlets or boots each add their own. A shield adds its coverage only to a
+      character with the Shield Expert feat.\n
+      __Coverage is the second thing an attack roll is measured against. Beat the
+      target's Defense Class and you have hit him. Beat his Defense Class PLUS the
+      coverage of the armour and you have found a gap in it -- and every point you
+      rolled above that turns aside one further point of that armour. Beat it by
+      five and five points of armour do nothing. There is no single number at
+      which armour stops mattering all at once; a better roll is always worth
+      something, and the best roll gets through the most.\n
+      __Natural armour -- a dragon's scales, a barbarian's hardened hide -- is
+      penetrated the same way, but it covers the whole body, so the roll needed to
+      start finding a way past it is much higher. A creature wearing armour over
+      natural armour has two gaps to be found, at two different numbers, and each
+      is worn away separately. Cut through a lizardman's chainmail and you still
+      have his hide to get through.\n
+      __<11>Penetration:<3> Certain weapons -- an axe, a warhammer, a stiletto, a
+      crossbow --
+      are built to defeat armour rather than to cut what is behind it. Such a
+      weapon ignores two points in every five of whatever armour it faces,
+      natural or otherwise, on top of any gap the attack roll found. Against
+      light armour this is worth almost nothing. Against plate it is worth a
+      great deal, which is what those weapons are for.\n
+      __Strength does not penetrate armour directly. It does not need to: a
+      stronger character hits at a higher bonus, and a higher bonus is a higher
+      total for coverage to be measured against, so his blows find gaps that a
+      weaker character's do not.\n\n
       
       <11>Armour vs. Special Attacks<3>\n
       __If a physical attack (a claw or sting, for example) carries with it

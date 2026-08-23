@@ -418,7 +418,11 @@ class Creature: public Thing, public Magic
       virtual int16 GetPower(int16);
       
       virtual int16 GetBAB(int16 mode);
-      int16 ResistLevel(int16 DType, bool bypass_armour = false);
+      /* NatIgnored and WornIgnored are how many points of armour this attack
+         has found a way past, counted separately for natural armour and for a
+         worn suit because the two sit behind different Coverage values. See
+         Fight.cpp. Both default to 0, which is "nothing was penetrated". */
+      int16 ResistLevel(int16 DType, int16 NatIgnored = 0, int16 WornIgnored = 0);
       virtual int16 WeaponSaveDC(Item *wp, int16 at);
 
 

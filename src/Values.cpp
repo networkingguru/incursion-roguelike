@@ -7,7 +7,7 @@
 
      void Creature::CalcValues(bool KnownOnly)
      void Character::CalcValues(bool KnownOnly)
-     int16 Creature::ResistLevel(int16 DType, bool bypass_armour)
+     int16 Creature::ResistLevel(int16 DType, int16 NatIgnored, int16 WornIgnored)
      int8 MonHDType(int8 MType)
      int8 MonGoodSaves(int8 MType)
      void Creature::CalcHP()
@@ -861,8 +861,13 @@ Restart:
         AddBonus(BONUS_ELEV,A_DMG_MELEE,SkillLevel(SK_RIDE)/5);
     }
 
+    /* upstream: SL_HELM, SL_GAUNTLETS and SL_BOOTS were absent from this list, so
+       the loop below never saw a helmet, a gauntlet or a boot at all and their
+       declared Coverage could not reach A_COV. Upstream's defect, not the port's:
+       the array holds the same three slots under the original typedefs on Win32.
+       Traced. inc-vifx. Not sent. */
     static int armourSlots[] = {
-        SL_ARMOUR, SL_READY, SL_WEAPON, 0
+        SL_ARMOUR, SL_READY, SL_WEAPON, SL_HELM, SL_GAUNTLETS, SL_BOOTS, 0
     } ;
     for (j=0; armourSlots[j]; j++) {
         i = armourSlots[j];
@@ -914,9 +919,28 @@ Restart:
                     StackBonus(BONUS_ARMOUR,A_SAV_REF,penalty);
                 }
                 AddBonus(BONUS_ARMOUR, A_MOV, penalty);
-            } 
-        } 
-    } 
+            } else if (it->isType(T_HELMET) || it->isType(T_GAUNTLETS)
+                       || it->isType(T_BOOTS)) {
+                /* upstream: the second half of the inc-vifx defect. Even once the
+                   slot list above reaches these items, the chain had no branch for
+                   them, so their Coverage still went nowhere. See the note on
+                   armourSlots. Traced. inc-vifx. Not sent.
+                   A helmet is built as a plain Item (Item.cpp:298), so Item::CovVal
+                   returns 0 for one; the parser fills u.a.Cov for every item type
+                   (yygram.cpp:2458), so read the template rather than change what
+                   class a helmet is and with it the saved form of every helmet. */
+                int16 cov;
+                if (it->isType(T_HELMET)) {
+                    cov = TITEM(it->iID)->u.a.Cov;
+                    if (cov && (it->isKnown(KN_PLUS) || !KnownOnly))
+                        cov += it->GetPlus();
+                } else
+                    cov = it->CovVal(this, KnownOnly);
+                if (cov > 0)
+                    StackBonus(BONUS_ARMOUR, A_COV, cov);
+            }
+        }
+    }
 
     if (onPlane() != PHASE_MATERIAL) {
         // SRD: An incorporeal creature has no natural armour bonus but has a
@@ -1889,7 +1913,7 @@ void Character::CalcValues(bool KnownOnly, Item *thrown)
 
 int16 Resists[16], ResistCount;
 
-int16 Creature::ResistLevel(int16 DType, bool bypass_armour)
+int16 Creature::ResistLevel(int16 DType, int16 NatIgnored, int16 WornIgnored)
   {
     uint32 Res = TMON(mID)->Res, Imm = TMON(mID)->Imm;
     uint8  StatiResists[16]; int16 i,highest,highval,total;
@@ -1983,10 +2007,19 @@ int16 Creature::ResistLevel(int16 DType, bool bypass_armour)
         return -1;
     
     if (is_wepdmg(DType)) {
-      if (Attr[A_ARM] && !bypass_armour)
-        Resists[ResistCount++] = max(0,Attr[A_ARM]);
-      if ((it = EInSlot(SL_ARMOUR)) && !bypass_armour)
-        Resists[ResistCount++] = ((Armour *)it)->ArmVal(DType - AD_SLASH);
+      /* Each physical source is penetrated on its own account, because natural
+         armour and a worn suit sit behind different Coverage values and so
+         behind different attack rolls. Whatever survives stacks below by the
+         ordinary rule. A source reduced to nothing drops out of the list
+         entirely, which is what the old all-or-nothing bypass did to both of
+         them at once. */
+      int16 av;
+      if (Attr[A_ARM])
+        if ((av = max(0,Attr[A_ARM]) - NatIgnored) > 0)
+          Resists[ResistCount++] = av;
+      if ((it = EInSlot(SL_ARMOUR)))
+        if ((av = ((Armour *)it)->ArmVal(DType - AD_SLASH) - WornIgnored) > 0)
+          Resists[ResistCount++] = av;
       }
 
     // ww: a sword that comes in with AD_SLASH won't get a skeletons
