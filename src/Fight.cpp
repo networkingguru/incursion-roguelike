@@ -1950,13 +1950,79 @@ SkipSoundAttack:
                 e2.vDmg   = e2.Dmg.Roll();
                 e2.EItem = it;
                 e2.EItem2 = NULL;
-                e2.ETarget = it; 
+                /* upstream: base-code defect, the fix is ours. Tier Observed;
+                   the evidence is set out below. Tracking inc-473. Not sent to
+                   rmtew.
+
+                   ETarget and EVictim are not two fields. They are one event
+                   slot read through two macros (inc/Events.h:214-215):
+                   ETarget is p[1].t and EVictim is p[1].c. So the assignment
+                   below, which exists only to aim the EV_DAMAGE rethrow at the
+                   item instead of at its owner, also erased the owner. It used
+                   to sit HERE, above the save, and both halves of the message
+                   that follows were wrong because of it.
+
+                     - the text. <EVictim> and <his:EVictim> resolve through
+                       ev->ETarget (src/Message.cpp:466 maps the 'ev' and 'et'
+                       prefixes to the same pointer, correctly, because there
+                       is only one). With the item in the slot the line read
+                       "The orcish bastard sword +1 protects its orcish bastard
+                       sword +1" -- twice the item, and "its" because an item
+                       carries no gender.
+
+                     - the routing, which a reworded message would not have
+                       fixed. VPrint (src/Message.cpp:621) delivers msg1 to
+                       e.EVictim and msg2 to every other player who perceives
+                       e.EVictim. msg1 therefore went to the ITEM, whose
+                       Thing::__IPrint is an empty virtual (inc/Map.h:679), so
+                       the character whose sword had just been saved was told
+                       nothing at all; and that character, no longer equal to
+                       e.EVictim, fell into the bystander branch and got the
+                       garbled third-person line about his own sword. That is
+                       why it was ever seen.
+
+                   Moving the assignment below the save is the whole fix. The
+                   save path returns before the rethrow, so the rethrow still
+                   receives the item, which is the intended behaviour and is
+                   unchanged. Nothing here depends on a type width, a typedef
+                   or a compiler: a union whose two members alias one slot
+                   behaves identically on Win32 built with the upstream
+                   toolchain, so the defect is upstream's.
+
+                   OBSERVED. tools/check_dequ_save_message.sh, seed 5: an orc
+                   warrior wielding an orcish knife +1 strikes a wizard-summoned
+                   brown pudding six times. The pudding carries A_DEQU for 5d6
+                   AD_DCAY at DC 19 (lib/mon3.irh:2770) and is live -- lib/
+                   program.i shows it as "60 for 5d6 57 (DC 19)", A_DEQU
+                   expanded to 60 and AD_DCAY to 57. The save is forced by a
+                   probe build, -DDEQU_PROBE reading INCURSION_DEQU_FORCE_SAVE,
+                   because winning a DC 19 Reflex save on demand is a dice roll
+                   and the message is what is under test, not the roll. The
+                   probe changes which branch runs and nothing inside it.
+
+                   Two binaries, one seed, one key script, six strike screens
+                   each. Before the move: 6 of 6 screens read "The orcish knife
+                   +1 protects its orcish knife +1." -- Brian's line, in a
+                   different weapon -- and 0 of 6 carried the first-person
+                   line. After it: 6 of 6 read "You avoid harm to your orcish
+                   knife +1." and 0 of 6 carried the third-person one.
+
+                   That count settles the routing as well as the wording. In a
+                   one-player session the two strings cannot both reach the same
+                   screen: VPrint gives msg1 only to e.EVictim and msg2 only to
+                   somebody who is NOT e.EVictim. Reading msg1 on the player's
+                   own screen therefore proves he is e.EVictim again. */
                 if (e.saveDC > 0)
-                    if (e.EVictim->SavingThrow(REF,e.saveDC)) {
+                    if (e.EVictim->SavingThrow(REF,e.saveDC)
+#ifdef DEQU_PROBE
+                        || getenv("INCURSION_DEQU_FORCE_SAVE")
+#endif
+                        ) {
                         VPrint(e2,"You avoid harm to your <EItem>.",
                             "The <EVictim> protects <his:EVictim> <EItem>.");
                         return DONE;
                     }
+                e2.ETarget = it; 
                 ReThrow(EV_DAMAGE,e2);
                 ReThrow(EV_ATTACKMSG,e2);
                 return DONE;

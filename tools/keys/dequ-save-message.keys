@@ -1,0 +1,86 @@
+# Make a monster's damage-equipment attack fail its save, and read the line
+# the player is shown (bd inc-473).
+#
+#   INCURSION_DEQU_FORCE_SAVE=1 INCURSION_BIN=./incursion-dequ \
+#   INCURSION_OPTIONS=tools/gates/Options.Dat \
+#       tools/headless.sh tools/keys/dequ-save-message.keys 5
+#
+# WHAT IS BEING MEASURED. A_DEQU is a response attack: it fires from inside the
+# resolution of the PLAYER's blow (src/Fight.cpp, the is_response_attk loop),
+# not on the monster's own turn, so Freeze Monsters does not suppress it. When
+# the player makes the Reflex save the handler prints a message and returns.
+# That message is the oracle. Before the fix it read "The <item> protects its
+# <item>." and went to every player EXCEPT the one whose sword was saved; after
+# it, the character himself is told "You avoid harm to your <item>."
+#
+# WHY THE SAVE IS FORCED. The brown pudding's A_DEQU is DC 19 and the message
+# only prints on a success, so an unforced script would be waiting on a die.
+# The probe build (-DDEQU_PROBE) reads INCURSION_DEQU_FORCE_SAVE and takes the
+# success branch; it changes which branch runs and nothing inside it, and the
+# ordinary binary does not contain the test at all.
+#
+# WHY A BROWN PUDDING. It is one of the two monsters in lib/ that carry A_DEQU
+# with a save DC (lib/mon3.irh:2770), and it is live: lib/program.i:45870 shows
+# it as "60 for 5d6 57 (DC 19)", A_DEQU expanded to 60 and AD_DCAY to 57.
+#
+# Freeze Monsters is on so the pudding neither moves nor takes a turn of its
+# own. It still answers a blow, which is the whole point.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Explore Mode -- yes
+i       # Race:  [i] Orc
+a       # Subrace: [a] Orc (Standard)
+j       # Class: [j] Warrior -- starts with a weapon in hand
+a       # Attributes: the first offered set
+c       # Alignment: [c] Neutral
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "wish to worship" y
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+a       # Personality archetype
+@until "Things in View" ESC
+
+# 'w' opens wizard mode and 'y' confirms it the first time. The pair is driven
+# by @until rather than written out, because a keystroke swallowed by a prompt
+# that was still up would spend every key after it on the wrong thing, and that
+# is exactly what happened on the first attempt at this script.
+@until "Wizard Mode Options" w y
+w       # [w] Wizard Mode Switches
+# The switch list draws no cursor a screen dump can see, so this counts rows:
+# Freeze Monsters is the eleventh, and the cursor opens on the first.
+DOWN*10
+SPACE   # Freeze Monsters: NO -> YES
+ESC
+
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "brown pudding"
+RIGHT ENTER
+@dump:pudding-summoned
+
+# Walk into it. Each bump is one melee attack. A miss prints no save message,
+# so swing several times; the pudding is frozen and cannot walk away.
+RIGHT
+@dump:strike-1
+RIGHT
+@dump:strike-2
+RIGHT
+@dump:strike-3
+RIGHT
+@dump:strike-4
+RIGHT
+@dump:strike-5
+RIGHT
+@dump:strike-6
+
+@quit
