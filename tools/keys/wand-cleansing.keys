@@ -1,0 +1,71 @@
+# Fire a Wand of Cleansing Light at an aberration and let the screen say what
+# the wand rolled. Read by tools/check_wand_cleansing.sh, finding PA-08-F1 of
+# bd inc-tek.8.8.
+#
+# The run needs one wand of a KNOWN plus and one target the wand will accept,
+# and it must reach both without a monster writing over the window the damage
+# is printed in. So, in order:
+#
+#   w y                      enter wizard mode and open its menu. Later
+#                            entries need 'w' alone; the 'y' answers the
+#                            one-time "enter wizard mode?" question.
+#   Wizard Mode Switches     DOWN*10 walks to Freeze Monsters, the 11th row
+#   DOWN*10 SPACE ESC        (src/Tables.cpp:2610-2656). SPACE toggles and does
+#                            not move the cursor. Frozen monsters do not walk
+#                            up and attack while the wand is being fetched.
+#   Item Acquisition         RIGHT*4 walks the glyph row to Wands: ItemGlyphs
+#   RIGHT*4                  (src/Tables.cpp:320) puts -AI_WAND 4 steps along,
+#                            and the header line names the category.
+#   @until "Wand of Soul     the candidate list has no menu letters, so the
+#     Flaying" DOWN          cursor is walked. Three rows show and the MIDDLE
+#                            one is selected, so the run stops on the pass
+#                            where the row BELOW the wanted one appears. Soul
+#                            Flaying is the entry after Cleansing Light in
+#                            lib/m_items.irh. That is an ordering assumption,
+#                            and the check does not trust it: it reads the
+#                            wand's name back off the screen before believing
+#                            anything.
+#   ENTER 2 ENTER            take it. "Enter Item Level:" sets the item's plus
+#                            (src/Debug.cpp:613-622 calls SetInherentPlus with
+#                            what is typed), so the wand is a known +2 and both
+#                            numbers the check compares are predictable.
+#   s ESC                    stow it in the pack and close the manager. The
+#                            manager refuses to close with an item in the air.
+#   Monster Summoning        an aether sponge, the first aberration on the
+#   a a RIGHT ENTER          list, placed one square east. It must be an
+#                            aberration, undead or outsider: EV_ISTARGET
+#                            (lib/m_items.irh) refuses everything else, which
+#                            is why the player himself is an "[Invalid
+#                            Target]". It must also be something that does not
+#                            act: an umber hulk gazes on the same turn and its
+#                            own damage line overwrites the wand's.
+#   b a RIGHT                blast, choose the wand, fire east.
+
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+w
+@choose "Item Acquisition"
+RIGHT*4
+@until "Wand of Soul Flaying" DOWN
+ENTER
+2
+ENTER
+@dump:wand-in-hand
+s
+ESC
+w
+@choose "Monster Summoning"
+a
+a
+RIGHT
+ENTER
+b
+a
+RIGHT
+@dump:fired
