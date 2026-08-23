@@ -284,14 +284,29 @@ public:
   String        & Dump();
   void          Serialize(Registry &r);
 
-  /* One-time cleanup for Targets just loaded from a save or module.
+  /* upstream: base-code defect, the fix is ours. It is upstream's because
+     nothing in it depends on platform, compiler or type width:
+     Registry::SaveGroup writes whole C++ objects as raw bytes by design, and
+     Target::GetThingOrNULL read a union member the type did not select. A
+     Win32 build with the original typedefs reads the same stale bytes as the
+     same wrong handle. The parent project has already accepted the sibling
+     defect -- the missing zero-initialisation, inc-zmk -- as its own, merged
+     as pull request #42 on 2026-08-15. Tier Observed -- see the measurement in
+     docs/REPORTING-GATE.md's row for inc-upw.13: 74 wrong-type asserts on a
+     20-turn walk over a real save before, 0 after. Tracking inc-upw.13. Not
+     sent to rmtew.
+
+     THE DECLARATION IS PART OF THE FIX, which is why this file is named as a
+     fix site in that row. The function did not exist before it.
+
+     One-time cleanup for Targets just loaded from a save or module.
      Registry::SaveGroup/LoadGroup copy whole C++ objects as raw bytes, so a
      Target's `data` union comes back exactly as it was written -- including,
      for anything saved before c9201dd (inc-zmk's Target zero-init fix),
      whatever was on the stack when that Target was constructed. Clears
      data.Creature.c wherever `type` doesn't legitimately carry a creature
      handle (see the matching list in Target::GetThingOrNULL), so a stale
-     value can't later be misread as a handle. See inc-upw.13. */
+     value can't later be misread as a handle. */
   void          SanitizeLoadedTargets();
 } TargetSystem;
 

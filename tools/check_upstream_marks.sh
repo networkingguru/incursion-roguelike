@@ -15,7 +15,7 @@
 #
 #   2. MALFORMED MARKS. A comment that says 'upstream' in a marker's shape but
 #      does not spell the tag as the documented `upstream: ` is invisible to
-#      `grep -rn "upstream:" src/ inc/` (docs/REPORTING-GATE.md:107), so pass 1
+#      `grep -rn "upstream:" src/ inc/` (docs/REPORTING-GATE.md:154), so pass 1
 #      never sees it and the old version of this script counted a clean run
 #      while a fix site went unchecked. src/rle.c:270 and src/lz.c:500 both
 #      wrote the tag as `upstream (inc-l0t, Traced, not sent):` and were skipped
@@ -38,12 +38,13 @@
 #      row's tracking id. A table row that names a file with no mark in it
 #      passes every other check in this script.
 #
-#      This pass WARNS and does not fail, because two rows are unmatched today
-#      and they are not this script's to fix: whether the right answer is a new
-#      marker or a corrected table row is a provenance judgement (bd inc-6s5).
-#      A gate that is red for a reason nobody may act on gets switched off. Run
-#      with --strict to turn these warnings into failures once the backlog is
-#      clear; that is the mode CI should adopt then.
+#      This pass FAILS. It used to warn, because two rows were unmatched and
+#      neither was this script's to settle: whether the right answer is a new
+#      marker or a corrected table row is a provenance judgement, and a gate
+#      that is red for a reason nobody may act on gets switched off. Both were
+#      settled on 2026-08-23 (bd inc-6s5), the backlog is empty, and the mode
+#      the header always called for is now the default. `--strict` is still
+#      accepted and does nothing, so an older caller does not break.
 #
 # WHAT THIS CANNOT CHECK, and do not let a PASS tell you otherwise:
 #   - whether the provenance claim is TRUE. Deciding that a defect would also
@@ -56,24 +57,33 @@
 #
 # Usage:
 #   tools/check_upstream_marks.sh            exit 0 pass, 1 fail
-#   tools/check_upstream_marks.sh --strict   an unmatched table row also fails
+#   tools/check_upstream_marks.sh --strict   accepted, and already the default
 #   tools/check_upstream_marks.sh --selftest prove the detectors still detect
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-REGISTRY="docs/REPORTING-GATE.md"
+# Overridable so --selftest can point pass 3 at a synthetic table. Nothing else
+# sets it; a caller who does is testing the checker, not the tree.
+REGISTRY="${REGISTRY:-docs/REPORTING-GATE.md}"
 FAIL=0
 UNMATCHED=0
-STRICT=0
+
+# STRICT IS THE DEFAULT NOW. It was 0, because two table rows named a fix site
+# with no marker in it and neither was this script's to settle -- a gate that is
+# red for a reason nobody may act on gets switched off. Both were settled on
+# 2026-08-23 (inc-6s5): src/Fight.cpp's inc-dzz row was superseded by inc-nie's
+# marker, and inc/Target.h gained a reasoned marker for inc-upw.13. The backlog
+# is empty, so the warning becomes the failure the header always said it should.
+STRICT=1
 
 APOS=$(printf '\047')
 BT=$(printf '\140')
 
 # The documented form, and nothing else: the literal token `upstream:` followed
-# by whitespace. This is the pattern docs/REPORTING-GATE.md:107 and
-# docs/FIXED.md:210 tell a reader to grep for, so it is the pattern that
+# by whitespace. This is the pattern docs/REPORTING-GATE.md:154 and
+# docs/FIXED.md:587 tell a reader to grep for, so it is the pattern that
 # defines "well formed".
 WELL_FORMED="(^|[^A-Za-z0-9_])upstream:[[:space:]]"
 
@@ -253,7 +263,7 @@ run_checks() {
             echo "WARN: $REGISTRY names $tpath as a fix site for $tid, but $tpath carries"
             echo "      no upstream: marker mentioning $tid. Either the fix site needs a"
             echo "      properly reasoned marker, or the table row names the wrong file."
-            echo "      The two known today are tracked as inc-6s5."
+            echo "      Deciding which is a provenance judgement -- see docs/REPORTING-GATE.md."
             UNMATCHED=$((UNMATCHED + 1))
         fi
     done <<< "$(table_fix_sites "$REGISTRY")"
@@ -262,11 +272,9 @@ run_checks() {
     if [ "$UNMATCHED" -gt 0 ]; then
         echo "$UNMATCHED table row(s) name a fix site that carries no matching marker."
         if [ "$STRICT" -eq 1 ]; then
-            echo "--strict: counting that as a failure."
             FAIL=1
         else
-            echo "Not a failure here; deciding marker-versus-table needs a human. Use"
-            echo "--strict once the backlog is clear."
+            echo "Not counted as a failure: this run was asked not to."
         fi
     fi
 
@@ -352,6 +360,44 @@ inc-ccc src/Third.cpp'
             "table fix-site extraction" "$expect" "$sites"
         rc=1
     fi
+    # PASS 3 MUST BITE, and until 2026-08-23 nothing proved that it did. The
+    # pass only ever warned, so its result was never the exit status and a
+    # silent break in it would have looked exactly like a clean tree. It fails
+    # now, which makes an untested detector a live hazard rather than a dormant
+    # one.
+    #
+    # Three rows, so the answer is three-sided. The files must all EXIST, or the
+    # missing-file branch above answers instead and the marker matcher is never
+    # exercised at all -- which is the mistake this case was written with on the
+    # first attempt.
+    #   src/MapAudit.cpp carries no upstream marker of any kind, so its row must
+    #     be reported as unmatched.
+    #   src/Target.cpp carries a real inc-upw.13 marker, so its row must be
+    #     silent. A detector that reports everything passes the first row alone.
+    #   src/NoSuchFile.cpp does not exist, so the missing-file branch must fire
+    #     and keep its own separate wording.
+    {
+        printf '### Base-code bugs fixed locally\n\n'
+        printf '| Fix | Tier | Sent? | Tracked |\n|---|---|---|---|\n'
+        printf '| A row whose fix site carries no marker (`src/MapAudit.cpp`) | **Traced** | no | inc-aaa |\n'
+        printf '| A row whose fix site does carry one (`src/Target.cpp`) | **Observed** | no | inc-upw.13 |\n'
+        printf '| A row naming a file that is not there (`src/NoSuchFile.cpp`) | **Traced** | no | inc-bbb |\n'
+    } > "$dir/pass3.md"
+
+    local p3
+    p3=$( REGISTRY="$dir/pass3.md" run_checks 2>&1 )
+    if printf '%s\n' "$p3" | grep -q 'WARN: .* names src/MapAudit.cpp as a fix site for inc-aaa' &&
+       printf '%s\n' "$p3" | grep -q 'FAIL: .* names src/NoSuchFile.cpp .* no such file exists' &&
+       ! printf '%s\n' "$p3" | grep -q 'names src/Target.cpp'; then
+        printf 'selftest ok    %-34s -> unmatched row named, matched row silent\n' \
+            "table row without its marker"
+    else
+        printf 'selftest FAIL  %-34s -> pass 3 did not separate the two rows\n' \
+            "table row without its marker"
+        printf '%s\n' "$p3" | sed 's/^/    | /'
+        rc=1
+    fi
+
     rm -rf "$dir"
 
     # And the end-to-end failure path: a malformed tag must make the real run
@@ -392,6 +438,7 @@ inc-ccc src/Third.cpp'
 
 while [ $# -gt 0 ]; do
     case "$1" in
+        # Kept as a no-op so a caller written before 2026-08-23 still runs.
         --strict)   STRICT=1; shift ;;
         --selftest) selftest; exit $? ;;
         *) echo "usage: $0 [--strict] | --selftest" >&2; exit 2 ;;

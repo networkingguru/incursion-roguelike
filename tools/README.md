@@ -319,7 +319,7 @@ the job, and each still explains an older log or an older commit.
 
 `run_probe.sh` was **deleted on 2026-08-18**. Its own header said "Delete this
 script once the saved-game position bug is fixed", and that bug is fixed:
-`docs/REPORTING-GATE.md:189` records `*((long*)&hm)` destroying the player's
+`docs/REPORTING-GATE.md:239` records `*((long*)&hm)` destroying the player's
 position as a closed fix, and `src/AbiCheck.cpp:11` now gates the type widths it
 depended on. It was also redundant — `play.sh` sets the same two probes and more
 (`play.sh:41-49`) and prints a report afterwards, which `run_probe.sh` did not.
@@ -429,7 +429,7 @@ this directory the same way: ask what it samples before you trust what it says.
 An instrument that answers confidently about the wrong thing costs more than no
 instrument. `gate_lib.sh:27-29` states its own version of this limit — the gate
 detects only regressions that produce log output, and never replaces a
-play-test. `check_upstream_marks.sh:48-56` and `check_api_arity.py:65-69` each
+play-test. `check_upstream_marks.sh:49-56` and `check_api_arity.py:65-69` each
 state theirs.
 
 ### Build and release
@@ -633,11 +633,16 @@ months (`check_upstream_marks.sh:16-23`). Both of those two sites are now spelle
 them today shows the fix and not the defect; the check is what keeps the next
 one from happening. Pass 3 is new and checks the REVERSE direction: for every fix
 site the table names, the named file must carry a marker mentioning that row's
-id (`check_upstream_marks.sh:35-39`). Pass 3 WARNS rather than fails, because two rows are unmatched
-today and resolving them is a provenance judgement, not this script's call
-(`check_upstream_marks.sh:41-47`). `--strict` promotes those warnings to failures, and that is the mode
-CI should adopt once the backlog clears (`check_upstream_marks.sh:59`). `--selftest` proves the
-detectors still detect (`check_upstream_marks.sh:60`).
+id (`check_upstream_marks.sh:35-39`). Pass 3 WARNED rather than failed until
+2026-08-23, because two rows were unmatched and resolving them is a provenance
+judgement, not this script's call. Both were settled that day (bd inc-6s5), so
+the pass now FAILS and `--strict` is the default (`check_upstream_marks.sh:41-47`,
+`:73-79`). The flag is still accepted and does nothing, so an older caller does
+not break (`check_upstream_marks.sh:60`). `--selftest` proves the detectors still
+detect (`check_upstream_marks.sh:61`), and since 2026-08-23 that includes pass 3
+itself: a synthetic table with one unmatched row, one matched row and one row
+naming a file that is not there must produce exactly one WARN, one FAIL and no
+word about the matched row.
 
 **`check_api_arity.py` now has a checked-in baseline and can fail.** It used to
 return 0 on every path, printing two MISALIGNED slots and exiting green, so
