@@ -1553,7 +1553,7 @@ Class "Earthsinger"
       even take on its properties. In game terms, the character gains a
       number of spell-like abilities as she advances in this class, in
       the following order: <9>stone tell<2>, <9>soften stone<2>, <9>meld
-      into stone<2>, <9>spike stones<9>, <9>earthmaw<2>, <9>wall of stone<2>,
+      into stone<2>, <9>spike growth<2>, <9>earthmaw<2>, <9>wall of stone<2>,
       <9>transmute rock to mud<2>, <9>stoneskin<2>, <9>animate rock<2>,
       <9>conjure earth elemental<2>, <9>transmute flesh to stone<2> and
       <9>elemental aura<2> (the earth version only). (The last four of these
@@ -1580,7 +1580,7 @@ Class "Earthsinger"
       _Level_Def_Fort_Refl_Will_NA_GS__Special Abilities<1>\n
       ___1___+0___+2___+0___+2__+1 +1__Grounded Stance, Stone Tell\n
       ___2___+0___+3___+0___+3__+1 +2__Soften Stone, Meld i. Stone\n
-      ___3___+0___+3___+1___+3__+2 +3__Geomancy I, Spike Stones\n
+      ___3___+0___+3___+1___+3__+2 +3__Geomancy I, Spike Growth\n
       ___4___+1___+4___+1___+4__+2 +4__Earthmaw, Wall of Stone\n
       ___5___+1___+4___+1___+4__+3 +5__Transmute Rock to Mud\n
       ___6___+1___+5___+2___+5__+3 +6__Stoneskin\n
