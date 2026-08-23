@@ -9,9 +9,12 @@ and flag the ones that are actively misleading. Nothing has been moved to
 `devtools/` and `src/Dump.cpp` has not been touched. Those are steps 4 and 5 and
 they need a decision that is not recorded here.
 
-Two things have been deleted since, each on Brian's explicit decision as he went
-through the list item by item: `FLICKER_PROBE` and `tools/run_probe.sh`. Both
-are recorded in place below.
+Three things have been deleted since. Brian decided the first two himself, as
+he went through the list item by item: `FLICKER_PROBE` and
+`tools/run_probe.sh`. The third, `INCURSION_DEPTH_PROBE`, was deleted on
+2026-08-23 by an unattended run working `bd inc-loa.8`, whose whole content is
+this document's own recommendation plus the probe's own comment. All three are
+recorded in place below.
 
 **Updated 2026-08-20.** The investigations that owned the ACTIVE items have
 mostly closed, so those items now carry a status. Nothing further has been moved
@@ -104,10 +107,23 @@ about blinking, and no probe symbols -- the same check the "Stale
 
 ## 2. Environment-gated diagnostics
 
-Twenty-eight names, counted 2026-08-20 with
-`grep -rho 'getenv *( *"[A-Za-z_0-9]*"' src/ inc/`. `getenv` costs nothing when
-the variable is unset, so unlike the compile-time probes these ship in every
-binary. That is the reason to be stricter about the ones that are finished.
+Thirty distinct names, re-derived 2026-08-23 from the tree with
+
+```sh
+grep -rho 'getenv *( *"[A-Za-z_0-9]*"' src/ inc/ | sort -u | wc -l
+```
+
+Run it and it prints the number; without `sort -u` the same grep prints 38,
+which is call sites and not names. The figure was *Twenty-eight, counted
+2026-08-20*, and the command beside it stopped at the `grep`, so it printed no
+number and nobody could tell the count had moved. Three names arrived after
+that date (`INCURSION_HANDLE_BASE`, `INCURSION_RIDER_PROBE`,
+`INCURSION_STAIR_WARN_PROBE`) and `INCURSION_DEPTH_PROBE` left on 2026-08-23,
+which is 28 + 3 - 1 = 30.
+
+`getenv` costs nothing when the variable is unset, so unlike the compile-time
+probes these ship in every binary. That is the reason to be stricter about the
+ones that are finished.
 
 **Infrastructure, not dev tools. These stay exactly where they are.**
 
@@ -119,11 +135,11 @@ binary. That is the reason to be stricter about the ones that are finished.
 | `INCURSION_MAP_AUDIT` | Armed by `headless.sh` on every run and reported in its summary. A feature now, not a probe. |
 | `STRING_QUEUE_SIZE` | A `-D` override, not a `getenv`. `tools/check_strqueue.sh` builds against it. |
 
-**Finished, and self-marked for deletion.**
+**Finished, self-marked for deletion, and now deleted.**
 
 | Name | Added | Verdict |
 |---|---|---|
-| `INCURSION_DEPTH_PROBE` | 2026-08-17 | Its own comment says *"Delete once inc-x9i is settled"*. **2026-08-20: the condition is now met.** inc-x9i closed on 2026-08-19, fixed in `a8f298a`, and `INCURSION_STACK_PROBE` rather than this one carried the before/after evidence. **DELETE** is the recommendation, and it is Brian's to take. |
+| `INCURSION_DEPTH_PROBE` | 2026-08-17 | **DELETED 2026-08-23 (inc-loa.8).** Its own comment said *"Delete once inc-x9i is settled"*. inc-x9i closed on 2026-08-19, fixed in `a8f298a`, and `INCURSION_STACK_PROBE` rather than this one carried the before/after evidence. What went with it: the `getenv` block and its 21-line comment in `Map::Generate`, and the `probeStairsDown` local that existed only to feed it. The generator is unchanged — `tools/headless.sh tools/keys/dive.keys` on seeds 2, 3, 4, 5, 6 and 7 gave byte-identical screen dumps before and after, and all twelve runs reached gameplay. The readings it made are kept in `docs/evidence/inc-x9i/README.md`. |
 
 **Candidates with a verdict.**
 
@@ -233,8 +249,10 @@ inc-4pt asks to draw explicitly is this:
 
 ## 4. What this audit did not do
 
-- Nothing moved. Two deletions so far, both on Brian's explicit decision:
-  `FLICKER_PROBE` and `tools/run_probe.sh`. Nothing else has been removed.
+- Nothing moved. Three deletions so far: `FLICKER_PROBE` and
+  `tools/run_probe.sh`, both on Brian's explicit decision, and
+  `INCURSION_DEPTH_PROBE` on 2026-08-23 under `bd inc-loa.8`. Nothing else has
+  been removed.
 - `src/Dump.cpp` — settled 2026-08-18. See the section below.
 - No `devtools/README.md` was written. That is step 6 and it describes a
   directory that does not exist yet.

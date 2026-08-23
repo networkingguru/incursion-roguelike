@@ -89,7 +89,7 @@ modifier flags of 0, so `W` is a different keystroke that reaches nothing
 
 `[M] Create Altar` is there for the harness. A sacrifice needs the player to
 be standing on an altar, and the only other source of one is `MakeLev`'s
-random assignment (`src/MakeLev.cpp:2109-2125`), which picks from seven gods
+random assignment (`src/MakeLev.cpp:2107-2123`), which picks from seven gods
 and cannot be asked for a particular one. The command prompts for a god name
 and builds the feature exactly as `MakeLev.cpp:1143-1145` does.
 `check_sacrifice.sh` is the first thing to use it.

@@ -1360,7 +1360,6 @@ extern unsigned long long RNGCalls;
 
 void Map::Generate(rID _dID, int16 _Depth, Map *Above, int8 Luck) {
     int16 i, j, n, fCount, tot, c;
-    int16 probeStairsDown = 0; /* temporary: INCURSION_DEPTH_PROBE, see below */
     int16 x, y, sx, sy, dx, dy, cx, cy, px, py, Streamers, Tries;
     rID xtID, sID, xID;
     Rect r;
@@ -1912,7 +1911,6 @@ SecondStreamerSame:
 
     if ((int16)Con[MAX_STAIRS] && Depth < (int16)Con[DUN_DEPTH]) {
         j = (int16)Con[MIN_STAIRS] + random((int16)(Con[MAX_STAIRS] - Con[MIN_STAIRS]));
-        probeStairsDown = j;
         for (i = 0; i != j; i++) {
             Tries = 0;
             do {
@@ -2345,49 +2343,6 @@ RestartVerifyMon:
     }
 
     PROBE2("gen-out");
-
-    /* Temporary diagnostic: set INCURSION_DEPTH_PROBE=1 to record, for every
-       level this function builds, how deep it is, how deep the dungeon claims
-       to be, how many squares a creature can fall through, and how many down
-       stairs were placed. Answers three questions that were only ever read out
-       of the source: whether stairs stop above the bottom level, whether chasm
-       floor reaches levels shallower than MIN_CHASM_DEPTH, and whether it can
-       land on the bottom level, where there is nothing below to fall to.
-
-       fall_squares counts squares whose terrain carries TF_FALL. Only one
-       terrain in lib/ has that flag, $"chasm" (lib/dungeon.irh:680 upstream),
-       so the count is chasm squares exactly. It counts the built level, so it
-       sees chasm floor from every source: streamers, rooms whose Floor or
-       Tiles are chasm, and anything a special placed.
-
-       stairs_down is the number the stairs loop above was asked to place, not
-       a re-count of what stands on the map. The two differ only if a placement
-       exhausted its 500 tries. The value that matters here is 0 against
-       non-zero, and 0 is structural: the loop does not run at all on the
-       deepest level.
-
-       Delete once inc-x9i is settled. */
-    if (getenv("INCURSION_DEPTH_PROBE")) {
-        static FILE *depthLog = NULL;
-        if (!depthLog) {
-            char path[1024];
-            snprintf(path, sizeof(path), "%slogs/depthprobe.log",
-                (const char*)T1->IncursionDirectory);
-            depthLog = fopen(path, "a");
-        }
-        if (depthLog) {
-            int32 fallSquares = 0;
-            for (x = 1; x < sizeX - 1; x++)
-                for (y = 1; y < sizeY - 1; y++)
-                    if (TTER(TerrainAt(x, y))->HasFlag(TF_FALL))
-                        fallSquares++;
-            fprintf(depthLog,
-                "gen depth=%d dun_depth=%d fall_squares=%d stairs_down=%d\n",
-                (int)Depth, (int)Con[DUN_DEPTH], (int)fallSquares,
-                (int)probeStairsDown);
-            fflush(depthLog);
-        }
-    }
 
 #ifdef INCURSION_OOB_PROBE
     /* inc-b5b: print the FINISHED level around every door that was built at a

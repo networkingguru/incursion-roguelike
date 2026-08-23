@@ -319,7 +319,7 @@ struct Rect
                typedefs exactly as it does here.
 
                WHAT THE CALLER DOES WITH IT, which is why this matters.
-               PlaceWithin has exactly one caller, src/MakeLev.cpp:2948, and the
+               PlaceWithin has exactly one caller, src/MakeLev.cpp:2903, and the
                rectangle it returns is the WALL RING of a room's inner chamber:
                the caller walks its four edges writing wall, then punches a door
                into one of them. An inside-out ring is walked backwards, and

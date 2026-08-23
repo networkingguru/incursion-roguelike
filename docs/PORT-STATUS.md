@@ -297,7 +297,7 @@ use this for unattended verification, not for things he can check in ten seconds
 [For developers](../README.md#for-developers) section**, which lists the main
 switches with the question each answers, and in [`DEVTOOLS-AUDIT.md`](DEVTOOLS-AUDIT.md),
 which carries a verdict on each. What follows is the part specific to this
-document: how they are armed, and the two that were deleted.
+document: how they are armed, and the three that were deleted.
 
 Environment-gated diagnostics cost nothing when the variable is unset, so they
 ship in every binary. Compile-time probes need
@@ -308,7 +308,7 @@ INCURSION_MAP_AUDIT=1 tools/play.sh                       # env-gated
 EXTRA_CXXFLAGS=-DPATH_PROBE OUT=incursion-path ./build_macos.sh   # compile-time
 ```
 
-Environment-gated, as of 2026-08-20:
+Environment-gated, as of 2026-08-23:
 
 | Variable | What it answers |
 |---|---|
@@ -325,7 +325,6 @@ Environment-gated, as of 2026-08-20:
 | `INCURSION_QUIET_PROBE=1` | Whether a handle lookup spoke. Behind `check_quiet_lookup.sh`. |
 | `INCURSION_SAVE_FAIL_AT=N` | Stages a save failure at a chosen point, throwing what a short write throws. Fires once per process. A real full disk cannot reach the interesting case, because both write loops write into memory first. |
 | `INCURSION_STACK_PROBE=1` | Nested entries into depth changes. Found the bottom-of-dungeon crash. |
-| `INCURSION_DEPTH_PROBE=1` | Depth-change accounting. Its own comment says to delete it once inc-x9i is settled. |
 | `INCURSION_FOLLOWER_PROBE`, `INCURSION_GOWITH_PROBE` | Follower loss across a level change. |
 | `INCURSION_FALL_CHAIN`, `INCURSION_FALL_CHAIN_SKIP`, `INCURSION_CHASM_WALK`, `INCURSION_LEVITATE_CHASM` | The chasm and falling investigations. |
 | `INCURSION_DUNGEONMAP_PROBE`, `INCURSION_DESCEND_PROBE` | Dungeon and descent structure. |
@@ -356,6 +355,14 @@ housekeeping:
   defect it was built for, and its flat 8.99 reading was true and irrelevant. Use
   `tools/flickercapture.sh` with `tools/flickerscan.py`, which capture and crop
   the real window. See [`DEVTOOLS-AUDIT.md`](DEVTOOLS-AUDIT.md).
+- **`INCURSION_DEPTH_PROBE`, deleted 2026-08-23.** It logged, for every level
+  `Map::Generate` built, the level's depth, the dungeon's declared depth, the
+  number of chasm squares and the number of down stairs the stairs loop was
+  asked to place. Its own comment said to delete it once inc-x9i was settled.
+  inc-x9i closed on 2026-08-19, fixed in `a8f298a`, and `INCURSION_STACK_PROBE`
+  rather than this one carried the before/after evidence. The measurements it
+  made are kept in `docs/evidence/inc-x9i/README.md`. See
+  [`DEVTOOLS-AUDIT.md`](DEVTOOLS-AUDIT.md).
 - **`tools/run_probe.sh`, deleted 2026-08-18.** An older launcher, superseded by
   `tools/play.sh`. Its own header said to delete it once the saved-game position
   bug was fixed, and that bug is fixed. Nothing invoked it.

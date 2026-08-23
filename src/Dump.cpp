@@ -270,7 +270,7 @@ bool RunSaveDump(const char *path) {
         int32 cells = (int32)sx * (int32)sy;
 
         /* Reachability from the player, over squares that Map::SolidAt calls
-           open. SolidAt (src/MakeLev.cpp:4016) is the same test MoveDepth uses
+           open. SolidAt (src/MakeLev.cpp:3971) is the same test MoveDepth uses
            to reject an arrival square: it counts solid terrain and any feature
            flagged F_SOLID or F_XSOLID. A closed door is NOT solid by that test,
            so this walk passes through doors the player would first have to

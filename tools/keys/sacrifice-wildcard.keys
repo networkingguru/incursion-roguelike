@@ -31,7 +31,7 @@
 # The altar is made by wizard option [M] "Create Altar" (src/Debug.cpp),
 # which exists for this: a sacrifice needs the player to be standing on an
 # altar, and the only other source of one is MakeLev's random placement
-# (src/MakeLev.cpp:2093-2105), which cannot be asked for a particular god.
+# (src/MakeLev.cpp:2107-2123), which cannot be asked for a particular god.
 
 @include chargen.keys
 
