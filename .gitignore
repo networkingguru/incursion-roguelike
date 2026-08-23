@@ -78,3 +78,12 @@ id_ed25519
 # repository. The worktrees themselves are disposable; their branches carry the
 # work.
 .claude/worktrees/
+
+# One-off overnight run reports and their working papers. Both were tracked once
+# and should not have been: MORNING-REPORT.md is a dated report of a single
+# 2026-08-20 job, nothing in the tree references it, and once tracked it acquired
+# a citation header that enlisted it in a checker that must stay green forever.
+# docdelta/ is that job's scratch output; its findings live in beads and its
+# dependency lists were merged into docs/doc-deps.tsv, which IS tracked.
+MORNING-REPORT.md
+docdelta/
