@@ -2622,8 +2622,8 @@ Class "Shadowdancer"
        
       \n\n<10>CLASS FEATURES<2>\n
       __*_<7>Proficiencies<2> -- The shadowdancer is proficient with all
-      simple weapons, daggers, blades, thrown weapons, flexible weapons,
-      archery and light armour.\n
+      simple weapons, daggers, short blades, thrown weapons, flexible
+      weapons, archery and light armour.\n
       __*_<7>Evasion<2> -- A shadowdancer that makes a Reflex
       save to avoid an area-effect attack takes no damage. Levels of this
       ability from shadowdancer and other classes stack toward gaining
@@ -2634,6 +2634,10 @@ Class "Shadowdancer"
       __*_<7>Hide in Plain Sight<2> -- A shadowdancer is able to use this
       ability to slip away into shadows, hiding even when directly observed
       by other characters, at 3rd level.\n
+      __*_<7>Sneak Attack<2> -- A shadowdancer gains a sneak attack just like
+      a rogue's, starting at 3rd level and advancing every third level after
+      that. Levels of this ability from shadowdancer, rogue, assassin and any
+      similar class stack.\n
       __*_<7>Infravision<2> -- A shadowdancer gains the ability to see in 
       the dark for 20 feet (2 squares) or has her darkvision range extended 
       by 20 feet (2 squares) culmulatively at 2nd, 5th and 9th levels.\n
