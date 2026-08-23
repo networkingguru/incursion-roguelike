@@ -1,0 +1,223 @@
+# Build an Alienist and photograph the effect bd inc-tek.8.3 finding
+# PA-03-F7 connected: "Surreal Presence", which the class's prose promises at
+# 3rd level and which nothing in the ruleset ever granted.
+#
+# The effect was fully written at lib/prestige.irh:449-461 -- a verbatim copy
+# of the Spook spell with EF_PERMANANT in place of EF_PERSISTANT -- and no
+# Grants entry, no ThrowEff and no GainPermStati referred to it. The fix adds
+# two lines to the class's own EV_ADVANCE handler (lib/prestige.irh:391-393),
+# in the shape the Earthsinger already used for Grounded Stance.
+#
+# THE ORACLE is wizard mode's Examine Player Data, which lists every stati a
+# creature carries, by name. An effect that was thrown and stuck appears
+# there; one that was never thrown does not. That is a direct reading of the
+# thing the fix changed, and it does not depend on any second system working.
+#
+# THE BUILD. The gate (lib/prestige.irh:175-208) wants Knowledge (Planes) 10,
+# seven levels of known Weavecraft spells, the Augment Summoning feat, and
+# either Kysul or no god at all.
+#   * A mage carries every Knowledge skill: SK_KNOW_ALL in its skill list
+#     expands to all of them (inc/Defines.h:1888).
+#   * Weavecraft is one of the nine specialties a wizard picks at creation,
+#     and its five first-level spells -- Alarm, Mount, Monster Summoning I,
+#     Phase Door and Magic Weapon -- are exactly the five picks character
+#     generation gives, for five of the seven levels needed.
+#   * Augment Summoning has no prerequisite of its own
+#     (src/FeatTab.cpp:827-829), so it can be the first feat taken.
+#   * Humans are given no god at birth.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Human"
+@choose "Knowledge (Planes)"    # humans choose two bonus skills
+@while "Choose a skill:" a
+@choose "Mage"
+
+# Point buy, 75 points, spent to the last one.
+p
+RIGHT*5         # STR 13
+DOWN
+RIGHT*8         # DEX 16
+DOWN
+RIGHT*8         # CON 16
+DOWN
+RIGHT*10        # INT 18
+DOWN
+RIGHT*8         # WIS 16
+DOWN
+RIGHT*7         # CHA 15
+DOWN
+RIGHT*10        # LUC 18
+ENTER y         # "Are these your final stats?"
+
+@choose "Neutral"
+@choose "Weavecraft"            # the wizard specialty the gate cares about
+@choose "Augment Summoning"     # a class requirement, and it has no prereq
+@while "Choose a feat" a
+
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Knowledge (Planes" DOWN
+RIGHT*3
+@cursorto:mark "Alchemy" UP
+RIGHT*3
+@cursorto:mark "Appraise" DOWN
+RIGHT*3
+@cursorto:mark "Concentration" DOWN
+RIGHT*3
+@cursorto:mark "Craft" DOWN
+RIGHT*3
+@cursorto:mark "Decipher Script" DOWN
+RIGHT*3
+ENTER y
+
+a       # Personality archetype
+
+# The five picks character generation gives. Only three first-level
+# Weavecraft spells are offered -- the menu shows a subset of the school, and
+# which subset depends on the seed -- so three of the seven levels the gate
+# counts are bought here and the rest are taken below.
+@choose "Alarm"
+@choose "Mount"
+@choose "Spiritwrack"
+@while "Learn which spell" a
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d                               # character sheet
+# Four levels, one G at a time, each followed by the two menus a mage level
+# can open: a spell to learn, and sometimes a bonus metamagic feat. The
+# "press G until the level shows" shape does NOT work here, because those
+# menus cover the sheet -- so the level never becomes visible, and 'g' is
+# itself a menu letter, so the stray presses pick spells at random.
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@expect "Mage 5"
+
+S
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Knowledge (Planes" DOWN
+RIGHT*8
+ENTER y
+
+# The gate counts SPELL LEVELS of known Weavecraft spells, and wants seven.
+# Alarm, Mount and Spiritwrack are three. Two second-level Weavecraft spells
+# make seven. Wizard mode's Learn Any Spell is used rather than the ordinary
+# level-up menu because that menu offers a seed-dependent subset, and this
+# character must not depend on the seed for a requirement.
+@until "HP:" ESC
+w
+@choose "Learn Any Spell"
+"Summon Swarm" ENTER
+w
+@choose "Learn Any Spell"
+"Apportation" ENTER
+@until "Skill Ratings" d        # back to the sheet
+P                               # [P]restige Classes
+@expect "Choose a class:"
+@choose "Alienist"
+@expect "Alienist 0"            # the gate let him in
+
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Alienist"
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Alienist"
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Alienist"
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Alienist"
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Alienist"
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@expect "Alienist 5"
+ESC
+
+# THE MEASUREMENT, bd inc-tek.22, finding PA-03-F26.
+#
+# Outer Pathways turns an alienist's summons pseudonatural. Two things are
+# read here, and both need the same cast:
+#
+# 1. HOW MANY creatures are converted. The clause took
+#    GetEncounterCreature(0) only, and one cast of a Monster Summoning spell
+#    can produce a whole encounter, so the rest arrived ordinary. The
+#    sidebar's "Things in View" names every creature with its template
+#    prefix, so it counts them.
+#
+# 2. WHAT IT COSTS. The class description says each pseudonatural summoning
+#    "drains [Summoned Creature's CR x 2] mana, and this mana does not
+#    regenerate" (lib/prestige.irh:290-292). The clause charged nothing. The
+#    status line's Mana figure is the oracle: it is read before the cast and
+#    after it, so the drop covers the spell's own cost plus the drain.
+#
+# Monster Summoning III is used because this character is Alienist 5 and its
+# clause fires at 4 (ALIENIST_CLAUSE(3), lib/wspells.irh:5378).
+@until "HP:" ESC
+w
+@choose "Learn Any Spell"
+"Monster Summoning III" ENTER
+@until "HP:" ESC
+@dump:before
+
+m
+@choose "Monster Summoning III"
+RIGHT ENTER
+@until "HP:" ESC
+@dump:after
+
+# THE STEADY STATE is the real oracle, because spent mana regenerates and held
+# mana does not (inc/Creature.h:145-146). Ten searches pass enough game time
+# for every point of ordinary spending to come back, so whatever the status
+# line is still short of the maximum at this point is held. Searching is used
+# rather than resting on purpose: a completed rest clears held mana outright,
+# src/Player.cpp:2186-2188.
+s s s s s s s s s s
+@until "HP:" ESC
+@dump:settled
+
+@quit

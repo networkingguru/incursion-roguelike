@@ -286,10 +286,11 @@ Class "Alienist"
           spell the alienist casts summons a pseudonatural version of whatever
           creature it would normally summon. At 3rd level, the 2nd-level spells are
           so altered, and so on until 10th level, when even 9th-level summoning spells
-          call forth pseudonatural creatures.\n
+          call forth pseudonatural creatures. (The last summoning spell written is
+          the 6th-level one, so alienist levels above 7 alter nothing further.)\n
           __In addition to the normal mana cost of the summoning spell, the pseudonatural
           summoning of an alienist drains [Summoned Creature's CR x 2] mana, and this
-          mana does not regenerate.\n
+          mana does not regenerate. Resting recovers it.\n
           __*_<7>Surreal Presence<2> -- The sense that there is something faintly
           off, something <10>wrong<2> about the alienist crystalizes to a razor-sharp
           clarity at 3rd level, and she gains the benefit (or curse) of a constantly
@@ -300,7 +301,8 @@ Class "Alienist"
           wounds. She gains Toughness as a bonus feat and a +10 bonus to the 
           Concentration skill.\n
           __*_<7>Visitation<2> -- At 5th level, the alienist may use <9>contact other
-          plane<2> at will as an innate spell-like ability.\n
+          plane<2> at will as an innate spell-like ability. (<9>Contact other
+          plane<2> is not yet implemented, so this ability grants nothing.)\n
           __*_<7>Inhuman Allies<2> -- At 6th level, the alienist gains the ability to
           invoke ancient pacts between the harbringers of the Outer Rim and their
           Outer Ones' more modern spawn. Aberrations are neutral to her unless she
@@ -515,8 +517,11 @@ Class "Assassin"
       Balance, Bluff, Climb, Disguise, Escape Artist, Find Weakness,
       Gather Information, Handle Device, Hide in Shadows, Intimidate, 
       Intuition, Jump, Listen, Lockpicking, Move Silently, Poison Use,
-      Spot, Swim and Tumble. 
-      
+      Spot, Swim and Tumble.\n
+      __(<9>Gather Information<2> is not yet implemented, and no Assassin
+      receives it. It needs a world above the dungeon to gather information
+      in.)
+
       \n\n<10>CLASS FEATURES<2>\n
       __*_<7>Proficiencies<2> -- Assassins gain proficiency with crossbows
       and light weapons.\n      
@@ -561,8 +566,9 @@ Class "Assassin"
       phantasmal killer, premonition, track monster.\n
       <15>__5th level -- <1>cloudkill, dream, lower resistance, misdirection,
       power word: stop, telekinesis, wizard sight.\n
-      <15>__6th level -- <1>disintegrate, power word: stun.
-      
+      <15>__6th level -- <1>disintegrate, power word: stun.\n
+      __<1>(<9>gaseous form<1> is not yet implemented.)
+
       \n\n<10>THE ASSASSIN<15>\n
       __Level__Def__Fort_Refl_Will_Special Abilities<1>\n
       ____1____+0____+0___+2___+0__Sneak Attack +1d6 \n
@@ -643,7 +649,18 @@ Effect "Death Attack" : EA_GENERIC
         if (!EVictim->isCreature())
           return NOTHING;
         okForDA = false;
-        if (EActor->isFlatFooted() && EVictim->isFlatFooted())
+        /* upstream: base-code defect, not a port artefact. The gate and the
+           class page are both shared game data, so the same disagreement
+           exists on Win32, with the original typedefs, on the upstream
+           compiler. The page attaches the out-of-combat condition to the
+           assassin alone (lib/prestige.irh:520-524); the line below also
+           demanded it of the target. isFlatFooted() is the out-of-combat
+           counter, not the D&D condition (inc/Creature.h:567-568), and any
+           strike zeroes it for both fighters (src/Fight.cpp:3150-3151), so a
+           target already fighting could never be assassinated -- not even
+           unseen and from behind while the party held it. The EVictim term is
+           removed. Tier Observed -- see bd inc-tek.24. Not sent to rmtew. */
+        if (EActor->isFlatFooted())
           if (!EVictim->Perceives(EActor))
             if (EActor->Perceives(EVictim))
               okForDA = true;
@@ -755,6 +772,9 @@ Class "Blackguard"
       __*_<7>Alignment<2> -- Obviously, any character who wishes to become a
       blackguard must be utterly Evil. Changing to a non-evil alignment causes
       all of the blackguard's supernatural class features to become inaccessable.\n
+      __(<9>That loss is not yet enforced<2>. A blackguard who turns non-evil
+      keeps every class feature. Only the paladin's fall from grace is
+      implemented.)\n
       __*_<7>Base Attack Bonus<2> -- An aspirant must have a BAB of at least +6
       in one category.\n
       __*_<7>Skills<2> -- A character must be a creature of blood, terror and
@@ -822,9 +842,11 @@ Class "Blackguard"
       fire.\n
       <15>__5th level -- <1>evard's black tentacles, infernal blood, nightmare, 
       slay living.\n
-      <15>__6th level -- <1>create corporeal undead, harm, heal, planar 
+      <15>__6th level -- <1>create corporeal undead, harm, heal, planar
       conjuration.\n
-      
+      __<1>(<9>death knell<1> and <9>planar conjuration<1> are not yet
+      implemented.)
+
       \n\n<10>THE BLACKGUARD<15>\n
       __Level__Def__Fort_Refl_Will_Special Abilities<1>\n
       ____1____+0____+2___+0___+0__Sense Light, Smite Good\n
@@ -1648,7 +1670,13 @@ Effect "Grounded Stance" : EA_INFLICT
   }
   
 Effect "Geomancy" : EA_HEALING
-  { SC_THA; Level: 3; xval: HEAL_MANA; pval: 5d12+12; 
+  /* upstream: base-code defect, not a port artefact. The value and both of
+     its descriptions are shared game data: the same disagreement exists on
+     Win32, with the original typedefs, on the upstream compiler. The whole
+     line was copied from the *Mana* potion (lib/m_items.irh:1192), whose own
+     description does state the +12; the copy took the number and left the
+     sentence. Tier Observed -- see bd inc-tek.21. Not sent to rmtew. */
+  { SC_THA; Level: 3; xval: HEAL_MANA; pval: 5d12;
     Purpose: EP_FIX_TROUBLE (TROUBLE_LOWMANA); Level: 3; 
     Desc: "By using geomancy, you can draw magical power from the
       earth, using it to restore 5d12 points of mana. This is
@@ -2903,7 +2931,7 @@ Class "Twilight Huntsman"
       __*_<7>Relentless<2> -- Once a twilight huntsman has begun the hunt for
       an enemy of Maeve, there is no force short of utter annihiliation that
       will turn her away from her task. This intense focus is represented in
-      game terms by the Dwarven Focus ability, gained at 4th level.\n
+      game terms by the Dwarven Focus ability, gained at 3rd level.\n
       __*_<7>Noble Aegis<2> -- At 4th level, the twilight huntsman's role
       as an appointed soveriegn of Maeve is recognized in the form of a
       noble aegis that protects her from base treachery in the form of a

@@ -1,0 +1,223 @@
+# Can an Assassin death-attack a target that is NOT relaxed?
+#
+# bd inc-tek.24, finding PA-03-F28 of bd inc-tek.8.3.
+#
+# THE DEFECT. The class page attaches the out-of-combat condition to the
+# assassin alone (lib/prestige.irh:520-524). The gate demanded it of the target
+# too:  if (EActor->isFlatFooted() && EVictim->isFlatFooted()).
+# isFlatFooted() is not the D&D condition; it is a per-creature out-of-combat
+# counter, FFCount > min(5,10+Mod(A_WIS)) (inc/Creature.h:567-568). Any strike
+# zeroes it for both fighters (src/Fight.cpp:3150-3151), so a target already
+# fighting -- one the party was holding, say -- could never be assassinated.
+#
+# WHAT THIS RUN ARRANGES, and why it is not the party fight it stands for.
+# The run needs a victim whose FFCount is low while the assassin's is high.
+# Staging a real melee between a companion and the victim would work and would
+# also make the measurement depend on monster AI timing. The engine sets the
+# same field itself, deterministically, at creation: Monster::Initialize gives
+# a creature with Improved Initiative FFCount 0 and everything else FFCount 20
+# (src/Monster.cpp:1443-1446). So the run summons one of each and strikes both.
+# The only difference between the two victims is the one field the fix reads.
+#
+#   goblin      no Improved Initiative -> FFCount 20 -> relaxed
+#   grippli     Improved Initiative    -> FFCount 0  -> not relaxed
+#               (lib/mon2.irh:3865)
+#
+# THE ORACLE is the ability's own message. Death Attack announces itself on
+# either outcome -- "You assassinate the <victim>!" when the Fortitude save
+# fails and "The <victim> resists your death attack!" when it holds
+# (lib/prestige.irh:677-682). Either line proves the gate opened; neither can
+# appear if it did not. So the check does not depend on a saving throw.
+#
+# THE TWO STATES, and why the control is not optional:
+#   goblin      the message must appear BEFORE the fix and after it. This is
+#               what stops a "fix" that merely broke the ability from passing.
+#   grippli     the message appears ONLY after the fix.
+#
+# THE OTHER CONDITIONS ARE HELD FAVOURABLE, and one line proves it. Death
+# Attack also requires that the target not perceive the assassin, so both
+# victims are put to sleep first: a sleeping creature perceives nothing
+# (src/Vision.cpp:416-419) and the engine skips the Move Silently against
+# Listen contest for it (src/Fight.cpp:3186-3196). That contest is a d20 roll
+# and it DID decide an earlier draft of this file -- "The goblin hears you!" --
+# which is exactly the kind of dependency a regression check must not carry.
+#
+# Sleeping is not enough on its own, because the sleeper wakes as the blow
+# lands. The engine's own report that the blow arrived unperceived is the line
+# "Catching him unaware" (src/Fight.cpp:3155-3157), and the check REQUIRES it
+# on both strikes. It separates the two failures that otherwise look the same:
+# a victim that noticed him, and a gate that refused a victim he approached
+# perfectly.
+#
+# THE WAIT BETWEEN THE TWO STRIKES. The assassin's own FFCount is zeroed by his
+# own blow, so after the first strike he is no longer relaxed and NOTHING can
+# be measured until it recovers. Ten searches pass more than the six turns the
+# threshold needs. The second victim is summoned after the wait, not before, so
+# that its own counter is still fresh when it is struck.
+#
+# Freeze Monsters is on so that nothing retaliates during the wait: a blow
+# landing on the assassin would zero his counter again and quietly void the
+# second measurement.
+#
+# tools/check_death_attack.sh reads the two dumps. SEED matters: the attribute
+# rolls and the offered feats move with it.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Rogue"
+a                       # Attributes: the first of the offered sets
+@choose "Neutral"       # the class refuses a Good alignment
+@choose "Alertness"
+@until "Unspent Skill Ranks" a          # however many feats are asked for
+
+# The four ranks the Assassin's gate reads, then the rest, because character
+# generation will not release a character with a rank unspent.
+@cursorto:mark "Disguise" DOWN
+RIGHT*3
+@cursorto:mark "Poison Use" DOWN
+RIGHT*3
+@cursorto:mark "Move Silently" UP
+RIGHT*3
+@cursorto:mark "Hide in Shadows" UP
+RIGHT*3
+@cursorto:mark "Bluff" UP
+RIGHT*3
+@cursorto:mark "Alchemy" UP
+RIGHT*3
+@cursorto:mark "Appraise" DOWN
+RIGHT*3
+@cursorto:mark "Balance" DOWN
+RIGHT*3
+@cursorto:mark "Climb" DOWN
+RIGHT*3
+ENTER y # Done, and confirm keeping the ranks
+
+a       # Personality archetype
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+# The list draws no cursor a screen dump can see, so this counts rows against
+# the option table (src/Tables.cpp:2610-2656). The cursor opens on the first
+# row and SPACE does not move it.
+DOWN*2
+SPACE   # 3  Free Advancement:  NO -> YES
+DOWN*8
+SPACE   # 11 Freeze Monsters:   NO -> YES
+ESC
+
+d                               # character sheet
+@until "Class  Rogue 5" G       # five core levels, for the ranks they carry
+
+# The gate wants Disguise 10, Poison Use 10, Hide 7 and Move Silently 7.
+S
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Disguise" DOWN
+RIGHT*8
+@cursorto:mark "Poison Use" DOWN
+RIGHT*8
+@cursorto:mark "Move Silently" UP
+RIGHT*8
+@cursorto:mark "Hide in Shadows" UP
+RIGHT*8
+ENTER y
+
+P                               # [P]restige Classes
+@expect "Choose a class:"
+@choose "Assassin"
+@expect "Assassin 0"            # the gate let him in
+
+@until "class do you wish to advance" G
+@choose "Assassin"
+@while "Choose a feat" a
+
+# The Assassin's 1st level hands over a spellbook (lib/prestige.irh:597-607).
+# It lands in the In-the-Air slot and the game will not leave inventory mode
+# while anything is there, so it must be stowed before any further keystroke.
+ESC
+@while "Air':?" s
+@while "ESC:Done" ESC
+@until "Skill Ratings" d
+
+@until "class do you wish to advance" G
+@choose "Assassin"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Assassin"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Assassin"
+@while "Choose a feat" a
+@expect "Assassin 4"            # caster level 4, enough for the 1st-level sleep
+ESC
+@until "HP:" ESC
+
+# Wizard mode teaches him Sleep. Knowing a spell is not enough to cast it --
+# arcane casting wants the spellbook in hand -- and the Assassin's own
+# spellbook does not carry it.
+w
+@choose "Learn Any Spell"
+"Sleep" ENTER
+@until "HP:" ESC
+
+# ---------------------------------------------------------------- control
+# A goblin has no Improved Initiative, so Monster::Initialize leaves it at
+# FFCount 20 and it counts as relaxed. The old gate and the new one agree here.
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+@until "HP:" ESC
+@dump:0001-goblin-summoned
+
+m
+@cursorto:mark "Sleep" DOWN
+ENTER
+RIGHT ENTER
+@until "HP:" ESC
+@dump:0002-goblin-asleep
+
+RIGHT                           # walk into it: the attack
+@while "Confirm attack" y
+@until "HP:" ESC
+@dump:0003-goblin-struck
+
+# ---------------------------------------------------------------- the wait
+# The blow above zeroed the assassin's own counter. Ten searches carry it back
+# over the threshold of five.
+s s s s s s s s s s
+@until "HP:" ESC
+@dump:0004-rested
+
+# ---------------------------------------------------------------- the test
+# A grippli has Improved Initiative, so it is created at FFCount 0 and is not
+# relaxed. Before the fix this is the case the gate refused. It is also the
+# easiest of the Improved Initiative roster to hit (Def 13), which matters: a
+# miss still zeroes the assassin's own counter and would waste the strike.
+w
+@choose "Monster Summoning"
+@choose "Reptiles"
+@choose "grippli"
+LEFT ENTER
+@until "HP:" ESC
+@dump:0005-grippli-summoned
+
+m
+@cursorto:mark "Sleep" DOWN
+ENTER
+LEFT ENTER
+@until "HP:" ESC
+@dump:0006-grippli-asleep
+
+LEFT                            # walk into it: the attack
+@while "Confirm attack" y
+@until "HP:" ESC
+@dump:0007-grippli-struck
+
+@quit

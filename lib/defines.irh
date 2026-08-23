@@ -64,19 +64,42 @@
   ( (32000  * percent) / 200 ) \
   ( (64000  * percent) / 200 )
   
+/* upstream: base-code defect, not a port artefact. It is wrong in shared
+   script data and behaves the same on Win32, with the original typedefs and
+   on the upstream compiler. The class description promises that each
+   pseudonatural summoning "drains [Summoned Creature's CR x 2] mana, and this
+   mana does not regenerate" (lib/prestige.irh:290-292), and the clause charged
+   nothing at all. Tier Observed -- see bd inc-tek.22. Not sent to rmtew.
+
+   THE LOOP IS DEFENSIVE AND CHANGES NOTHING TODAY, so do not read it as a
+   second fix. The clause used to convert GetEncounterCreature(0) alone, while
+   the Shadowdancer's parallel handler loops (lib/prestige.irh:2704-2705).
+   Every encounter these spells summon carries NF_SINGLE -- "Summoned Monster"
+   at lib/enclist.irh:114, "Holy Summons" at :33, "Nature's Ally" -- so exactly
+   one creature arrives per cast and index 0 was already all of them. The loop
+   is here so that a future multi-creature summon does not silently convert one
+   of its creatures. It is Reasoned, not Observed.
+
+   THE PRICE IS READ OFF THE CREATURE THE SPELL CALLED, before the template
+   is added, because the template's own CR line is "CR: +4 (Min 7)"
+   (lib/mon3.irh:1068). Charging afterwards would make every conversion cost
+   at least 14 mana, so a 2-mana Monster Summoning I would carry a 14-mana
+   drain and the ability would be unusable at the level it arrives. */
 #define ALIENIST_CLAUSE(n)                      \
   On Event POST(EV_MAGIC_HIT) {                 \
-    hObj cr;                                    \
+    hObj cr; int16 i; int16 crCR;               \
     if (EActor->isCharacter())                  \
       if (EActor->LevelAs($"alienist") >= n+1)  \
-        {                                       \
-          cr = EMap->GetEncounterCreature(0);   \
-          if (cr != NULL_OBJ)                   \
-            if (cr->CanAddTemplate($"pseudonatural")) \
+        for (i=0; cr = EMap->GetEncounterCreature(i); i++) \
+          if (cr->CanAddTemplate($"pseudonatural")) \
+            {                                   \
+              crCR = cr->ChallengeRating();     \
               cr->AddTemplate($"pseudonatural");\
-        }                                       \
+              if (crCR > 0)                     \
+                EActor->LoseMana(crCR * 2, true); \
+            }                                   \
     return NOTHING;                             \
-    };                                          
+    };
     
 #define ANIMATION_MORALITY(corpse, undead)                              \
   if (undead->isMType(MA_EVIL) && undead->HasMFlag(M_IALIGN))           \

@@ -1,0 +1,152 @@
+# Build an Earthsinger and photograph two things bd inc-tek.8.3 changed about
+# the class: the race gate that refused the gnomes its own refusal message
+# names (PA-03-F14), and the Grounded Stance that any pair of boots switched
+# off (PA-03-F5).
+#
+# PA-03-F14. The gate tested dwarves only. Its gnome clauses were commented
+# out, and the reason was a naming bug rather than a mechanism failure -- the
+# disabled lines named $"Gnome, Rock" and $"Gnome, Deep", against the real
+# resource names "Gnome;race" and "Deep Gnome;race". So the class's own live
+# refusal message promised "a dwarf, rock gnome or deep gnome" and then
+# refused two of the three. This character is a rock gnome, the exact case
+# the message named and the gate denied.
+#
+# PA-03-F5. Grounded Stance adds the character's Earthsinger level to the
+# damage of every melee or unarmed hit, provided she is not levitating, not
+# ethereal, on earth, and NOT WEARING MAGICAL BOOTS. The test read
+#     if (EActor->InSlot(SL_BOOTS) != NULL_OBJ)
+# which asks whether the slot is occupied, not whether the boot is magical,
+# so ordinary leather boots cancelled the class's signature ability -- and
+# nearly every character wears boots, so it was off nearly always. An
+# ethereality test was missing too and has been added.
+#
+# THE ORACLE for PA-03-F5 is the combat message. The effect appends its own
+# term to the damage string, ' %+d GS' (lib/prestige.irh:1610), and
+# src/Fight.cpp:8038 prints that string in the "Damage:" line. So a hit
+# either says GS or it does not, and the character is wearing ordinary boots
+# while it happens.
+#
+# THE BUILD, and why each number is forced.
+#   * Race: a gnome, which is the half of the roster that was refused.
+#   * Bardic Music, so the class must be entered from the bard.
+#   * Melee BAB +5. A bard attacks at 75%, so that is 7th level.
+#   * Craft 15. ISkillLevel counts ranks, training and (attribute-11)/2, and
+#     the bard's Craft reads Wisdom. Ten ranks is a 7th-level cap, so the
+#     bought Wisdom has to carry the rest -- hence 17 bought against the
+#     gnome's -2.
+#   * Endurance and Hardiness, which are the two feats character generation
+#     hands out. Hardiness is only offered once Endurance is held, so the
+#     order matters.
+#   * No god, or Ekliazeh. Gnomes are given no god at birth, so nothing to do.
+#   * Seven core levels plus four prestige levels is 11, MAX_CHAR_LEVEL.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Gnome"
+@choose "Gnome (Standard)"
+@choose "Bard"
+
+# Point buy, 75 points, spent to the last one.
+p
+RIGHT*4         # STR 12
+DOWN
+RIGHT*10        # DEX 18
+DOWN
+RIGHT*8         # CON 16
+DOWN
+RIGHT*8         # INT 16
+DOWN
+RIGHT*9         # WIS 17, which the gnome's -2 leaves at 15, for Craft
+DOWN
+RIGHT*10        # CHA 18
+DOWN
+RIGHT*6         # LUC 14
+ENTER y         # "Are these your final stats?"
+
+@choose "Neutral"
+@choose "Endurance"     # Hardiness needs it, and the class needs both
+@choose "Hardiness"
+@while "Choose a feat" a
+
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Craft" DOWN
+RIGHT*3
+@cursorto:mark "Alchemy" UP
+RIGHT*3
+@cursorto:mark "Appraise" DOWN
+RIGHT*3
+@cursorto:mark "Bluff" DOWN
+RIGHT*3
+@cursorto:mark "Concentration" DOWN
+RIGHT*3
+@cursorto:mark "Decipher Script" DOWN
+RIGHT*3
+@cursorto:mark "Diplomacy" DOWN
+RIGHT*3
+@cursorto:mark "Disguise" DOWN
+RIGHT*3
+@cursorto:mark "Escape Artist" DOWN
+RIGHT*3
+@cursorto:mark "Heal" DOWN
+RIGHT*3
+ENTER y # Done, and confirm keeping the ranks
+
+a       # Personality archetype
+@while "Learn which spell" a    # a bard picks spells; any will do here
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+DOWN*9
+SPACE   # Show All Combat Rolls: NO -> YES. This is what makes the engine
+        #   print the "Damage:" line (src/Fight.cpp:8038), which is where
+        #   Grounded Stance writes its own term.
+ESC
+
+d                               # character sheet
+# Levelling a bard opens a spell-learning menu at most levels, so the plain
+# "press G until the level arrives" shape is not enough on its own.
+@until "Class  Bard 7" G
+@while "Learn which spell" a
+
+S
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Craft" DOWN
+RIGHT*10
+ENTER y
+
+P                               # [P]restige Classes
+@expect "Choose a class:"
+@choose "Earthsinger"
+@expect "Earthsinger 0"         # the gate admitted a gnome
+
+@until "class do you wish to advance" G
+@choose "Earthsinger"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Earthsinger"
+@while "Choose a feat" a
+@until "class do you wish to advance" G
+@choose "Earthsinger"
+@while "Choose a feat" a
+@expect "Earthsinger 3"         # Geomancy arrives at 3rd level
+ESC
+
+# THE ORACLE is the Spell Manager's "Power & Metamagic" column. It prints the
+# effect's pval as a dice expression beside the ability, so the number the
+# player is shown and the number the engine rolls are the same field. Geomancy
+# is granted as Ability[CA_INNATE_SPELL, $"Geomancy"] (lib/prestige.irh:1582),
+# so it appears in this manager rather than on a spell list.
+#
+# The class's two descriptions promise 5d12 (lib/prestige.irh:1543 and the
+# effect's own Desc). The value was 5d12+12, copied whole from the *Mana*
+# potion. tools/check_geomancy.sh reads this dump. bd inc-tek.21.
+m
+@dump:spellmanager
+ESC
+@quit
