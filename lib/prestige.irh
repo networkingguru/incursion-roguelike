@@ -1080,7 +1080,9 @@ Class "Bladesinger"
     Skills[0]: 0;
     Grants:
       ;
-    Flags: CF_PRESTIGE, CF_FAVOURED;
+    // CF_PSEUDO: unfinished -- hidden from every class list. The header, level
+    // table and feature prose above stay as the design guide for implementing it.
+    Flags: CF_PRESTIGE, CF_FAVOURED, CF_PSEUDO;
     Lists:
       * SPELL_LIST
           0;
@@ -1184,7 +1186,9 @@ Class "Celestial Initiate"
     Skills[0]: 0;
     Grants:
       ;
-    Flags: CF_PRESTIGE, CF_FAVOURED;
+    // CF_PSEUDO: unfinished -- hidden from every class list. The header, level
+    // table and feature prose above stay as the design guide for implementing it.
+    Flags: CF_PRESTIGE, CF_FAVOURED, CF_PSEUDO;
     Lists:
       * SPELL_LIST
           0;
@@ -1302,7 +1306,9 @@ Class "Crimson Adept"
     Skills[0]: 0;
     Grants:
       ;
-    Flags: CF_PRESTIGE, CF_FAVOURED;
+    // CF_PSEUDO: unfinished -- hidden from every class list. The header, level
+    // table and feature prose above stay as the design guide for implementing it.
+    Flags: CF_PRESTIGE, CF_FAVOURED, CF_PSEUDO;
     Lists:
       * SPELL_LIST
           0;
@@ -1438,7 +1444,9 @@ Class "Duelist"
     Skills[0]: 0;
     Grants:
       ;
-    Flags: CF_PRESTIGE, CF_FAVOURED;
+    // CF_PSEUDO: unfinished -- hidden from every class list. The header, level
+    // table and feature prose above stay as the design guide for implementing it.
+    Flags: CF_PRESTIGE, CF_FAVOURED, CF_PSEUDO;
     Lists:
       * SPELL_LIST
           0;
@@ -1844,7 +1852,9 @@ Class "Elementalist"
     Skills[0]: 0;
     Grants:
       ;
-    Flags: CF_PRESTIGE, CF_FAVOURED;
+    // CF_PSEUDO: unfinished -- hidden from every class list. The header, level
+    // table and feature prose above stay as the design guide for implementing it.
+    Flags: CF_PRESTIGE, CF_FAVOURED, CF_PSEUDO;
     Lists:
       * SPELL_LIST
           0;
@@ -1872,7 +1882,9 @@ Class "Horizon Walker"
     Skills[0]: 0;
     Grants:
       ;
-    Flags: CF_PRESTIGE, CF_FAVOURED;
+    // CF_PSEUDO: unfinished -- hidden from every class list. The header, level
+    // table and feature prose above stay as the design guide for implementing it.
+    Flags: CF_PRESTIGE, CF_FAVOURED, CF_PSEUDO;
     Lists:
       * SPELL_LIST
           0;
@@ -2020,7 +2032,9 @@ Class "Inquisitor"
     Skills[0]: 0;
     Grants:
       ;
-    Flags: CF_PRESTIGE, CF_FAVOURED;
+    // CF_PSEUDO: unfinished -- hidden from every class list. The header, level
+    // table and feature prose above stay as the design guide for implementing it.
+    Flags: CF_PRESTIGE, CF_FAVOURED, CF_PSEUDO;
     Lists:
       * SPELL_LIST
           0;
@@ -3064,7 +3078,9 @@ Class "Undead Slayer"
     Skills[0]: 0;
     Grants:
       ;
-    Flags: CF_PRESTIGE, CF_FAVOURED;
+    // CF_PSEUDO: unfinished -- hidden from every class list. The header, level
+    // table and feature prose above stay as the design guide for implementing it.
+    Flags: CF_PRESTIGE, CF_FAVOURED, CF_PSEUDO;
     Lists:
       * SPELL_LIST
           0;
@@ -3171,7 +3187,7 @@ Class "Underdark Warrior"
       with times of privation. Levels of this ability from ranger and underdark
       warrior stack.\n
       __*_<7>Bonus Feats<2> -- An underdark warrior gains Close Quarters Fighter
-      as a bonus feat at level 2, Improved Initiative as a bonus feat at level 3
+      as a bonus feat at level 1, Improved Initiative as a bonus feat at level 3
       and Zen Defense as a bonus feat at level 5.\n
       __*_<7>Uncanny Dodge<2> -- The underdark warrior gains the Uncanny Dodge 
       ability at 2nd level; levels of this ability gained from the barbarian or

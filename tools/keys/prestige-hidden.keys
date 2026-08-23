@@ -1,0 +1,45 @@
+# Photograph the whole prestige-class menu, so a check can read which classes
+# the game offers a player.
+#
+# WHY THIS EXISTS. Eight prestige classes in lib/prestige.irh are unfinished:
+# each carries a "*** NOT FINISHED YET ***" banner and the same placeholder
+# body -- d4 hit die, 12 mana, 1/4 defence, no class skills, no grants. They
+# were still listed, so a player picked one and only then read "This prestige
+# class is still under development and cannot be used." They now carry
+# CF_PSEUDO, which every list-building site in the engine skips
+# (src/Managers.cpp:2271, src/Create.cpp:306, src/Help.cpp:763, :789, :840,
+# src/Skills.cpp:97). tools/check_prestige_hidden.sh reads this dump.
+#
+# HOW IT GETS THERE. Free Advancement is a wizard-mode switch, so the script
+# enters wizard mode (lowercase w -- 'W' is a different keystroke, see
+# TokenToKey in src/Wposix.cpp), turns the switch on, and then uses the
+# character sheet's [G] to reach the three core levels that
+# src/Managers.cpp:2252 demands before it will open the prestige list.
+#
+# NOTHING IS TAKEN. Pressing a menu letter TAKES the class (LMenu returns the
+# moment its letter arrives, src/TextTerm.cpp:1217-1231), so this script only
+# photographs the menu and presses ESC.
+#
+# SEED-INDEPENDENT for what it asserts: the menu is static text built from the
+# module. The chargen it includes is seed-locked, which is why a seed is still
+# passed.
+
+@include chargen-rogue.keys
+
+ESC             # dismiss the arrival-room description
+w               # wizard mode
+y               # "Enter wizard mode?" -- yes
+w               # [w] Wizard Mode Switches
+DOWN DOWN       # Cheat Death -> Auto-Identify Items -> Free Advancement
+SPACE           # NO -> YES
+ESC             # leave the options manager
+
+d               # character sheet
+G G G           # three core levels; the prestige list refuses fewer
+
+@choose "Prestige Classes"
+@expect "Choose a class:"
+@dump:prestige-menu
+
+ESC
+@quit

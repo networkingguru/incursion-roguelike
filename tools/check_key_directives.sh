@@ -70,25 +70,20 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 2. @cursorto matches a name the menu has truncated.
+# 2. RETIRED -- @cursorto matches a name the menu has truncated.
 #
-# LMenu cuts every entry to its column width (src/TextTerm.cpp:1022), so the
-# prestige list draws "[e] Celestial Initiat" and the full name appears nowhere
-# on the screen. A directive that could not match it would be useless on any
-# long name. The dump cannot show the highlight -- it is a colour, and a dump is
-# ASCII -- so the oracle is the description pane, which follows the cursor.
-echo "-- @cursorto: matching a truncated menu entry"
-OUT="$(tools/headless.sh tools/keys/prestige-tables.keys "$SEED" 2>&1)"
-RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
-DUMP="$RUN/logs/screens/"*"-truncated.txt"
-
-if ! ls $DUMP >/dev/null 2>&1; then
-    say_fail "prestige-tables.keys wrote no 'truncated' screen dump"
-elif grep -q "celestial initiate is a prestige class" $DUMP; then
-    echo "  ok: the full name 'Celestial Initiate' reached '[e] Celestial Initiat'"
-else
-    say_fail "the cursor is not on the Celestial Initiate"
-fi
+# LMenu cuts every entry to its column width (src/TextTerm.cpp:1403 cuts the
+# stored text, :1462 prints one character less), so the prestige list drew
+# "[e] Celestial Initiat" and the full name appeared nowhere on the screen.
+# That was the specimen: a directive that could not match it would be useless
+# on any long name.
+#
+# Celestial Initiate is one of the eight unfinished prestige classes. They now
+# carry CF_PSEUDO and appear in no list, and no remaining prestige class name
+# is long enough to truncate -- "Twilight Huntsman" and "Underdark Warrior" are
+# 17 characters and fit exactly. This check is therefore short one assertion
+# until a replacement menu is found. See bd inc-m09m; it names the candidates
+# already probed and rejected.
 
 # ---------------------------------------------------------------------------
 # 3. A directive that cannot find its target stops the run.

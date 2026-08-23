@@ -75,12 +75,12 @@ PGDN*4                          # this table is four rows and then "..."
 PGDN*8
 @dump:twilight
 
-# Not a table: this one proves the naming survives a truncated menu. LMenu
-# cuts every entry to the column width (src/TextTerm.cpp:1022), so this class
-# is drawn "[e] Celestial Initiat" and the full name is nowhere on the screen.
-# tools/check_key_directives.sh reads this dump.
-@cursorto "Celestial Initiate" DOWN
-@dump:truncated
+# The block that used to sit here photographed "Celestial Initiate", drawn by
+# LMenu as "[e] Celestial Initiat", to prove @cursorto matches a truncated
+# entry. That class is unfinished, now carries CF_PSEUDO and appears in no
+# list, and no remaining prestige class name is long enough to truncate. The
+# proof is retired, not silently weakened -- see bd inc-m09m for what would
+# restore it.
 
 ESC
 @quit
