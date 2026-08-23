@@ -22,12 +22,26 @@
 #   2. Every GitHub link to OUR fork -- the path exists on the published ref,
 #      because an evidence link that is only in the working tree 404s for the
 #      reader. This is the check that fails when we forget to push.
+#  2b. Every embedded image -- `![alt](path)` -- exists in FALLBACK_REF. An
+#      embed names a file and nothing else, so existence is the whole check. A
+#      README whose screenshot is not in the tree shows a broken image to every
+#      reader, and nothing looked for that until 2026-08-23.
 #   3. Every named `File.ext:NNNN` citation in the prose -- ANY extension, not
 #      a list of favoured ones -- resolved to a unique path, range-checked
 #      against that file's length, then printed with its content.
 #   4. Every bare `:NNNN` continuation -- a line number written with no file in
 #      front of it, which inherits the file named before it in the prose. The
 #      inheritance rule is strict and is described at the check itself.
+#
+# WHAT IS NOT A CITATION. A GitHub link that names no path -- a repository root,
+# a releases page, an issue, a pull request -- is not a citation and is not
+# checked as one. It is printed and skipped. Until 2026-08-23 it was reported as
+# a defect, so README.md failed its own gate on three correct links, one of them
+# the download link a player follows. A binary file is the same idea from the
+# other side: it exists or it does not, and it has no lines to cite. Neither
+# rule is a softening, because neither one can make an unreadable citation pass:
+# a blob link into a repository this clone cannot resolve still fails, and a
+# line number written on a binary file still fails.
 #
 # There is no citation this tool looks at and says nothing about. Checks 3 and 4
 # are two spellings of one question, so they MUST give the same verdict for the
@@ -151,6 +165,55 @@ resolve_basename() {
 line_at_ref() { git -C "$ROOT" show "$1:$2" 2>/dev/null | sed -n "${3}p"; }
 lines_in_ref() { git -C "$ROOT" show "$1:$2" 2>/dev/null | grep -c ''; }
 
+# Is the blob at <ref>:<path> binary? The test is git's own: a NUL byte inside
+# the first 8000 bytes. The tool needs this because a document may name a file
+# that has no lines at all. On 2026-08-18 README.md embedded
+# docs/media/incursion-macos.png, the checker measured the PNG like source and
+# died decoding it, and the traceback was then counted as a defect in the
+# README. The README was correct.
+#
+# Two reads and not one: the count of bytes and the count of bytes with NUL
+# removed. They differ exactly when a NUL is present. This runs only for a
+# citation that carries a line number, which is rare, so the second read costs
+# nothing that anyone can measure.
+blob_is_binary() {
+    local bytes stripped
+    bytes=$(git -C "$ROOT" show "$1:$2" 2>/dev/null | head -c 8000 | wc -c)
+    stripped=$(git -C "$ROOT" show "$1:$2" 2>/dev/null | head -c 8000 | LC_ALL=C tr -d '\000' | wc -c)
+    [ "$bytes" != "$stripped" ]
+}
+
+# GitHub URL shapes that are not file citations at all.
+#
+# A repository root, a releases page, an issue, a pull request or a comparison
+# names no path and no line. There is nothing in it for this tool to resolve, so
+# raising it as "link points at neither tree" says something false about a link
+# that works. That happened on 2026-08-18 to three correct links in README.md,
+# one of them the download link a player follows.
+#
+# The list is deliberately a list of KNOWN shapes. It does not say "anything
+# without /blob/ passes", because the catch-all still has a job: a blob or tree
+# link into a repository this clone cannot resolve is a real defect and must
+# stay one. Returns 0 when the link names no file.
+non_file_link() {
+    case "$1" in
+        */blob/*|*/tree/*|*/raw/*|*/blame/*) return 1 ;;
+    esac
+    case "$1" in
+        */releases|*/releases/*|*/issues|*/issues/*|*/pull/*|*/pulls|\
+        */discussions|*/discussions/*|*/compare/*|*/commit/*|*/commits|*/commits/*|\
+        */tags|*/branches|*/wiki|*/wiki/*|*/actions|*/actions/*|*/graphs/*)
+            return 0 ;;
+    esac
+    # What is left is a bare owner page or a bare owner/repo root: at most two
+    # path segments. Three or more segments is a shape this tool has never been
+    # taught, and an unknown shape must fail rather than pass.
+    case "$1" in
+        */*/*) return 1 ;;
+        *)     return 0 ;;
+    esac
+}
+
 check_document() {
     local doc=$1 expect=${2:-} url_ref
     [ -r "$doc" ] || { echo "cannot read $doc" >&2; exit 2; }
@@ -166,6 +229,10 @@ check_document() {
         anchor=${path#*\#}
         [ "$anchor" = "$path" ] && anchor=""
         path=${path%%\#*}
+        # A trailing slash is the same address with one more character in it.
+        # Without this strip, `.../beads/` had three segments and looked like a
+        # shape the tool did not know.
+        path=${path%/}
         case "$path" in
             "$UPSTREAM_HOST"/blob/*)
                 # Accept any ref in the URL, not just master: a link meant to
@@ -217,10 +284,57 @@ check_document() {
                 fi
                 ;;
             *)
-                fail "link points at neither tree: $url"
+                # Not silence. The tool says what it decided about every link it
+                # read, because a link it never mentions is a link nobody can
+                # tell it skipped.
+                if non_file_link "$path"; then
+                    printf 'link     %s  (names no file -- nothing to resolve)\n' "$url"
+                else
+                    fail "link points at neither tree: $url"
+                fi
                 ;;
         esac
     done < <(grep -oE 'https://github\.com/[A-Za-z0-9_.@:/~-]+(#L[0-9]+(-L[0-9]+)?)?' "$doc" | sort -u)
+
+    # 2b. Embedded images -- `![alt](path)`.
+    #
+    # An embed is a citation of a different kind: it names a file, and the only
+    # thing that can be true or false about a binary file is whether it is
+    # there. README.md:16 embeds docs/media/incursion-macos.png, and a README
+    # whose screenshot is not in the tree shows every reader a broken image.
+    # Nothing checked this before 2026-08-23; the path went to the source-
+    # citation scan instead, which tried to count the lines in a PNG.
+    #
+    # FALLBACK_REF and not UPSTREAM_REF. The screenshots belong to this port and
+    # rmtew's tree has never carried one, so upstream is the wrong tree to ask.
+    #
+    # The path is read as repo-relative first, then relative to the directory
+    # the document sits in, because both spellings are correct markdown.
+    local img docdir=""
+    if [ -d "$ROOT" ]; then
+        docdir=$(cd -- "$(dirname -- "$doc")" 2>/dev/null && pwd -P)
+        case "$docdir" in
+            "$ROOT")   docdir="" ;;
+            "$ROOT"/*) docdir=${docdir#"$ROOT"/} ;;
+            *)         docdir="" ;;   # the document is outside the repository
+        esac
+    fi
+    while read -r img; do
+        [ -n "$img" ] || continue
+        img=${img%%#*}          # `path#anchor`
+        img=${img%% *}          # `path "title"`
+        [ -n "$img" ] || continue
+        case "$img" in
+            http*|/*|'<'*) continue ;;   # remote or absolute: not ours to resolve
+        esac
+        if path_in_ref "$FALLBACK_REF" "$img"; then
+            printf 'asset    %s  present at %s\n' "$img" "$FALLBACK_REF"
+        elif [ -n "$docdir" ] && path_in_ref "$FALLBACK_REF" "$docdir/$img"; then
+            printf 'asset    %s/%s  present at %s\n' "$docdir" "$img" "$FALLBACK_REF"
+        else
+            fail "embedded image $img is not in $FALLBACK_REF -- the reader sees a broken image"
+        fi
+    done < <(grep -oE '!\[[^]]*\]\([^)]+\)' "$doc" | sed -E 's/^!\[[^]]*\]\(//; s/\)$//' | sort -u)
 
     # 3. Named File.ext:NNNN citations.
     #
@@ -248,6 +362,14 @@ check_document() {
         fi
         ref=${hit%%$'\t'*}
         full=${hit#*$'\t'}
+        # A line number on a binary file is nonsense, and it must be reported as
+        # nonsense rather than measured. `grep -c` will happily count "lines" in
+        # a PNG, so `incursion-macos.png:12` would otherwise resolve and print a
+        # line of binary as though it were evidence.
+        if blob_is_binary "$ref" "$full"; then
+            fail "$cite names a line in a binary file ($full in $ref), which has no lines"
+            continue
+        fi
         len=$(lines_in_ref "$ref" "$full")
         if [ "$num" -gt "$len" ] || [ "$num" -lt 1 ]; then
             fail "$cite is past the end of $full, which has $len lines in $ref"
@@ -297,7 +419,12 @@ check_document() {
 import os, re, subprocess, sys
 
 doc, ref, root, fallback, cache = sys.argv[1:6]
-text = open(doc).read()
+
+# errors='replace', here and everywhere else in this block. Strict decoding was
+# the default and it ended a whole run in a traceback on 2026-08-18. The tool
+# reports on citations; a traceback reports on nothing, and the run that printed
+# it went on to count its own crash as a defect in the document.
+text = open(doc, encoding='utf-8', errors='replace').read()
 
 # One regex for every filename-shaped token, with the line number optional. The
 # line number is optional because a file named WITHOUT one -- "all in
@@ -343,18 +470,38 @@ def tree(r):
 # is both `Options.Dat` and `tools/gates/Options.Dat` -- needs a path, and
 # telling that writer to "name a file that is committed" would be nonsense,
 # since the file is committed twice over.
+#
+# The fourth field of a length is `binary`. A binary file has no lines, so the
+# only question this tool can answer about one is whether the tree carries it.
 lengths, unresolved = {}, {}
+
+# BYTES, never text. text=True decodes as UTF-8 and raises on the first byte
+# that is not, and README.md embeds a PNG whose first byte is 0x89. Each caller
+# below decides what to do with the bytes it gets.
+def blob(r, path):
+    return subprocess.run(['git', '-C', root, 'show', f'{r}:{path}'],
+                          capture_output=True).stdout
+
+# git's own test for a binary file: a NUL byte in the first 8000 bytes.
+def is_binary(data):
+    return b'\x00' in data[:8000]
+
+def decode(data):
+    return data.decode('utf-8', 'replace')
+
 def length_of(base):
     if base not in lengths:
-        lengths[base] = (None, None, 0)
+        lengths[base] = (None, None, 0, False)
         unresolved[base] = (f"is in neither {ref} nor {fallback}",
                             "Name a file that is committed, or cite the generator input.")
         for r in (ref, fallback):
             hits = tree(r).get(base, [])
             if len(hits) == 1:
-                body = subprocess.run(['git', '-C', root, 'show', f'{r}:{hits[0]}'],
-                                      capture_output=True, text=True).stdout
-                lengths[base] = (r, hits[0], body.count('\n'))
+                data = blob(r, hits[0])
+                if is_binary(data):
+                    lengths[base] = (r, hits[0], 0, True)
+                else:
+                    lengths[base] = (r, hits[0], decode(data).count('\n'), False)
                 unresolved[base] = None
                 break
             if len(hits) > 1:
@@ -363,8 +510,7 @@ def length_of(base):
     return lengths[base]
 
 def line_of(r, path, num):
-    body = subprocess.run(['git', '-C', root, 'show', f'{r}:{path}'],
-                          capture_output=True, text=True).stdout.splitlines()
+    body = decode(blob(r, path)).splitlines()
     return body[num - 1] if 0 < num <= len(body) else ''
 
 # Two kinds of event, in document order.
@@ -423,7 +569,29 @@ def lost(num, why, advice):
 
 for start, end, kind, name, num in events:
     if kind == 'file':
-        r, path, n = length_of(name)
+        r, path, n, binary = length_of(name)
+        if path is not None and binary:
+            # The file is there, and that is the whole of what a binary file can
+            # be asked. Existence is a real check and it can still fail: a
+            # missing screenshot is caught by the embed check further up.
+            #
+            # A LINE number on it is still a defect -- `incursion-macos.png:12`
+            # names a line in a PNG -- and check 3 above reports it, with the
+            # full path. This block does not report it a second time. That is
+            # the division of labour the two scans already had: check 3 owns
+            # every NAMED citation's range check, this block owns the bare
+            # continuations. Reporting here as well would count one bad citation
+            # twice, and it would hide a break in check 3 from the selftest case
+            # that guards it.
+            #
+            # The name ends the previous file's claim on the numbers that
+            # follow, for the same reason any other file name does: a bare
+            # `:NNN` after an embedded screenshot has no file to be checked
+            # against.
+            ctx = None
+            dead = (f"the last file named before it is {name}, a binary file with no lines",
+                    "Name the source file this number is in.")
+            continue
         if path is None:
             # Named, and not resolvable. It is still the subject of the prose,
             # so it ends the previous file's claim on the numbers that follow --
@@ -452,7 +620,9 @@ for start, end, kind, name, num in events:
                   f"(CITATION_FAR_CHARS={FAR_CHARS})",
                   f"Write `{base}:{num}` here.")
         continue
-    r, path, n = length_of(base)
+    # `binary` is discarded here on purpose: a binary name never becomes the
+    # context, so `base` is always a text file at this point.
+    r, path, n, _ = length_of(base)
     if num > n:
         print(f"DEFECT  bare ':{num}' follows {base}, which has only {n} lines "
               f"-- it inherited the wrong file")
@@ -525,6 +695,12 @@ PYCHECK
 
 selftest_failures=0
 
+# The number of cases is counted and not written down. It was written down, as
+# the literal 12 in two printf strings, and adding a case meant remembering to
+# edit both. A count that has to be maintained by hand eventually lies, and this
+# tool has no business printing a number it did not measure.
+selftest_total=0
+
 # Run one fixture and compare the run's verdict with the wanted one. The verdict
 # is the real exit path -- "did $defects end at zero" -- and not a grep for the
 # word DEFECT, because the thing a caller depends on is the exit status. A test
@@ -533,6 +709,7 @@ selftest_failures=0
 # prevent in documents.
 selftest_case() {
     local label=$1 want=$2 doc=$3 exp=${4:-} got
+    selftest_total=$((selftest_total + 1))
     ( defects=0; unchecked=0; check_document "$doc" "$exp" > "$doc.out" 2>&1; verdict )
     got=$?
     [ "$got" = "$want" ] && return 0
@@ -606,6 +783,38 @@ selftest() {
     printf 'The call sites are at `program.i:30782` in the generated script.\n' \
         > "$dir/nowhere.md"
 
+    # A document that embeds a binary asset. README.md:16 does exactly this. The
+    # tool read the PNG as UTF-8, died on byte 0x89, printed the traceback and
+    # counted it as a defect in the document. The document was correct. A binary
+    # file has no lines, so the only question the tool can ask about it is
+    # whether it is in the tree.
+    printf '![iNCURSION on macOS](docs/media/incursion-macos.png)\n' > "$dir/binary.md"
+
+    # The same asset with a line number on it. Existence is all that can be
+    # checked about a PNG, so a LINE in one is nonsense and stays a defect.
+    # Silence here would trade one wrong answer for another.
+    printf 'The shot is at `docs/media/incursion-macos.png:12`.\n' > "$dir/binary-line.md"
+
+    # An embedded image that is NOT in the tree. This is the failure the
+    # existence check keeps alive: the reader of the README sees a broken image.
+    printf '![missing](docs/media/no-such-screenshot.png)\n' > "$dir/missing-asset.md"
+
+    # A repository root URL and a releases URL. Neither names a path or a line,
+    # so neither is a citation and neither can be resolved as one. Both were
+    # reported as "link points at neither tree" on 2026-08-18, and one of them
+    # was README.md's own download link -- the link a player follows. A gate
+    # that is red about the download link teaches everyone to ignore the gate.
+    printf 'Download it from https://github.com/%s/releases, and the tracker\n' \
+        "$ORIGIN_HOST" > "$dir/nonfile-link.md"
+    printf 'is https://github.com/gastownhall/beads.\n' >> "$dir/nonfile-link.md"
+
+    # The guard on the case above. Skipping a link shape that names no file must
+    # never become skipping a link that DOES name a file. A blob link into a
+    # repository this clone knows nothing about is unresolvable, and stays a
+    # defect.
+    printf 'See https://github.com/nobody/nothing/blob/master/src/Art.cpp#L1\n' \
+        > "$dir/unknown-blob.md"
+
     selftest_case "a resolving citation and its expectation" 0 "$dir/good.md" "$dir/good.expect"
     selftest_case "a link to a path that cannot exist"       1 "$dir/bad.md"
     selftest_case "a file named without a line number"       0 "$dir/adopt.md"
@@ -619,12 +828,18 @@ selftest() {
     selftest_case "a named fallback citation past the end"   1 "$dir/named-local-eof.md"
     selftest_case "a named upstream citation past the end"   1 "$dir/named-eof.md"
     selftest_case "a citation into a file in neither tree"   1 "$dir/nowhere.md"
+    selftest_case "an embedded binary asset"                 0 "$dir/binary.md"
+    selftest_case "a line number on a binary file"           1 "$dir/binary-line.md"
+    selftest_case "an embedded image not in the tree"        1 "$dir/missing-asset.md"
+    selftest_case "a repository root and a releases URL"     0 "$dir/nonfile-link.md"
+    selftest_case "a blob link into an unknown repository"   1 "$dir/unknown-blob.md"
 
     # The bare and the named form of the SAME citation must agree. They did not:
     # the bare form was a hard error whose advice was to write the named form,
     # and the named form was silence. A rule that can be escaped by following
     # the tool's own advice is not a rule.
     local rc_bare rc_named
+    selftest_total=$((selftest_total + 1))
     printf 'See `build_macos.sh` -- the default is set at `:34`.\n' > "$dir/pair-bare.md"
     ( defects=0; unchecked=0; check_document "$dir/pair-bare.md" > "$dir/pair-bare.out" 2>&1; verdict )
     rc_bare=$?
@@ -639,10 +854,10 @@ selftest() {
 
     rm -rf "$dir"
     if [ "$selftest_failures" -eq 0 ]; then
-        echo "selftest: pass -- 12 cases"
+        printf 'selftest: pass -- %d cases\n' "$selftest_total"
         return 0
     fi
-    printf 'selftest: FAIL -- %d of 12 cases\n' "$selftest_failures"
+    printf 'selftest: FAIL -- %d of %d cases\n' "$selftest_failures" "$selftest_total"
     return 1
 }
 
