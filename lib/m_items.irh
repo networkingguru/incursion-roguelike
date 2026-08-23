@@ -4734,7 +4734,19 @@ AI_RING Effect "Elemental Command (Water)" : EA_GRANT
       if (e.isWield && e.efNum == 0)
         {
           clev = EVictim->GetStatiMag(COMMAND_ABILITY,MA_WATER);
-          EVictim->GainPermStati(COMMAND_ABILITY,EItem,SS_ITEM, MA_FIRE,
+          /* upstream: base-code defect, not a port artefact. Both lines are
+             shared game data, so the same disagreement exists on Win32, with
+             the original typedefs, on the upstream compiler. The write said
+             MA_FIRE while the read above it asks about MA_WATER, so the ring
+             measured the wearer's command of water, threw the measurement
+             away, and handed him command of fire creatures -- against a page
+             (:4698) that promises water. The three sibling rings each read
+             and write their own element (:4496/:4497, :4569/:4570,
+             :4643/:4644), which is what says this is a copy-paste slip and
+             not a design. Tier Observed -- see
+             tools/check_ring_water_command.sh. Tracking bd inc-tek.8.8,
+             finding PA-08-F3. Not sent to rmtew. */
+          EVictim->GainPermStati(COMMAND_ABILITY,EItem,SS_ITEM, MA_WATER,
             max(10,clev+5), $"Elemental Command (Water)", e.vCasterLev);
         }
       return NOTHING;

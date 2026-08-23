@@ -1,0 +1,42 @@
+# Put a Ring of Elemental Command (Water) on a finger and let the character
+# sheet name the creatures it lets him command. Read by
+# tools/check_ring_water_command.sh, finding PA-08-F3 of bd inc-tek.8.8.
+#
+#   w y                      enter wizard mode and open its menu.
+#   Item Acquisition         RIGHT*26 walks the glyph row to Rings: ItemGlyphs
+#   RIGHT*26                 (src/Tables.cpp:320) puts -AI_RING 26 steps along,
+#                            and the header line names the category.
+#   @until "Ring of Item     the candidate list has no menu letters, so the
+#     Preservation" DOWN     cursor is walked. Three rows show and the MIDDLE
+#                            one is selected, so the run stops on the pass
+#                            where the row BELOW the wanted one appears. Item
+#                            Preservation is the entry after Elemental Command
+#                            (Water) in lib/m_items.irh. The check does not
+#                            trust that ordering: it reads the ring's name back
+#                            off the inventory screen.
+#   ENTER m SPACE            take it, move the cursor to the Left Ring slot,
+#                            and SPACE to put it on (src/Managers.cpp:873).
+#   @dump:ring-on ESC        the assertion that the right ring is on the right
+#                            finger. The manager refuses to close with an item
+#                            still in the air, so a missed SPACE cannot pass.
+#   d @until ... DOWN        open the sheet and scroll to the Special Abilities
+#                            block, which prints one line per commandable type
+#                            (src/Sheet.cpp:492-499). The block is well below
+#                            the first screen. PGDN wraps back to the top here,
+#                            so the cursor is walked with DOWN.
+
+@include chargen.keys
+
+w
+y
+@choose "Item Acquisition"
+RIGHT*26
+@until "Ring of Item Preservation" DOWN
+ENTER
+m
+SPACE
+@dump:ring-on
+ESC
+d
+@until "Special Abilities" DOWN
+@dump:specials
