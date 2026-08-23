@@ -2196,7 +2196,7 @@ Class "Loremaster"
                 break;
             }
           hBook = CreateItem(bID);
-          EActor->IPrint("You've discovered a tome of ancient lore!");
+          EActor->IPrint("You've discovered a spellbook hidden nearby!");
           EActor->GainItem(hBook,false);
         }
       
