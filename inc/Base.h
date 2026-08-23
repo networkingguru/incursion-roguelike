@@ -160,6 +160,25 @@ class String
 
 
 extern String & VFormat(const char*fmt,va_list ap);
+/* upstream: this attribute is the oracle for a whole class of defect, and this
+   comment stands in for all of it rather than being repeated at fifty-eight
+   call sites. Format() is a plain vsprintf (src/Base.cpp:467) and Error() a
+   plain vsnprintf, so a format string that disagrees with its arguments has
+   always been silent. Armed, clang reported 58 disagreements. 38 of them
+   misbehave on Win32 exactly as they do here and are upstream's: 26 calls
+   passing arguments the string never consumes, 3 passing FEWER arguments than
+   it consumes (src/Feature.cpp:423, src/Main.cpp:1740, src/Prayer.cpp:1303 --
+   vsprintf reads whatever the register file holds next), 3 invalid specifiers
+   (the `%l` at src/Magic.cpp:426 and the two ASSERTs described at
+   inc/Defines.h:93), and 6 arguments of the wrong type where the type was
+   wrong on Win32 too (a `const char*` printed with `%d`, a `int*` printed with
+   `%d`). The other 20 are NOT upstream's and are not claimed as such: 14 are
+   upstream code that is merely non-portable to LP64 -- a `long`, `size_t`,
+   `intptr_t` or `ptrdiff_t` that was 32 bits on Win32 -- and 6 are OURS, made
+   by this port narrowing int32/uint32/hObj from `long` to `int`
+   (inc/Defines.h:48-63). Tier Observed: 58 warnings before, 0 after, from
+   tools/check_format_strings.sh, which fails if the count ever rises.
+   inc-9t6. NOT SENT upstream. */
 extern String & Format(const char*fmt,...) __attribute__((format(printf,1,2)));
 
 String & Pluralize(const char* s, rID iID=0);

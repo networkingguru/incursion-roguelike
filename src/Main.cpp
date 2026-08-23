@@ -855,7 +855,7 @@ done_jump: ;
   T1->SetWin(WIN_SCREEN);
   T1->Clear();
   T1->Write(Format("%s %s results ...\n",NAME(mID),
-        tID ? NAME(tID) : "", tID));
+        tID ? NAME(tID) : ""));
   T1->Color(GREY);
   int j; 
 
@@ -1737,7 +1737,7 @@ void Game::CheckConsistency(void)
   }
 
 
-  T1->Write(Format(" %d (%d) resources\n",total_resources));
+  T1->Write(Format(" %d resources\n",total_resources));
 
   rID *r ; 
   r = (rID *)calloc(sizeof(*r),total_resources);
@@ -1860,8 +1860,7 @@ void Game::CheckConsistency(void)
       if (100 + mon->Mov * 5 <= 50 && 
           100 + mon->Mov * 5 > 0) {
         Report += Format("  %s",
-              (const char*)theGame->GetText(r[i],theGame->Get(r[i])->Name),
-              r[i]);
+              (const char*)theGame->GetText(r[i],theGame->Get(r[i])->Name));
       } 
     }
   }
@@ -1883,8 +1882,7 @@ void Game::CheckConsistency(void)
             see = true; 
       if (mon->HasFlag(M_NOHANDS) && !see) {
         Report += Format(" %s",
-              (const char*)theGame->GetText(r[i],theGame->Get(r[i])->Name),
-              r[i]);
+              (const char*)theGame->GetText(r[i],theGame->Get(r[i])->Name));
       } 
     }
   }

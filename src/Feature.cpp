@@ -420,7 +420,7 @@ EvReturn Portal::Enter(EventInfo &e) {
         }
         break;
     default:
-        Error("Strange Portal xval (%d).");
+        Error("Strange Portal xval (%d).", (int)TFEAT(fID)->xval);
         return DONE;
     }
 }

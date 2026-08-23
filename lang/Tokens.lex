@@ -232,7 +232,7 @@ YYSTYPE DoKeywords(const char *text)
 %}
 %%
 
-"#line".*[0-9]*     { sscanf(yytext,"#line \"%s %d",preprocFilename,&yypos);
+"#line".*[0-9]*     { sscanf(yytext,"#line \"%s %ld",preprocFilename,&yypos);
                       yypos --; /* we'll read the \n next */
                       for (int16 i=0;preprocFilename[i] && i != 1022;i++)
                         {
@@ -284,14 +284,14 @@ YYSTYPE DoKeywords(const char *text)
                else if (szl && sz != szl && !warned)
                  {
                    warned = true;
-                   yyerror(Format("Error: Mismatched grid line at line %d.",ln));
+                   yyerror(Format("Error: Mismatched grid line at line %d.",(int)ln));
                  }
                szl = 0;
              }
                 
            }
          if (ch1 == EOF)
-           { yyerror(Format("Error: Unterminated Map Grid starting at line %d.",yypos));
+           { yyerror(Format("Error: Unterminated Map Grid starting at line %d.",(int)yypos));
              return ARCHERY; }
          if ((ch2 = yyinput()) == '}')
            {
@@ -460,7 +460,7 @@ void CatLiteral(const char*str)
                           LBuff[lpos++] = '>'; break;
                 case 0: break;
                 default:
-                  yyerror(Format("Unknown escape sequence at line %d.", yypos));
+                  yyerror(Format("Unknown escape sequence at line %d.", (int)yypos));
               }
           else {      
             if (i)

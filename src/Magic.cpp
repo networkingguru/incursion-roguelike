@@ -330,7 +330,7 @@ bool Magic::isTarget(EventInfo &_e, Thing *t) {
           case SHOULD_CAST_IT: 
           case CAN_CAST_IT: 
            break; 
-          default: Error("EV_ISTARGET for <Res> returned?",e.eID);
+          default: Error("EV_ISTARGET for %s returned?",NAME(e.eID));
           }
         if (te->HasFlag(EF_ITEMS_ONLY))
           return false;
@@ -399,7 +399,7 @@ bool Magic::isTarget(EventInfo &_e, Thing *t) {
           case SHOULD_CAST_IT:
             break;
           case CANNOT_CAST_IT: return false; 
-          default: Error("EV_ISTARGET for <Res>",e.eID);
+          default: Error("EV_ISTARGET for %s",NAME(e.eID));
         }
       if (te->HasFlag(EF_LIM_ITYPE))
         return t->isType(e.EMagic->tval);
@@ -423,7 +423,7 @@ bool Magic::isTarget(EventInfo &_e, Thing *t) {
       e.EMagic = te->Vals(e.efNum);
       // TODO: Remove when bug has been tracked down.  Reported on bay12forums, access violation down below where this is the case.
       if ((e.isSpell || (e.isItem && e.EItem->isType(T_SCROLL))) && e.EMagic == NULL)
-          Error("Crash imminent, id=%l, effect='%s', num=%d, actor='%s'", e.EActor->myHandle, NAME(e.eID), e.efNum, (const char*)e.EActor->Name());
+          Error("Crash imminent, id=%d, effect='%s', num=%d, actor='%s'", (int)e.EActor->myHandle, NAME(e.eID), (int)e.efNum, (const char*)e.EActor->Name());
 
       if (e.isItem && e.EItem->isItem()) {
           if (e.EItem->isBlessed())

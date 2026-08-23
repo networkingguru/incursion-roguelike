@@ -83,6 +83,23 @@ EXTRA_CXXFLAGS="${EXTRA_CXXFLAGS:-}"
 #   BACKEND=posix OUT=incursion-asan ./build_macos.sh
 EXTRA_LDFLAGS="${EXTRA_LDFLAGS:-}"
 
+# The C++ warning switch. It defaults to -w, which is what every ordinary build
+# has always used, so leaving this unset changes nothing.
+#
+# IT EXISTS BECAUSE EXTRA_CXXFLAGS CANNOT TURN A WARNING BACK ON. clang's -w is
+# not an ordinary -W option that a later one overrides: it sets
+# SuppressAllDiagnostics on the diagnostic engine, and nothing after it revives
+# a warning. Verified on clang 17, arm64: -w -Wno-everything -Wformat and even
+# -w -Werror=format both print nothing on a call with too few arguments, while
+# the same command without -w reports it. So a diagnostic build must REPLACE
+# -w, not append to it:
+#   WARN_FLAGS="-Wno-everything -Wformat" EXTRA_CXXFLAGS=-DFMTAUDIT \
+#   OUT=incursion-fmt BACKEND=posix ./build_macos.sh
+# Set EXTRA_CXXFLAGS to something as well, as above, so the build takes the
+# instrumented path: its own object directory, and no rewrite of the shared
+# mod/Incursion.Mod. See tools/check_format_strings.sh.
+WARN_FLAGS="${WARN_FLAGS:--w}"
+
 # The object directory must encode every flag that changes what an object IS.
 # COMPILER belongs in it: a shipping build and a developer build differ by
 # -DDEBUG, and -DDEBUG changes real code in Player.cpp and Main.cpp, so sharing
@@ -149,7 +166,7 @@ fi
 
 # ------------------------------------------------------------------ game -----
 echo "--- compiling Incursion ---"
-CXXFLAGS="-O2 -w -fpermissive -Wno-narrowing $DEFINES $INCLUDES $EXTRA_CXXFLAGS"
+CXXFLAGS="-O2 $WARN_FLAGS -fpermissive -Wno-narrowing $DEFINES $INCLUDES $EXTRA_CXXFLAGS"
 CFLAGS="-O2 -w -Wno-implicit-function-declaration -Wno-implicit-int -Wno-return-mismatch $DEBUG_DEFINE -Iinc -Ilib -Icompat"
 
 for f in src/*.cpp; do

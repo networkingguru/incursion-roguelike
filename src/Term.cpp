@@ -366,7 +366,7 @@ void TextTerm::ShowTraits() {
       Color(RED);
     else 
       Color(SKYBLUE);
-    Write(Format("%ld/%ld",max(0,p->XP - p->XP_Drained), p->NextLevXP()));
+    Write(Format("%ld/%ld",(long)max(0,p->XP - p->XP_Drained), (long)p->NextLevXP()));
     Color (GREY);
     Write(" XP\n");
     if (!p->Opt(OPT_SIDEBAR))
@@ -2055,7 +2055,7 @@ Reprompt:
     else {
         if (typ == Q_TAR) {
 //SelectTarget:
-            Prompt = Format("%cChoose your target", -AZURE, Arrows, -GREY);
+            Prompt = Format("%cChoose your target", -AZURE);
             Prompt += Format(": [%s%s%s%s%s%s%s]%c ", Arrows, "*", (fl & Q_DIR) ? "d" : "", 
                 fl & Q_LOC ? "l" : "", fl & Q_TAR ? "tn" : "", fl & Q_INV ? "i" : "",
                 fl & Q_ALL ? "a" : "", -GREY);

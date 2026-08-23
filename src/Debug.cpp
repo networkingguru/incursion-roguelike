@@ -1276,8 +1276,7 @@ void Player::ListChestContents()
             (const char*) t->Name(0));
           for (j=0;(*c)[j];j++) {
             str += Format("__[%d] %s\n"/*"________%s\n"*/, ((*c)[j])->ItemLevel(),
-              (const char*) ((*c)[j])->Name(NA_IDENT),
-              (const char*) ((*c)[j])->GenStats);
+              (const char*) ((*c)[j])->Name(NA_IDENT));
             if (((*c)[j])->isType(T_COIN))
               gp += ((*c)[j])->getShopCost(NULL,NULL);
             }
@@ -1405,7 +1404,6 @@ void Thing::Dump()
 		 Flags & F_INVIS ? "F_INVIS " : "",
 		 Flags & F_DELETE ? "F_DELETE " : "",
      Flags & F_XSOLID ? "F_XSOLID " : "",
-     Flags & F_OPAQUE ? "F_OPAQUE " : "",
      Flags & F_OPAQUE ? "F_OPAQUE " : ""));
 	}
 
@@ -1555,7 +1553,7 @@ void Creature::Dump()
           ss += Format(" (Val:%s Mag:%d)",
             Lookup(INV_CONSTNAMES,S->Val), S->Mag);
         else if (S->Nature == INVIS_TO)
-          ss += Format(" (Val:%s Mag:%d)",
+          ss += Format(" (Val:%s Mag:%s)",
             Lookup(INV_CONSTNAMES,S->Val), 
             Lookup(MA_CONSTNAMES,S->Mag));
         else if (S->Nature == PHASED)
@@ -1789,7 +1787,7 @@ void Item::Dump() {
           ss += Format(" (Val:%s Mag:%d)",
             Lookup(INV_CONSTNAMES,S->Val), S->Mag);
         else if (S->Nature == INVIS_TO)
-          ss += Format(" (Val:%s Mag:%d)",
+          ss += Format(" (Val:%s Mag:%s)",
             Lookup(INV_CONSTNAMES,S->Val), 
             Lookup(MA_CONSTNAMES,S->Mag));
         else if (S->Nature == PHASED)
@@ -1976,7 +1974,7 @@ void TMonster::Dump()
       Res & DF_DISN ? "Disint " : "",  Res & DF_NECR ? "Necro " : "",
       Res & DF_PSYC ? "Psychic " : "",  Res & DF_MAGC ? "Magic " : ""));
 
-    T1->SWrite(Format("  Immune to %s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n\n", Imm == 0 ? "Nothing" : "",
+    T1->SWrite(Format("  Immune to %s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n\n", Imm == 0 ? "Nothing" : "",
       Imm & DF_FIRE ? "Fire " : "",  Imm & DF_COLD ? "Cold " : "",
       Imm & DF_ACID ? "Acid " : "",  Imm & DF_ELEC ? "Elec " : "",
       Imm & DF_POIS ? "Poison " : "",  Imm & DF_NECR ? "Necro " : "",
@@ -2024,8 +2022,8 @@ void Game::MemoryStats()
         default: ThingsK += (sizeof(Item)+30); break;
         }
 
-    T1->Write(Format("Resources %ldK, Map %ldK, Things %ldK",ResK/1024,
-      MapK/1024, ThingsK/1024));
+    T1->Write(Format("Resources %ldK, Map %ldK, Things %ldK",(long)(ResK/1024),
+      (long)(MapK/1024), (long)(ThingsK/1024)));
   }
 
   

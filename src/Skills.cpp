@@ -3935,7 +3935,7 @@ void Creature::Awaken(int32 st)
 			return;
 		RemoveStati(SLEEPING);
 		IDPrint("You are shocked awake!",
-			(const char*)Format("The <Obj> wakes up!", st), this);
+			(const char*)Format("The <Obj> wakes up!"), this);
 		Timeout += 30;
 		GainTempStati(EXPOSED, NULL, 4, SS_MISC);
 	}

@@ -1300,9 +1300,10 @@ EvReturn Character::ConvertAltar(EventInfo &e)
       isCeded = true;
     }
       
-    nums += Format("= %d vs. DC 15 %c[%s]%c", bonus+roll, 
+    nums += Format("= %d vs. DC 15 %c[%s]%c", bonus+roll,
       bonus + roll >= 15 ? -EMERALD : -RED,
-      bonus + roll >= 15 ? "success" : "failure");
+      bonus + roll >= 15 ? "success" : "failure",
+      -GREY);
     
     thisp->MyTerm->SetWin(WIN_NUMBERS);
     thisp->MyTerm->Clear();

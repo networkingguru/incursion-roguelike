@@ -131,12 +131,12 @@ EffectValues ValArray[32];
 
 int yyerror(const char*msg) {
    Errors++;
-   printf("\"%s\" (%d): %s\n", preprocFilename, yypos, msg);
+   printf("\"%s\" (%d): %s\n", preprocFilename, (int)yypos, msg);
    longjmp(jb,1);
 }
 
 void yywarning(const char*msg) {
-   printf("\"%s\" (%d): %s\n", preprocFilename,  yypos, msg);
+   printf("\"%s\" (%d): %s\n", preprocFilename,  (int)yypos, msg);
 }
 
 
@@ -9555,7 +9555,7 @@ int param_list (pBSysFunc b, YYSTYPE fn, VBlock *bl, int *narg)
         if (*narg < b->ParamCount)
           if (!AllowedCast(p.Type,b->ParamType[*narg]))
             yyerror(Format("Type mismatch in parameter %d of call to function %s (%s/%s).",
-              narg+1, theSymTab[fn], Lookup(DataTypeNames, b->ParamType[*narg]),
+              (*narg)+1, theSymTab[fn], Lookup(DataTypeNames, b->ParamType[*narg]),
                 Lookup(DataTypeNames,p.Type))); 
         if (*narg > b->ParamCount && !b->isVarParam)
           yyerror(Format("Too many parameters in call to function %s.",theSymTab[fn]));

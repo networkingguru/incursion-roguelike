@@ -574,8 +574,8 @@ Repeat:
                 case T_THING:     fprintf(fp,"oThing(h)->"); break;
                 case T_PLAYER:    fprintf(fp,"oPlayer(h)->"); break;
                 case T_CREATURE:  fprintf(fp,"oCreature(h)->"); break;
-                case T_CHARACTER: fprintf(fp,"oCharacter(h)->",j); break; 
-                case T_MONSTER:   fprintf(fp,"oMonster(h)->",j); break; 
+                case T_CHARACTER: fprintf(fp,"oCharacter(h)->"); break; 
+                case T_MONSTER:   fprintf(fp,"oMonster(h)->"); break; 
                 case T_ITEM:      fprintf(fp,"oItem(h)->"); break;
                 case T_FEATURE:   fprintf(fp,"oFeature(h)->"); break;
                 case T_PORTAL:    fprintf(fp,"oPortal(h)->"); break;
@@ -636,7 +636,7 @@ Repeat:
                     case T_TRAP:      fprintf(fp,"oTrap(STACK(%d))",j); break;
                     case T_GAME:      fprintf(fp,"oGame(STACK(%d))",j); break;                            
                     case T_CONTAIN: fprintf(fp,"oContain(STACK(%d))",j); break; 
-                    case T_TERM: fprintf(fp,"T1",j); break;     
+                    case T_TERM: fprintf(fp,"T1"); break;     
                     default:          fprintf(fp,"STACK(%d)",j); break;
                     }
                 }
@@ -741,7 +741,7 @@ Repeat:
                         case T_TRAP:      fprintf(fp,"oTrap(STACK(%d))",j); break;
                         case T_GAME:      fprintf(fp,"oGame(STACK(%d))",j); break;                            
                         case T_CONTAIN: fprintf(fp,"oContain(STACK(%d))",j); break; 
-                        case T_TERM: fprintf(fp,"T1",j); break;     
+                        case T_TERM: fprintf(fp,"T1"); break;     
                         default:          fprintf(fp,"STACK(%d)",j); break;
                         }
                     }
@@ -838,8 +838,8 @@ Repeat:
             case T_THING:     fprintf(fp,"oThing(h)"); break;
             case T_PLAYER:    fprintf(fp,"oPlayer(h)"); break;
             case T_CREATURE:  fprintf(fp,"oCreature(h)"); break;
-            case T_CHARACTER: fprintf(fp,"oCharacter(h)",j); break; 
-            case T_MONSTER:   fprintf(fp,"oMonster(h)",j); break; 
+            case T_CHARACTER: fprintf(fp,"oCharacter(h)"); break; 
+            case T_MONSTER:   fprintf(fp,"oMonster(h)"); break; 
             case T_ITEM:      fprintf(fp,"oItem(h)"); break;
             case T_FEATURE:   fprintf(fp,"oFeature(h)"); break;
             case T_PORTAL:    fprintf(fp,"oPortal(h)"); break;

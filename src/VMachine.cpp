@@ -569,7 +569,7 @@ int32 VMachine::Execute(EventInfo *e, rID _xID, hCode CP)
                                  GETSTR(Value2(vc))); break;            
           default: 
             Error("Illegal opcode at address %d in routine $\"%s\"::%s!",
-              vc-cs,xID ? NAME(xID) : "<NULL>", pe ? Lookup(EV_CONSTNAMES,
+              (int)(vc-cs),xID ? NAME(xID) : "<NULL>", pe ? Lookup(EV_CONSTNAMES,
               pe->Event) : "???");   
            break;
         }
@@ -580,7 +580,7 @@ int32 VMachine::Execute(EventInfo *e, rID _xID, hCode CP)
       NextOpcode:;
       }
     Error("HALT opcode at address %d in routine $\"%s\"::%s!",
-             vc-cs,xID ? NAME(xID) : "<NULL>", pe ? Lookup(EV_CONSTNAMES,
+             (int)(vc-cs),xID ? NAME(xID) : "<NULL>", pe ? Lookup(EV_CONSTNAMES,
              pe->Event) : "???");   
     return DONE;
   }

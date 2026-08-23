@@ -552,9 +552,7 @@ bool HelpDomains(String & helpText) {
                     helpText += Format("%s",
                         TGOD(gID)->Domains[j] == RetribID ? "Retrib." :
                         TGOD(gID)->Domains[j] == ProtectID ? "Protect." :
-                        NAME(TGOD(gID)->Domains[j]),
-                        NAME(TGOD(gID)->Domains[j])[0],
-                        NAME(TGOD(gID)->Domains[j])[1]);
+                        NAME(TGOD(gID)->Domains[j]));
                     if (TGOD(gID)->Domains[j + 1]) {
                         helpText += ", ";
                         /*for (k = strlen(NAME(TGOD(gID)->Domains[j]));k<12;k++)
@@ -1521,7 +1519,7 @@ DoneKey:;
         if (!desc)
             continue;
         int padcnt = countskipchars(Keys[n]);
-        KStr[n].Text = Format("%c%s%c%*s%c", -GREY, desc, -YELLOW, 24 + padcnt - strlen(desc), (const char *)Keys[n], -GREY);
+        KStr[n].Text = Format("%c%s%c%*s%c", -GREY, desc, -YELLOW, 24 + padcnt - (int)strlen(desc), (const char *)Keys[n], -GREY);
         KStr[n].Val = i;
         n++;
     }
@@ -3462,8 +3460,7 @@ String & Item::Describe(Player *p) {
 
     if (TITEM(iID)->HasFlag(IT_NOGEN) && !eID)
         Desc += Format("__%cNever Randomly Created:%c This item is never found randomly in dungeons, and is only created in specific instances.\n",
-            -RED, -GREY,
-            (const char*)DESC(iID));
+            -RED, -GREY);
 
     Desc += Format("__%cComposition:%c It weighs %d.%ds and is made of %c%s%c. ",
         -BROWN, -GREY,
@@ -3491,7 +3488,7 @@ String & Item::Describe(Player *p) {
 
     if (p && p->WizardMode) {
         Desc += Format("__%cWizard Mode Info:%c It has an item level of <11>%d<7>. It has a Parent of %ld (<11>%s<7>).\n", -YELLOW, -GREY, ItemLevel(),
-            Parent,
+            (long)Parent,
             Parent ? (const char*)(oThing(Parent))->Name() : "null"
             );
     }

@@ -502,7 +502,7 @@ PutName:
             str = Tag1;
             if ((intptr_t)Subject < 0x000FFFFF) {
                 Error("Probable parameter mismatch in __XPrint; msg = \"%s\","
-                    " POV=%d, Subject=%d", msg, (intptr_t)POV, (intptr_t)Subject);
+                    " POV=%ld, Subject=%ld", msg, (long)(intptr_t)POV, (long)(intptr_t)Subject);
                 return msg;
             }
 
@@ -1621,7 +1621,7 @@ String & Corpse::Name(int16 Flags) {
         if (isFresh())
             s += Format(" %c(%cfresh", -GREY, -GREEN);
         else
-            s += Format(" %c(%cstale", -GREY, -RED, -GREY);
+            s += Format(" %c(%cstale", -GREY, -RED);
 
         int16 dc = noDiseaseDC();
         if (dc <= 30)
@@ -1668,7 +1668,7 @@ String Game::RecursiveParse(EventInfo &e, rID tID, int32 *tBuff, int16 len) {
     while (tBuff[i] && i < len) {
         switch (tBuff[i]) {
         case TC_RPAREN:
-            Error("Mismatched parenthesis in dynamic text <Res>.", tID);
+            Error("Mismatched parenthesis in dynamic text %s.", NAME(tID));
             return *tmpstr("Error building text.");
         case TC_LPAREN:
             nest = 1;
@@ -1680,7 +1680,7 @@ String Game::RecursiveParse(EventInfo &e, rID tID, int32 *tBuff, int16 len) {
                     nest--;
             }
             if (nest) {
-                Error("Closing parenthesis missing in dynamic text <Res>.", tID);
+                Error("Closing parenthesis missing in dynamic text %s.", NAME(tID));
                 return *tmpstr("Error building text.");
             }
             break;
@@ -1701,7 +1701,7 @@ String Game::RecursiveParse(EventInfo &e, rID tID, int32 *tBuff, int16 len) {
     while (tBuff[i] && i < len) {
         switch (tBuff[i]) {
         case TC_RPAREN:
-            Error("Mismatched parenthesis in dynamic text <Res>.", tID);
+            Error("Mismatched parenthesis in dynamic text %s.", NAME(tID));
             return *tmpstr("Error building text.");
         case TC_LPAREN:
             nest++;
@@ -1714,7 +1714,7 @@ String Game::RecursiveParse(EventInfo &e, rID tID, int32 *tBuff, int16 len) {
                     nest--;
             }
             if (nest) {
-                Error("Closing parenthesis missing in dynamic text <Res>.", tID);
+                Error("Closing parenthesis missing in dynamic text %s.", NAME(tID));
                 return *tmpstr("Error building text.");
             }
             if (i == start + 1)
@@ -1739,7 +1739,7 @@ String Game::RecursiveParse(EventInfo &e, rID tID, int32 *tBuff, int16 len) {
                 n++;
             }
             if (tBuff[n] != TC_TERM || nest) {
-                Error("Unterminated dynamic text case in <Res>.", tID);
+                Error("Unterminated dynamic text case in %s.", NAME(tID));
                 return *tmpstr("Error building text.");
             }
             if (theGame->VM.Execute(&e, tID, hc))
@@ -1765,7 +1765,7 @@ String Game::RecursiveParse(EventInfo &e, rID tID, int32 *tBuff, int16 len) {
                 n++;
             }
             if (tBuff[n] != TC_TERM || nest) {
-                Error("Unterminated dynamic text case in <Res>.", tID);
+                Error("Unterminated dynamic text case in %s.", NAME(tID));
                 return *tmpstr("Error building text.");
             }
             if (random(100) <= c)

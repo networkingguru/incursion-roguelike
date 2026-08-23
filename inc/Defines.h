@@ -90,8 +90,16 @@ typedef signed int        hObj;
   #undef ASSERT
 #endif
 
-#define ASSERT(a) if (!(a)) Error("ASSERT failed: '" #a \
-    "' in file %s, line %d.", __FILE__, __LINE__);
+/* upstream: #a was pasted straight INTO the format string, so any '%' in the
+   asserted expression became a conversion specifier and Error() then read an
+   argument that was never passed. Wrong on Win32 for exactly the same reason:
+   Error() is vsnprintf there too. Two live sites, ASSERT(feet % 5 == 0) at
+   src/Creature.cpp:243 and ASSERT(... (ev % 16) + 1) at src/Debug.cpp:2106.
+   Fixing the macro immunises every future ASSERT as well. Tier Observed:
+   clang -Wformat reports "invalid conversion specifier ' '" and "')'" at those
+   two sites before this change and neither after. inc-9t6. NOT SENT upstream. */
+#define ASSERT(a) if (!(a)) Error("ASSERT failed: '%s' in file %s, line %d.", \
+    #a, __FILE__, __LINE__);
 
 #define MYABS(n) ((n)>0 ? (n) : -(n))
 

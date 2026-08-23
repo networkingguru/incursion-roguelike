@@ -328,7 +328,7 @@ PRIVATE int print_item(int p)
       k++;
    }
    if (yygrammar[i] <= 0) printf(" *");
-   T1->CWrite(Format(" (back:%d sub:%d left:%d)\n", back[p], sub[p], left[p]));
+   T1->CWrite(Format(" (back:%d sub:%d left:%d)\n", (int)back[p], (int)sub[p], (int)left[p]));
 }
 
 /*----------------------------------------------------------------------------*/
