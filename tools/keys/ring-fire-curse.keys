@@ -1,0 +1,43 @@
+# Put a Ring of Elemental Command (Fire) on chargen.keys' orc barbarian, with
+# mana enough to fire a wand at himself. Included by ring-fire-shards.keys and
+# ring-fire-ice.keys, which differ only in which wand they then acquire and
+# fire. Finding PA-08-F2 of bd inc-tek.8.8.
+#
+#   w y                      enter wizard mode and open its menu. Later
+#                            entries are 'w' alone; the 'y' answers the
+#                            one-time "enter wizard mode?" question.
+#   Wizard Mode Switches     DOWN*7 walks to Infinite Mana, the 8th row
+#   DOWN*7 SPACE ESC         (src/Tables.cpp:2610-2656). SPACE toggles and does
+#                            not move the cursor. Without it the barbarian
+#                            runs out of mana before the wand goes off.
+#   Item Acquisition         RIGHT*26 walks the glyph row to Rings: ItemGlyphs
+#   RIGHT*26                 (src/Tables.cpp:320) puts -AI_RING 26 steps along,
+#                            and the header line names the category.
+#   @until "Ring of Elemental the candidate list has no menu letters, so the
+#     Command (Water)" DOWN   cursor is walked. Three rows show and the MIDDLE
+#                            one is selected, so the run stops on the pass
+#                            where the row BELOW the wanted one appears. Water
+#                            is the entry after Fire in lib/m_items.irh. The
+#                            check does not trust that ordering: it reads the
+#                            ring's name back off the inventory screen.
+#   ENTER m SPACE ESC        take it, move the cursor to the Left Ring slot,
+#                            SPACE to put it on (src/Managers.cpp:873), close.
+#                            The manager refuses to close with an item in the
+#                            air, so a missed SPACE cannot pass unnoticed.
+
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*7
+SPACE
+ESC
+w
+@choose "Item Acquisition"
+RIGHT*26
+@until "Ring of Elemental Command (Water)" DOWN
+ENTER
+m
+SPACE
+ESC

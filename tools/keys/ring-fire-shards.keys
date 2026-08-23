@@ -1,0 +1,38 @@
+# Wearing the fire ring, shoot yourself with a wand of SLASHING damage and let
+# the screen name the damage type. Read by tools/check_ring_fire_curse.sh,
+# finding PA-08-F2 of bd inc-tek.8.8.
+#
+# Shards is chosen because AD_SLASH is a type the ring has no business
+# touching: its curse is meant to fire on cold alone.
+#
+#   Item Acquisition         RIGHT*4 reaches Wands; the run stops on "Wand of
+#   RIGHT*4 @until           the Void", the entry after Shards.
+#   ENTER 2 ENTER            "Enter Item Level:" sets the plus
+#                            (src/Debug.cpp:613-622), so the dice are known.
+#   s ESC                    stow it; the manager will not close otherwise.
+#   b a *                    blast, choose the wand, and '*' is Target Self
+#                            (KY_CMD_TARGET_SELF, src/Tables.cpp:4658). Fired
+#                            twice because the Use Magic check can refuse the
+#                            first attempt; the check reads the FIRST damage
+#                            line any dump shows.
+
+@include ring-fire-curse.keys
+
+w
+@choose "Item Acquisition"
+RIGHT*4
+@until "Wand of the Void" DOWN
+ENTER
+2
+ENTER
+@dump:wand-in-hand
+s
+ESC
+b
+a
+*
+@dump:shot1
+b
+a
+*
+@dump:shot2

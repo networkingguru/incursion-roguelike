@@ -1,0 +1,28 @@
+# The control for ring-fire-shards.keys: wearing the same fire ring, shoot
+# yourself with a wand of COLD damage, which is the one type the ring's curse
+# is supposed to amplify. Read by tools/check_ring_fire_curse.sh, finding
+# PA-08-F2 of bd inc-tek.8.8.
+#
+# Identical to ring-fire-shards.keys but for the wand: the run stops on "Wand
+# of Scouring", the entry after Ice in lib/m_items.irh.
+
+@include ring-fire-curse.keys
+
+w
+@choose "Item Acquisition"
+RIGHT*4
+@until "Wand of Scouring" DOWN
+ENTER
+2
+ENTER
+@dump:wand-in-hand
+s
+ESC
+b
+a
+*
+@dump:shot1
+b
+a
+*
+@dump:shot2

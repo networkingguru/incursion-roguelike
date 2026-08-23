@@ -4660,7 +4660,21 @@ and EA_GRANT
 and EA_GRANT
   { xval: TRAP_EVENT; yval: EVICTIM(EV_DAMAGE);
     On Event META(EVICTIM(EV_DAMAGE)) {
-      if (e.DType = AD_COLD)
+      /* upstream: base-code defect, not a port artefact. The line is shared
+         game data and the language is the same everywhere, so a Win32 build
+         on the upstream compiler runs the same always-true test. It read
+         "if (e.DType = AD_COLD)", a single equals sign. That is an
+         assignment, not a comparison: the grammar routes '=' to
+         CodeAssignment (src/yygram.cpp:9373, src/RComp.cpp:1014) and the
+         expression yields the value assigned, which is AD_COLD == 2
+         (inc/Defines.h:987) and never zero. So the ring wrote cold into every
+         wound its wearer took, tested what it had just written, and
+         multiplied the lot by 3/2 -- a sword cut, a fall, a fireball. The
+         ring's own page (:4610) curses the wearer with 150% damage from
+         "all cold-based attacks" alone. Tier Observed -- see
+         tools/check_ring_fire_curse.sh. Tracking bd inc-tek.8.8, finding
+         PA-08-F2. Not sent to rmtew. */
+      if (e.DType == AD_COLD)
         e.vDmg = (e.vDmg * 3) / 2;
       return NOTHING;
       };      
