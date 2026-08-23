@@ -2,6 +2,33 @@
 
 This file provides instructions and context for AI coding agents working on this project.
 
+## Standing order: do not start work without an OK
+
+**A bug report is not a work order. You MUST NOT change a file, build, or
+commit until Brian says go.**
+
+This rule has no size exemption. It overrides the task-sizing rule that lets
+small work skip approval. It applies to source, data, scripts, docs and
+generated artefacts alike.
+
+When Brian reports a defect, or describes one, you MUST answer with three
+things and then STOP:
+
+1. **The issue.** What is wrong, and the evidence that it is wrong.
+2. **The fix.** What you propose to change, file by file.
+3. **The blast radius.** What else the change reaches, and what it can break.
+
+You MAY read, grep, build a diagnostic in a scratch directory, and run the
+headless harness to prove the defect. That is investigation. Editing a
+tracked file is not.
+
+Wait for a yes on the plan. A "yes, that is the bug" is not a yes to the fix.
+
+Broken on 2026-08-23: Brian reported that the Boots of Providence pay no Luck
+bonus when carried. He asked for nothing else. The session diagnosed it, then
+edited four tracked files, rebuilt both binaries and the module, and filed a
+bead, all unasked. See bead inc-izuu.
+
 ## Publishing anything outward-facing
 
 Two rules, and neither has an exception.
