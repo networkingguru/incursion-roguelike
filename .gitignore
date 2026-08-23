@@ -72,3 +72,9 @@ notary.env
 .netrc
 id_rsa
 id_ed25519
+
+# Agent worktrees. `git worktree add` puts a real checkout here, so without this
+# line `git status` in the main tree offers to commit a second copy of the whole
+# repository. The worktrees themselves are disposable; their branches carry the
+# work.
+.claude/worktrees/
