@@ -1,0 +1,29 @@
+# Die for real, then look at the gravestone (bd inc-r6z).
+#
+#   INCURSION_OPTIONS=tools/gates/Options.Dat \
+#       tools/headless.sh tools/keys/gravestone.keys 11
+#
+# The seed and the settings are not free choices. tools/check_headless.sh:387
+# already keeps one reproducible confirmed death -- dive.keys, seed 11, the
+# pinned gate settings -- and this file replays exactly that scenario so it
+# does not have to find a second one. The pinned settings run with OPT_NODEATH
+# on, so the killing blow asks "You die... Die? [yn]" (src/Fight.cpp) and every
+# remaining dive.keys keystroke is swallowed by that prompt until a 'y'
+# arrives. The trailing y's below are that 'y'; some of them may instead be
+# spent on OPT_ELUDE_DEATH's budgeted escapes, which is why there are twelve.
+#
+# After Player::Death() runs, src/Main.cpp:481 waits for ENTER and then calls
+# Player::Gravestone(), which draws GravestoneImage (src/Main.cpp:2305) with
+# ch = 'g' before it asks for anything. So the screen dumped below IS the death
+# screen a player sees. 'q' is what the gravestone's own prompt
+# ("[dvmqs]", src/Main.cpp:2434) accepts for Quit; @quit would not be read
+# there.
+
+@include dive.keys
+
+y*12
+ENTER*3
+
+@dump:gravestone
+
+q

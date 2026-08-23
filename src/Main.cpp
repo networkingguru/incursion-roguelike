@@ -2302,6 +2302,23 @@ Quit:
     Cleanup();
 }
 
+/* upstream: base-code defect, the fix is ours. The epitaph below read
+   REQUISCANT IN PACE, and there is no such Latin word. The phrase R.I.P.
+   abbreviates is "requiescat in pace" -- singular, because a gravestone
+   belongs to one person -- and the plural is "requiescant". Either spelling
+   keeps the 'e' this one dropped. Singular was chosen: the stone names one
+   character, and Player::Gravestone() below writes his own name into it.
+   It is upstream's because a misspelt word inside a string literal reads the
+   same on Win32, with the original typedefs, on the upstream compiler; nothing
+   here depends on platform, compiler or type width. It came in with 7b8504a,
+   "Fixed v0.6.5B source as provided by Julian", which is Julian's code as
+   Richard Tew received it, and every player who dies sees it.
+   REQUISCANT and REQUIESCAT are both ten characters, so no column moves and
+   no other line of the drawing changes. Tier Observed -- the same session
+   (tools/keys/gravestone.keys, seed 11, tools/gates/Options.Dat) dumped
+   "REQUISCANT IN PACE," before the fix and "REQUIESCAT IN PACE," after, both
+   at screen column 14; tools/check_gravestone.sh. Tracking inc-r6z. Not sent
+   to rmtew. */
 const char* GravestoneImage =
 "                                             \n\
                                               \n\
@@ -2313,7 +2330,7 @@ const char* GravestoneImage =
         /                             \\      \n\
        /                               \\     \n\
       |                                 |     \n\
-      |       <8>REQUISCANT IN PACE,<7>       |     \n\
+      |       <8>REQUIESCAT IN PACE,<7>       |     \n\
       |                                 |     \n\
       |                                 |     \n\
       |                                 |     \n\
