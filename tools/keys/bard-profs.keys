@@ -1,0 +1,50 @@
+# Make an elf bard and photograph the character sheet.
+#
+# One assertion: the sheet's Proficiencies line must name every weapon group
+# the class grants. The bard grants WG_SIMPLE, WG_DAGGERS, WG_LIGHT,
+# WG_SBLADES and WG_ARCHERY (lib/classes.irh:444; the same five bits appear as
+# 0x00000001, 0x00001000, 0x00010000, 0x00000004, 0x00000020 at
+# lib/program.i:3328, which is what the compiler actually reads). The bard's
+# own prose promises "simple weapons, light weapons, short blades, daggers and
+# archery" (lib/classes.irh:289-290).
+#
+# A bard, because it is a first-level base class that carries WG_LIGHT. The
+# assassin carries the bit too (lib/prestige.irh:589) but is a prestige class
+# and costs seven levels of play to reach.
+#
+# src/Sheet.cpp:855-877 builds that line by looking each bit up in
+# WeaponGroupNames[] and dropping any bit the table does not hold, so the sheet
+# is a true oracle for the table under test.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+# The choices are named, not counted, so a race or class added to lib/ cannot
+# make this script build a different character. See @choose in src/Wposix.cpp.
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Bard"
+a                       # Attributes: the first of the five offered sets. The
+                        #   sets have no names, so this one stays positional.
+@choose "Neutral"       # a bard may not be lawful
+a                       # First feat.  Which feats are offered depends on the
+a                       # Second feat. attribute rolls, so these stay counted.
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y                 # leave the Skill Manager and accept the allocation
+
+@choose "The Witty Thrillseeker"    # personality archetype
+@choose "Sleep"         # a bard learns one spell at first level. A rogue is
+                        #   never asked this, which is why elf-search.keys has
+                        #   no line here.
+
+ESC                     # dismiss the arrival-room description; now in play
+d                       # character sheet
+@expect "Class  Bard 1" # the whole point of the run; stop here if it is wrong
+W                       # Write Dump
+s h e e t ENTER         # filename: "sheet"
+@dump:afterdump
+ESC
+@quit

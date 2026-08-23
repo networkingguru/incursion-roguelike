@@ -1308,6 +1308,37 @@ TextVal MMAttkVerbs2[] = {
   { A_DEXP, "When it dies, it explodes %s." },
   { 0, NULL } };
 
+/* upstream: base-code defect, the fix is ours. The table below turns a
+   creature's Proficiencies bits into the words a player reads, and it had no
+   row for WG_LIGHT (inc/Defines.h:2110, "Light-weight weapons"). All three
+   printing sites guard each bit with LookupOnly(WeaponGroupNames, 1L << i)
+   and step silently over a bit the table does not hold -- src/Sheet.cpp:855
+   (the character sheet), src/Help.cpp:101 (the class help page), and
+   src/Help.cpp:1240, which walks this table itself and so gave light weapons
+   no section at all. No assert and no error line; just a shorter sentence.
+   Upstream's because a missing row in a static initialiser reads the same on
+   Win32, with the original typedefs, on the upstream compiler: the bit, the
+   table and the three loops are plain C++ with no platform, width or
+   endianness dependence. It arrived with 7b8504a, the v0.6.5B source as
+   Richard Tew received it.
+   Tier Observed. One elf bard, tools/keys/bard-profs.keys, seed 1: the sheet
+   named 5 weapon groups before the fix and 6 after it, the new one being
+   "Light Weapons", and no other word on the line moved. Both halves live in
+   tools/check_weapon_groups.sh, which also asserts the general property that
+   every WG_ bit declared in inc/Defines.h has a row here.
+   Tracking inc-tek.15. Not sent to rmtew.
+   The wording follows the prose that promises the ability, not the
+   identifier: the bard is "proficient with simple weapons, light weapons,
+   short blades, daggers and light armour" (lib/classes.irh:289), assassins
+   "gain proficiency with crossbows and light weapons" (lib/prestige.irh:526),
+   and a Thaumaturge is "proficient with all light weapons"
+   (lib/help.irh:3894). Title case with the noun kept, because the neighbours
+   read "Simple Weapons", "Exotic Weapons" and "Martial Weapons". The sibling
+   row for WG_CROSSBOWS was missing for the same reason (f5444e9).
+   The row has to sit BEFORE the WG_SHIELDS row, not merely somewhere in
+   the table: the src/Help.cpp:1240 loop breaks at WG_SHIELDS, because the
+   rows from there on are armour rather than weapons. Bit order puts it in
+   the right place anyway, between WG_FIREARMS and WG_FLAILS. */
 TextVal WeaponGroupNames[] = {
   { WG_SIMPLE, "Simple Weapons" },
   { WG_EXOTIC, "Exotic Weapons" },
@@ -1325,6 +1356,7 @@ TextVal WeaponGroupNames[] = {
   { WG_MARTIAL, "Martial Weapons" },
   { WG_FLEXIBLE, "Flexible" },
   { WG_FIREARMS, "Firearms" },
+  { WG_LIGHT, "Light Weapons" },
   { WG_FLAILS, "Flails" },
   { WG_CROSSBOWS, "Crossbows" },
   { WG_SHIELDS, "Shields" },
