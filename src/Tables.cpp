@@ -2731,6 +2731,14 @@ TextVal FileErrors[] = {
 const char* EncumbranceNames[] = {
   "None", "Light", "Moderate", "Heavy", "Extreme", "(null)" };
 
+/* The twelve months of the game calendar, thirty days each. This table was a
+   function-local array inside TextTerm::ShowTime() until inc-pg5 needed a
+   second reader of it; see GameDate() in src/Term.cpp. */
+const char* MonthNames[] = {
+  "Suntide", "Harvest", "Leafdry", "Softwind",
+  "Thincold", "Deepcold", "Midwint", "Arvester",
+  "Reprise", "Icemelt", "Turnleaf", "Blossom" };
+
 int16 EncumbranceTable[30*3] = {
   30,      60,      100,        // ww: previously this only had 29 rows
   30,      60,      100,        // and it was supposed to go to 30 ...

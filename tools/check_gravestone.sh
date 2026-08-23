@@ -1,5 +1,8 @@
 #!/bin/bash
-# Regression check for the death screen's epitaph (bd inc-r6z).
+# Regression check for the death screen (bd inc-r6z, bd inc-pg5).
+#
+# Two assertions, both on one rendered gravestone: the epitaph's wording and
+# columns (inc-r6z), and the date the stone is carved with (inc-pg5).
 #
 # The gravestone read "REQUISCANT IN PACE," (src/Main.cpp, GravestoneImage) and
 # there is no such Latin word. The phrase R.I.P. abbreviates is "requiescat in
@@ -100,7 +103,77 @@ if ! grep -qxF "$WANT" "$SCREEN"; then
     exit 1
 fi
 
+# ---------------------------------------------------------------------------
+# The date the stone carries (bd inc-pg5).
+#
+# The line under "ON THE" was sprintf(buff,"12th of Suntide") -- a constant, so
+# every dead character was buried on the same day. It now comes from GameDate()
+# (src/Term.cpp), which turns theGame->GetTurn() into a date.
+#
+# This assertion is DERIVED, not recorded: the screen dump's own header names
+# the turn the dump was taken on, and the calendar below re-implements the
+# arithmetic independently of the code under test. So it does not pass merely
+# because tonight's run printed what tonight's run printed, and it does not
+# accept "12th of Suntide" unless the character really did die on that day.
+# The calendar is the game's, not this script's: 432000 turns to a day, thirty
+# days to a month, twelve months to a year, and the ordinal suffixes of
+# NumPrefix() (inc/Inline.h).
+#
+# It asserts the whole LINE, indentation included, for the same reason the
+# epitaph assertion does: the date is centred on column 23 by
+# 23-length/2, and a date of a different width than the old constant must still
+# come out centred there.
+#
+# Proved RED before it was believed: run against a binary still carrying
+# sprintf(buff,"12th of Suntide"), this fails with
+#   wanted: [      |         1st of Suntide          |]
+#   got:    [      |         12th of Suntide         |]
+
+TURN="$(sed -n '1s/.*turn \([0-9][0-9]*\).*/\1/p' "$SCREEN")"
+if [ -z "$TURN" ]; then
+    echo "FAIL: $SCREEN has no turn in its header, so the date cannot be derived"
+    head -1 "$SCREEN"
+    exit 1
+fi
+
+MONTHS=(Suntide Harvest Leafdry Softwind Thincold Deepcold Midwint Arvester \
+        Reprise Icemelt Turnleaf Blossom)
+DAY=$(( TURN / 432000 ))
+DOM=$(( DAY % 30 + 1 ))
+MONTH="${MONTHS[$(( (DAY / 30) % 12 ))]}"
+case $DOM in
+    1[0-9]) SUF=th ;;
+    *1)     SUF=st ;;
+    *2)     SUF=nd ;;
+    *3)     SUF=rd ;;
+    *)      SUF=th ;;
+esac
+DATE="$DOM$SUF of $MONTH"
+
+# Centre it the way Player::Gravestone() must: text starts at column
+# 23-length/2, the stone's left wall is at column 6 and its right wall at
+# column 40.
+LEN=${#DATE}
+START=$(( 23 - LEN / 2 ))
+if [ "$START" -lt 7 ]; then
+    echo "FAIL: the derived date [$DATE] is too wide for the stone"
+    exit 1
+fi
+PAD1=$(( START - 7 ))
+PAD2=$(( 40 - START - LEN ))
+WANTDATE="$(printf '      |%*s%s%*s|' "$PAD1" "" "$DATE" "$PAD2" "")"
+
+if ! grep -qxF "$WANTDATE" "$SCREEN"; then
+    echo "FAIL: the death date is not what turn $TURN implies."
+    echo "  wanted: [$WANTDATE]"
+    echo "  got:    [$(grep -m1 ' of ' "$SCREEN")]"
+    echo "  screen: $SCREEN"
+    exit 1
+fi
+
 echo "  ok: $(grep -m1 'IN PACE' "$SCREEN")"
+echo "  ok: $(grep -m1 -xF "$WANTDATE" "$SCREEN")   (turn $TURN -> day $DAY)"
 echo "PASS: the death screen reads REQUIESCAT IN PACE, in its original columns"
+echo "      and is dated $DATE, which is the day turn $TURN falls on"
 echo "      ($SCREEN)"
 exit 0

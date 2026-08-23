@@ -2408,8 +2408,37 @@ void Player::Gravestone()
             GraveText = "causes unknown";
           GraveText = GraveText.Left(30);
           MyTerm->Write((int16)(23-GraveText.GetLength()/2),20,GraveText);
-          sprintf(buff,"12th of Suntide");
-          MyTerm->Write(23-strlen(buff)/2,24,buff);
+          /* upstream: base-code defect, the fix is ours. The line below read
+             sprintf(buff,"12th of Suntide"), a constant, so every character who
+             ever died was buried on the same day whatever turn killed him, and
+             the 'g' case above is on the path of every death.
+             It is upstream's because a hardcoded string literal prints the same
+             on Win32, with the original typedefs, on the upstream compiler;
+             nothing here depends on platform, compiler or type width, and the
+             constant is wrong on every one of them. git blame puts it in
+             7b8504a, "Fixed v0.6.5B source as provided by Julian", which is
+             Julian's code as Richard Tew received it.
+             Tier Observed -- seed 11, tools/keys/gravestone.keys, under
+             tools/gates/Options.Dat: the character dies on turn 198067, and the
+             dumped death screen read "12th of Suntide" before this change and
+             "1st of Suntide" after it, with diff reporting that one line and no
+             other. 198067/432000 is day 0, which is the 1st of Suntide.
+             tools/check_gravestone.sh now derives the date from the turn the
+             dump reports rather than recording what a run printed.
+             Tracking inc-pg5. Not sent to rmtew.
+             The date was always reachable: TextTerm::ShowTime() (src/Term.cpp)
+             derives one from theGame->GetTurn(), and only its function-local
+             month table stopped this site sharing it. That table is now
+             MonthNames (src/Tables.cpp) and the arithmetic is now GameDate()
+             (src/Term.cpp), which both readers call, so they cannot drift.
+             GetTurn() here is one turn past the killing blow -- the play loop
+             at the top of this file increments Turn once before it breaks out
+             on F_DELETE -- which is a fifth of an in-game second and cannot
+             change the day except at the exact stroke of midnight.
+             The drawing does not move: the date is centred by the same
+             23-length/2 rule the name, the class and the killer already use. */
+          { String Died = GameDate(theGame->GetTurn());
+            MyTerm->Write((int16)(23-Died.GetLength()/2),24,Died); }
           if (VictoryFlag) {
             MyTerm->Color(PURPLE);
             MyTerm->Write(7,27,"* * * A TRUE HERO OF LEGEND * * *");

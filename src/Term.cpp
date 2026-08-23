@@ -640,24 +640,33 @@ void TextTerm::ShowTraits() {
     SetWin(WIN_SCREEN);
 }
 
+/* The game calendar, in one place. 432000 turns make a day, thirty days make
+   a month and twelve months make a year; MonthNames (src/Tables.cpp) holds the
+   names. Both readers of the date -- the sidebar clock in TextTerm::ShowTime()
+   below and the gravestone in Player::Gravestone() (src/Main.cpp) -- call this
+   rather than repeating the arithmetic, because two copies of a calculation
+   drift apart. src/Player.cpp:AddJournalEntry() is a third copy that already
+   has drifted; it is a separate defect and is left alone here. */
+String & GameDate(uint32 turn) {
+    const uint32 day = turn / 432000L;
+    return Format("%d%s of %s", (int)(day % 30) + 1,
+                  NumPrefix((int16)((day % 30) + 1)),
+                  MonthNames[(day / 30) % 12]);
+}
+
 void TextTerm::ShowTime() {
-    uint8 hour, min, sec, day;
-    const char *Months[] = { "Suntide", "Harvest", "Leafdry", "Softwind",
-                             "Thincold", "Deepcold", "Midwint", "Arvester", 
-                             "Reprise", "Icemelt", "Turnleaf", "Blossom" };
+    uint8 hour, min, sec;
     const uint32 turn = theGame->GetTurn();
     hour = (turn/18000) % 24;
     min  = (turn/300) % 60;
     sec  = (turn/5) % 60;
-    day  = (uint8)(turn/432000L);
     SetWin(WIN_TRAITS); Color(GREY);
     switch (p->Opt(OPT_PRECISE_TIME)) {
       case 0:  // minutes 
         Write(0,TimeLine,Format("%d:%02d %s  \n", (hour%12)+1, min,
               (hour > 12) && (hour != 23) ? "PM" : "AM"));
         if (!p->Opt(OPT_SIDEBAR)) // omit the day part of the date
-          Write(Format("%d%s of %s\n", (day % 30)+1, NumPrefix((day%30)+1),
-                         Months[(day/30)%12]));
+          Write(Format("%s\n", (const char*)GameDate(turn)));
         break;
       case 1: // seconds 
         Write(0,TimeLine,Format("%d:%02d:%02d %s  \n", 

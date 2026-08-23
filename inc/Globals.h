@@ -69,6 +69,7 @@ extern int16     EventSP;
                    
 int StringCompare(const void *a, const void *b);
 String & DescribeSkill(int16 sk);
+String & GameDate(uint32 turn);
 
 const char* __XPrint(Player *POV, const char *msg,va_list args);
 const char* XPrint(const char*msg,...);
@@ -140,6 +141,7 @@ extern const char *KeyBindings,
                   *NumberNames[],
                   *RomanNumerals[],
                   // *TileNames[],
+                  *MonthNames[],
                   *EncumbranceNames[];
 
 extern TextVal DTypeNames[],
