@@ -645,17 +645,36 @@ void Item::MakeKnown(uint8 k)
     if ((Known & KN_MAGIC) && (Known & KN_PLUS))
       Inscrip.Empty();
 
-    if (k & KN_MAGIC) {
-      if (Type == T_SCROLL || Type == T_WAND   || Type == T_RING ||
-          Type == T_GAUNTLETS || Type == T_GIRDLE || Type == T_CROWN ||
-          Type == T_HELMET || Type == T_TOME || Type == T_CLOAK ||
-          Type == T_BOOTS || Type == T_ROD || Type == T_STAFF)
-        if (eID)
-          EFFMEM(eID,theGame->GetPlayer(0))->Known = true;
-      if (Type == T_POTION)
-        if (eID)
-          EFFMEM(eID,theGame->GetPlayer(0))->PKnown = true;
-      }  
+    /* upstream: identifying one item taught the KIND only for a hand-written
+       list of item types, and that list had drifted from the Flavored column
+       of DungeonItems (src/Tables.cpp:2947), which is what decides whether a
+       kind has a flavour name to learn in the first place. Amulets, bracers,
+       lenses, mushrooms and horns are flavoured and were
+       all missing, so identifying one of them taught nothing and the next one
+       of the same kind arrived unknown again; tomes and crowns were in the
+       list and are not flavoured at all. Nothing here is a port artefact: the
+       list is byte-identical in cea33d8, Julian's own 0.6.9H3 source, and
+       behaves the same on Win32 with the original typedefs. Observed, seed 1:
+       an unidentified Periapt of Wisdom reads "? pearl amulet", and after
+       Identify Whole Pack a second one of the SAME effect still reads
+       "? pearl amulet", while a ring in the same run, by the same route, goes
+       from "? electrum ring" to "? Ring of Good Fortune". See
+       tools/check_item_type_id.sh. inc-bj4z, not sent.
+
+       The test below is now the one the reader already uses. Item::Name
+       (src/Message.cpp:1131 and 1145) prints the true name when the effect
+       carries a flavour and that flavour is Known, so this records Known
+       under exactly that condition. There is no second list to drift. */
+    if (k & KN_MAGIC)
+      if (eID) {
+        EffMem *em = EFFMEM(eID,theGame->GetPlayer(0));
+        if (isType(T_POTION)) {
+          if (em->PFlavorID)
+            em->PKnown = true;
+          }
+        else if (em->FlavorID)
+          em->Known = true;
+        }
     if (theGame->GetPlayer(0))
       if (theGame->GetPlayer(0)->Perceives(this))
         theGame->GetPlayer(0)->JournalNoteItem(this);

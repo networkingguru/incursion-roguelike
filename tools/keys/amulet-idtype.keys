@@ -1,0 +1,80 @@
+# Does identifying one item of a flavoured kind teach the KIND? This is the
+# oracle for inc-bj4z.
+#
+#   tools/headless.sh tools/keys/amulet-idtype.keys 1
+#
+# Take an unidentified Periapt of Wisdom (an amulet) and an unidentified ring,
+# identify the pack, then take one more of each and read the name the game
+# gives it. The ring is the control: its type was in Item::MakeKnown's
+# hand-written list and it always learned. The amulet's type was not in that
+# list, so before the fix it never learned and every amulet of the same kind
+# had to be identified again.
+#
+# WHY THE MEASUREMENT IS THE In-the-Air LINE. "Acquire Unknown Item" is wizard
+# menu case 5 (src/Debug.cpp:659), which calls SetKnown(0), so what arrives is
+# unidentified and lands in the Inventory Manager's In-the-Air slot. That one
+# line therefore reads either the flavour ("? pearl amulet") or the true name
+# ("? Periapt of Wisdom"), and nothing else on the screen can be mistaken for
+# it. The leading '?' is the unknown blessed/cursed marker and stays either
+# way; it is not part of what this measures.
+#
+# WHY BOTH AMULETS ARE THE SAME KIND. A flavour belongs to an EFFECT, not to
+# an item (Game::SetFlavors, src/Item.cpp:310), so two amulets that read the
+# same flavour are two amulets of the same kind. Both here read "pearl
+# amulet".
+#
+# [w] asks "Enter wizard mode?" the FIRST time only; after that it opens the
+# wizard menu directly, so a second [y] would pick the menu's y) entry --
+# which is Create Trap, and the run then dies at "Enter Trap Name:".
+# [s] stows the in-air item in the backpack (src/Managers.cpp:835). The
+# manager will not close while anything is still in the air.
+#
+# The RIGHT counts are indices into ItemGlyphs (src/Tables.cpp:320), counted
+# from zero: ring 26, amulet 27. A miscount lands on another category and the
+# following @until then fails loudly rather than measuring the wrong item.
+
+@include chargen.keys
+
+@dump:arrival
+
+w
+y
+@choose "Acquire Unknown Item"
+RIGHT*27
+@until "Periapt of Wisdom" DOWN
+ENTER
+@dump:amulet-1-in-air
+s
+ENTER
+
+w
+@choose "Acquire Unknown Item"
+RIGHT*26
+@until "Fire Resistance" DOWN
+ENTER
+@dump:ring-1-in-air
+s
+ENTER
+
+w
+@choose "Identify Whole Pack"
+
+w
+@choose "Acquire Unknown Item"
+RIGHT*27
+@until "Periapt of Wisdom" DOWN
+ENTER
+@dump:amulet-2-in-air
+s
+ENTER
+
+w
+@choose "Acquire Unknown Item"
+RIGHT*26
+@until "Fire Resistance" DOWN
+ENTER
+@dump:ring-2-in-air
+s
+ENTER
+
+@quit
