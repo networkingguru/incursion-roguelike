@@ -1,0 +1,56 @@
+# The control for tools/check_boots_providence.sh, bead inc-izuu.
+#
+# Boots of the Winterlands say nothing about being carried, and they carry no
+# EF_CARRIED flag. They walk the same route as the Boots of Providence -- same
+# acquisition list, same belt slot, same feet -- so if the belt slot ever
+# starts paying for everything, this script says so and the fix's own check
+# stays honest.
+#
+#   RIGHT*20                 walks the glyph row to Boots: ItemGlyphs
+#                            (src/Tables.cpp:341) puts -AI_BOOTS 20 steps
+#                            along the row.
+#   @until "Boots of         the candidate list has no menu letters and its
+#     Stability" DOWN        middle row is the selected one, so the run stops
+#                            on the pass where the row BELOW the wanted one
+#                            appears. Stability is the entry after the
+#                            Winterlands in lib/m_items.irh. The check does
+#                            not trust that ordering: it reads the boots'
+#                            name back off the inventory screen.
+#   3 ENTER                  the acquisition asks for the item level, which
+#                            is the plus (src/Debug.cpp:619). Three levels of
+#                            cold resistance per plus, so +3 is nine.
+#   t SPACE d                put them in the first belt slot. That slot holds
+#                            starting gold, which the swap lifts into the air,
+#                            and the manager will not close with anything in
+#                            the air, so d drops it.
+#   k SPACE                  and then onto the feet, which is the green half.
+
+@include chargen.keys
+
+w
+y
+@choose "Item Acquisition"
+RIGHT*20
+@until "Boots of Stability" DOWN
+ENTER
+3
+ENTER
+t
+SPACE
+d
+@dump:boots-on-belt
+ESC
+d
+@until "Resistances and Armour" DOWN
+@dump:sheet-carried
+ESC
+i
+t
+SPACE
+k
+SPACE
+@dump:boots-worn
+ESC
+d
+@until "Resistances and Armour" DOWN
+@dump:sheet-worn

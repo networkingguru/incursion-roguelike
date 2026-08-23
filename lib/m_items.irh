@@ -374,7 +374,7 @@ AI_STONE Effect "Luckstone" : EA_GRANT
       * ITEM_COST ABIL_BOOST_COST(150); }
 AI_RING Effect "Good Fortune" : EA_GRANT
   { xval: ADJUST; yval: A_LUC; pval: PLUS_1PER1;
-    Flags: EF_NEEDS_PLUS; SC_WEA; Level: PLUS_2PER1;
+    Flags: EF_NEEDS_PLUS, EF_CARRIED; SC_WEA; Level: PLUS_2PER1;
     Desc: "When carried or worn, this item bestows
       good luck upon its wielder in the form of a magic bonus to
       his Luck score.";  
@@ -382,7 +382,7 @@ AI_RING Effect "Good Fortune" : EA_GRANT
       * ITEM_COST ABIL_BOOST_COST(100); }
 AI_BOOTS Effect "Providence" : EA_GRANT
   { xval: ADJUST; yval: A_LUC; pval: PLUS_1PER1;
-    Flags: EF_NEEDS_PLUS; SC_WEA; Level: PLUS_2PER1;
+    Flags: EF_NEEDS_PLUS, EF_CARRIED; SC_WEA; Level: PLUS_2PER1;
     Desc: "When carried or worn, this item bestows
       good luck upon its wielder in the form of a magic bonus to
       his Luck score.";  

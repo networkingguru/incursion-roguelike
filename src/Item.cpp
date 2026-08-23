@@ -1061,7 +1061,37 @@ bool Item::activeSlot(int16 slot)
     if (Type == T_TOOL || Type == T_GEM)
       if (eID && TEFF(eID)->HasSource(AI_STONE))
         return true;
-    
+
+    /* upstream: two items promise a bonus they never paid. The Ring of Good
+       Fortune and the Boots of Providence each open their page with "When
+       carried or worn, this item bestows good luck upon its wielder", and
+       that wording is not copied from the Luckstone above them -- the
+       Luckstone says "When carried" and somebody deliberately added "or
+       worn" to these two. Only worn paid. An item's grant is thrown from
+       Wield (src/Inv.cpp:396 and 111) and only for a slot this function
+       calls active, and the only exemption was the stone one above, so a
+       ring or a pair of boots on the belt was inert. Nothing here is a port
+       artefact: no typedef, pointer width or compiler extension is involved,
+       the description and this function are byte-identical in Julian's own
+       source, and a Win32 build reads the same page and pays the same
+       nothing. Evidence: Observed, seed 1 -- Boots +3 of Providence in a
+       belt slot read LUC: 15/00 (base 15) and on the feet read LUC: 18/00
+       (base 15, +3 magic); see tools/check_boots_providence.sh. inc-izuu,
+       not sent.
+
+       The five belt slots, and not every slot, because that is what the
+       player's own inventory screen calls carrying: the stone exemption
+       above is wider, and a wider test here would make Monster::InSlot
+       (src/Inv.cpp:48-69) answer "what is in my armour slot?" with a pair
+       of boots. An item is still active in its own slot through the switch
+       below. */
+    if (eID && TEFF(eID)->HasFlag(EF_CARRIED))
+      switch (slot)
+        {
+          case SL_BELT1: case SL_BELT2: case SL_BELT3:
+          case SL_BELT4: case SL_BELT5:
+            return true;
+        }
 
 
     switch (slot)

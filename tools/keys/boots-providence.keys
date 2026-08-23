@@ -1,0 +1,72 @@
+# Do the Boots of Providence pay their Luck bonus while carried, as their own
+# page promises? Read by tools/check_boots_providence.sh, bead inc-izuu.
+#
+#   w y                      enter wizard mode and open its menu.
+#   Item Acquisition         RIGHT*20 walks the glyph row to Boots: ItemGlyphs
+#   RIGHT*20                 (src/Tables.cpp:341) puts -AI_BOOTS 20 steps
+#                            along, and the header line names the category.
+#   @until "Boots of the     the candidate list has no menu letters, so the
+#     Druid" DOWN            cursor is walked. Three rows show and the MIDDLE
+#                            one is selected, so the run stops on the pass
+#                            where the row BELOW the wanted one appears. The
+#                            Druid is the entry after Providence in
+#                            lib/m_items.irh. The check does not trust that
+#                            ordering: it reads the boots' name back off the
+#                            inventory screen.
+#   3 ENTER                  the acquisition asks for the item level, which is
+#                            the plus (src/Debug.cpp:619). One point of Luck
+#                            per plus, so +3 is a bonus no rounding can hide.
+#   t SPACE d                put the boots in the first belt slot -- CARRIED,
+#                            not worn. That slot holds the starting gold,
+#                            which the swap lifts into the air, and the
+#                            manager will not close with anything in the air,
+#                            so d drops the gold on the floor.
+#   ESC d                    the character sheet, whose attribute lines print
+#                            the bonus and where it came from
+#                            (src/Sheet.cpp:91-99). This is the red/green
+#                            reading: "(base 15)" against
+#                            "(base 15, +3 magic)".
+#   i t SPACE k SPACE        the same boots from the belt onto the feet. The
+#                            second sheet must read the SAME +3 and not +6: a
+#                            grant applied twice would show here.
+#   i k SPACE d              and off the feet onto the floor. The last sheet
+#                            must be back to base, because a bonus that
+#                            outlives the item is worse than one that never
+#                            arrives.
+
+@include chargen.keys
+
+w
+y
+@choose "Item Acquisition"
+RIGHT*20
+@until "Boots of the Druid" DOWN
+ENTER
+3
+ENTER
+t
+SPACE
+d
+@dump:boots-on-belt
+ESC
+d
+@dump:sheet-carried
+ESC
+i
+t
+SPACE
+k
+SPACE
+@dump:boots-worn
+ESC
+d
+@dump:sheet-worn
+ESC
+i
+k
+SPACE
+d
+@dump:boots-dropped
+ESC
+d
+@dump:sheet-dropped

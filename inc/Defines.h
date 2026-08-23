@@ -3268,7 +3268,8 @@ typedef signed int        hObj;
 #define EF_ADJUST_GLYPH 102
 #define EF_COMPULSION 103
 #define EF_GAZE       104
-#define EF_LAST       105
+#define EF_CARRIED    105 /* Works on the belt, not only in its own slot */
+#define EF_LAST       106
 
 
 #define EA_BLAST    1      /* xval = DType, pval = Damage */
