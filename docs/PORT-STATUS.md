@@ -1,3 +1,5 @@
+<!-- citations: this-port -->
+
 # Port status
 
 Last reviewed 2026-08-20. This is the running state of the macOS/POSIX port.

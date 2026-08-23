@@ -40,8 +40,10 @@
 # the download link a player follows. A binary file is the same idea from the
 # other side: it exists or it does not, and it has no lines to cite. Neither
 # rule is a softening, because neither one can make an unreadable citation pass:
-# a blob link into a repository this clone cannot resolve still fails, and a
-# line number written on a binary file still fails.
+# a blob link into OUR fork or into upstream naming a path that is not there
+# still fails, an unknown URL shape still fails, and a line number written on a
+# binary file still fails. A blob link into a THIRD-PARTY repository is a
+# separate case with its own section below: it is unchecked, not a defect.
 #
 # There is no citation this tool looks at and says nothing about. Checks 3 and 4
 # are two spellings of one question, so they MUST give the same verdict for the
@@ -82,11 +84,76 @@
 # never reported as "no defects", because the reader of an outgoing document
 # needs to know that this line number was confirmed somewhere rmtew cannot see.
 #
+# WHICH TREE A DOCUMENT IS ABOUT -- THE PER-DOCUMENT DECLARATION
+#
+# Upstream-first is right for a document going to rmtew and wrong for a document
+# describing this port's own engine. docs/ENGINE-MAP-CREATURE.md cites
+# src/Display.cpp:1720. Our Display.cpp has 2230 lines and rmtew's has 1325, so
+# the citation is correct and the tool called it a defect. On 2026-08-23 that
+# accounted for 74 of the 112 defects reported across every tracked markdown
+# file: 45 named citations past the end of the UPSTREAM file, and 29 bare
+# continuations measured the same way. Every one of the 74 was right.
+#
+# So a document may declare, in itself, which tree it is written against. The
+# declaration is one line, alone on the line, inside the first 20 lines:
+#
+#     <!-- citations: this-port -->
+#
+# An HTML comment renders as nothing, so it costs the reader no page. It lives
+# in the document rather than in a list inside this script, because a list here
+# goes stale the moment somebody renames a file, and because a reader who opens
+# the document can see which tree its numbers are in.
+#
+# IT FAILS CLOSED. A document that declares nothing is resolved exactly as
+# before: upstream first, fallback second. Nothing about the outgoing path
+# changes unless a writer types the line.
+#
+# A declared document is resolved against FALLBACK_REF FIRST and UPSTREAM_REF
+# second. Every run prints one `tree` line naming the order it used, so no
+# reader can mistake a document checked against ours for one checked against
+# rmtew's.
+#
+# THE DECLARATION IS NOT A SOFTENING, AND THREE RULES KEEP IT FROM BECOMING ONE.
+#   * A number past the end of OUR file is still a defect. src/Annot.cpp is
+#     1338 lines upstream and 1337 here, so `Annot.cpp:1338` passes undeclared
+#     and fails declared. The selftest holds that case.
+#   * A citation that resolves in NEITHER tree is still a defect. Declaring a
+#     tree does not invent a file.
+#   * A document under docs/outgoing/ MUST NOT declare it. That directory is
+#     what goes to rmtew, where every citation must resolve in HIS tree. The
+#     declaration there is a hard error naming the file, exit 2, not a silent
+#     ignore -- a silent ignore would let a writer believe he had relaxed a gate
+#     that in fact still held, or the reverse.
+#
+# The marker is matched as a WHOLE LINE and only in the first 20 lines. The
+# whole-line match is so that prose quoting the marker inside backticks does not
+# declare the document by accident. The 20-line window is so the declaration
+# stays where a reader meets it. A marker found BELOW line 20 is a hard error
+# telling the writer to move it up, because honouring it silently and ignoring
+# it silently are both worse than saying so.
+#
+# A LINK INTO A THIRD-PARTY REPOSITORY
+#
+# `https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md` is a
+# blob link into a repository this clone has no remote for and never will. It
+# works in a browser. Calling it "points at neither tree" says it is broken,
+# which is false, and four such links were reported that way on 2026-08-23.
+# A blob/tree/raw/blame link into a repository that is neither ORIGIN_HOST nor
+# UPSTREAM_HOST is now reported as a link this tool CANNOT CHECK, and counted
+# the way an UNCHECKED citation is counted -- visible, non-zero, never a defect.
+#
+# That is narrow on purpose. The catch-all still fails a URL shape this tool has
+# never been taught, and a blob link into OUR fork or into upstream naming a
+# path that is not there still fails. Both are in the selftest.
+#
 # Exit status:
-#   0  every citation was checked against UPSTREAM_REF and every one resolved
+#   0  every citation was checked against the document's PRIMARY tree and every
+#      one resolved
 #   1  a defect was found
-#   2  the invocation was wrong
-#   3  no defects, but N citations could only be checked against FALLBACK_REF.
+#   2  the invocation was wrong, or a document declared a tree it may not
+#      declare
+#   3  no defects, but N citations could only be checked against the SECONDARY
+#      tree, or are links into a repository this clone has no remote for.
 #      Non-zero on purpose. A gate for anything going upstream MUST require 0.
 #      A gate for an internal document MAY accept 3, having read the list.
 
@@ -102,6 +169,18 @@ ORIGIN_HOST=${ORIGIN_HOST:-networkingguru/incursion-roguelike}
 # buffer is not evidence. The cost is that a citation into a file edited but not
 # yet committed reads the committed lengths, which is the safer way to be wrong.
 FALLBACK_REF=${FALLBACK_REF:-HEAD}
+
+# The order the CURRENT document is resolved in. Set once per document by
+# check_document, from the declaration described in the header. The defaults are
+# the undeclared behaviour, so a caller that never sets them gets exactly what
+# this tool did before 2026-08-23.
+PRIMARY_REF=$UPSTREAM_REF
+SECONDARY_REF=$FALLBACK_REF
+
+# The declaration itself. One constant, used by the reader, by the error
+# messages and by the selftest, so the three can never drift apart.
+OURS_MARK='<!-- citations: this-port -->'
+OURS_MARK_LINES=20
 
 ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || {
     echo "not inside a git repository" >&2; exit 2; }
@@ -159,15 +238,68 @@ resolve_in_ref() {
 
 # Resolve a basename and say which tree answered, so the caller can report the
 # difference. Prints "<ref><TAB><path>" and returns 1 when neither tree has it.
+#
+# PRIMARY_REF and SECONDARY_REF, not UPSTREAM_REF and FALLBACK_REF. The order is
+# still the whole safety argument -- a basename the PRIMARY tree carries is
+# always measured against the primary tree -- but which tree is primary is now
+# the document's own declaration. See the header.
 resolve_basename() {
     local base=$1 hit
-    if hit=$(resolve_in_ref "$UPSTREAM_REF" "$base"); then
-        printf '%s\t%s\n' "$UPSTREAM_REF" "$hit"; return 0
+    if hit=$(resolve_in_ref "$PRIMARY_REF" "$base"); then
+        printf '%s\t%s\n' "$PRIMARY_REF" "$hit"; return 0
     fi
-    if hit=$(resolve_in_ref "$FALLBACK_REF" "$base"); then
-        printf '%s\t%s\n' "$FALLBACK_REF" "$hit"; return 0
+    if hit=$(resolve_in_ref "$SECONDARY_REF" "$base"); then
+        printf '%s\t%s\n' "$SECONDARY_REF" "$hit"; return 0
     fi
     return 1
+}
+
+# Does this document sit in docs/outgoing/? Answered from the ABSOLUTE directory
+# so that `docs/outgoing/pr43.md`, `./docs/outgoing/pr43.md` and a scratch copy
+# under /tmp/x/docs/outgoing all give the same answer. A relative spelling that
+# slipped past this test would let an outgoing draft declare itself ours.
+in_outgoing() {
+    local dir
+    dir=$(cd -- "$(dirname -- "$1")" 2>/dev/null && pwd -P) || return 1
+    case "$dir" in */docs/outgoing) return 0 ;; esac
+    return 1
+}
+
+# Read the per-document tree declaration and set PRIMARY_REF/SECONDARY_REF.
+# Prints the `tree` line, which is the record of which tree answered.
+read_declaration() {
+    local doc=$1
+    PRIMARY_REF=$UPSTREAM_REF
+    SECONDARY_REF=$FALLBACK_REF
+    if head -n "$OURS_MARK_LINES" "$doc" | grep -qxF "$OURS_MARK"; then
+        if in_outgoing "$doc"; then
+            # Hard error, not a silent ignore. docs/outgoing/ is what goes to
+            # rmtew; a citation there that resolves only in our tree is exactly
+            # the mistake this whole file exists to stop.
+            printf 'cannot check %s: it is in docs/outgoing/ and carries `%s`.\n' \
+                "$doc" "$OURS_MARK" >&2
+            printf 'Everything in docs/outgoing/ goes to rmtew, so every citation in it\n' >&2
+            printf 'must resolve in %s. Delete the declaration line.\n' "$UPSTREAM_REF" >&2
+            exit 2
+        fi
+        PRIMARY_REF=$FALLBACK_REF
+        SECONDARY_REF=$UPSTREAM_REF
+        printf 'tree     %s declares `%s` -- resolved against %s first, %s second\n' \
+            "$doc" "$OURS_MARK" "$PRIMARY_REF" "$SECONDARY_REF"
+        return 0
+    fi
+    # Found, but too far down to be the header a reader meets. Saying nothing
+    # would be a silent miss either way round, so it is an error with an
+    # instruction attached.
+    if grep -qxF "$OURS_MARK" "$doc"; then
+        printf 'cannot check %s: `%s` appears below line %s.\n' \
+            "$doc" "$OURS_MARK" "$OURS_MARK_LINES" >&2
+        printf 'The declaration must be in the first %s lines, where a reader meets it.\n' \
+            "$OURS_MARK_LINES" >&2
+        exit 2
+    fi
+    printf 'tree     %s declares nothing -- resolved against %s first, %s second\n' \
+        "$doc" "$PRIMARY_REF" "$SECONDARY_REF"
 }
 
 line_at_ref() { git -C "$ROOT" show "$1:$2" 2>/dev/null | sed -n "${3}p"; }
@@ -222,9 +354,34 @@ non_file_link() {
     esac
 }
 
+# A file link into a repository that is NEITHER our fork nor upstream.
+#
+# `https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md` is the
+# case. It names a path, so it is a citation, and this clone has no remote that
+# could resolve it, so the tool cannot check it and never will. Until 2026-08-23
+# it was reported as "link points at neither tree", which reads as a broken link
+# about four links that work. It is now reported as unchecked.
+#
+# The caller has already matched our two hosts, so this test only has to see a
+# file-shaped path. It stays narrow: no /blob/, /tree/, /raw/ or /blame/ and the
+# link falls through to the catch-all, which still fails an unknown shape.
+third_party_file_link() {
+    case "$1" in
+        "$UPSTREAM_HOST"/*|"$ORIGIN_HOST"/*) return 1 ;;
+    esac
+    case "$1" in
+        */blob/*|*/tree/*|*/raw/*|*/blame/*) return 0 ;;
+    esac
+    return 1
+}
+
 check_document() {
     local doc=$1 expect=${2:-} url_ref py_rc
     [ -r "$doc" ] || { echo "cannot read $doc" >&2; exit 2; }
+
+    # Which tree this document is about, decided by the document. Printed, never
+    # assumed. See the header for why the default is upstream-first.
+    read_declaration "$doc"
 
     local resolved="${TMPDIR:-/tmp}/checkcit-resolved.$$"
     : > "$resolved"
@@ -297,6 +454,11 @@ check_document() {
                 # tell it skipped.
                 if non_file_link "$path"; then
                     printf 'link     %s  (names no file -- nothing to resolve)\n' "$url"
+                elif third_party_file_link "$path"; then
+                    # Counted like an UNCHECKED citation and worded like one, so
+                    # the run stays non-zero and nobody reads it as a pass.
+                    printf 'UNCHECKED %s  (third-party repository -- this clone has no remote for it)\n' "$url"
+                    unchecked=$((unchecked + 1))
                 else
                     fail "link points at neither tree: $url"
                 fi
@@ -365,7 +527,7 @@ check_document() {
         base=${cite%%:*}
         num=${cite##*:}
         if ! hit=$(resolve_basename "$base"); then
-            fail "cannot resolve '$base' to one file in $UPSTREAM_REF or $FALLBACK_REF (cited as $cite)"
+            fail "cannot resolve '$base' to one file in $PRIMARY_REF or $SECONDARY_REF (cited as $cite)"
             continue
         fi
         ref=${hit%%$'\t'*}
@@ -384,11 +546,11 @@ check_document() {
             continue
         fi
         printf '%s:%s\t%s\n' "$full" "$num" "$(line_at_ref "$ref" "$full" "$num")" >> "$resolved"
-        if [ "$ref" = "$UPSTREAM_REF" ]; then
+        if [ "$ref" = "$PRIMARY_REF" ]; then
             printf 'bare     %s:%s  %s\n' "$full" "$num" "$(line_at_ref "$ref" "$full" "$num")"
         else
             printf 'UNCHECKED %s:%s  (only in %s, not in %s)  %s\n' \
-                "$full" "$num" "$ref" "$UPSTREAM_REF" "$(line_at_ref "$ref" "$full" "$num")"
+                "$full" "$num" "$ref" "$PRIMARY_REF" "$(line_at_ref "$ref" "$full" "$num")"
             unchecked=$((unchecked + 1))
         fi
     done < <(grep -oE '\b[A-Za-z_][A-Za-z0-9_-]+\.[A-Za-z][A-Za-z0-9]{0,3}:[0-9]+' "$doc" | sort -u)
@@ -430,11 +592,19 @@ check_document() {
     # it did not measure is the same fault this file exists to stop, and the run
     # that removed the hardcoded case count from the selftest summary had
     # already applied that rule one screen further down.
-    python3 - "$doc" "$UPSTREAM_REF" "$ROOT" "$FALLBACK_REF" "$CACHE_DIR" \
+    # PRIMARY_REF and SECONDARY_REF, in that order: the block resolves a
+    # basename against the first tree that carries it, and the document's own
+    # declaration decides which tree is first. Undeclared, these are upstream
+    # and the fallback, which is what they always were.
+    python3 - "$doc" "$PRIMARY_REF" "$ROOT" "$SECONDARY_REF" "$CACHE_DIR" \
         <<'PYCHECK'
 import os, re, subprocess, sys
 
-doc, ref, root, fallback, cache = sys.argv[1:6]
+# `primary` is the tree this document is written against and `secondary` is the
+# other one. Undeclared that is upstream then ours; a document carrying
+# `<!-- citations: this-port -->` swaps them. Nothing else in this block cares
+# which is which, which is why the swap is one argument and not a branch.
+doc, primary, root, secondary, cache = sys.argv[1:6]
 
 # errors='replace', here and everywhere else in this block. Strict decoding was
 # the default and it ended a whole run in a traceback on 2026-08-18. The tool
@@ -476,10 +646,11 @@ def tree(r):
         trees[r] = index
     return trees[r]
 
-# Upstream first, then the fallback. The order is the whole safety argument: a
-# basename upstream carries is ALWAYS measured against upstream, so the fallback
-# cannot quietly bless a line number rmtew's tree does not have. The fallback is
-# reached only for a file upstream does not carry at all.
+# The primary tree first, then the secondary. The order is the whole safety
+# argument: a basename the primary tree carries is ALWAYS measured against the
+# primary tree, so the secondary cannot quietly bless a line number the primary
+# does not have. The secondary is reached only for a file the primary does not
+# carry at all.
 #
 # `unresolved` says WHY, because the two reasons need opposite fixes. A name no
 # tree carries needs a different name. A name several files carry -- Options.Dat
@@ -508,9 +679,9 @@ def decode(data):
 def length_of(base):
     if base not in lengths:
         lengths[base] = (None, None, 0, False)
-        unresolved[base] = (f"is in neither {ref} nor {fallback}",
+        unresolved[base] = (f"is in neither {primary} nor {secondary}",
                             "Name a file that is committed, or cite the generator input.")
-        for r in (ref, fallback):
+        for r in (primary, secondary):
             hits = tree(r).get(base, [])
             if len(hits) == 1:
                 data = blob(r, hits[0])
@@ -640,17 +811,29 @@ for start, end, kind, name, num in events:
     # context, so `base` is always a text file at this point.
     r, path, n, _ = length_of(base)
     if num > n:
-        # Two sentences, because they send the writer to two different fixes.
-        # Where the number INHERITED its file, the file is the thing that is
-        # wrong and the wording has to say so -- that diagnosis is the whole
-        # point of this check. Where the prose named the file outright, with no
-        # line number, nothing was inherited at all: the writer chose that file
-        # and the number is simply past the end of it. Telling him he inherited
-        # the wrong file there sends him to re-read a paragraph that is correct.
+        # THE MESSAGE MUST NAME THE TREE IT MEASURED AGAINST.
+        #
+        # It did not, and the omission made the message a false diagnosis. On
+        # 2026-08-23 twenty-nine bare continuations in the ENGINE-* documents
+        # read "bare ':1739' follows Display.cpp, which has only 1325 lines --
+        # it inherited the wrong file". Nothing had inherited anything. 1325 is
+        # rmtew's Display.cpp; ours has 2230 lines and the citation was right.
+        # A reader sent to hunt for a paragraph that stole a file name cannot
+        # find one, and concludes the document is wrong when the tool was.
+        # Naming the tree lets him tell the two apart in one glance.
+        #
+        # Two sentences after that, because they send the writer to two
+        # different fixes. Where the number INHERITED its file, the file may be
+        # the thing that is wrong and the wording still says so -- that
+        # diagnosis is the whole point of this check. Where the prose named the
+        # file outright, with no line number, nothing was inherited at all: the
+        # writer chose that file and the number is simply past the end of it.
         why = ("the number is past the end of the file the prose names"
-               if scoped else "it inherited the wrong file")
+               if scoped else
+               f"it inherited the wrong file, or it was written against a tree "
+               f"that is not {r}")
         print(f"DEFECT  bare ':{num}' follows {base}, which has only {n} lines "
-              f"-- {why}")
+              f"in {r} -- {why}")
         bad += 1
         ctx = [base, end, scoped]
         continue
@@ -681,10 +864,10 @@ for start, end, kind, name, num in events:
             bad += 1
             ctx = [base, end, scoped]
             continue
-    if r != ref:
+    if r != primary:
         # Checked, and checked correctly -- but against a tree the reader of an
         # outgoing document cannot see. Printed and counted, never silent.
-        print(f"UNCHECKED {path}:{num}  (only in {r}, not in {ref})  "
+        print(f"UNCHECKED {path}:{num}  (only in {r}, not in {primary})  "
               f"{line_of(r, path, num)}")
         unchecked += 1
     cited.setdefault(base, set()).add(num)
@@ -724,7 +907,10 @@ PYCHECK
         local want key sub got
         while IFS=$'\t' read -r key sub; do
             case "$key" in ''|\#*) continue ;; esac
-            got=$(git -C "$ROOT" show "$UPSTREAM_REF:${key%%:*}" 2>/dev/null | sed -n "${key##*:}p")
+            # PRIMARY_REF: an expectation pins the CONTENT of a line, so it
+            # must read the same tree the address check read. Undeclared that
+            # is UPSTREAM_REF, exactly as before.
+            got=$(git -C "$ROOT" show "$PRIMARY_REF:${key%%:*}" 2>/dev/null | sed -n "${key##*:}p")
             case "$got" in
                 *"$sub"*) printf 'expect   %s  ok\n' "$key" ;;
                 *)        fail "$key does not contain '$sub' -- it has: $got" ;;
@@ -869,12 +1055,78 @@ selftest() {
         "$ORIGIN_HOST" > "$dir/nonfile-link.md"
     printf 'is https://github.com/gastownhall/beads.\n' >> "$dir/nonfile-link.md"
 
-    # The guard on the case above. Skipping a link shape that names no file must
-    # never become skipping a link that DOES name a file. A blob link into a
-    # repository this clone knows nothing about is unresolvable, and stays a
-    # defect.
+    # A blob link into a repository that is neither ours nor upstream. This
+    # clone has no remote for it and never will, so the tool cannot check it.
+    # It wanted exit 1 until 2026-08-23, which said "broken link" about four
+    # links that work -- the beads documentation linked from AGENTS.md,
+    # CLAUDE.md and .beads/README.md. It now wants 3: unchecked, printed,
+    # non-zero, and not a defect.
     printf 'See https://github.com/nobody/nothing/blob/master/src/Art.cpp#L1\n' \
         > "$dir/unknown-blob.md"
+
+    # The same shape in the tree form, which is what .beads/README.md carries.
+    printf 'See https://github.com/steveyegge/beads/tree/main/docs\n' \
+        > "$dir/thirdparty-tree.md"
+
+    # THE GUARD ON THE TWO CASES ABOVE. Skipping a link shape that names no
+    # file, and declining to check a repository we cannot reach, must never
+    # become skipping a link this tool COULD have read. A URL with three or more
+    # path segments and no /blob/, /tree/, /raw/ or /blame/ in it is a shape
+    # this tool has never been taught, and an unknown shape stays a defect.
+    printf 'See https://github.com/foo/bar/baz/qux\n' > "$dir/malformed-link.md"
+
+    # A blob link into OUR OWN fork naming a path that is not there. The
+    # third-party rule must not reach this: we can resolve origin, so we must.
+    printf 'See https://github.com/%s/blob/master/src/NoSuchFile.cpp\n' \
+        "$ORIGIN_HOST" > "$dir/ours-blob-missing.md"
+
+    # THE PER-DOCUMENT TREE DECLARATION.
+    #
+    # src/Display.cpp:1720 is a real line of OUR Display.cpp, which has 2230
+    # lines, and is 395 lines past the end of rmtew's, which has 1325. On
+    # 2026-08-23 this shape accounted for 74 of the 112 defects reported across
+    # every tracked markdown file, and every one of the 74 was right.
+    printf '%s\n' "$OURS_MARK" > "$dir/declared.md"
+    printf 'The status line is drawn at `src/Display.cpp:1720`.\n' >> "$dir/declared.md"
+
+    # FAIL CLOSED. The same body with no declaration must still be a defect,
+    # because that is the outgoing behaviour and nothing about it may change by
+    # accident. If this case ever goes green, the declaration has stopped being
+    # a declaration and has become the default.
+    printf 'The status line is drawn at `src/Display.cpp:1720`.\n' \
+        > "$dir/undeclared.md"
+
+    # THE DECLARATION IS NOT A SOFTENING, PART ONE. A number past the end of OUR
+    # file is still a defect. src/Annot.cpp is the one file in this tree that is
+    # LONGER upstream -- 1338 lines there, 1337 here -- so `Annot.cpp:1338`
+    # passes undeclared and must fail declared. That asymmetry is what makes
+    # this case able to go red; every other file would fail both ways and prove
+    # nothing about the declaration.
+    printf '%s\n' "$OURS_MARK" > "$dir/declared-past-ours.md"
+    printf 'The last line is `src/Annot.cpp:1338`.\n' >> "$dir/declared-past-ours.md"
+
+    # THE DECLARATION IS NOT A SOFTENING, PART TWO. Declaring a tree does not
+    # invent a file. `program.i` is generated and committed nowhere, so it is
+    # unresolvable in both trees and stays a defect.
+    printf '%s\n' "$OURS_MARK" > "$dir/declared-nowhere.md"
+    printf 'The call sites are at `program.i:30782`.\n' >> "$dir/declared-nowhere.md"
+
+    # docs/outgoing/ MUST NOT DECLARE IT. That directory is what goes to rmtew.
+    # A silent ignore would leave a writer believing he had changed which tree
+    # his draft was measured against when he had not, so it is a hard error,
+    # exit 2, naming the file.
+    mkdir -p "$dir/docs/outgoing"
+    printf '%s\n' "$OURS_MARK" > "$dir/docs/outgoing/draft.md"
+    printf 'The status line is drawn at `src/Display.cpp:56`.\n' \
+        >> "$dir/docs/outgoing/draft.md"
+
+    # A declaration too far down to be the header a reader meets. Honouring it
+    # silently and ignoring it silently are both worse than saying so, so this
+    # is a hard error with an instruction attached.
+    printf 'padding\n%.0s' {1..25} > "$dir/declared-late.md"
+    printf '%s\n' "$OURS_MARK" >> "$dir/declared-late.md"
+    printf 'The status line is drawn at `src/Display.cpp:1720`.\n' \
+        >> "$dir/declared-late.md"
 
     selftest_case "a resolving citation and its expectation" 0 "$dir/good.md" "$dir/good.expect"
     selftest_case "a link to a path that cannot exist"       1 "$dir/bad.md"
@@ -894,7 +1146,16 @@ selftest() {
     selftest_case "a line number on a binary file"           1 "$dir/binary-line.md"
     selftest_case "an embedded image not in the tree"        1 "$dir/missing-asset.md"
     selftest_case "a repository root and a releases URL"     0 "$dir/nonfile-link.md"
-    selftest_case "a blob link into an unknown repository"   1 "$dir/unknown-blob.md"
+    selftest_case "a blob link into a third-party repository" 3 "$dir/unknown-blob.md"
+    selftest_case "a tree link into a third-party repository" 3 "$dir/thirdparty-tree.md"
+    selftest_case "a URL shape the tool has never been taught" 1 "$dir/malformed-link.md"
+    selftest_case "a blob into our fork with no such path"   1 "$dir/ours-blob-missing.md"
+    selftest_case "a document declaring this port's tree"    0 "$dir/declared.md"
+    selftest_case "the same document declaring nothing"      1 "$dir/undeclared.md"
+    selftest_case "a declared document past the end of ours" 1 "$dir/declared-past-ours.md"
+    selftest_case "a declared document citing no tree's file" 1 "$dir/declared-nowhere.md"
+    selftest_case "a declaration inside docs/outgoing"       2 "$dir/docs/outgoing/draft.md"
+    selftest_case "a declaration below the header"           2 "$dir/declared-late.md"
 
     # The bare and the named form of the SAME citation must agree. They did not:
     # the bare form was a hard error whose advice was to write the named form,
@@ -911,6 +1172,47 @@ selftest() {
         printf 'selftest FAIL: bare and named forms disagree -- bare=%s named=%s\n' \
             "$rc_bare" "$rc_named"
         sed 's/^/    | /' "$dir/pair-bare.out"
+        selftest_failures=$((selftest_failures + 1))
+    fi
+
+    # THE OVER-LENGTH MESSAGE MUST NAME THE TREE IT MEASURED AGAINST.
+    #
+    # It did not, and the omission turned the message into a false diagnosis:
+    # "bare ':1739' follows Display.cpp, which has only 1325 lines -- it
+    # inherited the wrong file". Nothing had inherited anything. 1325 is
+    # rmtew's file; ours has 2230 lines and the citation was right. Twenty-nine
+    # bare continuations read that way on 2026-08-23. This case watches the
+    # WORDS and not the exit status, because the exit status was already 1 and
+    # was already correct -- the defect was in what the tool told the reader.
+    local msg
+    selftest_total=$((selftest_total + 1))
+    printf 'The walk is at `src/Display.cpp:1300`, and `:1739` follows it.\n' \
+        > "$dir/whichtree.md"
+    "$SELF" "$dir/whichtree.md" > "$dir/whichtree.out" 2>&1
+    msg=$(grep '^DEFECT  bare' "$dir/whichtree.out")
+    case "$msg" in
+        *"only 1325 lines in $UPSTREAM_REF"*) ;;
+        *)
+            printf 'selftest FAIL: the over-length message does not name the tree it measured\n'
+            sed 's/^/    | /' "$dir/whichtree.out"
+            selftest_failures=$((selftest_failures + 1))
+            ;;
+    esac
+
+    # EVERY RUN MUST SAY WHICH TREE IT READ. A reader who cannot tell a document
+    # checked against ours from one checked against rmtew's has no way to know
+    # what a green run means, and the declaration above makes the two possible
+    # in the same sweep. The line is printed for a declared document and for an
+    # undeclared one, because silence on the default is the same gap.
+    local decl_line undecl_line
+    selftest_total=$((selftest_total + 1))
+    decl_line=$(grep -c "^tree .*declares .* $FALLBACK_REF first" "$dir/declared.md.out")
+    undecl_line=$(grep -c "^tree .*declares nothing -- resolved against $UPSTREAM_REF first" \
+        "$dir/undeclared.md.out")
+    if [ "$decl_line" != 1 ] || [ "$undecl_line" != 1 ]; then
+        printf 'selftest FAIL: the run does not name the tree it read -- declared=%s undeclared=%s\n' \
+            "$decl_line" "$undecl_line"
+        sed 's/^/    | /' "$dir/declared.md.out" "$dir/undeclared.md.out"
         selftest_failures=$((selftest_failures + 1))
     fi
 
@@ -972,7 +1274,7 @@ case "$rc" in
         printf '\n%d defect(s). Fix them before this goes anywhere public.\n' "$defects"
         [ "$unchecked" -gt 0 ] && printf \
             '%d citation(s) also went unchecked against %s (UNCHECKED above).\n' \
-            "$unchecked" "$UPSTREAM_REF"
+            "$unchecked" "$PRIMARY_REF"
         ;;
     # Exit 3, not 0. The old wording -- "Every citation resolves in
     # upstream/master" -- was printed for documents in which dozens of citations
@@ -981,14 +1283,19 @@ case "$rc" in
     # gate to make a decision instead of inheriting a green tick.
     3)
         printf '\nNo defects, but %d citation(s) could NOT be checked against %s.\n' \
-            "$unchecked" "$UPSTREAM_REF"
-        printf 'Each is marked UNCHECKED above and was verified against %s instead.\n' "$FALLBACK_REF"
+            "$unchecked" "$PRIMARY_REF"
+        printf 'Each is marked UNCHECKED above and was verified against %s instead,\n' "$SECONDARY_REF"
+        printf 'or is a link into a repository this clone has no remote for.\n'
         printf 'That is fine for a document about this port. For anything going to\n'
         printf 'rmtew, every citation must resolve in %s -- exit 0 and nothing less.\n' "$UPSTREAM_REF"
         ;;
     *)
+        # PRIMARY_REF and not UPSTREAM_REF. Printing "resolves in upstream/master"
+        # about a document resolved against HEAD would be a claim of coverage
+        # the run does not have -- the exact fault the exit-3 wording above was
+        # rewritten for on 2026-08-18.
         printf '\nNo defects. Every citation resolves in %s and every evidence link is on %s.\n' \
-            "$UPSTREAM_REF" "$ORIGIN_REF"
+            "$PRIMARY_REF" "$ORIGIN_REF"
         ;;
 esac
 exit "$rc"

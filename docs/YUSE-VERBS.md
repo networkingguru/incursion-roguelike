@@ -1,3 +1,5 @@
+<!-- citations: this-port -->
+
 # The Yuse menu (`y`) — every verb, and whether it does anything
 
 The `y` command opens a verb menu: *"What do you want to do?"* It holds 63

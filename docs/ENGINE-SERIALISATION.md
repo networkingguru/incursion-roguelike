@@ -1,3 +1,5 @@
+<!-- citations: this-port -->
+
 # Engine map: the serialisation layer
 
 Scope: `Registry::SaveGroup`, `Registry::LoadGroup`, `ARCHIVE_CLASS`, the handle fixups. Read-only survey. Claims are read from source unless marked **observed** (a byte dump or a count I ran; commands at the bottom).
@@ -49,7 +51,7 @@ A save file and a `.Mod` file share one format.
 3. `LoadCompressed` the whole payload (:923).
 4. Per object: read type byte (:928); `malloc(typeSize(oType))` (:937), a bare malloc with no zeroing; read the bytes (:942); **placement new** to reattach the vptr (:948-990). `T_GAME` is not allocated — the live `theGame` is overwritten (:934-935).
 5. `o->Type != oType` -> `ECORRUPT` (:993). A loaded `Creature` gets `ts.SanitizeLoadedTargets()` (:1015-1016). `RegisterObject(o,true)` keeps the handle the object was saved with (:527-530), so handle identity survives the round trip.
-6. `SIGNATURE_TWO` check (:1028); data blocks malloc'd and registered (:1044-1052).
+6. `SIGNATURE_TWO` check (src/Registry.cpp:1028); data blocks malloc'd and registered (:1044-1052).
 7. `Serialize(*this,false)` over every loaded object (:1057-1060). `loadMode` is still true here; the guard clears it on return and on every throw above.
 
 ## The fixup contract
@@ -83,10 +85,10 @@ NOT repaired. `LoadGroup` contains no migration or upgrade step, and its only va
 
 "No version stamp and no rejection" is **refuted for the object types in the digest, and still true for the resource tables.**
 
-- A stamp exists: `SaveModule` writes `SaveFormatID()` (:1377) and `LoadGroup` rejects a mismatch (:873) through `SaveFormatMatches` (:65). Confirmed in the observed bytes above.
+- A stamp exists: `SaveModule` writes `SaveFormatID()` (src/Registry.cpp:1377) and `LoadGroup` rejects a mismatch (:873) through `SaveFormatMatches` (:65). Confirmed in the observed bytes above.
 - The stamp is derived from struct layout, not hand-edited. `SaveLayoutDigest()` (src/AbiCheck.cpp:144-166) hashes the primitive widths, `LocationInfo`, `TAttack` and every whole-object type `typeSize()` can return, and `SaveFormatID()` renders it as "SF" plus eight hex digits. A change to `sizeof(Player)` or `sizeof(Module)` moves it by itself.
 - `SaveFormatMatches` also accepts the old `VERSION_STRING` literal (:80), so files written before the digest existed still load. That branch is marked for deletion in the source.
-- A change to `sizeof(Module)` is caught twice: by the digest, and by the `SIGNATURE_TWO` separator, which a shifted reader misses and raises `ECORRUPT` (:1028).
+- A change to `sizeof(Module)` is caught twice: by the digest, and by the `SIGNATURE_TWO` separator, which a shifted reader misses and raises `ECORRUPT` (src/Registry.cpp:1028).
 - A change to `sizeof(TMonster)` or any other resource table is **not** caught. No resource table is in the digest list. Those blocks sit after the separator, their recorded size is never compared with the running binary's `sizeof`, and the loader indexes old bytes with a new stride. The module loads, no error fires, and the game plays on with garbage.
 
 ## How to check this page

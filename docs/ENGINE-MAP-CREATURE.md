@@ -1,3 +1,5 @@
+<!-- citations: this-port -->
+
 # Engine map: Map, Thing, Creature, Grid, fields, stati
 
 Navigational page for bead inc-e2j. Every claim carries file:line; counts carry their command. "Read" marks something I read but did not observe running.

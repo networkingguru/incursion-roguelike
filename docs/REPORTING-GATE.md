@@ -1,3 +1,5 @@
+<!-- citations: this-port -->
+
 # Reporting gate
 
 Rules for claiming a bug is real and that a fix is the real fix. They apply to

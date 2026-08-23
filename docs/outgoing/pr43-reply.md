@@ -30,7 +30,7 @@ descendprobe-climb-seed777.log      Descend branch=climb-failed depth=10 enters_
 
 Each run writes one line to its own log; the file name is mine, the rest is the probe's.
 
-Four probe lines for four `Descend` reports: the two levitation runs and the successful climb give the three bare stacks, and the failed Climb check gives the fourth — `Move(...); TerrainEffects();` at `:4177-4179`, which enters `MoveDepth` with the default `safe=false` and so says nothing about `safe` either way. Both `safe=true` branches have now crashed on the bottom level, individually and by name.
+Four probe lines for four `Descend` reports: the two levitation runs and the successful climb give the three bare stacks, and the failed Climb check gives the fourth — `Move(...); TerrainEffects();` at `Skills.cpp:4177-4179`, which enters `MoveDepth` with the default `safe=false` and so says nothing about `safe` either way. Both `safe=true` branches have now crashed on the bottom level, individually and by name.
 
 Which branch ran hardly matters for the conclusion, and that part is arithmetic on the source rather than anything I ran: the null read at `Feature.cpp:887` sits forty lines above the `safe` test at `:927`, so `safe` is beside the point whoever passes it.
 

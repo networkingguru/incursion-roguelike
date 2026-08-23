@@ -1,3 +1,5 @@
+<!-- citations: this-port -->
+
 # Engine map: events and dispatch
 
 How an event is raised, finds handlers, orders them, and how a handler changes the outcome. Aimed at the three crashes under

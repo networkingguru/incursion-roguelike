@@ -1,3 +1,5 @@
+<!-- citations: this-port -->
+
 # Engine map: the IncursionScript compiler and the module pipeline
 
 Where the pipeline lives, what calls what, which half of it ships. The language
@@ -114,8 +116,8 @@ No claim here needed a binary run.
 1. **A module is written only if it defines two specific monsters.**
    `src/RComp.cpp:215` guards the save with
    `FIND("mage") && FIND("shocker lizard")`. A user module built per
-   `docs/modules.md` fails that test, prints "Forgoing save." (`:226`) and
-   produces no `.Mod`, yet `ResourceCompiler` returns success (`:232`).
+   `docs/modules.md` fails that test, prints "Forgoing save." (`src/RComp.cpp:226`) and
+   produces no `.Mod`, yet `ResourceCompiler` returns success (`src/RComp.cpp:232`).
 2. **`docs/modules.md:21-22` is wrong about where a module `.irc` lives.**
    `mod/` holds compiled `.Mod` files (`src/Registry.cpp:1057`, `:1061`); the
    `.irc` source must sit in `LibraryPath()`, because `ResourceCompiler` chdirs

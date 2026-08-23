@@ -1,3 +1,5 @@
+<!-- citations: this-port -->
+
 # Overnight doc reconciliation — 2026-08-20
 
 Baseline: tree clean at `df3e85b`. Every change is from this run.
@@ -82,7 +84,7 @@ of the damage:
   holding compiled-out twins of six `…At` accessors. **A citation into dead code
   passes every check a reader would run** — right file, right line, right text —
   while naming code the compiler never emits.
-- `docs/ENGINE-EVENTS.md` said an all-`NOTHING` sweep reaches `Fatal`. `:454`
+- `docs/ENGINE-EVENTS.md` said an all-`NOTHING` sweep reaches `Fatal`. `src/Event.cpp:454`
   returns first. Two of those three `Fatal` calls are unreachable, and both print
   `PRE_` for a POST event and `POST_` for a PRE event (`PRE(a)` is `a+500`,
   `POST(a)` is `a+1000`, `inc/Defines.h:4392-4393`).
