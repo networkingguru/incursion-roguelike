@@ -4741,7 +4741,79 @@ DoDig:
 
 	fat = (diff + 5) * 3;
 	time = 1 + diff / 6;
-	percent = 100 / SkillLevel(SK_MINING);
+#ifdef DIG_PROBE
+	/* Diagnostic only, for bead inc-4ht. Prints every term of
+	   SkillLevel(SK_MINING) at the one site that divides by it, so the
+	   question "can it really be zero here?" is answered with numbers
+	   instead of by reading. Build with:
+	     EXTRA_CXXFLAGS=-DDIG_PROBE OUT=incursion-digprobe BACKEND=posix ./build_macos.sh
+	   Not wired into any normal build. */
+	{
+		int16 _sl = SkillLevel(SK_MINING);
+		char _path[1024];
+		FILE *_f;
+		snprintf(_path, sizeof(_path), "%slogs/dig-probe.log",
+			(const char*)T1->IncursionDirectory);
+		_f = fopen(_path, "a");
+		if (_f) {
+			fprintf(_f, "dig (%d,%d) ter=%s mat=%d hard=%d pow=%d plus=%d "
+				"skill=%d [racial=%d train=%d kit=%d circ=%d item=%d "
+				"enh=%d focus=%d syn=%d inh=%d armour=%d attrmod=%d]\n",
+				tx, ty, NAME(m->TerrainAt(tx, ty)), (int)tt->Material,
+				hard, pow, it->GetPlus(), _sl,
+				s_racial, s_train, s_kit, s_circ, s_item,
+				s_enhance, s_focus, s_syn, s_inh, s_armour,
+				Mod2((int8)SkillAttr(SK_MINING)));
+			fclose(_f);
+		}
+	}
+#endif
+	/* upstream: base-code defect, the fix is ours. Tier Observed for the zero
+	   divisor and Traced for one step of the reach -- both are set out below.
+	   Tracking inc-4ht. Not sent to rmtew.
+
+	   An unguarded integer division whose divisor the base code's own rules
+	   let reach zero. Nothing here is platform-specific or typedef-dependent,
+	   so the same value arrives on Win32 built with the upstream compiler;
+	   there it is worse than here, because x86 IDIV raises #DE on a zero
+	   divisor while AArch64 SDIV quietly yields 0, which is why this port
+	   survived it in silence.
+
+	   OBSERVED, the divisor. tools/check_dig_zero_skill.sh, seed 1: a gnome
+	   warrior with Wisdom 3 wielding an ordinary pickaxe arrives here with
+	   SkillLevel(SK_MINING) exactly 0 -- race training +2, pickaxe skill-kit
+	   +2, attribute modifier -4, racial skill bonus 0, the gnome template
+	   being the one Mining race that grants none. On the unguarded source that
+	   same run reported 100 percent structural integrity left after a full
+	   swing, and a -fsanitize=integer-divide-by-zero build of it aborted at
+	   this line; guarded, it reports 0 percent.
+
+	   READ THIS BEFORE QUOTING THAT AS A PLAYER-REACHABLE CRASH. The run
+	   reaches the division through a SECOND defect, tracked separately: the
+	   verb menu's Dig asks for a direction, and nothing turns that direction
+	   into a target square -- SetupDig(Dir) above is an empty stub and this
+	   function reads e.EXVal/e.EYVal, which e.Clear() left at 0. So the swing
+	   measured above landed on map square (0,0), the permanent border, whose
+	   material is Indestructable Rock and whose hardness is -1.
+
+	   The divisor does not depend on that. SkillLevel(SK_MINING) is 0 whatever
+	   square is dug, and 0 is what was measured.
+
+	   TRACED, the rest of the reach. A correctly aimed dig also meets a
+	   hardness of -1: MaterialHardness answers an immune material with -1
+	   rather than a large number, so the "too hard" gate above lets it
+	   through, and solid igneous rock (MAT_MAGMA) answers -1 too.
+	   Map::Generate rewrites every wall square adjacent to magma, brimstone,
+	   smooth igneous rock or obsidian into that terrain, so a Magma Vein's
+	   walls are squares a player stands beside. That step has been read and
+	   not run.
+
+	   max(1,...) rather than a skipped dig: a skill of 0 is untrained, not
+	   forbidden, and 100 percent structural integrity per swing is the
+	   already-intended worst case -- the collapse prompt below is written for
+	   it. A negative skill, which the same arithmetic also allows, would
+	   otherwise CREDIT structural integrity. */
+	percent = 100 / max((int16)1, SkillLevel(SK_MINING));
 	if (m->PercentSI + percent > 100)
 		if (!yn(Format("There is a %d~ chance of collapse! Continue?",
 			min(100, (m->PercentSI + percent) - 100))))

@@ -1,0 +1,97 @@
+# Reach Creature::Dig's division with SkillLevel(SK_MINING) exactly 0 (bd inc-4ht).
+#
+#   INCURSION_OPTIONS=tools/gates/Options.Dat \
+#       tools/headless.sh tools/keys/dig-zero-skill.keys 1
+#
+# WHY A GNOME WARRIOR WITH WISDOM 3. SkillLevel(SK_MINING) (src/Create.cpp) has
+# no floor of 1. For this character every term of it is known and they sum to
+# zero:
+#
+#   ranks               0   Mining is never trained here
+#   s_train            +2   Mining is a gnome race skill (lib/races.irh)
+#   s_racial            0   the gnome template, alone among the five races that
+#                           have Mining, carries no Stati[SKILL_BONUS,35]
+#                           -- the kobold and dwarf templates both carry +2
+#   s_kit              +2   the pickaxe is Mining's skill kit, SKILL_KIT_MOD +2
+#   Mod2(min(WIS,STR)) -4   Mining takes the WORSE of Wisdom and Strength, and
+#                           this character's Wisdom is 3
+#
+# Wisdom 3 comes from point buy ([p] on the attribute screen), which is why the
+# stats below are typed rather than chosen from a rolled set: base Wisdom 5 plus
+# the gnome's -2. Every other attribute is bought up because point buy will not
+# release the character while a point is unspent.
+#
+# WHY THE 'y' VERB MENU AND NOT THE MINING SKILL. Both reach the same function.
+# The verb menu is used here because it is deterministic: Player::YuseMenu asks
+# Q_DIR, EffectPrompt answers a direction by setting e.EDir and NOT e.EXVal or
+# e.EYVal, and Creature::Dig reads e.EXVal/e.EYVal -- which e.Clear() left at
+# (0,0). So this dig always lands on map square (0,0), which is Indestructable
+# Rock, whose MaterialHardness for AD_PIERCE is -1. -1 is not greater than 0, so
+# the "That area is too hard" gate passes on any seed. (That mis-aimed target is
+# a second defect and is NOT what this script is about.)
+#
+# The in-play route reaches the same division: wield the pickaxe, use the Mining
+# skill, walk into a wall of solid igneous rock -- material MAT_MAGMA, hardness
+# -1 for piercing -- which src/MakeLev.cpp:2153 writes around every magma,
+# brimstone or igneous floor. That route needs the right region to generate, so
+# it is not what a check should depend on.
+#
+# WHAT TO READ OFF THE LAST SCREEN. `percent = 100 / SkillLevel(SK_MINING)` and
+# Skills.cpp prints max(0, 100 - m->PercentSI) when the dig finishes:
+#
+#   before the guard   "(100% structural integrity remaining.)"  AArch64 SDIV
+#                      answers a zero divisor with 0, so nothing was spent
+#   after  the guard   "(0% structural integrity remaining.)"    100/max(1,0)
+#
+# On x86 there is no "before": IDIV raises #DE and the process dies.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Gnome"
+@choose "Gnome (Standard)"
+@choose "Warrior"
+
+p       # Abort to Point Buy; every attribute starts at 8, with 75 points
+        # STR 9, DEX 18, CON 18, INT 18, WIS 5, CHA 18, LUC 17 == exactly 75
+RIGHT DOWN RIGHT*10 DOWN RIGHT*10 DOWN RIGHT*10 DOWN LEFT*3 DOWN RIGHT*10 DOWN RIGHT*9
+ENTER
+y       # Are these your final stats? -- yes
+
+@choose "Neutral"
+a       # First feat
+a       # Second feat
+a       # Focus on which weapon
+
+# Skill Manager. Nine ranks, spent on the first five rows -- Athletics, Bluff,
+# Climb, Craft, Find Weakness. Mining is far below them in the list and MUST NOT
+# receive a rank; one rank in it makes this script measure nothing.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+@while "wish to worship" y
+@choose "The Disciplined Expert"
+
+ESC     # the keystroke that lands in the dungeon
+
+# Move the pickaxe from the right shoulder into the weapon hand. Creature::Dig
+# tests InSlot(SL_WEAPON), so carrying it is not enough.
+i
+f
+SPACE
+b
+SPACE
+f
+SPACE
+@dump:wielded
+ESC
+
+y
+@choose "Dig"
+i
+@choose "pickaxe"
+UP
+@dump:digresult
+
+@quit
