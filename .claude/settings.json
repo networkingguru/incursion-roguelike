@@ -6,6 +6,10 @@
           {
             "command": "bd prime --hook-json",
             "type": "command"
+          },
+          {
+            "command": "tools/held_queue.sh",
+            "type": "command"
           }
         ],
         "matcher": ""
