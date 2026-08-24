@@ -38,7 +38,7 @@
 # THE COST OF A FAILED CHECK is 50, which is the engine's own number: "a
 # 'full round action', in the base system" (src/Fight.cpp:2531).
 #
-# THE THREE ORACLES, one run each, all on SEED 2.
+# THE THREE ORACLES, one run each, all on the seed pinned below.
 #
 #   jam    the turn stamp in the dump headers that posixTerm::DumpScreen
 #          writes (src/Wposix.cpp). A jammed attempt must move it by at least a
@@ -96,7 +96,29 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-SEED=2
+# WHY SEED 19, and why not 2. The seed was 2 until 2026-08-24. The
+# two-weapon run builds its rogue with `@choose "Two-Weapon Styl"`, and
+# @choose reads only the screen in front of it (src/Wposix.cpp:940-999) --
+# it does not press TAB. That day's item work added one more feat, Swarm
+# Tactics, to the offered list. The seed-2 orc qualified for 56 feats, the
+# menu holds 51 per page, and Two-Weapon Style moved to page 2, so chargen
+# stopped and the whole check exited 2, INCONCLUSIVE.
+#
+# Seed 19 was chosen because all five assertions run and pass on it: the
+# jam costs 51 turns, the deployment that follows costs 0, cold fires, hot
+# fires on a landed blow, and both blades out read Hit:6 / 4.
+#
+# A REPLACEMENT SEED MUST MEET FOUR CONDITIONS, so do not repin blindly.
+#   1  Its orc must reach Two-Weapon Style on page 1 of the feat menu.
+#   2  A rogue must jam at least one of the jam run's eight attempts.
+#   3  The hot run's blow must land, or PRE(EV_HIT) never runs.
+#   4  Its orc must have the same STR and DEX modifiers as seed 2's, or
+#      the hardcoded 6 / 4 and 4 / 2 below stop being the tagged and
+#      untagged readings of the same character. Seed 19 rolls STR 21 and
+#      DEX 15 against seed 2's STR 20 and DEX 14 -- different numbers, the
+#      same modifiers, so the arithmetic those two pairs come from is
+#      unchanged. Seeds 1, 3 and 5 all fail one of the four.
+SEED=19
 fail=0
 
 [ -x ./incursion-headless ] || {
