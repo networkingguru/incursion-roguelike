@@ -3636,6 +3636,43 @@ AI_STAFF Effect "the Abyss" : EA_GRANT
           /*$"death knell"*/ $"deeper darkness" $"desecrate"
           $"dire charm" $"enervation" $"unholy blight"
           $"wall of fire" /* $"cacodemon" $"ensnarement" */ ;
+    /* upstream: base-code defect, fix is ours. Tier Observed -- the page
+       below named TWELVE spells and the STAFF_SPELL_LIST above grants NINE.
+       Cacodaemon, death knell and ensnarement have been cut from the page.
+       The item description screen, which is where a player reads this, listed
+       "bestow curse, burning blood, cacodaemon, contagion, death knell,
+       deeper darkness, desecrate, dire charm, enervation, ensnarement,
+       unholy blight and wall of fire" before this change and "bestow curse,
+       burning blood, contagion, deeper darkness, desecrate, dire charm,
+       enervation, unholy blight and wall of fire" after it.
+       tools/check_staff_abyss_spell_list.sh, red before and green after.
+       Tracking inc-tek.8.8, finding PA-08-F7. Not sent to rmtew.
+
+       THE PROSE LOSES HERE, which is the opposite of how most of this
+       partition has been ruled, and the reason is that the three names have
+       nothing behind them. Ensnarement has no definition anywhere in lib/;
+       there is no such spell. Cacodemon has none either -- it is commented
+       out at lib/sp_books.irh:504 and again inside the Evil domain's
+       commented block at lib/domains.irh:266. Death Knell exists only as a
+       stub: lib/pspells.irh:1781 is Effect "Death Knell" : EA_NOTIMP { }.
+       Honouring the page would mean writing two spells from nothing and
+       finishing a third that upstream itself marked not-implemented. That is
+       a feature, not a prose fix, and it is tracked as bd inc-tek.26; the
+       live-defect half, classes and monsters that still hand out the Death
+       Knell stub, is bd inc-tek.27. The commented-out $"cacodemon" and
+       $"ensnarement" in the STAFF_SPELL_LIST above are left exactly as they
+       are: they are upstream's own record that it knew.
+
+       The list states no count word, so removing three names needs no other
+       change. The punctuation was repaired: the list joins with commas and
+       puts "and" before the final entry, and each name carries the colour
+       codes <9> and <7>, which came away with the names.
+
+       The defect is upstream's: this is module content, not port code. The
+       page and the list are both in the original ruleset, so the same
+       disagreement exists on Win32, with the original typedefs and on the
+       upstream compiler. Nothing here depends on integer width or on the
+       platform. */
     Desc: "There is no academically credible mortal origin
       for these staves, despite several forged manuscripts 
       claiming to be an ancient wizard's account of inventing
@@ -3659,9 +3696,8 @@ AI_STAFF Effect "the Abyss" : EA_GRANT
       the abstract ethos to grasp the staff's function. In the
       hands of a non-good caster, however, it grants access to
       the following spells: <9>bestow curse<7>, <9>burning blood<7>,
-      <9>cacodaemon<7>, <9>contagion<7>, <9>death knell<7>, 
-      <9>deeper darkness<7>, <9>desecrate<7>, <9>dire charm<7>,
-      <9>enervation<7>, <9>ensnarement<7>, <9>unholy blight<7>
+      <9>contagion<7>, <9>deeper darkness<7>, <9>desecrate<7>,
+      <9>dire charm<7>, <9>enervation<7>, <9>unholy blight<7>
       and <9>wall of fire<7>.\n
       __Its spells, however, are not nearly its most potent
       ability. It strikes in combat as a <11>+2 vampiric quarterstaff

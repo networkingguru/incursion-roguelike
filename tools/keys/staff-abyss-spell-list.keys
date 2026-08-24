@@ -1,0 +1,96 @@
+# Put a Staff of the Abyss in a character's hands, identify it, and open the
+# item description screen, which is where the game renders the staff's page.
+# Read by tools/check_staff_abyss_spell_list.sh, finding PA-08-F7 of
+# bd inc-tek.8.8.
+#
+# WHY THE DESCRIPTION SCREEN AND NOT THE FILE. This finding changes prose and
+# nothing else, so no behaviour moves and no behavioural check is possible.
+# The honest oracle is therefore the page as the PLAYER reads it, not the page
+# as lib/m_items.irh stores it: grep over the source would prove only that a
+# file changed. Item::Describe prints the entity's Desc through DESC(eID)
+# (src/Help.cpp:3405-3408), and Inventory Mode's 'x' puts that on screen
+# (src/Managers.cpp:751-754), so this script drives the game to the same
+# screen a player would reach and lets the check read the rendered words.
+#
+# WHY THE PACK IS IDENTIFIED. Item::Describe prints the entity's page only
+# when the item isKnown(KN_MAGIC) (src/Help.cpp:3405). Wizard mode's
+# "Identify Whole Pack" calls MakeKnown(0xFF) on everything the character
+# carries (src/Debug.cpp:717-720).
+#
+# WHY A BARBARIAN IS ENOUGH. The staff is inert in the hands of a good
+# character or of anyone below five caster levels -- that is its EV_MAGIC_HIT
+# gate. The gate gives or withholds the SPELLS; it has nothing to do with the
+# description screen, which reads the entity's Desc string off the resource.
+# tools/keys/chargen.keys makes an orc barbarian, and that is all this reading
+# needs.
+#
+#   w y                    enter wizard mode and open its menu.
+#   Item Acquisition       RIGHT*3 walks the glyph row to Staves: ItemGlyphs
+#   RIGHT*3                (src/Tables.cpp:320-323) puts -AI_STAFF three
+#                          steps along.
+#   @until "Staff of       the candidate list has no menu letters, so the
+#     the Abyss" DOWN      cursor is walked. Three rows show and the MIDDLE
+#   DOWN*3                 one is selected, so the @until stops one row EARLY
+#                          -- on the pass where the Abyss first appears, as
+#                          the row below Winter. The Abyss is the last staff
+#                          entity in lib/m_items.irh and the list is in file
+#                          order, so there is no row after it to walk to and
+#                          the extra DOWNs saturate harmlessly. The check does
+#                          not trust any of that: it reads the staff's name
+#                          back off the description box's own title line.
+#   ENTER 2 ENTER          take it, and answer "Enter Item Level:" with 2,
+#                          which is the plus the page states (src/Debug.cpp:
+#                          604-620).
+#   b SPACE s              the pickup drops the staff into the in-air slot and
+#                          opens Inventory Mode. 'b' is the Weapon Hand -- the
+#                          slot lettering skips 'd', which is the Drop key --
+#                          SPACE swaps the staff into it (src/Managers.cpp:873)
+#                          and 's' stows the starting knife that swap pushed
+#                          into the air, because the manager will not close
+#                          while anything is held there
+#                          (src/Managers.cpp:835-848).
+#   ESC i b x              leave the manager, reopen it once the pack is
+#                          identified, put the cursor back on the Weapon Hand
+#                          and press 'x', which describes what is in it.
+#   DOWN*6 five times      this staff's page is long -- the entity even carries
+#                          EF_DLONG -- and the box shows about forty rows at a
+#                          time, scrolling one row per DOWN
+#                          (src/TextTerm.cpp:537-540). Six dumps at six-row
+#                          steps put the whole page in front of the check and
+#                          guarantee that at least one of them holds the spell
+#                          sentence entire, which is what it has to count.
+
+@include chargen.keys
+
+w
+y
+@choose "Item Acquisition"
+RIGHT*3
+@until "Staff of the Abyss" DOWN
+DOWN*3
+ENTER
+2
+ENTER
+b
+SPACE
+s
+@dump:staff-wielded
+ESC
+w
+@choose "Identify Whole Pack"
+i
+b
+x
+@dump:desc-1
+DOWN*6
+@dump:desc-2
+DOWN*6
+@dump:desc-3
+DOWN*6
+@dump:desc-4
+DOWN*6
+@dump:desc-5
+DOWN*6
+@dump:desc-6
+ESC
+ESC
