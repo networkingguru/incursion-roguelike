@@ -7011,6 +7011,57 @@ and EA_GRANT
       },
     EITEM(EV_HIT) {
       /* Immolation damage vs. undead */
+
+      /* upstream: this handler was an empty stub -- the comment above and
+         `return NOTHING;`, nothing else -- while the sword's own page four
+         hundred lines up promises that a struck corporeal undead "catches
+         flame and continues to burn, causing it to suffer 3d6 fire damage
+         the first turn after the hit, 2d6 the second turn and 1d6 on the
+         third". So the sentence was false in every game ever played. The
+         defect is upstream's and not this port's: the stub is the original
+         author's own unfinished handler, it is content in lib/ that ships
+         with the ruleset, and an empty handler returns NOTHING just as
+         emptily on Win32, with the original typedefs, on the upstream
+         compiler. Evidence tier: Observed -- tools/check_flame_tongue_undead.sh
+         reads a summoned mummy's hit points on the turn of the hit and on
+         each of the next four game turns, and on the pre-fix module all five
+         readings are the same number. Tracked as bd inc-tek.8.8, finding
+         PA-08-F11. NOT sent upstream.
+         The burn itself lives in $"flame tongue immolation" below, beside
+         $"tongue of flame", because a TRAP_EVENT stati names the effect
+         resource whose META handler the dispatch calls (src/Event.cpp,
+         the StatiIterNature(t,TRAP_EVENT) loop), and giving that name to
+         this multi-block EA_GRANT entity would aim the wielder's own grants
+         at it. */
+      if (!(GetHandle(EItem) && EItem->ieID == $"flame tongue"))
+        return NOTHING;
+      if (!GetHandle(EVictim) || !EVictim->isCreature() || EVictim->isDead())
+        return NOTHING;
+      /* "Corporeal undead" is the game's own category -- it names the
+         summoning list the subjects come from -- and it is two tests: the
+         undead half is M_UNDEAD (src/Values.cpp, Creature::isMType's
+         MA_UNDEAD arm returns exactly that flag), and the corporeal half is
+         the absence of M_INCOR. A wraith or a spectre has no dry flesh to
+         set alight. */
+      if (!EVictim->isMType(MA_UNDEAD) || EVictim->HasMFlag(M_INCOR))
+        return NOTHING;
+      if (EVictim->HasEffStati(TRAP_EVENT,$"flame tongue immolation"))
+        {
+          /* A second blow restarts the three turns rather than stacking a
+             second burn beside the first: GainTempStati merges only for
+             SS_ENCH (src/Status.cpp), so a plain call would leave two
+             stati ticking and two handlers firing every turn. */
+          EVictim->SetEffStatiVal(TRAP_EVENT,$"flame tongue immolation",0);
+          EVictim->SetEffStatiDur(TRAP_EVENT,$"flame tongue immolation",3);
+          return NOTHING;
+        }
+      /* Val and Mag are swapped for TRAP_EVENT (src/Status.cpp says so in
+         those words), so the event code goes in the Val argument and the
+         Mag argument is the counter GetEffStatiVal reads back. */
+      EVictim->GainTempStati(TRAP_EVENT,EActor,3,SS_ATTK,EV_TURN,0,
+                             $"flame tongue immolation");
+      VPrint(e,"Your dry flesh catches fire!",
+               "The <EVictim>'s withered flesh catches fire!");
       return NOTHING;
       };
     Constants:
@@ -7020,6 +7071,35 @@ and EA_GRANT
       * ITEM_QUALITIES WQ_FLAMING WQ_BURST;
   }
 and EA_GENERIC { }
+
+/* The burn a flame tongue leaves on a corporeal undead. It is a separate
+   resource because the flame tongue's EITEM(EV_HIT) hands its name to a
+   TRAP_EVENT stati, and the dispatch calls the META handler of whatever
+   resource that stati names. Three turns, 3d6 then 2d6 then 1d6, counted in
+   the stati's own Val. Written for bd inc-tek.8.8, finding PA-08-F11; see the
+   upstream: mark on that handler for why the sword needed one. */
+0 Effect "flame tongue immolation" : EA_GENERIC
+  { On Event META(EV_TURN) {
+      hObj killer; int16 i;
+      i = EActor->GetEffStatiVal(TRAP_EVENT,$"flame tongue immolation");
+      if (i < 0 || i > 2)
+        return NOTHING;
+      EActor->SetEffStatiVal(TRAP_EVENT,$"flame tongue immolation",i+1);
+      killer = EActor->GetEffStatiObj(TRAP_EVENT,$"flame tongue immolation");
+      if (!GetHandle(killer))
+        killer = EActor;
+      ThrowDmg(EV_DAMAGE,AD_FIRE,(3-i)d6,"a flame tongue's fire",
+               killer,EActor);
+      DPrint(e,"Your withered flesh burns!",
+               "The <EActor>'s withered flesh burns!");
+      if (EActor->isDead() && killer != EActor)
+        killer->KillXP(EActor);
+      return NOTHING;
+      },
+    EV_ELAPSED
+      "The flames on your flesh gutter out." /
+      "The flames on the <EActor> gutter out.";
+  }
 
 0 Effect "tongue of flame" : EA_BLAST
   { xval: AD_FIRE; pval: 4d8; 

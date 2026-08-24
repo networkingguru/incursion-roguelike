@@ -1,0 +1,139 @@
+# Strike a corporeal undead with a flame tongue sword and watch what the
+# creature's hit points do over the next four game turns.
+#
+# Read by tools/check_flame_tongue_undead.sh, for PA-08-F11 of bd inc-tek.8.8.
+#
+# WHAT IS BEING MEASURED. The mummy's hit points, five times: once on the turn
+# of the hit and once after each of the next four EV_TURN boundaries. The
+# sword's page (lib/m_items.irh, the "flame tongue" entity) promises that a
+# struck corporeal undead "catches flame and continues to burn, causing it to
+# suffer 3d6 fire damage the first turn after the hit, 2d6 the second turn and
+# 1d6 on the third". So the reading must fall three times and then stop.
+#
+# ON A BUILD WITHOUT THE FIX all five readings are the SAME number. The sword's
+# EITEM(EV_HIT) handler was an empty stub -- a comment and `return NOTHING;` --
+# so nothing at all followed the blow.
+#
+# WHY A WIZARD-MODE DUMP IS THE ORACLE. Creature::Dump prints "HP:cur/max"
+# (src/Debug.cpp, Creature::Dump). Nothing else in the game shows a monster's
+# hit points as a number, and the damage messages carry no figures. The
+# Examine Nearby Things browser is reached from the wizard menu, walks the
+# map's thing list with RIGHT (src/Debug.cpp, Player::BrowseThings), and
+# spends no game time, so a reading never disturbs what it reads.
+#
+# WHY A MUMMY. It must be undead, corporeal, and it must survive all three
+# burns or the last readings measure a corpse. The mummy is the cheapest such
+# subject: the game files it under "Corporeal Undead" in the summoning menu,
+# it carries M_UNDEAD and not M_INCOR, and 8d12 hit dice leave it standing.
+# It is also vulnerable to fire (lib/mon3.irh, "mummy": AD_FIRE damage is
+# multiplied by 1.5), which makes the three drops larger and easier to read;
+# the check allows for that and never asserts an exact die total.
+#
+# WHY THE MONSTERS ARE FROZEN. The subject stands next to the player for about
+# eighty game turns while the burn runs. A mummy that acts would kill a first
+# level barbarian long before then, and a dead player measures nothing. The
+# Freeze Monsters switch denies monsters their activity cycles but leaves them
+# in the world (src/Main.cpp, the OPT_FREEZE_MON arm), and EV_TURN is still
+# thrown at every thing on the map, so the burn still ticks.
+#
+# THE ARITHMETIC OF THE WAITING. Game::Turn counts ticks; EV_TURN is thrown to
+# everything on the map once every 60 of them (src/Main.cpp, `if (!(Turn%60))`).
+# One Search costs exactly 3 ticks here -- measured, not assumed -- so `s*21`
+# is 63 ticks and crosses exactly one multiple of 60 whatever the phase. Four
+# such blocks therefore step the burn exactly one turn at a time. Infinite
+# Fatigue is switched on so that eighty-four Searches cannot exhaust the
+# character instead.
+#
+# Menu letters move when a list changes. Run with the seed the check supplies.
+
+@include chargen.keys
+
+# --- WIZARD SWITCHES --------------------------------------------------------
+# The option list is a fixed table (src/Tables.cpp, the OPC_WIZARD rows), so
+# these are counted rows and not searched text: Infinite Fatigue is the fourth
+# and Freeze Monsters the eleventh.
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*3
+SPACE           # Infinite Fatigue: NO -> YES
+DOWN*7
+SPACE           # Freeze Monsters:  NO -> YES
+@dump:switches
+ESC
+
+# --- PUT A FLAME TONGUE IN THE CHARACTER'S HAND -----------------------------
+# RIGHT*10 walks the glyph row to Specific Weapons (src/Tables.cpp, ItemGlyphs).
+# The candidate list has no menu letters and shows three rows with the MIDDLE
+# one selected, so the walk stops on the pass where the row BELOW the wanted
+# one appears -- "Javelin of Lightning" is the AI_WEAPON entity that follows
+# "flame tongue" in lib/m_items.irh. The check does not trust that ordering: it
+# reads the sword's name back off the inventory screen before believing any
+# number.
+w
+@choose "Item Acquisition"
+RIGHT*10
+@until "Javelin of Lightning" DOWN
+ENTER
+2               # "Enter Item Level:" -- the sword's own INITIAL_PLUS
+ENTER
+b               # Weapon Hand; the slot lettering skips 'd', the Drop key
+SPACE           # swap the sword into it
+n               # decline wielding a long sword two-handed
+s               # stow the orcish knife the swap pushed into the air
+@dump:wielded
+ESC
+
+# --- SUMMON THE SUBJECT ONE SQUARE EAST -------------------------------------
+w
+@choose "Monster Summoning"
+@choose "Corporeal Undead"
+@choose "mummy"
+RIGHT           # the location cursor starts on the player; one step east
+ENTER
+@dump:summoned
+
+# --- HIT IT -----------------------------------------------------------------
+# Walking into it is attacking it. A first level barbarian misses a defense
+# class of 16 about half the time, so keep swinging until one lands. @until
+# stops on the first pass that shows the phrase, so exactly one hit has landed
+# when this line finishes.
+@until "hitting the mummy" RIGHT
+@dump:struck
+
+# --- FIVE READINGS ----------------------------------------------------------
+w
+@choose "Examine Nearby Things"
+@until "mummy (class" RIGHT
+@dump:hp-0
+ESC
+
+s*21
+w
+@choose "Examine Nearby Things"
+@until "mummy (class" RIGHT
+@dump:hp-1
+ESC
+
+s*21
+w
+@choose "Examine Nearby Things"
+@until "mummy (class" RIGHT
+@dump:hp-2
+ESC
+
+s*21
+w
+@choose "Examine Nearby Things"
+@until "mummy (class" RIGHT
+@dump:hp-3
+ESC
+
+s*21
+w
+@choose "Examine Nearby Things"
+@until "mummy (class" RIGHT
+@dump:hp-4
+ESC
+
+@quit
