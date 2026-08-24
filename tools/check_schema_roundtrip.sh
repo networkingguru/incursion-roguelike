@@ -1,11 +1,16 @@
 #!/bin/bash
-# Round-trip check for the v1 save schema, phase 1 (docs/SAVE-SCHEMA-SPEC.md).
-# Drives `incursion-headless -schematest`, which: loads the modules, builds a
-# set of Item objects (class Item exactly, via the LoadGroup allocation idiom)
-# with real module rIDs in iID/eID/homeID, stati, a name and backRefs; writes
-# them as a v1 group; reads the file back into a fresh registry; compares every
-# field; writes a second file; and byte-compares the two. DEBUG builds also run
-# the coverage check on every record and any finding is fatal.
+# Round-trip check for the v1 save schema (docs/SAVE-SCHEMA-SPEC.md).
+# Drives `incursion-headless -schematest`, which runs one section per class
+# group. Each section builds objects through the LoadGroup allocation idiom,
+# fills every member with a distinct value, writes them as a v1 group, reads
+# the file back into a fresh registry, compares field for field, writes a
+# second file and byte-compares the two. DEBUG builds also run the coverage
+# check on every record and any finding is fatal.
+#
+#   items     four Item objects (class Item exactly) with real module rIDs in
+#             iID/eID/homeID, stati, a name and backRefs.
+#   creature  one Monster: every Creature member, and three live targets in
+#             ts of types TargetEnemy, TargetArea and TargetItem.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
 FAILED=0; fail() { echo "FAIL: $1"; FAILED=1; }
@@ -20,9 +25,13 @@ if ! ./incursion-headless -schematest "$WORK" -timeout 120 < /dev/null > "$WORK/
     fail "-schematest exited non-zero"
 fi
 grep -q "^SCHEMATEST PASS" "$WORK/out.txt" || fail "no 'SCHEMATEST PASS' line"
+for g in items creature; do
+    grep -q "^SCHEMATEST GROUP $g PASS" "$WORK/out.txt" ||
+        fail "no 'SCHEMATEST GROUP $g PASS' line"
+done
 grep -q "byte-identical" "$WORK/out.txt" || fail "second save was not byte-compared"
 if grep -q "SCHEMA COVERAGE" "$WORK/out.txt"; then
     grep "SCHEMA COVERAGE" "$WORK/out.txt"; fail "coverage findings"
 fi
-[ "$FAILED" -eq 0 ] && { echo "PASS: v1 round trip (Item chain) is exact"; exit 0; }
+[ "$FAILED" -eq 0 ] && { echo "PASS: v1 round trip (Item and Creature chains) is exact"; exit 0; }
 exit 1

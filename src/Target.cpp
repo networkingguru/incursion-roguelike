@@ -1448,6 +1448,98 @@ void TargetSystem::Serialize(Registry &r)
 {
 }
 
+/* upstream: TargetSystem::Serialize above is empty, and was correct only
+   because v0 dumps the embedding Creature raw. The v1 field list below is
+   the real one. Evidence: Traced (docs/ENGINE-SERIALISATION.md, "Whatever a
+   Serialize body omits"). Tracking: inc-mdi6, the save-schema work, and
+   docs/SAVE-SCHEMA-SPEC.md risk 2. Not sent.
+
+   It is upstream's and not this port's: nothing in it depends on platform,
+   compiler or type width. A Win32 build with the original typedefs writes an
+   empty target field list from the same body, and gets away with it for the
+   same reason we did -- Registry::SaveGroup dumps the embedding Creature as
+   raw bytes, so the omission never showed. */
+
+/* Widths measured on arm64/LP64, 2026-08-24. Every kind below is sized to a
+   measured number, and the static_asserts fail the build if a compiler or an
+   upstream edit moves one:
+     bool 1, TargetType 4, TargetWhyType 4, TargetWhy 28,
+     TargetWhy::data 20, Target::data 8, Target 44, TargetSystem 1412.
+   TargetWhy is a STRUCT, not an enum, so it travels as its own embed rather
+   than as one scalar.
+
+   ponytail: the two unions -- Target::data and TargetWhy::data -- travel as
+   raw words, so an rID inside one (TargetWhy::data.SpelledMe.spellID, and
+   Hostility::why.data.eid.eid under it) travels positionally instead of
+   through the v1 name table. Ceiling: after the module is recompiled with a
+   resource inserted or removed, a monster's memory of WHY it hates you can
+   name a different spell. It cannot mis-resolve into a crash, and the
+   target itself (type, priority, and the handle words) is unaffected.
+   Upgrade path: switch on `type` and give each arm its own field list, with
+   FIELD_RID for the resource members. */
+void TargetSystem::FieldsV1(Registry &r)
+{
+  static_assert(sizeof(bool) == 1, "shouldRetarget travels as K_U8");
+  static_assert(sizeof(TargetType) == 4, "Target::type travels as K_I32");
+  static_assert(sizeof(TargetWhyType) == 4, "TargetWhy::type travels as K_I32");
+  static_assert(sizeof(TargetWhy) == 28, "TargetWhy is a struct, tag 4 embed");
+  static_assert(sizeof(Target) == 44, "one embed per slot covers the whole Target");
+  static_assert(sizeof(TargetSystem) == 1412,
+                "Creature's pin row pads assume this");
+  static_assert(sizeof(t[0].data) == 8, "Target::data travels as two u32 words");
+
+  uint8 retarget = 0;
+  if (r.Saving())
+    retarget = shouldRetarget ? 1 : 0;
+  FIELD_U8(1, tCount);
+  /* Staged through a uint8, not written straight into the bool: a byte off a
+     crafted file is any of 256 values, and a bool holding one of the other
+     254 is undefined behaviour the moment anything reads it. */
+  FIELD_U8(2, retarget);
+  if (r.Loading())
+    shouldRetarget = retarget != 0;
+
+  for (int i = 0; i < NUM_TARGETS; i++) {
+    /* One embed per slot, tag 3+i. EVERY slot travels, not just the first
+       tCount, for two reasons: v0 kept the whole array because it dumped the
+       array, so storing all of it changes no behaviour; and every byte of
+       the object must reach the coverage map. Writing only tCount slots
+       would cost about 1.5 KB per creature less -- see risk 6 in
+       docs/SAVE-SCHEMA-SPEC.md, which asks for that to be measured rather
+       than assumed. */
+    uint32 w0 = 0, w1 = 0;
+    if (r.Saving()) {
+      /* memcpy, never a type-punned cast. The union covers every arm in
+         eight bytes (inc/Target.h:166-177), and the first word is the
+         handle in both handle-bearing arms. */
+      memcpy(&w0, &t[i].data, 4);
+      memcpy(&w1, ((char*)&t[i].data) + 4, 4);
+    }
+    r.V1EmbedBegin((uint16)(3 + i), &t[i], sizeof(t[i]));
+    FIELD_I32(1, t[i].type);
+    FIELD_U16(2, t[i].priority);
+    FIELD_U16(3, t[i].vis);
+    /* why: a 28-byte struct of two scalars and a 20-byte union. The union
+       has three arms of unlike shape and no word in a fixed role, so it
+       travels as opaque bytes -- see the ponytail note above. */
+    r.V1EmbedBegin(4, &t[i].why, sizeof(t[i].why));
+    FIELD_I32(1, t[i].why.type);
+    FIELD_U32(2, t[i].why.turnOfBirth);
+    FIELD_ARRAY(3, &t[i].why.data, 1, (uint32)sizeof(t[i].why.data));
+    r.V1EmbedEnd();
+    FIELD_U32(5, w0);
+    FIELD_U32(6, w1);
+    FIELD_SKIP(t[i].data);       /* the union travels as w0/w1 above */
+    r.V1EmbedEnd();
+    /* Load-direction fixup, below the fields it reads: w0 and w1 land
+       inside the embed, and this runs after V1EmbedEnd(). */
+    if (r.Loading()) {
+      memcpy(&t[i].data, &w0, 4);
+      memcpy(((char*)&t[i].data) + 4, &w1, 4);
+    }
+  }
+}
+
 /* See the declaration in inc/Target.h and inc-upw.13. Called once per
    TargetSystem right after Registry::LoadGroup finishes loading its owning
    Creature (Registry.cpp) -- for a save written entirely by a binary that

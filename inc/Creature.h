@@ -160,7 +160,50 @@ inline int16 XCRtoCR(int32 XCR);
 class Creature: public Thing, public Magic
   {
     ARCHIVE_CLASS(Creature,Thing,r)
-      ts.Serialize(r); 
+      /* v1 tags 256-383, in the declaration order of the members below.
+         FIELD_OBJ's v0 branch IS ts.Serialize(r) -- the call this line
+         replaces -- so the v0 path does exactly what it did before, and only
+         v1 routes into TargetSystem::FieldsV1 (src/Target.cpp). */
+      FIELD_OBJ(256, ts);
+      FIELD_RID(257, mID);
+      FIELD_RID(258, tmID);
+      FIELD_I16(259, PartyID);
+      FIELD_I16(260, cHP);
+      FIELD_I16(261, mHP);
+      FIELD_I16(262, Subdual);
+      FIELD_I16(263, cFP);
+      FIELD_I32(264, uMana);
+      FIELD_I32(265, mMana);
+      FIELD_I32(266, hMana);
+      FIELD_I32(267, ManaPulse);
+      FIELD_I8 (268, concentUsed);
+      FIELD_ARRAY(269, Attr, sizeof(int16), ATTR_LAST);
+      /* Dir is `typedef signed char` (inc/Defines.h:55), so it is one byte
+         and needs no staging temporary. */
+      FIELD_I8 (270, LastMoveDir);
+      FIELD_I8 (271, AoO);
+      FIELD_I8 (272, FFCount);
+      FIELD_I8 (273, HideVal);
+      FIELD_I16(274, StateFlags);
+      FIELD_I8 (275, AttrDeath);
+      /* The ten perception precalcs below are STORED, not FIELD_SKIPped.
+         They are derived state, and the rule is to skip derived state that
+         the load path rebuilds -- but the load path rebuilds it for the
+         PLAYER only: Game::LoadGame calls CalcValues() and CalcVision() on
+         oPlayer(p[0]) and on nothing else (src/Registry.cpp:1364-1365).
+         Nothing recalculates a monster's, so skipping them would load every
+         monster in the game blind, deaf and scentless until something else
+         happened to call CalcValues() on it. */
+      FIELD_U8 (276, TremorRange);
+      FIELD_U8 (277, SightRange);
+      FIELD_U8 (278, LightRange);
+      FIELD_U8 (279, BlindRange);
+      FIELD_U8 (280, InfraRange);
+      FIELD_U8 (281, PercepRange);
+      FIELD_U8 (282, TelepRange);
+      FIELD_U8 (283, ScentRange);
+      FIELD_U8 (284, ShadowRange);
+      FIELD_U8 (285, NatureSight);
     END_ARCHIVE
 
 	  public:

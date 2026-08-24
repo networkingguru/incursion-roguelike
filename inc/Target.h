@@ -283,6 +283,9 @@ public:
 
   String        & Dump();
   void          Serialize(Registry &r);
+  /* The v1 field list. Serialize above is the v0 path and stays empty; see
+     the upstream: note over the definition in src/Target.cpp. */
+  void          FieldsV1(Registry &r);
 
   /* upstream: base-code defect, the fix is ours. It is upstream's because
      nothing in it depends on platform, compiler or type width:

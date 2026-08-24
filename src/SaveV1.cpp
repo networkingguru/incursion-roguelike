@@ -181,9 +181,34 @@ static const SchemaPad ItemPads[] = {
     { 0, 8 }, { 10, 2 }, { 133, 1 }, { 151, 1 }, { 156, 4 }, { 218, 6 }
 };
 
+/* Creature chain on arm64/LP64: vptr 0-8 and the pad after Object::Type
+   10-12, both shared with the Item row above; pad after Creature::cFP
+   1558-1560; pad after Creature::concentUsed 1577-1578; tail pad after
+   Creature::NatureSight 1677-1680. ts covers 128-1540 whole, because the
+   FIELD_OBJ embed marks the range and so takes TargetSystem's own interior
+   padding with it. */
+static const SchemaPad CreaturePads[] = {
+    { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1677, 3 }
+};
+
+/* Monster: CreaturePads, plus the pending range. */
+static const SchemaPad MonsterPads[] = {
+    { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1677, 3 },
+    /* pending: Task 3 declares these. Monster's own members -- Inv,
+       BuffCount, FoilCount and Recent[6] (inc/Creature.h:1183-1185) -- have
+       no field lines yet, so the whole of Monster's own range is pinned as
+       padding meanwhile. The row goes away when Task 3 declares them, and
+       the coverage check then reports any byte the new lines miss. */
+    { 1680, 16 }
+};
+
 static const SchemaPin SchemaPins[] = {
     { "Item", T_ITEM, sizeof(Item), ItemPads,
       (int)(sizeof(ItemPads)/sizeof(ItemPads[0])) },
+    { "Creature", T_CREATURE, sizeof(Creature), CreaturePads,
+      (int)(sizeof(CreaturePads)/sizeof(CreaturePads[0])) },
+    { "Monster", T_MONSTER, sizeof(Monster), MonsterPads,
+      (int)(sizeof(MonsterPads)/sizeof(MonsterPads[0])) },
 };
 
 #ifdef DEBUG
@@ -916,6 +941,11 @@ void Registry::V1Array(uint16 tag, void *p, size_t elemSize, uint32 count)
       return;   /* unreached: FIELD_ARRAY appears only in FieldsV1 bodies */
     if (v1.mode == V1_SAVE)
       {
+        /* A fixed array is a field like any other, so it covers its own
+           bytes. Without this, the first array member declared -- Creature's
+           Attr[ATTR_LAST] -- read as 82 uncovered bytes and no pin row could
+           honestly account for them. */
+        v1CovMark(p, (size_t)count * elemSize);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_ARRAY);
         v1PutU32(&v1Out, count);
@@ -1463,7 +1493,8 @@ bool Registry::V1RunSchemaTest(const char *outDir)
       {
         theRegistry = regA;
 
-        /* 2. Four Item instances via the LoadGroup allocation idiom --
+        /* ---------------------------------------------------------- group 1 --
+           items. Four Item instances via the LoadGroup allocation idiom --
            types in the T_FIRSTITEM..T_LASTITEM default branch, so the
            class is exactly Item. */
         for (i = 0; i != 4; i++)
@@ -1658,25 +1689,270 @@ bool Registry::V1RunSchemaTest(const char *outDir)
 
     {
       long fsize = 0;
+      bool grpOk = true;
       if (v1FilesIdentical((const char*)pa, (const char*)pb, &fsize))
         printf("a.sav and b.sav are byte-identical (%ld bytes)\n", fsize);
       else
         {
           printf("a.sav and b.sav DIFFER\n");
-          ok = false;
+          grpOk = false;
         }
+      if (v1TestMismatches)
+        {
+          printf("%ld field mismatches\n", v1TestMismatches);
+          grpOk = false;
+        }
+      if (v1CovFindings)
+        {
+          printf("%ld coverage findings\n", v1CovFindings);
+          grpOk = false;
+        }
+      printf("SCHEMATEST GROUP items %s\n", grpOk ? "PASS" : "FAIL");
+      ok = ok && grpOk;
     }
 
-    if (v1TestMismatches)
+    /* ------------------------------------------------------------ group 2 --
+       creature. One Monster: the smallest concrete class whose chain reaches
+       Creature, so the record exercises Thing's field list and Creature's.
+       Monster's own members are not declared until Task 3; the pin table
+       carries a pending row that covers them meanwhile. */
+    v1TestMismatches = 0;
+    v1CovFindings = 0;
+
+    Registry *regC = new Registry();
+    Registry *regD = new Registry();
+    Monster *mon = NULL;
+    hObj mh = 0;
+    String pc, pd;
+    pc = Format("%s/c.sav", outDir);
+    pd = Format("%s/d.sav", outDir);
+
+    try
       {
-        printf("%ld field mismatches\n", v1TestMismatches);
-        ok = false;
+        theRegistry = regC;
+
+        size_t sz = typeSize((int8)T_MONSTER);
+        mon = (Monster*) malloc(sz);
+        if (!mon)
+          throw EMEMORY;
+        memset((void*)mon, 0, sz);
+        new((Object*)mon) Monster(regC);
+        mon->Type = T_MONSTER;
+        mon->myHandle = regC->RegisterObject(mon);
+        mh = mon->myHandle;
+
+        /* Thing's own fields, so the chain is exercised end to end. hm stays
+           0 for the reason the items group gives. */
+        mon->Next = 0;
+        mon->hm = 0;
+        mon->x = 51;
+        mon->y = 52;
+        mon->Image = (Glyph)0x0A0B0C0Du;
+        mon->Timeout = 53;
+        mon->StoredMovementTimeout = 54;
+        mon->Flags = 0x5A5A0001u;
+        mon->Named = (const char*) Format("Test monster");
+        mon->__Stati.Initialize();
+
+        /* Creature's own members, in declaration order, all distinct. */
+        mon->mID = mod->MonsterID(1);
+        mon->tmID = mod->TemplateID(1);
+        mon->PartyID = 61;
+        mon->cHP = 62;
+        mon->mHP = 63;
+        mon->Subdual = 64;
+        mon->cFP = 65;
+        mon->uMana = 1001;
+        mon->mMana = 1002;
+        mon->hMana = 1003;
+        mon->ManaPulse = 1004;
+        mon->concentUsed = 66;
+        for (i = 0; i != ATTR_LAST; i++)
+          mon->Attr[i] = (int16)(700 + i);
+        mon->LastMoveDir = (Dir)5;
+        mon->AoO = 67;
+        mon->FFCount = 68;
+        mon->HideVal = 69;
+        mon->StateFlags = 0x0F0F;
+        mon->AttrDeath = 70;
+        mon->TremorRange = 71;
+        mon->SightRange = 72;
+        mon->LightRange = 73;
+        mon->BlindRange = 74;
+        mon->InfraRange = 75;
+        mon->PercepRange = 76;
+        mon->TelepRange = 77;
+        mon->ScentRange = 78;
+        mon->ShadowRange = 79;
+        mon->NatureSight = 80;
+
+        /* Three live targets, one per arm of Target::data. All three types
+           are on SanitizeLoadedTargets's keep list (src/Target.cpp:1549),
+           which runs on the v1 load path too (LoadGroupV1 above): a type off
+           that list would have its data zeroed after load and the second
+           save could not be byte-compared with the first.
+
+           Slot 1 also carries an rID inside TargetWhy's union, which the
+           field list moves as raw words -- see the ponytail note in
+           TargetSystem::FieldsV1 (src/Target.cpp). */
+        mon->ts.tCount = 3;
+        mon->ts.shouldRetarget = true;
+        mon->ts.t[0].type = TargetEnemy;
+        mon->ts.t[0].priority = 81;
+        mon->ts.t[0].vis = 1;
+        mon->ts.t[0].why.type = TargetHitMe;
+        mon->ts.t[0].why.turnOfBirth = 9001;
+        mon->ts.t[0].data.Creature.c = mh;
+        mon->ts.t[0].data.Creature.damageDoneToMe = 82;
+        mon->ts.t[1].type = TargetArea;
+        mon->ts.t[1].priority = 83;
+        mon->ts.t[1].vis = 0;
+        mon->ts.t[1].why.type = TargetSpelledMe;
+        mon->ts.t[1].why.turnOfBirth = 9002;
+        mon->ts.t[1].why.data.SpelledMe.spellID = mod->EffectID(5);
+        mon->ts.t[1].data.Area.x = 84;
+        mon->ts.t[1].data.Area.y = 85;
+        mon->ts.t[2].type = TargetItem;
+        mon->ts.t[2].priority = 86;
+        mon->ts.t[2].vis = 1;
+        mon->ts.t[2].why.type = TargetGreedy;
+        mon->ts.t[2].why.turnOfBirth = 9003;
+        mon->ts.t[2].data.Item.i = mh;
+
+        memset(&fh, 0, sizeof(fh));
+        fh.Sig = SIGNATURE;
+        strcpy(fh.Version, SaveSchemaID());
+        strncpy(fh.Name, "schematest creature", 71);
+        fh.numGroups = 1;
+        fh.Compression = SaveV1_Raw() ? 0 : 1;
+        T1->OpenWrite(pc);
+        T1->FWrite(&fh, sizeof(fh));
+        regC->SaveGroupV1(*T1, 0);
+        T1->Close();
+
+        theRegistry = regD;
+        T1->OpenRead(pc);
+        regD->LoadGroup(*T1, 0, false);
+        T1->Close();
+        SaveV1_ResolveNames();
+
+        {
+          Monster *a = mon;
+          Monster *b = (Monster*) regD->Get(mh);
+          if (!b)
+            v1Mismatch(0, "monster missing after load", (long)mh, 0);
+          else
+            {
+              V1CMP(0, Type);
+              V1CMP(0, myHandle);
+              V1CMP(0, Next);
+              V1CMP(0, hm);
+              V1CMP(0, x);
+              V1CMP(0, y);
+              V1CMP(0, Image);
+              V1CMP(0, Timeout);
+              V1CMP(0, StoredMovementTimeout);
+              V1CMP(0, Flags);
+              v1MismatchStr(0, "Named",
+                            a->Named.GetData(), b->Named.GetData());
+              V1CMP(0, mID);
+              V1CMP(0, tmID);
+              V1CMP(0, PartyID);
+              V1CMP(0, cHP);
+              V1CMP(0, mHP);
+              V1CMP(0, Subdual);
+              V1CMP(0, cFP);
+              V1CMP(0, uMana);
+              V1CMP(0, mMana);
+              V1CMP(0, hMana);
+              V1CMP(0, ManaPulse);
+              V1CMP(0, concentUsed);
+              for (i = 0; i != ATTR_LAST; i++)
+                if (a->Attr[i] != b->Attr[i])
+                  v1Mismatch(0, "Attr[i]", (long)a->Attr[i], (long)b->Attr[i]);
+              V1CMP(0, LastMoveDir);
+              V1CMP(0, AoO);
+              V1CMP(0, FFCount);
+              V1CMP(0, HideVal);
+              V1CMP(0, StateFlags);
+              V1CMP(0, AttrDeath);
+              V1CMP(0, TremorRange);
+              V1CMP(0, SightRange);
+              V1CMP(0, LightRange);
+              V1CMP(0, BlindRange);
+              V1CMP(0, InfraRange);
+              V1CMP(0, PercepRange);
+              V1CMP(0, TelepRange);
+              V1CMP(0, ScentRange);
+              V1CMP(0, ShadowRange);
+              V1CMP(0, NatureSight);
+              V1CMP(0, ts.tCount);
+              V1CMP(0, ts.shouldRetarget);
+              for (i = 0; i != NUM_TARGETS; i++)
+                {
+                  Target *ta = &a->ts.t[i], *tb = &b->ts.t[i];
+                  if (ta->type != tb->type)
+                    v1Mismatch(i, "ts.t[].type",
+                               (long)ta->type, (long)tb->type);
+                  if (ta->priority != tb->priority)
+                    v1Mismatch(i, "ts.t[].priority",
+                               (long)ta->priority, (long)tb->priority);
+                  if (ta->vis != tb->vis)
+                    v1Mismatch(i, "ts.t[].vis", (long)ta->vis, (long)tb->vis);
+                  if (ta->why.type != tb->why.type)
+                    v1Mismatch(i, "ts.t[].why.type",
+                               (long)ta->why.type, (long)tb->why.type);
+                  if (ta->why.turnOfBirth != tb->why.turnOfBirth)
+                    v1Mismatch(i, "ts.t[].why.turnOfBirth",
+                               (long)ta->why.turnOfBirth,
+                               (long)tb->why.turnOfBirth);
+                  if (memcmp(&ta->why.data, &tb->why.data,
+                             sizeof(ta->why.data)))
+                    v1Mismatch(i, "ts.t[].why.data", i, i);
+                  if (memcmp(&ta->data, &tb->data, sizeof(ta->data)))
+                    v1Mismatch(i, "ts.t[].data", i, i);
+                }
+            }
+        }
+
+        T1->OpenWrite(pd);
+        T1->FWrite(&fh, sizeof(fh));
+        regD->SaveGroupV1(*T1, 0);
+        T1->Close();
       }
-    if (v1CovFindings)
+    catch (int error_number)
       {
-        printf("%ld coverage findings\n", v1CovFindings);
-        ok = false;
+        fprintf(stderr, "incursion -schematest: %s\n",
+                Lookup(FileErrors, error_number));
+        theRegistry = savedReg;
+        return false;
       }
+    theRegistry = savedReg;
+
+    {
+      long fsize = 0;
+      bool grpOk = true;
+      if (v1FilesIdentical((const char*)pc, (const char*)pd, &fsize))
+        printf("c.sav and d.sav are byte-identical (%ld bytes)\n", fsize);
+      else
+        {
+          printf("c.sav and d.sav DIFFER\n");
+          grpOk = false;
+        }
+      if (v1TestMismatches)
+        {
+          printf("%ld field mismatches\n", v1TestMismatches);
+          grpOk = false;
+        }
+      if (v1CovFindings)
+        {
+          printf("%ld coverage findings\n", v1CovFindings);
+          grpOk = false;
+        }
+      printf("SCHEMATEST GROUP creature %s\n", grpOk ? "PASS" : "FAIL");
+      ok = ok && grpOk;
+    }
+
     if (ok)
       printf("SCHEMATEST PASS\n");
     return ok;
