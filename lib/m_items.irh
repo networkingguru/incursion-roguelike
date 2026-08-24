@@ -4049,8 +4049,21 @@ AI_BRACERS Effect "Vulnerability" : EA_GRANT
       points per magical plus they possess."; }
 
 Item "springblade" : T_WEAPON
-  { Image: gray GLYPH_SWORD; Group: WG_SBLADES;
-    Mat:MAT_IRON; Size: SZ_SMALL; Weight: 30; 
+  /* upstream: base-code defect, not a port artefact. Weapon groups are shared
+     game data, so the same weapon is mis-tagged on Win32, with the original
+     typedefs, on the upstream compiler. The springblade is a short sword in
+     every other respect -- same material, size, weight, cost, parry, damage,
+     accuracy and critical, and a better threat range -- and the short sword
+     carries WG_SBLADES | WG_LIGHT (lib/weapons.irh:401). This one carried only
+     WG_SBLADES. Creature::CalcValues charges an extra -2 to the main hand and
+     -2 to the off hand when the off-hand weapon is neither light nor smaller
+     than the main-hand weapon (src/Values.cpp:1345-1352), and the bracers
+     deploy two springblades of the same size, so a wielder of the pair the
+     item exists to give him paid a penalty a pair of short swords does not.
+     WG_LIGHT added. Tier Observed -- see bd inc-tek.8.8, finding PA-08-F14.
+     Not sent to rmtew. */
+  { Image: gray GLYPH_SWORD; Group: WG_SBLADES | WG_LIGHT;
+    Mat:MAT_IRON; Size: SZ_SMALL; Weight: 30;
     Cost: OPT_COST(31,9) GOLD; Parry: 4;
     SDmg:1d6; LDmg:1d6+1; Acc: +1; Crit: x2; Threat: 3; Spd: 130%;
     Flags: WT_SUPER_SNEAK, WT_SLASHING, WT_PIERCING, IT_NOGEN;

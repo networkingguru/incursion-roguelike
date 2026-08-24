@@ -1,0 +1,55 @@
+# Snap out BOTH springblades and let the sidebar say what two-weapon fighting
+# with them costs.
+#
+# bd inc-tek.8.8, finding PA-08-F14. Item "springblade" carried
+# `Group: WG_SBLADES`. The short sword it is otherwise a copy of carries
+# `Group: WG_SBLADES | WG_LIGHT` (lib/weapons.irh:401), and every other stat on
+# the springblade is the same or better, so the missing tag is an oversight.
+#
+# WHAT THE TAG CHANGES. Creature::CalcValues charges an extra -2 to the main
+# hand and -2 to the off hand when the off-hand weapon is neither light nor
+# smaller than the main-hand weapon (src/Values.cpp:1345-1352). Two springblades
+# are the same size as each other, so without WG_LIGHT that clause fires.
+#
+# THE ORACLE is the sidebar's own "Hit:" line, which prints the main hand and
+# the off hand either side of a slash. It is the engine's arithmetic, printed
+# by the game, and tools/check_springblade.sh reads it back off the dump.
+#
+# THE CHARACTER CARRIES TWO-WEAPON STYLE because the bracers deploy a second
+# blade only for a wielder who has it, and the clause under test reads the OFF
+# hand. See chargen-rogue-twf.keys. That feat also silences a different -2/-2
+# clause four lines above the one being measured (src/Values.cpp:1326-1329),
+# which is convenient rather than necessary: it leaves fewer moving parts
+# between the tag and the number on screen.
+#
+# SIX ACTIVATION ATTEMPTS, because a rogue fails the DC 15 Handle Device check
+# more often than not and a jammed attempt costs a round and nothing else. The
+# check requires that a dump said BOTH blades snapped out -- the plural line --
+# before it believes the Hit numbers, since one blade would leave the off hand
+# empty and the clause unexercised.
+
+@include chargen-rogue-twf.keys
+@include springblade-gear.keys
+
+@dump:0001-before-deploy
+
+a
+@choose "Springblade Bracers"
+@dump:0002-deploy-1
+a
+@choose "Springblade Bracers"
+@dump:0003-deploy-2
+a
+@choose "Springblade Bracers"
+@dump:0004-deploy-3
+a
+@choose "Springblade Bracers"
+@dump:0005-deploy-4
+a
+@choose "Springblade Bracers"
+@dump:0006-deploy-5
+a
+@choose "Springblade Bracers"
+@dump:0007-deploy-6
+
+@quit

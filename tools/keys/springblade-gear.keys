@@ -1,0 +1,50 @@
+# Put the Springblade Bracers on a made character, in a frozen dungeon.
+#
+# Included by springblade-setup.keys, which prefixes the ordinary rogue, and by
+# springblade-light.keys, which prefixes a rogue carrying Two-Weapon Style.
+# The character is made before this file runs; everything here is gear and
+# dungeon state, so the two families cannot drift apart.
+# bd inc-tek.8.8, finding PA-08-F14.
+#
+# THE BRACERS ARE MADE IN WIZARD MODE, because Item "springblade" and the
+# effect that carries it both sit behind IT_NOGEN (lib/m_items.irh) and no
+# walk can find a pair.
+#
+#   w y                    enter wizard mode
+#   Wizard Mode Switches   Freeze Monsters, so that nothing retaliates. A blow
+#   DOWN*10 SPACE          landing on the wielder would zero his own FFCount
+#                          and quietly change what the fight runs measure.
+#   Item Acquisition       the acquisition browser
+#   RIGHT*21               walk the glyph row to Bracers. ItemGlyphs
+#                          (src/Tables.cpp:320-345) puts -AI_BRACERS 21 steps
+#                          along, and the header line names the category, so a
+#                          miscount shows up in a dump as some other word after
+#                          "Acquisition -- [...]:".
+#   @until ... DOWN        the candidate list has no menu letters, so the
+#                          cursor is walked instead. The window shows three
+#                          rows and highlights the middle one, so the run stops
+#                          on the pass where the row BELOW the wanted one first
+#                          appears. That is an ordering assumption about
+#                          lib/m_items.irh; the checks do not trust it and read
+#                          the item's name back off the activate menu first.
+#   ENTER r SPACE ENTER    take it, put it in the Bracers slot, leave the
+#                          inventory manager.
+
+ESC     # dismiss the arrival-room description; now in play
+
+w
+y       # "Enter wizard mode?" -- yes
+
+w       # [w] Wizard Mode Switches
+DOWN*10
+SPACE   # Freeze Monsters: NO -> YES
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*21
+@until "Devilbane Bracers" DOWN
+ENTER
+r
+SPACE
+ENTER

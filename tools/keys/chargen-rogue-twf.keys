@@ -1,0 +1,45 @@
+# Make chargen-rogue.keys' orc rogue, but spend his first feat on Two-Weapon
+# Style. Read by springblade-light.keys. bd inc-tek.8.8, finding PA-08-F14.
+#
+# WHY THE FEAT IS NEEDED, and why it is not an artificial arrangement. The
+# Springblade Bracers deploy a SECOND blade only for a wielder who has it:
+# Effect "Springblade Bracers", EV_MAGIC_HIT, sends hBlade2 to SL_READY behind
+# `EActor->HasFeat(FT_TWO_WEAPON_STYLE)` (lib/m_items.irh). The two-weapon
+# penalty this run measures reads the OFF-HAND weapon (src/Values.cpp:1348), so
+# a springblade must be in the off hand for there to be anything to read. One
+# blade lands in SL_WEAPON and is the main hand.
+#
+# The feat has no prerequisites of its own (src/FeatTab.cpp:983-985), so a
+# first-level rogue may take it.
+#
+# THE FEAT IS CHOSEN BY NAME, NOT BY LETTER, because the offered list moves
+# with the seed and with the attribute rolls. The list column is narrow and the
+# game truncates the name to "Two-Weapon Styl", which is what @choose must be
+# given -- @choose reads the screen, and the screen has no final 'e'.
+#
+# Everything else is chargen-rogue.keys, keystroke for keystroke, so that the
+# only difference between this character and the one the other springblade runs
+# use is the feat.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+i       # Race:     [i] Orc
+a       # Subrace:  [a] Orc (Standard)
+i       # Class:    [i] Rogue
+a       # Attributes: the first of the five offered sets
+e       # Alignment: [e] Neutral
+
+@choose "Two-Weapon Styl"       # First feat: the one this run is about
+a                               # Second feat
+
+# Skill Manager. RIGHT spends a rank on the selected skill and stops at the
+# skill's maximum, DOWN moves to the next skill, so three RIGHTs per skill
+# spends everything available without needing to know how many ranks this
+# character has.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+y       # Do you wish to worship <god>? -- yes
+a       # Personality archetype

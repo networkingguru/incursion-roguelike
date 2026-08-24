@@ -265,9 +265,58 @@ case "$(messages "$HOTHIT")" in
         fail=1 ;;
 esac
 
+# ------------------------------------------- the tag: two blades, two hands
+# Item "springblade" carried Group: WG_SBLADES and nothing else. The short
+# sword it is otherwise a copy of carries WG_SBLADES | WG_LIGHT
+# (lib/weapons.irh:401). Creature::CalcValues charges an extra -2 to the main
+# hand and -2 to the off hand when the off-hand weapon is neither light nor
+# smaller than the main-hand weapon (src/Values.cpp:1345-1352). Two springblades
+# are the same size, so without the tag that clause fired on a pair of them.
+LIGHT="$(run_case tools/keys/springblade-light.keys)"
+
+# BOTH blades must be out. One blade leaves the off hand empty, the clause
+# unexercised, and the Hit numbers meaningless. The plural line is the game's
+# own report that two came out.
+LIGHTOUT="$(first_dump_with "$LIGHT" "gleamingbladessnapoutofyourbracers")" || {
+    echo "INCONCLUSIVE: the two-weapon run never got both blades out in six"
+    echo "              tries, so the off hand was empty. screens: $LIGHT"
+    exit 2
+}
+
+# "Hit:4 / 2" -- the main hand, then the off hand.
+hit_pair() {    # hit_pair <dump file> -> "<main> <offhand>"
+    sed -n 's/.*|Hit:\([-0-9]*\) *\/ *\([-0-9]*\).*/\1 \2/p' "$1" | head -1
+}
+
+PAIR="$(hit_pair "$LIGHTOUT")"
+[ -n "$PAIR" ] || {
+    echo "INCONCLUSIVE: the sidebar in $LIGHTOUT printed no two-handed Hit line,"
+    echo "              so the character was not fighting with two weapons."
+    exit 2
+}
+
+if [ "$PAIR" = "6 4" ]; then
+    echo "  ok: two springblades cost no unwieldy-off-hand penalty (Hit:6 / 4)"
+elif [ "$PAIR" = "4 2" ]; then
+    echo "FAIL: two springblades were charged the unwieldy-off-hand penalty."
+    echo "      Hit:$(echo "$PAIR" | tr ' ' '/' | sed 's|/| / |') -- two lower"
+    echo "      in each hand than the 6 / 4 a light off-hand pays. Item"
+    echo "      \"springblade\" in lib/m_items.irh is missing WG_LIGHT from its"
+    echo "      Group, which src/Values.cpp:1348 reads to waive that clause."
+    echo "      dump: $LIGHTOUT"
+    fail=1
+else
+    echo "INCONCLUSIVE: the sidebar read Hit:$(echo "$PAIR" | tr ' ' '/')"
+    echo "              , which is neither the tagged 6 / 4 nor the untagged"
+    echo "              4 / 2. Something other than this tag moved the number;"
+    echo "              re-derive both before trusting either. dump: $LIGHTOUT"
+    exit 2
+fi
+
 if [ "$fail" = 0 ]; then
-    echo "PASS: a failed Handle Device check costs the round, and the free"
-    echo "      off-guard strike is bought in or out of combat."
+    echo "PASS: a failed Handle Device check costs the round, the free off-guard"
+    echo "      strike is bought in or out of combat, and a springblade counts"
+    echo "      as a light weapon in the off hand."
     exit 0
 fi
 exit 1
