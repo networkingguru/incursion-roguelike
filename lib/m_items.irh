@@ -3626,6 +3626,46 @@ AI_STAFF Effect "the Abyss" : EA_GRANT
     On Event PRE(EV_MAGIC_HIT) {
       if (e.isRemove)
         return NOTHING;
+      /* upstream: base-code defect, fix is ours. Tier Observed -- the page
+         below says "A staff of the Abyss is an inert stick in the hands of
+         any good character", and nothing in the entity read the wielder's
+         alignment. A Neutral Good Mage 5 holding the staff carried
+         "STAFF SPELLS from SS ITEM (Val:0 Mag:0) [CL 5]" in wizard mode's
+         Examine Player Data before this line, and carries no such stati
+         after it, while the Neutral Mage 5 of the other half carries it
+         both times. tools/check_staff_abyss_alignment.sh, red before and
+         green after. Tracking inc-tek.8.8, finding PA-08-F8. Not sent to
+         rmtew.
+
+         THE DRUID CLAUSE OF THE PAGE NEEDS NOTHING. It says druids "lack
+         the abstract ethos to grasp the staff's function", and druids cast
+         with SP_PRIMAL, which the caster-level test below does not name. So
+         the existing line already excludes them.
+
+         WHY NOT THE STAFF OF EXORCISM'S LINE. That sibling entity gates
+         itself with !EActor->ItemPrereq(ALIGN_VAL + MA_GOOD,0,20), which
+         looks like the mechanism this page wants and is in fact dead code.
+         Creature::ItemPrereq (src/Skills.cpp:5647-5728) branches on
+         ABIL_VAL, FEAT_VAL, SKILL_VAL, MFLAG_VAL, MTYPE_VAL, ATTR_VAL and
+         CLEV_VAL and has no branch for ALIGN_VAL at all; ALIGN_VAL is 9000
+         (inc/Defines.h:2096), so the argument is 9106, which is under the
+         0xFFFF that sends a value down the resource-id path, and the
+         function reaches its closing "return false". The call is therefore
+         false for every creature, so the Staff of Exorcism returns DONE for
+         every creature and is inert in every hand. That was measured, not
+         reasoned: the same line was tried here first, and the good
+         character still held the staff's spells afterwards. The Exorcism
+         defect is tracked separately as bd inc-tek.29. isMType(MA_GOOD)
+         reads the ALIGNMENT stati directly (src/Values.cpp:2465-2468) and
+         is how the rest of lib/ asks this question.
+
+         The defect is upstream's: this is module content, not port code.
+         The page and the handler are both in the original ruleset, so the
+         same disagreement exists on Win32, with the original typedefs and
+         on the upstream compiler. Nothing here depends on integer width or
+         on the platform. */
+      if (EActor->isMType(MA_GOOD))
+        return DONE;
       if (EActor->ItemPrereq(CLEV_VAL + SP_ARCANE + SP_DIVINE,5,20))
         return NOTHING;
       return DONE;

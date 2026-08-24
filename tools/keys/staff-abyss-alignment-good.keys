@@ -1,0 +1,47 @@
+# The GOOD half of finding PA-08-F8 of bd inc-tek.8.8: the Staff of the Abyss
+# says it is "an inert stick in the hands of any good character", so a good
+# fifth-level caster must get nothing from it. Read by
+# tools/check_staff_abyss_alignment.sh.
+#
+# WHY THIS FILE REPEATS tools/keys/chargen-mage.keys INSTEAD OF INCLUDING IT.
+# That file answers the alignment prompt with the literal letter 'e', which is
+# Neutral. Nothing in wizard mode can change a character's alignment after
+# generation -- the menu (src/Debug.cpp:534-572) has no such option -- so the
+# good character has to be made good at the prompt, and the prompt is in the
+# middle of the file. Everything AFTER generation is shared, and lives in
+# tools/keys/staff-abyss-alignment-body.keys.
+#
+# The character is otherwise the same orc mage the non-good half uses: same
+# race, same class, same specialty, same seed. Only the alignment differs, so
+# only the alignment can explain a difference in the result.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+i       # Race:     [i] Orc
+a       # Subrace:  [a] Orc (Standard)
+d       # Class:    [d] Mage
+a       # Attributes: the first of the five offered sets
+
+@choose "Neutral Good"
+        #   By name, not by letter. FindMenuEntry ranks an exact match above
+        #   an overlap (src/Wposix.cpp:984-997), so this cannot be captured by
+        #   the plain "Neutral" entry sitting in the same list.
+
+e       # Wizard specialty: [e] Evocation
+a       # First feat
+a       # Second feat
+
+# Skill Manager. RIGHT spends a rank on the selected skill and stops at the
+# skill's maximum, DOWN moves to the next skill, so three RIGHTs per skill
+# spends everything available without needing to know how many ranks this
+# character has. Character generation will not let go until the pool is empty.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+y       # Do you wish to worship <god>? -- yes
+a       # Personality archetype
+a a a   # Three starting spells
+
+@include staff-abyss-alignment-body.keys

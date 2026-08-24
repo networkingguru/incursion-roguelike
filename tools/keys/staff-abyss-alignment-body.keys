@@ -1,0 +1,148 @@
+# Build the caster up to Mage 5, put a Staff of the Abyss in his weapon hand,
+# and photograph three things: his class level, his alignment, and every stati
+# he holds. Read by tools/check_staff_abyss_alignment.sh, finding PA-08-F8 of
+# bd inc-tek.8.8.
+#
+# This file is the half that is the SAME for both alignments. Two sessions
+# have to run, because nothing in wizard mode can change a character's
+# alignment after generation -- the menu (src/Debug.cpp:534-572) has no such
+# option -- so the two halves of the finding need two characters. The two
+# callers differ only in the alignment they pick during generation:
+#
+#   tools/keys/staff-abyss-alignment-good.keys      Neutral Good
+#   tools/keys/staff-abyss-alignment-nongood.keys   Neutral
+#
+# WHY MAGE 5. The staff's own EV_MAGIC_HIT handler calls
+# ItemPrereq(CLEV_VAL + SP_ARCANE + SP_DIVINE,5,20) and returns DONE -- which
+# swallows the event before Magic::Grant runs -- when that fails. ItemPrereq's
+# CLEV_VAL branch (src/Skills.cpp:5681-5692) sums the highest SPELL_ACCESS
+# magnitude per casting type, so a Mage 5 reads 5 and a Mage 4 reads 4. Below
+# five the staff is silent for EVERY alignment, and a session built that way
+# would show the good character empty-handed for the wrong reason. So the
+# check refuses to believe anything unless the sheet says Mage 5.
+#
+# HOW THE LEVELS ARE GAINED. Wizard mode's "Free Advancement" switch lets the
+# character sheet's [G]ain Level work without the experience
+# (src/Managers.cpp:2221). Each mage level opens up to three menus of its own,
+# which cover the sheet, so the level is gained one G at a time and each G is
+# followed by the menus it can raise.
+#
+# THE ORACLE is wizard mode's "Examine Player Data", which prints every stati
+# with its Val and its Mag (src/Debug.cpp:1524-1590). STAFF_SPELLS is the
+# grant the staff has always made and the one the handler withholds, so its
+# presence or absence is the whole measurement. Underscores render as spaces
+# on screen, so the pattern the check greps for is "STAFF SPELLS from SS ITEM".
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d       # character sheet
+# Each G is followed by every menu a mage level can raise, and the list is
+# given TWICE because the menus do not always arrive in this order -- a
+# fourth level brings the attribute prompt as well as the spell prompt, and
+# @while is a single test against whatever is on screen when it is read, so a
+# directive whose menu has not appeared yet does nothing and is spent. Two
+# passes cover any order of two menus. A pass whose menu never appears costs
+# nothing.
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@expect "Mage 5"
+@dump:sheet
+ESC
+
+# --- take a Staff of the Abyss and put it in the weapon hand ---
+#   RIGHT*3      walks the acquisition's glyph row to Staves: ItemGlyphs
+#                (src/Tables.cpp:320-323) puts -AI_STAFF three steps along.
+#   @until       the candidate list has no menu letters, so the cursor is
+#     "Staff of  walked. Three rows show and the MIDDLE one is selected, so
+#     the Abyss" the @until stops one row EARLY, on the pass where the Abyss
+#     DOWN       first appears as the row below Winter. The Abyss is the last
+#   DOWN*3       staff entity in lib/m_items.irh and the list is in file
+#                order, so there is no row after it and the extra DOWNs
+#                saturate harmlessly. The check does not trust any of that:
+#                it reads the staff's name back off the inventory screen.
+#   ENTER 2 ENTER  take it, and answer "Enter Item Level:" with 2, which is
+#                the plus the page states (src/Debug.cpp:604-620).
+#   b SPACE s    the pickup drops the staff into the in-air slot and opens
+#                Inventory Mode. 'b' is the Weapon Hand -- the slot lettering
+#                skips 'd', which is the Drop key -- SPACE swaps the staff
+#                into it (src/Managers.cpp:873), and 's' stows the starting
+#                knife that swap pushed into the air, because the manager
+#                will not close while anything is held there
+#                (src/Managers.cpp:835-848).
+w
+@choose "Item Acquisition"
+RIGHT*3
+@until "Staff of the Abyss" DOWN
+DOWN*3
+ENTER
+2
+ENTER
+b
+SPACE
+s
+@dump:staff-wielded
+ESC
+
+# --- what the wielder now holds ---
+# The stati list is longer than the box, so it is walked in twelve-row steps.
+# Four dumps cover a fifth-level mage's list with room to spare; the check
+# greps all of them together.
+w
+@choose "Examine Player Data"
+@until "Stati (" DOWN
+@dump:stati-1
+DOWN*12
+@dump:stati-2
+DOWN*12
+@dump:stati-3
+DOWN*12
+@dump:stati-4
+ESC

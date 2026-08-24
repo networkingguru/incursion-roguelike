@@ -1,0 +1,18 @@
+# The NON-GOOD half of finding PA-08-F8 of bd inc-tek.8.8: a fifth-level
+# caster who is not good must still get everything the Staff of the Abyss
+# grants. Read by tools/check_staff_abyss_alignment.sh.
+#
+# This half exists to catch an INVERTED gate. A gate written the wrong way
+# round would suppress the staff for everyone who is NOT good, which locks
+# out the very characters the item exists for and hands it to paladins. A
+# check that measured only a good character could not tell that apart from a
+# correct fix, because both leave the good character empty-handed.
+#
+# The character is the neutral orc mage tools/keys/chargen-mage.keys already
+# builds. Neutral is the tighter of the two non-good readings: the page says
+# "in the hands of a non-good caster", not "in the hands of an evil caster",
+# so a gate that let evil through and stopped neutral would still be wrong
+# and this session would still catch it.
+
+@include chargen-mage.keys
+@include staff-abyss-alignment-body.keys
