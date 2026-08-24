@@ -5038,10 +5038,16 @@ AI_RING Effect "Item Preservation" : EA_GRANT
        removed, so it no longer followed from anything, and murder-and-loot
        is exactly what the ring does NOT prevent. It now names the theft the
        ring does stop, which keeps the deterrent theme the ruling asked to
-       keep. The second paragraph is untouched by the ruling's instruction to
-       keep the rest of the page; it still talks of guilds recovering
-       sequestered items, and it is framed as what NPCs believe and as a
-       warning that the ring is of little use to a player character.
+       keep. The second paragraph is gone too: Brian ruled on 2026-08-24 that
+       every promise of death-time preservation leaves the page, and all three
+       of that paragraph's sentences rested on the absent handler. It said the
+       ring preserves a wearer's items "for their (hopeful) resurrection",
+       which is the same retention the handler does not perform; it described
+       guilds with "the means to recover the items sequestered by the ring's
+       magic", a recovery route that does not exist; and it concluded the ring
+       is of little use to a player character, which is false, because the
+       Apportation ward protects whoever wears it. No replacement text was
+       written, so the page ends on the deterrent sentence.
 
        The defect is upstream's: this is module content, not port code. The
        page and the #if 0 are both in the original ruleset, so the same
@@ -5054,13 +5060,7 @@ AI_RING Effect "Item Preservation" : EA_GRANT
       magic that would spirit them away, so that a spell reaching
       into his pack closes on nothing.
       Thus, they serve as powerful deterrants to those who would
-      rob merchants and shop-keepers of the goods they carry.\n
-      __Powerful NPC adventurers also sometimes wear these rings as
-      deterrants against theft-by-murder, and to preserve their
-      items for their (hopeful) resurrection. However, they aren't as
-      useful to player characters, who typically don't belong to 
-      the powerful guilds that have the means to recover the items
-      sequestered by the ring's magic.";
+      rob merchants and shop-keepers of the goods they carry.";
   }
 
   

@@ -46,11 +46,23 @@ SEED=1
 # a word that happens to appear in it, and none contains punctuation: the box
 # hard-wraps and joining its rows can leave a space before a comma or a full
 # stop, so a pattern with punctuation in it could fail for the wrong reason.
+#
+# The last four are the second paragraph, which Brian ruled out on 2026-08-24
+# as a follow-up to the same finding. Every sentence in it rested on the
+# absent handler: it promised the ring preserves a wearer's items "for their
+# (hopeful) resurrection", it described guilds recovering items "sequestered
+# by the ring's magic", and it concluded the ring is of little use to a player
+# character -- which is false, because the Apportation ward works for whoever
+# wears the ring.
 GONE="upon the death of the wearer
 rendered unconscious or paralyzed
 into a specially prepared extradimensional space
 retrieved by the merchant guild or family
-murder merchants and shop-keepers in order to loot the goods"
+murder merchants and shop-keepers in order to loot the goods
+Powerful NPC adventurers also sometimes wear these rings
+deterrants against theft-by-murder
+hopeful) resurrection
+sequestered by the ring's magic"
 
 # Phrases the page must print. The first is the true behaviour -- the ward
 # that Apportation runs into. The second is the deterrent theme, which the
