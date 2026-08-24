@@ -1,0 +1,83 @@
+# Put a Ring of Item Preservation on a character's finger, identify it, and
+# open the item description screen, which is where the game renders the ring's
+# page. Read by tools/check_ring_preservation_page.sh, finding PA-08-F9 of
+# bd inc-tek.8.8.
+#
+# WHY THE DESCRIPTION SCREEN AND NOT THE FILE. This finding changes prose and
+# nothing else, so no behaviour moves and no behavioural check is possible.
+# The honest oracle is therefore the page as the PLAYER reads it, not the page
+# as lib/m_items.irh stores it: grep over the source would prove only that a
+# file changed. Item::Describe prints the entity's Desc through DESC(eID)
+# (src/Help.cpp:3405-3408), and Inventory Mode's 'x' puts that on screen
+# (src/Managers.cpp:751-754), so this script drives the game to the same
+# screen a player would reach and lets the check read the rendered words.
+#
+# WHY THE PACK IS IDENTIFIED. Item::Describe prints the entity's page only
+# when the item isKnown(KN_MAGIC) (src/Help.cpp:3405). Wizard mode's
+# "Identify Whole Pack" calls MakeKnown(0xFF) on everything the character
+# carries (src/Debug.cpp:717-720), a worn ring included.
+#
+# WHY AN ORC BARBARIAN IS ENOUGH. The ring gates itself on nothing at all. It
+# is a plain EA_GRANT that registers one TRAP_EVENT stati, so any character
+# who can wear a ring reads the same page. tools/keys/chargen.keys makes an
+# orc barbarian, and that is all this reading needs.
+#
+#   w y                    enter wizard mode and open its menu.
+#   Item Acquisition       RIGHT*26 walks the glyph row to Rings: ItemGlyphs
+#   RIGHT*26               (src/Tables.cpp:320-349) puts -AI_RING 26 steps
+#                          along. tools/keys/ring-command-level.keys walks the
+#                          same 26 to the same list.
+#   @until "Ring of Item   the candidate list has no menu letters, so the
+#     Preservation" DOWN   cursor is walked. Three rows show and the MIDDLE
+#                          one is selected, so the @until stops one row EARLY,
+#                          on the pass where the wanted row first appears
+#                          below the selected one, so ONE more DOWN is needed
+#   DOWN                   to put the cursor on it. Without that extra DOWN
+#                          the session takes the Ring of Elemental Command
+#                          (Water), which is the row above it -- and that is
+#                          exactly how tools/keys/ring-command-level.keys
+#                          reaches the Water ring. The check does not trust
+#                          any of this: it reads the ring's name back off the
+#                          description box's own title line.
+#   ENTER m SPACE          take it -- a ring carries no plus, so the
+#                          acquisition asks for no item level -- then put the
+#                          cursor on the Left Ring slot and SPACE to wear it
+#                          (src/Managers.cpp:873). The slot was empty, so
+#                          nothing is pushed into the in-air slot and nothing
+#                          needs stowing before the manager will close.
+#   ESC w i m x            leave the manager, identify the pack, reopen the
+#                          manager, put the cursor back on the Left Ring and
+#                          press 'x', which describes what is on it.
+#   DOWN*6 three times     the box shows about forty rows and scrolls one row
+#                          per DOWN (src/TextTerm.cpp:537-540). This page is
+#                          shorter than that, so the first dump already holds
+#                          it whole; the later dumps cost nothing and would
+#                          carry the page if it ever grew past the box.
+
+@include chargen.keys
+
+w
+y
+@choose "Item Acquisition"
+RIGHT*26
+@until "Ring of Item Preservation" DOWN
+DOWN
+ENTER
+m
+SPACE
+@dump:ring-worn
+ESC
+w
+@choose "Identify Whole Pack"
+i
+m
+x
+@dump:desc-1
+DOWN*6
+@dump:desc-2
+DOWN*6
+@dump:desc-3
+DOWN*6
+@dump:desc-4
+ESC
+ESC

@@ -5000,16 +5000,61 @@ AI_RING Effect "Item Preservation" : EA_GRANT
       return NOTHING;
       };
 #endif
+    /* upstream: base-code defect, fix is ours. Tier Observed -- the page
+       below promised that "upon the death of the wearer, or if the wearer
+       is rendered unconscious or paralyzed, they transport any items the
+       wearer carries into a specially prepared extradimensional space", and
+       that "these items can later be retrieved by the merchant guild or
+       family the merchant works for using powerful magical rituals". None of
+       that happens: the whole META(POST(EVICTIM(EV_DEATH))) handler that
+       would have done it is inside the #if 0 above. The item description
+       screen, which is where a player reads this, printed those two claims
+       before this change and does not after it.
+       tools/check_ring_preservation_page.sh, red before and green after.
+       Tracking inc-tek.8.8, finding PA-08-F9. Not sent to rmtew.
+
+       THE RING IS NOT INERT, AND THE HANDLER WAS NOT ENABLED. The finding
+       claimed the ring does nothing. That is wrong, and it is why the fix is
+       to the page rather than to the #if 0. The registration line above --
+       xval: TRAP_EVENT; yval: POST(EVICTIM(EV_DEATH)) -- sits OUTSIDE the
+       #if 0, and two live behaviours read it:
+         * lib/wspells.irh:3518. Apportation, the wizard spell that teleports
+           one item out of a creature's inventory into the caster's hands,
+           refuses against a wearer:
+           EVictim->HasEffStati(TRAP_EVENT,$"Item Preservation") sends it to
+           "The <hObj> flickers briefly." That is a real ward, and it is the
+           sentence this page now carries.
+         * lib/alchemy.irh:740. Dunking the ring in acid makes the acid and
+           the flask "vanish to another plane", which is the ring's
+           identification clue.
+       Enabling the handler is a feature, not a prose fix, and it is tracked
+       as bd inc-tek.28, which also records why the handler as written would
+       be wrong to switch on unchanged.
+
+       WHAT CHANGED, AND WHAT DELIBERATELY DID NOT. The transport clause and
+       the guild-retrieval sentence are gone. One sentence took their place,
+       stating the ward the ring really has. The "Thus" sentence that
+       followed them was re-aimed rather than deleted: its premise had been
+       removed, so it no longer followed from anything, and murder-and-loot
+       is exactly what the ring does NOT prevent. It now names the theft the
+       ring does stop, which keeps the deterrent theme the ruling asked to
+       keep. The second paragraph is untouched by the ruling's instruction to
+       keep the rest of the page; it still talks of guilds recovering
+       sequestered items, and it is framed as what NPCs believe and as a
+       warning that the ring is of little use to a player character.
+
+       The defect is upstream's: this is module content, not port code. The
+       page and the #if 0 are both in the original ruleset, so the same
+       disagreement exists on Win32, with the original typedefs and on the
+       upstream compiler. Nothing here depends on integer width or on the
+       platform. */
     Desc: "These rings are highly valued by merchants, especially
       those who sell valuable magical items. Their enchantment is
-      simple -- upon the death of the wearer, or if the wearer is
-      rendered unconscious or paralyzed, they transport any items 
-      the wearer carries into a specially prepared extradimensional 
-      space. These items can later be retrieved by the merchant guild 
-      or family the merchant works for using powerful magical rituals.
+      simple -- they hold the wearer's possessions fast against any
+      magic that would spirit them away, so that a spell reaching
+      into his pack closes on nothing.
       Thus, they serve as powerful deterrants to those who would
-      murder merchants and shop-keepers in order to loot the goods
-      from their bodies.\n
+      rob merchants and shop-keepers of the goods they carry.\n
       __Powerful NPC adventurers also sometimes wear these rings as
       deterrants against theft-by-murder, and to preserve their
       items for their (hopeful) resurrection. However, they aren't as
