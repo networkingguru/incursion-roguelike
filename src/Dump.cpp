@@ -189,6 +189,13 @@ bool RunSaveDump(const char *path) {
     if (p->Subdual)
         printf("  (Subdual %d)", p->Subdual);
     printf("\n");
+    /* The status line prints cMana()/tMana() and so hides WHY mana is
+       missing. uMana is mana spent, and it regenerates. hMana is mana held,
+       and only rest returns it (src/Player.cpp:2186-2188). A mana potion
+       refills the spent half alone (src/Effects.cpp:2266-2271), so this split
+       is the first thing to read when a potion appears to do nothing. */
+    printf("Mana:      %d / %d  (spent %d, held %d)\n",
+        (int)p->cMana(), (int)p->tMana(), (int)p->uMana, (int)p->hMana);
     printf("Position:  (%d,%d)", p->x, p->y);
     if (m) {
         printf(" on ");
