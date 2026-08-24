@@ -6291,12 +6291,35 @@ and EA_GENERIC
   { On Event EV_MAGIC_HIT {
       if (!e.isActivation)
         return NOTHING;
+
+      /* upstream: refuse before charging, not after. This handler used to
+         spend one of the sword's Plusses and only THEN reach a wish redirect
+         its own author had commented out, so it printed the apology below
+         after taking a payment the sword's own page calls irreversible --
+         "this lost enchantment cannot be restored in any manner". Three
+         activations ground a +3 keen short sword down to +0 and granted
+         nothing. The defect is upstream's and not this port's: it is content
+         in lib/, present in the original ruleset, and it is made entirely of
+         the order of these statements, so the same sword drains itself on
+         Win32, with the original typedefs, on the upstream compiler.
+         Evidence tier: Observed -- tools/check_luckblade_plus.sh reads +3,
+         +2, +1, +0 off the game's own Activate menu on the pre-fix binary.
+         Tracked as bd inc-tek.8.8, finding PA-08-F10. NOT sent upstream. */
+      EActor->IPrint("Wishes aren't implemented yet; sorry.");
+      return DONE;
+
+      /* Everything from here to the end of the handler is the author's
+         original code, kept whole and in order. It is unreachable until a
+         wish effect exists -- there is none anywhere in lib/ -- which is
+         tracked as bd inc-tek.30. Whoever implements wish deletes the two
+         lines above and this comment, and the sword then works as it was
+         written to. Do not repair this code in place: it is not running. */
       if (EItem->GetInherentPlus() <= 0)
         {
           EActor->IPrint("There are no wishes left.");
           return DONE;
         }
-     
+
       /* Consume one Plus permanently. */
       EItem->SetInherentPlus(EItem->GetInherentPlus() - 1);
       

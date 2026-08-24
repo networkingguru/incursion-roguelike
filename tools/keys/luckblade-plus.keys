@@ -1,0 +1,118 @@
+# Put a Luckblade in a character's hands and activate it three times, dumping
+# the item menu before each activation and the message line after it. Read by
+# tools/check_luckblade_plus.sh, finding PA-08-F10 of bd inc-tek.8.8.
+#
+# WHAT IS BEING MEASURED. The sword's magical plus, before and after each
+# activation. The Luckblade charges one Plus for a wish and then prints
+# "Wishes aren't implemented yet; sorry.", so a player paid an irreversible
+# price for nothing. The ruling is that the game must refuse before it
+# charges, which means the plus must be the SAME after three activations as
+# it was before the first one.
+#
+# WHY THE ITEM MENU IS THE ORACLE. Item::xName appends the plus to the item's
+# name whenever the item is known (src/Message.cpp:1300-1308), and it does so
+# for an EF_NAMEONLY entity too -- the flag only chooses the base word, the
+# plus is written after it either way. So the 'a' command's own menu, which
+# the player reads before choosing what to activate, spells the number out:
+# "Luckblade +3". No debug screen is needed, and no arithmetic. When the plus
+# reaches zero the name loses its plus entirely, because xName writes nothing
+# for GetPlus() == 0, so a drained sword reads plainly as "Luckblade".
+#
+# NOTHING IS IDENTIFIED HERE, and it does not need to be. Item::isActivatable
+# returns false for anything not known to be magical (src/Item.cpp:939-941),
+# so an unidentified Luckblade would never appear in the 'a' menu at all and
+# the session would measure nothing. Wizard mode's Item Acquisition hands over
+# an item that is already known -- the run's own inventory screen calls it
+# "keen Luckblade +3 [+3, +3]" the moment it arrives -- unlike "Acquire
+# Unidentified Item", which calls SetKnown(0) first (src/Debug.cpp:657-666).
+# The check reads that name back and reports INCONCLUSIVE if the plus is
+# missing, so a future change that stopped identifying it could not pass here
+# by accident.
+#
+#   w y                    enter wizard mode and open its menu. Later 'w'
+#                          presses need no 'y': the confirmation is asked once
+#                          (src/Player.cpp:773-784).
+#   Item Acquisition       RIGHT*10 walks the glyph row to specific weapons:
+#   RIGHT*10               ItemGlyphs (src/Tables.cpp:320-330) puts -AI_WEAPON
+#                          ten steps along.
+#   @until "Holy Avenger"  the candidate list has no menu letters, so the
+#     DOWN                 cursor is walked. Three rows show and the MIDDLE
+#                          one is selected, so the run stops on the pass where
+#                          the row BELOW the wanted one appears. Holy Avenger
+#                          is the AI_WEAPON entity after Luckblade in
+#                          lib/m_items.irh. The check does not trust that
+#                          ordering: it reads the sword's name back off the
+#                          item menu before believing any number.
+#   ENTER 3 ENTER          take it, and answer "Enter Item Level:" with 3,
+#                          which is the sword's own INITIAL_PLUS and the plus
+#                          its page states (src/Debug.cpp:613-620).
+#   b SPACE n s            the pickup drops the sword into the in-air slot and
+#                          opens Inventory Mode. 'b' is the Weapon Hand -- the
+#                          slot lettering skips 'd', which is the Drop key --
+#                          SPACE swaps the sword into it (src/Managers.cpp:873).
+#                          The Ready Hand is empty, so the manager then asks
+#                          "Wield the keen Luckblade +3 two-handed?" and 'n'
+#                          declines, which is what a short sword is for. 's'
+#                          stows the starting knife that swap pushed into the
+#                          air, because the manager will not close while
+#                          anything is held there (src/Managers.cpp:835-848).
+#   ESC                    leave the manager.
+#   a                      the Activate command. Player::ItemMenu lists every
+#                          activatable item (src/Player.cpp:1399-1401) and
+#                          throws EV_ACTIVATE at the one chosen (:1495, :1531).
+#   @dump:menu-N           the menu itself, with the sword's name and plus on
+#                          it. This is the measurement.
+#   a                      choose the menu's first entry, which activates the
+#                          sword. It is a bare letter and not @choose because
+#                          @choose matches from the start of the entry's text
+#                          (src/Wposix.cpp:882-895) and the game writes the
+#                          sword's damage state in front of its name: the row
+#                          reads "[a] mildly damaged keen Luckblade +3".
+#                          Matching that whole phrase would tie this script to
+#                          a wear level. The letter is safe because the check
+#                          reads the "[a]" row back off every menu dump and
+#                          refuses to report anything unless that row names a
+#                          Luckblade.
+#   @dump:msg-N            the message line, where the refusal is printed.
+#
+# Four menus are dumped for three activations. menu-1 is the sword before any
+# activation and menu-4 is the sword after all three, so the pair brackets the
+# whole experiment; menu-2 and menu-3 show whether the loss is one Plus at a
+# time. The final 'a' is answered with ESC, which leaves the menu without
+# activating anything (src/TextTerm.cpp, MENU_ESC).
+
+@include chargen.keys
+
+w
+y
+@choose "Item Acquisition"
+RIGHT*10
+@until "Holy Avenger" DOWN
+ENTER
+3
+ENTER
+b
+SPACE
+n
+s
+@dump:wielded
+ESC
+
+a
+@dump:menu-1
+a
+@dump:msg-1
+
+a
+@dump:menu-2
+a
+@dump:msg-2
+
+a
+@dump:menu-3
+a
+@dump:msg-3
+
+a
+@dump:menu-4
+ESC
