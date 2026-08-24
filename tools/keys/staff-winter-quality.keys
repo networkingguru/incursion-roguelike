@@ -1,0 +1,91 @@
+# Put a Staff of Winter in a character's hands, identify it, and open the
+# item description screen, which prints the staff's page and the staff's
+# weapon quality one under the other. Read by
+# tools/check_staff_winter_quality.sh, finding PA-08-F6 of bd inc-tek.8.8.
+#
+# WHY THIS ORACLE AND NOT THE ITEM'S NAME. The entity carries EF_HIDEQUAL,
+# and that flag suppresses the quality word in the item's NAME and nowhere
+# else: src/Message.cpp:1241 guards the whole quality loop of Item::xName
+# with it, so the staff is called "Staff +2 of Winter" and never "Staff +2 of
+# numbing". No name-based check could ever see this defect. The description
+# screen is a different code path -- QItem::Describe (src/Help.cpp:3508-3524)
+# walks Qualities[] itself, with no EF_HIDEQUAL test -- so it prints the
+# quality by name and then prints the quality's own paragraph from
+# QualityDescs (src/Tables.cpp:1831-1832). That paragraph names the ability
+# score the quality damages, which is the whole of this finding.
+#
+# WHY THE PACK IS IDENTIFIED. QItem::Describe skips any quality below
+# IQ_DWARVEN that KnownQuality() denies (src/Help.cpp:3509), and Item::
+# Describe prints the entity's page only when the item isKnown(KN_MAGIC)
+# (src/Help.cpp:3405). Wizard mode's "Identify Whole Pack" calls
+# MakeKnown(0xFF) on everything the character carries (src/Debug.cpp:717-720),
+# and QItem::MakeKnown sets KnownQualities to 0xFF whenever KN_MAGIC arrives
+# (inc/Item.h:235-237). Both halves of the contradiction are then on screen
+# together.
+#
+# WHY A BARBARIAN IS ENOUGH. The staff's caster-level-three door is on its
+# EV_MAGIC_HIT handler, which gates the EA_GRANT blocks. The weapon quality
+# is not granted that way: ITEM_QUALITIES is applied when the item is made,
+# so it is on the object itself and the description screen reads it off the
+# object. tools/keys/chargen.keys makes an orc barbarian, and that is all
+# this reading needs.
+#
+#   w y                    enter wizard mode and open its menu.
+#   Item Acquisition       RIGHT*3 walks the glyph row to Staves: ItemGlyphs
+#   RIGHT*3                (src/Tables.cpp:320-323) puts -AI_STAFF three
+#                          steps along.
+#   @until "Staff of       the candidate list has no menu letters, so the
+#     the Abyss" DOWN      cursor is walked. Three rows show and the MIDDLE
+#                          one is selected, so the run stops on the pass
+#                          where the row BELOW the wanted one appears. The
+#                          Abyss is the entity after Winter in
+#                          lib/m_items.irh. The check does not trust that
+#                          ordering: it reads the staff's name back off the
+#                          description box's own title line.
+#   ENTER 2 ENTER          take it, and answer "Enter Item Level:" with 2,
+#                          which is the staff's own INITIAL_PLUS and the plus
+#                          its page states (src/Debug.cpp:604-620).
+#   b SPACE s              the pickup drops the staff into the in-air slot and
+#                          opens Inventory Mode. 'b' is the Weapon Hand --
+#                          the slot lettering skips 'd', which is the Drop
+#                          key -- SPACE swaps the staff into it
+#                          (src/Managers.cpp:873), and 's' stows the starting
+#                          knife that swap pushed into the air, because the
+#                          manager will not close while anything is held
+#                          there (src/Managers.cpp:835-848). A quarterstaff
+#                          is two-handed, so it fills the Ready Hand as well.
+#   ESC i b x              leave the manager, reopen it once the pack is
+#                          identified, put the cursor back on the Weapon Hand
+#                          and press 'x', which describes what is in it
+#                          (src/Managers.cpp:751-754).
+#   DOWN*10                the description is longer than its box. The box
+#                          scrolls one row per DOWN (src/TextTerm.cpp:537-540),
+#                          and the quality paragraph is the last thing in it,
+#                          because QItem::Describe appends the qualities
+#                          after everything Item::Describe wrote.
+
+@include chargen.keys
+
+w
+y
+@choose "Item Acquisition"
+RIGHT*3
+@until "Staff of the Abyss" DOWN
+ENTER
+2
+ENTER
+b
+SPACE
+s
+@dump:staff-wielded
+ESC
+w
+@choose "Identify Whole Pack"
+i
+b
+x
+@dump:desc-top
+DOWN*10
+@dump:desc-bottom
+ESC
+ESC

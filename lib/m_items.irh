@@ -3517,7 +3517,45 @@ AI_STAFF Effect "Winter" : EA_GRANT
           $"Ice Storm" $"Chill Touch"
           $"Wall of Ice" $"Cone of Cold"
           $"Creeping Cold" $"Blight Plants";
-      * ITEM_QUALITIES WQ_NUMBING;
+      /* upstream: base-code defect, fix is ours. Tier Observed -- this line
+         said WQ_NUMBING while the page below calls the staff a "+2
+         quarterstaff of weakening". Weakening damages Strength and numbing
+         damages Dexterity (src/Tables.cpp:1831-1832), so the player was
+         promised one ability score and given another. The item description
+         screen prints both halves at once: before this change it read "A
+         Staff of Winter acts as a +2 quarterstaff of weakening" and, twenty
+         lines lower, "Numbing: A weapon of numbing inflicts 1d6 points of
+         Dexterity ability damage with every successful hit (save DC 10+7 for
+         half)". After it, the same screen reads "Weakening: A weapon of
+         weakening inflicts 1d6 points of Strength ability damage ...".
+         tools/check_staff_winter_quality.sh, red before and green after.
+         Tracking inc-tek.8.8, finding PA-08-F6. Not sent to rmtew.
+
+         THE SCRIPT LOSES HERE, not the page, which is the opposite of how
+         most of this partition has been ruled. WQ_WEAKENING and WQ_NUMBING
+         are adjacent entries in one table (inc/Defines.h:2161-2162 numbers
+         them 37 and 38, with a comment that their order must be kept, and
+         src/Tables.cpp:1831-1832 describes them in that order). This
+         partition has already produced one confirmed slip of exactly that
+         shape: the Ring of Water Elemental Command took MA_FIRE from the line
+         beside MA_WATER. One line up or down in a table read by eye has a
+         precedent here; a page that names a quality in plain words does not.
+         A thematic reading -- numbing suits an ice staff -- was raised and
+         rejected: it is an inference, and the page is evidence.
+
+         The defect is upstream's: this is module content, not port code. The
+         line and the sentence it contradicts are both in the original
+         ruleset, so the same disagreement exists on Win32, with the original
+         typedefs and on the upstream compiler. Nothing here depends on
+         integer width or on the platform.
+
+         EF_HIDEQUAL on this entity does not hide the defect. It suppresses
+         the quality word in the item's NAME only -- src/Message.cpp:1241
+         guards the whole quality loop of Item::xName with it -- so the staff
+         is called "Staff +2 of Winter" and never "Staff +2 of numbing".
+         QItem::Describe (src/Help.cpp:3508-3524) has no such test and prints
+         the quality by name on the description screen regardless. */
+      * ITEM_QUALITIES WQ_WEAKENING;
     Desc: "Carved from a beautiful aquamarine crystal and
       adorned with a valuable gemstone of a piercing, clear
       blue hue at each end, the witch who created these
