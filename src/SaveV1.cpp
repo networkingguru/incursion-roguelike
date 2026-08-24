@@ -615,6 +615,16 @@ void SaveV1_ResolveNames()
       throw ECORRUPT;
   }
 
+/* Drop any pending (unconsumed) resolve state. A load path that parks
+   state in LoadGroupV1 and then fails before its SaveV1_ResolveNames() call
+   runs -- Game::LoadGame's null-map/player return is one such path -- must
+   not leave it behind for the NEXT load attempt to consume against the
+   wrong file. Game::LoadGame calls this at entry. */
+void SaveV1_DiscardPending()
+  {
+    v1ResolveTeardown();
+  }
+
 /* ------------------------------------------------------------------------ */
 /*                            reader primitives                             */
 /* ------------------------------------------------------------------------ */
@@ -1110,11 +1120,14 @@ int16 Registry::LoadGroupV1(Term &t, fileHeader &fh, hObj hGroup)
 
     /* Reject a schema revision this binary does not implement, naming both
        (wire-format section, schema revisions). The "IS1." prefix was checked
-       by the dispatch in LoadGroup. */
-    if (strcmp(fh.Version, SaveSchemaID()))
+       by the dispatch in LoadGroup. Bounded compare and bounded print:
+       fh.Version is char[12] straight off the file with NO NUL guarantee,
+       so plain strcmp/%s on it would read into fh.Name and beyond on a
+       crafted header of 12 non-NUL bytes. */
+    if (strncmp(fh.Version, SaveSchemaID(), sizeof(fh.Version)))
       {
         fprintf(stderr,
-            "incursion: this file is save-schema revision \"%s\"; this "
+            "incursion: this file is save-schema revision \"%.12s\"; this "
             "binary implements \"%s\"\n", fh.Version, SaveSchemaID());
         throw EBADVER;
       }

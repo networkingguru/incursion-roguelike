@@ -234,6 +234,15 @@ def main():
     f = base[:off] + bytes([K_U32]) + base[off + 1:]
     cases.append(("wrong_kind", f, "fail", CORRUPT))
 
+    # --- 8. unterminated_version: fileHeader.Version is char[12] with no
+    # NUL guarantee. Fill all 12 bytes ("IS1." prefix so the v1 dispatch
+    # fires) and expect the bounded revision-reject. The expected substring
+    # includes the closing quote DIRECTLY after the 12th byte: an unbounded
+    # %s would run on into fh.Name's bytes and fail this grep.
+    f = base[:4] + b"IS1.0AAAAAAA" + base[16:]
+    cases.append(("unterminated_version", f, "fail",
+                  'revision "IS1.0AAAAAAA"; this'))
+
     # --- 4/5. name-table mutants, against the first Effect-pool entry.
     eff = [e for e in v1.names if e["pool"] == SP_EFF]
     if not eff:

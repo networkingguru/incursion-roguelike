@@ -1226,6 +1226,14 @@ bool Game::LoadGame(bool backup) {
     strncpy(pattern, backup ? SAVE_BACKUP_PATTERN : SAVE_PATTERN, patternsize);
     pattern[patternsize] = '\0';
 
+    /* A previous load attempt from this menu can have parked v1 resolve
+       state and then failed before SaveV1_ResolveNames() ran (the
+       null-map/player return below is one such path). Left pending, that
+       state would be consumed by THIS attempt's resolution and fail a
+       perfectly good save -- observed as a process abort on 2026-08-24:
+       a corrupt v1 file selected first, a valid v0 save selected second. */
+    SaveV1_DiscardPending();
+
     T1->ChangeDirectory(T1->SaveSubDir());
 
     try {
@@ -1333,8 +1341,19 @@ NoSaved:
     /* Deferred v1 name resolution: every rID slot a v1 load queued is
        resolved here, now that the modules the names refer to are back in
        memory. A v0 load queues nothing, so this is a no-op for it. It runs
-       before any CalcValues/report code touches a resource field. */
-    SaveV1_ResolveNames();
+       before any CalcValues/report code touches a resource field.
+
+       Caught HERE, because this call sits after the catch block above
+       closes and no caller of LoadGame -- StartMenu, either backend's
+       main() -- has a handler: an unresolvable name would otherwise ride
+       the throw to std::terminate and abort the process. Observed doing
+       exactly that on 2026-08-24, driven through the load menu. */
+    try {
+        SaveV1_ResolveNames();
+    } catch (int error_number) {
+        Error("Error reading saved game (%s).", Lookup(FileErrors, error_number));
+        return false;
+    }
     memset(oPlayer(p[0])->MessageQueue, 0, sizeof(String) * 8);
     InitGodArrays();
 
