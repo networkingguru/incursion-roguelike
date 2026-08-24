@@ -1,0 +1,103 @@
+# Fire a Wand of Animal Summoning and let the screen name what arrives.
+# Finding PA-08-F13 of bd inc-tek.8.8. Read by tools/check_wand_animal.sh.
+#
+# THE DEFECT. The wand's data entry passes xval: MA_DRAGON, copied verbatim
+# from the Dragon Summoning wand directly above it in lib/m_items.irh.
+# Magic::Summon copies xval into xe.enConstraint (src/Effects.cpp:1451) and
+# that is the monster-type filter, so the wand summoned from the wrong list.
+#
+# THE ORACLE is the line Magic::Summon prints for every creature that lands,
+# "An <Obj> appears!" (src/Effects.cpp:1493). The check reads the creature's
+# name back off the screen and looks its MTypes up in lib/mon*.irh.
+#
+# The steps, in order:
+#
+#   w y                      enter wizard mode; 'y' answers the one-time
+#                            "enter wizard mode?" question.
+#   Wizard Mode Switches     the wizard switches are OPT_NODEATH (801) through
+#   DOWN*7 SPACE             OPT_FREEZE_MON (811) in order (inc/Defines.h:
+#   DOWN*3 SPACE ESC         4137-4147), so row 8 is Infinite Mana and row 11
+#                            is Freeze Monsters. SPACE toggles and does not
+#                            move the cursor.
+#                            Infinite Mana, because a barbarian's 17 mana pays
+#                            for two shots and the run needs eight.
+#                            Freeze Monsters, so nothing walks up and attacks
+#                            while the wand is fetched, and nothing writes
+#                            over the summon message.
+#   Item Acquisition         RIGHT*4 walks the glyph row to Wands
+#   RIGHT*4                  (ItemGlyphs, src/Tables.cpp:320).
+#   @until "Wand of          the candidate list has no menu letters, so the
+#     Goblinoid Summoning"   cursor is walked. Three rows show and the MIDDLE
+#     DOWN                   one is selected, so the run stops on the pass
+#                            where the row BELOW the wanted one appears.
+#                            Goblinoid Summoning is the entry after Animal
+#                            Summoning in lib/m_items.irh. That is an ordering
+#                            assumption and the check does not trust it: it
+#                            reads the wand's name back off the screen first.
+#   ENTER 5 ENTER            take it at plus 5. "Enter Item Level:" sets the
+#                            inherent plus (src/Debug.cpp:613-622). pval is
+#                            PLUS_2PER1, so the summon gets a CR budget of 10.
+#                            A budget that size lets the generator reach real
+#                            dragons, which is what makes the red side legible.
+#   s ESC                    stow it and close the manager, which refuses to
+#                            close with an item in the air.
+#   b a                      blast, choose the wand. There is no direction to
+#                            give: an EA_SUMMON wand places its creature next
+#                            to the caster and never prompts. An earlier
+#                            version of this script typed a direction after
+#                            'a'; the key became a movement command, the move
+#                            printed its own message, and that message wrote
+#                            over the summon line the check had to read.
+#
+# The wand is fired EIGHT times, and every shot is photographed. It has to be.
+# Firing a wand is a Use Magic check against DC 10 + itemlevel/2
+# (src/Magic.cpp:3838), which is DC 15 for a +5 wand, and an orc barbarian
+# makes about one in two. A single shot would therefore measure nothing half
+# the time. The check reads the shots in order and takes the FIRST one that
+# summoned anything, so eight shots leave about one run in 250 with no
+# reading at all. The wand carries 31 charges and cannot run dry first.
+
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*7
+SPACE
+DOWN*3
+SPACE
+ESC
+w
+@choose "Item Acquisition"
+RIGHT*4
+@until "Wand of Goblinoid Summoning" DOWN
+ENTER
+5
+ENTER
+@dump:wand-in-hand
+s
+ESC
+b
+a
+@dump:fired1
+b
+a
+@dump:fired2
+b
+a
+@dump:fired3
+b
+a
+@dump:fired4
+b
+a
+@dump:fired5
+b
+a
+@dump:fired6
+b
+a
+@dump:fired7
+b
+a
+@dump:fired8
