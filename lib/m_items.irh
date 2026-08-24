@@ -7872,6 +7872,17 @@ and EA_GRANT
   { xval: SKILL_BONUS; yval: SK_SEARCH; pval: 5; }
 and EA_GRANT
   { xval: SEE_INVIS; }
+/* upstream: the Desc above promises "60 feet of Infravison" and no grant block
+   ever delivered it, so the sentence was false for every wearer. The defect is
+   upstream's, not the port's: it is an omitted grant in a data file that the
+   resource compiler reads identically on Win32, with the original typedefs and
+   on the upstream compiler, so no platform behaves differently. +6 is the
+   file's own idiom for 60 feet -- "Eyes of the Night" uses the same pval and
+   says so in its own Desc. Evidence tier: Observed. An orc reads 60 ft worn and
+   unworn alike before this block and 60/120/60 after it
+   (tools/check_robe_eyes.sh). Tracked as inc-tek.8.8. NOT sent upstream. */
+and EA_GRANT
+  { xval: EXTRA_ABILITY; yval: CA_INFRAVISION; pval: +6; }
 and EA_GRANT
   { xval: EXTRA_FEAT; yval: FT_IMPROVED_INITIATIVE; }
 and EA_GRANT

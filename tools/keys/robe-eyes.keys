@@ -1,0 +1,84 @@
+# Does the Robe of Eyes grant the infravision its own page promises? Read by
+# tools/check_robe_eyes.sh, bead inc-tek.8.8, finding PA-08-F12.
+#
+# The robe's Desc says it "grants the wearer 60 feet of Infravison"
+# (lib/m_items.irh, entity AI_WONDER Effect "Robe of Eyes"). The entity's grant
+# blocks gave Spot, Search, See Invisible, Improved Initiative and a gaze-attack
+# handler, and no infravision at all.
+#
+# The oracle is the character dump, not a screen. [W]rite Dump on the character
+# sheet calls TextTerm::DumpCharacter (src/Sheet.cpp), which writes the whole
+# sheet to logs/<name>.txt. The "Special Abilities" block of that file prints
+# "Infravision (%d ft)" from src/Sheet.cpp:538, and the number is
+# Creature::AbilityLevel(CA_INFRAVISION) * 10. That function ADDS every
+# EXTRA_ABILITY stati to the racial level (src/Creature.cpp:2983-2991), so a
+# worn robe must raise the number rather than replace it.
+#
+# The character is the standard orc barbarian of chargen.keys. An orc already
+# has 60 feet of its own (lib/races.irh, ABILITY(CA_INFRAVISION,6)), so the
+# reading is 60 ft without the robe and must be 120 ft with it. A race with no
+# infravision would read 0 and print no line at all, which is a weaker oracle:
+# a missing line cannot tell "no grant" apart from "no section".
+#
+#   d W b e f o r e ENTER    dump the sheet before the robe exists. This is the
+#                            baseline the two later dumps are measured against.
+#   w y                      enter wizard mode and open its menu.
+#   Item Acquisition         RIGHT*39 walks the glyph row to Wonderous Items:
+#   RIGHT*39                 ItemGlyphs (src/Tables.cpp:320-365) puts
+#                            -AI_WONDER 39 steps along, and the header line
+#                            names the category.
+#   @until "Robe of Eyes"    the candidate list has no menu letters, so the
+#     DOWN                   cursor is walked. Three rows show and the MIDDLE
+#                            one is selected, so the run stops on the pass where
+#                            the wanted row first appears BELOW the cursor. One
+#                            more DOWN selects it. The check does not trust that
+#                            reasoning: it reads the robe's name back off the
+#                            equipment screen.
+#   i i SPACE d              open the inventory manager, select the Clothing
+#                            slot, swap the robe into it, and drop the loincloth
+#                            the swap lifted into the air. The manager will not
+#                            close with anything in the air.
+#   d W w o r n ENTER        the second dump. This is the reading under test:
+#                            it must say 120 ft, not 60 ft.
+#   i i SPACE d              and the robe back off, onto the floor.
+#   d W o f f ENTER          the third dump. It must be back to 60 ft, because a
+#                            bonus that outlives the item is worse than one that
+#                            never arrives.
+
+@include chargen.keys
+
+d
+@expect "Race   Orc"
+W
+b e f o r e ENTER
+ESC
+
+w
+y
+@choose "Item Acquisition"
+RIGHT*39
+@until "Robe of Eyes" DOWN
+DOWN
+ENTER
+
+i
+i
+SPACE
+d
+@dump:robe-worn
+ESC
+d
+W
+w o r n ENTER
+ESC
+
+i
+i
+SPACE
+d
+@dump:robe-removed
+ESC
+d
+W
+o f f ENTER
+ESC
