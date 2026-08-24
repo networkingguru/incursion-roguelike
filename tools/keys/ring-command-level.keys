@@ -1,0 +1,106 @@
+# Wear all four Rings of Elemental Command, two at a time, and let wizard
+# mode print the magnitude of the command ability each one grants. Read by
+# tools/check_ring_command_level.sh, finding PA-08-F4 of bd inc-tek.8.8.
+#
+# WHY THIS ORACLE. The number a ring grants is an effective priest turning
+# level, which src/Skills.cpp:4448-4562 adds to a d20 roll and to several
+# other bonuses before it divides by the target's resistance. Two extra points
+# move a probability and cross no visible threshold, so no amount of watching
+# the game command creatures would measure it. Wizard mode's "Examine Player
+# Data" prints every stati with its Val and its Mag (src/Debug.cpp:1528-1584),
+# and that Mag IS the number this finding changes. Val names the element:
+# MA_WATER 92, MA_AIR 93, MA_EARTH 94, MA_FIRE 95 (inc/Defines.h:1610-1613).
+#
+# The character sheet cannot do this job. Its CA_COMMAND case
+# (src/Sheet.cpp:492-499) prints the element and no number at all, unlike the
+# CA_TURNING case beside it.
+#
+# WHY TWO PASSES. A creature has two ring slots, so only two of the four rings
+# can be worn at once. The script wears Water and Fire, dumps the stati, then
+# swaps Air and Earth in over the top and dumps again. All four rings are
+# therefore measured in one session.
+#
+#   w y                      enter wizard mode and open its menu. The second
+#                            and later 'w' need no 'y': the confirmation is
+#                            asked once, when WizardMode goes true
+#                            (src/Player.cpp:773-784).
+#   Item Acquisition         RIGHT*26 walks the glyph row to Rings: ItemGlyphs
+#   RIGHT*26                 (src/Tables.cpp:320) puts -AI_RING 26 steps along.
+#   @until "<name>" DOWN     the candidate list has no menu letters, so the
+#                            cursor is walked. Three rows show and the MIDDLE
+#                            one is selected, so the run stops on the pass
+#                            where the row BELOW the wanted one appears. The
+#                            four rings sit in file order in lib/m_items.irh
+#                            (Air, Earth, Fire, Water) and Item Preservation
+#                            follows Water. The check does not trust that
+#                            ordering: it reads every ring's name back off the
+#                            inventory screen before it believes any number.
+#   ENTER m|n SPACE          take it, move the cursor to a ring slot -- 'm' is
+#                            Left Ring and 'n' is Right Ring -- and SPACE to
+#                            put it on (src/Managers.cpp:873).
+#   s                        stow whatever the swap left in the air. A ring put
+#                            on over an occupied slot pushes the old ring into
+#                            the in-air slot, and the manager refuses to close
+#                            while anything is held there. 's' puts it in the
+#                            pack (src/Managers.cpp:835-848), which also takes
+#                            its command ability away again.
+#   ESC w                    leave the manager and reopen the wizard menu.
+#   @until "COMMAND ABILITY" the debug dump is far longer than one screen and
+#     DOWN                   scrolls with DOWN, not PGDN (src/Debug.cpp:583-596).
+#   DOWN*6                   the first COMMAND ABILITY arrives on the bottom
+#                            row. Six more rows bring the second one, and the
+#                            ring name printed under each, into view.
+
+@include chargen.keys
+
+# --- pass one: Water on the left hand, Fire on the right ---
+w
+y
+@choose "Item Acquisition"
+RIGHT*26
+@until "Ring of Item Preservation" DOWN
+ENTER
+m
+SPACE
+ESC
+w
+@choose "Item Acquisition"
+RIGHT*26
+@until "Ring of Elemental Command (Water)" DOWN
+ENTER
+n
+SPACE
+@dump:rings-on
+ESC
+w
+@choose "Examine Player Data"
+@until "COMMAND ABILITY" DOWN
+DOWN*6
+@dump:stati
+ESC
+
+# --- pass two: Air replaces Water, Earth replaces Fire ---
+w
+@choose "Item Acquisition"
+RIGHT*26
+@until "Ring of Elemental Command (Earth)" DOWN
+ENTER
+m
+SPACE
+s
+ESC
+w
+@choose "Item Acquisition"
+RIGHT*26
+@until "Ring of Elemental Command (Fire)" DOWN
+ENTER
+n
+SPACE
+s
+@dump:rings-on2
+ESC
+w
+@choose "Examine Player Data"
+@until "COMMAND ABILITY" DOWN
+DOWN*6
+@dump:stati2

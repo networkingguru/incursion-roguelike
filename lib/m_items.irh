@@ -4494,8 +4494,23 @@ AI_RING Effect "Elemental Command (Air)" : EA_GRANT
       if (e.isWield && e.efNum == 0)
         {
           clev = EVictim->GetStatiMag(COMMAND_ABILITY,MA_AIR);
+          /* upstream: base-code defect, not a port artefact. The grant and the
+             page above it are shared game data, so the same disagreement
+             exists on Win32, with the original typedefs, on the upstream
+             compiler. The page (:4459) promises command "as an Air priest
+             of 12th level, or augments their existing ability by +6 --
+             whichever is superior". The grant said max(10,clev+5), which is
+             10th level and +5, and all four rings said it against four pages
+             that all promise 12 and +6. Neither pair of numbers has a
+             published rule behind it: the 3.5 SRD ring grants no command
+             ability at all, and the 1e ring's "12th level" and "+6" belong to
+             its spell caster level and to flat weapon damage. The numbers are
+             therefore the author's own, and the page is the copy of them the
+             player reads. Tier Observed -- see
+             tools/check_ring_command_level.sh. Tracking bd inc-tek.8.8,
+             finding PA-08-F4. Not sent to rmtew. */
           EVictim->GainPermStati(COMMAND_ABILITY,EItem,SS_ITEM, MA_AIR,
-            max(10,clev+5), $"Elemental Command (Air)", e.vCasterLev);
+            max(12,clev+6), $"Elemental Command (Air)", e.vCasterLev);
         }
       return NOTHING;
       };
@@ -4567,8 +4582,11 @@ AI_RING Effect "Elemental Command (Earth)" : EA_GRANT
       if (e.isWield && e.efNum == 0)
         {
           clev = EVictim->GetStatiMag(COMMAND_ABILITY,MA_EARTH);
+          /* upstream: the same shortfall as the mark on the air ring
+             (:4513). This page (:4547) promises 12th level and +6
+             too. bd inc-tek.8.8, PA-08-F4, Observed, not sent. */
           EVictim->GainPermStati(COMMAND_ABILITY,EItem,SS_ITEM, MA_EARTH,
-            max(10,clev+5), $"Elemental Command (Earth)", e.vCasterLev);
+            max(12,clev+6), $"Elemental Command (Earth)", e.vCasterLev);
         }
       return NOTHING;
       };
@@ -4641,8 +4659,11 @@ AI_RING Effect "Elemental Command (Fire)" : EA_GRANT
       if (e.isWield && e.efNum == 0)
         {
           clev = EVictim->GetStatiMag(COMMAND_ABILITY,MA_FIRE);
+          /* upstream: the same shortfall as the mark on the air ring
+             (:4513). This page (:4624) promises 12th level and +6
+             too. bd inc-tek.8.8, PA-08-F4, Observed, not sent. */
           EVictim->GainPermStati(COMMAND_ABILITY,EItem,SS_ITEM, MA_FIRE,
-            max(10,clev+5), $"Elemental Command (Fire)", e.vCasterLev);
+            max(12,clev+6), $"Elemental Command (Fire)", e.vCasterLev);
         }
       return NOTHING;
       };
@@ -4746,8 +4767,11 @@ AI_RING Effect "Elemental Command (Water)" : EA_GRANT
              not a design. Tier Observed -- see
              tools/check_ring_water_command.sh. Tracking bd inc-tek.8.8,
              finding PA-08-F3. Not sent to rmtew. */
+          /* upstream: the same shortfall as the mark on the air ring
+             (:4513). This page (:4720) promises 12th level and +6
+             too. bd inc-tek.8.8, PA-08-F4, Observed, not sent. */
           EVictim->GainPermStati(COMMAND_ABILITY,EItem,SS_ITEM, MA_WATER,
-            max(10,clev+5), $"Elemental Command (Water)", e.vCasterLev);
+            max(12,clev+6), $"Elemental Command (Water)", e.vCasterLev);
         }
       return NOTHING;
       };
