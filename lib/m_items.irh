@@ -3536,7 +3536,52 @@ AI_STAFF Effect "Winter" : EA_GRANT
       __These staves are Lawful Evil in temperment, and
       using them is an evil act.";
   }
-  
+/* upstream: base-code defect, fix is ours. Tier Observed -- the three blocks
+   below did not exist, so the staff's own page described three powers no
+   script ever gave. A Mage 3 built by tools/keys/staff-winter-grants.keys,
+   with the staff in the weapon hand, held twelve stati before this change and
+   fifteen after. Wizard mode's "Examine Player Data" printed nothing at all
+   for Charisma, Intimidate or Appraise on the pre-fix module, and printed
+   "ADJUST from SS ITEM (Val:A CHA Mag:2)", "SKILL BONUS from SS ITEM
+   (Val:SK INTIMIDATE Mag:4)" and "SKILL BONUS from SS ITEM (Val:SK APPRAISE
+   Mag:-6)" on the rebuilt one. The character sheet moved with it: Charisma
+   14 -> 16 and Intimidate "+4 (0 ranks, +2 STR, +2 train)" ->
+   "+8 (0 ranks, +2 STR, +2 train, +4 magic)".
+   tools/check_staff_winter_grants.sh, red before and green after.
+   Tracking inc-tek.8.8, finding PA-08-F5. Not sent to rmtew.
+
+   The page (the Desc above) promises the wielder "a +2 enhancement bonus to
+   Charisma and a +4 enhancement bonus to Intimidate", and "a -6 penalty to
+   the Appraise skill". The entity held exactly one effect block, the
+   STAFF_SPELLS grant, and closed without an "and EA_GRANT" continuation. The
+   page is what the player reads, so the page wins and the script now says
+   what the page says.
+
+   The numbers are literal and not scaled on the item's plus, unlike most of
+   this file's skill boosters, which use PLUS_2PER1. The page states flat
+   figures; a scaled grant would make the page true only at the staff's
+   INITIAL_PLUS of +2 and false at every plus above it.
+
+   The defect is upstream's: this is module content, not port code. The
+   sentences and the missing blocks are in the original ruleset, and the same
+   disagreement between page and script exists on Win32, with the original
+   typedefs and on the upstream compiler. Nothing here depends on integer
+   width or on the platform.
+
+   These three sit behind the same caster-level-three door as the spells: the
+   EV_MAGIC_HIT handler above belongs to the whole effect resource, not to one
+   block of it (src/Event.cpp:248-259 dispatches once per ReThrow by e.eID),
+   and it returns DONE -- which swallows the event before Magic::Grant runs --
+   whenever ItemPrereq fails. That matches the page, which gives the spells to
+   "anyone with a caster level of three or higher who grasps it" and then
+   calls the same person "such a worthy wielder". */
+and EA_GRANT
+  { xval: ADJUST; yval: A_CHA; pval: 2; }
+and EA_GRANT
+  { xval: SKILL_BONUS; yval: SK_INTIMIDATE; pval: 4; }
+and EA_GRANT
+  { xval: SKILL_BONUS; yval: SK_APPRAISE; pval: -6; }
+
 AI_STAFF Effect "the Abyss" : EA_GRANT
   { SC_THA; SC_ENC; Level: 12; xval: STAFF_SPELLS;  
     Flags: EF_EVIL, EF_3PERDAY, EF_ACTIVATE2, EF_DLONG, EF_HIDEQUAL;

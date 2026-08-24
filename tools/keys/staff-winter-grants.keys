@@ -1,0 +1,124 @@
+# Does the Staff of Winter hand over the three powers its own page promises
+# besides the spells? Read by tools/check_staff_winter_grants.sh, finding
+# PA-08-F5 of bd inc-tek.8.8.
+#
+# WHY A MAGE 3. The entity gates itself. Its EV_MAGIC_HIT handler
+# (lib/m_items.irh) calls ItemPrereq(CLEV_VAL + 255,3,20) and returns DONE --
+# which swallows the event -- when that fails, and the handler belongs to the
+# whole effect resource, not to one segment of it (src/Event.cpp:248-259
+# dispatches by e.eID once per ReThrow(EV_MAGIC_HIT)). So every EA_GRANT
+# block in the entity is behind the same caster-level-three door, the new
+# ones included. ItemPrereq's CLEV_VAL branch (src/Skills.cpp:5681-5692) sums
+# the highest SPELL_ACCESS magnitude per casting type, so a Mage 3 reads 3
+# and a Mage 1 reads 1. A barbarian reads 0 and would measure nothing at all.
+#
+# HOW THE LEVELS ARE GAINED. Wizard mode's "Free Advancement" switch lets the
+# character sheet's [G]ain Level work without the experience
+# (src/Managers.cpp:2221). Each mage level opens up to two menus of its own,
+# which cover the sheet, so the level is gained one G at a time and each G is
+# followed by the menus it can raise -- exactly as
+# tools/keys/prestige-loremaster.keys does it.
+#
+# THE ORACLE is read twice, before the staff and after it:
+#   * the character sheet's Skill Ratings block, which prints the item's
+#     contribution as ", +N magic" (src/Sheet.cpp:947);
+#   * wizard mode's "Examine Player Data", which prints every stati with its
+#     Val and Mag (src/Debug.cpp:1524-1590). SKILL_BONUS prints its skill by
+#     name and ADJUST prints its attribute by name.
+# The stati dump also carries STAFF_SPELLS, which is the proof that the
+# caster-level gate opened at all. Without that line no reading below it
+# means anything, so the check treats its absence as INCONCLUSIVE.
+
+@include chargen-mage.keys
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d       # character sheet
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+G
+@while "Learn which spell" a
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@expect "Mage 3"
+@dump:mage3
+ESC
+
+# --- the reading before the staff ---
+@until "Skill Ratings" d
+@dump:sheet-before
+ESC
+w
+@choose "Examine Player Data"
+@until "Stati (" DOWN
+@dump:stati-before-1
+DOWN*12
+@dump:stati-before-2
+DOWN*12
+@dump:stati-before-3
+DOWN*12
+@dump:stati-before-4
+ESC
+
+# --- take a Staff of Winter and put it in the weapon hand ---
+#   RIGHT*3      walks the acquisition's glyph row to Staves: ItemGlyphs
+#                (src/Tables.cpp:320-323) puts -AI_STAFF three steps along.
+#   @until       the candidate list has no menu letters, so the cursor is
+#     "Staff of  walked. Three rows show and the MIDDLE one is selected, so
+#     the Abyss" the run stops on the pass where the row BELOW the wanted one
+#     DOWN       appears. The Abyss is the entity after Winter in
+#                lib/m_items.irh. The check does not trust that ordering: it
+#                reads the staff's name back off the inventory screen.
+#   2 ENTER      the acquisition asks for the item level, which is the plus
+#                (src/Debug.cpp:619). +2 is the staff's own INITIAL_PLUS and
+#                the plus its page states.
+#   0 2          the acquisition drops the staff into the backpack, not into
+#                a hand, so it is taken back out by its two-digit container
+#                number (src/Managers.cpp:1005-1033), which lifts it into the
+#                in-air slot. 02 is its row; the check does not trust that
+#                either -- it reads the name off the Weapon Hand line.
+#   b SPACE      'b' is the Weapon Hand slot and SPACE swaps the staff into
+#                it. The slot letters skip 'd', which is the Drop key, so the
+#                lettering is not simply SlotNames counted from 'a'.
+#   s            the mage's starting knife is pushed out by that swap, and
+#                the manager will not close while anything is held in the
+#                air. 's' stows it in the pack (src/Managers.cpp:835-848).
+w
+@choose "Item Acquisition"
+RIGHT*3
+@until "Staff of the Abyss" DOWN
+ENTER
+2
+ENTER
+0
+2
+@dump:staff-selected
+b
+SPACE
+s
+@dump:staff-wielded
+ESC
+
+# --- the same reading with the staff in hand ---
+@until "Skill Ratings" d
+@dump:sheet-after
+ESC
+w
+@choose "Examine Player Data"
+@until "Stati (" DOWN
+@dump:stati-after-1
+DOWN*12
+@dump:stati-after-2
+DOWN*12
+@dump:stati-after-3
+DOWN*12
+@dump:stati-after-4
+ESC
