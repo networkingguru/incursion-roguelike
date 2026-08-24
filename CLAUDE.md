@@ -76,6 +76,10 @@ has none of your context:
 the work is findable if the original maintainer ever returns. Sending still goes
 through the gate, and still needs Brian to read the literal text.
 
+The row goes under the exact heading `### Base-code bugs fixed locally`, never
+under `### Not sent`, which is a three-column table that drops the tracking id;
+`tools/check_ledger_rows.sh` is the check for that.
+
 Verify with `tools/check_upstream_marks.sh`. Find them all with
 `grep -rn "upstream:" src/ inc/`.
 

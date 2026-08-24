@@ -33,10 +33,38 @@
 #      tier sit on the NEXT line is still missed.
 #
 #   3. TABLE -> MARK, the reverse direction. For every fix site the table names
-#      -- the last parenthesised list of backticked src/ or inc/ paths in a
-#      row's Fix cell -- the named file must carry a marker mentioning that
-#      row's tracking id. A table row that names a file with no mark in it
+#      -- the backticked src/ or inc/ paths in the LAST parenthesised list in a
+#      row's Fix cell -- at least one named file must carry a marker mentioning
+#      that row's tracking id. A table row that names a file with no mark in it
 #      passes every other check in this script.
+#
+#      Two details, both settled on 2026-08-24 (inc-6s5 follow-up) when twenty-
+#      six rows were moved out of "Not sent" and this pass saw them for the
+#      first time:
+#
+#        - AT LEAST ONE, not every one. A row may name several files because the
+#          fix touched several -- inc-izuu names inc/Defines.h, inc/ConstNam.h,
+#          lib/m_items.irh and src/Item.cpp -- and the house convention is ONE
+#          mark, at the primary site. Demanding a mark in the header that gained
+#          a constant asks for a marker the rule never wanted. A row naming a
+#          single wrong file still fails, which is the case this pass exists for.
+#
+#        - THE LAST LIST, even when it names no src/ or inc/ path. A fix that
+#          lives in lib/ ends its Fix cell with "(`lib/prestige.irh`)", and the
+#          src/ paths earlier in the cell are citations, not fix sites. Taking
+#          the last list that happens to hold a src/ path picked up the citation
+#          and demanded a marker there. Two rows were affected, inc-tek.24 and
+#          inc-tek.8.8, and in both the "fix site" it found was evidence the row
+#          argued from. This script cannot read lib/, so such a row simply has
+#          no fix site this pass can check -- see the note on lib/ below.
+#
+#      WHY lib/ IS NOT SCANNED. Widening the greps to lib/ was measured on
+#      2026-08-24: 35 markers there, and one of them, lib/m_items.irh:7092,
+#      fails the four-part test because it is a cross-reference in prose ("see
+#      the upstream: mark on that handler") whose id sits on the line ABOVE it.
+#      Widening would turn this script red and stop the nightly, so it was not
+#      done. tools/check_ledger_rows.sh covers lib/ instead: it requires every
+#      marker in src/, inc/ AND lib/ to reach the ledger table.
 #
 #      This pass FAILS. It used to warn, because two rows were unmatched and
 #      neither was this script's to settle: whether the right answer is a new
@@ -108,8 +136,10 @@ classify_line() {
     printf 'none\n'
 }
 
-# Emit "id<TAB>path" for every fix site named in the "Base-code bugs fixed
-# locally" table of $1.
+# Emit "id<TAB>path path ..." -- ONE LINE PER ROW -- for every fix site named in
+# the "Base-code bugs fixed locally" table of $1. The paths stay on one line so
+# the caller can ask "did ANY of this row's files carry the mark?" rather than
+# demanding one in each.
 #
 # A row's Fix cell cites many backticked paths that are NOT the fix site:
 # sibling loops the fix was compared against, the ASSERT it relies on, the
@@ -118,6 +148,10 @@ classify_line() {
 # or "(`src/lz.c`, `src/rle.c`)". A cited path carrying a line number
 # ("`inc/Defines.h:73`") is a reference, not a fix site, so the extraction
 # requires the closing backtick straight after the extension.
+#
+# The LAST list wins outright. If it names only lib/ files, this row has no fix
+# site this script can check and emits nothing -- it does NOT fall back to an
+# earlier list, because that list is the row's evidence, not its fix.
 table_fix_sites() {
     local reg=$1 in_table=0 row id body fixcell groups g ps best p
     while IFS= read -r row; do
@@ -148,14 +182,13 @@ table_fix_sites() {
             ps=$(printf '%s\n' "$g" |
                  grep -oE "${BT}(src|inc)/[A-Za-z0-9_]+\.(cpp|c|h)${BT}" |
                  tr -d "$BT")
-            [ -n "$ps" ] && best=$ps
+            # The last list wins whatever it holds, so a lib/-only list clears
+            # the src/ paths an earlier, citing list left behind.
+            best=$ps
         done <<< "$groups"
 
         [ -n "$best" ] || continue
-        while IFS= read -r p; do
-            [ -n "$p" ] || continue
-            printf '%s\t%s\n' "$id" "$p"
-        done <<< "$best"
+        printf '%s\t%s\n' "$id" "$(printf '%s\n' "$best" | tr '\n' ' ' | sed 's/ *$//')"
     done < "$reg"
 }
 
@@ -251,18 +284,25 @@ run_checks() {
     done <<< "$MARKS"
 
     # --- pass 3: TABLE -> MARK ----------------------------------------------
-    local tid tpath
-    while IFS=$'\t' read -r tid tpath; do
+    local tid tpaths tp present matched
+    while IFS=$'\t' read -r tid tpaths; do
         [ -n "$tid" ] || continue
-        if [ ! -f "$tpath" ]; then
-            echo "FAIL: $REGISTRY names $tpath as a fix site for $tid, and no such file exists"
-            FAIL=1
-            continue
-        fi
-        if ! printf '%s' "$MARKED" | grep -qxF "$tpath	$tid"; then
-            echo "WARN: $REGISTRY names $tpath as a fix site for $tid, but $tpath carries"
-            echo "      no upstream: marker mentioning $tid. Either the fix site needs a"
-            echo "      properly reasoned marker, or the table row names the wrong file."
+        present=""
+        matched=0
+        for tp in $tpaths; do
+            if [ ! -f "$tp" ]; then
+                echo "FAIL: $REGISTRY names $tp as a fix site for $tid, and no such file exists"
+                FAIL=1
+                continue
+            fi
+            present="$present $tp"
+            printf '%s' "$MARKED" | grep -qxF "$tp	$tid" && matched=1
+        done
+        [ -n "$present" ] || continue
+        if [ "$matched" -eq 0 ]; then
+            echo "WARN: $REGISTRY names${present} as the fix site(s) for $tid, and none of"
+            echo "      them carries an upstream: marker mentioning $tid. Either the fix site"
+            echo "      needs a properly reasoned marker, or the table row names the wrong file."
             echo "      Deciding which is a provenance judgement -- see docs/REPORTING-GATE.md."
             UNMATCHED=$((UNMATCHED + 1))
         fi
@@ -342,18 +382,20 @@ selftest() {
         printf '| A defect compared against `src/Other.cpp:12` and `src/Sibling.cpp`, fixed in (`src/Real.cpp`) | **Traced** | no | inc-aaa |\n'
         printf '| Two files this time, guarded at `Map::GetAt` (`src/One.cpp`, `inc/Two.h`) | **Observed** | no | inc-bbb |\n'
         printf '| A reference with a line number (`inc/Defines.h:73`) only logs; fixed instead (`src/Third.cpp`) | **Traced** -- ran (`tools/harness.sh`) | no | inc-ccc |\n'
+        printf '| A lib fix argued from (`src/Fight.cpp`) and fixed in (`lib/prestige.irh`) | **Traced** | no | inc-eee |\n'
         printf '\n### Something else\n'
         printf '| Not a fix row (`src/NotAFixSite.cpp`) | x | x | inc-ddd |\n'
     } > "$dir/table.md"
 
     local sites expect
     sites=$(table_fix_sites "$dir/table.md" | sort | tr '\t' ' ')
+    # One line per ROW, not per path. inc-eee emits nothing: its last list names
+    # only lib/, so the src/Fight.cpp it argues from is not taken as a fix site.
     expect='inc-aaa src/Real.cpp
-inc-bbb inc/Two.h
-inc-bbb src/One.cpp
+inc-bbb src/One.cpp inc/Two.h
 inc-ccc src/Third.cpp'
     if [ "$sites" = "$expect" ]; then
-        printf 'selftest ok    %-34s -> 4 sites, no references, no rows past the table\n' \
+        printf 'selftest ok    %-34s -> 3 rows, no references, no lib-only row, none past the table\n' \
             "table fix-site extraction"
     else
         printf 'selftest FAIL  %-34s\n  wanted: %s\n  got:    %s\n' \
@@ -382,14 +424,19 @@ inc-ccc src/Third.cpp'
         printf '| A row whose fix site carries no marker (`src/MapAudit.cpp`) | **Traced** | no | inc-aaa |\n'
         printf '| A row whose fix site does carry one (`src/Target.cpp`) | **Observed** | no | inc-upw.13 |\n'
         printf '| A row naming a file that is not there (`src/NoSuchFile.cpp`) | **Traced** | no | inc-bbb |\n'
+        printf '| A row naming two files, one marked (`src/MapAudit.cpp`, `src/Registry.cpp`) | **Traced** | no | inc-zmk |\n'
     } > "$dir/pass3.md"
 
     local p3
     p3=$( REGISTRY="$dir/pass3.md" run_checks 2>&1 )
-    if printf '%s\n' "$p3" | grep -q 'WARN: .* names src/MapAudit.cpp as a fix site for inc-aaa' &&
+    # The fourth row proves "at least one" is really at least one: src/MapAudit.cpp
+    # carries nothing and src/Registry.cpp carries an inc-zmk marker, so the row
+    # must be silent even though half of it is unmarked.
+    if printf '%s\n' "$p3" | grep -q 'WARN: .* names src/MapAudit.cpp as the fix site(s) for inc-aaa' &&
        printf '%s\n' "$p3" | grep -q 'FAIL: .* names src/NoSuchFile.cpp .* no such file exists' &&
-       ! printf '%s\n' "$p3" | grep -q 'names src/Target.cpp'; then
-        printf 'selftest ok    %-34s -> unmatched row named, matched row silent\n' \
+       ! printf '%s\n' "$p3" | grep -q 'for inc-upw.13' &&
+       ! printf '%s\n' "$p3" | grep -q 'for inc-zmk'; then
+        printf 'selftest ok    %-34s -> unmatched row named, matched rows silent\n' \
             "table row without its marker"
     else
         printf 'selftest FAIL  %-34s -> pass 3 did not separate the two rows\n' \
