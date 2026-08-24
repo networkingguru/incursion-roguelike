@@ -11,21 +11,29 @@
 #
 #   2  Every deployment re-armed the COUNTER that makes the next springblade
 #      blow treat the foe as off-guard (Item "springblade", PRE(EV_HIT)).
-#      Nothing tied that to the opening of a fight, so a wielder who snapped
-#      the blades out in the middle of a melee bought the same free off-guard
-#      strike -- sneak attack damage, for a rogue -- that the page sells as the
-#      reward for coming to the fight ready.
+#      Nothing tied that to a fight at all, so the free strike was payable
+#      again and again inside one melee -- sneak attack damage, for a rogue,
+#      before every single blow.
 #
-# WHAT "ONCE PER ENGAGEMENT" IS, in the engine's own terms. There is no
-# engagement object to read, so the fix reads the thing the engine already
-# keeps: Creature::isFlatFooted(), which is not the D&D condition but a
-# per-creature out-of-combat counter, FFCount > min(5,10+Mod(A_WIS))
-# (inc/Creature.h:571-572). Creature::DoTurn() raises it by one per turn out of
-# combat (src/Creature.cpp:1590-1591) and any strike zeroes it for both
-# fighters (src/Fight.cpp:3258-3259). The blades now arm only while that
-# counter is still high. lib/prestige.irh reads the same field for the
-# Assassin's Death Attack, so this is the codebase's existing answer to the
-# same question.
+# THE RULE, in Brian's words: "first attack after snapping out, IN OR OUT OF
+# COMBAT = free sneak attack, but never again during that combat (if you SA
+# out of combat, you start combat, hence no more free sneak atk)."
+#
+# HOW THAT IS WRITTEN WITHOUT INVENTING STATE. A COUNTER stati on the bracers
+# marks a fight that has already yielded its opening. The engine's own
+# out-of-combat counter does not GRANT the opening -- it CLEARS that mark.
+# Creature::isFlatFooted() is FFCount > min(5,10+Mod(A_WIS))
+# (inc/Creature.h:571-572); Creature::DoTurn() raises it one per quiet turn
+# (src/Creature.cpp:1590-1591) and any strike zeroes it for both fighters
+# (src/Fight.cpp:3258-3259). lib/prestige.irh reads the same field for the
+# Assassin's Death Attack. The two walks:
+#
+#   deploy while quiet      the mark clears, the opening arms, and the blow
+#                           that takes it starts the fight -- so a further
+#                           deployment in that fight finds the mark set
+#   deploy during a fight   the mark was cleared the last time the wielder was
+#                           quiet, so the opening still arms; a further
+#                           deployment in that same fight does not
 #
 # THE COST OF A FAILED CHECK is 50, which is the engine's own number: "a
 # 'full round action', in the base system" (src/Fight.cpp:2531).
@@ -39,11 +47,28 @@
 #
 #   cold   the item's own line, "Springblade effect!", after blades snapped out
 #          while the sidebar still said "Exploring". This is the CONTROL and it
-#          was green before the fix as well: it is what stops a "fix" that
-#          merely deleted the effect from passing.
+#          is green on every build: it is what stops a "fix" that merely
+#          deleted the effect from passing.
 #
-#   hot    the same line, absent, after blades snapped out while the sidebar
-#          said "Fighting". Before the fix it was present.
+#   hot    the same line, PRESENT, after blades snapped out for the first time
+#          while the sidebar said "Fighting". This is the case the rule is
+#          about, and it is red on both of the wrong rules -- the original,
+#          which armed on every deployment and so cannot distinguish anything,
+#          is caught by the jam half instead.
+#
+# WHAT THIS CHECK DOES NOT MEASURE, and why not. The rule's second half -- a
+# SECOND deployment inside one fight arms nothing, and a deployment after the
+# fight ends arms again -- has no oracle, because no second deployment is
+# possible in a running game. Measured three ways: ALT_ITEM exists only to
+# serve this item (inc/Defines.h:3056) and is granted with a negative
+# duration, which the stati clock never decrements (src/Status.cpp:50-62);
+# nothing in src/ removes it; Player::CancelMenu will not list the bracers,
+# because it skips a stati whose item Owner() is not the wielder
+# (src/Skills.cpp:312-315) and the blades belong to no inventory; and dropping
+# the bracers after deploying leaves the deployment standing -- the next
+# activation still answers "You're already loaded!". So the mark is written
+# and cannot yet bind. That is stated here rather than guarded, because a
+# passing assertion for an unreachable case would be a lie.
 #
 # THE SIDEBAR WORD IS NOT THE CHECK'S OPINION. src/Term.cpp:388-392 prints
 # "Exploring" when isFlatFooted() is true and "Fighting" when it is false, so
@@ -53,17 +78,17 @@
 # wielder back out of combat and quietly void the hot measurement.
 #
 # THE HOT STRIKE MUST LAND. A miss never reaches PRE(EV_HIT), so it cannot
-# print the springblade line either, and would read as a passing fix. The check
+# print the springblade line either, and would read as a failing fix. The check
 # requires the engine's own report that the blow connected.
 #
-# PROVED RED FIRST, on the same seed, with lib/m_items.irh reverted and the
-# module rebuilt:
-#   jam    8 attempts, no jam, turn 198046 -> 198046. Nothing failed, nothing
-#          was paid for.
-#   cold   "Springblade effect!" present.  (green before and after)
-#   hot    "Springblade effect!" present.  (the defect)
-# After the fix: the first jam cost 51 turns and the deployment that followed
-# cost 0; cold still fires; hot does not, on a blow that killed the goblin.
+# PROVED RED FIRST, on the same seed, against the two earlier builds:
+#   against the ORIGINAL, with no Handle Device check at all: 8 deployments,
+#   none failed, turn 198046 -> 198046.
+#   against the FIRST, WRONG rule, which armed the opening only while the
+#   wielder was out of combat: the hot run's blow landed and printed no
+#   springblade line.
+# After this fix: the first jam costs 51 turns, the deployment that follows
+# costs 0, cold fires, and hot fires on a blow that killed the goblin.
 #
 # Usage: tools/check_springblade.sh    (0 pass, 1 fail, 2 inconclusive)
 set -uo pipefail
@@ -227,18 +252,22 @@ case "$(messages "$HOTHIT")" in
 esac
 case "$(messages "$HOTHIT")" in
     *springbladeeffect*)
-        echo "FAIL: blades deployed in the middle of a fight still bought a free"
-        echo "      off-guard strike. That is the defect: the opening is payable"
-        echo "      again and again inside one engagement."
+        echo "  ok: a first deployment made during a fight bought the opening" ;;
+    *)
+        echo "FAIL: blades snapped out for the first time in the middle of a"
+        echo "      fight bought nothing. The opening is meant to be worth one"
+        echo "      per fight, in combat or out of it -- see the Effect"
+        echo "      \"Springblade Bracers\" EV_MAGIC_HIT handler in"
+        echo "      lib/m_items.irh. A rule that reads the out-of-combat"
+        echo "      counter to GRANT the opening rather than to CLEAR the mark"
+        echo "      fails exactly here."
         echo "      dump: $HOTHIT"
         fail=1 ;;
-    *)
-        echo "  ok: blades deployed mid-fight bought no second opening" ;;
 esac
 
 if [ "$fail" = 0 ]; then
-    echo "PASS: the Handle Device check costs a round when it fails, and the"
-    echo "      free off-guard strike is worth one opening per engagement."
+    echo "PASS: a failed Handle Device check costs the round, and the free"
+    echo "      off-guard strike is bought in or out of combat."
     exit 0
 fi
 exit 1

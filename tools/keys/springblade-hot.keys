@@ -1,33 +1,34 @@
-# Deploy the springblades in the MIDDLE of a fight, then strike.
+# Snap the springblades out for the FIRST time in the middle of a fight, then
+# strike.
 #
-# This is the measured half of bd inc-tek.8.8, finding PA-08-F14. The free
-# off-guard strike is meant to be worth one opening; it must not be available
-# to a wielder who is already engaged.
+# This is the measured half of bd inc-tek.8.8, finding PA-08-F14. The rule, in
+# Brian's words: "first attack after snapping out, IN OR OUT OF COMBAT = free
+# sneak attack, but never again during that combat". So a wielder who is
+# already fighting must still get the opening the first time he deploys.
 #
-# HOW THE RUN GETS "ALREADY ENGAGED", and why it is the engine's own state and
+# HOW THE RUN GETS "ALREADY FIGHTING", and why it is the engine's own state and
 # not the script's opinion. Creature::isFlatFooted() is a per-creature
 # out-of-combat counter, FFCount > min(5,10+Mod(A_WIS)) (inc/Creature.h:571-572).
 # Any strike zeroes it for both fighters (src/Fight.cpp:3258-3259) and
 # Creature::DoTurn() raises it by one per turn out of combat
-# (src/Creature.cpp:1590-1591). So the run kills the first goblin with the
-# character's ordinary knife, which zeroes the counter, and only then snaps the
-# blades out.
+# (src/Creature.cpp:1590-1591). So the run swings at the first goblin with the
+# character's ordinary knife, which zeroes the counter whether it lands or not,
+# and only then snaps the blades out.
 #
 # THE STATE IS VISIBLE. The sidebar prints "Exploring" when isFlatFooted() is
 # true and "Fighting" when it is false (src/Term.cpp:388-392). Every dump here
 # carries it, and tools/check_springblade.sh reads the word off the dump where
 # the blades snapped out rather than assuming what the run arranged.
 #
-# THE SECOND GOBLIN is summoned after the first is dead, so the strike that is
-# measured lands on a fresh creature. That matters: it means the only
+# THE SECOND GOBLIN is summoned after the first is engaged, so the strike that
+# is measured lands on a fresh creature. That matters: it means the only
 # difference between this run and springblade-cold.keys is the wielder's own
 # counter, which is the one thing the fix reads.
 #
-# EIGHT ACTIVATION ATTEMPTS. A rogue fails the DC 15 Handle Device check the
-# fix adds more often than not. A jammed attempt costs a round and nothing
-# else. Jams do carry the wielder back towards "Exploring" -- one FFCount per
-# turn -- which is why the check reads the sidebar instead of trusting the
-# arrangement.
+# EIGHT ACTIVATION ATTEMPTS. A rogue fails the DC 15 Handle Device check more
+# often than not. A jammed attempt costs a round and nothing else. Jams do
+# carry the wielder back towards "Exploring" -- one FFCount per turn -- which is
+# why the check reads the sidebar instead of trusting the arrangement.
 
 @include springblade-setup.keys
 

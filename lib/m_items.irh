@@ -4077,12 +4077,13 @@ AI_BRACERS Effect "Springblade Bracers" : EA_GENERIC
       these weapons because they often allow them to get in a
       second sneak attack after a fight has begun -- the first
       attack made with a springblade within a single round of their
-      deployment automatically treats a foe as off-guard, but only
-      when the blades are snapped out before the fighting starts.\n
+      deployment automatically treats a foe as off-guard, whether
+      the blades are snapped out before a fight or during one, but
+      one fight will yield only one such opening.\n
       __This particular set of springblade bracers contains a pair
       of <11>+2 keen springblades<7>.";
     On Event EV_MAGIC_HIT {
-      hObj hBlade1, hBlade2; int16 count; bool coldOpening;
+      hObj hBlade1, hBlade2; int16 count; bool freeOpening;
       EActor->Timeout = 0;
       if (EActor->HasStati(ALT_ITEM))
         {
@@ -4112,17 +4113,37 @@ AI_BRACERS Effect "Springblade Bracers" : EA_GENERIC
          round action, in the base system" (src/Fight.cpp:2531).
          (2) Every deployment re-armed the COUNTER that makes the next
          springblade blow treat the foe as off-guard, so the free opening was
-         payable again and again inside one fight. It is now armed only when
-         the wielder is still out of combat, which is the engine's own
-         out-of-combat counter, FFCount > min(5,10+Mod(A_WIS))
-         (inc/Creature.h:571-572); any strike zeroes it for both fighters
-         (src/Fight.cpp:3258-3259). lib/prestige.irh reads the same field for
-         the Assassin's Death Attack.
+         payable again and again inside one fight. The rule is now one opening
+         per fight, in combat or out of it. A COUNTER stati on the bracers
+         themselves marks a fight that has already yielded one, and the
+         engine's own out-of-combat counter does not GRANT the opening -- it
+         CLEARS that mark. isFlatFooted() is FFCount > min(5,10+Mod(A_WIS))
+         (inc/Creature.h:571-572), raised one per quiet turn by
+         Creature::DoTurn() (src/Creature.cpp:1590-1591) and zeroed for both
+         fighters by any strike (src/Fight.cpp:3258-3259). lib/prestige.irh
+         reads the same field for the Assassin's Death Attack. So: deploy
+         while quiet and the mark clears, the opening arms, and the blow that
+         takes it starts the fight -- any further deployment in that fight
+         finds the mark and arms nothing. Deploy first in the middle of a
+         fight and the opening still arms, because the mark was cleared the
+         last time the wielder was quiet.
          NOT AN ITEM DEFECT, and deliberately not touched here: retracting the
          blades is free because Player::CancelMenu (src/Skills.cpp:288) and its
          caller (src/Player.cpp:1143-1145) never set Timeout. That is engine
          behaviour shared by every cancellable ability, and fixing it in this
          item would fix it nowhere else.
+         NOT REACHABLE TODAY, and measured to be so: no second deployment is
+         possible in a running game, so the mark cannot yet bind. ALT_ITEM
+         exists only to serve this item (inc/Defines.h:3056), it is granted
+         with a negative duration, which Thing::DoTurnStati never decrements
+         (src/Status.cpp:50-62), and nothing else in src/ removes it. The
+         cancel menu will not list the bracers, because Player::CancelMenu
+         skips a stati whose item Owner() is not the wielder
+         (src/Skills.cpp:312-315) and the blades belong to no inventory; and
+         dropping the bracers leaves the deployment standing, measured -- the
+         next activation still answers "You're already loaded!". The mark is
+         written anyway, because it is the rule Brian asked for and it becomes
+         live the day retraction works.
          Tier Observed -- see bd inc-tek.8.8, finding PA-08-F14.
          Not sent to rmtew. */
       if (!EActor->SkillCheck(SK_HANDLE_DEV,15,true))
@@ -4133,7 +4154,17 @@ AI_BRACERS Effect "Springblade Bracers" : EA_GENERIC
           return DONE;
         }
 
-      coldOpening = EActor->isFlatFooted();
+      if (EActor->isFlatFooted())
+        EItem->RemoveStati(COUNTER);
+
+      if (EItem->HasEffStati(COUNTER,$"Springblade Bracers"))
+        freeOpening = false;
+      else
+        {
+          freeOpening = true;
+          EItem->GainTempStati(COUNTER,NULL,-2,
+            SS_MISC,0,0, $"Springblade Bracers");
+        }
 
       count = 0;
       if (hBlade1)
@@ -4141,7 +4172,7 @@ AI_BRACERS Effect "Springblade Bracers" : EA_GENERIC
           EActor->GainTempStati(ALT_ITEM,hBlade1,-2,
             SS_MISC,SL_WEAPON,0, $"Springblade Bracers");
           hBlade1->RemoveStati(COUNTER);
-          if (coldOpening)
+          if (freeOpening)
             hBlade1->GainTempStati(COUNTER,NULL,2,
               SS_MISC,0,0, $"Springblade Bracers");
           count++;
@@ -4153,7 +4184,7 @@ AI_BRACERS Effect "Springblade Bracers" : EA_GENERIC
           EActor->GainTempStati(ALT_ITEM,hBlade2,-2,
             SS_MISC,SL_READY,0, $"Springblade Bracers");
           hBlade2->RemoveStati(COUNTER);
-          if (coldOpening)
+          if (freeOpening)
             hBlade2->GainTempStati(COUNTER,NULL,2,
               SS_MISC,0,0, $"Springblade Bracers");
           count++;
