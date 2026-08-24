@@ -3,6 +3,8 @@
 # Spec: a named, extensible save schema
 
 Status: proposed, 2026-08-24. Approved to write by Brian on 2026-08-24.
+Amended the same day, after measurement, with the name-collision rules and
+the resource memory segment. Approved by Brian.
 Background reading: `docs/ENGINE-SERIALISATION.md` describes the format this
 replaces. Read it first; this spec assumes it.
 
@@ -85,9 +87,37 @@ v1.
 
 One table per file, written after the records, indexed from the records.
 
-Each entry is a resource type byte (the `T_T*` constant) and the resource's
-name. On save, every `rID` field contributes its type and `NAME()`. On load,
-each entry is resolved once against the loaded module, by name, within its type.
+Each entry is a resource type byte (the `T_T*` constant), the resource's
+name, and an ordinal. On save, every `rID` field contributes its type and
+`NAME()`. On load, each entry is resolved once against the loaded module, by
+name, within its type.
+
+**Resolution MUST compare names byte for byte — case-sensitive.** Measured
+against `lib/program.i`, the preprocessed stream the 2026-08-24 module was
+compiled from, with a parser that repeats `CountResources`' first pass: 3,430
+named resources across 15 pools, and case-sensitive names are unique in every
+pool except Flavour. Case-folded they are not: `Effect "Heartstone"`
+(`lib/m_items.irh:299`) collides with `Effect "heartstone"`
+(`lib/mon2.irh:2177`), and `Effect "*Mana*"` (`lib/m_items.irh:1191`) with
+`Effect "*MANA*"` (`lib/m_items.irh:1197`). `Module::FindResource` uses
+`stricmp` and is a runtime facility; it stays untouched and the name table
+does not use it.
+
+**The ordinal handles duplicate names.** It counts earlier same-type,
+same-name resources in module declaration order, so it is 0 wherever the name
+is unique — every pool except Flavour today. The Flavour pool duplicates
+names by design: 86 of its 883 names repeat ("rune-covered" appears ten
+times), and two are literal adjacent copy-paste declarations
+(`lib/flavors.irh:329-330`). An ordinal at or past the count of same-named
+resources MUST abort the load. Between same-named flavours the ordinal is
+best effort: inserting a same-named flavour ahead of another shifts the later
+one's ordinal, and the load then resolves to a different flavour with the
+same display name. The harm ceiling is a swapped item appearance, never a
+wrong god.
+
+**The resource compiler MUST reject a same-case duplicate name** within every
+pool except Flavour, at build time, so a future collision fails at compile
+rather than resolving arbitrarily at load.
 
 The table is the whole answer to defect two. **A saved reference names Zurvash,
 not slot 16,779,233.** Recompiling the module with fifty new effects moves no
@@ -176,6 +206,37 @@ Terrain and region are 8-bit indices into `TerraList` (`inc/Map.h:36-37`), not
 resource ids, so the grid itself carries no `rID` and needs none. `TerraList` is
 an ordinary array of `rID` and gets `FIELD_RID` treatment per element.
 
+### The resource memory segment
+
+`Game::Serialize` writes each module's `MDataSeg` as one raw block
+(`inc/Res.h:1072-1073`). The block is the module's script data segment
+followed by the per-player resource memory: `MonMem[szMon]`,
+`ItemMem[szItm]`, `EffMem[szEff]`, `RegMem[szReg]`, addressed arithmetically
+from the resource's position (`Module::GetMemoryPtr`, `src/Res.cpp:711`).
+`EffMem` (`inc/Res.h:1225`) carries `FlavorID` and `PFlavorID` — whole
+flavour `rID`s, assigned by the per-game shuffle in `Game::SetFlavors`
+(`src/Item.cpp:310`). This is the identification state: which potion looks
+like what, and what the player has tried and knows.
+
+Left raw, this block reproduces the renumbering defect inside v1. Add one
+`Effect` and every memory row above it shifts by one row, and every stored
+flavour `rID` moves one slot. `FIELD_RID` on object fields never reaches it.
+
+So the memory rows MUST NOT stay raw. v1 writes them as records keyed
+through the name table — one entry of (type, name, ordinal) per row — and
+the flavour `rID` values inside `EffMem` MUST route through the name table
+like any other resource reference. On load, a row naming a resource the
+module no longer has is discarded: it is annotation about the resource, not
+a reference to it, and memory about nothing means nothing. A resource with
+no row keeps zeroed memory, as a new game gives it.
+
+The script data segment at the front of the block is not covered by this
+spec yet. It holds compiled script state whose layout the resource compiler
+chooses, so it is welded to the scripts the same way the memory rows are
+welded to the counts. It MUST be investigated before phase 2; until then it
+stays a raw blob inside the segment record, and the investigation is the
+first task of phase 4.
+
 ## Compatibility, and Brian's character
 
 The v0 raw reader stays in the binary. It is 200 lines, it works, and deleting
@@ -217,7 +278,14 @@ be converted.
 3. **`T_STAFF` and `T_COIN` change vtable across a save today** (defects 2 and 3
    in `docs/ENGINE-SERIALISATION.md`). v1 does not fix them and MUST NOT be
    blamed for them. They are separate beads.
-4. **Save size.** Tags and kinds cost about 3 bytes per field. Against a 2.4 MB
+4. **Ordinal drift among same-named flavours.** Inserting or removing a
+   same-named flavour shifts the ordinals after it, and an old save then
+   resolves to a different flavour with the same display name. Best effort by
+   design; the ceiling is a changed item appearance.
+5. **The script data segment is unmeasured.** The front of `MDataSeg` holds
+   compiled script state this spec does not yet describe. See the resource
+   memory segment section; it blocks phase 4, not phase 1.
+6. **Save size.** Tags and kinds cost about 3 bytes per field. Against a 2.4 MB
    save whose bulk is map grids and data blocks, the estimate is under 5%. It
    MUST be measured, not assumed.
 
@@ -231,6 +299,8 @@ Adversarial, before anything else:
 - A name-table entry naming a resource the module does not have. Expect an abort
   that names it.
 - A grid record whose `sizeX`/`sizeY` disagree with the map. Expect an abort.
+- A name-table entry whose ordinal is at or past the count of same-named
+  resources of its type. Expect an abort that names it.
 
 Round trip, the real test:
 
@@ -247,6 +317,9 @@ Live, as Brian plays:
   save, reload. Character sheet, inventory, mount and god unchanged.
 - One full soak seed on the new binary with the unchanged module, to show the
   module path is untouched.
+- Convert a save, rebuild the module with one `Effect` added, load. Every
+  potion and scroll appearance, and every Known and Tried flag, unchanged.
+  This is the oracle for the memory segment; it fails on the raw block.
 
 ## Phases
 
@@ -260,8 +333,11 @@ Each phase is one commit.
    kinds, `Module`, `Game`, `Map`.
 3. `LocationInfo` packed layout, with the bit assignment and its
    `static_assert`.
-4. `-convert`, the fixture guard, and Brian's save.
-5. The seven harness scripts that read saves, and `docs/ENGINE-SERIALISATION.md`
+4. The resource memory segment: the script-data-segment investigation, then
+   name-keyed rows for `MonMem`, `ItemMem`, `EffMem` and `RegMem`, with
+   flavour values through the name table.
+5. `-convert`, the fixture guard, and Brian's save.
+6. The seven harness scripts that read saves, and `docs/ENGINE-SERIALISATION.md`
    updated to describe both formats.
 
 ## Open question for Brian
