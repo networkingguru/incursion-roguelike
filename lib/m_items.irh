@@ -4071,16 +4071,18 @@ AI_BRACERS Effect "Springblade Bracers" : EA_GENERIC
       telescoping mithril blades, that when fully extended are not
       unlike those of a short sword. Activating the bracers causes
       the blades to snap out; this takes no time, but does require
-      a Handle Device check (DC 15). The blades can be retracted
+      a Handle Device check (DC 15), and a failed check jams the
+      springs and costs you the round. The blades can be retracted
       by using the Cancel Standing Power ('x') command. Rogues use
       these weapons because they often allow them to get in a
       second sneak attack after a fight has begun -- the first
       attack made with a springblade within a single round of their
-      deployment automatically treats a foe as off-guard.\n
+      deployment automatically treats a foe as off-guard, but only
+      when the blades are snapped out before the fighting starts.\n
       __This particular set of springblade bracers contains a pair
       of <11>+2 keen springblades<7>.";
     On Event EV_MAGIC_HIT {
-      hObj hBlade1, hBlade2; int16 count;
+      hObj hBlade1, hBlade2; int16 count; bool coldOpening;
       EActor->Timeout = 0;
       if (EActor->HasStati(ALT_ITEM))
         {
@@ -4099,26 +4101,61 @@ AI_BRACERS Effect "Springblade Bracers" : EA_GENERIC
             destroyed. They're useless now.");
           return DONE;
         }
-      
+
+      /* upstream: base-code defect, not a port artefact. Both halves live in
+         shared game data, so the same item misbehaves on Win32, with the
+         original typedefs, on the upstream compiler.
+         (1) The page above has always promised a Handle Device check on
+         deployment; this handler contained no SkillCheck call, so deployment
+         never failed and cost nothing. The check is added here, and a failure
+         costs the round -- 50, which is what the engine itself calls "a full
+         round action, in the base system" (src/Fight.cpp:2531).
+         (2) Every deployment re-armed the COUNTER that makes the next
+         springblade blow treat the foe as off-guard, so the free opening was
+         payable again and again inside one fight. It is now armed only when
+         the wielder is still out of combat, which is the engine's own
+         out-of-combat counter, FFCount > min(5,10+Mod(A_WIS))
+         (inc/Creature.h:571-572); any strike zeroes it for both fighters
+         (src/Fight.cpp:3258-3259). lib/prestige.irh reads the same field for
+         the Assassin's Death Attack.
+         NOT AN ITEM DEFECT, and deliberately not touched here: retracting the
+         blades is free because Player::CancelMenu (src/Skills.cpp:288) and its
+         caller (src/Player.cpp:1143-1145) never set Timeout. That is engine
+         behaviour shared by every cancellable ability, and fixing it in this
+         item would fix it nowhere else.
+         Tier Observed -- see bd inc-tek.8.8, finding PA-08-F14.
+         Not sent to rmtew. */
+      if (!EActor->SkillCheck(SK_HANDLE_DEV,15,true))
+        {
+          DPrint(e,"The springs jam, and you lose the round working them free.",
+                   "The <EActor> fumbles with a pair of bracers.");
+          EActor->Timeout += 50;
+          return DONE;
+        }
+
+      coldOpening = EActor->isFlatFooted();
+
       count = 0;
       if (hBlade1)
         {
           EActor->GainTempStati(ALT_ITEM,hBlade1,-2,
             SS_MISC,SL_WEAPON,0, $"Springblade Bracers");
           hBlade1->RemoveStati(COUNTER);
-          hBlade1->GainTempStati(COUNTER,NULL,2,
-            SS_MISC,0,0, $"Springblade Bracers");
+          if (coldOpening)
+            hBlade1->GainTempStati(COUNTER,NULL,2,
+              SS_MISC,0,0, $"Springblade Bracers");
           count++;
         }
-      
+
       if (hBlade2 && (EActor->HasFeat(FT_TWO_WEAPON_STYLE) ||
                       !hBlade1))
         {
           EActor->GainTempStati(ALT_ITEM,hBlade2,-2,
             SS_MISC,SL_READY,0, $"Springblade Bracers");
           hBlade2->RemoveStati(COUNTER);
-          hBlade2->GainTempStati(COUNTER,NULL,2,
-            SS_MISC,0,0, $"Springblade Bracers");
+          if (coldOpening)
+            hBlade2->GainTempStati(COUNTER,NULL,2,
+              SS_MISC,0,0, $"Springblade Bracers");
           count++;
         }
         

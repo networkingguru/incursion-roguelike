@@ -1,0 +1,48 @@
+# Snap the springblades out over and over, with nothing to fight, and let the
+# game clock say what a deployment cost.
+#
+# This is the first half of bd inc-tek.8.8, finding PA-08-F14: the item's page
+# says deployment "does require a Handle Device check (DC 15)" and the
+# activation handler contained no check at all, so deployment never failed and
+# never cost anything.
+#
+# THE ORACLE IS THE TURN STAMP that posixTerm::DumpScreen writes into every
+# dump header (src/Wposix.cpp). Deployment on a passed check still takes no
+# time, exactly as the page says. A failed check costs a full round, which the
+# engine values at 50 (src/Fight.cpp:2531, a "full round action" in the base
+# system). So a jammed attempt moves the stamp and a clean one does not, and
+# tools/check_springblade.sh compares consecutive stamps rather than reading a
+# message.
+#
+# There is no monster here on purpose. Combat would move the clock for its own
+# reasons and the measurement would stop being about the bracers.
+
+@include springblade-setup.keys
+
+@dump:0001-before
+a
+@choose "Springblade Bracers"
+@dump:0002-attempt-1
+a
+@choose "Springblade Bracers"
+@dump:0003-attempt-2
+a
+@choose "Springblade Bracers"
+@dump:0004-attempt-3
+a
+@choose "Springblade Bracers"
+@dump:0005-attempt-4
+a
+@choose "Springblade Bracers"
+@dump:0006-attempt-5
+a
+@choose "Springblade Bracers"
+@dump:0007-attempt-6
+a
+@choose "Springblade Bracers"
+@dump:0008-attempt-7
+a
+@choose "Springblade Bracers"
+@dump:0009-attempt-8
+
+@quit

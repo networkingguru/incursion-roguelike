@@ -1,0 +1,55 @@
+# Make a rogue who is wearing the Springblade Bracers, in a frozen dungeon.
+#
+# Included by springblade-cold.keys, springblade-hot.keys and
+# springblade-jam.keys, which differ only in what they do afterwards.
+# bd inc-tek.8.8, finding PA-08-F14.
+#
+# WHY A ROGUE. The item's own page says rogues are who it is for, and the
+# Handle Device check the fix adds is a rogue skill. A barbarian would jam on
+# every attempt and could never deploy, so no run could measure the second
+# half.
+#
+# THE BRACERS ARE MADE IN WIZARD MODE, because Item "springblade" and the
+# effect that carries it both sit behind IT_NOGEN (lib/m_items.irh) and no
+# walk can find a pair.
+#
+#   w y                    enter wizard mode
+#   Wizard Mode Switches   Freeze Monsters, so that nothing retaliates. A blow
+#   DOWN*10 SPACE          landing on the wielder would zero his own FFCount
+#                          and quietly change what the second half measures.
+#   Item Acquisition       the acquisition browser
+#   RIGHT*21               walk the glyph row to Bracers. ItemGlyphs
+#                          (src/Tables.cpp:320-345) puts -AI_BRACERS 21 steps
+#                          along, and the header line names the category, so a
+#                          miscount shows up in a dump as some other word after
+#                          "Acquisition -- [...]:".
+#   @until ... DOWN        the candidate list has no menu letters, so the
+#                          cursor is walked instead. The window shows three
+#                          rows and highlights the middle one, so the run stops
+#                          on the pass where the row BELOW the wanted one first
+#                          appears. That is an ordering assumption about
+#                          lib/m_items.irh; the checks do not trust it and read
+#                          the item's name back off the activate menu first.
+#   ENTER r SPACE ENTER    take it, put it in the Bracers slot, leave the
+#                          inventory manager.
+
+@include chargen-rogue.keys
+
+ESC     # dismiss the arrival-room description; now in play
+
+w
+y       # "Enter wizard mode?" -- yes
+
+w       # [w] Wizard Mode Switches
+DOWN*10
+SPACE   # Freeze Monsters: NO -> YES
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*21
+@until "Devilbane Bracers" DOWN
+ENTER
+r
+SPACE
+ENTER

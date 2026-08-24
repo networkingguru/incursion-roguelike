@@ -1,0 +1,56 @@
+# Deploy the springblades BEFORE the fighting starts, then strike.
+#
+# This is the control half of bd inc-tek.8.8, finding PA-08-F14. The free
+# off-guard strike must still work when the blades are snapped out at the
+# opening of an engagement -- that is what the item is for, and it is what
+# stops a "fix" that merely deleted the effect from passing.
+#
+# THE ORACLE is the item's own line, "Springblade effect!"
+# (lib/m_items.irh, Item "springblade", PRE(EV_HIT)). Nothing else prints it.
+#
+# EIGHT ACTIVATION ATTEMPTS, not one. The fix puts a Handle Device check (DC
+# 15) on deployment, and a rogue fails it more often than not. A jammed attempt
+# costs a round and changes nothing else, so the run simply tries again; the
+# attempts after the first success say "You're already loaded!" and are inert.
+# tools/check_springblade.sh requires that one of the eight said the blades
+# snapped out, and calls the run inconclusive otherwise.
+
+@include springblade-setup.keys
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+@dump:0001-goblin-summoned
+
+a
+@choose "Springblade Bracers"
+@dump:0002-deploy-1
+a
+@choose "Springblade Bracers"
+@dump:0003-deploy-2
+a
+@choose "Springblade Bracers"
+@dump:0004-deploy-3
+a
+@choose "Springblade Bracers"
+@dump:0005-deploy-4
+a
+@choose "Springblade Bracers"
+@dump:0006-deploy-5
+a
+@choose "Springblade Bracers"
+@dump:0007-deploy-6
+a
+@choose "Springblade Bracers"
+@dump:0008-deploy-7
+a
+@choose "Springblade Bracers"
+@dump:0009-deploy-8
+
+RIGHT
+@while "Confirm attack" y
+@dump:0010-strike
+
+@quit
