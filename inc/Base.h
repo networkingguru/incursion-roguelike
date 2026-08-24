@@ -54,7 +54,10 @@ template<class S, int32 Initial, int32 Delta>
       void Remove(uint32 i);
       S*   NewItem();
       void Serialize(Registry &r);
-      void Clear() { Count = 0; }; 
+      /* v1 field list (src/Base.cpp, beside Serialize): Count, then the
+         elements as one K_ARRAY of raw POD bytes. */
+      void FieldsV1(Registry &r);
+      void Clear() { Count = 0; };
 	};
 
 extern long ZeroValue;
@@ -614,8 +617,9 @@ class Fraction
 
 
 class Archive;
+struct Status;   /* inc/Res.h; Registry::V1RidStatus takes a reference */
 
-class Object 
+class Object
   {
     public:
     Object(int16 _Type); 
@@ -644,6 +648,13 @@ class Object
                                  (t == Type); }
 
     virtual void Serialize(Registry &r, bool isSave) {}
+    /* Overridden by ARCHIVE_CLASS in every archived class. The v1 coverage
+       check keys on it because it reports the class the object REALLY is,
+       where typeSize() reports the class the type byte maps to -- the two
+       disagree on T_STAFF and T_COIN (docs/ENGINE-SERIALISATION.md defects
+       2 and 3, preserved on purpose). A virtual added here grows only the
+       vtable; no instance size in SaveLayoutDigest() moves. */
+    virtual size_t ObjectSize() { return sizeof(Object); }
     virtual String & Describe(Player *p)
       { return *tmpstr("[Object::Describe] A strange, undefined thing."); }
     virtual void Dump();
@@ -682,6 +693,87 @@ class Object
       { return (h == 0); }
 
   };
+
+/* The save-file headers. Declared here (moved from src/Registry.cpp) because
+   the v1 schema code in src/SaveV1.cpp reads and writes them too. The layouts
+   are part of the on-disk format and must not change. */
+struct fileHeader
+  {
+    uint32 Sig;
+    char Version[12];
+    char Name[72];
+    int16 numGroups;
+    int16 Compression;
+    int16 numDependencies;
+  };
+
+struct groupHeader
+  {
+    uint32 Signature;
+    hObj   hGroup;
+    int32  groupSize;
+    int32  compSize;
+    int32  objCount;
+    int32  dataCount;
+    int32  LastHandle;
+  };
+
+/* v1 wire kinds (docs/SAVE-SCHEMA-SPEC.md; the wire format is normative in
+   docs/superpowers/plans/2026-08-24-save-schema-v1.md). */
+enum {
+  K_U8 = 1, K_I8 = 2, K_U16 = 3, K_I16 = 4, K_U32 = 5, K_I32 = 6,
+  K_STR   = 7,   /* uint32 len, len bytes, no NUL */
+  K_BLOB  = 8,   /* uint32 len, len bytes */
+  K_RID   = 9,   /* uint32 name-table index; 0xFFFFFFFF encodes rID 0 (null) */
+  K_H     = 10,  /* uint32; hObj/hData value (signed int stored two's-complement) */
+  K_ARRAY = 11,  /* uint32 count, uint32 elemSize, count*elemSize raw bytes */
+  K_EMBED = 12   /* uint32 len; a nested field stream with its own tag scope
+                    and its own tag-0 terminator */
+};
+
+/* Wire pool ids, in the canonical declaration order of inc/Res.h:875-897.
+   Append-only forever. */
+enum {
+  SP_MON = 0, SP_ITM = 1, SP_FEA = 2, SP_EFF = 3, SP_ART = 4, SP_QUE = 5,
+  SP_DGN = 6, SP_ROU = 7, SP_NPC = 8, SP_CLA = 9, SP_RAC = 10, SP_DOM = 11,
+  SP_GOD = 12, SP_REG = 13, SP_TER = 14, SP_TXT = 15, SP_VAR = 16,
+  SP_TEM = 17, SP_FLA = 18, SP_BEV = 19, SP_ENC = 20
+};
+
+/* v1 tag ranges. Within a range: a new field takes the next unused number, a
+   retired number is never reused, a number never changes. Tags are unique
+   within a class CHAIN, so a chain crossing two ranges never collides.
+     Thing      1-31        Item      32-63
+     QItem     64-79        Food      80-95      Corpse    96-111
+     Container 112-127      Weapon   128-143     Coin     144-159
+     Armour   160-175       Feature  176-191     Door     192-207
+     Trap     208-223       Portal   224-239     Creature 256-383
+     Character 384-511      Player   512-639     Monster  640-671
+     Map      672-767       Module   768-799     Game     800-899 */
+
+/* One declaration serves four duties: the v0 save/load path (where the raw
+   dump already carries scalars, so scalar macros are no-ops there and the
+   STR/BLOB/OBJ macros perform exactly the legacy Serialize/Block calls they
+   replace), the v1 write, the v1 read, and the DEBUG coverage map. */
+#define FIELD_U8(tag,m)   r.V1Field((tag), K_U8,  &(m), sizeof(m))
+#define FIELD_I8(tag,m)   r.V1Field((tag), K_I8,  &(m), sizeof(m))
+#define FIELD_U16(tag,m)  r.V1Field((tag), K_U16, &(m), sizeof(m))
+#define FIELD_I16(tag,m)  r.V1Field((tag), K_I16, &(m), sizeof(m))
+#define FIELD_U32(tag,m)  r.V1Field((tag), K_U32, &(m), sizeof(m))
+#define FIELD_I32(tag,m)  r.V1Field((tag), K_I32, &(m), sizeof(m))
+#define FIELD_H(tag,m)    r.V1Field((tag), K_H,   &(m), sizeof(m))
+#define FIELD_RID(tag,m)  r.V1Rid((tag), (m))
+#define FIELD_STR(tag,m)  do { if (r.V1Active()) r.V1Str((tag),(m)); \
+                               else (m).Serialize(r); } while (0)
+#define FIELD_BLOB(tag,p,sz) do { if (r.V1Active()) r.V1Blob((tag),(void**)&(p),(sz)); \
+                                  else r.Block((void**)&(p),(sz)); } while (0)
+#define FIELD_ARRAY(tag,p,elem,count) r.V1Array((tag),(p),(elem),(count))
+#define FIELD_OBJ(tag,m)  do { if (r.V1Active()) { r.V1EmbedBegin((tag),&(m),sizeof(m)); \
+                               (m).FieldsV1(r); r.V1EmbedEnd(); } \
+                               else (m).Serialize(r); } while (0)
+#define FIELD_EMBED(tag,m) do { if (r.V1Active()) { r.V1EmbedBegin((tag),&(m),sizeof(m)); \
+                                (m).FieldsV1(r); r.V1EmbedEnd(); } } while (0)
+#define FIELD_SKIP(m)     r.V1Cover(&(m), sizeof(m))
 
 #define ARCHIVE_CLASS(ClassName,Base,r)                         \
   friend class Registry; protected:                             \
@@ -774,7 +866,41 @@ class Registry
     int16 SaveGroup(Term &t, hObj hGroup, bool use_lz, bool newFile=false);
     int16 LoadGroup(Term &t, hObj hGroup, bool use_lz);
 
+    /* ------------------------------------------------------------------ v1 --
+       The tagged-record save schema (docs/SAVE-SCHEMA-SPEC.md), defined in
+       src/SaveV1.cpp. METHODS AND STATICS ONLY: sizeof(Registry) is an input
+       to SaveLayoutDigest() (src/AbiCheck.cpp), so a data member added here
+       orphans every v0 save. All v1 state lives in file-scope context objects
+       in src/SaveV1.cpp. */
+    bool V1Active();
+    void V1Field(uint16 tag, uint8 kind, void *p, size_t size);
+    void V1Str(uint16 tag, String &s);
+    void V1Blob(uint16 tag, void **p, size_t sz);
+    void V1Rid(uint16 tag, rID &m);
+    /* Status's members are bitfields, so FIELD_RID/FIELD_H cannot take their
+       address; this stages Status::eID through the name table itself. */
+    void V1RidStatus(uint16 tag, Status &s);
+    void V1Array(uint16 tag, void *p, size_t elemSize, uint32 count);
+    void V1EmbedBegin(uint16 tag, void *member, size_t size);
+    void V1EmbedEnd();
+    void V1Cover(const void *p, size_t size);
+    int16 SaveGroupV1(Term &t, hObj hGroup);
+    int16 LoadGroupV1(Term &t, fileHeader &fh, hObj hGroup);
+    /* The -schematest / -schemaload bodies live here (not as free functions)
+       because ARCHIVE_CLASS makes Registry a friend of every archived class,
+       and the test must populate and compare protected members directly. The
+       free RunSchemaTest/RunSchemaLoad wrappers below forward to these. */
+    static bool V1RunSchemaTest(const char *outDir);
+    static bool V1RunSchemaLoad(const char *path);
+
   };
+
+/* Free entry points for the v1 schema (src/SaveV1.cpp). */
+void SaveV1_ResolveNames();
+const char* SaveSchemaID();  /* "IS1." + SCHEMA_REV: "IS1.0" until Task 7's bump */
+bool SaveV1_Raw();           /* DEBUG && INCURSION_V1_RAW=1 */
+bool RunSchemaTest(const char *outDir);
+bool RunSchemaLoad(const char *path);
 
 
 

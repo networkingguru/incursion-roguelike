@@ -445,6 +445,72 @@ void Game::CountResources() {
     theModule->szTextSeg = textSeg.GetLength();
     theModule->QTextSeg = AllocTextSeg();
 
+    /* Same-case duplicate names are fatal in every pool EXCEPT Flavour.
+       The v1 save schema resolves saved resource references by (pool, name,
+       ordinal), so a duplicate that today resolves arbitrarily at load must
+       instead fail here, at compile (docs/SAVE-SCHEMA-SPEC.md, resource
+       name table). Flavour duplicates names by design (86 of its 883 names
+       repeat) and the ordinal carries them. strcmp, never stricmp: the
+       measured basis is that SAME-CASE names are unique -- case-folded they
+       are not ("Heartstone" vs "heartstone"). Measured 2026-08-24 against
+       lib/program.i: 3430 named resources, zero same-case duplicates
+       outside Flavour. Runs after AllocTextSeg() so GetText() serves the
+       names with real NUL terminators. O(n^2) per pool over at most ~1200
+       names; the cost is not measurable against the parse. All duplicates
+       are reported before the abort, which follows yyerror's own fatal
+       path (Errors++, then longjmp to ResourceCompiler's setjmp) -- the
+       compiler's downstream stages assume a parse happened and are not
+       safe to run on a counted-but-unparsed module. */
+    {
+        int16 dups = 0;
+        struct { const char *pool; Resource *base; size_t stride;
+                 int16 count; } pools[] = {
+            { "Monster",   (Resource*)theModule->QMon, sizeof(TMonster),   theModule->szMon },
+            { "Item",      (Resource*)theModule->QItm, sizeof(TItem),      theModule->szItm },
+            { "Feature",   (Resource*)theModule->QFea, sizeof(TFeature),   theModule->szFea },
+            { "Effect",    (Resource*)theModule->QEff, sizeof(TEffect),    theModule->szEff },
+            { "Artifact",  (Resource*)theModule->QArt, sizeof(TArtifact),  theModule->szArt },
+            { "Quest",     (Resource*)theModule->QQue, sizeof(TQuest),     theModule->szQue },
+            { "Dungeon",   (Resource*)theModule->QDgn, sizeof(TDungeon),   theModule->szDgn },
+            { "Routine",   (Resource*)theModule->QRou, sizeof(TRoutine),   theModule->szRou },
+            { "NPC",       (Resource*)theModule->QNPC, sizeof(TNPC),       theModule->szNPC },
+            { "Class",     (Resource*)theModule->QCla, sizeof(TClass),     theModule->szCla },
+            { "Race",      (Resource*)theModule->QRac, sizeof(TRace),      theModule->szRac },
+            { "Domain",    (Resource*)theModule->QDom, sizeof(TDomain),    theModule->szDom },
+            { "God",       (Resource*)theModule->QGod, sizeof(TGod),       theModule->szGod },
+            { "Region",    (Resource*)theModule->QReg, sizeof(TRegion),    theModule->szReg },
+            { "Terrain",   (Resource*)theModule->QTer, sizeof(TTerrain),   theModule->szTer },
+            { "Text",      (Resource*)theModule->QTxt, sizeof(TText),      theModule->szTxt },
+            { "Variable",  (Resource*)theModule->QVar, sizeof(TVariable),  theModule->szVar },
+            { "Template",  (Resource*)theModule->QTem, sizeof(TTemplate),  theModule->szTem },
+            /* Flavour deliberately absent */
+            { "Behaviour", (Resource*)theModule->QBev, sizeof(TBehaviour), theModule->szBev },
+            { "Encounter", (Resource*)theModule->QEnc, sizeof(TEncounter), theModule->szEnc },
+        };
+        for (size_t p = 0; p != sizeof(pools)/sizeof(pools[0]); p++) {
+            for (int16 a = 0; a < pools[p].count; a++) {
+                const char *na = theModule->GetText(
+                    ((Resource*)((char*)pools[p].base + (size_t)a
+                                 * pools[p].stride))->Name);
+                for (int16 b2 = (int16)(a + 1); b2 < pools[p].count; b2++) {
+                    const char *nb = theModule->GetText(
+                        ((Resource*)((char*)pools[p].base + (size_t)b2
+                                     * pools[p].stride))->Name);
+                    if (!strcmp(na, nb)) {
+                        printf("Error: duplicate %s name \"%s\" "
+                               "(declarations %d and %d of this pool, in "
+                               "module declaration order)\n",
+                               pools[p].pool, na, (int)a, (int)b2);
+                        Errors++;
+                        dups++;
+                    }
+                }
+            }
+        }
+        if (dups)
+            longjmp(jb, 1);
+    }
+
     firstTile = new LocationInfo[127];
     currMap = 0;
 }

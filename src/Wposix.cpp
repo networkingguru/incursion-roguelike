@@ -489,6 +489,8 @@ int main(int argc, char *argv[]) {
     char *envPath = getenv("INCURSIONPATH");
     const char *keyScript = NULL;
     const char *dumpSave = NULL;
+    const char *schemaTest = NULL;
+    const char *schemaLoad = NULL;
     int i, retval = 0;
     bool forceHeadless = false;
     unsigned timeout = DEFAULT_TIMEOUT_S;
@@ -555,6 +557,10 @@ int main(int argc, char *argv[]) {
             forceHeadless = true;
         else if (!strcmp(argv[i], "-dump") && i + 1 < argc)
             dumpSave = argv[++i];
+        else if (!strcmp(argv[i], "-schematest") && i + 1 < argc)
+            schemaTest = argv[++i];
+        else if (!strcmp(argv[i], "-schemaload") && i + 1 < argc)
+            schemaLoad = argv[++i];
     }
 
     theGame = new Game();
@@ -588,6 +594,10 @@ int main(int argc, char *argv[]) {
        RunOnCommandLine (src/TextTerm.cpp:39). */
     if (dumpSave) {
         retval = RunSaveDump(dumpSave) ? 0 : 22;
+    } else if (schemaTest) {
+        retval = RunSchemaTest(schemaTest) ? 0 : 22;
+    } else if (schemaLoad) {
+        retval = RunSchemaLoad(schemaLoad) ? 0 : 22;
     } else if (!AT1->RunOnCommandLine(argc, argv, &retval)) {
         T1->Initialize();
         theGame->StartMenu();

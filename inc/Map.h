@@ -622,10 +622,86 @@ typedef struct StatiCollection {
     void Serialize(Registry &r) {
       ASSERT(Added == NULL);
       if (Allocated) {
-        r.Block((void**)(&S),sizeof(S[0])*Allocated);  
-        r.Block((void**)(&Idx),sizeof(Idx[0])*LAST_STATI);  
+        r.Block((void**)(&S),sizeof(S[0])*Allocated);
+        r.Block((void**)(&Idx),sizeof(Idx[0])*LAST_STATI);
       }
-    } 
+    }
+
+    /* v1 field list. Status is bitfields, so its members are staged through
+       stack temporaries (the coverage map ignores addresses outside the
+       object) and eID goes through Registry::V1RidStatus, which queues the
+       Status itself for deferred name resolution. Idx is not stored: it is
+       rebuilt on load with the exact index-build steps of
+       Thing::_FixupStati (src/Status.cpp:304-321); S is saved already
+       sorted, so no qsort is needed. Embedded tag scopes start at 1. */
+    void FieldsV1(Registry &r) {
+      int32 i;
+      if (r.Saving())
+        ASSERT(Added == NULL);
+      FIELD_I16(1, Last);
+      FIELD_I16(2, Allocated);
+      if (r.Loading()) {
+        /* Bounds first: both counts just came off the file. The live
+           invariant is Allocated <= 256 (src/Status.cpp:281). */
+        if (Last < 0 || Allocated < 0 || Last > Allocated || Allocated > 256)
+          throw ECORRUPT;
+        S = NULL; Idx = NULL; Added = NULL;
+        szAdded = 0; Removed = 0; Nested = 0;
+        if (Allocated) {
+          S = (Status*) malloc(sizeof(Status)*Allocated);
+          Idx = (uint16*) malloc(sizeof(Idx[0])*LAST_STATI);
+          if (!S || !Idx)
+            throw EMEMORY;
+          memset(S,0,sizeof(Status)*Allocated);
+          memset(Idx,NO_STATI_ENTRY,sizeof(Idx[0])*LAST_STATI);
+        }
+      }
+      for (i=0;i<Last;i++) {
+        Status &st = S[i];
+        r.V1EmbedBegin((uint16)(3+i), &st, sizeof(Status));
+        {
+          uint8 nature=0, src=0, clev=0, dis=0, once=0;
+          int16 val=0, mag=0, dur=0;
+          hObj sh=0;
+          if (r.Saving()) {
+            nature=(uint8)st.Nature; val=(int16)st.Val; mag=(int16)st.Mag;
+            dur=(int16)st.Duration; src=(uint8)st.Source; clev=(uint8)st.CLev;
+            dis=(uint8)st.Dis; once=(uint8)st.Once; sh=(hObj)st.h;
+          }
+          FIELD_U8 (1, nature);
+          FIELD_I16(2, val);
+          FIELD_I16(3, mag);
+          FIELD_I16(4, dur);
+          FIELD_U8 (5, src);
+          FIELD_U8 (6, clev);
+          FIELD_U8 (7, dis);
+          FIELD_U8 (8, once);
+          r.V1RidStatus(9, st);
+          FIELD_H  (10, sh);
+          if (r.Loading()) {
+            st.Nature=nature; st.Val=val; st.Mag=mag; st.Duration=dur;
+            st.Source=src; st.CLev=clev; st.Dis=dis; st.Once=once; st.h=sh;
+          }
+        }
+        r.V1EmbedEnd();
+      }
+      if (r.Loading() && Allocated) {
+        /* Rebuild the index; the load fixup runs AFTER the field lines it
+           reads, per the load-direction ordering rule. */
+        int last = -1;
+        for (i = 0; i < Last; i++)
+          if ((int)S[i].Nature != last) {
+            int nat = S[i].Nature;
+            Idx[nat] = (uint16)i;
+            last = nat;
+          }
+        for (i = ADJUST; i <= ADJUST_LAST; i++)
+          if (Idx[i] != NO_STATI_ENTRY) {
+            Idx[ADJUST_IDX] = Idx[i];
+            break;
+          }
+      }
+    }
 
     void Initialize() {
       Last = 
@@ -668,11 +744,20 @@ class Thing: public Object
          right type; no cast is needed. */
       if (isSave)
         hm = m ? m->myHandle : 0;
-      else
-        m = oMap(hm);
-      Named.Serialize(r);
-      __Stati.Serialize(r);
-      backRefs.Serialize(r); 
+      FIELD_SKIP(m);               /* rebuilt from hm, never stored */
+      FIELD_H  (1, Next);
+      FIELD_H  (2, hm);
+      FIELD_I16(3, x);
+      FIELD_I16(4, y);
+      FIELD_U32(5, Image);
+      FIELD_I16(6, Timeout);
+      FIELD_I16(7, StoredMovementTimeout);
+      FIELD_U32(8, Flags);
+      FIELD_STR(9, Named);
+      FIELD_OBJ(10, __Stati);
+      FIELD_OBJ(11, backRefs);
+      if (!isSave)
+        m = oMap(hm);              /* load fixup: hm has landed by here */
     END_ARCHIVE
 		public:
       Map* m;

@@ -41,15 +41,8 @@ extern void InitGodArrays();
 
 /* Save maps when we leave them, load maps when we enter them. */
 
-struct fileHeader
-  {
-    uint32 Sig;
-    char Version[12];
-    char Name[72];
-    int16 numGroups;
-    int16 Compression;
-    int16 numDependencies;
-  };
+/* fileHeader and groupHeader moved to inc/Base.h: src/SaveV1.cpp reads and
+   writes them too. Their layouts are unchanged. */
 
 struct dependHeader
   {
@@ -82,17 +75,6 @@ static bool SaveFormatMatches(const char *stamp)
 
     return false;
   }
-
-struct groupHeader
-  {
-    uint32 Signature;
-    hObj   hGroup;
-    int32  groupSize;
-    int32  compSize;
-    int32  objCount;
-    int32  dataCount;
-    int32  LastHandle;
-  };
 
 /* upstream: LoadGroup and SaveGroup leak their Registry mode flag on every
    throw, and the next load then frees stack garbage. Base-code defect, not a
@@ -225,8 +207,11 @@ class SaveFixupScope
    after both loops have finished. So a real full disk always fails with EVERY
    object already converted, and the half-converted group -- the case
    SaveFixupScope above exists for -- has no other way in.
-   tools/check_save_fail.sh drives it. inc-i0r. */
-static void SaveFailProbe(bool isData, int32 index)
+   tools/check_save_fail.sh drives it. inc-i0r.
+
+   Not static: Registry::SaveGroupV1 (src/SaveV1.cpp) calls it too, so the
+   probe keeps one fired-once state across both writers. */
+void SaveFailProbe(bool isData, int32 index)
   {
     static const char *want = NULL;
     static bool asked = false, fired = false;
@@ -869,6 +854,14 @@ int16 Registry::LoadGroup(Term &t, hObj hGroup, bool use_lz) {
     /* Read Header */
     t.FRead(&fh,sizeof(fh));
 
+    /* v1 dispatch: a tagged-record file carries "IS" + major.rev in Version
+       (docs/SAVE-SCHEMA-SPEC.md). v0 files carry "SF" + digest or the old
+       VERSION_STRING and fall through to the raw reader below. */
+    if (fh.Sig == SIGNATURE && !strncmp(fh.Version, "IS", 2)) {
+        if (strncmp(fh.Version, "IS1.", 4)) throw EBADVER;  /* future major */
+        return LoadGroupV1(t, fh, hGroup);
+    }
+
     /* Check Version Number */
     if (!SaveFormatMatches(fh.Version))
       throw EBADVER;
@@ -1251,7 +1244,10 @@ NoSaved:
         do {
             T1->FRead(&fh, sizeof(fh));
             T1->Close();
-            if (!SaveFormatMatches(fh.Version))
+            /* A v1 save ("IS1." prefix) is listed beside the v0 files this
+               binary's own stamp matches. */
+            if (!SaveFormatMatches(fh.Version) &&
+                strncmp(fh.Version, "IS1.", 4))
                 continue;
 
             Filenames[i] = T1->GetFileName();
@@ -1334,6 +1330,11 @@ NoSaved:
     }
 
     theRegistry = &MainRegistry;
+    /* Deferred v1 name resolution: every rID slot a v1 load queued is
+       resolved here, now that the modules the names refer to are back in
+       memory. A v0 load queues nothing, so this is a no-op for it. It runs
+       before any CalcValues/report code touches a resource field. */
+    SaveV1_ResolveNames();
     memset(oPlayer(p[0])->MessageQueue, 0, sizeof(String) * 8);
     InitGodArrays();
 

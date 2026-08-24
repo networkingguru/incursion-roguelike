@@ -658,6 +658,37 @@ template<class S,int32 Initial,int32 Delta>
 void Array<S,Initial,Delta>::Serialize(Registry &r)
   { r.Block((void**)(&Items),sizeof(S)*Size);  }
 
+/* v1 field list: Count, then the elements as one K_ARRAY of raw POD bytes.
+   Size is not stored -- on load it becomes Count, and Enlarge() grows the
+   array from there exactly as it would from the constructor's shape. The
+   load fixup (the allocation) runs AFTER the field line it reads, per the
+   load-direction ordering rule. Element types carrying rIDs (TerraRecord,
+   Field) get their own FieldsV1 in a later task; Task 1 reaches only
+   Array<hObj,10,20> (Thing::backRefs). */
+template<class S,int32 Initial,int32 Delta>
+void Array<S,Initial,Delta>::FieldsV1(Registry &r)
+  {
+    FIELD_U32(1, Count);
+    if (r.Loading())
+      {
+        /* Count just came off the file; bound it before it reaches malloc.
+           The same CFILE_SANE_MAX_SIZE ceiling the group header checks use. */
+        if ((unsigned long long)Count * sizeof(S) >
+            (unsigned long long)CFILE_SANE_MAX_SIZE)
+          throw ECORRUPT;
+        Size = Count;
+        Items = NULL;
+        if (Size)
+          {
+            Items = (S*) malloc(sizeof(S)*Size);
+            if (!Items)
+              throw EMEMORY;
+            memset(Items,0,sizeof(S)*Size);
+          }
+      }
+    FIELD_ARRAY(2, Items, sizeof(S), Count);
+  }
+
 template class Array<Field,10,5>;            /* Map::Fields */
 template class Array<hObj,1000,10>;          /* Map::Things */
 template class Array<hObj,30,30>;

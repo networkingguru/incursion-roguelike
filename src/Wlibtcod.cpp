@@ -423,6 +423,8 @@ int main(int argc, char *argv[]) {
     char executablePath[MAX_PATH_LENGTH] = "";
     char *envPath = getenv("INCURSIONPATH");
     const char *dumpSave = NULL;
+    const char *schemaTest = NULL;
+    const char *schemaLoad = NULL;
     int i;
 
     if (envPath != NULL) {
@@ -502,6 +504,10 @@ int main(int argc, char *argv[]) {
     for (i = 1; i < argc; i++)
         if (!strcmp(argv[i], "-dump") && i + 1 < argc)
             dumpSave = argv[++i];
+        else if (!strcmp(argv[i], "-schematest") && i + 1 < argc)
+            schemaTest = argv[++i];
+        else if (!strcmp(argv[i], "-schemaload") && i + 1 < argc)
+            schemaLoad = argv[++i];
 
     theGame = new Game();
     AT1 = new libtcodTerm;
@@ -516,6 +522,10 @@ int main(int argc, char *argv[]) {
        until now was reachable only from the posix build. */
     if (dumpSave) {
         retval = RunSaveDump(dumpSave) ? 0 : 22;
+    } else if (schemaTest) {
+        retval = RunSchemaTest(schemaTest) ? 0 : 22;
+    } else if (schemaLoad) {
+        retval = RunSchemaLoad(schemaLoad) ? 0 : 22;
     } else if (!AT1->RunOnCommandLine(argc, argv, &retval)) {
         T1->Initialize();
         theGame->StartMenu();

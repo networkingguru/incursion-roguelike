@@ -172,6 +172,17 @@ bool RunSaveDump(const char *path) {
     }
     theRegistry = &MainRegistry;
 
+    /* Deferred v1 name resolution, same placement as Game::LoadGame: after
+       the module reload loop, before anything touches a resource field. A v0
+       load queues nothing and this is a no-op for it. */
+    try {
+        SaveV1_ResolveNames();
+    } catch (int error_number) {
+        fprintf(stderr, "incursion -dump: %s: %s\n", path,
+            Lookup(FileErrors, error_number));
+        return false;
+    }
+
     InitGodArrays();
 
     Player *p = oPlayer(theGame->p[0]);

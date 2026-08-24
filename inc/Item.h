@@ -18,8 +18,23 @@ class Item: public Thing, public Magic
     friend class TextTerm;
     friend void Player::JournalNoteItem(Item *i);
     ARCHIVE_CLASS(Item,Thing,r)
-      Inscrip.Serialize(r); 
-      GenStats.Serialize(r);
+      FIELD_U16(32, Known);
+      FIELD_I8 (33, Plus);
+      FIELD_I8 (34, Charges);
+      FIELD_I8 (35, DmgType);
+      FIELD_I16(36, GenNum);
+      FIELD_H  (37, Parent);
+      FIELD_RID(38, homeID);
+      FIELD_I16(39, Flavor);
+      FIELD_I16(40, cHP);
+      FIELD_I16(41, Age);
+      FIELD_U8 (42, swingCount);
+      FIELD_U32(43, Quantity);
+      FIELD_STR(44, Inscrip);
+      FIELD_STR(45, GenStats);
+      FIELD_RID(46, iID);
+      FIELD_RID(47, eID);
+      FIELD_U16(48, IFlags);
     END_ARCHIVE
     protected:
 			uint16 Known;
