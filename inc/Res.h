@@ -1127,6 +1127,12 @@ struct __FindCache
     char  str[32];
   };
 
+/* The v1 per-slot resource memory segment record (src/SaveV1.cpp): script
+   blob + name-keyed memory rows, written and parsed inside the slot's
+   K_EMBED scope in Game's archive body below. */
+class Game;
+void SaveV1_SegmentFields(Registry &r, Game &g, int slot);
+
 
 class Game : public Object
   {
@@ -1228,10 +1234,28 @@ class Game : public Object
         if (DungeonLevels[i] || r.V1Active())
           FIELD_BLOB((uint16)(835+i), DungeonLevels[i],
                      sizeof(hObj)*(DungeonSize[i]+1));
+      /* The per-module resource memory. v1 (IS1.2, SCHEMA_REV 1 -> 2): one
+         K_EMBED segment record per slot inside the tag-816 scope -- the
+         script blob plus NAME-KEYED memory rows (SaveV1_SegmentFields,
+         src/SaveV1.cpp) -- replacing the raw K_BLOB slots, whose
+         position-keyed rows and raw flavour rIDs were the renumbering
+         defect (docs/SAVE-SCHEMA-SPEC.md, "The resource memory segment").
+         On a v1 LOAD nothing lands here: the record is parsed into the
+         file-scope pending context, and SaveV1_ResolveNames() allocates
+         and fills MDataSeg[i] from the LOADED module's geometry after the
+         module reload -- Game::Modules is stale or zeroed while this body
+         runs. v0 keeps its raw block dump untouched. */
       r.V1EmbedBegin(816, MDataSeg, sizeof(MDataSeg));
       for(i=0;i!=MAX_MODULES;i++)
-        if (MDataSeg[i] || r.V1Active())
-          FIELD_BLOB((uint16)(1+i), MDataSeg[i], MDataSegSize[i]);
+        if (r.V1Active())
+          {
+            r.V1EmbedBegin((uint16)(1+i), &(MDataSeg[i]),
+                           sizeof(MDataSeg[i]));
+            SaveV1_SegmentFields(r, *this, i);
+            r.V1EmbedEnd();
+          }
+        else if (MDataSeg[i])
+          r.Block((void**)&(MDataSeg[i]), MDataSegSize[i]);
       r.V1EmbedEnd();
       FIELD_OBJ(867, Limbo);
       FIELD_OBJ(868, ModFiles);
@@ -1245,13 +1269,11 @@ class Game : public Object
           doLoad     = bLoad != 0;
           doAutoSave = bAuto != 0;
           doQuit     = bQuit != 0;
-          /* A file that declares a non-empty level list or data segment
-             must deliver it: Registry::V1Blob leaves NULL for an absent or
-             empty blob record, and GetDungeonMap/VMachine::Execute would
-             dereference it. */
-          for (i = 0; i != MAX_MODULES; i++)
-            if (MDataSegSize[i] && !MDataSeg[i])
-              throw ECORRUPT;
+          /* MDataSeg is NOT checked here any more (IS1.2): on a v1 load
+             every slot is still NULL at this point by design -- the
+             deferred placement in SaveV1_ResolveNames() allocates them
+             after the module reload, and ITS checks demand a segment
+             record for every loaded module. */
         }
     END_ARCHIVE
     public:

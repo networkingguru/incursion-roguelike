@@ -111,6 +111,44 @@ static void DumpItem(Item *it, int depth) {
     }
 }
 
+/* A resource name for the flavour report below, with the bounds checked by
+   hand. Two reasons NAME() is not used here. First, one purpose of the
+   Effect Memory section is to make a MISREAD memory segment visible in the
+   dump output (tools/check_flavor_stability.sh diffs it across a module
+   rebuild): a shifted or garbage rID must print as text, never crash the
+   report, and NAME() dereferences Get(rID) unguarded. Second, NAME()'s
+   ternary converts GetName's String& into a String TEMPORARY, so its
+   (const char*) is only alive for the full expression it sits in -- fine
+   at a printf argument, dangling the moment a helper RETURNS it (observed:
+   heap garbage in place of every name). So the name is read straight from
+   the module's text segment, into a rotating static buffer, with GetName's
+   own ';'-truncation applied by hand. */
+static const char* SafeResName(rID xID) {
+    static char bufs[4][120];
+    static int cyc;
+    if (!xID)
+        return "-";
+    int slot = (int)(xID >> 24) - 1;
+    if (slot < 0 || slot >= MAX_MODULES || !Game::Modules[slot])
+        return "(invalid module slot)";
+    Module *mod = Game::Modules[slot];
+    if ((int32)(xID & 0x00FFFFFF) >= (int32)mod->NumResources())
+        return "(out of range)";
+    Resource *res = theGame->Get(xID);
+    if (!res)
+        return "(no resource)";
+    const char *nm = mod->GetText(res->Name);
+    if (!nm)
+        return "(unnamed)";
+    char *out = bufs[cyc];
+    cyc = (cyc + 1) % 4;
+    size_t n = 0;
+    for (; nm[n] && nm[n] != ';' && n < sizeof(bufs[0]) - 1; n++)
+        out[n] = nm[n];
+    out[n] = 0;
+    return out;
+}
+
 bool RunSaveDump(const char *path) {
     if (!T1->Exists(path)) {
         fprintf(stderr, "incursion -dump: no such file: %s\n", path);
@@ -280,6 +318,44 @@ bool RunSaveDump(const char *path) {
             printf("  (nothing here)\n");
     } else
         printf("  (player position is out of map bounds)\n");
+    printf("\n");
+
+    /* Per-player resource memory for every Effect: the flavour appearance(s)
+       the game rolled at NewGame (Game::SetFlavors, src/Item.cpp) and the
+       Known/Tried identification flags, straight from EffMem through the
+       real EFFMEM accessor. This is the lens tools/check_flavor_stability.sh
+       compares across a module rebuild: these lines must be IDENTICAL when
+       the same save is read against a module with one Effect added, because
+       the memory rows are keyed by name and the flavour rIDs travel through
+       the save's name table (docs/SAVE-SCHEMA-SPEC.md, phase 4). Effects
+       whose whole row is zero are omitted: a save carries no row for them
+       and a new game gives them zeroed memory. */
+    printf("=== Effect Memory (flavours and Known/Tried) ===\n");
+    {
+        int shown = 0;
+        for (int ms = 0; ms != MAX_MODULES; ms++) {
+            Module *mod = Game::Modules[ms];
+            if (!mod)
+                continue;
+            for (int32 j = 0; j != mod->szEff; j++) {
+                rID eID = mod->EffectID((uint16)j);
+                EffMem *em = EFFMEM(eID, p);
+                if (!em->FlavorID && !em->PFlavorID && !em->Known &&
+                        !em->Tried && !em->PKnown && !em->PTried)
+                    continue;
+                printf("  %s: flavor=%s pflavor=%s Known=%d Tried=%d "
+                       "PKnown=%d PTried=%d\n",
+                    SafeResName(eID),
+                    SafeResName((rID)em->FlavorID),
+                    SafeResName((rID)em->PFlavorID),
+                    (int)em->Known, (int)em->Tried,
+                    (int)em->PKnown, (int)em->PTried);
+                shown++;
+            }
+        }
+        if (!shown)
+            printf("  (no effect memory)\n");
+    }
     printf("\n");
 
     /* Temporary diagnostic (inc-otz): report every portal on the player's map,

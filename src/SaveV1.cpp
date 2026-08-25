@@ -42,8 +42,13 @@ extern size_t typeSize(int8 Type);
    of an existing tag or record shape bumps it (wire-format section, schema
    revisions). History: 0 -> 1, Map's tag 672 (the grid) changed from one
    raw K_BLOB of LocationInfo to the packed K_EMBED grid record
-   (Map::GridFieldsV1 below). */
-#define SCHEMA_REV 1
+   (Map::GridFieldsV1 below). 1 -> 2, Game's tag 816 (the per-module
+   resource memory segment) changed from raw K_BLOB slots to per-slot
+   K_EMBED segment records: script blob + name-keyed memory rows
+   (SaveV1_SegmentFields below), so a module rebuild that adds, removes or
+   reorders a resource no longer shifts every row or renumbers the stored
+   flavour rIDs. */
+#define SCHEMA_REV 2
 
 const char* SaveSchemaID()
   {
@@ -157,6 +162,41 @@ struct V1Frame {
 
 static V1Frame v1Frames[V1_MAX_DEPTH];
 static int v1FrameDepth;
+
+/* -- the pending resource memory segment (phase 4) ------------------------*/
+
+/* One parsed memory row, held between the record read and the deferred
+   placement. The payload is copied out of the group buffer because
+   LoadGroupV1 frees that buffer before SaveV1_ResolveNames() runs. */
+#define V1_SEG_MAX_PAY 13   /* the largest packed row payload (MonMem) */
+
+struct V1SegRow {
+    uint8  kind;                 /* 0 MonMem, 1 ItemMem, 2 EffMem, 3 RegMem */
+    uint16 ordinal;              /* among same-pool, same-name resources */
+    char  *name;                 /* owned */
+    uint8  payLen;
+    uint8  pay[V1_SEG_MAX_PAY];
+};
+
+/* Per-slot pending state: what the segment record carried, plus WHERE the
+   placement must land -- captured at record-read time so the -schematest /
+   -schemaload drivers place into the object the record loaded into, not
+   into some global. */
+struct V1SegPending {
+    bool     present;            /* this slot's record was in the file */
+    char   **target;             /* &Game::MDataSeg[slot] of the loaded Game */
+    uint32  *sizeTarget;         /* &Game::MDataSegSize[slot] */
+    uint8   *script;             /* the script data segment blob (owned) */
+    uint32   scriptLen;          /* its saved length (== saved szDataSeg) */
+    V1SegRow *rows;              /* owned */
+    uint32   rowCount;
+};
+
+static V1SegPending v1Seg[MAX_MODULES];
+/* True once a v1 Game record's segment loop ran this load: the deferred
+   placement then DEMANDS a record for every loaded module (a module whose
+   record is missing would otherwise play with a NULL MDataSeg). */
+static bool v1SegSawGame;
 
 /* -- coverage (DEBUG, save direction only) --------------------------------*/
 
@@ -725,12 +765,31 @@ static void v1ReaderTeardown(void)
     v1FramesFree();
   }
 
-/* The resolve state (name table + queues) outlives LoadGroupV1 on purpose:
-   SaveV1_ResolveNames() consumes it after the module reload. */
+static void v1SegFree(void)
+  {
+    for (int i = 0; i != MAX_MODULES; i++)
+      {
+        V1SegPending *sp = &v1Seg[i];
+        if (sp->rows)
+          {
+            for (uint32 k = 0; k != sp->rowCount; k++)
+              free(sp->rows[k].name);
+            free(sp->rows);
+          }
+        free(sp->script);
+        memset(sp, 0, sizeof(*sp));
+      }
+    v1SegSawGame = false;
+  }
+
+/* The resolve state (name table + queues + pending memory segments)
+   outlives LoadGroupV1 on purpose: SaveV1_ResolveNames() consumes it after
+   the module reload. */
 static void v1ResolveTeardown(void)
   {
     v1NamesFree();
     v1QueuesFree();
+    v1SegFree();
   }
 
 /* RAII: however SaveGroupV1/LoadGroupV1 leave, the context is not left
@@ -896,6 +955,500 @@ static bool V1ResolveEntry(V1NameEntry *ent)
     return true;
   }
 
+/* ------------------------------------------------------------------------ */
+/*             the resource memory segment record (phase 4)                 */
+/* ------------------------------------------------------------------------ */
+
+static const V1Ent* v1Find(uint16 tag);   /* reader primitive, below */
+
+/* Row kind -> wire pool byte, memory row stride, and packed payload size.
+   Indexed by the row's kind byte (0 MonMem, 1 ItemMem, 2 EffMem, 3 RegMem).
+   The payload layouts are fixed for IS1.2; any change bumps SCHEMA_REV. */
+static const uint8  v1SegPool[4]   = { SP_MON, SP_ITM, SP_EFF, SP_REG };
+static const size_t v1SegStride[4] = { sizeof(MonMem), sizeof(ItemMem),
+                                       sizeof(EffMem), sizeof(RegMem) };
+static const uint8  v1SegPayLen[4] = { 13, 1, 9, 4 };
+
+/* The block starts inside MDataSeg[slot], exactly as Module::GetMemoryPtr
+   (src/Res.cpp:711) computes them: the script data segment first, then one
+   block per pool in Mon/Itm/Eff/Reg order. GetMemoryPtr multiplies the
+   in-pool index by NumPlayers() but not the skipped blocks; NumPlayers()
+   is 1, which makes the two conventions agree, and GetMemoryPtr is the
+   authority this mirrors. */
+static void v1SegStarts(Module *mod, size_t np, size_t start[4], size_t *total)
+  {
+    start[0] = (size_t)mod->szDataSeg;
+    start[1] = start[0] + sizeof(MonMem)  * (size_t)mod->szMon * np;
+    start[2] = start[1] + sizeof(ItemMem) * (size_t)mod->szItm * np;
+    start[3] = start[2] + sizeof(EffMem)  * (size_t)mod->szEff * np;
+    *total   = start[3] + sizeof(RegMem)  * (size_t)mod->szReg * np;
+  }
+
+/* Pack one memory row's bitfields BY NAME into the fixed little-endian
+   payload (never memcpy: the in-memory bitfield layout is the compiler's,
+   the wire layout is ours). EffMem is handled by the caller because its
+   two flavour values go through the name table. Returns false for an
+   all-zero row, which is not written at all: a resource with no row keeps
+   zeroed memory, as a new game gives it. */
+static bool v1SegPackRow(int kind, const char *rowp, uint8 *out)
+  {
+    switch (kind)
+      {
+        case 0:
+          {
+            const MonMem *m = (const MonMem*)rowp;
+            if (!m->Battles && !m->Deaths && !m->Kills && !m->pKills &&
+                !m->Attacks && !m->Resists && !m->Immune && !m->Seen &&
+                !m->Fought && !m->Feats && !m->Flags)
+              return false;
+            out[0] = (uint8)m->Battles;
+            out[1] = (uint8)m->Deaths;
+            out[2] = (uint8)m->Kills;
+            out[3] = (uint8)m->pKills;
+            out[4] = (uint8)(m->Attacks & 0xFF);
+            out[5] = (uint8)(m->Attacks >> 8);
+            out[6] = (uint8)m->Resists;
+            out[7] = (uint8)(m->Immune & 0xFF);
+            out[8] = (uint8)(m->Immune >> 8);
+            out[9] = (uint8)((m->Seen ? 1 : 0) | (m->Fought ? 2 : 0));
+            out[10] = (uint8)(m->Feats & 0xFF);
+            out[11] = (uint8)(m->Feats >> 8);
+            out[12] = (uint8)m->Flags;
+            return true;
+          }
+        case 1:
+          {
+            const ItemMem *m = (const ItemMem*)rowp;
+            if (!m->Known && !m->ProfLevel && !m->Tried && !m->Mastered &&
+                !m->Unused)
+              return false;
+            out[0] = (uint8)((m->Known ? 1 : 0) | (m->ProfLevel << 1) |
+                             (m->Tried ? 16 : 0) | (m->Mastered ? 32 : 0) |
+                             (m->Unused << 6));
+            return true;
+          }
+        case 3:
+          {
+            const RegMem *m = (const RegMem*)rowp;
+            if (!m->Seen)
+              return false;
+            out[0] = (uint8)(m->Seen & 0xFF);
+            out[1] = (uint8)((m->Seen >> 8) & 0xFF);
+            out[2] = (uint8)((m->Seen >> 16) & 0xFF);
+            out[3] = (uint8)((m->Seen >> 24) & 0xFF);
+            return true;
+          }
+      }
+    return false;
+  }
+
+/* The other direction, payload -> bitfields by name, for the deferred
+   placement. EffMem's flavour values are resolved by the caller. */
+static void v1SegUnpackRow(int kind, const uint8 *pay, char *rowp)
+  {
+    switch (kind)
+      {
+        case 0:
+          {
+            MonMem *m = (MonMem*)rowp;
+            m->Battles = pay[0];
+            m->Deaths  = pay[1];
+            m->Kills   = pay[2];
+            m->pKills  = pay[3];
+            m->Attacks = (unsigned)(pay[4] | (pay[5] << 8)) & 0x1FF;
+            m->Resists = pay[6];
+            m->Immune  = (unsigned)(pay[7] | (pay[8] << 8));
+            m->Seen    = pay[9] & 1;
+            m->Fought  = (pay[9] >> 1) & 1;
+            m->Feats   = (unsigned)(pay[10] | (pay[11] << 8));
+            m->Flags   = pay[12] & 0x1F;
+            break;
+          }
+        case 1:
+          {
+            ItemMem *m = (ItemMem*)rowp;
+            m->Known     = pay[0] & 1;
+            m->ProfLevel = (pay[0] >> 1) & 7;
+            m->Tried     = (pay[0] >> 4) & 1;
+            m->Mastered  = (pay[0] >> 5) & 1;
+            m->Unused    = (pay[0] >> 6) & 3;
+            break;
+          }
+        case 3:
+          {
+            RegMem *m = (RegMem*)rowp;
+            m->Seen = (unsigned)pay[0] | ((unsigned)pay[1] << 8) |
+                      ((unsigned)pay[2] << 16) | ((unsigned)pay[3] << 24);
+            break;
+          }
+      }
+  }
+
+/* The per-slot segment record, called from Game's ARCHIVE_CLASS body inside
+   the slot's K_EMBED scope (inc/Res.h, tag 816 scope, inner tag 1+slot).
+   The embed's contents are three ordinary tagged fields, so the generic
+   scanner and the harness field parsers keep working:
+
+     1: K_BLOB  the script data segment: the first szDataSeg bytes, raw.
+                Carried with its own length and length-checked against the
+                LOADED module's szDataSeg at placement time, per
+                docs/SCRIPT-DATA-SEGMENT.md's Verdict (0 bytes in every
+                real module today).
+     2: K_U32   rowCount
+     3: K_BLOB  rowCount packed row sub-records, memory-layout order:
+                  u8  rowKind   0=MonMem 1=ItemMem 2=EffMem 3=RegMem
+                  u8  pool      SP_MON/SP_ITM/SP_EFF/SP_REG (must match
+                                rowKind; the redundancy is a cheap check)
+                  u16 ordinal   among same-pool same-name resources
+                  u16 nameLen + name bytes -- an INLINE key, not a global
+                                table index: memory rows have
+                                discard-on-missing semantics (constraint
+                                3's exception), the global table aborts
+                  u8  payLen  + payload (v1SegPackRow's layouts; EffMem is
+                                two uint32 GLOBAL name-table indices for
+                                FlavorID/PFlavorID -- abort semantics --
+                                plus one Known/Tried/PKnown/PTried flags
+                                byte)
+
+   On load this only PARSES into v1Seg[] -- no resolution, no allocation
+   from module geometry: Game::Modules is stale or zeroed here, because
+   both load paths reload modules only AFTER the save group
+   (src/Registry.cpp:1317-1334, src/Dump.cpp:151-172). v1SegPlace() does
+   the real work from SaveV1_ResolveNames(), after the reload. */
+void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
+  {
+    (void)r;
+    if (v1.mode == V1_SAVE)
+      {
+        if (!g.MDataSeg[slot])
+          return;               /* slot not in use: an empty embed */
+        Module *mod = Game::Modules[slot];
+        if (!mod)
+          {
+            Error("SaveV1: MDataSeg[%d] is allocated but module slot %d "
+                  "is not loaded", slot, slot);
+            throw ECORRUPT;
+          }
+        const char *seg = g.MDataSeg[slot];
+        size_t start[4], total;
+        v1SegStarts(mod, (size_t)g.NumPlayers(), start, &total);
+        if (total > (size_t)g.MDataSegSize[slot])
+          {
+            Error("SaveV1: MDataSeg[%d] is %u bytes but the loaded module "
+                  "needs %lu", slot, (unsigned)g.MDataSegSize[slot],
+                  (unsigned long)total);
+            throw ECORRUPT;
+          }
+
+        /* 1: the script data segment, raw, with its own length. */
+        v1PutU16(&v1Out, 1);
+        v1PutU8(&v1Out, K_BLOB);
+        v1PutU32(&v1Out, (uint32)mod->szDataSeg);
+        if (mod->szDataSeg)
+          v1Put(&v1Out, seg, (size_t)mod->szDataSeg);
+
+        /* The rows, in memory-layout order (pool by pool, declaration
+           order within the pool) -- deterministic, so the fixpoint's
+           byte-identity holds. */
+        V1Buf rows;
+        memset(&rows, 0, sizeof(rows));
+        uint32 rowCount = 0;
+        try
+          {
+            for (int kind = 0; kind != 4; kind++)
+              {
+                V1Pool pl;
+                if (!V1GetPool(mod, v1SegPool[kind], &pl))
+                  throw ECORRUPT;
+                for (int32 j = 0; j != pl.count; j++)
+                  {
+                    const char *rowp = seg + start[kind] +
+                        (size_t)j * v1SegStride[kind] *
+                        (size_t)g.NumPlayers();
+                    uint8 pay[V1_SEG_MAX_PAY];
+                    if (kind == 2)
+                      {
+                        /* EffMem: the flavour rID VALUES go through the
+                           GLOBAL name table, like any other resource
+                           reference (abort semantics on load). */
+                        const EffMem *m = (const EffMem*)rowp;
+                        if (!m->FlavorID && !m->PFlavorID && !m->Known &&
+                            !m->Tried && !m->PKnown && !m->PTried)
+                          continue;
+                        uint32 fi = m->FlavorID ?
+                            V1InternRid((rID)m->FlavorID) : 0xFFFFFFFFu;
+                        uint32 pfi = m->PFlavorID ?
+                            V1InternRid((rID)m->PFlavorID) : 0xFFFFFFFFu;
+                        memcpy(pay, &fi, 4);
+                        memcpy(pay + 4, &pfi, 4);
+                        pay[8] = (uint8)((m->Known ? 1 : 0) |
+                                         (m->Tried ? 2 : 0) |
+                                         (m->PKnown ? 4 : 0) |
+                                         (m->PTried ? 8 : 0));
+                      }
+                    else if (!v1SegPackRow(kind, rowp, pay))
+                      continue;
+                    const char *name = V1ResName(mod, &pl, j);
+                    size_t nameLen = strlen(name);
+                    ASSERT(nameLen <= 0xFFFF);
+                    uint32 ordinal = 0;
+                    for (int32 q = 0; q != j; q++)
+                      if (!strcmp(V1ResName(mod, &pl, q), name))
+                        ordinal++;
+                    v1PutU8(&rows, (uint8)kind);
+                    v1PutU8(&rows, v1SegPool[kind]);
+                    v1PutU16(&rows, (uint16)ordinal);
+                    v1PutU16(&rows, (uint16)nameLen);
+                    v1Put(&rows, name, nameLen);
+                    v1PutU8(&rows, v1SegPayLen[kind]);
+                    v1Put(&rows, pay, v1SegPayLen[kind]);
+                    rowCount++;
+                  }
+              }
+            /* 2: rowCount.  3: the packed rows. */
+            v1PutU16(&v1Out, 2);
+            v1PutU8(&v1Out, K_U32);
+            v1PutU32(&v1Out, rowCount);
+            v1PutU16(&v1Out, 3);
+            v1PutU8(&v1Out, K_BLOB);
+            v1PutU32(&v1Out, (uint32)rows.len);
+            if (rows.len)
+              v1Put(&v1Out, rows.p, rows.len);
+          }
+        catch (...)
+          {
+            v1BufFree(&rows);
+            throw;
+          }
+        v1BufFree(&rows);
+        return;
+      }
+
+    if (v1.mode != V1_LOAD)
+      return;   /* v0: the raw dump path never calls this (inc/Res.h) */
+
+    /* Record read, phase 1: parse into the file-scope context ONLY. */
+    v1SegSawGame = true;
+    const V1Ent *eScript = v1Find(1);
+    const V1Ent *eCount  = v1Find(2);
+    const V1Ent *eRows   = v1Find(3);
+    if (!eScript && !eCount && !eRows)
+      return;                   /* an empty embed: slot not in use */
+    if (!eScript || !eCount || !eRows)
+      throw ECORRUPT;           /* a partial segment record is corruption */
+    if (eScript->kind != K_BLOB || eCount->kind != K_U32 ||
+        eRows->kind != K_BLOB)
+      throw ECORRUPT;           /* known tag, unexpected kind */
+
+    V1SegPending *sp = &v1Seg[slot];
+    if (sp->present)
+      throw ECORRUPT;           /* two records for one slot */
+
+    uint32 rowCount;
+    memcpy(&rowCount, eCount->pay, 4);
+    /* Every row is at least 7 bytes of header, so this bounds the
+       allocation below by the blob the scanner already bounded. */
+    if (rowCount > eRows->size / 7)
+      throw ECORRUPT;
+
+    /* Copied OUT of the group buffer: LoadGroupV1 frees it before the
+       deferred placement runs. */
+    sp->scriptLen = eScript->size;
+    if (eScript->size)
+      {
+        sp->script = (uint8*) malloc(eScript->size);
+        if (!sp->script)
+          throw EMEMORY;
+        memcpy(sp->script, eScript->pay, eScript->size);
+      }
+    if (rowCount)
+      {
+        sp->rows = (V1SegRow*) calloc(rowCount, sizeof(V1SegRow));
+        if (!sp->rows)
+          throw EMEMORY;
+      }
+    {
+      const uint8 *p = eRows->pay;
+      size_t len = eRows->size, pos = 0;
+      for (uint32 k = 0; k != rowCount; k++)
+        {
+          V1SegRow *row = &sp->rows[k];
+          uint16 ordinal, nameLen;
+          if (pos + 6 > len)
+            throw ECORRUPT;
+          uint8 kind = p[pos];
+          uint8 pool = p[pos + 1];
+          if (kind > 3 || pool != v1SegPool[kind])
+            throw ECORRUPT;
+          memcpy(&ordinal, p + pos + 2, 2);
+          memcpy(&nameLen, p + pos + 4, 2);
+          pos += 6;
+          if (nameLen > len - pos)
+            throw ECORRUPT;
+          row->kind = kind;
+          row->ordinal = ordinal;
+          row->name = (char*) malloc((size_t)nameLen + 1);
+          if (!row->name)
+            throw EMEMORY;
+          memcpy(row->name, p + pos, nameLen);
+          row->name[nameLen] = 0;
+          sp->rowCount = k + 1;   /* now, so a throw below still frees it */
+          pos += nameLen;
+          if (pos + 1 > len)
+            throw ECORRUPT;
+          row->payLen = p[pos];
+          pos += 1;
+          if (row->payLen != v1SegPayLen[kind] || row->payLen > len - pos)
+            throw ECORRUPT;       /* IS1.2 payloads are fixed-size */
+          memcpy(row->pay, p + pos, row->payLen);
+          pos += row->payLen;
+        }
+      if (pos != len)
+        throw ECORRUPT;           /* trailing bytes after the last row */
+    }
+    sp->present = true;
+    sp->target = &g.MDataSeg[slot];
+    sp->sizeTarget = &g.MDataSegSize[slot];
+  }
+
+/* Placement, phase 2: runs inside SaveV1_ResolveNames(), after the module
+   reload, with the name-table entries already resolved. Allocates each
+   pending slot's MDataSeg from the LOADED module's geometry, places the
+   script blob (length-checked, docs/SCRIPT-DATA-SEGMENT.md), and walks the
+   parsed rows: an inline key that no longer names a resource DISCARDS its
+   row silently-by-design (one stderr line per discard in DEBUG builds, so
+   the behaviour is observable); the EffMem flavour values resolve through
+   the global table with ABORT semantics. Returns the failure count; the
+   caller aggregates and throws. */
+static long v1SegPlace(void)
+  {
+    long failures = 0;
+    size_t np = theGame ? (size_t)theGame->NumPlayers() : 1;
+
+    /* Only a load that replayed a Game record has a segment to place.
+       A group without one -- the -schematest/-schemaload class groups --
+       must not have modules-without-records demanded of it. */
+    if (!v1SegSawGame)
+      return 0;
+
+    for (int slot = 0; slot != MAX_MODULES; slot++)
+      {
+        V1SegPending *sp = &v1Seg[slot];
+        Module *mod = Game::Modules[slot];
+        if (!sp->present)
+          {
+            if (mod)
+              {
+                /* The save must carry a record for every module it lists
+                   in ModFiles: a missing one would leave the VM and every
+                   memory accessor a NULL MDataSeg to walk. */
+                failures++;
+                fprintf(stderr,
+                    "incursion: v1 save carries no memory segment record "
+                    "for loaded module slot %d\n", slot);
+              }
+            continue;
+          }
+        if (!mod)
+          {
+            failures++;
+            fprintf(stderr,
+                "incursion: v1 memory segment record names module slot %d, "
+                "which did not load\n", slot);
+            continue;
+          }
+        if (sp->scriptLen != (uint32)mod->szDataSeg)
+          {
+            /* The Verdict's length guard: the script data segment is
+               opaque VM state and cannot be truncated or zero-extended. */
+            failures++;
+            fprintf(stderr,
+                "incursion: saved script data segment for module slot %d "
+                "is %u bytes; the loaded module's szDataSeg is %u\n",
+                slot, (unsigned)sp->scriptLen, (unsigned)mod->szDataSeg);
+            continue;
+          }
+
+        size_t start[4], total;
+        v1SegStarts(mod, np, start, &total);
+        char *seg = (char*) malloc(total ? total : 1);
+        if (!seg)
+          throw EMEMORY;
+        memset(seg, 0, total);
+        if (sp->scriptLen)
+          memcpy(seg, sp->script, sp->scriptLen);
+
+        for (uint32 k = 0; k != sp->rowCount; k++)
+          {
+            V1SegRow *row = &sp->rows[k];
+            V1Pool pl;
+            if (!V1GetPool(mod, v1SegPool[row->kind], &pl))
+              { failures++; continue; }
+            int32 found = -1;
+            uint32 running = 0;
+            for (int32 j = 0; j != pl.count; j++)
+              if (!strcmp(V1ResName(mod, &pl, j), row->name))
+                {
+                  if (running == row->ordinal)
+                    { found = j; break; }
+                  running++;
+                }
+            if (found < 0)
+              {
+                /* Silently-by-design: a memory row is annotation, not a
+                   reference (constraint 3's exception). */
+#ifdef DEBUG
+                fprintf(stderr,
+                    "incursion: v1 memory row discarded: %s \"%s\" "
+                    "(ordinal %u) is no longer in module slot %d\n",
+                    V1PoolName(v1SegPool[row->kind]), row->name,
+                    (unsigned)row->ordinal, slot);
+#endif
+                continue;
+              }
+            char *rowp = seg + start[row->kind] +
+                (size_t)found * v1SegStride[row->kind] * np;
+            if (row->kind == 2)
+              {
+                EffMem *m = (EffMem*)rowp;
+                uint32 idx[2];
+                rID val[2] = { 0, 0 };
+                memcpy(&idx[0], row->pay, 4);
+                memcpy(&idx[1], row->pay + 4, 4);
+                for (int f = 0; f != 2; f++)
+                  {
+                    if (idx[f] == 0xFFFFFFFFu)
+                      continue;               /* encoded null */
+                    if (idx[f] >= v1.nameCount)
+                      {
+                        failures++;
+                        fprintf(stderr,
+                            "incursion: v1 EffMem flavour references name "
+                            "table entry %u of %u\n",
+                            (unsigned)idx[f], (unsigned)v1.nameCount);
+                        continue;
+                      }
+                    if (v1.names[idx[f]].bad)
+                      continue;               /* counted and reported */
+                    val[f] = v1.names[idx[f]].resolved;
+                  }
+                m->FlavorID  = (unsigned)val[0];
+                m->PFlavorID = (unsigned)val[1];
+                m->Known  = row->pay[8] & 1;
+                m->Tried  = (row->pay[8] >> 1) & 1;
+                m->PKnown = (row->pay[8] >> 2) & 1;
+                m->PTried = (row->pay[8] >> 3) & 1;
+              }
+            else
+              v1SegUnpackRow(row->kind, row->pay, rowp);
+          }
+
+        *(sp->target) = seg;
+        *(sp->sizeTarget) = (uint32) total;
+      }
+    return failures;
+  }
+
 /* Deferred resolution: called once after each load path's module-reload
    loop (Game::LoadGame, RunSaveDump, and the -schematest/-schemaload
    drivers). Resolves every queued slot or aborts naming EVERY failure --
@@ -906,7 +1459,7 @@ void SaveV1_ResolveNames()
     uint32 i;
     long failures = 0;
 
-    if (!v1.slotQCount && !v1.statQCount && !v1.nameCount)
+    if (!v1.slotQCount && !v1.statQCount && !v1.nameCount && !v1SegSawGame)
       return;
 
     for (i = 0; i != v1.nameCount; i++)
@@ -954,6 +1507,12 @@ void SaveV1_ResolveNames()
           continue;
         v1.statQ[i]->eID = (int32) v1.names[idx].resolved;
       }
+
+    /* Phase 2 of the memory segment record: allocation from the LOADED
+       modules' geometry, script-blob placement, and the name-keyed row
+       walk. Runs after the entry loop above because the EffMem flavour
+       values read the resolved entries. */
+    failures += v1SegPlace();
 
     v1ResolveTeardown();
     if (failures)

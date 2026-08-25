@@ -366,7 +366,7 @@ def craft_map_grid_overflow(cases):
     payload = (rec + struct.pack("<I", SIGNATURE_TWO)
                    + struct.pack("<I", 0))            # empty name table
 
-    fh = struct.pack("<I", SIGNATURE) + b"IS1.1" + bytes(7) + bytes(72) \
+    fh = struct.pack("<I", SIGNATURE) + b"IS1.2" + bytes(7) + bytes(72) \
         + struct.pack("<hhh", 1, 0, 0)                # numGroups/Comp/nDeps
     fh += bytes(FH_SIZE - len(fh))                    # tail padding
     gh = struct.pack("<IiiiiiI", SIGNATURE, 0, len(payload), len(payload),
