@@ -162,9 +162,10 @@ bool RunSaveDump(const char *path) {
        read the fields below. OpenRead only; nothing here ever opens a file
        for writing. */
     /* The FILE's header, kept for the report: the Format line must name the
-       stamp the file carries ("IS1.0" for a v1 save, the SF digest for a
-       v0 one), not this binary's own SaveFormatID(). LoadGroup reads the
-       same bytes internally but does not hand them back. */
+       stamp the file carries ("IS1." + the file's schema revision for a v1
+       save, the SF digest for a v0 one), not this binary's own
+       SaveFormatID() or SaveSchemaID(). LoadGroup reads the same bytes
+       internally but does not hand them back. */
     fileHeader fhdr;
     memset(&fhdr, 0, sizeof(fhdr));
 

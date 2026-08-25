@@ -7,12 +7,16 @@
 # that this fails LOUDLY -- not that the report quietly starts omitting a
 # section, or worse, printing something plausible and wrong.
 #
-# How it gets a known save without one checked into git. save/ is gitignored
-# (a .sav is a memory image welded to the exact struct layout of the binary
-# that wrote it, so a committed fixture would go stale the moment anyone
+# How it gets a known save without one checked into git. save/ is gitignored.
+# A v0 .sav is a memory image welded to the exact struct layout of the binary
+# that wrote it, so a committed v0 fixture would go stale the moment anyone
 # touched a header -- the same reason an external parser was rejected for
-# -dump itself; see docs/ENGINE-SERIALISATION.md). Instead this generates one
-# fresh, in a scratch directory, the same way tools/check_headless.sh does:
+# -dump itself; see docs/ENGINE-SERIALISATION.md. The v1 saves the game
+# writes today are tagged-record files and do not go stale that way, but a
+# committed fixture would freeze one old writer's output where this check
+# wants today's: the point is that TODAY's writer and TODAY's reader agree.
+# So this generates one fresh, in a scratch directory, the same way
+# tools/check_headless.sh does:
 # tools/headless.sh with a fixed seed and tools/keys/smoke.keys is
 # deterministic (same reasoning as check_headless.sh's reproducibility
 # assertion), so the fields checked below are exact expected values, not just

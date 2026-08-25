@@ -10,10 +10,15 @@
 # a real character is carrying, what stati she is under, or what the game
 # thinks her weapon skill is -- read-only, without running the game any other
 # way. The report comes from -dump (src/Dump.cpp), a mode of the game binary
-# itself: it loads the file through the real Registry::LoadGroup and walks it
-# with the real accessors, which is the only way the report cannot drift out
-# of step with the save format. See docs/ENGINE-SERIALISATION.md for why an
-# external parser was rejected outright.
+# itself: it loads the file through the real reader and walks it with the
+# real accessors, which is the only way the report cannot drift out of step
+# with either save format. There are two. The binary picks the reader from
+# the file's own stamp (Registry::LoadGroup's dispatch): a Version of
+# "IS1.x" is a v1 tagged-record save -- every save the game writes today --
+# and anything else goes through the v0 raw-memory reader, which still
+# serves saves from before the switch and every .Mod. The report's Format:
+# line names the stamp the FILE carries. See docs/ENGINE-SERIALISATION.md
+# for both formats and for why an external parser was rejected outright.
 #
 # SAFETY. -dump opens the named file and the save's module dependencies for
 # reading only: it never calls OpenWrite, never calls Player::TouchGallery,

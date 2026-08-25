@@ -26,6 +26,14 @@
 # by hand as well, before and after the fix; it is not automated here because
 # it needs a mounted disk image.
 #
+# SINCE SCHEMA V1. Real saves now go through Registry::SaveGroupV1
+# (src/SaveV1.cpp), which never parks handles in pointer slots -- the
+# restore hazard above is v0's, and v0 still writes every .Mod. The staged
+# probe fires in SaveGroupV1's object loop too, so what this check asserts
+# on the v1 path is the same contract from the player's side: a throw
+# part way through a save leaves the game running, reported, and able to
+# save the identical character again.
+#
 # HOW IT WOULD CATCH A REGRESSION. Three ways, in rising order of subtlety:
 #   1. the session crashes (this is what the unfixed build does: exit 139);
 #   2. the session survives but the failure was never reported to the player;

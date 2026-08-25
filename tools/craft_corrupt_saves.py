@@ -2,16 +2,23 @@
 """Craft deliberately corrupt .sav files from one genuine, freshly-generated
 save, for tools/check_load_corrupt.sh (bd inc-l0t).
 
-WHY A GENUINE SAVE IS THE STARTING POINT. A .sav is a memory image welded to
-the exact struct layout of the binary that wrote it (see
-docs/ENGINE-SERIALISATION.md) -- the same reason inc-loa.1 refused to write an
-external save parser. This script does not parse the save contents either. It
-only overwrites four fixed fields in the group header immediately after the
-96-byte fileHeader (verified against the real struct layout in
-src/Registry.cpp, offsets confirmed in the bd inc-l0t working notes) and, for
-two cases, replaces the compressed data that follows it with a hand-built
-stream in the RLE format the main save group actually uses
-(Registry::LoadGame calls LoadGroup with use_lz=false).
+WHY A GENUINE SAVE IS THE STARTING POINT. Parsing a save's contents here
+would duplicate the reader and drift (see docs/ENGINE-SERIALISATION.md) --
+the same reason inc-loa.1 refused to write an external save parser. This
+script does not parse the save contents. It only overwrites four fixed
+fields in the group header immediately after the 96-byte fileHeader (both
+header shapes are shared by the v0 and v1 formats; offsets verified against
+the real struct layout in src/Registry.cpp and confirmed in the bd inc-l0t
+working notes) and, for two cases, replaces the compressed data that follows
+it with a hand-built stream. Those two streams are in v0's RLE token format,
+which was the main save group's codec when they were written. The genuine
+base save is a v1 file now (Compression=1 means a zlib-6 payload, per
+docs/ENGINE-SERIALISATION.md), so the v1 reader meets them as invalid zlib
+input and must refuse them at the inflate's own bounds checks -- still
+corrupt input at the same trust boundary, refused one layer earlier. The
+corpus therefore exercises the v1 reader's shared header path and its
+decompression bounds; the v0 RLE decoder's own overflow safety stays proven
+by tools/check_lz_uncompress.sh at the unit level.
 
 Usage: craft_corrupt_saves.py <genuine.sav> <output-dir>
 Writes one file per case into <output-dir> and prints "<name> <path>" for

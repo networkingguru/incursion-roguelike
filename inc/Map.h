@@ -68,7 +68,9 @@ struct LocationInfo
 static_assert(sizeof(LocationInfo) == 20,
     "LocationInfo changed size: a member was added, removed or resized. "
     "Extend the packed layout into the reserved bytes and re-verify the "
-    "pack/unpack loops deliberately.");
+    "pack/unpack loops deliberately. (This assert only sees SIZE changes; "
+    "a new :1 flag in the spare flag bits keeps sizeof at 20 and is caught "
+    "only by the DEBUG grid probe's fill list -- add the flag there too.)");
 static_assert(offsetof(LocationInfo, Glyph) == 0 &&
               offsetof(LocationInfo, Memory) == 12 &&
               offsetof(LocationInfo, Contents) == 16,

@@ -15,6 +15,14 @@
 # exit code that says so, and nothing printed by the sanitizer build) while
 # the genuine ones still load and read back correctly.
 #
+# Which reader this covers. The genuine save is generated fresh, so it is a
+# v1 tagged-record file ("IS1.x", zlib-6 payload): the corpus exercises the
+# v1 reader's header path -- the fileHeader/groupHeader sanity checks it
+# shares with the v0 reader -- and its zlib decompression bounds. The v0
+# raw reader stays covered elsewhere, by the two v0 evidence fixtures under
+# docs/evidence/inc-upw.13/, which tools/check_convert_guard.sh loads (and
+# dumps) through it on every run.
+#
 # tools/check_lz_uncompress.sh is the unit-level half of this same
 # verification: it proves the two decoder primitives are safe in isolation,
 # with a canary buffer showing no write ever reaches past the declared

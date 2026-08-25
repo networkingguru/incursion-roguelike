@@ -37,7 +37,10 @@
 # water?", which a plain seeded session still produces on demand.
 #
 # THE FIXTURE. The save is Brian's own character, copied while he played on
-# 2026-08-21 and recorded in bd inc-wcf. It is not in the repository: it is
+# 2026-08-21 and recorded in bd inc-wcf. It is a v0 save pinned by sha1, so
+# it loads through the v0 reader forever -- do NOT "helpfully" -convert it,
+# that would change the bytes and every assertion below rests on them.
+# It is not in the repository: it is
 # 900KB of binary and it belongs to him. Point INCURSION_WCF_SAVE at a copy if
 # it lives somewhere else. Without it this check is INCONCLUSIVE, never a pass
 # and never a failure -- a session that never happened says nothing about the
