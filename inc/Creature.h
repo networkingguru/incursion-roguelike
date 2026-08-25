@@ -1454,6 +1454,29 @@ class Player: public Character
       FIELD_I32(541, deathCount);
       FIELD_I32(542, rerollCount);
       FIELD_I16(543, statMethod);
+      if (!isSave)
+        {
+          /* AutoBuffs is a NUL-terminated list inside a fixed 64-entry
+             array, and all three walks of it stop only on a zero entry with
+             no index limit (src/Term.cpp:152 and :234, src/Sheet.cpp:778).
+             If the wire fills every entry there is no terminator and those
+             loops run off the end, so the terminator is an invariant the
+             reader must enforce rather than hope for. One zero anywhere is
+             enough: the walks stop at the first. This one REFUSES rather
+             than repairs, because the game cannot produce a terminator-free
+             list: the add path writes only slots 0..62
+             (`for (z=0;z!=63;z++)`, src/Managers.cpp:413) and the remove
+             path zeroes slot 63 (src/Managers.cpp:407).
+
+             NOT V1Active()-guarded, unlike the fixups below: a v0 save
+             carries the same 64 raw bytes and those walks are just as
+             unbounded when it is the reader. */
+          for (i = 0; i != 64; i++)
+            if (!AutoBuffs[i])
+              break;
+          if (i == 64)
+            throw ECORRUPT;
+        }
       /* Load-direction fixups, below every field they read. V1Active()
          guards them for the reason Character's list gives. */
       if (!isSave && r.V1Active())
@@ -1488,22 +1511,6 @@ class Player: public Character
             throw ECORRUPT;
           if (cAutoBuff > 63)
             cAutoBuff = 63;
-          /* AutoBuffs is a NUL-terminated list inside a fixed 64-entry
-             array, and all three walks of it stop only on a zero entry with
-             no index limit (src/Term.cpp:152 and :234, src/Sheet.cpp:778).
-             If the wire fills every entry there is no terminator and those
-             loops run off the end, so the terminator is an invariant the
-             reader must enforce rather than hope for. One zero anywhere is
-             enough: the walks stop at the first. This one REFUSES rather
-             than repairs, because the game cannot produce a terminator-free
-             list: the add path writes only slots 0..62
-             (`for (z=0;z!=63;z++)`, src/Managers.cpp:413) and the remove
-             path zeroes slot 63 (src/Managers.cpp:407). */
-          for (i = 0; i != 64; i++)
-            if (!AutoBuffs[i])
-              break;
-          if (i == 64)
-            throw ECORRUPT;
           /* RecentVerbs holds indexes into YuseCommands[], which
              Player::YuseMenu dereferences as
              YuseCommands[RecentVerbs[i]].Verb -- a const char* it then
