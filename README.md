@@ -78,8 +78,39 @@ subset of it.
 
 ## What is new
 
-Everything below is in the current download, **release 2**. The newest work is
+Everything below is in the current download, **release 3**. The newest work is
 first.
+
+### New in release 3
+
+**Your save survives new content.** Every reference to game content inside a save
+used to be a bare number, and that number was a position in a list. The lists sit
+end to end in one numbering space, so adding a single monster, spell or effect
+anywhere shifted every entry after it, and an existing save then read one
+resource off — an orc came back as a lizardfolk, worshipping the wrong god. A
+save now carries a manifest: the length of each of the 21 lists and every entry's
+name in position order. The reader converts each reference through that manifest
+instead of trusting the number, so content added to the end of a list changes
+nothing about a save written before it.
+
+**Old saves convert themselves.** Release 3 is deliberately content-identical to
+release 2, so a release-2 save loads correctly and is rewritten in the new format
+the first time you save. There is no command to run and nothing to click.
+**Upgrade through release 3 rather than skipping it** — it is the release that
+performs the conversion, and a save that never passes through it will read one
+resource off once later content is added.
+
+**A refused save no longer costs you your file.** The engine now checks whether a
+save can be written before it touches anything on disk. A refusal leaves the
+existing save exactly as it was, instead of a truncated file and a backup.
+
+**A resource inserted in the middle of a list is refused, not guessed at.** If a
+future release ever breaks the append-only rule, the load stops and names what
+moved, down to the list, the position and both names, rather than silently
+handing you different equipment.
+
+**Saves are a fifth of the size.** Tagged records replaced raw structure dumps: a
+2.4 MB character file became 360 KB.
 
 ### New in release 2
 
@@ -141,8 +172,9 @@ Master Archer's ranged sneak attack fired with a sling.
 **Your saves survive an update.** Save compatibility is keyed on a digest of the
 actual data layout rather than on a version number, so shipping a new release
 does not hide your characters. Previously any version change made every save
-vanish from the load menu without a word. Release 2 does not move that digest,
-so characters rolled under release 1 still load.
+vanish from the load menu without a word. Neither release 2 nor release 3 moves
+that digest, so characters rolled under release 1 still load — and release 3
+converts them to the new format as described above.
 
 **Your species' feats are granted.** Eight racial feats across six races were
 never reaching players. A Dragonkin never had Mantis Leap, a dwarf never had
@@ -230,7 +262,7 @@ step with what the game believes.
 
 You do not need this to play. It is here for people who want to change something.
 
-`master` is the development tip. The `release-2` tag marks the commit the
+`master` is the development tip. The `release-3` tag marks the commit the
 current download was built from. The `release-1` tag marks this fork's first
 release, but the release-1 image was rebuilt after that tag, to carry the
 module-load and Gatekeeper fixes described in [`docs/FIXED.md`](docs/FIXED.md);
