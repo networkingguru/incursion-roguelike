@@ -269,7 +269,9 @@ class QItem: public Item
       int8  Qualities[8];
       uint8 KnownQualities;  
     ARCHIVE_CLASS(QItem,Item,r)
-    END_ARCHIVE	
+      FIELD_ARRAY(64, Qualities, sizeof(int8), 8);
+      FIELD_U8   (65, KnownQualities);
+    END_ARCHIVE
   };
 
 class Food : public QItem {
@@ -292,6 +294,7 @@ public:
     EvReturn Eat(EventInfo &e);
 
     ARCHIVE_CLASS(Food, QItem, r)
+      FIELD_I16(80, Eaten);
     END_ARCHIVE
 };
 
@@ -324,7 +327,10 @@ class Corpse: public Food
           return sz; }
       EvReturn Eat(EventInfo &e);
       ARCHIVE_CLASS(Corpse,Food,r)
-      END_ARCHIVE	
+        FIELD_RID(96, mID);
+        FIELD_U32(97, TurnCreated);
+        FIELD_I16(98, LastDiseaseDCCheck);
+      END_ARCHIVE
 	};
 
 
@@ -352,6 +358,7 @@ class Container: public QItem
       Item * getItem(int16 n) { return (*this)[n]; }
       EvReturn Event(EventInfo &e);
       ARCHIVE_CLASS(Container,QItem,r)
+        FIELD_H(112, Contents);
       END_ARCHIVE
 
   };
@@ -397,7 +404,8 @@ class Weapon: public QItem
       private:
       int16 Bane;
       ARCHIVE_CLASS(Weapon,QItem,r)
-      END_ARCHIVE	
+        FIELD_I16(128, Bane);
+      END_ARCHIVE
 
 	};
 

@@ -272,9 +272,87 @@ static const SchemaPad PortalPads[] = {
     { 0, 8 }, { 10, 2 }, { 137, 7 }
 };
 
+/* QItem chain on arm64/LP64: ItemPads' five interior/vptr pads (0-8, 10-12,
+   133-134, 151-152, 156-160), unchanged -- QItem adds no members before
+   offset 218. QItem's own members, Qualities[8] and KnownQualities, land in
+   and past Item's former 218-224 tail pad (9 bytes don't fit in 6, so
+   sizeof(QItem) grows to 232); tail pad 227-232. No T_* type placement-news
+   a bare QItem (every concrete descendant does), so this row is never the
+   one v1CovBegin's exact-match selects -- same situation as the Character
+   row below, and for the same reason: it is here because QItem's layout is
+   real and every QItem descendant's own pads are measured relative to it.
+   Armour adds no members of its own (spec: a class with no own members
+   still gets pinned), so THIS row is also the one that matches a real
+   Armour object, byte for byte -- measured: a real Armour's only uncovered
+   range past offset 156 is (227, 5), identical to QItem's own tail. */
+static const SchemaPad QItemPads[] = {
+    { 0, 8 }, { 10, 2 }, { 133, 1 }, { 151, 1 }, { 156, 4 }, { 227, 5 }
+};
+
+/* Food chain: QItemPads' shape through offset 227, but Food's own Eaten
+   (int16) fills part of QItem's spare tail room instead of leaving it as
+   padding: a 1-byte alignment gap at 227, Eaten at 228-229, a 2-byte tail
+   pad 230-232. sizeof(Food) 232, same as QItem/Container/Weapon/Armour --
+   Food's 2-byte member fits in QItem's spare room without growing the
+   object (measured, mirrors the Feature/Door/Trap/Portal precedent above). */
+static const SchemaPad FoodPads[] = {
+    { 0, 8 }, { 10, 2 }, { 133, 1 }, { 151, 1 }, { 156, 4 }, { 227, 1 },
+    { 230, 2 }
+};
+
+/* Corpse chain: FoodPads' shape through offset 232 (Corpse adds no member
+   inside QItem's tail room; mID/TurnCreated/LastDiseaseDCCheck are new
+   members past 232, not padding), plus a 6-byte tail after
+   LastDiseaseDCCheck. sizeof(Corpse) 248. */
+static const SchemaPad CorpsePads[] = {
+    { 0, 8 }, { 10, 2 }, { 133, 1 }, { 151, 1 }, { 156, 4 }, { 227, 1 },
+    { 230, 2 }, { 242, 6 }
+};
+
+/* Container chain: QItemPads' shape through offset 227, but Contents (hObj,
+   4 bytes) fills QItem's spare tail room exactly, after the same 1-byte
+   alignment gap -- no tail pad left. sizeof(Container) 232, same as
+   QItem/Food/Weapon/Armour. */
+static const SchemaPad ContainerPads[] = {
+    { 0, 8 }, { 10, 2 }, { 133, 1 }, { 151, 1 }, { 156, 4 }, { 227, 1 }
+};
+
+/* Weapon chain: same shape as FoodPads -- Bane (int16) lands where Food's
+   Eaten does, for the same reason (the sole 2-byte member added after
+   QItem's own tail room, same alignment gap and tail pad). sizeof(Weapon)
+   232. */
+static const SchemaPad WeaponPads[] = {
+    { 0, 8 }, { 10, 2 }, { 133, 1 }, { 151, 1 }, { 156, 4 }, { 227, 1 },
+    { 230, 2 }
+};
+
 static const SchemaPin SchemaPins[] = {
     { "Item", T_ITEM, sizeof(Item), ItemPads,
       (int)(sizeof(ItemPads)/sizeof(ItemPads[0])) },
+    { "QItem", T_ITEM, sizeof(QItem), QItemPads,
+      (int)(sizeof(QItemPads)/sizeof(QItemPads[0])) },
+    { "Food", T_FOOD, sizeof(Food), FoodPads,
+      (int)(sizeof(FoodPads)/sizeof(FoodPads[0])) },
+    { "Corpse", T_CORPSE, sizeof(Corpse), CorpsePads,
+      (int)(sizeof(CorpsePads)/sizeof(CorpsePads[0])) },
+    { "Container", T_CHEST, sizeof(Container), ContainerPads,
+      (int)(sizeof(ContainerPads)/sizeof(ContainerPads[0])) },
+    { "Weapon", T_WEAPON, sizeof(Weapon), WeaponPads,
+      (int)(sizeof(WeaponPads)/sizeof(WeaponPads[0])) },
+    /* Coin declares no own members (ARCHIVE_CLASS body is empty; pin row
+       only). Measured sizeof(Coin) == sizeof(Item) == 224 and Coin's
+       uncovered range is identical to ItemPads' own tail -- typeSize(T_COIN)
+       reports sizeof(Item) while the placement-new switch constructs a Coin
+       (docs/ENGINE-SERIALISATION.md defect 3, spec risk 3, preserved on
+       purpose), but the two sizes coincide here, so no allocation shortfall
+       follows from the mismatch. */
+    { "Coin", T_COIN, sizeof(Coin), ItemPads,
+      (int)(sizeof(ItemPads)/sizeof(ItemPads[0])) },
+    /* Armour declares no own members (pin row only); see the QItemPads
+       comment above -- this row's pads ARE QItemPads, because a real
+       Armour object's layout is measured byte-identical to QItem's own. */
+    { "Armour", T_ARMOUR, sizeof(Armour), QItemPads,
+      (int)(sizeof(QItemPads)/sizeof(QItemPads[0])) },
     { "Creature", T_CREATURE, sizeof(Creature), CreaturePads,
       (int)(sizeof(CreaturePads)/sizeof(CreaturePads[0])) },
     { "Monster", T_MONSTER, sizeof(Monster), MonsterPads,
@@ -2689,6 +2767,274 @@ bool Registry::V1RunSchemaTest(const char *outDir)
           grpOk = false;
         }
       printf("SCHEMATEST GROUP feature %s\n", grpOk ? "PASS" : "FAIL");
+      ok = ok && grpOk;
+    }
+
+    /* ------------------------------------------------------------ group 5 --
+       items2. One each of Food, Corpse, Container, Weapon, Coin and Armour
+       -- the six concrete classes below Item whose own field lists this
+       task declares, built through the LoadGroup allocation idiom. QItem
+       itself is never the most-derived class of any constructed object: no
+       T_* type placement-news a bare QItem (T_SCROLL, the brief's
+       contingency, maps to plain Item -- already exercised in group 1), so
+       QItem's own members (Qualities, KnownQualities) are exercised through
+       Food, Container, Weapon and Armour, all of which extend it directly.
+       Coin extends Item, not QItem, and declares no own members. Corpse::mID
+       is a real module Monster rID. */
+    v1TestMismatches = 0;
+    v1CovFindings = 0;
+
+    Registry *regI = new Registry();
+    Registry *regJ = new Registry();
+    Food *food = NULL;
+    Corpse *corpse = NULL;
+    Container *contain = NULL;
+    Weapon *weapon = NULL;
+    Coin *coin = NULL;
+    Armour *armour = NULL;
+    hObj hFood = 0, hCorpse = 0, hContain = 0, hWeapon = 0, hCoin = 0,
+         hArmour = 0;
+    String piSav, pjSav;
+    piSav = Format("%s/i.sav", outDir);
+    pjSav = Format("%s/j.sav", outDir);
+
+    try
+      {
+        theRegistry = regI;
+
+        size_t foodSz = typeSize((int8)T_FOOD);
+        food = (Food*) malloc(foodSz);
+        if (!food)
+          throw EMEMORY;
+        memset((void*)food, 0, foodSz);
+        new((Object*)food) Food(regI);
+        food->Type = T_FOOD;
+        food->myHandle = regI->RegisterObject(food);
+        hFood = food->myHandle;
+
+        size_t corpseSz = typeSize((int8)T_CORPSE);
+        corpse = (Corpse*) malloc(corpseSz);
+        if (!corpse)
+          throw EMEMORY;
+        memset((void*)corpse, 0, corpseSz);
+        new((Object*)corpse) Corpse(regI);
+        corpse->Type = T_CORPSE;
+        corpse->myHandle = regI->RegisterObject(corpse);
+        hCorpse = corpse->myHandle;
+
+        size_t containSz = typeSize((int8)T_CHEST);
+        contain = (Container*) malloc(containSz);
+        if (!contain)
+          throw EMEMORY;
+        memset((void*)contain, 0, containSz);
+        new((Object*)contain) Container(regI);
+        contain->Type = T_CHEST;
+        contain->myHandle = regI->RegisterObject(contain);
+        hContain = contain->myHandle;
+
+        size_t weaponSz = typeSize((int8)T_WEAPON);
+        weapon = (Weapon*) malloc(weaponSz);
+        if (!weapon)
+          throw EMEMORY;
+        memset((void*)weapon, 0, weaponSz);
+        new((Object*)weapon) Weapon(regI);
+        weapon->Type = T_WEAPON;
+        weapon->myHandle = regI->RegisterObject(weapon);
+        hWeapon = weapon->myHandle;
+
+        size_t coinSz = typeSize((int8)T_COIN);
+        coin = (Coin*) malloc(coinSz);
+        if (!coin)
+          throw EMEMORY;
+        memset((void*)coin, 0, coinSz);
+        new((Object*)coin) Coin(regI);
+        coin->Type = T_COIN;
+        coin->myHandle = regI->RegisterObject(coin);
+        hCoin = coin->myHandle;
+
+        size_t armourSz = typeSize((int8)T_ARMOUR);
+        armour = (Armour*) malloc(armourSz);
+        if (!armour)
+          throw EMEMORY;
+        memset((void*)armour, 0, armourSz);
+        new((Object*)armour) Armour(regI);
+        armour->Type = T_ARMOUR;
+        armour->myHandle = regI->RegisterObject(armour);
+        hArmour = armour->myHandle;
+
+        /* QItem's own members, distinct per object, on every QItem
+           descendant. Coin has none: it extends Item, not QItem. */
+        for (i = 0; i != 8; i++)
+          {
+            food->Qualities[i]   = (int8)(1 + i);
+            corpse->Qualities[i] = (int8)(11 + i);
+            contain->Qualities[i]= (int8)(21 + i);
+            weapon->Qualities[i] = (int8)(31 + i);
+            armour->Qualities[i] = (int8)(41 + i);
+          }
+        food->KnownQualities    = 0xA5;
+        corpse->KnownQualities  = 0xB6;
+        contain->KnownQualities = 0xC7;
+        weapon->KnownQualities  = 0xD8;
+        armour->KnownQualities  = 0xE9;
+
+        /* Food's own member. Corpse inherits it and gets its own value. */
+        food->Eaten = 501;
+        corpse->Eaten = 502;
+
+        /* Corpse's own members: mID is a real module Monster rID. */
+        corpse->mID = mod->MonsterID(1);
+        corpse->TurnCreated = 60606u;
+        corpse->LastDiseaseDCCheck = -7;
+
+        /* Container's own member: a handle to another object in this
+           group, so FIELD_H moves a real, resolvable value. */
+        contain->Contents = hFood;
+
+        /* Weapon's own member. */
+        weapon->Bane = -333;
+
+        memset(&fh, 0, sizeof(fh));
+        fh.Sig = SIGNATURE;
+        strcpy(fh.Version, SaveSchemaID());
+        strncpy(fh.Name, "schematest items2", 71);
+        fh.numGroups = 1;
+        fh.Compression = SaveV1_Raw() ? 0 : 1;
+        T1->OpenWrite(piSav);
+        T1->FWrite(&fh, sizeof(fh));
+        regI->SaveGroupV1(*T1, 0);
+        T1->Close();
+
+        theRegistry = regJ;
+        T1->OpenRead(piSav);
+        regJ->LoadGroup(*T1, 0, false);
+        T1->Close();
+        SaveV1_ResolveNames();
+
+        {
+          Food *a = food;
+          Food *b = (Food*) regJ->Get(hFood);
+          if (!b)
+            v1Mismatch(0, "food missing after load", (long)hFood, 0);
+          else
+            {
+              V1CMP(0, Type);
+              V1CMP(0, myHandle);
+              if (memcmp(a->Qualities, b->Qualities, sizeof(a->Qualities)))
+                v1Mismatch(0, "Food.Qualities", 0, 1);
+              V1CMP(0, KnownQualities);
+              V1CMP(0, Eaten);
+            }
+        }
+        {
+          Corpse *a = corpse;
+          Corpse *b = (Corpse*) regJ->Get(hCorpse);
+          if (!b)
+            v1Mismatch(0, "corpse missing after load", (long)hCorpse, 0);
+          else
+            {
+              V1CMP(0, Type);
+              V1CMP(0, myHandle);
+              if (memcmp(a->Qualities, b->Qualities, sizeof(a->Qualities)))
+                v1Mismatch(0, "Corpse.Qualities", 0, 1);
+              V1CMP(0, KnownQualities);
+              V1CMP(0, Eaten);
+              V1CMP(0, mID);
+              V1CMP(0, TurnCreated);
+              V1CMP(0, LastDiseaseDCCheck);
+            }
+        }
+        {
+          Container *a = contain;
+          Container *b = (Container*) regJ->Get(hContain);
+          if (!b)
+            v1Mismatch(0, "container missing after load", (long)hContain, 0);
+          else
+            {
+              V1CMP(0, Type);
+              V1CMP(0, myHandle);
+              if (memcmp(a->Qualities, b->Qualities, sizeof(a->Qualities)))
+                v1Mismatch(0, "Container.Qualities", 0, 1);
+              V1CMP(0, KnownQualities);
+              V1CMP(0, Contents);
+            }
+        }
+        {
+          Weapon *a = weapon;
+          Weapon *b = (Weapon*) regJ->Get(hWeapon);
+          if (!b)
+            v1Mismatch(0, "weapon missing after load", (long)hWeapon, 0);
+          else
+            {
+              V1CMP(0, Type);
+              V1CMP(0, myHandle);
+              if (memcmp(a->Qualities, b->Qualities, sizeof(a->Qualities)))
+                v1Mismatch(0, "Weapon.Qualities", 0, 1);
+              V1CMP(0, KnownQualities);
+              V1CMP(0, Bane);
+            }
+        }
+        {
+          Coin *a = coin;
+          Coin *b = (Coin*) regJ->Get(hCoin);
+          if (!b)
+            v1Mismatch(0, "coin missing after load", (long)hCoin, 0);
+          else
+            {
+              V1CMP(0, Type);
+              V1CMP(0, myHandle);
+            }
+        }
+        {
+          Armour *a = armour;
+          Armour *b = (Armour*) regJ->Get(hArmour);
+          if (!b)
+            v1Mismatch(0, "armour missing after load", (long)hArmour, 0);
+          else
+            {
+              V1CMP(0, Type);
+              V1CMP(0, myHandle);
+              if (memcmp(a->Qualities, b->Qualities, sizeof(a->Qualities)))
+                v1Mismatch(0, "Armour.Qualities", 0, 1);
+              V1CMP(0, KnownQualities);
+            }
+        }
+
+        T1->OpenWrite(pjSav);
+        T1->FWrite(&fh, sizeof(fh));
+        regJ->SaveGroupV1(*T1, 0);
+        T1->Close();
+      }
+    catch (int error_number)
+      {
+        fprintf(stderr, "incursion -schematest: %s\n",
+                Lookup(FileErrors, error_number));
+        theRegistry = savedReg;
+        return false;
+      }
+    theRegistry = savedReg;
+
+    {
+      long fsize = 0;
+      bool grpOk = true;
+      if (v1FilesIdentical((const char*)piSav, (const char*)pjSav, &fsize))
+        printf("i.sav and j.sav are byte-identical (%ld bytes)\n", fsize);
+      else
+        {
+          printf("i.sav and j.sav DIFFER\n");
+          grpOk = false;
+        }
+      if (v1TestMismatches)
+        {
+          printf("%ld field mismatches\n", v1TestMismatches);
+          grpOk = false;
+        }
+      if (v1CovFindings)
+        {
+          printf("%ld coverage findings\n", v1CovFindings);
+          grpOk = false;
+        }
+      printf("SCHEMATEST GROUP items2 %s\n", grpOk ? "PASS" : "FAIL");
       ok = ok && grpOk;
     }
 
