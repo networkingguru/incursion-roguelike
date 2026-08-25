@@ -1,0 +1,35 @@
+# Transform a wielded Rod of Lordly Might into its flaming long-sword form and
+# dump the sidebar before and after the transformation.
+
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*3
+SPACE
+DOWN*7
+SPACE
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*2
+@until "Rod of Lordly Might" DOWN
+DOWN
+ENTER
+7
+ENTER
+b
+SPACE
+n
+s
+ESC
+
+@dump:0001-rod
+a
+@choose "Rod of Lordly Might"
+@choose "Change into a +1 flaming long sword"
+@dump:0002-longsword
+
+@quit

@@ -6043,7 +6043,13 @@ AI_ROD Effect "Rod of Lordly Might" : EA_GENERIC
             EItem->ChangeIID($"long sword");
             EItem->PurgeAllQualities();
             EItem->AddQuality(WQ_FLAMING);
-            EItem->SetInherentPlus(2);
+            /* upstream: base-code defect, not a port artefact. This shared
+               game data is read identically on Win32 with the original
+               typedefs and upstream compiler. Evidence tier: Observed --
+               tools/check_rod_longsword_plus.sh reads Hit 9 / Dmg 1d8+6
+               before and Hit 8 / Dmg 1d8+5 after. Tracked as inc-tek.8.8.
+               NOT sent upstream. */
+            EItem->SetInherentPlus(1);
             EActor->CalcValues();
            break;
           case 7:
