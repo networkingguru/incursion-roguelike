@@ -31,7 +31,7 @@
    FORK_BASE_HASH is the commit, not just the version, so that anyone can run
    git log 961c54b and see exactly what this was built on top of. */
 #define FORK_NAME      "iNCURSION"
-#define FORK_RELEASE   "2"
+#define FORK_RELEASE   "3"
 #define FORK_BASE_REPO "rmtew"
 #define FORK_BASE_HASH "961c54b"
 #define FORK_BASE_DATE "2025-06-28"
