@@ -154,11 +154,18 @@ if [ -n "$SAVE2" ] && [ -n "$SAVE3" ]; then
 import struct, sys
 
 # (type byte, tag path) -> why this field may differ between generations.
+# Keep this MINIMAL: only fields MEASURED to differ for a reason that is
+# not a serialization defect. Notably absent on purpose: Game tags 808-810
+# (inPerceive/inChooseAct/inCalcVal) are re-entrancy DEPTH state, not
+# profiling totals -- they must be 0 at every save, so a difference there
+# is a real defect and must fail.
 ALLOW = {
-    # Game: the cc* profiling counters (tags 800-810) and their two
+    # Game: the cc* profiling counters (tags 800-807) and their two
     # per-nature arrays (811, 812) count perception/AI/CalcValues work
     # done since process start; the load path itself does such work.
-    **{(1, str(t)): "profiling counter" for t in range(800, 813)},
+    **{(1, str(t)): "profiling counter" for t in range(800, 808)},
+    (1, "811"): "profiling counter array",
+    (1, "812"): "profiling counter array",
     # Game.Turn: the quick-quit save costs one game tick, every
     # generation (measured: exactly +1 per cycle).
     (1, "814"): "quick-quit tick",
@@ -174,7 +181,11 @@ ALLOW = {
 def parse(path):
     d = open(path, "rb").read()
     sig, = struct.unpack_from("<I", d, 0)
-    comp, = struct.unpack_from("<h", d, 94)
+    # fileHeader (inc/Base.h): Sig 0, Version 4, Name 16, numGroups 88,
+    # Compression 90. (Offset 94 is tail padding -- always 0 -- and reading
+    # it here once made this assertion inert; tools/craft_bad_v1_saves.py
+    # reads 90 and is the reference.)
+    comp, = struct.unpack_from("<h", d, 90)
     if sig != 0x1234ABCD or comp != 0:
         sys.exit(f"{path}: not a raw v1 save (sig={sig:#x} comp={comp})")
     gsize, csize, objc = struct.unpack_from("<iii", d, 104)
@@ -216,6 +227,12 @@ def fields(stream, prefix=""):
             out[tp] = (kind, pay)
     return out
 
+# Records only, not the trailing separator/name table. Sound because the
+# table is a pure function of the record walk (entries are interned in
+# first-use order as the rID fields are written, and the separator is a
+# constant), and no rID-kind field is allowlisted -- so any table
+# divergence necessarily shows up as a differing K_RID index inside a
+# record, which this compare catches.
 a, b = parse(sys.argv[1]), parse(sys.argv[2])
 if [(h, t) for h, t, s in a] != [(h, t) for h, t, s in b]:
     sys.exit("record sets differ between the two generations")

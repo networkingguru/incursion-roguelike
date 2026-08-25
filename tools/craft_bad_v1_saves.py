@@ -285,6 +285,52 @@ def craft_player_index_mutants(src_path, cases):
     cases.append(("player_notified_level_negative", f, "fail", CORRUPT))
 
 
+def craft_map_grid_overflow(cases):
+    """One synthesized file: a T_MAP record whose sizeX*sizeY grid product
+    overflows 32 bits so that its LOW 32 bits equal the crafted blob's
+    length exactly.
+
+    Built from scratch rather than mutated, because no schematest group
+    carries a Map record. The reader computes the expected grid size as
+    sizeof(LocationInfo)*sizeX*sizeY from the two already-loaded dimension
+    fields; a compare truncated to 32 bits would pass this file and hand
+    the game a 139 KB grid it will index as 214 million cells. The fixed
+    reader must refuse it: the 64-bit product exceeds both 2^32 and the
+    CFILE_SANE_MAX_SIZE allocation ceiling (inc/Term.h).
+
+    ELEM is sizeof(LocationInfo) == 20, hardcoded but safe: LocationInfo
+    is listed in SaveLayoutDigest() (src/AbiCheck.cpp), so its size cannot
+    change without orphaning every v0 save -- it is frozen by design. The
+    dimensions are the deterministic pick 32767 x 6554:
+    20*32767*6554 = 4,295,106,360 = 2^32 + 139,064.
+    """
+    ELEM = 20
+    T_MAP = 4                             # inc/Defines.h
+    MAP_SIZEX_TAG, MAP_SIZEY_TAG, MAP_GRID_TAG = 673, 674, 672  # inc/Map.h
+    SX, SY = 32767, 6554
+    total = ELEM * SX * SY
+    lo32 = total & 0xFFFFFFFF
+    if total <= (1 << 32) or lo32 >= (1 << 21):
+        die("map_grid_size_overflow: the crafted dimensions no longer "
+            "overflow the way the case needs")
+
+    fields = struct.pack("<HBh", MAP_SIZEX_TAG, K_I16, SX)
+    fields += struct.pack("<HBh", MAP_SIZEY_TAG, K_I16, SY)
+    fields += struct.pack("<HBI", MAP_GRID_TAG, K_BLOB, lo32) + bytes(lo32)
+    fields += struct.pack("<H", 0)                    # record terminator
+    rec = struct.pack("<BII", T_MAP, 150, len(fields)) + fields
+    payload = (rec + struct.pack("<I", SIGNATURE_TWO)
+                   + struct.pack("<I", 0))            # empty name table
+
+    fh = struct.pack("<I", SIGNATURE) + b"IS1.0" + bytes(7) + bytes(72) \
+        + struct.pack("<hhh", 1, 0, 0)                # numGroups/Comp/nDeps
+    fh += bytes(FH_SIZE - len(fh))                    # tail padding
+    gh = struct.pack("<IiiiiiI", SIGNATURE, 0, len(payload), len(payload),
+                     1, 0, 999)
+    cases.append(("map_grid_size_overflow", fh + gh + payload,
+                  "fail", CORRUPT))
+
+
 def main():
     if len(sys.argv) not in (3, 4, 5):
         print("usage: craft_bad_v1_saves.py <raw-v1.sav> <output-dir> "
@@ -388,6 +434,9 @@ def main():
     # --- 10. the two Player index mutants, from the character file.
     if len(sys.argv) == 5:
         craft_player_index_mutants(sys.argv[4], cases)
+
+    # --- 11. the synthesized 32-bit-truncation grid mutant.
+    craft_map_grid_overflow(cases)
 
     for name, contents, expect, detail in cases:
         path = os.path.join(out_dir, name + ".sav")

@@ -157,8 +157,8 @@ while IFS='|' read -r name path expect detail; do
     esac
 done < "$WORK/craft.log"
 
-if [ "$CASE_COUNT" -lt 17 ]; then
-    fail "only $CASE_COUNT cases ran; the crafting script should emit one per record boundary twice, plus nine more"
+if [ "$CASE_COUNT" -lt 18 ]; then
+    fail "only $CASE_COUNT cases ran; the crafting script should emit one per record boundary twice, plus ten more"
 fi
 
 # --- 5. the safety claim: nothing touched the real save/ directory ---

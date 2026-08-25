@@ -1177,8 +1177,21 @@ void Registry::V1Blob(uint16 tag, void **p, size_t sz)
        corruption: the consumers index the allocation by those counts, so a
        shorter blob is a heap overread waiting in At()/GetText()/Execute.
        (The empty case above stays permissive: a NULL pointer wrote len 0
-       regardless of what sz evaluated to at save time.) */
-    if (e->size != (uint32)sz)
+       regardless of what sz evaluated to at save time.)
+
+       BOTH checks below are load-bearing, in this order. sz is a size_t
+       computed from file-fed counts (sizeX*sizeY, DungeonSize, the module
+       counts), so a crafted pair like sizeX=32767 sizeY=6554 makes it
+       4,295,106,360 -- and a compare truncated to 32 bits would pass a
+       139,064-byte blob (the product's low half) that the game then
+       indexes as 214 million cells. The ceiling rejects any expected size
+       past the same CFILE_SANE_MAX_SIZE bound every reader allocation
+       honours; the full-width compare rejects any lie the ceiling lets
+       through. The adversarial mutant map_grid_size_overflow
+       (tools/craft_bad_v1_saves.py) holds this exact door shut. */
+    if ((unsigned long long)sz > (unsigned long long)CFILE_SANE_MAX_SIZE)
+      throw ECORRUPT;
+    if ((unsigned long long)e->size != (unsigned long long)sz)
       throw ECORRUPT;
     void *blk = malloc(e->size);
     if (!blk)
