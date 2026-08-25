@@ -994,6 +994,137 @@ static long v1ManifestPreflight(void)
     return failures;
   }
 
+static int v1NameCmp(const void *a, const void *b)
+  { return strcmp(*(const char* const*)a, *(const char* const*)b); }
+
+/* The drift rules (docs/SAVE-SCHEMA-SPEC.md, "Drift rules"), run after the
+   shrink pre-flight and BEFORE any reference is converted.
+
+   For each array the manifest's names are compared with the loaded module's,
+   over positions 0 to (recorded length - 1). The load is refused ONLY on
+   positive evidence that entries MOVED. Two shapes count:
+
+     a SLIDE   -- two or more consecutive positions where the name now present
+                  is the one the manifest recorded one place EARLIER (an
+                  insertion) or one place LATER (a removal). One such match
+                  can be coincidence, so one is not enough. Only a position
+                  that MISMATCHES counts: a position still holding its
+                  recorded name has not moved, whatever its neighbours are
+                  called, and Flavour is the one pool with same-case duplicate
+                  names to trip over.
+
+     a SHUFFLE -- the compared range holds the same names the manifest
+                  recorded, as a multiset, but at least one is elsewhere.
+
+   Everything else loads in silence. One changed name, ten, or every name in
+   the array is a rename or a deliberate replacement, and the project rule
+   says it MUST load. That is not negotiable and this function MUST NOT grow
+   a heuristic that second-guesses it.
+
+   TWO CASES THIS CANNOT SEE, stated so nobody later believes it is total.
+   An insertion at the LAST compared position slides exactly one entry inside
+   the range, which is one short of a slide; the file cannot tell it from a
+   rename. And renaming every entry of an array WHILE reordering it leaves no
+   surviving name to line up and no multiset to compare. The build-time order
+   ledger sees both, because there they are moved lines in a diff. */
+static long v1ManifestDrift(void)
+  {
+    long failures = 0;
+    for (int slot = 0; slot != MAX_MODULES; slot++)
+      {
+        V1ManifestPending *mp = &v1Manifest[slot];
+        Module *mod = Game::Modules[slot];
+        if (!mp->present || !mod)
+          continue;               /* absent, or the pre-flight refused it */
+        uint32 base = 0;
+        for (int p = SP_MON; p <= SP_ENC; p++)
+          {
+            uint32 len = mp->lengths[p];
+            V1Pool pl;
+            if (!V1GetPool(mod, p, &pl) || pl.count < 0 ||
+                (uint32)pl.count < len)
+              { base += len; continue; }   /* diagnosed by the pre-flight */
+
+            /* The common case: nothing was renamed and nothing moved. One
+               strcmp per recorded position, and no allocation. */
+            uint32 firstBad = len;
+            for (uint32 i = 0; i != len; i++)
+              if (strcmp(mp->names[base + i], V1ResName(mod, &pl, (int32)i)))
+                { firstBad = i; break; }
+            if (firstBad == len)
+              { base += len; continue; }
+
+            int run = 0, dir = 0;
+            uint32 runAt = 0;
+            for (uint32 i = 0; i != len; i++)
+              {
+                const char *found = V1ResName(mod, &pl, (int32)i);
+                int here = 0;
+                if (!strcmp(found, mp->names[base + i]))
+                  here = 0;
+                else if (i && !strcmp(found, mp->names[base + i - 1]))
+                  here = -1;      /* an insertion pushed this one down */
+                else if (i + 1 < len && !strcmp(found, mp->names[base + i + 1]))
+                  here = 1;       /* a removal pulled this one up */
+                if (!here)
+                  { run = 0; dir = 0; continue; }
+                if (here == dir)
+                  run++;
+                else
+                  { dir = here; run = 1; runAt = i; }
+                if (run >= 2)
+                  break;
+              }
+            if (run >= 2)
+              {
+                failures++;
+                fprintf(stderr,
+                    "incursion: module slot %d %s array slid at position %u: "
+                    "the save's manifest recorded \"%s\" there and the loaded "
+                    "module has \"%s\" -- a resource was %s in the middle of "
+                    "the array, which the append-only rule forbids\n",
+                    slot, V1PoolName(p), (unsigned)runAt,
+                    mp->names[base + runAt],
+                    V1ResName(mod, &pl, (int32)runAt),
+                    dir < 0 ? "inserted" : "removed");
+                base += len;
+                continue;
+              }
+
+            /* Same names, different places: a reorder. */
+            const char **rec = (const char**) malloc(len * sizeof(char*));
+            const char **cur = (const char**) malloc(len * sizeof(char*));
+            if (!rec || !cur)
+              { free(rec); free(cur); throw EMEMORY; }
+            for (uint32 i = 0; i != len; i++)
+              {
+                rec[i] = mp->names[base + i];
+                cur[i] = V1ResName(mod, &pl, (int32)i);
+              }
+            qsort(rec, len, sizeof *rec, v1NameCmp);
+            qsort(cur, len, sizeof *cur, v1NameCmp);
+            bool sameSet = true;
+            for (uint32 i = 0; i != len; i++)
+              if (strcmp(rec[i], cur[i]))
+                { sameSet = false; break; }
+            free(rec); free(cur);
+            if (sameSet)
+              {
+                failures++;
+                fprintf(stderr,
+                    "incursion: module slot %d %s array was reordered: "
+                    "position %u recorded \"%s\" and the loaded module has "
+                    "\"%s\", with the same names present throughout\n",
+                    slot, V1PoolName(p), (unsigned)firstBad,
+                    mp->names[base + firstBad],
+                    V1ResName(mod, &pl, (int32)firstBad));
+              }
+            base += len;
+          }
+      }
+    return failures;
+  }
+
 /* Convert one plain saved rID through its manifest position. The pre-flight
    above guarantees that rebuilding from the loaded lengths succeeds: every
    covered array position still exists because an array can only have grown.
@@ -1739,6 +1870,17 @@ void SaveV1_ResolveNames()
       return;
 
     failures += v1ManifestPreflight();
+    if (failures)
+      {
+        v1ResolveTeardown();
+        throw ECORRUPT;
+      }
+
+    /* The drift rules run on the surviving arrays, before ANY reference is
+       converted: a slid or reordered array makes every position in it a lie,
+       so there is nothing to be gained by converting first and reporting
+       after. */
+    failures += v1ManifestDrift();
     if (failures)
       {
         v1ResolveTeardown();
