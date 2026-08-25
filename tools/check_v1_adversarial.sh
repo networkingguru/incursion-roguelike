@@ -13,8 +13,9 @@
 # Two cases are crafted from other groups' files rather than the item group's.
 # creature_tcount_overflow needs a count field inside a Creature whose value
 # the reader cannot honour, so it comes from the creature group's file.
-# player_notified_level_overflow needs a file-fed INDEX inside a Player, so it
-# comes from the character group's.
+# The two player_* cases need a file-fed INDEX inside a Player, so they come
+# from the character group's file: one asserts the reader REFUSES a value the
+# game cannot produce, the other that it CLAMPS one the game can.
 #
 # Skeleton and safety assertions as in tools/check_load_corrupt.sh: every
 # headless invocation carries < /dev/null and -timeout (a binary that
@@ -129,6 +130,15 @@ while IFS='|' read -r name path expect detail; do
                 fail "$name: the field lines changed; an unknown tag must be skipped without damage"
             fi
             ;;
+          player_index_clamp)
+            # The detail check above asserted the NotifiedLevel clamp; this
+            # is the other half of the same rule. Both are values the game
+            # itself can reach, so the file must load AND land clamped.
+            if ! grep -qF 'field Player.cAutoBuff=63' "$WORK/case_$name.fields"; then
+                grep -F 'field Player.' "$WORK/case_$name.fields"
+                fail "$name: cAutoBuff did not land clamped to 63"
+            fi
+            ;;
           deleted_tag)
             # Exactly one line changes: the deleted field reads as its
             # constructed default.
@@ -147,8 +157,8 @@ while IFS='|' read -r name path expect detail; do
     esac
 done < "$WORK/craft.log"
 
-if [ "$CASE_COUNT" -lt 16 ]; then
-    fail "only $CASE_COUNT cases ran; the crafting script should emit one per record boundary twice, plus eight more"
+if [ "$CASE_COUNT" -lt 17 ]; then
+    fail "only $CASE_COUNT cases ran; the crafting script should emit one per record boundary twice, plus nine more"
 fi
 
 # --- 5. the safety claim: nothing touched the real save/ directory ---
@@ -159,9 +169,10 @@ fi
 
 if [ "$FAILED" -eq 0 ]; then
     echo "PASS: all $CASE_COUNT v1 adversarial cases behaved: truncations and"
-    echo "      the wrong-kind/bad-name/bad-ordinal/tcount/notified-level mutants were"
-    echo "      refused with the expected errors; the unknown-tag and"
-    echo "      deleted-tag mutants loaded with the skip/default rules intact."
+    echo "      the wrong-kind/bad-name/bad-ordinal/tcount mutants and the"
+    echo "      negative Player index were refused with the expected errors;"
+    echo "      the unknown-tag, deleted-tag and clamped-Player-index mutants"
+    echo "      loaded with the skip/default/clamp rules intact."
     exit 0
 fi
 exit 1

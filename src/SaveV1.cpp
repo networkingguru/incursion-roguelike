@@ -2471,6 +2471,20 @@ bool Registry::V1RunSchemaLoad(const char *path)
             continue;
           Object *o = r->pObj;
           printf("record type=%d handle=%d\n", (int)o->Type, (int)o->myHandle);
+          if (o->Type == T_PLAYER)
+            {
+              /* Only the two members the load rules CLAMP rather than
+                 refuse. A clamp that stops clamping is invisible from the
+                 outside -- the file loads either way -- so
+                 tools/check_v1_adversarial.sh asserts the landed values
+                 here. Everything else about a Player is compared by the
+                 round-trip check instead. */
+              Player *pl = (Player*) o;
+              printf("field Character.NotifiedLevel=%d\n",
+                     (int)pl->NotifiedLevel);
+              printf("field Player.cAutoBuff=%d\n", (int)pl->cAutoBuff);
+              continue;
+            }
           if (!o->isItem())
             continue;
           Item *it = (Item*) o;

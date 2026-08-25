@@ -31,7 +31,7 @@ honour.
 
 The optional fourth file is the schematest 'character' group's raw file
 (e.sav). It carries a Player record, which neither of the others does, and
-yields the mutant for a file-fed INDEX inside a Player.
+yields the two mutants for a file-fed INDEX inside a Player.
 """
 import struct
 import sys
@@ -56,8 +56,10 @@ T_MONSTER = 6                     # inc/Defines.h
 T_PLAYER = 7                      # inc/Defines.h
 CREATURE_TS_TAG = 256             # Creature::ts, inc/Creature.h
 CHAR_NOTIFIEDLEVEL_TAG = 421      # Character::NotifiedLevel, inc/Creature.h
+PLAYER_CAUTOBUFF_TAG = 521        # Player::cAutoBuff, inc/Creature.h
 NUM_TARGETS = 32                  # inc/Target.h
 MAX_NOTIFIED_LEVEL = 25           # ExperienceChart[27], src/Tables.cpp
+MAX_AUTOBUFF_CURSOR = 63          # AutoBuffs[64], inc/Creature.h
 
 CORRUPT = "File is Corrupt"       # ECORRUPT, src/Tables.cpp FileErrors
 
@@ -221,37 +223,66 @@ def craft_creature_tcount(src_path, cases):
     cases.append(("creature_tcount_overflow", f, "fail", CORRUPT))
 
 
-def craft_player_notified_level(src_path, cases):
-    """One mutant from the character file: Character::NotifiedLevel = 127.
+def player_field_payload(v1, base, tag, kind, what):
+    """Absolute offset of the payload of one top-level field of the single
+    Player record, checked to be the kind the field list declares."""
+    recs = [r for r in v1.records if r["type"] == T_PLAYER]
+    if len(recs) != 1:
+        die("expected exactly one T_PLAYER record, found %d" % len(recs))
+    fl = [f for f in recs[0]["fields"] if f["tag"] == tag]
+    if len(fl) != 1 or fl[0]["kind"] != kind:
+        die("expected exactly one tag-%d kind-%d field (%s)"
+            % (tag, kind, what))
+    return fl[0]["off"] + 3         # tag (2) + kind (1)
 
-    NotifiedLevel is an int8 on the wire and the game uses it unguarded as
+
+def craft_player_index_mutants(src_path, cases):
+    """Two mutants from the character file, one per half of the reader's
+    rule for a file-fed index (inc/Creature.h): a value the game CANNOT
+    produce is refused, a value it CAN produce is clamped.
+
+    NotifiedLevel is an int8 the game uses unguarded as
     ExperienceChart[NotifiedLevel+1] (27 entries) and
     NumberNames[NotifiedLevel+1] (31 entries), then PRINTS the const char*
-    the second yields (src/Create.cpp:2060-2062). Off the end of NumberNames
-    that pointer is whatever follows the table. 25 is the largest value both
-    index expressions can honour, so the reader must refuse a bigger one.
+    the second yields (src/Create.cpp:2086-2088). Past the end of NumberNames
+    that pointer is whatever follows the table. cAutoBuff is the cursor
+    NextAutoBuff() reads AutoBuffs[64] through, one past the end at 64.
 
-    This is the cheapest of the class to craft: a top-level K_I8 field in the
-    Player record, so the mutation is one byte and no length changes. The
-    other new bounds sit inside K_ARRAY payloads (RecentVerbs, AutoBuffs) or
-    are enforced at the use site rather than at load (GallerySlot).
+    player_index_clamp   both set wild and POSITIVE, which the ++ at
+                         src/Create.cpp:2094 and a completed autobuff walk
+                         can each reach in play. The file must LOAD, and
+                         -schemaload's field lines must show the clamped
+                         values -- a clamp that stopped clamping would
+                         otherwise be invisible, because the file loads
+                         either way.
+    player_notified_level_negative
+                         NotifiedLevel set negative, which nothing in the
+                         game writes. That half must still be refused.
+
+    Both are top-level fields of the Player record, so each mutation is one
+    or two bytes with no length fixups. The other new bounds sit inside
+    K_ARRAY payloads (RecentVerbs, AutoBuffs) or are enforced at the use
+    site rather than at load (GallerySlot).
     """
     base = open(src_path, "rb").read()
     v1 = V1File(base)
-    recs = [r for r in v1.records if r["type"] == T_PLAYER]
-    if len(recs) != 1:
-        die("expected exactly one T_PLAYER record in %s, found %d"
-            % (src_path, len(recs)))
-    fl = [f for f in recs[0]["fields"]
-          if f["tag"] == CHAR_NOTIFIEDLEVEL_TAG]
-    if len(fl) != 1 or fl[0]["kind"] != K_I8:
-        die("expected exactly one tag-%d K_I8 field "
-            "(Character::NotifiedLevel)" % CHAR_NOTIFIEDLEVEL_TAG)
-    off = fl[0]["off"] + 3          # tag (2) + kind (1)
-    if base[off] > MAX_NOTIFIED_LEVEL:
-        die("the genuine file already carries NotifiedLevel=%d" % base[off])
-    f = base[:off] + bytes([127]) + base[off + 1:]
-    cases.append(("player_notified_level_overflow", f, "fail", CORRUPT))
+    n_off = player_field_payload(v1, base, CHAR_NOTIFIEDLEVEL_TAG, K_I8,
+                                 "Character::NotifiedLevel")
+    c_off = player_field_payload(v1, base, PLAYER_CAUTOBUFF_TAG, K_I16,
+                                 "Player::cAutoBuff")
+    if base[n_off] > MAX_NOTIFIED_LEVEL:
+        die("the genuine file already carries NotifiedLevel=%d" % base[n_off])
+    cur, = struct.unpack_from("<h", base, c_off)
+    if cur > MAX_AUTOBUFF_CURSOR:
+        die("the genuine file already carries cAutoBuff=%d" % cur)
+
+    f = base[:n_off] + bytes([127]) + base[n_off + 1:]
+    f = f[:c_off] + struct.pack("<h", 200) + f[c_off + 2:]
+    cases.append(("player_index_clamp", f, "ok",
+                  "field Character.NotifiedLevel=%d" % MAX_NOTIFIED_LEVEL))
+
+    f = base[:n_off] + bytes([0x80]) + base[n_off + 1:]   # int8 -128
+    cases.append(("player_notified_level_negative", f, "fail", CORRUPT))
 
 
 def main():
@@ -354,9 +385,9 @@ def main():
     if len(sys.argv) >= 4:
         craft_creature_tcount(sys.argv[3], cases)
 
-    # --- 10. player_notified_level_overflow, from the character file.
+    # --- 10. the two Player index mutants, from the character file.
     if len(sys.argv) == 5:
-        craft_player_notified_level(sys.argv[4], cases)
+        craft_player_index_mutants(sys.argv[4], cases)
 
     for name, contents, expect, detail in cases:
         path = os.path.join(out_dir, name + ".sav")

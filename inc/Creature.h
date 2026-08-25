@@ -983,10 +983,10 @@ class Character: public Creature
              offer -128..127 and a negative value makes that loop run away.
              The SUM matters too, and separately: NextLevXP() indexes
              ExperienceChart[Level[0]+Level[1]+Level[2]+1] and that table
-             holds 27 entries (src/Create.cpp:1997, src/Tables.cpp:3467), so
+             holds 27 entries (src/Create.cpp:2023, src/Tables.cpp:3481), so
              three legal per-class levels of 11 would index 34. The real
              game invariant is the one Player::AdvanceLevel enforces at
-             src/Create.cpp:2445 -- it refuses to advance once TotalLevel()
+             src/Create.cpp:2471 -- it refuses to advance once TotalLevel()
              reaches MAX_CHAR_LEVEL -- so the total, not the element, is the
              bound, and it also implies every element is within
              MAX_CHAR_LEVEL. A value the reader cannot honour is corruption,
@@ -999,13 +999,24 @@ class Character: public Creature
             throw ECORRUPT;
           /* NotifiedLevel indexes ExperienceChart[NotifiedLevel+1] (27
              entries) and NumberNames[NotifiedLevel+1] (31 entries), both
-             unguarded at src/Create.cpp:2060-2062, and the const char* the
-             second yields is printed. It is an int8 off the wire. 25 is the
-             largest value for which both index expressions stay in range;
-             chargen starts it at 1 (src/Create.cpp:103) and 0 is the value
-             an absent tag leaves, so both are accepted. */
-          if (NotifiedLevel < 0 || NotifiedLevel > 25)
+             unguarded at src/Create.cpp:2086-2088, and the const char* the
+             second yields is printed. It is an int8 off the wire, and 25 is
+             the largest value both index expressions can honour.
+
+             REFUSE what the game cannot produce; CLAMP what it can. Negative
+             is not producible -- chargen sets 1 (src/Create.cpp:103), the
+             only write is ++ (src/Create.cpp:2094), and 0 is what an absent
+             tag leaves -- so it is corruption. Above 25 IS producible: that
+             ++ has no cap and Character::GainXP has no XP ceiling, so a
+             character past 315,000 XP (ExperienceChart's last entry) walks
+             it to 26 and beyond in ordinary play. Refusing those saves would
+             call a real character's file Corrupt over a datum that only
+             gates the "enough experience to advance" message, so the value
+             is clamped to the last index the tables can serve. */
+          if (NotifiedLevel < 0)
             throw ECORRUPT;
+          if (NotifiedLevel > 25)
+            NotifiedLevel = 25;
         }
     END_ARCHIVE
 	};
@@ -1459,24 +1470,35 @@ class Player: public Character
           /* cAutoBuff is the cursor NextAutoBuff() reads AutoBuffs[64]
              through -- `return AutoBuffs[cAutoBuff++]` -- and NextAutoBuff
              is a script-callable API (inc/Api.h:506) that does not reset
-             it. 63 is the last index the read can honour: a cursor of 64
+             it. 63 is the last index that read can honour: a cursor of 64
              reads one past the end before the increment is even seen.
-             Known cost of choosing 63 over 64: a completed
+
+             Refuse what the game cannot produce, clamp what it can, as for
+             NotifiedLevel below. Negative is not producible; the only
+             writes are `= 0` and `++`. 64 IS producible: a completed
              FirstAutoBuff/NextAutoBuff walk parks the cursor one past the
-             last entry it read, so a player with a FULL 63-entry autobuff
-             list, saved after such a walk, would carry 64 and be refused.
-             That takes 63 buffs deliberately added one at a time through
-             the spell manager; a one-past-end read is the worse of the
-             two, so the tighter bound wins. */
-          if (cAutoBuff < 0 || cAutoBuff > 63)
+             entry that stopped it, so a full 63-buff list leaves 64. The
+             clamp is observably identical in that state, because the entry
+             the clamped cursor re-reads is the zero that stopped the walk:
+             the add path only ever writes slots 0..62
+             (`for (z=0;z!=63;z++)`, src/Managers.cpp:413) and the remove
+             path zeroes slot 63 explicitly, so AutoBuffs[63] is zero
+             whenever a walk reaches it. */
+          if (cAutoBuff < 0)
             throw ECORRUPT;
+          if (cAutoBuff > 63)
+            cAutoBuff = 63;
           /* AutoBuffs is a NUL-terminated list inside a fixed 64-entry
              array, and all three walks of it stop only on a zero entry with
              no index limit (src/Term.cpp:152 and :234, src/Sheet.cpp:778).
              If the wire fills every entry there is no terminator and those
              loops run off the end, so the terminator is an invariant the
              reader must enforce rather than hope for. One zero anywhere is
-             enough: the walks stop at the first. */
+             enough: the walks stop at the first. This one REFUSES rather
+             than repairs, because the game cannot produce a terminator-free
+             list: the add path writes only slots 0..62
+             (`for (z=0;z!=63;z++)`, src/Managers.cpp:413) and the remove
+             path zeroes slot 63 (src/Managers.cpp:407). */
           for (i = 0; i != 64; i++)
             if (!AutoBuffs[i])
               break;
