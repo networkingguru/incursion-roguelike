@@ -49,7 +49,7 @@ case "${1:-}" in
 esac
 
 # The ratcheted checks, in the order a reader wants them. Each is cheap -- all
-# five together are seconds, so running them twice a night costs nothing.
+# of them together are seconds, so running them twice a night costs nothing.
 # A check added here MUST be deterministic and MUST NOT need a build.
 RATCHET_CHECKS=(
     "tools/check_upstream_marks.sh"
@@ -57,6 +57,9 @@ RATCHET_CHECKS=(
     "tools/check_format_strings.sh"
     "tools/check_citations.sh --selftest"
     "tools/check_doc_citations.sh --base $BASE_REF"
+    "tools/check_comment_budget.sh"
+    "tools/check_readme_checks.sh"
+    "tools/check_commit_lane.sh"
 )
 
 run_check() { # run_check "<command line>" -> echoes the exit code

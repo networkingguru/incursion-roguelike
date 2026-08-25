@@ -326,13 +326,35 @@ reads like a missing credential. A file has no ACL.
 
 ## For developers
 
-There is no test suite and no CI. What there is instead is a harness that plays
-the game unattended, a regression gate, a set of checks that each defend one
-defect, and a set of instruments you switch on with an environment variable or a
-compile flag. Nearly all of it is new in this fork.
+There is no test suite and no CI. There is a stated verification policy, a
+harness that plays the game unattended, a regression gate, a set of checks that
+each defend one defect, and a set of instruments you switch on with an
+environment variable or a compile flag. Nearly all of it is new in this fork.
 
 Start with [`tools/README.md`](tools/README.md), which documents every file with
 a status and cites a line number for each claim. What follows is the map.
+
+### Verification
+
+This project uses local, deterministic verification rather than hosted CI. Every
+change that alters behaviour follows five steps, in this order:
+
+1. add or update one check that defends the new behaviour;
+2. mutate the fix, or the check's own oracle, and confirm the check goes red;
+3. rebuild every target the change reaches — both backends are separate `main()`s;
+4. run that check and `tools/nightly_verify.sh --compare`;
+5. record the commands, the mutation and the result in the commit body or the bead.
+
+`tools/nightly_verify.sh` is the wrapper. It builds both backends, runs the check
+sweep, and compares the result against a base recorded before the work started. A
+check that already failed is not the change's fault; a check that passed before
+and fails after stops the merge. Builds are not ratcheted: a tree that does not
+compile is never safe.
+
+The commit body carries the evidence, because git records results and not
+process. State the oracle, the numbers it produced, the mutation that proved it
+bites, and the checks you re-ran. `docs/VERIFICATION.md` has the long form, the
+rules the harness enforces, and what this method cannot prove.
 
 ### The harness
 
@@ -341,6 +363,7 @@ a status and cites a line number for each claim. What follows is the map.
 | `tools/headless.sh` | Plays one scripted session with no display and no keyboard, in its own sandbox with its own `save/` and `logs/`. Everything else that plays the game calls it. |
 | `tools/soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about by message rather than by session. |
 | `tools/play.sh` | Interactive launcher for a real session with the map audit, save probe and character probe armed. |
+| `tools/nightly_verify.sh` | Builds both backends, sweeps the checks, and compares the result against a recorded base. `--record` before the work, `--compare` after. |
 | `tools/dump_save.sh` | Runs `-dump` against a save in the same sandbox, without playing. |
 | `tools/keys/*.keys` | The key scripts: the inputs a session plays. Read the header of one before using it. |
 
@@ -379,6 +402,8 @@ the unfixed tree before it is trusted.
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? Assesses a **quarantined** copy, asks the binary for its own save-layout stamp, and asserts the signature survives a run. |
 | `check_broken_door.sh` | Does a door still lie about being broken? Covers the stale orientation brand and every reader that asks whether a door is a hole. |
+| `check_comment_budget.sh` | Did any comment or `_PROBE` block in `src/` or `inc/` appear over the 30-line ceiling, or grow past what the baseline recorded? |
+| `check_commit_lane.sh` | Does every commit since the rule started open with one of the six lanes, and does every `rules:` commit name a design bead? |
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? |
 | `check_dump_save.sh` | Does `-dump` walk a real save and report the same bytes from both backends? |
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the gnomes its own refusal message names? |
@@ -401,6 +426,7 @@ the unfixed tree before it is trusted.
 | `check_ptr_sweep.sh` | Does the pointer-ordering sweep still find an ordering, and still ignore an equality? |
 | `check_quiet_lookup.sh` | Does a dead object handle still resolve silently where silence is correct, and still complain where a complaint is correct? |
 | `check_race_feats.sh` | Does a Dragonkin get Mantis Leap on the character sheet? |
+| `check_readme_checks.sh` | Was a regression check added without a row in this table? |
 | `check_reveal_delete.sh` | Can a monster still delete itself inside `Reveal()` and leave the caller holding a dangling map pointer? |
 | `check_sacrifice.sh` | Does a god's altar read the rows below `MA_ALL`, and does it refuse what it should refuse? |
 | `check_save_fail.sh` | Does a save that fails part-way leave the game playable? Drives real and staged failures. |

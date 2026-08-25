@@ -141,18 +141,28 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 
 ## Build & Test
 
-_Add your build and test commands here_
-
 ```bash
-# Example:
-# npm install
-# npm test
+./build_macos.sh                        # the SDL build, ./incursion
+BACKEND=posix ./build_macos.sh          # the headless build, most checks need it
+tools/headless.sh tools/keys/dive.keys  # play one seeded session, sandboxed
+tools/nightly_verify.sh --record        # freeze what already fails
+tools/nightly_verify.sh --compare       # did this work break anything that passed?
 ```
 
-## Architecture Overview
+Never run the binary directly. `tools/headless.sh` gives a run its own `save/`
+and `logs/`, so an unattended session cannot destroy a real character.
 
-_Add a brief overview of your project architecture_
+`tools/README.md` §7 groups every check into five tiers by what it needs, and
+names the two you must not run casually.
 
-## Conventions & Patterns
+## Verification
 
-_Add your project-specific conventions here_
+Read `docs/VERIFICATION.md` before you change behaviour. It states the rule this
+project uses instead of hosted CI, and it is not optional.
+
+## Architecture and conventions
+
+`README.md` §For developers describes the harness, the gate and the checks.
+`AGENTS.md` holds the working rules: the standing order, the publishing rules,
+how to mark a base-code bug, how to classify a change, and the comment budget.
+Neither is repeated here, because a third copy would drift.

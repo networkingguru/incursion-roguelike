@@ -1,0 +1,3 @@
+# The commit the lane rule starts after. Everything at or before it is exempt.
+# See AGENTS.md, "Classifying a change".
+6528c12ecff5dcad1a38ead549d8148867c0a052

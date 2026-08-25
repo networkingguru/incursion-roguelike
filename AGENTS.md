@@ -96,6 +96,60 @@ through the gate, and still needs Brian to read the literal text.
 Verify with `tools/check_upstream_marks.sh`. Find them all with
 `grep -rn "upstream:" src/ inc/`.
 
+## Classifying a change
+
+**Every commit subject MUST open with a lane, and the lane MUST be one of six.**
+An outsider reading `git log --oneline` has to be able to sort a defect fix from
+a rules redesign without opening a single body. Today they cannot, and that is
+the fault this rule fixes.
+
+| Lane | What belongs in it |
+|---|---|
+| `fix:` | A defect. The behaviour was wrong against the game's own rules or its own documentation. |
+| `port:` | Platform, build, toolchain, packaging. No behaviour a player sees. |
+| `data:` | `lib/*.irh` content that was wrong: a stat, a name, a spell list, a table row. |
+| `rules:` | A deliberate change to how the game plays. Balance, mechanics, a system redesign. |
+| `docs:` | Prose only. `README.md`, `docs/`, help text, comments. |
+| `tools:` | The harness, the checks, the gate, packaging scripts. |
+
+Pick the lane by what the change DOES, not by what motivated it. Making the code
+agree with the manual is still `rules:` when a player will feel the difference.
+The armour change (545e07f) is the worked example: the manual was the reason, and
+the lane is `rules:`, because damage now resolves differently.
+
+**A `rules:` commit MUST name a design bead in its body.** The bead holds the
+ruling and the reasoning. The commit holds the change. A `rules:` commit with no
+bead is a balance change nobody agreed to.
+
+**A lane is not a substitute for the verification record.** Whatever the lane,
+the body still states the oracle, the mutation and the checks re-run, as
+`docs/VERIFICATION.md` requires.
+
+Verify with `tools/check_commit_lane.sh`.
+
+## The comment budget
+
+**A comment at a fix site states the invariant and stops.** Four things belong
+there, and nothing else: what must be true, the evidence tier, the tracking id,
+and whether it has been sent. That is the `upstream:` marker described above.
+
+**The reproduction, the measurements and the argument go in the bead.** They are
+valuable and they are not source. Reference them by id.
+
+This is not a matter of taste. `tools/check_doc_freshness.sh` records the cost: a
+102-line probe block added at the top of `src/Event.cpp` moved 92 of that page's
+131 line citations, and nothing noticed for days. Bulk in a source file breaks
+every citation below it.
+
+**Limits, enforced by `tools/check_comment_budget.sh`:**
+
+- A comment block in `src/` or `inc/` SHOULD NOT exceed 30 lines.
+- A `#ifdef <NAME>_PROBE` block SHOULD NOT exceed 30 lines. A larger probe moves
+  to its own function, or to its own file, and the site keeps the `#ifdef` call.
+- Neither limit is retroactive. The check ratchets: it fails on a block that grew
+  past the ceiling in this change, not on one that was already over it. The
+  existing oversize blocks are tracked in `tools/comment_budget.baseline`.
+
 ## Issue tracking
 
 This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.

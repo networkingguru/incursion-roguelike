@@ -1,0 +1,71 @@
+# Comment and _PROBE blocks already at or over the 30-line
+# ceiling, frozen 2026-08-25. Columns: file, kind, lines,
+# opening text. Cutting these is bd inc-5ysg follow-up work.
+# Delete a line when the block is cut. Never add one by hand.
+inc/Base.h	comment	54	upstream: base-code defect, the fix is ours. inc-65j, tier
+inc/Defines.h	comment	45	The monster attack codes: there are five kinds of attack
+inc/Inline.h	comment	36	See the Incursion LICENSE file for copyright information.
+inc/cppdef.h	comment	44	In order to predefine machine-dependent constants,
+inc/lz.h	comment	30	Name: lz.h
+inc/rle.h	comment	30	Name: rle.h
+src/Annot.cpp	comment	34	ANNOT.CPP -- See the Incursion LICENSE file for copyright in
+src/Art.cpp	comment	40	encoded grammar
+src/Base.cpp	comment	42	A C-program for MT19937, with initialization improved 2002/1
+src/Base.cpp	comment	44	BASE.CPP -- See the Incursion LICENSE file for copyright inf
+src/Base.cpp	probe	83	Counts every random number the game has drawn. Two runs of o
+src/Create.cpp	comment	59	--- Abilities whose levels stack across classes ------------
+src/Create.cpp	comment	36	CREATE.CPP -- See the Incursion LICENSE file for copyright i
+src/Create.cpp	comment	46	upstream: base-code defect, the fix is ours. It is upstream'
+src/Create.cpp	comment	36	upstream: this is a defect in the BASE CODE, not a port
+src/Creature.cpp	comment	47	CREATURE.CPP -- See the Incursion LICENSE file for copyright
+src/Creature.cpp	comment	32	In the OGL system, it's technically possible to flank a
+src/Creature.cpp	comment	42	upstream: base-code defect, the fix is ours. It is upstream'
+src/Creature.cpp	comment	30	upstream: base-code defect, the fix is ours. inc-upw.37, tie
+src/Display.cpp	comment	41	DISPLAY.CPP -- See the Incursion LICENSE file for copyright 
+src/Display.cpp	comment	33	Diagnostic only, for bead inc-5xn and upstream issue #40. rm
+src/Display.cpp	probe	652	include <cstdlib>
+src/Display.cpp	probe	97	include <execinfo.h>
+src/Effects.cpp	comment	33	EFFECTS.CPP -- See the Incursion LICENSE file for copyright 
+src/Encounter.cpp	comment	46	1) Apply any templates explicitly specified in the Part
+src/Encounter.cpp	comment	168	TODO:
+src/Event.cpp	probe	84	include <execinfo.h>
+src/Feature.cpp	comment	32	FEATURE.CPP -- See the Incursion LICENSE file for copyright 
+src/Fight.cpp	comment	50	Example messages:
+src/Fight.cpp	comment	31	FIGHT.CPP -- See the Incursion LICENSE file for copyright in
+src/Fight.cpp	comment	39	Is this attack a blow struck by a creature -- a limb, or a w
+src/Fight.cpp	comment	42	upstream: base-code defect, fix is ours. Tier Observed --
+src/Fight.cpp	comment	62	upstream: base-code defect, the fix is ours. Tier Observed;
+src/Inv.cpp	comment	35	INV.CPP -- See the Incursion LICENSE file for copyright info
+src/Item.cpp	comment	60	ITEM.CPP -- See the Incursion LICENSE file for copyright inf
+src/Magic.cpp	comment	38	MAGIC.CPP -- See the Incursion LICENSE file for copyright in
+src/MakeLev.cpp	comment	34	MAKELEV.CPP -- See the Incursion LICENSE file for copyright 
+src/MakeLev.cpp	probe	93	inc-b5b: print the FINISHED level around every door that was
+src/Message.cpp	comment	32	MESSAGE.CPP -- See the Incursion LICENSE file for copyright 
+src/Monster.cpp	comment	136	Monster logic:
+src/Move.cpp	comment	37	upstream: base-code defect, the fix is ours. It is upstream'
+src/Registry.cpp	comment	40	upstream: LoadGroup and SaveGroup leak their Registry mode f
+src/Registry.cpp	comment	40	upstream: the second half of the same hole, and the half Reg
+src/Res.cpp	comment	35	RES.CPP -- See the Incursion LICENSE file for copyright info
+src/SaveV1.cpp	comment	47	One row per archived class. size pins sizeof(Class): a membe
+src/SaveV1.cpp	comment	30	The drift rules (docs/SAVE-SCHEMA-SPEC.md, "Drift rules"), r
+src/SaveV1.cpp	comment	34	The per-slot segment record, called from Game's ARCHIVE_CLAS
+src/Skills.cpp	comment	48	Just a note about this: I'm probably NOT going to implement 
+src/Skills.cpp	comment	45	upstream: base-code defect, the fix is ours. Tier Observed f
+src/Social.cpp	comment	58	SOCIAL.CPP -- See the Incursion LICENSE file for copyright i
+src/Status.cpp	comment	36	STATUS.CPP -- See the Incursion LICENSE file for copyright i
+src/Tables.cpp	comment	31	upstream: base-code defect, the fix is ours. The table below
+src/Target.cpp	comment	30	upstream: base-code defect, the fix is ours. git blame puts 
+src/Term.cpp	comment	57	TERM.CPP -- See the Incursion LICENSE file for copyright inf
+src/TextTerm.cpp	comment	35	TEXTTERM.CPP -- See the Incursion LICENSE file for copyright
+src/Values.cpp	comment	39	upstream: base-code defect, fix is ours. Tier Observed -- se
+src/Wcurses.cpp	comment	55	Wcurses.CPP -- See the Incursion LICENSE file for copyright 
+src/Wlibtcod.cpp	comment	55	Wlibtcod.CPP -- See the Incursion LICENSE file for copyright
+src/Wlibtcod.cpp	comment	33	if (first_time == false) {
+src/Wposix.cpp	comment	36	Is the cursor on the row that holds this text?
+src/Wposix.cpp	comment	52	The script is a token stream: whitespace separates tokens, '
+src/Wposix.cpp	comment	30	WPOSIX.CPP -- See the Incursion LICENSE file for copyright i
+src/cpp1.c	comment	78	CPP main program.
+src/cpp4.c	comment	37	Called from control when a #define is scanned. This module
+src/cpp6.c	comment	48	skipnl() skips over input text to the end of the line.
+src/lz.c	comment	78	Name: lz.c
+src/rle.c	comment	66	Name: rle.c

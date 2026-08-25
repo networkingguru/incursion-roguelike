@@ -347,8 +347,11 @@ Nothing invoked it; the only references were documentation. See
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? | LIVE |
 | `check_brawl_weapon.sh` | Does a fist still borrow the sword? An elf ranger holds his bow and carries his sword on his back, where the sheet will show both the Brawl and the Melee block, and the Brawl block must name no weapon at all. | LIVE |
 | `check_broken_door.sh` | Does a door still lie about being broken? Asserts the one predicate every reader asks, and runs a generated level to prove no door ends it closed and branded broken in a readable doorframe. | LIVE |
+| `check_comment_budget.sh` | Did a comment or `_PROBE` block in `src/` or `inc/` appear over the 30-line ceiling, or grow past its recorded size? Ratcheted against `tools/comment_budget.baseline`; `comment_budget.py` does the measuring. | LIVE |
+| `check_commit_lane.sh` | Does every commit after `tools/commit_lane.since` open with one of the six lanes, and does every `rules:` commit name a design bead? | LIVE |
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? | LIVE |
 | `check_consumable_abort.sh` | Does a consumable survive an action the character refused to complete? Answers yes to the game's own "Stop reading?" offer and asserts the scroll stack did not move, then drinks a potion and asserts that one still goes. Reports a session whose Will save never produced the offer as INCONCLUSIVE. | LIVE |
+| `check_readme_checks.sh` | Was a regression check added with no row in the `README.md` check table? Ratcheted against `tools/readme_checks.baseline`, which holds the 58-row backlog. | LIVE |
 | `check_dump_save.sh` | Does `-dump` still walk a real save and report the right fields, from BOTH backends? | LIVE |
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the rock gnome its own refusal message names? | LIVE |
 | `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? | LIVE |
@@ -474,6 +477,9 @@ tools/check_api_arity.py            # reads inc/Api.h against the C++ headers
 tools/check_gate.sh                 # feeds gate_lib.sh made-up logs
 tools/check_escape_sweep.sh         # greps src/ and inc/ for a C escape spelled /n
 tools/check_natural_speed.sh        # reads lib/weapons.irh against inc/Defines.h
+tools/check_comment_budget.sh       # sizes comment and _PROBE blocks in src/, inc/
+tools/check_commit_lane.sh          # reads git log against the six lanes
+tools/check_readme_checks.sh        # tools/check_*.sh against the README table
 ```
 
 These tools prove themselves against known-bad input on demand:
@@ -485,6 +491,9 @@ tools/check_headless.sh --selftest
 tools/check_citations.sh --selftest
 tools/check_escape_sweep.sh --selftest
 tools/check_lz_uncompress.sh --selftest
+tools/check_comment_budget.sh --selftest
+tools/check_commit_lane.sh --selftest
+tools/check_readme_checks.sh --selftest
 python3 tools/flickerscan_selftest.py
 ```
 
