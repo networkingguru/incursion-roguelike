@@ -1070,6 +1070,144 @@ static bool V1ResolveEntry(V1NameEntry *ent)
     return true;
   }
 
+/* Before resolving ANY resource reference, verify the append-only premise for
+   every manifest the save carried. A shrink is a broken module, whether or
+   not this particular save happens to reference the removed position. */
+static long v1ManifestPreflight(void)
+  {
+    long failures = 0;
+    for (int slot = 0; slot != MAX_MODULES; slot++)
+      {
+        V1ManifestPending *mp = &v1Manifest[slot];
+        if (!mp->present)
+          continue;
+        Module *mod = Game::Modules[slot];
+        if (!mod)
+          {
+            failures++;
+            fprintf(stderr,
+                "incursion: v1 manifest names module slot %d, which did "
+                "not load\n", slot);
+            continue;
+          }
+        for (int p = SP_MON; p <= SP_ENC; p++)
+          {
+            V1Pool pl;
+            if (!V1GetPool(mod, p, &pl) || pl.count < 0)
+              {
+                failures++;
+                fprintf(stderr,
+                    "incursion: loaded module slot %d has invalid %s "
+                    "array geometry\n", slot, V1PoolName(p));
+                continue;
+              }
+            if ((uint32)pl.count < mp->lengths[p])
+              {
+                failures++;
+                fprintf(stderr,
+                    "incursion: module slot %d %s array shrank: manifest "
+                    "recorded %u entries, loaded module has %u\n",
+                    slot, V1PoolName(p), (unsigned)mp->lengths[p],
+                    (unsigned)pl.count);
+              }
+          }
+      }
+    return failures;
+  }
+
+/* Convert one plain saved rID through its manifest position. The pre-flight
+   above guarantees that rebuilding from the loaded lengths succeeds: every
+   covered array position still exists because an array can only have grown.
+
+   EVERY reference goes through here, including one from a file that carries
+   no manifest at all. That case is not a formality. The wire value is now
+   the rID itself, so an unchecked one reaches Modules[(rID >> 24) - 1] and
+   Module::__GetResource straight from the file, and neither is safe to feed
+   an arbitrary 32-bit number: a zero slot byte indexes Modules[-1]. The walk
+   below is what bounds the index, so it MUST run whether or not a manifest
+   supplied the lengths. */
+static bool v1ConvertManifestRid(uint32 saved, rID *resolved)
+  {
+    int slot = (int)(saved >> 24) - 1;
+    uint32 index = saved & 0x00FFFFFFu;
+    if (slot < 0 || slot >= MAX_MODULES)
+      {
+        fprintf(stderr,
+            "incursion: v1 rID %u names module slot %d outside [0, %d)\n",
+            (unsigned)saved, slot, MAX_MODULES);
+        return false;
+      }
+    Module *mod = Game::Modules[slot];
+    if (!mod)
+      {
+        fprintf(stderr,
+            "incursion: v1 rID %u names module slot %d, which did not "
+            "load\n", (unsigned)saved, slot);
+        return false;
+      }
+
+    /* Which lengths describe the SAVE's numbering. A file with a Game record
+       carries a manifest for every slot it loaded, so a referenced slot
+       without one is corruption. The -schematest / -schemaload class groups
+       have no Game record, so no manifest: they are not complete saves and
+       they reload against the very module geometry they were written from,
+       which makes the loaded lengths the save's own numbering. */
+    uint32 loaded[21];
+    const uint32 *lengths;
+    V1ManifestPending *mp = &v1Manifest[slot];
+    if (mp->present)
+      lengths = mp->lengths;
+    else if (v1SegSawGame)
+      {
+        fprintf(stderr,
+            "incursion: v1 rID %u names module slot %d, which has no "
+            "manifest\n", (unsigned)saved, slot);
+        return false;
+      }
+    else
+      {
+        for (int p = SP_MON; p <= SP_ENC; p++)
+          {
+            V1Pool pl;
+            if (!V1GetPool(mod, p, &pl) || pl.count < 0)
+              {
+                fprintf(stderr,
+                    "incursion: loaded module slot %d has invalid %s array "
+                    "geometry\n", slot, V1PoolName(p));
+                return false;
+              }
+            loaded[p] = (uint32)pl.count;
+          }
+        lengths = loaded;
+      }
+
+    int array = -1;
+    uint32 position = index;
+    for (int p = SP_MON; p <= SP_ENC; p++)
+      if (position < lengths[p])
+        { array = p; break; }
+      else
+        position -= lengths[p];
+    if (array < 0)
+      {
+        fprintf(stderr,
+            "incursion: v1 rID module slot %d index %u is past the last "
+            "resource array\n", slot, (unsigned)index);
+        return false;
+      }
+
+    uint32 running = 0;
+    for (int p = SP_MON; p < array; p++)
+      {
+        V1Pool pl;
+        if (!V1GetPool(mod, p, &pl) || pl.count < 0)
+          return false;          /* already diagnosed by the pre-flight */
+        running += (uint32)pl.count;
+      }
+    *resolved = (rID)(running + position + ((uint32)(slot + 1) << 24));
+    return true;
+  }
+
 /* ------------------------------------------------------------------------ */
 /*             the resource memory segment record (phase 4)                 */
 /* ------------------------------------------------------------------------ */
@@ -1724,6 +1862,13 @@ void SaveV1_ResolveNames()
     if (!v1.slotQCount && !v1.statQCount && !v1.nameCount && !v1SegSawGame)
       return;
 
+    failures += v1ManifestPreflight();
+    if (failures)
+      {
+        v1ResolveTeardown();
+        throw ECORRUPT;
+      }
+
     for (i = 0; i != v1.nameCount; i++)
       {
         V1NameEntry *ent = &v1.names[i];
@@ -1740,34 +1885,18 @@ void SaveV1_ResolveNames()
 
     for (i = 0; i != v1.slotQCount; i++)
       {
-        uint32 idx = (uint32) *(v1.slotQ[i]);
-        if (idx >= v1.nameCount)
-          {
-            failures++;
-            fprintf(stderr,
-                "incursion: v1 rID field references name table entry %u "
-                "of %u\n", (unsigned)idx, (unsigned)v1.nameCount);
-            continue;
-          }
-        if (v1.names[idx].bad)
-          continue;   /* already reported above */
-        *(v1.slotQ[i]) = v1.names[idx].resolved;
+        rID resolved;
+        if (!v1ConvertManifestRid((uint32)*(v1.slotQ[i]), &resolved))
+          { failures++; continue; }
+        *(v1.slotQ[i]) = resolved;
       }
 
     for (i = 0; i != v1.statQCount; i++)
       {
-        uint32 idx = (uint32) v1.statQ[i]->eID;
-        if (idx >= v1.nameCount)
-          {
-            failures++;
-            fprintf(stderr,
-                "incursion: v1 Status::eID references name table entry %u "
-                "of %u\n", (unsigned)idx, (unsigned)v1.nameCount);
-            continue;
-          }
-        if (v1.names[idx].bad)
-          continue;
-        v1.statQ[i]->eID = (int32) v1.names[idx].resolved;
+        rID resolved;
+        if (!v1ConvertManifestRid((uint32)v1.statQ[i]->eID, &resolved))
+          { failures++; continue; }
+        v1.statQ[i]->eID = (int32)resolved;
       }
 
     /* Phase 2 of the memory segment record: allocation from the LOADED
@@ -2030,10 +2159,9 @@ void Registry::V1Rid(uint16 tag, rID &m)
     if (v1.mode == V1_SAVE)
       {
         v1CovMark(&m, sizeof(rID));
-        uint32 idx = (m == 0) ? 0xFFFFFFFFu : V1InternRid(m);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_RID);
-        v1PutU32(&v1Out, idx);
+        v1PutU32(&v1Out, (uint32)m);
         return;
       }
     const V1Ent *e = v1Find(tag);
@@ -2041,13 +2169,13 @@ void Registry::V1Rid(uint16 tag, rID &m)
       { m = 0; return; }
     if (e->kind != K_RID)
       throw ECORRUPT;
-    uint32 idx;
-    memcpy(&idx, e->pay, 4);
-    if (idx == 0xFFFFFFFFu)
+    uint32 saved;
+    memcpy(&saved, e->pay, 4);
+    if (saved == 0)
       { m = 0; return; }
-    /* Deferred: park the table index in the slot and queue its address for
+    /* Deferred: park the saved rID in the slot and queue its address for
        SaveV1_ResolveNames(), which runs after the modules are reloaded. */
-    m = (rID)idx;
+    m = (rID)saved;
     if (v1.slotQCount == v1.slotQCap)
       {
         v1.slotQCap = v1.slotQCap ? v1.slotQCap * 2 : 64;
@@ -2070,10 +2198,9 @@ void Registry::V1RidStatus(uint16 tag, Status &s)
     if (v1.mode == V1_SAVE)
       {
         rID e = (rID)s.eID;
-        uint32 idx = (e == 0) ? 0xFFFFFFFFu : V1InternRid(e);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_RID);
-        v1PutU32(&v1Out, idx);
+        v1PutU32(&v1Out, (uint32)e);
         return;
       }
     const V1Ent *e = v1Find(tag);
@@ -2081,11 +2208,11 @@ void Registry::V1RidStatus(uint16 tag, Status &s)
       { s.eID = 0; return; }
     if (e->kind != K_RID)
       throw ECORRUPT;
-    uint32 idx;
-    memcpy(&idx, e->pay, 4);
-    if (idx == 0xFFFFFFFFu)
+    uint32 saved;
+    memcpy(&saved, e->pay, 4);
+    if (saved == 0)
       { s.eID = 0; return; }
-    s.eID = (int32)idx;
+    s.eID = (int32)saved;
     if (v1.statQCount == v1.statQCap)
       {
         v1.statQCap = v1.statQCap ? v1.statQCap * 2 : 64;

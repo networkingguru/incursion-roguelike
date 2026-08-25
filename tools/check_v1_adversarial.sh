@@ -202,7 +202,7 @@ fi
 
 if [ "$FAILED" -eq 0 ]; then
     echo "PASS: all $CASE_COUNT v1 adversarial cases behaved: truncations and"
-    echo "      the wrong-kind/bad-name/bad-ordinal/tcount mutants and the"
+    echo "      the wrong-kind/bad-rID-slot/past-the-arrays/tcount mutants and the"
     echo "      negative Player index were refused with the expected errors;"
     echo "      the unknown-tag, deleted-tag and clamped-Player-index mutants"
     echo "      loaded with the skip/default/clamp rules intact."

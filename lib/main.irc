@@ -467,3 +467,50 @@ Effect "XP Ticker" : EA_INFLICT
       return NOTHING;
       };
   }
+
+/* APPEND-ONLY: THIS DECLARATION MUST STAY LAST, AND SO MUST ANY THAT FOLLOW
+   IT. A resource's position in its array is part of the save format: a v1
+   save records each array's length and each entry's name in position order,
+   and the loader converts a saved reference by position (see
+   docs/SAVE-SCHEMA-SPEC.md, "Resource references"). Adding a resource in the
+   MIDDLE of an array therefore slides every later entry, and every save
+   written before the addition then reads one resource too early.
+
+   That is not hypothetical. This very resource was first declared in the
+   middle of lib/m_items.irh by 4ba035b on 2026-08-24, which pushed 862
+   Effects down one place. Measured on 2026-08-25 by reading both modules'
+   own manifests: position 325 held "tongue of flame" before and
+   "flame tongue immolation" after. A save from before that commit read its
+   owner's Robe of Blending back as a Hat of Disguise. Moving the
+   declaration here makes 4ba035b a legal append and the old saves correct.
+
+   New resources go at the END of this file. Never in the middle of an
+   existing list. */
+/* The burn a flame tongue leaves on a corporeal undead. It is a separate
+   resource because the flame tongue's EITEM(EV_HIT) hands its name to a
+   TRAP_EVENT stati, and the dispatch calls the META handler of whatever
+   resource that stati names. Three turns, 3d6 then 2d6 then 1d6, counted in
+   the stati's own Val. Written for bd inc-tek.8.8, finding PA-08-F11; see the
+   upstream: mark on that handler for why the sword needed one. */
+0 Effect "flame tongue immolation" : EA_GENERIC
+  { On Event META(EV_TURN) {
+      hObj killer; int16 i;
+      i = EActor->GetEffStatiVal(TRAP_EVENT,$"flame tongue immolation");
+      if (i < 0 || i > 2)
+        return NOTHING;
+      EActor->SetEffStatiVal(TRAP_EVENT,$"flame tongue immolation",i+1);
+      killer = EActor->GetEffStatiObj(TRAP_EVENT,$"flame tongue immolation");
+      if (!GetHandle(killer))
+        killer = EActor;
+      ThrowDmg(EV_DAMAGE,AD_FIRE,(3-i)d6,"a flame tongue's fire",
+               killer,EActor);
+      DPrint(e,"Your withered flesh burns!",
+               "The <EActor>'s withered flesh burns!");
+      if (EActor->isDead() && killer != EActor)
+        killer->KillXP(EActor);
+      return NOTHING;
+      },
+    EV_ELAPSED
+      "The flames on your flesh gutter out." /
+      "The flames on the <EActor> gutter out.";
+  }

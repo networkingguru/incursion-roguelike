@@ -13,17 +13,24 @@
 #
 #   2. CONVERSION. A scratch COPY of Furious_Fox.sav converts -- against a
 #      module whose numbering matches the save. The fixture predates
-#      4ba035b (which grew szEff via lib/m_items.irh), so the sandbox
-#      module is compiled from HEAD scripts with only m_items.irh reverted
-#      to `git show 4ba035b^` -- the exact procedure the spec's
+#      4ba035b (which added the immolation Effect), so the sandbox module
+#      is compiled from HEAD scripts with lib/m_items.irh AND lib/main.irc
+#      reverted to `git show 4ba035b^` -- the exact procedure the spec's
 #      Compatibility section prescribes for save/Dench.sav, rehearsed here
 #      on a disposable copy. Asserted: exit 0; a <name>.v0 sibling holds
 #      the original v0 bytes; the converted file's header reads the current
-#      SaveSchemaID() ("IS1.2"); and tools/dump_save.sh of the converted
-#      copy AGAINST THE REPO'S HEAD MODULE matches the dump of the .v0
-#      against the matching (pre-4ba035b) module line for line except the
-#      Format: line -- the conversion recorded names, so the reading
-#      survives the module rebuild that used to shift it.
+#      SaveSchemaID(); and tools/dump_save.sh of the converted copy AGAINST
+#      THE REPO'S HEAD MODULE matches the dump of the .v0 against the
+#      matching (pre-4ba035b) module line for line except the Format: line
+#      and the renumbered rID values -- the conversion records the module
+#      manifest, so the reader converts each saved rID by POSITION and the
+#      reading survives the module rebuild that used to shift it.
+#
+#      THIS PART IS ALSO THE APPEND-ONLY ORACLE. It is the check that fails
+#      if a new resource is ever declared in the middle of an array again:
+#      the fixture then reads back as different equipment. On 2026-08-25 it
+#      did exactly that, which is how 4ba035b's mid-file declaration was
+#      found and moved to the end of lib/main.irc.
 #      Also: converting against the MISMATCHED (HEAD) module refuses
 #      cleanly (exit 2, target byte-identical, no .v0 left); a pre-existing
 #      .v0 sibling refuses (exit 3, nothing overwritten); re-converting an
@@ -36,7 +43,7 @@
 # Needs BOTH builds (same requirement as tools/check_flavor_stability.sh):
 # ./incursion (the developer build carries -compile) for the sandbox module,
 # and ${INCURSION_BIN:-./incursion-headless} for the conversions and dumps.
-# Needs git history: the pre-4ba035b m_items.irh comes from `git show`.
+# Needs git history: the pre-4ba035b lib files come from `git show`.
 #
 # Usage: tools/check_convert_guard.sh   (exits 0 on pass, 1 on fail)
 # The current schema stamp, read from the source of truth rather than
@@ -73,8 +80,9 @@ REAL_SAVE_BEFORE="$(save_state)"
 # anything the binary wrongly wrote by CWD lands in a throwaway directory:
 #   SB      the repo's own HEAD module -- for the refusal tests and the
 #           module-MISMATCH test.
-#   SB_PRE  a module compiled from HEAD scripts with only lib/m_items.irh
-#           reverted to pre-4ba035b -- the module that matches the fixture's
+#   SB_PRE  a module compiled from HEAD scripts with lib/m_items.irh
+#           and lib/main.irc reverted to pre-4ba035b -- the module that
+#           matches the fixture's
 #           numbering, for the real conversion.
 # -timeout bounds a regressed binary that fell through to the menu;
 # INCURSION_MAX_KEYS starves that menu of input so it dies fast.
@@ -87,10 +95,21 @@ SB_PRE="$WORK/pre4ba035b"
 mkdir -p "$SB_PRE/mod" "$SB_PRE/save" "$SB_PRE/logs"
 cp -R "$ROOT/lib" "$SB_PRE/lib"
 ln -sfn "$ROOT/inc" "$SB_PRE/inc"
-if ! git -C "$ROOT" show "4ba035b^:lib/m_items.irh" > "$SB_PRE/lib/m_items.irh"; then
-    fail "git show 4ba035b^:lib/m_items.irh failed; is history available?"
-    exit 1
-fi
+# BOTH files, not just m_items.irh. 4ba035b first declared the immolation
+# Effect in the MIDDLE of m_items.irh, which slid 862 later Effects down one
+# place; the declaration now lives at the END of main.irc so that the same
+# commit reads as a legal append. Reverting only m_items.irh therefore no
+# longer removes that resource, and the sandbox module stopped matching the
+# fixture. Reverting both files to 4ba035b^ reconstructs the fixture's
+# numbering exactly: measured 2026-08-25 by reading both modules' own save
+# manifests, the two lists differ by that one appended Effect and nothing
+# else.
+for f in lib/m_items.irh lib/main.irc; do
+    if ! git -C "$ROOT" show "4ba035b^:$f" > "$SB_PRE/$f"; then
+        fail "git show 4ba035b^:$f failed; is history available?"
+        exit 1
+    fi
+done
 INCURSIONPATH="$SB_PRE/" "$COMPILER" -compile main.irc \
     < /dev/null > "$WORK/compile.log" 2>&1
 STATUS=$?
@@ -168,7 +187,7 @@ else
     cmp -s "$WORK/copy.sav" "$WORK/copy.sav.v0" && \
         fail "the converted file is byte-identical to the original; nothing was converted"
 
-    # The comparisons below drop Format: (v0 digest vs IS1.2, the one
+    # The comparisons below drop Format: (v0 digest vs the v1 stamp, the one
     # intended difference) and File: (the two paths differ by name).
     strip() { grep -v -e '^Format:' -e '^File:' "$1"; }
     # The cross-module comparison additionally masks rID VALUES (the
@@ -274,7 +293,7 @@ fi
 if [ "$FAILED" -eq 0 ]; then
     echo "PASS: both fixtures (and a symlink to one) refused with exit 3 and"
     echo "      stayed byte-identical; the mismatched HEAD module refused with"
-    echo "      the target untouched; a scratch copy converted to IS1.2 against"
+    echo "      the target untouched; a scratch copy converted to $SCHEMA_STAMP against"
     echo "      the matching pre-4ba035b module with a byte-exact .v0 backup"
     echo "      and a dump identical across the module rebuild beyond Format:;"
     echo "      a pre-existing .v0 refused; nothing real was touched."

@@ -539,29 +539,42 @@ def main():
     cases.append(("unterminated_version", f, "fail",
                   'revision "IS1.0AAAAAAA"; this'))
 
-    # --- 4/5. name-table mutants, against the first Effect-pool entry.
-    eff = [e for e in v1.names if e["pool"] == SP_EFF]
-    if not eff:
-        die("no Effect-pool entry in the name table")
-    ent = eff[0]
+    # --- 4/5. reference mutants, against the first non-null K_RID field.
+    #
+    # THESE REPLACED bad_name AND bad_ordinal. Until phase 3 of the manifest
+    # work a reference travelled as a name-table index and those two mutants
+    # corrupted the entry it pointed at. A reference is now the plain rID, so
+    # the name table no longer keys references and there was nothing left for
+    # them to corrupt. What the plain rID DID make reachable is worse, and is
+    # what these two cover: a wire value flows into Modules[(rID >> 24) - 1]
+    # and Module::__GetResource, and neither is safe to feed an arbitrary
+    # 32-bit number. Both mutations are the same width as the field, so no
+    # size fixup is needed.
+    rid_off = rid_val = None
+    for rec in v1.records:
+        for fld in rec["fields"]:
+            if fld["kind"] != K_RID:
+                continue
+            val, = struct.unpack_from("<I", base, fld["off"] + 3)
+            if val:
+                rid_off, rid_val = fld["off"] + 3, val
+                break
+        if rid_off is not None:
+            break
+    if rid_off is None:
+        die("no non-null K_RID field to corrupt")
 
-    # bad_name: a name the module does not have. The load must abort with a
-    # message naming it.
-    new_name = b"No Such Effect Anywhere"
-    ins = struct.pack("<BBHH", ent["pool"], ent["slot"], ent["ordinal"],
-                      len(new_name)) + new_name
-    f, delta = splice(base, ent["off"], ent["size"], ins)
-    f = fix_sizes(f, delta)
-    cases.append(("bad_name", f, "fail", "No Such Effect Anywhere"))
+    # rid_bad_slot: a zero slot byte makes the module index -1. Modules[-1]
+    # is the read the bound exists to stop.
+    f = (base[:rid_off] + struct.pack("<I", rid_val & 0x00FFFFFF)
+         + base[rid_off + 4:])
+    cases.append(("rid_bad_slot", f, "fail", "names module slot -1"))
 
-    # bad_ordinal: an ordinal at or past the count of same-named resources
-    # (Effect names are unique, so 250 is far past). The abort must name the
-    # entry.
-    ins = struct.pack("<BBHH", ent["pool"], ent["slot"], 250,
-                      len(ent["name"])) + ent["name"].encode("latin-1")
-    f, delta = splice(base, ent["off"], ent["size"], ins)
-    f = fix_sizes(f, delta)
-    cases.append(("bad_ordinal", f, "fail", ent["name"]))
+    # rid_past_arrays: a position past the end of the slot's last resource
+    # array. Nothing may be clamped, skipped or zeroed; the load is refused.
+    f = (base[:rid_off] + struct.pack("<I", (rid_val & 0xFF000000) | 0x00FFFFFF)
+         + base[rid_off + 4:])
+    cases.append(("rid_past_arrays", f, "fail", "past the last resource array"))
 
     # --- 9. creature_tcount_overflow, from the creature file when given.
     if len(sys.argv) >= 4:

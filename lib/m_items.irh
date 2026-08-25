@@ -7165,35 +7165,6 @@ and EA_GRANT
   }
 and EA_GENERIC { }
 
-/* The burn a flame tongue leaves on a corporeal undead. It is a separate
-   resource because the flame tongue's EITEM(EV_HIT) hands its name to a
-   TRAP_EVENT stati, and the dispatch calls the META handler of whatever
-   resource that stati names. Three turns, 3d6 then 2d6 then 1d6, counted in
-   the stati's own Val. Written for bd inc-tek.8.8, finding PA-08-F11; see the
-   upstream: mark on that handler for why the sword needed one. */
-0 Effect "flame tongue immolation" : EA_GENERIC
-  { On Event META(EV_TURN) {
-      hObj killer; int16 i;
-      i = EActor->GetEffStatiVal(TRAP_EVENT,$"flame tongue immolation");
-      if (i < 0 || i > 2)
-        return NOTHING;
-      EActor->SetEffStatiVal(TRAP_EVENT,$"flame tongue immolation",i+1);
-      killer = EActor->GetEffStatiObj(TRAP_EVENT,$"flame tongue immolation");
-      if (!GetHandle(killer))
-        killer = EActor;
-      ThrowDmg(EV_DAMAGE,AD_FIRE,(3-i)d6,"a flame tongue's fire",
-               killer,EActor);
-      DPrint(e,"Your withered flesh burns!",
-               "The <EActor>'s withered flesh burns!");
-      if (EActor->isDead() && killer != EActor)
-        killer->KillXP(EActor);
-      return NOTHING;
-      },
-    EV_ELAPSED
-      "The flames on your flesh gutter out." /
-      "The flames on the <EActor> gutter out.";
-  }
-
 0 Effect "tongue of flame" : EA_BLAST
   { xval: AD_FIRE; pval: 4d8; 
     aval: AR_RAY; cval: PINK; qval: Q_TAR;
