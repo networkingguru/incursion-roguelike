@@ -25,6 +25,52 @@ as concealment.
 See `docs/REPORTING-GATE.md` for the separate rule that a public claim needs an
 oracle that changed state, with numbers on both sides.
 
+## If you are Codex
+
+Claude plans and reviews. You implement. These rules hold on every run, whether
+or not the prompt repeats them. Where a prompt and this section disagree, say so
+in your report rather than choosing silently.
+
+**Never delete an existing guard, bounds check, invariant, assertion or test to
+make new code fit.** If one blocks you, STOP and report it with its file and
+line and say why it blocks you. Most of them exist because a specific defect got
+through once, and the comment above them usually says which. Deleting one is the
+single most damaging thing you can do here, because every check stays green
+afterwards and the loss is invisible in a report. This was broken on 2026-08-25:
+the AutoBuffs terminator invariant in `inc/Creature.h` was removed while
+reworking how that array is stored. Three loops walk `AutoBuffs` with no index
+limit (`src/Term.cpp:152` and `:234`, `src/Sheet.cpp:778`), so the removal
+re-opened an out-of-bounds read reachable from a crafted save file, on the old
+save path as well as the new one.
+
+**Build only with `BACKEND=posix ./build_macos.sh`.** The default libtcod build
+compiles the game module by RUNNING the SDL binary, which aborts inside your
+sandbox with "the video driver did not add any displays". The posix build
+produces `incursion-headless` and compiles `mod/Incursion.Mod` entirely inside
+the sandbox. Use `./incursion-headless` as the compiler in any script you write.
+
+**Never invoke `./incursion`.** It is the SDL binary and it cannot run in your
+sandbox. Five checks invoke it or invoke git, so you cannot run them:
+`check_flavor_stability.sh`, `check_dump_save.sh`, `check_convert_guard.sh`,
+`check_stair_warn.sh` and `check_dup_names.sh`. Do not run them, do not edit
+them, and do not report them as failures. A human runs them outside the sandbox.
+
+**Run no git commands.** Leave every change in the working tree. A human reads
+the diff and records it.
+
+**Change no issue-tracker state.** Do not run `bd`. You do not open, close,
+claim or annotate issues. This was broken on 2026-08-25: bead `inc-mdi6` was
+closed unasked, with a reason describing different work.
+
+**Stay inside the stated scope.** Do not edit the spec or the plan you were
+given unless the prompt says you may. Do not make unrelated whitespace or
+formatting changes; they hide the real diff. If you believe the spec or the plan
+is wrong, say so in your report with evidence and do not implement what you
+believe is wrong.
+
+**Report what you removed.** List every deletion your change makes, separately
+from what you added. A reviewer's weakest sense is for what is no longer there.
+
 ## Marking base-code bugs
 
 **Every fix to a defect that is upstream's rather than the port's MUST be marked

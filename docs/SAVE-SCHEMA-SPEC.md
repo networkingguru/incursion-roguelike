@@ -2,9 +2,7 @@
 
 # Spec: a named, extensible save schema
 
-Status: proposed, 2026-08-24. Approved to write by Brian on 2026-08-24.
-Amended the same day, after measurement, with the name-collision rules and
-the resource memory segment. Approved by Brian.
+Status: normative. Written 2026-08-24, redesigned with Brian 2026-08-25.
 Background reading: `docs/ENGINE-SERIALISATION.md` describes the format this
 replaces. Read it first; this spec assumes it.
 
@@ -20,22 +18,53 @@ to notice that weld breaking. It has already fired in anger: the shipping build
 and the developer build computed different digests of the same file, and the
 released package could not load its own module (`inc-tm4`).
 
-**A resource id is a position, not a name.** `Module::__GetResource`
-(`src/Res.cpp:102-170`) decodes an `rID` by walking per-type array counts —
-Monsters, Items, Features, Effects, Artifacts, Quests, Dungeons, Routines,
-NPCs, Classes, Races, Domains, Gods, and so on — and subtracting each count in
-turn. `CountResources` (`src/RComp.cpp:248`) sets those counts from a first pass
-over the scripts. Add one resource of any type and every id above that type's
-block names the resource one slot earlier.
+**A resource id is a position in one running count, not a name.**
+`Module::__GetResource` (`src/Res.cpp:102-215`) decodes an `rID` by walking 21
+per-type array counts — Monsters, Items, Features, Effects, Artifacts, Quests,
+Dungeons, Routines, NPCs, Classes, Races, Domains, Gods, and so on — and
+subtracting each count in turn. `CountResources` (`src/RComp.cpp:248`) sets
+those counts from a first pass over the scripts. Add one resource of any type
+and every id above that type's block names the resource one slot earlier.
 
 That happened on 2026-08-24. Commit `4ba035b` added one `Effect` for bead
-`inc-tek.8.8`, finding PA-08-F11. `szEff` grew by one. Brian's Orc, who worships
-Zurvash, loaded as a Lizardfolk who worships Xel, with the classes of the three
-classes one slot below his own, standing in a dungeon whose id now named an
-Effect. Nothing in the engine noticed, because there was nothing to notice with.
+`inc-tek.8.8`. `szEff` grew by one. Brian's Orc, who worships Zurvash, loaded as
+a Lizardfolk who worships Xel, with the classes of the three classes one slot
+below his own, standing in a dungeon whose id now named an Effect. Nothing in
+the engine noticed, because there was nothing to notice with.
 
 The two defects share one cause. **The file records no names — only offsets and
 positions — so nothing in it can be checked, migrated, or read by a person.**
+
+## The project rule this rests on
+
+**Resource lists in `lib/` are append-only.** This is a hard project rule, not a
+preference of the save format. The format is correct only while it holds, and
+the format's job is to notice when it has been broken.
+
+1. **Never reorder. Never delete. Append only.** No exception, no one-off, no
+   alphabetising, no moving a declaration from one file to another. A list may
+   grow at the end and may do nothing else.
+
+2. **Removal is a tombstone.** To retire a spell, leave its declaration in place
+   and disable it. The line stays and keeps its position.
+
+3. **A replaced slot loads as the new resource, and that is intended.** If the
+   declaration at a position is changed — renamed, or swapped for a different
+   resource entirely, such as replacing an over-powered `Wish` with a
+   gain-attribute spell so that a character does not simply lose his best spell
+   — then every save that referenced that position loads the new resource. This
+   is a known and expected effect. It is done only when it is the desired
+   result. It is never a defect, it MUST NOT be reported as one, and nothing
+   needs to disambiguate it.
+
+The **kinds** of array are append-only on the same terms: a new resource kind
+MAY be added at the end of the list of kinds, and no existing kind may be
+reordered or removed.
+
+Appending is the only structural change the rule permits, and appending is
+exactly what shifts the running count. So the rule alone does not make saved
+references stable. It guarantees one thing, and the format is built on it: a
+resource keeps its **position within its own array**, forever.
 
 ## Goal
 
@@ -45,20 +74,24 @@ to the game.
 The format MUST satisfy four properties.
 
 1. **Named.** Every field carries an identity, not just a position.
-2. **Extensible.** Adding a field MUST NOT invalidate existing saves. Removing
-   one MUST NOT either.
+2. **Extensible, forwards only.** Adding a field MUST NOT invalidate existing
+   saves. A field is never removed: its number is retired, never reused, and a
+   save carrying a field number the running binary does not know MUST be
+   refused, loudly.
 3. **Resource-safe.** A saved resource reference MUST survive the module being
-   recompiled with resources added or removed.
+   recompiled with resources **appended**. Resources are never reordered and
+   never removed; a save that meets evidence of either MUST be refused, loudly.
 4. **Layout-safe.** No vtable pointer, no padding, and no compiler-chosen
    bitfield order reaches the file.
 
 ## Non-goals
 
 - **Modules stay on the raw path.** `Game::SaveModule` (`src/Registry.cpp:1361`)
-  keeps calling the existing `SaveGroup`. A module is regenerated by the same
-  build that reads it, so its weld to the ABI costs nothing. This keeps every
-  existing `Incursion.Mod` readable, which keeps every soak run and every
-  harness script working unchanged.
+  keeps calling the existing `SaveGroup`. `mod/Incursion.Mod` is a separate file
+  written by the resource compiler (`src/RComp.cpp:223`) and read at startup by
+  `LoadModules()`. A save never contains a module; it refers to one. A module is
+  regenerated by the same build that reads it, so its weld to the ABI costs
+  nothing.
 - **`gallery.dat` and `Options.Dat` are untouched.** They have their own writers
   in `src/Create.cpp`.
 - **`String` and `Array` are not touched.** `FIELD_STR` and `FIELD_OBJ` write
@@ -70,10 +103,14 @@ The format MUST satisfy four properties.
   run time. `RES()`, `NAME()` and range tests such as
   `xID >= EffectID(0) && xID <= EffectID(szEff-1)` (`src/Res.cpp:733`) keep
   working untouched. Only the bytes on disk change.
+- **The engine's `rID` arithmetic is not touched.** Re-slicing the id inside the
+  engine would fix the renumbering too, at the cost of auditing about 70 sites
+  across 11 files. Brian rejected that blast radius. The conversion happens at
+  the save/load boundary only.
 
 ## The format
 
-A v1 save is a header, a resource name table, and a stream of tagged records.
+A v1 save is a header, a module manifest, and a stream of tagged records.
 
 ### Header
 
@@ -82,50 +119,6 @@ load menu already reads — `Sig`, `Name`, `numGroups`. `Version[12]` carries
 `"IS1"` plus a decimal schema revision instead of the ABI digest. The reader
 MUST dispatch on this field: `"SF"` prefix means the v0 raw reader, `"IS"` means
 v1.
-
-### Resource name table
-
-One table per file, written after the records, indexed from the records.
-
-Each entry is a resource type byte (the `T_T*` constant), the resource's
-name, and an ordinal. On save, every `rID` field contributes its type and
-`NAME()`. On load, each entry is resolved once against the loaded module, by
-name, within its type.
-
-**Resolution MUST compare names byte for byte — case-sensitive.** Measured
-against `lib/program.i`, the preprocessed stream the 2026-08-24 module was
-compiled from, with a parser that repeats `CountResources`' first pass: 3,430
-named resources across 15 pools, and case-sensitive names are unique in every
-pool except Flavour. Case-folded they are not: `Effect "Heartstone"`
-(`lib/m_items.irh:299`) collides with `Effect "heartstone"`
-(`lib/mon2.irh:2177`), and `Effect "*Mana*"` (`lib/m_items.irh:1191`) with
-`Effect "*MANA*"` (`lib/m_items.irh:1197`). `Module::FindResource` uses
-`stricmp` and is a runtime facility; it stays untouched and the name table
-does not use it.
-
-**The ordinal handles duplicate names.** It counts earlier same-type,
-same-name resources in module declaration order, so it is 0 wherever the name
-is unique — every pool except Flavour today. The Flavour pool duplicates
-names by design: 86 of its 883 names repeat ("rune-covered" appears ten
-times), and two are literal adjacent copy-paste declarations
-(`lib/flavors.irh:329-330`). An ordinal at or past the count of same-named
-resources MUST abort the load. Between same-named flavours the ordinal is
-best effort: inserting a same-named flavour ahead of another shifts the later
-one's ordinal, and the load then resolves to a different flavour with the
-same display name. The harm ceiling is a swapped item appearance, never a
-wrong god.
-
-**The resource compiler MUST reject a same-case duplicate name** within every
-pool except Flavour, at build time, so a future collision fails at compile
-rather than resolving arbitrarily at load.
-
-The table is the whole answer to defect two. **A saved reference names Zurvash,
-not slot 16,779,233.** Recompiling the module with fifty new effects moves no
-saved reference at all.
-
-Unresolvable entries MUST abort the load with a message naming every one of
-them. They MUST NOT be zeroed and MUST NOT be skipped. A silently zeroed
-resource reference is precisely how a character becomes a Lizardfolk.
 
 ### Records
 
@@ -141,10 +134,11 @@ uint32  length          bytes to the end of this record
   terminator tag 0
 ```
 
-The reader loops over fields. A tag it knows, it stores. **A tag it does not
-know, it skips using `kind` and `length`.** A tag it knows and does not meet, it
-leaves at the value the constructor gave it. Those two sentences are properties
-2 and 3 of the goal, and they are the entire extensibility story.
+The reader loops over fields. A tag it knows, it stores. A tag it knows and does
+not meet, it leaves at the value the constructor gave it — that is how an older
+save loads under a newer binary. **A tag it does not know MUST refuse the load**,
+naming the tag: a field it cannot interpret means the file was written by
+something newer than itself.
 
 ### Field numbers: the one rule
 
@@ -180,12 +174,8 @@ END_ARCHIVE
 ```
 
 `Item` (`inc/Item.h:20-23`) gains `FIELD_RID(n, iID)`, `FIELD_RID(n, eID)` and
-`FIELD_RID(n, homeID)` beside its scalars. **`FIELD_RID` is the fix.** It routes
-the value through the name table in both directions. Nothing else in the engine
-learns anything.
-
-One macro set serves both directions, as `Serialize` does today, so a field
-cannot be written and not read.
+`FIELD_RID(n, homeID)` beside its scalars. One macro set serves both directions,
+as `Serialize` does today, so a field cannot be written and not read.
 
 ### The map grid
 
@@ -206,36 +196,171 @@ Terrain and region are 8-bit indices into `TerraList` (`inc/Map.h:36-37`), not
 resource ids, so the grid itself carries no `rID` and needs none. `TerraList` is
 an ordinary array of `rID` and gets `FIELD_RID` treatment per element.
 
+### The 21 arrays, in their fixed order
+
+Position 0 is `Monster`, and the order is exactly the walk order of
+`__GetResource`:
+
+```
+ 0 Monster    7 Routine   14 Terrain
+ 1 Item       8 NPC       15 Text
+ 2 Feature    9 Class     16 Variable
+ 3 Effect    10 Race      17 Template
+ 4 Artifact  11 Domain    18 Flavour
+ 5 Quest     12 God       19 Behaviour
+ 6 Dungeon   13 Region    20 Encounter
+```
+
+This order is a wire constant. It MUST match `__GetResource`'s walk and
+`V1GetPool`'s switch (`src/SaveV1.cpp:820`). A new kind is appended at 21.
+
+### The module manifest
+
+A v1 save carries a manifest: one entry per module slot that was loaded when the
+save was written. It is a record of the modules **as they were at save time**,
+written once per file, not once per reference.
+
+**How the reader finds a slot's entry.** By tag number. The manifest lives
+inside the existing per-module scope, tag 816 (`inc/Res.h:1253`), where module
+slot `i` is already written as inner tag `1+i`. The slot number is the
+addressing and it comes from the top 8 bits of the `rID` itself: to convert a
+reference in slot 3, the reader reads inner tag 4. There is no name lookup and
+no search anywhere in this path.
+
+**What a slot's entry holds**, as two new tags inside that slot's scope,
+alongside the segment record already there:
+
+* the length of each of the module's 21 arrays, in the fixed order above, as one
+  `K_ARRAY` of 21 `uint32`;
+* the name of every entry in every array, in position order, array by array, as
+  one length-prefixed blob of `uint16` length plus bytes per name. The name
+  count MUST equal the sum of the 21 lengths, and a disagreement is `ECORRUPT`.
+
+**The module's identity is not in the manifest and MUST NOT be copied into it.**
+It is already recorded in `ModFiles`, tag 868, whose `ModuleRecord`
+(`inc/Res.h:1108`) holds `Slot`, `hMod` and `FName[1024]`. Duplicating it would
+create a second copy to disagree with the first. The manifest's names are a
+stronger identity check than a filename anyway: a file renamed on disk changes
+nothing the format cares about, and a file with the same name but different
+contents is caught by the drift rules below.
+
+**A manifest entry for a slot with no loaded module MUST refuse the load,**
+naming the slot. So MUST a loaded module in a slot the manifest does not
+describe, if any reference points into it.
+
+**Why it carries names and not only lengths.** Lengths cannot detect a reorder:
+alphabetising an array changes no length, so a lengths-only manifest would load
+the character silently with every reference pointing at the wrong resource. The
+names are what make the drift rules below possible.
+
+**Size.** `lib/program.i` for the 2026-08-24 module holds 3,430 named resources.
+At the measured average name length the manifest is on the order of 70 KB before
+compression. A real save, `save/Dench.sav`, is 2,439,280 bytes. The manifest is
+about three percent of the file, and it compresses well because the text is
+repetitive. That cost buys a save that validates itself against a module rather
+than trusting that a build-time check was run, which matters for a module this
+project did not compile.
+
+### Resource references
+
+**A reference to a resource is the plain 32-bit `rID` the engine uses.** No
+packing, no bit-splitting, no name, no table index. Nothing about the shape of a
+record changes.
+
+The conversion is entirely in the reader:
+
+1. Split the saved `rID` into its module slot and its running index.
+2. Walk the **manifest's** lengths for that slot to turn the running index into
+   an array number and a position within that array.
+3. Apply the drift rules below.
+4. Walk the **loaded module's** lengths to turn that array number and position
+   back into the running index this run's engine uses, and rebuild the `rID`.
+
+**A shorter array is a removal, and it MUST be refused.** If a loaded array is
+shorter than the length the manifest recorded for it, the append-only rule was
+broken. The reader MUST refuse before it converts anything, naming the array,
+the recorded length and the length found. It MUST NOT clamp the position, skip
+the reference, zero it, or load the character with the remaining entries. This
+holds even when no saved reference falls in the missing range: the shrink is the
+defect, not the dangling reference.
+
+Otherwise step 4 always succeeds for any position the manifest covers, because
+an array can only have grown.
+
+**Sequencing.** Both load paths reload modules only after the save group is read
+(`src/Registry.cpp:1317-1334`, `src/Dump.cpp:151-172`), so `Game::Modules` is
+stale or zeroed while records are being replayed. The manifest MUST be parsed
+with the records and the conversion MUST be deferred to `SaveV1_ResolveNames()`,
+which already runs after the reload.
+
+### Drift rules
+
+For each array, the reader compares the manifest's name list against the loaded
+module's name list, over positions 0 to (manifest length − 1). It refuses the
+load only on positive evidence that entries **moved**. Two shapes count:
+
+**A slide.** For some position N, the name now at each position from N onward
+equals the name the manifest recorded one position earlier (an insertion) or one
+position later (a deletion). A slide MUST be at least two consecutive positions
+before it counts, so that a single coincidental match does not trip it.
+
+**A shuffle.** The set of names in the loaded array over the compared range is
+the same set the manifest recorded, but at least one name is at a different
+position.
+
+Anything else is accepted and loads silently. One changed name, ten changed
+names, or every name changed is a rename or a deliberate replacement under rule
+3 above, and rule 3 says it MUST load.
+
+A refusal MUST name the array, the first offending position, the name the
+manifest recorded there, and the name found there instead.
+
+**The one case this cannot catch,** stated so that nobody later believes the
+check is total: renaming every entry in an array **and** reordering it in the
+same change is undetectable from the file, because there is no surviving name to
+line up and no set to compare. No design can detect it. The build-time order
+check on the source files still sees it, because there it is moved lines in a
+diff.
+
 ### The resource memory segment
 
 `Game::Serialize` writes each module's `MDataSeg` as one raw block
-(`inc/Res.h:1072-1073`). The block is the module's script data segment
-followed by the per-player resource memory: `MonMem[szMon]`,
-`ItemMem[szItm]`, `EffMem[szEff]`, `RegMem[szReg]`, addressed arithmetically
-from the resource's position (`Module::GetMemoryPtr`, `src/Res.cpp:711`).
-`EffMem` (`inc/Res.h:1225`) carries `FlavorID` and `PFlavorID` — whole
-flavour `rID`s, assigned by the per-game shuffle in `Game::SetFlavors`
-(`src/Item.cpp:310`). This is the identification state: which potion looks
-like what, and what the player has tried and knows.
+(`inc/Res.h:1072-1073`). The block is the module's script data segment followed
+by the per-player resource memory: `MonMem[szMon]`, `ItemMem[szItm]`,
+`EffMem[szEff]`, `RegMem[szReg]`, addressed arithmetically from the resource's
+position (`Module::GetMemoryPtr`, `src/Res.cpp:711`). `EffMem`
+(`inc/Res.h:1225`) carries `FlavorID` and `PFlavorID` — whole flavour `rID`s,
+assigned by the per-game shuffle in `Game::SetFlavors` (`src/Item.cpp:310`).
+This is the identification state: which potion looks like what, and what the
+player has tried and knows.
 
 Left raw, this block reproduces the renumbering defect inside v1. Add one
-`Effect` and every memory row above it shifts by one row, and every stored
-flavour `rID` moves one slot. `FIELD_RID` on object fields never reaches it.
+`Effect` and every memory row above it shifts by one row.
 
-So the memory rows MUST NOT stay raw. v1 writes them as records keyed
-through the name table — one entry of (type, name, ordinal) per row — and
-the flavour `rID` values inside `EffMem` MUST route through the name table
-like any other resource reference. On load, a row naming a resource the
-module no longer has is discarded: it is annotation about the resource, not
-a reference to it, and memory about nothing means nothing. A resource with
-no row keeps zeroed memory, as a new game gives it.
+So the memory rows MUST NOT stay raw. Each row is written with the (array,
+position) of the resource it annotates, and the flavour `rID` values inside
+`EffMem` are ordinary resource references and convert like any other. A resource
+with no row keeps zeroed memory, as a new game gives it. There is no
+discard-on-missing case: under the append-only rule a recorded position always
+exists, and a shorter array has already refused the load.
 
-The script data segment at the front of the block is not covered by this
-spec yet. It holds compiled script state whose layout the resource compiler
-chooses, so it is welded to the scripts the same way the memory rows are
-welded to the counts. It MUST be investigated before phase 2; until then it
-stays a raw blob inside the segment record, and the investigation is the
-first task of phase 4.
+The script data segment at the front of the block is not covered by this spec.
+It holds compiled script state whose layout the resource compiler chooses. It is
+0 bytes in every real module today. Until that is investigated it stays a raw
+blob inside the segment record, length-checked against the loaded module's
+`szDataSeg`.
+
+### Version rules: forward-only
+
+* A file whose schema revision is **newer** than the running binary MUST be
+  refused, loudly, naming both revisions.
+* A file whose schema revision is **older** MUST load. Fields the binary knows
+  and the file lacks keep their constructed defaults; the next save writes the
+  current format.
+* Within a revision, an unknown field tag MUST refuse the load, per "Records"
+  above.
+
+Saves are therefore forward-compatible only. That is accepted.
 
 ## Compatibility, and Brian's character
 
@@ -250,16 +375,16 @@ incursion -convert save/Dench.sav
 
 It loads the save with the existing v0 reader, and writes it back as v1. **The
 conversion is where the renumbering is repaired**, because the v0 read resolves
-every `rID` against the module in `mod/`, and the v1 write records the resulting
-names.
+every `rID` against the module in `mod/`, and the v1 write records the manifest
+that pins those positions.
 
 Therefore the converter MUST be run with a module whose numbering matches the
-save. For Brian's save that is any module built before `4ba035b`. I have built
-and verified one: today's HEAD with only the immolation `Effect` reversed reads
-his save as Orc, Zurvash, Ranger 3 / Rogue 2 / Druid 3, The Goblin Caves, depth
-6, with an equipped list byte-identical to the pre-`4ba035b` reading. After
+save. For Brian's save that is any module built before `4ba035b`. One has been
+built and verified: HEAD with only the immolation `Effect` reversed reads his
+save as Orc, Zurvash, Ranger 3 / Rogue 2 / Druid 3, The Goblin Caves, depth 6,
+with an equipped list byte-identical to the pre-`4ba035b` reading. After
 conversion the module can be rebuilt at full HEAD, immolation included, and the
-save follows, because it now holds names.
+save follows.
 
 The two committed fixtures, `docs/evidence/inc-upw.13/Furious_Fox.sav` and
 `Jaoin.sav`, keep loading through the v0 reader. They are evidence and MUST NOT
@@ -269,79 +394,76 @@ be converted.
 
 1. **A missed field is silent.** Today a forgotten member is still written,
    because the whole object is dumped. Under v1 it is simply absent and loads as
-   its constructed default. Mitigated by the round-trip test below, which
-   compares every field the character dump can see, and by a debug-build check
-   that every byte of the object is covered by exactly one field declaration.
+   its constructed default. Mitigated by the round-trip test below, and by a
+   debug-build check that every byte of the object is covered by exactly one
+   field declaration.
 2. **`TargetSystem::Serialize` is empty** (`src/Target.cpp:1447-1449`) and
    correct only by luck, as `docs/ENGINE-SERIALISATION.md` records. It gains a
    real field list here.
 3. **`T_STAFF` and `T_COIN` change vtable across a save today** (defects 2 and 3
    in `docs/ENGINE-SERIALISATION.md`). v1 does not fix them and MUST NOT be
    blamed for them. They are separate beads.
-4. **Ordinal drift among same-named flavours.** Inserting or removing a
-   same-named flavour shifts the ordinals after it, and an old save then
-   resolves to a different flavour with the same display name. Best effort by
-   design; the ceiling is a changed item appearance.
-5. **The script data segment is unmeasured.** The front of `MDataSeg` holds
-   compiled script state this spec does not yet describe. See the resource
-   memory segment section; it blocks phase 4, not phase 1.
-6. **Save size.** Tags and kinds cost about 3 bytes per field. Against a 2.4 MB
-   save whose bulk is map grids and data blocks, the estimate is under 5%. It
-   MUST be measured, not assumed.
+4. **The append-only rule is invisible in a diff.** Positions come from
+   declaration order across `lib/*.irh`. Someone alphabetising a file, or moving
+   entries between files, breaks every save in the wild from a commit that looks
+   harmless. The drift rules catch it at load; a build-time order check catches
+   it in the diff. Both are wanted.
+5. **The script data segment is unmeasured.** See the memory segment section.
+6. **Save size.** Tags and kinds cost about 3 bytes per field, and the manifest
+   about 70 KB. Against a 2.4 MB save the estimate is under 8%. It MUST be
+   measured, not assumed.
+7. **No runtime check that `mod/Incursion.Mod` was built by the running
+   binary.** There is a file signature and range sanity checks
+   (`inc/Res.h:868`), but no ABI digest. A stale module with a new binary is
+   undefined behaviour rather than a refusal. Out of scope here; tracked
+   separately.
 
 ## Test plan
 
-Adversarial, before anything else:
+Legal changes, which MUST load:
 
-- Truncated file at every record boundary. Expect a clean `ECORRUPT`, no crash.
-- Unknown tag injected into a record. Expect it skipped and the rest read.
-- A known tag deleted from a record. Expect the constructed default.
-- A name-table entry naming a resource the module does not have. Expect an abort
-  that names it.
-- A grid record whose `sizeX`/`sizeY` disagree with the map. Expect an abort.
-- A name-table entry whose ordinal is at or past the count of same-named
-  resources of its type. Expect an abort that names it.
+1. **Round trip, no drift.** Save, load, save again. The second file MUST equal
+   the first byte for byte. This is possible only under v1:
+   `docs/ENGINE-SERIALISATION.md` invariant 2 records that v0's bytes are not
+   reproducible, because padding is never assigned.
+2. **Legal append.** Add an Effect to the end of the Effect list, recompile,
+   load a save written before it. Every reference MUST resolve to the same
+   resource it named before. This is the case the current format gets wrong.
+3. **Legal replacement.** Change the name of one entry in place. The save MUST
+   load silently and the character MUST hold the new resource at that position.
+4. **Legal mass rename.** Change every name in one array. Same requirement.
 
-Round trip, the real test:
+Illegal changes, which MUST refuse:
 
-- Save, load, save again. The second file MUST equal the first byte for byte.
-  Note that this test is only possible under v1: `docs/ENGINE-SERIALISATION.md`
-  invariant 2 records that v0's bytes are not reproducible, because padding is
-  never assigned.
-- `-dump` of Brian's character before conversion and after MUST match line for
-  line, on a module that reads both.
+5. **Insertion.** Insert an Effect in the middle. The refusal MUST name the
+   array and the first shifted position.
+6. **Shuffle.** Alphabetise one array.
+7. **Removal, middle.** Delete an Effect from the middle. This shows as a slide,
+   and the array is also shorter.
+8. **Removal, end.** Delete the LAST entry of an array, so no name slides and
+   only the length changes. The refusal MUST come from the length alone. Run
+   this with a save that references nothing in the missing range, to prove the
+   refusal does not depend on catching a dangling reference.
+9. **Newer revision.** A file stamped one schema revision newer.
+10. **Unknown tag.** A file carrying a field tag the binary does not know.
+11. **Adversarial.** Truncation at every record boundary; manifest lengths that
+    overflow, that disagree with the name count, or that exceed the loaded
+    module; a manifest for an absent module slot; a truncated manifest; a
+    reference past the end of the manifest; a grid record whose `sizeX`/`sizeY`
+    disagree with the map. Each MUST be refused cleanly and MUST NOT read out of
+    bounds.
 
 Live, as Brian plays:
 
-- Convert `save/Dench.sav`, rebuild the module at full HEAD, load, walk a level,
-  save, reload. Character sheet, inventory, mount and god unchanged.
-- One full soak seed on the new binary with the unchanged module, to show the
-  module path is untouched.
-- Convert a save, rebuild the module with one `Effect` added, load. Every
-  potion and scroll appearance, and every Known and Tried flag, unchanged.
-  This is the oracle for the memory segment; it fails on the raw block.
+12. Convert `save/Dench.sav`, rebuild the module at full HEAD, load, walk a
+    level, save, reload. Character sheet, inventory, mount and god unchanged.
+13. One full soak seed on the new binary with the unchanged module, to show the
+    module path is untouched.
+14. Convert a save, rebuild the module with one `Effect` appended, load. Every
+    potion and scroll appearance, and every Known and Tried flag, unchanged.
+    This is the oracle for the memory segment; it fails on the raw block.
 
-## Phases
-
-Each phase is one commit.
-
-1. Field macros, the v1 writer and reader, the name table, and the version
-   dispatch. `Thing` and `Item` only; every other class keeps the v0 path.
-   Round-trip test on a save containing only those.
-2. The remaining 18 classes, in dependency order: `Object`, `Creature`,
-   `Character`, `Player`, `Monster`, the four `Feature` kinds, the six item
-   kinds, `Module`, `Game`, `Map`.
-3. `LocationInfo` packed layout, with the bit assignment and its
-   `static_assert`.
-4. The resource memory segment: the script-data-segment investigation, then
-   name-keyed rows for `MonMem`, `ItemMem`, `EffMem` and `RegMem`, with
-   flavour values through the name table.
-5. `-convert`, the fixture guard, and Brian's save.
-6. The seven harness scripts that read saves, and `docs/ENGINE-SERIALISATION.md`
-   updated to describe both formats.
-
-## Open question for Brian
-
-Phase 2 is 18 classes of mechanical field lists and is the bulk of the work. It
-is also the part where a missed field hides. Do you want it as one commit, or
-one commit per class group so each is separately reviewable?
+Cases 1 to 8 need a deliberately built sandbox **module**, the way
+`tools/check_spell_god_drift.sh` already builds one. Cases 9 to 11 need a
+deliberately malformed **save file**; those are Claude's to write, because
+OpenAI's content filter terminates a Codex run that touches the crafting script.
