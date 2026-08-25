@@ -1132,6 +1132,11 @@ struct __FindCache
    K_EMBED scope in Game's archive body below. */
 class Game;
 void SaveV1_SegmentFields(Registry &r, Game &g, int slot);
+/* Write pre-flight (src/SaveV1.cpp): the early, non-destructive copy of the
+   segment-geometry refusal above. Game::SaveGame and RunSaveConvert both
+   call it BEFORE touching the existing file, so a refused save cannot
+   destroy the primary save. On refusal whyNot carries the reason. */
+bool SaveV1_CanWrite(Game &g, String &whyNot);
 
 
 class Game : public Object

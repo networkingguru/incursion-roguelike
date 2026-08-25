@@ -16,10 +16,12 @@
 # The two player_* cases need a file-fed INDEX inside a Player, so they come
 # from the character group's file: one asserts the reader REFUSES a value the
 # game cannot produce, the other that it CLAMPS one the game can.
-# grid_mismatch needs a Map record, which no schematest group carries, so it
-# comes from a real smoke-session save written under INCURSION_V1_RAW=1 and
-# is driven through tools/dump_save.sh -- the real load path -- instead of
-# -schemaload.
+# grid_mismatch needs a Map record and seg_row_namelen_overrun needs a Game
+# record's memory-row blob; no schematest group carries either, so both come
+# from a real smoke-session save written under INCURSION_V1_RAW=1 and are
+# driven through tools/dump_save.sh -- the real load path -- instead of
+# -schemaload. stati_nature_oob comes from the item group's file: a Status
+# whose Nature byte would index past the Idx allocation must be refused.
 #
 # Skeleton and safety assertions as in tools/check_load_corrupt.sh: every
 # headless invocation carries < /dev/null and -timeout (a binary that
@@ -111,10 +113,11 @@ while IFS='|' read -r name path expect detail; do
     CASE_COUNT=$((CASE_COUNT + 1))
     OUT="$WORK/case_$name.out"
     ERR="$WORK/case_$name.err"
-    if [ "$name" = grid_mismatch ]; then
-        # The mutant is a FULL save, and only the real load path replays a
-        # Map record's fields -- the -schemaload harness groups carry no
-        # maps. tools/dump_save.sh is that path, sandboxed.
+    if [ "$name" = grid_mismatch ] || [ "$name" = seg_row_namelen_overrun ]; then
+        # These mutants are FULL saves, and only the real load path replays
+        # a Map record's fields or a Game record's segment rows -- the
+        # -schemaload harness groups carry neither. tools/dump_save.sh is
+        # that path, sandboxed.
         INCURSION_DUMP_SANDBOX="$WORK/sandbox_$name" \
             ./tools/dump_save.sh "$path" < /dev/null > "$OUT" 2> "$ERR"
         STATUS=$?
@@ -187,8 +190,8 @@ while IFS='|' read -r name path expect detail; do
     esac
 done < "$WORK/craft.log"
 
-if [ "$CASE_COUNT" -lt 19 ]; then
-    fail "only $CASE_COUNT cases ran; the crafting script should emit one per record boundary twice, plus eleven more"
+if [ "$CASE_COUNT" -lt 21 ]; then
+    fail "only $CASE_COUNT cases ran; the crafting script should emit one per record boundary twice, plus thirteen more"
 fi
 
 # --- 5. the safety claim: nothing touched the real save/ directory ---

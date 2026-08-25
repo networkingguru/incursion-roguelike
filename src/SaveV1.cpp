@@ -1084,6 +1084,42 @@ static void v1SegUnpackRow(int kind, const uint8 *pay, char *rowp)
       }
   }
 
+/* Write pre-flight, shared by Game::SaveGame and RunSaveConvert: the same
+   segment-geometry refusals SaveV1_SegmentFields makes at write time, made
+   BEFORE any destructive step, so a refused save leaves the existing file
+   byte-intact (inc-ew8r fails safe). It catches a module that GREW past the
+   save's segment -- the 4ba035b class of mismatch; a same-size renumbering
+   is invisible to any size check and remains the operator's responsibility,
+   per docs/SAVE-SCHEMA-SPEC.md "Compatibility". The write-time checks in
+   SaveV1_SegmentFields stay: this is the early copy of them. */
+bool SaveV1_CanWrite(Game &g, String &whyNot)
+  {
+    for (int i = 0; i != MAX_MODULES; i++)
+      {
+        if (!g.MDataSeg[i])
+          continue;
+        Module *mod = Game::Modules[i];
+        if (!mod)
+          {
+            whyNot = Format("MDataSeg[%d] is allocated but module slot %d "
+                            "is not loaded", i, i);
+            return false;
+          }
+        size_t start[4], total;
+        v1SegStarts(mod, (size_t)g.NumPlayers(), start, &total);
+        if (total > (size_t)g.MDataSegSize[i])
+          {
+            whyNot = Format("the save's memory segment for module slot %d "
+                            "is %u bytes but the loaded module needs %lu "
+                            "-- the module does not match the save's "
+                            "numbering", i, (unsigned)g.MDataSegSize[i],
+                            (unsigned long)total);
+            return false;
+          }
+      }
+    return true;
+  }
+
 /* The per-slot segment record, called from Game's ARCHIVE_CLASS body inside
    the slot's K_EMBED scope (inc/Res.h, tag 816 scope, inner tag 1+slot).
    The embed's contents are three ordinary tagged fields, so the generic
@@ -4570,41 +4606,24 @@ int RunSaveConvert(const char *path)
        every v1 file, and a v0 load queues nothing to resolve. */
 
     /* Pre-flight the module-matching requirement BEFORE anything is
-       written: the same geometry check SaveV1_SegmentFields makes at write
-       time, but made here it stops a mismatched run with the target file
-       untouched, instead of after OpenWrite has truncated it. (The write-
-       time check stays; this is the early copy of it. The check catches a
-       module that GREW past the save's segment -- the 4ba035b class of
-       mismatch; a same-size renumbering is invisible to any size check and
-       remains the operator's responsibility, per the spec.) */
-    for (i = 0; i != MAX_MODULES; i++)
-      {
-        if (!theGame->MDataSeg[i])
-          continue;
-        Module *mod = Game::Modules[i];
-        size_t start[4], total;
-        if (!mod)
-          {
-            fprintf(stderr,
-                "incursion -convert: MDataSeg[%d] is allocated but module "
-                "slot %d is not loaded\n", (int)i, (int)i);
-            return 2;
-          }
-        v1SegStarts(mod, (size_t)theGame->NumPlayers(), start, &total);
-        if (total > (size_t)theGame->MDataSegSize[i])
-          {
-            fprintf(stderr,
-                "incursion -convert: refusing to convert %s:\n"
-                "  its memory segment for module slot %d is %u bytes but the\n"
-                "  loaded module needs %lu -- the module does not match the\n"
-                "  save's numbering. Run -convert against the module the\n"
-                "  save was written with (docs/SAVE-SCHEMA-SPEC.md,\n"
-                "  \"Compatibility\"). Nothing was written.\n",
-                resolved, (int)i, (unsigned)theGame->MDataSegSize[i],
-                (unsigned long)total);
-            return 2;
-          }
-      }
+       written: SaveV1_CanWrite is the shared early copy of the geometry
+       check SaveV1_SegmentFields makes at write time -- Game::SaveGame
+       makes the same call before its own destructive steps. Made here it
+       stops a mismatched run with the target file untouched, instead of
+       after OpenWrite has truncated it. */
+    {
+      String whyNot;
+      if (!SaveV1_CanWrite(*theGame, whyNot))
+        {
+          fprintf(stderr,
+              "incursion -convert: refusing to convert %s:\n"
+              "  %s. Run -convert against the module the\n"
+              "  save was written with (docs/SAVE-SCHEMA-SPEC.md,\n"
+              "  \"Compatibility\"). Nothing was written.\n",
+              resolved, (const char*)whyNot);
+          return 2;
+        }
+    }
 
     /* The backup, AFTER the load proved the file readable and BEFORE the
        write below touches it -- and verified byte for byte, because from

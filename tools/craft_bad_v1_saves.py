@@ -35,9 +35,10 @@ The optional fourth file is the schematest 'character' group's raw file
 yields the two mutants for a file-fed INDEX inside a Player.
 
 The optional fifth file is a real save from a smoke session run under
-INCURSION_V1_RAW=1. It is the only input with a Map record, and yields the
-grid_mismatch mutant; its caller drives that one through tools/dump_save.sh,
-the real load path, because -schemaload's harness groups carry no maps.
+INCURSION_V1_RAW=1. It is the only input with a Map record and a Game record,
+and yields the grid_mismatch and seg_row_namelen_overrun mutants; its caller
+drives both through tools/dump_save.sh, the real load path, because
+-schemaload's harness groups carry no maps and no Game record.
 """
 import struct
 import sys
@@ -58,12 +59,16 @@ K_STR, K_BLOB, K_RID, K_H, K_ARRAY, K_EMBED = 7, 8, 9, 10, 11, 12
 FIXED = {K_U8: 1, K_I8: 1, K_U16: 2, K_I16: 2, K_U32: 4, K_I32: 4,
          K_RID: 4, K_H: 4}
 SP_EFF = 3
+T_GAME = 1                        # inc/Defines.h
 T_MAP = 4                         # inc/Defines.h
 T_MONSTER = 6                     # inc/Defines.h
 T_PLAYER = 7                      # inc/Defines.h
 MAP_SIZEX_TAG = 673               # Map::sizeX, inc/Map.h
 MAP_SIZEY_TAG = 674               # Map::sizeY, inc/Map.h
 MAP_GRID_TAG = 672                # Map's grid record, inc/Map.h
+THING_STATI_TAG = 10              # Thing::__Stati, inc/Map.h
+GAME_MDATASEG_TAG = 816           # Game's segment-record scope, inc/Res.h
+LAST_STATI = 237                  # inc/Defines.h
 CREATURE_TS_TAG = 256             # Creature::ts, inc/Creature.h
 CHAR_NOTIFIEDLEVEL_TAG = 421      # Character::NotifiedLevel, inc/Creature.h
 PLAYER_CAUTOBUFF_TAG = 521        # Player::cAutoBuff, inc/Creature.h
@@ -295,6 +300,84 @@ def craft_player_index_mutants(src_path, cases):
     cases.append(("player_notified_level_negative", f, "fail", CORRUPT))
 
 
+def craft_stati_nature_oob(base, v1, cases):
+    """One mutant against the first Item record: a Stati collection of one
+    Status whose Nature byte is 255.
+
+    On load, StatiCollection::FieldsV1 (inc/Map.h) rebuilds the Idx array,
+    which holds LAST_STATI == 237 uint16 entries, and indexes it as
+    Idx[S[i].Nature]. A Nature byte of 237..255 would write a uint16 up to
+    36 bytes past that heap allocation. The reader must refuse the file:
+    Nature < LAST_STATI is the live invariant, so no clamp is defensible.
+
+    The replacement embed is built from scratch -- Last=1, Allocated=1, one
+    status embed carrying only tag 1, the nature byte. A missing inner tag
+    loads as the constructed default (the deleted_tag rule), so the minimal
+    status is valid on the wire and ONLY its Nature is out of range.
+    """
+    rec0 = v1.records[0]
+    st = [fl for fl in rec0["fields"] if fl["tag"] == THING_STATI_TAG]
+    if len(st) != 1 or st[0]["kind"] != K_EMBED:
+        die("expected exactly one tag-%d K_EMBED field (Thing::__Stati) "
+            "in the first record" % THING_STATI_TAG)
+    if not 237 <= LAST_STATI <= 255:
+        die("stati_nature_oob: LAST_STATI moved out of uint8 overflow "
+            "range; re-derive the mutant's nature byte")
+    status = struct.pack("<HBB", 1, K_U8, 255) + struct.pack("<H", 0)
+    inner = struct.pack("<HBh", 1, K_I16, 1)          # Last
+    inner += struct.pack("<HBh", 2, K_I16, 1)         # Allocated
+    inner += struct.pack("<HBI", 3, K_EMBED, len(status)) + status
+    inner += struct.pack("<H", 0)                     # embed terminator
+    field = struct.pack("<HBI", THING_STATI_TAG, K_EMBED, len(inner)) + inner
+    f, delta = splice(base, st[0]["off"], st[0]["size"], field)
+    f = fix_record_length(f, rec0["off"], delta)
+    f = fix_sizes(f, delta)
+    cases.append(("stati_nature_oob", f, "fail", CORRUPT))
+
+
+def craft_seg_row_namelen(src_path, cases):
+    """One mutant from the full raw save, against the memory-row-blob parser
+    (SaveV1_SegmentFields' load side, src/SaveV1.cpp): the first row's
+    nameLen raised to 0xFFFF with the blob length untouched. Unchecked, the
+    parser's memcpy of the name would read ~64KB past the row blob; its
+    bound (nameLen > len - pos) must refuse the file instead. Driven
+    through tools/dump_save.sh like grid_mismatch: only the real load path
+    replays a Game record, and only the full save carries one.
+    """
+    base = open(src_path, "rb").read()
+    v1 = V1File(base)
+    recs = [r for r in v1.records if r["type"] == T_GAME]
+    if len(recs) != 1:
+        die("expected exactly one T_GAME record in %s, found %d"
+            % (src_path, len(recs)))
+    seg = [fl for fl in recs[0]["fields"] if fl["tag"] == GAME_MDATASEG_TAG]
+    if len(seg) != 1 or seg[0]["kind"] != K_EMBED:
+        die("expected exactly one tag-%d K_EMBED (the segment-record scope) "
+            "in the Game record" % GAME_MDATASEG_TAG)
+    rows_off = None
+    for sl in v1.parse_fields(seg[0]["off"] + 7, seg[0]["size"] - 7):
+        if sl["kind"] != K_EMBED:
+            die("expected only K_EMBED slot records inside tag %d"
+                % GAME_MDATASEG_TAG)
+        inner = v1.parse_fields(sl["off"] + 7, sl["size"] - 7)
+        count_f = [f for f in inner if f["tag"] == 2]
+        rows_f = [f for f in inner if f["tag"] == 3]
+        if not count_f or not rows_f:
+            continue                    # an empty embed: slot not in use
+        count, = struct.unpack_from("<I", base, count_f[0]["off"] + 3)
+        if count == 0:
+            continue
+        rows_off = rows_f[0]["off"] + 7   # tag (2) + kind (1) + blob len (4)
+        break
+    if rows_off is None:
+        die("no module slot in %s carries memory rows; the seg-row mutant "
+            "needs at least one" % src_path)
+    # Row header: u8 rowKind, u8 pool, u16 ordinal, u16 nameLen.
+    off = rows_off + 4
+    f = base[:off] + struct.pack("<H", 0xFFFF) + base[off + 2:]
+    cases.append(("seg_row_namelen_overrun", f, "fail", CORRUPT))
+
+
 def craft_grid_mismatch(src_path, cases):
     """One mutant from the raw-mode FULL save (the only input with a Map
     record; the schematest groups carry none): the grid record's own sizeX
@@ -476,6 +559,9 @@ def main():
     if len(sys.argv) >= 4:
         craft_creature_tcount(sys.argv[3], cases)
 
+    # --- 13. the out-of-range Status nature, from the item file.
+    craft_stati_nature_oob(base, v1, cases)
+
     # --- 10. the two Player index mutants, from the character file.
     if len(sys.argv) >= 5:
         craft_player_index_mutants(sys.argv[4], cases)
@@ -483,9 +569,11 @@ def main():
     # --- 11. the synthesized 32-bit-truncation grid mutant.
     craft_map_grid_overflow(cases)
 
-    # --- 12. the grid-dimension mismatch, from the full raw save.
+    # --- 12. the grid-dimension mismatch and the row-blob nameLen overrun,
+    # both from the full raw save.
     if len(sys.argv) == 6:
         craft_grid_mismatch(sys.argv[5], cases)
+        craft_seg_row_namelen(sys.argv[5], cases)
 
     for name, contents, expect, detail in cases:
         path = os.path.join(out_dir, name + ".sav")

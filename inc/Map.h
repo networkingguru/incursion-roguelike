@@ -834,6 +834,13 @@ typedef struct StatiCollection {
           r.V1RidStatus(9, st);
           FIELD_H  (10, sh);
           if (r.Loading()) {
+            /* Bounds: nature came off the file, and the Idx rebuild below
+               indexes Idx[S[i].Nature] into an allocation of LAST_STATI
+               uint16 entries. A nature byte of LAST_STATI..255 would write
+               past it. Nature < LAST_STATI is the live invariant, so an
+               out-of-range value is corruption, never something to clamp. */
+            if (nature >= LAST_STATI)
+              throw ECORRUPT;
             st.Nature=nature; st.Val=val; st.Mag=mag; st.Duration=dur;
             st.Source=src; st.CLev=clev; st.Dis=dis; st.Once=once; st.h=sh;
           }

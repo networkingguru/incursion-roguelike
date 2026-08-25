@@ -1116,6 +1116,21 @@ bool Game::SaveGame(Player &p) {
 
       CharacterProbe();
 
+      /* v1 write pre-flight (SaveV1_CanWrite, src/SaveV1.cpp): every
+         refusal SaveGroupV1 would make for segment geometry is made HERE,
+         before the backup/delete/truncate below touches the existing save.
+         Without it a refused save left only a .backup and a partial file
+         (inc-ew8r); with it a refused save changes nothing on disk. */
+      {
+        String whyNot;
+        if (!SaveV1_CanWrite(*this, whyNot)) {
+          Error("Cannot write the save file: %s.\n"
+                "The existing save file was not touched.",
+                (const char*)whyNot);
+          return false;
+        }
+      }
+
       T1->ChangeDirectory(T1->SaveSubDir());
 
       memset(p.MessageQueue,0,sizeof(String)*8);
