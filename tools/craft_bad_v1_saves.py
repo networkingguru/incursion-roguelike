@@ -529,16 +529,23 @@ def main():
                       "fail", CORRUPT))
 
     # --- 2. unknown_tag: insert tag=999, kind=K_U32, payload 0xDEADBEEF
-    # into the first Item record, lengths fixed up. The skip rule must keep
-    # every original field intact: expect SUCCESS and the baseline field
-    # lines (the caller compares them).
+    # into the first Item record, lengths fixed up.
+    #
+    # THIS CASE FLIPPED IN PHASE 6. It used to expect SUCCESS, on the rule
+    # that a reader skips what it does not understand. That rule was the
+    # wrong half of the contract. A MISSING tag is safe -- the constructed
+    # default stands, and deleted_tag below still proves it. An EXTRA tag
+    # means the file carries state this binary cannot honour, and skipping it
+    # loads an object that is silently incomplete. The refusal must name the
+    # tag, so this asserts the number 999 reaches stderr.
     rec0 = v1.records[0]
     ins = struct.pack("<HBI", 999, K_U32, 0xDEADBEEF)
     first_field_off = rec0["fields"][0]["off"]
     f, delta = splice(base, first_field_off, 0, ins)
     f = fix_record_length(f, rec0["off"], delta)
     f = fix_sizes(f, delta)
-    cases.append(("unknown_tag", f, "ok", ""))
+    cases.append(("unknown_tag", f, "fail",
+                  "field tag 999, which is not one this binary reads"))
 
     # --- 3. deleted_tag: remove the tag=6 (Thing::Timeout) field from the
     # first Item record. The reader must leave the constructed default:
@@ -564,9 +571,42 @@ def main():
     # fires) and expect the bounded revision-reject. The expected substring
     # includes the closing quote DIRECTLY after the 12th byte: an unbounded
     # %s would run on into fh.Name's bytes and fail this grep.
+    #
+    # It is also the malformed-stamp case. "0AAAAAAA" starts with a digit,
+    # so a parser built on atoi would read this as revision 0 and refuse it
+    # for the wrong reason -- or, once revision 0 is inside a readable range,
+    # accept it. The digits must be followed by NUL padding and nothing else.
     f = base[:4] + b"IS1.0AAAAAAA" + base[16:]
     cases.append(("unterminated_version", f, "fail",
-                  'revision "IS1.0AAAAAAA"; this'))
+                  'revision "IS1.0AAAAAAA" is not'))
+
+    # --- 8b/8c. the two revision gates, phase 6. The stamp comes from the
+    # genuine file this run produced, never from a constant: a hard-coded
+    # "IS1.3" silently stops testing the gate the day SCHEMA_REV moves, and
+    # starts testing the parser instead.
+    def restamp(rev):
+        stamp = ("IS1.%d" % rev).encode()
+        if len(stamp) > 12:
+            die("revision %d does not fit fileHeader.Version[12]" % rev)
+        return base[:4] + stamp + b"\0" * (12 - len(stamp)) + base[16:]
+
+    if not v1.version.startswith("IS1.") or not v1.version[4:].isdigit():
+        die("genuine file carries a non-numeric revision %r" % v1.version)
+    live_rev = int(v1.version[4:])
+
+    # NEWER: one past what this binary writes. Nothing about the bytes is
+    # wrong; the stamp alone must stop the load, because a later build could
+    # have changed the meaning of any tag in the file.
+    cases.append(("newer_revision", restamp(live_rev + 1), "fail",
+                  ", NEWER than the "))
+
+    # OLDER: revision 0. The floor is MIN_READ_REV, which this script cannot
+    # see, so the case uses the lowest revision that ever existed -- it stays
+    # below any floor of 1 or more, which is every floor this reader can have
+    # while it still refuses something. The message names the floor; the grep
+    # deliberately does not, so raising MIN_READ_REV does not rewrite it.
+    cases.append(("older_revision", restamp(0), "fail",
+                  ", OLDER than revision "))
 
     # --- 4/5. reference mutants, against the first non-null K_RID field.
     #

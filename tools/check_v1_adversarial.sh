@@ -6,9 +6,13 @@
 #
 #   - every corruption case must be REFUSED (non-zero exit, the expected
 #     stderr text, and no field dump printed for the refused file);
-#   - the two extensibility cases (unknown tag inserted, known tag deleted)
-#     must SUCCEED, with the surviving field lines intact -- the skip rule
-#     and the constructed-default rule at work.
+#   - the extensibility case (known tag deleted) must SUCCEED, with the
+#     surviving field lines intact -- the constructed-default rule at work.
+#
+# Phase 6 moved unknown_tag from the second list to the first. A reader that
+# skips a tag it does not understand loads an object missing whatever state
+# that tag carried, and says nothing. Only a MISSING tag is safe. The two
+# revision cases (newer_revision, older_revision) came in with it.
 #
 # Some cases are crafted from other files than the item group's.
 # creature_tcount_overflow needs a count field inside a Creature whose value
@@ -159,16 +163,6 @@ while IFS='|' read -r name path expect detail; do
         fi
         grep '^field ' "$OUT" > "$WORK/case_$name.fields"
         case "$name" in
-          unknown_tag)
-            # The inserted tag is skipped; every original field line must
-            # survive byte-for-byte.
-            if ! diff -q "$WORK/baseline.fields" "$WORK/case_$name.fields" \
-                    > /dev/null; then
-                echo "--- first differing field lines ---"
-                diff "$WORK/baseline.fields" "$WORK/case_$name.fields" | head -10
-                fail "$name: the field lines changed; an unknown tag must be skipped without damage"
-            fi
-            ;;
           player_index_clamp)
             # The detail check above asserted the NotifiedLevel clamp; this
             # is the other half of the same rule. Both are values the game
@@ -196,8 +190,8 @@ while IFS='|' read -r name path expect detail; do
     esac
 done < "$WORK/craft.log"
 
-if [ "$CASE_COUNT" -lt 21 ]; then
-    fail "only $CASE_COUNT cases ran; the crafting script should emit one per record boundary twice, plus thirteen more"
+if [ "$CASE_COUNT" -lt 23 ]; then
+    fail "only $CASE_COUNT cases ran; the crafting script should emit one per record boundary twice, plus fifteen more"
 fi
 
 # --- 5. the safety claim: nothing touched the real save/ directory ---

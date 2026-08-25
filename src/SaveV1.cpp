@@ -52,6 +52,24 @@ extern size_t typeSize(int8 Type);
    21-array length and position-ordered resource-name manifest. */
 #define SCHEMA_REV 3
 
+/* The OLDEST revision this binary can still read. A file older than this is
+   refused by revision, not left to fail on its own shape.
+
+   Revisions 0 to 2 are unreadable here because phases 3 and 4 of the manifest
+   work deleted the only code that understood them. A revision-2 reference
+   travelled as an index into a per-file name table, and a revision-2 resource
+   memory row carried an inline pool, ordinal and name; a revision-3 reference
+   is a plain rID and a revision-3 row is (array, position). The rows live
+   inside one K_BLOB, so the scanner cannot see that the interior cuts have
+   moved -- it would hand the old bytes to the new reader, which would read a
+   pool byte as an array id and an ordinal as a position. Some of those files
+   would throw on a bounds check and some would load a character wearing the
+   wrong items. Neither is acceptable, and only the revision stamp separates
+   them from a good file before the first byte is believed.
+
+   Raise this in step with any future change that deletes a reader. */
+#define MIN_READ_REV 3
+
 const char* SaveSchemaID()
   {
     static char id[12];
@@ -137,6 +155,8 @@ static V1Ctx v1;
 struct V1Ent {
     uint16 tag;
     uint8  kind;
+    uint8  used;         /* set by v1Find; v1PopFrame refuses a frame that
+                            still holds an entry no field list asked for */
     const uint8 *pay;
     uint32 size;
 };
@@ -238,13 +258,14 @@ struct SchemaPin { const char *cls; size_t size;
    follow-up). T_STAFF is the one alias the placement-new switch does NOT
    list for Weapon (T_MISSILE/T_BOW/T_WEAPON only) -- v1PinClassForType
    mirrors that omission and maps T_STAFF to Item, matching what actually
-   gets constructed: a staff record loads as a bare Item, and its QItem/
-   Weapon-range tags are skipped as unknown. This is unreachable today (no
-   T_STAFF record exists until Task 10 converts an old save that names
-   one), it is a preserved v0 quirk (spec risk 3, see above), and the
-   shipping module declares every staff resource T_WEAPON at compile time
-   -- but a save that outlived a staff's removal from a module, or hand-
-   crafted test data, could still carry a T_STAFF record. Task 10's
+   gets constructed: a staff record loads as a bare Item. Its QItem/Weapon-
+   range tags are now a REFUSAL, not a skip -- phase 6 made an unknown tag
+   ECORRUPT at v1PopFrame, and a bare Item never asks for them. This is
+   unreachable today (no T_STAFF record exists until Task 10 converts an old
+   save that names one), it is a preserved v0 quirk (spec risk 3, see above),
+   and the shipping module declares every staff resource T_WEAPON at compile
+   time -- but a save that outlived a staff's removal from a module, or
+   hand-crafted test data, could still carry a T_STAFF record. Task 10's
    convert-guard must know this when it reasons about which old records
    are safe to carry forward. */
 
@@ -1941,9 +1962,10 @@ static size_t v1KindFixedSize(uint8 kind)
   }
 
 /* Scan one field stream [p, p+len) into an entry list. The stream must end
-   with its tag-0 terminator exactly at len. Unknown TAGS are kept (and so
-   skipped by never being looked up); an unknown KIND cannot be sized and is
-   corruption. Strict bounds on every read. */
+   with its tag-0 terminator exactly at len. An unknown KIND cannot be sized
+   and is corruption, caught here. An unknown TAG is sized fine, so it is
+   kept, marked unused, and caught by v1PopFrame once the record's field list
+   has run and had its chance to ask for it. Strict bounds on every read. */
 static void v1ScanFields(const uint8 *p, size_t len, V1Ent **outEnts,
                          int *outCount)
   {
@@ -2005,6 +2027,7 @@ static void v1ScanFields(const uint8 *p, size_t len, V1Ent **outEnts,
           }
         ents[count].tag = tag;
         ents[count].kind = kind;
+        ents[count].used = 0;
         ents[count].pay = pay;
         ents[count].size = size;
         count++;
@@ -2024,14 +2047,52 @@ static void v1PushFrame(V1Ent *ents, int count)
     v1FrameDepth++;
   }
 
+/* Close the current scope and enforce the unknown-tag rule.
+
+   A field list has now run over this frame and asked for every tag it knows.
+   Any entry still unmarked is a tag this binary does not read. The old rule
+   skipped it, on the theory that a reader should ignore what it does not
+   understand. That is the wrong half of the extensibility contract: a MISSING
+   tag is safe, because the constructed default stands and the object is
+   merely older than the code; an EXTRA tag means the file carries state this
+   binary cannot honour, and loading it produces an object that is silently
+   incomplete. Refuse instead, and name the tag so the file can be identified.
+
+   The scan is O(entries) once per scope and reads a byte already in cache.
+
+   The entry list is freed BEFORE the throw. v1PopFrame is the only owner of
+   it at this point, and an exception path that skipped the free would leak
+   the whole frame on every refused file. */
 static void v1PopFrame(void)
   {
     if (v1FrameDepth == 0)
       return;
     v1FrameDepth--;
-    free(v1Frames[v1FrameDepth].ents);
-    v1Frames[v1FrameDepth].ents = NULL;
-    v1Frames[v1FrameDepth].count = 0;
+
+    V1Frame *f = &v1Frames[v1FrameDepth];
+    uint16 orphan = 0;
+    bool   found  = false;
+    for (int i = 0; i != f->count; i++)
+      if (!f->ents[i].used)
+        { orphan = f->ents[i].tag; found = true; break; }
+
+    free(f->ents);
+    f->ents = NULL;
+    f->count = 0;
+
+    if (found)
+      {
+        /* stderr, not Error(): this fires under -schemaload too, where the
+           terminal is never initialised and Error() falls back to stdout --
+           and stdout is where the field dump goes, so a refusal printed
+           there would be indistinguishable from a load that worked. The
+           revision gate above prints the same way, for the same reason. */
+        fprintf(stderr,
+            "incursion: this file carries field tag %u, which is not one "
+            "this binary reads; it was written by a build that knows "
+            "something this one does not\n", (unsigned)orphan);
+        throw ECORRUPT;
+      }
   }
 
 static const V1Ent* v1Find(uint16 tag)
@@ -2041,7 +2102,10 @@ static const V1Ent* v1Find(uint16 tag)
     V1Frame *f = &v1Frames[v1FrameDepth - 1];
     for (int i = 0; i != f->count; i++)
       if (f->ents[i].tag == tag)
-        return &f->ents[i];
+        {
+          f->ents[i].used = 1;   /* asked for, so not unknown */
+          return &f->ents[i];
+        }
     return NULL;
   }
 
@@ -2779,6 +2843,35 @@ static bool v1KnownRecordType(uint8 t)
     return t >= T_FIRSTITEM && t <= T_LASTITEM;
   }
 
+/* Read the decimal revision out of fileHeader.Version ("IS1." + digits).
+   The buffer is char[12] straight off the file with NO NUL guarantee, so
+   every read here is bounded by verLen and nothing in it may reach strcmp,
+   atoi or a bare %s. Returns false unless the tail after the prefix is one
+   or more decimal digits followed only by NUL padding, which is what makes
+   "IS1.0AAAAAAA" a malformed stamp and not revision 0. */
+static bool v1ParseRevision(const char *ver, size_t verLen, uint32 *out)
+  {
+    size_t i = 4;   /* the "IS1." prefix is checked by LoadGroup's dispatch */
+    uint32 rev = 0;
+    int digits = 0;
+
+    for (; i != verLen && ver[i] >= '0' && ver[i] <= '9'; i++)
+      {
+        if (digits == 9)
+          return false;   /* nine digits already exceeds any real revision,
+                             and a tenth could overflow the accumulator */
+        rev = rev * 10 + (uint32)(ver[i] - '0');
+        digits++;
+      }
+    if (!digits)
+      return false;
+    for (; i != verLen; i++)
+      if (ver[i] != '\0')
+        return false;     /* trailing junk after the digits */
+    *out = rev;
+    return true;
+  }
+
 int16 Registry::LoadGroupV1(Term &t, fileHeader &fh, hObj hGroup)
   {
     groupHeader gh;
@@ -2791,17 +2884,42 @@ int16 Registry::LoadGroupV1(Term &t, fileHeader &fh, hObj hGroup)
     V1Loaded *loaded = NULL;
     uint32 loadedCount = 0, loadedCap = 0;
 
-    /* Reject a schema revision this binary does not implement, naming both
-       (wire-format section, schema revisions). The "IS1." prefix was checked
-       by the dispatch in LoadGroup. Bounded compare and bounded print:
-       fh.Version is char[12] straight off the file with NO NUL guarantee,
-       so plain strcmp/%s on it would read into fh.Name and beyond on a
-       crafted header of 12 non-NUL bytes. */
-    if (strncmp(fh.Version, SaveSchemaID(), sizeof(fh.Version)))
+    /* The schema-revision gate (wire-format section, schema revisions). Three
+       refusals, each naming the file's stamp and this binary's, and each
+       printing the file's stamp with a BOUNDED %.12s: fh.Version has no NUL
+       guarantee, so a bare %s would run on into fh.Name on a crafted header
+       of 12 non-NUL bytes.
+
+       A revision BETWEEN MIN_READ_REV and SCHEMA_REV loads. Every field it
+       lacks takes the constructed default, which is the rule that lets a tag
+       be added without invalidating the saves written before it. What that
+       rule does NOT cover is a tag whose meaning changed or whose reader was
+       deleted, and MIN_READ_REV is where that is declared. */
+    uint32 fileRev;
+    if (!v1ParseRevision(fh.Version, sizeof(fh.Version), &fileRev))
       {
         fprintf(stderr,
-            "incursion: this file is save-schema revision \"%.12s\"; this "
-            "binary implements \"%s\"\n", fh.Version, SaveSchemaID());
+            "incursion: this file's save-schema revision \"%.12s\" is not "
+            "\"IS1.\" followed by a decimal number; this binary implements "
+            "\"%s\"\n", fh.Version, SaveSchemaID());
+        throw EBADVER;
+      }
+    if (fileRev > (uint32)SCHEMA_REV)
+      {
+        fprintf(stderr,
+            "incursion: this file is save-schema revision \"%.12s\", NEWER "
+            "than the \"%s\" this binary implements; a later build wrote it, "
+            "and this one cannot know what it added\n",
+            fh.Version, SaveSchemaID());
+        throw EBADVER;
+      }
+    if (fileRev < (uint32)MIN_READ_REV)
+      {
+        fprintf(stderr,
+            "incursion: this file is save-schema revision \"%.12s\", OLDER "
+            "than revision %d, the oldest this binary still reads; it "
+            "implements \"%s\"\n",
+            fh.Version, MIN_READ_REV, SaveSchemaID());
         throw EBADVER;
       }
 
