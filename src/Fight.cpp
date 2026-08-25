@@ -32,6 +32,25 @@
 
 #include "Incursion.h"
 
+#ifdef ROLM_PROBE
+/* Diagnostic for inc-tek.8.8. Record the real TOUCH_ATTACK counter at the
+   landed-touch path; tools/check_rod_lordly_might.sh counts its transitions. */
+static void RoLMProbeNote(EventInfo &e, const char *when)
+{
+    char path[1024];
+    FILE *f;
+    snprintf(path, sizeof(path), "%slogs/rolm-touch.log",
+        (const char*)T1->IncursionDirectory);
+    f = fopen(path, "a");
+    if (!f)
+        return;
+    fprintf(f, "%s effect=%s magnitude=%d present=%d\n", when,
+        (const char*)NAME(e.eID), (int)e.EActor->GetStatiMag(TOUCH_ATTACK),
+        e.EActor->HasStati(TOUCH_ATTACK) ? 1 : 0);
+    fclose(f);
+}
+#endif
+
 /* Temporary diagnostic: set INCURSION_RIDER_PROBE=1 to record what an attack
    sequence does to its victim. Three lines can appear.
 
@@ -5114,6 +5133,9 @@ AfterEffects:
     }
     e.efNum = ii;
     e.isSpell = true; 
+#ifdef ROLM_PROBE
+    RoLMProbeNote(e, "before");
+#endif
     ReThrow(EV_MAGIC_STRIKE,e);
 
     /* If this touch spell allows multiple uses, reduce the
@@ -5124,6 +5146,9 @@ AfterEffects:
           e.EActor->GetStatiMag(TOUCH_ATTACK)-1);
     else
       e.EActor->RemoveStati(TOUCH_ATTACK);
+#ifdef ROLM_PROBE
+    RoLMProbeNote(e, "after");
+#endif
   }  
 
   if (e.AType == A_SWNG && e.EActor->HasAttk(A_TUCH) && 
@@ -8799,5 +8824,4 @@ SkipMainMessage:
     Silence = saveSil;
     return DONE;
 }
-
 

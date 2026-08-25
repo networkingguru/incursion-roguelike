@@ -1,0 +1,39 @@
+# Count landed paralyzing touches from a Rod of Lordly Might. The compile-time
+# ROLM_PROBE reads the engine's TOUCH_ATTACK stati at src/Fight.cpp's landed
+# touch path, immediately around the decrement/removal that consumes a touch.
+
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*3
+SPACE
+DOWN*7
+SPACE
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*2
+@until "Rod of Lordly Might" DOWN
+DOWN
+ENTER
+7
+ENTER
+s
+ESC
+
+a
+a
+@choose "Use paralyzing touch attack"
+
+w
+@choose "Monster Summoning"
+@choose "Corporeal Undead"
+@choose "mummy"
+RIGHT
+ENTER
+
+RIGHT*80
+@quit

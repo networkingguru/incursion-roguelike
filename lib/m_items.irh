@@ -6003,8 +6003,14 @@ AI_ROD Effect "Rod of Lordly Might" : EA_GENERIC
         {
           case 1:
             EActor->RemoveStati(TOUCH_ATTACK);
+            /* upstream: base-code defect, not a port artefact. This copied
+               counter is shared game data read identically on Win32, with the
+               original typedefs and upstream compiler. Evidence tier:
+               Observed -- tools/check_rod_lordly_might.sh counts 7 landed
+               touches before and 3 after. Tracked as inc-tek.8.8. NOT sent
+               upstream. */
             EActor->GainTempStati(TOUCH_ATTACK,EItem,30,SS_ENCH,
-                      0,7,$"paralysis;RoLM",e.vCasterLev);
+                      0,3,$"paralysis;RoLM",e.vCasterLev);
             EActor->Timeout = 0;
            break;
           case 2:
@@ -8292,4 +8298,3 @@ AI_BRACERS Effect "Purity" : EA_GRANT
       this item will also cause such creatures to view you with marked 
       disdain.";
   } and EA_GRANT { xval: ENEMY_TO; yval: MA_ABERRATION; }
-
