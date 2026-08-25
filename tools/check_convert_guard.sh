@@ -119,6 +119,36 @@ if [ "$STATUS" -ne 0 ] || [ ! -f "$SB_PRE/mod/Incursion.Mod" ]; then
     exit 1
 fi
 
+# SB_PLUS: HEAD scripts plus ONE throwaway appended Effect, for the
+# module-MISMATCH test below.
+#
+# That test used to borrow its mismatch from the repo's own module, on the
+# assumption that HEAD always carried a resource the fixture predates -- the
+# immolation Effect. Release 3 took that Effect back out so that a release-2
+# save converts cleanly, at which point HEAD and SB_PRE held the same
+# resources, there was no mismatch left to detect, and all four of the
+# mismatch assertions failed. A check must not change meaning because
+# unrelated content moved, so it now BUILDS the module it needs: one extra
+# Effect, appended at the end, which is the smallest legal edit that grows
+# szEff by one and so makes the fixture's memory segment too short.
+SB_PLUS="$WORK/headplus"
+mkdir -p "$SB_PLUS/mod" "$SB_PLUS/save" "$SB_PLUS/logs"
+cp -R "$ROOT/lib" "$SB_PLUS/lib"
+ln -sfn "$ROOT/inc" "$SB_PLUS/inc"
+cat >> "$SB_PLUS/lib/main.irc" <<'EFFECT'
+
+0 Effect "convert guard probe" : EA_GENERIC
+  { On Event META(EV_TURN) { return NOTHING; }; }
+EFFECT
+INCURSIONPATH="$SB_PLUS/" "$COMPILER" -compile main.irc \
+    < /dev/null > "$WORK/compile_plus.log" 2>&1
+STATUS=$?
+if [ "$STATUS" -ne 0 ] || [ ! -f "$SB_PLUS/mod/Incursion.Mod" ]; then
+    tail -15 "$WORK/compile_plus.log"
+    fail "the HEAD-plus-one-Effect sandbox module compile failed (exit $STATUS)"
+    exit 1
+fi
+
 convert() { # <sandbox> <path> <logfile>
     INCURSIONPATH="$1/" INCURSION_MAX_KEYS=40 \
         "$BIN" -headless -timeout 60 -convert "$2" > "$3" 2>&1 < /dev/null
@@ -154,17 +184,17 @@ cmp -s "$FIX_DIR/Furious_Fox.sav" "$WORK/Furious_Fox.sav.pre" || \
     fail "the symlinked fixture's bytes changed"
 
 # --- 2a. the MISMATCHED module refuses with the target untouched -----------
-# The fixture's memory segment predates 4ba035b, so the repo's HEAD module
-# needs more bytes than the save holds. -convert must see that BEFORE any
+# The fixture's memory segment is one Effect short of SB_PLUS, so that
+# module needs more bytes than the save holds. -convert must see that BEFORE any
 # write: exit 2, the file byte-identical, no .v0 left behind. This is the
 # protection the real save relies on if the operator fumbles the module
 # revert, so it is proven here first.
 cp "$FIX_DIR/Furious_Fox.sav" "$WORK/copy_mismatch.sav"
-convert "$SB" "$WORK/copy_mismatch.sav" "$WORK/mismatch.out"
+convert "$SB_PLUS" "$WORK/copy_mismatch.sav" "$WORK/mismatch.out"
 STATUS=$?
 if [ "$STATUS" -ne 2 ]; then
     tail -8 "$WORK/mismatch.out"
-    fail "-convert against the mismatched HEAD module exited $STATUS, wanted 2"
+    fail "-convert against the mismatched (HEAD+1 Effect) module exited $STATUS, wanted 2"
 fi
 grep -qi "does not match" "$WORK/mismatch.out" || \
     fail "the mismatch refusal does not say the module does not match the save"
