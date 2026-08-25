@@ -1,3 +1,7 @@
 # The commit the lane rule starts after. Everything at or before it is exempt.
 # See AGENTS.md, "Classifying a change".
-6528c12ecff5dcad1a38ead549d8148867c0a052
+#
+# Set to 6528c12 when the rule was written, then moved forward one commit:
+# bfd63f6 landed on this branch while the rule was being written, so the
+# original sha made the rule judge a commit that predated it.
+bfd63f6

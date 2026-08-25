@@ -1,4 +1,6 @@
 # Checks with no row in the README table, frozen 2026-08-25.
+# check_rod_lordly_might.sh joined on the re-record: it arrived in bfd63f6,
+# which is the commit the rules start after, so it predates them.
 # Draining this file is bd inc-5ysg follow-up work. Delete a line
 # when you write its row. Never add a line by hand.
 check_alienist_drain.sh
@@ -35,6 +37,7 @@ check_ring_fire_curse.sh
 check_ring_preservation_page.sh
 check_ring_water_command.sh
 check_robe_eyes.sh
+check_rod_lordly_might.sh
 check_schema_roundtrip.sh
 check_spell_god_drift.sh
 check_spook_ally.sh
