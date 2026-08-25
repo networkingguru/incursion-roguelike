@@ -11,6 +11,10 @@
 class Feature: public Thing
 	{
     ARCHIVE_CLASS(Feature,Thing,r)
+      FIELD_I16(176, cHP);
+      FIELD_I16(177, mHP);
+      FIELD_RID(178, fID);
+      FIELD_I8 (179, MoveMod);
     END_ARCHIVE
 		public:
     int16 cHP, mHP; 
@@ -45,6 +49,8 @@ class Feature: public Thing
 class Door: public Feature
 	{
     ARCHIVE_CLASS(Door,Feature,r)
+      FIELD_I8 (192, DoorFlags);
+      FIELD_U32(193, SecretSavedGlyph);
     END_ARCHIVE
 
 		public:
@@ -82,8 +88,10 @@ class Door: public Feature
 	};
 
 class Trap: public Feature
-  { 
+  {
     ARCHIVE_CLASS(Trap,Feature,r)
+      FIELD_U8 (208, TrapFlags);
+      FIELD_RID(209, tID);
     END_ARCHIVE
     public:
       uint8 TrapFlags; rID tID;
@@ -118,8 +126,11 @@ class Trap: public Feature
 class Portal: public Feature
   {
     ARCHIVE_CLASS(Portal,Feature,r)
+      /* No own members: Portal adds nothing over Feature. The pin row still
+         lands (size only, no pads beyond Feature's) so an upstream addition
+         here is caught by the coverage check. */
     END_ARCHIVE
-    public: 
+    public:
     Portal(rID pID);
     bool isDownStairs()
       { return TFEAT(fID)->xval == POR_DOWN_STAIR; }

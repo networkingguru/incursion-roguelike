@@ -15,6 +15,8 @@
 #             members, including every rID-bearing one (ClassID, RaceID,
 #             GodID, Tattoos, Macros), both journal strings, the timing
 #             block and the option array; and Monster's own four members.
+#   feature   one each of Feature, Door, Trap and Portal, with fID/tID
+#             pointing at real module resources.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
 FAILED=0; fail() { echo "FAIL: $1"; FAILED=1; }
@@ -29,7 +31,7 @@ if ! ./incursion-headless -schematest "$WORK" -timeout 120 < /dev/null > "$WORK/
     fail "-schematest exited non-zero"
 fi
 grep -q "^SCHEMATEST PASS" "$WORK/out.txt" || fail "no 'SCHEMATEST PASS' line"
-for g in items creature character; do
+for g in items creature character feature; do
     grep -q "^SCHEMATEST GROUP $g PASS" "$WORK/out.txt" ||
         fail "no 'SCHEMATEST GROUP $g PASS' line"
 done
@@ -37,5 +39,5 @@ grep -q "byte-identical" "$WORK/out.txt" || fail "second save was not byte-compa
 if grep -q "SCHEMA COVERAGE" "$WORK/out.txt"; then
     grep "SCHEMA COVERAGE" "$WORK/out.txt"; fail "coverage findings"
 fi
-[ "$FAILED" -eq 0 ] && { echo "PASS: v1 round trip (Item, Creature and Character chains) is exact"; exit 0; }
+[ "$FAILED" -eq 0 ] && { echo "PASS: v1 round trip (Item, Creature, Character and Feature chains) is exact"; exit 0; }
 exit 1

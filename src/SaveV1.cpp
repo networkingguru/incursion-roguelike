@@ -229,6 +229,49 @@ static const SchemaPad PlayerPads[] = {
     { 18258, 6 }, { 18649, 3 }, { 19610, 6 }
 };
 
+/* Feature chain on arm64/LP64: vptr 0-8 and the pad after Object::Type
+   10-12, both shared with the Item/Creature rows above (same Thing base,
+   measured identical by the absence of any other coverage finding below
+   offset 128 while these four classes' own fields were still undeclared).
+   Feature's own members (cHP 128, mHP 130, fID 132, MoveMod 136) run
+   128-137; tail pad 137-144. sizeof(Feature) 144.
+
+   Feature, Door, Trap and Portal are all sizeof 144 -- Feature's own tail
+   padding (7 bytes) is roomy enough to swallow Door's and Trap's one extra
+   member without growing the object -- so size alone cannot select the
+   right row for these four the way it does for every earlier class. v1Cov-
+   Begin's exact (size, type) pass (below) picks the right row by Object::
+   Type; the size-only fallback pass is what still selects this row for a
+   real Feature or Portal object (both share this exact layout: Portal adds
+   nothing, see PortalPads). */
+static const SchemaPad FeaturePads[] = {
+    { 0, 8 }, { 10, 2 }, { 137, 7 }
+};
+
+/* Door: Feature's base pads, but Door itself uses the 137-144 range instead
+   of leaving it padding -- DoorFlags at 137, a 2-byte alignment gap before
+   the uint32 SecretSavedGlyph at 140. Only that internal gap is padding.
+   sizeof(Door) 144, same as Feature (measured; see FeaturePads). */
+static const SchemaPad DoorPads[] = {
+    { 0, 8 }, { 10, 2 }, { 138, 2 }
+};
+
+/* Trap: same shape as Door -- TrapFlags at 137, a 2-byte alignment gap,
+   then the uint32 tID at 140. sizeof(Trap) 144. */
+static const SchemaPad TrapPads[] = {
+    { 0, 8 }, { 10, 2 }, { 138, 2 }
+};
+
+/* Portal: FeaturePads verbatim -- Portal adds no members of its own, so its
+   layout is byte-for-byte Feature's (measured: cHP/mHP/fID/MoveMod land at
+   the same offsets, tail pad 137-144). This row still lands (spec: a class
+   with no own members still gets pinned) so an upstream addition to Portal
+   is caught, and the (size, type) match in v1CovBegin picks it over
+   Feature's row for a real Portal object. */
+static const SchemaPad PortalPads[] = {
+    { 0, 8 }, { 10, 2 }, { 137, 7 }
+};
+
 static const SchemaPin SchemaPins[] = {
     { "Item", T_ITEM, sizeof(Item), ItemPads,
       (int)(sizeof(ItemPads)/sizeof(ItemPads[0])) },
@@ -240,6 +283,14 @@ static const SchemaPin SchemaPins[] = {
       (int)(sizeof(CharacterPads)/sizeof(CharacterPads[0])) },
     { "Player", T_PLAYER, sizeof(Player), PlayerPads,
       (int)(sizeof(PlayerPads)/sizeof(PlayerPads[0])) },
+    { "Feature", T_FEATURE, sizeof(Feature), FeaturePads,
+      (int)(sizeof(FeaturePads)/sizeof(FeaturePads[0])) },
+    { "Door", T_DOOR, sizeof(Door), DoorPads,
+      (int)(sizeof(DoorPads)/sizeof(DoorPads[0])) },
+    { "Trap", T_TRAP, sizeof(Trap), TrapPads,
+      (int)(sizeof(TrapPads)/sizeof(TrapPads[0])) },
+    { "Portal", T_PORTAL, sizeof(Portal), PortalPads,
+      (int)(sizeof(PortalPads)/sizeof(PortalPads[0])) },
 };
 
 #ifdef DEBUG
@@ -268,9 +319,24 @@ static void v1CovBegin(Object *o)
     v1Cov.openDepth = 0;
     v1Cov.pin = NULL;
     v1Cov.cls = "?";
+    /* Two passes: an exact (size, type) match first, because Feature and
+       Portal share one layout (Portal adds no members) while Door and Trap
+       share a different one (Door.SecretSavedGlyph and Trap.tID both start
+       at the same offset) -- all four are sizeof 144 on arm64/LP64, so size
+       alone cannot tell them apart (measured 2026-08-24: feat/door/trap/
+       portal offsets of cHP/mHP/fID/MoveMod are identical at 128/130/132/
+       136 in every one of them; Door and Trap add their own member at 137
+       and diverge only there). The size-only fallback pass keeps every
+       earlier row's behaviour unchanged: Item's row carries type T_ITEM but
+       real Item objects carry T_RING/T_POTION/etc, so it has always relied
+       on size-only matching and must keep doing so. */
     for (size_t i = 0; i != sizeof(SchemaPins)/sizeof(SchemaPins[0]); i++)
-      if (SchemaPins[i].size == sz)
+      if (SchemaPins[i].size == sz && SchemaPins[i].type == (int16)o->Type)
         { v1Cov.pin = &SchemaPins[i]; v1Cov.cls = SchemaPins[i].cls; break; }
+    if (!v1Cov.pin)
+      for (size_t i = 0; i != sizeof(SchemaPins)/sizeof(SchemaPins[0]); i++)
+        if (SchemaPins[i].size == sz)
+          { v1Cov.pin = &SchemaPins[i]; v1Cov.cls = SchemaPins[i].cls; break; }
     if (!v1Cov.pin)
       {
         v1CovFindings++;
@@ -2418,6 +2484,211 @@ bool Registry::V1RunSchemaTest(const char *outDir)
           grpOk = false;
         }
       printf("SCHEMATEST GROUP character %s\n", grpOk ? "PASS" : "FAIL");
+      ok = ok && grpOk;
+    }
+
+    /* ------------------------------------------------------------ group 4 --
+       feature. One of each of Feature, Door, Trap and Portal -- the four
+       concrete classes in the chain Object -> Thing -> Feature ->
+       {Door, Trap, Portal} -- built through the LoadGroup allocation idiom,
+       each with its own field list's members set to distinct, non-zero
+       values and fID/tID pointing at real module resources. */
+    v1TestMismatches = 0;
+    v1CovFindings = 0;
+
+    Registry *regG = new Registry();
+    Registry *regH = new Registry();
+    Feature *feat = NULL;
+    Door *door = NULL;
+    Trap *trap = NULL;
+    Portal *portal = NULL;
+    hObj hFeat = 0, hDoor = 0, hTrap = 0, hPortal = 0;
+    String pgSav, phSav;
+    pgSav = Format("%s/g.sav", outDir);
+    phSav = Format("%s/h.sav", outDir);
+
+    try
+      {
+        theRegistry = regG;
+
+        size_t featSz = typeSize((int8)T_FEATURE);
+        feat = (Feature*) malloc(featSz);
+        if (!feat)
+          throw EMEMORY;
+        memset((void*)feat, 0, featSz);
+        new((Object*)feat) Feature(regG);
+        feat->Type = T_FEATURE;
+        feat->myHandle = regG->RegisterObject(feat);
+        hFeat = feat->myHandle;
+
+        size_t doorSz = typeSize((int8)T_DOOR);
+        door = (Door*) malloc(doorSz);
+        if (!door)
+          throw EMEMORY;
+        memset((void*)door, 0, doorSz);
+        new((Object*)door) Door(regG);
+        door->Type = T_DOOR;
+        door->myHandle = regG->RegisterObject(door);
+        hDoor = door->myHandle;
+
+        size_t trapSz = typeSize((int8)T_TRAP);
+        trap = (Trap*) malloc(trapSz);
+        if (!trap)
+          throw EMEMORY;
+        memset((void*)trap, 0, trapSz);
+        new((Object*)trap) Trap(regG);
+        trap->Type = T_TRAP;
+        trap->myHandle = regG->RegisterObject(trap);
+        hTrap = trap->myHandle;
+
+        size_t portalSz = typeSize((int8)T_PORTAL);
+        portal = (Portal*) malloc(portalSz);
+        if (!portal)
+          throw EMEMORY;
+        memset((void*)portal, 0, portalSz);
+        new((Object*)portal) Portal(regG);
+        portal->Type = T_PORTAL;
+        portal->myHandle = regG->RegisterObject(portal);
+        hPortal = portal->myHandle;
+
+        /* Feature's own members, distinct per object. */
+        feat->cHP = 301; feat->mHP = 302;
+        feat->fID = mod->FeatureID(1);
+        feat->MoveMod = 3;
+
+        door->cHP = 311; door->mHP = 312;
+        door->fID = mod->FeatureID(2);
+        door->MoveMod = -4;
+        door->DoorFlags = 0x15;
+        door->SecretSavedGlyph = (Glyph)0x0B0C0D0Eu;
+
+        trap->cHP = 321; trap->mHP = 322;
+        trap->fID = mod->FeatureID(3);
+        trap->MoveMod = 5;
+        trap->TrapFlags = 0x2A;
+        trap->tID = mod->EffectID(12);
+
+        portal->cHP = 331; portal->mHP = 332;
+        portal->fID = mod->FeatureID(4);
+        portal->MoveMod = -6;
+
+        memset(&fh, 0, sizeof(fh));
+        fh.Sig = SIGNATURE;
+        strcpy(fh.Version, SaveSchemaID());
+        strncpy(fh.Name, "schematest feature", 71);
+        fh.numGroups = 1;
+        fh.Compression = SaveV1_Raw() ? 0 : 1;
+        T1->OpenWrite(pgSav);
+        T1->FWrite(&fh, sizeof(fh));
+        regG->SaveGroupV1(*T1, 0);
+        T1->Close();
+
+        theRegistry = regH;
+        T1->OpenRead(pgSav);
+        regH->LoadGroup(*T1, 0, false);
+        T1->Close();
+        SaveV1_ResolveNames();
+
+        {
+          Feature *a = feat;
+          Feature *b = (Feature*) regH->Get(hFeat);
+          if (!b)
+            v1Mismatch(0, "feature missing after load", (long)hFeat, 0);
+          else
+            {
+              V1CMP(0, Type);
+              V1CMP(0, myHandle);
+              V1CMP(0, cHP);
+              V1CMP(0, mHP);
+              V1CMP(0, fID);
+              V1CMP(0, MoveMod);
+            }
+        }
+        {
+          Door *a = door;
+          Door *b = (Door*) regH->Get(hDoor);
+          if (!b)
+            v1Mismatch(0, "door missing after load", (long)hDoor, 0);
+          else
+            {
+              V1CMP(0, Type);
+              V1CMP(0, myHandle);
+              V1CMP(0, cHP);
+              V1CMP(0, mHP);
+              V1CMP(0, fID);
+              V1CMP(0, MoveMod);
+              V1CMP(0, DoorFlags);
+              V1CMP(0, SecretSavedGlyph);
+            }
+        }
+        {
+          Trap *a = trap;
+          Trap *b = (Trap*) regH->Get(hTrap);
+          if (!b)
+            v1Mismatch(0, "trap missing after load", (long)hTrap, 0);
+          else
+            {
+              V1CMP(0, Type);
+              V1CMP(0, myHandle);
+              V1CMP(0, cHP);
+              V1CMP(0, mHP);
+              V1CMP(0, fID);
+              V1CMP(0, MoveMod);
+              V1CMP(0, TrapFlags);
+              V1CMP(0, tID);
+            }
+        }
+        {
+          Portal *a = portal;
+          Portal *b = (Portal*) regH->Get(hPortal);
+          if (!b)
+            v1Mismatch(0, "portal missing after load", (long)hPortal, 0);
+          else
+            {
+              V1CMP(0, Type);
+              V1CMP(0, myHandle);
+              V1CMP(0, cHP);
+              V1CMP(0, mHP);
+              V1CMP(0, fID);
+              V1CMP(0, MoveMod);
+            }
+        }
+
+        T1->OpenWrite(phSav);
+        T1->FWrite(&fh, sizeof(fh));
+        regH->SaveGroupV1(*T1, 0);
+        T1->Close();
+      }
+    catch (int error_number)
+      {
+        fprintf(stderr, "incursion -schematest: %s\n",
+                Lookup(FileErrors, error_number));
+        theRegistry = savedReg;
+        return false;
+      }
+    theRegistry = savedReg;
+
+    {
+      long fsize = 0;
+      bool grpOk = true;
+      if (v1FilesIdentical((const char*)pgSav, (const char*)phSav, &fsize))
+        printf("g.sav and h.sav are byte-identical (%ld bytes)\n", fsize);
+      else
+        {
+          printf("g.sav and h.sav DIFFER\n");
+          grpOk = false;
+        }
+      if (v1TestMismatches)
+        {
+          printf("%ld field mismatches\n", v1TestMismatches);
+          grpOk = false;
+        }
+      if (v1CovFindings)
+        {
+          printf("%ld coverage findings\n", v1CovFindings);
+          grpOk = false;
+        }
+      printf("SCHEMATEST GROUP feature %s\n", grpOk ? "PASS" : "FAIL");
       ok = ok && grpOk;
     }
 
