@@ -662,9 +662,9 @@ void Array<S,Initial,Delta>::Serialize(Registry &r)
    Size is not stored -- on load it becomes Count, and Enlarge() grows the
    array from there exactly as it would from the constructor's shape. The
    load fixup (the allocation) runs AFTER the field line it reads, per the
-   load-direction ordering rule. Element types carrying rIDs (TerraRecord,
-   Field) get their own FieldsV1 in a later task; Task 1 reaches only
-   Array<hObj,10,20> (Thing::backRefs). */
+   load-direction ordering rule. Element types that cannot travel as raw
+   POD (Field, TerraRecord, LimboEntry, ModuleRecord) have explicit
+   specialisations in src/SaveV1.cpp; see the declarations below. */
 template<class S,int32 Initial,int32 Delta>
 void Array<S,Initial,Delta>::FieldsV1(Registry &r)
   {
@@ -688,6 +688,18 @@ void Array<S,Initial,Delta>::FieldsV1(Registry &r)
       }
     FIELD_ARRAY(2, Items, sizeof(S), Count);
   }
+
+/* Four element types cannot travel as raw POD -- Field, TerraRecord and
+   LimboEntry carry rIDs (and LimboEntry a String), ModuleRecord a handle --
+   so their arrays' FieldsV1 is explicitly specialised to write Count plus
+   one embed per element (src/SaveV1.cpp). The declarations must precede the
+   explicit class instantiations below, or those would instantiate the
+   generic POD body for these types and the specialisation would be
+   ill-formed. */
+template<> void Array<Field,10,5>::FieldsV1(Registry &r);
+template<> void Array<TerraRecord,0,5>::FieldsV1(Registry &r);
+template<> void Array<LimboEntry,20,10>::FieldsV1(Registry &r);
+template<> void Array<ModuleRecord,5,5>::FieldsV1(Registry &r);
 
 template class Array<Field,10,5>;            /* Map::Fields */
 template class Array<hObj,1000,10>;          /* Map::Things */

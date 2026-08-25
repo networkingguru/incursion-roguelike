@@ -115,11 +115,15 @@ grep -q '^Name:' "$WORK/control.dump" || {
     exit 1
 }
 
-# 2. The staged failures. Plain numbers count objects, "d" numbers count data
-#    blocks, and 1 is the first of either -- so this covers a failure on the
-#    very first object, two failures part way through the object loop (which is
-#    the case the whole design turns on), and two inside the data loop.
-for AT in 1 5 40 d1 d3; do
+# 2. The staged failures. Plain numbers count objects, and 1 is the first --
+#    so this covers a failure on the very first object and two part way
+#    through the object loop (which is the case the whole design turns on).
+#    The "d" values (data blocks) were retired when real saves flipped to the
+#    v1 schema: SaveGroupV1 writes no data-block section at all
+#    (FIELD_STR/FIELD_BLOB inline their contents; groupHeader.dataCount is
+#    always 0), so a failure staged there would simply never fire and the run
+#    would prove nothing.
+for AT in 1 5 40; do
     TAG="fail-$AT"
     run_session "$AT" "$TAG"
     STATUS="$(cat "$WORK/$TAG/status")"

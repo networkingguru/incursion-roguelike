@@ -1196,13 +1196,20 @@ failed:
           T1->OpenWrite(fn);
 
           memset(&fh,0,sizeof(fh));
-          strcpy(fh.Version,SaveFormatID());
+          /* Real saves are v1 from here on (docs/SAVE-SCHEMA-SPEC.md).
+             The caller writes the COMPLETE header: SaveGroupV1 trusts both
+             Version and Compression, and the memset above would otherwise
+             leave Compression claiming raw while the payload is RLE. The
+             v0 reader stays below for every existing save; modules stay on
+             the raw path (Game::SaveModule). */
+          strcpy(fh.Version,SaveSchemaID());
           fh.Sig = SIGNATURE;
           fh.numGroups = 1;
+          fh.Compression = SaveV1_Raw() ? 0 : 1;
           strncpy(fh.Name,desc,71);
           T1->FWrite(&fh,sizeof(fh));
           SaveLoadProbe("save: before write", &p);
-          theRegistry->SaveGroup(*T1,0,false,true);
+          theRegistry->SaveGroupV1(*T1,0);
           SaveLoadProbe("save: after write", &p);
           T1->Close();
           T1->ChangeDirectory(T1->IncursionDirectory);

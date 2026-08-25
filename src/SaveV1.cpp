@@ -28,6 +28,8 @@
 */
 
 #include "Incursion.h"
+#include <zlib.h>   /* IS1.x compressed payloads are zlib-6; libz was
+                       already a link dependency (CFile's LZ path) */
 
 /* src/Registry.cpp's staged-write-failure probe; shared so the fired-once
    state covers both writers, keeping tools/check_save_fail.sh meaningful. */
@@ -372,6 +374,42 @@ static const SchemaPad WeaponPads[] = {
     { 230, 2 }
 };
 
+/* Map on arm64/LP64: the shared Object prefix (vptr 0-8, pad after Type
+   10-12), then one gap per alignment step between its own members --
+   23 after inGenerate (bool), 2131 after QueueSP (int8), 2139 after
+   inDaysPassed (bool), 2214 after Day (int16, before the 8-aligned
+   Overlay), 4228 after ov (Overlay is 2012 bytes, the arrays behind it are
+   8-aligned), 4314 after FieldCount, and the 6-byte tail after
+   PreviousAuguries. Every static member is generation scratch outside the
+   object. Measured 2026-08-24; sizeof(Map) 4344. */
+static const SchemaPad MapPads[] = {
+    { 0, 8 }, { 10, 2 }, { 23, 1 }, { 2131, 1 }, { 2139, 1 }, { 2214, 2 },
+    { 4228, 4 }, { 4314, 2 }, { 4338, 6 }
+};
+
+/* Game on arm64/LP64: the shared Object prefix, then 2110 after Day (int16),
+   2116 after Turn (uint32, before the 8-aligned String SaveFile), 3698
+   after Difficulty (int8, before the 4-aligned DungeonID), 3892 after
+   DungeonSize (int16[32], before the 8-aligned DungeonLevels pointers),
+   8794 after szFindCache (int16, before the 8-aligned VM), and the 4-byte
+   tail after BarrierCount. Modules[] and the destroy queues are static and
+   outside the object. Measured 2026-08-24; sizeof(Game) 8840. */
+static const SchemaPad GamePads[] = {
+    { 0, 8 }, { 10, 2 }, { 2110, 2 }, { 2116, 4 }, { 3698, 2 },
+    { 3892, 4 }, { 8794, 6 }, { 8836, 4 }
+};
+
+/* Module on arm64/LP64: the shared Object prefix, then 49178 after Slot
+   (int16, before the 8-aligned Q* pointers), 49380 after szCodeSeg (int32,
+   before the 8-aligned Annotations), and 49458 after szEnc (int16, before
+   the 4-aligned TurnLastUsed). No tail pad. Measured 2026-08-24;
+   sizeof(Module) 49464. The row matters even though no check ever produces
+   a T_MODULE v1 record (see the field list's own comment in inc/Res.h):
+   an upstream member change must still be caught on purpose. */
+static const SchemaPad ModulePads[] = {
+    { 0, 8 }, { 10, 2 }, { 49178, 6 }, { 49380, 4 }, { 49458, 2 }
+};
+
 static const SchemaPin SchemaPins[] = {
     { "Item", sizeof(Item), ItemPads,
       (int)(sizeof(ItemPads)/sizeof(ItemPads[0])) },
@@ -415,6 +453,12 @@ static const SchemaPin SchemaPins[] = {
       (int)(sizeof(TrapPads)/sizeof(TrapPads[0])) },
     { "Portal", sizeof(Portal), PortalPads,
       (int)(sizeof(PortalPads)/sizeof(PortalPads[0])) },
+    { "Map", sizeof(Map), MapPads,
+      (int)(sizeof(MapPads)/sizeof(MapPads[0])) },
+    { "Game", sizeof(Game), GamePads,
+      (int)(sizeof(GamePads)/sizeof(GamePads[0])) },
+    { "Module", sizeof(Module), ModulePads,
+      (int)(sizeof(ModulePads)/sizeof(ModulePads[0])) },
 };
 
 /* Maps a record's Type byte to the class its row is filed under, by
@@ -422,14 +466,16 @@ static const SchemaPin SchemaPins[] = {
    src/Registry.cpp:941-983, and Registry::LoadGroupV1, src/SaveV1.cpp)
    exactly -- see the SchemaPin comment above for why this replaced the old
    (size, type) exact-match / size-only-fallback selector, and for the
-   T_STAFF arm's absence below. Returns NULL for a Type neither switch
-   constructs (T_GAME, T_MAP, T_MODULE, and every other class outside this
-   task's seven plus the earlier tasks' rows are not looked up through this
-   table at all; see v1CovBegin). */
+   T_STAFF arm's absence below. Returns NULL only for a Type neither switch
+   constructs; such a record never reaches v1CovBegin, because the writer
+   only ever sees objects the registry holds. */
 static const char* v1PinClassForType(int16 type)
   {
     switch (type)
       {
+        case T_GAME:     return "Game";
+        case T_MAP:      return "Map";
+        case T_MODULE:   return "Module";
         case T_MONSTER:  return "Monster";
         case T_PLAYER:   return "Player";
         case T_PORTAL:   return "Portal";
@@ -1125,6 +1171,15 @@ void Registry::V1Blob(uint16 tag, void **p, size_t sz)
       throw ECORRUPT;
     if (!e->size)
       { *p = NULL; return; }
+    /* Every FIELD_BLOB caller loads its size fields before its blob line
+       (load-direction ordering), so sz here is what the object's own loaded
+       counts say the blob must be. A non-empty blob of any other length is
+       corruption: the consumers index the allocation by those counts, so a
+       shorter blob is a heap overread waiting in At()/GetText()/Execute.
+       (The empty case above stays permissive: a NULL pointer wrote len 0
+       regardless of what sz evaluated to at save time.) */
+    if (e->size != (uint32)sz)
+      throw ECORRUPT;
     void *blk = malloc(e->size);
     if (!blk)
       throw EMEMORY;
@@ -1297,6 +1352,113 @@ void Registry::V1Cover(const void *p, size_t size)
   }
 
 /* ------------------------------------------------------------------------ */
+/*              per-element field lists for non-POD array elements          */
+/* ------------------------------------------------------------------------ */
+
+/* These run only on the v1 path: the arrays' owners reach them through
+   FIELD_OBJ's V1Active() branch, and the elements through FIELD_EMBED,
+   which has no v0 branch at all. The v0 path still raw-dumps the arrays
+   through Array::Serialize, exactly as before. Embedded tag scopes start
+   at 1. */
+
+void Field::FieldsV1(Registry &r)
+  {
+    FIELD_RID(1, eID);
+    FIELD_U32(2, FType);
+    FIELD_U32(3, Image);          /* Glyph */
+    FIELD_U8 (4, cx);
+    FIELD_U8 (5, cy);
+    FIELD_U8 (6, rad);
+    FIELD_I16(7, Dur);
+    FIELD_H  (8, Creator);
+    FIELD_H  (9, Next);
+    FIELD_I8 (10, Color);
+  }
+
+void TerraRecord::FieldsV1(Registry &r)
+  {
+    FIELD_I16(1, key);
+    FIELD_I16(2, Duration);
+    FIELD_I8 (3, SaveDC);
+    FIELD_I8 (4, DType);
+    FIELD_I8 (5, pval.Number);
+    FIELD_I8 (6, pval.Sides);
+    FIELD_I8 (7, pval.Bonus);
+    FIELD_RID(8, eID);
+    FIELD_H  (9, Creator);
+  }
+
+void LimboEntry::FieldsV1(Registry &r)
+  {
+    FIELD_H  (1, h);
+    FIELD_H  (2, Target);
+    FIELD_U8 (3, x);
+    FIELD_U8 (4, y);
+    FIELD_RID(5, mID);
+    FIELD_I8 (6, Depth);
+    FIELD_I8 (7, OldDepth);
+    FIELD_U32(8, Arrival);
+    /* v0 raw-dumped the String struct itself, restoring a Buffer pointer
+       into the writing process's dead heap; v1 stores the text. A zeroed
+       String (the load side's memset below) is a valid empty one -- Buffer
+       NULL, Length 0, Canary 0 -- so plain assignment works. */
+    FIELD_STR(9, Message);
+  }
+
+void ModuleRecord::FieldsV1(Registry &r)
+  {
+    FIELD_U8 (1, Slot);
+    FIELD_H  (2, hMod);
+    FIELD_ARRAY(3, FName, 1, 1024);
+  }
+
+/* The four Array member specialisations, declared in inc/Map.h and
+   inc/Res.h beside their element structs. Same shape as the generic POD
+   FieldsV1 in src/Base.cpp -- Count, bound it, allocate, then the elements
+   -- except each element is an embed of named fields instead of raw bytes,
+   because these element types carry rIDs, handles or a String. The 0xFFF0
+   ceiling keeps 3+i inside the uint16 tag space; every one of these arrays
+   counts in the tens at most in a real game, so only a crafted file can
+   reach it (file-fed impossible value: ECORRUPT). */
+#define V1_ELEM_ARRAY_FIELDS(S)                                           \
+    {                                                                     \
+      uint32 i;                                                           \
+      FIELD_U32(1, Count);                                                \
+      if (r.Loading())                                                    \
+        {                                                                 \
+          if (Count > 0xFFF0 ||                                           \
+              (unsigned long long)Count * sizeof(S) >                     \
+              (unsigned long long)CFILE_SANE_MAX_SIZE)                    \
+            throw ECORRUPT;                                               \
+          Size = Count;                                                   \
+          Items = NULL;                                                   \
+          if (Size)                                                       \
+            {                                                             \
+              Items = (S*) malloc(sizeof(S)*Size);                        \
+              if (!Items)                                                 \
+                throw EMEMORY;                                            \
+              memset(Items,0,sizeof(S)*Size);                             \
+            }                                                             \
+        }                                                                 \
+      for (i = 0; i != Count; i++)                                        \
+        FIELD_EMBED((uint16)(3+i), Items[i]);                             \
+    }
+
+template<> void Array<Field,10,5>::FieldsV1(Registry &r)
+    V1_ELEM_ARRAY_FIELDS(Field)
+
+template<> void Array<TerraRecord,0,5>::FieldsV1(Registry &r)
+    V1_ELEM_ARRAY_FIELDS(TerraRecord)
+
+template<> void Array<LimboEntry,20,10>::FieldsV1(Registry &r)
+    V1_ELEM_ARRAY_FIELDS(LimboEntry)
+
+template<> void Array<ModuleRecord,5,5>::FieldsV1(Registry &r)
+    V1_ELEM_ARRAY_FIELDS(ModuleRecord)
+
+#undef V1_ELEM_ARRAY_FIELDS
+
+/* ------------------------------------------------------------------------ */
 /*                               the writer                                 */
 /* ------------------------------------------------------------------------ */
 
@@ -1313,6 +1475,9 @@ int16 Registry::SaveGroupV1(Term &t, hObj hGroup)
 
     v1WriterTeardown();   /* stale state from an aborted run, if any */
     V1SaveScope guard(&saveMode);
+#ifdef DEBUG
+    long covBefore = v1CovFindings;
+#endif
 
     t.Seek(0, SEEK_END);
     ghPos = t.Tell();
@@ -1359,6 +1524,26 @@ int16 Registry::SaveGroupV1(Term &t, hObj hGroup)
             }
         }
 
+#ifdef DEBUG
+    /* Constraint 8: the coverage check is non-optional, and a finding on the
+       REAL save path must refuse the save loudly, never write a file whose
+       records silently miss (or double-carry) bytes. Each finding was
+       already reported by Error() as it was found; this turns the batch
+       into a save failure. The file is left with its zeroed placeholder
+       groupHeader, which no reader accepts (Signature check), and
+       Game::SaveGame's catch shows the player "Error writing save file
+       (Corrupt File)". DEBUG only: a shipping build carries no coverage
+       map to judge by. */
+    if (v1CovFindings != covBefore)
+      {
+        fprintf(stderr,
+            "incursion: refusing to write a v1 save: %ld schema coverage "
+            "finding(s) -- see the SCHEMA COVERAGE errors above\n",
+            v1CovFindings - covBefore);
+        throw ECORRUPT;
+      }
+#endif
+
     { uint32 sig = SIGNATURE_TWO; v1Put(&v1Out, &sig, 4); }
 
     v1PutU32(&v1Out, v1.nameCount);
@@ -1382,10 +1567,26 @@ int16 Registry::SaveGroupV1(Term &t, hObj hGroup)
       }
     else
       {
-        CFile *cf = new CFile(&t);
-        cf->FWrite(v1Out.p, v1Out.len);
-        gh.compSize = cf->CommitCompressed(t.Tell(), false);
-        delete cf;
+        /* WIRE FORMAT: for IS1.x files, fileHeader.Compression == 1 MEANS
+           zlib level 6 (0 stays raw). v0 keeps its CFile RLE untouched.
+           RLE was measured hopeless on tagged records -- it compresses
+           runs, and a tag stream has none: seed-1 smoke save, 2026-08-24,
+           552,209 raw -> 332,517 RLE (60.2%) but 26,430 zlib-6 (4.8%);
+           the v0 file of the same seed is 239,535. libz is already a link
+           dependency (CFile's LZ path). */
+        uLongf clen = compressBound((uLong)v1Out.len);
+        Bytef *cbuf = (Bytef*) malloc(clen);
+        if (!cbuf)
+          throw EMEMORY;
+        if (compress2(cbuf, &clen, (const Bytef*)v1Out.p,
+                      (uLong)v1Out.len, 6) != Z_OK)
+          {
+            free(cbuf);
+            throw EMEMORY;   /* compress2 fails only on memory/param */
+          }
+        t.FWrite(cbuf, (size_t)clen);
+        free(cbuf);
+        gh.compSize = (int32)clen;
       }
 
     gh.Signature  = SIGNATURE;
@@ -1424,6 +1625,12 @@ int16 Registry::LoadGroupV1(Term &t, fileHeader &fh, hObj hGroup)
     groupHeader gh;
     int32 i;
     uint8 *buf = NULL;
+    /* Pass-1 bookkeeping for the two-pass load below: each record's scanned
+       entry list (pointing into buf) and its constructed object, held until
+       pass 2 replays them. */
+    struct V1Loaded { V1Ent *ents; int count; Object *o; };
+    V1Loaded *loaded = NULL;
+    uint32 loadedCount = 0, loadedCap = 0;
 
     /* Reject a schema revision this binary does not implement, naming both
        (wire-format section, schema revisions). The "IS1." prefix was checked
@@ -1490,22 +1697,44 @@ foundGroup:
           }
         else if (fh.Compression == 1)
           {
-            CFile *cf = new CFile(&t);
+            /* WIRE FORMAT: for IS1.x files, Compression == 1 MEANS zlib
+               level 6 -- see the matching note in SaveGroupV1. Bounds: buf
+               is groupSize bytes and groupSize passed the
+               CFILE_SANE_MAX_SIZE ceiling above, so a crafted header
+               cannot drive an unbounded inflate -- uncompress() caps its
+               output at dlen; compSize passed the bytes-left-in-file
+               check, so cbuf is bounded too. A stream that inflates to
+               any size other than groupSize exactly is corruption. */
+            Bytef *cbuf = (Bytef*) malloc(gh.compSize);
+            if (!cbuf)
+              throw EMEMORY;
+            uLongf dlen = (uLongf)gh.groupSize;
+            int zr;
             try
               {
-                cf->LoadCompressed(t.Tell(), gh.compSize, gh.groupSize, false);
-                cf->Seek(0, SEEK_SET);
-                cf->FRead(buf, gh.groupSize);
+                t.FRead(cbuf, gh.compSize);
               }
             catch (...)
-              { delete cf; throw; }
-            delete cf;
+              { free(cbuf); throw; }
+            zr = uncompress((Bytef*)buf, &dlen, cbuf, (uLong)gh.compSize);
+            free(cbuf);
+            if (zr != Z_OK || dlen != (uLongf)gh.groupSize)
+              throw ECORRUPT;
           }
         else
           throw ECORRUPT;
 
         LastUsedHandle = max(LastUsedHandle, gh.LastHandle);
 
+        /* TWO PASSES, for the same reason v0's LoadGroup ends with a
+           whole-group Serialize loop over LoadedObjects
+           (src/Registry.cpp:1050-1054): a body's load fixup can look
+           another object up by handle -- Thing's `m = oMap(hm)` is the
+           one that found this -- and the objects arrive in ObjTable hash
+           order, so the referenced object is registered later than the
+           referencing one about half the time. Pass 1 constructs and
+           registers every object; pass 2 replays every field list against
+           a registry that already knows every handle. */
         size_t pos = 0, len = (size_t)gh.groupSize;
         for (i = 0; i != gh.objCount; i++)
           {
@@ -1527,9 +1756,24 @@ foundGroup:
                 continue;
               }
 
+            /* Scanned NOW, in pass 1, so a malformed field stream rejects
+               the whole load before any object's fields have landed; kept
+               (it points into buf) for pass 2 to replay. */
             V1Ent *ents; int entCount;
             v1ScanFields(buf + pos, recLen, &ents, &entCount);
-            v1PushFrame(ents, entCount);
+            if (loadedCount == loadedCap)
+              {
+                loadedCap = loadedCap ? loadedCap * 2 : 64;
+                V1Loaded *nl = (V1Loaded*)
+                    realloc(loaded, loadedCap * sizeof(V1Loaded));
+                if (!nl)
+                  { free(ents); throw EMEMORY; }
+                loaded = nl;
+              }
+            loaded[loadedCount].ents = ents;
+            loaded[loadedCount].count = entCount;
+            loaded[loadedCount].o = NULL;
+            loadedCount++;   /* now, so a throw below still frees ents */
 
             Object *o;
             if (oType == T_GAME)
@@ -1590,17 +1834,26 @@ foundGroup:
             /* v0 got these from the raw bytes; v1's envelope carries them. */
             o->Type = oType;
             o->myHandle = (hObj)handle;
-            hCurrent = o->myHandle;
 
+            RegisterObject(o, true);
+            loaded[loadedCount - 1].o = o;
+            pos += recLen;
+          }
+
+        /* Pass 2: every handle is registered; now the field lists replay
+           and their load fixups can resolve cross-references. */
+        for (i = 0; i != (int32)loadedCount; i++)
+          {
+            Object *o = loaded[i].o;
+            hCurrent = o->myHandle;
+            v1PushFrame(loaded[i].ents, loaded[i].count);
+            loaded[i].ents = NULL;   /* the frame owns (and frees) it now */
             o->Serialize(*this, false);
             ASSERT(v1FrameDepth == 1);
             v1PopFrame();
 
             if (o->isCreature())
               ((Creature*)o)->ts.SanitizeLoadedTargets();
-
-            RegisterObject(o, true);
-            pos += recLen;
           }
 
         {
@@ -1659,9 +1912,13 @@ foundGroup:
       }
     catch (...)
       {
+        for (uint32 li = 0; li != loadedCount; li++)
+          free(loaded[li].ents);   /* NULL once pass 2's frame took it */
+        free(loaded);
         free(buf);
         throw;
       }
+    free(loaded);   /* every ents was consumed (and freed) by pass 2 */
     free(buf);
 
     /* Resolution is deferred: the modules the names refer to are reloaded

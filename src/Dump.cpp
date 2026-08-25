@@ -123,7 +123,17 @@ bool RunSaveDump(const char *path) {
        message -- none of it writes anything and none of it is needed to
        read the fields below. OpenRead only; nothing here ever opens a file
        for writing. */
+    /* The FILE's header, kept for the report: the Format line must name the
+       stamp the file carries ("IS1.0" for a v1 save, the SF digest for a
+       v0 one), not this binary's own SaveFormatID(). LoadGroup reads the
+       same bytes internally but does not hand them back. */
+    fileHeader fhdr;
+    memset(&fhdr, 0, sizeof(fhdr));
+
     try {
+        T1->OpenRead(path);
+        T1->FRead(&fhdr, sizeof(fhdr));
+        T1->Close();
         T1->OpenRead(path);
         MainRegistry.RemoveObject(theGame);
         MainRegistry.LoadGroup(*T1, 0, false);
@@ -194,7 +204,9 @@ bool RunSaveDump(const char *path) {
 
     printf("=== Incursion save dump ===\n");
     printf("File:      %s\n", path);
-    printf("Format:    %s\n", SaveFormatID());
+    /* Bounded print: Version is char[12] straight off the file with no NUL
+       guarantee (same reasoning as LoadGroupV1's revision check). */
+    printf("Format:    %.12s\n", fhdr.Version);
     printf("Name:      %s\n", (const char*)p->Named);
     printf("HP:        %d / %d", p->cHP, p->mHP);
     if (p->Subdual)

@@ -77,7 +77,15 @@ struct Field
       { return dist(x,y,cx,cy) <= rad; }
     bool Affects(Thing *t);
     uint8 FieldDC();
+    /* v1 per-element field list (src/SaveV1.cpp): eID is an rID and must go
+       through the name table, so this struct can never travel as raw POD. */
+    void FieldsV1(Registry &r);
   };
+
+/* Declared here, before any use, so no TU ever instantiates the generic
+   raw-POD FieldsV1 for an element type that carries rIDs. Definitions in
+   src/SaveV1.cpp. */
+template<> void Array<Field,10,5>::FieldsV1(Registry &r);
 
 class Term;
 struct RoomInfo;
@@ -122,8 +130,14 @@ struct TerraRecord
     Dice  pval;
     rID   eID;
     hObj  Creator;      // ww: if a wall of fire burns something to death,
-                        // who gets the XP? 
+                        // who gets the XP?
+    /* v1 per-element field list (src/SaveV1.cpp): eID is an rID and must go
+       through the name table, so this struct can never travel as raw POD. */
+    void FieldsV1(Registry &r);
   };
+
+/* See the note above Array<Field,10,5>'s specialisation declaration. */
+template<> void Array<TerraRecord,0,5>::FieldsV1(Registry &r);
 
 struct EncMember
   {
@@ -490,12 +504,111 @@ class Map: public Object
     
     friend class Term;
     ARCHIVE_CLASS(Map,Object,r)
-      r.Block((void**)&Grid,sizeof(LocationInfo)*sizeX*sizeY);
-      Things.Serialize(r);
-      Fields.Serialize(r);
-      TerraXY.Serialize(r);
-      TerraList.Serialize(r);
-      TorchList.Serialize(r);
+      /* v1 tags 672-767, in the declaration order of the members above --
+         except Grid, whose tag is 672 by the plan's naming of "the tag-672
+         grid line". Every static member of this class is generation scratch
+         shared by all maps and is not part of the object; nothing here names
+         one. Widths measured on arm64/LP64, 2026-08-24.
+
+         LINE ORDER, not tag order, is replay order. The sizeX/sizeY lines
+         MUST stay above the Grid line: on load the Grid line's size
+         expression reads them when it runs (load-direction ordering,
+         docs/superpowers/plans/2026-08-24-save-schema-v1.md wire format).
+         And the Grid line MUST stay the first line that writes to the v0
+         stream, followed by the five container lines in their old order --
+         FIELD_BLOB and FIELD_OBJ take the legacy Block/Serialize branch on
+         the v0 path, and reordering them would break every existing save.
+         Every scalar macro is a no-op on the v0 path. */
+      static_assert(sizeof(Map) == 4344,
+                    "Map's coverage pin row pads assume this");
+      static_assert(sizeof(bool) == 1, "the staged bools travel as K_U8");
+      int i;
+      FIELD_I16(673, sizeX);
+      FIELD_I16(674, sizeY);
+      FIELD_I16(675, nextAvailableTerraKey);
+      /* Bools staged through uint8s, as Character::isFallenPaladin is
+         (inc/Creature.h): a byte off a crafted file is any of 256 values,
+         and a bool holding one of the other 254 is undefined behaviour. */
+      uint8 bGenerate = 0, bDaysPassed = 0, bOvActive = 0;
+      if (isSave)
+        {
+          bGenerate   = inGenerate ? 1 : 0;
+          bDaysPassed = inDaysPassed ? 1 : 0;
+          bOvActive   = ov.Active ? 1 : 0;
+        }
+      FIELD_U8 (676, bGenerate);    FIELD_SKIP(inGenerate);
+      /* RegionList and TerrainList are rID arrays: per-element FIELD_RID
+         inside an embed, never FIELD_ARRAY -- raw pool indices are exactly
+         what the name table exists to replace. */
+      r.V1EmbedBegin(677, RegionList, sizeof(RegionList));
+      for (i = 0; i != 256; i++)
+        FIELD_RID((uint16)(1 + i), RegionList[i]);
+      r.V1EmbedEnd();
+      FIELD_ARRAY(678, SpecialDepths, sizeof(uint8), 16);
+      r.V1EmbedBegin(679, TerrainList, sizeof(TerrainList));
+      for (i = 0; i != 256; i++)
+        FIELD_RID((uint16)(1 + i), TerrainList[i]);
+      r.V1EmbedEnd();
+      FIELD_I16(680, CurrThing);
+      FIELD_ARRAY(681, QueueStack, sizeof(int8), 32);
+      FIELD_I8 (682, QueueSP);
+      FIELD_RID(683, dID);
+      FIELD_I16(684, PercentSI);
+      FIELD_U8 (685, bDaysPassed);  FIELD_SKIP(inDaysPassed);
+      FIELD_I16(686, Depth);
+      FIELD_I16(687, Level);
+      FIELD_I16(688, EnterX);
+      FIELD_I16(689, EnterY);
+      FIELD_ARRAY(690, SpecialsLevels, sizeof(int8), 64);
+      FIELD_I16(691, Day);
+      /* The overlay carries a handle (ov.m), so it cannot travel as one raw
+         blob; the embed also takes the struct's interior padding with it.
+         Map is a friend of Overlay, which is why this can sit here and not
+         in a FieldsV1 of Overlay's own. */
+      r.V1EmbedBegin(692, &ov, sizeof(ov));
+      FIELD_ARRAY(1, ov.GlyphX, sizeof(int16), MAX_OVERLAY_GLYPHS);
+      FIELD_ARRAY(2, ov.GlyphY, sizeof(int16), MAX_OVERLAY_GLYPHS);
+      FIELD_ARRAY(3, ov.GlyphImage, sizeof(Glyph), MAX_OVERLAY_GLYPHS);
+      FIELD_I16(4, ov.GlyphCount);
+      FIELD_H  (5, ov.m);
+      FIELD_U8 (6, bOvActive);      FIELD_SKIP(ov.Active);
+      r.V1EmbedEnd();
+      FIELD_I16(698, FieldCount);
+      FIELD_H  (699, pl[0]);
+      FIELD_H  (700, pl[1]);
+      FIELD_H  (701, pl[2]);
+      FIELD_H  (702, pl[3]);
+      FIELD_I16(703, PlayerCount);
+      FIELD_I16(704, BreedCount);
+      FIELD_I16(705, PreviousAuguries);
+      /* Bounds before the allocation-sizing use below: both dimensions just
+         came off the file, and a negative one turns the Grid size expression
+         into a huge size_t (file-fed impossible value: ECORRUPT, never
+         clamp). */
+      if (!isSave && r.V1Active())
+        if (sizeX < 0 || sizeY < 0)
+          throw ECORRUPT;
+      FIELD_BLOB(672, Grid, sizeof(LocationInfo)*sizeX*sizeY);
+      FIELD_OBJ(693, Things);
+      FIELD_OBJ(694, Fields);
+      FIELD_OBJ(695, TerraXY);
+      FIELD_OBJ(696, TerraList);
+      FIELD_OBJ(697, TorchList);
+      /* Load-direction fixups, below every field they read. V1Active()
+         guards them because this body also runs on the v0 path, where the
+         raw dump already carried the real bytes and the staging uint8s
+         would still be 0. */
+      if (!isSave && r.V1Active())
+        {
+          inGenerate   = bGenerate != 0;
+          inDaysPassed = bDaysPassed != 0;
+          ov.Active    = bOvActive != 0;
+          /* A file that declares a non-empty grid must deliver one:
+             Registry::V1Blob leaves a NULL pointer for an absent or empty
+             blob record, and every At() would dereference it. */
+          if (sizeX && sizeY && !Grid)
+            throw ECORRUPT;
+        }
     END_ARCHIVE
 
 

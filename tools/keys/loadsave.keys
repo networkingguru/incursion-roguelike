@@ -1,0 +1,20 @@
+# Load the one saved character and quit straight back out, saving again on
+# the way. tools/check_v1_full_roundtrip.sh drives this once per fixpoint
+# generation: quick-quit's save writes the next file of its save2-vs-save3
+# field comparison. No gameplay happens in between on purpose -- any turn
+# taken here would make the generations legitimately different beyond the
+# script's documented volatile-field allowlist.
+#
+#   tools/headless.sh tools/keys/loadsave.keys 1
+#
+# The run directory must already hold exactly one save in save/ (the check
+# copies one in). With one save present the load menu is deterministic.
+
+@expect "Initial Choices"
+@choose "Restore a Saved Game"
+@expect "Choose a character:"
+a
+
+@dump:loaded
+
+@quit

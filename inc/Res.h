@@ -811,37 +811,102 @@ class Module : public Object
     friend EvReturn Resource::Event(EventInfo &e, rID xID, int16 context);
 
     ARCHIVE_CLASS(Module,Object,r)
+      /* v1 tags 768-799, blobs first in the declaration order of the Q*
+         pointers below. One honest sentence for the record: this field list
+         is UNTESTED BY DESIGN. No check in the v1 plan ever produces a
+         T_MODULE v1 record, because modules never take the v1 path (spec
+         non-goal 1: Game::SaveModule stays raw), -schematest uses a local
+         registry, and the full round trip saves MainRegistry group 0, which
+         holds no Module. The list exists anyway because LoadGroupV1's
+         placement-new switch knows T_MODULE -- a crafted v1 file can present
+         one, and this body must then replay safely under the macro set
+         instead of running raw r.Block calls in a v1 context -- and because
+         the pin row still catches upstream member changes.
+
+         The two memsets and the two QTextSeg inversion loops are per-mode
+         fixups both paths need; they stay exactly as they were. The counts
+         travel in one embed placed ABOVE the blobs, because on a v1 load
+         each blob line's size expression reads them when it runs
+         (load-direction ordering). The v0 wire order -- 21 pool blobs,
+         Annotations, Symbols, QTextSeg, QCodeSeg -- is unchanged: scalar
+         macros and embeds are no-ops on the v0 path. */
+      static_assert(sizeof(Module) == 49464,
+                    "Module's coverage pin row pads assume this");
       int32 i;
       memset(GetResourceCache,0,sizeof(GetResourceCache));
       memset(GetResourceIndex,0,sizeof(GetResourceIndex));
       if (r.Saving())
         for (i=0;i!=szTextSeg;i++)
           *(((char*)QTextSeg)+i) = ~(*(QTextSeg+i));
-      r.Block((void**)(&QMon),sizeof(TMonster)  *szMon);
-      r.Block((void**)(&QItm),sizeof(TItem)     *szItm);
-      r.Block((void**)(&QFea),sizeof(TFeature)  *szFea);
-      r.Block((void**)(&QEff),sizeof(TEffect)   *szEff);
-      r.Block((void**)(&QArt),sizeof(TArtifact) *szArt);
-      r.Block((void**)(&QQue),sizeof(TQuest)    *szQue);
-      r.Block((void**)(&QDgn),sizeof(TDungeon)  *szDgn);
-      r.Block((void**)(&QRou),sizeof(TRoutine)  *szRou);
-      r.Block((void**)(&QNPC),sizeof(TNPC)      *szNPC);
-      r.Block((void**)(&QCla),sizeof(TClass)    *szCla);
-      r.Block((void**)(&QRac),sizeof(TRace)     *szRac);
-      r.Block((void**)(&QDom),sizeof(TDomain)   *szDom);
-      r.Block((void**)(&QGod),sizeof(TGod)      *szGod);
-      r.Block((void**)(&QReg),sizeof(TRegion)   *szReg);
-      r.Block((void**)(&QTer),sizeof(TTerrain)  *szTer);
-      r.Block((void**)(&QTxt),sizeof(TText)     *szTxt);
-      r.Block((void**)(&QVar),sizeof(TVariable) *szVar);
-      r.Block((void**)(&QTem),sizeof(TTemplate) *szTem);
-      r.Block((void**)(&QFla),sizeof(TFlavor)   *szFla);
-      r.Block((void**)(&QBev),sizeof(TBehaviour)*szBev);
-      r.Block((void**)(&QEnc),sizeof(TEncounter)*szEnc);
-      Annotations.Serialize(r);
-      Symbols.Serialize(r);
-      r.Block((void**)(&QTextSeg), szTextSeg);
-      r.Block((void**)(&QCodeSeg), szCodeSeg * sizeof(VCode));
+      FIELD_SKIP(GetResourceCache);   /* rebuilt by the memsets above */
+      FIELD_SKIP(GetResourceIndex);
+      FIELD_I32(793, Name);           /* hText: an offset into QTextSeg */
+      FIELD_I32(794, FName);
+      FIELD_I16(795, Slot);
+      r.V1EmbedBegin(796, &szMon, sizeof(int16)*21);
+      FIELD_I32(1, szTextSeg);
+      FIELD_I32(2, szDataSeg);
+      FIELD_I32(3, szCodeSeg);
+      FIELD_I16(4,  szMon);  FIELD_I16(5,  szItm);  FIELD_I16(6,  szFea);
+      FIELD_I16(7,  szEff);  FIELD_I16(8,  szArt);  FIELD_I16(9,  szQue);
+      FIELD_I16(10, szDgn);  FIELD_I16(11, szRou);  FIELD_I16(12, szNPC);
+      FIELD_I16(13, szCla);  FIELD_I16(14, szRac);  FIELD_I16(15, szDom);
+      FIELD_I16(16, szGod);  FIELD_I16(17, szReg);  FIELD_I16(18, szTer);
+      FIELD_I16(19, szTxt);  FIELD_I16(20, szVar);  FIELD_I16(21, szTem);
+      FIELD_I16(22, szFla);  FIELD_I16(23, szBev);  FIELD_I16(24, szEnc);
+      r.V1EmbedEnd();
+      FIELD_I32(797, TurnLastUsed);
+      /* Bounds before the allocation-sizing uses below: every count just
+         came off the file, and a negative one turns its blob's size
+         expression into a huge size_t (file-fed impossible value: ECORRUPT,
+         never clamp). */
+      if (!isSave && r.V1Active())
+        if (szMon < 0 || szItm < 0 || szFea < 0 || szEff < 0 || szArt < 0 ||
+            szQue < 0 || szDgn < 0 || szRou < 0 || szNPC < 0 || szCla < 0 ||
+            szRac < 0 || szDom < 0 || szGod < 0 || szReg < 0 || szTer < 0 ||
+            szTxt < 0 || szVar < 0 || szTem < 0 || szFla < 0 || szBev < 0 ||
+            szEnc < 0 || szTextSeg < 0 || szDataSeg < 0 || szCodeSeg < 0)
+          throw ECORRUPT;
+      FIELD_BLOB(768, QMon, sizeof(TMonster)  *szMon);
+      FIELD_BLOB(769, QItm, sizeof(TItem)     *szItm);
+      FIELD_BLOB(770, QFea, sizeof(TFeature)  *szFea);
+      FIELD_BLOB(771, QEff, sizeof(TEffect)   *szEff);
+      FIELD_BLOB(772, QArt, sizeof(TArtifact) *szArt);
+      FIELD_BLOB(773, QQue, sizeof(TQuest)    *szQue);
+      FIELD_BLOB(774, QDgn, sizeof(TDungeon)  *szDgn);
+      FIELD_BLOB(775, QRou, sizeof(TRoutine)  *szRou);
+      FIELD_BLOB(776, QNPC, sizeof(TNPC)      *szNPC);
+      FIELD_BLOB(777, QCla, sizeof(TClass)    *szCla);
+      FIELD_BLOB(778, QRac, sizeof(TRace)     *szRac);
+      FIELD_BLOB(779, QDom, sizeof(TDomain)   *szDom);
+      FIELD_BLOB(780, QGod, sizeof(TGod)      *szGod);
+      FIELD_BLOB(781, QReg, sizeof(TRegion)   *szReg);
+      FIELD_BLOB(782, QTer, sizeof(TTerrain)  *szTer);
+      FIELD_BLOB(783, QTxt, sizeof(TText)     *szTxt);
+      FIELD_BLOB(784, QVar, sizeof(TVariable) *szVar);
+      FIELD_BLOB(785, QTem, sizeof(TTemplate) *szTem);
+      FIELD_BLOB(786, QFla, sizeof(TFlavor)   *szFla);
+      FIELD_BLOB(787, QBev, sizeof(TBehaviour)*szBev);
+      FIELD_BLOB(788, QEnc, sizeof(TEncounter)*szEnc);
+      FIELD_OBJ(791, Annotations);
+      FIELD_OBJ(792, Symbols);
+      FIELD_BLOB(789, QTextSeg, szTextSeg);
+      FIELD_BLOB(790, QCodeSeg, szCodeSeg * sizeof(VCode));
+      /* A v1 file that declares a non-empty segment must deliver it: the
+         inversion loop below (and every later GetText/Execute) would
+         dereference the NULL that Registry::V1Blob leaves for an absent
+         blob record. The pool pointers get the same check because
+         __GetResource walks them by the counts loaded above. */
+      if (!isSave && r.V1Active())
+        if ((szMon && !QMon) || (szItm && !QItm) || (szFea && !QFea) ||
+            (szEff && !QEff) || (szArt && !QArt) || (szQue && !QQue) ||
+            (szDgn && !QDgn) || (szRou && !QRou) || (szNPC && !QNPC) ||
+            (szCla && !QCla) || (szRac && !QRac) || (szDom && !QDom) ||
+            (szGod && !QGod) || (szReg && !QReg) || (szTer && !QTer) ||
+            (szTxt && !QTxt) || (szVar && !QVar) || (szTem && !QTem) ||
+            (szFla && !QFla) || (szBev && !QBev) || (szEnc && !QEnc) ||
+            (szTextSeg && !QTextSeg) || (szCodeSeg && !QCodeSeg))
+          throw ECORRUPT;
       if (r.Loading())
         for (i=0;i!=szTextSeg;i++)
           *(((char*)QTextSeg)+i) = ~(*(QTextSeg+i));
@@ -1035,6 +1100,9 @@ struct LimboEntry
     int8 Depth, OldDepth;
     uint32 Arrival;
     String Message;
+    /* v1 per-element field list (src/SaveV1.cpp): mID is an rID and Message
+       is a String, so this struct can never travel as raw POD. */
+    void FieldsV1(Registry &r);
   };
 
 struct ModuleRecord
@@ -1042,7 +1110,16 @@ struct ModuleRecord
     uint8 Slot;
     hObj  hMod;
     char  FName[1024];
+    /* v1 per-element field list (src/SaveV1.cpp): hMod is a handle and must
+       be a named K_H field, not four raw bytes. */
+    void FieldsV1(Registry &r);
   };
+
+/* Declared here, before any use, so no TU ever instantiates the generic
+   raw-POD FieldsV1 for element types that carry rIDs, Strings or handles.
+   Definitions in src/SaveV1.cpp. */
+template<> void Array<LimboEntry,20,10>::FieldsV1(Registry &r);
+template<> void Array<ModuleRecord,5,5>::FieldsV1(Registry &r);
 
 struct __FindCache
   {
@@ -1064,16 +1141,118 @@ class Game : public Object
     friend int32 VMachine::Execute(EventInfo *e, rID xID, hCode CP);
     friend const char* __XPrint(Player *POV, const char *msg,va_list args);
     ARCHIVE_CLASS(Game,Object,r)
+      /* v1 tags 800-899, in the declaration order of the members below.
+         Static members (Modules, the destroy queues) are not part of the
+         object and have no lines. Widths measured on arm64/LP64,
+         2026-08-24.
+
+         The v0 wire order -- the DungeonLevels blocks, the MDataSeg blocks,
+         Limbo, ModFiles, SaveFile -- is unchanged: every scalar macro and
+         embed below is a no-op on the v0 path, and the two blob loops keep
+         their v0 guards for that path. On the v1 path the loops run
+         unguarded instead: a NULL slot writes a zero-length blob, so the
+         pointer round-trips as NULL and the coverage map still sees every
+         slot. The count arrays travel ABOVE the blob loops because on a v1
+         load each blob line's size expression reads them when it runs
+         (load-direction ordering). */
+      static_assert(sizeof(Game) == 8840,
+                    "Game's coverage pin row pads assume this");
+      static_assert(sizeof(bool) == 1, "the staged bools travel as K_U8");
       int16 i;
+      FIELD_I32(800, ccHasEffStati);
+      FIELD_I32(801, ccHasValStati);
+      FIELD_I32(802, ccHasNatStati);
+      FIELD_I32(803, ccHasStatiTrue);
+      FIELD_I32(804, ccHasStatiFalse);
+      FIELD_I32(805, ccHSPerceive);
+      FIELD_I32(806, ccHSMonAI);
+      FIELD_I32(807, ccHSCalcVal);
+      FIELD_I32(808, inPerceive);
+      FIELD_I32(809, inChooseAct);
+      FIELD_I32(810, inCalcVal);
+      FIELD_ARRAY(811, ccStatiNat, sizeof(int32), 256);
+      FIELD_ARRAY(812, ccStatiVal, sizeof(int32), 256);
+      FIELD_I16(813, Day);
+      FIELD_U32(814, Turn);
+      FIELD_ARRAY(817, MDataSegSize, sizeof(uint32), MAX_MODULES);
+      FIELD_H  (818, m[0]);  FIELD_H  (819, m[1]);
+      FIELD_H  (820, m[2]);  FIELD_H  (821, m[3]);
+      FIELD_H  (822, p[0]);  FIELD_H  (823, p[1]);
+      FIELD_H  (824, p[2]);  FIELD_H  (825, p[3]);
+      FIELD_H  (826, Timestopper);
+      /* Bools staged through uint8s, as Character::isFallenPaladin is
+         (inc/Creature.h). */
+      uint8 bPlay = 0, bSave = 0, bLoad = 0, bAuto = 0, bQuit = 0;
+      if (isSave)
+        {
+          bPlay = PlayMode ? 1 : 0;
+          bSave = doSave ? 1 : 0;
+          bLoad = doLoad ? 1 : 0;
+          bAuto = doAutoSave ? 1 : 0;
+          bQuit = doQuit ? 1 : 0;
+        }
+      FIELD_U8 (827, bPlay);   FIELD_SKIP(PlayMode);
+      FIELD_U8 (828, bSave);   FIELD_SKIP(doSave);
+      FIELD_U8 (829, bLoad);   FIELD_SKIP(doLoad);
+      FIELD_U8 (830, bAuto);   FIELD_SKIP(doAutoSave);
+      FIELD_U8 (831, bQuit);   FIELD_SKIP(doQuit);
+      FIELD_I8 (832, Difficulty);
+      /* An rID array: per-element FIELD_RID inside an embed, never
+         FIELD_ARRAY -- dungeon ids are resources and were among the
+         renumbering victims the name table exists for. */
+      r.V1EmbedBegin(833, DungeonID, sizeof(DungeonID));
+      for (i = 0; i != MAX_DUNGEONS; i++)
+        FIELD_RID((uint16)(1 + i), DungeonID[i]);
+      r.V1EmbedEnd();
+      FIELD_ARRAY(834, DungeonSize, sizeof(int16), MAX_DUNGEONS);
+      /* The caches are rebuilt by use; the VM's five members are transient
+         execution scratch that VMachine::Execute re-establishes at entry
+         (src/VMachine.cpp:461-474: xID, mn, isTracing, pe) -- pe and
+         Subject are raw pointers into the writing process's heap, so
+         carrying them (as the v0 raw dump did) restores dangling values
+         that nothing reads before Execute overwrites them. */
+      FIELD_SKIP(FindCache);
+      FIELD_SKIP(szFindCache);
+      FIELD_SKIP(VM);
+      FIELD_I16(869, ItemGenNum);
+      FIELD_I16(870, BarrierCount);
+      /* Bounds before the allocation-sizing uses below: every DungeonSize
+         just came off the file, and a negative one turns its blob's size
+         expression into nonsense (file-fed impossible value: ECORRUPT,
+         never clamp). */
+      if (!isSave && r.V1Active())
+        for (i = 0; i != MAX_DUNGEONS; i++)
+          if (DungeonSize[i] < 0)
+            throw ECORRUPT;
       for(i=0;i!=MAX_DUNGEONS;i++)
-        if (DungeonLevels[i])
-          r.Block((void**)&(DungeonLevels[i]),sizeof(hObj)*(DungeonSize[i]+1));
+        if (DungeonLevels[i] || r.V1Active())
+          FIELD_BLOB((uint16)(835+i), DungeonLevels[i],
+                     sizeof(hObj)*(DungeonSize[i]+1));
+      r.V1EmbedBegin(816, MDataSeg, sizeof(MDataSeg));
       for(i=0;i!=MAX_MODULES;i++)
-        if (MDataSeg[i])
-          r.Block((void**)&(MDataSeg[i]),MDataSegSize[i]);
-      Limbo.Serialize(r);      
-      ModFiles.Serialize(r);
-      SaveFile.Serialize(r);
+        if (MDataSeg[i] || r.V1Active())
+          FIELD_BLOB((uint16)(1+i), MDataSeg[i], MDataSegSize[i]);
+      r.V1EmbedEnd();
+      FIELD_OBJ(867, Limbo);
+      FIELD_OBJ(868, ModFiles);
+      FIELD_STR(815, SaveFile);
+      /* Load-direction fixups, below every field they read. V1Active()
+         guards them because this body also runs on the v0 path. */
+      if (!isSave && r.V1Active())
+        {
+          PlayMode   = bPlay != 0;
+          doSave     = bSave != 0;
+          doLoad     = bLoad != 0;
+          doAutoSave = bAuto != 0;
+          doQuit     = bQuit != 0;
+          /* A file that declares a non-empty level list or data segment
+             must deliver it: Registry::V1Blob leaves NULL for an absent or
+             empty blob record, and GetDungeonMap/VMachine::Execute would
+             dereference it. */
+          for (i = 0; i != MAX_MODULES; i++)
+            if (MDataSegSize[i] && !MDataSeg[i])
+              throw ECORRUPT;
+        }
     END_ARCHIVE
     public:
       int32 ccHasEffStati,
