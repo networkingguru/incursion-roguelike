@@ -4371,3 +4371,290 @@ bool RunSchemaTest(const char *outDir)
 
 bool RunSchemaLoad(const char *path)
   { return Registry::V1RunSchemaLoad(path); }
+
+/* ------------------------------------------------------------------------ */
+/*                      -convert: a v0 file becomes v1                      */
+/* ------------------------------------------------------------------------ */
+
+/* Byte-copy src to dst. Plain stdio, same as Game::SaveGame's backup loop
+   (src/Registry.cpp:1126-1146), because this runs before any Term file
+   state is involved. Returns false (with the partial dst left for the
+   caller to remove) on any short read or write. */
+static bool V1CopyBytes(const char *src, const char *dst)
+  {
+    FILE *fin = fopen(src, "rb"), *fout = NULL;
+    char buf[4096];
+    bool ok = false;
+    size_t n;
+    if (fin && (fout = fopen(dst, "wb")))
+      {
+        ok = true;
+        while ((n = fread(buf, 1, sizeof(buf), fin)) > 0)
+          if (fwrite(buf, 1, n, fout) != n)
+            { ok = false; break; }
+        if (ferror(fin))
+          ok = false;
+      }
+    if (fin)
+      fclose(fin);
+    if (fout && fclose(fout))
+      ok = false;
+    return ok;
+  }
+
+/* True when the two files hold exactly the same bytes. */
+static bool V1SameBytes(const char *a, const char *b)
+  {
+    FILE *fa = fopen(a, "rb"), *fb = fopen(b, "rb");
+    char bufa[4096], bufb[4096];
+    bool same = (fa && fb);
+    while (same)
+      {
+        size_t na = fread(bufa, 1, sizeof(bufa), fa);
+        size_t nb = fread(bufb, 1, sizeof(bufb), fb);
+        if (na != nb || memcmp(bufa, bufb, na))
+          same = false;
+        else if (na < sizeof(bufa))
+          { same = !ferror(fa) && !ferror(fb); break; }
+      }
+    if (fa)
+      fclose(fa);
+    if (fb)
+      fclose(fb);
+    return same;
+  }
+
+/* -convert <file> (docs/SAVE-SCHEMA-SPEC.md, "Compatibility, and Brian's
+   character"): read a v0 save through the EXISTING v0 flow -- the same
+   LoadGroup call and module-reload loop RunSaveDump uses
+   (src/Dump.cpp:152-221) -- and write it back in place as v1, keeping the
+   original bytes at <file>.v0. The conversion is where the renumbering is
+   repaired: the v0 read resolves every rID against the loaded module, and
+   the v1 write records the resulting names. So this MUST be run with a
+   module whose numbering matches the save; that is the operator's
+   responsibility and cannot be checked here.
+
+   Returns the process exit code (tools/check_convert_guard.sh holds the
+   contract):
+     0  converted; the original v0 bytes are kept at <file>.v0
+     2  missing / unreadable / already v1 / a load or write failure
+     3  refused: the file resolves under docs/evidence/ (the committed
+        fixtures are evidence of the v0 defects and are NEVER converted --
+        plan constraint 7), or a <file>.v0 already exists (overwriting it
+        would destroy the only v0 copy). */
+int RunSaveConvert(const char *path)
+  {
+    char resolved[4096], v0path[4104];
+    fileHeader oldfh;
+    FILE *f;
+    int32 i;
+
+    /* The fixture guard matches the RESOLVED path, so a symlink from
+       outside docs/evidence/ into it still refuses, and a fixture named by
+       relative path is still recognised. realpath also answers "does this
+       file exist" -- it fails on a path with no file behind it. */
+#ifdef _WIN32
+    if (!_fullpath(resolved, path, sizeof(resolved)))
+#else
+    if (!realpath(path, resolved))
+#endif
+      {
+        fprintf(stderr, "incursion -convert: no such file: %s\n", path);
+        return 2;
+      }
+    if (strstr(resolved, "/docs/evidence/") ||
+        strstr(resolved, "\\docs\\evidence\\"))
+      {
+        fprintf(stderr,
+            "incursion -convert: refused: %s\n"
+            "  resolves under docs/evidence/. The committed fixtures are\n"
+            "  evidence of the v0 defects and are never converted\n"
+            "  (docs/SAVE-SCHEMA-SPEC.md, \"Compatibility\").\n", resolved);
+        return 3;
+      }
+
+    /* The old header: its Version tells v0 from v1 before any load work,
+       and its Name (the character description line) carries over into the
+       converted file's header below. */
+    if (!(f = fopen(resolved, "rb")))
+      {
+        fprintf(stderr, "incursion -convert: cannot read %s\n", resolved);
+        return 2;
+      }
+    if (fread(&oldfh, 1, sizeof(oldfh), f) != sizeof(oldfh))
+      {
+        fclose(f);
+        fprintf(stderr,
+            "incursion -convert: %s is too short to be a save file\n",
+            resolved);
+        return 2;
+      }
+    fclose(f);
+    if (!strncmp(oldfh.Version, "IS", 2))
+      {
+        fprintf(stderr,
+            "incursion -convert: %s is already a v1 save (%.12s); there are\n"
+            "  no v0 bytes to convert or to back up.\n",
+            resolved, oldfh.Version);
+        return 2;
+      }
+
+    snprintf(v0path, sizeof(v0path), "%s.v0", resolved);
+    if ((f = fopen(v0path, "rb")))
+      {
+        fclose(f);
+        fprintf(stderr,
+            "incursion -convert: refused: %s already exists.\n"
+            "  It is the only v0 copy of a previous conversion; overwriting\n"
+            "  it would destroy the original bytes. Move it aside first if\n"
+            "  you really mean to re-convert.\n", v0path);
+        return 3;
+      }
+
+    /* The v0 load, exactly as RunSaveDump does it: LoadGroup, then the
+       module-reload loop over the ModFiles list the group restored, so the
+       v1 write below has the module names to record. */
+    try
+      {
+        T1->OpenRead(resolved);
+        MainRegistry.RemoveObject(theGame);
+        MainRegistry.LoadGroup(*T1, 0, false);
+        T1->Close();
+      }
+    catch (int error_number)
+      {
+        fprintf(stderr, "incursion -convert: %s: %s\n", resolved,
+            Lookup(FileErrors, error_number));
+        if (error_number == EBADVER)
+          fprintf(stderr,
+              "incursion -convert: this build wants save-format %s\n",
+              SaveFormatID());
+        return 2;
+      }
+    if (!theGame->p[0] || !theGame->m[0])
+      {
+        fprintf(stderr,
+            "incursion -convert: %s has no player/map after load\n",
+            resolved);
+        return 2;
+      }
+    theRegistry = &ResourceRegistry;
+    memset(Game::Modules, 0, sizeof(Module*) * MAX_MODULES);
+    for (i = 0; theGame->ModFiles[i]; i++)
+      {
+        try
+          {
+            char *filespec = theGame->ModFiles[i]->FName;
+            T1->ChangeDirectory(T1->ModuleSubDir());
+            T1->OpenRead(filespec);
+            ResourceRegistry.LoadGroup(*T1, theGame->ModFiles[i]->hMod, true);
+            T1->Close();
+            if (!oThing(theGame->ModFiles[i]->hMod))
+              throw EHANDLE;
+            Game::Modules[theGame->ModFiles[i]->Slot] =
+                oModule(theGame->ModFiles[i]->hMod);
+            T1->ChangeDirectory(T1->IncursionDirectory);
+          }
+        catch (int error_number)
+          {
+            fprintf(stderr, "incursion -convert: module '%s': %s\n",
+                theGame->ModFiles[i]->FName,
+                Lookup(FileErrors, error_number));
+            theRegistry = &MainRegistry;
+            T1->ChangeDirectory(T1->IncursionDirectory);
+            return 2;
+          }
+      }
+    theRegistry = &MainRegistry;
+    /* No SaveV1_ResolveNames() here: the "IS" check above already refused
+       every v1 file, and a v0 load queues nothing to resolve. */
+
+    /* Pre-flight the module-matching requirement BEFORE anything is
+       written: the same geometry check SaveV1_SegmentFields makes at write
+       time, but made here it stops a mismatched run with the target file
+       untouched, instead of after OpenWrite has truncated it. (The write-
+       time check stays; this is the early copy of it. The check catches a
+       module that GREW past the save's segment -- the 4ba035b class of
+       mismatch; a same-size renumbering is invisible to any size check and
+       remains the operator's responsibility, per the spec.) */
+    for (i = 0; i != MAX_MODULES; i++)
+      {
+        if (!theGame->MDataSeg[i])
+          continue;
+        Module *mod = Game::Modules[i];
+        size_t start[4], total;
+        if (!mod)
+          {
+            fprintf(stderr,
+                "incursion -convert: MDataSeg[%d] is allocated but module "
+                "slot %d is not loaded\n", (int)i, (int)i);
+            return 2;
+          }
+        v1SegStarts(mod, (size_t)theGame->NumPlayers(), start, &total);
+        if (total > (size_t)theGame->MDataSegSize[i])
+          {
+            fprintf(stderr,
+                "incursion -convert: refusing to convert %s:\n"
+                "  its memory segment for module slot %d is %u bytes but the\n"
+                "  loaded module needs %lu -- the module does not match the\n"
+                "  save's numbering. Run -convert against the module the\n"
+                "  save was written with (docs/SAVE-SCHEMA-SPEC.md,\n"
+                "  \"Compatibility\"). Nothing was written.\n",
+                resolved, (int)i, (unsigned)theGame->MDataSegSize[i],
+                (unsigned long)total);
+            return 2;
+          }
+      }
+
+    /* The backup, AFTER the load proved the file readable and BEFORE the
+       write below touches it -- and verified byte for byte, because from
+       here on this copy is the only v0 form of the save. */
+    if (!V1CopyBytes(resolved, v0path))
+      {
+        remove(v0path);
+        fprintf(stderr,
+            "incursion -convert: could not write the backup %s;\n"
+            "  nothing was converted.\n", v0path);
+        return 2;
+      }
+    if (!V1SameBytes(resolved, v0path))
+      {
+        fprintf(stderr,
+            "incursion -convert: the backup %s does not match the\n"
+            "  original; nothing was converted.\n", v0path);
+        return 2;
+      }
+
+    /* The v1 write, exactly as Game::SaveGame writes a fresh save
+       (src/Registry.cpp:1195-1214): the caller writes the COMPLETE header
+       -- SaveSchemaID() into Version AND the Compression flag -- because
+       SaveGroupV1 trusts both. Only the Name line carries over from the
+       old header. */
+    try
+      {
+        fileHeader fh;
+        T1->OpenWrite(resolved);
+        memset(&fh, 0, sizeof(fh));
+        strcpy(fh.Version, SaveSchemaID());
+        fh.Sig = SIGNATURE;
+        fh.numGroups = 1;
+        fh.Compression = SaveV1_Raw() ? 0 : 1;
+        memcpy(fh.Name, oldfh.Name, sizeof(fh.Name));
+        T1->FWrite(&fh, sizeof(fh));
+        MainRegistry.SaveGroupV1(*T1, 0);
+        T1->Close();
+      }
+    catch (int error_number)
+      {
+        fprintf(stderr,
+            "incursion -convert: writing %s failed: %s\n"
+            "  The original v0 bytes are intact at %s; the partial file at\n"
+            "  the original path must not be trusted.\n",
+            resolved, Lookup(FileErrors, error_number), v0path);
+        return 2;
+      }
+
+    printf("incursion -convert: %s is now %s; the v0 original is kept at\n"
+           "%s\n", resolved, SaveSchemaID(), v0path);
+    return 0;
+  }

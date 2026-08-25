@@ -418,6 +418,11 @@ ExceptionHandler* crashdumpHandler;
    declares it for the other backend. */
 extern bool RunSaveDump(const char *path);
 
+/* src/SaveV1.cpp; declared locally for the same reason as RunSaveDump.
+   Returns the process exit code directly (0 converted, 2 error, 3 refused
+   -- the fixture guard), so main() passes it through unmapped. */
+extern int RunSaveConvert(const char *path);
+
 int main(int argc, char *argv[]) {
     /* This path code is currently present in libtcod and curses code. */
     char executablePath[MAX_PATH_LENGTH] = "";
@@ -425,6 +430,7 @@ int main(int argc, char *argv[]) {
     const char *dumpSave = NULL;
     const char *schemaTest = NULL;
     const char *schemaLoad = NULL;
+    const char *convertSave = NULL;
     int i;
 
     if (envPath != NULL) {
@@ -508,6 +514,16 @@ int main(int argc, char *argv[]) {
             schemaTest = argv[++i];
         else if (!strcmp(argv[i], "-schemaload") && i + 1 < argc)
             schemaLoad = argv[++i];
+        else if (!strcmp(argv[i], "-convert")) {
+            /* Unlike its siblings, -convert with no value exits 2 rather
+               than falling through to the menu: it REWRITES the named file,
+               so a mangled invocation must stop, not play. */
+            if (i + 1 >= argc) {
+                fprintf(stderr, "usage: incursion -convert <file>\n");
+                return 2;
+            }
+            convertSave = argv[++i];
+        }
 
     theGame = new Game();
     AT1 = new libtcodTerm;
@@ -526,6 +542,8 @@ int main(int argc, char *argv[]) {
         retval = RunSchemaTest(schemaTest) ? 0 : 22;
     } else if (schemaLoad) {
         retval = RunSchemaLoad(schemaLoad) ? 0 : 22;
+    } else if (convertSave) {
+        retval = RunSaveConvert(convertSave);
     } else if (!AT1->RunOnCommandLine(argc, argv, &retval)) {
         T1->Initialize();
         theGame->StartMenu();
