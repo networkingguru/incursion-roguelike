@@ -287,12 +287,12 @@ static bool ArrivalSquare(Map *new_m, int16 &nx, int16 &ny, bool safe) {
     return true;
 }
 
-/* Diagnostic: set INCURSION_STAIR_WARN_PROBE=1 to record what the descent
-   warning in Portal::Enter decided and what it decided it from -- whether the
-   square the player keeps survives MoveDepth's placement rules, what terrain
-   sits there, whether the terrain itself calls the square unsafe, and whether
-   the player was asked to confirm. tools/check_stair_warn.sh recomputes the
-   rule from these facts, so a warning that fires on a safe square and a
+/* Diagnostic for inc-wcf. Set INCURSION_STAIR_WARN_PROBE=1 to record what
+   the descent warning in Portal::Enter decided and what it decided it from --
+   whether the square the player keeps survives MoveDepth's placement rules,
+   what terrain sits there, whether the terrain itself calls the square unsafe,
+   and whether the player was asked to confirm. tools/check_stair_warn.sh
+   recomputes the rule from these facts, so a warning that fires on a safe square and a
    warning that never fires at all both show up as a disagreement rather than
    as a screen somebody has to read. Writes logs/stairwarn.log. */
 static void StairWarnProbe(int16 depth, int16 nx, int16 ny, bool usable,

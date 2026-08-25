@@ -2056,7 +2056,7 @@ SkipSoundAttack:
                    AD_DCAY at DC 19 (lib/mon3.irh:2770) and is live -- lib/
                    program.i shows it as "60 for 5d6 57 (DC 19)", A_DEQU
                    expanded to 60 and AD_DCAY to 57. The save is forced by a
-                   probe build, -DDEQU_PROBE reading INCURSION_DEQU_FORCE_SAVE,
+                   probe build, -DDEQU_PROBE on INCURSION_DEQU_FORCE_SAVE (inc-473),
                    because winning a DC 19 Reflex save on demand is a dice roll
                    and the message is what is under test, not the roll. The
                    probe changes which branch runs and nothing inside it.

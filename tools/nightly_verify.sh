@@ -10,13 +10,12 @@
 #       1 this run broke something, or a build failed
 #       2 could not measure
 #
-# WHY A RATCHET AND NOT "EVERYTHING MUST PASS". tools/check_probe_hooks.sh exits
-# 1 on master today and will keep doing so until Brian names the bead that
-# INCURSION_STAIR_WARN_PROBE serves (bd inc-loa.12) -- a question the run is
-# forbidden to guess at. A gate that demanded a clean sweep would block every
-# merge on a question only he can answer, which is the opposite of the point.
-# So the rule is: a check that ALREADY failed before the run is not this run's
-# fault; a check that passed before and fails after is, and it stops the merge.
+# WHY A RATCHET AND NOT "EVERYTHING MUST PASS". Checks arrive faster than their
+# backlogs drain, so at any moment some check is red for a reason that predates
+# the work in hand. A gate demanding a clean sweep would block every merge on
+# somebody else's backlog, which is the opposite of the point. So the rule is:
+# a check that ALREADY failed before the run is not this run's fault; a check
+# that passed before and fails after is, and it stops the merge.
 #
 # The BUILDS are absolute, not ratcheted. A tree that does not compile is never
 # safe to merge, whatever it did yesterday. Both backends build, because they
