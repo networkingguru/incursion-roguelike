@@ -88,8 +88,8 @@ grep -qE '^Name:      Varag the Deathbringer$' "$WORK/dump.txt" ||
     fail "Name: line missing or does not read 'Varag the Deathbringer' -- character generation, the save format, or -dump's field walk has changed"
 grep -qE '^HP:        42 / 42' "$WORK/dump.txt" ||
     fail "HP: line missing or not '42 / 42' -- current/max HP no longer reads correctly"
-grep -qE '^Format:    IS1\.0$' "$WORK/dump.txt" ||
-    fail "Format: line missing or not IS1.0 -- real saves are v1 now, and -dump names the FILE's stamp"
+grep -qE '^Format:    IS1\.1$' "$WORK/dump.txt" ||
+    fail "Format: line missing or not IS1.1 -- real saves are v1 now, and -dump names the FILE's stamp"
 grep -qE 'Race   Orc' "$WORK/dump.txt" ||
     fail "the engine's own character-sheet dump (CreateCharDump) did not include the expected race line"
 

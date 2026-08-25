@@ -898,7 +898,7 @@ class Registry
 /* Free entry points for the v1 schema (src/SaveV1.cpp). */
 void SaveV1_ResolveNames();
 void SaveV1_DiscardPending();  /* drop unconsumed resolve state; see LoadGame */
-const char* SaveSchemaID();  /* "IS1." + SCHEMA_REV: "IS1.0" until Task 7's bump */
+const char* SaveSchemaID();  /* "IS1." + SCHEMA_REV: "IS1.1" since Task 7's packed grid */
 bool SaveV1_Raw();           /* DEBUG && INCURSION_V1_RAW=1 */
 bool RunSchemaTest(const char *outDir);
 bool RunSchemaLoad(const char *path);

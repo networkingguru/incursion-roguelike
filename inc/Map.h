@@ -56,6 +56,25 @@ struct LocationInfo
     hObj         Contents;
   };
 
+/* v1 packed tile (docs/SAVE-SCHEMA-SPEC.md §map grid). 8 bytes, fixed:
+   byte 0: Region        byte 1: Terrain     (8-bit TerraList indices)
+   bytes 2-3, little-endian, bit 0 first, DECLARATION ORDER of the flag
+   bitfields: Opaque, Obscure, Lit, Bright, Solid, Shade, hasField, Dark,
+   mLight, mTerrain, cOpaque, Special, isWall, isVault, isSkylight, mObscure
+   bytes 4-5: Visibility (16 bits)   bytes 6-7: reserved, write 0
+   Glyph, Memory and Contents travel as sibling blobs in the grid record;
+   they are not part of this element. Append new flags to the reserved
+   bytes; never renumber a bit. */
+static_assert(sizeof(LocationInfo) == 20,
+    "LocationInfo changed size: a member was added, removed or resized. "
+    "Extend the packed layout into the reserved bytes and re-verify the "
+    "pack/unpack loops deliberately.");
+static_assert(offsetof(LocationInfo, Glyph) == 0 &&
+              offsetof(LocationInfo, Memory) == 12 &&
+              offsetof(LocationInfo, Contents) == 16,
+    "LocationInfo members moved: re-verify the packed layout and the "
+    "pack/unpack loops.");
+
 extern Tile* MapLetterArray[127];
 
 #define VI_VISIBLE  1
@@ -503,6 +522,10 @@ class Map: public Object
     void ResetImages();
     
     friend class Term;
+    /* v1 only: the pack/unpack loops for the tag-672 grid record, called
+       from the embed in the ARCHIVE_CLASS body below. Non-virtual, defined
+       in src/SaveV1.cpp beside the packed-tile helpers it uses. */
+    void GridFieldsV1(Registry &r);
     ARCHIVE_CLASS(Map,Object,r)
       /* v1 tags 672-767, in the declaration order of the members above --
          except Grid, whose tag is 672 by the plan's naming of "the tag-672
@@ -588,7 +611,24 @@ class Map: public Object
       if (!isSave && r.V1Active())
         if (sizeX < 0 || sizeY < 0)
           throw ECORRUPT;
-      FIELD_BLOB(672, Grid, sizeof(LocationInfo)*sizeX*sizeY);
+      /* The grid MUST NOT travel field-by-field (an 80x100 map would emit
+         ~120,000 field records), and since SCHEMA_REV 1 it does not travel
+         as one raw K_BLOB of LocationInfo either: the compiler owns the
+         bitfield order and padding of that struct, and letting them reach
+         the file was the layout defect being removed. Tag 672 is now a
+         K_EMBED whose pack/unpack loops live in Map::GridFieldsV1
+         (src/SaveV1.cpp); the packed 8-byte element is pinned by the
+         comment and static_asserts beside LocationInfo above. Grid is a
+         pointer member: the embed covers the pointer slot, and the
+         pointed-to storage travels as the K_BLOBs inside the record. */
+      if (r.V1Active())
+        {
+          r.V1EmbedBegin(672, &Grid, sizeof(Grid));
+          GridFieldsV1(r);
+          r.V1EmbedEnd();
+        }
+      else
+        r.Block((void**)&Grid, sizeof(LocationInfo)*sizeX*sizeY);
       FIELD_OBJ(693, Things);
       FIELD_OBJ(694, Fields);
       FIELD_OBJ(695, TerraXY);

@@ -10,12 +10,16 @@
 #     must SUCCEED, with the surviving field lines intact -- the skip rule
 #     and the constructed-default rule at work.
 #
-# Two cases are crafted from other groups' files rather than the item group's.
+# Some cases are crafted from other files than the item group's.
 # creature_tcount_overflow needs a count field inside a Creature whose value
 # the reader cannot honour, so it comes from the creature group's file.
 # The two player_* cases need a file-fed INDEX inside a Player, so they come
 # from the character group's file: one asserts the reader REFUSES a value the
 # game cannot produce, the other that it CLAMPS one the game can.
+# grid_mismatch needs a Map record, which no schematest group carries, so it
+# comes from a real smoke-session save written under INCURSION_V1_RAW=1 and
+# is driven through tools/dump_save.sh -- the real load path -- instead of
+# -schemaload.
 #
 # Skeleton and safety assertions as in tools/check_load_corrupt.sh: every
 # headless invocation carries < /dev/null and -timeout (a binary that
@@ -60,6 +64,21 @@ CREATURE="$WORK/c.sav"
 CHARACTER="$WORK/e.sav"
 [ -f "$CHARACTER" ] || { fail "no e.sav produced"; exit 1; }
 
+# --- 1b. one genuine RAW-mode FULL save, via a real smoke session: the
+#         grid_mismatch mutant needs a Map record, and no schematest group
+#         carries one. Driven through tools/dump_save.sh below for the same
+#         reason.
+INCURSION_V1_RAW=1 INCURSION_RUN_DIR="$WORK/fullrun" ./tools/headless.sh \
+    tools/keys/smoke.keys 1 > "$WORK/fullsession.log" 2>&1 < /dev/null
+STATUS=$?
+if [ "$STATUS" -ne 0 ]; then
+    tail -20 "$WORK/fullsession.log"
+    fail "the smoke session that was supposed to produce a full raw save exited $STATUS, wanted 0"
+    exit 1
+fi
+FULLSAVE="$(ls "$WORK"/fullrun/save/*.sav 2>/dev/null | head -1)"
+[ -n "$FULLSAVE" ] || { fail "the smoke session produced no .sav file"; exit 1; }
+
 # --- 2. the genuine file itself must load, and its field lines are the
 #        baseline the 'ok' mutants are compared against ---
 if ! ./incursion-headless -schemaload "$BASE" -timeout 120 < /dev/null \
@@ -77,7 +96,7 @@ fi
 
 # --- 3. craft the mutants ---
 if ! python3 tools/craft_bad_v1_saves.py "$BASE" "$WORK/mutants" "$CREATURE" \
-        "$CHARACTER" > "$WORK/craft.log" 2> "$WORK/craft.err"; then
+        "$CHARACTER" "$FULLSAVE" > "$WORK/craft.log" 2> "$WORK/craft.err"; then
     cat "$WORK/craft.err"
     fail "tools/craft_bad_v1_saves.py failed -- see above (a wire-format drift check may have tripped; investigate, do not silence)"
     exit 1
@@ -92,9 +111,18 @@ while IFS='|' read -r name path expect detail; do
     CASE_COUNT=$((CASE_COUNT + 1))
     OUT="$WORK/case_$name.out"
     ERR="$WORK/case_$name.err"
-    ./incursion-headless -schemaload "$path" -timeout 120 < /dev/null \
-        > "$OUT" 2> "$ERR"
-    STATUS=$?
+    if [ "$name" = grid_mismatch ]; then
+        # The mutant is a FULL save, and only the real load path replays a
+        # Map record's fields -- the -schemaload harness groups carry no
+        # maps. tools/dump_save.sh is that path, sandboxed.
+        INCURSION_DUMP_SANDBOX="$WORK/sandbox_$name" \
+            ./tools/dump_save.sh "$path" < /dev/null > "$OUT" 2> "$ERR"
+        STATUS=$?
+    else
+        ./incursion-headless -schemaload "$path" -timeout 120 < /dev/null \
+            > "$OUT" 2> "$ERR"
+        STATUS=$?
+    fi
     case "$expect" in
       fail)
         if [ "$STATUS" -eq 0 ]; then
@@ -104,8 +132,10 @@ while IFS='|' read -r name path expect detail; do
             fail "$name: expected stderr to mention '$detail', got:"
             cat "$ERR"
         fi
-        # A refused file must never yield the field dump or a pass line.
-        if grep -q '^field ' "$OUT" || grep -q 'SCHEMATEST' "$OUT"; then
+        # A refused file must never yield the field dump, a pass line, or
+        # (for the full-save case driven through -dump) the character report.
+        if grep -q '^field ' "$OUT" || grep -q 'SCHEMATEST' "$OUT" ||
+                grep -q 'Full Character Sheet' "$OUT"; then
             fail "$name: a refused file still produced a field dump"
         fi
         ;;
@@ -157,8 +187,8 @@ while IFS='|' read -r name path expect detail; do
     esac
 done < "$WORK/craft.log"
 
-if [ "$CASE_COUNT" -lt 18 ]; then
-    fail "only $CASE_COUNT cases ran; the crafting script should emit one per record boundary twice, plus ten more"
+if [ "$CASE_COUNT" -lt 19 ]; then
+    fail "only $CASE_COUNT cases ran; the crafting script should emit one per record boundary twice, plus eleven more"
 fi
 
 # --- 5. the safety claim: nothing touched the real save/ directory ---

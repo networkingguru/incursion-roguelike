@@ -94,8 +94,8 @@ fi
 # 2. The file's own Version field says v1. Offset 4 because fileHeader is
 #    { uint32 Sig; char Version[12]; ... } (inc/Base.h).
 STAMP="$(dd if="$SAVE1" bs=1 skip=4 count=5 2>/dev/null)"
-if [ "$STAMP" != "IS1.0" ]; then
-    fail "save Version field reads \"$STAMP\", wanted \"IS1.0\" -- real saves are not v1"
+if [ "$STAMP" != "IS1.1" ]; then
+    fail "save Version field reads \"$STAMP\", wanted \"IS1.1\" -- real saves are not at the current v1 revision"
 fi
 
 # 3. The v1 save reloads to the same character. Exact values, not "present":
@@ -111,8 +111,8 @@ grep -qE '^Name:      Varag the Deathbringer$' "$WORK/dump1.txt" ||
     fail "Name: line missing or not 'Varag the Deathbringer' -- the v1 save did not reload to the same character"
 grep -qE '^HP:        42 / 42' "$WORK/dump1.txt" ||
     fail "HP: line missing or not '42 / 42' after the v1 reload"
-grep -qE '^Format:    IS1\.0$' "$WORK/dump1.txt" ||
-    fail "Format: line missing or not IS1.0 -- -dump does not name the file's own stamp"
+grep -qE '^Format:    IS1\.1$' "$WORK/dump1.txt" ||
+    fail "Format: line missing or not IS1.1 -- -dump does not name the file's own stamp"
 grep -qE 'Race   Orc' "$WORK/dump1.txt" ||
     fail "the character-sheet dump lost the expected race line after the v1 reload"
 

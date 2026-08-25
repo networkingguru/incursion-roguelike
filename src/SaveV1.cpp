@@ -40,8 +40,10 @@ extern size_t typeSize(int8 Type);
 
 /* The decimal after "IS1." in fileHeader.Version. Any change to the meaning
    of an existing tag or record shape bumps it (wire-format section, schema
-   revisions). */
-#define SCHEMA_REV 0
+   revisions). History: 0 -> 1, Map's tag 672 (the grid) changed from one
+   raw K_BLOB of LocationInfo to the packed K_EMBED grid record
+   (Map::GridFieldsV1 below). */
+#define SCHEMA_REV 1
 
 const char* SaveSchemaID()
   {
@@ -1423,6 +1425,211 @@ void ModuleRecord::FieldsV1(Registry &r)
     FIELD_U8 (1, Slot);
     FIELD_H  (2, hMod);
     FIELD_ARRAY(3, FName, 1, 1024);
+  }
+
+/* ------------------------------------------------------------------------ */
+/*                     the packed map grid (Map tag 672)                    */
+/* ------------------------------------------------------------------------ */
+
+/* The 8-byte packed tile the grid record carries. The comment and
+   static_asserts beside LocationInfo (inc/Map.h) are the normative layout
+   statement; these two loops implement it, reading and writing every
+   bitfield BY NAME -- never a memcpy of the bitfield block, because the
+   compiler owns that block's bit order and padding, and letting them reach
+   the file was the layout defect this record removed (SCHEMA_REV 0 -> 1).
+   Glyph, Memory and Contents travel as sibling blobs in the grid record;
+   they are not part of this element. */
+static void v1PackTile(const LocationInfo *t, uint8 *d)
+  {
+    uint16 flags = (uint16)
+        ( ((uint16)t->Opaque     << 0)  | ((uint16)t->Obscure    << 1)
+        | ((uint16)t->Lit        << 2)  | ((uint16)t->Bright     << 3)
+        | ((uint16)t->Solid      << 4)  | ((uint16)t->Shade      << 5)
+        | ((uint16)t->hasField   << 6)  | ((uint16)t->Dark       << 7)
+        | ((uint16)t->mLight     << 8)  | ((uint16)t->mTerrain   << 9)
+        | ((uint16)t->cOpaque    << 10) | ((uint16)t->Special    << 11)
+        | ((uint16)t->isWall     << 12) | ((uint16)t->isVault    << 13)
+        | ((uint16)t->isSkylight << 14) | ((uint16)t->mObscure   << 15) );
+    d[0] = (uint8)t->Region;
+    d[1] = (uint8)t->Terrain;
+    d[2] = (uint8)(flags & 0xFF);
+    d[3] = (uint8)(flags >> 8);
+    d[4] = (uint8)(t->Visibility & 0xFF);
+    d[5] = (uint8)((t->Visibility >> 8) & 0xFF);
+    d[6] = 0;   /* reserved */
+    d[7] = 0;   /* reserved */
+  }
+
+static void v1UnpackTile(const uint8 *d, LocationInfo *t)
+  {
+    uint16 flags = (uint16)(d[2] | ((uint16)d[3] << 8));
+    t->Region     = d[0];
+    t->Terrain    = d[1];
+    t->Opaque     = (flags >> 0)  & 1;
+    t->Obscure    = (flags >> 1)  & 1;
+    t->Lit        = (flags >> 2)  & 1;
+    t->Bright     = (flags >> 3)  & 1;
+    t->Solid      = (flags >> 4)  & 1;
+    t->Shade      = (flags >> 5)  & 1;
+    t->hasField   = (flags >> 6)  & 1;
+    t->Dark       = (flags >> 7)  & 1;
+    t->mLight     = (flags >> 8)  & 1;
+    t->mTerrain   = (flags >> 9)  & 1;
+    t->cOpaque    = (flags >> 10) & 1;
+    t->Special    = (flags >> 11) & 1;
+    t->isWall     = (flags >> 12) & 1;
+    t->isVault    = (flags >> 13) & 1;
+    t->isSkylight = (flags >> 14) & 1;
+    t->mObscure   = (flags >> 15) & 1;
+    t->Visibility = (uint16)(d[4] | ((uint16)d[5] << 8));
+    /* d[6], d[7]: reserved, ignored until a flag is appended there */
+  }
+
+#ifdef DEBUG
+/* Runs once, at the first grid write. Fills one LocationInfo with all-ones
+   in EVERY declared field -- the fill list below is maintained WITH the
+   pack loop -- packs it, unpacks into a zeroed second tile, and memcmps
+   the two. Any field the pack or the unpack loop drops, truncates or
+   mis-orders fails immediately; a field added to the struct and to this
+   fill list but not to both loops fails the same way. Glyph, Memory and
+   Contents travel as sibling blobs in the grid record, so the probe routes
+   them the way the real loops do: whole-word copies. */
+static void v1GridProbe(void)
+  {
+    static bool fired;
+    if (fired)
+      return;
+    fired = true;
+    LocationInfo a, b;
+    memset(&a, 0, sizeof(a));
+    memset(&b, 0, sizeof(b));
+    a.Glyph = 0xFFFFFFFFu;
+    a.Region = 0xFF;   a.Terrain = 0xFF;
+    a.Opaque = 1;      a.Obscure = 1;    a.Lit = 1;        a.Bright = 1;
+    a.Solid = 1;       a.Shade = 1;      a.hasField = 1;   a.Dark = 1;
+    a.mLight = 1;      a.mTerrain = 1;   a.cOpaque = 1;    a.Special = 1;
+    a.isWall = 1;      a.isVault = 1;    a.isSkylight = 1; a.mObscure = 1;
+    a.Visibility = 0xFFFF;
+    a.Memory = 0xFFFFFFFFu;
+    a.Contents = (hObj)-1;
+    uint8 d[8];
+    v1PackTile(&a, d);
+    v1UnpackTile(d, &b);
+    b.Glyph    = a.Glyph;      /* sibling blob, as GridFieldsV1's copy */
+    b.Memory   = a.Memory;     /* sibling blob */
+    b.Contents = a.Contents;   /* sibling blob */
+    if (memcmp(&a, &b, sizeof(a)))
+      Fatal("SaveV1: the packed tile layout dropped or mis-ordered a "
+            "LocationInfo field; fix the pack/unpack loops and the fill "
+            "list in v1GridProbe together");
+  }
+#endif
+
+/* Map's grid record (tag 672, K_EMBED -- the SCHEMA_REV 0 -> 1 change):
+     1: K_I16 sizeX      2: K_I16 sizeY     3: K_U8 elemSize (= 8)
+     4: K_BLOB packed    sizeX*sizeY*8 bytes -- the tile image above
+     5: K_BLOB glyphs    sizeX*sizeY*4 bytes -- LocationInfo::Glyph
+     6: K_BLOB memory    sizeX*sizeY*4 bytes -- LocationInfo::Memory
+     7: K_BLOB contents  sizeX*sizeY*4 bytes -- LocationInfo::Contents
+   Called only from the tag-672 embed in Map's ARCHIVE_CLASS body, so it
+   runs on the v1 path alone. Map's own sizeX/sizeY field lines sit ABOVE
+   the embed line (load-direction ordering), so on load they hold the
+   file's values by the time this runs; the record's own dimensions are
+   cross-checked against them, and elemSize must be 8 -- either
+   disagreement is corruption, named on stderr. The blob sizes are computed
+   in size_t from the already-bounded dimensions, and V1Blob's
+   CFILE_SANE_MAX_SIZE ceiling + full-width compare (see its own comment)
+   reject any lie about their lengths -- nothing is re-truncated here. */
+void Map::GridFieldsV1(Registry &r)
+  {
+    size_t n = (size_t)sizeX * (size_t)sizeY;
+    int16 gx = 0, gy = 0;
+    uint8 elem = 0;
+    uint8 *packed = NULL;
+    uint32 *glyphs = NULL, *memw = NULL;
+    hObj *conts = NULL;
+    size_t i;
+
+    if (r.Saving())
+      {
+#ifdef DEBUG
+        v1GridProbe();
+#endif
+        gx = sizeX; gy = sizeY; elem = 8;
+        if (Grid && n)
+          {
+            packed = (uint8*)  malloc(n * 8);
+            glyphs = (uint32*) malloc(n * 4);
+            memw   = (uint32*) malloc(n * 4);
+            conts  = (hObj*)   malloc(n * 4);
+            if (!packed || !glyphs || !memw || !conts)
+              {
+                free(packed); free(glyphs); free(memw); free(conts);
+                throw EMEMORY;
+              }
+            for (i = 0; i != n; i++)
+              {
+                v1PackTile(&Grid[i], packed + i * 8);
+                glyphs[i] = Grid[i].Glyph;
+                memw[i]   = Grid[i].Memory;
+                conts[i]  = Grid[i].Contents;
+              }
+          }
+      }
+
+    try
+      {
+        FIELD_I16(1, gx);
+        FIELD_I16(2, gy);
+        FIELD_U8 (3, elem);
+        if (r.Loading())
+          if (gx != sizeX || gy != sizeY || elem != 8)
+            {
+              fprintf(stderr,
+                  "incursion: the grid record claims %d x %d cells of %d "
+                  "bytes; the map's own fields say %d x %d of 8\n",
+                  (int)gx, (int)gy, (int)elem, (int)sizeX, (int)sizeY);
+              throw ECORRUPT;
+            }
+        r.V1Blob(4, (void**)&packed, n * 8);
+        r.V1Blob(5, (void**)&glyphs, n * 4);
+        r.V1Blob(6, (void**)&memw,   n * 4);
+        r.V1Blob(7, (void**)&conts,  n * 4);
+        if (r.Loading())
+          {
+            Grid = NULL;
+            if (n && packed && glyphs && memw && conts)
+              {
+                Grid = (LocationInfo*) malloc(sizeof(LocationInfo) * n);
+                if (!Grid)
+                  throw EMEMORY;
+                memset(Grid, 0, sizeof(LocationInfo) * n);
+                for (i = 0; i != n; i++)
+                  {
+                    v1UnpackTile(packed + i * 8, &Grid[i]);
+                    Grid[i].Glyph    = glyphs[i];
+                    Grid[i].Memory   = memw[i];
+                    Grid[i].Contents = conts[i];
+                  }
+              }
+            else if (packed || glyphs || memw || conts)
+              {
+                /* Some of the four payload blobs are empty and others are
+                   not: no writer produces that. (All four empty with a
+                   non-empty size leaves Grid NULL, and the trailing check
+                   in Map's ARCHIVE_CLASS body refuses that file.) */
+                fprintf(stderr, "incursion: the grid record is missing "
+                        "part of its payload\n");
+                throw ECORRUPT;
+              }
+          }
+      }
+    catch (...)
+      {
+        free(packed); free(glyphs); free(memw); free(conts);
+        throw;
+      }
+    free(packed); free(glyphs); free(memw); free(conts);
   }
 
 /* The four Array member specialisations, declared in inc/Map.h and

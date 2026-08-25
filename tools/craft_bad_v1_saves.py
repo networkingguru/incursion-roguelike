@@ -22,7 +22,8 @@ with FOUR fields because two cases expect SUCCESS rather than refusal:
                      the caller's baseline comparison).
 
 Usage: craft_bad_v1_saves.py <raw-v1.sav> <output-dir>
-           [<raw-creature-v1.sav> [<raw-character-v1.sav>]]
+           [<raw-creature-v1.sav> [<raw-character-v1.sav>
+           [<raw-full-save.sav>]]]
 
 The optional third file is the schematest 'creature' group's raw file (c.sav).
 It carries a Monster record, which the first file does not, and yields the
@@ -32,6 +33,11 @@ honour.
 The optional fourth file is the schematest 'character' group's raw file
 (e.sav). It carries a Player record, which neither of the others does, and
 yields the two mutants for a file-fed INDEX inside a Player.
+
+The optional fifth file is a real save from a smoke session run under
+INCURSION_V1_RAW=1. It is the only input with a Map record, and yields the
+grid_mismatch mutant; its caller drives that one through tools/dump_save.sh,
+the real load path, because -schemaload's harness groups carry no maps.
 """
 import struct
 import sys
@@ -52,8 +58,12 @@ K_STR, K_BLOB, K_RID, K_H, K_ARRAY, K_EMBED = 7, 8, 9, 10, 11, 12
 FIXED = {K_U8: 1, K_I8: 1, K_U16: 2, K_I16: 2, K_U32: 4, K_I32: 4,
          K_RID: 4, K_H: 4}
 SP_EFF = 3
+T_MAP = 4                         # inc/Defines.h
 T_MONSTER = 6                     # inc/Defines.h
 T_PLAYER = 7                      # inc/Defines.h
+MAP_SIZEX_TAG = 673               # Map::sizeX, inc/Map.h
+MAP_SIZEY_TAG = 674               # Map::sizeY, inc/Map.h
+MAP_GRID_TAG = 672                # Map's grid record, inc/Map.h
 CREATURE_TS_TAG = 256             # Creature::ts, inc/Creature.h
 CHAR_NOTIFIEDLEVEL_TAG = 421      # Character::NotifiedLevel, inc/Creature.h
 PLAYER_CAUTOBUFF_TAG = 521        # Player::cAutoBuff, inc/Creature.h
@@ -285,44 +295,78 @@ def craft_player_index_mutants(src_path, cases):
     cases.append(("player_notified_level_negative", f, "fail", CORRUPT))
 
 
+def craft_grid_mismatch(src_path, cases):
+    """One mutant from the raw-mode FULL save (the only input with a Map
+    record; the schematest groups carry none): the grid record's own sizeX
+    -- inner tag 1 of the tag-672 K_EMBED -- bumped by one, so it disagrees
+    with the map's already-loaded sizeX (outer tag 673). The reader's
+    cross-check must refuse the file with an stderr line naming the grid.
+    No length fixups: the mutated field is a fixed-size K_I16.
+    """
+    base = open(src_path, "rb").read()
+    v1 = V1File(base)
+    recs = [r for r in v1.records if r["type"] == T_MAP]
+    if not recs:
+        die("no T_MAP record in %s" % src_path)
+    grid = [fl for fl in recs[0]["fields"] if fl["tag"] == MAP_GRID_TAG]
+    if len(grid) != 1 or grid[0]["kind"] != K_EMBED:
+        die("expected exactly one tag-%d K_EMBED grid record in the Map "
+            "record; found %s" % (MAP_GRID_TAG,
+                                  [(g["tag"], g["kind"]) for g in grid]))
+    inner = grid[0]["off"] + 7          # tag (2) + kind (1) + embed len (4)
+    tag, kind = struct.unpack_from("<HB", base, inner)
+    if tag != 1 or kind != K_I16:
+        die("expected the grid record's first field to be tag 1 K_I16 "
+            "(sizeX); got tag %d kind %d" % (tag, kind))
+    off = inner + 3
+    sx, = struct.unpack_from("<h", base, off)
+    f = base[:off] + struct.pack("<h", sx + 1) + base[off + 2:]
+    cases.append(("grid_mismatch", f, "fail", "grid"))
+
+
 def craft_map_grid_overflow(cases):
-    """One synthesized file: a T_MAP record whose sizeX*sizeY grid product
-    overflows 32 bits so that its LOW 32 bits equal the crafted blob's
-    length exactly.
+    """One synthesized file: a T_MAP record whose sizeX*sizeY*8 packed-grid
+    product overflows 32 bits so that its LOW 32 bits equal the crafted
+    blob's length exactly.
 
     Built from scratch rather than mutated, because no schematest group
-    carries a Map record. The reader computes the expected grid size as
-    sizeof(LocationInfo)*sizeX*sizeY from the two already-loaded dimension
-    fields; a compare truncated to 32 bits would pass this file and hand
-    the game a 139 KB grid it will index as 214 million cells. The fixed
-    reader must refuse it: the 64-bit product exceeds both 2^32 and the
-    CFILE_SANE_MAX_SIZE allocation ceiling (inc/Term.h).
+    carries a Map record. The reader computes the expected packed-blob size
+    as sizeX*sizeY*8 from the two already-loaded dimension fields; a
+    compare truncated to 32 bits would pass this file and hand the game a
+    128 KB grid it will index as 536 million cells. The reader must refuse
+    it: the 64-bit product exceeds both 2^32 and the CFILE_SANE_MAX_SIZE
+    allocation ceiling (inc/Term.h), and V1Blob checks both in full width.
 
-    ELEM is sizeof(LocationInfo) == 20, hardcoded but safe: LocationInfo
-    is listed in SaveLayoutDigest() (src/AbiCheck.cpp), so its size cannot
-    change without orphaning every v0 save -- it is frozen by design. The
-    dimensions are the deterministic pick 32767 x 6554:
-    20*32767*6554 = 4,295,106,360 = 2^32 + 139,064.
+    ELEM is 8, hardcoded but safe: it is the packed tile size the wire
+    format pins (the packed-layout comment beside LocationInfo, inc/Map.h),
+    append-only by design. The record carries the grid K_EMBED's own
+    matching dimensions and elemSize, so the reader's grid cross-check
+    passes and the size check is what must bite. The dimensions are the
+    deterministic pick 32767 x 16385:
+    8*32767*16385 = 4,295,098,360 = 2^32 + 131,064.
     """
-    ELEM = 20
-    T_MAP = 4                             # inc/Defines.h
-    MAP_SIZEX_TAG, MAP_SIZEY_TAG, MAP_GRID_TAG = 673, 674, 672  # inc/Map.h
-    SX, SY = 32767, 6554
+    ELEM = 8
+    SX, SY = 32767, 16385
     total = ELEM * SX * SY
     lo32 = total & 0xFFFFFFFF
     if total <= (1 << 32) or lo32 >= (1 << 21):
         die("map_grid_size_overflow: the crafted dimensions no longer "
             "overflow the way the case needs")
 
+    inner = struct.pack("<HBh", 1, K_I16, SX)         # grid sizeX
+    inner += struct.pack("<HBh", 2, K_I16, SY)        # grid sizeY
+    inner += struct.pack("<HBB", 3, K_U8, ELEM)       # elemSize
+    inner += struct.pack("<HBI", 4, K_BLOB, lo32) + bytes(lo32)
+    inner += struct.pack("<H", 0)                     # embed terminator
     fields = struct.pack("<HBh", MAP_SIZEX_TAG, K_I16, SX)
     fields += struct.pack("<HBh", MAP_SIZEY_TAG, K_I16, SY)
-    fields += struct.pack("<HBI", MAP_GRID_TAG, K_BLOB, lo32) + bytes(lo32)
+    fields += struct.pack("<HBI", MAP_GRID_TAG, K_EMBED, len(inner)) + inner
     fields += struct.pack("<H", 0)                    # record terminator
     rec = struct.pack("<BII", T_MAP, 150, len(fields)) + fields
     payload = (rec + struct.pack("<I", SIGNATURE_TWO)
                    + struct.pack("<I", 0))            # empty name table
 
-    fh = struct.pack("<I", SIGNATURE) + b"IS1.0" + bytes(7) + bytes(72) \
+    fh = struct.pack("<I", SIGNATURE) + b"IS1.1" + bytes(7) + bytes(72) \
         + struct.pack("<hhh", 1, 0, 0)                # numGroups/Comp/nDeps
     fh += bytes(FH_SIZE - len(fh))                    # tail padding
     gh = struct.pack("<IiiiiiI", SIGNATURE, 0, len(payload), len(payload),
@@ -332,9 +376,10 @@ def craft_map_grid_overflow(cases):
 
 
 def main():
-    if len(sys.argv) not in (3, 4, 5):
+    if len(sys.argv) not in (3, 4, 5, 6):
         print("usage: craft_bad_v1_saves.py <raw-v1.sav> <output-dir> "
-              "[<raw-creature-v1.sav> [<raw-character-v1.sav>]]",
+              "[<raw-creature-v1.sav> [<raw-character-v1.sav> "
+              "[<raw-full-save.sav>]]]",
               file=sys.stderr)
         return 2
     src_path, out_dir = sys.argv[1], sys.argv[2]
@@ -432,11 +477,15 @@ def main():
         craft_creature_tcount(sys.argv[3], cases)
 
     # --- 10. the two Player index mutants, from the character file.
-    if len(sys.argv) == 5:
+    if len(sys.argv) >= 5:
         craft_player_index_mutants(sys.argv[4], cases)
 
     # --- 11. the synthesized 32-bit-truncation grid mutant.
     craft_map_grid_overflow(cases)
+
+    # --- 12. the grid-dimension mismatch, from the full raw save.
+    if len(sys.argv) == 6:
+        craft_grid_mismatch(sys.argv[5], cases)
 
     for name, contents, expect, detail in cases:
         path = os.path.join(out_dir, name + ".sav")
