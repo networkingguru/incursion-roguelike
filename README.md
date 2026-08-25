@@ -409,6 +409,8 @@ the unfixed tree before it is trusted.
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the gnomes its own refusal message names? |
 | `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? |
 | `check_escape_sweep.sh` | Does any string literal still spell a C escape with a forward slash, the way the port's path sweep wrote `/n` for `\n`? |
+| `check_horn_madness.sh` | Does the Horn of Madness drain and stun a bystander while sparing its blower from both halves? |
+| `check_horn_panic.sh` | Can the Horn of Panic frighten a failed-save bystander while sparing its blower? |
 | `check_huntsman_live.sh` | Does the Twilight Huntsman reach its own spell list, smite Law rather than Good, and track at the rate it claims to stack with? |
 | `check_key_directives.sh` | Do the key-script directives reach a menu entry by name, where counting rows could not? |
 | `check_layout.sh` | Does this build play the same game when its objects sit at different addresses? |

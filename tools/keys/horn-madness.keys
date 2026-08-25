@@ -1,0 +1,47 @@
+# Exercise both components of the Horn of Madness against a goblin and inspect
+# the goblin and blower before and after. Read by check_horn_madness.sh.
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+DOWN*9
+SPACE                   # Freeze Monsters
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*28                # Horns
+@until "Horn of Madness" DOWN
+DOWN
+ENTER
+1
+ENTER
+s
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT
+ENTER
+
+w
+@choose "Examine Nearby Things"
+@until "goblin (class" RIGHT
+@dump:goblin-before
+ESC
+
+a
+a
+@dump:blown
+
+w
+@choose "Examine Nearby Things"
+@until "goblin (class" RIGHT
+@dump:goblin-after-top
+ESC
+@quit

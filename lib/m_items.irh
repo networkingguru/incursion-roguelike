@@ -6256,14 +6256,24 @@ AI_HORN Effect "the Kobolds;horn" : EA_SUMMON
 AI_HORN Effect "Madness" : EA_DRAIN
   { SC_ENC; Level: PLUS_2PER1; sval: WILL;
     xval: AD_DAWI; pval: (PLUS_1PER1)d4;
-    aval: AR_GLOBE; cval: MAGENTA; lval: 6; }
+    aval: AR_GLOBE; cval: MAGENTA; lval: 6;
+    /* upstream: base-code defect: this shared game data is read identically
+       on Win32 with the original typedefs and compiler. Evidence tier:
+       Observed. Two defects share this line: the missing caster immunity is
+       tracked as inc-tek.8.8, the missing activation as inc-j4dy. NOT sent
+       upstream. */
+    Flags: EF_CASTER_IMMUNE, EF_ACTIVATE; }
 and EA_INFLICT
   { xval: STUNNED; aval: AR_GLOBE; lval: 6;
+    /* upstream: base-code defect: this shared game data is read identically
+       on Win32 with the original typedefs and compiler. Evidence tier:
+       Observed. Tracked as inc-j4dy. NOT sent upstream. */
+    Flags: EF_ACTIVATE2;
     Desc: "This baleful horn is carved with ancient horrors from
       the earliest days of Theyra. When it is blown, its strange,
       uluating tone shatters the minds of all who listen to it,
       causing them to become Stunned and to suffer 1d4 points of
-      Intelligence damage per magical plus the horn possesses. Its
+      Wisdom damage per magical plus the horn possesses. Its
       user is immune to the effect, provided that the item is
       identified and activated with a full understanding of what
       it is going to do."; }
@@ -6308,7 +6318,10 @@ AI_HORN Effect "Panic" : EA_INFLICT
   { SC_NEC; Level: 4; sval: WILL;
     xval: AFRAID; aval: AR_BALL; lval: 9; cval: CYAN;
     Purpose: EP_FOIL_PURSUIT | EP_CURSE; qval: 0;
-    Flags: EF_MENTAL , EF_CASTER_IMMUNE, EF_SOUND;
+    /* upstream: base-code defect: this shared game data is read identically
+       on Win32 with the original typedefs and compiler. Evidence tier:
+       Observed. Tracked as inc-j4dy. NOT sent upstream. */
+    Flags: EF_MENTAL , EF_CASTER_IMMUNE, EF_SOUND, EF_ACTIVATE;
     Desc: "Causes all other creatures within 90 feet of the user
       to become afraid, if they fail a Will saving throw.";
   }

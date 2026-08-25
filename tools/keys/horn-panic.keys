@@ -1,0 +1,41 @@
+# Exercise the Horn of Panic against a goblin and inspect the goblin and blower
+# after activation. Read by check_horn_panic.sh.
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+DOWN*9
+SPACE                   # Freeze Monsters
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*28                # Horns
+@until "Horn of Panic" DOWN
+DOWN
+ENTER
+1
+ENTER
+s
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT
+ENTER
+
+a
+a
+@dump:blown
+
+w
+@choose "Examine Nearby Things"
+@until "goblin (class" RIGHT
+@dump:goblin-after-stati
+ESC
+@quit
