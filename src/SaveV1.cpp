@@ -194,6 +194,19 @@ struct V1SegPending {
 };
 
 static V1SegPending v1Seg[MAX_MODULES];
+
+/* The module manifest is parsed while the save group still owns its input
+   buffer, then consumed by later phases after the modules have reloaded.
+   Keep owned copies here, beside the pending segment state with the same
+   lifetime. */
+struct V1ManifestPending {
+    bool    present;
+    uint32  lengths[21];
+    char  **names;              /* owned, in pool/position wire order */
+    uint32  nameCount;
+};
+
+static V1ManifestPending v1Manifest[MAX_MODULES];
 /* True once a v1 Game record's segment loop ran this load: the deferred
    placement then DEMANDS a record for every loaded module (a module whose
    record is missing would otherwise play with a NULL MDataSeg). */
@@ -770,6 +783,15 @@ static void v1SegFree(void)
   {
     for (int i = 0; i != MAX_MODULES; i++)
       {
+        V1ManifestPending *mp = &v1Manifest[i];
+        if (mp->names)
+          {
+            for (uint32 k = 0; k != mp->nameCount; k++)
+              free(mp->names[k]);
+            free(mp->names);
+          }
+        memset(mp, 0, sizeof(*mp));
+
         V1SegPending *sp = &v1Seg[i];
         if (sp->rows)
           {
@@ -1363,6 +1385,115 @@ void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
     const V1Ent *eScript = v1Find(1);
     const V1Ent *eCount  = v1Find(2);
     const V1Ent *eRows   = v1Find(3);
+    const V1Ent *eLengths = v1Find(4);
+    const V1Ent *eNames   = v1Find(5);
+
+    /* The writer emits a manifest even when this slot has no memory
+       segment, so this must precede the empty-embed return below. */
+    if (!!eLengths != !!eNames)
+      {
+        Error("SaveV1: module slot %d has only one of manifest tags 4 and 5",
+              slot);
+        throw ECORRUPT;
+      }
+    if (eLengths)
+      {
+        V1ManifestPending *mp = &v1Manifest[slot];
+        if (mp->present)
+          {
+            Error("SaveV1: module slot %d has two manifests", slot);
+            throw ECORRUPT;
+          }
+        if (eLengths->kind != K_ARRAY)
+          {
+            Error("SaveV1: module slot %d manifest tag 4 is not an array",
+                  slot);
+            throw ECORRUPT;
+          }
+        uint32 count, elemSize;
+        memcpy(&count, eLengths->pay, 4);
+        memcpy(&elemSize, eLengths->pay + 4, 4);
+        if (count != 21 || elemSize != sizeof(uint32))
+          {
+            Error("SaveV1: module slot %d manifest lengths have count %u "
+                  "and element size %u; expected 21 and %lu", slot,
+                  (unsigned)count, (unsigned)elemSize,
+                  (unsigned long)sizeof(uint32));
+            throw ECORRUPT;
+          }
+        if (eNames->kind != K_BLOB)
+          {
+            Error("SaveV1: module slot %d manifest tag 5 is not a blob",
+                  slot);
+            throw ECORRUPT;
+          }
+
+        unsigned long long total = 0;
+        for (int p = 0; p != 21; p++)
+          {
+            uint32 length;
+            memcpy(&length, eLengths->pay + 8 + p * sizeof(uint32),
+                   sizeof(length));
+            if (length > 0xFFFFFFu)
+              {
+                Error("SaveV1: module slot %d manifest array %d length %u "
+                      "exceeds 0xFFFFFF", slot, p, (unsigned)length);
+                throw ECORRUPT;
+              }
+            total += (unsigned long long)length;
+            if (total > 0xFFFFFFu)
+              {
+                Error("SaveV1: module slot %d manifest length sum exceeds "
+                      "0xFFFFFF at array %d", slot, p);
+                throw ECORRUPT;
+              }
+            mp->lengths[p] = length;
+          }
+
+        if (total)
+          {
+            mp->names = (char**) calloc((size_t)total, sizeof(char*));
+            if (!mp->names)
+              throw EMEMORY;
+          }
+        const uint8 *p = eNames->pay;
+        size_t len = eNames->size, pos = 0;
+        for (uint32 k = 0; k != (uint32)total; k++)
+          {
+            uint16 nameLen;
+            if (len - pos < sizeof(nameLen))
+              {
+                Error("SaveV1: module slot %d manifest name %u has no "
+                      "complete length", slot, (unsigned)k);
+                throw ECORRUPT;
+              }
+            memcpy(&nameLen, p + pos, sizeof(nameLen));
+            pos += sizeof(nameLen);
+            if (nameLen > len - pos)
+              {
+                Error("SaveV1: module slot %d manifest name %u length %u "
+                      "runs past the blob", slot, (unsigned)k,
+                      (unsigned)nameLen);
+                throw ECORRUPT;
+              }
+            mp->names[k] = (char*) malloc((size_t)nameLen + 1);
+            if (!mp->names[k])
+              throw EMEMORY;
+            memcpy(mp->names[k], p + pos, nameLen);
+            mp->names[k][nameLen] = 0;
+            mp->nameCount = k + 1; /* now, so a later throw frees this name */
+            pos += nameLen;
+          }
+        if (pos != len)
+          {
+            Error("SaveV1: module slot %d manifest blob has %lu trailing "
+                  "bytes after %u names", slot, (unsigned long)(len - pos),
+                  (unsigned)mp->nameCount);
+            throw ECORRUPT;
+          }
+        mp->present = true;
+      }
+
     if (!eScript && !eCount && !eRows)
       return;                   /* an empty embed: slot not in use */
     if (!eScript || !eCount || !eRows)
