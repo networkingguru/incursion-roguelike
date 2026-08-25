@@ -1496,8 +1496,20 @@ void TargetSystem::FieldsV1(Registry &r)
      crafted file is any of 256 values, and a bool holding one of the other
      254 is undefined behaviour the moment anything reads it. */
   FIELD_U8(2, retarget);
-  if (r.Loading())
+  if (r.Loading()) {
+    /* Bounds first, before anything walks the array. tCount is a uint8, so
+       the wire can offer 0-255, and t[] holds NUM_TARGETS == 32. Everything
+       that reads a TargetSystem bounds itself by tCount and not by
+       NUM_TARGETS -- TargetSystem::SanitizeLoadedTargets, which the v1
+       reader calls on every creature record it loads (src/SaveV1.cpp), WRITES
+       through that loop: memset(&t[i].data, 0, 8) in its default arm. A
+       tCount of 255 would therefore memset up to 11 KB past the end of the
+       1696-byte allocation the record was read into. A value the reader
+       cannot honour is corruption, per the wire format's reader rules. */
+    if (tCount > NUM_TARGETS)
+      throw ECORRUPT;
     shouldRetarget = retarget != 0;
+  }
 
   for (int i = 0; i < NUM_TARGETS; i++) {
     /* One embed per slot, tag 3+i. EVERY slot travels, not just the first

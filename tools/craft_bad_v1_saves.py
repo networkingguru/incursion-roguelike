@@ -21,7 +21,12 @@ with FOUR fields because two cases expect SUCCESS rather than refusal:
                      stdout must contain ("" = no extra requirement beyond
                      the caller's baseline comparison).
 
-Usage: craft_bad_v1_saves.py <raw-v1.sav> <output-dir>
+Usage: craft_bad_v1_saves.py <raw-v1.sav> <output-dir> [<raw-creature-v1.sav>]
+
+The optional third file is the schematest 'creature' group's raw file (c.sav).
+It carries a Monster record, which the first file does not, and yields the
+one mutant that needs a creature: a count field whose value the reader cannot
+honour.
 """
 import struct
 import sys
@@ -42,6 +47,9 @@ K_STR, K_BLOB, K_RID, K_H, K_ARRAY, K_EMBED = 7, 8, 9, 10, 11, 12
 FIXED = {K_U8: 1, K_I8: 1, K_U16: 2, K_I16: 2, K_U32: 4, K_I32: 4,
          K_RID: 4, K_H: 4}
 SP_EFF = 3
+T_MONSTER = 6                     # inc/Defines.h
+CREATURE_TS_TAG = 256             # Creature::ts, inc/Creature.h
+NUM_TARGETS = 32                  # inc/Target.h
 
 CORRUPT = "File is Corrupt"       # ECORRUPT, src/Tables.cpp FileErrors
 
@@ -172,10 +180,43 @@ def fix_record_length(data, rec_off, delta):
         + data[rec_off + 9:]
 
 
+def craft_creature_tcount(src_path, cases):
+    """One mutant from the creature file: TargetSystem::tCount = 255.
+
+    tCount is a uint8 on the wire and t[] holds NUM_TARGETS == 32 slots, and
+    everything that walks a TargetSystem bounds itself by tCount -- including
+    TargetSystem::SanitizeLoadedTargets, which the v1 reader runs on every
+    creature record and which WRITES through that loop. Unbounded, a tCount
+    of 255 memsets about 11 KB past the end of the record's allocation. The
+    reader must refuse the file instead.
+    """
+    base = open(src_path, "rb").read()
+    v1 = V1File(base)
+    recs = [r for r in v1.records if r["type"] == T_MONSTER]
+    if len(recs) != 1:
+        die("expected exactly one T_MONSTER record in %s, found %d"
+            % (src_path, len(recs)))
+    ts = [fl for fl in recs[0]["fields"] if fl["tag"] == CREATURE_TS_TAG]
+    if len(ts) != 1 or ts[0]["kind"] != K_EMBED:
+        die("expected exactly one tag-%d K_EMBED field (Creature::ts)"
+            % CREATURE_TS_TAG)
+    # tag (2) + kind (1) + embed length (4), then the nested field stream.
+    inner = ts[0]["off"] + 7
+    tag, kind = struct.unpack_from("<HB", base, inner)
+    if tag != 1 or kind != K_U8:
+        die("expected TargetSystem's first embedded field to be tag 1 K_U8 "
+            "(tCount); got tag %d kind %d" % (tag, kind))
+    off = inner + 3
+    if base[off] > NUM_TARGETS:
+        die("the genuine file already carries tCount=%d" % base[off])
+    f = base[:off] + bytes([255]) + base[off + 1:]
+    cases.append(("creature_tcount_overflow", f, "fail", CORRUPT))
+
+
 def main():
-    if len(sys.argv) != 3:
-        print("usage: craft_bad_v1_saves.py <raw-v1.sav> <output-dir>",
-              file=sys.stderr)
+    if len(sys.argv) not in (3, 4):
+        print("usage: craft_bad_v1_saves.py <raw-v1.sav> <output-dir> "
+              "[<raw-creature-v1.sav>]", file=sys.stderr)
         return 2
     src_path, out_dir = sys.argv[1], sys.argv[2]
     os.makedirs(out_dir, exist_ok=True)
@@ -266,6 +307,10 @@ def main():
     f, delta = splice(base, ent["off"], ent["size"], ins)
     f = fix_sizes(f, delta)
     cases.append(("bad_ordinal", f, "fail", ent["name"]))
+
+    # --- 9. creature_tcount_overflow, from the creature file when given.
+    if len(sys.argv) == 4:
+        craft_creature_tcount(sys.argv[3], cases)
 
     for name, contents, expect, detail in cases:
         path = os.path.join(out_dir, name + ".sav")

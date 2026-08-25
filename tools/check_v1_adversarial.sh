@@ -10,6 +10,10 @@
 #     must SUCCEED, with the surviving field lines intact -- the skip rule
 #     and the constructed-default rule at work.
 #
+# One case, creature_tcount_overflow, is crafted from the creature group's
+# file rather than the item group's: it needs a count field inside a Creature
+# whose value the reader cannot honour.
+#
 # Skeleton and safety assertions as in tools/check_load_corrupt.sh: every
 # headless invocation carries < /dev/null and -timeout (a binary that
 # predates a flag would otherwise start an interactive session and hang),
@@ -44,6 +48,10 @@ if ! INCURSION_V1_RAW=1 ./incursion-headless -schematest "$WORK" -timeout 120 \
 fi
 BASE="$WORK/a.sav"
 [ -f "$BASE" ] || { fail "no a.sav produced"; exit 1; }
+# The creature group's file. a.sav holds Item records only, and the one
+# mutant that needs a count field inside a Creature needs a Monster record.
+CREATURE="$WORK/c.sav"
+[ -f "$CREATURE" ] || { fail "no c.sav produced"; exit 1; }
 
 # --- 2. the genuine file itself must load, and its field lines are the
 #        baseline the 'ok' mutants are compared against ---
@@ -61,7 +69,7 @@ if [ "$BASE_FIELD_COUNT" -eq 0 ]; then
 fi
 
 # --- 3. craft the mutants ---
-if ! python3 tools/craft_bad_v1_saves.py "$BASE" "$WORK/mutants" \
+if ! python3 tools/craft_bad_v1_saves.py "$BASE" "$WORK/mutants" "$CREATURE" \
         > "$WORK/craft.log" 2> "$WORK/craft.err"; then
     cat "$WORK/craft.err"
     fail "tools/craft_bad_v1_saves.py failed -- see above (a wire-format drift check may have tripped; investigate, do not silence)"
@@ -133,8 +141,8 @@ while IFS='|' read -r name path expect detail; do
     esac
 done < "$WORK/craft.log"
 
-if [ "$CASE_COUNT" -lt 14 ]; then
-    fail "only $CASE_COUNT cases ran; the crafting script should emit one per record boundary twice, plus six more"
+if [ "$CASE_COUNT" -lt 15 ]; then
+    fail "only $CASE_COUNT cases ran; the crafting script should emit one per record boundary twice, plus seven more"
 fi
 
 # --- 5. the safety claim: nothing touched the real save/ directory ---
@@ -145,9 +153,9 @@ fi
 
 if [ "$FAILED" -eq 0 ]; then
     echo "PASS: all $CASE_COUNT v1 adversarial cases behaved: truncations and"
-    echo "      the wrong-kind/bad-name/bad-ordinal mutants were refused with"
-    echo "      the expected errors; the unknown-tag and deleted-tag mutants"
-    echo "      loaded with the skip/default rules intact."
+    echo "      the wrong-kind/bad-name/bad-ordinal/tcount mutants were"
+    echo "      refused with the expected errors; the unknown-tag and"
+    echo "      deleted-tag mutants loaded with the skip/default rules intact."
     exit 0
 fi
 exit 1

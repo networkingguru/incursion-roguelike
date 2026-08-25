@@ -938,7 +938,12 @@ void Registry::V1RidStatus(uint16 tag, Status &s)
 void Registry::V1Array(uint16 tag, void *p, size_t elemSize, uint32 count)
   {
     if (v1.mode == V1_OFF)
-      return;   /* unreached: FIELD_ARRAY appears only in FieldsV1 bodies */
+      /* REACHED, and it must stay a no-op return. FIELD_ARRAY sits in an
+         ARCHIVE_CLASS body -- Creature's Attr[ATTR_LAST] (inc/Creature.h) --
+         so the v0 save and load paths run this line for every creature. The
+         v0 raw dump already carries the array's bytes; writing anything here
+         would corrupt the v0 format. */
+      return;
     if (v1.mode == V1_SAVE)
       {
         /* A fixed array is a field like any other, so it covers its own
