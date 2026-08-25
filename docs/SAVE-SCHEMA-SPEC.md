@@ -358,9 +358,19 @@ blob inside the segment record, length-checked against the loaded module's
 
 * A file whose schema revision is **newer** than the running binary MUST be
   refused, loudly, naming both revisions.
-* A file whose schema revision is **older** MUST load. Fields the binary knows
-  and the file lacks keep their constructed defaults; the next save writes the
-  current format.
+* A file whose schema revision is **older** MUST load, DOWN TO A DECLARED
+  FLOOR. Fields the binary knows and the file lacks keep their constructed
+  defaults; the next save writes the current format.
+* The floor is `MIN_READ_REV`, and a file below it MUST be refused as loudly
+  as a newer one, naming both revisions. The floor exists because the
+  older-revision rule above holds only while the change was ADDITIVE. A
+  revision that deletes a reader is not additive: `IS1.3` deleted the code
+  that read a name-table reference and a name-keyed memory row, and those
+  rows travel inside one opaque blob, so nothing in the shape of an `IS1.2`
+  file tells the reader that the interior cuts have moved. Such a file MUST
+  NOT be handed to the new reader on the chance that a bounds check catches
+  it. `MIN_READ_REV` is 3 today, and MUST rise with any future revision that
+  deletes a reader.
 * Within a revision, an unknown field tag MUST refuse the load, per "Records"
   above.
 
@@ -449,7 +459,15 @@ Illegal changes, which MUST refuse:
    only the length changes. The refusal MUST come from the length alone. Run
    this with a save that references nothing in the missing range, to prove the
    refusal does not depend on catching a dangling reference.
-9. **Newer revision.** A file stamped one schema revision newer.
+9. **Newer revision.** A file stamped one schema revision newer. The stamp
+   MUST be taken from a file the run itself produced, never written as a
+   constant: a hard-coded revision stops testing the gate the day
+   `SCHEMA_REV` moves.
+9a. **Revision below the floor.** A file stamped below `MIN_READ_REV`.
+9b. **Malformed stamp.** Digits followed by anything but NUL padding, in all
+    twelve bytes of `fileHeader.Version`. It MUST be refused as malformed
+    rather than read as the revision its leading digits spell, and the
+    refusal MUST print the stamp bounded to twelve bytes.
 10. **Unknown tag.** A file carrying a field tag the binary does not know.
 11. **Adversarial.** Truncation at every record boundary; manifest lengths that
     overflow, that disagree with the name count, or that exceed the loaded

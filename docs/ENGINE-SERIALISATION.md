@@ -12,9 +12,9 @@ I ran; commands at the bottom). Normative spec: `docs/SAVE-SCHEMA-SPEC.md`.
 
 - **v1** is what `Game::SaveGame` writes (src/Registry.cpp:1199-1212): the
   96-byte `fileHeader` and 28-byte `groupHeader` shapes survive, but the
-  payload is a stream of tagged records plus a resource name table, deflated
-  with zlib level 6. The stamp is `SaveSchemaID()` — `"IS1."` + the schema
-  revision, `"IS1.3"` today (src/SaveV1.cpp:51-59).
+  payload is a stream of tagged records, deflated with zlib level 6. The
+  stamp is `SaveSchemaID()` — `"IS1."` + the schema revision, `"IS1.3"`
+  today (src/SaveV1.cpp:73-79).
 - **v0** is the legacy raw-memory format described further down. The v0
   reader stays in the binary for every save written before the switch, and
   modules stay on the raw path entirely: `Game::SaveModule`
@@ -26,7 +26,7 @@ I ran; commands at the bottom). Normative spec: `docs/SAVE-SCHEMA-SPEC.md`.
   version and throws `EBADVER`; anything else falls through to the v0 raw
   reader. `Game::LoadGame` lists v1 saves beside the v0 files this binary's
   own stamp matches (:1262-1266).
-- `incursion -convert <file>` (`RunSaveConvert`, src/SaveV1.cpp:4445)
+- `incursion -convert <file>` (`RunSaveConvert`, src/SaveV1.cpp:4902)
   rewrites a v0 save as v1, leaving the v0 bytes in a `<name>.v0` sibling.
   The two committed evidence fixtures are refused by a realpath guard;
   tools/check_convert_guard.sh proves both directions.
@@ -41,8 +41,8 @@ I ran; commands at the bottom). Normative spec: `docs/SAVE-SCHEMA-SPEC.md`.
 | `ARCHIVE_CLASS` / `END_ARCHIVE` | inc/Base.h:778 / :785 |
 | `class Registry` (`saveMode`, `loadMode`, `hCurrent`) | inc/Base.h:789 |
 | v0 `Registry::SaveGroup` / `LoadGroup` (+ v1 dispatch) | src/Registry.cpp:664 / :834 (:857-862) |
-| v1 `Registry::SaveGroupV1` / `LoadGroupV1` | src/SaveV1.cpp:2248 / :2402 |
-| `SCHEMA_REV`, `SaveSchemaID()`, `SaveV1_Raw()` | src/SaveV1.cpp:41-72 |
+| v1 `Registry::SaveGroupV1` / `LoadGroupV1` | src/SaveV1.cpp:2705 / :2875 |
+| `SCHEMA_REV`, `SaveSchemaID()`, `SaveV1_Raw()` | src/SaveV1.cpp:42-92 |
 | `Registry::Block` (v0 pointer/handle swap) | src/Registry.cpp:352 |
 | `typeSize()` (bytes per object type) | src/Registry.cpp:289 |
 | `Game::SaveGame` / `LoadGame` | src/Registry.cpp:1111 / :1227 |
@@ -71,10 +71,10 @@ migration allowance that is marked for deletion.
 
 `fh.Compression` was declared and never assigned or tested in the original
 code; **v1 gave it a meaning**: 1 = the payload is zlib level 6
-(src/SaveV1.cpp:2349-2369), 0 = raw, which DEBUG builds write when
+(src/SaveV1.cpp:2792-2801), 0 = raw, which DEBUG builds write when
 `INCURSION_V1_RAW=1` so the mutation tools can craft byte-exact test files
-(src/SaveV1.cpp:61-72). The v1 reader follows the file's field
-(src/SaveV1.cpp:2468-2498). The v0 paths still ignore it: v0's LZ-versus-RLE
+(src/SaveV1.cpp:84-92). The v1 reader follows the file's field
+(src/SaveV1.cpp:2966-2996). The v0 paths still ignore it: v0's LZ-versus-RLE
 choice is a **caller argument, not a file field** — `SaveGroup`/`LoadGroup`
 take `use_lz`, the v0 save path passes `false` (src/Registry.cpp:1303),
 modules pass `true` (:1334, :1410, :1441), and src/Term.cpp:3525-3536 picks
@@ -88,17 +88,19 @@ After the two headers, the payload (zlib-deflated unless `Compression` is 0):
 ```
 objCount x record
 uint32  SIGNATURE_TWO       separator, as v0
-name table:
-    uint32  entryCount
-    entryCount x entry
 ```
 
 `groupSize` is the uncompressed payload size, `compSize` the compressed
 size, `objCount` the record count, `dataCount` always 0 — v1 has no
 data-block section; `FIELD_STR`/`FIELD_BLOB` write contents inline.
-Trailing bytes after the name table are `ECORRUPT` (src/SaveV1.cpp:2690).
+`SIGNATURE_TWO` ends the group: any trailing byte after it is `ECORRUPT`
+(src/SaveV1.cpp:3141-3146).
 
-One record per object (written at src/SaveV1.cpp:2284-2298):
+There is no name table. `IS1.0` through `IS1.2` ended the payload with one,
+and every `rID` in the file was an index into it; the manifest replaced it at
+`IS1.3` and it was deleted with its last user.
+
+One record per object (written at src/SaveV1.cpp:2747-2754):
 
 ```
 uint8   type        the T_* constant
@@ -116,13 +118,25 @@ sizes for `K_U8..K_I32`, `K_RID`, `K_H`; length-prefixed for
 `K_STR`/`K_BLOB`/`K_EMBED`; `count`/`elemSize` header for `K_ARRAY`;
 `K_EMBED` is a nested field stream with its own tag scope and terminator.
 
-**Extensibility and corruption, one rule each way.** A tag the reader knows,
-it stores. A tag it does not know, it skips by kind. A known tag it does not
-meet stays at the zeroed default construction gave it. An unknown *kind*
-cannot be sized and throws `ECORRUPT`; an unknown record *type* is skipped
-whole via `length`. A known tag carrying a kind other than the one the field
-list declares is `ECORRUPT` — the file and the binary disagree about a field
-both claim to know; it is never coerced.
+**Extensibility and corruption. The two directions are not symmetric.** A tag
+the reader knows, it stores. A known tag it does not meet stays at the zeroed
+default construction gave it — that is what lets a field be added without
+invalidating the saves written before it.
+
+A tag the reader does NOT know is `ECORRUPT`, and this is the half that
+inverted at `IS1.3`. It used to be skipped by kind. Skipping is safe only for
+the missing direction: a file that is MISSING a tag is merely older than the
+binary, while a file carrying an EXTRA one holds state this binary cannot
+honour, and skipping it loads an object that is silently incomplete. The
+scanner keeps the unknown entry and marks it unused; the field list gets its
+chance to ask for it; closing the scope refuses if anything is left unasked,
+naming the tag (src/SaveV1.cpp:2066-2110).
+
+An unknown *kind* cannot be sized and throws `ECORRUPT` in the scanner
+itself; an unknown record *type* is still skipped whole via `length`, which
+is the same extensibility rule one level up. A known tag carrying a kind
+other than the one the field list declares is `ECORRUPT` — the file and the
+binary disagree about a field both claim to know; it is never coerced.
 
 **Field declarations.** `FIELD_*` macro lines inside the existing
 `ARCHIVE_CLASS` bodies (inc/Base.h:754-776) serve the v0 path (scalar macros
@@ -134,47 +148,117 @@ order, not tag order: load-direction fixups sit below the fields they read
 reused and never change; a new field takes the next unused number in its
 class's range (inc/Base.h:743-752).
 
-**The name table.** Every `rID` a record carries travels as `K_RID`: a
-uint32 index into the file's own name table (0xFFFFFFFF is the null rID).
-An entry is `pool`(1) — the `SP_*` id, because `T_TNPC` and `T_TCLASS`
-share a Type byte — `moduleSlot`(1), `ordinal`(2, count of earlier
-same-pool same-name resources in declaration order), `nameLen`(2), then the
-name bytes (src/SaveV1.cpp:2328-2339). Resolution is case-SENSITIVE
-`strcmp` — never `stricmp`; case-folded names are not unique in this
-module. An unresolvable entry, or an ordinal at or past the count of
-same-named resources, **aborts the load naming every failing entry**; it is
-never zeroed and never skipped.
+**References travel as the plain `rID` (since IS1.3).** Every `rID` a record
+carries is written as `K_RID`: the engine's own 32-bit value, unchanged, with
+0 as the null reference (src/SaveV1.cpp:2229-2256). No name and no ordinal
+travel with it. An `rID` is a module slot in the top byte (slot + 1) and a
+flat index across that module's 21 resource arrays in the low 24 bits, so the
+value means nothing without the array lengths that produced it. Those lengths
+are the manifest, below.
 
-**Deferred resolution.** Records are read before the name table, and both
-load paths reload modules only after the save group (src/Registry.cpp:1328-1346,
-src/Dump.cpp:200-228). So a v1 load stores the table index in the `rID`
-slot and queues the slot; one `SaveV1_ResolveNames()` call after each
-path's module reload (src/Registry.cpp:1359, src/Dump.cpp:228) resolves
-every queued slot or aborts. A v0 load queues nothing.
+**The module manifest (Game tag 816, per slot, tags 4 and 5, since IS1.3).**
+Inside the same per-slot scope as the memory segment, where inner tag `1+i`
+already addresses slot `i`:
+
+```
+tag 4  K_ARRAY  count 21, elemSize 4, then 21 x uint32
+                the length of each resource array, SP_MON..SP_ENC in order
+tag 5  K_BLOB   every resource name, array by array, position by position:
+                  uint16 nameLen + nameLen bytes, no NUL
+                the name count MUST equal the sum of the 21 lengths
+```
+
+Written by `v1WriteModuleManifest()` (src/SaveV1.cpp:920-970), parsed by
+`SaveV1_SegmentFields()` into a structure that outlives the save group
+(src/SaveV1.cpp:1551-1657). The parse validates shape only — 21 lengths, a
+bounded sum, no name running past the blob, no trailing bytes — because
+`Game::Modules` is stale or zeroed at that point. A malformed manifest is
+`ECORRUPT`, named by slot and array.
+
+The manifest is what makes a reference portable. On load, `SaveV1_ResolveNames()`
+splits the saved `rID` into (slot, index), walks the MANIFEST's lengths to turn
+the index into an (array, position) pair, then walks the LOADED module's lengths
+to rebuild the index (src/SaveV1.cpp:1160-1240). A resource appended to `lib/`
+after the save was written shifts every later `rID`, and this conversion is what
+survives that shift.
+
+**The append-only rule, and the three refusals that police it.** The
+conversion above is sound only while positions are stable. Three checks run
+in `SaveV1_ResolveNames()` (src/SaveV1.cpp:1885-1935), all of them BEFORE any
+reference is converted, because a moved array makes every position in it a
+lie:
+
+1. **Shrink** — any loaded array shorter than the manifest recorded means a
+   resource was removed. `ECORRUPT`, naming the array, the recorded length
+   and the length found (src/SaveV1.cpp:972-1016). It runs over all 21 arrays
+   whether or not a saved reference falls in the missing range: the removal
+   is the defect either way.
+2. **Slide** — two or more CONSECUTIVE positions where the name now present
+   is the one recorded one place earlier (an insertion) or one place later
+   (a removal). One such match can be coincidence — `Flavour` holds
+   same-case duplicate names — so one is not enough
+   (src/SaveV1.cpp:1051-1147).
+3. **Shuffle** — the compared range holds the same names as a multiset with
+   at least one at a different position.
+
+Everything else loads in silence. One changed name, ten, or every name in an
+array is a rename or a deliberate replacement, and it MUST load; the drift
+rules exist to catch resources that MOVED, not resources that were renamed.
+Comparison is case-SENSITIVE `strcmp` — never `stricmp`; case-folded names
+are not unique in this module.
+
+**Two blind spots, named in the code.** An insertion at the LAST compared
+position slides exactly one entry inside the range, one short of a slide, and
+cannot be told from a rename. Renaming an array WHILE reordering it leaves no
+surviving name to line up and no multiset to compare. The build-time order
+ledger sees both, because there they are moved lines in a diff; it is tracked
+separately and does not exist yet.
+
+**Deferred resolution.** Both load paths reload modules only after the save
+group (src/Registry.cpp:1317-1334, src/Dump.cpp:151-172), so at the moment a
+record is read there is no module to convert against. A v1 load parks the
+saved `rID` in its own slot and queues the slot's address; one
+`SaveV1_ResolveNames()` call after each path's module reload converts every
+queued slot or aborts. A failure is never zeroed and never skipped. A v0 load
+queues nothing.
 
 **The packed grid (Map tag 672, since IS1.1).** The map grid is not dumped
 as raw `LocationInfo` (20 bytes each, bitfield order at the compiler's
 whim) but as a `K_EMBED` record: dimensions, an elemSize of 8, then four
 sibling blobs — the 8-byte packed tile image, and the `Glyph`, `Memory`
-and `Contents` words (record shape src/SaveV1.cpp:2087-2101, layout comment
+and `Contents` words (record shape src/SaveV1.cpp:2545-2558, layout comment
 and `static_assert`s inc/Map.h:59-76). The packed tile is port-defined:
 Region and Terrain bytes, sixteen flag bits in declaration order, sixteen
 Visibility bits, sixteen reserved. A DEBUG probe fills a tile with all-ones
 field by field, packs, unpacks and compares, so a flag added to the struct
-but not the pack loops fails at first save (src/SaveV1.cpp:2048-2085).
+but not the pack loops fails at first save (src/SaveV1.cpp:2513-2543).
 
-**The memory rows (Game tag 816, since IS1.2).** The per-module resource
-memory segment (`MDataSeg`) is not a raw blob but, per slot: the script
-data segment with its own length, then name-keyed rows — one per
-Mon/Item/Eff/Reg memory entry, keyed by pool + ordinal + inline name
-(record shape src/SaveV1.cpp:1092-1111). A module rebuild that adds,
-removes or reorders resources no longer shifts every row. A row naming a
-resource the module no longer has is **discarded** — a row is annotation,
-not a reference — but the flavour `rID` values inside `EffMem` go through
-the global name table and keep abort semantics. Placement runs inside
-`SaveV1_ResolveNames()`, after the module reload (src/SaveV1.cpp:1323).
+**The memory rows (Game tag 816, since IS1.2; position-keyed since IS1.3).**
+The per-module resource memory segment (`MDataSeg`) is not a raw blob but,
+per slot: tag 1, the script data segment with its own length; tag 2, a
+`rowCount`; tag 3, that many packed rows — one per Mon/Item/Eff/Reg memory
+entry (record shape src/SaveV1.cpp:1407-1440). A row is:
 
-**Schema revisions.** `SCHEMA_REV` (src/SaveV1.cpp:41-51) is the decimal
+```
+u8   rowKind    0=MonMem 1=ItemMem 2=EffMem 3=RegMem
+u8   pool       SP_MON/SP_ITM/SP_EFF/SP_REG, and it must match rowKind —
+                the redundancy is a cheap consistency check
+u32  position   the resource's position within that array, in the SAVE's
+                numbering, which the slot's manifest supplies
+u8   payLen  +  payload; EffMem's is its two flavour rIDs plus one
+                Known/Tried/PKnown/PTried flags byte
+```
+
+At `IS1.2` a row carried an inline pool, ordinal and name, and a row naming a
+resource the module no longer had was **discarded** — a row is annotation,
+not a reference. `IS1.3` deleted that case. Under the append-only rule a
+recorded position always exists in the loaded module, so a position the
+manifest does not cover is `ECORRUPT`, not a discard. The flavour `rID`s
+inside `EffMem` convert through the manifest exactly like any other
+reference, and keep abort semantics. Placement runs inside
+`SaveV1_ResolveNames()`, after the module reload.
+
+**Schema revisions.** `SCHEMA_REV` (src/SaveV1.cpp:42-53) is the decimal
 after `"IS1."`. Any change to the meaning of an existing tag or record
 shape bumps it:
 
@@ -183,36 +267,67 @@ shape bumps it:
 | `IS1.0` | the initial v1 format: tagged records + name table |
 | `IS1.1` | Map tag 672: raw `LocationInfo` blob → packed grid record |
 | `IS1.2` | Game tag 816: raw `MDataSeg` blobs → script blob + name-keyed memory rows |
-| `IS1.3` | Game tag 816: each slot gained the module manifest — tag 4, the 21 array lengths; tag 5, every resource name in position order |
+| `IS1.3` | Game tag 816: each slot gained the module manifest — tag 4, the 21 array lengths; tag 5, every resource name in position order. With it: a reference became the plain `rID`, a memory row became (array, position), and the name table was deleted with its last user |
 
-The reader rejects a revision it does not implement with a clean error
-naming both revisions, the file's and the binary's, and reads nothing
-(src/SaveV1.cpp:2414-2425).
+`MIN_READ_REV` (src/SaveV1.cpp:55-71) is the oldest revision the binary can
+still READ, and it is 3. Revisions 0 to 2 are refused by their stamp, not
+left to fail on their own shape: phases 3 and 4 of the manifest work deleted
+the only code that understood a name-table reference and a name-keyed memory
+row. Those rows live inside one `K_BLOB`, so the scanner cannot see that the
+interior cuts have moved — it would hand old bytes to the new reader, which
+would read a pool byte as an array id. Some of those files would throw and
+some would load a character wearing the wrong items. Only the stamp separates
+them from a good file before the first byte is believed. Older revisions load
+again as soon as one exists that merely ADDS tags.
+
+The gate reads the decimal rather than comparing strings, so a refusal can
+say WHICH way the file is wrong, and names both revisions every time
+(src/SaveV1.cpp:2852-2940):
+
+| The file | The refusal |
+|---|---|
+| revision above `SCHEMA_REV` | `"IS1.4", NEWER than the "IS1.3" this binary implements` |
+| revision below `MIN_READ_REV` | `"IS1.0", OLDER than revision 3, the oldest this binary still reads` |
+| digits followed by anything but NUL padding | `"IS1.0AAAAAAA" is not "IS1." followed by a decimal number` |
+
+Every read of that field is bounded by its 12 bytes. `fileHeader.Version` is
+`char[12]` straight off disk with NO NUL guarantee, so `atoi` or a bare `%s`
+on it runs into `fileHeader.Name` on a crafted header of 12 non-NUL bytes.
+That is what the `unterminated_version` mutant builds, and why the malformed
+case exists at all: `"IS1.0AAAAAAA"` starts with a digit, so a parser built
+on `atoi` would read it as revision 0.
 
 **The coverage check (DEBUG, save direction, non-optional).** Every byte of
 every archived object must be covered by exactly one field declaration, an
 explicit `FIELD_SKIP`, or a pinned padding range from the per-class pin
-table (`SchemaPin`, src/SaveV1.cpp:203-238), which also pins each class's
+table (`SchemaPin`, src/SaveV1.cpp:221-238), which also pins each class's
 `sizeof` — upstream adding or moving a member is a loud finding, not a
 silently dropped field. A finding on the real save path refuses to write
-the file (src/SaveV1.cpp:2306-2323): the player sees "Error writing save
+the file (src/SaveV1.cpp:2763-2781): the player sees "Error writing save
 file" rather than a save with a hole in it.
 
-**Measured size.** The v1 format earns its keep. The seed-1 check save
-measured 239,535 bytes as v0 and 26,571 bytes as v1 at the `IS1.0` flip —
-**−88.91%**. At `IS1.2` the same scenario measures 32,813 bytes (the
-name-keyed memory rows buy their robustness with ~6KB) — still −86.3%
-against the v0 baseline. tools/check_v1_full_roundtrip.sh prints the
-current `v1=` number on every run, and the delta too when it is handed a
-v0 baseline. The codec ruling behind the win: RLE compresses runs and a
+**Measured size.** The v1 format earns its keep, and each robustness
+revision has been paid for in bytes. The seed-1 check save measured 239,535
+bytes as v0 and 26,571 bytes as v1 at the `IS1.0` flip — **−88.91%**:
+
+| Revision | Bytes | Against the v0 baseline | What it bought |
+|---|---|---|---|
+| `IS1.0` | 26,571 | −88.91% | — |
+| `IS1.2` | 32,813 | −86.30% | name-keyed memory rows, ~6KB |
+| `IS1.3` | 47,335 | −80.24% | the manifest: every resource name, in position order, per module slot |
+
+The manifest is the largest single cost in the format and it is spent on one
+thing — a save keeps working when a resource is appended to `lib/`.
+tools/check_v1_full_roundtrip.sh prints the current `v1=` number on every
+run, and the delta too when it is handed a v0 baseline. The codec ruling behind the win: RLE compresses runs and a
 tagged-record stream has none, so the same payload measured 552,209 raw →
 332,517 as RLE (worse than v0) but ~26,4xx as zlib-6
-(src/SaveV1.cpp:2349-2355).
+(src/SaveV1.cpp:2793-2799).
 
-**Observed** in a fresh seed-1 save (2026-08-25): `Sig`=0x1234ABCD,
-`Version`="IS1.2", `Name` carries the character line, `numGroups`=1,
-`Compression`=1; `groupSize`=546036, `compSize`=32700, `objCount`=330,
-`dataCount`=0.
+**Observed** in a fresh seed-1 save (2026-08-25, 47,335 bytes on disk):
+`Sig`=0x1234ABCD, `Version`="IS1.3", `Name`="Varag the Deathbringer, Orc
+Barbarian 1", `numGroups`=1, `Compression`=1; `groupSize`=579946,
+`compSize`=47211, `objCount`=330, `dataCount`=0.
 
 ## The v0 format (legacy — old saves and every `.Mod`)
 
@@ -260,7 +375,7 @@ the handle back for the pointer (:367). The `intptr_t` route there plus
 `static_assert(sizeof(void*) >= sizeof(hData))` (src/AbiCheck.cpp:97) make
 that reuse safe rather than lucky. v1 never parks anything: `SaveGroupV1`
 reads through the same bodies without mutating the object, so it needs no
-`SaveFixupScope` (src/SaveV1.cpp:2379-2382).
+`SaveFixupScope` (src/SaveV1.cpp:2823-2826).
 
 ### LoadGroup, in order (src/Registry.cpp:834-1065)
 
@@ -286,7 +401,7 @@ reads through the same bodies without mutating the object, so it needs no
    `loadMode` is still true here; the guard clears it on return and on
    every throw above.
 
-`LoadGroupV1` (src/SaveV1.cpp:2402) mirrors steps 4-7 for records: same
+`LoadGroupV1` (src/SaveV1.cpp:2875) mirrors steps 4-7 for records: same
 placement-new switch, then a two-pass replay (register every object first,
 then run every field list) so cross-object load fixups resolve regardless
 of record order.
@@ -316,8 +431,9 @@ range check at src/Registry.cpp:903-913:
   that was wrong when the file was written stays wrong after every future
   load.** The only check on the result is `if (!p[0] || !m[0])` at
   src/Registry.cpp:1319. (v1 reproduces handles the same way — `K_H` is a
-  number — but every `rID` goes through the name table instead of riding
-  as an index, and out-of-range file-fed indexes are bounded on load.)
+  number — but every `rID` is converted through the module manifest rather
+  than trusted as written, and out-of-range file-fed indexes are bounded on
+  load.)
 - **Block sizes.** The size is written (:796) and stored (:1046) but never
   compared with the size the running binary computes; `Registry::Block`'s
   load branch (:367) discards its `sz` argument entirely.
@@ -387,12 +503,12 @@ grep -rn "numDependencies" src inc | wc -l                              # 1, the
 grep -n  "Compression" src/SaveV1.cpp | head -3                         # the field v1 gave a meaning
 grep -rn "VERSION_STRING" src inc | wc -l                               # 15; only src/Registry.cpp:73 compares
 grep -rn "SaveFormatID\|SaveFormatMatches" src inc                      # the v0 stamp that does compare
-grep -n  "SCHEMA_REV" src/SaveV1.cpp | head -2                          # 2 today -> "IS1.2"
+grep -n  "SCHEMA_REV" src/SaveV1.cpp | head -2                          # 3 today -> "IS1.3"
 xxd -l 16 mod/Incursion.Mod                                             # Sig + "SF" digest stamp
 xxd -s 96 -l 28 mod/Incursion.Mod                                       # groupHeader
 head -c 16 docs/evidence/inc-upw.13/Furious_Fox.sav | xxd               # v0 fixture: same "SF" stamp
 head -c 16 docs/evidence/inc-upw.13/Jaoin.sav | xxd                     # pre-digest stamp "0.6.9Y19"
-head -c 16 <any freshly written .sav> | xxd                             # "IS1.2" -- a v1 save
+head -c 16 <any freshly written .sav> | xxd                             # "IS1.3" -- a v1 save
 tools/check_v1_full_roundtrip.sh                                        # prints current v1/v0 sizes + delta
 grep -n "virtual" inc/Res.h | head -3                                   # first live virtual is line 924
 ```
