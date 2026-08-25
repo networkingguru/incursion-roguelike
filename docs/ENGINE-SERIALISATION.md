@@ -14,7 +14,7 @@ I ran; commands at the bottom). Normative spec: `docs/SAVE-SCHEMA-SPEC.md`.
   96-byte `fileHeader` and 28-byte `groupHeader` shapes survive, but the
   payload is a stream of tagged records plus a resource name table, deflated
   with zlib level 6. The stamp is `SaveSchemaID()` — `"IS1."` + the schema
-  revision, `"IS1.2"` today (src/SaveV1.cpp:51-59).
+  revision, `"IS1.3"` today (src/SaveV1.cpp:51-59).
 - **v0** is the legacy raw-memory format described further down. The v0
   reader stays in the binary for every save written before the switch, and
   modules stay on the raw path entirely: `Game::SaveModule`
@@ -183,6 +183,7 @@ shape bumps it:
 | `IS1.0` | the initial v1 format: tagged records + name table |
 | `IS1.1` | Map tag 672: raw `LocationInfo` blob → packed grid record |
 | `IS1.2` | Game tag 816: raw `MDataSeg` blobs → script blob + name-keyed memory rows |
+| `IS1.3` | Game tag 816: each slot gained the module manifest — tag 4, the 21 array lengths; tag 5, every resource name in position order |
 
 The reader rejects a revision it does not implement with a clean error
 naming both revisions, the file's and the binary's, and reads nothing

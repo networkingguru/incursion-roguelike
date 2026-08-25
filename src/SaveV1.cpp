@@ -47,8 +47,9 @@ extern size_t typeSize(int8 Type);
    K_EMBED segment records: script blob + name-keyed memory rows
    (SaveV1_SegmentFields below), so a module rebuild that adds, removes or
    reorders a resource no longer shifts every row or renumbers the stored
-   flavour rIDs. */
-#define SCHEMA_REV 2
+   flavour rIDs. 2 -> 3, each module slot's tag-816 scope gained its
+   21-array length and position-ordered resource-name manifest. */
+#define SCHEMA_REV 3
 
 const char* SaveSchemaID()
   {
@@ -865,6 +866,98 @@ static const char* V1ResName(Module *mod, const V1Pool *pool, int32 i)
     return nm ? nm : "";
   }
 
+/* The manifest order is a wire constant. The explicit enum checks catch an
+   accidental pool-id reorder at compile time; the boundary probes catch a
+   disagreement between V1GetPool's switch and Module::__GetResource's walk
+   at save time. */
+static void v1AssertPoolOrder(Module *mod, const V1Pool pools[21])
+  {
+    static_assert(SP_MON == 0 && SP_ITM == 1 && SP_FEA == 2 &&
+                  SP_EFF == 3 && SP_ART == 4 && SP_QUE == 5 &&
+                  SP_DGN == 6 && SP_ROU == 7 && SP_NPC == 8 &&
+                  SP_CLA == 9 && SP_RAC == 10 && SP_DOM == 11 &&
+                  SP_GOD == 12 && SP_REG == 13 && SP_TER == 14 &&
+                  SP_TXT == 15 && SP_VAR == 16 && SP_TEM == 17 &&
+                  SP_FLA == 18 && SP_BEV == 19 && SP_ENC == 20,
+                  "save manifest pool order is a wire constant");
+    uint32 running = 0;
+    for (int p = SP_MON; p <= SP_ENC; p++)
+      {
+        if (pools[p].count < 0)
+          throw ECORRUPT;
+        if (pools[p].count &&
+            (mod->__GetResource((rID)running) !=
+                 (Resource*)pools[p].base ||
+             mod->__GetResource((rID)(running + pools[p].count - 1)) !=
+                 (Resource*)(pools[p].base +
+                    (size_t)(pools[p].count - 1) * pools[p].stride)))
+          {
+            Error("SaveV1: resource pool order disagrees at %s",
+                  V1PoolName(p));
+            throw ECORRUPT;
+          }
+        running += (uint32)pools[p].count;
+      }
+  }
+
+/* Tags inside Game's tag-816 / tag-(1+slot) scope:
+     4: K_ARRAY, count 21, element size 4, the pool lengths in wire order.
+     5: K_BLOB, for every pool in that order and every position in the pool,
+        uint16 name length followed by that many bytes (no NUL).
+   Phase 1 deliberately writes these fields only; phase 2 will parse them. */
+static void v1WriteModuleManifest(Module *mod)
+  {
+    V1Pool pools[21];
+    uint32 lengths[21];
+    for (int p = SP_MON; p <= SP_ENC; p++)
+      {
+        if (!V1GetPool(mod, p, &pools[p]) || pools[p].count < 0)
+          throw ECORRUPT;
+        lengths[p] = (uint32)pools[p].count;
+      }
+    v1AssertPoolOrder(mod, pools);
+
+    v1PutU16(&v1Out, 4);
+    v1PutU8(&v1Out, K_ARRAY);
+    v1PutU32(&v1Out, 21);
+    v1PutU32(&v1Out, sizeof(uint32));
+    v1Put(&v1Out, lengths, sizeof(lengths));
+
+    V1Buf names;
+    memset(&names, 0, sizeof(names));
+    try
+      {
+        for (int p = SP_MON; p <= SP_ENC; p++)
+          for (int32 i = 0; i != pools[p].count; i++)
+            {
+              const char *name = V1ResName(mod, &pools[p], i);
+              size_t len = strlen(name);
+              if (len > 0xFFFF)
+                {
+                  Error("SaveV1: %s resource name at position %d is too long",
+                        V1PoolName(p), (int)i);
+                  throw ECORRUPT;
+                }
+              v1PutU16(&names, (uint16)len);
+              if (len)
+                v1Put(&names, name, len);
+            }
+        if (names.len > 0xFFFFFFFFu)
+          throw ECORRUPT;
+        v1PutU16(&v1Out, 5);
+        v1PutU8(&v1Out, K_BLOB);
+        v1PutU32(&v1Out, (uint32)names.len);
+        if (names.len)
+          v1Put(&v1Out, names.p, names.len);
+      }
+    catch (...)
+      {
+        v1BufFree(&names);
+        throw;
+      }
+    v1BufFree(&names);
+  }
+
 /* Save side: intern one rID as a (pool, slot, ordinal, name) entry and
    return its table index. First-use order; duplicates dedupe. */
 static uint32 V1InternRid(rID id)
@@ -1156,9 +1249,11 @@ void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
     (void)r;
     if (v1.mode == V1_SAVE)
       {
-        if (!g.MDataSeg[slot])
-          return;               /* slot not in use: an empty embed */
         Module *mod = Game::Modules[slot];
+        if (mod)
+          v1WriteModuleManifest(mod);
+        if (!g.MDataSeg[slot])
+          return;               /* no segment fields for this slot */
         if (!mod)
           {
             Error("SaveV1: MDataSeg[%d] is allocated but module slot %d "

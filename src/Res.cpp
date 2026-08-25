@@ -99,7 +99,15 @@ inline Resource* Module::GetResource(rID r)
     return res;
   } 
 
-inline Resource* Module::__GetResource(rID r_) {
+/* NOT inline. It is declared without `inline` at inc/Res.h:928, and
+   src/SaveV1.cpp calls it cross-TU to prove the save manifest's array
+   order matches this walk. An `inline` definition sitting in one .cpp
+   is not visible to that caller, so the call would be ill-formed and
+   would link only by the accident of clang emitting a strong symbol
+   here. Do not put `inline` back; move the body to the header instead
+   if it ever needs to be inlined again. GetResource above caches, so
+   this is already the slow path. */
+Resource* Module::__GetResource(rID r_) {
     uint32 r = r_ & 0x00FFFFFF;
 
     if (r < (uint32)szMon)

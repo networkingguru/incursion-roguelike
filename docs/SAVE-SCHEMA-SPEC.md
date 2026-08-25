@@ -253,12 +253,16 @@ alphabetising an array changes no length, so a lengths-only manifest would load
 the character silently with every reference pointing at the wrong resource. The
 names are what make the drift rules below possible.
 
-**Size.** `lib/program.i` for the 2026-08-24 module holds 3,430 named resources.
-At the measured average name length the manifest is on the order of 70 KB before
-compression. A real save, `save/Dench.sav`, is 2,439,280 bytes. The manifest is
-about three percent of the file, and it compresses well because the text is
-repetitive. That cost buys a save that validates itself against a module rather
-than trusting that a build-time check was run, which matters for a module this
+**Size, measured.** `tools/check_v1_full_roundtrip.sh` on its fixed seed writes
+32,781 bytes without the manifest and 53,980 bytes with it: **+21,199 bytes
+compressed**, measured 2026-08-25 by building both ways. The manifest is a fixed
+cost per save, independent of how large the save is, because it describes the
+module rather than the game. On that small early-game save it is a 65% increase.
+On a real save -- `save/Dench.sav` is 2,439,280 bytes -- the same 21 KB is under
+one percent.
+
+That cost buys a save that validates itself against a module rather than
+trusting that a build-time check was run, which matters for a module this
 project did not compile.
 
 ### Resource references
@@ -409,9 +413,10 @@ be converted.
    harmless. The drift rules catch it at load; a build-time order check catches
    it in the diff. Both are wanted.
 5. **The script data segment is unmeasured.** See the memory segment section.
-6. **Save size.** Tags and kinds cost about 3 bytes per field, and the manifest
-   about 70 KB. Against a 2.4 MB save the estimate is under 8%. It MUST be
-   measured, not assumed.
+6. **Save size.** Measured, not assumed. The manifest costs +21,199 bytes
+   compressed on the round-trip check's seed (32,781 -> 53,980). It is a fixed
+   per-save cost, so it is 65% of a small early save and under 1% of a 2.4 MB
+   one. Tags and kinds cost about 3 bytes per field on top.
 7. **No runtime check that `mod/Incursion.Mod` was built by the running
    binary.** There is a file signature and range sanity checks
    (`inc/Res.h:868`), but no ABI digest. A stale module with a new binary is

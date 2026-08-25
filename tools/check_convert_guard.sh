@@ -39,6 +39,11 @@
 # Needs git history: the pre-4ba035b m_items.irh comes from `git show`.
 #
 # Usage: tools/check_convert_guard.sh   (exits 0 on pass, 1 on fail)
+# The current schema stamp, read from the source of truth rather than
+# hardcoded: a literal here rots into a false failure the moment SCHEMA_REV
+# moves, and the check then reports a format problem that does not exist.
+SCHEMA_STAMP="IS1.$(sed -n 's/^#define SCHEMA_REV \([0-9]*\).*/\1/p' src/SaveV1.cpp)"
+[ -n "${SCHEMA_STAMP#IS1.}" ] || { echo "cannot read SCHEMA_REV from src/SaveV1.cpp" >&2; exit 1; }
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -213,8 +218,8 @@ else
         cat "$WORK/dumpNew.err"
         fail "-dump of the converted copy (HEAD module) exited non-zero"
     fi
-    grep -Eq '^Format: *IS1\.2$' "$WORK/dumpNew.txt" || \
-        fail "the converted copy's Format line is not IS1.2: $(grep '^Format:' "$WORK/dumpNew.txt")"
+    grep -Eq "^Format: *${SCHEMA_STAMP//./\\.}$" "$WORK/dumpNew.txt" || \
+        fail "the converted copy's Format line is not $SCHEMA_STAMP: $(grep '^Format:' "$WORK/dumpNew.txt")"
     # The "Known Spells" section is EXCLUDED from this comparison: it is
     # printed from Character::Spells[], which is indexed by module spell
     # POSITION, not by rID or name -- the documented conversion ceiling

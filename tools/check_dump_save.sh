@@ -23,6 +23,11 @@
 # "something non-empty".
 #
 # Usage: tools/check_dump_save.sh   (exits 0 on pass, 1 on fail)
+# The current schema stamp, read from the source of truth rather than
+# hardcoded: a literal here rots into a false failure the moment SCHEMA_REV
+# moves, and the check then reports a format problem that does not exist.
+SCHEMA_STAMP="IS1.$(sed -n 's/^#define SCHEMA_REV \([0-9]*\).*/\1/p' src/SaveV1.cpp)"
+[ -n "${SCHEMA_STAMP#IS1.}" ] || { echo "cannot read SCHEMA_REV from src/SaveV1.cpp" >&2; exit 1; }
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -92,8 +97,8 @@ grep -qE '^Name:      Varag the Deathbringer$' "$WORK/dump.txt" ||
     fail "Name: line missing or does not read 'Varag the Deathbringer' -- character generation, the save format, or -dump's field walk has changed"
 grep -qE '^HP:        42 / 42' "$WORK/dump.txt" ||
     fail "HP: line missing or not '42 / 42' -- current/max HP no longer reads correctly"
-grep -qE '^Format:    IS1\.2$' "$WORK/dump.txt" ||
-    fail "Format: line missing or not IS1.2 -- real saves are v1 now, and -dump names the FILE's stamp"
+grep -qE "^Format:    ${SCHEMA_STAMP//./\\.}$" "$WORK/dump.txt" ||
+    fail "Format: line missing or not $SCHEMA_STAMP -- real saves are v1 now, and -dump names the FILE's stamp"
 grep -qE 'Race   Orc' "$WORK/dump.txt" ||
     fail "the engine's own character-sheet dump (CreateCharDump) did not include the expected race line"
 

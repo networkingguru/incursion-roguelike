@@ -99,6 +99,7 @@ class V1File:
         version = data[4:16].split(b"\0")[0].decode()
         if not version.startswith("IS1."):
             die("not a v1 file: Version=%r" % version)
+        self.version = version
         compression, = struct.unpack_from("<h", data, 90)
         if compression != 0:
             die("not a RAW-mode file (Compression=%d); regenerate under "
@@ -407,7 +408,11 @@ def craft_grid_mismatch(src_path, cases):
     cases.append(("grid_mismatch", f, "fail", "grid"))
 
 
-def craft_map_grid_overflow(cases):
+def craft_map_grid_overflow(cases, version):
+    """version comes from a genuine file this run produced, never a
+    literal: this header is synthesized from scratch, so a hardcoded
+    stamp silently rots into a File Version Mismatch the moment
+    SCHEMA_REV moves, and the mutant stops testing what it names."""
     """One synthesized file: a T_MAP record whose sizeX*sizeY*8 packed-grid
     product overflows 32 bits so that its LOW 32 bits equal the crafted
     blob's length exactly.
@@ -449,8 +454,11 @@ def craft_map_grid_overflow(cases):
     payload = (rec + struct.pack("<I", SIGNATURE_TWO)
                    + struct.pack("<I", 0))            # empty name table
 
-    fh = struct.pack("<I", SIGNATURE) + b"IS1.2" + bytes(7) + bytes(72) \
-        + struct.pack("<hhh", 1, 0, 0)                # numGroups/Comp/nDeps
+    stamp = version.encode() if isinstance(version, str) else version
+    if len(stamp) > 11:
+        die("schema stamp %r does not fit fileHeader.Version[12]" % stamp)
+    fh = struct.pack("<I", SIGNATURE) + stamp + bytes(12 - len(stamp)) \
+        + bytes(72) + struct.pack("<hhh", 1, 0, 0)    # numGroups/Comp/nDeps
     fh += bytes(FH_SIZE - len(fh))                    # tail padding
     gh = struct.pack("<IiiiiiI", SIGNATURE, 0, len(payload), len(payload),
                      1, 0, 999)
@@ -567,7 +575,7 @@ def main():
         craft_player_index_mutants(sys.argv[4], cases)
 
     # --- 11. the synthesized 32-bit-truncation grid mutant.
-    craft_map_grid_overflow(cases)
+    craft_map_grid_overflow(cases, v1.version)
 
     # --- 12. the grid-dimension mismatch and the row-blob nameLen overrun,
     # both from the full raw save.
