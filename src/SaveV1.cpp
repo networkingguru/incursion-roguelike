@@ -157,7 +157,7 @@ static int v1FrameDepth;
 /* -- coverage (DEBUG, save direction only) --------------------------------*/
 
 struct SchemaPad { uint32 off, len; };
-struct SchemaPin { const char *cls; int16 type; size_t size;
+struct SchemaPin { const char *cls; size_t size;
                    const SchemaPad *pads; int npads; };
 /* One row per archived class. size pins sizeof(Class): a member added or
    removed by upstream moves it and the v1 field list must be revisited ON
@@ -171,7 +171,40 @@ struct SchemaPin { const char *cls; int16 type; size_t size;
    purpose-preserved upstream defects (spec risk 3) -- typeSize(T_STAFF)
    returns sizeof(Weapon) while the placement-new switch constructs a bare
    Item, and typeSize's default returns sizeof(Item) for T_COIN while the
-   switch news a Coin. ObjectSize() reports the class the object really is. */
+   switch news a Coin. ObjectSize() reports the class the object really is.
+
+   ROW SELECTION does not use ObjectSize() alone. v1CovBegin (below) first
+   maps the record's Type byte to a class name through v1PinClassForType,
+   which is a direct transcription of the placement-new switch in
+   Registry::LoadGroup (src/Registry.cpp:941-983) and Registry::LoadGroupV1
+   (src/SaveV1.cpp, "the placement-new switch, as LoadGroup's"): several
+   Type bytes construct the SAME C++ class -- T_CHEST and T_CONTAIN both
+   placement-new a Container, T_WEAPON/T_BOW/T_MISSILE all placement-new a
+   Weapon, T_ARMOUR/T_SHIELD/T_GAUNTLETS/T_BOOTS all placement-new an
+   Armour, T_STATUE/T_FIGURE/T_CORPSE all placement-new a Corpse -- and
+   every one of those aliases must resolve to the ONE row for its class.
+   size is then a CROSS-CHECK against that row, not the selector: a
+   mismatch is a fatal SCHEMA COVERAGE finding (upstream moved the class
+   without the field list being revisited), never a silent fall-through to
+   another row. Before this, the code matched by (size, type) exact-match
+   then size-only fallback; several 232-byte rows shared that size, so a
+   real T_CONTAIN or T_BOW record -- built via an alias this table's single
+   `type` field never named -- fell through to whichever 232-byte row
+   happened to sit first in the array, and any of that row's pinned pads
+   that the falling-through object's own fields actually covered fired a
+   false "pinned pad is covered by a field" fatal (inc-review, Task 5
+   follow-up). T_STAFF is the one alias the placement-new switch does NOT
+   list for Weapon (T_MISSILE/T_BOW/T_WEAPON only) -- v1PinClassForType
+   mirrors that omission and maps T_STAFF to Item, matching what actually
+   gets constructed: a staff record loads as a bare Item, and its QItem/
+   Weapon-range tags are skipped as unknown. This is unreachable today (no
+   T_STAFF record exists until Task 10 converts an old save that names
+   one), it is a preserved v0 quirk (spec risk 3, see above), and the
+   shipping module declares every staff resource T_WEAPON at compile time
+   -- but a save that outlived a staff's removal from a module, or hand-
+   crafted test data, could still carry a T_STAFF record. Task 10's
+   convert-guard must know this when it reasons about which old records
+   are safe to carry forward. */
 
 /* Item chain on arm64/LP64: vptr 0-8; pad after Object::Type 10-12; pad
    after Item::DmgType 133-134; pad after Item::swingCount 151-152; pad
@@ -276,15 +309,28 @@ static const SchemaPad PortalPads[] = {
    133-134, 151-152, 156-160), unchanged -- QItem adds no members before
    offset 218. QItem's own members, Qualities[8] and KnownQualities, land in
    and past Item's former 218-224 tail pad (9 bytes don't fit in 6, so
-   sizeof(QItem) grows to 232); tail pad 227-232. No T_* type placement-news
-   a bare QItem (every concrete descendant does), so this row is never the
-   one v1CovBegin's exact-match selects -- same situation as the Character
-   row below, and for the same reason: it is here because QItem's layout is
-   real and every QItem descendant's own pads are measured relative to it.
-   Armour adds no members of its own (spec: a class with no own members
-   still gets pinned), so THIS row is also the one that matches a real
-   Armour object, byte for byte -- measured: a real Armour's only uncovered
-   range past offset 156 is (227, 5), identical to QItem's own tail. */
+   sizeof(QItem) grows to 232); tail pad 227-232.
+
+   No T_* type placement-news a bare QItem (every concrete descendant
+   does), and v1PinClassForType (below) never maps a Type to "QItem" for
+   that reason -- so, UNLIKE Item's row, this row is never selected by
+   v1CovBegin at all, by construction, not by a coincidence of size or
+   fallback order. (An earlier version of this comment claimed the same
+   for the OLD size-only-fallback selector, which was false: T_CONTAIN and
+   T_BOW records, whose class the old single-`type` field never named,
+   fell through by size and landed on whichever 232-byte row was first in
+   the array -- often this one. v1PinClassForType removed that fallback
+   path entirely; a row is now selected only by an alias this function
+   names explicitly.) This row exists purely so QItem's own layout is
+   documented once, in the one place every QItem descendant's own pads are
+   measured against.
+
+   Armour declares no members of its own (spec: a class with no own
+   members still gets pinned). Its OWN row, below, is selected via
+   T_ARMOUR/T_SHIELD/T_GAUNTLETS/T_BOOTS in v1PinClassForType -- never via
+   this row -- and simply reuses this array because a real Armour object's
+   layout is measured byte-identical to QItem's own: its only uncovered
+   range past offset 156 is (227, 5), the same as QItem's tail. */
 static const SchemaPad QItemPads[] = {
     { 0, 8 }, { 10, 2 }, { 133, 1 }, { 151, 1 }, { 156, 4 }, { 227, 5 }
 };
@@ -327,17 +373,17 @@ static const SchemaPad WeaponPads[] = {
 };
 
 static const SchemaPin SchemaPins[] = {
-    { "Item", T_ITEM, sizeof(Item), ItemPads,
+    { "Item", sizeof(Item), ItemPads,
       (int)(sizeof(ItemPads)/sizeof(ItemPads[0])) },
-    { "QItem", T_ITEM, sizeof(QItem), QItemPads,
+    { "QItem", sizeof(QItem), QItemPads,
       (int)(sizeof(QItemPads)/sizeof(QItemPads[0])) },
-    { "Food", T_FOOD, sizeof(Food), FoodPads,
+    { "Food", sizeof(Food), FoodPads,
       (int)(sizeof(FoodPads)/sizeof(FoodPads[0])) },
-    { "Corpse", T_CORPSE, sizeof(Corpse), CorpsePads,
+    { "Corpse", sizeof(Corpse), CorpsePads,
       (int)(sizeof(CorpsePads)/sizeof(CorpsePads[0])) },
-    { "Container", T_CHEST, sizeof(Container), ContainerPads,
+    { "Container", sizeof(Container), ContainerPads,
       (int)(sizeof(ContainerPads)/sizeof(ContainerPads[0])) },
-    { "Weapon", T_WEAPON, sizeof(Weapon), WeaponPads,
+    { "Weapon", sizeof(Weapon), WeaponPads,
       (int)(sizeof(WeaponPads)/sizeof(WeaponPads[0])) },
     /* Coin declares no own members (ARCHIVE_CLASS body is empty; pin row
        only). Measured sizeof(Coin) == sizeof(Item) == 224 and Coin's
@@ -346,30 +392,77 @@ static const SchemaPin SchemaPins[] = {
        (docs/ENGINE-SERIALISATION.md defect 3, spec risk 3, preserved on
        purpose), but the two sizes coincide here, so no allocation shortfall
        follows from the mismatch. */
-    { "Coin", T_COIN, sizeof(Coin), ItemPads,
+    { "Coin", sizeof(Coin), ItemPads,
       (int)(sizeof(ItemPads)/sizeof(ItemPads[0])) },
     /* Armour declares no own members (pin row only); see the QItemPads
        comment above -- this row's pads ARE QItemPads, because a real
        Armour object's layout is measured byte-identical to QItem's own. */
-    { "Armour", T_ARMOUR, sizeof(Armour), QItemPads,
+    { "Armour", sizeof(Armour), QItemPads,
       (int)(sizeof(QItemPads)/sizeof(QItemPads[0])) },
-    { "Creature", T_CREATURE, sizeof(Creature), CreaturePads,
+    { "Creature", sizeof(Creature), CreaturePads,
       (int)(sizeof(CreaturePads)/sizeof(CreaturePads[0])) },
-    { "Monster", T_MONSTER, sizeof(Monster), MonsterPads,
+    { "Monster", sizeof(Monster), MonsterPads,
       (int)(sizeof(MonsterPads)/sizeof(MonsterPads[0])) },
-    { "Character", T_CREATURE, sizeof(Character), CharacterPads,
+    { "Character", sizeof(Character), CharacterPads,
       (int)(sizeof(CharacterPads)/sizeof(CharacterPads[0])) },
-    { "Player", T_PLAYER, sizeof(Player), PlayerPads,
+    { "Player", sizeof(Player), PlayerPads,
       (int)(sizeof(PlayerPads)/sizeof(PlayerPads[0])) },
-    { "Feature", T_FEATURE, sizeof(Feature), FeaturePads,
+    { "Feature", sizeof(Feature), FeaturePads,
       (int)(sizeof(FeaturePads)/sizeof(FeaturePads[0])) },
-    { "Door", T_DOOR, sizeof(Door), DoorPads,
+    { "Door", sizeof(Door), DoorPads,
       (int)(sizeof(DoorPads)/sizeof(DoorPads[0])) },
-    { "Trap", T_TRAP, sizeof(Trap), TrapPads,
+    { "Trap", sizeof(Trap), TrapPads,
       (int)(sizeof(TrapPads)/sizeof(TrapPads[0])) },
-    { "Portal", T_PORTAL, sizeof(Portal), PortalPads,
+    { "Portal", sizeof(Portal), PortalPads,
       (int)(sizeof(PortalPads)/sizeof(PortalPads[0])) },
 };
+
+/* Maps a record's Type byte to the class its row is filed under, by
+   transcribing the placement-new switch's arms (Registry::LoadGroup,
+   src/Registry.cpp:941-983, and Registry::LoadGroupV1, src/SaveV1.cpp)
+   exactly -- see the SchemaPin comment above for why this replaced the old
+   (size, type) exact-match / size-only-fallback selector, and for the
+   T_STAFF arm's absence below. Returns NULL for a Type neither switch
+   constructs (T_GAME, T_MAP, T_MODULE, and every other class outside this
+   task's seven plus the earlier tasks' rows are not looked up through this
+   table at all; see v1CovBegin). */
+static const char* v1PinClassForType(int16 type)
+  {
+    switch (type)
+      {
+        case T_MONSTER:  return "Monster";
+        case T_PLAYER:   return "Player";
+        case T_PORTAL:   return "Portal";
+        case T_DOOR:     return "Door";
+        case T_TRAP:     return "Trap";
+        case T_FEATURE:  return "Feature";
+        case T_CHEST:    case T_CONTAIN:  return "Container";
+        case T_COIN:     return "Coin";
+        case T_FOOD:     return "Food";
+        case T_STATUE:   case T_FIGURE:   case T_CORPSE:
+          return "Corpse";
+        case T_MISSILE:  case T_BOW:      case T_WEAPON:
+          return "Weapon";
+        case T_ARMOUR:   case T_SHIELD:   case T_GAUNTLETS: case T_BOOTS:
+          return "Armour";
+        default:
+          /* T_STAFF deliberately falls through to here: it is absent from
+             both placement-new switches' own Weapon arm, so a T_STAFF
+             record actually placement-news a bare Item (spec risk 3;
+             see the SchemaPin comment). */
+          if (type >= T_FIRSTITEM && type <= T_LASTITEM)
+            return "Item";
+          return NULL;
+      }
+  }
+
+static const SchemaPin* v1FindPinByClass(const char *cls)
+  {
+    for (size_t i = 0; i != sizeof(SchemaPins)/sizeof(SchemaPins[0]); i++)
+      if (!strcmp(SchemaPins[i].cls, cls))
+        return &SchemaPins[i];
+    return NULL;
+  }
 
 #ifdef DEBUG
 struct V1Cov {
@@ -397,30 +490,34 @@ static void v1CovBegin(Object *o)
     v1Cov.openDepth = 0;
     v1Cov.pin = NULL;
     v1Cov.cls = "?";
-    /* Two passes: an exact (size, type) match first, because Feature and
-       Portal share one layout (Portal adds no members) while Door and Trap
-       share a different one (Door.SecretSavedGlyph and Trap.tID both start
-       at the same offset) -- all four are sizeof 144 on arm64/LP64, so size
-       alone cannot tell them apart (measured 2026-08-24: feat/door/trap/
-       portal offsets of cHP/mHP/fID/MoveMod are identical at 128/130/132/
-       136 in every one of them; Door and Trap add their own member at 137
-       and diverge only there). The size-only fallback pass keeps every
-       earlier row's behaviour unchanged: Item's row carries type T_ITEM but
-       real Item objects carry T_RING/T_POTION/etc, so it has always relied
-       on size-only matching and must keep doing so. */
-    for (size_t i = 0; i != sizeof(SchemaPins)/sizeof(SchemaPins[0]); i++)
-      if (SchemaPins[i].size == sz && SchemaPins[i].type == (int16)o->Type)
-        { v1Cov.pin = &SchemaPins[i]; v1Cov.cls = SchemaPins[i].cls; break; }
-    if (!v1Cov.pin)
-      for (size_t i = 0; i != sizeof(SchemaPins)/sizeof(SchemaPins[0]); i++)
-        if (SchemaPins[i].size == sz)
-          { v1Cov.pin = &SchemaPins[i]; v1Cov.cls = SchemaPins[i].cls; break; }
-    if (!v1Cov.pin)
-      {
-        v1CovFindings++;
-        Error("SCHEMA COVERAGE: no pin row for class of size %lu (type %d)",
-              (unsigned long)sz, (int)o->Type);
-      }
+    /* Select the row by what the record's Type byte ACTUALLY constructs
+       (v1PinClassForType, a transcription of the placement-new switch),
+       never by ObjectSize() alone -- see the SchemaPin comment for why.
+       size is then a cross-check, not the selector: a real mismatch (the
+       class moved and the field list was not revisited) is its own fatal
+       finding, distinct from "no row at all" so the two are never
+       conflated in the log. */
+    {
+      const char *cls = v1PinClassForType((int16)o->Type);
+      const SchemaPin *p = cls ? v1FindPinByClass(cls) : NULL;
+      if (p && p->size == sz)
+        { v1Cov.pin = p; v1Cov.cls = p->cls; }
+      else if (p)
+        {
+          v1CovFindings++;
+          Error("SCHEMA COVERAGE: %s: pin row size %lu does not match "
+                "ObjectSize() %lu for a real type %d object -- the class "
+                "moved and its field list needs revisiting",
+                p->cls, (unsigned long)p->size, (unsigned long)sz,
+                (int)o->Type);
+        }
+      else
+        {
+          v1CovFindings++;
+          Error("SCHEMA COVERAGE: no pin row for class of size %lu (type %d)",
+                (unsigned long)sz, (int)o->Type);
+        }
+    }
 #else
     (void)o;
 #endif
@@ -2780,7 +2877,23 @@ bool Registry::V1RunSchemaTest(const char *outDir)
        QItem's own members (Qualities, KnownQualities) are exercised through
        Food, Container, Weapon and Armour, all of which extend it directly.
        Coin extends Item, not QItem, and declares no own members. Corpse::mID
-       is a real module Monster rID. */
+       is a real module Monster rID.
+
+       Plus one Container built as T_CONTAIN and one Weapon built as T_BOW --
+       ALIASES of the T_CHEST/T_WEAPON types above that the placement-new
+       switch maps to the SAME classes (src/Registry.cpp:941-983,
+       src/SaveV1.cpp's LoadGroupV1). Real modules use these aliases: the
+       shipping module declares backpacks/scroll cases/quivers T_CONTAIN
+       (lib/mundane.irh) and bows/arrows T_BOW (lib/weapons.irh). Before the
+       v1PinClassForType fix, a real T_CONTAIN/T_BOW object's ObjectSize()
+       still matched the Container/Weapon row's pinned size, but the row
+       selector keyed on the single (size, T_CHEST)/(size, T_WEAPON) pair
+       those rows carried, so the alias missed the exact match and fell
+       through to whichever 232-byte row was first in the table -- QItem's
+       -- and that row's own pinned pad (227, 5) collided with the real
+       object's FIELD_H(112, Contents) or FIELD_I16(128, Bane) coverage,
+       firing a false fatal "pinned pad is covered by a field". These two
+       objects reproduce that: RED on the pre-fix selector, GREEN after. */
     v1TestMismatches = 0;
     v1CovFindings = 0;
 
@@ -2789,11 +2902,13 @@ bool Registry::V1RunSchemaTest(const char *outDir)
     Food *food = NULL;
     Corpse *corpse = NULL;
     Container *contain = NULL;
+    Container *contain2 = NULL;
     Weapon *weapon = NULL;
+    Weapon *weapon2 = NULL;
     Coin *coin = NULL;
     Armour *armour = NULL;
-    hObj hFood = 0, hCorpse = 0, hContain = 0, hWeapon = 0, hCoin = 0,
-         hArmour = 0;
+    hObj hFood = 0, hCorpse = 0, hContain = 0, hContain2 = 0, hWeapon = 0,
+         hWeapon2 = 0, hCoin = 0, hArmour = 0;
     String piSav, pjSav;
     piSav = Format("%s/i.sav", outDir);
     pjSav = Format("%s/j.sav", outDir);
@@ -2842,6 +2957,28 @@ bool Registry::V1RunSchemaTest(const char *outDir)
         weapon->myHandle = regI->RegisterObject(weapon);
         hWeapon = weapon->myHandle;
 
+        /* T_CONTAIN alias of Container -- see the group comment above. */
+        size_t contain2Sz = typeSize((int8)T_CONTAIN);
+        contain2 = (Container*) malloc(contain2Sz);
+        if (!contain2)
+          throw EMEMORY;
+        memset((void*)contain2, 0, contain2Sz);
+        new((Object*)contain2) Container(regI);
+        contain2->Type = T_CONTAIN;
+        contain2->myHandle = regI->RegisterObject(contain2);
+        hContain2 = contain2->myHandle;
+
+        /* T_BOW alias of Weapon -- see the group comment above. */
+        size_t weapon2Sz = typeSize((int8)T_BOW);
+        weapon2 = (Weapon*) malloc(weapon2Sz);
+        if (!weapon2)
+          throw EMEMORY;
+        memset((void*)weapon2, 0, weapon2Sz);
+        new((Object*)weapon2) Weapon(regI);
+        weapon2->Type = T_BOW;
+        weapon2->myHandle = regI->RegisterObject(weapon2);
+        hWeapon2 = weapon2->myHandle;
+
         size_t coinSz = typeSize((int8)T_COIN);
         coin = (Coin*) malloc(coinSz);
         if (!coin)
@@ -2866,17 +3003,21 @@ bool Registry::V1RunSchemaTest(const char *outDir)
            descendant. Coin has none: it extends Item, not QItem. */
         for (i = 0; i != 8; i++)
           {
-            food->Qualities[i]   = (int8)(1 + i);
-            corpse->Qualities[i] = (int8)(11 + i);
-            contain->Qualities[i]= (int8)(21 + i);
-            weapon->Qualities[i] = (int8)(31 + i);
-            armour->Qualities[i] = (int8)(41 + i);
+            food->Qualities[i]     = (int8)(1 + i);
+            corpse->Qualities[i]   = (int8)(11 + i);
+            contain->Qualities[i]  = (int8)(21 + i);
+            weapon->Qualities[i]   = (int8)(31 + i);
+            armour->Qualities[i]   = (int8)(41 + i);
+            contain2->Qualities[i] = (int8)(51 + i);
+            weapon2->Qualities[i]  = (int8)(61 + i);
           }
-        food->KnownQualities    = 0xA5;
-        corpse->KnownQualities  = 0xB6;
-        contain->KnownQualities = 0xC7;
-        weapon->KnownQualities  = 0xD8;
-        armour->KnownQualities  = 0xE9;
+        food->KnownQualities     = 0xA5;
+        corpse->KnownQualities   = 0xB6;
+        contain->KnownQualities  = 0xC7;
+        weapon->KnownQualities   = 0xD8;
+        armour->KnownQualities   = 0xE9;
+        contain2->KnownQualities = 0xFA;
+        weapon2->KnownQualities  = 0x6C;
 
         /* Food's own member. Corpse inherits it and gets its own value. */
         food->Eaten = 501;
@@ -2890,9 +3031,11 @@ bool Registry::V1RunSchemaTest(const char *outDir)
         /* Container's own member: a handle to another object in this
            group, so FIELD_H moves a real, resolvable value. */
         contain->Contents = hFood;
+        contain2->Contents = hCorpse;
 
         /* Weapon's own member. */
         weapon->Bane = -333;
+        weapon2->Bane = -444;
 
         memset(&fh, 0, sizeof(fh));
         fh.Sig = SIGNATURE;
@@ -2970,6 +3113,38 @@ bool Registry::V1RunSchemaTest(const char *outDir)
               V1CMP(0, myHandle);
               if (memcmp(a->Qualities, b->Qualities, sizeof(a->Qualities)))
                 v1Mismatch(0, "Weapon.Qualities", 0, 1);
+              V1CMP(0, KnownQualities);
+              V1CMP(0, Bane);
+            }
+        }
+        {
+          Container *a = contain2;
+          Container *b = (Container*) regJ->Get(hContain2);
+          if (!b)
+            v1Mismatch(0, "T_CONTAIN container missing after load",
+                       (long)hContain2, 0);
+          else
+            {
+              V1CMP(0, Type);
+              V1CMP(0, myHandle);
+              if (memcmp(a->Qualities, b->Qualities, sizeof(a->Qualities)))
+                v1Mismatch(0, "Container(T_CONTAIN).Qualities", 0, 1);
+              V1CMP(0, KnownQualities);
+              V1CMP(0, Contents);
+            }
+        }
+        {
+          Weapon *a = weapon2;
+          Weapon *b = (Weapon*) regJ->Get(hWeapon2);
+          if (!b)
+            v1Mismatch(0, "T_BOW weapon missing after load",
+                       (long)hWeapon2, 0);
+          else
+            {
+              V1CMP(0, Type);
+              V1CMP(0, myHandle);
+              if (memcmp(a->Qualities, b->Qualities, sizeof(a->Qualities)))
+                v1Mismatch(0, "Weapon(T_BOW).Qualities", 0, 1);
               V1CMP(0, KnownQualities);
               V1CMP(0, Bane);
             }
