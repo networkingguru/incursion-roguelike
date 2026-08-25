@@ -16,8 +16,16 @@
 #      the repo's own module and extract the "Effect Memory" section
 #      (src/Dump.cpp prints it with the real EFFMEM accessors).
 #   2. In an INCURSIONPATH sandbox, rebuild the module with one scratch
-#      Effect appended to a COPY of lib/m_items.irh (the
-#      tools/check_dup_names.sh technique; unique name).
+#      Effect appended to the END of a COPY of lib/main.irc (unique name).
+#      That is the end of parse order, so it is a LEGAL append under the
+#      project's append-only rule -- the same insertion point
+#      tools/check_v1_append_survives.sh uses. It MUST stay there. The
+#      scratch Effect went to the end of lib/m_items.irh until 2026-08-25,
+#      which is the MIDDLE of the Effect array: 862 Effects are declared
+#      after that file. Name-keyed rows survived that and hid it. Rows are
+#      keyed by position now, so the same insertion slid 138 of 391
+#      appearance lines and this check failed -- correctly. A reorder is
+#      not what this check is for; tools/check_spell_god_drift.sh is.
 #   3. Dump the SAME save against the sandbox module.
 #   4. Assert the two Effect Memory sections are line-for-line identical:
 #      every appearance and every Known/Tried flag unchanged.
@@ -39,8 +47,9 @@
 #   >   Might: flavor=banded pflavor=- Known=0 Tried=0 ...
 #   FAIL: 389 of 391 effect-memory lines changed after a one-Effect rebuild
 #
-# With the segment record (name-keyed rows, flavour rIDs through the name
-# table) the same comparison is line-for-line identical and this PASSES.
+# With the segment record (rows keyed by their position in the Effect array,
+# flavour rIDs converted through the save's own module manifest) the same
+# comparison is line-for-line identical and this PASSES.
 #
 # Needs BOTH builds: ./incursion (graphical developer build; -compile lives
 # behind DEBUG, same requirement as tools/check_dup_names.sh) for the module
@@ -104,7 +113,9 @@ SB="$WORK/plus1"
 mkdir -p "$SB/mod" "$SB/save" "$SB/logs"
 cp -R "$ROOT/lib" "$SB/lib"
 ln -sfn "$ROOT/inc" "$SB/inc"
-cat >> "$SB/lib/m_items.irh" <<'EOF'
+# The END of main.irc, never the middle of an existing list: see step 2 of
+# the header. lib/main.irc's own tail carries the same warning in the source.
+cat >> "$SB/lib/main.irc" <<'EOF'
 
 AI_STONE Effect "Scratch Flavour Stability Probe" : EA_GRANT
   { xval: ADJUST; yval: A_WIS; pval: PLUS_1PER1;

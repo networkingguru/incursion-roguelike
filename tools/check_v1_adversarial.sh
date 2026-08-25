@@ -16,7 +16,7 @@
 # The two player_* cases need a file-fed INDEX inside a Player, so they come
 # from the character group's file: one asserts the reader REFUSES a value the
 # game cannot produce, the other that it CLAMPS one the game can.
-# grid_mismatch needs a Map record and seg_row_namelen_overrun needs a Game
+# grid_mismatch needs a Map record and the two seg_ mutants need a Game
 # record's memory-row blob; no schematest group carries either, so both come
 # from a real smoke-session save written under INCURSION_V1_RAW=1 and are
 # driven through tools/dump_save.sh -- the real load path -- instead of
@@ -113,7 +113,13 @@ while IFS='|' read -r name path expect detail; do
     CASE_COUNT=$((CASE_COUNT + 1))
     OUT="$WORK/case_$name.out"
     ERR="$WORK/case_$name.err"
-    if [ "$name" = grid_mismatch ] || [ "$name" = seg_row_namelen_overrun ]; then
+    case "$name" in
+      grid_mismatch|seg_row_position_past_array|seg_effmem_flavour_bad_slot)
+        NEEDS_FULL_PATH=1 ;;
+      *)
+        NEEDS_FULL_PATH=0 ;;
+    esac
+    if [ "$NEEDS_FULL_PATH" = 1 ]; then
         # These mutants are FULL saves, and only the real load path replays
         # a Map record's fields or a Game record's segment rows -- the
         # -schemaload harness groups carry neither. tools/dump_save.sh is

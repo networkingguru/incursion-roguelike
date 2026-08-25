@@ -4,7 +4,7 @@ RAW-mode v1 file, for tools/check_v1_adversarial.sh.
 
 Unlike v0 (tools/craft_corrupt_saves.py, which must treat the payload as an
 opaque memory image), v1 is parseable by design: the payload is a stream of
-tagged records followed by a name table (docs/SAVE-SCHEMA-SPEC.md; the wire
+tagged records ended by SIGNATURE_TWO (docs/SAVE-SCHEMA-SPEC.md; the wire
 format section of docs/superpowers/plans/2026-08-24-save-schema-v1.md is
 normative). This parses a RAW-mode file (fileHeader.Compression == 0,
 produced under INCURSION_V1_RAW=1 by a DEBUG build) and emits one mutant per
@@ -36,9 +36,10 @@ yields the two mutants for a file-fed INDEX inside a Player.
 
 The optional fifth file is a real save from a smoke session run under
 INCURSION_V1_RAW=1. It is the only input with a Map record and a Game record,
-and yields the grid_mismatch and seg_row_namelen_overrun mutants; its caller
-drives both through tools/dump_save.sh, the real load path, because
--schemaload's harness groups carry no maps and no Game record.
+and yields the grid_mismatch, seg_row_position_past_array and
+seg_effmem_flavour_bad_slot mutants; its caller drives all three through
+tools/dump_save.sh, the real load path, because -schemaload's harness groups
+carry no maps and no Game record.
 """
 import struct
 import sys
@@ -135,23 +136,8 @@ class V1File:
         if sep != SIGNATURE_TWO:
             die("SIGNATURE_TWO not found where expected")
         pos += 4
-        # name table: list of {off, size, pool, slot, ordinal, name}
-        self.name_table_off = pos
-        count, = struct.unpack_from("<I", data, pos)
-        pos += 4
-        self.names = []
-        for _ in range(count):
-            ent_off = pos
-            pool, slot, ordinal, name_len = struct.unpack_from(
-                "<BBHH", data, pos)
-            pos += 6
-            name = data[pos:pos + name_len].decode("latin-1")
-            pos += name_len
-            self.names.append({"off": ent_off, "size": 6 + name_len,
-                               "pool": pool, "slot": slot,
-                               "ordinal": ordinal, "name": name})
         if pos != len(data):
-            die("trailing bytes after the name table")
+            die("trailing bytes after SIGNATURE_TWO")
 
     def parse_fields(self, start, length):
         data = self.data
@@ -336,14 +322,28 @@ def craft_stati_nature_oob(base, v1, cases):
     cases.append(("stati_nature_oob", f, "fail", CORRUPT))
 
 
-def craft_seg_row_namelen(src_path, cases):
-    """One mutant from the full raw save, against the memory-row-blob parser
-    (SaveV1_SegmentFields' load side, src/SaveV1.cpp): the first row's
-    nameLen raised to 0xFFFF with the blob length untouched. Unchecked, the
-    parser's memcpy of the name would read ~64KB past the row blob; its
-    bound (nameLen > len - pos) must refuse the file instead. Driven
+def craft_seg_row_mutants(src_path, cases):
+    """Two mutants from the full raw save, against the memory-row path
+    (SaveV1_SegmentFields' load side and v1SegPlace, src/SaveV1.cpp). Driven
     through tools/dump_save.sh like grid_mismatch: only the real load path
     replays a Game record, and only the full save carries one.
+
+    THESE REPLACED seg_row_namelen_overrun. Until phase 4 a row carried an
+    inline nameLen + name and the mutant raised that length past the end of
+    the row blob. A row is now keyed by (array, position) and carries no
+    name, so there is no length left to overrun. The two cases below are what
+    the position key made reachable instead:
+
+      seg_row_position_past_array -- a position no manifest length covers.
+        Unchecked it would index MDataSeg far past the block v1SegStarts
+        sized, so the bound is a write bound, not a tidiness check. The old
+        name key DISCARDED an unmatched row; a position must refuse the file
+        (docs/SAVE-SCHEMA-SPEC.md, "The resource memory segment").
+
+      seg_effmem_flavour_bad_slot -- an EffMem flavour rID whose module slot
+        byte is 0, so (rID >> 24) - 1 is -1. The flavour values became plain
+        rIDs in this phase, and they reach v1ConvertManifestRid from a
+        different call site than the queued references rid_bad_slot covers.
     """
     base = open(src_path, "rb").read()
     v1 = V1File(base)
@@ -371,12 +371,42 @@ def craft_seg_row_namelen(src_path, cases):
         rows_off = rows_f[0]["off"] + 7   # tag (2) + kind (1) + blob len (4)
         break
     if rows_off is None:
-        die("no module slot in %s carries memory rows; the seg-row mutant "
-            "needs at least one" % src_path)
-    # Row header: u8 rowKind, u8 pool, u16 ordinal, u16 nameLen.
-    off = rows_off + 4
-    f = base[:off] + struct.pack("<H", 0xFFFF) + base[off + 2:]
-    cases.append(("seg_row_namelen_overrun", f, "fail", CORRUPT))
+        die("no module slot in %s carries memory rows; the seg-row mutants "
+            "need at least one" % src_path)
+    rows_len = struct.unpack_from("<I", base, rows_f[0]["off"] + 3)[0]
+
+    # Row wire shape: u8 rowKind, u8 pool, u32 position, u8 payLen, payload.
+    # Both mutations are the same width as the bytes they replace, so no
+    # length fixup is needed.
+    off = rows_off + 2
+    f = base[:off] + struct.pack("<I", 0xFFFFFFF0) + base[off + 4:]
+    cases.append(("seg_row_position_past_array", f, "fail",
+                  "memory row for module slot"))
+
+    # Walk to the first EffMem row (kind 2) with a non-null FlavorID. Rows
+    # are written in memory-layout order, so the Effect block is contiguous.
+    eff_off = None
+    pos = rows_off
+    end = rows_off + rows_len
+    while pos + 7 <= end:
+        kind = base[pos]
+        pay_len = base[pos + 6]
+        pay_off = pos + 7
+        if pay_off + pay_len > end:
+            die("the row blob of %s is malformed at offset %d" % (src_path, pos))
+        if kind == 2:
+            flavour, = struct.unpack_from("<I", base, pay_off)
+            if flavour:
+                eff_off = pay_off
+                break
+        pos = pay_off + pay_len
+    if eff_off is None:
+        die("no EffMem row in %s carries a flavour rID; the flavour mutant "
+            "needs one (a save written after Game::SetFlavors has them)"
+            % src_path)
+    f = base[:eff_off] + struct.pack("<I", 0x00FFFFFF) + base[eff_off + 4:]
+    cases.append(("seg_effmem_flavour_bad_slot", f, "fail",
+                  "names module slot -1"))
 
 
 def craft_grid_mismatch(src_path, cases):
@@ -451,8 +481,7 @@ def craft_map_grid_overflow(cases, version):
     fields += struct.pack("<HBI", MAP_GRID_TAG, K_EMBED, len(inner)) + inner
     fields += struct.pack("<H", 0)                    # record terminator
     rec = struct.pack("<BII", T_MAP, 150, len(fields)) + fields
-    payload = (rec + struct.pack("<I", SIGNATURE_TWO)
-                   + struct.pack("<I", 0))            # empty name table
+    payload = rec + struct.pack("<I", SIGNATURE_TWO)
 
     stamp = version.encode() if isinstance(version, str) else version
     if len(stamp) > 11:
@@ -590,11 +619,11 @@ def main():
     # --- 11. the synthesized 32-bit-truncation grid mutant.
     craft_map_grid_overflow(cases, v1.version)
 
-    # --- 12. the grid-dimension mismatch and the row-blob nameLen overrun,
-    # both from the full raw save.
+    # --- 12. the grid-dimension mismatch and the two memory-row mutants,
+    # all from the full raw save.
     if len(sys.argv) == 6:
         craft_grid_mismatch(sys.argv[5], cases)
-        craft_seg_row_namelen(sys.argv[5], cases)
+        craft_seg_row_mutants(sys.argv[5], cases)
 
     for name, contents, expect, detail in cases:
         path = os.path.join(out_dir, name + ".sav")

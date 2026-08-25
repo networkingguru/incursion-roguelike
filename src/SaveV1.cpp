@@ -3,9 +3,10 @@
      The v1 tagged-record save schema (docs/SAVE-SCHEMA-SPEC.md). A v1 file
    keeps the 96-byte fileHeader and 28-byte groupHeader shapes of the v0
    format, but the payload is a stream of tagged records -- one per object,
-   each field carrying a stable tag and a wire kind -- followed by a resource
-   name table that replaces positional rIDs with (pool, module, ordinal,
-   name) entries. Field declarations live inside the ARCHIVE_CLASS bodies as
+   each field carrying a stable tag and a wire kind. A resource reference is
+   the plain rID; each module's save-time array lengths and entry names ride
+   along in a manifest, and the reader converts every reference through its
+   position. Field declarations live inside the ARCHIVE_CLASS bodies as
    FIELD_* macro lines (inc/Base.h) and serve the v0 path, the v1 write, the
    v1 read, and the DEBUG coverage check from one declaration.
 
@@ -115,17 +116,6 @@ static void v1PutU32(V1Buf *b, uint32 v) { v1Put(b, &v, 4); }
 static void v1Patch32(V1Buf *b, size_t off, uint32 v)
   { memcpy(b->p + off, &v, 4); }
 
-/* Name-table entries, in first-use order so a second save of the same
-   registry is byte-identical. */
-struct V1NameEntry {
-    uint8  pool;
-    uint8  slot;
-    uint16 ordinal;
-    char  *name;      /* owned */
-    rID    resolved;  /* load side, after SaveV1_ResolveNames */
-    bool   bad;       /* load side: could not be resolved */
-};
-
 /* Embed scopes open on the writer: the byte offset of each scope's length
    placeholder. */
 struct V1Ctx {
@@ -134,11 +124,6 @@ struct V1Ctx {
     /* writer */
     size_t wEmbedPatch[V1_MAX_DEPTH];
     int    wEmbedDepth;
-
-    /* name table (writer builds it; reader loads it and keeps it for
-       SaveV1_ResolveNames) */
-    V1NameEntry *names;
-    uint32 nameCount, nameCap;
 
     /* reader: deferred rID resolution queues */
     rID  **slotQ;    uint32 slotQCount,   slotQCap;
@@ -173,8 +158,7 @@ static int v1FrameDepth;
 
 struct V1SegRow {
     uint8  kind;                 /* 0 MonMem, 1 ItemMem, 2 EffMem, 3 RegMem */
-    uint16 ordinal;              /* among same-pool, same-name resources */
-    char  *name;                 /* owned */
+    uint32 position;             /* its position in that array, SAVE numbering */
     uint8  payLen;
     uint8  pay[V1_SEG_MAX_PAY];
 };
@@ -736,14 +720,6 @@ static void v1CovEnd(void)
 /*                              teardown                                    */
 /* ------------------------------------------------------------------------ */
 
-static void v1NamesFree(void)
-  {
-    for (uint32 i = 0; i != v1.nameCount; i++)
-      free(v1.names[i].name);
-    free(v1.names);
-    v1.names = NULL; v1.nameCount = v1.nameCap = 0;
-  }
-
 static void v1QueuesFree(void)
   {
     free(v1.slotQ); v1.slotQ = NULL; v1.slotQCount = v1.slotQCap = 0;
@@ -766,7 +742,6 @@ static void v1WriterTeardown(void)
     v1.mode = V1_OFF;
     v1.wEmbedDepth = 0;
     v1BufFree(&v1Out);
-    v1NamesFree();
 #ifdef DEBUG
     free(v1Cov.map);
     v1Cov.map = NULL;
@@ -793,24 +768,18 @@ static void v1SegFree(void)
         memset(mp, 0, sizeof(*mp));
 
         V1SegPending *sp = &v1Seg[i];
-        if (sp->rows)
-          {
-            for (uint32 k = 0; k != sp->rowCount; k++)
-              free(sp->rows[k].name);
-            free(sp->rows);
-          }
+        free(sp->rows);
         free(sp->script);
         memset(sp, 0, sizeof(*sp));
       }
     v1SegSawGame = false;
   }
 
-/* The resolve state (name table + queues + pending memory segments)
+/* The resolve state (queues + pending manifests and memory segments)
    outlives LoadGroupV1 on purpose: SaveV1_ResolveNames() consumes it after
    the module reload. */
 static void v1ResolveTeardown(void)
   {
-    v1NamesFree();
     v1QueuesFree();
     v1SegFree();
   }
@@ -835,7 +804,7 @@ struct V1LoadScope {
 };
 
 /* ------------------------------------------------------------------------ */
-/*                          the resource name table                         */
+/*                    resource pools and the manifest                       */
 /* ------------------------------------------------------------------------ */
 
 struct V1Pool { char *base; size_t stride; int32 count; };
@@ -978,96 +947,6 @@ static void v1WriteModuleManifest(Module *mod)
         throw;
       }
     v1BufFree(&names);
-  }
-
-/* Save side: intern one rID as a (pool, slot, ordinal, name) entry and
-   return its table index. First-use order; duplicates dedupe. */
-static uint32 V1InternRid(rID id)
-  {
-    int slot = (int)(id >> 24) - 1;
-    if (slot < 0 || slot >= MAX_MODULES || !Game::Modules[slot])
-      {
-        Error("SaveV1: rID %u names module slot %d, which is not loaded",
-              (unsigned)id, slot);
-        throw ECORRUPT;
-      }
-    Module *mod = Game::Modules[slot];
-    uint32 idx = id & 0x00FFFFFF;
-    int pool = -1; V1Pool pl;
-    for (int p = SP_MON; p <= SP_ENC; p++)
-      {
-        if (!V1GetPool(mod, p, &pl))
-          break;
-        if (idx < (uint32)pl.count)
-          { pool = p; break; }
-        idx -= (uint32)pl.count;
-      }
-    if (pool < 0)
-      {
-        Error("SaveV1: rID %u is past every resource pool of module slot %d",
-              (unsigned)id, slot);
-        throw ECORRUPT;
-      }
-    const char *name = V1ResName(mod, &pl, (int32)idx);
-    /* The ordinal: how many earlier same-pool resources carry this exact
-       name, in declaration order. strcmp -- case matters (constraint 2). */
-    uint32 ordinal = 0;
-    for (uint32 j = 0; j != idx; j++)
-      if (!strcmp(V1ResName(mod, &pl, (int32)j), name))
-        ordinal++;
-    for (uint32 e = 0; e != v1.nameCount; e++)
-      if (v1.names[e].pool == (uint8)pool && v1.names[e].slot == (uint8)slot &&
-          v1.names[e].ordinal == (uint16)ordinal &&
-          !strcmp(v1.names[e].name, name))
-        return e;
-    if (v1.nameCount == v1.nameCap)
-      {
-        v1.nameCap = v1.nameCap ? v1.nameCap * 2 : 64;
-        V1NameEntry *nn = (V1NameEntry*)
-            realloc(v1.names, v1.nameCap * sizeof(V1NameEntry));
-        if (!nn)
-          throw EMEMORY;
-        v1.names = nn;
-      }
-    V1NameEntry *ent = &v1.names[v1.nameCount];
-    ent->pool = (uint8)pool;
-    ent->slot = (uint8)slot;
-    ent->ordinal = (uint16)ordinal;
-    ent->name = strdup(name);
-    ent->resolved = 0;
-    ent->bad = false;
-    return v1.nameCount++;
-  }
-
-/* Load side: one entry -> the rID it names in the modules now loaded, or
-   failure. An ordinal at or past the count of same-named resources fails. */
-static bool V1ResolveEntry(V1NameEntry *ent)
-  {
-    if (ent->slot >= MAX_MODULES || !Game::Modules[ent->slot])
-      return false;
-    Module *mod = Game::Modules[ent->slot];
-    V1Pool pl;
-    if (!V1GetPool(mod, ent->pool, &pl))
-      return false;
-    int32 found = -1; uint32 running = 0;
-    for (int32 i = 0; i != pl.count; i++)
-      if (!strcmp(V1ResName(mod, &pl, i), ent->name))
-        {
-          if (running == ent->ordinal)
-            { found = i; break; }
-          running++;
-        }
-    if (found < 0)
-      return false;
-    uint32 poolBase = 0; V1Pool earlier;
-    for (int p = SP_MON; p != ent->pool; p++)
-      {
-        if (!V1GetPool(mod, p, &earlier))
-          return false;
-        poolBase += (uint32)earlier.count;
-      }
-    ent->resolved = poolBase + (uint32)found + ((uint32)(ent->slot + 1) << 24);
-    return true;
   }
 
 /* Before resolving ANY resource reference, verify the append-only premise for
@@ -1240,7 +1119,7 @@ static void v1SegStarts(Module *mod, size_t np, size_t start[4], size_t *total)
 /* Pack one memory row's bitfields BY NAME into the fixed little-endian
    payload (never memcpy: the in-memory bitfield layout is the compiler's,
    the wire layout is ours). EffMem is handled by the caller because its
-   two flavour values go through the name table. Returns false for an
+   two flavour values are ordinary resource references. Returns false for an
    all-zero row, which is not written at all: a resource with no row keeps
    zeroed memory, as a new game gives it. */
 static bool v1SegPackRow(int kind, const char *rowp, uint8 *out)
@@ -1388,14 +1267,17 @@ bool SaveV1_CanWrite(Game &g, String &whyNot)
                   u8  rowKind   0=MonMem 1=ItemMem 2=EffMem 3=RegMem
                   u8  pool      SP_MON/SP_ITM/SP_EFF/SP_REG (must match
                                 rowKind; the redundancy is a cheap check)
-                  u16 ordinal   among same-pool same-name resources
-                  u16 nameLen + name bytes -- an INLINE key, not a global
-                                table index: memory rows have
-                                discard-on-missing semantics (constraint
-                                3's exception), the global table aborts
+                  u32 position  the resource's position within that array,
+                                in the SAVE's numbering. The slot's manifest
+                                bounds it, and under append-only the same
+                                position in the loaded module is the same
+                                resource. There is no discard-on-missing
+                                case any more: a position the manifest does
+                                not cover is ECORRUPT.
                   u8  payLen  + payload (v1SegPackRow's layouts; EffMem is
-                                two uint32 GLOBAL name-table indices for
-                                FlavorID/PFlavorID -- abort semantics --
+                                the two plain flavour rIDs for FlavorID and
+                                PFlavorID -- converted by position, abort
+                                semantics, rID 0 is the null reference --
                                 plus one Known/Tried/PKnown/PTried flags
                                 byte)
 
@@ -1459,17 +1341,17 @@ void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
                     uint8 pay[V1_SEG_MAX_PAY];
                     if (kind == 2)
                       {
-                        /* EffMem: the flavour rID VALUES go through the
-                           GLOBAL name table, like any other resource
-                           reference (abort semantics on load). */
+                        /* EffMem: the flavour rID VALUES are ordinary
+                           resource references. They travel as the plain
+                           rID, like every other reference since phase 3,
+                           and convert by position on load (abort
+                           semantics; rID 0 is the null reference). */
                         const EffMem *m = (const EffMem*)rowp;
                         if (!m->FlavorID && !m->PFlavorID && !m->Known &&
                             !m->Tried && !m->PKnown && !m->PTried)
                           continue;
-                        uint32 fi = m->FlavorID ?
-                            V1InternRid((rID)m->FlavorID) : 0xFFFFFFFFu;
-                        uint32 pfi = m->PFlavorID ?
-                            V1InternRid((rID)m->PFlavorID) : 0xFFFFFFFFu;
+                        uint32 fi = (uint32)m->FlavorID;
+                        uint32 pfi = (uint32)m->PFlavorID;
                         memcpy(pay, &fi, 4);
                         memcpy(pay + 4, &pfi, 4);
                         pay[8] = (uint8)((m->Known ? 1 : 0) |
@@ -1479,18 +1361,9 @@ void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
                       }
                     else if (!v1SegPackRow(kind, rowp, pay))
                       continue;
-                    const char *name = V1ResName(mod, &pl, j);
-                    size_t nameLen = strlen(name);
-                    ASSERT(nameLen <= 0xFFFF);
-                    uint32 ordinal = 0;
-                    for (int32 q = 0; q != j; q++)
-                      if (!strcmp(V1ResName(mod, &pl, q), name))
-                        ordinal++;
                     v1PutU8(&rows, (uint8)kind);
                     v1PutU8(&rows, v1SegPool[kind]);
-                    v1PutU16(&rows, (uint16)ordinal);
-                    v1PutU16(&rows, (uint16)nameLen);
-                    v1Put(&rows, name, nameLen);
+                    v1PutU32(&rows, (uint32)j);
                     v1PutU8(&rows, v1SegPayLen[kind]);
                     v1Put(&rows, pay, v1SegPayLen[kind]);
                     rowCount++;
@@ -1644,10 +1517,23 @@ void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
     if (sp->present)
       throw ECORRUPT;           /* two records for one slot */
 
+    /* Every row keys by a position in the SAVE's numbering, so the manifest
+       that supplies that numbering MUST be in the file beside it. The writer
+       emits the manifest for any slot that has a module, and refuses to
+       write a segment record for a slot that has none, so the two always
+       travel together. */
+    if (!v1Manifest[slot].present)
+      {
+        Error("SaveV1: module slot %d has a memory segment record but no "
+              "manifest to number its rows by", slot);
+        throw ECORRUPT;
+      }
+
     uint32 rowCount;
     memcpy(&rowCount, eCount->pay, 4);
-    /* Every row is at least 7 bytes of header, so this bounds the
-       allocation below by the blob the scanner already bounded. */
+    /* Every row is 7 header bytes (kind, pool, position, payLen) plus at
+       least one payload byte, so this bounds the allocation below by the
+       blob the scanner already bounded. */
     if (rowCount > eRows->size / 7)
       throw ECORRUPT;
 
@@ -1673,27 +1559,18 @@ void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
       for (uint32 k = 0; k != rowCount; k++)
         {
           V1SegRow *row = &sp->rows[k];
-          uint16 ordinal, nameLen;
+          uint32 position;
           if (pos + 6 > len)
             throw ECORRUPT;
           uint8 kind = p[pos];
           uint8 pool = p[pos + 1];
           if (kind > 3 || pool != v1SegPool[kind])
             throw ECORRUPT;
-          memcpy(&ordinal, p + pos + 2, 2);
-          memcpy(&nameLen, p + pos + 4, 2);
+          memcpy(&position, p + pos + 2, 4);
           pos += 6;
-          if (nameLen > len - pos)
-            throw ECORRUPT;
           row->kind = kind;
-          row->ordinal = ordinal;
-          row->name = (char*) malloc((size_t)nameLen + 1);
-          if (!row->name)
-            throw EMEMORY;
-          memcpy(row->name, p + pos, nameLen);
-          row->name[nameLen] = 0;
-          sp->rowCount = k + 1;   /* now, so a throw below still frees it */
-          pos += nameLen;
+          row->position = position;
+          sp->rowCount = k + 1;   /* the placement walks this many */
           if (pos + 1 > len)
             throw ECORRUPT;
           row->payLen = p[pos];
@@ -1757,6 +1634,19 @@ static long v1SegPlace(void)
                 "which did not load\n", slot);
             continue;
           }
+        /* The parser refuses a segment record without one, so this cannot
+           fire on a file the parser accepted. It stands because the row walk
+           below reads mp->lengths and MUST NOT read an absent manifest. */
+        V1ManifestPending *mp = &v1Manifest[slot];
+        if (!mp->present)
+          {
+            failures++;
+            fprintf(stderr,
+                "incursion: v1 memory segment record for module slot %d has "
+                "no manifest to number its rows by\n", slot);
+            continue;
+          }
+
         if (sp->scriptLen != (uint32)mod->szDataSeg)
           {
             /* The Verdict's length guard: the script data segment is
@@ -1781,56 +1671,42 @@ static long v1SegPlace(void)
         for (uint32 k = 0; k != sp->rowCount; k++)
           {
             V1SegRow *row = &sp->rows[k];
+            int pool = v1SegPool[row->kind];
             V1Pool pl;
-            if (!V1GetPool(mod, v1SegPool[row->kind], &pl))
+            if (!V1GetPool(mod, pool, &pl) || pl.count < 0)
               { failures++; continue; }
-            int32 found = -1;
-            uint32 running = 0;
-            for (int32 j = 0; j != pl.count; j++)
-              if (!strcmp(V1ResName(mod, &pl, j), row->name))
-                {
-                  if (running == row->ordinal)
-                    { found = j; break; }
-                  running++;
-                }
-            if (found < 0)
+            /* Append-only makes a position stable: an array only grows at
+               its end, so position P in the save is position P in the loaded
+               module. A position the save's own manifest never numbered, or
+               one past the loaded array, is corruption -- NOT a row to drop.
+               The discard-on-missing case is gone with the name key. */
+            if (row->position >= mp->lengths[pool] ||
+                row->position >= (uint32)pl.count)
               {
-                /* Silently-by-design: a memory row is annotation, not a
-                   reference (constraint 3's exception). */
-#ifdef DEBUG
+                failures++;
                 fprintf(stderr,
-                    "incursion: v1 memory row discarded: %s \"%s\" "
-                    "(ordinal %u) is no longer in module slot %d\n",
-                    V1PoolName(v1SegPool[row->kind]), row->name,
-                    (unsigned)row->ordinal, slot);
-#endif
+                    "incursion: v1 memory row for module slot %d names %s "
+                    "position %u; the save's manifest recorded %u entries "
+                    "and the loaded module has %u\n",
+                    slot, V1PoolName(pool), (unsigned)row->position,
+                    (unsigned)mp->lengths[pool], (unsigned)pl.count);
                 continue;
               }
             char *rowp = seg + start[row->kind] +
-                (size_t)found * v1SegStride[row->kind] * np;
+                (size_t)row->position * v1SegStride[row->kind] * np;
             if (row->kind == 2)
               {
                 EffMem *m = (EffMem*)rowp;
-                uint32 idx[2];
+                uint32 saved[2];
                 rID val[2] = { 0, 0 };
-                memcpy(&idx[0], row->pay, 4);
-                memcpy(&idx[1], row->pay + 4, 4);
+                memcpy(&saved[0], row->pay, 4);
+                memcpy(&saved[1], row->pay + 4, 4);
                 for (int f = 0; f != 2; f++)
                   {
-                    if (idx[f] == 0xFFFFFFFFu)
-                      continue;               /* encoded null */
-                    if (idx[f] >= v1.nameCount)
-                      {
-                        failures++;
-                        fprintf(stderr,
-                            "incursion: v1 EffMem flavour references name "
-                            "table entry %u of %u\n",
-                            (unsigned)idx[f], (unsigned)v1.nameCount);
-                        continue;
-                      }
-                    if (v1.names[idx[f]].bad)
-                      continue;               /* counted and reported */
-                    val[f] = v1.names[idx[f]].resolved;
+                    if (!saved[f])
+                      continue;               /* the null reference */
+                    if (!v1ConvertManifestRid(saved[f], &val[f]))
+                      { failures++; val[f] = 0; }
                   }
                 m->FlavorID  = (unsigned)val[0];
                 m->PFlavorID = (unsigned)val[1];
@@ -1851,15 +1727,15 @@ static long v1SegPlace(void)
 
 /* Deferred resolution: called once after each load path's module-reload
    loop (Game::LoadGame, RunSaveDump, and the -schematest/-schemaload
-   drivers). Resolves every queued slot or aborts naming EVERY failure --
-   an unresolvable entry MUST NOT be zeroed and MUST NOT be skipped
+   drivers). Converts every queued reference or aborts naming EVERY failure
+   -- an unconvertible reference MUST NOT be zeroed and MUST NOT be skipped
    (constraint 3). A v0 load queues nothing and returns immediately. */
 void SaveV1_ResolveNames()
   {
     uint32 i;
     long failures = 0;
 
-    if (!v1.slotQCount && !v1.statQCount && !v1.nameCount && !v1SegSawGame)
+    if (!v1.slotQCount && !v1.statQCount && !v1SegSawGame)
       return;
 
     failures += v1ManifestPreflight();
@@ -1867,20 +1743,6 @@ void SaveV1_ResolveNames()
       {
         v1ResolveTeardown();
         throw ECORRUPT;
-      }
-
-    for (i = 0; i != v1.nameCount; i++)
-      {
-        V1NameEntry *ent = &v1.names[i];
-        if (V1ResolveEntry(ent))
-          continue;
-        ent->bad = true;
-        failures++;
-        fprintf(stderr,
-            "incursion: v1 name table entry %u does not resolve: "
-            "pool %s, module slot %u, ordinal %u, name \"%s\"\n",
-            (unsigned)i, V1PoolName(ent->pool), (unsigned)ent->slot,
-            (unsigned)ent->ordinal, ent->name);
       }
 
     for (i = 0; i != v1.slotQCount; i++)
@@ -1900,9 +1762,9 @@ void SaveV1_ResolveNames()
       }
 
     /* Phase 2 of the memory segment record: allocation from the LOADED
-       modules' geometry, script-blob placement, and the name-keyed row
-       walk. Runs after the entry loop above because the EffMem flavour
-       values read the resolved entries. */
+       modules' geometry, script-blob placement, and the position-keyed row
+       walk. Its EffMem flavour values convert through the manifest, exactly
+       like the queued references above. */
     failures += v1SegPlace();
 
     v1ResolveTeardown();
@@ -2633,7 +2495,7 @@ template<> void Array<ModuleRecord,5,5>::FieldsV1(Registry &r)
 /* The caller writes the complete fileHeader first -- SaveSchemaID() into
    Version, Compression = SaveV1_Raw() ? 0 : 1 -- exactly as v0's callers
    write theirs. This writes one group: placeholder groupHeader, the records,
-   SIGNATURE_TWO, the name table, then backpatches the real header. */
+   SIGNATURE_TWO, then backpatches the real header. */
 int16 Registry::SaveGroupV1(Term &t, hObj hGroup)
   {
     groupHeader gh;
@@ -2713,19 +2575,6 @@ int16 Registry::SaveGroupV1(Term &t, hObj hGroup)
 #endif
 
     { uint32 sig = SIGNATURE_TWO; v1Put(&v1Out, &sig, 4); }
-
-    v1PutU32(&v1Out, v1.nameCount);
-    for (uint32 e = 0; e != v1.nameCount; e++)
-      {
-        V1NameEntry *ent = &v1.names[e];
-        size_t nameLen = strlen(ent->name);
-        ASSERT(nameLen <= 0xFFFF);
-        v1PutU8(&v1Out, ent->pool);
-        v1PutU8(&v1Out, ent->slot);
-        v1PutU16(&v1Out, ent->ordinal);
-        v1PutU16(&v1Out, (uint16)nameLen);
-        v1Put(&v1Out, ent->name, nameLen);
-      }
 
     gh.groupSize = (int32)v1Out.len;
     if (SaveV1_Raw())
@@ -3033,50 +2882,8 @@ foundGroup:
             throw ECORRUPT;
         }
 
-        /* The name table, kept for the deferred SaveV1_ResolveNames(). */
-        {
-          uint32 entryCount;
-          if (pos + 4 > len)
-            throw ECORRUPT;
-          memcpy(&entryCount, buf + pos, 4); pos += 4;
-          if (entryCount > 0x100000)
-            throw ECORRUPT;
-          if (entryCount)
-            {
-              v1.names = (V1NameEntry*)
-                  calloc(entryCount, sizeof(V1NameEntry));
-              if (!v1.names)
-                throw EMEMORY;
-              v1.nameCap = entryCount;
-            }
-          for (uint32 e = 0; e != entryCount; e++)
-            {
-              uint16 ordinal, nameLen;
-              if (pos + 6 > len)
-                throw ECORRUPT;
-              uint8 pool = buf[pos];
-              uint8 slot = buf[pos + 1];
-              memcpy(&ordinal, buf + pos + 2, 2);
-              memcpy(&nameLen, buf + pos + 4, 2);
-              pos += 6;
-              if (nameLen > len - pos)
-                throw ECORRUPT;
-              char *nm = (char*) malloc((size_t)nameLen + 1);
-              if (!nm)
-                throw EMEMORY;
-              memcpy(nm, buf + pos, nameLen);
-              nm[nameLen] = 0;
-              pos += nameLen;
-              v1.names[e].pool = pool;
-              v1.names[e].slot = slot;
-              v1.names[e].ordinal = ordinal;
-              v1.names[e].name = nm;
-              v1.nameCount = e + 1;
-            }
-        }
-
         if (pos != len)
-          throw ECORRUPT;   /* trailing bytes: this revision wrote none */
+          throw ECORRUPT;   /* trailing bytes: SIGNATURE_TWO ends the group */
       }
     catch (...)
       {
@@ -3089,9 +2896,10 @@ foundGroup:
     free(loaded);   /* every ents was consumed (and freed) by pass 2 */
     free(buf);
 
-    /* Resolution is deferred: the modules the names refer to are reloaded
-       AFTER the save group in both load paths, so the queues survive this
-       return and SaveV1_ResolveNames() consumes them there. */
+    /* Conversion is deferred: the modules the references point into are
+       reloaded AFTER the save group in both load paths, so the queues and
+       the parsed manifests survive this return and SaveV1_ResolveNames()
+       consumes them there. */
     guard.committed = true;
     return 0;
   }

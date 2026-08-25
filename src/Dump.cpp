@@ -327,8 +327,9 @@ bool RunSaveDump(const char *path) {
        real EFFMEM accessor. This is the lens tools/check_flavor_stability.sh
        compares across a module rebuild: these lines must be IDENTICAL when
        the same save is read against a module with one Effect added, because
-       the memory rows are keyed by name and the flavour rIDs travel through
-       the save's name table (docs/SAVE-SCHEMA-SPEC.md, phase 4). Effects
+       the memory rows are keyed by their position in the Effect array and
+       the flavour rIDs convert through the save's own module manifest
+       (docs/SAVE-SCHEMA-SPEC.md, "The resource memory segment"). Effects
        whose whole row is zero are omitted: a save carries no row for them
        and a new game gives them zeroed memory. */
     printf("=== Effect Memory (flavours and Known/Tried) ===\n");
