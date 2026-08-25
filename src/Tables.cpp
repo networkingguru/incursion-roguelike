@@ -3403,6 +3403,20 @@ YuseCommand YuseCommands[] = {
 
   { 0, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0 } };
 
+/* How many real rows YuseCommands has, counted to the Event == 0 terminator
+   the table already ends with -- the same walk Player::YuseMenu does
+   (src/Player.cpp:1549). It lives here, beside the table, because the table
+   has no declared extent: `extern struct YuseCommand YuseCommands[]`
+   (inc/Globals.h) gives no count to any other translation unit. The v1 save
+   reader needs it to bound Player::RecentVerbs, which holds indexes into
+   this table and is restored from the file (inc/Creature.h). */
+int16 YuseCommandCount()
+{
+    int16 n = 0;
+    while (YuseCommands[n].Event)
+        n++;
+    return n;
+}
 
 
 const char* SlotNames[] = {

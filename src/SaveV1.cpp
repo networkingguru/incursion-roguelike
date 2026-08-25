@@ -2146,8 +2146,12 @@ bool Registry::V1RunSchemaTest(const char *outDir)
             pl->QuickKeys[i].MM = (uint32)(i * 7u); }
         for (i = 0; i != 8; i++)
           pl->MessageQueue[i] = (const char*) Format("message %d", (int)i);
-        for (i = 0; i != 64; i++)
+        /* 63 entries and a terminator, not 64 entries: the load rules
+           require a zero somewhere in AutoBuffs, because every walk of it
+           stops only on one. */
+        for (i = 0; i != 63; i++)
           pl->AutoBuffs[i] = (int16)(i + 1);
+        pl->AutoBuffs[63] = 0;
         pl->cAutoBuff = 7;
         pl->GraveText = "Here lies a test player.";
         pl->HungerShown = 203;
@@ -2159,8 +2163,10 @@ bool Registry::V1RunSchemaTest(const char *outDir)
         pl->JournalInfo.numMonSeen = 206;
         for (i = 0; i != MA_LAST_REAL; i++)
           pl->JournalInfo.numMonOfType[i] = (int)(i + 1);
+        /* Real YuseCommands indexes, plus the -1 "empty" sentinel in one
+           slot: the load rules accept those two shapes and nothing else. */
         for (i = 0; i != 5; i++)
-          pl->RecentVerbs[i] = (int16)(i + 61);
+          pl->RecentVerbs[i] = (int16)(i == 2 ? -1 : i);
         for (i = 0; i != 11; i++)   /* LTI[11], inc/Creature.h */
           { pl->GameTimeInfo.LTI[i].turns = (uint32)(i + 1);
             pl->GameTimeInfo.LTI[i].actions = (uint32)(i + 2);

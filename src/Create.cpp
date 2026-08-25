@@ -868,6 +868,22 @@ void Player::TouchGallery(bool active)
     MyTerm->Seek(0,SEEK_END);
     sz = (int16)(MyTerm->Tell() / sizeof(ReincarnationInfo));
     MyTerm->Seek(0,SEEK_SET);
+    /* upstream: the two writes below index an array sized from gallery.dat
+       with GallerySlot, which is restored from the SAVE file and was checked
+       only for being negative. A save whose GallerySlot is past the gallery's
+       length -- a corrupt file, a hand-edited one, or a gallery.dat the
+       player replaced with a shorter one -- writes past the end of this heap
+       allocation. Nothing here depends on the platform, the compiler or the
+       typedefs: a Win32 build with the original types writes out of bounds
+       from the same line, so the defect is upstream's and not this port's.
+       Evidence: Traced -- read out of the code while auditing every
+       file-fed index for the v1 save schema; never seen to fire.
+       Tracking: inc-3c6x. Not sent. */
+    if (GallerySlot >= sz)
+      {
+        MyTerm->Close();
+        return;
+      }
     ri = new ReincarnationInfo[sz];
     MyTerm->FRead(ri,sz * sizeof(ReincarnationInfo));
     MyTerm->Close();
@@ -897,11 +913,21 @@ void Player::DisableReincarnation()
     MyTerm->Seek(0,SEEK_END);
     sz = (int16)(MyTerm->Tell() / sizeof(ReincarnationInfo));
     MyTerm->Seek(0,SEEK_SET);
+    /* The same defect and the same fix as TouchGallery above; the base-code
+       note is on that site (inc-3c6x). The ASSERT below was the only upper
+       guard this site had, and it was off by one -- sz == GallerySlot passes
+       it and indexes one past the end -- and an ASSERT is DEBUG-only anyway,
+       so a shipping build had no guard at all. */
+    if (GallerySlot >= sz)
+      {
+        MyTerm->Close();
+        return;
+      }
     ri = new ReincarnationInfo[sz];
     MyTerm->FRead(ri,sz * sizeof(ReincarnationInfo));
     MyTerm->Close();
 
-    ASSERT(sz >= GallerySlot);
+    ASSERT(sz > GallerySlot);
     ri[GallerySlot].Disabled = true;
 
     MyTerm->OpenWrite("gallery.dat");

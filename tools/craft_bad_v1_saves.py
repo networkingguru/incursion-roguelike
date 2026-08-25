@@ -21,12 +21,17 @@ with FOUR fields because two cases expect SUCCESS rather than refusal:
                      stdout must contain ("" = no extra requirement beyond
                      the caller's baseline comparison).
 
-Usage: craft_bad_v1_saves.py <raw-v1.sav> <output-dir> [<raw-creature-v1.sav>]
+Usage: craft_bad_v1_saves.py <raw-v1.sav> <output-dir>
+           [<raw-creature-v1.sav> [<raw-character-v1.sav>]]
 
 The optional third file is the schematest 'creature' group's raw file (c.sav).
 It carries a Monster record, which the first file does not, and yields the
 one mutant that needs a creature: a count field whose value the reader cannot
 honour.
+
+The optional fourth file is the schematest 'character' group's raw file
+(e.sav). It carries a Player record, which neither of the others does, and
+yields the mutant for a file-fed INDEX inside a Player.
 """
 import struct
 import sys
@@ -48,8 +53,11 @@ FIXED = {K_U8: 1, K_I8: 1, K_U16: 2, K_I16: 2, K_U32: 4, K_I32: 4,
          K_RID: 4, K_H: 4}
 SP_EFF = 3
 T_MONSTER = 6                     # inc/Defines.h
+T_PLAYER = 7                      # inc/Defines.h
 CREATURE_TS_TAG = 256             # Creature::ts, inc/Creature.h
+CHAR_NOTIFIEDLEVEL_TAG = 421      # Character::NotifiedLevel, inc/Creature.h
 NUM_TARGETS = 32                  # inc/Target.h
+MAX_NOTIFIED_LEVEL = 25           # ExperienceChart[27], src/Tables.cpp
 
 CORRUPT = "File is Corrupt"       # ECORRUPT, src/Tables.cpp FileErrors
 
@@ -213,10 +221,44 @@ def craft_creature_tcount(src_path, cases):
     cases.append(("creature_tcount_overflow", f, "fail", CORRUPT))
 
 
+def craft_player_notified_level(src_path, cases):
+    """One mutant from the character file: Character::NotifiedLevel = 127.
+
+    NotifiedLevel is an int8 on the wire and the game uses it unguarded as
+    ExperienceChart[NotifiedLevel+1] (27 entries) and
+    NumberNames[NotifiedLevel+1] (31 entries), then PRINTS the const char*
+    the second yields (src/Create.cpp:2060-2062). Off the end of NumberNames
+    that pointer is whatever follows the table. 25 is the largest value both
+    index expressions can honour, so the reader must refuse a bigger one.
+
+    This is the cheapest of the class to craft: a top-level K_I8 field in the
+    Player record, so the mutation is one byte and no length changes. The
+    other new bounds sit inside K_ARRAY payloads (RecentVerbs, AutoBuffs) or
+    are enforced at the use site rather than at load (GallerySlot).
+    """
+    base = open(src_path, "rb").read()
+    v1 = V1File(base)
+    recs = [r for r in v1.records if r["type"] == T_PLAYER]
+    if len(recs) != 1:
+        die("expected exactly one T_PLAYER record in %s, found %d"
+            % (src_path, len(recs)))
+    fl = [f for f in recs[0]["fields"]
+          if f["tag"] == CHAR_NOTIFIEDLEVEL_TAG]
+    if len(fl) != 1 or fl[0]["kind"] != K_I8:
+        die("expected exactly one tag-%d K_I8 field "
+            "(Character::NotifiedLevel)" % CHAR_NOTIFIEDLEVEL_TAG)
+    off = fl[0]["off"] + 3          # tag (2) + kind (1)
+    if base[off] > MAX_NOTIFIED_LEVEL:
+        die("the genuine file already carries NotifiedLevel=%d" % base[off])
+    f = base[:off] + bytes([127]) + base[off + 1:]
+    cases.append(("player_notified_level_overflow", f, "fail", CORRUPT))
+
+
 def main():
-    if len(sys.argv) not in (3, 4):
+    if len(sys.argv) not in (3, 4, 5):
         print("usage: craft_bad_v1_saves.py <raw-v1.sav> <output-dir> "
-              "[<raw-creature-v1.sav>]", file=sys.stderr)
+              "[<raw-creature-v1.sav> [<raw-character-v1.sav>]]",
+              file=sys.stderr)
         return 2
     src_path, out_dir = sys.argv[1], sys.argv[2]
     os.makedirs(out_dir, exist_ok=True)
@@ -309,8 +351,12 @@ def main():
     cases.append(("bad_ordinal", f, "fail", ent["name"]))
 
     # --- 9. creature_tcount_overflow, from the creature file when given.
-    if len(sys.argv) == 4:
+    if len(sys.argv) >= 4:
         craft_creature_tcount(sys.argv[3], cases)
+
+    # --- 10. player_notified_level_overflow, from the character file.
+    if len(sys.argv) == 5:
+        craft_player_notified_level(sys.argv[4], cases)
 
     for name, contents, expect, detail in cases:
         path = os.path.join(out_dir, name + ".sav")

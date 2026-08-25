@@ -980,14 +980,32 @@ class Character: public Creature
           /* Level[c] is a loop bound over hpRolls[c][MAX_CHAR_LEVEL] and
              manaRolls[c][MAX_CHAR_LEVEL] (`for (j=0;j!=Level[i];j++)`,
              src/Values.cpp:1785 and :1841). It is an int8, so the wire can
-             offer -128..127: a negative value makes that loop run away, and
-             anything past MAX_CHAR_LEVEL reads off the end of the roll
-             array. A value the reader cannot honour is corruption, per the
-             wire format's reader rules -- the same rule TargetSystem
+             offer -128..127 and a negative value makes that loop run away.
+             The SUM matters too, and separately: NextLevXP() indexes
+             ExperienceChart[Level[0]+Level[1]+Level[2]+1] and that table
+             holds 27 entries (src/Create.cpp:1997, src/Tables.cpp:3467), so
+             three legal per-class levels of 11 would index 34. The real
+             game invariant is the one Player::AdvanceLevel enforces at
+             src/Create.cpp:2445 -- it refuses to advance once TotalLevel()
+             reaches MAX_CHAR_LEVEL -- so the total, not the element, is the
+             bound, and it also implies every element is within
+             MAX_CHAR_LEVEL. A value the reader cannot honour is corruption,
+             per the wire format's reader rules; the same rule TargetSystem
              applies to tCount. */
           for (i = 0; i != 3; i++)
-            if (Level[i] < 0 || Level[i] > MAX_CHAR_LEVEL)
+            if (Level[i] < 0)
               throw ECORRUPT;
+          if (Level[0] + Level[1] + Level[2] > MAX_CHAR_LEVEL)
+            throw ECORRUPT;
+          /* NotifiedLevel indexes ExperienceChart[NotifiedLevel+1] (27
+             entries) and NumberNames[NotifiedLevel+1] (31 entries), both
+             unguarded at src/Create.cpp:2060-2062, and the const char* the
+             second yields is printed. It is an int8 off the wire. 25 is the
+             largest value for which both index expressions stay in range;
+             chargen starts it at 1 (src/Create.cpp:103) and 0 is the value
+             an absent tag leaves, so both are accepted. */
+          if (NotifiedLevel < 0 || NotifiedLevel > 25)
+            throw ECORRUPT;
         }
     END_ARCHIVE
 	};
@@ -1439,11 +1457,44 @@ class Player: public Character
           ExploreMode   = bExplore != 0;
           rerolledPerks = bReroll != 0;
           /* cAutoBuff is the cursor NextAutoBuff() reads AutoBuffs[64]
-             through, and NextAutoBuff is a script-callable API
-             (inc/Api.h:506) that does not reset it. A value off the wire
-             that is negative or past the array is corruption. */
-          if (cAutoBuff < 0 || cAutoBuff > 64)
+             through -- `return AutoBuffs[cAutoBuff++]` -- and NextAutoBuff
+             is a script-callable API (inc/Api.h:506) that does not reset
+             it. 63 is the last index the read can honour: a cursor of 64
+             reads one past the end before the increment is even seen.
+             Known cost of choosing 63 over 64: a completed
+             FirstAutoBuff/NextAutoBuff walk parks the cursor one past the
+             last entry it read, so a player with a FULL 63-entry autobuff
+             list, saved after such a walk, would carry 64 and be refused.
+             That takes 63 buffs deliberately added one at a time through
+             the spell manager; a one-past-end read is the worse of the
+             two, so the tighter bound wins. */
+          if (cAutoBuff < 0 || cAutoBuff > 63)
             throw ECORRUPT;
+          /* AutoBuffs is a NUL-terminated list inside a fixed 64-entry
+             array, and all three walks of it stop only on a zero entry with
+             no index limit (src/Term.cpp:152 and :234, src/Sheet.cpp:778).
+             If the wire fills every entry there is no terminator and those
+             loops run off the end, so the terminator is an invariant the
+             reader must enforce rather than hope for. One zero anywhere is
+             enough: the walks stop at the first. */
+          for (i = 0; i != 64; i++)
+            if (!AutoBuffs[i])
+              break;
+          if (i == 64)
+            throw ECORRUPT;
+          /* RecentVerbs holds indexes into YuseCommands[], which
+             Player::YuseMenu dereferences as
+             YuseCommands[RecentVerbs[i]].Verb -- a const char* it then
+             prints -- guarded only against the -1 "empty" sentinel
+             (src/Player.cpp:1546-1547). The table has no declared extent,
+             so its length comes from the count of its own rows. */
+          {
+            int16 nVerbs = YuseCommandCount();
+            for (i = 0; i != 5; i++)
+              if (RecentVerbs[i] != -1 &&
+                  (RecentVerbs[i] < 0 || RecentVerbs[i] >= nVerbs))
+                throw ECORRUPT;
+          }
         }
     END_ARCHIVE
 

@@ -264,6 +264,10 @@ extern int32 WealthByLevel[];
 extern uint16 ActiveTraits[];
 extern struct Option OptionList[];
 extern struct YuseCommand YuseCommands[];
+/* The row count of the table above, to its Event == 0 terminator. Defined in
+   src/Tables.cpp beside the table, because the array has no declared extent
+   here. */
+int16 YuseCommandCount();
 
 extern struct ReincarnationInfo RInf;
 
