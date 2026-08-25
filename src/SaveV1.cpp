@@ -191,15 +191,42 @@ static const SchemaPad CreaturePads[] = {
     { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1677, 3 }
 };
 
-/* Monster: CreaturePads, plus the pending range. */
+/* Monster: CreaturePads, plus the tail pad after Recent[6] ends at 1692
+   and sizeof(Monster) is 1696. */
 static const SchemaPad MonsterPads[] = {
     { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1677, 3 },
-    /* pending: Task 3 declares these. Monster's own members -- Inv,
-       BuffCount, FoilCount and Recent[6] (inc/Creature.h:1183-1185) -- have
-       no field lines yet, so the whole of Monster's own range is pinned as
-       padding meanwhile. The row goes away when Task 3 declares them, and
-       the coverage check then reports any byte the new lines miss. */
-    { 1680, 16 }
+    { 1692, 4 }
+};
+
+/* Character: CreaturePads, plus the pads the compiler leaves between its
+   own members. Each one is the gap before the next member's alignment:
+   1937 after SkillRanks[49], 2173 after Abilities[143], 2263 after
+   RageCount, 2278 before LastRest, 2583 after NotifiedLevel, 7038 before
+   SacVals, 8390 before lastPulse, and the 4-byte tail after
+   Proficiencies.
+
+   No object is ever exactly a Character -- the class is abstract
+   (AdvanceLevel is pure virtual) -- so this row is never the one
+   ObjectSize() selects. It is here because Character's field list is real
+   and its padding is what Player's row inherits: if upstream adds a member
+   to Character, the two rows move together and both must be re-measured. */
+static const SchemaPad CharacterPads[] = {
+    { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1677, 3 },
+    { 1937, 1 }, { 2173, 1 }, { 2263, 1 }, { 2278, 2 }, { 2583, 1 },
+    { 7038, 2 }, { 8390, 2 }, { 8548, 4 }
+};
+
+/* Player: CharacterPads without Character's tail pad -- Player's
+   MapMemoryMask occupies 8548 -- plus Player's own seven gaps and its
+   6-byte tail. MessageQueue, QuickKeys, Macros, JournalInfo and
+   GameTimeInfo carry no rows: each travels as an embed over its whole
+   range, which marks its interior padding too. */
+static const SchemaPad PlayerPads[] = {
+    { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1677, 3 },
+    { 1937, 1 }, { 2173, 1 }, { 2263, 1 }, { 2278, 2 }, { 2583, 1 },
+    { 7038, 2 }, { 8390, 2 },
+    { 8553, 1 }, { 8618, 2 }, { 17500, 4 }, { 17826, 6 }, { 17858, 6 },
+    { 18258, 6 }, { 18649, 3 }, { 19610, 6 }
 };
 
 static const SchemaPin SchemaPins[] = {
@@ -209,6 +236,10 @@ static const SchemaPin SchemaPins[] = {
       (int)(sizeof(CreaturePads)/sizeof(CreaturePads[0])) },
     { "Monster", T_MONSTER, sizeof(Monster), MonsterPads,
       (int)(sizeof(MonsterPads)/sizeof(MonsterPads[0])) },
+    { "Character", T_CREATURE, sizeof(Character), CharacterPads,
+      (int)(sizeof(CharacterPads)/sizeof(CharacterPads[0])) },
+    { "Player", T_PLAYER, sizeof(Player), PlayerPads,
+      (int)(sizeof(PlayerPads)/sizeof(PlayerPads[0])) },
 };
 
 #ifdef DEBUG
@@ -1955,6 +1986,432 @@ bool Registry::V1RunSchemaTest(const char *outDir)
           grpOk = false;
         }
       printf("SCHEMATEST GROUP creature %s\n", grpOk ? "PASS" : "FAIL");
+      ok = ok && grpOk;
+    }
+
+    /* ------------------------------------------------------------ group 3 --
+       character. One Player -- the only concrete class whose chain reaches
+       Character, so the record exercises Character's field list and
+       Player's -- plus one Monster, whose own four members no other group
+       gives a value to. Every rID-bearing member of the two classes is
+       filled with a real resource, because those are the renumbering
+       victims the whole schema exists for (spec, "Why"). */
+    v1TestMismatches = 0;
+    v1CovFindings = 0;
+
+    Registry *regE = new Registry();
+    Registry *regF = new Registry();
+    Player *pl = NULL;
+    Monster *mon2 = NULL;
+    hObj ph = 0, m2h = 0;
+    String pe, pf;
+    pe = Format("%s/e.sav", outDir);
+    pf = Format("%s/f.sav", outDir);
+
+    try
+      {
+        theRegistry = regE;
+
+        size_t psz = typeSize((int8)T_PLAYER);
+        pl = (Player*) malloc(psz);
+        if (!pl)
+          throw EMEMORY;
+        memset((void*)pl, 0, psz);
+        new((Object*)pl) Player(regE);
+        pl->Type = T_PLAYER;
+        pl->myHandle = regE->RegisterObject(pl);
+        ph = pl->myHandle;
+
+        size_t msz = typeSize((int8)T_MONSTER);
+        mon2 = (Monster*) malloc(msz);
+        if (!mon2)
+          throw EMEMORY;
+        memset((void*)mon2, 0, msz);
+        new((Object*)mon2) Monster(regE);
+        mon2->Type = T_MONSTER;
+        mon2->myHandle = regE->RegisterObject(mon2);
+        m2h = mon2->myHandle;
+
+        /* Thing/Creature slices, so the chain runs end to end. hm stays 0
+           for the reason the items group gives. */
+        pl->Named = (const char*) Format("Test player");
+        pl->__Stati.Initialize();
+        pl->x = 91; pl->y = 92;
+        pl->mID = mod->MonsterID(2);
+        pl->cHP = 93; pl->mHP = 94;
+        mon2->Named = (const char*) Format("Test monster two");
+        mon2->__Stati.Initialize();
+        mon2->x = 95; mon2->y = 96;
+        mon2->mID = mod->MonsterID(3);
+
+        /* Monster's own members. */
+        mon2->Inv = ph;
+        mon2->BuffCount = 11;
+        mon2->FoilCount = 12;
+        for (i = 0; i != 6; i++)
+          mon2->Recent[i] = (uint8)(200 + i);
+
+        /* Character's own members, in declaration order. */
+        for (i = 0; i != NUM_SLOTS; i++)
+          pl->Inv[i] = (hObj)(i ? 0 : m2h);
+        pl->defMelee = m2h; pl->defRanged = ph;
+        pl->defAmmo = 0;    pl->defOffhand = m2h;
+        for (i = 0; i != 7; i++)
+          pl->BAttr[i] = (int16)(10 + i);
+        for (i = 0; i != ATTR_LAST; i++)
+          pl->KAttr[i] = (int16)(300 + i);
+        for (i = 0; i != SK_LASTSKILL; i++)
+          pl->SkillRanks[i] = (int8)(i % 20);
+        for (i = 0; i != (FT_LAST/8)+1; i++)
+          pl->Feats[i] = (uint16)(0x0101u * (uint16)(i + 1));
+        for (i = 0; i != CA_LAST; i++)
+          pl->Abilities[i] = (uint8)(i % 7);
+        for (i = 0; i != 6; i++)
+          { pl->SpentSP[i] = (uint16)(i + 1);
+            pl->BonusSP[i] = (uint16)(i + 10);
+            pl->TotalSP[i] = (uint16)(i + 20); }
+        for (i = 0; i != 4; i++)
+          { pl->TurnTypes[i] = (uint8)(i + 1);
+            pl->TurnLevels[i] = (uint8)(i + 5); }
+        for (i = 0; i != 12; i++)
+          { pl->FavTypes[i] = (uint8)(i + 2);
+            pl->FavLevels[i] = (uint8)(i + 3); }
+        for (i = 0; i != STUDY_LAST; i++)
+          pl->IntStudy[i] = (uint8)(i + 4);
+        pl->FocusWCount = 101; pl->FocusSCount = 102; pl->ExoticCount = 103;
+        pl->aStoryPluses = 104; pl->tStoryPluses = 105;
+        pl->RageCount = 106; pl->xpTicks = 107;
+        pl->Personality = 0xC0FFEE01u; pl->polyTicks = 108;
+        pl->alignGE = -109; pl->alignLC = 110;
+        pl->LastRest = 111; pl->fracFatigue = 112;
+        pl->isFallenPaladin = true;
+        pl->Level[0] = 3; pl->Level[1] = 2; pl->Level[2] = 4;
+        for (i = 0; i != 3; i++)
+          for (j = 0; j != MAX_CHAR_LEVEL; j++)
+            { pl->hpRolls[i][j] = (int8)(i * 3 + j);
+              pl->manaRolls[i][j] = (int8)(i * 5 + j); }
+        for (i = 0; i != 16; i++)
+          pl->SaveBonus[i] = (int8)(i - 8);
+        for (i = 0; i != 7; i++)
+          for (j = 0; j != 15; j++)
+            pl->GainAttr[i][j] = (int16)(i * 15 + j);
+        pl->NotifiedLevel = 9;
+        for (i = 0; i != 6; i++)
+          pl->ClassID[i] = mod->ClassID((uint16)(i + 1));
+        pl->RaceID = mod->RaceID(2);
+        pl->GodID = mod->GodID(1);
+        pl->Mount = m2h;
+        pl->XP = 123456; pl->XP_Drained = 789;
+        for (i = 0; i != 10; i++)
+          { pl->SpellsLearned[i] = (uint8)(i + 1);
+            pl->SpellSlots[i] = (uint8)(i + 11);
+            pl->BonusSlots[i] = (uint8)(i + 21);
+            pl->RecentSpells[i] = (uint16)(i + 31); }
+        for (i = 0; i != 5; i++)
+          { pl->RecentSkills[i] = (uint16)(i + 41);
+            pl->RecentItems[i] = (uint16)(i + 51); }
+        for (i = 0; i != MAX_SPELLS + 1; i++)
+          pl->Spells[i] = (uint16)(i & 0xFF);
+        for (i = 0; i != 10; i++)
+          pl->Tattoos[i] = mod->EffectID((uint16)(20 + i));
+        pl->resChance = 113;
+        for (i = 0; i != MAX_GODS; i++)
+          { pl->FavourLev[i] = (int16)(i + 1);
+            pl->TempFavour[i] = (int32)(1000 + i);
+            pl->Anger[i] = (int16)(i + 2);
+            pl->FavPenalty[i] = (int16)(i + 3);
+            pl->PrayerTimeout[i] = (int16)(i + 4);
+            pl->AngerThisTurn[i] = (int16)(i + 5);
+            pl->lastPulse[i] = (int32)(2000 + i);
+            pl->godFlags[i] = (uint16)(i + 6);
+            for (j = 0; j != MAX_SAC_CATS + 2; j++)
+              pl->SacVals[i][j] = (int32)(i * 100 + j); }
+        pl->desiredAlign = 0xBEEF;
+        pl->Proficiencies = 0xDEADBEEFu;
+
+        /* Player's own members, in declaration order. */
+        pl->MapMemoryMask = 201;
+        pl->GallerySlot = 202;
+        pl->MapSP = 3;
+        for (i = 0; i != MAX_DUNGEONS; i++)
+          pl->MaxDepths[i] = (int16)(i + 1);
+        for (i = 0; i != MAX_SPELLS; i++)
+          pl->MMArray[i] = (uint32)(i * 3u);
+        for (i = 0; i != MAX_MACROS; i++)
+          pl->Macros[i] = mod->EffectID((uint16)(40 + i));
+        for (i = 0; i != MAX_QKEYS; i++)
+          { pl->QuickKeys[i].Value = (uint32)(i + 300);
+            pl->QuickKeys[i].Type = (int16)(i % 4);
+            pl->QuickKeys[i].hItem = (hObj)(i & 1 ? ph : m2h);
+            pl->QuickKeys[i].MM = (uint32)(i * 7u); }
+        for (i = 0; i != 8; i++)
+          pl->MessageQueue[i] = (const char*) Format("message %d", (int)i);
+        for (i = 0; i != 64; i++)
+          pl->AutoBuffs[i] = (int16)(i + 1);
+        pl->cAutoBuff = 7;
+        pl->GraveText = "Here lies a test player.";
+        pl->HungerShown = 203;
+        pl->Journal = "Day one: the schema test began.";
+        pl->JournalInfo.bestMonster = "Balrog";
+        pl->JournalInfo.bestMonsterVal = 204;
+        pl->JournalInfo.bestItem = "Vorpal Blade";
+        pl->JournalInfo.bestItemVal = 205;
+        pl->JournalInfo.numMonSeen = 206;
+        for (i = 0; i != MA_LAST_REAL; i++)
+          pl->JournalInfo.numMonOfType[i] = (int)(i + 1);
+        for (i = 0; i != 5; i++)
+          pl->RecentVerbs[i] = (int16)(i + 61);
+        for (i = 0; i != 11; i++)   /* LTI[11], inc/Creature.h */
+          { pl->GameTimeInfo.LTI[i].turns = (uint32)(i + 1);
+            pl->GameTimeInfo.LTI[i].actions = (uint32)(i + 2);
+            pl->GameTimeInfo.LTI[i].keystrokes = (uint32)(i + 3);
+            pl->GameTimeInfo.LTI[i].seconds = (time_t)(1700000000 + i);
+            pl->GameTimeInfo.LTI[i].xp = (int32)(i + 4); }
+        pl->GameTimeInfo.start_turn = 301;
+        pl->GameTimeInfo.actions = 302;
+        pl->GameTimeInfo.keystrokes = 303;
+        pl->GameTimeInfo.start_second = (time_t)1700000999;
+        pl->GameTimeInfo.start_xp = 304;
+        pl->statiChanged = true;
+        pl->formulaSeed = 401; pl->storeSeed = 402;
+        for (i = 0; i != 12; i++)
+          pl->SpellKeys[i] = (int16)(i + 71);
+        for (i = 0; i != OPT_LAST; i++)
+          pl->Options[i] = (int8)(i % 5);
+        pl->shownFF = true;
+        pl->VictoryFlag = false; pl->QuitFlag = true;
+        pl->UpdateMap = true;    pl->DigMode = false;
+        pl->WizardMode = true;   pl->ExploreMode = false;
+        pl->rerolledPerks = true;
+        pl->deathCount = 403; pl->rerollCount = 404;
+        pl->statMethod = 405;
+
+        memset(&fh, 0, sizeof(fh));
+        fh.Sig = SIGNATURE;
+        strcpy(fh.Version, SaveSchemaID());
+        strncpy(fh.Name, "schematest character", 71);
+        fh.numGroups = 1;
+        fh.Compression = SaveV1_Raw() ? 0 : 1;
+        T1->OpenWrite(pe);
+        T1->FWrite(&fh, sizeof(fh));
+        regE->SaveGroupV1(*T1, 0);
+        T1->Close();
+
+        theRegistry = regF;
+        T1->OpenRead(pe);
+        regF->LoadGroup(*T1, 0, false);
+        T1->Close();
+        SaveV1_ResolveNames();
+
+        {
+          Player *a = pl;
+          Player *b = (Player*) regF->Get(ph);
+          if (!b)
+            v1Mismatch(0, "player missing after load", (long)ph, 0);
+          else
+            {
+              /* Character's own members. */
+              for (i = 0; i != NUM_SLOTS; i++)
+                if (a->Inv[i] != b->Inv[i])
+                  v1Mismatch(i, "Inv[i]", (long)a->Inv[i], (long)b->Inv[i]);
+              V1CMP(0, defMelee);   V1CMP(0, defRanged);
+              V1CMP(0, defAmmo);    V1CMP(0, defOffhand);
+              for (i = 0; i != 7; i++)
+                if (a->BAttr[i] != b->BAttr[i])
+                  v1Mismatch(i, "BAttr[i]", (long)a->BAttr[i],
+                             (long)b->BAttr[i]);
+              for (i = 0; i != ATTR_LAST; i++)
+                if (a->KAttr[i] != b->KAttr[i])
+                  v1Mismatch(i, "KAttr[i]", (long)a->KAttr[i],
+                             (long)b->KAttr[i]);
+              if (memcmp(a->SkillRanks, b->SkillRanks, sizeof(a->SkillRanks)))
+                v1Mismatch(0, "SkillRanks", 0, 1);
+              if (memcmp(a->Feats, b->Feats, sizeof(a->Feats)))
+                v1Mismatch(0, "Feats", 0, 1);
+              if (memcmp(a->Abilities, b->Abilities, sizeof(a->Abilities)))
+                v1Mismatch(0, "Abilities", 0, 1);
+              if (memcmp(a->SpentSP, b->SpentSP, sizeof(a->SpentSP)) ||
+                  memcmp(a->BonusSP, b->BonusSP, sizeof(a->BonusSP)) ||
+                  memcmp(a->TotalSP, b->TotalSP, sizeof(a->TotalSP)))
+                v1Mismatch(0, "SP arrays", 0, 1);
+              if (memcmp(a->TurnTypes, b->TurnTypes, sizeof(a->TurnTypes)) ||
+                  memcmp(a->TurnLevels, b->TurnLevels, sizeof(a->TurnLevels)) ||
+                  memcmp(a->FavTypes, b->FavTypes, sizeof(a->FavTypes)) ||
+                  memcmp(a->FavLevels, b->FavLevels, sizeof(a->FavLevels)) ||
+                  memcmp(a->IntStudy, b->IntStudy, sizeof(a->IntStudy)))
+                v1Mismatch(0, "turn/fav/study arrays", 0, 1);
+              V1CMP(0, FocusWCount); V1CMP(0, FocusSCount);
+              V1CMP(0, ExoticCount); V1CMP(0, aStoryPluses);
+              V1CMP(0, tStoryPluses); V1CMP(0, RageCount);
+              V1CMP(0, xpTicks);     V1CMP(0, Personality);
+              V1CMP(0, polyTicks);   V1CMP(0, alignGE);
+              V1CMP(0, alignLC);     V1CMP(0, LastRest);
+              V1CMP(0, fracFatigue); V1CMP(0, isFallenPaladin);
+              if (memcmp(a->Level, b->Level, sizeof(a->Level)) ||
+                  memcmp(a->hpRolls, b->hpRolls, sizeof(a->hpRolls)) ||
+                  memcmp(a->manaRolls, b->manaRolls, sizeof(a->manaRolls)) ||
+                  memcmp(a->SaveBonus, b->SaveBonus, sizeof(a->SaveBonus)) ||
+                  memcmp(a->GainAttr, b->GainAttr, sizeof(a->GainAttr)))
+                v1Mismatch(0, "level/roll arrays", 0, 1);
+              V1CMP(0, NotifiedLevel);
+              for (i = 0; i != 6; i++)
+                if (a->ClassID[i] != b->ClassID[i])
+                  v1Mismatch(i, "ClassID[i]", (long)a->ClassID[i],
+                             (long)b->ClassID[i]);
+              V1CMP(0, RaceID); V1CMP(0, GodID); V1CMP(0, Mount);
+              V1CMP(0, XP);     V1CMP(0, XP_Drained);
+              if (memcmp(a->SpellsLearned, b->SpellsLearned,
+                         sizeof(a->SpellsLearned)) ||
+                  memcmp(a->SpellSlots, b->SpellSlots,
+                         sizeof(a->SpellSlots)) ||
+                  memcmp(a->BonusSlots, b->BonusSlots,
+                         sizeof(a->BonusSlots)) ||
+                  memcmp(a->RecentSpells, b->RecentSpells,
+                         sizeof(a->RecentSpells)) ||
+                  memcmp(a->RecentSkills, b->RecentSkills,
+                         sizeof(a->RecentSkills)) ||
+                  memcmp(a->RecentItems, b->RecentItems,
+                         sizeof(a->RecentItems)) ||
+                  memcmp(a->Spells, b->Spells, sizeof(a->Spells)))
+                v1Mismatch(0, "spell/recent arrays", 0, 1);
+              for (i = 0; i != 10; i++)
+                if (a->Tattoos[i] != b->Tattoos[i])
+                  v1Mismatch(i, "Tattoos[i]", (long)a->Tattoos[i],
+                             (long)b->Tattoos[i]);
+              V1CMP(0, resChance);
+              if (memcmp(a->FavourLev, b->FavourLev, sizeof(a->FavourLev)) ||
+                  memcmp(a->TempFavour, b->TempFavour,
+                         sizeof(a->TempFavour)) ||
+                  memcmp(a->Anger, b->Anger, sizeof(a->Anger)) ||
+                  memcmp(a->SacVals, b->SacVals, sizeof(a->SacVals)) ||
+                  memcmp(a->FavPenalty, b->FavPenalty,
+                         sizeof(a->FavPenalty)) ||
+                  memcmp(a->PrayerTimeout, b->PrayerTimeout,
+                         sizeof(a->PrayerTimeout)) ||
+                  memcmp(a->AngerThisTurn, b->AngerThisTurn,
+                         sizeof(a->AngerThisTurn)) ||
+                  memcmp(a->lastPulse, b->lastPulse, sizeof(a->lastPulse)) ||
+                  memcmp(a->godFlags, b->godFlags, sizeof(a->godFlags)))
+                v1Mismatch(0, "religion arrays", 0, 1);
+              V1CMP(0, desiredAlign); V1CMP(0, Proficiencies);
+
+              /* Player's own members. */
+              V1CMP(0, MapMemoryMask); V1CMP(0, GallerySlot); V1CMP(0, MapSP);
+              if (memcmp(a->MaxDepths, b->MaxDepths, sizeof(a->MaxDepths)) ||
+                  memcmp(a->MMArray, b->MMArray, sizeof(a->MMArray)))
+                v1Mismatch(0, "MaxDepths/MMArray", 0, 1);
+              for (i = 0; i != MAX_MACROS; i++)
+                if (a->Macros[i] != b->Macros[i])
+                  v1Mismatch(i, "Macros[i]", (long)a->Macros[i],
+                             (long)b->Macros[i]);
+              for (i = 0; i != MAX_QKEYS; i++)
+                if (a->QuickKeys[i].Value != b->QuickKeys[i].Value ||
+                    a->QuickKeys[i].Type  != b->QuickKeys[i].Type  ||
+                    a->QuickKeys[i].hItem != b->QuickKeys[i].hItem ||
+                    a->QuickKeys[i].MM    != b->QuickKeys[i].MM)
+                  v1Mismatch(i, "QuickKeys[i]", (long)a->QuickKeys[i].Value,
+                             (long)b->QuickKeys[i].Value);
+              for (i = 0; i != 8; i++)
+                v1MismatchStr(i, "MessageQueue[i]",
+                              a->MessageQueue[i].GetData(),
+                              b->MessageQueue[i].GetData());
+              if (memcmp(a->AutoBuffs, b->AutoBuffs, sizeof(a->AutoBuffs)))
+                v1Mismatch(0, "AutoBuffs", 0, 1);
+              V1CMP(0, cAutoBuff);
+              v1MismatchStr(0, "GraveText", a->GraveText.GetData(),
+                            b->GraveText.GetData());
+              V1CMP(0, HungerShown);
+              v1MismatchStr(0, "Journal", a->Journal.GetData(),
+                            b->Journal.GetData());
+              v1MismatchStr(0, "JournalInfo.bestMonster",
+                            a->JournalInfo.bestMonster.GetData(),
+                            b->JournalInfo.bestMonster.GetData());
+              v1MismatchStr(0, "JournalInfo.bestItem",
+                            a->JournalInfo.bestItem.GetData(),
+                            b->JournalInfo.bestItem.GetData());
+              V1CMP(0, JournalInfo.bestMonsterVal);
+              V1CMP(0, JournalInfo.bestItemVal);
+              V1CMP(0, JournalInfo.numMonSeen);
+              if (memcmp(a->JournalInfo.numMonOfType,
+                         b->JournalInfo.numMonOfType,
+                         sizeof(a->JournalInfo.numMonOfType)))
+                v1Mismatch(0, "JournalInfo.numMonOfType", 0, 1);
+              if (memcmp(a->RecentVerbs, b->RecentVerbs,
+                         sizeof(a->RecentVerbs)))
+                v1Mismatch(0, "RecentVerbs", 0, 1);
+              if (memcmp(a->GameTimeInfo.LTI, b->GameTimeInfo.LTI,
+                         sizeof(a->GameTimeInfo.LTI)))
+                v1Mismatch(0, "GameTimeInfo.LTI", 0, 1);
+              V1CMP(0, GameTimeInfo.start_turn);
+              V1CMP(0, GameTimeInfo.actions);
+              V1CMP(0, GameTimeInfo.keystrokes);
+              V1CMP(0, GameTimeInfo.start_second);
+              V1CMP(0, GameTimeInfo.start_xp);
+              V1CMP(0, statiChanged);
+              V1CMP(0, formulaSeed); V1CMP(0, storeSeed);
+              if (memcmp(a->SpellKeys, b->SpellKeys, sizeof(a->SpellKeys)) ||
+                  memcmp(a->Options, b->Options, sizeof(a->Options)))
+                v1Mismatch(0, "SpellKeys/Options", 0, 1);
+              if (b->MyTerm != T1)
+                v1Mismatch(0, "MyTerm (should rebuild to T1)", 0, 1);
+              V1CMP(0, shownFF);    V1CMP(0, VictoryFlag);
+              V1CMP(0, QuitFlag);   V1CMP(0, UpdateMap);
+              V1CMP(0, DigMode);    V1CMP(0, WizardMode);
+              V1CMP(0, ExploreMode); V1CMP(0, rerolledPerks);
+              V1CMP(0, deathCount); V1CMP(0, rerollCount);
+              V1CMP(0, statMethod);
+            }
+
+          Monster *ma = mon2;
+          Monster *mb = (Monster*) regF->Get(m2h);
+          if (!mb)
+            v1Mismatch(0, "monster two missing after load", (long)m2h, 0);
+          else
+            {
+              Monster *a = ma, *b = mb;
+              V1CMP(0, Inv);
+              V1CMP(0, BuffCount);
+              V1CMP(0, FoilCount);
+              if (memcmp(a->Recent, b->Recent, sizeof(a->Recent)))
+                v1Mismatch(0, "Recent", 0, 1);
+            }
+        }
+
+        T1->OpenWrite(pf);
+        T1->FWrite(&fh, sizeof(fh));
+        regF->SaveGroupV1(*T1, 0);
+        T1->Close();
+      }
+    catch (int error_number)
+      {
+        fprintf(stderr, "incursion -schematest: %s\n",
+                Lookup(FileErrors, error_number));
+        theRegistry = savedReg;
+        return false;
+      }
+    theRegistry = savedReg;
+
+    {
+      long fsize = 0;
+      bool grpOk = true;
+      if (v1FilesIdentical((const char*)pe, (const char*)pf, &fsize))
+        printf("e.sav and f.sav are byte-identical (%ld bytes)\n", fsize);
+      else
+        {
+          printf("e.sav and f.sav DIFFER\n");
+          grpOk = false;
+        }
+      if (v1TestMismatches)
+        {
+          printf("%ld field mismatches\n", v1TestMismatches);
+          grpOk = false;
+        }
+      if (v1CovFindings)
+        {
+          printf("%ld coverage findings\n", v1CovFindings);
+          grpOk = false;
+        }
+      printf("SCHEMATEST GROUP character %s\n", grpOk ? "PASS" : "FAIL");
       ok = ok && grpOk;
     }
 
