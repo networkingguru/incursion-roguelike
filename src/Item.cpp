@@ -66,11 +66,26 @@ int16 CorpseNut[] = { 0, 1, 10, 25, 50, 100, 300, 500, 800 };
 Item::Item(rID _iID,int16 _Type) : Thing(0,_Type) {
     ASSERT(TITEM(_iID));
     iID=_iID; Timeout = -1;
+    /* upstream: this constructor read eID and Plus inside MaxHP() before it
+       assigned them, and never assigned Parent, homeID, Flavor, DmgType or
+       swingCount at all -- it leaned on the zero-fill that Object::operator new
+       does (inc/Base.h). Reading a member the constructor leaves indeterminate
+       is undefined, so an optimising compiler that does not preserve that fill
+       reads stale heap bytes. GCC -O2 does exactly that: a garbage Plus makes
+       cHP wrong (the Item.cpp ASSERT), and a wild Parent handle is dereferenced
+       during character creation and segfaults. clang keeps the fill and hides
+       it. Richard Tew's code (7b8504a, 2014), so it misbehaves the same way on
+       the original Win32 compiler; it is not a port artifact. The fix sets each
+       member before use, which equals the zero-fill clang already produced, so
+       clang runs are unchanged. Observed, inc-nw0v, not sent. */
+    eID = 0; Plus = 0;                 /* MaxHP() reads both; assign them first */
     cHP = MaxHP();
 	Image=TITEM(iID)->Image;
-    eID = 0; Quantity = 1;
+    Quantity = 1;
     Known = IFlags = 0;
-    Inscrip = NULL; Plus = 0;
+    Inscrip = NULL;
+    Parent = 0; homeID = 0; Flavor = 0; DmgType = 0; swingCount = 0;
+    Charges = 0; Age = 0;              /* defaults; set below for WAND/STAFF/LIGHT */
     GenNum = theGame->ItemGenNum++;
     if (_Type == T_WAND)
       Charges = 30+random(21);
