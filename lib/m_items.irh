@@ -18,13 +18,6 @@
        ((EActor->SkillRating(SK_USE_MAGIC) +        \
          EActor->SkillRating(SK_BLUFF)) > DC)) )   
          
-#define LEVEL_AS(cl,DC)                             \
-   ( EActor->LevelAs(cl) + ( cl != $"Rogue" &&      \
-     HasAbility(CA_TRICK_MAGIC) &&                  \
-     ((EActor->SkillRating(SK_USE_MAGIC) +          \
-         EActor->SkillRating(SK_BLUFF)) > DC) ?     \
-       EActor->LevelAs($"Rogue") ) )
-
 /* Item Level Precedents:       Item Level        Bonus    Item Cost                  
    Generic Stat Enhance Item    PLUS_3PER1        Plus     Level Chart x10
    Generic Inherent Bonus Tome  PLUS_3PER1_ADD3   Plus     Level Chart x20
@@ -6544,8 +6537,11 @@ AI_WEAPON Effect "Holy Avenger" : EA_GRANT
       if (EVictim->isDead())
         return NOTHING;
         
-      /* e.vCasterLev = LEVEL_AS($"paladin",20); */
-      e.vCasterLev = 12;
+      /* upstream: base-code defect, not a port artefact: on Win32 with the
+         original typedefs and compiler this handler also assigns literal 12,
+         so its dispel ignores the wielder's paladin level promised by the page.
+         Observed; tracking inc-tek.8.8; not sent. */
+      e.vCasterLev = EActor->LevelAs($"paladin");
       e.eID = $"dispel magic";
       ReThrow(EV_MAGIC_HIT,e);
       e.vCasterLev = 0;
