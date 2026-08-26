@@ -29,6 +29,9 @@
 */
 
 #include "Incursion.h"
+/* intptr_t, for the two hData<->pointer casts in Block(). libc++ supplies it
+   transitively on macOS; libstdc++ does not. */
+#include <cstdint>
 #include <sys/stat.h>
 #include <time.h>
 

@@ -503,7 +503,13 @@ int Preprocess(const char*in,const char*out)
   addfile(fin, work);		/* "open" main input file	*/
 
   cppmain();			/* Process main file		*/
-  fclose(fin); fclose(fout);
+  /* upstream: do NOT fclose(fin) here. addfile() above hands the stream to
+     the include stack, and cpp6.c:650 closes it when cppmain() reaches EOF.
+     Closing it again frees the FILE a second time. macOS's allocator
+     tolerates that silently; glibc aborts with "double free detected in
+     tcache 2", which is what a Linux -compile hit on the first try.
+     Observed. inc-0dyb. NOT SENT. */
+  fclose(fout);
   if ((i = (ifptr - &ifstack[0])) != 0) {
     cierror("Inside #ifdef block at end of input, depth = %d", i);
     }

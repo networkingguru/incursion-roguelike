@@ -398,6 +398,7 @@ the unfixed tree before it is trusted.
 | `check_headless.sh` | Do the properties every unattended run depends on still hold, including that two simultaneous runs get separate directories? |
 | `check_abi.sh` | Did any save-format type width move, and does anything cast a handle to a pointer? |
 | `check_abs_path.sh` | Does the game still resolve `argv[0]` to an absolute path? |
+| `check_linux_build.sh` | Do both backends still build on Linux, and does a seeded run still play with no errors? Needs Docker; it is the only check that does. |
 | `check_alienist_live.sh` | Does an Alienist get Surreal Presence, the ability her own description promises? |
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? Assesses a **quarantined** copy, asks the binary for its own save-layout stamp, and asserts the signature survives a run. |

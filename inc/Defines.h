@@ -105,10 +105,27 @@ typedef signed int        hObj;
 
 #endif
 
+/* Break into an attached debugger. __builtin_debugtrap is clang-only and GCC
+   has no equivalent builtin, so GCC emits the trap instruction directly.
+
+   THIS BLOCK MUST NOT #include ANYTHING. inc/Defines.h is also read by the
+   resource compiler's own preprocessor (src/cpp1-6.c, the DECUS cpp), which
+   has no system include path: an #include <csignal> here builds the game
+   fine and then fails -compile with "Cannot open include file". Macros only.
+
+   Do not substitute __builtin_trap() on the main paths -- that is SIGILL and
+   does not resume. It is the last resort for an architecture with no known
+   trap mnemonic. */
 #ifdef WIN32
   #define BREAKOUT __debugbreak();
-#else
+#elif defined(__clang__)
   #define BREAKOUT __builtin_debugtrap();
+#elif defined(__x86_64__) || defined(__i386__)
+  #define BREAKOUT __asm__ __volatile__("int3");
+#elif defined(__aarch64__)
+  #define BREAKOUT __asm__ __volatile__("brk #0");
+#else
+  #define BREAKOUT __builtin_trap();
 #endif
 
 

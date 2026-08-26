@@ -71,6 +71,10 @@ static_assert(sizeof(LocationInfo) == 20,
     "pack/unpack loops deliberately. (This assert only sees SIZE changes; "
     "a new :1 flag in the spare flag bits keeps sizeof at 20 and is caught "
     "only by the DEBUG grid probe's fill list -- add the flag there too.)");
+/* offsetof lives in <cstddef>. Apple's libc++ drags it in transitively and
+   libstdc++ does not, so the asserts below compiled on macOS and failed on
+   the first Linux build. */
+#include <cstddef>
 static_assert(offsetof(LocationInfo, Glyph) == 0 &&
               offsetof(LocationInfo, Memory) == 12 &&
               offsetof(LocationInfo, Contents) == 16,

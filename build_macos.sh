@@ -33,6 +33,18 @@ cd "$ROOT"
 #   libtcod  the SDL window build; the way to play.
 #   posix    src/Wposix.cpp, which needs neither SDL nor libtcod and can run
 #            with no display and no keyboard. See docs/HEADLESS-SPEC.md.
+# Which host we are building on. macOS wants clang and an OpenGL framework;
+# Linux wants gcc and neither. Both honour $CC/$CXX if the caller sets them.
+HOST="$(uname -s)"
+case "$HOST" in
+    Darwin) CC="${CC:-clang}"; CXX="${CXX:-clang++}"; GUI_LIBS="-framework OpenGL" ;;
+    # -ldl -lpthread: libtcod calls dlopen/dlclose and sem_*. macOS has both in
+    # libSystem; glibc before 2.34 keeps them in separate libdl and libpthread.
+    # Harmless on newer glibc, where both are stubs inside libc.
+    Linux)  CC="${CC:-gcc}";   CXX="${CXX:-g++}";     GUI_LIBS="-ldl -lpthread" ;;
+    *)      echo "Unsupported host '$HOST' (want Darwin or Linux)"; exit 1 ;;
+esac
+
 BACKEND="${BACKEND:-libtcod}"
 
 case "$BACKEND" in
@@ -138,7 +150,7 @@ else
     INCLUDES="-Iinc -Ilib -Ilibtcod/include -Icompat $SDL_CFLAGS"
     DEFINES="$DEBUG_DEFINE -DLIBTCOD_TERM"
     SKIP_BACKENDS="Wcurses Wposix"
-    LINK_LIBS="-lz -framework OpenGL"
+    LINK_LIBS="-lz $GUI_LIBS"
 fi
 
 # ---------------------------------------------------------------- libtcod ----
@@ -156,9 +168,9 @@ elif [ ! -f "$TCODLIB" ]; then
         case "$f" in libtcod/src/zlib/*) continue ;; esac
         o="$TOBJ/$(echo "$f" | tr '/' '_').o"
         if [ "${f##*.}" = "c" ]; then
-            clang $TFLAGS -c "$f" -o "$o"
+            $CC $TFLAGS -c "$f" -o "$o"
         else
-            clang++ $TFLAGS -fpermissive -c "$f" -o "$o"
+            $CXX $TFLAGS -fpermissive -c "$f" -o "$o"
         fi
     done
     ar rcs "$TCODLIB" "$TOBJ"/*.o
@@ -167,7 +179,7 @@ fi
 # ------------------------------------------------------------------ game -----
 echo "--- compiling Incursion ---"
 CXXFLAGS="-O2 $WARN_FLAGS -fpermissive -Wno-narrowing $DEFINES $INCLUDES $EXTRA_CXXFLAGS"
-CFLAGS="-O2 -w -Wno-implicit-function-declaration -Wno-implicit-int -Wno-return-mismatch $DEBUG_DEFINE -Iinc -Ilib -Icompat"
+CFLAGS="-O2 -w -Wno-implicit-function-declaration -Wno-implicit-int -Wno-return-mismatch -Wno-return-type $DEBUG_DEFINE -Iinc -Ilib -Icompat"
 
 for f in src/*.cpp; do
     n="$(basename "$f" .cpp)"
@@ -179,7 +191,7 @@ for f in src/*.cpp; do
     [ -n "$skip" ] && continue
     std="c++17"
     case "$n" in Tokens|Art) std="c++14" ;; esac
-    clang++ -std=$std $CXXFLAGS -c "$f" -o "$OBJ/$n.o"
+    $CXX -std=$std $CXXFLAGS -c "$f" -o "$OBJ/$n.o"
 done
 
 # src/cpp1-6.c are the DECUS preprocessor, used only by -compile, so a shipping
@@ -192,11 +204,11 @@ for f in src/*.c; do
     if [ "$COMPILER" = no ]; then
         case "$n" in cpp[1-6]) continue ;; esac
     fi
-    clang -std=gnu89 $CFLAGS -c "$f" -o "$OBJ/c_$n.o"
+    $CC -std=gnu89 $CFLAGS -c "$f" -o "$OBJ/c_$n.o"
 done
 
 echo "--- linking ---"
-clang++ -std=c++17 $EXTRA_LDFLAGS -o "$ROOT/$OUT" "$OBJ"/*.o $TCODLIB $SDL_LIBS $LINK_LIBS
+$CXX -std=c++17 $EXTRA_LDFLAGS -o "$ROOT/$OUT" "$OBJ"/*.o $TCODLIB $SDL_LIBS $LINK_LIBS
 
 # ------------------------------------------------------------- game data -----
 # A shipping binary cannot build its own data: that is the point of it. The
