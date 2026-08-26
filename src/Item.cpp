@@ -2243,18 +2243,21 @@ int16 Item::PItemLevel(Creature *cr)
     return max(ItemLevel(),GetStatiMag(MAGIC_AURA));
   }
 
-/* True only for a grantless god emblem: an eID that is some god's HOLY_SYMBOL
-   effect AND grants nothing (EA_GENERIC). That is 16 of the 17 god symbols, and
-   any shield a priest hook stamps with one. Hesani's symbol (EA_GRANT) and a
-   real shield enchantment are not emblems, so both return false. bd inc-upw.52. */
+/* True for a god emblem the autopickup sweep must leave alone: an eID that is
+   some god's HOLY_SYMBOL effect. A holy symbol ITEM (T_SYMBOL) qualifies whatever
+   its god grants -- Hesani's granting symbol (EA_GRANT) is still a holy symbol,
+   and the priest who rolled Hesani drops one that must stay exempt just like the
+   other 16 gods'. A god-marked SHIELD qualifies only when the emblem grants
+   nothing (EA_GENERIC): a real shield enchantment -- Hesani's buckler -- is magic
+   the player wants, so it still hoards. bd inc-upw.52. */
 bool Item::isFlavorGodMark()
   {
     int16 i;
-    if (!eID || !TEFF(eID) || TEFF(eID)->ef.eval != EA_GENERIC)
+    if (!eID || !TEFF(eID))
       return false;
     for (i = 0; i != theGame->LastGod(); i++)
       if (eID == TGOD(theGame->GodID(i))->GetConst(HOLY_SYMBOL))
-        return true;
+        return isType(T_SYMBOL) || TEFF(eID)->ef.eval == EA_GENERIC;
     return false;
   }
 
