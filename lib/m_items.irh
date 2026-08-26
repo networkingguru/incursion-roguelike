@@ -3294,10 +3294,12 @@ and EA_GRANT
 AI_STAFF Effect "Abjuration" : EA_GRANT
   {
     xval: STAFF_SPELLS; Level: 10; pval: 3;
+    /* upstream: this page contradicts its unchanged combined caster mask on
+       Win32 too; Observed, inc-tek.8.8, NOT sent. */
     Desc: "This staff is specially attuned to the magical school 
       of Abjuration, and is carved with sacred words and protective
-      glyphs. If the hands of any character with three or more
-      arcane casting levels, it grants the a +2 magic bonus to saving
+      glyphs. In the hands of any character with three or more
+      levels as a mage or priest, it grants a +2 magic bonus to saving
       throws when grasped, and allows access to the spells
       <9>banishment<7>, <9>dismissal<7>, <9>dispel magic<7>,
       <9>energy buffer<7>, <9>magic circle vs. evil<7> and

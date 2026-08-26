@@ -1,6 +1,6 @@
 #!/bin/bash
-# Regression check for PA-08-F26, PA-08-F27, PA-08-F29 and PA-08-F30 / inc-tek.8.8:
-# four corrected item pages must advertise their own scripted qualities,
+# Regression check for PA-08-F26, PA-08-F27, PA-08-F29, PA-08-F30 and
+# PA-08-F31 / inc-tek.8.8: five corrected item pages must advertise their own scripted qualities,
 # prerequisite or spells, while the unchanged featherlight scroll is the control.
 #
 # WHAT WAS WRONG. Both Descs were copied verbatim from Enchant Armour
@@ -9,8 +9,8 @@
 #
 # THE ORACLE is the item description screen the game renders from the compiled
 # module. One wizard-mode session Auto-Identifies and acquires all three scrolls,
-# the Staff of the Goblin Queen and the Staff of Exorcism, then Inventory Mode's
-# x opens each page.
+# the Staff of the Goblin Queen, the Staff of Exorcism and the Staff of
+# Abjuration, then Inventory Mode's x opens each page.
 # Each box must name its own item and show its own description block before its
 # words are trusted.
 #
@@ -67,7 +67,8 @@ feather_file="$run/logs/screens/0002-featherlight.txt"
 lifekeeping_file="$run/logs/screens/0003-life-keeping.txt"
 goblin_file="$run/logs/screens/0004-goblin-queen.txt"
 exorcism_file="$run/logs/screens/0005-exorcism.txt"
-for f in "$graceful_file" "$feather_file" "$lifekeeping_file" "$goblin_file" "$exorcism_file"; do
+abjuration_file="$run/logs/screens/0006-abjuration.txt"
+for f in "$graceful_file" "$feather_file" "$lifekeeping_file" "$goblin_file" "$exorcism_file" "$abjuration_file"; do
     [ -f "$f" ] || { echo "FAIL: no description screen at $f"; exit 1; }
 done
 
@@ -76,6 +77,7 @@ feather="$(box_text "$feather_file")"
 lifekeeping="$(box_text "$lifekeeping_file")"
 goblin="$(box_text "$goblin_file")"
 exorcism="$(box_text "$exorcism_file")"
+abjuration="$(box_text "$abjuration_file")"
 for spec in "graceful|$graceful|$graceful_file" \
             "featherlight|$feather|$feather_file" \
             "life-keeping|$lifekeeping|$lifekeeping_file"; do
@@ -97,6 +99,14 @@ case "$exorcism" in
     *"Staff Of Exorcism"*) ;;
     *) echo "FAIL: $exorcism_file does not name the Staff of Exorcism; wrong page."; exit 1 ;;
 esac
+case "$abjuration" in
+    *"Staff Of Abjuration"*) ;;
+    *) echo "FAIL: $abjuration_file does not name the Staff of Abjuration; wrong page."; exit 1 ;;
+esac
+case "$abjuration" in
+    *"allows access to the spells"*) ;;
+    *) echo "FAIL: $abjuration_file lacks the staff's description block; absence proves nothing."; exit 1 ;;
+esac
 case "$exorcism" in
     *"access to the spells"*) ;;
     *) echo "FAIL: $exorcism_file lacks the staff's description block; absence proves nothing."; exit 1 ;;
@@ -111,6 +121,7 @@ echo "Featherlight control page: $(printf '%s' "$feather" | grep -o 'bestow the 
 echo "Life-keeping scroll page: $(printf '%s' "$lifekeeping" | grep -o 'bestow the [a-z-]* quality' | head -1)"
 echo "Goblin Queen staff page: $(printf '%s' "$goblin" | grep -o '[13].. level or above' | head -1)"
 echo "Exorcism staff page: Staff Of Exorcism"
+echo "Abjuration staff page: $(printf '%s' "$abjuration" | grep -oE 'arcane casting levels|mage or priest' | head -1)"
 
 fail=0
 case "$graceful" in
@@ -145,6 +156,13 @@ for spell in "aura of abjuration" "bless" "detect evil" "dispel evil" \
         *) echo "FAIL: the Staff of Exorcism does not advertise $spell."; fail=1 ;;
     esac
 done
+case "$abjuration" in
+    *"mage or priest"*) ;;
+    *) echo "FAIL: the Staff of Abjuration does not advertise arcane and divine casters."; fail=1 ;;
+esac
+case "$abjuration" in
+    *"arcane casting levels"*) echo "FAIL: the Staff of Abjuration still advertises an arcane-only gate."; fail=1 ;;
+esac
 
-[ "$fail" -eq 0 ] && echo "PASS: all five item pages advertise their own scripted qualities, prerequisite or spells."
+[ "$fail" -eq 0 ] && echo "PASS: all six item pages advertise their own scripted qualities, prerequisites or spells."
 exit "$fail"
