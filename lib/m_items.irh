@@ -3220,12 +3220,14 @@ AI_STAFF Effect "the Goblin Queen" : EA_GRANT
           $"shocking grasp" $"grease" $"visage of death"
           $"caustic vitae" $"expeditious retreat" $"reduce"
           $"shatter" $"pyrotechnics";
+    /* upstream: this page understates its unchanged caster-level gate on
+       Win32 too; Observed, inc-tek.8.8, NOT sent. */
     Desc: "Crafted by goblin witch doctors, these staves eminate
       malice and insanity. They are carved with hundreds of eerie, 
       leering inhuman faces, the gemstones set into each face's
       eyesockets glittering even in darkness. A staff of the goblin
       queen holds within it thirteen potent charms that can be used
-      by any goblinoid spellcaster of 1st level or above: <9>dancing 
+      by any goblinoid spellcaster of 3rd level or above: <9>dancing 
       lights<7>, <9>improved phantasmal force<7>, <9>summon swarm<7>, 
       <9>spook<7>, <9>gust of wind<7>, <9>shocking grasp<7>, <9>grease<7>, 
       <9>visage of death<7>, <9>caustic vitae<7>, <9>expeditious

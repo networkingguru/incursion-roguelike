@@ -1,16 +1,17 @@
 #!/bin/bash
-# Regression check for PA-08-F26 and PA-08-F27 / inc-tek.8.8: the Enchant
-# Armour (graceful) and (life-keeping) scrolls must advertise their own
-# qualities, not featherlight.
+# Regression check for PA-08-F26, PA-08-F27 and PA-08-F29 / inc-tek.8.8:
+# three corrected item pages must advertise their own scripted qualities or
+# prerequisite, while the unchanged featherlight scroll is the control.
 #
 # WHAT WAS WRONG. Both Descs were copied verbatim from Enchant Armour
 # (featherlight), although their scripts test and grant AQ_GRACEFUL and
 # AQ_LIFEKEEPING respectively.
 #
 # THE ORACLE is the item description screen the game renders from the compiled
-# module. One wizard-mode session Auto-Identifies and acquires all three scrolls,
-# then Inventory Mode's x opens each page. Each box must name its own scroll
-# and show the unchanged provided-that clause before its words are trusted.
+# module. One wizard-mode session Auto-Identifies and acquires all three scrolls
+# and the Staff of the Goblin Queen, then Inventory Mode's x opens each page.
+# Each box must name its own item and show its own description block before its
+# words are trusted.
 #
 # MEASURED, seed 1:
 #   BEFORE: graceful page said "bestow the featherlight quality".
@@ -62,13 +63,15 @@ box_text() {
 graceful_file="$run/logs/screens/0001-graceful.txt"
 feather_file="$run/logs/screens/0002-featherlight.txt"
 lifekeeping_file="$run/logs/screens/0003-life-keeping.txt"
-for f in "$graceful_file" "$feather_file" "$lifekeeping_file"; do
+goblin_file="$run/logs/screens/0004-goblin-queen.txt"
+for f in "$graceful_file" "$feather_file" "$lifekeeping_file" "$goblin_file"; do
     [ -f "$f" ] || { echo "FAIL: no description screen at $f"; exit 1; }
 done
 
 graceful="$(box_text "$graceful_file")"
 feather="$(box_text "$feather_file")"
 lifekeeping="$(box_text "$lifekeeping_file")"
+goblin="$(box_text "$goblin_file")"
 for spec in "graceful|$graceful|$graceful_file" \
             "featherlight|$feather|$feather_file" \
             "life-keeping|$lifekeeping|$lifekeeping_file"; do
@@ -82,10 +85,19 @@ for spec in "graceful|$graceful|$graceful_file" \
         *) echo "FAIL: $file lacks the description block; absence proves nothing."; exit 1 ;;
     esac
 done
+case "$goblin" in
+    *"Staff Of The Goblin Queen"*) ;;
+    *) echo "FAIL: $goblin_file does not name the Staff of the Goblin Queen; wrong page."; exit 1 ;;
+esac
+case "$goblin" in
+    *"thirteen potent charms"*) ;;
+    *) echo "FAIL: $goblin_file lacks the staff's description block; absence proves nothing."; exit 1 ;;
+esac
 
 echo "Graceful scroll page: $(printf '%s' "$graceful" | grep -o 'bestow the [a-z]* quality' | head -1)"
 echo "Featherlight control page: $(printf '%s' "$feather" | grep -o 'bestow the [a-z]* quality' | head -1)"
 echo "Life-keeping scroll page: $(printf '%s' "$lifekeeping" | grep -o 'bestow the [a-z-]* quality' | head -1)"
+echo "Goblin Queen staff page: $(printf '%s' "$goblin" | grep -o '[13].. level or above' | head -1)"
 
 fail=0
 case "$graceful" in
@@ -106,6 +118,13 @@ esac
 case "$lifekeeping" in
     *"featherlight"*) echo "FAIL: the life-keeping scroll still advertises featherlight."; fail=1 ;;
 esac
+case "$goblin" in
+    *"3rd level or above"*) ;;
+    *) echo "FAIL: the Goblin Queen staff does not advertise its 3rd-level gate."; fail=1 ;;
+esac
+case "$goblin" in
+    *"1st level or above"*) echo "FAIL: the Goblin Queen staff still advertises a 1st-level gate."; fail=1 ;;
+esac
 
-[ "$fail" -eq 0 ] && echo "PASS: all three Enchant Armour scroll pages advertise their own qualities."
+[ "$fail" -eq 0 ] && echo "PASS: all four item pages advertise their own scripted qualities or prerequisite."
 exit "$fail"
