@@ -1762,7 +1762,14 @@ TextVal QualityDescs[] = {
              "creature with a head on a successful critical hit." },
   { WQ_DEFENDING, "A defending weapon adds its magic bonus to the character's defense "
              "class in addition to her attack and damage rolls." },
-  { WQ_WARNING, "A weapon of warning flares when danger is near, giving you a 50% "
+  { WQ_WARNING,
+    // upstream: this description reaches Format() (vsprintf, src/Base.cpp:467) on one of
+    // its two render paths (Help.cpp:3522), where a literal "%" makes vsprintf read
+    // "50% chance" as the conversion "% c" and print a garbage char (the smiley). The word
+    // "percent" avoids "%" entirely, so it is correct on both the Format and the plain-Lookup
+    // path (Help.cpp:3537). Upstream bug: fails identically on Win32/original compiler.
+    // Reasoned. inc-1y0v. Not sent.
+    "A weapon of warning flares when danger is near, giving you a 50 percent "
              "chance to negate surprise on any attack against you." },
   { WQ_CLEAVING, "A cleaving weapon inflicts a critical hit on a "
              "successful cleave attack." },
