@@ -6896,7 +6896,11 @@ AI_WEAPON Effect "Bloodspear" : EA_GRANT
       * BASE_ITEM $"longspear",
       * INITIAL_PLUS 2;
     Lists:
-      * BANE_LIST MA_HUMAN MA_ELF MA_DWARF MA_HALFLING;
+      /* upstream: base-code defect, not a port artefact: the same BANE_LIST
+         data lists only four types on Win32 with the original typedefs and
+         compiler, contradicting the spear's own page. Observed, inc-tek.8.8,
+         NOT sent. */
+      * BANE_LIST MA_HUMAN MA_ELF MA_DWARF MA_GNOME MA_HALFLING;
     On Event EITEM(EV_WIELD) {
       if (e.isRemove)
         return NOTHING;
