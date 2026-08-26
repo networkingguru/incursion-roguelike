@@ -1901,6 +1901,8 @@ Terrain "turbulent water"
 
 
 
+/* upstream: base-code defect in shared game data, so Win32 and the upstream
+   compiler misbehave identically. Tier Observed -- inc-tek.8.8. NOT SENT upstream. */
 Terrain "magma"
   { Image: pink GLYPH_LAVA; Mat:MAT_MAGMA; 
     Flags: TF_WARN, TF_SPECIAL, TF_SHOWNAME, TF_LOCAL_LIGHT, TF_DEEP_LIQ; 
@@ -1918,6 +1920,8 @@ Terrain "magma"
         if (mount->isAerial() ||
             mount->HasEffStati(-1,$"the Inferno") ||
             EActor->HasEffStati(-1,$"the Inferno") ||
+            mount->HasEffStati(-1,$"Fire Resistance") ||
+            EActor->HasEffStati(-1,$"Fire Resistance") ||
             mount->HasAbility(CA_WOODLAND_STRIDE))
           return NOTHING;
         rl = mount->ResistLevel(AD_FIRE);
@@ -1925,6 +1929,7 @@ Terrain "magma"
       } else {
         if (EActor->isAerial() ||
             EActor->HasEffStati(-1,$"the Inferno") ||
+            EActor->HasEffStati(-1,$"Fire Resistance") ||
             EActor->HasAbility(CA_WOODLAND_STRIDE))
           return NOTHING;
         rl = EActor->ResistLevel(AD_FIRE);
@@ -1942,6 +1947,8 @@ Terrain "magma"
         if (mount->isAerial() || 
             mount->HasEffStati(-1,$"the Inferno") ||
             EActor->HasEffStati(-1,$"the Inferno") ||
+            mount->HasEffStati(-1,$"Fire Resistance") ||
+            EActor->HasEffStati(-1,$"Fire Resistance") ||
             mount->HasAbility(CA_WOODLAND_STRIDE))
           return NOTHING;
         r = mount->ResistLevel(AD_FIRE);
@@ -1955,6 +1962,7 @@ Terrain "magma"
       } 
         if (EActor->isAerial() || 
             EActor->HasEffStati(-1,$"the Inferno") ||
+            EActor->HasEffStati(-1,$"Fire Resistance") ||
             EActor->HasAbility(CA_WOODLAND_STRIDE))
           return NOTHING;
       r = EActor->ResistLevel(AD_FIRE);
@@ -1996,6 +2004,8 @@ Terrain "brimstone"
         if (mount->isAerial() ||
             mount->HasEffStati(-1,$"the Inferno") ||
             EActor->HasEffStati(-1,$"the Inferno") ||
+            mount->HasEffStati(-1,$"Fire Resistance") ||
+            EActor->HasEffStati(-1,$"Fire Resistance") ||
             mount->HasAbility(CA_WOODLAND_STRIDE))
           return NOTHING;
         rl = mount->ResistLevel(AD_FIRE);
@@ -2003,6 +2013,7 @@ Terrain "brimstone"
       } else {
         if (EActor->isAerial() ||
             EActor->HasEffStati(-1,$"the Inferno") ||
+            EActor->HasEffStati(-1,$"Fire Resistance") ||
             EActor->HasAbility(CA_WOODLAND_STRIDE))
           return NOTHING;
         rl = EActor->ResistLevel(AD_FIRE);
@@ -2021,6 +2032,8 @@ Terrain "brimstone"
         if (mount->isAerial() || 
             mount->HasEffStati(-1,$"the Inferno") ||
             EActor->HasEffStati(-1,$"the Inferno") ||
+            mount->HasEffStati(-1,$"Fire Resistance") ||
+            EActor->HasEffStati(-1,$"Fire Resistance") ||
             mount->HasAbility(CA_WOODLAND_STRIDE))
           return NOTHING;
         r = mount->ResistLevel(AD_FIRE);
@@ -2034,6 +2047,7 @@ Terrain "brimstone"
       } 
         if (EActor->isAerial() || 
             EActor->HasEffStati(-1,$"the Inferno") ||
+            EActor->HasEffStati(-1,$"Fire Resistance") ||
             EActor->HasAbility(CA_WOODLAND_STRIDE))
           return NOTHING;
       r = EActor->ResistLevel(AD_FIRE);
@@ -4920,4 +4934,3 @@ Region "Temple to Elemental Water" : RF_ROOM
   }
 
 #endif  
-

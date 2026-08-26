@@ -1,0 +1,17 @@
+# Control for PA-08-F24, inc-tek.8.8. The same character changes the square
+# immediately east to magma without acquiring the ring, then tries to enter it.
+
+@include chargen.keys
+
+.
+@dump:control-before
+w
+y
+@choose "Change terrain type"
+RIGHT
+ENTER
+@choose "magma"
+@dump:control-terrain
+RIGHT
+@dump:control-after
+@quit

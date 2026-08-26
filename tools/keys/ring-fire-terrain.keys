@@ -1,0 +1,30 @@
+# Live oracle for PA-08-F24, inc-tek.8.8. A Ring of Fire Resistance wearer
+# changes the square immediately east to magma, then tries to enter it.
+
+@include chargen.keys
+
+.
+
+w
+y
+@choose "Item Acquisition"
+RIGHT*26
+@until "Ring of Acid Warding" DOWN
+ENTER
+5
+ENTER
+m
+SPACE
+@dump:ring-worn
+ESC
+@dump:ring-before
+
+w
+@choose "Change terrain type"
+RIGHT
+ENTER
+@choose "magma"
+@dump:ring-terrain
+RIGHT
+@dump:ring-after
+@quit
