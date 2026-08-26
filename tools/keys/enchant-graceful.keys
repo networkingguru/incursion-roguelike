@@ -1,4 +1,4 @@
-# Acquire both Enchant Armour quality scrolls with wizard Auto-Identify on,
+# Acquire all three Enchant Armour quality scrolls with wizard Auto-Identify on,
 # then open each scroll's player-facing description from Inventory Mode.
 # Read by tools/check_enchant_graceful.sh for PA-08-F26 / inc-tek.8.8.
 #
@@ -47,6 +47,25 @@ i
 @expect "Scroll of Enchant Armour (featherlight)"
 x
 @dump:featherlight
+ESC
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT                   # Scrolls
+@until "Enchant Armour (fortification)" DOWN
+ENTER                   # life-keeping is the selected preceding row
+s
+ESC
+
+i
+0
+6                       # featherlight is the first pack-contained scroll
+DOWN
+DOWN                    # life-keeping sorts after graceful
+@expect "Scroll of Enchant Armour (life-keeping)"
+x
+@dump:life-keeping
 ESC
 ESC
 @quit

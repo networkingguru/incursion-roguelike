@@ -407,7 +407,7 @@ the unfixed tree before it is trusted.
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? |
 | `check_dump_save.sh` | Does `-dump` walk a real save and report the same bytes from both backends? |
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the gnomes its own refusal message names? |
-| `check_enchant_graceful.sh` | Does the compiled Enchant Armour (graceful) scroll page advertise graceful while its featherlight control still advertises featherlight? |
+| `check_enchant_graceful.sh` | Do the compiled Enchant Armour graceful, life-keeping, and featherlight scroll pages each advertise their own quality? |
 | `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? |
 | `check_escape_sweep.sh` | Does any string literal still spell a C escape with a forward slash, the way the port's path sweep wrote `/n` for `\n`? |
 | `check_horn_madness.sh` | Does the Horn of Madness drain and stun a bystander while sparing its blower from both halves? |

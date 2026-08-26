@@ -952,7 +952,9 @@ AI_SCROLL Effect "Enchant Armour (graceful)" : EA_GENERIC
 AI_SCROLL Effect "Enchant Armour (life-keeping)" : EA_GENERIC
   {
     Level: 5;
-    Desc: "This scroll, when read, will bestow the featherlight
+    /* upstream: shared Desc mislabels life-keeping on Win32 too; Observed,
+       inc-tek.8.8, NOT sent. */
+    Desc: "This scroll, when read, will bestow the life-keeping
       quality on the suit of armour you currently wear, provided 
       that the armour's item level (before enchantment) is lower 
       than your character level plus your Charisma modifier, 

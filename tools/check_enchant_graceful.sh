@@ -1,12 +1,14 @@
 #!/bin/bash
-# Regression check for PA-08-F26 / inc-tek.8.8: the Enchant Armour (graceful)
-# scroll must advertise the graceful quality, not featherlight.
+# Regression check for PA-08-F26 and PA-08-F27 / inc-tek.8.8: the Enchant
+# Armour (graceful) and (life-keeping) scrolls must advertise their own
+# qualities, not featherlight.
 #
-# WHAT WAS WRONG. Its Desc was copied verbatim from Enchant Armour
-# (featherlight), although its script tests and grants AQ_GRACEFUL.
+# WHAT WAS WRONG. Both Descs were copied verbatim from Enchant Armour
+# (featherlight), although their scripts test and grant AQ_GRACEFUL and
+# AQ_LIFEKEEPING respectively.
 #
 # THE ORACLE is the item description screen the game renders from the compiled
-# module. One wizard-mode session Auto-Identifies and acquires both scrolls,
+# module. One wizard-mode session Auto-Identifies and acquires all three scrolls,
 # then Inventory Mode's x opens each page. Each box must name its own scroll
 # and show the unchanged provided-that clause before its words are trusted.
 #
@@ -14,6 +16,9 @@
 #   BEFORE: graceful page said "bestow the featherlight quality".
 #   AFTER:  graceful page says "bestow the graceful quality"; the featherlight
 #           control still says "bestow the featherlight quality".
+#   BEFORE: life-keeping page said "bestow the featherlight quality".
+#   AFTER:  life-keeping page says "bestow the life-keeping quality"; the
+#           featherlight control still says "bestow the featherlight quality".
 #
 # Usage: tools/check_enchant_graceful.sh    (exits 0 on pass, 1 on fail)
 set -uo pipefail
@@ -56,14 +61,17 @@ box_text() {
 
 graceful_file="$run/logs/screens/0001-graceful.txt"
 feather_file="$run/logs/screens/0002-featherlight.txt"
-for f in "$graceful_file" "$feather_file"; do
+lifekeeping_file="$run/logs/screens/0003-life-keeping.txt"
+for f in "$graceful_file" "$feather_file" "$lifekeeping_file"; do
     [ -f "$f" ] || { echo "FAIL: no description screen at $f"; exit 1; }
 done
 
 graceful="$(box_text "$graceful_file")"
 feather="$(box_text "$feather_file")"
+lifekeeping="$(box_text "$lifekeeping_file")"
 for spec in "graceful|$graceful|$graceful_file" \
-            "featherlight|$feather|$feather_file"; do
+            "featherlight|$feather|$feather_file" \
+            "life-keeping|$lifekeeping|$lifekeeping_file"; do
     kind="${spec%%|*}"; rest="${spec#*|}"; page="${rest%%|*}"; file="${rest##*|}"
     case "$page" in
         *"Enchant Armour ($kind)"*) ;;
@@ -77,6 +85,7 @@ done
 
 echo "Graceful scroll page: $(printf '%s' "$graceful" | grep -o 'bestow the [a-z]* quality' | head -1)"
 echo "Featherlight control page: $(printf '%s' "$feather" | grep -o 'bestow the [a-z]* quality' | head -1)"
+echo "Life-keeping scroll page: $(printf '%s' "$lifekeeping" | grep -o 'bestow the [a-z-]* quality' | head -1)"
 
 fail=0
 case "$graceful" in
@@ -90,6 +99,13 @@ case "$feather" in
     *"bestow the featherlight quality"*) ;;
     *) echo "FAIL: the featherlight control no longer advertises featherlight."; fail=1 ;;
 esac
+case "$lifekeeping" in
+    *"bestow the life-keeping quality"*) ;;
+    *) echo "FAIL: the life-keeping scroll does not advertise life-keeping."; fail=1 ;;
+esac
+case "$lifekeeping" in
+    *"featherlight"*) echo "FAIL: the life-keeping scroll still advertises featherlight."; fail=1 ;;
+esac
 
-[ "$fail" -eq 0 ] && echo "PASS: both Enchant Armour scroll pages advertise their own qualities."
+[ "$fail" -eq 0 ] && echo "PASS: all three Enchant Armour scroll pages advertise their own qualities."
 exit "$fail"
