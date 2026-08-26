@@ -352,6 +352,7 @@ Nothing invoked it; the only references were documentation. See
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? | LIVE |
 | `check_cloak_resistance.sh` | Does a +3 Cloak of Resistance grant resistance rather than magic? One session reads all three saving throws with the cloak alone and with auspicious +2 armour; the control stays fixed and the smaller same-type bonus must not stack. | LIVE |
 | `check_shadow_shifting.sh` | Does the Cloak of Shadow Shifting require darkness at both ends without charging a refused activation? Statically guards the source-before-charge and both destination paths until a headless behavioral scenario can replace it. | LIVE |
+| `check_bracers_defense_page.sh` | Does the Bracers of Defense page state the two distinct rates: Defense Class equal to the magical plus and Coverage equal to twice the plus? | LIVE |
 | `check_consumable_abort.sh` | Does a consumable survive an action the character refused to complete? Answers yes to the game's own "Stop reading?" offer and asserts the scroll stack did not move, then drinks a potion and asserts that one still goes. Reports a session whose Will save never produced the offer as INCONCLUSIVE. | LIVE |
 | `check_readme_checks.sh` | Was a regression check added with no row in the `README.md` check table? Ratcheted against `tools/readme_checks.baseline`, which holds the 58-row backlog. | LIVE |
 | `check_dump_save.sh` | Does `-dump` still walk a real save and report the right fields, from BOTH backends? | LIVE |

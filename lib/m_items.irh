@@ -4045,8 +4045,11 @@ AI_BRACERS Effect "Grounding" : EA_GRANT
 AI_BRACERS Effect "Defense" : EA_GRANT
   { SC_ABJ; Level: PLUS_2PER1; Flags: EF_NEEDS_PLUS;
     xval: ADJUST; yval: A_DEF; pval: PLUS_1PER1; 
-    Desc: "These bracers improve your defense class and coverage with a magic
-      bonus equal to the magical plus they possess."; } and EA_GRANT
+    /* upstream: base-code defect, not a port artefact. The shared effect grants
+       these same unequal rates on Win32 with the original typedefs and compiler.
+       Observed; inc-tek.8.8; not sent. */
+    Desc: "These bracers improve your defense class by a magic bonus equal to
+      the magical plus they possess, and your coverage by twice that."; } and EA_GRANT
   { xval: ADJUST; yval: A_COV; pval: PLUS_2PER1; } 
 
 /* upstream: base-code defect, not a port artefact. Shared game data gives the
