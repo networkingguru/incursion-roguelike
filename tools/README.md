@@ -381,6 +381,7 @@ Nothing invoked it; the only references were documentation. See
 | `check_sentinel_live.sh` | Does the Sentinel's engine-side save track match the table it prints? Makes one, four levels deep. | LIVE |
 | `check_sharp_senses.sh` | Does the Sharp Senses bonus reach Search, and not only Spot and Listen? | LIVE |
 | `check_stacked_abilities.sh` | Do abilities whose prose says their levels stack across classes actually stack, charging one waiting period rather than one per class? Five characters: a Rogue 6 invariant, a Barbarian 3 / Rogue 3, a Bard 7 / Assassin 4, an Elf Rogue 7 / Assassin 3 and a control. | LIVE |
+| `check_springblade_label.sh` | Does the Springblade Bracers type-3 pair name both of its +2 elemental blades accurately? Seed 6 reads the rolled suffix from the activation menu. | LIVE |
 | `check_stair_cycle.sh` | Does the overview map's staircase search run, pick the cheapest, and wrap? | LIVE |
 | `check_store_scroll.sh` | Does the shop list follow the selection in both directions, reached without wizard mode? | LIVE |
 | `check_strqueue.sh` | Is the string queue's bound still tested before the write? | LIVE |
@@ -546,6 +547,7 @@ tools/check_key_directives.sh
 tools/check_menu_value.sh
 tools/check_sharp_senses.sh
 tools/check_stacked_abilities.sh
+tools/check_springblade_label.sh
 tools/check_xp_penalty.sh
 tools/check_xp_penalty_rule.sh
 tools/check_prestige_profs.sh

@@ -1609,9 +1609,12 @@ AI_EYES Effect "Detection" : EA_GRANT
 AI_EYES Effect "the Eagle" : EA_GRANT
   { SC_THA; SC_ABJ; xval: SKILL_BONUS; yval: SK_SPOT; pval: PLUS_2PER1;
     Purpose: EP_BUFF;  Flags: EF_NEEDS_PLUS; Level: PLUS_2PER1; 
+    /* upstream: base-code defect: this shared game text is read identically
+       on Win32 with the original typedefs and compiler. Evidence tier:
+       Traced. Tracked as inc-tek.8.8. NOT sent upstream. */
     Desc: "When worn, this item grants you a magic bonus to your
-      Spot skill equal to twice its plus. It grants the Superior
-      Senses feat, thus doubling you basic vision range.  In addition, it
+      Spot skill equal to twice its plus. It grants the Acute
+      Senses feat, thus increasing your basic vision range by 50~.  In addition, it
       makes you inoffensive to birds."; }
   and EA_GRANT { xval: EXTRA_FEAT; yval: FT_ACUTE_SENSES; }
   and EA_GRANT { xval: NEUTRAL_TO; yval: MA_BIRD; }
@@ -4079,6 +4082,9 @@ Item "springblade" : T_WEAPON
 AI_BRACERS Effect "Springblade Bracers" : EA_GENERIC
   { SC_ARC; SC_ENC; Level: 3; 
     Flags: EF_NAMEONLY, EF_ACTIVATE, EF_CANCEL, EF_MUNDANE;
+    /* upstream: base-code defect: this shared game text is read identically
+       on Win32 with the original typedefs and compiler. Evidence tier:
+       Traced. Tracked as inc-tek.8.8. NOT sent upstream. */
     Desc: "These crafty mechanical bracers are favoured by gnomes
       and assassins. Mounted carefully inside them are two spring-loaded
       telescoping mithril blades, that when fully extended are not
@@ -4093,8 +4099,8 @@ AI_BRACERS Effect "Springblade Bracers" : EA_GENERIC
       deployment automatically treats a foe as off-guard, whether
       the blades are snapped out before a fight or during one, but
       one fight will yield only one such opening.\n
-      __This particular set of springblade bracers contains a pair
-      of <11>+2 keen springblades<7>.";
+      __The pair has one of several possible loadouts; the item's name
+      carries the details.";
     On Event EV_MAGIC_HIT {
       hObj hBlade1, hBlade2; int16 count; bool freeOpening;
       EActor->Timeout = 0;
@@ -4267,9 +4273,12 @@ AI_BRACERS Effect "Springblade Bracers" : EA_GENERIC
     EV_GETNAME {
       switch(EActor->GetEffStatiVal(-1,$"Springblade Bracers"))
         {
+          /* upstream: base-code defect: this shared game-data label is read
+             identically on Win32 with the original typedefs and compiler.
+             Evidence tier: Observed. Tracked as inc-tek.8.8. NOT sent upstream. */
           case 1:  e.nAppend += " (+2 keen/+1 keen)"; break;
           case 2:  e.nAppend += " (+3/+3)"; break;
-          case 3:  e.nAppend += " (+3 flame/+2 frost)"; break;
+          case 3:  e.nAppend += " (+2 flame/+2 frost)"; break;
           case 4:  e.nAppend += " (+2 shock/+1 pain)"; break;
           case 5:  e.nAppend += " (+1 venom/+3)"; break;
           case 6:  e.nAppend += " (+1 weakening/+1 numbing)"; break;

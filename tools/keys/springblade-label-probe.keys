@@ -1,0 +1,10 @@
+# Show the rolled Springblade Bracers name in the activation menu.
+# Seed 6 rolls the symmetric elemental pair (type 3); the menu is the
+# player-visible oracle for inc-tek.8.8.
+
+@include springblade-setup.keys
+
+a
+@dump:0001-label
+ESC
+@quit
