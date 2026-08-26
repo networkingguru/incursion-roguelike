@@ -5597,7 +5597,9 @@ AI_CLOAK Effect "Displacement;cloak" : EA_GRANT
  }
 
 AI_CLOAK Effect "Resistance" : EA_GRANT
-  { SC_ENC; xval: ADJUST; yval: A_SAV; pval: PLUS_1PER1;
+  /* upstream: ADJUST misclassifies this saving-throw bonus on Win32 too;
+     Observed, inc-tek.8.8, NOT sent. */
+  { SC_ENC; xval: ADJUST_RES; yval: A_SAV; pval: PLUS_1PER1;
     Flags: EF_NEEDS_PLUS; Level: PLUS_3PER1;
     Desc: "This cloak wards away harm, giving the wearer a resistance
             bonus to all his saving throws equal to its magical bonus."; }

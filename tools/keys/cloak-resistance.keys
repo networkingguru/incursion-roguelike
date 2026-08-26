@@ -1,0 +1,97 @@
+# Equip a known Cloak +3 of Resistance, photograph the saving throws, then
+# add differently valued auspicious +2 armour and photograph them again.
+# Read by tools/check_cloak_resistance.sh.
+
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+ESC
+
+w
+@until "Wizard Mode Options" y
+@choose "Item Acquisition"
+RIGHT*22                # Cloaks
+@until "Cloak of Resistance" DOWN
+DOWN                    # wanted row is below the selected Displacement cloak
+ENTER
+3
+ENTER
+l
+SPACE                   # Cloak slot
+@dump:cloak-inventory
+ESC
+
+d
+@expect "Fortitude"
+@dump:cloak-alone
+ESC
+
+# Raise the already-worn orcish hide armour from +0 to +2 with successful
+# ordinary Enchant Armour scrolls. A mundane armour acquisition has no plus prompt.
+w
+@until "Wizard Mode Options" y
+@choose "Item Acquisition"
+RIGHT                   # Scrolls
+@until "Enchant Armour (featherlight)" DOWN
+ENTER                   # plain Enchant Armour is the selected preceding row
+s
+ESC
+r
+@choose "(in pack) Scroll of Enchant Armour"
+@while "Stop reading?" n
+@while "Select target or inventory item" * # effect uses the worn armour
+
+w
+@until "Wizard Mode Options" y
+@choose "Item Acquisition"
+RIGHT
+@until "Enchant Armour (featherlight)" DOWN
+ENTER
+s
+ESC
+r
+@choose "(in pack) Scroll of Enchant Armour"
+@while "Stop reading?" n
+@while "Select target or inventory item" *
+
+# Seed 1 fails one Decipher Script check, so a third scroll is needed to make
+# the worn armour +2 deterministically.
+w
+@until "Wizard Mode Options" y
+@choose "Item Acquisition"
+RIGHT
+@until "Enchant Armour (featherlight)" DOWN
+ENTER
+s
+ESC
+r
+@choose "(in pack) Scroll of Enchant Armour"
+@while "Stop reading?" n
+@while "Select target or inventory item" *
+
+w
+@until "Wizard Mode Options" y
+@choose "Add Quality to Armour"
+A Q _ A U S P I C I O U S ENTER
+
+w
+@until "Wizard Mode Options" y
+@choose "All Creatures CalcValues"
+
+i
+j
+SPACE                   # remove and re-wear so the new EA_GRANT is applied
+j
+SPACE
+@expect "auspicious"
+@dump:both-inventory
+ESC
+
+d
+@expect "Fortitude"
+@dump:cloak-and-armour
+@quit
