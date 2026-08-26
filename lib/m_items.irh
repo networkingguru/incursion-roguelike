@@ -2146,10 +2146,12 @@ AI_WAND Effect "Acid;wand" : EA_BLAST
     META(EV_TURN) {
       hObj killer;
       killer = EActor->GetEffStatiObj(TRAP_EVENT,$"Acid;wand");
+      /* upstream: residual burn is fire-typed on Win32 too; Observed,
+         inc-tek.8.8, NOT sent. */
       if (killer) 
-        ThrowDmg(EV_DAMAGE,AD_FIRE,1d6,"residual acid damage",killer,EActor);
+        ThrowDmg(EV_DAMAGE,AD_ACID,1d6,"residual acid damage",killer,EActor);
       else 
-        ThrowDmg(EV_DAMAGE,AD_FIRE,1d6,"residual acid damage",EActor,EActor);
+        ThrowDmg(EV_DAMAGE,AD_ACID,1d6,"residual acid damage",EActor,EActor);
       if (EActor->isDead())
         DPrint(e,"The acid burns, killing you.",
                  "The acid burns the <EActor> to death.");

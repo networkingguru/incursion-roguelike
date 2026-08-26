@@ -1,0 +1,74 @@
+# Measure the Wand of Acid's residual burn against resistant victims.
+# Read by tools/check_wand_acid_type.sh for PA-08-F28 / inc-tek.8.8.
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+DOWN*2
+SPACE                   # Infinite Fatigue
+DOWN*7
+SPACE                   # Freeze Monsters
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*4                 # Wands
+@until "Wand of Thunderbolts" DOWN
+ENTER                   # Acid is the selected preceding row
+4                       # four residual turns; two remain after activation time
+ENTER
+@dump:wand
+s
+ESC
+
+# Fire-immune, not acid-resistant: lib/mon4.irh, hell hound.
+w
+@choose "Monster Summoning"
+@choose "Dogs"
+@choose "hell hound"
+RIGHT
+ENTER
+b
+a
+RIGHT
+@dump:fire-hit
+
+w
+@choose "Examine Nearby Things"
+@until "hell hound (class" RIGHT
+@dump:fire-hp-0
+ESC
+s*21
+w
+@choose "Examine Nearby Things"
+@until "hell hound (class" RIGHT
+@dump:fire-hp-1
+ESC
+s*21
+w
+@choose "Examine Nearby Things"
+@until "hell hound (class" RIGHT
+@dump:fire-hp-2
+ESC
+s*21
+w
+@choose "Examine Nearby Things"
+@until "hell hound (class" RIGHT
+@dump:fire-hp-3
+ESC
+s*21
+w
+@choose "Examine Nearby Things"
+@until "hell hound (class" RIGHT
+@dump:fire-hp-4
+ESC
+s*21
+w
+@choose "Examine Nearby Things"
+@until "hell hound (class" RIGHT
+@dump:fire-hp-5
+ESC
+@quit

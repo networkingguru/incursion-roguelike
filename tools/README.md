@@ -561,6 +561,7 @@ tools/check_loremaster_live.sh
 tools/check_masterarcher_live.sh
 tools/check_sentinel_live.sh
 tools/check_underdark_live.sh
+tools/check_wand_acid_type.sh       # residual acid burn damages a fire-immune victim
 ```
 
 Run `check_headless.sh` before the rest of the tier. They all drive
