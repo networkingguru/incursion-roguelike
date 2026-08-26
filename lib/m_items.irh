@@ -6610,13 +6610,13 @@ AI_WEAPON Effect "Sunblade" : EA_GRANT
       if (EVictim->HasMFlag(M_LIGHT_AVERSE))
         EItem->AddQuality(WQ_TERROR);
       
-      /* There should be a better way to find Negative Plane
-         denizens than this, but ah well. */
-      if (EVictim->isMType(MA_WRAITH))
+      /* upstream: Reasoned, inc-tek.8.8, not sent -- the shared Win32 handler
+         promised double damage against Negative-Plane creatures but did neither. */
+      if (EVictim->HasMFlag(M_UNDEAD) ||
+          EVictim->mID == $"spectral mold" ||
+          EVictim->mID == $"mote of negative energy")
         {
-          // e.vMult++;
-          e.xDmg += 5d6;
-          e.strXDmg += " +5d6 sunblade";
+          e.vMult++;
         }
       return NOTHING;
       },
