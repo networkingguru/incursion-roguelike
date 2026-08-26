@@ -1,0 +1,52 @@
+# Acquire both Enchant Armour quality scrolls with wizard Auto-Identify on,
+# then open each scroll's player-facing description from Inventory Mode.
+# Read by tools/check_enchant_graceful.sh for PA-08-F26 / inc-tek.8.8.
+#
+# Scrolls are one RIGHT from Potions in ItemGlyphs (src/Tables.cpp:320-322).
+# The acquisition list shows three rows with the middle selected, so looking
+# for the following scroll leaves the wanted scroll selected. The check does
+# not trust that ordering: each description box must name its own scroll.
+
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT                   # Scrolls
+@until "Enchant Armour (life-keeping)" DOWN
+ENTER                   # graceful is the selected preceding row
+s
+ESC
+
+i
+0
+6                       # first pack-contained item: graceful scroll
+@expect "Scroll of Enchant Armour (graceful)"
+x
+@dump:graceful
+ESC
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT                   # Scrolls
+@until "Enchant Armour (graceful)" DOWN
+ENTER                   # featherlight is the selected preceding row
+s
+ESC
+
+i
+0
+6                       # featherlight sorts before the graceful scroll
+@expect "Scroll of Enchant Armour (featherlight)"
+x
+@dump:featherlight
+ESC
+ESC
+@quit
