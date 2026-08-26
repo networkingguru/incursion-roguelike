@@ -6926,6 +6926,11 @@ AI_WEAPON Effect "Bloodspear" : EA_GRANT
         }
       return NOTHING;
       },
+    /* upstream: base-code defect, not a port artefact: the same handler and
+       arithmetic run unchanged on Win32 with the original typedefs and compiler,
+       so the disagreement with the spear's own page is upstream's. Traced -- the
+       four duration paths read against the prose disagree in their multipliers;
+       inc-tek.8.8; not sent. */
     EITEM(POST(EV_HIT)) {
       int16 amt, CR, Dur;
       if (EActor->isMType(MA_ORC))
@@ -6944,7 +6949,7 @@ AI_WEAPON Effect "Bloodspear" : EA_GRANT
                                min(Dur+amt*5,1000));
                   }
                 else {
-                  EActor->GainTempStati(REGEN,EItem,min(amt*5,1000),SS_ENCH,
+                  EActor->GainTempStati(REGEN,EItem,min(amt*20,1000),SS_ENCH,
                     /* Regen Flags Later */ 0, max(1,CR)*100, $"Bloodspear", e.vCasterLev);
                   EActor->IPrint("<10>You feel your blood quicken...<7>");
                   }
@@ -6954,7 +6959,7 @@ AI_WEAPON Effect "Bloodspear" : EA_GRANT
             else
               {
                 if (EActor->HasEffStati(REGEN,$"Bloodspear"))
-                  EActor->SetEffStatiDur(REGEN,$"Bloodspear",min(Dur+amt,1000));
+                  EActor->SetEffStatiDur(REGEN,$"Bloodspear",min(Dur+amt*5,1000));
                 return NOTHING;
               }
             }
