@@ -3277,14 +3277,16 @@ AI_STAFF Effect "Exorcism" : EA_GRANT
           $"magic circle vs. evil"
           $"remove curse"
           $"spiritwrack";
+    /* upstream: this page omits one of its unchanged spell-list entries on
+       Win32 too; Observed, inc-tek.8.8, NOT sent. */
     Desc: "Frequently crafted by priests of the church of Immotian,
       these staves are solid and heavy, carved from ivory and clad
       with a ruby at the tip. They allow an accomplished (caster level
       3+) mage or priest of good alignment access to the spells <9>aura 
       of abjuration<7>, <9>bless<7>, <9>detect evil<7>, <9>dispel
-      evil<7>, <9>dispel magic<7>, <9>remove curse<7> and
-      <9>spiritwrack<7>. Worthy bearers also receive a +2 sacred
-      bonus to all their saving throws.";
+      evil<7>, <9>dispel magic<7>, <9>magic circle vs. evil<7>,
+      <9>remove curse<7> and <9>spiritwrack<7>. Worthy bearers also
+      receive a +2 sacred bonus to all their saving throws.";
   }
 and EA_GRANT
   { xval: ADJUST_SAC; yval: A_SAV; pval: +2; }

@@ -354,7 +354,7 @@ Nothing invoked it; the only references were documentation. See
 | `check_readme_checks.sh` | Was a regression check added with no row in the `README.md` check table? Ratcheted against `tools/readme_checks.baseline`, which holds the 58-row backlog. | LIVE |
 | `check_dump_save.sh` | Does `-dump` still walk a real save and report the right fields, from BOTH backends? | LIVE |
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the rock gnome its own refusal message names? | LIVE |
-| `check_enchant_graceful.sh` | Do the compiled Enchant Armour scroll pages advertise their own qualities and the Goblin Queen staff page its caster-level gate? | LIVE |
+| `check_enchant_graceful.sh` | Do five compiled item pages advertise their own qualities, caster-level gate and spells? | LIVE |
 | `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? | LIVE |
 | `check_escape_sweep.sh` | Does any string literal still spell a C escape with a forward slash, the way the port's path sweep wrote `/n` for `\n`? | LIVE |
 | `check_hunger_penalty.sh` | Does getting hungrier still make a character stronger? Photographs one Dragonkin fed, Hungry and Starving, and refuses an order in which Hungry costs more than Starving. | LIVE |
