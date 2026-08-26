@@ -6901,6 +6901,12 @@ AI_WEAPON Effect "Bloodspear" : EA_GRANT
          compiler, contradicting the spear's own page. Observed, inc-tek.8.8,
          NOT sent. */
       * BANE_LIST MA_HUMAN MA_ELF MA_DWARF MA_GNOME MA_HALFLING;
+    /* upstream: base-code defect, not a port artefact: the SAVE_BONUS grant
+       sits on the component unconditionally and every wield branch returned
+       NOTHING on Win32 too, so every wielder got the +4 and the page's orc
+       restriction is unmet upstream. Traced -- the EA_GRANT wield path in
+       src/Magic.cpp lets Grant() apply the bonus after NOTHING, while DONE
+       skips it; inc-tek.8.8; not sent. */
     On Event EITEM(EV_WIELD) {
       if (e.isRemove)
         return NOTHING;
@@ -6913,6 +6919,7 @@ AI_WEAPON Effect "Bloodspear" : EA_GRANT
           EItem->AddQuality(WQ_WEAKENING);
           EItem->AddQuality(WQ_BANE);
           EItem->AddQuality(WQ_PAIN);
+          return NOTHING;
         }
       /* upstream: base-code defect, not a port artefact: the same wield handler
          tests only three types on Win32 with the original typedefs and compiler,
@@ -6933,7 +6940,7 @@ AI_WEAPON Effect "Bloodspear" : EA_GRANT
           EItem->PurgeAllQualities();
           EItem->SetInherentPlus(+2);
         }
-      return NOTHING;
+      return DONE;
       },
     /* upstream: base-code defect, not a port artefact: the same handler and
        arithmetic run unchanged on Win32 with the original typedefs and compiler,
