@@ -3269,7 +3269,10 @@ typedef signed int        hObj;
 #define EF_COMPULSION 103
 #define EF_GAZE       104
 #define EF_CARRIED    105 /* Works on the belt, not only in its own slot */
-#define EF_LAST       106
+/* upstream: the shared effect flags had no way to require dark endpoints on
+   Win32 either; Reasoned, inc-tek.8.8, NOT sent. */
+#define EF_NEEDS_DARK 106
+#define EF_LAST       107
 
 
 #define EA_BLAST    1      /* xval = DType, pval = Damage */

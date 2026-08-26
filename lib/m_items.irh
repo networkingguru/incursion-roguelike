@@ -5605,15 +5605,14 @@ AI_CLOAK Effect "Resistance" : EA_GRANT
             bonus to all his saving throws equal to its magical bonus."; }
 
 AI_CLOAK Effect "Shadow Shifting" : EA_TRAVEL
+  /* upstream: the shared cloak effect ignores its promised darkness restriction
+     on Win32 too; Reasoned, inc-tek.8.8, NOT sent. */
   { SC_WEA; pval: 2d12+12; Purpose: EP_ESCAPE; 
-    xval: TRAVEL_ANYWHERE; Flags: EF_ACTIVATE, EF_7PERDAY; Level: 4;
-	/* TODO: Limit to darkened areas. */
+	xval: TRAVEL_ANYWHERE; Flags: EF_ACTIVATE, EF_7PERDAY, EF_NEEDS_DARK; Level: 4;
 	On Event EV_MAGIC_STRIKE
 	  "You merge with the shadows, moving without walking." /
 	  "The <EActor> vanishes in a puff of shadow.";
-	Desc: "This cloak allows the wearer to step into one shadow and out
-	  of another when it is activated, teleporting around at will in
-		darkened areas."; }
+	Desc: "Seven times per day, from shadow to shadow."; }
 
 AI_CLOAK Effect "the Bat" : EA_GRANT
   { SC_ILL; xval: SKILL_BONUS; yval: SK_LISTEN; pval: PLUS_1PER1; }

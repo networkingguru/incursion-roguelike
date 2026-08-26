@@ -2149,6 +2149,9 @@ EvReturn Magic::Travel(EventInfo &e)
       return ABORT; 
 
     Map *m = e.EActor->m;
+    /* upstream: travel ignored destination lighting on Win32 too; Reasoned,
+       inc-tek.8.8, NOT sent. */
+    bool needsDark = (e.eID && TEFF(e.eID)->HasFlag(EF_NEEDS_DARK));
     
     if (e.EVictim->HasStati(ANCHORED))
       goto Failed;
@@ -2179,6 +2182,8 @@ EvReturn Magic::Travel(EventInfo &e)
         else
           goto Failed;
         if (!e.EMap->InBounds(_x,_y))
+          goto Failed;
+        if (needsDark && m->LightAt(_x,_y))
           goto Failed;
        break;
       case TRAVEL_KNOWN:
@@ -2216,6 +2221,8 @@ EvReturn Magic::Travel(EventInfo &e)
             if (!m->InBounds(_x,_y))
               continue;
             if (m->SolidAt(_x,_y))
+              continue;
+            if (needsDark && m->LightAt(_x,_y))
               continue;
             // ww: dimdooring into a chasm is *really* annoying
             if (TREG(m->RegionAt(_x,_y))->HasFlag(RF_CHASM) &&
@@ -2377,5 +2384,4 @@ EvReturn Magic::Healing(EventInfo &e)
 
     return DONE;
   }
-
 

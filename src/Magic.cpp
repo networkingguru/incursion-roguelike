@@ -661,6 +661,16 @@ Nothing:
           e.Event = EV_EFFECT;
       }
 
+      /* upstream: activation ignored the source square's light on Win32 too;
+         Reasoned, inc-tek.8.8, NOT sent. */
+      if (e.isActivation && te && te->HasFlag(EF_NEEDS_DARK) &&
+          e.EActor && e.EActor->m &&
+          e.EActor->m->LightAt(e.EActor->x, e.EActor->y)) {
+          e.EActor->IDPrint("There are no shadows here to step into.",
+                            "Nothing happens.", e.eID);
+          return ABORT;
+      }
+
       if (e.isActivation && (e.EItem && e.EItem->isItem()))
           if (te->HasFlag(EF_3PERDAY) || te->HasFlag(EF_7PERDAY) || te->HasFlag(EF_1PERDAY)) {
               if (te->HasFlag(EF_1PERDAY) && e.EItem->GetCharges() >= 1)
