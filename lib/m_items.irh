@@ -4033,11 +4033,14 @@ AI_BRACERS Effect "Defense" : EA_GRANT
       bonus equal to the magical plus they possess."; } and EA_GRANT
   { xval: ADJUST; yval: A_COV; pval: PLUS_2PER1; } 
 
+/* upstream: base-code defect, not a port artefact. Shared game data gives the
+   same one-point rate on Win32 with the original typedefs and compiler.
+   Observed; inc-tek.8.8; not sent. */
 AI_BRACERS Effect "Killing Hands" : EA_GRANT
   { SC_THA; Level: PLUS_2PER1; Flags: EF_NEEDS_PLUS;
-    xval: ADJUST; yval: A_HIT_BRAWL; pval: PLUS_1PER1; } and EA_GRANT
+    xval: ADJUST; yval: A_HIT_BRAWL; pval: PLUS_2PER1; } and EA_GRANT
   { SC_THA; 
-    xval: ADJUST; yval: A_DMG_BRAWL; pval: PLUS_1PER1; 
+    xval: ADJUST; yval: A_DMG_BRAWL; pval: PLUS_2PER1; 
     Desc: "These increase your hit rolls and the damage you inflict when
     making unarmed attacks by two points per plus. In addition, your
     unarmed strikes count as magical weapons with a plus equal to this

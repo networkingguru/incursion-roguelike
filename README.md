@@ -413,6 +413,7 @@ the unfixed tree before it is trusted.
 | `check_horn_panic.sh` | Can the Horn of Panic frighten a failed-save bystander while sparing its blower? |
 | `check_huntsman_live.sh` | Does the Twilight Huntsman reach its own spell list, smite Law rather than Good, and track at the rate it claims to stack with? |
 | `check_key_directives.sh` | Do the key-script directives reach a menu entry by name, where counting rows could not? |
+| `check_killing_hands.sh` | Do Bracers of Killing Hands pay two points per plus to both unarmed accuracy and damage? |
 | `check_layout.sh` | Does this build play the same game when its objects sit at different addresses? |
 | `check_load_corrupt.sh` | Does the binary refuse ten hand-corrupted saves cleanly and still load two genuine ones? |
 | `check_logrotate.sh` | Does log rotation keep the right archives and prune only names it made itself? |

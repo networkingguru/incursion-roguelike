@@ -360,6 +360,7 @@ Nothing invoked it; the only references were documentation. See
 | `check_huntsman_live.sh` | Does the Twilight Huntsman reach his own spell list, smite Law rather than Good, and track at the ranger's rate, serving the ranger's opening bonus once rather than twice? | LIVE |
 | `check_key_directives.sh` | Do the screen-driven key-script directives `@choose`, `@cursorto`, `@cursorto:mark` and `@expect` reach a menu entry that counting could not? | LIVE |
 | `check_ki_strike_live.sh` | Does the module grant a Monk Ki Strike? One session photographs the character sheet's Special Abilities block at 1st level and again at 4th: nothing, then `Ki Strike +1`. Reads a compiled module, so a red run after editing `lib/` usually means `./incursion -compile main.irc` was not run. | LIVE |
+| `check_killing_hands.sh` | Do Bracers of Killing Hands pay two points per plus to both unarmed accuracy and damage? Equips a known, identified +2 pair and requires +4 on both lines of the sheet's Brawl block. | LIVE |
 | `check_layout.sh` | Does this build play the same game when its objects sit at different addresses? | LIVE |
 | `check_load_corrupt.sh` | Does the real binary refuse ten hand-corrupted saves cleanly and still load two genuine ones? | LIVE |
 | `check_logrotate.sh` | Does log rotation keep the right archives and prune only names it made itself? | LIVE |

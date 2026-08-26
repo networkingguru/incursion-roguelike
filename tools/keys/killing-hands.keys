@@ -1,0 +1,47 @@
+# Equip known +2 Bracers of Killing Hands and photograph their inventory row
+# and the character sheet's Brawl block. Read by check_killing_hands.sh.
+#
+# Wizard Auto-Identify is enabled before acquisition because an unidentified
+# plus is no oracle. RIGHT*21 selects Bracers from the acquisition glyph row
+# (src/Tables.cpp:320-345). The candidate list has no menu letters and shows
+# three rows with the middle row selected, so walking until the following
+# Bracers of Vulnerability appears leaves Killing Hands selected. The check
+# does not trust that walk alone: it reads the equipped item's name and +2
+# back from the inventory dump before accepting the Brawl measurements.
+#
+# The orc barbarian begins with a weapon in hand, which hides the sheet's Brawl
+# block. Stow that weapon in the pack and leave the weapon hand empty before
+# opening the sheet.
+
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*21                # Bracers
+@until "Bracers of Vulnerability" DOWN
+ENTER
+2                       # known inherent plus
+ENTER
+r                       # Bracers slot
+SPACE
+ENTER
+
+i
+@expect "Bracers +2 of Killing Hands"
+@dump:inventory
+b                       # Weapon Hand
+SPACE                   # lift the starting weapon
+s                       # stow it in the pack; weapon hand is now empty
+ESC
+
+d
+@expect "Brawl"
+@dump:sheet
+@quit
