@@ -6638,8 +6638,10 @@ AI_WEAPON Effect "Sunblade" : EA_GRANT
    the page's promise, and Win32 reads the same shared effect data. */
 and EA_GRANT
   { xval: RESIST; yval: AD_COLD; pval: PLUS_1PER1; }
+/* upstream: Observed, inc-tek.8.8, NOT sent -- shared Win32 data used five
+   10-foot squares despite this page promising a 60-foot light burst. */
 and EA_GENERIC
-  {  aval: AR_FIELD; lval: 5; rval: FI_LIGHT; cval: yellow; } 
+  {  aval: AR_FIELD; lval: 6; rval: FI_LIGHT; cval: yellow; } 
 
 Item "small hornblade" : T_WEAPON
   { Image: purple GLYPH_WEAPON; Group: WG_SIMPLE;
