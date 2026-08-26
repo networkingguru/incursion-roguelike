@@ -6572,7 +6572,11 @@ Item "short sword;sunblade" : T_WEAPON
   { Image: gray GLYPH_SWORD; Group: WG_SBLADES;
     Mat:MAT_IRON; Size: SZ_SMALL; Weight: 30; 
     Cost: OPT_COST(31,9) GOLD; Parry: 4;
-    SDmg:1d10; LDmg:1d12; Acc: +3; Crit: x3; Threat: 2; Spd: 140%;
+    /* upstream: base-code defect, not a port artefact. The same item stat data
+       gives Acc +3 / Crit x3 on Win32 with the original typedefs and compiler,
+       though the Sunblade's own page promises a bastard sword's accuracy and crit.
+       Observed; inc-tek.8.8; not sent. */
+    SDmg:1d10; LDmg:1d12; Acc: +2; Crit: x2; Threat: 2; Spd: 140%;
     Flags: WT_SUPER_SNEAK, WT_SLASHING, WT_PIERCING, IT_NOGEN;
     Constants:
       * WIELD_AS $"short sword";
