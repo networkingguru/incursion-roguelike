@@ -1,8 +1,9 @@
 # Acquire all three Enchant Armour quality scrolls, the Staff of the Goblin
-# Queen, the Staff of Exorcism and the Staff of Abjuration with wizard
+# Queen, the Staff of Exorcism, the Staff of Abjuration and the Staff of Wind
+# and Water with wizard
 # Auto-Identify on, then open each player-facing description
 # from Inventory Mode. Read by tools/check_enchant_graceful.sh for PA-08-F26,
-# PA-08-F27, PA-08-F29, PA-08-F30 and PA-08-F31 / inc-tek.8.8.
+# PA-08-F27, PA-08-F29, PA-08-F30, PA-08-F31 and PA-08-F32 / inc-tek.8.8.
 #
 # Scrolls are one RIGHT from Potions in ItemGlyphs (src/Tables.cpp:320-322).
 # The acquisition list shows three rows with the middle selected, so looking
@@ -131,6 +132,27 @@ b
 @expect "Staff of Abjuration"
 x
 @dump:abjuration
+ESC
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*3                 # Staves
+@until "Staff of Wind and Water" DOWN
+DOWN                    # the wanted row is below the selected preceding staff
+ENTER
+2                       # Enter Item Level
+ENTER
+b
+SPACE                   # swap the staff into the Weapon Hand
+s                       # stow the Abjuration staff left in the air slot
+ESC
+
+i
+b
+@expect "Staff of Wind and Water"
+x
+@dump:wind-water
 ESC
 ESC
 @quit

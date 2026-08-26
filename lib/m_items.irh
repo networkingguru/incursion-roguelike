@@ -3470,6 +3470,8 @@ AI_STAFF Effect "Wind and Water" : EA_GRANT
           $"Gust of Wind" $"Gaseous Form" 
           $"Wall of Fog" $"Waterspout"
           $"Air Walk" $"Solid Fog";
+    /* upstream: this page contradicts its unchanged circumstance-bonus grant
+       on Win32 too; Observed, inc-tek.8.8, NOT sent. */
     Desc: "This staff initially appear to be nothing more than
       a gnarled old cudgel, and in fact that it what most of
       them began their existance as -- the walking sticks of
@@ -3483,7 +3485,7 @@ AI_STAFF Effect "Wind and Water" : EA_GRANT
       and pay all due respects to their legendary creator,
       wherever he might be.\n
       __In the hands of a character with three or more levels
-      as a spellcaster, this staff grants a +2 enhancement
+      as a spellcaster, this staff grants a +2 circumstance
       bonus to Luck, and also allows access to the spells
       <9>gust of wind<7>, <9>gaseous form<7>, <9>wall of fog<7>,
       <9>waterspout<7>, <9>air walk<7> and <9>solid fog<7>.";

@@ -1,7 +1,8 @@
 #!/bin/bash
-# Regression check for PA-08-F26, PA-08-F27, PA-08-F29, PA-08-F30 and
-# PA-08-F31 / inc-tek.8.8: five corrected item pages must advertise their own scripted qualities,
-# prerequisite or spells, while the unchanged featherlight scroll is the control.
+# Regression check for PA-08-F26, PA-08-F27, PA-08-F29, PA-08-F30,
+# PA-08-F31 and PA-08-F32 / inc-tek.8.8: six corrected item pages must
+# advertise their own scripted qualities, prerequisite, spells or bonus type,
+# while the unchanged featherlight scroll is the control.
 #
 # WHAT WAS WRONG. Both Descs were copied verbatim from Enchant Armour
 # (featherlight), although their scripts test and grant AQ_GRACEFUL and
@@ -10,7 +11,8 @@
 # THE ORACLE is the item description screen the game renders from the compiled
 # module. One wizard-mode session Auto-Identifies and acquires all three scrolls,
 # the Staff of the Goblin Queen, the Staff of Exorcism and the Staff of
-# Abjuration, then Inventory Mode's x opens each page.
+# Abjuration and the Staff of Wind and Water, then Inventory Mode's x opens
+# each page.
 # Each box must name its own item and show its own description block before its
 # words are trusted.
 #
@@ -68,7 +70,8 @@ lifekeeping_file="$run/logs/screens/0003-life-keeping.txt"
 goblin_file="$run/logs/screens/0004-goblin-queen.txt"
 exorcism_file="$run/logs/screens/0005-exorcism.txt"
 abjuration_file="$run/logs/screens/0006-abjuration.txt"
-for f in "$graceful_file" "$feather_file" "$lifekeeping_file" "$goblin_file" "$exorcism_file" "$abjuration_file"; do
+wind_water_file="$run/logs/screens/0007-wind-water.txt"
+for f in "$graceful_file" "$feather_file" "$lifekeeping_file" "$goblin_file" "$exorcism_file" "$abjuration_file" "$wind_water_file"; do
     [ -f "$f" ] || { echo "FAIL: no description screen at $f"; exit 1; }
 done
 
@@ -78,6 +81,7 @@ lifekeeping="$(box_text "$lifekeeping_file")"
 goblin="$(box_text "$goblin_file")"
 exorcism="$(box_text "$exorcism_file")"
 abjuration="$(box_text "$abjuration_file")"
+wind_water="$(box_text "$wind_water_file")"
 for spec in "graceful|$graceful|$graceful_file" \
             "featherlight|$feather|$feather_file" \
             "life-keeping|$lifekeeping|$lifekeeping_file"; do
@@ -103,6 +107,14 @@ case "$abjuration" in
     *"Staff Of Abjuration"*) ;;
     *) echo "FAIL: $abjuration_file does not name the Staff of Abjuration; wrong page."; exit 1 ;;
 esac
+case "$wind_water" in
+    *"Staff Of Wind And Water"*) ;;
+    *) echo "FAIL: $wind_water_file does not name the Staff of Wind and Water; wrong page."; exit 1 ;;
+esac
+case "$wind_water" in
+    *"bonus to Luck"*) ;;
+    *) echo "FAIL: $wind_water_file lacks the staff's description block; absence proves nothing."; exit 1 ;;
+esac
 case "$abjuration" in
     *"allows access to the spells"*) ;;
     *) echo "FAIL: $abjuration_file lacks the staff's description block; absence proves nothing."; exit 1 ;;
@@ -122,6 +134,7 @@ echo "Life-keeping scroll page: $(printf '%s' "$lifekeeping" | grep -o 'bestow t
 echo "Goblin Queen staff page: $(printf '%s' "$goblin" | grep -o '[13].. level or above' | head -1)"
 echo "Exorcism staff page: Staff Of Exorcism"
 echo "Abjuration staff page: $(printf '%s' "$abjuration" | grep -oE 'arcane casting levels|mage or priest' | head -1)"
+echo "Wind and Water staff page: $(printf '%s' "$wind_water" | grep -oE '\+2 (circumstance|enhancement) bonus to Luck' | head -1)"
 
 fail=0
 case "$graceful" in
@@ -163,6 +176,13 @@ esac
 case "$abjuration" in
     *"arcane casting levels"*) echo "FAIL: the Staff of Abjuration still advertises an arcane-only gate."; fail=1 ;;
 esac
+case "$wind_water" in
+    *"+2 circumstance bonus to Luck"*) ;;
+    *) echo "FAIL: the Staff of Wind and Water does not advertise its circumstance bonus."; fail=1 ;;
+esac
+case "$wind_water" in
+    *"enhancement"*) echo "FAIL: the Staff of Wind and Water still advertises an enhancement bonus."; fail=1 ;;
+esac
 
-[ "$fail" -eq 0 ] && echo "PASS: all six item pages advertise their own scripted qualities, prerequisites or spells."
+[ "$fail" -eq 0 ] && echo "PASS: all seven item pages advertise their own scripted qualities, prerequisites, spells or bonus type."
 exit "$fail"
