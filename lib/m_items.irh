@@ -6914,9 +6914,14 @@ AI_WEAPON Effect "Bloodspear" : EA_GRANT
           EItem->AddQuality(WQ_BANE);
           EItem->AddQuality(WQ_PAIN);
         }
+      /* upstream: base-code defect, not a port artefact: the same wield handler
+         tests only three types on Win32 with the original typedefs and compiler,
+         so the lizardman tier the spear's own page promises is missing upstream.
+         Observed, inc-tek.8.8, not sent. */
       else if (EActor->isMType(MA_GOBLINOID) || 
                EActor->isMType(MA_TROLL) ||
-               EActor->isMType(MA_KOBOLD))
+               EActor->isMType(MA_KOBOLD) ||
+               EActor->isMType(MA_LIZARDFOLK))
         {
           EItem->PurgeAllQualities();
           EItem->SetInherentPlus(+3);
