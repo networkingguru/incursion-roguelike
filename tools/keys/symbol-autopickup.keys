@@ -1,0 +1,32 @@
+# Regression fixture for inc-upw.52. AutoPickupFloor's unidentified-magic branch
+# (src/Player.cpp) must NOT auto-stow a grantless holy symbol, nor the shield a
+# priest drops stamped with the same god emblem, while it still stows real
+# unidentified magic. Read by tools/check_symbol_autopickup.sh.
+#
+# Route on seed 1: an orc barbarian; wizard-summon a base human to the east; add
+# the priest template, whose EV_INITIALIZE creates an UNIDENTIFIED holy symbol
+# (lib/mon2.irh, MakeMagical with no MakeKnown) and stamps its buckler with the
+# same god emblem; genocide it so it drops the gear; step onto the tile so the
+# pickup runs. @dump:before catches the loaded tile; @dump:after catches the
+# view once the pickup has settled.
+@include chargen.keys
+w
+y
+@expect "Wizard Mode Options:"
+@choose "Monster Summoning"
+@choose "Humans"
+@choose "Human"
+RIGHT
+ENTER
+w
+@choose "Add Template to Creature"
+RIGHT
+ENTER
+@choose "Priest"
+w
+@choose "Genocide Everything"
+RIGHT
+@dump:before
+SPACE
+@dump:after
+@quit

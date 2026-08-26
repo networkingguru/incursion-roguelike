@@ -393,6 +393,7 @@ Nothing invoked it; the only references were documentation. See
 | `check_stair_cycle.sh` | Does the overview map's staircase search run, pick the cheapest, and wrap? | LIVE |
 | `check_store_scroll.sh` | Does the shop list follow the selection in both directions, reached without wizard mode? | LIVE |
 | `check_strqueue.sh` | Is the string queue's bound still tested before the write? | LIVE |
+| `check_symbol_autopickup.sh` | Does autopickup keep a grantless holy symbol and the god-marked shield out of the pack while still stowing real unidentified magic? | LIVE |
 | `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? | LIVE |
 | `check_two_fist_feats_live.sh` | Do the two-weapon feats reach two empty hands? A Monk 1 / Warrior 10 buys Two-Weapon Tempest and the sheet's Brawl row moves 125% to 175%; the 1st-level sidebar must still read two equal fists at full Strength. | LIVE |
 | `check_underdark_live.sh` | Does the Underdark Warrior check the race it requires, and give the Reflex save it advertises? | LIVE |
@@ -550,6 +551,7 @@ tools/check_save_fail.sh
 tools/check_stair_cycle.sh
 tools/check_broken_door.sh
 tools/check_store_scroll.sh
+tools/check_symbol_autopickup.sh
 tools/check_target_order.sh
 tools/check_key_directives.sh
 tools/check_menu_value.sh
