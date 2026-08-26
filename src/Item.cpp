@@ -2243,6 +2243,21 @@ int16 Item::PItemLevel(Creature *cr)
     return max(ItemLevel(),GetStatiMag(MAGIC_AURA));
   }
 
+/* True only for a grantless god emblem: an eID that is some god's HOLY_SYMBOL
+   effect AND grants nothing (EA_GENERIC). That is 16 of the 17 god symbols, and
+   any shield a priest hook stamps with one. Hesani's symbol (EA_GRANT) and a
+   real shield enchantment are not emblems, so both return false. bd inc-upw.52. */
+bool Item::isFlavorGodMark()
+  {
+    int16 i;
+    if (!eID || !TEFF(eID) || TEFF(eID)->ef.eval != EA_GENERIC)
+      return false;
+    for (i = 0; i != theGame->LastGod(); i++)
+      if (eID == TGOD(theGame->GodID(i))->GetConst(HOLY_SYMBOL))
+        return true;
+    return false;
+  }
+
 int16 Item::ItemLevel(bool bounded)
   {
     int16 eff_lev, cost_lev;

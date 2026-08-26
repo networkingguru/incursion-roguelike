@@ -4971,6 +4971,26 @@ void Character::LegendIdent(Item *it) {
 			return;
 		}
 
+	/* Local addition (not an upstream fix): a worshipper knows his own god's
+	   holy symbol on sight, and a student of the gods may recognise another
+	   god's with a Knowledge: Theology check (DC 10). Only a grantless god
+	   emblem qualifies, so an actually magical item -- Hesani's symbol, or an
+	   enchanted shield -- is never revealed this way. Pairs with the autopickup
+	   emblem exemption in Player::AutoPickupFloor. bd inc-upw.52. */
+	if (isPlayer() && it->eID && !it->isKnown(KN_MAGIC)) {
+		bool mine = getGod() && it->eID == TGOD(getGod())->GetConst(HOLY_SYMBOL);
+		if (mine || it->isFlavorGodMark()) {
+			if (mine) {
+				it->MakeKnown(KN_MAGIC);
+				IPrint("You recognise the <Obj>, your own god's.", it);
+			}
+			else if (HasSkill(SK_KNOW_THEO) && SkillCheck(SK_KNOW_THEO,10,true)) {
+				it->MakeKnown(KN_MAGIC);
+				IPrint("You recognise the <Obj>.", it);
+			}
+		}
+	}
+
 	if (!HasAbility(CA_LEGEND_LORE))
 		return;
 	if (it->isType(T_CORPSE) ||

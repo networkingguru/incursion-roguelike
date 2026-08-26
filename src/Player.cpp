@@ -2848,7 +2848,19 @@ start_again:
                 }
             }
 
-            if (i->PItemLevel(this) >= 0 && i->eID && !i->isKnown()) {
+            /* upstream: the unidentified-magic autopickup sweep hoards any
+               item that carries an effect id, so a dead priest's grantless holy
+               symbol -- and the shield the priest hook stamps with the same god
+               emblem -- fill the pack one at a time and never converge, because
+               a symbol has no flavour to learn as a kind. This defeats the 0.6.4
+               changelog's own claim that holy symbols are exempt from autopickup;
+               that exemption (the !isType(T_SYMBOL) test ~50 lines up) guards
+               only the stacking branch. Win32 with the original typedefs behaves
+               the same; not a port artefact. Observed: seed 1, an orc barbarian
+               with no magic auto-stows a ? holy symbol. isFlavorGodMark() keeps
+               the emblem out while still hoarding Hesani's granting symbol and
+               real enchantments. inc-upw.52, not sent. */
+            if (i->PItemLevel(this) >= 0 && i->eID && !i->isKnown() && !i->isFlavorGodMark()) {
                 if (auto_pickup == 2 && Inv[SL_PACK] && oItem(Inv[SL_PACK])->Type == T_CONTAIN && (InSlot(SL_PACK) || AbilityLevel(CA_WILD_SHAPE))) { 
                     pack = (Container*)oItem(Inv[SL_PACK]);
                     if (pack) {

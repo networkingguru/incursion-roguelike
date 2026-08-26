@@ -153,6 +153,7 @@ class Item: public Thing, public Magic
       bool isCursed()  { return (IFlags & IF_CURSED) != 0;  }
       bool isMaster()  { return (IFlags & IF_MASTERWORK) != 0; }
       bool isKnown(uint16 kn = KN_MAGIC) { return (Known & kn) == kn; }
+      bool isFlavorGodMark();  // a grantless god emblem, 16 of 17 gods: bd inc-upw.52
       int8 GetPlus()   { 
         if (IFlags & IF_CURSED)
           return HighStatiMag(BOOST_PLUS)-Plus;
