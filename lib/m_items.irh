@@ -1692,12 +1692,14 @@ AI_STONE Effect "Shadowstone" : EA_GENERIC
     lval: 1; Level: PLUS_2PER1; 
     aval: AR_MFIELD; rval: FI_SHADOW; cval: shadow; 
     Purpose: EP_STEALTH; Flags: EF_GLYPH_FLOOR, EF_NAMEONLY; 
+    /* upstream: copied cloak prose is wrong for this stone on Win32 too;
+       Observed, inc-tek.8.8, NOT sent. */
     Desc: "This item creates a field of supernatural shadow. Inside the
     field bright lights (e.g., from wall torches) do not prevent creatures
     from hiding. The field of shadow is not a field of darkness, and
     surroundings and features can still be seen, even via torchlight. In
-    addition, the cloak grants a bonus to Hide skill checks equal to its
-    magical plus."; 
+    addition, the stone grants a bonus to Hide skill checks equal to twice
+    its magical plus."; 
   } and EA_GRANT { xval: SKILL_BONUS; yval: SK_HIDE; pval: PLUS_2PER1; }
 
 
