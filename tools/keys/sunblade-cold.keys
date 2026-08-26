@@ -1,0 +1,44 @@
+# Read Cold resistance before and after wielding a known +2 Sunblade. Read by
+# tools/check_sunblade_cold.sh. RIGHT*10 reaches specific weapons; Hornblade is
+# the candidate after Sunblade, so seeing it below leaves Sunblade selected.
+
+@include chargen.keys
+
+d
+@until "Resistances and Armour" DOWN
+@dump:without-sunblade
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*10                # specific weapons
+@until "Hornblade" DOWN
+ENTER
+2                       # Sunblade's INITIAL_PLUS
+ENTER
+b                       # Weapon Hand
+SPACE
+n                       # do not wield the short sword two-handed
+s                       # stow the displaced starting weapon
+@dump:wielded
+ESC
+
+a
+@dump:activation-menu
+a                       # activate the Sunblade's 3/day light field
+@dump:after-activation
+a
+@dump:activation-menu-after
+ESC
+
+d
+@until "Resistances and Armour" DOWN
+@dump:with-sunblade
+@quit

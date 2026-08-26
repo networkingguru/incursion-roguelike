@@ -6579,7 +6579,7 @@ Item "short sword;sunblade" : T_WEAPON
   }
   
 AI_WEAPON Effect "Sunblade" : EA_GRANT
-  { SC_EVO; Level: 8; Flags: EF_NAMEONLY, EF_ACTIVATE2, EF_3PERDAY;
+  { SC_EVO; Level: 8; Flags: EF_NAMEONLY, EF_ACTIVATE3, EF_3PERDAY;
     xval: RESIST; yval: AD_NECR; pval: PLUS_2PER1;
     Desc: "Though this weapon materially appears to be a bastard
       sword, and is such to all physical examination, when picked
@@ -6634,6 +6634,10 @@ AI_WEAPON Effect "Sunblade" : EA_GRANT
     Lists:
       * ITEM_QUALITIES WQ_GLOWING WQ_KEEN WQ_HOLY IQ_GHOST_TOUCH;
   }
+/* upstream: Reasoned inc-tek.8.8, NOT sent -- the cold grant was absent despite
+   the page's promise, and Win32 reads the same shared effect data. */
+and EA_GRANT
+  { xval: RESIST; yval: AD_COLD; pval: PLUS_1PER1; }
 and EA_GENERIC
   {  aval: AR_FIELD; lval: 5; rval: FI_LIGHT; cval: yellow; } 
 
