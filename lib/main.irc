@@ -13,7 +13,7 @@ Monster "(Resource Zero)" : 0
   {                                                                       
     Flags: M_NOGEN, M_NOPOLY;
   }
-  
+
 Effect "unimplemented" : EA_NOTIMP
   {
     Level: 10;
@@ -514,3 +514,22 @@ Effect "XP Ticker" : EA_INFLICT
       "The flames on your flesh gutter out." /
       "The flames on the <EActor> gutter out.";
   }
+
+/* APPEND-ONLY (see the note above the flame tongue immolation effect and
+   docs/SAVE-SCHEMA-SPEC.md): new resources go HERE, at the end of parse order,
+   never in the middle of an existing list. This is the throwable base item for
+   the Dwarven Thrower artifact (lib/m_items.irh, finding PA-08-F46). Incursion's
+   "throwing" is the IT_THROWABLE item flag, read from the item type, so the
+   artifact needed a base warhammer that carries it; the .irh language has no item
+   inheritance, so every stat below is a hand-copy of "warhammer" in
+   lib/weapons.irh and MUST be kept in sync with it by hand. Only IT_THROWABLE (so
+   it can be hurled) and IT_NOGEN (so it never drops as ordinary loot) differ. */
+Item "warhammer;thrown" : T_WEAPON
+  { Image: red GLYPH_WEAPON; Group: WG_IMPACT;
+    Mat: MAT_IRON; Size: SZ_MEDIUM; Weight: 120;
+    Cost: OPT_COST(40,14) GOLD; Parry: 3;
+    SDmg: 1d8; LDmg: 1d8; Acc: 0; Crit: x3; Threat: 1; Spd: 80%;
+    Flags: WT_BLUNT, WT_STR2, WT_STUNNING, WT_PENETRATING, IT_THROWABLE, IT_NOGEN;
+    Desc: "The warhammer is a blunt weapon designed specifically to
+      punch through plate armours. Its blows carry terrible force
+      with them."; }

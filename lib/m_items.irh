@@ -6730,7 +6730,6 @@ AI_WEAPON Effect "Dwarven Thrower" : EA_GRANT
         {
           EItem->PurgeAllQualities();
           EItem->SetInherentPlus(4);
-          /*EItem->AddQuality(WQ_THROWING);*/
           EItem->AddQuality(WQ_RETURNING);
           EItem->AddQuality(WQ_IMPACT);
           EItem->AddQuality(WQ_BANE);
@@ -6739,7 +6738,6 @@ AI_WEAPON Effect "Dwarven Thrower" : EA_GRANT
         {
           EItem->PurgeAllQualities();
           EItem->SetInherentPlus(2);
-          /*EItem->AddQuality(WQ_THROWING);*/
           EItem->AddQuality(WQ_BANE);
           return DONE;
         }
@@ -6750,10 +6748,17 @@ AI_WEAPON Effect "Dwarven Thrower" : EA_GRANT
         SHOULD_CAST_IT : CANNOT_CAST_IT;
       };
     Constants:
-      * BASE_ITEM $"warhammer",
+      /* upstream: base-code defect, not a port artefact: on Win32 with the
+         original typedefs and compiler, the artifact's base is the
+         non-throwable warhammer and WQ_THROWING is undefined, so the
+         "throwing" its page promises never worked upstream. Traced: the throw
+         path in src/Values.cpp promotes only an IT_THROWABLE base; the
+         warhammer lacks it; WQ_THROWING is defined nowhere. Tracking
+         inc-tek.8.8. Not sent. */
+      * BASE_ITEM $"warhammer;thrown",
       * INITIAL_PLUS +2;
     Lists:
-      * ITEM_QUALITIES /*WQ_THROWING*/ WQ_RETURNING WQ_BANE,
+      * ITEM_QUALITIES WQ_RETURNING WQ_BANE,
       * BANE_LIST MA_ORC MA_GIANT;
     Desc: "__Crafted by the dwarven elders of Thogorolain
       Citadel, these seven mighty hammers were created
