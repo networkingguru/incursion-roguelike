@@ -76,8 +76,10 @@ code; **v1 gave it a meaning**: 1 = the payload is zlib level 6
 (src/SaveV1.cpp:84-92). The v1 reader follows the file's field
 (src/SaveV1.cpp:2966-2996). The v0 paths still ignore it: v0's LZ-versus-RLE
 choice is a **caller argument, not a file field** — `SaveGroup`/`LoadGroup`
-take `use_lz`, the v0 save path passes `false` (src/Registry.cpp:1321),
-modules pass `true` (:1352, :1428, :1459), and src/Term.cpp:3525-3536 picks
+take `use_lz`, the main save's own group is loaded with `false`
+(src/Registry.cpp:1321) — the v0 save path that once passed it is gone, since
+`Game::SaveGame` writes v1 now — while modules pass `true` on both save and
+load (:1352, :1428, :1459), and src/Term.cpp:3525-3536 picks
 the codec from that argument alone. `numDependencies` and `dependHeader`
 (src/Registry.cpp:50) remain unused by everything.
 
@@ -215,7 +217,7 @@ ledger sees both, because there they are moved lines in a diff; it is tracked
 separately and does not exist yet.
 
 **Deferred resolution.** Both load paths reload modules only after the save
-group (src/Registry.cpp:1320-1337, src/Dump.cpp:151-172), so at the moment a
+group (src/Registry.cpp:1320-1337, src/Dump.cpp:196-221), so at the moment a
 record is read there is no module to convert against. A v1 load parks the
 saved `rID` in its own slot and queues the slot's address; one
 `SaveV1_ResolveNames()` call after each path's module reload converts every
@@ -497,7 +499,7 @@ the digest, and still true for the resource tables.**
 ## How to check this page
 
 ```
-grep -rn "ARCHIVE_CLASS(" inc | wc -l                                   # 20
+grep -rn "ARCHIVE_CLASS(" inc | wc -l                                   # 21 (20 classes + the macro definition)
 grep -rn "r\.Block(" inc src | wc -l                                    # 7 (the rest went through FIELD_BLOB)
 grep -rn "numDependencies" src inc | wc -l                              # 1, the declaration; nothing uses it
 grep -n  "Compression" src/SaveV1.cpp | head -3                         # the field v1 gave a meaning

@@ -118,15 +118,10 @@ No claim here needed a binary run.
    `FIND("mage") && FIND("shocker lizard")`. A user module built per
    `docs/modules.md` fails that test, prints "Forgoing save." (`src/RComp.cpp:226`) and
    produces no `.Mod`, yet `ResourceCompiler` returns success (`src/RComp.cpp:232`).
-2. **`docs/modules.md:21-22` is wrong about where a module `.irc` lives.**
-   `mod/` holds compiled `.Mod` files (`src/Registry.cpp:1449`, `src/Registry.cpp:1453`); the
-   `.irc` source must sit in `LibraryPath()`, because `ResourceCompiler` chdirs
-   there before opening it (`src/RComp.cpp:99`, `:101`).
-3. **A missing `lib/dispatch.h` degrades silently.** `src/VMachine.cpp:195-199`
+2. **A missing `lib/dispatch.h` degrades silently.** `src/VMachine.cpp:195-199`
    defines empty `CallMemberFunc`, `GetMemberVar` and `SetMemberVar` when
    `DISPATCH` is undefined -- no warning, scripts just stop having effects.
-4. **`GenerateDispatch` checks the `fopen` and nothing after it**
+3. **`GenerateDispatch` checks the `fopen` and nothing after it**
    (`src/RComp.cpp:591-592`, `fclose` at `src/RComp.cpp:955`), so a full disk yields a
-   truncated `dispatch.h` the next build consumes as complete. Four of its
-   `fprintf` calls also pass an unused argument (`:577`, `:578`, `:841`,
-   `:842`), and `AddDebugInfo` is gated by `if (1)` at `src/RComp.cpp:535`.
+   truncated `dispatch.h` the next build consumes as complete. `AddDebugInfo`
+   is gated by `if (1)` at `src/RComp.cpp:535`.
