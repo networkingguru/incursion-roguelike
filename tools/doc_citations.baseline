@@ -4,10 +4,10 @@
 0 AGENTS.md
 0 CLAUDE.md
 0 docs/DEVTOOLS-AUDIT.md
-5 docs/ENGINE-EVENTS.md
+3 docs/ENGINE-EVENTS.md
 4 docs/ENGINE-MAP-CREATURE.md
-4 docs/ENGINE-MAP.md
-10 docs/ENGINE-SCRIPT.md
+3 docs/ENGINE-MAP.md
+4 docs/ENGINE-SCRIPT.md
 0 docs/ENGINE-SERIALISATION.md
 0 docs/evidence/inc-5xn/README.md
 2 docs/evidence/inc-90u/README.md
@@ -34,6 +34,11 @@
 1 docs/PORT-STATUS.md
 0 docs/reference.md
 1 docs/REPORTING-GATE.md
+0 docs/SAVE-SCHEMA-SPEC.md
+0 docs/SCRIPT-DATA-SEGMENT.md
+0 docs/superpowers/plans/2026-08-24-save-schema-v1.md
+1 docs/superpowers/plans/2026-08-25-save-manifest-position-refs.md
+0 docs/VERIFICATION.md
 1 docs/YUSE-VERBS.md
 0 libtcod/README.md
 0 MORNING-REPORT.md

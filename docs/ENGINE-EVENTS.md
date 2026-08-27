@@ -8,9 +8,9 @@ inc-s6m: inc-upw.5 (P1), inc-upw.16 (P1) and inc-upw.15 (P0). inc-s6m is closed 
 ## Where it lives
 Event stack and `Throw*`: `src/Event.cpp`. `EventInfo` and the `PEVENT`/`DAMAGE`/`THROW` macros: `inc/Events.h`. C++ -> script
 boundary: `src/Annot.cpp:1098`. Bytecode VM: `src/VMachine.cpp:413`. Generated script-callable C++ API: `lib/dispatch.h`.
-Preprocessed ruleset: `lib/program.i`. Event numbers and `PRE`/`POST`/`META`/`GODWATCH`/`EVICTIM`: `inc/Defines.h:4392-4398`; 183
+Preprocessed ruleset: `lib/program.i`. Event numbers and `PRE`/`POST`/`META`/`GODWATCH`/`EVICTIM`: `inc/Defines.h:4433-4439`; 183
 `EV_` numbers exist. `EvReturn` is `int8` (`inc/Defines.h:58`): `ERROR -1`, `NOTHING 0`, `DONE 1`, `ABORT 2`, `NOMSG 3`
-(`inc/Defines.h:112-116`).
+(`inc/Defines.h:137-141`).
 
 ## Raising an event
 14 functions push a frame then call `RealThrow`; each starts `EventSP++; CHECK_OVERFLOW;`. They differ only in the fields they
@@ -33,9 +33,9 @@ creature is the victim (`:676`), then as the plain event if it is the actor (`:6
 
 A handler changes the outcome four ways. `DONE`/`ABORT` stop dispatch at every level above (`src/Event.cpp:179`, `:245`, `:311`,
 `:374`); `NOMSG` sets `e.Terse` and continues (`:181`); `NOTHING` continues, and a whole sweep of `NOTHING` reaches the
-unhandled-event `Fatal` block in `RealThrow` (`:452-461`), which logs and `exit(1)` (`src/Wposix.cpp:1729-1744`) — but the guard
-at `:454` returns first whenever the POST pass ran, because `e.Event` then holds `POST(Ev)`, so that `Fatal` is dead on every
-normal path; fourth, handlers mutate `EventInfo` in place, and `ReThrow` copies the frame back into the caller's `e` (`:479-482`).
+unhandled-event `Fatal` block in `RealThrow` (`:452-461`), which logs and `exit(1)` (`src/Wposix.cpp:1766-1782`) — but the guard
+at `src/Event.cpp:454` returns first whenever the POST pass ran, because `e.Event` then holds `POST(Ev)`, so that `Fatal` is dead on every
+normal path; fourth, handlers mutate `EventInfo` in place, and `ReThrow` copies the frame back into the caller's `e` (`src/Event.cpp:479-482`).
 
 ## The C++ / script boundary
 The boundary is exactly `Resource::Event` (`src/Annot.cpp:1098`); above it is C++, below it is bytecode. It rejects fast on a
@@ -47,24 +47,24 @@ val` (`:3413`), with no validation.
 
 The build holds 1459 `On Event` occurrences; the `.irh`/`.irc` sources hold 1469 — the figure quoted in the issue. They are not
 the same set: `#if 0` at `lib/main.irc:36` and `:268` and a comment block at `:176` delete source handlers, while macro
-`ALIENIST_CLAUSE` (`lib/defines.irh:68`) expands one source occurrence into 18 built ones. **1469 counts source text, not handlers
+`ALIENIST_CLAUSE` (`lib/defines.irh:88`) expands one source occurrence into 18 built ones. **1469 counts source text, not handlers
 in the build.**
 
 ## The event stack
 `EventInfo EventStack[EVENT_STACK_SIZE]`, `EventSP` starting at -1 (`src/Event.cpp:130-131`); the size is 128
 (`inc/Defines.h:80`). The only bound is `CHECK_OVERFLOW` (`src/Event.cpp:128`), which calls `Fatal("Event Stack Overflow!")` and
 exits. There is no depth budget, no recursion counter and no cycle detection in `src/Event.cpp`. Unrelated code reads frames
-assuming the enclosing context: `src/Fight.cpp:156-163`, `src/Prayer.cpp:588`, `src/Skills.cpp:1569`, `src/Target.cpp:1617`.
+assuming the enclosing context: `src/Fight.cpp:285-292`, `src/Prayer.cpp:588`, `src/Skills.cpp:1569`, `src/Target.cpp:1726`.
 
 ## Re-entrancy
 **The system has no general protection against re-entrancy.** Shared by every nested event: `VMachine::Regs[64]`, `SRegs[64]`,
-`Stack[8192]`, `Memory`, `szMemory` are `static` (`inc/Res.h:66-74`) with one VM instance, `theGame->VM` (`inc/Res.h:1114`);
+`Stack[8192]`, `Memory`, `szMemory` are `static` (`inc/Res.h:66-74`) with one VM instance, `theGame->VM` (`inc/Res.h:1320`);
 `Execute` saves and restores only `Regs[63]` (`src/VMachine.cpp:426`, `:489-497`). `Resource::cAnnot`, `cAnnot2` and `EvMsg[64]`
 are `static` on `Resource` (`inc/Res.h:224-225`) — one annotation cursor for the whole game. The code says so: "Nested
 FAnnot/NAnnot doesn't normally [work]" (`src/Annot.cpp:619-621`); `FAnnot2` is a one-level kludge, and depth 3 has no cursor.
-`Thing::PlaceNear` holds `static Creature* Displace[64]` (`src/Display.cpp:392`) and re-enters itself via `PlaceAt` (`:529`),
-which the code notes can overflow the C stack (`:523-525`). Only three places are protected: `StatiCollection::Nested` defers
-stati fixups to the outermost iteration (`inc/Map.h:563`, `:601-609`), `Creature::Perceives` uses a static counter as a recursion
+`Thing::PlaceNear` holds `static Creature* Displace[64]` (`src/Display.cpp:413`) and re-enters itself via `PlaceAt` (`:550`),
+which the code notes can overflow the C stack (`:544-546`). Only three places are protected: `StatiCollection::Nested` defers
+stati fixups to the outermost iteration (`inc/Map.h:738`, `:776-784`), `Creature::Perceives` uses a static counter as a recursion
 mutex (`src/Vision.cpp:383-384`), and `Creature::Multiply` refuses to breed past a nesting depth of 4 (`src/Creature.cpp:497`).
 
 ## The three crashes
@@ -72,30 +72,30 @@ mutex (`src/Vision.cpp:383-384`), and `Creature::Multiply` refuses to breed past
 (`src/Effects.cpp:261`) -> a script handler on `POST(EV_DAMAGE)`/`EVICTIM(EV_DAMAGE)` (`lib/program.i:45382`, `:45815`) or on
 `POST(EVICTIM(EV_HIT))` (`:46418`) calls `Multiply` -> `Creature::Multiply` (`src/Creature.cpp:485`) -> `mn->PlaceAt` (`:556`)
 throws `EV_PLACE` (`src/Display.cpp:224`, `:248`) and `EV_FIELDON` (`:314`) -> `Creature::FieldOn` re-throws `EV_EFFECT` for
-`FI_MODIFIER` (`src/Status.cpp:1688`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1174`).
+`FI_MODIFIER` (`src/Status.cpp:1688`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1202`).
 *Invariant violated:* `Creature::FieldOn` sets `EActor` to the field's creator, so the script calls `Multiply` on the same
 generation-0 parent every time, and the generation cap at `src/Creature.cpp:509` can never apply to it. Only `m->BreedCount >= 50`
 (`:513`) survives, far above the 128-frame stack. *Fix:* a nesting cap of 4 on `Multiply` (`:497`); `GENERATION` is now stamped at
 `:552`, before the child is placed at `:556`.
 
 **2. `Player::MoveDepth` re-enters itself. Fixed (inc-upw.15, closed as a duplicate of inc-x9i).** `MoveDepth`
-(`src/Feature.cpp:948`) calls `PlaceAt` (`:1176`) -> `PlaceAt` throws `EV_PLACE`/`EV_FIELDON` (`src/Display.cpp:224`, `:314`) and
-calls `TerrainEffects` (`:337`) -> a portal or terrain handler calls `MoveDepth` again (`src/Feature.cpp:260`;
+(`src/Feature.cpp:1143`) calls `PlaceAt` (`:1414`) -> `PlaceAt` throws `EV_PLACE`/`EV_FIELDON` (`src/Display.cpp:224`, `:314`) and
+calls `TerrainEffects` (`:358`) -> a portal or terrain handler calls `MoveDepth` again (`src/Feature.cpp:393`;
 `src/Move.cpp:1433`, inside `Creature::TerrainEffects` at `src/Move.cpp:1302`). The re-entry path is ordinary event dispatch; no
 C++ call from `MoveDepth` to `MoveDepth` exists. *Invariant violated:* a function its caller can re-enter must hold no
-call-lifetime state in `static` storage. The follower array is now local, `Thing *GoWith[64]` (`src/Feature.cpp:968`), bounded at
-`:1085`; `static Creature* Displace[64]` (`src/Display.cpp:392`) still violates it. *Fix:* the re-entry was not the cause. The
+call-lifetime state in `static` storage. The follower array is now local, `Thing *GoWith[64]` (`src/Feature.cpp:1163`), bounded at
+`:1310`; `static Creature* Displace[64]` (`src/Display.cpp:413`) still violates it. *Fix:* the re-entry was not the cause. The
 down path read `RES(0)` whenever `BELOW_DUNGEON` is unset, which is every dungeon in `lib/`; the zero check at
-`src/Feature.cpp:1030` stops it.
+`src/Feature.cpp:1255` stops it.
 
 **3. Wild resource id crashes `Game::Get` inside `Magic::Blast`. Fixed (inc-upw.16).** Handlers get ids from three unvalidated
 places: the `eID` a caller put in the frame (`src/Event.cpp:594`), script assignment `pe->eID = val` (`lib/dispatch.h:3413`), and
 script `ThrowEff` with an arbitrary int32 (`lib/dispatch.h:2533`). *Invariant violated:* `Game::Get` indexed the module table by
-the top byte, `Modules[(xID >> 24)-1]`, `MAX_MODULES` being 126 (`inc/Defines.h:4362`), so an id with a zero top byte indexed
+the top byte, `Modules[(xID >> 24)-1]`, `MAX_MODULES` being 126 (`inc/Defines.h:4403`), so an id with a zero top byte indexed
 `Modules[-1]`. The guard was `ASSERT(Modules[(xID >> 24)-1])`, and `ASSERT` only calls `Error` and falls through
-(`inc/Defines.h:93`) — it did not stop the next line's dereference. Hence SIGBUS with no log: if the out-of-range slot held
+(`inc/Defines.h:101`) — it did not stop the next line's dereference. Hence SIGBUS with no log: if the out-of-range slot held
 non-zero garbage, `ASSERT` passed silently and `->GetResource` ran on a garbage `Module*`. *Fix:* `Game::Get` range-checks the
-slot in signed arithmetic and returns NULL with a logged `Error` (`src/Res.cpp:342-347`). The three id sources stay unvalidated.
+slot in signed arithmetic and returns NULL with a logged `Error` (`src/Res.cpp:348-353`). The three id sources stay unvalidated.
 
 ## How to check this page
 ```
@@ -109,11 +109,11 @@ grep -rn "ALIENIST_CLAUSE" lib/*.irh | grep -v define # 18 macro expansions
 
 ## Suspected defects
 1. Fixed. `src/Creature.cpp:552` now stamps `GENERATION` before `:556` places the child, and `:497` caps `Multiply` nesting at 4.
-2. `src/Display.cpp:392` `static Creature* Displace[64]` in a function re-entering itself at `:529`; `Displace[dc++]` (`:489`) has
+2. `src/Display.cpp:413` `static Creature* Displace[64]` in a function re-entering itself at `:550`; `Displace[dc++]` (`:510`) has
 no bound check and `dc` is `uint8`.
 3. `src/Effects.cpp:153` states `e.eID` may be 0 for breath weapons; `:166` then reads `TEFF(e.eID)->Schools` unchecked. Same
-shape at `src/Creature.cpp:817`, `src/Magic.cpp:1170`.
-4. Fixed. `src/Res.cpp:342-347` range-checks the module slot and returns NULL, so `ASSERT` no longer guards the dereference.
+shape at `src/Creature.cpp:817`, `src/Magic.cpp:1198`.
+4. Fixed. `src/Res.cpp:348-353` range-checks the module slot and returns NULL, so `ASSERT` no longer guards the dereference.
 5. `src/VMachine.cpp:520` restores `xID` after `CMEM` because the call may have re-entered `Execute`, but not `mn`, `Memory` or
 `szMemory` (`:461-465`), leaving a cross-module outer script on the inner module's data segment.
 6. `src/Annot.cpp:1102` declares `res` as `uint32`; `:1125` casts it to `int8`, so a script returning 256 becomes `NOTHING`.

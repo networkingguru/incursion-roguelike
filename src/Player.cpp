@@ -1607,10 +1607,10 @@ DoYuse:
      * with no target at all, and Magic::MagicEvent (src/Magic.cpp:734) makes
      * the activator the victim when none was picked. That is the self-hit.
      *
-     * The same query on the 'a' command's route is Player::ItemMenu's
-     * EffectPrompt at :1435, and this is that line, in the one place on this
+     * The same query on the 'a' command's route is Player::UseItemMenu's
+     * EffectPrompt at :1525, and this is that line, in the one place on this
      * route where the item is settled and the event has not yet been thrown.
-     * e.eID is set first for the same reason ItemMenu sets it: EffectPrompt
+     * e.eID is set first for the same reason UseItemMenu sets it: EffectPrompt
      * calls CalcEffect through it to work out the effect's range.
      *
      * upstream: the defect is the base code's, not the port's. It is plain
