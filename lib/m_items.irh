@@ -6757,10 +6757,12 @@ AI_WEAPON Effect "Dwarven Thrower" : EA_GRANT
       /* upstream: base-code defect, not a port artefact: on Win32 with the
          original typedefs and compiler, the artifact's base is the
          non-throwable warhammer and WQ_THROWING is undefined, so the
-         "throwing" its page promises never worked upstream. Traced: the throw
-         path in src/Values.cpp promotes only an IT_THROWABLE base; the
-         warhammer lacks it; WQ_THROWING is defined nowhere. Tracking
-         inc-tek.8.8. Not sent. */
+         "throwing" its page promises never worked upstream. Observed: with the
+         fix a dwarf throws the Dwarven Thrower and "The Warhammer, Dwarven
+         Thrower +4 returns to you." -- it lands back in the weapon hand; on the
+         reverted build the plain-warhammer base is not throwable, so Fire will
+         not throw it and no return appears. tools/keys/dwarven-thrower-throw.keys,
+         with a boomerang control. Tracking inc-tek.8.8. Not sent. */
       * BASE_ITEM $"warhammer;thrown",
       * INITIAL_PLUS +2;
     Lists:

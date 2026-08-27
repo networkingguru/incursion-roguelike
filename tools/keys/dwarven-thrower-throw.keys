@@ -1,0 +1,150 @@
+# Observe the return path for a control boomerang and the Dwarven Thrower.
+#
+# WHAT IS BEING MEASURED. A returning thrown weapon prints "<item> returns to
+# you." at src/Fight.cpp:1089. A boomerang is the control: WT_RETURNING makes it
+# return after a hit, and WT_NO_MELEE ensures Fire must throw it. The subject is
+# the Dwarven Thrower, whose WQ_RETURNING return is unconditional after a throw.
+#
+# RANGE AND FREEZE. Each goblin is summoned one square east, then the player
+# walks four squares west. Freeze Monsters leaves the goblin behind, producing
+# a five-square ranged shot instead of an adjacent melee swing.
+#
+# Run at seed 1 with INCURSION_OPTIONS=tools/gates/Options.Dat so Store Rolls in
+# Log retains the hit and return messages for the final message-log dump.
+
+# chargen.keys idiom, with its orc race choice replaced by a standard dwarf so
+# the artifact keeps WQ_RETURNING when wielded.
+a
+n
+y
+@choose "Dwarf"
+@choose "Dwarf (Standard)"
+@choose "Barbarian"
+a
+@choose "Neutral"
+a
+a
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+y
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+@until "Afoot" ESC
+
+# Confirm the early switch rows, then enable Auto-Identify Items (second row)
+# before acquisition so the artifact arrives fully identified.
+w
+y
+@choose "Wizard Mode Switches"
+@dump:wizard-switches
+DOWN
+SPACE
+ESC
+
+# Freeze Monsters (eleventh Wizard Mode Switches row).
+w
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+# Part A: acquire and wield the returning-by-type control weapon.
+w
+@choose "Item Acquisition"
+RIGHT*9
+@until "Boomerang" DOWN
+DOWN
+ENTER
+2
+ENTER
+b
+SPACE
+n
+s
+ESC
+
+# Fully identify the pack so weapon selection and dumps are unambiguous.
+w
+@choose "Identify Whole Pack"
+i
+ESC
+
+# Summon the frozen control target adjacent, inspect the cave, then walk away.
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT
+ENTER
+@dump:map-before-walk
+LEFT
+@while "Abort, Flee or Disengage" f
+LEFT
+@while "Abort, Flee or Disengage" f
+LEFT
+@while "Abort, Flee or Disengage" f
+LEFT
+@while "Abort, Flee or Disengage" f
+@dump:ranged-setup
+
+# Fire the boomerang five squares east and prove the return verb/setup.
+f
+a
+RIGHT*5
+ENTER
+@while "Really fire" y
+@until "returns to you" SPACE
+@while "Wield the boomerang two-handed" n
+@dump:boomerang-return-log
+
+# Part B: acquire and wield the Dwarven Thrower.
+w
+@choose "Item Acquisition"
+RIGHT*10
+@until "Dwarven Thrower" DOWN
+DOWN
+ENTER
+2
+ENTER
+b
+SPACE
+n
+s
+ESC
+w
+@choose "Identify Whole Pack"
+i
+ESC
+
+# Use a fresh adjacent frozen goblin, then walk away to the same range.
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT
+ENTER
+@dump:subject-map-before-walk
+LEFT
+@while "Abort, Flee or Disengage" f
+LEFT
+@while "Abort, Flee or Disengage" f
+LEFT
+@while "Abort, Flee or Disengage" f
+LEFT
+@while "Abort, Flee or Disengage" f
+@dump:subject-ranged-setup
+
+# Fire the wielded hammer at range, then record hand/ground state and the log.
+f
+a
+RIGHT*5
+ENTER
+@while "Really fire" y
+@dump:dwarven-thrower-after-throw
+@while "two-handed" n
+v
+@dump:dwarven-thrower-return-log
+ESC
+@quit
