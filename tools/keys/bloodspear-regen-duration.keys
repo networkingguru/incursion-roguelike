@@ -1,0 +1,106 @@
+# Observe the Bloodspear's regeneration DURATION, read from the wizard
+# "Examine Player Data" dump. Read by tools/check_bloodspear_regen_duration.sh
+# and reproduced across the fix by tools/oracle_ab.sh. F41 / inc-tek.8.8.
+#
+# WHY THE WIZARD DUMP. The regeneration a Bloodspear critical grants shows the
+# player only its RATE on the character sheet ("Regeneration (N/round)"), never
+# its remaining turns. The turn count -- the value F41 corrects from amt*5 to
+# amt*20 -- surfaces only as the REGEN stati's "[Dur N]" in Creature::Dump
+# (src/Debug.cpp:1590), reached through wizard "Examine Player Data". Brian ruled
+# that dump an acceptable oracle for this fix (2026-08-27).
+#
+# HOW THE CRIT IS FORCED. The regeneration starts only on a CRITICAL hit by an
+# orc wielder. A natural crit cannot be scripted reliably, so this delivers a
+# Coup de Grace, which is an automatic critical:
+#   1. Wield the Bloodspear (orc form) and ACTIVATE it once to change the
+#      longspear into a shortspear -- a longspear has reach and cannot strike an
+#      adjacent square, but a Coup de Grace is an adjacent action.
+#   2. Read a Scroll of Sleep at an adjacent summoned goblin. Sleep makes it
+#      helpless. At SEED 4 the level-1 reader's scroll lands ("The goblin
+#      collapses into slumber!"); other seeds miscast or the goblin resists, so
+#      this observation is pinned to seed 4.
+#   3. Coup de Grace the sleeping goblin (c, g, direction). The automatic
+#      critical fires the regeneration ("You feel your blood quicken...").
+# The coup's damage is amt; the granted duration is min(amt*20,1000).
+#
+# ACQUISITION ORDER. Item Acquisition follows lib/m_items.irh, so "Sword of the
+# Planes" is the row after the Bloodspear. Scrolls are the second acquisition
+# glyph (RIGHT once from Potions); "Scroll of Sleep" sits one row below the row
+# where its name first appears, so the extra DOWN lands on it.
+
+@include chargen.keys
+
+# Auto-Identify Items.
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE
+ESC
+
+# Acquire and wield the Bloodspear (+2 base; orc form).
+w
+@choose "Item Acquisition"
+RIGHT*10
+@until "Sword of the Planes" DOWN
+ENTER
+2
+ENTER
+b
+SPACE
+@while "two-handed" n
+s
+ESC
+
+# Acquire a Scroll of Sleep.
+w
+@choose "Item Acquisition"
+RIGHT
+@until "Scroll of Sleep" DOWN
+DOWN
+ENTER
+@while "two-handed" n
+s
+ESC
+
+w
+@choose "Identify Whole Pack"
+i
+ESC
+
+# Change the longspear into a shortspear so it can strike an adjacent square.
+a
+a
+@dump:after-transform
+
+# Summon a goblin one square east.
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT
+ENTER
+
+# Put the goblin to sleep.
+r
+a
+RIGHT
+ENTER
+@while "Confirm" y
+@dump:after-sleep
+
+# Coup de grace the sleeping goblin: an automatic critical that starts regen.
+c
+g
+RIGHT
+@while "Confirm" y
+@dump:after-coup
+
+# Read the player's stati; the REGEN line carries [Dur N].
+w
+@choose "Examine Player Data"
+DOWN*25
+@dump:player-dump
+ESC
+ESC
+@quit

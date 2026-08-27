@@ -6955,8 +6955,11 @@ AI_WEAPON Effect "Bloodspear" : EA_GRANT
       },
     /* upstream: base-code defect, not a port artefact: the same handler and
        arithmetic run unchanged on Win32 with the original typedefs and compiler,
-       so the disagreement with the spear's own page is upstream's. Traced -- the
-       four duration paths read against the prose disagree in their multipliers;
+       so the disagreement with the spear's own page is upstream's. Observed --
+       an orc coup-de-graces a sleeping goblin (an automatic critical) and the
+       granted REGEN stati's "[Dur N]" reads 224 before this fix and 899 after,
+       the amt*5 -> amt*20 change (tools/keys/bloodspear-regen-duration.keys,
+       tools/check_bloodspear_regen_duration.sh, tools/oracle_ab.sh);
        inc-tek.8.8; not sent. */
     EITEM(POST(EV_HIT)) {
       int16 amt, CR, Dur;
