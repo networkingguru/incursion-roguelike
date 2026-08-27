@@ -91,6 +91,26 @@ The tier is about evidence, not about how sure you feel. `Magic::Augury` holds
 three defects that are certainly real, and it is still Traced, because that code
 has never been seen to run.
 
+## A gameplay fix needs a before/after observation
+
+A fix that changes what the player sees or does in play MUST ship a gameplay
+oracle before it is done: the game run on the code WITHOUT the fix and again
+WITH it, the changed value read from a player-facing screen on each side, and
+both values recorded (a committed `tools/keys/<name>.keys` is the usual form).
+This earns the Observed tier.
+
+A structural check -- a grep or an assert on source or the compiled module,
+red-green on a rebuild -- proves the source changed, not that the game behaves
+differently. It earns Traced, never Observed, and it does NOT satisfy this rule.
+
+The only exception is a specific written exception from Brian, naming the fix
+and why the observation is impractical (for example, the current headless
+harness cannot render the value -- the Sunblade's light radius is the standing
+case). Record the exception at the fix site and in the tracking bead.
+
+Absent the observation or the exception, a gameplay fix is not finished, and a
+claim about it MUST NOT be graded Observed.
+
 ## Titles
 
 The title MUST NOT assert more than the body proves. This is the easiest rule

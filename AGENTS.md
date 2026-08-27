@@ -125,6 +125,11 @@ bead is a balance change nobody agreed to.
 the body still states the oracle, the mutation and the checks re-run, as
 `docs/VERIFICATION.md` requires.
 
+**A `fix:` or `rules:` change a player feels needs a before/after gameplay
+observation, or a written exception from Brian.** A structural check alone earns
+Traced, never Observed. See "A gameplay fix needs a before/after observation" in
+`docs/REPORTING-GATE.md`.
+
 Verify with `tools/check_commit_lane.sh`.
 
 ## The comment budget
