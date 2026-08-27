@@ -1,0 +1,47 @@
+# Observe the Bloodspear's +4-vs-spells save bonus reaching an ORC wielder's
+# character sheet. Paired with bloodspear-human-save.keys (a non-orc wielder
+# gets nothing) and read by tools/check_bloodspear_orc_save.sh. F44 /
+# inc-tek.8.8.
+#
+# WHAT IS BEING MEASURED. The Will save line on the character sheet gains a
+# "(+4 vs. spells)" annotation (src/Sheet.cpp:146) when a SAVE_BONUS/SN_SPELLS
+# stati is present. The Bloodspear grants exactly that stati, but only when its
+# EV_WIELD handler takes the orc branch and returns NOTHING, so the EA_GRANT
+# wield path applies the component (src/Magic.cpp). A dump of the sheet before
+# the spear proves the annotation is absent to begin with.
+#
+# ACQUISITION ORDER. The specific-weapons browser follows lib/m_items.irh, so
+# "Sword of the Planes" is the row after the Bloodspear; stopping when it first
+# appears below leaves the Bloodspear selected. RIGHT*10 reaches the
+# specific-weapons glyph, as in sunblade-cold.keys.
+
+@include chargen.keys
+
+d
+@dump:orc-sheet-without-bloodspear
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*10                # specific weapons
+@until "Sword of the Planes" DOWN
+ENTER
+2                       # Bloodspear's INITIAL_PLUS
+ENTER
+b                       # Weapon Hand
+SPACE
+@while "two-handed" n
+s                       # stow the displaced starting weapon
+@dump:orc-wielded
+ESC
+
+d
+@dump:orc-sheet-with-bloodspear
+@quit

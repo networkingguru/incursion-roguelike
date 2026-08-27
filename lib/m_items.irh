@@ -6913,9 +6913,11 @@ AI_WEAPON Effect "Bloodspear" : EA_GRANT
     /* upstream: base-code defect, not a port artefact: the SAVE_BONUS grant
        sits on the component unconditionally and every wield branch returned
        NOTHING on Win32 too, so every wielder got the +4 and the page's orc
-       restriction is unmet upstream. Traced -- the EA_GRANT wield path in
-       src/Magic.cpp lets Grant() apply the bonus after NOTHING, while DONE
-       skips it; inc-tek.8.8; not sent. */
+       restriction is unmet upstream. Observed -- an orc and a dwarf each wield
+       the spear in the headless harness; the dwarf's character sheet loses its
+       "+4 vs. spells" Will-save line across this fix while the orc keeps it
+       (tools/keys/bloodspear-orc-save.keys, tools/keys/bloodspear-dwarf-save.keys,
+       tools/check_bloodspear_orc_save.sh); inc-tek.8.8; not sent. */
     On Event EITEM(EV_WIELD) {
       if (e.isRemove)
         return NOTHING;

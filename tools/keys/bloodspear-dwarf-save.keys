@@ -1,0 +1,63 @@
+# Observe that a NON-orc wielder of the Bloodspear receives NO save bonus. The
+# control for bloodspear-orc-save.keys, read by tools/check_bloodspear_orc_save.sh.
+# F44 / inc-tek.8.8.
+#
+# WHAT IS BEING MEASURED. The character sheet's Will save line gains a
+# "(+4 vs. spells)" annotation (src/Sheet.cpp:146) only when a
+# SAVE_BONUS/SN_SPELLS stati is present. The Bloodspear grants that stati only
+# when its EV_WIELD handler takes the orc branch. A dwarf is not an orc, and is
+# not a goblinoid, troll, kobold or lizardfolk either, so the handler falls to
+# the plain +2 branch, returns DONE, and the EA_GRANT wield path skips Grant().
+# The sheet must therefore show no vs-spells line before OR after the spear.
+#
+# The dwarf-barbarian chargen mirrors dwarven-thrower-throw.keys, whose orc
+# race choice was likewise replaced by a standard dwarf. Everything after
+# chargen mirrors bloodspear-orc-save.keys line for line.
+
+a
+n
+y
+@choose "Dwarf"
+@choose "Dwarf (Standard)"
+@choose "Barbarian"
+a
+@choose "Neutral"
+a
+a
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+y
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+@until "Afoot" ESC
+
+d
+@dump:dwarf-sheet-without-bloodspear
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*10                # specific weapons
+@until "Sword of the Planes" DOWN
+ENTER
+2                       # Bloodspear's INITIAL_PLUS
+ENTER
+b                       # Weapon Hand
+SPACE
+@while "two-handed" n
+s                       # stow the displaced starting weapon
+@dump:dwarf-wielded
+ESC
+
+d
+@dump:dwarf-sheet-with-bloodspear
+@quit
