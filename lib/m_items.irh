@@ -6326,8 +6326,9 @@ AI_HORN Effect "the Sewers" : EA_SUMMON
     pval: (PLUS_2PER1)d(1); Purpose: EP_SUMMON;
     Flags: EF_ACTIVATE, EF_MULTIPLE, EF_DLONG, EF_AUTOID, EF_SOUND,
            EF_3PERDAY, EF_NEEDS_PLUS; 
+    // upstream: the same understated Desc ships on Win32 with the original data, so it misdescribes the summon there too; Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8; not sent.
     Desc: "When blown (activated), this horn summons rodents with CR 
-      equal to its magical plus to fight on the user's behalf."; 
+      equal to twice its magical plus to fight on the user's behalf."; 
   }
 
 AI_HORN Effect "the Tritons" : EA_SUMMON
