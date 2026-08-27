@@ -341,7 +341,7 @@ correction has no check and is **Reasoned**.
 | Bloodspear | Regeneration now lasts 20 turns per hit point of the starting crit, and 5 per hit point for a hit landing at the maxed rate, as the page states | Traced |
 | Bloodspear | The +4 saves versus spells now reach only an orc wielder, not everyone | Traced |
 | Sunblade | Accuracy and crit now match the bastard sword the page names: +2 / ×2, not +3 / ×3 | Traced |
-| Sunblade | The activated light burst now reaches 60 feet, radius six rather than five under the file's ten-feet-per-square convention | Traced |
+| Sunblade | The activated light burst now reaches 60 feet, radius six rather than five under the file's ten-feet-per-square convention | Observed — on seed 1 the activated field paints a light disc on the map, six squares (60 ft) to each side of the wielder after the fix and five before it, both counted off the '@' row of the after-activation dump (`tools/keys/sunblade-light.keys`, read by `tools/check_sunblade_light_range.sh`; the 5-vs-6 across commit e47f209 reproduced by `tools/oracle_ab.sh`) |
 | Sunblade | Double damage now strikes every creature tied to the Negative Material Plane, not wraiths alone; the multiplier had been commented out and replaced by a flat rider | Traced |
 | Sunblade | It now grants the cold resistance its page always promised | Observed — a wielded +2 blade raised Cold resistance 0 → 2 on the sheet, Life Drain resistance unmoved at 4 as the control |
 | Holy Avenger | Its on-hit dispel now fires at the wielder's paladin level, not a hardcoded caster level 12 | Traced |

@@ -1,0 +1,50 @@
+# Measure the Sunblade's activated light field ON SCREEN, by the radius of the
+# lit disc it paints around the player. Read by tools/check_sunblade_light_range.sh.
+#
+# bd inc-cyma (upgrade F39 / inc-tek.8.8 from Traced to Observed). The fix at
+# commit e47f209 changed the Sunblade FI_LIGHT field's lval from 5 to 6
+# (lib/m_items.irh). Under REPORTING-GATE that was Traced: a grep proved the
+# source changed, but the game was never watched lighting a wider area.
+#
+# THE ORACLE is the map itself. An activated FI_LIGHT field renders as a disc of
+# ',' glyphs centred on the player '@'. The disc's radius in tiles IS the field's
+# lval, and one tile is ten feet. The glyph is distinct from floor '.', so the
+# count is unambiguous even in an already-lit room: on seed 1 the disc stops with
+# four plain floor tiles still visible before the wall, so the wall does not clip
+# it. tools/oracle_ab.sh runs this file on the without-fix build (e47f209^, lval 5)
+# and the with-fix build (lval 6); the check reads the '@' row of the
+# after-activation dump on each and asserts 5 then 6.
+#
+# The wizard-mode path mirrors sunblade-cold.keys: RIGHT*10 reaches the specific
+# weapons, Hornblade is the entry after Sunblade, so stopping on it leaves the
+# Sunblade selected. INITIAL_PLUS 2 makes it a known +2.
+
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*10                # specific weapons
+@until "Hornblade" DOWN
+ENTER
+2                       # Sunblade's INITIAL_PLUS
+ENTER
+b                       # Weapon Hand
+SPACE
+n                       # do not wield the short sword two-handed
+s                       # stow the displaced starting weapon
+ESC
+
+@dump:map-before-activation
+
+a
+a                       # activate the Sunblade's 3/day light field
+@dump:map-after-activation
+
+@quit
