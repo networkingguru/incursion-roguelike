@@ -1,0 +1,33 @@
+# Regression fixture for inc-mc37 (tanglefoot half). Player::AutoPickupFloor's
+# unidentified-magic branch (src/Player.cpp) must NOT auto-stow an EF_MUNDANE
+# item -- here a tanglefoot bag -- while it still stows real unidentified magic
+# (the rogue-archer's dimension-door potion). Read by
+# tools/check_mundane_autopickup.sh.
+#
+# Route: an orc barbarian; wizard-summon a base human to the east; add the
+# "rogue-archer" template, whose gear is a GUARANTEED 1d2 tanglefoot bag
+# (lib/mon2.irh) plus a 1d1 dimension-door potion; genocide it so the pile drops
+# on one tile; step onto the tile so AutoPickupFloor runs. The tanglefoot bag
+# must REMAIN in view (not stowed); the potion must be gone (stowed), proving
+# the branch still hoards real magic.
+@include chargen.keys
+w
+y
+@expect "Wizard Mode Options:"
+@choose "Monster Summoning"
+@choose "Humans"
+@choose "Human"
+RIGHT
+ENTER
+w
+@choose "Add Template to Creature"
+RIGHT
+ENTER
+@choose "Rogue-Archer"
+w
+@choose "Genocide Everything"
+RIGHT
+@dump:before
+SPACE
+@dump:after
+@quit

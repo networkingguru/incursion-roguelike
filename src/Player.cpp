@@ -2860,7 +2860,19 @@ start_again:
                with no magic auto-stows a ? holy symbol. isFlavorGodMark() keeps
                the emblem out while still hoarding Hesani's granting symbol and
                real enchantments. inc-upw.52, not sent. */
-            if (i->PItemLevel(this) >= 0 && i->eID && !i->isKnown() && !i->isFlavorGodMark()) {
+            /* upstream: the same sweep also hoards every EF_MUNDANE item -- holy
+               water, tanglefoot bags and the rest of the alchemy line -- because
+               a mundane effect carries an eID but has no flavour to learn, so
+               isKnown() never converges. The codebase itself calls these "not
+               magic" (lib/alchemy.irh:1363), so an unidentified-magic sweep must
+               not stow them; the isFlavorGodMark() whitelist above was too narrow
+               to catch them. Not a port artefact -- Win32 reads the same flag.
+               Observed: a curate drops 3d4 holy water and a rogue-archer 1d2
+               tanglefoot bags; before this EF_MUNDANE test each pile auto-stowed
+               one at a time and never stopped, guarded by
+               tools/check_mundane_autopickup.sh. inc-mc37, not sent. */
+            if (i->PItemLevel(this) >= 0 && i->eID && !i->isKnown() && !i->isFlavorGodMark()
+                && !(TEFF(i->eID) && TEFF(i->eID)->HasFlag(EF_MUNDANE))) {
                 if (auto_pickup == 2 && Inv[SL_PACK] && oItem(Inv[SL_PACK])->Type == T_CONTAIN && (InSlot(SL_PACK) || AbilityLevel(CA_WILD_SHAPE))) { 
                     pack = (Container*)oItem(Inv[SL_PACK]);
                     if (pack) {

@@ -1,0 +1,34 @@
+# Regression fixture for inc-mc37. Player::AutoPickupFloor's unidentified-magic
+# branch (src/Player.cpp) must NOT auto-stow an EF_MUNDANE item -- here holy
+# water -- because EF_MUNDANE means "not magic" and the sweep is for magic.
+# It must still stow real unidentified magic (the curate's healing potion).
+# Read by tools/check_mundane_autopickup.sh.
+#
+# Route: an orc barbarian; wizard-summon a base human to the east; add the
+# "curate" template, whose gear is a GUARANTEED 3d4 blessed flask of water
+# (holy water, lib/mon2.irh) plus a 1d1 healing potion; genocide it so the pile
+# drops on one tile; step onto the tile so AutoPickupFloor runs. @dump:before
+# catches the loaded tile; @dump:after catches the view once the sweep settled.
+# The holy water must REMAIN in view (not stowed); the potion must be gone
+# (stowed), which proves the branch ran and still hoards real magic.
+@include chargen.keys
+w
+y
+@expect "Wizard Mode Options:"
+@choose "Monster Summoning"
+@choose "Humans"
+@choose "Human"
+RIGHT
+ENTER
+w
+@choose "Add Template to Creature"
+RIGHT
+ENTER
+@choose "Curate"
+w
+@choose "Genocide Everything"
+RIGHT
+@dump:before
+SPACE
+@dump:after
+@quit

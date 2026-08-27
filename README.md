@@ -497,6 +497,11 @@ the unfixed tree before it is trusted.
 | `check_store_scroll.sh` | Does the shop list follow the selection, in both directions, without wizard mode? |
 | `check_strqueue.sh` | Is the string queue's bound still tested before the write? |
 | `check_symbol_autopickup.sh` | Does autopickup keep a dead priest's holy symbol -- of any god, granting or not -- out of the pack, while still stowing real magic and a granting god-marked shield? |
+| `check_mundane_autopickup.sh` | Does autopickup keep an EF_MUNDANE item -- holy water, tanglefoot bags, the alchemy line -- out of the pack, while still stowing the same drop's unidentified potion? |
+| `check_bloodspear_regen_duration.sh` | Does a Bloodspear critical grant the orc wielder regeneration for amt*20 turns rather than amt*5? |
+| `check_horn_goodness_radius.sh` | Does the Horn of Goodness' Magic Circle vs. Evil field have its promised 60-foot (six-square) radius? |
+| `check_horn_sewers_cr.sh` | Does the Horn of the Sewers' description state its summoned rodents have CR twice its magical plus? |
+| `check_javelin_lightning_savedc.sh` | Does the Javelin of Lightning's Reflex save use the DC its description promises? |
 | `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? |
 | `check_underdark_live.sh` | Does the Underdark Warrior check its race requirement, and refuse the grey elf? |
 | `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? |
