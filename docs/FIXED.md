@@ -18,6 +18,8 @@ were run and, where one exists, the check left behind.
 | [Crashes found by playing and by the harness](#crashes-found-by-playing-and-by-the-harness) | Three null dereferences and the level-builder defect behind one of them |
 | [Robustness: a failure should not take the process with it](#robustness-a-failure-should-not-take-the-process-with-it) | Save and load failures that were survivable and were not |
 | [Rules defects](#rules-defects) | Changes to how the game plays |
+| [Magic-item descriptions made true](#magic-item-descriptions-made-true) | About thirty items corrected to behave as their own in-game text already promised |
+| [Every Item member is initialised](#every-item-member-is-initialised) | A constructor that leaned on a `memset` the GCC `-O2` optimiser is free to drop |
 | [Interface defects](#interface-defects) | Target cursor, shop list, overview map |
 | [Two defects that shipped, and were found by a stranger](#two-defects-that-shipped-and-were-found-by-a-stranger) | The packaging failures, and why local checks could not see them |
 | [Defects this port introduced, and then removed](#defects-this-port-introduced-and-then-removed) | Ours, not the base game's |
@@ -305,6 +307,98 @@ The other fifteen are Traced, not Observed. Each needs a character who actually
 holds the class, which needs the skill manager, which is not written yet. Where a
 feature cannot be written now, the class description says so in its own text, and
 the bead that eventually writes it must delete that line.
+
+---
+
+### Magic-item descriptions made true
+
+About thirty magic items now behave as their own in-game description already
+promised. Each fix closed a gap between what an item's description tells the
+player and what the script the engine runs actually does. The rule throughout:
+the prose wins unless the script has independent support, and where the two
+genuinely conflicted the owner ruled which side is the truth, item by item.
+Most corrections are to the shared item data in `lib/m_items.irh` and
+`lib/main.irc`, or to a handler in `src/`. Where a fix touched `src/` and the
+defect reads identically on Win32, it carries an `upstream:` comment at the fix
+site and a row in the "Base-code bugs fixed locally" ledger of
+[`REPORTING-GATE.md`](REPORTING-GATE.md). The holy-symbol autopickup exemption
+is the fork's own code and carries no such mark.
+
+The tier column follows the evidence, not how sure the fix is. A correction is
+**Observed** only where a check ran the game and read a changed number or a
+changed rendered screen — a character sheet, a hit-point trace, the item's own
+description page, or the autopickup panel — with values on both sides. A
+correction that a check guards only structurally — asserting a value in the
+source or the compiled module, red before the fix and green after a rebuild — is
+**Traced**, because that code has not been seen to run in play. This is stricter
+than several of the commits' own self-labels, which is deliberate. One
+correction has no check and is **Reasoned**.
+
+| Item | Correction | Tier |
+|---|---|---|
+| Bloodspear | Its bane list gains the gnome its page promises: four races before, five now | Traced |
+| Bloodspear | A lizardman wielder now reaches the +3 wounding tier the page grants; the branch tested only three creature types | Traced |
+| Bloodspear | Regeneration now lasts 20 turns per hit point of the starting crit, and 5 per hit point for a hit landing at the maxed rate, as the page states | Traced |
+| Bloodspear | The +4 saves versus spells now reach only an orc wielder, not everyone | Traced |
+| Sunblade | Accuracy and crit now match the bastard sword the page names: +2 / ×2, not +3 / ×3 | Traced |
+| Sunblade | The activated light burst now reaches 60 feet, radius six rather than five under the file's ten-feet-per-square convention | Traced |
+| Sunblade | Double damage now strikes every creature tied to the Negative Material Plane, not wraiths alone; the multiplier had been commented out and replaced by a flat rider | Traced |
+| Sunblade | It now grants the cold resistance its page always promised | Observed — a wielded +2 blade raised Cold resistance 0 → 2 on the sheet, Life Drain resistance unmoved at 4 as the control |
+| Holy Avenger | Its on-hit dispel now fires at the wielder's paladin level, not a hardcoded caster level 12 | Traced |
+| Dwarven Thrower | Its base item now carries the throwable flag, so the "throwing returning warhammer" can be thrown at all | Traced |
+| Sword of Warning | Its description no longer prints a smiley in place of its percent sign; "50 percent" carries no `%` and so is correct on both render paths | Reasoned |
+| Rod of Lordly Might | The long-sword form is now the +1 both its labels say, not +2 | Observed — the wielder's Hit / Dmg fell from 9 / 1d8+6 to 8 / 1d8+5 |
+| Rod of Lordly Might | The paralysing touch grants the three touches its page states, not seven | Observed — a probe read the touch counter 3, 2, 1, then removal |
+| Horns of Madness and Panic | Both can now be blown at all; neither carried an activation flag. Madness now spares its own blower and its page names Wisdom, the stat it drains | Observed — the target lost Wisdom and gained the stun/fear while the blower kept his and did not |
+| Cloak of Shadow Shifting | Travel is now gated on darkness, as the page promised, and the page says seven uses a day rather than "at will" | Traced |
+| Cloak of Resistance | It now grants a resistance bonus, as its name says, not a plain magic bonus. This moves live save numbers | Observed — with auspicious armour the saves changed type and the smaller bonus dropped, 8/6/8 to 6/4/6; the cloak alone was the control and did not move |
+| Bracers of Defense | The page now states both of its unequal rates: defense class equal to the plus, coverage twice it | Traced |
+| Bracers of Killing Hands | They now add the two points per plus their page promises to unarmed hit and damage, not one | Observed — the Brawl sheet block read +4 magic on both, not +2, at item plus +2 |
+| Shadowstone | Its page now calls the item a stone, not a cloak, and states the twice-per-plus Hide bonus it grants | Traced |
+| Staff of Wind and Water | Its page now names the circumstance bonus it grants, not an enhancement bonus; the two stack differently | Observed — the staff's own description page changed in game |
+| Staff of Abjuration | Its page now offers the staff to a 3rd-level mage or priest, matching the gate that already accepted them | Observed — the staff's own description page changed in game |
+| Staff of Exorcism | Its page now names the eighth spell it has always granted | Observed — all eight spell names read back off the page in game |
+| Staff of the Goblin Queen | Its page now states the 3rd-level caster requirement its gate demands, not 1st | Observed — the staff's own description page changed in game |
+| Wand of Acid | Its lingering burn is now dealt as acid, not fire, matching the wand and its own messages | Observed — a fire-immune target's hit points fell across the burn turns only after the type was corrected |
+| Enchant Armour (graceful) scroll | Its page now names the graceful quality it bestows, not featherlight | Observed — the scroll's own description page changed in game against a featherlight control |
+| Enchant Armour (life-keeping) scroll | Its page now names the life-keeping quality it bestows, not featherlight | Observed — the scroll's own description page changed in game against a featherlight control |
+| Ring of Fire Resistance | Its wearer, and a mount, can now cross fiery terrain as the page promises; no ring's bonus had ever reached the threshold the terrain checked, and the terrain never named the ring | Observed — a wearer crossed magma the same character without the ring could not |
+| Eyes of the Eagle | Its page now names the Acute Senses feat and its +50%, not a "Superior Senses" doubling it never grants | Traced |
+| Springblade Bracers | The page no longer promises a fixed pair of +2 keen blades, since birth rolls one of six loadouts, and the type-3 label reads +2, not +3 | Label Observed (the activation menu name changed from +3 to +2); the two description edits Traced |
+| Holy symbols | A god's holy symbol, a granting one included, is now exempt from unidentified-magic autopickup and is auto-identifiable, restoring the 0.6.4 changelog's own claim. This is the fork's own code, not upstream | Observed — a dropped symbol stays in view while other unidentified magic is stowed, red on the pre-fix binary |
+
+---
+
+### Every Item member is initialised
+
+**The `Item` constructor read members, and left others, that only a `memset`
+had zeroed.** `Item::Item(rID,int16)` read `eID` and `Plus` inside `MaxHP()`
+before it assigned them, and never assigned `Parent`, `homeID`, `Flavor`,
+`DmgType` or `swingCount` at all. It relied on the zero-fill that
+`Object::operator new` performs with `memset` (`inc/Base.h`). Reading a
+member the constructor leaves indeterminate is undefined, and an optimising
+compiler need not preserve that fill. GCC `-O2` does not: a garbage `Plus` broke
+`cHP` and tripped the `src/Item.cpp` ASSERT, and a wild `Parent` handle was
+dereferenced during character creation and segfaulted before any map, reported
+as `invalid object handle (1344285811)`. clang keeps the fill, so the macOS
+build and the clang Linux build never saw it. The fix assigns each member before
+use, which equals the zero clang already produced, so clang runs are
+byte-unchanged.
+
+Upstream, and marked as such. It is Richard Tew's code (commit 7b8504a, 2014)
+and misbehaves the same way on the original Win32 compiler, so it carries an
+`upstream:` comment at the fix site in `src/Item.cpp` with a row in the
+[`REPORTING-GATE.md`](REPORTING-GATE.md) ledger. Not sent.
+
+Observed. Debian 11 GCC `-O2`, seed 7: the unfixed constructor segfaulted at
+character creation, exit 139 with no map reached, while clang and GCC `-O0` were
+clean. Per-translation-unit then per-function bisection isolated it to this
+constructor, and reverting the `Parent`-group line alone reproduces the exact
+handle. The clang seed-7 run was unchanged, 362 turns with no errors, and a
+release-1.3 save loaded clean. Guarded by `tools/check_gcc_o2_char_create.sh`,
+the only check that builds at `-O2` with GCC; it fails on the handle signature
+or on a run that never reaches a map. A follow-up (inc-uusj) audits the rest of
+the object hierarchy for the same pattern.
 
 ---
 

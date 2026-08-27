@@ -78,8 +78,44 @@ subset of it.
 
 ## What is new
 
-Everything below is in the current download, **release 3**. The newest work is
-first.
+The newest work is first. The top section describes work that is finished but
+not yet in any download. Everything from **release 3** downward is in the
+current download.
+
+### In the current build (not yet released)
+
+**Every Item member is set before it is read.** The item constructor worked out a
+new item's hit points from two of its fields — its enchantment id and its plus —
+before it assigned either one, and it never assigned five more members at all. It
+leaned on the zero-fill that object allocation happens to leave behind. clang
+keeps that fill, so the macOS build was never wrong. A GCC build at `-O2` does not
+keep it, and there a garbage plus tripped an assertion and a wild parent handle
+crashed character creation before the first map ever drew. The constructor now
+sets each member before anything reads it, which is the same zero clang already
+produced, so the macOS build is unchanged.
+
+**The game builds and runs on Linux.** Six places in the port assumed Apple's
+compiler or Apple's C library: a hardcoded `clang`, a shim header that shadowed
+glibc's own, three missing standard includes, a clang-only debug trap, and one
+double `fclose` the parent project's preprocessor has always carried. None of the
+six was visible from macOS, and all six surfaced by building inside a Debian 11
+(bullseye) container — glibc 2.31 on x86-64, chosen as an old-glibc floor so the
+binary's versioned symbols resolve on newer distributions too. Both backends now
+compile there under either clang or GCC, and a seeded session plays through with
+no errors. This is the groundwork for the Linux and
+Steam Deck target named under [What is next](#what-is-next), not a download yet
+— but you can [build and run it from source](#building-from-source) today.
+
+**Magic items now do what their own descriptions promise.** Item after item did
+less than the text the game already shows for it. The Bloodspear named a bane
+creature and wielder bonuses its script never granted; the Sunblade promised cold
+resistance, a sixty-foot burst of light and double damage against Negative-Plane
+creatures it never delivered; the Dwarven Thrower called itself a throwing hammer
+while its base weapon could not be thrown at all; the Holy Avenger dispelled magic
+at a fixed level rather than its paladin wielder's; and a god's holy symbol would
+not stay out of the autopickup pile. More than twenty items across the Bloodspears,
+Sunblades, Staffs, Cloaks, Bracers, Wands, Rods and scrolls were brought into line
+with the one standard the game already sets for each — the description it displays.
 
 ### New in release 3
 
@@ -203,6 +239,8 @@ The short version:
 | Monster AI | Out-of-bounds map reads answered with the (0,0) square instead of failing | [FIXED](docs/FIXED.md#the-four-defects-that-blocked-a-posix-build) |
 | Followers | Escorts read stack garbage as the handle of the creature to follow | [FIXED](docs/FIXED.md#found-by-the-game-playing-itself) |
 | Rules | Racial feats, bare-handed attacks, sacrifice tables, natural weapon speed | [FIXED](docs/FIXED.md#rules-defects) |
+| Rules | Magic items that did less than their own in-game descriptions promised | [FIXED](docs/FIXED.md#magic-item-descriptions-made-true) |
+| Objects | The Item constructor read fields before assigning them and left others to the zero-fill, crashing a GCC `-O2` build | [FIXED](docs/FIXED.md#every-item-member-is-initialised) |
 | Interface | Target cursor, store scrolling, overview-map staircase keys | [FIXED](docs/FIXED.md#interface-defects) |
 | Packaging | Two defects that shipped and were reported by a stranger | [FIXED](docs/FIXED.md#two-defects-that-shipped-and-were-found-by-a-stranger) |
 | Port artefacts | Six C escapes eaten by the port's path sweep; colliding run directories | [FIXED](docs/FIXED.md#defects-this-port-introduced-and-then-removed) |
