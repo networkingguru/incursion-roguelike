@@ -7383,11 +7383,15 @@ AI_WEAPON Effect "Lightning;jav" : EA_BLAST
         return RedirectEff(e,$"Lightning;jav");
       },
     EV_CALC_EFFECT {
+      // upstream: the saveDC formula is commented out on Win32 too, with the
+      // original typedefs and compiler, so the javelin's Reflex save has always
+      // used an engine default rather than the DC the page describes. Observed
+      // -- a Barbarian-3 (Dex +1) thrower's blast showed the target DC 17
+      // without the fix and DC 12 with it (= 10 + level/2 + Dex), read from the
+      // player-facing save line by tools/keys/javelin-lightning-savedc.keys.
+      // inc-tek.8.8; not sent.
       e.vRange = 6;
-      /*e.vRange = 3 + EActor->Mod(A_DEX);
-      e.vRange = 6;
-      e.saveDC = 10 + EActor->ChallengeRating()/2 + 
-                         EActor->Mod(A_DEX);*/
+      e.saveDC = 10 + EActor->ChallengeRating()/2 + EActor->Mod(A_DEX);
       return NOTHING;
       };
     Constants:

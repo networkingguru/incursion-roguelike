@@ -1,0 +1,88 @@
+# Throw a Javelin of Lightning at a visible creature and read the Reflex-save
+# DC that the player is shown (PA-08-F47 of bd inc-tek.8.8).
+#
+# WHAT IS BEING MEASURED. Creature::SavingThrow prints the subject's Reflex
+# roll as "1d20 ... vs DC D" when the player perceives it. With Store Rolls in
+# Log enabled, the same player-facing line is retained in the message log and
+# photographed by the savedc-log dump below. D must be 10 + half the thrower's
+# total character level + the thrower's Dexterity modifier, as the item's Desc
+# promises. The character sheet dump records both inputs.
+#
+# ON A BUILD WITHOUT THE FIX the weapon effect leaves saveDC non-positive.
+# SavingThrow returns before printing a roll, so savedc-log contains no
+# javelin-generated "Reflex Save" / "vs DC" line and the subject takes full
+# damage. With the fix, that line appears with the computed DC.
+#
+# WHY A GOBLIN AND WHY FREEZE IT. A plain goblin has no electricity resistance
+# or immunity and is visible to the adjacent player, so the SavingThrow show
+# branch runs. Freeze Monsters keeps it one square east without suppressing a
+# saving throw caused by the player's attack. Free Advancement makes the
+# barbarian level 3, giving the half-level term a visible value of 1.
+#
+# Menu letters and generated attributes depend on the seed. Run at seed 1 with
+# INCURSION_OPTIONS=tools/gates/Options.Dat; that pinned file keeps Store Rolls
+# in Log enabled.
+
+@include chargen.keys
+@until "Afoot" ESC
+
+# Free Advancement (third row) and Freeze Monsters (eleventh row).
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*2
+SPACE
+DOWN*8
+SPACE
+ESC
+
+# Raise the barbarian from level 1 to level 3, then record level and Dexterity.
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel hardier" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel hardier" ESC
+@expect "Barbarian 3"
+@dump:thrower-sheet
+ESC
+
+# Put the named specific weapon in the weapon hand.
+w
+@choose "Item Acquisition"
+RIGHT*10
+@until "Javelin of Lightning" DOWN
+DOWN
+ENTER
+2
+ENTER
+b
+SPACE
+s
+@dump:javelin-ready
+ESC
+
+# A visible, non-electric-resistant subject, frozen one square east.
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT
+ENTER
+@dump:subject-ready
+
+# Fire Ranged Weapon: choose the javelin, then target the adjacent goblin.
+f
+a
+RIGHT
+ENTER
+@dump:after-throw
+
+# Store Rolls in Log makes the save line persist here after the effect resolves.
+v
+@dump:savedc-log
+ESC
+@quit
