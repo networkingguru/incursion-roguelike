@@ -1,0 +1,42 @@
+# Blow a Horn of Goodness and read the protective white-floor field's radius
+# directly from the player-facing map. Read the horizontal row through the `@`
+# in @dump:goodness-field: the white GLYPH_FLOOR2 patch reaches six squares
+# from the player, which is 60 feet at 10 feet per square.
+#
+# ON A BUILD WITHOUT THE FIX the same dump shows radius 2: the white-floor
+# field reaches only two squares (20 feet) from `@`. The separate fear globe's
+# lval 6 is not measured here; this oracle reads the field painted by NewField.
+#
+# Auto-Identify Items makes the acquired horn's true name available to the
+# Activate menu. Item Acquisition's Horns category is RIGHT*28, following the
+# established horn-madness and horn-panic oracles. The horn is given plus 1;
+# its plus does not control the explicitly coded field radius. Run with seed 1.
+
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*28                # Horns
+@until "Horn of Goodness" DOWN
+DOWN
+ENTER
+1                       # known plus; the field radius is independent of plus
+ENTER
+a                       # empty Ready Hand slot
+SPACE                   # complete assignment; clear the In-the-Air slot
+@dump:horn-carried
+ESC
+
+A                       # Activate an Item (shifted command)
+@until "Which magic item do you wish to activate?" a
+a                       # choose [a] Horn of Goodness
+@dump:goodness-field
+
+@quit

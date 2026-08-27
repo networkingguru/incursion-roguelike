@@ -6248,8 +6248,13 @@ AI_HORN Effect "Goodness" : EA_INFLICT
   { SC_ABJ; aval: AR_GLOBE; lval: 6; tval: MA_EVIL; sval: WILL;
     xval: AFRAID; Flags: EF_ACTIVATE, EF_LIM_MTYPE, EF_AUTOID, EF_SOUND;
     Level: 3; On Event EV_EFFECT {
+      /* upstream: radius 2 is also laid on Win32 with the original data, making the
+         circle 20 ft instead of the promised 60 ft. Observed -- the horn's field
+         disc grew from 2 squares (20 ft) without the fix to 6 squares (60 ft) with
+         it, read off the player-facing map by tools/keys/horn-goodness-radius.keys;
+         inc-tek.8.8; not sent. */
       EMap->NewField(FI_BLOCKER|FI_MODIFIER,EActor->x,EActor->y,
-        2,GLYPH_VALUE(GLYPH_FLOOR2, WHITE),10,$"Magic Circle vs. Evil",EActor);
+        6,GLYPH_VALUE(GLYPH_FLOOR2, WHITE),10,$"Magic Circle vs. Evil",EActor);
       };
 		Desc: "When blown (activated), this horn creates a protective field
 		  against evil creatures and influences (similar to Magic Circle
