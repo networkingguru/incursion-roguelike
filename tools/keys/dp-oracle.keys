@@ -1,0 +1,148 @@
+# Divine Power grants Power Attack (branch 2) on a magic hit, for bd inc-tek.8.7
+# (PA-07-F6).
+#
+#   tools/headless.sh tools/keys/dp-oracle.keys 1
+#
+# WHAT THIS MEASURES. Divine Power's POST(EV_MAGIC_HIT) handler rewards a STR-18
+# caster: with Power Attack already held it grants Knock Prone (branch 1); WITHOUT
+# it, the Desc says the caster GAINS Power Attack (branch 2). Both branches
+# granted Knock Prone before the fix; branch 2 now grants Power Attack.
+#
+# WHY A LEVELLED ORC PRIEST. The branch test is IAttr(A_STR) >= 18, and
+# src/Create.cpp:3962 shows IAttr counts base + racial + ADJUST_INH but NOT the
+# spell's own sacred (ADJUST_SAC) bonus. So the caster's INHERENT strength must
+# be 18. A priest gets no Power Attack class feat (so it can reach branch 2), but
+# the orc priest's inherent STR is only 17 (base 13 + 4 natural). Free
+# Advancement raises it: the level-4 attribute bump goes to STR (the "a" answer),
+# making inherent STR 18. Every feat prompt takes "a" (Acrobatic), never the "Q"
+# that is Power Attack, so the caster still lacks Power Attack at branch 2.
+#
+# THE ORACLE is the caster's own stati dump: a feat granted by Divine Power lands
+# as "EXTRA FEAT from SS ENCH (Val:<feat> ...) (eID:Divine Power)". Val:Power
+# Attack can come ONLY from branch 2, and branch 2 grants it only with the fix.
+@include chargen-priest.keys
+# chargen-priest ends with four spell picks "a a a a"; a spare "a" can leak into
+# the dungeon and open a targeting prompt. Clear any stray prompt.
+ESC
+ESC
+ESC
+
+# Cheat Death (row 1) and Free Advancement (row 3).
+w
+y
+@choose "Wizard Mode Switches"
+SPACE
+DOWN*2
+SPACE
+ESC
+
+# Raise the priest to level 5, past the level-4 attribute bump. "d" opens the
+# character sheet; "G" gains a level inside it. Each attribute bump goes to STR
+# ("a"), each feat to Acrobatic ("a", never Power Attack).
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+ESC
+@while "more" SPACE
+@dump:leveled-sheet
+
+# Make Divine Power castable at no mana regardless of memorised spells.
+w
+@choose "Learn Any Spell"
+"Divine Power"
+ENTER
+
+# Summon a weak monster adjacent (it lands one square EAST of the caster).
+w
+@choose "Monster Summoning"
+"Kobolds"
+a
+RIGHT
+ENTER
+
+# Cast Divine Power on the caster himself. "*" targets self.
+m
+@choose "Divine Power"
+*
+@dump:after-cast
+
+# Strike the adjacent monster (one square EAST) many times. Clear any pending
+# message page (SPACE) BEFORE each swing so no RIGHT is wasted, then answer any
+# "Confirm attack" (y) or "Abort, Flee or Disengage" (a) prompt. With inherent
+# STR 18 and no Power Attack, the first LANDED hit grants the feat via branch 2.
+@while "more" SPACE
+@while "Abort" a
+RIGHT
+@while "onfirm" y
+@while "more" SPACE
+@while "Abort" a
+RIGHT
+@while "onfirm" y
+@while "more" SPACE
+@while "Abort" a
+RIGHT
+@while "onfirm" y
+@while "more" SPACE
+@while "Abort" a
+RIGHT
+@while "onfirm" y
+@while "more" SPACE
+@while "Abort" a
+RIGHT
+@while "onfirm" y
+@while "more" SPACE
+@while "Abort" a
+RIGHT
+@while "onfirm" y
+@while "more" SPACE
+@while "Abort" a
+RIGHT
+@while "onfirm" y
+@while "more" SPACE
+@while "Abort" a
+RIGHT
+@while "onfirm" y
+@while "more" SPACE
+@while "Abort" a
+RIGHT
+@while "onfirm" y
+@while "more" SPACE
+@while "Abort" a
+RIGHT
+@while "onfirm" y
+
+# Flush every pending message page or prompt before opening the wizard menu.
+@while "more" SPACE
+@while "Abort" a
+@while "more" SPACE
+@while "Abort" a
+@while "more" SPACE
+@dump:pre-exam
+
+# The oracle: the caster's own stati dump. Look for
+# "EXTRA FEAT from ... (Val:Power Attack ...) (eID:Divine Power)".
+w
+@choose "Examine Player Data"
+@dump:after-stati
+DOWN*16
+@dump:after-stati2
+DOWN*16
+@dump:after-stati3
+DOWN*16
+@dump:after-stati4
+ESC
+@quit

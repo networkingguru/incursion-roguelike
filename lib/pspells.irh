@@ -3904,9 +3904,22 @@ and EA_INFLICT
       if (EActor->IAttr(A_STR) >= 18 && EActor->HasFeat(FT_POWER_ATTACK))
         EActor->GainTempStati(EXTRA_FEAT,EActor,e.vDuration,SS_ENCH,
                               FT_KNOCK_PRONE,0,$"Divine Power", e.vCasterLev);
+      /* upstream: base-code defect, fix is ours. The Desc promises two
+         different STR-18 rewards: with no Power Attack feat you GAIN Power
+         Attack; with the feat already you gain Knock Prone instead. Both
+         STR-18 branches granted FT_KNOCK_PRONE, so branch 2 duplicated
+         branch 1 and the "gain Power Attack" case never fired -- a
+         copy-paste slip in the lib/ data. Not a port artefact: lib/ is
+         unchanged by the port, this is a feat constant in a spell
+         declaration, and a Win32 build with the original typedefs reads the
+         same duplicated FT_KNOCK_PRONE against the same Desc. Only this one
+         branch's feat token changed to FT_POWER_ATTACK; branch 1
+         (FT_KNOCK_PRONE) and the ADJUST_SAC branch are untouched. Tier
+         Observed -- the headless oracle reads the granted feat. Tracking
+         inc-tek.8.7 / PA-07-F6. Not sent. */
       else if (EActor->IAttr(A_STR) >= 18)
         EActor->GainTempStati(EXTRA_FEAT,EActor,e.vDuration,SS_ENCH,
-                              FT_KNOCK_PRONE,0,$"Divine Power", e.vCasterLev);
+                              FT_POWER_ATTACK,0,$"Divine Power", e.vCasterLev);
       else
         EActor->GainTempStati(ADJUST_SAC,EActor,e.vDuration,SS_ENCH,
                               A_STR,18 - EActor->IAttr(A_STR),$"Divine Power", e.vCasterLev);
