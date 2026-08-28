@@ -425,7 +425,7 @@ public:
 
     /* Other Prompts (Term.Cpp) */
     virtual bool yn(const char*msg)=0;
-    virtual char ChoicePrompt(const char*msg,const char*choices,int8 col1=BROWN,  int8 col2=YELLOW,bool preprompt=true)=0;
+    virtual char ChoicePrompt(const char*msg,const char*choices,int8 col1=BROWN,  int8 col2=YELLOW,bool preprompt=true,char def=0)=0;
     virtual Thing* AcquisitionPrompt(int8 Reason, int8 minlev, int8 maxlev, int8 MType=0)=0;
     virtual rID  ChooseResource(const char*prompt, int16 RType, rID eID)=0;
     virtual int32 MonsterTypePrompt(const char * prompt, int minCount = 1, int maxCount = 99999)=0;
@@ -674,8 +674,8 @@ public:
 
     /* Other Prompts (Term.Cpp) */
     virtual bool yn(const char*msg);
-    virtual char ChoicePrompt(const char*msg,const char*choices,int8 col1=BROWN, 
-        int8 col2=YELLOW,bool preprompt=true);
+    virtual char ChoicePrompt(const char*msg,const char*choices,int8 col1=BROWN,
+        int8 col2=YELLOW,bool preprompt=true,char def=0);
     virtual Thing* AcquisitionPrompt(int8 Reason, int8 minlev, int8 maxlev, int8 MType);
     virtual rID  ChooseResource(const char*prompt, int16 RType, rID eID);
     virtual int32 MonsterTypePrompt(const char * prompt, int minCount = 1, int maxCount = 99999);

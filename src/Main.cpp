@@ -2473,14 +2473,34 @@ void Player::Gravestone()
          break;
         }
          
-      MyTerm->Color(MAGENTA);
-      MyTerm->CursorOn();
-      MyTerm->Write(0,MyTerm->WinSizeY()-1,Format("Dump character, reView Messages, Main menu, Quit or Scoreboard? [dvmqs%c%c] ",
-        24,25));
-      MyTerm->CursorOn();
-      while (!strchr("dmvqs",ch = (char)MyTerm->GetCharRaw()))
-        ;
-      MyTerm->CursorOff();
+      {
+        const char *choices = "dvmqs";
+        int16 sel = 2, gch, i;
+        String cd;
+        /* Let controllers navigate this end-game prompt with arrows and Enter.
+           inc-es62. */
+        for (;;)
+          {
+            cd = "";
+            for (i = 0; i != 5; i++)
+              cd += Format("<%d>%c", i == sel ? WHITE : MAGENTA,
+                           i == sel ? toupper(choices[i]) : choices[i]);
+            MyTerm->Write(0,MyTerm->WinSizeY()-1,XPrint(Format(
+              "<%d>Dump character, reView Messages, Main menu, Quit or Scoreboard? [%s<%d>%c%c] ",
+              MAGENTA,(const char*)cd,MAGENTA,24,25)));
+            MyTerm->CursorOn();
+            gch = MyTerm->GetCharRaw();
+            if (gch == KY_UP || gch == KY_LEFT)
+              { sel = (int16)((sel + 4) % 5); continue; }
+            if (gch == KY_DOWN || gch == KY_RIGHT)
+              { sel = (int16)((sel + 1) % 5); continue; }
+            if (gch == KY_ENTER)
+              { ch = choices[sel]; break; }
+            if (gch < 200 && strchr(choices,(char)gch))
+              { ch = (char)gch; break; }
+          }
+        MyTerm->CursorOff();
+      }
     }
     while(1);
   }
@@ -2601,6 +2621,5 @@ void BuildSpellList()
   }
 
 #endif
-
 
 

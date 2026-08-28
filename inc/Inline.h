@@ -561,7 +561,7 @@ inline Dir OppositeDir(Dir d)
 
 inline int8 Player::ChoicePrompt(const char*msg, const char*choices, char def, 
                       int8 col1,int8 col2, bool preprompt)
-  { return MyTerm->ChoicePrompt(msg,choices,col1,col2,preprompt); }
+  { return MyTerm->ChoicePrompt(msg,choices,col1,col2,preprompt,def); }
 
 inline Thing* GetHandle(Thing *t)
   { return t; }

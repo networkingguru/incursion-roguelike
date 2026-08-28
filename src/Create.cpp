@@ -1365,7 +1365,7 @@ static void GrantPerks(PerkSet& p, Player *target)
 } 
 
 void Player::RollAttributes() {
-    int16 nPerks, ch, wanted;
+    int16 nPerks, ch, wanted, sel = 0;
     bool do_redraw = false, perk_warn = 0;
     int8 BestStats[7][5], i, j, k, l, c, tot, Points, PCost;
     int8 PointCosts[] = { 0, 0, 0, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 8, 10, 13, 16 };
@@ -1551,10 +1551,30 @@ Reprompt:
             (Opt(OPT_REROLL) && statMethod == 1) ? "w" : ""));
         MyTerm->CursorOn();
 
+        /* Let a player pick a set with the arrow keys and Enter, not only the
+           letters a-e: a controller's sticks send arrow keys and the on-screen
+           keyboard is otherwise the only way to reach a letter. The '>' marker
+           shows the current set; Up/Down move it, Enter confirms it. The letter
+           keys still work exactly as before. inc-es62. */
+        for (c = 0; c != 5; c++)
+            MyTerm->Write(0, 4 + c * linesPerSet, c == sel ? ">" : " ");
+
         do_redraw = false;
-        do
-            ch = tolower(MyTerm->GetCharRaw());
-        while (ch != KY_REDRAW && (ch < 'a' || ch > 'e') && ch != '?' && ch != 'p' && ((ch != 'x' && ch != 'w') || !Opt(OPT_REROLL)));
+        for (;;) {
+            ch = MyTerm->GetCharRaw();
+            if (ch == KY_UP || ch == KY_DOWN) {
+                MyTerm->Write(0, 4 + sel * linesPerSet, " ");
+                sel = (int16)((ch == KY_UP ? sel + 4 : sel + 1) % 5);
+                MyTerm->Write(0, 4 + sel * linesPerSet, ">");
+                MyTerm->Update();
+                continue;
+            }
+            if (ch == KY_ENTER) { ch = 'a' + sel; break; }
+            ch = tolower(ch);
+            if (ch == KY_REDRAW || (ch >= 'a' && ch <= 'e') || ch == '?' || ch == 'p'
+                || ((ch == 'x' || ch == 'w') && Opt(OPT_REROLL)))
+                break;
+        }
         PurgeStrings();
         MyTerm->CursorOff();
         if (ch == KY_REDRAW)

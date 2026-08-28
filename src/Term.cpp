@@ -2743,28 +2743,57 @@ Thing * TextTerm::ExamineSquare(int x, int y) {
 *                               Other Prompts                                *
 \*****************************************************************************/
 
-char TextTerm::ChoicePrompt(const char*msg,const char*choices,int8 col1, int8 col2, bool preprompt) {
-    String str; int16 ch; 
+char TextTerm::ChoicePrompt(const char*msg,const char*choices,int8 col1, int8 col2, bool preprompt, char def) {
+    String str, cd; int16 ch, i;
+    int16 nchoices = (int16)strlen(choices);
+    int16 sel = 0;
     if (Mode == MO_RECREATE)
       {
         ASSERT(strncmp(RInf.Rsp[RInf.cRsp].Question,msg,31) == 0);
         return (char)RInf.Rsp[RInf.cRsp++].Answer;
       }
-    str = Format("<%d>%s [<%d>%s<%d>] ",col1,msg,col2,choices,col1);
+    /* Start the highlight on the caller's default choice if it named one and
+       that choice is actually offered; otherwise on the first choice. Player::
+       ChoicePrompt used to drop this default on the floor. */
+    if (def)
+      {
+        const char *d = strchr(choices, tolower(def));
+        if (d) sel = (int16)(d - choices);
+      }
     Redraw:
-    SetWin(WIN_INPUT); Clear(); 
+    SetWin(WIN_INPUT); Clear();
     if (preprompt)
       PrePrompt();
-    Write(0,0,XPrint(str));
-    CursorOn();
-    do
-      ch = tolower(GetCharRaw());
-    while (ch != KY_ESC && !strchr(choices,ch) && ch != KY_REDRAW);
-    if (ch == KY_REDRAW)
-      goto Redraw;
+    /* Let a controller answer this prompt: the sticks send arrow keys and the
+       A button sends Enter, but the loop used to accept only the letter keys,
+       so every ChoicePrompt was unreachable without the on-screen keyboard.
+       Highlight the selected choice; Up/Down/Left/Right move it, Enter picks
+       it. The letter keys still select directly, exactly as before. inc-es62. */
+    for (;;)
+      {
+        cd = "";
+        for (i = 0; i < nchoices; i++)
+          cd += Format("<%d>%c", i == sel ? WHITE : col2,
+                       i == sel ? toupper(choices[i]) : choices[i]);
+        str = Format("<%d>%s [%s<%d>] ", col1, msg, (const char*)cd, col1);
+        Write(0,0,XPrint(str));
+        CursorOn();
+        ch = GetCharRaw();
+        if (nchoices && (ch == KY_UP || ch == KY_LEFT))
+          { sel = (int16)((sel + nchoices - 1) % nchoices); continue; }
+        if (nchoices && (ch == KY_DOWN || ch == KY_RIGHT))
+          { sel = (int16)((sel + 1) % nchoices); continue; }
+        if (nchoices && ch == KY_ENTER)
+          { ch = (uint8)choices[sel]; break; }
+        if (ch == KY_REDRAW)
+          goto Redraw;
+        ch = tolower(ch);
+        if (ch == KY_ESC || strchr(choices, ch))
+          break;
+      }
     CursorOff();
     Clear();
-  
+
     if (ch == KY_ESC)
       ch = -1;
     if (Mode == MO_CREATE)
