@@ -1966,7 +1966,9 @@ char * posixTerm::MenuListFiles(const char * filespec, uint16 flags, const char 
         return (char*)"";
     }
     while ((ent = readdir(d)) != NULL && option_count < MAX_MENU_OPTIONS - 1) {
-        if (fnmatch(filespec, ent->d_name, 0))
+        /* FNM_PERIOD keeps macOS AppleDouble sidecars (._*) and "."/".." out of
+           this user-facing file list, for the same reason as NextFile() above. */
+        if (fnmatch(filespec, ent->d_name, FNM_PERIOD))
             continue;
         option_count++;
         file_names[option_count] = (char *)alloca(strlen(ent->d_name) + 1);
@@ -2005,7 +2007,17 @@ bool posixTerm::NextFile() {
         return false;
 
     while ((ent = readdir(findDir)) != NULL) {
-        if (fnmatch(findSpec, ent->d_name, 0))
+        /* FNM_PERIOD: a wildcard must not match a leading '.'. Packaging the
+           tree with tar on macOS (without COPYFILE_DISABLE=1) drops AppleDouble
+           sidecar files next to the real ones -- ._Incursion.Mod beside
+           Incursion.Mod, ._8x8.png beside the fonts. Each is 163 bytes and
+           matches "*.Mod", so LoadModules() opened ._Incursion.Mod first,
+           LoadGroup() rejected its header as "File Version Mismatch", and all
+           module loading aborted. This is port code and a port/packaging
+           artefact, not an upstream bug: no ._* file exists in an upstream
+           Win32 distribution, and upstream enumerates with FindFirstFileA, not
+           fnmatch. FNM_PERIOD also skips "." and "..", which no resource uses. */
+        if (fnmatch(findSpec, ent->d_name, FNM_PERIOD))
             continue;
         try {
             OpenRead(ent->d_name);
