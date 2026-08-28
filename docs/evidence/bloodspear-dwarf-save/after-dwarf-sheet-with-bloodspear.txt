@@ -1,0 +1,49 @@
+=== screen 0003 dwarf-sheet-with-bloodspear  key 148  mode 4  turn 198084 ===
+ Loderr Oakenstrike, The Manipulative Plotter (Wizard Mode) (Explore Mode)
+
+ Gender Male            STR: 14/00 [+2/+1]  (base 12, +2 inherent)
+ Race   Dwarf           DEX: 12/00 [+1/+0]  (base 12)
+ Class  Barbarian 1     CON: 15/00 [+2/+2]  (base 12, +1 inherent, +2 natural)
+ Faith  Ekliazeh        INT: 15/00 [+2/+2]  (base 15)
+ XP     0               WIS: 14/00 [+2/+1]  (base 14)
+ Next @ 1000            CHA: 14/00 [+2/+1]  (base 16, -2 natural)
+ Align  Neutral         LUC: 15/00 [+2/+2]  (base 15)
+
+ Fortitude   +4 (Barbarian +2, +2 Con)
+ Reflex      +1 (Barbarian +0, +1 Dex)
+ Will        +2 (Barbarian +0, +2 Wis)
+             (+2 vs. magic, +2 vs. poison, +2 vs. traps, +4 vs. knockdown)
+
+ Melee   +toHit +5   (Barbarian +1, +2 Str, +2 magic)
+         Damage +4   (base 1d8 / 1d8, +2 Str, +2 magic)
+         Speed  110% (base 100%) x 110% magic
+ Thrown  +toHit +3   (Barbarian +0, +1 Dex, +2 magic)
+         Damage +4   (base 1d8 / 1d8, +2 Str, +2 magic)
+         Speed  110% (base 100%) x 110% magic
+ Size           Human-sized (base human-sized)
+ Defense Class  11   (base 10, +1 Dex)
+ Coverage       10   (base 0, +10 armour)
+ Movement Rate  70%  (base 75%) x 75% armour x 115% skill
+ Hit Dice Rolls 36   20 + 1d12 (12) + 4 (CON bonus)
+ Fatigue Points 9    (base 4, +1 Barbarian, +2 Con, +2 skill)
+ Mana Rolls     16   10 + 1d4 (4) x 1 + 2 (WIS bonus)
+ Encumbrance    Moderate  (Light 28.6s, Moderate 86.0s, Heavy 173.0s, Extreme
+                           260.0s, Max Press 350.0s)
+ Proficiencies  Simple Weapons, Long Blades, Axes, Impact, Polearms, Spears,
+                  Flails, Light Armour, Medium Armour, Heavy Armour and
+                  dwarven waraxe
+
+ Skill Ratings:
+   Athletics        +6  (2 ranks, +2 CON, +2 train)
+   Balance          -5  (0 ranks, -5 armour)
+   Climb            +0  (2 ranks, +1 STR, +2 train, -5 armour)
+   Craft            +9  (2 ranks, +3 train, +2 racial, +2 kit)
+   Escape Artist    -5  (0 ranks, -5 armour)
+   Healing          +7  (2 ranks, +1 WIS, +2 train, +2 kit)
+   Hide in Shadows  -5  (0 ranks, -5 armour)
+   Intimidate       +3  (0 ranks, +1 CHA, +2 train)
+   Intuition        +3  (0 ranks, +1 WIS, +2 train)
+   Knowledge (Nature) +4  (0 ranks, +2 INT, +2 train)                          v
+[P]restige Classes [PGUP/PGDN] Scroll [W]rite Dump [ESC] Return to Game
+[G]ain Levels [L]earn Spells [S]kill Manager [M]ulticlass [C]onditions [Q]uests
+[K]nown Items [F]eat Descriptions [J]ournal [R]ecall Monster [D] Alignment

@@ -1,0 +1,49 @@
+=== screen 0004 player-dump  key 217  mode 2  turn 198388 ===
+The goblin wakes up. The goblin wakes up! Catching him unaware, |Henk
+you deliver a killing blow, killing the goblin. You feel your   |Male Orc
+blood quicken...                                                |Barbarian 1
+                                                                |67/1000 XP
+A ARC   -8 (base 0, -8 armour)                                 ^|
+A DIV    0 (base 0)                                             |12:01 AM
+A THP    0 (null)                                               |1st of Suntide
+A MAN    0 (base 16)                                            |
+A FAT    7 (B4, +1 +1Cn +2Sk -1En)                              |Fighting
+A COV    8 (base 0, +8 armour)                                  |Satiated
+A HIT    8 (Barbarian +1, +3 Str, +4 magic)                     |Afoot
+A DMG    9 (base 1d8 / 1d8, +5 Str, +4 magic)                   |Healthy
+A SPD  120 (base 100%) x 120% magic                             |Vigorous
+                                                                |
+Attacks:                                                        |STR: 16
+  A PUNC for 1d3 AD BLUNT                                       |DEX: 17
+Resists:                                                        |CON: 14
+  Slashing Damage 5 (bypass = 5)                                |INT: 13
+  Piercing Damage 6 (bypass = 6)                                |WIS: 14
+  Blunt Damage 6 (bypass = 6)                                   |CHA: 11
+Stati (9):                                                      |LUC: 16
+  WEP SKILL from SS CLAS (Val:WS PROFICIENT Mag:0)              |
+            (eID:shotput)                                       |Mod:Melee
+  EXTRA ABILITY from SS BODY (Val:CA INFRAVISION Mag:6)         |Hit:8
+            (h:Henk) (eID:orc)                                  |Dmg:1d8+9
+  EXTRA ABILITY from SS BODY (Val:CA SCENT Mag:3)               |Spd:120%
+            (h:Henk) (eID:orc)                                  |Enc:Moderate
+  HUNGER from SS MISC (Val:-1 Mag:-1) [Dur 2490]                |Def:12 Cov:8
+  ADJUST INH from SS MISC (Val:A CON Mag:2)                     |Arm: 5 Slash
+  ADJUST INH from SS MISC (Val:A STR Mag:2)                     |     6 Pierce
+  SAVE BONUS from SS ITEM (Val:SN SPELLS Mag:4)                 |     6 Blunt
+            (h:shortspear 'Bloodspear' +4) (eID:Bloodspear)     |Mov:80%
+  REGEN from SS ENCH (Val:0 Mag:100) [Dur 899]                  |
+            (h:shortspear 'Bloodspear' +4) (eID:Bloodspear)     |Things in View:
+  ALIGNMENT from SS PERM (Val:0 Mag:-1)                         |< cave entrance
+            (h:Henk)                                            |* ? light mace
+Inventory:                                                      |* goblin corpse
+  * a shortspear 'Bloodspear' +4 [+4] (equipped)                |% cave orc
+  * an orcish longspear                                         |% lizardman
+  * an orcish halberd                                           |% elf corpse
+  * a loincloth (equipped)                                      |% gnome corpse
+  * a suit of orcish hide armour (equipped)                     |% dwarf corpse
+  * a Holy symbol of Khasrach (equipped)                        |% human corpse
+  * 26 gold pieces                                              |% kobold corpse
+  * 4 Potions of See Invisibility                               |% dwarf corpse
+  * 6 Potions of Remove Curse                                  v|% dwarf corpse
+The Goblin Caves: Entry Chamber                             010m|[*************]
+HP:45/45 Mana:15/16 FP:7/7 GP:26                                |[*************]

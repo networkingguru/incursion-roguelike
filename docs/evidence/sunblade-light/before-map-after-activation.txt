@@ -1,0 +1,49 @@
+=== screen 0002 map-after-activation  key 143  mode 2  turn 198133 ===
+You squint and stagger in the bright light.                     |Varag
+                                                                |Male Orc
+                                                                |Barbarian 1
+                                                                |0/1000 XP
+             .o....,..,.....                                    |
+            .................                                   |12:00 AM
+           ..,...,....,...,...                                  |1st of Suntide
+           o................,.                                  |
+          .........,,,.....,...                                 |Exploring
+          .......,,,%,,,.......                                 |Satiated
+         #......,,,,,%,,,%..,..#                                |Afoot
+         #..,..,,%,,,%,,,......#                                |Healthy
+         #.....,,,,,,,,,%,..,..#                                |Vigorous
+         #.....,,,,,@,,,,,.....#                                |
+         #....%,,,%,,,,,,,.....#                                |STR: 18
+         #.....,,,,,,,,,,..,...#                                |DEX: 12
+         #......,,,,,%,,,......#                                |CON: 13
+          ,..,...,,,,,,,.......                                 |INT: 13
+          ,.,.,,.,.,,,.........                                 |WIS: 16
+           ,,.,..,...,....,..o                                  |CHA: 14
+           ,,...,.,...........                                  |LUC: 15
+            .,.,,,...........                                   |
+             .,,,,.,,....,o.                                    |Mod:Melee
+               .,,,,......                                      |Hit:6
+                 #######                                        |Dmg:1d10+6
+                                                                |    +2d6 vs. E
+                                                                |Spd:75%
+                                                                |Enc:Light
+                                                                |Def:11 Cov:8
+                                                                |Arm: 5 Slash
+                                                                |     6 Pierce
+                                                                |     6 Blunt
+                                                                |Mov:90%
+                                                                |
+                                                                |Things in View:
+                                                                |< cave entrance
+                                                                |% lizardman
+                                                                |  corpse
+                                                                |% cave orc
+                                                                |% elf corpse
+                                                                |% gnome corpse
+                                                                |% human corpse
+                                                                |% kobold corpse
+                                                                |% dwarf corpse
+                                                                |% dwarf corpse
+                                                                |% dwarf corpse
+The Goblin Caves: Entry Chamber (cave entrance)             010m|[*************]
+HP:42/42 Mana:17/17 FP:8/8 GP:21                                |[*************]
