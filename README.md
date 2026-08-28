@@ -448,6 +448,7 @@ the unfixed tree before it is trusted.
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? |
 | `check_cloak_resistance.sh` | Does a +3 Cloak of Resistance keep the same saves alone, yet stop stacking with auspicious +2 armour once both bonuses are resistance? |
 | `check_cure_critical.sh` | Does the Cure Critical Wounds effect roll the `4d8 + LEVEL_MAX20` its own description promises, rather than the `3d8` it paid before? |
+| `check_flame_strike.sh` | Does Flame Strike's description state `1d6` points of damage per caster level, matching its SRD-authentic `(LEVEL_SCALED)d6` script rather than the `1d8` prose it carried before? |
 | `check_sunblade_cold.sh` | Does wielding a known +2 Sunblade raise Cold resistance by the promised mild rate of two points? |
 | `check_sunblade_light_range.sh` | Does the Sunblade's activated light field reach the promised 60 feet (6 squares)? |
 | `check_sunblade_negative_plane.sh` | Does the Sunblade double damage against undead and both named non-undead Negative-Plane creatures, without retaining its old wraith-only `5d6` rider? |

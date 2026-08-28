@@ -4587,8 +4587,9 @@ Priest / Druid  Spell	"Flame Strike" : EA_BLAST
     aval: AR_BALL; lval: 1; 
     Purpose: EP_ATTACK;
     On Event MSG_BLASTNAME "pillar of flame";
+    // upstream: the same Desc typo ships on Win32 with the original data, so it misdescribes the damage there too; the script pval (LEVEL_SCALED)d6 is the SRD-correct value (Flame Strike is 1d6 per caster level, half fire / half divine) and the prose "1d8" was the outlier, so nobody should "fix" the code to match the old prose; Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.7 / PA-07-F2; not sent.
     Desc: "Calls down a pillar of divine fire to strike a chosen target for
-    1d8 points of damage per caster level, scaled after 9th. A Reflex save 
+    1d6 points of damage per caster level, scaled after 9th. A Reflex save 
     halves the damage, but only half the damage the spell inflicts is fire 
     damage -- the other half is raw divine power and cannot be resisted. The 
     column has a radius of one square and the caster is immune to the damage.";
