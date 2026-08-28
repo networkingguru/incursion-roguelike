@@ -3068,9 +3068,17 @@ void Creature::Devour(Corpse * c) {
 	// ww: now that we're taking Templates into account for corpses, it's
 	// easier just to make a fake monster
 	Monster *m = new Monster(c->mID);
-	StatiIterNature(this, TEMPLATE)
+	// upstream: ww read the eater's templates (this) to score devoured flesh,
+	// but a corpse stores its own templates on itself (Corpse::Corpse) and every
+	// sibling consumer reads them back off the corpse -- Sacrifice (Prayer.cpp)
+	// and burning-hunger eat (Item.cpp) both iterate the corpse c. Reading `this`
+	// drops the corpse's celestial/fiendish/etc resistances and misapplies the
+	// eater's own. Pure logic, no typedef/width/endianness dependence: fails
+	// identically on Win32/MSVC, so it is upstream's, not a port artefact.
+	// Evidence: Traced. Tracking: inc-x1f3. Not yet sent upstream.
+	StatiIterNature(c, TEMPLATE)
 		m->AddTemplate(S->eID);
-	StatiIterEnd(this)
+	StatiIterEnd(c)
 	// ww: not necessary, plus things with fields get annoyed when they are
 	// not on the map: TMON(m->tmID)->PEvent(EV_BIRTH,m,m->tmID);
 	// m->Initialize(false);

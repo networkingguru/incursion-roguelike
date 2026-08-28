@@ -1,0 +1,49 @@
+=== screen 0001 m01  key 11  mode 2  turn 1941802 ===
+Farstrider regenerates fully. You finish eating the celestial   |Dench
+arsinoitherium corpse (fresh, DC 8).                            |Male Orc
+                                                                |Ranger 3
+                                                                |Rogue 3
+                                        ################.#      |Druid 3
+                                                       #.#      |40449/45000 XP
+                                                       #.#      |
+                                                       #.#      |12:52 AM
+                                                       #.#      |5th of Suntide
+                                                       #.#      |
+                                                       #.#    ~ |Fighting
+                                  #                    #.#    ~ |Bloated
+#################################~###                  #.#    ~ |Mounted
+.........+..................~~~~@v^~^# g               #.#   #~#|Diseased
+.......o.########################^~^#                  #.#   #~#|Vigorous
+.........#                        ###                  #.#   #~#|
+.........#                                             #.#   #~#|STR: 26
+.........#                                          ####.#####~#|DEX: 23
+.......o.#                                      ........,,,,,,,,|CON: 24
+.........#                                          ####,,,,,,,,|INT: 20
+##########                                             #,,,,,,,,|WIS: 26
+                                                       #,,,,,,,,|CHA: 15
+                                                       #,,,,,,,,|LUC: 17
+                                                       #,,,,,,,,|
+                                                       #,,,,,,,,|Mod:Melee
+                                                       #,,,,,,,,|Hit:25
+                                                       #,,,,,,,,|Dmg:1d8+15
+                                                       #,,,,,,,,|    +2d6 SA
+                                                       #,,,,,,,,|Spd:155%
+                                                       #,,,,,,,,|Enc:Light
+                                                       #,,,,,,,,|Def:33 Cov:22
+                                                       #,,,,(,,,|Arm:15 Slash
+                                                       #########|    14 Pierce
+                                                                |    14 Blunt
+                                                                |Mov:225%
+                                                                |
+                                                                |Things in View:
+                                                                |v ? chakram
+                                                                |^ sheaf arrow
+                                                                |  +1
+                                                                |^ sheaf arrow
+                                                                |  +1
+                                                                |^ sheaf arrow
+                                                                |  +1
+Wilderness Lore Check: 1d20 (6) +13 = 19 vs DC 1 [success].     |^ sheaf arrow
+                                                                |  +1
+The Goblin Caves: Winding Corridor                          070m|[*************]
+HP:207/216 Mana:312/394 FP:9/18 GP:95032  Hid Rag PwoTrace Bufd |[*************]
