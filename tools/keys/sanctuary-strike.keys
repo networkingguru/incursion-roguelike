@@ -1,0 +1,125 @@
+# Photograph the game's own Sanctuary indicator on both sides of a melee blow
+# struck BY the warded creature. This is the session for bd inc-r1e6.
+#
+#   tools/headless.sh tools/keys/sanctuary-strike.keys 4
+#
+# Read the result with tools/check_sanctuary_strike.sh, which is what asserts.
+# This file only produces the screens.
+#
+# WHAT THE BEAD CLAIMS. lib/pspells.irh's Sanctuary registers three TRAP_EVENT
+# stati on landing -- EVICTIM(EV_STRIKE), EV_EFFECT and EV_MAGIC_STRIKE -- but
+# defines handlers for EVICTIM(EV_STRIKE), EV_STRIKE and EV_MAGIC_STRIKE. The
+# two lists do not match. Event dispatch (src/Event.cpp) calls a trap's effect
+# only when META(S->Mag) equals the event being thrown, so META(EV_STRIKE) --
+# the handler that is supposed to end the spell when the warded creature
+# attacks -- is unreachable. The spell's own Desc promises "This protection
+# ceases if you take any directly hostile action against another creature".
+#
+# THE ORACLE IS THE STATUS LINE. src/Term.cpp:185 walks the player's stati on
+# every redraw and prints the name of any T_TEFFECT stati whose effect carries
+# EF_SHOWNAME. Sanctuary carries it, so the bottom line of the map screen reads
+#
+#   HP:35/35 Mana:26/26 FP:8/8 GP:68                      Sanctuary |
+#
+# for exactly as long as the player holds the spell, and stops the moment the
+# stati goes. The key script cannot write that word: it only sends keystrokes,
+# and the string comes from the player's live stati list, not from a message
+# that could linger in the message window.
+#
+# THREE PHOTOGRAPHS, and the comparison between them is the whole test:
+#
+#   after-cast       the spell has just landed -- Sanctuary MUST be shown
+#   after-nonattack  a summon and three searches later -- MUST still be shown
+#   after-strike     one melee blow later -- MUST be gone
+#
+# THE MIDDLE ONE IS THE CONTROL AND IT IS NOT DECORATION. Without it a build
+# that never applied Sanctuary at all, or one that dropped it on any turn that
+# passed, would show an absent indicator after the blow and would be read as
+# proof that the strike ended it. The searches spend real game time (measured
+# on seed 4: turn 198021 at after-cast, 198030 at after-nonattack), so the
+# control is a genuine "time passed and nothing hostile happened" case. It is
+# also the RAW case: the 3.5 SRD lets the warded creature "use nonattack
+# spells or otherwise act" without breaking the spell.
+#
+# WIZARD MODE SUPPLIES THE SPELL AND THE TARGET, because no scripted walk can
+# be relied on to find either.
+#
+#   * Freeze Monsters (the eleventh row of the Wizard Mode Switches list) stops
+#     the goblin acting. A goblin that fought back would attack the player,
+#     which is EVICTIM(EV_STRIKE) -- a different handler, and one that rolls a
+#     saving throw. This session must measure the player's own blow only.
+#   * "Learn Any Spell" takes a typed name and sets SP_KNOWN|SP_PRIMAL|SP_INNATE
+#     (src/Debug.cpp:862). An innate spell costs no mana and casts in 20 ticks,
+#     so the character reaches the strike with the spell up whatever god the
+#     seed gave the priest. A quoted string in a key script is sent one
+#     character per keystroke, which is how "Sanctuary" reaches the ReadLine.
+#   * A priest, not the usual barbarian, because the Spell Manager divides by
+#     the caster's total mana and a character with none has no business there.
+#
+# The ESC after chargen-priest.keys answers the "Select direction, location or
+# target:" prompt that the last of its four starting-spell keys leaves open.
+#
+# @choose "Sanctuary" presses the Spell Manager letter beside the spell, which
+# casts it outright -- ENTER afterwards would be a second, separate command.
+#
+# The player-data dump at the end is corroboration, not the oracle: wizard mode
+# "Examine Player Data" prints every stati with its event code, so the three
+# TRAP EVENT rows tagged (eID:Sanctuary) show which events the spell actually
+# trapped. On the unfixed build their Mag values are 2019, 52 and 83 --
+# EVICTIM(EV_STRIKE), EV_EFFECT and EV_MAGIC_STRIKE. It is scrolled to with
+# DOWN because the dump is longer than the screen.
+
+@include chargen-priest.keys
+
+ESC
+
+# Freeze Monsters, the eleventh row of the switches list.
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+w
+@choose "Learn Any Spell"
+"Sanctuary"
+ENTER
+
+m
+@choose "Sanctuary"
+@dump:after-cast
+
+# What the traps actually are, before anything disturbs them.
+w
+@choose "Examine Player Data"
+DOWN*40
+@dump:traps-before
+ESC
+
+# --- the control: a summon and three searches, none of them an attack -------
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT
+ENTER
+s
+s
+s
+@dump:after-nonattack
+
+# --- the blow ----------------------------------------------------------------
+RIGHT
+@while "Confirm attack" y
+@dump:after-strike
+v
+@dump:strike-log
+@while "Messages" ESC
+
+w
+@choose "Examine Player Data"
+DOWN*40
+@dump:traps-after
+ESC
+@quit

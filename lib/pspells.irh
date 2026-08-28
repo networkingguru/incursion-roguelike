@@ -508,8 +508,23 @@ Priest / Druid Spell "Sanctuary" : EA_GENERIC
       /* SS_MISC cause sancutary can't be dispelled. */
       EVictim->GainTempStati(TRAP_EVENT, EActor, e.vDuration, SS_MISC,
         EVICTIM(EV_STRIKE),e.saveDC,$"sanctuary");
+      /* upstream: base-code defect, fix is ours. Every META handler below
+         needs a trap of the same event, or src/Event.cpp:322-340 never runs
+         it: dispatch calls a trap's effect only where META(S->Mag) equals the
+         event thrown. This line read EV_EFFECT, which no handler answers,
+         while META(EV_STRIKE) -- the handler that ends the spell when its
+         holder attacks, as the Desc below promises -- had no trap at all. The
+         defect is upstream's, not a port artefact: lib/ is unchanged by the
+         port, the mismatch is between two lists in this one declaration, and
+         the dispatch reading it is plain control flow with no dependence on
+         integer width, the original typedefs or the upstream compiler. No
+         META(EV_EFFECT) is added in its place, because the 3.5 SRD says
+         Sanctuary "does not prevent the warded creature from being attacked
+         or affected by area or effect spells". Tier Observed --
+         tools/check_sanctuary_strike.sh, seed 4. Tracking inc-r1e6. Not
+         sent. */
       EVictim->GainTempStati(TRAP_EVENT, EActor, e.vDuration, SS_MISC,
-        EV_EFFECT,e.saveDC,$"sanctuary");
+        EV_STRIKE,e.saveDC,$"sanctuary");
       EVictim->GainTempStati(TRAP_EVENT, EActor, e.vDuration, SS_MISC,
         EV_MAGIC_STRIKE,e.saveDC,$"sanctuary");
       return DONE;
