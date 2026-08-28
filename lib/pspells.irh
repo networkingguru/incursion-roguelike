@@ -3787,7 +3787,21 @@ Effect "Holy Sword" : EA_GENERIC
 
 Priest / Sorcerer / Druid Spell "Cure Critical Wounds" : EA_HEALING
   { SC_THE; Base: SP_EASY; Cost: 0; Level: 4; qval: Q_TAR|Q_NEAR;
-    xval: HEAL_HP; pval: 3d8 + LEVEL_MAX20; yval: 30; 
+    /* upstream: base-code defect, fix is ours. This EA_HEALING effect rolled
+       3d8 while the spell's own Desc below promises 4d8 -- "Heals you of 4d8 +
+       your level ... to a maximum of 4d8+20" -- so the spell paid one die less
+       than it advertised. The sibling Inflict Critical Wounds, the damage twin
+       of this spell, already rolls 4d8 + LEVEL_MAX20, and the intended value is
+       therefore unambiguous. Cure Serious Wounds one tier down is the 3d8 spell
+       (3d8 + LEVEL_MAX15) and is deliberately left alone. The defect is
+       upstream's, not a port artefact: lib/ is unchanged by the port, this is a
+       data value in a spell declaration, and a Win32 build with the original
+       typedefs reads the same 3d8 against the same 4d8 prose. Only the dice
+       token changed; the LEVEL_MAX20 cap, the yval and the Desc are untouched.
+       Tier Traced -- grep and a module rebuild prove the token; the EA_HEALING
+       pval reading proves it is the amount rolled. Tracking inc-tek.8.7. Not
+       sent. */
+    xval: HEAL_HP; pval: 4d8 + LEVEL_MAX20; yval: 30;
     Flags: EF_VARMANA, EF_LOSEMANA; Purpose: EP_FIX_TROUBLE (TROUBLE_INJURY);
     Desc: "Heals you of 4d8 + your level in hit points of damage, to a
       maximum of 4d8+20, with a hit point to mana ratio of 3 per 1. Healing
