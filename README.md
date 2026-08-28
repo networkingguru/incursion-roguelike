@@ -509,6 +509,7 @@ the unfixed tree before it is trusted.
 | `check_underdark_live.sh` | Does the Underdark Warrior check its race requirement, and refuse the grey elf? |
 | `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? |
 | `check_wand_acid_type.sh` | Does the Wand of Acid's residual burn damage a fire-immune victim? |
+| `check_zeal_strike.sh` | Does Zeal end when the paladin strikes a creature it did not choose, and survive both an ordinary turn and a blow at the target it did choose? |
 
 `tools/README.md` §7 groups these into five tiers by what each needs — a clean
 clone, a compiler, a POSIX build, a built artefact, or a recorded baseline — and

@@ -1,0 +1,68 @@
+# Make a human paladin of Erich and get into the dungeon.
+#
+# There is no paladin among the other chargen scripts, and Zeal is a paladin
+# spell, so tools/keys/zeal-strike.keys needs this one. It is built the same
+# way as chargen-priest.keys -- by name where a name is on screen, by loop
+# where the number of questions follows the seed -- for the same reason: a
+# fixed stream of letters cannot answer a question that is only sometimes
+# asked, and the letter beside an entry moves when the list above it changes.
+#
+# THE ORDER THE GAME ASKS IN, measured on seed 4:
+#
+#   race                 Human
+#   racial skill x2      Human alone gets to name two skills as racial ones
+#                        (see the race screen: "They may choose any two
+#                        skills to treat as racial skills"), so this pair of
+#                        prompts does not appear for any other race.
+#   class                Paladin
+#   god                  asked here, not after the skills as it is for a
+#                        priest, because the paladin class is CF_RELIGIOUS
+#                        and the game settles the god before the attributes.
+#                        Erich because Zeal's own Desc says the spell "finds
+#                        great favour with the paladins who serve Erich".
+#   attributes           the first of the offered sets
+#   alignment            the first offered; the class is CF_GOOD | CF_LAWFUL,
+#                        so the game offers Lawful Good and little else
+#   feats                a human paladin gets three at first level, so this
+#                        is a loop rather than three letters
+#   skill ranks          one pool
+#   personality          colour only
+#
+# The trailing ESC dismisses the room description box that the game puts up
+# on arrival ("Entry Chamber ... your first sight of the goblin caves").
+# Without it the next key in the caller's script is eaten dismissing the box,
+# and everything after it is off by one. Measured: with the ESC removed, the
+# 'w' meant for wizard mode dismissed the box instead and the following 'y'
+# opened the Yuse verb menu, because command keys are matched without regard
+# to case and KY_CMD_YUSE is 'Y'.
+#
+# NOTE the paladin arrives with his sacred mount standing beside him -- a 'q'
+# immediately west of the '@' on seed 4. A caller that wants an empty square
+# next to the player must not assume west is free.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Human"
+@choose "Athletics"      # first racial skill
+@choose "Diplomacy"      # second racial skill
+@choose "Paladin"
+@choose "Erich"
+
+a       # Attributes: the first of the offered sets
+a       # Alignment:  the first offered
+
+@while "Choose a feat" a
+
+# Skill Manager. RIGHT spends a rank on the selected skill and stops at that
+# skill's maximum; DOWN moves to the next skill. The loop matches the stars
+# that count unspent ranks, not the header, which stays on screen when the
+# pool is empty and so would never become false.
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+@while "wish to worship" y
+@while "personality archetype" a
+
+ESC     # dismiss the arrival room description

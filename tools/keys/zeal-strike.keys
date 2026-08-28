@@ -1,0 +1,165 @@
+# Photograph the game's own Zeal indicator on both sides of TWO melee blows
+# thrown by the paladin who holds the spell: one at the target the spell chose,
+# one at a second creature. This is the session for bd inc-tek.31.
+#
+#   tools/headless.sh tools/keys/zeal-strike.keys 4
+#
+# Read the result with tools/check_zeal_strike.sh, which is what asserts. This
+# file only produces the screens.
+#
+# WHAT THE BEAD CLAIMS. lib/pspells.irh's Zeal is a copy of Sanctuary and
+# carries Sanctuary's defect unchanged. It registers three TRAP_EVENT stati on
+# landing -- EVICTIM(EV_STRIKE), EV_EFFECT and EV_MAGIC_STRIKE -- but defines
+# handlers for EVICTIM(EV_STRIKE), EV_STRIKE and EV_MAGIC_STRIKE. The two lists
+# do not match. Event dispatch (src/Event.cpp:322-340) calls a trap's effect
+# only when META(S->Mag) equals the event being thrown, so META(EV_STRIKE) --
+# the handler that ends the spell when the paladin attacks somebody other than
+# his chosen target -- is unreachable. The spell's own Desc promises "If the
+# paladin attacks any other target, the effect ceases -- the target is free to
+# attack him in turn."
+#
+# WHY THIS SESSION NEEDS TWO BLOWS AND NOT ONE. Zeal is not a plain copy of
+# Sanctuary: it adds an exemption so that the paladin may strike his chosen
+# target and keep the spell. All three handlers open with the same test,
+#
+#   if (GetHandle(EVictim) == EActor->GetEffStatiObj(EFF_FLAG1,$"Zeal"))
+#     return NOTHING;
+#
+# against a flag granted at cast time as $"zeal". A check that measured only
+# "Zeal ends on a blow" would pass a build in which that exemption had been
+# broken, which is the exact opposite of what the spell is for. So the session
+# strikes the CHOSEN target first and then the OTHER one, and the two readings
+# have to disagree.
+#
+# THE ORACLE IS THE STATUS LINE. src/Term.cpp:185 walks the player's stati on
+# every redraw and prints the name of any T_TEFFECT stati whose effect carries
+# EF_SHOWNAME. Zeal carries it, so the bottom line of the map screen reads
+#
+#   HP:31/31 Mana:19/19 FP:4/4 GP:11           Zeal Globe of Shadow |
+#
+# for exactly as long as the paladin holds the spell, and stops the moment the
+# stati goes. The key script cannot write that word: it only sends keystrokes,
+# and the string comes from the player's live stati list, not from a message
+# that could linger in the message window. ("Globe of Shadow" beside it is the
+# babau's own darkness, not part of the measurement.)
+#
+# FIVE PHOTOGRAPHS, and the comparisons between them are the whole test:
+#
+#   after-cast       the spell has just landed -- Zeal MUST be shown
+#   after-nonattack  three searches later -- MUST still be shown
+#   after-chosen     one blow at the CHOSEN target later -- MUST still be shown
+#   after-other      one blow at the SECOND babau later -- MUST be gone
+#
+# THE FIRST TWO ARE CONTROLS AND THEY ARE NOT DECORATION. Without them a build
+# that never applied Zeal at all, or one that dropped it on any turn that
+# passed, would show an absent indicator after the second blow and would be
+# read as proof that the blow ended it. The searches spend real game time
+# (measured on seed 4: turn 198021 at after-cast, 198030 at after-nonattack).
+#
+# WIZARD MODE SUPPLIES THE SPELL AND BOTH TARGETS, because no scripted walk
+# can be relied on to find any of them.
+#
+#   * Freeze Monsters (the eleventh row of the Wizard Mode Switches list) stops
+#     the babaus acting. A babau that fought back would attack the player,
+#     which is EVICTIM(EV_STRIKE) -- a different handler, and one that rolls a
+#     saving throw. This session must measure the paladin's own blows only.
+#   * "Learn Any Spell" takes a typed name and sets SP_KNOWN|SP_PRIMAL|SP_INNATE
+#     (src/Debug.cpp:862). An innate spell costs no mana, so the character
+#     reaches the blows with the spell up whatever the seed gave him. A quoted
+#     string in a key script is sent one character per keystroke, which is how
+#     "Zeal" reaches the ReadLine.
+#   * A babau, and not the goblin that tools/keys/sanctuary-strike.keys uses,
+#     for two reasons. Zeal's EV_ISTARGET returns CANNOT_CAST_IT unless the
+#     victim isMType(MA_EVIL), and a babau is always Chaotic Evil. And the
+#     chosen target has to survive being hit, because the session goes on to
+#     strike the other creature afterwards: a babau has 7d20+35 hit points
+#     against a first-level paladin's 1d8+1 +2d6-vs-evil, and a goblin would
+#     not have lived through the first blow.
+#   * The paladin's sacred mount stands immediately WEST of him on arrival, so
+#     the two babaus go EAST (the chosen target) and NORTH (the other one).
+#     Striking west would hit his own horse.
+#
+# @choose "Zeal" presses the Spell Manager letter beside the spell, which casts
+# it outright -- ENTER afterwards would be a second, separate command. The
+# RIGHT then ENTER after it answer the spell's own Q_TAR prompt: RIGHT walks
+# the target cursor one square east onto the chosen babau, ENTER takes it.
+#
+# The player-data dump is corroboration, not the oracle: wizard mode "Examine
+# Player Data" prints every stati with its event code, so the three TRAP EVENT
+# rows tagged (eID:Zeal) show which events the spell actually trapped. On the
+# unfixed build their Mag values are 2019, 52 and 83 -- EVICTIM(EV_STRIKE),
+# EV_EFFECT and EV_MAGIC_STRIKE; the fix turns the 52 into a 19. It is
+# scrolled to with DOWN because the dump is longer than the screen.
+
+@include chargen-paladin.keys
+
+# Freeze Monsters, the eleventh row of the switches list.
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+w
+@choose "Learn Any Spell"
+"Zeal"
+ENTER
+
+# The chosen target, east of the player.
+w
+@choose "Monster Summoning"
+@choose "Demons"
+@choose "babau"
+RIGHT
+ENTER
+
+# The other creature, north of the player.
+w
+@choose "Monster Summoning"
+@choose "Demons"
+@choose "babau"
+UP
+ENTER
+
+m
+@choose "Zeal"
+RIGHT
+ENTER
+@dump:after-cast
+
+# What the traps actually are, before anything disturbs them.
+w
+@choose "Examine Player Data"
+DOWN*40
+@dump:traps-before
+ESC
+
+# --- the first control: three searches, none of them an attack -------------
+s
+s
+s
+@dump:after-nonattack
+
+# --- the blow at the CHOSEN target: Zeal must survive it -------------------
+RIGHT
+@while "Confirm attack" y
+@dump:after-chosen
+v
+@dump:chosen-log
+@while "Messages" ESC
+
+# --- the blow at the OTHER creature: Zeal must end --------------------------
+UP
+@while "Confirm attack" y
+@dump:after-other
+v
+@dump:other-log
+@while "Messages" ESC
+
+w
+@choose "Examine Player Data"
+DOWN*40
+@dump:traps-after
+ESC
+@quit
