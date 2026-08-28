@@ -4356,9 +4356,30 @@ Effect "Unholy Blight" : EA_BLAST
       throws) good creatures who fail a Fortitude save 
       for 1d4 rounds."; }
 and EA_INFLICT
+  /* upstream: base-code defect, fix is ours. This EA_INFLICT segment assigned
+     xval TWICE -- `xval: ADJUST_CIRC` then `xval: A_AID` -- so the second write
+     overwrote the first and the applied stati became A_AID (51), an undefined
+     stati, while the attribute group the ADJUST_CIRC penalty acts on was never
+     set. The sicken was therefore inert: a good creature that failed the save
+     gained nothing. The second token was meant to be `yval: A_AID` -- the
+     attribute group of the -2 circumstance penalty -- as the sibling Thornwrack
+     effect shows (`xval: ADJUST_CIRC; yval: A_AID`), and the parallel spells
+     Order's Wrath (`xval: STUNNED`) and Chaos Hammer (`xval: CONFUSED`) each
+     carry a single xval. The defect is upstream's, not a port artefact: lib/ is
+     unchanged by the port, this is a data double-assignment in an effect
+     declaration, and a Win32 build with the original typedefs parses the same
+     doubled xval and applies the same undefined stati. Only that one token
+     changed from xval to yval; ADJUST_CIRC, the pval, Flags and the STATINAME
+     are untouched. Tier Traced -- grep and a module rebuild prove the single
+     xval and the yval token; A_AID is 51 (inc/Defines.h) and no stati of that
+     number exists, so the pre-fix write applied nothing. A deterministic
+     gameplay reading was not forced: the sicken lands only when a MA_GOOD
+     creature fails a Fort save while surviving the same-cast evil blast, and no
+     wizard facility forces a save result. Tracking inc-tek.8.7 (PA-07-F4). Not
+     sent. */
   { xval: ADJUST_CIRC; tval: MA_GOOD; sval: FORT; aval: AR_GLOBE;
-    lval: 6; xval: A_AID; pval: -2;
-    Flags: EF_EVIL, EF_LIM_MTYPE, EF_DSHORT, EF_SHOWNAME; 
+    lval: 6; yval: A_AID; pval: -2;
+    Flags: EF_EVIL, EF_LIM_MTYPE, EF_DSHORT, EF_SHOWNAME;
     On Event MSG_STATINAME "Sickened" "Sick"; }
 
 Effect "Order's Wrath" : EA_BLAST

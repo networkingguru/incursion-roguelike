@@ -509,6 +509,7 @@ the unfixed tree before it is trusted.
 | `check_javelin_lightning_savedc.sh` | Does the Javelin of Lightning's Reflex save use the DC its description promises? |
 | `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? |
 | `check_underdark_live.sh` | Does the Underdark Warrior check its race requirement, and refuse the grey elf? |
+| `check_unholy_blight.sh` | Does Unholy Blight's inflict segment carry one `xval` (`ADJUST_CIRC`) and `yval: A_AID`, so the sicken lands, rather than the doubled `xval` that made it inert? |
 | `check_uninit_reads.sh` | Does the shipping build carry no high-confidence uninitialised-variable reads (`-Wuninitialized`, `-Wsometimes-uninitialized`)? |
 | `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? |
 | `check_wand_acid_type.sh` | Does the Wand of Acid's residual burn damage a fire-immune victim? |
