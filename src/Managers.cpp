@@ -708,6 +708,7 @@ ResetCurrCon:
             if (currCon)
                 UpdateScrollArea(offset + (1 + p->Opt(OPT_SCROLL_MAG)));
             break;
+        case 200 + EAST:      /* Deck: Right = next container, mirrors TAB. inc-7h6s. */
         case KY_TAB:
             changed = true;
             if (cs > SL_PACK)
@@ -728,6 +729,28 @@ ResetCurrCon:
                 }
                 if (cs >= SL_LAST)
                     cs = -2;
+            } while (cs != ocs);
+            break;
+        case 200 + WEST:      /* Deck: Left = previous container. inc-7h6s. */
+            changed = true;
+            if (cs > SL_PACK)
+                cs = 0;
+            ocs = cs;
+            do {
+                cs--;
+                if (cs < -1)
+                    cs = SL_LAST - 1;
+                if (cs == -1) {
+                    if (theChest) {
+                        currCon = theChest;
+                        break;
+                    }
+                } else if (p->Inv[cs] && oItem(p->Inv[cs])->isType(T_CONTAIN) && (p->InSlot(cs))) {
+                    currCon = (Container*)oItem(p->Inv[cs]);
+                    if (CurrSlot >= NUM_SLOTS)
+                        CurrSlot = 1;
+                    break;
+                }
             } while (cs != ocs);
             break;
         case KY_HELP:
@@ -1655,7 +1678,7 @@ Recount:
             LITERAL_CHAR, LITERAL_CHAR1(GLYPH_ARROW_DOWN), LITERAL_CHAR2(GLYPH_ARROW_DOWN),
             LITERAL_CHAR, LITERAL_CHAR1(GLYPH_ARROW_LEFT), LITERAL_CHAR2(GLYPH_ARROW_LEFT),
             LITERAL_CHAR, LITERAL_CHAR1(GLYPH_ARROW_RIGHT), LITERAL_CHAR2(GLYPH_ARROW_RIGHT)));
-        Write(0, WinSizeY() - 2, Format("[?] Skill Manager Help / Skill Descriptions [TAB] Change Class"));
+        Write(0, WinSizeY() - 2, Format("[?] Skill Manager Help / Skill Descriptions [TAB/c] Change Class"));
 
         SizeWin(WIN_MENUDESC, x1 + 2, y1 + sl + SKILLS_SHOWN + 1, x2 - 2, y2 - 3);
 
@@ -1680,6 +1703,7 @@ Recount:
             switch (ch) {
             case KY_REDRAW:
                 goto Recount;
+            case 'c': case 'C':   /* Deck: plain-letter alias for Change Class. inc-7h6s. */
             case KY_CMD_TAB:
             case KY_TAB:
                 int8 occ; occ = cc;

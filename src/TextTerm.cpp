@@ -1202,12 +1202,27 @@ InvalidChar:
             }
             break;
         case KY_CMD_WEST:
+            /* Deck: Left moves one column left, or turns the page back when
+               already at the left edge (where it used to do nothing), so a
+               handheld with only arrow keys can page. inc-7h6s. */
             if (c - vRows >= vStart)
                 c -= vRows;
+            else if (paged) {
+                c = c - (c % pageSize) - pageSize;
+                if (c < 0)
+                    c = ((OptionCount - 1) / pageSize) * pageSize;
+            }
             break;
         case KY_CMD_EAST:
+            /* Deck: Right moves one column right, or turns the page forward
+               when already at the right edge, mirroring TAB. inc-7h6s. */
             if (c + vRows <= min(OptionCount-1,vStart+(vRows*Cols-1)))
                 c += vRows;
+            else if (paged) {
+                c += pageSize - (c % pageSize);
+                if (c >= OptionCount)
+                    c = 0;
+            }
             break;
         case KY_TAB:
             /* Next page, wrapping. Only a paged menu has one, and TAB is

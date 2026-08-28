@@ -1,0 +1,50 @@
+# Page a long selection menu with the RIGHT arrow, not TAB: inc-7h6s.
+#
+# The Steam Deck maps a stick to the arrow keys, so a player has Right and Left
+# at hand but not Tab. A single-column paged LMenu must therefore page on Right
+# (forward) and Left (back), mirroring Tab and Shift-Tab. This script proves the
+# forward half on the same menu tools/keys/menu-overflow.keys uses.
+#
+# WHY THIS CHARACTER. A Wood Elf Druid at seed 7 is offered 88 feats, more than
+# the 52 letters a page can show, so the list pages. Natural Aptitude is the
+# 61st of the 88 -- it is NOT on the first page. The only way to reach it is to
+# turn the page.
+#
+# WHAT MAKES IT AN ORACLE. This script turns the page with RIGHT, never TAB. On
+# a build without the inc-7h6s change RIGHT does the old within-page column move
+# and never crosses a page boundary, so "Natural Aptitude" never appears, the
+# @until below exhausts, and the run fails instead of reaching @choose. So a
+# green run proves RIGHT paged the menu forward. @choose then reads the letter
+# the game printed beside the name, so the feat was also selectable, not merely
+# visible.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Elf"
+@choose "Wood Elf"
+@choose "Druid"
+a       # Attributes: the first of the offered sets
+e       # Alignment: [e] Neutral
+
+@expect "Choose a feat"
+@until "Natural Aptitud" RIGHT   # RIGHT pages the menu forward, not TAB
+@choose "Natural Aptitude"
+@expect "Choose a skill"
+@choose "Alchemy"                # a skill no druid carries, so the sheet
+                                 #   showing it is the feat having worked
+
+@while "Choose a feat" a         # whatever else the class asks for
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y                          # Done, and confirm keeping the ranks
+a                                # Personality archetype
+@while "Choose a feat" a
+a a a a                          # starting spells
+
+@until "Entry Chamber" ESC       # in play
+d                                # character sheet
+@until "Natural Aptitude" PGDN   # scroll to the Feats block
+@dump:sheet-feats
+ESC
+@quit
