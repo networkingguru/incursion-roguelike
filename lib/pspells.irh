@@ -1550,6 +1550,26 @@ Druid Spell "Snowstrike" : EA_BLAST
   { SC_EVO; SC_COLD; SC_WATER; Base: SP_MEDIUM; Cost: 5; Level: 2; sval: REF partial;
     xval: AD_COLD; pval: (LEVEL_EVERY2)d4; Purpose: EP_ATTACK;
     aval: AR_BALL; qval: Q_DIR | Q_TAR; cval: COL_COLD; lval: 2;
+    /* upstream: base-code defect, fix is ours. This EA_BLAST effect carried no
+       Flags line, so EF_CASTER_IMMUNE and EF_ALLIES_IMMUNE were both absent and
+       the AR_BALL cold blast froze the caster and her allies -- directly against
+       this spell's own Desc below, which promises "The caster and her allies are
+       immune to the effect". Magic.cpp's target test (EF_CASTER_IMMUNE exempts
+       the caster, EF_ALLIES_IMMUNE exempts friendly creatures) never fired
+       because the flags were not set. The sibling Ice Dagger, an EA_BLAST cold
+       blast that says "The caster is immune", carries flags: EF_CASTER_IMMUNE and
+       confirms the mechanism. The defect is upstream's, not a port artefact:
+       lib/ is unchanged by the port, this is a data declaration, and a Win32
+       build with the original typedefs ships the same flagless declaration and
+       reads the same missing immunity against the same prose. Not a D&D
+       divergence: the Desc states the immunity explicitly. Added both flags so
+       the caster and her allies are immune as the Desc promises; nothing else
+       changes -- the pval (LEVEL_EVERY2)d4 and the Desc are untouched. Tier
+       Traced -- grep and a module rebuild prove the flags parse; a friendly
+       creature reliably inside the 1-square blast could not be staged for a
+       clean before/after cold reading. Tracking inc-tek.8.7 (PA-07-F7). Not
+       sent. */
+    Flags: EF_CASTER_IMMUNE, EF_ALLIES_IMMUNE;
     Desc: "Creates an explosive blast of snow that deals (caster level / 2)d4
     points of cold damage to all creatures within a 10 foot (1 square)
     radius. The caster and her allies are immune to the effect."; 
