@@ -316,11 +316,11 @@ Priest / Sorcerer  Spell "Command" : EA_GENERIC
           break;
         }
         };
+    // upstream: the code deliberately removed Command's EF_LIM_LEVEL limit (see the commented-out tval/Flags line and the maintainer's own note above: "Let's remove that limit."), yet this Desc still advertised it; the same stale prose ships on Win32 with the original data, so it misdescribes the spell there too; the CODE is correct -- the limit's removal is deliberate -- so nobody should re-add EF_LIM_LEVEL to match the old prose; Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.7 / PA-07-F8; not sent.
     Desc: "Allows you to speak one of six one-word commands that a single
       target creature will be forced to obey for a brief time: flee, yield,
       kneel (i.e., drop prone), attack (the nearest creature), drop (held
-      items) or halt (freeze in place). Does not affect creatures whose
-      CR is more than 2/3rds your level.";
+      items) or halt (freeze in place).";
   }  
 
 Priest / Druid / Sorcerer Spell "Cure Light Wounds" : EA_HEALING
