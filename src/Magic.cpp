@@ -3696,8 +3696,8 @@ Failed:
   }
       
 EvReturn Item::Activate(EventInfo &e)
-  {             
-    EvReturn r;
+  {
+    EvReturn r; Item *unit = NULL;
     e.isActivation = true;
     if (!e.eID)
       e.eID = eID;
@@ -3714,19 +3714,31 @@ EvReturn Item::Activate(EventInfo &e)
         }        
 
     if (e.EItem->Quantity > 1)
-      e.EItem = e.EItem->TakeOne();
+      unit = e.EItem = e.EItem->TakeOne();
     e.isItem = true;
     r = ReThrow(EV_EFFECT,e);
-    /* I'm not sure what this is supposed to do (returning
-       weapons?) but it's killing my attempt to implement
-       the Rod of the Python. */
-    /*
-    if (e.EItem->Owner() != e.EActor)
-      if (!(e.EItem->Flags & F_DELETE))
-        e.EActor->GainItem(e.EItem);
-    */
+
+    // upstream: plain control-flow, not a port artefact -- no typedef, pointer
+    // width, endianness or compiler extension is involved, so a Win32/MSVC
+    // build of the original source loses the unit in exactly the same place.
+    // TakeOne() above always leaves its unit outside the pack, so every exit
+    // owes it a disposal, and this function had none on any exit, success
+    // included. Activating a rod or a horn does not spend it, so one unit of
+    // every stack died on every activation. The give-back was commented out
+    // upstream because it fired for a Quantity-1 item too, and the Rod of the
+    // Python (lib/m_items.irh) Remove(false)s the very rod it turns into a
+    // snake; `unit` is what makes that safe, because it is set only when this
+    // function did the splitting. Ceiling: a player carrying a STACK of those
+    // transforming rods still gets one back, which no cheap test here can
+    // tell apart from an ordinary activation.
+    // Evidence: Observed -- tools/check_activate_stack.sh, seed 4: before,
+    // "3 Horns of Plenty" became 2 on blowing one; after, the stack stays at
+    // 3 and the horn still conjures the food. inc-od6j. Not sent.
+    if (unit && !(unit->Flags & F_DELETE))
+      unit->GiveBackTo(e.EActor);
+
     return r;
-      
+
   }
       
 EvReturn Item::UseStaff(EventInfo &e)

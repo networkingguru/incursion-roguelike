@@ -1,0 +1,106 @@
+# Prove that activating one item out of a stack costs the stack nothing, and
+# that the activation still does its work. This is the oracle for inc-od6j.
+#
+#   tools/headless.sh tools/keys/activate-stack.keys 4
+#
+# THE ITEM IS A HORN OF PLENTY AND THE CHOICE IS DELIBERATE. Three things had
+# to be true of it at once. It stacks: it is a T_TOOL, and Item::operator==
+# (src/Item.cpp) lists T_TOOL as an easy-stack type, so three identical horns
+# merge into one pack entry. It is activated rather than consumed: blowing a
+# horn is not meant to spend it, so an honest run must end with the same three
+# horns it started with, which a potion or a scroll could never show. And its
+# effect announces itself in one fixed sentence -- lib/m_items.irh gives the
+# Plenty effect an EV_MAGIC_STRIKE message, "Fruits and produce appear at your
+# feet!", and drops a pile of fresh food on the floor. Nothing about that
+# message depends on a die roll, a monster or a saving throw, so the run needs
+# no seed hunting. Seed 4 is used only because tools/check_horn_panic.sh
+# already uses it.
+#
+# WIZARD MODE SUPPLIES THE HORNS, because no scripted walk can be relied on to
+# find three of one magic item. [e] Item Acquisition opens
+# TextTerm::AcquisitionPrompt (src/Term.cpp), which draws its candidates in the
+# message window with the selected row in the middle and has NO menu letters,
+# so @choose cannot reach a row. The idiom below is the one
+# tools/keys/horn-panic.keys uses: RIGHT*28 walks the glyph strip to the Horns
+# category, @until presses DOWN until the name appears at the bottom of that
+# three-line window, and one further DOWN moves the selection onto it. Adding a
+# horn effect to lib/ moves nothing here, because @until reads the name off the
+# screen rather than counting rows -- but adding a glyph category before Horns
+# WOULD break RIGHT*28, and then the run acquires something else. That is why
+# tools/check_activate_stack.sh re-reads the item's name out of the game's own
+# activate menu and calls a run that never held three horns INCONCLUSIVE.
+#
+# There is no quantity prompt in the acquisition list, so the block is written
+# out three times. The two @while lines after each ENTER are insurance: an
+# acquired item that will not stack lands in the In-the-Air slot and opens the
+# inventory manager, which refuses to close while that slot is full. With these
+# horns the game auto-stows instead and both lines fire zero times.
+#
+# Two menu dumps, and the comparison between them is the whole test:
+#
+#   menu-before   "[a] (in pack) 3 Horns of Plenty (3 uses left)"
+#   blown         "Fruits and produce appear at your feet!"
+#   menu-after    the same three horns. Item::Activate (src/Magic.cpp) split
+#                 one unit off the stack with TakeOne() and never gave it back,
+#                 so before the fix this line read TWO Horns of Plenty.
+#
+# The blown screen is not decoration. It is the half that fails if a "fix"
+# keeps the stack whole by refusing to fire the effect at all.
+
+@include chargen.keys
+
+# Auto-Identify Items, so the horns arrive fully known and therefore identical
+# to each other. Two units the game describes differently do not stack.
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE
+ESC
+
+# --- three Horns of Plenty --------------------------------------------------
+w
+@choose "Item Acquisition"
+RIGHT*28                # the Horns glyph category
+@until "Horn of Plenty" DOWN
+DOWN
+ENTER
+@while "In the Air':Horn" s
+@while "Ready Hand" ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*28
+@until "Horn of Plenty" DOWN
+DOWN
+ENTER
+@while "In the Air':Horn" s
+@while "Ready Hand" ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*28
+@until "Horn of Plenty" DOWN
+DOWN
+ENTER
+@while "In the Air':Horn" s
+@while "Ready Hand" ESC
+
+# --- blow one of the three --------------------------------------------------
+# The activate menu is an ordinary LMenu and does carry letters, but its
+# letters move: the pile of food this activation drops joins the list ahead of
+# the horns, so the horns are [a] before and [b] after. @choose reads the
+# letter the game printed rather than assuming one. Player::ItemMenu writes an
+# item held in a container as "(in pack) 3 Horns of Plenty", so the count is
+# part of the name, and a run in which the count is not 3 stops here instead of
+# activating something else.
+a
+@dump:menu-before
+@choose "(in pack) 3 Horns of Plenty"
+@dump:blown
+
+a
+@dump:menu-after
+ESC
+
+@quit
