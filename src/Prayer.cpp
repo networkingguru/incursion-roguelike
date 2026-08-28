@@ -1247,8 +1247,10 @@ EvReturn Character::Convert(EventInfo &e)
   
 EvReturn Character::ConvertAltar(EventInfo &e)
   {
-    int16 roll, bonus, rel; rID altarID; 
-    bool doWrath, isCeded; String nums;
+    int16 roll, bonus, rel; rID altarID;
+    bool doWrath, isCeded = false; String nums;  /* init: the goto autoFail
+      (~1288) jumps past the isCeded=false at ~1295, so init here; no path then
+      reads it unset. Latent, not a reachable bug -- no upstream mark. */
     
     altarID = e.ETarget->GetStatiEID(MY_GOD);
     

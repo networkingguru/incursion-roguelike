@@ -3277,7 +3277,11 @@ void Player::GainAbility(int16 ab, uint32 pa, rID sourceID, int16 statiSource) {
         break; 
     case CA_TATTOOS:
         {
-            bool found;
+            bool found = false;  /* upstream: was uninitialised; if the loop
+              offers no tattoo (all already taken or filtered by EV_PREREQ) the
+              !found guard at ~3297 reads indeterminate storage. Unreachable in
+              play (13 of 14 tattoos have no prereq, at most 5 are gained), but
+              wrong on any compiler. Traced (clang). inc-5yb, not sent. */
             int16 i, j;
             rID tatID;
 

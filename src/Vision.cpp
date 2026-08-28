@@ -378,7 +378,11 @@ bool Player::Seen(int16 x, int16 y) {
 // something. 
 uint16 Creature::Perceives(Thing *t, bool assertLOS) {
     int16 i, tx, ty;
-    uint16 Per;
+    uint16 Per = 0;  /* upstream: was uninitialised; line ~408 ORs PER_VISUAL
+                        into Per on the monster-perceives-its-leader path, a
+                        read of indeterminate storage. Wrong on any compiler and
+                        on Win32. Traced (clang -Wuninitialized). inc-5aw6, not
+                        sent. */
     bool isBlind;
     // ww: somewhat like a mutex to prevent infinite recursion
     static int16 limit = 0;

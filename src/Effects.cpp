@@ -738,7 +738,10 @@ EvReturn Magic::Polymorph(EventInfo &e)
       { mID = e.EMagic->rval; goto SkipChecks; }
     else if (e.MM & MM_CONTROL)
       {
-        int16 best, bestCR, n;
+        int16 best = 0, bestCR, n;  /* upstream: best was uninitialised; an NPC
+          caster (neither isMonster nor isPlayer) skips both branches below and
+          line ~762 indexes Candidates[best] out of bounds. Wrong on any
+          compiler and on Win32. Traced. inc-l796, not sent. */
         rID Candidates[40];
         n = 3 + max(0,e.EActor->Mod(A_INT));
         for (i=0;i!=n;i++)

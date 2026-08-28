@@ -3130,8 +3130,12 @@ void Creature::Devour(Corpse * c) {
 EvReturn Character::CraftItem(int16 abil) {
 	int8 i;
 	int16 new_lev, c, max_lev, qual, old_lev,
-		repairDC, craftDC, itemType, itemSource, acqVal,
-		useSkill, minSkill, hours, quan; int32 gpCost, XPCost;
+		repairDC, craftDC,
+		/* init: ChoicePrompt below returns only r/t/c; r->Repair, t->Temper,
+		   c sets these four, so the unset fall-through clang flags is
+		   unreachable. Defensive, not a real bug -- no upstream mark. */
+		itemType = -1, itemSource = -1, acqVal = ACQ_CRAFT,
+		useSkill = SK_CRAFT, minSkill, hours, quan; int32 gpCost, XPCost;
 	Feature *ft; hObj hItem; char ch; Item *it, *it2;
 
 	int16 XPCostTable[] = {

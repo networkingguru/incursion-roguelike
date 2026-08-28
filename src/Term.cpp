@@ -480,7 +480,9 @@ void TextTerm::ShowTraits() {
           Color(GREY);
         Write(Format("%2d",p->KAttr[i]));
         if (p->Opt(OPT_SIDEBAR) && i >= 0 && i <= 2) {
-          int16 a,b;
+          int16 a = 0, b = 0;  /* init: the outer i>=0&&i<=2 guard makes the
+            i==0/1/2 chain below exhaustive; clang can't correlate them.
+            Defensive, not a real bug -- no upstream mark. */
           if (i == 0) {
             a = (int16)p->cHP+p->KAttr[A_THP]-p->Attr[A_THP];
             b = (int16)p->mHP+p->Attr[A_THP];
