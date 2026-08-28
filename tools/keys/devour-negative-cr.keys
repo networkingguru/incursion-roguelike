@@ -1,0 +1,133 @@
+# Devour one corpse of NEGATIVE challenge rating and one of positive challenge
+# rating, and photograph the game's own experience-point counter either side of
+# each meal. This is the session for bd inc-i9p.
+#
+#   tools/headless.sh tools/keys/devour-negative-cr.keys 4
+#
+# Read the result with tools/check_devour_negative_cr.sh, which is what asserts
+# on the numbers. This file only produces the screens.
+#
+# WHAT THE BEAD CLAIMED. Creature::DevourMonster (src/Skills.cpp) ends with
+#
+#     i = CR * 50;
+#     for (j = ChallengeRating(); j >= CR; j--) i /= 2;
+#     GainXP(i);
+#
+# i and j are int16 and Character::GainXP takes a uint32, so a NEGATIVE i would
+# be converted to a huge unsigned number and would subtract experience instead
+# of adding it. A myconid is written "CR: -2" in lib/mon2.irh, so the bead read
+# that as an experience LOSS of six points for a 1st-level devourer.
+#
+# WHAT THIS SESSION FOUND. It does not happen, because CR never reaches this
+# arithmetic as a negative number. Creature::ChallengeRating (src/Creature.cpp)
+# is declared "int16 ChallengeRating(bool allow_neg = false)" and its last line
+# is "return max(0,CR)". DevourMonster calls it with no argument, so a CR -2
+# myconid arrives here as ZERO and the award is 0 * 50 = 0.
+#
+# THE ORACLE IS THE STATUS SIDEBAR, which the game writes as "<n>/<next> XP"
+# (src/Term.cpp:369). Four photographs, and the comparison between them is the
+# whole test:
+#
+#   xp-before-myconid   after the myconid is killed, before it is eaten
+#   xp-after-myconid    after it is eaten -- MUST NOT be lower
+#   xp-before-tabaxi    after the tabaxi is killed, before it is eaten
+#   xp-after-tabaxi     after it is eaten -- MUST be higher
+#
+# THE TABAXI IS THE CONTROL AND IT IS NOT DECORATION. Without it, a session in
+# which DevourMonster returned early -- or in which the character had no
+# Devouring ability at all -- would show an unchanged number and would be read
+# as proof that nothing was subtracted. The tabaxi is written "CR: 2"
+# (lib/mon2.irh), the devourer stands at character level 1, so the halving loop
+# never runs and the award is the full 2 * 50 = 100 points. A run that does not
+# see that award has not exercised the code this bead is about.
+#
+# WHY THESE TWO MONSTERS. The myconid is the bead's own worked example and is
+# the lowest-CR creature the summon menu offers in a group that can be named.
+# The tabaxi is the cheapest CR 2 creature that leaves an ordinary corpse: the
+# two githyanki-family monsters at the same CR carry CA_PHASE, which puts a
+# PHASED stati on the corpse (src/Fight.cpp) and hides it from a devourer
+# standing on the material plane.
+#
+# WIZARD MODE SUPPLIES BOTH, because no scripted walk can be relied on to find
+# a named creature. Freeze Monsters is switched on first (the eleventh row of
+# the Wizard Mode Switches list) so that neither summoned creature acts: the
+# myconid's spore attack is 3d6 AD_STUN, and a stunned character stops
+# answering the script.
+#
+# THE THREE IDIOMS THAT LOOK ODD, and all three are the game, not the script.
+#
+# 1. The first blow at each creature raises "Confirm attack the <name>?"
+#    (src/Player.cpp), because a freshly summoned creature is not yet hostile
+#    to the player's party. The bare RIGHT before each @until is the keystroke
+#    that raises that question and the @while is what answers it; afterwards
+#    the creature is hostile and the question is not asked again.
+# 2. @until "* <name>" RIGHT keeps swinging until the creature's glyph in the
+#    Things in View list turns from a creature into an item pile, which is how
+#    the script knows it is dead without counting blows.
+# 3. Stepping onto the corpse opens a "You see here:" panel that swallows the
+#    next keystroke, and the eat command is lowercase 'e' -- StandardKeySet
+#    lists KY_CMD_EAT with no modifier, and TokenToKey (src/Wposix.cpp) sets
+#    SHIFT for an uppercase letter, so a capital E reaches nothing at all.
+#
+# The "You finish eating ..." sentence is read off the message log rather than
+# off the map, because the map's message window holds two lines and the
+# alignment and disease messages that a corpse produces push that sentence off
+# it within the same turn.
+
+@include chargen.keys
+
+# Freeze Monsters, the eleventh row of the switches list.
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+# --- the CR -2 corpse: a myconid ---------------------------------------------
+w
+@choose "Monster Summoning"
+@choose "Aberration"
+@choose "myconid"
+RIGHT
+ENTER
+
+RIGHT
+@while "Confirm attack" y
+@until "* myconid" RIGHT
+@dump:xp-before-myconid
+
+RIGHT
+@while "You see here" ESC
+e
+@choose "(ground) myconid corpse"
+@while "Stop eating" n
+@dump:xp-after-myconid
+v
+@dump:log-myconid
+@while "Messages" ESC
+
+# --- the CR 2 control: a tabaxi ----------------------------------------------
+w
+@choose "Monster Summoning"
+@choose "Cats"
+@choose "tabaxi"
+RIGHT
+ENTER
+
+RIGHT
+@while "Confirm attack" y
+@until "* tabaxi" RIGHT
+@dump:xp-before-tabaxi
+
+RIGHT
+@while "You see here" ESC
+e
+@choose "(ground) tabaxi corpse"
+@while "Stop eating" n
+@dump:xp-after-tabaxi
+v
+@dump:log-tabaxi
+@while "Messages" ESC
+
+@quit
