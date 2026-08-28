@@ -1,0 +1,107 @@
+# Observe Retributive Mirror reflecting one third of incoming damage back at the
+# attacker, for bd inc-tek.8.7 (PA-07-F5).
+#
+#   tools/headless.sh tools/keys/retributive-mirror.keys 1
+#
+# WHAT IS MEASURED. Retributive Mirror is an EA_INFLICT self-buff whose
+# META(PRE(EVICTIM(EV_DAMAGE))) handler throws `bonus = e.vDmg / N` back at any
+# creature that strikes the warded caster (message source "retributive strike").
+# The spell's own Desc promises "one third of all damage dealt to you (round
+# down) is reflected", so N MUST be 3; the pre-fix line used 5. The reflected
+# damage is applied silently -- it prints no combat line -- so the oracle reads
+# it as the ATTACKER's hit-point drop, cross-checked against the incoming
+# damages the log prints with "Show All Combat Rolls" on.
+#
+# WHY A FIRE GIANT. A fire giant (MA_GIANT, M_EVIL) is hostile the instant it is
+# summoned and hits hard enough that its melee bypasses the caster's armour, so
+# each incoming e.vDmg is large and floor(/3) and floor(/5) differ by a clear
+# margin. Free Advancement raises the barbarian to level 5 for hit points, and
+# Cheat Death guarantees he survives the giant's full attack routine so the
+# giant's hit-point drop stays readable; the reflection has already struck the
+# giant by the time any death is resolved.
+#
+# HOW TO READ IT. "Examine Nearby Things" starts on the player; RIGHT cycles to
+# the next thing, and a monster's Dump prints its HP:cur/max. giant-before reads
+# max/max; giant-after reads (max - reflected)/max. The reflected total equals
+# the sum of floor(incoming_i / 3) over the giant's hits, read from the log.
+
+@include chargen.keys
+
+# One visit to the switches submenu. First wizard entry needs the "Enter wizard
+# mode? [yn]" confirm (w y); later entries do not (w alone). Rows top-to-bottom:
+# 1 Cheat Death, 3 Free Advancement, 12 Show All Combat Rolls.
+w
+y
+@choose "Wizard Mode Switches"
+SPACE
+DOWN*2
+SPACE
+DOWN*9
+SPACE
+ESC
+
+# Raise the barbarian to level 5 for survivable hit points.
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+ESC
+
+# Make Retributive Mirror castable regardless of class.
+w
+@choose "Learn Any Spell"
+"Retributive Mirror"
+ENTER
+
+# Summon a fire giant one square east of the caster.
+w
+@choose "Monster Summoning"
+@choose "Giant"
+@choose "fire giant"
+RIGHT
+ENTER
+
+# Read the giant's hit points before any blow lands (max/max).
+w
+@choose "Examine Nearby Things"
+@until "'H'" RIGHT
+@dump:giant-before
+ESC
+
+# Cast Retributive Mirror on the caster himself. "*" targets self.
+m
+@choose "Retributive Mirror"
+*
+
+# Let the giant take one turn and strike. Cheat Death revives the caster if the
+# routine would kill him; the reflection has already struck the giant.
+.
+@while "Die?" y
+
+# Read the giant's hit points after the blows (max - reflected)/max.
+w
+@choose "Examine Nearby Things"
+@until "'H'" RIGHT
+@dump:giant-after
+ESC
+
+# The combat log: every incoming damage number, for the floor(inc/3) cross-check.
+v
+@dump:log0
+PGUP
+@dump:log1
+@while "Messages" ESC
+@quit

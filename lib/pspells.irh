@@ -1278,7 +1278,21 @@ Effect "Retributive Mirror" : EA_INFLICT
       hObj caster;
       int16 bonus; 
         if (EActor != EVictim && EActor->isCreature()) {
-          bonus = e.vDmg / 5;
+          /* upstream: base-code defect, fix is ours. This handler reflected
+             e.vDmg / 5 while the spell's own Desc above promises "one third of
+             all damage dealt to you (round down) is reflected back to the
+             attacker". The divisor 5 pays one fifth, contradicting the spell's
+             only reference -- its own prose. Retributive Mirror is an Incursion
+             invention with no D&D twin, so the Desc is the intended value and
+             the divisor 5 is unambiguously wrong. The defect is upstream's, not
+             a port artefact: lib/ is unchanged by the port, this is a script
+             constant in a spell declaration, and a Win32 build with the
+             original typedefs parses the same / 5 against the same "one third"
+             prose. Only the divisor changed; the ThrowDmg call, the ABORT logic
+             and the Desc are untouched. Tier Observed -- an oracle reads the
+             reflected "retributive strike" damage as incoming/3, not
+             incoming/5. Tracking inc-tek.8.7 / PA-07-F5. Not sent. */
+          bonus = e.vDmg / 3;
           if (bonus > 0) {
             ThrowDmg(EV_DAMAGE,AD_NORM,bonus,"retributive strike",
               EVictim,EActor,EItem,EItem2);

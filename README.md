@@ -489,6 +489,7 @@ the unfixed tree before it is trusted.
 | `check_quiet_lookup.sh` | Does a dead object handle still resolve silently where silence is correct, and still complain where a complaint is correct? |
 | `check_race_feats.sh` | Does a Dragonkin get Mantis Leap on the character sheet? |
 | `check_readme_checks.sh` | Was a regression check added without a row in this table? |
+| `check_retributive_mirror.sh` | Does Retributive Mirror reflect one third of incoming damage (`e.vDmg / 3`), the fraction its own description promises, rather than the one fifth it paid before? |
 | `check_reveal_delete.sh` | Can a monster still delete itself inside `Reveal()` and leave the caller holding a dangling map pointer? |
 | `check_ring_fire_terrain.sh` | Can a Ring of Fire Resistance wearer cross magma while the same character without the ring is still refused? |
 | `check_rod_longsword_plus.sh` | Does the Rod of Lordly Might's labeled +1 flaming long sword grant exactly +1 to real to-hit and damage? |
