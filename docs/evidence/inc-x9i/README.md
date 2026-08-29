@@ -107,7 +107,7 @@ exactly that. It is in the **streamer** picker, and so is the `MIN_CHASM_DEPTH`
 test at `:1449`.
 
 Chasm floor also arrives as an ordinary **room**. The room picker at
-`:2397-2404` applies neither rule; its gates are `RoomTypes`, then `DepthCR`
+`src/MakeLev.cpp:2397-2404` applies neither rule; its gates are `RoomTypes`, then `DepthCR`
 against the region's own `Depth`, then `MIN_VAULT_DEPTH`, then `RF_CORRIDOR`,
 then a scan of what has already been used on this level.
 Three shipped regions place chasm — `"Twisting Chasm"` (`lib/dungeon.irh:3497`,
@@ -122,9 +122,9 @@ region that is not `RF_NOGEN` into every dungeon's pool (`:371-372`).
 Measured across 8 seeded sessions and 60 generated levels, one run directory
 each: chasm appears on 16 of the 31 levels generated shallower than `MIN_CHASM_DEPTH`,
 and on the bottom level in all three sessions that reached it. Down-stairs stop
-at level 9, which `:1879` intends. An earlier version of this file said "7
-sessions and 51 levels"; those runs shared directories (inc-uh0) and the totals
-were unreliable.
+at level 9, which the `Depth < Con[DUN_DEPTH]` gate at `src/MakeLev.cpp:1878`
+intends. An earlier version of this file said "7 sessions and 51 levels"; those
+runs shared directories (inc-uh0) and the totals were unreliable.
 
 ## Challenge difficulty really does make the dungeon 15 deep
 

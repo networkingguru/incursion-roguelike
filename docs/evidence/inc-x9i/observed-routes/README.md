@@ -99,7 +99,8 @@ GetDungeonMap depth=11 allocated=11 last_valid_index=10 reads_index=11
 ```
 
 Eleven handles, indices 0 to 10, and the function is asked for index 11. The
-loop at `:1004` runs `i <= Depth` and the return at `:1017` reads `[Depth]`.
+loop at `Feature.cpp:1004` runs `i <= Depth` and the return at
+`Feature.cpp:1017` reads `[Depth]`.
 The probe stays silent on both climb runs. That is the control, and it is
 narrower than it looks: the probe reports out-of-allocation REQUESTS, not calls,
 so the silence shows the climb branch never makes one. That the climb runs call

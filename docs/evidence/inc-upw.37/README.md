@@ -40,7 +40,7 @@ null dereference and not a use-after-free.
 | file | what it proves |
 |---|---|
 | `crash-backtrace.txt` | the faulting stack, with `Map::At(this=0x0, x=-1, y=-1)` |
-| `caller-is-self.txt` | `c == this` at the crash, so the guard at :342 did cover the object that later went null |
+| `caller-is-self.txt` | `c == this` at the crash, so the guard at `src/Creature.cpp:342` did cover the object that later went null |
 | `watchpoint-map-pointer.txt` | **the key artefact.** A hardware watchpoint on the caster's `m`, catching the write of null and naming every frame from `MakeNoise` down to `Thing::Remove` |
 | `size-change.txt` | `oldSize` 5 -> `Attr[A_SIZ]` 6, and `FaceRadius` 0 -> 1 |
 | `three-builds.txt` | unmodified / widen / collapse on one seed, one flag apart |
