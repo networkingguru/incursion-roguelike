@@ -74,6 +74,38 @@ status_of() {
         grep -oE '(OPEN|IN_PROGRESS|CLOSED|DEFERRED|BLOCKED)' | head -1
 }
 
+# Which check script, if any, drives this hook? Prints the scripts, or nothing.
+#
+# WHY THIS EXISTS. On 2026-08-29 this tool listed twelve hooks as HELD and told
+# the reader to delete each one from src/. Six of them are what a regression
+# check in tools/ sets to reach the state it measures: INCURSION_ARMOUR_PROBE
+# is how tools/check_armour_model.sh reads the armour model, and
+# INCURSION_HANDLE_BASE is how tools/check_menu_value.sh gives an ordinary
+# character wide object handles from birth. Obeying the instruction would have
+# broken six checks in one commit. A hook a check drives is a facility whatever
+# its bead says, and the KNOBS list above could not see that because it is a
+# hardcoded string of five names.
+#
+# This is DELIBERATELY NARROW. It changes the verdict only for a hook whose
+# bead is already closed. It does not touch the rule this whole file exists for
+# -- that a hook must name the bead it serves -- and a hook that names no bead
+# is still reported however many scripts drive it. Widening it to skip the
+# naming rule, the way KNOBS does, would exempt seven more hooks from the only
+# check here that has ever caught anything.
+#
+# tools/*.sh only, and never this script: a .keys file mentions a hook in a
+# comment without setting it, tools/README.md describes one in prose, and this
+# file lists them all by construction.
+# -w, not -F. A plain substring match says INCURSION_HANDLE_BASE is driven by a
+# script that only mentions INCURSION_HANDLE_BASE_XX, which is how the first
+# version of this function passed its own break test while measuring nothing.
+# -w requires a word boundary, and `_` counts as a word character to grep, so
+# the longer name no longer matches the shorter one.
+driven_by() {
+    grep -rlw "$1" tools --include='*.sh' 2>/dev/null |
+        grep -v 'check_probe_hooks\.sh$' | tr '\n' ' ' | sed 's/ $//'
+}
+
 if [ "${1:-}" = "--baseline" ]; then
     : > "$BASELINE"
     for h in $hooks; do
@@ -91,8 +123,8 @@ fi
     exit 2
 }
 
-orphans=0; stale=0; live=0; held=0; retired=0; knobs=0
-declare -a HELD_LIST RETIRED_LIST NEW_LIST
+orphans=0; stale=0; live=0; held=0; retired=0; knobs=0; inuse=0
+declare -a HELD_LIST RETIRED_LIST NEW_LIST INUSE_LIST
 
 for h in $hooks; do
     case " $KNOBS " in *" $h "*) knobs=$((knobs+1)); continue ;; esac
@@ -115,7 +147,10 @@ for h in $hooks; do
         OPEN|IN_PROGRESS|BLOCKED|"")
             live=$((live+1)) ;;
         *)
-            if ls docs/evidence/"$id"/*.patch > /dev/null 2>&1; then
+            drivers="$(driven_by "$h")"
+            if [ -n "$drivers" ]; then
+                inuse=$((inuse+1)); INUSE_LIST+=("$h ($id) <- $drivers")
+            elif ls docs/evidence/"$id"/*.patch > /dev/null 2>&1; then
                 retired=$((retired+1)); RETIRED_LIST+=("$h ($id)")
             else
                 held=$((held+1)); HELD_LIST+=("$h ($id)")
@@ -123,12 +158,21 @@ for h in $hooks; do
     esac
 done
 
-echo "hooks:    $((knobs + live + held + retired + orphans)) reading the environment in src/ and inc/"
+echo "hooks:    $((knobs + live + held + retired + orphans + inuse)) reading the environment in src/ and inc/"
 echo "  knob:      $knobs documented facility, not scaffolding"
 echo "  live:      $live serving a bead that is still open"
+echo "  in use:    $inuse bead finished, but a check in tools/ drives it"
 echo "  held:      $held bead finished, reproduction NOT yet preserved"
 echo "  retired:   $retired bead finished, reproduction preserved -- safe to delete"
 echo "  undeclared: $orphans naming no bead, known and baselined"
+
+if [ "$inuse" -gt 0 ]; then
+    echo
+    echo "IN USE -- the bead is finished, but a check in tools/ sets this hook"
+    echo "        to reach the state it measures. DO NOT DELETE THESE. The"
+    echo "        reproduction is the check, and it runs:"
+    printf '  %s\n' "${INUSE_LIST[@]}"
+fi
 
 if [ "$held" -gt 0 ]; then
     echo
