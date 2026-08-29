@@ -4594,10 +4594,11 @@ AI_RING Effect "the Chameleon" : EA_GRANT
 AI_RING Effect "Animal Kinship" : EA_GRANT
   { SC_THA; xval: SKILL_BONUS; yval: SK_ANIMAL_EMP; pval: PLUS_2PER1;
     Flags: EF_NEEDS_PLUS; Level: PLUS_2PER1; 
+    // upstream: the Animal Kinship ring Desc promised a "+3 or higher" threshold to use Animal Empathy untrained, but the entity has no +3 test and no INNATE_KIT grant, AND the threshold is redundant: the ring's own SKILL_BONUS SK_ANIMAL_EMP makes SkillLevel(SK_ANIMAL_EMP) nonzero, and the use-gate (src/Skills.cpp:1111) tests SkillLevel not SkillRanks (SkillLevel sums the item bonus with no trained-only gate, src/Create.cpp:4198-4243), so untrained attempts already work from +1; the CODE is correct and unchanged; dropped the false "+3 or higher" threshold and stated the untrained use plainly; the same prose ships on Win32 with the original data (prose in an item declaration, not a port artefact); Traced; inc-tek.8.8 / PA-08-F65; not sent.
     Desc: "This ring bestows a supernatural kinship to animals,
       improving your Animal Empathy skill by twice its level of
-      enchantment. At +3 or higher, it will allow you to use the
-      skill even if you have no ranks in it. In addition, true
+      enchantment. It will also allow you to use the skill even if
+      you have no ranks in it. In addition, true
       animals will always be initially neutral to you."; } 
   and EA_GRANT
   { xval: NEUTRAL_TO; yval: MA_ANIMAL; }
