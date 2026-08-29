@@ -1,0 +1,860 @@
+﻿"controller_mappings"
+{
+	"version"		"3"
+	"game"		"Incursion (Full Command Set)"
+	"title"		"#Title"
+	"description"		"#Description"
+	"controller_type"		"controller_rog_ally"
+	"major_revision"		"0"
+	"minor_revision"		"0"
+	"localization"
+	{
+		"english"
+		{
+			"Title"		"Incursion (Full Command Set)"
+			"Description"		"SHIFT LAYER: HOLD LB. While held, D-pad = macros F1-F4, A/B/X/Y = F5-F8, RB = F9, LT = F10, RT = F11, Menu = F12, View = Sleep; and LB+hold on A/B/X/Y gives Search / Rest / Activate / Blast. All 12 Incursion macro slots are reachable and there are NO double-taps anywhere. MOVEMENT IS GAME-SIDE (needs the SDL gamepad build): LEFT STICK = 8-way move with autorun on hold, RIGHT STICK = view pan; the sticks are never mode-shifted, so movement is unaffected by the shift. Stick clicks = stairs. BASE press/hold: D-pad Up=Kick/Pray, Down=Jump/Open, Left=Hide/Messages, Right=Look/Tab. A=Confirm/y. B=Cancel/n. X=Examine/Use. Y=Get/Inventory. RB=Attack/Quaff. LT=Magic/Read. RT=Fire/Target. Menu=Help/Eat. View=Options/Sheet. Keys are sent UNSHIFTED except Help (?) and stairs (< >). THE BACK BUTTONS (M1/M2) CANNOT BE BOUND on the ROG Ally: the pad reports them as keyboard keys F16/F17/F18/PROG1, not controller buttons. Do not try button_back_* or button_macro_*. Double-tap does not work on bumpers or back buttons. The d-pad must stay on keyboard keys, never raw gamepad: Steam's virtual pad exposes it only as a hat axis and SDL has no mapping for 28de:11ff."
+		}
+	}
+	"group"
+	{
+		"id"		"0"
+		"mode"		"four_buttons"
+		"inputs"
+		{
+			"button_a"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press RETURN, Confirm"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press Y, Yes / YUse"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"button_b"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press ESCAPE, Cancel"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press N, No / Name"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"button_x"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press X, Examine"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press U, Use"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"button_y"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press G, Get"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press I, Inventory"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+		}
+	}
+	"group"
+	{
+		"id"		"1"
+		"mode"		"dpad"
+		"inputs"
+		{
+			"dpad_north"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press K, Kick"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press P, Pray"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"dpad_south"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press J, Jump"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press O, Open"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"dpad_east"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press L, Look"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press TAB, Tab"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"dpad_west"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press H, Hide"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press V, Messages"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+		}
+		"settings"
+		{
+			"requires_click"		"0"
+			"deadzone_outer_radius"		"32767"
+		}
+	}
+	"group"
+	{
+		"id"		"2"
+		"mode"		"joystick_move"
+		"inputs"
+		{
+			"click"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press LEFT_SHIFT, Up stairs"
+							"binding"		"key_press COMMA, Up stairs"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+		}
+		"settings"
+		{
+			"requires_click"		"0"
+			"deadzone_inner_radius"		"0"
+			"deadzone_outer_radius"		"32767"
+		}
+	}
+	"group"
+	{
+		"id"		"3"
+		"mode"		"joystick_move"
+		"inputs"
+		{
+			"click"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press LEFT_SHIFT, Down stairs"
+							"binding"		"key_press PERIOD, Down stairs"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+		}
+		"settings"
+		{
+			"requires_click"		"0"
+			"deadzone_inner_radius"		"0"
+			"deadzone_outer_radius"		"32767"
+		}
+	}
+	"group"
+	{
+		"id"		"4"
+		"mode"		"trigger"
+		"inputs"
+		{
+			"edge"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press M, Magic"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press R, Read"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+		}
+	}
+	"group"
+	{
+		"id"		"5"
+		"mode"		"trigger"
+		"inputs"
+		{
+			"edge"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press F, Fire"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press T, Target"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+		}
+	}
+	"group"
+	{
+		"id"		"6"
+		"mode"		"switches"
+		"inputs"
+		{
+			"left_bumper"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"mode_shift button_diamond 7, Shift"
+							"binding"		"mode_shift dpad 8, Shift"
+							"binding"		"mode_shift left_trigger 9, Shift"
+							"binding"		"mode_shift right_trigger 10, Shift"
+							"binding"		"mode_shift switch 11, Shift"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"right_bumper"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press C, Attack"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press Q, Quaff"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"button_menu"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press LEFT_SHIFT, Help"
+							"binding"		"key_press FORWARD_SLASH, Help"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press E, Eat"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"button_escape"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press EQUALS, Options"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press D, Sheet"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+		}
+	}
+	"group"
+	{
+		"id"		"7"
+		"mode"		"four_buttons"
+		"inputs"
+		{
+			"button_a"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press F5, Macro F5"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press S, Search"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"button_b"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press F6, Macro F6"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press PERIOD, Rest"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"button_x"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press F7, Macro F7"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press A, Activate"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"button_y"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press F8, Macro F8"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press B, Blast"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+		}
+	}
+	"group"
+	{
+		"id"		"8"
+		"mode"		"dpad"
+		"inputs"
+		{
+			"dpad_north"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press F1, Macro F1"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"dpad_south"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press F2, Macro F2"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"dpad_west"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press F3, Macro F3"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"dpad_east"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press F4, Macro F4"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+		}
+		"settings"
+		{
+			"requires_click"		"0"
+			"deadzone_outer_radius"		"32767"
+		}
+	}
+	"group"
+	{
+		"id"		"9"
+		"mode"		"trigger"
+		"inputs"
+		{
+			"edge"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press F10, Macro F10"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+		}
+	}
+	"group"
+	{
+		"id"		"10"
+		"mode"		"trigger"
+		"inputs"
+		{
+			"edge"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press F11, Macro F11"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+		}
+	}
+	"group"
+	{
+		"id"		"11"
+		"mode"		"switches"
+		"inputs"
+		{
+			"right_bumper"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press F9, Macro F9"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"button_menu"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press F12, Macro F12"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+			"button_escape"
+			{
+				"activators"
+				{
+					"Full_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press Z, Sleep"
+						}
+						"settings"
+						{
+							"haptic_intensity"		"1"
+						}
+					}
+				}
+			}
+		}
+	}
+	"preset"
+	{
+		"id"		"0"
+		"name"		"Default"
+		"group_source_bindings"
+		{
+			"0"		"button_diamond active"
+			"1"		"dpad active"
+			"2"		"joystick active"
+			"3"		"right_joystick active"
+			"4"		"left_trigger active"
+			"5"		"right_trigger active"
+			"6"		"switch active"
+			"7"		"button_diamond active modeshift"
+			"8"		"dpad active modeshift"
+			"9"		"left_trigger active modeshift"
+			"10"		"right_trigger active modeshift"
+			"11"		"switch active modeshift"
+		}
+	}
+}
