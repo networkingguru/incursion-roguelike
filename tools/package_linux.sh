@@ -151,6 +151,18 @@ assemble() {
     cp "$ROOT/LICENSE"            "$pkg/"
     cp "$ROOT/Incursion.txt"      "$pkg/"
 
+    # SteamOS/Linux installer: registers Incursion as a Steam shortcut and writes
+    # the controller layout for every supported controller_type. install-steamos.sh
+    # substitutes controller_type into incursion-steam-input.vdf, so ship that .vdf
+    # at the bundle root under the exact name the installer expects (the repo keeps
+    # it under docs/ with an -ally suffix).
+    cp "$ROOT/install-steamos.sh"                  "$pkg/"
+    chmod +x "$pkg/install-steamos.sh"
+    mkdir -p "$pkg/tools"
+    cp "$ROOT/tools/steam_shortcut.py"             "$pkg/tools/"
+    chmod +x "$pkg/tools/steam_shortcut.py"
+    cp "$ROOT/docs/incursion-steam-input-ally.vdf" "$pkg/incursion-steam-input.vdf"
+
     if [ "$kind" = "sdl" ]; then
         # Generic Linux: carry SDL2 and a launcher that finds it.
         mkdir -p "$pkg/libs"
