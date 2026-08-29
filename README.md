@@ -449,7 +449,9 @@ the unfixed tree before it is trusted.
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? |
 | `check_cloak_resistance.sh` | Does a +3 Cloak of Resistance keep the same saves alone, yet stop stacking with auspicious +2 armour once both bonuses are resistance? |
 | `check_command_prose.sh` | Does Command's description leave out the CR/level limit the code deliberately removed, rather than still promising "does not affect creatures whose CR is more than 2/3rds your level"? |
+| `check_cowl_warding_prose.sh` | Does the Cowl of Warding description state that its save-versus-spells and armour-luck bonuses scale with the magical plus -- +3 and +5 plus the plus -- rather than the flat "+4"/"+6" it claimed before, matching its `PLUS_ADD3`/`PLUS_ADD5` code? |
 | `check_cure_critical.sh` | Does the Cure Critical Wounds effect roll the `4d8 + LEVEL_MAX20` its own description promises, rather than the `3d8` it paid before? |
+| `check_divine_aspect_prose.sh` | Does the Lesser Divine Aspect description state that its disease/poison saves and its acid/cold/electricity resistances scale per magical plus, matching its `PLUS_2PER1`/`PLUS_5PER1` code, rather than the flat "+2" and "resistance of 5" it claimed before? |
 | `check_divine_power.sh` | Does Divine Power grant `FT_POWER_ATTACK` when the caster has STR 18 and no Power Attack, yet still grant `FT_KNOCK_PRONE` when he already has Power Attack, as its description promises? |
 | `check_flame_strike.sh` | Does Flame Strike's description state `1d6` points of damage per caster level, matching its SRD-authentic `(LEVEL_SCALED)d6` script rather than the `1d8` prose it carried before? |
 | `check_snowstrike.sh` | Does the Snowstrike blast carry `EF_CASTER_IMMUNE` and `EF_ALLIES_IMMUNE`, so the caster and her allies are immune as its description promises, rather than freezing them? |
@@ -489,6 +491,8 @@ the unfixed tree before it is trusted.
 | `check_natural_speed.sh` | Has the hard-coded brawl-speed floor drifted from the fastest weapon in `lib/weapons.irh`? |
 | `check_natural_speed_live.sh` | Does flipping one byte of `Options.Dat` really move the Brawl row on the character sheet, from 100% to 175%? |
 | `check_package.sh` | Is the packaged folder free of ACCENT symbols and Homebrew paths, and does it carry its data? |
+| `check_periapt_poison_prose.sh` | Does the Periapt of Proof against Poisons description state that its saving-throw-versus-poison bonus scales per magical plus, matching its `PLUS_2PER1` code, rather than the flat "+2" it claimed before? |
+| `check_precision_prose.sh` | Does the Eyes of Precision description state that its lowlight-vision bonus scales at 20 feet (2 squares) per magical plus, matching its CA_LOWLIGHT `PLUS_2PER1` code, rather than the flat "20 feet" it claimed before? |
 | `check_prestige_profs.sh` | Do the Assassin and the Blackguard hold the proficiencies their prose promises? |
 | `check_prestige_tables.sh` | Does each prestige class print the saves and the defence track it really grants? |
 | `check_ptr_sweep.sh` | Does the pointer-ordering sweep still find an ordering, and still ignore an equality? |

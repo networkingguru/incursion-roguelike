@@ -582,8 +582,9 @@ AI_AMULET Effect "Periapt of Proof against Poisons" : EA_GRANT
 and EA_GRANT
   { xval: RESIST; yval: AD_TOXI; pval: PLUS_4PER1; 
     Flags: EF_NEEDS_PLUS, EF_NAMEONLY; Level: PLUS_2PER1; 
-    Desc: "This item protects its wearer from toxins, granting a +2
-      magic bonus to saving throws versus poison and 4 points of
+    // upstream: the Periapt of Proof against Poisons Desc stated a flat "a +2 magic bonus to saving throws versus poison", yet the SN_POISON save is coded pval PLUS_2PER1 with EF_NEEDS_PLUS -- 2 per magical plus -- so the save SCALES with the item plus and never has a fixed value; +2 holds only at +1. The toxic-damage-resistance clause already states "per magical plus" and is unchanged. The flat prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- pval PLUS_2PER1 stays. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F55; not sent.
+    Desc: "This item protects its wearer from toxins, granting a +2 per
+      magical plus magic bonus to saving throws versus poison and 4 points of
       toxic damage resistance per magical plus it possesses."; }
 
 AI_HELM Effect "Clear Sound" : EA_GRANT
@@ -1767,11 +1768,12 @@ AI_EYES Effect "Stone;eyes" : EA_GRANT
 AI_EYES Effect "Precision;eyes" : EA_GRANT
   { SC_THA; xval: EXTRA_FEAT; yval: FT_PRECISE_SHOT; pval: PLUS_1PER1; 
     Level: PLUS_3PER1; Flags: EF_NEEDS_PLUS; 
+    // upstream: the Eyes of Precision Desc stated a flat "20 feet (2 squares)" lowlight-vision bonus, yet the CA_LOWLIGHT grant is coded pval PLUS_2PER1 with EF_NEEDS_PLUS -- 2 squares per plus, i.e. 20 feet per magical plus at the map scale of 10 feet per square, so the bonus SCALES with the item plus and never has a fixed value; 20 feet holds only at +1. The flat prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- pval PLUS_2PER1 stays. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F53; not sent.
     Desc: "These lenses give the wearer a preternatural sharpness of
     vision and a steady hand. While worn they grant the benefits of the
     Precise Shot and Aimed Shot feat as well as increasing the lowlight
     vision (and typically thus perception range) of the wearer by 20 feet
-    (2 squares). They are a great benison to archers."; } 
+    (2 squares) per magical plus. They are a great benison to archers."; }
   and EA_GRANT 
   { SC_THA; xval: EXTRA_FEAT; yval: FT_AIMED_SHOT; pval: PLUS_1PER1; }
   and EA_GRANT 
@@ -5875,10 +5877,12 @@ and EA_GRANT
   { xval: ADJUST_LUCK; yval: A_ARM; pval: PLUS_ADD5; }
 and EA_GRANT
   { xval: IMMUNITY; yval: AD_NECR;
+    // upstream: the Cowl of Warding Desc stated a flat "a +4 bonus to save versus spells, a +6 luck bonus to armour", yet the SN_SPELLS save is coded pval PLUS_ADD3 (plus+3) and the A_ARM luck bonus pval PLUS_ADD5 (plus+5), both additive with the item's magical plus under EF_NEEDS_PLUS, so the +4 / +6 values hold only at +1 and rise with the plus. The flat prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- pval PLUS_ADD3 and pval PLUS_ADD5 stay. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F54; not sent.
     Desc: "This powerful defensive garment conveys five distinct protective
-      effects: immunity to mind magic, charms, paralysis, a +4 bonus
-            to save versus spells, a +6 luck bonus to armour and immunity to
-            life draining and necromantic damage."; }
+      effects: immunity to mind magic, charms, paralysis, a bonus to save
+            versus spells of +3 plus its magical plus (+4 at +1), a luck
+            bonus to armour of +5 plus its magical plus (+6 at +1) and
+            immunity to life draining and necromantic damage."; }
 
 /************************************************************************\
  *                                 RODS                                 *
@@ -8303,11 +8307,12 @@ AI_STONE Effect "Courage" : EA_GRANT
 AI_GIRDLE Effect "Lesser Divine Aspect" : EA_GRANT
   { xval: ADJUST; yval: A_CHA; pval: 4; Purpose: EP_BUFF;
     Level: PLUS_5PER1_ADD3; Flags: EF_NEEDS_PLUS; 
+    // upstream: the Lesser Divine Aspect Desc stated a flat "+2 bonus to saving throws against disease and poison" and "resistance of 5", yet the acid/cold/electricity resistances are coded pval PLUS_5PER1 (5 per magical plus) and the disease/poison saves pval PLUS_2PER1 (2 per magical plus), both under EF_NEEDS_PLUS, so both SCALE with the item plus and hold their +2 / 5 values only at +1. The Charisma +4 (pval 4) and the darkvision are genuinely flat and unchanged. The flat prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- pval PLUS_5PER1 and pval PLUS_2PER1 stay. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F56; not sent.
     Desc: "Causes you to take on some of the qualities of a
       celestial being: you gain an enhancement bonus of +4
-      to your Charisma score; darkvision; a +2 bonus to saving
-      throws against disease and poison; and acid, cold and 
-      electricity resistance of 5."; }
+      to your Charisma score; darkvision; a +2 per magical plus bonus
+      to saving throws against disease and poison; and acid, cold and
+      electricity resistance of 5 per magical plus."; }
 and EA_INFLICT
   { xval: RESIST; yval: AD_COLD; pval: PLUS_5PER1 ; }
 and EA_INFLICT
