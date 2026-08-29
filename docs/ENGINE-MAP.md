@@ -33,10 +33,10 @@ The spine. Every hop is a direct call; nothing is queued or deferred.
 3. `Game::Play()` `src/Main.cpp:215`; the `do {} while(1)` at `:251` is the game loop. It walks every `Thing` on the player's map (`:285`), decrements `Timeout`, calls `ChooseAction()` on whatever is ready (`:347`).
 4. `Player::ChooseAction()` `src/Player.cpp:219` redraws status, then blocks on `MyTerm->GetCharCmd()` (`src/Player.cpp:357`).
 5. `posixTerm::GetCharCmd()` `src/Wposix.cpp:1638` flushes the screen *first* (`Update()`, `:1681`), reads one raw key (`NextKey()`, `:1686`), maps it to a `KY_CMD_*` by scanning the active keyset (`:1732-1741`). Redraw-before-read is why the screen is always current when the game waits.
-6. `switch (ch)` `src/Player.cpp:378`; a direction key lands at `:1247` and, with no attack chosen, throws `ThrowDir(EV_MOVE, ...)` (`:1346`).
+6. `switch (ch)` `src/Player.cpp:378`; a direction key lands at `src/Player.cpp:1247` and, with no attack chosen, throws `ThrowDir(EV_MOVE, ...)` (`src/Player.cpp:1346`).
 7. `ThrowDir` `src/Event.cpp:533` fills an `EventInfo` and calls `RealThrow` (`:414`), which fires PRE, event, POST (`:439-449`).
 8. `ThrowEvent` `src/Event.cpp:152` offers the event to region, terrain, dungeon, field and effect resources in that order (`:170-257`); `ThrowTo` (`:363`) then walks the C++ hierarchy from concrete type up to base via the `HIER` macro (`:371-407`).
-9. `Creature::Walk()` `src/Move.cpp:24` is the handler `EV_MOVE` reaches (`:147`); it ends at `Move(tx, ty, ...)` (`:945`).
+9. `Creature::Walk()` `src/Move.cpp:24` is the handler `EV_MOVE` reaches (`:147`); it ends at `Move(tx, ty, ...)` (`src/Move.cpp:945`).
 10. `Thing::Move()` `src/Display.cpp:1681` relinks square contents, calls `M->Update()` on both changed squares (`:1780-1781`), and sets the player's `UpdateMap` (`:1796`).
 11. `Map::Update(x,y)` `src/Term.cpp:732` picks one square's glyph and pushes it to `PutChar`.
 12. Next pass, `TextTerm::AdjustMap()` `src/Term.cpp:1008` (from `RefreshMap()` `inc/Term.h:654`, and from `src/Main.cpp:266`) scrolls the viewport and calls `ShowMap()` when the offset moved or `UpdateMap` is set (`src/Term.cpp:1079-1080`).

@@ -92,8 +92,11 @@ baseline_for() {
     awk -v d="$doc" '$2 == d { print $1; found=1 } END { if (!found) print 0 }' "$BASELINE" | head -1
 }
 
-# tracked_docs -- every tracked .md, in a stable order.
-tracked_docs() { git ls-files '*.md' | sort; }
+# tracked_docs -- every tracked .md, in a stable order. LC_ALL=C, because the
+# order goes straight into the baseline file: a locale that folds case and
+# ignores punctuation reorders 40 lines every time the baseline is re-recorded
+# on a different machine, and buries the one line that actually moved.
+tracked_docs() { git ls-files '*.md' | LC_ALL=C sort; }
 
 # changed_docs -- the .md files this change touched: committed since BASE_REF,
 # staged, unstaged, and untracked-but-not-ignored. A doc is checked if it appears
@@ -112,7 +115,7 @@ changed_docs() {
         git diff --name-only "$BASE_REF...HEAD" -- '*.md'
         git diff --name-only HEAD -- '*.md'
         git ls-files --others --exclude-standard -- '*.md'
-    } 2>/dev/null | sort -u | while read -r d; do
+    } 2>/dev/null | LC_ALL=C sort -u | while read -r d; do
         [ -f "$d" ] && echo "$d"
     done
 }
