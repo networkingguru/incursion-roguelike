@@ -108,8 +108,23 @@
 #undef MIN
 #undef MAX
 
+#ifndef _WIN32
+// SDL is pulled only on Mac/Linux. The Windows libtcod build compiles this
+// file with no SDL include path, and gamepad support is not wired for
+// Windows yet, so all of it is compiled out there.
+// push/pop min & max: inc/Defines.h defines lowercase min()/max() macros
+// that break libstdc++'s std::min/std::max when SDL pulls <cmath> on Linux.
+// Undef them only across the SDL include, then restore for the rest of the
+// file (the min() use further down still needs them).
+#pragma push_macro("min")
+#pragma push_macro("max")
+#undef min
+#undef max
 #include <SDL.h>
+#pragma pop_macro("min")
+#pragma pop_macro("max")
 #include "gamepad_dir.h"
+#endif
 
 
 #ifndef CURSOR_BLINK_MS
@@ -557,6 +572,7 @@ int main(int argc, char *argv[]) {
     return retval;
 }
 
+#ifndef _WIN32
 static SDL_GameController *gamepad;
 static bool left_stick_armed = true;
 static bool right_stick_armed = true;
@@ -649,10 +665,14 @@ static bool poll_gamepad(TCOD_key_t *out)
     }
     return false;
 }
+#else
+static bool poll_gamepad(TCOD_key_t *out) { (void)out; return false; }
+#endif
 
 TCOD_key_t readkey(int wait) {
     TCOD_key_t key = TCOD_key_t();
     if (wait) {
+#ifndef _WIN32
         for (;;) {
             TCOD_event_t tcod_event = TCOD_sys_check_for_event(TCOD_EVENT_KEY_PRESS,&key,NULL);
             if (tcod_event & TCOD_EVENT_KEY)
@@ -661,6 +681,10 @@ TCOD_key_t readkey(int wait) {
                 return key;
             TCOD_sys_sleep_milli(15);
         }
+#else
+        TCOD_sys_wait_for_event(TCOD_EVENT_KEY_PRESS,&key,NULL,true);
+        return key;
+#endif
     }
 
     TCOD_event_t tcod_event = TCOD_sys_check_for_event(TCOD_EVENT_KEY_PRESS,&key,NULL);
@@ -1555,11 +1579,13 @@ int16 libtcodTerm::GetCharCmd(KeyCmdMode mode) {
 		uint32 ticks0 = TCOD_sys_elapsed_milli(), ticks1;
         TCOD_key_t tcodKey;
         TCOD_event_t tcodEvent = TCOD_sys_check_for_event(TCOD_EVENT_KEY_PRESS, &tcodKey, NULL);
+#ifndef _WIN32
         if (tcodKey.vk == TCODK_NONE) {
             TCOD_key_t gamepadKey;
             if (poll_gamepad(&gamepadKey))
                 tcodKey = gamepadKey;
         }
+#endif
 
         if (Mode == MO_PLAY && p->UpdateMap)
             RefreshMap();
