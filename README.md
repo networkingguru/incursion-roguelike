@@ -520,6 +520,65 @@ the unfixed tree before it is trusted.
 | `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? |
 | `check_wand_acid_type.sh` | Does the Wand of Acid's residual burn damage a fire-immune victim? |
 | `check_zeal_strike.sh` | Does Zeal end when the paladin strikes a creature it did not choose, and survive both an ordinary turn and a blow at the target it did choose? |
+| `check_alienist_drain.sh` | Does each Alienist summoning drain the held mana its page names (Summoned Creature's CR x 2), the mana that never regenerates? |
+| `check_armour_model.sh` | Does the armour model penetrate coverage by grade and subtract from damage, with natural armour and a worn suit penetrated independently? |
+| `check_boots_providence.sh` | Do the Boots of Providence pay their Luck bonus while carried, not only while worn? |
+| `check_brawl_weapon.sh` | Does an unarmed attack take nothing from a held weapon -- no accuracy, speed or enchantment reaching the fist? |
+| `check_clock_advance.sh` | Does the game-time oracle still catch a scripted run that burns keys while no game time passes? |
+| `check_consumable_abort.sh` | Does a scroll whose reading is aborted return to the pack, rather than being spent on an action that never happened? |
+| `check_convert_guard.sh` | Does `-convert` refuse the committed evidence fixtures and leave them byte-identical, while still converting a scratch copy? |
+| `check_death_attack.sh` | Does the Assassin's Death Attack gate only on the assassin's own out-of-combat state, so it can strike a target that is already fighting? |
+| `check_dequ_save_message.sh` | Does the equipment-save message name the character and reach him, rather than naming the item twice and speaking to the item? |
+| `check_dig_zero_skill.sh` | Does a dig by a miner with zero Mining skill finish cleanly, rather than dividing by zero? |
+| `check_doc_citations.sh` | Did any document a change touched gain a citation defect above its recorded baseline? |
+| `check_doc_freshness.sh` | Which documents did a range of commits leave stale, and does every line citation in them and in the source they touched still resolve? |
+| `check_dup_names.sh` | Does the resource compiler reject a same-case duplicate resource name, with its own duplicate-name diagnostic? |
+| `check_flame_tongue_undead.sh` | Does a flame tongue sword set a corporeal undead alight for the 3d6/2d6/1d6 fire its page promises? |
+| `check_flavor_stability.sh` | Does a v1 save's per-player flavour memory -- appearances and their Known/Tried flags -- survive a module rebuild that adds a resource? |
+| `check_format_strings.sh` | Does every printf-style format string in the engine agree with its arguments, or has the warning count risen above the baseline? |
+| `check_geomancy.sh` | Does the Earthsinger's Geomancy roll the 5d12 its page names, rather than the 5d12+12 copied from the Mana potion? |
+| `check_gravestone.sh` | Does the death screen render the epitaph's corrected wording and columns, and the date the stone is carved with? |
+| `check_grounded_stance_live.sh` | Does the Earthsinger's Grounded Stance add its damage term to a landed blow when every condition it names is met? |
+| `check_hunger_penalty.sh` | Does a Hungry character pay only the Hungry penalty, so getting hungrier never makes him stronger? |
+| `check_item_type_id.sh` | Does identifying one item teach its kind for every flavoured type, so the next of that kind arrives already named? |
+| `check_ki_strike_live.sh` | Does a Monk gain Ki Strike at 4th level, the grant that lets an unarmed attacker harm an incorporeal creature? |
+| `check_ledger_rows.sh` | Does every ledger row in `docs/REPORTING-GATE.md` sit under the heading whose column shape it has, so no tracking id is dropped? |
+| `check_luckblade_plus.sh` | Does the Luckblade keep its magical plus when the wish it would charge for is refused, rather than grinding down first? |
+| `check_menu_overflow.sh` | Does a menu with more than 52 options still draw and select every row, rather than losing the ones past the alphabet? |
+| `check_module_rebuild.sh` | Does an ordinary build put this tree's scripts into the game, while an instrumented build still leaves the module alone? |
+| `check_prestige_hidden.sh` | Are the eight unfinished prestige classes kept out of every class list, rather than offered and then refused after the pick? |
+| `check_probe_hooks.sh` | Does every debugging hook shipped in the game name a bead, or has an undeclared hook appeared outside the baseline? |
+| `check_rider_corpse.sh` | Does a natural attack's rider clause stop when its victim is dead, rather than striking a corpse and dangling a map pointer? |
+| `check_ring_command_level.sh` | Do the Rings of Elemental Command grant the 12th-level, +6 command power their pages promise, not 10th level and +5? |
+| `check_ring_fire_curse.sh` | Does the Ring of Elemental Command (Fire) curse amplify cold damage alone, rather than rewriting every wound its wearer takes to cold? |
+| `check_ring_preservation_page.sh` | Does the Ring of Item Preservation's page describe the ward the ring actually is, rather than the extradimensional transport that never happens? |
+| `check_ring_water_command.sh` | Does the Ring of Elemental Command (Water) grant command of water creatures, its page's element, rather than fire? |
+| `check_robe_eyes.sh` | Does the Robe of Eyes grant the 60 feet of infravision its page promises? |
+| `check_rod_lordly_might.sh` | Does the Rod of Lordly Might's paralyzing touch grant the three charges its page promises, rather than seven? |
+| `check_schema_roundtrip.sh` | Does each class group of the v1 save schema round-trip field for field, and write a byte-identical second file? |
+| `check_spell_god_drift.sh` | Does a v1 save refuse a reloaded module only on positive evidence that entries moved, while a pure rename still loads? |
+| `check_spook_ally.sh` | Does Spook spare its caster's own side, and does a creature made immune inside a field still shed the stati when it leaves? |
+| `check_spook_mount.sh` | Does a mount keep the aura it emits across being ridden and carried between levels, and keep owning it? |
+| `check_springblade.sh` | Does deploying the Springblade Bracers require a Handle Device check, and does its free off-guard strike fire only once per combat? |
+| `check_stacked_abilities.sh` | Do Uncanny Dodge and Sneak Attack levels stack across the classes that grant them, so a multiclass character serves one waiting period rather than each class's? |
+| `check_staff_abyss_alignment.sh` | Is the Staff of the Abyss inert in a good character's hands, and still whole in a non-good one's, as its page says? |
+| `check_staff_abyss_spell_list.sh` | Does the Staff of the Abyss's page name only the nine spells it actually grants, without the three that have nothing behind them? |
+| `check_staff_winter_grants.sh` | Does the Staff of Winter hand over all four powers its page promises -- the cold spells, and the Charisma, Intimidate and Appraise numbers? |
+| `check_staff_winter_quality.sh` | Does the Staff of Winter carry the weakening quality its page names, rather than the numbing quality the script gave it? |
+| `check_stair_warn.sh` | Does descending an ordinary staircase skip the false unsafe-terrain warning, rather than asking to confirm every descent? |
+| `check_two_fist_feats_live.sh` | Do the two-weapon feats reach a pair of empty hands, so a monk's Two-Weapon Tempest speeds his fists? |
+| `check_v1_adversarial.sh` | Does the v1 save reader refuse every crafted corruption, yet still load the case that merely deletes a known tag? |
+| `check_v1_append_survives.sh` | Does a save written before a resource is appended to `lib/` still load to the same character afterward? |
+| `check_v1_full_roundtrip.sh` | Does a real session write a v1 save that reloads to the same character and reaches a save-load-save byte fixpoint? |
+| `check_v1_manifest_parse.sh` | Does the v1 module manifest's load-side parser refuse a manifest corrupted in one field, by name? |
+| `check_wand_animal.sh` | Does a Wand of Animal Summoning summon an animal, rather than a dragon from the line copied above it? |
+| `check_wand_cleansing.sh` | Does a Wand of Cleansing Light roll the damage its own inventory line prints, rather than multiplying its plus twice? |
+| `check_weapon_groups.sh` | Does every weapon-group bit hold a row in the name table, so a class's proficiency list names it rather than dropping it in silence? |
+| `check_weapon_immunity_live.sh` | Does an unarmed strike meet Weapon Immunity at all, and does Ki Strike carry a fist through it? |
+| `check_xp_penalty.sh` | Does `XPPenalty` survive a character with fewer than three classes, rather than dereferencing a zero class id and crashing? |
+| `check_xp_penalty_rule.sh` | Does the multiclass experience penalty exempt every class the race favours, honour `CF_FAVOURED`, and charge the manual's 20% rather than 25%? |
+| `check_xsummon_live.sh` | Does a divine summoning spell (Holy Summoning, Summon Nature's Ally) cap its concurrent summons the way the wizard line does? |
+| `check_yuse_activate.sh` | Does activating a blast item from the `y` menu ask where to aim it, rather than resolving the beam on the activator? |
 
 `tools/README.md` §7 groups these into five tiers by what each needs — a clean
 clone, a compiler, a POSIX build, a built artefact, or a recorded baseline — and
@@ -579,10 +638,13 @@ Work is tracked in the repository with
 
 ## Windows
 
-The original build still works and is unchanged by this fork. Pre-compiled
-dependencies are checked in; `build_sdl2.bat`, `build_libtcod.bat` and
-`build_pdcurses.bat` rebuild them if needed, and `build.bat` produces
-`IncursionLibtcod.exe` and `IncursionCurses.exe`.
+This fork targets macOS and Linux; it has never built or run on Windows. The
+original MSVC build is still here — `build_sdl2.bat`, `build_libtcod.bat` and
+`build_pdcurses.bat` rebuild the checked-in dependencies, and `build.bat`
+produces `IncursionLibtcod.exe` and `IncursionCurses.exe` — but it currently
+does **not** compile: `src/ErrorLog.cpp`, added by this fork, has unguarded
+POSIX includes (`inc-xo4o`). No Windows build has ever been run against this
+fork, so nothing here is a claim that it works.
 
 **Why the dependencies are checked in, in Richard Tew's words:** bug fixes to
 gameplay require a save game, and a save game only loads in the build that wrote
