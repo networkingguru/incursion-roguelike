@@ -7864,7 +7864,8 @@ AI_WONDER Effect "Brazier Commanding Fire Elementals" : EA_SUMMON
   { SC_WEA; Cost: 15; Level: PLUS_2PER1_ADD1;
     Purpose: EP_SUMMON; Flags: EF_NEEDS_PLUS, EF_ACTIVATE,
       EF_NAMEONLY, EF_3PERDAY, EF_DLONG, EF_XSUMMON;
-    Desc: "Once per day, this brazier can be lit to summon
+    // upstream: the "Brazier Commanding Fire Elementals" item is coded EF_3PERDAY (three activations per day, EF_3PERDAY defined in inc/Defines.h and the shared idiom across this file's activated summon items), yet this Desc still said "Once per day"; the same understating prose ships on Win32 with the original data, so it misdescribes the item there too; it is prose in an item declaration, not a port artefact; the CODE is correct and unchanged -- EF_3PERDAY stays, three uses/day; Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F50; not sent.
+    Desc: "Three times per day, this brazier can be lit to summon
       a fire elemental of power commensurate to its magical
       plus to serve the holder faithfully.";
     On Event PRE(EV_MAGIC_HIT) {
