@@ -659,11 +659,15 @@ static bool poll_gamepad(TCOD_key_t *out, bool allow_repeat, bool look_mode)
             out->vk = direction_keys[right_dir];
             out->lalt = true;
         } else {
+            // The ROG Ally's right stick reports its axes transposed from a normal pad
+            // (Observed on device): the physically-vertical push lands on the X axis and
+            // the horizontal push on the Y axis. Map accordingly so vertical = line
+            // scroll (up/down arrows) and horizontal = page (PgUp/PgDn).
             long long axx = (long long)rx * rx, ayy = (long long)ry * ry;
-            if (ayy >= axx)
-                out->vk = (ry < 0) ? TCODK_KP8 : TCODK_KP2;
+            if (axx >= ayy)
+                out->vk = (rx < 0) ? TCODK_KP8 : TCODK_KP2;
             else
-                out->vk = (rx < 0) ? TCODK_KP9 : TCODK_KP3;
+                out->vk = (ry < 0) ? TCODK_KP9 : TCODK_KP3;
         }
         return true;
     }

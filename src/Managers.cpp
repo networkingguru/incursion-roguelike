@@ -757,9 +757,7 @@ ResetCurrCon:
             HelpTopic("help::interface", "IM");
             break;
         case KY_ENTER:
-            if (p->Inv[SL_INAIR])
-                goto InventorySwap;
-            goto ExitInventory;
+            goto InventorySwap;
         case KY_ESC:
             if (p->Inv[SL_INAIR]) {
                 Item *it;
@@ -780,7 +778,6 @@ ResetCurrCon:
                     if (oItem(p->Inv[SL_INAIR])->Owner() != p)
                         p->Inv[SL_INAIR] = 0;
             }
-ExitInventory:
             changed = true;
             SetWin(WIN_INVEN);
             Clear();
