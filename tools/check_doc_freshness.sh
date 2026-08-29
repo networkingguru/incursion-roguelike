@@ -258,18 +258,56 @@ fi
 # defect nothing else gates: tools/check_citations.sh is pointed at outgoing
 # documents only, and four rotted comment citations were found on 2026-08-20,
 # two of them inside `upstream:` blocks -- the text that goes to rmtew.
+
+# doc_for_label -- the second column of docs/doc-deps.tsv holds a LABEL, not a
+# path, so every use of one has to turn it back into a file. That mapping lives
+# here and only here: it used to be written inline in the loop below, and a
+# second copy would drift from the first the moment either grew a case.
+#
+# Prints the path, or prints nothing when the label names no document.
+doc_for_label() {
+    case "$1" in
+        README) [ -f README.md ] && echo README.md ;;
+        TOOLS)  [ -f tools/README.md ] && echo tools/README.md ;;
+        AGENTS) [ -f AGENTS.md ] && echo AGENTS.md ;;
+        *)      [ -f "docs/$1.md" ] && echo "docs/$1.md" ;;
+    esac
+}
+
 {
     # every changed file that carries citations worth resolving
     grep -E '\.(md|cpp|c|h|sh|py|keys)$' "$TMP/changed" || true
     # plus every document flagged stale above, whether or not it changed
     if [ -s "$TMP/stale" ]; then
         while IFS= read -r name; do
-            find docs -maxdepth 1 -name "${name}.md" 2>/dev/null
-            [ "$name" = "README" ] && echo "README.md"
-            [ "$name" = "TOOLS" ] && echo "tools/README.md"
+            doc_for_label "$name"
         done < "$TMP/stale"
     fi
 } | sort -u > "$TMP/tocheck"
+
+# A LABEL THAT NAMES NO DOCUMENT IS A FINDING, NOT A SILENT SKIP.
+#
+# Until 2026-08-29 the loop above resolved a label by looking for
+# docs/<label>.md, with hardcoded cases for README and TOOLS, and said nothing
+# at all when it found neither. Three labels were in that state and had been
+# since the map was written on 2026-08-21: AGENTS, whose file is AGENTS.md at
+# the repository root and simply needed the third case; and SCRIPT-LANG and
+# VERBS-HEADLESS, which name no document in this repository and never have.
+#
+# The cost was not the missing check. It was that the report named those pages
+# as worth re-reading and there was no such page to open, so a reader who went
+# looking learned to distrust the list. A map that names a document nobody can
+# find is worse than a map with a hole in it, because the hole is invisible.
+if [ -s "$TMP/stale" ]; then
+    while IFS= read -r name; do
+        [ -n "$(doc_for_label "$name")" ] && continue
+        say ""
+        say "UNRESOLVED LABEL \"$name\" in $DEPS names no document."
+        say "  Nothing was cite-checked for it. Rename the label to a document"
+        say "  that exists, or delete its rows."
+        FINDINGS=1
+    done < "$TMP/stale"
+fi
 
 say ""
 BROKEN=0
@@ -277,11 +315,23 @@ while IFS= read -r f; do
     [ -f "$f" ] || continue          # deleted in the range
     out="$(cite_check "$f")"
     rc=$?
-    if [ "$rc" != 0 ]; then
+    [ "$rc" = 0 ] && continue
+    # WHAT THE HEADER MUST NOT SAY. tools/check_citations.sh also exits
+    # non-zero when a document is CLEAN but carries citations it declined to
+    # check -- a link into a third-party repository this clone has no remote
+    # for is the usual one. Printing "CITATION DEFECT in AGENTS.md:" and then
+    # listing nothing under it, which is what a bare rc test does, announces a
+    # defect the reader cannot find and cannot fix. Report what was actually
+    # measured: defects when there are defects, and the unchecked count
+    # otherwise, which is a note and not a finding.
+    lines="$(printf '%s\n' "$out" | grep -E '^(DEFECT|WARN)')"
+    if [ -n "$lines" ]; then
         say "CITATION DEFECT in $f:"
-        printf '%s\n' "$out" | grep -E '^(DEFECT|WARN)' | sed 's/^/  /'
+        printf '%s\n' "$lines" | sed 's/^/  /'
         BROKEN=$((BROKEN + 1))
         FINDINGS=1
+    else
+        say "note: $f has $(printf '%s\n' "$out" | grep -c '^UNCHECKED') citation(s) this clone cannot check, and no defect."
     fi
 done < "$TMP/tocheck"
 
