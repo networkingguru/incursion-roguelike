@@ -492,6 +492,7 @@ the unfixed tree before it is trusted.
 | `check_natural_speed.sh` | Has the hard-coded brawl-speed floor drifted from the fastest weapon in `lib/weapons.irh`? |
 | `check_natural_speed_live.sh` | Does flipping one byte of `Options.Dat` really move the Brawl row on the character sheet, from 100% to 175%? |
 | `check_package.sh` | Is the packaged folder free of ACCENT symbols and Homebrew paths, and does it carry its data? |
+| `check_periapt_closure_prose.sh` | Does the Periapt of Wound Closure description drop its false "removes infections" claim, keeping only the two effects the entity truly provides -- stop bleeding and speed healing? |
 | `check_periapt_poison_prose.sh` | Does the Periapt of Proof against Poisons description state that its saving-throw-versus-poison bonus scales per magical plus, matching its `PLUS_2PER1` code, rather than the flat "+2" it claimed before? |
 | `check_precision_prose.sh` | Does the Eyes of Precision description state that its lowlight-vision bonus scales at 20 feet (2 squares) per magical plus, matching its CA_LOWLIGHT `PLUS_2PER1` code, rather than the flat "20 feet" it claimed before? |
 | `check_prestige_profs.sh` | Do the Assassin and the Blackguard hold the proficiencies their prose promises? |

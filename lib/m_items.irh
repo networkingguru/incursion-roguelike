@@ -5381,9 +5381,10 @@ AI_AMULET Effect "Periapt of Wound Closure" : EA_GRANT
       EVictim->RemoveStati(BLEEDING); 
       return NOTHING;
       };
-    Desc: "This powerful item stops bleeding, removes infections and
-      speeds healing, such that all of your wounds heal fully over
-      the course of a single night's rest.";
+    // upstream: the Periapt of Wound Closure entity promised in prose "stops bleeding, removes infections and speeds healing", yet nothing in the entity removes disease or infection -- there is no HEAL_MALADY, no IMMUNITY AD_DISE, and no disease-stati removal; the two TRAP_EVENT handlers only clear BLEEDING (RemoveStati(BLEEDING)) and full-heal on EV_REST. The SRD Periapt of Wound Closure has no infection removal, and the sibling Periapt of Health is the disease item. The same over-promising prose ships on Win32 with the original data -- prose in an item declaration, not a port artefact. The CODE is correct and unchanged: both real effects, stop-bleeding and speed-healing, are untouched and both fire. Traced (prose-only, no in-play value changes); inc-tek.8.8 / PA-08-F59; not sent.
+    Desc: "This powerful item stops bleeding and speeds healing, such
+      that all of your wounds heal fully over the course of a single
+      night's rest.";
     Level: 6; Flags: EF_NAMEONLY;
   }
 and EA_GRANT
