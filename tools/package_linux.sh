@@ -141,7 +141,13 @@ assemble() {
     chmod +x "$pkg/incursion"
     cp "$STAGE/mod/Incursion.Mod" "$pkg/mod/"
     cp "$ROOT"/fonts/*.png        "$pkg/fonts/"
-    cp "$ROOT/Options.Dat"        "$pkg/"
+    # Deliberately NOT Options.Dat. Player::LoadOptions (src/Player.cpp) fills in
+    # every option's real default when the file is absent, so a fresh install is
+    # correct without it -- and the tree's Options.Dat is an all-NUL file that
+    # would instead force every option to zero. Shipping it also overwrote a
+    # player's customised options on each rolling-alpha update. Leaving it out
+    # fixes both: real defaults on first run, and an update never touches a
+    # settings file the player owns.
     cp "$ROOT/LICENSE"            "$pkg/"
     cp "$ROOT/Incursion.txt"      "$pkg/"
 
@@ -186,13 +192,15 @@ LAUNCH
 
 # ------------------------------------------------------------------- tar ----
 # COPYFILE_DISABLE=1 stops Apple's tar from writing resource forks as ._* members;
-# --exclude drops any that slipped through. Each archive holds one top-level
-# directory, so it extracts to ./<dir>/.
+# --exclude drops any that slipped through. --no-xattrs stops libarchive from
+# storing macOS xattrs (com.apple.provenance) as LIBARCHIVE.xattr.* headers, which
+# GNU tar warns about on extraction ("Ignoring unknown extended header keyword").
+# Each archive holds one top-level directory, so it extracts to ./<dir>/.
 maketar() {
     local dir="$1" tarball="$2"
     echo "=== writing $tarball ==="
     rm -f "$tarball"
-    COPYFILE_DISABLE=1 tar --exclude='._*' --exclude='.DS_Store' \
+    COPYFILE_DISABLE=1 tar --no-xattrs --exclude='._*' --exclude='.DS_Store' \
         -C "$DIST" -czf "$tarball" "$dir"
 }
 
