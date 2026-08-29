@@ -579,7 +579,7 @@ static int ls_octant = -1;      // octant currently held, -1 = released
 static Uint32 ls_fire_ms = 0;   // when we last emitted for this hold
 static bool ls_repeating = false;
 
-static bool poll_gamepad(TCOD_key_t *out, bool allow_repeat)
+static bool poll_gamepad(TCOD_key_t *out, bool allow_repeat, bool look_mode)
 {
     static const int outer = 16000;
     static const int inner = 8000;
@@ -655,14 +655,22 @@ static bool poll_gamepad(TCOD_key_t *out, bool allow_repeat)
 
     if (right_dir != -1) {
         right_stick_armed = false;
-        out->vk = direction_keys[right_dir];
-        out->lalt = true;
+        if (look_mode) {
+            out->vk = direction_keys[right_dir];
+            out->lalt = true;
+        } else {
+            long long axx = (long long)rx * rx, ayy = (long long)ry * ry;
+            if (ayy >= axx)
+                out->vk = (ry < 0) ? TCODK_KP8 : TCODK_KP2;
+            else
+                out->vk = (rx < 0) ? TCODK_KP9 : TCODK_KP3;
+        }
         return true;
     }
     return false;
 }
 #else
-static bool poll_gamepad(TCOD_key_t *out, bool) { (void)out; return false; }
+static bool poll_gamepad(TCOD_key_t *out, bool, bool) { (void)out; return false; }
 #endif
 
 TCOD_key_t readkey(int wait) {
@@ -673,7 +681,7 @@ TCOD_key_t readkey(int wait) {
             TCOD_event_t tcod_event = TCOD_sys_check_for_event(TCOD_EVENT_KEY_PRESS,&key,NULL);
             if (tcod_event & TCOD_EVENT_KEY)
                 return key;
-            if (poll_gamepad(&key, false))
+            if (poll_gamepad(&key, false, false))
                 return key;
             TCOD_sys_sleep_milli(15);
         }
@@ -684,7 +692,7 @@ TCOD_key_t readkey(int wait) {
     }
 
     TCOD_event_t tcod_event = TCOD_sys_check_for_event(TCOD_EVENT_KEY_PRESS,&key,NULL);
-    if ((tcod_event & TCOD_EVENT_KEY) == 0 && !poll_gamepad(&key, false))
+    if ((tcod_event & TCOD_EVENT_KEY) == 0 && !poll_gamepad(&key, false, false))
         key = TCOD_key_t();
     return key;
 }
@@ -1578,7 +1586,9 @@ int16 libtcodTerm::GetCharCmd(KeyCmdMode mode) {
 #ifndef _WIN32
         if (tcodKey.vk == TCODK_NONE) {
             TCOD_key_t gamepadKey;
-            if (poll_gamepad(&gamepadKey, GetMode() == MO_PLAY && mode == KY_CMD_NORMAL_MODE))
+            if (poll_gamepad(&gamepadKey,
+                    (GetMode() == MO_PLAY && mode == KY_CMD_NORMAL_MODE) || GetMode() == MO_INV,
+                    GetMode() == MO_PLAY && mode == KY_CMD_NORMAL_MODE))
                 tcodKey = gamepadKey;
         }
 #endif

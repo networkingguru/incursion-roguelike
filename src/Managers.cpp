@@ -757,12 +757,30 @@ ResetCurrCon:
             HelpTopic("help::interface", "IM");
             break;
         case KY_ENTER:
+            if (p->Inv[SL_INAIR])
+                goto InventorySwap;
+            goto ExitInventory;
         case KY_ESC:
             if (p->Inv[SL_INAIR]) {
-                p->IPrint("You cannot leave Inventory Mode with an item "
-                    "in your In-the-Air slot.");
-                break;
+                Item *it;
+                it = oItem(p->Inv[SL_INAIR]);
+                if (!it)
+                    break;
+                if (p->Opt(OPT_WARN_DROP))
+                    if (!yn(XPrint("Confirm drop <Str>? ", (const char*)
+                        Decolorize(oItem(p->Inv[SL_INAIR])->Name(NA_THE | NA_SINGLE)))))
+                        break;
+                // ww: I don't know how this happens, but at this point the
+                // object has no parent! this causes the game to crash later
+                // because it won't be removed from Inv[SL_INAIR] even though it
+                // will be deleted
+                it->SetOwner(p->myHandle);
+                Throw(EV_DROP, p, NULL, it);
+                if (p->Inv[SL_INAIR])
+                    if (oItem(p->Inv[SL_INAIR])->Owner() != p)
+                        p->Inv[SL_INAIR] = 0;
             }
+ExitInventory:
             changed = true;
             SetWin(WIN_INVEN);
             Clear();
@@ -894,6 +912,7 @@ ResetCurrCon:
                 Message("Nothing to stow.");
             break;
         case KY_SPACE:
+InventorySwap:
             if (!CurrSlot || CurrSlot == SL_INAIR)
                 break;
             changed = true;
