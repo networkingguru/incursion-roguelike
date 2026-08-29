@@ -4721,6 +4721,7 @@ AI_RING Effect "Aggravate Monster" : EA_GRANT
 AI_RING Effect "Elemental Command (Air)" : EA_GRANT
   { SC_EVO; SC_WEA; SC_ARC; Level: 14;
     xval: TRAP_EVENT; yval: EVICTIM(EV_STRIKE);
+    // upstream: the "Elemental Command (Air)" ring Desc named "wind column" as the first of its granted staff-spells, yet no spell called "wind column" exists anywhere in lib/ -- the ring's STAFF_SPELL_LIST grants the real air spell "gaseous form" in that first slot (1 $"gaseous form" ...). The phantom name ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- the STAFF_SPELL_LIST still grants "gaseous form". Brian ruled the prose is corrected to the granted spell. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F58; not sent.
     Desc: "Legends claim that D'Salyn, the mouth of the Elder
       Elemental Eye and the one of the eldest of the 13 mage-kings,
       crafted four rings to give to his most senior warlords, each
@@ -4741,7 +4742,7 @@ AI_RING Effect "Elemental Command (Air)" : EA_GRANT
       the benefits, however, suffering a -4 penalty to saving throws
       versus knockdown or knockback.\n
       __Finally, the bearer is granted access to several staff-spells
-      related to elemental air: <9>wind column<7>, <9>gust of wind<7>,
+      related to elemental air: <9>gaseous form<7>, <9>gust of wind<7>,
       <9>wind wall<7>, <9>air walk<7>, <9>cloudkill<7> and <9>chain
       lightning<7>. The wearer of the ring may make use of these spells
       even if she has no spellcasting ability of her own, per the normal

@@ -439,6 +439,7 @@ the unfixed tree before it is trusted.
 | `check_linux_build.sh` | Do both backends still build on Linux, and does a seeded run still play with no errors? Needs Docker; it is the only check that does. |
 | `check_gcc_o2_char_create.sh` | Does a GCC `-O2` build still play character creation into a map, or has the `Item` constructor's uninitialised-member miscompile (inc-nw0v) returned? Needs Docker and builds with GCC, the converse of `check_linux_build.sh`. |
 | `check_activate_stack.sh` | Does activating one item out of a stack leave the stack whole, and still fire the effect? |
+| `check_air_ring_spell.sh` | Does the Elemental Command (Air) ring description name the granted staff-spell "gaseous form", rather than the phantom "wind column" that exists nowhere in `lib/`? |
 | `check_alienist_live.sh` | Does an Alienist get Surreal Presence, the ability her own description promises? |
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? Assesses a **quarantined** copy, asks the binary for its own save-layout stamp, and asserts the signature survives a run. |
