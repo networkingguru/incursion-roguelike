@@ -131,7 +131,7 @@ far less ground than its name suggests. Verified by reading the script.
 - **Dip** has five handlers and they cover two targets: a **fountain**
   (`lib/dungeon.irh:2163` and `:2336`, plus the Spell Storing ring at
   `lib/m_items.irh:4887`) and an **alchemical flask**, where only acid does
-  anything (`lib/alchemy.irh:97` and `:577`). Dipping into anything else has
+  anything (`lib/alchemy.irh:97` and `lib/alchemy.irh:577`). Dipping into anything else has
   nothing behind it.
 - **Fill / Pour** (`lib/mundane.irh:640`) — the only combination implemented
   is refilling a **brass lantern** from a **flask of oil**, and the flask must
