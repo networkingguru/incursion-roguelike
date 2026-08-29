@@ -482,6 +482,7 @@ the unfixed tree before it is trusted.
 | `check_key_directives.sh` | Do the key-script directives reach a menu entry by name, where counting rows could not? |
 | `check_killing_hands.sh` | Do Bracers of Killing Hands pay two points per plus to both unarmed accuracy and damage? |
 | `check_layout.sh` | Does this build play the same game when its objects sit at different addresses? |
+| `check_life_stealing_prose.sh` | Does the ball Wand of Life Stealing description state that its necromantic damage scales per plus, matching its `pval: (PLUS_1PER1)d6` code, rather than the flat "1d6 points of necromantic damage" it claimed before? |
 | `check_load_corrupt.sh` | Does the binary refuse ten hand-corrupted saves cleanly and still load two genuine ones? |
 | `check_logrotate.sh` | Does log rotation keep the right archives and prune only names it made itself? |
 | `check_loremaster_live.sh` | Does a Loremaster gain the extra attribute points a tome promises her? |
@@ -523,6 +524,7 @@ the unfixed tree before it is trusted.
 | `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? |
 | `check_telepathy_prose.sh` | Does the Telepathy helm description state its scaling telepathy range -- 50 feet plus 10 feet per magic plus -- rather than the flat "60 feet" it claimed before, matching its `pval: PLUS_ADD5` code? |
 | `check_underdark_live.sh` | Does the Underdark Warrior check its race requirement, and refuse the grey elf? |
+| `check_unearthly_harmonies_prose.sh` | Does the Wand of Unearthly Harmonies description state that its Intelligence damage scales per plus, matching its second `EA_BLAST` `pval: (PLUS_1PER1)d2` code, rather than the flat "1d2 points of Intelligence damage" it claimed before? |
 | `check_unholy_blight.sh` | Does Unholy Blight's inflict segment carry one `xval` (`ADJUST_CIRC`) and `yval: A_AID`, so the sicken lands, rather than the doubled `xval` that made it inert? |
 | `check_uninit_reads.sh` | Does the shipping build carry no high-confidence uninitialised-variable reads (`-Wuninitialized`, `-Wsometimes-uninitialized`)? |
 | `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? |

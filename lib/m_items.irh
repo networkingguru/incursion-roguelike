@@ -2090,10 +2090,11 @@ AI_WAND Effect "Life Stealing" : EA_BLAST
     Flags: EF_STRIKEID, EF_NEEDS_PLUS, EF_LIM_MTYPE; sval: REF partial;
     xval: AD_VAMP; pval: (PLUS_1PER1)d6; Level: PLUS_3PER1_ADD1;
     On Event MSG_BLASTNAME "ball of dark energy";
+    // upstream: the Wand of Life Stealing (ball) Desc stated a flat "1d6 points of necromantic damage" with no per-plus, yet the EA_BLAST damage is coded pval (PLUS_1PER1)d6 with EF_NEEDS_PLUS -- 1d6 per magical plus -- so the damage SCALES with the wand plus and never has a fixed value; 1d6 holds only at +1. The sibling Wand of Life Stealing (bolt) states "per plus" correctly. The flat prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- pval (PLUS_1PER1)d6 stays. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F60; not sent.
     Desc: "When fired, this wand emits a blast of life-sapping
       shadow that drains the vitality of any living targets it
       hits even as it heals and strengthens the wielder. The
-      blast inflicts 1d6 points of necromantic damage to
+      blast inflicts 1d6 points of necromantic damage per plus to
       everyone caught in its area, healing the caster for half
       of the total hit points it actually inflicts. Victims
       may make a Reflex saving throw for half damage.";
@@ -2403,12 +2404,13 @@ AI_WAND Effect "Unearthly Harmonies" : EA_BLAST
     Flags: EF_NEEDS_PLUS, EF_AUTOID, EF_LAWFUL, EF_LIM_MTYPE;
     sval: WILL partial; xval: AD_SONI; pval: (PLUS_1PER1)d8;
     Level: PLUS_3PER1_ADD1;
+    // upstream: the Wand of Unearthly Harmonies Desc stated a flat "1d2 points of Intelligence damage" with no per-plus, yet the second EA_BLAST is coded xval AD_DAIN with pval (PLUS_1PER1)d2 under EF_NEEDS_PLUS -- 1d2 per magical plus -- so the Intelligence damage SCALES with the wand plus and never has a fixed value; 1d2 holds only at +1. The Desc's own sonic clause already states "per plus the wand possesses". The flat prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- pval (PLUS_1PER1)d2 stays. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F61; not sent.
     Desc: "This wand produces a sanity-rending blast of otherworldly
       music drawn from the Clockwork Nirvana of Mechanus -- the
       outer-planar home of absolute Law. This music inflicts 1d8
       points of sonic damage per plus the wand possesses, and
       hearing it also damages the sanity of thinking beings,
-      inflicting 1d2 points of Intelligence damage. Chaotic
+      inflicting 1d2 points of Intelligence damage per plus the wand possesses. Chaotic
       creatures suffer double damage from both effects, but a
       successful Will saving throw halves the effects. The
       caster is immune to the sonic damage, but not to the
