@@ -38,12 +38,12 @@ The spine. Every hop is a direct call; nothing is queued or deferred.
 8. `ThrowEvent` `src/Event.cpp:152` offers the event to region, terrain, dungeon, field and effect resources in that order (`:170-257`); `ThrowTo` (`:363`) then walks the C++ hierarchy from concrete type up to base via the `HIER` macro (`:371-407`).
 9. `Creature::Walk()` `src/Move.cpp:24` is the handler `EV_MOVE` reaches (`:147`); it ends at `Move(tx, ty, ...)` (`src/Move.cpp:945`).
 10. `Thing::Move()` `src/Display.cpp:1681` relinks square contents, calls `M->Update()` on both changed squares (`:1780-1781`), and sets the player's `UpdateMap` (`:1796`).
-11. `Map::Update(x,y)` `src/Term.cpp:732` picks one square's glyph and pushes it to `PutChar`.
-12. Next pass, `TextTerm::AdjustMap()` `src/Term.cpp:1008` (from `RefreshMap()` `inc/Term.h:654`, and from `src/Main.cpp:266`) scrolls the viewport and calls `ShowMap()` when the offset moved or `UpdateMap` is set (`src/Term.cpp:1079-1080`).
-13. `TextTerm::ShowMap()` `src/Term.cpp:901` calls `p->CalcVision()` (`src/Term.cpp:937`, defined `src/Vision.cpp:256`), clears `UpdateMap` (`src/Term.cpp:938`), loops the window calling `PutChar`/`PutGlyph` (`src/Term.cpp:952-976`, `src/Term.cpp:1237`).
+11. `Map::Update(x,y)` `src/Term.cpp:734` picks one square's glyph and pushes it to `PutChar`.
+12. Next pass, `TextTerm::AdjustMap()` `src/Term.cpp:1010` (from `RefreshMap()` `inc/Term.h:654`, and from `src/Main.cpp:266`) scrolls the viewport and calls `ShowMap()` when the offset moved or `UpdateMap` is set (`src/Term.cpp:1081-1082`).
+13. `TextTerm::ShowMap()` `src/Term.cpp:903` calls `p->CalcVision()` (`src/Term.cpp:939`, defined `src/Vision.cpp:256`), clears `UpdateMap` (`src/Term.cpp:940`), loops the window calling `PutChar`/`PutGlyph` (`src/Term.cpp:954-978`, `src/Term.cpp:1239`).
 14. `posixTerm::Update()` `src/Wposix.cpp:653` blits the 80x48 buffer to the terminal; with no terminal it only sets a flag (`:656,677`). Then `Turn++` `src/Main.cpp:443`.
 
-**Invariant.** `Player::UpdateMap` is a one-bit dirty flag. Only `ShowMap` clears it (`src/Term.cpp:938`); every world change sets it (`src/Display.cpp:1796,1600`). A map that will not redraw is nearly always a lost set of that flag, not a broken draw call.
+**Invariant.** `Player::UpdateMap` is a one-bit dirty flag. Only `ShowMap` clears it (`src/Term.cpp:940`); every world change sets it (`src/Display.cpp:1796,1600`). A map that will not redraw is nearly always a lost set of that flag, not a broken draw call.
 
 ## 3. Boundaries, and what crosses them
 
