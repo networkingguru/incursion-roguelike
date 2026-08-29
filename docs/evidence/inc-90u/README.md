@@ -90,8 +90,9 @@ followers with him.
 bring a parked Thing back to the player's map, and it is inert three times over:
 nothing calls it; no shipped script calls `EnterLimbo` to park anything
 (`lib/dispatch.h:2174` is its only entry point); and `EnterLimbo` never assigns
-the `Target` that `LimboCheck` tests at `:827`, so that branch cannot run and the
-fallback at `:842` would read an uninitialised `p`. Tracked as inc-ujn.
+the `Target` that `LimboCheck` tests at `src/Feature.cpp:827`, so that branch
+cannot run and the fallback at `src/Feature.cpp:842` would read an
+uninitialised `p`. Tracked as inc-ujn.
 
 ## Scope
 
