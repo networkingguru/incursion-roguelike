@@ -5709,8 +5709,11 @@ AI_CLOAK Effect "Mana Bleeding" : EA_GRANT
 AI_HELM Effect "Telepathy" : EA_GRANT
   { SC_DIV; xval: EXTRA_ABILITY; yval: CA_TELEPATHY; pval: PLUS_ADD5; 
     Level: PLUS_2PER1_ADD1; Flags: EF_NEEDS_PLUS; 
+    // upstream: the "Telepathy" helm Desc stated a flat "within 60 feet of him", yet its range is coded pval PLUS_ADD5 with EF_NEEDS_PLUS -- plus+5 SQUARES, i.e. 50 feet + 10 feet per magical plus at the map scale of 10 feet per square (src/Social.cpp:900), so the range SCALES with the helm plus and never has a fixed value; 60 feet holds only at +1. The flat prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- pval PLUS_ADD5 stays, and the sibling Medallion of ESP states the same scaling pattern correctly. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F52; not sent.
     Desc: "This helm conveys telepathic awareness when worn, causing the
-        wearer to sense the presence of all minds within 60 feet of him."; 
+        wearer to sense the presence of all minds within 50 feet (5
+        squares) of him, plus 10 feet (1 square) per magic plus the helm
+        possesses.";
         }
 
 AI_HELM Effect "Teleportation" : EA_TRAVEL
