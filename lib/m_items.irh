@@ -3221,6 +3221,7 @@ AI_STAFF Effect "the Goblin Queen" : EA_GRANT
           $"shatter" $"pyrotechnics";
     /* upstream: this page understates its unchanged caster-level gate on
        Win32 too; Observed, inc-tek.8.8, NOT sent. */
+    // upstream: the Staff of the Goblin Queen Desc used a generic "Wielders of the staff" for the +4 Handle Device/Bluff bonuses and the -4 Spot/Listen/Concentration penalties, yet its EV_MAGIC_HIT handler gates ALL six granted effects behind one all-or-nothing goblinoid + 3rd-caster-level test with NO per-effect (e.efNum) test, so a non-goblinoid gets none of them, bonuses and penalties included. The sibling Staff of the Spider uses e.efNum gating, so the author had per-effect tooling and deliberately did not use it here; single-tier goblinoid scope is intended. The generic prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- the all-or-nothing goblinoid gate stays. Scoped the two "Wielders of the staff" phrases to "Goblinoid wielders of the staff" to match. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F64; not sent.
     Desc: "Crafted by goblin witch doctors, these staves eminate
       malice and insanity. They are carved with hundreds of eerie, 
       leering inhuman faces, the gemstones set into each face's
@@ -3231,9 +3232,9 @@ AI_STAFF Effect "the Goblin Queen" : EA_GRANT
       <9>spook<7>, <9>gust of wind<7>, <9>shocking grasp<7>, <9>grease<7>, 
       <9>visage of death<7>, <9>caustic vitae<7>, <9>expeditious
       retreat<7>, <9>reduce<7>, <9>shatter<7> and <9>pyrotechnics<7>.
-      Wielders of the staff also gain a +4 bonus to the Handle Device
+      Goblinoid wielders of the staff also gain a +4 bonus to the Handle Device
       and Bluff skills.\n
-      __This power (and diversity!) comes with a price. Wielders of
+      __This power (and diversity!) comes with a price. Goblinoid wielders of
       the staff constantly hear a giddy, high-pitched laughter that
       gives them a -4 penalty to Spot, Listen and Concentration skills.
       Over time, their behaviour is said to become erratic as they
