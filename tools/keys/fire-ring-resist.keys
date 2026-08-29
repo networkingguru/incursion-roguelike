@@ -1,0 +1,33 @@
+# Dump the character sheet Resistances page before and after wearing a Ring of
+# Elemental Command (Fire). The fire-resistance magnitude is the oracle: 12
+# before the PA-08-F57 fix and 10 after. Read by a manual before/after
+# comparison.
+
+@include chargen.keys
+
+d
+@until "Resistances and Armour" DOWN
+@dump:without-ring
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*26                # walk the glyph row to Rings
+@until "Ring of Elemental Command (Water)" DOWN
+ENTER
+m
+SPACE                   # put the Fire ring on the Left Ring slot
+@dump:ring-inventory
+ESC
+
+d
+@until "Resistances and Armour" DOWN
+@dump:with-ring
+@quit

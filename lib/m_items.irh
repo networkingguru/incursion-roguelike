@@ -4955,7 +4955,16 @@ and EA_GRANT
           2 $"flame strike";
   }
 and EA_GRANT
-  { xval: RESIST; yval: AD_FIRE; pval: 12; }
+  // upstream: the Ring of Elemental Command (Fire) fire-resistance grant was coded
+  // pval 12, yet the ring's own Desc promises "a Fire Resistance of 10"; the two
+  // disagreed by two points. The same value ships on Win32 with the original data --
+  // this is a data value in an item declaration, not a port artefact -- so the
+  // mismatch is upstream's. Brian ruled the Desc is authoritative (prose wins), so
+  // the coded value is corrected to 10 and the Desc is left unchanged. Observed --
+  // the wearer's character-sheet Resistances page reads Fire 10 after the fix and
+  // Fire 12 before (tools/keys/fire-ring-resist.keys, tools/check_fire_ring_resist.sh).
+  // inc-tek.8.8 / PA-08-F57; not sent.
+  { xval: RESIST; yval: AD_FIRE; pval: 10; }
 and EA_GRANT
   { xval: TRAP_EVENT; yval: EVICTIM(EV_DAMAGE);
     On Event META(EVICTIM(EV_DAMAGE)) {

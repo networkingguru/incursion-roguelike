@@ -539,6 +539,7 @@ the unfixed tree before it is trusted.
 | `check_doc_citations.sh` | Did any document a change touched gain a citation defect above its recorded baseline? |
 | `check_doc_freshness.sh` | Which documents did a range of commits leave stale, and does every line citation in them and in the source they touched still resolve? |
 | `check_dup_names.sh` | Does the resource compiler reject a same-case duplicate resource name, with its own duplicate-name diagnostic? |
+| `check_fire_ring_resist.sh` | Does the Ring of Elemental Command (Fire) grant the Fire Resistance of 10 its page promises, rather than the 12 its grant was coded? |
 | `check_flame_tongue_undead.sh` | Does a flame tongue sword set a corporeal undead alight for the 3d6/2d6/1d6 fire its page promises? |
 | `check_flavor_stability.sh` | Does a v1 save's per-player flavour memory -- appearances and their Known/Tried flags -- survive a module rebuild that adds a resource? |
 | `check_format_strings.sh` | Does every printf-style format string in the engine agree with its arguments, or has the warning count risen above the baseline? |
