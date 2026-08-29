@@ -69,8 +69,9 @@ mutex (`src/Vision.cpp:383-384`), and `Creature::Multiply` refuses to breed past
 
 ## The three crashes
 **1. Event Stack Overflow: blast -> Multiply -> place -> blast. Fixed (inc-upw.5).** `Magic::Blast` throws `EV_DAMAGE`
-(`src/Effects.cpp:261`) -> a script handler on `POST(EV_DAMAGE)`/`EVICTIM(EV_DAMAGE)` (`lib/program.i:45382`, `:45815`) or on
-`POST(EVICTIM(EV_HIT))` (`:46418`) calls `Multiply` -> `Creature::Multiply` (`src/Creature.cpp:485`) -> `mn->PlaceAt` (`:556`)
+(`src/Effects.cpp:261`) -> a script handler on `POST(EV_DAMAGE)`/`EVICTIM(EV_DAMAGE)` (id moss `lib/mon3.irh:2258`, brown
+mold `lib/mon3.irh:2296` and `lib/mon3.irh:2304`) or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3354`)
+calls `Multiply` -> `Creature::Multiply` (`src/Creature.cpp:485`) -> `mn->PlaceAt` (`:556`)
 throws `EV_PLACE` (`src/Display.cpp:224`, `:248`) and `EV_FIELDON` (`:314`) -> `Creature::FieldOn` re-throws `EV_EFFECT` for
 `FI_MODIFIER` (`src/Status.cpp:1688`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1202`).
 *Invariant violated:* `Creature::FieldOn` sets `EActor` to the field's creator, so the script calls `Multiply` on the same
