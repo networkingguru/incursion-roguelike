@@ -466,6 +466,7 @@ the unfixed tree before it is trusted.
 | `check_holy_avenger_dispel_cl.sh` | Does the Holy Avenger's on-hit dispel use the wielder's paladin level as its caster level, rather than a hardcoded 12? |
 | `check_dwarven_thrower_throwable.sh` | Is the Dwarven Thrower's base item a throwable, non-generated hand-copy of the ordinary warhammer, so the artifact can actually be thrown? |
 | `check_devour_negative_cr.sh` | Does devouring a corpse of negative challenge rating leave experience alone, while an ordinary corpse still pays? |
+| `check_devour_template_source.sh` | Does `Creature::Devour(Corpse*)` read the TEMPLATE stati off the corpse rather than off the eater, with the iteration opening and closing on the same object? |
 | `check_dump_save.sh` | Does `-dump` walk a real save and report the same bytes from both backends? |
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the gnomes its own refusal message names? |
 | `check_enchant_graceful.sh` | Do seven compiled item pages advertise their own qualities, caster-level gates, spells and bonus type? |
@@ -482,6 +483,7 @@ the unfixed tree before it is trusted.
 | `check_loremaster_live.sh` | Does a Loremaster gain the extra attribute points a tome promises her? |
 | `check_lz_uncompress.sh` | Can the LZ77 and RLE decoders be made to write past their output buffer? |
 | `check_masterarcher_live.sh` | Does the Master Archer's ranged sneak attack fire with a bow only, and not with a sling? |
+| `check_menu_page_arrows.sh` | Does the RIGHT arrow page a long selection menu forward, so a Steam Deck player who has a stick but no Tab key can reach a row on the second page and still pick it? |
 | `check_menu_value.sh` | Does a script menu give back the same object handle it was handed? |
 | `check_natural_speed.sh` | Has the hard-coded brawl-speed floor drifted from the fastest weapon in `lib/weapons.irh`? |
 | `check_natural_speed_live.sh` | Does flipping one byte of `Options.Dat` really move the Brawl row on the character sheet, from 100% to 175%? |
