@@ -108,6 +108,9 @@
 #undef MIN
 #undef MAX
 
+#include <SDL.h>
+#include "gamepad_dir.h"
+
 
 #ifndef CURSOR_BLINK_MS
 #define CURSOR_BLINK_MS 300
@@ -554,16 +557,115 @@ int main(int argc, char *argv[]) {
     return retval;
 }
 
-TCOD_key_t readkey(int wait) {
-    TCOD_key_t key;
-    if (wait)
-        TCOD_sys_wait_for_event(TCOD_EVENT_KEY_PRESS,&key,NULL,true);
-    else {
-        TCOD_key_t nokey = { TCODK_NONE, 0 };
-        TCOD_event_t tcod_event = TCOD_sys_check_for_event(TCOD_EVENT_KEY_PRESS,&key,NULL);
-        if ((tcod_event & TCOD_EVENT_KEY) == 0)
-            return nokey;
+static SDL_GameController *gamepad;
+static bool left_stick_armed = true;
+static bool right_stick_armed = true;
+static Uint8 previous_dpad[4];
+static unsigned pending_dpad;
+
+static bool poll_gamepad(TCOD_key_t *out)
+{
+    static const int outer = 16000;
+    static const int inner = 8000;
+    static const TCOD_keycode_t direction_keys[8] = {
+        TCODK_KP8, TCODK_KP9, TCODK_KP6, TCODK_KP3,
+        TCODK_KP2, TCODK_KP1, TCODK_KP4, TCODK_KP7
+    };
+    // D-pad commands are intentionally separate from movement and editable.
+    static const SDL_GameControllerButton dpad_buttons[4] = {
+        SDL_CONTROLLER_BUTTON_DPAD_UP, SDL_CONTROLLER_BUTTON_DPAD_DOWN,
+        SDL_CONTROLLER_BUTTON_DPAD_LEFT, SDL_CONTROLLER_BUTTON_DPAD_RIGHT
+    };
+    static const char dpad_commands[4] = { 'K', 'P', '/', ',' };
+
+    *out = TCOD_key_t();
+    if (!(SDL_WasInit(SDL_INIT_GAMECONTROLLER) & SDL_INIT_GAMECONTROLLER) &&
+            SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) != 0)
+        return false;
+
+    if (gamepad && !SDL_GameControllerGetAttached(gamepad)) {
+        SDL_GameControllerClose(gamepad);
+        gamepad = NULL;
+        left_stick_armed = right_stick_armed = true;
+        pending_dpad = 0;
+        for (int i = 0; i != 4; ++i)
+            previous_dpad[i] = 0;
     }
+    if (!gamepad) {
+        for (int i = 0; i != SDL_NumJoysticks(); ++i) {
+            if (SDL_IsGameController(i)) {
+                gamepad = SDL_GameControllerOpen(i);
+                if (gamepad)
+                    break;
+            }
+        }
+    }
+    if (!gamepad)
+        return false;
+
+    // Polling avoids consuming the SDL event queue owned by libtcod.
+    SDL_GameControllerUpdate();
+    const int lx = SDL_GameControllerGetAxis(gamepad, SDL_CONTROLLER_AXIS_LEFTX);
+    const int ly = SDL_GameControllerGetAxis(gamepad, SDL_CONTROLLER_AXIS_LEFTY);
+    const int rx = SDL_GameControllerGetAxis(gamepad, SDL_CONTROLLER_AXIS_RIGHTX);
+    const int ry = SDL_GameControllerGetAxis(gamepad, SDL_CONTROLLER_AXIS_RIGHTY);
+    const long long left_magnitude = (long long)lx * lx + (long long)ly * ly;
+    const long long right_magnitude = (long long)rx * rx + (long long)ry * ry;
+
+    // A fired stick must cross the inner radius before another octant can fire.
+    if (!left_stick_armed && left_magnitude < (long long)inner * inner)
+        left_stick_armed = true;
+    if (!right_stick_armed && right_magnitude < (long long)inner * inner)
+        right_stick_armed = true;
+
+    int left_dir = left_stick_armed ? gamepad_dir8_from_axes(lx, ly, outer) : -1;
+    int right_dir = right_stick_armed ? gamepad_dir8_from_axes(rx, ry, outer) : -1;
+    Uint8 dpad[4];
+    for (int i = 0; i != 4; ++i) {
+        dpad[i] = SDL_GameControllerGetButton(gamepad, dpad_buttons[i]);
+        if (dpad[i] && !previous_dpad[i])
+            pending_dpad |= 1u << i;
+        previous_dpad[i] = dpad[i];
+    }
+
+    if (left_dir != -1) {
+        left_stick_armed = false;
+        out->vk = direction_keys[left_dir];
+        return true;
+    }
+    if (right_dir != -1) {
+        right_stick_armed = false;
+        out->vk = direction_keys[right_dir];
+        out->lalt = true;
+        return true;
+    }
+    for (int i = 0; i != 4; ++i) {
+        if (pending_dpad & (1u << i)) {
+            pending_dpad &= ~(1u << i);
+            out->vk = TCODK_CHAR;
+            out->c = dpad_commands[i];
+            return true;
+        }
+    }
+    return false;
+}
+
+TCOD_key_t readkey(int wait) {
+    TCOD_key_t key = TCOD_key_t();
+    if (wait) {
+        for (;;) {
+            TCOD_event_t tcod_event = TCOD_sys_check_for_event(TCOD_EVENT_KEY_PRESS,&key,NULL);
+            if (tcod_event & TCOD_EVENT_KEY)
+                return key;
+            if (poll_gamepad(&key))
+                return key;
+            TCOD_sys_sleep_milli(15);
+        }
+    }
+
+    TCOD_event_t tcod_event = TCOD_sys_check_for_event(TCOD_EVENT_KEY_PRESS,&key,NULL);
+    if ((tcod_event & TCOD_EVENT_KEY) == 0 && !poll_gamepad(&key))
+        key = TCOD_key_t();
     return key;
 }
 
@@ -1453,6 +1555,11 @@ int16 libtcodTerm::GetCharCmd(KeyCmdMode mode) {
 		uint32 ticks0 = TCOD_sys_elapsed_milli(), ticks1;
         TCOD_key_t tcodKey;
         TCOD_event_t tcodEvent = TCOD_sys_check_for_event(TCOD_EVENT_KEY_PRESS, &tcodKey, NULL);
+        if (tcodKey.vk == TCODK_NONE) {
+            TCOD_key_t gamepadKey;
+            if (poll_gamepad(&gamepadKey))
+                tcodKey = gamepadKey;
+        }
 
         if (Mode == MO_PLAY && p->UpdateMap)
             RefreshMap();
@@ -1817,4 +1924,3 @@ Retry:
 }
 
 #endif
-
