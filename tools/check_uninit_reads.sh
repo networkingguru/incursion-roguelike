@@ -71,7 +71,10 @@ if [ "$rc" -ne 0 ]; then
 fi
 
 # One line per offending use, e.g.
-#   src/Foo.cpp:123:4: warning: variable 'x' ... [-Wsometimes-uninitialized]
+#   src/<file>.cpp:<line>:4: warning: variable 'x' ... [-Wsometimes-uninitialized]
+# The placeholders are deliberate. A plausible-looking file:line in a comment is
+# read as a citation by tools/check_doc_freshness.sh, which then reports a
+# defect for a file that was never meant to exist.
 HITS="$(grep -E "warning: variable .*\[-W(sometimes-)?uninitialized\]" "$LOG" | sort -u)"
 
 if [ -n "$HITS" ]; then

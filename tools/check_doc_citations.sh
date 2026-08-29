@@ -14,7 +14,7 @@
 #       2 the tool could not measure -- missing baseline, unreadable file
 #
 # WHY THIS EXISTS. An unattended agent edits prose and commits it. Prose that
-# cites `file.cpp:1234` is a claim about the tree, and a wrong line number reads
+# cites `<file>.cpp:<line>` is a claim about the tree, and a wrong line number reads
 # as fact to whoever comes next -- that is how MORNING-REPORT.md's own citation
 # header ended up enlisting a one-off report in a gate that must stay green.
 # tools/check_citations.sh already resolves every citation in ONE document. What
