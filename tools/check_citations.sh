@@ -226,11 +226,17 @@ list_ref() {
 
 path_in_ref() { list_ref "$1" | grep -qxF "$2"; }
 
-# A bare citation gives only a basename. Accept it when exactly one file in the
-# named tree carries that name; anything else is ambiguous and must be written
-# out in full.
+# Resolve in two steps. First accept the token exactly as written when it is a
+# tracked path: equality cannot launder a wrong citation into a different file.
+# Otherwise discard any directory prefix and apply the existing basename rule,
+# accepting the name only when exactly one file in the tree carries it.
 resolve_in_ref() {
     local ref=$1 base=$2 hits
+    if list_ref "$ref" | grep -qxF "$base"; then
+        printf '%s\n' "$base"
+        return 0
+    fi
+    base=${base##*/}
     hits=$(list_ref "$ref" | grep -E "(^|/)$(printf '%s' "$base" | sed 's/[.[\*^$]/\\&/g')$")
     [ "$(printf '%s\n' "$hits" | grep -c .)" = 1 ] || return 1
     printf '%s\n' "$hits"
@@ -553,7 +559,7 @@ check_document() {
                 "$full" "$num" "$ref" "$PRIMARY_REF" "$(line_at_ref "$ref" "$full" "$num")"
             unchecked=$((unchecked + 1))
         fi
-    done < <(grep -oE '\b[A-Za-z_][A-Za-z0-9_-]+\.[A-Za-z][A-Za-z0-9]{0,3}:[0-9]+' "$doc" | sort -u)
+    done < <(grep -oE '\b([A-Za-z0-9_.-]+/)*[A-Za-z_][A-Za-z0-9_-]+\.[A-Za-z][A-Za-z0-9]{0,3}:[0-9]+' "$doc" | sort -u)
 
     # 4. Bare continuation citations -- a `:NNNN` with no file in front of it.
     #
@@ -632,7 +638,7 @@ text = open(doc, encoding='utf-8', errors='replace').read()
 # in full, and naming `build_macos.sh:34` in full made the tool say nothing at
 # all. What decides now is whether the file can be FOUND, which is the question
 # that was always being asked.
-fileish = re.compile(r'\b([A-Za-z_][A-Za-z0-9_-]+)\.([A-Za-z][A-Za-z0-9]{0,3})\b(?::(\d+))?')
+fileish = re.compile(r'\b((?:[A-Za-z0-9_.-]+/)*[A-Za-z_][A-Za-z0-9_-]+)\.([A-Za-z][A-Za-z0-9]{0,3})\b(?::(\d+))?')
 bare    = re.compile(r'(?<![\w.])(?<!\.cpp)(?<!\.h)(?<!\.irh):(\d+)')
 
 trees = {}
@@ -643,7 +649,7 @@ def tree(r):
         index = {}
         for p in out:
             index.setdefault(p.split('/')[-1], []).append(p)
-        trees[r] = index
+        trees[r] = (index, set(out))
     return trees[r]
 
 # The primary tree first, then the secondary. The order is the whole safety
@@ -682,7 +688,11 @@ def length_of(base):
         unresolved[base] = (f"is in neither {primary} nor {secondary}",
                             "Name a file that is committed, or cite the generator input.")
         for r in (primary, secondary):
-            hits = tree(r).get(base, [])
+            index, paths = tree(r)
+            # An exact tracked path is authoritative and cannot select another
+            # file. Only when it is absent do we preserve the old basename
+            # lookup, using the last segment of the name as written.
+            hits = [base] if base in paths else index.get(base.split('/')[-1], [])
             if len(hits) == 1:
                 data = blob(r, hits[0])
                 if is_binary(data):
@@ -693,7 +703,7 @@ def length_of(base):
                 break
             if len(hits) > 1:
                 unresolved[base] = (f"is the name of {len(hits)} different files in {r}",
-                                    "Write the path, not just the file name.")
+                                    "Write the path as it is tracked, for example tools/README.md rather than README.md.")
     return lengths[base]
 
 def line_of(r, path, num):
@@ -725,9 +735,9 @@ events.sort(key=lambda e: e[0])
 FAR       = int(os.environ.get('CITATION_FAR', '400'))
 FAR_CHARS = int(os.environ.get('CITATION_FAR_CHARS', '1000'))
 
-# The context is [basename, end offset of the most recent citation in this
-# thread, scoped]. A run of continuations keeps the thread alive: each accepted
-# number moves the offset forward, so "Event.cpp:339 ... :55 ... :75 ... :95"
+# The context is [resolved path, name as written, end offset of the most recent
+# citation in this thread, scoped]. A run of continuations keeps the thread
+# alive: each accepted number moves the offset forward, so "Event.cpp:339 ... :55 ... :75 ... :95"
 # stays one reference however long the list runs. What the thread cannot survive
 # is a stretch of prose with no citation in it, or the naming of any other file.
 #
@@ -789,9 +799,12 @@ for start, end, kind, name, num in events:
             reason, advice = unresolved[name]
             dead = (f"the last file named before it is {name}, which {reason}", advice)
             continue
-        ctx, dead = [name, end, num is None], None
+        # Identity belongs to the resolved path, not the spelling in the prose.
+        # Otherwise `Feature.cpp` and `src/Feature.cpp` split one file into two
+        # histories and make the nearest-citation distance measure the wrong gap.
+        ctx, dead = [path, name, end, num is None], None
         if num is not None:
-            cited.setdefault(name, set()).add(num)
+            cited.setdefault(path, set()).add(num)
         continue
 
     if ctx is None:
@@ -799,7 +812,7 @@ for start, end, kind, name, num in events:
                                "Name the file this number is in.")
         lost(num, why, advice)
         continue
-    base, anchor, scoped = ctx
+    path_key, base, anchor, scoped = ctx
     gap_chars = start - anchor
     if gap_chars > FAR_CHARS:
         lost(num, f"the nearest {base} citation is {gap_chars} characters back, "
@@ -809,7 +822,7 @@ for start, end, kind, name, num in events:
         continue
     # `binary` is discarded here on purpose: a binary name never becomes the
     # context, so `base` is always a text file at this point.
-    r, path, n, _ = length_of(base)
+    r, path, n, _ = length_of(path_key)
     if num > n:
         # THE MESSAGE MUST NAME THE TREE IT MEASURED AGAINST.
         #
@@ -835,7 +848,7 @@ for start, end, kind, name, num in events:
         print(f"DEFECT  bare ':{num}' follows {base}, which has only {n} lines "
               f"in {r} -- {why}")
         bad += 1
-        ctx = [base, end, scoped]
+        ctx = [path_key, base, end, scoped]
         continue
     # A continuation that lands thousands of lines from anything else cited in
     # that file has almost certainly inherited the wrong file and happened to
@@ -854,7 +867,7 @@ for start, end, kind, name, num in events:
     # right. The protection that matters is untouched: `Skills.cpp:4161`
     # followed much later by `:887` still carries a number, so it is not scoped,
     # and the heuristic still fires on it.
-    seen = cited.get(base)
+    seen = cited.get(path_key)
     if seen and not scoped:
         gap = min(abs(num - c) for c in seen)
         if gap > FAR:
@@ -862,7 +875,7 @@ for start, end, kind, name, num in events:
                   f"{base} citation is {gap} lines away -- check it did not "
                   f"inherit the wrong file")
             bad += 1
-            ctx = [base, end, scoped]
+            ctx = [path_key, base, end, scoped]
             continue
     if r != primary:
         # Checked, and checked correctly -- but against a tree the reader of an
@@ -870,8 +883,8 @@ for start, end, kind, name, num in events:
         print(f"UNCHECKED {path}:{num}  (only in {r}, not in {primary})  "
               f"{line_of(r, path, num)}")
         unchecked += 1
-    cited.setdefault(base, set()).add(num)
-    ctx = [base, end, scoped]
+    cited.setdefault(path_key, set()).add(num)
+    ctx = [path_key, base, end, scoped]
 
 # Hand the count back through a file. The block's stdout is the report the user
 # reads, so it cannot also be a return channel, and an exit status carries one
@@ -956,6 +969,34 @@ selftest() {
     printf 'See https://github.com/%s/blob/master/src/NoSuchFile.cpp#L1\n' \
         "$UPSTREAM_HOST" > "$dir/bad.md"
     printf 'src/Feature.cpp:850\tThing::MoveDepth\n' > "$dir/good.expect"
+
+    # A path written exactly as tracked resolves before basename ambiguity is
+    # considered. README.md is carried by several files, so this citation was
+    # rejected when the scan threw away `tools/` and kept only the basename.
+    printf '%s\n' "$OURS_MARK" > "$dir/exact-path.md"
+    printf 'The guide starts at `tools/README.md:1`.\n' >> "$dir/exact-path.md"
+
+    # The fallback rule is unchanged. README.txt is carried by several tracked
+    # subdirectories and is not itself a root path, so a bare spelling remains
+    # ambiguous and must not acquire an arbitrary target.
+    printf 'The notes begin at `README.txt:1`.\n' > "$dir/ambiguous-basename.md"
+
+    # Exact-path resolution still feeds the ordinary range check. This guards
+    # against treating path existence alone as evidence for an impossible line.
+    printf '%s\n' "$OURS_MARK" > "$dir/exact-path-eof.md"
+    printf 'The guide ends at `tools/README.md:99999`.\n' >> "$dir/exact-path-eof.md"
+
+    # THE SAME RULE, ON THE OTHER SCAN. Checks 3 and 4 resolve a name in two
+    # separate implementations -- bash above, python below -- and the three
+    # cases above only ever reach the bash one. Deleting the exact-path branch
+    # from the python block left all three green, which is a check that cannot
+    # fail. A bare continuation is the only thing that reaches the python
+    # resolver, so this fixture names the path and then writes `:2` after it:
+    # without the branch the name is ambiguous, the context dies, and the
+    # continuation is reported as having no file.
+    printf '%s\n' "$OURS_MARK" > "$dir/exact-path-bare.md"
+    printf 'The guide starts at `tools/README.md:1` and goes on at `:2`.\n' \
+        >> "$dir/exact-path-bare.md"
 
     # A file named with NO line number must become the context for the bare
     # numbers after it. This is the docs/PORT-STATUS.md sentence of 2026-08-18,
@@ -1129,6 +1170,10 @@ selftest() {
         >> "$dir/declared-late.md"
 
     selftest_case "a resolving citation and its expectation" 0 "$dir/good.md" "$dir/good.expect"
+    selftest_case "an exact tracked path with an ambiguous basename" 0 "$dir/exact-path.md"
+    selftest_case "an ambiguous basename outside the root"    1 "$dir/ambiguous-basename.md"
+    selftest_case "an exact tracked path past the end"         1 "$dir/exact-path-eof.md"
+    selftest_case "a continuation under an exact tracked path" 0 "$dir/exact-path-bare.md"
     selftest_case "a link to a path that cannot exist"       1 "$dir/bad.md"
     selftest_case "a file named without a line number"       0 "$dir/adopt.md"
     selftest_case "a named file shorter than the stale one"  1 "$dir/stale-short.md"
