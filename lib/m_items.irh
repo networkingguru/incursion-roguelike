@@ -7324,6 +7324,7 @@ and EA_GENERIC { }
   
 AI_SHIELD Effect "Dragonshield" : EA_BLAST
   { Level: PLUS_2PER1; qval: Q_TAR | Q_DIR;
+    // upstream: the Dragonshield Desc listed a dragon colour "brown" that its EV_GETNAME handler never produces, while EV_GETNAME names the AD_SLASH shield "Yellow" -- a real displayed name that was absent from the Desc; the seven EV_GETNAME names are Red/White/Blue/Black/Purple/Yellow/Green, so "brown" names no shield and "yellow" was missing. Changed only the lowercase Desc word "brown" to "yellow"; the uppercase glyph constant BROWN in EV_CALC_EFFECT (case AD_SLASH) and every handler are left alone. The flat prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F63; not sent.
     Desc: "A Dragonshield is a kite shield carved with the
       image of a dragon's head, its mouth wide open as if
       to breathe. Three times per day, the shield can be
@@ -7332,7 +7333,7 @@ AI_SHIELD Effect "Dragonshield" : EA_BLAST
       magical plus the item possesses (with a Reflex save
       for half damage). The type of damage depends upon
       the type of dragon the shield is modelled after --
-      white, red, brown, green, black, blue or purple.\n
+      white, red, yellow, green, black, blue or purple.\n
       __In addition to this special ability, a Dragonshield
       is a <11>+1 <7>(or higher)<11> light fortification 
       fearsome shield<7>. Bearing a Dragonshield makes all

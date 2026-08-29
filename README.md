@@ -454,6 +454,7 @@ the unfixed tree before it is trusted.
 | `check_cure_critical.sh` | Does the Cure Critical Wounds effect roll the `4d8 + LEVEL_MAX20` its own description promises, rather than the `3d8` it paid before? |
 | `check_divine_aspect_prose.sh` | Does the Lesser Divine Aspect description state that its disease/poison saves and its acid/cold/electricity resistances scale per magical plus, matching its `PLUS_2PER1`/`PLUS_5PER1` code, rather than the flat "+2" and "resistance of 5" it claimed before? |
 | `check_divine_power.sh` | Does Divine Power grant `FT_POWER_ATTACK` when the caster has STR 18 and no Power Attack, yet still grant `FT_KNOCK_PRONE` when he already has Power Attack, as its description promises? |
+| `check_dragonshield_prose.sh` | Does the Dragonshield description list the colour names the shield can actually display (yellow, not brown), matching its `EV_GETNAME` name table? |
 | `check_flame_strike.sh` | Does Flame Strike's description state `1d6` points of damage per caster level, matching its SRD-authentic `(LEVEL_SCALED)d6` script rather than the `1d8` prose it carried before? |
 | `check_snowstrike.sh` | Does the Snowstrike blast carry `EF_CASTER_IMMUNE` and `EF_ALLIES_IMMUNE`, so the caster and her allies are immune as its description promises, rather than freezing them? |
 | `check_sunblade_cold.sh` | Does wielding a known +2 Sunblade raise Cold resistance by the promised mild rate of two points? |
