@@ -1,3 +1,5 @@
+<!-- citations: this-port -->
+
 # Plan: module manifest and position-keyed references
 
 Goal: make a v1 save survive a legal append to any resource list, and refuse a
