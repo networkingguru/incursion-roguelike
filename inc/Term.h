@@ -550,6 +550,9 @@ protected:
     int16 cx, cy, cWrap;
     uint16 attr;
     bool ClearMsgOK, isHelp;
+    bool InOverviewMap = false;   // true only while ShowMapOverview() runs; the
+                                  // libtcod gamepad poller reads it to give the
+                                  // overview map stick-repeat and right-stick zoom.
     int16 Mode;
 
     /* Inventory Variables */

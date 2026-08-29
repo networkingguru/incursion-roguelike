@@ -579,7 +579,8 @@ static int ls_octant = -1;      // octant currently held, -1 = released
 static Uint32 ls_fire_ms = 0;   // when we last emitted for this hold
 static bool ls_repeating = false;
 
-static bool poll_gamepad(TCOD_key_t *out, bool allow_repeat, bool look_mode)
+static bool poll_gamepad(TCOD_key_t *out, bool allow_repeat, bool look_mode,
+                         bool overview)
 {
     static const int outer = 16000;
     static const int inner = 8000;
@@ -654,27 +655,40 @@ static bool poll_gamepad(TCOD_key_t *out, bool allow_repeat, bool look_mode)
     }
 
     if (right_dir != -1) {
+        if (overview) {
+            // Overview map: a vertical right-stick flick zooms. The stick is
+            // natural (vertical = ry), measured on device 2026-08-29. Up = zoom
+            // in ('+'), down = zoom out ('-'); a horizontal flick does nothing.
+            long long axx = (long long)rx * rx, ayy = (long long)ry * ry;
+            if (ayy >= axx) {
+                right_stick_armed = false;
+                out->vk = TCODK_TEXT;
+                out->text[0] = (ry < 0) ? '+' : '-';
+                out->text[1] = '\0';
+                return true;
+            }
+            return false;
+        }
         right_stick_armed = false;
         if (look_mode) {
             out->vk = direction_keys[right_dir];
             out->lalt = true;
         } else {
-            // The ROG Ally's right stick reports its axes transposed from a normal pad
-            // (Observed on device): the physically-vertical push lands on the X axis and
-            // the horizontal push on the Y axis. Map accordingly so vertical = line
-            // scroll (up/down arrows) and horizontal = page (PgUp/PgDn).
+            // Out-of-play scroll pad. The stick is natural (vertical = ry,
+            // horizontal = rx), measured on device 2026-08-29. Vertical = line
+            // scroll (up/down arrows), horizontal = page (PgUp/PgDn).
             long long axx = (long long)rx * rx, ayy = (long long)ry * ry;
-            if (axx >= ayy)
-                out->vk = (rx < 0) ? TCODK_KP8 : TCODK_KP2;
+            if (ayy >= axx)
+                out->vk = (ry < 0) ? TCODK_KP8 : TCODK_KP2;
             else
-                out->vk = (ry < 0) ? TCODK_KP9 : TCODK_KP3;
+                out->vk = (rx < 0) ? TCODK_KP9 : TCODK_KP3;
         }
         return true;
     }
     return false;
 }
 #else
-static bool poll_gamepad(TCOD_key_t *out, bool, bool) { (void)out; return false; }
+static bool poll_gamepad(TCOD_key_t *out, bool, bool, bool) { (void)out; return false; }
 #endif
 
 TCOD_key_t readkey(int wait) {
@@ -685,7 +699,7 @@ TCOD_key_t readkey(int wait) {
             TCOD_event_t tcod_event = TCOD_sys_check_for_event(TCOD_EVENT_KEY_PRESS,&key,NULL);
             if (tcod_event & TCOD_EVENT_KEY)
                 return key;
-            if (poll_gamepad(&key, false, false))
+            if (poll_gamepad(&key, false, false, false))
                 return key;
             TCOD_sys_sleep_milli(15);
         }
@@ -696,7 +710,7 @@ TCOD_key_t readkey(int wait) {
     }
 
     TCOD_event_t tcod_event = TCOD_sys_check_for_event(TCOD_EVENT_KEY_PRESS,&key,NULL);
-    if ((tcod_event & TCOD_EVENT_KEY) == 0 && !poll_gamepad(&key, false, false))
+    if ((tcod_event & TCOD_EVENT_KEY) == 0 && !poll_gamepad(&key, false, false, false))
         key = TCOD_key_t();
     return key;
 }
@@ -1591,8 +1605,10 @@ int16 libtcodTerm::GetCharCmd(KeyCmdMode mode) {
         if (tcodKey.vk == TCODK_NONE) {
             TCOD_key_t gamepadKey;
             if (poll_gamepad(&gamepadKey,
-                    (GetMode() == MO_PLAY && mode == KY_CMD_NORMAL_MODE) || GetMode() == MO_INV,
-                    GetMode() == MO_PLAY && mode == KY_CMD_NORMAL_MODE))
+                    (GetMode() == MO_PLAY && mode == KY_CMD_NORMAL_MODE) || GetMode() == MO_INV
+                        || InOverviewMap,
+                    GetMode() == MO_PLAY && mode == KY_CMD_NORMAL_MODE,
+                    InOverviewMap))
                 tcodKey = gamepadKey;
         }
 #endif

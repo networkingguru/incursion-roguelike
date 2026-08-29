@@ -1358,6 +1358,11 @@ void TextTerm::ShowMapOverview() {
        is an inconclusive session; the second is the inc-pw1.5 regression. */
     StairProbe("open at=%d,%d\n", (int)p->x, (int)p->y);
 
+    /* Tell the gamepad poller we are on the overview map, so the left stick
+       repeats (hold to pan) and the right stick zooms. The flag clears at the
+       one exit below. */
+    InOverviewMap = true;
+
     vx = p->x;
     vy = p->y;
     mag = 1;
@@ -1524,6 +1529,7 @@ void TextTerm::ShowMapOverview() {
             ShowStatus();
             ShowTraits();
             linenum = linepos = 0;
+            InOverviewMap = false;
             return;
 
         case KY_CMD_NORTH:       vy -= magn; break;
