@@ -12,7 +12,7 @@
 		"english"
 		{
 			"Title"		"Incursion (Full Command Set)"
-			"Description"		"SHIFT LAYER: HOLD LB. While held, D-pad = macros F1-F4, A/B/X/Y = F5-F8, RB = F9, LT = F10, RT = F11, Menu = F12, View = Sleep; and LB+hold on A/B/X/Y gives Search / Rest / Activate / Blast. All 12 Incursion macro slots are reachable and there are NO double-taps anywhere. MOVEMENT IS GAME-SIDE (needs the SDL gamepad build): LEFT STICK = 8-way move with autorun on hold, RIGHT STICK = view pan; the sticks are never mode-shifted, so movement is unaffected by the shift. Stick clicks = stairs. BASE press/hold: D-pad Up=Kick/Pray, Down=Jump/Open, Left=Hide/Messages, Right=Look/Tab. A=Confirm/y. B=Cancel/n. X=Examine/Use. Y=Get/Inventory. RB=Attack/Quaff. LT=Magic/Read. RT=Fire/Target. Menu=Help/Eat. View=Options/Sheet. Keys are sent UNSHIFTED except Help (?) and stairs (< >). THE BACK BUTTONS (M1/M2) CANNOT BE BOUND on the ROG Ally: the pad reports them as keyboard keys F16/F17/F18/PROG1, not controller buttons. Do not try button_back_* or button_macro_*. Double-tap does not work on bumpers or back buttons. The d-pad must stay on keyboard keys, never raw gamepad: Steam's virtual pad exposes it only as a hat axis and SDL has no mapping for 28de:11ff."
+			"Description"		"SHIFT LAYER: HOLD LB. While held, D-pad = macros F1-F4, A/B/X/Y = F5-F8, RB = F9 (hold = Sleep), LT = F10, RT = F11, LEFT system button = F12, RIGHT system button = Options (hold = on-screen keyboard); shift+D-pad Up/Down hold = PgUp/PgDn; and LB+hold on A/B/X/Y gives Search / Rest / Activate / Blast. All 12 Incursion macro slots are reachable and there are NO double-taps anywhere. MOVEMENT IS GAME-SIDE (needs the SDL gamepad build): LEFT STICK = 8-way move with autorun on hold, RIGHT STICK = view pan; the sticks are never mode-shifted, so movement is unaffected by the shift. Stick clicks = stairs. BASE press/hold: D-pad Up=Kick/Pray, Down=Jump/Open, Left=Hide/Messages, Right=Look/Tab. A=Confirm/y. B=Cancel/n. X=Examine/Use. Y=Get/Inventory. RB=Attack/Quaff. LT=Magic/Read. RT=Fire/Target. LEFT system button=SPACE(place item)/Eat. RIGHT system button=HELP(?)/Sheet. Keys are sent UNSHIFTED except Help (?) and stairs (< >). THE BACK BUTTONS (M1/M2) CANNOT BE BOUND on the ROG Ally: the pad reports them as keyboard keys F16/F17/F18/PROG1, not controller buttons. Do not try button_back_* or button_macro_*. Double-tap does not work on bumpers or back buttons. The d-pad must stay on keyboard keys, never raw gamepad: Steam's virtual pad exposes it only as a hat axis and SDL has no mapping for 28de:11ff."
 		}
 	}
 	"group"
@@ -470,8 +470,7 @@
 					{
 						"bindings"
 						{
-							"binding"		"key_press LEFT_SHIFT, Help"
-							"binding"		"key_press FORWARD_SLASH, Help"
+							"binding"		"key_press SPACE, Space / place item"
 						}
 						"settings"
 						{
@@ -500,7 +499,8 @@
 					{
 						"bindings"
 						{
-							"binding"		"key_press EQUALS, Options"
+							"binding"		"key_press LEFT_SHIFT, Help"
+							"binding"		"key_press FORWARD_SLASH, Help"
 						}
 						"settings"
 						{
@@ -668,6 +668,18 @@
 							"haptic_intensity"		"1"
 						}
 					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press PAGE_UP, Page up"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
 				}
 			}
 			"dpad_south"
@@ -682,6 +694,18 @@
 						}
 						"settings"
 						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press PAGE_DOWN, Page down"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
 							"haptic_intensity"		"1"
 						}
 					}
@@ -799,6 +823,18 @@
 							"haptic_intensity"		"1"
 						}
 					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press Z, Sleep"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
 				}
 			}
 			"button_menu"
@@ -826,10 +862,22 @@
 					{
 						"bindings"
 						{
-							"binding"		"key_press Z, Sleep"
+							"binding"		"key_press EQUALS, Options"
 						}
 						"settings"
 						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"controller_action SHOW_KEYBOARD, Keyboard"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
 							"haptic_intensity"		"1"
 						}
 					}

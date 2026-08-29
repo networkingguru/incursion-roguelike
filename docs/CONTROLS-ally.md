@@ -13,12 +13,17 @@ key bindings. **Hold LB** for a shift layer that reaches all 12 macro slots.
 The exact config that produces this layout is checked in at
 [`incursion-steam-input-ally.vdf`](incursion-steam-input-ally.vdf).
 
+**Naming the two system buttons.** On the ROG Ally the LEFT small system button
+is Steam's `button_menu` and the RIGHT one is `button_escape` — the reverse of
+what the glyphs suggest. This doc names them by **physical side** (LEFT / RIGHT),
+not by the Steam token.
+
 ## Movement and view (game-side, analog sticks)
 
 | Control | Action |
 |---|---|
 | **Left stick** | 8-way movement. One flick = one step; **hold a direction to autorun** (repeats after ~0.5 s until you recentre or change direction). |
-| **Right stick** | Pan the view (look) in eight directions. |
+| **Right stick** | Pan the view (look) in eight directions in play; out of play it scrolls (up/down = line, left/right = page). |
 | **L3 · left stick click** | Up stairs (`<`) |
 | **R3 · right stick click** | Down stairs (`>`) |
 
@@ -44,29 +49,37 @@ Press and hold are separate Steam Input bindings on the same control. Hold is
 | **RB** | Attack (`c`) | Quaff (`q`) |
 | **LT** | Magic (`m`) | Read (`r`) |
 | **RT** | Fire (`f`) | Target (`T`) |
-| **☰ Menu** | Help (`?`) | Eat (`e`) |
-| **⊟ View** | Options (`=`) | Sheet (`d`) |
+| **LEFT system button** | SPACE (place item) | Eat (`e`) |
+| **RIGHT system button** | Help (`?`) | Sheet (`d`) |
 
 ## Shift layer (hold LB)
 
 Hold LB and use the control. This reaches all 12 of Incursion's macro slots
-(F1–F12) plus the four commands that used to be double-taps.
+(F1–F12) plus the commands that used to be double-taps.
 
 | Control | Press | Hold |
 |---|---|---|
-| **D-pad Up / Down / Left / Right** | Macro F1 / F2 / F3 / F4 | — |
+| **D-pad Up** | Macro F1 | Page Up |
+| **D-pad Down** | Macro F2 | Page Down |
+| **D-pad Left / Right** | Macro F3 / F4 | — |
 | **A** | Macro F5 | Search (`s`) |
 | **B** | Macro F6 | Rest (`.`) |
 | **X** | Macro F7 | Activate (`A`) |
 | **Y** | Macro F8 | Blast (`B`) |
-| **RB** | Macro F9 | — |
-| **LT** | Macro F10 | — |
-| **RT** | Macro F11 | — |
-| **☰ Menu** | Macro F12 | — |
-| **⊟ View** | Sleep (`z`) | — |
+| **RB** | Macro F9 | Sleep (`z`) |
+| **LT / RT** | Macro F10 / F11 | — |
+| **LEFT system button** | Macro F12 | — |
+| **RIGHT system button** | Options (`=`) | On-screen keyboard |
 
 ## Notes
 
+- **SPACE is still bound (LEFT system button, press)** even though Confirm now
+  does a full inventory swap. It costs nothing and is the native inventory key —
+  it lifts/places an item in the In-Air slot directly.
+- **The on-screen keyboard is on shift+RIGHT-hold.** Without it, typed prompts
+  (Name, Journal, the "Some" quantity prompt), container digit picks, and
+  inventory slot-letter selection are unreachable from the pad rather than merely
+  awkward. Behind a modifier it costs nothing.
 - **The back buttons M1/M2 cannot be bound at all on the Ally.** The pad reports
   them as keyboard keys (F16/F17/F18/PROG1), not as controller buttons, so no
   Steam Input binding name reaches them. Do not try `button_back_*` or
@@ -74,9 +87,8 @@ Hold LB and use the control. This reaches all 12 of Incursion's macro slots
   reachable without them, so this layout also works on a pad with no back
   buttons.
 - **Deliberately unbound:** Run (`,`) — left-stick autorun replaced it; Legend
-  (`/`); Exchange (`-`); More (space); the on-screen keyboard. There is now NO
-  way to type an arbitrary key, so the two tables above are the **complete**
-  reachable command set.
+  (`/`); Exchange (`-`); More (space, as a -more- key). The full command set is
+  reachable through the two tables above plus the on-screen keyboard.
 - **Command keys are sent UNSHIFTED.** The keymap is case-insensitive (the game
   upper-cases the key before matching, `src/Wlibtcod.cpp:1770`), so lowercase
   keys resolve correctly. Only Help (`?`) and the stairs (`<` `>`) use
@@ -105,12 +117,6 @@ Valve's own worked examples of `mode_shift` live in
 `basicui_neptune.vdf`, `basicui_gamepad.vdf`, `desktop_neptune.vdf`) — one
 directory ABOVE `controller_base/templates/`. None of the `templates/` files use
 it, so searching only there wrongly suggests the feature is undocumented.
-
-Steam also has a second mechanism, action layers (`action_layers`, activated by
-`controller_action hold_layer`). This config does NOT use it: `mode_shift` is
-simpler, and action layers have two reported bugs — a layer bound with a Toggle
-activator never turns off, and spamming a hold-layer button can wedge the layer
-on permanently.
 
 ## Installing the Steam Input config
 
