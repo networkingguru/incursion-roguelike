@@ -1556,7 +1556,22 @@ void TextTerm::ShowMapOverview() {
                 break;
             if (!p->RunTo(tx, ty))
             {
-                Message("There's no clear, safe and explored route to that area."); break;
+                /* Name why RunTo refused, so 'R' does not fall back to one
+                   catch-all line. inc-otz. */
+                switch (m->RunToFailReason(p, tx, ty))
+                {
+                case RTF_UNEXPLORED:
+                    Message("You have not yet explored a whole route to there."); break;
+                case RTF_HOSTILE:
+                    Message("Something hostile stands on the only way to there."); break;
+                case RTF_DOOR:
+                    Message("A door you cannot pass blocks the way to there."); break;
+                case RTF_NOROUTE:
+                    Message("There is no route to that area."); break;
+                default:
+                    Message("There's no clear, safe and explored route to that area.");
+                }
+                break;
             }
 
         default:

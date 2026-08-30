@@ -498,6 +498,16 @@ class Map: public Object
     uint16 RunOver(uint8 x, uint8 y, bool memonly, Creature *c,
                    int32 dangerFactor, bool Incor, bool Meld);
 
+/* Why RunTo (src/Creature.cpp) refused a destination, so the overview-map 'R'
+   command can name the cause instead of one catch-all line. See
+   Map::RunToFailReason (src/Djikstra.cpp). */
+#define RTF_NONE        0   /* no cause found -- fall back to the old message */
+#define RTF_NOROUTE     1   /* no open corridor to the target at all */
+#define RTF_UNEXPLORED  2   /* a corridor exists but crosses unremembered ground */
+#define RTF_HOSTILE     3   /* a perceived hostile stands on every route */
+#define RTF_DOOR        4   /* an impassable door blocks every route */
+    int    RunToFailReason(Creature *runner, int16 tx, int16 ty);
+
     /* Encounter Generation */
     EvReturn enGenerate(EventInfo &e);
     EvReturn enGenPart(EventInfo &e);

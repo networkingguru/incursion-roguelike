@@ -372,6 +372,95 @@ uint16 Map::RunOver(uint8 x, uint8 y, bool memonly, Creature *c,
   return 2;
 }
 
+/* Why did Player::RunTo (src/Creature.cpp) refuse a destination? RunTo returns
+   only a bool, but the overview-map 'R' command wants to tell the player WHICH
+   gate stopped it. This finds a physical corridor to the target -- SolidAt-open
+   squares only, the same graph src/Dump.cpp's reachability walk uses, so it
+   passes through closed doors the player would open -- and then names the first
+   square on it that RunTo's memory-enforced gate rejects. RunTo has already
+   failed when this runs, so on the shortest such corridor at least one square
+   must fail the gate; the one nearest the player is the obstacle the player
+   meets first, and that is a true, actionable cause.
+
+   This runs once per refused 'R' press, never in the pathfinding hot loop, so
+   the per-call heap arrays cost nothing that matters. ponytail: the classify
+   block below mirrors the never-relaxed branches of Map::RunOver (above) and
+   of GateBlockReason (src/Dump.cpp) in the same order; keep the three in step.
+   inc-otz. */
+int Map::RunToFailReason(Creature *runner, int16 tx, int16 ty)
+  {
+    if (!runner || !InBounds(runner->x, runner->y) || !InBounds(tx, ty))
+      return RTF_NOROUTE;
+
+    int32 sx = sizeX, sy = sizeY, cells = sx * sy;
+    int16 *dist  = new int16[cells];
+    int32 *par   = new int32[cells];
+    int32 *queue = new int32[cells];
+    int32 qh = 0, qt = 0, k;
+    for (k = 0; k < cells; k++) { dist[k] = -1; par[k] = -1; }
+
+    int32 si = (int32)runner->y * sx + runner->x;
+    int32 ti = (int32)ty * sx + tx;
+    dist[si] = 0;
+    queue[qt++] = si;
+    while (qh < qt)
+      {
+        int32 cur = queue[qh++];
+        int16 cx = (int16)(cur % sx), cy = (int16)(cur / sx);
+        for (int16 d = 0; d != 8; d++)
+          {
+            int16 ax = cx + DirX[d], ay = cy + DirY[d];
+            if (!InBounds(ax, ay))
+              continue;
+            int32 ai = (int32)ay * sx + ax;
+            if (dist[ai] != -1)
+              continue;
+            if (SolidAt(ax, ay))
+              continue;
+            dist[ai] = (int16)(dist[cur] + 1);
+            par[ai] = cur;
+            queue[qt++] = ai;
+          }
+      }
+
+    int reason = RTF_NONE;
+    if (dist[ti] < 0)
+      reason = RTF_NOROUTE;
+    else
+      {
+        bool Incor = runner->HasMFlag(M_INCOR) || runner->HasStati(PHASED);
+        bool Meld  = runner->HasAbility(CA_EARTHMELD);
+        /* Follow the corridor from the target back to the player. Every square
+           the gate rejects overwrites the answer, so the value left standing is
+           the rejecting square nearest the player -- the first one blocking the
+           way out. The player's own square is always remembered, so it is never
+           the blocker. */
+        for (int32 node = ti; node >= 0; node = par[node])
+          {
+            int16 x = (int16)(node % sx), y = (int16)(node / sx);
+            if (RunOver((uint8)x, (uint8)y, true, runner,
+                        DF_IGNORE_TRAPS | DF_IGNORE_TERRAIN, Incor, Meld))
+              continue;                 /* this square passes the gate */
+            if (!At(x, y).Memory)
+              { reason = RTF_UNEXPLORED; continue; }
+            reason = RTF_UNEXPLORED;     /* default if the scans below find nothing */
+            bool named = false;
+            for (Creature *ca = FCreatureAt(x, y); ca; ca = NCreatureAt(x, y))
+              if (ca && runner->Perceives(ca) && ca->isHostileTo(runner))
+                { reason = RTF_HOSTILE; named = true; break; }
+            if (!named)
+              for (Door *dr = FDoorAt(x, y); dr; dr = NDoorAt(x, y))
+                if (!dr->isPassable())
+                  { reason = RTF_DOOR; break; }
+          }
+      }
+
+    delete [] dist;
+    delete [] par;
+    delete [] queue;
+    return reason;
+  }
+
 #ifdef PATH_PROBE
 #include <stdio.h>
 void PP_Report(void) {

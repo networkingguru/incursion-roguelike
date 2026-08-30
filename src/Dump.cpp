@@ -149,6 +149,49 @@ static const char* SafeResName(rID xID) {
     return out;
 }
 
+/* Why RunTo's tier-3 gate (DF_IGNORE_TRAPS|DF_IGNORE_TERRAIN, memory enforced)
+   rejects one square. This mirrors the never-relaxed branches of Map::RunOver
+   (src/Djikstra.cpp:268) in the same order; only these four can still block a
+   square once traps and hazardous terrain are ignored. ponytail: it is a
+   second copy of RunOver's block conditions, kept only to LABEL a square the
+   gate walk below has already rejected. It never decides reachability -- the
+   walk calls the real RunOver for that -- so if RunOver's gate changes, a
+   stale copy here costs a wrong label on a diagnostic line, never a wrong
+   route. Keep it in step with RunOver anyway. inc-otz. */
+static String GateBlockReason(Map *m, Player *p, int16 x, int16 y) {
+    bool Incor = p->HasMFlag(M_INCOR) || p->HasStati(PHASED);
+    bool Meld  = p->HasAbility(CA_EARTHMELD);
+    if (!Incor && m->SolidAt(x, y) && !Meld)
+        return String("solid rock or feature");
+    if (!m->At(x, y).Memory)
+        return String("unexplored -- no memory of this square");
+    Creature *ca;
+    for (ca = m->FCreatureAt(x, y); ca; ca = m->NCreatureAt(x, y))
+        if (ca && p->Perceives(ca) && ca->isHostileTo(p))
+            return Format("perceived hostile: %s (handle %d)",
+                          (const char *)ca->Name(0), (int)ca->myHandle);
+    Door *dr;
+    for (dr = m->FDoorAt(x, y); dr; dr = m->NDoorAt(x, y))
+        if (!dr->isPassable())
+            return String("impassable door -- locked, stuck or broken shut");
+    return String("blocked, but by nothing in the never-relaxed set "
+                  "-- recheck against RunOver");
+}
+
+/* Name for a Map::RunToFailReason code, for the per-portal line below. It lets
+   -dump cross-check RunToFailReason against the cut list: a portal the gate
+   blocks purely on unexplored ground must report "unexplored ground on the
+   route" here. inc-otz. */
+static const char *RtfName(int r) {
+    switch (r) {
+    case RTF_NOROUTE:    return "no open route at all";
+    case RTF_UNEXPLORED: return "unexplored ground on the route";
+    case RTF_HOSTILE:    return "a perceived hostile on the route";
+    case RTF_DOOR:       return "an impassable door on the route";
+    default:             return "none (target is reachable)";
+    }
+}
+
 bool RunSaveDump(const char *path) {
     if (!T1->Exists(path)) {
         fprintf(stderr, "incursion -dump: no such file: %s\n", path);
@@ -417,10 +460,66 @@ bool RunSaveDump(const char *path) {
             if (m->InBounds(cx, cy) && !m->SolidAt(cx, cy))
                 open++;
         }
+
+        /* Second reachability walk: the gate Player::RunTo actually applies.
+           The walk above counts a square open when Map::SolidAt calls it open.
+           RunTo demands more of every step -- the square must be remembered,
+           hold no perceived hostile, and lie behind no impassable door -- and
+           it never relaxes those three, however dangerous a route it accepts
+           (only traps and hazardous terrain relax, at its second and third
+           tries). So this walk scores each step with the real Map::RunOver at
+           RunTo's most permissive tier, DF_IGNORE_TRAPS|DF_IGNORE_TERRAIN.
+           That tier is a superset of the other two, so a portal it cannot
+           reach is one 'R' refuses outright with "no clear, safe and explored
+           route", and the cut list further down names the squares where the
+           gate says no. This is the instrument for the bug where a staircase
+           the player has walked to, and can see a clear path to on the
+           overview map, still will not auto-travel: the overview draws
+           remembered terrain but not the creature or shut door on the route.
+           inc-otz. */
+        bool Incor = p->HasMFlag(M_INCOR) || p->HasStati(PHASED);
+        bool Meld  = p->HasAbility(CA_EARTHMELD);
+        const int32 GATE_TIER = DF_IGNORE_TRAPS | DF_IGNORE_TERRAIN;
+        int16 *gdist  = new int16[cells];
+        int32 *gqueue = new int32[cells];
+        int32 gqh = 0, gqt = 0;
+        for (k = 0; k < cells; k++)
+            gdist[k] = -1;
+        /* Seed the player's own square unconditionally, exactly as
+           Map::ShortestPath does -- it never gates the start square. */
+        if (m->InBounds(p->x, p->y)) {
+            gdist[(int32)p->y * sx + p->x] = 0;
+            gqueue[gqt++] = (int32)p->y * sx + p->x;
+        }
+        while (gqh < gqt) {
+            int32 gcur = gqueue[gqh++];
+            int16 gx = (int16)(gcur % sx), gy = (int16)(gcur / sx);
+            for (int16 gd = 0; gd != 8; gd++) {
+                int16 nx = gx + DirX[gd], ny = gy + DirY[gd];
+                if (!m->InBounds(nx, ny))
+                    continue;
+                int32 ni = (int32)ny * sx + nx;
+                if (gdist[ni] != -1)
+                    continue;
+                if (!m->RunOver((uint8)(nx & 0xFF), (uint8)(ny & 0xFF), true, p,
+                                GATE_TIER, Incor, Meld))
+                    continue;
+                gdist[ni] = (int16)(gdist[gcur] + 1);
+                gqueue[gqt++] = ni;
+            }
+        }
+        int32 gopen = 0;
+        for (k = 0; k < cells; k++)
+            if (gdist[k] >= 0)
+                gopen++;
         printf("  Map %dx%d, depth %d. Open squares %d, reachable from the "
                "player %d.\n", (int)sx, (int)sy, (int)m->Depth,
                (int)open, (int)qt);
-        printf("  Player at (%d,%d).\n\n", (int)p->x, (int)p->y);
+        printf("  Player at (%d,%d).\n", (int)p->x, (int)p->y);
+        printf("  Under RunTo's gate (square remembered, no perceived hostile, "
+               "no impassable door; traps and terrain ignored): %d of those "
+               "%d reachable squares stay reachable.\n\n",
+               (int)gopen, (int)qt);
 
         Thing *t; int32 i;
         int found = 0;
@@ -469,13 +568,60 @@ bool RunSaveDump(const char *path) {
                         (int)dist[pi]);
                 else
                     printf("    reachable    : NO -- no open path from the player\n");
+                int32 gpi = (int32)py * sx + px;
+                if (gdist[gpi] >= 0)
+                    printf("    RunTo gate   : reachable, %d steps -- 'R' can "
+                        "auto-travel here\n", (int)gdist[gpi]);
+                else {
+                    printf("    RunTo gate   : BLOCKED -- 'R' refuses this "
+                        "portal (see the cut list below)\n");
+                    printf("    RunTo reason : %s\n",
+                        RtfName(m->RunToFailReason(p, px, py)));
+                }
                 printf("\n");
             }
         if (!found)
             printf("  (no portals on this map)\n");
 
+        /* Where RunTo's gate seals off ground the player can physically reach:
+           squares the first walk reached, that the gate walk did not, that
+           border the gate-reachable region. The creature or shut door that
+           traps the player sits on one of these. A physically-reached square
+           is open (SolidAt false), so the reason is never "solid" here. */
+        int cutshown = 0, cuttotal = 0;
+        for (k = 0; k < cells; k++) {
+            if (dist[k] < 0 || gdist[k] >= 0)
+                continue;
+            int16 cx = (int16)(k % sx), cy = (int16)(k / sx);
+            bool border = false;
+            for (int16 d = 0; d != 8 && !border; d++) {
+                int16 ax = cx + DirX[d], ay = cy + DirY[d];
+                if (m->InBounds(ax, ay) && gdist[(int32)ay * sx + ax] >= 0)
+                    border = true;
+            }
+            if (!border)
+                continue;
+            cuttotal++;
+            if (cutshown == 0)
+                printf("\n  RunTo cut -- walkable squares the gate rejects, on "
+                       "the border of where 'R' can still reach:\n");
+            if (cutshown < 40) {
+                String why = GateBlockReason(m, p, cx, cy);
+                printf("    (%d,%d): %s\n", (int)cx, (int)cy,
+                       (const char *)why);
+                cutshown++;
+            }
+        }
+        if (cuttotal > cutshown)
+            printf("    ... and %d more.\n", cuttotal - cutshown);
+        if (!cuttotal)
+            printf("\n  RunTo cut: none -- the gate reaches every square the "
+                   "player can physically walk to.\n");
+
         delete [] dist;
         delete [] queue;
+        delete [] gdist;
+        delete [] gqueue;
     }
     printf("\n");
 
