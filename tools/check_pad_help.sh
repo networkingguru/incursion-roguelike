@@ -10,13 +10,17 @@
 #
 # HOW IT PROVES IT. tools/keys/pad-help.keys builds a character, presses ? in
 # play and dumps the screen. The check runs it twice: with INCURSION_PAD_HELP=1
-# the Look row must read "D-pad Right (l)"; without it the dump must not
-# mention the d-pad at all. So a pass proves both the hint and the gate. The
-# override, not a real pad, is what the headless build can exercise; the
-# vendor-id and SteamGameId detection in libtcodTerm::PadAttached
-# (src/Wlibtcod.cpp) is verified on the device, not here.
+# the Look row must read "D-pad > (l)" (the arrow glyph dumps as ">") and the
+# title must be on screen; without it the dump must not mention the d-pad at
+# all. Either run ending in anything but "cleanly" is a FAIL, not an
+# INCONCLUSIVE: the first version of this check called the 2026-08-30 crash
+# inconclusive and passed, while headless.sh had logged the very assert
+# (exit 7 now). The override, not a real pad, is what the headless build can
+# exercise; the vendor-id and SteamGameId detection in
+# libtcodTerm::PadAttached (src/Wlibtcod.cpp) is verified on the device.
 #
-# Measured red-before / green-after on 2026-08-30, seed 7.
+# Measured red-before / green-after on 2026-08-30, seed 7, both for the
+# missing hint (first version) and for the one-column overflow (this one).
 #
 # Usage: tools/check_pad_help.sh [seed]
 # Ends:  0 pass, 1 fail, 2 the check could not be run.
@@ -40,26 +44,41 @@ one_run() {
     local out run
     out="$(env $2 INCURSION_BIN="$BIN" tools/headless.sh "$KEYS" "$SEED" 2>&1)"
     run="$(echo "$out" | awk '/^run:/ {print $2}')"
+    if echo "$out" | grep -q "^ended: *ASSERT"; then
+        echo "FAIL ($1): the engine tripped an assertion opening the ? screen." >&2
+        echo "      On 2026-08-30 that was the one-column list overflowing the" >&2
+        echo "      screen (SizeWin, src/TextTerm.cpp)." >&2
+        echo "$out" | grep -A3 "^ended:" >&2
+        return 1
+    fi
     if ! echo "$out" | grep -q "^ended: *cleanly"; then
-        echo "INCONCLUSIVE ($1): the session did not finish, so it says nothing" >&2
-        echo "              about the ? screen. The chargen questions have" >&2
-        echo "              probably moved; fix $KEYS first." >&2
+        echo "FAIL ($1): the session did not end cleanly, so the ? screen was" >&2
+        echo "      not shown as scripted. If the chargen questions moved, fix" >&2
+        echo "      $KEYS; otherwise the screen itself is at fault." >&2
         echo "$out" | sed -n '/--- after the session ---/,$p' >&2
-        return 2
+        return 1
     fi
     local dump="$run/logs/screens/0001-help.txt"
     [ -f "$dump" ] || { echo "INCONCLUSIVE ($1): no help dump at $dump" >&2; return 2; }
     echo "$dump"
 }
 
-PAD="$(one_run pad INCURSION_PAD_HELP=1)" || exit 2
-KBD="$(one_run keyboard INCURSION_PAD_HELP=)" || exit 2
+PAD="$(one_run pad INCURSION_PAD_HELP=1)" || exit $?
+KBD="$(one_run keyboard INCURSION_PAD_HELP=)" || exit $?
 
 # The assertion: with the override on, Look carries its pad control.
-if ! grep -q "Look .*D-pad Right (l)" "$PAD"; then
+if ! grep -q "Look .*D-pad > (l)" "$PAD"; then
     echo "FAIL: with INCURSION_PAD_HELP=1 the ? screen does not read"
-    echo "      'Look ... D-pad Right (l)'. DescribeKeys (src/Help.cpp) must"
+    echo "      'Look ... D-pad > (l)'. DescribeKeys (src/Help.cpp) must"
     echo "      print the PadHints entry. Dump: $PAD"
+    exit 1
+fi
+
+# The whole screen must be on screen: the title is its first line, and a
+# list taller than the box scrolls it off the top (seen 2026-08-30).
+if ! grep -q "Incursion Key Bindings (controller)" "$PAD"; then
+    echo "FAIL: the controller ? screen's title is not on screen, so the list"
+    echo "      overflowed its box and scrolled. Dump: $PAD"
     exit 1
 fi
 
@@ -70,6 +89,7 @@ if grep -q "D-pad" "$KBD"; then
     exit 1
 fi
 
-echo "PASS: the ? screen reads 'D-pad Right (l)' beside Look with"
-echo "      INCURSION_PAD_HELP=1 and names no pad control without it."
+echo "PASS: the ? screen reads 'D-pad > (l)' beside Look, with its title on"
+echo "      screen and no assertion, under INCURSION_PAD_HELP=1; it names no"
+echo "      pad control without it."
 exit 0

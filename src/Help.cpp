@@ -1435,24 +1435,24 @@ size_t countskipchars(const char *cs) {
    the layout leaves unbound are absent and print keyboard-only. */
 struct PadHint { int16 cmd; const char *pad; };
 static const PadHint PadHints[] = {
-    { KY_CMD_NORTH,         "Left stick" },
-    { KY_CMD_SOUTH,         "Left stick" },
-    { KY_CMD_EAST,          "Left stick" },
-    { KY_CMD_WEST,          "Left stick" },
-    { KY_CMD_NORTHEAST,     "Left stick" },
-    { KY_CMD_NORTHWEST,     "Left stick" },
-    { KY_CMD_SOUTHEAST,     "Left stick" },
-    { KY_CMD_SOUTHWEST,     "Left stick" },
+    { KY_CMD_NORTH,         "L-stick" },
+    { KY_CMD_SOUTH,         "L-stick" },
+    { KY_CMD_EAST,          "L-stick" },
+    { KY_CMD_WEST,          "L-stick" },
+    { KY_CMD_NORTHEAST,     "L-stick" },
+    { KY_CMD_NORTHWEST,     "L-stick" },
+    { KY_CMD_SOUTHEAST,     "L-stick" },
+    { KY_CMD_SOUTHWEST,     "L-stick" },
     { KY_CMD_UP,            "L3" },
     { KY_CMD_DOWN,          "R3" },
-    { KY_CMD_KICK,          "D-pad Up" },
-    { KY_CMD_PRAY,          "D-pad Up hold" },
-    { KY_CMD_JUMP,          "D-pad Down" },
-    { KY_CMD_OPEN,          "D-pad Down hold" },
-    { KY_CMD_HIDE,          "D-pad Left" },
-    { KY_CMD_SHOW_MESSAGES, "D-pad Left hold" },
-    { KY_CMD_LOOK,          "D-pad Right" },
-    { KY_CMD_TAB,           "D-pad Right hold" },
+    { KY_CMD_KICK,          "D-pad ^" },
+    { KY_CMD_PRAY,          "D-pad ^ hold" },
+    { KY_CMD_JUMP,          "D-pad v" },
+    { KY_CMD_OPEN,          "D-pad v hold" },
+    { KY_CMD_HIDE,          "D-pad <" },
+    { KY_CMD_SHOW_MESSAGES, "D-pad < hold" },
+    { KY_CMD_LOOK,          "D-pad >" },
+    { KY_CMD_TAB,           "D-pad > hold" },
     { KY_CMD_ENTER,         "A" },
     { KY_CMD_YUSE,          "A hold" },
     { KY_CMD_ESCAPE,        "B" },
@@ -1468,13 +1468,13 @@ static const PadHint PadHints[] = {
     { KY_CMD_READ,          "LT hold" },
     { KY_CMD_FIRE,          "RT" },
     { KY_CMD_TARGET,        "RT hold" },
-    { KY_CMD_EAT,           "Left sys hold" },
-    { KY_CMD_HELP,          "Right sys" },
-    { KY_CMD_CHAR_SHEET,    "Right sys hold" },
-    { KY_CMD_MACRO1,        "LB+D-pad Up" },
-    { KY_CMD_MACRO2,        "LB+D-pad Down" },
-    { KY_CMD_MACRO3,        "LB+D-pad Left" },
-    { KY_CMD_MACRO4,        "LB+D-pad Right" },
+    { KY_CMD_EAT,           "L-sys hold" },
+    { KY_CMD_HELP,          "R-sys" },
+    { KY_CMD_CHAR_SHEET,    "R-sys hold" },
+    { KY_CMD_MACRO1,        "LB+D-pad ^" },
+    { KY_CMD_MACRO2,        "LB+D-pad v" },
+    { KY_CMD_MACRO3,        "LB+D-pad <" },
+    { KY_CMD_MACRO4,        "LB+D-pad >" },
     { KY_CMD_MACRO5,        "LB+A" },
     { KY_CMD_MACRO6,        "LB+B" },
     { KY_CMD_MACRO7,        "LB+X" },
@@ -1483,13 +1483,31 @@ static const PadHint PadHints[] = {
     { KY_CMD_MACRO10,       "LB+LT" },
     { KY_CMD_MACRO11,       "LB+RT" },
     { KY_CMD_MACRO12,       "LB+RT hold" },
-    { KY_CMD_OPTIONS,       "LB+D-pad Left hold" },
+    { KY_CMD_OPTIONS,       "LB+D-pad < hold" },
     { KY_CMD_SEARCH,        "LB+A hold" },
     { KY_CMD_REST,          "LB+B hold" },
     { KY_CMD_ACTIVATE,      "LB+X hold" },
     { KY_CMD_BLAST_WAND,    "LB+Y hold" },
     { KY_CMD_LAST,          NULL }
 };
+
+/* The one character after "D-pad " names a direction; print it as the
+   screen's arrow glyph, the way the keyboard rows print the arrow keys.
+   The longest hint is then 15 visible characters plus " (k)". */
+static String PadHintText(const char *hint) {
+    String s;
+    for (const char *c = hint; *c; c++) {
+        Glyph g = 0;
+        if (c - hint >= 6 && !strncmp(c - 6, "D-pad ", 6))
+            g = (*c == '^') ? GLYPH_ARROW_UP : (*c == 'v') ? GLYPH_ARROW_DOWN :
+                (*c == '<') ? GLYPH_ARROW_LEFT : (*c == '>') ? GLYPH_ARROW_RIGHT : 0;
+        if (g)
+            s += Format("%c%c%c", LITERAL_CHAR, LITERAL_CHAR1(g), LITERAL_CHAR2(g));
+        else
+            s += *c;
+    }
+    return s;
+}
 
 static const char *PadHintFor(int16 cmd) {
     for (const PadHint *h = PadHints; h->pad; h++)
@@ -1505,20 +1523,27 @@ bool Term::PadHelpActive() {
     return PadAttached();
 }
 
-/* pad: print the controller ? screen. Each row gains the pad control before
-   the key, so the key column widens from 24 to 44 and the screen drops from
-   two columns to one; the help viewer scrolls it. */
-static void DescribeKeys(String &s, bool pad) {
+/* padCols: 0 prints the keyboard screen, two columns of 24. Any other value
+   prints the controller screen in that many columns of 33, each row gaining
+   the pad control before the key. HelpTopic picks the count from the screen
+   width, because one column of 65 commands is taller than any screen the
+   game runs on (82 rows against the Ally's 75; that overflow crashed the
+   Ally on 2026-08-30) while the Ally's 133-column screen holds three.
+   Returns the number of lines written. */
+static int DescribeKeys(String &s, int padCols) {
     int16 i, j, n;
     TextVal KStr[KY_CMD_LAST];
     String Keys[KY_CMD_LAST];
     extern TextVal KeyCmdDescs[];
     KeySetItem * ks = theGame->Opt(OPT_ROGUELIKE) ? RoguelikeKeySet : StandardKeySet;
     int time_for_ret = 0;
-    const int width = pad ? 44 : 24;
+    const bool pad = padCols > 0;
+    const int width = pad ? 33 : 24;
+    const int cols = pad ? padCols : 2;
 
     if (pad)
-        s = Format("      %c-- %cIncursion Key Bindings (controller)%c --\n", -GREY, -PINK, -GREY);
+        s = Format("%*s%c-- %cIncursion Key Bindings (controller)%c --\n",
+                   max(0, (cols * 36 - 3 - 43) / 2), "", -GREY, -PINK, -GREY);
     else
         s = Format("            %c-- %cIncursion Key Bindings%c --\n", -GREY, -PINK, -GREY);
     n = 0;
@@ -1606,7 +1631,7 @@ DoneKey:;
             continue;
         const char *hint = pad ? PadHintFor(i) : NULL;
         if (hint)
-            Keys[n] = Format("%s (%s)", hint, (const char *)Keys[n]);
+            Keys[n] = Format("%s (%s)", (const char *)PadHintText(hint), (const char *)Keys[n]);
         int padcnt = countskipchars(Keys[n]);
         KStr[n].Text = Format("%c%s%c%*s%c", -GREY, desc, -YELLOW, width + padcnt - (int)strlen(desc), (const char *)Keys[n], -GREY);
         KStr[n].Val = i;
@@ -1615,22 +1640,20 @@ DoneKey:;
 
     qsort(KStr, n, sizeof(TextVal), &SortKeys);
 
-    if (pad) {
-        for (i = 0; i != n; i++) {
-            s += KStr[i].Text;
-            s += "\n";
+    const int rows = (n + cols - 1) / cols;
+    for (i = 0; i != rows; i++) {
+        for (j = 0; j != cols; j++) {
+            if (j)
+                s += " | ";
+            if (i + j * rows < n)
+                s += KStr[i + j * rows].Text;
+            else
+                s += Format("%*s", width, "");
         }
-        return;
-    }
-
-    for (i = 0; i != (n + 1) / 2; i++) {
-        s += KStr[i].Text;
-        s += " | ";
-        s += KStr[i + n / 2].Text;
         s += "\n";
     }
 
-    return;
+    return rows + 1;
 }
 
 void TextTerm::GetHelp(String & helpText, const char *topic) {
@@ -1721,7 +1744,12 @@ NewTopic:
     isHelp = true;
 
     if (topic == NULL) { 
-      DescribeKeys(helpText, PadHelpActive());
+      int padCols = 0, lines;
+      if (PadHelpActive()) {
+        SetWin(WIN_SCREEN);
+        padCols = max(1, min(4, (WinSizeX() - 1) / 36));
+      }
+      lines = DescribeKeys(helpText, padCols);
       helpText += Format("\n%c---------------------------------------------------"
                          "\n                    %cFurther Help%c\n",-WHITE,-PINK,-GREY);
       LOption("Help Contents",0);
@@ -1760,8 +1788,26 @@ NewTopic:
       LOption("The Theryan Pantheon",21);
       //LOption("Monster Memory", 22);
       LOption("View the OGL",23);
-      switch (LMenu(MENU_SWRAPWRITE|MENU_ESC|
-            MENU_2COLS|MENU_RAW|MENU_BORDER,helpText,WIN_MENUBOX)) {
+      int32 pick;
+      if (padCols) {
+        /* LMenu sizes WIN_MENUBOX to two option columns and caps the box at
+           78 wide, which the pad columns do not fit. A caller-sized window
+           takes the else branch of LMenu (no sizing, no cap), as the feat
+           and pantheon pages already do (HelpFeats, HelpPantheon). Width is
+           the columns, their " | " joins, and the four columns SWrapWrite
+           needs beyond the text (it wraps at WinSizeX()-2 from column 3;
+           one short and every row folds, measured 2026-08-30). Height is
+           the list, the three Further Help lines, up to six option rows,
+           and the border: 46 rows in two columns on the 80x48 screen, 38
+           in three on the Ally's 133x75. */
+        SetWin(WIN_SCREEN);
+        SizeWin(WIN_CUSTOM, padCols * 36 + 5, lines + 3 + 6 + 2);
+        pick = LMenu(MENU_SWRAPWRITE|MENU_ESC|
+              MENU_3COLS|MENU_RAW|MENU_BORDER,helpText,WIN_CUSTOM);
+      } else
+        pick = LMenu(MENU_SWRAPWRITE|MENU_ESC|
+              MENU_2COLS|MENU_RAW|MENU_BORDER,helpText,WIN_MENUBOX);
+      switch (pick) {
         case 0: HelpTopic("help::mainmenu"); break;
         case 1: HelpTopic("help::custom"); break;
         case 2: HelpTopic("help::commands"); break;

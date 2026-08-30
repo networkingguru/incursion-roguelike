@@ -16,7 +16,8 @@ The exact config that produces this layout is checked in at
 [`incursion-steam-input-ally.vdf`](incursion-steam-input-ally.vdf).
 
 In play, `?` (RIGHT system button) shows this same table beside the keyboard
-keys, as `Look  D-pad Right (l)`. The game shows the controller version when
+keys, as `Look  D-pad → (l)`, in as many columns as the screen is wide (three
+on the Ally's 1600x1200 grid). The game shows the controller version when
 it sees Steam's virtual pad (vendor `28de`) or the `SteamGameId` variable
 Steam sets; `INCURSION_PAD_HELP=1` forces it on any machine, `=0` forces it
 off. The table in `src/Help.cpp` (`PadHints`) is a copy of this layout and
