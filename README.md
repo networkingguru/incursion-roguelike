@@ -457,6 +457,7 @@ the unfixed tree before it is trusted.
 | `check_divination_staff_prose.sh` | Does the Staff of Divination description name the granted spell "true seeing", rather than the phantom "true sight" that exists nowhere in `lib/`? |
 | `check_divine_aspect_prose.sh` | Does the Lesser Divine Aspect description state that its disease/poison saves and its acid/cold/electricity resistances scale per magical plus, matching its `PLUS_2PER1`/`PLUS_5PER1` code, rather than the flat "+2" and "resistance of 5" it claimed before? |
 | `check_divine_power.sh` | Does Divine Power grant `FT_POWER_ATTACK` when the caster has STR 18 and no Power Attack, yet still grant `FT_KNOCK_PRONE` when he already has Power Attack, as its description promises? |
+| `check_dragonshield_plus_prose.sh` | Does the Dragonshield description state a "+2 (or higher)" enhancement floor, matching its `INITIAL_PLUS +2` constant, rather than the unreachable "+1 (or higher)" it claimed before? |
 | `check_dragonshield_prose.sh` | Does the Dragonshield description list the colour names the shield can actually display (yellow, not brown), matching its `EV_GETNAME` name table? |
 | `check_flame_strike.sh` | Does Flame Strike's description state `1d6` points of damage per caster level, matching its SRD-authentic `(LEVEL_SCALED)d6` script rather than the `1d8` prose it carried before? |
 | `check_goblin_queen_prose.sh` | Does the Staff of the Goblin Queen description scope its +4 bonuses and -4 penalties to goblinoid wielders, matching the all-or-nothing goblinoid gate that governs every effect? |
@@ -477,6 +478,7 @@ the unfixed tree before it is trusted.
 | `check_devour_negative_cr.sh` | Does devouring a corpse of negative challenge rating leave experience alone, while an ordinary corpse still pays? |
 | `check_devour_template_source.sh` | Does `Creature::Devour(Corpse*)` read the TEMPLATE stati off the corpse rather than off the eater, with the iteration opening and closing on the same object? |
 | `check_dump_save.sh` | Does `-dump` walk a real save and report the same bytes from both backends? |
+| `check_earth_ring_prose.sh` | Does the Ring of Elemental Command (Earth) description name the wearer's own ring "the ring of earth" in its curse clause, rather than the "ring of air" it copied from the Air ring? |
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the gnomes its own refusal message names? |
 | `check_enchant_graceful.sh` | Do seven compiled item pages advertise their own qualities, caster-level gates, spells and bonus type? |
 | `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? |
@@ -596,6 +598,7 @@ the unfixed tree before it is trusted.
 | `check_v1_manifest_parse.sh` | Does the v1 module manifest's load-side parser refuse a manifest corrupted in one field, by name? |
 | `check_wand_animal.sh` | Does a Wand of Animal Summoning summon an animal, rather than a dragon from the line copied above it? |
 | `check_wand_cleansing.sh` | Does a Wand of Cleansing Light roll the damage its own inventory line prints, rather than multiplying its plus twice? |
+| `check_water_ring_prose.sh` | Does the Ring of Elemental Command (Water) description introduce its staff-spells as "elemental water", matching its all-water spell list, rather than the "elemental fire" it copied from the Fire ring? |
 | `check_weapon_groups.sh` | Does every weapon-group bit hold a row in the name table, so a class's proficiency list names it rather than dropping it in silence? |
 | `check_weapon_immunity_live.sh` | Does an unarmed strike meet Weapon Immunity at all, and does Ki Strike carry a fist through it? |
 | `check_xp_penalty.sh` | Does `XPPenalty` survive a character with fewer than three classes, rather than dereferencing a zero class id and crashing? |

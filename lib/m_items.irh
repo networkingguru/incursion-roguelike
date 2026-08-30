@@ -4840,6 +4840,7 @@ and EA_GRANT
 AI_RING Effect "Elemental Command (Earth)" : EA_GRANT
   { SC_EVO; SC_WEA; SC_ARC; Level: 14;
     xval: TRAP_EVENT; yval: EVICTIM(EV_STRIKE);
+    // upstream: the Elemental Command (Earth) ring Desc named the wearer's own item "the ring of air" in its curse clause -- a copy-paste from the Air ring -- while the -4 penalty is versus petrification, the earth ring's own curse; the entity is unambiguously the Earth ring (its handler tests isMType(MA_EARTH), it grants COMMAND_ABILITY MA_EARTH, and its staff-spells are the earth spells), so the NAME is the error, not the penalty. Renamed only the curse clause's ring of air to ring of earth and changed nothing else. The wrong name ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F76; not sent.
     Desc: "Legends claim that D'Salyn, the mouth of the Elder
       Elemental Eye and the one of the eldest of the 13 mage-kings,
       crafted four rings to give to his most senior warlords, each
@@ -4856,7 +4857,7 @@ AI_RING Effect "Elemental Command (Earth)" : EA_GRANT
       creatures as an Earth priest of 12th level, or augments their existing
       ability by +6 -- whichever is superior. The ring also sustains its
       wearer's Strength and Constitution.\n
-      __The bearer of the ring of air does suffer a minor curse among all
+      __The bearer of the ring of earth does suffer a minor curse among all
       the benefits, however, suffering a -4 penalty to saving throws
       versus petrification.\n
       __Finally, the bearer is granted access to several staff-spells
@@ -5022,6 +5023,7 @@ and EA_GRANT
 AI_RING Effect "Elemental Command (Water)" : EA_GRANT
   { SC_EVO; SC_WEA; SC_ARC; Level: 14;
     xval: TRAP_EVENT; yval: EVICTIM(EV_STRIKE);
+    // upstream: the Elemental Command (Water) ring Desc introduced its staff-spell list as spells "related to elemental fire", yet every spell listed is a water spell (water walking, part water, wall of ice, ice storm, create water, waterspout) and the entity is the Water ring (its handler tests isMType(MA_WATER), it grants COMMAND_ABILITY MA_WATER, and it grants water breathing); the phrase is a copy of the Fire ring's introducer. Changed only the introducer elemental fire to elemental water and nothing else. The wrong phrase ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F77; not sent.
     Desc: "Legends claim that D'Salyn, the mouth of the Elder
       Elemental Eye and the one of the eldest of the 13 mage-kings,
       crafted four rings to give to his most senior warlords, each
@@ -5042,7 +5044,7 @@ AI_RING Effect "Elemental Command (Water)" : EA_GRANT
       the benefits, however -- suffering a -4 penalty to saving throws
       against poison.\n
       __Finally, the bearer is granted access to several staff-spells
-      related to elemental fire: <9>water walking<7>, <9>part water<7>,
+      related to elemental water: <9>water walking<7>, <9>part water<7>,
       <9>wall of ice<7>, <9>ice storm<7>, <9>create water<7> and 
       <9>waterspout<7>. The wearer of the ring may make use of these spells
       even if she has no spellcasting ability of her own, per the normal
@@ -7391,6 +7393,7 @@ and EA_GENERIC { }
 AI_SHIELD Effect "Dragonshield" : EA_BLAST
   { Level: PLUS_2PER1; qval: Q_TAR | Q_DIR;
     // upstream: the Dragonshield Desc listed a dragon colour "brown" that its EV_GETNAME handler never produces, while EV_GETNAME names the AD_SLASH shield "Yellow" -- a real displayed name that was absent from the Desc; the seven EV_GETNAME names are Red/White/Blue/Black/Purple/Yellow/Green, so "brown" names no shield and "yellow" was missing. Changed only the lowercase Desc word "brown" to "yellow"; the uppercase glyph constant BROWN in EV_CALC_EFFECT (case AD_SLASH) and every handler are left alone. The flat prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F63; not sent.
+    // upstream: the Dragonshield Desc stated a "+1 (or higher)" enhancement floor, yet the entity's Constants set INITIAL_PLUS +2, so the shield never generates below +2 and the +1 floor is unreachable. Changed only the stated floor from +1 (or higher) to +2 (or higher) in that Desc clause; INITIAL_PLUS, the light fortification and fearsome qualities, the dragon-hostility clause and every handler are left alone. The wrong floor ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F78; not sent.
     Desc: "A Dragonshield is a kite shield carved with the
       image of a dragon's head, its mouth wide open as if
       to breathe. Three times per day, the shield can be
@@ -7401,7 +7404,7 @@ AI_SHIELD Effect "Dragonshield" : EA_BLAST
       the type of dragon the shield is modelled after --
       white, red, yellow, green, black, blue or purple.\n
       __In addition to this special ability, a Dragonshield
-      is a <11>+1 <7>(or higher)<11> light fortification 
+      is a <11>+2 <7>(or higher)<11> light fortification 
       fearsome shield<7>. Bearing a Dragonshield makes all
       chromatic dragons hostile to the bearer -- rumours
       claim that their blood is an essential component in
