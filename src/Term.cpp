@@ -935,6 +935,8 @@ void TextTerm::ShowMap() {
 
     Check(m, "Null Map in ShowMap?!");
     Color(GREY);
+    /* Vision reads the light map, so the map must be built first. */
+    LightRebuild(m, p);
     if (p->UpdateMap)
         p->CalcVision();
     p->UpdateMap = 0;
@@ -1248,9 +1250,25 @@ void TextTerm::PutGlyph(int16 x, int16 y,Glyph g) {
     if (m->At(x,y).hasField && ((g & GLYPH_BACK_MASK) != GLYPH_BACK(WHITE))) {
       g = m->FieldGlyph(x,y,g);
     }
-    
-    APutChar(x-XOff + Windows[WIN_MAP].Left,
-             y-YOff + Windows[WIN_MAP].Top,g);
+
+    int16 sx = x-XOff + Windows[WIN_MAP].Left,
+          sy = y-YOff + Windows[WIN_MAP].Top;
+    const uint16 vis = m->At(x,y).Visibility;
+    if (LightMode(p) != LIGHT_LEGACY && (vis & VI_DEFINED)) {
+      bool remembered = !(vis & VI_VISIBLE) || m->At(x,y).Dark;
+      /* A defined cell always goes through the light: no light at all is
+         the floor brightness, not full colour. Floor cells (TF_SHADE) fall
+         further than walls and doors, so a room's walls keep their shape
+         at the edge of the torchlight. A remembered cell takes no light. */
+      float floor = m->At(x,y).Shade ? LIGHT_UNLIT_FLOOR : LIGHT_UNLIT_SOLID;
+      int16 fi = GLYPH_FORE_VALUE(g), bi = GLYPH_BACK_VALUE(g);
+      if (fi == 0 && bi == 0) {
+        fi = attr & COLOUR_MASK;
+        bi = (attr >> COLOUR_BITS) & COLOUR_MASK;
+      }
+      APutCharLit(sx, sy, g, x, y, fi, bi, floor, remembered);
+    } else
+      APutChar(sx, sy, g);
     updated = false;
 }
 

@@ -73,6 +73,7 @@ long  array_index(long x,long y);
 #include "Creature.h"
 #include "Item.h"
 #include "Feature.h"
+#include "Light.h"
 #include "Term.h"
 #include "Inline.h"
 

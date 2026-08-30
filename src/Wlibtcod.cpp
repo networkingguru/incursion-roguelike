@@ -136,6 +136,8 @@
    rate, and that state is the one that demonstrably does not flicker. */
 #ifndef IDLE_REPAINT_MS
 #define IDLE_REPAINT_MS 300
+/* The shimmer: how often the lit map cells are re-shaded while idle. */
+#define LIGHT_TICK_MS 33
 #endif
 
 #ifdef USE_BREAKPAD
@@ -239,6 +241,16 @@ private:
     /* Separate from ticks_blink_last, which only CursorOn() initialises and
        so is indeterminate before the first prompt. */
     uint32 ticks_idle_last;
+    /* Every map cell drawn through the light, so a tick can re-shade it
+       without the game: what PutGlyph passed, plus a flag that a plain
+       APutChar clears when something else is drawn over the cell. */
+    struct LitCell { Glyph g; int16 mx, my, fi, bi; float floor; bool remembered, lit; };
+    LitCell *litCells = NULL, *litSaved = NULL;
+    uint32 ticks_light_last = 0;
+    void LitAlloc();
+    void LitPaint(int32 idx);
+    bool LightFrame(uint32 now);
+    void SleepTicking(int16 milli);
     int oldResX, oldResY;
     String debugText;
     /* File I/O Stuff */
@@ -262,6 +274,8 @@ public:
     virtual void Restore();
     virtual void PutChar(Glyph g);
     virtual void APutChar(int16 x, int16 y, Glyph g);
+    virtual void APutCharLit(int16 x, int16 y, Glyph g, int16 mx, int16 my,
+                             int16 fi, int16 bi, float floor, bool remembered);
     virtual void PutChar(int16 x, int16 y, Glyph g);
     virtual Glyph AGetChar(int16 x, int16 y);
     virtual void GotoXY(int16 x, int16 y);
@@ -717,7 +731,8 @@ bool libtcodTerm::PadAttached() {
 TCOD_key_t readkey(int wait) {
     TCOD_key_t key = TCOD_key_t();
     if (wait) {
-#ifndef _WIN32
+        /* Poll on every platform. TCOD_sys_wait_for_event blocked here on
+           Windows, and a blocked wait freezes the light tick. */
         for (;;) {
             TCOD_event_t tcod_event = TCOD_sys_check_for_event(TCOD_EVENT_KEY_PRESS,&key,NULL);
             if (tcod_event & TCOD_EVENT_KEY)
@@ -726,10 +741,6 @@ TCOD_key_t readkey(int wait) {
                 return key;
             TCOD_sys_sleep_milli(15);
         }
-#else
-        TCOD_sys_wait_for_event(TCOD_EVENT_KEY_PRESS,&key,NULL,true);
-        return key;
-#endif
     }
 
     TCOD_event_t tcod_event = TCOD_sys_check_for_event(TCOD_EVENT_KEY_PRESS,&key,NULL);
@@ -976,10 +987,14 @@ void libtcodTerm::BlinkCursor() {
 void libtcodTerm::Save() { 
     Update();
     TCOD_console_blit(bScreen,0,0,0,0,bSave,0,0,1.0f,1.0f);
+    if (litCells)
+        memcpy(litSaved, litCells, sizeof(LitCell) * sizeX * sizeY);
 }
 
 void libtcodTerm::Restore() { 
     TCOD_console_blit(bSave,0,0,0,0,bScreen,0,0,1.0f,1.0f);
+    if (litCells)
+        memcpy(litCells, litSaved, sizeof(LitCell) * sizeX * sizeY);
     Update();    
 }
 
@@ -1001,7 +1016,80 @@ void libtcodTerm::APutChar(int16 x, int16 y, Glyph g) {
 	else
 	    TCOD_console_put_char_ex(bScreen, x, y, c, Colors[fg_idx], Colors[bg_idx]);
 
+	if (litCells && x >= 0 && y >= 0 && x < sizeX && y < sizeY)
+		litCells[y * sizeX + x].lit = false;
 	updated = false;
+}
+
+void libtcodTerm::APutCharLit(int16 x, int16 y, Glyph g, int16 mx, int16 my,
+                              int16 fi, int16 bi, float floor, bool remembered) {
+	if (!litCells || x < 0 || y < 0 || x >= sizeX || y >= sizeY) {
+		APutChar(x, y, g);
+		return;
+	}
+	LitCell &lc = litCells[y * sizeX + x];
+	lc.g = g; lc.mx = mx; lc.my = my; lc.fi = fi; lc.bi = bi;
+	lc.floor = floor; lc.remembered = remembered;
+	LitPaint(y * sizeX + x);
+	lc.lit = !remembered;
+	updated = false;
+}
+
+void libtcodTerm::LitPaint(int32 idx) {
+	const LitCell &lc = litCells[idx];
+	int c = glyphchar_to_char(lc.g);
+	if (c >= 255) {
+		Error("Bad character code encountered");
+		return;
+	}
+	LightRGB L = { 0, 0, 0 };
+	if (!lc.remembered)
+		LightAt(lc.mx, lc.my, L);
+	LightRGB fg = LightShade(lc.fi, L, lc.floor), bg = LightGlow(lc.bi, L);
+	TCOD_color_t tf = { fg.r, fg.g, fg.b }, tb = { bg.r, bg.g, bg.b };
+	TCOD_console_put_char_ex(bScreen, idx % sizeX, idx / sizeX, c, tf, tb);
+}
+
+void libtcodTerm::LitAlloc() {
+	delete[] litCells; delete[] litSaved;
+	litCells = new LitCell[(int32)sizeX * sizeY]();
+	litSaved = new LitCell[(int32)sizeX * sizeY]();
+	ticks_light_last = TCOD_sys_elapsed_milli() - LIGHT_TICK_MS;
+}
+
+/* One shimmer frame: advance the noise, re-shade every cell still flagged
+   lit, present. Only in play, only when the option asks for it, and never
+   under a visible cursor, whose blink draws on the root console and would be
+   wiped by the present. Returns whether it drew. */
+bool libtcodTerm::LightFrame(uint32 now) {
+	if (!litCells || Mode != MO_PLAY || showCursor || LightMode(p) != LIGHT_SHIMMER)
+		return false;
+	// Unsigned elapsed subtraction survives the millisecond counter wrap.
+	if (now - ticks_light_last < LIGHT_TICK_MS)
+		return false;
+	LightTick(now);
+	const int32 n = (int32)sizeX * sizeY;
+	for (int32 i = 0; i < n; i++)
+		if (litCells[i].lit)
+			LitPaint(i);
+	Update();
+	ticks_light_last = now;
+	return true;
+}
+
+void libtcodTerm::SleepTicking(int16 milli) {
+	const uint32 start = TCOD_sys_elapsed_milli();
+	const uint32 total = (milli > 0) ? (uint32)milli : 0u;
+	uint32 done = 0;
+	// Unsigned elapsed subtraction survives the millisecond counter wrap.
+	while (done < total) {
+		uint32 step = total - done;
+		if (step > LIGHT_TICK_MS) step = LIGHT_TICK_MS;
+		TCOD_sys_sleep_milli(step);
+		uint32 now = TCOD_sys_elapsed_milli();
+		done = now - start;
+		LightFrame(now);
+	}
 }
 
 void libtcodTerm::PutChar(int16 x, int16 y, Glyph g) {
@@ -1045,6 +1133,10 @@ void libtcodTerm::GotoXY(int16 x, int16 y)  {
 
 void libtcodTerm::Clear() {
     TCOD_console_rect(bScreen,activeWin->Left,activeWin->Top,(activeWin->Right+1)-activeWin->Left,(activeWin->Bottom+1)-activeWin->Top,1,TCOD_BKGND_SET);
+    if (litCells)
+        for (int16 y = activeWin->Top; y <= activeWin->Bottom && y < sizeY; y++)
+            for (int16 x = activeWin->Left; x <= activeWin->Right && x < sizeX; x++)
+                litCells[y * sizeX + x].lit = false;
     cWrap = 0; cx = cy = 0;
     if (activeWin == &Windows[WIN_SCREEN] || activeWin == &Windows[WIN_MESSAGE])
         linepos = linenum = 0;
@@ -1057,8 +1149,8 @@ void libtcodTerm::Color(uint16 _attr) {
 
 void libtcodTerm::StopWatch(int16 milli) {    
     switch (p ? p->Opt(OPT_ANIMATION) : 0) {
-    case 0: TCOD_sys_sleep_milli(milli); return;
-    case 1: TCOD_sys_sleep_milli((milli+3)/4); return; 
+    case 0: SleepTicking(milli); return;
+    case 1: SleepTicking((milli+3)/4); return; 
     case 2: return;
     }
 }
@@ -1335,6 +1427,12 @@ RetryFont:
     else
         for (i=0;i!=MAX_COLOURS;i++)
             Colors[i] = RGBValues[i];
+    {
+        LightRGB pal[MAX_COLOURS];
+        for (i=0;i!=MAX_COLOURS;i++)
+            { pal[i].r = Colors[i].r; pal[i].g = Colors[i].g; pal[i].b = Colors[i].b; }
+        LightSetPalette(pal);
+    }
     PALETTE_LOG_EVENT("palette-apply", theGame->Opt(OPT_SOFT_PALETTE)
         ? "RGBSofter  (WHITE 230) -- the dim palette"
         : "RGBValues  (WHITE 255) -- the bright palette");
@@ -1351,6 +1449,7 @@ RetryFont:
     TCOD_console_set_default_background(bSave, TCOD_black);
     TCOD_console_set_default_foreground(bSave, TCOD_white);
     TCOD_console_clear(bSave);
+    LitAlloc();
 
     if (bScroll == NULL) {
         bScroll  = TCOD_console_new(SCROLL_WIDTH, MAX_SCROLL_LINES);
@@ -1646,7 +1745,9 @@ int16 libtcodTerm::GetCharCmd(KeyCmdMode mode) {
             }
           
         ticks1 = TCOD_sys_elapsed_milli();
-        if (showCursor && ticks1 > ticks_blink_last + CURSOR_BLINK_MS) {
+        if (LightFrame(ticks1)) {
+            ticks_idle_last = ticks1;
+        } else if (showCursor && ticks1 > ticks_blink_last + CURSOR_BLINK_MS) {
             BlinkCursor();
             ticks_blink_last = ticks1;
         } else if (!showCursor && ticks1 > ticks_idle_last + IDLE_REPAINT_MS) {
@@ -1682,6 +1783,9 @@ CtrlBreak:
             uint32 ticks_next = ticks1 + INPUT_IDLE_MS;
             if (showCursor && ticks_next > ticks_blink_last + CURSOR_BLINK_MS)
                 ticks_next = ticks_blink_last + CURSOR_BLINK_MS;
+            if (litCells && Mode == MO_PLAY && !showCursor && LightMode(p) == LIGHT_SHIMMER
+                    && ticks_next > ticks_light_last + LIGHT_TICK_MS)
+                ticks_next = ticks_light_last + LIGHT_TICK_MS;
             if (ticks_next > ticks1)
                 TCOD_sys_sleep_milli(ticks_next - ticks1);
 
