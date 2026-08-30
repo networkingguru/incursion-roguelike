@@ -12,7 +12,7 @@
 		"english"
 		{
 			"Title"		"Incursion (Full Command Set)"
-			"Description"		"SHIFT LAYER: HOLD LB. While held, D-pad = macros F1-F4, A/B/X/Y = F5-F8, RB = F9 (hold = Sleep), LT = F10, RT = F11, LEFT system button = F12, RIGHT system button = Options (hold = on-screen keyboard); shift+D-pad Up/Down hold = PgUp/PgDn; and LB+hold on A/B/X/Y gives Search / Rest / Activate / Blast. All 12 Incursion macro slots are reachable and there are NO double-taps anywhere. MOVEMENT IS GAME-SIDE (needs the SDL gamepad build): LEFT STICK = 8-way move with autorun on hold, RIGHT STICK = view pan; the sticks are never mode-shifted, so movement is unaffected by the shift. Stick clicks = stairs. BASE press/hold: D-pad Up=Kick/Pray, Down=Jump/Open, Left=Hide/Messages, Right=Look/Tab. A=Confirm/y. B=Cancel/n. X=Examine/Use. Y=Get/Inventory. RB=Attack/Quaff. LT=Magic/Read. RT=Fire/Target. LEFT system button=SPACE(place item)/Eat. RIGHT system button=HELP(?)/Sheet. Keys are sent UNSHIFTED except Help (?) and stairs (< >). THE BACK BUTTONS (M1/M2) CANNOT BE BOUND on the ROG Ally: the pad reports them as keyboard keys F16/F17/F18/PROG1, not controller buttons. Do not try button_back_* or button_macro_*. Double-tap does not work on bumpers or back buttons. The d-pad must stay on keyboard keys, never raw gamepad: Steam's virtual pad exposes it only as a hat axis and SDL has no mapping for 28de:11ff."
+			"Description"		"SHIFT LAYER: HOLD LB. While held, D-pad = macros F1-F4, A/B/X/Y = F5-F8, LT = F10 (hold = F9), RT = F11 (hold = F12); shift+D-pad holds = PgUp / PgDn / Options / on-screen keyboard; and LB+hold on A/B/X/Y gives Search / Rest / Activate / Blast. THE SHIFT LAYER DOES NOT REACH THE BUMPERS OR THE SYSTEM BUTTONS - Steam will not mode-shift the group that contains the shift button itself, measured on device; binding a shifted bumper or system button silently does nothing. All 12 Incursion macro slots are reachable and there are NO double-taps anywhere. MOVEMENT IS GAME-SIDE (needs the SDL gamepad build): LEFT STICK = 8-way move with autorun on hold, RIGHT STICK = view pan; the sticks are never mode-shifted, so movement is unaffected by the shift. Stick clicks = stairs. BASE press/hold: D-pad Up=Kick/Pray, Down=Jump/Open, Left=Hide/Messages, Right=Look/Tab. A=Confirm/y. B=Cancel/n. X=Examine/Use. Y=Get/Inventory. RB=Attack/Quaff. LT=Magic/Read. RT=Fire/Target. LEFT system button=SPACE(place item)/Eat. RIGHT system button=HELP(?)/Sheet. Sleep (z) is unbound - reach it via the on-screen keyboard. Keys are sent UNSHIFTED except Help (?) and stairs (< >). THE BACK BUTTONS (M1/M2) CANNOT BE BOUND on the ROG Ally: the pad reports them as keyboard keys F16/F17/F18/PROG1, not controller buttons. Do not try button_back_* or button_macro_*. Double-tap does not work on bumpers or back buttons. The d-pad must stay on keyboard keys, never raw gamepad: Steam's virtual pad exposes it only as a hat axis and SDL has no mapping for 28de:11ff."
 		}
 	}
 	"group"
@@ -424,7 +424,6 @@
 							"binding"		"mode_shift dpad 8, Shift"
 							"binding"		"mode_shift left_trigger 9, Shift"
 							"binding"		"mode_shift right_trigger 10, Shift"
-							"binding"		"mode_shift switch 11, Shift"
 						}
 						"settings"
 						{
@@ -726,6 +725,18 @@
 							"haptic_intensity"		"1"
 						}
 					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press EQUALS, Options"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
 				}
 			}
 			"dpad_east"
@@ -740,6 +751,18 @@
 						}
 						"settings"
 						{
+							"haptic_intensity"		"1"
+						}
+					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"controller_action SHOW_KEYBOARD, Keyboard"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
 							"haptic_intensity"		"1"
 						}
 					}
@@ -773,6 +796,18 @@
 							"haptic_intensity"		"1"
 						}
 					}
+					"Long_Press"
+					{
+						"bindings"
+						{
+							"binding"		"key_press F9, Macro F9"
+						}
+						"settings"
+						{
+							"long_press_time"		"350"
+							"haptic_intensity"		"1"
+						}
+					}
 				}
 			}
 		}
@@ -798,82 +833,11 @@
 							"haptic_intensity"		"1"
 						}
 					}
-				}
-			}
-		}
-	}
-	"group"
-	{
-		"id"		"11"
-		"mode"		"switches"
-		"inputs"
-		{
-			"right_bumper"
-			{
-				"activators"
-				{
-					"Full_Press"
-					{
-						"bindings"
-						{
-							"binding"		"key_press F9, Macro F9"
-						}
-						"settings"
-						{
-							"haptic_intensity"		"1"
-						}
-					}
 					"Long_Press"
-					{
-						"bindings"
-						{
-							"binding"		"key_press Z, Sleep"
-						}
-						"settings"
-						{
-							"long_press_time"		"350"
-							"haptic_intensity"		"1"
-						}
-					}
-				}
-			}
-			"button_menu"
-			{
-				"activators"
-				{
-					"Full_Press"
 					{
 						"bindings"
 						{
 							"binding"		"key_press F12, Macro F12"
-						}
-						"settings"
-						{
-							"haptic_intensity"		"1"
-						}
-					}
-				}
-			}
-			"button_escape"
-			{
-				"activators"
-				{
-					"Full_Press"
-					{
-						"bindings"
-						{
-							"binding"		"key_press EQUALS, Options"
-						}
-						"settings"
-						{
-							"haptic_intensity"		"1"
-						}
-					}
-					"Long_Press"
-					{
-						"bindings"
-						{
-							"binding"		"controller_action SHOW_KEYBOARD, Keyboard"
 						}
 						"settings"
 						{
@@ -902,7 +866,6 @@
 			"8"		"dpad active modeshift"
 			"9"		"left_trigger active modeshift"
 			"10"		"right_trigger active modeshift"
-			"11"		"switch active modeshift"
 		}
 	}
 }

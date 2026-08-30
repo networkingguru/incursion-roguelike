@@ -61,22 +61,30 @@ Hold LB and use the control. This reaches all 12 of Incursion's macro slots
 |---|---|---|
 | **D-pad Up** | Macro F1 | Page Up |
 | **D-pad Down** | Macro F2 | Page Down |
-| **D-pad Left / Right** | Macro F3 / F4 | — |
+| **D-pad Left** | Macro F3 | Options (`=`) |
+| **D-pad Right** | Macro F4 | On-screen keyboard |
 | **A** | Macro F5 | Search (`s`) |
 | **B** | Macro F6 | Rest (`.`) |
 | **X** | Macro F7 | Activate (`A`) |
 | **Y** | Macro F8 | Blast (`B`) |
-| **RB** | Macro F9 | Sleep (`z`) |
-| **LT / RT** | Macro F10 / F11 | — |
-| **LEFT system button** | Macro F12 | — |
-| **RIGHT system button** | Options (`=`) | On-screen keyboard |
+| **LT** | Macro F10 | Macro F9 |
+| **RT** | Macro F11 | Macro F12 |
+
+The shift layer does **not** reach the bumpers or the two system buttons. Steam
+will not mode-shift the group that contains the shift button itself (measured on
+device); binding a shifted bumper or system button silently does nothing, with
+no error. So F9 and F12 live on the trigger holds. Options landed on
+shift+D-pad-Left-hold as a fallback after that retreat, not as a deliberate
+choice — if the shift-group limitation is ever worked around, Options deserves a
+better home. Sleep (`z`) is unbound; reach it via the on-screen keyboard. The
+base layer is unchanged.
 
 ## Notes
 
 - **SPACE is still bound (LEFT system button, press)** even though Confirm now
   does a full inventory swap. It costs nothing and is the native inventory key —
   it lifts/places an item in the In-Air slot directly.
-- **The on-screen keyboard is on shift+RIGHT-hold.** Without it, typed prompts
+- **The on-screen keyboard is on shift+D-pad-Right-hold.** Without it, typed prompts
   (Name, Journal, the "Some" quantity prompt), container digit picks, and
   inventory slot-letter selection are unreachable from the pad rather than merely
   awkward. Behind a modifier it costs nothing.
@@ -105,8 +113,9 @@ Hold LB and use the control. This reaches all 12 of Incursion's macro slots
 ## How the shift layer works
 
 The shift layer is a `mode_shift`: a second group bound to the same physical
-source. LB carries five `mode_shift` bindings (button_diamond, dpad,
-left_trigger, right_trigger, switch), and each shifted group is qualified
+source. LB carries four `mode_shift` bindings (button_diamond, dpad,
+left_trigger, right_trigger — not the switch group, which holds LB itself and
+Steam will not mode-shift), and each shifted group is qualified
 `"<gid>" "<source> active modeshift"` in `group_source_bindings`. The qualifier
 MUST be `active modeshift`, not a bare `modeshift` (a bare one works only by
 tolerance, not by contract). The sticks are intentionally left out of the shift,
