@@ -1438,6 +1438,14 @@ static const PadHint PadHints[] = {
     { KY_CMD_NORTHWEST,     "L-stick" },
     { KY_CMD_SOUTHEAST,     "L-stick" },
     { KY_CMD_SOUTHWEST,     "L-stick" },
+    { KY_CMD_LOOK_NORTH,     "R-stick" },
+    { KY_CMD_LOOK_SOUTH,     "R-stick" },
+    { KY_CMD_LOOK_EAST,      "R-stick" },
+    { KY_CMD_LOOK_WEST,      "R-stick" },
+    { KY_CMD_LOOK_NORTHEAST, "R-stick" },
+    { KY_CMD_LOOK_NORTHWEST, "R-stick" },
+    { KY_CMD_LOOK_SOUTHEAST, "R-stick" },
+    { KY_CMD_LOOK_SOUTHWEST, "R-stick" },
     { KY_CMD_UP,            "L3" },
     { KY_CMD_SLEEP,         "L3 hold" },
     { KY_CMD_DOWN,          "R3" },
@@ -1506,13 +1514,6 @@ static String PadHintText(const char *hint) {
     return s;
 }
 
-static const char *PadHintFor(int16 cmd) {
-    for (const PadHint *h = PadHints; h->pad; h++)
-        if (h->cmd == cmd)
-            return h->pad;
-    return NULL;
-}
-
 bool Term::PadHelpActive() {
     const char *force = getenv("INCURSION_PAD_HELP");
     if (force && *force)
@@ -1529,6 +1530,11 @@ bool Term::PadHelpActive() {
    Returns the number of lines written. */
 static int DescribeKeys(String &s, int padCols) {
     int16 i, j, n;
+    enum KeySection { DIR_SECTION, PROMPT_SECTION, GAME_SECTION };
+    struct PadKeyHint { int16 raw_key, raw_key_flags; const char *pad; };
+    PadKeyHint padKeyHints[sizeof(PadHints) / sizeof(PadHints[0])];
+    int padKeyHintCount = 0;
+    KeySection section = DIR_SECTION;
     TextVal KStr[KY_CMD_LAST];
     String Keys[KY_CMD_LAST];
     extern TextVal KeyCmdDescs[];
@@ -1537,6 +1543,18 @@ static int DescribeKeys(String &s, int padCols) {
     const bool pad = padCols > 0;
     const int width = pad ? 33 : 24;
     const int cols = pad ? padCols : 2;
+
+    for (const PadHint *h = PadHints; h->pad; h++) {
+        for (j = 0; ks[j].cmd != KY_CMD_LAST; j++) {
+            if (ks[j].cmd == h->cmd) {
+                padKeyHints[padKeyHintCount].raw_key = ks[j].raw_key;
+                padKeyHints[padKeyHintCount].raw_key_flags = ks[j].raw_key_flags;
+                padKeyHints[padKeyHintCount].pad = h->pad;
+                padKeyHintCount++;
+                break;
+            }
+        }
+    }
 
     if (pad)
         s = Format("%*s%c-- %cIncursion Key Bindings (controller)%c --\n",
@@ -1549,12 +1567,14 @@ static int DescribeKeys(String &s, int padCols) {
 
     for (i = KY_HEADER_DIR; i < KY_CMD_LAST; i++) {
         if (i == KY_HEADER_DIR) {
+            section = DIR_SECTION;
             Keys[n] = Format("     %cDirection Keys%c     ", -PINK, -GREY);
             KStr[n].Text = Keys[n];
             KStr[n].Val = i;
             n++;
             continue;
         } else if (i == KY_HEADER_PROMPT) {
+            section = PROMPT_SECTION;
             Keys[n] = Format("  %cSelection Prompt Keys%c ", -PINK, -GREY);
             KStr[n].Text = Keys[n];
             KStr[n].Val = i;
@@ -1563,6 +1583,7 @@ static int DescribeKeys(String &s, int padCols) {
         }
 
         if (i == KY_HEADER_GAME) {
+            section = GAME_SECTION;
             Keys[n] = Format("   %cGameplay Mode Keys%c   ", -PINK, -GREY);
             KStr[n].Text = Keys[n];
             KStr[n].Val = i;
@@ -1570,8 +1591,11 @@ static int DescribeKeys(String &s, int padCols) {
             continue;
         }
 
+        int16 rowRawKey = 0, rowRawKeyFlags = 0;
         for (j = 0; ks[j].cmd != KY_CMD_LAST; j++) {
             if (ks[j].cmd == i) {
+                rowRawKey = ks[j].raw_key;
+                rowRawKeyFlags = ks[j].raw_key_flags;
                 Keys[n] = "";
 
                 if (ks[j].raw_key_flags == -1) {
@@ -1626,7 +1650,33 @@ DoneKey:;
         const char * desc = LookupOnly(KeyCmdDescs, i);
         if (!desc)
             continue;
-        const char *hint = pad ? PadHintFor(i) : NULL;
+        const char *hint = NULL;
+        if (pad) {
+            for (j = 0; j != padKeyHintCount; j++) {
+                if (padKeyHints[j].raw_key == rowRawKey &&
+                    padKeyHints[j].raw_key_flags == rowRawKeyFlags) {
+                    hint = padKeyHints[j].pad;
+                    break;
+                }
+            }
+            if (hint) {
+                int first = 0;
+                if (section == GAME_SECTION)
+                    while (ks[first].cmd != KY_CMD_LAST)
+                        first++;
+                int delta = section == GAME_SECTION ? -1 : 1;
+                if (section == GAME_SECTION)
+                    first--;
+                for (j = first; j >= 0 && ks[j].cmd != KY_CMD_LAST; j += delta) {
+                    if (ks[j].raw_key == rowRawKey &&
+                        (ks[j].raw_key_flags == -1 || ks[j].raw_key_flags == rowRawKeyFlags)) {
+                        if (ks[j].cmd != i)
+                            hint = NULL;
+                        break;
+                    }
+                }
+            }
+        }
         if (hint)
             Keys[n] = Format("%s (%s)", (const char *)PadHintText(hint), (const char *)Keys[n]);
         int padcnt = countskipchars(Keys[n]);

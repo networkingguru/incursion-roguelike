@@ -83,6 +83,21 @@ if ! grep -q "R3 hold" "$PAD"; then
     echo "      Dump: $PAD"
     exit 1
 fi
+if ! grep "Look North" "$PAD" | grep -q "R-stick"; then
+    echo "FAIL: with INCURSION_PAD_HELP=1 Look North is missing its R-stick hint."
+    echo "      Dump: $PAD"
+    exit 1
+fi
+if ! grep "Overview Map" "$PAD" | grep -q "D-pad"; then
+    echo "FAIL: with INCURSION_PAD_HELP=1 Overview Map is missing its D-pad hint."
+    echo "      Dump: $PAD"
+    exit 1
+fi
+if ! grep "Cast Magic Spell" "$PAD" | grep -q "LT"; then
+    echo "FAIL: with INCURSION_PAD_HELP=1 Cast Magic Spell is missing its LT hint."
+    echo "      Dump: $PAD"
+    exit 1
+fi
 
 # The whole screen must be on screen: the title is its first line, and a
 # list taller than the box scrolls it off the top (seen 2026-08-30).
