@@ -3352,13 +3352,14 @@ and EA_GRANT
 AI_STAFF Effect "Divination" : EA_GRANT
   {
     xval: STAFF_SPELLS; Level: 10; pval: 3;
+    // upstream: the Staff of Divination Desc named a granted spell "true sight", yet no spell of that name exists in lib/; the entity registers the spell as "True Seeing" (lib/wspells.irh) and its own STAFF_SPELL_LIST grants $"true seeing". The phantom name ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- the STAFF_SPELL_LIST true seeing grant stays. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F71; not sent.
     Desc: "This staff formed of gnarled oak and engraved with
       an eye motif. In the hands of any character with three or more
       levels as an arcane caster, it grants a +1 bonus to all
       Knowledge skills and access to the following spells:
       <9>detect monsters<7>, <9>Mord's lucubration<7>,
       <9>wizard sight<7>, <9>premonition<7>, <9>identify<7> and
-      <9>true sight<7>.";
+      <9>true seeing<7>.";
     On Event EV_MAGIC_HIT {
       if (e.isRemove)
         return NOTHING;
@@ -5855,9 +5856,10 @@ and EA_BLAST
 and EA_BLAST
   { xval: AD_SUNL; pval: 5d6; tval: MA_CONSTRUCT;
     aval: AR_BEAM; 
+    // upstream: the Circlet of Blasting Desc said its beam inflicts "5d8 damage to everything else", yet the base 5d8 EA_BLAST is coded tval MA_LIVING under EF_LIM_MTYPE, so it strikes LIVING creatures only, not everything. This matches Incursion own sibling spell Searing Light (lib/pspells.irh), whose base 5d8 blast is likewise tval MA_LIVING and whose prose correctly says "living creatures". It is a DELIBERATE Incursion divergence from the SRD -- SRD Searing Light hits any creature, and Incursion narrowed both the code AND the spell prose to living creatures -- so the Circlet Desc is brought into line with Incursion own design, not with the SRD. The over-broad prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- tval MA_LIVING stays. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F67; not sent.
     Desc: "The circlet of blasting projects a destructive beam of
         radiance when activated that inflicts 10d6 damage to undead,
-      5d6 damage to constructs and 5d8 damage to everything else."; }
+      5d6 damage to constructs and 5d8 damage to living creatures."; }
 
 AI_HEADBAND Effect "Tactical Combat" : EA_GRANT 
   { SC_THA; xval: EXTRA_FEAT; yval: FT_EXPERTISE; Level: 3; 
@@ -6427,8 +6429,7 @@ AI_HORN Effect "Plenty" : EA_CREATION
     EV_MAGIC_STRIKE
       "Fruits and produce appear at your feet!" /
       "Fruits and produce appear at the <EActor>'s feet!";
-		Desc: "When blown (activated), this horn conjures a pile of
-		  fresh food at the blower's feet.";
+    // upstream: the Horn of Plenty entity declared its description field twice; the first names the fatigue cost ("at the cost of fatiguing its bearer") that the EV_EFFECT handler charges via LoseFatigue(4), while the second omitted that cost. Removed the duplicate second description so the surviving one matches the LoseFatigue(4) code. The duplicate ships on Win32 with the original data, so the same fatigue-less second description is present there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- LoseFatigue(4) stays. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F73; not sent.
   }
 
 /* Of course, this should be too heavy to stockpile and carry around

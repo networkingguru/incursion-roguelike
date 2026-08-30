@@ -446,6 +446,7 @@ the unfixed tree before it is trusted.
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? Assesses a **quarantined** copy, asks the binary for its own save-layout stamp, and asserts the signature survives a run. |
 | `check_brazier_prose.sh` | Does the Brazier Commanding Fire Elementals description say it can be lit three times per day, matching its `EF_3PERDAY` flag, rather than the "Once per day" it claimed before? |
 | `check_broken_door.sh` | Does a door still lie about being broken? Covers the stale orientation brand and every reader that asks whether a door is a hole. |
+| `check_circlet_blasting_prose.sh` | Does the Circlet of Blasting description scope its base 5d8 damage to living creatures, matching its base `EA_BLAST` `tval: MA_LIVING` code and its Searing Light twin, rather than the "everything else" it claimed before? |
 | `check_comment_budget.sh` | Did any comment or `_PROBE` block in `src/` or `inc/` appear over the 30-line ceiling, or grow past what the baseline recorded? |
 | `check_commit_lane.sh` | Does every commit since the rule started open with one of the six lanes, and does every `rules:` commit name a design bead? |
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? |
@@ -453,6 +454,7 @@ the unfixed tree before it is trusted.
 | `check_command_prose.sh` | Does Command's description leave out the CR/level limit the code deliberately removed, rather than still promising "does not affect creatures whose CR is more than 2/3rds your level"? |
 | `check_cowl_warding_prose.sh` | Does the Cowl of Warding description state that its save-versus-spells and armour-luck bonuses scale with the magical plus -- +3 and +5 plus the plus -- rather than the flat "+4"/"+6" it claimed before, matching its `PLUS_ADD3`/`PLUS_ADD5` code? |
 | `check_cure_critical.sh` | Does the Cure Critical Wounds effect roll the `4d8 + LEVEL_MAX20` its own description promises, rather than the `3d8` it paid before? |
+| `check_divination_staff_prose.sh` | Does the Staff of Divination description name the granted spell "true seeing", rather than the phantom "true sight" that exists nowhere in `lib/`? |
 | `check_divine_aspect_prose.sh` | Does the Lesser Divine Aspect description state that its disease/poison saves and its acid/cold/electricity resistances scale per magical plus, matching its `PLUS_2PER1`/`PLUS_5PER1` code, rather than the flat "+2" and "resistance of 5" it claimed before? |
 | `check_divine_power.sh` | Does Divine Power grant `FT_POWER_ATTACK` when the caster has STR 18 and no Power Attack, yet still grant `FT_KNOCK_PRONE` when he already has Power Attack, as its description promises? |
 | `check_dragonshield_prose.sh` | Does the Dragonshield description list the colour names the shield can actually display (yellow, not brown), matching its `EV_GETNAME` name table? |
@@ -481,6 +483,7 @@ the unfixed tree before it is trusted.
 | `check_escape_sweep.sh` | Does any string literal still spell a C escape with a forward slash, the way the port's path sweep wrote `/n` for `\n`? |
 | `check_horn_madness.sh` | Does the Horn of Madness drain and stun a bystander while sparing its blower from both halves? |
 | `check_horn_panic.sh` | Can the Horn of Panic frighten a failed-save bystander while sparing its blower? |
+| `check_horn_plenty_prose.sh` | Does the Horn of Plenty entity declare exactly one description, and does it name the fatigue cost its `LoseFatigue(4)` code charges, rather than the duplicate fatigue-less second description it carried before? |
 | `check_huntsman_live.sh` | Does the Twilight Huntsman reach its own spell list, smite Law rather than Good, and track at the rate it claims to stack with? |
 | `check_key_directives.sh` | Do the key-script directives reach a menu entry by name, where counting rows could not? |
 | `check_killing_hands.sh` | Do Bracers of Killing Hands pay two points per plus to both unarmed accuracy and damage? |
