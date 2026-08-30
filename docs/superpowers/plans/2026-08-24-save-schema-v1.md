@@ -199,7 +199,7 @@ Encoding an `rID` into an entry: `slot = (id >> 24) - 1`; the pool and in-pool i
 - Create: `tools/check_schema_roundtrip.sh`, `tools/craft_bad_v1_saves.py`, `tools/check_v1_adversarial.sh`, `tools/check_dup_names.sh`
 
 **Interfaces:**
-- Consumes: `Registry::Block` (`src/Registry.cpp:367`), `CFile` (`inc/Term.h:804`), `typeSize` (`src/Registry.cpp:304`), the placement-new switch (`src/Registry.cpp:948-990`), `String::Serialize` (`src/Base.cpp:504`).
+- Consumes: `Registry::Block` (`src/Registry.cpp:367`), `CFile` (`inc/Term.h:807`), `typeSize` (`src/Registry.cpp:304`), the placement-new switch (`src/Registry.cpp:948-990`), `String::Serialize` (`src/Base.cpp:504`).
 - Produces (every later task relies on these exact names):
   - Macros in `inc/Base.h`: `FIELD_U8/I8/U16/I16/U32/I32(tag,m)`, `FIELD_H(tag,m)`, `FIELD_RID(tag,m)`, `FIELD_STR(tag,m)`, `FIELD_BLOB(tag,ptr,sz)`, `FIELD_ARRAY(tag,ptr,elemSize,count)`, `FIELD_OBJ(tag,m)`, `FIELD_EMBED(tag,m)`, `FIELD_SKIP(m)`.
   - `Registry` methods (declared `inc/Base.h`, defined `src/SaveV1.cpp`): `bool V1Active(); void V1Field(uint16,uint8,void*,size_t); void V1Str(uint16,String&); void V1Blob(uint16,void**,size_t); void V1Rid(uint16,rID&); void V1Array(uint16,void*,size_t,uint32); void V1EmbedBegin(uint16 tag, void *member, size_t size); void V1EmbedEnd(); void V1Cover(const void*,size_t); int16 SaveGroupV1(Term&,hObj); int16 LoadGroupV1(Term&,fileHeader&,hObj);`
@@ -315,7 +315,7 @@ if (fh.Sig == SIGNATURE && !strncmp(fh.Version, "IS", 2)) {
 
 `LoadGroupV1` additionally rejects a `SCHEMA_REV` it does not implement, with a clean error naming the file's revision and the binary's (wire-format §schema revisions) — at this task that means anything other than `0`.
 
-Also extend the save-menu filter in `Game::LoadGame` (`src/Registry.cpp:1254`) to accept an `IS1.` prefix beside `SaveFormatMatches`, and `-schemaload`/`-schematest` parsing in both backends beside `-dump` (`src/Wposix.cpp:550-558`, `src/Wlibtcod.cpp:500-505`).
+Also extend the save-menu filter in `Game::LoadGame` (`src/Registry.cpp:1254`) to accept an `IS1.` prefix beside `SaveFormatMatches`, and `-schemaload`/`-schematest` parsing in both backends beside `-dump` (`src/Wposix.cpp:550-558`, `src/Wlibtcod.cpp:518-523`).
 - `Thing`'s body (`inc/Map.h:663-676`) becomes the spec's example — `Serialize` calls replaced by macros, and the fixups re-seated per the load-direction ordering rule: the save-direction staging stays on top, but `m = oMap(hm)` moves into a trailing `if (!isSave)` block, because on load `hm` has a value only after `FIELD_H(2, hm)` has run — left where v0 had it, `m` would load as `oMap(0)`. Keep the existing upstream comment at `inc/Map.h:664-668` (the `*((long*)&hm)` LP64 note) in place above the staging lines:
 
 ```cpp
