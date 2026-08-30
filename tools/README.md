@@ -319,7 +319,7 @@ the job, and each still explains an older log or an older commit.
 
 `run_probe.sh` was **deleted on 2026-08-18**. Its own header said "Delete this
 script once the saved-game position bug is fixed", and that bug is fixed:
-`docs/REPORTING-GATE.md:239` records `*((long*)&hm)` destroying the player's
+`docs/REPORTING-GATE.md:366` records `*((long*)&hm)` destroying the player's
 position as a closed fix, and `src/AbiCheck.cpp:11` now gates the type widths it
 depended on. It was also redundant — `play.sh` sets the same two probes and more
 (`play.sh:41-49`) and prints a report afterwards, which `run_probe.sh` did not.
