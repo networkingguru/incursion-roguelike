@@ -36,6 +36,8 @@ not by the Steam token.
 | **Right stick** | Pan the view (look) in eight directions in play; out of play it scrolls (up/down = line, left/right = page). |
 | **L3 · left stick click** | Up stairs (`<`) |
 | **R3 · right stick click** | Down stairs (`>`) |
+| **L3 hold · left stick click, hold** | Rest and Recover (`z`) |
+| **R3 hold · right stick click, hold** | Exchange Weapons (`-`) |
 
 The sticks are never mode-shifted, so movement and view pan are identical whether
 or not you hold LB.
@@ -105,7 +107,7 @@ base layer is unchanged.
   reachable without them, so this layout also works on a pad with no back
   buttons.
 - **Deliberately unbound:** Run (`,`) — left-stick autorun replaced it; Legend
-  (`/`); Exchange (`-`); More (space, as a -more- key). The full command set is
+  (`/`); and More (space, as a -more- key). The full command set is
   reachable through the two tables above plus the on-screen keyboard.
 - **Command keys are sent UNSHIFTED.** The keymap is case-insensitive (the game
   upper-cases the key before matching, `src/Wlibtcod.cpp:1800`), so lowercase

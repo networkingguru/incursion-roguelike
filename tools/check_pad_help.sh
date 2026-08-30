@@ -73,6 +73,16 @@ if ! grep -q "Look .*D-pad > (l)" "$PAD"; then
     echo "      print the PadHints entry. Dump: $PAD"
     exit 1
 fi
+if ! grep -q "L3 hold" "$PAD"; then
+    echo "FAIL: with INCURSION_PAD_HELP=1 the ? screen is missing the L3 hold hint."
+    echo "      Dump: $PAD"
+    exit 1
+fi
+if ! grep -q "R3 hold" "$PAD"; then
+    echo "FAIL: with INCURSION_PAD_HELP=1 the ? screen is missing the R3 hold hint."
+    echo "      Dump: $PAD"
+    exit 1
+fi
 
 # The whole screen must be on screen: the title is its first line, and a
 # list taller than the box scrolls it off the top (seen 2026-08-30).
