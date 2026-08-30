@@ -6782,8 +6782,24 @@ AI_WEAPON Effect "Hornblade" : EA_GENERIC
     Constants:
       * BASE_ITEM $"sickle",
       * INITIAL_PLUS 2;
-    Lists:
-      * ITEM_QUALITIES WQ_ROARING;
+    // upstream: this entity declared `* ITEM_QUALITIES WQ_ROARING;`, a
+    // noise-making "roaring" weapon quality, on a weapon whose whole design is
+    // concealment. The Desc says the hornblade "is so difficult to visually
+    // recognize as a weapon" that its first strike on any given foe counts as
+    // a sneak attack, and the entity's EF_HIDEQUAL flag hides its qualities so
+    // a player can never even learn WQ_ROARING is present. A roaring quality
+    // contradicts that stealth design. Brian ruled prose wins: remove it.
+    // The removal is observably a no-op, because WQ_ROARING (== 51,
+    // inc/Defines.h) is INERT -- no src/ code keys any behaviour on it. The
+    // constant appears only in the name/const tables (inc/ConstNam.h,
+    // inc/Defines.h, src/Tables.cpp's "roaring") and, before this fix, on this
+    // one entity; no combat effect, sound or fear rider reads it, so no
+    // gameplay oracle can observe the change. Not a port artefact: lib/ is
+    // item data the port does not touch, and a Win32 build with the original
+    // data ships the same contradictory quality against the same Desc. Tier
+    // Traced: proven by a whole-tree grep that WQ_ROARING reaches no
+    // behavioural code, not by a play observation. inc-tek.8.8 / PA-08-F80;
+    // not sent.
     Desc: "A very cleverly disguised weapon, a hornblade appears to
       all examination to be a piece of an animal's horn carved in an
       intricate manner. Only a proficient user knows how to wield it
