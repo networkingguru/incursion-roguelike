@@ -1258,15 +1258,13 @@ void TextTerm::PutGlyph(int16 x, int16 y,Glyph g) {
          the floor brightness, not full colour. Floor cells (TF_SHADE) fall
          further than walls and doors, so a room's walls keep their shape
          at the edge of the torchlight. */
-      LightRGB L = { 0, 0, 0 };
-      LightAt(x, y, L);
       float floor = m->At(x,y).Shade ? LIGHT_FLOOR_SHADE : LIGHT_FLOOR_SOLID;
       int16 fi = GLYPH_FORE_VALUE(g), bi = GLYPH_BACK_VALUE(g);
       if (fi == 0 && bi == 0) {
         fi = attr & COLOUR_MASK;
         bi = (attr >> COLOUR_BITS) & COLOUR_MASK;
       }
-      APutCharRGB(sx, sy, g, LightShade(fi, L, floor), LightShade(bi, L, floor));
+      APutCharLit(sx, sy, g, x, y, fi, bi, floor);
     } else
       APutChar(sx, sy, g);
     updated = false;
