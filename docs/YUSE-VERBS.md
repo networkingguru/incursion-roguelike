@@ -127,10 +127,10 @@ far less ground than its name suggests. Verified by reading the script.
   effect to that target". Nothing else answers `EV_APPLY` except three
   alchemical liquids (`lib/alchemy.irh:82`), poison from a small
   glass vial onto a weapon (`lib/mundane.irh:1016`), the weapon oils
-  (`lib/m_items.irh:1479`) and the lantern below.
+  (`lib/m_items.irh:1480`) and the lantern below.
 - **Dip** has five handlers and they cover two targets: a **fountain**
   (`lib/dungeon.irh:2163` and `:2336`, plus the Spell Storing ring at
-  `lib/m_items.irh:4887`) and an **alchemical flask**, where only acid does
+  `lib/m_items.irh:5289`) and an **alchemical flask**, where only acid does
   anything (`lib/alchemy.irh:97` and `lib/alchemy.irh:577`). Dipping into anything else has
   nothing behind it.
 - **Fill / Pour** (`lib/mundane.irh:640`) — the only combination implemented
