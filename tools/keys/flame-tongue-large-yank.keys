@@ -1,0 +1,120 @@
+# Observed oracle for PA-08-F70 / inc-tek.8.8: the flame tongue sword's
+# tongue-of-flame lash must be able to yank a LARGE corporeal creature.
+#
+# THE PROMISE. The sword's own page (lib/m_items.irh, the "flame tongue"
+# entity) says the lash acts "if the victim still lives and is a Large or
+# smaller corporeal creature". So a Large victim is inside the rule.
+#
+# THE DEFECT. The lash effect ("tongue of flame" EA_BLAST) gated the
+# opposed-Strength yank on `if (EVictim->GetAttr(A_SIZ) >= SZ_LARGE) return
+# NOTHING;` -- an off-by-one that bailed for Large AND larger, so only
+# Medium-and-smaller ever reached the contest. Brian ruled prose wins: include
+# Large, exclude only LARGER. The gate must read `> SZ_LARGE`.
+#
+# WHAT IS OBSERVED. One session hits a summoned otyugh with the activated
+# lash. The otyugh is Large (lib/mon1.irh: Size SZ_LARGE), corporeal (a MA_BEAST
+# with no M_INCOR) and weak-armed (Str 11, modifier 0), so a barbarian wins the
+# opposed Strength test and the yank fires.
+#
+#   ON A BUILD WITHOUT THE FIX (gate `>= SZ_LARGE`): the ray deals its 4d8 and
+#   then falls silent -- the size gate returns before the contest, so NO
+#   "tongue of flame lashes around ... pulls <him> to your side" line and no
+#   "holds ground" line ever prints.
+#   ON A BUILD WITH THE FIX (gate `> SZ_LARGE`): the same otyugh is now inside
+#   the rule, the barbarian wins the Strength test and the lash prints
+#   "Your tongue of flame lashes around the otyugh and pulls it to your side."
+#
+# WHY AN OTYUGH. It must be Large, corporeal, survive the 4d8 ray, and have a
+# low enough Strength that the wielder wins the opposed test on this seed. The
+# otyugh's Str 11 (modifier 0) against the barbarian's positive modifier makes
+# the win reliable, and its 6 Hit Dice leave it standing after 4d8.
+#
+# WHY THE MONSTERS ARE FROZEN. The otyugh stands one square east while the
+# sword is readied and activated. An unfrozen otyugh (Rend, natural grab) would
+# maul a first level barbarian first. Freeze Monsters leaves it in the world but
+# denies it its turns.
+#
+# Menu letters move when a list changes. Run with the seed the check supplies.
+
+@include chargen.keys
+
+# --- WIZARD SWITCHES: Auto-Identify (so the sword's activation is named) and
+# --- Freeze Monsters. Row 1 is Auto-Identify, row 10 is Freeze Monsters.
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+DOWN*9
+SPACE                   # Freeze Monsters
+ESC
+
+# --- PUT A FLAME TONGUE IN THE CHARACTER'S HAND -----------------------------
+# RIGHT*10 walks the glyph row to Specific Weapons. The candidate list shows
+# three rows with the MIDDLE one selected, so the walk stops on the pass where
+# the row BELOW the wanted one -- "Javelin of Lightning", the AI_WEAPON entity
+# that follows "flame tongue" in lib/m_items.irh -- first appears.
+w
+@choose "Item Acquisition"
+RIGHT*10
+@until "Javelin of Lightning" DOWN
+ENTER
+2                       # "Enter Item Level:" -- the sword's own INITIAL_PLUS
+ENTER
+b                       # Weapon Hand; the slot lettering skips 'd', the Drop key
+SPACE                   # swap the sword into it
+n                       # decline wielding a long sword two-handed
+s                       # stow the orcish knife the swap pushed into the air
+@dump:wielded
+ESC
+
+# --- SUMMON THE OTYUGH THREE SQUARES EAST -----------------------------------
+# Three squares away, not adjacent, so a successful yank has somewhere to pull
+# the otyugh FROM: the lash lands it "directly at his feet", one square east,
+# and the map glyph moves from three east to one east. The ray's range is
+# 3 + max(0, Charisma modifier) squares = 5 here (Charisma 14), so three
+# squares is well inside it.
+w
+@choose "Monster Summoning"
+@choose "Beast"
+@choose "otyugh"
+RIGHT*3                 # the location cursor starts on the player; three east
+ENTER
+@dump:summoned
+
+# --- ACTIVATE THE TONGUE OF FLAME AND TARGET THE OTYUGH ---------------------
+# 'a' opens the activation menu; the sword is its only activatable item, listed
+# as menu entry [a] (the @dump:activate-menu screen shows "Long Sword, Flame
+# Tongue +2", which the check reads back before trusting anything). The second
+# 'a' selects it.
+#
+# Two target prompts follow. The activation handler prompts first ("Select a
+# target:"); RIGHT enters the target ring at the nearest creature east -- the
+# adjacent otyugh -- and ENTER confirms it. The handler then RedirectEff's to
+# the "tongue of flame" blast, which raises its own prompt ("Choose your
+# target:"); RIGHT and ENTER pick the otyugh again. The ray then deals 4d8 and
+# runs the opposed-Strength yank.
+a
+@dump:activate-menu
+a
+RIGHT
+ENTER
+RIGHT
+ENTER
+@dump:lash
+
+# --- READ THE OTYUGH BACK ---------------------------------------------------
+# The yank is silent to a scrollback that only keeps two lines, so the oracle
+# reads the otyugh's own wizard-mode Dump instead. A yank knocks its victim
+# down (GainPermStati(PRONE) in the lash), and a frozen otyugh never stands, so
+# PRONE persists in the dump's Stati list. On a build WITHOUT the fix the size
+# gate returns before the knockdown and the Stati list carries no Prone; on a
+# build WITH it, Prone is present. The dump's HP line also proves the 4d8 ray
+# left the otyugh alive, so the yank had a living Large victim to act on.
+w
+@choose "Examine Nearby Things"
+@until "otyugh (class" RIGHT
+@dump:otyugh-after
+ESC
+
+@quit

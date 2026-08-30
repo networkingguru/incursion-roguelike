@@ -446,6 +446,7 @@ the unfixed tree before it is trusted.
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? Assesses a **quarantined** copy, asks the binary for its own save-layout stamp, and asserts the signature survives a run. |
 | `check_brazier_prose.sh` | Does the Brazier Commanding Fire Elementals description say it can be lit three times per day, matching its `EF_3PERDAY` flag, rather than the "Once per day" it claimed before? |
 | `check_broken_door.sh` | Does a door still lie about being broken? Covers the stale orientation brand and every reader that asks whether a door is a hole. |
+| `check_circlet_blasting_prose.sh` | Does the Circlet of Blasting description scope its base 5d8 damage to living creatures, matching its base `EA_BLAST` `tval: MA_LIVING` code and its Searing Light twin, rather than the "everything else" it claimed before? |
 | `check_comment_budget.sh` | Did any comment or `_PROBE` block in `src/` or `inc/` appear over the 30-line ceiling, or grow past what the baseline recorded? |
 | `check_commit_lane.sh` | Does every commit since the rule started open with one of the six lanes, and does every `rules:` commit name a design bead? |
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? |
@@ -453,16 +454,23 @@ the unfixed tree before it is trusted.
 | `check_command_prose.sh` | Does Command's description leave out the CR/level limit the code deliberately removed, rather than still promising "does not affect creatures whose CR is more than 2/3rds your level"? |
 | `check_cowl_warding_prose.sh` | Does the Cowl of Warding description state that its save-versus-spells and armour-luck bonuses scale with the magical plus -- +3 and +5 plus the plus -- rather than the flat "+4"/"+6" it claimed before, matching its `PLUS_ADD3`/`PLUS_ADD5` code? |
 | `check_cure_critical.sh` | Does the Cure Critical Wounds effect roll the `4d8 + LEVEL_MAX20` its own description promises, rather than the `3d8` it paid before? |
+| `check_divination_staff_prose.sh` | Does the Staff of Divination description name the granted spell "true seeing", rather than the phantom "true sight" that exists nowhere in `lib/`? |
 | `check_divine_aspect_prose.sh` | Does the Lesser Divine Aspect description state that its disease/poison saves and its acid/cold/electricity resistances scale per magical plus, matching its `PLUS_2PER1`/`PLUS_5PER1` code, rather than the flat "+2" and "resistance of 5" it claimed before? |
 | `check_divine_power.sh` | Does Divine Power grant `FT_POWER_ATTACK` when the caster has STR 18 and no Power Attack, yet still grant `FT_KNOCK_PRONE` when he already has Power Attack, as its description promises? |
+| `check_dragonshield_hostility.sh` | Does the Dragonshield anger only chromatic (evil) dragons, matching its description, rather than every dragon including the metallic (good) ones? |
+| `check_dragonshield_plus_prose.sh` | Does the Dragonshield description state a "+2 (or higher)" enhancement floor, matching its `INITIAL_PLUS +2` constant, rather than the unreachable "+1 (or higher)" it claimed before? |
 | `check_dragonshield_prose.sh` | Does the Dragonshield description list the colour names the shield can actually display (yellow, not brown), matching its `EV_GETNAME` name table? |
+| `check_eyes_soul_prose.sh` | Does the Eyes of the Soul description name the Necrophysiology feat the item grants via `EXTRA_FEAT FT_NECROPHYSIOLOGY` -- the feat that lets its holder crit, sneak attack and coup de grace undead -- rather than omitting it as the prose did before? |
 | `check_flame_strike.sh` | Does Flame Strike's description state `1d6` points of damage per caster level, matching its SRD-authentic `(LEVEL_SCALED)d6` script rather than the `1d8` prose it carried before? |
 | `check_goblin_queen_prose.sh` | Does the Staff of the Goblin Queen description scope its +4 bonuses and -4 penalties to goblinoid wielders, matching the all-or-nothing goblinoid gate that governs every effect? |
+| `check_hornblade_roaring.sh` | Does the Hornblade carry no noise-making `WQ_ROARING` quality, which would contradict the concealment design its description and `EF_HIDEQUAL` flag build? |
+| `check_python_rod_prose.sh` | Does the Rod of the Python carry a description at all, and does it name its per-plus poison-save bonus, its per-plus Constitution bonus and its three-times-daily transformation into a boa constrictor, matching its `SN_POISON`, `A_CON` and boa-summoning code? |
 | `check_snowstrike.sh` | Does the Snowstrike blast carry `EF_CASTER_IMMUNE` and `EF_ALLIES_IMMUNE`, so the caster and her allies are immune as its description promises, rather than freezing them? |
 | `check_sunblade_cold.sh` | Does wielding a known +2 Sunblade raise Cold resistance by the promised mild rate of two points? |
 | `check_sunblade_light_range.sh` | Does the Sunblade's activated light field reach the promised 60 feet (6 squares)? |
 | `check_lightmap.sh` | Does the light map obey line of sight — no lit cell that no source can reach through walls — and does a carried light light its bearer? |
 | `check_sunblade_negative_plane.sh` | Does the Sunblade double damage against undead and both named non-undead Negative-Plane creatures, without retaining its old wraith-only `5d6` rider? |
+| `check_sylvan_scimitar_prose.sh` | Does the Sylvan Scimitar description say elves are neutral toward its bearer, matching its `NEUTRAL_TO MA_ELF` grant and that grant's Neutral-quality resolution in `src/Target.cpp`, rather than the "friendly" it claimed before? |
 | `check_shadow_shifting.sh` | Does the Cloak of Shadow Shifting require darkness at both endpoints, with the source refusal before daily charge accounting? |
 | `check_bracers_defense_page.sh` | Does the Bracers of Defense page state that Defense Class improves by the magical plus and Coverage by twice the plus? |
 | `check_shadowstone_page.sh` | Does the Shadowstone page name the stone and state that its Hide bonus is twice its magical plus? |
@@ -476,12 +484,14 @@ the unfixed tree before it is trusted.
 | `check_devour_negative_cr.sh` | Does devouring a corpse of negative challenge rating leave experience alone, while an ordinary corpse still pays? |
 | `check_devour_template_source.sh` | Does `Creature::Devour(Corpse*)` read the TEMPLATE stati off the corpse rather than off the eater, with the iteration opening and closing on the same object? |
 | `check_dump_save.sh` | Does `-dump` walk a real save and report the same bytes from both backends? |
+| `check_earth_ring_prose.sh` | Does the Ring of Elemental Command (Earth) description name the wearer's own ring "the ring of earth" in its curse clause, rather than the "ring of air" it copied from the Air ring? |
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the gnomes its own refusal message names? |
 | `check_enchant_graceful.sh` | Do seven compiled item pages advertise their own qualities, caster-level gates, spells and bonus type? |
 | `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? |
 | `check_escape_sweep.sh` | Does any string literal still spell a C escape with a forward slash, the way the port's path sweep wrote `/n` for `\n`? |
 | `check_horn_madness.sh` | Does the Horn of Madness drain and stun a bystander while sparing its blower from both halves? |
 | `check_horn_panic.sh` | Can the Horn of Panic frighten a failed-save bystander while sparing its blower? |
+| `check_horn_plenty_prose.sh` | Does the Horn of Plenty entity declare exactly one description, and does it name the fatigue cost its `LoseFatigue(4)` code charges, rather than the duplicate fatigue-less second description it carried before? |
 | `check_huntsman_live.sh` | Does the Twilight Huntsman reach its own spell list, smite Law rather than Good, and track at the rate it claims to stack with? |
 | `check_key_directives.sh` | Do the key-script directives reach a menu entry by name, where counting rows could not? |
 | `check_killing_hands.sh` | Do Bracers of Killing Hands pay two points per plus to both unarmed accuracy and damage? |
@@ -501,6 +511,7 @@ the unfixed tree before it is trusted.
 | `check_package.sh` | Is the packaged folder free of ACCENT symbols and Homebrew paths, and does it carry its data? |
 | `check_periapt_closure_prose.sh` | Does the Periapt of Wound Closure description drop its false "removes infections" claim, keeping only the two effects the entity truly provides -- stop bleeding and speed healing? |
 | `check_periapt_poison_prose.sh` | Does the Periapt of Proof against Poisons description state that its saving-throw-versus-poison bonus scales per magical plus, matching its `PLUS_2PER1` code, rather than the flat "+2" it claimed before? |
+| `check_planes_sword_prose.sh` | Does the Sword of the Planes description scope its +3 enhancement tier to outsiders generally, matching its `EV_WATTACK` handler's `MA_OUTSIDER` branch, rather than the narrower "denizens of the ethereal or astral planes" it claimed before? |
 | `check_precision_prose.sh` | Does the Eyes of Precision description state that its lowlight-vision bonus scales at 20 feet (2 squares) per magical plus, matching its CA_LOWLIGHT `PLUS_2PER1` code, rather than the flat "20 feet" it claimed before? |
 | `check_prestige_profs.sh` | Do the Assassin and the Blackguard hold the proficiencies their prose promises? |
 | `check_prestige_tables.sh` | Does each prestige class print the saves and the defence track it really grants? |
@@ -550,6 +561,8 @@ the unfixed tree before it is trusted.
 | `check_doc_freshness.sh` | Which documents did a range of commits leave stale, and does every line citation in them and in the source they touched still resolve? |
 | `check_dup_names.sh` | Does the resource compiler reject a same-case duplicate resource name, with its own duplicate-name diagnostic? |
 | `check_fire_ring_resist.sh` | Does the Ring of Elemental Command (Fire) grant the Fire Resistance of 10 its page promises, rather than the 12 its grant was coded? |
+| `check_flame_tongue_large.sh` | Does the flame tongue sword's tongue-of-flame lash yank a Large corporeal creature, matching its page's "a Large or smaller corporeal creature", rather than excluding Large by an off-by-one `>= SZ_LARGE` size gate? |
+| `check_flame_tongue_range_prose.sh` | Does the flame tongue sword description state its Tongue of Flame reach as a 30-foot base plus 10 feet per point of Charisma modifier (minimum 30 feet), matching its `e.vRange = 3 + max(0, Mod(A_CHA))` squares code at 10 feet per square, rather than the "Charisma modifier times ten in feet (minimum 20)" it claimed before? |
 | `check_flame_tongue_undead.sh` | Does a flame tongue sword set a corporeal undead alight for the 3d6/2d6/1d6 fire its page promises? |
 | `check_flavor_stability.sh` | Does a v1 save's per-player flavour memory -- appearances and their Known/Tried flags -- survive a module rebuild that adds a resource? |
 | `check_format_strings.sh` | Does every printf-style format string in the engine agree with its arguments, or has the warning count risen above the baseline? |
@@ -583,6 +596,7 @@ the unfixed tree before it is trusted.
 | `check_staff_winter_grants.sh` | Does the Staff of Winter hand over all four powers its page promises -- the cold spells, and the Charisma, Intimidate and Appraise numbers? |
 | `check_staff_winter_quality.sh` | Does the Staff of Winter carry the weakening quality its page names, rather than the numbing quality the script gave it? |
 | `check_stair_warn.sh` | Does descending an ordinary staircase skip the false unsafe-terrain warning, rather than asking to confirm every descent? |
+| `check_striking_wand_knockback.sh` | Does the Wand of Striking fold its knockback into the telekinetic bolt's single Reflex save, instead of rolling a second, independent one? |
 | `check_two_fist_feats_live.sh` | Do the two-weapon feats reach a pair of empty hands, so a monk's Two-Weapon Tempest speeds his fists? |
 | `check_v1_adversarial.sh` | Does the v1 save reader refuse every crafted corruption, yet still load the case that merely deletes a known tag? |
 | `check_v1_append_survives.sh` | Does a save written before a resource is appended to `lib/` still load to the same character afterward? |
@@ -590,6 +604,7 @@ the unfixed tree before it is trusted.
 | `check_v1_manifest_parse.sh` | Does the v1 module manifest's load-side parser refuse a manifest corrupted in one field, by name? |
 | `check_wand_animal.sh` | Does a Wand of Animal Summoning summon an animal, rather than a dragon from the line copied above it? |
 | `check_wand_cleansing.sh` | Does a Wand of Cleansing Light roll the damage its own inventory line prints, rather than multiplying its plus twice? |
+| `check_water_ring_prose.sh` | Does the Ring of Elemental Command (Water) description introduce its staff-spells as "elemental water", matching its all-water spell list, rather than the "elemental fire" it copied from the Fire ring? |
 | `check_weapon_groups.sh` | Does every weapon-group bit hold a row in the name table, so a class's proficiency list names it rather than dropping it in silence? |
 | `check_weapon_immunity_live.sh` | Does an unarmed strike meet Weapon Immunity at all, and does Ki Strike carry a fist through it? |
 | `check_xp_penalty.sh` | Does `XPPenalty` survive a character with fewer than three classes, rather than dereferencing a zero class id and crashing? |

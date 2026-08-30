@@ -1620,11 +1620,12 @@ AI_EYES Effect "the Eagle" : EA_GRANT
 AI_EYES Effect "the Soul;eyes" : EA_GRANT
   { SC_NEC|SC_THE; xval: SKILL_BONUS; yval: SK_INTIMIDATE; pval: PLUS_2PER1; 
     Level: PLUS_2PER1; Flags: EF_NEEDS_PLUS; 
+    // upstream: the Eyes of the Soul Desc described the Intimidate and Knowledge (Theology) skill bonus and the fear-save bonus, but omitted the item's fourth grant, EXTRA_FEAT FT_NECROPHYSIOLOGY. That feat lets its holder score critical hits against undead (src/FeatTab.cpp, src/Fight.cpp), so it can sneak attack or coup de grace undead that are otherwise immune to such precision. Brian ruled the prose must document the granted feat: added an in-voice sentence naming Necrophysiology and its effect. The grant itself is unchanged. The incomplete prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F81; not sent.
     Desc: "These lenses grant the bearer a terrifying window in the souls
     of others and the holes where the souls of the undead would be. This
     grants the wearer a skill bonus to Intimidate and Knowledge (Theology) skill checks
     equal to twice their plus. In addition, the wearer adds their magical
-    plus as a bonus to saving throws versus fear."; }
+    plus as a bonus to saving throws versus fear. Finally, the wearer's grasp of undead anatomy grants the Necrophysiology feat, which lets them score critical hits against undead -- and so sneak attack or deliver a coup de grace to undead foes that would otherwise be immune to such precision."; }
   and EA_GRANT { xval: SKILL_BONUS; yval: SK_KNOW_THEO; pval: PLUS_2PER1; }
   and EA_GRANT { xval: SAVE_BONUS; yval: SN_FEAR; pval: PLUS_1PER1; } 
   and EA_GRANT { xval: EXTRA_FEAT; yval: FT_NECROPHYSIOLOGY; } 
@@ -2358,7 +2359,32 @@ AI_WAND Effect "Striking;wand" : EA_BLAST
     Level: PLUS_3PER1_ADD1; 
     On Event
       MSG_BLASTNAME
-        "bolt of telekinetic force";
+        "bolt of telekinetic force",
+      // upstream: the Wand of Striking's knockback rider (the `and EA_BLAST`
+      // below, xval AD_KNOC) carried no aval, so it resolved as its OWN
+      // separate strike and rolled a SECOND, independent Reflex save
+      // (Magic::MagicStrike, src/Magic.cpp: a first-in-strike segment always
+      // saves at the SavingThrow call). A target therefore made TWO Reflex
+      // saves against one bolt, while the wand's own Desc promises a SINGLE
+      // save: "A Reflex save halves the damage, but on failure the target
+      // will also be knocked back." This is item data in lib/, which the port
+      // does not touch; a Win32 build with the original data and compiler
+      // ships the same riderless-aval second save, so the defect is
+      // upstream's, not a port artefact. Brian ruled prose wins: one Reflex
+      // save governs both. The rider now shares the bolt's strike (aval:
+      // AR_BOLT, added below), so the same-sval guard in MagicStrike skips a
+      // reroll and no second save is made; this handler then drops the
+      // knockback segment (efNum 1) whenever the target MADE that one save
+      // (e.Resist). Success = half damage and no knockback; failure = full
+      // damage and knockback. The mechanism mirrors Priest Spell "Holy Orb"
+      // (lib/abilities.irh), whose AD_KNOC rider is aval: AR_BOLT with the
+      // same `efNum == 1 && e.Resist` handler. Tier Traced; inc-tek.8.8 /
+      // PA-08-F72; not sent.
+      PRE(EV_MAGIC_HIT) {
+        if (e.efNum == 1 && e.Resist)
+          return DONE;
+        return NOTHING;
+        };
     Desc: "This wand fires a telekinetic bolt which strikes a
       single target for 2d10 points of blunt damage per magical
       plus of the wand. A Reflex save halves the damage, but on
@@ -2366,7 +2392,7 @@ AI_WAND Effect "Striking;wand" : EA_BLAST
       plus] squares.";
   }
 and EA_BLAST 
-  { xval: AD_KNOC; pval: 1d4 + PLUS_1PER1; sval: REF; }
+  { xval: AD_KNOC; pval: 1d4 + PLUS_1PER1; sval: REF; aval: AR_BOLT; }
 
 /* Note that the area here is actually meant to be a weakness, or
    at least a double-edged sword -- it's hard to fire this without
@@ -3352,13 +3378,14 @@ and EA_GRANT
 AI_STAFF Effect "Divination" : EA_GRANT
   {
     xval: STAFF_SPELLS; Level: 10; pval: 3;
+    // upstream: the Staff of Divination Desc named a granted spell "true sight", yet no spell of that name exists in lib/; the entity registers the spell as "True Seeing" (lib/wspells.irh) and its own STAFF_SPELL_LIST grants $"true seeing". The phantom name ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- the STAFF_SPELL_LIST true seeing grant stays. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F71; not sent.
     Desc: "This staff formed of gnarled oak and engraved with
       an eye motif. In the hands of any character with three or more
       levels as an arcane caster, it grants a +1 bonus to all
       Knowledge skills and access to the following spells:
       <9>detect monsters<7>, <9>Mord's lucubration<7>,
       <9>wizard sight<7>, <9>premonition<7>, <9>identify<7> and
-      <9>true sight<7>.";
+      <9>true seeing<7>.";
     On Event EV_MAGIC_HIT {
       if (e.isRemove)
         return NOTHING;
@@ -4814,6 +4841,7 @@ and EA_GRANT
 AI_RING Effect "Elemental Command (Earth)" : EA_GRANT
   { SC_EVO; SC_WEA; SC_ARC; Level: 14;
     xval: TRAP_EVENT; yval: EVICTIM(EV_STRIKE);
+    // upstream: the Elemental Command (Earth) ring Desc named the wearer's own item "the ring of air" in its curse clause -- a copy-paste from the Air ring -- while the -4 penalty is versus petrification, the earth ring's own curse; the entity is unambiguously the Earth ring (its handler tests isMType(MA_EARTH), it grants COMMAND_ABILITY MA_EARTH, and its staff-spells are the earth spells), so the NAME is the error, not the penalty. Renamed only the curse clause's ring of air to ring of earth and changed nothing else. The wrong name ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F76; not sent.
     Desc: "Legends claim that D'Salyn, the mouth of the Elder
       Elemental Eye and the one of the eldest of the 13 mage-kings,
       crafted four rings to give to his most senior warlords, each
@@ -4830,7 +4858,7 @@ AI_RING Effect "Elemental Command (Earth)" : EA_GRANT
       creatures as an Earth priest of 12th level, or augments their existing
       ability by +6 -- whichever is superior. The ring also sustains its
       wearer's Strength and Constitution.\n
-      __The bearer of the ring of air does suffer a minor curse among all
+      __The bearer of the ring of earth does suffer a minor curse among all
       the benefits, however, suffering a -4 penalty to saving throws
       versus petrification.\n
       __Finally, the bearer is granted access to several staff-spells
@@ -4996,6 +5024,7 @@ and EA_GRANT
 AI_RING Effect "Elemental Command (Water)" : EA_GRANT
   { SC_EVO; SC_WEA; SC_ARC; Level: 14;
     xval: TRAP_EVENT; yval: EVICTIM(EV_STRIKE);
+    // upstream: the Elemental Command (Water) ring Desc introduced its staff-spell list as spells "related to elemental fire", yet every spell listed is a water spell (water walking, part water, wall of ice, ice storm, create water, waterspout) and the entity is the Water ring (its handler tests isMType(MA_WATER), it grants COMMAND_ABILITY MA_WATER, and it grants water breathing); the phrase is a copy of the Fire ring's introducer. Changed only the introducer elemental fire to elemental water and nothing else. The wrong phrase ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F77; not sent.
     Desc: "Legends claim that D'Salyn, the mouth of the Elder
       Elemental Eye and the one of the eldest of the 13 mage-kings,
       crafted four rings to give to his most senior warlords, each
@@ -5016,7 +5045,7 @@ AI_RING Effect "Elemental Command (Water)" : EA_GRANT
       the benefits, however -- suffering a -4 penalty to saving throws
       against poison.\n
       __Finally, the bearer is granted access to several staff-spells
-      related to elemental fire: <9>water walking<7>, <9>part water<7>,
+      related to elemental water: <9>water walking<7>, <9>part water<7>,
       <9>wall of ice<7>, <9>ice storm<7>, <9>create water<7> and 
       <9>waterspout<7>. The wearer of the ring may make use of these spells
       even if she has no spellcasting ability of her own, per the normal
@@ -5855,9 +5884,10 @@ and EA_BLAST
 and EA_BLAST
   { xval: AD_SUNL; pval: 5d6; tval: MA_CONSTRUCT;
     aval: AR_BEAM; 
+    // upstream: the Circlet of Blasting Desc said its beam inflicts "5d8 damage to everything else", yet the base 5d8 EA_BLAST is coded tval MA_LIVING under EF_LIM_MTYPE, so it strikes LIVING creatures only, not everything. This matches Incursion own sibling spell Searing Light (lib/pspells.irh), whose base 5d8 blast is likewise tval MA_LIVING and whose prose correctly says "living creatures". It is a DELIBERATE Incursion divergence from the SRD -- SRD Searing Light hits any creature, and Incursion narrowed both the code AND the spell prose to living creatures -- so the Circlet Desc is brought into line with Incursion own design, not with the SRD. The over-broad prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- tval MA_LIVING stays. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F67; not sent.
     Desc: "The circlet of blasting projects a destructive beam of
         radiance when activated that inflicts 10d6 damage to undead,
-      5d6 damage to constructs and 5d8 damage to everything else."; }
+      5d6 damage to constructs and 5d8 damage to living creatures."; }
 
 AI_HEADBAND Effect "Tactical Combat" : EA_GRANT 
   { SC_THA; xval: EXTRA_FEAT; yval: FT_EXPERTISE; Level: 3; 
@@ -5905,7 +5935,15 @@ and EA_GRANT
 
 AI_ROD Effect "the Python" : EA_GRANT
   { SC_ABJ; SC_THA; Level: PLUS_3PER1; Flags: EF_NEEDS_PLUS;
-    xval: SAVE_BONUS; yval: SN_POISON; pval: PLUS_1PER1; }
+    xval: SAVE_BONUS; yval: SN_POISON; pval: PLUS_1PER1;
+    // upstream: the Rod of the Python declared no Desc in any of its three blocks, so the item shipped with no description text at all. Its effects are a per-plus poison save bonus (SAVE_BONUS SN_POISON, pval PLUS_1PER1), a per-plus Constitution bonus (ADJUST A_CON, pval PLUS_1PER1) and a three-times-daily transformation (EF_3PERDAY) into a boa constrictor whose Companion template scales with the rod's plus. Brian ruled the item needs a description: authored one from these effects, in the voice of the sibling rods. No grant, flag or value changed. The missing Desc ships on Win32 with the original data too; it is prose in an item declaration, not a port artefact. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F83; not sent.
+    Desc: "Carved from the fang of a great serpent and bound with dark
+      scales, this rod lends its bearer the snake's own resilience. It
+      grants a bonus to saving throws against poison equal to its magical
+      plus, and raises the wielder's Constitution by one point per magical
+      plus. Three times each day, on command, the rod itself transforms
+      into a mighty boa constrictor that fights at the wielder's side; the
+      serpent grows in power with the rod's magical plus."; }
 and EA_GRANT
   { xval: ADJUST; yval: A_CON; pval: PLUS_1PER1; }
 and EA_GENERIC
@@ -6427,8 +6465,7 @@ AI_HORN Effect "Plenty" : EA_CREATION
     EV_MAGIC_STRIKE
       "Fruits and produce appear at your feet!" /
       "Fruits and produce appear at the <EActor>'s feet!";
-		Desc: "When blown (activated), this horn conjures a pile of
-		  fresh food at the blower's feet.";
+    // upstream: the Horn of Plenty entity declared its description field twice; the first names the fatigue cost ("at the cost of fatiguing its bearer") that the EV_EFFECT handler charges via LoseFatigue(4), while the second omitted that cost. Removed the duplicate second description so the surviving one matches the LoseFatigue(4) code. The duplicate ships on Win32 with the original data, so the same fatigue-less second description is present there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- LoseFatigue(4) stays. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F73; not sent.
   }
 
 /* Of course, this should be too heavy to stockpile and carry around
@@ -6754,8 +6791,24 @@ AI_WEAPON Effect "Hornblade" : EA_GENERIC
     Constants:
       * BASE_ITEM $"sickle",
       * INITIAL_PLUS 2;
-    Lists:
-      * ITEM_QUALITIES WQ_ROARING;
+    // upstream: this entity declared `* ITEM_QUALITIES WQ_ROARING;`, a
+    // noise-making "roaring" weapon quality, on a weapon whose whole design is
+    // concealment. The Desc says the hornblade "is so difficult to visually
+    // recognize as a weapon" that its first strike on any given foe counts as
+    // a sneak attack, and the entity's EF_HIDEQUAL flag hides its qualities so
+    // a player can never even learn WQ_ROARING is present. A roaring quality
+    // contradicts that stealth design. Brian ruled prose wins: remove it.
+    // The removal is observably a no-op, because WQ_ROARING (== 51,
+    // inc/Defines.h) is INERT -- no src/ code keys any behaviour on it. The
+    // constant appears only in the name/const tables (inc/ConstNam.h,
+    // inc/Defines.h, src/Tables.cpp's "roaring") and, before this fix, on this
+    // one entity; no combat effect, sound or fear rider reads it, so no
+    // gameplay oracle can observe the change. Not a port artefact: lib/ is
+    // item data the port does not touch, and a Win32 build with the original
+    // data ships the same contradictory quality against the same Desc. Tier
+    // Traced: proven by a whole-tree grep that WQ_ROARING reaches no
+    // behavioural code, not by a play observation. inc-tek.8.8 / PA-08-F80;
+    // not sent.
     Desc: "A very cleverly disguised weapon, a hornblade appears to
       all examination to be a piece of an animal's horn carved in an
       intricate manner. Only a proficient user knows how to wield it
@@ -7065,6 +7118,7 @@ and EA_GENERIC
 AI_WEAPON Effect "Sword of the Planes" : EA_GENERIC
   {
     Level: 7; Flags: EF_HIDEQUAL, EF_NAMEONLY;
+    // upstream: the Sword of the Planes Desc scoped its +3 enhancement tier to "denizens of the ethereal or astral planes", yet the EA_GENERIC EV_WATTACK handler grants the +3 to any MA_OUTSIDER (else if (EVictim->isMType(MA_OUTSIDER)) newBonus = 3), which is broader than ethereal/astral denizens and is the only engine type for planar creatures; the demon/devil/celestial +4 branch runs first, so the +3 tier covers every other outsider, and the PHASED locale bonus still backs the "such a locale" clause. The narrow prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- the MA_OUTSIDER branch and the PHASED max stay. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F68; not sent.
     Desc: "This unusual weapon is forged from a special form of
       adamant mined on the plane of Concordant Opposition, the
       spiritual homeland of True Neutrality. It is among the
@@ -7083,10 +7137,11 @@ AI_WEAPON Effect "Sword of the Planes" : EA_GENERIC
       user is on a plane other than the Prime Material, or if 
       fighting an outsider.\n
       __On an elemental plane, or when fighting elementalkin,
-      the sword has a +2 bonus. Against denizens of the ethereal
-      or astral planes, or when the wielder is in such a locale
-      herself, the bonus is +3. On the outer planes, or against
-      demons, devils or celestials, the sword has a bonus of +4."; 
+      the sword has a +2 bonus. Against outsiders -- creatures
+      native to the outer or transitive planes -- or when the
+      wielder is in such a locale herself, the bonus is +3. On
+      the outer planes, or against demons, devils or celestials,
+      the sword has a bonus of +4."; 
     On Event EITEM(PRE(EV_WATTACK)) {
       int16 oldBonus, newBonus;
       oldBonus = EItem->GetInherentPlus();
@@ -7143,6 +7198,7 @@ AI_WEAPON Effect "flame tongue" : EA_GRANT
 and EA_GRANT
   { xval: SUSTAIN; yval: A_CON; 
     Flags: EF_ACTIVATE3, EF_3PERDAY EF_HIDEQUAL, EF_POSTFIX;
+    // upstream: the flame tongue sword's Desc gave the tongue-of-flame lash "a maximum range of the bearer's Charisma modifier times ten in feet (minimum 20)", yet the EV_CALC_EFFECT handler sets e.vRange = 3 + max(0, EActor->Mod(A_CHA)); and vRange is in SQUARES, at this file's scale of 10 feet per square (see lines 1679-1680, 5729-5732), so the real range is (3 + Charisma modifier) squares = 30 feet plus 10 feet per point of Charisma modifier, floored at 30 feet because max(0, ...) clamps the modifier at 0. The old prose was wrong two ways: it dropped the +3-square (30-foot) base and it stated a 20-foot floor the clamp cannot produce. The wrong prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- e.vRange = 3 + max(0, EActor->Mod(A_CHA)) stays. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F69; not sent.
     Desc: "Seven of these powerful blades are believed to exist.
       Revered as holy by the priesthood of Immotian, scholars
       believe they have an older, and more primal, origin than
@@ -7173,9 +7229,10 @@ and EA_GRANT
       ability, the sheath of flames that normally surrounds the 
       sword's blade extends far past its tip and magically takes 
       on a tangible element like the lash of a whip. The tongue of
-      flame lashes out from the sword to a maximum range of the 
-      bearer's Charisma modifier times ten in feet (minimum 20) to 
-      snare a chosen target.\n
+      flame lashes out from the sword to a maximum range of 30
+      feet, plus a further 10 feet for each point of the bearer's
+      Charisma modifier (minimum 30 feet), to snare a chosen
+      target.\n
       __The swordbearer must make a ranged touch attack
       to hit the intended target. If this is successful,
       the tongue of flame deals 4d8 damage to the
@@ -7315,7 +7372,22 @@ and EA_GENERIC { }
       int16 dr;
       if (EVictim->isDead())
         return NOTHING;
-      if (EVictim->GetAttr(A_SIZ) >= SZ_LARGE)
+      // upstream: the lash's own page (the "flame tongue" entity above) says
+      // the yank acts "if the victim still lives and is a Large or smaller
+      // corporeal creature", yet this size gate read `>= SZ_LARGE` and so
+      // bailed for Large AND everything larger, leaving only Medium-and-smaller
+      // victims to reach the opposed-Strength test. Brian ruled prose wins:
+      // include Large, exclude only LARGER, so the comparison must be
+      // `> SZ_LARGE`. The off-by-one ships on Win32 with the original data --
+      // SZ_LARGE and A_SIZ are the game's own constants and the `>=` misbehaves
+      // identically there -- so it is upstream's, not a port artefact. Observed:
+      // seed 1, a summoned otyugh (Large, Str 11) three squares east is hit by
+      // the activated lash; on the `>=` build it is never pulled (it stays
+      // three east), on the `>` build the barbarian wins the Strength test and
+      // the lash yanks it to his side. tools/keys/flame-tongue-large-yank.keys
+      // drives it; tools/check_flame_tongue_large.sh guards the operator.
+      // inc-tek.8.8 / PA-08-F70, not sent.
+      if (EVictim->GetAttr(A_SIZ) > SZ_LARGE)
         return NOTHING;
       if (EActor->Mod(A_STR) + 1d20 >= EVictim->Mod(A_STR) + 1d20)
         {
@@ -7346,6 +7418,7 @@ and EA_GENERIC { }
 AI_SHIELD Effect "Dragonshield" : EA_BLAST
   { Level: PLUS_2PER1; qval: Q_TAR | Q_DIR;
     // upstream: the Dragonshield Desc listed a dragon colour "brown" that its EV_GETNAME handler never produces, while EV_GETNAME names the AD_SLASH shield "Yellow" -- a real displayed name that was absent from the Desc; the seven EV_GETNAME names are Red/White/Blue/Black/Purple/Yellow/Green, so "brown" names no shield and "yellow" was missing. Changed only the lowercase Desc word "brown" to "yellow"; the uppercase glyph constant BROWN in EV_CALC_EFFECT (case AD_SLASH) and every handler are left alone. The flat prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F63; not sent.
+    // upstream: the Dragonshield Desc stated a "+1 (or higher)" enhancement floor, yet the entity's Constants set INITIAL_PLUS +2, so the shield never generates below +2 and the +1 floor is unreachable. Changed only the stated floor from +1 (or higher) to +2 (or higher) in that Desc clause; INITIAL_PLUS, the light fortification and fearsome qualities, the dragon-hostility clause and every handler are left alone. The wrong floor ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F78; not sent.
     Desc: "A Dragonshield is a kite shield carved with the
       image of a dragon's head, its mouth wide open as if
       to breathe. Three times per day, the shield can be
@@ -7356,7 +7429,7 @@ AI_SHIELD Effect "Dragonshield" : EA_BLAST
       the type of dragon the shield is modelled after --
       white, red, yellow, green, black, blue or purple.\n
       __In addition to this special ability, a Dragonshield
-      is a <11>+1 <7>(or higher)<11> light fortification 
+      is a <11>+2 <7>(or higher)<11> light fortification 
       fearsome shield<7>. Bearing a Dragonshield makes all
       chromatic dragons hostile to the bearer -- rumours
       claim that their blood is an essential component in
@@ -7422,7 +7495,35 @@ AI_SHIELD Effect "Dragonshield" : EA_BLAST
       * ITEM_QUALITIES AQ_LIGHT_FOR AQ_FEARSOME;
   }
 and EA_GRANT
-  { xval: ENEMY_TO; yval: MA_DRAGON; aval: 0; lval: 0; }
+  {
+    // upstream: this EA_GRANT gave the bearer ENEMY_TO MA_DRAGON, which makes
+    // EVERY dragon hostile. LowPriorityStatiHostility (src/Target.cpp) tests
+    // me->isMType(S->Val) for each dragon that rates the bearer, and bare
+    // MA_DRAGON matches metallic (good) dragons as well as chromatic (evil)
+    // ones. The shield's own Desc promises only chromatic dragons: "Bearing a
+    // Dragonshield makes all chromatic dragons hostile to the bearer." The
+    // engine's chromatic/metallic split IS alignment: RacialHostility
+    // (src/Target.cpp) and the encounter-rating code (src/Monster.cpp) both
+    // separate dragons by isMType(MA_EVIL) vs isMType(MA_GOOD). Brian ruled
+    // prose wins, so only chromatic (evil) dragons turn hostile. The yval now
+    // carries the compound monster type MA_DRAGON+(MA_EVIL*256); isMType splits
+    // a value over 256 into mt%256 and mt/256 and ANDs the two tests
+    // (src/Values.cpp), so a dragon must be BOTH MA_DRAGON and MA_EVIL to
+    // match. The compound-MA form is the one the Cloak of Arachnida grant
+    // already uses in this file (xval: ALLY_TO; yval:
+    // (MA_SPIDER+(MA_ANIMAL*256))). This is item data in lib/, which the port
+    // does not touch; a Win32 build with the original data ships the same
+    // over-broad MA_DRAGON grant against the same Desc, so the defect is
+    // upstream's, not a port artefact. Tier Traced: the fix is deterministic
+    // (an evil dragon always turns hostile, a good dragon never does, no seed
+    // applies), but a headless A/B oracle would need harness scaffolding to
+    // spawn a chromatic and a metallic dragon, equip the shield, and dump each
+    // dragon's hostility toward the bearer, which is not a scriptable key
+    // sequence here. Proven instead by the isMType compound recursion
+    // (src/Values.cpp) and the M_EVIL/M_GOOD resolution it reaches, plus the
+    // Arachnida precedent. inc-tek.8.8 / PA-08-F79; not sent.
+    xval: ENEMY_TO; yval: (MA_DRAGON+(MA_EVIL*256)); aval: 0; lval: 0;
+  }
 
 
 AI_WEAPON Effect "Lightning;jav" : EA_BLAST
@@ -7463,6 +7564,7 @@ AI_WEAPON Effect "Sylvan Scimitar" : EA_GRANT
   { 
     xval: EXTRA_FEAT; yval: FT_CLEAVE; Level: 4; 
     Flags: EF_NAMEONLY, EF_HIDEQUAL;
+      // upstream: the Sylvan Scimitar Desc said elves "tend to be friendly" to a character bearing one of these weapons, yet the item grants NEUTRAL_TO MA_ELF, which TargetSystem::LowPriorityStatiHostility (src/Target.cpp) resolves as a Neutral-quality attitude and the character sheet labels "Neutral" (src/Sheet.cpp) -- a neutral reaction, not a friendly one. The wrong prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- the grant stays NEUTRAL_TO MA_ELF. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F82; not sent.
     Desc: "Crafted by the wood elves, these swords serve both as
       useful utility items and as emblems of their trust. They are
       one of the more common specific magical items of Theyra, with
@@ -7473,7 +7575,7 @@ AI_WEAPON Effect "Sylvan Scimitar" : EA_GRANT
       properties against orcs and beasts; wielding it grants the user 
       the Cleave feat. When the user is on verdant terrain, the scimitar 
       gains an additional +2 circumstance bonus to hit and damage. Elves 
-      tend to be friendly to a character that bears one of these weapons;
+      tend to be neutral toward a character that bears one of these weapons;
       in the hands of an elf or a druid, it also benefits from the
       <11>keen<7> quality."; 
     Constants:
