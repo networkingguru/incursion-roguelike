@@ -39,7 +39,7 @@ The spine. Every hop is a direct call; nothing is queued or deferred.
 9. `Creature::Walk()` `src/Move.cpp:24` is the handler `EV_MOVE` reaches (`:147`); it ends at `Move(tx, ty, ...)` (`src/Move.cpp:945`).
 10. `Thing::Move()` `src/Display.cpp:1681` relinks square contents, calls `M->Update()` on both changed squares (`:1780-1781`), and sets the player's `UpdateMap` (`:1796`).
 11. `Map::Update(x,y)` `src/Term.cpp:734` picks one square's glyph and pushes it to `PutChar`.
-12. Next pass, `TextTerm::AdjustMap()` `src/Term.cpp:1010` (from `RefreshMap()` `inc/Term.h:654`, and from `src/Main.cpp:266`) scrolls the viewport and calls `ShowMap()` when the offset moved or `UpdateMap` is set (`src/Term.cpp:1081-1082`).
+12. Next pass, `TextTerm::AdjustMap()` `src/Term.cpp:1010` (from `RefreshMap()` `inc/Term.h:657`, and from `src/Main.cpp:266`) scrolls the viewport and calls `ShowMap()` when the offset moved or `UpdateMap` is set (`src/Term.cpp:1081-1082`).
 13. `TextTerm::ShowMap()` `src/Term.cpp:903` calls `p->CalcVision()` (`src/Term.cpp:939`, defined `src/Vision.cpp:256`), clears `UpdateMap` (`src/Term.cpp:940`), loops the window calling `PutChar`/`PutGlyph` (`src/Term.cpp:954-978`, `src/Term.cpp:1239`).
 14. `posixTerm::Update()` `src/Wposix.cpp:653` blits the 80x48 buffer to the terminal; with no terminal it only sets a flag (`:656,677`). Then `Turn++` `src/Main.cpp:443`.
 
@@ -50,7 +50,7 @@ The spine. Every hop is a direct call; nothing is queued or deferred.
 - **Object ↔ handle.** Nothing stores a `Thing*` across a turn; it stores an `hObj` and resolves it through `oThing(h)`, `oMap(h)` and friends (`inc/Base.h:258-262`) over `class Registry` (`inc/Base.h:789`) and the globals `MainRegistry`/`ResourceRegistry` (`inc/Globals.h:112`). `theRegistry` switches to `ResourceRegistry` while modules load, and back after (`src/Registry.cpp:1451,1509`).
 - **Game ↔ ruleset.** Resources are reached only by `rID` through `RES()`, `TMON()`, `TEFF()` (`inc/Res.h:10-13`). Every override point is an `EventInfo`.
 - **C++ ↔ script.** One door: `Resource::Event()` (`src/Annot.cpp:1098`) calls `theGame->VM.Execute()` (`:1120`); `VMachine::Execute` (`src/VMachine.cpp:413`) calls back into C++ through generated `lib/dispatch.h` (`:175`). Constants are shared, not copied: `lib/main.irc:1-2` includes `Defines.h` and `Api.h`.
-- **Game ↔ display.** Above `Term` everything speaks glyphs and window ids. `Term` declares 135 pure virtuals; `TextTerm` implements all but 48, and those 48 are the backend contract (`inc/Term.h:720-785`).
+- **Game ↔ display.** Above `Term` everything speaks glyphs and window ids. `Term` declares 135 pure virtuals; `TextTerm` implements all but 48, and those 48 are the backend contract (`inc/Term.h:723-788`).
 - **Compiler ↔ engine.** Same binary, run before the display exists: `TextTerm::RunOnCommandLine` (`src/TextTerm.cpp:39`) handles `-compile` and returns true, so `main` skips `Initialize`/`StartMenu` (`src/Wposix.cpp:619`). It preprocesses `lib/main.irc` to `lib/program.i` and parses that (`src/RComp.cpp:118,128`).
 
 ## 4. Terminal backends
@@ -59,11 +59,11 @@ The spine. Every hop is a direct call; nothing is queued or deferred.
 
 | File | Class | `main()` | Guard | Owns |
 |---|---|---|---|---|
-| `src/Wlibtcod.cpp` | `libtcodTerm` `:210` | `:426` | `LIBTCOD_TERM` `:57` | SDL/libtcod window, fonts, tiles |
+| `src/Wlibtcod.cpp` | `libtcodTerm` `:228` | `:444` | `LIBTCOD_TERM` `:57` | SDL/libtcod window, fonts, tiles |
 | `src/Wposix.cpp` | `posixTerm` `:133` | `:492` | `POSIX_TERM` `:32` | curses or no output; key scripts; screen dumps |
 | `src/Wcurses.cpp` | `cursesTerm` `:176` | `:396` | `CURSES_TERM` `:57` | pdcurses on Windows |
 
-All three `main()`s do the same five things in order: `new Game`, `new <backend>`, `SetIncursionDirectory`, `T1 = AT1`, then `RunOnCommandLine` or `Initialize`/`StartMenu`/`ShutDown` (`src/Wposix.cpp:582-622`, `src/Wlibtcod.cpp:528-550`, `src/Wcurses.cpp:460-470`). Each defines its own `Term *T1` (`src/Wposix.cpp:303`, `src/Wlibtcod.cpp:404`, `src/Wcurses.cpp:384`), so exactly one backend can link.
+All three `main()`s do the same five things in order: `new Game`, `new <backend>`, `SetIncursionDirectory`, `T1 = AT1`, then `RunOnCommandLine` or `Initialize`/`StartMenu`/`ShutDown` (`src/Wposix.cpp:582-622`, `src/Wlibtcod.cpp:546-568`, `src/Wcurses.cpp:460-470`). Each defines its own `Term *T1` (`src/Wposix.cpp:303`, `src/Wlibtcod.cpp:422`, `src/Wcurses.cpp:384`), so exactly one backend can link.
 
 There is no headless class. `posixTerm` is headless at run time: `useCurses` (`src/Wposix.cpp:142`) is set by `UseTerminal()` (`:237`) from `-headless` and `isatty` (`:590`), and every draw path tests it.
 
@@ -92,5 +92,5 @@ Section 2 was traced by reading the listed call sites. It was not observed under
 - `src/Event.cpp:226` — inside a branch guarded by `e.EMap && e.EMap->dID`, the error text dereferences `e.EActor->m->dID`. `ThrowEvent` reaches it with `e.EActor == NULL` when `e.EMap` came from `e.EVictim` (`:163`), so the error path crashes instead of reporting.
 - `src/Main.cpp:383` — `min(20048, DestroyCount+1)`; the array holds 20480 (`inc/Res.h:1307,1309`). Digits transposed. It clamps low so it cannot overrun, but 432 queued deletions per pass would be dropped silently.
 - `src/Event.cpp:454-459` — `if (e.Event >= 500) return r;` makes the two following `Fatal` branches for unhandled PRE and POST events unreachable.
-- `inc/Term.h:654` — `RefreshMap()` dereferences `p` unchecked and is called as `T1->RefreshMap()` (`src/Magic.cpp:1358`, `src/Skills.cpp:1937`); `ClearPlayer()` (`inc/Term.h:750`) sets `p` to NULL, so the state is reachable.
+- `inc/Term.h:657` — `RefreshMap()` dereferences `p` unchecked and is called as `T1->RefreshMap()` (`src/Magic.cpp:1358`, `src/Skills.cpp:1937`); `ClearPlayer()` (`inc/Term.h:753`) sets `p` to NULL, so the state is reachable.
 - `src/Term.cpp:6` — the header says "80x50 text mode"; the code is 80x48 (`src/Wposix.cpp:73-74`, asserted `src/TextTerm.cpp:100-101`). Stale prose.
