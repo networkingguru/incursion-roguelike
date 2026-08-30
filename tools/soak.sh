@@ -83,6 +83,7 @@ sort -n "$SOAK/exits" | awk '{print $2}' | sort | uniq -c | while read -r n code
         3) what="out of keys" ;;
         4) what="WATCHDOG -- the game stopped asking for keystrokes" ;;
         5) what="NO GAMEPLAY -- never entered a map, measured nothing" ;;
+        7) what="ASSERT -- an assertion not in tools/known_asserts.txt" ;;
         *) what="exit $code" ;;
     esac
     printf '  %4d  %s\n' "$n" "$what"

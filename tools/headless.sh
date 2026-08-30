@@ -32,7 +32,8 @@
 #       3 the key budget ran out, 4 the watchdog fired (the game stopped
 #       asking for keys, which is the signature of a hang), 5 the run never
 #       entered a map and so measured nothing, 6 a @choose, @cursorto or
-#       @expect was told to find something the screen never showed.
+#       @expect was told to find something the screen never showed, 7 the
+#       engine logged an ASSERT that tools/known_asserts.txt does not list.
 #
 # A death, or a session stuck at the threat-disengage prompt, is deliberately
 # NOT its own exit code: whether either should FAIL a run, versus merely be
@@ -177,6 +178,23 @@ if [ "$PLAYED" -eq 0 ] && { [ "$STATUS" -eq 0 ] || [ "$STATUS" -eq 3 ]; }; then
     STATUS=5
 fi
 
+# An assert the engine logged is a defect the session found, and the check
+# that drove the session must see it without reading the log. Only a normal
+# ending is promoted, as with 5 above. Known asserts are listed in
+# tools/known_asserts.txt so the checks do not all go red on upstream's
+# standing ones; the pad-help crash of 2026-08-30 was logged here, and the
+# check that ran the session read only the screen dump and passed.
+NEW_ASSERTS=""
+if [ -f "$RUN/logs/errors.log" ]; then
+    NEW_ASSERTS="$(grep '^[0-9]' "$RUN/logs/errors.log" |
+        sed -n "s/^[0-9-]* [0-9:]*  ASSERT failed: '\(.*\)' in file .*/\1/p" |
+        sort -u |
+        grep -vxF -f <(sed 's/ *#.*//' tools/known_asserts.txt | grep -v '^$') || true)"
+fi
+if [ -n "$NEW_ASSERTS" ] && { [ "$STATUS" -eq 0 ] || [ "$STATUS" -eq 3 ]; }; then
+    STATUS=7
+fi
+
 case $STATUS in
     0) echo "ended:      cleanly (script finished or asked to quit)" ;;
     1) echo "ended:      FATAL -- see the log below" ;;
@@ -187,6 +205,9 @@ case $STATUS in
        echo "            measured nothing. Do not count it as a pass." ;;
     6) echo "ended:      the key script looked for something the screen never" ;
        echo "            showed. The last screen dump is what it was reading." ;;
+    7) echo "ended:      ASSERT -- the engine tripped an assertion that" ;
+       echo "            tools/known_asserts.txt does not list:" ;
+       echo "$NEW_ASSERTS" | sed 's/^/              /' ;;
     *) echo "ended:      exit $STATUS" ;;
 esac
 

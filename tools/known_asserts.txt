@@ -1,0 +1,19 @@
+# Engine assertions tools/headless.sh already knows about, one per line.
+#
+# headless.sh promotes a run that ends 0 or 3 to exit 7 when logs/errors.log
+# holds an "ASSERT failed" whose condition is NOT listed here. Every check that
+# keys on the exit code then goes red on a new assert without reading the log
+# itself. The pad-help crash of 2026-08-30 (TextTerm.cpp SizeWin) is the one
+# that motivated this: the harness logged it, the check ignored the log.
+#
+# A line is the text between the quotes of the message, matched as a fixed
+# string; file and line are deliberately not part of it because they drift.
+# Add a line only for an assert that is tracked, and name where. Remove the
+# line when the fix lands, so the check can see it come back.
+#
+# The seven below were every distinct assert in logs/runs on 2026-08-30.
+InBounds(x,y)                       # inc/Map.h Map::At bounds; map-audit spam, no bead yet
+m->InBounds(_x,_y)                  # src/Display.cpp; same root, no bead yet
+theGame->Get(eID)                   # src/Status.cpp; no bead yet
+c = GetEncounterCreature(0)         # src/MakeLev.cpp; no bead yet
+OpenC                               # src/MakeLev.cpp Map::GetOpenXY; inc-y4o

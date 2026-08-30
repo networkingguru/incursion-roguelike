@@ -105,11 +105,20 @@ self-explanatory.
 
 **`ended: NO GAMEPLAY`** — the run never entered a map, so it measured nothing.
 `Game::Play` writes `logs/session.log` on the first completed turn, so that file
-exists if and only if the session reached gameplay (`headless.sh:149-151`). When
-it is missing and the run would otherwise have exited 0 or 3, `headless.sh:174-178`
+exists if and only if the session reached gameplay (`headless.sh:175-176`). When
+it is missing and the run would otherwise have exited 0 or 3, `headless.sh:177-179`
 rewrites the exit code to 5. Do not count such a run as a pass. Screens are not
 a substitute test: `@dump` lines fire even in a session that never entered a map,
-and one vacuous run left 11 of them (`headless.sh:168-170`).
+and one vacuous run left 11 of them (`headless.sh:169-171`).
+
+**`ended: ASSERT`** — the engine logged an `ASSERT failed` whose condition is
+not listed in `tools/known_asserts.txt`, and the run would otherwise have
+exited 0 or 3, so `headless.sh` rewrites the exit code to 7 and prints the
+condition. The list holds upstream's standing asserts (the `InBounds` spam and
+four others) so every check does not go red on them; add a line only for a
+tracked assert, and remove it when the fix lands. Added 2026-08-30 after the
+controller `?` screen crashed on the Ally: the harness had logged the very
+assert, and the check that drove the session read only the screen dump.
 
 **`ended: WATCHDOG`** — exit 4. The game stopped asking for keystrokes, which is
 the signature of a hang (`headless.sh:32-33`). `SIGALRM` fires in
