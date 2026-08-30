@@ -62,6 +62,27 @@ void LightSetPalette(const LightRGB *sixteen) {
   memcpy(Palette, sixteen, sizeof(Palette));
 }
 
+LightRGB LightPaletteRGB(int idx) {
+  return Palette[idx & COLOUR_MASK];
+}
+
+LightRGB LightShade(int idx, LightRGB L, float floor) {
+  LightRGB b = Palette[idx & COLOUR_MASK], o;
+  float span = 1.0f - floor;
+  o.r = (uint8)(b.r * (floor + span * L.r / 255.0f) + 0.5f);
+  o.g = (uint8)(b.g * (floor + span * L.g / 255.0f) + 0.5f);
+  o.b = (uint8)(b.b * (floor + span * L.b / 255.0f) + 0.5f);
+  return o;
+}
+
+int LightMode(Player *p) {
+  switch (p ? p->Opt(OPT_ANIMATION) : 0) {
+    case 2:  return LIGHT_LEGACY;    /* None */
+    case 1:  return LIGHT_STEADY;    /* Fast */
+    default: return LIGHT_SHIMMER;   /* Normal, Player */
+  }
+}
+
 static void EnsureCells(Map *m) {
   if (m->SizeX() == lmW && m->SizeY() == lmH && Steady)
     return;
@@ -189,7 +210,7 @@ static void ScanTerrain(Map *m) {
 }
 
 static void SumSteady(Map *m) {
-  static const LightRGB LitRoom = { 36, 32, 26 }, Skylight = { 30, 36, 48 };
+  static const LightRGB LitRoom = { 180, 170, 150 }, Skylight = { 170, 185, 210 };
   for (int16 y = 0; y < lmH; y++)
     for (int16 x = 0; x < lmW; x++) {
       LightRGB &d = Steady[(int32)y * lmW + x];

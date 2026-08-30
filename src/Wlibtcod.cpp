@@ -262,6 +262,7 @@ public:
     virtual void Restore();
     virtual void PutChar(Glyph g);
     virtual void APutChar(int16 x, int16 y, Glyph g);
+    virtual void APutCharRGB(int16 x, int16 y, Glyph g, LightRGB fg, LightRGB bg);
     virtual void PutChar(int16 x, int16 y, Glyph g);
     virtual Glyph AGetChar(int16 x, int16 y);
     virtual void GotoXY(int16 x, int16 y);
@@ -1004,6 +1005,17 @@ void libtcodTerm::APutChar(int16 x, int16 y, Glyph g) {
 	updated = false;
 }
 
+void libtcodTerm::APutCharRGB(int16 x, int16 y, Glyph g, LightRGB fg, LightRGB bg) {
+	int c = glyphchar_to_char(g);
+	if (c >= 255) {
+		Error("Bad character code encountered");
+		return;
+	}
+	TCOD_color_t tf = { fg.r, fg.g, fg.b }, tb = { bg.r, bg.g, bg.b };
+	TCOD_console_put_char_ex(bScreen, x, y, c, tf, tb);
+	updated = false;
+}
+
 void libtcodTerm::PutChar(int16 x, int16 y, Glyph g) {
     x += activeWin->Left;
     y += activeWin->Top;
@@ -1335,6 +1347,12 @@ RetryFont:
     else
         for (i=0;i!=MAX_COLOURS;i++)
             Colors[i] = RGBValues[i];
+    {
+        LightRGB pal[MAX_COLOURS];
+        for (i=0;i!=MAX_COLOURS;i++)
+            { pal[i].r = Colors[i].r; pal[i].g = Colors[i].g; pal[i].b = Colors[i].b; }
+        LightSetPalette(pal);
+    }
     PALETTE_LOG_EVENT("palette-apply", theGame->Opt(OPT_SOFT_PALETTE)
         ? "RGBSofter  (WHITE 230) -- the dim palette"
         : "RGBValues  (WHITE 255) -- the bright palette");

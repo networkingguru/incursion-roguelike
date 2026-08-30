@@ -479,6 +479,11 @@ public:
     virtual void Restore()=0;
     virtual void PutChar(Glyph g)=0;
     virtual void APutChar(int16 x, int16 y, Glyph g)=0;
+    /* A map cell under true-colour light. Backends that cannot draw RGB
+       keep this default and draw the 16-colour glyph, which is exactly
+       what they drew before lighting existed (bead inc-bjgh). */
+    virtual void APutCharRGB(int16 x, int16 y, Glyph g, LightRGB fg, LightRGB bg)
+      { APutChar(x, y, g); }
     virtual void PutChar(int16 x, int16 y, Glyph g)=0;
     virtual Glyph AGetChar(int16 x, int16 y)=0;
     virtual void GotoXY(int16 x, int16 y)=0;

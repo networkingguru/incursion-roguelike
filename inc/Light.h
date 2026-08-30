@@ -37,4 +37,17 @@ bool LightAt(int16 x, int16 y, LightRGB &out);
    classic libtcod palette until a backend calls this. */
 void LightSetPalette(const LightRGB *sixteen);
 
+/* One 16-colour index as the backend's RGB, and that colour under light L:
+   each channel is base * (floor + (1 - floor) * L / 255), so floor is the
+   brightness of a cell no light reaches (0..1). */
+LightRGB LightPaletteRGB(int idx);
+LightRGB LightShade(int idx, LightRGB L, float floor);
+
+/* How the SDL build should draw, from OPT_ANIMATION: None = the classic
+   16-colour path, Fast = steady coloured light, Normal/Player = shimmer. */
+enum { LIGHT_LEGACY = 0, LIGHT_STEADY = 1, LIGHT_SHIMMER = 2 };
+#define LIGHT_FLOOR_SHADE 0.35f
+#define LIGHT_FLOOR_SOLID 0.75f
+int LightMode(Player *p);
+
 #endif
