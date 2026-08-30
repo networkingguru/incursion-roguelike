@@ -3,8 +3,8 @@
 #
 # Plays tools/keys/smoke.keys on seed 1 with INCURSION_LIGHT_PROBE=1, so
 # every ShowMap appends a block to the run's logs/light.log, then hands the
-# log to tools/lightmap_check.py: no lit cell without a source that reaches
-# it through line of sight, and a player who carries a light stands lit.
+# log to tools/lightmap_check.py: every lit cell is reached, a light-carrying
+# player stands lit, source neighbours are lit, and sole-source light dims.
 #
 # Usage: tools/check_lightmap.sh              exit 0 pass, 1 fail, 2 inconclusive
 #        tools/check_lightmap.sh --selftest   proves the parser's assertions bite

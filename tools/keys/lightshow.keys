@@ -1,0 +1,55 @@
+# Build a saved visual showcase of overlapping light-source kinds.
+#
+#   tools/headless.sh tools/keys/lightshow.keys 1
+#
+# Keep every ESC immediately after a map-screen dump. ESC opens the System
+# Menu, where [a] saves and quits; moving it behind any prompt can therefore
+# end the run successfully without creating the intended showcase.
+
+@include chargen.keys
+
+@dump:arrival
+
+w y
+@dump:wizard-menu
+
+K
+@dump:terrain-target
+RIGHT ENTER
+@dump:terrain-list
+P
+
+w K LEFT ENTER P
+w K UP ENTER P
+w K DOWN ENTER P
+w K UP RIGHT ENTER P
+w K DOWN RIGHT ENTER P
+w K UP LEFT ENTER P
+w K DOWN LEFT ENTER P
+@dump:magma-ring
+
+w K UP*2 ENTER p
+@dump:painted-sources
+
+w e RIGHT*37 ENTER
+@dump:torch-acquired
+SPACE
+@dump:torch-equipped
+ESC
+@dump:torch-map
+
+w g
+@dump:monster-types
+@choose "Corporeal Undead"
+@choose "bone delver"
+RIGHT*2 ENTER
+@dump:lantern-placed
+w C
+@dump:choose-lantern-companion
+RIGHT*2 ENTER
+@dump:showcase-before-save
+
+ESC b
+@dump:showcase-saved
+
+@quit

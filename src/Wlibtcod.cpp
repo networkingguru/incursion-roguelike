@@ -244,7 +244,7 @@ private:
     /* Every map cell drawn through the light, so a tick can re-shade it
        without the game: what PutGlyph passed, plus a flag that a plain
        APutChar clears when something else is drawn over the cell. */
-    struct LitCell { Glyph g; int16 mx, my, fi, bi; float floor; bool lit; };
+    struct LitCell { Glyph g; int16 mx, my, fi, bi; float floor; bool remembered, lit; };
     LitCell *litCells = NULL, *litSaved = NULL;
     uint32 ticks_light_last = 0;
     void LitAlloc();
@@ -275,7 +275,7 @@ public:
     virtual void PutChar(Glyph g);
     virtual void APutChar(int16 x, int16 y, Glyph g);
     virtual void APutCharLit(int16 x, int16 y, Glyph g, int16 mx, int16 my,
-                             int16 fi, int16 bi, float floor);
+                             int16 fi, int16 bi, float floor, bool remembered);
     virtual void PutChar(int16 x, int16 y, Glyph g);
     virtual Glyph AGetChar(int16 x, int16 y);
     virtual void GotoXY(int16 x, int16 y);
@@ -1022,15 +1022,16 @@ void libtcodTerm::APutChar(int16 x, int16 y, Glyph g) {
 }
 
 void libtcodTerm::APutCharLit(int16 x, int16 y, Glyph g, int16 mx, int16 my,
-                              int16 fi, int16 bi, float floor) {
+                              int16 fi, int16 bi, float floor, bool remembered) {
 	if (!litCells || x < 0 || y < 0 || x >= sizeX || y >= sizeY) {
 		APutChar(x, y, g);
 		return;
 	}
 	LitCell &lc = litCells[y * sizeX + x];
 	lc.g = g; lc.mx = mx; lc.my = my; lc.fi = fi; lc.bi = bi;
-	lc.floor = floor; lc.lit = true;
+	lc.floor = floor; lc.remembered = remembered;
 	LitPaint(y * sizeX + x);
+	lc.lit = !remembered;
 	updated = false;
 }
 
@@ -1042,8 +1043,9 @@ void libtcodTerm::LitPaint(int32 idx) {
 		return;
 	}
 	LightRGB L = { 0, 0, 0 };
-	LightAt(lc.mx, lc.my, L);
-	LightRGB fg = LightShade(lc.fi, L, lc.floor), bg = LightShade(lc.bi, L, lc.floor);
+	if (!lc.remembered)
+		LightAt(lc.mx, lc.my, L);
+	LightRGB fg = LightShade(lc.fi, L, lc.floor), bg = LightGlow(lc.bi, L);
 	TCOD_color_t tf = { fg.r, fg.g, fg.b }, tb = { bg.r, bg.g, bg.b };
 	TCOD_console_put_char_ex(bScreen, idx % sizeX, idx / sizeX, c, tf, tb);
 }
@@ -1052,7 +1054,7 @@ void libtcodTerm::LitAlloc() {
 	delete[] litCells; delete[] litSaved;
 	litCells = new LitCell[(int32)sizeX * sizeY]();
 	litSaved = new LitCell[(int32)sizeX * sizeY]();
-	ticks_light_last = 0;
+	ticks_light_last = TCOD_sys_elapsed_milli() - LIGHT_TICK_MS;
 }
 
 /* One shimmer frame: advance the noise, re-shade every cell still flagged
@@ -1062,7 +1064,8 @@ void libtcodTerm::LitAlloc() {
 bool libtcodTerm::LightFrame(uint32 now) {
 	if (!litCells || Mode != MO_PLAY || showCursor || LightMode(p) != LIGHT_SHIMMER)
 		return false;
-	if (now < ticks_light_last + LIGHT_TICK_MS)
+	// Unsigned elapsed subtraction survives the millisecond counter wrap.
+	if (now - ticks_light_last < LIGHT_TICK_MS)
 		return false;
 	LightTick(now);
 	const int32 n = (int32)sizeX * sizeY;
@@ -1075,12 +1078,16 @@ bool libtcodTerm::LightFrame(uint32 now) {
 }
 
 void libtcodTerm::SleepTicking(int16 milli) {
-	uint32 now = TCOD_sys_elapsed_milli(), end = now + (milli > 0 ? milli : 0);
-	while (now < end) {
-		uint32 step = end - now;
+	const uint32 start = TCOD_sys_elapsed_milli();
+	const uint32 total = (milli > 0) ? (uint32)milli : 0u;
+	uint32 done = 0;
+	// Unsigned elapsed subtraction survives the millisecond counter wrap.
+	while (done < total) {
+		uint32 step = total - done;
 		if (step > LIGHT_TICK_MS) step = LIGHT_TICK_MS;
 		TCOD_sys_sleep_milli(step);
-		now = TCOD_sys_elapsed_milli();
+		uint32 now = TCOD_sys_elapsed_milli();
+		done = now - start;
 		LightFrame(now);
 	}
 }

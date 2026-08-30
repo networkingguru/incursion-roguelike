@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Does the light map obey its two invariants? Reads logs/light.log.
+"""Does the light map obey its invariants? Reads logs/light.log.
 
 The log is written by src/Light.cpp when INCURSION_LIGHT_PROBE is set. Each
 block: a header, one "S x y r red green blue kind cells" line per source, then
@@ -7,19 +7,29 @@ the source-light grid with ambient left out: '#' opaque unlit, '%' opaque lit,
 '.' unlit, '0'-'9' lit and how brightly.
 
 Invariants checked, on every block:
-  1. A lit cell is within radius of a source that reaches it: a straight line
-     from the source, in either axis-major rasterisation, crosses no opaque
-     cell strictly between them. This is an independent re-implementation of
-     the game's line-of-sight rule, not a call into it.
+  1. A lit cell is within radius under the game's distance metric of a source
+     that reaches it: a straight line from the source, in either axis-major
+     rasterisation, crosses no opaque cell strictly between them. This is an
+     independent re-implementation of the game's line-of-sight rule, not a
+     call into it.
   2. A player who carries a light stands on a lit cell.
+  3. Every non-opaque neighbour of a source with radius at least one is lit.
+  4. Among cells reached by only one source, brightness never rises with
+     distance from that same source.
 
 Usage: tools/lightmap_check.py <light.log>      exit 0 pass, 1 fail, 2 no blocks
-       tools/lightmap_check.py --selftest       proves both assertions bite
+       tools/lightmap_check.py --selftest       proves all four assertions bite
 """
 import re
 import sys
 
 HEADER = re.compile(r"^LIGHT map=(\d+) (\d+) player=(-?\d+) (-?\d+) plight=(\d+) sources=(\d+)$")
+
+
+def game_distance(dx, dy):
+    """Mirror dist() in inc/Inline.h independently, without calling the game."""
+    a, b = abs(dx), abs(dy)
+    return a + b // 2 if a > b else b + a // 2
 
 
 def parse(text):
@@ -46,6 +56,10 @@ def parse(text):
 
 def opaque(grid, x, y):
     return grid[y][x] in "#%"
+
+
+def lit(grid, x, y):
+    return grid[y][x] == "%" or grid[y][x].isdigit()
 
 
 def clear_line(grid, sx, sy, tx, ty):
@@ -76,21 +90,58 @@ def check_block(b, where):
     if len(b["grid"]) != b["h"] or any(len(r) != b["w"] for r in b["grid"]):
         return ["%s: grid is not %dx%d" % (where, b["w"], b["h"])]
     g = b["grid"]
+    sole_lit = {}
     for y in range(b["h"]):
         for x in range(b["w"]):
             ch = g[y][x]
             if ch in ".#":
                 continue
-            reached = any(max(abs(x - sx), abs(y - sy)) <= r and clear_line(g, sx, sy, x, y)
-                          for sx, sy, r in b["sources"])
+            reached = [n for n, (sx, sy, r) in enumerate(b["sources"])
+                       if game_distance(x - sx, y - sy) <= r
+                       and clear_line(g, sx, sy, x, y)]
             if not reached:
                 fails.append("%s: cell (%d,%d) is lit '%s' but no source reaches it"
                              % (where, x, y, ch))
+            elif len(reached) == 1 and ch.isdigit():
+                n = reached[0]
+                sx, sy, unused_r = b["sources"][n]
+                distance = game_distance(x - sx, y - sy)
+                sole_lit.setdefault(n, {}).setdefault(distance, []).append(
+                    (int(ch), x, y))
     px, py = b["px"], b["py"]
     if b["plight"] > 0 and 0 <= px < b["w"] and 0 <= py < b["h"]:
         if g[py][px] in ".#":
             fails.append("%s: player at (%d,%d) carries light %d but the cell is unlit"
                          % (where, px, py, b["plight"]))
+    for sx, sy, r in b["sources"]:
+        if r < 1:
+            continue
+        # Every adjacent cell has game distance 1, so radius >= 1 reaches it.
+        for y in range(max(0, sy - 1), min(b["h"], sy + 2)):
+            for x in range(max(0, sx - 1), min(b["w"], sx + 2)):
+                if (x, y) == (sx, sy) or opaque(g, x, y):
+                    continue
+                if not lit(g, x, y):
+                    fails.append("%s: source (%d,%d) radius %d has dark neighbour (%d,%d)"
+                                 % (where, sx, sy, r, x, y))
+    for n, by_distance in sole_lit.items():
+        sx, sy, unused_r = b["sources"][n]
+        nearest_min = None
+        for distance in sorted(by_distance):
+            if nearest_min is not None:
+                av, ax, ay, ad = nearest_min
+                for bv, bx, by in by_distance[distance]:
+                    if av < bv:
+                        fails.append(
+                            "%s: source (%d,%d) cell (%d,%d) distance %d digit %d "
+                            "is dimmer than cell (%d,%d) distance %d digit %d"
+                            % (where, sx, sy, ax, ay, ad, av,
+                               bx, by, distance, bv))
+            distance_min = min(by_distance[distance])
+            candidate = (distance_min[0], distance_min[1],
+                         distance_min[2], distance)
+            if nearest_min is None or candidate[0] < nearest_min[0]:
+                nearest_min = candidate
     return fails
 
 
@@ -110,12 +161,35 @@ def selftest():
     good = ("LIGHT map=7 5 player=1 2 plight=2 sources=1\n"
             "S 1 2 3 255 147 41 0 9\n"
             ".......\n"
-            "..2#...\n"
-            "132#...\n"
-            "..2#...\n"
+            "888#...\n"
+            "898#...\n"
+            "888#...\n"
             ".......\n")
-    wall_leak = good.replace("132#...", "132#.2.")
-    dark_player = good.replace("132#...", "1.2#...")
+    wall_leak = good.replace("898#...", "898#.2.")
+    dark_player = good.replace("898#...", "8.8#...")
+    source_only = good.replace("888#...", "...#...").replace("898#...", ".9.#...")
+    rising = good.replace(".......\n888#...", ".9.....\n888#...", 1)
+    two_source_rising = ("LIGHT map=11 3 player=-1 -1 plight=0 sources=2\n"
+                         "S 1 1 2 255 147 41 0 9\n"
+                         "S 9 1 1 255 147 41 0 9\n"
+                         "5558....777\n"
+                         "5958....797\n"
+                         "5558....777\n")
+    two_source_overlap = ("LIGHT map=7 3 player=-1 -1 plight=0 sources=2\n"
+                          "S 2 1 2 255 147 41 0 9\n"
+                          "S 4 1 2 255 147 41 0 9\n"
+                          "5599955\n"
+                          "5599955\n"
+                          "5599955\n")
+    game_metric_order = ("LIGHT map=11 7 player=-1 -1 plight=0 sources=1\n"
+                         "S 5 5 6 255 147 41 0 9\n"
+                         ".....5.....\n"
+                         ".........4.\n"
+                         "...........\n"
+                         "...........\n"
+                         "....888....\n"
+                         "....898....\n"
+                         "....888....\n")
     results = [
         ("a clean block passes", check(good)[0] == 0),
         ("light behind a wall fails", check(wall_leak)[0] == 1),
@@ -123,7 +197,15 @@ def selftest():
         ("an empty log is inconclusive", check("")[0] == 2),
         ("a log with no source is inconclusive",
          check(good.replace("sources=1\nS 1 2 3 255 147 41 0 9\n", "sources=0\n")
-                   .replace("132#...", "...#...").replace("..2#...", "...#..."))[0] == 2),
+                   .replace("898#...", "...#...").replace("888#...", "...#..."))[0] == 2),
+        ("a source that lights only its own square fails", check(source_only)[0] == 1),
+        ("brightness that rises with distance fails", check(rising)[0] == 1),
+        ("a two-source block still checks a sole-lit cell",
+         check(two_source_rising)[0] == 1),
+        ("two sources summing on one cell is not a failure",
+         check(two_source_overlap)[0] == 0),
+        ("the game's distance metric, not Chebyshev, orders the cells",
+         check(game_metric_order)[0] == 0),
     ]
     ok = True
     for name, passed in results:

@@ -40,9 +40,9 @@ inline bool Map::MarkAsSeen(const int8 pn, const int16 lx, const int16 ly,
   if (SightRange) {
     if (//Here.Dark ||
         dist > SightRange || // beyond your maximum range, period 
-        (dist > ShadowOrBlindRange && !Here.Lit && !Here.mLight))
+        (dist > ShadowOrBlindRange && !Here.Lit && !Here.mLight && !::LightLitAt(lx,ly)))
       return true; 
-    else if (dist > LightRange && !Here.Lit && !Here.mLight)
+    else if (dist > LightRange && !Here.Lit && !Here.mLight && !::LightLitAt(lx,ly))
       Mask = VI_DEFINED << (pn*4);
     else
       Mask = (VI_VISIBLE | VI_DEFINED) << (pn*4);
