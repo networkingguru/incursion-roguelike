@@ -7470,7 +7470,35 @@ AI_SHIELD Effect "Dragonshield" : EA_BLAST
       * ITEM_QUALITIES AQ_LIGHT_FOR AQ_FEARSOME;
   }
 and EA_GRANT
-  { xval: ENEMY_TO; yval: MA_DRAGON; aval: 0; lval: 0; }
+  {
+    // upstream: this EA_GRANT gave the bearer ENEMY_TO MA_DRAGON, which makes
+    // EVERY dragon hostile. LowPriorityStatiHostility (src/Target.cpp) tests
+    // me->isMType(S->Val) for each dragon that rates the bearer, and bare
+    // MA_DRAGON matches metallic (good) dragons as well as chromatic (evil)
+    // ones. The shield's own Desc promises only chromatic dragons: "Bearing a
+    // Dragonshield makes all chromatic dragons hostile to the bearer." The
+    // engine's chromatic/metallic split IS alignment: RacialHostility
+    // (src/Target.cpp) and the encounter-rating code (src/Monster.cpp) both
+    // separate dragons by isMType(MA_EVIL) vs isMType(MA_GOOD). Brian ruled
+    // prose wins, so only chromatic (evil) dragons turn hostile. The yval now
+    // carries the compound monster type MA_DRAGON+(MA_EVIL*256); isMType splits
+    // a value over 256 into mt%256 and mt/256 and ANDs the two tests
+    // (src/Values.cpp), so a dragon must be BOTH MA_DRAGON and MA_EVIL to
+    // match. The compound-MA form is the one the Cloak of Arachnida grant
+    // already uses in this file (xval: ALLY_TO; yval:
+    // (MA_SPIDER+(MA_ANIMAL*256))). This is item data in lib/, which the port
+    // does not touch; a Win32 build with the original data ships the same
+    // over-broad MA_DRAGON grant against the same Desc, so the defect is
+    // upstream's, not a port artefact. Tier Traced: the fix is deterministic
+    // (an evil dragon always turns hostile, a good dragon never does, no seed
+    // applies), but a headless A/B oracle would need harness scaffolding to
+    // spawn a chromatic and a metallic dragon, equip the shield, and dump each
+    // dragon's hostility toward the bearer, which is not a scriptable key
+    // sequence here. Proven instead by the isMType compound recursion
+    // (src/Values.cpp) and the M_EVIL/M_GOOD resolution it reaches, plus the
+    // Arachnida precedent. inc-tek.8.8 / PA-08-F79; not sent.
+    xval: ENEMY_TO; yval: (MA_DRAGON+(MA_EVIL*256)); aval: 0; lval: 0;
+  }
 
 
 AI_WEAPON Effect "Lightning;jav" : EA_BLAST

@@ -457,6 +457,7 @@ the unfixed tree before it is trusted.
 | `check_divination_staff_prose.sh` | Does the Staff of Divination description name the granted spell "true seeing", rather than the phantom "true sight" that exists nowhere in `lib/`? |
 | `check_divine_aspect_prose.sh` | Does the Lesser Divine Aspect description state that its disease/poison saves and its acid/cold/electricity resistances scale per magical plus, matching its `PLUS_2PER1`/`PLUS_5PER1` code, rather than the flat "+2" and "resistance of 5" it claimed before? |
 | `check_divine_power.sh` | Does Divine Power grant `FT_POWER_ATTACK` when the caster has STR 18 and no Power Attack, yet still grant `FT_KNOCK_PRONE` when he already has Power Attack, as its description promises? |
+| `check_dragonshield_hostility.sh` | Does the Dragonshield anger only chromatic (evil) dragons, matching its description, rather than every dragon including the metallic (good) ones? |
 | `check_dragonshield_plus_prose.sh` | Does the Dragonshield description state a "+2 (or higher)" enhancement floor, matching its `INITIAL_PLUS +2` constant, rather than the unreachable "+1 (or higher)" it claimed before? |
 | `check_dragonshield_prose.sh` | Does the Dragonshield description list the colour names the shield can actually display (yellow, not brown), matching its `EV_GETNAME` name table? |
 | `check_flame_strike.sh` | Does Flame Strike's description state `1d6` points of damage per caster level, matching its SRD-authentic `(LEVEL_SCALED)d6` script rather than the `1d8` prose it carried before? |
