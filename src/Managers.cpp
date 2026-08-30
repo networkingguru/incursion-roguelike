@@ -1981,7 +1981,6 @@ void TextTerm::OptionManager(int16 start_cat) {
             HelpTopic("help::interface", "OP");
             goto RedrawList;
         case KY_ESC:
-        case KY_ENTER:
             pp->statiChanged = true;
             pp->UpdateOptions(isValidHandle(theGame->p[0]));
             if (oldVid[0] != pp->Opt(OPT_FULL_RES) ||
@@ -2000,6 +1999,11 @@ void TextTerm::OptionManager(int16 start_cat) {
                 delete pp;
             return;
         case KY_SPACE:
+        case KY_ENTER:
+            /* Enter cycles the highlighted value, same as Space. A stock
+               controller layout has a Confirm button (Enter) but no Space
+               key, so without this a pad player cannot change any option --
+               which includes binding macros. Esc still exits the screen. */
             if (Sec == OPC_CHARGEN)
                 if (pp->m && !pp->WizardMode) {
                     Message("Character generation options cannot be changed "
