@@ -1409,11 +1409,6 @@ void HelpCustom(String &helpText, Player *p)
     
   }  
 
-int SortKeys(const void *A, const void *B) {
-    TextVal *a = (TextVal*)A, *b = (TextVal*)B;
-    return a->Val > b->Val;
-}
-
 size_t countskipchars(const char *cs) {
     size_t len = 0, i = 0;
     while (i < strlen(cs)) {
@@ -1638,22 +1633,69 @@ DoneKey:;
         n++;
     }
 
-    qsort(KStr, n, sizeof(TextVal), &SortKeys);
+    /* upstream: base-code defect, fix is ours. This list used to be passed
+       through qsort with a comparator that returned a->Val > b->Val, a 0/1
+       result where qsort needs negative, zero or positive; an invalid
+       comparator gives an arbitrary order (observed: "Rest and Recover"
+       first, the Direction Keys header last), on Win32 and MSVC the same.
+       The loop above builds the entries in enum order, which is the order
+       the headers assume, so the sort is simply gone. Observed, inc-pk2p,
+       not sent. */
 
-    const int rows = (n + cols - 1) / cols;
-    for (i = 0; i != rows; i++) {
-        for (j = 0; j != cols; j++) {
-            if (j)
-                s += " | ";
-            if (i + j * rows < n)
-                s += KStr[i + j * rows].Text;
-            else
-                s += Format("%*s", width, "");
+    int lines = 1;
+    if (!pad) {
+        /* The keyboard screen: two columns straight down the list, headers
+           in-column, 34 rows, which is all a 48-row screen has left after
+           the option block. */
+        const int rows = (n + cols - 1) / cols;
+        for (i = 0; i != rows; i++) {
+            for (j = 0; j != cols; j++) {
+                if (j)
+                    s += " | ";
+                if (i + j * rows < n)
+                    s += KStr[i + j * rows].Text;
+                else
+                    s += Format("%*s", width, "");
+            }
+            s += "\n";
         }
-        s += "\n";
+        return lines + rows;
     }
 
-    return rows + 1;
+    /* The controller screen: each header on its own full-width row, and its
+       section flowed into the columns beneath it, so no entry ever sits
+       level with a header (Brian, on the Ally, 2026-08-30). */
+    const int total = cols * width + (cols - 1) * 3;
+    int start = 0;
+    for (int k = 0; k <= n; k++) {
+        const bool header = k < n && (KStr[k].Val == KY_HEADER_DIR ||
+                                      KStr[k].Val == KY_HEADER_PROMPT ||
+                                      KStr[k].Val == KY_HEADER_GAME);
+        if (k < n && !header)
+            continue;
+        const int cnt = k - start, rows = (cnt + cols - 1) / cols;
+        for (i = 0; i != rows; i++) {
+            for (j = 0; j != cols; j++) {
+                if (j)
+                    s += " | ";
+                if (i + j * rows < cnt)
+                    s += KStr[start + i + j * rows].Text;
+                else
+                    s += Format("%*s", width, "");
+            }
+            s += "\n";
+        }
+        lines += rows;
+        if (header) {
+            const char *name = KStr[k].Val == KY_HEADER_DIR ? "Direction Keys" :
+                               KStr[k].Val == KY_HEADER_PROMPT ? "Selection Prompt Keys" :
+                               "Gameplay Mode Keys";
+            s += Format("%*s%c%s%c\n", (total - (int)strlen(name)) / 2, "", -PINK, name, -GREY);
+            lines++;
+        }
+        start = k + 1;
+    }
+    return lines;
 }
 
 void TextTerm::GetHelp(String & helpText, const char *topic) {
@@ -1750,8 +1792,14 @@ NewTopic:
         padCols = max(1, min(4, (WinSizeX() - 1) / 36));
       }
       lines = DescribeKeys(helpText, padCols);
-      helpText += Format("\n%c---------------------------------------------------"
-                         "\n                    %cFurther Help%c\n",-WHITE,-PINK,-GREY);
+      if (padCols)
+        /* No dashed rule: the three header rows above took its row, and
+           the 48-row screen has none spare. */
+        helpText += Format("\n%*s%cFurther Help%c\n",
+                           (padCols * 36 - 3 - 12) / 2, "", -PINK, -GREY);
+      else
+        helpText += Format("\n%c---------------------------------------------------"
+                           "\n                    %cFurther Help%c\n",-WHITE,-PINK,-GREY);
       LOption("Help Contents",0);
       LOption("My Character_________",1);
       //LOption("Command Descriptions",2);
@@ -1797,11 +1845,12 @@ NewTopic:
            the columns, their " | " joins, and the four columns SWrapWrite
            needs beyond the text (it wraps at WinSizeX()-2 from column 3;
            one short and every row folds, measured 2026-08-30). Height is
-           the list, the three Further Help lines, up to six option rows,
-           and the border: 46 rows in two columns on the 80x48 screen, 38
-           in three on the Ally's 133x75. */
+           the list with its three header rows, the two Further Help lines,
+           the option rows in three columns, and the border and the blank
+           row LMenu puts above the title: 48 rows in two columns on the
+           80x48 screen with 13 options, 47 with 12, measured. */
         SetWin(WIN_SCREEN);
-        SizeWin(WIN_CUSTOM, padCols * 36 + 5, lines + 3 + 6 + 2);
+        SizeWin(WIN_CUSTOM, padCols * 36 + 5, lines + 2 + (OptionCount + 2) / 3 + 3);
         pick = LMenu(MENU_SWRAPWRITE|MENU_ESC|
               MENU_3COLS|MENU_RAW|MENU_BORDER,helpText,WIN_CUSTOM);
       } else

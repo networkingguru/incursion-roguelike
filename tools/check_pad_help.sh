@@ -82,6 +82,22 @@ if ! grep -q "Incursion Key Bindings (controller)" "$PAD"; then
     exit 1
 fi
 
+# The order: the Direction Keys header is the first list row, alone on its
+# row, and North is the first entry under it. On 298ce72 the list went
+# through a boolean qsort comparator and came out with "Rest and Recover"
+# first and that header at the bottom of the right column (inc-pk2p).
+if ! grep -A1 "Incursion Key Bindings (controller)" "$PAD" | tail -1 | grep -q "^| *Direction Keys *|$"; then
+    echo "FAIL: the row under the title is not the Direction Keys header on"
+    echo "      its own, so the list is out of order or the headers share"
+    echo "      rows with entries (inc-pk2p). Dump: $PAD"
+    exit 1
+fi
+if ! grep -A2 "Incursion Key Bindings (controller)" "$PAD" | tail -1 | grep -q "^| *North "; then
+    echo "FAIL: North is not the first entry under Direction Keys (inc-pk2p)."
+    echo "      Dump: $PAD"
+    exit 1
+fi
+
 # The control: with the override off, no pad control appears anywhere.
 if grep -q "D-pad" "$KBD"; then
     echo "FAIL: without INCURSION_PAD_HELP the ? screen still names the d-pad,"
@@ -89,7 +105,7 @@ if grep -q "D-pad" "$KBD"; then
     exit 1
 fi
 
-echo "PASS: the ? screen reads 'D-pad > (l)' beside Look, with its title on"
-echo "      screen and no assertion, under INCURSION_PAD_HELP=1; it names no"
-echo "      pad control without it."
+echo "PASS: the ? screen reads 'D-pad > (l)' beside Look, opens with the"
+echo "      Direction Keys header then North, fits with no assertion, under"
+echo "      INCURSION_PAD_HELP=1; it names no pad control without it."
 exit 0
