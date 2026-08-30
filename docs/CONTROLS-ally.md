@@ -1,3 +1,5 @@
+<!-- citations: this-port -->
+
 <!-- AI-assisted; see the commit trailer. Documents the ROG Ally X control
      scheme as shipped and live on the device. HYBRID: the two analog sticks are
      read game-side by the binary (SDL_GameController, src/Wlibtcod.cpp); the
@@ -98,7 +100,7 @@ base layer is unchanged.
   (`/`); Exchange (`-`); More (space, as a -more- key). The full command set is
   reachable through the two tables above plus the on-screen keyboard.
 - **Command keys are sent UNSHIFTED.** The keymap is case-insensitive (the game
-  upper-cases the key before matching, `src/Wlibtcod.cpp:1770`), so lowercase
+  upper-cases the key before matching, `src/Wlibtcod.cpp:1800`), so lowercase
   keys resolve correctly. Only Help (`?`) and the stairs (`<` `>`) use
   `LEFT_SHIFT`.
 - **Sticks are game-side; d-pad and buttons are Steam Input.** Only the two
