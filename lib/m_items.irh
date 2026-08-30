@@ -7145,6 +7145,7 @@ AI_WEAPON Effect "flame tongue" : EA_GRANT
 and EA_GRANT
   { xval: SUSTAIN; yval: A_CON; 
     Flags: EF_ACTIVATE3, EF_3PERDAY EF_HIDEQUAL, EF_POSTFIX;
+    // upstream: the flame tongue sword's Desc gave the tongue-of-flame lash "a maximum range of the bearer's Charisma modifier times ten in feet (minimum 20)", yet the EV_CALC_EFFECT handler sets e.vRange = 3 + max(0, EActor->Mod(A_CHA)); and vRange is in SQUARES, at this file's scale of 10 feet per square (see lines 1679-1680, 5729-5732), so the real range is (3 + Charisma modifier) squares = 30 feet plus 10 feet per point of Charisma modifier, floored at 30 feet because max(0, ...) clamps the modifier at 0. The old prose was wrong two ways: it dropped the +3-square (30-foot) base and it stated a 20-foot floor the clamp cannot produce. The wrong prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- e.vRange = 3 + max(0, EActor->Mod(A_CHA)) stays. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F69; not sent.
     Desc: "Seven of these powerful blades are believed to exist.
       Revered as holy by the priesthood of Immotian, scholars
       believe they have an older, and more primal, origin than
@@ -7175,9 +7176,10 @@ and EA_GRANT
       ability, the sheath of flames that normally surrounds the 
       sword's blade extends far past its tip and magically takes 
       on a tangible element like the lash of a whip. The tongue of
-      flame lashes out from the sword to a maximum range of the 
-      bearer's Charisma modifier times ten in feet (minimum 20) to 
-      snare a chosen target.\n
+      flame lashes out from the sword to a maximum range of 30
+      feet, plus a further 10 feet for each point of the bearer's
+      Charisma modifier (minimum 30 feet), to snare a chosen
+      target.\n
       __The swordbearer must make a ranged touch attack
       to hit the intended target. If this is successful,
       the tongue of flame deals 4d8 damage to the
