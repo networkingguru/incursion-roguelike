@@ -1642,6 +1642,7 @@ PrintSpecialKey:
                     }
                 }
 DoneKey:;
+                break;
             }
         }
 

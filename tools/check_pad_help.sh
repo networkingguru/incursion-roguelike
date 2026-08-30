@@ -88,6 +88,21 @@ if ! grep "Look North" "$PAD" | grep -q "R-stick"; then
     echo "      Dump: $PAD"
     exit 1
 fi
+for row in North South East West North-East North-West South-East South-West; do
+    if ! grep -E "[|] *${row}[[:space:]]+L-stick" "$PAD" >/dev/null; then
+        echo "FAIL: with INCURSION_PAD_HELP=1 $row is missing its L-stick hint."
+        echo "      Dump: $PAD"
+        exit 1
+    fi
+done
+for row in "Look North" "Look South" "Look East" "Look West" \
+           "Look North-East" "Look North-West" "Look South-East" "Look South-West"; do
+    if ! grep -E "[|] *${row}[[:space:]]+R-stick" "$PAD" >/dev/null; then
+        echo "FAIL: with INCURSION_PAD_HELP=1 $row is missing its R-stick hint."
+        echo "      Dump: $PAD"
+        exit 1
+    fi
+done
 if ! grep "Overview Map" "$PAD" | grep -q "D-pad"; then
     echo "FAIL: with INCURSION_PAD_HELP=1 Overview Map is missing its D-pad hint."
     echo "      Dump: $PAD"
