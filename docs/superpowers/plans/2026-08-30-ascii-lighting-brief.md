@@ -2,7 +2,7 @@
 
 # Coloured, shimmering light on the ASCII map — spec and plan (brief)
 
-**Sized:** Medium. **Status:** draft, awaiting Brian's read. **Branch:** master, no worktree.
+**Sized:** Medium. **Status:** approved 2026-08-30; phases 1-3 committed, phase 4 tuning waits on Brian's eye. **Branch:** `lighting`, worktree `.claude/worktrees/lighting` (another session held master).
 
 **Goal.** The SDL build lights the map the way Brogue does: every light source on
 the level casts its own colour, light fades with distance, is stopped by walls,
