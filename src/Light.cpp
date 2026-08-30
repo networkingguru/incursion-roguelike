@@ -54,6 +54,7 @@ struct LightSource {
 struct FootCell { int32 idx; uint8 w; };
 
 static Map    *lmMap = NULL;
+static bool    lmLegacy = false;    /* the option turned the lighting off */
 static int16   lmW = 0, lmH = 0;
 static int32   lmCells = 0;
 static LightRGB *Steady = NULL, *Frame = NULL;   /* per cell */
@@ -127,6 +128,52 @@ LightRGB LightShade(int idx, LightRGB L, float unlit) {
   o.r = LightChannel(hr * val + (white - hr * val) * over);
   o.g = LightChannel(hg * val + (white - hg * val) * over);
   o.b = LightChannel(hb * val + (white - hb * val) * over);
+  return o;
+}
+
+LightRGB LightMemory(int idx, float unlit) {
+  LightRGB b = Palette[idx & COLOUR_MASK], o;
+  /* Grey by VALUE, not luminance: a saturated blue has almost no
+     luminance and greying it that way would crush it to black. */
+  float v = ColValue(b);
+  /* Washed out is low contrast as well as low colour, so pull the
+     surface's own brightness toward the middle before draining it. */
+  float vf = v + (0.5f - v) * LIGHT_MEMORY_FLAT;
+  float k  = v > 0.0f ? vf / v : 0.0f;      /* same hue, flattened brightness */
+  float g  = vf * 255.0f;                   /* the neutral of that brightness */
+  float hr = b.r * k, hg = b.g * k, hb = b.b * k;
+  /* Memory has its own brightness: at the unlit level the grey is too
+     dark to read as grey at all. Floors stay below walls, so a remembered
+     room keeps its shape. */
+  float mem = unlit + (1.0f - unlit) * LIGHT_MEMORY_LIFT;
+  o.r = LightChannel((hr + (g - hr) * LIGHT_MEMORY_GREY) * mem);
+  o.g = LightChannel((hg + (g - hg) * LIGHT_MEMORY_GREY) * mem);
+  o.b = LightChannel((hb + (g - hb) * LIGHT_MEMORY_GREY) * mem);
+  return o;
+}
+
+LightRGB LightInfra(int idx, bool warm) {
+  LightRGB b = Palette[idx & COLOUR_MASK], o;
+  float v = ColValue(b);
+  float s = (LIGHT_INFRA_FLOOR + (1.0f - LIGHT_INFRA_FLOOR) * v)
+            * (warm ? 1.0f : LIGHT_INFRA_COLD);
+  o.r = LightChannel(LIGHT_INFRA_R * s);
+  o.g = LightChannel(LIGHT_INFRA_G * s);
+  o.b = LightChannel(LIGHT_INFRA_B * s);
+  return o;
+}
+
+LightRGB LightInfraMix(LightRGB lit, int idx, bool warm,
+                       LightRGB L, float infra) {
+  if (infra <= 0.0f) return lit;
+  float i = ColValue(L) / LIGHT_INFRA_YIELD;
+  if (i > 1.0f) i = 1.0f;
+  float k = infra * (1.0f - i);      /* how much red survives */
+  if (k <= 0.0f) return lit;
+  LightRGB h = LightInfra(idx, warm), o;
+  o.r = LightChannel(lit.r + (h.r - lit.r) * k);
+  o.g = LightChannel(lit.g + (h.g - lit.g) * k);
+  o.b = LightChannel(lit.b + (h.b - lit.b) * k);
   return o;
 }
 
@@ -321,8 +368,9 @@ static void ComposeFrame() {
 static void ProbeDump(Map *m, Player *p);
 
 void LightRebuild(Map *m, Player *p) {
-  if (!m || !p) { lmMap = NULL; nSrc = 0; nFoot = 0; return; }
+  if (!m || !p) { lmMap = NULL; lmLegacy = true; nSrc = 0; nFoot = 0; return; }
   EnsureCells(m);
+  lmLegacy = LightMode(p) == LIGHT_LEGACY;
   lmMap = m; nSrc = 0; nFoot = 0; anyFlicker = false;
   ScanCreatures(m);
   ScanFields(m);
@@ -391,6 +439,10 @@ bool LightAt(int16 x, int16 y, LightRGB &out) {
 }
 
 bool LightLitAt(int16 x, int16 y) {
+  /* With the option off, vision must be exactly what it was before the
+     light map existed, so a before-and-after recording compares two real
+     builds. */
+  if (lmLegacy) return false;
   if (!lmMap || !SrcLit || x < 0 || y < 0 || x >= lmW || y >= lmH) return false;
   return SrcLit[(int32)y * lmW + x] >= LIGHT_SEE_MIN;
 }

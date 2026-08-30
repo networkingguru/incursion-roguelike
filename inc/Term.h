@@ -412,7 +412,9 @@ public:
     virtual void ShowMapOverview()=0;
     virtual void AdjustMap(int16 vx,int16 vy,bool newmap=false)=0;
     virtual void RefreshMap()=0;
-    virtual void PutGlyph(int16 x,int16 y,Glyph g)=0;
+    /* 'sense' is the PER_* mask saying why the player perceives what is
+       drawn, and 0 means ordinary sight. */
+    virtual void PutGlyph(int16 x,int16 y,Glyph g,uint16 sense=0)=0;
     virtual Glyph GetGlyph(int16 x, int16 y)=0;
     virtual void ShowThings()=0;
     virtual int16 MSizeX()=0;
@@ -488,7 +490,8 @@ public:
        16-colour glyph, exactly what they drew before lighting existed
        (bead inc-bjgh). */
     virtual void APutCharLit(int16 x, int16 y, Glyph g, int16 mx, int16 my,
-                             int16 fi, int16 bi, float floor, bool remembered)
+                             int16 fi, int16 bi, float floor, bool remembered,
+                             float infra, bool warm)
       { APutChar(x, y, g); }
     virtual void PutChar(int16 x, int16 y, Glyph g)=0;
     virtual Glyph AGetChar(int16 x, int16 y)=0;
@@ -674,7 +677,7 @@ public:
     virtual void AdjustMap(int16 vx,int16 vy,bool newmap=false);
     virtual void RefreshMap()
     { p->UpdateMap = true; AdjustMap(p->x,p->y); }
-    virtual void PutGlyph(int16 x,int16 y,Glyph g);
+    virtual void PutGlyph(int16 x,int16 y,Glyph g,uint16 sense=0);
     virtual Glyph GetGlyph(int16 x, int16 y);
     virtual Glyph FloorShading(int16 x, int16 y, Glyph g);
     virtual void ShowThings();

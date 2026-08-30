@@ -45,6 +45,16 @@ void LightSetPalette(const LightRGB *sixteen);
    by light L, so unlit is the brightness of a cell no light reaches (0..1). */
 LightRGB LightPaletteRGB(int idx);
 LightRGB LightShade(int idx, LightRGB L, float unlit);
+/* A remembered cell is drawn from memory rather than seen, so it keeps its
+   shape and loses most of its colour. */
+LightRGB LightMemory(int idx, float unlit);
+/* Heat sight discards a surface's hue and shows only how bright it is, so
+   the picture is monochrome red and cannot be mistaken for torchlight. */
+LightRGB LightInfra(int idx, bool warm);
+/* Heat sight over a lit colour. 'infra' is the spatial strength,
+   0..1, and any light at LIGHT_INFRA_YIELD or above wins outright. */
+LightRGB LightInfraMix(LightRGB lit, int idx, bool warm,
+                       LightRGB L, float infra);
 /* The glow a lit cell paints across its whole square, behind the glyph. */
 LightRGB LightGlow(int idx, LightRGB L);
 
@@ -55,9 +65,19 @@ enum { LIGHT_LEGACY = 0, LIGHT_STEADY = 1, LIGHT_SHIMMER = 2 };
 #define LIGHT_SOFTEN      2.0f  /* the inverse-square softening distance, in cells */
 #define LIGHT_UNLIT_FLOOR 0.15f /* an unlit floor, as a fraction of its own colour */
 #define LIGHT_UNLIT_SOLID 0.35f /* an unlit wall: higher, so walls keep their shape at the edge of the light */
+#define LIGHT_MEMORY_GREY 0.95f /* how far a remembered surface is drained toward grey */
+#define LIGHT_MEMORY_FLAT 0.50f /* how far a remembered surface's brightness is pulled toward mid, so memory reads flat */
+#define LIGHT_MEMORY_LIFT 0.22f /* how far a remembered surface is lifted above unlit, so its greyness is visible at all */
 #define LIGHT_WASH        0.35f /* how far light beyond a surface's own ceiling blows it toward white */
 #define LIGHT_BG_GAIN     0.18f /* the whole-square glow painted into a cell's background */
 #define LIGHT_SEE_MIN     48    /* least source light, 0..255, at which the engine counts a cell as lit */
+#define LIGHT_INFRA_R     200   /* the heat-sight ramp: a dim red, hue only */
+#define LIGHT_INFRA_G      60
+#define LIGHT_INFRA_B      60
+#define LIGHT_INFRA_FLOOR 0.35f /* the darkest a surface reads under heat sight */
+#define LIGHT_INFRA_COLD  0.65f /* cold terrain, against a warm body's full ramp */
+#define LIGHT_INFRA_YIELD 0.35f /* the light at which heat sight has wholly given way */
+#define LIGHT_INFRA_FADE  2     /* cells over which the edge of heat sight tapers out */
 int LightMode(Player *p);
 
 #endif

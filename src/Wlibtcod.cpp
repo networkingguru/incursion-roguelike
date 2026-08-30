@@ -244,7 +244,7 @@ private:
     /* Every map cell drawn through the light, so a tick can re-shade it
        without the game: what PutGlyph passed, plus a flag that a plain
        APutChar clears when something else is drawn over the cell. */
-    struct LitCell { Glyph g; int16 mx, my, fi, bi; float floor; bool remembered, lit; };
+    struct LitCell { Glyph g; int16 mx, my, fi, bi; float floor, infra; bool remembered, warm, lit; };
     LitCell *litCells = NULL, *litSaved = NULL;
     uint32 ticks_light_last = 0;
     void LitAlloc();
@@ -275,7 +275,8 @@ public:
     virtual void PutChar(Glyph g);
     virtual void APutChar(int16 x, int16 y, Glyph g);
     virtual void APutCharLit(int16 x, int16 y, Glyph g, int16 mx, int16 my,
-                             int16 fi, int16 bi, float floor, bool remembered);
+                             int16 fi, int16 bi, float floor, bool remembered,
+                             float infra, bool warm);
     virtual void PutChar(int16 x, int16 y, Glyph g);
     virtual Glyph AGetChar(int16 x, int16 y);
     virtual void GotoXY(int16 x, int16 y);
@@ -1022,14 +1023,15 @@ void libtcodTerm::APutChar(int16 x, int16 y, Glyph g) {
 }
 
 void libtcodTerm::APutCharLit(int16 x, int16 y, Glyph g, int16 mx, int16 my,
-                              int16 fi, int16 bi, float floor, bool remembered) {
+                              int16 fi, int16 bi, float floor, bool remembered,
+                              float infra, bool warm) {
 	if (!litCells || x < 0 || y < 0 || x >= sizeX || y >= sizeY) {
 		APutChar(x, y, g);
 		return;
 	}
 	LitCell &lc = litCells[y * sizeX + x];
 	lc.g = g; lc.mx = mx; lc.my = my; lc.fi = fi; lc.bi = bi;
-	lc.floor = floor; lc.remembered = remembered;
+	lc.floor = floor; lc.remembered = remembered; lc.infra = infra; lc.warm = warm;
 	LitPaint(y * sizeX + x);
 	lc.lit = !remembered;
 	updated = false;
@@ -1045,7 +1047,10 @@ void libtcodTerm::LitPaint(int32 idx) {
 	LightRGB L = { 0, 0, 0 };
 	if (!lc.remembered)
 		LightAt(lc.mx, lc.my, L);
-	LightRGB fg = LightShade(lc.fi, L, lc.floor), bg = LightGlow(lc.bi, L);
+	LightRGB fg = lc.remembered ? LightMemory(lc.fi, lc.floor)
+	                            : LightShade(lc.fi, L, lc.floor);
+	LightRGB bg = LightGlow(lc.bi, L);
+	fg = LightInfraMix(fg, lc.fi, lc.warm, L, lc.infra);
 	TCOD_color_t tf = { fg.r, fg.g, fg.b }, tb = { bg.r, bg.g, bg.b };
 	TCOD_console_put_char_ex(bScreen, idx % sizeX, idx / sizeX, c, tf, tb);
 }

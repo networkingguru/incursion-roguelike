@@ -880,24 +880,24 @@ void Map::Update(int16 x,int16 y) {
 
 DoDraw:
   if (creatures > 1 && Pri == 3)
-      T1->PutGlyph(x, y, GLYPH_VALUE(GLYPH_MULTI, WHITE) | (mg & GLYPH_BACK_MASK));
+      T1->PutGlyph(x, y, GLYPH_VALUE(GLYPH_MULTI, WHITE) | (mg & GLYPH_BACK_MASK), Vis);
   else if (items > 1 && Pri < 3) {
       Container * c = FChestAt(x, y);
       if (c) {
           if (g & GLYPH_BACK_MASK)
-              T1->PutGlyph(x, y, (g & GLYPH_BACK_MASK) | (c->Image & ~GLYPH_BACK_MASK));
+              T1->PutGlyph(x, y, (g & GLYPH_BACK_MASK) | (c->Image & ~GLYPH_BACK_MASK), Vis);
           else
-              T1->PutGlyph(x, y, c->Image);
+              T1->PutGlyph(x, y, c->Image, Vis);
       } else
-          T1->PutGlyph(x, y, GLYPH_VALUE(GLYPH_PILE, GREY) | (mg & GLYPH_BACK_MASK));
+          T1->PutGlyph(x, y, GLYPH_VALUE(GLYPH_PILE, GREY) | (mg & GLYPH_BACK_MASK), Vis);
   } else
-      T1->PutGlyph(x, y, g);
+      T1->PutGlyph(x, y, g, Vis);
 
 DoOverlay:
   if (ov.Active && !isEngulfed)
       for (i = 0; i != ov.GlyphCount; i++)
           if (ov.GlyphX[i] == x && ov.GlyphY[i] == y)
-              T1->PutGlyph(x, y, ov.GlyphImage[i] | (mg & GLYPH_BACK_MASK));
+              T1->PutGlyph(x, y, ov.GlyphImage[i] | (mg & GLYPH_BACK_MASK), Vis);
 }
 
 void TextTerm::ShowMap() {
@@ -1238,7 +1238,7 @@ Glyph TextTerm::FloorShading(int16 x, int16 y, Glyph g) {
       */
 }
 
-void TextTerm::PutGlyph(int16 x, int16 y,Glyph g) {
+void TextTerm::PutGlyph(int16 x, int16 y,Glyph g,uint16 sense) {
     if(x<XOff || y<YOff || !m)
       return;
     if (x>XOff+Windows[WIN_MAP].Right || 
@@ -1253,8 +1253,19 @@ void TextTerm::PutGlyph(int16 x, int16 y,Glyph g) {
 
     int16 sx = x-XOff + Windows[WIN_MAP].Left,
           sy = y-YOff + Windows[WIN_MAP].Top;
+    /* A thing sensed by something other than light is not lit by
+       anything, so the light must not dim it. */
+    if (sense & (PER_TELE | PER_BLIND | PER_PERCEPT | PER_TREMOR |
+                 PER_DETECT | PER_TRACK)) {
+      APutChar(sx, sy, g);
+      updated = false;
+      return;
+    }
     const uint16 vis = m->At(x,y).Visibility;
-    if (LightMode(p) != LIGHT_LEGACY && (vis & VI_DEFINED)) {
+    /* Memory, not VI_DEFINED: MarkAsSeen clears VI_DEFINED on every cell
+       past the player's sight range, so most of an explored screen would
+       fall through to the unlit path and paint at full brightness. */
+    if (LightMode(p) != LIGHT_LEGACY && ((vis & VI_DEFINED) || m->At(x,y).Memory)) {
       bool remembered = !(vis & VI_VISIBLE) || m->At(x,y).Dark;
       /* A defined cell always goes through the light: no light at all is
          the floor brightness, not full colour. Floor cells (TF_SHADE) fall
@@ -1266,7 +1277,18 @@ void TextTerm::PutGlyph(int16 x, int16 y,Glyph g) {
         fi = attr & COLOUR_MASK;
         bi = (attr >> COLOUR_BITS) & COLOUR_MASK;
       }
-      APutCharLit(sx, sy, g, x, y, fi, bi, floor, remembered);
+      /* Heat sight tapers over its last cells, so its edge is a gradient
+         and not a circle drawn on the floor. */
+      float infra = 0.0f;
+      if (p->InfraRange > 0 && !remembered) {
+        int16 d = dist(x, y, p->x, p->y), edge = p->InfraRange - d;
+        if (edge >= 0)
+          infra = edge >= LIGHT_INFRA_FADE
+                ? 1.0f
+                : (float)(edge + 1) / (float)(LIGHT_INFRA_FADE + 1);
+      }
+      bool warm = (sense & PER_INFRA) != 0;
+      APutCharLit(sx, sy, g, x, y, fi, bi, floor, remembered, infra, warm);
     } else
       APutChar(sx, sy, g);
     updated = false;
