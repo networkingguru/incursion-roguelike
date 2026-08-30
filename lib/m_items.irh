@@ -6303,6 +6303,25 @@ AI_HORN Effect "the Kobolds;horn" : EA_SUMMON
       her fellows to fight on her behalf with a CR equal to twice 
       its magical plus. In the hands of a member of any other
       race, however, the kobolds will be hostile."; 
+    /* upstream: the Desc promises a non-kobold wielder gets HOSTILE kobolds,
+       but the declarative EA_SUMMON always summoned FRIENDLY. Magic::Summon
+       hardcodes xe.enFlags = EN_SUMMON with no hostile flag and no race check
+       (src/Effects.cpp:1448-1471), so the second Desc sentence was never
+       implemented. The same gap ships on Win32 with the original shared game
+       data, the original typedefs and the upstream compiler -- it is a missing
+       feature in the data, not a port artefact. This On Event EV_MAGIC_HIT
+       handler adds the race-conditional hostile summon for a non-kobold
+       wielder; the kobold wielder falls through (return NOTHING) to the
+       unchanged declarative friendly EA_SUMMON. Evidence tier: Observed.
+       Tracking id: inc-tek.8.8 / PA-08-F66. NOT sent upstream. */
+    On Event EV_MAGIC_HIT {
+      if (e.isActivation && !EActor->isMType(MA_KOBOLD)) {
+        EMap->thEnGenMTypeXY($"mass summons", MA_KOBOLD,
+          EN_SUMMON|EN_SINGLE|EN_HOSTILE, e.vDmg, 0, EActor->x, EActor->y);
+        return DONE;
+        }
+      return NOTHING;
+      };
   }
   
 AI_HORN Effect "Madness" : EA_DRAIN

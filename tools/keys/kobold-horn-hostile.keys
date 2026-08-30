@@ -1,0 +1,48 @@
+# Observed oracle for PA-08-F66 / inc-tek.8.8: the Horn of the Kobolds, blown by
+# a NON-kobold wielder, must summon HOSTILE kobolds. The default chargen makes an
+# orc barbarian (a non-kobold), so no race-setting is needed. Read by
+# check_kobold_horn.sh, which examines the summoned kobold's Hostility section.
+#
+# Pre-fix (HEAD): the declarative EA_SUMMON always summoned FRIENDLY, so the
+# kobold feels allegiance/neutrality toward the blower. Post-fix: the new
+# On Event EV_MAGIC_HIT handler makes a non-kobold wielder's kobolds HOSTILE, so
+# the kobold feels enmity toward the blower.
+#
+# Navigation modelled on horn-panic.keys (bd inc-j4dy): wizard mode entered once
+# with 'w' 'y'; Item Acquisition RIGHT*28 reaches Horns; the candidate list
+# highlights the middle of three rows, so @until stops on the row after the one
+# wanted; 'Enter Item Level:' sets the item plus; 's' stows the item.
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+DOWN*9
+SPACE                   # Freeze Monsters
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*28                # Horns
+@until "Horn of the Kobolds" DOWN
+DOWN
+ENTER
+3
+ENTER
+s
+ESC
+
+a
+@dump:activate-menu
+a
+@dump:blown
+
+w
+@choose "Examine Nearby Things"
+@until "kobold (class" RIGHT
+DOWN*40
+@dump:kobold-after
+ESC
+@quit
