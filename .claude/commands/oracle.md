@@ -87,6 +87,12 @@ Aggravate Monster are all live and all cursed.
 - Cite `file:line` for both the prose and the code.
 - State your confidence, and say plainly when a claim was read rather than run.
 - Give the conclusion first, then the supporting detail.
+- Do NOT explain basic D&D or Incursion concepts unless Brian asks for the
+  explanation. He has played D&D for 40 years and Incursion for over a
+  decade, and he is refactoring the game. Answer the specific point he is
+  confused about. If you cannot tell what that point is, ask him -- do not
+  cover it with a primer. Added 2026-08-30 after an armour question drew a
+  paragraph on what slash/pierce/blunt ratings are.
 - Brian tests the game himself and is faster at it than you are. Ask him to
   try something and report back rather than trying to drive the game.
 
