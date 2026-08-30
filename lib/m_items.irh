@@ -1620,11 +1620,12 @@ AI_EYES Effect "the Eagle" : EA_GRANT
 AI_EYES Effect "the Soul;eyes" : EA_GRANT
   { SC_NEC|SC_THE; xval: SKILL_BONUS; yval: SK_INTIMIDATE; pval: PLUS_2PER1; 
     Level: PLUS_2PER1; Flags: EF_NEEDS_PLUS; 
+    // upstream: the Eyes of the Soul Desc described the Intimidate and Knowledge (Theology) skill bonus and the fear-save bonus, but omitted the item's fourth grant, EXTRA_FEAT FT_NECROPHYSIOLOGY. That feat lets its holder score critical hits against undead (src/FeatTab.cpp, src/Fight.cpp), so it can sneak attack or coup de grace undead that are otherwise immune to such precision. Brian ruled the prose must document the granted feat: added an in-voice sentence naming Necrophysiology and its effect. The grant itself is unchanged. The incomplete prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F81; not sent.
     Desc: "These lenses grant the bearer a terrifying window in the souls
     of others and the holes where the souls of the undead would be. This
     grants the wearer a skill bonus to Intimidate and Knowledge (Theology) skill checks
     equal to twice their plus. In addition, the wearer adds their magical
-    plus as a bonus to saving throws versus fear."; }
+    plus as a bonus to saving throws versus fear. Finally, the wearer's grasp of undead anatomy grants the Necrophysiology feat, which lets them score critical hits against undead -- and so sneak attack or deliver a coup de grace to undead foes that would otherwise be immune to such precision."; }
   and EA_GRANT { xval: SKILL_BONUS; yval: SK_KNOW_THEO; pval: PLUS_2PER1; }
   and EA_GRANT { xval: SAVE_BONUS; yval: SN_FEAR; pval: PLUS_1PER1; } 
   and EA_GRANT { xval: EXTRA_FEAT; yval: FT_NECROPHYSIOLOGY; } 
@@ -5934,7 +5935,15 @@ and EA_GRANT
 
 AI_ROD Effect "the Python" : EA_GRANT
   { SC_ABJ; SC_THA; Level: PLUS_3PER1; Flags: EF_NEEDS_PLUS;
-    xval: SAVE_BONUS; yval: SN_POISON; pval: PLUS_1PER1; }
+    xval: SAVE_BONUS; yval: SN_POISON; pval: PLUS_1PER1;
+    // upstream: the Rod of the Python declared no Desc in any of its three blocks, so the item shipped with no description text at all. Its effects are a per-plus poison save bonus (SAVE_BONUS SN_POISON, pval PLUS_1PER1), a per-plus Constitution bonus (ADJUST A_CON, pval PLUS_1PER1) and a three-times-daily transformation (EF_3PERDAY) into a boa constrictor whose Companion template scales with the rod's plus. Brian ruled the item needs a description: authored one from these effects, in the voice of the sibling rods. No grant, flag or value changed. The missing Desc ships on Win32 with the original data too; it is prose in an item declaration, not a port artefact. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F83; not sent.
+    Desc: "Carved from the fang of a great serpent and bound with dark
+      scales, this rod lends its bearer the snake's own resilience. It
+      grants a bonus to saving throws against poison equal to its magical
+      plus, and raises the wielder's Constitution by one point per magical
+      plus. Three times each day, on command, the rod itself transforms
+      into a mighty boa constrictor that fights at the wielder's side; the
+      serpent grows in power with the rod's magical plus."; }
 and EA_GRANT
   { xval: ADJUST; yval: A_CON; pval: PLUS_1PER1; }
 and EA_GENERIC
@@ -7555,6 +7564,7 @@ AI_WEAPON Effect "Sylvan Scimitar" : EA_GRANT
   { 
     xval: EXTRA_FEAT; yval: FT_CLEAVE; Level: 4; 
     Flags: EF_NAMEONLY, EF_HIDEQUAL;
+      // upstream: the Sylvan Scimitar Desc said elves "tend to be friendly" to a character bearing one of these weapons, yet the item grants NEUTRAL_TO MA_ELF, which TargetSystem::LowPriorityStatiHostility (src/Target.cpp) resolves as a Neutral-quality attitude and the character sheet labels "Neutral" (src/Sheet.cpp) -- a neutral reaction, not a friendly one. The wrong prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- the grant stays NEUTRAL_TO MA_ELF. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F82; not sent.
     Desc: "Crafted by the wood elves, these swords serve both as
       useful utility items and as emblems of their trust. They are
       one of the more common specific magical items of Theyra, with
@@ -7565,7 +7575,7 @@ AI_WEAPON Effect "Sylvan Scimitar" : EA_GRANT
       properties against orcs and beasts; wielding it grants the user 
       the Cleave feat. When the user is on verdant terrain, the scimitar 
       gains an additional +2 circumstance bonus to hit and damage. Elves 
-      tend to be friendly to a character that bears one of these weapons;
+      tend to be neutral toward a character that bears one of these weapons;
       in the hands of an elf or a druid, it also benefits from the
       <11>keen<7> quality."; 
     Constants:
