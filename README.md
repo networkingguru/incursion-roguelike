@@ -493,6 +493,7 @@ the unfixed tree before it is trusted.
 | `check_lz_uncompress.sh` | Can the LZ77 and RLE decoders be made to write past their output buffer? |
 | `check_masterarcher_live.sh` | Does the Master Archer's ranged sneak attack fire with a bow only, and not with a sling? |
 | `check_menu_page_arrows.sh` | Does the RIGHT arrow page a long selection menu forward, so a Steam Deck player who has a stick but no Tab key can reach a row on the second page and still pick it? |
+| `check_pad_help.sh` | Does the `?` screen name the pad control beside each key (`Look ... D-pad Right (l)`) when a controller is in front of the game, and stay keyboard-only when none is? The headless build forces the pad screen with `INCURSION_PAD_HELP=1`. |
 | `check_menu_value.sh` | Does a script menu give back the same object handle it was handed? |
 | `check_natural_speed.sh` | Has the hard-coded brawl-speed floor drifted from the fastest weapon in `lib/weapons.irh`? |
 | `check_natural_speed_live.sh` | Does flipping one byte of `Options.Dat` really move the Brawl row on the character sheet, from 100% to 175%? |

@@ -1426,15 +1426,101 @@ size_t countskipchars(const char *cs) {
     return len;
 }
 
-static void DescribeKeys(String &s) {
+/* The pad control for each command, shown beside the key on the ? screen
+   when a controller is in front of the game. This is a copy of the shipped
+   Steam Input layout (docs/CONTROLS-ally.md, docs/incursion-steam-input-ally.vdf)
+   and MUST change with it: the game cannot read that layout, because the
+   buttons reach it only as the keystrokes Steam synthesises. inc-5mtz
+   replaces this table with the one the game reads the buttons from. Commands
+   the layout leaves unbound are absent and print keyboard-only. */
+struct PadHint { int16 cmd; const char *pad; };
+static const PadHint PadHints[] = {
+    { KY_CMD_NORTH,         "Left stick" },
+    { KY_CMD_SOUTH,         "Left stick" },
+    { KY_CMD_EAST,          "Left stick" },
+    { KY_CMD_WEST,          "Left stick" },
+    { KY_CMD_NORTHEAST,     "Left stick" },
+    { KY_CMD_NORTHWEST,     "Left stick" },
+    { KY_CMD_SOUTHEAST,     "Left stick" },
+    { KY_CMD_SOUTHWEST,     "Left stick" },
+    { KY_CMD_UP,            "L3" },
+    { KY_CMD_DOWN,          "R3" },
+    { KY_CMD_KICK,          "D-pad Up" },
+    { KY_CMD_PRAY,          "D-pad Up hold" },
+    { KY_CMD_JUMP,          "D-pad Down" },
+    { KY_CMD_OPEN,          "D-pad Down hold" },
+    { KY_CMD_HIDE,          "D-pad Left" },
+    { KY_CMD_SHOW_MESSAGES, "D-pad Left hold" },
+    { KY_CMD_LOOK,          "D-pad Right" },
+    { KY_CMD_TAB,           "D-pad Right hold" },
+    { KY_CMD_ENTER,         "A" },
+    { KY_CMD_YUSE,          "A hold" },
+    { KY_CMD_ESCAPE,        "B" },
+    { KY_CMD_NAME,          "B hold" },
+    { KY_CMD_CANCEL_MENU,   "X" },
+    { KY_CMD_EXAMINE,       "X" },
+    { KY_CMD_USE,           "X hold" },
+    { KY_CMD_GET,           "Y" },
+    { KY_CMD_INVENTORY,     "Y hold" },
+    { KY_CMD_ATTACK_MENU,   "RB" },
+    { KY_CMD_QUAFF,         "RB hold" },
+    { KY_CMD_MAGIC,         "LT" },
+    { KY_CMD_READ,          "LT hold" },
+    { KY_CMD_FIRE,          "RT" },
+    { KY_CMD_TARGET,        "RT hold" },
+    { KY_CMD_EAT,           "Left sys hold" },
+    { KY_CMD_HELP,          "Right sys" },
+    { KY_CMD_CHAR_SHEET,    "Right sys hold" },
+    { KY_CMD_MACRO1,        "LB+D-pad Up" },
+    { KY_CMD_MACRO2,        "LB+D-pad Down" },
+    { KY_CMD_MACRO3,        "LB+D-pad Left" },
+    { KY_CMD_MACRO4,        "LB+D-pad Right" },
+    { KY_CMD_MACRO5,        "LB+A" },
+    { KY_CMD_MACRO6,        "LB+B" },
+    { KY_CMD_MACRO7,        "LB+X" },
+    { KY_CMD_MACRO8,        "LB+Y" },
+    { KY_CMD_MACRO9,        "LB+LT hold" },
+    { KY_CMD_MACRO10,       "LB+LT" },
+    { KY_CMD_MACRO11,       "LB+RT" },
+    { KY_CMD_MACRO12,       "LB+RT hold" },
+    { KY_CMD_OPTIONS,       "LB+D-pad Left hold" },
+    { KY_CMD_SEARCH,        "LB+A hold" },
+    { KY_CMD_REST,          "LB+B hold" },
+    { KY_CMD_ACTIVATE,      "LB+X hold" },
+    { KY_CMD_BLAST_WAND,    "LB+Y hold" },
+    { KY_CMD_LAST,          NULL }
+};
+
+static const char *PadHintFor(int16 cmd) {
+    for (const PadHint *h = PadHints; h->pad; h++)
+        if (h->cmd == cmd)
+            return h->pad;
+    return NULL;
+}
+
+bool Term::PadHelpActive() {
+    const char *force = getenv("INCURSION_PAD_HELP");
+    if (force && *force)
+        return *force != '0';
+    return PadAttached();
+}
+
+/* pad: print the controller ? screen. Each row gains the pad control before
+   the key, so the key column widens from 24 to 44 and the screen drops from
+   two columns to one; the help viewer scrolls it. */
+static void DescribeKeys(String &s, bool pad) {
     int16 i, j, n;
     TextVal KStr[KY_CMD_LAST];
     String Keys[KY_CMD_LAST];
     extern TextVal KeyCmdDescs[];
     KeySetItem * ks = theGame->Opt(OPT_ROGUELIKE) ? RoguelikeKeySet : StandardKeySet;
     int time_for_ret = 0;
+    const int width = pad ? 44 : 24;
 
-    s = Format("            %c-- %cIncursion Key Bindings%c --\n", -GREY, -PINK, -GREY);
+    if (pad)
+        s = Format("      %c-- %cIncursion Key Bindings (controller)%c --\n", -GREY, -PINK, -GREY);
+    else
+        s = Format("            %c-- %cIncursion Key Bindings%c --\n", -GREY, -PINK, -GREY);
     n = 0;
 
     memset(KStr, 0, sizeof(TextVal) * KY_CMD_LAST);
@@ -1518,13 +1604,24 @@ DoneKey:;
         const char * desc = LookupOnly(KeyCmdDescs, i);
         if (!desc)
             continue;
+        const char *hint = pad ? PadHintFor(i) : NULL;
+        if (hint)
+            Keys[n] = Format("%s (%s)", hint, (const char *)Keys[n]);
         int padcnt = countskipchars(Keys[n]);
-        KStr[n].Text = Format("%c%s%c%*s%c", -GREY, desc, -YELLOW, 24 + padcnt - (int)strlen(desc), (const char *)Keys[n], -GREY);
+        KStr[n].Text = Format("%c%s%c%*s%c", -GREY, desc, -YELLOW, width + padcnt - (int)strlen(desc), (const char *)Keys[n], -GREY);
         KStr[n].Val = i;
         n++;
     }
 
     qsort(KStr, n, sizeof(TextVal), &SortKeys);
+
+    if (pad) {
+        for (i = 0; i != n; i++) {
+            s += KStr[i].Text;
+            s += "\n";
+        }
+        return;
+    }
 
     for (i = 0; i != (n + 1) / 2; i++) {
         s += KStr[i].Text;
@@ -1624,7 +1721,7 @@ NewTopic:
     isHelp = true;
 
     if (topic == NULL) { 
-      DescribeKeys(helpText);
+      DescribeKeys(helpText, PadHelpActive());
       helpText += Format("\n%c---------------------------------------------------"
                          "\n                    %cFurther Help%c\n",-WHITE,-PINK,-GREY);
       LOption("Help Contents",0);

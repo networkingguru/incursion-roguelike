@@ -336,6 +336,13 @@ protected:
 public:
     String IncursionDirectory;
 
+    /* Controller help. PadAttached is the backend's word that a pad whose
+       buttons work is in front of the game; PadHelpActive (Help.cpp) adds the
+       INCURSION_PAD_HELP override the headless check and a keyboard-only
+       machine use to see the controller ? screen. */
+    virtual bool PadAttached() { return false; }
+    bool PadHelpActive();
+
     /* Window Handling (TextTerm.cpp) */
     virtual void InitWindows()=0;
     virtual void SetWin(int16 win)=0;

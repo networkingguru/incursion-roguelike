@@ -15,6 +15,13 @@ key bindings. **Hold LB** for a shift layer that reaches all 12 macro slots.
 The exact config that produces this layout is checked in at
 [`incursion-steam-input-ally.vdf`](incursion-steam-input-ally.vdf).
 
+In play, `?` (RIGHT system button) shows this same table beside the keyboard
+keys, as `Look  D-pad Right (l)`. The game shows the controller version when
+it sees Steam's virtual pad (vendor `28de`) or the `SteamGameId` variable
+Steam sets; `INCURSION_PAD_HELP=1` forces it on any machine, `=0` forces it
+off. The table in `src/Help.cpp` (`PadHints`) is a copy of this layout and
+must change with it.
+
 **Naming the two system buttons.** On the ROG Ally the LEFT small system button
 is Steam's `button_menu` and the RIGHT one is `button_escape` — the reverse of
 what the glyphs suggest. This doc names them by **physical side** (LEFT / RIGHT),

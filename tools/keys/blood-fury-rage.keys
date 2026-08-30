@@ -1,0 +1,120 @@
+# Cast Blood Fury on a living target and photograph the RAGING stati it grants,
+# for bd inc-tek.8.7 (PA-07-F3).
+#
+#   tools/headless.sh tools/keys/blood-fury-rage.keys 1
+#
+# WHAT IS MEASURED. Blood Fury is an EA_INFLICT domain buff that lands a RAGING
+# stati on its target. src/Values.cpp:805-810 reads that stati's Val for the
+# Rage bonus to STR, CON, SPD (each +Val) and Will (+Val/2). On the EA_INFLICT
+# path the stati's Val comes from the effect's yval and its Mag from pval. The
+# pre-fix line set only xval and pval and left yval unset, so Val was 0 and the
+# spell granted nothing. The fix sets yval: LEVEL_SCALED2 (Val = half the
+# caster's level, scaled at 10) and pval: LEVEL_1PER2 (Mag = caster level / 2).
+#
+# THE ORACLE is the target's own stati dump. Creature::Dump (src/Debug.cpp:1524)
+# prints every stati as "RAGING from <source> (Val:V Mag:M)". With the fix and a
+# level-4 caster the target's RAGING reads Val:2 Mag:2 and its A_STR line gains a
+# Rage bonus; on the pre-fix build the same line reads Val:0 and STR is unmoved.
+# The key script cannot forge the number: it only sends keystrokes, and the Val
+# comes from the live stati the engine attached to the target.
+#
+# WHY A LEVEL-4 CASTER. LEVEL_SCALED2 is level/2 for levels 1-10, so at level 1
+# the correct grant is 0 and the fix is indistinguishable from the bug. Free
+# Advancement raises the barbarian to level 4, where LEVEL_SCALED2 = 2, a clear
+# non-zero reading.
+#
+# WHY A GOBLIN AND WHY FREEZE IT. Blood Fury's EV_ISTARGET returns
+# CANNOT_CAST_IT unless the victim isMType(MA_HAS_BLOOD); a goblin has blood.
+# Freeze Monsters keeps it one square east so the caster's cast lands on a known
+# tile and the goblin does not wander out of the Examine Nearby Things range.
+# The goblin carries no Rage of its own, so the only RAGING on it is the spell's.
+#
+# Learn Any Spell sets the spell SP_KNOWN|SP_INNATE, so any class casts it at no
+# mana. Run at seed 1 with INCURSION_OPTIONS=tools/gates/Options.Dat.
+
+@include chargen.keys
+@until "Afoot" ESC
+
+# Free Advancement (third row) only. Monsters are NOT frozen: RAGING winds down
+# on a creature's DoTurn whenever it is flat-footed (FFCount over threshold,
+# src/Creature.cpp:1590-1597), and a creature stays non-flat-footed only while it
+# is in active melee (FFCount is reset to 0 when it attacks or is struck,
+# src/Fight.cpp:3277-3278). So the caster must be engaged for a self-cast rage to
+# survive to the dump.
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*2
+SPACE
+ESC
+
+# Raise the barbarian several levels. Each G gains one; the @while blocks drain
+# every prompt a gain can raise (attribute bump every fourth level, feat, and
+# the "You feel ..." -more- lines). The exact final level is read from the
+# caster-sheet dump below; LEVEL_SCALED2 of it is the Val the target must show.
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+@dump:caster-sheet
+ESC
+
+# Make Blood Fury castable regardless of class.
+w
+@choose "Learn Any Spell"
+"Blood Fury"
+ENTER
+
+# Engage the adjacent native goblin in melee. When the caster strikes it, his
+# own FFCount is reset to 0 (src/Fight.cpp:3277), which holds him non-flat-footed
+# for the next few turns so the RAGING a self-cast grants is not wound down
+# before the dump. The goblin sits one square east of the caster.
+RIGHT
+@while "Confirm attack" y
+
+# Cast Blood Fury on the caster himself. "*" is KY_CMD_TARGET_SELF (bound to '*',
+# src/Tables.cpp). The orc barbarian is MA_HAS_BLOOD, so EV_ISTARGET accepts him.
+m
+@choose "Blood Fury"
+*
+@dump:after-cast
+
+# The oracle: the caster's own stati and attribute dump, read at once (no turn
+# passes inside the wizard menu). Creature::Dump prints "RAGING from <source>
+# (Val:V Mag:M)" and the A_STR line with its Rage bonus. At level 7,
+# LEVEL_SCALED2(7)=3 and LEVEL_1PER2(7)=3, so the fix must show RAGING (Val:3
+# Mag:3) and STR raised by 3; the pre-fix line would show RAGING (Val:0).
+w
+@choose "Examine Player Data"
+@dump:player-top
+DOWN*8
+@dump:player-mid
+DOWN*8
+@dump:player-stati
+ESC
+@quit

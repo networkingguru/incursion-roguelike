@@ -249,6 +249,7 @@ private:
     intptr_t *alf_it;
 
 public:
+    virtual bool PadAttached();
     /* Low-Level Read/Write */
     virtual void Update();
     virtual void Redraw();
@@ -690,6 +691,28 @@ static bool poll_gamepad(TCOD_key_t *out, bool allow_repeat, bool look_mode,
 #else
 static bool poll_gamepad(TCOD_key_t *out, bool, bool, bool) { (void)out; return false; }
 #endif
+
+/* True when a pad is attached AND Steam Input stands in front of it. Only
+   then do the buttons do anything: the game reads the sticks itself, but the
+   d-pad and buttons reach it as the keystrokes Steam synthesises from
+   docs/incursion-steam-input-ally.vdf (docs/CONTROLS-ally.md). Steam's virtual
+   pad carries Valve's vendor id (28de:11ff on the Ally, measured on device
+   2026-08-29), and Steam sets SteamGameId in the environment of anything it
+   launches; either is taken as Steam being in front. A pad on a machine
+   without Steam therefore gets the keyboard ? screen, which is the truth
+   until inc-5mtz reads the buttons natively. */
+bool libtcodTerm::PadAttached() {
+#ifndef _WIN32
+    if (!gamepad || !SDL_GameControllerGetAttached(gamepad))
+        return false;
+    if (SDL_GameControllerGetVendor(gamepad) == 0x28de)
+        return true;
+    const char *steam = getenv("SteamGameId");
+    return steam && *steam;
+#else
+    return false;
+#endif
+}
 
 TCOD_key_t readkey(int wait) {
     TCOD_key_t key = TCOD_key_t();

@@ -1,0 +1,15 @@
+# Open the ? screen once in play and photograph it, for tools/check_pad_help.sh.
+#
+#   INCURSION_PAD_HELP=1 tools/headless.sh tools/keys/pad-help.keys 7
+#
+# With INCURSION_PAD_HELP=1 the game prints the controller key bindings
+# (src/Help.cpp, PadHints), so the Look row reads "D-pad Right (l)". Without
+# it the same row reads "l". The check reads the dump both ways.
+
+@include chargen.keys
+
+@until "Entry Chamber" ESC       # in play
+?                                # the key bindings screen
+@dump:help
+ESC
+@quit
