@@ -2358,7 +2358,32 @@ AI_WAND Effect "Striking;wand" : EA_BLAST
     Level: PLUS_3PER1_ADD1; 
     On Event
       MSG_BLASTNAME
-        "bolt of telekinetic force";
+        "bolt of telekinetic force",
+      // upstream: the Wand of Striking's knockback rider (the `and EA_BLAST`
+      // below, xval AD_KNOC) carried no aval, so it resolved as its OWN
+      // separate strike and rolled a SECOND, independent Reflex save
+      // (Magic::MagicStrike, src/Magic.cpp: a first-in-strike segment always
+      // saves at the SavingThrow call). A target therefore made TWO Reflex
+      // saves against one bolt, while the wand's own Desc promises a SINGLE
+      // save: "A Reflex save halves the damage, but on failure the target
+      // will also be knocked back." This is item data in lib/, which the port
+      // does not touch; a Win32 build with the original data and compiler
+      // ships the same riderless-aval second save, so the defect is
+      // upstream's, not a port artefact. Brian ruled prose wins: one Reflex
+      // save governs both. The rider now shares the bolt's strike (aval:
+      // AR_BOLT, added below), so the same-sval guard in MagicStrike skips a
+      // reroll and no second save is made; this handler then drops the
+      // knockback segment (efNum 1) whenever the target MADE that one save
+      // (e.Resist). Success = half damage and no knockback; failure = full
+      // damage and knockback. The mechanism mirrors Priest Spell "Holy Orb"
+      // (lib/abilities.irh), whose AD_KNOC rider is aval: AR_BOLT with the
+      // same `efNum == 1 && e.Resist` handler. Tier Traced; inc-tek.8.8 /
+      // PA-08-F72; not sent.
+      PRE(EV_MAGIC_HIT) {
+        if (e.efNum == 1 && e.Resist)
+          return DONE;
+        return NOTHING;
+        };
     Desc: "This wand fires a telekinetic bolt which strikes a
       single target for 2d10 points of blunt damage per magical
       plus of the wand. A Reflex save halves the damage, but on
@@ -2366,7 +2391,7 @@ AI_WAND Effect "Striking;wand" : EA_BLAST
       plus] squares.";
   }
 and EA_BLAST 
-  { xval: AD_KNOC; pval: 1d4 + PLUS_1PER1; sval: REF; }
+  { xval: AD_KNOC; pval: 1d4 + PLUS_1PER1; sval: REF; aval: AR_BOLT; }
 
 /* Note that the area here is actually meant to be a weakness, or
    at least a double-edged sword -- it's hard to fire this without
