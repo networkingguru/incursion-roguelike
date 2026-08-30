@@ -71,6 +71,10 @@ enum { LIGHT_LEGACY = 0, LIGHT_STEADY = 1, LIGHT_SHIMMER = 2 };
 #define LIGHT_WASH        0.35f /* how far light beyond a surface's own ceiling blows it toward white */
 #define LIGHT_BG_GAIN     0.18f /* the whole-square glow painted into a cell's background */
 #define LIGHT_SEE_MIN     48    /* least source light, 0..255, at which the engine counts a cell as lit */
+#define LIGHT_ICE_PASS    0.55f /* fraction of light that survives one cell of ice */
+#define LIGHT_FOG_PASS    0.45f /* fraction of light that survives one cell of fog */
+#define LIGHT_FILTER_TINT 0.65f /* how far a crossed cell pulls light toward its own colour */
+#define LIGHT_FILTER_MIN  8     /* least surviving light, 0..255, still worth storing */
 #define LIGHT_INFRA_R     200   /* the heat-sight ramp: a dim red, hue only */
 #define LIGHT_INFRA_G      60
 #define LIGHT_INFRA_B      60

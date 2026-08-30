@@ -1,0 +1,65 @@
+# Build a saved showcase for the light FILTER: ice on one side, green fog on
+# the other, a wall torch behind each, and clear torchlight in between.
+#
+#   tools/headless.sh tools/keys/lightfilter-show.keys 1
+#
+# It exists because tools/keys/lightshow.keys shows every KIND of source but
+# no filtering cell, so it cannot show what src/Light.cpp's transmittance walk
+# does. Bead inc-qh0w.
+#
+# WHAT IT BUILDS, all relative to where the mage arrives:
+#   east   a five-cell vertical ICE WALL one step away, with a wall torch
+#          three steps away behind it -- torchlight arrives dim and blue
+#   west   a wall torch three steps away with nothing in the way -- the same
+#          torch, unfiltered, for comparison
+#   north  a green Stinking Cloud, an FI_FOG field, so its own colour tints
+#          the light that crosses it. North, not west, because the targeting
+#          cursor will not cross the west torch either -- trap 3 again, in
+#          the spell system rather than the wizard menu.
+#
+# THREE THINGS THAT BIT THIS SCRIPT, all of them silent:
+#
+#   1. chargen-mage.keys ends on the Entry Chamber room description, so the
+#      first key after arrival is spent dismissing it. Without the SPACE
+#      everything after shifts by one and the run ends in an options screen.
+#   2. 'w' OPENS the wizard menu; it is not a prefix. After "w y" the menu is
+#      already open, so the FIRST placement presses K on its own. Writing
+#      "w K" there picks wizard item [w] instead and desynchronises the rest.
+#   3. The targeting cursor will not cross a solid cell. Terrain therefore
+#      goes down FAR TO NEAR, with each wall torch placed before the ice that
+#      would later stand between it and the player.
+#
+# A mage, not the usual barbarian, because only a caster reaches the fog: the
+# cloud is a field cast from the spell system, not a terrain type. The terrain
+# called "fog" is a different thing (TF_OBSCURE, no field) and the light map
+# does not read it.
+#
+# Terrain letters from the wizard "Which terrain type?" list:
+#   [h] Ice Wall   [p] Wall Torch
+
+@include chargen-mage.keys
+@dump:arrival
+
+SPACE
+w y
+
+K RIGHT*3 ENTER p
+w K RIGHT ENTER h
+w K UP RIGHT ENTER h
+w K UP*2 RIGHT ENTER h
+w K DOWN RIGHT ENTER h
+w K DOWN*2 RIGHT ENTER h
+w K LEFT*3 ENTER p
+@dump:ice-and-torches
+
+w r "Stinking Cloud" ENTER
+@dump:spell-learned
+
+m ENTER
+UP*4 ENTER
+@dump:fog-cast
+
+ESC b
+@dump:showcase-saved
+
+@quit

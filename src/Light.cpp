@@ -5,11 +5,14 @@
    design. Nothing here may include a backend header: the posix build
    compiles this file too. */
 
-#include "Incursion.h"
-#include "Light.h"
+/* Incursion.h defines min and max as macros, so system headers must precede
+   them because libstdc++ declares std::min/std::max through <math.h>. */
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "Incursion.h"
+#include "Light.h"
 
 #define LIGHT_MAX_RADIUS 12
 
@@ -51,7 +54,7 @@ struct LightSource {
   int32 first, count;          /* slice of Foot[] */
 };
 
-struct FootCell { int32 idx; uint8 w; };
+struct FootCell { int32 idx; uint8 w; uint8 fr, fg, fb; };
 
 static Map    *lmMap = NULL;
 static bool    lmLegacy = false;    /* the option turned the lighting off */
@@ -59,6 +62,7 @@ static int16   lmW = 0, lmH = 0;
 static int32   lmCells = 0;
 static LightRGB *Steady = NULL, *Frame = NULL;   /* per cell */
 static uint8 *SrcLit = NULL;                     /* strongest source light, 0..255 */
+static uint8 *FogCol = NULL;                     /* fog palette index plus one, or zero */
 static LightSource *Src = NULL; static int32 nSrc = 0, capSrc = 0;
 static FootCell    *Foot = NULL; static int32 nFoot = 0, capFoot = 0;
 static bool        anyFlicker = false;
@@ -197,12 +201,13 @@ int LightMode(Player *p) {
 static void EnsureCells(Map *m) {
   if (m->SizeX() == lmW && m->SizeY() == lmH && Steady)
     return;
-  delete[] Steady; delete[] Frame; delete[] SrcLit;
-  Steady = NULL; Frame = NULL; SrcLit = NULL;
+  delete[] Steady; delete[] Frame; delete[] SrcLit; delete[] FogCol;
+  Steady = NULL; Frame = NULL; SrcLit = NULL; FogCol = NULL;
   lmW = m->SizeX(); lmH = m->SizeY(); lmCells = (int32)lmW * lmH;
   Steady = new LightRGB[lmCells];
   Frame  = new LightRGB[lmCells];
   SrcLit = new uint8[lmCells];
+  FogCol = new uint8[lmCells];
 }
 
 static LightSource &NewSource() {
@@ -216,14 +221,15 @@ static LightSource &NewSource() {
   return Src[nSrc++];
 }
 
-static void AddFoot(int32 idx, uint8 w) {
+static void AddFoot(int32 idx, uint8 w, uint8 fr, uint8 fg, uint8 fb) {
   if (nFoot == capFoot) {
     capFoot = capFoot ? capFoot * 2 : 1024;
     FootCell *n = new FootCell[capFoot];
     if (Foot) memcpy(n, Foot, sizeof(FootCell) * nFoot);
     delete[] Foot; Foot = n;
   }
-  Foot[nFoot].idx = idx; Foot[nFoot].w = w; nFoot++;
+  Foot[nFoot].idx = idx; Foot[nFoot].w = w;
+  Foot[nFoot].fr = fr; Foot[nFoot].fg = fg; Foot[nFoot].fb = fb; nFoot++;
 }
 
 static inline void AddScaled(LightRGB &d, LightRGB c, float k) {
@@ -236,6 +242,14 @@ static inline void AddScaled(LightRGB &d, LightRGB c, float k) {
   d.r = (uint8)(255 - (255 - d.r) * (255 - r) / 255);
   d.g = (uint8)(255 - (255 - d.g) * (255 - g) / 255);
   d.b = (uint8)(255 - (255 - d.b) * (255 - b) / 255);
+}
+
+static inline void AddScaledF(LightRGB &d, LightRGB c, float k,
+                              const FootCell &fc) {
+  c.r = (uint8)((int32)c.r * fc.fr / 255);
+  c.g = (uint8)((int32)c.g * fc.fg / 255);
+  c.b = (uint8)((int32)c.b * fc.fb / 255);
+  AddScaled(d, c, k);
 }
 
 /* Seed and speed come from a hash of where the source stands, so a rebuild
@@ -268,6 +282,74 @@ static bool Reaches(Map *m, int16 sx, int16 sy, int16 tx, int16 ty) {
   return m->LineOfVisualSight(tx, ty, sx, sy, NULL);
 }
 
+static LightRGB GlyphColour(Glyph g) {
+  return Palette[GLYPH_FORE_VALUE(g) & COLOUR_MASK];
+}
+
+static bool CellFilter(Map *m, int16 x, int16 y, LightRGB &f) {
+  LightRGB out = { 255, 255, 255 };
+  bool filtered = false;
+  TTerrain *tt = TTER(m->TerrainAt(x, y));
+  LightRGB colours[2];
+  float passes[2];
+  int16 count = 0;
+  if (tt && tt->Material == MAT_ICE && !tt->HasFlag(TF_OPAQUE)) {
+    colours[count] = GlyphColour(tt->Image); passes[count++] = LIGHT_ICE_PASS;
+  }
+  int32 idx = (int32)y * lmW + x;
+  if (FogCol[idx]) {
+    colours[count] = Palette[FogCol[idx] - 1]; passes[count++] = LIGHT_FOG_PASS;
+  }
+  for (int16 i = 0; i < count; i++) {
+    uint8 mx = colours[i].r > colours[i].g ? colours[i].r : colours[i].g;
+    if (colours[i].b > mx) mx = colours[i].b;
+    float nr = mx ? colours[i].r / (float)mx : 1.0f;
+    float ng = mx ? colours[i].g / (float)mx : 1.0f;
+    float nb = mx ? colours[i].b / (float)mx : 1.0f;
+    LightRGB mult = {
+      LightChannel(255.0f * passes[i] * (1.0f - LIGHT_FILTER_TINT + LIGHT_FILTER_TINT * nr)),
+      LightChannel(255.0f * passes[i] * (1.0f - LIGHT_FILTER_TINT + LIGHT_FILTER_TINT * ng)),
+      LightChannel(255.0f * passes[i] * (1.0f - LIGHT_FILTER_TINT + LIGHT_FILTER_TINT * nb))
+    };
+    out.r = (uint8)(((int32)out.r * mult.r + 127) / 255);
+    out.g = (uint8)(((int32)out.g * mult.g + 127) / 255);
+    out.b = (uint8)(((int32)out.b * mult.b + 127) / 255);
+    filtered = true;
+  }
+  if (filtered) f = out;
+  return filtered;
+}
+
+static int16 DDARound(int32 v, int16 n) {
+  int16 sign = v < 0 ? -1 : 1;
+  uint32 a = v < 0 ? (uint32)-v : (uint32)v;
+  uint32 q = a / n, rem = a % n;
+  if (rem * 2 > (uint32)n || (rem * 2 == (uint32)n && (q & 1))) q++;
+  return (int16)(sign * (int32)q);
+}
+
+/* Visibility remains Reaches' decision; this second walk only gathers the
+   colour and strength lost through cells that do not block sight. */
+static bool FilterAlong(Map *m, int16 sx, int16 sy, int16 tx, int16 ty,
+                        LightRGB &out) {
+  out.r = out.g = out.b = 255;
+  int16 dx = tx - sx, dy = ty - sy;
+  int16 n = abs(dx) > abs(dy) ? abs(dx) : abs(dy);
+  for (int16 k = 1; k < n; k++) {
+    int16 x = sx + DDARound((int32)dx * k, n);
+    int16 y = sy + DDARound((int32)dy * k, n);
+    if (!m->InBounds(x, y)) continue;
+    LightRGB mult;
+    if (!CellFilter(m, x, y, mult)) continue;
+    out.r = (uint8)(((int32)out.r * mult.r + 127) / 255);
+    out.g = (uint8)(((int32)out.g * mult.g + 127) / 255);
+    out.b = (uint8)(((int32)out.b * mult.b + 127) / 255);
+  }
+  uint8 mx = out.r > out.g ? out.r : out.g;
+  if (out.b > mx) mx = out.b;
+  return mx >= LIGHT_FILTER_MIN;
+}
+
 /* Inverse square, softened at the source so the centre cell does not
    diverge. Absolute in d, so a source's radius no longer sets how
    bright it is. */
@@ -289,13 +371,12 @@ static void CastFootprint(Map *m, LightSource &s) {
       float w = (RawFall(d) - edge) / (1.0f - edge) * s.gain;
       if (w <= 0.0f) continue;
       if (!Reaches(m, s.x, s.y, x, y)) continue;
-      AddFoot((int32)y * lmW + x, (uint8)(w * 255.0f + 0.5f));
+      LightRGB filter;
+      if (!FilterAlong(m, s.x, s.y, x, y, filter)) continue;
+      AddFoot((int32)y * lmW + x, (uint8)(w * 255.0f + 0.5f),
+              filter.r, filter.g, filter.b);
     }
   s.count = nFoot - s.first;
-}
-
-static LightRGB GlyphColour(Glyph g) {
-  return Palette[GLYPH_FORE_VALUE(g) & COLOUR_MASK];
 }
 
 static void ScanCreatures(Map *m) {
@@ -337,6 +418,20 @@ static void ScanTerrain(Map *m) {
     }
 }
 
+static void ScanFog(Map *m) {
+  memset(FogCol, 0, sizeof(uint8) * lmCells);
+  for (int32 i = 0; i < m->Fields.Total(); i++) {
+    Field *f = m->Fields[i];
+    if (!f || !(f->FType & FI_FOG)) continue;
+    uint8 colour = (f->Color > 0 && f->Color < MAX_COLOURS)
+      ? f->Color : (GLYPH_FORE_VALUE(f->Image) & COLOUR_MASK);
+    for (int16 y = f->cy - f->rad; y <= f->cy + f->rad; y++)
+      for (int16 x = f->cx - f->rad; x <= f->cx + f->rad; x++)
+        if (m->InBounds(x, y) && f->inArea(x, y))
+          FogCol[(int32)y * lmW + x] = colour + 1;
+  }
+}
+
 static void SumSteady(Map *m) {
   static const LightRGB Skylight = { 170, 185, 210 };
   for (int16 y = 0; y < lmH; y++)
@@ -351,7 +446,7 @@ static void SumSteady(Map *m) {
     const LightSource &s = Src[i];
     if (s.amp > 0.0f) continue;
     for (int32 k = s.first; k < s.first + s.count; k++)
-      AddScaled(Steady[Foot[k].idx], s.c, Foot[k].w / 255.0f);
+      AddScaledF(Steady[Foot[k].idx], s.c, Foot[k].w / 255.0f, Foot[k]);
   }
 }
 
@@ -361,7 +456,8 @@ static void ComposeFrame() {
     const LightSource &s = Src[i];
     if (s.amp <= 0.0f) continue;
     for (int32 k = s.first; k < s.first + s.count; k++)
-      AddScaled(Frame[Foot[k].idx], s.c, Foot[k].w / 255.0f * s.noise);
+      AddScaledF(Frame[Foot[k].idx], s.c,
+                 Foot[k].w / 255.0f * s.noise, Foot[k]);
   }
 }
 
@@ -375,6 +471,7 @@ void LightRebuild(Map *m, Player *p) {
   ScanCreatures(m);
   ScanFields(m);
   ScanTerrain(m);
+  ScanFog(m);
   for (int32 i = 0; i < nSrc; i++)
     CastFootprint(m, Src[i]);
   memset(SrcLit, 0, sizeof(uint8) * lmCells);
@@ -450,6 +547,7 @@ bool LightLitAt(int16 x, int16 y) {
 /* INCURSION_LIGHT_PROBE=1 appends one block per change to logs/light.log:
    a header, one S line per source, then the source-light grid with ambient
    left out. '#' opaque unlit, '%' opaque lit, '.' unlit, 0-9 brightness.
+   A FILTER grid follows: 'b' both ice and fog, 'i' ice, 'f' fog, '-' neither.
    tools/check_lightmap.sh reads it. */
 static void ProbeDump(Map *m, Player *p) {
   static FILE *fp = NULL;
@@ -479,12 +577,22 @@ static void ProbeDump(Map *m, Player *p) {
         if (dist(x, y, s.x, s.y) > s.r) continue;
         for (int32 k = s.first; k < s.first + s.count; k++)
           if (Foot[k].idx == (int32)y * lmW + x)
-            { AddScaled(v, s.c, Foot[k].w / 255.0f); break; }
+            { AddScaledF(v, s.c, Foot[k].w / 255.0f, Foot[k]); break; }
       }
       int mx = v.r > v.g ? v.r : v.g; if (v.b > mx) mx = v.b;
       bool opaque = m->OpaqueAt(x, y);
       char ch = opaque ? (mx ? '%' : '#') : (mx ? (char)('0' + mx * 10 / 256) : '.');
       fputc(ch, fp);
+    }
+    fputc('\n', fp);
+  }
+  fprintf(fp, "FILTER\n");
+  for (int16 y = 0; y < lmH; y++) {
+    for (int16 x = 0; x < lmW; x++) {
+      TTerrain *tt = TTER(m->TerrainAt(x, y));
+      bool ice = tt && tt->Material == MAT_ICE && !tt->HasFlag(TF_OPAQUE);
+      bool fog = FogCol[(int32)y * lmW + x] != 0;
+      fputc(ice ? (fog ? 'b' : 'i') : (fog ? 'f' : '-'), fp);
     }
     fputc('\n', fp);
   }

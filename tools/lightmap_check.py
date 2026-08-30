@@ -49,8 +49,13 @@ def parse(text):
             i += 1
         grid = lines[i:i + h]
         i += h
+        filter_grid = None
+        if i < len(lines) and lines[i] == "FILTER":
+            i += 1
+            filter_grid = lines[i:i + h]
+            i += h
         blocks.append(dict(w=w, h=h, px=px, py=py, plight=plight,
-                           sources=sources, grid=grid))
+                           sources=sources, grid=grid, filter=filter_grid))
     return blocks
 
 
@@ -85,10 +90,26 @@ def clear_line(grid, sx, sy, tx, ty):
     return False
 
 
+def crosses_filter(b, sx, sy, tx, ty):
+    if b["filter"] is None:
+        return False
+    dx, dy = tx - sx, ty - sy
+    n = max(abs(dx), abs(dy))
+    for k in range(1, n):
+        x = sx + round(dx * k / n)
+        y = sy + round(dy * k / n)
+        if 0 <= x < b["w"] and 0 <= y < b["h"] and b["filter"][y][x] != "-":
+            return True
+    return False
+
+
 def check_block(b, where):
     fails = []
     if len(b["grid"]) != b["h"] or any(len(r) != b["w"] for r in b["grid"]):
         return ["%s: grid is not %dx%d" % (where, b["w"], b["h"])]
+    if b["filter"] is not None and (len(b["filter"]) != b["h"]
+                                    or any(len(r) != b["w"] for r in b["filter"])):
+        return ["%s: FILTER grid is not %dx%d" % (where, b["w"], b["h"])]
     g = b["grid"]
     sole_lit = {}
     for y in range(b["h"]):
@@ -105,6 +126,8 @@ def check_block(b, where):
             elif len(reached) == 1 and ch.isdigit():
                 n = reached[0]
                 sx, sy, unused_r = b["sources"][n]
+                if crosses_filter(b, sx, sy, x, y):
+                    continue
                 distance = game_distance(x - sx, y - sy)
                 sole_lit.setdefault(n, {}).setdefault(distance, []).append(
                     (int(ch), x, y))
@@ -190,6 +213,24 @@ def selftest():
                          "....888....\n"
                          "....898....\n"
                          "....888....\n")
+    filtered_rise = ("LIGHT map=7 7 player=-1 -1 plight=0 sources=1\n"
+                     "S 1 3 4 255 147 41 0 9\n"
+                     ".4.....\n"
+                     ".......\n"
+                     "888....\n"
+                     "8982...\n"
+                     "888....\n"
+                     ".......\n"
+                     ".......\n"
+                     "FILTER\n"
+                     "-------\n"
+                     "-------\n"
+                     "-------\n"
+                     "--i----\n"
+                     "-------\n"
+                     "-------\n"
+                     "-------\n")
+    unmarked_filtered_rise = filtered_rise.split("FILTER\n", 1)[0]
     results = [
         ("a clean block passes", check(good)[0] == 0),
         ("light behind a wall fails", check(wall_leak)[0] == 1),
@@ -206,11 +247,17 @@ def selftest():
          check(two_source_overlap)[0] == 0),
         ("the game's distance metric, not Chebyshev, orders the cells",
          check(game_metric_order)[0] == 0),
+        ("filtered rays are exempt from monotonicity",
+         check(filtered_rise)[0] == 0),
+        ("the same dim ray without FILTER fails monotonicity",
+         check(unmarked_filtered_rise)[0] == 1),
     ]
     ok = True
     for name, passed in results:
         print(("  ok   " if passed else "  FAIL ") + name)
         ok = ok and passed
+    print("selftest: %d/%d passed" % (sum(passed for unused, passed in results),
+                                      len(results)))
     return 0 if ok else 1
 
 

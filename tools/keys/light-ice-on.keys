@@ -1,0 +1,33 @@
+# Subject for tools/check_light_filter.sh: a wall torch, an ICE WALL, and a
+# floor cell two steps from the torch behind it. The paired control
+# light-ice-off.keys differs by one letter -- 'e' Floor for 'h' Ice Wall -- so
+# the two runs measure the ice and nothing else.
+#
+# Terrain letters come from the wizard "Which terrain type?" list:
+# [e] Floor, [h] Ice Wall, [p] Wall Torch.
+#
+# Placement runs far-to-near: the wizard's targeting cursor will not cross a
+# solid cell, so the wall torch goes down last.
+#
+# The final UP/DOWN pair exists because ProbeDump only writes a block when the
+# map, the player's position or the source count changes; a terrain edit alone
+# changes none of the three.
+
+@include chargen.keys
+@dump:arrival
+
+w y
+@dump:wizard-menu
+
+K RIGHT*3 ENTER e
+w K RIGHT*2 ENTER h
+w K UP ENTER e
+w K RIGHT ENTER p
+
+@dump:terrain-placed
+
+UP
+DOWN
+@dump:measured
+
+@quit
