@@ -75,4 +75,5 @@ long  array_index(long x,long y);
 #include "Feature.h"
 #include "Term.h"
 #include "Inline.h"
+#include "Light.h"
 

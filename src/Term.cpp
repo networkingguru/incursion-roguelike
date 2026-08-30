@@ -939,6 +939,7 @@ void TextTerm::ShowMap() {
         p->CalcVision();
     p->UpdateMap = 0;
     SetWin(WIN_MAP);
+    LightRebuild(m, p);
 
     const int16 sx = MSizeX();
     const int16 sy = MSizeY();

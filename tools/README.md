@@ -579,6 +579,7 @@ tools/check_masterarcher_live.sh
 tools/check_sentinel_live.sh
 tools/check_underdark_live.sh
 tools/check_wand_acid_type.sh       # residual acid burn damages a fire-immune victim
+tools/check_lightmap.sh             # the light map: no light through walls, a carried light lights its bearer
 ```
 
 Run `check_headless.sh` before the rest of the tier. They all drive
