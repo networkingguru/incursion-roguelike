@@ -7319,7 +7319,22 @@ and EA_GENERIC { }
       int16 dr;
       if (EVictim->isDead())
         return NOTHING;
-      if (EVictim->GetAttr(A_SIZ) >= SZ_LARGE)
+      // upstream: the lash's own page (the "flame tongue" entity above) says
+      // the yank acts "if the victim still lives and is a Large or smaller
+      // corporeal creature", yet this size gate read `>= SZ_LARGE` and so
+      // bailed for Large AND everything larger, leaving only Medium-and-smaller
+      // victims to reach the opposed-Strength test. Brian ruled prose wins:
+      // include Large, exclude only LARGER, so the comparison must be
+      // `> SZ_LARGE`. The off-by-one ships on Win32 with the original data --
+      // SZ_LARGE and A_SIZ are the game's own constants and the `>=` misbehaves
+      // identically there -- so it is upstream's, not a port artefact. Observed:
+      // seed 1, a summoned otyugh (Large, Str 11) three squares east is hit by
+      // the activated lash; on the `>=` build it is never pulled (it stays
+      // three east), on the `>` build the barbarian wins the Strength test and
+      // the lash yanks it to his side. tools/keys/flame-tongue-large-yank.keys
+      // drives it; tools/check_flame_tongue_large.sh guards the operator.
+      // inc-tek.8.8 / PA-08-F70, not sent.
+      if (EVictim->GetAttr(A_SIZ) > SZ_LARGE)
         return NOTHING;
       if (EActor->Mod(A_STR) + 1d20 >= EVictim->Mod(A_STR) + 1d20)
         {

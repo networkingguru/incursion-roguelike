@@ -550,6 +550,7 @@ the unfixed tree before it is trusted.
 | `check_doc_freshness.sh` | Which documents did a range of commits leave stale, and does every line citation in them and in the source they touched still resolve? |
 | `check_dup_names.sh` | Does the resource compiler reject a same-case duplicate resource name, with its own duplicate-name diagnostic? |
 | `check_fire_ring_resist.sh` | Does the Ring of Elemental Command (Fire) grant the Fire Resistance of 10 its page promises, rather than the 12 its grant was coded? |
+| `check_flame_tongue_large.sh` | Does the flame tongue sword's tongue-of-flame lash yank a Large corporeal creature, matching its page's "a Large or smaller corporeal creature", rather than excluding Large by an off-by-one `>= SZ_LARGE` size gate? |
 | `check_flame_tongue_range_prose.sh` | Does the flame tongue sword description state its Tongue of Flame reach as a 30-foot base plus 10 feet per point of Charisma modifier (minimum 30 feet), matching its `e.vRange = 3 + max(0, Mod(A_CHA))` squares code at 10 feet per square, rather than the "Charisma modifier times ten in feet (minimum 20)" it claimed before? |
 | `check_flame_tongue_undead.sh` | Does a flame tongue sword set a corporeal undead alight for the 3d6/2d6/1d6 fire its page promises? |
 | `check_flavor_stability.sh` | Does a v1 save's per-player flavour memory -- appearances and their Known/Tried flags -- survive a module rebuild that adds a resource? |
