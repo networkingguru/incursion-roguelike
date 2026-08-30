@@ -7065,6 +7065,7 @@ and EA_GENERIC
 AI_WEAPON Effect "Sword of the Planes" : EA_GENERIC
   {
     Level: 7; Flags: EF_HIDEQUAL, EF_NAMEONLY;
+    // upstream: the Sword of the Planes Desc scoped its +3 enhancement tier to "denizens of the ethereal or astral planes", yet the EA_GENERIC EV_WATTACK handler grants the +3 to any MA_OUTSIDER (else if (EVictim->isMType(MA_OUTSIDER)) newBonus = 3), which is broader than ethereal/astral denizens and is the only engine type for planar creatures; the demon/devil/celestial +4 branch runs first, so the +3 tier covers every other outsider, and the PHASED locale bonus still backs the "such a locale" clause. The narrow prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- the MA_OUTSIDER branch and the PHASED max stay. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F68; not sent.
     Desc: "This unusual weapon is forged from a special form of
       adamant mined on the plane of Concordant Opposition, the
       spiritual homeland of True Neutrality. It is among the
@@ -7083,10 +7084,11 @@ AI_WEAPON Effect "Sword of the Planes" : EA_GENERIC
       user is on a plane other than the Prime Material, or if 
       fighting an outsider.\n
       __On an elemental plane, or when fighting elementalkin,
-      the sword has a +2 bonus. Against denizens of the ethereal
-      or astral planes, or when the wielder is in such a locale
-      herself, the bonus is +3. On the outer planes, or against
-      demons, devils or celestials, the sword has a bonus of +4."; 
+      the sword has a +2 bonus. Against outsiders -- creatures
+      native to the outer or transitive planes -- or when the
+      wielder is in such a locale herself, the bonus is +3. On
+      the outer planes, or against demons, devils or celestials,
+      the sword has a bonus of +4."; 
     On Event EITEM(PRE(EV_WATTACK)) {
       int16 oldBonus, newBonus;
       oldBonus = EItem->GetInherentPlus();
