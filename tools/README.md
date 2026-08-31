@@ -42,10 +42,10 @@ terminal — a headless run never calls into it
 (`build_macos.sh:114-116`). The `libtcod` build links SDL2 and OpenGL instead
 (`build_macos.sh:119-124`), and needs `sdl2` and `pkg-config` from Homebrew.
 
-**The harness needs the second line.** `headless.sh:75` defaults its binary to
-`./incursion-headless`, and `:78-81` refuses to run without it, printing that
+**The harness needs the second line.** `headless.sh:76` defaults its binary to
+`./incursion-headless`, and `:79-82` refuses to run without it, printing that
 exact build command. `soak.sh:33-35`, `check_race_feats.sh:23-26` and
-`check_load_corrupt.sh:47-48` all say the same.
+`check_load_corrupt.sh:55-58` all say the same.
 
 Requirements: Xcode command line tools, plus `sdl2` and `pkg-config` from
 Homebrew (`build_macos.sh:4-5`). The POSIX build needs neither SDL nor libtcod
@@ -59,7 +59,7 @@ Homebrew (`build_macos.sh:4-5`). The POSIX build needs neither SDL nor libtcod
 `tools/keys/` inside its own directory under `logs/runs/`, with its own `save/`
 and `logs/`, and with `mod/` and `lib/` symlinked in (`headless.sh:7-10`). It
 exists so that an unattended run cannot destroy a real character. Use it and
-never the binary directly (`headless.sh:48-51`).
+never the binary directly (`headless.sh:49-52`).
 
 `soak.sh` calls `headless.sh` once per seed, several at a time, and reports the
 errors grouped by message rather than by session (`soak.sh:19-21`).
@@ -130,30 +130,30 @@ keystrokes, not the length of the run, so a long honest session is safe
 (`src/Wposix.cpp:576-580`).
 
 **`death: STUCK`** — the run ended with `Die? [yn]` still on the last screen,
-unanswered (`headless.sh:245-249`). The pinned settings run with `OPT_NODEATH`
+unanswered (`headless.sh:266-270`). The pinned settings run with `OPT_NODEATH`
 on, so a killing blow asks that question instead of ending the game, and a key
 script answers it blind with whatever token comes next
-(`headless.sh:214-217`). If no `y` or `n` remains in the script, every later
+(`headless.sh:235-238`). If no `y` or `n` remains in the script, every later
 keystroke is swallowed and the run still reports `ended: cleanly`
-(`headless.sh:224-230`). A confirmed death prints `death: N confirmed` instead
+(`headless.sh:245-251`). A confirmed death prints `death: N confirmed` instead
 and is logged to `logs/death.log`. Neither gets its own exit code, on purpose:
 whether a death should fail a run is a product decision the script does not make
-(`headless.sh:37-42`).
+(`headless.sh:38-43`).
 
 **`stuck-prompt: threat-disengage`** — the run ended with `You are in a
 threatened area. Abort, Flee or Disengage?` still on screen
-(`headless.sh:268-271`). That prompt has no option gate at all and fires
+(`headless.sh:289-292`). That prompt has no option gate at all and fires
 whenever a player-controlled creature moves away from a hostile creature that
-perceives it (`src/Move.cpp:841`, quoted at `headless.sh:254-257`).
+perceives it (`src/Move.cpp:841`, quoted at `headless.sh:275-276`).
 `tools/keys/dive.keys` contains none of `a`, `f`, `d`, `?` or ESC, so once the
 prompt fires the rest of the script is swallowed. Measured on 7 of 40 seeds
-(`headless.sh:263-265`).
+(`headless.sh:284-286`).
 
 **`map audit: armed, no inconsistencies found`** — the audit ran and found
 nothing. `src/MapAudit.cpp:64` writes an `=== map audit armed ... ===` header
 whenever the audit is on, so the log carries a line even on a clean run. That is
-what lets `headless.sh:296-297` tell "clean" apart from "never ran". A missing
-log is reported three different ways depending on why (`headless.sh:288-295`),
+what lets `headless.sh:349-350` tell "clean" apart from "never ran". A missing
+log is reported three different ways depending on why (`headless.sh:341-348`),
 because merging them is the exact defect this code used to have.
 
 ---
@@ -162,21 +162,21 @@ because merging them is the exact defect this code used to have.
 
 **Trap 1 — every script resolves the repo root itself.** The idiom is
 `ROOT="$(cd "$(dirname "$0")/.." && pwd)"` followed by `cd "$ROOT"`
-(`headless.sh:45-46`, `soak.sh:24-25`, `gate_record.sh:17-18`,
+(`headless.sh:46-47`, `soak.sh:24-25`, `gate_record.sh:17-18`,
 `check_headless.sh:38-39`, and most other scripts here). So you may call any of
 them from any working directory, and the path arguments they take are relative
 to the REPO ROOT, not to where you are standing. `gate_lib.sh:43` uses `BASH_SOURCE` instead
 because it is sourced, not executed.
 
 **Trap 2 — `headless.sh` copies the LIVE `Options.Dat` unless you say
-otherwise.** `headless.sh:107` defaults `INCURSION_OPTIONS` to `$ROOT/Options.Dat`
-and `headless.sh:112` copies it into the session. The default is deliberate: a session with
+otherwise.** `headless.sh:108` defaults `INCURSION_OPTIONS` to `$ROOT/Options.Dat`
+and `headless.sh:113` copies it into the session. The default is deliberate: a session with
 no options file never finishes character generation, which produced two false
-passes on 2026-08-14 (`headless.sh:94-96`). But the live file is whatever the
+passes on 2026-08-14 (`headless.sh:95-97`). But the live file is whatever the
 owner last played with, and the game rewrites it every session. Settings change
 the game. On 2026-08-15 the same binary, seed and key script gave different
 screens either side of a rewrite, and the gate's finding count moved 4386 to
-4416 with no code change (`headless.sh:98-101`, `gate_lib.sh:31-41`).
+4416 with no code change (`headless.sh:99-102`, `gate_lib.sh:31-41`).
 
 This matters more than it sounds, because the key scripts choose menu items by
 FIXED LETTERS. One extra prompt slides every later keystroke out of step. Two
@@ -185,13 +185,13 @@ answer for (`tools/keys/chargen-priest.keys:12-16`). Anything that compares one
 run against another MUST pass `INCURSION_OPTIONS`. The gate pins
 `tools/gates/Options.Dat` and records its checksum in the baseline
 (`gate_lib.sh:43-44`, `gate_record.sh:28-34`). A file you name and cannot have is
-an error, never a silent fall back to the live one (`headless.sh:105-111`).
+an error, never a silent fall back to the live one (`headless.sh:106-112`).
 
 **Trap 3 — the map audit is ON by default and it is expensive.**
-`headless.sh:119` sets `INCURSION_MAP_AUDIT` to 1 unless you override it. A
+`headless.sh:120` sets `INCURSION_MAP_AUDIT` to 1 unless you override it. A
 sample of a headless run on 2026-08-15 put 75 percent of the run inside
 `AuditMap`, so a session with the audit on measures the audit and not the game
-(`headless.sh:114-118`). **Anything timing the engine MUST set
+(`headless.sh:115-119`). **Anything timing the engine MUST set
 `INCURSION_MAP_AUDIT=0`. Anything hunting defects MUST leave it on.**
 
 **Trap 4 — a key script longer than the budget stops early and exits 3, and
@@ -222,7 +222,7 @@ factor of about 2.5, and both are now the measured numbers.
 
 **Trap 5 — two runs started in the same second used to SHARE a run directory.
 Fixed; the history is here because the number it corrupted was published.**
-`headless.sh:90` now names the default run directory
+`headless.sh:91` now names the default run directory
 `logs/runs/$(date +%Y%m%d-%H%M%S)-<pid>-<script>`. The stamp alone resolves to
 the SECOND, so before the process id joined it, a loop that started several
 sessions inside one second gave them all the same directory, and any probe that
@@ -241,8 +241,8 @@ runs before you believe any per-seed number.** A name you chose says what the
 run was for, which a pid does not, and the count is the only thing that proves
 the runs stayed apart. `soak.sh:59` does this, and so does every check that
 drives more than one session (`check_headless.sh:255`, `:278`, `:287`, `:299`,
-`:320`; `check_layout.sh:88`; `check_dump_save.sh:46`;
-`check_load_corrupt.sh:60`). `check_race_feats.sh:28-29` does NOT — it takes the
+`:320`; `check_layout.sh:88`; `check_dump_save.sh:55`;
+`check_load_corrupt.sh:68`). `check_race_feats.sh:28-29` does NOT — it takes the
 timestamped default and parses the `run:` line out of the harness output. That
 is now safe in a loop as well, because the default name is unique, but it still
 tells you nothing about which run was which.
@@ -598,9 +598,9 @@ read at all. Without the second, the check cannot tell a fixed wildcard from a
 loop that matches everything. Without the third, it cannot see a loop that
 stops one row too early.
 
-`check_load_corrupt.sh:37-41` prefers `./incursion-ubsan` when it exists and
+`check_load_corrupt.sh:45-51` prefers `./incursion-ubsan` when it exists and
 falls back to `./incursion-headless`. Build the sanitizer variant with the line
-in `build_macos.sh:80-84` if you want the stronger run.
+in `build_macos.sh:92-95` if you want the stronger run.
 
 ### Tier 4 — needs an artefact you built on purpose
 
