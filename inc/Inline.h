@@ -640,7 +640,10 @@ inline bool Map::LightAt(int16 x, int16 y)
     return At(x,y).Lit || FieldAt(x,y,FI_LIGHT); }
 
 inline bool Map::BrightAt(int16 x, int16 y)
-  { if (FieldAt(x,y,FI_DARKNESS|FI_SHADOW))
+  { /* unified brightness when the light map owns this map; else the classic test */
+    if (LightMapIsFor(this))
+      return LightBrightAt(x,y);
+    if (FieldAt(x,y,FI_DARKNESS|FI_SHADOW))
       return false;
     return At(x,y).Bright || FieldAt(x,y,FI_LIGHT); }
 

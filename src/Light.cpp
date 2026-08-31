@@ -67,6 +67,13 @@ static LightSource *Src = NULL; static int32 nSrc = 0, capSrc = 0;
 static FootCell    *Foot = NULL; static int32 nFoot = 0, capFoot = 0;
 static bool        anyFlicker = false;
 
+static uint8 LegacyLevel(int16 x, int16 y) {
+  const LocationInfo &at = lmMap->At(x, y);
+  if (at.Bright) return LIGHT_LEGACY_BRIGHT;
+  if (at.Lit) return LIGHT_LEGACY_LIT;
+  return 0;
+}
+
 void LightSetPalette(const LightRGB *sixteen) {
   memcpy(Palette, sixteen, sizeof(Palette));
 }
@@ -535,13 +542,31 @@ bool LightAt(int16 x, int16 y, LightRGB &out) {
   return true;
 }
 
+uint8 LightLevelAt(int16 x, int16 y) {
+  if (!lmMap || !SrcLit || x < 0 || y < 0 || x >= lmW || y >= lmH) return 0;
+  if (lmMap->FieldAt(x, y, FI_DARKNESS | FI_SHADOW)) return 0;
+  uint8 source = SrcLit[(int32)y * lmW + x];
+  uint8 legacy = LegacyLevel(x, y);
+  /* max, not sum: a scalar cannot double-count a cell that is both a live source and legacy-.Bright; the render's additive path handles that. inc-jcg4 */
+  return source > legacy ? source : legacy;
+}
+
+bool LightBrightAt(int16 x, int16 y) {
+  return LightLevelAt(x, y) >= LIGHT_HIDE_MIN;
+}
+
 bool LightLitAt(int16 x, int16 y) {
   /* With the option off, vision must be exactly what it was before the
      light map existed, so a before-and-after recording compares two real
      builds. */
   if (lmLegacy) return false;
   if (!lmMap || !SrcLit || x < 0 || y < 0 || x >= lmW || y >= lmH) return false;
-  return SrcLit[(int32)y * lmW + x] >= LIGHT_SEE_MIN;
+  return LightLevelAt(x, y) >= LIGHT_SEE_MIN;
+}
+
+bool LightMapIsFor(Map *m) {
+  /* Not authoritative in legacy mode: classic light must match the pre-light-map game, as LightLitAt's lmLegacy guard does. inc-jcg4 */
+  return lmMap == m && !lmLegacy;
 }
 
 bool LightMapActive() {
@@ -600,5 +625,8 @@ static void ProbeDump(Map *m, Player *p) {
     }
     fputc('\n', fp);
   }
+  fprintf(fp, "P plight=%d pbright=%d psource=%d punified=%d\n",
+    (int)p->LightRange, m->At(p->x, p->y).Bright ? 1 : 0,
+    (int)SrcLit[(int32)p->y * lmW + p->x], LightBrightAt(p->x, p->y) ? 1 : 0);
   fflush(fp);
 }

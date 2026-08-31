@@ -13,6 +13,7 @@ ESC
 
 # Seed 1 starts on open cave floor; stepping right exercises TerrainEffects.
 RIGHT
+y
 @dump:after-move
 h
 @dump:hide-refused

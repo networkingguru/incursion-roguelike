@@ -726,7 +726,7 @@ InvisToTremor:;
             Per |= PER_VISUAL | PER_SHADOW;
     }
 
-    if (Dist > (LightRange * 2) && !m->At(tx, ty).Lit && !m->At(tx, ty).mLight && t != this) {
+    if (Dist > (LightRange * 2) && !m->At(tx, ty).Lit && !m->At(tx, ty).mLight && !LightLitAt(tx,ty) && t != this) {
         Per &= ~(PER_VISUAL | PER_SHADOW);
     }
 

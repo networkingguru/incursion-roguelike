@@ -1,0 +1,20 @@
+# Regression fixture for inc-jcg4: a live wall-torch source breaks shadow
+# hiding even where the legacy per-cell Bright flag is unset.
+
+@include chargen-rogue.keys
+ESC
+@dump:arrival-hidden
+
+# Seed 1 arrives at (111,110). Clear the destination and its far side, then
+# put an opaque live wall torch two cells east. The player steps into the
+# torch's bright radius without carrying a light.
+w y
+K RIGHT*2 ENTER e
+w K RIGHT*3 ENTER p
+
+@dump:dynamic-source-hidden
+RIGHT
+@dump:dynamic-light-warning
+y
+@dump:after-dynamic-light-move
+@quit

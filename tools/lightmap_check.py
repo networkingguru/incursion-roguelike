@@ -22,8 +22,26 @@ Usage: tools/lightmap_check.py <light.log>      exit 0 pass, 1 fail, 2 no blocks
 """
 import re
 import sys
+from pathlib import Path
 
 HEADER = re.compile(r"^LIGHT map=(\d+) (\d+) player=(-?\d+) (-?\d+) plight=(\d+) sources=(\d+)$")
+
+
+def check_wall_torch_hide_cutoff():
+    """Radius-3 wall-torch falloff is bright through d=2, dim at d=3."""
+    light_h = (Path(__file__).resolve().parent.parent / "inc" / "Light.h").read_text()
+    soften = float(re.search(r"^#define LIGHT_SOFTEN\s+([0-9.]+)f", light_h,
+                              re.MULTILINE).group(1))
+    hide_min = int(re.search(r"^#define LIGHT_HIDE_MIN\s+(\d+)", light_h,
+                             re.MULTILINE).group(1))
+    edge = soften * soften / (soften * soften + 4.0 * 4.0)
+    levels = []
+    for distance in (1, 2, 3):
+        raw = soften * soften / (soften * soften + distance * distance)
+        levels.append(int((raw - edge) / (1.0 - edge) * 255.0 + 0.5))
+    assert levels == [191, 96, 34], levels
+    assert levels[0] >= hide_min and levels[1] >= hide_min
+    assert levels[2] < hide_min
 
 
 def game_distance(dx, dy):
@@ -262,6 +280,7 @@ def selftest():
 
 
 def main(argv):
+    check_wall_torch_hide_cutoff()
     if len(argv) == 2 and argv[1] == "--selftest":
         return selftest()
     if len(argv) != 2:

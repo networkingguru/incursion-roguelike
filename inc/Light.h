@@ -35,6 +35,9 @@ bool LightAt(int16 x, int16 y, LightRGB &out);
 /* The light map's answer to the engine's Lit flag; reads the steady footprint
    so flicker cannot make vision blink. */
 bool LightLitAt(int16 x, int16 y);
+uint8 LightLevelAt(int16 x, int16 y);  /* authoritative 0..255 brightness */
+bool LightBrightAt(int16 x, int16 y);  /* LightLevelAt >= LIGHT_HIDE_MIN */
+bool LightMapIsFor(Map *m);             /* is the light map authoritative for m? */
 
 /* True when the light map is built and not in legacy mode, so the source-lit
    vision test can distinguish the new lighting from the classic path. */
@@ -75,6 +78,10 @@ enum { LIGHT_LEGACY = 0, LIGHT_STEADY = 1, LIGHT_SHIMMER = 2 };
 #define LIGHT_WASH        0.35f /* how far light beyond a surface's own ceiling blows it toward white */
 #define LIGHT_BG_GAIN     0.18f /* the whole-square glow painted into a cell's background */
 #define LIGHT_SEE_MIN     48    /* least source light, 0..255, at which the engine counts a cell as lit */
+/* Provisional tuning knobs for the unified light model. */
+#define LIGHT_HIDE_MIN    90    /* 0..255; at/above this a cell is "brightly lit": breaks hide and triggers light aversion */
+#define LIGHT_LEGACY_BRIGHT 160 /* the 0..255 level a legacy .Bright cell contributes (>= LIGHT_HIDE_MIN) */
+#define LIGHT_LEGACY_LIT  64    /* the level a legacy .Lit-but-not-.Bright cell contributes (visible, still hideable) */
 #define LIGHT_ICE_PASS    0.55f /* fraction of light that survives one cell of ice */
 #define LIGHT_FOG_PASS    0.45f /* fraction of light that survives one cell of fog */
 #define LIGHT_FILTER_TINT 0.65f /* how far a crossed cell pulls light toward its own colour */
