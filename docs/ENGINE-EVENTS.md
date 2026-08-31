@@ -64,8 +64,8 @@ are `static` on `Resource` (`inc/Res.h:224-225`) — one annotation cursor for t
 FAnnot/NAnnot doesn't normally [work]" (`src/Annot.cpp:619-621`); `FAnnot2` is a one-level kludge, and depth 3 has no cursor.
 `Thing::PlaceNear` holds `static Creature* Displace[64]` (`src/Display.cpp:413`) and re-enters itself via `PlaceAt` (`:550`),
 which the code notes can overflow the C stack (`:544-546`). Only three places are protected: `StatiCollection::Nested` defers
-stati fixups to the outermost iteration (`inc/Map.h:738`, `:776-784`), `Creature::Perceives` uses a static counter as a recursion
-mutex (`src/Vision.cpp:383-384`), and `Creature::Multiply` refuses to breed past a nesting depth of 4 (`src/Creature.cpp:497`).
+stati fixups to the outermost iteration (`inc/Map.h:700-705`, field at `:790`), `Creature::Perceives` uses a static counter as a recursion
+mutex (`src/Vision.cpp:386-387`), and `Creature::Multiply` refuses to breed past a nesting depth of 4 (`src/Creature.cpp:497`).
 
 ## The three crashes
 **1. Event Stack Overflow: blast -> Multiply -> place -> blast. Fixed (inc-upw.5).** `Magic::Blast` throws `EV_DAMAGE`
