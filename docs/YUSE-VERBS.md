@@ -19,8 +19,8 @@ here, and it is not discoverable except by trying them.
 Derive the menu size and the distinct verb count:
 
 ```sh
-sed -n '3046,3364p' src/Tables.cpp | grep -c '^  { EV_'
-sed -n '3046,3364p' src/Tables.cpp | grep '^  { EV_' |
+sed -n '3093,3411p' src/Tables.cpp | grep -c '^  { EV_'
+sed -n '3093,3411p' src/Tables.cpp | grep '^  { EV_' |
     sed 's/^  { \(EV_[A-Z_]*\),.*/\1/' | sort -u | wc -l
 ```
 
@@ -28,7 +28,7 @@ sed -n '3046,3364p' src/Tables.cpp | grep '^  { EV_' |
 
 ## How the menu works
 
-The verbs live in `YuseCommands[]`, `src/Tables.cpp:3046-3364`. Each entry
+The verbs live in `YuseCommands[]`, `src/Tables.cpp:3093-3411`. Each entry
 carries up to three prompts and a flag word:
 
 ```c
@@ -40,21 +40,21 @@ carries up to three prompts and a flag word:
 ```
 
 - **The prompts run in table order**, target first, unless the entry carries
-  `YU_REVERSE`, which asks for the item first. `src/Player.cpp:1474`.
+  `YU_REVERSE`, which asks for the item first. `src/Player.cpp:1566`.
 - **`Q_INV` reaches inside containers.** The item picker walks
   `FirstInv`/`NextInv`, which descends into packs (`src/Inv.cpp:809`), so
   verbs offer packed items without you unpacking them.
 - **The five most recent verbs float to the top** of the menu
-  (`src/Player.cpp:1455`), so the list reorders as you use it.
-- **Verbs can be bound to Quick Keys** (`QKY_VERB`, `src/Player.cpp:1464`).
+  (`src/Player.cpp:1549`), so the list reorders as you use it.
+- **Verbs can be bound to Quick Keys** (`QKY_VERB`, `src/Player.cpp:1556`).
   Worth doing for Mount if you ride.
 - **Ten social verbs refuse non-creatures** with *"Don't socialize with the
-  furniture."* (`src/Player.cpp:1490`).
+  furniture."* (`src/Player.cpp:1593`).
 
 ### What happens when you pick an unimplemented verb
 
 The event is thrown, nothing handles it, and it falls through to
-`Creature::HandleVerb` (`src/Player.cpp:1544` via `src/Creature.cpp:1008`).
+`Creature::HandleVerb` (`src/Player.cpp:1664` via `src/Creature.cpp:1008`).
 That prints **"That verb can't be used that way."** for post-phase events and
 otherwise returns silently. So a dead verb costs you the prompts and gives
 you either that message or nothing at all.
@@ -67,7 +67,7 @@ you either that message or nothing at all.
 
 All are implemented in `src/Social.cpp`, and `src/Creature.cpp:719-767`
 dispatches them. The `y` menu itself lists every entry at all times and
-hides nothing (`src/Player.cpp:1459`). The conditions below gate the **Talk**
+hides nothing (`src/Player.cpp:1551`). The conditions below gate the **Talk**
 prompt instead: `Creature::PreTalk` (`src/Social.cpp:101`) drops a choice from
 that prompt when its condition fails (`src/Social.cpp:140-198`). So a verb you
 cannot see when you Talk is usually a verb that does not apply to that
@@ -98,18 +98,18 @@ or friendly.
 
 | Verb | What it does | Handler |
 |---|---|---|
-| Activate | trigger an item's power | `src/Item.cpp:796` |
-| Drink | drink a potion | `src/Item.cpp:773` |
-| Eat | eat food | `src/Item.cpp:1861` |
-| Read | read a scroll or book | `src/Item.cpp:780` |
-| Zap | aim a wand at a target | `src/Item.cpp:766` |
+| Activate | trigger an item's power | `src/Item.cpp:846` |
+| Drink | drink a potion | `src/Item.cpp:823` |
+| Eat | eat food | `src/Item.cpp:1941` |
+| Read | read a scroll or book | `src/Item.cpp:830` |
+| Zap | aim a wand at a target | `src/Item.cpp:816` |
 | Wield | equip a weapon | `src/Creature.cpp:924` |
 | Shoot / Throw | ranged attack — **one event**, `EV_RATTACK` | `src/Creature.cpp:831` |
 | Insert | put an item into a container | `src/Inv.cpp:1106` |
-| Divide | split a stack; refuses singular items; the new stack is `DROPPED` for 10 turns | `src/Player.cpp:1546` |
-| Open / Open With | doors and containers | `src/Feature.cpp:417` |
-| Close | shut a door | `src/Feature.cpp:532` |
-| Enter | portals and the like | `src/Feature.cpp:218` |
+| Divide | split a stack; refuses singular items; the new stack is `DROPPED` for 10 turns | `src/Player.cpp:1666` |
+| Open / Open With | doors and containers | `src/Feature.cpp:612` |
+| Close | shut a door | `src/Feature.cpp:727` |
+| Enter | portals and the like | `src/Feature.cpp:254` |
 | Break | break a target | `src/Creature.cpp:988` |
 | Push | shove a target | `src/Creature.cpp:792` |
 | Dig | dig in a direction | `src/Creature.cpp:948` |
@@ -129,8 +129,8 @@ far less ground than its name suggests. Verified by reading the script.
   glass vial onto a weapon (`lib/mundane.irh:1016`), the weapon oils
   (`lib/m_items.irh:1480`) and the lantern below.
 - **Dip** has five handlers and they cover two targets: a **fountain**
-  (`lib/dungeon.irh:2163` and `:2336`, plus the Spell Storing ring at
-  `lib/m_items.irh:5289`) and an **alchemical flask**, where only acid does
+  (`lib/dungeon.irh:2177` and `:2350`, plus the Spell Storing ring at
+  `lib/m_items.irh:5318`) and an **alchemical flask**, where only acid does
   anything (`lib/alchemy.irh:97` and `lib/alchemy.irh:577`). Dipping into anything else has
   nothing behind it.
 - **Fill / Pour** (`lib/mundane.irh:640`) — the only combination implemented
@@ -141,14 +141,14 @@ Notes on individual verbs:
 
 **Divide** splits a stack, and refuses singular items with *"Singular items
 cannot be divided."* The new stack is marked `DROPPED` for 10 turns
-(`src/Player.cpp:1546`).
+(`src/Player.cpp:1674`).
 
 **Mount** is the only command that rides a creature. No key binding throws
 `EV_MOUNT`; only this verb and the spells that summon a steed do
-(`lib/wspells.irh:1796` and `:1891`, `lib/pspells.irh:3347`). It runs a full
+(`lib/wspells.irh:1808` and `:1903`, `lib/pspells.irh:3460`). It runs a full
 validation path — Ride skill, humanoid form, the target's `M_MOUNTABLE` flag,
 hostility, prone/stuck/grappled/asleep, plane, size, challenge rating, and
-whether the creature will accept you at all (`src/Skills.cpp:4215`).
+whether the creature will accept you at all (`src/Skills.cpp:4254`).
 **Dismount** has a second route: the Cancel (`x`) command drops a standing
 `MOUNTED` stati (`src/Skills.cpp:451` and `:567`).
 
