@@ -92,7 +92,11 @@ bool isExploreMode(Player *p) {
     return false;
 }
 
-void Player::Create(bool reincarnate) {
+bool Player::AbandonCreation() {
+    return yn("Abandon this character and return to the main menu?");
+}
+
+bool Player::Create(bool reincarnate) {
     rID xID, endID; int16 i, q, rv; char ch;
     static rID Choices[32]; bool b;
 
@@ -206,7 +210,7 @@ RepeatRace:
         }
     if (!i)
         Fatal("No core races to choose from among the loaded resources!");
-    i = (int16)MyTerm->LMenu(MENU_3COLS | MENU_DESC,
+    i = (int16)MyTerm->LMenu(MENU_3COLS | MENU_DESC | MENU_ESC,
         "<15>  Your race grants you a number of special abilities in the game, "
         "including modifiers to your Attributes, additional skills and "
         "often potent supernatural powers. Newer players are recommended "
@@ -219,6 +223,13 @@ RepeatRace:
         "can be valuable to a new player learning about the game. You can "
         "scroll through the descriptions of races using [PGUP] and [PGDN].",
         WIN_CREATION,"help::chargen,R");
+    if (i == -1 && MyTerm->GetMode() != MO_RECREATE) {
+        if (AbandonCreation())
+            return false;
+        if (MyTerm->GetMode() == MO_CREATE && RInf.nRsp > 0)
+            RInf.nRsp--;
+        goto RepeatRace;
+    }
     RaceID = Choices[i];
     if (!TRACE(RaceID)->mID) {
         MyTerm->Message("That race isn't implemented yet. Please choose another.");
@@ -227,6 +238,7 @@ RepeatRace:
     if (!Opt(OPT_SUBRACES))
         goto SkipSubraces;
 
+RepeatSubrace:
     i = 0;
     Choices[i++] = RaceID;
     MyTerm->LOptionClear();
@@ -254,13 +266,20 @@ RepeatRace:
         MyTerm->LOptionClear();
         goto SkipSubraces;
     }
-    i = (int16)MyTerm->LMenu(MENU_2COLS | MENU_DESC,
+    i = (int16)MyTerm->LMenu(MENU_2COLS | MENU_DESC | MENU_ESC,
         "<15>__Subraces provide additional permutations of the existing "
         "set of races, opening new challenges and play styles for advanced "
         "players. The race you have chosen has one or more available subraces "
         "as shown in the list below. Unless otherwise noted, a subrace shares "
         "all traits with its base race. You can scroll through the descriptions "
         "of races using [PGUP] and [PGDN].", WIN_CREATION,"help::chargen,R");
+    if (i == -1 && MyTerm->GetMode() != MO_RECREATE) {
+        if (AbandonCreation())
+            return false;
+        if (MyTerm->GetMode() == MO_CREATE && RInf.nRsp > 0)
+            RInf.nRsp--;
+        goto RepeatSubrace;
+    }
     RaceID = Choices[i];
 
 
@@ -313,7 +332,7 @@ RepeatClass:
         }
     if (!i)
         Fatal("No classes to choose from among the loaded resources!");
-    i = (int16)MyTerm->LMenu(MENU_3COLS | MENU_DESC,
+    i = (int16)MyTerm->LMenu(MENU_3COLS | MENU_DESC | MENU_ESC,
         "<15>  Your class describes the fundamental abilities your character "
         "possesses, and will determine your overall strategy in the game. "
         "Incursion characters can become multi-classed later in the game, "
@@ -330,6 +349,13 @@ RepeatClass:
         "to be viable, though some may be less optimal. You can scroll the "
         "class descriptions using [PGUP] and [PGDN].", 
         WIN_CREATION, "help::chargen,C");
+    if (i == -1 && MyTerm->GetMode() != MO_RECREATE) {
+        if (AbandonCreation())
+            return false;
+        if (MyTerm->GetMode() == MO_CREATE && RInf.nRsp > 0)
+            RInf.nRsp--;
+        goto RepeatClass;
+    }
     ClassID[0] = Choices[i];
     if (!TCLASS(ClassID[0])->HitDie)
     {
@@ -347,7 +373,8 @@ RepeatClass:
     GodID = 0;
 
     if (TCLASS(ClassID[0])->HasFlag(CF_RELIGIOUS))
-        ChooseGod(true);
+        if (!ChooseGod(true))
+            return false;
 
     if (!Opt(OPT_ATTR_FIRST)) { 
         RollAttributes();
@@ -361,6 +388,7 @@ RepeatClass:
 
     Level[0] = 0;
 
+RepeatAlignment:
     for (i=0;i<9;i++) {
         if (TCLASS(ClassID[0])->HasFlag(CF_LAWFUL) &&
             !(AlignmentInfo[i].align & AL_LAWFUL)) 
@@ -417,7 +445,7 @@ RepeatClass:
         MyTerm->LOption(AlignmentInfo[i].name,i,AlignmentInfo[i].desc);
     } 
 
-    i = (int16)MyTerm->LMenu(MENU_3COLS|MENU_DESC,"__Alignment determines a character's "
+    i = (int16)MyTerm->LMenu(MENU_3COLS|MENU_DESC|MENU_ESC,"__Alignment determines a character's "
         "moral and ethical outlook on the world. In the game, many different "
         "actions influence alignment, and alignment in turn impacts how gods "
         "react to your character, the prerequisites or certain classes, feats "
@@ -432,6 +460,13 @@ RepeatClass:
         "characters are proscribed from doing. Press '?' to view the manual "
         "section on alignments for more information.",
         WIN_CREATION,"help::adventuring,AC");
+    if (i == -1 && MyTerm->GetMode() != MO_RECREATE) {
+        if (AbandonCreation())
+            return false;
+        if (MyTerm->GetMode() == MO_CREATE && RInf.nRsp > 0)
+            RInf.nRsp--;
+        goto RepeatAlignment;
+    }
     GainPermStati(ALIGNMENT,this,SS_PERM,AlignmentInfo[i].align);
     if (AlignmentInfo[i].align & AL_LAWFUL)
         alignLC = -50;
@@ -617,6 +652,11 @@ SkipThisFocus:;
     // the Enneagram, don't serve a purpose. Let's replace this with an
     // alignment choice, which does matter (monsters have unholy weapons,
     // there are magic circles vs evil, etc.). 
+    /* No MENU_ESC here, unlike the menus above. This is the last question in
+       creation, so the character it would throw away is already finished --
+       gear, skills and spells granted. Personality is also the one answer
+       that changes nothing: src/Sheet.cpp:25 prints it on the sheet banner
+       and no other code reads it. inc-gd3c. */
     for(i=0;PersonalityNames[i];i++)
         MyTerm->LOption(PersonalityNames[i],i);
     Personality = MyTerm->LMenu(MENU_2COLS,
@@ -740,6 +780,7 @@ SkipThisFocus:;
         MyTerm->Close();
         delete[] ri;
     }
+    return true;
 }
 
 static void NamePerk(Perk& p, String& str);
@@ -2419,7 +2460,7 @@ void Creature::ThiefXP(rID regID)
 
 #define CG_LIMIT 50
 
-void Player::ChooseGod(bool required) {
+bool Player::ChooseGod(bool required) {
     int i = 0, q;
     rID GodList[CG_LIMIT], xID;
     bool pally = false;
@@ -2443,6 +2484,7 @@ void Player::ChooseGod(bool required) {
         GodList[i] = 0;
     }
 
+RepeatGod:
     for (i = 0; GodList[i]; i++) {
         xID = GodList[i];
 
@@ -2465,17 +2507,24 @@ void Player::ChooseGod(bool required) {
     if (!i)
         Fatal("No suitable God to choose from among the loaded resources!");
 
-    int flags = MENU_3COLS | MENU_DESC;
-    if (!required)
-        flags |= MENU_ESC;
+    int flags = MENU_3COLS | MENU_DESC | MENU_ESC;
     i = MyTerm->LMenu(flags, "<15>Choose a God:",
         thisp->MyTerm->GetMode() == MO_CREATE ? WIN_CREATION :
         WIN_SCREEN, "help::domains");
+
+    if (i == -1 && required && MyTerm->GetMode() != MO_RECREATE) {
+        if (AbandonCreation())
+            return false;
+        if (MyTerm->GetMode() == MO_CREATE && RInf.nRsp > 0)
+            RInf.nRsp--;
+        goto RepeatGod;
+    }
 
     if (i >= 0)
         GodID = Candidates[i];
 
     setGodFlags(GodID, GS_INVOLVED);
+    return true;
 }
 
 int16 TotalClassLevels(rID clID) {

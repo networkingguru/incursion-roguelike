@@ -121,8 +121,8 @@ void Game::NewGame(rID mID, bool reincarnate) {
     if (reincarnate) {
         if (!pp->Reincarnate())
             return;
-    } else
-        pp->Create(false);
+    } else if (!pp->Create(false))
+        return;
 
     if (mID) {
         mp = new Map;
@@ -2241,7 +2241,8 @@ Redraw:
 #endif
 
             NewGame(0,false);
-            Play();
+            if (m[0] && p[0])
+                Play();
             Cleanup();
             break;
         case 9:

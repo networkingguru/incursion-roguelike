@@ -1239,7 +1239,7 @@ class Player: public Character
       virtual int16 getMaxDepth(rID dID);
 
       virtual void AutoPickupFloor(); 
-      void ChooseGod(bool required = true); 
+      bool ChooseGod(bool required = true); 
 
       /* Display a formatted message in the player's message window. */
       virtual void IPrint(const char*, ...);
@@ -1262,7 +1262,10 @@ class Player: public Character
                   void IntuitItem(Item *it); 
 
       /* Trait Management Functions */
-	 	  void Create(bool reincarnate=false);
+	 	  bool Create(bool reincarnate=false);
+    private:
+      bool AbandonCreation();
+    public:
       bool Reincarnate();
       void DisableReincarnation();
       void TouchGallery(bool active);

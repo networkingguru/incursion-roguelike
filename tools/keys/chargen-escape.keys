@@ -1,0 +1,35 @@
+# Prove that ESC at a character-generation menu offers to abandon the
+# character, declining restores the same menu, and accepting returns to the
+# main menu. This is the stage-1 oracle for inc-gd3c.
+#
+#   tools/headless.sh tools/keys/chargen-escape.keys 5
+#
+# WHAT IS BEING PROVED. TextTerm::LMenu ignores ESC unless its caller passes
+# MENU_ESC. Character generation historically omitted that flag, leaving a
+# player who regretted a choice with no route back to the main menu except
+# killing the process. The race menu is the earliest affected menu and proves
+# the complete unwind without spending keys on later character choices.
+#
+# The first ESC must show the abandon question. Answering no must rebuild the
+# race option list because LMenu clears it before returning; the second race
+# dump proves both the menu prompt and an original race survived that rebuild.
+# The second ESC is accepted, and the final dump proves Game::StartMenu is in
+# control again rather than a half-created Player entering Game::Play.
+#
+# The final h is counted from Game::StartMenu's eight visible options in
+# src/Main.cpp: Create, Restore, Reincarnate, Recover, Options, Introduction,
+# Help, Quit. It exits through the real main-menu command after the oracle has
+# been captured.
+
+a
+n
+y
+@dump:race-menu
+ESC
+@dump:abandon-prompt
+n
+@dump:race-menu-again
+ESC
+y
+@dump:main-menu
+h
