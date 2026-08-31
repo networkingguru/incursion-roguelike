@@ -31,41 +31,41 @@ The spine. Every hop is a direct call; nothing is queued or deferred.
 1. `main()` `src/Wposix.cpp:492` builds `theGame` and the backend, assigns `T1`, calls `T1->Initialize()` then `theGame->StartMenu()` (`:620-621`).
 2. `Game::StartMenu()` `src/Main.cpp:2162`; menu choice 0 runs `LoadModules()` (`src/Registry.cpp:1441`), `NewGame()` (`src/Main.cpp:90`), `Play()` (`:2233-2245`).
 3. `Game::Play()` `src/Main.cpp:215`; the `do {} while(1)` at `:251` is the game loop. It walks every `Thing` on the player's map (`:285`), decrements `Timeout`, calls `ChooseAction()` on whatever is ready (`:347`).
-4. `Player::ChooseAction()` `src/Player.cpp:219` redraws status, then blocks on `MyTerm->GetCharCmd()` (`src/Player.cpp:357`).
+4. `Player::ChooseAction()` `src/Player.cpp:219` redraws status, then blocks on `MyTerm->GetCharCmd()` (`src/Player.cpp:359`).
 5. `posixTerm::GetCharCmd()` `src/Wposix.cpp:1638` flushes the screen *first* (`Update()`, `:1681`), reads one raw key (`NextKey()`, `:1686`), maps it to a `KY_CMD_*` by scanning the active keyset (`:1732-1741`). Redraw-before-read is why the screen is always current when the game waits.
-6. `switch (ch)` `src/Player.cpp:378`; a direction key lands at `src/Player.cpp:1247` and, with no attack chosen, throws `ThrowDir(EV_MOVE, ...)` (`src/Player.cpp:1346`).
+6. `switch (ch)` `src/Player.cpp:380`; a direction key lands at `src/Player.cpp:1249` and, with no attack chosen, throws `ThrowDir(EV_MOVE, ...)` (`src/Player.cpp:1348`).
 7. `ThrowDir` `src/Event.cpp:533` fills an `EventInfo` and calls `RealThrow` (`:414`), which fires PRE, event, POST (`:439-449`).
 8. `ThrowEvent` `src/Event.cpp:152` offers the event to region, terrain, dungeon, field and effect resources in that order (`:170-257`); `ThrowTo` (`:363`) then walks the C++ hierarchy from concrete type up to base via the `HIER` macro (`:371-407`).
 9. `Creature::Walk()` `src/Move.cpp:24` is the handler `EV_MOVE` reaches (`:147`); it ends at `Move(tx, ty, ...)` (`src/Move.cpp:945`).
 10. `Thing::Move()` `src/Display.cpp:1681` relinks square contents, calls `M->Update()` on both changed squares (`:1780-1781`), and sets the player's `UpdateMap` (`:1796`).
 11. `Map::Update(x,y)` `src/Term.cpp:734` picks one square's glyph and pushes it to `PutChar`.
-12. Next pass, `TextTerm::AdjustMap()` `src/Term.cpp:1010` (from `RefreshMap()` `inc/Term.h:657`, and from `src/Main.cpp:266`) scrolls the viewport and calls `ShowMap()` when the offset moved or `UpdateMap` is set (`src/Term.cpp:1081-1082`).
-13. `TextTerm::ShowMap()` `src/Term.cpp:903` calls `p->CalcVision()` (`src/Term.cpp:939`, defined `src/Vision.cpp:256`), clears `UpdateMap` (`src/Term.cpp:940`), loops the window calling `PutChar`/`PutGlyph` (`src/Term.cpp:954-978`, `src/Term.cpp:1239`).
+12. Next pass, `TextTerm::AdjustMap()` `src/Term.cpp:1012` (from `RefreshMap()` `inc/Term.h:678`, and from `src/Main.cpp:266`) scrolls the viewport and calls `ShowMap()` when the offset moved or `UpdateMap` is set (`src/Term.cpp:1083-1084`).
+13. `TextTerm::ShowMap()` `src/Term.cpp:903` calls `p->CalcVision()` (`src/Term.cpp:941`, defined `src/Vision.cpp:256`), clears `UpdateMap` (`src/Term.cpp:942`), loops the window calling `PutChar`/`PutGlyph` (`src/Term.cpp:956-980`, `src/Term.cpp:1241`).
 14. `posixTerm::Update()` `src/Wposix.cpp:653` blits the 80x48 buffer to the terminal; with no terminal it only sets a flag (`:656,677`). Then `Turn++` `src/Main.cpp:443`.
 
-**Invariant.** `Player::UpdateMap` is a one-bit dirty flag. Only `ShowMap` clears it (`src/Term.cpp:940`); every world change sets it (`src/Display.cpp:1796,1600`). A map that will not redraw is nearly always a lost set of that flag, not a broken draw call.
+**Invariant.** `Player::UpdateMap` is a one-bit dirty flag. Only `ShowMap` clears it (`src/Term.cpp:942`); every world change sets it (`src/Display.cpp:1796,1600`). A map that will not redraw is nearly always a lost set of that flag, not a broken draw call.
 
-**The light map (SDL build only).** `ShowMap` also calls `LightRebuild(m, p)` (`src/Term.cpp:942`, defined `src/Light.cpp:242`), which scans the level for light sources and casts each one's footprint through line of sight (`src/Light.cpp:146-153`). The map lives in file scope in `src/Light.cpp`, never in `Map`: `Map`, `Term` and `LocationInfo` are in `SaveLayoutDigest()` (`src/AbiCheck.cpp:144`), and a new member there orphans every save. `PutGlyph` (`src/Term.cpp:1240`) hands each visible cell to `APutCharLit` (`src/Term.cpp:1267`, virtual `inc/Term.h:488`), whose default body draws the 16-colour glyph, so `posixTerm` and `cursesTerm` draw exactly what they drew before. `libtcodTerm` overrides it (`src/Wlibtcod.cpp:1024`), records the cell, and its idle tick `LightFrame` (`src/Wlibtcod.cpp:1062`, called from `GetCharRaw` at `src/Wlibtcod.cpp:1741`) re-shades every recorded cell every `LIGHT_TICK_MS` (`src/Wlibtcod.cpp:140`) with fresh noise from `LightTick` (`src/Light.cpp:258`). No game rule reads the light map. `tools/check_lightmap.sh` is its check; `docs/superpowers/plans/2026-08-30-ascii-lighting-brief.md` is the design.
+**The light map (SDL build only).** `ShowMap` also calls `LightRebuild(m, p)` (`src/Term.cpp:939`, defined `src/Light.cpp:466`), which scans the level for light sources and casts each one's footprint through line of sight (`src/Light.cpp:471-476`). The map lives in file scope in `src/Light.cpp`, never in `Map`: `Map`, `Term` and `LocationInfo` are in `SaveLayoutDigest()` (`src/AbiCheck.cpp:144`), and a new member there orphans every save. `PutGlyph` (`src/Term.cpp:1241`) hands each visible cell to `APutCharLit` (`src/Term.cpp:1291`, virtual `inc/Term.h:492`), whose default body draws the 16-colour glyph, so `posixTerm` and `cursesTerm` draw exactly what they drew before. `libtcodTerm` overrides it (`src/Wlibtcod.cpp:1025`), records the cell, and its idle tick `LightFrame` (`src/Wlibtcod.cpp:1069`, called from `GetCharRaw` at `src/Wlibtcod.cpp:1753`) re-shades every recorded cell every `LIGHT_TICK_MS` (`src/Wlibtcod.cpp:140`) with fresh noise from `LightTick` (`src/Light.cpp:517`). No game rule reads the light map. `tools/check_lightmap.sh` is its check; `docs/superpowers/plans/2026-08-30-ascii-lighting-brief.md` is the design.
 
 ## 3. Boundaries, and what crosses them
 
 - **Object ↔ handle.** Nothing stores a `Thing*` across a turn; it stores an `hObj` and resolves it through `oThing(h)`, `oMap(h)` and friends (`inc/Base.h:258-262`) over `class Registry` (`inc/Base.h:789`) and the globals `MainRegistry`/`ResourceRegistry` (`inc/Globals.h:112`). `theRegistry` switches to `ResourceRegistry` while modules load, and back after (`src/Registry.cpp:1451,1509`).
 - **Game ↔ ruleset.** Resources are reached only by `rID` through `RES()`, `TMON()`, `TEFF()` (`inc/Res.h:10-13`). Every override point is an `EventInfo`.
 - **C++ ↔ script.** One door: `Resource::Event()` (`src/Annot.cpp:1098`) calls `theGame->VM.Execute()` (`:1120`); `VMachine::Execute` (`src/VMachine.cpp:413`) calls back into C++ through generated `lib/dispatch.h` (`:175`). Constants are shared, not copied: `lib/main.irc:1-2` includes `Defines.h` and `Api.h`.
-- **Game ↔ display.** Above `Term` everything speaks glyphs and window ids. `Term` declares 135 pure virtuals; `TextTerm` implements all but 48, and those 48 are the backend contract (`inc/Term.h:723-788`).
+- **Game ↔ display.** Above `Term` everything speaks glyphs and window ids. `Term` declares 135 pure virtuals; `TextTerm` implements all but 48, and those 48 are the backend contract (`inc/Term.h:744-809`).
 - **Compiler ↔ engine.** Same binary, run before the display exists: `TextTerm::RunOnCommandLine` (`src/TextTerm.cpp:39`) handles `-compile` and returns true, so `main` skips `Initialize`/`StartMenu` (`src/Wposix.cpp:619`). It preprocesses `lib/main.irc` to `lib/program.i` and parses that (`src/RComp.cpp:118,128`).
 
 ## 4. Terminal backends
 
-`Term` (`inc/Term.h:281`) → `TextTerm` (`inc/Term.h:546`) → one concrete backend. Each backend file wraps its whole body in an `#ifdef`, so all three can be handed to the compiler and only one emits code.
+`Term` (`inc/Term.h:281`) → `TextTerm` (`inc/Term.h:567`) → one concrete backend. Each backend file wraps its whole body in an `#ifdef`, so all three can be handed to the compiler and only one emits code.
 
 | File | Class | `main()` | Guard | Owns |
 |---|---|---|---|---|
-| `src/Wlibtcod.cpp` | `libtcodTerm` `:228` | `:444` | `LIBTCOD_TERM` `:57` | SDL/libtcod window, fonts, tiles |
+| `src/Wlibtcod.cpp` | `libtcodTerm` `:230` | `:460` | `LIBTCOD_TERM` `:57` | SDL/libtcod window, fonts, tiles |
 | `src/Wposix.cpp` | `posixTerm` `:133` | `:492` | `POSIX_TERM` `:32` | curses or no output; key scripts; screen dumps |
 | `src/Wcurses.cpp` | `cursesTerm` `:176` | `:396` | `CURSES_TERM` `:57` | pdcurses on Windows |
 
-All three `main()`s do the same five things in order: `new Game`, `new <backend>`, `SetIncursionDirectory`, `T1 = AT1`, then `RunOnCommandLine` or `Initialize`/`StartMenu`/`ShutDown` (`src/Wposix.cpp:582-622`, `src/Wlibtcod.cpp:546-568`, `src/Wcurses.cpp:460-470`). Each defines its own `Term *T1` (`src/Wposix.cpp:303`, `src/Wlibtcod.cpp:422`, `src/Wcurses.cpp:384`), so exactly one backend can link.
+All three `main()`s do the same five things in order: `new Game`, `new <backend>`, `SetIncursionDirectory`, `T1 = AT1`, then `RunOnCommandLine` or `Initialize`/`StartMenu`/`ShutDown` (`src/Wposix.cpp:582-622`, `src/Wlibtcod.cpp:562-584`, `src/Wcurses.cpp:460-470`). Each defines its own `Term *T1` (`src/Wposix.cpp:303`, `src/Wlibtcod.cpp:438`, `src/Wcurses.cpp:384`), so exactly one backend can link.
 
 There is no headless class. `posixTerm` is headless at run time: `useCurses` (`src/Wposix.cpp:142`) is set by `UseTerminal()` (`:237`) from `-headless` and `isatty` (`:590`), and every draw path tests it.
 
@@ -79,8 +79,8 @@ ls src/*.cpp src/*.c | wc -l                 # the source file count
 wc -l src/*.cpp src/*.c | tail -1            # the source line count
 find src -size 0                             # the empty files
 wc -l src/yygram.cpp                         # the size of the generated parser
-sed -n '281,545p' inc/Term.h | grep -c "=0;" # 135 pure virtuals on Term
-sed -n '546,787p' inc/Term.h | grep -c "=0;" # 48 left pure by TextTerm
+sed -n '281,566p' inc/Term.h | grep -c "=0;" # 135 pure virtuals on Term
+sed -n '567,809p' inc/Term.h | grep -c "=0;" # 48 left pure by TextTerm
 grep -n "int main(int argc" src/W*.cpp       # the 3 backend entry points
 grep -n "Term \*T1;" src/W*.cpp              # the 3 T1 definitions
 grep -n "SKIP_BACKENDS=" build_macos.sh      # backend selection
@@ -90,9 +90,9 @@ Section 2 was traced by reading the listed call sites. It was not observed under
 
 ## Suspected defects
 
-- `src/Player.cpp:366` — `ch != KY_CMD_NAME && KY_CMD_WIZMODE &&` is missing its `ch !=`. `KY_CMD_WIZMODE` is a non-zero enumerator (`inc/Term.h:186`), so the term is always true and has no effect: the wizard key is the one key in the list that is NOT exempt, and pressing it while charging asks "Break off your charge?". The eight neighbouring tests all use `ch !=`. (Corrected 2026-08-15: the page first said the opposite.)
+- `src/Player.cpp:368` — `ch != KY_CMD_NAME && KY_CMD_WIZMODE &&` is missing its `ch !=`. `KY_CMD_WIZMODE` is a non-zero enumerator (`inc/Term.h:186`), so the term is always true and has no effect: the wizard key is the one key in the list that is NOT exempt, and pressing it while charging asks "Break off your charge?". The eight neighbouring tests all use `ch !=`. (Corrected 2026-08-15: the page first said the opposite.)
 - `src/Event.cpp:226` — inside a branch guarded by `e.EMap && e.EMap->dID`, the error text dereferences `e.EActor->m->dID`. `ThrowEvent` reaches it with `e.EActor == NULL` when `e.EMap` came from `e.EVictim` (`:163`), so the error path crashes instead of reporting.
 - `src/Main.cpp:383` — `min(20048, DestroyCount+1)`; the array holds 20480 (`inc/Res.h:1307,1309`). Digits transposed. It clamps low so it cannot overrun, but 432 queued deletions per pass would be dropped silently.
 - `src/Event.cpp:454-459` — `if (e.Event >= 500) return r;` makes the two following `Fatal` branches for unhandled PRE and POST events unreachable.
-- `inc/Term.h:657` — `RefreshMap()` dereferences `p` unchecked and is called as `T1->RefreshMap()` (`src/Magic.cpp:1358`, `src/Skills.cpp:1937`); `ClearPlayer()` (`inc/Term.h:753`) sets `p` to NULL, so the state is reachable.
+- `inc/Term.h:678` — `RefreshMap()` dereferences `p` unchecked and is called as `T1->RefreshMap()` (`src/Magic.cpp:1358`, `src/Skills.cpp:1937`); `ClearPlayer()` (`inc/Term.h:774`) sets `p` to NULL, so the state is reachable.
 - `src/Term.cpp:6` — the header says "80x50 text mode"; the code is 80x48 (`src/Wposix.cpp:73-74`, asserted `src/TextTerm.cpp:100-101`). Stale prose.
