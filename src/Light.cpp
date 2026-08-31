@@ -544,6 +544,10 @@ bool LightLitAt(int16 x, int16 y) {
   return SrcLit[(int32)y * lmW + x] >= LIGHT_SEE_MIN;
 }
 
+bool LightMapActive() {
+  return lmMap && !lmLegacy;
+}
+
 /* INCURSION_LIGHT_PROBE=1 appends one block per change to logs/light.log:
    a header, one S line per source, then the source-light grid with ambient
    left out. '#' opaque unlit, '%' opaque lit, '.' unlit, 0-9 brightness.

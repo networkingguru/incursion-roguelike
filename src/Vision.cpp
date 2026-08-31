@@ -39,9 +39,23 @@ inline bool Map::MarkAsSeen(const int8 pn, const int16 lx, const int16 ly,
   LocationInfo & Here = At(lx,ly); 
   if (SightRange) {
     if (//Here.Dark ||
-        dist > SightRange || // beyond your maximum range, period 
-        (dist > ShadowOrBlindRange && !Here.Lit && !Here.mLight && !::LightLitAt(lx,ly)))
-      return true; 
+        dist > SightRange) // beyond your maximum range, period
+      return true;
+    else if (dist > ShadowOrBlindRange && !Here.Lit && !Here.mLight && !::LightLitAt(lx,ly)) {
+      /* upstream: Julian's MarkAsSeen returned true here, which stops the
+         whole vision ray at the first unlit cell past shadow range, so a
+         self-luminous cell farther out (a distant torch across a dark room)
+         was never reached and never marked visible. It misbehaves on Win32
+         with the original typedefs just the same: the ray dies on darkness,
+         not on any occluder, and CARE_ABOUT_SEEING already stops the ray on
+         real occluders (opaque, magical Dark, obscuring). Continue the ray
+         instead, leaving this dark cell unmarked, so a lit cell beyond it can
+         still be seen. Gated on the light map so LIGHT_LEGACY vision stays
+         byte-for-byte the classic path. Observed. inc-qw4d. Not sent. */
+      if (LightMapActive())
+        return false;
+      return true;
+    }
     else if (dist > LightRange && !Here.Lit && !Here.mLight && !::LightLitAt(lx,ly))
       Mask = VI_DEFINED << (pn*4);
     else

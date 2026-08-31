@@ -36,6 +36,10 @@ bool LightAt(int16 x, int16 y, LightRGB &out);
    so flicker cannot make vision blink. */
 bool LightLitAt(int16 x, int16 y);
 
+/* True when the light map is built and not in legacy mode, so the source-lit
+   vision test can distinguish the new lighting from the classic path. */
+bool LightMapActive();
+
 /* The backend's 16-colour palette, so a source whose colour comes from its
    glyph lights in the same colour the glyph is drawn in. Defaults to the
    classic libtcod palette until a backend calls this. */
