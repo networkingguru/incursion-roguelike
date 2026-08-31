@@ -65,6 +65,7 @@ Creature::Creature(rID _mID, int16 _Type):
       StateFlags |= MS_FEMALE;
   cFP = Attr[A_FAT] = 0;
   ManaPulse = 0; 
+  LightAverseWasBright = false;
 }
                                     
 void Creature::SetImage()         
@@ -1346,6 +1347,20 @@ void Creature::DoTurn() {
     Item *it;
     if (!m || x == -1)
         return;
+
+    /* Light aversion follows BrightAt's cutoff and reports only dim-to-bright edges. inc-jcg4 */
+    if (HasMFlag(M_LIGHT_AVERSE)) {
+        bool bright = m->BrightAt(x,y);
+        if (bright && !LightAverseWasBright) {
+            EventInfo e;
+            e.Clear();
+            e.EActor = this;
+            e.EMap = m;
+            DPrint(e,"You squint and stagger in the bright light.",
+                "The <EActor> squints and staggers in the bright light.");
+        }
+        LightAverseWasBright = bright;
+    }
 
     /* This should really be the saving throw DC of the effect,
     but that's a lot of extra work, so for now... */
@@ -3514,4 +3529,3 @@ bool Creature::HasInnateSpell(rID spID)
     return false;
   }            
       
-

@@ -3548,13 +3548,15 @@ EvReturn Creature::PreStrike(EventInfo &e) /* this == EActor */
         e.strHit += " +4 BS";
     } 
 
-    if (e.EActor->HasMFlag(M_LIGHT_AVERSE) && e.EActor->inField(FI_LIGHT))
+    if (e.EActor->HasMFlag(M_LIGHT_AVERSE) &&
+        e.EActor->m->BrightAt(e.EActor->x,e.EActor->y))
       {
         e.vHit -= 4;
         e.strHit += " -4 light";
       }
 
-    if (e.EVictim->HasMFlag(M_LIGHT_AVERSE) && e.EVictim->inField(FI_LIGHT))
+    if (e.EVictim->HasMFlag(M_LIGHT_AVERSE) &&
+        e.EVictim->m->BrightAt(e.EVictim->x,e.EVictim->y))
       {
         e.vDef -= 4;
         e.strDef += " -4 light";
@@ -8824,4 +8826,3 @@ SkipMainMessage:
     Silence = saveSil;
     return DONE;
 }
-

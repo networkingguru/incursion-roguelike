@@ -1661,9 +1661,6 @@ EvReturn Creature::FieldOn(EventInfo &e) {
                     DPrint(e,"You are exposed!",
                         "The light reveals an <EActor>, hidden in the shadows!");
                 }
-                if (HasMFlag(M_LIGHT_AVERSE))
-                    DPrint(e,"You squint and stagger in the bright light.",
-                    "The <EActor> squints and staggers in the bright light.");              
                 break;
             case FI_SILENCE:
                 IPrint("Unearthly silence envelops you!");
@@ -1729,5 +1726,4 @@ EvReturn Creature::FieldOff(EventInfo &e) {
         }
     return DONE;
 }
-
 

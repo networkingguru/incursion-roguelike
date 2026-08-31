@@ -1,0 +1,32 @@
+# Phase-3 fixture for inc-jcg4.  The orc player is light-averse.  A live wall
+# torch two cells east lights the player's cell dynamically (no carried light
+# and no legacy Bright), then a frozen stone jelly west supplies a safe combat
+# roll whose stored breakdown exposes the light penalty.
+
+@include chargen-rogue.keys
+ESC
+
+@until "Wizard Mode Options" w y
+w
+DOWN*10
+SPACE
+ESC
+
+# Clear the torch cell and place the live wall torch two cells east.
+w K RIGHT*2 ENTER e
+w K RIGHT*2 ENTER p
+
+# Spend one creature turn in the newly bright cell, then summon and strike.
+s
+@dump:bright-squint
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "stone jelly"
+LEFT ENTER
+LEFT
+@while "Confirm attack" y
+v
+@dump:bright-combat-log
+ESC
+@quit

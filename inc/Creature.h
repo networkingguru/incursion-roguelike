@@ -231,6 +231,7 @@ class Creature: public Thing, public Magic
            InfraRange, PercepRange, TelepRange,
            ScentRange, ShadowRange,
            NatureSight; // ww: also used
+      bool LightAverseWasBright;
     public:
       /* General Stuff */
 		  Creature(rID mID,int16 _Type);
@@ -1617,5 +1618,4 @@ class Monster: public Creature
       FIELD_ARRAY(643, Recent, sizeof(uint8), 6);
     END_ARCHIVE
 	};
-
 

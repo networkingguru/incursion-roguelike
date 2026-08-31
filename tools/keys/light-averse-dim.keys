@@ -1,0 +1,29 @@
+# Dim control for inc-jcg4.  A live magma source two squares away lights the
+# orc's cell in the visible-but-not-bright band.  The same frozen-jelly attack
+# must carry no light penalty and the turn must print no squint message.
+
+@include chargen-rogue.keys
+ESC
+
+@until "Wizard Mode Options" w y
+w
+DOWN*10
+SPACE
+ESC
+
+# Magma is a scanned dynamic source; uppercase P is its wizard terrain entry.
+w K RIGHT*2 ENTER P
+
+s
+@dump:dim-no-squint
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "stone jelly"
+LEFT ENTER
+LEFT
+@while "Confirm attack" y
+v
+@dump:dim-combat-log
+ESC
+@quit
