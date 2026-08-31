@@ -2803,6 +2803,12 @@ EvReturn Creature::Hide(EventInfo &e) {
 		switch (e.EParam) {
 		case HI_SHADOWS:
 			/* ww: now that we have cross-class skills, anyone can "try"  */
+			/* upstream: BrightAt and LightRange are upstream-identical, so Win32 also lets a torch carrier hide; the port's render light map only exposed the gap.
+			   Traced; inc-nhrk; not sent. */
+			if (LightRange) {
+				IPrint("You can't hide while carrying a light.");
+				return ABORT;
+			}
 			if (m->BrightAt(x, y)) {
 				IPrint("It's too bright to hide effectively here.");
 				return ABORT;

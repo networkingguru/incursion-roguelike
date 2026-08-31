@@ -1371,7 +1371,9 @@ void Creature::TerrainEffects() {
 		return;
 
 	if (HasStati(HIDING)) {
-		if (m->BrightAt(x, y))
+		/* upstream: BrightAt and LightRange are upstream-identical, so Win32 also leaves a moving torch carrier hidden; the port's render light map only exposed the gap.
+		   Traced; inc-nhrk; not sent. */
+		if (m->BrightAt(x, y) || LightRange)
 			if (HasStati(HIDING, HI_SHADOWS))
 				Reveal(false);
 		if (tt->HasFlag(TF_WATER) && !HasFeat(FT_FEATHERFOOT) && !isAerial())
@@ -1526,4 +1528,3 @@ void Creature::ClimbFall() {
 		XPrint(typ == ELEV_TREE ? "falling out of a <Res>" :
 			"falling off the ceiling", m->TerrainAt(x, y)), this, this);
 }
-

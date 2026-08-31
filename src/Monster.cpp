@@ -1499,7 +1499,9 @@ void Monster::Initialize(bool in_play)
           GainPermStati(HIDING,NULL,SS_CLAS,HI_UNDER,SkillLevel(SK_HIDE));
           HideVal = random(11)-5;
         } 
-      } else if (!m->BrightAt(x,y)) {
+      /* upstream: BrightAt and LightRange are upstream-identical, so Win32 also lets a torch carrier spawn hidden; the port's render light map only exposed the gap.
+         Traced; inc-nhrk; not sent. */
+      } else if (!m->BrightAt(x,y) && !LightRange) {
         GainPermStati(HIDING,NULL,SS_CLAS,HI_SHADOWS,SkillLevel(SK_HIDE));
         HideVal = random(11)-5;
       } 

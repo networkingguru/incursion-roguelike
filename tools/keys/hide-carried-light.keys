@@ -1,0 +1,19 @@
+# Regression fixture for inc-nhrk: a rogue carrying a lit torch cannot remain
+# hidden and cannot manually hide again while the torch is equipped.
+
+@include chargen-rogue.keys
+ESC
+@dump:arrival-hidden
+
+w y e RIGHT*37 ENTER
+@dump:torch-acquired
+SPACE
+@dump:torch-equipped-hidden
+ESC
+
+# Seed 1 starts on open cave floor; stepping right exercises TerrainEffects.
+RIGHT
+@dump:after-move
+h
+@dump:hide-refused
+@quit

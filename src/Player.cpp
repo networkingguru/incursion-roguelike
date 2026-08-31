@@ -315,7 +315,9 @@ void Player::ChooseAction() {
             return;
     }
 
-    if (Opt(OPT_AUTOHIDE) && HasSkill(SK_HIDE) && !HasStati(HIDING) && !m->BrightAt(x, y) && !HasStati(ILLUMINATED)
+    /* upstream: BrightAt and LightRange are upstream-identical, so Win32 also lets a torch carrier auto-hide; the port's render light map only exposed the gap.
+       Traced; inc-nhrk; not sent. */
+    if (Opt(OPT_AUTOHIDE) && HasSkill(SK_HIDE) && !HasStati(HIDING) && !m->BrightAt(x, y) && !LightRange && !HasStati(ILLUMINATED)
         && !(TTER(m->TerrainAt(x, y))->HasFlag(TF_WATER) || HasFeat(FT_FEATHERFOOT)) && !HasStati(MANIFEST)) {
         Creature *cr; int32 i;
         /* Replacement isThreatened() prevents you from AutoHiding when observed by enemies you can't see. */
