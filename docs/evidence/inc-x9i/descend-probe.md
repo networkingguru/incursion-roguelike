@@ -24,14 +24,12 @@ Each line names the branch and how it reaches `MoveDepth`:
     Descend branch=climb-succeeded depth=3 enters_MoveDepth=directly, safe=true
 
 Recorded 2026-08-29. The patch was cut from `src/Skills.cpp` at commit
-0233d4e and checked with `git apply --check` against the probe-free file; the
-source copy was then restored, so the probe is still in the tree today. See
-`tools/check_probe_hooks.sh`, which reports it as RETIRED now that this file
-exists — meaning the source copy CAN go, not that it must go tonight.
+0233d4e and checked with `git apply --check` against the probe-free file. The
+source copy was removed from `src/Skills.cpp` on 2026-08-31; this patch is now
+the only copy, and `tools/check_probe_hooks.sh` no longer lists the hook at all.
 
-Removing it is not free of consequences and should not be done in a session
-that is also correcting citations. It deletes 25 lines at `src/Skills.cpp:4123`
-and moves every line below, including the four `src/Skills.cpp` citations in
-docs/REPORTING-GATE.md rows 243, 279, 293 and 297 and the one in
-docs/ENGINE-MAP-CREATURE.md, which were re-derived on 2026-08-29 and would go
-stale again in the same run. Tracked in bd inc-loa.18.
+Removing it moved every line below `src/Skills.cpp:4129` up by 25, which
+re-stales the `src/Skills.cpp` citations in docs/REPORTING-GATE.md and
+docs/ENGINE-MAP-CREATURE.md. The removal was done FIRST, ahead of the citation
+sweep in the same run, because a citation is cheap to re-derive and a deleted
+probe is not. Tracked in bd inc-loa.18.

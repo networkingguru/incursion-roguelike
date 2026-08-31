@@ -4126,28 +4126,6 @@ EvReturn Creature::Ascend(EventInfo &e)
 	return ABORT;
 }
 
-/* Temporary diagnostic: set INCURSION_DESCEND_PROBE=1 to record which branch of
-   Creature::Descend enters MoveDepth. A release build gives the same stack for
-   the levitation branch and the successful-climb branch, so a crash report
-   cannot tell them apart; this can. Delete with inc-x9i. */
-static void DescendProbe(const char *branch, int depth, const char *how)
-{
-    if (!getenv("INCURSION_DESCEND_PROBE"))
-        return;
-    static FILE *log = NULL;
-    if (!log) {
-        char path[1024];
-        snprintf(path, sizeof(path), "%slogs/descendprobe.log",
-            (const char*)T1->IncursionDirectory);
-        log = fopen(path, "a");
-    }
-    if (log) {
-        fprintf(log, "Descend branch=%s depth=%d enters_MoveDepth=%s\n",
-            branch, depth, how);
-        fflush(log);
-    }
-}
-
 EvReturn Creature::Descend(EventInfo &e)
 {
 	int16 i;
@@ -4197,7 +4175,6 @@ EvReturn Creature::Descend(EventInfo &e)
 			if (theGame->GetDungeonMap(m->dID, m->Depth + 1, oPlayer(m->pl[0]), NULL))
 			{
 				IPrint("You float downwards.");
-				DescendProbe("levitation", m->Depth, "directly, safe=true");
 				MoveDepth(m->Depth + 1, true);
 				Timeout += 30;
 				return DONE;
@@ -4214,12 +4191,10 @@ EvReturn Creature::Descend(EventInfo &e)
 				"The <Obj> climbs down the chasm.", this);
 			if (!SkillCheck(SK_CLIMB, 15, true))
 			{
-				DescendProbe("climb-failed", m->Depth, "via TerrainEffects, safe=false");
 				Move(x + DirX[i], y + DirY[i], false);
 				TerrainEffects();
 				return DONE;
 			}
-			DescendProbe("climb-succeeded", m->Depth, "directly, safe=true");
 			MoveDepth(m->Depth + 1, true);
 			IPrint("You complete your descent successfully!");
 			return DONE;
