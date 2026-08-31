@@ -192,7 +192,7 @@ lie:
 
 1. **Shrink** — any loaded array shorter than the manifest recorded means a
    resource was removed. `ECORRUPT`, naming the array, the recorded length
-   and the length found (src/SaveV1.cpp:972-1016). It runs over all 21 arrays
+   and the length found (src/SaveV1.cpp:976-1016). It runs over all 21 arrays
    whether or not a saved reference falls in the missing range: the removal
    is the defect either way.
 2. **Slide** — two or more CONSECUTIVE positions where the name now present

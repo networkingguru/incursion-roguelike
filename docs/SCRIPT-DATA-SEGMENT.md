@@ -75,9 +75,9 @@ this port**: the region in front of the memory rows is empty.
 ### Measurements
 
 Method: the resource compiler writes each module as an LZ-compressed group
-(`src/Registry.cpp:1410`, `SaveGroup(..., true, true)`; the compress happens at
-`src/Registry.cpp:805`). Inside the group each object is written as one type
-byte then its raw struct bytes (`src/Registry.cpp:757` and `:759`). A scratch C
+(`src/Registry.cpp:1428`, `SaveGroup(..., true, true)`; the compress happens at
+`src/Registry.cpp:808`). Inside the group each object is written as one type
+byte then its raw struct bytes (`src/Registry.cpp:760` and `:762`). A scratch C
 harness (`scratchpad/modpeek3.c`) decompresses the group with the game's own
 `LZ_Uncompress` and reads `szTextSeg`, `szDataSeg`, `szCodeSeg` straight out of
 the `Module` struct image. The read is cross-checked: the `szTextSeg` value must

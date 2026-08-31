@@ -197,9 +197,9 @@ sample of a headless run on 2026-08-15 put 75 percent of the run inside
 **Trap 4 — a key script longer than the budget stops early and exits 3, and
 that looks like a short run rather than a failure.** The budget is
 `DEFAULT_MAX_KEYS 20000` (`src/Wposix.cpp:78`, applied at `:171`). It counts keys
-READ, one per `GetChar` call (`src/Wposix.cpp:1590`), and when it runs out
+READ, one per `GetChar` call (`src/Wposix.cpp:1627`), and when it runs out
 the game dumps a screen named `maxkeys` and exits with `EXIT_OUT_OF_KEYS`, which
-is 3. Raise it with `INCURSION_MAX_KEYS` (`src/Wposix.cpp:570-571`).
+is 3. Raise it with `INCURSION_MAX_KEYS` (`src/Wposix.cpp:592-593`).
 
 **Correction, 2026-08-17: `marathon.keys` does NOT need a raised cap, and the
 usage line in its own header was wrong.** That header told everyone to run

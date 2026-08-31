@@ -11,7 +11,7 @@ replaces. Read it first; this spec assumes it.
 Two defects, both observed, both caused by the same thing.
 
 **A save is a byte dump of live C++ objects.** `Registry::SaveGroup` writes
-`typeSize(Type)` raw bytes per object (`src/Registry.cpp:774`), vtable pointer
+`typeSize(Type)` raw bytes per object (`src/Registry.cpp:762`), vtable pointer
 and padding included. So the file is welded to the compiled layout of the
 binary that produced it. `SaveFormatID()` (`src/AbiCheck.cpp:167`) exists only
 to notice that weld breaking. It has already fired in anger: the shipping build
@@ -19,7 +19,7 @@ and the developer build computed different digests of the same file, and the
 released package could not load its own module (`inc-tm4`).
 
 **A resource id is a position in one running count, not a name.**
-`Module::__GetResource` (`src/Res.cpp:102-215`) decodes an `rID` by walking 21
+`Module::__GetResource` (`src/Res.cpp:110-223`) decodes an `rID` by walking 21
 per-type array counts — Monsters, Items, Features, Effects, Artifacts, Quests,
 Dungeons, Routines, NPCs, Classes, Races, Domains, Gods, and so on — and
 subtracting each count in turn. `CountResources` (`src/RComp.cpp:248`) sets
@@ -96,12 +96,12 @@ The format MUST satisfy four properties.
   in `src/Create.cpp`.
 - **`String` and `Array` are not touched.** `FIELD_STR` and `FIELD_OBJ` write
   their contents inline on the v1 path, so `Registry::Block`
-  (`src/Registry.cpp:367`) and the one-line `String::Serialize`
+  (`src/Registry.cpp:355`) and the one-line `String::Serialize`
   (`src/Base.cpp:504`) are needed only by the v0 reader, which keeps them
   unchanged. No type used across the app changes at all.
 - **No change to in-memory representation.** An `rID` stays a 32-bit index at
   run time. `RES()`, `NAME()` and range tests such as
-  `xID >= EffectID(0) && xID <= EffectID(szEff-1)` (`src/Res.cpp:733`) keep
+  `xID >= EffectID(0) && xID <= EffectID(szEff-1)` (`src/Res.cpp:741`) keep
   working untouched. Only the bytes on disk change.
 - **The engine's `rID` arithmetic is not touched.** Re-slicing the id inside the
   engine would fix the renumbering too, at the cost of auditing about 70 sites
@@ -114,7 +114,7 @@ A v1 save is a header, a module manifest, and a stream of tagged records.
 
 ### Header
 
-The existing `fileHeader` (`src/Registry.cpp:44-52`) is kept for the fields the
+The existing `fileHeader` (`inc/Base.h:700-708`) is kept for the fields the
 load menu already reads — `Sig`, `Name`, `numGroups`. `Version[12]` carries
 `"IS1"` plus a decimal schema revision instead of the ABI digest. The reader
 MUST dispatch on this field: `"SF"` prefix means the v0 raw reader, `"IS"` means
@@ -212,7 +212,7 @@ Position 0 is `Monster`, and the order is exactly the walk order of
 ```
 
 This order is a wire constant. It MUST match `__GetResource`'s walk and
-`V1GetPool`'s switch (`src/SaveV1.cpp:820`). A new kind is appended at 21.
+`V1GetPool`'s switch (`src/SaveV1.cpp:833`). A new kind is appended at 21.
 
 ### The module manifest
 
@@ -292,7 +292,7 @@ Otherwise step 4 always succeeds for any position the manifest covers, because
 an array can only have grown.
 
 **Sequencing.** Both load paths reload modules only after the save group is read
-(`src/Registry.cpp:1317-1334`, `src/Dump.cpp:151-172`), so `Game::Modules` is
+(`src/Registry.cpp:1320-1337`, `src/Dump.cpp:195-215`), so `Game::Modules` is
 stale or zeroed while records are being replayed. The manifest MUST be parsed
 with the records and the conversion MUST be deferred to `SaveV1_ResolveNames()`,
 which already runs after the reload.
