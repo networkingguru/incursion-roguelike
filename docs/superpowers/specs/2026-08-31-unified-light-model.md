@@ -1,7 +1,7 @@
 # Spec: one authoritative light model (inc-jcg4)
 
-Status: DRAFT for Brian's read. No code until approved.
-Tier: Large. Related: inc-qvk9 (runtime tunables + asymptotic curve),
+Status: APPROVED (Brian, 2026-08-31). Plan: 2026-08-31-unified-light-model-plan.md.
+Tier: Medium (heavy). Related: inc-qvk9 (runtime tunables + asymptotic curve),
 inc-nhrk (carried-light hide fix), inc-qw4d (distance-vision fix).
 
 ## Goal, in Brian's words
@@ -78,8 +78,20 @@ draws it dark -- Bug A.
 | `Skills.cpp:2806` | `BrightAt \|\| LightRange` | manual Hide |
 | `Move.cpp:1376` | `BrightAt \|\| LightRange` | reveal-on-move |
 | `Move.cpp:445` | `BrightAt` | move warning |
+| `Fight.cpp:3551` | `inField(FI_LIGHT)` | light-averse to-hit penalty |
+| `Fight.cpp:3557` | `inField(FI_LIGHT)` | light-averse defense penalty |
+| `Status.cpp:1664` | `FI_LIGHT` field-entry event | light-averse "squint" message |
 
 `.Bright` has zero direct reads outside `BrightAt`.
+
+The three light-averse sites are the same disease as Bug B, one layer deeper.
+Light aversion reads `inField(FI_LIGHT)` -- membership in a cast light FIELD
+(`Light`, `Continual Flame`, a sunlight field) -- and nothing else. It never
+reads `.Bright` or the light map. So a light-averse creature suffers ZERO
+penalty when it stands beside the player's torch, in a wall-torch pool, on
+magma, or inside a `.Bright` room -- every natural dungeon light source is
+invisible to it. This misbehaves identically on Win32 (upstream never had a
+unified light notion), so it is an upstream design gap, markable `upstream:`.
 
 ## Design: one predicate, legacy folded in as input
 
@@ -114,9 +126,13 @@ Two thresholds, because the rules let you hide in DIMLY lit tiles (Skulk) but
 not brightly lit ones:
 
 - `LIGHT_SEE_MIN` (48, existing) -- vision floor, unchanged.
-- `LIGHT_HIDE_MIN` (NEW, proposed default ~128) -- the "brightly lit" cutoff
-  for breaking hide. A knob for inc-qvk9's runtime tuning; Brian sets it by
-  eye. Below it a cell is dim enough to hide in.
+- `LIGHT_HIDE_MIN` (NEW, **90**, Brian 2026-08-31) -- the "brightly lit" cutoff
+  for breaking hide AND for light aversion. A knob for inc-qvk9's runtime
+  tuning. Below it a cell is dim enough to hide in. Chosen by the single-torch
+  falloff: a wall torch reads 255 / 191 / 96 / 34 at distance 0/1/2/3, a
+  carried torch 255 / 196 / 107 / 50 / 18 at 0..4. 90 breaks hide (and bites a
+  light-averse creature) out to two tiles from a torch; 128 would have reached
+  only the ring you can touch.
 
 ### Repoint the readers
 
@@ -127,6 +143,15 @@ not brightly lit ones:
 - The 3 vision sites: already read `LightLitAt`; route them through the
   unified `LightLitAt` (same 48 floor, so normal vision is behaviourally
   unchanged except where the folded-in legacy light now correctly registers).
+- The 3 light-averse sites: replace `inField(FI_LIGHT)` with
+  `LightBrightAt(x,y)` at the SAME 90 cutoff as hiding (Brian: "if you can
+  hide, no light adversity"). The two combat penalties (`Fight.cpp:3551/3557`)
+  are a direct swap. The "squint" message (`Status.cpp:1664`) is today a
+  one-shot fired on ENTERING an `FI_LIGHT` field; it must become a per-turn
+  check ("am I standing in a bright cell this turn"), because ambient light has
+  no field-entry event. Fire it once on the transition dim->bright, not every
+  turn, to avoid message spam. The glowing-weapon `+2` (`Fight.cpp:3604`) is
+  gated on the FLAG alone, not on ambient light -- leave it untouched.
 - The render: it already reads the map. Because `LightLevelAt` folds in the
   legacy `.Bright`/`.Lit`, the render must paint those cells too -- so Bug A
   is fixed at the same place. Reconcile in `SumSteady`: add the legacy-static
@@ -160,14 +185,20 @@ separate explicitly-named accessor rather than silently changing it.
   linear-additive accumulation + a single tone-map curve is a localized change
   with zero reader rework. Do NOT bake the 0..255 scale into any reader.
 
+## Settled decisions (Brian, 2026-08-31), continued
+
+- **`LIGHT_HIDE_MIN` = 90**, shared by hiding and light aversion. Provisional
+  only in that inc-qvk9's additive/tone-map rework rescales the 0..255 axis
+  later and makes this a live knob; the *rule* (dim-enough-to-hide ==
+  dim-enough-not-to-suffer) is fixed.
+- **Light aversion folds into the unified model**, at the same 90 cutoff. No
+  separate `FI_LIGHT`-field path survives for it. This is a behaviour change:
+  light-averse creatures now suffer near torches, lava, and the player's light,
+  where before only a cast light spell bit them.
+
 ## Open items to settle in review
 
-- `LIGHT_HIDE_MIN` default (proposed ~128 on today's scale). Re-tuned by eye,
-  and the scale itself changes when inc-qvk9's additive/tone-map rework lands,
-  so treat the value as provisional. inc-qvk9 makes it a live knob.
-- Light-averse monsters (`M_LIGHT_AVERSE`) read "lit area" for penalties, not
-  detection. Unifying "lit" changes when they suffer. In scope (consistent) or
-  frozen for now? Still needs Brian's ruling.
+- None blocking. Values above are provisional against inc-qvk9's rescale only.
 
 ## Test / verification plan
 
@@ -183,6 +214,11 @@ separate explicitly-named accessor rather than silently changing it.
   before; the warning still fires (unchanged, correct).
 - **Dim vs bright:** a character in a dim torch-edge tile (level in
   [`LIGHT_SEE_MIN`, `LIGHT_HIDE_MIN`)) can still hide; one cell brighter cannot.
+- **Light aversion, folded in:** a light-averse creature standing near a wall
+  torch / on magma / beside the player's light now takes the -4 combat penalty
+  and gets the squint message; pre-fix it took neither. A dim-tile (48..90)
+  light-averse creature takes NO penalty (mirrors the hide test). The squint
+  message fires once on dim->bright, not every turn.
 - **No-regression:** `nightly_verify --compare`, and the existing
   `check_lightmap.sh` / `check_hide_carried_light.sh` stay green.
 - **Upstream marking:** the hide-gate changes extend the inc-nhrk markers;
@@ -191,7 +227,9 @@ separate explicitly-named accessor rather than silently changing it.
 ## Rough size
 
 Medium-heavy build: one new predicate + the `SumSteady` reconciliation
-(~1 file), repoint 8 sites (5 hide, 3 vision), the render fold-in, one new
-tunable, and the guard + two behavioural checks. The risk is concentrated in
-`SumSteady`'s anti-double-count rule and in proving the non-normal-detection
-invariant, not in the repointing.
+(~1 file), repoint 11 sites (5 hide, 3 vision, 3 light-averse), the render
+fold-in, one new tunable, and the guard + three behavioural checks. The
+light-averse squint message is the one non-mechanical change (field-entry event
+-> per-turn dim->bright transition). The risk is concentrated in `SumSteady`'s
+anti-double-count rule and in proving the non-normal-detection invariant, not
+in the repointing.
