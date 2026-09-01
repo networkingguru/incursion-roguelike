@@ -1,0 +1,36 @@
+# Controls for tools/check_holy_undead.sh on seed 4. A Holy paladin strikes an
+# evil-undead mummy (must be smitten) and a neutral living brown bear (must not
+# be). Both are frozen and tanky. The sacred mount stands west, leaving east
+# and south free.
+@include chargen-paladin.keys
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*3
+SPACE
+DOWN*7
+SPACE
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Corporeal Undead"
+@choose "mummy"
+RIGHT
+ENTER
+@until "hitting the mummy" RIGHT
+v
+@dump:mummy-hit
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "brown bear"
+DOWN
+ENTER
+@until "hitting the brown bear" DOWN
+v
+@dump:brown-bear-hit
+ESC
+@quit

@@ -6644,7 +6644,12 @@ WoundIgnored:
                                         if (e.EVictim->isMType(MA_GOOD) &&
                                             !e.EVictim->isMType(MA_UNDEAD))
                                             break;
-                                        else if (!e.EVictim->isMType(MA_EVIL))
+                                        /* upstream: undead must take full holy damage; Julian's
+                                        v0.6.5B has the same pure alignment-logic bug on Win32
+                                        with original typedefs. Evidence: Observed. Tracking:
+                                        inc-ragf. Not sent. */
+                                        else if (!e.EVictim->isMType(MA_EVIL) &&
+                                            !e.EVictim->isMType(MA_UNDEAD))
                                             e.vDmg /= 2;
                                         e.DType = AD_NORM;
                                         if (!e.Terse)
@@ -7756,7 +7761,11 @@ void Weapon::QualityDmgSingle(EventInfo &e, int32 q)
     case WQ_HOLY:
       if (!e.ETarget->isCreature()) break;
       if (!e.EActor->isMType(MA_GOOD)) break; 
-      if (!e.EVictim->isMType(MA_EVIL))
+      /* upstream: Holy weapons must smite undead; Julian's v0.6.5B has the
+         same pure alignment-logic bug on Win32 with original typedefs.
+         Evidence: Observed. Tracking: inc-ragf. Not sent. */
+      if (!e.EVictim->isMType(MA_EVIL) &&
+          !e.EVictim->isMType(MA_UNDEAD))
         break;
       txt1 = "Holy purity"; txt2 = "sacred";
       txt3 = "white light"; txt4 = "holy";

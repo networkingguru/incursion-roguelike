@@ -1,0 +1,50 @@
+# Regression fixture for inc-ragf: Holy weapons must smite undead even when
+# the victim is not evil. Read by tools/check_holy_undead.sh on seed 4.
+#
+# The paladin's Holy sword strikes a neutral black bear given the zombie
+# template. It is the red-to-green subject. The two controls live in
+# smite-holy-undead-controls.keys so a surviving hostile cannot put later
+# wizard commands through the Abort/Flee/Disengage prompt.
+
+@include chargen-paladin.keys
+
+# Free Advancement, Infinite Fatigue, and Freeze Monsters. Level 2 gives the
+# paladin innate fear immunity before it faces the zombie.
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*2
+SPACE
+DOWN
+SPACE
+DOWN*7
+SPACE
+@dump:switches
+ESC
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+ESC
+
+# --- ZOMBIE BLACK BEAR EAST (non-evil undead: RED -> GREEN) -----------------
+w
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "black bear"
+RIGHT
+ENTER
+w
+@choose "Add Template to Creature"
+RIGHT
+ENTER
+# Two eligible entries render as "zombie". The harness's joined form combines
+# the displayed letter and label, uniquely naming the first as "G zombie".
+@choose "G zombie"
+@dump:zombie-black-bear-summoned
+@until "hitting the black bear zombie" RIGHT
+v
+@dump:zombie-black-bear-hit
+ESC
+@quit
