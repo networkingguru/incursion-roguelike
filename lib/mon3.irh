@@ -1188,17 +1188,23 @@ Monster "mote of fire" : MA_VORTEX, MA_ELEMENTAL
            M_SKIRMISH, M_FIRE, M_NOPOLY, M_NOHEAD;
     On Event EV_MOVE, EV_STRIKE {
       if (!GetHandle(EActor) || EActor->isDead())
-        return NOTHING; 
+        return NOTHING;
       if (!EMap->SolidAt(EActor->x,EActor->y)) {
         EMap->WriteTerra(EActor->x,EActor->y,$"brimstone");
-      } 
-      if (GetHandle(EVictim) && !EVictim->isDead() && 
+      }
+      if (GetHandle(EVictim) && !EVictim->isDead() &&
           !EMap->SolidAt(EVictim->x,EVictim->y)) {
         EMap->WriteTerra(EVictim->x,EVictim->y,$"brimstone");
-      } 
+      }
     } ;
+    On Event EV_INITIALIZE {
+      /* inc-aau6: "an intense field of heat", per its own Desc. */
+      EMap->NewField(FI_LIGHT|FI_MOBILE,EActor->x,EActor->y,1,
+        GLYPH_VALUE(GLYPH_FLOOR2, RED),-1,NULL_ID,EActor);
+      return NOTHING;
+      };
     Desc: "This strange quasi-elemental is surrounded by an intense field
-    of heat. It leaves a trail of melted brimstone in its path."; 
+    of heat. It leaves a trail of melted brimstone in its path.";
   }
 
 Monster "mote of negative energy" : MA_VORTEX, MA_ELEMENTAL, MA_OUTSIDER
@@ -1362,13 +1368,19 @@ Monster "will-o'-wisp" : MA_VORTEX, MA_ABERRATION
       switch(e.eID) {
         case $"magic missile":
         // case $"maze":
-          return NOTHING; 
+          return NOTHING;
         default:
           e.Immune = true;
           return DONE;
         }
       return NOTHING;
     };
+    On Event EV_INITIALIZE {
+      /* inc-aau6: "sheds light as a torch", per its own Desc. */
+      EMap->NewField(FI_LIGHT|FI_MOBILE,EActor->x,EActor->y,3,
+        GLYPH_VALUE(GLYPH_FLOOR2, WHITE),-1,NULL_ID,EActor);
+      return NOTHING;
+      };
   }
 
 
@@ -2831,6 +2843,12 @@ Monster "magma creeper" : MA_JELLY
     target, not distinguishing among foes, and attempting to slam or
     (preferably) grab the target. If two creatures are an equal distance
     from it, the magma creeper attacks the larger of the two.";
+    On Event EV_INITIALIZE {
+      /* inc-aau6: a "quick-moving flow of magma" glows like one. */
+      EMap->NewField(FI_LIGHT|FI_MOBILE,EActor->x,EActor->y,4,
+        GLYPH_VALUE(GLYPH_FLOOR2, RED),-1,NULL_ID,EActor);
+      return NOTHING;
+      };
   }
 
 Monster "stunjelly" : MA_JELLY
@@ -3746,9 +3764,9 @@ Monster "burning ghast" : MA_REVENANT
       * GROUP_ALLY $"ghoul";
     On Event EVICTIM(EV_DAMAGE) {
       if (e.DType == AD_SOAK) {
-        e.DType = AD_NORM; 
+        e.DType = AD_NORM;
         e.vDmg = e.vDmg * 2;
-        } 
+        }
       return NOTHING;
       },
     POST(EV_INVOKE) {
@@ -3756,7 +3774,13 @@ Monster "burning ghast" : MA_REVENANT
       return NOTHING;
       },
     MSG_SPECABIL
-      "It takes double damage from soaking attacks.";
+      "It takes double damage from soaking attacks.",
+    EV_INITIALIZE {
+      /* inc-aau6: an undead put to death by fire and still burning. */
+      EMap->NewField(FI_LIGHT|FI_MOBILE,EActor->x,EActor->y,2,
+        GLYPH_VALUE(GLYPH_FLOOR2, RED),-1,NULL_ID,EActor);
+      return NOTHING;
+      };
   }
 
 Monster "icewight" : MA_REVENANT

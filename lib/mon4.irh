@@ -336,8 +336,14 @@ Monster "palrethee" : MA_DEMON
             if (h->QualityOK(WQ_FLAMING))
               h->AddQuality(WQ_FLAMING);
         return NOTHING;
+        },
+      EV_INITIALIZE {
+        /* inc-aau6: "turned into eternal torches -- set aflame", per Desc. */
+        EMap->NewField(FI_LIGHT|FI_MOBILE,EActor->x,EActor->y,3,
+          GLYPH_VALUE(GLYPH_FLOOR2, RED),-1,NULL_ID,EActor);
+        return NOTHING;
         };
-      Gear: 
+      Gear:
         50% $"long sword" +1 else
           50% $"halberd" +1 else
             50% $"glaive" +1 else
@@ -2270,8 +2276,16 @@ Monster word  " fire elemental" : MA_ELEMENTAL                                  
           return ABORT;                                                               \
         }                                                                             \
       return NOTHING;                                                                 \
+      },                                                                              \
+    EV_INITIALIZE {                                                                   \
+      /* inc-aau6: scaled with the elemental's CR, since "cr" already spans   */      \
+      /* the family from tiny (1) to elder (12) in this macro.                */      \
+      EMap->NewField(FI_LIGHT|FI_MOBILE,EActor->x,EActor->y,                          \
+        (cr >= 8 ? 4 : (cr >= 4 ? 2 : 1)),                                            \
+        GLYPH_VALUE(GLYPH_FLOOR2, RED),-1,NULL_ID,EActor);                            \
+      return NOTHING;                                                                 \
       };                                                                              \
-  } 
+  }
 
 Effect "Burn" : EA_INFLICT
   { xval: TRAP_EVENT; yval: EV_TURN; Flags: EF_PERSISTANT, EF_MUNDANE; 
@@ -2763,7 +2777,13 @@ Monster "efreeti" : MA_GENIE, MA_FIRE
     Plane of Fire. An efreeti stands about 12 feet tall and weighs about
     2,000 pounds. Efreet love to mislead, befuddle, and confuse their
     foes. They do so for enjoyment as well as a battle tactic.";
-  } 
+    On Event EV_INITIALIZE {
+      /* inc-aau6: a genie of the Elemental Plane of Fire glows. */
+      EMap->NewField(FI_LIGHT|FI_MOBILE,EActor->x,EActor->y,3,
+        GLYPH_VALUE(GLYPH_FLOOR2, RED),-1,NULL_ID,EActor);
+      return NOTHING;
+      };
+  }
 
 /* Marid */
 
@@ -2796,10 +2816,13 @@ Monster "azer" : MA_ELEMENTALKIN, MA_ADVENTURER, MA_DWARF
       for(h=EActor->FirstInv();h;h=EActor->NextInv()) {
         if (h->QualityOK(IQ_DWARVEN))
           h->AddQuality(IQ_DWARVEN);
-      } 
+      }
+      /* inc-aau6: the flames wreathing an azer's face shed real light. */
+      EMap->NewField(FI_LIGHT|FI_MOBILE,EActor->x,EActor->y,2,
+        GLYPH_VALUE(GLYPH_FLOOR2, RED),-1,NULL_ID,EActor);
       return NOTHING;
     };
-  } 
+  }
 
 Monster "azerkin" : MA_ELEMENTALKIN, MA_ADVENTURER, MA_DWARF
   { Image: pink 'K'; Size: SZ_MEDIUM;  
@@ -2829,10 +2852,14 @@ Monster "azerkin" : MA_ELEMENTALKIN, MA_ADVENTURER, MA_DWARF
       for(h=EActor->FirstInv();h;h=EActor->NextInv()) {
         if (h->QualityOK(IQ_DWARVEN))
           h->AddQuality(IQ_DWARVEN);
-      } 
+      }
+      /* inc-aau6: the flames wreathing an azerkin's face shed real light,
+         dimmer than a true azer's -- radius 1 against the azer's 2. */
+      EMap->NewField(FI_LIGHT|FI_MOBILE,EActor->x,EActor->y,1,
+        GLYPH_VALUE(GLYPH_FLOOR2, RED),-1,NULL_ID,EActor);
       return NOTHING;
     };
-  } 
+  }
 
 /* ww: these things are way too weak ... let's beef it up! */
 Monster "dust devil;monster" : MA_VORTEX, MA_ELEMENTALKIN
@@ -2869,11 +2896,17 @@ Monster "thoqqua" : MA_ELEMENTALKIN, MA_FIRE, MA_BURROW
            M_BLIND, M_DEAF, M_THICK_HIDE, M_FIRE, M_EARTH;
     Desc: "The thoqqua, or lavaworm, radiates a body heat strong
       enough to melt solid rock. It is native to the elemental
-      plane of fire, appears as a large segmented worm with a skin of 
-      rock and a pointed tip glowing red with heat. Thoqqua are 
-      ill-tempered creatures, but are often found in the company of 
-      gnomes, who can use their empathy with burrowing creatures 
+      plane of fire, appears as a large segmented worm with a skin of
+      rock and a pointed tip glowing red with heat. Thoqqua are
+      ill-tempered creatures, but are often found in the company of
+      gnomes, who can use their empathy with burrowing creatures
       to tame these beasts.";
+    On Event EV_INITIALIZE {
+      /* inc-aau6: its heated tip glows visibly, per its own Desc. */
+      EMap->NewField(FI_LIGHT|FI_MOBILE,EActor->x,EActor->y,2,
+        GLYPH_VALUE(GLYPH_FLOOR2, RED),-1,NULL_ID,EActor);
+      return NOTHING;
+      };
   }
 
 Monster "vampiric mist" : MA_ELEMENTALKIN, MA_AIR
@@ -4009,6 +4042,13 @@ Template "flame" : TM_PLANAR for MA_NLIVING
           EActor->HasMFlag(M_FIRE) || EActor->HasMFlag(M_WATER) )
         return -1;
       return 0;
+      },
+    EV_INITIALIZE {
+      /* inc-aau6: a body of living fire sheds light of its own,
+         independent of anything it carries. */
+      EMap->NewField(FI_LIGHT|FI_MOBILE,EActor->x,EActor->y,2,
+        GLYPH_VALUE(GLYPH_FLOOR2, RED),-1,NULL_ID,EActor);
+      return NOTHING;
       };
   }
 

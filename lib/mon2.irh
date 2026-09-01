@@ -3725,7 +3725,13 @@ Monster "firebat" : MA_BEAST, MA_BAT
          M_NOHANDS, M_NOLIMBS, M_FLYER, M_BLIND, M_FIRE;
   Desc: "The firebat bears a passing resemblance to the standard nocturnal
   bat, if you are willing to overlook the magical aura of flame that
-  surrounds it."; 
+  surrounds it.";
+  On Event EV_INITIALIZE {
+    /* inc-aau6: the "magical aura of flame" its own Desc names. */
+    EMap->NewField(FI_LIGHT|FI_MOBILE,EActor->x,EActor->y,1,
+      GLYPH_VALUE(GLYPH_FLOOR2, RED),-1,NULL_ID,EActor);
+    return NOTHING;
+    };
 }
 
 Monster "night hunter" : MA_ANIMAL, MA_BAT
