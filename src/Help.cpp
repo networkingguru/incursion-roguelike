@@ -1515,6 +1515,8 @@ static String PadHintText(const char *hint) {
 }
 
 bool Term::PadHelpActive() {
+    /* This hook forces the controller ? help screen verified by
+       tools/check_pad_help.sh; it serves bead inc-5mtz native gamepad support. */
     const char *force = getenv("INCURSION_PAD_HELP");
     if (force && *force)
         return *force != '0';
