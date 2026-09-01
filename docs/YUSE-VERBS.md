@@ -54,7 +54,7 @@ carries up to three prompts and a flag word:
 ### What happens when you pick an unimplemented verb
 
 The event is thrown, nothing handles it, and it falls through to
-`Creature::HandleVerb` (`src/Player.cpp:1664` via `src/Creature.cpp:1008`).
+`Creature::HandleVerb` (`src/Player.cpp:1664` via `src/Creature.cpp:1009`).
 That prints **"That verb can't be used that way."** for post-phase events and
 otherwise returns silently. So a dead verb costs you the prompts and gives
 you either that message or nothing at all.
@@ -65,7 +65,7 @@ you either that message or nothing at all.
 
 ### Social verbs
 
-All are implemented in `src/Social.cpp`, and `src/Creature.cpp:719-767`
+All are implemented in `src/Social.cpp`, and `src/Creature.cpp:720-768`
 dispatches them. The `y` menu itself lists every entry at all times and
 hides nothing (`src/Player.cpp:1551`). The conditions below gate the **Talk**
 prompt instead: `Creature::PreTalk` (`src/Social.cpp:101`) drops a choice from
@@ -103,19 +103,19 @@ or friendly.
 | Eat | eat food | `src/Item.cpp:1941` |
 | Read | read a scroll or book | `src/Item.cpp:830` |
 | Zap | aim a wand at a target | `src/Item.cpp:816` |
-| Wield | equip a weapon | `src/Creature.cpp:924` |
-| Shoot / Throw | ranged attack — **one event**, `EV_RATTACK` | `src/Creature.cpp:831` |
+| Wield | equip a weapon | `src/Creature.cpp:925` |
+| Shoot / Throw | ranged attack — **one event**, `EV_RATTACK` | `src/Creature.cpp:832` |
 | Insert | put an item into a container | `src/Inv.cpp:1106` |
 | Divide | split a stack; refuses singular items; the new stack is `DROPPED` for 10 turns | `src/Player.cpp:1666` |
 | Open / Open With | doors and containers | `src/Feature.cpp:612` |
 | Close | shut a door | `src/Feature.cpp:727` |
 | Enter | portals and the like | `src/Feature.cpp:254` |
-| Break | break a target | `src/Creature.cpp:988` |
-| Push | shove a target | `src/Creature.cpp:792` |
-| Dig | dig in a direction | `src/Creature.cpp:948` |
-| Talk | open conversation | `src/Creature.cpp:715` |
-| **Mount** | ride a creature — full validation, see below | `src/Creature.cpp:965` |
-| **Dismount** | get off; takes no target | `src/Creature.cpp:969` |
+| Break | break a target | `src/Creature.cpp:989` |
+| Push | shove a target | `src/Creature.cpp:793` |
+| Dig | dig in a direction | `src/Creature.cpp:949` |
+| Talk | open conversation | `src/Creature.cpp:716` |
+| **Mount** | ride a creature — full validation, see below | `src/Creature.cpp:966` |
+| **Dismount** | get off; takes no target | `src/Creature.cpp:970` |
 
 ### Verbs that work but are narrower than they look
 
