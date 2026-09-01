@@ -28,8 +28,8 @@ order: Region under the subject (`:172`), special Terrain (`:192`), illusory Ter
 for the victim (`:285`); the map object (`:305`); then `e.p[3]` down to `e.p[0]` — item2, item, victim, actor (`:322`), each
 preceded by its `TRAP_EVENT` stati matching `META(S->Mag)` (`:325-339`). `ThrowTo` (`:363`) then walks the class hierarchy upward
 — Player -> Character -> Creature -> Thing, Weapon -> Item -> Thing (`HIER` macro, `:371-407`); any level may stop it.
-`Creature::Event` (`src/Creature.cpp:673`) asks the monster resource and each `TEMPLATE` stati, first as `EVICTIM(Ev)` if this
-creature is the victim (`:676`), then as the plain event if it is the actor (`:694`).
+`Creature::Event` (`src/Creature.cpp:674`) asks the monster resource and each `TEMPLATE` stati, first as `EVICTIM(Ev)` if this
+creature is the victim (`:677`), then as the plain event if it is the actor (`:695`).
 
 A handler changes the outcome four ways. `DONE`/`ABORT` stop dispatch at every level above (`src/Event.cpp:179`, `:245`, `:311`,
 `:374`); `NOMSG` sets `e.Terse` and continues (`:181`); `NOTHING` continues, and a whole sweep of `NOTHING` reaches the
@@ -65,19 +65,19 @@ FAnnot/NAnnot doesn't normally [work]" (`src/Annot.cpp:619-621`); `FAnnot2` is a
 `Thing::PlaceNear` holds `static Creature* Displace[64]` (`src/Display.cpp:413`) and re-enters itself via `PlaceAt` (`:550`),
 which the code notes can overflow the C stack (`:544-546`). Only three places are protected: `StatiCollection::Nested` defers
 stati fixups to the outermost iteration (`inc/Map.h:700-705`, field at `:790`), `Creature::Perceives` uses a static counter as a recursion
-mutex (`src/Vision.cpp:386-387`), and `Creature::Multiply` refuses to breed past a nesting depth of 4 (`src/Creature.cpp:497`).
+mutex (`src/Vision.cpp:401-402`), and `Creature::Multiply` refuses to breed past a nesting depth of 4 (`src/Creature.cpp:498`).
 
 ## The three crashes
 **1. Event Stack Overflow: blast -> Multiply -> place -> blast. Fixed (inc-upw.5).** `Magic::Blast` throws `EV_DAMAGE`
 (`src/Effects.cpp:261`) -> a script handler on `POST(EV_DAMAGE)`/`EVICTIM(EV_DAMAGE)` (id moss `lib/mon3.irh:2258`, brown
 mold `lib/mon3.irh:2296` and `lib/mon3.irh:2304`) or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3354`)
-calls `Multiply` -> `Creature::Multiply` (`src/Creature.cpp:485`) -> `mn->PlaceAt` (`:556`)
+calls `Multiply` -> `Creature::Multiply` (`src/Creature.cpp:486`) -> `mn->PlaceAt` (`:557`)
 throws `EV_PLACE` (`src/Display.cpp:224`, `:248`) and `EV_FIELDON` (`:314`) -> `Creature::FieldOn` re-throws `EV_EFFECT` for
-`FI_MODIFIER` (`src/Status.cpp:1688`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1202`).
+`FI_MODIFIER` (`src/Status.cpp:1685`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1202`).
 *Invariant violated:* `Creature::FieldOn` sets `EActor` to the field's creator, so the script calls `Multiply` on the same
-generation-0 parent every time, and the generation cap at `src/Creature.cpp:509` can never apply to it. Only `m->BreedCount >= 50`
-(`:513`) survives, far above the 128-frame stack. *Fix:* a nesting cap of 4 on `Multiply` (`:497`); `GENERATION` is now stamped at
-`:552`, before the child is placed at `:556`.
+generation-0 parent every time, and the generation cap at `src/Creature.cpp:510` can never apply to it. Only `m->BreedCount >= 50`
+(`:514`) survives, far above the 128-frame stack. *Fix:* a nesting cap of 4 on `Multiply` (`:498`); `GENERATION` is now stamped at
+`:553`, before the child is placed at `:557`.
 
 **2. `Player::MoveDepth` re-enters itself. Fixed (inc-upw.15, closed as a duplicate of inc-x9i).** `MoveDepth`
 (`src/Feature.cpp:1143`) calls `PlaceAt` (`:1414`) -> `PlaceAt` throws `EV_PLACE`/`EV_FIELDON` (`src/Display.cpp:224`, `:314`) and
@@ -109,11 +109,11 @@ grep -rn "ALIENIST_CLAUSE" lib/*.irh | grep -v define # 18 macro expansions
 ```
 
 ## Suspected defects
-1. Fixed. `src/Creature.cpp:552` now stamps `GENERATION` before `:556` places the child, and `:497` caps `Multiply` nesting at 4.
+1. Fixed. `src/Creature.cpp:553` now stamps `GENERATION` before `:557` places the child, and `:498` caps `Multiply` nesting at 4.
 2. `src/Display.cpp:413` `static Creature* Displace[64]` in a function re-entering itself at `:550`; `Displace[dc++]` (`:510`) has
 no bound check and `dc` is `uint8`.
 3. `src/Effects.cpp:153` states `e.eID` may be 0 for breath weapons; `:166` then reads `TEFF(e.eID)->Schools` unchecked. Same
-shape at `src/Creature.cpp:817`, `src/Magic.cpp:1198`.
+shape at `src/Creature.cpp:818`, `src/Magic.cpp:1198`.
 4. Fixed. `src/Res.cpp:348-353` range-checks the module slot and returns NULL, so `ASSERT` no longer guards the dereference.
 5. `src/VMachine.cpp:520` restores `xID` after `CMEM` because the call may have re-entered `Execute`, but not `mn`, `Memory` or
 `szMemory` (`:461-465`), leaving a cross-module outer script on the inner module's data segment.
