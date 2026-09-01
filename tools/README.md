@@ -580,6 +580,11 @@ tools/check_sentinel_live.sh
 tools/check_underdark_live.sh
 tools/check_wand_acid_type.sh       # residual acid burn damages a fire-immune victim
 tools/check_lightmap.sh             # the light map: no light through walls, a carried light lights its bearer
+tools/check_light_filter.sh         # light dims and shifts colour crossing an ice wall
+tools/check_hide_carried_light.sh   # a creature carrying a lit source cannot hide
+tools/check_hide_dynamic_light.sh   # a dynamic external light breaks hiding, with no static .Bright
+tools/check_light_averse.sh         # light aversion bites in a dynamically lit cell, not a dim one
+tools/check_holy_undead.sh          # a Holy weapon smites undead that are not evil
 ```
 
 Run `check_headless.sh` before the rest of the tier. They all drive
@@ -628,6 +633,20 @@ without recording anything. Do NOT run `gate_record.sh` unless you mean to
 replace that baseline — see below.
 
 ### The ones you must not run casually
+
+**`tools/check_distant_light_vision.sh` and `tools/check_nonnormal_invariant.sh`
+are A/B checks that build both sides themselves.** Each one runs
+`git worktree add --detach` for the before ref and the after ref
+(`check_distant_light_vision.sh:66`, `check_nonnormal_invariant.sh:55`), builds
+`BACKEND=posix ./build_macos.sh` inside each, and on exit runs
+`git worktree remove --force` and `git worktree prune`
+(`check_distant_light_vision.sh:48-50`, `check_nonnormal_invariant.sh:42-45`).
+So they cost two full builds, not one run, and they touch this repository's
+worktree list. They belong to Tier 3 by what they measure and to this section
+by what they cost. `check_nonnormal_invariant.sh` sweeps seeds 1-10, so budget
+for it accordingly. `tools/check_light_averse.sh` is milder but not free: if
+`./incursion-headless` is missing it builds one itself (`check_light_averse.sh:27`)
+instead of reporting INCONCLUSIVE.
 
 **`tools/check_abs_path.sh` runs the real game from the repo root, and moves the
 live `Options.Dat` aside.** Verified: `check_abs_path.sh:22-27` renames `Options.Dat` to
