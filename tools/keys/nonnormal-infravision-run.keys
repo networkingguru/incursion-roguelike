@@ -1,0 +1,15 @@
+# Measurement half of nonnormal-infravision.keys.  The run directory already
+# contains exactly one saved orc standing inside Deeper Darkness.
+
+@expect "Initial Choices"
+@choose "Restore a Saved Game"
+@expect "Choose a character:"
+a
+
+# Spend turns and redraw repeatedly without leaving the six-cell darkness
+# globe.  ShowMap writes one complete visible/remembered/unseen count per draw
+# when INCURSION_MAP_PROBE is set.
+@dump:darkness-start
+s . s . s . s .
+@dump:darkness-end
+@quit

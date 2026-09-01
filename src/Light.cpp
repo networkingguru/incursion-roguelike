@@ -557,6 +557,7 @@ uint8 LightLevelAt(int16 x, int16 y) {
 }
 
 bool LightBrightAt(int16 x, int16 y) {
+  /* upstream: source-blind hiding is upstream's because Win32 BrightAt/FI_LIGHT also omits dynamic external sources; Traced, inc-jcg4, not sent. */
   return LightLevelAt(x, y) >= LIGHT_HIDE_MIN;
 }
 

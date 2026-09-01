@@ -1,0 +1,21 @@
+# Phase-5 invariant fixture for inc-jcg4.  The standard orc has innate
+# infravision, acquires and equips no light, and casts Deeper Darkness around
+# himself so normal-light vision contributes no detected cells.  Every cell
+# detected inside the globe therefore comes from the orc's non-normal sense.
+
+@include chargen-rogue.keys
+ESC
+
+# Wizard learning marks the spell innate, so the level-one rogue can cast it
+# deterministically without depending on mana, class, god or the fixed seed.
+w y
+@choose "Learn Any Spell"
+"Deeper Darkness" ENTER
+m
+@choose "Deeper Darkness"
+RIGHT ENTER
+
+# Save the already-dark character.  The invariant run restores this save in a
+# fresh process with the map probe enabled, so chargen and pre-cast normal
+# vision never enter the byte comparison.
+ESC a

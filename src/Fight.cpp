@@ -3548,6 +3548,7 @@ EvReturn Creature::PreStrike(EventInfo &e) /* this == EActor */
         e.strHit += " +4 BS";
     } 
 
+    /* upstream: field-only light aversion is upstream's because Win32 also ignores torchlight, magma glow and .Bright rooms; Traced, inc-jcg4, not sent. */
     if (e.EActor->HasMFlag(M_LIGHT_AVERSE) &&
         e.EActor->m->BrightAt(e.EActor->x,e.EActor->y))
       {
