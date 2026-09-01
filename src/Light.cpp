@@ -440,14 +440,19 @@ static void ScanFog(Map *m) {
 }
 
 static void SumSteady(Map *m) {
-  static const LightRGB Skylight = { 170, 185, 210 };
   for (int16 y = 0; y < lmH; y++)
     for (int16 x = 0; x < lmW; x++) {
-      LightRGB &d = Steady[(int32)y * lmW + x];
+      int32 idx = (int32)y * lmW + x;
+      LightRGB &d = Steady[idx];
       d.r = d.g = d.b = 0;
       const LocationInfo &at = m->At(x, y);
-      if (at.isSkylight) AddScaled(d, Skylight, 1.0f);
-      /* Lit ambient double-counted wall torches, which are sources in their own right. */
+      /* Legacy static light contributes only outside live footprints and dark fields. inc-jcg4 */
+      if (!SrcLit[idx] && !m->FieldAt(x, y, FI_DARKNESS | FI_SHADOW)) {
+        if (at.Bright)
+          AddScaled(d, LIGHT_LEGACY_COLOUR, LIGHT_LEGACY_BRIGHT / 255.0f);
+        else if (at.Lit)
+          AddScaled(d, LIGHT_LEGACY_COLOUR, LIGHT_LEGACY_LIT / 255.0f);
+      }
     }
   for (int32 i = 0; i < nSrc; i++) {
     const LightSource &s = Src[i];

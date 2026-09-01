@@ -82,6 +82,7 @@ enum { LIGHT_LEGACY = 0, LIGHT_STEADY = 1, LIGHT_SHIMMER = 2 };
 #define LIGHT_HIDE_MIN    90    /* 0..255; at/above this a cell is "brightly lit": breaks hide and triggers light aversion */
 #define LIGHT_LEGACY_BRIGHT 160 /* the 0..255 level a legacy .Bright cell contributes (>= LIGHT_HIDE_MIN) */
 #define LIGHT_LEGACY_LIT  64    /* the level a legacy .Lit-but-not-.Bright cell contributes (visible, still hideable) */
+static const LightRGB LIGHT_LEGACY_COLOUR = { 255, 160, 60 }; /* render colour of legacy static lighting; by-eye tuning knob */
 #define LIGHT_ICE_PASS    0.55f /* fraction of light that survives one cell of ice */
 #define LIGHT_FOG_PASS    0.45f /* fraction of light that survives one cell of fog */
 #define LIGHT_FILTER_TINT 0.65f /* how far a crossed cell pulls light toward its own colour */
