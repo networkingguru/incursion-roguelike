@@ -472,10 +472,13 @@ the unfixed tree before it is trusted.
 | `check_sunblade_light_range.sh` | Does the Sunblade's activated light field reach the promised 60 feet (6 squares)? |
 | `check_lightmap.sh` | Does the light map obey line of sight — no lit cell that no source can reach through walls — and does a carried light light its bearer? |
 | `check_light_filter.sh` | Does light lose strength and colour crossing an ice wall? Two sessions differ by one terrain letter, and the cell two steps beyond must read dimmer through the ice than through open air. |
+| `check_light_averse.sh` | Does a light-averse creature take its -4 combat penalty and squint in a cell lit only by a dynamic external source, and neither in a merely dim cell? |
+| `check_nonnormal_invariant.sh` | Is non-normal detection (an infravision character in darkness) byte-identical across the inc-jcg4 unified-light change over seeds 1-10? |
 | `check_sunblade_negative_plane.sh` | Does the Sunblade double damage against undead and both named non-undead Negative-Plane creatures, without retaining its old wraith-only `5d6` rider? |
 | `check_sylvan_scimitar_prose.sh` | Does the Sylvan Scimitar description say elves are neutral toward its bearer, matching its `NEUTRAL_TO MA_ELF` grant and that grant's Neutral-quality resolution in `src/Target.cpp`, rather than the "friendly" it claimed before? |
 | `check_shadow_shifting.sh` | Does the Cloak of Shadow Shifting require darkness at both endpoints, with the source refusal before daily charge accounting? |
 | `check_hide_carried_light.sh` | Can a creature carrying a lit light source still hide in shadows (it must not)? |
+| `check_hide_dynamic_light.sh` | Does a creature hiding in a cell lit only by a dynamic external source -- magma, a live wall torch, or another creature's torch, with no static `.Bright` and no carried light -- get its hide broken and warned? |
 | `check_bracers_defense_page.sh` | Does the Bracers of Defense page state that Defense Class improves by the magical plus and Coverage by twice the plus? |
 | `check_shadowstone_page.sh` | Does the Shadowstone page name the stone and state that its Hide bonus is twice its magical plus? |
 | `check_sunblade_acc_crit.sh` | Does the Sunblade still carry a bastard sword's Acc +2 and Crit x2 while keeping its own damage, threat range and short-sword speed? |
