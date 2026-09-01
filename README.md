@@ -475,6 +475,7 @@ the unfixed tree before it is trusted.
 | `check_light_averse.sh` | Does a light-averse creature take its -4 combat penalty and squint in a cell lit only by a dynamic external source, and neither in a merely dim cell? |
 | `check_nonnormal_invariant.sh` | Is non-normal detection (an infravision character in darkness) byte-identical across the inc-jcg4 unified-light change over seeds 1-10? |
 | `check_sunblade_negative_plane.sh` | Does the Sunblade double damage against undead and both named non-undead Negative-Plane creatures, without retaining its old wraith-only `5d6` rider? |
+| `check_holy_undead.sh` | Does a Holy weapon, and holy damage, smite an undead creature that is not evil? Seed 4 gives a neutral zombie-templated black bear as the subject, an evil mummy as the positive control and a living neutral brown bear as the negative one. |
 | `check_sylvan_scimitar_prose.sh` | Does the Sylvan Scimitar description say elves are neutral toward its bearer, matching its `NEUTRAL_TO MA_ELF` grant and that grant's Neutral-quality resolution in `src/Target.cpp`, rather than the "friendly" it claimed before? |
 | `check_shadow_shifting.sh` | Does the Cloak of Shadow Shifting require darkness at both endpoints, with the source refusal before daily charge accounting? |
 | `check_hide_carried_light.sh` | Can a creature carrying a lit light source still hide in shadows (it must not)? |
@@ -512,6 +513,7 @@ the unfixed tree before it is trusted.
 | `check_masterarcher_live.sh` | Does the Master Archer's ranged sneak attack fire with a bow only, and not with a sling? |
 | `check_menu_page_arrows.sh` | Does the RIGHT arrow page a long selection menu forward, so a Steam Deck player who has a stick but no Tab key can reach a row on the second page and still pick it? |
 | `check_pad_help.sh` | Does the `?` screen name the pad control beside each key (`Look ... D-pad > (l)`) when a controller is in front of the game, fit on the screen without an assertion, and stay keyboard-only when none is? The headless build forces the pad screen with `INCURSION_PAD_HELP=1`. |
+| `check_vdf_tokens.sh` | Does every `key_press` token in the Steam Input config use a spelling Steam recognises? An unrecognised token neither rejects the config nor logs anything -- the activator silently never fires -- which is how `key_press MINUS` left the R3-hold Exchange Weapons binding dead in a shipped release. |
 | `check_menu_value.sh` | Does a script menu give back the same object handle it was handed? |
 | `check_natural_speed.sh` | Has the hard-coded brawl-speed floor drifted from the fastest weapon in `lib/weapons.irh`? |
 | `check_natural_speed_live.sh` | Does flipping one byte of `Options.Dat` really move the Brawl row on the character sheet, from 100% to 175%? |
