@@ -461,7 +461,10 @@ void TextTerm::ShowTraits() {
         
       }
     else
-      Write("Readyness\nHunger State\nLocomotion\nHealth State\nFatigue State\n\n");
+      /* upstream: base-code defect, not a port artefact. "Readyness" is the
+         label spelling in shared engine code, so Win32 shows it too; the usual
+         spelling is "Readiness". Observed. inc-br1x; not sent. */
+      Write("Readiness\nHunger State\nLocomotion\nHealth State\nFatigue State\n\n");
 
     for(i=0;i!=7;i++)
     {

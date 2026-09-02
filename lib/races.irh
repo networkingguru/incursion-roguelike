@@ -1885,6 +1885,11 @@ Race "Orc;race"
             EActor->setGodFlags($"Khasrach",GS_INVOLVED);
           }
       };
+    /* upstream: base-code defect, not a port artefact. Two typos in the Desc
+       prose below ship in shared game data, so Win32 with the original data
+       shows them too: "firemost" -> "foremost" (line 1672 of this file writes
+       "first and foremost" correctly), and "this count be" -> "this could be".
+       Both appear at race selection. Observed. inc-7lg0; not sent. */
     Desc: "<15>Str:<1>+4 <15>Dex:<1>-- <15>Con:<1>-- <15>Int:<1>-2 
       <15>Wis:<1>+2 <15>Cha:<1>-2 <15>Luc:<1>--
       \n<15>Favoured Classes:<2> Barbarian, Priest\n
@@ -1895,12 +1900,12 @@ Race "Orc;race"
       this connection with their savagery and their willing contentment to
       accept the lowest common denominator in all things. Orc society tends
       to be militaristic, patriarchal and driven by selfishness first and
-      firemost.
+      foremost.
       \n__Orcs are very, very rapid breeders, giving birth to litters and
       breeding frequently and casually -- along with their recent focus on
       the development of black-powder weapons, this may be the only factor
       that has allowed them to survive against dwarven prowess and human
-      sociological development. On the other hand, this count be exactly
+      sociological development. On the other hand, this could be exactly
       what humanity wants -- for ages untold, it has been a human warlord
       or necromancer who gathers and leads armies of orcs, usually as a
       distraction or tactical edge that ends in their near-extermination.
