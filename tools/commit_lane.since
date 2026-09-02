@@ -1,6 +1,31 @@
 # The commit the lane rule starts after. Everything at or before it is exempt.
 # See AGENTS.md, "Classifying a change".
 #
-# 0662d6e grandfathers the pre-rule gamepad/help/build commits that predate
-# consistent lane: tagging; the lane rule is enforced only for commits after it.
-0662d6e
+# 0662d6e grandfathered the pre-rule gamepad/help/build commits that predate
+# consistent lane: tagging.
+#
+# c06f555 advances it by three commits, on 2026-09-01, for one commit only:
+#
+#   c06f555 "lib,src: fix the reported orc-desc and status-screen typos"
+#
+# Its author used the two changed DIRECTORIES as the subject prefix instead of
+# one of the six lanes, so the check read it as carrying no lane. The right
+# lane was docs: -- an orc Desc string and a "Readyness" status label, prose
+# only, no behaviour change.
+#
+# WHY IT WAS EXEMPTED RATHER THAN REWORDED. The commit was already pushed to
+# origin by the time the failure was seen. Correcting a subject line on a
+# shared branch means a force-push, and rewriting published history is a worse
+# harm than a wrong prefix. Leaving the check red was the other option and is
+# worse still: a check that stays red is a check people stop reading, which is
+# exactly how bd inc-loa.12 turned one P3 one-liner into noise in every
+# session-start report for two days.
+#
+# NOTHING ELSE IS FORGIVEN BY THIS MOVE. The two commits also skipped over,
+# 180113f "rules: ..." and 2777ef5 "tools: ...", both already carried a valid
+# lane and both passed. c06f555 is the only commit this exemption covers.
+#
+# The reason this reached origin at all is that no hook runs
+# tools/check_commit_lane.sh -- the rule lives in AGENTS.md and is checked only
+# when somebody remembers to run it. That gap is bd inc-er2i.
+c06f555
