@@ -462,6 +462,7 @@ state theirs.
 | `package_macos.sh` | Produces `dist/Incursion-macOS-arm64/`, a plain folder with the game and its data. | BUILD INFRASTRUCTURE |
 | `app_launcher.c` | The bundle's entry point. Redirects the game's single read-write directory to `~/Library/Application Support/Incursion/` so nothing writes inside the signed bundle. Compiled by `package_macos_app.sh`. | BUILD INFRASTRUCTURE |
 | `setup_notary.sh` | Stores the notarisation credential in a mode-600 file so a release can be cut from a non-Terminal shell. Run once, by hand. | BUILD INFRASTRUCTURE |
+| `sync_issues.sh` | Publishes every bead labelled `public` to the Issues tab, so a stranger about to report a bug sees it already filed. Reads the live bead database on this machine; `SYNC_REPO` retargets it at a throwaway repository. See "The ones you must not run casually". | PUBLISHES OUTWARD |
 
 `package_macos.sh` is not superseded by `package_macos_app.sh`. They produce
 different artefacts for different reasons: a bare executable in a folder cannot
@@ -499,6 +500,7 @@ tools/check_natural_speed.sh        # reads lib/weapons.irh against inc/Defines.
 tools/check_comment_budget.sh       # sizes comment and _PROBE blocks in src/, inc/
 tools/check_commit_lane.sh          # reads git log against the six lanes
 tools/check_readme_checks.sh        # tools/check_*.sh against the README table
+tools/check_bead_publish.py         # reads the bead database against git HEAD
 ```
 
 These tools prove themselves against known-bad input on demand:
@@ -513,6 +515,7 @@ tools/check_lz_uncompress.sh --selftest
 tools/check_comment_budget.sh --selftest
 tools/check_commit_lane.sh --selftest
 tools/check_readme_checks.sh --selftest
+tools/check_bead_publish.py --selftest
 python3 tools/flickerscan_selftest.py
 ```
 
@@ -657,6 +660,17 @@ directory, so it reads and can write the owner's real `save/`. Second, if the
 script is killed with a signal the trap cannot catch, the live `Options.Dat`
 stays parked at `Options.Dat.checktmp` and the game starts with defaults next
 time. Recover by renaming it back. Do not run this while anyone is playing.
+
+**`tools/sync_issues.sh` WRITES TO A PUBLIC ISSUE TRACKER.** It sends every
+bead labelled `public` to the Issues tab of
+`networkingguru/incursion-roguelike`, creating an issue for each one that has
+none and updating the rest. Creating a few hundred issues is not something you
+can quietly undo: GitHub lets you close an issue, never un-file it, and
+everybody watching the repository gets the mail. Run `tools/sync_issues.sh
+--dry-run` first, always. Point `SYNC_REPO` at a throwaway repository to
+rehearse. `tools/check_bead_publish.py` decides what the word `public` means,
+and it is documented under "Every bead carries `public` or `internal`" in
+`AGENTS.md`.
 
 **`tools/gate_record.sh` OVERWRITES a committed baseline.** Verified:
 `:37-38` build `OUT="$ROOT/tools/gates/$NAME.baseline"` from the key script's

@@ -170,6 +170,33 @@ This project uses **bd** (beads) for issue tracking. Run `bd prime` for full wor
 > source of truth; don't `bd import` during normal operation; don't
 > reach for third-party Dolt hosting before trying the default).
 
+### Every bead carries `public` or `internal`
+
+**A bead you create MUST carry exactly one of the labels `public` or
+`internal`, and `tools/check_bead_publish.py` fails the commit when it carries
+neither or both.** The label is not decoration. `tools/sync_issues.sh`
+publishes every `public` bead to the Issues tab of
+`networkingguru/incursion-roguelike` and never publishes an `internal` one, so
+the label decides whether the outside world can see the bead at all.
+
+- **`public`** — a defect or a wanted feature IN THE GAME. The rules, the
+  engine, the rendering, the saves, the in-game help text, the controller and
+  keyboard bindings, the builds and the releases a person downloads. When you
+  are unsure, choose this. A bead wrongly published is visible and gets fixed;
+  a bead wrongly suppressed is invisible, and nobody can see what is missing.
+- **`internal`** — the test harness, the key scripts, the documentation
+  checks, the reporting ledger, the bead and gate machinery, and anything about
+  how agents work on this project. Never published.
+
+The check also prints, without failing, the beads whose title argues with their
+label in either direction. It is advice from a word list, not a ruling. You
+decide.
+
+A new bead labelled `public` must also pass `bd lint`, which asks a bug for
+"## Steps to Reproduce" and "## Acceptance Criteria". The existing backlog is
+exempt and is being drained separately as bead `inc-uh76`; the check asks this
+of new beads only.
+
 ## Quick Reference
 
 ```bash

@@ -444,6 +444,7 @@ the unfixed tree before it is trusted.
 | `check_animal_kinship_prose.sh` | Does the Ring of Animal Kinship description drop its false "+3 or higher" untrained-use threshold, stating plainly that it lets you use Animal Empathy with no ranks -- which its skill bonus and the `SkillLevel` use-gate already permit? |
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? Assesses a **quarantined** copy, asks the binary for its own save-layout stamp, and asserts the signature survives a run. |
+| `check_bead_publish.py` | Does every bead created since the last commit carry exactly one of `public` or `internal`, and does a new `public` one carry the sections a stranger needs to reproduce it? The label decides whether `tools/sync_issues.sh` shows the bead to the world, so an unlabelled bead is an invisible one. |
 | `check_brazier_prose.sh` | Does the Brazier Commanding Fire Elementals description say it can be lit three times per day, matching its `EF_3PERDAY` flag, rather than the "Once per day" it claimed before? |
 | `check_broken_door.sh` | Does a door still lie about being broken? Covers the stale orientation brand and every reader that asks whether a door is a hole. |
 | `check_chargen_escape.sh` | Does ESC at a character-creation menu offer to abandon the character, restore the same menu unchanged when that offer is refused, and return to the main menu rather than entering play with a half-made character? |
