@@ -1175,6 +1175,7 @@ class Player: public Character
     friend void Map::VisionThing(int16 p, Creature *c, bool do_clear);
     friend bool Game::SaveGame(Player &p);
     friend bool Game::LoadGame(bool backup);
+    friend bool Game::LoadNamedGame(const char *savefile);
     friend void HelpCustom(String &helpText, Player *p);
     friend class TextTerm; 
     private:
@@ -1618,4 +1619,3 @@ class Monster: public Creature
       FIELD_ARRAY(643, Recent, sizeof(uint8), 6);
     END_ARCHIVE
 	};
-

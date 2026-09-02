@@ -61,6 +61,20 @@ and `logs/`, and with `mod/` and `lib/` symlinked in (`headless.sh:7-10`). It
 exists so that an unattended run cannot destroy a real character. Use it and
 never the binary directly (`headless.sh:49-52`).
 
+Both backends read `-keys` scripts. The SDL/libtcod build accepts the shared
+movement subset: literal and named keys, `*N` repeats, comments, `@include`,
+`@pause MS` and `@quit`. It does not accept the POSIX-only screen-scrape
+directives `@choose`, `@expect`, `@cursorto`, `@while` or `@until`. `@pause MS`
+holds the SDL frame for that many milliseconds while the light keeps animating;
+the headless build treats it as a no-op so replay stays instant. In SDL, `@quit`
+or consuming the last key exits the game; put `@pause` before the end to hold
+the final frame. Both backends also accept `-load <save>`, which loads the named save
+straight into play without visiting the title menu. For example:
+
+```sh
+./incursion -load save/<character>.sav -keys tools/keys/trailer-demo.keys
+```
+
 `soak.sh` calls `headless.sh` once per seed, several at a time, and reports the
 errors grouped by message rather than by session (`soak.sh:19-21`).
 
@@ -473,7 +487,7 @@ one (`package_macos_app.sh:5-13`).
 
 | Path | What it is |
 |---|---|
-| `keys/*.keys` | The key scripts `headless.sh` plays. Read the header of one before you use it. |
+| `keys/*.keys` | Key scripts read by both backends. `headless.sh` uses the full POSIX harness format; the SDL build uses only the shared movement subset. `keys/trailer-demo.keys` demonstrates SDL movement, `@pause` and `@quit`. Read the header of a script before using it. |
 | `gates/dive.baseline` | The committed regression baseline. `gate_record.sh` overwrites it. |
 | `gates/Options.Dat` | The pinned settings file every gate run plays with. Committed on purpose. |
 | `gates/Options.Dat.md` | What is in that settings file and why. |

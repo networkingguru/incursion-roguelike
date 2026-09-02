@@ -51,6 +51,7 @@
 #include <sys/types.h>
 
 #include "Incursion.h"
+#include "KeyScript.h"
 #undef ERROR
 #undef MIN
 #undef MAX
@@ -92,8 +93,6 @@ char __buff2[80];
 
 /* Script tokens that are instructions to the harness rather than keystrokes.
    They are outside the range of any KY_ value. */
-#define SK_DUMP  (-1)
-#define SK_QUIT  (-2)
 #define SK_WHILE (-3)
 #define SK_UNTIL (-4)
 #define SK_CHOOSE (-5)
@@ -110,26 +109,6 @@ char __buff2[80];
    which measures the gap between keystrokes and would never fire. The limit
    counts passes over the body, not keystrokes. */
 #define SK_LOOP_MAX  200
-#define SK_BODY_MAX  8
-
-typedef struct ScriptKey {
-    int16 ch;        /* a KY_ value, a character, or SK_ above */
-    uint8 mods;      /* SHIFT | CONTROL | ALT, as the keyset expects */
-    char  label[64]; /* SK_DUMP: the dump label. Every other SK_: screen text. */
-    bool  byMark;    /* SK_CURSOR: look for a marker, not a highlight. */
-
-    /* SK_WHILE and SK_UNTIL only. The body is a sequence rather than a single
-       key because the case this exists for needs one: draining the Skill
-       Manager takes RIGHT to spend a rank and DOWN to move to the next skill,
-       and neither alone makes progress. The screen is tested once per pass,
-       at the top, so a pass always completes. */
-    int16 bodyCh[SK_BODY_MAX];
-    uint8 bodyMods[SK_BODY_MAX];
-    int8  bodyCount;
-    int8  bodyPos;
-    int16 iter;      /* passes completed */
-} ScriptKey;
-
 class posixTerm : public TextTerm {
     friend void Error(const char* fmt, ...);
     friend void Fatal(const char* fmt, ...);
@@ -493,6 +472,7 @@ int main(int argc, char *argv[]) {
     char executablePath[MAX_PATH_LENGTH] = "";
     char *envPath = getenv("INCURSIONPATH");
     const char *keyScript = NULL;
+    const char *loadSave = NULL;
     const char *dumpSave = NULL;
     const char *schemaTest = NULL;
     const char *schemaLoad = NULL;
@@ -557,6 +537,8 @@ int main(int argc, char *argv[]) {
     for (i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-keys") && i + 1 < argc)
             keyScript = argv[++i];
+        else if (!strcmp(argv[i], "-load") && i + 1 < argc)
+            loadSave = argv[++i];
         else if (!strcmp(argv[i], "-timeout") && i + 1 < argc)
             timeout = (unsigned)atoi(argv[++i]);
         else if (!strcmp(argv[i], "-headless"))
@@ -618,7 +600,16 @@ int main(int argc, char *argv[]) {
         retval = RunSaveConvert(convertSave);
     } else if (!AT1->RunOnCommandLine(argc, argv, &retval)) {
         T1->Initialize();
-        theGame->StartMenu();
+        if (loadSave) {
+            if (theGame->LoadModules() && theGame->LoadNamedGame(loadSave)) {
+                theGame->Play();
+                theGame->Cleanup();
+            } else {
+                retval = 2;
+            }
+        } else {
+            theGame->StartMenu();
+        }
         T1->ShutDown();
     }
 
@@ -1117,72 +1108,6 @@ void posixTerm::ScriptFailed(const char *what, const char *detail) {
 *                              Input Functions                                *
 \*****************************************************************************/
 
-static const struct { const char *name; int16 ch; } NamedKeys[] = {
-    { "ESC", KY_ESC }, { "ENTER", KY_ENTER }, { "RETURN", KY_ENTER },
-    { "TAB", KY_TAB }, { "SPACE", KY_SPACE }, { "BKSP", KY_BACKSPACE },
-    { "BACKSPACE", KY_BACKSPACE },
-    { "UP", KY_UP }, { "DOWN", KY_DOWN }, { "LEFT", KY_LEFT },
-    { "RIGHT", KY_RIGHT }, { "HOME", KY_HOME }, { "END", KY_END },
-    { "PGUP", KY_PGUP }, { "PGDN", KY_PGDN },
-    { "F1", KY_CMD_MACRO1 }, { "F2", KY_CMD_MACRO2 }, { "F3", KY_CMD_MACRO3 },
-    { "F4", KY_CMD_MACRO4 }, { "F5", KY_CMD_MACRO5 }, { "F6", KY_CMD_MACRO6 },
-    { "F7", KY_CMD_MACRO7 }, { "F8", KY_CMD_MACRO8 }, { "F9", KY_CMD_MACRO9 },
-    { "F10", KY_CMD_MACRO10 }, { "F11", KY_CMD_MACRO11 }, { "F12", KY_CMD_MACRO12 },
-    { NULL, 0 }
-};
-
-/* Turn one script token into a keystroke.
-
-   SHIFT is not cosmetic here. StandardKeySet matches toupper(ch) against
-   raw_key and then compares the modifier flags exactly, so
-   { KY_CMD_ACTIVATE, 'A', 0 } is reached by lowercase 'a' and never by 'A'.
-   Setting SHIFT for an uppercase letter is what a real keyboard does, and
-   without it a script silently dispatches the wrong commands. Punctuation is
-   left alone: every punctuation entry in both keysets uses flags -1, which
-   ignores modifiers. */
-static bool TokenToKey(const char *tok, ScriptKey *out) {
-    int i;
-
-    memset(out, 0, sizeof(*out));
-
-    if (tok[0] == '@') {
-        /* "@dump" or "@dump:label", and nothing else that merely starts that
-           way -- a misspelling should be reported, not silently obeyed. */
-        if (!strncmp(tok + 1, "dump", 4) && (!tok[5] || tok[5] == ':')) {
-            out->ch = SK_DUMP;
-            if (tok[5] == ':')
-                snprintf(out->label, sizeof(out->label), "%s", tok + 6);
-            return true;
-        }
-        if (!strcmp(tok + 1, "quit")) {
-            out->ch = SK_QUIT;
-            return true;
-        }
-        return false;
-    }
-
-    if (tok[0] == '^' && tok[1] && !tok[2]) {
-        out->ch = tolower((unsigned char)tok[1]);
-        out->mods = CONTROL;
-        return true;
-    }
-
-    for (i = 0; NamedKeys[i].name; i++)
-        if (!strcasecmp(tok, NamedKeys[i].name)) {
-            out->ch = NamedKeys[i].ch;
-            return true;
-        }
-
-    if (tok[0] && !tok[1]) {
-        out->ch = (unsigned char)tok[0];
-        if (isupper((unsigned char)tok[0]))
-            out->mods = SHIFT;
-        return true;
-    }
-
-    return false;
-}
-
 /* The script is a token stream: whitespace separates tokens, '#' starts a
    comment, and a double-quoted run becomes one keystroke per character. A
    trailing *N repeats the token N times.
@@ -1339,6 +1264,41 @@ void posixTerm::LoadKeyScript(const char *fn) {
                 snprintf(resolved, sizeof(resolved), "%.*s%s",
                     (int)(slash - fn + 1), fn, inc);
             LoadKeyScript(resolved);
+            continue;
+        }
+
+        if (!strcmp(tok, "@pause")) {
+            char ms[MAX_PATH_LENGTH];
+            uint32 value = 0;
+            bool tooLarge = false;
+
+            n = 0;
+            while ((c = fgetc(f)) != EOF && isspace(c))
+                ;
+            while (c != EOF && !isspace(c) && n < (int)sizeof(ms) - 1) {
+                ms[n++] = (char)c;
+                c = fgetc(f);
+            }
+            ms[n] = '\0';
+
+            for (i = 0; ms[i] && isdigit((unsigned char)ms[i]); i++) {
+                if (value > 214748364 ||
+                    (value == 214748364 && ms[i] > '7')) {
+                    tooLarge = true;
+                    break;
+                }
+                value = value * 10 + ms[i] - '0';
+            }
+            if (!ms[0] || ms[i] || tooLarge || value < 1) {
+                printf("Key script '%s': @pause needs a positive integer of "
+                    "milliseconds, and got '%s'.\n", fn, ms);
+                exit(2);
+            }
+
+            memset(&k, 0, sizeof(k));
+            k.ch = SK_PAUSE;
+            k.pauseMs = (int32)value;
+            AppendKey(k);
             continue;
         }
 
@@ -1538,6 +1498,11 @@ ScriptKey posixTerm::NextKey() {
             OutOfKeys();
 
         e = &keys[keyNext];
+
+        if (e->ch == SK_PAUSE) {
+            keyNext++;
+            continue;
+        }
 
         /* Neither of these is a keystroke. @expect asserts and steps aside;
            @choose reads the menu and becomes the letter it found there. */

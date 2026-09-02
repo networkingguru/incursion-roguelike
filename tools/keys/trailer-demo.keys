@@ -1,0 +1,10 @@
+# SDL movement-script format demonstrator: movement keys, @pause holds, @quit.
+# Run: ./incursion -load save/<character>.sav -keys tools/keys/trailer-demo.keys
+
+RIGHT*3
+@pause 1500
+DOWN*2 LEFT
+@pause 1000
+UP RIGHT*2
+@pause 1500
+@quit

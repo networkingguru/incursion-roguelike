@@ -1310,6 +1310,33 @@ NoSaved:
         }
 
         fn = Filenames[i];
+        T1->ChangeDirectory(T1->IncursionDirectory);
+        return LoadNamedGame(fn);
+    } catch (int error_number) {
+        Error("Error reading saved game (%s).", Lookup(FileErrors, error_number));
+        T1->ChangeDirectory(T1->IncursionDirectory);
+        return false;
+    }
+}
+
+bool Game::LoadNamedGame(const char *savefile) {
+    int32 i;
+    String fn;
+
+    /* A bare filename has the same meaning as a picker selection. A relative
+       path with directories is command-line input and is rooted at the game
+       directory, rather than accidentally becoming save/savefile. */
+    if (savefile[0] == '/' || !strchr(savefile, '/'))
+        fn = savefile;
+    else
+        fn = T1->IncursionDirectory + "/" + savefile;
+
+    /* Named loads bypass the picker, but otherwise enter the exact same
+       restore path as a save selected from the title menu. */
+    SaveV1_DiscardPending();
+    T1->ChangeDirectory(T1->SaveSubDir());
+
+    try {
         T1->Clear();
         T1->GotoXY(0, 0);
         T1->Color(WHITE);

@@ -80,9 +80,11 @@ bool TextTerm::RunOnCommandLine(int argc, char *argv[], int *retval) {
                halves disagree cannot load its own module and says so only
                after the title screen -- which is how networkingguru#6 reached
                an outside user (inc-tm4). This is the smallest question that
-               catches it, and unlike a key script it works in every backend:
-               -keys exists only in the curses build (src/Wposix.cpp:518), and
-               the shipped binary is the libtcod one. */
+               catches it without loading a game. Both backends accept -keys;
+               the libtcod build's LoadKeyQueue supports literal and named keys,
+               repeats, comments, @include, @pause and @quit, but not the posix
+               screen-scrape directives @choose, @expect, @cursorto, @while or
+               @until. */
             printf("%s\n", SaveFormatID());
             return true;
         }
@@ -1680,4 +1682,3 @@ int16 TextTerm::DumpContainers()
     return cc2->PourInContents(e);
   } 
 } 
-

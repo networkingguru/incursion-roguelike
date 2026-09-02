@@ -1340,6 +1340,7 @@ class Game : public Object
       void WriteHTMLHelp();
       void NewGame(rID mID, bool reincarnate);
       bool LoadGame(bool backup);
+      bool LoadNamedGame(const char *savefile);
       bool SaveGame(Player &p);
       bool LoadModules();
       void SaveModule(int16 mn);

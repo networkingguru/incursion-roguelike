@@ -403,7 +403,7 @@ rules the harness enforces, and what this method cannot prove.
 | `tools/play.sh` | Interactive launcher for a real session with the map audit, save probe and character probe armed. |
 | `tools/nightly_verify.sh` | Builds both backends, sweeps the checks, and compares the result against a recorded base. `--record` before the work, `--compare` after. |
 | `tools/dump_save.sh` | Runs `-dump` against a save in the same sandbox, without playing. |
-| `tools/keys/*.keys` | The key scripts: the inputs a session plays. Read the header of one before using it. |
+| `tools/keys/*.keys` | Key scripts read by both backends. The SDL build supports the shared movement subset (literal and named keys, `*N` repeats, comments, `@include`, `@pause MS` and `@quit`), but not the POSIX screen-scrape directives. In SDL, `@quit` or consuming the last key exits the game; put `@pause` before the end to hold the final frame while its light animates. `@pause` is an instant no-op headlessly. Use `./incursion -load save/<character>.sav -keys tools/keys/trailer-demo.keys` to start a named save directly in play and run the sample. |
 
 Sessions are seeded through `INCURSION_SEED`, so two runs of one seed play the
 same game. That determinism is what every measurement in the project rests on.

@@ -98,6 +98,7 @@
 #endif
 
 #include "Incursion.h"
+#include "KeyScript.h"
 #undef ERROR
 #undef MIN
 #undef MAX
@@ -260,7 +261,22 @@ private:
     TCOD_list_t alf;
     intptr_t *alf_it;
 
+    std::vector<ScriptKey> keyQueue;
+    size_t keyIndex = 0;
+    uint32 pauseUntil = 0;
+    bool scriptAborted = false;
+    bool Scripting() {
+        return !keyQueue.empty() && keyIndex < keyQueue.size() &&
+               !scriptAborted;
+    }
+
 public:
+    bool LoadKeys(const char *fn, char *err, size_t errsz) {
+        keyIndex = 0;
+        pauseUntil = 0;
+        scriptAborted = false;
+        return LoadKeyQueue(fn, keyQueue, err, errsz);
+    }
     virtual bool PadAttached();
     /* Low-Level Read/Write */
     virtual void Update();
@@ -462,6 +478,8 @@ int main(int argc, char *argv[]) {
     char executablePath[MAX_PATH_LENGTH] = "";
     char *envPath = getenv("INCURSIONPATH");
     const char *dumpSave = NULL;
+    const char *keyScript = NULL;
+    const char *loadSave = NULL;
     const char *schemaTest = NULL;
     const char *schemaLoad = NULL;
     const char *convertSave = NULL;
@@ -544,6 +562,10 @@ int main(int argc, char *argv[]) {
     for (i = 1; i < argc; i++)
         if (!strcmp(argv[i], "-dump") && i + 1 < argc)
             dumpSave = argv[++i];
+        else if (!strcmp(argv[i], "-keys") && i + 1 < argc)
+            keyScript = argv[++i];
+        else if (!strcmp(argv[i], "-load") && i + 1 < argc)
+            loadSave = argv[++i];
         else if (!strcmp(argv[i], "-schematest") && i + 1 < argc)
             schemaTest = argv[++i];
         else if (!strcmp(argv[i], "-schemaload") && i + 1 < argc)
@@ -579,8 +601,21 @@ int main(int argc, char *argv[]) {
     } else if (convertSave) {
         retval = RunSaveConvert(convertSave);
     } else if (!AT1->RunOnCommandLine(argc, argv, &retval)) {
+        char keyError[512];
         T1->Initialize();
-        theGame->StartMenu();
+        if (keyScript && !AT1->LoadKeys(keyScript, keyError, sizeof(keyError))) {
+            fprintf(stderr, "%s\n", keyError);
+            retval = 2;
+        } else if (loadSave) {
+            if (theGame->LoadModules() && theGame->LoadNamedGame(loadSave)) {
+                theGame->Play();
+                theGame->Cleanup();
+            } else {
+                retval = 2;
+            }
+        } else {
+            theGame->StartMenu();
+        }
         T1->ShutDown();
     }
 
@@ -1726,7 +1761,9 @@ int16 libtcodTerm::GetCharCmd(KeyCmdMode mode) {
 
     for(;;) {
 		uint32 ticks0 = TCOD_sys_elapsed_milli(), ticks1;
-        TCOD_key_t tcodKey;
+        ScriptKey scriptKey;
+        bool injecting = false;
+        TCOD_key_t tcodKey = TCOD_key_t();
         TCOD_event_t tcodEvent = TCOD_sys_check_for_event(TCOD_EVENT_KEY_PRESS, &tcodKey, NULL);
 #ifndef _WIN32
         if (tcodKey.vk == TCODK_NONE) {
@@ -1739,6 +1776,42 @@ int16 libtcodTerm::GetCharCmd(KeyCmdMode mode) {
                 tcodKey = gamepadKey;
         }
 #endif
+
+        /* ESC is the one live key that preempts a running script. It is
+           consumed here: the next iteration polls the live keyboard normally. */
+        if (Scripting() && tcodKey.vk == TCODK_ESCAPE) {
+            scriptAborted = true;
+            pauseUntil = 0;
+            continue;
+        }
+
+        if (!keyQueue.empty() && keyIndex >= keyQueue.size() &&
+                !scriptAborted &&
+                (!pauseUntil || TCOD_sys_elapsed_milli() >= pauseUntil)) {
+            this->ShutDown();
+            exit(0);
+        }
+
+        if (Scripting()) {
+            uint32 now = TCOD_sys_elapsed_milli();
+            if (pauseUntil && now < pauseUntil) {
+                tcodKey = TCOD_key_t();
+            } else {
+                pauseUntil = 0;
+                scriptKey = keyQueue[keyIndex++];
+                if (scriptKey.ch == SK_PAUSE) {
+                    pauseUntil = now + (uint32)scriptKey.pauseMs;
+                    tcodKey = TCOD_key_t();
+                } else if (scriptKey.ch == SK_QUIT) {
+                    this->ShutDown();
+                    exit(0);
+                } else {
+                    ch = scriptKey.ch;
+                    ControlKeys = scriptKey.mods;
+                    injecting = true;
+                }
+            }
+        }
 
         if (Mode == MO_PLAY && p->UpdateMap)
             RefreshMap();
@@ -1784,7 +1857,7 @@ CtrlBreak:
             }
         }
 
-        if (tcodKey.vk == TCODK_NONE) {
+        if (!injecting && tcodKey.vk == TCODK_NONE) {
             uint32 ticks_next = ticks1 + INPUT_IDLE_MS;
             if (showCursor && ticks_next > ticks_blink_last + CURSOR_BLINK_MS)
                 ticks_next = ticks_blink_last + CURSOR_BLINK_MS;
@@ -1803,6 +1876,7 @@ CtrlBreak:
         }
 
 #ifdef PALETTE_LOG
+        if (!injecting)
         /* Log the key itself, not just the repaint it causes. This is what
            makes a session reconstructable afterwards, and it gives the tester
            a way to mark "I can see it dimming now" without leaving the game:
@@ -1832,6 +1906,9 @@ CtrlBreak:
         /* A key repaints the screen anyway, so restart the idle tick from
            here rather than firing a redundant repaint straight after it. */
         ticks_idle_last = ticks_blink_last;
+
+        if (injecting)
+            goto MapKey;
 
         if (tcodKey.vk == TCODK_TEXT) {
             ch = tcodKey.text[0];
@@ -1925,6 +2002,7 @@ CtrlBreak:
             }
         }
 
+MapKey:
         if (mode == KY_CMD_RAW)
             return ch;
 
