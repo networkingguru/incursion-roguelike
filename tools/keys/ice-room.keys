@@ -1,0 +1,65 @@
+# A showcase for the ICE REFLECTION (bead inc-qh0w, commit 2). The player
+# carries a lit torch and stands in the middle of a 5x5 room whose walls are
+# ICE, with a doorway to the south. The torch lights the ice on every side, so
+# the reflection pass makes the walls glint blue as the player moves.
+#
+#   tools/headless.sh tools/keys/ice-room.keys 1
+#   ./incursion -load save/Varag.sav      # after ESC b saves it
+#
+# Idiom, proven by tools/keys/lightfilter-show.keys and hide-carried-light.keys:
+#   w y            first wizard invocation: open the menu and enable wizard mode
+#   <letter>       pick a menu option; 'e' = Item Acquisition, 'K' = Change
+#                  terrain type (option index 36 -> the 11th capital letter)
+#   w <letter>     reopen the menu (already enabled, no 'y') and pick again
+# The targeting cursor starts on the player and will NOT cross a solid cell, so
+# every wall is reached through the still-open interior and the corners go down
+# before the edges that would later block the path to them.
+#
+# Terrain letters from the "Which terrain type?" list: [h] Ice Wall.
+
+@include chargen-mage.keys
+@dump:arrival
+
+SPACE
+
+# A lit torch on the character, FIRST. 'w y' enables wizard mode and opens the
+# menu; 'e' is Item Acquisition; RIGHT*37 selects the torch; SPACE swaps it
+# into the Light Source slot. The acquisition leaves the equipment screen open,
+# so ESC returns to the map before any terrain goes down -- without it every
+# following key navigates the equipment list instead of the wizard menu.
+w y e RIGHT*37 ENTER
+SPACE
+ESC
+@dump:torch-acquired
+
+# --- the ice room, corners first, then edges, doorway omitted at south-centre.
+# Wizard mode is already on, so each placement is 'w K': open the menu, pick
+# Change-terrain (K), move the cursor from the player, ENTER the cell, 'h' Ice.
+# corners
+w K RIGHT UP RIGHT UP ENTER h
+w K LEFT UP LEFT UP ENTER h
+w K RIGHT DOWN RIGHT DOWN ENTER h
+w K LEFT DOWN LEFT DOWN ENTER h
+# north edge
+w K UP UP ENTER h
+w K RIGHT UP UP ENTER h
+w K LEFT UP UP ENTER h
+# south edge (centre left open as the doorway)
+w K RIGHT DOWN DOWN ENTER h
+w K LEFT DOWN DOWN ENTER h
+# east edge
+w K RIGHT RIGHT ENTER h
+w K RIGHT UP RIGHT ENTER h
+w K RIGHT DOWN RIGHT ENTER h
+# west edge
+w K LEFT LEFT ENTER h
+w K LEFT UP LEFT ENTER h
+w K LEFT DOWN LEFT ENTER h
+
+@dump:ice-room-built
+
+# Save the showcase to save/Varag.sav and quit.
+ESC b
+@dump:showcase-saved
+
+@quit

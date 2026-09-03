@@ -598,6 +598,7 @@ tools/check_underdark_live.sh
 tools/check_wand_acid_type.sh       # residual acid burn damages a fire-immune victim
 tools/check_lightmap.sh             # the light map: no light through walls, a carried light lights its bearer
 tools/check_light_filter.sh         # light dims and shifts colour crossing an ice wall
+tools/check_light_fog.sh            # light passes through fog, dimmed, and is not stopped by it
 tools/check_hide_carried_light.sh   # a creature carrying a lit source cannot hide
 tools/check_hide_dynamic_light.sh   # a dynamic external light breaks hiding, with no static .Bright
 tools/check_light_averse.sh         # light aversion bites in a dynamically lit cell, not a dim one

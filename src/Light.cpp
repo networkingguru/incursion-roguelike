@@ -17,7 +17,7 @@
 #define LIGHT_MAX_RADIUS 12
 
 enum LightKind { LK_TORCH, LK_LANTERN, LK_GLOW, LK_FIELD, LK_MAGMA,
-                 LK_WALLTORCH, LK_KINDS };
+                 LK_WALLTORCH, LK_REFLECT, LK_KINDS };
 
 /* ponytail: a source's colour comes from this table, or from its own glyph
    when the table row is black. The upgrade path is a "Light Colour:" field in
@@ -34,6 +34,7 @@ static const LightKindRow KindTable[LK_KINDS] = {
   /* LK_FIELD     */ { {   0,   0,   0 }, 1.00f, 0.30f,  1.2f, 3, 4.00f },
   /* LK_MAGMA     */ { { 255,  80,  20 }, 0.70f, 0.35f,  0.6f, 2, 0.80f },
   /* LK_WALLTORCH */ { { 255, 160,  60 }, 1.00f, 0.30f,  9.0f, 4, 0.60f },
+  /* LK_REFLECT   */ { {   0,   0,   0 }, 1.00f, 0.00f,  1.0f, 1, 1.00f },
 };
 
 static LightRGB Palette[MAX_COLOURS] = {
@@ -52,6 +53,8 @@ struct LightSource {
   int16 oct;                   /* number of noise octaves */
   float noise;                 /* current multiplier, 1.0 when steady */
   int32 first, count;          /* slice of Foot[] */
+  int8 rdx, rdy;               /* reflected source only: the hemisphere it lights,
+                                  toward the light that lit it; 0,0 = all round */
 };
 
 struct FootCell { int32 idx; uint8 w; uint8 fr, fg, fb; };
@@ -61,6 +64,7 @@ static bool    lmLegacy = false;    /* the option turned the lighting off */
 static int16   lmW = 0, lmH = 0;
 static int32   lmCells = 0;
 static LightRGB *Steady = NULL, *Frame = NULL;   /* per cell */
+static LightRGB *SrcCol = NULL;                  /* summed primary source colour */
 static uint8 *SrcLit = NULL;                     /* strongest source light, 0..255 */
 static uint8 *FogCol = NULL;                     /* fog palette index plus one, or zero */
 static LightSource *Src = NULL; static int32 nSrc = 0, capSrc = 0;
@@ -104,8 +108,8 @@ static uint8 LightChannel(float v) {
   return (uint8)(v + 0.5f);
 }
 
-LightRGB LightShade(int idx, LightRGB L, float unlit) {
-  LightRGB b = Palette[idx & COLOUR_MASK], o;
+LightRGB LightShadeBase(LightRGB base, LightRGB L, float unlit) {
+  LightRGB b = base, o;
   float i = ColValue(L);
   if (i <= 0.0f) {
     o.r = LightChannel(b.r * unlit);
@@ -142,8 +146,12 @@ LightRGB LightShade(int idx, LightRGB L, float unlit) {
   return o;
 }
 
-LightRGB LightMemory(int idx, float unlit) {
-  LightRGB b = Palette[idx & COLOUR_MASK], o;
+LightRGB LightShade(int idx, LightRGB L, float unlit) {
+  return LightShadeBase(Palette[idx & COLOUR_MASK], L, unlit);
+}
+
+LightRGB LightMemoryBase(LightRGB base, float unlit) {
+  LightRGB b = base, o;
   /* Grey by VALUE, not luminance: a saturated blue has almost no
      luminance and greying it that way would crush it to black. */
   float v = ColValue(b);
@@ -161,6 +169,10 @@ LightRGB LightMemory(int idx, float unlit) {
   o.g = LightChannel((hg + (g - hg) * LIGHT_MEMORY_GREY) * mem);
   o.b = LightChannel((hb + (g - hb) * LIGHT_MEMORY_GREY) * mem);
   return o;
+}
+
+LightRGB LightMemory(int idx, float unlit) {
+  return LightMemoryBase(Palette[idx & COLOUR_MASK], unlit);
 }
 
 LightRGB LightInfra(int idx, bool warm) {
@@ -208,11 +220,12 @@ int LightMode(Player *p) {
 static void EnsureCells(Map *m) {
   if (m->SizeX() == lmW && m->SizeY() == lmH && Steady)
     return;
-  delete[] Steady; delete[] Frame; delete[] SrcLit; delete[] FogCol;
-  Steady = NULL; Frame = NULL; SrcLit = NULL; FogCol = NULL;
+  delete[] Steady; delete[] Frame; delete[] SrcCol; delete[] SrcLit; delete[] FogCol;
+  Steady = NULL; Frame = NULL; SrcCol = NULL; SrcLit = NULL; FogCol = NULL;
   lmW = m->SizeX(); lmH = m->SizeY(); lmCells = (int32)lmW * lmH;
   Steady = new LightRGB[lmCells];
   Frame  = new LightRGB[lmCells];
+  SrcCol = new LightRGB[lmCells];
   SrcLit = new uint8[lmCells];
   FogCol = new uint8[lmCells];
 }
@@ -279,14 +292,35 @@ static void AddSource(int16 x, int16 y, int16 r, uint8 kind, LightRGB glyphColou
   if (s.amp > 0.0f) anyFlicker = true;
 }
 
-/* A wall torch stands in an opaque cell, and LineOfVisualSight refuses a
+/* A reflected source: a lit reflective wall re-emits a weak, steady, wall-
+   coloured light. gain already carries the incident light, so it is not read
+   from KindTable. It never flickers, so it adds no per-frame cost and does not
+   double the flicker of the torch it reflects. */
+static void AddReflectedSource(int16 x, int16 y, int16 r, LightRGB col, float gain,
+                               int8 rdx, int8 rdy) {
+  if (r <= 0 || gain <= 0.0f) return;
+  if (r > LIGHT_MAX_RADIUS) r = LIGHT_MAX_RADIUS;
+  LightSource &s = NewSource();
+  s.x = x; s.y = y; s.r = r; s.kind = LK_REFLECT;
+  s.c = col;
+  s.seed = (uint32)x * 73856093u ^ (uint32)y * 19349663u ^ 0x9e3779b9u;
+  s.gain = gain;
+  s.amp = 0.0f; s.freq = 1.0f; s.oct = 1; s.bias = 1.0f;
+  s.noise = 1.0f;
+  s.rdx = rdx; s.rdy = rdy;
+}
+
+/* A wall torch stands in an opaque cell, and LineOfLight refuses a
    path that starts in one, so the ray is cast from the lit cell back to the
-   source unless the lit cell is itself a wall face. */
+   source unless the lit cell is itself a wall face. LineOfLight, not the
+   eye's LineOfVisualSight: fog and magical darkness stop sight, not a
+   photon, and asking the eye's question left fog blocking light outright
+   so the transmittance walk below never ran. inc-qh0w */
 static bool Reaches(Map *m, int16 sx, int16 sy, int16 tx, int16 ty) {
   if (sx == tx && sy == ty) return true;
   if (m->OpaqueAt(tx, ty))
-    return m->LineOfVisualSight(sx, sy, tx, ty, NULL);
-  return m->LineOfVisualSight(tx, ty, sx, sy, NULL);
+    return m->LineOfLight(sx, sy, tx, ty);
+  return m->LineOfLight(tx, ty, sx, sy);
 }
 
 static LightRGB GlyphColour(Glyph g) {
@@ -373,6 +407,13 @@ static void CastFootprint(Map *m, LightSource &s) {
       if (!m->InBounds(x, y)) continue;
       int16 d = dist(x, y, s.x, s.y);
       if (d > s.r) continue;
+      /* A reflected source lights only the hemisphere toward the light that lit
+         it, so a wall never re-emits through itself to the dark side. Without
+         this, ice makes the cell behind it brighter than the open, which is
+         exactly what the filter must prevent. inc-qh0w */
+      if ((s.rdx || s.rdy) &&
+          (int32)(x - s.x) * s.rdx + (int32)(y - s.y) * s.rdy < 0)
+        continue;
       /* Window the curve so it reaches exactly zero at the cutoff: a hard
          edge on an inverse square would leave a visible seam. */
       float w = (RawFall(d) - edge) / (1.0f - edge) * s.gain;
@@ -439,6 +480,71 @@ static void ScanFog(Map *m) {
   }
 }
 
+/* One bounce off shiny walls. A solid wall of ice, glass or metal that the
+   primary sources have lit becomes a weak secondary source coloured by the
+   incoming light and, when selected, the material. It reads primary-only
+   SrcLit and SrcCol, so a reflection can never seed another reflection. */
+static void ScanReflections(Map *m) {
+  for (int16 y = 0; y < lmH; y++)
+    for (int16 x = 0; x < lmW; x++) {
+      TTerrain *tt = TTER(m->TerrainAt(x, y));
+      if (!tt || !tt->HasFlag(TF_WALL)) continue;
+      int16 mat = tt->Material;
+      if (mat != MAT_ICE && mat != MAT_GLASS && mat != MAT_METAL) continue;
+      uint8 lit = SrcLit[(int32)y * lmW + x];
+      if (lit < LIGHT_REFLECT_MIN) continue;
+      /* Which way did the light come from? The brightest lit neighbour. The
+         reflection emits into that hemisphere, so the wall glints back into the
+         room and never through itself to the dark side behind it. */
+      int8 rdx = 0, rdy = 0; uint8 best = 0;
+      for (int16 oy = -1; oy <= 1; oy++)
+        for (int16 ox = -1; ox <= 1; ox++) {
+          if (!ox && !oy) continue;
+          int16 nx = x + ox, ny = y + oy;
+          if (!m->InBounds(nx, ny)) continue;
+          uint8 nl = SrcLit[(int32)ny * lmW + nx];
+          if (nl > best) { best = nl; rdx = (int8)ox; rdy = (int8)oy; }
+        }
+      LightRGB incoming = SrcCol[(int32)y * lmW + x];
+      uint8 lm = incoming.r > incoming.g ? incoming.r : incoming.g;
+      if (incoming.b > lm) lm = incoming.b;
+      if (!lm) continue;
+      float lr = incoming.r / (float)lm;
+      float lg = incoming.g / (float)lm;
+      float lb = incoming.b / (float)lm;
+      LightRGB material = mat == MAT_ICE ? LIGHT_ICE_BASE : GlyphColour(tt->Image);
+      uint8 mm = material.r > material.g ? material.r : material.g;
+      if (material.b > mm) mm = material.b;
+      float mr = mm ? material.r / (float)mm : 1.0f;
+      float mg = mm ? material.g / (float)mm : 1.0f;
+      float mb = mm ? material.b / (float)mm : 1.0f;
+      float gr = lr, gg = lg, gb = lb;
+#if LIGHT_GLINT_MODE == 1
+      gr *= mr; gg *= mg; gb *= mb;
+      float gm = gr > gg ? gr : gg;
+      if (gb > gm) gm = gb;
+      if (gm > 0.0f) {
+        gr /= gm; gg /= gm; gb /= gm;
+      } else {
+        gr = lr; gg = lg; gb = lb;
+      }
+#endif
+      float sat = LIGHT_REFLECT_SAT, white = 255.0f * (1.0f - sat);
+      LightRGB glint = { LightChannel(white + 255.0f * gr * sat),
+                         LightChannel(white + 255.0f * gg * sat),
+                         LightChannel(white + 255.0f * gb * sat) };
+      AddReflectedSource(x, y, LIGHT_REFLECT_RADIUS, glint,
+                         lit / 255.0f * LIGHT_REFLECT, rdx, rdy);
+    }
+}
+
+static void FoldSrcLit(int32 from, int32 to) {
+  for (int32 i = from; i < to; i++)
+    for (int32 k = Src[i].first; k < Src[i].first + Src[i].count; k++)
+      if (Foot[k].w > SrcLit[Foot[k].idx])
+        SrcLit[Foot[k].idx] = Foot[k].w;
+}
+
 static void SumSteady(Map *m) {
   for (int16 y = 0; y < lmH; y++)
     for (int16 x = 0; x < lmW; x++) {
@@ -484,13 +590,25 @@ void LightRebuild(Map *m, Player *p) {
   ScanFields(m);
   ScanTerrain(m);
   ScanFog(m);
+  int32 nPrimary = nSrc;
   for (int32 i = 0; i < nSrc; i++)
     CastFootprint(m, Src[i]);
   memset(SrcLit, 0, sizeof(uint8) * lmCells);
-  for (int32 i = 0; i < nSrc; i++)
+  memset(SrcCol, 0, sizeof(LightRGB) * lmCells);
+  FoldSrcLit(0, nPrimary);
+  for (int32 i = 0; i < nPrimary; i++)
     for (int32 k = Src[i].first; k < Src[i].first + Src[i].count; k++)
-      if (Foot[k].w > SrcLit[Foot[k].idx])
-        SrcLit[Foot[k].idx] = Foot[k].w;
+      AddScaledF(SrcCol[Foot[k].idx], Src[i].c,
+                 Foot[k].w / 255.0f, Foot[k]);
+  /* Second pass: one bounce off shiny walls. ScanReflections reads the SrcLit
+     just built from the primaries, then appends reflected sources. NewSource
+     may realloc Src, so this MUST run between the two cast loops, never inside
+     one -- the first loop is finished and the second has not begun, so no
+     LightSource& is live across the realloc. inc-qh0w */
+  ScanReflections(m);
+  for (int32 i = nPrimary; i < nSrc; i++)
+    CastFootprint(m, Src[i]);
+  FoldSrcLit(nPrimary, nSrc);
   SumSteady(m);
   ComposeFrame();
   /* INCURSION_LIGHT_PROBE: the dump tools/check_lightmap.sh reads. Bead inc-bjgh. */
@@ -584,13 +702,28 @@ bool LightMapActive() {
    left out. '#' opaque unlit, '%' opaque lit, '.' unlit, 0-9 brightness.
    A FILTER grid follows: 'b' both ice and fog, 'i' ice, 'f' fog, '-' neither.
    tools/check_lightmap.sh reads it. */
+static char FilterMark(Map *m, int16 x, int16 y) {
+  TTerrain *tt = TTER(m->TerrainAt(x, y));
+  bool ice = tt && tt->Material == MAT_ICE && !tt->HasFlag(TF_OPAQUE);
+  bool fog = FogCol[(int32)y * lmW + x] != 0;
+  return ice ? (fog ? 'b' : 'i') : (fog ? 'f' : '-');
+}
+
 static void ProbeDump(Map *m, Player *p) {
   static FILE *fp = NULL;
   static Map *lastMap = NULL; static int16 lastX = -1, lastY = -1;
-  static int32 lastSrc = -1;
-  if (m == lastMap && p->x == lastX && p->y == lastY && nSrc == lastSrc)
+  static int32 lastSrc = -1; static uint32 lastSig = 0;
+  /* A fog cast and a terrain edit move neither the player, the map nor the
+     source count, so without the filter signature the dump never records
+     either and fog transmittance cannot be observed at all. inc-qh0w */
+  uint32 sig = 2166136261u;
+  for (int16 y = 0; y < lmH; y++)
+    for (int16 x = 0; x < lmW; x++)
+      { sig ^= (uint32)(uint8)FilterMark(m, x, y); sig *= 16777619u; }
+  if (m == lastMap && p->x == lastX && p->y == lastY && nSrc == lastSrc
+      && sig == lastSig)
     return;
-  lastMap = m; lastX = p->x; lastY = p->y; lastSrc = nSrc;
+  lastMap = m; lastX = p->x; lastY = p->y; lastSrc = nSrc; lastSig = sig;
   if (!fp) {
     char path[1024];
     snprintf(path, sizeof(path), "%slogs/light.log",
@@ -623,12 +756,8 @@ static void ProbeDump(Map *m, Player *p) {
   }
   fprintf(fp, "FILTER\n");
   for (int16 y = 0; y < lmH; y++) {
-    for (int16 x = 0; x < lmW; x++) {
-      TTerrain *tt = TTER(m->TerrainAt(x, y));
-      bool ice = tt && tt->Material == MAT_ICE && !tt->HasFlag(TF_OPAQUE);
-      bool fog = FogCol[(int32)y * lmW + x] != 0;
-      fputc(ice ? (fog ? 'b' : 'i') : (fog ? 'f' : '-'), fp);
-    }
+    for (int16 x = 0; x < lmW; x++)
+      fputc(FilterMark(m, x, y), fp);
     fputc('\n', fp);
   }
   fprintf(fp, "P plight=%d pbright=%d psource=%d punified=%d\n",

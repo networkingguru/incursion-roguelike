@@ -473,6 +473,7 @@ the unfixed tree before it is trusted.
 | `check_sunblade_light_range.sh` | Does the Sunblade's activated light field reach the promised 60 feet (6 squares)? |
 | `check_lightmap.sh` | Does the light map obey line of sight — no lit cell that no source can reach through walls — and does a carried light light its bearer? |
 | `check_light_filter.sh` | Does light lose strength and colour crossing an ice wall? Two sessions differ by one terrain letter, and the cell two steps beyond must read dimmer through the ice than through open air. |
+| `check_light_fog.sh` | Does light pass through a cloud of fog, dimmed, instead of stopping at it? One session dumps the same cell before and after a Stinking Cloud is cast across it, and the cell must fall from `3` to `1` — it fails both if the cell does not dim and if it goes dark, because a dark cell means the light map is again asking whether an eye could see through rather than whether light passes. |
 | `check_light_averse.sh` | Does a light-averse creature take its -4 combat penalty and squint in a cell lit only by a dynamic external source, and neither in a merely dim cell? |
 | `check_nonnormal_invariant.sh` | Is non-normal detection (an infravision character in darkness) byte-identical across the inc-jcg4 unified-light change over seeds 1-10? |
 | `check_sunblade_negative_plane.sh` | Does the Sunblade double damage against undead and both named non-undead Negative-Plane creatures, without retaining its old wraith-only `5d6` rider? |

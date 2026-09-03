@@ -152,6 +152,13 @@ inline bool Map::MarkAsSeen(const int8 pn, const int16 lx, const int16 ly,
             if  (SolidAt(cx,cy) || Here.isWall)\
             return false;
 
+// and this one if you want a "light" check. Only opaque terrain stops a
+// ray of light: fog and magical darkness stop an EYE, which is a different
+// question, and FI_DARKNESS is answered where it always was, in SumSteady.
+#define CARE_ABOUT_LIGHT \
+            if  (OpaqueAt(cx,cy))\
+            return false;
+
 #define HUGE_PATH_MACRO(DO_THING0,DO_THING1,DO_THING2,DO_THING3,DO_THING4,SEEING_CHECK) \
     cx = sx; cy = sy; \
     if (cx == tx) { \
@@ -207,6 +214,13 @@ bool Map::LineOfVisualSight(int16 sx, int16 sy, int16 tx, int16 ty, Creature *c)
   const bool ignoreDark = false; 
   HUGE_PATH_MACRO(;, ;, ;, ;, ;, CARE_ABOUT_SEEING)
 } 
+
+bool Map::LineOfLight(int16 sx, int16 sy, int16 tx, int16 ty)
+{
+  int16 cx,cy;
+  const int8 dirX = (tx >= sx) ? 1 : -1, dirY = (ty >= sy) ? 1 : -1;
+  HUGE_PATH_MACRO(;, ;, ;, ;, ;, CARE_ABOUT_LIGHT)
+}
 
 bool Map::LineOfFire(int16 sx, int16 sy, int16 tx, int16 ty, Creature *c)
 {

@@ -1291,7 +1291,9 @@ void TextTerm::PutGlyph(int16 x, int16 y,Glyph g,uint16 sense) {
                 : (float)(edge + 1) / (float)(LIGHT_INFRA_FADE + 1);
       }
       bool warm = (sense & PER_INFRA) != 0;
-      APutCharLit(sx, sy, g, x, y, fi, bi, floor, remembered, infra, warm);
+      TTerrain *itt = TTER(m->TerrainAt(x, y));
+      bool ice = itt && itt->Material == MAT_ICE;
+      APutCharLit(sx, sy, g, x, y, fi, bi, floor, remembered, infra, warm, ice);
     } else
       APutChar(sx, sy, g);
     updated = false;

@@ -484,14 +484,14 @@ public:
     /* A map cell under the light map: mx,my are its map coordinates,
        fi/bi its 16-colour indices, floor its brightness with no light (0..1).
        remembered means the player recalls the cell rather than seeing it, so
-       it takes no light.
+       it takes no light; ice selects the SDL backend's ice base colour.
        The backend shades it with LightAt/LightShade and may re-shade it on a
        tick. Backends that cannot draw RGB keep this default and draw the
        16-colour glyph, exactly what they drew before lighting existed
        (bead inc-bjgh). */
     virtual void APutCharLit(int16 x, int16 y, Glyph g, int16 mx, int16 my,
                              int16 fi, int16 bi, float floor, bool remembered,
-                             float infra, bool warm)
+                             float infra, bool warm, bool ice)
       { APutChar(x, y, g); }
     virtual void PutChar(int16 x, int16 y, Glyph g)=0;
     virtual Glyph AGetChar(int16 x, int16 y)=0;

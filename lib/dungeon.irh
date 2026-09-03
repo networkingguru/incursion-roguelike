@@ -528,7 +528,7 @@ Terrain "Dungeon Wall"
     Flags: TF_SOLID, TF_OPAQUE, TF_WALL; }
 
 Terrain "Ice Wall"
-  { Image: bright blue GLYPH_SOLID on blue; Mat:MAT_ICE; 
+  { Image: bright blue GLYPH_SOLID on white; Mat:MAT_ICE;
     Flags: TF_SOLID, TF_WALL, TF_SPECIAL; 
     On Event EV_MAGIC_XY {
         if (e.DType == AD_FIRE && e.vDmg > (10+random(10))) {

@@ -1,0 +1,48 @@
+# Subject for tools/check_light_fog.sh: one wall torch, then a cloud of fog
+# rolled across the cells between that torch and the cell the check measures.
+#
+# It dumps TWICE from ONE session, before the fog and after it, so the check
+# compares two blocks that share a map, a player position and a source list.
+# The two-run A/B that tools/check_light_filter.sh uses for ice cannot do that:
+# two runs drift apart as the monsters take their turns.
+#
+# WHAT IT BUILDS, on seed 1, where chargen-mage.keys lands the mage at (82,13):
+#   (79,13)   a wall torch, the only source that reaches the measured cell
+#   (80,13)   the crossed cell, clear at the first dump and fog at the second
+#   (81,13)   the measured cell, two steps from the torch
+#
+# The Stinking Cloud has a radius of three, so it also covers the torch and the
+# measured cell. That is harmless: the filter walk excludes both endpoints of
+# the ray, so only the cells BETWEEN them can take light away.
+#
+# A mage, not the usual barbarian, because only a caster reaches an FI_FOG
+# field. The terrain called "fog" is a different thing (TF_OBSCURE, no field)
+# and the light map does not read it.
+#
+# THREE THINGS THAT BIT tools/keys/lightfilter-show.keys, and bite this too:
+#   1. chargen-mage.keys ends on the Entry Chamber room description, so the
+#      first key after arrival is spent dismissing it.
+#   2. 'w' OPENS the wizard menu; it is not a prefix. The first placement
+#      therefore presses K on its own.
+#   3. The targeting cursor opens on the player, so one LEFT puts the cloud's
+#      centre on (81,13).
+#
+# Terrain letters from the wizard "Which terrain type?" list: [p] Wall Torch.
+
+@include chargen-mage.keys
+@dump:arrival
+
+SPACE
+w y
+
+K LEFT*3 ENTER p
+@dump:torch-placed
+
+w r "Stinking Cloud" ENTER
+@dump:spell-learned
+
+m ENTER
+LEFT ENTER
+@dump:fog-cast
+
+@quit

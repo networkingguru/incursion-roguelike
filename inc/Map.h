@@ -432,6 +432,7 @@ class Map: public Object
     bool LineOfSight(int16 sx, int16 sy, int16 tx, int16 ty, Creature *c);
     bool LineOfVisualSight(int16 sx, int16 sy, int16 tx, int16 ty, Creature *c);
     bool LineOfFire(int16 sx, int16 sy, int16 tx, int16 ty, Creature *c);
+    bool LineOfLight(int16 sx, int16 sy, int16 tx, int16 ty);
     void VisionThing(int16 pn, Creature *c, bool do_clear);
     bool VisionPath(int8 pn, 
         const int16 sx, const int16 sy, 

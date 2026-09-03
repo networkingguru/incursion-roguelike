@@ -51,9 +51,11 @@ void LightSetPalette(const LightRGB *sixteen);
 /* One 16-colour index as the backend's RGB, and that colour shaded and lifted
    by light L, so unlit is the brightness of a cell no light reaches (0..1). */
 LightRGB LightPaletteRGB(int idx);
+LightRGB LightShadeBase(LightRGB base, LightRGB L, float unlit);
 LightRGB LightShade(int idx, LightRGB L, float unlit);
 /* A remembered cell is drawn from memory rather than seen, so it keeps its
    shape and loses most of its colour. */
+LightRGB LightMemoryBase(LightRGB base, float unlit);
 LightRGB LightMemory(int idx, float unlit);
 /* Heat sight discards a surface's hue and shows only how bright it is, so
    the picture is monochrome red and cannot be mistaken for torchlight. */
@@ -83,10 +85,16 @@ enum { LIGHT_LEGACY = 0, LIGHT_STEADY = 1, LIGHT_SHIMMER = 2 };
 #define LIGHT_LEGACY_BRIGHT 160 /* the 0..255 level a legacy .Bright cell contributes (>= LIGHT_HIDE_MIN) */
 #define LIGHT_LEGACY_LIT  64    /* the level a legacy .Lit-but-not-.Bright cell contributes (visible, still hideable) */
 static const LightRGB LIGHT_LEGACY_COLOUR = { 255, 160, 60 }; /* render colour of legacy static lighting; by-eye tuning knob */
-#define LIGHT_ICE_PASS    0.55f /* fraction of light that survives one cell of ice */
+static const LightRGB LIGHT_ICE_BASE = { 70, 115, 235 }; /* ice glyph base colour; by-eye tuning knob */
+#define LIGHT_ICE_PASS    0.75f /* fraction of light that survives one cell of ice */
 #define LIGHT_FOG_PASS    0.45f /* fraction of light that survives one cell of fog */
-#define LIGHT_FILTER_TINT 0.65f /* how far a crossed cell pulls light toward its own colour */
+#define LIGHT_FILTER_TINT 0.10f /* how far a crossed cell pulls light toward its own colour */
 #define LIGHT_FILTER_MIN  8     /* least surviving light, 0..255, still worth storing */
+#define LIGHT_REFLECT     1.00f /* fraction of the light on a reflective wall it re-emits */
+#define LIGHT_REFLECT_RADIUS 5  /* how far a reflected glint carries, in cells */
+#define LIGHT_REFLECT_MIN 16    /* least light, 0..255, on a wall for it to reflect at all */
+#define LIGHT_REFLECT_SAT 1.00f /* how far the glint keeps its selected colour vs white; separate from the through-light tint */
+#define LIGHT_GLINT_MODE   1     /* glint colour: 0 = incoming light only, 1 = light x material colour */
 #define LIGHT_INFRA_R     200   /* the heat-sight ramp: a dim red, hue only */
 #define LIGHT_INFRA_G      60
 #define LIGHT_INFRA_B      60
