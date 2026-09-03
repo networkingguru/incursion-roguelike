@@ -2,6 +2,11 @@
 
 Julian Mensch's D&D 3.5 roguelike, running natively on the Mac.
 
+![macOS Apple Silicon](https://img.shields.io/badge/macOS-Apple_Silicon-000?logo=apple)
+![signed & notarised](https://img.shields.io/badge/signed_%26_notarised-Apple-success)
+![latest release](https://img.shields.io/github/v/release/networkingguru/incursion-roguelike?label=release)
+![license](https://img.shields.io/badge/license-Incursion%20%2F%20MIT%20%2F%20OGL-blue)
+
 Incursion is one of the deepest roguelikes ever written. Not a game with a few
 D&D words borrowed for flavour — a real, implemented 3.5 ruleset, with feats that
 combine, classes that branch into prestige paths, and a tactical combat model
@@ -371,6 +376,20 @@ environment variable or a compile flag. Nearly all of it is new in this fork.
 
 Start with [`tools/README.md`](tools/README.md), which documents every file with
 a status and cites a line number for each claim. What follows is the map.
+
+```mermaid
+flowchart TB
+    a["IncursionScript ruleset<br/>lib/*.irh"] --> b["resource compiler<br/>(developer binary)"]
+    b --> c["compiled data module"]
+    c --> d["engine — C++ 3.5 rules core"]
+    d --> e["three ways to run it:<br/>SDL window · terminal · headless"]
+    e --> f["deterministic verification harness<br/>(headless script playback)"]
+```
+
+The developer binary's resource compiler turns the IncursionScript ruleset into
+the data module the engine loads; the shipping binary drops that compiler, whose
+runtime is GPLv2. One engine drives all three frontends, and the headless one
+feeds the verification harness described below.
 
 ### Verification
 
