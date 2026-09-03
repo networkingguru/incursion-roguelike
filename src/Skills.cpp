@@ -447,8 +447,14 @@ void Player::CancelMenu() {
 	}
 	else {
 		c = -c; /* it's a stati nature */
-		if (c == MOUNTED)
+		if (c == MOUNTED) {
+			/* Dismount owns the MOUNTED stati: it keeps the stati when it
+			   refuses (no room to dismount) and removes it on success. Return
+			   so the RemoveStati(c) below cannot strip MOUNTED and leave the
+			   rider afoot behind a refused dismount. */
 			ThrowVal(EV_DISMOUNT, DSM_CHOICE, this, GetStatiObj(MOUNTED));
+			return;
+		}
 		if (c == FLAWLESS_DODGE)
 		{
 			/* Don't kill the whole Stati; it has the number of dodges
@@ -4328,18 +4334,69 @@ EvReturn Creature::Dismount(EventInfo &e)
 			IPrint("You aren't mounted at the moment.");
 		return ABORT;
 	}
+	/* upstream: a chosen dismount must step the RIDER off the shared square and
+	   leave the mount where it stands. The original code did the reverse for
+	   every case -- it relocated the mount with PlaceAt->PlaceNear -- so a stuck
+	   mount silently teleported to a new square while keeping its STUCK stati,
+	   and a fully blocked spot could even delete a non-player mount. For a
+	   voluntary dismount, find a square the rider can enter FIRST; if there is
+	   none, refuse: waste no time and change no state, and never relocate a
+	   possibly-immobile mount or delete the player to make room. The involuntary
+	   modes (thrown, fell, floated) keep their original behaviour and messages.
+	   This is upstream's -- the flawed remove/re-place is platform-independent
+	   engine logic and misbehaves the same on the original Win32 build.
+	   Evidence: Observed (save/Keos.sav, a STUCK mount moved 88,52 -> 89,53 on a
+	   chosen dismount). inc-lxvv. Not sent. */
+	int16 tx = -1, ty = -1;
+	if (e.EParam == DSM_CHOICE)
+	{
+		for (int16 dd = 0; dd < 8; dd++)
+		{
+			int16 nx = x + DirX[dd], ny = y + DirY[dd];
+			if (!m->InBounds(nx, ny))
+				continue;
+			if (!m->OpenAt(nx, ny))
+				continue;
+			if (m->FallAt(nx, ny) && !isAerial())
+				continue;
+			tx = nx; ty = ny;
+			break;
+		}
+		if (tx < 0)
+		{
+			IPrint("There is no room beside you to dismount.");
+			return ABORT;
+		}
+	}
 	e.EActor->RemoveStati(MOUNTED);
 	e.EActor->RemoveStati(CHARGING);
 	e.EVictim->RemoveStati(MOUNT);
-	e.EVictim->m = NULL;
-	e.EVictim->x = -1;
-	e.EVictim->y = -1;
-	e.EVictim->Remove(false);
 	if (e.EVictim->ts.GetTarget(e.EActor) &&
 		e.EVictim->ts.GetTarget(e.EActor)->type == TargetMount)
 		e.EVictim->ts.removeCreatureTarget(e.EActor, TargetMount);
 	e.EVictim->SetImage();
-	e.EVictim->PlaceAt(m, x, y);
+	if (tx >= 0)
+	{
+		/* Move the rider to the clear square first, so the square the two
+		   shared is empty; then drop the mount onto it exactly, instead of
+		   letting PlaceNear bump a stuck mount away. */
+		int16 ox = x, oy = y;
+		Map *om = m;
+		e.EActor->PlaceAt(m, tx, ty);
+		e.EVictim->m = NULL;
+		e.EVictim->x = -1;
+		e.EVictim->y = -1;
+		e.EVictim->Remove(false);
+		e.EVictim->PlaceAt(om, ox, oy);
+	}
+	else
+	{
+		e.EVictim->m = NULL;
+		e.EVictim->x = -1;
+		e.EVictim->y = -1;
+		e.EVictim->Remove(false);
+		e.EVictim->PlaceAt(m, x, y);
+	}
 	e.EVictim->ts.Retarget(this);
 	switch (e.EParam)
 	{

@@ -276,31 +276,46 @@ Terrain "tanglefoot strands" {
       mount = EActor->GetStatiObj(MOUNTED);
       if (mount) {
         if (mount->HasAbility(CA_WOODLAND_STRIDE) ||
-            mount->HasStati(STUCK) || 
-            EActor->HasStati(STUCK) || 
+            mount->HasStati(STUCK) ||
             mount->ResistLevel(AD_STUK) == -1 ||
             mount->isAerial())
           return NOTHING;
         if (mount->SavingThrow(REF,15,SA_GRAB|SA_TRAPS)) {
-          return NOTHING; 
-        } 
+          return NOTHING;
+        }
+        // upstream: the consequence stuck the RIDER, not the mount. When
+        // mounted, the mount rolls the save (correct), but the original shared
+        // tail ran ThrowDmg(...,EActor,EActor) and tested EActor, so the rider
+        // took AD_STUK for the mount's failed save while the mount walked free.
+        // This is upstream's: pure lib/ script plus platform-independent
+        // AD_STUK/event semantics, so it misbehaves identically on the original
+        // Win32 build. The fix mirrors the "pool of grease" terrain
+        // (lib/dungeon.irh), which targets the mount. Evidence: Observed
+        // (save/Keos.sav -- rider STUCK, mount not). inc-lxvv. Not sent upstream.
+        ThrowDmg(EV_DAMAGE,AD_STUK,-1,"tanglefoot strangs",mount,mount);
+        if (mount->HasStati(STUCK)) {
+          DPrint(e,"Your mount becomes entangled!",
+                   "An <EActor>'s mount becomes entangled!");
+          EActor->Timeout += 10;
+        }
+        return DONE;
       } else {
         if (EActor->HasAbility(CA_WOODLAND_STRIDE) ||
-            EActor->HasStati(STUCK) || 
+            EActor->HasStati(STUCK) ||
             EActor->ResistLevel(AD_STUK) == -1 ||
             EActor->isAerial())
           return NOTHING;
         if (EActor->SavingThrow(REF,15,SA_GRAB|SA_TRAPS)) {
-          return NOTHING; 
-        } 
-      } 
-      ThrowDmg(EV_DAMAGE,AD_STUK,-1,"tanglefoot strangs",EActor,EActor);
-      if (EActor->HasStati(STUCK)) {
-        DPrint(e,"You become entangled!", 
-                 "An <EActor> becomes entangled!");
-        EActor->Timeout += 10;
-      } 
-      return DONE;
+          return NOTHING;
+        }
+        ThrowDmg(EV_DAMAGE,AD_STUK,-1,"tanglefoot strangs",EActor,EActor);
+        if (EActor->HasStati(STUCK)) {
+          DPrint(e,"You become entangled!",
+                   "An <EActor> becomes entangled!");
+          EActor->Timeout += 10;
+        }
+        return DONE;
+      }
     };
   }
   
