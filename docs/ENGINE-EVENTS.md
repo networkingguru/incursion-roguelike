@@ -33,7 +33,7 @@ creature is the victim (`:677`), then as the plain event if it is the actor (`:6
 
 A handler changes the outcome four ways. `DONE`/`ABORT` stop dispatch at every level above (`src/Event.cpp:179`, `:245`, `:311`,
 `:374`); `NOMSG` sets `e.Terse` and continues (`:181`); `NOTHING` continues, and a whole sweep of `NOTHING` reaches the
-unhandled-event `Fatal` block in `RealThrow` (`:452-461`), which logs and `exit(1)` (`src/Wposix.cpp:1766-1782`) — but the guard
+unhandled-event `Fatal` block in `RealThrow` (`:452-461`), which logs and `exit(1)` (`src/Wposix.cpp:1731-1747`) — but the guard
 at `src/Event.cpp:454` returns first whenever the POST pass ran, because `e.Event` then holds `POST(Ev)`, so that `Fatal` is dead on every
 normal path; fourth, handlers mutate `EventInfo` in place, and `ReThrow` copies the frame back into the caller's `e` (`src/Event.cpp:479-482`).
 
@@ -64,13 +64,13 @@ are `static` on `Resource` (`inc/Res.h:224-225`) — one annotation cursor for t
 FAnnot/NAnnot doesn't normally [work]" (`src/Annot.cpp:619-621`); `FAnnot2` is a one-level kludge, and depth 3 has no cursor.
 `Thing::PlaceNear` holds `static Creature* Displace[64]` (`src/Display.cpp:413`) and re-enters itself via `PlaceAt` (`:550`),
 which the code notes can overflow the C stack (`:544-546`). Only three places are protected: `StatiCollection::Nested` defers
-stati fixups to the outermost iteration (`inc/Map.h:700-705`, field at `:790`), `Creature::Perceives` uses a static counter as a recursion
-mutex (`src/Vision.cpp:401-402`), and `Creature::Multiply` refuses to breed past a nesting depth of 4 (`src/Creature.cpp:498`).
+stati fixups to the outermost iteration (`inc/Map.h:701-706`, field at `:790`), `Creature::Perceives` uses a static counter as a recursion
+mutex (`src/Vision.cpp:415-416`), and `Creature::Multiply` refuses to breed past a nesting depth of 4 (`src/Creature.cpp:498`).
 
 ## The three crashes
 **1. Event Stack Overflow: blast -> Multiply -> place -> blast. Fixed (inc-upw.5).** `Magic::Blast` throws `EV_DAMAGE`
-(`src/Effects.cpp:261`) -> a script handler on `POST(EV_DAMAGE)`/`EVICTIM(EV_DAMAGE)` (id moss `lib/mon3.irh:2258`, brown
-mold `lib/mon3.irh:2296` and `lib/mon3.irh:2304`) or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3354`)
+(`src/Effects.cpp:261`) -> a script handler on `POST(EV_DAMAGE)`/`EVICTIM(EV_DAMAGE)` (id moss `lib/mon3.irh:2270`, brown
+mold `lib/mon3.irh:2308` and `lib/mon3.irh:2316`) or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3372`)
 calls `Multiply` -> `Creature::Multiply` (`src/Creature.cpp:486`) -> `mn->PlaceAt` (`:557`)
 throws `EV_PLACE` (`src/Display.cpp:224`, `:248`) and `EV_FIELDON` (`:314`) -> `Creature::FieldOn` re-throws `EV_EFFECT` for
 `FI_MODIFIER` (`src/Status.cpp:1685`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1202`).
