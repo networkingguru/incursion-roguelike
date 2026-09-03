@@ -31,3 +31,32 @@ if command -v bd >/dev/null 2>&1; then
   if [ $_bd_exit -ne 0 ]; then exit $_bd_exit; fi
 fi
 # --- END BEADS INTEGRATION v1.1.2 ---
+
+# --- INCURSION: publish the public beads on push (inc-qh0w session, 2026-09-03) ---
+# core.hooksPath points git at .beads/hooks, so this shim is the ONLY pre-push
+# hook git runs; a script in .git/hooks would never fire.
+#
+# It calls tools/sync_issues.sh, not `bd github sync`, because bare sync has no
+# label filter and would publish `internal` beads -- the harness, the docs
+# checks, the agent process -- to a public tracker. sync_issues.sh computes the
+# `public` set and hands it over as --issues, and reconciles closed state that
+# bd leaves open.
+#
+# IT IS THE FULL SYNC, not --new-only. The full run refreshes the titles and
+# descriptions of the issues that already exist and reconciles their open or
+# closed state, which is the whole point: a defect closed in beads must stop
+# being advertised as open. --new-only would only create issues for new beads
+# and would leave every fixed defect showing open. The cost is about four
+# minutes per push. That is the price of the tracker being true.
+#
+# IT MUST NEVER BLOCK A PUSH. A push is a code operation; sync_issues.sh exits
+# non-zero for reasons that have nothing to do with the commits being pushed --
+# an unlabelled bead, no token, a bead linked to a rehearsal repo. Warn and let
+# the push through. Set INCURSION_NO_BEAD_SYNC=1 to skip it.
+if [ -z "${INCURSION_NO_BEAD_SYNC:-}" ] && [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
+  _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
+  if [ -x "$_inc_root/tools/sync_issues.sh" ]; then
+    BD_GIT_HOOK_NESTED=1 "$_inc_root/tools/sync_issues.sh" || \
+      echo >&2 "pre-push: bead publication failed; the push CONTINUES. Run tools/sync_issues.sh to see why."
+  fi
+fi

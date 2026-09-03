@@ -45,6 +45,12 @@
 # USAGE
 #   tools/sync_issues.sh              push every `public` bead
 #   tools/sync_issues.sh --dry-run    say what would be pushed, touch nothing
+#   tools/sync_issues.sh --new-only   push only the `public` beads that have no
+#                                     issue yet, and say nothing when there are
+#                                     none. This is what the pre-push hook
+#                                     runs: a full run costs four minutes, a
+#                                     quiet --new-only run costs under a second.
+#                                     The flags combine.
 #
 # ENVIRONMENT
 #   SYNC_REPO      owner/repo to push into. Default is the real fork. Point it
@@ -59,11 +65,15 @@ cd "$repo_root"
 SYNC_REPO=${SYNC_REPO:-networkingguru/incursion-roguelike}
 
 dry_run=""
-case "${1:-}" in
-    --dry-run) dry_run="--dry-run" ;;
-    "")        ;;
-    *)         echo "usage: $0 [--dry-run]" >&2; exit 2 ;;
-esac
+new_only=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --dry-run)  dry_run="--dry-run" ;;
+        --new-only) new_only=1 ;;
+        *)          echo "usage: $0 [--dry-run] [--new-only]" >&2; exit 2 ;;
+    esac
+    shift
+done
 
 command -v bd >/dev/null 2>&1 || { echo "sync_issues: bd is not on PATH" >&2; exit 1; }
 
@@ -98,14 +108,38 @@ if [ -n "$unlabelled" ]; then
     exit 1
 fi
 
-ids=$(bd list --label public --all --limit 0 --flat --json 2>/dev/null | python3 -c '
-import sys, json
+# ONE READ OF THE DATABASE, REUSED THREE TIMES.
+#
+# `bd show --json <ids>` costs 116 SECONDS for 368 beads -- measured 2026-09-03
+# with a traced run -- because it pays a round trip per id. The script used to
+# call it twice, in the stale-tracker guard and in the state reconciliation,
+# which was 232 of the 240 seconds a full run took. `bd list --json` returns
+# `external_ref` and `status` for the whole database in 0.6 seconds, and those
+# are the only two fields either step wanted. So read once, into a file, and
+# let all three steps parse it. A full run is now about ten seconds, nearly all
+# of it GitHub's own issue listing.
+beads_json=$(mktemp -t sync_issues) || { echo "sync_issues: no temp file" >&2; exit 1; }
+trap 'rm -f "$beads_json"' EXIT
+bd list --label public --all --limit 0 --flat --json > "$beads_json" 2>/dev/null || {
+    echo "sync_issues: cannot read the bead database" >&2; exit 1; }
+
+# --new-only keeps just the public beads that have no issue yet. The pre-push
+# hook does NOT use it: a push must move statuses too, or a defect closed in
+# beads stays advertised as open on the tracker.
+export NEW_ONLY="$new_only"
+ids=$(python3 -c '
+import sys, json, os
 d = json.load(sys.stdin)
 issues = d if isinstance(d, list) else d.get("issues", [])
+if os.environ.get("NEW_ONLY"):
+    issues = [x for x in issues if not (x.get("external_ref") or "")]
 print(",".join(x["id"] for x in issues))
-')
+' < "$beads_json")
 
 if [ -z "$ids" ]; then
+    if [ -n "$new_only" ]; then
+        exit 0          # nothing new to publish; say nothing, this runs on every push
+    fi
     echo "sync_issues: no bead is labelled public; nothing to push."
     exit 0
 fi
@@ -131,17 +165,23 @@ fi
 # throwaway. Pointing this script at the real repository then updates the
 # rehearsal issues and creates nothing real, silently. So refuse, and say which
 # beads to clear.
-stale=$(bd show --json $(printf '%s' "$ids" | tr ',' ' ') 2>/dev/null | python3 -c '
+export SYNC_IDS="$ids"
+stale=$(python3 -c '
 import sys, json, os
 repo = os.environ["GITHUB_REPOSITORY"]
 mine = "https://github.com/%s/issues/" % repo
+wanted = set(os.environ["SYNC_IDS"].split(","))
+d = json.load(sys.stdin)
+issues = d if isinstance(d, list) else d.get("issues", [])
 bad = []
-for b in json.load(sys.stdin):
+for b in issues:
+    if b["id"] not in wanted:
+        continue
     ref = b.get("external_ref") or ""
     if ref and "/issues/" in ref and not ref.startswith(mine):
         bad.append(b["id"])
 print(" ".join(bad))
-')
+' < "$beads_json")
 if [ -n "$stale" ]; then
     n=$(printf '%s\n' "$stale" | wc -w | tr -d ' ')
     echo "sync_issues: ${n} bead(s) are already linked to a DIFFERENT tracker." >&2
@@ -155,6 +195,11 @@ fi
 echo "sync_issues: ${count} public beads -> ${SYNC_REPO} (${length} bytes of ids)"
 bd github sync --push-only --issues "$ids" ${dry_run:+$dry_run}
 
+# Re-read, because the sync above has just written `external_ref` onto every
+# bead it created an issue for, and the reconciliation below needs those.
+bd list --label public --all --limit 0 --flat --json > "$beads_json" 2>/dev/null || {
+    echo "sync_issues: cannot re-read the beads; state NOT reconciled" >&2; exit 1; }
+
 # RECONCILE THE OPEN/CLOSED STATE OURSELVES.
 #
 # `bd github sync` creates every issue open, whatever the bead says, and only
@@ -167,10 +212,11 @@ bd github sync --push-only --issues "$ids" ${dry_run:+$dry_run}
 # invites a stranger to spend an evening on something already done. So the
 # state is not left to bd. `external_ref` on each bead holds the issue URL bd
 # assigned, which is the durable link, and `gh` sets the state directly.
-python3 - "$SYNC_REPO" "$ids" "${dry_run:-}" <<'PY'
+python3 - "$SYNC_REPO" "$ids" "${dry_run:-}" "$beads_json" <<'PY'
 import json, subprocess, sys
 
-repo, ids, dry = sys.argv[1], sys.argv[2].split(","), bool(sys.argv[3])
+repo, ids, dry, beads_json = (
+    sys.argv[1], sys.argv[2].split(","), bool(sys.argv[3]), sys.argv[4])
 
 
 def sh(cmd):
@@ -178,10 +224,12 @@ def sh(cmd):
     return p.stdout if p.returncode == 0 else None
 
 
-out = sh(["bd", "show", "--json"] + ids)
-if out is None:
-    sys.exit("sync_issues: cannot read the beads back; state NOT reconciled")
-beads = json.loads(out)
+# From the file, not `bd show <ids>`: that call costs 116 seconds for 368 ids
+# and returns nothing this step cannot read here.
+d = json.load(open(beads_json))
+rows = d if isinstance(d, list) else d.get("issues", [])
+wanted = set(ids)
+beads = [b for b in rows if b["id"] in wanted]
 
 out = sh(["gh", "issue", "list", "-R", repo, "--state", "all",
           "--limit", "2000", "--json", "number,state"])
