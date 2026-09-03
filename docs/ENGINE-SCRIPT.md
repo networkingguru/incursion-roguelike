@@ -15,8 +15,8 @@ is `docs/incursionscript.md`; the module format `docs/modules.md`.
 | 4 | Pass 1, count | `src/RComp.cpp:248` `CountResources()` | lex-only scan; sizes and names 21 resource arrays |
 | 5 | Pass 2, parse | `src/RComp.cpp:184` `yyparse()`, `src/yygram.cpp` + `src/Tokens.cpp` | tokens -> filled `Module` object |
 | 6 | Emit dispatch | `src/RComp.cpp:570` `GenerateDispatch()` | symbol table -> `lib/dispatch.h`, a C++ **source** file |
-| 7 | Serialise | `src/RComp.cpp:223` -> `src/Registry.cpp:1406` | `Module` -> `mod/Incursion.Mod` |
-| 8 | Load | `src/Registry.cpp:1453` scans `mod/*.Mod` | file -> live `Module*` in `Modules[slot]` (`src/Registry.cpp:1483`) |
+| 7 | Serialise | `src/RComp.cpp:223` -> `src/Registry.cpp:1433` | `Module` -> `mod/Incursion.Mod` |
+| 8 | Load | `src/Registry.cpp:1480` scans `mod/*.Mod` | file -> live `Module*` in `Modules[slot]` (`src/Registry.cpp:1510`) |
 | 9 | Execute | `src/VMachine.cpp`, `#include "dispatch.h"` at `:175` | `VCode` bytecode -> C++ calls |
 
 Generator sources are kept: `lang/Tokens.lex` (flex -> `src/Tokens.cpp`) and
