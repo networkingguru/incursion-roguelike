@@ -454,7 +454,9 @@ static void ScanFields(Map *m) {
   }
 }
 
+/* Read terrain once for light sources and fog, clearing the fog map first. */
 static void ScanTerrain(Map *m) {
+  memset(FogCol, 0, sizeof(uint8) * lmCells);
   for (int16 y = 0; y < lmH; y++)
     for (int16 x = 0; x < lmW; x++) {
       TTerrain *tt = TTER(m->TerrainAt(x, y));
@@ -463,11 +465,15 @@ static void ScanTerrain(Map *m) {
         AddSource(x, y, 2, LK_MAGMA, GlyphColour(tt->Image));
       else if (tt->HasFlag(TF_TORCH))
         AddSource(x, y, 3, LK_WALLTORCH, GlyphColour(tt->Image));
+      if (tt->HasFlag(TF_OBSCURE) &&
+          (tt->Material == MAT_EMPTYNESS || tt->Material == MAT_FORCE))
+        FogCol[(int32)y * lmW + x] =
+          (GLYPH_FORE_VALUE(tt->Image) & COLOUR_MASK) + 1;
     }
 }
 
+/* Read fog fields after terrain so a cast cloud wins a shared cell. */
 static void ScanFog(Map *m) {
-  memset(FogCol, 0, sizeof(uint8) * lmCells);
   for (int32 i = 0; i < m->Fields.Total(); i++) {
     Field *f = m->Fields[i];
     if (!f || !(f->FType & FI_FOG)) continue;

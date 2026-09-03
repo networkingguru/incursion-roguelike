@@ -1,0 +1,40 @@
+# Subject for tools/check_light_fog.sh: one wall torch, then fog terrain placed
+# on the cell between that torch and the cell the check measures.
+#
+# It dumps TWICE from ONE session, before the fog and after it, so the check
+# compares two blocks that share a map, a player position and a source list.
+# The final UP/DOWN pair forces a post-placement probe block even when terrain
+# fog is not scanned; returning to the same cell makes that block comparable.
+#
+# WHAT IT BUILDS, on seed 1, where chargen-mage.keys lands the mage at (82,13):
+#   (79,13)   a wall torch, the only source that reaches the measured cell
+#   (80,13)   the crossed cell, clear at the first dump and fog at the second
+#   (81,13)   the measured cell, two steps from the torch
+#
+# THREE THINGS inherited from tools/keys/light-fog.keys:
+#   1. chargen-mage.keys ends on the Entry Chamber room description, so the
+#      first key after arrival is spent dismissing it.
+#   2. 'w' OPENS the wizard menu; it is not a prefix. The first placement
+#      therefore presses K on its own.
+#   3. The targeting cursor opens on the player.
+#
+# Terrain letters observed from the wizard "Which terrain type?" list:
+# [I] fog, [p] Wall Torch.
+
+@include chargen-mage.keys
+@dump:arrival
+
+SPACE
+w y
+
+K LEFT*3 ENTER p
+@dump:torch-placed
+
+w K LEFT*2 ENTER I
+@dump:fog-placed
+
+UP
+DOWN
+@dump:measured
+
+@quit

@@ -11,12 +11,14 @@
 #
 #   tools/keys/light-fog.keys   one wall torch, then a cloud rolled across the
 #                               cells between that torch and the measured cell
+#   tools/keys/light-fogterrain.keys
+#                               the same geometry with placed fog terrain
 #
-# It compares the LAST TWO dump blocks of ONE session, not two sessions as
-# tools/check_light_filter.sh must for ice. Both blocks then share a map, a
-# player position and a source list, so no monster can move between them and
-# explain the difference away. The source lines are compared as the control,
-# ignoring each source's footprint size, which the fog legitimately shrinks.
+# It finds a clear block and the final fogged block in ONE session, not two
+# sessions as tools/check_light_filter.sh must for ice. Both blocks then share
+# a map, a player position and a source list, so no monster can move between
+# them and explain the difference away. The source lines are compared as the
+# control, ignoring each source's footprint size, which fog can shrink.
 #
 # On seed 1 chargen-mage.keys lands the mage at (82,13):
 #   (79,13) the wall torch   (80,13) the crossed cell   (81,13) measured
@@ -35,7 +37,11 @@ FOG_X=80; MEASURE_X=81; ROW=13
     exit 2
 }
 
-out="$(INCURSION_LIGHT_PROBE=1 tools/headless.sh tools/keys/light-fog.keys 1 2>&1)"
+check_subject() {
+    subject="$1"
+    label="$2"
+
+out="$(INCURSION_LIGHT_PROBE=1 tools/headless.sh "$subject" 1 2>&1)"
 run="$(printf '%s\n' "$out" | awk '/^run:/ {print $2}')"
 if printf '%s\n' "$out" | grep -q "NO GAMEPLAY"; then
     echo "INCONCLUSIVE: the subject never entered a map. Run: $run"
@@ -47,11 +53,12 @@ log="$run/logs/light.log"
     exit 2
 }
 
-python3 - "$log" "$ROW" "$FOG_X" "$MEASURE_X" "$run" <<'PY'
+python3 - "$log" "$ROW" "$FOG_X" "$MEASURE_X" "$run" "$label" <<'PY'
 import sys
 
-log, row, fog_x, measure_x, run = (
-    sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), sys.argv[5])
+log, row, fog_x, measure_x, run, label = (
+    sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), sys.argv[5],
+    sys.argv[6])
 
 def parse(block):
     """A dump block as (sources, light grid, filter grid)."""
@@ -72,8 +79,9 @@ if len(blocks) < 2:
                      "  writes a block only when something it watches changes.\n"
                      % (log, len(blocks)))
     sys.exit(2)
-before, after = parse(blocks[-2]), parse(blocks[-1])
-if before is None or after is None:
+parsed = [parse(block) for block in blocks]
+after = parsed[-1]
+if after is None:
     sys.stderr.write("INCONCLUSIVE: a dump block in %s has no FILTER grid\n" % log)
     sys.exit(2)
 
@@ -85,6 +93,15 @@ def geometry(srcs):
     """A source line without its footprint size, which fog legitimately shrinks."""
     return [" ".join(s.split()[:8]) for s in srcs]
 
+before = next((block for block in reversed(parsed[:-1])
+               if block is not None
+               and block[2][row][fog_x] == "-"
+               and geometry(block[0]) == geometry(after[0])), None)
+if before is None:
+    sys.stderr.write("INCONCLUSIVE: %s has no clear block with the final source "
+                     "geometry\n" % log)
+    sys.exit(2)
+
 fail = []
 if geometry(before[0]) != geometry(after[0]):
     fail.append("the two blocks do not share a source list, so the fog is not the\n"
@@ -93,7 +110,7 @@ if before[2][row][fog_x] != "-":
     fail.append("the before block already marks (%d,%d) as '%s'; it must be clear"
                 % (fog_x, row, before[2][row][fog_x]))
 if after[2][row][fog_x] != "f":
-    fail.append("the after block marks (%d,%d) as '%s', not 'f' -- the cloud never\n"
+    fail.append("the after block marks (%d,%d) as '%s', not 'f' -- the fog never\n"
                 "      landed on the cell the subject aimed it at"
                 % (fog_x, row, after[2][row][fog_x]))
 
@@ -118,8 +135,11 @@ if fail:
         print("FAIL: %s" % f)
     print("run: %s" % run)
     sys.exit(1)
-print("light through fog: (%d,%d) reads '%s' in the clear and '%s' behind one "
-      "cell of fog" % (measure_x, row,
+print("light through %s: (%d,%d) reads '%s' in the clear and '%s' behind one "
+      "cell of fog" % (label, measure_x, row,
                        before[1][row][measure_x], after[1][row][measure_x]))
 PY
-exit $?
+}
+
+check_subject tools/keys/light-fog.keys "cast fog" || exit $?
+check_subject tools/keys/light-fogterrain.keys "fog terrain" || exit $?

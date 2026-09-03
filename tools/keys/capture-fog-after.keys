@@ -1,0 +1,17 @@
+# SDL-only capture script for the after frame of fog terrain dimming and
+# tinting light. It exists to satisfy the before/after render observation that
+# AGENTS.md requires for a graphics: commit.
+
+@include chargen-mage.keys
+
+SPACE
+w y
+
+K LEFT*3 ENTER p
+
+w K LEFT*2 ENTER I
+
+UP
+DOWN
+
+@pause 30000
