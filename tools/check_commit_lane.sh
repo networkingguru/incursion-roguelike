@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 #
-# Does every new commit subject open with one of the six lanes, and does every
+# Does every new commit subject open with one of the seven lanes, and does every
 # rules: commit name a design bead?
 #
 #   tools/check_commit_lane.sh              every commit since the rule started
 #   tools/check_commit_lane.sh --since REF  an explicit range
 #   tools/check_commit_lane.sh --selftest   prove this script still bites
 #
-# THE RULE is in AGENTS.md, "Classifying a change". Six lanes: fix, port, data,
-# rules, docs, tools. A rules: commit changes how the game plays, so its body
-# must name the bead that holds the ruling.
+# THE RULE is in AGENTS.md, "Classifying a change". Seven lanes: fix, port, data,
+# rules, graphics, docs, tools. A rules: commit changes how the game plays, so
+# its body must name the bead that holds the ruling.
 #
 # WHY A START SHA AND NOT A DATE. 807 commits predate the rule and none of them
 # carries a lane. Relabelling history is not possible, and failing on it would
@@ -23,7 +23,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-LANES='fix|port|data|rules|docs|tools'
+LANES='fix|port|data|rules|graphics|docs|tools'
 SINCE_FILE="$ROOT/tools/commit_lane.since"
 
 fail=0
@@ -78,18 +78,21 @@ if [ "${1:-}" = "--selftest" ]; then
     commit "fix: guard the divisor" 1
     sweep "$tmp" "$base..HEAD" >/dev/null || { echo "SELFTEST FAIL: refused a good fix: subject"; st=1; }
 
-    commit "rules: make armour subtract" 2 "Design: bd inc-b0w2."
+    commit "graphics: soften the light map" 2
+    sweep "$tmp" "$base..HEAD" >/dev/null || { echo "SELFTEST FAIL: refused a good graphics: subject"; st=1; }
+
+    commit "rules: make armour subtract" 3 "Design: bd inc-b0w2."
     sweep "$tmp" "$base..HEAD" >/dev/null || { echo "SELFTEST FAIL: refused a rules: commit that names a bead"; st=1; }
 
-    commit "Make armour subtract damage" 3
+    commit "Make armour subtract damage" 4
     sweep "$tmp" "$base..HEAD" >/dev/null && { echo "SELFTEST FAIL: accepted a subject with no lane"; st=1; }
     git -C "$tmp" reset -q --hard HEAD~1
 
-    commit "rules: rebalance the daggers" 4 "No bead here."
+    commit "rules: rebalance the daggers" 5 "No bead here."
     sweep "$tmp" "$base..HEAD" >/dev/null && { echo "SELFTEST FAIL: accepted a rules: commit with no bead"; st=1; }
     git -C "$tmp" reset -q --hard HEAD~1
 
-    commit "fixing: not a lane" 5
+    commit "fixing: not a lane" 6
     sweep "$tmp" "$base..HEAD" >/dev/null && { echo "SELFTEST FAIL: accepted a near-miss lane word"; st=1; }
 
     [ "$st" -eq 0 ] && echo "SELFTEST PASS: check_commit_lane.sh bites on all three failures"

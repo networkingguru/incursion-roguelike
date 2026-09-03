@@ -98,7 +98,7 @@ Verify with `tools/check_upstream_marks.sh`. Find them all with
 
 ## Classifying a change
 
-**Every commit subject MUST open with a lane, and the lane MUST be one of six.**
+**Every commit subject MUST open with a lane, and the lane MUST be one of seven.**
 An outsider reading `git log --oneline` has to be able to sort a defect fix from
 a rules redesign without opening a single body. Today they cannot, and that is
 the fault this rule fixes.
@@ -108,7 +108,8 @@ the fault this rule fixes.
 | `fix:` | A defect. The behaviour was wrong against the game's own rules or its own documentation. |
 | `port:` | Platform, build, toolchain, packaging. No behaviour a player sees. |
 | `data:` | `lib/*.irh` content that was wrong: a stat, a name, a spell list, a table row. |
-| `rules:` | A deliberate change to how the game plays. Balance, mechanics, a system redesign. |
+| `rules:` | A deliberate change to the game's rules content: a class, an attribute, a feat, a spell, a balance change, a system redesign. |
+| `graphics:` | The renderer, the light map, terminal output and the look of the game. A lighting or render change is not `rules:`, even when it changes how much of the map the player can see. |
 | `docs:` | Prose only. `README.md`, `docs/`, help text, comments. |
 | `tools:` | The harness, the checks, the gate, packaging scripts. |
 
@@ -125,10 +126,12 @@ bead is a balance change nobody agreed to.
 the body still states the oracle, the mutation and the checks re-run, as
 `docs/VERIFICATION.md` requires.
 
-**A `fix:` or `rules:` change a player feels needs a before/after gameplay
-observation, or a written exception from Brian.** A structural check alone earns
-Traced, never Observed. See "A gameplay fix needs a before/after observation" in
-`docs/REPORTING-GATE.md`.
+**A `fix:`, `rules:` or `graphics:` change a player feels needs a before/after
+observation, or a written exception from Brian.** For `fix:` and `rules:` that
+observation is gameplay. For `graphics:` it is the rendered output itself, the
+same shot before and after, because the whole point of the change is what the
+screen shows. A structural check alone earns Traced, never Observed. See "A
+gameplay fix needs a before/after observation" in `docs/REPORTING-GATE.md`.
 
 Verify with `tools/check_commit_lane.sh`.
 
