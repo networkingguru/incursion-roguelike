@@ -12,13 +12,14 @@
 #define SK_DUMP  (-1)
 #define SK_QUIT  (-2)
 #define SK_PAUSE (-8)
+#define SK_SHOT  (-9)
 
 #define SK_BODY_MAX 8
 
 typedef struct ScriptKey {
     int16 ch;        /* a KY_ value, a character, or SK_ above */
     uint8 mods;      /* SHIFT | CONTROL | ALT, as the keyset expects */
-    char  label[64]; /* SK_DUMP: the dump label. Every other SK_: screen text. */
+    char  label[64]; /* SK_DUMP: dump label; SK_SHOT: screenshot filename. */
     bool  byMark;    /* SK_CURSOR: look for a marker, not a highlight. */
     int32 pauseMs;   /* SK_PAUSE: milliseconds to pause. */
 

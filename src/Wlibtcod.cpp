@@ -128,9 +128,11 @@
 
 extern "C" SDL_Surface* TCOD_sys_read_png(const char* filename);
 extern "C" void TCOD_sys_register_SDL_renderer(void (*renderer)(void*));
+extern "C" void TCOD_sys_save_bitmap(void* bitmap, const char* filename);
 extern bool g_titleLogoActive;
 
 static SDL_Surface* g_logo = NULL;
+static SDL_Surface* g_lastFrame = NULL;
 static SDL_Rect g_logoSrc;
 static int g_gridW = 0, g_gridH = 0, g_fontW = 0, g_fontH = 0;
 static bool g_logoLoadAttempted = false;
@@ -140,6 +142,7 @@ static bool g_wasShown = false;
 extern "C" {
 static void LogoRenderCB(void* vsurf) {
     SDL_Surface* screen = (SDL_Surface*)vsurf;
+    g_lastFrame = screen;
     if (!g_logo || !screen) return;
     bool show = g_titleLogoActive;
     if (show) {
@@ -1561,11 +1564,11 @@ RetryFont:
                 g_logoSrc.h = g_logo->h;
             }
             SDL_SetSurfaceBlendMode(g_logo, SDL_BLENDMODE_NONE);
-            if (!g_logoRendererRegistered) {
-                TCOD_sys_register_SDL_renderer(LogoRenderCB);
-                g_logoRendererRegistered = true;
-            }
         }
+    }
+    if (!g_logoRendererRegistered) {
+        TCOD_sys_register_SDL_renderer(LogoRenderCB);
+        g_logoRendererRegistered = true;
     }
 #endif
 
@@ -1911,6 +1914,11 @@ int16 libtcodTerm::GetCharCmd(KeyCmdMode mode) {
                 scriptKey = keyQueue[keyIndex++];
                 if (scriptKey.ch == SK_PAUSE) {
                     pauseUntil = now + (uint32)scriptKey.pauseMs;
+                    tcodKey = TCOD_key_t();
+                } else if (scriptKey.ch == SK_SHOT) {
+                    TCOD_console_flush();
+                    if (g_lastFrame)
+                        TCOD_sys_save_bitmap((void*)g_lastFrame, scriptKey.label);
                     tcodKey = TCOD_key_t();
                 } else if (scriptKey.ch == SK_QUIT) {
                     this->ShutDown();

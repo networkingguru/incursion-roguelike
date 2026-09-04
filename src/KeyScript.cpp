@@ -194,6 +194,39 @@ static bool LoadKeyQueueFile(const char *fn, std::vector<ScriptKey> &out,
             continue;
         }
 
+        if (!strcmp(tok, "@shot")) {
+            char name[MAX_PATH_LENGTH];
+            int nn = 0;
+
+            while ((c = fgetc(f)) != EOF && isspace(c))
+                ;
+            while (c != EOF && !isspace(c) &&
+                   nn < (int)sizeof(name) - 1) {
+                name[nn++] = (char)c;
+                c = fgetc(f);
+            }
+            name[nn] = '\0';
+            if (!name[0]) {
+                fclose(f);
+                if (err && errsz)
+                    snprintf(err, errsz,
+                        "Key script '%s': @shot needs a filename.", fn);
+                return false;
+            }
+            if (nn >= (int)sizeof(((ScriptKey*)0)->label)) {
+                fclose(f);
+                if (err && errsz)
+                    snprintf(err, errsz,
+                        "Key script '%s': @shot filename too long.", fn);
+                return false;
+            }
+            memset(&k, 0, sizeof(k));
+            k.ch = SK_SHOT;
+            snprintf(k.label, sizeof(k.label), "%s", name);
+            out.push_back(k);
+            continue;
+        }
+
         if (!strcmp(tok, "@choose") || !strcmp(tok, "@expect") ||
             !strcmp(tok, "@cursorto") || !strcmp(tok, "@cursorto:mark") ||
             !strcmp(tok, "@while") || !strcmp(tok, "@until")) {
