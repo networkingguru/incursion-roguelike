@@ -209,6 +209,17 @@ LightRGB LightGlow(int idx, LightRGB L) {
   return o;
 }
 
+/* Fog scatters the light that reaches it: a lit cloud glows in its own colour
+   and an unlit one stays exactly as dark as it was. */
+LightRGB LightFogMix(LightRGB c, LightRGB fog, LightRGB L) {
+  float i = ColValue(L), k = LIGHT_FOG_GLOW * i;
+  LightRGB o;
+  o.r = LightChannel(c.r * (1.0f - k) + fog.r * i * k);
+  o.g = LightChannel(c.g * (1.0f - k) + fog.g * i * k);
+  o.b = LightChannel(c.b * (1.0f - k) + fog.b * i * k);
+  return o;
+}
+
 int LightMode(Player *p) {
   switch (p ? p->Opt(OPT_ANIMATION) : 0) {
     case 2:  return LIGHT_LEGACY;    /* None */
@@ -668,6 +679,18 @@ bool LightAt(int16 x, int16 y, LightRGB &out) {
   const LightRGB &f = Frame[(int32)y * lmW + x];
   if (!(f.r | f.g | f.b)) return false;
   out = f;
+  return true;
+}
+
+/* The fog on one map cell as its palette colour, for the renderer's scatter
+   tint. False, and `out` untouched, when the cell carries no fog. Reads the
+   file-static FogCol, which ScanTerrain and ScanFog fill from fog terrain and
+   from cast FI_FOG fields alike. */
+bool LightFogAt(int16 x, int16 y, LightRGB &out) {
+  if (!lmMap || !FogCol || x < 0 || y < 0 || x >= lmW || y >= lmH) return false;
+  uint8 c = FogCol[(int32)y * lmW + x];
+  if (!c) return false;
+  out = Palette[(c - 1) & COLOUR_MASK];
   return true;
 }
 

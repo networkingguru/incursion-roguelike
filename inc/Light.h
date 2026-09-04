@@ -31,6 +31,8 @@ void LightTick(uint32 ms);
    Returns false, and leaves `out` alone, when the cell is off the map or
    receives no light at all. */
 bool LightAt(int16 x, int16 y, LightRGB &out);
+/* The fog colour on one map cell, when it carries fog. */
+bool LightFogAt(int16 x, int16 y, LightRGB &out);
 
 /* The light map's answer to the engine's Lit flag; reads the steady footprint
    so flicker cannot make vision blink. */
@@ -66,6 +68,8 @@ LightRGB LightInfraMix(LightRGB lit, int idx, bool warm,
                        LightRGB L, float infra);
 /* The glow a lit cell paints across its whole square, behind the glyph. */
 LightRGB LightGlow(int idx, LightRGB L);
+/* Blend a rendered colour toward fog in proportion to arriving light. */
+LightRGB LightFogMix(LightRGB c, LightRGB fog, LightRGB L);
 
 /* How the SDL build should draw, from OPT_ANIMATION: None = the classic
    16-colour path, Fast = steady coloured light, Normal/Player = shimmer. */
@@ -86,6 +90,7 @@ enum { LIGHT_LEGACY = 0, LIGHT_STEADY = 1, LIGHT_SHIMMER = 2 };
 #define LIGHT_LEGACY_LIT  64    /* the level a legacy .Lit-but-not-.Bright cell contributes (visible, still hideable) */
 static const LightRGB LIGHT_LEGACY_COLOUR = { 255, 160, 60 }; /* render colour of legacy static lighting; by-eye tuning knob */
 static const LightRGB LIGHT_ICE_BASE = { 70, 115, 235 }; /* ice glyph base colour; by-eye tuning knob */
+#define LIGHT_FOG_GLOW    0.55f /* how far a fully lit fog cell is pulled toward its own colour */
 #define LIGHT_ICE_PASS    0.75f /* fraction of light that survives one cell of ice */
 #define LIGHT_FOG_PASS    0.45f /* fraction of light that survives one cell of fog */
 #define LIGHT_FILTER_TINT 0.10f /* how far a crossed cell pulls light toward its own colour */

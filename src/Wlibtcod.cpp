@@ -1087,6 +1087,9 @@ void libtcodTerm::LitPaint(int32 idx) {
 	LightRGB fg = lc.remembered ? LightMemoryBase(base, lc.floor)
 	                            : LightShadeBase(base, L, lc.floor);
 	LightRGB bg = LightGlow(lc.bi, L);
+	LightRGB fogc;
+	if (LightFogAt(lc.mx, lc.my, fogc))
+		{ fg = LightFogMix(fg, fogc, L); bg = LightFogMix(bg, fogc, L); }
 	fg = LightInfraMix(fg, lc.fi, lc.warm, L, lc.infra);
 	TCOD_color_t tf = { fg.r, fg.g, fg.b }, tb = { bg.r, bg.g, bg.b };
 	TCOD_console_put_char_ex(bScreen, idx % sizeX, idx / sizeX, c, tf, tb);
