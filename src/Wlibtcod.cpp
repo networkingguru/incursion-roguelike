@@ -125,6 +125,51 @@
 #pragma pop_macro("min")
 #pragma pop_macro("max")
 #include "gamepad_dir.h"
+
+extern "C" SDL_Surface* TCOD_sys_read_png(const char* filename);
+extern "C" void TCOD_sys_register_SDL_renderer(void (*renderer)(void*));
+extern bool g_titleLogoActive;
+
+static SDL_Surface* g_logo = NULL;
+static SDL_Rect g_logoSrc;
+static int g_gridW = 0, g_gridH = 0, g_fontW = 0, g_fontH = 0;
+static bool g_logoLoadAttempted = false;
+static bool g_logoRendererRegistered = false;
+static bool g_wasShown = false;
+
+extern "C" {
+static void LogoRenderCB(void* vsurf) {
+    SDL_Surface* screen = (SDL_Surface*)vsurf;
+    if (!g_logo || !screen) return;
+    bool show = g_titleLogoActive;
+    if (show) {
+        int ox = (g_gridW - 80) / 2;
+        int oy = (g_gridH > 50) ? (g_gridH - 50) / 2 : 0;
+        int bandCol0 = ox + 4, bandCols = 72;
+        int bandRow0 = oy + 2, bandRows = 10;
+        int bx = bandCol0 * g_fontW, by = bandRow0 * g_fontH;
+        int bw = bandCols * g_fontW, bh = bandRows * g_fontH;
+        SDL_Rect band = { bx, by, bw, bh };
+        SDL_FillRect(screen, &band, SDL_MapRGB(screen->format, 0, 0, 0));
+
+        double nativeAR = (double)g_logoSrc.w / (double)g_logoSrc.h;
+        double bandAR = (double)bw / (double)bh;
+        int dw, dh;
+        if (nativeAR > bandAR) {
+            dw = bw;
+            dh = (int)(bw / nativeAR + 0.5);
+        } else {
+            dh = bh;
+            dw = (int)(bh * nativeAR + 0.5);
+        }
+        SDL_Rect dst = { bx + (bw - dw) / 2, by + (bh - dh) / 2, dw, dh };
+        SDL_BlitScaled(g_logo, &g_logoSrc, screen, &dst);
+    } else if (g_wasShown) {
+        TCOD_console_set_dirty(0, 0, g_gridW, g_gridH);
+    }
+    g_wasShown = show;
+}
+}
 #endif
 
 
@@ -1463,6 +1508,66 @@ RetryFont:
     sprintf(fontName + i, "%dx%d.png", fontX, fontY);
 	TCOD_console_set_custom_font(fontName, TCOD_FONT_LAYOUT_ASCII_INROW, 16, 16);
 	TCOD_console_init_root(sizeX, sizeY, "Incursion: Halls of the Goblin King", !isWindowed, TCOD_RENDERER_SDL);
+
+#ifndef _WIN32
+    g_gridW = sizeX;
+    g_gridH = sizeY;
+    g_fontW = fontX;
+    g_fontH = fontY;
+    if (!g_logoLoadAttempted) {
+        char logoName[MAX_PATH_LENGTH] = "";
+        strcat(logoName, IncursionDirectory);
+        strcat(logoName, "graphics/logo.png");
+        g_logoLoadAttempted = true;
+        g_logo = TCOD_sys_read_png(logoName);
+        if (g_logo) {
+            int minX = g_logo->w, minY = g_logo->h, maxX = -1, maxY = -1;
+            bool locked = !SDL_MUSTLOCK(g_logo) || SDL_LockSurface(g_logo) == 0;
+            if (locked) {
+                int bytesPerPixel = g_logo->format->BytesPerPixel;
+                for (int y = 0; y < g_logo->h; ++y) {
+                    Uint8* row = (Uint8*)g_logo->pixels + y * g_logo->pitch;
+                    for (int x = 0; x < g_logo->w; ++x) {
+                        Uint8* p = row + x * bytesPerPixel;
+                        Uint32 pixel;
+                        if (bytesPerPixel == 4)
+                            pixel = *(Uint32*)p;
+                        else if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
+                            pixel = ((Uint32)p[0] << 16) | ((Uint32)p[1] << 8) | p[2];
+                        else
+                            pixel = p[0] | ((Uint32)p[1] << 8) | ((Uint32)p[2] << 16);
+                        Uint8 r, g, b;
+                        SDL_GetRGB(pixel, g_logo->format, &r, &g, &b);
+                        if (r > 24 || g > 24 || b > 24) {
+                            if (x < minX) minX = x;
+                            if (x > maxX) maxX = x;
+                            if (y < minY) minY = y;
+                            if (y > maxY) maxY = y;
+                        }
+                    }
+                }
+                if (SDL_MUSTLOCK(g_logo))
+                    SDL_UnlockSurface(g_logo);
+            }
+            if (maxX >= minX && maxY >= minY) {
+                g_logoSrc.x = minX;
+                g_logoSrc.y = minY;
+                g_logoSrc.w = maxX - minX + 1;
+                g_logoSrc.h = maxY - minY + 1;
+            } else {
+                g_logoSrc.x = 0;
+                g_logoSrc.y = 0;
+                g_logoSrc.w = g_logo->w;
+                g_logoSrc.h = g_logo->h;
+            }
+            SDL_SetSurfaceBlendMode(g_logo, SDL_BLENDMODE_NONE);
+            if (!g_logoRendererRegistered) {
+                TCOD_sys_register_SDL_renderer(LogoRenderCB);
+                g_logoRendererRegistered = true;
+            }
+        }
+    }
+#endif
 
     InitWindows();
 

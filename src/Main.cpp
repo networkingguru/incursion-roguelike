@@ -2159,11 +2159,14 @@ void Game::ListItemsByLevel()
     
 extern void TestEncounterGen(Term *t);
 
+bool g_titleLogoActive = false;
+
 void Game::StartMenu() {                                      
     int16 i;
 
 Redraw:
     do {
+        g_titleLogoActive = true;
         T1->SetMode(MO_SPLASH);
         T1->Title();
         T1->LOption("Create a New Character",0);
@@ -2178,7 +2181,12 @@ Redraw:
 #ifdef DEBUG
         T1->LOption("(Debugging Commands)",99);
 #endif
-        switch(i = (int16)T1->LMenu(MENU_2COLS|MENU_REDRAW,"-- Initial Choices -- ",WIN_CUSTOM)) {
+        i = (int16)T1->LMenu(MENU_2COLS|MENU_REDRAW,"-- Initial Choices -- ",WIN_CUSTOM);
+        g_titleLogoActive = false;
+        T1->SetWin(WIN_SCREEN);
+        T1->Clear();
+        T1->Update();
+        switch (i) {
         case 99:
             T1->LOption("Monster Evaluation",2);
             T1->LOption("Check Module Consistency",1);
@@ -2622,5 +2630,3 @@ void BuildSpellList()
   }
 
 #endif
-
-

@@ -135,12 +135,13 @@ assemble() {
     local pkg="$DIST/$dir"
     echo "=== assembling $pkg ==="
     rm -rf "$pkg"
-    mkdir -p "$pkg/mod" "$pkg/fonts" "$pkg/save" "$pkg/logs"
+    mkdir -p "$pkg/mod" "$pkg/fonts" "$pkg/graphics" "$pkg/save" "$pkg/logs"
 
     cp "$STAGE/incursion-ship"    "$pkg/incursion"
     chmod +x "$pkg/incursion"
     cp "$STAGE/mod/Incursion.Mod" "$pkg/mod/"
     cp "$ROOT"/fonts/*.png        "$pkg/fonts/"
+    cp "$ROOT"/graphics/logo.png  "$pkg/graphics/"
     # Deliberately NOT Options.Dat. Player::LoadOptions (src/Player.cpp) fills in
     # every option's real default when the file is absent, so a fresh install is
     # correct without it -- and the tree's Options.Dat is an all-NUL file that
