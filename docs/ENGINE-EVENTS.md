@@ -54,7 +54,7 @@ in the build.**
 `EventInfo EventStack[EVENT_STACK_SIZE]`, `EventSP` starting at -1 (`src/Event.cpp:130-131`); the size is 128
 (`inc/Defines.h:80`). The only bound is `CHECK_OVERFLOW` (`src/Event.cpp:128`), which calls `Fatal("Event Stack Overflow!")` and
 exits. There is no depth budget, no recursion counter and no cycle detection in `src/Event.cpp`. Unrelated code reads frames
-assuming the enclosing context: `src/Fight.cpp:285-292`, `src/Prayer.cpp:588`, `src/Skills.cpp:1569`, `src/Target.cpp:1726`.
+assuming the enclosing context: `src/Fight.cpp:285-292`, `src/Prayer.cpp:588`, `src/Skills.cpp:1575`, `src/Target.cpp:1726`.
 
 ## Re-entrancy
 **The system has no general protection against re-entrancy.** Shared by every nested event: `VMachine::Regs[64]`, `SRegs[64]`,
@@ -64,7 +64,7 @@ are `static` on `Resource` (`inc/Res.h:224-225`) — one annotation cursor for t
 FAnnot/NAnnot doesn't normally [work]" (`src/Annot.cpp:619-621`); `FAnnot2` is a one-level kludge, and depth 3 has no cursor.
 `Thing::PlaceNear` holds `static Creature* Displace[64]` (`src/Display.cpp:413`) and re-enters itself via `PlaceAt` (`:550`),
 which the code notes can overflow the C stack (`:544-546`). Only three places are protected: `StatiCollection::Nested` defers
-stati fixups to the outermost iteration (`inc/Map.h:701-706`, field at `:790`), `Creature::Perceives` uses a static counter as a recursion
+stati fixups to the outermost iteration (`inc/Map.h:701-706`, field at `:791`), `Creature::Perceives` uses a static counter as a recursion
 mutex (`src/Vision.cpp:415-416`), and `Creature::Multiply` refuses to breed past a nesting depth of 4 (`src/Creature.cpp:498`).
 
 ## The three crashes
