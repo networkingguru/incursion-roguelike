@@ -86,7 +86,7 @@ The format MUST satisfy four properties.
 
 ## Non-goals
 
-- **Modules stay on the raw path.** `Game::SaveModule` (`src/Registry.cpp:1361`)
+- **Modules stay on the raw path.** `Game::SaveModule` (`src/Registry.cpp:1433`)
   keeps calling the existing `SaveGroup`. `mod/Incursion.Mod` is a separate file
   written by the resource compiler (`src/RComp.cpp:223`) and read at startup by
   `LoadModules()`. A save never contains a module; it refers to one. A module is
@@ -152,10 +152,10 @@ That rule is the contract. Nothing else about the schema needs remembering.
 
 ### How a class declares its fields
 
-`ARCHIVE_CLASS` (`inc/Base.h:686`) already generates a
+`ARCHIVE_CLASS` (`inc/Base.h:778`) already generates a
 `Serialize(Registry&, bool isSave)` that calls its base first, and 20 classes
 already use it. The bodies gain field declarations beside the fixups they
-already carry. `Thing` (`inc/Map.h:663-676`) becomes:
+already carry. `Thing` (`inc/Map.h:916-938`) becomes:
 
 ```cpp
 ARCHIVE_CLASS(Thing,Object,r)
@@ -179,7 +179,7 @@ as `Serialize` does today, so a field cannot be written and not read.
 
 ### The map grid
 
-`Map::Serialize` (`inc/Map.h:492-500`) writes `Grid` as one raw block of
+`Map::Serialize` (`inc/Map.h:647-648`) writes `Grid` as one raw block of
 `sizeof(LocationInfo)*sizeX*sizeY`. `LocationInfo` (`inc/Map.h:33-51`) is
 bitfields, whose order and packing the compiler chooses.
 
@@ -292,7 +292,7 @@ Otherwise step 4 always succeeds for any position the manifest covers, because
 an array can only have grown.
 
 **Sequencing.** Both load paths reload modules only after the save group is read
-(`src/Registry.cpp:1320-1337`, `src/Dump.cpp:195-215`), so `Game::Modules` is
+(`src/Registry.cpp:1347-1364`, `src/Dump.cpp:195-215`), so `Game::Modules` is
 stale or zeroed while records are being replayed. The manifest MUST be parsed
 with the records and the conversion MUST be deferred to `SaveV1_ResolveNames()`,
 which already runs after the reload.
@@ -329,12 +329,12 @@ diff.
 ### The resource memory segment
 
 `Game::Serialize` writes each module's `MDataSeg` as one raw block
-(`inc/Res.h:1072-1073`). The block is the module's script data segment followed
+(`inc/Res.h:1262-1263`). The block is the module's script data segment followed
 by the per-player resource memory: `MonMem[szMon]`, `ItemMem[szItm]`,
 `EffMem[szEff]`, `RegMem[szReg]`, addressed arithmetically from the resource's
-position (`Module::GetMemoryPtr`, `src/Res.cpp:711`). `EffMem`
-(`inc/Res.h:1225`) carries `FlavorID` and `PFlavorID` — whole flavour `rID`s,
-assigned by the per-game shuffle in `Game::SetFlavors` (`src/Item.cpp:310`).
+position (`Module::GetMemoryPtr`, `src/Res.cpp:719`). `EffMem`
+(`inc/Res.h:1432`) carries `FlavorID` and `PFlavorID` — whole flavour `rID`s,
+assigned by the per-game shuffle in `Game::SetFlavors` (`src/Item.cpp:325`).
 This is the identification state: which potion looks like what, and what the
 player has tried and knows.
 
