@@ -9,7 +9,7 @@ Navigational page for bead inc-e2j. Every claim carries file:line; counts carry 
 - `Registry` owns every `Object` by handle `hObj` (`inc/Base.h:789`; `Object::myHandle` `inc/Base.h:630`). `theRegistry->Exists(h)` is the liveness test. Handles 1..127 are reserved (`src/Registry.cpp:251-260`).
 - `Map: public Object` (`inc/Map.h:177`) owns `LocationInfo *Grid` (`inc/Map.h:188`), sized `sizeX*sizeY`. Serialization takes one of two paths (`inc/Map.h:641`): a v1 save embeds the grid through `V1EmbedBegin`/`GridFieldsV1` (`inc/Map.h:643-645`); the legacy v0 path writes it as one block with `r.Block` (`inc/Map.h:648`).
 - `Thing: public Object` (`inc/Map.h:914`) holds `Map* m; hObj Next, hm; int16 x,y` (`inc/Map.h:940-942`). `m` is a raw pointer; `hm` is only its save form (`inc/Map.h:922-924`).
-- Hierarchy: `Creature: Thing, Magic` (`inc/Creature.h:160`) -> `Character` (`inc/Creature.h:638`) -> `Player` (`inc/Creature.h:1172`); `Monster: Creature` (`inc/Creature.h:1538`). `Item: Thing, Magic` (`inc/Item.h:13`). `Feature: Thing` (`inc/Feature.h:11`) -> `Door`/`Trap`/`Portal`.
+- Hierarchy: `Creature: Thing, Magic` (`inc/Creature.h:160`) -> `Character` (`inc/Creature.h:639`) -> `Player` (`inc/Creature.h:1173`); `Monster: Creature` (`inc/Creature.h:1538`). `Item: Thing, Magic` (`inc/Item.h:13`). `Feature: Thing` (`inc/Feature.h:11`) -> `Door`/`Trap`/`Portal`.
 - Type tests are numeric, not virtual (`inc/Base.h:631-635`). `isType(T_THING)` is always true (`inc/Base.h:642`), so `Map::FirstAt` returns any Thing.
 
 ## The two lists — the central invariant
@@ -19,7 +19,7 @@ A Map records each Thing twice: `Map::Things`, an `NArray<hObj,1000,10>` (`inc/M
 INVARIANT: a Thing with `m == M` is in both `M->Things` and the Contents chain of `M->At(x,y)`. Enforced nowhere. The pair is inserted together only in `Thing::PlaceAt` (`src/Display.cpp:278` array, `:280-290` chain) and `Thing::Move` (`src/Display.cpp:1741-1769`, chain only), and unlinked together only in `Thing::Remove` (`src/Display.cpp:2026-2058`). Insert is not FIFO: if the chain head is a creature the newcomer is spliced in second (`src/Display.cpp:280-286`, `:1760-1765`).
 
 Three exemptions, all deliberate:
-- MOUNT — `Creature::Mount` calls `Remove(false, true)`, then re-writes `x,y,m` by hand and never re-adds (`src/Skills.cpp:4294-4297`). A mount is in NEITHER list. `Thing::Remove` then skips the whole unlink block for it (`src/Display.cpp:2026`).
+- MOUNT — `Creature::Mount` calls `Remove(false, true)`, then re-writes `x,y,m` by hand and never re-adds (`src/Skills.cpp:4300-4303`). A mount is in NEITHER list. `Thing::Remove` then skips the whole unlink block for it (`src/Display.cpp:2026`).
 - ENGULFED — `Creature::DoEngulf` re-adds to `Things` only (`src/Display.cpp:2191-2194`): in list 1, not list 2.
 - `Item::Next` is overloaded — the map Contents link when on the ground, the inventory link when carried (`src/Display.cpp:2141-2152`; chest walk `src/Display.cpp:372-376`). `Container::Contents` is unrelated to `LocationInfo::Contents`.
 
@@ -45,7 +45,7 @@ FI_SIZE (`inc/Defines.h:3457`) is the bulk of a creature above size Large, creat
 2. **GetOpenXY returns (0,0)** (`src/MakeLev.cpp:3572-3579`) violates "the open-square set belongs to the map being populated". `OpenX/OpenY/OpenC` are `static` members of Map (`inc/Map.h:202-203`), shared by every Map instance and by encounter generation (`src/Encounter.cpp:2547`, `:2569`). The caller is `Thing::PlaceOpen` (`inc/Map.h:1006-1008`), which decodes 0 as (0,0) unchecked. Every script call site does guard with `FindOpenAreas` (`lib/program.i`), so the failure needs `OpenC` clobbered between guard and use.
 3. **GetAt reports an FI_SIZE field not in Fields[]** (`src/Display.cpp:1538`). See Suspected defects: that Error cannot fire, and the staleness worth catching is silent.
 4. **Encounter placed, no creature** (`src/MakeLev.cpp:3483`, `ASSERT(c = GetEncounterCreature(0))`) violates "`CandidateCreatures[i]` refers to a live, placed creature". `enBuildMon` writes the slot at `src/Encounter.cpp:2531`, then 33 lines later can delete the monster after 50 failed terrain tries (`:2564`, `mn->Remove(true); return ABORT;`) without clearing it. The array is memset only on a non-nested generate (`src/Encounter.cpp:536`), and `GetEncounterCreature` returns the raw pointer with no liveness check (`src/Encounter.cpp:365-371`). `ASSERT` is always live — it calls `Error` (`inc/Defines.h:101`).
-5. **orphans** (`src/MapAudit.cpp:224`). The two lists are `Map::Things` and the per-square Contents chains. Check 3 tests only `inThingsArray` (`:222`), and it exempts MOUNT/ENGULFED (`:220`) exactly as check 1 does (`:156`). Mounts are in neither list by design (`src/Skills.cpp:4294-4297`). That exemption landed on 2026-08-17; every orphan line in the log comes from a session before it, names a mountable creature, and reports `F_DELETE=0`.
+5. **orphans** (`src/MapAudit.cpp:224`). The two lists are `Map::Things` and the per-square Contents chains. Check 3 tests only `inThingsArray` (`:222`), and it exempts MOUNT/ENGULFED (`:220`) exactly as check 1 does (`:156`). Mounts are in neither list by design (`src/Skills.cpp:4300-4303`). That exemption landed on 2026-08-17; every orphan line in the log comes from a session before it, names a mountable creature, and reports `F_DELETE=0`.
 
 ## How to check this page
 
