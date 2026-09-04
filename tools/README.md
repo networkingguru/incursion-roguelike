@@ -30,17 +30,17 @@ backend can be linked at a time, because each defines `main()`, `Error()` and
 BACKEND=posix ./build_macos.sh   # -> ./incursion-headless  the POSIX/ncurses build
 ```
 
-`build_macos.sh:36` defaults `BACKEND` to `libtcod`; `:39` maps that to
-`OUT=incursion` and `:40` maps `posix` to `OUT=incursion-headless`. Either line
-also writes `mod/Incursion.Mod` when that file is absent (`build_macos.sh:189-199`),
+`build_macos.sh:48` defaults `BACKEND` to `libtcod`; `:51` maps that to
+`OUT=incursion` and `:52` maps `posix` to `OUT=incursion-headless`. Either line
+also writes `mod/Incursion.Mod` when that file is absent (`build_macos.sh:236-246`),
 because both builds carry the resource compiler by default.
 
 The `posix` build compiles `src/Wposix.cpp` and links `-lz -lncurses`
-(`build_macos.sh:108-117`). ncurses ships with macOS and with every Linux
+(`build_macos.sh:137-146`). ncurses ships with macOS and with every Linux
 distribution, so it adds nothing to install, and it draws only to a real
 terminal — a headless run never calls into it
-(`build_macos.sh:114-116`). The `libtcod` build links SDL2 and OpenGL instead
-(`build_macos.sh:119-124`), and needs `sdl2` and `pkg-config` from Homebrew.
+(`build_macos.sh:143-145`). The `libtcod` build links SDL2 and OpenGL instead
+(`build_macos.sh:148-153`), and needs `sdl2` and `pkg-config` from Homebrew.
 
 **The harness needs the second line.** `headless.sh:76` defaults its binary to
 `./incursion-headless`, and `:79-82` refuses to run without it, printing that
@@ -99,7 +99,7 @@ them (`src/Debug.cpp`), so adding an option renumbers everything after it —
 dump the menu and read the letter rather than counting. And `w`, not `W`: an
 uppercase token sets SHIFT, and both key tables bind `KY_CMD_WIZMODE` with
 modifier flags of 0, so `W` is a different keystroke that reaches nothing
-(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:4641`/`4761`).
+(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:4702`/`4822`).
 
 `[M] Create Altar` is there for the harness. A sacrifice needs the player to
 be standing on an altar, and the only other source of one is `MakeLev`'s
@@ -136,12 +136,12 @@ assert, and the check that drove the session read only the screen dump.
 
 **`ended: WATCHDOG`** — exit 4. The game stopped asking for keystrokes, which is
 the signature of a hang (`headless.sh:32-33`). `SIGALRM` fires in
-`src/Wposix.cpp:471-479`, which writes `incursion: watchdog timeout, no key read
-in time` and exits with `EXIT_OUT_OF_TIME`, defined as 4 at `src/Wposix.cpp:84`.
-The alarm is 300 seconds (`src/Wposix.cpp:79`) and it measures the GAP between
+`src/Wposix.cpp:450-458`, which writes `incursion: watchdog timeout, no key read
+in time` and exits with `EXIT_OUT_OF_TIME`, defined as 4 at `src/Wposix.cpp:85`.
+The alarm is 300 seconds (`src/Wposix.cpp:80`) and it measures the GAP between
 keystrokes, not the length of the run, so a long honest session is safe
-(`src/Wposix.cpp:1593-1597`). It is never armed when a person is at the keyboard
-(`src/Wposix.cpp:576-580`).
+(`src/Wposix.cpp:1595-1599`). It is never armed when a person is at the keyboard
+(`src/Wposix.cpp:580-584`).
 
 **`death: STUCK`** — the run ended with `Die? [yn]` still on the last screen,
 unanswered (`headless.sh:266-270`). The pinned settings run with `OPT_NODEATH`
@@ -210,10 +210,10 @@ sample of a headless run on 2026-08-15 put 75 percent of the run inside
 
 **Trap 4 — a key script longer than the budget stops early and exits 3, and
 that looks like a short run rather than a failure.** The budget is
-`DEFAULT_MAX_KEYS 20000` (`src/Wposix.cpp:78`, applied at `:171`). It counts keys
-READ, one per `GetChar` call (`src/Wposix.cpp:1627`), and when it runs out
+`DEFAULT_MAX_KEYS 20000` (`src/Wposix.cpp:79`, applied at `:150`). It counts keys
+READ, one per `GetChar` call (`src/Wposix.cpp:1592`), and when it runs out
 the game dumps a screen named `maxkeys` and exits with `EXIT_OUT_OF_KEYS`, which
-is 3. Raise it with `INCURSION_MAX_KEYS` (`src/Wposix.cpp:592-593`).
+is 3. Raise it with `INCURSION_MAX_KEYS` (`src/Wposix.cpp:574-575`).
 
 **Correction, 2026-08-17: `marathon.keys` does NOT need a raised cap, and the
 usage line in its own header was wrong.** That header told everyone to run
@@ -244,7 +244,7 @@ APPENDS to a log wrote into the same file. The result was one directory whose
 log read like a single long session, and every per-seed figure drawn from it was
 wrong. This produced a false count on 2026-08-17: a 7-session, 51-level survey
 figure had to be withdrawn and re-measured at 60 levels over eight isolated
-seeds (commit `0b5b59b`, bd `inc-uh0`). `dump_save.sh:74` carried the same
+seeds (commit `0b5b59b`, bd `inc-uh0`). `dump_save.sh:79` carried the same
 defect and got the same fix. `check_headless.sh` assertion 11 is what stops it
 coming back: it starts two sessions at once with no `INCURSION_RUN_DIR` and
 fails if they report one path.
@@ -342,7 +342,7 @@ the job, and each still explains an older log or an older commit.
 
 `run_probe.sh` was **deleted on 2026-08-18**. Its own header said "Delete this
 script once the saved-game position bug is fixed", and that bug is fixed:
-`docs/REPORTING-GATE.md:366` records `*((long*)&hm)` destroying the player's
+`docs/REPORTING-GATE.md:392` records `*((long*)&hm)` destroying the player's
 position as a closed fix, and `src/AbiCheck.cpp:11` now gates the type widths it
 depended on. It was also redundant — `play.sh` sets the same two probes and more
 (`play.sh:41-49`) and prints a report afterwards, which `run_probe.sh` did not.
@@ -450,7 +450,7 @@ so averaging the whole desktop halves any real signal and lets unrelated windows
 swamp it (`flickerscan.py:5-8`). `flickerscan.py` also refuses to reach a verdict
 on black frames, which is the failure that had the older scan confidently
 reporting results from captures macOS had blocked
-(`docs/PORT-STATUS.md:366`). `flickerscan.sh` still calls `flickerscan.py`,
+(`docs/PORT-STATUS.md:376`). `flickerscan.sh` still calls `flickerscan.py`,
 so it is not broken — it is the weaker instrument, and it is kept only so its
 older logs stay interpretable.
 
