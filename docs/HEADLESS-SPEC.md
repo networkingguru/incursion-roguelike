@@ -49,11 +49,11 @@ Both existing backends store the screen in their graphics library's own buffer
 `posixTerm` stores `Glyph scr[48][80]` directly.
 
 A `Glyph` is a `uint32`: 12 bits of glyph id, 4 of foreground, 4 of background
-(`inc/Defines.h:4174`). Storing it verbatim makes `AGetChar` exact. The libtcod
+(`inc/Defines.h:4215`). Storing it verbatim makes `AGetChar` exact. The libtcod
 backend cannot do that — it stores the character its glyph table produced, so
 `GetGlyph` → `PutGlyph` round trips lose the glyph id. The callers
-(`src/Term.cpp:2247`, `src/Magic.cpp:1353`, `src/Skills.cpp:1932`,
-`src/Skills.cpp:2851`) mask with `GLYPH_ID_MASK` and put the result back, so
+(`src/Term.cpp:2252`, `src/Magic.cpp:1353`, `src/Skills.cpp:1938`,
+`src/Skills.cpp:2857`) mask with `GLYPH_ID_MASK` and put the result back, so
 exactness is what they want.
 
 This also means the rendering target is not the screen model. The same array
@@ -177,7 +177,7 @@ the two tables above as the starting point, not as the current list.
   *name*; `@expect "text"`, which stops the run unless the screen shows
   *text*; `@while "text" KEY` and `@until "text" KEY`; and `@cursorto "name"
   KEY` with its `@cursorto:mark` variant. All are parsed in
-  `src/Wposix.cpp:1283-1345`.
+  `src/Wposix.cpp:1245-1391`.
 - The command line also takes `-timeout SECONDS`, the watchdog for an
   unattended run, and `-dump SAVEFILE`, which prints a save file and exits
   without starting the game.
