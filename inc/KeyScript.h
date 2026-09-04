@@ -2,9 +2,19 @@
 #define KEYSCRIPT_H
 
 #include <stddef.h>
+/* Incursion.h has already defined array, min and max as macros. libstdc++
+   declares std::min/std::max in <bits/stl_algobase.h>, and the macros mangle
+   those declarations, so the Linux build fails where libc++ tolerates it.
+   Hide all three across the include, then restore them. */
 #pragma push_macro("array")
+#pragma push_macro("min")
+#pragma push_macro("max")
 #undef array
+#undef min
+#undef max
 #include <vector>
+#pragma pop_macro("max")
+#pragma pop_macro("min")
 #pragma pop_macro("array")
 
 /* Script tokens that both backends treat as instructions rather than
