@@ -2516,13 +2516,24 @@ TargetChosen:
                         continue;
                     }
                     e.ETarget = e.ETarget->GetStatiObj(MOUNTED);
-                } else if (ch == KY_CMD_ENTER) {
-                    Feature *ft = m->KnownFeatureAt(tx,ty);
-                    if (ft != NULL && ft->Type == T_PORTAL && !((Portal*)ft)->EnterDir(CENTER)) {
-                        Message("You can't go in anything here.");
-                        continue;
-                    }
                 }
+                /* upstream: no KY_CMD_ENTER/portal guard belongs in this shared
+                 * prompt. rmtew added one in 6e67101 (Fixes #187) to stop the
+                 * 'y' use menu's Enter verb handing a non-portal to the script
+                 * engine, but he wrote it here, where EVERY ENTER in EVERY
+                 * target prompt passes through it. Portal::EnterDir(CENTER) is
+                 * false for up and down stairs (src/Feature.cpp:428), and an
+                 * arriving character stands ON the stair (Player::MoveDepth), so
+                 * the Q_TAR cursor started on a refused square: no potion, wand,
+                 * spell or fired missile could confirm a target on any stair,
+                 * and the continue cleared the message before it drew, so ENTER
+                 * looked dead. His own 94ddfbe weakened the test in place ("the
+                 * fix still isn't a good one") until it caught only stairs -- by
+                 * which point it no longer guarded the non-portal case #187 was
+                 * about at all. The #187 guard now sits at its one real site,
+                 * Player::YuseMenu. Defect is upstream's: plain control flow,
+                 * unchanged since 2014, identical on Win32. Evidence: Observed.
+                 * inc-2sv. NOT sent upstream. */
 
                 e.EXVal = tx;
                 e.EYVal = ty;

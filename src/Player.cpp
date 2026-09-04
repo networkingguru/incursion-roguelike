@@ -1594,6 +1594,22 @@ DoYuse:
             return;
         }
 
+    /* upstream: rmtew's #187 guard lives here now, not in the shared target
+     * prompt where he first put it (6e67101). The Enter verb (Tables.cpp:3194)
+     * sends EV_ENTER, and the script engine chokes if the chosen square holds
+     * no enterable portal. Test that once, for this one verb, after the target
+     * prompt has settled e.EXVal/e.EYVal. Every other verb, and every other
+     * target prompt in the game, is now free to confirm a target on a stair.
+     * Defect is upstream's: plain control flow, same on Win32. Evidence:
+     * Observed. inc-2sv. NOT sent upstream. */
+    if (YuseCommands[c].Event == EV_ENTER) {
+        Feature *ft = m->KnownFeatureAt(e.EXVal, e.EYVal);
+        if (!ft || ft->Type != T_PORTAL || !((Portal*)ft)->EnterDir(CENTER)) {
+            IPrint("You can't go in anything here.");
+            return;
+        }
+    }
+
     if (e.ETarget && !e.EItem)
         if (e.ETarget->isItem()) {
             e.EItem = (Item*) e.ETarget;

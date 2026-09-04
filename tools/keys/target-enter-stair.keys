@@ -1,0 +1,64 @@
+# The full oracle for inc-2sv, on a character generated from scratch. Read the
+# result with tools/check_target_enter.sh; this file only plays the session.
+#
+#   tools/headless.sh tools/keys/target-enter-stair.keys 1
+#
+# THE SCENE, WHICH NEEDS NO SAVE. A standard orc barbarian (chargen.keys) is
+# placed ON the cave entrance -- the up staircase to the inn -- the moment he
+# enters level 1. The '@' glyph hides the '<' underneath; step one square east
+# and the '<' appears in the square he just left, which is how this session
+# proves the spawn really was a stair. He also starts with Potions of Cure
+# Disease, so the exact item Brian first reported is in the pack from turn one.
+#
+# ORDER MATTERS. The scene is validated and the #187 guard is exercised BEFORE
+# the quaff, because on an unfixed build the quaff's target prompt never closes
+# -- it swallows every keystroke after it. Everything that must run has to run
+# first; the quaff, the one measurement that hangs when it fails, goes last.
+#
+# THREE THINGS ARE MEASURED:
+#
+#   1. THE SCENE IS REAL. He steps one square east. The vacated spawn square
+#      renders '<' immediately west of '@'. A seed that spawned him off a stair
+#      would lack this adjacency, and the check refuses to judge.
+#
+#   2. THE #187 GUARD SURVIVES. Standing now on Floor, he opens the 'y' menu,
+#      chooses [u] Enter, and confirms the default self-target. Floor is not an
+#      enterable portal, so the Enter verb must refuse, "You can't go in
+#      anything here", from its new home in Player::YuseMenu.
+#
+#   3. THE BUG IS FIXED. He steps back west onto the staircase and quaffs a
+#      Potion of Cure Disease (Q_TAR|Q_NEAR). The target prompt opens on
+#      himself, on the stair; he presses ENTER. Before the fix the shared
+#      prompt read this as "walk into the stair", refused it silently, and the
+#      prompt stayed open (screen mode 9) with no turn spent. After the fix the
+#      target is accepted, the potion is drunk, a turn passes and the game
+#      returns to play (screen mode 2). That mode-2-and-a-turn is the oracle.
+
+@include chargen.keys
+
+# A turn to let the level settle, and a stamp to measure the quaff against.
+.*1
+@dump:before
+
+# 1. THE SCENE IS REAL: step east, uncovering the '<' on the spawn square.
+RIGHT
+@dump:stepped
+
+# 2. THE #187 GUARD: Enter a non-portal (self, now on Floor) must be refused.
+y
+u
+@dump:enter-prompt
+ENTER
+@dump:after-enter
+
+# 3. THE BUG: step back onto the stair, quaff, confirm the self-target on it.
+LEFT
+@dump:back-on-stair
+q
+@choose "3 Potions of Cure Disease"
+@dump:target-prompt
+ENTER
+@dump:after-quaff
+
+ESC
+@quit
