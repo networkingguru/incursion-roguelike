@@ -321,7 +321,7 @@ defect that needs depth 11 or deeper cannot find it with these scripts at all.
 
 ---
 
-## 6. Every file in tools/
+## 6. The files that matter in tools/
 
 Not every file here is alive. Statuses: **LIVE** — use it.
 **BUILD INFRASTRUCTURE** — part of producing or shipping a binary, not a
@@ -772,3 +772,9 @@ its parser can match, so a clean run is not a clean bill of health
   `tools/keys/dragonkin-ration.keys` cited a `tools/check_dragonkin_ration.sh`
   that has never existed. Its header is corrected; the assertion is still
   enforced by a person reading the dumps.
+- **§6 is a curated guide, not a complete inventory.** It names 62 of the 187
+  `check_*.sh` in the tree, and §7's tiers name 54; the rest are real checks
+  that no page here lists. §6 documents the harness, the gate and the checks
+  worth reading, because a row is only worth writing when someone has read the
+  script. Counted 2026-09-04: `ls tools/check_*.sh | wc -l` against the scripts
+  named in §6 and §7.

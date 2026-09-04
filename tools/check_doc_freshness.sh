@@ -313,6 +313,14 @@ say ""
 BROKEN=0
 while IFS= read -r f; do
     [ -f "$f" ] || continue          # deleted in the range
+    # tools/check_citations.sh documents and tests citation-checking, so it is
+    # deliberately full of broken citations -- in its explanatory comments as
+    # well as its printf fixtures -- and cite-checking it only ever produces
+    # findings nobody can act on. Comment-only scanning cannot help, because the
+    # fakes are in the comments too. Its own --selftest is what guards it, so it
+    # is skipped here by name (inc-loa.14). It is the only self-referential file:
+    # the sibling citation tools cite-check clean.
+    case "$f" in tools/check_citations.sh) continue ;; esac
     out="$(cite_check "$f")"
     rc=$?
     [ "$rc" = 0 ] && continue

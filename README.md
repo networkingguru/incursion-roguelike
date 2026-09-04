@@ -374,8 +374,9 @@ harness that plays the game unattended, a regression gate, a set of checks that
 each defend one defect, and a set of instruments you switch on with an
 environment variable or a compile flag. Nearly all of it is new in this fork.
 
-Start with [`tools/README.md`](tools/README.md), which documents every file with
-a status and cites a line number for each claim. What follows is the map.
+Start with [`tools/README.md`](tools/README.md), which documents the harness,
+the gate and the principal checks with a status and a line number for each
+claim. What follows is the map.
 
 ```mermaid
 flowchart TB

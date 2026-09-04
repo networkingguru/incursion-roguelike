@@ -1043,7 +1043,7 @@ DisbeliefMessageDone:
            (inc-9mhh) made a tamed caster's -2 stick to its master for ever,
            with 'You are unaffected.' printed on the way out. Only EA_GRANT and
            AR_MFIELD segments reach this on a leave (see the filter at
-           Magic.cpp:714), so no blast or save is skipped by this. The defect
+           Magic.cpp:724-729), so no blast or save is skipped by this. The defect
            is upstream's: plain control flow, no dependence on integer width,
            the typedefs or the compiler. Tracking inc-9mhh. Not sent. */
         e.Immune = e.MagicRes || doResistDeath || !isTarget(e,e.ETarget);

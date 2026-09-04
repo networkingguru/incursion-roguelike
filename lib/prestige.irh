@@ -936,7 +936,17 @@ Effect "Fiendish Servant" : EA_SUMMON
   { SC_WEA; rval: $"true imp"; pval: 6; Purpose: EP_SUMMON;
     /* EF_PERMANANT, not EF_DLONG: the description below says twice that the
        servant remains until dismissed. EF_CANCEL is what dismisses it. */
-    Flags: EF_ACTIVATE, EF_XSUMMON, EF_EVIL, EF_LAWFUL, EF_PERMANANT,
+    /* upstream: EF_ACTIVATE was dropped here. The class grants this effect as
+       an innate spell (CA_INNATE_SPELL, line 882), but EF_ACTIVATE marks
+       segment 0 as activation-only, and Magic::MagicEvent (src/Magic.cpp:701)
+       skips any segment whose activation flag disagrees with how the effect was
+       invoked. A Spell-Manager cast leaves e.isActivation false, so segment 0
+       was skipped and the game printed "There's no effect."; the effect reached
+       no activate menu either, because CA_INNATE_SPELL grants no activation
+       stati. The grant/flag mismatch is in upstream's data and misbehaves
+       identically on Win32 and the original typedefs. Evidence: Observed, via
+       tools/keys/prestige-blackguard5.keys. Tracking: inc-1cq. Not sent. */
+    Flags: EF_XSUMMON, EF_EVIL, EF_LAWFUL, EF_PERMANANT,
            EF_3PERDAY, EF_CANCEL;
     Desc: "Starting at 5th level, a blackguard
       can summon an imp or quasit, as suits his alignment, who will serve

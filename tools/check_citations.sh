@@ -195,8 +195,16 @@ SELF=$(cd -- "$(dirname -- "$0")" 2>/dev/null && pwd -P)/$(basename -- "$0")
 
 defects=0
 unchecked=0
+warnings=0
 
 fail() { printf 'DEFECT  %s\n' "$1"; defects=$((defects + 1)); }
+
+# A WARNING is a distinct severity below DEFECT: a strong drift signal that is
+# not proof, so it never changes the exit code and never moves the defect
+# baseline. tools/check_doc_citations.sh reads the defect count from the summary
+# line, so these lines are invisible to that ratchet by design. The only warning
+# today is a named citation that resolves onto a blank line (inc-loa.20).
+warn() { printf 'WARNING  %s\n' "$1"; warnings=$((warnings + 1)); }
 
 # One place decides the exit status, because the selftest must be able to assert
 # on the same rule the caller sees. A defect outranks an unchecked citation:
@@ -311,6 +319,49 @@ read_declaration() {
 line_at_ref() { git -C "$ROOT" show "$1:$2" 2>/dev/null | sed -n "${3}p"; }
 lines_in_ref() { git -C "$ROOT" show "$1:$2" 2>/dev/null | grep -c ''; }
 
+# comment_only <file> -- print the path to feed the citation scanners. For a
+# document (.md) or an unknown type, that is the file itself. For a source file,
+# it is a temp copy that keeps ONLY comment text, with every code line blanked
+# and the line count preserved. A real citation in a code file lives in a
+# comment (the `upstream:` blocks); the scanner's `path:N` / bare `:N` shapes
+# also match ordinary code -- a C++ `? 12 :13` ternary, a Python `[:20]` slice,
+# a bash `${@:3}` expansion, and the deliberately broken citations in a checker's
+# own printf fixtures -- and every one of those is code, not a comment. Scanning
+# comments only drops all of them while keeping the rotted-comment coverage the
+# freshness sweep scans code for (inc-loa.14). The extractor is line-based on
+# purpose: the codebase writes citations in standalone comment blocks, so a
+# per-line string lexer is not needed and its edge cases are not risked.
+comment_only() {
+    local f=$1 tmp
+    case "$f" in
+        *.cpp|*.c|*.h|*.hpp|*.irh|*.irc|*.i)
+            tmp="$CACHE_DIR/commentonly.$(printf '%s' "$f" | tr './' '__')"
+            awk '
+            { rest=$0; out=""
+              while (length(rest) > 0) {
+                if (inblk) {
+                    e=index(rest,"*/")
+                    if (e==0) { out=out rest; rest="" }
+                    else { out=out substr(rest,1,e+1); rest=substr(rest,e+2); inblk=0 }
+                } else {
+                    b=index(rest,"/*"); l=index(rest,"//")
+                    if (l>0 && (b==0 || l<b)) { out=out substr(rest,l); rest="" }
+                    else if (b>0) { out=out substr(rest,b,2); rest=substr(rest,b+2); inblk=1 }
+                    else { rest="" }
+                }
+              }
+              print out
+            }' "$f" > "$tmp"
+            printf '%s\n' "$tmp" ;;
+        *.sh|*.py)
+            tmp="$CACHE_DIR/commentonly.$(printf '%s' "$f" | tr './' '__')"
+            awk '{ i=index($0,"#"); if (i>0) print substr($0,i); else print "" }' "$f" > "$tmp"
+            printf '%s\n' "$tmp" ;;
+        *)
+            printf '%s\n' "$f" ;;
+    esac
+}
+
 # Is the blob at <ref>:<path> binary? The test is git's own: a NUL byte inside
 # the first 8000 bytes. The tool needs this because a document may name a file
 # that has no lines at all. On 2026-08-18 README.md embedded
@@ -388,6 +439,12 @@ check_document() {
     # Which tree this document is about, decided by the document. Printed, never
     # assumed. See the header for why the default is upstream-first.
     read_declaration "$doc"
+
+    # The citation scanners (the named grep and the bare-continuation block) read
+    # comments only for a source file, so code syntax that looks like a citation
+    # is not mistaken for one. For a .md this is $doc unchanged. See comment_only.
+    local SCANDOC
+    SCANDOC=$(comment_only "$doc")
 
     local resolved="${TMPDIR:-/tmp}/checkcit-resolved.$$"
     : > "$resolved"
@@ -559,7 +616,7 @@ check_document() {
                 "$full" "$num" "$ref" "$PRIMARY_REF" "$(line_at_ref "$ref" "$full" "$num")"
             unchecked=$((unchecked + 1))
         fi
-    done < <(grep -oE '\b([A-Za-z0-9_.-]+/)*[A-Za-z_][A-Za-z0-9_-]+\.[A-Za-z][A-Za-z0-9]{0,3}:[0-9]+' "$doc" | sort -u)
+    done < <(grep -oE '\b([A-Za-z0-9_.-]+/)*[A-Za-z_][A-Za-z0-9_-]+\.[A-Za-z][A-Za-z0-9]{0,3}:[0-9]+' "$SCANDOC" | sort -u)
 
     # 4. Bare continuation citations -- a `:NNNN` with no file in front of it.
     #
@@ -602,7 +659,7 @@ check_document() {
     # basename against the first tree that carries it, and the document's own
     # declaration decides which tree is first. Undeclared, these are upstream
     # and the fallback, which is what they always were.
-    python3 - "$doc" "$PRIMARY_REF" "$ROOT" "$SECONDARY_REF" "$CACHE_DIR" \
+    python3 - "$SCANDOC" "$PRIMARY_REF" "$ROOT" "$SECONDARY_REF" "$CACHE_DIR" \
         <<'PYCHECK'
 import os, re, subprocess, sys
 
@@ -930,6 +987,31 @@ PYCHECK
             esac
         done < "$expect"
     fi
+
+    # 6. Blank-line citations (WARNING, inc-loa.20). A named path:line that
+    # lands on an empty line is almost always drift: the citation still resolves
+    # while naming nothing. This walks the named citations already resolved into
+    # $resolved, whose content came from line_at_ref -> `sed -n Np`, which counts
+    # \n alone. That matters: nine tracked files carry form feeds (the DECUS cpp
+    # sources), and any splitter that breaks on \f as well -- Python's
+    # splitlines() does -- misnumbers every line after one and reports drift that
+    # is not there. Bare `:NNN` continuations are not scanned here; the Python
+    # block above owns them, and blank-line drift there is not worth the \f risk.
+    #
+    # Dated-record documents are skipped. Their citations pin the tree at a past
+    # moment and MUST NOT be "corrected", so warning on them would be twenty
+    # findings nobody can act on, every run -- the very noise this project keeps
+    # writing checks to avoid.
+    case "$doc" in
+        *docs/superpowers/plans/*|MORNING-REPORT.md|*/MORNING-REPORT.md) ;;
+        *)
+            while IFS=$'\t' read -r cite content; do
+                [ -n "$cite" ] || continue
+                [ -z "${content//[[:space:]]/}" ] &&
+                    warn "$cite resolves onto a blank line -- likely drift (it names nothing)"
+            done < "$resolved"
+            ;;
+    esac
 
     rm -f "$resolved"
 }
@@ -1287,6 +1369,57 @@ selftest() {
         selftest_failures=$((selftest_failures + 1))
     fi
 
+    # The blank-line WARNING (inc-loa.20). A named citation onto an empty line
+    # is flagged; a dated-record document is exempt. The cited blank line is
+    # found in HEAD at run time, so the fixture cannot drift as the tree moves.
+    local blankfile blankno
+    blankfile=src/Feature.cpp
+    blankno=$(git -C "$ROOT" show "$FALLBACK_REF:$blankfile" 2>/dev/null \
+        | grep -n '^[[:space:]]*$' | head -1 | cut -d: -f1)
+    if [ -n "$blankno" ]; then
+        selftest_total=$((selftest_total + 1))
+        printf '%s\n%s:%s is nothing.\n' "$OURS_MARK" "$blankfile" "$blankno" > "$dir/blank-live.md"
+        "$SELF" "$dir/blank-live.md" > "$dir/blank-live.out" 2>&1
+        if ! grep -q '^WARNING .*blank line' "$dir/blank-live.out"; then
+            printf 'selftest FAIL: a citation onto a blank line was not flagged as a WARNING\n'
+            sed 's/^/    | /' "$dir/blank-live.out"
+            selftest_failures=$((selftest_failures + 1))
+        fi
+
+        selftest_total=$((selftest_total + 1))
+        mkdir -p "$dir/docs/superpowers/plans"
+        printf '%s\n%s:%s is nothing.\n' "$OURS_MARK" "$blankfile" "$blankno" \
+            > "$dir/docs/superpowers/plans/blank-record.md"
+        "$SELF" "$dir/docs/superpowers/plans/blank-record.md" > "$dir/blank-record.out" 2>&1
+        if grep -q '^WARNING' "$dir/blank-record.out"; then
+            printf 'selftest FAIL: a dated-record document was warned about a blank-line citation\n'
+            sed 's/^/    | /' "$dir/blank-record.out"
+            selftest_failures=$((selftest_failures + 1))
+        fi
+    fi
+
+    # comment_only (inc-loa.14): a source file is cite-checked over its comments,
+    # not its code. A citation shape in code -- a bash `${@:N}` or a `[:N]` slice
+    # -- must be ignored, while a real citation in a comment is still checked.
+    local cofix_rc
+    selftest_total=$((selftest_total + 1))
+    {
+        printf '# a real citation: src/Feature.cpp:850\n'
+        printf 'x="${@:99999}"\n'
+        printf 'y=msgs[:88888]\n'
+    } > "$dir/codefix.sh"
+    "$SELF" "$dir/codefix.sh" > "$dir/codefix.out" 2>&1
+    cofix_rc=$?
+    if [ "$cofix_rc" != 0 ] || grep -q '^DEFECT' "$dir/codefix.out"; then
+        printf 'selftest FAIL: code syntax in a .sh was cite-checked as a citation\n'
+        sed 's/^/    | /' "$dir/codefix.out"
+        selftest_failures=$((selftest_failures + 1))
+    elif ! grep -q 'Feature.cpp:850' "$dir/codefix.out"; then
+        printf 'selftest FAIL: a real citation in a .sh comment was not scanned\n'
+        sed 's/^/    | /' "$dir/codefix.out"
+        selftest_failures=$((selftest_failures + 1))
+    fi
+
     rm -rf "$dir"
     if [ "$selftest_failures" -eq 0 ]; then
         printf 'selftest: pass -- %d cases\n' "$selftest_total"
@@ -1343,4 +1476,8 @@ case "$rc" in
             "$PRIMARY_REF" "$ORIGIN_REF"
         ;;
 esac
+# Warnings are reported but never change the exit code (see warn() above).
+[ "$warnings" -gt 0 ] && printf \
+    '%d citation(s) land on a blank line (WARNING above) -- likely drift, not counted as defects.\n' \
+    "$warnings"
 exit "$rc"

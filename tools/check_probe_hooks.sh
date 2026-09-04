@@ -38,8 +38,13 @@ BASELINE="tools/probe_hooks.baseline"
 
 # Documented facilities, not scaffolding. These are how the tools drive the
 # game and are meant to stay: the seed, the key budget, the map audit, the
-# error prompt, and the heap-layout switch, which is compiled out anyway.
-KNOBS="INCURSION_SEED INCURSION_MAX_KEYS INCURSION_MAP_AUDIT INCURSION_ERROR_PROMPT INCURSION_LAYOUT"
+# error prompt, the heap-layout switch, which is compiled out anyway, the
+# pad-help override (docs/CONTROLS-ally.md, inc/Term.h) that forces the
+# controller ? screen for tools/check_pad_help.sh without a real gamepad, and
+# the OOB probe, a compiled-out diagnostic (only under -DINCURSION_OOB_PROBE)
+# with documented A/B-build usage at src/Display.cpp:768-780; kept for the same
+# reason as the heap-layout switch, not scaffolding waiting to be deleted.
+KNOBS="INCURSION_SEED INCURSION_MAX_KEYS INCURSION_MAP_AUDIT INCURSION_ERROR_PROMPT INCURSION_LAYOUT INCURSION_PAD_HELP INCURSION_OOB_PROBE"
 
 command -v bd > /dev/null || {
     echo "COULD NOT MEASURE: bd is not on PATH, so no bead status can be read."

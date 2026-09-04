@@ -117,7 +117,7 @@ bool Player::Create(bool reincarnate) {
     // upstream: off-by-one wrote SkillRanks[SK_LAST] (index 49) into
     // SkillRanks[SK_LASTSKILL==49], one past the end (valid indices 0-48).
     // Every other loop over SkillRanks in this codebase uses "i!=SK_LAST"
-    // with no "+1" (Debug.cpp:1653, Create.cpp:2620/2652, Managers.cpp,
+    // with no "+1" (Debug.cpp:1677, Create.cpp:2958/2990, Managers.cpp:1821,
     // Help.cpp:82); this is the only outlier. UBSan, Traced, inc-bd2, not sent.
     for(i=0;i!=SK_LAST;i++)
         SkillRanks[i] = 0;
@@ -4033,7 +4033,7 @@ int16 Character::IAttr(int8 a)
     // upstream: "a" is documented (FeatTab.cpp:16) and used everywhere else
     // as a base ability-score index (A_STR..A_LUC, 0-6) -- that's the only
     // domain BAttr[7] and TRACE()->AttrAdj[7] are sized for. But
-    // FeatPrereq's FP_ATTR case (Create.cpp, ~line 3321) forwards fc->arg
+    // FeatPrereq's FP_ATTR case (Create.cpp:3660) forwards fc->arg
     // here verbatim, and two FeatTab.cpp entries (Iron Skin) pass
     // A_SAV_FORT (28), an index from the unrelated, much larger
     // A_HIT_*/A_SAV_*/... numbering used by Creature::Attr[ATTR_LAST]
@@ -4041,7 +4041,7 @@ int16 Character::IAttr(int8 a)
     // anything outside the ability-score range to GetAttr(), which is
     // backed by the correctly-sized Attr[ATTR_LAST] array and is exactly
     // what AdvanceLevel's "CalcValues(); // For Attribute-based feat
-    // prereqs" (Create.cpp ~line 2324) was already computing for. This
+    // prereqs" (Create.cpp:2662) was already computing for. This
     // does not change behaviour for a<=A_LUC (all 8 other call sites, and
     // ~60 other FeatTab.cpp FP_ATTR entries, only ever pass 0-6).
     // UBSan, Traced, inc-bd2, not sent.

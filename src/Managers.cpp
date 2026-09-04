@@ -1247,14 +1247,14 @@ PartialRedraw:
     }
 
     /* upstream: the shop list never scrolled at all. ClearScroll(true) at the
-       top of PartialRedraw zeroes TextTerm::offset (src/TextTerm.cpp:720-728),
+       top of PartialRedraw zeroes TextTerm::offset (src/TextTerm.cpp:725-731),
        every arrow key returns here, and this is the only draw -- so whatever
        offset the NORTH/SOUTH cases had just worked out was thrown away and row
        0 was redrawn at the top of the page every time. Those cases also
        compared against a hardcoded 32 rows, while the window is WinSizeY()
        tall. Keep the scroll position in a local the redraw cannot reach, and
        take the page height from the window, the way TextTerm::LMenu does at
-       src/TextTerm.cpp:1052-1055. Nothing here is a port artefact: the reset
+       src/TextTerm.cpp:1041. Nothing here is a port artefact: the reset
        and the constant are both upstream source and behave the same on Win32
        with the original typedefs. Observed -- 40 DOWN presses left the page
        byte-identical while the selection provably moved 40 rows; see
