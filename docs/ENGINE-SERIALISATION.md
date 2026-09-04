@@ -18,8 +18,8 @@ I ran; commands at the bottom). Normative spec: `docs/SAVE-SCHEMA-SPEC.md`.
 - **v0** is the legacy raw-memory format described further down. The v0
   reader stays in the binary for every save written before the switch, and
   modules stay on the raw path entirely: `Game::SaveModule`
-  (src/Registry.cpp:1406) still writes a `.Mod` through `SaveGroup` with the
-  `"SF"` layout digest stamp (:1422).
+  (src/Registry.cpp:1433) still writes a `.Mod` through `SaveGroup` with the
+  `"SF"` layout digest stamp (:1449).
 - The reader dispatches on the file's own stamp, in `Registry::LoadGroup`
   (src/Registry.cpp:860-865): `Sig` right and `Version` starting `"IS"` goes
   to `LoadGroupV1`; an `"IS"` file that is not `"IS1."` is a future major
@@ -46,9 +46,9 @@ I ran; commands at the bottom). Normative spec: `docs/SAVE-SCHEMA-SPEC.md`.
 | `Registry::Block` (v0 pointer/handle swap) | src/Registry.cpp:355 |
 | `typeSize()` (bytes per object type) | src/Registry.cpp:292 |
 | `Game::SaveGame` / `LoadGame` | src/Registry.cpp:1114 / :1245 |
-| `Game::SaveModule` / `LoadModules` | src/Registry.cpp:1406 / :1441 |
-| Deferred v1 name resolution call sites | src/Registry.cpp:1377, src/Dump.cpp:271 |
-| `CFile` (v0 compressed payload buffer) | inc/Term.h:828, src/Term.cpp:3539-3698 |
+| `Game::SaveModule` / `LoadModules` | src/Registry.cpp:1433 / :1468 |
+| Deferred v1 name resolution call sites | src/Registry.cpp:1404, src/Dump.cpp:271 |
+| `CFile` (v0 compressed payload buffer) | inc/Term.h:828, src/Term.cpp:3544-3703 |
 | ABI gate | src/AbiCheck.cpp |
 | `SaveFormatID()` / `SaveFormatMatches()` (the v0 stamp) | src/AbiCheck.cpp:167 / src/Registry.cpp:61 |
 | `SIGNATURE`, `SIGNATURE_TWO`, `VERSION_STRING` | inc/Defines.h:15, :16, :23 |
@@ -77,9 +77,9 @@ code; **v1 gave it a meaning**: 1 = the payload is zlib level 6
 (src/SaveV1.cpp:2966-2996). The v0 paths still ignore it: v0's LZ-versus-RLE
 choice is a **caller argument, not a file field** — `SaveGroup`/`LoadGroup`
 take `use_lz`, the main save's own group is loaded with `false`
-(src/Registry.cpp:1321) — the v0 save path that once passed it is gone, since
+(src/Registry.cpp:1348) — the v0 save path that once passed it is gone, since
 `Game::SaveGame` writes v1 now — while modules pass `true` on both save and
-load (:1352, :1428, :1459), and src/Term.cpp:3623-3628 picks
+load (:1379, :1455, :1486), and src/Term.cpp:3628-3633 picks
 the codec from that argument alone. `numDependencies` and `dependHeader`
 (src/Registry.cpp:50) remain unused by everything.
 
@@ -146,7 +146,7 @@ are no-ops there; `FIELD_STR`/`FIELD_BLOB`/`FIELD_OBJ` perform exactly the
 legacy `Serialize`/`Block` calls they replaced), the v1 write, the v1 read,
 and the DEBUG coverage map, from one declaration. Replay order is line
 order, not tag order: load-direction fixups sit below the fields they read
-(e.g. `Thing`'s `m = oMap(hm)`, inc/Map.h:936). Tag numbers are never
+(e.g. `Thing`'s `m = oMap(hm)`, inc/Map.h:937). Tag numbers are never
 reused and never change; a new field takes the next unused number in its
 class's range (inc/Base.h:743-752).
 
@@ -217,7 +217,7 @@ ledger sees both, because there they are moved lines in a diff; it is tracked
 separately and does not exist yet.
 
 **Deferred resolution.** Both load paths reload modules only after the save
-group (src/Registry.cpp:1320-1337, src/Dump.cpp:239-264), so at the moment a
+group (src/Registry.cpp:1347-1364, src/Dump.cpp:239-264), so at the moment a
 record is read there is no module to convert against. A v1 load parks the
 saved `rID` in its own slot and queues the slot's address; one
 `SaveV1_ResolveNames()` call after each path's module reload converts every
@@ -416,8 +416,8 @@ Repaired on load, and nothing else is:
 |---|---|
 | vptr | placement new, src/Registry.cpp:944-986 |
 | pointer to an owned heap block | src/Registry.cpp:370, via the 7 direct `r.Block` sites plus every `FIELD_BLOB`/`FIELD_OBJ` line's v0 branch (inc/Base.h:768-773) |
-| `Thing::m` from `Thing::hm` | inc/Map.h:936 |
-| `Player::MyTerm = T1` | inc/Creature.h:1358 |
+| `Thing::m` from `Thing::hm` | inc/Map.h:937 |
+| `Player::MyTerm = T1` | inc/Creature.h:1360 |
 | `Module` resource caches zeroed | inc/Res.h:836-837 (save side), :919-920 (load side) |
 | module text segment un-inverted | inc/Res.h:908-912 |
 | garbage payload in a loaded `Target` | src/Registry.cpp:1011-1012, src/Target.cpp:1561 |
@@ -426,13 +426,13 @@ NOT repaired on the v0 path, whose only validation is the group-header
 range check at src/Registry.cpp:906-916:
 
 - **Every `hObj` and `rID` field.** `Thing::Next`, `Thing::hm`
-  (inc/Map.h:940), `Item::Parent` (inc/Item.h:44), `Container::Contents`
+  (inc/Map.h:941), `Item::Parent` (inc/Item.h:44), `Container::Contents`
   (inc/Item.h:344), `Game::m[]`, `Game::p[]` (inc/Res.h:1304),
   `TargetSystem`'s per-target `data` (inc/Target.h:166-177). These are
   plain numbers and the v0 loader reproduces them byte for byte. **A handle
   that was wrong when the file was written stays wrong after every future
   load.** The only check on the result is `if (!p[0] || !m[0])` at
-  src/Registry.cpp:1337. (v1 reproduces handles the same way — `K_H` is a
+  src/Registry.cpp:1364. (v1 reproduces handles the same way — `K_H` is a
   number — but every `rID` is converted through the module manifest rather
   than trusted as written, and out-of-range file-fed indexes are bounded on
   load.)
@@ -475,7 +475,7 @@ range check at src/Registry.cpp:906-916:
 the digest, and still true for the resource tables.**
 
 - A stamp exists: `SaveModule` writes `SaveFormatID()`
-  (src/Registry.cpp:1422) and `LoadGroup` rejects a mismatch (:869-870)
+  (src/Registry.cpp:1449) and `LoadGroup` rejects a mismatch (:869-870)
   through `SaveFormatMatches` (:61). Confirmed in the observed bytes above.
 - The stamp is derived from struct layout, not hand-edited.
   `SaveLayoutDigest()` (src/AbiCheck.cpp:144-163) hashes the primitive
@@ -520,7 +520,7 @@ grep -n "virtual" inc/Res.h | head -3                                   # first 
 1. src/Registry.cpp:691-709 — the "delete the old group" loop does
    `fh.numGroups++` inside `for(i=0;i!=fh.numGroups;i++)`, so `i` never
    reaches the bound, and it rewrites the file header every iteration.
-   Unreachable today: the only caller passes `newFile=true` (:1428).
+   Unreachable today: the only caller passes `newFile=true` (:1455).
 2. src/Registry.cpp:972-973 vs :981-983 — `T_STAFF` (52) has no case in
    the `LoadGroup` switch and sits inside the item range, so it falls to
    the default and placement-news an `Item`. A staff is built as a `Weapon`
@@ -537,14 +537,14 @@ grep -n "virtual" inc/Res.h | head -3                                   # first 
    but `LoadGroup` has no case and 90 is outside the item range, so loading
    one hits `Fatal`. Dead today; annotations live in `Module::Annotations`.
 5. **Fixed.** `CFile::FRead` past the end used to zero-fill and report
-   nothing. It now throws `ECORRUPT` (src/Term.cpp:3585-3586). inc-l0t.
+   nothing. It now throws `ECORRUPT` (src/Term.cpp:3590-3591). inc-l0t.
 6. **Fixed.** `LoadCompressed` now range-checks both sizes
-   (src/Term.cpp:3649-3652), passes the real buffer capacity to the
+   (src/Term.cpp:3654-3657), passes the real buffer capacity to the
    decoder, and compares the produced length with `uncompressed_size`
-   (src/Term.cpp:3693-3694). `LoadGroup` checks the same header fields
+   (src/Term.cpp:3698-3699). `LoadGroup` checks the same header fields
    first (src/Registry.cpp:906-916). inc-l0t.
 7. **Fixed.** `CFile::Seek` now tests `realloc`'s return value and throws
-   `EMEMORY` (src/Term.cpp:3599-3610). It still has no caller in
+   `EMEMORY` (src/Term.cpp:3604-3615). It still has no caller in
    src/Registry.cpp, so it is unreached today.
 8. inc/Res.h:838-840 vs :908-912 — `SaveModule` inverts `QTextSeg` in
    place on the save pass, but the restore pass runs with `saveMode` and
