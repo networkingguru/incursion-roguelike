@@ -31,8 +31,8 @@
 #
 # A mage, not the usual barbarian, because only a caster reaches the fog: the
 # cloud is a field cast from the spell system, not a terrain type. The terrain
-# called "fog" is a different thing (TF_OBSCURE, no field) and the light map
-# does not read it.
+# called "fog" is a different thing: TF_OBSCURE and no field. Since cab4cd3 the
+# light map reads that too, through ScanTerrain.
 #
 # Terrain letters from the wizard "Which terrain type?" list:
 #   [h] Ice Wall   [p] Wall Torch

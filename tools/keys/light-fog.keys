@@ -16,8 +16,9 @@
 # the ray, so only the cells BETWEEN them can take light away.
 #
 # A mage, not the usual barbarian, because only a caster reaches an FI_FOG
-# field. The terrain called "fog" is a different thing (TF_OBSCURE, no field)
-# and the light map does not read it.
+# field. The terrain called "fog" is a different thing: TF_OBSCURE and no
+# field. Since cab4cd3 the light map reads that too, through ScanTerrain, and
+# tools/keys/light-fogterrain.keys is the subject that covers it.
 #
 # THREE THINGS THAT BIT tools/keys/lightfilter-show.keys, and bite this too:
 #   1. chargen-mage.keys ends on the Entry Chamber room description, so the
