@@ -198,3 +198,4 @@
 {"id":"int-63ef5ea8729d2d0e244f0f23950e0160","kind":"field_change","created_at":"2026-09-02T15:22:30.367017Z","actor":"Brian Hill","issue_id":"inc-j0yy","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}
 {"id":"int-315002da99975b8f0e25a8cc709e87c0","kind":"field_change","created_at":"2026-09-03T18:15:58.422938Z","actor":"Brian Hill","issue_id":"inc-l796","extra":{"field":"priority","new_value":"4","old_value":"2"}}
 {"id":"int-a7ccb397f8ae92fe9c6f5e3d13eef222","kind":"field_change","created_at":"2026-09-03T22:42:16.297108Z","actor":"Brian Hill","issue_id":"inc-wefr","extra":{"field":"status","new_value":"in_progress","old_value":"open"}}
+{"id":"int-7a10511884196f0985da75e5a2aff5ef","kind":"field_change","created_at":"2026-09-04T00:14:00.034165Z","actor":"Brian Hill","issue_id":"inc-ttte","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}
