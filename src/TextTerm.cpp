@@ -232,7 +232,10 @@ void TextTerm::Write(const char*str)
 			ch++;
 			gid = ~(*ch) << 8;
 			ch++;
-			gid |= *ch;
+			// upstream: Win32/MSVC's signed char sign-extends this low byte too.
+			// Traced: 4072 == 0xFE8 from rune 0xE8 (232).
+			// inc-ttte; not sent.
+			gid |= (uint8)*ch;
 			APutChar(cx, cy, GLYPH_VALUE(gid, attr));
 		} else if (*ch == WRAP_BREAK) 
           cWrap = cx+1;
@@ -836,7 +839,10 @@ void TextTerm::SWrite(const char *text, int16 wn)
 			ch++;
 			gid = ~(*ch) << 8;
 			ch++;
-			gid |= *ch;
+			// upstream: Win32/MSVC's signed char sign-extends this low byte too.
+			// Traced: 4072 == 0xFE8 from rune 0xE8 (232).
+			// inc-ttte; not sent.
+			gid |= (uint8)*ch;
 			SPutChar(scx, scy, GLYPH_VALUE(gid, attr));
 		}
         else if (*ch == WRAP_BREAK) 
