@@ -86,7 +86,7 @@ The format MUST satisfy four properties.
 
 ## Non-goals
 
-- **Modules stay on the raw path.** `Game::SaveModule` (`src/Registry.cpp:1433`)
+- **Modules stay on the raw path.** `Game::SaveModule` (`src/Registry.cpp:1438`)
   keeps calling the existing `SaveGroup`. `mod/Incursion.Mod` is a separate file
   written by the resource compiler (`src/RComp.cpp:223`) and read at startup by
   `LoadModules()`. A save never contains a module; it refers to one. A module is
@@ -155,7 +155,7 @@ That rule is the contract. Nothing else about the schema needs remembering.
 `ARCHIVE_CLASS` (`inc/Base.h:778`) already generates a
 `Serialize(Registry&, bool isSave)` that calls its base first, and 20 classes
 already use it. The bodies gain field declarations beside the fixups they
-already carry. `Thing` (`inc/Map.h:916-938`) becomes:
+already carry. `Thing` (`inc/Map.h:919-941`) becomes:
 
 ```cpp
 ARCHIVE_CLASS(Thing,Object,r)
@@ -179,7 +179,7 @@ as `Serialize` does today, so a field cannot be written and not read.
 
 ### The map grid
 
-`Map::Serialize` (`inc/Map.h:647-648`) writes `Grid` as one raw block of
+`Map::Serialize` (`inc/Map.h:650-651`) writes `Grid` as one raw block of
 `sizeof(LocationInfo)*sizeX*sizeY`. `LocationInfo` (`inc/Map.h:33-51`) is
 bitfields, whose order and packing the compiler chooses.
 
