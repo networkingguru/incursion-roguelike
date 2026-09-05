@@ -8065,7 +8065,20 @@ void Weapon::DoQualityDmgSingle(EventInfo &e, int32 skip)
       if (!e.ETarget->isDead() && S->Val != skip)
       QualityDmgSingle(e,S->Val);
   StatiIterEnd(this)
-} 
+
+  /* A paladin's faith makes any weapon he wields strike as a holy weapon.
+     This is a port design choice, not an upstream defect, so it carries no
+     upstream: mark. The WQ_HOLY case in QualityDmgSingle already self-gates
+     on the wielder being good and the victim being evil or undead, so this
+     only adds the +2d6 versus foes a holy weapon would already smite. The
+     HasQuality guard stops a genuinely holy weapon from smiting twice.
+     LevelAs returns 0 for Monster paladins, so only player paladins gain
+     this; NPC paladins keep their spawned holy sword instead. */
+  if (!e.ETarget->isDead() && WQ_HOLY != skip)
+    if (e.EActor && e.EActor->LevelAs(FIND("Paladin")) > 0)
+      if (!HasQuality(WQ_HOLY))
+        QualityDmgSingle(e,WQ_HOLY);
+}
 
 EvReturn Weapon::QualityDmg(EventInfo &e) {
   int16 n; 

@@ -1547,6 +1547,11 @@ Class "Paladin"
       against an evil creature, he adds his Charisma bonus (if any) to the attack
       roll, and if he hits he also adds his Paladin level to the damage that he
       inflicts.
+      \n__*_<7>Sanctified Weapon<2> -- A Paladin's faith sanctifies whatever melee
+      or thrown weapon he wields, so that it strikes as a Holy weapon -- dealing an
+      extra 2d6 holy damage to evil and undead foes -- even when the weapon carries
+      no enchantment of its own. This blessing is innate and always active from 1st
+      level.
       \n__*_<7>Aura of Valour<2> -- Starting at second level, a Paladin is immune to
       fear and grants any allies within 3 squares of him a +1 bonus to save versus
       fear effects for every even numbered Paladin level he possesses. This ability is innate
@@ -1584,9 +1589,10 @@ Class "Paladin"
       Holy quality.
       \n\n<10>THE PALADIN<15>\n
       __Level__Def__Fort_Refl_Will_Special Abilities<1>\n
-      ____1____+0____+2___+0___+2__Lay on Hands,\n
-      _____________________________Smite Evil, Immune\n
-      _____________________________to Diseases\n
+      ____1____+0____+2___+0___+2__Lay on Hands, Smite\n
+      _____________________________Evil, Sanctified\n
+      _____________________________Weapon, Immune to\n
+      _____________________________Diseases\n
       ____2____+0____+3___+0___+3__Aura of Valour,\n
       _____________________________Divine Grace\n
       ____3____+0____+3___+1___+3__Turn Undead,\n

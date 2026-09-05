@@ -356,7 +356,13 @@ EvReturn Character::Wield(EventInfo &e) {
                 return ABORT;
             }
 
-            if ((TITEM(e.EItem->iID)->HasFlag(WT_EXOTIC_1H) && !HasEffStati(WEP_SKILL,e.EItem->iID)) ||
+            /* Monkey Grip lets a character hold a one-handed exotic weapon
+               (e.g. a bastard sword) in a single hand without its exotic
+               proficiency, freeing the off hand for a shield. This is a port
+               design choice, not an upstream defect, so it carries no
+               upstream: mark. Values.cpp grants such a grip the two-handed
+               1.5x Strength bonus at a -2 to hit. */
+            if ((TITEM(e.EItem->iID)->HasFlag(WT_EXOTIC_1H) && !HasEffStati(WEP_SKILL,e.EItem->iID) && !HasFeat(FT_MONKEY_GRIP)) ||
                 (e.EItem->Size(this) + TITEM(e.EItem->iID)->HasFlag(WT_TWO_HANDED) > (Attr[A_SIZ] + (e.EItem->isType(T_SHIELD) ? 0 : HasFeat(FT_MONKEY_GRIP))))) {
                 if (Inv[SL_WEAPON] || Inv[SL_READY]) {
                     IPrint("You grip the <Obj> experimentally, and find you would need both hands free to wield it well.", e.EItem);

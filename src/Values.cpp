@@ -1123,7 +1123,15 @@ Restart:
     /* Wielding a weapon two-handed gives you 1.5 times Strength bonus */
     if (meleeWep && !meleeWep->useStrength())
         ;
-    else if (meleeWep && (EInSlot(SL_WEAPON) == EInSlot(SL_READY)) && !meleeWep->HasIFlag(WT_DOUBLE))      
+    else if (meleeWep && (EInSlot(SL_WEAPON) == EInSlot(SL_READY)) && !meleeWep->HasIFlag(WT_DOUBLE))
+        AddBonus(BONUS_ATTR,A_DMG_MELEE,max(0,((XMod(A_STR)*3)+1)/2));
+    else if (meleeWep && HasFeat(FT_MONKEY_GRIP) &&
+             TITEM(meleeWep->iID)->HasFlag(WT_EXOTIC_1H) &&
+             !HasEffStati(WEP_SKILL,meleeWep->iID) &&
+             (EInSlot(SL_WEAPON) != EInSlot(SL_READY)))
+        /* Monkey Grip holding a one-handed exotic weapon in a single hand
+           keeps the two-handed 1.5x Strength bonus (the -2 to hit below is
+           the trade-off). Port design choice, not an upstream defect. */
         AddBonus(BONUS_ATTR,A_DMG_MELEE,max(0,((XMod(A_STR)*3)+1)/2));
     else if (XMod(A_STR) >= 0 || !HasFeat(FT_WEAPON_FINESSE) || (meleeWep && !meleeWep->canFinesse()))
         AddBonus(BONUS_ATTR,A_DMG_MELEE,XMod(A_STR));
@@ -1145,11 +1153,17 @@ Restart:
 
     if (HasFeat(FT_MONKEY_GRIP))
         if (EInSlot(SL_WEAPON) != EInSlot(SL_READY)) {
+            /* -2 when Monkey Grip carries a weapon it otherwise could not
+               hold one-handed: one a size larger than the wielder, or a
+               one-handed exotic weapon the wielder is not proficient with
+               (a bastard sword). Port design choice, not an upstream defect. */
             if ((it = EInSlot(SL_WEAPON)) && it->isType(T_WEAPON))
-                if (it->Size(this) > Attr[A_SIZ])
+                if (it->Size(this) > Attr[A_SIZ] ||
+                    (TITEM(it->iID)->HasFlag(WT_EXOTIC_1H) && !HasEffStati(WEP_SKILL,it->iID)))
                     AddBonus(BONUS_CIRC,A_HIT_MELEE,-2);
             if ((it = EInSlot(SL_READY)) && it->isType(T_WEAPON))
-                if (it->Size(this) > Attr[A_SIZ])
+                if (it->Size(this) > Attr[A_SIZ] ||
+                    (TITEM(it->iID)->HasFlag(WT_EXOTIC_1H) && !HasEffStati(WEP_SKILL,it->iID)))
                     AddBonus(BONUS_CIRC,A_HIT_OFFHAND,-2);
         }
 
