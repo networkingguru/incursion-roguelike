@@ -134,6 +134,8 @@ screen shows. A structural check alone earns Traced, never Observed. See "A
 gameplay fix needs a before/after observation" in `docs/REPORTING-GATE.md`.
 
 Verify with `tools/check_commit_lane.sh`.
+The `.beads/hooks/commit-msg` hook enforces this rule at commit time.
+Set `INCURSION_NO_LANE_CHECK=1` to bypass it in an emergency.
 
 ## The comment budget
 

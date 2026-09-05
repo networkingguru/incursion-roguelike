@@ -25,7 +25,7 @@
 # 180113f "rules: ..." and 2777ef5 "tools: ...", both already carried a valid
 # lane and both passed. c06f555 is the only commit this exemption covers.
 #
-# The reason this reached origin at all is that no hook runs
-# tools/check_commit_lane.sh -- the rule lives in AGENTS.md and is checked only
-# when somebody remembers to run it. That gap is bd inc-er2i.
+# The reason this reached origin at all was that no hook ran
+# tools/check_commit_lane.sh. The .beads/hooks/commit-msg hook now closes that
+# gap (bd inc-er2i) by refusing an invalid message before the commit exists.
 c06f555

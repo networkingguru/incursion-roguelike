@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+# No beads-managed commit-msg block existed when this hook was added, so there
+# is no managed block to preserve. A later bd setup may prepend one.
+
+# --- INCURSION: enforce commit lanes at commit time (inc-er2i, 2026-09-05) ---
+if [ "${INCURSION_NO_LANE_CHECK:-}" = "1" ]; then
+  exit 0
+fi
+
+_inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
+_inc_check="$_inc_root/tools/check_commit_lane.sh"
+if [ -z "$_inc_root" ] || [ ! -x "$_inc_check" ]; then
+  echo >&2 "commit-msg: WARNING: tools/check_commit_lane.sh is missing or not executable; allowing commit."
+  exit 0
+fi
+
+"$_inc_check" --message "$1"

@@ -5,6 +5,7 @@
 #
 #   tools/check_commit_lane.sh              every commit since the rule started
 #   tools/check_commit_lane.sh --since REF  an explicit range
+#   tools/check_commit_lane.sh --message FILE  judge a proposed commit message
 #   tools/check_commit_lane.sh --selftest   prove this script still bites
 #
 # THE RULE is in AGENTS.md, "Classifying a change". Seven lanes: fix, port, data,
@@ -28,25 +29,55 @@ SINCE_FILE="$ROOT/tools/commit_lane.since"
 
 fail=0
 
-# Read one commit's subject and body from a repo, and judge it. Echoes each
-# complaint. Returns 1 if the commit is bad.
+# Judge a subject and body from either history or a proposed message. Returns 1
+# if the message is bad and sets REASON for the caller's chosen report format.
 judge() {
-    local repo="$1" sha="$2" subject body short
-    subject="$(git -C "$repo" log -1 --format=%s "$sha")"
-    short="$(git -C "$repo" log -1 --format=%h "$sha")"
-
+    local subject="$1" body="$2"
+    REASON=
+    case "$subject" in
+        "Merge "*|"Revert "*|fixup\!*|squash\!*|amend\!*) return 0 ;;
+    esac
     if ! printf '%s' "$subject" | grep -qE "^($LANES): ."; then
-        echo "  $short  no lane: $subject"
+        REASON="no lane"
         return 1
     fi
     if printf '%s' "$subject" | grep -qE '^rules: '; then
-        body="$(git -C "$repo" log -1 --format=%B "$sha")"
         if ! printf '%s' "$body" | grep -qE 'inc-[a-z0-9]+(\.[0-9]+)*'; then
-            echo "  $short  rules: with no design bead: $subject"
+            REASON="rules: with no design bead"
             return 1
         fi
     fi
     return 0
+}
+
+judge_commit() {
+    local repo="$1" sha="$2" subject body short
+    subject="$(git -C "$repo" log -1 --format=%s "$sha")"
+    body="$(git -C "$repo" log -1 --format=%B "$sha")"
+    short="$(git -C "$repo" log -1 --format=%h "$sha")"
+    judge "$subject" "$body" || { echo "  $short  $REASON: $subject"; return 1; }
+}
+
+judge_message() {
+    local file="$1" message subject
+    [ -f "$file" ] || { echo "cannot read commit message file: $file" >&2; return 2; }
+    message="$(grep -v '^#' "$file")"
+    subject="$(printf '%s\n' "$message" | sed -n '/[^[:space:]]/{p;q;}')"
+    judge "$subject" "$message" && return 0
+    printf '%s\n' \
+        "Commit subject refused: $subject" \
+        "Reason: $REASON." \
+        "Choose one of the seven lanes:" \
+        "  fix: correct a defect" \
+        "  port: platform, build, toolchain, or packaging" \
+        "  data: correct lib/*.irh content" \
+        "  rules: deliberately change game rules (body must name an inc-* design bead)" \
+        "  graphics: renderer, light map, terminal output, or appearance" \
+        "  docs: prose only" \
+        "  tools: harness, checks, gate, or scripts" \
+        "See AGENTS.md, \"Classifying a change\"." \
+        "Emergency escape hatch: INCURSION_NO_LANE_CHECK=1 git commit ..." >&2
+    return 1
 }
 
 sweep() {
@@ -54,7 +85,7 @@ sweep() {
     while read -r sha; do
         [ -n "$sha" ] || continue
         n=$((n + 1))
-        judge "$repo" "$sha" || bad=$((bad + 1))
+        judge_commit "$repo" "$sha" || bad=$((bad + 1))
     done < <(git -C "$repo" rev-list --no-merges "$range" 2>/dev/null)
     echo "$n commit(s) in range, $bad unclassified"
     [ "$bad" -eq 0 ]
@@ -95,8 +126,25 @@ if [ "${1:-}" = "--selftest" ]; then
     commit "fixing: not a lane" 6
     sweep "$tmp" "$base..HEAD" >/dev/null && { echo "SELFTEST FAIL: accepted a near-miss lane word"; st=1; }
 
-    [ "$st" -eq 0 ] && echo "SELFTEST PASS: check_commit_lane.sh bites on all three failures"
+    printf '%s\n' "fix: guard the divisor" > "$tmp/message"
+    judge_message "$tmp/message" 2>/dev/null || { echo "SELFTEST FAIL: refused a good fix: message file"; st=1; }
+    printf '%s\n' "Make armour subtract damage" > "$tmp/message"
+    judge_message "$tmp/message" >/dev/null 2>&1 && { echo "SELFTEST FAIL: accepted a message file with no lane"; st=1; }
+    printf '%s\n' "rules: rebalance the daggers" "" "No bead here." > "$tmp/message"
+    judge_message "$tmp/message" >/dev/null 2>&1 && { echo "SELFTEST FAIL: accepted a rules: message file with no bead"; st=1; }
+    printf '%s\n' "rules: rebalance the daggers" "" "Design: bd inc-b0w2." > "$tmp/message"
+    judge_message "$tmp/message" 2>/dev/null || { echo "SELFTEST FAIL: refused a rules: message file that names a bead"; st=1; }
+    printf '%s\n' "# template comment" "Merge branch 'topic'" > "$tmp/message"
+    judge_message "$tmp/message" 2>/dev/null || { echo "SELFTEST FAIL: refused an exempt Merge message file"; st=1; }
+
+    [ "$st" -eq 0 ] && echo "SELFTEST PASS: check_commit_lane.sh bites on all failures and judges message files"
     exit "$st"
+fi
+
+if [ "${1:-}" = "--message" ]; then
+    [ -n "${2:-}" ] || { echo "--message needs a file" >&2; exit 2; }
+    judge_message "$2"
+    exit $?
 fi
 
 if [ "${1:-}" = "--since" ]; then
