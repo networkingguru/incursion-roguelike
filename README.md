@@ -458,7 +458,7 @@ the unfixed tree before it is trusted.
 | `check_illus_refund.sh` | Does the illusory-damage refund still clamp to the maximum, instead of paying above it and stranding a character at 58/56? |
 | `check_abi.sh` | Did any save-format type width move, and does anything cast a handle to a pointer? |
 | `check_abs_path.sh` | Does the game still resolve `argv[0]` to an absolute path? |
-| `check_linux_build.sh` | Do both backends still build on Linux, and does a seeded run still play with no errors? Needs Docker; it is the only check that does. |
+| `check_linux_build.sh` | Do both backends still build on Linux, and does a seeded run still play with no errors? Needs Docker; so does `check_gcc_o2_char_create.sh` below, and no other check. |
 | `check_gcc_o2_char_create.sh` | Does a GCC `-O2` build still play character creation into a map, or has the `Item` constructor's uninitialised-member miscompile (inc-nw0v) returned? Needs Docker and builds with GCC, the converse of `check_linux_build.sh`. |
 | `check_activate_stack.sh` | Does activating one item out of a stack leave the stack whole, and still fire the effect? |
 | `check_air_ring_spell.sh` | Does the Elemental Command (Air) ring description name the granted staff-spell "gaseous form", rather than the phantom "wind column" that exists nowhere in `lib/`? |
@@ -497,6 +497,7 @@ the unfixed tree before it is trusted.
 | `check_light_filter.sh` | Does light lose strength and colour crossing an ice wall? Two sessions differ by one terrain letter, and the cell two steps beyond must read dimmer through the ice than through open air. |
 | `check_light_fog.sh` | Does light pass through a cloud of fog, dimmed, instead of stopping at it? One session dumps the same cell before and after a Stinking Cloud is cast across it, and the cell must fall from `3` to `1` — it fails both if the cell does not dim and if it goes dark, because a dark cell means the light map is again asking whether an eye could see through rather than whether light passes. |
 | `check_light_averse.sh` | Does a light-averse creature take its -4 combat penalty and squint in a cell lit only by a dynamic external source, and neither in a merely dim cell? |
+| `check_wall_opacity.sh` | Does a wall left behind where level generation removed a door still stop light, or does it stay solid but see-through? |
 | `check_nonnormal_invariant.sh` | Is non-normal detection (an infravision character in darkness) byte-identical across the inc-jcg4 unified-light change over seeds 1-10? |
 | `check_sunblade_negative_plane.sh` | Does the Sunblade double damage against undead and both named non-undead Negative-Plane creatures, without retaining its old wraith-only `5d6` rider? |
 | `check_holy_undead.sh` | Does a Holy weapon, and holy damage, smite an undead creature that is not evil? Seed 4 gives a neutral zombie-templated black bear as the subject, an evil mummy as the positive control and a living neutral brown bear as the negative one. |
@@ -525,6 +526,7 @@ the unfixed tree before it is trusted.
 | `check_horn_panic.sh` | Can the Horn of Panic frighten a failed-save bystander while sparing its blower? |
 | `check_horn_plenty_prose.sh` | Does the Horn of Plenty entity declare exactly one description, and does it name the fatigue cost its `LoseFatigue(4)` code charges, rather than the duplicate fatigue-less second description it carried before? |
 | `check_huntsman_live.sh` | Does the Twilight Huntsman reach its own spell list, smite Law rather than Good, and track at the rate it claims to stack with? |
+| `check_fiendish_servant.sh` | Does the Blackguard's Fiendish Servant summon a creature when cast from the spell manager, rather than printing "Nothing happens"? |
 | `check_key_directives.sh` | Do the key-script directives reach a menu entry by name, where counting rows could not? |
 | `check_killing_hands.sh` | Do Bracers of Killing Hands pay two points per plus to both unarmed accuracy and damage? |
 | `check_kobold_horn.sh` | Does the Horn of the Kobolds, blown by a non-kobold wielder, summon hostile kobolds as its page promises, rather than the friendly ones the bare `EA_SUMMON` always gave? |
@@ -572,6 +574,7 @@ the unfixed tree before it is trusted.
 | `check_horn_sewers_cr.sh` | Does the Horn of the Sewers' description state its summoned rodents have CR twice its magical plus? |
 | `check_javelin_lightning_savedc.sh` | Does the Javelin of Lightning's Reflex save use the DC its description promises? |
 | `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? |
+| `check_target_enter.sh` | Can a target prompt confirm a square that holds a staircase, including the one a character stands on the moment he enters a level? |
 | `check_telepathy_prose.sh` | Does the Telepathy helm description state its scaling telepathy range -- 50 feet plus 10 feet per magic plus -- rather than the flat "60 feet" it claimed before, matching its `pval: PLUS_ADD5` code? |
 | `check_underdark_live.sh` | Does the Underdark Warrior check its race requirement, and refuse the grey elf? |
 | `check_unearthly_harmonies_prose.sh` | Does the Wand of Unearthly Harmonies description state that its Intelligence damage scales per plus, matching its second `EA_BLAST` `pval: (PLUS_1PER1)d2` code, rather than the flat "1d2 points of Intelligence damage" it claimed before? |
