@@ -72,6 +72,9 @@ runs that both did nothing.
 recorded before the work started. A check that already failed is not this
 change's fault. A check that passed before and fails after stops the merge. The
 builds are exempt from the ratchet: a tree that does not compile is never safe.
+`tools/check_linux_build.sh` runs with those builds for the same reason, and it
+is why a full run costs about ten minutes rather than seconds; a machine with no
+Docker skips it rather than failing on it.
 
 **Checks prove themselves on demand.** `--selftest` exists on
 `check_upstream_marks.sh`, `check_api_arity.py`, `check_headless.sh`,

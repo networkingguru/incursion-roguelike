@@ -21,6 +21,16 @@
 # safe to merge, whatever it did yesterday. Both backends build, because they
 # are separate main()s and a change can break one while the other compiles.
 #
+# The LINUX CROSS-BUILD runs here with the builds, and not with the ratcheted
+# checks, because it has the same character: it compiles the tree, and a tree
+# that does not compile on Linux is never safe to merge either. It cannot go in
+# the ratchet, which promises checks that cost seconds and need no build, while
+# this one is a ten-minute Docker build of both backends plus a seeded run. It
+# is here because commit 04431f2 broke the Linux build on 2026-09-02 and nothing
+# saw it until a release build failed two days later. A machine with no Docker
+# reports a skip and stays green: a check that could not run has measured
+# nothing, and nothing is not a failure.
+#
 # WHERE THE BASE IS RECORDED. $NIGHTLY_VERIFY_STATE if set (the harness points it
 # outside the repository), otherwise logs/nightly-verify-base.txt. It is a
 # record of a run, not source: never commit it.
@@ -86,7 +96,7 @@ FAILED=0
 if [ "$SKIP_BUILDS" = 1 ]; then
     echo "--- builds SKIPPED (--checks-only) ---"
 else
-    echo "--- builds (absolute: a tree that does not compile never merges) ---"
+    echo "--- builds, macOS then Linux (absolute: a tree that does not compile never merges) ---"
     for build in "BACKEND=posix ./build_macos.sh" "./build_macos.sh"; do
         printf '%s ... ' "$build"
         if ( eval "$build" ) > /dev/null 2>&1; then
@@ -97,6 +107,21 @@ else
             FAILED=1
         fi
     done
+
+    # Its own step, not another entry in the loop above, because it has three
+    # exit codes and the loop reads every non-zero as a failure. Exit 2 is
+    # "could not measure" -- no docker, or the image build or the working-tree
+    # export failed. None of those says the tree is broken, so none of them
+    # stops a merge.
+    printf 'tools/check_linux_build.sh ... '
+    tools/check_linux_build.sh > /dev/null 2>&1
+    case $? in
+        0) echo "ok" ;;
+        2) echo "SKIPPED (could not measure)" ;;
+        *) echo "FAILED"
+           echo "    re-run it to see why: tools/check_linux_build.sh"
+           FAILED=1 ;;
+    esac
 fi
 
 echo

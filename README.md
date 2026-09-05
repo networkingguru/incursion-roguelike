@@ -403,11 +403,12 @@ change that alters behaviour follows five steps, in this order:
 4. run that check and `tools/nightly_verify.sh --compare`;
 5. record the commands, the mutation and the result in the commit body or the bead.
 
-`tools/nightly_verify.sh` is the wrapper. It builds both backends, runs the check
-sweep, and compares the result against a base recorded before the work started. A
-check that already failed is not the change's fault; a check that passed before
-and fails after stops the merge. Builds are not ratcheted: a tree that does not
-compile is never safe.
+`tools/nightly_verify.sh` is the wrapper. It builds both backends, cross-builds
+them for Linux in Docker, runs the check sweep, and compares the result against a
+base recorded before the work started. A check that already failed is not the
+change's fault; a check that passed before and fails after stops the merge.
+Builds are not ratcheted: a tree that does not compile is never safe. A machine
+with no Docker skips the Linux build rather than failing on it.
 
 The commit body carries the evidence, because git records results and not
 process. State the oracle, the numbers it produced, the mutation that proved it
@@ -421,7 +422,7 @@ rules the harness enforces, and what this method cannot prove.
 | `tools/headless.sh` | Plays one scripted session with no display and no keyboard, in its own sandbox with its own `save/` and `logs/`. Everything else that plays the game calls it. |
 | `tools/soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about by message rather than by session. |
 | `tools/play.sh` | Interactive launcher for a real session with the map audit, save probe and character probe armed. |
-| `tools/nightly_verify.sh` | Builds both backends, sweeps the checks, and compares the result against a recorded base. `--record` before the work, `--compare` after. |
+| `tools/nightly_verify.sh` | Builds both backends, cross-builds them for Linux in Docker, sweeps the checks, and compares the result against a recorded base. `--record` before the work, `--compare` after. The Linux build is skipped, not failed, where there is no Docker. |
 | `tools/dump_save.sh` | Runs `-dump` against a save in the same sandbox, without playing. |
 | `tools/keys/*.keys` | Key scripts read by both backends. The SDL build supports the shared movement subset (literal and named keys, `*N` repeats, comments, `@include`, `@pause MS` and `@quit`), but not the POSIX screen-scrape directives. In SDL, `@quit` or consuming the last key exits the game; put `@pause` before the end to hold the final frame while its light animates. `@pause` is an instant no-op headlessly. Use `./incursion -load save/<character>.sav -keys tools/keys/trailer-demo.keys` to start a named save directly in play and run the sample. |
 
