@@ -11,7 +11,7 @@
 # "about 500" and "about 400" until 2026-08-17; both were wrong. Recount with
 # the expansion rule below whenever a walk file changes.)
 #
-# So this is the same undirected walk, held for roughly 10500 keystrokes. It
+# So this is the same undirected walk, held for roughly 10780 keystrokes. It
 # still walks into rock, which still spends a turn, so monsters still move and
 # their AI still runs. It still takes the stairs, so levels keep being made.
 # ESC still appears regularly, so a command that unexpectedly opens a menu
@@ -52,14 +52,14 @@
 # This header used to read: "The default key budget is 20000 (DEFAULT_MAX_KEYS
 # in src/Wposix.cpp), which this exceeds on purpose. Set INCURSION_MAX_KEYS
 # above it or the session stops early and exits 3." That was wrong from the
-# day the file was written, and it contradicted the 10500 figure eight lines
+# day the file was written, and it contradicted the keystroke figure eight lines
 # above it. Corrected 2026-08-17.
 #
-# The arithmetic. DEFAULT_MAX_KEYS is 20000 (src/Wposix.cpp:78) and has been
+# The arithmetic. DEFAULT_MAX_KEYS is 20000 (src/Wposix.cpp:79) and has been
 # since this harness was added (commit 058ba87). The budget counts keys READ
-# (keysRead, src/Wposix.cpp:1189), one per GetChar call. Expanding every
-# `TOKEN*N` in this file gives 10500 keystrokes, and the included
-# chargen.keys gives 111, so a session reads at most 10611. It runs out of
+# (keysRead, src/Wposix.cpp:1592), one per GetChar call. Expanding every
+# `TOKEN*N` in this file gives 10780 keystrokes, and the included
+# chargen.keys gives 111, so a session reads at most 10891. It runs out of
 # SCRIPT long before it runs out of BUDGET, and exits 0, not 3.
 #
 # Setting INCURSION_MAX_KEYS higher is harmless and buys nothing. Raise it

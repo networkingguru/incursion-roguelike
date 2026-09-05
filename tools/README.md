@@ -218,18 +218,20 @@ is 3. Raise it with `INCURSION_MAX_KEYS` (`src/Wposix.cpp:574-575`).
 **Correction, 2026-08-17: `marathon.keys` does NOT need a raised cap, and the
 usage line in its own header was wrong.** That header told everyone to run
 `INCURSION_MAX_KEYS=60000` and said the file "exceeds" the 20000 default "on
-purpose". It does not. Expanding every `TOKEN*N` gives 10500 keystrokes, and the
-`chargen.keys` it includes gives 111, so a session reads at most 10611 — about
+purpose". It does not. Expanding every `TOKEN*N` gives 10780 keystrokes, and the
+`chargen.keys` it includes gives 111, so a session reads at most 10891 — about
 half the default. The header contradicted itself, because its own line 12 already
-said "roughly 10500 keystrokes". The budget has been 20000 since the harness was
-added (commit `058ba87`). I corrected the header and left the counting one-liner
-in it. Count, do not guess:
+said "roughly 10500 keystrokes", which was the count on that date. The budget has
+been 20000 since the harness was added (commit `058ba87`). I corrected the header
+and left the counting one-liner in it. The file has grown since: it counted 10500
+until `cd25032` on 2026-08-22 stamped the turn on every screen dump, and the
+figures below were re-taken on 2026-09-05. Count, do not guess:
 
 ```sh
 python3 -c "import re,sys; print(sum(int(m.group(2)) if (m:=re.match(r'^(.+?)\*(\d+)$',t)) else 1 for l in open(sys.argv[1]) if not l.lstrip().startswith('@') for t in l.split('#')[0].split() if not t.startswith('@')))" tools/keys/marathon.keys
 ```
 
-Measured with that line: `marathon.keys` 10500, `explore.keys` 1259,
+Measured with that line: `marathon.keys` 10780, `explore.keys` 1259,
 `dive.keys` 886, `chargen.keys` 111. The `marathon.keys` header also described
 `explore.keys` as "about 500" and `dive.keys` as "about 400"; both were low by a
 factor of about 2.5, and both are now the measured numbers.
