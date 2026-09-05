@@ -18,8 +18,8 @@ I ran; commands at the bottom). Normative spec: `docs/SAVE-SCHEMA-SPEC.md`.
 - **v0** is the legacy raw-memory format described further down. The v0
   reader stays in the binary for every save written before the switch, and
   modules stay on the raw path entirely: `Game::SaveModule`
-  (src/Registry.cpp:1433) still writes a `.Mod` through `SaveGroup` with the
-  `"SF"` layout digest stamp (:1449).
+  (src/Registry.cpp:1438) still writes a `.Mod` through `SaveGroup` with the
+  `"SF"` layout digest stamp (:1454).
 - The reader dispatches on the file's own stamp, in `Registry::LoadGroup`
   (src/Registry.cpp:860-865): `Sig` right and `Version` starting `"IS"` goes
   to `LoadGroupV1`; an `"IS"` file that is not `"IS1."` is a future major
@@ -46,7 +46,7 @@ I ran; commands at the bottom). Normative spec: `docs/SAVE-SCHEMA-SPEC.md`.
 | `Registry::Block` (v0 pointer/handle swap) | src/Registry.cpp:355 |
 | `typeSize()` (bytes per object type) | src/Registry.cpp:292 |
 | `Game::SaveGame` / `LoadGame` | src/Registry.cpp:1114 / :1245 |
-| `Game::SaveModule` / `LoadModules` | src/Registry.cpp:1433 / :1468 |
+| `Game::SaveModule` / `LoadModules` | src/Registry.cpp:1438 / :1473 |
 | Deferred v1 name resolution call sites | src/Registry.cpp:1404, src/Dump.cpp:271 |
 | `CFile` (v0 compressed payload buffer) | inc/Term.h:828, src/Term.cpp:3544-3703 |
 | ABI gate | src/AbiCheck.cpp |
@@ -79,7 +79,7 @@ choice is a **caller argument, not a file field** — `SaveGroup`/`LoadGroup`
 take `use_lz`, the main save's own group is loaded with `false`
 (src/Registry.cpp:1348) — the v0 save path that once passed it is gone, since
 `Game::SaveGame` writes v1 now — while modules pass `true` on both save and
-load (:1379, :1455, :1486), and src/Term.cpp:3628-3633 picks
+load (:1379, :1460, :1491), and src/Term.cpp:3628-3633 picks
 the codec from that argument alone. `numDependencies` and `dependHeader`
 (src/Registry.cpp:50) remain unused by everything.
 
@@ -146,7 +146,7 @@ are no-ops there; `FIELD_STR`/`FIELD_BLOB`/`FIELD_OBJ` perform exactly the
 legacy `Serialize`/`Block` calls they replaced), the v1 write, the v1 read,
 and the DEBUG coverage map, from one declaration. Replay order is line
 order, not tag order: load-direction fixups sit below the fields they read
-(e.g. `Thing`'s `m = oMap(hm)`, inc/Map.h:937). Tag numbers are never
+(e.g. `Thing`'s `m = oMap(hm)`, inc/Map.h:940). Tag numbers are never
 reused and never change; a new field takes the next unused number in its
 class's range (inc/Base.h:743-752).
 
@@ -416,7 +416,7 @@ Repaired on load, and nothing else is:
 |---|---|
 | vptr | placement new, src/Registry.cpp:944-986 |
 | pointer to an owned heap block | src/Registry.cpp:370, via the 7 direct `r.Block` sites plus every `FIELD_BLOB`/`FIELD_OBJ` line's v0 branch (inc/Base.h:768-773) |
-| `Thing::m` from `Thing::hm` | inc/Map.h:937 |
+| `Thing::m` from `Thing::hm` | inc/Map.h:940 |
 | `Player::MyTerm = T1` | inc/Creature.h:1360 |
 | `Module` resource caches zeroed | inc/Res.h:836-837 (save side), :919-920 (load side) |
 | module text segment un-inverted | inc/Res.h:908-912 |
@@ -426,7 +426,7 @@ NOT repaired on the v0 path, whose only validation is the group-header
 range check at src/Registry.cpp:906-916:
 
 - **Every `hObj` and `rID` field.** `Thing::Next`, `Thing::hm`
-  (inc/Map.h:941), `Item::Parent` (inc/Item.h:44), `Container::Contents`
+  (inc/Map.h:944), `Item::Parent` (inc/Item.h:44), `Container::Contents`
   (inc/Item.h:344), `Game::m[]`, `Game::p[]` (inc/Res.h:1304),
   `TargetSystem`'s per-target `data` (inc/Target.h:166-177). These are
   plain numbers and the v0 loader reproduces them byte for byte. **A handle
@@ -475,7 +475,7 @@ range check at src/Registry.cpp:906-916:
 the digest, and still true for the resource tables.**
 
 - A stamp exists: `SaveModule` writes `SaveFormatID()`
-  (src/Registry.cpp:1449) and `LoadGroup` rejects a mismatch (:869-870)
+  (src/Registry.cpp:1454) and `LoadGroup` rejects a mismatch (:869-870)
   through `SaveFormatMatches` (:61). Confirmed in the observed bytes above.
 - The stamp is derived from struct layout, not hand-edited.
   `SaveLayoutDigest()` (src/AbiCheck.cpp:144-163) hashes the primitive
@@ -520,7 +520,7 @@ grep -n "virtual" inc/Res.h | head -3                                   # first 
 1. src/Registry.cpp:691-709 — the "delete the old group" loop does
    `fh.numGroups++` inside `for(i=0;i!=fh.numGroups;i++)`, so `i` never
    reaches the bound, and it rewrites the file header every iteration.
-   Unreachable today: the only caller passes `newFile=true` (:1455).
+   Unreachable today: the only caller passes `newFile=true` (:1460).
 2. src/Registry.cpp:972-973 vs :981-983 — `T_STAFF` (52) has no case in
    the `LoadGroup` switch and sits inside the item range, so it falls to
    the default and placement-news an `Item`. A staff is built as a `Weapon`
