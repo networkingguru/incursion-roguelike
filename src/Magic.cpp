@@ -510,30 +510,36 @@ bool Magic::isTarget(EventInfo &_e, Thing *t) {
           e.vRange *= 2;
 
       /* Calculate duration */
-      if (te->HasFlag(EF_DSHORT))
-          e.vDuration = Dice::Roll(1,4)+1;
-      else if (te->HasFlag(EF_D1ROUND))
-          e.vDuration = 2;
-      else if (te->HasFlag(EF_DLONG))
-          e.vDuration = 100 + e.vCasterLev*10;
-      else if (te->HasFlag(EF_DXLONG))
-          e.vDuration = 1000 + e.vCasterLev*100;
-      else if (te->HasFlag(EF_PERSISTANT))
-          e.vDuration = -2;
-      else if (te->HasFlag(EF_PERMANANT))
-          e.vDuration = -1;
-      else
-          e.vDuration = 10 + e.vCasterLev*2;
+      /* upstream: modifier-field grants must inherit their field's lifetime.
+         The base-code mismatch removes the aura identically on Win32; the
+         local light port only makes that removal visible as darkness.
+         Observed, inc-hzy1, not sent. */
+      if (!e.isEnter) {
+          if (te->HasFlag(EF_DSHORT))
+              e.vDuration = Dice::Roll(1,4)+1;
+          else if (te->HasFlag(EF_D1ROUND))
+              e.vDuration = 2;
+          else if (te->HasFlag(EF_DLONG))
+              e.vDuration = 100 + e.vCasterLev*10;
+          else if (te->HasFlag(EF_DXLONG))
+              e.vDuration = 1000 + e.vCasterLev*100;
+          else if (te->HasFlag(EF_PERSISTANT))
+              e.vDuration = -2;
+          else if (te->HasFlag(EF_PERMANANT))
+              e.vDuration = -1;
+          else
+              e.vDuration = 10 + e.vCasterLev*2;
 
-      if ((e.MM & MM_ANCHOR) && e.vDuration > 1)
-          e.vDuration *= 2;
-      if ((te->Purpose & EP_BUFF) && e.vDuration > 1 && 
-          e.EActor->HasFeat(FT_MYSTIC_PREPARATION))
-          e.vDuration *= 2; 
-      if ((e.MM & MM_PERSISTANT) && e.vDuration >= 10)
-          e.vDuration = -2;
-      else if ((e.MM & MM_EXTEND) && e.vDuration >= 1)
-          e.vDuration *= 2;
+          if ((e.MM & MM_ANCHOR) && e.vDuration > 1)
+              e.vDuration *= 2;
+          if ((te->Purpose & EP_BUFF) && e.vDuration > 1 && 
+              e.EActor->HasFeat(FT_MYSTIC_PREPARATION))
+              e.vDuration *= 2; 
+          if ((e.MM & MM_PERSISTANT) && e.vDuration >= 10)
+              e.vDuration = -2;
+          else if ((e.MM & MM_EXTEND) && e.vDuration >= 1)
+              e.vDuration *= 2;
+      }
 
       if (e.MM & MM_TRANSMUTE) {
           char ch = e.Transmute;

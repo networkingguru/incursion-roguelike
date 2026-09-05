@@ -1686,6 +1686,7 @@ EvReturn Creature::FieldOn(EventInfo &e) {
                 e2.isEnter = true;
                 e2.EVictim = this;
                 e2.EActor  = oCreature(e.EField->Creator);
+                e2.vDuration = e.EField->Dur;
                 e2.Terse = e.Terse;
                 ReThrow(EV_EFFECT,e2);
                 break;
@@ -1731,4 +1732,3 @@ EvReturn Creature::FieldOff(EventInfo &e) {
         }
     return DONE;
 }
-

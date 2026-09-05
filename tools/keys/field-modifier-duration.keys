@@ -1,0 +1,26 @@
+# Regression fixture for inc-hzy1: a modifier field's status shares its duration.
+
+@include chargen.keys
+
+# Wizard placement creates the creature directly, without a SUMMONED status.
+w
+y
+@choose "Monster Summoning"
+@choose "Celestials"
+@choose "torch archon"
+RIGHT ENTER
+@dump:early
+
+# The broken status lasts 12 turns.  This advances about 4,800 turns.
+.*300
+
+# The target screen proves that the creature remains alive and exposes its
+# statuses after the broken countdown would have expired many times over.
+w
+@choose "Examine All Things"
+@until "archon (class" RIGHT
+DOWN*40
+@dump:late-stati
+ESC
+ESC
+a

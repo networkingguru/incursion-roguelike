@@ -2445,7 +2445,8 @@ Done2:;
 
 RestartFields:
     for (i = 0; Fields[i]; i++) {
-        if (Fields[i]->Dur >= 1 || Fields[i]->Dur >= -2) {
+        /* upstream: permanent fields must survive a day change; this plain comparison misbehaves identically on Win32 with the original typedefs and compiler. Traced, inc-32tj, not sent. */
+        if (Fields[i]->Dur >= 1 || Fields[i]->Dur == -2) {
             RemoveField(Fields[i]);
             goto RestartFields;
         }

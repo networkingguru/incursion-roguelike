@@ -1,0 +1,47 @@
+# Regression fixture for inc-32tj: a permanent field must survive a day change.
+#
+# Depth 2, because Player::Rest refuses on depth 1 by design ("you can just
+# climb back out of the dungeon entirely"). Genocide first, because the rest is
+# refused while any hostile is in plain sight. The subject is a torch archon:
+# wizard placement leaves it non-SUMMONED, an archon is NOT hostile to this
+# character so it never blocks the rest, and its light/aura field is permanent
+# (Dur -1). Resting with lowercase 'z' is the only route that both advances
+# theGame->Day -- so Map::DaysPassed runs -- and leaves the player on the same
+# map, which the surface inn does not: the inn's Descend regenerates the level.
+#
+# 'z' must be lowercase. KY_CMD_SLEEP is { 'Z', 0 } and the keyset compares
+# modifier flags exactly, so a shifted 'Z' matches nothing (src/KeyScript.cpp:22).
+
+@include chargen.keys
+@until "HP:" ESC
+
+w y
+@choose "Ascend / Descend Depth"
+"2" ENTER
+@until "HP:" ESC
+
+w
+@choose "Genocide Everything"
+@until "HP:" ESC
+
+w
+@choose "Monster Summoning"
+@choose "Celestials"
+@choose "torch archon"
+RIGHT ENTER
+
+w
+@choose "Display Resource Statistics"
+DOWN*30
+@dump:fields-before
+ESC
+
+z y
+SPACE SPACE
+
+w
+@choose "Display Resource Statistics"
+DOWN*30
+@dump:fields-after
+ESC
+@quit

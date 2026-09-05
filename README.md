@@ -455,6 +455,8 @@ the unfixed tree before it is trusted.
 | Check | The question it answers |
 |---|---|
 | `check_headless.sh` | Do the properties every unattended run depends on still hold, including that two simultaneous runs get separate directories? |
+| `check_field_day_duration.sh` | Does a permanent (`Dur -1`) field still survive a day change? It places a torch archon on depth 2, rests one night on the same map with lowercase `z`, and counts the map's fields either side; the rise in creatures proves `Map::DaysPassed` actually ran. Fixed 1 -> 1, unfixed 1 -> 0. |
+| `check_field_modifier_duration.sh` | Does a living, directly placed torch archon retain both its permanent white light field and its Magic Circle vs. Evil status after the broken 12-turn countdown would have expired many times over? |
 | `check_illus_refund.sh` | Does the illusory-damage refund still clamp to the maximum, instead of paying above it and stranding a character at 58/56? |
 | `check_abi.sh` | Did any save-format type width move, and does anything cast a handle to a pointer? |
 | `check_abs_path.sh` | Does the game still resolve `argv[0]` to an absolute path? |
