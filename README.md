@@ -455,6 +455,7 @@ the unfixed tree before it is trusted.
 | Check | The question it answers |
 |---|---|
 | `check_headless.sh` | Do the properties every unattended run depends on still hold, including that two simultaneous runs get separate directories? |
+| `check_illus_refund.sh` | Does the illusory-damage refund still clamp to the maximum, instead of paying above it and stranding a character at 58/56? |
 | `check_abi.sh` | Did any save-format type width move, and does anything cast a handle to a pointer? |
 | `check_abs_path.sh` | Does the game still resolve `argv[0]` to an absolute path? |
 | `check_linux_build.sh` | Do both backends still build on Linux, and does a seeded run still play with no errors? Needs Docker; it is the only check that does. |

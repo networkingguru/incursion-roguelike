@@ -980,7 +980,12 @@ RestartDropItems:
         }
         break;
     case ILLUS_DMG:
-        cHP = max(cHP + s.Mag, mHP + GetAttr(A_THP));
+        /* upstream: the illusory-damage refund must stop AT the maximum.
+           max() stopped at no less than it, so a victim who healed before
+           the illusion ended kept s.Mag points above mHP for life. Pure
+           v0.6.5B arithmetic, identical on Win32 with the original
+           typedefs. Observed, inc-3627, NOT sent. */
+        cHP = min(cHP + s.Mag, mHP + GetAttr(A_THP));
         break;
     case ENRAGED:
     case CONFLICT:
