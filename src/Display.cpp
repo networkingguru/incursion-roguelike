@@ -1720,6 +1720,19 @@ void Thing::Move(int16 newx,int16 newy, bool is_walk)
 
     if (M->At(x,y).hasField || M->At(newx,newy).hasField || !is_walk)
       {
+        /* upstream: a creature carried inside another must get the same field
+           events a rider gets. Engulfed creatures sit in m->Things at their
+           engulfer's square, so Map::NewField, RemoveField and MoveField all
+           reach them through MapIterate; only this hand-written notification
+           misses them. Plain control flow, wrong identically on Win32 with the
+           original typedefs. Traced, inc-rr0t, not sent. */
+        hObj Carried[128]; int16 cc = 0, j;
+        if (HasStati(ENGULFER))
+          StatiIterNature(this,ENGULFER)
+            if (cc != 128)
+              Carried[cc++] = S->h;
+          StatiIterEnd(this)
+
         for(i=0;M->Fields[i];i++)
           if (M->Fields[i]->Creator == myHandle || (mount && 
                 M->Fields[i]->Creator == mount->myHandle))
@@ -1738,12 +1751,18 @@ void Thing::Move(int16 newx,int16 newy, bool is_walk)
                 ThrowField(EV_FIELDOFF,M->Fields[i],this);
                 if (mount && M->Fields[i])
                   ThrowField(EV_FIELDOFF,M->Fields[i],mount);
+                for(j=0;j!=cc;j++)
+                  if (M->Fields[i] && theRegistry->Exists(Carried[j]))
+                    ThrowField(EV_FIELDOFF,M->Fields[i],oThing(Carried[j]));
               }
             if (M->Fields[i] && (!M->Fields[i]->inArea(x,y)) && M->Fields[i]->inArea(newx,newy))
               {
                 ThrowField(EV_FIELDON,M->Fields[i],this);
                 if (mount && M->Fields[i])
                   ThrowField(EV_FIELDON,M->Fields[i],mount);
+                for(j=0;j!=cc;j++)
+                  if (M->Fields[i] && theRegistry->Exists(Carried[j]))
+                    ThrowField(EV_FIELDON,M->Fields[i],oThing(Carried[j]));
               }
           }
       }
