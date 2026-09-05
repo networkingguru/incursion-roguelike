@@ -507,8 +507,17 @@ int32 VMachine::Execute(EventInfo *e, rID _xID, hCode CP)
           case MIN:  REGS(0) = min(Value1(vc),Value2(vc)); break;
           case MAX:  REGS(0) = max(Value1(vc),Value2(vc)); break;
           case MOV: *LValue1(vc) = Value2(vc);         break;
-          case BSHL: REGS(0) = Value1(vc) >> Value2(vc); break;
-          case BSHR: REGS(0) = Value1(vc) << Value2(vc); break;
+          /* upstream: the two shift opcodes ran each other's operation, so a
+             script `<<` right-shifted and `>>` left-shifted. Pure arithmetic --
+             no dependence on integer width, the typedefs or the compiler, so
+             Win32/MSVC misbehaves identically. The Rect codegen at
+             src/RComp.cpp:1400,1430,1442 was written against the inversion and
+             swaps with it; two script sites that exploited it flip to `>>`.
+             Observed -- a fire elemental's FI_LIGHT field saved Image 324
+             instead of 16708, and the light probe scanned it as colour 0,0,0.
+             inc-gv1u; not sent. */
+          case BSHL: REGS(0) = Value1(vc) << Value2(vc); break;
+          case BSHR: REGS(0) = Value1(vc) >> Value2(vc); break;
           case JTRU: if (Value1(vc))  { vc += (Value2(vc)-1); goto NextOpcode; } break;
           case JFAL: if (!Value1(vc)) { vc += (Value2(vc)-1); goto NextOpcode; } break;
           case CMEQ: REGS(0) = (Value1(vc) == Value2(vc)); break;

@@ -605,6 +605,7 @@ tools/check_light_fog.sh            # light passes through fog, dimmed, and is n
 tools/check_hide_carried_light.sh   # a creature carrying a lit source cannot hide
 tools/check_hide_dynamic_light.sh   # a dynamic external light breaks hiding, with no static .Bright
 tools/check_light_averse.sh         # light aversion bites in a dynamically lit cell, not a dim one
+tools/check_shift_opcodes.sh        # a script `<<` shifts left, so a glowing creature's light keeps its colour
 tools/check_holy_undead.sh          # a Holy weapon smites undead that are not evil
 ```
 

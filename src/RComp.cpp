@@ -1397,7 +1397,13 @@ PExp& CodeRectMember(PExp *rect, int16 id)
     if (!ex.Code)
       ex.Code = new VBlock;
     ex.Code->Generate(BAND,rect->Storage,rect->Value,RT_CONSTANT,mask);
-    ex.Code->Generate(BSHL,RT_REGISTER,0,RT_CONSTANT,shift);
+    /* upstream: reading a Rect member out of its byte is a RIGHT shift; this
+       asked for BSHL and was correct only while the VM ran BSHL as `>>`, so it
+       swaps with the VM. See the marker at src/VMachine.cpp. Traced -- the
+       preceding BAND isolates the byte and the shift must bring it down to bit
+       0; a scratch build that swapped the VM alone read Rect members back
+       wrong. inc-gv1u; not sent. */
+    ex.Code->Generate(BSHR,RT_REGISTER,0,RT_CONSTANT,shift);
     if (rect->Storage == RT_REGISTER)
       FreeRegister((int16)rect->Value);
     ex.Storage = RT_REGISTER;
@@ -1427,7 +1433,9 @@ LExp& CodeRectLVal(LExp *rect,int16 id)
     if (!lv.RCode)
       lv.RCode = new VBlock;
     lv.RCode->Generate(BAND,rect->Storage,rect->Value,RT_CONSTANT,mask);
-    lv.RCode->Generate(BSHL,RT_REGISTER,0,RT_CONSTANT,shift);
+    /* upstream: same right shift as the read path above. Traced. inc-gv1u;
+       not sent. */
+    lv.RCode->Generate(BSHR,RT_REGISTER,0,RT_CONSTANT,shift);
     if (rect->Storage == RT_REGISTER)
       FreeRegister((int16)rect->Value);
     lv.Storage = RT_REGISTER;
@@ -1438,8 +1446,12 @@ LExp& CodeRectLVal(LExp *rect,int16 id)
     lv.WCode = new VBlock;
     
     /* Save the shifted value for a rect member into a register */
+    /* upstream: positioning a value INTO its byte is a LEFT shift; this asked
+       for BSHR and was correct only while the VM ran BSHR as `<<`. See the
+       marker at src/VMachine.cpp. Traced -- the value is shifted up, then the
+       old field is masked out and the two are ORed. inc-gv1u; not sent. */
     i = AllocRegister();
-    lv.WCode->Generate(BSHR,RT_REGISTER,0,RT_CONSTANT,shift);
+    lv.WCode->Generate(BSHL,RT_REGISTER,0,RT_CONSTANT,shift);
     lv.WCode->Generate(MOV,RT_REGISTER,i,RT_REGISTER,0);
 
     /* Read the entire Rect structure */

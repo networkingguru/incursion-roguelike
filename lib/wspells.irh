@@ -4556,7 +4556,9 @@ Wizard / Scroll Spell "Flame Arrow" : EA_GENERIC
       EActor->GainTempStati(EFF_FLAG1,NULL,e.vDuration,SS_ENCH,
         e.MM & 0xFFFF,0,$"Flame Arrow",e.vCasterLev);
       EActor->GainTempStati(EFF_FLAG2,NULL,e.vDuration,SS_ENCH,
-        (e.MM & 0xFFFF0000) << 16,0,$"Flame Arrow",e.vCasterLev);
+        /* Same compensation as "Bolts of Glory": `<< 16` here meant a right
+           shift while the VM ran the operators inverted (inc-gv1u). */
+        (e.MM & 0xFFFF0000) >> 16,0,$"Flame Arrow",e.vCasterLev);
       EActor->GainTempStati(TRAP_EVENT,NULL,e.vDuration,SS_ENCH,
         EV_TURN,0,$"Flame Arrow",e.vCasterLev);
       return NOTHING;

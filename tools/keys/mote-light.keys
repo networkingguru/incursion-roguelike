@@ -1,0 +1,43 @@
+# Regression fixture for inc-gv1u: a script `<<` must shift LEFT.
+#
+# Read by tools/check_shift_opcodes.sh.
+#
+# WHAT IS BEING MEASURED. The colour of the light a mote of fire casts. The
+# creature's own script (lib/mon3.irh, the "mote of fire" entity) gives it an
+# FI_LIGHT field at birth, glyphed GLYPH_VALUE(GLYPH_FLOOR2, RED). That macro
+# packs the colour into the glyph by shifting it left twelve places, and
+# src/Light.cpp (ScanFields) reads the colour back out of that glyph to decide
+# what colour the light source is.
+#
+# ON A BUILD WITHOUT THE FIX the shift went the wrong way, the colour was lost,
+# and the field was stored as a bare glyph 324 -- colour 0, which is black. The
+# light probe recorded the source with colour 0 0 0 and it lit nothing.
+#
+# WHY A MOTE OF FIRE. It is the cheapest creature in the game whose own script
+# creates a coloured light field, its radius is 1 so the footprint is small,
+# and it is summonable from the wizard menu without any equipment or spell.
+#
+# WHY WIZARD SUMMONING. The field is created on EV_INITIALIZE, at the moment
+# the creature comes into being, so any creation path serves. The wizard menu
+# is the only one that spends no game time and needs no caster.
+#
+# Menu letters move when a list changes. Run with the seed the check supplies.
+
+@include chargen.keys
+
+# --- SUMMON THE MOTE ONE SQUARE EAST ----------------------------------------
+# 'r' is the Elementals category on the first page of the glyph list; 'y' is
+# the mote of fire within it. The check does not trust either letter: it reads
+# the light probe, which names the source's colour outright.
+w
+y
+@choose "Monster Summoning"
+r
+y
+RIGHT           # the location cursor starts on the player; one step east
+ENTER
+@dump:summoned
+
+# Save and quit, so the field is also readable from the save file.
+ESC
+a

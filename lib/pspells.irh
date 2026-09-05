@@ -3644,7 +3644,11 @@ Effect "Bolts of Glory" : EA_GENERIC
       EActor->GainTempStati(EFF_FLAG1,NULL,e.vDuration,SS_ENCH,
         e.MM & 0xFFFF,0,$"Bolts of Glory",e.vCasterLev);
       EActor->GainTempStati(EFF_FLAG2,NULL,e.vDuration,SS_ENCH,
-        (e.MM & 0xFFFF0000) << 16,0,$"Bolts of Glory",e.vCasterLev);
+        /* This site extracted the high half-word of the packed metamagic
+           flags. It read `<< 16` because the VM ran a script `<<` as a right
+           shift; with that inversion fixed (inc-gv1u) the operator is spelled
+           the way it always behaved. Same machine operation, same value. */
+        (e.MM & 0xFFFF0000) >> 16,0,$"Bolts of Glory",e.vCasterLev);
       EActor->GainTempStati(TRAP_EVENT,NULL,e.vDuration,SS_ENCH,
         EV_TURN,0,$"Bolts of Glory",e.vCasterLev);
       return NOTHING;
