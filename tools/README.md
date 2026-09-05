@@ -422,6 +422,7 @@ Nothing invoked it; the only references were documentation. See
 | `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? | LIVE |
 | `check_two_fist_feats_live.sh` | Do the two-weapon feats reach two empty hands? A Monk 1 / Warrior 10 buys Two-Weapon Tempest and the sheet's Brawl row moves 125% to 175%; the 1st-level sidebar must still read two equal fists at full Strength. | LIVE |
 | `check_underdark_live.sh` | Does the Underdark Warrior check the race it requires, and give the Reflex save it advertises? | LIVE |
+| `check_upstream_label.sh` | Does every bead the reporting ledger lists as a base-code defect carry the beads-label `upstream`, so `sync_issues.sh` publishes its GitHub issue with that tag? Reads all ids in each row, so a shared row is not skipped. | LIVE |
 | `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? | LIVE |
 | `check_weapon_immunity_live.sh` | Is a bare fist tested against Weapon Immunity, and does Ki Strike beat it? One wizard-mode-summoned lemure, punched by the same character at Monk 1 and at Monk 4: `Your weapon fails to penetrate.` then no such line. | LIVE |
 | `check_xp_penalty.sh` | Can a character who holds only two classes read his own sheet? A Wood Elf Rogue 2 / Warrior 1, whose empty third class slot used to segfault `Character::XPPenalty`. | LIVE |

@@ -108,6 +108,19 @@ if [ -n "$unlabelled" ]; then
     exit 1
 fi
 
+# Every bead the reporting ledger lists as a base-code (upstream) defect must
+# carry the `upstream` label before we publish, or its GitHub issue goes up with
+# no tag and the tracker under-counts the port's upstream work -- the gap that
+# left 90-odd fixed defects showing as four on 2026-09-04. This is the same
+# shape as the guard above: a required label, checked before the push, not left
+# to anyone's memory. tools/check_upstream_label.sh is the detector and carries
+# its own self-test.
+if ! "$repo_root/tools/check_upstream_label.sh"; then
+    echo "sync_issues: ledger beads are missing the 'upstream' label (above)." >&2
+    echo "sync_issues: label them, then re-run. Nothing was pushed." >&2
+    exit 1
+fi
+
 # ONE READ OF THE DATABASE, REUSED THREE TIMES.
 #
 # `bd show --json <ids>` costs 116 SECONDS for 368 beads -- measured 2026-09-03

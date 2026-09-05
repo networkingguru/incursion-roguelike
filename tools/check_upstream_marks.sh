@@ -162,10 +162,15 @@ table_fix_sites() {
         [ "$in_table" = 1 ] || continue
         case "$row" in "|"*) ;; *) continue ;; esac
 
-        # The tracking id is the last cell.
-        id=$(printf '%s\n' "$row" |
-             grep -oE "\|[[:space:]]*${ID_RE}[[:space:]]*\|[[:space:]]*$" |
-             grep -oE "$ID_RE")
+        # The tracking id(s) are in the last cell. A row MAY name more than one
+        # -- inc-f13 and inc-5xn share row 224 -- so take every id in that cell,
+        # comma-joined. The old pattern demanded a lone id immediately before the
+        # closing pipe, matched nothing on a shared cell, and skipped the whole
+        # row in silence; pass 3 then never checked its fix site. Fixed 2026-09-05.
+        last=${row%"${row##*[![:space:]]}"}   # strip trailing whitespace
+        last=${last%|}                         # drop the trailing pipe
+        last=${last##*|}                       # everything after the last separator
+        id=$(printf '%s\n' "$last" | grep -oE "$ID_RE" | paste -sd, -)
         [ -n "$id" ] || continue
 
         # A cell may contain an escaped pipe (row 148 holds '\|\|'), so hide
@@ -284,7 +289,7 @@ run_checks() {
     done <<< "$MARKS"
 
     # --- pass 3: TABLE -> MARK ----------------------------------------------
-    local tid tpaths tp present matched
+    local tid tpaths tp present matched oneid
     while IFS=$'\t' read -r tid tpaths; do
         [ -n "$tid" ] || continue
         present=""
@@ -296,7 +301,11 @@ run_checks() {
                 continue
             fi
             present="$present $tp"
-            printf '%s' "$MARKED" | grep -qxF "$tp	$tid" && matched=1
+            # A row may name more than one id; one marker on the fix site for ANY
+            # of them satisfies the row.
+            for oneid in ${tid//,/ }; do
+                printf '%s' "$MARKED" | grep -qxF "$tp	$oneid" && matched=1
+            done
         done
         [ -n "$present" ] || continue
         if [ "$matched" -eq 0 ]; then

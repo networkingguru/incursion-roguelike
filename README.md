@@ -580,6 +580,7 @@ the unfixed tree before it is trusted.
 | `check_unearthly_harmonies_prose.sh` | Does the Wand of Unearthly Harmonies description state that its Intelligence damage scales per plus, matching its second `EA_BLAST` `pval: (PLUS_1PER1)d2` code, rather than the flat "1d2 points of Intelligence damage" it claimed before? |
 | `check_unholy_blight.sh` | Does Unholy Blight's inflict segment carry one `xval` (`ADJUST_CIRC`) and `yval: A_AID`, so the sicken lands, rather than the doubled `xval` that made it inert? |
 | `check_uninit_reads.sh` | Does the shipping build carry no high-confidence uninitialised-variable reads (`-Wuninitialized`, `-Wsometimes-uninitialized`)? |
+| `check_upstream_label.sh` | Does every bead the reporting ledger lists as a base-code defect carry the beads-label `upstream`, so `sync_issues.sh` publishes its GitHub issue with that tag? |
 | `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? |
 | `check_wand_acid_type.sh` | Does the Wand of Acid's residual burn damage a fire-immune victim? |
 | `check_zeal_strike.sh` | Does Zeal end when the paladin strikes a creature it did not choose, and survive both an ordinary turn and a blow at the target it did choose? |
