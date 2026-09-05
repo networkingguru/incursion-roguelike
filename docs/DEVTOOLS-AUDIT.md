@@ -109,19 +109,23 @@ about blinking, and no probe symbols -- the same check the "Stale
 
 ## 2. Environment-gated diagnostics
 
-Thirty distinct names, re-derived 2026-08-23 from the tree with
+Thirty-five distinct names, re-derived 2026-09-05 from the tree with
 
 ```sh
 grep -rho 'getenv *( *"[A-Za-z_0-9]*"' src/ inc/ | sort -u | wc -l
 ```
 
-Run it and it prints the number; without `sort -u` the same grep prints 38,
+Run it and it prints the number; without `sort -u` the same grep prints 43,
 which is call sites and not names. The figure was *Twenty-eight, counted
 2026-08-20*, and the command beside it stopped at the `grep`, so it printed no
 number and nobody could tell the count had moved. Three names arrived after
 that date (`INCURSION_HANDLE_BASE`, `INCURSION_RIDER_PROBE`,
 `INCURSION_STAIR_WARN_PROBE`) and `INCURSION_DEPTH_PROBE` left on 2026-08-23,
-which is 28 + 3 - 1 = 30.
+which was 28 + 3 - 1 = 30. Six more have arrived since -- `INCURSION_ARMOUR_PROBE`,
+`INCURSION_DEQU_FORCE_SAVE`, `INCURSION_LIGHT_PROBE`, `INCURSION_PAD_HELP`,
+`INCURSION_V1_RAW`, and `SteamGameId`, which is Steam's own variable rather than
+ours (`src/Wlibtcod.cpp:808`) -- and `INCURSION_DESCEND_PROBE` left in `ccf91de`,
+which is 30 + 6 - 1 = 35.
 
 `getenv` costs nothing when the variable is unset, so unlike the compile-time
 probes these ship in every binary. That is the reason to be stricter about the
@@ -162,7 +166,7 @@ moved or deleted.
 | `INCURSION_STACK_PROBE` | Logged nested entries into depth changes, with the nesting level and map depth. | **KEEP.** It carried the before/after for inc-x9i: seed 3362, exit 139 to exit 0, with the same nested bottom-level entry on both runs, which is what proved the branch was entered and not avoided. That is the whole shape this document asks for. |
 | `INCURSION_FOLLOWER_PROBE`, `INCURSION_GOWITH_PROBE` | Follower loss across a level change. | **KEEP.** They measured the follower loss properly after the first count was withdrawn — and the withdrawal was caused by five runs sharing one directory, not by the probes. |
 | `INCURSION_FALL_CHAIN`, `INCURSION_FALL_CHAIN_SKIP`, `INCURSION_CHASM_WALK`, `INCURSION_LEVITATE_CHASM` | The chasm and falling routes into `MoveDepth`. | **KEEP for now.** They are how the four routes into the bottom-of-dungeon crash were each shown to be reachable without a debugger. Cheap, and the routes are still the ones anyone re-testing that fix would use. |
-| `INCURSION_DUNGEONMAP_PROBE`, `INCURSION_DESCEND_PROBE` | Dungeon and descent structure. | **CANDIDATE for deletion.** Neither is cited in the evidence that closed inc-x9i. Confirm against `bd show inc-x9i` before removing either. |
+| `INCURSION_DUNGEONMAP_PROBE`, `INCURSION_DESCEND_PROBE` | Dungeon and descent structure. | **CANDIDATE for deletion.** Neither is cited in the evidence that closed inc-x9i. Confirm against `bd show inc-x9i` before removing either. `INCURSION_DESCEND_PROBE` has since gone, in `ccf91de`; `INCURSION_DUNGEONMAP_PROBE` is still in the tree at `src/Feature.cpp:1563`. |
 | `INC6D5_PROBE_NAMES` | Names the creatures `INC6D5_PROBE` follows. | **KEEP** with `INC6D5_PROBE`. inc-6d5 is still open. |
 
 ## Added after this audit was written
