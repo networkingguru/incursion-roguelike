@@ -1605,7 +1605,13 @@ Found:
     */
 
     PlayMode = ip;
-    return oMap(DungeonLevels[n][Depth]);
+    /* inc-qhux: heal the level the player is about to enter. A freshly
+       generated level is already correct (the fix is in Map::Generate) and the
+       call is idempotent; a level restored from a pre-fix save is healed here. */
+    Map *ready = oMap(DungeonLevels[n][Depth]);
+    if (ready)
+        ready->FixWallOpacity();
+    return ready;
 }
 
 void Feature::StatiOn(Status s) {

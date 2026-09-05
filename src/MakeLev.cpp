@@ -2151,6 +2151,21 @@ StartAgain:
         for (y = 0; y < (int16)Con[LEVEL_SIZEY]; y++) {
             if (!FDoorAt(x, y)) {
                 At(x, y).Solid = TTER(TerrainAt(x, y))->HasFlag(TF_SOLID);
+                /* upstream: this pass, and the door-removal sites above
+                   (2076, 2083-2084), restore .Solid from terrain but never
+                   .Opaque. Door::SetImage clears .Opaque for an open/broken
+                   door (src/Feature.cpp:570); when generation then removes that
+                   door the cell comes back solid but see-through -- 3 such wall
+                   cells per level. Restore .Opaque from terrain here too, the
+                   same pairing the summoned-feature cleanup already does
+                   (src/Feature.cpp:1631). Not a port artefact: these are all
+                   Richard Tew's 2014-2015 engine lines and drop the same bit on
+                   Win32 with the original typedefs; the defect stayed latent
+                   until the local light port's CARE_ABOUT_LIGHT
+                   (src/Vision.cpp:158) began passing light through any
+                   non-Opaque cell. Observed -- 3 leak cells on each of two
+                   levels of a real save, parsed. inc-qhux. Not sent. */
+                At(x, y).Opaque = TTER(TerrainAt(x, y))->HasFlag(TF_OPAQUE);
             }
             if (TTER(TerrainAt(x, y))->HasFlag(TF_WALL)) {
                 bool found = false;

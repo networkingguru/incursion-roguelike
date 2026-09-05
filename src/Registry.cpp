@@ -1411,6 +1411,11 @@ bool Game::LoadNamedGame(const char *savefile) {
 
     oPlayer(p[0])->MyTerm = T1;
     T1->SetPlayer(oPlayer(p[0]));
+    /* inc-qhux: heal the current level's wall opacity on load, so a save
+       written before the generation fix stops leaking light through its walls.
+       Other levels heal as the player enters them (Game::GetDungeonMap). */
+    if (oMap(m[0]))
+        oMap(m[0])->FixWallOpacity();
     T1->SetMap(oMap(m[0]));
     T1->SetMode(MO_PLAY);
     oPlayer(p[0])->CalcValues();

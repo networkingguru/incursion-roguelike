@@ -534,6 +534,9 @@ class Map: public Object
     bool Filled(int16 x,int16 y);
     void Load(rID mID);
     void RegisterPlayer(hObj h);
+    /* inc-qhux: re-derive .Opaque from terrain for bare cells, healing walls
+       that upstream generation left solid but see-through in a stored save. */
+    void FixWallOpacity();
     /* This function updates the map when the player rests, adding new monsters and such. */
     void DaysPassed();
     void ResetImages();
