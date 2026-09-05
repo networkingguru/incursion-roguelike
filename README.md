@@ -565,6 +565,7 @@ the unfixed tree before it is trusted.
 | `check_save_fail.sh` | Does a save that fails part-way leave the game playable? Drives real and staged failures. |
 | `check_sentinel_live.sh` | Does a live Sentinel get the saves its corrected level table names? |
 | `check_sharp_senses.sh` | Does Sharp Senses reach Search, and not only Spot and Listen? |
+| `check_shift_opcodes.sh` | Does the VM's BSHL shift left while Rect member codegen still uses BSHR for reads and BSHL for writes, and does a script-coloured field cast red rather than black light? |
 | `check_springblade_label.sh` | Do the Springblade Bracers name the pair they actually rolled? Seed 6 rolls the two matched +2 elemental blades, and the name must say so. |
 | `check_stair_cycle.sh` | Does the overview map's staircase search run, pick the cheapest, and wrap? |
 | `check_store_scroll.sh` | Does the shop list follow the selection, in both directions, without wizard mode? |

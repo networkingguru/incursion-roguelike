@@ -136,6 +136,20 @@ classify_line() {
     printf 'none\n'
 }
 
+# A wrapped prose statement can put `upstream:` at the start of a new line even
+# though the preceding line says it is no marker. Join that preceding text to
+# the current-line prefix so both marker passes make the same decision.
+hit_is_negated() {
+    local file=$1 line=$2 text=$3 previous prefix joined
+    previous=""
+    [ "$line" -gt 1 ] && previous=$(sed -n "$((line - 1))p" "$file")
+    prefix=${text%%[Uu]pstream:*}
+    joined=$(printf '%s %s\n' "$previous" "$prefix" |
+             tr '[:upper:]' '[:lower:]' |
+             sed -E "s/[^a-z0-9']+/ /g; s/^[[:space:]]+//; s/[[:space:]]+$//; s/[[:space:]]+/ /g")
+    printf '%s\n' "$joined" | grep -qE '(^| )(no|not a|not an)$'
+}
+
 # Emit "id<TAB>path path ..." -- ONE LINE PER ROW -- for every fix site named in
 # the "Base-code bugs fixed locally" table of $1. The paths stay on one line so
 # the caller can ask "did ANY of this row's files carry the mark?" rather than
@@ -218,6 +232,7 @@ run_checks() {
         REST="${hit#*:}"
         LINE="${REST%%:*}"
         TEXT="${REST#*:}"
+        hit_is_negated "$FILE" "$LINE" "$TEXT" && continue
         [ "$(classify_line "$TEXT")" = malformed ] || continue
         echo "FAIL: $FILE:$LINE writes the marker tag in a form the documented grep cannot see"
         echo "      $TEXT"
@@ -250,6 +265,8 @@ run_checks() {
         FILE="${hit%%:*}"
         REST="${hit#*:}"
         LINE="${REST%%:*}"
+        TEXT="${REST#*:}"
+        hit_is_negated "$FILE" "$LINE" "$TEXT" && continue
         COUNT=$((COUNT + 1))
 
         # The marker is a comment block. Twenty lines is comfortably more than any
@@ -381,6 +398,26 @@ selftest() {
         '        // Secondary correctness fix, part of the same upstream mark above' none
     check_one "prose: parenthetical citation" \
         '       terrain in lib/ has that flag, $"chasm" (lib/dungeon.irh:680 upstream),' none
+
+    local negated_file="${TMPDIR:-/tmp}/checkmarks-negated-selftest.$$"
+    printf '%s\n%s\n' \
+        '/* This is a port design choice, not an upstream defect, so it carries no' \
+        '   upstream: mark. */' > "$negated_file"
+    if hit_is_negated "$negated_file" 2 '   upstream: mark. */'; then
+        printf 'selftest ok    %-34s -> not a marker\n' "cross-line negated mention"
+    else
+        printf 'selftest FAIL  %-34s -> treated as a marker\n' "cross-line negated mention"
+        rc=1
+    fi
+    if ! hit_is_negated "$negated_file" 1 \
+            'code(); /* upstream: base-code defect. Traced. inc-abc. Not sent. */' &&
+       [ "$(classify_line 'code(); /* upstream: base-code defect. Traced. inc-abc. Not sent. */')" = wellformed ]; then
+        printf 'selftest ok    %-34s -> wellformed\n' "valid mid-line marker after code"
+    else
+        printf 'selftest FAIL  %-34s -> not wellformed\n' "valid mid-line marker after code"
+        rc=1
+    fi
+    rm -f "$negated_file"
 
     # The reverse direction: a table that names a fix site.
     local dir="${TMPDIR:-/tmp}/checkmarks-selftest.$$"
