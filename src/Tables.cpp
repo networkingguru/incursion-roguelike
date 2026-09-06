@@ -2418,11 +2418,13 @@ Option OptionList[] = {
       "when playing the game in windowed mode. If the selected font "
       "size does not allow the display of at least 50 rows and 80 columns, "
       "the 8x8 font will be used instead." },
-  { OPT_SOFT_PALETTE, "Softer Palette Colors", "OFF/ON", 1, 0, 0,
-      "__This option uses a 'softer' set of RGB values for the colors in "
-      "the game's palette. This might make text more readable, increase "
-      "contrast and appeal aesthetically to some players, but is a less "
-      "accurate simulation of traditional ASCII graphics." },
+  { OPT_SOFT_PALETTE, "Color Palette", "Classic/Softer/Muted", 2, 0, 0,
+      "__This option chooses the set of RGB values used for the sixteen colors "
+      "in the game's palette. 'Classic' is the traditional ASCII palette. "
+      "'Softer' is the same colors at a lower brightness, which some players "
+      "find more readable. 'Muted' desaturates the colors without darkening "
+      "them, which suits the lighting: a less colorful surface lets the color "
+      "of a torch or a spell show on it more strongly." },
       
 /* Tactical Options */
 #if 0

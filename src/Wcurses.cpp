@@ -170,6 +170,28 @@ int32 RGBSofter[MAX_COLOURS][3] = {
 	{ 230, 230, 230 }, // WHITE
 };
 
+/* Keep these values identical to RGBMuted in src/Wlibtcod.cpp, or the two
+   backends disagree about what "Muted" looks like. See the design note there
+   for why this palette drops saturation and holds value. */
+int32 RGBMuted[MAX_COLOURS][3] = {
+	{ 0, 0, 0 }, // BLACK
+	{ 38, 68, 192 }, // BLUE
+	{ 55, 128, 64 }, // GREEN
+	{ 56, 128, 128 }, // CYAN
+	{ 128, 46, 33 }, // RED
+	{ 122, 61, 128 }, // PURPLE
+	{ 128, 94, 35 }, // BROWN
+	{ 192, 188, 177 }, // GREY
+	{ 117, 117, 128 }, // SHADOW
+	{ 80, 123, 255 }, // AZURE
+	{ 126, 255, 122 }, // EMERALD
+	{ 122, 248, 255 }, // SKYBLUE
+	{ 255, 96, 67 }, // "PINK"
+	{ 251, 132, 255 }, // MAGENTA
+	{ 255, 214, 89 }, // YELLOW
+	{ 255, 248, 232 }, // WHITE
+};
+
 char __buffer[1600];
 char __buff2[80];
 
@@ -1004,10 +1026,17 @@ RetryFont:
 	}
 
 	if (can_change_color()) { // CURSES API
-		if (theGame->Opt(OPT_SOFT_PALETTE))
-			memcpy(&Colors, &RGBSofter, sizeof(Colors[0][0]) * MAX_COLOURS * 3);
-		else
-			memcpy(&Colors, &RGBValues, sizeof(Colors[0][0]) * MAX_COLOURS * 3);
+		switch (theGame->Opt(OPT_SOFT_PALETTE)) {
+			case PALETTE_SOFTER:
+				memcpy(&Colors, &RGBSofter, sizeof(Colors[0][0]) * MAX_COLOURS * 3);
+				break;
+			case PALETTE_MUTED:
+				memcpy(&Colors, &RGBMuted, sizeof(Colors[0][0]) * MAX_COLOURS * 3);
+				break;
+			default:
+				memcpy(&Colors, &RGBValues, sizeof(Colors[0][0]) * MAX_COLOURS * 3);
+				break;
+		}
 
 		for (i = 0; i < MAX_COLOURS; i++) {
 			// The curses RGB range is 0-1000, whereas our local range is 0-255.

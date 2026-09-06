@@ -4120,6 +4120,13 @@ typedef signed int        hObj;
 #define OPT_WIND_RES            432
 #define OPT_WIND_FONT           433
 #define OPT_SOFT_PALETTE        434
+/* Values OPT_SOFT_PALETTE may hold. The options file (Player::LoadOptions)
+   stores one byte per option and is not versioned, so 0 and 1 MUST keep the
+   meanings they had when this was a plain OFF/ON switch. Append new palettes
+   at the end and raise the max in the OptionList row in src/Tables.cpp. */
+#define PALETTE_CLASSIC         0
+#define PALETTE_SOFTER          1
+#define PALETTE_MUTED           2
 
 
 #define OPC_TACTICAL            500

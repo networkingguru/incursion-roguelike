@@ -233,6 +233,48 @@ TCOD_color_t RGBSofter[MAX_COLOURS] = {
   { 230, 230, 230 }, // WHITE
   };
 
+/* The muted palette, for players who run with the lighting on.
+
+   TWO RULES MADE THESE NUMBERS, and the second one was learned the hard way.
+
+   Saturation is DOWN, from 0.98 to 0.63 averaged over the twelve chromatic
+   entries. LightShadeBase weighs a surface's own colour against the light's by
+   claimB = ColValue(b) * ColSat(b) (src/Light.cpp), so a less colourful
+   surface lets the torch colour through. Measured against this table, a close
+   torch supplies 62% of a lit cell's hue where the classic palette gives it
+   46%. That is the whole point of the palette.
+
+   Value is UNCHANGED: every entry has the same maximum channel as its classic
+   counterpart. Value is also `cap` in LightShadeBase, the ceiling past which
+   LIGHT_WASH blows a cell toward white. A first draft of this table dropped
+   mean value 0.72 -> 0.60 as well, and under a close torch all sixteen colours
+   collapsed toward the same tan -- a green slime and a red imp lit alike. Do
+   not darken this palette to make it calmer; take saturation instead.
+
+   Index i and index i|8 must stay the same hue: BRIGHT_MASK is 8 and the
+   engine ORs it in to brighten a glyph (src/Creature.cpp, src/MakeLev.cpp).
+   All 16 entries must also stay distinct, because the reverse lookup below
+   (~:1203) finds an index by matching RGB and would alias a duplicate.
+   tools/check_palettes.py enforces both, and that both backends agree. */
+TCOD_color_t RGBMuted[MAX_COLOURS] = {
+  {   0,   0,   0 }, // BLACK
+  {  38,  68, 192 }, // BLUE
+  {  55, 128,  64 }, // GREEN
+  {  56, 128, 128 }, // CYAN
+  { 128,  46,  33 }, // RED
+  { 122,  61, 128 }, // PURPLE
+  { 128,  94,  35 }, // BROWN
+  { 192, 188, 177 }, // GREY
+  { 117, 117, 128 }, // SHADOW
+  {  80, 123, 255 }, // AZURE
+  { 126, 255, 122 }, // EMERALD
+  { 122, 248, 255 }, // SKYBLUE
+  { 255,  96,  67 }, // "PINK"
+  { 251, 132, 255 }, // MAGENTA
+  { 255, 214,  89 }, // YELLOW
+  { 255, 248, 232 }, // WHITE
+  };
+
 #ifdef PALETTE_LOG
 /* Diagnostic only. Separates two explanations of the whole-screen brighten/dim:
    the game re-applied a palette (RGBValues 255 vs RGBSofter 230), or the game
@@ -1574,20 +1616,30 @@ RetryFont:
 
     InitWindows();
 
-    if (theGame->Opt(OPT_SOFT_PALETTE))
+    {
+        /* Option value 0 and 1 keep the meanings they have always had, because
+           the options file stores this as one byte and every existing player
+           already has a 0 or a 1 in it. New palettes append at 2 and upward. */
+        const TCOD_color_t *chosen;
+        switch (theGame->Opt(OPT_SOFT_PALETTE)) {
+            case PALETTE_SOFTER: chosen = RGBSofter; break;
+            case PALETTE_MUTED:  chosen = RGBMuted;  break;
+            default:             chosen = RGBValues; break;
+        }
         for (i=0;i!=MAX_COLOURS;i++)
-            Colors[i] = RGBSofter[i];
-    else
-        for (i=0;i!=MAX_COLOURS;i++)
-            Colors[i] = RGBValues[i];
+            Colors[i] = chosen[i];
+    }
     {
         LightRGB pal[MAX_COLOURS];
         for (i=0;i!=MAX_COLOURS;i++)
             { pal[i].r = Colors[i].r; pal[i].g = Colors[i].g; pal[i].b = Colors[i].b; }
         LightSetPalette(pal);
     }
-    PALETTE_LOG_EVENT("palette-apply", theGame->Opt(OPT_SOFT_PALETTE)
+    PALETTE_LOG_EVENT("palette-apply",
+          theGame->Opt(OPT_SOFT_PALETTE) == PALETTE_SOFTER
         ? "RGBSofter  (WHITE 230) -- the dim palette"
+        : theGame->Opt(OPT_SOFT_PALETTE) == PALETTE_MUTED
+        ? "RGBMuted   (WHITE 226) -- the desaturated palette"
         : "RGBValues  (WHITE 255) -- the bright palette");
 
     bScreen = TCOD_console_new(sizeX, sizeY);
