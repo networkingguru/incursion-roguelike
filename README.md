@@ -1,4 +1,4 @@
-# iNCURSION
+![iNCURSION](docs/media/incursion-logo-web.png)
 
 Julian Mensch's D&D 3.5 roguelike, running natively on the Mac and on Linux.
 
@@ -18,7 +18,7 @@ then very nearly finished it.
 It has only ever run on Windows. This fork brings it to macOS, and to Linux and
 the Steam Deck, and it is meant to be played, not built.
 
-![iNCURSION running on macOS](docs/media/incursion-macos.png)
+![iNCURSION running on macOS](docs/media/incursion-macos-web.png)
 
 **Jump to:** [Get it](#get-it) · [What is new](#what-is-new) ·
 [What is fixed](#what-is-fixed) · [What is next](#what-is-next) ·
@@ -175,6 +175,13 @@ and it glints off a shiny wall in the colour that struck it. The SDL build
 re-shades while you stand still, so the flicker reads as movement. The terminal
 builds keep their sixteen colours and are unchanged.
 
+![Coloured light in an ice cavern](docs/media/incursion-lighting-web.png)
+
+*Three archons light this cavern, each at its own radius and colour, and the ice
+walls take the light as pale blue. Beyond the last source the floor is black, and
+the corridors the character has already walked sit grey and unlit, remembered
+rather than seen.*
+
 **Light now decides what you can see, and what can see you.** Twelve creatures and
 the flame template light their surroundings by their own nature rather than only
 by carrying a torch: a mote glows one square, a magma flow four. A creature can no
@@ -232,10 +239,15 @@ not stay out of the autopickup pile. More than twenty items across the Bloodspea
 Sunblades, Staffs, Cloaks, Bracers, Wands, Rods and scrolls were brought into line
 with the one standard the game already sets for each — the description it displays.
 
-**And a run of smaller fixes.** Every weapon a Paladin wields now strikes as a holy
-weapon, an extra 2d6 against evil and undead, even a plain unenchanted blade.
-Monkey Grip one-hands a bastard sword without its exotic proficiency, which frees
-the off hand for a shield. Holy weapons and holy damage smite non-evil undead.
+**Two deliberate rule changes.** These two are design choices rather than repairs.
+Every weapon a Paladin wields now strikes as a holy weapon, an extra 2d6 against
+evil and undead, even a plain unenchanted blade; it is a 1st-level class feature,
+always on, and it is written into the Paladin's own description and level table.
+Monkey Grip now one-hands a bastard sword without its exotic proficiency, which
+frees the off hand for a shield, swung at the two-handed Strength bonus and -2 to
+hit.
+
+**And a run of smaller fixes.** Holy weapons and holy damage smite non-evil undead.
 Walls stopped leaking light after a door in them was removed. Illusory damage no
 longer leaves you permanently above your maximum hit points once it wears off.
 Permanent glows and magic auras stopped winking out on their own: an archon's
