@@ -477,10 +477,16 @@ EvReturn Magic::Grant(EventInfo &e) {
         if (e.isWield) { 
             e.ETarget->GainPermStati(e.EMagic->xval,e.EItem,SS_ITEM,e.EMagic->yval,e.vDmg,e.eID,e.vCasterLev+(e.MM & MM_FORTIFY ? 5 : 0)); 
         } else if (e.isEnter)
-            e.ETarget->GainTempStati(e.EMagic->xval,e.EItem,e.vDuration,SS_ENCH,e.EMagic->yval,e.vDmg,e.eID,e.vCasterLev+(e.MM & MM_FORTIFY ? 5 : 0)); 
+            e.ETarget->GainTempStati(e.EMagic->xval,e.EActor,e.vDuration,SS_ENCH,e.EMagic->yval,e.vDmg,e.eID,e.vCasterLev+(e.MM & MM_FORTIFY ? 5 : 0)); 
     } else if (e.isRemove || e.isLeave) {
         if (e.EItem && e.EItem->isItem())
             e.ETarget->RemoveStatiFrom(e.EItem);
+        /* upstream: a field leave must remove only that creator's row;
+           effect-id-only removal also deletes overlapping grants. Plain
+           base-code control flow is identical on Win32. Observed, inc-fiiq,
+           NOT sent. */
+        else if (e.isLeave)
+            e.ETarget->RemoveEffStati(e.eID,EV_REMOVED,0,e.EActor);
         else
             e.ETarget->RemoveEffStati(e.eID);
 
@@ -538,7 +544,10 @@ EvReturn Magic::Grant(EventInfo &e) {
 
 EvReturn Magic::Inflict(EventInfo &e) {
     if (e.isRemove || e.isLeave) {
-        e.ETarget->RemoveEffStati(e.eID);
+        if (e.isLeave)
+            e.ETarget->RemoveEffStati(e.eID,EV_REMOVED,0,e.EActor);
+        else
+            e.ETarget->RemoveEffStati(e.eID);
         e.Terse = true; 
         return DONE; 
     }
@@ -2387,4 +2396,3 @@ EvReturn Magic::Healing(EventInfo &e)
 
     return DONE;
   }
-

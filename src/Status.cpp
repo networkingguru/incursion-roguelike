@@ -369,14 +369,16 @@ void Thing::RemoveOnceStati(int16 n, int16 Val) {
     }
 }
 
-void Thing::RemoveEffStati(rID eID, int16 ev, int16 butNotNature) {
+void Thing::RemoveEffStati(rID eID, int16 ev, int16 butNotNature, Thing *source) {
     bool msg = false; 
     int16 oNested = __Stati.Nested;
 
     StatiIter(this)
         if (S->Nature == INNATE_SPELL || S->Nature == butNotNature) 
             continue; 
-        if (S->Source != SS_MONI && S->eID == eID && (S->h == 0 || butNotNature != -1)) {
+        if (S->Source != SS_MONI && S->eID == eID &&
+            (!source ? (S->h == 0 || butNotNature != -1) :
+                       S->h == source->myHandle)) {
             if (S->Nature == PERIODIC && isCreature())
                 if (oThing(S->h) && oThing(S->h)->isItem() && !EventStack[EventSP].isRemove)
                     continue;
@@ -533,7 +535,24 @@ void Thing::__StatiRemoval(Status *S, Thing *t) {
                 RemoveBackref(t->myHandle,this);
                 S->h = 0;
         } else {
-            StatiIter_RemoveCurrent(t); 
+            /* upstream: cleanup must remove only the rows that refer to the
+               deleted source. The base code reaches here through
+               StatiIter_RemoveCurrent (inc/Map.h), whose RemoveEffStati guard
+               reduces to always-true, so it reaps every row sharing the effect
+               id no matter which object died; that is how two overlapping
+               fields destroy one another. The EV_REMOVED event is NOT new --
+               the macro already delivered it. The fallback replaces the
+               progress guarantee the unconditional sweep gave for free:
+               without it CleanupRefedStati's restart loop can spin on a row
+               the narrowed call declines to remove. Plain base-code control
+               flow behaves identically on Win32. Observed for the narrowing,
+               Reasoned for the fallback, inc-fiiq, NOT sent. */
+            if (S->eID && RES(S->eID)->Type == T_TEFFECT) {
+                t->RemoveEffStati(S->eID, EV_REMOVED, 0, this);
+                if (S->Nature && S->h == myHandle)
+                    Stati_RemoveInline(S,t);
+            } else
+                Stati_RemoveInline(S,t);
         }
     //}
 }
@@ -1048,7 +1067,12 @@ RestartDropItems:
         CalcValues();
         if (s.eID && m) {
             for (i=0;m->Fields[i];i++)
+                /* upstream: an ending sourced row may reap only its source's
+                   mobile field; id-only reaping destroys overlapping fields.
+                   Plain base-code control flow is identical on Win32.
+                   Observed, inc-fiiq, NOT sent. */
                 if (m->Fields[i]->Creator == myHandle && 
+                    (!s.h || m->Fields[i]->Creator == s.h) &&
                     m->Fields[i]->FType & FI_MOBILE &&
                     m->Fields[i]->eID == s.eID) {
                         m->RemoveField(m->Fields[i]);
@@ -1468,6 +1492,33 @@ bool Thing::HasEffField(rID eID)
     for (i=0;f = m->Fields[i];i++)
         if (f->Creator == myHandle && f->eID == eID)
             return true;
+    return false;
+}
+
+bool Thing::RedundantFieldGrant(Status *s)
+{
+    Status *other;
+    int16 i, sIndex = -1;
+
+    if (!s || s->Source != SS_ENCH || !s->h || !s->eID ||
+        !theRegistry->Exists(s->h) || !oThing(s->h)->HasEffField(s->eID))
+        return false;
+
+    for (i=0;other=SN(i,this);i++)
+        if (other == s)
+            sIndex = i;
+    ASSERT(sIndex != -1);
+
+    for (i=0;other=SN(i,this);i++) {
+        if (other->Nature != s->Nature || other->eID != s->eID ||
+            other->Val != s->Val || other->Source != SS_ENCH || !other->h ||
+            !theRegistry->Exists(other->h) ||
+            !oThing(other->h)->HasEffField(other->eID))
+            continue;
+        if (abs(other->Mag) > abs(s->Mag) ||
+            (abs(other->Mag) == abs(s->Mag) && sIndex != -1 && i < sIndex))
+            return true;
+    }
     return false;
 }
   

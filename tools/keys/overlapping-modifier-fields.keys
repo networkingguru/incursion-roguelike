@@ -1,0 +1,29 @@
+# Regression fixture for inc-fiiq: overlapping torch-archon modifier fields.
+
+@include chargen.keys
+
+w
+y
+@choose "Monster Summoning"
+@choose "Celestials"
+@choose "torch archon"
+RIGHT ENTER
+
+w
+@choose "Monster Summoning"
+@choose "Celestials"
+@choose "torch archon"
+RIGHT RIGHT ENTER
+
+# Reach the post-overlap state by ordinary turns, never by teleporting either
+# archon.  This lets both mobile fields cross one another naturally.
+.*200
+
+w
+@choose "Examine All Things"
+@until "archon (class" RIGHT
+DOWN*40
+@dump:late-stati
+ESC
+ESC
+a

@@ -1,0 +1,73 @@
+# Probe for inc-fiiq: does reference cleanup now DELIVER EV_REMOVED?
+#
+#   tools/headless.sh tools/keys/evrem-zeal-kill.keys 4
+#   INCURSION_BIN=./incursion-nocleanupevent tools/headless.sh tools/keys/evrem-zeal-kill.keys 4
+#
+# THE SHAPE. Zeal (lib/pspells.irh:2699) is the one spell whose stati rows sit
+# on the CASTER and point at the TARGET:
+#
+#   EActor->GainTempStati(TRAP_EVENT, EVictim, ..., SS_MISC, ..., $"zeal");
+#   EActor->GainPermStati(EFF_FLAG1,  EVictim, ..., SS_MISC, ..., $"zeal");
+#
+# So the player holds four rows whose S->h is the goblin and whose S->eID is
+# $"zeal", a T_TEFFECT that carries
+#
+#   EV_REMOVED "You feel less safe." / "The <EActor>'s golden aura fades."
+#
+# Kill the goblin and Thing::CleanupRefedStati walks the goblin's backRefs to
+# the player's rows. The fixed build calls RemoveEffStati(eID, EV_REMOVED, 0,
+# goblin) and the line prints; the reverted build calls Stati_RemoveInline and
+# drops the rows in silence. Same rows gone either way, so the message -- not
+# the Zeal indicator on the status line -- is the oracle.
+#
+# Freeze Monsters keeps the goblin from acting, so nothing but the player's own
+# blows touches the spell. Zeal exempts blows at its chosen target, so striking
+# the goblin does not end the spell early; only its death does.
+
+@include chargen-paladin.keys
+
+# Freeze Monsters, the eleventh row of the switches list.
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+w
+@choose "Learn Any Spell"
+"Zeal"
+ENTER
+
+# The chosen target, east of the player. A goblin, not a babau: it has to die.
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT
+ENTER
+
+m
+@choose "Zeal"
+RIGHT
+ENTER
+@dump:after-cast
+
+# Beat the chosen target to death.
+RIGHT
+@while "Confirm attack" y
+RIGHT
+@while "Confirm attack" y
+RIGHT
+@while "Confirm attack" y
+RIGHT
+@while "Confirm attack" y
+RIGHT
+@while "Confirm attack" y
+RIGHT
+@while "Confirm attack" y
+@dump:after-kill
+v
+@dump:kill-log
+@while "Messages" ESC
+@quit

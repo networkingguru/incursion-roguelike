@@ -678,30 +678,37 @@ Restart:
         AddBonus(BONUS_STATUS,A_HIT,-2);
 
     StatiIterNature(this,ADJUST)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
         AddBonus(BONUS_ENHANCE,S->Val,S->Mag);
     StatiIterEnd(this)
     StatiIterNature(this,ADJUST_SAC)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
         AddBonus(BONUS_SACRED,S->Val,S->Mag);
     StatiIterEnd(this)
     StatiIterNature(this,ADJUST_INS)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
         AddBonus(BONUS_INSIGHT,S->Val,S->Mag);
     StatiIterEnd(this)
         StatiIterNature(this,ADJUST_COMP)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
     AddBonus(BONUS_COMP,S->Val,S->Mag);
     StatiIterEnd(this)
     StatiIterNature(this,ADJUST_ART)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
         AddBonus(BONUS_ARTI,S->Val,S->Mag);
     StatiIterEnd(this)
     StatiIterNature(this,ADJUST_DEFL)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
         AddBonus(BONUS_DEFLECT,S->Val,S->Mag);
     StatiIterEnd(this)
     StatiIterNature(this,ADJUST_DMG)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
         if (S->Val == A_AID) 
             StackBonus(BONUS_NEGLEV,S->Val,S->Mag);
@@ -709,42 +716,52 @@ Restart:
             StackBonus(BONUS_DAMAGE,S->Val,S->Mag);
     StatiIterEnd(this)
     StatiIterNature(this,ADJUST_INH)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
         StackBonus(BONUS_INHERANT,S->Val,S->Mag);
     StatiIterEnd(this)
     StatiIterNature(this,ADJUST_MOR)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
         AddBonus(BONUS_MORALE,S->Val,S->Mag);
     StatiIterEnd(this)
     StatiIterNature(this,ADJUST_ARM)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
         AddBonus(BONUS_ARMOUR,S->Val,S->Mag);
     StatiIterEnd(this)
     StatiIterNature(this,ADJUST_DODG)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
         StackBonus(BONUS_DODGE,S->Val,S->Mag);
     StatiIterEnd(this)
     StatiIterNature(this,ADJUST_CIRC)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
         StackBonus(BONUS_CIRC,S->Val,S->Mag);
     StatiIterEnd(this)
     StatiIterNature(this,ADJUST_NAT)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
         AddBonus(BONUS_NATURAL,S->Val,S->Mag);
     StatiIterEnd(this)
     StatiIterNature(this,ADJUST_LUCK)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
         AddBonus(BONUS_LUCK,S->Val,S->Mag);
     StatiIterEnd(this)
     StatiIterNature(this,ADJUST_RES)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
         AddBonus(BONUS_RESIST,S->Val,S->Mag);
     StatiIterEnd(this)
     StatiIterNature(this,ADJUST_PAIN)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
         AddBonus(BONUS_PAIN,S->Val,S->Mag);
     StatiIterEnd(this)
     StatiIterNature(this,ADJUST_SIZE)
+        if (RedundantFieldGrant(S)) continue;
         KNOWN;
         AddBonus(BONUS_SIZE,S->Val,S->Mag);
     StatiIterEnd(this)

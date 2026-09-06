@@ -1,0 +1,37 @@
+# Regression fixture for inc-fiiq: killing one archon must not darken the other.
+#
+# Two torch archons stand one square apart, so each sits inside the other's
+# magic circle.  The player kills the near one.  Map::RemoveField throws
+# EV_FIELDOFF to everything the dead archon's field covered, including the
+# survivor.  Before the fix that leave event removed every row with the same
+# effect id -- the survivor's own included -- and Creature::StatiOff then
+# reaped the survivor's field, so the survivor went dark while still alive.
+#
+# This is the scenario a player actually creates: kill one of a group.
+
+@include chargen.keys
+
+w
+y
+@choose "Genocide Everything"
+
+w
+@choose "Monster Summoning"
+@choose "Celestials"
+@choose "torch archon"
+RIGHT ENTER
+
+w
+@choose "Monster Summoning"
+@choose "Celestials"
+@choose "torch archon"
+RIGHT RIGHT ENTER
+
+# Each RIGHT walks into the near archon and each y confirms the attack on a
+# creature that is not hostile.  Fourteen swings kill it at this seed and stop
+# short of reaching the far one.
+RIGHT y RIGHT y RIGHT y RIGHT y RIGHT y RIGHT y RIGHT y RIGHT y RIGHT y RIGHT y
+RIGHT y RIGHT y RIGHT y RIGHT y
+ESC
+@dump:after-kill
+a

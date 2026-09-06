@@ -1087,7 +1087,8 @@ class Thing: public Object
 	  void GainTempStati(int16 n,Thing *t,int16 Duration,int8 Cause,int16 Val=-1,int16 Mag=-1, rID eID = 0, int8 clev=0);
       void CopyStati(Thing *t, int16 n);
       void RemoveStati(int16 n,int8 Cause=-1, int16 Val=-1,int16 Mag=-1, Thing *t=NULL);		  
-      void RemoveEffStati(rID xID, int16 ev = EV_REMOVED, int16 butNotNature = 0);
+      void RemoveEffStati(rID xID, int16 ev = EV_REMOVED, int16 butNotNature = 0,
+                          Thing *source = NULL);
       void RemoveStatiFrom(Thing *t, int16 ev=EV_REMOVED);
       void RemoveStatiSource(uint8 ss);
       void RemoveOnceStati(int16 n, int16 val);
@@ -1096,6 +1097,7 @@ class Thing: public Object
       inline bool HasStati(int16 n,int16 Val=-1,Thing *t=NULL);
       inline bool HasEffStati(int16 n,rID eID, int16 Val=-1, Thing *t=NULL);
       bool HasEffField(rID eID);
+      bool RedundantFieldGrant(Status *s);
       bool HasStatiFrom(Thing *t);
       Status* GetStati(int16 n,int16 Val=-1,Thing *t=NULL);
       Status* GetEffStati(int16 n,rID xID, int16 Val=-1, Thing *t=NULL);

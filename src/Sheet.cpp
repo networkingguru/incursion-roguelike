@@ -120,6 +120,8 @@ void TextTerm::CreateCharSheet(CharSheet &cs)
       {
         b = 0;
         StatiIterNature(p,SAVE_BONUS)
+          if (p->RedundantFieldGrant(S))
+            continue;
           if (i == S->Val)
             b += S->Mag;
         StatiIterEnd(p)

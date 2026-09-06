@@ -674,6 +674,8 @@ inline int16 Thing::SumStatiMag(int16 n,int16 Val, Thing *t)
     ASSERT(n > 0 && n < LAST_STATI); 
     int16 m = 0; 
     StatiIterNature(this,n)
+        if (RedundantFieldGrant(S))
+          continue;
         if (S->Val == Val || Val == -1) 
           if (!t || S->h == t->myHandle)
             m += S->Mag;

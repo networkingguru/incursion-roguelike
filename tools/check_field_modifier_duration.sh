@@ -44,7 +44,7 @@ circle=0
 white=0
 grep -q 'With priority 1 it wanders about' "$late" && alive=1
 grep -q 'SUMMONED' "$late" && summoned=1
-grep -qi 'Magic Circle vs\. Evil' "$late" && circle=1
+grep -qi 'Magic Circle vs\.' "$late" && circle=1
 white="$(python3 - "$log" <<'PY'
 import sys
 blocks = open(sys.argv[1]).read().split("LIGHT ")[1:]

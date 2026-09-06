@@ -1,0 +1,34 @@
+# Control for tools/keys/watery-death.keys: the same setup and the same kill,
+# with the Watery Double cast left out. If this run is clean and the cast run
+# is not, the difference belongs to the spell and not to the terrain edit, the
+# summon or the genocide.
+
+@include chargen.keys
+
+w
+y
+@choose "Genocide Everything"
+
+w
+@choose "Change terrain type"
+RIGHT ENTER
+TAB
+@choose "shallow water"
+
+w
+@choose "Monster Summoning"
+@choose "Reptiles"
+@choose "giant tortoise"
+RIGHT ENTER
+@dump:victim
+
+w
+@choose "Learn Any Spell"
+"Watery Double" ENTER
+@dump:learned
+
+w
+@choose "Genocide Everything"
+@dump:after-kill
+s
+@dump:after-turn

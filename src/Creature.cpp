@@ -3377,6 +3377,8 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
   }
 
   StatiIterNature(this,SAVE_BONUS)
+      if (RedundantFieldGrant(S))
+        continue;
       if (BIT(S->Val) & Subtype) {
         Bonus += S->Mag;        
         if (show) bStr += Format(" %+d (%s)",S->Mag,

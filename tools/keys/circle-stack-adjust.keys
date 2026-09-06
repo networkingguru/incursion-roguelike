@@ -1,0 +1,59 @@
+# Regression fixture for inc-fiiq: overlapping magic circles must not stack.
+#
+# The character is Neutral EVIL on purpose.  A torch archon's circle inflicts
+# its -3 penalty on MA_EVIL creatures only (lib/wspells.irh:3847-3849), so an
+# evil player standing between two archons is the only oracle in the game that
+# shows the summed value on screen: the "Hit:" line of the side panel.
+#
+# Three dumps: no circle, one circle, two circles.  The ruling is that the
+# second circle adds nothing, so dump two must equal dump one.
+
+a       # Create a New Character
+n       # Do not alter the chargen options
+y       # Accept Explore Mode
+i       # Race: Orc
+a       # Subrace: Orc (Standard)
+a       # Class: Barbarian
+a       # Attributes: first offered set
+e       # Alignment: Neutral EVIL -- the whole point of this fixture
+a       # First feat
+a       # Second feat
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+y
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+w
+y
+@choose "Genocide Everything"
+@dump:hit-base
+
+# The player stands at the centre.  Radius is 2, so an archon one square away
+# and an archon two squares away both cover the player.
+w
+@choose "Monster Summoning"
+@choose "Celestials"
+@choose "torch archon"
+RIGHT ENTER
+@dump:hit-one
+
+w
+@choose "Monster Summoning"
+@choose "Celestials"
+@choose "torch archon"
+RIGHT RIGHT ENTER
+@dump:hit-two
+
+# Both rows must still exist -- the fix suppresses one at read time, it does
+# not delete it.  Deleting it would break the leave path this bead is about.
+w
+@choose "Examine Player Data"
+DOWN*40
+@dump:player-stati
+ESC
+ESC
+a
