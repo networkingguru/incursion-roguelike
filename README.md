@@ -68,15 +68,21 @@ Play it to enjoy it and to shake problems out, not for a character you would
 mourn. The tag is rolling: each new test build overwrites it, so the download
 link always points at the newest one.
 
+Both of these are Linux builds, and **neither runs on Windows**. A ROG Ally with
+the stock Windows install it ships with cannot use either one. An Ally running
+SteamOS can, and that is what the first tarball was tested on.
+
 There are two tarballs, and which one you want depends on whether SDL2 is already
 on the machine.
 
-- `incursion-steamdeck-x86_64.tar.gz` — Steam Deck and ROG Ally. It uses
-  SteamOS's own SDL2.
-- `incursion-linux-x86_64.tar.gz` — any x86-64 Linux. It carries SDL2 and a
+- `incursion-steamdeck-x86_64.tar.gz` — for **SteamOS**: the Steam Deck, or
+  another handheld running SteamOS in place of the system it shipped with. It
+  uses SteamOS's own SDL2 instead of carrying one. Tested on a ROG Ally running
+  SteamOS.
+- `incursion-linux-x86_64.tar.gz` — any other x86-64 Linux. It carries SDL2 and a
   launcher with it, so it runs without your installing SDL2 first.
 
-On a Steam Deck, switch to Desktop mode and open Konsole:
+On SteamOS, switch to Desktop mode and open Konsole:
 
 ```
 tar -xzf incursion-steamdeck-x86_64.tar.gz

@@ -9,6 +9,12 @@
 
 # Incursion — ROG Ally X controls
 
+**This is a SteamOS layout.** It was built and verified on a ROG Ally X running
+SteamOS, not on the Windows install the Ally ships with. Nothing here reaches a
+stock Ally, because the only handheld build this fork produces is a Linux one
+and it does not run on Windows at all — see the *Windows* section of the
+[README](../README.md).
+
 The analog sticks are read by the game itself (native `SDL_GameController`
 support in the SDL/libtcod build). The d-pad and all buttons are Steam Input
 key bindings. **Hold LB** for a shift layer that reaches all 12 macro slots.
