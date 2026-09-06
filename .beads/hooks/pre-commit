@@ -31,3 +31,41 @@ if command -v bd >/dev/null 2>&1; then
   if [ $_bd_exit -ne 0 ]; then exit $_bd_exit; fi
 fi
 # --- END BEADS INTEGRATION v1.1.2 ---
+
+# --- INCURSION: a new bead must be fit to publish before it is committed ---
+# (inc-m7xb, 2026-09-06)
+#
+# core.hooksPath points git at .beads/hooks, so this shim is the ONLY pre-commit
+# hook git runs; a script in .git/hooks would never fire.
+#
+# WHY IT IS HERE AT ALL. tools/check_bead_publish.py was written on 2026-09-02,
+# has a passing selftest, and was wired into NOTHING for four days while
+# AGENTS.md, README.md and tools/sync_issues.sh all stated that it failed a
+# commit. In that window inc-b12m reached the public tracker as GitHub issue
+# #381 with an empty body. The rule existed; the hook did not.
+#
+# IT MUST BLOCK. This is the exact inverse of the pre-push shim next door, which
+# must NEVER block a push: publication is a network operation whose failures have
+# nothing to do with the commits, while an unfit bead is a defect in the commit
+# itself. Brian's ruling on 2026-09-03: make it so you "physically CANNOT post a
+# bead without desc, tags, etc." There is no bypass variable on purpose. The
+# native git commit --no-verify flag remains, and using it is a deliberate act.
+#
+# EXIT 2 WARNS, IT DOES NOT BLOCK. Exit 2 means the script could not measure --
+# no bd on PATH, no python3, an unreadable database. That is not a bead with a
+# missing description, and failing every commit in a fresh clone would get the
+# hook deleted within a week. Exit 1, a real unfit bead, blocks.
+if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
+  _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
+  if [ -x "$_inc_root/tools/check_bead_publish.py" ]; then
+    BD_GIT_HOOK_NESTED=1 "$_inc_root/tools/check_bead_publish.py"
+    _inc_pub=$?
+    if [ $_inc_pub -eq 1 ]; then
+      echo >&2 "pre-commit: a bead created since the last commit is not fit to publish. Fix it above, or use git commit --no-verify and answer for it."
+      exit 1
+    fi
+    if [ $_inc_pub -ne 0 ]; then
+      echo >&2 "pre-commit: check_bead_publish.py could not measure (exit $_inc_pub); the commit CONTINUES."
+    fi
+  fi
+fi

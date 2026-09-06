@@ -177,9 +177,15 @@ This project uses **bd** (beads) for issue tracking. Run `bd prime` for full wor
 
 ### Every bead carries `public` or `internal`
 
-**A bead you create MUST carry exactly one of the labels `public` or
-`internal`, and `tools/check_bead_publish.py` fails the commit when it carries
-neither or both.** The label is not decoration. `tools/sync_issues.sh`
+**A bead you create MUST have a non-empty description and MUST carry exactly
+one of the labels `public` or `internal`. `tools/check_bead_publish.py` fails
+the commit when a new bead has an empty description, or carries neither label
+or both.** It is wired into `.beads/hooks/pre-commit`, so it blocks; it was
+wired in on 2026-09-06 under inc-m7xb, after four days in which this paragraph
+described a gate that ran nowhere. The description is not optional because
+`tools/sync_issues.sh` publishes the DESCRIPTION and never the notes: a bead
+whose content lives in its notes reaches the public tracker with an empty body,
+which is how inc-b12m became GitHub issue #381 with nothing in it. The label is not decoration. `tools/sync_issues.sh`
 publishes every `public` bead to the Issues tab of
 `networkingguru/incursion-roguelike` and never publishes an `internal` one, so
 the label decides whether the outside world can see the bead at all.

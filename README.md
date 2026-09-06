@@ -1,6 +1,6 @@
 # iNCURSION
 
-Julian Mensch's D&D 3.5 roguelike, running natively on the Mac.
+Julian Mensch's D&D 3.5 roguelike, running natively on the Mac and on Linux.
 
 ![macOS Apple Silicon](https://img.shields.io/badge/macOS-Apple_Silicon-000?logo=apple)
 ![signed & notarised](https://img.shields.io/badge/signed_%26_notarised-Apple-success)
@@ -15,8 +15,8 @@ straight 3.5: Mensch threw out the SRD's eight schools and wrote his own eleven,
 Arcana and Thaumaturgy and Weavecraft among them. He built something enormous and
 then very nearly finished it.
 
-It has only ever run on Windows. This fork brings it to macOS, and it is meant to
-be played, not built.
+It has only ever run on Windows. This fork brings it to macOS, and to Linux and
+the Steam Deck, and it is meant to be played, not built.
 
 ![iNCURSION running on macOS](docs/media/incursion-macos.png)
 
@@ -28,9 +28,16 @@ be played, not built.
 
 ## Get it
 
-Download the disk image from
-[Releases](https://github.com/networkingguru/incursion-roguelike/releases), open
-it, drag **Incursion.app** to Applications, and double-click it.
+There are two downloads, both on the
+[Releases](https://github.com/networkingguru/incursion-roguelike/releases) page.
+The macOS one is finished, signed and notarised. The Linux and Steam Deck one is
+a test build, and it is ahead of macOS: it already carries work that no macOS
+release has yet. [What is new](#what-is-new) says which build has what.
+
+### macOS
+
+Download the disk image, open it, drag **Incursion.app** to Applications, and
+double-click it.
 
 There is no installer, no dependency to fetch, and no compiler. The app is signed
 and notarised by Apple, and the notarisation ticket is stapled to the app itself
@@ -44,7 +51,7 @@ not normal, and mean something is genuinely wrong — *"the developer cannot be
 verified"* and *"the app has been modified or damaged"*. If you see either,
 please open an issue.
 
-**Requires** macOS on Apple Silicon. Intel and Linux builds are planned; see
+**Requires** macOS on Apple Silicon. An Intel and universal build is planned; see
 *What is next*.
 
 Your saves, options and logs live in `~/Library/Application Support/Incursion/`.
@@ -53,10 +60,57 @@ They are kept outside the app because an app bundle that writes inside itself
 breaks its own code signature, which macOS then reports as the app having been
 modified or damaged.
 
-**Three ways to run it.** The download is the windowed SDL build, which is the
-way to play. Building from source also gives you a plain terminal build that
-needs no graphics at all and works over ssh, and a headless mode that plays from
-a script, which is how this fork finds its own bugs.
+### Linux and Steam Deck
+
+**This one is a beta, and it says so.** It has had real playtesting on handheld
+hardware, but expect bugs, and expect that a save may not survive the next build.
+Play it to enjoy it and to shake problems out, not for a character you would
+mourn. The tag is rolling: each new test build overwrites it, so the download
+link always points at the newest one.
+
+There are two tarballs, and which one you want depends on whether SDL2 is already
+on the machine.
+
+- `incursion-steamdeck-x86_64.tar.gz` — Steam Deck and ROG Ally. It uses
+  SteamOS's own SDL2.
+- `incursion-linux-x86_64.tar.gz` — any x86-64 Linux. It carries SDL2 and a
+  launcher with it, so it runs without your installing SDL2 first.
+
+On a Steam Deck, switch to Desktop mode and open Konsole:
+
+```
+tar -xzf incursion-steamdeck-x86_64.tar.gz
+cd incursion-deck && ./incursion.sh
+```
+
+Start it through `incursion.sh`, not through the `incursion` binary beside it.
+The script sets the working directory first, because the game writes its
+options, saves and logs next to itself and finds its data module by the path it
+was started with. Each bundle also carries `install-steamos.sh`, which registers
+Incursion with Steam as a non-Steam shortcut and writes a controller layout for
+it, so you can start it from Game Mode with the pad already mapped.
+
+On any other Linux:
+
+```
+tar -xzf incursion-linux-x86_64.tar.gz
+cd incursion-linux && ./run.sh
+```
+
+**Requires** x86-64, and glibc 2.31 or newer. That is the Debian 11 floor, which
+is also the Steam Runtime *sniper* floor, and the release is built against it on
+purpose so that it runs on that and on everything newer. A gamepad is optional,
+and the Deck bundle is built around one.
+
+Your saves, options and logs stay inside the folder you unpacked, beside the
+binary. Move that folder and your characters move with it.
+
+### Three ways to run it
+
+Both downloads are the windowed SDL build, which is the way to play. Building
+from source also gives you a plain terminal build that needs no graphics at all
+and works over ssh, and a headless mode that plays from a script, which is how
+this fork finds its own bugs.
 
 ---
 
@@ -83,11 +137,79 @@ subset of it.
 
 ## What is new
 
-The newest work is first. The top section describes work that is finished but
-not yet in any download. Everything from **release 3** downward is in the
-current download.
+The newest work is first, and each heading says which download carries the work
+under it. The two downloads sit at different points. The macOS download is
+**release 3**. The Linux and Steam Deck download is a rolling beta, and it
+carries everything from **Since release 3** downward.
 
-### In the current build (not yet released)
+### Not in either download yet
+
+**Two archons stop putting each other's lights out.** An archon standing inside a
+neighbouring archon's magic circle lost its own light and its own aura for good,
+the moment the two drifted apart. Every archon's circle carries the same effect
+id, so the archon standing inside held two rows under that one id, and leaving
+the neighbour's circle deleted both — the second deletion then reaped the
+creature's own light. The same duplication also paid an overlapping circle's
+bonus, and its penalty, once per circle. It takes two archons in one place to
+show, which is why every single-archon check passed.
+
+**A swallowed creature feels what its swallower walks through.** A creature that
+has been swallowed or engulfed rides at its carrier's square and cannot move
+itself, and the code that announces crossing a field boundary told only the mover
+and the mover's mount. The passenger therefore never gained a status from a field
+its carrier walked into, and never lost one either. It now gets the same events
+its carrier gets.
+
+### Since release 3 — playable in the Linux and Steam Deck beta
+
+**The map is lit in colour.** Incursion draws its map in the sixteen colours the
+character set gives it, and a lit square used to be no more than a brighter
+version of its own colour. There is now a light map under the display. Every
+torch, lantern, magma pool, glowing creature and light spell casts a coloured
+footprint that falls away with distance, and each source flickers on noise of its
+own — a torch gutters, a lantern is nearly steady, magma breathes slowly. A lit
+cell is a contest between the surface's colour and the light's, so a torch on a
+dark floor takes the cell, while the same torch in a vivid purple room gives
+purple with a yellow cast. Light loses strength and colour crossing ice or fog,
+and it glints off a shiny wall in the colour that struck it. The SDL build
+re-shades while you stand still, so the flicker reads as movement. The terminal
+builds keep their sixteen colours and are unchanged.
+
+**Light now decides what you can see, and what can see you.** Twelve creatures and
+the flame template light their surroundings by their own nature rather than only
+by carrying a torch: a mote glows one square, a magma flow four. A creature can no
+longer hide while carrying a lit torch, lantern or glowing weapon, and the Hide
+skill refuses with *"You can't hide while carrying a light."* Hiding, light
+aversion and what the map actually paints all read the same brightness rule now,
+rather than each answering the question its own way.
+
+**The game plays on a gamepad.** The SDL build reads a controller itself. The left
+stick moves in eight directions, with a deadzone and a one-flick-one-step feel;
+the right stick pans the look cursor; the d-pad carries Kick, Pray, Legend and
+Run; and holding a clicked stick rests or exchanges weapons. The `?` screen names
+the pad control beside each key whenever a pad is in front of the game. Menus that
+needed Tab now page with Left and Right, choice screens answer to the arrow keys
+and Enter, and the overview map, the inventory and the Options screen all take the
+pad. This is what makes the Steam Deck bundle playable with no keyboard attached.
+
+**A title screen.** The SDL build opens on the launch logo, letterboxed over the
+title band so that it keeps its shape at every window size and font. The terminal
+and headless builds fall back to the same wordmark redrawn as hard CP437 glyphs in
+sixteen colours, and both keep the *Halls of the Goblin King* subtitle and the
+credits below it.
+
+**It runs on Linux and on the Steam Deck, and you can download it.** Six places in
+the port assumed Apple's compiler or Apple's C library: a hardcoded `clang`, a
+shim header that shadowed glibc's own, three missing standard includes, a
+clang-only debug trap, and one double `fclose` the parent project's preprocessor
+has always carried. None of the six was visible from macOS, and all six surfaced
+by building inside a Debian 11 (bullseye) container — glibc 2.31 on x86-64, chosen
+as an old-glibc floor so the binary's versioned symbols resolve on newer
+distributions too, and the same floor the Steam Runtime *sniper* uses. Both
+backends now compile there under either clang or GCC, and a seeded session plays
+through with no errors. There are two tarballs on the Releases page, one for the
+Deck and one for any x86-64 Linux; see [Get it](#get-it). The nightly gate
+cross-builds for Linux, so a Linux break stops a merge.
 
 **Every Item member is set before it is read.** The item constructor worked out a
 new item's hit points from two of its fields — its enchantment id and its plus —
@@ -98,18 +220,6 @@ keep it, and there a garbage plus tripped an assertion and a wild parent handle
 crashed character creation before the first map ever drew. The constructor now
 sets each member before anything reads it, which is the same zero clang already
 produced, so the macOS build is unchanged.
-
-**The game builds and runs on Linux.** Six places in the port assumed Apple's
-compiler or Apple's C library: a hardcoded `clang`, a shim header that shadowed
-glibc's own, three missing standard includes, a clang-only debug trap, and one
-double `fclose` the parent project's preprocessor has always carried. None of the
-six was visible from macOS, and all six surfaced by building inside a Debian 11
-(bullseye) container — glibc 2.31 on x86-64, chosen as an old-glibc floor so the
-binary's versioned symbols resolve on newer distributions too. Both backends now
-compile there under either clang or GCC, and a seeded session plays through with
-no errors. This is the groundwork for the Linux and
-Steam Deck target named under [What is next](#what-is-next), not a download yet
-— but you can [build and run it from source](#building-from-source) today.
 
 **Magic items now do what their own descriptions promise.** Item after item did
 less than the text the game already shows for it. The Bloodspear named a bane
@@ -122,7 +232,20 @@ not stay out of the autopickup pile. More than twenty items across the Bloodspea
 Sunblades, Staffs, Cloaks, Bracers, Wands, Rods and scrolls were brought into line
 with the one standard the game already sets for each — the description it displays.
 
-### New in release 3
+**And a run of smaller fixes.** Every weapon a Paladin wields now strikes as a holy
+weapon, an extra 2d6 against evil and undead, even a plain unenchanted blade.
+Monkey Grip one-hands a bastard sword without its exotic proficiency, which frees
+the off hand for a shield. Holy weapons and holy damage smite non-evil undead.
+Walls stopped leaking light after a door in them was removed. Illusory damage no
+longer leaves you permanently above your maximum hit points once it wears off.
+Permanent glows and magic auras stopped winking out on their own: an archon's
+continual light and its magic circle destroyed themselves the moment they were
+cast, and every permanent field on a level used to die the first time the in-game
+day rolled over. A target prompt accepts a square with a staircase on it. ESC
+leaves character generation instead of doing nothing. Tanglefoot catches the
+mount, and dismounting no longer drags a stuck mount along.
+
+### New in release 3 — in both downloads
 
 **Your save survives new content.** Every reference to game content inside a save
 used to be a bare number, and that number was a position in a list. The lists sit
@@ -286,7 +409,8 @@ step with what the game believes.
 
 ## What is next
 
-- **Linux and Steam Deck.** The concrete target. The work that gated it is done.
+- **Take Linux and the Steam Deck out of beta**, and cut a macOS release that
+  carries everything the beta already has.
 - **Intel and universal Macs**, so this runs on hardware older than Apple Silicon.
 - **Finish the content Mensch already wrote.** This is the exciting one. The game
   describes a great deal it never quite got round to building: eight races have
@@ -473,7 +597,7 @@ the unfixed tree before it is trusted.
 | `check_animal_kinship_prose.sh` | Does the Ring of Animal Kinship description drop its false "+3 or higher" untrained-use threshold, stating plainly that it lets you use Animal Empathy with no ranks -- which its skill bonus and the `SkillLevel` use-gate already permit? |
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? Assesses a **quarantined** copy, asks the binary for its own save-layout stamp, and asserts the signature survives a run. |
-| `check_bead_publish.py` | Does every bead created since the last commit carry exactly one of `public` or `internal`, and does a new `public` one carry the sections a stranger needs to reproduce it? The label decides whether `tools/sync_issues.sh` shows the bead to the world, so an unlabelled bead is an invisible one. |
+| `check_bead_publish.py` | Does every bead created since the last commit have a non-empty description and carry exactly one of `public` or `internal`, and does a new `public` one carry the sections a stranger needs to reproduce it? Wired into `.beads/hooks/pre-commit`, so it blocks a commit. `tools/sync_issues.sh` publishes the description and never the notes, so an undescribed bead reaches the tracker with an empty body; the label decides whether it is shown at all, so an unlabelled bead is an invisible one. |
 | `check_brazier_prose.sh` | Does the Brazier Commanding Fire Elementals description say it can be lit three times per day, matching its `EF_3PERDAY` flag, rather than the "Once per day" it claimed before? |
 | `check_broken_door.sh` | Does a door still lie about being broken? Covers the stale orientation brand and every reader that asks whether a door is a hole. |
 | `check_chargen_escape.sh` | Does ESC at a character-creation menu offer to abandon the character, restore the same menu unchanged when that offer is refused, and return to the main menu rather than entering play with a half-made character? |

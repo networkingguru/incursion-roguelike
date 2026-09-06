@@ -85,7 +85,7 @@ by blocking every commit on a backlog.
 
 | File | Change |
 |---|---|
-| `tools/check_bead_publish.sh` | New. Gate check: fails when a newly created bead carries neither `public` nor `internal`, or both; runs `bd lint` over new `public` beads; prints the advisory heuristic's disagreements without failing. |
+| `tools/check_bead_publish.py` | New. Gate check: fails when a newly created bead carries neither `public` nor `internal`, or both; runs `bd lint` over new `public` beads; prints the advisory heuristic's disagreements without failing. |
 | `tools/sync_issues.sh` | New. Computes the filtered id list and calls `bd github sync --push-only --issues`. Reads the token from `gh auth token` locally, `GITHUB_TOKEN` in CI. |
 | `.github/workflows/beads-sync.yml` | New. The repo has no `.github/` at all. Fetches `refs/dolt/data`, runs `bd bootstrap`, runs the script. Scheduled, plus `workflow_dispatch`. |
 | `AGENTS.md` | One paragraph: every bead carries `public` or `internal`, the gate enforces it, and what each means. |
@@ -107,7 +107,7 @@ No game source changes. No bead schema changes.
    where the type is not `bug`/`feature` or an ancestor is `inc-loa`, else
    `public`. Then look at the 21 the advisory heuristic flags and correct them
    by hand. Bead data only, no commit.
-4. **Add `tools/check_bead_publish.sh` to the gate.** It fails the commit when
+4. **Add `tools/check_bead_publish.py` to the gate.** DONE 2026-09-06, inc-m7xb: it is wired into `.beads/hooks/pre-commit` and blocks. It fails the commit when
    a bead created since the last commit carries neither `public` nor
    `internal`, or carries both. It also runs `bd lint` over newly created
    `public` beads, and prints -- without failing -- the advisory heuristic's

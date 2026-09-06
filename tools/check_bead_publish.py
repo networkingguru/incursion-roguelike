@@ -19,12 +19,21 @@ different kind of thing: it cannot be walked past, only answered.
 
 WHAT IT CHECKS.
 
-  A. CLASSIFIED. Every bead created since the last commit carries exactly one
+  A. DESCRIBED. Every bead created since the last commit has a non-empty
+     description. `tools/sync_issues.sh` publishes the DESCRIPTION and never
+     the notes, so a bead whose content lives only in its notes reaches the
+     public tracker with an empty body. That is not hypothetical: on
+     2026-09-03 inc-b12m became GitHub issue #381 with nothing in it, while
+     its notes ran to several paragraphs. Asked of every new bead, not only
+     the public ones, because a lane label can be changed later and the
+     description is what a stranger reads.
+
+  B. CLASSIFIED. Every bead created since the last commit carries exactly one
      of `public` or `internal`. Neither is unclassified; both is a
      contradiction. Beads that already existed at HEAD are not asked -- editing
      an old bead must not fail a commit.
 
-  B. FIT TO PUBLISH. Every newly created `public` bead passes `bd lint`, which
+  C. FIT TO PUBLISH. Every newly created `public` bead passes `bd lint`, which
      asks a bug for "## Steps to Reproduce" and "## Acceptance Criteria". A
      defect that reaches a public tracker with no way to reproduce it reads as
      noise.
@@ -35,7 +44,7 @@ WHAT IT CHECKS.
      content, so demanding it of the backlog would suppress nearly everything.
      Draining that backlog is bead inc-uh76, and it is not a commit gate.
 
-  C. ADVISORY, NEVER BLOCKING. The label is a human's judgement, so the script
+  D. ADVISORY, NEVER BLOCKING. The label is a human's judgement, so the script
      does not overrule it. It prints, in both directions, the beads whose title
      disagrees with their label: a `public` bead that sounds like the harness,
      and an `internal` bead that sounds like the game. Print only. A wrong
@@ -47,8 +56,9 @@ WHAT IT CHECKS.
      The second direction is the one that matters: an over-suppressed bead is
      the failure no hold list can show you, because it never appears anywhere.
 
-Exit: 0 every new bead is classified and fit
-      1 a new bead is unclassified, doubly classified, or fails lint
+Exit: 0 every new bead is described, classified and fit
+      1 a new bead has no description, is unclassified, is doubly classified,
+        or fails lint
       2 could not measure
 """
 
@@ -168,6 +178,31 @@ def classify(beads, cutoff):
     return unclassified, doubly, new_public
 
 
+def undescribed(beads, cutoff):
+    """Beads created after `cutoff` whose description is empty.
+
+    Whitespace is not a description. `bd` returns the field as an empty string
+    when it was never written, and sync_issues.sh sends that field and nothing
+    else to the public tracker.
+    """
+    return [b["id"] for b in beads
+            if is_new(b, cutoff) and not (b.get("description") or "").strip()]
+
+
+def undescribed_all(beads):
+    """Every bead with an empty description, whatever its age or status.
+
+    Used by --audit as a regression check. Split into the ones labelled
+    `public`, which would publish an empty body, and the rest, which are only
+    untidy. Counting all statuses is deliberate: `bd list --label public`
+    returns the open ones alone and would miss a third of the database.
+    """
+    bad = [b for b in beads if not (b.get("description") or "").strip()]
+    pub = [b["id"] for b in bad if "public" in set(b.get("labels") or [])]
+    rest = [b["id"] for b in bad if "public" not in set(b.get("labels") or [])]
+    return pub, rest
+
+
 def disagreements(beads):
     """Beads whose title argues with their label, in both directions."""
     loud, quiet = [], []
@@ -190,20 +225,34 @@ def disagreements(beads):
 FIXTURE = [
     # created before the cutoff: never asked, whatever its labels
     {"id": "old-none", "created_at": "2026-01-01T00:00:00Z", "labels": [],
-     "title": "an old bead nobody ever labelled"},
+     "description": "an old bead, described", "title": "an old bead nobody ever labelled"},
+    # created before the cutoff and undescribed: still never asked
+    {"id": "old-nodesc", "created_at": "2026-01-01T00:00:00Z",
+     "labels": ["public"], "description": "",
+     "title": "an old entry with an empty body"},
     # created after: the three answers
     {"id": "new-public", "created_at": "2026-06-01T00:00:00Z",
-     "labels": ["public"], "title": "the potion of healing does nothing"},
+     "labels": ["public"], "description": "the potion heals nothing at all",
+     "title": "the potion of healing does nothing"},
     {"id": "new-internal", "created_at": "2026-06-01T00:00:00Z",
-     "labels": ["internal"], "title": "check_foo.sh exits silently"},
+     "labels": ["internal"], "description": "it exits 0 on a real failure",
+     "title": "check_foo.sh exits silently"},
     {"id": "new-none", "created_at": "2026-06-01T00:00:00Z", "labels": [],
+     "description": "described, but no lane",
      "title": "somebody forgot to classify this one"},
     {"id": "new-both", "created_at": "2026-06-01T00:00:00Z",
-     "labels": ["public", "internal"], "title": "two answers is not an answer"},
+     "labels": ["public", "internal"], "description": "described, two lanes",
+     "title": "two answers is not an answer"},
+    # created after, labelled, and empty: the failure that reached GitHub
+    {"id": "new-nodesc", "created_at": "2026-06-01T00:00:00Z",
+     "labels": ["public"], "description": "   ",
+     "title": "all its content is in the notes"},
     # advisory, both directions, and neither may change the exit status
     {"id": "loud", "created_at": "2026-01-01T00:00:00Z", "labels": ["public"],
+     "description": "it swallows a real failure",
      "title": "tools/check_bar.sh swallows its own failure"},
     {"id": "quiet", "created_at": "2026-01-01T00:00:00Z", "labels": ["internal"],
+     "description": "undead take no damage from it",
      "title": "the paladin's weapon deals no damage to undead"},
 ]
 
@@ -230,8 +279,24 @@ def selftest():
     if doubly != ["new-both"]:
         print("SELFTEST FAIL: doubly is %r, wanted ['new-both']" % doubly)
         st = 1
-    if new_public != ["new-public"]:
-        print("SELFTEST FAIL: new_public is %r, wanted ['new-public']" % new_public)
+    if new_public != ["new-public", "new-nodesc"]:
+        print("SELFTEST FAIL: new_public is %r, wanted "
+              "['new-public', 'new-nodesc']" % new_public)
+        st = 1
+
+    # The failure that put an empty body on the public tracker as issue #381.
+    nodesc = undescribed(FIXTURE, cutoff)
+    if nodesc != ["new-nodesc"]:
+        print("SELFTEST FAIL: undescribed is %r, wanted ['new-nodesc']" % nodesc)
+        st = 1
+    if "old-nodesc" in nodesc:
+        print("SELFTEST FAIL: an old bead with an empty description "
+              "failed the commit")
+        st = 1
+    pub_empty, rest_empty = undescribed_all(FIXTURE)
+    if sorted(pub_empty) != ["new-nodesc", "old-nodesc"]:
+        print("SELFTEST FAIL: --audit missed an empty public description: %r"
+              % pub_empty)
         st = 1
     if "old-none" in unclassified:
         print("SELFTEST FAIL: an old unlabelled bead failed the commit")
@@ -253,7 +318,7 @@ def selftest():
         st = 1
 
     if st == 0:
-        print("SELFTEST PASS: check_bead_publish.py bites on all five failures")
+        print("SELFTEST PASS: check_bead_publish.py bites on all six failures")
     return st
 
 
@@ -283,6 +348,15 @@ def main(argv):
     print("check_bead_publish: %d bead(s) created since HEAD" % len(fresh))
 
     fail = 0
+    nodesc = undescribed(beads, cutoff)
+    if nodesc:
+        print("FAIL: these new beads have an empty description:")
+        for i in nodesc:
+            print("  %s" % i)
+        print("sync_issues.sh publishes the DESCRIPTION and never the notes,")
+        print("so this bead would reach the public tracker with an empty body.")
+        print("Write it: bd update <id> --description \"...\"")
+        fail = 1
     if unclassified:
         print("FAIL: these new beads carry neither `public` nor `internal`:")
         for i in unclassified:
@@ -309,6 +383,21 @@ def main(argv):
 
     if audit:
         scope = beads
+        pub_empty, rest_empty = undescribed_all(beads)
+        print("")
+        print("audit: %d bead(s) in the database, all statuses" % len(beads))
+        if pub_empty:
+            print("FAIL: these `public` beads have an empty description and")
+            print("would publish an empty body:")
+            for i in sorted(pub_empty):
+                print("  %s" % i)
+            fail = 1
+        else:
+            print("audit: no `public` bead has an empty description")
+        if rest_empty:
+            print("advisory, not public, so nothing leaks:")
+            for i in sorted(rest_empty):
+                print("  %s has an empty description" % i)
     else:
         scope = fresh
 
@@ -325,7 +414,7 @@ def main(argv):
 
     if fail:
         return 1
-    print("PASS: every new bead is classified and fit to publish")
+    print("PASS: every new bead is described, classified and fit to publish")
     return 0
 
 

@@ -14,8 +14,9 @@
 # `--parent` cannot express the filter, and the filter has to be computed out
 # here and handed over as an id list. The filter itself is a mandatory label:
 # every bead carries exactly one of `public` or `internal`, and
-# tools/check_bead_publish.sh fails the commit when a new bead carries neither
-# or both. A required field that blocks a commit is the only kind of rule an
+# tools/check_bead_publish.py fails the commit when a new bead has an empty
+# description, or carries neither label or both. It is wired into
+# .beads/hooks/pre-commit and blocks (inc-m7xb, 2026-09-06). A required field that blocks a commit is the only kind of rule an
 # agent cannot walk past; a paragraph in AGENTS.md has been walked past twice
 # on record.
 #
@@ -40,7 +41,7 @@
 # and observed effect. The check measures a heading, not the presence of
 # content, so gating publication on it would suppress essentially the whole
 # database. The lint gate belongs on NEWLY created beads, where it is cheap and
-# shapes the template; check_bead_publish.sh does that.
+# shapes the template; check_bead_publish.py does that.
 #
 # USAGE
 #   tools/sync_issues.sh              push every `public` bead
