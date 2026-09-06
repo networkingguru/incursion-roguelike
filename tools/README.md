@@ -373,7 +373,7 @@ Nothing invoked it; the only references were documentation. See
 | `check_brawl_weapon.sh` | Does a fist still borrow the sword? An elf ranger holds his bow and carries his sword on his back, where the sheet will show both the Brawl and the Melee block, and the Brawl block must name no weapon at all. | LIVE |
 | `check_broken_door.sh` | Does a door still lie about being broken? Asserts the one predicate every reader asks, and runs a generated level to prove no door ends it closed and branded broken in a readable doorframe. | LIVE |
 | `check_comment_budget.sh` | Did a comment or `_PROBE` block in `src/` or `inc/` appear over the 30-line ceiling, or grow past its recorded size? Ratcheted against `tools/comment_budget.baseline`; `comment_budget.py` does the measuring. | LIVE |
-| `check_commit_lane.sh` | Does every commit after `tools/commit_lane.since` open with one of the seven lanes, and does every `rules:` commit name a design bead? | LIVE |
+| `check_commit_lane.sh` | Does every commit after `tools/commit_lane.since`, except the ones `tools/commit_lane.exempt` forgives by name, open with one of the seven lanes, and does every `rules:` commit name a design bead? | LIVE |
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? | LIVE |
 | `check_cloak_resistance.sh` | Does a +3 Cloak of Resistance grant resistance rather than magic? One session reads all three saving throws with the cloak alone and with auspicious +2 armour; the control stays fixed and the smaller same-type bonus must not stack. | LIVE |
 | `check_sunblade_cold.sh` | Does wielding a known +2 Sunblade raise the character sheet's Cold resistance by 2, the `PLUS_1PER1` mild rate, from the pre-wield control? | LIVE |

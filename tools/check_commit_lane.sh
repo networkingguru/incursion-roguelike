@@ -8,6 +8,13 @@
 #   tools/check_commit_lane.sh --message FILE  judge a proposed commit message
 #   tools/check_commit_lane.sh --selftest   prove this script still bites
 #
+# TWO HATCHES, DIFFERENT SHAPES. tools/commit_lane.since is one sha and says
+# "the rule starts after this"; everything at or before it is exempt forever.
+# tools/commit_lane.exempt names individual commits that are forgiven, so a
+# later miss below them still fails. Use the list, not the cutoff, for a commit
+# that simply got it wrong -- advancing the cutoff grandfathers everything
+# behind it. bd inc-3aqd.
+#
 # THE RULE is in AGENTS.md, "Classifying a change". Seven lanes: fix, port, data,
 # rules, graphics, docs, tools. A rules: commit changes how the game plays, so
 # its body must name the bead that holds the ruling.
@@ -26,6 +33,12 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LANES='fix|port|data|rules|graphics|docs|tools'
 SINCE_FILE="$ROOT/tools/commit_lane.since"
+EXEMPT_FILE="$ROOT/tools/commit_lane.exempt"
+
+# Full shas of the commits forgiven BY NAME, newline separated. The selftest
+# sets this directly against its throwaway repo; load_exempt fills it from
+# EXEMPT_FILE for a real run.
+EXEMPT=""
 
 fail=0
 
@@ -80,14 +93,44 @@ judge_message() {
     return 1
 }
 
+# Read the exemption list into EXEMPT, resolving each entry to a full sha.
+# A named commit that does not exist here is an error, not a silent skip: a
+# typo in this file must never quietly widen the exemption.
+load_exempt() {
+    local line sha full
+    EXEMPT=""
+    [ -f "$EXEMPT_FILE" ] || return 0
+    while read -r line; do
+        case "$line" in ''|'#'*) continue ;; esac
+        sha="$(printf '%s' "$line" | awk '{print $1}')"
+        [ -n "$sha" ] || continue
+        full="$(git -C "$ROOT" rev-parse --verify --quiet "$sha^{commit}")" || {
+            echo "$EXEMPT_FILE names $sha, which is not a commit here" >&2
+            return 2
+        }
+        EXEMPT="$EXEMPT$full
+"
+    done < "$EXEMPT_FILE"
+    return 0
+}
+
+is_exempt() {
+    [ -n "$EXEMPT" ] || return 1
+    printf '%s' "$EXEMPT" | grep -qx "$1"
+}
+
 sweep() {
-    local repo="$1" range="$2" n=0 bad=0 sha
+    local repo="$1" range="$2" n=0 bad=0 skipped=0 sha
     while read -r sha; do
         [ -n "$sha" ] || continue
         n=$((n + 1))
+        if is_exempt "$sha"; then
+            skipped=$((skipped + 1))
+            continue
+        fi
         judge_commit "$repo" "$sha" || bad=$((bad + 1))
     done < <(git -C "$repo" rev-list --no-merges "$range" 2>/dev/null)
-    echo "$n commit(s) in range, $bad unclassified"
+    echo "$n commit(s) in range, $skipped forgiven by name, $bad unclassified"
     [ "$bad" -eq 0 ]
 }
 
@@ -137,7 +180,51 @@ if [ "${1:-}" = "--selftest" ]; then
     printf '%s\n' "# template comment" "Merge branch 'topic'" > "$tmp/message"
     judge_message "$tmp/message" 2>/dev/null || { echo "SELFTEST FAIL: refused an exempt Merge message file"; st=1; }
 
-    [ "$st" -eq 0 ] && echo "SELFTEST PASS: check_commit_lane.sh bites on all failures and judges message files"
+    # THE EXEMPTION LIST. It must forgive exactly what it names and nothing
+    # else, in particular nothing below a forgiven commit. Start from a clean
+    # base so the earlier cases cannot colour this one.
+    git -C "$tmp" reset -q --hard "$base"
+
+    commit "no lane on this one" 7
+    exempt_sha="$(git -C "$tmp" rev-parse HEAD)"
+    EXEMPT="$exempt_sha
+"
+    sweep "$tmp" "$base..HEAD" >/dev/null || {
+        echo "SELFTEST FAIL: a commit named in the exemption list still failed"; st=1; }
+
+    EXEMPT=""
+    sweep "$tmp" "$base..HEAD" >/dev/null && {
+        echo "SELFTEST FAIL: that commit passed with an EMPTY exemption list, so the list is not what forgave it"; st=1; }
+
+    EXEMPT="$exempt_sha
+"
+    commit "no lane on this one either" 8
+    sweep "$tmp" "$base..HEAD" >/dev/null && {
+        echo "SELFTEST FAIL: an unlisted laneless commit passed because an older commit was exempt"; st=1; }
+    git -C "$tmp" reset -q --hard HEAD~1
+
+    commit "fix: a good one above an exempt one" 9
+    sweep "$tmp" "$base..HEAD" >/dev/null || {
+        echo "SELFTEST FAIL: refused a good commit stacked on an exempt one"; st=1; }
+    EXEMPT=""
+
+    # A typo in the exemption file must be an ERROR, not a silent widening.
+    # load_exempt resolves against the real repo, so a sha that does not exist
+    # there is exactly the shape of a mistyped entry.
+    exempt_file_real="$EXEMPT_FILE"
+    EXEMPT_FILE="$tmp/exempt"
+    printf '%s\n' "# a comment line" \
+        "0000000000000000000000000000000000000000  names no commit" > "$EXEMPT_FILE"
+    load_exempt 2>/dev/null && {
+        echo "SELFTEST FAIL: accepted an exemption entry that names no commit"; st=1; }
+    printf '%s\n' "# a comment line" "" \
+        "$(git -C "$ROOT" rev-parse HEAD)  the current tip" > "$EXEMPT_FILE"
+    load_exempt || {
+        echo "SELFTEST FAIL: refused a well-formed exemption file"; st=1; }
+    EXEMPT_FILE="$exempt_file_real"
+    EXEMPT=""
+
+    [ "$st" -eq 0 ] && echo "SELFTEST PASS: check_commit_lane.sh bites on all failures, judges message files, and forgives only the commits its list names"
     exit "$st"
 fi
 
@@ -157,6 +244,8 @@ else
         echo "$SINCE_FILE names $start, which is not a commit here" >&2; exit 2; }
     RANGE="$start..HEAD"
 fi
+
+load_exempt || exit 2
 
 echo "check_commit_lane: $RANGE"
 sweep "$ROOT" "$RANGE" || fail=1

@@ -1,0 +1,42 @@
+# Commits the lane rule forgives BY NAME. One sha per line, reason after it.
+# See AGENTS.md, "Classifying a change".
+#
+# WHY A LIST AND NOT A MOVING CUTOFF. tools/commit_lane.since is a single sha
+# and exempts everything at or before it, forever. That is the right shape for
+# "the rule starts here" and the wrong shape for "these six specific commits".
+# Advancing .since past 8e6707d would grandfather all 49 commits behind it and
+# gut the check. This file names each forgiven commit individually, so a future
+# miss BELOW them still fails. Tracked as bd inc-3aqd.
+#
+# WHY THESE SIX WERE NOT SIMPLY REWORDED. The oldest is 04431f2, from
+# 2026-09-02, so rewording rewrites 49 commits and needs a force-push. Four
+# things break:
+#
+#   - the `beta` tag contains 04431f2 and is the Steam Deck prerelease the
+#     Ally installs from;
+#   - five in-tree citations name shas in the range --
+#     docs/specs/2026-09-02-demo-level-brief.md:37 and tools/nightly_verify.sh:29
+#     name 04431f2, docs/specs/2026-09-03-fog-brief.md:15 names 0654a25,
+#     tools/keys/light-fog.keys:20 and tools/keys/lightfilter-show.keys:34
+#     name cab4cd3;
+#   - beads reference 04431f2 and 0747c0c, and those sync to the public tracker;
+#   - the Ally session's clone would need a hard reset.
+#
+# Rewriting published history is a worse harm than a wrong subject prefix.
+# Leaving the check red is worse than both: a check that stays red is a check
+# people stop reading.
+#
+# THE LIST IS CLOSED AT SIX. c7e5d2f added .beads/hooks/commit-msg, which
+# refuses an invalid subject before the commit exists, so no new laneless
+# commit can be created. Adding a seventh line here should be very hard to
+# justify; prefer rewording anything not yet pushed.
+#
+# Full 40-character shas, so a short-sha collision can never silently forgive
+# the wrong commit.
+
+8e6707db347efa78051a2c4f2bb5d71ef87b03c6  2026-09-05  data: item and feat corrections. "Paladins wield holy; Monkey Grip one-hands the bastard sword"
+d9d950fd195fc2b37ae42ec5d6548218441c0c6a  2026-09-05  fix: the script VM shift opcodes. "Make a script shift go the way it says (inc-gv1u)"
+58d9f2ebbd026c6ff068b7accabcc666ec1b55d8  2026-09-04  docs: bead answers only. "resolve the 10 held questions from the overnight run"
+dddec749dd5308d8484cae169c416a6ec9e73cac  2026-09-04  docs: bead activity only. "beads: park the tile work behind a libtcod 1.6.3 -> 1.24.0 upgrade"
+0747c0cd7b9387b8b898e23f1dabc39a76467af6  2026-09-03  docs: bead activity only. "chore: bead activity for the fog render tint and the publication-gate hole (inc-qh0w, inc-m7xb)"
+04431f2f073f861b1e33b67836e8cfd98c7c62ec  2026-09-02  graphics: trailer capture playback. "sdl,lib: -keys movement-script playback and -load for trailer capture"

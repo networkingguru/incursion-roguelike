@@ -133,7 +133,10 @@ same shot before and after, because the whole point of the change is what the
 screen shows. A structural check alone earns Traced, never Observed. See "A
 gameplay fix needs a before/after observation" in `docs/REPORTING-GATE.md`.
 
-Verify with `tools/check_commit_lane.sh`.
+Verify with `tools/check_commit_lane.sh`. A commit that is already pushed and
+cannot be reworded is forgiven by name in `tools/commit_lane.exempt`, never by
+advancing `tools/commit_lane.since`, which would grandfather everything behind
+it.
 The `.beads/hooks/commit-msg` hook enforces this rule at commit time.
 Set `INCURSION_NO_LANE_CHECK=1` to bypass it in an emergency.
 

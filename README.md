@@ -603,7 +603,7 @@ the unfixed tree before it is trusted.
 | `check_chargen_escape.sh` | Does ESC at a character-creation menu offer to abandon the character, restore the same menu unchanged when that offer is refused, and return to the main menu rather than entering play with a half-made character? |
 | `check_circlet_blasting_prose.sh` | Does the Circlet of Blasting description scope its base 5d8 damage to living creatures, matching its base `EA_BLAST` `tval: MA_LIVING` code and its Searing Light twin, rather than the "everything else" it claimed before? |
 | `check_comment_budget.sh` | Did any comment or `_PROBE` block in `src/` or `inc/` appear over the 30-line ceiling, or grow past what the baseline recorded? |
-| `check_commit_lane.sh` | Does every commit since the rule started open with one of the seven lanes, and does every `rules:` commit name a design bead? |
+| `check_commit_lane.sh` | Does every commit since the rule started open with one of the seven lanes, and does every `rules:` commit name a design bead? Two hatches: `tools/commit_lane.since` says where the rule starts, and `tools/commit_lane.exempt` forgives six already-pushed commits by name, so a later miss below them still fails. |
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? |
 | `check_cloak_resistance.sh` | Does a +3 Cloak of Resistance keep the same saves alone, yet stop stacking with auspicious +2 armour once both bonuses are resistance? |
 | `check_command_prose.sh` | Does Command's description leave out the CR/level limit the code deliberately removed, rather than still promising "does not affect creatures whose CR is more than 2/3rds your level"? |
