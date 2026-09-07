@@ -124,7 +124,7 @@ that date (`INCURSION_HANDLE_BASE`, `INCURSION_RIDER_PROBE`,
 which was 28 + 3 - 1 = 30. Six more have arrived since -- `INCURSION_ARMOUR_PROBE`,
 `INCURSION_DEQU_FORCE_SAVE`, `INCURSION_LIGHT_PROBE`, `INCURSION_PAD_HELP`,
 `INCURSION_V1_RAW`, and `SteamGameId`, which is Steam's own variable rather than
-ours (`src/Wlibtcod.cpp:808`) -- and `INCURSION_DESCEND_PROBE` left in `ccf91de`,
+ours (`src/Wlibtcod.cpp:850`) -- and `INCURSION_DESCEND_PROBE` left in `ccf91de`,
 which is 30 + 6 - 1 = 35.
 
 `getenv` costs nothing when the variable is unset, so unlike the compile-time
@@ -216,7 +216,7 @@ Brian's decision was to wire it up rather than remove it, since the code was
 already paying its full cost in the release. `src/Wlibtcod.cpp`'s `main()` now
 parses `-dump` the same way and for the same stated reason as the posix
 backend: `TextTerm::RunOnCommandLine` caps an option value at 49 characters
-(`src/TextTerm.cpp:39`), which silently truncates a real save path.
+(`src/TextTerm.cpp:53`), which silently truncates a real save path.
 
 Observed, both sides. With the parse in place both binaries dump the same save
 to a byte-identical report and `tools/check_dump_save.sh` prints *"Both backends
