@@ -1,4 +1,13 @@
+<!-- citations: this-port -->
+
 # Build brief: `-keys` deterministic playback in the SDL/libtcod build
+
+**Status: implemented.** The work landed in 04431f2 on 2026-09-02. Every
+`file:line` below names the tree this brief was written against -- 5e62eb2,
+2026-09-01 -- and not today's tree. Read one with `git show 5e62eb2:<file>`.
+They MUST NOT be renumbered to HEAD: the brief describes the code *before* the
+change, so a refreshed number points at the finished work instead of at the
+seam the brief asked an implementer to cut.
 
 **For:** Codex (`codex exec -C /Users/brianhill/Scripts/Incursion -s workspace-write - < brief`). Codex implements and builds the posix half in the sandbox; it MUST NOT commit and MUST NOT run the SDL binary (`./incursion`) — the sandbox has no display. The Claude session reviews each phase's diff and runs the SDL build outside the sandbox.
 
