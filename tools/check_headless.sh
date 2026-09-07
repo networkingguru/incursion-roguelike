@@ -43,6 +43,9 @@ fail() { echo "FAIL: $1"; FAILED=1; }
 
 SEED=1
 KEYS="tools/keys/smoke.keys"
+# Since e4a6499, tools/headless.sh refuses runs without a settings file:
+# settings change what a seeded session does.
+SMOKE_OPTS="$ROOT/tools/fixtures/options-2026-08-22.dat"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/incursion-check.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 
@@ -252,7 +255,8 @@ if [ ! -x ./incursion-headless ]; then
 fi
 
 # 1. It runs to the end on its own, with no terminal of any kind.
-INCURSION_RUN_DIR="$WORK/run1" ./tools/headless.sh "$KEYS" "$SEED" > "$WORK/out1" 2>&1 < /dev/null
+INCURSION_RUN_DIR="$WORK/run1" INCURSION_OPTIONS="$SMOKE_OPTS" \
+    ./tools/headless.sh "$KEYS" "$SEED" > "$WORK/out1" 2>&1 < /dev/null
 STATUS=$?
 if [ "$STATUS" -ne 0 ]; then
     echo "--- session output ---"
@@ -275,7 +279,8 @@ elif ! assert_shows_map "$LAST"; then
 fi
 
 # 3. The same seed plays the same game.
-INCURSION_RUN_DIR="$WORK/run2" ./tools/headless.sh "$KEYS" "$SEED" > "$WORK/out2" 2>&1 < /dev/null
+INCURSION_RUN_DIR="$WORK/run2" INCURSION_OPTIONS="$SMOKE_OPTS" \
+    ./tools/headless.sh "$KEYS" "$SEED" > "$WORK/out2" 2>&1 < /dev/null
 if ! assert_reproducible "$WORK/run1/logs/screens" "$WORK/run2/logs/screens"; then
     echo "--- what differs ---"
     diff -r "$WORK/run1/logs/screens" "$WORK/run2/logs/screens" | head -20
@@ -284,7 +289,8 @@ fi
 
 # 4. A different seed must play a different game, or the seed is being ignored
 #    and assertion 3 above would pass on a build that had lost it entirely.
-INCURSION_RUN_DIR="$WORK/run3" ./tools/headless.sh "$KEYS" 99 > "$WORK/out3" 2>&1 < /dev/null
+INCURSION_RUN_DIR="$WORK/run3" INCURSION_OPTIONS="$SMOKE_OPTS" \
+    ./tools/headless.sh "$KEYS" 99 > "$WORK/out3" 2>&1 < /dev/null
 if assert_reproducible "$WORK/run1/logs/screens" "$WORK/run3/logs/screens"; then
     fail "two different seeds drew identical screens; the seed is being ignored"
 fi
@@ -296,7 +302,8 @@ fi
 #    session as "clean", and 250 of them were once read as evidence that a fix
 #    worked. This assertion is the reason that cannot happen again.
 printf '# no keys at all: the session must not reach a map\n' > "$WORK/empty.keys"
-INCURSION_RUN_DIR="$WORK/run4" ./tools/headless.sh "$WORK/empty.keys" "$SEED" \
+INCURSION_RUN_DIR="$WORK/run4" INCURSION_OPTIONS="$SMOKE_OPTS" \
+    ./tools/headless.sh "$WORK/empty.keys" "$SEED" \
     > "$WORK/out4" 2>&1 < /dev/null
 STATUS=$?
 if [ "$STATUS" -ne 5 ]; then
@@ -317,7 +324,8 @@ fi
 #    Note what this must NOT be rewritten to use: screens are no evidence of
 #    gameplay, because they come from @dump lines in the key script. The vacuous
 #    run above leaves 11 of them.
-INCURSION_MAP_AUDIT=0 INCURSION_RUN_DIR="$WORK/run5" ./tools/headless.sh "$KEYS" "$SEED" \
+INCURSION_MAP_AUDIT=0 INCURSION_RUN_DIR="$WORK/run5" INCURSION_OPTIONS="$SMOKE_OPTS" \
+    ./tools/headless.sh "$KEYS" "$SEED" \
     > "$WORK/out5" 2>&1 < /dev/null
 STATUS=$?
 if [ "$STATUS" -ne 0 ]; then
@@ -438,9 +446,11 @@ fi
 #     second. Both directories are removed afterwards: they are the only two
 #     this check writes outside its own temporary tree, and it knows their
 #     exact paths because the harness printed them.
-./tools/headless.sh "$KEYS" "$SEED" > "$WORK/out-par1" 2>&1 < /dev/null &
+INCURSION_OPTIONS="$SMOKE_OPTS" \
+    ./tools/headless.sh "$KEYS" "$SEED" > "$WORK/out-par1" 2>&1 < /dev/null &
 P1=$!
-./tools/headless.sh "$KEYS" "$SEED" > "$WORK/out-par2" 2>&1 < /dev/null &
+INCURSION_OPTIONS="$SMOKE_OPTS" \
+    ./tools/headless.sh "$KEYS" "$SEED" > "$WORK/out-par2" 2>&1 < /dev/null &
 P2=$!
 wait $P1
 wait $P2
