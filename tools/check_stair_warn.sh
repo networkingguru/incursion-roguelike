@@ -37,14 +37,22 @@
 # water?", which a plain seeded session still produces on demand.
 #
 # THE FIXTURE. The save is Brian's own character, copied while he played on
-# 2026-08-21 and recorded in bd inc-wcf. It is a v0 save pinned by sha1, so
-# it loads through the v0 reader forever -- do NOT "helpfully" -convert it,
-# that would change the bytes and every assertion below rests on them.
-# It is not in the repository: it is
-# 900KB of binary and it belongs to him. Point INCURSION_WCF_SAVE at a copy if
-# it lives somewhere else. Without it this check is INCONCLUSIVE, never a pass
-# and never a failure -- a session that never happened says nothing about the
-# defect, which is the mistake of inc-loa.3.
+# 2026-08-21 and recorded in bd inc-wcf. It is a v1 save, converted ONCE on
+# 2026-09-07 from the v0 original against the module that matched it (lib/ as
+# of b932018, the commit before the first resource append). The v0 original
+# sits beside it, untouched, as provenance. It is not in the repository: it
+# belongs to him. Point INCURSION_WCF_SAVE at a copy if it lives somewhere
+# else. Without it this check is INCONCLUSIVE, never a pass and never a
+# failure -- a session that never happened says nothing about the defect,
+# which is the mistake of inc-loa.3.
+#
+# WHY v1 AND NOT THE v0 ORIGINAL (bd inc-0idm). A v0 save holds bare rID
+# numbers, and the 21 resource arrays share one index space, so ANY resource
+# append -- the legal kind, at the end of lib/main.irc -- shifts every rID a
+# v0 save reads. The first such append (b369eb2, 2026-08-25) made this
+# character's god read as a Domain and her staircase vanish. A sha1-pinned v0
+# fixture therefore has a shelf life that ends at the next append. A v1 save
+# carries a manifest and converts by name and position, so it survives them.
 #
 # The staged copy is what the session plays. The original is never opened by
 # the game, only read by cp, so a run cannot damage it.
@@ -55,8 +63,8 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-SAVE="${INCURSION_WCF_SAVE:-/Users/brianhill/Scripts/Incursion-work/repro/incursion-repro-stairwall/Furious_Fox.sav}"
-WANT_SHA1="b868277dbf5a78b016685367012d8c558d03905a"
+SAVE="${INCURSION_WCF_SAVE:-/Users/brianhill/Scripts/Incursion-work/repro/incursion-repro-stairwall/Furious_Fox.v1.sav}"
+WANT_SHA1="87ef129a953f0a57ed43acbc2388b57a0cc7d044"
 
 [ -x ./incursion-headless ] || {
     echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"

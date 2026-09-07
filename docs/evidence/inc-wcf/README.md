@@ -36,3 +36,20 @@ that decided whether the square was unsafe at all — the terrain's own
 `b868277dbf5a78b016685367012d8c558d03905a`, and `tools/check_stair_warn.sh`
 takes `INCURSION_WCF_SAVE` if it moves. Without it the check is INCONCLUSIVE
 and never a pass.
+
+### Converted to v1 on 2026-09-07 (bd inc-0idm)
+
+The file above is a v0 save: bare rID numbers, no manifest. The first legal
+resource append after it was captured (b369eb2, 2026-08-25) shifted every rID
+it reads, so the check went red with the file's sha1 unchanged. Measured by
+compiling the module from lib/ at three commits: before the append the check
+passes, at the append it fails, at HEAD it fails further.
+
+The check now runs `Furious_Fox.v1.sav`, sha1
+`87ef129a953f0a57ed43acbc2388b57a0cc7d044`, in the same directory. It was
+made with `incursion-headless -convert` on a copy of the v0 file, against a
+module compiled from lib/ as of b932018 (the commit before b369eb2, the last
+module that reads the v0 numbering correctly). Against today's module the
+converted file restores the same world the 2026-08-21 dump records: The
+Goblin Caves, the down staircase at (74,70), the descent to 030m. The v0
+file stays beside it as provenance and is no longer opened by the check.
