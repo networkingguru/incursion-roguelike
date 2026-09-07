@@ -124,7 +124,7 @@ that date (`INCURSION_HANDLE_BASE`, `INCURSION_RIDER_PROBE`,
 which was 28 + 3 - 1 = 30. Six more have arrived since -- `INCURSION_ARMOUR_PROBE`,
 `INCURSION_DEQU_FORCE_SAVE`, `INCURSION_LIGHT_PROBE`, `INCURSION_PAD_HELP`,
 `INCURSION_V1_RAW`, and `SteamGameId`, which is Steam's own variable rather than
-ours (`src/Wlibtcod.cpp:850`) -- and `INCURSION_DESCEND_PROBE` left in `ccf91de`,
+ours (`src/Wlibtcod.cpp:849`) -- and `INCURSION_DESCEND_PROBE` left in `ccf91de`,
 which is 30 + 6 - 1 = 35.
 
 `getenv` costs nothing when the variable is unset, so unlike the compile-time

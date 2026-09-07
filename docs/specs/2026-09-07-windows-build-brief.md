@@ -219,10 +219,12 @@ assert.
 Package on the pattern of `tools/package_linux.sh`. The manifest is the macOS
 one minus the dylib: the `.exe`, `mod/Incursion.Mod` (~1M), `fonts/` (28K),
 `LICENSE`, `Incursion.txt`, and empty `save/` and `logs/`. Ship the SDL2 DLL
-beside the `.exe` unless it is linked statically. **`graphics/` is not needed**
-— the logo it holds is read only inside the `#ifndef _WIN32` branch at
-`src/Wlibtcod.cpp:1557`. `lib/` and `lang/` are not shipped; they are
-resource-compiler input.
+beside the `.exe` unless it is linked statically. **`graphics/logo.png` IS
+needed** — the title screen reads it at `src/Wlibtcod.cpp:1563`, and without it
+the title falls back to the ASCII wordmark. This paragraph said the opposite
+until the `#ifndef _WIN32` guard around that load came off; the file is one
+line in `tools/package_linux.sh`'s `assemble()` and is the same one line here.
+`lib/` and `lang/` are not shipped; they are resource-compiler input.
 
 ## Phase 5 — verification
 
@@ -251,7 +253,7 @@ equivalent for Windows, and a check nobody can run is not a check.
 The build is not the release. `inc-9df.8` is open and applies to Windows harder
 than it applies to macOS: all three backends resolve `argv[0]`, `chdir` there,
 and write `Options.Dat`, `save/` and `logs/` beside the executable
-(`src/Wlibtcod.cpp:590-676`). A repository-wide grep for `APPDATA`,
+(`src/Wlibtcod.cpp:589-675`). A repository-wide grep for `APPDATA`,
 `SHGetKnownFolderPath` and `CSIDL` returns nothing.
 
 Installed to `Program Files` and run by a standard user, the first settings or

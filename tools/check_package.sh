@@ -76,7 +76,7 @@ done
 # maintainer's personal settings file from the source tree.
 [ ! -e "$PKG/Options.Dat" ] || note_fail "package contains a maintainer Options.Dat"
 
-# The game writes beside itself (Wlibtcod.cpp:302 returns "." for OptionsSubDir).
+# The game writes beside itself (Wlibtcod.cpp:301 returns "." for OptionsSubDir).
 # Both directories must exist and be writable or the first run loses data.
 for d in save logs; do
     if [ ! -d "$PKG/$d" ]; then

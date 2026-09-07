@@ -315,7 +315,7 @@ if (fh.Sig == SIGNATURE && !strncmp(fh.Version, "IS", 2)) {
 
 `LoadGroupV1` additionally rejects a `SCHEMA_REV` it does not implement, with a clean error naming the file's revision and the binary's (wire-format §schema revisions) — at this task that means anything other than `0`.
 
-Also extend the save-menu filter in `Game::LoadGame` (`src/Registry.cpp:1254`) to accept an `IS1.` prefix beside `SaveFormatMatches`, and `-schemaload`/`-schematest` parsing in both backends beside `-dump` (`src/Wposix.cpp:550-558`, `src/Wlibtcod.cpp:518-523`).
+Also extend the save-menu filter in `Game::LoadGame` (`src/Registry.cpp:1254`) to accept an `IS1.` prefix beside `SaveFormatMatches`, and `-schemaload`/`-schematest` parsing in both backends beside `-dump` (`src/Wposix.cpp:550-558`, `src/Wlibtcod.cpp:517-522`).
 - `Thing`'s body (`inc/Map.h:663-676`) becomes the spec's example — `Serialize` calls replaced by macros, and the fixups re-seated per the load-direction ordering rule: the save-direction staging stays on top, but `m = oMap(hm)` moves into a trailing `if (!isSave)` block, because on load `hm` has a value only after `FIELD_H(2, hm)` has run — left where v0 had it, `m` would load as `oMap(0)`. Keep the existing upstream comment at `inc/Map.h:664-668` (the `*((long*)&hm)` LP64 note) in place above the staging lines:
 
 ```cpp

@@ -20,7 +20,7 @@
  *
  * The game then sees one ordinary directory holding all five things and never
  * learns that two of them live inside a signed bundle. INCURSIONPATH is the
- * engine's own override (src/Wlibtcod.cpp:419) and is already exercised by the
+ * engine's own override (src/Wlibtcod.cpp:418) and is already exercised by the
  * headless harness, so this is a tested path rather than new machinery.
  *
  * ponytail: the real fix is to split the read root from the write root, so the

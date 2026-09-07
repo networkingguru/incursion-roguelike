@@ -95,24 +95,24 @@ rebuilt; not in this plan.
   Default body in `TextTerm`: `APutChar(x, y, g)`. `Wposix.cpp` and
   `Wcurses.cpp` are not edited.
 - `libtcodTerm` overrides it: `TCOD_console_put_char_ex(bScreen, x, y, ch, fg, bg)`
-  (today's call is `src/Wlibtcod.cpp:1002`), and records into a new per-cell
+  (today's call is `src/Wlibtcod.cpp:1001`), and records into a new per-cell
   buffer `{ Glyph g; LightRGB fgBase, bgBase; int32 lightIdx; bool lit; }`.
 - Any plain `APutChar` to a cell clears its `lit` flag, so a menu or prompt
   drawn over the map is never re-lit. `Save()`/`Restore()`
-  (`src/Wlibtcod.cpp:976-984`) save and restore the flag buffer beside `bSave`.
-- A window or font change (`src/Wlibtcod.cpp:1271-1286`) reallocates the buffer.
+  (`src/Wlibtcod.cpp:975-983`) save and restore the flag buffer beside `bSave`.
+- A window or font change (`src/Wlibtcod.cpp:1270-1285`) reallocates the buffer.
 
 ### S8. The tick
 
-- In `GetCharRaw`'s idle branch (`src/Wlibtcod.cpp:1652-1664`): when shimmer is
+- In `GetCharRaw`'s idle branch (`src/Wlibtcod.cpp:1649-1661`): when shimmer is
   on and `Mode == MO_PLAY`, every `LIGHT_TICK_MS` (33) call `LightTick`, re-put
   every cell with `lit` set, then one `TCOD_console_flush`. This replaces the
   300 ms `IDLE_REPAINT_MS` repaint while shimmer is on; that branch and its
   `ponytail:` stay for the other modes.
-- The idle sleep (`src/Wlibtcod.cpp:1682-1686`) is capped to the next tick.
-- `StopWatch` (`src/Wlibtcod.cpp:1057`) sleeps in ≤33 ms slices and ticks
+- The idle sleep (`src/Wlibtcod.cpp:1679-1683`) is capped to the next tick.
+- `StopWatch` (`src/Wlibtcod.cpp:1056`) sleeps in ≤33 ms slices and ticks
   between them, so spell and missile animations keep shimmering.
-- The Windows `readkey` branch (`src/Wlibtcod.cpp:729-731`) gets the polling
+- The Windows `readkey` branch (`src/Wlibtcod.cpp:728-730`) gets the polling
   loop macOS already uses (`:721-727`). The two fatal-error prompts
   (`:1114`, `:1170`) stay blocking; they cover the map with a box.
 

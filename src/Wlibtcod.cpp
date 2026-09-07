@@ -109,22 +109,22 @@
 #undef MIN
 #undef MAX
 
-#ifndef _WIN32
-// Mac/Linux only: the title logo, the -keys screenshot writer, the gamepad.
-// The Windows cross build now HAS an SDL include path, so this would compile
-// there; it stays off because that package ships no graphics/ for the logo.
+// The title logo, the -keys screenshot writer, and the SDL calls the gamepad
+// poll below needs. Every target that compiles this file -- macOS, Linux and
+// the mingw cross build -- has an SDL include path, so this is not platform
+// split; the Windows package ships graphics/logo.png like the others.
 // push/pop min & max: inc/Defines.h defines lowercase min()/max() macros
-// that break libstdc++'s std::min/std::max when SDL pulls <cmath> on Linux.
-// Undef them only across the SDL include, then restore for the rest of the
-// file (the min() use further down still needs them).
+// that break libstdc++'s std::min/std::max when a header pulls <cmath> --
+// SDL.h does on Linux, inc/gamepad_dir.h on mingw. Undef across both, then
+// restore for the rest of the file (the min() use further down needs them).
 #pragma push_macro("min")
 #pragma push_macro("max")
 #undef min
 #undef max
 #include <SDL.h>
+#include "gamepad_dir.h"
 #pragma pop_macro("min")
 #pragma pop_macro("max")
-#include "gamepad_dir.h"
 
 extern "C" SDL_Surface* TCOD_sys_read_png(const char* filename);
 extern "C" void TCOD_sys_register_SDL_renderer(void (*renderer)(void*));
@@ -173,7 +173,6 @@ static void LogoRenderCB(void* vsurf) {
     g_wasShown = show;
 }
 }
-#endif
 
 
 #ifndef CURSOR_BLINK_MS
@@ -1554,7 +1553,6 @@ RetryFont:
 	TCOD_console_set_custom_font(fontName, TCOD_FONT_LAYOUT_ASCII_INROW, 16, 16);
 	TCOD_console_init_root(sizeX, sizeY, "Incursion: Halls of the Goblin King", !isWindowed, TCOD_RENDERER_SDL);
 
-#ifndef _WIN32
     g_gridW = sizeX;
     g_gridH = sizeY;
     g_fontW = fontX;
@@ -1612,7 +1610,6 @@ RetryFont:
         TCOD_sys_register_SDL_renderer(LogoRenderCB);
         g_logoRendererRegistered = true;
     }
-#endif
 
     InitWindows();
 
@@ -1968,17 +1965,9 @@ int16 libtcodTerm::GetCharCmd(KeyCmdMode mode) {
                     pauseUntil = now + (uint32)scriptKey.pauseMs;
                     tcodKey = TCOD_key_t();
                 } else if (scriptKey.ch == SK_SHOT) {
-                    /* ponytail: @shot writes nothing on Windows. g_lastFrame
-                       and TCOD_sys_save_bitmap live in the #ifndef _WIN32
-                       block at the top; SK_SHOT arrived later and escaped it.
-                       Ceiling: no Windows screenshot, title logo or gamepad,
-                       all three being in that block. Upgrade path: it needs
-                       only SDL headers, which TARGET=windows now supplies. */
-#ifndef _WIN32
                     TCOD_console_flush();
                     if (g_lastFrame)
                         TCOD_sys_save_bitmap((void*)g_lastFrame, scriptKey.label);
-#endif
                     tcodKey = TCOD_key_t();
                 } else if (scriptKey.ch == SK_QUIT) {
                     this->ShutDown();
