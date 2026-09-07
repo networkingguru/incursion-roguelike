@@ -584,8 +584,9 @@ because a measurement once passed on two runs that both did nothing.
 The gate measures error volume and message-set membership. Screen dumps and
 crashing-seed identity were both tried and both failed, because screens diverge
 from the first changed decision onward, so a gate built on them goes red on every
-correct fix. The gate plays with a pinned `tools/gates/Options.Dat`, so playing
-the game cannot move its numbers.
+correct fix. Every scripted run explicitly selects a frozen settings file from
+`tools/fixtures/` or a purpose-built file such as `tools/gates/Options.Dat`, so
+playing the game cannot move its numbers.
 
 ### The checks
 

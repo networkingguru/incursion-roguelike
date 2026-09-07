@@ -44,7 +44,7 @@ mkdir -p "$RUN/save"
 
 # Generate a level with the current binary; the harness sandboxes save/.
 INCURSION_RUN_DIR="$RUN" INCURSION_MAP_AUDIT=0 \
-    tools/headless.sh "$KEYS" "$SEED" >"$RUN/run.log" 2>&1
+    INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$KEYS" "$SEED" >"$RUN/run.log" 2>&1
 SAVE="$(ls "$RUN"/save/*.sav 2>/dev/null | head -1)"
 if [ -z "$SAVE" ]; then
     echo "the generated session produced no save; see $RUN/run.log" >&2

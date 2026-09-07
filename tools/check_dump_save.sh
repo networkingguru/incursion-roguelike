@@ -52,7 +52,8 @@ REAL_SAVE_BEFORE="$(find "$ROOT/save" -type f 2>/dev/null | sort)"
 
 # 1. Produce a known save. This writes into $WORK/run/save, never into the
 #    real save/ -- see tools/headless.sh's own header comment.
-INCURSION_RUN_DIR="$WORK/run" ./tools/headless.sh "$KEYS" "$SEED" \
+# Measured exit 1 under 08-13 and 0 under 08-18; 08-13 cannot finish character generation.
+INCURSION_RUN_DIR="$WORK/run" INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat ./tools/headless.sh "$KEYS" "$SEED" \
     > "$WORK/session.log" 2>&1 < /dev/null
 STATUS=$?
 if [ "$STATUS" -ne 0 ]; then

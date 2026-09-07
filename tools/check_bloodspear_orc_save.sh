@@ -29,7 +29,7 @@ DWARF_KEYS=tools/keys/bloodspear-dwarf-save.keys
 # reached a map or could not find a screen it scripted.
 run_keys() {
     local keys="$1" out run
-    out="$(tools/headless.sh "$keys" "$SEED" 2>&1)"
+    out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$keys" "$SEED" 2>&1)"
     run="$(echo "$out" | awk '/^run:/ {print $2}')"
     if echo "$out" | grep -q "NO GAMEPLAY"; then
         echo "FAIL: $keys never entered a map, so it measured nothing." >&2

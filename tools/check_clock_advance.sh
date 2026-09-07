@@ -124,7 +124,7 @@ fi
 
 if [ "$LIVE" -eq 1 ]; then
     echo "7. live: a real session stamps a real turn counter"
-    OUT="$(tools/headless.sh tools/keys/smoke.keys "$SEED" 2>&1)"
+    OUT="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh tools/keys/smoke.keys "$SEED" 2>&1)"
     echo "$OUT" | grep -q 'game time:  [0-9]* turns' &&
         pass "a real run reported real game time" ||
         fail "a real run reported no game time: $(echo "$OUT" | grep 'game time' || echo none)"

@@ -31,7 +31,7 @@ ICE_X=113; MEASURE_X=114; ROW=110
 # Play one key script and echo "<light digit> <filter char> <run dir>".
 play() {
     local keys="$1" out run log
-    out="$(INCURSION_LIGHT_PROBE=1 tools/headless.sh "$keys" 1 2>&1)"
+    out="$(INCURSION_LIGHT_PROBE=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$keys" 1 2>&1)"
     run="$(printf '%s\n' "$out" | awk '/^run:/ {print $2}')"
     if printf '%s\n' "$out" | grep -q "NO GAMEPLAY"; then
         echo "INCONCLUSIVE: $keys never entered a map. Run: $run" >&2

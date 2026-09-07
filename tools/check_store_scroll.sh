@@ -43,7 +43,7 @@ ROW0="00) coil of a hemp rope"
     exit 2
 }
 
-out="$(tools/headless.sh tools/keys/store-scroll.keys "$SEED" 2>&1)"
+out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh tools/keys/store-scroll.keys "$SEED" 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 S="$run/logs/screens"
 

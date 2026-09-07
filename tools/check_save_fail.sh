@@ -90,11 +90,11 @@ run_session() {
     mkdir -p "$WORK/$tag"
     if [ -n "$at" ]; then
         INCURSION_SAVE_FAIL_AT="$at" INCURSION_RUN_DIR="$WORK/$tag/run" \
-            ./tools/headless.sh "$KEYS" "$SEED" \
+            INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat ./tools/headless.sh "$KEYS" "$SEED" \
             > "$WORK/$tag/session.log" 2>&1 < /dev/null
     else
         INCURSION_RUN_DIR="$WORK/$tag/run" \
-            ./tools/headless.sh "$KEYS" "$SEED" \
+            INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat ./tools/headless.sh "$KEYS" "$SEED" \
             > "$WORK/$tag/session.log" 2>&1 < /dev/null
     fi
     echo $? > "$WORK/$tag/status"

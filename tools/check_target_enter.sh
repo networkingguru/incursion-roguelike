@@ -46,7 +46,7 @@ cd "$ROOT"
     exit 2
 }
 
-OUT="$(tools/headless.sh tools/keys/target-enter-stair.keys 1 2>&1)"
+OUT="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh tools/keys/target-enter-stair.keys 1 2>&1)"
 RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
 SCREENS="$RUN/logs/screens"
 

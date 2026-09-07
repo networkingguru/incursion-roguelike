@@ -24,7 +24,7 @@ KEYS=tools/keys/smoke.keys
     echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
     exit 2
 }
-out="$(INCURSION_LIGHT_PROBE=1 tools/headless.sh "$KEYS" "$SEED" 2>&1)"
+out="$(INCURSION_LIGHT_PROBE=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 run="$(printf '%s\n' "$out" | awk '/^run:/ {print $2}')"
 if printf '%s\n' "$out" | grep -q "NO GAMEPLAY"; then
     echo "INCONCLUSIVE: $KEYS never entered a map. Run: $run"

@@ -65,7 +65,8 @@ trap 'rm -rf "$WORK"' EXIT
 REAL_SAVE_BEFORE="$(find "$ROOT/save" -type f 2>/dev/null | sort)"
 
 # --- 1. produce one genuine, deterministic save, exactly as check_dump_save.sh does ---
-INCURSION_RUN_DIR="$WORK/run" ./tools/headless.sh "$KEYS" "$SEED" \
+# Measured exit 1 under 08-13 and 0 under 08-18; 08-13 cannot finish character generation.
+INCURSION_RUN_DIR="$WORK/run" INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat ./tools/headless.sh "$KEYS" "$SEED" \
     > "$WORK/session.log" 2>&1 < /dev/null
 STATUS=$?
 if [ "$STATUS" -ne 0 ]; then

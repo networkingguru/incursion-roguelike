@@ -49,7 +49,7 @@ SEED=1
     exit 2
 }
 
-out="$(INCURSION_RIDER_PROBE=1 tools/headless.sh tools/keys/rider-corpse.keys "$SEED" 2>&1)"
+out="$(INCURSION_RIDER_PROBE=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh tools/keys/rider-corpse.keys "$SEED" 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 log="$run/logs/rider.log"
 

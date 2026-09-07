@@ -92,21 +92,16 @@ RUN="${INCURSION_RUN_DIR:-$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$$-$(basename "
 mkdir -p "$RUN/save" "$RUN/logs"
 ln -sfn "$ROOT/mod" "$RUN/mod"
 ln -sfn "$ROOT/lib" "$RUN/lib"
-# Which settings the session plays with. The default is the live file, because
-# a session with NO options file never finishes character generation and so
-# measures nothing -- that produced two false passes on 2026-08-14.
-#
-# But the live file is whatever Brian last used, and the game rewrites it every
-# time he plays. Settings change the game: on 2026-08-15 the same binary, seed
-# and key script gave different screens either side of a rewrite at 17:49, and
-# the regression tool's finding count moved 4386 -> 4416 with no code change.
-# So anything that compares one run against another must pass
-# INCURSION_OPTIONS and pin a file. The gate does; see tools/gate_lib.sh.
-#
-# A caller that asks for a file it cannot have gets an error, not the live one.
-# Falling back would put the defect straight back, and quietly.
-OPTIONS="${INCURSION_OPTIONS:-$ROOT/Options.Dat}"
-if [ -n "${INCURSION_OPTIONS:-}" ] && [ ! -f "$OPTIONS" ]; then
+# Every scripted run must choose its settings explicitly. Settings change the
+# game, and the repository-root Options.Dat belongs to the player and is
+# rewritten during play. Stable choices live in tools/fixtures/; gates keep
+# their purpose-built file in tools/gates/Options.Dat.
+if [ -z "${INCURSION_OPTIONS:-}" ]; then
+    echo "INCURSION_OPTIONS is required; choose a settings file from tools/fixtures/"
+    exit 2
+fi
+OPTIONS="$INCURSION_OPTIONS"
+if [ ! -f "$OPTIONS" ]; then
     echo "INCURSION_OPTIONS names a file that is not there: $OPTIONS"
     exit 2
 fi

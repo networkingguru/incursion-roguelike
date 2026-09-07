@@ -273,7 +273,7 @@ fi
 RUN="$ROOT/logs/runs/broken-door-$$"
 mkdir -p "$RUN/logs" || exit 2
 if ! INCURSION_DOOR_PROBE=1 INCURSION_RUN_DIR="$RUN" \
-        tools/headless.sh "$KEYS" "$SEED" > "$RUN/harness.txt" 2>&1; then
+        INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh "$KEYS" "$SEED" > "$RUN/harness.txt" 2>&1; then
     echo "  INCONCLUSIVE: the headless run did not finish. See $RUN/harness.txt"
     exit 2
 fi

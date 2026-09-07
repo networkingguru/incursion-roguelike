@@ -80,7 +80,7 @@ REAL_SAVE_BEFORE="$(find "$ROOT/save" -type f 2>/dev/null | sort)"
 
 # --- 1. a real session produces the save, and dump A reads it against the
 #        repo's own module (tools/dump_save.sh symlinks $ROOT/mod in) -------
-INCURSION_RUN_DIR="$WORK/run1" INCURSION_BIN="$BIN" ./tools/headless.sh \
+INCURSION_RUN_DIR="$WORK/run1" INCURSION_BIN="$BIN" INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat ./tools/headless.sh \
     "$KEYS" "$SEED" > "$WORK/session.log" 2>&1 < /dev/null
 STATUS=$?
 if [ "$STATUS" -ne 0 ]; then

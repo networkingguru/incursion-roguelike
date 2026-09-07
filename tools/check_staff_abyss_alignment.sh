@@ -67,7 +67,7 @@ GRANT="STAFF SPELLS from SS ITEM"
 # result that could be mistaken for a measurement.
 measure() { # <keyscript> <alignment the sheet must show> -> "yes"|"no"
     local keys="$1" want_align="$2" out run scr sheet wielded align class
-    out="$(tools/headless.sh "$keys" "$SEED" 2>&1)"
+    out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$keys" "$SEED" 2>&1)"
     run="$(echo "$out" | awk '/^run:/ {print $2}')"
     if echo "$out" | grep -q "the key script looked for something"; then
         echo "INCONCLUSIVE: $keys could not find something on screen. Run: $run" >&2

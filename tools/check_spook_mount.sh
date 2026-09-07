@@ -39,7 +39,7 @@ set -e
 
 cd "$(dirname "$0")/.."
 
-RUN=$(./tools/headless.sh tools/keys/spook-mount.keys 5 2>&1 | sed -n 's/^run:  *//p')
+RUN=$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat ./tools/headless.sh tools/keys/spook-mount.keys 5 2>&1 | sed -n 's/^run:  *//p')
 [ -n "$RUN" ] || { echo "FAIL: the run produced no directory"; exit 1; }
 S="$RUN/logs/screens"
 

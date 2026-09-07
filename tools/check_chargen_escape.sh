@@ -33,7 +33,7 @@ RACE_PROMPT="Your race grants"
     exit 2
 }
 
-out="$(tools/headless.sh tools/keys/chargen-escape.keys "$SEED" 2>&1)"
+out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh tools/keys/chargen-escape.keys "$SEED" 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 S="$run/logs/screens"
 

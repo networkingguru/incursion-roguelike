@@ -45,7 +45,7 @@ fi
 mkdir -p "$WORK/run/logs" "$WORK/run/save"
 ln -sfn "$ROOT/mod" "$WORK/run/mod"
 ln -sfn "$ROOT/lib" "$WORK/run/lib"
-[ -f "$ROOT/Options.Dat" ] && cp "$ROOT/Options.Dat" "$WORK/run/Options.Dat"
+cp "$ROOT/tools/fixtures/options-2026-08-13.dat" "$WORK/run/Options.Dat"
 
 INCURSIONPATH="$WORK/run/" INCURSION_SEED=7 \
     ./incursion-strqueue -keys tools/keys/smoke.keys \

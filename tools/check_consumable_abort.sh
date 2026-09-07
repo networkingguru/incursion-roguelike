@@ -54,7 +54,7 @@ ONE_POTION="Potion of Healing"
     exit 2
 }
 
-out="$(tools/headless.sh tools/keys/consumable-abort.keys "$SEED" 2>&1)"
+out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh tools/keys/consumable-abort.keys "$SEED" 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 S="$run/logs/screens"
 

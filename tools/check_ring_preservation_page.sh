@@ -75,7 +75,7 @@ deterrants to those who would rob merchants and shop-keepers"
     exit 2
 }
 
-out="$(tools/headless.sh tools/keys/ring-preservation-page.keys "$SEED" 2>&1)"
+out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh tools/keys/ring-preservation-page.keys "$SEED" 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 if echo "$out" | grep -q "the key script looked for something"; then
     echo "INCONCLUSIVE: the key script could not find something on screen. Run: $run"

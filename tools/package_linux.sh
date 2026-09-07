@@ -144,8 +144,8 @@ assemble() {
     cp "$ROOT"/graphics/logo.png  "$pkg/graphics/"
     # Deliberately NOT Options.Dat. Player::LoadOptions (src/Player.cpp) fills in
     # every option's real default when the file is absent, so a fresh install is
-    # correct without it -- and the tree's Options.Dat is an all-NUL file that
-    # would instead force every option to zero. Shipping it also overwrote a
+    # correct without it -- and the tree's Options.Dat is the maintainer's own
+    # settings rather than a distributable defaults file. Shipping it also overwrote a
     # player's customised options on each rolling-alpha update. Leaving it out
     # fixes both: real defaults on first run, and an update never touches a
     # settings file the player owns.

@@ -42,7 +42,7 @@ BIN="${INCURSION_BIN:-./incursion-headless}"
 # one_run <label> <env-setting>: run the script, print the path of the help dump.
 one_run() {
     local out run
-    out="$(env $2 INCURSION_BIN="$BIN" tools/headless.sh "$KEYS" "$SEED" 2>&1)"
+    out="$(env $2 INCURSION_BIN="$BIN" INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
     run="$(echo "$out" | awk '/^run:/ {print $2}')"
     if echo "$out" | grep -q "^ended: *ASSERT"; then
         echo "FAIL ($1): the engine tripped an assertion opening the ? screen." >&2

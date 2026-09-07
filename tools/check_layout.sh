@@ -82,11 +82,12 @@ echo
 # 80x24, decides it cannot draw and exits before it plays anything.
 run_one() {
     local layout="$1" tag="$2"
+    # Measured exit 2 under 08-13 and 0 under 08-18; 08-13 cannot finish character generation.
     INCURSION_BIN="$BIN" \
     INCURSION_LAUNCHER="lldb -b -o run -o quit --" \
     INCURSION_LAYOUT="$layout" \
     INCURSION_RUN_DIR="$WORK/$tag" \
-        ./tools/headless.sh "$KEYS" "$SEED" -headless > "$WORK/$tag.out" 2>&1
+        INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat ./tools/headless.sh "$KEYS" "$SEED" -headless > "$WORK/$tag.out" 2>&1
 }
 
 for pair in "$A:a1" "$A:a2" "$B:b1" "$B:b2"; do

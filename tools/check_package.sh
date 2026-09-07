@@ -65,12 +65,16 @@ done
 # --- 3. the data the game reads at run time ---------------------------------
 # lib/ and lang/ are deliberately NOT here. They are resource-compiler input,
 # and nothing in src/ opens them at run time; the module already holds the data.
-for f in mod/Incursion.Mod fonts/8x8.png fonts/12x16.png fonts/16x12.png fonts/16x16.png Options.Dat; do
+for f in mod/Incursion.Mod fonts/8x8.png fonts/12x16.png fonts/16x12.png fonts/16x16.png; do
     if [ ! -f "$PKG/$f" ]; then
         note_fail "missing data file: $f"
     fi
 done
-[ "$FAIL" -eq 0 ] && echo "PASS: module, fonts and options are present"
+[ "$FAIL" -eq 0 ] && echo "PASS: module and fonts are present"
+
+# A fresh install must obtain the defaults from OptionList, not inherit the
+# maintainer's personal settings file from the source tree.
+[ ! -e "$PKG/Options.Dat" ] || note_fail "package contains a maintainer Options.Dat"
 
 # The game writes beside itself (Wlibtcod.cpp:302 returns "." for OptionsSubDir).
 # Both directories must exist and be writable or the first run loses data.

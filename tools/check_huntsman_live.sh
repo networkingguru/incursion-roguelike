@@ -40,7 +40,7 @@ KEYS=tools/keys/prestige-huntsman.keys
     exit 1
 }
 
-OUT="$(tools/headless.sh "$KEYS" "$SEED" 2>&1)"
+OUT="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
 DUMP="$RUN/logs/hunt.txt"
 LEARN="$(ls "$RUN"/logs/screens/*learn.txt 2>/dev/null | head -1)"

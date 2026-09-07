@@ -21,6 +21,8 @@ x64_Debug
 x64_Release
 
 # Incursion specific temporary files.
+# The root file is personal settings; keep the anchored path from matching tools/gates/Options.Dat.
+/Options.Dat
 lib/program.i
 build/
 incursion

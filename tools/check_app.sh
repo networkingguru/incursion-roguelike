@@ -56,10 +56,14 @@ run_bounded() {
 # --- 1. the bundle is shaped like a bundle -----------------------------------
 for f in Contents/Info.plist Contents/MacOS/Incursion Contents/MacOS/incursion-game \
          Contents/Resources/mod/Incursion.Mod Contents/Resources/fonts/8x8.png \
-         Contents/Resources/Options.Dat Contents/Resources/Incursion-macOS.txt; do
+         Contents/Resources/Incursion-macOS.txt; do
     [ -e "$APP/$f" ] || note_fail "missing from the bundle: $f"
 done
 [ "$FAIL" -eq 0 ] && echo "PASS: bundle layout is complete"
+
+# A fresh install must obtain the defaults from OptionList, not inherit the
+# maintainer's personal settings file from the source tree.
+[ ! -e "$APP/Contents/Resources/Options.Dat" ] || note_fail "bundle contains a maintainer Options.Dat"
 
 # --- 2. the GPLv2 resource compiler must not be in the shipped binary --------
 # src/Art.cpp:2-7 forbids distributing it. Do NOT grep for 'accent': no symbol
@@ -161,8 +165,8 @@ else
         note_fail "the launcher did not create its writable directory under a fresh HOME"
     elif [ ! -L "$FAKEHOME/Library/Application Support/Incursion/mod" ]; then
         note_fail "the launcher did not link mod/ into the writable directory"
-    elif [ ! -f "$FAKEHOME/Library/Application Support/Incursion/Options.Dat" ]; then
-        note_fail "the launcher did not seed Options.Dat"
+    elif [ -e "$FAKEHOME/Library/Application Support/Incursion/Options.Dat" ]; then
+        note_fail "the launcher created Options.Dat during a -formatid run"
     else
         echo "PASS: launcher builds its writable directory outside the bundle"
     fi

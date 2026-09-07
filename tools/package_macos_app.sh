@@ -122,7 +122,6 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/mod" "$APP/Contents/Reso
 cp "$ROOT/incursion-ship"    "$APP/Contents/MacOS/incursion-game"
 cp "$ROOT/mod/Incursion.Mod" "$APP/Contents/Resources/mod/"
 cp "$ROOT"/fonts/*.png       "$APP/Contents/Resources/fonts/"
-cp "$ROOT/Options.Dat"       "$APP/Contents/Resources/"
 cp "$ROOT/LICENSE"           "$APP/Contents/Resources/"
 cp "$ROOT/Incursion.txt"     "$APP/Contents/Resources/"
 # Ours, beside upstream's. Incursion.txt is the original project's readme and

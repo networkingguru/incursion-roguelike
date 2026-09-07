@@ -33,18 +33,19 @@ WANT_FLOORED=175      # NATURAL_SPD_FLOOR 15, displayed as 100 + 15*5
     echo "FAIL: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
     exit 1
 }
-[ -f Options.Dat ] || { echo "FAIL: no Options.Dat to base the two runs on"; exit 1; }
+BASE_OPTIONS=tools/fixtures/options-2026-08-18.dat
+[ -f "$BASE_OPTIONS" ] || { echo "FAIL: no $BASE_OPTIONS to base the two runs on"; exit 1; }
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 # Two options files that differ in exactly one byte.
-python3 - "$TMP" "$OPT_BYTE" <<'PY' || exit 1
+python3 - "$TMP" "$OPT_BYTE" "$BASE_OPTIONS" <<'PY' || exit 1
 import sys, io
-tmp, idx = sys.argv[1], int(sys.argv[2])
-b = bytearray(io.open('Options.Dat','rb').read())
+tmp, idx, options = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+b = bytearray(io.open(options,'rb').read())
 if len(b) <= idx:
-    raise SystemExit("Options.Dat is %d bytes, too short for option %d" % (len(b), idx))
+    raise SystemExit("%s is %d bytes, too short for option %d" % (options, len(b), idx))
 b[idx] = 0; io.open(tmp + '/original.Dat','wb').write(bytes(b))
 b[idx] = 1; io.open(tmp + '/floored.Dat','wb').write(bytes(b))
 PY

@@ -40,7 +40,7 @@ view() { sed -n '/Things in View/,/HP:/p' "$1"; }
 # Run the fixture on one seed; set globals BEFORE and AFTER to the two dumps.
 run_seed() {
     local seed="$1" out run
-    out="$(tools/headless.sh tools/keys/symbol-autopickup.keys "$seed" 2>&1)"
+    out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh tools/keys/symbol-autopickup.keys "$seed" 2>&1)"
     RUN="$(echo "$out" | awk '/^run:/ {print $2}')"
     BEFORE="$(ls "$RUN"/logs/screens/*before* 2>/dev/null | head -1)"
     AFTER="$(ls "$RUN"/logs/screens/*after*  2>/dev/null | head -1)"

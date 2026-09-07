@@ -182,15 +182,14 @@ them from any working directory, and the path arguments they take are relative
 to the REPO ROOT, not to where you are standing. `gate_lib.sh:43` uses `BASH_SOURCE` instead
 because it is sourced, not executed.
 
-**Trap 2 — `headless.sh` copies the LIVE `Options.Dat` unless you say
-otherwise.** `headless.sh:108` defaults `INCURSION_OPTIONS` to `$ROOT/Options.Dat`
-and `headless.sh:113` copies it into the session. The default is deliberate: a session with
-no options file never finishes character generation, which produced two false
-passes on 2026-08-14 (`headless.sh:95-97`). But the live file is whatever the
-owner last played with, and the game rewrites it every session. Settings change
-the game. On 2026-08-15 the same binary, seed and key script gave different
-screens either side of a rewrite, and the gate's finding count moved 4386 to
-4416 with no code change (`headless.sh:99-102`, `gate_lib.sh:31-41`).
+**Trap 2 — every `headless.sh` run must choose its settings.** Set
+`INCURSION_OPTIONS` to one of the frozen files in `tools/fixtures/`, or to a
+purpose-built file such as `tools/gates/Options.Dat`. The harness refuses an
+unset variable or a path that is not a file (`headless.sh:99-108`). This keeps
+checks independent of the repository-root `Options.Dat`, which belongs to the
+player and is rewritten every session. Settings change the game: on 2026-08-15
+the same binary, seed and key script gave different screens either side of a
+rewrite, and the gate's finding count moved 4386 to 4416 with no code change.
 
 This matters more than it sounds, because the key scripts choose menu items by
 FIXED LETTERS. One extra prompt slides every later keystroke out of step. Two
@@ -198,8 +197,8 @@ seeds died exactly that way when a god offered a domain prompt the stream had no
 answer for (`tools/keys/chargen-priest.keys:12-16`). Anything that compares one
 run against another MUST pass `INCURSION_OPTIONS`. The gate pins
 `tools/gates/Options.Dat` and records its checksum in the baseline
-(`gate_lib.sh:43-44`, `gate_record.sh:28-34`). A file you name and cannot have is
-an error, never a silent fall back to the live one (`headless.sh:106-112`).
+(`gate_lib.sh:43-44`, `gate_record.sh:28-34`). A run that does not choose a
+file, or names one it cannot have, is an error (`headless.sh:99-108`).
 
 **Trap 3 — the map audit is ON by default and it is expensive.**
 `headless.sh:120` sets `INCURSION_MAP_AUDIT` to 1 unless you override it. A
@@ -494,6 +493,8 @@ one (`package_macos_app.sh:5-13`).
 | `gates/dive.baseline` | The committed regression baseline. `gate_record.sh` overwrites it. |
 | `gates/Options.Dat` | The pinned settings file every gate run plays with. Committed on purpose. |
 | `gates/Options.Dat.md` | What is in that settings file and why. |
+| `fixtures/options-*.dat` | Frozen, dated settings files that scripted checks select explicitly. |
+| `fixtures/README.md` | Origins, differences and immutability rule for the settings fixtures. |
 | `__pycache__/` | Python bytecode. Untracked build litter. |
 
 ---
@@ -558,8 +559,8 @@ tools/check_strqueue.sh             # builds its own probe binary, then deletes 
 
 `check_strqueue.sh:36-38` calls `./build_macos.sh` itself with
 `OUT=incursion-strqueue`, so it costs a full build the first time. It removes
-that binary afterwards (`check_strqueue.sh:95`). It copies the LIVE `Options.Dat`
-into its sandbox (`check_strqueue.sh:48`), so Trap 2 applies to it.
+that binary afterwards (`check_strqueue.sh:95`). It copies the frozen
+`fixtures/options-2026-08-13.dat` into its sandbox (`check_strqueue.sh:48`).
 
 ### Tier 3 — needs `BACKEND=posix ./build_macos.sh` first
 

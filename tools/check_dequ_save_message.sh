@@ -54,15 +54,15 @@ BAD="protects its"
     exit 2
 }
 
-# The live Options.Dat, deliberately, and not the pinned gate file: seed 5 under
-# the gate settings does not reach the wizard menu with these keystrokes, and
+# The dated 08-22 fixture, deliberately, and not the pinned gate file: seed 5
+# under the gate settings does not reach the wizard menu with these keystrokes, and
 # tools/check_spook_ally.sh -- the script this one's chargen and summon sequence
 # is taken from -- runs the same way for the same reason. Nothing here compares
-# one run against a stored screen, so a settings change cannot silently move the
-# answer; it can only stop the run reaching the pudding, which the guards below
-# report as a failure rather than a pass.
+# one run against a stored screen, and the frozen fixture keeps later personal
+# settings changes from moving the answer. The guards below still report a run
+# that does not reach the pudding as a failure rather than a pass.
 OUT="$(INCURSION_DEQU_FORCE_SAVE=1 INCURSION_BIN="$BIN" \
-       tools/headless.sh "$KEYS" "$SEED" 2>&1 < /dev/null)"
+       INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$KEYS" "$SEED" 2>&1 < /dev/null)"
 RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
 
 # A session that measured nothing must never read as a pass -- that is inc-loa.3.

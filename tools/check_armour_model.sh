@@ -107,7 +107,7 @@ print("data:  NATURAL_COVERAGE %d = suit %d + helm %d + gauntlets %d + boots %d"
 PYEOF
 
 # --- Part two: the model, measured in a real session ------------------------
-out="$(INCURSION_ARMOUR_PROBE=1 tools/headless.sh "$KEYS" "$SEED" 2>&1)"
+out="$(INCURSION_ARMOUR_PROBE=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 
 # A session that measured nothing must never read as a pass: inc-loa.3.

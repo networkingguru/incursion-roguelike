@@ -69,7 +69,6 @@ mkdir -p "$PKG/mod" "$PKG/fonts" "$PKG/save" "$PKG/logs"
 cp "$ROOT/incursion-ship"      "$PKG/incursion"
 cp "$ROOT/mod/Incursion.Mod"   "$PKG/mod/"
 cp "$ROOT"/fonts/*.png         "$PKG/fonts/"
-cp "$ROOT/Options.Dat"         "$PKG/"
 cp "$ROOT/LICENSE"             "$PKG/"
 cp "$ROOT/Incursion.txt"       "$PKG/"
 

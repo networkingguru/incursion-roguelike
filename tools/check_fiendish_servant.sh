@@ -39,7 +39,7 @@ BIN="${INCURSION_BIN:-./incursion-headless}"
 }
 [ -f "$KEYS" ] || { echo "INCONCLUSIVE: no key script at $KEYS"; exit 2; }
 
-out="$(env INCURSION_BIN="$BIN" tools/headless.sh "$KEYS" 2>&1)"
+out="$(env INCURSION_BIN="$BIN" INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$KEYS" 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 
 if echo "$out" | grep -q "^ended: *ASSERT"; then

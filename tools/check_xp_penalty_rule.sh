@@ -100,7 +100,7 @@ fail=0
 # Play one key script and print the directory it left behind.
 run_keys () { # <keyscript> <seed>
     local out
-    out="$(tools/headless.sh "$1" "$2" 2>&1)"
+    out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh "$1" "$2" 2>&1)"
     printf '%s\n' "$out" | awk '/^run:/ {print $2}'
 }
 

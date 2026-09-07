@@ -42,7 +42,7 @@ SEED=3
 fail=0
 
 # ---- PA-03-F13, and the admitting half of PA-03-F12 --------------------
-OUT="$(tools/headless.sh tools/keys/underdark-deepgnome.keys "$SEED" 2>&1)"
+OUT="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh tools/keys/underdark-deepgnome.keys "$SEED" 2>&1)"
 RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
 DUMP="$RUN/logs/udwar.txt"
 
@@ -77,7 +77,7 @@ else
 fi
 
 # ---- the refusing half of PA-03-F12 ------------------------------------
-OUT="$(tools/headless.sh tools/keys/underdark-greyelf.keys "$SEED" 2>&1)"
+OUT="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh tools/keys/underdark-greyelf.keys "$SEED" 2>&1)"
 RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
 SCR="$RUN/logs/screens/0001-refused.txt"
 

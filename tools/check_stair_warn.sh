@@ -85,7 +85,7 @@ mkdir -p "$RUN/save"
 cp "$SAVE" "$RUN/save/Furious_Fox.sav"
 
 INCURSION_STAIR_WARN_PROBE=1 INCURSION_RUN_DIR="$RUN" \
-    tools/headless.sh tools/keys/stair-warn.keys 1 > "$RUN/harness.out" 2>&1
+    INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh tools/keys/stair-warn.keys 1 > "$RUN/harness.out" 2>&1
 
 SCREENS="$RUN/logs/screens"
 LOADED="$SCREENS/0001-loaded.txt"

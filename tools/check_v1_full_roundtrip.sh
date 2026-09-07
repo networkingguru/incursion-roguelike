@@ -64,7 +64,7 @@ REAL_SAVE_BEFORE="$(find "$ROOT/save" -type f 2>/dev/null | sort)"
 
 # 1. A real session produces a save (sandboxed run directory; see
 #    tools/headless.sh's own header for why never the binary directly).
-INCURSION_RUN_DIR="$WORK/run1" ./tools/headless.sh "$KEYS" "$SEED" \
+INCURSION_RUN_DIR="$WORK/run1" INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat ./tools/headless.sh "$KEYS" "$SEED" \
     > "$WORK/session1.log" 2>&1 < /dev/null
 STATUS=$?
 if [ "$STATUS" -ne 0 ]; then
@@ -126,7 +126,7 @@ generation() { # <input-save> <runtag>  -> path of the new save on stdout
     mkdir -p "$WORK/$tag/save"
     cp "$in" "$WORK/$tag/save/"
     INCURSION_V1_RAW=1 INCURSION_RUN_DIR="$WORK/$tag" \
-        ./tools/headless.sh tools/keys/loadsave.keys "$SEED" \
+        INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat ./tools/headless.sh tools/keys/loadsave.keys "$SEED" \
         > "$WORK/$tag.log" 2>&1 < /dev/null
     local st=$?
     if [ "$st" -ne 0 ]; then

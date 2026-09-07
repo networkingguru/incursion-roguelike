@@ -65,7 +65,7 @@ fi
 # 2. The save, written by the STOCK module. Raw mode leaves the records
 #    uncompressed so the manifest can be read back below.
 INCURSION_V1_RAW=1 INCURSION_RUN_DIR="$WORK/before" \
-    ./tools/headless.sh tools/keys/smoke.keys 1 \
+    INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat ./tools/headless.sh tools/keys/smoke.keys 1 \
     > "$WORK/session.log" 2>&1 < /dev/null
 SAVE="$(ls "$WORK"/before/save/*.sav 2>/dev/null | head -1)"
 if [ -z "$SAVE" ]; then
@@ -83,7 +83,7 @@ fi
 #    because that is a real directory and not a symlink -- it drops an inert
 #    $MODULE/mod/mod link inside it and leaves the compiled module alone.
 INCURSION_V1_RAW=1 INCURSION_RUN_DIR="$MODULE" \
-    ./tools/headless.sh tools/keys/smoke.keys 1 \
+    INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat ./tools/headless.sh tools/keys/smoke.keys 1 \
     > "$WORK/session-after.log" 2>&1 < /dev/null
 SAVE_AFTER="$(ls "$MODULE"/save/*.sav 2>/dev/null | head -1)"
 if [ -z "$SAVE_AFTER" ]; then

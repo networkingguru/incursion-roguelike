@@ -57,7 +57,7 @@ fi
     exit 1
 }
 
-OUT="$(tools/headless.sh "$KEYS" "$SEED" 2>&1)"
+OUT="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
 S1="$RUN/logs/screens/0001-cast1.txt"
 S2="$RUN/logs/screens/0002-cast2.txt"

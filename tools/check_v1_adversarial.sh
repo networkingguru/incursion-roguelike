@@ -74,7 +74,7 @@ CHARACTER="$WORK/e.sav"
 #         grid_mismatch mutant needs a Map record, and no schematest group
 #         carries one. Driven through tools/dump_save.sh below for the same
 #         reason.
-INCURSION_V1_RAW=1 INCURSION_RUN_DIR="$WORK/fullrun" ./tools/headless.sh \
+INCURSION_V1_RAW=1 INCURSION_RUN_DIR="$WORK/fullrun" INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat ./tools/headless.sh \
     tools/keys/smoke.keys 1 > "$WORK/fullsession.log" 2>&1 < /dev/null
 STATUS=$?
 if [ "$STATUS" -ne 0 ]; then

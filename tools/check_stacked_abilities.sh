@@ -80,7 +80,7 @@ fail=0
 check_sheet () {
     local keys="$1" base="$2" guard="$3" want="$4" deny="$5"
     local out run dump
-    out="$(tools/headless.sh "$keys" "$SEED" 2>&1)"
+    out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh "$keys" "$SEED" 2>&1)"
     run="$(echo "$out" | awk '/^run:/ {print $2}')"
     dump="$run/logs/$base.txt"
 

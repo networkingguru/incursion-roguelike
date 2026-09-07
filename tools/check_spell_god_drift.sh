@@ -62,7 +62,7 @@ trap 'rm -rf "$WORK"' EXIT
 REAL_SAVE_BEFORE="$(find "$ROOT/save" -type f 2>/dev/null | sort)"
 
 # --- 1. one real save, written against the repo's own module --------------
-INCURSION_RUN_DIR="$WORK/run1" INCURSION_BIN="$BIN" ./tools/headless.sh \
+INCURSION_RUN_DIR="$WORK/run1" INCURSION_BIN="$BIN" INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat ./tools/headless.sh \
     "$KEYS" "$SEED" > "$WORK/session.log" 2>&1 < /dev/null
 STATUS=$?
 if [ "$STATUS" -ne 0 ]; then

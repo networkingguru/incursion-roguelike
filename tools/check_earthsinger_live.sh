@@ -48,7 +48,7 @@ KEYS=tools/keys/prestige-earthsinger.keys
     exit 1
 }
 
-OUT="$(tools/headless.sh "$KEYS" "$SEED" 2>&1)"
+OUT="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
 DUMP="$RUN/logs/esng.txt"
 

@@ -68,7 +68,7 @@ run_side() { # run_side <label> <ref>
     ( cd "$wt" && BACKEND=posix ./build_macos.sh ) >&2 || return 2
     local s out run log
     for s in $SEEDS; do
-        out="$( cd "$wt" && INCURSION_MAP_PROBE=1 tools/headless.sh "$KEYS_ABS" "$s" 2>&1 )"
+        out="$( cd "$wt" && INCURSION_MAP_PROBE=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$KEYS_ABS" "$s" 2>&1 )"
         run="$(printf '%s\n' "$out" | awk '/^run:/ {print $2}')"
         log="$run/logs/mapprobe.log"
         [ -f "$log" ] || { echo "INCONCLUSIVE: no mapprobe.log for $label seed $s" >&2; return 2; }

@@ -39,7 +39,7 @@ view() { sed -n '/Things in View/,/HP:/p' "$1"; }
 # Run one fixture on seed 1; set BEFORE and AFTER to the two dumps.
 run_keys() {
     local keys="$1" out
-    out="$(tools/headless.sh "$keys" 1 2>&1)"
+    out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$keys" 1 2>&1)"
     RUN="$(echo "$out" | awk '/^run:/ {print $2}')"
     BEFORE="$(ls "$RUN"/logs/screens/*before* 2>/dev/null | head -1)"
     AFTER="$(ls "$RUN"/logs/screens/*after*  2>/dev/null | head -1)"

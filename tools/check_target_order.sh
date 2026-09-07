@@ -47,7 +47,7 @@ SEED=1
     exit 2
 }
 
-out="$(INCURSION_TARGET_PROBE=1 tools/headless.sh tools/keys/target-ring.keys "$SEED" 2>&1)"
+out="$(INCURSION_TARGET_PROBE=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh tools/keys/target-ring.keys "$SEED" 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 log="$run/logs/targetprobe.log"
 

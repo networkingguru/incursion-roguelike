@@ -44,7 +44,7 @@ SEED=1
 # script fires twice and this takes the first line that appears.
 shot() { # <keyscript-basename> -> echoes "<dice> <amount> <type>"
     local out run held line
-    out="$(tools/headless.sh "tools/keys/$1.keys" "$SEED" 2>&1)"
+    out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "tools/keys/$1.keys" "$SEED" 2>&1)"
     run="$(echo "$out" | awk '/^run:/ {print $2}')"
     if echo "$out" | grep -q "the key script looked for something"; then
         echo "INCONCLUSIVE: $1 could not find something on screen. Run: $run" >&2

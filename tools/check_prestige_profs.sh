@@ -42,7 +42,7 @@ fail=0
 check_class () {
     local keys="$1" base="$2" guard="$3"; shift 3
     local out run dump line name
-    out="$(tools/headless.sh "$keys" "$SEED" 2>&1)"
+    out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh "$keys" "$SEED" 2>&1)"
     run="$(echo "$out" | awk '/^run:/ {print $2}')"
     dump="$run/logs/$base.txt"
 

@@ -51,7 +51,8 @@ WANT_BRAWL_SPEED=105
     echo "FAIL: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
     exit 1
 }
-[ -f Options.Dat ] || { echo "FAIL: no Options.Dat to base the run on"; exit 1; }
+BASE_OPTIONS=tools/fixtures/options-2026-08-22.dat
+[ -f "$BASE_OPTIONS" ] || { echo "FAIL: no $BASE_OPTIONS to base the run on"; exit 1; }
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -59,12 +60,12 @@ trap 'rm -rf "$TMP"' EXIT
 # OPT_NATURAL_SPEED floors the brawl speed at 175%, which would hide the very
 # number this check reads. Turn it off in a throwaway copy of the options, so
 # the check says the same thing whatever the player has set.
-python3 - "$TMP" "$OPT_BYTE" <<'PY' || exit 1
+python3 - "$TMP" "$OPT_BYTE" "$BASE_OPTIONS" <<'PY' || exit 1
 import sys, io
-tmp, idx = sys.argv[1], int(sys.argv[2])
-b = bytearray(io.open('Options.Dat','rb').read())
+tmp, idx, options = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+b = bytearray(io.open(options,'rb').read())
 if len(b) <= idx:
-    raise SystemExit("Options.Dat is %d bytes, too short for option %d" % (len(b), idx))
+    raise SystemExit("%s is %d bytes, too short for option %d" % (options, len(b), idx))
 b[idx] = 0
 io.open(tmp + '/plain.Dat','wb').write(bytes(b))
 PY

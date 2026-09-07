@@ -17,7 +17,7 @@ cd "$ROOT"
     exit 2
 }
 
-out="$(tools/headless.sh tools/keys/springblade-label-probe.keys 6 2>&1)"
+out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh tools/keys/springblade-label-probe.keys 6 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 screen="$run/logs/screens/0001-0001-label.txt"
 

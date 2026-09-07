@@ -43,7 +43,7 @@ KEYS=tools/keys/sunblade-light.keys
     exit 2
 }
 
-out="$(tools/headless.sh "$KEYS" "$SEED" 2>&1)"
+out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 run="$(printf '%s\n' "$out" | awk '/^run:/ {print $2}')"
 if printf '%s\n' "$out" | grep -q "the key script looked for something"; then
     echo "INCONCLUSIVE: $KEYS could not find something on screen. Run: $run"

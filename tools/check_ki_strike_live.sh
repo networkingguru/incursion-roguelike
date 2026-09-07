@@ -31,7 +31,7 @@ WANT="Ki Strike +1"
     exit 1
 }
 
-out="$(tools/headless.sh "$KEYS" "$SEED" 2>&1)"
+out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 
 # A session that measured nothing must never read as a pass: that mistake is

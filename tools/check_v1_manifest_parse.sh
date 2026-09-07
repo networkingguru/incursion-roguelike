@@ -45,7 +45,7 @@ trap 'rm -rf "$WORK"' EXIT
 # below can find the manifest by its own wire bytes. Sandboxed run directory:
 # nothing here can touch the real save/.
 INCURSION_V1_RAW=1 INCURSION_RUN_DIR="$WORK/run1" \
-    ./tools/headless.sh tools/keys/smoke.keys 1 \
+    INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat ./tools/headless.sh tools/keys/smoke.keys 1 \
     > "$WORK/session1.log" 2>&1 < /dev/null
 SAVE="$(ls "$WORK"/run1/save/*.sav 2>/dev/null | head -1)"
 if [ -z "$SAVE" ]; then

@@ -28,7 +28,7 @@ KEYS=tools/keys/cloak-resistance.keys
     exit 1
 }
 
-out="$(tools/headless.sh "$KEYS" "$SEED" 2>&1)"
+out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 
 if echo "$out" | grep -q "NO GAMEPLAY"; then

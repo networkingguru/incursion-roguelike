@@ -586,6 +586,10 @@ tools/gates/dive.baseline	TOOLS
 tools/gates/Options.Dat	README
 tools/gates/Options.Dat	TOOLS
 tools/gates/Options.Dat.md	TOOLS
+tools/fixtures/options-2026-08-13.dat	TOOLS
+tools/fixtures/options-2026-08-18.dat	TOOLS
+tools/fixtures/options-2026-08-22.dat	TOOLS
+tools/fixtures/README.md	TOOLS
 tools/headless.sh	FIXED
 tools/headless.sh	PORT-STATUS
 tools/headless.sh	README

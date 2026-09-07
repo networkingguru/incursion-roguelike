@@ -56,7 +56,7 @@ SEED=1
 # hunting a bug that is not there. That mistake is inc-loa.3.
 run_script() {
     local keys="$1" corpse="$2" god="$3" out run
-    out="$(tools/headless.sh "$keys" "$SEED" 2>&1)"
+    out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh "$keys" "$SEED" 2>&1)"
     run="$(echo "$out" | awk '/^run:/ {print $2}')"
     SCREENS="$run/logs/screens"
 

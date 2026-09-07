@@ -75,7 +75,7 @@ OUT="$(docker run --rm --platform "$PLATFORM" \
     set -e
     CC=gcc CXX=g++ BACKEND=posix ./build_macos.sh >/dev/null 2>&1 \
         || { echo "POSIX-BUILD-FAILED"; exit 0; }
-    tools/headless.sh '"$KEYS"' '"$SEED"' 2>&1 | tail -40
+    INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh '"$KEYS"' '"$SEED"' 2>&1 | tail -40
 ' 2>&1)"
 
 fail() { echo "FAIL: $1"; echo "--- run output ---"; echo "$OUT"; exit 1; }

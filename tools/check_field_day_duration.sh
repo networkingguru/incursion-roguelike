@@ -29,7 +29,7 @@ SEED=20260905
     exit 2
 }
 
-out="$(INCURSION_BIN="$BIN" tools/headless.sh "$KEYS" "$SEED" 2>&1)"
+out="$(INCURSION_BIN="$BIN" INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 status=$?
 run="$(printf '%s\n' "$out" | awk '/^run:/ {print $2}')"
 if [ "$status" -ne 0 ] || printf '%s\n' "$out" | grep -q "NO GAMEPLAY"; then

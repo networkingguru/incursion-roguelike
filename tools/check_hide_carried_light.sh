@@ -12,7 +12,7 @@ cd "$ROOT"
     exit 2
 }
 
-out="$(tools/headless.sh tools/keys/hide-carried-light.keys 1 2>&1)"
+out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh tools/keys/hide-carried-light.keys 1 2>&1)"
 status=$?
 RUN="$(echo "$out" | awk '/^run:/ {print $2}')"
 

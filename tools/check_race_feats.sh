@@ -25,7 +25,8 @@ KEYS=tools/keys/dragonkin-sheet.keys
     exit 1
 }
 
-OUT="$(tools/headless.sh "$KEYS" "$SEED" 2>&1)"
+# Measured exit 1 under 08-13 and 0 under 08-18; 08-13 cannot finish character generation.
+OUT="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
 SCREENS="$RUN/logs/screens"
 

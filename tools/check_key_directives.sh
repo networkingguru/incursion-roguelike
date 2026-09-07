@@ -38,7 +38,7 @@ say_fail() { echo "FAIL: $1"; fail=1; }
 # through Diplomacy. So "Alchemy has no ranks" is the half of this assertion
 # that counting cannot fake.
 echo "-- @cursorto:mark: spending ranks by name"
-OUT="$(tools/headless.sh tools/keys/skill-by-name.keys "$SEED" 2>&1)"
+OUT="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh tools/keys/skill-by-name.keys "$SEED" 2>&1)"
 RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
 SHEET="$RUN/logs/sheet.txt"
 
@@ -99,7 +99,7 @@ printf 'a\nn\ny\n@choose "Elf"\n@choose "Elf (Standard)"\n@choose "Ba"\n' \
                                                     > "$TMP/two-entries.keys"
 
 for t in no-such-text no-such-entry two-entries; do
-    tools/headless.sh "$TMP/$t.keys" "$SEED" >/dev/null 2>"$TMP/$t.err"
+    INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh "$TMP/$t.keys" "$SEED" >/dev/null 2>"$TMP/$t.err"
     rc=$?
     if [ "$rc" = 6 ]; then
         echo "  ok: $t ended 6 -- $(grep -m1 -o 'incursion: .*failed' "$TMP/$t.err")"

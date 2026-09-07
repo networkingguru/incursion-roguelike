@@ -40,7 +40,7 @@ SEED=1
 # $1 key script, $2 the name this check calls it. Echoes the run directory.
 run_session() {
     local out run
-    out="$(tools/headless.sh "$1" "$SEED" 2>&1)"
+    out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$1" "$SEED" 2>&1)"
     run="$(echo "$out" | awk '/^run:/ {print $2}')"
     if echo "$out" | grep -q "the key script looked for something"; then
         echo "INCONCLUSIVE: the $2 key script could not find something on" >&2

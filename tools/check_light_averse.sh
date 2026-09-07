@@ -30,7 +30,7 @@ build() {
 
 run_case() { # run_case <keys>; echoes run directory
     local out status run
-    out="$(INCURSION_LIGHT_PROBE=1 INCURSION_BIN="$BIN" tools/headless.sh "$1" "$SEED" 2>&1)"
+    out="$(INCURSION_LIGHT_PROBE=1 INCURSION_BIN="$BIN" INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$1" "$SEED" 2>&1)"
     status=$?
     run="$(printf '%s\n' "$out" | awk '/^run:/ {print $2}')"
     [ "$status" -eq 0 ] || {

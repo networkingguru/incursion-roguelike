@@ -55,7 +55,7 @@ WANT="Natural Aptitude"
 }
 [ -f "$KEYS" ] || { echo "INCONCLUSIVE: no key script at $KEYS"; exit 2; }
 
-OUT="$(INCURSION_BIN="$BIN" tools/headless.sh "$KEYS" "$SEED" 2>&1)"
+OUT="$(INCURSION_BIN="$BIN" INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
 SCREENS="$RUN/logs/screens"
 
