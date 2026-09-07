@@ -51,7 +51,8 @@ NM="${NM:-nm}"
 #   native   (default) this host. Nothing changes.
 #   windows  cross-compile Incursion.exe with mingw-w64. Install the toolchain
 #            with `brew install mingw-w64`, and stage SDL2, zlib and their
-#            headers under build/win-deps (see docs/specs/ for the recipe).
+#            headers under build/win-deps. The recipe is docs/WINDOWS-BUILD.md,
+#            and staging is still a manual step: see inc-wefr.3.
 # This is a separate axis from BACKEND on purpose. BACKEND picks which source
 # file defines main(); TARGET picks which compiler and which libraries. Windows
 # uses the SAME libtcod backend the Mac does.
@@ -69,7 +70,8 @@ case "$TARGET" in
         command -v "$CXX" >/dev/null 2>&1 \
             || { echo "No $CXX. Install it with: brew install mingw-w64"; exit 1; }
         [ -d "$WIN_DEPS/lib" ] \
-            || { echo "No $WIN_DEPS/lib. Stage SDL2 and zlib for mingw first."; exit 1; }
+            || { echo "No $WIN_DEPS/lib. Stage SDL2 and zlib for mingw first:"
+                 echo "  see docs/WINDOWS-BUILD.md section 1."; exit 1; }
         ;;
     # TARGET is a common name to have exported already -- autotools, Rust and
     # several CI runners all set it. Say so, or a stray one in the environment
