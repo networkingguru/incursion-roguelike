@@ -11,6 +11,14 @@
 # The oracle is the git tag, because that is what names a release here:
 # release-1, release-2, release-3. The highest one must equal FORK_RELEASE.
 #
+# ONLY A BARE release-N COUNTS. A build-point tag such as release-4-windows
+# names where a platform's artifact was cut, not a release of the game, and the
+# title screen must not be asked to print it. The first pattern here was
+# 'release-[0-9]*', whose trailing * swallowed the suffix: release-4-windows
+# became "4-windows", which sort -n ranks alongside 4 and tail -1 then picked,
+# so a correct tree failed and told the reader to set FORK_RELEASE to
+# "4-windows".
+#
 # A clone with no release tag cannot answer the question, so it says so and
 # passes. Failing there would make a fresh clone red for a reason that has
 # nothing to do with the tree.
@@ -28,7 +36,8 @@ if [ -z "$FORK_RELEASE" ]; then
     exit 1
 fi
 
-TAG="$(git tag --list 'release-[0-9]*' | sed 's/^release-//' | sort -n | tail -1)"
+TAG="$(git tag --list 'release-*' | grep -E '^release-[0-9]+$' |
+       sed 's/^release-//' | sort -n | tail -1)"
 if [ -z "$TAG" ]; then
     echo "SKIP: no release-N tag in this clone, so there is nothing to compare"
     echo "  the game's release $FORK_RELEASE against."

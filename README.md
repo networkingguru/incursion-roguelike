@@ -45,7 +45,7 @@ another any more.
 
 | Download | For | State |
 |---|---|---|
-| `Incursion-macOS-arm64.dmg` | macOS on Apple Silicon | Signed and notarised by Apple |
+| `incursion-macos-arm64.dmg` | macOS on Apple Silicon | Signed and notarised by Apple |
 | `incursion-windows-x86_64.zip` | Windows 10 or later, x86-64 | New in release 4 |
 | `incursion-steamdeck-x86_64.tar.gz` | SteamOS: the Steam Deck, or a handheld running it | Beta |
 | `incursion-linux-x86_64.tar.gz` | Any other x86-64 Linux | Beta |
@@ -536,10 +536,11 @@ step with what the game believes.
 
 You do not need this to play. It is here for people who want to change something.
 
-`master` is the development tip. The `release-4` tag marks the commit every
-current download was built from. `release-4-windows` is that same engine plus the
-portability fixes the Windows executable needed, none of which change behaviour
-on any platform. The `release-1` tag marks this fork's first release, but the
+`master` is the development tip. The `release-4` tag marks the release itself,
+and the Linux and Steam Deck tarballs were built from it. The macOS and Windows
+downloads are newer: both need the mingw-w64 portability work that landed after
+the tag, which the `release-4-windows` tag marks. None of that work changes
+behaviour on macOS or Linux, so all four downloads are the same game. The `release-1` tag marks this fork's first release, but the
 release-1 image was rebuilt after that tag, to carry the module-load and
 Gatekeeper fixes described in [`docs/FIXED.md`](docs/FIXED.md); that tag is not a
 byte-for-byte match for it.

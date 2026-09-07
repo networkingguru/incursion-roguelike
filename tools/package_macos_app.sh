@@ -261,7 +261,15 @@ echo "=== 7/8  verifying ==="
 # -------------------------------------------------------------------- dmg ----
 echo "=== 8/8  disk image ==="
 if [ "${DMG:-no}" = yes ]; then
-    DMG_PATH="$DIST/$NAME.dmg"
+    # THE IMAGE IS NAMED FOR THE RELEASE PAGE, not for the staging directory.
+    # $NAME carries an -app suffix that exists only to keep this bundle's
+    # staging directory apart from package_macos.sh's plain-folder one, and
+    # every release up to 3 was therefore renamed by hand on the way to GitHub.
+    # A hand rename beside a stale same-named image is how release 3 nearly
+    # went out as release 4's download. The other three artifacts are
+    # incursion-<platform>-<arch>.<ext>; this one now matches them, so the file
+    # the script writes is the file that gets uploaded.
+    DMG_PATH="$DIST/incursion-macos-$ARCH.dmg"
     rm -f "$DMG_PATH"
     # An /Applications alias, so the image looks like every other Mac download
     # and the drag target is right there.
