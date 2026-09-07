@@ -1,3 +1,5 @@
+<!-- citations: this-port -->
+
 # tools/gates/Options.Dat -- what it is and why
 
 Binary, 900 bytes (`OPT_LAST` from inc/Defines.h), one signed byte per option
@@ -76,10 +78,17 @@ die... Die? [yn]" prompt inc-loa.3 instrumented:
   for depths the dungeon does not have. inc-loa.2's territory.
 * **"Abort, Flee or Disengage?"** (Move.cpp:841) -- confirmed by reading
   every `Opt(OPT_` check in Move.cpp that no option gates it. Worse than a
-  single eaten keystroke: `ChoicePrompt`'s input loop (Term.cpp:2460) blocks
-  on every keystroke until one of `a`/`f`/`d`/`?`/ESC arrives, none of which
-  `dive.keys` contains, so once this fires a session is frozen for the rest
-  of its run. See inc-loa.5, filed tonight with the repro.
+  single eaten keystroke: `ChoicePrompt` (Term.cpp:2823) blocks in its input
+  loop (`:2858`) until the key is one of `a`/`f`/`d`/`?`, or ESC. See
+  inc-loa.5, filed the night this file was written, with the repro.
+  **The freeze claim this paragraph carried is no longer safe.** It said the
+  session was frozen for the rest of its run because `dive.keys` presses none
+  of those keys. `f7ff2d7` (2026-08-28) added arrow-key navigation and made
+  ENTER take the highlighted choice (`src/Term.cpp:2863-2864`), and this call
+  passes four choices (`"afd?"`), so ENTER now leaves the prompt -- and
+  `dive.keys` presses ENTER 36 times. Whether a session still freezes depends
+  on where in the queue the prompt fires, and that has not been re-measured.
+  inc-loa.33 holds the measurement.
 * **"Request aid or seek insight?"** (Prayer.cpp:105) -- also ungated; fires
   whenever a mundane `EV_PRAY` reaches an altar. `dive.keys` never presses a
   pray key on purpose, so on the seeds where this still appears it is a
