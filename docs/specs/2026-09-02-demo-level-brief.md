@@ -1,3 +1,5 @@
+<!-- citations: this-port -->
+
 # Build brief: lighting-showcase demo content (inc-wefr item 2)
 
 **For:** Codex (`codex exec -C /Users/brianhill/Scripts/Incursion -s workspace-write - < brief`).
@@ -91,13 +93,13 @@ ready-made moving coloured light; this brief uses it as-is, nothing to build.
 
 | Token | Kind | Radius | Colour / flicker | Source |
 |---|---|---|---|---|
-| `$"Wall Torch"` | opaque wall, emits | 3 | warm `{255,160,60}`, amp 0.30 @ **9 Hz** | `dungeon.irh:542`, `Light.cpp:423` |
-| `$"magma"` | floor light + 6d6 fire hazard | 2 | red `{255,80,20}`, amp 0.35 @ **0.6 Hz** | `dungeon.irh:1906`, `Light.cpp:421` |
-| `$"Ice Wall"` | solid wall, **not opaque** | — | passes 55% of light, tinted to ice colour | `dungeon.irh:530`, `Light.cpp:303`, `LIGHT_ICE_PASS 0.55` |
+| `$"Wall Torch"` | opaque wall, emits | 3 | warm `{255,160,60}`, amp 0.30 @ **9 Hz** | `dungeon.irh:542`, `src/Light.cpp:36` |
+| `$"magma"` | floor light + 6d6 fire hazard | 2 | red `{255,80,20}`, amp 0.35 @ **0.6 Hz** | `dungeon.irh:1906`, `src/Light.cpp:35` |
+| `$"Ice Wall"` | solid wall, **not opaque** | — | passes 75% of light, tinted to ice colour | `dungeon.irh:530`, `src/Light.cpp:349`, `LIGHT_ICE_PASS 0.75f` at `inc/Light.h:94` |
 | `$"Ice Floor"` / `$"ice door"` | floor / door | — | dressing | — |
 | `$"fog"` | obscures LOS | — | **no coloured-light interaction** (D2) | `dungeon.irh:1021`, `Light.cpp:428` |
 | `$"will-o'-wisp"` | monster, mobile field | 3 | white, **moves** (`FI_MOBILE`) | `mon3.irh:1334` |
-| `$"torch"` (rng 4) / `$"brass lantern"` (rng 6) | carried light | 4 / 6 | must be equipped in `SL_LIGHT` to shine | `mundane.irh:625/635`, `Values.cpp:1565` |
+| `$"torch"` (rng 4) / `$"brass lantern"` (rng 6) | carried light | 4 / 6 | must be equipped in `SL_LIGHT` to shine | `mundane.irh:625/635`, `src/Values.cpp:1596` |
 
 ## The three rooms
 
