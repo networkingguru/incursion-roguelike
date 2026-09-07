@@ -23,9 +23,10 @@
 #   Barbarian 3 / Rogue 3        THE MEASUREMENT. Both classes carry the
 #     dodge-barb-rogue.keys      sentence "Levels of this ability from the
 #                                barbarian and rogue classes stack"
-#                                (lib/classes.irh:118, :2395). He held 3
-#                                before -- less than the Rogue 6 above, off
-#                                the same six levels -- and holds 5 now.
+#                                (lib/classes.irh:118 and
+#                                lib/classes.irh:2418). He held 3 before --
+#                                less than the Rogue 6 above, off the same
+#                                six levels -- and holds 5 now.
 #
 #   Human Bard 7 / Assassin 4    THE OTHER DIRECTION. His class description
 #     assassin-bard.keys         gives Uncanny Dodge at the rogue's rate on
