@@ -69,6 +69,7 @@ RATCHET_CHECKS=(
     "tools/check_comment_budget.sh"
     "tools/check_readme_checks.sh"
     "tools/check_commit_lane.sh"
+    "tools/check_package_parity.sh"
 )
 
 run_check() { # run_check "<command line>" -> echoes the exit code
