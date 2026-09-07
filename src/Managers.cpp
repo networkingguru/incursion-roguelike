@@ -1823,18 +1823,54 @@ Recount:
 
                 for (i = 0; i != 6; i++)
                     p->SpentSP[i] = p->TotalSP[i] - usp[i];
-                /* Fall Through */
+                goto Leave;
+            case KY_ESC:
+                /* The footer has always promised "[ESC] Abort". It still
+                   aborts, and it now says so before it does it. */
+                Color(YELLOW);
+                Write(0, WinSizeY() - 1, "                                                                  ");
+                Write(0, WinSizeY() - 1, "Abort, and discard the ranks placed here? [yn] ");
+                CursorOn();
+                do
+                    ch = tolower(GetCharRaw());
+                while (ch != 'y' && ch != 'n' && ch != KY_REDRAW);
+                CursorOff();
+                if (ch != 'y')
+                    goto Recount;
+                goto Leave;
             default:
-                if (initial)
-                    if (p->UnspentSP(0) || p->UnspentSP(3))
-                        goto Reset;
-                Restore();
-                SetWin(WIN_SCREEN);
-                Clear();
-                return;
+                /* upstream: a key this switch does not list must leave the
+                   screen exactly as it found it. This arm used to be the exit
+                   path too -- KY_ENTER fell through into it -- so any
+                   unlisted key threw away every rank placed in this visit
+                   (chargen, through Reset) or closed the manager without a
+                   word (level-up). Both halves are reachable from the pad: the
+                   left stick's UP-LEFT and DOWN-LEFT arrive as
+                   KY_CMD_NORTHWEST and KY_CMD_SOUTHWEST (src/Tables.cpp:4653
+                   and :4655), which this switch never listed, while the two
+                   right-hand diagonals do have cases and behave. Home and End
+                   reach it from a keyboard. Nothing here is a port artefact:
+                   the missing cases and the fall through are both upstream
+                   source and do the same thing on Win32 with the original
+                   typedefs. Observed -- on a Steam Deck, and headless; see
+                   tools/check_skill_manager_reset.sh. inc-0o0r, not sent. */
+                break;
             }
         } while (1);
     } while (1);
+
+Leave:
+    /* The one way out of this manager. KY_ENTER arrives here having already
+       written its ranks into the player; KY_ESC arrives having written
+       nothing. Chargen may not be left with ranks unspent, so the pool is
+       tested here rather than in either case. */
+    if (initial)
+        if (p->UnspentSP(0) || p->UnspentSP(3))
+            goto Reset;
+    Restore();
+    SetWin(WIN_SCREEN);
+    Clear();
+    return;
 }
 
 const char* OptChoice(const char *text, int16 num) {

@@ -1,0 +1,54 @@
+# The Skill Manager reached the way a level-up reaches it, and one
+# unrecognised key. This is the second half of the oracle for inc-0o0r.
+#
+#   tools/headless.sh tools/keys/skill-manager-levelup.keys 5
+#
+# WHY THIS NEEDS NO EXPERIENCE POINTS. The character sheet's [S] calls
+# MyTerm->SkillManager() with no argument (src/Managers.cpp:2318), and the
+# default argument is false (inc/Term.h:731). That is the same call a level-up
+# makes, and the same `initial == false` the defect's second half needs. The
+# wizard 'Generate 50 XP Ticks' route would need 1000 XP for a Barbarian's
+# second level -- twenty visits to the menu -- and would prove nothing extra.
+#
+# The two halves of inc-0o0r are one arm of one switch wearing two faces. With
+# ranks still unspent, as in character generation, the arm ran Reset and threw
+# the allocations away; with the pool empty, as here, it fell through to the
+# return and shut the manager without a word. So the claim to test here is not
+# "the ranks survive" -- there are none to place -- it is "the manager is still
+# open".
+#
+# Menu letters are lowercase on purpose. StandardKeySet holds
+# { KY_CMD_CHAR_SHEET, 'D', 0 } and matches toupper(ch) against that raw key
+# with the modifier flags compared exactly (src/Tables.cpp:4706), so the key
+# that opens the sheet is lowercase d and never shift-D. The sheet then reads
+# its own menu through toupper() (src/Managers.cpp:2283), so lowercase s
+# reaches its case 'S'.
+#
+# Four screen dumps. The comparison between them is the whole test:
+#
+#   open        the Skill Manager, opened from the character sheet.
+#   after-end   after one END. It MUST still be the Skill Manager, and MUST
+#               equal "open" -- END is not a key this screen knows.
+#   after-home  after one HOME. Same requirement.
+#   after-esc   after ESC answered 'y'. ESC is the one key that MAY close
+#               this screen, and it MUST have asked first.
+#
+# Before the fix, "after-end" is the character sheet: the manager closed on a
+# keystroke that means nothing to it. See tools/check_skill_manager_reset.sh.
+
+@include chargen.keys
+
+d                   # character sheet
+s                   # [S] Skills -- SkillManager(false), the level-up path
+@dump:open
+
+END                 # left stick DOWN-LEFT
+@dump:after-end
+HOME                # left stick UP-LEFT
+@dump:after-home
+
+ESC y               # the one key that may leave, and it asks now
+@dump:after-esc
+
+ESC                 # leave the character sheet
+@quit

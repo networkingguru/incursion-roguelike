@@ -412,6 +412,7 @@ Nothing invoked it; the only references were documentation. See
 | `check_save_fail.sh` | Does a save that fails part-way leave the game playable? Stages the throw with `INCURSION_SAVE_FAIL_AT` at a chosen object or data block. It does not drive a real disk-full, and cannot: every write goes into a memory `CFile` and the disk is untouched until `CommitCompressed`, so a full disk can only fail once every object is already converted. That case was reproduced by hand instead. | LIVE |
 | `check_sentinel_live.sh` | Does the Sentinel's engine-side save track match the table it prints? Makes one, four levels deep. | LIVE |
 | `check_sharp_senses.sh` | Does the Sharp Senses bonus reach Search, and not only Spot and Listen? | LIVE |
+| `check_skill_manager_reset.sh` | Does an unrecognised key still wreck the Skill Manager? Presses END and HOME -- the left stick's two left diagonals -- in both of the screen's modes: character generation, where the ranks were wiped, and level-up, where the manager silently closed. Two sessions. | LIVE |
 | `check_stacked_abilities.sh` | Do abilities whose prose says their levels stack across classes actually stack, charging one waiting period rather than one per class? Five characters: a Rogue 6 invariant, a Barbarian 3 / Rogue 3, a Bard 7 / Assassin 4, an Elf Rogue 7 / Assassin 3 and a control. | LIVE |
 | `check_springblade_label.sh` | Does the Springblade Bracers type-3 pair name both of its +2 elemental blades accurately? Seed 6 reads the rolled suffix from the activation menu. | LIVE |
 | `check_stair_cycle.sh` | Does the overview map's staircase search run, pick the cheapest, and wrap? | LIVE |
@@ -594,6 +595,7 @@ tools/check_target_order.sh
 tools/check_key_directives.sh
 tools/check_menu_value.sh
 tools/check_sharp_senses.sh
+tools/check_skill_manager_reset.sh
 tools/check_stacked_abilities.sh
 tools/check_springblade_label.sh
 tools/check_xp_penalty.sh

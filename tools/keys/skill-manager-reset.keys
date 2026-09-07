@@ -1,0 +1,75 @@
+# Press an unrecognised key in the Skill Manager and see whether the ranks
+# survive it. This is the oracle for inc-0o0r.
+#
+#   tools/headless.sh tools/keys/skill-manager-reset.keys 5
+#
+# The offending keys are HOME and END, and they are not an odd choice of
+# keyboard: they are what the left stick sends. poll_gamepad maps the eight
+# octants onto the numeric keypad (src/Wlibtcod.cpp:729-731), so UP-LEFT
+# arrives as KP7 -> KY_HOME -> KY_CMD_NORTHWEST and DOWN-LEFT as KP1 ->
+# KY_END -> KY_CMD_SOUTHWEST (src/Tables.cpp:4653 and :4655). Neither had a
+# case in TextTerm::SkillManager's switch, so both fell into default:, which
+# was also the exit path -- and during character generation the exit path
+# runs Reset and throws every allocation away. The two right-hand diagonals
+# do have cases (they scroll the description) and were always harmless, which
+# is why Brian saw the left diagonals fire and the right ones behave.
+#
+# The character generation prefix is chargen.keys' own, copied rather than
+# included because this script must stop inside the first Skill Manager and
+# chargen.keys walks straight through it. Keep the two in step.
+#
+# Three screen dumps. The comparison between them is the whole test:
+#
+#   before      three skills carrying ranks, cursor on the third.
+#   after-end   after one END. It MUST equal "before" -- END is not a key
+#               this screen knows, so it MUST do nothing at all.
+#   after-home  after one HOME. Same requirement.
+#
+# Before the fix, both "after" screens show an empty allocation column, a
+# refilled pool and the cursor back on the first row. See
+# tools/check_skill_manager_reset.sh.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+i       # Race:     [i] Orc
+a       # Subrace:  [a] Orc (Standard)
+a       # Class:    [a] Barbarian
+a       # Attributes: the first of the five offered sets
+c       # Alignment: [c] Neutral
+a       # First feat
+a       # Second feat
+
+# The Skill Manager. Spend three ranks on each of the first three skills and
+# stop, leaving the pool non-empty -- an empty pool takes the other half of
+# the defect (a silent exit) and this run is measuring the wipe.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3
+@dump:before
+
+END                 # left stick DOWN-LEFT
+@dump:after-end
+HOME                # left stick UP-LEFT
+@dump:after-home
+
+# ESC is the other half of the report: the footer calls it Abort, and it used
+# to abort by wiping without asking. It asks now, so declining MUST leave the
+# ranks alone. The screen is redrawn from Recount rather than left untouched,
+# so this dump is checked on its contents and not byte-for-byte.
+ESC n
+@dump:after-esc-no
+
+# Finish. UP*40 puts the cursor back on the first row from wherever the run
+# left it, so the same burst empties the pool in a fixed build and in a
+# broken one. Character generation will not let go until the pool is empty.
+UP*40
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+y       # Do you wish to worship <god>? -- yes
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+@quit
