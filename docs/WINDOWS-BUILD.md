@@ -159,8 +159,14 @@ Verify the result:
 
     x86_64-w64-mingw32-objdump -p dist/incursion-windows/Incursion.exe | grep 'DLL Name' | sort -u
 
-The only non-`api-ms-win-crt-*` imports must be `KERNEL32.dll` and `SDL2.dll`.
-If `libgcc_s_seh-1.dll`, `libstdc++-6.dll` or `libwinpthread-1.dll` appear, the
+The non-`api-ms-win-crt-*` imports are `KERNEL32.dll`, `SDL2.dll` and
+`SHELL32.dll`. All three are either shipped beside the binary or present on every
+Windows install. `SHELL32` arrived with the title logo; a build without the logo
+code does not import it, so do not treat its absence in an older binary as a
+difference that matters.
+
+What you are checking for is the mingw runtime. If `libgcc_s_seh-1.dll`,
+`libstdc++-6.dll` or `libwinpthread-1.dll` appear, the
 `-static` link has broken and the package will fail on any machine without mingw
 installed. `-static-libgcc -static-libstdc++` do **not** fix that; read the
 comment in `build_macos.sh`'s windows arm before changing the link line.
