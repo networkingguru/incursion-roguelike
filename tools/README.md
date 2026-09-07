@@ -519,7 +519,15 @@ tools/check_comment_budget.sh       # sizes comment and _PROBE blocks in src/, i
 tools/check_commit_lane.sh          # reads git log against the seven lanes
 tools/check_readme_checks.sh        # tools/check_*.sh against the README table
 tools/check_bead_publish.py         # reads the bead database against git HEAD
+tools/check_bead_new_gate.sh        # watches tools/bead_new.sh refuse an unfit bead
 ```
+
+`tools/bead_new.sh` is not a check; it is how a bead should be filed.
+It passes its arguments to `bd create`, then runs
+`tools/check_bead_publish.py --bead <id>` on what it just filed, so an
+undescribed or unclassified bead is caught by its author rather than by
+whoever commits next. The pre-commit hook stays as the backstop, because a
+wrapper only fires when somebody calls it.
 
 These tools prove themselves against known-bad input on demand:
 

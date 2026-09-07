@@ -2,6 +2,7 @@
 """Is every newly created bead classified for publication, and fit to publish?
 
     tools/check_bead_publish.py              check the beads created since HEAD
+    tools/check_bead_publish.py --bead <id>  check ONE bead, whatever its age
     tools/check_bead_publish.py --audit      advise on the WHOLE database
     tools/check_bead_publish.py --selftest   prove this script still bites
 
@@ -152,7 +153,17 @@ def epoch(stamp):
 
 
 def is_new(bead, cutoff):
-    """Was this bead created after HEAD? Unparseable timestamps are not new."""
+    """Was this bead created after HEAD? Unparseable timestamps are not new.
+
+    `cutoff` of None means "do not ask the question": every bead in the list
+    counts. That is what --bead uses, and it is not the same as a cutoff of 0.
+    A cutoff of 0 still runs the timestamp through epoch(), so a bead whose
+    created_at will not parse would answer False and be waved through
+    unchecked -- silently, which is the one failure this script must never
+    have. None skips the parse entirely.
+    """
+    if cutoff is None:
+        return True
     created = epoch(bead.get("created_at") or "")
     return created is not None and created > cutoff
 
@@ -317,37 +328,47 @@ def selftest():
         print("SELFTEST FAIL: flagged a plain check-script bead as game work")
         st = 1
 
+    # --bead names one bead, so its age is not the question and the timestamp
+    # must not be consulted at all. A cutoff of 0 looks like it would do that
+    # and does not: it still runs created_at through epoch(), so a bead whose
+    # stamp will not parse answers False and is waved through UNCHECKED. That
+    # is the silent pass this script exists to prevent, so both halves are
+    # asserted -- the hole, and that None closes it.
+    broken = [{"id": "no-stamp", "created_at": "not a date", "labels": [],
+               "description": "", "title": "a bead with an unreadable stamp"}]
+    if classify(broken, 0)[0]:
+        print("SELFTEST FAIL: a cutoff of 0 no longer skips an unparseable "
+              "timestamp, so this case no longer proves why None is needed")
+        st = 1
+    if classify(broken, None)[0] != ["no-stamp"]:
+        print("SELFTEST FAIL: --bead's cutoff of None did not check a bead "
+              "whose created_at will not parse")
+        st = 1
+    if undescribed(broken, None) != ["no-stamp"]:
+        print("SELFTEST FAIL: --bead's cutoff of None did not notice an "
+              "empty description")
+        st = 1
+
     if st == 0:
-        print("SELFTEST PASS: check_bead_publish.py bites on all six failures")
+        print("SELFTEST PASS: check_bead_publish.py bites on all seven failures")
     return st
 
 
 # ---------------------------------------------------------------- main
 
-def main(argv):
-    audit = False
-    if len(argv) > 1 and argv[1] == "--selftest":
-        return selftest()
-    if len(argv) > 1 and argv[1] == "--audit":
-        audit = True
-    elif len(argv) > 1:
-        print("usage: %s [--audit|--selftest]" % argv[0], file=sys.stderr)
-        return 2
+def report(beads, cutoff):
+    """The four blocking checks, over whichever beads is_new() accepts.
 
-    beads = load_beads()
-    if beads is None:
-        print("check_bead_publish: cannot read the bead database", file=sys.stderr)
-        return 2
-    cutoff = head_time()
-    if not cutoff:
-        print("check_bead_publish: cannot read the time of HEAD", file=sys.stderr)
-        return 2
+    `cutoff` is HEAD's commit time, or None to mean "every bead given". One
+    body serves both callers on purpose: the commit gate asks it about the
+    beads created since HEAD, and --bead asks it about one bead, and a second
+    copy of these messages would drift from this one within a month.
 
+    Returns 1 when any check failed, 0 when none did.
+    """
     unclassified, doubly, new_public = classify(beads, cutoff)
-    fresh = [b for b in beads if is_new(b, cutoff)]
-    print("check_bead_publish: %d bead(s) created since HEAD" % len(fresh))
-
     fail = 0
+
     nodesc = undescribed(beads, cutoff)
     if nodesc:
         print("FAIL: these new beads have an empty description:")
@@ -380,6 +401,62 @@ def main(argv):
         print("A defect a stranger cannot reproduce reads as noise. Write the")
         print("sections, or re-type the bead if it is not really a bug.")
         fail = 1
+
+    return fail
+
+
+def check_one(bead_id):
+    """--bead: ask the same four questions of a single bead, by id.
+
+    This is what tools/bead_new.sh calls the moment a bead is filed, so the
+    author is told while the bead is still in their head rather than at the
+    next commit -- which, because beads live in Dolt and not in git, may be
+    somebody else's commit entirely. It deliberately does NOT consult HEAD:
+    the bead's age is not the question when you have named one bead.
+
+    Exit 2, not 1, when the id is unknown. A typo'd id is a broken invocation,
+    not an unfit bead, and the two must not be reported the same way.
+    """
+    beads = load_beads()
+    if beads is None:
+        print("check_bead_publish: cannot read the bead database", file=sys.stderr)
+        return 2
+    one = [b for b in beads if b.get("id") == bead_id]
+    if not one:
+        print("check_bead_publish: no bead with id %s" % bead_id, file=sys.stderr)
+        return 2
+    print("check_bead_publish: checking %s" % bead_id)
+    fail = report(one, None)
+    if not fail:
+        print("check_bead_publish: %s is described, classified and fit" % bead_id)
+    return fail
+
+
+def main(argv):
+    audit = False
+    if len(argv) > 1 and argv[1] == "--selftest":
+        return selftest()
+    if len(argv) > 2 and argv[1] == "--bead":
+        return check_one(argv[2])
+    if len(argv) > 1 and argv[1] == "--audit":
+        audit = True
+    elif len(argv) > 1:
+        print("usage: %s [--audit|--bead <id>|--selftest]" % argv[0],
+              file=sys.stderr)
+        return 2
+
+    beads = load_beads()
+    if beads is None:
+        print("check_bead_publish: cannot read the bead database", file=sys.stderr)
+        return 2
+    cutoff = head_time()
+    if not cutoff:
+        print("check_bead_publish: cannot read the time of HEAD", file=sys.stderr)
+        return 2
+
+    fresh = [b for b in beads if is_new(b, cutoff)]
+    print("check_bead_publish: %d bead(s) created since HEAD" % len(fresh))
+    fail = report(beads, cutoff)
 
     if audit:
         scope = beads

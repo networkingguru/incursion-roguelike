@@ -185,7 +185,21 @@ one of the labels `public` or `internal`. `tools/check_bead_publish.py` fails
 the commit when a new bead has an empty description, or carries neither label
 or both.** It is wired into `.beads/hooks/pre-commit`, so it blocks; it was
 wired in on 2026-09-06 under inc-m7xb, after four days in which this paragraph
-described a gate that ran nowhere. The description is not optional because
+described a gate that ran nowhere.
+
+**File beads with `tools/bead_new.sh`, not `bd create`.** It hands every
+argument to `bd create` unchanged, then runs the same check against the new
+bead at once, so a fault is yours to fix while the bead is still in your head.
+Use it because of where the commit gate has to stand: beads live in Dolt and
+not in git, so a bead is never part of a commit, and the gate can only ask
+"beads created since HEAD" and block every commit in the tree on all of them.
+On 2026-09-07 that stopped one session committing four screenshots because
+another session had filed two beads it had not classified. The wrapper does not
+replace the hook and is not allowed to — `bd create` typed directly walks
+straight past it, which is exactly why the unavoidable gate stays. Prove the
+wrapper still bites with `tools/check_bead_new_gate.sh`.
+
+The description is not optional because
 `tools/sync_issues.sh` publishes the DESCRIPTION and never the notes: a bead
 whose content lives in its notes reaches the public tracker with an empty body,
 which is how inc-b12m became GitHub issue #381 with nothing in it. The label is not decoration. `tools/sync_issues.sh`
