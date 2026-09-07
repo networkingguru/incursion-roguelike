@@ -2,33 +2,41 @@
 
 # The Yuse menu (`y`) — every verb, and whether it does anything
 
-The `y` command opens a verb menu: *"What do you want to do?"* It holds 63
-entries and is the only route to several actions that have no key of their
-own, **Mount** among them.
+The `y` command opens a verb menu: *"What do you want to do?"* Its table holds
+63 entries, it offers you the ones your character can actually use, and it is
+the only route to several actions that have no key of their own, **Mount**
+among them.
 
 The game documents the command but not its contents. `lib/help.irh` gives the
-`y` key its own help entry (`lib/help.irh:1269`) and names the menu again
+`y` key its own help entry (`lib/help.irh:1272`) and names the menu again
 under Quick Keys, Dip, mounted combat and oils. None of those lists
 the verbs. There is no verb listing in the manual, in the help topics, or
 anywhere else. This file is that listing.
 
-**24 of its 57 distinct verbs are not implemented at all.** They prompt you,
-take your target, and then do nothing. That is the single most useful fact
-here, and it is not discoverable except by trying them.
+**24 of its 57 distinct verbs have no implementation**, filling 27 of the 63
+entries. The menu no longer offers them: `Player::YuseMenu` drops any entry
+whose `MissingImplementation` flag is set (`src/Player.cpp:1579-1586`,
+`inc/Creature.h:41`). Until that gate was added, a dead verb was offered like
+every other, took your prompts and your target, and did nothing. They are
+listed below because the table still carries them, and because which verbs are
+dead is what this file exists to record.
 
-Derive the menu size and the distinct verb count:
+Derive the menu size, the distinct verb count, and how many of them are dead:
 
 ```sh
-sed -n '3093,3411p' src/Tables.cpp | grep -c '^  { EV_'
-sed -n '3093,3411p' src/Tables.cpp | grep '^  { EV_' |
+sed -n '3106,3424p' src/Tables.cpp | grep -c '^  { EV_'
+sed -n '3106,3424p' src/Tables.cpp | grep '^  { EV_' |
     sed 's/^  { \(EV_[A-Z_]*\),.*/\1/' | sort -u | wc -l
+sed -n '3106,3424p' src/Tables.cpp |
+    awk '/^  \{ EV_/ { match($0,/EV_[A-Z_]+/); v=substr($0,RSTART,RLENGTH) }
+         /true *\}/ { print v }' | sort -u | wc -l
 ```
 
 ---
 
 ## How the menu works
 
-The verbs live in `YuseCommands[]`, `src/Tables.cpp:3093-3411`. Each entry
+The verbs live in `YuseCommands[]`, `src/Tables.cpp:3106-3424`. Each entry
 carries up to three prompts and a flag word:
 
 ```c
@@ -39,25 +47,36 @@ carries up to three prompts and a flag word:
      /* Flags   */ YU_REVERSE },
 ```
 
+- **The menu is built from what your character can do.** `Player::YuseMenu`
+  walks the table and drops an entry on either of two rules: its
+  `MissingImplementation` flag is set, or it carries a `Prerequisite` predicate
+  that returns false for you (`src/Player.cpp:1579-1586`). Two entries carry a
+  prerequisite today: **Mount** needs the Ride skill, a humanoid body with
+  limbs, and no mount under you already; **Dismount** needs you mounted
+  (`src/Tables.cpp:3095-3104`). If nothing survives both rules the command
+  says *"You have no usable verbs."* `tools/check_command_menu_gating.sh`
+  reads the `y` screen and fails if a dead verb is on it.
 - **The prompts run in table order**, target first, unless the entry carries
-  `YU_REVERSE`, which asks for the item first. `src/Player.cpp:1566`.
+  `YU_REVERSE`, which asks for the item first. `src/Player.cpp:1603`.
 - **`Q_INV` reaches inside containers.** The item picker walks
   `FirstInv`/`NextInv`, which descends into packs (`src/Inv.cpp:809`), so
   verbs offer packed items without you unpacking them.
 - **The five most recent verbs float to the top** of the menu
-  (`src/Player.cpp:1549`), so the list reorders as you use it.
-- **Verbs can be bound to Quick Keys** (`QKY_VERB`, `src/Player.cpp:1556`).
+  (`src/Player.cpp:1566`), so the list reorders as you use it. A recent verb
+  is gated the same way as any other, so it drops off the top when it stops
+  applying.
+- **Verbs can be bound to Quick Keys** (`QKY_VERB`, `src/Player.cpp:1593`).
   Worth doing for Mount if you ride.
 - **Ten social verbs refuse non-creatures** with *"Don't socialize with the
-  furniture."* (`src/Player.cpp:1593`).
+  furniture."* (`src/Player.cpp:1630`).
 
-### What happens when you pick an unimplemented verb
+### What an unimplemented verb does if something else throws it
 
-The event is thrown, nothing handles it, and it falls through to
-`Creature::HandleVerb` (`src/Player.cpp:1664` via `src/Creature.cpp:1009`).
-That prints **"That verb can't be used that way."** for post-phase events and
-otherwise returns silently. So a dead verb costs you the prompts and gives
-you either that message or nothing at all.
+You cannot pick one from this menu any more, because the menu does not list it.
+The path is still there for an event thrown by any other route: nothing handles
+it, so it falls through to `Creature::HandleVerb` (`src/Player.cpp:1685` via
+`src/Creature.cpp:1009`), which prints **"That verb can't be used that way."**
+for post-phase events and otherwise returns silently.
 
 ---
 
@@ -66,8 +85,9 @@ you either that message or nothing at all.
 ### Social verbs
 
 All are implemented in `src/Social.cpp`, and `src/Creature.cpp:720-768`
-dispatches them. The `y` menu itself lists every entry at all times and
-hides nothing (`src/Player.cpp:1551`). The conditions below gate the **Talk**
+dispatches them. None of them carries a prerequisite or a
+missing-implementation flag, so the `y` menu offers every one of them to every
+character (`src/Player.cpp:1579-1586`). The conditions below gate the **Talk**
 prompt instead: `Creature::PreTalk` (`src/Social.cpp:101`) drops a choice from
 that prompt when its condition fails (`src/Social.cpp:140-198`). So a verb you
 cannot see when you Talk is usually a verb that does not apply to that
@@ -106,7 +126,7 @@ or friendly.
 | Wield | equip a weapon | `src/Creature.cpp:925` |
 | Shoot / Throw | ranged attack — **one event**, `EV_RATTACK` | `src/Creature.cpp:832` |
 | Insert | put an item into a container | `src/Inv.cpp:1106` |
-| Divide | split a stack; refuses singular items; the new stack is `DROPPED` for 10 turns | `src/Player.cpp:1666` |
+| Divide | split a stack; refuses singular items; the new stack is `DROPPED` for 10 turns | `src/Player.cpp:1727` |
 | Open / Open With | doors and containers | `src/Feature.cpp:612` |
 | Close | shut a door | `src/Feature.cpp:727` |
 | Enter | portals and the like | `src/Feature.cpp:254` |
@@ -141,14 +161,17 @@ Notes on individual verbs:
 
 **Divide** splits a stack, and refuses singular items with *"Singular items
 cannot be divided."* The new stack is marked `DROPPED` for 10 turns
-(`src/Player.cpp:1674`).
+(`src/Player.cpp:1727`).
 
-**Mount** is the only command that rides a creature. No key binding throws
-`EV_MOUNT`; only this verb and the spells that summon a steed do
-(`lib/wspells.irh:1808` and `:1903`, `lib/pspells.irh:3460`). It runs a full
-validation path — Ride skill, humanoid form, the target's `M_MOUNTABLE` flag,
-hostility, prone/stuck/grappled/asleep, plane, size, challenge rating, and
-whether the creature will accept you at all (`src/Skills.cpp:4254`).
+**Mount** is offered only to a character who could ride: the Ride skill, a
+humanoid body with limbs, and no mount already under you
+(`src/Tables.cpp:3095-3099`). It is the only command that rides a creature: no
+key binding throws `EV_MOUNT`, and only this verb and the spells that summon a
+steed do (`lib/wspells.irh:1808` and `:1903`, `lib/pspells.irh:3460`). Once
+picked it runs a full validation path — Ride skill, humanoid form, the
+target's `M_MOUNTABLE` flag, hostility, prone/stuck/grappled/asleep, plane,
+size, challenge rating, and whether the creature will accept you at all
+(`src/Skills.cpp:4254`).
 **Dismount** has a second route: the Cancel (`x`) command drops a standing
 `MOUNTED` stati (`src/Skills.cpp:451` and `:567`).
 
