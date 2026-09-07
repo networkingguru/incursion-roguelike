@@ -199,6 +199,26 @@ if [ "$TARGET" = windows ]; then
     INCLUDES="-Iinc -Ilib -Ilibtcod/include -Icompat $SDL_CFLAGS"
     DEFINES="$DEBUG_DEFINE -DLIBTCOD_TERM -DTCODLIB_API="
     SKIP_BACKENDS="Wcurses Wposix"
+    # -flifetime-dse=1 is load-bearing, not a tuning knob. Object::operator new
+    # (inc/Base.h:661) memsets every allocation to zero, and constructors across
+    # the Object/Thing/Creature/Item/Monster hierarchy lean on that fill instead
+    # of initialising their own members. C++ says an object's lifetime has not
+    # begun until its constructor runs, so at the default -flifetime-dse=2 GCC is
+    # entitled to DELETE that memset. Members nobody assigns then hold heap
+    # garbage, and a garbage hObj is an invalid object handle
+    # (src/Registry.cpp:468) moments after character creation.
+    #
+    # Measured 2026-09-07 in a Windows 11 ARM64 VM, same source, three binaries
+    # differing only in flags: -O2 crashes after chargen, -O0 is clean, and
+    # -O2 -flifetime-dse=1 is clean. Optimisation-dependent, so it is undefined
+    # behaviour the optimiser may exploit rather than a port defect.
+    #
+    # ponytail: this MASKS the defect, it does not remove it. The real fix is the
+    # constructor audit in inc-uusj -- every member initialised by its own
+    # constructor instead of by the allocator. clang has the same licence to
+    # elide that memset and merely does not take it today, so macOS and Linux are
+    # latent rather than safe. Do not read this flag as "a GCC problem".
+    CXXFLAGS_EXTRA_TARGET="-flifetime-dse=1"
     # -static is what keeps the package to ONE DLL. Without it the .exe also
     # imports libgcc_s_seh-1.dll, libstdc++-6.dll and libwinpthread-1.dll, none
     # of which ships with any Windows, so a player who has not installed mingw
@@ -274,7 +294,10 @@ fi
 
 # ------------------------------------------------------------------ game -----
 echo "--- compiling Incursion ---"
-CXXFLAGS="-O2 $WARN_FLAGS -fpermissive -Wno-narrowing $DEFINES $INCLUDES $EXTRA_CXXFLAGS"
+# ${CXXFLAGS_EXTRA_TARGET:-} carries flags a cross target cannot build without;
+# only TARGET=windows sets it, and it is empty everywhere else. It sits BEFORE
+# $EXTRA_CXXFLAGS so a caller can still override it from the command line.
+CXXFLAGS="-O2 $WARN_FLAGS -fpermissive -Wno-narrowing ${CXXFLAGS_EXTRA_TARGET:-} $DEFINES $INCLUDES $EXTRA_CXXFLAGS"
 CFLAGS="-O2 -w -Wno-implicit-function-declaration -Wno-implicit-int -Wno-return-mismatch -Wno-return-type $DEBUG_DEFINE -Iinc -Ilib -Icompat"
 
 for f in src/*.cpp; do
