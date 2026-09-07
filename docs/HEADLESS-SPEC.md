@@ -165,6 +165,8 @@ harness would have been a smoke test and never a regression test.
 under `logs/runs`. This was not in the plan and it should have been: a run
 made outside it wrote a scripted character into `save/` beside real ones. Use
 `tools/headless.sh --tty` to test terminal drawing, never the binary directly.
+Every invocation must name its settings in `INCURSION_OPTIONS`; the harness
+exits 2 without it, because a seeded session's outcome depends on them.
 
 **`@include`.** Every script begins by making a character, and that sequence is
 long. Without an include, changing it meant editing every script that exists.

@@ -144,13 +144,21 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 ```bash
 ./build_macos.sh                        # the SDL build, ./incursion
 BACKEND=posix ./build_macos.sh          # the headless build, most checks need it
-tools/headless.sh tools/keys/dive.keys  # play one seeded session, sandboxed
+INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+    tools/headless.sh tools/keys/dive.keys   # one seeded session, sandboxed
 tools/nightly_verify.sh --record        # freeze what already fails
 tools/nightly_verify.sh --compare       # did this work break anything that passed?
 ```
 
 Never run the binary directly. `tools/headless.sh` gives a run its own `save/`
 and `logs/`, so an unattended session cannot destroy a real character.
+
+Every harness run MUST name its settings. `tools/headless.sh` exits 2 when
+`INCURSION_OPTIONS` is unset, because settings change what a seeded session
+does: e4a6499 measured one flipped option byte taking `dive.keys` on seed 4242
+from 254 turns to 2190. Frozen choices live in `tools/fixtures/` and are
+described in `tools/fixtures/README.md`; gates use their own
+`tools/gates/Options.Dat`.
 
 `tools/README.md` §7 groups every check into five tiers by what it needs, and
 names the two you must not run casually.
