@@ -12,8 +12,9 @@
  * read-only data appear inside it:
  *
  *     ~/Library/Application Support/Incursion/
- *         mod    -> <bundle>/Contents/Resources/mod     symlink
- *         fonts  -> <bundle>/Contents/Resources/fonts   symlink
+ *         mod      -> <bundle>/Contents/Resources/mod      symlink
+ *         fonts    -> <bundle>/Contents/Resources/fonts    symlink
+ *         graphics -> <bundle>/Contents/Resources/graphics symlink
  *         Options.Dat   real file, seeded on first run
  *         save/         real directory
  *         logs/         real directory
@@ -151,6 +152,13 @@ int main(int argc, char *argv[]) {
 
     snprintf(link_target, sizeof(link_target), "%s/fonts", resources);
     snprintf(path, sizeof(path), "%s/fonts", support);
+    relink(link_target, path);
+
+    /* The title screen's logo, read as graphics/logo.png relative to this same
+       directory (src/Wlibtcod.cpp:1563). Without the link the game finds no
+       file and falls back to the ASCII wordmark with no error. inc-ntjr. */
+    snprintf(link_target, sizeof(link_target), "%s/graphics", resources);
+    snprintf(path, sizeof(path), "%s/graphics", support);
     relink(link_target, path);
 
     snprintf(link_target, sizeof(link_target), "%s/Options.Dat", resources);

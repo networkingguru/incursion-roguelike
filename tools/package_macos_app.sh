@@ -133,7 +133,8 @@ COMPILER=no OUT=incursion-ship ./build_macos.sh >/dev/null
 # --------------------------------------------------------------- assemble ----
 echo "=== 4/7  assembling $APP ==="
 rm -rf "$STAGE"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/mod" "$APP/Contents/Resources/fonts"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/mod" \
+         "$APP/Contents/Resources/fonts" "$APP/Contents/Resources/graphics"
 
 # NOT "incursion". macOS filesystems are case-insensitive by default, so
 # Contents/MacOS/Incursion (the launcher, and CFBundleExecutable) and
@@ -143,6 +144,11 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/mod" "$APP/Contents/Reso
 cp "$ROOT/incursion-ship"    "$APP/Contents/MacOS/incursion-game"
 cp "$ROOT/mod/Incursion.Mod" "$APP/Contents/Resources/mod/"
 cp "$ROOT"/fonts/*.png       "$APP/Contents/Resources/fonts/"
+# The title screen reads graphics/logo.png relative to the game directory
+# (src/Wlibtcod.cpp:1563), and for the bundle that directory is Application
+# Support, not Resources -- so shipping the file here only works because the
+# launcher links it across, exactly as it does for mod/ and fonts/. inc-ntjr.
+cp "$ROOT/graphics/logo.png" "$APP/Contents/Resources/graphics/"
 cp "$ROOT/LICENSE"           "$APP/Contents/Resources/"
 cp "$ROOT/Incursion.txt"     "$APP/Contents/Resources/"
 # Ours, beside upstream's. Incursion.txt is the original project's readme and
@@ -235,7 +241,16 @@ fi
 # first run of this script reported.
 echo "=== 6/8  notarising the app ==="
 if [ "$SIGNED" = yes ]; then
-    ZIP="$DIST/$NAME-notarise.zip"
+    # THE NOTARY'S ZIP IS ALSO THE ITCH UPLOAD, so it is named for the release
+    # page and kept rather than named for this step and deleted. itch.io wants a
+    # zipped .app where GitHub takes a dmg, and until 2026-09-07 nothing built
+    # that zip: a human made one by hand into a directory outside the repo, it
+    # went stale against a rebuilt app, and no check could see it because the
+    # file existed nowhere the build knew about. inc-ntjr.
+    #
+    # It is written BEFORE stapling, so the copy on disk carries no ticket yet.
+    # That is why it is re-made after the staple below.
+    ZIP="$DIST/incursion-macos-$ARCH.zip"
     rm -f "$ZIP"
     # ditto, not zip: it preserves the bundle structure and extended attributes
     # that notarisation needs to see.
@@ -244,12 +259,20 @@ if [ "$SIGNED" = yes ]; then
     if xcrun notarytool submit "$ZIP" "${NOTARY_AUTH[@]}" --wait; then
         xcrun stapler staple "$APP"
         echo "notarised and stapled: $APP"
+        # Re-zip the STAPLED bundle. A downloader of the zip has no notary
+        # round trip to fall back on the way a dmg's does, so an unstapled
+        # copy is the one that gets refused on a machine that is offline.
+        rm -f "$ZIP"
+        /usr/bin/ditto -c -k --keepParent "$APP" "$ZIP"
+        echo "upload zip: $ZIP"
     else
+        # Leave no zip behind. An unstapled one on disk looks exactly like a
+        # good one and is the copy a later upload would reach for.
+        rm -f "$ZIP"
         echo "WARNING: notarisation failed. The bundle is signed but Gatekeeper"
         echo "  will refuse it on any machine that downloads it. check_app.sh"
         echo "  below will fail, and it is right to."
     fi
-    rm -f "$ZIP"
 else
     echo "SKIPPED: not signed, so there is nothing to notarise."
 fi

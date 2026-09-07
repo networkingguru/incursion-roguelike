@@ -65,12 +65,16 @@ done
 # --- 3. the data the game reads at run time ---------------------------------
 # lib/ and lang/ are deliberately NOT here. They are resource-compiler input,
 # and nothing in src/ opens them at run time; the module already holds the data.
-for f in mod/Incursion.Mod fonts/8x8.png fonts/12x16.png fonts/16x12.png fonts/16x16.png; do
+# graphics/logo.png is here because release 4 shipped without it on macOS and
+# nothing noticed: the title screen falls back to the ASCII wordmark in silence
+# when the file is absent, so the package looks healthy and looks wrong. inc-ntjr.
+for f in mod/Incursion.Mod fonts/8x8.png fonts/12x16.png fonts/16x12.png fonts/16x16.png \
+         graphics/logo.png; do
     if [ ! -f "$PKG/$f" ]; then
         note_fail "missing data file: $f"
     fi
 done
-[ "$FAIL" -eq 0 ] && echo "PASS: module and fonts are present"
+[ "$FAIL" -eq 0 ] && echo "PASS: module, fonts and logo are present"
 
 # A fresh install must obtain the defaults from OptionList, not inherit the
 # maintainer's personal settings file from the source tree.

@@ -64,11 +64,16 @@ COMPILER=no OUT=incursion-ship ./build_macos.sh >/dev/null
 # --------------------------------------------------------------- assemble ----
 echo "=== 4/6  assembling $PKG ==="
 rm -rf "$PKG"
-mkdir -p "$PKG/mod" "$PKG/fonts" "$PKG/save" "$PKG/logs"
+mkdir -p "$PKG/mod" "$PKG/fonts" "$PKG/graphics" "$PKG/save" "$PKG/logs"
 
 cp "$ROOT/incursion-ship"      "$PKG/incursion"
 cp "$ROOT/mod/Incursion.Mod"   "$PKG/mod/"
 cp "$ROOT"/fonts/*.png         "$PKG/fonts/"
+# The title screen reads this by name, relative to the game directory
+# (src/Wlibtcod.cpp:1563). Without it the title silently falls back to the
+# ASCII wordmark, which is how release 4 shipped on macOS while Linux and
+# Windows showed the real logo. inc-ntjr.
+cp "$ROOT/graphics/logo.png"   "$PKG/graphics/"
 cp "$ROOT/LICENSE"             "$PKG/"
 cp "$ROOT/Incursion.txt"       "$PKG/"
 
