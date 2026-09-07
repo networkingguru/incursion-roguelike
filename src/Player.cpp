@@ -854,133 +854,151 @@ CastSpell:
             GainTempStati(ACTING, NULL, 25, SS_MISC, EV_SEARCH);
             Timeout++;
             break;
-        case KY_CMD_ATTACK_MENU:
-            MyTerm->LOption("Attack", A_SWNG, "Use this option to perform a normal"
-                " attack against a creature who is not yet hostile to you (Walking"
-                " into these characters will normally just displace them) or is"
-                " invisible or otherwise imperceptible.");
-            MyTerm->LOption("Break Grapple", A_ESCA, "You attempt to break out of an"
-                " enemy's grab or grapple with a grapple check. If successful, this"
-                " maneuver takes no time to complete, giving you an opportunity to"
-                " get out of melee range, but if failed it takes up a full round.");
-            MyTerm->LOption("Bull Rush", A_BULL, "Attempt to force an opponent"
-                " back one square by charging into them. This is resolved with an"
-                " oppposed Strength roll modified by +4/-4 for every difference in"
-                " size category between you and your opponent. A bull rush normally"
-                " provokes an attack of oppurtonity from the target.");
-            MyTerm->LOption("Called Shot", A_CALL, XPrint("You aim an attack at a specific"
-                " part of an opponent's body, hoping to inflict a debilitating injury"
-                " rather than just going for the kill. <13>Not implemented yet.<2>"));
-#if 1
-            MyTerm->LOption("Charge", A_CHAR,
-                "__You run (or ride) in a straight line, gaining a +2 bonus to hit and "
-                "accumulating plusses to damage due to momentum as you move. Your damage "
-                "bonus is based on your mass (size, equipment and mount) times your velocity "
-                "(movement rate). These bonuses apply only to melee attacks. Some weapons "
-                "and feats double or triple the damage bonus that charging grants, and being "
-                "mounted also increases the effect. Hitting something with a weapon while "
-                "charging deals blunt damage to that weapon equal to your charge damage bonus."
-                "\n__You are always subject to Sneak Attacks while charging. You may not make "
-                "attacks of opportunity while charging. You are denied your Dexterity bonus "
-                "to Defense while charging."
-                "\n__If you charge near an opponent that has reach, it will set itself to "
-                "receive your charge, gaining a free attack of opportunity against you. In "
-                "this attack it gains your charge bonus to damage against you (momentum is "
-                "symmetric). If you take any damage in that attack, you must save versus DC "
-                "30 to avoid being tripped. If you do not take any damage, you automatically "
-                "close with that opponent.");
-#else
-            MyTerm->LOption("Charge",A_CHAR,"You run in a straight line, accumulating"
-                " plusses to hit and damage due to momentum as you move. You are considered" 
-                " to be exposed while charging, and for one turn thereafter. Some weapons"
-                " double or triple the damage bonus that charging grants, and being mounted"
-                " also increases the effect.");
-#endif
-            MyTerm->LOption("Charge, Automatic", AUTO_CHARGE,
-                " You automatically Charge when moving. Whenever you change directions you break off your current charge and start a new one. This can be convenient if you are mounted and trying to run a fleeing enemy down with a lance, for example.");
-            MyTerm->LOption("Coup de Grace", A_COUP, "Deliver a killing blow to a"
-                " paralyzed or sleeping living humanoid opponent within 5 feet of"
-                " you. The attack is an automatic critical, and even if the foe"
-                " survives the damage they must make a Fortitude save (DC 10 + half"
-                " of the damage dealt) or die anyway. Performing a Coup de Grace"
-                " provokes attacks of oppourtunity from every non-paralyzed or"
-                " sleeping enemy within 1 square.");
-            MyTerm->LOption("Disarm", A_DISA, "You cause an opponent to lose their"
-                " weapon. An opposed attack roll is made, using only Base Attack "
-                " Bonus, modified by both Strength and Dexterity, as well as +/- 4 "
-                "for weapon size differences. Success"
-                " causes the opponent to lose their weapon; failure means they are"
-                " allowed to make an immediate Disarm attempt against you, without"
-                " it costing them an action. A Disarm attempt normally provokes an"
-                " attack of opportunity.");
-            MyTerm->LOption("Fight Defensively", A_DEFN, "By devoting your full attention"
-                " to defense, you can gain a +4 circumstance bonus to your defense class"
-                " at the expense of suffering a -4 circumstance penalty to attack rolls,"
-                " -2 to damage, 75~ normal movement rate and a -20% spell success chance."
-                " Once fighting defensively, you can stop by using the 'x' command.");
-            MyTerm->LOption("Grapple", A_GRAB, "You grab your opponent and initate a"
-                " grapple with him. Grappling is resolved with grapple checks, which"
-                " are opposed contests of Brawl attack bonus plus Strength modifier"
-                " plus or minus 4 for every divergance in size category, favouring"
-                " the larger character. To begin grappling, however, you must hit your"
-                " target's DC as per a normal attack. Initiating a grapple provokes an"
-                " attack of opportunity from your target.");
-            MyTerm->LOption("Great Blow", A_GREA, "You execute a titanically powerful"
-                " blow with your weapon, allowing you to double your Strength modifier"
-                " to damage, granting a +2 bonus to both the attack roll and damage and"
-                " lowering the threat range of your attack"
-                " by 3 (i.e., 19-20 becomes 16-20). However, a great blow takes 1 1/2 times"
-                " as long as a normal attack, costs two Fatigue points and leaves you"
-                " off-balance and Exposed for a full round after you finish it.");
-            MyTerm->LOption("Sprint", A_SPRT, "You put on a desperate burst of speed,"
-                " and increase you movement rate by 50% for [1 + Constitution modifier]"
-                " rounds (minimum 1) at the cost of one fatigue point. Since you are"
-                " running full out, Sprint also decreases your defense class by two.");
-            MyTerm->LOption("Sunder Weapon", A_SUND, "You strike an opponent's weapon"
-                " (or, at your option, any unattended object) and attempt to damage or"
-                " destroy it. This provokes an attack of opportunity from the person"
-                " using the weapon. Weapons with a magical plus can not be destroyed"
-                " by any weapon with a lower magical plus than their own.");
-            MyTerm->LOption("Throw", A_THRO, "You throw an enemy you are grappling"
-                " with already one or more squares away from you. You must succeed"
-                " in a grapple check against them, and this action ends the grapple."
-                " You inflict your normal unarmed damage value in subdual damage, plus"
-                " one point per square the enemy is thrown.");
-            MyTerm->LOption("Trip", A_TRIP, "You attempt to knock an opponent prone."
-                " You must first make a successful attack roll against his DC, and"
-                " then you make a Strength check opposed by his Strength or Dexterity,"
-                " whichever favours him more. Success knocks the target prone. Failure"
-                " allows the target to make an immediate, free attempt to trip you in"
-                " return. Some weapons grant a bonus to trip attempts, such as the"
-                " quarterstaff. If you do not have the Improved Trip feat, you provoke"
-                " an attack of opportunity when you attempt to trip a foe.");
-            if (HasSkill(SK_FIND_WEAKNESS))
-                MyTerm->LOption("Precision Strike", A_PREC, "Facing an opponent with near-"
-                "insurmountable defenses, you cleverly gauge his defensive pattern and"
-                " search for an opening or weakness. You add 1/2 your Find Weakness "
-                " skill rating to the attack roll, but you also add 45 segments to the "
-                " attack's timecost.");
-
-            if (HasFeat(FT_SPRING_ATTACK))
-                MyTerm->LOption("Spring Attack", A_SPRI, "You are able to execute a rapid"
-                " melee attack against an opponent that is up to two squares away from"
-                " you by darting in quickly to strike. This does not provoke an attack"
-                " of opportunity the way leaving a hostile creature's threatened area"
-                " normally would.");
-            if (HasFeat(FT_WHIRLWIND_ATTACK))
-                MyTerm->LOption("Whirlwind Attack", A_WHIR, "You execute a rapid flurry"
-                " of attacks, striking every creature within one square of you at the"
-                " same time. A seperate attack is rolled against each creature at your"
-                " full normal attack bonus and damage rating. Performing a Whirlwind"
-                " Attack costs you one Fatigue point.");
-            MyTerm->LOption("Avert Eyes", A_AEYE,
-                "You avert your eyes from all opponents and attempt instead to look at their faces, shadows, torsos, and so on. This gives all gaze attacks against you a 50~ miss chance. However, it also gives you a 50~ miss chance in combat (25~ if you have the Blind Fighting feat). ");
-            MyTerm->LOption("Close Eyes", BLINDNESS,
-                "You close your eyes. This makes it difficult to see the dungeon around you (unless you have Stonework Sense, for example) and makes it difficult to see monsters around you (unless you have Blindsight or Telepathy or are already Tracking them, for example). It makes you immune to gaze attacks and blinding effects. It gives you a 50~ miss chance in combat (25~ if you have the Blind Fighting feat). You may not make attacks of opportunity. Unless you have the Blind Fighting feat, every attack against you is a surprise.");
-            MyTerm->LOption("Movement", A_MOVE,
-                "Move into a square adjacent to your own. This command can be used to move into the "
-                "same square as a monster instead of attacking it as the arrow keys would. You can "
-                "only pass into the square of an incorporeal or non-hostile creature.");
+        case KY_CMD_ATTACK_MENU: {
+            struct CombatOption {
+                const char *Verb;
+                int16 Event;
+                const char *Help;
+                bool (*Prerequisite)(Creature *);
+                bool MissingImplementation;
+            };
+            static const CombatOption options[] = {
+                { "Attack", A_SWNG, "Use this option to perform a normal"
+                    " attack against a creature who is not yet hostile to you (Walking"
+                    " into these characters will normally just displace them) or is"
+                    " invisible or otherwise imperceptible.", NULL, false },
+                { "Break Grapple", A_ESCA, "You attempt to break out of an"
+                    " enemy's grab or grapple with a grapple check. If successful, this"
+                    " maneuver takes no time to complete, giving you an opportunity to"
+                    " get out of melee range, but if failed it takes up a full round.",
+                    [](Creature *c) { return c->HasStati(GRAPPLED) || c->HasStati(GRABBED) || c->HasStati(GRAPPLING); }, false },
+                { "Bull Rush", A_BULL, "Attempt to force an opponent"
+                    " back one square by charging into them. This is resolved with an"
+                    " oppposed Strength roll modified by +4/-4 for every difference in"
+                    " size category between you and your opponent. A bull rush normally"
+                    " provokes an attack of oppurtonity from the target.", NULL, false },
+                /* ponytail: the original passed this help through XPrint() for its
+                   <13>/<2> colour codes. The row is hidden as unimplemented, so it
+                   never renders. If Called Shot is ever implemented, wrap this Help
+                   in XPrint() at the LOption call. */
+                { "Called Shot", A_CALL, "You aim an attack at a specific"
+                    " part of an opponent's body, hoping to inflict a debilitating injury"
+                    " rather than just going for the kill. <13>Not implemented yet.<2>",
+                    NULL, true },
+                { "Charge", A_CHAR,
+                    "__You run (or ride) in a straight line, gaining a +2 bonus to hit and "
+                    "accumulating plusses to damage due to momentum as you move. Your damage "
+                    "bonus is based on your mass (size, equipment and mount) times your velocity "
+                    "(movement rate). These bonuses apply only to melee attacks. Some weapons "
+                    "and feats double or triple the damage bonus that charging grants, and being "
+                    "mounted also increases the effect. Hitting something with a weapon while "
+                    "charging deals blunt damage to that weapon equal to your charge damage bonus."
+                    "\n__You are always subject to Sneak Attacks while charging. You may not make "
+                    "attacks of opportunity while charging. You are denied your Dexterity bonus "
+                    "to Defense while charging."
+                    "\n__If you charge near an opponent that has reach, it will set itself to "
+                    "receive your charge, gaining a free attack of opportunity against you. In "
+                    "this attack it gains your charge bonus to damage against you (momentum is "
+                    "symmetric). If you take any damage in that attack, you must save versus DC "
+                    "30 to avoid being tripped. If you do not take any damage, you automatically "
+                    "close with that opponent.", NULL, false },
+                { "Charge, Automatic", AUTO_CHARGE,
+                    " You automatically Charge when moving. Whenever you change directions you break off your current charge and start a new one. This can be convenient if you are mounted and trying to run a fleeing enemy down with a lance, for example.", NULL, false },
+                { "Coup de Grace", A_COUP, "Deliver a killing blow to a"
+                    " paralyzed or sleeping living humanoid opponent within 5 feet of"
+                    " you. The attack is an automatic critical, and even if the foe"
+                    " survives the damage they must make a Fortitude save (DC 10 + half"
+                    " of the damage dealt) or die anyway. Performing a Coup de Grace"
+                    " provokes attacks of oppourtunity from every non-paralyzed or"
+                    " sleeping enemy within 1 square.", NULL, false },
+                { "Disarm", A_DISA, "You cause an opponent to lose their"
+                    " weapon. An opposed attack roll is made, using only Base Attack "
+                    " Bonus, modified by both Strength and Dexterity, as well as +/- 4 "
+                    "for weapon size differences. Success"
+                    " causes the opponent to lose their weapon; failure means they are"
+                    " allowed to make an immediate Disarm attempt against you, without"
+                    " it costing them an action. A Disarm attempt normally provokes an"
+                    " attack of opportunity.", NULL, false },
+                { "Fight Defensively", A_DEFN, "By devoting your full attention"
+                    " to defense, you can gain a +4 circumstance bonus to your defense class"
+                    " at the expense of suffering a -4 circumstance penalty to attack rolls,"
+                    " -2 to damage, 75~ normal movement rate and a -20% spell success chance."
+                    " Once fighting defensively, you can stop by using the 'x' command.", NULL, false },
+                { "Grapple", A_GRAB, "You grab your opponent and initate a"
+                    " grapple with him. Grappling is resolved with grapple checks, which"
+                    " are opposed contests of Brawl attack bonus plus Strength modifier"
+                    " plus or minus 4 for every divergance in size category, favouring"
+                    " the larger character. To begin grappling, however, you must hit your"
+                    " target's DC as per a normal attack. Initiating a grapple provokes an"
+                    " attack of opportunity from your target.", NULL, false },
+                { "Great Blow", A_GREA, "You execute a titanically powerful"
+                    " blow with your weapon, allowing you to double your Strength modifier"
+                    " to damage, granting a +2 bonus to both the attack roll and damage and"
+                    " lowering the threat range of your attack"
+                    " by 3 (i.e., 19-20 becomes 16-20). However, a great blow takes 1 1/2 times"
+                    " as long as a normal attack, costs two Fatigue points and leaves you"
+                    " off-balance and Exposed for a full round after you finish it.", NULL, false },
+                { "Sprint", A_SPRT, "You put on a desperate burst of speed,"
+                    " and increase you movement rate by 50% for [1 + Constitution modifier]"
+                    " rounds (minimum 1) at the cost of one fatigue point. Since you are"
+                    " running full out, Sprint also decreases your defense class by two.", NULL, false },
+                { "Sunder Weapon", A_SUND, "You strike an opponent's weapon"
+                    " (or, at your option, any unattended object) and attempt to damage or"
+                    " destroy it. This provokes an attack of opportunity from the person"
+                    " using the weapon. Weapons with a magical plus can not be destroyed"
+                    " by any weapon with a lower magical plus than their own.", NULL, false },
+                { "Throw", A_THRO, "You throw an enemy you are grappling"
+                    " with already one or more squares away from you. You must succeed"
+                    " in a grapple check against them, and this action ends the grapple."
+                    " You inflict your normal unarmed damage value in subdual damage, plus"
+                    " one point per square the enemy is thrown.",
+                    [](Creature *c) { return c->HasStati(GRAPPLING); }, false },
+                { "Trip", A_TRIP, "You attempt to knock an opponent prone."
+                    " You must first make a successful attack roll against his DC, and"
+                    " then you make a Strength check opposed by his Strength or Dexterity,"
+                    " whichever favours him more. Success knocks the target prone. Failure"
+                    " allows the target to make an immediate, free attempt to trip you in"
+                    " return. Some weapons grant a bonus to trip attempts, such as the"
+                    " quarterstaff. If you do not have the Improved Trip feat, you provoke"
+                    " an attack of opportunity when you attempt to trip a foe.", NULL, false },
+                { "Precision Strike", A_PREC, "Facing an opponent with near-"
+                    "insurmountable defenses, you cleverly gauge his defensive pattern and"
+                    " search for an opening or weakness. You add 1/2 your Find Weakness "
+                    " skill rating to the attack roll, but you also add 45 segments to the "
+                    " attack's timecost.",
+                    [](Creature *c) { return c->HasSkill(SK_FIND_WEAKNESS); }, false },
+                { "Spring Attack", A_SPRI, "You are able to execute a rapid"
+                    " melee attack against an opponent that is up to two squares away from"
+                    " you by darting in quickly to strike. This does not provoke an attack"
+                    " of opportunity the way leaving a hostile creature's threatened area"
+                    " normally would.",
+                    [](Creature *c) { return c->HasFeat(FT_SPRING_ATTACK); }, false },
+                { "Whirlwind Attack", A_WHIR, "You execute a rapid flurry"
+                    " of attacks, striking every creature within one square of you at the"
+                    " same time. A seperate attack is rolled against each creature at your"
+                    " full normal attack bonus and damage rating. Performing a Whirlwind"
+                    " Attack costs you one Fatigue point.",
+                    [](Creature *c) { return c->HasFeat(FT_WHIRLWIND_ATTACK); }, false },
+                { "Avert Eyes", A_AEYE,
+                    "You avert your eyes from all opponents and attempt instead to look at their faces, shadows, torsos, and so on. This gives all gaze attacks against you a 50~ miss chance. However, it also gives you a 50~ miss chance in combat (25~ if you have the Blind Fighting feat). ", NULL, false },
+                { "Close Eyes", BLINDNESS,
+                    "You close your eyes. This makes it difficult to see the dungeon around you (unless you have Stonework Sense, for example) and makes it difficult to see monsters around you (unless you have Blindsight or Telepathy or are already Tracking them, for example). It makes you immune to gaze attacks and blinding effects. It gives you a 50~ miss chance in combat (25~ if you have the Blind Fighting feat). You may not make attacks of opportunity. Unless you have the Blind Fighting feat, every attack against you is a surprise.", NULL, false },
+                { "Movement", A_MOVE,
+                    "Move into a square adjacent to your own. This command can be used to move into the "
+                    "same square as a monster instead of attacking it as the arrow keys would. You can "
+                    "only pass into the square of an incorporeal or non-hostile creature.", NULL, false }
+            };
+            n = 0;
+            for (unsigned ci = 0; ci != sizeof(options) / sizeof(options[0]); ci++)
+                if (!options[ci].MissingImplementation &&
+                    (!options[ci].Prerequisite || options[ci].Prerequisite(this))) {
+                    MyTerm->LOption(options[ci].Verb, options[ci].Event, options[ci].Help);
+                    n++;
+                }
+            if (!n) {
+                IPrint("You have no combat options.");
+                break;
+            }
             /* Feint */
             /* Read Opponent */
 
@@ -1139,6 +1157,7 @@ FindNonReachVictim:
                 Error("Strange tactical option!");
             }
             return;
+        }
         case KY_CMD_USE:
             UseMenu();
             break;
@@ -1536,7 +1555,7 @@ AlreadyDone:;
 }
 
 void Player::YuseMenu(int32 SelectedIndex) {
-    int16 i, c;
+    int16 i, c, found = 0;
     EventInfo e;
 
     if (SelectedIndex) {
@@ -1546,12 +1565,30 @@ void Player::YuseMenu(int32 SelectedIndex) {
 
     for (i=0;i!=5;i++)
         if (RecentVerbs[i] != -1)
-            MyTerm->LOption(YuseCommands[RecentVerbs[i]].Verb,RecentVerbs[i]);
+            if (!YuseCommands[RecentVerbs[i]].MissingImplementation &&
+                (!YuseCommands[RecentVerbs[i]].Prerequisite ||
+                 YuseCommands[RecentVerbs[i]].Prerequisite(this))) {
+                MyTerm->LOption(YuseCommands[RecentVerbs[i]].Verb,RecentVerbs[i]);
+                found++;
+            }
 
+    /* upstream: RecentVerbs[4] was tested twice and [3] never excluded, so the
+       menu repeated the fourth recent verb and dropped nothing for it. Plain
+       index control flow: it misbehaves identically on Win32 with the original
+       typedefs and compiler. Observed, inc-upw.40, not sent. */
     for (i=0;YuseCommands[i].Event;i++)
         if (i != RecentVerbs[0] && i != RecentVerbs[1] && i != RecentVerbs[2]
-        && i != RecentVerbs[4] && i != RecentVerbs[4])
-            MyTerm->LOption(YuseCommands[i].Verb,i);
+        && i != RecentVerbs[3] && i != RecentVerbs[4])
+            if (!YuseCommands[i].MissingImplementation &&
+                (!YuseCommands[i].Prerequisite || YuseCommands[i].Prerequisite(this))) {
+                MyTerm->LOption(YuseCommands[i].Verb,i);
+                found++;
+            }
+
+    if (!found) {
+        IPrint("You have no usable verbs.");
+        return;
+    }
 
     MyTerm->SetQKeyType(QuickKeys,QKY_VERB);
     c = (int16)MyTerm->LMenu(MENU_3COLS|MENU_ESC|MENU_BORDER|MENU_QKEY,"What do you want to do?");

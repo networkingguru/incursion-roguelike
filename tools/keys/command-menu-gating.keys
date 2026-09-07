@@ -1,0 +1,44 @@
+# Exercise all three data-driven command menus before and after gaining a feat.
+# inc-q0w0: Whirlwind Attack must be absent without the feat and present when a
+# Quickblade grants it; dead Yuse verbs such as Burn must remain absent.
+
+@include chargen.keys
+
+ESC
+u
+@dump:use-without-feat
+ESC
+c
+@dump:combat-without-feat
+ESC
+y
+@dump:yuse-without-feat
+ESC
+
+w
+y
+@choose "Item Acquisition"
+RIGHT*10
+@until "Quickblade" DOWN
+DOWN
+ENTER
+3
+ENTER
+b
+SPACE
+n
+s
+@dump:quickblade-wielded
+ESC
+
+u
+@dump:use-with-feat
+ESC
+c
+@dump:combat-with-feat
+ESC
+y
+@dump:yuse-with-feat
+ESC
+
+@quit

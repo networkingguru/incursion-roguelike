@@ -597,6 +597,7 @@ the unfixed tree before it is trusted.
 
 | Check | The question it answers |
 |---|---|
+| `check_command_menu_gating.sh` | Do the Combat (C) and YUse (Y) menus still hide every verb with no implementation, and every verb whose character prerequisite is unmet? It dumps both menus before and after a wielded Quickblade grants Whirlwind Attack: the gated combat row appears only after the feat, and the dead Yuse rows stay absent either way. |
 | `check_headless.sh` | Do the properties every unattended run depends on still hold, including that two simultaneous runs get separate directories? |
 | `check_field_day_duration.sh` | Does a permanent (`Dur -1`) field still survive a day change? It places a torch archon on depth 2, rests one night on the same map with lowercase `z`, and counts the map's fields either side; the rise in creatures proves `Map::DaysPassed` actually ran. Fixed 1 -> 1, unfixed 1 -> 0. |
 | `check_field_modifier_duration.sh` | Does a living, directly placed torch archon retain both its permanent white light field and its Magic Circle vs. Evil status after the broken 12-turn countdown would have expired many times over? |

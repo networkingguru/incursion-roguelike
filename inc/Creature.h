@@ -37,6 +37,8 @@ struct YuseCommand
     int16 QItem2;
     const char* I2Msg;
     uint32 Flags;
+    bool (*Prerequisite)(Creature *);
+    bool MissingImplementation;
   };
 
 struct SkillInfoStruct
