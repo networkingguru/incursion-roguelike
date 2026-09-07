@@ -96,6 +96,27 @@ if [ -z "${VERSION:-}" ]; then
     exit 2
 fi
 
+# AND THE TITLE SCREEN MUST AGREE WITH IT. FORK_RELEASE (inc/Defines.h) is
+# compiled into the game and drawn on the title page (src/Term.cpp), printed by
+# src/TextTerm.cpp and stamped on every map-entry line in the log
+# (src/Main.cpp). VERSION only reaches Info.plist, so the two can drift -- and
+# they did: release 4 was built, signed and notarised on 2026-09-07 with a title
+# page that still read "iNCURSION release 3". Nothing caught it, because no
+# checker compared the two. This does, at the one moment it matters, and it
+# refuses rather than warns, because a warning in a build log is a warning
+# nobody reads.
+FORK_RELEASE="$(sed -n 's/^#define FORK_RELEASE  *"\(.*\)"/\1/p' "$ROOT/inc/Defines.h")"
+if [ -z "$FORK_RELEASE" ]; then
+    echo "cannot read FORK_RELEASE from inc/Defines.h; the #define moved" >&2
+    exit 2
+fi
+if [ "${VERSION%%.*}" != "$FORK_RELEASE" ]; then
+    echo "VERSION=$VERSION but the game says release $FORK_RELEASE." >&2
+    echo "  The title screen would not match the bundle. Bump FORK_RELEASE in" >&2
+    echo "  inc/Defines.h to ${VERSION%%.*}, or build with VERSION=$FORK_RELEASE.0" >&2
+    exit 2
+fi
+
 # ------------------------------------------------------------------ build ----
 echo "=== 1/7  developer binary ==="
 ./build_macos.sh >/dev/null
