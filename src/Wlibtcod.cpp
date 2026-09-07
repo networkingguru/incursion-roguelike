@@ -110,9 +110,9 @@
 #undef MAX
 
 #ifndef _WIN32
-// SDL is pulled only on Mac/Linux. The Windows libtcod build compiles this
-// file with no SDL include path, and gamepad support is not wired for
-// Windows yet, so all of it is compiled out there.
+// Mac/Linux only: the title logo, the -keys screenshot writer, the gamepad.
+// The Windows cross build now HAS an SDL include path, so this would compile
+// there; it stays off because that package ships no graphics/ for the logo.
 // push/pop min & max: inc/Defines.h defines lowercase min()/max() macros
 // that break libstdc++'s std::min/std::max when SDL pulls <cmath> on Linux.
 // Undef them only across the SDL include, then restore for the rest of the
@@ -1968,9 +1968,17 @@ int16 libtcodTerm::GetCharCmd(KeyCmdMode mode) {
                     pauseUntil = now + (uint32)scriptKey.pauseMs;
                     tcodKey = TCOD_key_t();
                 } else if (scriptKey.ch == SK_SHOT) {
+                    /* ponytail: @shot writes nothing on Windows. g_lastFrame
+                       and TCOD_sys_save_bitmap live in the #ifndef _WIN32
+                       block at the top; SK_SHOT arrived later and escaped it.
+                       Ceiling: no Windows screenshot, title logo or gamepad,
+                       all three being in that block. Upgrade path: it needs
+                       only SDL headers, which TARGET=windows now supplies. */
+#ifndef _WIN32
                     TCOD_console_flush();
                     if (g_lastFrame)
                         TCOD_sys_save_bitmap((void*)g_lastFrame, scriptKey.label);
+#endif
                     tcodKey = TCOD_key_t();
                 } else if (scriptKey.ch == SK_QUIT) {
                     this->ShutDown();

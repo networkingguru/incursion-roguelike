@@ -54,7 +54,7 @@ bool TokenToKey(const char *tok, ScriptKey *out) {
     }
 
     for (i = 0; NamedKeys[i].name; i++)
-        if (!strcasecmp(tok, NamedKeys[i].name)) {
+        if (!stricmp(tok, NamedKeys[i].name)) {
             out->ch = NamedKeys[i].ch;
             return true;
         }

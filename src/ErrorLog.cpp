@@ -23,7 +23,9 @@
 #include <cctype>
 #include <ctime>
 #include <dirent.h>
+#ifndef _WIN32
 #include <execinfo.h>   /* backtrace(), for the call stack in the log */
+#endif
 #include <unistd.h>
 #include <sys/stat.h>
 
@@ -136,17 +138,25 @@ void LogError(const char *dir, const char *msg, const char *banner) {
         if (!strcmp(seen[i], msg))
             break;
     if (i == seenCount && seenCount < (int)(sizeof(seen)/sizeof(seen[0]))) {
+#ifndef _WIN32
         void *frames[24];
         int n = backtrace(frames, 24);
         char **names = backtrace_symbols(frames, n);
+#endif
 
         snprintf(seen[seenCount++], sizeof(seen[0]), "%s", msg);
         fprintf(errLog, "    --- first occurrence, call stack ---\n");
+#ifndef _WIN32
         if (names) {
             for (i = 0; i < n; i++)
                 fprintf(errLog, "    %s\n", names[i]);
             free(names);
         }
+#else
+        /* mingw ships no <execinfo.h>. Say the stack is missing rather than
+           print an empty section, so a Windows log reads the same shape. */
+        fprintf(errLog, "    (call stack not available on this platform)\n");
+#endif
         fprintf(errLog, "    --- end ---\n");
     }
 

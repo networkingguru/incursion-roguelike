@@ -33,6 +33,11 @@ save/
 *.o
 incursion-fullblit
 incursion-debug
+# The Windows cross build: TARGET=windows ./build_macos.sh. Its shipping
+# sibling Incursion-ship.exe needs no entry of its own -- the /incursion-*
+# pattern below already eats it, because git matches that case-insensitively
+# on this filesystem.
+/Incursion.exe
 
 # Beads / Dolt files (added by bd init)
 .dolt/

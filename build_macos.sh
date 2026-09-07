@@ -44,6 +44,40 @@ case "$HOST" in
     Linux)  CC="${CC:-gcc}";   CXX="${CXX:-g++}";     GUI_LIBS="-ldl -lpthread" ;;
     *)      echo "Unsupported host '$HOST' (want Darwin or Linux)"; exit 1 ;;
 esac
+AR="${AR:-ar}"
+NM="${NM:-nm}"
+
+# Which machine the binary is FOR, as opposed to $HOST, the one it is built on.
+#   native   (default) this host. Nothing changes.
+#   windows  cross-compile Incursion.exe with mingw-w64. Install the toolchain
+#            with `brew install mingw-w64`, and stage SDL2, zlib and their
+#            headers under build/win-deps (see docs/specs/ for the recipe).
+# This is a separate axis from BACKEND on purpose. BACKEND picks which source
+# file defines main(); TARGET picks which compiler and which libraries. Windows
+# uses the SAME libtcod backend the Mac does.
+TARGET="${TARGET:-native}"
+WIN_DEPS="$ROOT/build/win-deps"
+case "$TARGET" in
+    native) ;;
+    windows)
+        # Not $CC/$CXX: those name a compiler for $HOST, and honouring them here
+        # would silently build a Mac binary under a Windows name.
+        CC="x86_64-w64-mingw32-gcc"; CXX="x86_64-w64-mingw32-g++"
+        AR="x86_64-w64-mingw32-ar";  NM="x86_64-w64-mingw32-nm"
+        GUI_LIBS=""
+        OUT="${OUT:-Incursion.exe}"
+        command -v "$CXX" >/dev/null 2>&1 \
+            || { echo "No $CXX. Install it with: brew install mingw-w64"; exit 1; }
+        [ -d "$WIN_DEPS/lib" ] \
+            || { echo "No $WIN_DEPS/lib. Stage SDL2 and zlib for mingw first."; exit 1; }
+        ;;
+    # TARGET is a common name to have exported already -- autotools, Rust and
+    # several CI runners all set it. Say so, or a stray one in the environment
+    # reads as this script being broken.
+    *)      echo "Unknown TARGET '$TARGET' (want native or windows)."
+            echo "If you did not set it, it came from the environment: unset TARGET."
+            exit 1 ;;
+esac
 
 BACKEND="${BACKEND:-libtcod}"
 
@@ -52,6 +86,14 @@ case "$BACKEND" in
     posix)   OUT="${OUT:-incursion-headless}" ;;
     *)       echo "Unknown BACKEND '$BACKEND' (want libtcod or posix)"; exit 1 ;;
 esac
+
+# src/Wposix.cpp needs alarm()/SIGALRM and fnmatch(), and mingw-w64 gates the
+# first behind __USE_MINGW_ALARM and does not ship the second at all. The
+# windowed build is scriptable on its own (-keys), so nothing is lost.
+if [ "$TARGET" = windows ] && [ "$BACKEND" != libtcod ]; then
+    echo "TARGET=windows builds the libtcod backend only (BACKEND=$BACKEND asked for)"
+    exit 1
+fi
 
 # Is the resource compiler part of this binary?
 #
@@ -116,7 +158,12 @@ WARN_FLAGS="${WARN_FLAGS:--w}"
 # COMPILER belongs in it: a shipping build and a developer build differ by
 # -DDEBUG, and -DDEBUG changes real code in Player.cpp and Main.cpp, so sharing
 # a directory would link a mixture of the two and the result would be neither.
-if [ "$OUT" = "incursion" ] && [ -z "$EXTRA_CXXFLAGS" ] && [ "$COMPILER" = yes ]; then
+if [ "$TARGET" != native ]; then
+    # A cross build's objects are for another machine entirely, so they get a
+    # directory of their own no matter what OUT says.
+    OBJ="$ROOT/build/obj-$TARGET-$OUT"
+    [ "$COMPILER" = no ] && OBJ="$OBJ-nocompiler"
+elif [ "$OUT" = "incursion" ] && [ -z "$EXTRA_CXXFLAGS" ] && [ "$COMPILER" = yes ]; then
     OBJ="$ROOT/build/obj"
 elif [ "$COMPILER" = no ]; then
     OBJ="$ROOT/build/obj-$OUT-nocompiler"
@@ -134,7 +181,40 @@ else
     SKIP_SOURCES="RComp Art yygram Tokens"
 fi
 
-if [ "$BACKEND" = posix ]; then
+if [ "$TARGET" = windows ]; then
+    # SDL2 and zlib come from build/win-deps, not from pkg-config: pkg-config on
+    # this Mac answers for the Mac. -lmingw32 -lSDL2main is what gives the .exe a
+    # WinMain, and -mwindows puts it in the GUI subsystem so no console opens
+    # behind the game window. libSDL2.dll.a is named by PATH, not by -lSDL2, for
+    # the reason LINK_LIBS gives below.
+    #
+    # -DTCODLIB_API= is not optional. libtcod/include/libtcod.h:152-163 makes
+    # TCODLIB_API mean __declspec(dllimport) on Windows, so every call into the
+    # vendored static library looks for an __imp_ symbol that a static archive
+    # does not have. The macro is #ifndef-guarded, so defining it empty on both
+    # sides of the link -- here and in TFLAGS below -- turns those back into
+    # ordinary calls. Mac and Linux never see this: there TCODLIB_API is empty.
+    SDL_CFLAGS="-I$WIN_DEPS/include -I$WIN_DEPS/include/SDL2"
+    SDL_LIBS="-L$WIN_DEPS/lib -lmingw32 -lSDL2main $WIN_DEPS/lib/libSDL2.dll.a"
+    INCLUDES="-Iinc -Ilib -Ilibtcod/include -Icompat $SDL_CFLAGS"
+    DEFINES="$DEBUG_DEFINE -DLIBTCOD_TERM -DTCODLIB_API="
+    SKIP_BACKENDS="Wcurses Wposix"
+    # -static is what keeps the package to ONE DLL. Without it the .exe also
+    # imports libgcc_s_seh-1.dll, libstdc++-6.dll and libwinpthread-1.dll, none
+    # of which ships with any Windows, so a player who has not installed mingw
+    # gets "the code execution cannot proceed" and nothing else. Measured with
+    # objdump -p: 3 extra DLLs without it, 0 with it.
+    #
+    # -static-libgcc -static-libstdc++ do NOT do the job on their own. The GCC
+    # driver expands each to -Bstatic <lib> -Bdynamic, so its own -Bdynamic
+    # lands after libstdc++, and libstdc++'s gthread layer (pthread_once,
+    # pthread_key_create, pthread_mutex_*) then resolves against the DLL.
+    #
+    # SDL2 escapes -static because SDL_LIBS names libSDL2.dll.a by path rather
+    # than with -lSDL2. -static changes the -l search, and a path is not a
+    # search, so this one library still links as a DLL import.
+    LINK_LIBS="-L$WIN_DEPS/lib -lz -mwindows -static"
+elif [ "$BACKEND" = posix ]; then
     SDL_CFLAGS=""
     SDL_LIBS=""
     INCLUDES="-Iinc -Ilib -Icompat"
@@ -157,23 +237,39 @@ fi
 # Built from the vendored copy. The bundled zlib is too old to compile against
 # a modern SDK (it redefines fdopen), so it is skipped in favour of system -lz.
 TCODLIB="$ROOT/build/libtcod_local.a"
+TOBJ="$ROOT/build/tcodobj"
+TCOD_PIC="-fPIC"
+TCOD_CSTD=""
+TCOD_API=""
+if [ "$TARGET" = windows ]; then
+    TCODLIB="$ROOT/build/libtcod_win.a"
+    TOBJ="$ROOT/build/tcodobj-win"
+    # Same reason as DEFINES above: without it libtcod's own cross-file calls
+    # also go looking for __imp_ symbols.
+    TCOD_API="-DTCODLIB_API="
+    # All PE code is position independent, so -fPIC only earns a warning per file.
+    TCOD_PIC=""
+    # libtcod/include/libtcod.h:143 is `typedef uint8 bool;`. GCC 15 and later
+    # default to C23, where bool is a keyword and that line is an error. Apple
+    # clang still defaults to gnu17 and never sees it, so only this arm pins it.
+    TCOD_CSTD="-std=gnu17"
+fi
 if [ "$BACKEND" = posix ]; then
     TCODLIB=""
 elif [ ! -f "$TCODLIB" ]; then
     echo "--- building vendored libtcod ---"
-    TOBJ="$ROOT/build/tcodobj"
     mkdir -p "$TOBJ"
-    TFLAGS="-O2 -w -fPIC -DTCOD_SDL2 -DNO_OPENGL $SDL_CFLAGS -Ilibtcod/include -Ilibtcod/src"
+    TFLAGS="-O2 -w $TCOD_PIC $TCOD_API -DTCOD_SDL2 -DNO_OPENGL $SDL_CFLAGS -Ilibtcod/include -Ilibtcod/src"
     for f in $(find libtcod/src -name '*.c' -o -name '*.cpp'); do
         case "$f" in libtcod/src/zlib/*) continue ;; esac
         o="$TOBJ/$(echo "$f" | tr '/' '_').o"
         if [ "${f##*.}" = "c" ]; then
-            $CC $TFLAGS -c "$f" -o "$o"
+            $CC $TCOD_CSTD $TFLAGS -c "$f" -o "$o"
         else
             $CXX $TFLAGS -fpermissive -c "$f" -o "$o"
         fi
     done
-    ar rcs "$TCODLIB" "$TOBJ"/*.o
+    $AR rcs "$TCODLIB" "$TOBJ"/*.o
 fi
 
 # ------------------------------------------------------------------ game -----
@@ -233,7 +329,21 @@ $CXX -std=c++17 $EXTRA_LDFLAGS -o "$ROOT/$OUT" "$OBJ"/*.o $TCODLIB $SDL_LIBS $LI
 # purpose. They share this one module file with the ordinary build, so a flag
 # that moved a struct would leave behind a module the ordinary binary then
 # refuses to load.
-if [ ! -f "$ROOT/mod/Incursion.Mod" ] || { [ -z "$EXTRA_CXXFLAGS" ] && [ "$COMPILER" = yes ]; }; then
+#
+# A CROSS BUILD CANNOT DO ANY OF THIS. Its binary does not run on this machine,
+# so it takes the module a NATIVE developer build of the same source wrote. That
+# is safe for the reason docs/SAVE-SCHEMA-SPEC.md gives: the module is
+# fixed-width and layout-safe, and src/AbiCheck.cpp's static_asserts fail the
+# compile above if any of those widths differ on the target.
+if [ "$TARGET" != native ]; then
+    if [ ! -f "$ROOT/mod/Incursion.Mod" ]; then
+        echo
+        echo "No mod/Incursion.Mod, and a $TARGET binary cannot compile one here."
+        echo "Build the native developer binary first, which will produce it:"
+        echo "    ./build_macos.sh"
+        exit 1
+    fi
+elif [ ! -f "$ROOT/mod/Incursion.Mod" ] || { [ -z "$EXTRA_CXXFLAGS" ] && [ "$COMPILER" = yes ]; }; then
     if [ "$COMPILER" = no ]; then
         echo
         echo "No mod/Incursion.Mod, and this build has no resource compiler."
@@ -252,7 +362,7 @@ if [ "$COMPILER" = no ]; then
     echo
     echo "This is a SHIPPING build: no resource compiler, no GPLv2 ACCENT"
     echo "runtime, and -compile will not work. Confirm with:"
-    echo "    nm '$ROOT/$OUT' | grep -c 'yyparse\|yyselect\|yymallocerror'"
+    echo "    $NM '$ROOT/$OUT' | grep -c 'yyparse\|yyselect\|yymallocerror'"
     echo "expecting 0. Those three are every function src/Art.cpp defines, and"
     echo "Art.cpp is the GPLv2 file. Do not grep for 'accent' -- none of the"
     echo "symbols carry that word, so it reports 0 either way."
