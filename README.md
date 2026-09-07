@@ -1,8 +1,11 @@
 ![iNCURSION](docs/media/incursion-logo-web.png)
 
-Julian Mensch's D&D 3.5 roguelike, running natively on the Mac and on Linux.
+Julian Mensch's D&D 3.5 roguelike, running natively on macOS, Windows, Linux and
+the Steam Deck.
 
 ![macOS Apple Silicon](https://img.shields.io/badge/macOS-Apple_Silicon-000?logo=apple)
+![Windows x86-64](https://img.shields.io/badge/Windows-x86--64-0078D4?logo=windows)
+![Linux and Steam Deck](https://img.shields.io/badge/Linux-Steam_Deck-1A9FFF?logo=steamdeck)
 ![signed & notarised](https://img.shields.io/badge/signed_%26_notarised-Apple-success)
 ![latest release](https://img.shields.io/github/v/release/networkingguru/incursion-roguelike?label=release)
 ![license](https://img.shields.io/badge/license-Incursion%20%2F%20MIT%20%2F%20OGL-blue)
@@ -15,10 +18,17 @@ straight 3.5: Mensch threw out the SRD's eight schools and wrote his own eleven,
 Arcana and Thaumaturgy and Weavecraft among them. He built something enormous and
 then very nearly finished it.
 
-It has only ever run on Windows. This fork brings it to macOS, and to Linux and
-the Steam Deck, and it is meant to be played, not built.
+It has only ever run on Windows. This fork brings it to macOS, to Linux and to
+the Steam Deck — and, in release 4, back to Windows. Four downloads, one commit,
+and it is meant to be played, not built.
 
-![iNCURSION running on macOS](docs/media/incursion-macos-web.png)
+![iNCURSION on a MacBook Pro and a Steam Deck](docs/media/incursion-mac-deck-web.png)
+
+![The release 4 trailer](docs/media/incursion-r4-trailer.gif)
+
+*Ninety seconds in the Lit Deep. Every light in it is the game's own: torch
+archons and lanterns carry their colour with them, and the ice matrix takes what
+passes through its walls.*
 
 **Jump to:** [Get it](#get-it) · [What is new](#what-is-new) ·
 [What is fixed](#what-is-fixed) · [What is next](#what-is-next) ·
@@ -28,11 +38,17 @@ the Steam Deck, and it is meant to be played, not built.
 
 ## Get it
 
-There are two downloads, both on the
-[Releases](https://github.com/networkingguru/incursion-roguelike/releases) page.
-The macOS one is finished, signed and notarised. The Linux and Steam Deck one is
-a test build, and it is ahead of macOS: it already carries work that no macOS
-release has yet. [What is new](#what-is-new) says which build has what.
+Release 4 is on the
+[Releases](https://github.com/networkingguru/incursion-roguelike/releases) page,
+and every download on it is built from the same commit. No platform is ahead of
+another any more.
+
+| Download | For | State |
+|---|---|---|
+| `Incursion-macOS-arm64.dmg` | macOS on Apple Silicon | Signed and notarised by Apple |
+| `incursion-windows-x86_64.zip` | Windows 10 or later, x86-64 | New in release 4 |
+| `incursion-steamdeck-x86_64.tar.gz` | SteamOS: the Steam Deck, or a handheld running it | Beta |
+| `incursion-linux-x86_64.tar.gz` | Any other x86-64 Linux | Beta |
 
 ### macOS
 
@@ -51,6 +67,8 @@ not normal, and mean something is genuinely wrong — *"the developer cannot be
 verified"* and *"the app has been modified or damaged"*. If you see either,
 please open an issue.
 
+![iNCURSION running on macOS](docs/media/incursion-macos-web.png)
+
 **Requires** macOS on Apple Silicon. An Intel and universal build is planned; see
 *What is next*.
 
@@ -60,20 +78,44 @@ They are kept outside the app because an app bundle that writes inside itself
 breaks its own code signature, which macOS then reports as the app having been
 modified or damaged.
 
+### Windows
+
+Download `incursion-windows-x86_64.zip`, unpack it wherever you like, and run
+`Incursion.exe` from inside the folder it makes. There is no installer and
+nothing to register.
+
+**Keep the folder together.** `SDL2.dll`, `fonts/`, `graphics/` and
+`mod/Incursion.Mod` sit beside the executable, and the game finds its own ruleset
+by the path it was started with. An `.exe` carried off on its own cannot start.
+
+The executable is not signed, so Windows SmartScreen calls its publisher
+unrecognised the first time you run it: choose *More info*, then *Run anyway*. A
+signing certificate is on the list; see *What is next*.
+
+**Requires** Windows 10 or later on x86-64, and nothing else. The one runtime the
+game needs travels with it as `SDL2.dll`.
+
+Your saves, options and logs stay inside that folder, beside the binary. Move the
+folder and your characters move with it.
+
+This is the first Windows build this fork has produced. It is the same engine the
+other three downloads carry, and it has been played from the title screen into
+the dungeon — but in one place only, a Windows 11 ARM64 virtual machine, where an
+x86-64 binary runs under emulation. No native x86-64 Windows machine has run it
+yet. Please open an issue for whatever you find.
+
 ### Linux and Steam Deck
 
-**This one is a beta, and it says so.** It has had real playtesting on handheld
-hardware, but expect bugs, and expect that a save may not survive the next build.
-Play it to enjoy it and to shake problems out, not for a character you would
-mourn. The tag is rolling: each new test build overwrites it, so the download
-link always points at the newest one.
+**These two are a beta, and they say so.** They have had real playtesting on
+handheld hardware, but expect bugs, and expect that a save may not survive the
+next build. Play them to enjoy them and to shake problems out, not for a
+character you would mourn.
 
-Both of these are Linux builds, and **neither runs on Windows**. A ROG Ally with
-the stock Windows install it ships with cannot use either one. An Ally running
-SteamOS can, and that is what the first tarball was tested on.
+Both are Linux builds, and neither runs on Windows. A ROG Ally with the stock
+Windows install it ships with wants the Windows download above. An Ally running
+SteamOS wants the Deck tarball, and that is the machine it was tested on.
 
-There are two tarballs, and which one you want depends on whether SDL2 is already
-on the machine.
+Which of the two you want depends on whether SDL2 is already on the machine.
 
 - `incursion-steamdeck-x86_64.tar.gz` — for **SteamOS**: the Steam Deck, or
   another handheld running SteamOS in place of the system it shipped with. It
@@ -113,7 +155,7 @@ binary. Move that folder and your characters move with it.
 
 ### Three ways to run it
 
-Both downloads are the windowed SDL build, which is the way to play. Building
+Every download is the windowed SDL build, which is the way to play. Building
 from source also gives you a plain terminal build that needs no graphics at all
 and works over ssh, and a headless mode that plays from a script, which is how
 this fork finds its own bugs.
@@ -143,30 +185,11 @@ subset of it.
 
 ## What is new
 
-The newest work is first, and each heading says which download carries the work
-under it. The two downloads sit at different points. The macOS download is
-**release 3**. The Linux and Steam Deck download is a rolling beta, and it
-carries everything from **Since release 3** downward.
+The newest work is first. **Release 4 is the first release where every
+download is the same program.** macOS, Windows, Linux and the Steam Deck are all
+built from one commit, and no platform is held back while another catches up.
 
-### Not in either download yet
-
-**Two archons stop putting each other's lights out.** An archon standing inside a
-neighbouring archon's magic circle lost its own light and its own aura for good,
-the moment the two drifted apart. Every archon's circle carries the same effect
-id, so the archon standing inside held two rows under that one id, and leaving
-the neighbour's circle deleted both — the second deletion then reaped the
-creature's own light. The same duplication also paid an overlapping circle's
-bonus, and its penalty, once per circle. It takes two archons in one place to
-show, which is why every single-archon check passed.
-
-**A swallowed creature feels what its swallower walks through.** A creature that
-has been swallowed or engulfed rides at its carrier's square and cannot move
-itself, and the code that announces crossing a field boundary told only the mover
-and the mover's mount. The passenger therefore never gained a status from a field
-its carrier walked into, and never lost one either. It now gets the same events
-its carrier gets.
-
-### Since release 3 — playable in the Linux and Steam Deck beta
+### New in release 4 — in every download
 
 **The map is lit in colour.** Incursion draws its map in the sixteen colours the
 character set gives it, and a lit square used to be no more than a brighter
@@ -211,6 +234,33 @@ and headless builds fall back to the same wordmark redrawn as hard CP437 glyphs 
 sixteen colours, and both keep the *Halls of the Goblin King* subtitle and the
 credits below it.
 
+**It runs on Windows.** Incursion began as a Windows game, and this fork could
+not build it there: `src/ErrorLog.cpp`, added by this port, carried four
+unguarded POSIX includes, and nothing had compiled on Windows since the day that
+file landed. There is now an `Incursion.exe`, cross-built from the Mac with
+mingw-w64, and it has been played through character creation and down into the
+dungeon in a Windows 11 virtual machine. Most of what stood in the way was found
+by the compiler rather than by any reading of the code, exactly as the Linux port
+went: a shim header in `compat/` that shadowed mingw's own `<malloc.h>` and took
+`alloca` away with it, at the same call site where the same mistake had already
+been made on Linux; a vendored library that needs `-std=gnu17`, because GCC 16
+made `bool` a keyword and that library still typedefs it. None of it was visible
+from macOS.
+
+**The one the compiler could not find.** This is the first binary this project
+has ever built with GCC, and it died moments after character creation on an
+invalid object handle. Three binaries were measured in the VM from one source,
+differing only in flags: `-O2` crashes, `-O0` is clean, and `-O2
+-flifetime-dse=1` is clean. `Object::operator new` zeroes every allocation, and
+constructors across the object hierarchy lean on that fill instead of setting
+their own members — the same pattern as the `Item` constructor below. C++ says an
+object's lifetime has not begun until its constructor runs, so a compiler is
+entitled to delete that memset as a dead store, and GCC at its default setting
+does. The flag stops it. **It masks the defect rather than removing it:** clang
+holds the same licence and merely does not take it, so the macOS and Linux builds
+are latent rather than safe. The constructor audit that would actually fix this
+is filed and open.
+
 **It runs on Linux and on the Steam Deck, and you can download it.** Six places in
 the port assumed Apple's compiler or Apple's C library: a hardcoded `clang`, a
 shim header that shadowed glibc's own, three missing standard includes, a
@@ -223,6 +273,42 @@ backends now compile there under either clang or GCC, and a seeded session plays
 through with no errors. There are two tarballs on the Releases page, one for the
 Deck and one for any x86-64 Linux; see [Get it](#get-it). The nightly gate
 cross-builds for Linux, so a Linux break stops a merge.
+
+**A quieter palette, and you choose it.** The sixteen colours the game draws in
+are vivid, and a vivid surface fights the new light rather than takes it. There
+is now a third palette beside the classic and softer ones, picked on the Options
+screen and applied without a restart. Its saturation is a third lower while every
+colour keeps the brightness of its classic counterpart, so a close torch supplies
+62% of a lit cell's hue where the classic table gives it 46%. Darkening it as
+well was tried and reverted: rendered through the real shading function, all
+sixteen colours collapsed toward the same tan under a close torch, lighting a
+green slime and a red imp alike.
+
+**The Combat and Use menus show only what you can actually do.** The Use menu
+(`U`) has always filtered itself against the character. The Combat Options menu
+(`C`) gated 3 of its 21 rows and the YUse menu (`Y`) gated none of its 63, so
+every character was offered every verb whether or not the game could perform it —
+Called Shot's own help text read *"Not implemented yet"* and it was still on the
+menu. Both menus now hide a row when the verb has no implementation, or when the
+character does not meet its prerequisite. Hidden means absent, not greyed.
+Nothing is deleted: the 27 unbuilt verbs are Julian Mensch's recorded intent, and
+each returns to the menu the day somebody builds it.
+
+**Two archons stop putting each other's lights out.** An archon standing inside a
+neighbouring archon's magic circle lost its own light and its own aura for good,
+the moment the two drifted apart. Every archon's circle carries the same effect
+id, so the archon standing inside held two rows under that one id, and leaving
+the neighbour's circle deleted both — the second deletion then reaped the
+creature's own light. The same duplication also paid an overlapping circle's
+bonus, and its penalty, once per circle. It takes two archons in one place to
+show, which is why every single-archon check passed.
+
+**A swallowed creature feels what its swallower walks through.** A creature that
+has been swallowed or engulfed rides at its carrier's square and cannot move
+itself, and the code that announces crossing a field boundary told only the mover
+and the mover's mount. The passenger therefore never gained a status from a field
+its carrier walked into, and never lost one either. It now gets the same events
+its carrier gets.
 
 **Every Item member is set before it is read.** The item constructor worked out a
 new item's hit points from two of its fields — its enchantment id and its plus —
@@ -253,9 +339,9 @@ Monkey Grip now one-hands a bastard sword without its exotic proficiency, which
 frees the off hand for a shield, swung at the two-handed Strength bonus and -2 to
 hit.
 
-**And a run of smaller fixes.** Holy weapons and holy damage smite non-evil undead.
-Walls stopped leaking light after a door in them was removed. Illusory damage no
-longer leaves you permanently above your maximum hit points once it wears off.
+**And a run of smaller fixes.** Walls stopped leaking light after a door in them
+was removed. Illusory damage no longer leaves you permanently above your maximum
+hit points once it wears off.
 Permanent glows and magic auras stopped winking out on their own: an archon's
 continual light and its magic circle destroyed themselves the moment they were
 cast, and every permanent field on a level used to die the first time the in-game
@@ -263,7 +349,7 @@ day rolled over. A target prompt accepts a square with a staircase on it. ESC
 leaves character generation instead of doing nothing. Tanglefoot catches the
 mount, and dismounting no longer drags a stuck mount along.
 
-### New in release 3 — in both downloads
+### New in release 3 — in every download
 
 **Your save survives new content.** Every reference to game content inside a save
 used to be a bare number, and that number was a position in a list. The lists sit
@@ -427,8 +513,11 @@ step with what the game believes.
 
 ## What is next
 
-- **Take Linux and the Steam Deck out of beta**, and cut a macOS release that
-  carries everything the beta already has.
+- **Give the Windows and Steam Deck downloads the confidence macOS has.** All
+  four come from one commit, but only macOS has had a signed release behind it
+  since release 1.
+- **Sign the Windows executable**, so SmartScreen stops calling its publisher
+  unrecognised.
 - **Intel and universal Macs**, so this runs on hardware older than Apple Silicon.
 - **Finish the content Mensch already wrote.** This is the exciting one. The game
   describes a great deal it never quite got round to building: eight races have
@@ -447,11 +536,13 @@ step with what the game believes.
 
 You do not need this to play. It is here for people who want to change something.
 
-`master` is the development tip. The `release-3` tag marks the commit the
-current download was built from. The `release-1` tag marks this fork's first
-release, but the release-1 image was rebuilt after that tag, to carry the
-module-load and Gatekeeper fixes described in [`docs/FIXED.md`](docs/FIXED.md);
-that tag is not a byte-for-byte match for it.
+`master` is the development tip. The `release-4` tag marks the commit every
+current download was built from. `release-4-windows` is that same engine plus the
+portability fixes the Windows executable needed, none of which change behaviour
+on any platform. The `release-1` tag marks this fork's first release, but the
+release-1 image was rebuilt after that tag, to carry the module-load and
+Gatekeeper fixes described in [`docs/FIXED.md`](docs/FIXED.md); that tag is not a
+byte-for-byte match for it.
 
 ```
 brew install sdl2 pkg-config
@@ -467,6 +558,27 @@ Both binaries accept `-dump`, so from a source tree the character report is
 `./incursion -dump save/YourCharacter.sav`, and `tools/dump_save.sh` wraps the
 same thing in a disposable sandbox. `tools/check_dump_save.sh` asserts that the
 two builds produce byte-identical reports for the same save.
+
+### Cross-building for Windows
+
+```
+brew install mingw-w64
+TARGET=windows ./build_macos.sh
+```
+
+That produces `Incursion.exe`. `TARGET` picks the compiler and the libraries;
+`BACKEND` picks which source file defines `main()`. They are separate axes, and
+Windows uses the same libtcod backend the Mac does. Two things must be in place
+first: SDL2 and zlib staged for mingw under `build/win-deps`, and one native
+build, because a cross-compiled binary cannot compile the data module on this
+machine.
+
+There is no tracked Windows packaging script; the bundle is assembled by hand,
+and `SDL2.dll`, `fonts/`, `graphics/` and `mod/Incursion.Mod` must all travel
+with the executable. Without `graphics/logo.png` the title screen silently falls
+back to the ASCII wordmark. The recipe, the packaging manifest and the defects
+the port had to clear are in
+[`docs/specs/2026-09-07-windows-build-brief.md`](docs/specs/2026-09-07-windows-build-brief.md).
 
 ### Packaging a release
 
@@ -861,13 +973,19 @@ Work is tracked in the repository with
 
 ## Windows
 
-This fork targets macOS and Linux; it has never built or run on Windows. The
-original MSVC build is still here — `build_sdl2.bat`, `build_libtcod.bat` and
-`build_pdcurses.bat` rebuild the checked-in dependencies, and `build.bat`
-produces `IncursionLibtcod.exe` and `IncursionCurses.exe` — but it currently
-does **not** compile: `src/ErrorLog.cpp`, added by this fork, has unguarded
-POSIX includes (`inc-xo4o`). No Windows build has ever been run against this
-fork, so nothing here is a claim that it works.
+Release 4 ships a Windows executable. It is cross-built from macOS with
+mingw-w64 — `TARGET=windows ./build_macos.sh` — and it is the same engine the
+other three downloads carry. [Get it](#get-it) says how to download and run it.
+
+The original MSVC build is still in the tree, and it is not the path this fork
+took. `build_sdl2.bat`, `build_libtcod.bat` and `build_pdcurses.bat` rebuild the
+checked-in dependencies, and `build.bat` produces `IncursionLibtcod.exe` and
+`IncursionCurses.exe`. Three things rule it out, any one of them sufficient: it
+reads a `build/dependencies/` directory that is not in this repository, it never
+compiles the data module, and it has no shipping mode, so everything it can
+produce links `src/Art.cpp` and the GPLv2 ACCENT runtime with it. The cross-build
+answers all three. `src/Wcurses.cpp`, the second Windows frontend, is still built
+by nothing.
 
 **Why the dependencies are checked in, in Richard Tew's words:** bug fixes to
 gameplay require a save game, and a save game only loads in the build that wrote
