@@ -7,7 +7,7 @@ the Steam Deck.
 ![Windows x86-64](https://img.shields.io/badge/Windows-x86--64-0078D4?logo=windows)
 ![Linux and Steam Deck](https://img.shields.io/badge/Linux-Steam_Deck-1A9FFF?logo=steamdeck)
 ![signed & notarised](https://img.shields.io/badge/signed_%26_notarised-Apple-success)
-![latest release](https://img.shields.io/github/v/release/networkingguru/incursion-roguelike?label=release)
+![latest release](https://img.shields.io/github/v/release/networkingguru/incursion-roguelike?label=release&cacheSeconds=1800)
 ![license](https://img.shields.io/badge/license-Incursion%20%2F%20MIT%20%2F%20OGL-blue)
 
 Incursion is one of the deepest roguelikes ever written. Not a game with a few
