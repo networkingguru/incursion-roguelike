@@ -15,7 +15,7 @@
 # points, where the wizard 'Generate 50 XP Ticks' route would need 1000 of
 # them for a Barbarian's second level and would prove nothing extra.
 #
-# TextTerm::SkillManager (src/Managers.cpp:1528) ran one switch over the key.
+# TextTerm::SkillManager (src/Managers.cpp:1529) ran one switch over the key.
 # Its default: arm was also its exit path, because KY_ENTER fell through into
 # it, so a key the switch did not list did what ENTER does -- and during
 # character generation, with ranks still unspent, that is `goto Reset`, which
@@ -80,10 +80,34 @@ fail=0
     exit 2
 }
 
+# tools/headless.sh exits 0 only when the script finished or asked to quit,
+# and both of these scripts end with @quit. Every other status -- 3 out of
+# keys, 4 watchdog, 5 no gameplay, 6 a screen that never appeared, 7 an
+# unlisted assertion -- means the session diverged from what this check thinks
+# it measured, so nothing it left behind can be trusted. That is INCONCLUSIVE
+# and not FAIL: a broken session says nothing about the bug either way, which
+# is the distinction inc-loa.3 was filed over.
+#
+# WHY THIS IS NOT COVERED BY THE DUMP-EXISTENCE GUARDS BELOW. They fire on a
+# run that never REACHED the screen. A run that reached it, dumped all four
+# screens and THEN died -- in Part A's UP*40 tail, which empties the pool --
+# satisfies every one of them. Found in review, 2026-09-07.
+session_ended_well() {
+    local status=$1 output=$2 dir=$3 part=$4
+    [ "$status" -eq 0 ] && return 0
+    echo "INCONCLUSIVE: the $part session did not end cleanly (exit $status), so"
+    echo "              whatever it left behind cannot be read as a measurement."
+    printf '%s\n' "$output" | sed -n '/^ended:/,/^[a-z]/p' | sed 's/^/              /'
+    echo "              Run dir: $dir"
+    return 1
+}
+
 echo "--- Part A: character generation, pool not empty ---"
 out="$(INCURSION_OPTIONS="$OPTS" tools/headless.sh tools/keys/skill-manager-reset.keys "$SEED" 2>&1)"
+rc=$?
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 S="$run/logs/screens"
+session_ended_well "$rc" "$out" "$run" "Part A" || exit 2
 
 for f in 0001-before 0002-after-end 0003-after-home 0004-after-esc-no; do
     [ -f "$S/$f.txt" ] || {
@@ -137,8 +161,10 @@ fi
 echo
 echo "--- Part B: level-up, pool empty ---"
 outB="$(INCURSION_OPTIONS="$OPTS" tools/headless.sh tools/keys/skill-manager-levelup.keys "$SEED" 2>&1)"
+rcB=$?
 runB="$(echo "$outB" | awk '/^run:/ {print $2}')"
 B="$runB/logs/screens"
+session_ended_well "$rcB" "$outB" "$runB" "Part B" || exit 2
 
 for f in 0001-open 0002-after-end 0003-after-home 0004-after-esc; do
     [ -f "$B/$f.txt" ] || {
