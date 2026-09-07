@@ -55,7 +55,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-SAVE="${INCURSION_WCF_SAVE:-/Users/brianhill/Scripts/incursion-repro-stairwall/Furious_Fox.sav}"
+SAVE="${INCURSION_WCF_SAVE:-/Users/brianhill/Scripts/Incursion-work/repro/incursion-repro-stairwall/Furious_Fox.sav}"
 WANT_SHA1="b868277dbf5a78b016685367012d8c558d03905a"
 
 [ -x ./incursion-headless ] || {
