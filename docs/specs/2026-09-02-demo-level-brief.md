@@ -9,6 +9,17 @@ binary (`./incursion`). The Claude session reviews each phase's diff, runs the
 SDL build outside the sandbox, and does the wizard-mode navigate-and-save that
 produces the trailer save.
 
+> **SUPERSEDED 2026-09-04. Do not build from this file, and do not raise
+> questions about its contents.** Brian rejected the hand-authored set-piece
+> approach the whole brief rests on -- "I want the actual generation types from
+> the levels" -- and redirected inc-wefr item 2 to the game's real procedural
+> generation, lighting seeded into generated content. The dungeon this brief
+> produced, `f582c5f` "The Sundered Deep", was committed and then dropped; it is
+> not an ancestor of master and nothing in `lib/` carries it. The current
+> direction is in bead `inc-wefr` and in memory key
+> `resume-2026-09-04-demo-pivot`. Kept as the record of an approach that was
+> tried, and for the lighting facts it established, which are still true.
+
 **This is a spec, not approval to build.** Nothing here goes to Codex until
 Brian reads this file and says go.
 

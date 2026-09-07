@@ -111,6 +111,21 @@ driven_by() {
         grep -v 'check_probe_hooks\.sh$' | tr '\n' ' ' | sed 's/ $//'
 }
 
+# A hook can be load-bearing with no script driving it, because it IS the
+# reproduce command of a claim already written down. Deleting one of those
+# leaves the ledger row and the evidence README naming a command that no longer
+# exists -- the exact failure this file's header warns about. Ruling, 2026-09-07
+# (inc-loa.25): as long as a repro needs it, it stays.
+#
+# Only COMMITTED claims count: the ledger and the evidence READMEs. src/ is
+# deliberately not searched, because the upstream: marker quoting the command
+# sits in the same file as the getenv it describes, so a match there would
+# prove nothing. -w for the same reason driven_by uses it.
+cited_by() {
+    grep -rlw "$1" docs/REPORTING-GATE.md docs/evidence 2>/dev/null |
+        tr '\n' ' ' | sed 's/ $//'
+}
+
 if [ "${1:-}" = "--baseline" ]; then
     : > "$BASELINE"
     for h in $hooks; do
@@ -153,8 +168,11 @@ for h in $hooks; do
             live=$((live+1)) ;;
         *)
             drivers="$(driven_by "$h")"
+            citers="$(cited_by "$h")"
             if [ -n "$drivers" ]; then
                 inuse=$((inuse+1)); INUSE_LIST+=("$h ($id) <- $drivers")
+            elif [ -n "$citers" ]; then
+                inuse=$((inuse+1)); INUSE_LIST+=("$h ($id) <- reproduce command in $citers")
             elif ls docs/evidence/"$id"/*.patch > /dev/null 2>&1; then
                 retired=$((retired+1)); RETIRED_LIST+=("$h ($id)")
             else
@@ -166,16 +184,17 @@ done
 echo "hooks:    $((knobs + live + held + retired + orphans + inuse)) reading the environment in src/ and inc/"
 echo "  knob:      $knobs documented facility, not scaffolding"
 echo "  live:      $live serving a bead that is still open"
-echo "  in use:    $inuse bead finished, but a check in tools/ drives it"
+echo "  in use:    $inuse bead finished, but a check or a committed repro needs it"
 echo "  held:      $held bead finished, reproduction NOT yet preserved"
 echo "  retired:   $retired bead finished, reproduction preserved -- safe to delete"
 echo "  undeclared: $orphans naming no bead, known and baselined"
 
 if [ "$inuse" -gt 0 ]; then
     echo
-    echo "IN USE -- the bead is finished, but a check in tools/ sets this hook"
-    echo "        to reach the state it measures. DO NOT DELETE THESE. The"
-    echo "        reproduction is the check, and it runs:"
+    echo "IN USE -- the bead is finished, but the hook is still load-bearing:"
+    echo "        a check in tools/ sets it to reach the state it measures, or"
+    echo "        a committed reproduce command names it. DO NOT DELETE THESE."
+    echo "        The reproduction is the check or the command, and it runs:"
     printf '  %s\n' "${INUSE_LIST[@]}"
 fi
 

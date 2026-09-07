@@ -1065,7 +1065,11 @@ void Thing::MoveDepth(int16 NewDepth, bool safe) {
    with nothing above it to measure against -- an ordinary stairway descent
    rather than a chained fall. Only nest>=2 lines carry a cost.
 
-   Delete with inc-upw.15. */
+   Retained, not scaffolding. Ruling, 2026-09-07: as long as a reproduce
+   command needs a hook, the hook stays. This one IS the reproduce command,
+   quoted in the base-code marker below and in the ledger row it feeds, so
+   deleting it would leave both naming a command that does not exist. The bead
+   it serves is inc-x9i. */
 struct MoveDepthStackProbe {
     static int16 Nest;
     static char *Frames[64];
@@ -1111,7 +1115,9 @@ char *MoveDepthStackProbe::Frames[64];
    is visible without any inference.
 
    The nest counter is separate from MoveDepthStackProbe's, which only counts
-   when its own variable is set. Delete with inc-upw.15. */
+   when its own variable is set. Retained for the reason given at
+   MoveDepthStackProbe: a committed reproduce command needs it. Serves
+   inc-x9i. */
 struct MoveDepthNest {
     static int16 Level;
     MoveDepthNest()  { Level++; }
@@ -1380,7 +1386,10 @@ void Player::MoveDepth(int16 NewDepth, bool safe) {
            else; it only chooses where the arriving player lands, which is what
            makes the fall chain reachable on demand instead of by luck. With
            'all' each arrival lands on chasm again, so the recursion runs to the
-           bottom of the dungeon. Delete with inc-upw.15. */
+           bottom of the dungeon. Retained: this and INCURSION_FALL_CHAIN_SKIP
+           are the steering in a committed reproduce command, so deleting them
+           breaks that README's own command. The README and the bead it serves
+           are inc-upw.15. */
         if (const char *fc = getenv("INCURSION_FALL_CHAIN"))
             if (!strcmp(fc, "all") || new_m->Depth == (int16)atoi(fc)) {
                 /* INCURSION_FALL_CHAIN_SKIP ignores the first N matching
