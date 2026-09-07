@@ -1243,7 +1243,7 @@ void Player::MoveDepth(int16 NewDepth, bool safe) {
            No dungeon in lib/ defines BELOW_DUNGEON, so leaving the bottom
            level of a dungeon downwards always reads RES(0). The climb-down
            route needs no wizard mode, no script and no recursion: Descend
-           calls MoveDepth straight (src/Skills.cpp:4181) with safe=true, and
+           calls MoveDepth straight (src/Skills.cpp:4204) with safe=true, and
            safe=true does not help. This read happens before the function ever
            looks at safe: the first test of it sits over a hundred lines below,
            inside the if (new_m) block that a null mID never reaches.
