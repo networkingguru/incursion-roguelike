@@ -19,10 +19,11 @@
 # max(10,clev+5) reads 10 and max(12,clev+6) reads 12.
 #
 # It has to be this and not behaviour. The number is a check bonus, not a
-# hit-dice cap: src/Skills.cpp:2162 reads it, and :4448-4562 adds a d20, a
-# feat, a Knowledge rank and Charisma before dividing by resistance. Two extra
-# points shift a probability and cross no threshold, so a behavioural test
-# would need thousands of trials to see what one screen states outright.
+# hit-dice cap: src/Skills.cpp:2162 reads it, and src/Skills.cpp:4499-4612
+# adds a d20, a feat, a Knowledge rank and Charisma before dividing by
+# resistance. Two extra points shift a probability and cross no threshold, so
+# a behavioural test would need thousands of trials to see what one screen
+# states outright.
 #
 # Usage: tools/check_ring_command_level.sh     (0 pass, 1 fail, 2 inconclusive)
 set -uo pipefail
