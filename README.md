@@ -92,8 +92,8 @@ The executable is not signed, so Windows SmartScreen calls its publisher
 unrecognised the first time you run it: choose *More info*, then *Run anyway*. A
 signing certificate is on the list; see *What is next*.
 
-**Requires** Windows 10 or later on x86-64, and nothing else. The one runtime the
-game needs travels with it as `SDL2.dll`.
+**Requires** Windows 10 or later on x86-64, and nothing else. `SDL2.dll` travels
+with the game; everything else the executable imports is Windows' own.
 
 Your saves, options and logs stay inside that folder, beside the binary. Move the
 folder and your characters move with it.
@@ -568,17 +568,27 @@ TARGET=windows ./build_macos.sh
 
 That produces `Incursion.exe`. `TARGET` picks the compiler and the libraries;
 `BACKEND` picks which source file defines `main()`. They are separate axes, and
-Windows uses the same libtcod backend the Mac does. Two things must be in place
-first: SDL2 and zlib staged for mingw under `build/win-deps`, and one native
-build, because a cross-compiled binary cannot compile the data module on this
-machine.
+Windows uses the same libtcod backend the Mac does.
 
-There is no tracked Windows packaging script; the bundle is assembled by hand,
-and `SDL2.dll`, `fonts/`, `graphics/` and `mod/Incursion.Mod` must all travel
-with the executable. Without `graphics/logo.png` the title screen silently falls
-back to the ASCII wordmark. The recipe, the packaging manifest and the defects
-the port had to clear are in
-[`docs/specs/2026-09-07-windows-build-brief.md`](docs/specs/2026-09-07-windows-build-brief.md).
+Two of the four steps are scripted and two are not, and the split is not
+obvious:
+
+| Step | |
+|---|---|
+| Stage SDL2 and zlib for mingw under `build/win-deps` | manual |
+| Cross-build the vendored libtcod | scripted |
+| Compile and link the `.exe` | scripted |
+| Assemble and zip the package | manual |
+
+You also need one native build first, because a cross-compiled binary cannot
+compile the data module on this machine. `SDL2.dll`, `fonts/`, `graphics/` and
+`mod/Incursion.Mod` must all travel with the executable, and without
+`graphics/logo.png` the title screen silently falls back to the ASCII wordmark.
+
+[`docs/WINDOWS-BUILD.md`](docs/WINDOWS-BUILD.md) is the recipe: the exact
+commands for both manual halves, the versions that matter, the import check that
+says whether the static link held, and what the recipe cannot prove — there is no
+Windows machine here, so no step in it demonstrates that the binary plays.
 
 ### Packaging a release
 
