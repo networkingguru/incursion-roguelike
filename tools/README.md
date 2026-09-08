@@ -30,9 +30,9 @@ backend can be linked at a time, because each defines `main()`, `Error()` and
 BACKEND=posix ./build_macos.sh   # -> ./incursion-headless  the POSIX/ncurses build
 ```
 
-`build_macos.sh:48` defaults `BACKEND` to `libtcod`; `:51` maps that to
-`OUT=incursion` and `:52` maps `posix` to `OUT=incursion-headless`. Either line
-also writes `mod/Incursion.Mod` when that file is absent (`build_macos.sh:236-246`),
+`build_macos.sh:84` defaults `BACKEND` to `libtcod`; `:87` maps that to
+`OUT=incursion` and `:88` maps `posix` to `OUT=incursion-headless`. Either line
+also writes `mod/Incursion.Mod` when that file is absent (`build_macos.sh:371-380`),
 because both builds carry the resource compiler by default.
 
 The `posix` build compiles `src/Wposix.cpp` and links `-lz -lncurses`
@@ -99,7 +99,7 @@ them (`src/Debug.cpp`), so adding an option renumbers everything after it —
 dump the menu and read the letter rather than counting. And `w`, not `W`: an
 uppercase token sets SHIFT, and both key tables bind `KY_CMD_WIZMODE` with
 modifier flags of 0, so `W` is a different keystroke that reaches nothing
-(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:4702`/`4822`).
+(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:4715`/`4835`).
 
 `[M] Create Altar` is there for the harness. A sacrifice needs the player to
 be standing on an altar, and the only other source of one is `MakeLev`'s
@@ -119,11 +119,11 @@ self-explanatory.
 
 **`ended: NO GAMEPLAY`** — the run never entered a map, so it measured nothing.
 `Game::Play` writes `logs/session.log` on the first completed turn, so that file
-exists if and only if the session reached gameplay (`headless.sh:175-176`). When
-it is missing and the run would otherwise have exited 0 or 3, `headless.sh:177-179`
+exists if and only if the session reached gameplay (`headless.sh:170-171`). When
+it is missing and the run would otherwise have exited 0 or 3, `headless.sh:172-174`
 rewrites the exit code to 5. Do not count such a run as a pass. Screens are not
 a substitute test: `@dump` lines fire even in a session that never entered a map,
-and one vacuous run left 11 of them (`headless.sh:169-171`).
+and one vacuous run left 11 of them (`headless.sh:164-166`).
 
 **`ended: ASSERT`** — the engine logged an `ASSERT failed` whose condition is
 not listed in `tools/known_asserts.txt`, and the run would otherwise have
@@ -144,30 +144,30 @@ keystrokes, not the length of the run, so a long honest session is safe
 (`src/Wposix.cpp:580-584`).
 
 **`death: STUCK`** — the run ended with `Die? [yn]` still on the last screen,
-unanswered (`headless.sh:266-270`). The pinned settings run with `OPT_NODEATH`
+unanswered (`headless.sh:261-264`). The pinned settings run with `OPT_NODEATH`
 on, so a killing blow asks that question instead of ending the game, and a key
 script answers it blind with whatever token comes next
-(`headless.sh:235-238`). If no `y` or `n` remains in the script, every later
+(`headless.sh:230-233`). If no `y` or `n` remains in the script, every later
 keystroke is swallowed and the run still reports `ended: cleanly`
-(`headless.sh:245-251`). A confirmed death prints `death: N confirmed` instead
+(`headless.sh:243-246`). A confirmed death prints `death: N confirmed` instead
 and is logged to `logs/death.log`. Neither gets its own exit code, on purpose:
 whether a death should fail a run is a product decision the script does not make
 (`headless.sh:38-43`).
 
 **`stuck-prompt: threat-disengage`** — the run ended with `You are in a
 threatened area. Abort, Flee or Disengage?` still on screen
-(`headless.sh:289-292`). That prompt has no option gate at all and fires
+(`headless.sh:284-287`). That prompt has no option gate at all and fires
 whenever a player-controlled creature moves away from a hostile creature that
-perceives it (`src/Move.cpp:841`, quoted at `headless.sh:275-276`).
+perceives it (`src/Move.cpp:841`, quoted at `headless.sh:270-271`).
 `tools/keys/dive.keys` contains none of `a`, `f`, `d`, `?` or ESC, so once the
 prompt fires the rest of the script is swallowed. Measured on 7 of 40 seeds
-(`headless.sh:284-286`).
+(`headless.sh:279-281`).
 
 **`map audit: armed, no inconsistencies found`** — the audit ran and found
 nothing. `src/MapAudit.cpp:64` writes an `=== map audit armed ... ===` header
 whenever the audit is on, so the log carries a line even on a clean run. That is
-what lets `headless.sh:349-350` tell "clean" apart from "never ran". A missing
-log is reported three different ways depending on why (`headless.sh:341-348`),
+what lets `headless.sh:344-345` tell "clean" apart from "never ran". A missing
+log is reported three different ways depending on why (`headless.sh:336-343`),
 because merging them is the exact defect this code used to have.
 
 ---
@@ -201,10 +201,10 @@ run against another MUST pass `INCURSION_OPTIONS`. The gate pins
 file, or names one it cannot have, is an error (`headless.sh:99-108`).
 
 **Trap 3 — the map audit is ON by default and it is expensive.**
-`headless.sh:120` sets `INCURSION_MAP_AUDIT` to 1 unless you override it. A
+`headless.sh:115` sets `INCURSION_MAP_AUDIT` to 1 unless you override it. A
 sample of a headless run on 2026-08-15 put 75 percent of the run inside
 `AuditMap`, so a session with the audit on measures the audit and not the game
-(`headless.sh:115-119`). **Anything timing the engine MUST set
+(`headless.sh:111-114`). **Anything timing the engine MUST set
 `INCURSION_MAP_AUDIT=0`. Anything hunting defects MUST leave it on.**
 
 **Trap 4 — a key script longer than the budget stops early and exits 3, and
@@ -255,9 +255,9 @@ loop, then count the run directories and confirm the count equals the number of
 runs before you believe any per-seed number.** A name you chose says what the
 run was for, which a pid does not, and the count is the only thing that proves
 the runs stayed apart. `soak.sh:59` does this, and so does every check that
-drives more than one session (`check_headless.sh:255`, `:278`, `:287`, `:299`,
-`:320`; `check_layout.sh:88`; `check_dump_save.sh:55`;
-`check_load_corrupt.sh:68`). `check_race_feats.sh:28-29` does NOT — it takes the
+drives more than one session (`check_headless.sh:258`, `:282`, `:292`, `:305`,
+`:327`; `check_layout.sh:89`; `check_dump_save.sh:56`;
+`check_load_corrupt.sh:69`). `check_race_feats.sh:28-29` does NOT — it takes the
 timestamped default and parses the `run:` line out of the harness output. That
 is now safe in a loop as well, because the default name is unique, but it still
 tells you nothing about which run was which.
@@ -343,7 +343,7 @@ the job, and each still explains an older log or an older commit.
 
 `run_probe.sh` was **deleted on 2026-08-18**. Its own header said "Delete this
 script once the saved-game position bug is fixed", and that bug is fixed:
-`docs/REPORTING-GATE.md:392` records `*((long*)&hm)` destroying the player's
+`docs/REPORTING-GATE.md:403` records `*((long*)&hm)` destroying the player's
 position as a closed fix, and `src/AbiCheck.cpp:11` now gates the type widths it
 depended on. It was also redundant — `play.sh` sets the same two probes and more
 (`play.sh:41-49`) and prints a report afterwards, which `run_probe.sh` did not.
@@ -733,8 +733,8 @@ id (`check_upstream_marks.sh:35-39`). Pass 3 WARNED rather than failed until
 judgement, not this script's call. Both were settled that day (bd inc-6s5), so
 the pass now FAILS and `--strict` is the default (`check_upstream_marks.sh:41-47`,
 `:73-79`). The flag is still accepted and does nothing, so an older caller does
-not break (`check_upstream_marks.sh:60`). `--selftest` proves the detectors still
-detect (`check_upstream_marks.sh:61`), and since 2026-08-23 that includes pass 3
+not break (`check_upstream_marks.sh:74-75`). `--selftest` proves the detectors still
+detect (`check_upstream_marks.sh:89`), and since 2026-08-23 that includes pass 3
 itself: a synthetic table with one unmatched row, one matched row and one row
 naming a file that is not there must produce exactly one WARN, one FAIL and no
 word about the matched row.
@@ -744,7 +744,7 @@ return 0 on every path, printing two MISALIGNED slots and exiting green, so
 anything running it as a gate got a pass no matter what happened
 (`check_api_arity.py:52-55`). It now compares what it finds against a `BASELINE`
 dictionary held in the script itself at `:110`. Three outcomes
-(`check_api_arity.py:56-63`):
+(`check_api_arity.py:57-60`):
 
 - a MISALIGNED slot IN the baseline — reported as KNOWN, tolerated;
 - a MISALIGNED slot NOT in it — FAIL, a new defect or a real change;
