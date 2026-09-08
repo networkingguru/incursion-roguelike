@@ -27,23 +27,23 @@ configuration (`build.bat:67-74`) and by `build.sh:125-129`. Stage 3 has no
 `./lib` (`src/cpp3.c:66-69`), which with stage 2 is why `#include "Api.h"` at
 `lib/main.irc:2` resolves to `inc/Api.h`. `ICOMP` is predefined on every run
 (`src/cpp1.c:458`) and is the switch that lets one header serve both compilers
-(`inc/Defines.h:45`, `inc/Defines.h:4648`).
+(`inc/Defines.h:45`, `inc/Defines.h:4655`).
 
 ## What ships and what does not
 
-`src/RComp.cpp` is a single `#ifdef DEBUG` block, line 1 to line 1506. So is
+`src/RComp.cpp` is a single `#ifdef DEBUG` block, line 1 to line 1518. So is
 `src/Art.cpp`, line 1 to 1578 -- the ACCENT runtime that defines `yyparse`
 (`:1524`), and which its own header calls GPLv2 code that "cannot be compiled
 into any distributed binaries" (`:3`). `src/Tokens.cpp` and `src/yygram.cpp`
 carry no such guard, and `src/yygram.cpp` calls `AllocString()` and
 `AllocRegister()` unconditionally (`:7857`, `:8548`). Both functions live
-inside the guarded block (`src/RComp.cpp:1479`, `src/RComp.cpp:1461`), so dropping `DEBUG`
+inside the guarded block (`src/RComp.cpp:1491`, `src/RComp.cpp:1473`), so dropping `DEBUG`
 alone fails the link. Each build answers that by excluding whole files.
-**The macOS build takes a `COMPILER` switch** (`build_macos.sh:86`).
+**The macOS build takes a `COMPILER` switch** (`build_macos.sh:130`).
 `COMPILER=yes`, the default, defines `DEBUG` and compiles every source
-(`build_macos.sh:128-131`). `COMPILER=no` defines nothing and skips `src/RComp.cpp`,
-`src/Art.cpp`, `src/yygram.cpp` and `src/Tokens.cpp` (`build_macos.sh:133-134`), and
-`src/cpp1-6.c` as well (`build_macos.sh:204-206`). Windows splits the same way by
+(`build_macos.sh:177-180`). `COMPILER=no` defines nothing and skips `src/RComp.cpp`,
+`src/Art.cpp`, `src/yygram.cpp` and `src/Tokens.cpp` (`build_macos.sh:182-183`), and
+`src/cpp1-6.c` as well (`build_macos.sh:325-327`). Windows splits the same way by
 configuration: Debug adds `/DDEBUG` (`build.bat:60`), Release does not (`build.bat:63`)
 and filters `cpp*.c`, `yygram.cpp` and `tokens.cpp` out of the source list
 (`build.bat:93`). Compiled in every configuration: `src/Registry.cpp`,
