@@ -73,21 +73,21 @@ mutex (`src/Vision.cpp:415-416`), and `Creature::Multiply` refuses to breed past
 mold `lib/mon3.irh:2308` and `lib/mon3.irh:2316`) or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3372`)
 calls `Multiply` -> `Creature::Multiply` (`src/Creature.cpp:486`) -> `mn->PlaceAt` (`:557`)
 throws `EV_PLACE` (`src/Display.cpp:224`, `:248`) and `EV_FIELDON` (`:314`) -> `Creature::FieldOn` re-throws `EV_EFFECT` for
-`FI_MODIFIER` (`src/Status.cpp:1690`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1202`).
+`FI_MODIFIER` (`src/Status.cpp:1690`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1208`).
 *Invariant violated:* `Creature::FieldOn` sets `EActor` to the field's creator, so the script calls `Multiply` on the same
 generation-0 parent every time, and the generation cap at `src/Creature.cpp:510` can never apply to it. Only `m->BreedCount >= 50`
 (`:514`) survives, far above the 128-frame stack. *Fix:* a nesting cap of 4 on `Multiply` (`:498`); `GENERATION` is now stamped at
 `:553`, before the child is placed at `:557`.
 
 **2. `Player::MoveDepth` re-enters itself. Fixed (inc-upw.15, closed as a duplicate of inc-x9i).** `MoveDepth`
-(`src/Feature.cpp:1143`) calls `PlaceAt` (`:1414`) -> `PlaceAt` throws `EV_PLACE`/`EV_FIELDON` (`src/Display.cpp:224`, `:314`) and
+(`src/Feature.cpp:1149`) calls `PlaceAt` (`:1423`) -> `PlaceAt` throws `EV_PLACE`/`EV_FIELDON` (`src/Display.cpp:224`, `:314`) and
 calls `TerrainEffects` (`:358`) -> a portal or terrain handler calls `MoveDepth` again (`src/Feature.cpp:393`;
-`src/Move.cpp:1433`, inside `Creature::TerrainEffects` at `src/Move.cpp:1302`). The re-entry path is ordinary event dispatch; no
+`src/Move.cpp:1435`, inside `Creature::TerrainEffects` at `src/Move.cpp:1302`). The re-entry path is ordinary event dispatch; no
 C++ call from `MoveDepth` to `MoveDepth` exists. *Invariant violated:* a function its caller can re-enter must hold no
-call-lifetime state in `static` storage. The follower array is now local, `Thing *GoWith[64]` (`src/Feature.cpp:1163`), bounded at
-`:1310`; `static Creature* Displace[64]` (`src/Display.cpp:413`) still violates it. *Fix:* the re-entry was not the cause. The
+call-lifetime state in `static` storage. The follower array is now local, `Thing *GoWith[64]` (`src/Feature.cpp:1169`), bounded at
+`:1316`; `static Creature* Displace[64]` (`src/Display.cpp:413`) still violates it. *Fix:* the re-entry was not the cause. The
 down path read `RES(0)` whenever `BELOW_DUNGEON` is unset, which is every dungeon in `lib/`; the zero check at
-`src/Feature.cpp:1255` stops it.
+`src/Feature.cpp:1261` stops it.
 
 **3. Wild resource id crashes `Game::Get` inside `Magic::Blast`. Fixed (inc-upw.16).** Handlers get ids from three unvalidated
 places: the `eID` a caller put in the frame (`src/Event.cpp:594`), script assignment `pe->eID = val` (`lib/dispatch.h:3413`), and
@@ -113,9 +113,9 @@ grep -rn "ALIENIST_CLAUSE" lib/*.irh | grep -v define # 18 macro expansions
 2. `src/Display.cpp:413` `static Creature* Displace[64]` in a function re-entering itself at `:550`; `Displace[dc++]` (`:510`) has
 no bound check and `dc` is `uint8`.
 3. `src/Effects.cpp:153` states `e.eID` may be 0 for breath weapons; `:166` then reads `TEFF(e.eID)->Schools` unchecked. Same
-shape at `src/Creature.cpp:818`, `src/Magic.cpp:1198`.
+shape at `src/Creature.cpp:818`, `src/Magic.cpp:1204`.
 4. Fixed. `src/Res.cpp:348-353` range-checks the module slot and returns NULL, so `ASSERT` no longer guards the dereference.
-5. `src/VMachine.cpp:520` restores `xID` after `CMEM` because the call may have re-entered `Execute`, but not `mn`, `Memory` or
+5. `src/VMachine.cpp:529` restores `xID` after `CMEM` because the call may have re-entered `Execute`, but not `mn`, `Memory` or
 `szMemory` (`:461-465`), leaving a cross-module outer script on the inner module's data segment.
 6. `src/Annot.cpp:1102` declares `res` as `uint32`; `:1125` casts it to `int8`, so a script returning 256 becomes `NOTHING`.
 7. `inc/Events.h:77-78` (`PEVENT`) and `src/Annot.cpp:1074-1075` assign `e.EXVal` twice, `e.EYVal` never.
