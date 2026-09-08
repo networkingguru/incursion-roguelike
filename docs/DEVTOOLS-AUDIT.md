@@ -166,7 +166,7 @@ moved or deleted.
 | `INCURSION_STACK_PROBE` | Logged nested entries into depth changes, with the nesting level and map depth. | **KEEP.** It carried the before/after for inc-x9i: seed 3362, exit 139 to exit 0, with the same nested bottom-level entry on both runs, which is what proved the branch was entered and not avoided. That is the whole shape this document asks for. |
 | `INCURSION_FOLLOWER_PROBE`, `INCURSION_GOWITH_PROBE` | Follower loss across a level change. | **KEEP.** They measured the follower loss properly after the first count was withdrawn — and the withdrawal was caused by five runs sharing one directory, not by the probes. |
 | `INCURSION_FALL_CHAIN`, `INCURSION_FALL_CHAIN_SKIP`, `INCURSION_CHASM_WALK`, `INCURSION_LEVITATE_CHASM` | The chasm and falling routes into `MoveDepth`. | **KEEP for now.** They are how the four routes into the bottom-of-dungeon crash were each shown to be reachable without a debugger. Cheap, and the routes are still the ones anyone re-testing that fix would use. |
-| `INCURSION_DUNGEONMAP_PROBE`, `INCURSION_DESCEND_PROBE` | Dungeon and descent structure. | **CANDIDATE for deletion.** Neither is cited in the evidence that closed inc-x9i. Confirm against `bd show inc-x9i` before removing either. `INCURSION_DESCEND_PROBE` has since gone, in `ccf91de`; `INCURSION_DUNGEONMAP_PROBE` is still in the tree at `src/Feature.cpp:1563`. |
+| `INCURSION_DUNGEONMAP_PROBE`, `INCURSION_DESCEND_PROBE` | Dungeon and descent structure. | **CANDIDATE for deletion.** Neither is cited in the evidence that closed inc-x9i. Confirm against `bd show inc-x9i` before removing either. `INCURSION_DESCEND_PROBE` has since gone, in `ccf91de`; `INCURSION_DUNGEONMAP_PROBE` is still in the tree at `src/Feature.cpp:1572`. |
 | `INC6D5_PROBE_NAMES` | Names the creatures `INC6D5_PROBE` follows. | **KEEP** with `INC6D5_PROBE`. inc-6d5 is still open. |
 
 ## Added after this audit was written
@@ -182,7 +182,7 @@ confident wrong number, because the check fails when it does.
 | `INCURSION_STAIR_PROBE` | What was the staircase candidate list, and how was it ranked? | `tools/check_stair_cycle.sh` |
 | `INCURSION_DOOR_PROBE` | What did `Door::SetImage` do to this door's flags, and what geometry did it read? | `tools/check_broken_door.sh` |
 | `INCURSION_QUIET_PROBE` | Did this handle lookup speak, and should it have? | `tools/check_quiet_lookup.sh` |
-| `INCURSION_HANDLE_BASE` | Does a defect appear only once an object handle stops fitting in sixteen bits? It starts the handle counter at a chosen number instead of at 128 (`src/Registry.cpp:250-272`), so a one-second session reaches a state that otherwise needs an evening of play. | `tools/check_menu_value.sh` |
+| `INCURSION_HANDLE_BASE` | Does a defect appear only once an object handle stops fitting in sixteen bits? It starts the handle counter at a chosen number instead of at 128 (`src/Registry.cpp:251-260`), so a one-second session reaches a state that otherwise needs an evening of play. | `tools/check_menu_value.sh` |
 | `INCURSION_SAVE_FAIL_AT` | Not a probe but a fault injector: it stages a save failure at a chosen point, throwing exactly what a short write throws, and fires once per process. It exists because a real full disk cannot reach the case the design turns on — both write loops write into memory and the disk is untouched until the commit. | `tools/check_save_fail.sh` |
 
 `INCURSION_SAVE_FAIL_AT` is the one to look at twice. A fault injector ships in
@@ -207,7 +207,7 @@ Acting on it would have removed a capability.
 Neither is a superset of the other in access, so both stay.
 
 **What the audit did miss.** `src/Dump.cpp` compiles into every binary the
-project builds, but until 2026-08-18 only `src/Wposix.cpp:556` parsed `-dump`.
+project builds, but until 2026-08-18 only the posix backend parsed `-dump`, today at `src/Wposix.cpp:546-547`.
 The shipped graphical release therefore carried the save decoder and could not
 reach it — `nm -C incursion | grep RunSaveDump` found the symbol at
 `T RunSaveDump(char const*)` with no caller in that backend.
