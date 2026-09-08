@@ -417,6 +417,7 @@ Nothing invoked it; the only references were documentation. See
 | `check_ki_strike_live.sh` | Does the module grant a Monk Ki Strike? One session photographs the character sheet's Special Abilities block at 1st level and again at 4th: nothing, then `Ki Strike +1`. Reads a compiled module, so a red run after editing `lib/` usually means `./incursion -compile main.irc` was not run. | LIVE |
 | `check_killing_hands.sh` | Do Bracers of Killing Hands pay two points per plus to both unarmed accuracy and damage? Equips a known, identified +2 pair and requires +4 on both lines of the sheet's Brawl block. | LIVE |
 | `check_layout.sh` | Does this build play the same game when its objects sit at different addresses? | LIVE |
+| `check_layout_sweep.sh` | The same question over many seeds and key scripts, which is the only form of it that can close the inc-dhc class. Builds the probe binary itself and runs with the builds in `nightly_verify.sh`. A seed whose session bought too little game time is reported as unmeasured, never as a pass. | LIVE |
 | `check_load_corrupt.sh` | Does the real binary refuse ten hand-corrupted saves cleanly and still load two genuine ones? | LIVE |
 | `check_logrotate.sh` | Does log rotation keep the right archives and prune only names it made itself? | LIVE |
 | `check_loremaster_live.sh` | Does the Loremaster's Bibliographic Insight add its extra attribute points when he reads a tome? | LIVE |
@@ -677,6 +678,14 @@ tools/package_macos_app.sh  && tools/check_app.sh dist/Incursion.app
 ```sh
 EXTRA_CXXFLAGS=-DDIVERGE_PROBE OUT=incursion-probe BACKEND=posix ./build_macos.sh
 tools/check_layout.sh 3 tools/keys/dive12.keys
+```
+
+`check_layout_sweep.sh` sits here too, and builds that probe for you:
+
+```sh
+tools/check_layout_sweep.sh              # 12 seeds across four key scripts
+tools/check_layout_sweep.sh --no-build   # reuse the probe binary already here
+tools/check_layout_sweep.sh --selftest   # stubbed, seconds, needs no build
 ```
 
 ### Tier 5 — the gate, which needs a baseline

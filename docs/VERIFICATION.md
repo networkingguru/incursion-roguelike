@@ -74,12 +74,15 @@ change's fault. A check that passed before and fails after stops the merge. The
 builds are exempt from the ratchet: a tree that does not compile is never safe.
 `tools/check_linux_build.sh` runs with those builds for the same reason, and it
 is why a full run costs about ten minutes rather than seconds; a machine with no
-Docker skips it rather than failing on it.
+Docker skips it rather than failing on it. `tools/check_layout_sweep.sh` runs
+there too: it builds the `DIVERGE_PROBE` binary and asks whether the tree still
+plays the same game when its objects move, and a machine without lldb skips it.
 
 **Checks prove themselves on demand.** `--selftest` exists on
 `check_upstream_marks.sh`, `check_api_arity.py`, `check_headless.sh`,
-`check_citations.sh`, `check_escape_sweep.sh`, `check_lz_uncompress.sh` and
-`flickerscan_selftest.py`. Run it when you change the checker. A check that has
+`check_citations.sh`, `check_escape_sweep.sh`, `check_lz_uncompress.sh`,
+`check_layout_sweep.sh` and `flickerscan_selftest.py`. Run it when you change the
+checker. A check that has
 quietly stopped checking anything looks exactly like a check that passes.
 
 ## What this cannot prove

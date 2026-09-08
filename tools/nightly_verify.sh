@@ -31,6 +31,11 @@
 # reports a skip and stays green: a check that could not run has measured
 # nothing, and nothing is not a failure.
 #
+# THE LAYOUT SWEEP sits beside it for the same three reasons: it builds its own
+# binary, it has three exit codes, and a machine without lldb skips and stays
+# green. It asks whether this build still plays the same game when its objects
+# move -- the inc-dhc class, which cost about an hour a site to hunt by hand.
+#
 # WHERE THE BASE IS RECORDED. $NIGHTLY_VERIFY_STATE if set (the harness points it
 # outside the repository), otherwise logs/nightly-verify-base.txt. It is a
 # record of a run, not source: never commit it.
@@ -121,6 +126,22 @@ else
         2) echo "SKIPPED (could not measure)" ;;
         *) echo "FAILED"
            echo "    re-run it to see why: tools/check_linux_build.sh"
+           FAILED=1 ;;
+    esac
+
+    # Here for the same three reasons as the Linux build: it needs a build of
+    # its own, it has three exit codes, and a machine that cannot run it reports
+    # a skip and stays green. It is the standing alarm for inc-dhc -- the engine
+    # reading a heap address as if it were data, so the same seed plays a
+    # different game. Two sites of that class were found and fixed by hand, at
+    # about an hour a site. This is what makes the third one announce itself.
+    printf 'tools/check_layout_sweep.sh ... '
+    tools/check_layout_sweep.sh > /dev/null 2>&1
+    case $? in
+        0) echo "ok" ;;
+        2) echo "SKIPPED (could not measure)" ;;
+        *) echo "FAILED"
+           echo "    re-run it to see why: tools/check_layout_sweep.sh --no-build"
            FAILED=1 ;;
     esac
 fi

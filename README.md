@@ -734,6 +734,7 @@ the unfixed tree before it is trusted.
 | `check_abs_path.sh` | Does the game still resolve `argv[0]` to an absolute path? |
 | `check_linux_build.sh` | Do both backends still build on Linux, and does a seeded run still play with no errors? Needs Docker; so does `check_gcc_o2_char_create.sh` below, and no other check. |
 | `check_gcc_o2_char_create.sh` | Does a GCC `-O2` build still play character creation into a map, or has the `Item` constructor's uninitialised-member miscompile (inc-nw0v) returned? Needs Docker and builds with GCC, the converse of `check_linux_build.sh`. |
+| `check_layout_sweep.sh` | Does this build still play the same game when its objects sit somewhere else? Runs `check_layout.sh` over many seeds and key scripts, which is the standing alarm for inc-dhc: the engine reading a heap address as if it were data. Needs lldb and builds the `DIVERGE_PROBE` binary, so it runs with the builds and not in the ratchet. A seed whose session bought too little game time is counted as unmeasured, never as a pass. `--selftest` proves all three verdicts still work. |
 | `check_activate_stack.sh` | Does activating one item out of a stack leave the stack whole, and still fire the effect? |
 | `check_air_ring_spell.sh` | Does the Elemental Command (Air) ring description name the granted staff-spell "gaseous form", rather than the phantom "wind column" that exists nowhere in `lib/`? |
 | `check_alienist_live.sh` | Does an Alienist get Surreal Presence, the ability her own description promises? |
