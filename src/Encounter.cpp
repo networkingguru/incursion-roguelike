@@ -617,6 +617,16 @@ EvReturn Map::enGenerate(EventInfo &e) {
               }
           }
         if (n) {
+          /* ponytail: this encounter total loses its size in the int16 cast:
+             32768..65535 gives a raw draw truncated to [-32768,32767] (negative
+             picks candidate 0, positive ignores the weights), while >=65536
+             keeps only the low 16 bits and draws against the wrong total.
+             Measured ceiling here: 300 on 2026-09-08, in 148,918 picks over
+             419 levels (inc-kww8). Shipped lib/ data contains this, not code;
+             edited modules with long lists or large weights can exceed 32767.
+             Upgrade path: random() taking int32, or scale down before casting.
+             The inc-6u2 negative guard is NOT the fix: it would turn an
+             arbitrary pick into always candidate 0. */
           w = random((int16)enWeight[n]);
           for (i=0;i!=n;i++)
             if (enWeight[i+1] > w)
@@ -701,6 +711,16 @@ EvReturn Map::enGenerate(EventInfo &e) {
       }      
   
     //********* Stage 3: Choose Encounter from Weighted List
+    /* ponytail: narrowing the weighted encounter sum discards its size;
+       32768..65535 yields a raw int16 draw in [-32768,32767] (negative
+       selects candidate 0, positive disregards the weights), and >=65536
+       uses only the low 16 bits, a range unrelated to the real total.
+       Ceiling measured on 2026-09-08: 432 here, from 148,918 picks over
+       419 levels; see inc-kww8. Only shipped lib/ data contains it;
+       longer lists or larger weights in edited modules can pass 32767.
+       Upgrade path: accept int32 in random(), or scale the total down
+       before the cast. The inc-6u2 negative guard is NOT the fix: an
+       arbitrary pick would become always candidate 0. */
     w = random((int16)enWeight[c]);
     for (i=0;i!=c;i++)
       if (enWeight[i+1] > w)
@@ -1747,6 +1767,16 @@ EvReturn Map::enChooseMID(EventInfo &e) {
         int16 bestCR, j; rID bestID;
         bestID = 0; bestCR = -100;
         for (j=0;j!=4;j++) {
+          /* ponytail: each best-of-four draw throws away the total's width:
+             32768..65535 returns a raw draw narrowed to [-32768,32767], with
+             negative selecting candidate 0 and positive ignoring the weights;
+             >=65536 retains only the low 16 bits, unrelated to the full sum.
+             Measured ceiling: 1,920 here on 2026-09-08, across 148,918 picks
+             over 419 levels (inc-kww8). Containment comes from shipped lib/
+             data, not code; edited modules with long lists or large weights
+             could cross 32767. Upgrade path: random() accepting int32, or scale
+             the total down before casting. The inc-6u2 negative guard is NOT
+             the fix: it changes an arbitrary pick to always candidate 0. */
           x = random((int16)monWeights[nMon]);
           for (i=0;monWeights[i+1];i++)
             if (monWeights[i+1]>x) {
@@ -1761,6 +1791,16 @@ EvReturn Map::enChooseMID(EventInfo &e) {
       }
     else
       {
+        /* ponytail: this monster pick narrows away the total's size, so
+           32768..65535 produces a raw truncated draw in [-32768,32767]
+           (negative chooses candidate 0, positive is unrelated to weights);
+           >=65536 leaves only the low 16 bits and the wrong draw range.
+           The measured ceiling here was 1,751 on 2026-09-08: 148,918 picks
+           over 419 levels, inc-kww8. Shipped lib/ data is the containment,
+           not the code; edited modules can breach 32767 with long lists or
+           large weights. Upgrade path: take int32 in random(), or scale down
+           before casting. The inc-6u2 negative guard is NOT the fix, since
+           it would replace an arbitrary pick with always candidate 0. */
         x = random((int16)monWeights[nMon]);
         for (i=0;monWeights[i+1];i++)
           if (monWeights[i+1]>x)
@@ -1865,6 +1905,16 @@ EvReturn Map::enGenMount(EventInfo &e)
       {
         //
       }     
+    /* ponytail: the mount total's size is lost at this cast: 32768..65535
+       makes random() return a raw draw truncated to [-32768,32767]
+       (negative picks candidate 0, positive ignores the weights), while
+       >=65536 keeps just the low 16 bits, not the real total's range.
+       Ceiling observed here: 424 on 2026-09-08, from 148,918 picks over
+       419 levels (inc-kww8). Shipped lib/ data alone contains this;
+       code does not, and edited modules with long lists or large weights
+       could exceed 32767. Upgrade path: an int32-taking random(), or
+       scale the total down before the cast. The inc-6u2 negative guard
+       is NOT the fix: arbitrary picks would become always candidate 0. */
     x = random((int16)mtWeights[nMount]);
     for (i=0;mtWeights[i+1];i++)
       if (mtWeights[i+1]>x)
@@ -2288,6 +2338,16 @@ EvReturn Map::enChooseTemp(EventInfo &e)
         enUniformAdd(((e.chList+e.cPart*10000) | 0x0D000000), e.chResult);
         return DONE;
       }     
+    /* ponytail: casting the template sum to int16 discards its size:
+       32768..65535 gives a raw draw truncated to [-32768,32767], where
+       negative chooses candidate 0 and positive disregards the weights;
+       >=65536 preserves only the low 16 bits, so the range is unrelated
+       to the actual sum. Measured ceiling here: 460 on 2026-09-08, in
+       148,918 picks over 419 levels (inc-kww8). The shipped lib/ data
+       contains this, not code; long lists or large weights in edited
+       modules could pass 32767. Upgrade path: random() taking int32, or
+       scale down before casting. The inc-6u2 negative guard is NOT the
+       fix: it would turn an arbitrary pick into always candidate 0. */
     x = random((int16)tmWeights[nTemp]);
     for (i=0;tmWeights[i+1];i++)
       if (tmWeights[i+1]>x)
