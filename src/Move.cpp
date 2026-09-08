@@ -153,8 +153,56 @@ EvReturn Creature::Walk(EventInfo &e) {
 
 		if (HasStati(STUCK)) {
 			int power = GetStatiMag(STUCK);
+			int16 stuckDC = (int16)(15 + power);
+			bool freed = SkillCheck(SK_ESCAPE_ART, stuckDC, true, false);
 
-			if (SkillCheck(SK_ESCAPE_ART, 15 + power, true, false)) {
+			/* upstream: glue had exactly one exit, and it was a Dexterity
+			   skill that carries the armour check penalty, so a character in
+			   heavy armour could not pass it at any roll. Measured: a paladin
+			   in full plate and a kite shield has an Escape Artist ceiling of
+			   9 against a DC floor of 14, and no armour-wearing class can buy
+			   a rank, because Character::MaxRanks (Create.cpp:3937) caps a
+			   non-class skill at zero. The SRD frees a creature from a
+			   tanglefoot bag on a Strength check, and an ability check takes
+			   no armour penalty, so the plate stops fighting its wearer. This
+			   engine already blends Strength into the A_ESCA grapple escape
+			   (Fight.cpp:4835); glue never got the same treatment, though the
+			   success branch below has always trained Strength.
+			   Upstream's because it is platform-independent integer logic: it
+			   behaves identically on the original Win32 build, with the
+			   original typedefs and the original compiler. Evidence: Observed
+			   (Escape Artist 1d20 (19) -11 = 8 vs DC 14; 673 turns never
+			   free). inc-jwm0. Not sent. The flat DC that every hazard shares
+			   is inc-18q6. */
+			if (!freed) {
+				int16 sRoll = Dice::Roll(1, 20);
+				int16 sBonus = (int16)Mod(A_STR);
+				freed = (sRoll + sBonus) >= stuckDC;
+				if (isPlayer() || theGame->GetPlayer(0)->XPerceives(this)) {
+					String bStr; Term *term;
+					bStr = Format("%cStrength Check:%c 1d20 (%d) %+d = %d vs DC %d %c[%s]%c.",
+						-AZURE, -GREY, sRoll, sBonus, sRoll + sBonus, stuckDC,
+						freed ? -EMERALD : -PINK,
+						freed ? "success" : "failure", -GREY);
+					if (isPlayer())
+						term = thisp->MyTerm;
+					else {
+						term = theGame->GetPlayer(0)->MyTerm;
+						bStr = this->Name(NA_CAPS|NA_POSS) + SC(" ") + bStr;
+					}
+					/* WIN_NUMBERS2 is the row directly under WIN_NUMBERS
+					   (TextTerm.cpp:125-126) and nothing else writes to it, so
+					   the Escape Artist line above stays on screen beside
+					   this one. */
+					term->SetWin(WIN_NUMBERS2);
+					term->Clear();
+					term->Write(0, 0, bStr);
+					if (theGame->Opt(OPT_STORE_ROLLS))
+						term->AddMessage(bStr);
+				}
+			}
+
+			if (freed) {
 				IPrint("You tear free!");
 				Exercise(A_STR, random(6) + 1, ESTR_UNSTUCK, 25);
 				Timeout += 1500 / (100 + Mod(A_DEX) * 5);

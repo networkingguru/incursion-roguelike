@@ -1,0 +1,133 @@
+#!/bin/bash
+# Can a character in heavy armour tear out of glue? Bead inc-jwm0.
+#
+# THE DEFECT. src/Move.cpp's EV_MOVE branch was the ONLY exit from STUCK, for
+# every entangling hazard in the game -- slime, grease, webbing, tanglefoot
+# strands, entangling weapons and monster AD_STUK attacks. It rolled Escape
+# Artist, which is keyed on Dexterity, carries the armour check penalty, and is
+# a class skill for no armour-wearing class, so Character::MaxRanks
+# (src/Create.cpp:3937) caps it at a hard zero forever. A paladin in full plate
+# and a kite shield sits at -11 against a DC of 14: his ceiling of 9 is five
+# below the floor and NO roll closes it. Measured before the fix: he stayed
+# stuck through 673 turns of game time.
+#
+# The engine already knew better twenty lines away. Breaking a GRAPPLE
+# (src/Fight.cpp:4757-4844) strips the Dex modifier back out of the skill --
+# "ww: we'll be adding in your dex/str bonus later" -- and adds Strength. And
+# the success branch in Move.cpp has always called Exercise(A_STR, ...) with a
+# reason code named ESTR_UNSTUCK, so whoever wrote it thought of tearing free
+# as a feat of Strength and then rolled it against Dexterity. The SRD frees a
+# creature from a tanglefoot bag on a Strength check, and an ability check
+# takes no armour penalty.
+#
+# THE ORACLE is the game's own printed check lines. Two of them now appear:
+# the unchanged "Escape Artist Check:" from SkillCheck, and a new "Strength
+# Check:" written to WIN_NUMBERS2, the row directly below it. The Strength line
+# CANNOT appear on a tree without the fix, which is what makes this check red
+# before and green after.
+#
+# WHY THE ESCAPE ALONE PROVES NOTHING, and why this script does not accept it:
+# src/Skills.cpp:1600 already frees the character on a natural 20 for Escape
+# Artist, provided no hostile is within sixteen squares. This fixture runs in
+# an empty entry chamber, so that clause is live and would eventually free him
+# on an unfixed tree too. The script therefore requires a Strength check that
+# SUCCEEDED, not merely an escape.
+#
+# The fixture uses the WORST case rather than a flattering one: seed 4 rolls
+# the paladin STR 10, so his Strength check is a bare d20 with no bonus. A real
+# tank rolls better. Twenty attempts at 35% each.
+#
+# Usage: tools/check_entangle_escape.sh   (0 pass, 1 fail, 2 inconclusive)
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+SEED=4
+KEYS=tools/keys/entangle-strength-escape.keys
+
+[ -x ./incursion-headless ] || {
+    echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
+    exit 2
+}
+
+out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+       INCURSION_MAP_AUDIT=0 tools/headless.sh "$KEYS" "$SEED" 2>&1)"
+run="$(echo "$out" | awk '/^run:/ {print $2}')"
+
+if echo "$out" | grep -q "the key script looked for something"; then
+    echo "INCONCLUSIVE: the key script could not find something on screen."
+    echo "              Menu letters move when a list changes. Run: $run"
+    exit 2
+fi
+[ -n "$run" ] && [ -d "$run/logs/screens" ] || {
+    echo "INCONCLUSIVE: no run directory. Output was:"; echo "$out"; exit 2; }
+
+S="$run/logs/screens"
+geared="$S/0001-geared.txt"
+
+# --- preconditions. A run that measured the wrong character measures nothing.
+
+[ -f "$geared" ] || { echo "INCONCLUSIVE: no character sheet dumped at $geared"; exit 2; }
+
+grep -q "Escape Artist    -11 (0 ranks, +1 DEX, -12 armour)" "$geared" || {
+    echo "INCONCLUSIVE: the subject is not in the case this check defends."
+    echo "              Wanted Escape Artist -11 from full plate and a kite"
+    echo "              shield; the sheet says:"
+    grep -E "Escape Artist|Encumbrance " "$geared" | sed 's/^/              /'
+    echo "              Screen: $geared"
+    exit 2
+}
+
+grep -qh "You've become stuck" "$S"/* || {
+    echo "INCONCLUSIVE: the character never became stuck, so nothing was"
+    echo "              measured. He may have passed the DC 15 Reflex save on"
+    echo "              every entry. Screens: $S"
+    exit 2
+}
+
+rc=0
+
+# --- the assertion that discriminates: the Strength exit exists and works.
+
+if ! grep -qh "Strength Check:" "$S"/*; then
+    echo "FAIL: no Strength check was ever rolled. The only exit from STUCK is"
+    echo "      still the Escape Artist check at src/Move.cpp, which a"
+    echo "      character in heavy armour cannot pass at any roll."
+    rc=1
+elif ! grep -qh "Strength Check:.*\[success\]" "$S"/*; then
+    echo "FAIL: the Strength check is rolled but never succeeded in twenty"
+    echo "      attempts against DC 14 on a bare d20. At STR 10 that is one"
+    echo "      run in ten thousand by chance, so read it as a real change in"
+    echo "      the DC or the modifier rather than bad luck."
+    grep -h "Strength Check:" "$S"/* | sed 's/ *|.*//' | sort -u | sed 's/^/      /'
+    rc=1
+fi
+
+if ! grep -qh "You tear free" "$S"/*; then
+    echo "FAIL: the character never got out of the tanglefoot strands."
+    rc=1
+fi
+
+# --- the guard: the Escape Artist path itself must NOT have been weakened.
+# Every roll below 20 must still fail at -11 against DC 14. A "fix" that made
+# this skill check passable would satisfy the assertions above for the wrong
+# reason.
+
+bad="$(grep -h "Escape Artist Check:" "$S"/* | sed 's/ *|.*//' \
+       | grep "\[success\]" | grep -v "1d20 (20)" || true)"
+if [ -n "$bad" ]; then
+    echo "FAIL: an Escape Artist check passed on a roll below 20, so the skill"
+    echo "      check itself has changed. This check defends the Strength exit,"
+    echo "      not a cheaper Escape Artist:"
+    echo "$bad" | sed 's/^/      /'
+    rc=1
+fi
+
+if [ "$rc" = 0 ]; then
+    echo "PASS: the Strength exit works where Escape Artist cannot."
+    grep -h "Escape Artist Check:" "$S"/* | sed 's/ *|.*//' | sort -u | tail -1 | sed 's/^/      /'
+    grep -h "Strength Check:.*\[success\]" "$S"/* | sed 's/ *|.*//' | sort -u | head -1 | sed 's/^/      /'
+fi
+echo "      run: $run"
+exit $rc

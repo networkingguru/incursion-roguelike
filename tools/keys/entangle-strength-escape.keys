@@ -1,0 +1,149 @@
+# inc-jwm0. A character in heavy armour must be able to tear out of glue on
+# his Strength, because he can never pass the Escape Artist check.
+#
+# THE SUBJECT is the human paladin of chargen-paladin.keys, and he is chosen
+# because he is the WORST case rather than a convenient one: seed 4 rolls him
+# STR 10, so his Strength check is a flat d20 with no bonus at all. A real
+# tank rolls better. If this character gets out, every heavier-armed, stronger
+# one does.
+#
+# THE GEAR is full plate armour, taken in wizard mode, plus the kite shield he
+# starts with, readied. That is Escape Artist -11: 0 ranks, +1 DEX (full plate
+# caps the bonus at +1), -12 armour. The escape DC is 14 -- 15 + the STUCK
+# magnitude, which is -1 for every hazard in the game because nothing ever
+# sets one (inc-18q6). His Escape Artist ceiling is therefore 20 - 11 = 9,
+# five below the floor, and no roll can close it.
+#
+# THE HAZARD is "tanglefoot strands", written under the two squares east of
+# him with the wizard terrain command. It is [j] on page 2 of that menu, hence
+# the TAB. Walking in costs a flat Reflex DC 15 (lib/alchemy.irh:282), which
+# he fails at -1.
+#
+# THE ORACLE is the two printed check lines. "Strength Check:" cannot appear
+# on a tree without the fix -- that is the assertion that discriminates. The
+# escape itself is NOT enough on its own, because Skills.cpp:1600 already
+# frees him on a natural 20 while no hostile is within sixteen squares, and
+# this fixture deliberately runs in an empty room. See tools/check_entangle_escape.sh.
+#
+# Twenty attempts. At STR 10 each attempt is 35%, so twenty of them fail
+# together about one time in ten thousand -- and the seed is fixed, so it
+# either passes or it does not.
+
+@include chargen-paladin.keys
+@until "Afoot" ESC
+
+w
+@expect "Enter wizard mode"
+y
+e
+@until ": Armours" RIGHT
+@until "Full plate armour" DOWN
+DOWN
+ENTER
+j
+SPACE
+d
+ESC
+i
+f
+SPACE
+a
+SPACE
+ESC
+d
+@dump:geared
+ESC
+
+# already in wizard mode: 'w' opens the menu with no y/n
+w
+K
+RIGHT
+ENTER
+TAB
+j
+
+RIGHT
+@while "Confirm" y
+@dump:entered
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try01
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try02
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try03
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try04
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try05
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try06
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try07
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try08
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try09
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try10
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try11
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try12
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try13
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try14
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try15
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try16
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try17
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try18
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try19
+SPACE SPACE
+RIGHT
+@while "Confirm" y
+@dump:try20
+SPACE SPACE
+@quit
