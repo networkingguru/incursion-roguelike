@@ -2,14 +2,31 @@
 
 ## Publishing anything outward-facing
 
-Two rules, and neither has an exception.
+Two rules. Rule 1 carries one scope limit, stated inside it. Rule 2 has none.
 
-1. **Brian reads the literal text before it is published.** Not a diff, not a
-   summary of what it claims — the exact body and title that will be posted.
-   This covers pull requests, issues, review comments, and anything else that
-   leaves this machine or appears under his name. A "go" that answers a plan is
-   NOT approval of wording he has not seen. Paste the text, wait for a yes on
-   that text.
+1. **Brian reads the literal text before it is published to a tree he does not
+   own.** Not a diff, not a summary of what it claims — the exact body and
+   title that will be posted. This covers pull requests, issues and review
+   comments on the parent project or any third party's repo, and anything else
+   that appears under his name on somebody else's property. A "go" that answers
+   a plan is NOT approval of wording he has not seen. Paste the text, wait for a
+   yes on that text.
+
+   **One exemption, and it is narrow: BUG TEXT on his own tracker.** A bead
+   filed, updated or synced to `networkingguru/incursion-roguelike` needs no
+   pre-read. Run `tools/sync_issues.sh`, then say what went out. Do not ask
+   first, and do not apologise afterwards. He set the scope on 2026-09-08,
+   after a session apologised for publishing nine of his own beads: "If I post
+   something to someone else's repo, need to read it. A bug in my own, I do
+   not."
+
+   **The exemption is bugs, NOT the repo.** README.md, user-facing docs,
+   release notes, store and itch pages, announcements, and anything else a
+   player or a visitor reads still need his eyes on the literal text before it
+   goes out, even though he owns the tree. He narrowed it in the same
+   conversation: "This is true for beads/bug, not the whole repo. Not the read
+   me, not user-facing docs (unless separately authorized). Just bugs." A
+   separate authorisation for one of those covers that one thing only.
 
 2. **Always disclose AI assistance on public contributions.** Every commit
    carries a `Co-Authored-By` trailer; so must anything sent to another
