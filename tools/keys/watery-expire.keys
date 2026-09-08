@@ -1,0 +1,89 @@
+# inc-q3r5: natural expiry must remove only the double.
+# Run with seed 20260905 and INCURSION_OPTIONS=tools/gates/Options.Dat.
+
+@include chargen.keys
+
+w
+y
+ESC # Enable wizard mode, then leave its menu without killing anything.
+
+# One square of shallow water, one step east of the player.
+w
+@choose "Change terrain type"
+RIGHT ENTER
+TAB
+@choose "shallow water"
+@dump:pool
+
+# The victim stands in it.
+w
+@choose "Monster Summoning"
+@choose "Reptiles"
+@choose "giant tortoise"
+RIGHT ENTER
+@dump:victim
+
+# A separate, distant bystander; no global kill is used.
+w
+@choose "Monster Summoning"
+@choose "Quadrupeds"
+@choose "pony"
+LEFT*4 ENTER
+@dump:bystander
+
+# The caster is the player.
+w
+@choose "Learn Any Spell"
+"Watery Double" ENTER
+@dump:learned
+
+m
+@choose "Watery Double"
+@dump:target-prompt
+RIGHT
+@dump:target-picked
+ENTER
+@dump:after-cast
+@expect "B aqueous giant"
+@expect "B giant"
+@expect "q pony"
+@expect "HP:47/47"
+
+# Inspect the actual two lifetime rows, not an assumed caster level.
+w
+@choose "Examine Nearby Things"
+@until ": aqueous giant tortoise" RIGHT
+@expect ": aqueous giant tortoise"
+@dump:double-data
+DOWN*20
+@dump:double-duration
+@expect "EFF_FLAG2 from SS_ENCH (Val:0 Mag:0) [Dur 11]"
+@expect "(h:Thokk) (eID:Watery Double)"
+@expect "(h:giant tortoise) (eID:Watery Double)"
+ESC
+# Apply earthen only AFTER the copy exists. Both now have weapon immunity;
+# neither can kill the other before expiry. The target remains a tortoise.
+w
+@choose "Add Template to Creature"
+RIGHT ENTER
+@choose "earthen"
+@expect "Template added."
+@dump:hardened
+# The first duration tick already ran at 198000. Eleven remain at 198021.
+# 39 waits reach 198645, before the last decrement at 198660.
+.*39
+@dump:before-expiry
+@expect "B aqueous giant"
+@expect "B earthen giant"
+@expect "q pony"
+@expect "HP:47/47"
+.
+@dump:after-expiry
+v
+@dump:expiry-messages
+@expect "collapses back to inanimate water"
+ESC
+@dump:final
+@expect "B earthen giant"
+@expect "q pony"
+@expect "HP:47/47"

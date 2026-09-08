@@ -7655,23 +7655,44 @@ Wizard Spell "Watery Double" : EA_GENERIC
       hDouble->AddTemplate($"aqueous");
       hDouble->TurnHostileTo(EVictim);
       hDouble->GainTempStati(EFF_FLAG2,EActor,e.vDuration,SS_ENCH,0,0,$"Watery Double");
+      hDouble->GainTempStati(EFF_FLAG2,EVictim,e.vDuration,SS_ENCH,0,0,$"Watery Double");
       hDouble->PlaceAt(EMap,EVictim->x,EVictim->y);
       hDouble->Initialize();
+      /* upstream: Julian Mensch's holder-bound removal deletes the caster on
+         Win32 too, with the original typedefs and compiler. Track the double;
+         retain both lifetime references and remove it only while mapped.
+         Observed; inc-q3r5; not sent. */
+      EActor->SetEffStatiObj(EFF_FLAG1,$"Watery Double",hDouble);
       EVictim->IDPrint("A duplicate of you rises up, formed out of the water!",
         "A duplicate of the <hObj> rises up, formed out of the water!", EVictim);
       return DONE;
       },
     EV_REMOVED {
-      /* Expiration or Dispelling */
+      /* Expiration, dispelling, or loss of caster or target. */
       if (e.EParam == EFF_FLAG2)
         {
-          EActor->IDPrint("","The <hObj> collapses back to inanimate water!", EVictim);
+          if (!EActor)
+            return NOTHING;
+          if (EActor->x == -1)
+            return NOTHING;
+          if (!EActor->m)
+            return NOTHING;
+          /* The collapse must survive the killing attack's message queue. */
+          EActor->m->SetQueue(0);
+          EActor->IDPrint("","The <hObj> collapses back to inanimate water!", EActor);
+          EActor->m->UnsetQueue(0);
           EActor->Remove(true);
           return NOTHING;
         }
       /* Cancellation */
-      EVictim->IDPrint("","The <hObj> collapses back to inanimate water!", EVictim);
-      EVictim->Remove(true);
+      if (!e.vObj)
+        return NOTHING;
+      if (e.vObj->x == -1)
+        return NOTHING;
+      if (!e.vObj->m)
+        return NOTHING;
+      e.vObj->IDPrint("","The <hObj> collapses back to inanimate water!", e.vObj);
+      e.vObj->Remove(true);
       return NOTHING;
       };
   }

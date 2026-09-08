@@ -1,0 +1,123 @@
+# inc-q3r5: real AI-selected Watery Double attempt; seed 20260905.
+# Covers the fourth removal path: loss of the MONSTER CASTER. The nereid
+# is killed with a self-learned Disintegrate once the double has appeared,
+# while the target (giant tortoise) and the bystander (pony) are both
+# still alive -- so any collapse observed here is caused by the caster's
+# death, not the target's (that path is watery-death.keys) and not
+# duration expiry (that path is watery-expire.keys).
+@include chargen.keys
+w
+y
+ESC
+w
+@choose "Change terrain type"
+RIGHT ENTER
+TAB
+@choose "shallow water"
+w
+@choose "Monster Summoning"
+@choose "Reptiles"
+@choose "giant tortoise"
+RIGHT ENTER
+@dump:target
+w
+@choose "Monster Summoning"
+@choose "Quadrupeds"
+@choose "pony"
+LEFT*4 ENTER
+@dump:bystander
+w
+@choose "Monster Summoning"
+@choose "Faerie"
+@choose "nereid"
+RIGHT*3 ENTER
+.
+@dump:nereid
+w
+@choose "Make Player Master of Monster"
+@until "A nereid" RIGHT
+@dump:master-picked
+ENTER
+w
+@choose "Add Template to Creature"
+@until "A nereid" RIGHT
+@expect "A nereid"
+ENTER
+@choose "paragon"
+@expect "Template added."
+@dump:before-wait
+.
+@dump:wait-1
+.
+@dump:wait-2
+.
+@dump:wait-3
+.
+@dump:wait-4
+@expect "B aqueous giant"
+@expect "B giant"
+@expect "q pony"
+
+# Kill the CASTER now, while the target and the bystander are both still
+# alive. A self-targeted Disintegrate (as in watery-caster-death.keys)
+# would end the game here, since the caster is the player in that
+# fixture; here the caster is the nereid, so target it instead.
+#
+# The paragon nereid has 50% magic resistance and a boosted Fortitude
+# save, so one ray is not reliable. At seed 20260905, deterministically:
+# the first ray is turned aside ("The nereid resists your magic."), and
+# the second gets through and fails the nereid's save (a paragon-boosted
+# +6 base, 11 vs DC 19). Do NOT recast a third time: at this seed the
+# nereid is already dead by then, and Disintegrate on its corpse item
+# throws an engine error ("Invalid object reference (object type
+# mismatch) calling GetAttr in script routine $"Disintegrate"::
+# EV_MAGIC_STRIKE") -- a separate, pre-existing defect this fixture does
+# not exercise or fix. Two casts is the deterministic kill at this seed.
+w
+@choose "Learn Any Spell"
+"Disintegrate" ENTER
+@dump:learned-disintegrate
+
+m
+@choose "Disintegrate"
+@dump:kill-target-prompt
+PGUP
+@dump:kill-target-picked
+@expect "A nereid"
+ENTER
+@dump:after-cast-1
+@expect "resists your magic"
+@expect "B aqueous giant"
+@expect "f nereid"
+
+m
+@choose "Disintegrate"
+PGUP
+ENTER
+@dump:after-nereid-death
+@expect "The nereid disintegrates!"
+@expect "aqueous giant tortoise collapses back to"
+@expect "inanimate water!"
+@expect "B giant"
+@expect "q pony"
+
+v
+@dump:kill-messages
+@expect "The nereid disintegrates!"
+@expect "aqueous giant tortoise collapses back to"
+@expect "inanimate water!"
+ESC
+.
+@dump:wait-5
+.
+@dump:wait-6
+.
+@dump:wait-7
+.
+@dump:wait-8
+.
+@dump:wait-9
+.
+@dump:wait-10
+v
+@dump:cast-messages

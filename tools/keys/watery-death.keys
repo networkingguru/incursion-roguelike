@@ -1,14 +1,5 @@
-# Behavioural fixture for inc-fiiq: reference cleanup must deliver EV_REMOVED.
-#
-# The player learns Watery Double, floods one square, summons a giant tortoise
-# into it and casts the spell at the tortoise.  The cast leaves the caster
-# holding EFF_FLAG1 whose stati object is the tortoise (lib/wspells.irh:7648),
-# and leaves the double holding EFF_FLAG2 whose stati object is the caster
-# (lib/wspells.irh:7657).  Killing the tortoise destroys the object the
-# caster's row refers to, so Thing::CleanupRefedStati reaches that row.
-#
-# With the fix the row goes through RemoveEffStati(eID, EV_REMOVED, ...) and the
-# spell's own EV_REMOVED handler runs.  Without it the row is dropped silently.
+# Behavioural fixture for inc-q3r5: target death must collapse its double.
+# The double retains references to both target and caster.
 
 @include chargen.keys
 
@@ -46,9 +37,13 @@ RIGHT
 ENTER
 @dump:after-cast
 
-# Kill the object the caster's row refers to.
-w
-@choose "Genocide Everything"
+# At seed 20260905, 26 wait commands let the double kill its target before
+# spell expiration. History preserves the collapse amid the combat messages.
+.*26
 @dump:after-kill
-s
+v
+@dump:kill-messages
+@expect "collapses back to inanimate water"
+ESC
+.
 @dump:after-turn

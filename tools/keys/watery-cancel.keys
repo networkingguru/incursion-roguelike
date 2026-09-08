@@ -1,0 +1,65 @@
+# inc-q3r5: deliberate cancellation must remove only the double.
+# Run with seed 20260905 and INCURSION_OPTIONS=tools/gates/Options.Dat.
+
+@include chargen.keys
+
+w
+y
+ESC # Enable wizard mode, then leave its menu without killing anything.
+
+# One square of shallow water, one step east of the player.
+w
+@choose "Change terrain type"
+RIGHT ENTER
+TAB
+@choose "shallow water"
+@dump:pool
+
+# The victim stands in it.
+w
+@choose "Monster Summoning"
+@choose "Reptiles"
+@choose "giant tortoise"
+RIGHT ENTER
+@dump:victim
+
+# A separate, distant bystander; no global kill is used.
+w
+@choose "Monster Summoning"
+@choose "Quadrupeds"
+@choose "pony"
+LEFT*4 ENTER
+@dump:bystander
+
+# The caster is the player.
+w
+@choose "Learn Any Spell"
+"Watery Double" ENTER
+@dump:learned
+
+m
+@choose "Watery Double"
+@dump:target-prompt
+RIGHT
+@dump:target-picked
+ENTER
+@dump:after-cast
+@expect "B aqueous giant"
+@expect "B giant"
+@expect "q pony"
+@expect "HP:47/47"
+
+# The X command is unshifted in the key table: script it as lowercase x.
+x
+@dump:cancel-menu
+@choose "Drop Watery Double"
+@dump:after-cancel
+v
+@dump:cancel-messages
+@expect "Dropping Watery Double."
+@expect "collapses back to inanimate water"
+ESC
+@dump:final
+@expect "HP:47/47"
+@expect "B giant"
+@expect "q pony"

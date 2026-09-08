@@ -108,6 +108,30 @@ and cannot be asked for a particular one. The command prompts for a god name
 and builds the feature exactly as `MakeLev.cpp:1143-1145` does.
 `check_sacrifice.sh` is the first thing to use it.
 
+The Watery Double fixtures use seed `20260905` and
+`INCURSION_OPTIONS=tools/gates/Options.Dat` through `tools/headless.sh`:
+`keys/watery-death.keys` covers target death and `keys/watery-nocast.keys` is
+its no-cast control. `keys/watery-cancel.keys` deliberately cancels the spell;
+`keys/watery-expire.keys` measures its lifetime and gives only the original
+target the earthen template after casting so combat cannot end the spell first.
+Both assert collapse, surviving target and pony bystander, and player HP 47/47.
+`keys/watery-caster-death.keys` self-casts Disintegrate and confirms real
+player death with the pony still alive, without a crash. The double itself is
+still `B aqueous giant` on the death screen: a player caster's death does not
+enqueue removal before `Game::Play` exits, so this fixture proves the crash is
+gone but does NOT observe caster-loss removal. `keys/watery-monster-caster.keys`
+covers that gap with a MONSTER caster instead: a paragon nereid AI-casts
+Watery Double on a giant tortoise, in view of a pony bystander, then the player
+kills the nereid with Disintegrate (two rays are needed at seed `20260905` --
+the first is turned aside by the nereid's magic resistance) while the tortoise
+and pony are both still alive. The nereid's death fires "The nereid
+disintegrates!" and "The aqueous giant tortoise collapses back to inanimate
+water!" together: the double leaves no live entry and no corpse, and the
+target and bystander both survive. This is the fixture that actually observes
+caster-loss removal (inc-q3r5, `docs/REPORTING-GATE.md`). None of these four
+fixtures (`watery-cancel`, `watery-expire`, `watery-caster-death`,
+`watery-monster-caster`) use a genocide command.
+
 Everything else is a diagnostic, a packaging step, or superseded.
 
 ---
