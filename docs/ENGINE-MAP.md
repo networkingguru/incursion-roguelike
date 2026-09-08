@@ -29,7 +29,7 @@ are zero bytes and dead, not stubs. Purposes are read from each file's header co
 The spine. Every hop is a direct call; nothing is queued or deferred.
 
 1. `main()` `src/Wposix.cpp:471` builds `theGame` and the backend, assigns `T1`, calls `T1->Initialize()` then `theGame->StartMenu()` (`:602-611`).
-2. `Game::StartMenu()` `src/Main.cpp:2162`; menu choice 0 runs `LoadModules()` (`src/Registry.cpp:1473`), `NewGame()` (`src/Main.cpp:90`), `Play()` (`:2240-2255`).
+2. `Game::StartMenu()` `src/Main.cpp:2164`; menu choice 0 runs `LoadModules()` (`src/Registry.cpp:1473`), `NewGame()` (`src/Main.cpp:90`), `Play()` (`:2240-2255`).
 3. `Game::Play()` `src/Main.cpp:215`; the `do {} while(1)` at `:251` is the game loop. It walks every `Thing` on the player's map (`:285`), decrements `Timeout`, calls `ChooseAction()` on whatever is ready (`:347`).
 4. `Player::ChooseAction()` `src/Player.cpp:219` redraws status, then blocks on `MyTerm->GetCharCmd()` (`src/Player.cpp:359`).
 5. `posixTerm::GetCharCmd()` `src/Wposix.cpp:1603` flushes the screen *first* (`Update()`, `:1646`), reads one raw key (`NextKey()`, `:1651`), maps it to a `KY_CMD_*` by scanning the active keyset (`:1697-1706`). Redraw-before-read is why the screen is always current when the game waits.
@@ -69,7 +69,7 @@ All three `main()`s do the same five things in order: `new Game`, `new <backend>
 
 There is no headless class. `posixTerm` is headless at run time: `useCurses` (`src/Wposix.cpp:121`) is set by `UseTerminal()` (`:216`) from `-headless` and `isatty` (`:572`), and every draw path tests it.
 
-`build_macos.sh` compiles one backend and skips the rest by filename: `BACKEND` defaults to libtcod (`:48`), the posix branch sets `-DPOSIX_TERM` and `SKIP_BACKENDS="Wlibtcod Wcurses"` (`:141-142`), enforced at `:188`. `build.sh:28` instead compiles all three and lets the define empty two. `src/Wcurses.cpp` never builds on macOS.
+`build_macos.sh` compiles one backend and skips the rest by filename: `BACKEND` defaults to libtcod (`:84`), the posix branch sets `-DPOSIX_TERM` and `SKIP_BACKENDS="Wlibtcod Wcurses"` (`:243-244`), enforced at `:309`. `build.sh:28` instead compiles all three and lets the define empty two. `src/Wcurses.cpp` never builds on macOS.
 
 ## How to check this page
 
