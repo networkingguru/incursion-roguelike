@@ -114,11 +114,11 @@ fi
 # WHY WHOLE FILES ARE EXCLUDED RATHER THAN LEFT TO #ifdef. src/RComp.cpp and
 # src/Art.cpp are each wrapped in one #ifdef DEBUG and would compile to nothing
 # anyway -- but src/yygram.cpp and src/Tokens.cpp are NOT wrapped, and they call
-# AllocString() and AllocRegister() (src/yygram.cpp:7857, :8548), which live
-# inside the block that just vanished. That undefined-symbol link failure is the
-# whole reason -DDEBUG was pinned on here in the first place. Windows solved it
-# the same way: build.bat:93 filters yygram.cpp, tokens.cpp and cpp*.c out of a
-# Release build.
+# AllocString() and AllocRegister() -- called at src/yygram.cpp:7857 and
+# src/yygram.cpp:8548, defined inside the block that just vanished. That
+# undefined-symbol link failure is the whole reason -DDEBUG was pinned on here
+# in the first place. Windows solved it the same way: build.bat:93 filters
+# yygram.cpp, tokens.cpp and cpp*.c out of a Release build.
 #
 # WHAT ELSE DROPPING -DDEBUG CHANGES, and all three are what a shipped game
 # should do:
