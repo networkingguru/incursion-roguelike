@@ -15,6 +15,9 @@ extern void OobProbeAtCensus(int x, int y, int sizeX, int sizeY);
 
 class Map;
 class Thing;
+#ifdef INCURSION_OPENXY_PROBE
+void OpenXYProbe(Map *, Thing *, int);
+#endif
 class Creature;
 class Character;
 class Player;
@@ -173,6 +176,16 @@ struct EncMember
   };
   
 #define MAX_ENC_MEMBERS  100
+
+/* GetOpenXY's refusal, distinct from the solid corner (0,0).
+   Precondition: (255,255) must not be an eligible open square. It holds for
+   the shipped module -- LEVEL_SIZEX/Y default to 128 (src/Annot.cpp:485-486)
+   and no dungeon in lib/ overrides them -- but it is data-driven, so a module
+   declaring a map wider than 255 breaks it. OpenX/OpenY are uint8, so such a
+   map already truncates every coordinate GetOpenXY returns; this sentinel
+   neither causes that nor extends the API's range. tools/check_open_xy.sh
+   tests the precondition at run time through the probe's `inband` counter. */
+#define NO_OPEN_XY 0xFFFF
 
 class Map: public Object
   {
@@ -410,6 +423,8 @@ class Map: public Object
 
     bool FindOpenAreas(Rect r, rID regID=0, int16 Flags=0);
     void SetRegion(Rect r, rID regID);
+    /* Returns x + y*256, or NO_OPEN_XY when no square is open. (0,0) cannot
+       carry that meaning: it is a real square, and it is always solid rock. */
     uint16 GetOpenXY();
 
     EvReturn thEnGen(rID xID, uint32 fl, int8 CR, uint16 enAlign);
@@ -1006,9 +1021,33 @@ class Thing: public Object
       Thing* ProjectTo(int16, int16, int8 range=127);
       void PlaceNear(int16, int16);
       void PlaceAt(Map* _m,int16 _x,int16 _y, bool share_square=false);
+      /* upstream: an empty OpenC must not place at the solid corner. Upstream's
+         own body is `PlaceAt(_m,xy%256,xy/256);` with no test (inc/Map.h:723-725
+         on upstream/master), so Win32 has it too -- there ASSERT's Error() puts
+         up "[E]xit or [C]ontinue?" and RETURNS on Continue, so the placement
+         follows a prompt instead of being silent as it is here.
+         Precondition: the Thing must not already be on a map or in a
+         container, because a refusal DISPOSES it. All six callers create it
+         immediately before, in the EV_BIRTH handlers of the lib/dungeon.irh
+         regions "Dragon Cave", "Kobold Warren", "Armoury" (twice) and
+         "Ancient Library" (twice). There is no caller in src/.
+         Observed, inc-upw.3, not sent. */
       void PlaceOpen(Map* _m)
-        { uint16 xy = _m->GetOpenXY();
-          PlaceAt(_m,xy%256,xy/256); }
+        { uint16 xy = _m ? _m->GetOpenXY() : (uint16)NO_OPEN_XY;
+#ifndef INCURSION_OPENXY_UNGUARDED
+          if (xy == NO_OPEN_XY) {
+            Remove(true);
+#ifdef INCURSION_OPENXY_PROBE
+            OpenXYProbe(_m, this, 2);
+#endif
+            return;
+          }
+#endif
+          PlaceAt(_m,xy%256,xy/256);
+#ifdef INCURSION_OPENXY_PROBE
+          OpenXYProbe(_m, this, 1);
+#endif
+        }
       /* keepMobileFields spares the mobile fields this Thing created, for the
          one caller that takes a creature off the map without it going
          anywhere: Creature::Mount. Size fields are never spared -- a carried

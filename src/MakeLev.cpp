@@ -3586,10 +3586,26 @@ bool Map::FindOpenAreas(Rect r, rID regID, int16 Flags) {
 
 uint16 Map::GetOpenXY() {
     int16 n;
-    if (!OpenC) {
-      ASSERT(OpenC); 
+    /* upstream: this returned 0 with no open square, and 0 is the real square
+       (0,0) in the solid outer edge, so callers placed Things in the rock.
+       Upstream's source is unchanged here -- src/MakeLev.cpp:3385-3393 on
+       upstream/master is this function byte for byte. ASSERT expands to
+       Error() and nothing else (inc/Defines.h), and upstream's Error()
+       returns to its caller when the player answers Continue, so the return
+       runs on Win32 too; only the silence is the port's, because the headless
+       Error() does not prompt.
+       Observed, inc-upw.3, not sent. See NO_OPEN_XY in inc/Map.h. */
+#ifdef INCURSION_OPENXY_PROBE
+    if (!OpenC) OpenXYProbe(this, NULL, 0);
+#endif
+#ifdef INCURSION_OPENXY_UNGUARDED
+    ASSERT(OpenC);
+    if (!OpenC)
       return 0;
-    } 
+#else
+    if (!OpenC)
+      return NO_OPEN_XY;
+#endif
     n = random(OpenC);
     return OpenX[n] + OpenY[n]*256;
 }
