@@ -82,7 +82,7 @@ generation-0 parent every time, and the generation cap at `src/Creature.cpp:510`
 **2. `Player::MoveDepth` re-enters itself. Fixed (inc-upw.15, closed as a duplicate of inc-x9i).** `MoveDepth`
 (`src/Feature.cpp:1149`) calls `PlaceAt` (`:1423`) -> `PlaceAt` throws `EV_PLACE`/`EV_FIELDON` (`src/Display.cpp:224`, `:314`) and
 calls `TerrainEffects` (`:358`) -> a portal or terrain handler calls `MoveDepth` again (`src/Feature.cpp:393`;
-`src/Move.cpp:1435`, inside `Creature::TerrainEffects` at `src/Move.cpp:1302`). The re-entry path is ordinary event dispatch; no
+`src/Move.cpp:1435`, inside `Creature::TerrainEffects` at `src/Move.cpp:1350`). The re-entry path is ordinary event dispatch; no
 C++ call from `MoveDepth` to `MoveDepth` exists. *Invariant violated:* a function its caller can re-enter must hold no
 call-lifetime state in `static` storage. The follower array is now local, `Thing *GoWith[64]` (`src/Feature.cpp:1169`), bounded at
 `:1316`; `static Creature* Displace[64]` (`src/Display.cpp:413`) still violates it. *Fix:* the re-entry was not the cause. The

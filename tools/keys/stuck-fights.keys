@@ -1,0 +1,57 @@
+# inc-18q6 phase 3: a frozen adjacent goblin is the melee target. (Not a
+# babau: its acid touch re-writes the same status line the attack roll
+# uses, clobbering the "Attack:" line the oracle reads.)
+# Failed escape must leave the same paladin anchored after the attack.
+# Reuses tools/keys/entangled-acts.keys' two-tile tanglefoot dance and its
+# eight-wait pin: on this seed, the LEFT move that follows those eight waits
+# fails its Reflex save (check_entangled_acts.sh hits this same roll), which
+# is exactly the anchored subject this check needs.
+# No further wait is needed after the attack: on this seed, the very next
+# escape attempt already fails both the Escape Artist and Strength checks,
+# so the fixture measures a refusal rather than an escape.
+@include chargen-paladin.keys
+@until "Afoot" ESC
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+w
+K
+RIGHT
+ENTER
+TAB
+j
+w
+K
+RIGHT RIGHT
+ENTER
+TAB
+j
+RIGHT
+@while "Confirm" y
+@until " Entangled |" RIGHT
+SPACE SPACE
+d
+ESC
+.*8
+LEFT
+@while "Confirm" y
+@dump:anchored
+SPACE SPACE
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+UP
+ENTER
+@dump:before-attack
+UP
+@while "[yn]" y
+@dump:attacked
+SPACE SPACE
+LEFT
+@while "Confirm" y
+@dump:refused
+@quit

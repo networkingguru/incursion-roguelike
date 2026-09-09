@@ -1125,6 +1125,10 @@ FindNonReachVictim:
                     IPrint("You're already charging!");
                     break;
                 }
+                if (HasStati(ENTANGLED)) {
+                    IPrint("You can't charge while entangled.");
+                    break;
+                }
                 if (!MyTerm->EffectPrompt(e, Q_DIR))
                     break;
                 DigMode = false;

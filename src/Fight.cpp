@@ -374,6 +374,23 @@ static int32 DualWieldTimeout(int16 spdA, int16 spdB)
            3000 / max((100 + max(spdA,spdB)*5),10) / 2;
 }
 
+/* upstream: STUCK used to forbid weapon melee (here), ranged attack,
+   trip, disarm, throwing a grappled creature, whirlwind attack, sunder
+   and attacks of opportunity (canMakeAoO, below) -- eight of the
+   twenty-one actions the SRD's entangled condition still permits a
+   glued creature, and Character::PickUp (src/Inv.cpp) forbade a ninth,
+   picking an item up. NAttack, natural attacks, carried no STUCK gate at
+   all, so a glued monster clawed at full effect while a glued character
+   could not swing a sword. R7 and R8 (inc-18q6) sort the twenty-one into
+   the ones that stay forbidden (movement: bull rush, spring attack,
+   sprint, jump, ascend/descend; donning or doffing armour; being ridden)
+   and the ones that do not; this function's refusal was one of the ones
+   that had to go, and bull rush's own STUCK refusal three functions
+   below this one is one of the ones that did not. The defect is
+   upstream's: it is plain event-flow logic with no platform-specific
+   type or compiler dependency, so it misbehaves identically on the
+   original Win32 build. Observed, tools/check_stuck_fights.sh. inc-18q6.
+   Not sent. */
 EvReturn Creature::WAttack(EventInfo &e)
 {
     int8 CleaveCount,j; Creature *CleaveList[64], *c;
@@ -397,12 +414,7 @@ EvReturn Creature::WAttack(EventInfo &e)
       return ABORT; 
     }
     
-    if (HasStati(STUCK))
-    {
-      e.EActor->IPrint("You can't attack with a weapon while stuck.");
-      return ABORT;
-    }
-    else if (HasStati(AFRAID) && !(e.EVictim && !e.EVictim->isCreature())
+    if (HasStati(AFRAID) && !(e.EVictim && !e.EVictim->isCreature())
                && !HasFeat(FT_LION_HEART)) {
       e.EActor->IPrint("You're too scared to attack!");
       return ABORT;
@@ -730,10 +742,6 @@ EvReturn Creature::RAttack(EventInfo &e)
 
   if (HasStati(AFRAID) && !HasFeat(FT_LION_HEART)) {
     e.EActor->IPrint("You're too scared to make a ranged attack!");
-    return ABORT;
-  }
-  if (HasStati(STUCK)) {
-    e.EActor->IPrint("You can't attack with a ranged weapon while stuck.");
     return ABORT;
   }
   if (e.EVictim && HasStati(CHARMED,-1,e.EVictim)) {
@@ -2236,11 +2244,7 @@ SkipSoundAttack:
             e.EActor->Timeout *= 2;
         return DONE;
     case A_TRIP:
-        if (e.EActor->HasStati(STUCK) && !e.isTelekinetic) {
-            if (!e.isCounterTrip)
-                IPrint("You can't trip something while stuck.");
-            return ABORT;
-        } else if (e.EVictim->isAerial()) {
+        if (e.EVictim->isAerial()) {
             if (!e.isCounterTrip)
                 IPrint("You can't trip a flying creature!");
             break;
@@ -2295,12 +2299,6 @@ SkipSoundAttack:
                 IPrint("You cannot disarm an unarmed creature!");
             return ABORT; 
         }
-        if (e.EActor->HasStati(STUCK) && !e.isTelekinetic) {
-            if (!e.isCounterTrip)
-                IPrint("You can't disarm something while stuck.");
-            return ABORT;
-        }
-
         if (e.EActor->AttackMode() == S_MELEE) {
             e.vHit = (int8)e.EActor->Attr[A_HIT_MELEE];
             e.EItem = e.EActor->EInSlot(SL_WEAPON);
@@ -2556,11 +2554,6 @@ SkipRepeat:;
             IPrint("You can only throw a creature you have already grappled.");
             return ABORT;
         }
-        if (e.EActor->HasStati(STUCK)) {
-            IPrint("You can't throw a creature while stuck.");
-            return ABORT;
-        }
-
         /* Succeed or fail, end the grapple */
         e.EVictim->RemoveStati(GRABBED,SS_ATTK,-1,-1,e.EActor);
         e.EVictim->RemoveStati(GRAPPLED,SS_ATTK,-1,-1,e.EActor);
@@ -2591,10 +2584,6 @@ SkipRepeat:;
         bool found; found = false;
         if (!e.EActor->HasFeat(FT_WHIRLWIND_ATTACK))
             return ABORT;
-        if (e.EActor->HasStati(STUCK)) {
-            IPrint("You can't execute a whirlwind of blows while stuck.");
-            return ABORT;
-        }
         for(i=0;i!=8;i++) {
             /* Clear away the flags from the last attack. */
             e.Clear();
@@ -2704,10 +2693,6 @@ SkipRepeat:;
             IPrint("That foe has no weapon to sunder.");
             return ABORT;
         }
-        if (e.EActor->HasStati(STUCK)) {
-            IPrint("You can't sunder a weapon while stuck.");
-            return ABORT;
-        }
         if (!EInSlot(SL_WEAPON)) {
             IPrint("You need a weapon yourself to sunder an enemy's.");
             return ABORT;
@@ -2739,6 +2724,10 @@ SkipRepeat:;
     case A_SPRT:
         if (HasStati(SPRINTING)) {
             IPrint("You're already sprinting.");
+            return ABORT;
+        }
+        if (HasStati(ENTANGLED)) {
+            IPrint("You can't run while entangled.");
             return ABORT;
         }
         if (HasStati(STUCK)) {
@@ -2789,7 +2778,16 @@ SkipRepeat:;
 }
 
 
-// doesn't handle off-guard, unseen attacker, surprise round, etc. 
+/* upstream: STUCK used to sit in this function's badStati list, denying
+   an anchored creature its Dexterity bonus to AC and so opening it to
+   sneak attack and the two auto-coup paths (src/Fight.cpp) as automatic
+   consequences of being anchored, though nothing about a foot glued to
+   the floor removes a creature's Dexterity. src/Values.cpp's `grappling`
+   expression carried the matching defect: STUCK sat beside a real grapple
+   there too, so an anchored-but-ungrappled creature also lost its
+   shield's AC, cover and damage absorption. Both are upstream's: plain
+   event-flow logic, not a port artefact. Traced. inc-18q6. Not sent. */
+// doesn't handle off-guard, unseen attacker, surprise round, etc.
 bool Creature::noDexDefense()
 {
   if (HasStati(ENGULFED))
@@ -2806,9 +2804,9 @@ bool Creature::noDexDefense()
     else 
       return true; 
     } 
-  int badStati[] = { 
+  int badStati[] = {
     ASLEEP, EXPOSED, GRABBED, GRAPPLED, GRAPPLING,
-    NAUSEA, PARALYSIS, PRONE, STUCK, STUNNED, 0 }; 
+    NAUSEA, PARALYSIS, PRONE, STUNNED, 0 };
   for (int i=0; badStati[i]; i++)
     if (HasStati(badStati[i]))
       return true; 
@@ -2820,6 +2818,10 @@ bool Creature::noDexDefense()
   return false; 
 }
 
+/* upstream: part of the same defect marked at Creature::WAttack above --
+   attacks of opportunity were one of the nine actions STUCK wrongly
+   forbade an anchored creature. Observed, tools/check_stuck_fights.sh.
+   inc-18q6. Not sent. */
 bool Creature::canMakeAoO(Creature * victim)
 {
   /* Some Stati prevent you from executing attacks of opportunity */
@@ -2833,9 +2835,8 @@ bool Creature::canMakeAoO(Creature * victim)
       HasStati(NAUSEA) ||
       HasStati(PARALYSIS) ||
       HasStati(SLEEPING) ||
-      HasStati(ENGULFED) || 
-      HasStati(STUCK) || 
-      HasStati(STUNNED) || 
+      HasStati(ENGULFED) ||
+      HasStati(STUNNED) ||
       HasMFlag(M_SWARM) || // WW: SRD
       ts.hasTargetOfType(OrderDoNotAttack) ||
       (HasStati(BLIND) && !HasMFlag(M_BLIND) && !HasFeat(FT_BLIND_FIGHT))
@@ -6551,16 +6552,34 @@ WoundIgnored:
                                         break;
                                     case AD_STUK:
                                         if (e.EVictim->HasStati(STUCK))
-                                            return ABORT; 
+                                            return ABORT;
                                         else if (e.EVictim->HasMFlag(M_AMORPH)) {
                                             e.Immune = true;
                                             break;
-                                        } 
+                                        }
                                         if (!e.EVictim->SavingThrow(REF,e.saveDC,SA_GRAB)) {
                                             if (!e.Terse)
                                                 e.EVictim->StatiMessage(STUCK,0,false);
 
-                                            e.EVictim->GainTempStati(STUCK,e.EActor,e.vDmg,SS_ATTK,(int16)e.EParam);
+                                            {
+                                                int16 stuckKind = (int16)e.EParam;
+                                                if (stuckKind < STUCK_STICKY || stuckKind > STUCK_WEB) {
+                                                    rID terr = e.EVictim->m ?
+                                                        e.EVictim->m->TerrainAt(e.EVictim->x, e.EVictim->y) : 0;
+                                                    stuckKind = terr ? (int16)TTER(terr)->GetConst(STICK_TYPE) : 0;
+                                                    if (stuckKind < STUCK_STICKY || stuckKind > STUCK_WEB)
+                                                        stuckKind = STUCK_ATTACK;
+                                                }
+                                                /* upstream: a monster's AD_STUK attack used to grant STUCK with
+                                                   no hazard kind and no difficulty of its own, so StuckEscapeDCs
+                                                   (src/Move.cpp) had nothing to read for the STUCK_ATTACK row and
+                                                   fell back to its default every time regardless of how hard the
+                                                   attack that caused it actually was. Passing e.saveDC through as
+                                                   the stati's Mag gives that row a real number: a monster whose
+                                                   attack DC is 13 no longer reads as hard to escape as one whose
+                                                   DC is 20. Traced. inc-18q6. Not sent. */
+                                                e.EVictim->GainTempStati(STUCK,e.EActor,e.vDmg,SS_ATTK,stuckKind,e.saveDC);
+                                            }
                                         } else e.Resist = true;
                                         break;
                                     case AD_SLOW:

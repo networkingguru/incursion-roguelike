@@ -2489,10 +2489,17 @@ Terrain "Ettercap Webbing"
   { Image: brown GLYPH_WEB; Mat:MAT_WEBBING; Mov: 100%;
     Flags: TF_WARN, TF_SPECIAL, TF_SHOWNAME; 
     On Event EV_MOVE {
-      if (!(EActor->mID == $"ettercap") && !EActor->HasEffStati(EFF_FLAG1, 
+      /* R18a (inc-18q6): the Escape Artist check above is Dexterity-based
+         and carries the armour penalty -- the same unreachable check
+         inc-jwm0 was about, written here in script instead of the engine.
+         A Strength alternative at DC 22, with no armour penalty, is tried
+         only when that check fails. Nothing else changes: no stati is
+         granted either way, and a failed attempt still costs a turn. */
+      if (!(EActor->mID == $"ettercap") && !EActor->HasEffStati(EFF_FLAG1,
                                               $"Universal Solvent") &&
           !(EActor->HasAbility(CA_WOODLAND_STRIDE)) &&
-          !(EActor->SkillCheck(SK_ESCAPE_ART,17,true)))
+          !(EActor->SkillCheck(SK_ESCAPE_ART,17,true)) &&
+          (random(20) + 1 + EActor->Mod(A_STR)) < 22)
         {
           DPrint(e,"You fail to escape the ettercap webbing!",
             "An <EActor> fails to escape the ettercap webbing!");

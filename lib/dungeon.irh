@@ -1269,10 +1269,13 @@ Terrain "Webbing"
           return NOTHING; 
         EActor->MakeNoise(10);
       } 
-      return NOTHING; 
-    } ;    
+      return NOTHING;
+    } ;
     Constants:
-      * STICK_TYPE STUCK_STICKY;
+      /* R18 (inc-18q6): Webbing is the Dexterity hazard, not the Strength
+         one -- it shared slime's STUCK_STICKY only because no hazard had
+         its own kind before this table existed. */
+      * STICK_TYPE STUCK_WEB;
   }
 
 Terrain "Ice Floor"

@@ -3229,10 +3229,21 @@ int16 Character::SpellRating(rID eID, uint32 mm, bool perceived)
       p_calc = 0;
     
     
+    /* upstream: STUCK used to share a grapple's -60 spell-success
+       penalty here, though an anchored-but-ungrappled caster still has
+       both hands and a functioning voice free -- a grapple binds those,
+       an anchored foot does not. STUCK now takes -40, the same penalty
+       a prone caster already took two lines down, and a grapple keeps
+       -60. Plain event-flow logic, not a port artefact. Traced.
+       inc-18q6. Not sent. */
     p_circ = 0; ps_circ.Empty();
     if (!(mm & MM_STILL)) {
-      if (HasStati(GRAPPLED) || HasStati(GRAPPLING) || HasStati(GRABBED) || HasStati(STUCK))
+      if (HasStati(GRAPPLED) || HasStati(GRAPPLING) || HasStati(GRABBED))
         { p_circ = -60; ps_circ += "grapple/"; }
+      else if (HasStati(STUCK))
+        { p_circ = -40; ps_circ += "stuck/"; }
+      else if (HasStati(ENTANGLED))
+        { p_circ = -20; ps_circ += "entangled/"; }
       else if (HasStati(PRONE))
         { p_circ = -20; ps_circ += "prone/"; }
       else if (m && TTER(m->TerrainAt(x,y))->HasFlag(TF_DEEP_LIQ))

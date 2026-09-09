@@ -35,7 +35,13 @@
 #
 # The fixture uses the WORST case rather than a flattering one: seed 4 rolls
 # the paladin STR 10, so his Strength check is a bare d20 with no bonus. A real
-# tank rolls better. Twenty attempts at 35% each.
+# tank rolls better. Twenty attempts at 20% each (DC 17, R14's tanglefoot row).
+#
+# PHASE 4 (R14) gave every hazard its own difficulty and governing attribute,
+# keyed on the STUCK stati's Val instead of one DC every hazard shared. This
+# script also proves that table is being read: tanglefoot strands is the
+# Strength hazard at DC 17, not the flat 15 + GetStatiMag(STUCK) that used to
+# read DC 14 for every hazard because nothing ever set a Mag.
 #
 # Usage: tools/check_entangle_escape.sh   (0 pass, 1 fail, 2 inconclusive)
 set -uo pipefail
@@ -97,8 +103,8 @@ if ! grep -qh "Strength Check:" "$S"/*; then
     rc=1
 elif ! grep -qh "Strength Check:.*\[success\]" "$S"/*; then
     echo "FAIL: the Strength check is rolled but never succeeded in twenty"
-    echo "      attempts against DC 14 on a bare d20. At STR 10 that is one"
-    echo "      run in ten thousand by chance, so read it as a real change in"
+    echo "      attempts against DC 17 on a bare d20. At STR 10 that is about"
+    echo "      one run in ninety by chance, so read it as a real change in"
     echo "      the DC or the modifier rather than bad luck."
     grep -h "Strength Check:" "$S"/* | sed 's/ *|.*//' | sort -u | sed 's/^/      /'
     rc=1
@@ -109,10 +115,31 @@ if ! grep -qh "You tear free" "$S"/*; then
     rc=1
 fi
 
+# --- R14: tanglefoot strands is the Strength hazard, at DC 17, not the flat
+# DC 14 every hazard used to share (15 + GetStatiMag(STUCK), Mag defaulting
+# to -1). A Strength check at DC 14 anywhere in this run means the per-hazard
+# table in src/Move.cpp is not being read for this stati's Val.
+
+if ! grep -qh "Strength Check:.*vs DC 17 " "$S"/*; then
+    echo "FAIL: no Strength check was ever rolled against DC 17, tanglefoot"
+    echo "      strands' own Strength escape DC (R14, STUCK_BONDED). The"
+    echo "      per-hazard table is not being consulted for this hazard."
+    grep -h "Strength Check:" "$S"/* | sed 's/ *|.*//' | sort -u | sed 's/^/      /'
+    rc=1
+fi
+
+if grep -qh "Strength Check:.*vs DC 14 " "$S"/*; then
+    echo "FAIL: a Strength check rolled against DC 14 -- the old flat"
+    echo "      15 + GetStatiMag(STUCK) formula. R14's per-hazard table is"
+    echo "      not in effect for tanglefoot strands."
+    grep -h "Strength Check:.*vs DC 14 " "$S"/* | sed 's/ *|.*//' | sort -u | sed 's/^/      /'
+    rc=1
+fi
+
 # --- the guard: the Escape Artist path itself must NOT have been weakened.
-# Every roll below 20 must still fail at -11 against DC 14. A "fix" that made
-# this skill check passable would satisfy the assertions above for the wrong
-# reason.
+# Every roll below 20 must still fail at -11 against DC 22 (R14's tanglefoot
+# Escape Artist DC). A "fix" that made this skill check passable would
+# satisfy the assertions above for the wrong reason.
 
 bad="$(grep -h "Escape Artist Check:" "$S"/* | sed 's/ *|.*//' \
        | grep "\[success\]" | grep -v "1d20 (20)" || true)"

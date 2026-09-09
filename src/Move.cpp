@@ -21,6 +21,58 @@ bool isSimilarDir(Dir d, Dir d2) {
 	return ((DirX[d] == DirX[d2] && abs(DirY[d] - DirY[d2]) < 2) || (DirY[d] == DirY[d2] && abs(DirX[d] - DirX[d2]) < 2));
 }
 
+/* upstream: every entangling hazard used to share one flat escape DC,
+   15 + GetStatiMag(STUCK), and nothing ever set a Mag on the STUCK this
+   table replaces, so GetStatiMag defaulted to -1 and every hazard read
+   the same DC 14 regardless of kind -- tanglefoot strands as easy to
+   escape as a web. Plain event-flow logic, not a port artefact.
+   Observed: tools/check_entangle_escape.sh measured DC 14 against the
+   flat formula and DC 17, tanglefoot's own STUCK_BONDED row, against
+   this table. inc-18q6. Not sent.
+
+   R14 (inc-18q6): every entangling hazard gets its own escape difficulty
+   and its own governing attribute, keyed on the STUCK stati's Val -- the
+   hazard kind GainTempStati was given when the stati was granted
+   (inc/Defines.h:2882). A monster's AD_STUK attack (STUCK_ATTACK) has no
+   fixed pair of its own: both checks read the attack's own save DC back
+   out of the stati's Mag, which src/Fight.cpp's AD_STUK arm now passes
+   there. One table, one lookup, used by the single caller below. */
+static void StuckEscapeDCs(int16 val, int16 mag, int16 &escArtDC, int16 &strDC) {
+	static const struct { int16 val, escArt, str; } StuckEscapeTable[] = {
+		{ STUCK_BONDED, 22, 17 },
+		{ STUCK_WEB,    20, 25 },
+		{ STUCK_WEAPON, 20, 25 },
+		{ STUCK_VINES,  20, 25 },
+		{ STUCK_STICKY, 15, 20 },
+		{ STUCK_PINNED, 20, 20 },
+	};
+	size_t i;
+
+	if (val == STUCK_ATTACK) {
+		/* A3 (inc-18q6): Mag is only meaningful when the attack that stuck
+		   this creature actually set it (see Fight.cpp's AD_STUK arm). A
+		   Mag of zero or less is not a difficulty -- Creature::SavingThrow
+		   treats DC <= 0 as an automatic failure -- so fall back to the
+		   same default the no-kind-declared row uses rather than rolling
+		   against a nonsense DC. */
+		if (mag <= 0) {
+			escArtDC = 20;
+			strDC = 25;
+		} else
+			escArtDC = strDC = mag;
+		return;
+	}
+	for (i = 0; i < sizeof(StuckEscapeTable) / sizeof(StuckEscapeTable[0]); i++)
+		if (StuckEscapeTable[i].val == val) {
+			escArtDC = StuckEscapeTable[i].escArt;
+			strDC = StuckEscapeTable[i].str;
+			return;
+		}
+	/* 0 or -1: no kind was declared. */
+	escArtDC = 20;
+	strDC = 25;
+}
+
 EvReturn Creature::Walk(EventInfo &e) {
 	bool jcheck, found, think, CloseConfirm = false;
 	char ch, MoveSilRoll;
@@ -152,9 +204,9 @@ EvReturn Creature::Walk(EventInfo &e) {
 		}
 
 		if (HasStati(STUCK)) {
-			int power = GetStatiMag(STUCK);
-			int16 stuckDC = (int16)(15 + power);
-			bool freed = SkillCheck(SK_ESCAPE_ART, stuckDC, true, false);
+			int16 escArtDC, strDC;
+			StuckEscapeDCs(GetStatiVal(STUCK), GetStatiMag(STUCK), escArtDC, strDC);
+			bool freed = SkillCheck(SK_ESCAPE_ART, escArtDC, true, false);
 
 			/* upstream: glue had exactly one exit, and it was a Dexterity
 			   skill that carries the armour check penalty, so a character in
@@ -177,11 +229,11 @@ EvReturn Creature::Walk(EventInfo &e) {
 			if (!freed) {
 				int16 sRoll = Dice::Roll(1, 20);
 				int16 sBonus = (int16)Mod(A_STR);
-				freed = (sRoll + sBonus) >= stuckDC;
+				freed = (sRoll + sBonus) >= strDC;
 				if (isPlayer() || theGame->GetPlayer(0)->XPerceives(this)) {
 					String bStr; Term *term;
 					bStr = Format("%cStrength Check:%c 1d20 (%d) %+d = %d vs DC %d %c[%s]%c.",
-						-AZURE, -GREY, sRoll, sBonus, sRoll + sBonus, stuckDC,
+						-AZURE, -GREY, sRoll, sBonus, sRoll + sBonus, strDC,
 						freed ? -EMERALD : -PINK,
 						freed ? "success" : "failure", -GREY);
 					if (isPlayer())
@@ -1351,6 +1403,12 @@ void Creature::TerrainEffects() {
 	Feature *ft;
 	if (!m || x == -1)
 		return;
+	StatiIterNature(this, ENTANGLED)
+		if (S->eID && S->eID != m->TerrainAt(x, y) &&
+			S->eID != m->StickyAt(x, y))
+			Stati_RemoveInline(S, this);
+	StatiIterEnd(this)
+
 	if (isIllusion())
 		return;
 	bool isIllTer = m->PTerrainAt(x, y, this) !=
@@ -1511,13 +1569,38 @@ void Creature::TerrainEffects() {
 			  return ABORT;
 			  */
 			if (!SkillCheck(SK_BALANCE, 14 + m->Depth, true, false)) {
-				DAMAGE(this, this, AD_STUK, -1, NAME(stickyID),
-					xe.EParam = TTER(stickyID)->GetConst(STICK_TYPE));
+				/* upstream: both halves below are the base code's, not the
+				   port's -- plain event-flow logic with no platform-specific
+				   type or compiler dependency. R19: the DAMAGE macro never
+				   set saveDC, so the Reflex save the AD_STUK arm rolls was
+				   dead code that always failed. R20: the duration was -1, so
+				   sticky terrain never expired. Observed,
+				   tools/check_sticky_save.sh. inc-18q6. Not sent. */
+				/* R19 (inc-18q6): the DAMAGE macro never sets saveDC, and
+				   EventInfo::Clear() memsets the struct, so it arrived as
+				   0. Creature::SavingThrow treats DC <= 0 as an automatic
+				   FAILURE, not an automatic pass, so the Reflex save the
+				   AD_STUK arm rolls was dead code that always failed. Give
+				   it the same DC the Balance check above just used.
+				   R20: the duration was -1. Thing::UpdateStati
+				   (src/Status.cpp:50) only ever decrements a Duration
+				   greater than zero, so -1 never counted down and sticky
+				   terrain anchored a creature for the rest of the game.
+				   20 turns instead: long enough that a real escape attempt
+				   at the hazard's own DC (StuckEscapeDCs, above -- 15/20
+				   for pool of slime) still matters across several tries,
+				   short enough that a creature who never rolls high enough
+				   is not stuck forever. */
+				DAMAGE(this, this, AD_STUK, 20, NAME(stickyID),
+					(xe.EParam = TTER(stickyID)->GetConst(STICK_TYPE),
+					 xe.saveDC = 14 + m->Depth));
 				if (HasStati(STUCK)) {
 					IDPrint("You get stuck in the <Res2>!",
 						"The <Obj1> gets stuck in the <Res2>!", this, stickyID);
 				}
 			}
+			else if (!GetEffStati(ENTANGLED, stickyID))
+				GainPermStati(ENTANGLED, NULL, SS_MISC, 0, 0, stickyID);
 		SkipStickTest:
 			;
 		}

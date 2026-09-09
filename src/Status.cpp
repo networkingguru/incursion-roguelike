@@ -47,9 +47,9 @@ void Thing::UpdateStati() {
         // trouble placing it (this happened Thu Jan 15 10:16:04 PST 2004)
         if (isCreature() && (isDead() || !m || x == -1)) 
             StatiIterBreakout(this,return)
-        if (S->Duration > 0) { 
+        if (S->Duration > 0) {
             // ww: I've gotten an invalid object handle on the oThing() below,
-            // so we add this sanity check 
+            // so we add this sanity check
             if (theRegistry->Exists(S->h) && HasStati(PERIODIC,-1,oThing(S->h)))
                 continue;
             if (S->Nature == POISONED && HasStati(SLOW_POISON))
@@ -1211,6 +1211,14 @@ void Creature::StatiMessage(int16 n,int16 val, bool ending) {
         else
             IDPrint("You tear free.",
             "The <Obj> tears free.",this);
+        break;
+    case ENTANGLED:
+        if (!ending)
+            IDPrint("You've become entangled!",
+            "The <Obj> seems to be entangled.",this);
+        else
+            IDPrint("You are no longer entangled.",
+            "The <Obj> is no longer entangled.",this);
         break;
     case ILLUS_DMG:
         if (ending)

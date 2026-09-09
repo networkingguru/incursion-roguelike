@@ -3314,6 +3314,15 @@ EvReturn Creature::TryToDestroyThing(Thing *f)
     return ABORT;
   } 
 
+/* upstream: STUCK used to add a flat -7 to Reflex saves elsewhere in this
+   file, stacked on top of whatever Dexterity penalty applied -- doubling
+   the SRD's entangled penalty for a creature that was also anchored,
+   since STUCK always implies ENTANGLED (R6, inc-18q6). That flat penalty
+   is gone; R2's -4 Dexterity (src/Values.cpp), which this function's own
+   ENTANGLED halving below sits beside, supplies the Reflex penalty once,
+   through Dexterity, the way the SRD's Dexterity-derived Reflex save
+   already would. Plain event-flow logic, not a port artefact. Traced.
+   inc-18q6. Not sent. */
 /* yields a number like 130% or 90% */
 int32 Creature::MoveAttr(int from_x, int from_y)
 {
@@ -3349,7 +3358,8 @@ int32 Creature::MoveAttr(int from_x, int from_y)
       i = 100;
   int32 bad_blind = 1 + ((isBlind() || m->At(x,y).Dark) && 
       !HasFeat(FT_BLIND_FIGHT) && !HasMFlag(M_BLIND));
-  return ((((Mov*5)+100) * i) / 100);
+  int32 result = ((((Mov*5)+100) * i) / 100);
+  return HasStati(ENTANGLED) ? result / 2 : result;
 } 
 
 inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
@@ -3435,13 +3445,6 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
     bStr += Format(" %+d %s", cmod, cmod_desc);
     }
       
-  if (type == REF && HasStati(STUCK)) {
-    Bonus -= 7;
-    if (show) bStr += " -7 (entangled)";
-    // ww: if you can't move, you normally can't make a reflex save ...
-    // but if by some miracle you can overcome a -30 penalty, more power
-    // to you!
-    } 
   for (i=ADJUST;i!=ADJUST_LAST+1;i++)
     {
       RemoveOnceStati(i,A_SAV);

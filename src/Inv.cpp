@@ -468,6 +468,11 @@ EvReturn Character::TakeOff(EventInfo &e) {
       return DONE;
   }
 
+/* upstream: part of the same defect marked at Creature::WAttack
+   (src/Fight.cpp) -- picking an item up was one of the nine actions
+   STUCK wrongly forbade an anchored creature, though the SRD's entangled
+   condition permits it. Observed, tools/check_stuck_fights.sh. inc-18q6.
+   Not sent. */
 EvReturn Character::PickUp(EventInfo &e) {
     uint8 i;
     if (HasMFlag(M_NOHANDS)) {
@@ -475,8 +480,8 @@ EvReturn Character::PickUp(EventInfo &e) {
         return ABORT;
     }
 
-    if (HasStati(GRAPPLED) || HasStati(GRABBED) || HasStati(GRAPPLING) || HasStati(STUCK)) {
-        IPrint("You can't pick something up while grappling or stuck.");
+    if (HasStati(GRAPPLED) || HasStati(GRABBED) || HasStati(GRAPPLING)) {
+        IPrint("You can't pick something up while grappling.");
         return ABORT;
     }
     if (HasStati(CHARGING) && !HasFeat(FT_SPIRITED_CHARGE)) {

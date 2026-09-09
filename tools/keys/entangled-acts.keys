@@ -1,0 +1,287 @@
+# inc-18q6 phase 2: passed-save entanglement must penalize, not disable.
+# Frozen monsters keep the action oracle about the player's own actions.
+# Paint two adjacent squares: tanglefoot rolls on departure and on strikes.
+#
+# THE SUBJECT is the orc rogue of chargen-rogue.keys, not the human paladin
+# check_entangle_escape.sh keeps. A paladin's Reflex save is bad enough that
+# a chain of independent DC 15 rolls (tanglefoot re-rolls that save on every
+# move AND every strike from the square, lib/alchemy.irh) almost never lines
+# up two, three, four passes in a row -- seeds 1 to 10 all failed on him. A
+# rogue's good Reflex progression plus his Dexterity gives him a real bonus
+# on this save, so a bounded chain of retries has a real chance of finishing
+# instead of measuring dice. On seed 4 that bonus is Reflex +5, a 55% chance
+# per independent roll.
+#
+# ORDER: the attack test runs BEFORE the movement test, on purpose. Both
+# tests need the subject standing on a tanglefoot square and Entangled, not
+# Stuck, at the moment they are graded, and both need retries: a failed save
+# Sticks the subject instead of granting the roll being tested, and each
+# retry is itself a fresh independent roll. An attack retry can never move
+# the subject -- attacking never changes his square -- so running the
+# attack loop first is free of risk. A move retry that SUCCEEDS, by
+# contrast, walks him one square closer to open floor; run enough of those
+# in a row (only two tanglefoot squares are painted) and he leaves the
+# hazard entirely. Running the movement test last, after the attack test,
+# means that overshoot is not a defect: this fixture WANTS him to walk
+# clear of the hazard by the end of the move loop, for the reason below.
+# An earlier version of this fixture ran the movement test first and
+# calibrated the exact number of attempts to stop at, to avoid overshoot on
+# one seed's exact dice -- that is what the Part A task brief calls
+# calibration rather than a fixture, and it is why this version does not do
+# that.
+#
+# WHY THE FLOOR BASELINE IS TAKEN LAST, NOT FIRST. A rogue starts Hiding,
+# which is its own movement penalty ("50% hiding" on the Movement Rate
+# line), and combat ends it -- measured while building this fixture: every
+# "before"/"moved" screen from the attack loop onward shows no Hiding tag,
+# where every screen before combat still shows one. Measuring the ordinary
+# floor cost before the fight and the entangled cost after it would compare
+# two different subjects: one paying a hiding penalty the other one is not.
+# So this fixture pays the entangled cost FIRST (from the same fight-worn,
+# no-longer-hiding subject) and measures the floor cost SECOND, once the
+# move loop has walked him back to ordinary ground -- both halves of the
+# comparison are the one post-combat subject.
+#
+# THE MOVE RETRY needs no separate recovery step. A failed attempt leaves
+# the subject Stuck rather than moved, and the very next LEFT keypress --
+# sent by this same loop, nothing extra needed -- is read by
+# Creature::Walk as an escape attempt while Stuck, so the loop naturally
+# alternates between "try to leave" and "try to tear free" without a
+# separate recovery block. tools/check_entangled_acts.sh finds the FIRST
+# attempt that actually left the square while Entangled and not Stuck, and
+# grades that one and no other; the loop then keeps going (it does not stop
+# there) so that by the last attempt the subject has walked off BOTH
+# tanglefoot squares, clearing the ground the trailing floor baseline needs.
+#
+# THE ATTACK RETRY does need a recovery step: PRE(EV_STRIKE) sits on the
+# same event list as EV_MOVE (lib/alchemy.irh) and re-rolls the same Reflex
+# DC 15 on a strike from the square, same as leaving it would -- but only
+# while the subject is Entangled, not Stuck; an attack thrown while already
+# Stuck does not re-roll it (measured while building this fixture: attacks
+# in a row from Stuck printed no "Reflex Save:" line at all, and Stuck
+# never lifted on its own). So after a strike leaves him Stuck, the script
+# spends "@while "Stuck" LEFT" -- Strength/Escape Artist checks,
+# src/Move.cpp -- until he tears free, and it must stop the moment Stuck
+# lifts, because one keypress too many would actually walk him off the
+# square this fixture is measuring. Escaping never moves him (it only ever
+# clears Stuck while he stands on the square he got stuck on), so this
+# cannot overshoot the way a move retry can. @while is capped at 200 passes
+# (src/Wposix.cpp SK_LOOP_MAX) and gives up rather than hang, so this cannot
+# loop forever even on a subject whose escape chance is poor.
+#
+# THE DISENGAGE PROMPT. Once the summoned troll turns hostile, walking
+# away from it while adjacent asks "Abort, Flee or Disengage?" (src/Move.cpp)
+# -- a different prompt from the hazard-entry "Confirm" one, and it blocks
+# the run if nothing answers it. "f" (Flee) always completes the move at
+# the cost of one attack of opportunity, which is what every LEFT in the
+# move loop needs: an aborted move would print no violation but would also
+# never satisfy "the subject moved," stalling the loop for nothing.
+#
+# tools/check_entangled_acts.sh finds the first attack attempt that lands a
+# printed "Attack:" line while Entangled and not Stuck, and grades that
+# one, and the first move attempt that actually left the square while
+# Entangled and not Stuck, and grades that one. Ten attempts of each; if
+# all ten of either miss, the check reports INCONCLUSIVE rather than FAIL,
+# because that is a measurement failure, not a proven defect.
+#
+# The "Stuck"/"Entangled" checks below match bare words, not anchored to
+# the pipe that ends the status field ("... Stuck |" or "... Entangled |"):
+# a third status (Hiding, here) can sit between one of these and the pipe,
+# so an anchored pattern silently never matches for Stuck. Entangled is
+# always the last status word the game prints before the pipe on this
+# subject, so anchoring it to " |" is safe and used for the one loop that
+# needs to stop AT Entangled rather than merely detect it.
+#
+# A TROLL takes the swing, not the paladin fixture's bugbear: measured
+# while building this version, a rogue's sneak attack (+1d8 while hidden,
+# unavailable to a paladin) plus ten un-recovering swings killed the
+# bugbear on some seeds partway through the attack loop -- and once the
+# target is dead, the next "UP" keypress the loop sends is read as a plain
+# move instead of an attack, silently walking the subject off the hazard
+# square before the move loop even starts. A troll regenerates 5 hit
+# points a round, which no amount of ordinary weapon damage from this
+# subject outpaces, so it cannot die mid-loop; a babau was tried and
+# rejected for the same reason the paladin version rejected it -- its acid
+# touch corrupts the same "Attack:" line the oracle reads and can melt the
+# subject's weapon outright. Measured HP cost to the subject across ten
+# attack attempts plus the escape rounds that follow: at most 6 of 33, no
+# death on any seed tried. While STUCK a weapon attack can still land
+# (Phase 3, R7) without clearing the Stuck the same swing was blocked by
+# moments before -- which is exactly why the checker requires Entangled and
+# not Stuck at the moment of the hit, not merely a hit.
+#
+# The checker tracks the player's own column on screen, run to run within
+# this one session: the display does not scroll over the handful of
+# squares this fixture ever moves across, so the raw column of '@' is a
+# stable, landmark-free position signal. (The paladin version anchored on
+# a '#' wall visible from the entry chamber; this room, generated after a
+# different amount of chargen dice, never shows one within view.)
+@include chargen-rogue.keys
+@until "Afoot" ESC
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+d
+@dump:baseline
+ESC
+w
+K
+RIGHT
+ENTER
+TAB
+j
+w
+K
+RIGHT RIGHT
+ENTER
+TAB
+j
+RIGHT
+@while "Confirm" y
+@dump:arrival
+@until " Entangled |" RIGHT
+@dump:entry
+SPACE SPACE
+d
+@dump:entangled-sheet
+ESC
+.*2
+w
+@choose "Monster Summoning"
+TAB
+@choose "Trolls"
+@choose "troll"
+UP
+ENTER
+@dump:before-attack1
+UP
+@while "[yn]" y
+@dump:attacked1
+@while "Confirm" y
+@while "Stuck" LEFT
+@while "Confirm" y
+@dump:before-attack2
+UP
+@while "[yn]" y
+@dump:attacked2
+@while "Confirm" y
+@while "Stuck" LEFT
+@while "Confirm" y
+@dump:before-attack3
+UP
+@while "[yn]" y
+@dump:attacked3
+@while "Confirm" y
+@while "Stuck" LEFT
+@while "Confirm" y
+@dump:before-attack4
+UP
+@while "[yn]" y
+@dump:attacked4
+@while "Confirm" y
+@while "Stuck" LEFT
+@while "Confirm" y
+@dump:before-attack5
+UP
+@while "[yn]" y
+@dump:attacked5
+@while "Confirm" y
+@while "Stuck" LEFT
+@while "Confirm" y
+@dump:before-attack6
+UP
+@while "[yn]" y
+@dump:attacked6
+@while "Confirm" y
+@while "Stuck" LEFT
+@while "Confirm" y
+@dump:before-attack7
+UP
+@while "[yn]" y
+@dump:attacked7
+@while "Confirm" y
+@while "Stuck" LEFT
+@while "Confirm" y
+@dump:before-attack8
+UP
+@while "[yn]" y
+@dump:attacked8
+@while "Confirm" y
+@while "Stuck" LEFT
+@while "Confirm" y
+@dump:before-attack9
+UP
+@while "[yn]" y
+@dump:attacked9
+@while "Confirm" y
+@while "Stuck" LEFT
+@while "Confirm" y
+@dump:before-attack10
+UP
+@while "[yn]" y
+@dump:attacked10
+SPACE SPACE
+@dump:before1
+LEFT
+@while "Disengage" f
+@while "Confirm" y
+@dump:moved1
+@dump:before2
+LEFT
+@while "Disengage" f
+@while "Confirm" y
+@dump:moved2
+@dump:before3
+LEFT
+@while "Disengage" f
+@while "Confirm" y
+@dump:moved3
+@dump:before4
+LEFT
+@while "Disengage" f
+@while "Confirm" y
+@dump:moved4
+@dump:before5
+LEFT
+@while "Disengage" f
+@while "Confirm" y
+@dump:moved5
+@dump:before6
+LEFT
+@while "Disengage" f
+@while "Confirm" y
+@dump:moved6
+@dump:before7
+LEFT
+@while "Disengage" f
+@while "Confirm" y
+@dump:moved7
+@dump:before8
+LEFT
+@while "Disengage" f
+@while "Confirm" y
+@dump:moved8
+@dump:before9
+LEFT
+@while "Disengage" f
+@while "Confirm" y
+@dump:moved9
+@dump:before10
+LEFT
+@while "Disengage" f
+@while "Confirm" y
+@dump:moved10
+@while " Entangled |" LEFT
+@while "Disengage" f
+@while "Confirm" y
+LEFT
+@while "Disengage" f
+@while "Confirm" y
+@dump:floor-before
+RIGHT
+@while "Confirm" y
+@dump:floor-after
+@quit

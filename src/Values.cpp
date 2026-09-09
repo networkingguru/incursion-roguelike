@@ -630,7 +630,14 @@ Restart:
         AddBonus(BONUS_STATUS,A_WIS,-4);
         AddBonus(BONUS_STATUS,A_MAG,-15);
     }
-    grappling = (HasStati(GRABBED) || HasStati(GRAPPLED) || HasStati(GRAPPLING) || HasStati(STUCK));
+    /* upstream: STUCK used to sit in this expression alongside a real
+       grapple, so an anchored-but-ungrappled creature lost its shield's
+       AC, cover and damage absorption below (nothing about a foot glued
+       to the floor binds a shield arm the way a grapple does), and
+       Creature::noDexDefense() (src/Fight.cpp) carried the matching
+       defect for Dexterity's own bonus to AC. Both are upstream's: plain
+       event-flow logic, not a port artefact. Traced. inc-18q6. Not sent. */
+    grappling = (HasStati(GRABBED) || HasStati(GRAPPLED) || HasStati(GRAPPLING));
     if (HasStati(STUNNED) || HasStati(NAUSEA)) { 
         AddBonus(BONUS_STATUS,A_DEX,-6);
         AddBonus(BONUS_STATUS,A_SPD,-10);
@@ -672,6 +679,11 @@ Restart:
         AddBonus(BONUS_HUNGER, A_STR, -4);
         AddBonus(BONUS_HUNGER, A_CON, -4);
         break;
+    }
+
+    if (HasStati(ENTANGLED)) {
+        AddBonus(BONUS_STATUS,A_HIT,-2);
+        AddBonus(BONUS_STATUS,A_DEX,-4);
     }
 
     if (HasStati(SINGING))

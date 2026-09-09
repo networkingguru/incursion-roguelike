@@ -1,0 +1,87 @@
+# inc-18q6 phase 5 (R19/R20). Walking onto a pool of slime must roll a real
+# Reflex save, and the STUCK it grants must lapse on its own.
+#
+# THE DEFECT (both halves, before the fix). src/Move.cpp's sticky-terrain
+# path (Creature::TerrainEffects) threw AD_STUK through the DAMAGE macro
+# without ever setting saveDC, and EventInfo::Clear() memsets the struct, so
+# it arrived as 0. Creature::SavingThrow (src/Creature.cpp) returns false --
+# and prints NOTHING -- for DC <= 0: a zero DC is an automatic failure, not
+# an automatic pass, and no "Reflex Save:" line was ever possible for this
+# hazard. The same call passed -1 as the duration, and
+# Thing::UpdateStati (src/Status.cpp) only ever decrements a Duration
+# greater than zero, so the STUCK it granted never expired.
+#
+# THE ORACLE, half one (R19). A DC above zero means SavingThrow actually
+# rolls and prints. "Reflex Save: ... vs DC 15 [failure]." on the turn the
+# character gets stuck is impossible on the unfixed tree -- it would print
+# nothing at all -- so its mere appearance is the assertion.
+#
+# THE ORACLE, half two (R20), and why it does NOT look like escaping. Pool
+# of slime's own hazard check re-runs every turn a creature stands on it
+# (the only guard is "not already Stuck"), so a creature who does nothing
+# but wait is caught again the instant the old grant expires -- correctly:
+# he is still standing in the puddle. That makes "still Stuck" on the status
+# line USELESS as a signal by itself; a permanently-stuck creature and a
+# finite one that keeps getting re-caught both show it forever. The signal
+# this script uses instead: the printed roll line is DIFFERENT after a long
+# wait than it was right after the first catch. A different 1d20 result (and,
+# once ENTANGLED's -4 Dexterity joins in, a different modifier) can only mean
+# a SECOND roll happened -- which requires the FIRST grant to have expired,
+# which requires a finite Duration. Measured at seed 4 with this exact
+# fixture: the fourth roll after getting stuck (100 waits later) reads
+# "Reflex Save: 1d20 (2) +1 base = 3 vs DC 15 [failure]", not the "1d20 (6)
+# +3 base = 9" the character got stuck on. On the unfixed tree (Duration -1)
+# that line would never change no matter how long the wait runs, because the
+# original grant is permanent and the guard blocks any second roll.
+#
+# THE GUARD, so a change to the ESCAPE mechanic cannot fake this pass: no
+# "Escape Artist Check:", "Strength Check:", "You tear free!" or "You remain
+# stuck fast!" may appear anywhere in this script's output. Every key this
+# fixture sends after getting stuck is "." (Wait One Turn) -- nothing here
+# ever tries to move or escape, so none of those lines has any legitimate
+# way to appear. If one does, the difference proved above came from the
+# escape mechanic, not from Duration, and the check must not pass.
+#
+# The subject and setup mirror tools/keys/entangle-strength-escape.keys and
+# tools/keys/entangled-acts.keys: the seed-4 human paladin, wizard mode with
+# monsters frozen, and the wizard terrain-paint command ([X], page 1 of
+# "Which terrain type?", no TAB) instead of tanglefoot's [j] on page 2. Two
+# squares are painted, as tanglefoot's fixtures do, because the first
+# attempt at this hazard on this seed rolls Reflex successfully (no stuck,
+# nothing to measure) and only the second fails.
+#
+# Usage: tools/check_sticky_save.sh   (0 pass, 1 fail, 2 inconclusive)
+
+@include chargen-paladin.keys
+@until "Afoot" ESC
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+w
+K
+RIGHT
+ENTER
+X
+w
+K
+RIGHT RIGHT
+ENTER
+X
+RIGHT
+@while "Confirm" y
+@dump:try1
+RIGHT
+@while "Confirm" y
+@dump:got-stuck
+.*25
+@dump:wait25
+.*25
+@dump:wait50
+.*25
+@dump:wait75
+.*25
+@dump:wait100
+@quit

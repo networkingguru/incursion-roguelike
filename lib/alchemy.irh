@@ -239,14 +239,14 @@ AI_ALCHEMY Effect "tanglefoot bag" : EA_TERRAFORM {
     * ITEM_COST 500;
   } 
 
-Terrain "tanglefoot strands" { 
+Terrain "tanglefoot strands" {
   Image: purple GLYPH_WATER on brown; Mat:MAT_VEGGY;
-  Flags: TF_WARN, TF_SPECIAL, TF_NOGEN, TF_SHOWNAME; 
+  Flags: TF_WARN, TF_SPECIAL, TF_NOGEN, TF_SHOWNAME;
   Desc: "A tanglefoot bag can be thrown (activated) to create a mass of
   tanglefoot strands with a radius of 10 feet (1 square). A creature
   attempting to move or attack in the strands must make a reflex saving
   throw (DC 15) to avoid becoming stuck instead. Woodland Stride, Free
-  Action and Flight all render one immune to tanglefoot strands."; 
+  Action and Flight all render one immune to tanglefoot strands.";
   On Event EV_MON_CONSIDER {
     hObj mount;
     mount = EActor->GetStatiObj(MOUNTED);
@@ -281,6 +281,8 @@ Terrain "tanglefoot strands" {
             mount->isAerial())
           return NOTHING;
         if (mount->SavingThrow(REF,15,SA_GRAB|SA_TRAPS)) {
+          if (!mount->HasEffStati(ENTANGLED,$"tanglefoot strands"))
+            mount->GainPermStati(ENTANGLED,NULL,SS_MISC,0,0,$"tanglefoot strands");
           return NOTHING;
         }
         // upstream: the consequence stuck the RIDER, not the mount. When
@@ -293,6 +295,12 @@ Terrain "tanglefoot strands" {
         // (lib/dungeon.irh), which targets the mount. Evidence: Observed
         // (save/Keos.sav -- rider STUCK, mount not). inc-lxvv. Not sent upstream.
         ThrowDmg(EV_DAMAGE,AD_STUK,-1,"tanglefoot strangs",mount,mount);
+        // A2 (inc-18q6): the terrain's own STICK_TYPE constant, declared
+        // below, is what tags the hazard kind now -- src/Fight.cpp's
+        // AD_STUK arm reads it straight off the square the victim stands
+        // on. This used to remove the STUCK ThrowDmg just granted and
+        // re-grant it with STUCK_BONDED, which made GainTempStati
+        // (src/Status.cpp:225) print "You've become stuck!" a third time.
         if (mount->HasStati(STUCK)) {
           DPrint(e,"Your mount becomes entangled!",
                    "An <EActor>'s mount becomes entangled!");
@@ -306,9 +314,14 @@ Terrain "tanglefoot strands" {
             EActor->isAerial())
           return NOTHING;
         if (EActor->SavingThrow(REF,15,SA_GRAB|SA_TRAPS)) {
+          if (!EActor->HasEffStati(ENTANGLED,$"tanglefoot strands"))
+            EActor->GainPermStati(ENTANGLED,NULL,SS_MISC,0,0,$"tanglefoot strands");
           return NOTHING;
         }
         ThrowDmg(EV_DAMAGE,AD_STUK,-1,"tanglefoot strangs",EActor,EActor);
+        // A2 (inc-18q6): see the mount branch above -- the terrain's own
+        // STICK_TYPE now tags the hazard kind, so there is nothing to
+        // retag here.
         if (EActor->HasStati(STUCK)) {
           DPrint(e,"You become entangled!",
                    "An <EActor> becomes entangled!");
@@ -317,8 +330,16 @@ Terrain "tanglefoot strands" {
         return DONE;
       }
     };
+  Constants:
+    /* A2 (inc-18q6): the hazard kind lives on the terrain now, the way
+       lib/dungeon.irh's Webbing and pool of slime declare theirs. It is
+       read back by src/Fight.cpp's AD_STUK arm off the square the
+       victim stands on, so the two remove-and-regrant blocks above are
+       gone -- they used to make GainTempStati (src/Status.cpp:225)
+       print "You've become stuck!" a third time. */
+    * STICK_TYPE STUCK_BONDED;
   }
-  
+
 Item "wooden rod" : T_TOOL
   {
     Image: yellow GLYPH_TOOL; hp: 5;

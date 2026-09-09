@@ -2885,6 +2885,7 @@ typedef signed int        hObj;
     #define STUCK_VINES   4
     #define STUCK_ATTACK  5
     #define STUCK_BONDED  6
+    #define STUCK_WEB     7
 #define BLEEDING      12
 #define ILLUS_DMG     13
 #define CHOKING       14
@@ -3158,7 +3159,8 @@ typedef signed int        hObj;
 #define SOCIAL_MOD        234
 #define DEATH_LOC         235
 #define ENCOUNTER         236
-#define LAST_STATI        237
+#define ENTANGLED         237
+#define LAST_STATI        238
   
 
 
