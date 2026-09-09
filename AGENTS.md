@@ -1,5 +1,22 @@
 # Agent Instructions
 
+## Standing order: fix bugs in this tree without asking
+
+**A bug in Brian's own repository IS a work order. Read it, edit it, build it,
+and run the checks. Do not ask.** He set this scope on 2026-09-09: "YOU DO NOT
+NEED TO ASK ME FOR EVERY FUCKING BUG EDIT, ONLY THOSE GOING TO OTHER REPOS."
+
+One principle covers this and the publishing rule below: **his tree, his bugs,
+go; somebody else's tree, ask.** Three things still need his word: anything
+aimed at a tree he does not own; committing and pushing; and work that is not a
+bug fix (a feature, a refactor, a spec, a rule change, or user-facing text).
+
+A question is still a question. If he asks why something behaves as it does,
+answer it — he asked for an explanation, not a repair. Report a fix after you
+make it, file by file, with what else the change reaches.
+
+The full statement of this rule, with the incident behind it, is in `CLAUDE.md`.
+
 ## Publishing anything outward-facing
 
 Two rules. Rule 1 carries one scope limit, stated inside it. Rule 2 has none.

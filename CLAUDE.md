@@ -2,32 +2,39 @@
 
 This file provides instructions and context for AI coding agents working on this project.
 
-## Standing order: do not start work without an OK
+## Standing order: fix bugs in this tree without asking
 
-**A bug report is not a work order. You MUST NOT change a file, build, or
-commit until Brian says go.**
+**A bug in Brian's own repository IS a work order. Read it, edit it, build it,
+and run the checks. Do not ask.** He set this scope on 2026-09-09, after a
+session presented issue/fix/blast-radius and stopped on a bug in his own tree:
+"YOU DO NOT NEED TO ASK ME FOR EVERY FUCKING BUG EDIT, ONLY THOSE GOING TO
+OTHER REPOS."
 
-This rule has no size exemption. It overrides the task-sizing rule that lets
-small work skip approval. It applies to source, data, scripts, docs and
-generated artefacts alike.
+This mirrors the scope he set on the publishing rule below on 2026-09-08. One
+principle covers both: **his tree, his bugs, go; somebody else's tree, ask.**
 
-When Brian reports a defect, or describes one, you MUST answer with three
-things and then STOP:
+Three things still need his word, and nothing else does:
 
-1. **The issue.** What is wrong, and the evidence that it is wrong.
-2. **The fix.** What you propose to change, file by file.
-3. **The blast radius.** What else the change reaches, and what it can break.
+1. **Anything aimed at a tree he does not own.** A patch, issue, PR or comment
+   for `rmtew/incursion-roguelike` or any third party. That is rule 1 of
+   "Publishing anything outward-facing", and it is unchanged.
+2. **Committing and pushing.** Separate rule, separate reason: when he says
+   save, commit or push, that is a stop instruction. Nothing else starts a
+   commit. Fixing a bug leaves the work in the tree for him to review.
+3. **Work that is not a bug fix.** A feature, a refactor, a spec, a rule
+   change, or any edit to user-facing text (README, docs, release notes,
+   store pages). Those keep the old shape: propose, then wait.
 
-You MAY read, grep, build a diagnostic in a scratch directory, and run the
-headless harness to prove the defect. That is investigation. Editing a
-tracked file is not.
+**A question is still a question.** If Brian asks why something behaves the way
+it does, answer the question. He asked for an explanation, not a repair. That is
+the residue of 2026-08-23, which is still worth remembering: he reported that
+the Boots of Providence pay no Luck bonus when carried and asked for nothing
+else, and the session edited four tracked files, rebuilt both binaries and the
+module, and filed a bead. The defect there was scope, not permission. See bead
+inc-izuu.
 
-Wait for a yes on the plan. A "yes, that is the bug" is not a yes to the fix.
-
-Broken on 2026-08-23: Brian reported that the Boots of Providence pay no Luck
-bonus when carried. He asked for nothing else. The session diagnosed it, then
-edited four tracked files, rebuilt both binaries and the module, and filed a
-bead, all unasked. See bead inc-izuu.
+When you fix a bug unasked, say what you changed, file by file, and what else
+the change reaches. Report it after; do not request it before.
 
 ## Publishing anything outward-facing
 
