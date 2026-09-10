@@ -29,11 +29,16 @@ BASELINE="$ROOT/tools/readme_checks.baseline"
 # Not game checks, so not in the game-check table.
 #   check_gate.sh       checks the gate, which the README says in the table's own
 #                       preamble.
+#   check_lib.sh        the shared library other checks source (bd inc-le1m). It
+#                       defends no defect and cannot be run as a check -- it
+#                       prints usage and exits 2 -- so a row in a table of
+#                       regression checks would misdescribe it. It is documented
+#                       in tools/README.md and proves itself with --selftest.
 #   *_cron.sh           schedulers, documented in tools/README.md under
 #                       Diagnostics rather than as regression checks.
 exempt() {
     case "$1" in
-        check_gate.sh|*_cron.sh) return 0 ;;
+        check_gate.sh|check_lib.sh|*_cron.sh) return 0 ;;
         *) return 1 ;;
     esac
 }

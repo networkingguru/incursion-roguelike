@@ -383,6 +383,17 @@ Nothing invoked it; the only references were documentation. See
 | `gate_compare.sh` | Did anything get worse since the baseline? | LIVE |
 | `check_gate.sh` | Does the gate actually bite? Feeds it made-up logs in about a second. | LIVE |
 
+### The shared library for new checks
+
+| File | The question it answers | Status |
+|---|---|---|
+| `check_lib.sh` | Sourced, not run. Holds the scaffolding every behavioural check repeats -- the seeded sandboxed session, the screen assertions, the build -- and makes `docs/VERIFICATION.md` step 2 one line: `<check> --prove-red` breaks the fix, rebuilds, re-runs the check, restores the source and reports whether the check went red. Proves itself with `--selftest`. | LIVE |
+
+Written for new checks only (bd inc-le1m). The checks already in this
+directory are not migrated: rewriting checks that work risks quietly breaking
+one that guards a real defect, and buys no behaviour. Read the header of
+`check_lib.sh` for a whole check written with it, which is about a dozen lines.
+
 ### The regression checks
 
 | File | The question it answers | Status |
@@ -567,6 +578,7 @@ tools/check_lz_uncompress.sh --selftest
 tools/check_comment_budget.sh --selftest
 tools/check_commit_lane.sh --selftest
 tools/check_readme_checks.sh --selftest
+tools/check_lib.sh --selftest
 tools/check_bead_publish.py --selftest
 python3 tools/flickerscan_selftest.py
 ```
