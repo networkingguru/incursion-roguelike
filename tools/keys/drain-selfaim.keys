@@ -1,0 +1,105 @@
+# inc-aocw: a monster that knows Minor Drain fires it at itself.
+#
+# The feyr (lib/mon3.irh:288) is the plainest carrier of the spell -- an
+# ordinary monster, no template needed, and Minor Drain sits in its Spells
+# list. A monster reaches either drain spell ONLY through the injury-remedy
+# action (src/Monster.cpp:568-572), because the trouble code sits in the high
+# word of Purpose and the plain attack slot's high word is zero. That action
+# carries no target, and src/Magic.cpp reads "no victim and no coordinates" as
+# "aim at me".
+#
+# THE SHAPE OF THIS FIXTURE, and why it is not simply "hit it and watch".
+#
+# Injury is only ONE of the feyr's troubles, and while it can see an enemy the
+# attack action outranks the remedy. Hurting it in melee therefore proves
+# nothing: it fights back, or flees, and never chooses the drain. What it
+# needs is an injury and NO visible enemy. So:
+#
+#   1. Freeze Monsters, so the feyr cannot act while it is being set up.
+#   2. Summon it five squares east, out of melee, so walking away later does
+#      not open the Abort/Flee/Disengage prompt.
+#   3. One cast of the player's own Minor Drain. One is enough: any damage at
+#      all puts TROUBLE_INJURY in the list (src/Prayer.cpp:706). This cast is
+#      also the CONTROL -- a spell the player aims must strike the feyr,
+#      whatever the monster AI does with the same spell.
+#   4. Walk ten squares west, out of its sight, while it is still frozen.
+#   5. Thaw it and wait. Injured, with nobody to fight, it casts the drain.
+#
+# The feyr is off-screen by then, so the engine narrates none of it. The probe
+# is the oracle, which is the whole reason the probe exists.
+#
+# Read by tools/check_drain_selfaim.sh on seed 4, with
+# INCURSION_SELFAIM_PROBE=1 and INCURSION_OPTIONS=tools/gates/Options.Dat.
+
+@include chargen-mage.keys
+
+# chargen-mage.keys ends one keystroke earlier than chargen.keys does: the
+# mage still has the arrival room description on screen. Dismiss it first, or
+# the [w] below is eaten by the description and the verb menu opens instead.
+ESC
+
+# Wizard switches, counted from the top of the list in src/Tables.cpp:
+#   3 Free Advancement, 4 Infinite Fatigue, 8 Infinite Mana,
+#   11 Freeze Monsters.
+#
+# Know All Spells is deliberately NOT set. It fills the Spell Manager with
+# every spell the class can reach, Minor Drain lands on a later page, and
+# @choose reads only what is on the screen. Learn Any Spell below teaches the
+# one spell this fixture needs and leaves the list one page long.
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*2
+SPACE
+DOWN
+SPACE
+DOWN*4
+SPACE
+DOWN*3
+SPACE
+@dump:switches
+ESC
+
+# One level, so the mage survives the walk and the wait.
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+ESC
+
+w
+@choose "Learn Any Spell"
+"Minor Drain" ENTER
+
+w
+@choose "Monster Summoning"
+@choose "Aberration"
+@choose "feyr"
+RIGHT*5
+ENTER
+@dump:feyr-summoned
+
+# The control cast. [RIGHT] both aims and fires; no ENTER follows it.
+m
+@choose "Minor Drain"
+RIGHT
+@dump:feyr-hurt
+@expect "Your necromantic bolt strikes a feyr."
+
+LEFT*10
+@dump:walked-away
+
+# Thaw: switch 11 again.
+w
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+s*30
+@dump:after-thaw
+v
+@dump:messages
+ESC
+@quit

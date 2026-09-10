@@ -1280,7 +1280,21 @@ NothingToDo:
             res = ABORT;
             break;
             }
-          
+          else if (Effs[k].Purpose & EP_ATTACK) {
+            /* upstream: base-code defect, fix is ours. Tier Observed -- the
+               measurement is in docs/REPORTING-GATE.md's row for inc-aocw.
+               Tracking inc-aocw. Not sent to rmtew.
+
+               An attack effect must be aimed at an enemy. The injury remedy
+               queued at line 570 carries no target, and MagicEvent reads "no
+               victim and no coordinates" as "aim at me", so a drain spell
+               reached here with Tar NULL and the caster blasted itself. */
+            if (Acts[j].Tar == this || !Acts[j].Tar)
+              Acts[j].Tar = (mtarg ? mtarg : rtarg);
+            if (!Acts[j].Tar)
+            { res = ABORT; break; }
+          }
+
           if (te->ef.aval == AR_TOUCH) {
             if (Acts[j].Tar && !isBeside(Acts[j].Tar)) 
             {

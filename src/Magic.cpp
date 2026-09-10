@@ -601,6 +601,31 @@ bool Magic::isTarget(EventInfo &_e, Thing *t) {
       }
   }
 
+/* Diagnostic: set INCURSION_SELFAIM_PROBE=1 to record every cast that reaches
+   the "no victim and no coordinates means aim at me" fallback in MagicEvent
+   below. Two unlike callers share that fallback -- a monster curing itself,
+   which needs it, and a monster firing an attack effect at itself, which is
+   inc-aocw -- so the log says whether the effect carries EP_ATTACK. It is the
+   oracle tools/check_drain_selfaim.sh reads. */
+static void SelfAimProbe(const char *fmt, ...) {
+    static FILE *f = NULL;
+    va_list ap;
+    if (!getenv("INCURSION_SELFAIM_PROBE"))
+        return;
+    if (!f) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%slogs/selfaimprobe.log",
+            (const char*)T1->IncursionDirectory);
+        f = fopen(path, "a");
+    }
+    if (!f)
+        return;
+    va_start(ap, fmt);
+    vfprintf(f, fmt, ap);
+    va_end(ap);
+    fflush(f);
+}
+
   EvReturn Magic::MagicEvent(EventInfo &e) {
       EvReturn r; Thing *t; int16 i;
       bool FieldDone = false,
@@ -749,8 +774,21 @@ Nothing:
           // ww: this looks very suspicious to me: you can't tell the
           // difference between a self hit and aiming a fireball at some floor
           // to hit some nearby monsters ... so I'll add the EXVal check
-          if (!e.EVictim && e.EXVal <= 0)
+          if (!e.EVictim && e.EXVal <= 0) {
+              /* isDir and isLoc matter more than the fallback itself: the
+                 caster is only really the victim when neither is set, since
+                 ABallBeamBolt takes its self-hit shortcut on exactly that
+                 condition. A player aiming with the cursor trips the fallback
+                 too, and his bolt still flies. */
+              SelfAimProbe("selfaim actor=%lu kind=%s effect=%s attack=%d "
+                  "dir=%d loc=%d\n",
+                  (unsigned long)(e.EActor ? e.EActor->myHandle : 0),
+                  (e.EActor && e.EActor->isMonster()) ? "monster" : "other",
+                  NAME(e.eID),
+                  (e.eID && (TEFF(e.eID)->Purpose & EP_ATTACK)) ? 1 : 0,
+                  e.isDir ? 1 : 0, e.isLoc ? 1 : 0);
               e.EVictim = e.EActor;
+          }
 
           r = te->Event(e,e.eID,0);
 
