@@ -1,0 +1,51 @@
+# Make the orc warrior every A_DEQU check uses, and freeze the monsters.
+# Included by dequ-hardness-plain.keys, dequ-hardness-magic.keys,
+# dequ-reach.keys, dequ-sunder.keys and dequ-owner-resist.keys.
+#
+# The character is a male orc WARRIOR, neutral, worshipping whichever god the
+# game offers. A warrior is deliberate: he starts with a weapon in hand, and
+# every one of these checks is about what happens to a weapon. The sequence is
+# tools/keys/dequ-save-message.keys's chargen, which is known to reach the
+# wizard menu on seed 5 under tools/fixtures/options-2026-08-22.dat.
+#
+# Every choice here is a menu letter, and menu letters move when the list
+# changes. Run with a fixed seed or the attribute rolls change, the offered
+# feats change with them, and these letters choose something else.
+#
+# Freeze Monsters is on so a summoned monster neither moves nor takes a turn of
+# its own. It still ANSWERS a blow -- A_DEQU fires from inside the resolution of
+# the player's own attack -- which is the whole point of these checks.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Explore Mode -- yes
+i       # Race:  [i] Orc
+a       # Subrace: [a] Orc (Standard)
+j       # Class: [j] Warrior -- starts with a weapon in hand
+a       # Attributes: the first offered set
+c       # Alignment: [c] Neutral
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "wish to worship" y
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+a       # Personality archetype
+@until "Things in View" ESC
+
+# 'w' opens wizard mode and 'y' confirms it the first time. The pair is driven
+# by @until rather than written out, because a keystroke swallowed by a prompt
+# that was still up would spend every key after it on the wrong thing.
+@until "Wizard Mode Options" w y
+w       # [w] Wizard Mode Switches
+# The switch list draws no cursor a screen dump can see, so this counts rows:
+# Freeze Monsters is the eleventh, and the cursor opens on the first.
+DOWN*10
+SPACE   # Freeze Monsters: NO -> YES
+ESC

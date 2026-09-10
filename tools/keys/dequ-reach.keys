@@ -1,0 +1,81 @@
+# Strike an acid blob from TWO squares away with a glaive, and read the
+# glaive's own description page before and after (bd inc-m2zi).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/dequ-reach.keys 5
+#
+# WHAT IS BEING MEASURED. Before this change the loop in Creature::Strike that
+# looks for response attacks was skipped entirely unless the victim was BESIDE
+# the striker, so a glaive user striking from two squares away took no A_DEQU
+# retaliation at all. The retaliation now fires at whatever distance the blow
+# was struck from.
+#
+# THE ABSENCE OF A MESSAGE IS WHAT THE OLD BEHAVIOUR LOOKED LIKE, so this run
+# has to prove the positive. Three things are dumped: the map, on which the
+# character and the blob are two squares apart with open floor between them;
+# the strike screen, which must name the blob and say the blow landed; and the
+# glaive's page before and after, which must lose hit points.
+#
+# WHY A GLAIVE. It is an iron polearm carrying WT_REACH (lib/weapons.irh:192),
+# so wielding it sets MS_HAS_REACH, and a direction key then attacks a creature
+# two squares away instead of walking (src/Player.cpp:1321-1325).
+#
+# ONE BLOB PER BLOW, for the reason tools/keys/dequ-hardness-plain.keys sets
+# out: a blow that kills its target leaves no item for the retaliation to aim
+# at. Each blob is summoned two squares east, which is also where the blow is
+# aimed, so the character never moves.
+
+@include dequ-setup.keys
+
+w
+@choose "Item Acquisition"
+RIGHT*9                 # walk the glyph row to ordinary weapons
+@until "Glaive" DOWN
+DOWN                    # the wanted row is the middle of three; step onto it
+ENTER
+b                       # Weapon Hand -- the slot lettering skips 'd' (Drop)
+SPACE                   # swap the glaive into it
+@while "two-handed" y
+s                       # stow the starting knife the swap pushed into the air
+@until "SPACE:Swap" i    # the inventory manager, if it is not already open
+@until ">>b)Weapon" b    # select the Weapon Hand
+@until "base value of" x # Examine: the item's own description page
+@dump:reach-before
+@until "Things in View" ESC
+
+# Two squares east, not one: RIGHT RIGHT walks the summoning cursor out to the
+# square the reach attack will reach.
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT RIGHT ENTER
+@dump:reach-placed
+RIGHT
+@while "Attack the" y
+@dump:reach-strike-1
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@dump:reach-strike-2
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@dump:reach-strike-3
+
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:reach-after
+@until "Things in View" ESC
+@quit

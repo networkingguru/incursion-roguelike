@@ -1,0 +1,83 @@
+# Sunder a caryatid column's own long sword with a battleaxe, and read the
+# BATTLEAXE's description page before and after (bd inc-m2zi).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/dequ-sunder.keys 5
+#
+# WHAT IS BEING MEASURED. A_SUND puts the VICTIM's weapon in e.EItem2, which is
+# correct -- that is what sunder attacks. The response-attack loop copied
+# e.EItem2 forward into the A_DEQU retaliation, so sundering an ARMED A_DEQU
+# monster made its retaliation land on ITS OWN weapon and the striker's
+# equipment went free. The retaliation now refuses any item the responder owns
+# and falls back to the striker's weapon.
+#
+# WHY A CARYATID COLUMN. It carries A_DEQU for 12d6 AD_SHAT and a cursed long
+# sword as gear (lib/mon3.irh:1646-1662), so it is the one monster in lib that
+# is both armed and equipment-destroying. Its armour is 20 and it regenerates,
+# so a first-level character cannot kill it by accident.
+#
+# WHY A MAUL. Both weapons in this fight would otherwise be called "long
+# sword" and no oracle could tell them apart. The maul is iron, like the
+# column's sword, so nothing but the name differs where it matters. It is also
+# the heaviest ordinary weapon in lib and therefore the one with the most hit
+# points: 12d6 against hardness 10 averages 32 points, and a battleaxe (26 hit
+# points) was measured being destroyed outright by the first retaliation, which
+# left no page to read.
+#
+# THE ORACLE is the battleaxe's own description page, reached from the
+# inventory by selecting the Weapon Hand ('b') and pressing 'x'. Under the old
+# behaviour it is untouched, because the column shattered its own sword
+# instead.
+#
+# THE PAGE IS DUMPED AFTER EVERY BLOW, so that a run in which the maul is
+# destroyed still leaves one readable page behind.
+
+@include dequ-setup.keys
+
+w
+@choose "Item Acquisition"
+RIGHT*9                 # walk the glyph row to ordinary weapons
+@until "Maul" DOWN
+DOWN                    # the wanted row is the middle of three; step onto it
+ENTER
+b                       # Weapon Hand -- the slot lettering skips 'd' (Drop)
+SPACE                   # swap the maul into it
+@while "two-handed" y
+s                       # stow the starting knife the swap pushed into the air
+@until "SPACE:Swap" i    # the inventory manager, if it is not already open
+@until ">>b)Weapon" b    # select the Weapon Hand
+@until "base value of" x # Examine: the item's own description page
+@dump:sunder-before
+@until "Things in View" ESC
+
+w
+@choose "Monster Summoning"
+@choose "Constructs"
+@choose "caryatid column"
+RIGHT ENTER
+@dump:sunder-placed
+
+# 'c' opens the Tactical Options menu; Sunder Weapon then asks for a target and
+# a direction key answers it.
+c
+@choose "Sunder Weapon"
+RIGHT
+@while "Attack the" y
+@dump:sunder-strike-1
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:sunder-after-1
+@until "Things in View" ESC
+
+c
+@choose "Sunder Weapon"
+RIGHT
+@while "Attack the" y
+@dump:sunder-strike-2
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:sunder-after-2
+@until "Things in View" ESC
+@quit

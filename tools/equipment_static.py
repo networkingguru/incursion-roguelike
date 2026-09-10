@@ -1,0 +1,133 @@
+"""Function-scoped static oracles for inc-m2zi AC8 and inc-w26h.
+
+Not a C++ interpreter: structural changes require reviewing these oracles.
+Comments and strings cannot supply positive evidence. Locals are captured rather
+than pinned to their current names. --root permits isolated mutation tests.
+"""
+import argparse
+import re
+import sys
+from pathlib import Path
+
+
+class Unmeasurable(Exception):
+    pass
+
+
+def clean(s, strings=True):
+    pattern = r'//[^\n]*|/\*[\s\S]*?\*/|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\''
+    return re.sub(pattern, lambda m: ' ' if strings or m[0].startswith(('/', "'")) else m[0], s)
+
+
+def body(s, pattern):
+    m = re.search(pattern + r'\s*\{', s)
+    if not m:
+        raise Unmeasurable('missing function or block: ' + pattern)
+    start = m.end()
+    depth = 1
+    for i in range(start, len(s)):
+        depth += (s[i] == '{') - (s[i] == '}')
+        if depth == 0:
+            return s[start:i]
+    raise Unmeasurable('unclosed function or block: ' + pattern)
+
+
+def compact(s):
+    return re.sub(r'\s+', '', s)
+
+
+def measure(ok, message):
+    print(('PASS: ' if ok else 'FAIL: ') + message)
+    return not ok
+
+
+def run(rule, root):
+    def read(path):
+        try:
+            return (root / path).read_text()
+        except (OSError, UnicodeError) as e:
+            raise Unmeasurable(str(e))
+
+    if rule == 'dequ_dice':
+        s = body(clean(read('src/Fight.cpp')), r'\bCreature\s*::\s*SAttack\s*\([^)]*\)')
+        s = body(s, r'\bcase\s+A_DEQU\s*:')
+        # Both naked-striker and equipment branches must load and immediately
+        # roll the declared dice; this excludes any intervening rescaling.
+        pairs = re.findall(r'(\w+)\s*\.\s*Dmg\s*=\s*\w+\s*->\s*u\s*\.\s*a\s*\.\s*Dmg\s*;\s*\1\s*\.\s*vDmg\s*=\s*\1\s*\.\s*Dmg\s*\.\s*Roll\s*\(\s*\)\s*;', s)
+        writes = re.findall(r'\.\s*Dmg(?:\s*\.\s*\w+)?\s*(?:[+*/%-]=|=(?!=)|\+\+|--)', s)
+        return measure(len(pairs) == 2 and len(writes) == 2,
+                       f'A_DEQU declared-dice immediate rolls={len(pairs)}/2; dice writes={len(writes)}/2')
+
+    if rule == 'dequ_dc':
+        allowed = {'remorhaz', 'rust monster', 'grey ooze', 'babau'}
+        ordinary = {'shattering ur-dragon', 'firebat', 'caryatid column', 'caustic fungus', 'acid blob', 'brown pudding', 'magma creeper', 'small mud elemental', 'vaporighu'}
+        found = []
+        for n in range(1, 5):
+            s = clean(read(f'lib/mon{n}.irh'), strings=False)
+            monsters = list(re.finditer(r'\bMonster\s+"([^"]+)"', s))
+            if not monsters:
+                raise Unmeasurable(f'no Monster declarations in lib/mon{n}.irh')
+            for i, m in enumerate(monsters):
+                section = s[m.end():monsters[i+1].start() if i+1 < len(monsters) else len(s)]
+                for attack in re.finditer(r'\bA_DEQU\b([^,;]*)[,;]', clean(section)):
+                    found.append((m[1], len(re.findall(r'\(\s*DC\s+\d+\s*\)', attack[1]))))
+        names = [name for name, _ in found]
+        bad = sorted(name for name, dc in found if dc != int(name in allowed))
+        ok = len(found) == 13 and set(names) == allowed | ordinary and not bad
+        return measure(ok, f'A_DEQU monsters={len(found)}/13; DC tokens={sum(dc for _, dc in found)}/4; incorrect DC owners={",".join(bad) or "none"}; roster={"expected" if set(names) == allowed | ordinary else "changed"}')
+
+    s = clean(read('src/Item.cpp'))
+    if rule == 'fire_hardness':
+        f = body(s, r'\bMaterialHardness\s*\([^)]*\)')
+        # Isolate the material switch, excluding earlier damage-type switches.
+        param = re.search(r'MaterialHardness\s*\(\s*\w+\s+(\w+)\s*,\s*\w+\s+(\w+)', s)
+        if not param:
+            raise Unmeasurable('MaterialHardness parameters missing')
+        mat, dtype = param.groups()
+        # The last switch on mat is the base hardness table.
+        starts = list(re.finditer(r'\bswitch\s*\(\s*' + mat + r'\s*\)', f))
+        if not starts:
+            raise Unmeasurable('material switch missing')
+        f = body(f[starts[-1].start():], r'switch\s*\([^)]*\)')
+        failed = False
+        for material, fire, other in [('WOOD',0,5), ('LEATHER',0,10), ('CLOTH',0,5), ('IRONWOOD',10,None), ('DARKWOOD',20,15), ('DRAGON_HIDE',15,None)]:
+            m = re.search(r'case\s+MAT_' + material + r'\s*:(.*?)(?=\bcase\b|\bdefault\b|\Z)', f, re.S)
+            actual = compact(m[1]) if m else 'missing'
+            expected = f'return{fire};' if other is None else f'return({dtype}==AD_FIRE)?{fire}:{other};'
+            failed |= measure(actual == expected, f'MAT_{material} fire hardness expected={fire}; rule={actual}')
+        return failed
+
+    if rule == 'item_hardness':
+        f = body(s, r'\bItem\s*::\s*Hardness\s*\([^)]*\)')
+        q = body(s, r'\bQItem\s*::\s*Hardness\s*\([^)]*\)')
+        m = re.search(r'\bint16\s+(\w+)\s*=\s*MaterialHardness\s*\(\s*Material\s*\(\s*\)\s*,\s*(\w+)\s*\)\s*;', f)
+        if not m:
+            return measure(False, 'Item::Hardness material initialization missing')
+        hd, dtype = m.groups()
+        f = compact(re.sub(r'\b' + hd + r'\b', 'H', f))
+        # Exact statement structure deliberately rejects new paths that could
+        # bypass the sentinel guard or apply the arithmetic twice.
+        prefix = f'int16H=MaterialHardness(Material(),{dtype});if(H<0)returnH;'
+        zero = 'if(H==0){if(GetPlus()>=0)H+=GetPlus()*5;elseH+=50;returnH;}'
+        arithmetic = 'if(HasQuality(IQ_DWARVEN))H+=10;if(HasQuality(IQ_ORCISH)||HasQuality(IQ_SILVER))H/=2;if(HasQuality(IQ_ADAMANT)||HasQuality(IQ_DARKWOOD))H*=2;if(HasQuality(IQ_MITHRIL))H=(H*150)/100;if(GetPlus()>=0)H+=GetPlus()*5;elseH+=50;returnH;'
+        delegated = bool(re.fullmatch(r'returnItem::Hardness\(\w+\);', compact(q)))
+        return measure(f == prefix + zero + arithmetic and delegated,
+                       f'Item arithmetic and preceding immunity guard={"intact" if f == prefix + zero + arithmetic else "changed"}; QItem single delegation={int(delegated)}/1')
+
+    f = body(s, r'\bItem\s*::\s*Damage\s*\([^)]*\)')
+    init = re.search(r'\b(\w+)\s*=\s*Hardness\s*\(\s*\w+\s*\.\s*DType\s*\)\s*;', f)
+    calls = len(re.findall(r'\bResistLevel\s*\(', f))
+    own = bool(init and re.search(r'\b' + init[1] + r'\s*==\s*-\s*1', f))
+    return measure(own and calls == 0, f'Item::Damage own hardness and immunity={int(own)}/1; ResistLevel calls={calls}/0')
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('rule', choices=['dequ_dice','dequ_dc','fire_hardness','item_hardness','item_owner_resist'])
+    parser.add_argument('--root', type=Path, default=Path('.'))
+    args = parser.parse_args()
+    try:
+        sys.exit(int(run(args.rule, args.root)))
+    except Unmeasurable as e:
+        print('COULD NOT MEASURE: ' + str(e))
+        sys.exit(2)

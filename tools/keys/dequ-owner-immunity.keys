@@ -1,0 +1,131 @@
+# Give the character total immunity to rust, then let a mud elemental rust his
+# weapon anyway, and read the weapon's page before and after (bd inc-w26h).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/dequ-owner-immunity.keys 5
+#
+# WHAT IS BEING MEASURED. Item::Damage used to return before it did anything at
+# all -- no damage, no message -- when the item's OWNER was immune to the
+# damage type:
+#
+#     if (owner)
+#         if (e.DType == AD_SOAK || e.DType == AD_RUST || e.DType == AD_DCAY)
+#             if (owner->ResistLevel(e.DType) == -1)
+#                 return DONE;
+#
+# so a character who could not be rusted himself carried a sword that could not
+# be rusted either. The owner's defences no longer reach his gear.
+#
+# WHY THESE GAUNTLETS. "Rust;gauntlet" (lib/m_items.irh:4348) grants IMMUNITY
+# to exactly the three damage types that block named -- AD_RUST, AD_DCAY and
+# AD_SOAK -- so wearing them makes ResistLevel(AD_RUST) return -1, which is the
+# sentinel the old code tested. Nothing else in wizard mode gives a character a
+# true immunity: the Ring of Elemental Command grants a resistance of 10, which
+# is a magnitude and not the sentinel.
+#
+# WHY A SMALL MUD ELEMENTAL. Its A_DEQU is 1d6 AD_RUST (lib/mon4.irh:2396) and
+# iron has a hardness of 0 against rust, so every retaliation that lands does
+# its whole roll. The old rule leaves the weapon untouched; the new one rusts
+# it. That is a difference in kind, not in degree.
+#
+# WHY A MAUL. It is the heaviest ordinary weapon in lib, 262 hit points, so
+# three retaliations cannot destroy it and leave no page to read. It is iron,
+# which is what rusts.
+#
+# ONE ELEMENTAL PER BLOW, for the reason tools/keys/dequ-hardness-plain.keys
+# sets out: a blow that kills its target leaves no item for the retaliation to
+# aim at.
+
+@include dequ-setup.keys
+
+# --- the gauntlets that make the character immune to rust ---
+w
+@choose "Item Acquisition"
+RIGHT*17                # walk the glyph row to gauntlets
+@until "Rust" DOWN
+DOWN                    # the wanted row is the middle of three; step onto it
+ENTER
+p                       # Gauntlets
+SPACE
+@until "Things in View" ESC
+
+# --- the weapon that will be rusted ---
+w
+@choose "Item Acquisition"
+RIGHT*9                 # walk the glyph row to ordinary weapons
+@until "Maul" DOWN
+DOWN
+ENTER
+b                       # Weapon Hand
+SPACE
+@while "two-handed" y
+s                       # stow the starting knife the swap pushed into the air
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:immune-before
+@until "Things in View" ESC
+
+# The character sheet's Resistances page, as evidence that the immunity is
+# really on him and not merely bought.
+d
+@until "Resistances and Armour" DOWN
+@dump:immune-sheet
+@until "Things in View" ESC
+
+w
+@choose "Monster Summoning"
+@choose "Elementals"
+@choose "small mud elemental"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:immune-strike-1
+
+w
+@choose "Monster Summoning"
+@choose "Elementals"
+@choose "small mud elemental"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:immune-strike-2
+
+w
+@choose "Monster Summoning"
+@choose "Elementals"
+@choose "small mud elemental"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:immune-strike-3
+
+w
+@choose "Monster Summoning"
+@choose "Elementals"
+@choose "small mud elemental"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:immune-strike-4
+
+w
+@choose "Monster Summoning"
+@choose "Elementals"
+@choose "small mud elemental"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:immune-strike-5
+
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:immune-after
+@until "Things in View" ESC
+@quit

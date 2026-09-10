@@ -1,0 +1,96 @@
+# Strike acid blobs with a MAGICAL long sword and read the sword's own
+# description page before and after (bd inc-m2zi).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/dequ-hardness-magic.keys 5
+#
+# WHAT IS BEING MEASURED, and why this is the other half of
+# tools/keys/dequ-hardness-plain.keys. Against a monster whose A_DEQU carries
+# no save DC, a NON-magical item now has its hardness bypassed; a MAGICAL one
+# keeps it. The plain run alone cannot tell that rule from "every item's
+# hardness is bypassed", which is why this run exists.
+#
+# WHY THE HOLY AVENGER. Wizard mode cannot type a plus onto a weapon: "Add
+# Quality to Weapon" refuses WQ_KEEN below character level 5, and WQ_IMPACT was
+# measured still printing a bypassed hardness. The Holy Avenger is built on the
+# SAME base item as the plain half -- its page reads "Long Sword, Holy Avenger
+# +2" -- and it carries an effect id, which is the plainest thing
+# Item::isMagic tests. tools/keys/luckblade-plus.keys already acquires and
+# wields a specific weapon this way and this copies that sequence.
+#
+# READ THE NUMBERS, NOT THE ADJECTIVE. The Holy Avenger arrives with 38 of 35
+# hit points -- item generation sets its plus after its hit points -- so the
+# game already calls it "Mildly Damaged" before a blow is struck. The check
+# compares the hit-point figures, which that quirk leaves alone, and requires
+# that the word "Melted" never appears.
+#
+# THE GUARD THAT MATTERS. "The magical sword was not damaged" proves nothing if
+# the retaliation never reached it. The strike screens are dumped as well, and
+# the check requires "Acid splashes the" -- the line the game prints when the
+# ITEM is the victim. When the retaliation lands on the striker instead it
+# reads "Acid splashes you!", so the two cases cannot be confused.
+#
+# ONE BLOB PER BLOW, for the reasons dequ-hardness-plain.keys sets out.
+
+@include dequ-setup.keys
+
+w
+@choose "Item Acquisition"
+RIGHT*10                # walk the glyph row to specific (magical) weapons
+@until "Holy Avenger" DOWN
+DOWN                    # the wanted row is the middle of three; step onto it
+ENTER
+0                       # Enter Item Level: 0 leaves the sword's own plus alone
+ENTER
+b                       # Weapon Hand -- the slot lettering skips 'd' (Drop)
+SPACE                   # swap the sword into it
+@while "two-handed" n
+s                       # stow the starting knife the swap pushed into the air
+@until "SPACE:Swap" i    # the inventory manager, if it is not already open
+@until ">>b)Weapon" b    # select the Weapon Hand
+@until "base value of" x # Examine: the item's own description page
+@dump:magic-before
+@until "Things in View" ESC
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@dump:magic-strike-1
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@dump:magic-strike-2
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@dump:magic-strike-3
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@dump:magic-strike-4
+
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:magic-after
+@until "Things in View" ESC
+@quit

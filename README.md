@@ -721,6 +721,15 @@ the unfixed tree before it is trusted.
 | Check | The question it answers |
 |---|---|
 | `check_command_menu_gating.sh` | Do the Combat (C) and YUse (Y) menus still hide every verb with no implementation, and every verb whose character prerequisite is unmet? It dumps both menus before and after a wielded Quickblade grants Whirlwind Attack: the gated combat row appears only after the feat, and the dead Yuse rows stay absent either way. |
+| `check_dequ_dice.sh` | Does A_DEQU roll its declared dice without tripling? |
+| `check_dequ_dc.sh` | Do exactly the four SRD monsters retain A_DEQU save DCs in the thirteen-monster roster? |
+| `check_fire_hardness.sh` | Do wood, leather and cloth have zero fire hardness while ironwood, darkwood and dragon hide retain theirs? |
+| `check_item_hardness.sh` | Does Item apply hardness modifiers once after preserving immunity, with QItem delegating? |
+| `check_item_owner_resist.sh` | Does item damage use its own defences without owner resistance or immunity? |
+| `check_dequ_magic_hardness.sh` | Against a monster whose A_DEQU carries no save DC, is a plain weapon's hardness bypassed while a magical weapon's is kept? Two sessions strike acid blobs, one with an ordinary long sword and one with a Holy Avenger, and read each sword's own description page before and after. |
+| `check_dequ_reach.sh` | Does a glaive user striking from two squares away now take the equipment retaliation he used to escape? The map shows the two-square gap, the message shows the blow landing, and the glaive's page shows the acid damage. |
+| `check_dequ_sunder.sh` | Does sundering an armed equipment-destroyer damage the striker's weapon rather than the monster's own? A caryatid column's cursed long sword is sundered with a maul, and the maul's page is the oracle. |
+| `check_dequ_owner_immunity.sh` | Does a character's own immunity still shield his gear? Wearing gauntlets that grant total immunity to rust, his maul is rusted by a mud elemental anyway. |
 | `check_headless.sh` | Do the properties every unattended run depends on still hold, including that two simultaneous runs get separate directories? |
 | `check_field_day_duration.sh` | Does a permanent (`Dur -1`) field still survive a day change? It places a torch archon on depth 2, rests one night on the same map with lowercase `z`, and counts the map's fields either side; the rise in creatures proves `Map::DaysPassed` actually ran. Fixed 1 -> 1, unfixed 1 -> 0. |
 | `check_field_modifier_duration.sh` | Does a living, directly placed torch archon retain both its permanent white light field and its Magic Circle vs. Evil status after the broken 12-turn countdown would have expired many times over? |

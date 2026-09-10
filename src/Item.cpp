@@ -1231,19 +1231,19 @@ int16 MaterialHardness(int8 mat, int8 DType)
       return (DType == AD_FIRE) ? 0 : 10;
 
     case MAT_CLOTH:
-      return (DType == AD_FIRE) ? 3 : 5;
+      return (DType == AD_FIRE) ? 0 : 5;
     case MAT_VEGGY:
     case MAT_FLESH:
       return 5;
     case MAT_BONE:
       return 6; 
     case MAT_LEATHER:
-      return 10;
+      return (DType == AD_FIRE) ? 0 : 10;
     case MAT_DRAGON_HIDE:
       return 15;
 
     case MAT_WOOD: // SRD: wood has 5 hardness
-      return 5;
+      return (DType == AD_FIRE) ? 0 : 5;
 
     case MAT_SILVER:
     case MAT_PLATINUM:
@@ -1253,7 +1253,8 @@ int16 MaterialHardness(int8 mat, int8 DType)
       return 7;
     case MAT_METAL:
       return 8;
-    case MAT_IRONWOOD: 
+    case MAT_IRONWOOD:
+      return 10;
     case MAT_IRON:
       return 10;
     case MAT_MITHRIL:
@@ -1290,7 +1291,30 @@ int16 MaterialHardness(int8 mat, int8 DType)
 
 int16 Item::Hardness(int8 DType)
 {
-  return MaterialHardness(Material(),DType);
+  int16 hd = MaterialHardness(Material(),DType);
+  /* inc-m2zi: immunity is never modified; zero hardness still gets the plus. */
+  if (hd < 0)
+    return hd;
+  if (hd == 0) {
+    if (GetPlus() >= 0)
+      hd += GetPlus()*5;
+    else
+      hd += 50;
+    return hd;
+  }
+  if (HasQuality(IQ_DWARVEN))
+    hd += 10;
+  if (HasQuality(IQ_ORCISH) || HasQuality(IQ_SILVER))
+    hd /= 2;
+  if (HasQuality(IQ_ADAMANT) || HasQuality(IQ_DARKWOOD))
+    hd *= 2;
+  if (HasQuality(IQ_MITHRIL))
+    hd = (hd * 150) / 100;
+  if (GetPlus() >= 0)
+    hd += GetPlus()*5;
+  else
+    hd += 50;     /* Cursed weapons are hard to destroy */
+  return hd;
 }
 
 bool MaterialIsMetallic(int8 mat)
@@ -1371,30 +1395,19 @@ EvReturn Item::Damage(EventInfo &e) {
     om = m;
 
     Creature *owner = Owner();
-    if (owner) {
-        if (e.DType == AD_SOAK || e.DType == AD_RUST || e.DType == AD_DCAY)
-            if (owner->ResistLevel(e.DType) == -1)
-                return DONE; 
-    }
-
+    /* inc-w26h: item defences do not inherit owner resistances or immunities. */
     hard = Hardness(e.DType);
 
-    if (owner)
-        if ((e.DType != AD_SLASH && e.DType != AD_BLUNT &&
-            e.DType != AD_PIERCE) || (owner->InSlot(SL_ARMOUR) &&
-            (owner->InSlot(SL_AMULET) == this ||
-            owner->InSlot(SL_BRACERS) == this ||
-            owner->InSlot(SL_BELT) == this)))
-        {
-            if (owner->ResistLevel(e.DType) == -1)
-                return DONE;
-            hard += owner->ResistLevel(e.DType);
+        /* inc-m2zi: Hardness returns -1 as an immunity sentinel, not as a
+           hardness. Arithmetic on it destroys the immunity: -1/2 is 0, and
+           forcing 0 makes an immune item take the full roll. Neither flag
+           may touch a negative value. */
+        if (hard >= 0) {
+            if (e.ignoreHardness == true)
+                hard = 0;
+            else if (e.halfHardness == true)
+                hard /= 2;
         }
-
-        if (e.ignoreHardness == true)
-            hard = 0;
-        else if (e.halfHardness == true)
-            hard /= 2;
 
         posthard = e.vDmg - hard; 
 
@@ -3041,24 +3054,7 @@ int32 QItem::Weight(bool psych_might)
 
 int16 QItem::Hardness(int8 DType)
   {
-    int16 hd = Item::Hardness(DType);
-    if (hd <= 0) {
-      if (DType == AD_RUST && hd == 0 && GetPlus() > 0)
-        hd += GetPlus() * 5;
-      return hd;
-    } 
-    if (HasQuality(IQ_DWARVEN))
-      hd += 10;
-    if (HasQuality(IQ_ORCISH) || HasQuality(IQ_SILVER))
-      hd /= 2;
-    if (HasQuality(IQ_ADAMANT) || HasQuality(IQ_DARKWOOD))
-      hd *= 2;
-    if (HasQuality(IQ_MITHRIL))
-      hd = (hd * 150) / 100;
-    if (GetPlus() >= 0)
-      hd += GetPlus()*5;
-    else
-      hd += 50;     /* Cursed weapons are hard to destroy */
-    return hd;
+    return Item::Hardness(DType);
   }
+
 

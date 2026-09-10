@@ -1040,7 +1040,7 @@ Monster "shattering ur-dragon" : MA_DRAGON, MA_VERMIN
     Str 24, Dex 10, Con 18, Int 10, Wis 10, Cha 10;
     Attk: A_BREA for 0d3 AD_BLUNT (DC 17) 
                  and 6d6 AD_SHAT (DC 17),
-          A_DEQU for 6d6 AD_SHAT (DC 18),
+          A_DEQU for 6d6 AD_SHAT,
           A_SEEM for $"dragon",
           A_FORM for $"caryatid column",    
           A_FORM for $"remorhaz",

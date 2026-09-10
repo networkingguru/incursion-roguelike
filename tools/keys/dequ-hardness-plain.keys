@@ -1,0 +1,87 @@
+# Strike acid blobs with an ORDINARY long sword and read the sword's own
+# description page before and after (bd inc-m2zi).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/dequ-hardness-plain.keys 5
+#
+# WHAT IS BEING MEASURED. The acid blob's A_DEQU is 2d4 AD_ACID and no longer
+# carries a save DC (lib/mon3.irh:2585). An ordinary iron weapon has hardness
+# 10 and 2d4 cannot exceed 8, so before this change the blob could never
+# scratch one. A non-magical item now has its hardness bypassed and takes the
+# whole roll.
+#
+# THE ORACLE is the item's own page, reached from the inventory by selecting
+# the Weapon Hand ('b') and pressing 'x'. It states the wear in its title and
+# the hit points in the Composition paragraph:
+#
+#     The Uncursed Long Sword ('(')            It has 15 out of 15 hit points.
+#     The Partly Melted Uncursed Long Sword    It has  9 out of 15 hit points.
+#
+# ONE BLOB PER BLOW, deliberately, for two reasons. A blow that KILLS its
+# target leaves no item for the retaliation to aim at -- the engine aims it at
+# the striker instead and prints "Acid splashes you!" -- and a blow into an
+# empty square would walk the character east and spend every later keystroke on
+# the wrong thing. Summoning a fresh blob before each blow keeps the character
+# still and gives every blow a living target. Three blows are struck because
+# whether any one blow kills its blob depends on the blob's hit dice.
+#
+# THE COMPANION SCRIPT is tools/keys/dequ-hardness-magic.keys, which does the
+# same thing with a MAGICAL sword, whose hardness is not bypassed. They are two
+# scripts and two sessions rather than two halves of one, because the
+# retaliations that land on the character rather than on his sword cost him
+# 2d4 hit points each and a level-one orc cannot pay for both halves.
+
+@include dequ-setup.keys
+
+w
+@choose "Item Acquisition"
+RIGHT*9                 # walk the glyph row to ordinary weapons
+@until "Long sword" DOWN
+DOWN                    # the wanted row is the middle of three; step onto it
+ENTER
+b                       # Weapon Hand -- the slot lettering skips 'd' (Drop)
+SPACE                   # swap the sword into it
+@while "two-handed" n
+s                       # stow the starting knife the swap pushed into the air
+@until "SPACE:Swap" i    # the inventory manager, if it is not already open
+@until ">>b)Weapon" b    # select the Weapon Hand
+@until "base value of" x # Examine: the item's own description page
+@dump:plain-before
+@until "Things in View" ESC
+
+# OPT_WARN_DEQU asks before a blow that risks the weapon, so answer it when it
+# is asked. It is asked here and not in the magical run, which is itself a
+# consequence of the same rule.
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@dump:plain-strike-1
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@dump:plain-strike-2
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@dump:plain-strike-3
+
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:plain-after
+@until "Things in View" ESC
+@quit

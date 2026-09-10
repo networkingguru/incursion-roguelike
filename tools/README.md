@@ -9,6 +9,11 @@ rest until you need them.
 | File | Why it matters |
 |---|---|
 | `headless.sh` | Runs one scripted game session in a sandbox. Everything else that plays the game calls it. |
+| `check_dequ_dice.sh` | Declared A_DEQU dice must roll without tripling (inc-m2zi AC8). |
+| `check_dequ_dc.sh` | Only the four named SRD A_DEQU monsters retain DCs (inc-m2zi AC8). |
+| `check_fire_hardness.sh` | Ordinary combustible materials lose fire hardness; enchanted materials keep it (inc-m2zi AC8). |
+| `check_item_hardness.sh` | Every Item gets modifiers once, after preserving immunity (inc-m2zi AC8). |
+| `check_item_owner_resist.sh` | Owner resistance and immunity cannot protect equipment (inc-w26h). |
 | `check_headless.sh` | The regression check for that harness. If this fails, no other measurement means anything. |
 | `soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about. |
 | `gate_record.sh` + `gate_compare.sh` + `gate_lib.sh` | The regression gate. `gate_record.sh` freezes a build's behaviour into `tools/gates/*.baseline`; `gate_compare.sh` re-runs the same seeds and says what got worse. |
@@ -546,6 +551,11 @@ These read source or text and compile nothing that needs the game to have been
 built.
 
 ```sh
+tools/check_dequ_dice.sh # Declared A_DEQU dice must roll without tripling (inc-m2zi AC8).
+tools/check_dequ_dc.sh # Only the four named SRD A_DEQU monsters retain DCs (inc-m2zi AC8).
+tools/check_fire_hardness.sh # Ordinary combustible materials lose fire hardness; enchanted materials keep it (inc-m2zi AC8).
+tools/check_item_hardness.sh # Every Item gets modifiers once, after preserving immunity (inc-m2zi AC8).
+tools/check_item_owner_resist.sh # Owner resistance and immunity cannot protect equipment (inc-w26h).
 tools/check_error_handling.sh       # greps src/*.cpp for the unbounded writes
 tools/check_upstream_marks.sh       # reads src/, inc/ and docs/REPORTING-GATE.md
 tools/check_api_arity.py            # reads inc/Api.h against the C++ headers
@@ -655,7 +665,19 @@ tools/check_hide_dynamic_light.sh   # a dynamic external light breaks hiding, wi
 tools/check_light_averse.sh         # light aversion bites in a dynamically lit cell, not a dim one
 tools/check_shift_opcodes.sh        # a script `<<` shifts left, so a glowing creature's light keeps its colour
 tools/check_holy_undead.sh          # a Holy weapon smites undead that are not evil
+tools/check_dequ_magic_hardness.sh  # a no-save A_DEQU bypasses a plain weapon's hardness, not a magical one's
+tools/check_dequ_reach.sh           # a blow struck at reach now takes the equipment retaliation
+tools/check_dequ_sunder.sh          # a sunder's retaliation lands on the striker's weapon, not the victim's
+tools/check_dequ_owner_immunity.sh  # the owner's own immunity no longer shields his gear
 ```
+
+The four `check_dequ_*` scripts above are the behavioural half of inc-m2zi and
+inc-w26h; the five `check_dequ_dc.sh`-style scripts in Tier 1 are the static
+half. Each of the four drives one or two seeded sessions and reads the struck
+weapon's own description page -- reached from the inventory with 'x' -- before
+and after the blows. `check_dequ_magic_hardness.sh` runs two sessions, because
+every retaliation that lands on the character rather than on his weapon costs
+him 2d4 hit points and a level-one orc cannot pay for both halves in one life.
 
 Run `check_headless.sh` before the rest of the tier. They all drive
 `headless.sh`, and if the harness itself is broken their results are

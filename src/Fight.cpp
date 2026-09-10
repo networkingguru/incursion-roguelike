@@ -374,6 +374,36 @@ static int32 DualWieldTimeout(int16 spdA, int16 spdB)
            3000 / max((100 + max(spdA,spdB)*5),10) / 2;
 }
 
+/* inc-m2zi: confirm each item at risk; unarmed retaliation damages the
+   creature directly and has no equipment to confirm. */
+static bool ConfirmDequAttack(EventInfo &e, Item *it)
+{
+  String s;
+  if (!e.ETarget || !e.ETarget->isCreature() ||
+      !e.EActor->isPlayer() || !e.EPActor->Opt(OPT_WARN_DEQU) ||
+      !e.EVictim->HasAttk(A_DEQU))
+    return true;
+  TAttack *ta = e.EVictim->GetAttk(A_DEQU);
+  if (!it) {
+    /* Unarmed: the retaliation damages the striker himself, so his own
+       resistance decides and no item hardness applies. */
+    if (e.EActor->ResistLevel(ta->DType) == -1)
+      return true;
+  } else {
+    int hard = it->Hardness(ta->DType);
+    if (hard == -1)
+      return true;
+    int max = ta->u.a.Dmg.Number * ta->u.a.Dmg.Sides + ta->u.a.Dmg.Bonus;
+    if ((ta->u.a.DC != 0 || it->isMagic()) && max <= hard)
+      return true;
+  }
+  s = Format("Attack %s (%s %s)?",
+      (const char*)e.EVictim->Name(NA_THE),
+      (const char*)ta->u.a.Dmg.Str(),
+      Lookup(DTypeNames,ta->DType));
+  return e.EActor->yn(s,true);
+}
+
 /* upstream: STUCK used to forbid weapon melee (here), ranged attack,
    trip, disarm, throwing a grappled creature, whirlwind attack, sunder
    and attacks of opportunity (canMakeAoO, below) -- eight of the
@@ -518,30 +548,8 @@ EvReturn Creature::WAttack(EventInfo &e)
       return ABORT;
     }
 
-    if (e.ETarget->isCreature() && 
-        e.EActor->isPlayer() && 
-        e.EVictim->HasAttk(A_DEQU) &&
-        e.EPActor->Opt(OPT_WARN_DEQU)) {
-      TAttack *ta = e.EVictim->GetAttk(A_DEQU);
-      int max = ta->u.a.Dmg.Number * ta->u.a.Dmg.Sides + ta->u.a.Dmg.Bonus;
-      //if (e.EPActor->HasFeat(FT_SIGNATURE_ITEMS)) max /= 2; 
-      int hard = EInSlot(SL_WEAPON) ? 
-        EInSlot(SL_WEAPON)->Hardness(ta->DType) : 
-        e.EActor->ResistLevel(ta->DType);
-      if (ta->DType == AD_SHAT && e.EActor->ResistLevel(AD_SHAT) == -1) hard=-1;
-      if (ta->DType == AD_RUST && e.EActor->ResistLevel(AD_RUST) == -1) hard=-1;
-      if (ta->DType == AD_SOAK && e.EActor->ResistLevel(AD_SOAK) == -1) hard=-1;
-      if (hard == -1 || hard >= max)
-        ;
-      else {
-        s = Format("Attack %s (%s %s)?",
-            (const char*)e.EVictim->Name(NA_THE),
-            (const char*)ta->u.a.Dmg.Str(),
-            Lookup(DTypeNames,ta->DType));
-        if (!yn(s,true)) 
-          return ABORT; 
-      } 
-    } 
+    if (!ConfirmDequAttack(e,EInSlot(SL_WEAPON)))
+      return ABORT;
 
     if (e.EVictim && e.EVictim->isCreature())
       if (!e.EVictim->HasStati(AFRAID) ||
@@ -599,7 +607,8 @@ DoCleave:
       return ABORT;
     bool isProneNow = e.ETarget->HasStati(PRONE);
 
-    if (AttackMode() == S_DUAL && !(e.ETarget->isDead()))
+    if (AttackMode() == S_DUAL && !(e.ETarget->isDead()) &&
+        ConfirmDequAttack(e,EInSlot(SL_READY)))
         {
           e.isOffhand = true; isTWF = true;
           e.EItem   = EInSlot(SL_READY);
@@ -668,6 +677,8 @@ DoCleave:
                   ((breach & AL_NONLAWFUL) && e.EActor->isMType(MA_LAWFUL)))
                 if (!yn(XPrint("Unchivalrously cleave <Obj>?",c)))
                   continue;
+              if (!ConfirmDequAttack(xe,EInSlot(SL_WEAPON)))
+                continue;
             }
             
             
@@ -1269,30 +1280,8 @@ EvReturn Creature::NAttack(EventInfo &e) /* this == EActor */
   if (!m->InBounds(x,y) || TTER(m->TerrainAt(x,y))->Event(e,m->TerrainAt(x,y)) == ABORT)
     return ABORT; 
 
-    if (e.ETarget->isCreature() && 
-        e.EActor->isPlayer() && 
-        e.EVictim->HasAttk(A_DEQU) &&
-        e.EPActor->Opt(OPT_WARN_DEQU)) {
-      TAttack *ta = e.EVictim->GetAttk(A_DEQU);
-      int max = ta->u.a.Dmg.Number * ta->u.a.Dmg.Sides + ta->u.a.Dmg.Bonus;
-      //if (e.EPActor->HasFeat(FT_SIGNATURE_ITEMS)) max /= 2; 
-      int hard = EInSlot(SL_WEAPON) ? 
-        EInSlot(SL_WEAPON)->Hardness(ta->DType) : 
-        e.EActor->ResistLevel(ta->DType);
-      if (ta->DType == AD_SHAT && e.EActor->ResistLevel(AD_SHAT) == -1) hard=-1;
-      if (ta->DType == AD_RUST && e.EActor->ResistLevel(AD_RUST) == -1) hard=-1;
-      if (ta->DType == AD_SOAK && e.EActor->ResistLevel(AD_SOAK) == -1) hard=-1;
-      if (hard == -1 || hard >= max)
-        ;
-      else {
-        s = Format("Attack %s (%s %s)?",
-            (const char*)e.EVictim->Name(NA_THE),
-            (const char*)ta->u.a.Dmg.Str(),
-            Lookup(DTypeNames,ta->DType));
-        if (!yn(s,true)) 
-          return ABORT; 
-      } 
-    } 
+    if (!ConfirmDequAttack(e,NULL))
+      return ABORT;
 
 
   if (e.ETarget->isCreature() && !e.isTelekinetic && 
@@ -1991,9 +1980,14 @@ SkipSoundAttack:
             e2.isHit = true; 
             e2.strDmg = ""; 
             e2.saveDC = (int8)e2.EActor->GetPower(ta->u.a.DC);
+            /* inc-m2zi: retaliation cannot target the responder's own item. */
             it = e.EItem2;
+            if (it && it->Owner() == e.EActor)
+              it = NULL;
             if (!it)
                 it = e.EItem;
+            if (it && it->Owner() == e.EActor)
+              it = NULL;
 
             if (!it) {
                 // ok, apply to attacker
@@ -2013,9 +2007,11 @@ SkipSoundAttack:
                 ReThrow(EV_ATTACKMSG,e2);
                 return DONE; 
             } else { 
+                /* upstream: item damage must match the statblock and untripled
+                   warning maximum (upstream Fight.cpp:367,1799-1800); the same
+                   arithmetic is wrong on Win32 with the original toolchain.
+                   Tier Reasoned; tracking inc-m2zi. Not sent to rmtew. */
                 e2.Dmg    = ta->u.a.Dmg;
-                e2.Dmg.Number *= 3; 
-                e2.Dmg.Bonus *= 3; 
                 e2.vDmg   = e2.Dmg.Roll();
                 e2.EItem = it;
                 e2.EItem2 = NULL;
@@ -2081,8 +2077,8 @@ SkipSoundAttack:
                    screen: VPrint gives msg1 only to e.EVictim and msg2 only to
                    somebody who is NOT e.EVictim. Reading msg1 on the player's
                    own screen therefore proves he is e.EVictim again. */
-                if (e.saveDC > 0)
-                    if (e.EVictim->SavingThrow(REF,e.saveDC)
+                if (e2.saveDC > 0)
+                    if (e2.EVictim->SavingThrow(REF,e2.saveDC)
 #ifdef DEQU_PROBE
                         || getenv("INCURSION_DEQU_FORCE_SAVE")
 #endif
@@ -2091,6 +2087,7 @@ SkipSoundAttack:
                             "The <EVictim> protects <his:EVictim> <EItem>.");
                         return DONE;
                     }
+                e2.ignoreHardness = (e2.saveDC <= 0 && !it->isMagic());
                 e2.ETarget = it; 
                 ReThrow(EV_DAMAGE,e2);
                 ReThrow(EV_ATTACKMSG,e2);
@@ -2873,6 +2870,9 @@ EvReturn Creature::OAttack(EventInfo &e)
     if (isPlayer() && (HasStati(HIDING) || HasStati(INVIS)))
       if (!yn(XPrint("Take opportunity on the <Obj>?",e.EVictim)))
         return ABORT;
+
+    if (!ConfirmDequAttack(e,EInSlot(SL_WEAPON)))
+      return ABORT;
 
     if (e.EVictim->HasStati(GRABBED,0,e.EActor))
       if (e.EActor->HasStati(GRAPPLING))
@@ -4591,13 +4591,25 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
       e.EVictim->HaltAction("struck");
     }
 
-    if (!is_response_attk(e.AType) && e.EVictim->isBeside(e.EActor)) {
+    /* inc-m2zi: the old adjacency guard sat here and skipped the whole scan.
+       Only A_DEQU may now answer from beyond it, so keep the cheap early exit
+       for every other target rather than listing 1024 attacks per bowshot. */
+    if (!is_response_attk(e.AType) &&
+        (e.EVictim->isBeside(e.EActor) ||
+         (e.ETarget->isCreature() && e.EVictim->HasAttk(A_DEQU)))) {
       TAttack *at;
       TAttack buf[1024];
       int max = e.EVictim->ListAttacks(buf,1024);
       for (i=0;i<max;i++) {
         at = &buf[i]; 
         if (is_response_attk(at->AType)) {
+          /* inc-m2zi: only equipment retaliation follows a melee hit beyond
+             adjacency; ranged strikes and other responses keep that limit. */
+          if (!e.EVictim->isBeside(e.EActor) &&
+              (at->AType != A_DEQU ||
+               !(is_standard_attk(e.AType) || is_postgrab_attk(e.AType) ||
+                 (is_maneuver(e.AType) && e.AType != A_FIRE))))
+            continue;
           if (at->DType == AD_GRAB)
             if (e.EVictim->HasStati(GRAPPLING))
               continue;
@@ -4612,7 +4624,11 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
           e2.vHit    = (int8)e.EVictim->Attr[A_HIT_BRAWL];
           e2.vDef    = (int8)e.EActor->getDef();
           e2.Dmg     = at->u.a.Dmg;
-          e2.saveDC = (int8)e.EActor->GetPower(at->u.a.DC);
+          /* upstream: response DC must use the responder's attack and templates,
+             never the striker's; the wrong receiver also misbehaves on Win32
+             with the original toolchain. Tier Reasoned; tracking inc-m2zi.
+             Not sent to rmtew. */
+          e2.saveDC = (int8)e2.EActor->GetPower(at->u.a.DC);
           e2.AType   = at->AType;
           e2.DType   = at->DType;
           e2.vThreat = 20; 

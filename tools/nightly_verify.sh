@@ -66,6 +66,12 @@ esac
 # of them together are seconds, so running them twice a night costs nothing.
 # A check added here MUST be deterministic and MUST NOT need a build.
 RATCHET_CHECKS=(
+    "tools/check_dequ_dice.sh"
+    "tools/check_dequ_dc.sh"
+    "tools/check_fire_hardness.sh"
+    "tools/check_item_hardness.sh"
+    "tools/check_item_owner_resist.sh"
+
     "tools/check_upstream_marks.sh"
     "tools/check_probe_hooks.sh"
     "tools/check_format_strings.sh"
@@ -77,6 +83,21 @@ RATCHET_CHECKS=(
     "tools/check_package_parity.sh"
 )
 
+# The behavioural half of inc-m2zi and inc-w26h. These are listed apart from the
+# ratcheted checks above because the rule stated there does not hold of them:
+# each one PLAYS the game, so it needs ./incursion-headless, and the four
+# together cost about two minutes rather than seconds. They are ratcheted in
+# exactly the same way. On a tree with no headless binary each exits 2, which
+# the ratchet reads as "could not measure" and not as a regression.
+LIVE_CHECKS=(
+    "tools/check_dequ_magic_hardness.sh"
+    "tools/check_dequ_reach.sh"
+    "tools/check_dequ_sunder.sh"
+    "tools/check_dequ_owner_immunity.sh"
+)
+
+ALL_CHECKS=( "${RATCHET_CHECKS[@]}" "${LIVE_CHECKS[@]}" )
+
 run_check() { # run_check "<command line>" -> echoes the exit code
     local cmd="$1"
     ( eval "$cmd" ) > /dev/null 2>&1
@@ -87,7 +108,7 @@ run_check() { # run_check "<command line>" -> echoes the exit code
 if [ "$MODE" = "record" ]; then
     mkdir -p "$(dirname "$STATE")" || exit 2
     : > "$STATE"
-    for c in "${RATCHET_CHECKS[@]}"; do
+    for c in "${ALL_CHECKS[@]}"; do
         rc="$(run_check "$c")"
         printf '%s\t%s\n' "$rc" "$c" >> "$STATE"
         printf 'base %-3s %s\n' "$rc" "$c"
@@ -154,7 +175,7 @@ else
     echo "NO recorded base. Every check must pass outright."
 fi
 
-for c in "${RATCHET_CHECKS[@]}"; do
+for c in "${ALL_CHECKS[@]}"; do
     now="$(run_check "$c")"
     was=""
     if [ -r "$STATE" ]; then

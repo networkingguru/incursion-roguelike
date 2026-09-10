@@ -2393,7 +2393,7 @@ Monster "small mud elemental" : MA_ELEMENTAL, MA_OOZE, MA_EARTH
     CR: OPT_CR(1,0); HD: 2; Hit: 2; Def: 8; Mov: 80%; Spd: 100%;
     Str 14, Dex 10, Con 13, Int 4, Wis 11, Cha 11;
     Attk: A_SLAM for 1d6 AD_BLUNT and 1d2 AD_STUK (DC 13),
-          A_DEQU for 1d6 AD_RUST (DC 15);
+          A_DEQU for 1d6 AD_RUST;
 	ABILITY(CA_EARTH_MASTERY,2);
 	ABILITY(CA_INFRAVISION,6);
 	ABILITY(CA_EARTHMELD,1);
