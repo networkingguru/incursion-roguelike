@@ -2430,13 +2430,13 @@ Option OptionList[] = {
   { OPT_LIGHT_EXPLORED, "Explored Area Brightness",
       "Darkest/Darker/Normal/Brighter/Brightest", 4, 2, 0,
       "__Ground you have already walked is drawn from memory, in grey, once "
-      "you can no longer see it. This option sets how far that grey rises out "
-      "of the dark. 'Darkest' leaves the explored map barely readable and "
+      "you can no longer see it. This option sets how dark those explored "
+      "areas are drawn. 'Darkest' leaves the explored map barely readable and "
       "makes a lit room stand out sharply against it; 'Brightest' keeps the "
       "whole floor plan easy to read at a glance. It changes nothing but the "
       "color of remembered ground: what you can see, and what can see you, "
       "are the same at every setting." },
-  { OPT_LIGHT_BRIGHT, "Light Brightness",
+  { OPT_LIGHT_BRIGHT, "Illumination Intensity",
       "Darkest/Darker/Normal/Brighter/Brightest", 4, 2, 0,
       "__This option sets how bright the finished picture looks. It scales "
       "every color on the map by the same amount, so one light never grows "

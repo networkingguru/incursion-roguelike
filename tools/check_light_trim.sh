@@ -21,12 +21,12 @@
 # Exit 0 pass, 1 behavioural failure, 2 missing or incomplete measurement.
 #
 # Mutations confirmed RED here on 2026-09-10:
-#   MemoryStep[0] 1.00f -> 1.01f          (step 0 stops being the old picture)
-#   GainStep[0]   1.00f -> 1.02f          (same, for the gain)
-#   StepIndex clamps, not falls back      (a corrupt option byte reads garbage)
-#   the g<1 branch -> the g>1 curve       (dimming leaves a white cell pinned)
-#   k -> g unconditionally                (brightening clips a maxed channel)
-#   MemoryStep[2] 0.35f -> 1.00f          (the explored option does nothing)
+#   MemoryStep[Normal]  1.00f -> 1.01f  (Normal stops being the old picture)
+#   GainStep[Normal]    1.00f -> 1.02f  (the same, for the gain)
+#   StepIndex clamps, not falls back    (a corrupt option byte reads garbage)
+#   the g<1 branch -> the g>1 curve     (dimming leaves a white cell pinned)
+#   k -> g unconditionally              (brightening clips a maxed channel)
+#   MemoryStep[Darkest] 0.20f -> 1.00f  (the explored option does nothing)
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"

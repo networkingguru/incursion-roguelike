@@ -163,14 +163,24 @@ static int StepIndex(int step) {
   return step;
 }
 
-/* How far a remembered surface lifts above unlit, as a multiple of
-   LIGHT_MEMORY_LIFT. Below 1 the explored grey sinks toward the dark. */
+/* What the step does to a remembered surface's brightness, as a multiple of
+   the brightness it had before this option existed.
+
+   It scales the FINISHED memory level rather than LIGHT_MEMORY_LIFT, and that
+   is the whole point of the option. `unlit` sits under the lift as a floor, so
+   scaling the lift can never take a remembered wall below unlit x its own
+   colour -- about 77 of 255 for a white wall, which is far too present to read
+   as "barely there". Scaling the level itself has no such floor and reaches
+   the dark. It also keeps the ratio between a remembered wall and a remembered
+   floor fixed at every step, because both are scaled by the same number; the
+   old form pulled them together as it brightened and flattened the map just
+   when the player asked to see more of it. */
 static const float MemoryStep[LIGHT_STEP_MAX + 1] = {
-  0.35f,   /* Dimmest   */
-  0.65f,   /* Dimmer    */
-  1.00f,   /* Normal    -- exactly LIGHT_MEMORY_LIFT */
-  1.60f,   /* Brighter  */
-  2.30f    /* Brightest */
+  0.20f,   /* Darkest   -- walls barely there, floors fainter still */
+  0.50f,   /* Darker    */
+  1.00f,   /* Normal    -- exactly the pre-option brightness */
+  1.45f,   /* Brighter  */
+  1.95f    /* Brightest */
 };
 
 /* The display gain each step asks LightGain for. */
@@ -221,9 +231,9 @@ LightRGB LightMemoryBase(LightRGB base, float unlit, int step) {
   /* Memory has its own brightness: at the unlit level the grey is too
      dark to read as grey at all. Floors stay below walls, so a remembered
      room keeps its shape. */
-  float lift = LIGHT_MEMORY_LIFT * MemoryStep[StepIndex(step)];
-  if (lift > 1.0f) lift = 1.0f;   /* a full lift is already the lit ceiling */
-  float mem = unlit + (1.0f - unlit) * lift;
+  float mem = (unlit + (1.0f - unlit) * LIGHT_MEMORY_LIFT)
+              * MemoryStep[StepIndex(step)];
+  if (mem > 1.0f) mem = 1.0f;     /* full brightness is the lit ceiling */
   o.r = LightChannel((hr + (g - hr) * LIGHT_MEMORY_GREY) * mem);
   o.g = LightChannel((hg + (g - hg) * LIGHT_MEMORY_GREY) * mem);
   o.b = LightChannel((hb + (g - hb) * LIGHT_MEMORY_GREY) * mem);
