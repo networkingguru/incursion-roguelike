@@ -2278,7 +2278,7 @@ AI_WAND Effect "Cleansing Light" : EA_BLAST
        lib/m_items.irh; every other pval in the file scales on the item's
        plus. For an item src/Magic.cpp:470 sets the casting level to
        Item::ItemLevel(), which for a wand is its effect's own Level field --
-       here PLUS_3PER1_ADD1, three times the plus plus one (src/Item.cpp:2210,
+       here PLUS_3PER1_ADD1, three times the plus plus one (src/Item.cpp:2312,
        and the base wand carries Level: 0 at lib/mundane.irh:8). So the plus
        was multiplied twice and the wand rolled (6*plus+2)d6 where its page
        (:2298) promises 2d6 per plus. The item's own balance comment above
