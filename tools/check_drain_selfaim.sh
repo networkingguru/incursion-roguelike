@@ -53,8 +53,24 @@ SEED=4
 
 out="$(INCURSION_SELFAIM_PROBE=1 INCURSION_OPTIONS=tools/gates/Options.Dat \
        tools/headless.sh tools/keys/drain-selfaim.keys "$SEED" 2>&1)"
+status=$?
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 log="$run/logs/selfaimprobe.log"
+
+# HOW THE SESSION ENDED IS PART OF THE MEASUREMENT. tools/headless.sh exits 0
+# for a clean finish and 3 when the key script runs out, which is how this one
+# ends. Every other code says the session stopped being a game: 1 FATAL, 4 the
+# watchdog, 5 NO GAMEPLAY, 6 an @expect that found nothing, 7 an assertion the
+# tree does not list. Without this test a session that crashed after the
+# control cast still printed PASS, because the two lines the verdict reads
+# were already in the probe log. That is inc-loa.3 again. See inc-mpw8.
+if [ "$status" -ne 0 ] && [ "$status" -ne 3 ]; then
+    echo "INCONCLUSIVE: the session ended badly (tools/headless.sh exit $status),"
+    echo "              so nothing after that point is gameplay and the probe"
+    echo "              log is not evidence about the fix."
+    echo "$out" | sed -n '/^--- after the session ---/,$p' | sed 's/^/  /'
+    exit 2
+fi
 
 [ -n "$run" ] && [ -f "$log" ] || {
     echo "INCONCLUSIVE: the session wrote no probe log, so no cast reached the"

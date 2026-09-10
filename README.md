@@ -883,6 +883,7 @@ the unfixed tree before it is trusted.
 | `check_dig_zero_skill.sh` | Does a dig by a miner with zero Mining skill finish cleanly, rather than dividing by zero? |
 | `check_doc_citations.sh` | Did any document a change touched gain a citation defect above its recorded baseline? |
 | `check_doc_freshness.sh` | Which documents did a range of commits leave stale, and does every line citation in them and in the source they touched still resolve? |
+| `check_drain_selfaim.sh` | Does a monster's drain spell hit an enemy rather than the caster? Minor and Major Drain reach a monster only through the injury-remedy action, which carries no target, and the untargeted fallback used to aim them at the caster -- one feyr drained itself 120 times in thirty turns. Reads the cast probe for a monster attack with no direction and no location, and stops rather than passes if the session never landed the player's control cast. |
 | `check_dup_names.sh` | Does the resource compiler reject a same-case duplicate resource name, with its own duplicate-name diagnostic? |
 | `check_fire_ring_resist.sh` | Does the Ring of Elemental Command (Fire) grant the Fire Resistance of 10 its page promises, rather than the 12 its grant was coded? |
 | `check_flame_tongue_large.sh` | Does the flame tongue sword's tongue-of-flame lash yank a Large corporeal creature, matching its page's "a Large or smaller corporeal creature", rather than excluding Large by an off-by-one `>= SZ_LARGE` size gate? |

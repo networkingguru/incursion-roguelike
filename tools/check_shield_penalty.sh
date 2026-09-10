@@ -84,16 +84,30 @@ in_hand() {   # $1 screen basename, $2 the item name the slot must show
     }
 }
 
-dump() {      # $1 dump basename -- echoes the path
+# Echoes the path, and RETURNS non-zero when there is none. It must not exit:
+# every caller reads it through $( ), and an exit inside a command substitution
+# leaves the subshell and nothing else. The script then ran on with an empty
+# path, sed read no file, and the missing dump was reported as
+# "FAIL: the buckler puts no armour term on Balance at all" -- a run that
+# measured NOTHING, printed as a defect in src/Item.cpp that was not there.
+# See inc-fu5w.
+#
+# Each caller now writes `f="$(dump x)" || exit 2`. The || must be at the CALL
+# SITE: the status of a command substitution is the status of the command
+# inside it, so the caller can read the failure, but an `exit` written inside
+# dump -- or inside any wrapper called the same way -- still only leaves the
+# subshell. Proved on 2026-09-10: a wrapper that did `dump "$1" || exit 2` read
+# back through $( ) let the script run on to its verdict exactly as before.
+dump() {      # $1 dump basename -- echoes the path, returns 1 when it is absent
     local f="$run/logs/$1.txt"
-    [ -f "$f" ] || { echo "INCONCLUSIVE: no character dump at $f" >&2; exit 2; }
+    [ -f "$f" ] || { echo "INCONCLUSIVE: no character dump at $f" >&2; return 1; }
     echo "$f"
 }
 
 # $1 dump name, $2 shield as the reader knows it, $3 the armour term owed
 armour_term() {
     local f term
-    f="$(dump "$1")"
+    f="$(dump "$1")" || exit 2
     term="$(sed -n 's/.*Balance  *[-+][0-9]*  *(0 ranks, +3 DEX, \(-[0-9]*\) armour).*/\1/p' "$f")"
     if [ -z "$term" ]; then
         echo "FAIL: the $2 puts no armour term on Balance at all. It must cost"
@@ -112,7 +126,7 @@ armour_term() {
 # or the word "none" when the penalty is too small to move the rate.
 move_factor() {
     local f factor
-    f="$(dump "$1")"
+    f="$(dump "$1")" || exit 2
     factor="$(sed -n 's/.*x \([0-9]*%\) shield.*/\1/p' "$f")"
     if [ "$3" = none ]; then
         [ -z "$factor" ] || {
@@ -132,8 +146,15 @@ move_factor() {
 
 ### The baseline. Nothing is in the hand, so nothing may be charged for.
 
-base="$(dump none)"
-if grep -q "shield" <(grep "x .*skill" "$base"); then
+base="$(dump none)" || exit 2
+# Anchored on the Movement Rate heading and the multiplier line under it,
+# not on the Athletics term that used to anchor it. "x .*skill" is the A_MOV
+# bonus from SkillLevel(SK_ATHLETICS)/2, and it leaves the sheet the moment
+# that figure reaches 0. The inner grep would then match nothing, the outer
+# grep would have nothing to complain about, and this assertion could never
+# fire again -- silently. The heading and its "(base NN%) x ..." line are
+# printed whatever the terms are. See inc-fu5w.
+if grep -q "shield" <(grep -A1 "^Movement Rate" "$base"); then
     echo "FAIL: a character with an empty Ready Hand is paying a shield's"
     echo "      movement penalty. Dump: $base"
     rc=1
