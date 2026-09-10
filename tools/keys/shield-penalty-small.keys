@@ -1,0 +1,88 @@
+# The same shields, in a SMALL character's hand. Bead inc-rsps.
+#
+# WHY A SECOND FILE. tools/keys/shield-penalty.keys reads the figure
+# lib/weapons.irh authors, which is what a MEDIUM character pays. The size
+# step in Armour::PenaltyVal (src/Item.cpp) is the other half of the rule: a
+# smaller bearer carries relatively more shield, so his figure doubles. Three
+# playable races are Small -- halfling, gnome and kobold -- so this is a case
+# a player reaches, not a corner.
+#
+# THE SUBJECT is a halfling warrior, made here rather than by including one of
+# the chargen scripts because none of them makes a Small character. He gets
+# TWO skill pools, one for the class and one after the god, which is why the
+# skill loop appears twice; a warrior's feats are a loop for the same reason.
+#
+# ONLY THE BUCKLER AND THE SMALL SHIELD ARE READ. A Small character cannot get
+# a kite shield into his hand at all -- the attempt leaves the previous shield
+# where it was -- and the tower shield is further out of reach still. Say so
+# rather than let a silent skip look like a reading.
+#
+# THE ORACLE is the Movement Rate line's shield factor, not the Skill Ratings
+# armour term. The halfling wears studded leather, which carries a penalty of
+# its own and is summed into the armour term; the movement line prints the
+# shield's share on its own, so it needs no subtraction to be believed.
+#
+# Menu letters move when a list changes. Run at the seed the check supplies.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Halfling"
+a       # Subrace: [a] Halfling (Standard)
+@choose "Warrior"
+a       # Attributes: the first of the offered sets
+a       # Alignment:  the first offered
+
+@while "Choose a feat" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "wish to worship" y
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "personality archetype" a
+@until "Afoot" ESC
+
+w
+@expect "Enter wizard mode"
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE           # Auto-Identify Items
+ESC
+
+# Shields are the seventeenth entry of ItemGlyphs (src/Tables.cpp:320-337).
+# The list is Tower, Kite, Small, Buckler, Buckler and opens on the first row.
+
+# --- BUCKLER ----------------------------------------------------------------
+w
+@choose "Item Acquisition"
+RIGHT*16
+DOWN DOWN DOWN
+ENTER
+a
+SPACE
+@dump:buckler-in-hand
+ESC
+d
+W
+b u c k
+ENTER
+ESC
+
+# --- SMALL SHIELD -----------------------------------------------------------
+w
+@choose "Item Acquisition"
+RIGHT*16
+DOWN DOWN
+ENTER
+a
+SPACE
+@dump:small-in-hand
+ESC
+d
+W
+s m a l l
+ENTER
+ESC
+@quit

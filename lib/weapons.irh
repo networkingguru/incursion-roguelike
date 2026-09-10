@@ -1332,6 +1332,7 @@ Item "giant shield" : T_SHIELD
   {
     Image: pink ']'; Group: WG_SHIELDS | WG_EXOTIC;
     Mat: MAT_IRON; Weight: 1000; Size: SZ_HUGE;
+    Penalty: -20;
     Flags: IT_NOGEN; 
     Desc: "This huge shield is essentially a tower shield for giantkin. 
       Human-sized creatures cannot hope to wield it effectively.
@@ -1342,6 +1343,7 @@ Item "giant shield" : T_SHIELD
 Item "tower shield" : T_SHIELD
   { 
     Image: red ']'; Mat: MAT_IRON; Weight: 400; Size: SZ_LARGE;
+    Penalty: -10;
     Group: WG_SHIELDS;
     Desc: "This large shield is essentially portable hard cover for
       human-sized creatures. It is large enough to fully obscure a
@@ -1355,6 +1357,7 @@ Item "kite shield" : T_SHIELD
   { 
     Image: cyan ']'; 
     Mat: MAT_IRON; Weight: 150; Size: SZ_MEDIUM;
+    Penalty: -4;
     Group: WG_SHIELDS; 
     Desc: "The kite shield is what most people envision when
       they think of a medieval knight's shield: a large square
@@ -1368,6 +1371,7 @@ Item "small shield" : T_SHIELD
   { 
     Image: white ']'; 
     Mat: MAT_IRON; Weight: 50; Size: SZ_SMALL; 
+    Penalty: -2;
     Group: WG_SHIELDS;
     Desc: "The common small shield is larger than a buckler but
            smaller than a kite shield. 
@@ -1379,6 +1383,7 @@ Item "buckler;leather" : T_SHIELD
   { 
     Image: brown ']'; 
     Mat: MAT_LEATHER; Weight: 5; Size: SZ_TINY;
+    Penalty: -1;
     Group: WG_SHIELDS|WG_SIMPLE;
     Desc: "The buckler is the smallest possible shield, and is
       usually worn strapped to one arm. It's only about a foot
@@ -1391,6 +1396,7 @@ Item "buckler;wooden" : T_SHIELD
   { 
     Image: green ']'; 
     Mat: MAT_WOOD; Weight: 5; Size: SZ_TINY;
+    Penalty: -1;
     Group: WG_SHIELDS|WG_SIMPLE;
     Desc: "The buckler is the smallest possible shield, and is
       usually worn strapped to one arm. It's only about a foot

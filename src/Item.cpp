@@ -2153,14 +2153,34 @@ int16 Armour::PenaltyVal(Creature * c, bool for_skills)
   int sSize = Size();
   int cSize = c ? c->GetAttr(A_SIZ) : SZ_MEDIUM; 
   if (isType(T_SHIELD)) {
-    if (sSize > cSize) val = -10;
-    else if (sSize == cSize) val = -8;
-    else if (sSize + 1 == cSize) val = -4;
-    else if (sSize + 2 == cSize) val = -2;
-    else val = -1;
-    if (sSize > cSize) val *= 2; 
+    /* upstream: a shield's check penalty is the item's own authored figure,
+       not a size comparison alone. The original ladder priced every shield of
+       a size the same and never read Penalty:, so the data had no say; its -10
+       rung was dead as well, because the line below it repeated the test that
+       selected -10 and doubled it. Upstream's defect, not the port's: the
+       ladder is in the original source and behaves the same on Win32 under the
+       original typedefs. Observed -- a Medium kite shield on a Medium
+       character cost -6 to skills where the SRD heavy steel shield costs -2,
+       and a buckler cost nothing at all. inc-rsps. Not sent. */
+    val = ti->u.a.Penalty;
+    if (!val)
+      /* A shield from data written before Penalty: falls back to the ladder
+         lib/weapons.irh now authors, so no shield is ever free. */
+      val = sSize >= SZ_HUGE   ? -20 :
+            sSize == SZ_LARGE  ? -10 :
+            sSize == SZ_MEDIUM ?  -4 :
+            sSize == SZ_SMALL  ?  -2 : -1;
+    /* Penalty: states what a Medium character pays. A smaller bearer carries
+       relatively more shield and a larger one relatively less: one doubling or
+       halving per size step, and two steps at most in either direction. */
+    int steps = max(-2, min(2, SZ_MEDIUM - cSize));
+    for (; steps > 0; steps--) val *= 2;
+    for (; steps < 0; steps++) val /= 2;
   } else val = ti->u.a.Penalty; 
-  if (for_skills) val += 2; 
+  /* The +2 answers body armour, whose Penalty: is authored two worse than the
+     figure it must show: full plate is -8 in lib/weapons.irh and -6 on the
+     sheet, the SRD number. A shield authors the shown figure itself. */
+  if (for_skills && !isType(T_SHIELD)) val += 2; 
   // ww: magical plusses specifically don't make the armour more limber
   if (HasQuality(AQ_GRACEFUL)) 
     val /= 2;

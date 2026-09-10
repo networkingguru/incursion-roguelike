@@ -3884,13 +3884,26 @@ String & Armour::Describe(Player *p) {
             Desc += Format(" This powerful shield also absorbs damage, providing an armour bonus of <11>%+d<7>.", ArmVal(0, isKnown(KN_PLUS)));
 
         if (Size(p) > p->Attr[A_SIZ]) {
+            /* upstream: the description does not double the penalty a second
+               time. PenaltyVal is the figure every consumer already uses, so
+               doubling it here made this page disagree with the character
+               sheet -- a Medium character with a tower shield read -36 while
+               the sheet read -18. Upstream's defect, not the port's: the same
+               two multiplications exist in the original source. Observed.
+               inc-rsps. Not sent. */
             Desc += Format(" This shield is so large for you that it provides portable cover: attacks against you have a 50~ chance of missing.");
-            penalty *= 2;
         }
 
         if (penalty) {
+            /* upstream: the movement figure is stated as a reduction, so it is
+               positive. A penalty is held negative, so the first argument must
+               negate it -- the body-armour sentence twenty lines down does
+               exactly that, and this one did not, so a shield's page read "your
+               base movement rate is reduced by -10~". Upstream's defect, not the
+               port's: both sentences are in the base source with this
+               difference. Observed. inc-rsps. Not sent. */
             Desc += Format(" While using it, your base movement rate is reduced by <11>%d~<7>, certain skills suffer a <11>%+d<7> penalty and your arcane spell failure rate increases by <11>%d~<7>.",
-                (penalty / 2) * 5,
+                (penalty / 2) * -5,
                 penalty,
                 (penalty * -10));
         }

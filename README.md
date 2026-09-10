@@ -847,6 +847,7 @@ the unfixed tree before it is trusted.
 | `check_save_fail.sh` | Does a save that fails part-way leave the game playable? Drives real and staged failures. |
 | `check_sentinel_live.sh` | Does a live Sentinel get the saves its corrected level table names? |
 | `check_sharp_senses.sh` | Does Sharp Senses reach Search, and not only Spot and Listen? |
+| `check_shield_penalty.sh` | Does a shield's armour check penalty come from the shield, or only from its size beside yours? Puts every shield in a Medium paladin's hand one at a time and reads its cost twice off the character dump -- the skill term and the movement rate -- then does the two a Small halfling can hold, whose figures must be double. |
 | `check_skill_manager_reset.sh` | Does an unrecognised key still wreck the Skill Manager? Presses END and HOME -- what the left stick's two left diagonals send -- twice over: at character generation, where the arm threw every allocated rank away, and at level-up, where the same arm closed the manager without a word. |
 | `check_shift_opcodes.sh` | Does the VM's BSHL shift left while Rect member codegen still uses BSHR for reads and BSHL for writes, and does a script-coloured field cast red rather than black light? |
 | `check_springblade_label.sh` | Do the Springblade Bracers name the pair they actually rolled? Seed 6 rolls the two matched +2 elemental blades, and the name must say so. |

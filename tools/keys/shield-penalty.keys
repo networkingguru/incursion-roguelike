@@ -1,0 +1,131 @@
+# Read the armour check penalty of every shield in the game off the character
+# dump, once each, on the same character. Bead inc-rsps.
+#
+# WHAT IS BEING MEASURED. Armour::PenaltyVal (src/Item.cpp:2147) used to price
+# a shield from a size comparison alone and never read the item's own
+# Penalty:, so no shield could differ from another of its size and the buckler
+# cost nothing at all. The figures the game now owes a Medium character are
+# the ones lib/weapons.irh authors: buckler -1, small shield -2, kite shield
+# -4, tower shield -10.
+#
+# THE ORACLE is the character dump written by the sheet's [W] command
+# (src/Managers.cpp:2503, src/Sheet.cpp:1389), which lands in the run's own
+# logs/ directory. Its Skill Ratings block prints the armour term of every
+# skill separately -- "Balance -7 (0 ranks, +3 DEX, -10 armour)" -- and its
+# Movement Rate line prints the shield factor separately from encumbrance.
+# Two independent readings of the same number, and neither is a screen scrape.
+# tools/check_shield_penalty.sh does the arithmetic.
+#
+# WHY A PALADIN. He is Medium, so the authored figure is what he pays with no
+# size step applied, and he is shield-proficient through his Grants block, so
+# no non-proficiency penalty is mixed into the reading. He also arrives
+# wearing a kite shield on a shoulder, which is the first subject.
+#
+# THE BASELINE ("none") HAS NO Balance LINE AT ALL, and that is not a fault.
+# The sheet lists a skill only once something moves it; Balance at 0 ranks
+# with nothing but its DEX modifier is left out. Its absence is the reading:
+# no shield is in the hand, so no armour term exists. The Movement Rate line
+# carries the baseline that can be compared.
+#
+# Menu letters move when a list changes. Run at the seed the check supplies
+# and no other.
+
+@include chargen-paladin.keys
+
+@until "Afoot" ESC
+
+# --- BASELINE: the kite shield is on a shoulder, so nothing is readied ------
+d
+W
+n o n e
+ENTER
+ESC
+
+# --- KITE SHIELD: off the shoulder and into the hand ------------------------
+# SPACE lifts the selected slot's item into the air; SPACE on the destination
+# slot puts it down there.
+i
+f
+SPACE
+a
+SPACE
+@dump:kite-in-hand
+ESC
+d
+W
+k i t e
+ENTER
+ESC
+
+# --- Wizard mode, for the three shields he does not own ---------------------
+w
+@expect "Enter wizard mode"
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE           # Auto-Identify Items, so no reading is of an unknown item
+ESC
+
+# Shields are the seventeenth entry of ItemGlyphs (src/Tables.cpp:320-337),
+# hence RIGHT*16. The list is Tower, Kite, Small, Buckler, Buckler, and it
+# opens on the first row, so DOWN counts from Tower. Both bucklers are drawn
+# as "Buckler" and both are authored -1, so either row answers.
+#
+# Placing a new shield in the Ready Hand pushes the old one into the air, and
+# the ESC that closes the screen drops it on the floor. That is deliberate:
+# each reading must have exactly one shield in hand.
+
+# --- SMALL SHIELD -----------------------------------------------------------
+w
+@choose "Item Acquisition"
+RIGHT*16
+DOWN DOWN
+ENTER
+a
+SPACE
+@dump:small-in-hand
+ESC
+d
+W
+s m a l l
+ENTER
+ESC
+
+# --- BUCKLER ----------------------------------------------------------------
+w
+@choose "Item Acquisition"
+RIGHT*16
+DOWN DOWN DOWN
+ENTER
+a
+SPACE
+@dump:buckler-in-hand
+ESC
+d
+W
+b u c k
+ENTER
+ESC
+
+# --- TOWER SHIELD -----------------------------------------------------------
+# It needs both hands, so the long sword leaves the Weapon Hand first and is
+# dropped. Without this the game refuses the grip and the reading would be of
+# an empty hand.
+i
+b
+SPACE
+ESC
+w
+@choose "Item Acquisition"
+RIGHT*16
+ENTER
+a
+SPACE
+@dump:tower-in-hand
+ESC
+d
+W
+t o w e r
+ENTER
+ESC
+@quit
