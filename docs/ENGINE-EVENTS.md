@@ -73,7 +73,7 @@ mutex (`src/Vision.cpp:415-416`), and `Creature::Multiply` refuses to breed past
 mold `lib/mon3.irh:2308` and `lib/mon3.irh:2316`) or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3372`)
 calls `Multiply` -> `Creature::Multiply` (`src/Creature.cpp:486`) -> `mn->PlaceAt` (`:557`)
 throws `EV_PLACE` (`src/Display.cpp:224`, `:248`) and `EV_FIELDON` (`:314`) -> `Creature::FieldOn` re-throws `EV_EFFECT` for
-`FI_MODIFIER` (`src/Status.cpp:1698`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1208`).
+`FI_MODIFIER` (`src/Status.cpp:1698`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1246`).
 *Invariant violated:* `Creature::FieldOn` sets `EActor` to the field's creator, so the script calls `Multiply` on the same
 generation-0 parent every time, and the generation cap at `src/Creature.cpp:510` can never apply to it. Only `m->BreedCount >= 50`
 (`:514`) survives, far above the 128-frame stack. *Fix:* a nesting cap of 4 on `Multiply` (`:498`); `GENERATION` is now stamped at
@@ -113,7 +113,7 @@ grep -rn "ALIENIST_CLAUSE" lib/*.irh | grep -v define # 18 macro expansions
 2. `src/Display.cpp:413` `static Creature* Displace[64]` in a function re-entering itself at `:550`; `Displace[dc++]` (`:510`) has
 no bound check and `dc` is `uint8`.
 3. `src/Effects.cpp:153` states `e.eID` may be 0 for breath weapons; `:166` then reads `TEFF(e.eID)->Schools` unchecked. Same
-shape at `src/Creature.cpp:818`, `src/Magic.cpp:1204`.
+shape at `src/Creature.cpp:818`, `src/Magic.cpp:1242`.
 4. Fixed. `src/Res.cpp:348-353` range-checks the module slot and returns NULL, so `ASSERT` no longer guards the dereference.
 5. `src/VMachine.cpp:529` restores `xID` after `CMEM` because the call may have re-entered `Execute`, but not `mn`, `Memory` or
 `szMemory` (`:461-465`), leaving a cross-module outer script on the inner module's data segment.
