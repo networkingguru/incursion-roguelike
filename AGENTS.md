@@ -259,6 +259,44 @@ A new bead labelled `public` must also pass `bd lint`, which asks a bug for
 exempt and is being drained separately as bead `inc-uh76`; the check asks this
 of new beads only.
 
+### A quote of Brian goes in the notes, and nowhere else
+
+**A direct quote of Brian MUST go in a bead's NOTES. It MUST NOT appear in the
+description, the title or the acceptance criteria.** He set this rule on
+2026-09-10: quotes of him are notes, and they are not public facing.
+
+The reason is the publication path. `tools/sync_issues.sh` hands every `public`
+bead to `bd github sync`. That command writes the bead's TITLE as the issue
+title. It writes the DESCRIPTION as the issue body, verbatim. It never writes
+the notes. Measured on 2026-09-10: bead `inc-upw.2` is GitHub issue #14. The
+issue body is 1,380 bytes, which is the exact length of the description. None
+of the 382 bytes of notes appears in it. So a quote in a description is a quote
+on a public tracker, under his name. A quote in the notes stays here.
+
+**The rule covers every bead, `public` and `internal` alike.** A label is one
+`bd update` away from changing, and nobody re-reads a description when they
+change one. Write every bead as though it will be published.
+
+**Put the ruling in the description. Put the words in the notes.** State what he
+decided in neutral third-person prose. Keep every fact the quote carried: the
+number, the file, the refusal, the priority. Then point at the notes for the
+exact words. Move the quote with `bd update <id> --append-notes`, attributed and
+dated where the source gives a date. Never drop information: only the voice
+changes, and a ruling MUST stay as firm in prose as it was in his words.
+
+A worked example. This description line:
+
+    Brian: "Why in the fuck is the warning not keyed to the fucking effect?"
+
+becomes this one:
+
+    The owner requires the warning to key on the effect, not on the material.
+    His exact words are in the notes.
+
+**A quote of anybody else is not covered.** Game prose, a code comment, a
+message the game printed, upstream's author and a third party's review all stay
+in the description. The description is where that evidence belongs.
+
 ## Quick Reference
 
 ```bash
