@@ -101,7 +101,7 @@ fi
 # Self-healing must still work. If the fallback stopped carrying benign
 # traffic, something removed it rather than fixing the aim, and the AI can no
 # longer cure itself.
-benign="$(grep -c 'attack=0' "$log")"
+benign="$(grep -F -- 'kind=monster ' "$log" | grep -cF -- ' attack=0 ')"
 [ "$benign" -ge 1 ] || {
     echo "INCONCLUSIVE: no benign self-aimed cast was recorded either, so this"
     echo "              run cannot tell a fixed aim from a removed fallback."

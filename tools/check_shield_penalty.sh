@@ -52,20 +52,21 @@ SEED=4
 
 # $1 key script, $2 the name this check calls it. Echoes the run directory.
 run_session() {
-    local out r
+    local out r status
     out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
            tools/headless.sh "$1" "$SEED" 2>&1)"
+    status=$?
     r="$(echo "$out" | awk '/^run:/ {print $2}')"
-    if echo "$out" | grep -q "the key script looked for something"; then
-        echo "INCONCLUSIVE: the $2 key script could not find something on" >&2
-        echo "              screen. Run: $r" >&2
+    if [ "$status" -ne 0 ] && [ "$status" -ne 3 ]; then
+        echo "INCONCLUSIVE: the $2 session ended badly (tools/headless.sh exit $status)." >&2
+        echo "              Run: $r" >&2
         exit 2
     fi
     [ -n "$r" ] || { echo "INCONCLUSIVE: no run directory for $2." >&2; exit 2; }
     echo "$r"
 }
 
-run="$(run_session tools/keys/shield-penalty.keys Medium)"
+run="$(run_session tools/keys/shield-penalty.keys Medium)" || exit 2
 
 rc=0
 
@@ -98,9 +99,15 @@ in_hand() {   # $1 screen basename, $2 the item name the slot must show
 # dump -- or inside any wrapper called the same way -- still only leaves the
 # subshell. Proved on 2026-09-10: a wrapper that did `dump "$1" || exit 2` read
 # back through $( ) let the script run on to its verdict exactly as before.
-dump() {      # $1 dump basename -- echoes the path, returns 1 when it is absent
+dump() {      # $1 dump basename -- echoes the path, returns 1 when absent or incomplete
     local f="$run/logs/$1.txt"
     [ -f "$f" ] || { echo "INCONCLUSIVE: no character dump at $f" >&2; return 1; }
+    if ! grep -qF -- "Movement Rate" "$f" ||
+       ! grep -qF -- "Skill Ratings:" "$f" ||
+       ! grep -qF -- "Inventory:" "$f"; then
+        echo "INCONCLUSIVE: not a character sheet (missing or incomplete sections): $f" >&2
+        return 1
+    fi
     echo "$f"
 }
 
@@ -184,7 +191,7 @@ move_factor tower "tower shield" 75%
 
 ### THE SIZE STEP. The same shields, one size of bearer down.
 
-run="$(run_session tools/keys/shield-penalty-small.keys Small)"
+run="$(run_session tools/keys/shield-penalty-small.keys Small)" || exit 2
 
 in_hand 0001-buckler-in-hand.txt "buckler"
 in_hand 0002-small-in-hand.txt   "small shield"

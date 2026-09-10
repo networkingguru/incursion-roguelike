@@ -105,7 +105,7 @@ CHECK_SCREENS=()        # the screen dumps the assertions read
 CHECK_FAIL=0            # any assertion failed
 CHECK_EXPECTS=0         # how many check_expect calls passed
 CHECK_REJECTS=0         # how many check_reject calls ran
-CHECK_BUILT=""          # targets already built this invocation
+CHECK_BUILT=""          # targets whose build was attempted this invocation
 
 # --prove-red is the library's flag, not the check's. A sourced file sees the
 # caller's positional parameters, so this reads the check's own command line.
@@ -179,13 +179,14 @@ check_build() { # <posix|sdl>
 
     log="$(mktemp -t check_build)" || _check_die 2 "check_build: no temp file"
     printf '  building %s ... ' "$out"
+    CHECK_BUILT="$CHECK_BUILT $target"
     if BACKEND="$env_backend" ./build_macos.sh > "$log" 2>&1; then
         echo "ok"
-        CHECK_BUILT="$CHECK_BUILT $target"
         rm -f "$log"
         return 0
     fi
-    echo "FAILED"
+    rm -f "$CHECK_ROOT/$out"
+    echo "FAILED ($out removed; the failed build may have linked it)"
     tail -20 "$log" | sed 's/^/      /'
     _check_die 2 "BACKEND=$env_backend ./build_macos.sh did not finish; full log in $log"
 }
@@ -285,6 +286,7 @@ check_screens() { # [glob]
 # no check. Reach for grep yourself on the rare occasion you want a pattern.
 check_expect() { # <text> [description]
     local text="$1" why="${2:-}" n
+    [ -n "$text" ] || _check_die 2 "check_expect: empty assertion text is a caller error."
     _check_have_screens check_expect
     n="$(grep -lF -- "$text" "${CHECK_SCREENS[@]}" 2>/dev/null | wc -l | tr -d ' ')"
     if [ "$n" -gt 0 ]; then
@@ -305,6 +307,7 @@ check_expect() { # <text> [description]
 # right line on all of them rather than on one lucky one.
 check_expect_all() { # <text> [description]
     local text="$1" why="${2:-}" n
+    [ -n "$text" ] || _check_die 2 "check_expect_all: empty assertion text is a caller error."
     _check_have_screens check_expect_all
     n="$(grep -lF -- "$text" "${CHECK_SCREENS[@]}" 2>/dev/null | wc -l | tr -d ' ')"
     if [ "$n" -eq "${#CHECK_SCREENS[@]}" ]; then
@@ -354,8 +357,9 @@ _check_have_screens() { # <caller name>
 # Exactly once, not at least once, because an ambiguous mutation proves nothing
 # specific about which site the check is watching.
 #
-# With --prove-red it performs docs/VERIFICATION.md step 2 whole: copy the file
-# aside, put `to` in place of `from`, rebuild every target in CHECK_TARGETS,
+# With --prove-red it performs docs/VERIFICATION.md step 2 whole: require a
+# green run first, copy the file aside, put `to` in place of `from`, rebuild
+# every target in CHECK_TARGETS,
 # re-run this same check, restore the file, rebuild again, and report. It exits
 # 0 when the inner run FAILED, because a check that goes red on a broken fix is
 # a check that measures something. It exits 1 when the inner run passed.
@@ -403,7 +407,18 @@ check_mutation() { # <file> <literal from> <literal to>
 # exact command, which is a loud failure rather than a quiet wrong answer.
 _check_pr_restore() {
     [ -n "${_CHECK_PR_FILE:-}" ] || return 0
-    cp -p "$_CHECK_PR_KEEP/original" "$_CHECK_PR_FILE" 2>/dev/null
+    local restore_status=0
+    if ! cp -p "$_CHECK_PR_KEEP/original" "$_CHECK_PR_FILE" ||
+       ! cmp -s "$_CHECK_PR_KEEP/original" "$_CHECK_PR_FILE"; then
+        echo "INCONCLUSIVE: restore failed for $_CHECK_PR_FILE; original kept at $_CHECK_PR_KEEP/original. Restore it by hand." >&2
+        restore_status=2
+    fi
+    _check_pr_remove_binaries
+    [ "$restore_status" -eq 0 ] && _CHECK_PR_FILE=""
+    return "$restore_status"
+}
+
+_check_pr_remove_binaries() {
     local target out
     for target in $CHECK_BUILT; do
         case "$target" in
@@ -413,23 +428,28 @@ _check_pr_restore() {
         esac
         [ -f "$CHECK_ROOT/$out" ] || continue
         rm -f "$CHECK_ROOT/$out"
-        echo "  removed $out -- it was linked from the mutated $_CHECK_PR_FILE." >&2
+        echo "  removed $out -- it may have been linked from the mutated $_CHECK_PR_FILE." >&2
         case "$target" in
             posix) echo "  Rebuild with: BACKEND=posix ./build_macos.sh" >&2 ;;
             sdl)   echo "  Rebuild with: ./build_macos.sh" >&2 ;;
         esac
     done
-    _CHECK_PR_FILE=""
 }
 
 _check_prove_red() { # <file> <literal from> <literal to>
     local file="$1" from="$2" to="$3" keep inner target
 
+    echo "  re-running $CHECK_SELF before mutation"
+    ( unset CHECK_MUTATED; CHECK_PROVE_RED=0 "$CHECK_SELF" ${CHECK_ARGS[@]+"${CHECK_ARGS[@]}"} ) 2>&1 | sed 's/^/  | /'
+    inner="${PIPESTATUS[0]}"
+    [ "$inner" -eq 0 ] || _check_die 2 \
+        "the check is not green to begin with (exit $inner); nothing is proved."
+
     keep="$(mktemp -d -t check_prove_red)" || _check_die 2 "no temp directory"
     cp -p "$file" "$keep/original" || _check_die 2 "could not copy $file aside"
     _CHECK_PR_FILE="$file"
     _CHECK_PR_KEEP="$keep"
-    trap '_check_pr_restore' EXIT
+    trap '_check_pr_restore || exit 2' EXIT
     trap '_check_pr_restore; exit 130' INT TERM HUP
 
     echo "--- prove red: $file ---"
@@ -452,14 +472,14 @@ _check_prove_red() { # <file> <literal from> <literal to>
     echo
 
     echo "  restoring  $file"
-    cp -p "$keep/original" "$file"
-    trap - EXIT INT TERM HUP
-    _CHECK_PR_FILE=""
-    if ! cmp -s "$keep/original" "$file"; then
+    if ! cp -p "$keep/original" "$file" || ! cmp -s "$keep/original" "$file"; then
         _check_die 2 \
             "THE RESTORE DID NOT TAKE. $file does not match the copy it was" \
             "made from. Put it back by hand: cp '$keep/original' '$file'"
     fi
+    _check_pr_remove_binaries
+    trap - EXIT INT TERM HUP
+    _CHECK_PR_FILE=""
     rm -rf "$keep"
     case "$file" in
         src/*|inc/*|lib/*)
@@ -554,6 +574,8 @@ _st_screens() { # write two screens into $ST_DIR and choose them
 }
 
 _st_c_expect_hit()     { _st_screens; check_expect "avoid harm to your"; check_done ok; }
+_st_c_expect_empty() { _st_screens; check_expect ""; check_done ok; }
+_st_c_expect_all_empty() { _st_screens; check_expect_all ""; check_done ok; }
 _st_c_expect_miss()    { _st_screens; check_expect "nothing says this"; check_done ok; }
 _st_c_expect_all_bad() { _st_screens; check_expect_all "avoid harm"; check_done ok; }
 _st_c_expect_all_ok()  { _st_screens
@@ -608,6 +630,12 @@ _st_c_prove_red_good() {
     return $rc
 }
 
+_st_c_prove_red_always_bad() {
+    printf 'THE FIX IS IN\n' > "$ST_DIR/oracle.txt"
+    _st_fake_check "$ST_DIR/always-bad.sh" "exit 1"
+    "$ST_DIR/always-bad.sh" --prove-red
+}
+
 _st_c_prove_red_blind() {
     printf 'THE FIX IS IN\n' > "$ST_DIR/oracle.txt"
     _st_fake_check "$ST_DIR/blind.sh" "exit 0"
@@ -622,7 +650,7 @@ _st_c_prove_red_blind() {
 # produced before CHECK_SELF existed. It must not read as evidence.
 _st_c_prove_red_unstartable() {
     printf 'THE FIX IS IN\n' > "$ST_DIR/oracle.txt"
-    _st_fake_check "$ST_DIR/gone.sh" "exit 127"
+    _st_fake_check "$ST_DIR/gone.sh" '[ "${CHECK_MUTATED:-0}" = 1 ] && exit 127; exit 0'
     "$ST_DIR/gone.sh" --prove-red
     local rc=$?
     grep -qF 'THE FIX IS IN' "$ST_DIR/oracle.txt" || echo "RESTORE FAILED"
@@ -662,6 +690,9 @@ _check_selftest() {
     ST_DIR="$(mktemp -d -t check_lib_selftest)" || return 2
     trap 'rm -rf "$ST_DIR"' EXIT
 
+    _st 2 'check_expect: empty assertion' 'empty check_expect is a caller error' _st_c_expect_empty
+    _st 2 'check_expect_all: empty assertion' 'empty check_expect_all is a caller error' _st_c_expect_all_empty
+    _st 2 'not green to begin with (exit 1)' 'prove-red rejects an already failing check' _st_c_prove_red_always_bad
     _st 0 'ok    1/2' 'a string on one screen satisfies check_expect' _st_c_expect_hit
     _st 1 'FAIL  0/2'  'a string on no screen fails check_expect'      _st_c_expect_miss
     _st 1 'only 1 of 2' 'check_expect_all needs every screen'          _st_c_expect_all_bad
