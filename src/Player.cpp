@@ -74,6 +74,12 @@ void Player::UpdateOptions(bool specific_game) {
         for (i = 0; OptionList[i].Val; i++)
             tOptions[OptionList[i].Val] = OptionList[i].Default;
     }
+    /* What the FILE knew about, kept across the copies below. They carry the
+       in-memory blocks over the ones just read, generation and new options
+       included, so migrating before them would be undone here and the stamp
+       would never reach the disk -- and until the stamp lands, every load
+       migrates again and a player could never keep a setting he changed. */
+    const int8 fileGen = tOptions[OPT_SETTINGS_GEN];
 
     memcpy(&tOptions[OPC_INPUT], &Options[OPC_INPUT], 100);
     memcpy(&tOptions[OPC_LIMITS], &Options[OPC_LIMITS], 100);
@@ -82,6 +88,13 @@ void Player::UpdateOptions(bool specific_game) {
         memcpy(&tOptions[OPC_TACTICAL], &Options[OPC_TACTICAL], 100);
         memcpy(&tOptions[OPC_CHARGEN], &Options[OPC_CHARGEN], 100);
     }
+
+    /* Judge by the file's own generation: that, not whatever the in-memory
+       block happens to hold, is what says whether these options have ever
+       been the player's to choose. A file already at this generation is left
+       exactly as it is, so a deliberate setting is never overruled. */
+    tOptions[OPT_SETTINGS_GEN] = fileGen;
+    MigrateOptions(tOptions);
 
     MyTerm->OpenWrite(SC(MyTerm->OptionsSubDir()) + OPT_FILE);
     MyTerm->FWrite(tOptions, OPT_LAST);
@@ -101,6 +114,7 @@ void Player::LoadOptions(bool new_game) {
         for (i = 0; OptionList[i].Val; i++)
             Options[OptionList[i].Val] = OptionList[i].Default;
     }
+    MigrateOptions(Options);
 
     if (new_game) {
         for (i = 0; OptionList[i].Val; i++)
@@ -2680,6 +2694,7 @@ int16 Game::Opt(int16 op) {
             T1->OpenRead(s);
             T1->FRead(Options, OPT_LAST);
             T1->Close();
+            MigrateOptions(Options);
             return Options[op];
         }
         for (i = 0; OptionList[i].Val; i++)

@@ -2427,7 +2427,28 @@ Option OptionList[] = {
       "find more readable. 'Muted' desaturates the colors without darkening "
       "them, which suits the lighting: a less colorful surface lets the color "
       "of a torch or a spell show on it more strongly." },
-      
+  { OPT_LIGHT_EXPLORED, "Explored Area Brightness",
+      "Darkest/Darker/Normal/Brighter/Brightest", 4, 2, 0,
+      "__Ground you have already walked is drawn from memory, in grey, once "
+      "you can no longer see it. This option sets how far that grey rises out "
+      "of the dark. 'Darkest' leaves the explored map barely readable and "
+      "makes a lit room stand out sharply against it; 'Brightest' keeps the "
+      "whole floor plan easy to read at a glance. It changes nothing but the "
+      "color of remembered ground: what you can see, and what can see you, "
+      "are the same at every setting." },
+  { OPT_LIGHT_BRIGHT, "Light Brightness",
+      "Darkest/Darker/Normal/Brighter/Brightest", 4, 2, 0,
+      "__This option sets how bright the finished picture looks. It scales "
+      "every color on the map by the same amount, so one light never grows "
+      "brighter relative to another and no color shifts its hue. Raising it "
+      "cannot wash the screen out: a surface already at full brightness has "
+      "nowhere left to go and is left where it is, while everything dimmer "
+      "comes up to meet it. It is a change to the display alone and moves no "
+      "rule of the game. In particular, it does not light the dark: a square "
+      "too dim to see is still too dim to see at 'Brightest', and a square "
+      "bright enough to give away a hiding character still gives you away at "
+      "'Darkest'." },
+
 /* Tactical Options */
 #if 0
   { OPT_SUBDUAL, "Strike to Subdue", "OFF/ON", 1, 0, 0,

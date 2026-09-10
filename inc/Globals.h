@@ -263,6 +263,10 @@ extern int32 WealthByLevel[];
 
 extern uint16 ActiveTraits[];
 extern struct Option OptionList[];
+/* Bring an options array just read from disk up to OPT_GEN_CURRENT. Defined in
+   src/OptionsGen.cpp, which the three readers in src/Player.cpp call; see the
+   comment on OPT_SETTINGS_GEN in inc/Defines.h for what it is for. */
+void MigrateOptions(int8 *opt);
 extern struct YuseCommand YuseCommands[];
 /* The row count of the table above, to its Event == 0 terminator. Defined in
    src/Tables.cpp beside the table, because the array has no declared extent

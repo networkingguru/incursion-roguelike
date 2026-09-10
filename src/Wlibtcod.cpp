@@ -1172,14 +1172,25 @@ void libtcodTerm::LitPaint(int32 idx) {
 	LightRGB L = { 0, 0, 0 };
 	if (!lc.remembered)
 		LightAt(lc.mx, lc.my, L);
+	/* The player's two by-eye lighting trims. Both are read HERE and nowhere
+	   else, which is what makes them display-only: this function never calls
+	   LightLevelAt, so neither trim can reach the lit test at src/Light.cpp
+	   :717 or the brightly-lit test at :708, and so neither can move whether
+	   a cell is seen, whether hiding breaks, or what a monster does. */
+	const int explored = p ? p->Opt(OPT_LIGHT_EXPLORED) : LIGHT_STEP_NORMAL;
+	const int bright   = p ? p->Opt(OPT_LIGHT_BRIGHT)   : LIGHT_STEP_NORMAL;
 	LightRGB base = lc.ice ? LIGHT_ICE_BASE : LightPaletteRGB(lc.fi);
-	LightRGB fg = lc.remembered ? LightMemoryBase(base, lc.floor)
+	LightRGB fg = lc.remembered ? LightMemoryBase(base, lc.floor, explored)
 	                            : LightShadeBase(base, L, lc.floor);
 	LightRGB bg = LightGlow(lc.bi, L);
 	LightRGB fogc;
 	if (LightFogAt(lc.mx, lc.my, fogc))
 		{ fg = LightFogMix(fg, fogc, L); bg = LightFogMix(bg, fogc, L); }
 	fg = LightInfraMix(fg, lc.fi, lc.warm, L, lc.infra);
+	/* Last of all, so the gain trims the finished picture and every blend
+	   above it has already happened at the untrimmed brightness. */
+	fg = LightGain(fg, bright);
+	bg = LightGain(bg, bright);
 	TCOD_color_t tf = { fg.r, fg.g, fg.b }, tb = { bg.r, bg.g, bg.b };
 	TCOD_console_put_char_ex(bScreen, idx % sizeX, idx / sizeX, c, tf, tb);
 }

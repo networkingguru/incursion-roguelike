@@ -56,9 +56,22 @@ LightRGB LightPaletteRGB(int idx);
 LightRGB LightShadeBase(LightRGB base, LightRGB L, float unlit);
 LightRGB LightShade(int idx, LightRGB L, float unlit);
 /* A remembered cell is drawn from memory rather than seen, so it keeps its
-   shape and loses most of its colour. */
-LightRGB LightMemoryBase(LightRGB base, float unlit);
-LightRGB LightMemory(int idx, float unlit);
+   shape and loses most of its colour. `step` is OPT_LIGHT_EXPLORED, which
+   scales how far memory lifts above unlit; LIGHT_STEP_NORMAL reproduces the
+   picture exactly as it was before that option existed. */
+LightRGB LightMemoryBase(LightRGB base, float unlit,
+                         int step = LIGHT_STEP_NORMAL);
+LightRGB LightMemory(int idx, float unlit, int step = LIGHT_STEP_NORMAL);
+
+/* OPT_LIGHT_BRIGHT: how bright the finished picture looks, and nothing else.
+   A backend applies this to a colour it is about to draw, after every
+   gameplay test has already read the ungained light. The map is uniform over
+   the whole screen and scales all three channels by one factor, so a cell's
+   hue and the ratios between its channels survive exactly. Dimming is a plain
+   scale; brightening rolls off as a cell nears full brightness, so raising
+   this can never clip a channel and never washes a lit cell toward white.
+   Black stays black at every step. LIGHT_STEP_NORMAL returns `c` unchanged. */
+LightRGB LightGain(LightRGB c, int step);
 /* Heat sight discards a surface's hue and shows only how bright it is, so
    the picture is monochrome red and cannot be mistaken for torchlight. */
 LightRGB LightInfra(int idx, bool warm);

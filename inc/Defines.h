@@ -4129,6 +4129,44 @@ typedef signed int        hObj;
 #define PALETTE_CLASSIC         0
 #define PALETTE_SOFTER          1
 #define PALETTE_MUTED           2
+/* Two by-eye lighting trims. Both are DISPLAY ONLY: they are read in
+   libtcodTerm::LitPaint, downstream of every gameplay test, so neither can
+   move LightLevelAt and neither is compiled into the posix backend at all. */
+#define OPT_LIGHT_EXPLORED      435
+#define OPT_LIGHT_BRIGHT        436
+/* The shared step scale both options use, ordered as the menu reads it:
+   darkest to brightest, with the middle step reproducing the picture exactly
+   as it was before either option existed. */
+#define LIGHT_STEP_DIMMEST      0
+#define LIGHT_STEP_DIMMER       1
+#define LIGHT_STEP_NORMAL       2
+#define LIGHT_STEP_BRIGHTER     3
+#define LIGHT_STEP_BRIGHTEST    4
+#define LIGHT_STEP_MAX          4
+
+/* THE OPTIONS FILE'S VERSION, and the reason the scale above can be ordered
+   the sensible way round.
+
+   Player::LoadOptions reads a bare array of one byte per option with no header
+   of any kind, so an option added later reads 0 from every file written before
+   it existed -- and 0 is a perfectly good menu index, so the new option comes
+   up silently at its FIRST choice instead of the default its OptionList row
+   asks for. That is why the OPT_SOFT_PALETTE note above has to promise that 0
+   and 1 keep their old meanings forever.
+
+   OPT_SETTINGS_GEN ends that. It counts the times options have been added, it
+   is itself 0 in every file written before it existed, and MigrateOptions
+   (src/Player.cpp) gives any option newer than a file's generation the default
+   its row asks for, then stamps the file. A new option is therefore free to
+   put its default wherever the scale reads best.
+
+   TO ADD AN OPTION LATER: raise OPT_GEN_CURRENT by one, give the new value its
+   own OPT_GEN_* name, and add one branch to MigrateOptions. Never renumber an
+   existing generation, and never lower OPT_GEN_CURRENT. */
+#define OPT_SETTINGS_GEN        437
+#define OPT_GEN_NONE            0   /* written before this field existed */
+#define OPT_GEN_LIGHT_TRIM      1   /* added OPT_LIGHT_EXPLORED, OPT_LIGHT_BRIGHT */
+#define OPT_GEN_CURRENT         1
 
 
 #define OPC_TACTICAL            500

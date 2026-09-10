@@ -150,7 +150,64 @@ LightRGB LightShade(int idx, LightRGB L, float unlit) {
   return LightShadeBase(Palette[idx & COLOUR_MASK], L, unlit);
 }
 
-LightRGB LightMemoryBase(LightRGB base, float unlit) {
+/* The two by-eye trims (OPT_LIGHT_EXPLORED, OPT_LIGHT_BRIGHT) share one
+   five-step scale, running darkest to brightest as the menu reads it.
+   LIGHT_STEP_NORMAL sits in the middle and is the identity in both tables:
+   at that step the game draws exactly what it drew before either option
+   existed. A file written before they existed reads 0 here, which is Dimmest
+   and not Normal -- MigrateOptions (src/Player.cpp) is what corrects that, so
+   neither table may be reordered without reading OPT_SETTINGS_GEN first. */
+static int StepIndex(int step) {
+  if (step < 0 || step > LIGHT_STEP_MAX)
+    return LIGHT_STEP_NORMAL;
+  return step;
+}
+
+/* How far a remembered surface lifts above unlit, as a multiple of
+   LIGHT_MEMORY_LIFT. Below 1 the explored grey sinks toward the dark. */
+static const float MemoryStep[LIGHT_STEP_MAX + 1] = {
+  0.35f,   /* Dimmest   */
+  0.65f,   /* Dimmer    */
+  1.00f,   /* Normal    -- exactly LIGHT_MEMORY_LIFT */
+  1.60f,   /* Brighter  */
+  2.30f    /* Brightest */
+};
+
+/* The display gain each step asks LightGain for. */
+static const float GainStep[LIGHT_STEP_MAX + 1] = {
+  0.65f,   /* Dimmest   */
+  0.80f,   /* Dimmer    */
+  1.00f,   /* Normal    -- returns the colour untouched */
+  1.30f,   /* Brighter  */
+  1.70f    /* Brightest */
+};
+
+LightRGB LightGain(LightRGB c, int step) {
+  const float g = GainStep[StepIndex(step)];
+  if (g == 1.0f)
+    return c;                    /* bit-exact identity, the frozen fixtures */
+  const float v = ColValue(c);   /* the colour's own brightness, 0..1 */
+  if (v <= 0.0f)
+    return c;                    /* black has no brightness to scale */
+  /* The two directions are not symmetric, because the screen is not.
+     DOWN (g < 1) is a plain scale: there is always room below, so every
+     channel takes the same factor and the ratios stay exact.
+     UP (g > 1) cannot be a plain scale, because a channel already at 255 has
+     no room and a multiply would clip it -- and clipping is precisely what
+     shifts a lit surface's hue toward white. g/(1+(g-1)v) instead approaches
+     1 as v approaches 1: a dim cell takes nearly the full g, a cell already
+     at full brightness is left where it is, and nothing can pass 255.
+     Both branches scale all three channels by one factor, so a cell's hue and
+     its channel ratios survive either way. */
+  const float k = g < 1.0f ? g : g / (1.0f + (g - 1.0f) * v);
+  LightRGB o;
+  o.r = LightChannel(c.r * k);
+  o.g = LightChannel(c.g * k);
+  o.b = LightChannel(c.b * k);
+  return o;
+}
+
+LightRGB LightMemoryBase(LightRGB base, float unlit, int step) {
   LightRGB b = base, o;
   /* Grey by VALUE, not luminance: a saturated blue has almost no
      luminance and greying it that way would crush it to black. */
@@ -164,15 +221,17 @@ LightRGB LightMemoryBase(LightRGB base, float unlit) {
   /* Memory has its own brightness: at the unlit level the grey is too
      dark to read as grey at all. Floors stay below walls, so a remembered
      room keeps its shape. */
-  float mem = unlit + (1.0f - unlit) * LIGHT_MEMORY_LIFT;
+  float lift = LIGHT_MEMORY_LIFT * MemoryStep[StepIndex(step)];
+  if (lift > 1.0f) lift = 1.0f;   /* a full lift is already the lit ceiling */
+  float mem = unlit + (1.0f - unlit) * lift;
   o.r = LightChannel((hr + (g - hr) * LIGHT_MEMORY_GREY) * mem);
   o.g = LightChannel((hg + (g - hg) * LIGHT_MEMORY_GREY) * mem);
   o.b = LightChannel((hb + (g - hb) * LIGHT_MEMORY_GREY) * mem);
   return o;
 }
 
-LightRGB LightMemory(int idx, float unlit) {
-  return LightMemoryBase(Palette[idx & COLOUR_MASK], unlit);
+LightRGB LightMemory(int idx, float unlit, int step) {
+  return LightMemoryBase(Palette[idx & COLOUR_MASK], unlit, step);
 }
 
 LightRGB LightInfra(int idx, bool warm) {
