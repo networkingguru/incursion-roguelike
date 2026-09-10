@@ -155,7 +155,7 @@ That rule is the contract. Nothing else about the schema needs remembering.
 `ARCHIVE_CLASS` (`inc/Base.h:778`) already generates a
 `Serialize(Registry&, bool isSave)` that calls its base first, and 20 classes
 already use it. The bodies gain field declarations beside the fixups they
-already carry. `Thing` (`inc/Map.h:919-941`) becomes:
+already carry. `Thing` (`inc/Map.h:934-956`) becomes:
 
 ```cpp
 ARCHIVE_CLASS(Thing,Object,r)
@@ -179,8 +179,8 @@ as `Serialize` does today, so a field cannot be written and not read.
 
 ### The map grid
 
-`Map::Serialize` (`inc/Map.h:650-651`) writes `Grid` as one raw block of
-`sizeof(LocationInfo)*sizeX*sizeY`. `LocationInfo` (`inc/Map.h:33-51`) is
+`Map::Serialize` (`inc/Map.h:665-666`) writes `Grid` as one raw block of
+`sizeof(LocationInfo)*sizeX*sizeY`. `LocationInfo` (`inc/Map.h:36-54`) is
 bitfields, whose order and packing the compiler chooses.
 
 The grid MUST NOT be written field-by-field: a single 80x100 map would emit
@@ -192,7 +192,7 @@ beside a `static_assert` on the count. One hand-written pack and unpack loop
 converts. The record carries `sizeX`, `sizeY` and the packed element size, and
 a mismatch MUST abort the load.
 
-Terrain and region are 8-bit indices into `TerraList` (`inc/Map.h:36-37`), not
+Terrain and region are 8-bit indices into `TerraList` (`inc/Map.h:39-40`), not
 resource ids, so the grid itself carries no `rID` and needs none. `TerraList` is
 an ordinary array of `rID` and gets `FIELD_RID` treatment per element.
 

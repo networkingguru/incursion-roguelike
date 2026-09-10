@@ -146,7 +146,7 @@ are no-ops there; `FIELD_STR`/`FIELD_BLOB`/`FIELD_OBJ` perform exactly the
 legacy `Serialize`/`Block` calls they replaced), the v1 write, the v1 read,
 and the DEBUG coverage map, from one declaration. Replay order is line
 order, not tag order: load-direction fixups sit below the fields they read
-(e.g. `Thing`'s `m = oMap(hm)`, inc/Map.h:940). Tag numbers are never
+(e.g. `Thing`'s `m = oMap(hm)`, inc/Map.h:955). Tag numbers are never
 reused and never change; a new field takes the next unused number in its
 class's range (inc/Base.h:743-752).
 
@@ -229,7 +229,7 @@ as raw `LocationInfo` (20 bytes each, bitfield order at the compiler's
 whim) but as a `K_EMBED` record: dimensions, an elemSize of 8, then four
 sibling blobs — the 8-byte packed tile image, and the `Glyph`, `Memory`
 and `Contents` words (record shape src/SaveV1.cpp:2545-2558, layout comment
-and `static_assert`s inc/Map.h:59-76). The packed tile is port-defined:
+and `static_assert`s inc/Map.h:62-79). The packed tile is port-defined:
 Region and Terrain bytes, sixteen flag bits in declaration order, sixteen
 Visibility bits, sixteen reserved. A DEBUG probe fills a tile with all-ones
 field by field, packs, unpacks and compares, so a flag added to the struct
@@ -416,7 +416,7 @@ Repaired on load, and nothing else is:
 |---|---|
 | vptr | placement new, src/Registry.cpp:944-986 |
 | pointer to an owned heap block | src/Registry.cpp:370, via the 7 direct `r.Block` sites plus every `FIELD_BLOB`/`FIELD_OBJ` line's v0 branch (inc/Base.h:768-773) |
-| `Thing::m` from `Thing::hm` | inc/Map.h:940 |
+| `Thing::m` from `Thing::hm` | inc/Map.h:955 |
 | `Player::MyTerm = T1` | inc/Creature.h:1360 |
 | `Module` resource caches zeroed | inc/Res.h:836-837 (save side), :919-920 (load side) |
 | module text segment un-inverted | inc/Res.h:908-912 |
@@ -426,7 +426,7 @@ NOT repaired on the v0 path, whose only validation is the group-header
 range check at src/Registry.cpp:906-916:
 
 - **Every `hObj` and `rID` field.** `Thing::Next`, `Thing::hm`
-  (inc/Map.h:944), `Item::Parent` (inc/Item.h:44), `Container::Contents`
+  (inc/Map.h:959), `Item::Parent` (inc/Item.h:44), `Container::Contents`
   (inc/Item.h:344), `Game::m[]`, `Game::p[]` (inc/Res.h:1304),
   `TargetSystem`'s per-target `data` (inc/Target.h:166-177). These are
   plain numbers and the v0 loader reproduces them byte for byte. **A handle
