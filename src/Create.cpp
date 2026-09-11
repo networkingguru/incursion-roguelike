@@ -2836,6 +2836,7 @@ void Player::GainFeat(int16 feat, int32 param) {
     String chooseWeaponStr, name; 
     static bool showAll = false; 
     bool bardic = false; 
+    bool focusToggle = false;
 
 Restart:
     Win = MyTerm->GetMode() == MO_CREATE ? WIN_CREATION : WIN_MENUBOX;
@@ -2927,9 +2928,11 @@ FoundFeat:
     if (!OneFeat) /* No Feats on list available! */
         return;
 
-    feat = (int16)MyTerm->LMenu(MENU_SORTED|MENU_3COLS|MENU_DESC|(Win == WIN_MENUBOX ? MENU_BORDER : 0),title,Win,"help::feats");
+    feat = (int16)MyTerm->LMenu(MENU_SORTED|MENU_3COLS|MENU_DESC|(Win == WIN_MENUBOX ? MENU_BORDER : 0),title,Win,"help::feats",focusToggle ? -1 : 0);
+    focusToggle = false;
     if (feat == -1) {
         showAll = !showAll;
+        focusToggle = true;
         goto pick_again;
     } 
 
