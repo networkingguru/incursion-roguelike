@@ -16,6 +16,7 @@ rest until you need them.
 | `check_fire_hardness.sh` | Ordinary combustible materials lose fire hardness; enchanted materials keep it (inc-m2zi AC8). |
 | `check_item_hardness.sh` | Every Item gets modifiers once, after preserving immunity (inc-m2zi AC8). |
 | `check_xprint_tokens.sh` | Ratchet literal __XPrint object-token vararg overruns (inc-upw.30); Python 3 only. |
+| `check_gaze_reflect_message.sh` | A reflected gaze must name the gazing monster once, on screen (inc-upw.30); needs the POSIX build. |
 | `check_item_owner_resist.sh` | Owner resistance and immunity cannot protect equipment (inc-w26h). |
 | `check_headless.sh` | The regression check for that harness. If this fails, no other measurement means anything. |
 | `soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about. |
@@ -675,7 +676,16 @@ tools/check_dequ_magic_hardness.sh  # a no-save A_DEQU bypasses a plain weapon's
 tools/check_dequ_reach.sh           # a blow struck at reach now takes the equipment retaliation
 tools/check_dequ_sunder.sh          # a sunder's retaliation lands on the striker's weapon, not the victim's
 tools/check_dequ_owner_immunity.sh  # the owner's own immunity no longer shields his gear
+tools/check_gaze_reflect_message.sh # a reflected gaze names the gazing monster once, in a sentence that parses
 ```
+
+`check_gaze_reflect_message.sh` is the live twin of Tier 1's
+`check_xprint_tokens.sh`. The static one counts vararg-consuming tokens in
+source text; this one summons a bodak at a character carrying Gaze Reflection
+and reads the sentence the reflection puts on the screen. Reverting the fix does
+not merely reword that sentence -- the session dies inside `__XPrint` -- so this
+check treats a killed session as a FAIL where `check_lib.sh` would call it
+INCONCLUSIVE. Its header says why.
 
 The four `check_dequ_*` scripts above are the behavioural half of inc-m2zi and
 inc-w26h; the five `check_dequ_dc.sh`-style scripts in Tier 1 are the static
