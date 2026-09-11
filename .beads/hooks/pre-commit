@@ -55,6 +55,55 @@ fi
 # no bd on PATH, no python3, an unreadable database. That is not a bead with a
 # missing description, and failing every commit in a fresh clone would get the
 # hook deleted within a week. Exit 1, a real unfit bead, blocks.
+# --- INCURSION: work happens in a worktree, not in the shared checkout ---
+# (inc-uw8s, 2026-09-11)
+#
+# Several agent sessions work in this repository at once. One directory has one
+# HEAD, one index and one working tree, so a session that changes branch changes
+# it for every session in that directory, silently and with no warning in
+# anybody's status output.
+#
+# It failed twice in one hour on 2026-09-11. A session ran `git checkout -b
+# inc-w26h-remaining` at 13:54:55; a second session, which had read "current
+# branch: master" when it started and never touched HEAD, committed at 16:09 and
+# landed on that branch. `git commit` takes no branch argument -- it advances
+# whatever branch HEAD names. Master did not get the fix. Separately,
+# tools/package_linux.sh exports the working tree, so that session's uncommitted
+# src/Values.cpp and three lib/*.irh files compiled into published release
+# assets (inc-iezk). The same class stranded b855fe2 on a review branch on
+# 2026-09-04.
+#
+# The knowledge that a clean worktree is required already existed in a memory
+# note and in a resume note on the day it happened, and it still happened. A
+# rule an agent has to remember is a rule that breaks on a busy turn; a hook
+# that refuses the command is not. That is the whole reason this is here and not
+# in AGENTS.md alone.
+#
+# IT ONLY REFUSES THE SHARED CHECKOUT. A linked worktree has its own git dir, so
+# --git-dir and --git-common-dir differ there and this block does not fire. The
+# shared checkout stays the place where integration happens, so a MERGE commit
+# is allowed: that is tools/finish_bead.sh landing work, not somebody starting
+# new work in the wrong place.
+if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
+  _inc_gitdir=$(git rev-parse --absolute-git-dir 2>/dev/null)
+  _inc_common=$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd)
+  if [ -n "$_inc_gitdir" ] && [ "$_inc_gitdir" = "$_inc_common" ] \
+     && [ ! -e "$_inc_gitdir/MERGE_HEAD" ]; then
+    echo >&2 "pre-commit: REFUSED. This is the shared checkout, and new work does not"
+    echo >&2 "happen here -- another session's branch change silently redirects your"
+    echo >&2 "commit, and another session's uncommitted files land in your release."
+    echo >&2 ""
+    echo >&2 "Start the bead in a worktree of its own:"
+    echo >&2 "    tools/worktree.sh <bead-id>"
+    echo >&2 "then commit there. When it is done:"
+    echo >&2 "    tools/finish_bead.sh <bead-id>"
+    echo >&2 ""
+    echo >&2 "A merge commit is allowed here, because integration IS this tree's job."
+    echo >&2 "git commit --no-verify still works and remains a deliberate act."
+    exit 1
+  fi
+fi
+
 if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
   _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
   if [ -x "$_inc_root/tools/check_bead_publish.py" ]; then
