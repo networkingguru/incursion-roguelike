@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Does the School Focus menu still hide a school the character already has?
 # (bd inc-q1ei)
 #

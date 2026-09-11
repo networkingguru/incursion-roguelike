@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # Regression check for the Error()/Fatal() defects found on 2026-08-13.
 #
 # Two bugs, both in src/Wlibtcod.cpp:

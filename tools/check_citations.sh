@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# gate: cheap --selftest
 #
 # Resolve every code citation in a document against the tree it claims to cite.
 #

@@ -77,12 +77,31 @@ is why a full run costs about ten minutes rather than seconds; a machine with no
 Docker skips it rather than failing on it. `tools/check_layout_sweep.sh` runs
 there too: it builds the `DIVERGE_PROBE` binary and asks whether the tree still
 plays the same game when its objects move, and a machine without lldb skips it.
+`tools/gate_compare.sh` runs there as well, for about a minute: it is the canary
+the checks are not, because it names no rule and instead reports a new complaint
+appearing in several of its 40 sessions at once, fewer sessions reaching a map,
+or more deaths and freezes than the baseline.
+
+**Three exit codes, not two.** A check exits 0 for pass, 2 for could not
+measure, and anything else for fail. The gate keeps 2 apart from failure in both
+directions: a check that could not be measured before the run does NOT forgive a
+failure after it, and a check that could be measured before and cannot now stops
+the merge just as a failure would. Collapsing the two was a real defect, found
+on 2026-09-11 and proved with `tools/nightly_verify.sh --selftest`.
+
+**The gate has no list of checks in it.** Each check declares its own tier near
+the top of its own file -- `# gate: cheap` for deterministic and build-free,
+`# gate: live` for one that plays the game, `# gate: none <why not>` for
+everything else -- and `nightly_verify.sh` reads those markers. A list nobody is
+obliged to update stops being true: on 2026-09-11 the hand-written list ran 18 of
+226 checks, and five absentees met its own rule and cost one second together.
+`tools/check_gate_membership.sh` fails a new check that declares nothing.
 
 **Checks prove themselves on demand.** `--selftest` exists on
 `check_upstream_marks.sh`, `check_api_arity.py`, `check_headless.sh`,
 `check_citations.sh`, `check_escape_sweep.sh`, `check_lz_uncompress.sh`,
-`check_layout_sweep.sh` and `flickerscan_selftest.py`. Run it when you change the
-checker. A check that has
+`check_layout_sweep.sh`, `check_gate_membership.sh`, `nightly_verify.sh` and
+`flickerscan_selftest.py`. Run it when you change the checker. A check that has
 quietly stopped checking anything looks exactly like a check that passes.
 
 ## What this cannot prove

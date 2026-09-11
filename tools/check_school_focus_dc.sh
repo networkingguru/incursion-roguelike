@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Does School Focus (Illusion) still raise the disbelief DC? (bd inc-q1ei)
 #
 # THE RULE. School Focus adds 2 to the save DC of the focused school's spells.
