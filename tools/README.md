@@ -464,6 +464,7 @@ one that guards a real defect, and buys no behaviour. Read the header of
 | `check_store_scroll.sh` | Does the shop list follow the selection in both directions, reached without wizard mode? | LIVE |
 | `check_strqueue.sh` | Is the string queue's bound still tested before the write? | LIVE |
 | `check_symbol_autopickup.sh` | Does autopickup keep a dead priest's holy symbol -- of any god, granting or not -- out of the pack while still stowing real unidentified magic and a granting god-marked shield? | LIVE |
+| `check_tanglefoot_mount.sh` | Do tanglefoot strands catch the MOUNT and leave the rider free? A level-1 paladin rides his sacred mount along a strip of strands until the mount fails its reflex save; wizard mode's "Examine Player Data" must then show `STUCK from SS ATTK` under the `----MOUNT----` banner and none in the rider's own stati list. | LIVE |
 | `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? | LIVE |
 | `check_two_fist_feats_live.sh` | Do the two-weapon feats reach two empty hands? A Monk 1 / Warrior 10 buys Two-Weapon Tempest and the sheet's Brawl row moves 125% to 175%; the 1st-level sidebar must still read two equal fists at full Strength. | LIVE |
 | `check_underdark_live.sh` | Does the Underdark Warrior check the race it requires, and give the Reflex save it advertises? | LIVE |
@@ -673,6 +674,7 @@ tools/check_dequ_magic_hardness.sh  # a no-save A_DEQU bypasses a plain weapon's
 tools/check_dequ_reach.sh           # a blow struck at reach now takes the equipment retaliation
 tools/check_dequ_sunder.sh          # a sunder's retaliation lands on the striker's weapon, not the victim's
 tools/check_dequ_owner_immunity.sh  # the owner's own immunity no longer shields his gear
+tools/check_tanglefoot_mount.sh     # tanglefoot catches the mount, not the rider on its back
 ```
 
 The four `check_dequ_*` scripts above are the behavioural half of inc-m2zi and
