@@ -24,10 +24,10 @@ dead is what this file exists to record.
 Derive the menu size, the distinct verb count, and how many of them are dead:
 
 ```sh
-sed -n '3106,3424p' src/Tables.cpp | grep -c '^  { EV_'
-sed -n '3106,3424p' src/Tables.cpp | grep '^  { EV_' |
+sed -n '3129,3447p' src/Tables.cpp | grep -c '^  { EV_'
+sed -n '3129,3447p' src/Tables.cpp | grep '^  { EV_' |
     sed 's/^  { \(EV_[A-Z_]*\),.*/\1/' | sort -u | wc -l
-sed -n '3106,3424p' src/Tables.cpp |
+sed -n '3129,3447p' src/Tables.cpp |
     awk '/^  \{ EV_/ { match($0,/EV_[A-Z_]+/); v=substr($0,RSTART,RLENGTH) }
          /true *\}/ { print v }' | sort -u | wc -l
 ```
@@ -36,7 +36,7 @@ sed -n '3106,3424p' src/Tables.cpp |
 
 ## How the menu works
 
-The verbs live in `YuseCommands[]`, `src/Tables.cpp:3127-3447`. Each entry
+The verbs live in `YuseCommands[]`, `src/Tables.cpp:3129-3447`. Each entry
 carries up to three prompts and a flag word:
 
 ```c
@@ -53,7 +53,7 @@ carries up to three prompts and a flag word:
   that returns false for you (`src/Player.cpp:1597-1604`). Two entries carry a
   prerequisite today: **Mount** needs the Ride skill, a humanoid body with
   limbs, and no mount under you already; **Dismount** needs you mounted
-  (`src/Tables.cpp:3097-3106`). If nothing survives both rules the command
+  (`src/Tables.cpp:3118-3127`). If nothing survives both rules the command
   says *"You have no usable verbs."* `tools/check_command_menu_gating.sh`
   reads the `y` screen and fails if a dead verb is on it.
 - **The prompts run in table order**, target first, unless the entry carries
@@ -74,7 +74,7 @@ carries up to three prompts and a flag word:
 
 You cannot pick one from this menu any more, because the menu does not list it.
 The path is still there for an event thrown by any other route: nothing handles
-it, so it falls through to `Creature::HandleVerb` (`src/Player.cpp:1703` via
+it, so it falls through to `Creature::HandleVerb` (`src/Player.cpp:1735` via
 `src/Creature.cpp:1009`), which prints **"That verb can't be used that way."**
 for post-phase events and otherwise returns silently.
 
