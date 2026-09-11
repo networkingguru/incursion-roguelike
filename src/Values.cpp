@@ -1956,6 +1956,34 @@ void Character::CalcValues(bool KnownOnly, Item *thrown)
 
 int16 Resists[16], ResistCount;
 
+/* inc-w26h: soaking and rust protect gear from every source; other types
+   require an effect flagged to protect the bearer's equipment. */
+int16 Creature::GearResistLevel(int16 DType)
+  {
+    bool immune = false; int16 best = 0;
+
+    if (DType == AD_SOAK || DType == AD_RUST)
+      return ResistLevel(DType);
+
+    StatiIterNature(this,IMMUNITY)
+      if (S->Val == DType && S->eID && RES(S->eID)->Type == T_TEFFECT &&
+          TEFF(S->eID)->HasFlag(EF_PROTECTS_ITEMS))
+        immune = true;
+    StatiIterEnd(this)
+
+    if (immune)
+      return -1;
+
+    StatiIterNature(this,RESIST)
+      if (!S->Dis && S->Val == DType && S->eID &&
+          RES(S->eID)->Type == T_TEFFECT &&
+          TEFF(S->eID)->HasFlag(EF_PROTECTS_ITEMS))
+        best = max(best,(int16)S->Mag);
+    StatiIterEnd(this)
+
+    return best;
+  }
+
 int16 Creature::ResistLevel(int16 DType, int16 NatIgnored, int16 WornIgnored)
   {
     uint32 Res = TMON(mID)->Res, Imm = TMON(mID)->Imm;

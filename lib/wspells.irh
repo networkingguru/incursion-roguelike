@@ -2028,7 +2028,7 @@ Wizard / Scroll Spell "Iron Mind" : EA_INFLICT
   }
 
 Wizard / Scroll / Druid Spell "Resist Water" : EA_INFLICT
-  { SC_ABJ|SC_WATER; IS_A_BUFF(COST_1); Level: 2; qval: Q_TAR; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ|SC_WATER; IS_A_BUFF(COST_1); Level: 2; qval: Q_TAR; 
     xval: SKILL_BONUS; yval: SK_SWIM; pval: LEVEL_SCALED; 
     On Event MSG_STATINAME "ResWater" / "RWat";
     Desc: "Grants the target an immunity to rusting, soaking and decay,

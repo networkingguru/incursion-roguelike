@@ -15,7 +15,11 @@ rest until you need them.
 | `check_dequ_dc.sh` | Only the four named SRD A_DEQU monsters retain DCs (inc-m2zi AC8). |
 | `check_fire_hardness.sh` | Ordinary combustible materials lose fire hardness; enchanted materials keep it (inc-m2zi AC8). |
 | `check_item_hardness.sh` | Every Item gets modifiers once, after preserving immunity (inc-m2zi AC8). |
-| `check_item_owner_resist.sh` | Owner resistance and immunity cannot protect equipment (inc-w26h). |
+| `check_item_owner_resist.sh` | Gear inherits blanket soak/rust defences and otherwise only flagged grants (inc-w26h). |
+| `check_item_flag_protection.sh` | Flagged acid immunity keeps an iron maul undamaged against acid-blob retaliation (inc-w26h). |
+| `check_xprint_tokens.sh` | Ratchet literal __XPrint object-token vararg overruns (inc-upw.30); Python 3 only. |
+| `check_gaze_reflect_message.sh` | A reflected gaze must name the gazing monster once, on screen (inc-upw.30); needs the POSIX build. |
+| `check_buckler_size.sh` | A buckler costs -1 to Balance on both Medium and enlarged Large bearers (inc-drmm). |
 | `check_headless.sh` | The regression check for that harness. If this fails, no other measurement means anything. |
 | `soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about. |
 | `gate_record.sh` + `gate_compare.sh` + `gate_lib.sh` | The regression gate. `gate_record.sh` freezes a build's behaviour into `tools/gates/*.baseline`; `gate_compare.sh` re-runs the same seeds and says what got worse. |
@@ -408,6 +412,7 @@ one that guards a real defect, and buys no behaviour. Read the header of
 |---|---|---|
 | `check_gate_membership.sh` | Does every check in this directory declare whether the gate should run it? Each carries `# gate: cheap`, `# gate: live` or `# gate: none <why not>` in its first 40 lines, and `nightly_verify.sh` reads those markers instead of a hand-written list. `gate_membership.baseline` excuses the 206 checks that predate the rule and only shrinks. Proves itself with `--selftest`. | LIVE |
 | `check_headless.sh` | Do the five properties every unattended run depends on still hold? | LIVE |
+| `check_feat_toggle.sh` | Do two presses of the feat toggle key toggle twice without spending a pick? | LIVE |
 | `check_abi.sh` | Did any save-format type width move, and does anything cast a handle to a pointer? | LIVE |
 | `check_abs_path.sh` | Does the game still resolve `argv[0]` to an absolute path? **Unsafe, see §7.** | LIVE |
 | `check_alienist_live.sh` | Does the Alienist's Surreal Presence field exist and speak? A kobold summoned beside her must read "seems unsettled". | LIVE |
@@ -427,6 +432,7 @@ one that guards a real defect, and buys no behaviour. Read the header of
 | `check_consumable_abort.sh` | Does a consumable survive an action the character refused to complete? Answers yes to the game's own "Stop reading?" offer and asserts the scroll stack did not move, then drinks a potion and asserts that one still goes. Reports a session whose Will save never produced the offer as INCONCLUSIVE. | LIVE |
 | `check_readme_checks.sh` | Was a regression check added with no row in the `README.md` check table? Ratcheted against `tools/readme_checks.baseline`, which holds the 58-row backlog. | LIVE |
 | `check_dump_save.sh` | Does `-dump` still walk a real save and report the right fields, from BOTH backends? | LIVE |
+| `check_dungeonmap_bounds.sh` | Does a levitating character on the bottom level still stay on it? `Game::GetDungeonMap` answered a request for one level past its own allocation by reading past the end of the array, and `Creature::Descend`'s levitation branch makes that request from depth 10. Walks the nine wizard jumps down, levitates over a chasm, presses `>`, and expects the climb-down prompt and a 100m depth reading. | LIVE |
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the rock gnome its own refusal message names? | LIVE |
 | `check_enchant_graceful.sh` | Do seven compiled item pages advertise their own qualities, caster-level gates, spells and bonus type? | LIVE |
 | `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? | LIVE |
@@ -466,6 +472,7 @@ one that guards a real defect, and buys no behaviour. Read the header of
 | `check_store_scroll.sh` | Does the shop list follow the selection in both directions, reached without wizard mode? | LIVE |
 | `check_strqueue.sh` | Is the string queue's bound still tested before the write? | LIVE |
 | `check_symbol_autopickup.sh` | Does autopickup keep a dead priest's holy symbol -- of any god, granting or not -- out of the pack while still stowing real unidentified magic and a granting god-marked shield? | LIVE |
+| `check_tanglefoot_mount.sh` | Do tanglefoot strands catch the MOUNT and leave the rider free? A level-1 paladin rides his sacred mount along a strip of strands until the mount fails its reflex save; wizard mode's "Examine Player Data" must then show `STUCK from SS ATTK` under the `----MOUNT----` banner and none in the rider's own stati list. | LIVE |
 | `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? | LIVE |
 | `check_two_fist_feats_live.sh` | Do the two-weapon feats reach two empty hands? A Monk 1 / Warrior 10 buys Two-Weapon Tempest and the sheet's Brawl row moves 125% to 175%; the 1st-level sidebar must still read two equal fists at full Strength. | LIVE |
 | `check_underdark_live.sh` | Does the Underdark Warrior check the race it requires, and give the Reflex save it advertises? | LIVE |
@@ -561,7 +568,8 @@ tools/check_dequ_dice.sh # Declared A_DEQU dice must roll without tripling (inc-
 tools/check_dequ_dc.sh # Only the four named SRD A_DEQU monsters retain DCs (inc-m2zi AC8).
 tools/check_fire_hardness.sh # Ordinary combustible materials lose fire hardness; enchanted materials keep it (inc-m2zi AC8).
 tools/check_item_hardness.sh # Every Item gets modifiers once, after preserving immunity (inc-m2zi AC8).
-tools/check_item_owner_resist.sh # Owner resistance and immunity cannot protect equipment (inc-w26h).
+tools/check_item_owner_resist.sh # Gear inherits blanket soak/rust defences and otherwise only flagged grants (inc-w26h).
+tools/check_xprint_tokens.sh    # Literal __XPrint object-token vararg backlog (inc-upw.30).
 tools/check_error_handling.sh       # greps src/*.cpp for the unbounded writes
 tools/check_upstream_marks.sh       # reads src/, inc/ and docs/REPORTING-GATE.md
 tools/check_api_arity.py            # reads inc/Api.h against the C++ headers
@@ -632,6 +640,8 @@ that binary afterwards (`check_strqueue.sh:95`). It copies the frozen
 ```sh
 BACKEND=posix ./build_macos.sh
 tools/check_headless.sh             # run this one FIRST of the tier
+tools/check_feat_toggle.sh
+tools/check_buckler_size.sh          # Medium and enlarged Large buckler Balance penalty
 tools/check_dump_save.sh
 tools/check_load_corrupt.sh
 tools/check_race_feats.sh
@@ -677,12 +687,26 @@ tools/check_holy_undead.sh          # a Holy weapon smites undead that are not e
 tools/check_dequ_magic_hardness.sh  # a no-save A_DEQU bypasses a plain weapon's hardness, not a magical one's
 tools/check_dequ_reach.sh           # a blow struck at reach now takes the equipment retaliation
 tools/check_dequ_sunder.sh          # a sunder's retaliation lands on the striker's weapon, not the victim's
-tools/check_dequ_owner_immunity.sh  # the owner's own immunity no longer shields his gear
+tools/check_dequ_owner_immunity.sh  # rust immunity keeps the owner's maul undamaged
+tools/check_item_flag_protection.sh # flagged acid immunity keeps the owner's maul undamaged
+tools/check_gaze_reflect_message.sh # a reflected gaze names the gazing monster once, in a sentence that parses
+tools/check_dungeonmap_bounds.sh    # a levitating character on the bottom level stays on it
+tools/check_tanglefoot_mount.sh     # tanglefoot catches the mount, not the rider on its back
+tools/check_school_focus_menu.sh    # a school already focused on is off the School Focus menu
+tools/check_school_focus_dc.sh      # School Focus (Illusion) raises the disbelief DC
 ```
 
-The four `check_dequ_*` scripts above are the behavioural half of inc-m2zi and
+`check_gaze_reflect_message.sh` is the live twin of Tier 1's
+`check_xprint_tokens.sh`. The static one counts vararg-consuming tokens in
+source text; this one summons a bodak at a character carrying Gaze Reflection
+and reads the sentence the reflection puts on the screen. Reverting the fix does
+not merely reword that sentence -- the session dies inside `__XPrint` -- and
+`check_lib.sh` fails a session the game killed, so the death is the
+measurement.
+
+The four `check_dequ_*` scripts and `check_item_flag_protection.sh` above are the behavioural half of inc-m2zi and
 inc-w26h; the five `check_dequ_dc.sh`-style scripts in Tier 1 are the static
-half. Each of the four drives one or two seeded sessions and reads the struck
+half. Each drives one or two seeded sessions and reads the struck
 weapon's own description page -- reached from the inventory with 'x' -- before
 and after the blows. `check_dequ_magic_hardness.sh` runs two sessions, because
 every retaliation that lands on the character rather than on his weapon costs

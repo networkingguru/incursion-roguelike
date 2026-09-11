@@ -1,0 +1,159 @@
+# Turn a monster's gaze attack back on it, and read the sentence the game
+# prints about it (bd inc-upw.30).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/gaze-reflect-message.keys 4
+#
+# WHAT IS BEING MEASURED. src/Magic.cpp:941, inside Magic::MagicStrike, answers
+# a gaze effect aimed at a creature carrying GAZE_REFLECTION / GR_REFLECT by
+# turning the effect around and printing, to everyone but the gazer:
+#
+#     "The <Obj1>'s gaze is reflected back at <him:Obj1>!"
+#
+# Both tags name argument 1, and argument 1 is the only argument the call
+# supplies. Before the fix both tags were unnumbered, and __XPrint reads an
+# unnumbered obj/mon/itm tag as "take the NEXT vararg", so the second one read
+# past the end of the list. That sentence is this script's oracle.
+#
+# WHY A BODAK, and how it keeps the two reflection sites apart. There are TWO
+# places that answer a reflected gaze. src/Fight.cpp:1868 handles the A_GAZE
+# entry in a monster's attack table and prints "The <EActor>'s gaze is
+# reflected!". src/Magic.cpp:941 handles an EF_GAZE magical effect and prints
+# the sentence above. A bodak (lib/mon3.irh:3422) has no A_GAZE attack at all --
+# its attack table is A_SLAM and A_SEEM -- so the Fight.cpp branch cannot run
+# for it. Its one spell, "Bodak Death Gaze" (lib/mon3.irh:3448), is one of only
+# two EF_GAZE effects in lib/, so every reflection this session sees comes from
+# Magic.cpp. The two sentences differ in words as well, which is the second way
+# to tell them apart: only the Magic.cpp one says "back at".
+#
+# The bodak also announces itself. Its MSG_CAST prints "eyes glow with a black
+# aura", so the screen says the gaze was cast as well as that it came back.
+#
+# WHY A MAGE, AND FIVE LEVELS. "Gaze Reflection" (lib/wspells.irh:2004) is a
+# Mage 2 spell, and it is how the player gets the stati. Learn Any Spell teaches
+# it to any class, but the Spell Manager will not cast what the character has no
+# slot for, so the character needs a second-level slot. Four free levels also
+# carry him through the bodak's slams; a bodak is CR 8-10 and the character is
+# not meant to win, only to be gazed at. Cheat Death covers the rest.
+
+@include chargen-mage.keys
+
+# chargen-mage.keys stops on the arrival room description. Dismiss it, or the
+# [w] below is eaten by the description.
+ESC
+
+# Wizard switches, counted from the top of the list in src/Tables.cpp:2674:
+#   1 Cheat Death, 3 Free Advancement, 6 Ignore Spell Failure,
+#   8 Infinite Mana, 10 Wizard Sight. Freeze Monsters is deliberately NOT set:
+# the bodak has to take its turn and cast.
+w
+y
+@choose "Wizard Mode Switches"
+SPACE
+DOWN*2
+SPACE
+DOWN*3
+SPACE
+DOWN*2
+SPACE
+DOWN*2
+SPACE
+ESC
+
+# Four free levels, on the character screen. 'd' opens it and 'G' gains a level
+# inside it. The three @while guards answer the three prompts a mage meets on
+# the way up; the metamagic one arrives at level five and is easy to forget,
+# and a level-up prompt left unanswered swallows every key after it.
+#
+# SPACE, not ESC, leaves the character screen. ESC is a bound command there and
+# the screen simply redraws; the loop at src/Managers.cpp:2287 exits on any key
+# it does not handle, and SPACE is one.
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+SPACE
+
+# Teach the mage the one spell this fixture needs. Know All Spells is not used:
+# it fills the Spell Manager with pages of spells and @choose reads only what is
+# on the screen.
+w
+@choose "Learn Any Spell"
+"Gaze Reflection"
+ENTER
+
+# Cast it on the caster himself. "*" targets self.
+m
+@choose "Gaze Reflection"
+*
+@expect "A reflective sheen covers your vision."
+
+# The character sheet's Specials column, as evidence that the stati is really on
+# the character before any gaze arrives. src/Sheet.cpp:653 is what prints it.
+d
+DOWN*20
+@dump:sheet-specials
+SPACE
+
+# Summon the bodak three squares east, inside its bolt range and inside sight.
+w
+@choose "Monster Summoning"
+@choose "Outsiders"
+@choose "bodak"
+RIGHT*3
+ENTER
+@dump:summoned
+
+# Stand still and be gazed at. Each '.' is one turn; the bodak is faster than
+# the character and casts on the first of them. The "Die?" guard is Cheat
+# Death's prompt, which a script must answer or every later key is spent on it.
+.
+@while "Die?" y
+@dump:wait01
+.
+@while "Die?" y
+@dump:wait02
+.
+@while "Die?" y
+@dump:wait03
+.
+@while "Die?" y
+@dump:wait04
+.
+@while "Die?" y
+@dump:wait05
+.
+@while "Die?" y
+@dump:wait06
+.
+@while "Die?" y
+@dump:wait07
+.
+@while "Die?" y
+@dump:wait08
+
+# The message log, which holds the sentence on one line of its own rather than
+# wrapped into the two-line message area.
+v
+@dump:msglog0
+PGUP
+@dump:msglog1
+@while "Messages" ESC
+@quit

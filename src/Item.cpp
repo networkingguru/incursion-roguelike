@@ -1395,8 +1395,15 @@ EvReturn Item::Damage(EventInfo &e) {
     om = m;
 
     Creature *owner = Owner();
-    /* inc-w26h: item defences do not inherit owner resistances or immunities. */
     hard = Hardness(e.DType);
+    /* inc-w26h: an owner's defences reach his gear only where the grant says so. */
+    if (owner) {
+        int16 gear = owner->GearResistLevel(e.DType);
+        if (gear == -1)
+            return DONE;
+        if (hard >= 0)
+            hard += gear;
+    }
 
         /* inc-m2zi: Hardness returns -1 as an immunity sentinel, not as a
            hardness. Arithmetic on it destroys the immunity: -1/2 is 0, and
@@ -2188,7 +2195,7 @@ int16 Armour::PenaltyVal(Creature * c, bool for_skills)
        halving per size step, and two steps at most in either direction. */
     int steps = max(-2, min(2, SZ_MEDIUM - cSize));
     for (; steps > 0; steps--) val *= 2;
-    for (; steps < 0; steps++) val /= 2;
+    for (; steps < 0; steps++) val = val < 0 ? min(-1, val / 2) : val / 2;
   } else val = ti->u.a.Penalty; 
   /* The +2 answers body armour, whose Penalty: is authored two worse than the
      figure it must show: full plate is -8 in lib/weapons.irh and -6 on the
