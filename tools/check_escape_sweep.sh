@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # Regression check for the port's backslash sweep (inc-49m, inc-upw.28).
 #
 # WHY THIS EXISTS. The port replaced Win32 path separators with forward slashes

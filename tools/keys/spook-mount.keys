@@ -109,7 +109,10 @@ RIGHT RIGHT RIGHT RIGHT RIGHT
 @dump:re-entered
 y
 @choose "Mount"
-RIGHT ENTER
+# DOWN, not RIGHT. dc6496a made a chosen dismount step the RIDER off the
+# shared square and leave the mount standing, so the bat is now one square
+# SOUTH: the rider took the first open square in DirX order, which is north.
+DOWN ENTER
 @dump:mounted-clean
 
 # Now change level. The rider carries the animal, and the animal's aura with

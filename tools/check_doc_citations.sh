@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# gate: cheap --base @base
 #
 # Ratchet the citation defects in the documents a change touched.
 #

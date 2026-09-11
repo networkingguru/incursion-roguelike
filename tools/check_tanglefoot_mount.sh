@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Do tanglefoot strands catch the MOUNT and leave the rider free? (bd inc-lxvv)
 #
 # THE RULE: a mounted character who rides through tanglefoot strands must not
