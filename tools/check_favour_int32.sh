@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Can a character's favour now pass 32767 without wrapping negative? (bd inc-upw.31)
 #
 # THE DEFECT. EventInfo::EParam is an int32 (inc/Events.h:227), but the SCRIPT
