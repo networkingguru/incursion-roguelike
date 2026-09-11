@@ -453,6 +453,7 @@ one that guards a real defect, and buys no behaviour. Read the header of
 | `check_lz_uncompress.sh` | Can the LZ77 and RLE decoders be made to write past their output buffer? | LIVE |
 | `check_masterarcher_live.sh` | Does the Master Archer's Ranged Sneak Attack fire only with a long bow or a short bow, and not with every launcher? | LIVE |
 | `check_menu_value.sh` | Does a script menu give back the same object handle it was handed, above the 16-bit line? | LIVE |
+| `check_favour_int32.sh` | Does a favour total over 32767 survive the round trip through `EV_CALC_FAVOUR`, instead of wrapping negative? The script view of `EventInfo::EParam` was int16 while the field is int32, so favour levels 7, 8 and 9 were unreachable. | LIVE |
 | `check_natural_speed.sh` | Has the hard-coded brawl-speed floor drifted from the fastest weapon in `lib/weapons.irh`? Reads the data; runs nothing. | LIVE |
 | `check_natural_speed_live.sh` | Does flipping one byte of `Options.Dat` really move the Brawl row on the character sheet, 100% to 175%? Refuses to pass if a run never entered a map. | LIVE |
 | `check_package.sh` | Is the packaged folder free of ACCENT symbols and Homebrew paths, and does it carry its data? | LIVE |
@@ -662,6 +663,7 @@ tools/check_symbol_autopickup.sh
 tools/check_target_order.sh
 tools/check_key_directives.sh
 tools/check_menu_value.sh
+tools/check_favour_int32.sh         # favour over 32767 no longer wraps negative
 tools/check_sharp_senses.sh
 tools/check_skill_manager_reset.sh
 tools/check_stacked_abilities.sh
