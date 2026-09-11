@@ -729,6 +729,7 @@ the unfixed tree before it is trusted.
 | Check | The question it answers |
 |---|---|
 | `check_command_menu_gating.sh` | Do the Combat (C) and YUse (Y) menus still hide every verb with no implementation, and every verb whose character prerequisite is unmet? It dumps both menus before and after a wielded Quickblade grants Whirlwind Attack: the gated combat row appears only after the feat, and the dead Yuse rows stay absent either way. |
+| `check_orphan_branches.sh` | Is every finished fix actually on master? It lists each branch master has not merged beside its bead's status and age. It fails on a branch whose bead is closed — the shape that stranded b855fe2 for days — and on a branch whose name is not a bead id, because nobody can then say what it was for. |
 | `check_dequ_dice.sh` | Does A_DEQU roll its declared dice without tripling? |
 | `check_dequ_dc.sh` | Do exactly the four SRD monsters retain A_DEQU save DCs in the thirteen-monster roster? |
 | `check_fire_hardness.sh` | Do wood, leather and cloth have zero fire hardness while ironwood, darkwood and dragon hide retain theirs? |

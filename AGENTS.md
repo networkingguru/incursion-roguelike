@@ -17,6 +17,47 @@ make it, file by file, with what else the change reaches.
 
 The full statement of this rule, with the incident behind it, is in `CLAUDE.md`.
 
+## One bead, one worktree — never work in the shared checkout
+
+**`~/Scripts/Incursion` is for integration and releases. Your work happens in a
+worktree of its own.** Start with `tools/worktree.sh <bead-id>`, which creates
+branch `<bead-id>` off master and a worktree at `~/Scripts/Incursion-<bead-id>`.
+Work there and nowhere else. `.beads/hooks/pre-commit` refuses a non-merge commit
+made in the shared checkout, so this is enforced rather than remembered.
+
+**Why.** Several sessions work here at once, and one directory has one HEAD, one
+index and one working tree. On 2026-09-11 a session ran `git checkout -b
+inc-w26h-remaining` at 13:54:55; a second session, which had read "current
+branch: master" at startup and never touched HEAD, committed at 16:09 and landed
+on that branch. `git commit` takes no branch argument — it advances whatever
+branch HEAD names. Master did not get the fix. In the same hour
+`tools/package_linux.sh`, which exports the working tree, compiled that session's
+uncommitted `src/Values.cpp` and three `lib/*.irh` files into published release
+assets (inc-iezk). The same class stranded b855fe2 on a review branch on
+2026-09-04. The knowledge that a clean worktree was required already existed in
+two notes on the day it happened, and it still happened — which is why it is a
+hook now.
+
+**The branch is scaffolding, and it dies with the bead.** When Brian says commit,
+commit on the branch through the usual gate, then run
+`tools/finish_bead.sh <bead-id>`. That brings master in, re-runs the gate, merges
+with `--no-ff`, deletes the branch and removes the worktree — all of it or none
+of it. A conflict or a red gate stops and leaves everything standing.
+
+**Why it merges immediately.** Brian chose merge-on-completion over
+review-before-merge on 2026-09-11, and gave the reason: nothing merges until he
+says commit, so he is the review. His objection to branches was the opposite
+failure — "I end up with 50 branches and can't remember what goes where and shit
+I fixed ends up never getting into the fucking code." You cannot accumulate fifty
+of something destroyed on completion. Naming the branch for its bead is what
+removes the remembering: branch `inc-abcd`, worktree `Incursion-inc-abcd`, bead
+`inc-abcd`.
+
+**What catches the escapes.** `tools/check_orphan_branches.sh` runs in the
+nightly gate. It fails on a branch whose bead is closed but which master never
+merged, and on a branch whose name is not a bead id. Five branches that predate
+this rule are forgiven by name inside that script; the list must not grow.
+
 ## Publishing anything outward-facing
 
 Two rules. Rule 1 carries one scope limit, stated inside it. Rule 2 has none.
