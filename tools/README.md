@@ -673,6 +673,8 @@ tools/check_dequ_magic_hardness.sh  # a no-save A_DEQU bypasses a plain weapon's
 tools/check_dequ_reach.sh           # a blow struck at reach now takes the equipment retaliation
 tools/check_dequ_sunder.sh          # a sunder's retaliation lands on the striker's weapon, not the victim's
 tools/check_dequ_owner_immunity.sh  # the owner's own immunity no longer shields his gear
+tools/check_school_focus_menu.sh    # a school already focused on is off the School Focus menu
+tools/check_school_focus_dc.sh      # School Focus (Illusion) raises the disbelief DC
 ```
 
 The four `check_dequ_*` scripts above are the behavioural half of inc-m2zi and

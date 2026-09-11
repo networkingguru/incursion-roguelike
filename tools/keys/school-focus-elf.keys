@@ -1,0 +1,67 @@
+# An elf takes School Focus, and Necromancy is not on offer. (bd inc-q1ei)
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/school-focus-elf.keys 42
+#
+# WHY THIS EXISTS ALONGSIDE tools/keys/school-focus.keys. The guard that hides
+# an already-focused school (src/Create.cpp) shares its Necromancy line with a
+# second rule -- an elf may not focus on Necromancy at all:
+#
+#     if (!((focused & SC_NEC) || isMType(MA_ELF)))
+#
+# The duplicate-school half of that line was rewritten for inc-q1ei; the elf
+# half was not, and this run is what says so. The orc in school-focus.keys
+# cannot show it, because the ban never fires for him: his menu carries
+# Necromancy on purpose.
+#
+# The character need do nothing after the menu is read, but the run must still
+# reach a map: tools/headless.sh calls a session that never entered one NO
+# GAMEPLAY and refuses to report it as a pass. So generation is carried to the
+# end and the script stops on the first screen of the dungeon.
+#
+# Every choice here is a menu letter, and menu letters move when the list
+# changes. Run with the seed and the settings named above.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+e       # Race:     [e] Elf
+a       # Subrace:  [a] Elf (Standard)
+d       # Class:    [d] Mage
+a       # Attributes: the first of the five offered sets
+e       # Alignment: [e] Neutral
+
+# The specialty list is chosen by name, not by letter: it is the same nine
+# schools as the focus menu and it is ALREADY short of Necromancy for an elf,
+# so every letter after Enchantment sits one place earlier than it does for
+# the orc.
+@expect "schools of magic"
+@choose "Evocation"
+
+# The feat list runs to 81 entries over two pages, and School Focus is on the
+# second, so TAB comes before the name.
+@expect "Choose a feat"
+TAB
+@choose "School Focus"
+@expect "Choose a focus school:"
+@dump:elf-school-menu
+@choose "Abjuration"
+
+# The rest of generation, none of which this run reads.
+@expect "Choose a feat"
+TAB
+@choose "Spell Penetration"
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+@while "wish to worship" y
+@expect "personality archetype"
+a       # Personality archetype
+@while "Learn which spell" a
+@until "Things in View" ESC
+
+# One turn of real play. tools/headless.sh writes logs/session.log on the first
+# COMPLETED turn and reports a session without one as NO GAMEPLAY, so a script
+# that stops the moment the map appears is refused rather than read.
+.
+@dump:elf-arrived

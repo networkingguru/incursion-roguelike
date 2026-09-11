@@ -83,17 +83,20 @@ RATCHET_CHECKS=(
     "tools/check_package_parity.sh"
 )
 
-# The behavioural half of inc-m2zi and inc-w26h. These are listed apart from the
-# ratcheted checks above because the rule stated there does not hold of them:
-# each one PLAYS the game, so it needs ./incursion-headless, and the four
-# together cost about two minutes rather than seconds. They are ratcheted in
-# exactly the same way. On a tree with no headless binary each exits 2, which
-# the ratchet reads as "could not measure" and not as a regression.
+# The behavioural half of inc-m2zi, inc-w26h and inc-q1ei. These are listed
+# apart from the ratcheted checks above because the rule stated there does not
+# hold of them: each one PLAYS the game, so it needs ./incursion-headless, and
+# the six together cost about three minutes rather than seconds. They are
+# ratcheted in exactly the same way. On a tree with no headless binary each
+# exits 2, which the ratchet reads as "could not measure" and not as a
+# regression.
 LIVE_CHECKS=(
     "tools/check_dequ_magic_hardness.sh"
     "tools/check_dequ_reach.sh"
     "tools/check_dequ_sunder.sh"
     "tools/check_dequ_owner_immunity.sh"
+    "tools/check_school_focus_menu.sh"
+    "tools/check_school_focus_dc.sh"
 )
 
 ALL_CHECKS=( "${RATCHET_CHECKS[@]}" "${LIVE_CHECKS[@]}" )

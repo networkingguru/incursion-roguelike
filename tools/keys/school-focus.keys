@@ -1,0 +1,133 @@
+# Take School Focus twice, then cast an illusion and read the disbelief DC.
+# (bd inc-q1ei)
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/school-focus.keys 42
+#
+# WHAT IS BEING MEASURED. The feat files its school in the stati's Mag
+# (src/Create.cpp), and two of the three places that read it looked elsewhere:
+# the duplicate guard in the menu below asked HasEffStati, which matches a
+# RESOURCE ID against eID, and the disbelief save asked HasStati, which matches
+# its second argument against Val. Both are 0 for this feat, so the menu
+# offered a school the character already held and the illusionist's +2 never
+# applied.
+#
+# WHY A MAGE. School Focus is FF_WIZARD and needs caster level 1, so only a
+# spellcasting class is offered it at first level. The orc mage is the one
+# tools/keys/chargen-mage.keys makes, on the same seed, so the race, subrace,
+# class, attribute and alignment letters are that file's and can be compared
+# against it when a menu moves.
+#
+# WHY PHANTASMAL FORCE. It is the only first-level illusion a mage can have
+# that reaches the disbelief save at all: its 'f' branch
+# (src/Effects.cpp) redirects a real attack spell at the victim with
+# effIllusion set, and src/Magic.cpp then rolls the victim's Will save. The
+# printed "Will Save: ... vs DC n" line is the oracle, and it is the only place
+# a player can read that DC.
+#
+# WHY A GOBLIN. The disbelief save is skipped outright for a victim that is
+# mindless, has true sight, or has scent, blindsight, tremorsense or sharpened
+# senses (src/Magic.cpp). A goblin has none of them, and it stands where the
+# summon puts it, one square east, so a single RIGHT reaches it in the
+# targeting prompt.
+#
+# Every choice here is a menu letter, and menu letters move when the list
+# changes. Run with the seed and the settings named above or the attribute
+# rolls change, the offered feats change with them, and these letters choose
+# something else.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+i       # Race:     [i] Orc
+a       # Subrace:  [a] Orc (Standard)
+d       # Class:    [d] Mage
+a       # Attributes: the first of the five offered sets
+e       # Alignment: [e] Neutral
+
+# Wizard specialty: Illusion, and not the Evocation the other chargen scripts
+# take. A specialist casts his own school at 100% and every other school at a
+# penalty ("Lacking aptitude for Illusion, you find casting Phantasmal Force
+# draining" was this script's first run), and a cast that fails to go off rolls
+# no disbelief save at all. This is the only way to make the cast certain.
+@expect "schools of magic"
+@choose "Illusion"
+
+# The feat list runs to 81 entries over two pages, and School Focus is on the
+# second, so TAB comes before the name.
+@expect "Choose a feat"
+TAB
+@choose "School Focus"
+@expect "Choose a focus school:"
+@dump:school-menu-1
+@choose "Illusion"
+
+# The second pick is the whole point: the school just taken must be gone.
+@expect "Choose a feat"
+TAB
+@choose "School Focus"
+@expect "Choose a focus school:"
+@dump:school-menu-2
+@choose "Evocation"
+
+# Skill Manager. RIGHT spends a rank on the selected skill and stops at the
+# skill's maximum, DOWN moves to the next, so three RIGHTs per skill spends
+# everything available without needing to know how many ranks this character
+# has. Character generation will not let go until the pool is empty. This is
+# tools/keys/chargen-mage.keys's pass, written out rather than looped: a mage
+# is offered exactly one Skill Manager, and a second @while aimed at a screen
+# that is no longer there spends its keys on the menus that follow.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+@while "wish to worship" y
+@expect "personality archetype"
+a       # Personality archetype
+
+# The starting spells. An Illusion specialist is granted Phantasmal Force
+# outright -- it is the one first-level illusion the offered list does NOT
+# carry -- so these picks are whatever the list opens on, and the cast below
+# is what proves the spell is really known.
+@expect "Learn which spell"
+@while "Learn which spell" a
+@until "Things in View" ESC
+
+# The character sheet's feat list, as evidence that both schools are really on
+# him and that the second pick was not thrown away.
+d
+@until "School Focus" DOWN
+@dump:sheet
+@until "Things in View" ESC
+
+# 'w' opens wizard mode and 'y' confirms it the first time. The pair is driven
+# by @until rather than written out, because a keystroke swallowed by a prompt
+# that was still up would spend every key after it on the wrong thing.
+@until "Wizard Mode Options" w y
+w       # [w] Wizard Mode Switches
+# The switch list draws no cursor a screen dump can see, so this counts rows:
+# Freeze Monsters is the eleventh, and the cursor opens on the first.
+DOWN*10
+SPACE   # Freeze Monsters: NO -> YES
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+@dump:summoned
+
+m
+@choose "Phantasmal Force"
+f       # Create illusionary creature, item, trap or force? -- force
+@choose "Magic Missile"
+RIGHT   # the targeting cursor, one square east, onto the goblin
+@expect "A goblin"
+ENTER
+@while "more --" SPACE
+
+# The roll line scrolls off the top line as soon as anything else prints, so
+# the message history is where it is read.
+v
+@dump:disbelief
