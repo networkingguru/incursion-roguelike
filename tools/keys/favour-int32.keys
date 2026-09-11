@@ -1,0 +1,48 @@
+# Make a character whose favour is larger than an int16 holds, and photograph
+# the character sheet that prints it. (bd inc-upw.31)
+#
+# Character::calcFavour (src/Prayer.cpp:648) hands the running total to the
+# script as e.EParam, throws EV_CALC_FAVOUR, and reads e.EParam back. Every god
+# in lib/religion.irh answers that event by writing the field. The script view
+# of EParam was int16 (inc/Api.h:723) while the field is int32
+# (inc/Events.h:227), so the generated setter truncated every write-back and a
+# total over 32767 came back NEGATIVE.
+#
+# HESANI, because the numbers line up on their own. The wizard menu's "Become
+# Divine Champion" (src/Debug.cpp:1118) sets one sacrifice category to 30000 --
+# under 32767, which is why the defect stayed invisible for years. Hesani's
+# handler (lib/religion.irh:2170) then multiplies:
+#
+#     e.EParam = (e.EParam * (TotalLevel()*2 - LevelAs("barbarian")))
+#                   / EActor->TotalLevel()*2;
+#
+# which for a level-one non-barbarian is 30000 * 2 / 1 * 2 = 120000. Hesani's
+# FAVOUR_CHART (lib/religion.irh:1983) runs to 92000 at level 9, so the sheet
+# reads "(Favour 120000, Lev 9, Pen 0%)". With the narrow declaration back it
+# reads "(Favour -11072, Lev 0, Pen 0%)": 120000 truncated to 16 bits is
+# -11072, which is below the chart's first rung, so no level is granted at all.
+#
+# The character is the orc warrior of dequ-setup.keys, on seed 5, under
+# tools/fixtures/options-2026-08-22.dat. Nothing about him matters except his
+# total level, which must be 1 for the arithmetic above. Every choice below is
+# a menu letter, and menu letters move when a list changes, so the seed and the
+# settings are part of the measurement: tools/check_favour_int32.sh supplies
+# both.
+
+@include dequ-setup.keys
+
+@until "Wizard Mode Options" w
+@choose "Become Divine Champion"
+H e s a n i
+ENTER
+
+# Ten blessings arrive at once and each one waits at a "-- more --" prompt. A
+# bare 'd' here is eaten by that prompt rather than opening the sheet, which is
+# how the first draft of this script photographed the map instead.
+@while "more --" SPACE
+
+d               # the character sheet
+DOWN*20         # Spiritual State is below the fold
+@dump:favour
+ESC
+@quit
