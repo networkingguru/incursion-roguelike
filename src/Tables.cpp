@@ -1868,17 +1868,22 @@ TextVal AQualityDescs[] = {
               "hit. It also grants a +12 bonus to saving throws versus disintegration." },
 
   { AQ_FIRE_RES, "This armour conveys upon its wearer a supernatural resistance to "
-              "fire equal in magnitude to three times its magical bonus." },
+              "fire equal in magnitude to three times its magical bonus. The armour "
+              "itself is immune to fire, whatever its magical bonus." },
   { AQ_ACID_RES, "This armour conveys upon its wearer a supernatural resistance to "
-              "acid equal in magnitude to three times its magical bonus." },
+              "acid equal in magnitude to three times its magical bonus. The armour "
+              "itself is immune to acid, whatever its magical bonus." },
   { AQ_COLD_RES, "This armour conveys upon its wearer a supernatural resistance to "
-              "cold equal in magnitude to three times its magical bonus." },
+              "cold equal in magnitude to three times its magical bonus. The armour "
+              "itself is immune to cold, whatever its magical bonus." },
   { AQ_LIGHT_RES, "This armour conveys upon its wearer a supernatural resistance to "
               "lightning and other electrical attacks equal in magnitude to three "
-              "times its magical bonus." },
+              "times its magical bonus. The armour itself is immune to lightning, "
+              "whatever its magical bonus." },
   { AQ_SONIC_RES, "This armour conveys upon its wearer a supernatural resistance to "
               "destructive sonic attacks equal in magnitude to three times its "
-              "magical bonus." },
+              "magical bonus. The armour itself is immune to sonic attacks, "
+              "whatever its magical bonus." },
   { AQ_POISON_RES, "This armour conveys upon its wearer a supernatural resistance to "
               "hit point damage from toxins equal in magnitude to three times its "
               "magical bonus, as well as a circustance bonus to saving throws versus "
@@ -1976,7 +1981,8 @@ TextVal AQualityDescs[] = {
               "sustaining all attributes at a level equal to its magical plus and "
               "also decreasing the experience loss suffered from life-draining "
               "attacks. Finally, it grants resistance to necromantic damage equal "
-              "to thrice its magical plus." },
+              "to thrice its magical plus. The armour itself is immune to "
+              "necromantic damage, whatever its magical bonus." },
   { 0, NULL }
 
   };

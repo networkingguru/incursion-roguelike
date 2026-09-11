@@ -1,0 +1,236 @@
+# A spell's SIBLING clause protects the bearer's gear (bd inc-w26h).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/gear-spell-protection.keys 5
+#
+# WHAT IS BEING MEASURED. "Endure the Elements" (lib/wspells.irh:5645) carries
+# Flags: EF_PROTECTS_ITEMS in its FIRST clause, whose grant is AD_SONI. The
+# AD_ACID grant this session strikes lives in the fourth `and EA_INFLICT`
+# sibling clause. Creature::GearResistLevel (src/Values.cpp) reads the flag off
+# the TEffect the stati's eID names, so the session answers one question: does a
+# sibling clause's stati name the same flagged TEffect as the first clause's?
+#
+# WHY A MAGE AT LEVEL TEN. The spell is level 4, so a mage needs level 7 to hold
+# a slot for it. Its pval is 3d1 + (LEVEL_1PER2), so the resistance is 3 + half
+# the caster level: 8 at level ten. The arithmetic below needs 6; ten is taken
+# for margin and because the sheet then reads a round "Acid 8".
+#
+# WHY A SILVERED MAGIC WARHAMMER. src/Fight.cpp:2090 sets ignoreHardness when a
+# no-save A_DEQU strikes a NON-magical item, and since inc-kapn
+# src/Item.cpp:1451 zeroes only what Hardness() returned, with the owner's grant
+# added after it at src/Item.cpp:1464. A resistance therefore survives on a
+# mundane weapon too; this session buys a magic one for its numbers. "Warhammer,
+# Dwarven Thrower" arrives from the wizard menu at its INITIAL_PLUS of +2
+# (lib/m_items.irh:6861), which is magic and has 45 base hit points (weight 120,
+# lang/Grammar.acc:577). IQ_SILVER makes it silver, whose acid hardness is 5,
+# halved to 2 by the same quality (src/Item.cpp:1344), leaving 2 + 5 x 2 = 12
+# for the plus.
+#
+# WHY A MAGMA CREEPER. Its A_DEQU is 3d6 AD_ACID with NO save DC
+# (lib/mon3.irh:2828), so no Reflex roll decides the outcome and hardness is the
+# only thing between the acid and the hammer. 12 + 8 = 20 exceeds the 18 the
+# dice can reach, so the protection is decisive rather than lucky, while the
+# bare 12 lets a roll of 13 or better through. It has 12 HD and resists blunt,
+# so one creeper survives twelve blows; frozen monsters still answer a hit.
+#
+# The oracle is the game's own combat-numbers line (src/Item.cpp:1494-1514),
+# which prints the hardness AFTER the owner's gear resistance is added:
+#   "Warhammer, Dwarven Thrower +2: 3d6 Acid = 5 vs. 20 (silver) [unhurt]"
+# 20 is 12 + 8. Without the flag the same line reads "vs. 12 (silver)".
+
+@include chargen-mage.keys
+
+# chargen-mage.keys stops on the arrival room description. Dismiss it, or the
+# [w] below is eaten by the description.
+ESC
+
+# Wizard switches, counted from the top of the list in src/Tables.cpp:2680:
+#   1 Cheat Death, 3 Free Advancement, 6 Ignore Spell Failure,
+#   8 Infinite Mana, 11 Freeze Monsters. A frozen monster takes no turn of its
+# own but still ANSWERS a blow, which is the whole point of an A_DEQU check.
+w
+y
+@choose "Wizard Mode Switches"
+SPACE
+DOWN*2
+SPACE
+DOWN*3
+SPACE
+DOWN*2
+SPACE
+DOWN*3
+SPACE
+ESC
+
+# Nine free levels, on the character screen: 'd' opens it and 'G' gains a level.
+# The three @while guards answer the three prompts a mage meets on the way up;
+# the metamagic one arrives at level five and is easy to forget, and a level-up
+# prompt left unanswered swallows every key after it. SPACE, not ESC, leaves the
+# character screen (src/Managers.cpp:2287).
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+SPACE
+
+# Teach the mage the one spell this fixture needs. Know All Spells is not used:
+# it fills the Spell Manager with pages of spells and @choose reads only what is
+# on the screen.
+w
+@choose "Learn Any Spell"
+"Endure the Elements"
+ENTER
+
+# Cast it on the caster himself. "*" targets self.
+m
+@choose "Endure the Elements"
+*
+@while "more --" SPACE
+
+# --- the weapon whose hit points are measured ---
+# ENTER at the item-level prompt keeps the effect's own INITIAL_PLUS of +2.
+w
+@choose "Item Acquisition"
+RIGHT*10
+@until "Dwarven Thrower" DOWN
+DOWN
+ENTER
+@expect "Enter Item Level"
+ENTER
+b
+SPACE
+@while "two-handed" y
+s                       # stow the starting knife the swap pushed into the air
+@until "Things in View" ESC
+
+w
+@choose "Add Quality to Weapon"
+"IQ_SILVER"
+ENTER
+@until "Things in View" ESC
+
+# The plus is unknown to the character until it is identified, and an
+# unidentified item's page hides its hit points.
+w
+@choose "Identify Whole Pack"
+@until "Things in View" ESC
+
+# The character sheet's Resistances page, as evidence that the sibling clause's
+# grant is really on the character, at the magnitude the arithmetic needs.
+d
+@until "Resistances and Armour" DOWN
+@dump:spell-sheet
+@until "Things in View" ESC
+
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:spell-before
+@until "Things in View" ESC
+
+# One creeper for all twelve blows. Its body is gargantuan, so the summon
+# cursor's square is not where the body's western edge lands; the character
+# walks east until he bumps into it, and every RIGHT after that is a blow.
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "magma creeper"
+RIGHT*4 ENTER
+
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:spell-strike-01
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:spell-strike-02
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:spell-strike-03
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:spell-strike-04
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:spell-strike-05
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:spell-strike-06
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:spell-strike-07
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:spell-strike-08
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:spell-strike-09
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:spell-strike-10
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:spell-strike-11
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:spell-strike-12
+
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:spell-after
+@until "Things in View" ESC
+@quit

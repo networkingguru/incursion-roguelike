@@ -1,0 +1,22 @@
+# ARM A of the quality-immunity check: the same suit with NO quality on it.
+# The negative control for quality-self-immune-quality.keys (bd inc-to9x).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/quality-self-immune-plain.keys 5
+#
+# Nothing is added to the suit here. Twelve self-cast fireballs must therefore
+# burn it: its numbers line must read "vs. 0 (leather)", its page must show
+# fewer than 56 of 56 hit points, and its hardness table must still list Fire
+# among the types it resists by 0 rather than among the ones it is immune to.
+# The character sheet must show NO fire resistance, because the quality that
+# grants one is not on the suit.
+
+@include quality-self-immune-setup.keys
+@include quality-self-immune-burn.keys
+
+# The Resistances page, with no quality anywhere on the character.
+d
+@until "Resistances and Armour" DOWN
+@dump:plain-sheet
+@until "Things in View" ESC
+@quit

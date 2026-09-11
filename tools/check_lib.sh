@@ -48,7 +48,7 @@
 # rebuild, run, remember to put the source back. Here it is one declaration and
 # one flag, and the restore is a trap rather than a memory.
 #
-# THREE RULES THIS FILE ENFORCES, because each one has already cost a day:
+# FOUR RULES THIS FILE ENFORCES, because each one has already cost a day:
 #
 #   Settings are an input. e4a6499 measured one flipped option byte taking
 #   dive.keys on seed 4242 from 254 turns to 2190, so CHECK_OPTIONS has no
@@ -57,6 +57,16 @@
 #   A run that measured nothing is not a pass. tools/headless.sh exits 5 for
 #   NO GAMEPLAY and 7 for an unlisted ASSERT; check_run stops on both instead
 #   of reading them as a quiet session. That is inc-loa.3.
+#
+#   A run the game killed is a FAIL, not a shrug. Exits 1 (Fatal), 4 (the
+#   watchdog: the game stopped asking for keys, the signature of a hang) and
+#   128 and up (a signal killed the process) say the GAME broke, not that the
+#   measurement drifted, so check_run exits 1 and quotes the session's
+#   errors.log. Calling those "could not measure" made any check whose defect
+#   IS a crash unprovable, because --prove-red reads exit 2 as "nothing is
+#   proved": inc-upw.30 dies inside the very sentence it asserts. The two rules
+#   sit side by side and do not overlap -- 2, 5, 6 and 7 stay INCONCLUSIVE,
+#   because each of those says the key script or the harness drifted.
 #
 #   check_reject alone is unfailable. A run that never reached the interesting
 #   state prints neither the good string nor the bad one, and a check made only
@@ -192,6 +202,64 @@ check_build() { # <posix|sdl>
 }
 
 # ---------------------------------------------------------------------------
+# _check_session_verdict <exit code> [the harness report] -- judge one session
+# by how it ended, and stop unless it ended in a way a check may read.
+#
+# The three verdicts, and tools/headless.sh's codes behind them (its own header
+# lists all of them, around line 31):
+#
+#   go on   0 the script finished or asked to quit, 3 the key budget ran out.
+#           Those are how nearly every key script ends.
+#
+#   FAIL    1 Fatal(), 4 the watchdog fired -- the game stopped asking for
+#           keys, which is the signature of a hang -- and 128 and up, which is
+#           a signal killing the process. In each the GAME died, and we can say
+#           so; see the fourth rule in this file's header for why that must not
+#           be reported as a failure to measure.
+#
+#   stop 2  everything else: 2 an unreadable key script, 5 the run never
+#           entered a map, 6 an @choose/@cursorto/@expect looked for something
+#           the screen never showed, 7 an ASSERT tools/known_asserts.txt does
+#           not list. Each says the check or the harness drifted, so the
+#           session is evidence about nothing.
+#
+# It is a function of its own, and not four lines inside check_run, so that
+# tools/check_lib.sh --selftest can put every code through it in a second
+# without building or playing the game.
+_check_session_verdict() { # <exit code> [harness output]
+    local status="$1" out="${2:-}" why=""
+
+    { [ "$status" -eq 0 ] || [ "$status" -eq 3 ]; } && return 0
+
+    case "$status" in
+        1) why="Fatal()" ;;
+        4) why="the watchdog fired; the game stopped asking for keys" ;;
+        *) [ "$status" -ge 128 ] && why="a signal killed it" ;;
+    esac
+
+    if [ -n "$why" ]; then
+        # The last messages the engine logged, and not the file: an errors.log
+        # entry carries its call stack indented under it, and a whole stack
+        # buries the one line that names what the game was doing. `^[0-9]` is
+        # the timestamp every message begins with, which headless.sh:184 uses
+        # to the same end.
+        if [ -n "${CHECK_RUN:-}" ] && [ -f "$CHECK_RUN/logs/errors.log" ]; then
+            grep '^[0-9]' "$CHECK_RUN/logs/errors.log" | tail -2 | sed 's/^/      /'
+        fi
+        _check_die 1 \
+            "the game died: tools/headless.sh exit $status, $why." \
+            "The session, with its screens and its logs, is in" \
+            "${CHECK_RUN:-logs/runs (the harness named no directory)}."
+    fi
+
+    [ -n "$out" ] &&
+        printf '%s\n' "$out" | sed -n '/^--- after the session ---/,$p' | sed 's/^/      /'
+    _check_die 2 \
+        "the session ended badly (tools/headless.sh exit $status), so it" \
+        "measured nothing. See ${CHECK_RUN:-the output above}."
+}
+
+# ---------------------------------------------------------------------------
 # check_run <keyscript> <seed> -- one seeded, sandboxed session.
 #
 # Always through tools/headless.sh, never the bare binary: a bare run reads and
@@ -233,16 +301,7 @@ check_run() { # <keyscript> <seed>
     CHECK_RUN="$(printf '%s\n' "$out" | awk '/^run:/ {print $2}')"
     [ -n "$CHECK_RUN" ] && printf '%s\n' "$out" > "$CHECK_RUN/harness.txt"
 
-    # 0 is a clean finish and 3 is "the key script ran out", which is how most
-    # key scripts end. Everything else -- FATAL, watchdog, NO GAMEPLAY, an
-    # @expect that found nothing, an unlisted ASSERT -- means this session is
-    # not evidence about anything, and must not be read as a quiet pass.
-    if [ "$status" -ne 0 ] && [ "$status" -ne 3 ]; then
-        printf '%s\n' "$out" | sed -n '/^--- after the session ---/,$p' | sed 's/^/      /'
-        _check_die 2 \
-            "the session ended badly (tools/headless.sh exit $status), so it" \
-            "measured nothing. See ${CHECK_RUN:-the output above}."
-    fi
+    _check_session_verdict "$status" "$out"
 
     # Reported, not failed. headless.sh deliberately leaves the "is a death a
     # failure?" question to the caller (inc-loa.3, inc-loa.5), and this library
@@ -597,6 +656,31 @@ _st_c_no_seed()        { CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 _st_c_no_keys()        { CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
                          check_run "$ST_DIR/not-a-key-script" 1; }
 
+# Every ending tools/headless.sh can report, through the one function that
+# judges them. No build and no session: _check_session_verdict takes the code
+# as an argument, which is why it is a function at all.
+_st_c_session_clean()    { CHECK_RUN=""; _check_session_verdict 0 && echo "read as a session"; }
+_st_c_session_budget()   { CHECK_RUN=""; _check_session_verdict 3 && echo "read as a session"; }
+_st_c_session_fatal()    { CHECK_RUN=""; _check_session_verdict 1; }
+_st_c_session_watchdog() { CHECK_RUN=""; _check_session_verdict 4; }
+_st_c_session_signal()   { CHECK_RUN=""; _check_session_verdict 139; }
+_st_c_session_badkeys()  { CHECK_RUN=""; _check_session_verdict 2; }
+_st_c_session_nomap()    { CHECK_RUN=""; _check_session_verdict 5; }
+_st_c_session_notshown() { CHECK_RUN=""; _check_session_verdict 6; }
+_st_c_session_assert()   { CHECK_RUN=""; _check_session_verdict 7; }
+
+# A dead session says what the engine logged last, and says it without the call
+# stack indented under it.
+_st_c_session_errorlog() {
+    mkdir -p "$ST_DIR/deadrun/logs"
+    { printf '=== session 2026-09-11 09:21:36 ===\n'
+      printf '2026-09-11 09:21:36  Probable parameter mismatch in __XPrint\n'
+      printf '    0   incursion-headless  0x0000 _Z8__XPrint + 5656\n'
+    } > "$ST_DIR/deadrun/logs/errors.log"
+    CHECK_RUN="$ST_DIR/deadrun"
+    _check_session_verdict 1
+}
+
 _st_c_mutation_absent() { printf 'alpha\n' > "$ST_DIR/m.txt"
                           check_mutation "$ST_DIR/m.txt" gone stillgone; }
 _st_c_mutation_twice()  { printf 'alpha\nalpha\n' > "$ST_DIR/m.txt"
@@ -706,6 +790,17 @@ _check_selftest() {
     _st 2 'CHECK_OPTIONS is unset' 'a run with unnamed settings stops' _st_c_no_options
     _st 2 'pin its seed' 'a run with no seed stops'                    _st_c_no_seed
     _st 2 'no such key script' 'a run with no key script stops'        _st_c_no_keys
+
+    _st 0 'read as a session' 'a clean ending is a session'            _st_c_session_clean
+    _st 0 'read as a session' 'the key budget running out is a session' _st_c_session_budget
+    _st 1 'the game died'  'a Fatal() session FAILS, it is not a shrug' _st_c_session_fatal
+    _st 1 'the game died'  'a watchdog stop FAILS'                     _st_c_session_watchdog
+    _st 1 'the game died'  'a killing signal FAILS'                    _st_c_session_signal
+    _st 1 'Probable parameter mismatch' 'a dead session quotes its error log' _st_c_session_errorlog
+    _st 2 'measured nothing' 'an unreadable key script stays INCONCLUSIVE' _st_c_session_badkeys
+    _st 2 'measured nothing' 'NO GAMEPLAY stays INCONCLUSIVE'          _st_c_session_nomap
+    _st 2 'measured nothing' 'an @expect that found nothing stays INCONCLUSIVE' _st_c_session_notshown
+    _st 2 'measured nothing' 'an unlisted ASSERT stays INCONCLUSIVE'   _st_c_session_assert
 
     _st 2 'appears 0 times' 'a mutation whose text is gone stops'      _st_c_mutation_absent
     _st 2 'appears 2 times' 'an ambiguous mutation stops'              _st_c_mutation_twice

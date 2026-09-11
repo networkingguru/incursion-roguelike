@@ -1,0 +1,121 @@
+# The character and the suit both arms of the quality-immunity check share.
+# Included by quality-self-immune-plain.keys and quality-self-immune-quality.keys.
+# Read by tools/check_quality_self_immune.sh (bd inc-to9x).
+#
+# WHY THE DAMAGE MUST COME FROM A MONSTER. Only one route brings an elemental
+# damage type to a WORN suit: the equipment block in Magic::Blast
+# (src/Effects.cpp:378-403), which damages one carried item when a blast that
+# ALLOWED a save was not saved against. Three conditions gate it, and the third
+# is why no self-inflicted blast can be used:
+#   - EF_PARTIAL on the effect, or Magic::Blast never rolls a save and
+#     save_type stays NOSAVE. The "Breath Weapon" resource (lib/main.irc:193)
+#     carries `sval: REF partial`, which is that flag.
+#   - the save must FAIL, because e.Resist is what the block tests.
+#   - the blast's actor must not be the item's owner. src/Item.cpp:1470 reads
+#     "If you are attacking your own items, ignore their hardness" and sets
+#     hard = 0, which erases the -1 immunity sentinel along with every other
+#     hardness. ThrowDmg clears isTrap and eID on the way in, so for the
+#     equipment block that test is just EActor == owner: a character who
+#     fireballs himself, or steps on his own trap, measures nothing. Both were
+#     tried and both showed "vs. 0 (leather)" on a suit whose own page said it
+#     was immune.
+#
+# The wearer must also have NO resistance to the damage type. Creature::Damage
+# sets e.Resist for ANY non-weapon damage the victim resists at all
+# (src/Fight.cpp:6260 and :6286), so one point of fire resistance makes the
+# block skip the wearer's gear entirely. That is why the suit stays +0 while it
+# burns: the quality's EA_GRANT is PLUS_3PER1 of the item's plus, so at +0 it
+# gives the wearer nothing and the item half stays measurable. Arm B buys the
+# plus back with two scrolls AFTER the burning, and measures the wearer half
+# there.
+#
+# WHY A MAGE AT LEVEL FIVE. Nothing here casts a spell; the four levels are hit
+# points and nothing else. Three hell hounds bite and breathe at him for a
+# hundred turns, and a level-one character spends that whole time in the Cheat
+# Death prompt. His Reflex save stays poor, which is what the measurement
+# wants: a MADE save sets e.Resist, and the equipment block runs only when
+# e.Resist is false.
+#
+# WHY A PLAIN LEATHER SUIT. MaterialHardness gives MAT_LEATHER a fire hardness
+# of 0 (src/Item.cpp:1241), so every roll that reaches it scratches it, and
+# Item::Damage names the material in its own numbers line -- "vs. 0 (leather)"
+# against "vs. Immune (leather)" is the whole measurement.
+
+@include chargen-mage.keys
+
+# chargen-mage.keys stops on the arrival room description. Dismiss it, or the
+# [w] below is eaten by the description.
+ESC
+
+# Wizard switches, counted from the top of the list in src/Tables.cpp:2674:
+#   1 Cheat Death, 3 Free Advancement, 5 Always Rest Safely.
+# Cheat Death is not a convenience: an unanswered death prompt spends every key
+# after it. Always Rest Safely stops new monsters being generated while the
+# character stands still, which is what keeps the room to the three summoned
+# hounds for most of the hundred turns. Freeze Monsters is NOT set and must not be: a breath is
+# the hound's own turn, not an answer to a blow.
+w
+y
+@choose "Wizard Mode Switches"
+SPACE
+DOWN*2
+SPACE
+DOWN*2
+SPACE
+ESC
+@until "Things in View" ESC
+
+# Four free levels, for hit points. 'd' opens the character screen and 'G'
+# gains a level; SPACE leaves it.
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+SPACE
+@until "Things in View" ESC
+
+# --- the suit whose hit points are measured -----------------------------
+# Column 15 of the acquisition prompt is Armours. The list shows the selected
+# row and the row under it, so @until stops with "Leather armour" one row below
+# the cursor and the extra DOWN selects it. No "Enter Item Level" prompt
+# follows, because a plain leather suit has no inherent plus.
+w
+@choose "Item Acquisition"
+RIGHT*15
+@until "Leather armour" DOWN
+DOWN
+ENTER
+j
+SPACE
+@while "two-handed" y
+# The mage's armour slot was empty, so the swap put nothing in the air. Empty
+# the weapon hand instead and stow the knife: with SL_WEAPON empty, the
+# equipment block reaches the armour on one coin toss rather than two
+# (src/Effects.cpp:384-387).
+b
+SPACE
+s
+@until "Things in View" ESC
+
+# An unidentified item's page hides its hit points, and the hit points are half
+# the measurement.
+w
+@choose "Identify Whole Pack"
+@until "Things in View" ESC

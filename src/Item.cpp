@@ -1289,8 +1289,45 @@ int16 MaterialHardness(int8 mat, int8 DType)
   return -1; // ww: paranoia
 } 
 
+/* inc-to9x: an item of BLAH is immune to BLAH. The six resistance qualities
+   make the item that carries one immune to that one damage type, ON TOP OF
+   the resistance lib/m_items.irh still grants the wearer; nobody loses
+   anything. The item-type gate is not optional: AQ_* and WQ_* share one
+   number space and collide on all six -- AQ_FIRE_RES == WQ_LAWFUL == 4,
+   AQ_COLD_RES == WQ_BALANCE == 5, AQ_ACID_RES == WQ_CORROSIVE == 6,
+   AQ_LIGHT_RES == WQ_FLAMING == 7, AQ_SONIC_RES == WQ_SHOCKING == 8,
+   AQ_LIFEKEEPING == WQ_WITHERING == 39 -- so an ungated HasQuality would make
+   every flaming weapon immune to lightning. isArmour() is true for class
+   Armour alone, which the factory builds for T_ARMOUR, T_BOOTS, T_GAUNTLETS
+   and T_SHIELD (src/Item.cpp:282-286); every WQ_* bearer is a Weapon and
+   answers false. quality::poison resistance is out of scope: MaterialHardness
+   returns -1 for AD_TOXI on every material, so every item already is immune.
+   Hardness's existing IQ_* tests need no such gate because IQ_* is 67 and up,
+   past both WQ_LAST (64) and AQ_LAST (42). */
+bool Item::QualityImmune(int8 DType)
+{
+  if (!isArmour())
+    return false;
+  switch (DType) {
+    case AD_FIRE: return HasQuality(AQ_FIRE_RES);
+    case AD_COLD: return HasQuality(AQ_COLD_RES);
+    case AD_ACID: return HasQuality(AQ_ACID_RES);
+    case AD_ELEC: return HasQuality(AQ_LIGHT_RES);
+    case AD_SONI: return HasQuality(AQ_SONIC_RES);
+    case AD_NECR: return HasQuality(AQ_LIFEKEEPING);
+  }
+  return false;
+}
+
 int16 Item::Hardness(int8 DType)
 {
+  /* inc-to9x: the quality returns IMMUNITY, not hardness, so the test stands
+     before every branch below and nothing is ever added to it. -1 is the
+     sentinel Item::Damage tests exactly; it must also beat the hd == 0 early
+     return, because a leather jerkin has fire hardness 0 and that is the very
+     case this rule is about. */
+  if (QualityImmune(DType))
+    return -1;
   int16 hd = MaterialHardness(Material(),DType);
   /* inc-m2zi: immunity is never modified; zero hardness still gets the plus. */
   if (hd < 0)
@@ -1395,19 +1432,36 @@ EvReturn Item::Damage(EventInfo &e) {
     om = m;
 
     Creature *owner = Owner();
-    /* inc-w26h: item defences do not inherit owner resistances or immunities. */
     hard = Hardness(e.DType);
+    int16 gear = 0;
+    /* inc-w26h: an owner's defences reach his gear only where the grant says
+       so. inc-kapn: the grant is READ here and ADDED below, after the bypass. */
+    if (owner) {
+        gear = owner->GearResistLevel(e.DType);
+        if (gear == -1)
+            return DONE;
+    }
 
         /* inc-m2zi: Hardness returns -1 as an immunity sentinel, not as a
            hardness. Arithmetic on it destroys the immunity: -1/2 is 0, and
            forcing 0 makes an immune item take the full roll. Neither flag
-           may touch a negative value. */
+           may touch a negative value. Both flags speak about the MATERIAL
+           only; the owner's grant is added after them, below. */
         if (hard >= 0) {
             if (e.ignoreHardness == true)
                 hard = 0;
             else if (e.halfHardness == true)
                 hard /= 2;
         }
+
+        /* inc-kapn: a magical protection that reaches the bearer's gear
+           survives the hardness bypass. ignoreHardness says iron does not
+           resist acid, and halfHardness says iron resists it by half; neither
+           says the spell stopped, so each may only zero or halve what
+           Hardness() returned. The >= 0 test is inc-m2zi's sentinel guard:
+           nothing is ever added to an immune -1. */
+        if (hard >= 0)
+            hard += gear;
 
         posthard = e.vDmg - hard; 
 
@@ -2188,7 +2242,7 @@ int16 Armour::PenaltyVal(Creature * c, bool for_skills)
        halving per size step, and two steps at most in either direction. */
     int steps = max(-2, min(2, SZ_MEDIUM - cSize));
     for (; steps > 0; steps--) val *= 2;
-    for (; steps < 0; steps++) val /= 2;
+    for (; steps < 0; steps++) val = val < 0 ? min(-1, val / 2) : val / 2;
   } else val = ti->u.a.Penalty; 
   /* The +2 answers body armour, whose Penalty: is authored two worse than the
      figure it must show: full plate is -8 in lib/weapons.irh and -6 on the

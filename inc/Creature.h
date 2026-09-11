@@ -469,6 +469,7 @@ class Creature: public Thing, public Magic
          worn suit because the two sit behind different Coverage values. See
          Fight.cpp. Both default to 0, which is "nothing was penetrated". */
       int16 ResistLevel(int16 DType, int16 NatIgnored = 0, int16 WornIgnored = 0);
+      int16 GearResistLevel(int16 DType);
       virtual int16 WeaponSaveDC(Item *wp, int16 at);
 
 

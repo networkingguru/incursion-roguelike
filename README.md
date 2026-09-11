@@ -669,11 +669,19 @@ change that alters behaviour follows five steps, in this order:
 5. record the commands, the mutation and the result in the commit body or the bead.
 
 `tools/nightly_verify.sh` is the wrapper. It builds both backends, cross-builds
-them for Linux in Docker, runs the check sweep, and compares the result against a
-base recorded before the work started. A check that already failed is not the
-change's fault; a check that passed before and fails after stops the merge.
-Builds are not ratcheted: a tree that does not compile is never safe. A machine
-with no Docker skips the Linux build rather than failing on it.
+them for Linux in Docker, sweeps the objects with the layout probe, soaks 40
+seeded sessions against the recorded baseline, then runs every check that
+declares itself part of the gate and compares the result against a base recorded
+before the work started. A check that already failed is not the change's fault; a
+check that passed before and fails after stops the merge. Builds are not
+ratcheted: a tree that does not compile is never safe. A machine that cannot run
+the Linux build, the layout sweep or the soak reports a skip rather than failing
+on it, because a step that measured nothing has not measured a failure.
+
+Which checks it runs is not a list inside it. Each check declares its own tier --
+`# gate: cheap`, `# gate: live` or `# gate: none <why not>` -- and the gate reads
+those markers, so a new check joins the gate when it is written.
+`tools/check_gate_membership.sh` is what obliges a new check to declare one.
 
 The commit body carries the evidence, because git records results and not
 process. State the oracle, the numbers it produced, the mutation that proved it
@@ -687,7 +695,7 @@ rules the harness enforces, and what this method cannot prove.
 | `tools/headless.sh` | Plays one scripted session with no display and no keyboard, in its own sandbox with its own `save/` and `logs/`. Everything else that plays the game calls it. |
 | `tools/soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about by message rather than by session. |
 | `tools/play.sh` | Interactive launcher for a real session with the map audit, save probe and character probe armed. |
-| `tools/nightly_verify.sh` | Builds both backends, cross-builds them for Linux in Docker, sweeps the checks, and compares the result against a recorded base. `--record` before the work, `--compare` after. The Linux build is skipped, not failed, where there is no Docker. |
+| `tools/nightly_verify.sh` | Builds both backends, cross-builds them for Linux in Docker, runs the layout sweep and the 40-session soak, then runs every check that declares a gate tier and compares the result against a recorded base. `--record` before the work, `--compare` after, `--selftest` to prove the ratchet still bites. A step that cannot run on this machine is skipped, not failed. |
 | `tools/dump_save.sh` | Runs `-dump` against a save in the same sandbox, without playing. |
 | `tools/keys/*.keys` | Key scripts read by both backends. The SDL build supports the shared movement subset (literal and named keys, `*N` repeats, comments, `@include`, `@pause MS` and `@quit`), but not the POSIX screen-scrape directives. In SDL, `@quit` or consuming the last key exits the game; put `@pause` before the end to hold the final frame while its light animates. `@pause` is an instant no-op headlessly. Use `./incursion -load save/<character>.sav -keys tools/keys/trailer-demo.keys` to start a named save directly in play and run the sample. |
 
@@ -721,15 +729,27 @@ the unfixed tree before it is trusted.
 | Check | The question it answers |
 |---|---|
 | `check_command_menu_gating.sh` | Do the Combat (C) and YUse (Y) menus still hide every verb with no implementation, and every verb whose character prerequisite is unmet? It dumps both menus before and after a wielded Quickblade grants Whirlwind Attack: the gated combat row appears only after the feat, and the dead Yuse rows stay absent either way. |
+| `check_orphan_branches.sh` | Is every finished fix actually on master? It lists each branch master has not merged beside its bead's status and age. It fails on a branch whose bead is closed — the shape that stranded b855fe2 for days — and on a branch whose name is not a bead id, because nobody can then say what it was for. |
 | `check_dequ_dice.sh` | Does A_DEQU roll its declared dice without tripling? |
 | `check_dequ_dc.sh` | Do exactly the four SRD monsters retain A_DEQU save DCs in the thirteen-monster roster? |
 | `check_fire_hardness.sh` | Do wood, leather and cloth have zero fire hardness while ironwood, darkwood and dragon hide retain theirs? |
 | `check_item_hardness.sh` | Does Item apply hardness modifiers once after preserving immunity, with QItem delegating? |
+| `check_xprint_tokens.sh` | Ratchet literal __XPrint object-token vararg overruns (inc-upw.30); Python 3 only. |
+| `check_gaze_reflect_message.sh` | When a gaze attack is turned back on the monster that made it, does the sentence on screen name that monster once and read as English? A mage casts Gaze Reflection on himself, the character sheet's Specials column is photographed as proof he carries it, a bodak is summoned, and the message area is read: "The bodak's gaze is reflected back at it!". It is the live twin of `check_xprint_tokens.sh`, which counts tokens in source text and cannot see what a player is shown. |
 | `check_item_owner_resist.sh` | Does item damage use its own defences without owner resistance or immunity? |
 | `check_dequ_magic_hardness.sh` | Against a monster whose A_DEQU carries no save DC, is a plain weapon's hardness bypassed while a magical weapon's is kept? Two sessions strike acid blobs, one with an ordinary long sword and one with a Holy Avenger, and read each sword's own description page before and after. |
 | `check_dequ_reach.sh` | Does a glaive user striking from two squares away now take the equipment retaliation he used to escape? The map shows the two-square gap, the message shows the blow landing, and the glaive's page shows the acid damage. |
 | `check_dequ_sunder.sh` | Does sundering an armed equipment-destroyer damage the striker's weapon rather than the monster's own? A caryatid column's cursed long sword is sundered with a maul, and the maul's page is the oracle. |
-| `check_dequ_owner_immunity.sh` | Does a character's own immunity still shield his gear? Wearing gauntlets that grant total immunity to rust, his maul is rusted by a mud elemental anyway. |
+| `check_dequ_owner_immunity.sh` | Does a character's rust immunity shield his gear? Wearing Gauntlets of Rust, his iron maul stays at 262/262 hit points after five small mud elemental retaliations. |
+| `check_item_flag_protection.sh` | Do Bracers of Neutralization keep an iron maul at 262/262 HP against acid-blob retaliation through EF_PROTECTS_ITEMS? |
+| `check_gear_protection_roster.sh` | Does `lib/` still match the whole gear-protection ruling table: the 36 grants that protect a bearer's carried gear, the 22 that protect only the bearer, and the general rules for spells, domains, gods and races? |
+| `check_gear_spell_protection.sh` | Does a spell protect the caster's gear? Under Endure the Elements his silvered warhammer holds 78 hit points through twelve magma creeper retaliations. |
+| `check_gear_item_exclusion.sh` | Does an item ruled wearer-only leave gear exposed? The Amulet of Bile grants acid resistance and the same warhammer still corrodes. |
+| `check_gear_bypass_survives.sh` | Does a resistance spell still protect a plain weapon, where the attack bypasses the metal's own hardness? Under Protection from Acid a mundane iron maul holds 262 hit points through twelve magma creeper retaliations. |
+| `check_quality_self_immune.sh` | Is an armour with a resistance quality immune to that element, while its wearer still gets the resistance? A +0 leather suit of fire resistance holds 56 hit points where the plain one is left mildly burnt. |
+| `check_divine_feat_gear.sh` | Does Divine Resistance protect a priest's gear while he is channeling? At Charisma 18 his plain iron warhammer holds 45 of 45 hit points through five firebat retaliations. |
+| `check_school_focus_menu.sh` | Is a school the character already focuses on kept off the School Focus menu? One orc mage takes the feat twice: Illusion is on the first menu and must be gone from the second, and the character sheet must list both schools, because School Focus is worth nothing taken twice in one school. A second run makes an elf, whose menu must still be short of Necromancy -- the other rule living in the same line. |
+| `check_school_focus_dc.sh` | Does School Focus (Illusion) still raise the DC to disbelieve an illusion? The same mage casts Phantasmal Force at a goblin, and the printed `Will Save: ... vs DC 13` line is the oracle -- the only place a player can read that DC. Unfocused it is 11. |
 | `check_headless.sh` | Do the properties every unattended run depends on still hold, including that two simultaneous runs get separate directories? |
 | `check_field_day_duration.sh` | Does a permanent (`Dur -1`) field still survive a day change? It places a torch archon on depth 2, rests one night on the same map with lowercase `z`, and counts the map's fields either side; the rise in creatures proves `Map::DaysPassed` actually ran. Fixed 1 -> 1, unfixed 1 -> 0. |
 | `check_field_modifier_duration.sh` | Does a living, directly placed torch archon retain both its permanent white light field and its Magic Circle vs. Evil status after the broken 12-turn countdown would have expired many times over? |
@@ -738,6 +758,7 @@ the unfixed tree before it is trusted.
 | `check_open_xy.sh` | Does `Map::GetOpenXY` refuse when no square is open, instead of answering (0,0)? Requires the `NO_OPEN_XY` sentinel to be returned and `Thing::PlaceOpen` to drop the Thing rather than place it in the map's solid outer edge. Three static greps plus a probe build (`EXTRA_CXXFLAGS=-DINCURSION_OPENXY_PROBE BACKEND=posix ./build_macos.sh`, binary named by `INCURSION_BIN`) that counts refusals, disposals and a successful-placement control -- the greps alone once passed a fix that tested the sentinel and then placed at (0,0) anyway. |
 | `check_entangled_acts.sh` | Does passed-save entanglement penalize without disabling? Requires an unanchored rogue, Dexterity 17 to 13 and melee to-hit +2 to +0 on the sheet, then a melee attack and a half-speed move while still entangled, measured against the same subject's own post-combat floor-move cost. |
 | `check_stuck_fights.sh` | Does anchoring stop being a lockdown while still stopping movement? A Stuck paladin must land a weapon attack and print its roll against an adjacent goblin, then fail an escape attempt (both Escape Artist and Strength) and remain Stuck in the same square. |
+| `check_tanglefoot_mount.sh` | Do tanglefoot strands catch the MOUNT and leave the rider free? The mount rolls the reflex save, so the mount is what a failed save must catch. A level-1 paladin rides his sacred mount along a strip of strands until the horse fails; wizard mode's "Examine Player Data" must then show `STUCK from SS ATTK` under the `----MOUNT----` banner, none in the rider's own stati list, and no `Stuck` on his status line. |
 | `check_sticky_save.sh` | Does walking onto a pool of slime roll a real Reflex save, and does the STUCK it grants lapse on its own? The DC must print above zero (`SavingThrow` prints nothing at all for `DC <= 0`), and the printed roll line must change after 100 turns of nothing but waiting -- proof a second roll fired, which requires the first grant to have expired, since the same hazard re-catches anyone still standing in it the instant an old grant lapses. |
 | `check_overlapping_modifier_fields.sh` | Do two torch archons that each stand inside the other's magic circle both keep their light field when they separate, and does each end up holding exactly one circle row? Fixed 2 lit, unfixed 0. |
 | `check_circle_creator_death.sh` | When the player kills one of two overlapping archons, does the survivor stay lit? Fixed: survivor alive and white count 1. Unfixed: survivor alive and white count 0 -- alive in the dark, the reported symptom. |
@@ -811,6 +832,7 @@ the unfixed tree before it is trusted.
 | `check_devour_negative_cr.sh` | Does devouring a corpse of negative challenge rating leave experience alone, while an ordinary corpse still pays? |
 | `check_devour_template_source.sh` | Does `Creature::Devour(Corpse*)` read the TEMPLATE stati off the corpse rather than off the eater, with the iteration opening and closing on the same object? |
 | `check_dump_save.sh` | Does `-dump` walk a real save and report the same bytes from both backends? |
+| `check_dungeonmap_bounds.sh` | Does a levitating character on the bottom level of a dungeon stay on it when he asks to go down? `Game::GetDungeonMap` answered a request for one level past the last it had allocated by reading past the end of its own array, and the levitation branch of `Creature::Descend` makes exactly that request. The session walks down to depth 10, levitates over a chasm there, presses `>`, and expects the climb-down prompt and a 100m depth reading rather than "You float downwards." |
 | `check_earth_ring_prose.sh` | Does the Ring of Elemental Command (Earth) description name the wearer's own ring "the ring of earth" in its curse clause, rather than the "ring of air" it copied from the Air ring? |
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the gnomes its own refusal message names? |
 | `check_enchant_graceful.sh` | Do seven compiled item pages advertise their own qualities, caster-level gates, spells and bonus type? |
@@ -859,6 +881,7 @@ the unfixed tree before it is trusted.
 | `check_save_fail.sh` | Does a save that fails part-way leave the game playable? Drives real and staged failures. |
 | `check_sentinel_live.sh` | Does a live Sentinel get the saves its corrected level table names? |
 | `check_sharp_senses.sh` | Does Sharp Senses reach Search, and not only Spot and Listen? |
+| `check_buckler_size.sh` | A buckler costs -1 to Balance on both Medium and enlarged Large bearers (inc-drmm). |
 | `check_shield_penalty.sh` | Does a shield's armour check penalty come from the shield, or only from its size beside yours? Puts every shield in a Medium paladin's hand one at a time and reads its cost twice off the character dump -- the skill term and the movement rate -- then does the two a Small halfling can hold, whose figures must be double. |
 | `check_skill_manager_reset.sh` | Does an unrecognised key still wreck the Skill Manager? Presses END and HOME -- what the left stick's two left diagonals send -- twice over: at character generation, where the arm threw every allocated rank away, and at level-up, where the same arm closed the manager without a word. |
 | `check_shift_opcodes.sh` | Does the VM's BSHL shift left while Rect member codegen still uses BSHR for reads and BSHL for writes, and does a script-coloured field cast red rather than black light? |
@@ -903,6 +926,7 @@ the unfixed tree before it is trusted.
 | `check_flame_tongue_undead.sh` | Does a flame tongue sword set a corporeal undead alight for the 3d6/2d6/1d6 fire its page promises? |
 | `check_flavor_stability.sh` | Does a v1 save's per-player flavour memory -- appearances and their Known/Tried flags -- survive a module rebuild that adds a resource? |
 | `check_format_strings.sh` | Does every printf-style format string in the engine agree with its arguments, or has the warning count risen above the baseline? |
+| `check_gate_membership.sh` | Does every check in `tools/` declare whether the gate should run it? A check carries `# gate: cheap`, `# gate: live` or `# gate: none <why not>`, and `nightly_verify.sh` reads those markers instead of a hand-written list. The checks that predate the rule are excused by `tools/gate_membership.baseline`, which only shrinks. |
 | `check_geomancy.sh` | Does the Earthsinger's Geomancy roll the 5d12 its page names, rather than the 5d12+12 copied from the Mana potion? |
 | `check_gravestone.sh` | Does the death screen render the epitaph's corrected wording and columns, and the date the stone is carved with? |
 | `check_grounded_stance_live.sh` | Does the Earthsinger's Grounded Stance add its damage term to a landed blow when every condition it names is met? |
@@ -911,6 +935,7 @@ the unfixed tree before it is trusted.
 | `check_ki_strike_live.sh` | Does a Monk gain Ki Strike at 4th level, the grant that lets an unarmed attacker harm an incorporeal creature? |
 | `check_ledger_rows.sh` | Does every ledger row in `docs/REPORTING-GATE.md` sit under the heading whose column shape it has, so no tracking id is dropped? |
 | `check_luckblade_plus.sh` | Does the Luckblade keep its magical plus when the wish it would charge for is refused, rather than grinding down first? |
+| `check_feat_toggle.sh` | Do two presses of the feat toggle key toggle twice without spending a pick? |
 | `check_menu_overflow.sh` | Does a menu with more than 52 options still draw and select every row, rather than losing the ones past the alphabet? |
 | `check_module_rebuild.sh` | Does an ordinary build put this tree's scripts into the game, while an instrumented build still leaves the module alone? |
 | `check_prestige_hidden.sh` | Are the eight unfinished prestige classes kept out of every class list, rather than offered and then refused after the pick? |

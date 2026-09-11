@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # Verify that the unarmed/natural attack speed floor still matches the data.
 #
 # OPT_NATURAL_SPEED floors A_SPD_BRAWL at NATURAL_SPD_FLOOR so that a creature

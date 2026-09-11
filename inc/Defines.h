@@ -3291,7 +3291,9 @@ typedef signed int        hObj;
 /* upstream: the shared effect flags had no way to require dark endpoints on
    Win32 either; Reasoned, inc-tek.8.8, NOT sent. */
 #define EF_NEEDS_DARK 106
-#define EF_LAST       107
+/* inc-w26h: this grant protects the bearer's gear, not only the bearer. */
+#define EF_PROTECTS_ITEMS 107
+#define EF_LAST       108
 
 
 #define EA_BLAST    1      /* xval = DType, pval = Damage */

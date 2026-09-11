@@ -139,34 +139,39 @@
 /* --ABJURATION 1-- */
 
 Wizard Spell "Endure Fire" : EA_INFLICT
-  { SC_ABJ|SC_FIRE; IS_A_BUFF(2); Level: 1; qval: Q_TAR; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ|SC_FIRE; IS_A_BUFF(2); Level: 1; qval: Q_TAR; 
     xval: RESIST; yval: AD_FIRE; pval: 3d1 + (LEVEL_1PER2);
     Desc: "Grants the target fire resistance equal to 3 plus
-      1 per 2 caster levels."; }
+      1 per 2 caster levels. The target's carried equipment is
+      protected as well."; }
 
 Wizard Spell "Endure Cold" : EA_INFLICT
-  { SC_ABJ|SC_COLD; IS_A_BUFF(2); Level: 1; qval: Q_TAR; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ|SC_COLD; IS_A_BUFF(2); Level: 1; qval: Q_TAR; 
     xval: RESIST; yval: AD_COLD; pval: 3d1 + (LEVEL_1PER2); 
     Desc: "Grants the target cold resistance equal to 3 plus
-      1 per 2 caster levels."; }
+      1 per 2 caster levels. The target's carried equipment is
+      protected as well."; }
 
 Wizard Spell "Endure Lightning" : EA_INFLICT
-  { SC_ABJ; IS_A_BUFF(2); Level: 1; qval: Q_TAR; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; IS_A_BUFF(2); Level: 1; qval: Q_TAR; 
     xval: RESIST; yval: AD_ELEC; pval: 3d1 + (LEVEL_1PER2); 
     Desc: "Grants the target lightning resistance equal to 3 plus
-      1 per 2 caster levels."; }
+      1 per 2 caster levels. The target's carried equipment is
+      protected as well."; }
 
 Wizard Spell "Endure Acid" : EA_INFLICT
-  { SC_ABJ; IS_A_BUFF(2); Level: 1; qval: Q_TAR; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; IS_A_BUFF(2); Level: 1; qval: Q_TAR; 
     xval: RESIST; yval: AD_ACID; pval: 3d1 + (LEVEL_1PER2); 
     Desc: "Grants the target acid resistance equal to 3 plus
-      1 per 2 caster levels."; }
+      1 per 2 caster levels. The target's carried equipment is
+      protected as well."; }
 
 Wizard Spell "Endure Sound" : EA_INFLICT
-  { SC_ABJ; IS_A_BUFF(2); Level: 1; qval: Q_TAR; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; IS_A_BUFF(2); Level: 1; qval: Q_TAR; 
     xval: RESIST; yval: AD_SONI; pval: 3d1 + (LEVEL_1PER2); 
     Desc: "Grants the target sound resistance equal to 3 plus
-      1 per 2 caster levels."; }
+      1 per 2 caster levels. The target's carried equipment is
+      protected as well."; }
 
 /* I changed the visual on this so that it truly feels like an
    Abjuration spell, rather than an Evocation hammered into the
@@ -2028,7 +2033,7 @@ Wizard / Scroll Spell "Iron Mind" : EA_INFLICT
   }
 
 Wizard / Scroll / Druid Spell "Resist Water" : EA_INFLICT
-  { SC_ABJ|SC_WATER; IS_A_BUFF(COST_1); Level: 2; qval: Q_TAR; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ|SC_WATER; IS_A_BUFF(COST_1); Level: 2; qval: Q_TAR; 
     xval: SKILL_BONUS; yval: SK_SWIM; pval: LEVEL_SCALED; 
     On Event MSG_STATINAME "ResWater" / "RWat";
     Desc: "Grants the target an immunity to rusting, soaking and decay,
@@ -2043,34 +2048,39 @@ Wizard / Scroll / Druid Spell "Resist Water" : EA_INFLICT
    and EA_GRANT { xval: SKILL_BONUS; yval: SK_SWIM; pval: LEVEL_SCALED; }
 
 Wizard / Priest / Druid / Scroll Spell "Resist Fire" : EA_INFLICT
-  { SC_ABJ|SC_FIRE; IS_A_BUFF(7); Level: 2; qval: Q_TAR; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ|SC_FIRE; IS_A_BUFF(7); Level: 2; qval: Q_TAR; 
     xval: RESIST; yval: AD_FIRE; pval: 5d1 + (LEVEL_2PER3); 
     Desc: "Grants the target fire resistance equal to 5 plus
-      2 per 3 caster levels."; } 
+      2 per 3 caster levels. The target's carried equipment is
+      protected as well."; }
 
 Wizard / Priest / Druid / Scroll Spell "Resist Cold" : EA_INFLICT
-  { SC_ABJ|SC_COLD; SC_COLD; IS_A_BUFF(7); Level: 2; qval: Q_TAR; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ|SC_COLD; SC_COLD; IS_A_BUFF(7); Level: 2; qval: Q_TAR; 
     xval: RESIST; yval: AD_COLD; pval: 5d1 + (LEVEL_2PER3); 
     Desc: "Grants the target cold resistance equal to 5 plus
-      2 per 3 caster levels."; }
+      2 per 3 caster levels. The target's carried equipment is
+      protected as well."; }
 
 Wizard / Priest / Druid / Scroll Spell "Resist Lightning" : EA_INFLICT
-  { SC_ABJ; IS_A_BUFF(7); Level: 2; qval: Q_TAR; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; IS_A_BUFF(7); Level: 2; qval: Q_TAR; 
     xval: RESIST; yval: AD_ELEC; pval: 5d1 + (LEVEL_2PER3); 
     Desc: "Grants the target lightning resistance equal to 5 plus
-      2 per 3 caster levels."; }
+      2 per 3 caster levels. The target's carried equipment is
+      protected as well."; }
 
 Wizard / Priest / Druid / Scroll Spell "Resist Acid" : EA_INFLICT
-  { SC_ABJ; IS_A_BUFF(7); Level: 2; qval: Q_TAR; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; IS_A_BUFF(7); Level: 2; qval: Q_TAR; 
     xval: RESIST; yval: AD_ACID; pval: 5d1 + (LEVEL_2PER3); 
     Desc: "Grants the target acid resistance equal to 5 plus
-      2 per 3 caster levels."; }
+      2 per 3 caster levels. The target's carried equipment is
+      protected as well."; }
 
 Wizard / Priest / Druid / Scroll Spell "Resist Sound" : EA_INFLICT
-  { SC_ABJ; IS_A_BUFF(7); Level: 2; qval: Q_TAR; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; IS_A_BUFF(7); Level: 2; qval: Q_TAR; 
     xval: RESIST; yval: AD_SONI; pval: 5d1 + (LEVEL_2PER3); 
     Desc: "Grants the target sound resistance equal to 5 plus
-      2 per 3 caster levels."; }
+      2 per 3 caster levels. The target's carried equipment is
+      protected as well."; }
 
 
 /* --ARCANA 2-- */
@@ -5597,42 +5607,48 @@ Vanish, Weavecraft
 /* --ABJURATION 4-- */
 
 Wizard / Priest / Druid  Spell "Protection from Fire" : EA_INFLICT
-  { SC_ABJ|SC_FIRE; IS_A_BUFF(35); qval: Q_TAR; Level: 4; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ|SC_FIRE; IS_A_BUFF(35); qval: Q_TAR; Level: 4; 
     xval: RESIST; yval: AD_FIRE; pval: 10d1 + (LEVEL_1PER1); 
     Desc: "Grants the target fire resistance equal to 10 plus
-      her caster level."; }
+      her caster level. The target's carried equipment is
+      protected as well."; }
 
 Wizard / Priest / Druid  Spell "Protection from Cold" : EA_INFLICT
-  { SC_ABJ|SC_COLD; IS_A_BUFF(35); qval: Q_TAR; Level: 4; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ|SC_COLD; IS_A_BUFF(35); qval: Q_TAR; Level: 4; 
     xval: RESIST; yval: AD_COLD; pval: 10d1 + (LEVEL_1PER1); 
     Desc: "Grants the target cold resistance equal to 10 plus
-      her caster level."; } 
+      her caster level. The target's carried equipment is
+      protected as well."; }
 
 Wizard / Priest / Druid  Spell "Protection from Lightning" : EA_INFLICT
-  { SC_ABJ; IS_A_BUFF(35); qval: Q_TAR; Level: 4; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; IS_A_BUFF(35); qval: Q_TAR; Level: 4; 
     xval: RESIST; yval: AD_ELEC; pval: 10d1 + (LEVEL_1PER1); 
     Desc: "Grants the target lightning resistance equal to 10 plus
-      her caster level."; } 
+      her caster level. The target's carried equipment is
+      protected as well."; }
 
 
 Wizard / Priest / Druid  Spell "Protection from Acid" : EA_INFLICT
-  { SC_ABJ; IS_A_BUFF(35); qval: Q_TAR; Level: 4; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; IS_A_BUFF(35); qval: Q_TAR; Level: 4; 
     xval: RESIST; yval: AD_ACID; pval: 10d1 + (LEVEL_1PER1); 
     Desc: "Grants the target acid resistance equal to 10 plus
-      her caster level."; }
+      her caster level. The target's carried equipment is
+      protected as well."; }
 
 Wizard / Priest / Druid  Spell "Protection from Sound" : EA_INFLICT
-  { SC_ABJ; IS_A_BUFF(35); qval: Q_TAR; Level: 4; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; IS_A_BUFF(35); qval: Q_TAR; Level: 4; 
     xval: RESIST; yval: AD_SONI; pval: 10d1 + (LEVEL_1PER1); 
     Desc: "Grants the target acid resistance equal to 10 plus
-      her caster level."; }
+      her caster level. The target's carried equipment is
+      protected as well."; }
 
 Wizard / Druid Spell "Endure the Elements" : EA_INFLICT
-  { SC_ABJ; IS_A_BUFF(10); Level: 4; qval: Q_TAR;
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; IS_A_BUFF(10); Level: 4; qval: Q_TAR;
     xval: RESIST; yval: AD_SONI; pval: 3d1 + (LEVEL_1PER2); 
     On Event MSG_STATINAME "EndureElem" / "EE"; 
     Desc: "Grants the target resistance equal to 3 plus
-      1 per 2 caster levels against Fire, Cold, Lightning, Acid and Sound."; }
+      1 per 2 caster levels against Fire, Cold, Lightning, Acid and Sound.
+      The target's carried equipment is protected as well."; }
   and EA_INFLICT { xval: RESIST; yval: AD_FIRE; 
                    flags: EF_DLONG; pval: 3d1+(LEVEL_1PER2); }
   and EA_INFLICT { xval: RESIST; yval: AD_COLD; 
@@ -6433,7 +6449,7 @@ and EA_INFLICT {
   }
     
 Wizard / Scroll Spell "Fire Shield" : EA_INFLICT
-  { SC_EVO|SC_FIRE; IS_A_BUFF(COST_4); Level: 4; 
+  { Flags: EF_PROTECTS_ITEMS; SC_EVO|SC_FIRE; IS_A_BUFF(COST_4); Level: 4; 
     Purpose: EP_BUFF | EP_COUNTER (VS_COLD);
     xval: RESIST; yval: AD_COLD; pval: 12d1 + LEVEL_1PER2; }
 and EA_INFLICT
@@ -6469,7 +6485,8 @@ and EA_INFLICT
       "The <EActor>'s fiery shroud fades.";  
     Desc: "Envelops you in a shroud of flames with give you cold resistance
       (12 + [caster level / 2]) and inflicts 1d8+caster level (max 1d8+15)
-      points of fire damage on anyone who attacks you in melee.";
+      points of fire damage on anyone who attacks you in melee. Your
+      carried equipment is protected as well.";
   } and EA_INFLICT { 
     xval: TRAP_EVENT; yval: EVICTIM(POST(EV_MISS)); pval: (LEVEL_MAX15);
     On Event META(POST(EVICTIM(EV_MISS))) {
@@ -6490,7 +6507,7 @@ and EA_INFLICT
     } 
 
 Wizard Spell "Chill Shield" : EA_INFLICT
-  { SC_EVO|SC_COLD; IS_A_BUFF(COST_4); Level: 4; 
+  { Flags: EF_PROTECTS_ITEMS; SC_EVO|SC_COLD; IS_A_BUFF(COST_4); Level: 4; 
     Purpose: EP_BUFF | EP_COUNTER (VS_FIRE);
     xval: RESIST; yval: AD_FIRE; pval: 12d1 + LEVEL_1PER2; }
 and EA_INFLICT
@@ -6525,7 +6542,8 @@ and EA_INFLICT
       "The <EActor>'s chill aura fades.";  
     Desc: "Envelops you in an aura of frost with give you fire resistance
       (12 + [caster level / 2]) and inflicts 1d8+caster level (max 1d8+15)
-      points of cold damage on anyone who attacks you in melee.";
+      points of cold damage on anyone who attacks you in melee. Your
+      carried equipment is protected as well.";
   }                          
 and EA_INFLICT
   { xval: TRAP_EVENT; yval: EVICTIM(POST(EV_MISS)); pval: (LEVEL_MAX15);
@@ -7421,7 +7439,7 @@ Wizard Spell "Mooncloak" : EA_INFLICT
       a single creature and requires a ranged attack roll to
       successfully impact.";
     xval: ILLUMINATED; pval +1;
-    Flags: EF_ACTIVATE3, EF_ACTIVATE2, EF_ONCEONLY, EF_ATTACK;
+    Flags: EF_ACTIVATE3, EF_ACTIVATE2, EF_ONCEONLY, EF_ATTACK, EF_PROTECTS_ITEMS;
   }
 and EA_BLAST
   { xval: AD_MAGC; pval: 3d6; aval: AR_BOLT; sval: FORT;
@@ -7463,11 +7481,12 @@ and EA_INFLICT
 
 
 Wizard / Priest / Druid Spell "Resist the Elements" : EA_INFLICT
-  { SC_ABJ; IS_A_BUFF(35); Level: 5; qval: Q_TAR;
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; IS_A_BUFF(35); Level: 5; qval: Q_TAR;
     xval: RESIST; yval: AD_FIRE; pval: 5d1 + (LEVEL_2PER3); 
     On Event MSG_STATINAME "ResistElem" / "ResE"; 
     Desc: "Grants the target resistance equal to 5 plus
-      2 per 3 caster levels against Acid, Cold, Lightning, Fire and Sound."; 
+      2 per 3 caster levels against Acid, Cold, Lightning, Fire and Sound.
+      The target's carried equipment is protected as well.";
     }
   and EA_INFLICT { xval: RESIST; yval: AD_COLD; 
                    flags: EF_DLONG; pval: 5d1+(LEVEL_2PER3); }
@@ -8716,11 +8735,12 @@ and EA_TERRAFORM
 /* Wizard Spell "Delayed Blast Fireball" : EA_BLAST */
 
 Wizard / Priest / Druid Spell "Protection from Elements" : EA_INFLICT
-  { SC_ABJ; IS_A_BUFF(COST_5); Level: 6; qval: Q_TAR;
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; IS_A_BUFF(COST_5); Level: 6; qval: Q_TAR;
     xval: RESIST; yval: AD_FIRE; pval: 10d1 + (LEVEL_1PER1); 
     On Event MSG_STATINAME "ProtElem" / "ProE"; 
     Desc: "Grants the target resistance equal to 10 plus her caster 
-      level against Acid, Cold, Lightning, Fire and Sound."; 
+      level against Acid, Cold, Lightning, Fire and Sound.
+      The target's carried equipment is protected as well.";
     }
   and EA_INFLICT { xval: RESIST; yval: AD_COLD; 
                    flags: EF_DLONG; pval: 10d1+(LEVEL_1PER1); }

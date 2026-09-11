@@ -80,7 +80,7 @@ Hold LB and use the control. This reaches all 12 of Incursion's macro slots
 | **D-pad Up** | Macro F1 | Page Up |
 | **D-pad Down** | Macro F2 | Page Down |
 | **D-pad Left** | Macro F3 | Options (`=`) |
-| **D-pad Right** | Macro F4 | On-screen keyboard |
+| **D-pad Right** | Macro F4 | *(free)* |
 | **A** | Macro F5 | Search (`s`) |
 | **B** | Macro F6 | Rest (`.`) |
 | **X** | Macro F7 | Activate (`A`) |
@@ -94,7 +94,7 @@ device); binding a shifted bumper or system button silently does nothing, with
 no error. So F9 and F12 live on the trigger holds. Options landed on
 shift+D-pad-Left-hold as a fallback after that retreat, not as a deliberate
 choice — if the shift-group limitation is ever worked around, Options deserves a
-better home. Sleep (`z`) is unbound; reach it via the on-screen keyboard. The
+better home. Rest and Recover (`z`) is on left-stick-click hold. The
 base layer is unchanged.
 
 ## Notes
@@ -102,10 +102,17 @@ base layer is unchanged.
 - **SPACE is still bound (LEFT system button, press)** even though Confirm now
   does a full inventory swap. It costs nothing and is the native inventory key —
   it lifts/places an item in the In-Air slot directly.
-- **The on-screen keyboard is on shift+D-pad-Right-hold.** Without it, typed prompts
-  (Name, Journal, the "Some" quantity prompt), container digit picks, and
-  inventory slot-letter selection are unreachable from the pad rather than merely
-  awkward. Behind a modifier it costs nothing.
+- **The on-screen keyboard is NOT bound to the pad, and MUST NOT be.** Use
+  **STEAM + X**, which toggles both ways. Steam offers only
+  `controller_action SHOW_KEYBOARD`, which shows the keyboard but cannot hide it,
+  so a pad binding summons a keyboard it cannot dismiss. Measured on device on
+  2026-08-31: the keyboard took input focus, A and B stopped reaching the game,
+  and neither the summoning chord, the Steam button nor navigating off the
+  keyboard gave focus back — the game had to be killed from outside. That is why
+  shift+D-pad-Right-hold is free. STEAM + X is how typed prompts (Name, Journal,
+  the "Some" quantity prompt), container digit picks and inventory slot letters
+  are reached. `tools/check_vdf_tokens.sh` fails the layout if the binding
+  returns.
 - **The back buttons M1/M2 cannot be bound at all on the Ally.** The pad reports
   them as keyboard keys (F16/F17/F18/PROG1), not as controller buttons, so no
   Steam Input binding name reaches them. Do not try `button_back_*` or
@@ -114,7 +121,7 @@ base layer is unchanged.
   buttons.
 - **Deliberately unbound:** Run (`,`) — left-stick autorun replaced it; Legend
   (`/`); and More (space, as a -more- key). The full command set is
-  reachable through the two tables above plus the on-screen keyboard.
+  reachable through the two tables above plus Steam's own keyboard (STEAM + X).
 - **Command keys are sent UNSHIFTED.** The keymap is case-insensitive (the game
   upper-cases the key before matching, `src/Wlibtcod.cpp:2177`), so lowercase
   keys resolve correctly. Only Help (`?`) and the stairs (`<` `>`) use

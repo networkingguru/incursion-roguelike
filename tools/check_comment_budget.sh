@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# gate: cheap
 #
 # Is any comment block or _PROBE block in src/ or inc/ over the 30-line ceiling,
 # and is it one this change made?

@@ -1,0 +1,778 @@
+# Three hell hounds, a hundred turns of their fire, and the suit's page either
+# side. Included by quality-self-immune-plain.keys and
+# quality-self-immune-quality.keys, AFTER each of those has or has not put the
+# quality on the suit.
+# Read by tools/check_quality_self_immune.sh (bd inc-to9x).
+#
+# NOT THE FLAME DRAKE, because it cannot be summoned at all. It is declared
+# MA_REPTILIAN only (lib/mon1.irh:1474), MA_REPTILIAN is 83
+# (inc/Defines.h:1618), and the summon menu walks 1..MA_LAST_REAL, which is 74
+# (src/Term.cpp:2887). No drake appears in any category.
+#
+# WHY HELL HOUNDS. Three things matter, and the hound (lib/mon4.irh:1992) is the
+# only summonable fire-breather that has all three.
+#   - It knows no spells. A monster adds its breath to the action list at
+#     P_URGENT (src/Monster.cpp:881), but a caster spends most of its turns
+#     casting instead; a red dragon was measured breathing four times in a
+#     hundred turns for exactly that reason, and a fire mephit fights other
+#     mephits.
+#   - Its breath is 2d6, which after src/Fight.cpp:1710 -- that line overwrites
+#     the rolled Number with max(1,e.Dmg.Number), so EVERY monster breath in
+#     this game delivers ONE die rather than its declared number of dice --
+#     lands as 1d6. The item takes half of that.
+#   - It is M_GROUP, so three of them hunt together instead of fighting each
+#     other, and three breaths a round is what makes a hundred turns enough.
+#
+# THE ORACLE is the suit's own page, read before and after. Its hit points are
+# the behavioural half; its hardness table, which ItemHardnessDesc builds by
+# calling Item::Hardness once per damage type, is the direct half. The game's
+# combat-numbers line (src/Item.cpp:1492-1513) prints "vs. 0 (leather)" or
+# "vs. Immune (leather)" as it happens, but only the LAST such line survives to
+# a screen dump, so no assertion rests on catching one.
+#
+# WHY A HUNDRED TURNS. The equipment block reaches the armour on about one
+# breath in four. Measured on seed 5, a hundred turns lands two hits on the
+# unprotected suit and takes it from 56 hit points to 52.
+
+@until "SPACE:Swap" i
+@until ">>j)Armour" j
+@until "base value of" x
+@dump:burn-before
+@until "Things in View" ESC
+
+w
+@choose "Monster Summoning"
+@choose "Dogs"
+@choose "hell hound"
+RIGHT*3 ENTER
+@while "more --" SPACE
+w
+@choose "Monster Summoning"
+@choose "Dogs"
+@choose "hell hound"
+LEFT*3 ENTER
+@while "more --" SPACE
+w
+@choose "Monster Summoning"
+@choose "Dogs"
+@choose "hell hound"
+UP*2 ENTER
+@while "more --" SPACE
+@dump:burn-summoned
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-001
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-002
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-003
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-004
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-005
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-006
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-007
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-008
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-009
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-010
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-011
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-012
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-013
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-014
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-015
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-016
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-017
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-018
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-019
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-020
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-021
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-022
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-023
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-024
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-025
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-026
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-027
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-028
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-029
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-030
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-031
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-032
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-033
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-034
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-035
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-036
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-037
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-038
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-039
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-040
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-041
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-042
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-043
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-044
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-045
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-046
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-047
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-048
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-049
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-050
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-051
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-052
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-053
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-054
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-055
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-056
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-057
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-058
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-059
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-060
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-061
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-062
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-063
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-064
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-065
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-066
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-067
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-068
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-069
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-070
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-071
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-072
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-073
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-074
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-075
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-076
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-077
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-078
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-079
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-080
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-081
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-082
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-083
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-084
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-085
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-086
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-087
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-088
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-089
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-090
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-091
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-092
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-093
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-094
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-095
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-096
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-097
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-098
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-099
+
+.
+@while "Die?" n
+@while "Hitpoint Warning" ESC
+@while "Counter?" n
+@while "more --" SPACE
+@dump:burn-turn-100
+
+@while "more --" SPACE
+@until "SPACE:Swap" i
+@until ">>j)Armour" j
+@until "base value of" x
+@dump:burn-after
+@until "Things in View" ESC
+
+# Clear the map before either arm reads anything else. The hounds do not stop
+# for the character screen, and a death prompt raised while a scroll is being
+# read spends every key after it. Wizard option 11 counted from the top of
+# src/Debug.cpp:544 kills every monster on the level and costs no game time.
+w
+@choose "Genocide Everything"
+@while "Die?" n
+@while "more --" SPACE
+@until "Things in View" ESC

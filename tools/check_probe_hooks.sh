@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # Every debugging hook in the shipped game names a bead, and none is deleted
 # until the reproduction it carries is preserved somewhere upstream can read it.
 #

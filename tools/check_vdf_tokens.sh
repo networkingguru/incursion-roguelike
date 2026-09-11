@@ -1,7 +1,19 @@
 #!/bin/bash
 # Regression check: every Steam Input key_press token avoids known-invalid
-# spellings, and tokens not attested in Valve's shipped SteamOS templates are
-# made visible for manual verification.
+# spellings, tokens not attested in Valve's shipped SteamOS templates are
+# made visible for manual verification, and no binding calls a controller_action
+# that Steam can start but cannot stop.
+#
+# THE SECOND GUARD, AND WHY IT IS HERE. Steam exposes SHOW_KEYBOARD but no
+# TOGGLE_KEYBOARD and no HIDE_KEYBOARD, so a pad binding can summon the
+# on-screen keyboard and then have no way to dismiss it. Measured on a ROG Ally
+# running SteamOS on 2026-08-31: the keyboard took input focus, A and B stopped
+# reaching the game, and neither the summoning chord, the Steam button nor
+# navigating off the keyboard returned focus. The game had to be killed from
+# outside the session. STEAM + X is the system keyboard and toggles both ways,
+# so nothing is lost by refusing the binding. This file is the ONE source
+# install-steamos.sh seds into all 18 controller_<type> templates, so one bad
+# binding here reaches every device the installer supports.
 #
 # WHY IT EXISTS. Steam Input keyboard bindings have the form
 #     "binding"    "key_press <TOKEN>, <human description>"
@@ -27,6 +39,8 @@ SCRIPT="$ROOT/tools/check_vdf_tokens.sh"
 
 # Human-maintained policy lists. The allowlist is deliberately a lower bound.
 DENYLIST="MINUS HYPHEN PLUS UNDERSCORE SLASH BACKSPACE_KEY CTRL ALT SHIFT ESC DEL"
+# controller_action values that start something Steam offers no way to stop.
+ACTION_DENYLIST="SHOW_KEYBOARD"
 ALLOWLIST="1 2 3 4 A B C COMMA D DASH DOWN_ARROW E END ENTER EQUALS ESCAPE F F1 F10 F11 F12 F2 F3 F4 F5 F6 F7 F8 F9 FORWARD_SLASH G H HOME I J K KEYPAD_1 KEYPAD_2 KEYPAD_3 KEYPAD_4 KEYPAD_6 KEYPAD_7 KEYPAD_8 KEYPAD_9 L LEFT_ALT LEFT_ARROW LEFT_CONTROL LEFT_SHIFT LEFT_WINDOWS M N NEXT_TRACK O P PAGE_DOWN PAGE_UP PERIOD PLAY PREV_TRACK Q R RETURN RIGHT_ARROW S SPACE T TAB U UP_ARROW V VOLUME_DOWN VOLUME_UP W X Y Z"
 
 selftest() {
@@ -58,6 +72,32 @@ selftest() {
         return 1
     fi
 
+    # The 2026-08-31 soft-lock, as the file carried it: the exact binding line.
+    printf '%s\n' '"binding"		"controller_action SHOW_KEYBOARD, Keyboard"' > "$fixture" || {
+        echo "SELFTEST FAIL: could not write the SHOW_KEYBOARD fixture"
+        return 1
+    }
+    bad_output="$("$SCRIPT" "$fixture" 2>&1)"
+    bad_status=$?
+    if [ "$bad_status" -ne 1 ]; then
+        echo "SELFTEST FAIL: SHOW_KEYBOARD fixture returned $bad_status, expected 1"
+        echo "$bad_output"
+        return 1
+    fi
+
+    # The prose case, which MUST NOT fail: the Description explains the ban.
+    printf '%s\n' '"Description"		"THE ON-SCREEN KEYBOARD IS NOT BOUND: Steam only offers controller_action SHOW_KEYBOARD, which SHOWS but cannot HIDE."' > "$fixture" || {
+        echo "SELFTEST FAIL: could not write the prose fixture"
+        return 1
+    }
+    bad_output="$("$SCRIPT" "$fixture" 2>&1)"
+    bad_status=$?
+    if [ "$bad_status" -ne 0 ]; then
+        echo "SELFTEST FAIL: prose fixture returned $bad_status, expected 0"
+        echo "$bad_output"
+        return 1
+    fi
+
     echo "SELFTEST PASS"
     return 0
 }
@@ -76,6 +116,17 @@ TARGET="${1:-$ROOT/docs/incursion-steam-input-ally.vdf}"
     echo "INCONCLUSIVE: target file is not readable: $TARGET"
     exit 2
 }
+
+# One-way controller_action guard. It reads BINDING LINES only, never the bare
+# word: the layout's own Description names SHOW_KEYBOARD to explain why nothing
+# binds it, and matching that prose would fail the file for documenting itself.
+for action in $ACTION_DENYLIST; do
+    hits="$(grep -n "\"binding\".*controller_action[[:space:]]\+$action" "$TARGET" || true)"
+    [ -n "$hits" ] || continue
+    echo "FAIL: $TARGET binds controller_action $action, which Steam can start but not stop:"
+    echo "$hits"
+    exit 1
+done
 
 awk -v denylist="$DENYLIST" -v allowlist="$ALLOWLIST" -v target="$TARGET" '
 BEGIN {

@@ -1,0 +1,47 @@
+# inc-cmo5: seed-7 human paladin, literal h twice on the toggle page.
+# First entry stays on page 1; TAB reaches the toggle on page 2.
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Human"
+@choose "Athletics"      # first racial skill
+@choose "Diplomacy"      # second racial skill
+@choose "Paladin"
+@choose "Erich"
+
+a       # Attributes: the first of the offered sets
+a       # Alignment:  the first offered
+
+@dump:initial-feats
+@until "(Show All Feats)" TAB
+@dump:toggle-before
+h
+@dump:toggle-on
+h
+@dump:toggle-off
+@until "Great Fortitude" TAB
+@choose "Great Fortitude"
+@until "Iron Will" TAB
+@choose "Iron Will"
+# Only the fixed build has a third pick left; page-1 b is Alertness.
+@while "Choose a feat" b
+
+# Skill Manager. RIGHT spends a rank on the selected skill and stops at that
+# skill's maximum; DOWN moves to the next skill. The loop matches the stars
+# that count unspent ranks, not the header, which stays on screen when the
+# pool is empty and so would never become false.
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+@while "wish to worship" y
+@while "personality archetype" a
+
+ESC     # dismiss the arrival room description
+
+d
+@until "Great Fortitude" PGDN
+PGDN*5
+@dump:sheet-feats
+ESC
+@quit

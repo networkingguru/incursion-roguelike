@@ -251,11 +251,21 @@ Terrain "tanglefoot strands" {
     hObj mount;
     mount = EActor->GetStatiObj(MOUNTED);
     if (mount) {
+      // upstream: this branch also asked whether the RIDER was stuck. Every
+      // other term here asks about the mount, because the mount is what the
+      // strands catch (see the EV_MOVE handler below), so a stuck rider made
+      // the whole square read as harmless to a pair whose mount was still
+      // catchable. It is read by three call sites, and it misleads all three:
+      // src/Move.cpp:577 drops the player's "Confirm enter the tanglefoot
+      // strands?" prompt, src/Move.cpp:583 lets a monster step in, and
+      // src/Djikstra.cpp:353 lets one path through. This is upstream's: pure
+      // lib/ script over platform-independent event semantics, so it
+      // misbehaves identically on the original Win32 build. Evidence: Traced
+      // (the three call sites above). inc-lxvv. Not sent upstream.
       if (mount->SkillLevel(SK_ESCAPE_ART) >= 5 ||
           mount->HasAbility(CA_WOODLAND_STRIDE) ||
           mount->ResistLevel(AD_STUK) == -1 ||
-          mount->HasStati(STUCK) || 
-          EActor->HasStati(STUCK) || 
+          mount->HasStati(STUCK) ||
           mount->isAerial())
         return NOTHING;
       else 
@@ -294,7 +304,7 @@ Terrain "tanglefoot strands" {
         // Win32 build. The fix mirrors the "pool of grease" terrain
         // (lib/dungeon.irh), which targets the mount. Evidence: Observed
         // (save/Keos.sav -- rider STUCK, mount not). inc-lxvv. Not sent upstream.
-        ThrowDmg(EV_DAMAGE,AD_STUK,-1,"tanglefoot strangs",mount,mount);
+        ThrowDmg(EV_DAMAGE,AD_STUK,-1,"tanglefoot strands",mount,mount);
         // A2 (inc-18q6): the terrain's own STICK_TYPE constant, declared
         // below, is what tags the hazard kind now -- src/Fight.cpp's
         // AD_STUK arm reads it straight off the square the victim stands
@@ -318,7 +328,7 @@ Terrain "tanglefoot strands" {
             EActor->GainPermStati(ENTANGLED,NULL,SS_MISC,0,0,$"tanglefoot strands");
           return NOTHING;
         }
-        ThrowDmg(EV_DAMAGE,AD_STUK,-1,"tanglefoot strangs",EActor,EActor);
+        ThrowDmg(EV_DAMAGE,AD_STUK,-1,"tanglefoot strands",EActor,EActor);
         // A2 (inc-18q6): see the mount branch above -- the terrain's own
         // STICK_TYPE now tags the hazard kind, so there is nothing to
         // retag here.
