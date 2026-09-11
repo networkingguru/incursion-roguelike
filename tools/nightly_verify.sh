@@ -74,6 +74,7 @@ RATCHET_CHECKS=(
 
     "tools/check_upstream_marks.sh"
     "tools/check_probe_hooks.sh"
+    "tools/check_xprint_tokens.sh"
     "tools/check_format_strings.sh"
     "tools/check_citations.sh --selftest"
     "tools/check_doc_citations.sh --base $BASE_REF"

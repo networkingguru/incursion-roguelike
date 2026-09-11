@@ -725,6 +725,7 @@ the unfixed tree before it is trusted.
 | `check_dequ_dc.sh` | Do exactly the four SRD monsters retain A_DEQU save DCs in the thirteen-monster roster? |
 | `check_fire_hardness.sh` | Do wood, leather and cloth have zero fire hardness while ironwood, darkwood and dragon hide retain theirs? |
 | `check_item_hardness.sh` | Does Item apply hardness modifiers once after preserving immunity, with QItem delegating? |
+| `check_xprint_tokens.sh` | Ratchet literal __XPrint object-token vararg overruns (inc-upw.30); Python 3 only. |
 | `check_item_owner_resist.sh` | Does item damage use its own defences without owner resistance or immunity? |
 | `check_dequ_magic_hardness.sh` | Against a monster whose A_DEQU carries no save DC, is a plain weapon's hardness bypassed while a magical weapon's is kept? Two sessions strike acid blobs, one with an ordinary long sword and one with a Holy Avenger, and read each sword's own description page before and after. |
 | `check_dequ_reach.sh` | Does a glaive user striking from two squares away now take the equipment retaliation he used to escape? The map shows the two-square gap, the message shows the blow landing, and the glaive's page shows the acid damage. |

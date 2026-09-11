@@ -938,8 +938,11 @@ EvReturn Magic::MagicStrike(EventInfo &e) {
         if (e.EVictim->HasStati(GAZE_REFLECTION,GR_IMMUNE))
             e.Immune = true;
         else if (e.EVictim->HasStati(GAZE_REFLECTION,GR_REFLECT)) {
+            // upstream: Both tags must reuse the sole argument; base string and
+            // formatter misbehave on Win32 with original typedefs/compiler too.
+            // Traced; inc-upw.30; not sent to rmtew.
             e.EActor->IDPrint("Your gaze is reflected back at you!",
-                "The <Obj>'s gaze is reflected back at <him:Obj>!", e.EActor);
+                "The <Obj1>'s gaze is reflected back at <him:Obj1>!", e.EActor);
             e.EVictim = e.EActor;
         }
     }

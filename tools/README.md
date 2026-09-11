@@ -15,6 +15,7 @@ rest until you need them.
 | `check_dequ_dc.sh` | Only the four named SRD A_DEQU monsters retain DCs (inc-m2zi AC8). |
 | `check_fire_hardness.sh` | Ordinary combustible materials lose fire hardness; enchanted materials keep it (inc-m2zi AC8). |
 | `check_item_hardness.sh` | Every Item gets modifiers once, after preserving immunity (inc-m2zi AC8). |
+| `check_xprint_tokens.sh` | Ratchet literal __XPrint object-token vararg overruns (inc-upw.30); Python 3 only. |
 | `check_item_owner_resist.sh` | Owner resistance and immunity cannot protect equipment (inc-w26h). |
 | `check_headless.sh` | The regression check for that harness. If this fails, no other measurement means anything. |
 | `soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about. |
@@ -559,6 +560,7 @@ tools/check_dequ_dice.sh # Declared A_DEQU dice must roll without tripling (inc-
 tools/check_dequ_dc.sh # Only the four named SRD A_DEQU monsters retain DCs (inc-m2zi AC8).
 tools/check_fire_hardness.sh # Ordinary combustible materials lose fire hardness; enchanted materials keep it (inc-m2zi AC8).
 tools/check_item_hardness.sh # Every Item gets modifiers once, after preserving immunity (inc-m2zi AC8).
+tools/check_xprint_tokens.sh    # Literal __XPrint object-token vararg backlog (inc-upw.30).
 tools/check_item_owner_resist.sh # Owner resistance and immunity cannot protect equipment (inc-w26h).
 tools/check_error_handling.sh       # greps src/*.cpp for the unbounded writes
 tools/check_upstream_marks.sh       # reads src/, inc/ and docs/REPORTING-GATE.md
