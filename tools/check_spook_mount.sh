@@ -1,4 +1,5 @@
 #!/bin/sh
+# gate: live
 # Does a mount keep its own aura, and keep owning it?
 #
 # bd inc-izzy. Two defects, one journey. Climbing onto an animal used to

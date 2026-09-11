@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # Verify that every base-code bug we have fixed is marked, and marked completely.
 #
 # The rule is in AGENTS.md and CLAUDE.md: a fix to a defect that is upstream's

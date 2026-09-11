@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Does a levitating character on the bottom level still stay on it? (bd inc-tos)
 #
 # THE DEFECT. Game::GetDungeonMap allocates min(MAX_DUNGEON_LEVELS, DUN_DEPTH+1)

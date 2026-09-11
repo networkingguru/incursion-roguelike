@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # Prove that the regression gate bites.
 #
 # The gate itself is checked against the real game by reintroducing a known
