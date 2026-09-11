@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# gate: cheap
 #
 # Does every regression check have a row in the README's check table?
 #

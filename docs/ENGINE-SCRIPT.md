@@ -27,7 +27,7 @@ configuration (`build.bat:67-74`) and by `build.sh:125-129`. Stage 3 has no
 `./lib` (`src/cpp3.c:66-69`), which with stage 2 is why `#include "Api.h"` at
 `lib/main.irc:2` resolves to `inc/Api.h`. `ICOMP` is predefined on every run
 (`src/cpp1.c:458`) and is the switch that lets one header serve both compilers
-(`inc/Defines.h:45`, `inc/Defines.h:4655`).
+(`inc/Defines.h:45`, `inc/Defines.h:4695`).
 
 ## What ships and what does not
 

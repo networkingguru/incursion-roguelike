@@ -1,3 +1,5 @@
+<!-- citations: this-port -->
+
 # tools/ — what is here and which parts matter
 
 This directory holds the unattended-testing harness for the macOS/Linux port of
@@ -105,7 +107,7 @@ them (`src/Debug.cpp`), so adding an option renumbers everything after it —
 dump the menu and read the letter rather than counting. And `w`, not `W`: an
 uppercase token sets SHIFT, and both key tables bind `KY_CMD_WIZMODE` with
 modifier flags of 0, so `W` is a different keystroke that reaches nothing
-(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:4715`/`4835`).
+(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:4739`/`4859`).
 
 `[M] Create Altar` is there for the harness. A sacrifice needs the player to
 be standing on an altar, and the only other source of one is `MakeLev`'s
@@ -373,7 +375,7 @@ the job, and each still explains an older log or an older commit.
 
 `run_probe.sh` was **deleted on 2026-08-18**. Its own header said "Delete this
 script once the saved-game position bug is fixed", and that bug is fixed:
-`docs/REPORTING-GATE.md:403` records `*((long*)&hm)` destroying the player's
+`docs/REPORTING-GATE.md:419` records `*((long*)&hm)` destroying the player's
 position as a closed fix, and `src/AbiCheck.cpp:11` now gates the type widths it
 depended on. It was also redundant — `play.sh` sets the same two probes and more
 (`play.sh:41-49`) and prints a report afterwards, which `run_probe.sh` did not.
@@ -388,6 +390,7 @@ Nothing invoked it; the only references were documentation. See
 | `gate_record.sh` | What does this build complain about, recorded as the thing later builds are measured against? | LIVE |
 | `gate_compare.sh` | Did anything get worse since the baseline? | LIVE |
 | `check_gate.sh` | Does the gate actually bite? Feeds it made-up logs in about a second. | LIVE |
+| `nightly_verify.sh` | The wrapper a branch must clear: both builds, the Linux cross-build, the layout sweep, `gate_compare.sh`, then every check that declares a gate tier, ratcheted against a recorded base. `--selftest` drives its own verdict table over made-up checks. | LIVE |
 
 ### The shared library for new checks
 
@@ -404,6 +407,7 @@ one that guards a real defect, and buys no behaviour. Read the header of
 
 | File | The question it answers | Status |
 |---|---|---|
+| `check_gate_membership.sh` | Does every check in this directory declare whether the gate should run it? Each carries `# gate: cheap`, `# gate: live` or `# gate: none <why not>` in its first 40 lines, and `nightly_verify.sh` reads those markers instead of a hand-written list. `gate_membership.baseline` excuses the 206 checks that predate the rule and only shrinks. Proves itself with `--selftest`. | LIVE |
 | `check_headless.sh` | Do the five properties every unattended run depends on still hold? | LIVE |
 | `check_abi.sh` | Did any save-format type width move, and does anything cast a handle to a pointer? | LIVE |
 | `check_abs_path.sh` | Does the game still resolve `argv[0]` to an absolute path? **Unsafe, see §7.** | LIVE |
@@ -568,6 +572,7 @@ tools/check_natural_speed.sh        # reads lib/weapons.irh against inc/Defines.
 tools/check_comment_budget.sh       # sizes comment and _PROBE blocks in src/, inc/
 tools/check_commit_lane.sh          # reads git log against the seven lanes
 tools/check_readme_checks.sh        # tools/check_*.sh against the README table
+tools/check_gate_membership.sh      # tools/check_* against their own gate markers
 tools/check_bead_publish.py         # reads the bead database against git HEAD
 tools/check_bead_new_gate.sh        # watches tools/bead_new.sh refuse an unfit bead
 ```
@@ -591,6 +596,8 @@ tools/check_lz_uncompress.sh --selftest
 tools/check_comment_budget.sh --selftest
 tools/check_commit_lane.sh --selftest
 tools/check_readme_checks.sh --selftest
+tools/check_gate_membership.sh --selftest
+tools/nightly_verify.sh --selftest
 tools/check_lib.sh --selftest
 tools/check_bead_publish.py --selftest
 python3 tools/flickerscan_selftest.py
@@ -731,6 +738,11 @@ tools/check_layout_sweep.sh --selftest   # stubbed, seconds, needs no build
 ```sh
 tools/gate_compare.sh               # re-runs every recorded baseline
 ```
+
+`tools/nightly_verify.sh` runs this for you: since 2026-09-11 the soak sits with
+the builds, so a full run costs its minute and reports a regression in the shape
+no single check can -- a complaint appearing in several sessions at once, fewer
+sessions reaching a map, more deaths or freezes.
 
 `tools/gates/dive.baseline` is committed, so a clone can run `gate_compare.sh`
 without recording anything. Do NOT run `gate_record.sh` unless you mean to

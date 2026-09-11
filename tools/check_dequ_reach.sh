@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Does a reach weapon now take the retaliation it used to dodge? (bd inc-m2zi)
 #
 # THE RULE. A_DEQU is a response attack: striking a monster that carries one

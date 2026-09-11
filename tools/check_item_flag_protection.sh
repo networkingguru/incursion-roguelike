@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Bracers of Neutralization protect gear through EF_PROTECTS_ITEMS (inc-w26h).
 # Acid is not blanket: the bracers' flag is the only route to the iron maul.
 # Acid blob (lib/mon3.irh) is a summonable low-CR jelly with 2d4 AD_ACID A_DEQU,

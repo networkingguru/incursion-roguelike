@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Rust immunity protects the owner's gear (bd inc-w26h).
 #
 # THE RULE. Soak and rust defences protect gear regardless of the grant's flag;

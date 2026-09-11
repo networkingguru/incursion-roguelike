@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # Gear inherits blanket soak/rust defences and otherwise only flagged grants.
 # Static Tier 1 (inc-w26h): clean(), function-scoped Python measurements.
 # Item::Damage uses its own hardness, one GearResistLevel call, an immunity

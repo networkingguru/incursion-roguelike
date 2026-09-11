@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Does a sundering blow still cost the striker his own weapon? (bd inc-m2zi)
 #
 # THE RULE. A_SUND puts the VICTIM's weapon in e.EItem2, which is correct --
