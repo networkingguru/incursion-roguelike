@@ -406,6 +406,7 @@ one that guards a real defect, and buys no behaviour. Read the header of
 | File | The question it answers | Status |
 |---|---|---|
 | `check_headless.sh` | Do the five properties every unattended run depends on still hold? | LIVE |
+| `check_feat_toggle.sh` | Do two presses of the feat toggle key toggle twice without spending a pick? | LIVE |
 | `check_abi.sh` | Did any save-format type width move, and does anything cast a handle to a pointer? | LIVE |
 | `check_abs_path.sh` | Does the game still resolve `argv[0]` to an absolute path? **Unsafe, see §7.** | LIVE |
 | `check_alienist_live.sh` | Does the Alienist's Surreal Presence field exist and speak? A kobold summoned beside her must read "seems unsettled". | LIVE |
@@ -627,6 +628,7 @@ that binary afterwards (`check_strqueue.sh:95`). It copies the frozen
 ```sh
 BACKEND=posix ./build_macos.sh
 tools/check_headless.sh             # run this one FIRST of the tier
+tools/check_feat_toggle.sh
 tools/check_dump_save.sh
 tools/check_load_corrupt.sh
 tools/check_race_feats.sh

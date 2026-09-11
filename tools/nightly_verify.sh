@@ -90,6 +90,7 @@ RATCHET_CHECKS=(
 # exactly the same way. On a tree with no headless binary each exits 2, which
 # the ratchet reads as "could not measure" and not as a regression.
 LIVE_CHECKS=(
+    "tools/check_feat_toggle.sh"
     "tools/check_dequ_magic_hardness.sh"
     "tools/check_dequ_reach.sh"
     "tools/check_dequ_sunder.sh"
