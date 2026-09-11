@@ -17,6 +17,8 @@ rest until you need them.
 | `check_item_hardness.sh` | Every Item gets modifiers once, after preserving immunity (inc-m2zi AC8). |
 | `check_item_owner_resist.sh` | Gear inherits blanket soak/rust defences and otherwise only flagged grants (inc-w26h). |
 | `check_item_flag_protection.sh` | Flagged acid immunity keeps an iron maul undamaged against acid-blob retaliation (inc-w26h). |
+| `check_xprint_tokens.sh` | Ratchet literal __XPrint object-token vararg overruns (inc-upw.30); Python 3 only. |
+| `check_gaze_reflect_message.sh` | A reflected gaze must name the gazing monster once, on screen (inc-upw.30); needs the POSIX build. |
 | `check_headless.sh` | The regression check for that harness. If this fails, no other measurement means anything. |
 | `soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about. |
 | `gate_record.sh` + `gate_compare.sh` + `gate_lib.sh` | The regression gate. `gate_record.sh` freezes a build's behaviour into `tools/gates/*.baseline`; `gate_compare.sh` re-runs the same seeds and says what got worse. |
@@ -563,6 +565,7 @@ tools/check_dequ_dc.sh # Only the four named SRD A_DEQU monsters retain DCs (inc
 tools/check_fire_hardness.sh # Ordinary combustible materials lose fire hardness; enchanted materials keep it (inc-m2zi AC8).
 tools/check_item_hardness.sh # Every Item gets modifiers once, after preserving immunity (inc-m2zi AC8).
 tools/check_item_owner_resist.sh # Gear inherits blanket soak/rust defences and otherwise only flagged grants (inc-w26h).
+tools/check_xprint_tokens.sh    # Literal __XPrint object-token vararg backlog (inc-upw.30).
 tools/check_error_handling.sh       # greps src/*.cpp for the unbounded writes
 tools/check_upstream_marks.sh       # reads src/, inc/ and docs/REPORTING-GATE.md
 tools/check_api_arity.py            # reads inc/Api.h against the C++ headers
@@ -680,7 +683,16 @@ tools/check_dequ_reach.sh           # a blow struck at reach now takes the equip
 tools/check_dequ_sunder.sh          # a sunder's retaliation lands on the striker's weapon, not the victim's
 tools/check_dequ_owner_immunity.sh  # rust immunity keeps the owner's maul undamaged
 tools/check_item_flag_protection.sh # flagged acid immunity keeps the owner's maul undamaged
+tools/check_gaze_reflect_message.sh # a reflected gaze names the gazing monster once, in a sentence that parses
 ```
+
+`check_gaze_reflect_message.sh` is the live twin of Tier 1's
+`check_xprint_tokens.sh`. The static one counts vararg-consuming tokens in
+source text; this one summons a bodak at a character carrying Gaze Reflection
+and reads the sentence the reflection puts on the screen. Reverting the fix does
+not merely reword that sentence -- the session dies inside `__XPrint` -- and
+`check_lib.sh` fails a session the game killed, so the death is the
+measurement.
 
 The four `check_dequ_*` scripts and `check_item_flag_protection.sh` above are the behavioural half of inc-m2zi and
 inc-w26h; the five `check_dequ_dc.sh`-style scripts in Tier 1 are the static
