@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # Declared A_DEQU dice must roll without tripling (inc-m2zi AC8).
 # Static Tier 1: Python 3 only; no binary, compiler, build or game run.
 # WHY: a quiet reversion of the equipment rules must fail independently of gameplay.

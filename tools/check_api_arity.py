@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# gate: cheap
 """Compare every script API declaration in inc/Api.h with the real C++ one.
 
 WHY THIS EXISTS. inc/Api.h declares the script-callable API in its own syntax.

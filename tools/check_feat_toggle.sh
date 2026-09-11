@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # inc-cmo5: the port's paged feat toggle must not spend a pick.
 # Seed 7: h toggles 59 -> 224 -> 59 entries; the sheet keeps all three picks.
 # --prove-red removes the conditional pos argument from GainFeat's LMenu call.
