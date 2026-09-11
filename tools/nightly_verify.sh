@@ -85,7 +85,7 @@ RATCHET_CHECKS=(
 
 # The behavioural half of inc-m2zi and inc-w26h. These are listed apart from the
 # ratcheted checks above because the rule stated there does not hold of them:
-# each one PLAYS the game, so it needs ./incursion-headless, and the four
+# each one PLAYS the game, so it needs ./incursion-headless, and the five
 # together cost about two minutes rather than seconds. They are ratcheted in
 # exactly the same way. On a tree with no headless binary each exits 2, which
 # the ratchet reads as "could not measure" and not as a regression.
@@ -94,6 +94,7 @@ LIVE_CHECKS=(
     "tools/check_dequ_reach.sh"
     "tools/check_dequ_sunder.sh"
     "tools/check_dequ_owner_immunity.sh"
+    "tools/check_item_flag_protection.sh"
 )
 
 ALL_CHECKS=( "${RATCHET_CHECKS[@]}" "${LIVE_CHECKS[@]}" )

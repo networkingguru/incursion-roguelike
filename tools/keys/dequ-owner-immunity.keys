@@ -1,35 +1,26 @@
-# Give the character total immunity to rust, then let a mud elemental rust his
-# weapon anyway, and read the weapon's page before and after (bd inc-w26h).
+# Give the character total immunity to rust, then read his maul's page before
+# and after five mud-elemental retaliations (bd inc-w26h).
 #
-#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#       tools/headless.sh tools/keys/dequ-owner-immunity.keys 5
+#   tools/check_dequ_owner_immunity.sh
 #
-# WHAT IS BEING MEASURED. Item::Damage used to return before it did anything at
-# all -- no damage, no message -- when the item's OWNER was immune to the
-# damage type:
+# WHAT IS BEING MEASURED. Soak and rust defences protect the owner's gear
+# regardless of the grant's flag; other damage types require EF_PROTECTS_ITEMS.
+# This checks the blanket rust half: the immune owner's maul stays undamaged.
+# The rust case in src/Fight.cpp:7009-7040 damages an item and never costs the
+# creature hit points, so a wearer-only rust grant would be a no-op.
 #
-#     if (owner)
-#         if (e.DType == AD_SOAK || e.DType == AD_RUST || e.DType == AD_DCAY)
-#             if (owner->ResistLevel(e.DType) == -1)
-#                 return DONE;
-#
-# so a character who could not be rusted himself carried a sword that could not
-# be rusted either. The owner's defences no longer reach his gear.
-#
-# WHY THESE GAUNTLETS. "Rust;gauntlet" (lib/m_items.irh:4348) grants IMMUNITY
-# to exactly the three damage types that block named -- AD_RUST, AD_DCAY and
-# AD_SOAK -- so wearing them makes ResistLevel(AD_RUST) return -1, which is the
-# sentinel the old code tested. Nothing else in wizard mode gives a character a
-# true immunity: the Ring of Elemental Command grants a resistance of 10, which
-# is a magnitude and not the sentinel.
+# WHY THESE GAUNTLETS. "Rust;gauntlet" (lib/m_items.irh:4348) grants total
+# immunity to rust, decay and soak. The sheet must show Rusting under Complete
+# Immunities. These gauntlets also carry EF_PROTECTS_ITEMS, so either route
+# protects the maul; the check's mutation breaks their shared delivery point
+# in Item::Damage rather than either route in GearResistLevel.
 #
 # WHY A SMALL MUD ELEMENTAL. Its A_DEQU is 1d6 AD_RUST (lib/mon4.irh:2396) and
-# iron has a hardness of 0 against rust, so every retaliation that lands does
-# its whole roll. The old rule leaves the weapon untouched; the new one rusts
-# it. That is a difference in kind, not in degree.
+# iron has hardness 0 against rust, so every retaliation that lands does its
+# whole roll when unprotected. Frozen monsters still retaliate on a hit.
 #
-# WHY A MAUL. It is the heaviest ordinary weapon in lib, 262 hit points, so
-# three retaliations cannot destroy it and leave no page to read. It is iron,
+# WHY A MAUL. It has 262 hit points, the heaviest ordinary weapon in lib/, so
+# five retaliations cannot destroy it and leave no page to read. It is iron,
 # which is what rusts.
 #
 # ONE ELEMENTAL PER BLOW, for the reason tools/keys/dequ-hardness-plain.keys

@@ -1586,7 +1586,7 @@ AI_POTION Effect "See Invisibility;potion" : EA_INFLICT
 
 AI_BRACERS Effect "the Endless Wave" : EA_GRANT
   { SC_THA; SC_ABJ; xval: SKILL_BONUS; yval: SK_SWIMMING; pval: PLUS_2PER1;
-    Purpose: EP_BUFF;  Flags: EF_NEEDS_PLUS; Level: PLUS_2PER1_ADD1; 
+    Purpose: EP_BUFF;  Flags: EF_NEEDS_PLUS, EF_PROTECTS_ITEMS; Level: PLUS_2PER1_ADD1; 
     Desc: "When worn, this item grants you a magic bonus to your
       Swimming skill equal to twice its plus. In addition, it makes
       you inoffensive to water creatures and makes you immune to soaking
@@ -1759,7 +1759,7 @@ AI_EYES Effect "Terror;eyes" : EA_GRANT
   { SC_ABJ; xval: SAVE_BONUS; yval: SN_FEAR; pval: +5; }
 
 AI_EYES Effect "Stone;eyes" : EA_GRANT
-  { SC_ABJ; xval: GAZE_REFLECTION; yval: GR_IMMUNE; Level: 1; 
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; xval: GAZE_REFLECTION; yval: GR_IMMUNE; Level: 1; 
     Desc: "These lenses appear to be opaque, but when worn they
     can be seen through normally.  They grant the wearer immunity to
     all incoming gaze attacks (i.e. - from basilisks, jackal lords,
@@ -4056,13 +4056,13 @@ AI_BRACERS Effect "Missile Deflection" : EA_GRANT
       gaining that feat normally."; }
 
 AI_BRACERS Effect "Neutralization" : EA_GRANT
-  { SC_ABJ; Level: 10;
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; Level: 10;
     xval: IMMUNITY; yval: AD_ACID; 
     Desc: "These legendary bracers grant you a total immunity to
       damage from acid when worn."; }
 
 AI_BRACERS Effect "Grounding" : EA_GRANT
-  { SC_ABJ; Level: 10;
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; Level: 10;
     xval: IMMUNITY; yval: AD_ELEC; 
     Desc: "These legendary bracers grant you a total immunity to
       damage from lightning or electricity when worn."; }
@@ -4346,7 +4346,7 @@ AI_GAUNTLETS Effect "Fumbling" : EA_GRANT
       penalty to your Dexterity score."; }
 
 AI_GAUNTLETS Effect "Rust;gauntlet" : EA_GRANT
-  { SC_ABJ; Level: 2; xval: IMMUNITY; yval: AD_RUST; }
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; Level: 2; xval: IMMUNITY; yval: AD_RUST; }
   and EA_GRANT
   { SC_ABJ; Level: 2; xval: IMMUNITY; yval: AD_DCAY; }
   and EA_GRANT

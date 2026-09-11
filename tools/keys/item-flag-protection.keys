@@ -1,0 +1,95 @@
+# Flagged acid immunity protects an ordinary maul (bd inc-w26h).
+# Acid blobs retaliate for 2d4 acid; Freeze Monsters prevents their own turns.
+@include dequ-setup.keys
+
+# --- the bracers that make the character immune to acid ---
+w
+@choose "Item Acquisition"
+RIGHT*21                # walk the glyph row to bracers
+@until "Neutralization" DOWN
+DOWN                    # the wanted row is the middle of three; step onto it
+ENTER
+r                       # Bracers
+SPACE
+@until "Things in View" ESC
+
+# --- the weapon whose hit points are measured ---
+w
+@choose "Item Acquisition"
+RIGHT*9                 # walk the glyph row to ordinary weapons
+@until "Maul" DOWN
+DOWN
+ENTER
+b                       # Weapon Hand
+SPACE
+@while "two-handed" y
+s                       # stow the starting knife the swap pushed into the air
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:flag-before
+@until "Things in View" ESC
+
+# The character sheet's Resistances page, as evidence that the immunity is
+# really on him and not merely bought.
+d
+@until "Resistances and Armour" DOWN
+@dump:flag-sheet
+@until "Things in View" ESC
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:flag-strike-1
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:flag-strike-2
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:flag-strike-3
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:flag-strike-4
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:flag-strike-5
+
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:flag-after
+@until "Things in View" ESC
+@quit
