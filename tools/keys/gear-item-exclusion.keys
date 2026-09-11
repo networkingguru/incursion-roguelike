@@ -1,0 +1,153 @@
+# An item the owner ruled wearer-only leaves the gear exposed (bd inc-w26h).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/gear-item-exclusion.keys 5
+#
+# WHAT IS BEING MEASURED. The Amulet of Bile (lib/m_items.irh:516) grants
+# RESIST AD_ACID of 4 per magical plus and carries no EF_PROTECTS_ITEMS. The
+# owner ruled it wearer-only, so Creature::GearResistLevel (src/Values.cpp) must
+# hand the bearer's gear NOTHING, however large the wearer's own resistance is.
+# This is the negative control for tools/keys/gear-spell-protection.keys, and it
+# uses the same weapon, the same monster and the same twelve blows.
+#
+# WHY +3. The wizard menu's item-level prompt sets the plus, so the wearer's own
+# acid resistance is a measured 12 -- four times the plus -- and the character
+# sheet must show it. Without that second assertion the session would pass on an
+# amulet that was never equipped, which proves nothing at all.
+#
+# WHY A SILVERED MAGIC WARHAMMER AND A MAGMA CREEPER. Both are chosen in
+# tools/keys/gear-spell-protection.keys, for reasons set out in its header: the
+# weapon is silvered so that its acid hardness is a measurable 12, and the
+# creeper's 3d6 AD_ACID A_DEQU carries no save DC, so no Reflex roll stands
+# between the acid and the hammer. The creeper rolls up to 18, so an unprotected
+# hammer takes damage; add the flag and 12 + 12 = 24 puts it beyond every roll.
+# Since inc-kapn the bypass at src/Item.cpp:1451 zeroes only what Hardness()
+# returned, so the magic is no longer what makes the grant measurable.
+#
+# The oracle is the game's own combat-numbers line (src/Item.cpp:1494-1514),
+# which prints the hardness AFTER the owner's gear resistance is added:
+#   "Warhammer, Dwarven Thrower +2: 3d6 Acid = 13 vs. 12 (silver) [1 damage]"
+# 12 is the hardness alone. The amulet's 12 does not appear in it, and the
+# hammer melts. Flag the amulet and the same line reads "vs. 24 (silver)".
+
+@include dequ-setup.keys
+
+# --- the amulet that must protect its wearer and nothing else ---
+w
+@choose "Item Acquisition"
+RIGHT*27
+@until "Bile" DOWN
+DOWN                    # the wanted row is the last of three; step onto it
+ENTER
+"3"
+ENTER
+o                       # Neck
+SPACE
+s                       # stow the holy symbol the swap pushed into the air
+@until "Things in View" ESC
+
+# --- the weapon whose hit points are measured ---
+# ENTER at the item-level prompt keeps the effect's own INITIAL_PLUS of +2.
+w
+@choose "Item Acquisition"
+RIGHT*10
+@until "Dwarven Thrower" DOWN
+DOWN
+ENTER
+@expect "Enter Item Level"
+ENTER
+b
+SPACE
+@while "two-handed" y
+s                       # stow the starting knife the swap pushed into the air
+@until "Things in View" ESC
+
+w
+@choose "Add Quality to Weapon"
+"IQ_SILVER"
+ENTER
+@until "Things in View" ESC
+
+# The plus is unknown to the character until it is identified, and an
+# unidentified item's page hides its hit points.
+w
+@choose "Identify Whole Pack"
+@until "Things in View" ESC
+
+# The character sheet's Resistances page, as evidence that the amulet really is
+# worn and really does protect the WEARER.
+d
+@until "Resistances and Armour" DOWN
+@dump:excl-sheet
+@until "Things in View" ESC
+
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:excl-before
+@until "Things in View" ESC
+
+# One creeper for all twelve blows. Its body is gargantuan, so the summon
+# cursor's square is not where the body's western edge lands; the character
+# walks east until he bumps into it, and every RIGHT after that is a blow.
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "magma creeper"
+RIGHT*4 ENTER
+
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:excl-strike-01
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:excl-strike-02
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:excl-strike-03
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:excl-strike-04
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:excl-strike-05
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:excl-strike-06
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:excl-strike-07
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:excl-strike-08
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:excl-strike-09
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:excl-strike-10
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:excl-strike-11
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:excl-strike-12
+
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:excl-after
+@until "Things in View" ESC
+@quit

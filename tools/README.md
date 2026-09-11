@@ -411,6 +411,7 @@ one that guards a real defect, and buys no behaviour. Read the header of
 | File | The question it answers | Status |
 |---|---|---|
 | `check_gate_membership.sh` | Does every check in this directory declare whether the gate should run it? Each carries `# gate: cheap`, `# gate: live` or `# gate: none <why not>` in its first 40 lines, and `nightly_verify.sh` reads those markers instead of a hand-written list. `gate_membership.baseline` excuses the 206 checks that predate the rule and only shrinks. Proves itself with `--selftest`. | LIVE |
+| `check_gear_protection_roster.sh` | Does `lib/` still match the whole `EF_PROTECTS_ITEMS` ruling table? Holds the 36 effects the repo owner ruled protect carried gear, the 22 grants he ruled wearer-only, and his two general rules -- spells are `y`, domains and gods and races and subraces are `n`. `gear_protection_roster.py` does the measuring; `--prove-red` breaks each part in turn and demands that part's own verdict line turn red. Red today on part C1, which names two unflagged priest spells for his ruling. | LIVE |
 | `check_headless.sh` | Do the five properties every unattended run depends on still hold? | LIVE |
 | `check_feat_toggle.sh` | Do two presses of the feat toggle key toggle twice without spending a pick? | LIVE |
 | `check_abi.sh` | Did any save-format type width move, and does anything cast a handle to a pointer? | LIVE |
@@ -569,6 +570,7 @@ tools/check_dequ_dc.sh # Only the four named SRD A_DEQU monsters retain DCs (inc
 tools/check_fire_hardness.sh # Ordinary combustible materials lose fire hardness; enchanted materials keep it (inc-m2zi AC8).
 tools/check_item_hardness.sh # Every Item gets modifiers once, after preserving immunity (inc-m2zi AC8).
 tools/check_item_owner_resist.sh # Gear inherits blanket soak/rust defences and otherwise only flagged grants (inc-w26h).
+tools/check_gear_protection_roster.sh # The whole EF_PROTECTS_ITEMS ruling table: 36 flagged effects, 22 wearer-only grants, the two general rules (inc-w26h).
 tools/check_xprint_tokens.sh    # Literal __XPrint object-token vararg backlog (inc-upw.30).
 tools/check_error_handling.sh       # greps src/*.cpp for the unbounded writes
 tools/check_upstream_marks.sh       # reads src/, inc/ and docs/REPORTING-GATE.md
@@ -689,6 +691,8 @@ tools/check_dequ_reach.sh           # a blow struck at reach now takes the equip
 tools/check_dequ_sunder.sh          # a sunder's retaliation lands on the striker's weapon, not the victim's
 tools/check_dequ_owner_immunity.sh  # rust immunity keeps the owner's maul undamaged
 tools/check_item_flag_protection.sh # flagged acid immunity keeps the owner's maul undamaged
+tools/check_gear_spell_protection.sh # a spell's SIBLING clause protects the caster's gear; the flag is shared across clauses
+tools/check_gear_item_exclusion.sh  # the wearer-only Amulet of Bile leaves the bearer's gear exposed
 tools/check_gaze_reflect_message.sh # a reflected gaze names the gazing monster once, in a sentence that parses
 tools/check_dungeonmap_bounds.sh    # a levitating character on the bottom level stays on it
 tools/check_tanglefoot_mount.sh     # tanglefoot catches the mount, not the rider on its back
@@ -704,11 +708,23 @@ not merely reword that sentence -- the session dies inside `__XPrint` -- and
 `check_lib.sh` fails a session the game killed, so the death is the
 measurement.
 
-The four `check_dequ_*` scripts and `check_item_flag_protection.sh` above are the behavioural half of inc-m2zi and
+The four `check_dequ_*` scripts, `check_item_flag_protection.sh`,
+`check_gear_spell_protection.sh` and `check_gear_item_exclusion.sh` above are
+the behavioural half of inc-m2zi and
 inc-w26h; the five `check_dequ_dc.sh`-style scripts in Tier 1 are the static
 half. Each drives one or two seeded sessions and reads the struck
 weapon's own description page -- reached from the inventory with 'x' -- before
-and after the blows. `check_dequ_magic_hardness.sh` runs two sessions, because
+and after the blows. The last two add a second reading, because a RESIST is a
+number rather than a yes or no: they read the hardness off the game's own
+combat-numbers line, which `Item::Damage` prints AFTER adding the bearer's gear
+resistance to it. Those two silver a magic warhammer for the ordering
+`Item::Damage` used to have: a no-save A_DEQU sets `ignoreHardness` on a plain
+item (`src/Fight.cpp:2090`), and the bearer's grant was added before the bypass
+emptied it, so a resistance was unmeasurable on ordinary gear. inc-kapn
+inverted that -- the bypass now empties only what `Hardness()` returned -- and
+`check_gear_bypass_survives.sh` measures a resistance on a plain iron maul. The
+warhammer stays because its silvered 12 is a hardness the creeper's 3d6 can
+still beat, which is what makes the mutation bite. `check_dequ_magic_hardness.sh` runs two sessions, because
 every retaliation that lands on the character rather than on his weapon costs
 him 2d4 hit points and a level-one orc cannot pay for both halves in one life.
 

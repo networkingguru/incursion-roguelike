@@ -459,7 +459,7 @@ AI_TOME Effect "Libram of Hidden Secrets" : EA_GENERIC
 
 AI_BOOTS Effect "the Winterlands" : EA_GRANT
   { SC_ABJ; 
-    xval: RESIST; yval: AD_COLD; pval: PLUS_3PER1; Flags: EF_NEEDS_PLUS;
+    xval: RESIST; yval: AD_COLD; pval: PLUS_3PER1; Flags: EF_NEEDS_PLUS, EF_PROTECTS_ITEMS;
     Level: PLUS_2PER1; 
     Desc: "This renders you (and your mount) immune to slipping on
     ice, and gives you three levels of cold resistance per magical plus
@@ -478,14 +478,14 @@ and EA_GRANT
     
 AI_BRACERS Effect "the Inferno" : EA_GRANT
   { SC_ABJ; xval: RESIST; yval: AD_FIRE; pval: PLUS_4PER1; 
-    Flags: EF_NEEDS_PLUS; Level: PLUS_2PER1; 
+    Flags: EF_NEEDS_PLUS, EF_PROTECTS_ITEMS; Level: PLUS_2PER1; 
     Desc: "This bestows upon its wearer 4 points of fire
       resistance for every magical plus it is imbued with and allows you
       (and your mount) to travel safely over fiery terrain."; }
 
 AI_RING Effect "Fire Resistance" : EA_GRANT
   { SC_ABJ; xval: RESIST; yval: AD_FIRE; pval: PLUS_3PER1;
-    Flags: EF_NEEDS_PLUS; Level: PLUS_2PER1; 
+    Flags: EF_NEEDS_PLUS, EF_PROTECTS_ITEMS; Level: PLUS_2PER1; 
     Desc: "This ring makes its wearer supernaturally resistant to heat
       and fire, granting her a fire resistance of 3 points per magical
       plus, and allowing her (and her mount) to cross over fiery terrain
@@ -570,7 +570,7 @@ and EA_BLAST
 
 AI_GIRDLE Effect "the Stormlord" : EA_GRANT
   { SC_ABJ; xval: RESIST; yval: AD_ELEC; pval: PLUS_3PER1; 
-    Flags: EF_NEEDS_PLUS; Level: PLUS_3PER1; }
+    Flags: EF_NEEDS_PLUS, EF_PROTECTS_ITEMS; Level: PLUS_3PER1; }
 and EA_GRANT
   { xval: RESIST; yval: AD_SONI; pval: PLUS_3PER1;
     Desc: "This magical belt gives the wearer authority over storms, granting
@@ -598,7 +598,7 @@ and EA_GRANT
 
 AI_WONDER Effect "Musical Defense" : EA_GRANT
   { SC_ABJ; xval: RESIST; yval: AD_SONI; pval: PLUS_3PER1;
-    Flags: EF_NEEDS_PLUS; Level: PLUS_2PER1;
+    Flags: EF_NEEDS_PLUS, EF_PROTECTS_ITEMS; Level: PLUS_2PER1;
     Desc: "This magical instrument grants its bearer protection from
       sound-based attacks -- three levels of sonic resistance per
       magical plus it possesses. In the hands of a character with
@@ -3712,7 +3712,7 @@ AI_STAFF Effect "the Abyss" : EA_GRANT
          reasoned: the same line was tried here first, and the good
          character still held the staff's spells afterwards. The Exorcism
          defect is tracked separately as bd inc-tek.29. isMType(MA_GOOD)
-         reads the ALIGNMENT stati directly (src/Values.cpp:2465-2468) and
+         reads the ALIGNMENT stati directly (src/Values.cpp:2561-2564) and
          is how the rest of lib/ asks this question.
 
          The defect is upstream's: this is module content, not port code.
@@ -5913,7 +5913,7 @@ AI_HEADBAND Effect "Circlet of Spellbreaking" : EA_GRANT
 
 AI_HEADBAND Effect "Cowl of Warding" : EA_GRANT
   { SC_ABJ; xval: IMMUNITY; yval: AD_MIND; Level: PLUS_3PER1_ADD7; 
-    Flags: EF_NAMEONLY | EF_NEEDS_PLUS; }
+    Flags: EF_NAMEONLY | EF_NEEDS_PLUS | EF_PROTECTS_ITEMS; }
 and EA_GRANT
   { xval: IMMUNITY; yval: AD_PLYS; }
 and EA_GRANT
@@ -6663,7 +6663,7 @@ Item "short sword;sunblade" : T_WEAPON
   }
   
 AI_WEAPON Effect "Sunblade" : EA_GRANT
-  { SC_EVO; Level: 8; Flags: EF_NAMEONLY, EF_ACTIVATE3, EF_3PERDAY;
+  { SC_EVO; Level: 8; Flags: EF_NAMEONLY, EF_ACTIVATE3, EF_3PERDAY, EF_PROTECTS_ITEMS;
     xval: RESIST; yval: AD_NECR; pval: PLUS_2PER1;
     Desc: "Though this weapon materially appears to be a bastard
       sword, and is such to all physical examination, when picked

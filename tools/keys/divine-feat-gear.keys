@@ -1,0 +1,268 @@
+# Two divine feats reach the bearer's CARRIED GEAR, not just his hit points
+# (bd inc-w26h).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/divine-feat-gear.keys 5
+#
+# WHAT IS BEING MEASURED. FT_DIVINE_RESISTANCE grants the bearer's Charisma
+# modifier against fire, cold and lightning while he holds the CHANNELING
+# stati, and FT_DIVINE_ARMOUR grants twice that modifier against five other
+# types. src/Values.cpp reads both through one helper, DivineFeatResist, from
+# BOTH Creature::ResistLevel (the bearer) and Creature::GearResistLevel (his
+# equipment). This session asks one question: does the GEAR half reach a plain
+# iron weapon?
+#
+# WHY THIS MEASURES DIVINE RESISTANCE AND NOT DIVINE ARMOUR. Of the five types
+# Divine Armour covers, not one has a monster that can damage equipment with
+# it: grep A_DEQU across lib/ and the damage types are fire, acid, decay, rust
+# and shatter only. So Divine Armour has no live carrier to measure, and it is
+# covered instead by the helper the two feats share plus the static rule in
+# tools/equipment_static.py.
+#
+# WHY A FIREBAT. Its A_DEQU is 1d3 AD_FIRE with NO save DC (lib/mon2.irh:3716),
+# and it is the only fire, cold or lightning carrier in lib/ with no DC. No DC
+# matters: src/Fight.cpp:2090 sets e.ignoreHardness whenever a no-save A_DEQU
+# strikes a NON-magical item, so iron contributes nothing at all and the feat's
+# grant is the WHOLE of the number on the line.
+#
+# WHY CHARISMA 18, AND WHY THAT IS DECISIVE RATHER THAN LUCKY. The point-buy
+# screen below spends all 75 points and puts Charisma at its 18 cap, so
+# Creature::Mod returns (18-10)/2 = 4. Iron's fire hardness is 10 and the
+# bypass zeroes it, so Item::Damage (src/Item.cpp:1463) computes hard = 0 + 4
+# and then returns at :1527 whenever hard >= e.vDmg. 1d3 cannot exceed 3 and
+# 4 > 3, so NO roll can reach the warhammer. Charisma 16 would also hold -- 3
+# >= 3 returns too -- but only on the boundary, and 18 is one point clear of
+# the largest roll the die has.
+#
+# HOW THE CHARACTER GETS CHANNELING. src/Skills.cpp:4492 grants
+# CHANNELING for Charisma x 2 rounds whenever a character with any of seven
+# divine feats uses Turn or Greater Turning. The grant is at :4492 and the turn
+# is rolled at :4496, AFTER it, so the attempt does not have to succeed and no
+# undead need be present: this session turns into an empty room and the game
+# answers "You channel the sacred energies of Aiswin. Nothing happens." while
+# still putting Channeling on the status line. What the code does require, all
+# checked above the grant, is a god, that god's favour, and a holy symbol; a
+# priest starts with all three. 36 rounds covers the whole session.
+#
+# WHY THE FEATS NEED A BUILT CHARACTER. src/FeatTab.cpp:630 asks
+# FT_DIVINE_RESISTANCE for the Turning ability, Charisma 13 and FT_ENDURANCE,
+# and FT_ENDURANCE (:1215) asks Constitution 13. No rolled attribute set on
+# this seed offers both, so the character is built at the point-buy screen
+# instead of chosen from the five sets, and takes Endurance at one feat prompt
+# and Divine Resistance at the next.
+#
+# WHY THIS SCRIPT CHANGES ONE SETTING, AND ONLY ONE. "Monsters Maximum Hit
+# Points" is turned from NO to DOUBLE in the character generation options
+# below. A firebat has 1 hit die, and a blow that KILLS its target leaves no
+# item for the retaliation to aim at -- the engine aims it at the striker
+# instead and prints "Fire sears you!", which is the same trap
+# tools/keys/dequ-hardness-plain.keys describes. DOUBLE gives the bat
+# 1 x d10 x 2, times 7/10 for being tiny (src/Values.cpp:2313), so 14 hit
+# points; the warhammer below cannot roll past 12, so every fresh bat survives
+# the blow that provokes it. Nothing else about the session changes.
+#
+# WHY A WARHAMMER. It is iron, mundane, an impact weapon the priest is
+# proficient with, it rolls 1d8+4 = 5 to 12 which is under the bat's 14, and it
+# has 45 hit points -- enough that the mutated run, which takes 1 to 3 points a
+# blow, still has a page to read at the end.
+#
+# ONE BAT PER NEIGHBOURING SQUARE. Each bat survives its blow and stays where
+# it is, so the next bat is summoned into the next of the eight squares round
+# the character rather than into an occupied one. Every blow therefore lands on
+# a fresh, off-guard bat.
+#
+# WHY A SEARCH TURN BEFORE EACH DUMP. The retaliation resolves after the screen
+# the blow left behind, and the next blow's "Attack:" line overwrites the
+# combat-numbers window before a dump can read it. One search costs a turn,
+# starts no attack roll, and leaves the line standing:
+#   "Warhammer: 1d3 Fire = 2 vs. 4 (iron) [unhurt]"
+# With the gear grant taken out of GearResistLevel the same line reads
+# "vs. 0 (iron)" and the hammer melts.
+
+# --- a human priest, built to qualify, with Charisma at the point-buy cap ---
+a                       # Create a New Character
+y                       # Alter the character generation options -- yes
+@until "everyone except your character" DOWN
+@until "DOUBLE" SPACE   # Monsters Maximum Hit Points: NO -> DOUBLE
+ESC
+y                       # Explore Mode
+@choose "Human"
+@while "Choose a skill" a   # the two human bonus skills
+@choose "Priest"
+@choose "Aiswin"
+p                       # Abort to Point Buy
+RIGHT*10                # STR 18
+DOWN RIGHT*6            # DEX 14
+DOWN RIGHT*10           # CON 18 -- Endurance asks for 13
+DOWN                    # INT  8
+DOWN RIGHT*10           # WIS 18
+DOWN RIGHT*10           # CHA 18 -- the number this check is about
+DOWN RIGHT*5            # LUC 13; all 75 points are spent
+ENTER y
+a                       # Alignment: [a] Lawful Good
+@while "Choose a Domain" a
+@choose "Endurance"         # Divine Resistance cannot be taken before this
+@choose "Divine Resistance"
+@while "Choose a feat" a
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "wish to worship" y
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "Choose a feat" a
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+
+# Freeze Monsters is the eleventh wizard switch. A frozen monster takes no turn
+# of its own but still ANSWERS a blow, which is the whole point here.
+@until "Wizard Mode Options" w y
+w
+DOWN*10
+SPACE
+ESC
+
+# --- the weapon whose hit points are measured: an ordinary iron warhammer ---
+@until "Wizard Mode Options" w
+@choose "Item Acquisition"
+RIGHT*9                 # walk the glyph row to ordinary weapons
+@until "Warhammer" DOWN
+DOWN                    # the wanted row is the middle of three; step onto it
+ENTER
+b                       # Weapon Hand
+SPACE
+@while "two-handed" n
+s                       # stow the mace the swap pushed into the air
+@until "Things in View" ESC
+
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:divine-before
+@until "Things in View" ESC
+
+# Turn undead in an empty room. The grant is made before the roll.
+@until "Use which skill" u
+@choose "Turn Undead"
+@while "more --" SPACE
+@dump:divine-channel
+
+# The character sheet, as evidence that the feat is really held and that the
+# grant is on the character at the magnitude the arithmetic needs.
+d
+@until "Resistances and Armour" DOWN
+@dump:divine-sheet
+@until "Things in View" ESC
+
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Bats"
+@choose "firebat"
+RIGHT ENTER
+RIGHT
+@while "Confirm attack" y
+@while "Attack the" y
+@while "more --" SPACE
+s
+@while "more --" SPACE
+@dump:divine-strike-01
+
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Bats"
+@choose "firebat"
+PGDN ENTER
+PGDN
+@while "Confirm attack" y
+@while "Attack the" y
+@while "more --" SPACE
+s
+@while "more --" SPACE
+@dump:divine-strike-02
+
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Bats"
+@choose "firebat"
+DOWN ENTER
+DOWN
+@while "Confirm attack" y
+@while "Attack the" y
+@while "more --" SPACE
+s
+@while "more --" SPACE
+@dump:divine-strike-03
+
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Bats"
+@choose "firebat"
+END ENTER
+END
+@while "Confirm attack" y
+@while "Attack the" y
+@while "more --" SPACE
+s
+@while "more --" SPACE
+@dump:divine-strike-04
+
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Bats"
+@choose "firebat"
+LEFT ENTER
+LEFT
+@while "Confirm attack" y
+@while "Attack the" y
+@while "more --" SPACE
+s
+@while "more --" SPACE
+@dump:divine-strike-05
+
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Bats"
+@choose "firebat"
+HOME ENTER
+HOME
+@while "Confirm attack" y
+@while "Attack the" y
+@while "more --" SPACE
+s
+@while "more --" SPACE
+@dump:divine-strike-06
+
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Bats"
+@choose "firebat"
+UP ENTER
+UP
+@while "Confirm attack" y
+@while "Attack the" y
+@while "more --" SPACE
+s
+@while "more --" SPACE
+@dump:divine-strike-07
+
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Bats"
+@choose "firebat"
+PGUP ENTER
+PGUP
+@while "Confirm attack" y
+@while "Attack the" y
+@while "more --" SPACE
+s
+@while "more --" SPACE
+@dump:divine-strike-08
+
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:divine-after
+@until "Things in View" ESC
+@quit

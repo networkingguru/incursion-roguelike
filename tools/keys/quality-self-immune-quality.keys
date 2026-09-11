@@ -1,0 +1,83 @@
+# ARM B of the quality-immunity check: the SAME suit, carrying AQ_FIRE_RES.
+# The positive arm; quality-self-immune-plain.keys is the control (bd inc-to9x).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/quality-self-immune-quality.keys 5
+#
+# BOTH HALVES OF THE RULING ARE MEASURED HERE.
+#
+# The ITEM half: wizard option 13, "Add Quality to Armour" (src/Debug.cpp:762),
+# puts AQ_FIRE_RES on the worn suit. It draws no random number for an AQ_*
+# value (QItem::AddQuality, src/Item.cpp:2919 onward walks straight to the
+# Qualities array), so the two arms stay in step. Twelve fireballs must then
+# leave the suit at 56 of 56 hit points, its numbers line must read
+# "vs. Immune (leather)", and its hardness table must list Fire as an immunity.
+#
+# The WEARER half: the same quality still grants the wearer RESIST AD_FIRE of
+# three per magical plus (lib/m_items.irh:645). The suit is +0 while it burns,
+# on purpose -- see quality-self-immune-setup.keys for why the item half is
+# only measurable at +0 -- so the grant is worth nothing until the fireballs
+# are done. Two Scrolls of Enchant Armour then take it to +2, and
+# Item::SetInherentPlus calls ReApply(), which re-runs the quality's EA_GRANT
+# at the new plus. The sheet must then read "Fire 6".
+
+@include quality-self-immune-setup.keys
+
+# AQ_FIRE_RES on the worn suit. The prompt takes the constant's name, which
+# src/Debug.cpp:760 looks up in AQ_CONSTNAMES.
+w
+@choose "Add Quality to Armour"
+@expect "Enter Quality Constant"
+"AQ_FIRE_RES"
+ENTER
+@until "Things in View" ESC
+
+@include quality-self-immune-burn.keys
+
+# --- the wearer half ----------------------------------------------------
+# Two ordinary Enchant Armour scrolls, +1 each. Column 1 of the acquisition
+# prompt is Scrolls; the plain scroll is the row above "Enchant Armour
+# (featherlight)", which is where @until leaves the cursor.
+w
+@choose "Item Acquisition"
+RIGHT
+@until "Enchant Armour (featherlight)" DOWN
+ENTER
+s
+ESC
+r
+@choose "(in pack) Scroll of Enchant Armour"
+@while "Stop reading?" n
+@while "Select target or inventory item" *
+@while "Die?" n
+@while "more --" SPACE
+@until "Things in View" ESC
+
+w
+@choose "Item Acquisition"
+RIGHT
+@until "Enchant Armour (featherlight)" DOWN
+ENTER
+s
+ESC
+r
+@choose "(in pack) Scroll of Enchant Armour"
+@while "Stop reading?" n
+@while "Select target or inventory item" *
+@while "Die?" n
+@while "more --" SPACE
+@until "Things in View" ESC
+
+# The suit's page again, now at +2 and carrying the quality by name.
+@until "SPACE:Swap" i
+@until ">>j)Armour" j
+@until "base value of" x
+@dump:quality-item
+@until "Things in View" ESC
+
+# The Resistances page: the wearer still gets what the quality always gave him.
+d
+@until "Resistances and Armour" DOWN
+@dump:quality-sheet
+@until "Things in View" ESC
+@quit
