@@ -1956,13 +1956,47 @@ void Character::CalcValues(bool KnownOnly, Item *thrown)
 
 int16 Resists[16], ResistCount;
 
-/* inc-w26h: soaking and rust protect gear from every source; other types
-   require an effect flagged to protect the bearer's equipment. */
+/* Both divine feats grant while the bearer is CHANNELING, and neither grant
+   carries an effect id, so neither can ever be flagged EF_PROTECTS_ITEMS.
+   inc-w26h: the owner rules that both protect the bearer's GEAR as well as his
+   hit points, so ResistLevel and GearResistLevel ask this one function and
+   cannot drift apart. Mag is written only when a feat applies, because
+   ResistLevel must still enter a zero or negative Charisma modifier into
+   Resists[] exactly as it did before. */
+static bool DivineFeatResist(Creature *c, int16 DType, int16 &Mag)
+  {
+    if ((DType == AD_NECR ||
+         DType == AD_HOLY ||
+         DType == AD_LAWF ||
+         DType == AD_CHAO ||
+         DType == AD_EVIL) && c->HasFeat(FT_DIVINE_ARMOUR)
+                           && c->HasStati(CHANNELING))
+      { Mag = c->Mod(A_CHA)*2; return true; }
+    if ((DType == AD_FIRE ||
+         DType == AD_COLD ||
+         DType == AD_ELEC) && c->HasFeat(FT_DIVINE_RESISTANCE)
+                           && c->HasStati(CHANNELING))
+      { Mag = c->Mod(A_CHA); return true; }
+    return false;
+  }
+
+/* inc-w26h: the four gear-only damage types -- soak, rust, decay and shatter --
+   hand gear every defence the wearer has. None of the four can cost a creature
+   hit points: src/Fight.cpp resolves all four against carried items, and its
+   construct, plant and fire-elemental branches re-throw AD_NORM rather than
+   hurt the creature with the gear type itself. A wearer-only grant against one
+   of them would therefore be a complete no-op. Every other type needs an effect
+   flagged to protect the bearer's equipment, or one of the two divine feats.
+   Of the eight types those feats cover, only necrotic, fire, cold and lightning
+   can hurt an item at all; the four aligned types are already immune by
+   material (MaterialHardness, src/Item.cpp), so granting them here costs
+   nothing and needs no special case. */
 int16 Creature::GearResistLevel(int16 DType)
   {
-    bool immune = false; int16 best = 0;
+    bool immune = false; int16 best = 0, divine = 0;
 
-    if (DType == AD_SOAK || DType == AD_RUST)
+    if (DType == AD_SOAK || DType == AD_RUST ||
+        DType == AD_DCAY || DType == AD_SHAT)
       return ResistLevel(DType);
 
     StatiIterNature(this,IMMUNITY)
@@ -1981,13 +2015,16 @@ int16 Creature::GearResistLevel(int16 DType)
         best = max(best,(int16)S->Mag);
     StatiIterEnd(this)
 
+    if (DivineFeatResist(this,DType,divine))
+      best = max(best,divine);
+
     return best;
   }
 
 int16 Creature::ResistLevel(int16 DType, int16 NatIgnored, int16 WornIgnored)
   {
     uint32 Res = TMON(mID)->Res, Imm = TMON(mID)->Imm;
-    uint8  StatiResists[16]; int16 i,highest,highval,total;
+    uint8  StatiResists[16]; int16 i,highest,highval,total,divine = 0;
     Item *it;
     ResistCount = 0;
 
@@ -2049,20 +2086,8 @@ int16 Creature::ResistLevel(int16 DType, int16 NatIgnored, int16 WornIgnored)
       if (StatiResists[i])
         Resists[ResistCount++] = StatiResists[i];
 
-    if((DType == AD_NECR ||
-        DType == AD_HOLY ||
-        DType == AD_LAWF ||
-        DType == AD_CHAO ||
-        DType == AD_EVIL) && HasFeat(FT_DIVINE_ARMOUR)
-                          && HasStati(CHANNELING)) {
-      Resists[ResistCount++] = Mod(A_CHA)*2;
-    }
-    if((DType == AD_FIRE ||
-        DType == AD_COLD ||
-        DType == AD_ELEC) && HasFeat(FT_DIVINE_RESISTANCE)
-                          && HasStati(CHANNELING)) {
-      Resists[ResistCount++] = Mod(A_CHA); 
-    }
+    if (DivineFeatResist(this,DType,divine))
+      Resists[ResistCount++] = divine;
 
     if((DType == AD_TOXI || 
         DType == AD_POIS ||

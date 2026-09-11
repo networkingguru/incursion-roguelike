@@ -3850,7 +3850,7 @@ Priest / Sorcerer / Druid Spell "Cure Critical Wounds" : EA_HEALING
   } 
 
 Priest / Druid Spell "Death Ward" : EA_INFLICT
-  { SC_ABJ; IS_A_BUFF(COST_4); Level: 4; qval: Q_TAR;
+  { Flags: EF_PROTECTS_ITEMS; SC_ABJ; IS_A_BUFF(COST_4); Level: 4; qval: Q_TAR;
     xval: IMMUNITY; yval: AD_NECR; Purpose: EP_BUFF | EP_COUNTER (VS_NECRO);
     Desc: "Renders a target of your choice immune to death effects
       and necromantic (but not poison) damage. Death effects include
@@ -3860,7 +3860,8 @@ Priest / Druid Spell "Death Ward" : EA_INFLICT
       killing component of <9>holy word<7>, <9>blasphemy<7>, 
       <9>dictum<7> and <9>word of chaos<7>. Certain special attacks 
       are also death effects, such as the unearthly beauty of a nymph 
-      or the death touch of a priest with the Death domain."; 
+      or the death touch of a priest with the Death domain. The target's
+      carried equipment is protected as well.";
     Constants:
       * SERVICE_SPELL_COST 250;
 
@@ -4356,13 +4357,14 @@ Druid Spell "Spike Growth" : EA_TERRAFORM
 
 
 Effect "Lesser Aspect of Divinity" : EA_INFLICT
-  { SC_THE; IS_A_BUFF(COST_4); Level: 4; 
+  { Flags: EF_PROTECTS_ITEMS; SC_THE; IS_A_BUFF(COST_4); Level: 4; 
     xval: ADJUST; yval: A_CHA; pval: 1d4+1; 
     Desc: "Causes you to take on some of the qualities of a
       celestial being: you gain an enhancement bonus of 1d4+1
       to your Charisma score, darkvision, a +2 bonus to saving
       throws against disease and poison, and acid, cold and 
-      electricity resistance of 5 + half your caster level."; }
+      electricity resistance of 5 + half your caster level. Your
+      carried equipment is protected as well."; }
 and EA_INFLICT
   { xval: RESIST; yval: AD_COLD; pval: 5d1 + (LEVEL_1PER2); }
 and EA_INFLICT
