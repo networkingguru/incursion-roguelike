@@ -192,7 +192,7 @@ beside a `static_assert` on the count. One hand-written pack and unpack loop
 converts. The record carries `sizeX`, `sizeY` and the packed element size, and
 a mismatch MUST abort the load.
 
-Terrain and region are 8-bit indices into `TerraList` (`inc/Map.h:36-40`), not
+Terrain and region are 8-bit indices into `TerraList` (`inc/Map.h:39-40`), not
 resource ids, so the grid itself carries no `rID` and needs none. `TerraList` is
 an ordinary array of `rID` and gets `FIELD_RID` treatment per element.
 
