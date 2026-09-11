@@ -1,0 +1,119 @@
+# inc-19ay, scenario 2 of 2: a breather whose statblock declares NO dice at
+# all, so every die it delivers comes from the age template's Power. Red
+# dragons declare A_BREA for 0d12 (lib/mon1.irh:564) and the TM_AGECAT
+# templates supply Power +1 (hatchling) through +6 (adult), lib/mon1.irh:1274
+# onwards. A fix that floored only the declared dice would give this dragon one
+# die at every age, which is the loss this scenario exists to catch.
+#
+# ONE DRAGON, NOT TWO, and the age is the one the game picks. Two earlier
+# shapes of this file do not work and should not be tried again:
+#
+#   * "Add Template to Creature" cannot reach the dragon. It targets through
+#     EffectPrompt's Q_TAR ring (src/Term.cpp:2106), which skips anything the
+#     player does not perceive, and a summoned dragon drops an unnaturally
+#     shadowed region that cuts the player's sight to one square. Measured:
+#     @until spent its whole 200-press budget with the cursor still on the
+#     player.
+#   * A second summoned red dragon is the same age as the first, so it adds no
+#     second Power. Measured on seed 1: four breaths, all at Power 5.
+#
+# Monster Summoning gives the dragon its age itself -- MonsterPrompt has no age
+# picker, but Debug.cpp:670 runs EV_BIRTH and Initialize, and the dragon
+# arrives templated. On seed 1 it arrives a young adult, Power 5, and breathes
+# 0 + 2*5 = 10 dice of d12.
+#
+# Six squares east: near enough to be in sight when it is summoned, far enough
+# that placing a gargantuan dragon does not shove the player out of his own
+# square. At three squares it does.
+@include chargen.keys
+
+# chargen.keys ends in play mode, so the first key here is a game command and
+# NOT a prompt dismissal: an ESC opens the System Menu (src/Player.cpp:845) and
+# every later keystroke then reads the wrong screen. Go straight to wizard
+# mode, the way kobold-horn-hostile.keys does. The first wizard entry asks for
+# confirmation; enable Cheat Death (the first switch) so a level-one character
+# can give every summoned monster a turn.
+w
+y
+@choose "Wizard Mode Switches"
+SPACE
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Dragon"
+@choose "red dragon"
+RIGHT*6
+ENTER
+@dump:dragon-summoned
+
+# NO "All Monster Aggravate" HERE. That wizard entry crashes the game:
+# src/Debug.cpp:1005 passes myHandle -- an object handle -- as the rID
+# argument of GainPermStati, Thing::GainPermStati asserts theGame->Get(eID)
+# on it (src/Status.cpp:188), and the session then segfaults. A monster the
+# wizard menu summons is hostile already, so the aggravate was never needed.
+
+# Each dot gives the monsters a turn. In Player::Death, n declines death
+# and restores HP; y accepts death and can prevent the next breath.
+.
+@while "Die?" n
+@dump:wait01
+.
+@while "Die?" n
+@dump:wait02
+.
+@while "Die?" n
+@dump:wait03
+.
+@while "Die?" n
+@dump:wait04
+.
+@while "Die?" n
+@dump:wait05
+.
+@while "Die?" n
+@dump:wait06
+.
+@while "Die?" n
+@dump:wait07
+.
+@while "Die?" n
+@dump:wait08
+.
+@while "Die?" n
+@dump:wait09
+.
+@while "Die?" n
+@dump:wait10
+.
+@while "Die?" n
+@dump:wait11
+.
+@while "Die?" n
+@dump:wait12
+.
+@while "Die?" n
+@dump:wait13
+.
+@while "Die?" n
+@dump:wait14
+.
+@while "Die?" n
+@dump:wait15
+.
+@while "Die?" n
+@dump:wait16
+.
+@while "Die?" n
+@dump:wait17
+.
+@while "Die?" n
+@dump:wait18
+.
+@while "Die?" n
+@dump:wait19
+.
+@while "Die?" n
+@dump:wait20
+
+@quit
