@@ -1,3 +1,5 @@
+<!-- citations: this-port -->
+
 # Headless terminal backend — specification
 
 **STATUS: IMPLEMENTED AND SHIPPED.** `inc-73g` is closed. This document is the
@@ -49,7 +51,7 @@ Both existing backends store the screen in their graphics library's own buffer
 `posixTerm` stores `Glyph scr[48][80]` directly.
 
 A `Glyph` is a `uint32`: 12 bits of glyph id, 4 of foreground, 4 of background
-(`inc/Defines.h:4215`). Storing it verbatim makes `AGetChar` exact. The libtcod
+(`inc/Defines.h:4262`). Storing it verbatim makes `AGetChar` exact. The libtcod
 backend cannot do that — it stores the character its glyph table produced, so
 `GetGlyph` → `PutGlyph` round trips lose the glyph id. The callers
 (`src/Term.cpp:2252`, `src/Magic.cpp:1397`, `src/Skills.cpp:1938`,
@@ -83,7 +85,7 @@ comment. Tokens:
 | `@dump` `@dump:label` | write the current screen to `logs/screens/` |
 | `@quit` | leave the game at the next key read |
 
-SHIFT matters and is not cosmetic. `StandardKeySet` (`src/Tables.cpp:4634`)
+SHIFT matters and is not cosmetic. `StandardKeySet` (`src/Tables.cpp:4671`)
 matches `toupper(ch)` against `raw_key` and then compares the modifier flags
 exactly, so `{ KY_CMD_ALL_ALLIES, 'A', 0 }` is reached by lowercase `a` and
 *not* by `A`. A script that ignored SHIFT would silently dispatch the wrong
