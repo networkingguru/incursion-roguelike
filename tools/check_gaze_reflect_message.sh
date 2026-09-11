@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Does a reflected gaze name the monster that gazed? (bd inc-upw.30)
 #
 # WHAT WENT WRONG. src/Magic.cpp:944 answers a gaze effect aimed at a creature

@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Does the owner's own immunity still shield his gear? (bd inc-w26h)
 #
 # THE RULE. Item::Damage used to return before it did anything at all -- no

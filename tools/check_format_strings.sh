@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # Every printf-style format string in the engine agrees with its arguments.
 #
 # Usage: tools/check_format_strings.sh              # check

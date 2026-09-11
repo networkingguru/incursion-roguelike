@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# gate: cheap
 #
 # Does every new commit subject open with one of the seven lanes, and does every
 # rules: commit name a design bead?

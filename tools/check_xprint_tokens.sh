@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # Literal __XPrint object tags must fit the supplied varargs (inc-upw.30).
 # Static Tier 1: Python 3 only; no binary, compiler, build or game run.
 # Usage: tools/check_xprint_tokens.sh [--root SCRATCH_ROOT] [--baseline|--prove-red]
