@@ -15,7 +15,7 @@ anywhere else. This file is that listing.
 
 **24 of its 57 distinct verbs have no implementation**, filling 27 of the 63
 entries. The menu no longer offers them: `Player::YuseMenu` drops any entry
-whose `MissingImplementation` flag is set (`src/Player.cpp:1583-1590`,
+whose `MissingImplementation` flag is set (`src/Player.cpp:1597-1604`,
 `inc/Creature.h:41`). Until that gate was added, a dead verb was offered like
 every other, took your prompts and your target, and did nothing. They are
 listed below because the table still carries them, and because which verbs are
@@ -36,7 +36,7 @@ sed -n '3106,3424p' src/Tables.cpp |
 
 ## How the menu works
 
-The verbs live in `YuseCommands[]`, `src/Tables.cpp:3108-3426`. Each entry
+The verbs live in `YuseCommands[]`, `src/Tables.cpp:3127-3447`. Each entry
 carries up to three prompts and a flag word:
 
 ```c
@@ -50,31 +50,31 @@ carries up to three prompts and a flag word:
 - **The menu is built from what your character can do.** `Player::YuseMenu`
   walks the table and drops an entry on either of two rules: its
   `MissingImplementation` flag is set, or it carries a `Prerequisite` predicate
-  that returns false for you (`src/Player.cpp:1583-1590`). Two entries carry a
+  that returns false for you (`src/Player.cpp:1597-1604`). Two entries carry a
   prerequisite today: **Mount** needs the Ride skill, a humanoid body with
   limbs, and no mount under you already; **Dismount** needs you mounted
   (`src/Tables.cpp:3097-3106`). If nothing survives both rules the command
   says *"You have no usable verbs."* `tools/check_command_menu_gating.sh`
   reads the `y` screen and fails if a dead verb is on it.
 - **The prompts run in table order**, target first, unless the entry carries
-  `YU_REVERSE`, which asks for the item first. `src/Player.cpp:1607`.
+  `YU_REVERSE`, which asks for the item first. `src/Player.cpp:1621`.
 - **`Q_INV` reaches inside containers.** The item picker walks
   `FirstInv`/`NextInv`, which descends into packs (`src/Inv.cpp:814`), so
   verbs offer packed items without you unpacking them.
 - **The five most recent verbs float to the top** of the menu
-  (`src/Player.cpp:1570`), so the list reorders as you use it. A recent verb
+  (`src/Player.cpp:1584`), so the list reorders as you use it. A recent verb
   is gated the same way as any other, so it drops off the top when it stops
   applying.
-- **Verbs can be bound to Quick Keys** (`QKY_VERB`, `src/Player.cpp:1597`).
+- **Verbs can be bound to Quick Keys** (`QKY_VERB`, `src/Player.cpp:1611`).
   Worth doing for Mount if you ride.
 - **Ten social verbs refuse non-creatures** with *"Don't socialize with the
-  furniture."* (`src/Player.cpp:1634`).
+  furniture."* (`src/Player.cpp:1648`).
 
 ### What an unimplemented verb does if something else throws it
 
 You cannot pick one from this menu any more, because the menu does not list it.
 The path is still there for an event thrown by any other route: nothing handles
-it, so it falls through to `Creature::HandleVerb` (`src/Player.cpp:1689` via
+it, so it falls through to `Creature::HandleVerb` (`src/Player.cpp:1703` via
 `src/Creature.cpp:1009`), which prints **"That verb can't be used that way."**
 for post-phase events and otherwise returns silently.
 
@@ -87,7 +87,7 @@ for post-phase events and otherwise returns silently.
 All are implemented in `src/Social.cpp`, and `src/Creature.cpp:720-768`
 dispatches them. None of them carries a prerequisite or a
 missing-implementation flag, so the `y` menu offers every one of them to every
-character (`src/Player.cpp:1583-1590`). The conditions below gate the **Talk**
+character (`src/Player.cpp:1597-1604`). The conditions below gate the **Talk**
 prompt instead: `Creature::PreTalk` (`src/Social.cpp:101`) drops a choice from
 that prompt when its condition fails (`src/Social.cpp:140-198`). So a verb you
 cannot see when you Talk is usually a verb that does not apply to that
@@ -120,13 +120,13 @@ or friendly.
 |---|---|---|
 | Activate | trigger an item's power | `src/Item.cpp:846` |
 | Drink | drink a potion | `src/Item.cpp:823` |
-| Eat | eat food | `src/Item.cpp:1941` |
+| Eat | eat food | `src/Item.cpp:1954` |
 | Read | read a scroll or book | `src/Item.cpp:830` |
 | Zap | aim a wand at a target | `src/Item.cpp:816` |
 | Wield | equip a weapon | `src/Creature.cpp:925` |
 | Shoot / Throw | ranged attack — **one event**, `EV_RATTACK` | `src/Creature.cpp:832` |
 | Insert | put an item into a container | `src/Inv.cpp:1111` |
-| Divide | split a stack; refuses singular items; the new stack is `DROPPED` for 10 turns | `src/Player.cpp:1731` |
+| Divide | split a stack; refuses singular items; the new stack is `DROPPED` for 10 turns | `src/Player.cpp:1745` |
 | Open / Open With | doors and containers | `src/Feature.cpp:612` |
 | Close | shut a door | `src/Feature.cpp:727` |
 | Enter | portals and the like | `src/Feature.cpp:254` |
@@ -161,11 +161,11 @@ Notes on individual verbs:
 
 **Divide** splits a stack, and refuses singular items with *"Singular items
 cannot be divided."* The new stack is marked `DROPPED` for 10 turns
-(`src/Player.cpp:1731`).
+(`src/Player.cpp:1745`).
 
 **Mount** is offered only to a character who could ride: the Ride skill, a
 humanoid body with limbs, and no mount already under you
-(`src/Tables.cpp:3097-3101`). It is the only command that rides a creature: no
+(`src/Tables.cpp:3118-3122`). It is the only command that rides a creature: no
 key binding throws `EV_MOUNT`, and only this verb and the spells that summon a
 steed do (`lib/wspells.irh:1808` and `:1903`, `lib/pspells.irh:3460`). Once
 picked it runs a full validation path — Ride skill, humanoid form, the
