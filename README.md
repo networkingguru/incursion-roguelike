@@ -669,11 +669,19 @@ change that alters behaviour follows five steps, in this order:
 5. record the commands, the mutation and the result in the commit body or the bead.
 
 `tools/nightly_verify.sh` is the wrapper. It builds both backends, cross-builds
-them for Linux in Docker, runs the check sweep, and compares the result against a
-base recorded before the work started. A check that already failed is not the
-change's fault; a check that passed before and fails after stops the merge.
-Builds are not ratcheted: a tree that does not compile is never safe. A machine
-with no Docker skips the Linux build rather than failing on it.
+them for Linux in Docker, sweeps the objects with the layout probe, soaks 40
+seeded sessions against the recorded baseline, then runs every check that
+declares itself part of the gate and compares the result against a base recorded
+before the work started. A check that already failed is not the change's fault; a
+check that passed before and fails after stops the merge. Builds are not
+ratcheted: a tree that does not compile is never safe. A machine that cannot run
+the Linux build, the layout sweep or the soak reports a skip rather than failing
+on it, because a step that measured nothing has not measured a failure.
+
+Which checks it runs is not a list inside it. Each check declares its own tier --
+`# gate: cheap`, `# gate: live` or `# gate: none <why not>` -- and the gate reads
+those markers, so a new check joins the gate when it is written.
+`tools/check_gate_membership.sh` is what obliges a new check to declare one.
 
 The commit body carries the evidence, because git records results and not
 process. State the oracle, the numbers it produced, the mutation that proved it
@@ -687,7 +695,7 @@ rules the harness enforces, and what this method cannot prove.
 | `tools/headless.sh` | Plays one scripted session with no display and no keyboard, in its own sandbox with its own `save/` and `logs/`. Everything else that plays the game calls it. |
 | `tools/soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about by message rather than by session. |
 | `tools/play.sh` | Interactive launcher for a real session with the map audit, save probe and character probe armed. |
-| `tools/nightly_verify.sh` | Builds both backends, cross-builds them for Linux in Docker, sweeps the checks, and compares the result against a recorded base. `--record` before the work, `--compare` after. The Linux build is skipped, not failed, where there is no Docker. |
+| `tools/nightly_verify.sh` | Builds both backends, cross-builds them for Linux in Docker, runs the layout sweep and the 40-session soak, then runs every check that declares a gate tier and compares the result against a recorded base. `--record` before the work, `--compare` after, `--selftest` to prove the ratchet still bites. A step that cannot run on this machine is skipped, not failed. |
 | `tools/dump_save.sh` | Runs `-dump` against a save in the same sandbox, without playing. |
 | `tools/keys/*.keys` | Key scripts read by both backends. The SDL build supports the shared movement subset (literal and named keys, `*N` repeats, comments, `@include`, `@pause MS` and `@quit`), but not the POSIX screen-scrape directives. In SDL, `@quit` or consuming the last key exits the game; put `@pause` before the end to hold the final frame while its light animates. `@pause` is an instant no-op headlessly. Use `./incursion -load save/<character>.sav -keys tools/keys/trailer-demo.keys` to start a named save directly in play and run the sample. |
 
@@ -903,6 +911,7 @@ the unfixed tree before it is trusted.
 | `check_flame_tongue_undead.sh` | Does a flame tongue sword set a corporeal undead alight for the 3d6/2d6/1d6 fire its page promises? |
 | `check_flavor_stability.sh` | Does a v1 save's per-player flavour memory -- appearances and their Known/Tried flags -- survive a module rebuild that adds a resource? |
 | `check_format_strings.sh` | Does every printf-style format string in the engine agree with its arguments, or has the warning count risen above the baseline? |
+| `check_gate_membership.sh` | Does every check in `tools/` declare whether the gate should run it? A check carries `# gate: cheap`, `# gate: live` or `# gate: none <why not>`, and `nightly_verify.sh` reads those markers instead of a hand-written list. The checks that predate the rule are excused by `tools/gate_membership.baseline`, which only shrinks. |
 | `check_geomancy.sh` | Does the Earthsinger's Geomancy roll the 5d12 its page names, rather than the 5d12+12 copied from the Mana potion? |
 | `check_gravestone.sh` | Does the death screen render the epitaph's corrected wording and columns, and the date the stone is carved with? |
 | `check_grounded_stance_live.sh` | Does the Earthsinger's Grounded Stance add its damage term to a landed blow when every condition it names is met? |

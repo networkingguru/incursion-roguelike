@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # Every packager must ship every directory the game reads at run time.
 #
 # WHY THIS EXISTS. graphics/logo.png landed on 2026-09-04 and only

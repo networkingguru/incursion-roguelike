@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # Owner resistance and immunity cannot protect equipment (inc-w26h).
 # Static Tier 1: Python 3 only; no binary, compiler, build or game run.
 # WHY: a quiet reversion of the equipment rules must fail independently of gameplay.

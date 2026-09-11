@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # inc-drmm (port defect): a Large bearer's buckler must still cost -1.
 # A seed-4 Human paladin acquires a buckler in wizard mode and learns Enlarge;
 # one session reads the Medium and Large character sheets and both ready hands.
