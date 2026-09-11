@@ -699,7 +699,28 @@ system int16   T_EVENTINFO::Event;
 system int16   T_EVENTINFO::EXVal;
 system int16   T_EVENTINFO::EYVal;
 system int16   T_EVENTINFO::ESpellNum;
-system int16   T_EVENTINFO::EParam;
+/* upstream: EventInfo::EParam is an int32 (inc/Events.h:227), and this line --
+   the SCRIPT view of that same field -- said int16. The resource compiler
+   writes the dispatcher from this line, so lib/dispatch.h:3551 cast every
+   script write down to sixteen bits: "pe->EParam = (int16)val;".
+   Character::calcFavour (src/Prayer.cpp:648) round-trips the running favour
+   total through EV_CALC_FAVOUR, and all eight gods that handle that event
+   write the field back (lib/religion.irh:676 and seven more), so a total over
+   32767 came back WRAPPED, not capped. 120000 returned as -11072, which is
+   below the first rung of every FAVOUR_CHART, so favour levels 7, 8 and 9 and
+   the abilities behind them were unreachable content.
+   Not a port artefact: int16 is sixteen bits on Win32 too, the resource
+   compiler emits the same cast there, and nothing in the truncation depends on
+   this port's typedefs, its word size or its compiler. The mismatch is between
+   two upstream files.
+   Observed -- the character sheet printed "(Favour -11072, Lev 0, Pen 0%)"
+   with the narrow declaration and "(Favour 120000, Lev 9, Pen 0%)" with the
+   wide one; see tools/check_favour_int32.sh. inc-upw.31, not sent -- esran
+   already has this fix in the parent project as c23f662, and it is not in this
+   tree.
+   Do NOT annotate lib/dispatch.h instead: it is generated, and every build
+   rewrites it from this line. */
+system int32   T_EVENTINFO::EParam;
 system int16   T_EVENTINFO::EDir;
 system int8    T_EVENTINFO::vRoll;
 system int8    T_EVENTINFO::AType;
