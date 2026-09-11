@@ -19,6 +19,7 @@ rest until you need them.
 | `check_item_flag_protection.sh` | Flagged acid immunity keeps an iron maul undamaged against acid-blob retaliation (inc-w26h). |
 | `check_xprint_tokens.sh` | Ratchet literal __XPrint object-token vararg overruns (inc-upw.30); Python 3 only. |
 | `check_gaze_reflect_message.sh` | A reflected gaze must name the gazing monster once, on screen (inc-upw.30); needs the POSIX build. |
+| `check_buckler_size.sh` | A buckler costs -1 to Balance on both Medium and enlarged Large bearers (inc-drmm). |
 | `check_headless.sh` | The regression check for that harness. If this fails, no other measurement means anything. |
 | `soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about. |
 | `gate_record.sh` + `gate_compare.sh` + `gate_lib.sh` | The regression gate. `gate_record.sh` freezes a build's behaviour into `tools/gates/*.baseline`; `gate_compare.sh` re-runs the same seeds and says what got worse. |
@@ -640,6 +641,7 @@ that binary afterwards (`check_strqueue.sh:95`). It copies the frozen
 BACKEND=posix ./build_macos.sh
 tools/check_headless.sh             # run this one FIRST of the tier
 tools/check_feat_toggle.sh
+tools/check_buckler_size.sh          # Medium and enlarged Large buckler Balance penalty
 tools/check_dump_save.sh
 tools/check_load_corrupt.sh
 tools/check_race_feats.sh
