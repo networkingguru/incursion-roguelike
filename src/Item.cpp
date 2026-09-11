@@ -1395,8 +1395,15 @@ EvReturn Item::Damage(EventInfo &e) {
     om = m;
 
     Creature *owner = Owner();
-    /* inc-w26h: item defences do not inherit owner resistances or immunities. */
     hard = Hardness(e.DType);
+    /* inc-w26h: an owner's defences reach his gear only where the grant says so. */
+    if (owner) {
+        int16 gear = owner->GearResistLevel(e.DType);
+        if (gear == -1)
+            return DONE;
+        if (hard >= 0)
+            hard += gear;
+    }
 
         /* inc-m2zi: Hardness returns -1 as an immunity sentinel, not as a
            hardness. Arithmetic on it destroys the immunity: -1/2 is 0, and

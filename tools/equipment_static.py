@@ -115,10 +115,44 @@ def run(rule, root):
                        f'Item arithmetic and preceding immunity guard={"intact" if f == prefix + zero + arithmetic else "changed"}; QItem single delegation={int(delegated)}/1')
 
     f = body(s, r'\bItem\s*::\s*Damage\s*\([^)]*\)')
-    init = re.search(r'\b(\w+)\s*=\s*Hardness\s*\(\s*\w+\s*\.\s*DType\s*\)\s*;', f)
+    init = re.search(r'\b(\w+)\s*=\s*Hardness\s*\(\s*(\w+)\s*\.\s*DType\s*\)\s*;', f)
     calls = len(re.findall(r'\bResistLevel\s*\(', f))
-    own = bool(init and re.search(r'\b' + init[1] + r'\s*==\s*-\s*1', f))
-    return measure(own and calls == 0, f'Item::Damage own hardness and immunity={int(own)}/1; ResistLevel calls={calls}/0')
+    gear_calls = len(re.findall(r'\bGearResistLevel\s*\(', f))
+    grant = re.search(r'\bint16\s+(\w+)\s*=\s*\w+\s*->\s*GearResistLevel\s*\(\s*(\w+)\s*\.\s*DType\s*\)\s*;', f)
+    guarded = False
+    if init and grant and init[2] == grant[2]:
+        hard, gear = init[1], grant[1]
+        tail = compact(f[grant.end():])
+        guarded = tail.startswith(f'if({gear}==-1)returnDONE;if({hard}>=0){hard}+={gear};')
+        guarded &= init.end() < grant.start()
+        guarded &= len(re.findall(r'\b' + re.escape(hard) + r'\s*\+=\s*' + re.escape(gear) + r'\s*;', f)) == 1
+    failed = measure(bool(init) and calls == 0 and gear_calls == 1 and guarded,
+                     f'Item::Damage hardness initialization={int(bool(init))}/1; ResistLevel calls={calls}/0; GearResistLevel calls={gear_calls}/1; immunity return and guarded addition={int(guarded)}/1')
+    g = body(clean(read('src/Values.cpp')), r'\bCreature\s*::\s*GearResistLevel\s*\([^)]*\)')
+    # Match the entire blanket condition, so an extra damage type cannot hide
+    # behind the two expected tokens. Other structures need oracle review.
+    blanket = re.findall(r'\bif\s*\(([^()]*)\)\s*return\s+ResistLevel\s*\(\s*(\w+)\s*\)\s*;', g)
+    types = []
+    if len(blanket) == 1:
+        condition, dtype = blanket[0]
+        terms = condition.split('||')
+        for term in terms:
+            m = re.fullmatch(r'\s*' + re.escape(dtype) + r'\s*==\s*(AD_\w+)\s*', term)
+            types.append(m[1] if m else '?')
+    blanket_ok = sorted(types) == ['AD_RUST', 'AD_SOAK']
+    blanket_ok &= len(re.findall(r'\bResistLevel\s*\(', g)) == 1
+    failed |= measure(blanket_ok, f'GearResistLevel blanket types={",".join(sorted(types)) or "none"}; expected=AD_RUST,AD_SOAK')
+    loops = re.findall(r'\bStatiIterNature\s*\(\s*this\s*,\s*(\w+)\s*\)(.*?)\bStatiIterEnd\s*\(\s*this\s*\)', g, re.S)
+    if not loops:
+        raise Unmeasurable('GearResistLevel status loops missing')
+    expected = {
+        'IMMUNITY': r'if\(S->Val==\w+&&S->eID&&RES\(S->eID\)->Type==T_TEFFECT&&TEFF\(S->eID\)->HasFlag\(EF_PROTECTS_ITEMS\)\)\w+=true;',
+        'RESIST': r'if\(!S->Dis&&S->Val==\w+&&S->eID&&RES\(S->eID\)->Type==T_TEFFECT&&TEFF\(S->eID\)->HasFlag\(EF_PROTECTS_ITEMS\)\)\w+=max\(\w+,\(int16\)S->Mag\);',
+    }
+    guarded_loops = sum(bool(re.fullmatch(expected.get(nature, r'(?!)'), compact(code))) for nature, code in loops)
+    failed |= measure(sorted(n for n, _ in loops) == ['IMMUNITY', 'RESIST'] and guarded_loops == 2,
+                      f'GearResistLevel flag-guarded status loops={guarded_loops}/2')
+    return failed
 
 
 if __name__ == '__main__':

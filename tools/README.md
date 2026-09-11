@@ -15,7 +15,8 @@ rest until you need them.
 | `check_dequ_dc.sh` | Only the four named SRD A_DEQU monsters retain DCs (inc-m2zi AC8). |
 | `check_fire_hardness.sh` | Ordinary combustible materials lose fire hardness; enchanted materials keep it (inc-m2zi AC8). |
 | `check_item_hardness.sh` | Every Item gets modifiers once, after preserving immunity (inc-m2zi AC8). |
-| `check_item_owner_resist.sh` | Owner resistance and immunity cannot protect equipment (inc-w26h). |
+| `check_item_owner_resist.sh` | Gear inherits blanket soak/rust defences and otherwise only flagged grants (inc-w26h). |
+| `check_item_flag_protection.sh` | Flagged acid immunity keeps an iron maul undamaged against acid-blob retaliation (inc-w26h). |
 | `check_headless.sh` | The regression check for that harness. If this fails, no other measurement means anything. |
 | `soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about. |
 | `gate_record.sh` + `gate_compare.sh` + `gate_lib.sh` | The regression gate. `gate_record.sh` freezes a build's behaviour into `tools/gates/*.baseline`; `gate_compare.sh` re-runs the same seeds and says what got worse. |
@@ -561,7 +562,7 @@ tools/check_dequ_dice.sh # Declared A_DEQU dice must roll without tripling (inc-
 tools/check_dequ_dc.sh # Only the four named SRD A_DEQU monsters retain DCs (inc-m2zi AC8).
 tools/check_fire_hardness.sh # Ordinary combustible materials lose fire hardness; enchanted materials keep it (inc-m2zi AC8).
 tools/check_item_hardness.sh # Every Item gets modifiers once, after preserving immunity (inc-m2zi AC8).
-tools/check_item_owner_resist.sh # Owner resistance and immunity cannot protect equipment (inc-w26h).
+tools/check_item_owner_resist.sh # Gear inherits blanket soak/rust defences and otherwise only flagged grants (inc-w26h).
 tools/check_error_handling.sh       # greps src/*.cpp for the unbounded writes
 tools/check_upstream_marks.sh       # reads src/, inc/ and docs/REPORTING-GATE.md
 tools/check_api_arity.py            # reads inc/Api.h against the C++ headers
@@ -677,12 +678,13 @@ tools/check_holy_undead.sh          # a Holy weapon smites undead that are not e
 tools/check_dequ_magic_hardness.sh  # a no-save A_DEQU bypasses a plain weapon's hardness, not a magical one's
 tools/check_dequ_reach.sh           # a blow struck at reach now takes the equipment retaliation
 tools/check_dequ_sunder.sh          # a sunder's retaliation lands on the striker's weapon, not the victim's
-tools/check_dequ_owner_immunity.sh  # the owner's own immunity no longer shields his gear
+tools/check_dequ_owner_immunity.sh  # rust immunity keeps the owner's maul undamaged
+tools/check_item_flag_protection.sh # flagged acid immunity keeps the owner's maul undamaged
 ```
 
-The four `check_dequ_*` scripts above are the behavioural half of inc-m2zi and
+The four `check_dequ_*` scripts and `check_item_flag_protection.sh` above are the behavioural half of inc-m2zi and
 inc-w26h; the five `check_dequ_dc.sh`-style scripts in Tier 1 are the static
-half. Each of the four drives one or two seeded sessions and reads the struck
+half. Each drives one or two seeded sessions and reads the struck
 weapon's own description page -- reached from the inventory with 'x' -- before
 and after the blows. `check_dequ_magic_hardness.sh` runs two sessions, because
 every retaliation that lands on the character rather than on his weapon costs
