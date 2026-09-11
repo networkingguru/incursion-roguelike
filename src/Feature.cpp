@@ -1547,6 +1547,17 @@ Map* Game::GetDungeonMap(rID dID, int16 Depth, Player *pl, Map*TownLevel) {
     ip = PlayMode;
     PlayMode = false;
 
+    /* upstream: indices must fit the malloc length; plain sizing and loop
+       bounds also overrun on Win32 with the original typedefs and compiler.
+       Observed, inc-tos. Described in the reply to PR #43, sent to rmtew on
+       2026-08-18, as the third of three suggested pull requests; the patch
+       itself has not been sent. */
+    const uint32 allocated = min(MAX_DUNGEON_LEVELS, RES(dID)->GetConst(DUN_DEPTH) + 1);
+    if (Depth < 0 || (uint32)Depth >= allocated) {
+        PlayMode = ip;
+        return NULL;
+    }
+
     for (i = 1; i != MAX_DUNGEONS && DungeonID[i]; i++)
         if (DungeonID[i] == dID)
             goto Found;
@@ -1558,37 +1569,10 @@ Map* Game::GetDungeonMap(rID dID, int16 Depth, Player *pl, Map*TownLevel) {
 
     DungeonID[i] = dID;
     DungeonSize[i] = min(MAX_DUNGEON_LEVELS, (int16)(RES(dID)->GetConst(DUN_DEPTH)));
-    DungeonLevels[i] = (hObj*)malloc(sizeof(hObj)*min(MAX_DUNGEON_LEVELS, RES(dID)->GetConst(DUN_DEPTH) + 1));
-    memset(DungeonLevels[i], 0, sizeof(hObj)*(RES(dID)->GetConst(DUN_DEPTH) + 1));
+    DungeonLevels[i] = (hObj*)malloc(sizeof(hObj)*allocated);
+    memset(DungeonLevels[i], 0, sizeof(hObj)*allocated);
 Found:
     n = i;
-
-    /* Temporary diagnostic: set INCURSION_DUNGEONMAP_PROBE=1 to report a request
-       for a level outside the array this function allocated. DungeonLevels[n]
-       holds min(MAX_DUNGEON_LEVELS, DUN_DEPTH + 1) handles, so the last valid
-       index is DUN_DEPTH -- but the loop below runs i <= Depth and the return
-       reads [Depth]. The levitation guard in Creature::Descend asks for
-       DUN_DEPTH + 1 while standing on the bottom level. Delete with inc-tos. */
-    if (getenv("INCURSION_DUNGEONMAP_PROBE")) {
-        int32 allocated = min((int32)MAX_DUNGEON_LEVELS,
-            (int32)(RES(dID)->GetConst(DUN_DEPTH)) + 1);
-        if ((int32)Depth >= allocated) {
-            static FILE *dmLog = NULL;
-            if (!dmLog) {
-                char path[1024];
-                snprintf(path, sizeof(path), "%slogs/dungeonmapprobe.log",
-                    (const char*)T1->IncursionDirectory);
-                dmLog = fopen(path, "a");
-            }
-            if (dmLog) {
-                fprintf(dmLog,
-                    "GetDungeonMap depth=%d allocated=%d last_valid_index=%d "
-                    "reads_index=%d\n",
-                    (int)Depth, (int)allocated, (int)allocated - 1, (int)Depth);
-                fflush(dmLog);
-            }
-        }
-    }
 
     /* Set DungeonLevels[n][0] to whatever is directly, geographically
        above the first dungeon level. This will allow us to match up stair

@@ -430,6 +430,7 @@ one that guards a real defect, and buys no behaviour. Read the header of
 | `check_consumable_abort.sh` | Does a consumable survive an action the character refused to complete? Answers yes to the game's own "Stop reading?" offer and asserts the scroll stack did not move, then drinks a potion and asserts that one still goes. Reports a session whose Will save never produced the offer as INCONCLUSIVE. | LIVE |
 | `check_readme_checks.sh` | Was a regression check added with no row in the `README.md` check table? Ratcheted against `tools/readme_checks.baseline`, which holds the 58-row backlog. | LIVE |
 | `check_dump_save.sh` | Does `-dump` still walk a real save and report the right fields, from BOTH backends? | LIVE |
+| `check_dungeonmap_bounds.sh` | Does a levitating character on the bottom level still stay on it? `Game::GetDungeonMap` answered a request for one level past its own allocation by reading past the end of the array, and `Creature::Descend`'s levitation branch makes that request from depth 10. Walks the nine wizard jumps down, levitates over a chasm, presses `>`, and expects the climb-down prompt and a 100m depth reading. | LIVE |
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the rock gnome its own refusal message names? | LIVE |
 | `check_enchant_graceful.sh` | Do seven compiled item pages advertise their own qualities, caster-level gates, spells and bonus type? | LIVE |
 | `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? | LIVE |
@@ -684,6 +685,7 @@ tools/check_dequ_sunder.sh          # a sunder's retaliation lands on the strike
 tools/check_dequ_owner_immunity.sh  # rust immunity keeps the owner's maul undamaged
 tools/check_item_flag_protection.sh # flagged acid immunity keeps the owner's maul undamaged
 tools/check_gaze_reflect_message.sh # a reflected gaze names the gazing monster once, in a sentence that parses
+tools/check_dungeonmap_bounds.sh    # a levitating character on the bottom level stays on it
 ```
 
 `check_gaze_reflect_message.sh` is the live twin of Tier 1's

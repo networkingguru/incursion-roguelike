@@ -1,0 +1,61 @@
+# Stand on the bottom level of the dungeon, levitating over a chasm, and ask to
+# descend. (bd inc-tos)
+#
+#   INCURSION_LEVITATE_CHASM=1 \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/levitate-bottom.keys 777
+#
+# WHY THE WALK MATTERS. The nine wizard depth jumps below are the route
+# docs/evidence/inc-x9i/observed-routes/to-bottom-level.keys took on 2026-08-18,
+# and they must stay as they are. Map content is NOT a property of the seed
+# alone: generation consumes the RNG stream, so a session that jumps straight to
+# depth 10 gets a different depth 10 from one that walked the nine above it. A
+# straight descent on seed 3362 produced a depth 10 with ZERO chasm squares
+# where the survey recorded 282. Do not shorten this file.
+#
+# INCURSION_LEVITATE_CHASM grants LEVITATION and stands the player ON a chasm
+# square on arrival at the deepest level (src/Feature.cpp). It manufactures no
+# terrain; a potion of levitation and a walk would reach the same state. It is
+# the setup, not the oracle: the oracle is what the screens say afterwards.
+#
+# The Goblin Caves declares DUN_DEPTH 10 (lib/dungeon.irh), so depth 10 is the
+# bottom and Creature::Descend's levitation branch asks GetDungeonMap for
+# depth 11 -- one past the last handle the allocation holds.
+
+@include chargen.keys
+
+@dump:arrival
+
+w y p "2" ENTER
+PGDN*3 PGDN*3 UP*3 PGUP*2 END*4 END*4 s .*2
+w p "3" ENTER
+PGUP*2 UP*2 LEFT*4 LEFT*3 HOME*5 PGUP*1 s .*2
+w p "4" ENTER
+LEFT*1 HOME*3 UP*2 END*1 RIGHT*1 UP*5 s .*2
+w p "5" ENTER
+PGUP*3 RIGHT*4 HOME*5 END*2 UP*5 RIGHT*5 s .*2
+w p "6" ENTER
+UP*5 END*1 RIGHT*1 LEFT*4 LEFT*1 UP*5 s .*2
+w p "7" ENTER
+RIGHT*4 PGUP*2 RIGHT*2 UP*3 PGDN*1 HOME*5 s .*2
+w p "8" ENTER
+RIGHT*3 LEFT*4 HOME*1 PGDN*1 END*3 END*1 s .*2
+w p "9" ENTER
+DOWN*3 END*1 LEFT*5 PGUP*3 DOWN*2 DOWN*3 s .*2
+w p "10" ENTER
+
+# The wizard depth change leaves a dialog box (MO_DIALOG) on the screen, and
+# one key dismisses it. dive.keys spends its first walking key on that box; this
+# file spends an ESC, so that the '>' below reaches the game.
+ESC
+@dump:on-bottom
+
+# Ask to go down while levitating over the chasm.
+>
+@dump:after-descend
+
+# Decline whatever prompt the request raised, so the session ends where it
+# started and the depth reading is readable on the last screen.
+n
+@dump:settled
+@quit

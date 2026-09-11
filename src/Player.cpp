@@ -3000,6 +3000,14 @@ String & Player::GetLevelStats() {
         if (GameTimeInfo.LTI[i].keystrokes) {
             rID dID = m->dID;
             Map * m = theGame->GetDungeonMap(dID, i, this);
+            /* upstream: skip unavailable maps; the literal 10-level loop
+               exceeds DUN_DEPTH-sized allocations on Win32 with the original
+               typedefs and compiler too. Traced, inc-tos. The bounds defect is
+               described in the reply to PR #43, sent to rmtew on 2026-08-18,
+               as the third of three suggested pull requests; the patch itself
+               has not been sent. */
+            if (!m)
+                continue;
 
             uint16 open = 0;
             uint16 explored = 0;
