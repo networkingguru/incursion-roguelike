@@ -470,6 +470,7 @@ one that guards a real defect, and buys no behaviour. Read the header of
 | `check_store_scroll.sh` | Does the shop list follow the selection in both directions, reached without wizard mode? | LIVE |
 | `check_strqueue.sh` | Is the string queue's bound still tested before the write? | LIVE |
 | `check_symbol_autopickup.sh` | Does autopickup keep a dead priest's holy symbol -- of any god, granting or not -- out of the pack while still stowing real unidentified magic and a granting god-marked shield? | LIVE |
+| `check_tanglefoot_mount.sh` | Do tanglefoot strands catch the MOUNT and leave the rider free? A level-1 paladin rides his sacred mount along a strip of strands until the mount fails its reflex save; wizard mode's "Examine Player Data" must then show `STUCK from SS ATTK` under the `----MOUNT----` banner and none in the rider's own stati list. | LIVE |
 | `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? | LIVE |
 | `check_two_fist_feats_live.sh` | Do the two-weapon feats reach two empty hands? A Monk 1 / Warrior 10 buys Two-Weapon Tempest and the sheet's Brawl row moves 125% to 175%; the 1st-level sidebar must still read two equal fists at full Strength. | LIVE |
 | `check_underdark_live.sh` | Does the Underdark Warrior check the race it requires, and give the Reflex save it advertises? | LIVE |
@@ -686,6 +687,7 @@ tools/check_dequ_owner_immunity.sh  # rust immunity keeps the owner's maul undam
 tools/check_item_flag_protection.sh # flagged acid immunity keeps the owner's maul undamaged
 tools/check_gaze_reflect_message.sh # a reflected gaze names the gazing monster once, in a sentence that parses
 tools/check_dungeonmap_bounds.sh    # a levitating character on the bottom level stays on it
+tools/check_tanglefoot_mount.sh     # tanglefoot catches the mount, not the rider on its back
 ```
 
 `check_gaze_reflect_message.sh` is the live twin of Tier 1's

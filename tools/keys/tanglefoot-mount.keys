@@ -1,0 +1,132 @@
+# Do tanglefoot strands catch the MOUNT and leave the rider free? (bd inc-lxvv)
+#
+# THE DEFECT. The terrain's EV_MOVE handler (lib/alchemy.irh) makes the MOUNT
+# roll the reflex save when a mounted creature moves in the strands, which is
+# right -- it is the mount's legs in the strands. The consequence went to the
+# wrong creature: the original tail ran ThrowDmg(...,EActor,EActor), so the
+# RIDER took AD_STUK for a save the MOUNT had failed. A level-1 paladin on his
+# sacred mount stood on the strands with "Stuck" on his own status line while
+# the horse under him was free to walk.
+#
+# WHERE THE ROLL HAPPENS, because it is not where a reader expects. The
+# terrain sees EV_MOVE at the square the creature is STANDING ON, not the one
+# it is entering (src/Event.cpp:184-198 takes tx,ty from the actor, and the
+# move event is thrown before the actor is relocated). So the strands catch a
+# creature that tries to LEAVE them, which is what the terrain's own Desc says:
+# "A creature attempting to move or attack in the strands must make a reflex
+# saving throw (DC 15) to avoid becoming stuck instead." That is why this
+# script lays a STRIP of strands and rides along it: stepping onto the first
+# square rolls nothing, and each step after that rolls once.
+#
+# THE RIDE, on seed 4 under tools/fixtures/options-2026-08-22.dat:
+#
+#   step 1  cave entrance -> strands 1   no roll (he was not in the strands)
+#   step 2  strands 1 -> strands 2       Keeper's Reflex Save 20+1 = 21, success
+#                                        -> "Keeper seems to be entangled."
+#   step 3  strands 2 -> strands 3       Keeper's Reflex Save 14 vs DC 15,
+#                                        FAILURE -> the mount is stuck, the
+#                                        move is refused, and the pair stay on
+#                                        strands 2
+#
+# Five strands squares are laid rather than three so that step 3 is a move
+# from strands INTO strands. A step off the end of the strip would roll too,
+# but it would also put the pair on clear ground, and the interesting state is
+# a stuck mount standing in the hazard.
+#
+# THE ORACLE is wizard mode's "Examine Player Data", which prints the rider's
+# whole stati list and then, under a "----MOUNT----" banner, the mount's
+# (src/Debug.cpp:1712-1716). Two screens are dumped out of that one scrolling
+# window, because the two stati lists are 120 lines apart:
+#
+#   rider-stati   20 lines down: the rider's "Stati (7):" list entire, from
+#                 EXTRA SKILL to ALIGNMENT, ending at "Inventory:". The
+#                 MOUNTED entry naming Keeper is what says whose list it is.
+#   mount-stati   140 lines down: "----MOUNT----", "horse named Keeper", and
+#                 the mount's own "Stati (6):" list with STUCK in it, all on
+#                 one screen. 150 is too far -- the banner has scrolled off by
+#                 then -- so this depth is pinned, not approximate.
+#
+# The map screen dumped as "crossed" carries the same finding in the player's
+# own words: his status line must not say Stuck while "Keeper seems to be
+# stuck." stands on the message line.
+#
+# Freeze Monsters is on so that nothing walks into the strip or onto the
+# message line while the pair are riding.
+#
+# Read by tools/check_tanglefoot_mount.sh.
+
+@include chargen-paladin.keys
+@until "Afoot" ESC
+
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+@choose "Wizard Mode Switches"
+DOWN*10 # Freeze Monsters is the eleventh row; the cursor opens on the first
+SPACE   # Freeze Monsters: NO -> YES
+ESC
+
+# Climb on. chargen-paladin.keys' header records that the sacred mount is the
+# 'q' immediately WEST of the '@' on this seed.
+y
+@choose "Mount"
+LEFT ENTER
+@dump:mounted
+SPACE SPACE
+
+# Lay five squares of tanglefoot strands east of the entrance. The wizard
+# location prompt opens on the player, so N presses of RIGHT name the square
+# N east of him. TAB pages the terrain menu; "tanglefoot strands" is on the
+# second page.
+w
+@choose "Change terrain type"
+RIGHT
+ENTER
+TAB
+@choose "tanglefoot strands"
+w
+@choose "Change terrain type"
+RIGHT RIGHT
+ENTER
+TAB
+@choose "tanglefoot strands"
+w
+@choose "Change terrain type"
+RIGHT RIGHT RIGHT
+ENTER
+TAB
+@choose "tanglefoot strands"
+w
+@choose "Change terrain type"
+RIGHT RIGHT RIGHT RIGHT
+ENTER
+TAB
+@choose "tanglefoot strands"
+w
+@choose "Change terrain type"
+RIGHT RIGHT RIGHT RIGHT RIGHT
+ENTER
+TAB
+@choose "tanglefoot strands"
+@dump:terrain-made
+
+# Ride east. The first step asks for confirmation, because the terrain under
+# the destination differs from the terrain under the pair and the strands
+# carry TF_WARN (src/Move.cpp:576-581). The two steps after it do not: strands
+# to strands is no change of terrain.
+RIGHT
+@while "Confirm" y
+RIGHT
+@while "Confirm" y
+RIGHT
+@while "Confirm" y
+@dump:crossed
+
+SPACE SPACE
+w
+@choose "Examine Player Data"
+DOWN*20
+@dump:rider-stati
+DOWN*120
+@dump:mount-stati
+ESC
+@quit
