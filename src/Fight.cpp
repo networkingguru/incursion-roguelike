@@ -7229,8 +7229,10 @@ SkipSplat:;
                                                 ThrowVal(EV_DISMOUNT,DSM_FALL,this);
                                         }            
                                         e.DType = AD_NORM;
-                                        if (!(e.Immune || e.Resist))
-                                            GainTempStati(STUNNED,NULL,Dice::Roll(1,4,2),SS_MISC);
+                                        /* Falling damage never stuns, on any path that reaches this
+                                           arm. The SRD gives falling no stun; Brian ruled on
+                                           2026-09-11 that the stun goes from every fall, not just
+                                           pits. See bead inc-0hma. */
                                         return ReThrow(EV_DAMAGE,e);
                                     case AD_DISN:
                                         xID = FIND("disintegrate");

@@ -686,7 +686,10 @@ Terrain "pit"
         return NOTHING;
       EActor->IDPrint("You fall into the pit!",
                       "The <hObj> falls into a pit!", EActor);
-      ThrowDmg(EV_DAMAGE,AD_FALL,2d6,"a pit trap",EActor,EActor);
+      /* Pit depth is 10 feet per dungeon level, capped at 20; SRD falling
+         damage is 1d6 per 10 feet. inc-szz3, Brian's ruling 2026-09-11. */
+      ThrowDmg(EV_DAMAGE,AD_FALL,(max(1,min(EMap->Depth,2)))d6,
+        "a pit trap",EActor,EActor);
       return NOTHING;
       },
     PRE(EV_PUSH) {
@@ -704,8 +707,8 @@ Terrain "pit"
       EActor->Timeout += 30;
       if (!EActor->SkillCheck(SK_CLIMB,20,true)) {
         EActor->IPrint("You try to climb out of the pit, but fall back in!");
-        ThrowDmg(EV_DAMAGE,AD_FALL,2d6,"failing to climb out of a pit trap",
-          EActor,EActor);
+        ThrowDmg(EV_DAMAGE,AD_FALL,(max(1,min(EMap->Depth,2)))d6,
+          "failing to climb out of a pit trap",EActor,EActor);
         return DONE;
         }
       EActor->IPrint("You climb out of the pit.");
