@@ -1,0 +1,39 @@
+# Magma step observation for inc-szz3; use the pinned options fixture.
+# Terrain letter observed in magma-probe seed 4, screen 0001 terrain-list:
+# |  [h] Ice Wall             [y] chasm                [P] magma                 |
+# Page 1: 1-51 of 63. P is uppercase.
+# Place three adjacent magma squares east of the player. Dumps preserve
+# each damage event, including a fatal hit if the death prompt intervenes.
+# Seeds 4/5/6: entry costs 0 HP; the second move costs 26/18/23 HP.
+# The third attempt reaches 0 HP before leaving square 2. Leave Die?
+# unanswered to preserve the fatal-hit screen; the final messages dump
+# remains that prompt, not a message-history window.
+# Low-HP warnings need SPACE before another movement command can work.
+@include chargen-paladin.keys
+SPACE
+w y
+K RIGHT ENTER P
+w K RIGHT*2 ENTER P
+w K RIGHT*3 ENTER P
+@dump:before
+RIGHT
+@while "Confirm enter" y
+@while "Low Hitpoint Warning!" SPACE
+@dump:step-1
+v
+@dump:messages-1
+ESC
+RIGHT
+@while "Confirm enter" y
+@while "Low Hitpoint Warning!" SPACE
+@dump:step-2
+v
+@dump:messages-2
+ESC
+RIGHT
+@while "Confirm enter" y
+@while "Low Hitpoint Warning!" SPACE
+@dump:step-3
+v
+@dump:messages
+@quit
