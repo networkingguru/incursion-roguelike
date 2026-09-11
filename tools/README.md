@@ -683,9 +683,9 @@ tools/check_gaze_reflect_message.sh # a reflected gaze names the gazing monster 
 `check_xprint_tokens.sh`. The static one counts vararg-consuming tokens in
 source text; this one summons a bodak at a character carrying Gaze Reflection
 and reads the sentence the reflection puts on the screen. Reverting the fix does
-not merely reword that sentence -- the session dies inside `__XPrint` -- so this
-check treats a killed session as a FAIL where `check_lib.sh` would call it
-INCONCLUSIVE. Its header says why.
+not merely reword that sentence -- the session dies inside `__XPrint` -- and
+`check_lib.sh` fails a session the game killed, so the death is the
+measurement.
 
 The four `check_dequ_*` scripts above are the behavioural half of inc-m2zi and
 inc-w26h; the five `check_dequ_dc.sh`-style scripts in Tier 1 are the static

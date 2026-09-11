@@ -47,67 +47,26 @@
 # took SIGBUS (tools/headless.sh reported "ended: exit 138"). That is the first
 # observation of this defect biting in play rather than in a source scan.
 #
+# WHY THIS CHECK CAN BE PROVED RED AT ALL. Here the death IS the measurement,
+# and tools/check_lib.sh's check_run used to report every abnormal ending as
+# INCONCLUSIVE, which --prove-red reads as "nothing is proved". This check
+# answered that with a check_run of its own for a day. The rule is shared now:
+# check_run FAILS a session the game killed -- a Fatal(), a watchdog stop, or a
+# signal -- and keeps INCONCLUSIVE for the endings that say the key script or
+# the harness drifted. Read the fourth rule in the header of tools/check_lib.sh.
+# This file overrides nothing.
+#
 # Usage: tools/check_gaze_reflect_message.sh              (0 pass, 1 fail, 2 no measurement)
 #        tools/check_gaze_reflect_message.sh --prove-red
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 
-# ---------------------------------------------------------------------------
-# check_run with one rule changed, and only one.
-#
-# check_run stops with INCONCLUSIVE on any session that did not end normally,
-# because for nearly every check a session that died measured nothing. Here the
-# death IS the measurement: with the fix reverted this session dies inside
-# Thing::IDPrint while it formats the very sentence under test, so check_run's
-# rule would report exit 2, and --prove-red reads exit 2 as "nothing is proved".
-# The check would then be unprovable against the defect it defends.
-#
-# So a FATAL, a watchdog stop or a killing signal counts as a FAIL here. Every
-# other bad ending -- no gameplay, an unreadable key script, an @expect that
-# found nothing, an unlisted ASSERT -- keeps check_run's verdict, because those
-# say the harness or the key script drifted rather than that the game misbehaved.
-# The override only ever turns a green into a red, never the other way.
-gaze_run() { # <keyscript> <seed>
-    local keys="$1" seed="$2" out status
-
-    [ -x "./incursion-headless" ] || _check_die 2 \
-        "./incursion-headless is not built. Run: BACKEND=posix ./build_macos.sh"
-
-    out="$(INCURSION_OPTIONS="$CHECK_OPTIONS" tools/headless.sh "$keys" "$seed" 2>&1 </dev/null)"
-    status=$?
-    CHECK_RUN="$(printf '%s\n' "$out" | awk '/^run:/ {print $2}')"
-    [ -n "$CHECK_RUN" ] && printf '%s\n' "$out" > "$CHECK_RUN/harness.txt"
-
-    if [ "$status" -eq 1 ] || [ "$status" -eq 4 ] || [ "$status" -ge 128 ]; then
-        echo "  FAIL  the game died (tools/headless.sh exit $status) before it could"
-        echo "        finish the session, and the last thing it was asked to do was"
-        echo "        print the reflected-gaze line."
-        if [ -n "$CHECK_RUN" ] && [ -f "$CHECK_RUN/logs/errors.log" ]; then
-            grep -m2 '__XPrint' "$CHECK_RUN/logs/errors.log" | sed 's/^/        /'
-        fi
-        echo
-        echo "FAIL: the reflected-gaze line killed the session instead of printing"
-        echo "      the screens and the log are in ${CHECK_RUN:-logs/runs}"
-        exit 1
-    fi
-
-    if [ "$status" -ne 0 ] && [ "$status" -ne 3 ]; then
-        printf '%s\n' "$out" | sed -n '/^--- after the session ---/,$p' | sed 's/^/      /'
-        _check_die 2 \
-            "the session ended badly (tools/headless.sh exit $status), so it" \
-            "measured nothing. See ${CHECK_RUN:-the output above}."
-    fi
-
-    printf '%s\n' "$out" | grep -E '^(death:|stuck-prompt:) *(STUCK|threat)' | sed 's/^/  note: /'
-    echo "  session: $CHECK_RUN (seed $seed, $(basename "$CHECK_OPTIONS"))"
-}
-
 check_mutation src/Magic.cpp \
     "The <Obj1>'s gaze is reflected back at <him:Obj1>!" \
     "The <Obj>'s gaze is reflected back at <him:Obj>!"
 
-gaze_run tools/keys/gaze-reflect-message.keys 4
+check_run tools/keys/gaze-reflect-message.keys 4
 
 # The stati is on the character before any gaze arrives. src/Sheet.cpp:653
 # writes this row of the sheet's Specials column.
