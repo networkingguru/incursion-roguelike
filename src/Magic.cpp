@@ -994,7 +994,8 @@ EvReturn Magic::MagicStrike(EventInfo &e) {
     }
 
     if (e.effIllusion) {
-        uint16 saveFlags, ocast; 
+        uint16 saveFlags, ocast;
+        int16 ill_focus;
         Creature *Illusionist;
 
         if (e.EActor->m)
@@ -1036,8 +1037,23 @@ EvReturn Magic::MagicStrike(EventInfo &e) {
         else
             ocast = 0; 
 
+        /* upstream: School Focus files its school in the stati's Mag
+           (src/Create.cpp), so it must be read out of Mag and masked, the way
+           getSpellDC does below. This asked HasStati(SCHOOL_FOCUS,SC_ILL),
+           and HasStati matches its second argument against Val, which the
+           feat always leaves 0 -- so the illusionist's +2 reached no
+           disbelief save ever. The defect is upstream's and not the port's:
+           a plain C++ argument mismatch against a shared stati layout, which
+           misbehaves identically on Win32 with the original typedefs and
+           compiler. Observed, inc-q1ei, not sent. */
+        ill_focus = 0;
+        StatiIterNature(e.EActor,SCHOOL_FOCUS)
+            if (S->Mag & SC_ILL)
+              ill_focus = 2;
+        StatiIterEnd(e.EActor)
+
         if (e.EVictim->SavingThrow(WILL,10 + (Illusionist ? Illusionist->SkillLevel(SK_ILLUSION) / 2 : 10)
-            + ocast + (e.isArcaneTrickery ? 8 : 0) + (e.EActor->HasStati(SCHOOL_FOCUS,SC_ILL) ? 2 : 0), saveFlags))
+            + ocast + (e.isArcaneTrickery ? 8 : 0) + ill_focus, saveFlags))
         {
             e.EActor->IPrint("The <Obj> disbelieves!", e.EVictim);
             e.effDisbelieved = true;

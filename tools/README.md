@@ -688,6 +688,8 @@ tools/check_item_flag_protection.sh # flagged acid immunity keeps the owner's ma
 tools/check_gaze_reflect_message.sh # a reflected gaze names the gazing monster once, in a sentence that parses
 tools/check_dungeonmap_bounds.sh    # a levitating character on the bottom level stays on it
 tools/check_tanglefoot_mount.sh     # tanglefoot catches the mount, not the rider on its back
+tools/check_school_focus_menu.sh    # a school already focused on is off the School Focus menu
+tools/check_school_focus_dc.sh      # School Focus (Illusion) raises the disbelief DC
 ```
 
 `check_gaze_reflect_message.sh` is the live twin of Tier 1's

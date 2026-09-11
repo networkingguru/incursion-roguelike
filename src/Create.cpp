@@ -3029,23 +3029,40 @@ ChosenStudy:
         if (param)
             i = (int16)param;
         else {
-            if (!HasEffStati(SCHOOL_FOCUS,SC_ABJ))
+            /* upstream: the schools already focused on, as one bitmask.
+               These nine guards asked HasEffStati(SCHOOL_FOCUS,SC_x), whose
+               second argument is a RESOURCE ID matched against the stati's
+               eID; the feat stores no eID and files the school in Mag
+               (below), so every guard was false forever and the menu offered
+               a school the character already held. School Focus is
+               FF_MULTIPLE for DIFFERENT schools, and a duplicate is worth
+               nothing, because the reader in getSpellDC assigns +2 rather
+               than adding it -- so the feat slot was simply lost. The defect
+               is upstream's and not the port's: a plain C++ argument
+               mismatch against a shared stati layout, which misbehaves
+               identically on Win32 with the original typedefs and compiler.
+               Observed, inc-q1ei, not sent. */
+            int16 focused; focused = 0;
+            StatiIterNature(this, SCHOOL_FOCUS)
+                focused |= S->Mag;
+            StatiIterEnd(this)
+            if (!(focused & SC_ABJ))
                 MyTerm->LOption("Abjuration",SC_ABJ);
-            if (!HasEffStati(SCHOOL_FOCUS,SC_ARC))
+            if (!(focused & SC_ARC))
                 MyTerm->LOption("Arcana",SC_ARC);
-            if (!HasEffStati(SCHOOL_FOCUS,SC_DIV))
+            if (!(focused & SC_DIV))
                 MyTerm->LOption("Divination",SC_DIV);
-            if (!HasEffStati(SCHOOL_FOCUS,SC_ENC))
+            if (!(focused & SC_ENC))
                 MyTerm->LOption("Enchantment",SC_ENC);
-            if (!HasEffStati(SCHOOL_FOCUS,SC_EVO))
+            if (!(focused & SC_EVO))
                 MyTerm->LOption("Evocation",SC_EVO);
-            if (!HasEffStati(SCHOOL_FOCUS,SC_ILL))
+            if (!(focused & SC_ILL))
                 MyTerm->LOption("Illusion",SC_ILL);
-            if (!(HasEffStati(SCHOOL_FOCUS,SC_NEC) || isMType(MA_ELF)))
+            if (!((focused & SC_NEC) || isMType(MA_ELF)))
                 MyTerm->LOption("Necromancy",SC_NEC);
-            if (!HasEffStati(SCHOOL_FOCUS,SC_THA))
+            if (!(focused & SC_THA))
                 MyTerm->LOption("Thaumaturgy",SC_THA);
-            if (!HasEffStati(SCHOOL_FOCUS,SC_WEA))
+            if (!(focused & SC_WEA))
                 MyTerm->LOption("Weavecraft",SC_WEA);
             i = (int16)MyTerm->LMenu(MENU_3COLS|MENU_BORDER,"Choose a focus school:",
                 WIN_MENUBOX,"help::magic,SC");
