@@ -16,6 +16,7 @@ rest until you need them.
 | `check_fire_hardness.sh` | Ordinary combustible materials lose fire hardness; enchanted materials keep it (inc-m2zi AC8). |
 | `check_item_hardness.sh` | Every Item gets modifiers once, after preserving immunity (inc-m2zi AC8). |
 | `check_item_owner_resist.sh` | Owner resistance and immunity cannot protect equipment (inc-w26h). |
+| `check_buckler_size.sh` | A buckler costs -1 to Balance on both Medium and enlarged Large bearers (inc-drmm). |
 | `check_headless.sh` | The regression check for that harness. If this fails, no other measurement means anything. |
 | `soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about. |
 | `gate_record.sh` + `gate_compare.sh` + `gate_lib.sh` | The regression gate. `gate_record.sh` freezes a build's behaviour into `tools/gates/*.baseline`; `gate_compare.sh` re-runs the same seeds and says what got worse. |
@@ -627,6 +628,7 @@ that binary afterwards (`check_strqueue.sh:95`). It copies the frozen
 ```sh
 BACKEND=posix ./build_macos.sh
 tools/check_headless.sh             # run this one FIRST of the tier
+tools/check_buckler_size.sh          # Medium and enlarged Large buckler Balance penalty
 tools/check_dump_save.sh
 tools/check_load_corrupt.sh
 tools/check_race_feats.sh

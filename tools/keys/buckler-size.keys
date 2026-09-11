@@ -1,0 +1,44 @@
+# inc-drmm: measure the same buckler before and after Enlarge, seed 4.
+@include chargen-paladin.keys
+@until "Afoot" ESC
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE
+DOWN*9
+SPACE
+ESC
+w
+@choose "Item Acquisition"
+RIGHT*16
+DOWN*3
+ENTER
+a
+SPACE
+@dump:medium-hand
+ESC
+d
+@dump:medium-sheet
+W
+"medium"
+ENTER
+ESC
+w
+@choose "Learn Any Spell"
+"Enlarge"
+ENTER
+m
+@choose "Enlarge"
+*
+@dump:enlarged
+d
+@dump:large-sheet
+W
+"large"
+ENTER
+ESC
+i
+@dump:large-hand
+ESC
+@quit
