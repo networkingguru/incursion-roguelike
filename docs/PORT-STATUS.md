@@ -330,7 +330,6 @@ Environment-gated, as of 2026-08-23:
 | `INCURSION_STACK_PROBE=1` | Nested entries into depth changes. Found the bottom-of-dungeon crash. |
 | `INCURSION_FOLLOWER_PROBE`, `INCURSION_GOWITH_PROBE` | Follower loss across a level change. |
 | `INCURSION_FALL_CHAIN`, `INCURSION_FALL_CHAIN_SKIP`, `INCURSION_CHASM_WALK`, `INCURSION_LEVITATE_CHASM` | The chasm and falling investigations. |
-| `INCURSION_DUNGEONMAP_PROBE`, `INCURSION_DESCEND_PROBE` | Dungeon and descent structure. |
 | `INC6D5_PROBE_NAMES` | Names the creatures `INC6D5_PROBE` follows. |
 
 Compile-time:

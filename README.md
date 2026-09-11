@@ -811,6 +811,7 @@ the unfixed tree before it is trusted.
 | `check_devour_negative_cr.sh` | Does devouring a corpse of negative challenge rating leave experience alone, while an ordinary corpse still pays? |
 | `check_devour_template_source.sh` | Does `Creature::Devour(Corpse*)` read the TEMPLATE stati off the corpse rather than off the eater, with the iteration opening and closing on the same object? |
 | `check_dump_save.sh` | Does `-dump` walk a real save and report the same bytes from both backends? |
+| `check_dungeonmap_bounds.sh` | Does a levitating character on the bottom level of a dungeon stay on it when he asks to go down? `Game::GetDungeonMap` answered a request for one level past the last it had allocated by reading past the end of its own array, and the levitation branch of `Creature::Descend` makes exactly that request. The session walks down to depth 10, levitates over a chasm there, presses `>`, and expects the climb-down prompt and a 100m depth reading rather than "You float downwards." |
 | `check_earth_ring_prose.sh` | Does the Ring of Elemental Command (Earth) description name the wearer's own ring "the ring of earth" in its curse clause, rather than the "ring of air" it copied from the Air ring? |
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the gnomes its own refusal message names? |
 | `check_enchant_graceful.sh` | Do seven compiled item pages advertise their own qualities, caster-level gates, spells and bonus type? |
