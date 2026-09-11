@@ -110,6 +110,7 @@ class Item: public Thing, public Magic
       virtual bool useStrength() { return false; } 
       void MakeMagical(rID eID, int16 spe=0);
       virtual int32 Weight(bool psych_might = false);
+      bool QualityImmune(int8 DType);
       virtual int16 Hardness(int8 DType);
       virtual bool HasSpell(uint16 sp);
       virtual rID  GetCorpseType() { return 0; }

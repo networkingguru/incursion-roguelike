@@ -1,0 +1,223 @@
+# A resistance grant survives the hardness bypass, on a MUNDANE weapon (inc-kapn).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/gear-bypass-survives.keys 5
+#
+# WHAT IS BEING MEASURED. src/Fight.cpp:2090 sets e.ignoreHardness whenever a
+# no-save A_DEQU strikes a NON-magical item. Item::Damage must read that as a
+# statement about the METAL -- iron does not resist acid -- and not as a
+# statement about the caster's spell, so the owner's gear grant is added AFTER
+# the bypass has zeroed the material. This session asks one question: does a
+# RESISTANCE reach a plain iron maul that the bypass has stripped to zero?
+#
+# WHY A PLAIN MAUL, WHERE gear-spell-protection.keys HAD TO USE A MAGIC HAMMER.
+# Before inc-kapn the grant was added BEFORE the bypass, so hard = 0 threw the
+# spell away with the metal. A resistance was therefore unmeasurable on any
+# mundane item, and the sibling script bought a magic weapon to keep a hardness
+# alive at all. That is the defect this script exists to catch, so it uses the
+# ordinary iron maul the check_dequ_* scripts use: 262 hit points, the heaviest
+# ordinary weapon in lib/, so twelve retaliations cannot destroy it and leave no
+# page to read.
+#
+# WHY "PROTECTION FROM ACID" AT CASTER LEVEL TEN. The spell (lib/wspells.irh)
+# carries EF_PROTECTS_ITEMS on the same clause that grants AD_ACID, so nothing
+# here rests on the sibling-clause question gear-spell-protection.keys settles.
+# Its pval is 10d1 + (LEVEL_1PER1), so the resistance is 10 plus the caster
+# level: 20 at level ten. It is a level 4 spell, so a mage needs level 7 to hold
+# a slot for it; ten is taken because the arithmetic below needs more than 18.
+#
+# WHY A MAGMA CREEPER, AND WHY THE MARGIN IS REAL. Its A_DEQU is 3d6 AD_ACID
+# with NO save DC (lib/mon3.irh), so no Reflex roll decides the outcome and
+# hardness is the only thing between the acid and the maul. Iron's acid hardness
+# is 10, and the bypass zeroes it, so the resistance is the WHOLE of the number
+# on the line. 3d6 cannot exceed 18 and 20 > 18, so no roll can hurt the maul:
+# the protection is decisive, not lucky. It has 12 HD and resists blunt, so one
+# creeper survives twelve blows; frozen monsters still answer a hit.
+#
+# The oracle is the game's own combat-numbers line in Item::Damage, which prints
+# the hardness actually used:
+#   "Maul: 3d6 Acid = 11 vs. 20 (iron) [unhurt]"
+# 20 is 0 of bypassed iron plus the 20 the spell grants. With the addition moved
+# back above the bypass the same line reads "vs. 0 (iron)".
+
+@include chargen-mage.keys
+
+# chargen-mage.keys stops on the arrival room description. Dismiss it, or the
+# [w] below is eaten by the description.
+ESC
+
+# Wizard switches, counted from the top of the list in src/Tables.cpp:
+#   1 Cheat Death, 3 Free Advancement, 6 Ignore Spell Failure,
+#   8 Infinite Mana, 11 Freeze Monsters. A frozen monster takes no turn of its
+# own but still ANSWERS a blow, which is the whole point of an A_DEQU check.
+w
+y
+@choose "Wizard Mode Switches"
+SPACE
+DOWN*2
+SPACE
+DOWN*3
+SPACE
+DOWN*2
+SPACE
+DOWN*3
+SPACE
+ESC
+
+# Nine free levels, on the character screen: 'd' opens it and 'G' gains a level.
+# The three @while guards answer the three prompts a mage meets on the way up;
+# the metamagic one arrives at level five and is easy to forget, and a level-up
+# prompt left unanswered swallows every key after it. SPACE, not ESC, leaves the
+# character screen (src/Managers.cpp).
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+SPACE
+
+# Teach the mage the one spell this fixture needs. Know All Spells is not used:
+# it fills the Spell Manager with pages of spells and @choose reads only what is
+# on the screen.
+w
+@choose "Learn Any Spell"
+"Protection from Acid"
+ENTER
+
+# Cast it on the caster himself. "*" targets self.
+m
+@choose "Protection from Acid"
+*
+@while "more --" SPACE
+
+# --- the weapon whose hit points are measured: an ordinary iron maul ---
+w
+@choose "Item Acquisition"
+RIGHT*9                 # walk the glyph row to ordinary weapons
+@until "Maul" DOWN
+DOWN
+ENTER
+b                       # Weapon Hand
+SPACE
+@while "two-handed" y
+s                       # stow the starting knife the swap pushed into the air
+@until "Things in View" ESC
+
+# The character sheet's Resistances page, as evidence that the grant is really
+# on the character, at the magnitude the arithmetic needs.
+d
+@until "Resistances and Armour" DOWN
+@dump:bypass-sheet
+@until "Things in View" ESC
+
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:bypass-before
+@until "Things in View" ESC
+
+# One creeper for all twelve blows. Its body is gargantuan, so the summon
+# cursor's square is not where the body's western edge lands; the character
+# walks east until he bumps into it, and every RIGHT after that is a blow.
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "magma creeper"
+RIGHT*4 ENTER
+
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:bypass-strike-01
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:bypass-strike-02
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:bypass-strike-03
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:bypass-strike-04
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:bypass-strike-05
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:bypass-strike-06
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:bypass-strike-07
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:bypass-strike-08
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:bypass-strike-09
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:bypass-strike-10
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:bypass-strike-11
+RIGHT
+@while "Attack the" y
+@while "more --" SPACE
+@dump:bypass-strike-12
+
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:bypass-after
+@until "Things in View" ESC
+@quit

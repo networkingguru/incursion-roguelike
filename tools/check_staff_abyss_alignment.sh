@@ -23,7 +23,7 @@
 # every hand -- a separate live defect, tracked as bd inc-tek.29. Copying it
 # here would have changed nothing at all. This entity uses
 # EActor->isMType(MA_GOOD) instead, which reads the ALIGNMENT stati directly
-# (src/Values.cpp:2465-2468) and is how the rest of lib/ asks the question.
+# (src/Values.cpp:2561-2564) and is how the rest of lib/ asks the question.
 #
 # THE ORACLE is wizard mode's "Examine Player Data", which prints every stati
 # with its Val and its Mag (src/Debug.cpp:1524-1590). STAFF_SPELLS is the

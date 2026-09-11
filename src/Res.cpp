@@ -328,7 +328,7 @@ Resource* Game::Get(rID xID)
        exact call. (That seed still crashes one call further downstream, on
        a separate, pre-existing, previously-masked defect -- an unchecked
        NULL dereference of this function's result in Creature::isMType,
-       src/Values.cpp:2163 -- tracked separately as inc-upw.24 and
+       src/Values.cpp:2440 -- tracked separately as inc-upw.24 and
        deliberately not fixed here.) Tracked as inc-upw.16. Not sent.
 
        Two defects compounded here. First, the module slot is the id's top

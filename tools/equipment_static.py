@@ -107,7 +107,12 @@ def run(rule, root):
         f = compact(re.sub(r'\b' + hd + r'\b', 'H', f))
         # Exact statement structure deliberately rejects new paths that could
         # bypass the sentinel guard or apply the arithmetic twice.
-        prefix = f'int16H=MaterialHardness(Material(),{dtype});if(H<0)returnH;'
+        # inc-to9x's quality immunity is pinned as the FIRST statement, ahead of
+        # the material lookup and therefore ahead of both returns below. It
+        # returns the sentinel rather than adding to anything, so it cannot be
+        # rewritten into the arithmetic without failing here.
+        prefix = (f'if(QualityImmune({dtype}))return-1;'
+                  f'int16H=MaterialHardness(Material(),{dtype});if(H<0)returnH;')
         zero = 'if(H==0){if(GetPlus()>=0)H+=GetPlus()*5;elseH+=50;returnH;}'
         arithmetic = 'if(HasQuality(IQ_DWARVEN))H+=10;if(HasQuality(IQ_ORCISH)||HasQuality(IQ_SILVER))H/=2;if(HasQuality(IQ_ADAMANT)||HasQuality(IQ_DARKWOOD))H*=2;if(HasQuality(IQ_MITHRIL))H=(H*150)/100;if(GetPlus()>=0)H+=GetPlus()*5;elseH+=50;returnH;'
         delegated = bool(re.fullmatch(r'returnItem::Hardness\(\w+\);', compact(q)))
@@ -118,19 +123,38 @@ def run(rule, root):
     init = re.search(r'\b(\w+)\s*=\s*Hardness\s*\(\s*(\w+)\s*\.\s*DType\s*\)\s*;', f)
     calls = len(re.findall(r'\bResistLevel\s*\(', f))
     gear_calls = len(re.findall(r'\bGearResistLevel\s*\(', f))
-    grant = re.search(r'\bint16\s+(\w+)\s*=\s*\w+\s*->\s*GearResistLevel\s*\(\s*(\w+)\s*\.\s*DType\s*\)\s*;', f)
+    grant = re.search(r'\b(\w+)\s*=\s*\w+\s*->\s*GearResistLevel\s*\(\s*(\w+)\s*\.\s*DType\s*\)\s*;', f)
     guarded = False
     if init and grant and init[2] == grant[2]:
-        hard, gear = init[1], grant[1]
+        hard, gear, ev = init[1], grant[1], init[2]
+        decl = re.search(r'\bint16\s+' + re.escape(gear) + r'\s*=\s*0\s*;', f)
         tail = compact(f[grant.end():])
-        guarded = tail.startswith(f'if({gear}==-1)returnDONE;if({hard}>=0){hard}+={gear};')
+        # The whole order is pinned, because inc-kapn is a statement ABOUT the
+        # order: the immunity return still precedes every piece of arithmetic;
+        # the two bypass flags then act on what Hardness() returned and on
+        # nothing else, because each speaks about the MATERIAL rather than
+        # about the owner's spell; and only then is the grant added, under the
+        # same nonnegative guard that keeps the -1 sentinel out of arithmetic.
+        # An addition that moves back above the bypass fails here.
+        guarded = tail.startswith(
+            f'if({gear}==-1)returnDONE;}}'
+            f'if({hard}>=0){{if({ev}.ignoreHardness==true){hard}=0;'
+            f'elseif({ev}.halfHardness==true){hard}/=2;}}'
+            f'if({hard}>=0){hard}+={gear};')
+        # Declared and zeroed before the call, so an item with no owner adds
+        # nothing rather than whatever the slot happened to hold.
+        guarded &= bool(decl) and decl.start() < grant.start()
         guarded &= init.end() < grant.start()
         guarded &= len(re.findall(r'\b' + re.escape(hard) + r'\s*\+=\s*' + re.escape(gear) + r'\s*;', f)) == 1
     failed = measure(bool(init) and calls == 0 and gear_calls == 1 and guarded,
-                     f'Item::Damage hardness initialization={int(bool(init))}/1; ResistLevel calls={calls}/0; GearResistLevel calls={gear_calls}/1; immunity return and guarded addition={int(guarded)}/1')
-    g = body(clean(read('src/Values.cpp')), r'\bCreature\s*::\s*GearResistLevel\s*\([^)]*\)')
+                     f'Item::Damage hardness initialization={int(bool(init))}/1; ResistLevel calls={calls}/0; GearResistLevel calls={gear_calls}/1; immunity return, bypass order and guarded addition={int(guarded)}/1')
+    v = clean(read('src/Values.cpp'))
+    g = body(v, r'\bCreature\s*::\s*GearResistLevel\s*\([^)]*\)')
     # Match the entire blanket condition, so an extra damage type cannot hide
-    # behind the two expected tokens. Other structures need oracle review.
+    # behind the expected tokens. Other structures need oracle review.
+    # The four gear-only types: none of them ever costs a creature hit points,
+    # so a wearer-only grant against one would be a no-op (inc-w26h).
+    BLANKET = ['AD_DCAY', 'AD_RUST', 'AD_SHAT', 'AD_SOAK']
     blanket = re.findall(r'\bif\s*\(([^()]*)\)\s*return\s+ResistLevel\s*\(\s*(\w+)\s*\)\s*;', g)
     types = []
     if len(blanket) == 1:
@@ -139,9 +163,9 @@ def run(rule, root):
         for term in terms:
             m = re.fullmatch(r'\s*' + re.escape(dtype) + r'\s*==\s*(AD_\w+)\s*', term)
             types.append(m[1] if m else '?')
-    blanket_ok = sorted(types) == ['AD_RUST', 'AD_SOAK']
+    blanket_ok = sorted(types) == BLANKET
     blanket_ok &= len(re.findall(r'\bResistLevel\s*\(', g)) == 1
-    failed |= measure(blanket_ok, f'GearResistLevel blanket types={",".join(sorted(types)) or "none"}; expected=AD_RUST,AD_SOAK')
+    failed |= measure(blanket_ok, f'GearResistLevel blanket types={",".join(sorted(types)) or "none"}; expected={",".join(BLANKET)}')
     loops = re.findall(r'\bStatiIterNature\s*\(\s*this\s*,\s*(\w+)\s*\)(.*?)\bStatiIterEnd\s*\(\s*this\s*\)', g, re.S)
     if not loops:
         raise Unmeasurable('GearResistLevel status loops missing')
@@ -152,6 +176,37 @@ def run(rule, root):
     guarded_loops = sum(bool(re.fullmatch(expected.get(nature, r'(?!)'), compact(code))) for nature, code in loops)
     failed |= measure(sorted(n for n, _ in loops) == ['IMMUNITY', 'RESIST'] and guarded_loops == 2,
                       f'GearResistLevel flag-guarded status loops={guarded_loops}/2')
+
+    # The two divine feats have no effect id, so no flag can reach them and the
+    # loops above can never see them. One helper serves both readers; pin its
+    # whole body, so dropping a damage type, the CHANNELING condition or the
+    # Charisma scaling is a failure, and pin each reader's single use of it.
+    sig = re.search(r'\bbool\s+DivineFeatResist\s*\(\s*Creature\s*\*\s*(\w+)\s*,'
+                    r'\s*int16\s+(\w+)\s*,\s*int16\s*&\s*(\w+)\s*\)', v)
+    if not sig:
+        raise Unmeasurable('DivineFeatResist signature missing or reshaped')
+    c, dtype, mag = sig.groups()
+    def arm(types, feat, scale):
+        condition = '||'.join(f'{dtype}=={t}' for t in types)
+        return (f'if(({condition})&&{c}->HasFeat({feat})&&{c}->HasStati(CHANNELING))'
+                f'{{{mag}={c}->Mod(A_CHA){scale};returntrue;}}')
+    want = (arm(['AD_NECR', 'AD_HOLY', 'AD_LAWF', 'AD_CHAO', 'AD_EVIL'], 'FT_DIVINE_ARMOUR', '*2')
+            + arm(['AD_FIRE', 'AD_COLD', 'AD_ELEC'], 'FT_DIVINE_RESISTANCE', '')
+            + 'returnfalse;')
+    got = compact(body(v, r'\bbool\s+DivineFeatResist\s*\([^)]*\)'))
+    # The creature keeps its own grant unchanged: the value still enters
+    # Resists[] so it stacks, and a zero or negative modifier still counts.
+    r = compact(body(v, r'\bCreature\s*::\s*ResistLevel\s*\([^)]*\)'))
+    creature = re.search(r'if\(DivineFeatResist\(this,(\w+),(\w+)\)\)Resists\[ResistCount\+\+\]=\2;', r)
+    creature_uses = len(re.findall(r'\bDivineFeatResist\s*\(', r))
+    # Gear takes the same grant, as the best of the sources rather than stacked.
+    gear = re.search(r'if\(DivineFeatResist\(this,(\w+),(\w+)\)\)(\w+)=max\(\3,\2\);', compact(g))
+    gear_uses = len(re.findall(r'\bDivineFeatResist\s*\(', g))
+    failed |= measure(got == want and bool(creature) and creature_uses == 1
+                                  and bool(gear) and gear_uses == 1,
+                      f'DivineFeatResist grants={"intact" if got == want else "changed"}; '
+                      f'ResistLevel stacks it={int(bool(creature)) if creature_uses == 1 else 0}/1; '
+                      f'GearResistLevel takes its max={int(bool(gear)) if gear_uses == 1 else 0}/1')
     return failed
 
 
