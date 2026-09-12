@@ -18,31 +18,46 @@
 # included because this script must stop inside the first Skill Manager and
 # chargen.keys walks straight through it. Keep the two in step.
 #
-# Three screen dumps. The comparison between them is the whole test:
+# Race, subrace, class and alignment use @choose to select by name. Use a
+# fixed seed: attribute sets have no names, and rolls decide the feats.
+# Start-menu and yes/no answers stay positional; arrow bursts move the cursor
+# and allocate ranks rather than answer named choices.
+#
+# Four screen dumps. The comparison between them is the whole test:
+# This header used to say three screen dumps; corrected 2026-09-12.
 #
 #   before      three skills carrying ranks, cursor on the third.
 #   after-end   after one END. It MUST equal "before" -- END is not a key
 #               this screen knows, so it MUST do nothing at all.
 #   after-home  after one HOME. Same requirement.
+#   after-esc-no  after ESC then n. The ranks MUST remain allocated.
 #
 # Before the fix, both "after" screens show an empty allocation column, a
 # refilled pool and the cursor back on the first row. See
 # tools/check_skill_manager_reset.sh.
 
-a       # Initial Choices: [a] Create a New Character
-n       # Alter the character generation options? -- no
-y       # Your options will place the game in Explore Mode. Continue? -- yes
-i       # Race:     [i] Orc
-a       # Subrace:  [a] Orc (Standard)
-a       # Class:    [a] Barbarian
-a       # Attributes: the first of the five offered sets
-c       # Alignment: [c] Neutral
-a       # First feat
-a       # Second feat
+@expect "Initial Choices"
+a       # Initial Choices: [a] Create a New Character; not a screen @choose reads.
+@expect "Alter the character generation options?"
+n       # Alter the character generation options? -- no; a yes/no question.
+@expect "Explore Mode. Continue?"
+y       # Continue in Explore Mode? Yes: a yes/no question.
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Barbarian"
+@expect "Which of the five attribute sets"
+a       # Attributes: the first of the five offered sets; the sets have no names.
+@choose "Neutral"
+@expect "Choose a feat"
+a       # First feat; the attribute rolls decide which feats are offered.
+@expect "Choose a feat"
+a       # Second feat; the attribute rolls decide which feats are offered.
 
 # The Skill Manager. Spend three ranks on each of the first three skills and
 # stop, leaving the pool non-empty -- an empty pool takes the other half of
 # the defect (a silent exit) and this run is measuring the wipe.
+@expect "Skill Manager"
+# Arrows allocate ranks and move between skills.
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3
 @dump:before
 
@@ -66,7 +81,12 @@ RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
 ENTER y
 
-y       # Do you wish to worship <god>? -- yes
+@expect "Do you wish to worship"
+y       # Do you wish to worship <god>? -- yes; a yes/no question.
+
+@expect "Your personality archetype"
+# Arrows move the selection on the personality archetype menu.
+# Personality affects only the sheet banner, so its selection is not pinned.
 
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN

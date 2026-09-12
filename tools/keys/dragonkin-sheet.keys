@@ -4,38 +4,56 @@
 # on the species template (lib/subraces.irh:731) and for years no player ever
 # received it, because Character::HasFeat did not read the template. See inc-2a0.
 #
-# Every choice below is a menu letter, and menu letters move when a list
-# changes. Run with a fixed seed or the attribute rolls change, the offered
-# feats change with them, and these letters choose something else.
+# Race, subrace, class and alignment use @choose to select by name, so a
+# list added to lib/ cannot change those choices. See src/Wposix.cpp.
+# Run with a fixed seed: attribute rolls change the offered feats, and the
+# attribute set and feat picks stay positional because sets have no names
+# and feats depend on the rolls. Start-menu, question and movement keys
+# stay counted for the reasons below.
+# Header said every choice was a menu letter; corrected 2026-09-12.
 # tools/check_race_feats.sh supplies the seed.
 
-a       # Initial Choices: [a] Create a New Character
-n       # Alter the character generation options? -- no
-y       # Your options will place the game in Explore Mode. Continue? -- yes
-h       # Race:     [h] Lizardfolk
-b       # Subrace:  [b] Dragonkin
-a       # Class:    [a] Barbarian
-a       # Attributes: the first of the five offered sets
-c       # Alignment: [c] Neutral
-a       # First feat
-a       # Second feat
+@expect "Initial Choices"
+a       # Create a New Character: start menu is not a screen @choose reads.
+@expect "Alter the character generation options?"
+n       # Alter the character generation options? No: a yes/no question.
+@expect "Explore Mode. Continue?"
+y       # Continue in Explore Mode? Yes: a yes/no question.
+@choose "Lizardfolk"
+@choose "Dragonkin"
+@choose "Barbarian"
+@expect "Which of the five attribute sets"
+a       # First attribute set: the five offered sets have no names.
+@choose "Neutral"
+@expect "Choose a feat"
+a       # First feat: offered feats depend on the attribute rolls.
+@expect "Choose a feat"
+a       # Second feat: offered feats depend on the attribute rolls.
 
-# Skill Manager, twice. Three RIGHTs per skill spends everything available
+# Skill Manager. Three RIGHTs per skill spends everything available
 # without needing to know how many ranks this character has.
+@expect "Skill Manager"
+# RIGHT/DOWN allocate ranks and move between skills, not named choices.
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
-ENTER y
+ENTER y # Finish and keep the ranks: ENTER is a control, y answers yes/no.
 
-y       # Do you wish to worship <god>? -- yes
+@expect "Your personality archetype"
+y       # No match: the sixteen personality entries use [a] through [p].
+
+# RIGHT/DOWN move the personality selection to The Manipulative Plotter.
+# Personality affects only the sheet banner, so its selection is not pinned.
 
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
-ENTER y
+ENTER y # Accept the selected archetype, then dismiss the entry description.
 
 # In the dungeon now. The sheet is two screens; the feats block is on the
 # second, so both are dumped and the check greps across them.
+@expect "Things in View"
 d
 @dump:sheet1
+@expect "[ESC] Return to Game"
 DOWN*20
 @dump:sheet2
 ESC
