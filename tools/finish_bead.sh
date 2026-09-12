@@ -5,6 +5,8 @@
 #   tools/finish_bead.sh inc-abcd --no-gate
 #   tools/finish_bead.sh --selftest
 #
+# A bead whose whole diff is *.md gets the cheap gate; see STEP 4.
+#
 # WHY IT IS ONE SCRIPT AND NOT A CHECKLIST. tools/worktree.sh isolates a bead so
 # two sessions cannot tread on each other. Isolation alone was NOT acceptable to
 # Brian on 2026-09-11: "I end up with 50 branches and can't remember what goes
@@ -56,6 +58,8 @@ BASE_BRANCH="${INCURSION_BASE_BRANCH:-master}"
 # caller can substitute a cheaper check knowingly; the default is the one
 # CLAUDE.md names as this project's answer to hosted CI.
 GATE_CMD="${INCURSION_FINISH_GATE:-tools/nightly_verify.sh --compare}"
+GATE_OVERRIDDEN=0
+[ -n "${INCURSION_FINISH_GATE:-}" ] && GATE_OVERRIDDEN=1
 
 die()    { echo "$1" >&2; exit 1; }
 cannot() { echo "INCONCLUSIVE: $1" >&2; exit 2; }
@@ -142,6 +146,36 @@ Nothing has reached $BASE_BRANCH."
 fi
 
 # STEP 4. The gate, run in the worktree, against the merged result.
+#
+# THE CARVE-OUT. A bead that changes nothing but markdown used to pay for both
+# builds, the Linux cross-build, the layout sweep, the soak and every live
+# check. On 2026-09-12 a two-file documentation edit did exactly that, and
+# Brian's instruction was "needs to be a carve out for changes that literally
+# cannot affect behavior". tools/docs_only_change.sh is the only thing that
+# decides a bead qualifies, and it is an allowlist, so anything it has not been
+# taught about gets the whole gate.
+#
+# IT DROPS THE BUILDS AND THE LIVE TIER, AND NOTHING ELSE. The entire cheap
+# tier still runs, because six checks in it parse markdown and a documentation
+# change is perfectly capable of breaking one. A carve-out that skipped those
+# would be the hole this comment exists to deny.
+#
+# IT FAILS CLOSED, THREE WAYS. An explicit INCURSION_FINISH_GATE is honoured
+# untouched, a verdict of 1 runs the full gate, and a verdict of 2 -- the
+# classifier could not measure -- runs the full gate too. The only path to the
+# cheap gate is a classifier that ran and said yes.
+if [ "$RUN_GATE" -eq 1 ] && [ "$GATE_OVERRIDDEN" -eq 0 ]; then
+    DOCS_VERDICT="$("$ROOT/tools/docs_only_change.sh" "$BASE_BRANCH" "$BEAD" 2>&1)"
+    case $? in
+        0) echo "=== $DOCS_VERDICT ==="
+           echo "=== gate scaled down: builds and the live tier cannot be reached by *.md ==="
+           GATE_CMD="tools/nightly_verify.sh --docs-only" ;;
+        1) ;;
+        *) echo "=== docs-only classifier could not measure; running the full gate ==="
+           echo "$DOCS_VERDICT" ;;
+    esac
+fi
+
 if [ "$RUN_GATE" -eq 1 ]; then
     echo "=== gate: $GATE_CMD ==="
     if ! ( cd "$WORKTREE" && eval "$GATE_CMD" ); then
