@@ -1,0 +1,44 @@
+# Pit entry observation for inc-szz3, human paladin of Erich, seed 4.
+# Terrain list observed in pit-probe: [U] pit, on page 1 (1-51 of 63).
+# WHAT IT BUILDS on seed 4: arrival (17,80), pits at (18,80),
+# (19,80), (20,80), (21,80). Coordinates read from player-position.
+# Run with: tools/headless.sh tools/keys/pit-fall.keys 4
+# The terrain menu paginates; [U] is on the first page, no TAB needed.
+# SPACE follows the chargen arrival dismissal. The first w opens wizard
+# mode; K selects Change terrain type, and the cursor starts on the player.
+# Confirm entry only when asked. A prone move stands up in place; later
+# moves attempt climbing. Dump every attempt and the complete message log.
+@include chargen-paladin.keys
+SPACE
+w y
+K RIGHT ENTER U
+w K RIGHT*2 ENTER U
+w K RIGHT*3 ENTER U
+w K RIGHT*4 ENTER U
+w a
+@dump:player-position
+ESC
+@dump:before
+RIGHT
+@while "Confirm enter" y
+@dump:after
+RIGHT
+@dump:stand-attempt
+RIGHT
+@while "Confirm enter" y
+@dump:move-attempt-2
+RIGHT
+@while "Confirm enter" y
+@dump:move-attempt-3
+RIGHT
+@while "Confirm enter" y
+@dump:move-attempt-4
+RIGHT
+@while "Confirm enter" y
+@dump:move-attempt-5
+RIGHT
+@while "Confirm enter" y
+@dump:move-attempt-6
+v
+@dump:messages
+@quit
