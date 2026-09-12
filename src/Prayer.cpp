@@ -1036,7 +1036,23 @@ int16 AidPairs[22][2] = {
 
 EvReturn Character::Pray(EventInfo &e) {
     TGod *tg = TGOD(e.eID);
-    int16 retry, i, j, k, cFavour;
+    int16 retry, i, j, k;
+    /* upstream: cFavour was int16 and took an explicit (int16) cast off
+       calcFavour(), which returns int32. Past 32767 the value wrapped
+       negative -- 102000 favour read as -29072 -- so every AID_CHART
+       threshold test below failed and the follower silently received no aid,
+       while still paying the prayer timeout and the favour penalty. 69
+       FAVOUR_CHART rows in lib/religion.irh exceed 32767, so this hit the top
+       of nearly every god's ladder. Upstream's, not the port's: int16 is
+       sixteen bits under the original typedefs and on Win32, so the same wrap
+       happens there. Five of the six chart comparisons in this file already
+       widen to int32 (:236, :282, :627, :1385, :1438); this was the lone
+       outlier, which is why it reads as an oversight. Traced. inc-pf0p. Not
+       sent.
+       NOT the defect inc-upw.31 fixed -- that was the SCRIPT view of
+       EventInfo::EParam in inc/Api.h, and its width sweep audited the
+       generated dispatcher, never a C++ local. */
+    int32 cFavour;
     int16 *Troubles; rID aidChart[64];
     bool doneSomething;
     String je;
@@ -1091,7 +1107,7 @@ EvReturn Character::Pray(EventInfo &e) {
 
     Troubles = getTroubles();
     tg->GetList(AID_CHART,aidChart,64);
-    cFavour = (int16)calcFavour(e.eID);
+    cFavour = calcFavour(e.eID);
     doneSomething = false;
 
     if (HasAbility(CA_DOMAINS) ||
@@ -1104,7 +1120,10 @@ EvReturn Character::Pray(EventInfo &e) {
         for (j=0;aidChart[j];j+=3) {
             if ((int16)aidChart[j+1] > (Troubles[i] / 256))
                 continue;
-            if ((int16)aidChart[j+2] > cFavour / (e.eID == GodID ? 1 : 5))
+            /* int32, matching the five other chart comparisons: rID is a
+               32-bit unsigned, and the old (int16) would truncate a module's
+               threshold above 32767 even with cFavour widened. inc-pf0p */
+            if ((int32)aidChart[j+2] > cFavour / (e.eID == GodID ? 1 : 5))
                 continue;
             for (k=0;AidPairs[k][0];k++)
                 if (AidPairs[k][1] == aidChart[j] &&
