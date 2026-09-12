@@ -2434,7 +2434,7 @@ Option OptionList[] = {
       "them, which suits the lighting: a less colorful surface lets the color "
       "of a torch or a spell show on it more strongly." },
   { OPT_LIGHT_EXPLORED, "Explored Area Brightness",
-      "Darkest/Darker/Normal/Brighter/Brightest", 4, 2, 0,
+      "Darkest/Darker/Normal/Brighter/Brightest", 4, 0, 0,
       "__Ground you have already walked is drawn from memory, in grey, once "
       "you can no longer see it. This option sets how dark those explored "
       "areas are drawn. 'Darkest' leaves the explored map barely readable and "
@@ -2443,7 +2443,7 @@ Option OptionList[] = {
       "color of remembered ground: what you can see, and what can see you, "
       "are the same at every setting." },
   { OPT_LIGHT_BRIGHT, "Illumination Intensity",
-      "Darkest/Darker/Normal/Brighter/Brightest", 4, 2, 0,
+      "Darkest/Darker/Normal/Brighter/Brightest", 4, 4, 0,
       "__This option sets how bright the finished picture looks. It scales "
       "every color on the map by the same amount, so one light never grows "
       "brighter relative to another and no color shifts its hue. Raising it "
