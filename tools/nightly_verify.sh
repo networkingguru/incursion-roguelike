@@ -6,6 +6,7 @@
 #   tools/nightly_verify.sh --compare   # after the run: did this run break any
 #   tools/nightly_verify.sh             # same as --compare, no recorded base
 #   tools/nightly_verify.sh --selftest  # does the ratchet itself still bite?
+#   tools/nightly_verify.sh --docs-only # *.md changed and nothing else did
 #
 # Exit: 0 safe to merge
 #       1 this run broke something, or a build failed
@@ -88,6 +89,7 @@ CHECK_DIR="${NIGHTLY_CHECK_DIR:-$ROOT/tools}"
 MODE="compare"
 
 SKIP_BUILDS=0
+SKIP_LIVE=0
 case "${1:-}" in
     --record)      MODE="record" ;;
     --compare)     MODE="compare" ;;
@@ -95,9 +97,16 @@ case "${1:-}" in
     # A build here overwrites ./incursion and mod/Incursion.Mod, which is not
     # safe to do while somebody is playing the game out of this directory.
     --checks-only) MODE="compare"; SKIP_BUILDS=1 ;;
+    # --docs-only is the carve-out for a change that cannot reach the
+    # game: it drops the builds and the live tier and keeps the whole
+    # cheap tier, which is where every documentation check lives. The
+    # CALLER decides a change qualifies, and tools/docs_only_change.sh is
+    # the only thing allowed to make that decision -- this flag trusts it
+    # and asks no questions, so nothing may pass it on a guess.
+    --docs-only)   MODE="compare"; SKIP_BUILDS=1; SKIP_LIVE=1 ;;
     --selftest)    MODE="selftest" ;;
     "")            MODE="compare" ;;
-    -h|--help)     sed -n '2,12p' "$0"; exit 0 ;;
+    -h|--help)     sed -n '2,13p' "$0"; exit 0 ;;
     *)             echo "unknown argument: $1" >&2; exit 2 ;;
 esac
 
@@ -137,7 +146,11 @@ discover_checks() {
     done
     # Cheap first, so a reader watching the output sees the seconds before the
     # minutes. Within a tier the glob's order is alphabetical and stable.
-    CHECKS=( ${cheap[@]+"${cheap[@]}"} ${live[@]+"${live[@]}"} )
+    if [ "$SKIP_LIVE" = 1 ]; then
+        CHECKS=( ${cheap[@]+"${cheap[@]}"} )
+    else
+        CHECKS=( ${cheap[@]+"${cheap[@]}"} ${live[@]+"${live[@]}"} )
+    fi
 }
 
 run_check() { # run_check "<command line>" -> echoes the exit code
@@ -261,7 +274,11 @@ fi
 FAILED=0
 
 if [ "$SKIP_BUILDS" = 1 ]; then
-    echo "--- builds SKIPPED (--checks-only) ---"
+    if [ "$SKIP_LIVE" = 1 ]; then
+        echo "--- builds and the live tier SKIPPED (--docs-only: no *.md reaches them) ---"
+    else
+        echo "--- builds SKIPPED (--checks-only) ---"
+    fi
 else
     echo "--- builds, macOS then Linux (absolute: a tree that does not compile never merges) ---"
     for build in "BACKEND=posix ./build_macos.sh" "./build_macos.sh"; do
