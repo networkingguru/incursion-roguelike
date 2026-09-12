@@ -1,0 +1,59 @@
+# Pray for divine aid while carrying more favour than an int16 holds, and
+# photograph what the god grants. (bd inc-pf0p)
+#
+# Character::Pray (src/Prayer.cpp:1037) read the favour total into an int16
+# local with an explicit cast off calcFavour(), which returns int32:
+#
+#     int16 retry, i, j, k, cFavour;      /* was */
+#     cFavour = (int16)calcFavour(e.eID); /* was */
+#
+# Every row of the god's AID_CHART is then gated on that value. Past 32767 the
+# cast wrapped NEGATIVE -- 120000 becomes -11072 -- so every threshold
+# comparison read `threshold > -11072`, took the `continue`, and the follower
+# received nothing at all. The symptom is silent: the prayer still charges the
+# timeout and the favour penalty, and the god's own MSG_PRAYER still prints.
+#
+# THE SAME CHARACTER AS tools/keys/favour-int32.keys, and for the same reason:
+# the wizard menu's "Become Divine Champion" (src/Debug.cpp:1118) sets one
+# sacrifice category to 30000, and Hesani's EV_CALC_FAVOUR handler
+# (lib/religion.irh:2170) multiplies it to 120000 for a level-one
+# non-barbarian. That is the cheapest route in the game to a favour total past
+# the wrap. Hesani's AID_CHART (lib/religion.irh:1994) opens AID_REFRESH at
+# threshold 100 and AID_MANA at 0, both P_LOW, so a fresh champion qualifies
+# for both on his first prayer.
+#
+# NO INJURY IS NEEDED. Creature::getTroubles (src/Prayer.cpp:682) reports
+# TROUBLE_LOWMANA from the mana RATIO rather than a deficit, so a character at
+# full mana already carries a P_LOW trouble; fatigue arrives the same way. That
+# is why this script can pray the moment the character exists.
+#
+# 'p' IS LOWERCASE. StandardKeySet stores { KY_CMD_PRAY, 'P', 0 }
+# (src/Tables.cpp:4755), but flag 0 means the UNSHIFTED key. An uppercase P is
+# swallowed on the map with no message at all, which is how the first draft of
+# this script measured a prayer that never happened.
+#
+# Seed 5 and tools/fixtures/options-2026-08-22.dat are part of the
+# measurement, because every choice below is a menu letter and menu letters
+# move when a list changes. tools/check_pray_aid_int32.sh supplies both.
+
+@include dequ-setup.keys
+
+@until "Wizard Mode Options" w
+@choose "Become Divine Champion"
+H e s a n i
+ENTER
+
+# Ten blessings arrive at once, each behind a "-- more --" prompt, and the last
+# of them leaves a dialog that swallows the next keystroke. Opening the sheet
+# and leaving it again is what reliably returns us to the map.
+@while "more --" SPACE
+d
+DOWN*20
+ESC
+
+p
+@expect "Request aid"
+a
+@while "more --" SPACE
+@dump:prayed
+@quit
