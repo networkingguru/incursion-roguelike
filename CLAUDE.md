@@ -2,39 +2,34 @@
 
 This file provides instructions and context for AI coding agents working on this project.
 
-## Standing order: fix bugs in this tree without asking
+## No autonomous work — propose, then wait
 
-**A bug in Brian's own repository IS a work order. Read it, edit it, build it,
-and run the checks. Do not ask.** He set this scope on 2026-09-09, after a
-session presented issue/fix/blast-radius and stopped on a bug in his own tree:
-"YOU DO NOT NEED TO ASK ME FOR EVERY FUCKING BUG EDIT, ONLY THOSE GOING TO
-OTHER REPOS."
+**You have no mandate to operate autonomously.** Brian set this scope on
+2026-09-12: "You do not have mandate to operate autonomously." It replaces the
+standing order that ran from 2026-09-09 to that date, which told a session to
+fix a bug in his own tree without asking.
 
-This mirrors the scope he set on the publishing rule below on 2026-09-08. One
-principle covers both: **his tree, his bugs, go; somebody else's tree, ask.**
+Before you change a tracked file, say what you found and what you would change,
+then WAIT for his word. This covers a bug fix in his own tree exactly as it
+covers a feature, a refactor, a spec, a rule change or user-facing text. A small
+diff is not an exception. Neither is a defect you are certain about.
 
-Three things still need his word, and nothing else does:
+Read, grep, build and run the checks freely. Investigation needs no permission.
+Changing his tree does.
 
-1. **Anything aimed at a tree he does not own.** A patch, issue, PR or comment
-   for `rmtew/incursion-roguelike` or any third party. That is rule 1 of
-   "Publishing anything outward-facing", and it is unchanged.
-2. **Committing and pushing.** Separate rule, separate reason: when he says
-   save, commit or push, that is a stop instruction. Nothing else starts a
-   commit. Fixing a bug leaves the work in the tree for him to review.
-3. **Work that is not a bug fix.** A feature, a refactor, a spec, a rule
-   change, or any edit to user-facing text (README, docs, release notes,
-   store pages). Those keep the old shape: propose, then wait.
+**A question is a question.** If he asks why something behaves as it does,
+answer it. He asked for an explanation, not a repair. On 2026-08-23 he reported
+that the Boots of Providence pay no Luck bonus when carried, and he asked for
+nothing else. That session edited four tracked files, rebuilt both binaries and
+the module, and filed a bead. See bead inc-izuu.
 
-**A question is still a question.** If Brian asks why something behaves the way
-it does, answer the question. He asked for an explanation, not a repair. That is
-the residue of 2026-08-23, which is still worth remembering: he reported that
-the Boots of Providence pay no Luck bonus when carried and asked for nothing
-else, and the session edited four tracked files, rebuilt both binaries and the
-module, and filed a bead. The defect there was scope, not permission. See bead
-inc-izuu.
+Two rules stay exactly as they are, and neither one grants autonomy:
 
-When you fix a bug unasked, say what you changed, file by file, and what else
-the change reaches. Report it after; do not request it before.
+1. **Committing and pushing.** When he says save, commit or push, that is a stop
+   instruction. Nothing else starts a commit.
+2. **Publishing to a tree he does not own.** See "Publishing anything
+   outward-facing" below. Its narrow bead-sync exemption is unchanged: a bug on
+   his own tracker still syncs without a pre-read.
 
 ## Publishing anything outward-facing
 
@@ -195,6 +190,7 @@ project uses instead of hosted CI, and it is not optional.
 ## Architecture and conventions
 
 `README.md` §For developers describes the harness, the gate and the checks.
-`AGENTS.md` holds the working rules: the standing order, the publishing rules,
-how to mark a base-code bug, how to classify a change, and the comment budget.
-Neither is repeated here, because a third copy would drift.
+`AGENTS.md` holds the working rules: the no-autonomy rule, the worktree rule,
+the publishing rules, how to mark a base-code bug, how to classify a change,
+and the comment budget. Neither is repeated here, because a third copy would
+drift.
