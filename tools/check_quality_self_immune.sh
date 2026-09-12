@@ -42,10 +42,20 @@
 # tools/keys/quality-self-immune-setup.keys carries the rest of that argument.
 #
 # Measured 2026-09-11, seed 5, tools/fixtures/options-2026-08-22.dat:
-#   arm A ends at 52 of 56 hit points, named "mildly burnt leather armour",
+#   arm A ends at 43 of 56 hit points, named "mildly burnt leather armour",
 #         with Fire still in its "0 to ..." group and no Fire on the sheet;
 #   arm B ends at 56 of 56, unburnt, with Fire in its immunity list, and the
 #         sheet reads "Fire 6" once the suit is +2.
+#
+# RE-CALIBRATED 2026-09-11, same day, after inc-19ay. That fix gave every breath
+# weapon the dice its statblock declares, so the hounds breathe 2d6 instead of
+# 1d6 and the random stream diverges at the first breath. Two numbers moved and
+# neither is a property of this check: arm A's suit now ends at 43 of 56 rather
+# than 52, and one of arm B's two Enchant Armour reads fell on a failed Decipher
+# check, which left the suit at +1 and the sheet at "Fire 3". The answer is in
+# tools/keys/quality-self-immune-quality.keys: the reader now wears a helm that
+# adds +10 to Decipher Script, so a read no longer turns on a die this fixture
+# cannot see. No assertion was weakened; "+2" and "Fire 6" still stand.
 # Usage: tools/check_quality_self_immune.sh [--prove-red]
 # Declared mutation: Item::Hardness returns 0 instead of the -1 immunity.
 # PROVED RED 2026-09-11. Arm A stays green, which is right -- it carries no

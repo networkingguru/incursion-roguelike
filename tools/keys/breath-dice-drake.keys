@@ -1,0 +1,99 @@
+# inc-19ay, scenario 1 of 2: a breather that declares its own dice and carries
+# no template, so Power is 0 and the declared dice are the whole answer.
+#
+# THE MONSTER IS A HELL HOUND, NOT A DRAKE, and the file keeps its old name
+# only because check_breath_dice.sh names its two scenarios "drake" and
+# "dragon". The flame drake this was written for CANNOT BE SUMMONED AT ALL:
+# its only declared MType is MA_REPTILIAN (lib/mon1.irh:1474), MA_REPTILIAN is
+# 83 (inc/Defines.h:1618), and TextTerm::MonsterTypePrompt (src/Term.cpp:2887)
+# offers only types up to MA_LAST_REAL, which is 74. Nothing in
+# Creature::isMType puts a flame drake into a type below that line, so it is on
+# neither page of the summon menu. Every drake is MA_REPTILIAN, so the same is
+# true of all four.
+#
+# The hell hound declares A_BREA for 2d6 AD_FIRE (lib/mon4.irh:1999), which is
+# the same 2 dice the drake declared, and it is an MA_DOG, so the summon menu
+# lists it under Dogs.
+#
+# INCURSION_BREATH_PROBE records the actual dice before damage is delivered.
+@include chargen.keys
+
+# chargen.keys ends in play mode, so the first key here is a game command and
+# NOT a prompt dismissal: an ESC opens the System Menu (src/Player.cpp:845) and
+# every later keystroke then reads the wrong screen. Go straight to wizard
+# mode, the way kobold-horn-hostile.keys does. The first wizard entry asks for
+# confirmation; enable Cheat Death (the first switch) so a level-one character
+# can give every summoned monster a turn.
+w
+y
+@choose "Wizard Mode Switches"
+SPACE
+ESC
+
+# Place it three squares east, in sight and close enough to breathe.
+w
+@choose "Monster Summoning"
+@choose "Dogs"
+@choose "hell hound"
+RIGHT*3
+ENTER
+@dump:hound-summoned
+
+# NO "All Monster Aggravate" HERE. That wizard entry crashes the game:
+# src/Debug.cpp:1005 passes myHandle -- an object handle -- as the rID
+# argument of GainPermStati, Thing::GainPermStati asserts theGame->Get(eID)
+# on it (src/Status.cpp:188), and the session then segfaults. A monster the
+# wizard menu summons is hostile already, so the aggravate was never needed.
+
+# Each dot gives the monsters a turn. In Player::Death, n declines death
+# and restores HP; y accepts death and can prevent the next breath.
+.
+@while "Die?" n
+@dump:wait01
+.
+@while "Die?" n
+@dump:wait02
+.
+@while "Die?" n
+@dump:wait03
+.
+@while "Die?" n
+@dump:wait04
+.
+@while "Die?" n
+@dump:wait05
+.
+@while "Die?" n
+@dump:wait06
+.
+@while "Die?" n
+@dump:wait07
+.
+@while "Die?" n
+@dump:wait08
+.
+@while "Die?" n
+@dump:wait09
+.
+@while "Die?" n
+@dump:wait10
+.
+@while "Die?" n
+@dump:wait11
+.
+@while "Die?" n
+@dump:wait12
+.
+@while "Die?" n
+@dump:wait13
+.
+@while "Die?" n
+@dump:wait14
+.
+@while "Die?" n
+@dump:wait15
+.
+@while "Die?" n
+@dump:wait16
+
+@quit

@@ -16,10 +16,13 @@
 #     casting instead; a red dragon was measured breathing four times in a
 #     hundred turns for exactly that reason, and a fire mephit fights other
 #     mephits.
-#   - Its breath is 2d6, which after src/Fight.cpp:1710 -- that line overwrites
-#     the rolled Number with max(1,e.Dmg.Number), so EVERY monster breath in
-#     this game delivers ONE die rather than its declared number of dice --
-#     lands as 1d6. The item takes half of that.
+#   - Its breath is 2d6 (lib/mon4.irh:1999), and it lands as the 2d6 it
+#     declares. It used to land as 1d6: src/Fight.cpp assigned
+#     max(1,e.Dmg.Number) over the dice the statblock had just declared, so
+#     EVERY monster breath in this game delivered ONE die. inc-19ay made that
+#     max a floor under the declared count instead of a replacement of it, and
+#     the hound now breathes what it says it breathes. The item takes half of
+#     that.
 #   - It is M_GROUP, so three of them hunt together instead of fighting each
 #     other, and three breaths a round is what makes a hundred turns enough.
 #
@@ -31,8 +34,10 @@
 # a screen dump, so no assertion rests on catching one.
 #
 # WHY A HUNDRED TURNS. The equipment block reaches the armour on about one
-# breath in four. Measured on seed 5, a hundred turns lands two hits on the
-# unprotected suit and takes it from 56 hit points to 52.
+# breath in four. Measured on seed 5 after inc-19ay, a hundred turns takes the
+# unprotected suit from 56 hit points to 43. Measured on the same seed before
+# inc-19ay, when every breath delivered one die instead of its declared two,
+# the same hundred turns took it from 56 to 52.
 
 @until "SPACE:Swap" i
 @until ">>j)Armour" j

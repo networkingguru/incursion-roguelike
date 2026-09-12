@@ -35,6 +35,42 @@ ENTER
 @include quality-self-immune-burn.keys
 
 # --- the wearer half ----------------------------------------------------
+# THE HELM COMES FIRST, because reading a scroll is a die roll and this
+# measurement must not rest on one. Item::ReadScroll gates the whole effect on
+# SkillCheck(SK_DECIPHER, 10 + sLevel) (src/Magic.cpp:3721). Enchant Armour is
+# Level 3 and sLevel is Level*2-1 (src/Magic.cpp:3681), so the DC is 15, and
+# this mage's Decipher rating is 2. SkillCheck rolls two d20 for SK_DECIPHER
+# and keeps the better (src/Skills.cpp:1539), so a bare read lands about two
+# times in three; a failed read prints "The magic runs amok!", spends the
+# scroll, and leaves the suit's plus where it was.
+#
+# That is what took this fixture red on 2026-09-11. inc-19ay gave every breath
+# weapon the dice its statblock declares, which moved the random stream from
+# the first breath onward; the first of the two reads then landed on a failure,
+# the suit finished at +1, and the sheet read "Fire 3". Nothing about the
+# property had changed. Measured on the fixed build, seed 5: read one failed at
+# "Decipher Script Check: 1d20 (10 [10/2]) +2 = 12 vs DC 15".
+#
+# "Comprehending Languages and Reading Magic" (lib/m_items.irh:5772) is a helm
+# whose entire effect is SKILL_BONUS SK_DECIPHER +10. It takes the rating to 12
+# against DC 15, so only a pair of ones and twos can fail a read now, and both
+# reads below land on any ordinary stream. It grants no resistance of any kind,
+# so it cannot touch what either half of this arm measures, and it goes on
+# AFTER the burning and after the genocide, so it cannot reach the item half at
+# all. Column 18 of the acquisition prompt is Helms (src/Tables.cpp:339); the
+# extra DOWN selects the matched row, as it does for the suit in
+# quality-self-immune-setup.keys. [q] is the Helmet slot and SPACE wears it.
+w
+@choose "Item Acquisition"
+RIGHT*18
+@until "Comprehending Languages" DOWN
+DOWN
+ENTER
+q
+SPACE
+@while "more --" SPACE
+@until "Things in View" ESC
+
 # Two ordinary Enchant Armour scrolls, +1 each. Column 1 of the acquisition
 # prompt is Scrolls; the plain scroll is the row above "Enchant Armour
 # (featherlight)", which is where @until leaves the cursor.

@@ -1705,10 +1705,42 @@ OvercomeNausea:
 
         if (!ta) return ABORT; 
 
+        /* upstream: a breath's die count is the statblock's dice plus the
+           breather's power scaling, and max(1,...) is the FLOOR under that sum --
+           never a replacement of it. Assigning e.Dmg.Number over it gave every
+           breath in the game exactly one die: every caller arrives through
+           ThrowVal, whose Clear() memsets e.Dmg to zero, and no breath type is a
+           response attack. Dragons declare 0dN (lib/mon1.irh:564) and take all
+           their dice from the age template's Power, so they breathed 1dN at every
+           age. Upstream's: the three lines are byte-identical in rmtew/master and
+           in the original 0.6.5B source (7b8504a), and the arithmetic is plain C++
+           that behaves the same on Win32 with the original typedefs. Tier
+           Observed; tracking inc-19ay. Not sent. */
         te->ef.pval = ta->u.a.Dmg;
         te->ef.pval.Number += e.EActor->GetPower(0)*2;
+#ifdef INCURSION_BREATH_UNFIXED
         te->ef.pval.Number = max(1,e.Dmg.Number);
+#else
+        te->ef.pval.Number = max(1,te->ef.pval.Number);
+#endif
         e.Dmg = te->ef.pval;
+        {
+            static int on = getenv("INCURSION_BREATH_PROBE") ? 1 : 0;
+            if (on) {
+                char path[1024];
+                snprintf(path,sizeof(path),"%slogs/breath.log",
+                         (const char*)T1->IncursionDirectory);
+                FILE *f = fopen(path,"a");
+                if (f) {
+                    fprintf(f, "breath: actor=\"%s\" atype=%d declared=%dd%d power=%d delivered=%dd%d\n",
+                        (const char*)NAME(e.EActor->mID), (int)e.AType,
+                        (int)ta->u.a.Dmg.Number, (int)ta->u.a.Dmg.Sides,
+                        (int)e.EActor->GetPower(0),
+                        (int)te->ef.pval.Number, (int)te->ef.pval.Sides);
+                    fclose(f);
+                }
+            }
+        }
         te->ef.lval = 3 + e.EActor->ChallengeRating()/2;
         e.vRange = te->ef.lval;
         e.DType = te->ef.xval = ta->DType;
