@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Regression check for the prestige-class level tables, bd inc-tek.8.3
 # findings PA-03-F16 and PA-03-F17.
 #

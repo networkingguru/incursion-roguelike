@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Regression check for the screen-driven key-script directives, bd inc-cso:
 # @choose, @cursorto, @cursorto:mark and @expect.
 #
