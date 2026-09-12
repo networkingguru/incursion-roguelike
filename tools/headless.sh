@@ -4,6 +4,12 @@
 # Usage: tools/headless.sh <keyscript> [seed]
 #        tools/headless.sh tools/keys/smoke.keys 1
 #
+# INCURSION_OPTIONS is mandatory and names the settings file; INCURSION_LOAD is
+# optional and names a save file to start from instead of the title menu. Both
+# are environment variables rather than arguments, because the two positions
+# are already spoken for in more than two hundred callers. A run that loads a
+# save still has to name its settings.
+#
 # The session runs in its own directory under logs/runs/, with its own save/
 # and logs/, and with mod/ and lib/ symlinked in. Nothing it does can reach
 # the save files in the game folder -- an unattended run must not be able to
@@ -107,6 +113,54 @@ if [ ! -f "$OPTIONS" ]; then
 fi
 [ -f "$OPTIONS" ] && cp "$OPTIONS" "$RUN/Options.Dat"
 
+# INCURSION_LOAD starts the session from a saved character instead of from the
+# title menu. It is an environment variable and not a positional argument for
+# the reason INCURSION_OPTIONS is one: over two hundred callers already pass
+# "<keyscript> [seed]" by position, and a third position would have to be
+# threaded through every one of them.
+#
+# WHY A SESSION WOULD WANT THIS. A character built by a key script is not
+# reproducible across module changes: an rID in this engine is a POSITION, so
+# one resource added to lib/ shifts every id above it. Measured 2026-09-12,
+# commit bef32c3 added one Effect to lib/m_items.irh and the seed-1 Lizardfolk
+# monk went from STR 18 holding a long sword +3 to STR 14 holding a
+# quarterstaff, on byte-identical attribute dice. A character LOADED from a
+# save does not move, because the v1 save schema converts every saved rID
+# through that save's own per-module manifest (v1ConvertManifestRid,
+# src/SaveV1.cpp). See bd inc-1fjk and tools/fixtures/chars/.
+#
+# THE COPY IS THE WHOLE POINT. A loaded session owns its save: Game::SaveGame
+# (src/Registry.cpp:1114) writes back to SaveFile, having first renamed the old
+# file to <name>.sav.backup, so a session pointed at a frozen fixture would
+# rewrite the fixture and delete nothing but its own evidence. The copy lands
+# in the run's own save/, which is the same directory this script hands every
+# other session, so a loaded run can save as freely as any other and still
+# reach nothing outside logs/runs/.
+#
+# The BARE FILE NAME is what goes on the command line, never the path.
+# Game::LoadNamedGame (src/Registry.cpp:1322-1332) resolves a name with no '/'
+# in it against the save subdirectory -- which INCURSIONPATH has already made
+# the sandbox -- and treats anything else as a path to open where it stands.
+# Passing the fixture's own path would therefore both read and later WRITE the
+# original file, which is the trap the copy above exists to avoid.
+LOAD="${INCURSION_LOAD:-}"
+LOAD_ARGS=()
+if [ -n "$LOAD" ]; then
+    if [ ! -f "$LOAD" ]; then
+        echo "INCURSION_LOAD names a file that is not there: $LOAD"
+        exit 2
+    fi
+    LOAD_NAME="$(basename "$LOAD")"
+    cp "$LOAD" "$RUN/save/$LOAD_NAME" || {
+        echo "INCURSION_LOAD: could not copy $LOAD into $RUN/save/"
+        exit 2
+    }
+    # A fixture kept read-only would copy read-only, and the game would then
+    # fail its own save rather than the run failing here where it can be read.
+    chmod u+w "$RUN/save/$LOAD_NAME"
+    LOAD_ARGS=(-load "$LOAD_NAME")
+fi
+
 # The probes that have already caught real defects. They do NOT cost nothing,
 # which is why they can be turned off: a sample of a headless run on 2026-08-15
 # put 75% of it inside AuditMap, so a session with the audit on measures the
@@ -122,6 +176,11 @@ echo "seed:  ${SEED:-<clock -- this run is not reproducible>}"
 # Printed because it is an input to the result. A run whose numbers surprise
 # somebody later should say on its own face which settings produced them.
 echo "opts:  $OPTIONS"
+# Printed only when there is one, so the output a caller parses is unchanged
+# for every run that does not load. A loaded run's character came from the
+# file rather than from the seed, and saying so here is the only place a
+# reader of the report would find that out.
+[ -n "$LOAD" ] && echo "load:  $LOAD (copied to $RUN/save/$LOAD_NAME)"
 echo "run:   $RUN"
 echo
 
@@ -131,11 +190,12 @@ if [ "$TTY" -eq 1 ]; then
     # nothing. The drawing is captured rather than shown, so the run stays
     # unattended and the escape sequences can be read afterwards.
     LINES=48 COLUMNS=80 TERM="${TERM:-xterm}" \
-        script -q "$RUN/logs/terminal.out" $LAUNCHER "$BIN" -keys "$KEYS" "${@:3}"
+        script -q "$RUN/logs/terminal.out" $LAUNCHER "$BIN" -keys "$KEYS" \
+        ${LOAD_ARGS[@]+"${LOAD_ARGS[@]}"} "${@:3}"
     STATUS=$?
     echo "terminal drawing captured in $RUN/logs/terminal.out"
 else
-    $LAUNCHER "$BIN" -keys "$KEYS" "${@:3}" < /dev/null
+    $LAUNCHER "$BIN" -keys "$KEYS" ${LOAD_ARGS[@]+"${LOAD_ARGS[@]}"} "${@:3}" < /dev/null
     STATUS=$?
 fi
 

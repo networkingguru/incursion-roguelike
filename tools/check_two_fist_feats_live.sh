@@ -11,6 +11,17 @@
 # fists had earned him did nothing until he put his fists away and picked up two
 # nunchaku.
 #
+# THE CHARACTER COMES FROM A FROZEN FIXTURE, not from a seeded chargen. A
+# seed-pinned character is not reproducible across module changes, and the
+# weapon chargen puts in his hands is exactly the field that moves: commit
+# bef32c3 swapped his long sword for a quarterstaff, the stow that used to
+# empty his hands was refused for size, and src/Sheet.cpp:162 then hid the
+# Brawl row this check exists to read (bd inc-sls0). So the monk is loaded from
+# tools/fixtures/chars/lizardfolk-monk-barehand-seed1.sav, which holds him with
+# his hands already empty. tools/fixtures/README.md states the rule and the
+# measurement behind it, and tools/check_char_fixture.sh is the standing proof
+# that a loaded character does not move.
+#
 # ONE SESSION, TWO MEASUREMENTS, ONE VARIABLE: the character buys Tempest
 # between them, and the Brawl row of the character sheet is read either side.
 #
@@ -42,6 +53,12 @@ cd "$ROOT"
 
 SEED=1
 KEYS=tools/keys/monk-tempest.keys
+OPTIONS=tools/fixtures/options-2026-08-18.dat
+# The fixture is generated on these same settings, so the two names move
+# together. tools/headless.sh copies the .sav into the run's own save/ and
+# hands the game the bare name, so nothing this session does reaches the file.
+FIXTURE=lizardfolk-monk-barehand-seed1
+SAV="tools/fixtures/chars/$FIXTURE.sav"
 WANT_BEFORE=125
 WANT_AFTER=175
 
@@ -49,8 +66,16 @@ WANT_AFTER=175
     echo "FAIL: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
     exit 1
 }
+[ -f "$SAV" ] || {
+    echo "FAIL: no $SAV, so there is no bare-handed monk to load."
+    echo "      Make one with:"
+    echo "      tools/make_char_fixture.sh $FIXTURE \\"
+    echo "          tools/keys/lizardfolk-monk-barehand-save.keys $SEED $OPTIONS"
+    exit 1
+}
 
-out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
+out="$(INCURSION_OPTIONS="$OPTIONS" INCURSION_LOAD="$SAV" \
+       tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 
 # A session that measured nothing must never read as a pass: inc-loa.3.

@@ -1,4 +1,6 @@
-# Dated options fixtures
+# Frozen fixtures
+
+## Dated options fixtures
 
 These 900-byte files preserve the settings that scripted checks originally ran
 against. Each is the exact `Options.Dat` blob from the named repository commit:
@@ -16,3 +18,88 @@ These are historical harness inputs, not recommended player defaults.
 
 A fixture is frozen. If a check needs different settings, add a new fixture
 with its own provenance and date; never edit an existing fixture.
+
+## Character fixtures
+
+`chars/<name>.sav`, `chars/<name>.keys` and `chars/<name>.sheet.txt` are one
+fixture, and a `.sav` on its own is not enough. The `.sav` is the frozen
+character. The `.keys` is the key script that generated him, copied in, because
+a save-format change will one day make remaking every fixture compulsory and the
+`.sav` cannot be remade without it. The `.sheet.txt` is the engine's own dump of
+the character under a provenance header — seed, settings, key script, commit,
+and the sha256 of both the `.sav` and `mod/Incursion.Mod` — so a reader can see
+what is in the `.sav` without loading it, and so a check can read its
+expectations out of the fixture instead of out of numbers typed into the check.
+`tools/make_char_fixture.sh` rewrites the whole sheet on every regeneration, so
+the header cannot drift away from the `.sav` beside it.
+
+**Why a character is frozen at all.** A character built by a key script is not
+reproducible across module changes. An rID in this engine is a POSITION, so one
+resource added to `lib/` shifts every id above it. Measured 2026-09-12: commit
+`bef32c3` added one Effect to `lib/m_items.irh`, and the seed-1 Lizardfolk monk
+went from STR 18 holding a long sword +3 to STR 14 holding a quarterstaff, on
+byte-identical attribute dice. About seventeen checks were red on master that
+day, and at least four of them were red from this cause alone. A character LOADED from a save
+does not move, because the v1 save schema converts every saved rID through that
+save's own per-module manifest (`v1ConvertManifestRid`, `src/SaveV1.cpp`);
+measured the same day, byte-identical across the same module change. So a check
+that wants a character who stays himself must load one. The defect is bd
+`inc-sls0` and this machinery is bd `inc-1fjk`.
+
+**Using one.** `INCURSION_LOAD` names the save, and `tools/headless.sh` starts
+the session from that character instead of from the title menu:
+
+```sh
+INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav \
+    tools/headless.sh tools/keys/load-char-sheet.keys 1
+```
+
+A loaded run still MUST name its settings, and it still takes a seed: the
+character comes from the file, but the seed pins everything the session does
+after the load. `tools/keys/load-char-sheet.keys` builds no character of its
+own, so it reads any fixture; run it with no `INCURSION_LOAD` and the game sits
+in its title menu and the run reports NO GAMEPLAY.
+
+**The save is COPIED into the run's sandbox, and that is the point.** A loaded
+session owns its save file and writes back to it, so a fixture handed to the
+game by path would be rewritten by the very run that read it.
+`tools/headless.sh` copies the file into the run's own `save/` and passes the
+bare name to `-load`, so nothing a session does reaches the path
+`INCURSION_LOAD` named. `tools/check_char_fixture.sh` asserts both halves of
+that: the fixture is byte-identical after a run that loaded AND saved it, and
+the run's sandbox holds its own copy.
+
+**Making one.** `tools/make_char_fixture.sh <name> <keyscript> <seed> <options>`:
+
+| Argument | What it is |
+|---|---|
+| `name` | What the fixture is called. It becomes `chars/<name>.sav` and its two companions, and also a `-load` argument, so letters, digits, dot, dash and underscore only. |
+| `keyscript` | The script that builds the character AND SAVES HIM. It must end with the System Menu's `[b]` Save and Continue — `ESC b` — which is the only save the game offers that does not also end the session. `tools/keys/lizardfolk-monk-save.keys` is the worked example. |
+| `seed` | The seed to generate under. Not optional: an unseeded run rolls different attributes, so it would freeze a different character. |
+| `options` | A settings file from this directory. Settings change what a seeded session does, so a fixture is only meaningful with the one that made it, and that name goes into the sheet header. |
+
+The script generates the character, copies the `.sav` into place, and then LOADS
+that copy back through `tools/headless.sh` to write the sheet. It costs a second
+session and buys one guarantee: no fixture is published without having been
+loaded once, so a `.sav` that cannot be read back fails there rather than in
+somebody else's check a month later.
+
+**Regenerating one.** Add `--force`. Without it the script refuses to touch an
+existing fixture, because overwriting one silently retires every check built on
+it. The regenerating command is written into the sheet's own header, so a
+save-format change years from now is a matter of running what the file already
+says.
+
+**A regeneration is always a real git diff, and the bytes are not the oracle.**
+The same name, key script, seed, settings and binary, run three times on
+2026-09-12, gave `.sav` files whose sha256 began `2b5fb59c`, `603f109b` and
+`94c4c2a8`, and `tools/check_char_fixture.sh` passed on each: same name, race,
+class and Strength. A save carries clocks and counters that no second run
+repeats. Judge a regeneration by what the sheet says, never by the size of the
+diff.
+
+A character fixture is frozen too. If a check needs a different character, add a
+new fixture with its own key script and its own name; never edit an existing
+one, and never hand-edit a `.sheet.txt`, which would leave it describing a
+character the `.sav` beside it does not hold.
