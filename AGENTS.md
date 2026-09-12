@@ -1,19 +1,21 @@
 # Agent Instructions
 
-## Standing order: fix bugs in this tree without asking
+## No autonomous work — propose, then wait
 
-**A bug in Brian's own repository IS a work order. Read it, edit it, build it,
-and run the checks. Do not ask.** He set this scope on 2026-09-09: "YOU DO NOT
-NEED TO ASK ME FOR EVERY FUCKING BUG EDIT, ONLY THOSE GOING TO OTHER REPOS."
+**You have no mandate to operate autonomously.** Brian set this scope on
+2026-09-12: "You do not have mandate to operate autonomously." It replaces the
+standing order that ran from 2026-09-09 to that date.
 
-One principle covers this and the publishing rule below: **his tree, his bugs,
-go; somebody else's tree, ask.** Three things still need his word: anything
-aimed at a tree he does not own; committing and pushing; and work that is not a
-bug fix (a feature, a refactor, a spec, a rule change, or user-facing text).
+Before you change a tracked file, say what you found and what you would change,
+then WAIT for his word. A bug fix in his own tree needs his word exactly as a
+feature, a refactor, a spec or a rule change does. A small diff is not an
+exception, and neither is a defect you are certain about.
 
-A question is still a question. If he asks why something behaves as it does,
-answer it — he asked for an explanation, not a repair. Report a fix after you
-make it, file by file, with what else the change reaches.
+Read, grep, build and run the checks freely. Investigation needs no permission.
+Changing his tree does.
+
+A question is a question. If he asks why something behaves as it does, answer
+it — he asked for an explanation, not a repair.
 
 The full statement of this rule, with the incident behind it, is in `CLAUDE.md`.
 
