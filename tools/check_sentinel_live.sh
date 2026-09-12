@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Does the Sentinel's printed level table match what the Sentinel actually
 # grants? bd inc-tek.8.3 finding PA-03-F16, and the mission test for bd
 # inc-cso.

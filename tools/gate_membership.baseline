@@ -93,7 +93,6 @@ check_huntsman_live.sh
 check_illus_refund.sh
 check_item_type_id.sh
 check_javelin_lightning_savedc.sh
-check_key_directives.sh
 check_ki_strike_live.sh
 check_killing_hands.sh
 check_kobold_horn.sh
@@ -133,7 +132,6 @@ check_planes_sword_prose.sh
 check_precision_prose.sh
 check_prestige_hidden.sh
 check_prestige_profs.sh
-check_prestige_tables.sh
 check_ptr_sweep.sh
 check_python_rod_prose.sh
 check_quiet_lookup.sh
@@ -153,7 +151,6 @@ check_sacrifice.sh
 check_sanctuary_strike.sh
 check_save_fail.sh
 check_schema_roundtrip.sh
-check_sentinel_live.sh
 check_shadow_shifting.sh
 check_shadowstone_page.sh
 check_sharp_senses.sh
