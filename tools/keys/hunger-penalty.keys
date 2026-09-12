@@ -20,30 +20,48 @@
 # tools/check_hunger_penalty.sh refuses to compare two photographs that are
 # not one Hungry and one Starving.
 #
-# Menu letters move when a list changes. Run with a fixed seed;
-# tools/check_hunger_penalty.sh supplies one.
+# Race, subrace, class and alignment use @choose by name, so changing a
+# list cannot shift these selections. Run with a fixed seed;
+# tools/check_hunger_penalty.sh supplies one. Attribute sets have no names,
+# and the rolls decide which feats are offered, so those picks stay counted.
+# Start-menu, yes/no and movement keys stay positional for the reasons below.
 
-a       # Initial Choices: [a] Create a New Character
-n       # Alter the character generation options? -- no
-y       # Your options will place the game in Explore Mode. Continue? -- yes
-h       # Race:     [h] Lizardfolk
-b       # Subrace:  [b] Dragonkin
-a       # Class:    [a] Barbarian
-a       # Attributes: the first of the five offered sets
-c       # Alignment: [c] Neutral
-a       # First feat
-a       # Second feat
+@expect "Initial Choices"
+a       # Create a New Character: start menu is not a screen @choose reads.
+@expect "Alter the character generation options?"
+n       # No alteration: a yes/no question, not a menu.
+@expect "Explore Mode. Continue?"
+y       # Continue in Explore Mode: a yes/no question, not a menu.
+@choose "Lizardfolk"
+@choose "Dragonkin"
+@choose "Barbarian"
+@expect "Which of the five attribute sets"
+a       # First attribute set: the five offered sets have no names.
+@choose "Neutral"
+@expect "Choose a feat"
+a       # First feat: the offered feats depend on attribute rolls.
+@expect "Choose a feat"
+a       # Second feat: the offered feats depend on attribute rolls.
 
-# Skill Manager, twice. Three RIGHTs per skill spends everything available
+# Skill Manager. Three RIGHTs per skill spends everything available
 # without needing to know how many ranks this character has.
+# The old comment said Skill Manager twice; corrected 2026-09-12.
+@expect "Skill Manager"
+# Cursor movement, not a choice.
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+# Finish ranks, then confirm: ENTER is a control; y answers yes/no.
 ENTER y
 
-y       # Do you wish to worship <god>? -- yes
+@expect "Your personality archetype"
+y       # No match: the sixteen personality entries use [a] through [p].
+# The old comment called this worship; corrected 2026-09-12.
+# RIGHT/DOWN move the personality selection to The Manipulative Plotter.
+# Personality affects only the sheet banner, so its selection is not pinned.
 
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+# Accept the personality, then dismiss the Entry Chamber description.
 ENTER y
 
 # In the dungeon now, and Satiated. This first photograph is the baseline: it

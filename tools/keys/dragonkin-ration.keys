@@ -5,6 +5,8 @@
 # very first one. Before the fix (src/Item.cpp, Food::Eat) each refusal took
 # one ration anyway -- 9 food rations -> 8 -> 7 -> ... -> "food ration"
 # (quantity 1) after 8 refusals, on this exact seed and script.
+# Run with seed 1 and tools/fixtures/options-2026-08-18.dat.
+# The seed was never recorded before; established 2026-09-12.
 #
 # NO CHECK SCRIPT READS THESE DUMPS. This header cited
 # tools/check_dragonkin_ration.sh as the enforcing check. That file has never
@@ -12,35 +14,50 @@
 # the dumps, and the measurement is recorded in the inc-i9q.1 row of
 # docs/REPORTING-GATE.md. Write the check if the assertion is worth a gate.
 #
-# Every choice below is a menu letter, and menu letters move when a list
-# changes. Run with a fixed seed or the attribute rolls change, the offered
-# feats change with them, and these letters choose something else.
+# Race, subrace, class, alignment and food use @choose names, so menu
+# letters moving when a list changes cannot select a different entry.
+# Run with a fixed seed: attribute sets have no names, and rolls decide the
+# offered feats, so attribute and feat picks stay positional. Start-menu,
+# question and control keys stay counted for the reasons beside them.
+# Formerly said every choice was a menu letter; corrected 2026-09-12.
 #
 # Dragonkin start with a random handful of food rations already in pack (part
 # of the shared adventurer starting kit, not race- or class-specific gear --
 # see src/Create.cpp). Seed 1 gives 9. Nothing needs to be granted by hand.
 
-a       # Initial Choices: [a] Create a New Character
-n       # Alter the character generation options? -- no
-y       # Your options will place the game in Explore Mode. Continue? -- yes
-h       # Race:     [h] Lizardfolk
-b       # Subrace:  [b] Dragonkin
-a       # Class:    [a] Barbarian
-a       # Attributes: the first of the five offered sets
-c       # Alignment: [c] Neutral
-a       # First feat
-a       # Second feat
+@expect "Initial Choices"
+a       # Create a New Character: start menu is not a screen @choose reads.
+@expect "Alter the character generation options?"
+n       # No alteration: this is a yes/no question.
+@expect "Explore Mode. Continue?"
+y       # Continue in Explore Mode: this is a yes/no question.
+@choose "Lizardfolk"
+@choose "Dragonkin"
+@choose "Barbarian"
+@expect "Which of the five attribute sets"
+a       # First attribute set: the five offered sets have no names.
+@choose "Neutral"
+@expect "Choose a feat"
+a       # First feat: offered feats depend on attribute rolls.
+a       # Second feat: offered feats depend on attribute rolls.
 
-# Skill Manager, twice. Three RIGHTs per skill spends everything available
+# Skill Manager. Three RIGHTs per skill spends everything available
 # without needing to know how many ranks this character has.
+@expect "Skill Manager"
+# RIGHT/DOWN spend ranks and move between skills, not named choices.
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+# Finish ranks, then yes to keeping them: control and yes/no keys.
 ENTER y
 
-y       # Do you wish to worship <god>? -- yes
+@expect "Your personality archetype"
+y       # No match: the sixteen personality entries use [a] through [p].
 
+# RIGHT/DOWN move the personality selection to The Manipulative Plotter.
+# Personality affects only the sheet banner, so its selection is not pinned.
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+# Accept the selected archetype, then dismiss the Entry Chamber text.
 ENTER y
 
 # In the dungeon now. [e] opens "What do you want to eat?"; the only edible
@@ -49,31 +66,41 @@ ENTER y
 # carnivorous creature..."), and control returns straight to the map -- no
 # further key is needed to dismiss anything. Reopen the menu and dump it, then
 # repeat. Eight refusals, matching the bead's measured run.
+@expect "Things in View"
 e
 @dump:menu01
-a
+@choose "(in pack) 9 food rations"
+@expect "Things in View"
 e
 @dump:menu02
-a
+@choose "(in pack) 9 food rations"
+@expect "Things in View"
 e
 @dump:menu03
-a
+@choose "(in pack) 9 food rations"
+@expect "Things in View"
 e
 @dump:menu04
-a
+@choose "(in pack) 9 food rations"
+@expect "Things in View"
 e
 @dump:menu05
-a
+@choose "(in pack) 9 food rations"
+@expect "Things in View"
 e
 @dump:menu06
-a
+@choose "(in pack) 9 food rations"
+@expect "Things in View"
 e
 @dump:menu07
-a
+@choose "(in pack) 9 food rations"
+@expect "Things in View"
 e
 @dump:menu08
-a
+@choose "(in pack) 9 food rations"
+@expect "Things in View"
 e
 @dump:menu09
+@expect "What do you want to eat?"
 ESC
 @quit
