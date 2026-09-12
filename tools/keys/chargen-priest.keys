@@ -1,8 +1,20 @@
 # Make an orc priest and get into the dungeon.
 #
-# The character is a male orc priest, neutral, worshipping whichever god the
-# game offers. A priest is the most demanding class to script: it has more
-# choices than any other, and which choices it has depends on the god.
+# The character is a male orc priest of Aiswin, lawful good. A priest is the
+# most demanding class to script: it has more choices than any other, and
+# which choices it has depends on the god.
+#
+# THIS SCRIPT WAS OFF BY ONE UNTIL inc-cso NAMED ITS CHOICES, and every label
+# from the god onward described the wrong question. The class is CF_RELIGIOUS,
+# so the game asks "Choose a God:" immediately after the class -- before the
+# attributes, as it does for the paladin. The stream had no key for that
+# question, so the key labelled "Attributes" answered the god, the key
+# labelled "Alignment" answered the attributes, and so on down the file.
+# Nothing complained, because each of those keys is a valid answer to the
+# question it actually reached. The character this script really built was a
+# lawful good priest of Aiswin on the third attribute set, not the neutral
+# priest of an arbitrary god that this header used to claim. Measured on
+# seed 1: the sheet reads "Faith Aiswin" and "Align Lawful Good".
 #
 # WHY THIS SCRIPT USES CONDITIONALS AND THE OTHERS DO NOT.
 #
@@ -29,16 +41,27 @@
 # empty and so never becomes false. Matching the header works but runs to the
 # 200-pass limit every time.
 
+# The race, subrace, class, god and alignment are named, not counted, so a
+# race, class or god added to lib/ cannot make this script build a different
+# character -- and a question that arrives where none was expected now stops
+# the run instead of silently absorbing the key meant for the next one, which
+# is the failure described above. See @choose in src/Wposix.cpp.
+
 a       # Initial Choices: [a] Create a New Character
 n       # Alter the character generation options? -- no
 y       # Your options will place the game in Explore Mode. Continue? -- yes
-i       # Race:     [i] Orc
-a       # Subrace:  [a] Orc (Standard)
-g       # Class:    [g] Priest
-a       # Attributes: the first of the five offered sets
-c       # Alignment: [c] Neutral
-a       # First feat
-a       # Second feat
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Priest"
+@choose "Aiswin"        # God, asked here rather than after the skill ranks,
+                        #   because the priest class is CF_RELIGIOUS.
+c                       # Attributes: the third of the five offered sets. The
+                        #   sets have no names, so this one stays positional.
+                        #   It is 'c' and not 'a' because 'c' is what the
+                        #   off-by-one stream was really pressing here.
+@choose "Lawful Good"   # Alignment. The god decides which are on offer.
+a                       # First feat. Which feats the game offers depends on
+                        #   the attribute rolls, so this one stays counted.
 
 # Skill Manager, once for the class pool. RIGHT spends a rank on the selected
 # skill and stops at that skill's maximum; DOWN moves to the next skill.

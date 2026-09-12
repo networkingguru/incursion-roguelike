@@ -2,9 +2,8 @@
 #
 # The character is a male orc rogue, neutral, worshipping whichever god the
 # game offers. The race is the same orc the other chargen scripts use, on
-# purpose: it keeps the race and subrace letters identical across the family
-# of scripts, so only the class-specific part of this file differs from
-# chargen.keys and only that part can rot.
+# purpose: only the class-specific part of this file differs from chargen.keys,
+# so only that part can rot.
 #
 # Why a rogue: the game's own class screen calls rogue the flavour of
 # character that exercises the skill system, and the skill system is what a
@@ -12,25 +11,26 @@
 # against the barbarian's five, so searching, hiding and moving silently
 # actually resolve instead of failing on every roll.
 #
-# Every choice here is a menu letter, and menu letters move when the list
-# changes. Run with a fixed seed (tools/headless.sh <script> <seed>) or the
-# attribute rolls change, the offered feats change with them, and these
-# letters choose something else.
+# The race, subrace, class and alignment are named, not counted, so a race or
+# class added to lib/ cannot make this script build a different character.
+# See @choose in src/Wposix.cpp. Run with a fixed seed all the same
+# (tools/headless.sh <script> <seed>): the attribute rolls decide which feats
+# the game offers, and the two feat picks below are still positional.
 
 a       # Initial Choices: [a] Create a New Character
 n       # Alter the character generation options? -- no
 y       # Your options will place the game in Explore Mode. Continue? -- yes
-i       # Race:     [i] Orc
-a       # Subrace:  [a] Orc (Standard)
-i       # Class:    [i] Rogue
-a       # Attributes: the first of the five offered sets
-e       # Alignment: [e] Neutral
-        #   NOTE: this is not the [c] that chargen.keys uses. A barbarian may
-        #   not be lawful, so the game offers a barbarian a shortened list of
-        #   six alignments and Neutral falls on [c]. A rogue may be any
-        #   alignment, so the list is the full nine and Neutral falls on [e].
-a       # First feat
-a       # Second feat
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Rogue"
+a       # Attributes: the first of the five offered sets. The sets have no
+        #   names, so this one stays positional.
+@choose "Neutral"   # This is why the alignment is named. A barbarian may not
+                    #   be lawful, so chargen.keys sees a shortened list of six
+                    #   and Neutral falls on [c]; a rogue sees the full nine
+                    #   and it falls on [e]. The name is the same on both.
+a       # First feat.  Which feats are offered depends on the attribute
+a       # Second feat. rolls, so these two stay counted.
 
 # Skill Manager. RIGHT spends a rank on the selected skill and stops at the
 # skill's maximum, DOWN moves to the next skill, so three RIGHTs per skill
