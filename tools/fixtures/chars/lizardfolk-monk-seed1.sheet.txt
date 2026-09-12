@@ -1,0 +1,245 @@
+=== fixture: lizardfolk-monk-seed1 ===
+
+This file is the audit record for
+  tools/fixtures/chars/lizardfolk-monk-seed1.sav
+and tools/make_char_fixture.sh writes the whole of it. Do not edit it
+by hand: it would then describe a character the .sav beside it does
+not hold, and that is the one failure tools/check_char_fixture.sh
+exists to catch.
+
+made on          2026-09-12 13:36:20 EDT
+made at commit   7f7738d
+                 the working tree was dirty, so this fixture may hold changes that commit does not
+seed             1
+settings         tools/fixtures/options-2026-08-22.dat
+key script       tools/keys/lizardfolk-monk-save.keys
+                 copied to tools/fixtures/chars/lizardfolk-monk-seed1.keys
+saved in game as Harmonious_Fox.sav
+sha256 .sav      94c4c2a8f3c4bc357bbc6978fa726e78a4d7a2f02ece09991ad4aeffaa9f58be
+sha256 module    a8a01ce6ce0b49e11e21f106f6b1a6f53d829a5f24fe828a13fa8273ccffb8b4
+                 mod/Incursion.Mod is what the save's rID manifest
+                 was written against. A fixture that stops loading
+                 is worth comparing against the module that made it.
+
+regenerate with
+  tools/make_char_fixture.sh lizardfolk-monk-seed1 tools/keys/lizardfolk-monk-save.keys 1 tools/fixtures/options-2026-08-22.dat --force
+Regenerating gives a BYTE-DIFFERENT .sav holding the SAME character:
+a save carries clocks and counters no second run repeats. Judge a
+regeneration by this sheet, never by the size of the diff.
+
+The character below is the engine's own dump. It was taken by LOADING
+the .sav beside this file and saving it again under
+INCURSION_CHAR_PROBE=1 (Game::SaveGame, src/Registry.cpp:1105-1111).
+A few of its lines belong to that reading session and not to the
+character: the torch's remaining turns, the Level Statistics table
+and the Messages at the end all move by the turns
+tools/keys/load-char-sheet.keys spends. Everything above Inventory is the
+character. For the resource ids behind the item names, which are what
+a module change moves, run:
+  tools/dump_save.sh tools/fixtures/chars/lizardfolk-monk-seed1.sav
+
+=== the character, as the engine writes him ===
+
+                        Harmonious_Fox, The Ambitious Conqueror (Explore Mode)
+
+Gender Male
+Race   Lizardfolk
+Class  Monk 1
+Faith  Aiswin
+XP     0
+Next @ 1000
+Align  Lawful Good
+
+
+STR: 14/00 [+2/+1] (base 12, +2 natural)
+DEX: 14/00 [+2/+1] (base 14)
+CON: 13/00 [+1/+1] (base 11, +2 natural)
+INT: 15/00 [+2/+2] (base 17, -2 natural)
+WIS: 13/00 [+1/+1] (base 13)
+CHA: 17/00 [+3/+3] (base 17)
+LUC:  9/00 [+0/-1] (base 11, -2 natural)
+Fortitude   +3(Monk +2, +1 Con)
+Reflex      +5(Monk +2, +2 Dex, +1 competence)
+Will        +3(Monk +2, +1 Wis)
+           (+4 vs. being grabbed, +14 vs. confusion, +3 vs. knockdown)
+Melee   +toHit +6  (Monk +0, +2 Str, +4 weapon)
+        Damage +0  (base 1d8 / 1d6)
+        Speed  100%(base 100%)
+Size           Human-sized:
+  (base human-sized)
+
+Defense Class  13:
+  (base 10, +2 Dex, +1 insight)
+
+Coverage       5:
+  (base 0, +5 armour)
+
+Movement Rate  105%:
+  (base 100% +10% class) x 110% skill x 90% encumbrance
+
+Hit Dice Rolls 29:
+   20 + 1d8 (8) + 1 (CON bonus)
+Mana Rolls     15:
+   10 + 1d4 (4) x 1 + 1 (WIS bonus)
+
+Encumbrance    Light:
+   (Light 28.6s, Moderate 86.0s, Heavy 173.0s, Extreme 260.0s, Max Press 350.0s)
+
+Special Abilities:
+  Ancestral Memory
+  Evasion
+  Increased Move
+  Innate Spells:
+    Adrenaline Control
+  Slow Metabolism
+  Species Affinity:
+    Reptiles
+  Stun Attack (DC 11)
+  Unarmed Strike (1d6)
+  Flurry of Blows
+
+Feats:
+  Acrobatic
+  Alluring
+  Ambidexterity
+  Two-Weapon Style
+  Zen Defense
+
+Resistances and Armour:
+  Slashing Damage 5
+  Piercing Damage 5
+  Blunt Damage 5
+  Fire 7
+  Sonic Damage 12
+
+Proficiencies Staves, Thrown, Martial Weapons and boomerang
+
+Skill Ratings:
+  Alchemy          +8  (2 ranks, +2 INT, +2 train, +2 kit)
+  Appraise         +5  (2 ranks, +1 WIS, +2 train)
+  Athletics        +5  (2 ranks, +1 STR, +2 train)
+  Balance          +6  (2 ranks, +1 DEX, +3 train)
+  Climb            +3  (0 ranks, +1 DEX, +2 train)
+  Concentration    +7  (0 ranks, +1 WIS, +2 train, +4 racial)
+  Decipher Script  +4  (0 ranks, +2 INT, +2 train)
+  Diplomacy        +5  (0 ranks, +3 CHA, +2 train)
+  Escape Artist    +3  (0 ranks, +1 DEX, +2 train)
+  Find Weakness    +3  (0 ranks, +1 WIS, +2 train)
+  Healing          +3  (0 ranks, +1 WIS, +2 train)
+  Hide in Shadows  +3  (0 ranks, +1 DEX, +2 train)
+  Intuition        +3  (0 ranks, +1 WIS, +2 train)
+  Jump             +7  (0 ranks, +1 STR, +3 train, +3 feat)
+  Knowledge (Theyra) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Magic) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Mythology) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Nature) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Planes) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Theology) +8  (0 ranks, +2 INT, +2 train, +4 kit)
+  Listen           +3  (0 ranks, +1 WIS, +2 train)
+  Move Silently    +3  (0 ranks, +1 DEX, +2 train)
+  Poison Use       +3  (0 ranks, +1 DEX, +2 train)
+  Spot             +3  (0 ranks, +1 WIS, +2 train)
+  Swimming         +3  (0 ranks, +1 DEX, +2 train)
+  Tumble           +6  (0 ranks, +1 DEX, +2 train, +3 feat)
+  Wilderness Lore  +3  (0 ranks, +1 WIS, +2 train)
+
+Spiritual State:
+__You are devoted to Aiswin.
+__Aiswin is noncommital.
+__Aiswin has not aided you.
+____(Favour 0, Lev 0, Pen 0%)
+__You are decisively Good.
+__You are decisively Lawful.
+
+CharGen Options and Choices:
+__You are in Explore Mode.
+__Beginner's Kit: ON
+__Initial Rolling Method: 4d6 + Perks
+__Allow Rerolling: YES
+__Use the Subraces: YES
+__Disallow Wizard Mode: NO
+__Maximum Hit Points: YES
+__Maximum Mana: YES
+__Default Character Gender: MALE
+__Monsters Maximum Hit Points: NO
+__Roll Attributes First: NO
+__Gain Attributes With Levels: YES
+__Allow Rapid Intuition: WEAPONS
+__Monsters Use Djikstra: YES
+__Out-Of-Depth Monsters: YES
+__Transgression Hints: YES
+__Difficulty Level: BASELINE
+__Power Stats: EXTREME
+__Elude Death: SEVEN
+__Disable Complicity Transgressions: YES
+__Natural Weapon Speed: ORIGINAL
+
+
+Inventory:
+  quarterstaff
+  torch (with 2974 turns of light left)
+  3 Potions of Cure Disease [0]
+  robes
+  Holy symbol of Aiswin
+  Helm +3 of Clear Sound [+12, +12]
+  chakram
+  7 Potions of Dimension Door [2d20+3]
+  5 Potions of See Invisibility
+  9 vials of holy water [3d6]
+  4 Potions of Remove Curse
+  medium backpack
+  gold piece
+  9 food rations
+  21 strips of cured meat
+  3 torches (with 3000 turns of light left)
+  4 Antitoxins [+3]
+  2 Potions of Detect Stairs
+  3 Potions of Restoration [4d6]
+  3 Potions of Restore Constitution [6d8]
+  2 Potions of Restore Strength [6d8]
+  alchemy set
+  Wand of Identify (50 charges)
+  5 boomerangs
+  main gauche
+
+On The Ground:
+
+Known Spells:
+  Adrenaline Control              0  100%    0 +4
+
+Journal:
+
+12:00 AM, 1st of Suntide: Entry Chamber, 10' (H:29/29 M:15/15 XP:0) 
+  You arrive at 10' in the The Goblin Caves.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:29/29 M:15/15 XP:0) 
+  OOD monster hobgoblin (CR 3) generated on dlev 1 by Encounter 'goblinoid warband' and the ENCOUNTER_LIST from 'Inner Keep'.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:29/29 M:15/15 XP:0) 
+  enChooseMID Failed: Enc 'gated outsiders', CR 1, Part 0, eimXCR 43, enRegID 'Ice Cavern', e.enConstraint 'unimplemented'.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:29/29 M:15/15 XP:0) 
+  enChooseMID Failed: Enc 'gated outsiders', CR 1, Part 0, eimXCR 1000000, enRegID 'Ice Cavern', e.enConstraint 'unimplemented'.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:29/29 M:15/15 XP:0) 
+  enChooseMID Failed: Enc 'gated outsiders', CR 1, Part 0, eimXCR 1, enRegID 'Ice Cavern', e.enConstraint 'unimplemented'.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:17/21 M:11/11 XP:0) 
+  Starting Perks:
+    Wild Talent: Adrenaline Control.
+  Starting Item: uncursed Helm +3 of Clear Sound.
+
+Monsters Encountered:
+  Total: 0
+
+Level Statistics:
+
+Lvl | Act | Key | Turns | Secs |  XP | Explored
+----+-----+-----+-------+------+-----+------------------
+1   |    1|  115|      1|     0|    0| 205 / 3695 = 5%
+
+Messages:
+Welcome back to Incursion, Harmonious_Fox!
+"Blessed be those who walk the path of shadows!"
+You find nothing of significance.
+Autosave... 

@@ -1,0 +1,61 @@
+# Load a frozen character fixture, photograph him, and save him again.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/<name>.sav \
+#       tools/headless.sh tools/keys/load-char-sheet.keys 1
+#
+# WHY THIS EXISTS. It is the reading half of tools/fixtures/chars/: the script
+# that turns a .sav back into something a person or a check can assert on. It
+# builds no character of its own, so it works on ANY fixture -- the session
+# starts in play mode with the saved character already standing on the saved
+# map, because tools/headless.sh passed -load. Run it with no INCURSION_LOAD
+# and there is no character, the game sits in its title menu, and the run
+# reports NO GAMEPLAY rather than quietly measuring something else.
+#
+# Both users are deliberate. tools/make_char_fixture.sh runs it to write the
+# <name>.sheet.txt half of a new fixture, which means a fixture is never
+# published without having been loaded once. tools/check_char_fixture.sh runs
+# it to assert that the character who comes back is the one the sheet claims.
+#
+# THE SEARCH IS NOT FILLER. tools/headless.sh reports NO GAMEPLAY (exit 5)
+# unless a turn actually completes, and every assertion library in tools/
+# refuses to read a session that measured nothing -- that is inc-loa.3. A
+# loaded session that only opened menus would complete no turn at all, so the
+# 's' below buys the one turn that makes this a session.
+#
+# THE SAVE AT THE END IS THE POINT OF THE WHOLE SCRIPT, not a courtesy. A
+# loaded session owns its save file and writes back to it (Game::SaveGame,
+# src/Registry.cpp:1114), so this is the one action that can prove the frozen
+# fixture was copied into the sandbox rather than played in place. Read the
+# warning in tools/keys/save-continue.keys before moving the ESC: ESC opens
+# the System Menu rather than cancelling anything, [a] is Save and Quit, and a
+# stray ESC therefore ends the run and still exits 0. The @expect is the guard.
+
+@dump:arrival
+
+s               # search: one real turn, so this counts as a session
+@dump:played
+
+d               # Display Character Sheet
+@expect "Gender"
+@dump:sheet
+ESC             # leave the sheet, back to play mode
+
+# ONE PAGE ONLY. PGDN scrolls the sheet by a single line, so a second dump
+# would repeat the first and prove nothing. The full sheet -- feats, special
+# abilities, the whole inventory, the journal -- reaches disk another way:
+# INCURSION_CHAR_PROBE=1 makes Game::SaveGame write logs/charprobe.txt
+# (src/Registry.cpp:1105-1111), untruncated by the 80x48 terminal, and that
+# file is what tools/make_char_fixture.sh keeps as <name>.sheet.txt.
+
+ESC                     # System Menu -- and NOT a cancel; see the header
+@expect "System Menu"
+b                       # [b] Save and Continue
+
+# Fires after the save lands, and photographs the engine's own
+# "Autosave...  Done." line, which is the oracle that it did.
+@dump:saved
+
+# No @quit: it is Save and Quit (src/Wposix.cpp:1657-1664) and would write a
+# second save this script did not ask for. Running out of keys ends the
+# session with exactly the one save above.

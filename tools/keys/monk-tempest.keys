@@ -15,39 +15,37 @@
 # CA_UNARMED_STRIKE, and so the fists, the Two-Weapon Style grant and
 # TwoFistFighting().
 #
-# The chargen prefix is tools/keys/monk-brawl-speed.keys, letter for letter,
-# because that path is already proven at seed 1. Levels come from wizard mode's
-# Free Advancement switch, as in tools/keys/prestige-blackguard5.keys.
+# THE CHARACTER COMES FROM A FILE, NOT FROM A SEED. This script used to build
+# him with a copy of tools/keys/monk-brawl-speed.keys and then empty his hands.
+# It cannot: a seed-pinned character is not reproducible across module changes,
+# and the weapon chargen hands him is exactly the field that moves. Commit
+# bef32c3 replaced his long sword with a quarterstaff, the stow that used to
+# empty his hands was refused for size, and the Brawl row this script exists to
+# read stopped being drawn at all (bd inc-sls0). He now comes from
+# tools/fixtures/chars/lizardfolk-monk-barehand-seed1.sav, which holds the same
+# character with his hands already empty; tools/fixtures/README.md says why a
+# character who must stay himself has to be loaded rather than rolled. Levels
+# still come from wizard mode's Free Advancement switch, as in
+# tools/keys/prestige-blackguard5.keys.
 #
-# The hands must be empty: chargen hands this character a long sword, and
-# src/Sheet.cpp:162 hides the Brawl row entirely while a weapon is held.
+# RUN IT WITH THE FIXTURE NAMED, or there is no character at all:
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-barehand-seed1.sav \
+#       tools/headless.sh tools/keys/monk-tempest.keys 1
+#
+# THE THREE DUMPS ARE THE WHOLE OUTPUT, in this order, because
+# tools/check_two_fist_feats_live.sh reads them by number: 0001-sidebar-monk1,
+# 0002-sheet-before, 0003-sheet-after. Do not add a fourth above them.
 
-a       # Initial Choices: [a] Create a New Character
-n       # Alter the character generation options? -- no
-y       # Your options will place the game in Explore Mode. Continue? -- yes
-h       # Race:     [h] Lizardfolk
-a       # Subrace:  [a] Lizardfolk (Standard)
-e       # Class:    [e] Monk
-a       # Attributes: the first of the five offered sets
-c       # Alignment: [c] Neutral
-a       # First feat
-a       # Second feat
-
-RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
-RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
-ENTER y
-
-y       # Do you wish to worship <god>? -- yes
-
-RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
-RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
-ENTER y
-
-ESC ENTER SPACE     # settle the arrival room; now in play
-
-i
-b s             # Weapon Hand, then Stow: the long sword goes to the pack
-ESC
+# The session starts in play mode with the saved character already standing on
+# the saved map, so there is no chargen and nothing to settle.
+#
+# THE SEARCH IS NOT FILLER. tools/headless.sh reports NO GAMEPLAY (exit 5)
+# unless a turn actually completes, and this script otherwise spends every key
+# inside menus. The 's' buys the one turn that makes this a session. Same
+# reason, same key, as tools/keys/load-char-sheet.keys.
+s
 
 # The sidebar is the regression oracle for inc-dzz: two Punch lines, equal
 # to-hit numbers either side of the slash, and full Strength on both.

@@ -1,0 +1,86 @@
+# Make the seed-1 Lizardfolk monk and SAVE him, so he can be frozen.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/lizardfolk-monk-save.keys 1
+#
+# WHY THIS EXISTS. tools/keys/monk-brawl-speed.keys builds this same character
+# and never saves him, so every run of it re-rolls him from the module that is
+# on disk at that moment. An rID in this engine is a POSITION, so one resource
+# added to lib/ shifts every id above it and silently rewrites a seed-pinned
+# character: commit bef32c3 added one Effect to lib/m_items.irh and this
+# character went from STR 18 holding a long sword +3 to STR 14 holding a
+# quarterstaff, with byte-identical attribute dice. A character LOADED from a
+# save does not move, because the save-schema v1 manifest converts a saved rID
+# through a per-module manifest (v1ConvertManifestRid, src/SaveV1.cpp). So this
+# script exists to produce the .sav that tools/make_char_fixture.sh freezes.
+# See bd inc-1fjk.
+#
+# THE CHARGEN BELOW IS A COPY of tools/keys/monk-brawl-speed.keys, deliberately
+# unchanged. The fixture is only worth having if it holds THE character the
+# resource shift demonstrably rewrote, and any edit here would make a different
+# one. Do not "improve" it; make a new script and a new fixture instead.
+#
+# ESC b is the System Menu's [b] Save and Continue (src/Player.cpp:843), and it
+# is the only save the game offers that does not also end the session. READ THE
+# WARNING IN tools/keys/save-continue.keys BEFORE MOVING IT: ESC opens that menu
+# rather than cancelling anything, [a] is Save and Quit, and a stray ESC
+# therefore ends the run and still exits 0. The @expect below is the guard
+# against exactly that -- it stops the run (exit 6) if the screen is not the
+# System Menu, so a drifted key count can never press [a] by accident.
+#
+# NOTHING IS STOWED. monk-brawl-speed.keys empties the weapon hand before
+# reading the sheet, because the sheet hides the Brawl row while a weapon is
+# held. This script must not: the held weapon is the very field the resource
+# shift moved, so the fixture keeps the character exactly as chargen handed him
+# over.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+h       # Race:     [h] Lizardfolk
+a       # Subrace:  [a] Lizardfolk (Standard)
+e       # Class:    [e] Monk
+a       # Attributes: the first of the five offered sets
+c       # Alignment: [c] Neutral
+a       # First feat
+a       # Second feat
+
+# Skill Manager, twice. Three RIGHTs per skill spends everything available
+# without needing to know how many ranks this character has.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+y       # Do you wish to worship <god>? -- yes
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+# In the dungeon now. Three keys settle the opening: the room description
+# wants dismissing, then two messages want acknowledging. A fourth ESC here
+# opens the System Menu instead and every later key lands in it.
+ESC ENTER SPACE
+
+@dump:arrival
+
+ESC                     # System Menu -- and NOT a cancel; see the header
+@expect "System Menu"   # refuse to press a letter into any other screen
+b                       # [b] Save and Continue
+
+# The save is not written by the keypress. Case 2 of the System Menu sets the
+# autosave flag and Timeout = 1 (src/Player.cpp:851-853); Game::Play writes the
+# file at the top of the next pass of its loop (src/Main.cpp:266-275), which is
+# before it asks for another key. This dump therefore fires AFTER the file is
+# on disk, and photographs the engine's own "Autosave... done." line saying so.
+# That line is the check's oracle that a fixture was written at all.
+@dump:saved
+
+# THERE IS NO @quit HERE, AND THAT IS DELIBERATE. @quit becomes
+# KY_CMD_QUICK_QUIT (src/Wposix.cpp:1657-1664), which is Save and Quit: it
+# would write the save a SECOND time, three turns later than the one above,
+# and shuffle the first copy off to <name>.sav.backup. The fixture would then
+# be a file no line of this script asked for. Letting the key script run out
+# instead ends the session with exactly one save, made at the point this
+# script names. Ending that way is normal (tools/headless.sh exit 0 or 3);
+# tools/keys/monk-brawl-speed.keys ends the same way.
