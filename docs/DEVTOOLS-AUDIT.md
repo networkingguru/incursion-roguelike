@@ -197,7 +197,7 @@ An earlier draft of this audit said one of the two should survive and the other
 should go. That was written before either was read properly, and it is wrong.
 Acting on it would have removed a capability.
 
-- `INCURSION_CHAR_PROBE` (`src/Registry.cpp:1109-1116`, eight lines) hooks
+- `INCURSION_CHAR_PROBE` (`src/Registry.cpp:1105-1112`, eight lines) hooks
   `Game::SaveGame`. It fires automatically, needs no one to remember it, and
   describes only the save just written, overwriting the last report.
 - `src/Dump.cpp` (268 lines, `-dump`, bd inc-loa.1) loads *any* existing save
