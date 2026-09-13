@@ -435,6 +435,7 @@ one that guards a real defect, and buys no behaviour. Read the header of
 | `check_broken_door.sh` | Does a door still lie about being broken? Asserts the one predicate every reader asks, and runs a generated level to prove no door ends it closed and branded broken in a readable doorframe. | LIVE |
 | `check_char_fixture.sh` | Does a frozen character fixture still load, and is he still the character his own sheet claims? Loads `tools/fixtures/chars/lizardfolk-monk-seed1.sav` and reads his name, race, class and Strength off the character sheet. The oracle is the fixture's own `.sheet.txt`, so regenerating the fixture moves the expectations with it. Two structural assertions ride along: the `.sav` is byte-identical after a run that loaded AND saved it, and the run played its own copy. | LIVE |
 | `check_comment_budget.sh` | Did a comment or `_PROBE` block in `src/` or `inc/` appear over the 30-line ceiling, or grow past its recorded size? Ratcheted against `tools/comment_budget.baseline`; `comment_budget.py` does the measuring. | LIVE |
+| `check_shared_checkout_gate.sh` | Does `.beads/hooks/pre-commit` still refuse new work in the shared checkout, and still let the overnight harness commit on its own `nightly/` branch? Seven cases run against a scratch repository under `TMPDIR`, four that must be refused and three that must be allowed, so a hook that never runs fails as loudly as a hook that refuses everything. The harness is admitted only when `NIGHTLY_BRANCH` names the branch HEAD is actually on, which is a variable one process tree holds and no second session in that directory has. | LIVE |
 | `check_commit_lane.sh` | Does every commit after `tools/commit_lane.since`, except the ones `tools/commit_lane.exempt` forgives by name, open with one of the seven lanes, and does every `rules:` commit name a design bead? | LIVE |
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? | LIVE |
 | `check_cloak_resistance.sh` | Does a +3 Cloak of Resistance grant resistance rather than magic? One session reads all three saving throws with the cloak alone and with auspicious +2 armour; the control stays fixed and the smaller same-type bonus must not stack. | LIVE |
@@ -600,6 +601,7 @@ tools/check_readme_checks.sh        # tools/check_*.sh against the README table
 tools/check_gate_membership.sh      # tools/check_* against their own gate markers
 tools/check_bead_publish.py         # reads the bead database against git HEAD
 tools/check_bead_new_gate.sh        # watches tools/bead_new.sh refuse an unfit bead
+tools/check_shared_checkout_gate.sh # commits in a scratch repo against .beads/hooks/pre-commit
 ```
 
 `tools/bead_new.sh` is not a check; it is how a bead should be filed.

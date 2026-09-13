@@ -25,7 +25,10 @@ The full statement of this rule, with the incident behind it, is in `CLAUDE.md`.
 worktree of its own.** Start with `tools/worktree.sh <bead-id>`, which creates
 branch `<bead-id>` off master and a worktree at `~/Scripts/Incursion-<bead-id>`.
 Work there and nowhere else. `.beads/hooks/pre-commit` refuses a non-merge commit
-made in the shared checkout, so this is enforced rather than remembered.
+made in the shared checkout, so this is enforced rather than remembered. The
+one exemption is the overnight harness: it commits on a `nightly/` branch in
+that checkout, and it exports `NIGHTLY_BRANCH` naming that branch, which no
+other session has (bd inc-loa.46). Nothing else is admitted.
 
 **Why.** Several sessions work here at once, and one directory has one HEAD, one
 index and one working tree. On 2026-09-11 a session ran `git checkout -b
