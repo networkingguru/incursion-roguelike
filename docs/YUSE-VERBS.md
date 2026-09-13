@@ -24,10 +24,10 @@ dead is what this file exists to record.
 Derive the menu size, the distinct verb count, and how many of them are dead:
 
 ```sh
-sed -n '3129,3447p' src/Tables.cpp | grep -c '^  { EV_'
-sed -n '3129,3447p' src/Tables.cpp | grep '^  { EV_' |
+sed -n '3135,3453p' src/Tables.cpp | grep -c '^  { EV_'
+sed -n '3135,3453p' src/Tables.cpp | grep '^  { EV_' |
     sed 's/^  { \(EV_[A-Z_]*\),.*/\1/' | sort -u | wc -l
-sed -n '3129,3447p' src/Tables.cpp |
+sed -n '3135,3453p' src/Tables.cpp |
     awk '/^  \{ EV_/ { match($0,/EV_[A-Z_]+/); v=substr($0,RSTART,RLENGTH) }
          /true *\}/ { print v }' | sort -u | wc -l
 ```
@@ -36,7 +36,7 @@ sed -n '3129,3447p' src/Tables.cpp |
 
 ## How the menu works
 
-The verbs live in `YuseCommands[]`, `src/Tables.cpp:3129-3447`. Each entry
+The verbs live in `YuseCommands[]`, `src/Tables.cpp:3135-3453`. Each entry
 carries up to three prompts and a flag word:
 
 ```c
@@ -53,7 +53,7 @@ carries up to three prompts and a flag word:
   that returns false for you (`src/Player.cpp:1597-1604`). Two entries carry a
   prerequisite today: **Mount** needs the Ride skill, a humanoid body with
   limbs, and no mount under you already; **Dismount** needs you mounted
-  (`src/Tables.cpp:3118-3127`). If nothing survives both rules the command
+  (`src/Tables.cpp:3124-3133`). If nothing survives both rules the command
   says *"You have no usable verbs."* `tools/check_command_menu_gating.sh`
   reads the `y` screen and fails if a dead verb is on it.
 - **The prompts run in table order**, target first, unless the entry carries
@@ -120,7 +120,7 @@ or friendly.
 |---|---|---|
 | Activate | trigger an item's power | `src/Item.cpp:846` |
 | Drink | drink a potion | `src/Item.cpp:823` |
-| Eat | eat food | `src/Item.cpp:1954` |
+| Eat | eat food | `src/Item.cpp:2008` |
 | Read | read a scroll or book | `src/Item.cpp:830` |
 | Zap | aim a wand at a target | `src/Item.cpp:816` |
 | Wield | equip a weapon | `src/Creature.cpp:925` |
@@ -149,9 +149,9 @@ far less ground than its name suggests. Verified by reading the script.
   glass vial onto a weapon (`lib/mundane.irh:1016`), the weapon oils
   (`lib/m_items.irh:1480`) and the lantern below.
 - **Dip** has five handlers and they cover two targets: a **fountain**
-  (`lib/dungeon.irh:2180` and `:2350`, plus the Spell Storing ring at
+  (`lib/dungeon.irh:2180` and `:2353`, plus the Spell Storing ring at
   `lib/m_items.irh:5318`) and an **alchemical flask**, where only acid does
-  anything (`lib/alchemy.irh:97` and `lib/alchemy.irh:598`). Dipping into anything else has
+  anything (`lib/alchemy.irh:97` and `lib/alchemy.irh:623`). Dipping into anything else has
   nothing behind it.
 - **Fill / Pour** (`lib/mundane.irh:640`) — the only combination implemented
   is refilling a **brass lantern** from a **flask of oil**, and the flask must
@@ -165,15 +165,15 @@ cannot be divided."* The new stack is marked `DROPPED` for 10 turns
 
 **Mount** is offered only to a character who could ride: the Ride skill, a
 humanoid body with limbs, and no mount already under you
-(`src/Tables.cpp:3118-3122`). It is the only command that rides a creature: no
+(`src/Tables.cpp:3124-3128`). It is the only command that rides a creature: no
 key binding throws `EV_MOUNT`, and only this verb and the spells that summon a
-steed do (`lib/wspells.irh:1808` and `:1903`, `lib/pspells.irh:3460`). Once
+steed do (`lib/wspells.irh:1813` and `:1908`, `lib/pspells.irh:3460`). Once
 picked it runs a full validation path — Ride skill, humanoid form, the
 target's `M_MOUNTABLE` flag, hostility, prone/stuck/grappled/asleep, plane,
 size, challenge rating, and whether the creature will accept you at all
-(`src/Skills.cpp:4254`).
+(`src/Skills.cpp:4260`).
 **Dismount** has a second route: the Cancel (`x`) command drops a standing
-`MOUNTED` stati (`src/Skills.cpp:451` and `:567`).
+`MOUNTED` stati (`src/Skills.cpp:455` and `:573`).
 
 **Shoot and Throw are the same event**, `EV_RATTACK`, differing only in
 prompt wording.
