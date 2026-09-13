@@ -1,0 +1,98 @@
+# Make the seed-1 kobold rogue and SAVE him, so he can be frozen. (bd inc-rgzr)
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/kobold-rogue-save.keys 1
+#
+# WHY THIS CHARACTER. tools/check_favour_awards.sh has to make a trap kill a
+# monster after this character RESET it, because only a trap carrying RESET_BY
+# pays Semirath (src/Feature.cpp:968-982). Resetting needs two things the
+# existing lizardfolk monk fixture lacks:
+#
+#   Handle Device must be one of his skills. Character::HasSkill
+#   (src/Create.cpp) asks the race and the classes, and the use-skill menu
+#   (Player::UseMenu, src/Skills.cpp) lists the skill only when it answers yes.
+#   A kobold has it as a race skill and a rogue as a class skill.
+#
+#   His rating must be 10 or more, or DisarmTrap (src/Skills.cpp) never offers
+#   the reset at all. Measured on the first run of this script: Handle Device
+#   +21, from 2 ranks, the kobold's +4, Artificer's +3, training, INT/DEX 19/18
+#   and the beginner's gauntlets.
+#
+# NO RANKS IN BLUFF OR PERFORM, AND THAT IS DELIBERATE. Semirath's
+# EV_CALC_FAVOUR (lib/religion.irh) multiplies the favour total by
+# (20 + ranks in Perform + ranks in Bluff) / 20. With both at zero the factor is
+# one, so the favour the sheet prints is the favour gainFavour wrote. The Skill
+# Manager is therefore driven by name, one skill at a time, and never counts.
+#
+# THE WHIP IS DROPPED. A reach weapon makes a monster pass a Reflex save to
+# close with its wielder (src/Move.cpp:826-903), and a monster that fails it
+# stops short of the square it wanted -- which is the trapped square. Dropping
+# it here, as tools/keys/lizardfolk-monk-barehand-save.keys drops the monk's
+# staff, keeps that roll out of every session that loads this fixture.
+#
+# ESC b is the System Menu's [b] Save and Continue (src/Player.cpp:843). READ
+# THE WARNING IN tools/keys/save-continue.keys BEFORE MOVING IT: ESC opens that
+# menu rather than cancelling anything, and [a] is Save and Quit. The @expect is
+# the guard.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Kobold"        # a kobold has no subrace menu
+@choose "Rogue"
+c       # Attributes: the third set, DEX 18 and INT 19 after the kobold's
+        #   modifiers on seed 1. The sets have no names, so this is positional.
+@choose "Neutral"
+@choose "Artificer"     # +3 Handle Device (Creature::SkillLevel)
+@choose "Alertness"
+
+# Skill Manager: two ranks each in ten skills, twenty ranks, none in Bluff or
+# Perform. @cursorto:mark walks the '>' cursor down to the named row.
+@cursorto:mark "Alchemy" DOWN
+RIGHT RIGHT
+@cursorto:mark "Climb" DOWN
+RIGHT RIGHT
+@cursorto:mark "Decipher Script" DOWN
+RIGHT RIGHT
+@cursorto:mark "Handle Device" DOWN
+RIGHT RIGHT
+@cursorto:mark "Hide" DOWN
+RIGHT RIGHT
+@cursorto:mark "Listen" DOWN
+RIGHT RIGHT
+@cursorto:mark "Lockpicking" DOWN
+RIGHT RIGHT
+@cursorto:mark "Move Silently" DOWN
+RIGHT RIGHT
+@cursorto:mark "Searching" DOWN
+RIGHT RIGHT
+@cursorto:mark "Spot" DOWN
+RIGHT RIGHT
+ENTER y # Done, and confirm keeping the ranks
+
+# A kobold is asked no god question. The next screen is the personality menu.
+@expect "personality archetype"
+a
+
+# In the dungeon now. The room description wants dismissing; the other two
+# keys are the same settling keys the monk fixtures use.
+@until "Entry Chamber" SPACE
+ESC ENTER SPACE
+
+@dump:arrival
+
+i                       # Inventory Mode
+b                       # Weapon Hand
+d                       # Drop the whip; see the header.
+@expect "Weapon Hand  :Empty"
+@dump:hands-empty
+ESC                     # leave Inventory Mode, back to play
+
+ESC                     # System Menu -- and NOT a cancel; see the header
+@expect "System Menu"   # refuse to press a letter into any other screen
+b                       # [b] Save and Continue
+
+# Fires after the save lands, and photographs the engine's own "Autosave...
+# Done." line saying so. No @quit: it is Save and Quit, and would write a
+# second save this script did not ask for.
+@dump:saved

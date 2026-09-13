@@ -417,7 +417,7 @@ Repaired on load, and nothing else is:
 | vptr | placement new, src/Registry.cpp:944-986 |
 | pointer to an owned heap block | src/Registry.cpp:370, via the 7 direct `r.Block` sites plus every `FIELD_BLOB`/`FIELD_OBJ` line's v0 branch (inc/Base.h:768-773) |
 | `Thing::m` from `Thing::hm` | inc/Map.h:955 |
-| `Player::MyTerm = T1` | inc/Creature.h:1363 |
+| `Player::MyTerm = T1` | inc/Creature.h:1368 |
 | `Module` resource caches zeroed | inc/Res.h:836-837 (save side), :919-920 (load side) |
 | module text segment un-inverted | inc/Res.h:908-912 |
 | garbage payload in a loaded `Target` | src/Registry.cpp:1011-1012, src/Target.cpp:1561 |

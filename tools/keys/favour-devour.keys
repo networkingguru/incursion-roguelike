@@ -1,0 +1,83 @@
+# Kill a tabaxi, eat its corpse, and photograph the patron's favour either
+# side of the meal. Read by tools/check_favour_awards.sh, bd inc-rgzr.
+#
+# NOT RUN ON ITS OWN. tools/keys/favour-devour-khasrach.keys and
+# tools/keys/favour-devour-zurvash.keys enter wizard mode, make their god the
+# patron, and then @include this file. The god is the only difference.
+#
+# Creature::DevourMonster (src/Skills.cpp) pays Khasrach 10 * CR for a SAPIENT
+# corpse and Zurvash 5 * CR for any corpse. A tabaxi is sapient (INT 12, not an
+# animal, not mindless) and CR 2 (lib/mon2.irh). It is the control of
+# tools/keys/devour-negative-cr.keys for the same reason: an ordinary corpse
+# that a wizard-mode summon can supply by name.
+#
+# THREE SHEETS, because the kill and the meal are separate events:
+#
+#   favour-champion   after Become Divine Champion
+#   favour-killed     after the kill, before the meal
+#   favour-ate        after the meal
+#
+# Only the last two bracket the award. The kill sits outside them because
+# Khasrach's script pays for kills too (GODWATCH(POST(EV_DEATH)),
+# lib/religion.irh), through the dispatcher path that never had this defect.
+#
+# THE IDIOMS, all borrowed from tools/keys/devour-negative-cr.keys:
+#
+#   Freeze Monsters      the eleventh row of the Wizard Mode Switches, so the
+#                        tabaxi does not fight back.
+#   RIGHT ENTER          summon it one square east.
+#   @while "Confirm      a freshly summoned tabaxi is not yet hostile, so the
+#     attack" y          first blow asks.
+#   @until "tabaxi       swing until its corpse is listed. SPACE comes first
+#     corpse" SPACE      in each pass because the first blow can raise a box
+#     RIGHT              of alignment messages, and RIGHT does not dismiss it.
+#   @until "What do      step onto the corpse and press e until the eat menu
+#     you want to eat" e is up. The step can raise boxes first -- "You see
+#                        here:", and on some seeds a rune-covered weapon being
+#                        identified -- and each swallows one key. Lowercase e:
+#                        see that script.
+
+w
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+d
+DOWN*20
+@dump:favour-champion
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Cats"
+@choose "tabaxi"
+RIGHT
+ENTER
+
+RIGHT
+@while "Confirm attack" y
+@until "tabaxi corpse" SPACE RIGHT
+@dump:killed
+@while "more --" SPACE
+
+d
+DOWN*20
+@dump:favour-killed
+ESC
+
+RIGHT
+@until "What do you want to eat" e
+@choose "(ground) tabaxi corpse"
+@while "Stop eating" n
+@dump:ate
+@while "more --" SPACE
+
+d
+DOWN*20
+@dump:favour-ate
+ESC
+
+v
+@dump:messages
+@while "Messages" ESC

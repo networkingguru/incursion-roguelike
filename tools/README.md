@@ -593,6 +593,7 @@ tools/check_xprint_tokens.sh    # Literal __XPrint object-token vararg backlog (
 tools/check_error_handling.sh       # greps src/*.cpp for the unbounded writes
 tools/check_upstream_marks.sh       # reads src/, inc/ and docs/REPORTING-GATE.md
 tools/check_api_arity.py            # reads inc/Api.h against the C++ headers
+tools/check_virtual_override.sh     # reads inc/*.h and src/W*.cpp for a redeclaration that hides its base
 tools/check_gate.sh                 # feeds gate_lib.sh made-up logs
 tools/check_escape_sweep.sh         # greps src/ and inc/ for a C escape spelled /n
 tools/check_natural_speed.sh        # reads lib/weapons.irh against inc/Defines.h
@@ -618,6 +619,7 @@ These tools prove themselves against known-bad input on demand:
 ```sh
 tools/check_upstream_marks.sh --selftest
 tools/check_api_arity.py --selftest
+tools/check_virtual_override.sh --selftest
 tools/check_headless.sh --selftest
 tools/check_citations.sh --selftest
 tools/check_escape_sweep.sh --selftest
@@ -685,6 +687,7 @@ tools/check_key_directives.sh
 tools/check_menu_value.sh
 tools/check_favour_int32.sh         # favour over 32767 no longer wraps negative
 tools/check_pray_aid_int32.sh       # and still buys the aid the AID_CHART grants
+tools/check_favour_awards.sh        # the five favour awards made in C++ reach the god
 tools/check_sharp_senses.sh
 tools/check_skill_manager_reset.sh
 tools/check_stacked_abilities.sh
