@@ -1,0 +1,22 @@
+# Devour a corpse as Zurvash's champion. bd inc-rgzr.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav \
+#       tools/headless.sh tools/keys/favour-devour-zurvash.keys 5
+#
+# Zurvash grants this character no favour level, so his champion step raises no
+# box and asks nothing. The rest is tools/keys/favour-devour.keys.
+#
+# The opening 's' buys the one completed turn without which tools/headless.sh
+# reports NO GAMEPLAY; see tools/keys/load-char-sheet.keys.
+
+s
+w
+@while "Enter wizard mode" y
+@until "Wizard Mode Options" w
+@choose "Become Divine Champion"
+"Zurvash"
+ENTER
+@while "more --" SPACE
+
+@include favour-devour.keys

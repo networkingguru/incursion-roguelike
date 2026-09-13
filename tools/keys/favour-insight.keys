@@ -1,0 +1,57 @@
+# A favoured-skill success, and the patron's favour either side of it.
+# Read by tools/check_favour_awards.sh, bd inc-rgzr.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav \
+#       tools/headless.sh tools/keys/favour-insight.keys 5
+#
+# Creature::SkillCheck (src/Skills.cpp) pays 10 * (check total - 15) favour to
+# every god whose FAVOURED_SKILLS list holds the skill, when the check succeeds
+# and a natural 1 would have failed. Xavias lists Knowledge (Theology)
+# (lib/religion.irh) and has no EV_CALC_FAVOUR handler, so the sheet prints his
+# favour exactly as gainFavour wrote it.
+#
+# Praying and choosing [i] seek insight (Character::Insight, src/Prayer.cpp)
+# rolls Knowledge (Theology) against DC 15 with the roll shown on screen, which
+# is what lets the check compute the award it expects from the game's own line.
+#
+#   w y                  wizard mode, whose menu opens at once.
+#   Become Divine        makes Xavias the patron. It sets one sacrifice
+#     Champion           category to 30000 (src/Debug.cpp), which is the
+#                        starting figure and is not the measurement.
+#   d DOWN*20            the character sheet, scrolled to Spiritual State.
+#   p i                  pray, seek insight.
+#   SPACE n              dismiss the box naming the aid Xavias would give, then
+#                        decline "divine insight into your possessions", which
+#                        would add an intervention penalty to the favour.
+#
+# The opening 's' buys the one completed turn without which tools/headless.sh
+# reports NO GAMEPLAY; see tools/keys/load-char-sheet.keys.
+
+s
+w
+@while "Enter wizard mode" y
+@until "Wizard Mode Options" w
+@choose "Become Divine Champion"
+"Xavias"
+ENTER
+@while "more --" SPACE
+
+d
+DOWN*20
+@dump:favour-before
+ESC
+
+p
+@expect "seek insight"
+i
+@dump:insight
+@while "more --" SPACE
+@while "would aid you" SPACE
+@while "insight into your possessions" n
+@while "more --" SPACE
+
+d
+DOWN*20
+@dump:favour-after
+ESC

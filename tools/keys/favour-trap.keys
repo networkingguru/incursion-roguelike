@@ -1,0 +1,172 @@
+# Reset a trap, let it kill a hostile twice, and photograph Semirath's favour
+# between every step. Read by tools/check_favour_awards.sh, bd inc-rgzr.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#       tools/headless.sh tools/keys/favour-trap.keys 3
+#
+# Trap::TriggerTrap (src/Feature.cpp) pays the character who RESET the trap
+# when it springs on a creature hostile to him: CR * 50 favour to Semirath if
+# the trap kills it, and another CR * 50 the first time that trap pays at all.
+# So one trap, two kills: the first kill pays both awards, the second only the
+# kill award, because the first left XP_GAINED on the trap. The same branch
+# pays experience too -- 100 + 25 * CR, once per trap -- through GainXP, which
+# never had this defect, so the sidebar's XP shows on its own that the
+# once-per-trap branch ran on the first kill and not on the second.
+#
+# The Handle Device checks on the way pay favour as well, because Semirath's
+# FAVOURED_SKILLS list holds Handle Device. Their lines are photographed so the
+# check can compute that award, and the sheets bracket them separately.
+#
+# THE STEPS, and why each one is there:
+#
+#   Freeze Monsters      on at once, off only while a kill is awaited.
+#   Become Divine        Semirath the patron. His EV_CALC_FAVOUR scales by
+#     Champion           ranks in Perform and Bluff; this fixture has none.
+#   Create Trap          a deathblade scythe one square east. It is level 8:
+#                        6d4+24 slashing kills a manes outright, and its save
+#                        is DC 23 against a manes' +2 Reflex.
+#   @until "A trap!" s   a created trap is hidden; search until it is found.
+#                        DisarmTrap refuses a trap that is not found.
+#   u Handle Device y    disarm it -- a reset needs a disarmed trap.
+#   u Handle Device r y  reset it. RESET_BY is what the awards read.
+#   Monster Summoning    a manes two squares east, beyond the trap. A manes is
+#                        mindless and evil, so it is hostile without being
+#                        struck (TargetSystem::RacialHostility), and it has no
+#                        ranged attack. Nothing strikes it, so Semirath's own
+#                        script award for a surprise strike on an evil
+#                        creature cannot fire.
+#   @while "Hiding" h    step out of the shadows. A rogue in the dark hides by
+#                        himself (OPT_AUTOHIDE), and a manes does not come for
+#                        what it cannot see. It does not rehide while a hostile
+#                        creature has a line of fire to him (Player.cpp).
+#   @until "slain by a   pass turns until the manes walks onto the trap. A
+#     deathblade" s      monster with a line of fire steps straight at its
+#                        target (Monster::SmartDirTo) and does not avoid traps.
+#
+# THE SEED MATTERS MORE HERE THAN ANYWHERE ELSE IN THE CHECK. The search, both
+# resets and both Reflex saves are rolls. Seed 3 passes every one of them on
+# the 2026-09-13 tree; a different seed may fail a reset, and a failed reset
+# cannot be retried. tools/check_favour_awards.sh reports such a run as
+# INCONCLUSIVE, not as a failure.
+
+w
+@while "Enter wizard mode" y
+@until "Wizard Mode Options" w
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+w
+@choose "Become Divine Champion"
+"Semirath"
+ENTER
+@while "more --" SPACE
+
+d
+DOWN*20
+@dump:favour-champion
+ESC
+
+w
+@choose "Create Trap"
+"deathblade scythe trap"
+ENTER
+RIGHT
+ENTER
+@until "A trap!" s
+
+u
+@choose "Handle Device"
+@expect "Disarm -- Handle Device"
+y
+@dump:disarm
+
+u
+@choose "Handle Device"
+@while "Reset trap or salvage" r
+@expect "Reset -- Handle Device"
+y
+@dump:reset
+
+# --- the first kill: the kill award and the once-per-trap award -----------
+w
+@choose "Monster Summoning"
+@choose "Demons"
+@choose "manes"
+RIGHT RIGHT
+ENTER
+@while "Hiding" h
+@dump:armed
+
+d
+DOWN*20
+@dump:favour-armed
+ESC
+
+w
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+@until "slain by a deathblade" s
+@dump:kill1
+@while "more --" SPACE
+w
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+@while "more --" SPACE
+
+d
+DOWN*20
+@dump:favour-kill1
+ESC
+
+# --- the second kill, on the same trap: the kill award alone ----------------
+u
+@choose "Handle Device"
+@while "Reset trap or salvage" r
+@expect "Reset -- Handle Device"
+y
+@dump:reset2
+
+w
+@choose "Monster Summoning"
+@choose "Demons"
+@choose "manes"
+RIGHT RIGHT
+ENTER
+@while "Hiding" h
+@dump:armed2
+
+d
+DOWN*20
+@dump:favour-armed2
+ESC
+
+w
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+@until "slain by a deathblade" s
+@dump:kill2
+@while "more --" SPACE
+w
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+@while "more --" SPACE
+
+d
+DOWN*20
+@dump:favour-kill2
+ESC
+
+v
+@dump:messages
+@while "Messages" ESC
