@@ -84,11 +84,39 @@ fi
 # shared checkout stays the place where integration happens, so a MERGE commit
 # is allowed: that is tools/finish_bead.sh landing work, not somebody starting
 # new work in the wrong place.
+#
+# IT EXEMPTS THE OVERNIGHT HARNESS, AND NOTHING ELSE. (inc-loa.46, 2026-09-13)
+# bin/nightly.sh in ~/Scripts/nightly-harness makes branch nightly/<date> in
+# THIS checkout, exports NIGHTLY_BRANCH holding that name, and runs the session
+# there; its prompt forbids a worktree and requires a commit per document,
+# because uncommitted work blocks the morning merge. So the two rules could not
+# both hold, and the run of 2026-09-13 made all sixteen of its commits with
+# --no-verify -- which also skipped the commit-lane check and the publish check
+# below, leaving the run to rerun them by hand. That is the failure this hook
+# was built to remove, so the harness gets a door instead of a bypass.
+#
+# WHY THIS IS NARROW. An exported variable belongs to ONE process tree, so the
+# exemption reaches the nightly session and nothing else: a second session
+# committing in this checkout at 02:00 has no NIGHTLY_BRANCH and is still
+# refused, which is the exact hazard this block exists for. HEAD must ALSO be on
+# a nightly/ branch, so an exported NIGHTLY_BRANCH cannot wave a commit through
+# on master. That nightly/ is BRANCH_PREFIX in bin/nightly.sh: if it ever
+# changes, this exemption stops matching and the commit is REFUSED, which is the
+# safe direction to fail.
+#
+# tools/check_shared_checkout_gate.sh proves all of it against a scratch repo.
 if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
   _inc_gitdir=$(git rev-parse --absolute-git-dir 2>/dev/null)
   _inc_common=$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd)
+  _inc_head=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+  _inc_nightly=0
+  case "$_inc_head" in
+    nightly/?*)
+      if [ "${NIGHTLY_BRANCH:-}" = "$_inc_head" ]; then _inc_nightly=1; fi
+      ;;
+  esac
   if [ -n "$_inc_gitdir" ] && [ "$_inc_gitdir" = "$_inc_common" ] \
-     && [ ! -e "$_inc_gitdir/MERGE_HEAD" ]; then
+     && [ ! -e "$_inc_gitdir/MERGE_HEAD" ] && [ "$_inc_nightly" -eq 0 ]; then
     echo >&2 "pre-commit: REFUSED. This is the shared checkout, and new work does not"
     echo >&2 "happen here -- another session's branch change silently redirects your"
     echo >&2 "commit, and another session's uncommitted files land in your release."
