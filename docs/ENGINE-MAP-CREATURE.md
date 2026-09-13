@@ -9,35 +9,35 @@ Navigational page for bead inc-e2j. Every claim carries file:line; counts carry 
 - `Registry` owns every `Object` by handle `hObj` (`inc/Base.h:789`; `Object::myHandle` `inc/Base.h:630`). `theRegistry->Exists(h)` is the liveness test. Handles 1..127 are reserved (`src/Registry.cpp:251-260`).
 - `Map: public Object` (`inc/Map.h:190`) owns `LocationInfo *Grid` (`inc/Map.h:201`), sized `sizeX*sizeY`. Serialization takes one of two paths (`inc/Map.h:659`): a v1 save embeds the grid through `V1EmbedBegin`/`GridFieldsV1` (`inc/Map.h:661-663`); the legacy v0 path writes it as one block with `r.Block` (`inc/Map.h:666`).
 - `Thing: public Object` (`inc/Map.h:932`) holds `Map* m; hObj Next, hm; int16 x,y` (`inc/Map.h:958-960`). `m` is a raw pointer; `hm` is only its save form (`inc/Map.h:940-942`).
-- Hierarchy: `Creature: Thing, Magic` (`inc/Creature.h:160`) -> `Character` (`inc/Creature.h:639`) -> `Player` (`inc/Creature.h:1173`); `Monster: Creature` (`inc/Creature.h:1540`). `Item: Thing, Magic` (`inc/Item.h:13`). `Feature: Thing` (`inc/Feature.h:11`) -> `Door`/`Trap`/`Portal`.
+- Hierarchy: `Creature: Thing, Magic` (`inc/Creature.h:162`) -> `Character` (`inc/Creature.h:642`) -> `Player` (`inc/Creature.h:1176`); `Monster: Creature` (`inc/Creature.h:1541`). `Item: Thing, Magic` (`inc/Item.h:13`). `Feature: Thing` (`inc/Feature.h:11`) -> `Door`/`Trap`/`Portal`.
 - Type tests are numeric, not virtual (`inc/Base.h:631-635`). `isType(T_THING)` is always true (`inc/Base.h:642`), so `Map::FirstAt` returns any Thing.
 
 ## The two lists — the central invariant
 
 A Map records each Thing twice: `Map::Things`, an `NArray<hObj,1000,10>` (`inc/Map.h:244`), flat and unordered; and `LocationInfo::Contents` (`inc/Map.h:59`), the head of a per-square chain threaded through `Thing::Next` (`inc/Map.h:959`).
 
-INVARIANT: a Thing with `m == M` is in both `M->Things` and the Contents chain of `M->At(x,y)`. Enforced nowhere. The pair is inserted together only in `Thing::PlaceAt` (`src/Display.cpp:278` array, `:280-290` chain) and `Thing::Move` (`src/Display.cpp:1759-1787`, chain only), and unlinked together only in `Thing::Remove` (`src/Display.cpp:2044-2076`). Insert is not FIFO: if the chain head is a creature the newcomer is spliced in second (`src/Display.cpp:280-286`, `:1778-1783`).
+INVARIANT: a Thing with `m == M` is in both `M->Things` and the Contents chain of `M->At(x,y)`. Enforced nowhere. The pair is inserted together only in `Thing::PlaceAt` (`src/Display.cpp:278` array, `:280-290` chain) and `Thing::Move` (`src/Display.cpp:1778-1806`, chain only), and unlinked together only in `Thing::Remove` (`src/Display.cpp:2063-2097`). Insert is not FIFO: if the chain head is a creature the newcomer is spliced in second (`src/Display.cpp:280-286`, `:1797-1802`).
 
 Three exemptions, all deliberate:
-- MOUNT — `Creature::Mount` calls `Remove(false, true)`, then re-writes `x,y,m` by hand and never re-adds (`src/Skills.cpp:4300-4303`). A mount is in NEITHER list. `Thing::Remove` then skips the whole unlink block for it (`src/Display.cpp:2044`).
-- ENGULFED — `Creature::DoEngulf` re-adds to `Things` only (`src/Display.cpp:2209-2212`): in list 1, not list 2.
-- `Item::Next` is overloaded — the map Contents link when on the ground, the inventory link when carried (`src/Display.cpp:2159-2170`; chest walk `src/Display.cpp:372-376`). `Container::Contents` is unrelated to `LocationInfo::Contents`.
+- MOUNT — `Creature::Mount` calls `Remove(false, true)`, then re-writes `x,y,m` by hand and never re-adds (`src/Skills.cpp:4300-4303`). A mount is in NEITHER list. `Thing::Remove` then skips the whole unlink block for it (`src/Display.cpp:2063`).
+- ENGULFED — `Creature::DoEngulf` re-adds to `Things` only (`src/Display.cpp:2228-2231`): in list 1, not list 2.
+- `Item::Next` is overloaded — the map Contents link when on the ground, the inventory link when carried (`src/Display.cpp:2178-2189`; chest walk `src/Display.cpp:372-376`). `Container::Contents` is unrelated to `LocationInfo::Contents`.
 
 ## The read path
 
 `Map::GetAt(x,y,t,first)` (`src/Display.cpp:1437`) is the single funnel for all 22 `F*At/N*At/M*At` accessors, and it keeps `static bool doneflag` and `static Thing* curr` (`src/Display.cpp:1439-1440`).
 
-INVARIANT: only one F/N iteration may be live at a time, process-wide. Nothing enforces it. `MCreatureAt`, `MultiAt`, `PileAt` each issue a fresh `first=true` call (`inc/Map.h:313-315`, `:348-353`), so calling one inside an `F...At`/`N...At` loop silently restarts the outer loop.
+INVARIANT: only one F/N iteration may be live at a time, process-wide. Nothing enforces it. `MCreatureAt`, `MultiAt`, `PileAt` each issue a fresh `first=true` call (`inc/Map.h:313-315`, `:361-366`), so calling one inside an `F...At`/`N...At` loop silently restarts the outer loop.
 
 ## Fields and stati
 
-`Map::Fields` is an `OArray<Field,10,5>` of values, not pointers (`inc/Map.h:248`, next to the author's own "something is scribbling over Fields" note at `:232-234`). `LocationInfo::hasField` (`inc/Map.h:47`) caches "some field covers me"; `Map::FieldAt` short-circuits on it (`inc/Inline.h:405-415`).
+`Map::Fields` is an `OArray<Field,10,5>` of values, not pointers (`inc/Map.h:248`, next to the author's own "something is scribbling over Fields" note at `:245-247`). `LocationInfo::hasField` (`inc/Map.h:47`) caches "some field covers me"; `Map::FieldAt` short-circuits on it (`inc/Inline.h:405-415`).
 
-INVARIANT: `hasField` is true exactly when some `Fields[i]->inArea(x,y)`. Set in `NewField` (`src/Status.cpp:1451`), recomputed in `RemoveField` (`src/Status.cpp:1375`) and `MoveField` (`src/Status.cpp:1593`) — each only over the affected field's own bounding box. `RemoveField` matches by pointer identity (`src/Status.cpp:1369`) into an array that memmoves on `Remove` and reallocs on `Enlarge` (`src/Base.cpp:583-620`), so a `Field*` held across another field operation is stale (read).
+INVARIANT: `hasField` is true exactly when some `Fields[i]->inArea(x,y)`. Set in `NewField` (`src/Status.cpp:1475`), recomputed in `RemoveField` (`src/Status.cpp:1399`) and `MoveField` (`src/Status.cpp:1644`) — each only over the affected field's own bounding box. `RemoveField` matches by pointer identity (`src/Status.cpp:1393`) into an array that memmoves on `Remove` and reallocs on `Enlarge` (`src/Base.cpp:583-620`), so a `Field*` held across another field operation is stale (read).
 
-FI_SIZE (`inc/Defines.h:3459`) is the bulk of a creature above size Large, created at `src/Monster.cpp:1620` and `src/Values.cpp:1714`; `GetAt` treats it as a creature standing on every covered square (`src/Display.cpp:1527-1539`).
+FI_SIZE (`inc/Defines.h:3461`) is the bulk of a creature above size Large, created at `src/Monster.cpp:1620` and `src/Values.cpp:1745`; `GetAt` treats it as a creature standing on every covered square (`src/Display.cpp:1527-1539`).
 
-`Thing::__Stati` is a hand-rolled `StatiCollection`, deliberately not an Array (`inc/Map.h:801-809`): live `S[]`, pending `Added[]`, per-nature index `Idx`, and a `Nested` depth so removal inside an iteration defers compaction to `_FixupStati` (`inc/Map.h:719-724`). `Thing::backRefs` (`inc/Map.h:967`) is the reverse edge; `FixupBackrefs` (`inc/Map.h:1283`) requires every `Status::h` aimed at a Thing to have a matching backref there.
+`Thing::__Stati` is a hand-rolled `StatiCollection`, deliberately not an Array (`inc/Map.h:801-809`): live `S[]`, pending `Added[]`, per-nature index `Idx`, and a `Nested` depth so removal inside an iteration defers compaction to `_FixupStati` (`inc/Map.h:719-724`). `Thing::backRefs` (`inc/Map.h:967`) is the reverse edge; `FixupBackrefs` (`inc/Map.h:1285`) requires every `Status::h` aimed at a Thing to have a matching backref there.
 
 ## Five bugs, as invariant violations (one now fixed)
 
@@ -51,7 +51,7 @@ FI_SIZE (`inc/Defines.h:3459`) is the bulk of a creature above size Large, creat
 
 ```sh
 grep -c "GetAt(x,y" inc/Map.h                                   # 30 call sites
-sed -n '290,355p' inc/Map.h | grep -cE "At\(int16 x, int16 y\) *$"              # 22 accessors
+sed -n '303,368p' inc/Map.h | grep -cE "At\(int16 x, int16 y\) *$"              # 22 accessors
 grep -c "map audit armed" logs/mapaudit.log                     # 16 armed sessions
 grep "^    " logs/mapaudit.log | cut -c5-56 | sort | uniq -c    # 9743 orphan lines in two formats, 3 deleted-in-Things
 grep -oE "x[0-9]+ " logs/mapaudit.log | tr -d 'x ' | paste -sd+ - | bc          # 13711 violations total
@@ -65,11 +65,11 @@ grep -n "FindOpenAreas" lib/dispatch.h                          # :314-316, the 
 
 ## Suspected defects
 
-- `lib/dispatch.h:316` binds the script's 2nd argument of `FindOpenAreas` to the C++ **`regID`** parameter, because `inc/Api.h:122` declares two parameters (`Rect, uint16 Flags`) and `src/MakeLev.cpp:3505` defines three (`Rect, rID regID, int16 Flags`). Tree Stride sets `ta = FOA_TREES_ONLY` (0x0080, `inc/Defines.h:3560`) at `lib/pspells.irh:2317` and passes it as the 2nd argument of `FindOpenAreas` at `lib/pspells.irh:2324`; it lands in `regID`, so `src/MakeLev.cpp:3531` compares a region rID against 128, `isReg` stays false for every square, `OpenC` becomes 0 and the spell always fails — while the intended tree filter never runs. dispatch.h is compiled in at `src/VMachine.cpp:175`. This is a lib/src disagreement, not a smoothed-over one.
+- `lib/dispatch.h:316` binds the script's 2nd argument of `FindOpenAreas` to the C++ **`regID`** parameter, because `inc/Api.h:122` declares two parameters (`Rect, uint16 Flags`) and `src/MakeLev.cpp:3505` defines three (`Rect, rID regID, int16 Flags`). Tree Stride sets `ta = FOA_TREES_ONLY` (0x0080, `inc/Defines.h:3562`) at `lib/pspells.irh:2317` and passes it as the 2nd argument of `FindOpenAreas` at `lib/pspells.irh:2324`; it lands in `regID`, so `src/MakeLev.cpp:3531` compares a region rID against 128, `isReg` stays false for every square, `OpenC` becomes 0 and the spell always fails — while the intended tree filter never runs. dispatch.h is compiled in at `src/VMachine.cpp:175`. This is a lib/src disagreement, not a smoothed-over one.
 - `src/Display.cpp:1538` `Error("Corrupted data for FI_SIZE field!")` is unreachable: its loop repeats exactly the predicate `FieldAt` has already satisfied (`inc/Inline.h:410-413` vs `src/Display.cpp:1530-1532`). The condition worth catching is the inverse — `hasField` set with no covering field — and that returns NULL silently.
 - `src/Encounter.cpp:2629` `j = random(OpenC)` with `OpenC == 0` yields j = 0 (`inc/Inline.h:40`), then reads stale `OpenX[0]/OpenY[0]` left by whatever map last ran `FindOpenAreas`.
-- `src/Display.cpp:2174` `Item::Remove` zeroes `Next` before calling `Thing::Remove` at `:2179`, which then writes that zero into the predecessor's `Next` (`:2074`), truncating the square's chain. Reachable only if an Item has both `Parent` and `m` set. Read, not observed.
+- `src/Display.cpp:2193` `Item::Remove` zeroes `Next` before calling `Thing::Remove` at `:2198`, which then writes that zero into the predecessor's `Next` (`:2093`), truncating the square's chain. Reachable only if an Item has both `Parent` and `m` set. Read, not observed.
 - `src/Effects.cpp:61-89` walks a Player's `x,y` around the map for the scrying cursor without touching Contents, restoring from `uint8` copies taken at `:55-56`. Any Remove or Move inside that loop would unlink from the wrong square.
-- `src/Display.cpp:1703` `Thing::Move` caches `Map *M = m`, then throws field events (`:1721-1746`) that can re-place this Thing on another map; the unlink and insert afterwards use the stale `M`.
+- `src/Display.cpp:1703` `Thing::Move` caches `Map *M = m`, then throws field events (`:1721-1768`) that can re-place this Thing on another map; the unlink and insert afterwards use the stale `M`.
 - `src/MapAudit.cpp:224` says "in neither list" while checking only `Things[]` (`:222`). A Thing in Contents but not `Things[]` is caught by check 2 instead (`:191`), so the wording is wrong, not the coverage.
 - `src/Encounter.cpp:2606-2608` builds a `Terrains[256]` table that is never read.
