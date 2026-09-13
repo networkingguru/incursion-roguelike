@@ -417,7 +417,7 @@ Repaired on load, and nothing else is:
 | vptr | placement new, src/Registry.cpp:944-986 |
 | pointer to an owned heap block | src/Registry.cpp:370, via the 7 direct `r.Block` sites plus every `FIELD_BLOB`/`FIELD_OBJ` line's v0 branch (inc/Base.h:768-773) |
 | `Thing::m` from `Thing::hm` | inc/Map.h:955 |
-| `Player::MyTerm = T1` | inc/Creature.h:1360 |
+| `Player::MyTerm = T1` | inc/Creature.h:1363 |
 | `Module` resource caches zeroed | inc/Res.h:836-837 (save side), :919-920 (load side) |
 | module text segment un-inverted | inc/Res.h:908-912 |
 | garbage payload in a loaded `Target` | src/Registry.cpp:1011-1012, src/Target.cpp:1561 |
@@ -427,7 +427,7 @@ range check at src/Registry.cpp:906-916:
 
 - **Every `hObj` and `rID` field.** `Thing::Next`, `Thing::hm`
   (inc/Map.h:959), `Item::Parent` (inc/Item.h:44), `Container::Contents`
-  (inc/Item.h:344), `Game::m[]`, `Game::p[]` (inc/Res.h:1304),
+  (inc/Item.h:345), `Game::m[]`, `Game::p[]` (inc/Res.h:1304),
   `TargetSystem`'s per-target `data` (inc/Target.h:166-177). These are
   plain numbers and the v0 loader reproduces them byte for byte. **A handle
   that was wrong when the file was written stays wrong after every future
@@ -526,7 +526,7 @@ grep -n "virtual" inc/Res.h | head -3                                   # first 
    the default and placement-news an `Item`. A staff is built as a `Weapon`
    (src/Item.cpp:275-276) and sized as one (src/Registry.cpp:324), so a
    loaded staff keeps the right byte count but gets `Item`'s vtable and
-   loses every `Weapon` override, `isWeapon()` included (inc/Item.h:374).
+   loses every `Weapon` override, `isWeapon()` included (inc/Item.h:375).
    v1 mirrors this behaviour deliberately (spec risk 3): fixing it is a
    vtable change across a load, out of the schema work's scope.
 3. src/Registry.cpp:967 — the mirror image. `T_COIN` (29) is built as a
