@@ -5,7 +5,8 @@
 #   tools/finish_bead.sh inc-abcd --no-gate
 #   tools/finish_bead.sh --selftest
 #
-# A bead whose whole diff is *.md gets the cheap gate; see STEP 4.
+# A bead whose whole diff is *.md gets the cheap gate; see STEP 4. So does a
+# bead whose exact files passed the full gate in the last 24 hours.
 #
 # WHY IT IS ONE SCRIPT AND NOT A CHECKLIST. tools/worktree.sh isolates a bead so
 # two sessions cannot tread on each other. Isolation alone was NOT acceptable to
@@ -164,13 +165,21 @@ fi
 # untouched, a verdict of 1 runs the full gate, and a verdict of 2 -- the
 # classifier could not measure -- runs the full gate too. The only path to the
 # cheap gate is a classifier that ran and said yes.
+#
+# THE SECOND CARVE-OUT asks a different question: have these exact files
+# already passed the full gate? A landing interrupted after a green gate, or a
+# gate run before the commit, used to pay for the whole gate again (inc-689z).
+# So a verdict of 1 runs --reuse-pass. It looks for the record that a full
+# pass leaves, re-runs the cheap tier when one matches, and runs the full gate
+# when none does. It does not widen the docs-only allowlist, and a verdict of
+# 2 does not reach it.
 if [ "$RUN_GATE" -eq 1 ] && [ "$GATE_OVERRIDDEN" -eq 0 ]; then
     DOCS_VERDICT="$("$ROOT/tools/docs_only_change.sh" "$BASE_BRANCH" "$BEAD" 2>&1)"
     case $? in
         0) echo "=== $DOCS_VERDICT ==="
            echo "=== gate scaled down: builds and the live tier cannot be reached by *.md ==="
            GATE_CMD="tools/nightly_verify.sh --docs-only" ;;
-        1) ;;
+        1) GATE_CMD="tools/nightly_verify.sh --reuse-pass" ;;
         *) echo "=== docs-only classifier could not measure; running the full gate ==="
            echo "$DOCS_VERDICT" ;;
     esac
