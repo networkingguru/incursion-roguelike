@@ -82,6 +82,15 @@ the checks are not, because it names no rule and instead reports a new complaint
 appearing in several of its 40 sessions at once, fewer sessions reaching a map,
 or more deaths and freezes than the baseline.
 
+**A full pass is remembered for the files it measured.** Each full `--compare`
+that passes leaves `nightly-verify-pass.txt` beside the recorded base.
+`tools/finish_bead.sh` runs `--reuse-pass`, which re-runs only the cheap tier
+when that record matches the files on disk, the recorded base and the toolchain,
+and is under 24 hours old. Anything else runs the full gate. The cheap tier
+always runs again, because some of its checks read commit messages, HEAD and the
+branches, and no hash of the files covers those. `tools/check_pass_record.sh`
+proves the rules against a scratch repository (inc-689z).
+
 **Three exit codes, not two.** A check exits 0 for pass, 2 for could not
 measure, and anything else for fail. The gate keeps 2 apart from failure in both
 directions: a check that could not be measured before the run does NOT forgive a
