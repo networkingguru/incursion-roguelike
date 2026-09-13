@@ -2321,7 +2321,7 @@ int16 Character::XPPenalty()
            separately as inc-5y8; tier Observed; not sent upstream. The
            original asked TCLASS(ClassID[n])->HasFlag(CF_FAVOURED) of every
            class slot, including an empty one. Game::Get returns NULL for a
-           zero id (src/Res.cpp:312), so a character who holds fewer than
+           zero id (src/Res.cpp:320), so a character who holds fewer than
            three classes dereferenced NULL and the process died. Nothing about
            that is platform, compiler or width dependent -- the missing NULL
            check is plain C++ and misbehaves identically on Win32 with the
