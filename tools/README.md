@@ -43,8 +43,9 @@ BACKEND=posix ./build_macos.sh   # -> ./incursion-headless  the POSIX/ncurses bu
 
 `build_macos.sh:84` defaults `BACKEND` to `libtcod`; `:87` maps that to
 `OUT=incursion` and `:88` maps `posix` to `OUT=incursion-headless`. Either line
-also writes `mod/Incursion.Mod` when that file is absent (`build_macos.sh:371-380`),
-because both builds carry the resource compiler by default.
+also compiles `mod/Incursion.Mod`, because both builds carry the resource
+compiler by default. An ordinary build recompiles it every time; a build with
+`EXTRA_CXXFLAGS` set compiles it only when the file is absent (`build_macos.sh:371-381`).
 
 The `posix` build compiles `src/Wposix.cpp` and links `-lz -lncurses`
 (`build_macos.sh:239-248`). ncurses ships with macOS and with every Linux
@@ -865,18 +866,20 @@ documented `upstream: ` and is therefore invisible to
 it as `upstream (inc-l0t, Traced, not sent):` and were skipped in silence for
 months (`check_upstream_marks.sh:17-23`). Both of those two sites are now spelled correctly, so reading
 them today shows the fix and not the defect; the check is what keeps the next
-one from happening. Pass 3 is new and checks the REVERSE direction: for every fix
-site the table names, the named file must carry a marker mentioning that row's
-id (`check_upstream_marks.sh:36-40`). Pass 3 WARNED rather than failed until
+one from happening. Pass 3 is new and checks the REVERSE direction: for every
+row, at least one of the files it names as the fix site must carry a marker
+mentioning that row's id, because the house convention is one mark at the
+primary site (`check_upstream_marks.sh:36-40`, `:46-51`). Pass 3 WARNED rather than failed until
 2026-08-23, because two rows were unmatched and resolving them is a provenance
 judgement, not this script's call. Both were settled that day (bd inc-6s5), so
 the pass now FAILS and `--strict` is the default (`check_upstream_marks.sh:70-76`,
 `:102-108`). The flag is still accepted and does nothing, so an older caller does
 not break (`check_upstream_marks.sh:75-76`). `--selftest` proves the detectors still
 detect (`check_upstream_marks.sh:90`), and since 2026-08-23 that includes pass 3
-itself: a synthetic table with one unmatched row, one matched row and one row
-naming a file that is not there must produce exactly one WARN, one FAIL and no
-word about the matched row.
+itself: a synthetic table with one unmatched row, one matched row, one row
+naming a file that is not there, and one row naming two files of which only one
+carries the marker must produce exactly one WARN, one FAIL and no word about
+either matched row.
 
 **`check_api_arity.py` now has a checked-in baseline and can fail.** It used to
 return 0 on every path, printing two MISALIGNED slots and exiting green, so
