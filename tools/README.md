@@ -47,14 +47,14 @@ also writes `mod/Incursion.Mod` when that file is absent (`build_macos.sh:371-38
 because both builds carry the resource compiler by default.
 
 The `posix` build compiles `src/Wposix.cpp` and links `-lz -lncurses`
-(`build_macos.sh:137-146`). ncurses ships with macOS and with every Linux
+(`build_macos.sh:239-248`). ncurses ships with macOS and with every Linux
 distribution, so it adds nothing to install, and it draws only to a real
 terminal — a headless run never calls into it
-(`build_macos.sh:143-145`). The `libtcod` build links SDL2 and OpenGL instead
-(`build_macos.sh:148-153`), and needs `sdl2` and `pkg-config` from Homebrew.
+(`build_macos.sh:245-247`). The `libtcod` build links SDL2 and OpenGL instead
+(`build_macos.sh:250-255`), and needs `sdl2` and `pkg-config` from Homebrew.
 
-**The harness needs the second line.** `headless.sh:76` defaults its binary to
-`./incursion-headless`, and `:79-82` refuses to run without it, printing that
+**The harness needs the second line.** `headless.sh:82` defaults its binary to
+`./incursion-headless`, and `:85-88` refuses to run without it, printing that
 exact build command. `soak.sh:33-35`, `check_race_feats.sh:23-26` and
 `check_load_corrupt.sh:55-58` all say the same.
 
@@ -68,9 +68,9 @@ Homebrew (`build_macos.sh:4-5`). The POSIX build needs neither SDL nor libtcod
 
 `headless.sh` is the harness. It plays one session of a key script from
 `tools/keys/` inside its own directory under `logs/runs/`, with its own `save/`
-and `logs/`, and with `mod/` and `lib/` symlinked in (`headless.sh:7-10`). It
+and `logs/`, and with `mod/` and `lib/` symlinked in (`headless.sh:13-16`). It
 exists so that an unattended run cannot destroy a real character. Use it and
-never the binary directly (`headless.sh:49-52`).
+never the binary directly (`headless.sh:55-58`).
 
 The harness takes two environment variables as inputs beside the key script and
 the seed. `INCURSION_OPTIONS` is mandatory and names the settings file (Trap 2
@@ -120,7 +120,7 @@ them (`src/Debug.cpp`), so adding an option renumbers everything after it —
 dump the menu and read the letter rather than counting. And `w`, not `W`: an
 uppercase token sets SHIFT, and both key tables bind `KY_CMD_WIZMODE` with
 modifier flags of 0, so `W` is a different keystroke that reaches nothing
-(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:4739`/`4859`).
+(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:4745`/`4865`).
 
 `[M] Create Altar` is there for the harness. A sacrifice needs the player to
 be standing on an altar, and the only other source of one is `MakeLev`'s
@@ -164,11 +164,11 @@ self-explanatory.
 
 **`ended: NO GAMEPLAY`** — the run never entered a map, so it measured nothing.
 `Game::Play` writes `logs/session.log` on the first completed turn, so that file
-exists if and only if the session reached gameplay (`headless.sh:170-171`). When
-it is missing and the run would otherwise have exited 0 or 3, `headless.sh:172-174`
+exists if and only if the session reached gameplay (`headless.sh:230-231`). When
+it is missing and the run would otherwise have exited 0 or 3, `headless.sh:232-234`
 rewrites the exit code to 5. Do not count such a run as a pass. Screens are not
 a substitute test: `@dump` lines fire even in a session that never entered a map,
-and one vacuous run left 11 of them (`headless.sh:164-166`).
+and one vacuous run left 11 of them (`headless.sh:224-226`).
 
 **`ended: ASSERT`** — the engine logged an `ASSERT failed` whose condition is
 not listed in `tools/known_asserts.txt`, and the run would otherwise have
@@ -180,7 +180,7 @@ controller `?` screen crashed on the Ally: the harness had logged the very
 assert, and the check that drove the session read only the screen dump.
 
 **`ended: WATCHDOG`** — exit 4. The game stopped asking for keystrokes, which is
-the signature of a hang (`headless.sh:32-33`). `SIGALRM` fires in
+the signature of a hang (`headless.sh:38-39`). `SIGALRM` fires in
 `src/Wposix.cpp:450-458`, which writes `incursion: watchdog timeout, no key read
 in time` and exits with `EXIT_OUT_OF_TIME`, defined as 4 at `src/Wposix.cpp:85`.
 The alarm is 300 seconds (`src/Wposix.cpp:80`) and it measures the GAP between
@@ -189,30 +189,30 @@ keystrokes, not the length of the run, so a long honest session is safe
 (`src/Wposix.cpp:580-584`).
 
 **`death: STUCK`** — the run ended with `Die? [yn]` still on the last screen,
-unanswered (`headless.sh:261-264`). The pinned settings run with `OPT_NODEATH`
+unanswered (`headless.sh:321-324`). The pinned settings run with `OPT_NODEATH`
 on, so a killing blow asks that question instead of ending the game, and a key
 script answers it blind with whatever token comes next
-(`headless.sh:230-233`). If no `y` or `n` remains in the script, every later
+(`headless.sh:290-293`). If no `y` or `n` remains in the script, every later
 keystroke is swallowed and the run still reports `ended: cleanly`
-(`headless.sh:243-246`). A confirmed death prints `death: N confirmed` instead
+(`headless.sh:303-306`). A confirmed death prints `death: N confirmed` instead
 and is logged to `logs/death.log`. Neither gets its own exit code, on purpose:
 whether a death should fail a run is a product decision the script does not make
-(`headless.sh:38-43`).
+(`headless.sh:44-49`).
 
 **`stuck-prompt: threat-disengage`** — the run ended with `You are in a
 threatened area. Abort, Flee or Disengage?` still on screen
-(`headless.sh:284-287`). That prompt has no option gate at all and fires
+(`headless.sh:344-347`). That prompt has no option gate at all and fires
 whenever a player-controlled creature moves away from a hostile creature that
-perceives it (`src/Move.cpp:841`, quoted at `headless.sh:270-271`).
+perceives it (`src/Move.cpp:941`, quoted at `headless.sh:330-331`).
 `tools/keys/dive.keys` contains none of `a`, `f`, `d`, `?` or ESC, so once the
 prompt fires the rest of the script is swallowed. Measured on 7 of 40 seeds
-(`headless.sh:279-281`).
+(`headless.sh:339-341`).
 
 **`map audit: armed, no inconsistencies found`** — the audit ran and found
 nothing. `src/MapAudit.cpp:64` writes an `=== map audit armed ... ===` header
 whenever the audit is on, so the log carries a line even on a clean run. That is
-what lets `headless.sh:344-345` tell "clean" apart from "never ran". A missing
-log is reported three different ways depending on why (`headless.sh:336-343`),
+what lets `headless.sh:404-405` tell "clean" apart from "never ran". A missing
+log is reported three different ways depending on why (`headless.sh:396-403`),
 because merging them is the exact defect this code used to have.
 
 ---
@@ -221,7 +221,7 @@ because merging them is the exact defect this code used to have.
 
 **Trap 1 — every script resolves the repo root itself.** The idiom is
 `ROOT="$(cd "$(dirname "$0")/.." && pwd)"` followed by `cd "$ROOT"`
-(`headless.sh:46-47`, `soak.sh:24-25`, `gate_record.sh:17-18`,
+(`headless.sh:52-53`, `soak.sh:24-25`, `gate_record.sh:17-18`,
 `check_headless.sh:38-39`, and most other scripts here). So you may call any of
 them from any working directory, and the path arguments they take are relative
 to the REPO ROOT, not to where you are standing. `gate_lib.sh:43` uses `BASH_SOURCE` instead
@@ -230,7 +230,7 @@ because it is sourced, not executed.
 **Trap 2 — every `headless.sh` run must choose its settings.** Set
 `INCURSION_OPTIONS` to one of the frozen files in `tools/fixtures/`, or to a
 purpose-built file such as `tools/gates/Options.Dat`. The harness refuses an
-unset variable or a path that is not a file (`headless.sh:99-108`). This keeps
+unset variable or a path that is not a file (`headless.sh:105-113`). This keeps
 checks independent of the repository-root `Options.Dat`, which belongs to the
 player and is rewritten every session. Settings change the game: on 2026-08-15
 the same binary, seed and key script gave different screens either side of a
@@ -239,17 +239,17 @@ rewrite, and the gate's finding count moved 4386 to 4416 with no code change.
 This matters more than it sounds, because the key scripts choose menu items by
 FIXED LETTERS. One extra prompt slides every later keystroke out of step. Two
 seeds died exactly that way when a god offered a domain prompt the stream had no
-answer for (`tools/keys/chargen-priest.keys:12-16`). Anything that compares one
+answer for (`tools/keys/chargen-priest.keys:24-28`). Anything that compares one
 run against another MUST pass `INCURSION_OPTIONS`. The gate pins
 `tools/gates/Options.Dat` and records its checksum in the baseline
 (`gate_lib.sh:43-44`, `gate_record.sh:28-34`). A run that does not choose a
-file, or names one it cannot have, is an error (`headless.sh:99-108`).
+file, or names one it cannot have, is an error (`headless.sh:105-113`).
 
 **Trap 3 — the map audit is ON by default and it is expensive.**
-`headless.sh:115` sets `INCURSION_MAP_AUDIT` to 1 unless you override it. A
+`headless.sh:169` sets `INCURSION_MAP_AUDIT` to 1 unless you override it. A
 sample of a headless run on 2026-08-15 put 75 percent of the run inside
 `AuditMap`, so a session with the audit on measures the audit and not the game
-(`headless.sh:111-114`). **Anything timing the engine MUST set
+(`headless.sh:165-168`). **Anything timing the engine MUST set
 `INCURSION_MAP_AUDIT=0`. Anything hunting defects MUST leave it on.**
 
 **Trap 4 — a key script longer than the budget stops early and exits 3, and
@@ -282,7 +282,7 @@ factor of about 2.5, and both are now the measured numbers.
 
 **Trap 5 — two runs started in the same second used to SHARE a run directory.
 Fixed; the history is here because the number it corrupted was published.**
-`headless.sh:91` now names the default run directory
+`headless.sh:97` now names the default run directory
 `logs/runs/$(date +%Y%m%d-%H%M%S)-<pid>-<script>`. The stamp alone resolves to
 the SECOND, so before the process id joined it, a loop that started several
 sessions inside one second gave them all the same directory, and any probe that
@@ -302,7 +302,7 @@ run was for, which a pid does not, and the count is the only thing that proves
 the runs stayed apart. `soak.sh:59` does this, and so does every check that
 drives more than one session (`check_headless.sh:258`, `:282`, `:292`, `:305`,
 `:327`; `check_layout.sh:89`; `check_dump_save.sh:56`;
-`check_load_corrupt.sh:69`). `check_race_feats.sh:28-29` does NOT — it takes the
+`check_load_corrupt.sh:69`). `check_race_feats.sh:29-30` does NOT — it takes the
 timestamped default and parses the `run:` line out of the harness output. That
 is now safe in a loop as well, because the default name is unique, but it still
 tells you nothing about which run was which.
@@ -389,7 +389,7 @@ the job, and each still explains an older log or an older commit.
 
 `run_probe.sh` was **deleted on 2026-08-18**. Its own header said "Delete this
 script once the saved-game position bug is fixed", and that bug is fixed:
-`docs/REPORTING-GATE.md:419` records `*((long*)&hm)` destroying the player's
+`docs/REPORTING-GATE.md:425` records `*((long*)&hm)` destroying the player's
 position as a closed fix, and `src/AbiCheck.cpp:11` now gates the type widths it
 depended on. It was also redundant — `play.sh` sets the same two probes and more
 (`play.sh:41-49`) and prints a report afterwards, which `run_probe.sh` did not.
@@ -537,7 +537,7 @@ this directory the same way: ask what it samples before you trust what it says.
 An instrument that answers confidently about the wrong thing costs more than no
 instrument. `gate_lib.sh:27-29` states its own version of this limit — the gate
 detects only regressions that produce log output, and never replaces a
-play-test. `check_upstream_marks.sh:49-56` and `check_api_arity.py:65-69` each
+play-test. `check_upstream_marks.sh:78-85` and `check_api_arity.py:66-70` each
 state theirs.
 
 ### Build and release
@@ -632,7 +632,7 @@ checking anything looks exactly like a check that passes.
 
 `tools/check_citations.sh <document>` also belongs in this tier, but it resolves
 citations against the git refs `upstream/master` and `origin/master`
-(`check_citations.sh:162-163`). Fetch those remotes first, or it reports failures
+(`check_citations.sh:163-164`). Fetch those remotes first, or it reports failures
 that are only missing refs. It is read-only on git.
 
 ### Tier 2 — needs a compiler but no prior build
@@ -737,7 +737,7 @@ number rather than a yes or no: they read the hardness off the game's own
 combat-numbers line, which `Item::Damage` prints AFTER adding the bearer's gear
 resistance to it. Those two silver a magic warhammer for the ordering
 `Item::Damage` used to have: a no-save A_DEQU sets `ignoreHardness` on a plain
-item (`src/Fight.cpp:2090`), and the bearer's grant was added before the bypass
+item (`src/Fight.cpp:2122`), and the bearer's grant was added before the bypass
 emptied it, so a resistance was unmeasurable on ordinary gear. inc-kapn
 inverted that -- the bypass now empties only what `Hardness()` returned -- and
 `check_gear_bypass_survives.sh` measures a resistance on a plain iron maul. The
@@ -858,22 +858,22 @@ This section exists so nobody describes their old behaviour.
 **`check_upstream_marks.sh` now runs three passes, not one.** Pass 1 is the
 original: every well-formed `upstream:` marker states its four required things
 and its tracking id reaches the table in `docs/REPORTING-GATE.md`
-(`check_upstream_marks.sh:11-15`). Pass 2 is new and FAILS on a MALFORMED
+(`check_upstream_marks.sh:12-15`). Pass 2 is new and FAILS on a MALFORMED
 marker — a comment shaped like a marker whose tag is not spelled as the
 documented `upstream: ` and is therefore invisible to
 `grep -rn "upstream:" src/ inc/`. `src/rle.c:270` and `src/lz.c:500` both wrote
 it as `upstream (inc-l0t, Traced, not sent):` and were skipped in silence for
-months (`check_upstream_marks.sh:16-23`). Both of those two sites are now spelled correctly, so reading
+months (`check_upstream_marks.sh:17-23`). Both of those two sites are now spelled correctly, so reading
 them today shows the fix and not the defect; the check is what keeps the next
 one from happening. Pass 3 is new and checks the REVERSE direction: for every fix
 site the table names, the named file must carry a marker mentioning that row's
-id (`check_upstream_marks.sh:35-39`). Pass 3 WARNED rather than failed until
+id (`check_upstream_marks.sh:36-40`). Pass 3 WARNED rather than failed until
 2026-08-23, because two rows were unmatched and resolving them is a provenance
 judgement, not this script's call. Both were settled that day (bd inc-6s5), so
-the pass now FAILS and `--strict` is the default (`check_upstream_marks.sh:41-47`,
-`:73-79`). The flag is still accepted and does nothing, so an older caller does
-not break (`check_upstream_marks.sh:74-75`). `--selftest` proves the detectors still
-detect (`check_upstream_marks.sh:89`), and since 2026-08-23 that includes pass 3
+the pass now FAILS and `--strict` is the default (`check_upstream_marks.sh:70-76`,
+`:102-108`). The flag is still accepted and does nothing, so an older caller does
+not break (`check_upstream_marks.sh:75-76`). `--selftest` proves the detectors still
+detect (`check_upstream_marks.sh:90`), and since 2026-08-23 that includes pass 3
 itself: a synthetic table with one unmatched row, one matched row and one row
 naming a file that is not there must produce exactly one WARN, one FAIL and no
 word about the matched row.
@@ -881,9 +881,9 @@ word about the matched row.
 **`check_api_arity.py` now has a checked-in baseline and can fail.** It used to
 return 0 on every path, printing two MISALIGNED slots and exiting green, so
 anything running it as a gate got a pass no matter what happened
-(`check_api_arity.py:52-55`). It now compares what it finds against a `BASELINE`
-dictionary held in the script itself at `:110`. Three outcomes
-(`check_api_arity.py:57-60`):
+(`check_api_arity.py:53-56`). It now compares what it finds against a `BASELINE`
+dictionary held in the script itself at `:111`. Three outcomes
+(`check_api_arity.py:58-61`):
 
 - a MISALIGNED slot IN the baseline — reported as KNOWN, tolerated;
 - a MISALIGNED slot NOT in it — FAIL, a new defect or a real change;
@@ -892,11 +892,11 @@ dictionary held in the script itself at `:110`. Three outcomes
 
 The exit codes are 0 clean, 1 a failure of any of those three kinds, 2 the tool
 could not parse `inc/Api.h` and so examined nothing
-(`check_api_arity.py:71-77`). `--selftest` exercises all four branches with no
-framework and no fixtures (`:368-369`, `:391-398`). Note the tool's own stated
+(`check_api_arity.py:72-77`). `--selftest` exercises all four branches with no
+framework and no fixtures (`:369-370`, `:392-401`). Note the tool's own stated
 limit: about a fifth of the declarations — 94 of 460 — find no C++ declaration
 its parser can match, so a clean run is not a clean bill of health
-(`:65-69`).
+(`:66-70`).
 
 ---
 
