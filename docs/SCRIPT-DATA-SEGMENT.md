@@ -40,8 +40,8 @@ The block has two parts, in this order (Traced):
    global variable is a bare index into it (`MEMORY(pv)` in `VMachine::Value1`,
    `src/VMachine.cpp:347`).
 2. **The per-player resource memory rows** — bytes `[szDataSeg, MDataSegSize)`.
-   `Module::GetMemoryPtr` (`src/Res.cpp:711`) addresses these arithmetically;
-   it starts its offset at `szDataSeg` (`src/Res.cpp:714`, `ptr = szDataSeg`)
+   `Module::GetMemoryPtr` (`src/Res.cpp:719`) addresses these arithmetically;
+   it starts its offset at `szDataSeg` (`src/Res.cpp:722`, `ptr = szDataSeg`)
    and adds `MonMem`/`ItemMem`/`EffMem`/`RegMem` rows keyed by the resource's
    position. Those rows are what the spec's "resource memory segment" section
    replaces with name-keyed records; this note is only about part 1 in front of
