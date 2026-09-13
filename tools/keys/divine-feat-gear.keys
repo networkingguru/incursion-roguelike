@@ -21,7 +21,7 @@
 #
 # WHY A FIREBAT. Its A_DEQU is 1d3 AD_FIRE with NO save DC (lib/mon2.irh:3716),
 # and it is the only fire, cold or lightning carrier in lib/ with no DC. No DC
-# matters: src/Fight.cpp:2090 sets e.ignoreHardness whenever a no-save A_DEQU
+# matters: src/Fight.cpp:2122 sets e.ignoreHardness whenever a no-save A_DEQU
 # strikes a NON-magical item, so iron contributes nothing at all and the feat's
 # grant is the WHOLE of the number on the line.
 #
@@ -46,7 +46,7 @@
 #
 # WHY THE FEATS NEED A BUILT CHARACTER. src/FeatTab.cpp:630 asks
 # FT_DIVINE_RESISTANCE for the Turning ability, Charisma 13 and FT_ENDURANCE,
-# and FT_ENDURANCE (:1215) asks Constitution 13. No rolled attribute set on
+# and FT_ENDURANCE (src/FeatTab.cpp:1215) asks Constitution 13. No rolled attribute set on
 # this seed offers both, so the character is built at the point-buy screen
 # instead of chosen from the five sets, and takes Endurance at one feat prompt
 # and Divine Resistance at the next.

@@ -328,7 +328,7 @@ if [ "$DEATHS" -eq 0 ] && [ "$STUCK_AT_PROMPT" -eq 0 ]; then
 fi
 
 # inc-loa.5: "You are in a threatened area. Abort, Flee or Disengage? [afd?]"
-# (src/Move.cpp:841) has no OPT_ gate at all -- it fires unconditionally
+# (src/Move.cpp:941) has no OPT_ gate at all -- it fires unconditionally
 # whenever a player-controlled creature moves away from a hostile creature
 # that perceives it and is not charging. Its ChoicePrompt only accepts
 # 'a'/'f'/'d'/'?'/ESC, and tools/keys/dive.keys has none of those in its
