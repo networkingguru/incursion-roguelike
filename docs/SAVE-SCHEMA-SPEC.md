@@ -173,7 +173,7 @@ ARCHIVE_CLASS(Thing,Object,r)
 END_ARCHIVE
 ```
 
-`Item` (`inc/Item.h:20-23`) gains `FIELD_RID(n, iID)`, `FIELD_RID(n, eID)` and
+`Item` (`inc/Item.h:20-38`) gains `FIELD_RID(n, iID)`, `FIELD_RID(n, eID)` and
 `FIELD_RID(n, homeID)` beside its scalars. One macro set serves both directions,
 as `Serialize` does today, so a field cannot be written and not read.
 
