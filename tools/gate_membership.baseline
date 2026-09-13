@@ -201,7 +201,6 @@ check_wand_cleansing.sh
 check_water_ring_prose.sh
 check_weapon_groups.sh
 check_weapon_immunity_live.sh
-check_xp_penalty.sh
 check_xp_penalty_rule.sh
 check_xsummon_live.sh
 check_yuse_activate.sh

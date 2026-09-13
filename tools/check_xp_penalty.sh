@@ -1,22 +1,21 @@
 #!/bin/bash
+# gate: live
 # Regression check for Character::XPPenalty (src/Create.cpp), bd inc-5y8.
 #
-# WHAT WAS WRONG. XPPenalty asks, for each of a character's three class slots,
-# whether that class is a favoured class of his race. The last clause of each
-# test reads
+# WHAT WAS WRONG. XPPenalty walks a character's three class slots and asks
 #
-#     TCLASS(ClassID[n])->HasFlag(CF_FAVOURED)
+#     TCLASS(ClassID[n])->HasFlag(...)
 #
-# and TCLASS is a cast of Game::Get, which returns NULL for a zero id
-# (src/Res.cpp:312). A character who holds fewer than three classes has a zero
-# in the unused slots, so the test dereferenced NULL and the process died with
-# SIGSEGV, exit 139, at EXC_BAD_ACCESS 0x4d.
+# of each slot it does not skip. TCLASS is a cast of Game::Get, which returns
+# NULL for a zero id (src/Res.cpp:320). A character who holds fewer than three
+# classes has a zero id in each unused slot, so the original dereferenced NULL
+# and the process died with SIGSEGV, exit 139, at EXC_BAD_ACCESS 0x4d. The fix
+# is the guard at the top of the loop, which skips an empty slot.
 #
-# It needed no wizard mode and no unusual play. Two classes were enough,
-# provided neither of the first two blocks returned first, and the sheet is
-# drawn by pressing 'd' (src/Sheet.cpp:62). XPPenalty is also called on every
-# XP gain (src/Create.cpp:2008), so the same character could not have earned
-# experience either. Brian met it on an Elf Rogue 3 / Twilight Huntsman 1.
+# It needed no wizard mode and no unusual play. The sheet calls XPPenalty
+# (src/Sheet.cpp:62), and so does every XP gain (src/Create.cpp:2095), so the
+# same character could not have earned experience either. Brian met it on an
+# Elf Rogue 3 / Twilight Huntsman 1.
 #
 # THE ORACLE is the run itself, and it is a hard one: the pre-fix build could
 # not reach the end of this key script at all. The assertion is in two parts,
@@ -24,6 +23,8 @@
 #
 #   THE EXIT STATUS. 139 is the shell's report of SIGSEGV. Any 139 from this
 #   script means the crash is back. This is the half that catches a regression.
+#   Any other non-zero exit fails too, so the key script plays one turn after
+#   the dump: tools/headless.sh exits 5, NO GAMEPLAY, for a run with none.
 #
 #   THE SHEET. A run can exit 0 and still have measured nothing -- the key
 #   script may have stopped building the character long before the sheet was
@@ -31,28 +32,34 @@
 #   Without this half, deleting the key script's contents would make the check
 #   pass. See tools/check_headless.sh for the same trap in its original form.
 #
-# THE CHARACTER, and why this one. tools/keys/xp-penalty-crash.keys builds a
-# Wood Elf Rogue 2 / Warrior 1 on seed 7 and then asks for his sheet. He is the
-# smallest character that reaches the third block:
+# THE CHARACTER. tools/keys/xp-penalty-crash.keys builds a Wood Elf Rogue 2 /
+# Warrior 1 on seed 7 and then asks for his sheet. Wood elves favour Barbarian,
+# Ranger and Druid (lib/subraces.irh:498). All three ids are non-zero, so an
+# empty slot matches none of them and, without the guard, reaches TCLASS. His
+# third slot is empty. One class is enough to reach it: in the proved-red run
+# below, the build died at the key script's first sheet, while he was still
+# Rogue 1. The second class stays because the sheet half of the assertion
+# looks for it.
 #
-#   - Wood elves favour Barbarian, Ranger and Druid (lib/subraces.irh:498), so
-#     the rogue matches none of the three favoured ids and does not carry
-#     CF_FAVOURED. The first block does not return.
-#   - The warrior does not carry CF_FAVOURED either. The second block does not
-#     return.
-#   - The third block then reads class slot 2, which is empty, and the old
-#     build died there.
-#
-# A single-classed character proves nothing here: the early return at
-# src/Create.cpp:2184 catches him before any of the three blocks runs. Two
-# classes are the minimum, and the first of them must not be favoured.
-#
-# Measured on builds differing only in src/Create.cpp:
-#                                    before          after
+# PROVED RED on 2026-09-13 (bd inc-jnnp), on builds differing only in the
+# guard at the top of the class loop in Character::XPPenalty,
+# `if (!ClassID[n] || Level[n] <= 0) continue;`:
+#                                    guard deleted   guard present
 #   exit status                      139 (SIGSEGV)   0
-#   dump written                     none            "Class  Rogue 2 / Warrior 1"
+#   dump written                     none            "Rogue 2", "Warrior 1"
+#   this check                       exit 1          exit 0
 #
-# Usage: tools/check_xp_penalty.sh      (exits 0 on pass, 1 on fail)
+# With the guard deleted, the check printed:
+#
+#   | FAIL: the session died of SIGSEGV (exit 139). inc-5y8 is back:
+#   |       Character::XPPenalty dereferenced an empty class slot.
+#
+# The crash report put the fault at 0x4d in Character::XPPenalty under
+# TextTerm::CreateCharSheet. Deleting only `!ClassID[n] ||` does NOT go red:
+# the level test still skips an empty slot, because its level is zero.
+#
+# Usage: tools/check_xp_penalty.sh      (exits 0 on pass, 1 on fail,
+#                                        2 when it could not measure)
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -87,15 +94,13 @@ DUMP="$(ls "$RUN"/logs/screens/*-crashed.txt 2>/dev/null | head -1)"
 if [ -z "$DUMP" ]; then
     echo "INCONCLUSIVE: no character dump was written under $RUN/logs/screens,"
     echo "              so $KEYS has rotted. Nothing was measured."
-    echo "FAIL: tools/check_xp_penalty.sh"
-    exit 1
+    exit 2
 fi
 if ! grep -q "Rogue 2" "$DUMP" || ! grep -q "Warrior 1" "$DUMP"; then
     echo "INCONCLUSIVE: the dump is not a Rogue 2 / Warrior 1 sheet, so $KEYS"
     echo "              no longer builds the two-class character this checks."
     echo "              Nothing was measured. dump: $DUMP"
-    echo "FAIL: tools/check_xp_penalty.sh"
-    exit 1
+    exit 2
 fi
 
 if [ "$STATUS" -ne 0 ]; then

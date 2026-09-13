@@ -38,4 +38,9 @@ M
 @choose "Warrior"
 @until "Warrior 1" a
 @dump:crashed
+# Leave the sheet and wait one turn. tools/headless.sh exits 5 (NO GAMEPLAY)
+# for a run that plays no turn, and tools/check_xp_penalty.sh needs exit 0.
+# The sheet is dumped first, so these keys cannot change it. bd inc-jnnp.
+ESC
+.
 @quit
