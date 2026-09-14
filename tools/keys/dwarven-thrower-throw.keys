@@ -1,7 +1,7 @@
 # Observe the return path for a control boomerang and the Dwarven Thrower.
 #
 # WHAT IS BEING MEASURED. A returning thrown weapon prints "<item> returns to
-# you." at src/Fight.cpp:1089. A boomerang is the control: WT_RETURNING makes it
+# you." at src/Fight.cpp:1108. A boomerang is the control: WT_RETURNING makes it
 # return after a hit, and WT_NO_MELEE ensures Fire must throw it. The subject is
 # the Dwarven Thrower, whose WQ_RETURNING return is unconditional after a throw.
 #

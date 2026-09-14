@@ -1,26 +1,26 @@
 # Build an Assassin who was never a Rogue, and photograph his Uncanny Dodge.
 #
 # WHY THIS EXISTS. bd inc-tek.8.3 finding PA-03-F21. The Assassin's own
-# description (lib/prestige.irh:545-548) gives Uncanny Dodge "at the same rate
+# description (lib/prestige.irh:550-553) gives Uncanny Dodge "at the same rate
 # that Rogues do", on the character's rogue and assassin levels added
 # together. The rogue's rate withholds a point for the first two of those
-# levels (lib/classes.irh:2563, "at every level starting at 3rd"). The
+# levels (lib/classes.irh:2586, "at every level starting at 3rd"). The
 # Assassin's grant used to start at 1st, which is the same arithmetic ONLY for
 # a character who already holds three rogue levels -- his rogue grant has
 # already withheld the two. A character who was never a rogue never withholds
 # them, and runs two levels ahead of his own description.
 #
-# THE ORACLE is the sheet's Specials block. src/Sheet.cpp:580-582 prints the
+# THE ORACLE is the sheet's Specials block. src/Sheet.cpp:582-584 prints the
 # ability as "Improved Uncanny Dodge" when the number is 4 or more and as
 # "Uncanny Dodge" below that, so the name on the sheet reads the number out.
 # This character is Bard 7 / Assassin 4: his description promises 4 - 2 = 2,
 # and the pre-fix module gives him 4. The word "Improved" is the whole test.
 #
 # WHY A BARD. The Assassin gate asks for four skills and a non-Good alignment
-# and never for a rogue level (lib/prestige.irh:469-483). A bard holds three
+# and never for a rogue level (lib/prestige.irh:471-485). A bard holds three
 # of the four as class skills; Poison Use is the fourth, and a human buys it
 # as one of his two birth skills (lib/races.irh:197, "Skills: SK_ANY, SK_ANY"
-# -> two Natural Aptitude picks, src/Create.cpp:283-289). A skill held that
+# -> two Natural Aptitude picks, src/Create.cpp:302-308). A skill held that
 # way caps at the character's own level rather than at the levels of the
 # classes that carry it (src/Create.cpp:3642-3650), so it can reach the 10 the
 # gate wants.
@@ -135,7 +135,7 @@ P                               # [P]restige Classes
 #    leaves the old class line in place, so every level below leaves the
 #    sheet and re-opens it, and the class line is read only from a fresh one.
 # 2. The Assassin's 1st level hands over a spellbook
-#    (lib/prestige.irh:609-619). The item lands in the In-the-Air slot, and
+#    (lib/prestige.irh:615-625). The item lands in the In-the-Air slot, and
 #    the game will not leave inventory mode while anything is there -- so it
 #    must be stowed before any further keystroke is spent, or every key after
 #    it goes into the inventory screen instead. That is the lone 's' below.

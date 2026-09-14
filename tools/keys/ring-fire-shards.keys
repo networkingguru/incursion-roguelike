@@ -11,7 +11,7 @@
 #                            (src/Debug.cpp:613-622), so the dice are known.
 #   s ESC                    stow it; the manager will not close otherwise.
 #   b a *                    blast, choose the wand, and '*' is Target Self
-#                            (KY_CMD_TARGET_SELF, src/Tables.cpp:4658). Fired
+#                            (KY_CMD_TARGET_SELF, src/Tables.cpp:4722). Fired
 #                            twice because the Use Magic check can refuse the
 #                            first attempt; the check reads the FIRST damage
 #                            line any dump shows.

@@ -21,7 +21,7 @@
 #                            check does not trust that ordering: it reads the
 #                            ring's name back off the inventory screen.
 #   ENTER m SPACE ESC        take it, move the cursor to the Left Ring slot,
-#                            SPACE to put it on (src/Managers.cpp:873), close.
+#                            SPACE to put it on (src/Managers.cpp:911), close.
 #                            The manager refuses to close with an item in the
 #                            air, so a missed SPACE cannot pass unnoticed.
 

@@ -15,7 +15,7 @@
 #
 # THE COUNTS. Each Search command spends about 100 points of hunger, from a
 # starting 2490. Hungry runs from 1000 down to 481 and Starving from 480 down
-# to 241 (inc/Defines.h:3471-3479), so eleven Searches land inside Hungry and
+# to 241 (inc/Defines.h:3504-3512), so eleven Searches land inside Hungry and
 # four more land inside Starving. The sidebar prints the state as a word, and
 # tools/check_hunger_penalty.sh refuses to compare two photographs that are
 # not one Hungry and one Starving.

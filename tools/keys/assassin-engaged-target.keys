@@ -6,7 +6,7 @@
 # assassin alone (lib/prestige.irh:520-524). The gate demanded it of the target
 # too:  if (EActor->isFlatFooted() && EVictim->isFlatFooted()).
 # isFlatFooted() is not the D&D condition; it is a per-creature out-of-combat
-# counter, FFCount > min(5,10+Mod(A_WIS)) (inc/Creature.h:567-568). Any strike
+# counter, FFCount > min(5,10+Mod(A_WIS)) (inc/Creature.h:623-624). Any strike
 # zeroes it for both fighters (src/Fight.cpp:3150-3151), so a target already
 # fighting -- one the party was holding, say -- could never be assassinated.
 #
@@ -16,12 +16,12 @@
 # also make the measurement depend on monster AI timing. The engine sets the
 # same field itself, deterministically, at creation: Monster::Initialize gives
 # a creature with Improved Initiative FFCount 0 and everything else FFCount 20
-# (src/Monster.cpp:1443-1446). So the run summons one of each and strikes both.
+# (src/Monster.cpp:1457-1460). So the run summons one of each and strikes both.
 # The only difference between the two victims is the one field the fix reads.
 #
 #   goblin      no Improved Initiative -> FFCount 20 -> relaxed
 #   grippli     Improved Initiative    -> FFCount 0  -> not relaxed
-#               (lib/mon2.irh:3865)
+#               (lib/mon2.irh:3871)
 #
 # THE ORACLE is the ability's own message. Death Attack announces itself on
 # either outcome -- "You assassinate the <victim>!" when the Fortitude save
@@ -37,7 +37,7 @@
 # THE OTHER CONDITIONS ARE HELD FAVOURABLE, and one line proves it. Death
 # Attack also requires that the target not perceive the assassin, so both
 # victims are put to sleep first: a sleeping creature perceives nothing
-# (src/Vision.cpp:416-419) and the engine skips the Move Silently against
+# (src/Vision.cpp:448-451) and the engine skips the Move Silently against
 # Listen contest for it (src/Fight.cpp:3186-3196). That contest is a d20 roll
 # and it DID decide an earlier draft of this file -- "The goblin hears you!" --
 # which is exactly the kind of dependency a regression check must not carry.

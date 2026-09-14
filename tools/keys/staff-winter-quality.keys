@@ -8,19 +8,19 @@
 # else: src/Message.cpp:1241 guards the whole quality loop of Item::xName
 # with it, so the staff is called "Staff +2 of Winter" and never "Staff +2 of
 # numbing". No name-based check could ever see this defect. The description
-# screen is a different code path -- QItem::Describe (src/Help.cpp:3508-3524)
+# screen is a different code path -- QItem::Describe (src/Help.cpp:3755-3771)
 # walks Qualities[] itself, with no EF_HIDEQUAL test -- so it prints the
 # quality by name and then prints the quality's own paragraph from
-# QualityDescs (src/Tables.cpp:1831-1832). That paragraph names the ability
+# QualityDescs (src/Tables.cpp:1840-1841). That paragraph names the ability
 # score the quality damages, which is the whole of this finding.
 #
 # WHY THE PACK IS IDENTIFIED. QItem::Describe skips any quality below
-# IQ_DWARVEN that KnownQuality() denies (src/Help.cpp:3509), and Item::
+# IQ_DWARVEN that KnownQuality() denies (src/Help.cpp:3756), and Item::
 # Describe prints the entity's page only when the item isKnown(KN_MAGIC)
-# (src/Help.cpp:3405). Wizard mode's "Identify Whole Pack" calls
+# (src/Help.cpp:3652). Wizard mode's "Identify Whole Pack" calls
 # MakeKnown(0xFF) on everything the character carries (src/Debug.cpp:717-720),
 # and QItem::MakeKnown sets KnownQualities to 0xFF whenever KN_MAGIC arrives
-# (inc/Item.h:235-237). Both halves of the contradiction are then on screen
+# (inc/Item.h:252-254). Both halves of the contradiction are then on screen
 # together.
 #
 # WHY A BARBARIAN IS ENOUGH. The staff's caster-level-three door is on its
@@ -49,17 +49,17 @@
 #                          opens Inventory Mode. 'b' is the Weapon Hand --
 #                          the slot lettering skips 'd', which is the Drop
 #                          key -- SPACE swaps the staff into it
-#                          (src/Managers.cpp:873), and 's' stows the starting
+#                          (src/Managers.cpp:911), and 's' stows the starting
 #                          knife that swap pushed into the air, because the
 #                          manager will not close while anything is held
-#                          there (src/Managers.cpp:835-848). A quarterstaff
+#                          there (src/Managers.cpp:873-886). A quarterstaff
 #                          is two-handed, so it fills the Ready Hand as well.
 #   ESC i b x              leave the manager, reopen it once the pack is
 #                          identified, put the cursor back on the Weapon Hand
 #                          and press 'x', which describes what is in it
-#                          (src/Managers.cpp:751-754).
+#                          (src/Managers.cpp:789-792).
 #   DOWN*10                the description is longer than its box. The box
-#                          scrolls one row per DOWN (src/TextTerm.cpp:537-540),
+#                          scrolls one row per DOWN (src/TextTerm.cpp:542-545),
 #                          and the quality paragraph is the last thing in it,
 #                          because QItem::Describe appends the qualities
 #                          after everything Item::Describe wrote.

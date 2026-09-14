@@ -3,7 +3,7 @@
 #   INCURSION_OPTIONS=tools/gates/Options.Dat \
 #       tools/headless.sh tools/keys/gravestone.keys 11
 #
-# The seed and the settings are not free choices. tools/check_headless.sh:387
+# The seed and the settings are not free choices. tools/check_headless.sh:395
 # already keeps one reproducible confirmed death -- dive.keys, seed 11, the
 # pinned gate settings -- and this file replays exactly that scenario so it
 # does not have to find a second one. The pinned settings run with OPT_NODEATH

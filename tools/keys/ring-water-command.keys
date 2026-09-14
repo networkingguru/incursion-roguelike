@@ -15,13 +15,13 @@
 #                            trust that ordering: it reads the ring's name back
 #                            off the inventory screen.
 #   ENTER m SPACE            take it, move the cursor to the Left Ring slot,
-#                            and SPACE to put it on (src/Managers.cpp:873).
+#                            and SPACE to put it on (src/Managers.cpp:911).
 #   @dump:ring-on ESC        the assertion that the right ring is on the right
 #                            finger. The manager refuses to close with an item
 #                            still in the air, so a missed SPACE cannot pass.
 #   d @until ... DOWN        open the sheet and scroll to the Special Abilities
 #                            block, which prints one line per commandable type
-#                            (src/Sheet.cpp:492-499). The block is well below
+#                            (src/Sheet.cpp:494-501). The block is well below
 #                            the first screen. PGDN wraps back to the top here,
 #                            so the cursor is walked with DOWN.
 

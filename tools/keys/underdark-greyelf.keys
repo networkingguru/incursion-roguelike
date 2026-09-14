@@ -33,7 +33,7 @@ y       # Your options will place the game in Explore Mode. Continue? -- yes
 @choose "Rogue"
 
 # Point buy, 75 points, spent to the last one. The seven rows are the
-# engine's own attribute list (src/Create.cpp:1617-1622), fixed at seven and
+# engine's own attribute list (src/Create.cpp:1704-1709), fixed at seven and
 # in a fixed order, so counting DOWN here cannot rot the way counting
 # through a list built from lib/ can.
 p

@@ -32,7 +32,7 @@
 #     character generation and one each at 3rd and 6th level, which is why
 #     the character is a Rogue 6 and not a Rogue 5.
 #   * Six core levels plus five prestige levels is exactly 11, which is
-#     MAX_CHAR_LEVEL (inc/Defines.h:4367). There is no room to spare.
+#     MAX_CHAR_LEVEL (inc/Defines.h:4457). There is no room to spare.
 
 a       # Initial Choices: [a] Create a New Character
 n       # Alter the character generation options? -- no
@@ -43,7 +43,7 @@ y       # Your options will place the game in Explore Mode. Continue? -- yes
 @choose "Rogue"
 
 # Point buy, 75 points, spent to the last one. The seven rows are the
-# engine's own attribute list (src/Create.cpp:1617-1622), fixed at seven and
+# engine's own attribute list (src/Create.cpp:1704-1709), fixed at seven and
 # in a fixed order, so counting DOWN here cannot rot the way counting
 # through a list built from lib/ can.
 p

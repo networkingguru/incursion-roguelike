@@ -22,7 +22,7 @@
 #
 # The wearer must also have NO resistance to the damage type. Creature::Damage
 # sets e.Resist for ANY non-weapon damage the victim resists at all
-# (src/Fight.cpp:6260 and :6286), so one point of fire resistance makes the
+# (src/Fight.cpp:6292 and :6318), so one point of fire resistance makes the
 # block skip the wearer's gear entirely. That is why the suit stays +0 while it
 # burns: the quality's EA_GRANT is PLUS_3PER1 of the item's plus, so at +0 it
 # gives the wearer nothing and the item half stays measurable. Arm B buys the

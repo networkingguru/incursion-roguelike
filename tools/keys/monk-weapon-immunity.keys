@@ -1,7 +1,7 @@
 # Punch a weapon-immune creature bare-handed, first without Ki Strike and then
 # with it.
 #
-# The subject is a lemure (lib/mon4.irh:1205-1213), a CR 1 devil carrying
+# The subject is a lemure (lib/mon4.irh:1211-1219), a CR 1 devil carrying
 # ABILITY(CA_WEAPON_IMMUNITY,1). It is the cheapest true subject in the module:
 # the immunity level is 1, so a Monk 4's Ki Strike +1 is exactly enough to beat
 # it and a Monk 1's nothing is exactly not enough.

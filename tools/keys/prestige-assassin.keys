@@ -5,13 +5,13 @@
 # The Assassin's prose promises "crossbows and light weapons"
 # (lib/prestige.irh:509). Before the fix the class had no Proficiencies: line
 # at all, so it granted neither. The fix declares
-#   Proficiencies: WG_CROSSBOWS, WG_LIGHT;      lib/prestige.irh:583
+#   Proficiencies: WG_CROSSBOWS, WG_LIGHT;      lib/prestige.irh:589
 # and WG_CROSSBOWS is a group that had to be invented, because the three
 # crossbows sat in WG_SIMPLE|WG_ARCHERY and WG_EXOTIC and no group named them.
 #
-# THE ORACLE is the sheet's Proficiencies line, which src/Sheet.cpp:861-876
+# THE ORACLE is the sheet's Proficiencies line, which src/Sheet.cpp:863-878
 # builds by walking the character's proficiency bits against
-# WeaponGroupNames[] (src/Tables.cpp:1329). "Crossbows" is the row added for
+# WeaponGroupNames[] (src/Tables.cpp:1363). "Crossbows" is the row added for
 # the new bit.
 #
 # KNOWN AND EXPECTED: only Crossbows will print, not "light weapons".
@@ -71,7 +71,7 @@ d                               # character sheet
 @until "Class  Rogue 5" G       # five core levels, for the ranks they carry
 
 # The gate wants Disguise 10, Poison Use 10, Hide 7 and Move Silently 7.
-# ISkillLevel (src/Create.cpp:3955) counts training and the inherent
+# ISkillLevel (src/Create.cpp:4315) counts training and the inherent
 # attribute bonus as well as ranks, so filling each to its cap clears them.
 S
 @expect "Unspent Skill Ranks"
@@ -94,7 +94,7 @@ P                               # [P]restige Classes
 @choose "Assassin"
 @while "Choose a feat" a
 
-# The Assassin's 1st level hands over a spellbook (lib/prestige.irh:597-607).
+# The Assassin's 1st level hands over a spellbook (lib/prestige.irh:611-621).
 # The item lands in the In-the-Air slot, and the game will not leave
 # inventory mode while anything is there -- so it must be stowed before any
 # further keystroke is spent, or every key after it goes into the inventory

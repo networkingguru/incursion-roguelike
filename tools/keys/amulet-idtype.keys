@@ -19,14 +19,14 @@
 # way; it is not part of what this measures.
 #
 # WHY BOTH AMULETS ARE THE SAME KIND. A flavour belongs to an EFFECT, not to
-# an item (Game::SetFlavors, src/Item.cpp:310), so two amulets that read the
+# an item (Game::SetFlavors, src/Item.cpp:325), so two amulets that read the
 # same flavour are two amulets of the same kind. Both here read "pearl
 # amulet".
 #
 # [w] asks "Enter wizard mode?" the FIRST time only; after that it opens the
 # wizard menu directly, so a second [y] would pick the menu's y) entry --
 # which is Create Trap, and the run then dies at "Enter Trap Name:".
-# [s] stows the in-air item in the backpack (src/Managers.cpp:835). The
+# [s] stows the in-air item in the backpack (src/Managers.cpp:873). The
 # manager will not close while anything is still in the air.
 #
 # The RIGHT counts are indices into ItemGlyphs (src/Tables.cpp:320), counted

@@ -18,7 +18,7 @@
 #
 # WHY A GLAIVE. It is an iron polearm carrying WT_REACH (lib/weapons.irh:192),
 # so wielding it sets MS_HAS_REACH, and a direction key then attacks a creature
-# two squares away instead of walking (src/Player.cpp:1321-1325).
+# two squares away instead of walking (src/Player.cpp:1335-1339).
 #
 # ONE BLOB PER BLOW, for the reason tools/keys/dequ-hardness-plain.keys sets
 # out: a blow that kills its target leaves no item for the retaliation to aim

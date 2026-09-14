@@ -3,7 +3,7 @@
 # F44 / inc-tek.8.8.
 #
 # WHAT IS BEING MEASURED. The character sheet's Will save line gains a
-# "(+4 vs. spells)" annotation (src/Sheet.cpp:146) only when a
+# "(+4 vs. spells)" annotation (src/Sheet.cpp:148) only when a
 # SAVE_BONUS/SN_SPELLS stati is present. The Bloodspear grants that stati only
 # when its EV_WIELD handler takes the orc branch. A dwarf is not an orc, and is
 # not a goblinoid, troll, kobold or lizardfolk either, so the handler falls to

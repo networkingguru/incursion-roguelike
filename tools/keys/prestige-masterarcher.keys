@@ -3,24 +3,24 @@
 # class's Ranged Sneak Attack fired with every launcher in the game, not
 # only with the bows its own description names.
 #
-# THE BUILD. The gate (lib/prestige.irh:2195-2232) wants an archery BAB of
+# THE BUILD. The gate (lib/prestige.irh:2280-2317) wants an archery BAB of
 # +5, Weapon Focus in a long bow or short bow, the Point Blank Shot, Rapid
 # Shot and Zen Archery feats, Concentration 7, and either elven blood or
 # Wisdom 17.
 #   * A ranger attacks at 100% in archery, so five ranger levels are the
-#     cheapest +5 (lib/classes.irh:2119).
+#     cheapest +5 (lib/classes.irh:2142).
 #   * The archery combat style hands over Rapid Shot at 1st and Point Blank
-#     Shot at 3rd for free (lib/classes.irh:2025-2027).
+#     Shot at 3rd for free (lib/classes.irh:2048-2050).
 #   * Zen Archery needs Far Shot and Blind Fight first (src/FeatTab.cpp:1426),
 #     and Blind Fight needs Wisdom 13 (:1392). Both are taken at creation.
-#   * The ranger does NOT carry Concentration (lib/classes.irh:2120-2123), and
+#   * The ranger does NOT carry Concentration (lib/classes.irh:2143-2146), and
 #     Character::MaxRanks caps a skill no class of yours carries at zero
 #     ranks. The bard does carry it (lib/classes.irh:440), so three bard
 #     levels open the skill.
 #   * An elf needs no Wisdom score for the gate.
 # Ranger 5 / Bard 3 / Master Archer 1 is nine levels, inside MAX_CHAR_LEVEL.
 #
-# Feats arrive at total level 1, 3, 6 and 9 (src/Create.cpp:2370), so the
+# Feats arrive at total level 1, 3, 6 and 9 (src/Create.cpp:2703), so the
 # order is forced: Far Shot and Blind Fight at creation, Weapon Focus (long
 # bow) at 3rd, Zen Archery at 6th.
 
@@ -90,7 +90,7 @@ SPACE   # Freeze Monsters: NO -> YES. A frozen monster never takes a turn, so
         #   between the three shots.
 DOWN
 SPACE   # Show All Combat Rolls: NO -> YES. This is what makes the engine
-        #   print the "Damage:" line (src/Fight.cpp:8038), which is where
+        #   print the "Damage:" line (src/Fight.cpp:8532), which is where
         #   a sneak attack writes its own " +Nd6 SA" term.
 ESC
 
@@ -189,8 +189,8 @@ P                               # [P]restige Classes
 #
 # WHY THE TARGET IS A FRESHLY SUMMONED MONSTER. Sneak attack damage needs the
 # victim off-guard, flanked or surprised, and the attacker within three
-# squares (src/Fight.cpp:5113-5115). Monster::Initialize sets FFCount to 20
-# on every new monster (src/Monster.cpp:1446) and isFlatFooted() is
+# squares (src/Fight.cpp:5422-5424). Monster::Initialize sets FFCount to 20
+# on every new monster (src/Monster.cpp:1460) and isFlatFooted() is
 # FFCount > 5, so a monster is off-guard on the turn it appears. Summoning
 # one beside the archer makes the condition certain rather than lucky.
 #
@@ -237,7 +237,7 @@ v
 ESC
 
 # TEST SHOT ONE: a sling. Each shot gets its own freshly summoned ogre,
-# because a strike resets the victim's FFCount to zero (src/Fight.cpp:3040)
+# because a strike resets the victim's FFCount to zero (src/Fight.cpp:3311)
 # and a monster that has been shot at once is no longer off-guard.
 w
 @choose "Item Acquisition"
@@ -275,7 +275,7 @@ v
 ESC
 
 # TEST SHOT TWO: an arbalest. A crossbow is unambiguously the generic
-# launcher attack type -- inc/Defines.h:1185 names the constant
+# launcher attack type -- inc/Defines.h:1210 names the constant
 # "Fire [Cross]bow". The arbalest rather than the hand crossbow, because the
 # acquisition list offers no hand crossbow darts and that weapon will not
 # shoot a bolt.

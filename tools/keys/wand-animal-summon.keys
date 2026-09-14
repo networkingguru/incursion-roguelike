@@ -3,7 +3,7 @@
 #
 # THE DEFECT. The wand's data entry passes xval: MA_DRAGON, copied verbatim
 # from the Dragon Summoning wand directly above it in lib/m_items.irh.
-# Magic::Summon copies xval into xe.enConstraint (src/Effects.cpp:1451) and
+# Magic::Summon copies xval into xe.enConstraint (src/Effects.cpp:1463) and
 # that is the monster-type filter, so the wand summoned from the wrong list.
 #
 # THE ORACLE is the line Magic::Summon prints for every creature that lands,

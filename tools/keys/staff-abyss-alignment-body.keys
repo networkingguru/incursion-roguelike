@@ -15,7 +15,7 @@
 # WHY MAGE 5. The staff's own EV_MAGIC_HIT handler calls
 # ItemPrereq(CLEV_VAL + SP_ARCANE + SP_DIVINE,5,20) and returns DONE -- which
 # swallows the event before Magic::Grant runs -- when that fails. ItemPrereq's
-# CLEV_VAL branch (src/Skills.cpp:5681-5692) sums the highest SPELL_ACCESS
+# CLEV_VAL branch (src/Skills.cpp:5751-5762) sums the highest SPELL_ACCESS
 # magnitude per casting type, so a Mage 5 reads 5 and a Mage 4 reads 4. Below
 # five the staff is silent for EVERY alignment, and a session built that way
 # would show the good character empty-handed for the wrong reason. So the
@@ -23,7 +23,7 @@
 #
 # HOW THE LEVELS ARE GAINED. Wizard mode's "Free Advancement" switch lets the
 # character sheet's [G]ain Level work without the experience
-# (src/Managers.cpp:2221). Each mage level opens up to three menus of its own,
+# (src/Managers.cpp:2301). Each mage level opens up to three menus of its own,
 # which cover the sheet, so the level is gained one G at a time and each G is
 # followed by the menus it can raise.
 #
@@ -113,10 +113,10 @@ ESC
 #   b SPACE s    the pickup drops the staff into the in-air slot and opens
 #                Inventory Mode. 'b' is the Weapon Hand -- the slot lettering
 #                skips 'd', which is the Drop key -- SPACE swaps the staff
-#                into it (src/Managers.cpp:873), and 's' stows the starting
+#                into it (src/Managers.cpp:911), and 's' stows the starting
 #                knife that swap pushed into the air, because the manager
 #                will not close while anything is held there
-#                (src/Managers.cpp:835-848).
+#                (src/Managers.cpp:873-886).
 w
 @choose "Item Acquisition"
 RIGHT*3

@@ -3,8 +3,8 @@
 #
 # WHAT THIS SCRIPT PROVED, and it is not what it set out to prove. The
 # huntsman's printed spell list names bestow curse at 3rd level
-# (lib/prestige.irh:2916) and his SPELL_LIST omitted it. The spell was added
-# (lib/prestige.irh:2977). NO CHARACTER CAN SEE THAT, and three numbers say
+# (lib/prestige.irh:3007) and his SPELL_LIST omitted it. The spell was added
+# (lib/prestige.irh:3068). NO CHARACTER CAN SEE THAT, and three numbers say
 # so before any run does:
 #
 #   * A caster needs caster level 5 to learn a 3rd-level spell. The Learn
@@ -14,8 +14,8 @@
 #   * The huntsman gains one caster level at every 2nd class level
 #     (lib/prestige.irh:2953), so caster level 5 needs TEN class levels.
 #   * No prestige class may be taken before three core levels
-#     (src/Managers.cpp:2251), and MAX_CHAR_LEVEL is 11
-#     (inc/Defines.h:4367). 10 + 3 = 13.
+#     (src/Managers.cpp:2331), and MAX_CHAR_LEVEL is 11
+#     (inc/Defines.h:4457). 10 + 3 = 13.
 #
 # So the 3rd, 4th and 5th level entries of this class's spell list are dead
 # data in this build, and the bestow curse fix is Traced, not Observed. This
@@ -25,7 +25,7 @@
 # the cap moves. He reaches caster level 4, one short.
 #
 # THE THREE-LEVEL ENTRY. The gate wants Ride 8, Athletics 8, Hide 5, Move
-# Silently 5, Animal Empathy 5 and Maeve (lib/prestige.irh:2807-2827). The
+# Silently 5, Animal Empathy 5 and Maeve (lib/prestige.irh:2898-2918). The
 # ranger carries every one of those skills except Athletics, and three ranger
 # levels buy six ranks in each, which clears them all once the attribute and
 # training terms are added.

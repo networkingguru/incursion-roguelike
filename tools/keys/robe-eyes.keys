@@ -9,9 +9,9 @@
 # The oracle is the character dump, not a screen. [W]rite Dump on the character
 # sheet calls TextTerm::DumpCharacter (src/Sheet.cpp), which writes the whole
 # sheet to logs/<name>.txt. The "Special Abilities" block of that file prints
-# "Infravision (%d ft)" from src/Sheet.cpp:538, and the number is
+# "Infravision (%d ft)" from src/Sheet.cpp:540, and the number is
 # Creature::AbilityLevel(CA_INFRAVISION) * 10. That function ADDS every
-# EXTRA_ABILITY stati to the racial level (src/Creature.cpp:2983-2991), so a
+# EXTRA_ABILITY stati to the racial level (src/Creature.cpp:2998-3006), so a
 # worn robe must raise the number rather than replace it.
 #
 # The character is the standard orc barbarian of chargen.keys. An orc already

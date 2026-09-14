@@ -19,7 +19,7 @@
 # for GetPlus() == 0, so a drained sword reads plainly as "Luckblade".
 #
 # NOTHING IS IDENTIFIED HERE, and it does not need to be. Item::isActivatable
-# returns false for anything not known to be magical (src/Item.cpp:939-941),
+# returns false for anything not known to be magical (src/Item.cpp:954-956),
 # so an unidentified Luckblade would never appear in the 'a' menu at all and
 # the session would measure nothing. Wizard mode's Item Acquisition hands over
 # an item that is already known -- the run's own inventory screen calls it
@@ -31,7 +31,7 @@
 #
 #   w y                    enter wizard mode and open its menu. Later 'w'
 #                          presses need no 'y': the confirmation is asked once
-#                          (src/Player.cpp:773-784).
+#                          (src/Player.cpp:789-800).
 #   Item Acquisition       RIGHT*10 walks the glyph row to specific weapons:
 #   RIGHT*10               ItemGlyphs (src/Tables.cpp:320-330) puts -AI_WEAPON
 #                          ten steps along.
@@ -49,23 +49,23 @@
 #   b SPACE n s            the pickup drops the sword into the in-air slot and
 #                          opens Inventory Mode. 'b' is the Weapon Hand -- the
 #                          slot lettering skips 'd', which is the Drop key --
-#                          SPACE swaps the sword into it (src/Managers.cpp:873).
+#                          SPACE swaps the sword into it (src/Managers.cpp:911).
 #                          The Ready Hand is empty, so the manager then asks
 #                          "Wield the keen Luckblade +3 two-handed?" and 'n'
 #                          declines, which is what a short sword is for. 's'
 #                          stows the starting knife that swap pushed into the
 #                          air, because the manager will not close while
-#                          anything is held there (src/Managers.cpp:835-848).
+#                          anything is held there (src/Managers.cpp:873-886).
 #   ESC                    leave the manager.
 #   a                      the Activate command. Player::ItemMenu lists every
-#                          activatable item (src/Player.cpp:1399-1401) and
-#                          throws EV_ACTIVATE at the one chosen (:1495, :1531).
+#                          activatable item (src/Player.cpp:1438-1440) and
+#                          throws EV_ACTIVATE at the one chosen (:1534, :1570).
 #   @dump:menu-N           the menu itself, with the sword's name and plus on
 #                          it. This is the measurement.
 #   a                      choose the menu's first entry, which activates the
 #                          sword. It is a bare letter and not @choose because
 #                          @choose matches from the start of the entry's text
-#                          (src/Wposix.cpp:882-895) and the game writes the
+#                          (src/Wposix.cpp:901-914) and the game writes the
 #                          sword's damage state in front of its name: the row
 #                          reads "[a] mildly damaged keen Luckblade +3".
 #                          Matching that whole phrase would tie this script to

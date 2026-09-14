@@ -196,7 +196,7 @@ ESC
 #    after it, so the drop covers the spell's own cost plus the drain.
 #
 # Monster Summoning III is used because this character is Alienist 5 and its
-# clause fires at 4 (ALIENIST_CLAUSE(3), lib/wspells.irh:5378).
+# clause fires at 4 (ALIENIST_CLAUSE(3), lib/wspells.irh:5390).
 @until "HP:" ESC
 w
 @choose "Learn Any Spell"
@@ -211,11 +211,11 @@ RIGHT ENTER
 @dump:after
 
 # THE STEADY STATE is the real oracle, because spent mana regenerates and held
-# mana does not (inc/Creature.h:145-146). Ten searches pass enough game time
+# mana does not (inc/Creature.h:147-148). Ten searches pass enough game time
 # for every point of ordinary spending to come back, so whatever the status
 # line is still short of the maximum at this point is held. Searching is used
 # rather than resting on purpose: a completed rest clears held mana outright,
-# src/Player.cpp:2186-2188.
+# src/Player.cpp:2259-2261.
 s s s s s s s s s s
 @until "HP:" ESC
 @dump:settled

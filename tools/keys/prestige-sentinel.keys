@@ -86,7 +86,7 @@ d                               # character sheet
 @until "Class  Rogue 5" G       # five core levels, for the ranks they carry
 
 # Top the three sensory skills up to their maximum. The class wants each at
-# 10, and ISkillLevel (src/Create.cpp:3955) counts training and the inherent
+# 10, and ISkillLevel (src/Create.cpp:4315) counts training and the inherent
 # attribute bonus as well as ranks, so eight ranks clears it.
 S
 @expect "Unspent Skill Ranks"

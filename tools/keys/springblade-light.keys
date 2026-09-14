@@ -8,7 +8,7 @@
 #
 # WHAT THE TAG CHANGES. Creature::CalcValues charges an extra -2 to the main
 # hand and -2 to the off hand when the off-hand weapon is neither light nor
-# smaller than the main-hand weapon (src/Values.cpp:1345-1352). Two springblades
+# smaller than the main-hand weapon (src/Values.cpp:1388-1395). Two springblades
 # are the same size as each other, so without WG_LIGHT that clause fires.
 #
 # THE ORACLE is the sidebar's own "Hit:" line, which prints the main hand and
@@ -18,7 +18,7 @@
 # THE CHARACTER CARRIES TWO-WEAPON STYLE because the bracers deploy a second
 # blade only for a wielder who has it, and the clause under test reads the OFF
 # hand. See chargen-rogue-twf.keys. That feat also silences a different -2/-2
-# clause four lines above the one being measured (src/Values.cpp:1326-1329),
+# clause four lines above the one being measured (src/Values.cpp:1369-1372),
 # which is convenient rather than necessary: it leaves fewer moving parts
 # between the tag and the number on screen.
 #

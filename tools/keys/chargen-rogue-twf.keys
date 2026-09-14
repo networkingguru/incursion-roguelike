@@ -5,7 +5,7 @@
 # Springblade Bracers deploy a SECOND blade only for a wielder who has it:
 # Effect "Springblade Bracers", EV_MAGIC_HIT, sends hBlade2 to SL_READY behind
 # `EActor->HasFeat(FT_TWO_WEAPON_STYLE)` (lib/m_items.irh). The two-weapon
-# penalty this run measures reads the OFF-HAND weapon (src/Values.cpp:1348), so
+# penalty this run measures reads the OFF-HAND weapon (src/Values.cpp:1391), so
 # a springblade must be in the off hand for there to be anything to read. One
 # blade lands in SL_WEAPON and is the main hand.
 #

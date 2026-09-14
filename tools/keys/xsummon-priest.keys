@@ -3,7 +3,7 @@
 # THE DEFECT (bd inc-j6ni). The engine carries its own one-at-a-time summon
 # limiter: Magic::Summon aborts a cast when the caster still holds a live
 # creature summoned by the SAME effect, but only for an effect flagged
-# EF_XSUMMON (src/Effects.cpp:1371-1379). The wizard summoning line sets that
+# EF_XSUMMON (src/Effects.cpp:1383-1391). The wizard summoning line sets that
 # flag. Holy Summoning I through VI and Summon Nature's Ally I through VI set
 # no Flags clause at all, so a priest or druid could recast without limit --
 # which is what Brian met in play on 2026-08-22, from a monster priest sitting

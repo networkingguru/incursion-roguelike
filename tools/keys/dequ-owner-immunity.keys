@@ -6,7 +6,7 @@
 # WHAT IS BEING MEASURED. Soak and rust defences protect the owner's gear
 # regardless of the grant's flag; other damage types require EF_PROTECTS_ITEMS.
 # This checks the blanket rust half: the immune owner's maul stays undamaged.
-# The rust case in src/Fight.cpp:7009-7040 damages an item and never costs the
+# The rust case in src/Fight.cpp:7041-7072 damages an item and never costs the
 # creature hit points, so a wearer-only rust grant would be a no-op.
 #
 # WHY THESE GAUNTLETS. "Rust;gauntlet" (lib/m_items.irh:4348) grants total

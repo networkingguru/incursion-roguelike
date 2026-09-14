@@ -18,7 +18,7 @@
 # each point came from: "STR: 16/00 [+3/+2] (base 13, +3 inherent)".
 # GainInherentBonus is what writes that "+N inherent" term.
 #
-# THE BUILD. The gate (lib/prestige.irh:1972-2010) wants four Knowledge
+# THE BUILD. The gate (lib/prestige.irh:2057-2095) wants four Knowledge
 # skills at 10, ten levels of known Divination spells, the Scribe Scroll feat
 # and a neutral component in the alignment. A mage carries every Knowledge
 # skill, and wizard mode's Learn Any Spell supplies the four Divination
@@ -210,7 +210,7 @@ ESC
 # ranges do not touch.
 #
 # WHY THE PLUS IS 1 AND NOT MORE. Creature::GainInherentBonus caps the total
-# at 5 + CA_INHERANT_POTENTIAL (src/Creature.cpp:1950), and a human carries
+# at 5 + CA_INHERANT_POTENTIAL (src/Creature.cpp:1965), and a human carries
 # +3 of that ability (lib/races.irh:205), so this character saturates at +8.
 # Three tomes at plus 2 reach the cap with or without the fix and measure
 # nothing. Two at plus 1 top out at +6, inside it.
@@ -218,7 +218,7 @@ ESC
 # The tomes are taken one at a time rather than both at once, because the
 # pack stacks them: two in hand are drawn "2 Manuals of Gainful Exercise",
 # and @choose matches a name from its start. One at a time the name is always
-# the same, and reading a tome destroys it (lib/m_items.irh:56) before the
+# the same, and reading a tome destroys it (lib/m_items.irh:49) before the
 # next one is acquired.
 #
 # The read command is lowercase 'r'. Uppercase would be wrong: the key tables

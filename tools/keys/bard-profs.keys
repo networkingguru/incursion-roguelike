@@ -12,7 +12,7 @@
 # assassin carries the bit too (lib/prestige.irh:589) but is a prestige class
 # and costs seven levels of play to reach.
 #
-# src/Sheet.cpp:855-877 builds that line by looking each bit up in
+# src/Sheet.cpp:857-879 builds that line by looking each bit up in
 # WeaponGroupNames[] and dropping any bit the table does not hold, so the sheet
 # is a true oracle for the table under test.
 

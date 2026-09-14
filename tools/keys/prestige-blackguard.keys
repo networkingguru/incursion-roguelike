@@ -9,12 +9,12 @@
 # Incursion into line with the SRD blackguard. The field is now
 #   Proficiencies: WG_SBLADES, WG_LBLADES, WG_IMPACT, WG_POLEARMS,
 #                  WG_SPEARS, WG_LARMOUR, WG_MARMOUR, WG_HARMOUR, WG_SHIELDS;
-# and the sheet's Proficiencies line (src/Sheet.cpp:861-876) reports it.
+# and the sheet's Proficiencies line (src/Sheet.cpp:863-878) reports it.
 #
 # PA-03-F15 is NOT tested here, and the reason is a hard limit rather than a
 # choice. The Fiendish Servant arrives at Blackguard 5, and this character
-# cannot get there. MAX_CHAR_LEVEL is 11 (inc/Defines.h:4367) and
-# src/Create.cpp:2210 enforces it, so the eight core levels this gate costs
+# cannot get there. MAX_CHAR_LEVEL is 11 (inc/Defines.h:4457) and
+# src/Create.cpp:2540 enforces it, so the eight core levels this gate costs
 # leave room for three. Entering with fewer core levels is not possible
 # either: the gate wants a base attack bonus of +6, which only a class
 # attacking at 100% reaches inside six levels, and no such class carries
@@ -23,9 +23,9 @@
 #
 # THE BUILD. The gate wants an Evil alignment, Intimidate 12, Knowledge
 # (Infernal) 10 and a base attack bonus of +6 in some category
-# (lib/prestige.irh:687-712). A rogue carries both skills -- SK_KNOW_ALL in
+# (lib/prestige.irh:712-737). A rogue carries both skills -- SK_KNOW_ALL in
 # its skill list expands to every Knowledge id, including SK_KNOW_INF
-# (inc/Defines.h:1888) -- and reaches melee BAB +6 at 8th level. So: Rogue 8.
+# (inc/Defines.h:1913) -- and reaches melee BAB +6 at 8th level. So: Rogue 8.
 #
 # SEED. The attribute rolls and the offered feats vary with the seed, so the
 # feat picks stay positional and a seed is passed.
