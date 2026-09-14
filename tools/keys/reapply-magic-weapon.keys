@@ -1,0 +1,80 @@
+# inc-7wmu: measure Bloodspear Will before, during and after Magic Weapon.
+# The sheet is the grant oracle; item descriptions prove boost start/end.
+# Magic Weapon is persistent (-2): rest at depth 2 advances the day and
+# removes it. Genocide prevents interrupted rest; depth 1 refuses sleeping.
+# Acquisition and chargen follow bloodspear-orc-save.keys, seed 4.
+# Description scrolling must reach Cost, below the outside-enchantment text.
+@include chargen.keys
+
+d
+@dump:orc-sheet-without-bloodspear
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*10                # specific weapons
+@until "Sword of the Planes" DOWN
+ENTER
+2                       # Bloodspear's INITIAL_PLUS
+ENTER
+b                       # Weapon Hand
+SPACE
+@while "two-handed" n
+s                       # stow the displaced starting weapon
+@dump:orc-wielded
+ESC
+
+d
+@dump:orc-sheet-with-bloodspear
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT
+@until "Scroll of Magic Weapon" DOWN
+DOWN
+ENTER
+s
+ESC
+r
+@choose "(in pack) Scroll of Magic Weapon"
+@dump:read-target
+a
+@while "Stop reading?" n
+@dump:cast
+d
+@dump:boosted-sheet
+ESC
+i
+b
+x
+DOWN*100
+@dump:boosted-item
+ESC
+ESC
+w
+@choose "Ascend / Descend Depth"
+"2" ENTER
+@until "HP:" ESC
+w
+@choose "Genocide Everything"
+@until "HP:" ESC
+z y
+SPACE SPACE
+@dump:rested
+d
+@dump:expired-sheet
+ESC
+i
+b
+x
+DOWN*100
+@dump:expired-item
+@quit

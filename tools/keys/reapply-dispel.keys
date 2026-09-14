@@ -1,0 +1,75 @@
+# inc-7wmu: dispel must remove the standing grant and restore one copy.
+# Aura and fade messages prove suppression and expiry; Will measures the grant.
+# Wizard stati dumps bracket the dispel, so a lost unrelated row shows.
+# Read by check_reapply_single_grant.sh. Seed 1 succeeds; seed 4 resists.
+# Not seed 9: its cord armour carries a quality the same dispel suppresses,
+# and that nested removal drops an unrelated row (inc-2k0c, not this bead).
+# The spell targets the wearer, suppressing the item via its SS_ITEM row.
+# Wait for the named fade message, rather than assuming a duration elapsed.
+@include chargen.keys
+
+d
+@dump:orc-sheet-without-bloodspear
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*10                # specific weapons
+@until "Sword of the Planes" DOWN
+ENTER
+2                       # Bloodspear's INITIAL_PLUS
+ENTER
+b                       # Weapon Hand
+SPACE
+@while "two-handed" n
+s                       # stow the displaced starting weapon
+@dump:orc-wielded
+ESC
+
+d
+@dump:orc-sheet-with-bloodspear
+ESC
+w
+@choose "Item Acquisition"
+RIGHT
+@until "Scroll of Dispel Magic" DOWN
+DOWN
+ENTER
+s
+ESC
+w
+@choose "Examine Player Data"
+@until "Inventory:" DOWN
+@dump:stati-before
+@until "hObj" UP        # the next scroll view inherits this offset
+ESC
+r
+@choose "(in pack) Scroll of Dispel Magic"
+@dump:dispel-target
+*
+@while "Stop reading?" n
+@dump:dispelled
+@while "[more]" SPACE
+ESC
+@while "System Menu" ESC  # one message leaves no box, so ESC opened this
+d
+@dump:dispelled-sheet
+ESC
+w
+@choose "Examine Player Data"
+@until "Inventory:" DOWN
+@dump:stati-after
+@until "hObj" UP
+ESC
+@until "The grey glow fades" .
+@dump:dispel-ended
+d
+@dump:restored-sheet
+@quit
