@@ -390,7 +390,7 @@ the job, and each still explains an older log or an older commit.
 
 `run_probe.sh` was **deleted on 2026-08-18**. Its own header said "Delete this
 script once the saved-game position bug is fixed", and that bug is fixed:
-`docs/REPORTING-GATE.md:425` records `*((long*)&hm)` destroying the player's
+`docs/REPORTING-GATE.md:426` records `*((long*)&hm)` destroying the player's
 position as a closed fix, and `src/AbiCheck.cpp:11` now gates the type widths it
 depended on. It was also redundant — `play.sh` sets the same two probes and more
 (`play.sh:41-49`) and prints a report afterwards, which `run_probe.sh` did not.
@@ -772,7 +772,7 @@ stops one row too early.
 
 `check_load_corrupt.sh:45-51` prefers `./incursion-ubsan` when it exists and
 falls back to `./incursion-headless`. Build the sanitizer variant with the line
-in `build_macos.sh:92-95` if you want the stronger run.
+in `build_macos.sh:136-139` if you want the stronger run.
 
 ### Tier 4 — needs an artefact you built on purpose
 
