@@ -263,7 +263,7 @@ This project uses **bd** (beads) for issue tracking. Run `bd prime` for full wor
 **A bead you create MUST have a non-empty description and MUST carry exactly
 one of the labels `public` or `internal`. `tools/check_bead_publish.py` fails
 the commit when a new bead has an empty description, or carries neither label
-or both.** It is wired into `.beads/hooks/pre-commit`, so it blocks; it was
+or both.** It is wired into `.beads/hooks/pre-commit`, so it blocks, except on the overnight harness's own `nightly/` branch, where it warns; it was
 wired in on 2026-09-06 under inc-m7xb, after four days in which this paragraph
 described a gate that ran nowhere.
 
