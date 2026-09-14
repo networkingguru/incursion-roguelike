@@ -4,7 +4,7 @@
 #
 # THE DEFECT. The class description says each pseudonatural summoning "drains
 # [Summoned Creature's CR x 2] mana, and this mana does not regenerate"
-# (lib/prestige.irh:290-292). ALIENIST_CLAUSE (lib/defines.irh) charged nothing.
+# (lib/prestige.irh:291-293). ALIENIST_CLAUSE (lib/defines.irh) charged nothing.
 #
 # THE ORACLE is the status line's Mana figure, read twice: once just after the
 # cast and once after ten searches have passed about fifteen thousand turns.

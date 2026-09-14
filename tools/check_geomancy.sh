@@ -3,7 +3,7 @@
 # finding PA-03-F25 of bd inc-tek.8.3.
 #
 # THE DEFECT. Geomancy turns fatigue into mana. The class page says 5d12
-# (lib/prestige.irh:1543) and the effect's own description repeats 5d12, while
+# (lib/prestige.irh:1576) and the effect's own description repeats 5d12, while
 # the value was pval: 5d12+12 -- the whole line copied from the *Mana* potion
 # (lib/m_items.irh:1190), whose own description does state the +12.
 #

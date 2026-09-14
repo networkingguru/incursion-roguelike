@@ -30,7 +30,7 @@ FAILED=0; fail() { echo "FAIL: $1"; FAILED=1; }
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/incursion-schema.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 # < /dev/null + -timeout: a binary that predates the flag would otherwise start
-# an ordinary interactive session and hang (src/Wposix.cpp:549-558); the
+# an ordinary interactive session and hang (src/Wposix.cpp:537-562); the
 # redirect is the tools/check_dump_save.sh:56-57 idiom.
 if ! ./incursion-headless -schematest "$WORK" -timeout 120 < /dev/null > "$WORK/out.txt" 2>&1; then
     tail -30 "$WORK/out.txt"

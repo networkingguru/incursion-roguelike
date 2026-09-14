@@ -15,7 +15,7 @@
 #
 # THE ORACLE is the Activate command's own menu -- the screen a player reads
 # before choosing what to activate. Item::xName writes the plus straight onto
-# the item's name for any known item (src/Message.cpp:1300-1308), so the menu
+# the item's name for any known item (src/Message.cpp:1302-1311), so the menu
 # row says "mildly damaged keen Luckblade +3" in the game's own words, and
 # says "mildly damaged keen Luckblade" with no plus at all once the sword is
 # drained, because xName writes nothing when GetPlus() is zero. The check
@@ -80,7 +80,7 @@ menu_row() { # <screen dump> -> the text of the [a] entry
 }
 
 # The plus as the game wrote it. An absent plus is +0: Item::xName appends
-# nothing at all when GetPlus() is zero (src/Message.cpp:1300).
+# nothing at all when GetPlus() is zero (src/Message.cpp:1302).
 plus_of() { # <menu row> -> the number
     case "$1" in
         *"Luckblade +"*) echo "${1##*Luckblade +}" ;;

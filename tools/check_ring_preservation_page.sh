@@ -89,7 +89,7 @@ ls "$scr"/*-desc-*.txt >/dev/null 2>&1 || {
 }
 
 # The description box is drawn by TextTerm::Box, which sizes itself to its
-# longest line (src/TextTerm.cpp:452-455), so its columns move when its text
+# longest line (src/TextTerm.cpp:466-467), so its columns move when its text
 # changes -- and this fix changes its text. Find the box by its own top border
 # rather than by counting columns, then read every row between that border and
 # the closing one and join them into one string. Joining is the point: Box

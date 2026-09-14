@@ -5,7 +5,7 @@
 # The class's prose promises, at 3rd level, "the benefit (or curse) of a
 # constantly active spook spell as an innate supernatural ability"
 # (lib/prestige.irh:294-297), and the effect that does exactly that sat at
-# lib/prestige.irh:449-461 with nothing in the ruleset referring to it -- no
+# lib/prestige.irh:455-467 with nothing in the ruleset referring to it -- no
 # Grants entry, no ThrowEff, no GainPermStati. The fix adds two lines to the
 # class's own EV_ADVANCE handler.
 #

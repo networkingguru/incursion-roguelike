@@ -20,7 +20,7 @@
 # level 1 is what makes the pair of measurements sharp: Ki Strike +1 is exactly
 # enough and nothing is exactly not enough.
 #
-# The oracle line is printed at src/Fight.cpp:8510 when e.isWImmune is set, and
+# The oracle line is printed at src/Fight.cpp:8900 when e.isWImmune is set, and
 # nowhere else in the game.
 #
 # ON A BUILD WITHOUT THE FIX both halves read the same: the Monk 1 punch lands

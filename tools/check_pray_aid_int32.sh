@@ -26,7 +26,7 @@
 # assertions green. The two checks share a character and nothing else.
 #
 # THE CONTROL MATTERS HERE. MSG_PRAYER, "You are surrounded in a column of
-# shimmering light.", prints at src/Prayer.cpp:1083 BEFORE the aid loop and is
+# shimmering light.", prints at src/Prayer.cpp:1099 BEFORE the aid loop and is
 # unconditional, so it must survive the mutation. If it ever goes missing the
 # mutated run failed to pray at all and the two aid assertions below would be
 # red for the wrong reason.

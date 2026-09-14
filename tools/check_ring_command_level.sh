@@ -5,7 +5,7 @@
 # THE DEFECT. Each of the four rings prints, on its own page, that it lets the
 # wearer "command <element> creatures as an <Element> priest of 12th level, or
 # augments their existing ability by +6 -- whichever is superior"
-# (lib/m_items.irh:4769, :4532, :4606, :4699). All four then handed out
+# (lib/m_items.irh:4769, :4858, :4935, :5041). All four then handed out
 #
 #   max(10,clev+5)
 #

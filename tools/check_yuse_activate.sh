@@ -9,7 +9,7 @@
 # The Activate row of YuseCommands (src/Tables.cpp:3141) carries QTarget 0 --
 # it must, because the query belongs to whichever item the player picks -- and
 # nothing after the item menu asked the item. With no target chosen,
-# Magic::MagicEvent (src/Magic.cpp:734) makes the activator the victim.
+# Magic::MagicEvent (src/Magic.cpp:777) makes the activator the victim.
 #
 # THE ORACLE is the message line. A run that was asked to aim shows the prompt
 # TextTerm::EffectPrompt writes for Q_DIR|Q_TAR, "Select direction or target".

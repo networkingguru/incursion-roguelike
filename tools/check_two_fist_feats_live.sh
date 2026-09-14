@@ -15,7 +15,7 @@
 # seed-pinned character is not reproducible across module changes, and the
 # weapon chargen puts in his hands is exactly the field that moves: commit
 # bef32c3 swapped his long sword for a quarterstaff, the stow that used to
-# empty his hands was refused for size, and src/Sheet.cpp:162 then hid the
+# empty his hands was refused for size, and src/Sheet.cpp:165-171 then hid the
 # Brawl row this check exists to read (bd inc-sls0). So the monk is loaded from
 # tools/fixtures/chars/lizardfolk-monk-barehand-seed1.sav, which holds him with
 # his hands already empty. tools/fixtures/README.md states the rule and the

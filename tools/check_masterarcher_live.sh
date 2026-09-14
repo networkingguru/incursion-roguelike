@@ -16,7 +16,7 @@
 # The fix names the bows instead.
 #
 # THE ORACLE is the damage line. A sneak attack appends its own term to it,
-# " +Nd6 SA" (src/Fight.cpp:5135), and the Show All Combat Rolls wizard
+# " +Nd6 SA" (src/Fight.cpp:5445), and the Show All Combat Rolls wizard
 # switch makes the line print.
 #
 # THE MEASUREMENT. tools/keys/prestige-masterarcher.keys builds an

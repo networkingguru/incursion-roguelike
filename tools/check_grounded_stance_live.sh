@@ -8,11 +8,11 @@
 # engine asks for is named META(PRE(EV_HIT)). Grounded Stance declared its
 # handler as plain PRE(EV_HIT), a name no trap dispatch ever asks for, so the
 # body never ran. Every other trap in lib/ pairs the two the other way round
-# -- Divine Sacrifice (lib/pspells.irh:1156,1132) and Death Attack
-# (lib/prestige.irh:606,652) both declare META(PRE(EV_HIT)).
+# -- Divine Sacrifice (lib/pspells.irh:1156,1171) and Death Attack
+# (lib/prestige.irh:606,669) both declare META(PRE(EV_HIT)).
 #
 # THE ORACLE is the damage roll. The handler appends its own term to the
-# damage string, " %+d GS" (lib/prestige.irh:1610), and src/Fight.cpp prints
+# damage string, " %+d GS" (lib/prestige.irh:1684), and src/Fight.cpp prints
 # that string in the "Damage:" line. So a landed blow either says GS or the
 # ability did not fire. Nothing else in the game writes " GS" into a damage
 # roll.

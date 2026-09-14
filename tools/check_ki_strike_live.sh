@@ -3,7 +3,7 @@
 #
 # The rule: lib/classes.irh gives the Monk Ability[CA_KI_STRIKE] at every 4th
 # level starting at 4th. The grant sat commented out, so nothing in the compiled
-# module granted the ability, and src/Fight.cpp:4112 -- the only thing that lets
+# module granted the ability, and src/Fight.cpp:4385-4386 -- the only thing that lets
 # an unarmed attacker damage an incorporeal creature -- could never fire.
 #
 # The character sheet is the oracle. src/Sheet.cpp:548 renders the ability as a

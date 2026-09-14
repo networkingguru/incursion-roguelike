@@ -20,11 +20,11 @@
 # build_macos.sh refuses rather than producing a package with no data.
 #
 # WHY A PLAIN FOLDER AND NOT A .app. The game writes Options.Dat, save/ and
-# logs/ beside itself -- Wlibtcod.cpp:301 returns "." for OptionsSubDir(). An app
+# logs/ beside itself -- Wlibtcod.cpp:441 returns "." for OptionsSubDir(). An app
 # bundle that writes inside itself breaks its own code signature, and a standard
 # user cannot write into /Applications at all. Shipping a .app needs the game to
 # put its writable state under ~/Library/Application Support first, which is a
-# separate change. It finds its data by argv[0] (Wlibtcod.cpp:435-442), so the
+# separate change. It finds its data by argv[0] (Wlibtcod.cpp:592-599), so the
 # folder works wherever it is put.
 #
 # Usage:

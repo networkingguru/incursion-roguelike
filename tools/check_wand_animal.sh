@@ -13,7 +13,7 @@
 # from the dragon list.
 #
 # THE ORACLE is the name of the creature that lands. Magic::Summon prints one
-# "An <Obj> appears!" line per summoned creature (src/Effects.cpp:1493), and
+# "An <Obj> appears!" line per summoned creature (src/Effects.cpp:1503), and
 # this script matches that name against the 474 monsters declared in
 # lib/mon*.irh to recover its MTypes. An animal has MA_ANIMAL; a dragon has
 # MA_DRAGON. Nothing is judged by the wand's own description, which was

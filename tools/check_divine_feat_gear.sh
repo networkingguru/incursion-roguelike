@@ -38,7 +38,7 @@
 # HOW THE CHARACTER GETS CHANNELING, which both feats require. src/Skills.cpp
 # :4492 grants CHANNELING for Charisma x 2 rounds when a character with any of
 # seven divine feats uses Turn Undead. The grant is at :4492 and the turn is
-# rolled at :4496, after it, so the attempt need not succeed and NO UNDEAD NEED
+# rolled at :4497, after it, so the attempt need not succeed and NO UNDEAD NEED
 # BE PRESENT: the key script turns into an empty room, the game answers
 # "Nothing happens", and Channeling appears on the status line all the same.
 # Measured 2026-09-11, seed 5: 36 rounds covers the whole session and
