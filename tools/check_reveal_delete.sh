@@ -3,7 +3,7 @@
 # the caller that keeps using its map pointer.
 #
 # WHAT THE DEFECT IS. Creature::MakeNoise checks that the caster is still
-# standing on the map (src/Creature.cpp:342), then calls Reveal(true), then
+# standing on the map (src/Creature.cpp:343), then calls Reveal(true), then
 # dereferences c->m. Reveal can delete the creature between those two lines:
 # it removes the HIDING stati, removing it runs StatiOff -> CalcValues,
 # CalcValues recomputes the size, a size of SZ_HUGE or above needs a 3x3

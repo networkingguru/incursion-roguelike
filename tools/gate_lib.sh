@@ -96,7 +96,7 @@ gate_options_check() { # <baseline> <optionsfile>
 #             gameplay from that point on, which is exactly what would make a
 #             build LOOK improved in lines/findings without being one.
 #   threat_frozen  sessions where the threat-disengage prompt (inc-loa.5,
-#             "Abort, Flee or Disengage?", src/Move.cpp:841) froze the
+#             "Abort, Flee or Disengage?", src/Move.cpp:941) froze the
 #             session -- same disease as 'died' above, a different unguarded
 #             prompt. No settings gate exists for it, so unlike 'died' there
 #             is no "confirmed, resolved cleanly" shape to also count: if
@@ -189,7 +189,7 @@ gate_collect() { # <soakdir>
     printf 'died\t%s\n' "$died"
 
     # inc-loa.5: sessions frozen at the unguarded threat-disengage prompt
-    # (src/Move.cpp:841, "Abort, Flee or Disengage?"). Same shape as 'died'
+    # (src/Move.cpp:941, "Abort, Flee or Disengage?"). Same shape as 'died'
     # above -- checked by the same "text still on the last screen" signal --
     # but this prompt has no settings gate and, given dive.keys' vocabulary,
     # no way to resolve once it fires, so there is only one shape to count.

@@ -310,12 +310,12 @@ def cpp_declarations(headers):
             dm = re.match(
                 # The trailing part is optional: several declarations in
                 # inc/Map.h put the opening brace on the NEXT line, and
-                # requiring it here hid Thing::DirTo(Thing*) at inc/Map.h:748.
+                # requiring it here hid Thing::DirTo(Thing*) at inc/Map.h:1072.
                 # A DECLARATION HAS A RETURN TYPE. Requiring at least one word
                 # before the name is what separates
                 #   int8 Exercise(int16 at, ...)      a declaration
                 # from
-                #   Exercise(at, -amt, 0, 0);         a call, inc/Creature.h:212
+                #   Exercise(at, -amt, 0, 0);         a call, inc/Creature.h:258
                 r"\s*(?:virtual\s+|inline\s+|static\s+)*"
                 r"[A-Za-z_][A-Za-z_0-9:<>]*[\s\*&]+"
                 r"\b([A-Za-z_][A-Za-z_0-9]*)\s*\((.*?)\)\s*(?:const)?\s*[;{=]?\s*$",
@@ -326,7 +326,7 @@ def cpp_declarations(headers):
             name, params = dm.groups()
             if name in ("if", "for", "while", "switch", "return", "sizeof"):
                 continue
-            # A CALL is not a declaration. Creature.h:240 holds
+            # A CALL is not a declaration. Creature.h:286 holds
             # 'return HasMFlag(M_BLIND) || HasStati(BLIND);', which otherwise
             # reads as a one-parameter declaration of HasMFlag.
             if re.match(r"\s*(return|\}|else)\b", line):

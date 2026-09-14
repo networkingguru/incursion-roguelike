@@ -73,8 +73,8 @@ fi
 # ---------------------------------------------------------------------------
 # 2. RETIRED -- @cursorto matches a name the menu has truncated.
 #
-# LMenu cuts every entry to its column width (src/TextTerm.cpp:1403 cuts the
-# stored text, :1462 prints one character less), so the prestige list drew
+# LMenu cuts every entry to its column width (src/TextTerm.cpp:1426 cuts the
+# stored text, :1485 prints one character less), so the prestige list drew
 # "[e] Celestial Initiat" and the full name appeared nowhere on the screen.
 # That was the specimen: a directive that could not match it would be useless
 # on any long name.

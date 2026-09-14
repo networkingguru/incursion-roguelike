@@ -24,12 +24,12 @@
 #   1. A line number that RECORDS A PAST RUN is evidence, not a pointer. ASSERT
 #      emits __FILE__ and __LINE__, so "asserts at Base.h:577 89,545 -> 0" quotes
 #      what the tool printed in the build that was measured. Rewriting 577 to
-#      today's line falsifies the record. src/Target.cpp:1104 is the worked
+#      today's line falsifies the record. src/Target.cpp:1107 is the worked
 #      example: it keeps the run's number and names today's location beside it.
 #   2. A citation can resolve perfectly and still be wrong, because the line it
 #      names is no longer the line the prose described. This tool answers "does
 #      that address exist"; only a person answers "is that the code you meant".
-#   3. A citation can point into a #if 0 block. src/Display.cpp:575-693 holds
+#   3. A citation can point into a #if 0 block. src/Display.cpp:596-714 holds
 #      compiled-out twins of six accessors, and a citation into them passes every
 #      address check while naming code the compiler never emits.
 #

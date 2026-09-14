@@ -27,7 +27,7 @@
 # gives "base 13, +5 inherent".
 #
 # WHY THE PLUS IS 1. GainInherentBonus caps the total at
-# 5 + CA_INHERANT_POTENTIAL (src/Creature.cpp:1950) and a human carries +3 of
+# 5 + CA_INHERANT_POTENTIAL (src/Creature.cpp:1965) and a human carries +3 of
 # that ability (lib/races.irh:205), so this character saturates at +8. Three
 # tomes at plus 2 reach +8 with or without the fix and measure nothing.
 #

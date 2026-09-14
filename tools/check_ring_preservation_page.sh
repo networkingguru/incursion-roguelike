@@ -8,18 +8,18 @@
 # "these items can later be retrieved by the merchant guild or family the
 # merchant works for using powerful magical rituals". None of that happens.
 # The whole META(POST(EVICTIM(EV_DEATH))) handler that would have done it sits
-# inside #if 0 (lib/m_items.irh:4991-5002).
+# inside #if 0 (lib/m_items.irh:5153-5164).
 #
 # THE RING IS NOT INERT, WHICH IS WHY THE HANDLER WAS NOT SIMPLY ENABLED. The
 # finding claimed the ring does nothing. That is wrong. The registration line
 # -- xval: TRAP_EVENT; yval: POST(EVICTIM(EV_DEATH)) -- sits OUTSIDE the
 # #if 0, and two live behaviours read it:
-#   * lib/wspells.irh:3518. Apportation, the wizard spell that teleports one
+#   * lib/wspells.irh:3528. Apportation, the wizard spell that teleports one
 #     item out of a creature's inventory into the caster's hands, refuses
 #     against a wearer: HasEffStati(TRAP_EVENT,$"Item Preservation") sends it
 #     to "The <hObj> flickers briefly." That is a real ward, and it is the
 #     sentence the page now carries.
-#   * lib/alchemy.irh:740. Dunking the ring in acid makes the acid and the
+#   * lib/alchemy.irh:786. Dunking the ring in acid makes the acid and the
 #     flask "vanish to another plane", which is the ring's identification
 #     clue.
 # Brian ruled on 2026-08-24 that the PAGE is corrected to match, and that the
@@ -31,8 +31,8 @@
 # and what matters, is the page as the GAME renders it: reading lib/m_items.irh
 # with grep would prove that a file changed, which is a different claim. The
 # item description screen is reached from Inventory Mode with 'x'
-# (src/Managers.cpp:751-754) and prints the entity's Desc through
-# Item::Describe (src/Help.cpp:3405-3408).
+# (src/Managers.cpp:789-792) and prints the entity's Desc through
+# Item::Describe (src/Help.cpp:3652-3655).
 #
 # Usage: tools/check_ring_preservation_page.sh   (0 pass, 1 fail, 2 inconclusive)
 set -uo pipefail
@@ -135,7 +135,7 @@ done
 }
 
 # The page must have arrived whole. Item::Describe prints the entity's Desc
-# only for a KN_MAGIC item (src/Help.cpp:3405), so an unidentified ring would
+# only for a KN_MAGIC item (src/Help.cpp:3652), so an unidentified ring would
 # show the generic ring paragraph alone -- and that too would pass every
 # "no longer says X" test below. The opening clause is not touched by this
 # fix, so its presence proves the entity's own page is on screen.

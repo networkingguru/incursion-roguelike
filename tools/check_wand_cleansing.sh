@@ -6,7 +6,7 @@
 # the wand possesses" (lib/m_items.irh). Its damage field asked for
 # LEVEL_2PER1 -- twice the CASTING level -- and for an item the casting level
 # is the item's own level (src/Magic.cpp:470), which for this wand is three
-# times its plus plus one (src/Item.cpp:2210, Level: PLUS_3PER1_ADD1). So the
+# times its plus plus one (src/Item.cpp:2379, Level: PLUS_3PER1_ADD1). So the
 # plus was multiplied twice and the wand rolled (6*plus+2)d6.
 #
 # THE ORACLE is the game arguing with itself on one screen, so no second build

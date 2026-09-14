@@ -18,7 +18,7 @@
 # WHY A SILVERED MAGIC WARHAMMER AND A MAGMA CREEPER. Both are argued in
 # check_gear_spell_protection.sh, which uses the same weapon, the same monster
 # and the same twelve blows. In short: a no-save A_DEQU sets ignoreHardness on a
-# NON-magical item (src/Fight.cpp:2090), and since inc-kapn src/Item.cpp:1451
+# NON-magical item (src/Fight.cpp:2122), and since inc-kapn src/Item.cpp:1451
 # zeroes only what Hardness() returned, a grant no longer needs a MAGIC victim
 # to survive. The weapon is kept for its numbers: silvered, its acid hardness is
 # 12, and the creeper's 3d6 reaches 18, so an unprotected hammer takes damage.

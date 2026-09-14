@@ -22,7 +22,7 @@
 #      exited 0 regardless, which every existing caller reads as "played".
 #   5. A session frozen at the threat-disengage prompt is reported as frozen,
 #      not as an ordinary clean exit (inc-loa.5). "You are in a threatened
-#      area. Abort, Flee or Disengage?" (src/Move.cpp:841) has no OPT_ gate
+#      area. Abort, Flee or Disengage?" (src/Move.cpp:941) has no OPT_ gate
 #      at all, and tools/keys/dive.keys has no 'a'/'f'/'d'/'?'/ESC to answer
 #      it with, so once it fires every remaining scripted keystroke is
 #      silently swallowed. 7 of 40 sessions in the kept baseline
@@ -85,7 +85,7 @@ assert_stuck_at_prompt() { # <rundir>
 }
 
 # inc-loa.5: "You are in a threatened area. Abort, Flee or Disengage?"
-# (src/Move.cpp:841) has no OPT_ gate and no settings-driven escape, and
+# (src/Move.cpp:941) has no OPT_ gate and no settings-driven escape, and
 # tools/keys/dive.keys has no 'a'/'f'/'d'/'?'/ESC in its vocabulary, so a
 # session that hits it is frozen for the rest of its key budget -- there is
 # no "confirmed, resolved cleanly" counterpart the way there is for the death
@@ -98,7 +98,7 @@ assert_stuck_at_threat_prompt() { # <rundir>
 
 # inc-uh0: two sessions started in the same second must each get their own
 # directory. The default name is built from a clock that resolves to the
-# second, so before the process id joined it (headless.sh:82) a loop that
+# second, so before the process id joined it (headless.sh:90) a loop that
 # started several sessions inside one second gave them all one directory --
 # one save/, one logs/, and one append-mode probe log holding every session's
 # lines. Both paths must exist, because "different" is also true of a name

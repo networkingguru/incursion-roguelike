@@ -2,7 +2,7 @@
 # Regression check: does an unarmed strike meet Weapon Immunity at all, and does
 # Ki Strike get through it?
 #
-# The rule Help.cpp:2060 states to the player is that the creature "is
+# The rule Help.cpp:2305 states to the player is that the creature "is
 # unaffected by weapons with a plus less than N". The engine tests that in
 # exactly one place, src/Fight.cpp inside Creature::Damage, and that test used
 # to be gated on a hand-written list of seven attack types with A_PUNC, A_CLAW
@@ -16,7 +16,7 @@
 #   Monk 4, Ki Strike +1, same fist  -> that line is gone and the devil reels.
 #
 # The subject is a lemure, a CR 1 devil with ABILITY(CA_WEAPON_IMMUNITY,1)
-# (lib/mon4.irh:1205-1213), summoned beside the player in wizard mode. Immunity
+# (lib/mon4.irh:1211-1219), summoned beside the player in wizard mode. Immunity
 # level 1 is what makes the pair of measurements sharp: Ki Strike +1 is exactly
 # enough and nothing is exactly not enough.
 #

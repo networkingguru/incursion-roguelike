@@ -5,7 +5,7 @@
 # THE DEFECT. Geomancy turns fatigue into mana. The class page says 5d12
 # (lib/prestige.irh:1543) and the effect's own description repeats 5d12, while
 # the value was pval: 5d12+12 -- the whole line copied from the *Mana* potion
-# (lib/m_items.irh:1192), whose own description does state the +12.
+# (lib/m_items.irh:1190), whose own description does state the +12.
 #
 # THE ORACLE is the Spell Manager's "Power & Metamagic" column, which prints
 # the effect's pval beside the ability. So the number the player reads and the

@@ -108,8 +108,8 @@ def main():
     # '|'-separated, rather than keeping its own copy of the mapping.
     cases = {}
 
-    CORRUPT = "File is Corrupt"      # ECORRUPT, src/Tables.cpp:2678
-    READERR = "File Read Error"      # EREADERR, src/Tables.cpp:2676
+    CORRUPT = "File is Corrupt"      # ECORRUPT, src/Tables.cpp:2763
+    READERR = "File Read Error"      # EREADERR, src/Tables.cpp:2761
 
     # --- corrupt header fields: zero, negative, absurdly large -------------
     cases["compsize_zero"] = (patch_i32(base, COMPSIZE_OFF, 0), CORRUPT)

@@ -148,7 +148,7 @@ if [ -n "$SAVE2" ] && [ -n "$SAVE3" ]; then
     # Field-aware comparison with the volatile-field allowlist. Every entry
     # is (record type byte, tag path) and carries its measured reason;
     # everything else must be byte-identical. Type bytes: T_GAME=1,
-    # T_PLAYER=7 (inc/Defines.h:313,319). Tag numbers: Game's list in
+    # T_PLAYER=7 (inc/Defines.h:330,319). Tag numbers: Game's list in
     # inc/Res.h, Player's GameTimeInfo embed (tag 527) in inc/Creature.h.
     if ! python3 - "$SAVE2" "$SAVE3" <<'PYEOF'
 import struct, sys

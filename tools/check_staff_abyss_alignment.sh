@@ -13,10 +13,10 @@
 # what looks like the mechanism already:
 #     if (!EActor->ItemPrereq(ALIGN_VAL + MA_GOOD,0,20))
 #       return DONE;
-# That call cannot work. Creature::ItemPrereq (src/Skills.cpp:5647-5728) has a
+# That call cannot work. Creature::ItemPrereq (src/Skills.cpp:5717-5798) has a
 # branch for ABIL_VAL, FEAT_VAL, SKILL_VAL, MFLAG_VAL, MTYPE_VAL, ATTR_VAL and
 # CLEV_VAL, and none at all for ALIGN_VAL. ALIGN_VAL is 9000
-# (inc/Defines.h:2096), so ALIGN_VAL + MA_GOOD is 9106, which is below the
+# (inc/Defines.h:2113), so ALIGN_VAL + MA_GOOD is 9106, which is below the
 # 0xFFFF that sends an argument down the resource-id path, and the function
 # falls through to its final "return false". The test is therefore false for
 # everyone, so the Staff of Exorcism returns DONE for everyone and is inert in

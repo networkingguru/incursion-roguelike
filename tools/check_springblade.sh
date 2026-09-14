@@ -23,9 +23,9 @@
 # marks a fight that has already yielded its opening. The engine's own
 # out-of-combat counter does not GRANT the opening -- it CLEARS that mark.
 # Creature::isFlatFooted() is FFCount > min(5,10+Mod(A_WIS))
-# (inc/Creature.h:571-572); Creature::DoTurn() raises it one per quiet turn
-# (src/Creature.cpp:1590-1591) and any strike zeroes it for both fighters
-# (src/Fight.cpp:3258-3259). lib/prestige.irh reads the same field for the
+# (inc/Creature.h:623-624); Creature::DoTurn() raises it one per quiet turn
+# (src/Creature.cpp:1605-1606) and any strike zeroes it for both fighters
+# (src/Fight.cpp:3310-3311). lib/prestige.irh reads the same field for the
 # Assassin's Death Attack. The two walks:
 #
 #   deploy while quiet      the mark clears, the opening arms, and the blow
@@ -36,7 +36,7 @@
 #                           deployment in that same fight does not
 #
 # THE COST OF A FAILED CHECK is 50, which is the engine's own number: "a
-# 'full round action', in the base system" (src/Fight.cpp:2531).
+# 'full round action', in the base system" (src/Fight.cpp:2577).
 #
 # THE THREE ORACLES, one run each, all on the seed pinned below.
 #
@@ -60,7 +60,7 @@
 # SECOND deployment inside one fight arms nothing, and a deployment after the
 # fight ends arms again -- has no oracle, because no second deployment is
 # possible in a running game. Measured three ways: ALT_ITEM exists only to
-# serve this item (inc/Defines.h:3056) and is granted with a negative
+# serve this item (inc/Defines.h:3074) and is granted with a negative
 # duration, which the stati clock never decrements (src/Status.cpp:50-62);
 # nothing in src/ removes it; Player::CancelMenu will not list the bracers,
 # because it skips a stati whose item Owner() is not the wielder
@@ -98,7 +98,7 @@ cd "$ROOT"
 
 # WHY SEED 19, and why not 2. The seed was 2 until 2026-08-24. The
 # two-weapon run builds its rogue with `@choose "Two-Weapon Styl"`, and
-# @choose reads only the screen in front of it (src/Wposix.cpp:940-999) --
+# @choose reads only the screen in front of it (src/Wposix.cpp:959-1018) --
 # it does not press TAB. That day's item work added one more feat, Swarm
 # Tactics, to the offered list. The seed-2 orc qualified for 56 feats, the
 # menu holds 51 per page, and Two-Weapon Style moved to page 2, so chargen
@@ -292,7 +292,7 @@ esac
 # sword it is otherwise a copy of carries WG_SBLADES | WG_LIGHT
 # (lib/weapons.irh:401). Creature::CalcValues charges an extra -2 to the main
 # hand and -2 to the off hand when the off-hand weapon is neither light nor
-# smaller than the main-hand weapon (src/Values.cpp:1345-1352). Two springblades
+# smaller than the main-hand weapon (src/Values.cpp:1388-1395). Two springblades
 # are the same size, so without the tag that clause fired on a pair of them.
 LIGHT="$(run_case tools/keys/springblade-light.keys)"
 

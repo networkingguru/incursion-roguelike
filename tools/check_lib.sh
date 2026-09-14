@@ -241,7 +241,7 @@ _check_session_verdict() { # <exit code> [harness output]
         # The last messages the engine logged, and not the file: an errors.log
         # entry carries its call stack indented under it, and a whole stack
         # buries the one line that names what the game was doing. `^[0-9]` is
-        # the timestamp every message begins with, which headless.sh:184 uses
+        # the timestamp every message begins with, which headless.sh:244 uses
         # to the same end.
         if [ -n "${CHECK_RUN:-}" ] && [ -f "$CHECK_RUN/logs/errors.log" ]; then
             grep '^[0-9]' "$CHECK_RUN/logs/errors.log" | tail -2 | sed 's/^/      /'

@@ -31,7 +31,7 @@
 #
 # WHY A GLAIVE. It is an iron polearm carrying WT_REACH (lib/weapons.irh:192),
 # so wielding it sets MS_HAS_REACH and a direction key attacks a creature two
-# squares away instead of walking (src/Player.cpp:1321-1325). Its hardness
+# squares away instead of walking (src/Player.cpp:1335-1339). Its hardness
 # against acid is 10 and the acid blob's A_DEQU is 2d4 with no save DC, so the
 # damage it takes is also evidence that the no-save bypass ran.
 #

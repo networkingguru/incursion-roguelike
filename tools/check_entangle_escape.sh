@@ -6,13 +6,13 @@
 # strands, entangling weapons and monster AD_STUK attacks. It rolled Escape
 # Artist, which is keyed on Dexterity, carries the armour check penalty, and is
 # a class skill for no armour-wearing class, so Character::MaxRanks
-# (src/Create.cpp:3937) caps it at a hard zero forever. A paladin in full plate
+# (src/Create.cpp:3957) caps it at a hard zero forever. A paladin in full plate
 # and a kite shield sits at -11 against a DC of 14: his ceiling of 9 is five
 # below the floor and NO roll closes it. Measured before the fix: he stayed
 # stuck through 673 turns of game time.
 #
 # The engine already knew better twenty lines away. Breaking a GRAPPLE
-# (src/Fight.cpp:4757-4844) strips the Dex modifier back out of the skill --
+# (src/Fight.cpp:4806-4893) strips the Dex modifier back out of the skill --
 # "ww: we'll be adding in your dex/str bonus later" -- and adds Strength. And
 # the success branch in Move.cpp has always called Exercise(A_STR, ...) with a
 # reason code named ESTR_UNSTUCK, so whoever wrote it thought of tearing free

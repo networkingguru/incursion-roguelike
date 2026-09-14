@@ -3,13 +3,13 @@
 # damage even when every condition it names was met.
 #
 # THE DEFECT. The ability rides a TRAP_EVENT stati whose Mag is PRE(EV_HIT)
-# (lib/prestige.irh:1598). src/Event.cpp:325-336 walks those stati, rewrites
+# (lib/prestige.irh:1638). src/Event.cpp:325-336 walks those stati, rewrites
 # e.Event to META(e.Event) and only then calls the effect, so the handler the
 # engine asks for is named META(PRE(EV_HIT)). Grounded Stance declared its
 # handler as plain PRE(EV_HIT), a name no trap dispatch ever asks for, so the
 # body never ran. Every other trap in lib/ pairs the two the other way round
-# -- Divine Sacrifice (lib/pspells.irh:1117,1132) and Death Attack
-# (lib/prestige.irh:600,652) both declare META(PRE(EV_HIT)).
+# -- Divine Sacrifice (lib/pspells.irh:1156,1132) and Death Attack
+# (lib/prestige.irh:606,652) both declare META(PRE(EV_HIT)).
 #
 # THE ORACLE is the damage roll. The handler appends its own term to the
 # damage string, " %+d GS" (lib/prestige.irh:1610), and src/Fight.cpp prints

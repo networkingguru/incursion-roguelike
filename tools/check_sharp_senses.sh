@@ -11,7 +11,7 @@
 #
 # This runs the game and reads the character sheet, because the sheet prints
 # each skill's terms one by one -- "+2 inherent" is the term under test -- and
-# src/Sheet.cpp:904 gets them by calling SkillLevel itself. The sheet is
+# src/Sheet.cpp:906 gets them by calling SkillLevel itself. The sheet is
 # therefore a true oracle for the function under test.
 #
 # Usage: tools/check_sharp_senses.sh      (exits 0 on pass, 1 on fail)

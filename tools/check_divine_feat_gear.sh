@@ -26,7 +26,7 @@
 # THE ARITHMETIC, and it is decisive rather than lucky. The firebat's A_DEQU is
 # 1d3 AD_FIRE with NO save DC (lib/mon2.irh:3716) -- the only fire, cold or
 # lightning carrier in lib/ with no DC -- so no Reflex roll decides anything,
-# and src/Fight.cpp:2090 sets e.ignoreHardness because the warhammer is not
+# and src/Fight.cpp:2122 sets e.ignoreHardness because the warhammer is not
 # magical. Iron's fire hardness is 10 and the bypass zeroes it, so the feat's
 # grant is the WHOLE of the number on the line. Charisma 18 is the point-buy
 # cap, so Creature::Mod returns (18-10)/2 = 4. Item::Damage adds that after the

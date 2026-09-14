@@ -1,10 +1,10 @@
 #!/bin/bash
 # Regression check for the shop list that would not scroll, inc-upw.23.
 #
-# TextTerm::BarterManager (src/Managers.cpp:1091) draws its own list and keeps
+# TextTerm::BarterManager (src/Managers.cpp:1130) draws its own list and keeps
 # its own selection. Every arrow key jumped back to its PartialRedraw label,
 # which begins with ClearScroll(true) -- and ClearScroll(true) zeroes
-# TextTerm::offset (src/TextTerm.cpp:720-728). The single UpdateScrollArea call
+# TextTerm::offset (src/TextTerm.cpp:725-733). The single UpdateScrollArea call
 # at the end of the redraw therefore always drew row 0 at the top of the page,
 # whatever the NORTH and SOUTH cases had just worked out. The selection walked
 # off the page and stayed off it. Both directions were dead, not just one; the

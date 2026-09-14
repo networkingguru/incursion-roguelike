@@ -20,7 +20,7 @@
 # gazed at a character who carries the stati.
 #
 # WHY A BODAK, and how it separates the two reflection sites. Two places answer
-# a reflected gaze. src/Fight.cpp:1868 handles the A_GAZE row of a monster's
+# a reflected gaze. src/Fight.cpp:1900 handles the A_GAZE row of a monster's
 # attack table and prints "The <EActor>'s gaze is reflected!"; src/Magic.cpp:944
 # handles an EF_GAZE magical effect and prints the sentence this check reads. A
 # bodak has no A_GAZE row -- its attacks are A_SLAM and A_SEEM -- so the

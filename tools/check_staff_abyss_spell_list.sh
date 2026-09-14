@@ -11,7 +11,7 @@
 #   * Ensnarement has no definition anywhere in lib/. There is no such spell.
 #   * Cacodemon has none either. It is commented out at lib/sp_books.irh:504
 #     and again inside the Evil domain's commented block at lib/domains.irh:266.
-#   * Death Knell exists only as a stub: lib/pspells.irh:1781 is
+#   * Death Knell exists only as a stub: lib/pspells.irh:1830 is
 #     Effect "Death Knell" : EA_NOTIMP { }.
 # Honouring the page would mean writing two spells from nothing and finishing a
 # third that upstream itself marked not-implemented. That is a feature, not a
@@ -22,8 +22,8 @@
 # THE ORACLE. This change moves no behaviour, so no behavioural check is
 # possible and none is faked here. What CAN be checked, and what matters, is
 # what the PLAYER reads: the item description screen, reached from Inventory
-# Mode with 'x' (src/Managers.cpp:751-754), which renders the entity's Desc
-# through Item::Describe (src/Help.cpp:3405-3408). This check drives the game
+# Mode with 'x' (src/Managers.cpp:789-792), which renders the entity's Desc
+# through Item::Describe (src/Help.cpp:3652-3655). This check drives the game
 # to that screen and counts the spell names the game itself printed. Reading
 # lib/m_items.irh with grep would prove only that a file changed, which is not
 # the same claim.

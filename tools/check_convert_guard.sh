@@ -272,7 +272,7 @@ else
     # The "Known Spells" section is EXCLUDED from this comparison: it is
     # printed from Character::Spells[], which is indexed by module spell
     # POSITION, not by rID or name -- the documented conversion ceiling
-    # (the ponytail comment at inc/Creature.h:877). Across this module
+    # (the ponytail comment at inc/Creature.h:886). Across this module
     # pair the one known spell's slot points at a different spell; that is
     # the pre-existing v0 ceiling, not a conversion defect, and it shifts
     # identically whether or not the file is converted. Measured 2026-08-25:

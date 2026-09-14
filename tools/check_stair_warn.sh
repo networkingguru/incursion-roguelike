@@ -33,7 +33,7 @@
 # down staircases on the level was tried and the walk is interrupted by
 # monsters and by prompts of its own. What holds the other half up meanwhile
 # is that the test now used is the terrain's own EV_MON_CONSIDER -- the same
-# expression Move.cpp:477 uses to ask a walking player "Confirm enter the deep
+# expression Move.cpp:577 uses to ask a walking player "Confirm enter the deep
 # water?", which a plain seeded session still produces on demand.
 #
 # THE FIXTURE. The save is Brian's own character, copied while he played on

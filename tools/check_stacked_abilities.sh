@@ -8,7 +8,7 @@
 # stack. A Grants: line counts only its own class's levels, so a character who
 # split his levels served every class's waiting period instead of one.
 #
-# THE ORACLE is the sheet's Special Abilities block. src/Sheet.cpp:580-582
+# THE ORACLE is the sheet's Special Abilities block. src/Sheet.cpp:582-584
 # prints "Improved Uncanny Dodge" when the number is 4 or more and plain
 # "Uncanny Dodge" below that, so the printed name reads the number out.
 # Sneak Attack prints its dice directly.

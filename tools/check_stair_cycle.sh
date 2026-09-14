@@ -7,7 +7,7 @@
 # 1. '<' and '>' did nothing at all (inc-pw1.5). TextTerm::ShowMapOverview
 #    switched on 'case KY_CMD_UP:' and 'case KY_CMD_DOWN:', and GetCharCmd in
 #    KY_CMD_ARROW_MODE returns no command outside the eight compass arrows
-#    (src/Wposix.cpp:1351, and the same lines in Wcurses.cpp and
+#    (src/Wposix.cpp:1703, and the same lines in Wcurses.cpp and
 #    Wlibtcod.cpp). So the keyset hit was dropped, the raw character came back
 #    instead, no label matched it, and both keys fell to default: -- which
 #    closes the map. ',' and '.' worked all along, because KY_COMMA and

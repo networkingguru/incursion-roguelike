@@ -13,7 +13,7 @@
 #
 # The check plays the same character twice from the same seed and the same key
 # script, changing one byte of Options.Dat between the runs, and reads the
-# Brawl speed off the character sheet. src/Sheet.cpp:151 builds that row from
+# Brawl speed off the character sheet. src/Sheet.cpp:153 builds that row from
 # KAttr[A_SPD_BRAWL], which is the value src/Values.cpp clamps, so the sheet is
 # a true oracle for the code under test. Numbers on both sides, one variable.
 #

@@ -8,10 +8,10 @@
 #
 # THE ORACLE is the status line's Mana figure, read twice: once just after the
 # cast and once after ten searches have passed about fifteen thousand turns.
-# Spent mana regenerates and held mana does not (inc/Creature.h:145-146), so a
+# Spent mana regenerates and held mana does not (inc/Creature.h:147-148), so a
 # shortfall that survives the wait is held mana and nothing else. Searching is
 # used rather than resting on purpose: a completed rest zeroes held mana
-# outright (src/Player.cpp:2186-2188).
+# outright (src/Player.cpp:2259-2261).
 #
 # The character is an Alienist 5 casting Monster Summoning III, which calls a
 # CR 3 creature, so the price is 6 and the maximum is 720.

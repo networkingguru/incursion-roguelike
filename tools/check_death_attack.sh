@@ -6,7 +6,7 @@
 # assassin alone (lib/prestige.irh:520-524). The gate demanded it of the target
 # as well:  if (EActor->isFlatFooted() && EVictim->isFlatFooted()).
 # isFlatFooted() is not the D&D flat-footed condition; it is a per-creature
-# out-of-combat counter, FFCount > min(5,10+Mod(A_WIS)) (inc/Creature.h:567-568),
+# out-of-combat counter, FFCount > min(5,10+Mod(A_WIS)) (inc/Creature.h:623-624),
 # and any strike zeroes it for both fighters (src/Fight.cpp:3150-3151). So a
 # target that was already fighting could never be assassinated, not even unseen
 # and from behind while the party held it. The EVictim term is now gone.
@@ -24,7 +24,7 @@
 #             what stops a "fix" that merely broke the ability from passing.
 #   grippli   Improved Initiative    -> Monster::Initialize sets FFCount 0
 #             -> not relaxed -> assassinated ONLY after the fix.
-#             (src/Monster.cpp:1443-1446, lib/mon2.irh:3865)
+#             (src/Monster.cpp:1457-1460, lib/mon2.irh:3871)
 #
 # EVERY STRIKE MUST ALSO SAY "Catching him unaware". That line is the engine's
 # own report that the blow landed unperceived (src/Fight.cpp:3155-3157), and it

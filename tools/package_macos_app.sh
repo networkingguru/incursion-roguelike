@@ -145,7 +145,7 @@ cp "$ROOT/incursion-ship"    "$APP/Contents/MacOS/incursion-game"
 cp "$ROOT/mod/Incursion.Mod" "$APP/Contents/Resources/mod/"
 cp "$ROOT"/fonts/*.png       "$APP/Contents/Resources/fonts/"
 # The title screen reads graphics/logo.png relative to the game directory
-# (src/Wlibtcod.cpp:1563), and for the bundle that directory is Application
+# (src/Wlibtcod.cpp:1574), and for the bundle that directory is Application
 # Support, not Resources -- so shipping the file here only works because the
 # launcher links it across, exactly as it does for mod/ and fonts/. inc-ntjr.
 cp "$ROOT/graphics/logo.png" "$APP/Contents/Resources/graphics/"

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Regression check for inc-mc37: Player::AutoPickupFloor's unidentified-magic
 # branch (src/Player.cpp) must NOT auto-stow an EF_MUNDANE item -- one the
-# codebase itself calls "not magic" (lib/alchemy.irh:1363) -- while it still
+# codebase itself calls "not magic" (lib/alchemy.irh:1409) -- while it still
 # stows real unidentified magic. This is the same branch inc-upw.52 patched for
 # holy symbols; that fix's isFlavorGodMark() whitelist was too narrow and missed
 # the whole EF_MUNDANE alchemy line. The added EF_MUNDANE test exempts the class.

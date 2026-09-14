@@ -3,7 +3,7 @@
 # (AI_HORN Effect "the Kobolds;horn" : EA_SUMMON) promises that a non-kobold
 # wielder gets HOSTILE kobolds. The declarative EA_SUMMON path always summoned
 # FRIENDLY -- Magic::Summon hardcodes EN_SUMMON with no hostile flag and no race
-# check (src/Effects.cpp:1448-1471) -- so the promise needed an On Event
+# check (src/Effects.cpp:1457-1480) -- so the promise needed an On Event
 # EV_MAGIC_HIT handler that summons hostile kobolds for a non-kobold wielder and
 # returns DONE to suppress the friendly built-in, while a kobold wielder falls
 # through (return NOTHING) to the unchanged friendly summon.

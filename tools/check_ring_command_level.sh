@@ -5,7 +5,7 @@
 # THE DEFECT. Each of the four rings prints, on its own page, that it lets the
 # wearer "command <element> creatures as an <Element> priest of 12th level, or
 # augments their existing ability by +6 -- whichever is superior"
-# (lib/m_items.irh:4459, :4532, :4606, :4699). All four then handed out
+# (lib/m_items.irh:4769, :4532, :4606, :4699). All four then handed out
 #
 #   max(10,clev+5)
 #
@@ -14,12 +14,12 @@
 #
 # THE ORACLE is wizard mode's "Examine Player Data", which prints every stati
 # with its Val and its Mag (src/Debug.cpp:1528-1584). Val names the element --
-# MA_WATER 92, MA_AIR 93, MA_EARTH 94, MA_FIRE 95 (inc/Defines.h:1610-1613) --
+# MA_WATER 92, MA_AIR 93, MA_EARTH 94, MA_FIRE 95 (inc/Defines.h:1627-1630) --
 # and Mag is the granted level itself. The scripted character is 1st level, so
 # max(10,clev+5) reads 10 and max(12,clev+6) reads 12.
 #
 # It has to be this and not behaviour. The number is a check bonus, not a
-# hit-dice cap: src/Skills.cpp:2162 reads it, and src/Skills.cpp:4499-4612
+# hit-dice cap: src/Skills.cpp:2168 reads it, and src/Skills.cpp:4499-4612
 # adds a d20, a feat, a Knowledge rank and Charisma before dividing by
 # resistance. Two extra points shift a probability and cross no threshold, so
 # a behavioural test would need thousands of trials to see what one screen

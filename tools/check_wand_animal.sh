@@ -8,7 +8,7 @@
 # carried "xval: MA_DRAGON; rval: $"generic summons";" -- the line above it,
 # copied whole off the Dragon Summoning wand, which is the entry immediately
 # before it in the same file. Magic::Summon copies xval into xe.enConstraint
-# before throwing EV_ENGEN (src/Effects.cpp:1451), and enConstraint is the
+# before throwing EV_ENGEN (src/Effects.cpp:1463), and enConstraint is the
 # monster-type filter the encounter generator selects on, so the wand drew
 # from the dragon list.
 #

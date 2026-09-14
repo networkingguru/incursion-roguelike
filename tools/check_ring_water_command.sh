@@ -13,8 +13,8 @@
 # sibling rings each read and write their own element.
 #
 # THE ORACLE is the character sheet's Special Abilities block, which prints one
-# line per commandable type (src/Sheet.cpp:492-499) and gets the words from
-# MTypeNames (src/Tables.cpp:983,988). The wearer reads "Command Fire
+# line per commandable type (src/Sheet.cpp:494-501) and gets the words from
+# MTypeNames (src/Tables.cpp:985,988). The wearer reads "Command Fire
 # Creatures" before the fix and "Command Water Creatures" after it. The column
 # is narrow and clips the line, so the check matches the part that fits, which
 # still tells the two elements apart.

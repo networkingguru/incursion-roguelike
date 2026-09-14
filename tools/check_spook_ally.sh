@@ -8,7 +8,7 @@
 #    own side only when that flag is set (src/Magic.cpp:340). A night hunter
 #    taken as a companion therefore held its own master at -2 on every roll for
 #    as long as it lived. Paralyzing Aura, the closest thing in the game
-#    (lib/mon4.irh:519), already sets the flag.
+#    (lib/mon4.irh:525), already sets the flag.
 #
 # 2. Fixing 1 exposed a second, older defect. Magic::MagicHit tested immunity
 #    before running a field LEAVE, and a leave only undoes what the entry

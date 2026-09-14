@@ -15,9 +15,9 @@
 # tools/keys/watery-death.keys makes the player cast Watery Double at a giant
 # tortoise standing in shallow water and then kills the tortoise. The cast
 # leaves the caster holding EFF_FLAG1 whose stati object is the tortoise
-# (lib/wspells.irh:7648). Killing the tortoise sends that row through
+# (lib/wspells.irh:7667). Killing the tortoise sends that row through
 # Thing::CleanupRefedStati to the spell's EV_REMOVED handler
-# (lib/wspells.irh:7664). PEVENT (inc/Events.h:65) binds both EActor and
+# (lib/wspells.irh:7689). PEVENT (inc/Events.h:65) binds both EActor and
 # EVictim to the row's HOLDER, not to the stati object, so the handler's
 # cancellation branch calls EVictim->Remove(true) on the caster -- the player.
 # Result: SIGSEGV, four InBounds asserts from TextTerm::ShowStatus.

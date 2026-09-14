@@ -4,7 +4,7 @@
 #
 # THE ORACLE is the character sheet's Will-save breakdown after the Bloodspear
 # is wielded. The sheet appends "(... +4 vs. spells ...)" to the Will line
-# (src/Sheet.cpp:146) when a SAVE_BONUS/SN_SPELLS stati is present. The
+# (src/Sheet.cpp:148) when a SAVE_BONUS/SN_SPELLS stati is present. The
 # Bloodspear grants that stati only when its EV_WIELD handler takes the orc
 # branch and returns NOTHING, so the EA_GRANT wield path applies the component.
 # An orc wielder must gain the line; a dwarf wielder -- not an orc, and not a

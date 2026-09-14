@@ -16,7 +16,7 @@
 # Spd, the enchantment plus, the weapon-skill bonuses -- then landed on the
 # fist.
 #
-# THE ORACLE is the character sheet's Brawl block, which src/Sheet.cpp:175-200
+# THE ORACLE is the character sheet's Brawl block, which src/Sheet.cpp:177-202
 # builds from KAttr[A_HIT_BRAWL] and KAttr[A_SPD_BRAWL] and prints with the
 # source of every term beside it. The sheet hides that block whenever the
 # weapon hand holds a T_WEAPON, so the character in tools/keys/
