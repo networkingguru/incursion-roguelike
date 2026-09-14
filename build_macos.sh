@@ -122,10 +122,10 @@ fi
 #
 # WHAT ELSE DROPPING -DDEBUG CHANGES, and all three are what a shipped game
 # should do:
-#   src/Player.cpp:683    wizard mode starts honouring the OPT_DISALLOW game
+#   src/Player.cpp:791    wizard mode starts honouring the OPT_DISALLOW game
 #                         option instead of ignoring it
-#   src/Main.cpp:2174     the "(Debugging Commands)" entry leaves the start menu
-#   src/Wlibtcod.cpp:476  Breakpad crash reporting is enabled -- Windows only,
+#   src/Main.cpp:2181     the "(Debugging Commands)" entry leaves the start menu
+#   src/Wlibtcod.cpp:632  Breakpad crash reporting is enabled -- Windows only,
 #                         since USE_BREAKPAD is not defined here
 COMPILER="${COMPILER:-yes}"
 case "$COMPILER" in
@@ -337,7 +337,7 @@ $CXX -std=c++17 $EXTRA_LDFLAGS -o "$ROOT/$OUT" "$OBJ"/*.o $TCODLIB $SDL_LIBS $LI
 # Registry writes raw struct bytes and the file is welded to the layout of the
 # binary that produced it.
 # NOTHING DETECTS A MODULE THAT HAS FALLEN BEHIND ITS SCRIPTS. Registry stamps
-# every file with a layout digest (src/Registry.cpp:65) and refuses a mismatch,
+# every file with a layout digest (src/Registry.cpp:61) and refuses a mismatch,
 # so a module built by a DIFFERENT struct layout is caught. A module with the
 # right layout and last week's rules is not: it loads in silence. Gating the
 # compile on the file being ABSENT therefore let a script-only fix build clean
