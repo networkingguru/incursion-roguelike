@@ -1,0 +1,67 @@
+# inc-7wmu: activation rows must survive ReApply.
+# Nine Lives Stealer activation is SS_ENCH, not a standing SS_ITEM grant.
+# Read by check_reapply_single_grant.sh, seed 4. Bloodspear follows the sword
+# in acquisition. The selected [a] names and the silvery/crimson messages
+# prove both actions used that sword; the stati dump identifies its source.
+@include chargen.keys
+
+d
+@dump:sheet-without-sword
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*10                # specific weapons
+@until "Bloodspear" DOWN
+ENTER
+2                       # Nine Lives Stealer's INITIAL_PLUS
+ENTER
+b                       # Weapon Hand
+SPACE
+@while "two-handed" n
+s                       # stow the displaced starting weapon
+@dump:orc-wielded
+ESC
+
+d
+@dump:sheet-with-sword
+ESC
+a
+@dump:activate-target
+a
+@dump:activated
+w
+@choose "Examine Player Data"
+@until "EFF FLAG1 from SS ENCH" DOWN
+DOWN*3
+@dump:activation-before
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT
+@until "Scroll of Magic Weapon" DOWN
+DOWN
+ENTER
+s
+ESC
+r
+@choose "(in pack) Scroll of Magic Weapon"
+@dump:read-target
+a
+@while "Stop reading?" n
+@dump:cast
+w
+@choose "Examine Player Data"
+@until "EFF FLAG1 from SS ENCH" DOWN
+DOWN*3
+@dump:activation-after
+ESC
+@quit

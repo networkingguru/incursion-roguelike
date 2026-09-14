@@ -210,9 +210,25 @@ void Item::ReApply() {
       
     IFlags |= IF_REAPPLYING;
     SetSilence();
-    RemoveStatiFrom(this);
+    /* upstream: the wearer must end with exactly one copy of each standing
+       grant. RemoveStatiFrom(this) cleared the item's own rows, never the
+       wearer's, so every re-apply added a second copy. Now only the rows the
+       isWield rethrow below re-creates are removed, silently, and only when
+       it re-adds them -- which also keeps the removal out of Magic::Dispel's
+       own walk over the wearer. HP is held at max across the swap, as
+       Character::UpdateTattoos does, so losing a CON grant cannot kill.
+       Plain base-code control flow, identical in upstream/master; it
+       misbehaves the same on Win32 with the original typedefs and
+       the upstream compiler. Observed, bd inc-7wmu, NOT sent. */
+    int16 ocHP = cr->cHP;
+    cr->cHP = cr->mHP;
     if (eID && !HasStati(DISPELLED))
       {
+        StatiIter(cr)
+            if (S->h == myHandle && S->eID == eID &&
+                S->Source == SS_ITEM && S->Duration == 0)
+                Stati_RemoveInline(S, cr);
+        StatiIterEnd(cr)
         EventInfo xe;
         xe.Clear();
         xe.isWield = true;
@@ -248,6 +264,7 @@ void Item::ReApply() {
             ReThrow(EV_EFFECT,xe);
           }
       }
+    cr->cHP = ocHP;
     UnsetSilence();
     IFlags &= ~IF_REAPPLYING;
   }

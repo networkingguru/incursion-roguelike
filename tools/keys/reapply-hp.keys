@@ -1,0 +1,101 @@
+# inc-7wmu S5: a re-apply must not cost the wearer hit points. Read by
+# tools/check_reapply_single_grant.sh, seed 1. Expected to PASS on the unfixed
+# engine; it exists to turn red if a fix strips the wearer's rows without
+# guarding HP.
+#
+# THE HAZARD. A Girdle of Tenacity (lib/m_items.irh:275) grants ADJUST/A_CON
+# at 1 per plus. CalcHP keeps DAMAGE, not current HP: cHP -= mHP, rebuild mHP,
+# cHP += mHP (src/Values.cpp:1800,1863), and cHP <= 0 there is a death or a DC
+# 20 Fortitude save to 1 HP (:1865). Worn at +2 on base CON 12 the girdle lifts
+# CON to 14 and max HP 77 -> 85 (6 levels x 1 x 1.25 Toughness). At 7 HP, a
+# re-apply that drops those rows for even one CalcValues takes HP to -1.
+# Enchanting to +3 makes CON 15, whose modifier is still +2, so a correct
+# re-apply leaves HP at exactly 7. The unfixed engine adds a +3 row beside
+# the +2 one; the max rule for typed bonuses hides it, so HP stays 7 there too.
+#
+# LOW HP. Wizard "Learn Any Spell" (src/Debug.cpp, case 17) teaches Divine
+# Sacrifice (lib/pspells.irh:1146) as an innate spell. For a non-paladin each
+# cast from the Use menu costs exactly 2 HP ("martyrdom", :1163), so 39 casts
+# take 85 to 7 with no randomness and no item damage. Below the pinned low-HP
+# threshold every drop raises a "Low Hitpoint Warning!" box that waits for a
+# key (src/Player.cpp:275-285).
+#
+# THE RE-APPLY is Storycraft -> SetInherentPlus -> Item::ReApply, the same
+# path as reapply-enchant.keys, whose header cites it line by line. It spends
+# no game time for a bard, so natural healing cannot move HP between dumps.
+@include reapply-bard.keys
+
+d
+@dump:sheet-without-girdle
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*25                # girdles: -AI_GIRDLE in ItemGlyphs, src/Tables.cpp:346
+@until "Girdle of Tenacity" DOWN
+DOWN ENTER              # three rows show and the middle one is taken
+2 ENTER                 # "Enter Item Level:" sets the plus
+g SPACE                 # Belt
+@dump:girdle-worn
+ESC
+
+d
+@dump:sheet-with-girdle
+ESC
+
+w
+@choose "Learn Any Spell"
+"Divine Sacrifice" ENTER
+@dump:learned
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+@dump:hp-before
+
+u
+@choose "Storycraft"
+@dump:augment-menu
+@choose "a Girdle +2 of Tenacity"
+@dump:augmented
+@while "[more]" SPACE
+@dump:hp-after
+d
+@dump:sheet-enchanted
+ESC
+@quit

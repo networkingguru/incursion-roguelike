@@ -1,0 +1,58 @@
+# inc-7wmu S2: enchanting a worn item must not stack its grant. Read by
+# tools/check_reapply_single_grant.sh, seed 1.
+#
+# THE ITEM. A Periapt of Proof against Poisons (lib/m_items.irh:580) grants
+# SAVE_BONUS/SN_POISON at 2 per plus, and the sheet SUMS every SAVE_BONUS row
+# into the Will line's "(+N vs. poison)" (src/Sheet.cpp:122-148), so a second
+# row shows. Worn at +1 it reads +2; enchanted to +2 it must read +4. The
+# unfixed engine keeps the old +2 row and adds a +4 one: +6.
+#
+# THE PATH, from the key to the defect:
+#   u                  KY_CMD_USE -> Player::UseMenu   src/Player.cpp:1179
+#   "Storycraft"       -> Character::UseAbility        src/Skills.cpp:265,2289
+#                      -> Character::CraftItem         src/Skills.cpp:3150,3253
+#   "a Periapt"        Augment: it->SetInherentPlus(+1) src/Skills.cpp:3499
+#                      -> Item::SetInherentPlus         inc/Item.h:170-175
+#                      -> Item::ReApply                 src/Item.cpp:191
+#                      RemoveStatiFrom(this) clears the ITEM's rows (:213),
+#                      then EV_EFFECT isWield (:223) adds a second wearer row
+#                      in Magic::Grant (src/Effects.cpp:478).
+#
+# WHY NOT THE BLOODSPEAR. Storycraft on the wielded Bloodspear reaches the
+# same line and reads +4 -> +8 vs. spells, but a specific item's level ignores
+# its plus (src/Item.cpp:2366), so XPCost is 0 and ASSERT(XPCost > 0) at
+# src/Skills.cpp:3445 fires; tools/headless.sh then exits 7. The periapt's
+# level is 2 per plus, so +1 -> +2 is level 2 -> 4, inside the bard's 8.
+@include reapply-bard.keys
+
+d
+@dump:sheet-without-periapt
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*27                # amulets: -AI_AMULET in ItemGlyphs, src/Tables.cpp:350
+@until "Periapt of Proof" DOWN
+DOWN ENTER              # three rows show and the middle one is taken
+1 ENTER                 # "Enter Item Level:" sets the plus
+o SPACE                 # Neck
+@dump:periapt-worn
+ESC
+
+d
+@dump:sheet-with-periapt
+ESC
+
+u
+@choose "Storycraft"
+@dump:augment-menu
+@choose "a Periapt of Proof"
+@dump:augmented
+@while "[more]" SPACE
+d
+@dump:sheet-enchanted
+ESC
+i
+@dump:equipment-enchanted
+ESC
+@quit

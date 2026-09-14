@@ -1,0 +1,71 @@
+# inc-7wmu: the character S2 and S5 of tools/check_reapply_single_grant.sh
+# share. Included by reapply-enchant.keys and reapply-hp.keys; run at seed 1.
+#
+# A male orc bard, neutral, worshipping no god, raised to bard 6 and left on
+# an empty level. A bard because Storycraft is the enchant a player can drive
+# with no forge, gold or XP: the class grants Ability[CA_STORYCRAFT,+1] at
+# every level from 2nd (lib/classes.irh:454), and the ability can raise an
+# item up to level AbilityLevel + CHA mod + 1 (src/Skills.cpp:3262). At bard 6
+# with this seed's CHA 14 that is 5 + 2 + 1 = 8.
+#
+# Levels come from the sheet's [G]ain Levels with the wizard switch Free
+# Advancement on (src/Tables.cpp:2688). Each level may ask for an attribute
+# (answered Strength, so CON stays at base 12, which S5 depends on), a feat or
+# a spell, and "You feel stronger." waits for a key; every question is answered
+# only if it is asked. @expect stops the run if bard 6 was not reached.
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Bard"
+a       # the first attribute set; the sets have no names
+@choose "Neutral"
+a       # first feat; which feats are offered depends on the rolls
+a       # second feat
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # leave the Skill Manager and keep the ranks
+@while "wish to worship" n
+@choose "The Witty Thrillseeker"    # personality archetype
+@choose "Sleep"                     # the bard's first spell
+@until "Afoot" ESC
+
+w y     # wizard mode, and confirm entering it
+@choose "Wizard Mode Switches"
+DOWN SPACE              # Auto-Identify Items
+DOWN SPACE              # Free Advancement
+ESC
+
+d
+G
+@while "Bonus To Which Attribute" a
+@while "You feel stronger" SPACE
+@while "Choose a feat" a
+@while "Learn which spell" a
+G
+@while "Bonus To Which Attribute" a
+@while "You feel stronger" SPACE
+@while "Choose a feat" a
+@while "Learn which spell" a
+G
+@while "Bonus To Which Attribute" a
+@while "You feel stronger" SPACE
+@while "Choose a feat" a
+@while "Learn which spell" a
+G
+@while "Bonus To Which Attribute" a
+@while "You feel stronger" SPACE
+@while "Choose a feat" a
+@while "Learn which spell" a
+G
+@while "Bonus To Which Attribute" a
+@while "You feel stronger" SPACE
+@while "Choose a feat" a
+@while "Learn which spell" a
+@expect "Class  Bard 6 "
+ESC
+
+w
+@choose "Genocide Everything"   # nothing may walk up and change HP
+@until "HP:" ESC
