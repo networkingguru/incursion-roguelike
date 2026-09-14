@@ -180,7 +180,7 @@ as `Serialize` does today, so a field cannot be written and not read.
 ### The map grid
 
 `Map::Serialize` (`inc/Map.h:665-666`) writes `Grid` as one raw block of
-`sizeof(LocationInfo)*sizeX*sizeY`. `LocationInfo` (`inc/Map.h:36-54`) is
+`sizeof(LocationInfo)*sizeX*sizeY`. `LocationInfo` (`inc/Map.h:36-60`) is
 bitfields, whose order and packing the compiler chooses.
 
 The grid MUST NOT be written field-by-field: a single 80x100 map would emit
@@ -292,7 +292,7 @@ Otherwise step 4 always succeeds for any position the manifest covers, because
 an array can only have grown.
 
 **Sequencing.** Both load paths reload modules only after the save group is read
-(`src/Registry.cpp:1347-1364`, `src/Dump.cpp:195-215`), so `Game::Modules` is
+(`src/Registry.cpp:1347-1390`, `src/Dump.cpp:220-264`), so `Game::Modules` is
 stale or zeroed while records are being replayed. The manifest MUST be parsed
 with the records and the conversion MUST be deferred to `SaveV1_ResolveNames()`,
 which already runs after the reload.
