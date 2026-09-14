@@ -22,7 +22,7 @@
 #                            believing anything else.
 #   ENTER q SPACE ENTER      take it, put it in the helmet slot, leave the
 #                            inventory manager. SPACE is the swap
-#                            (src/Managers.cpp:873); the manager refuses to
+#                            (src/Managers.cpp:911); the manager refuses to
 #                            close while anything is still in the air.
 
 @include chargen.keys

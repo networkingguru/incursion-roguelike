@@ -89,7 +89,7 @@ if i < 0:
 
 if mut == 'length':
     # One array longer than the format can address. An rID carries the
-    # module slot in its top 8 bits (inc/Res.h:1359 reads "(xID >> 24) - 1"),
+    # module slot in its top 8 bits (inc/Res.h:1360 reads "(xID >> 24) - 1"),
     # so the running index has 24 bits and 0xFFFFFF is the ceiling.
     struct.pack_into('<I', b, i + 11, 0x01000000)
 elif mut == 'sum':

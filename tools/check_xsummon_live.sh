@@ -4,7 +4,7 @@
 #
 # THE DEFECT. Magic::Summon aborts a cast when the caster still holds a live
 # creature summoned by the SAME effect, but only for an effect flagged
-# EF_XSUMMON (src/Effects.cpp:1371-1379). The wizard line sets that flag, and
+# EF_XSUMMON (src/Effects.cpp:1383-1391). The wizard line sets that flag, and
 # so do Dust Devil, Spiritual Hammer and Flaming Sphere. Holy Summoning I to VI
 # and Summon Nature's Ally I to VI carried no Flags clause at all. Brian met
 # the result in play on 2026-08-22: a monster priest behind Sanctuary summoned

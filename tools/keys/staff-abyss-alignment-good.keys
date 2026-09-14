@@ -25,7 +25,7 @@ a       # Attributes: the first of the five offered sets
 
 @choose "Neutral Good"
         #   By name, not by letter. FindMenuEntry ranks an exact match above
-        #   an overlap (src/Wposix.cpp:984-997), so this cannot be captured by
+        #   an overlap (src/Wposix.cpp:1003-1016), so this cannot be captured by
         #   the plain "Neutral" entry sitting in the same list.
 
 e       # Wizard specialty: [e] Evocation

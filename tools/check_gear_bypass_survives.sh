@@ -7,7 +7,7 @@
 # spell should protect a plain iron sword against one of the nine no-save
 # equipment-destroying monsters, he answered that the spells protect gear.
 #
-# THE DEFECT IT DEFENDS. src/Fight.cpp:2090 sets e.ignoreHardness whenever a
+# THE DEFECT IT DEFENDS. src/Fight.cpp:2122 sets e.ignoreHardness whenever a
 # no-save A_DEQU strikes a NON-magical item, which is the inc-m2zi ruling.
 # Item::Damage used to add the owner's gear grant BEFORE honouring that flag, so
 # hard = 0 threw the spell away together with the metal's own hardness. Cast

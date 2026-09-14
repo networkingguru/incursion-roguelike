@@ -9,12 +9,12 @@
 # the probe log. This file only produces the log.
 #
 # THE ROUTE IN IS [l] THEN [o], AND [o] ALONE DOES NOT WORK. In play mode
-# GetCharCmd walks the keyset backwards (src/Wposix.cpp:1270), so 'o' reaches
-# KY_CMD_OPEN at src/Tables.cpp:4636 and never KY_CMD_OVERVIEW_MAP at :4616.
+# GetCharCmd walks the keyset backwards (src/Wposix.cpp:1622), so 'o' reaches
+# KY_CMD_OPEN at src/Tables.cpp:4741 and never KY_CMD_OVERVIEW_MAP at :4721.
 # In the Look prompt it walks forwards and finds the overview entry first.
 # Both keysets are built the same way, so the map has one route in.
 #
-# Every letter here is lowercase on purpose. TokenToKey (src/Wposix.cpp:892)
+# Every letter here is lowercase on purpose. TokenToKey (src/KeyScript.cpp:64)
 # sets SHIFT for an uppercase token, and these bindings demand no modifier,
 # so 'O' matches nothing at all.
 #

@@ -6,15 +6,15 @@
 # block. A grant does nothing until somebody holds the class, so reading the
 # class description -- which is all tools/keys/prestige-tables.keys does --
 # cannot see any of them. The character sheet reports all three:
-#   "Smite Lawful Creatures"    src/Sheet.cpp:501-509
-#   "Tracking (280 feet)"       src/Sheet.cpp:719, AbilityLevel(CA_TRACKING)*10
-#   the [L]earn Spells menu     src/Create.cpp:4190-4198 builds it from the
+#   "Smite Lawful Creatures"    src/Sheet.cpp:503-511
+#   "Tracking (280 feet)"       src/Sheet.cpp:721, AbilityLevel(CA_TRACKING)*10
+#   the [L]earn Spells menu     src/Create.cpp:4550-4558 builds it from the
 #                               SPELL_ACCESS stati this fix added
 #
 # THE BUILD, and why it is a multiclass. The class wants Ride 8, Athletics 8,
 # Hide 5, Animal Empathy 5, Move Silently 5 and Maeve as patron
-# (lib/prestige.irh:2802-2818). No single class covers those five skills:
-# Character::MaxRanks (src/Create.cpp:3600-3629) allows ranks only in a skill
+# (lib/prestige.irh:2901-2917). No single class covers those five skills:
+# Character::MaxRanks (src/Create.cpp:3957-3986) allows ranks only in a skill
 # one of your classes carries, so a skill no class of yours has is capped at
 # zero ranks and can never be raised. The ranger has Animal Empathy and the
 # rogue has Athletics; neither has both. Hence Ranger 3 / Rogue 3, which is

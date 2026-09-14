@@ -102,7 +102,7 @@ check loremaster "THE LOREMASTER" \
 # Reflex alone is good: CF_GOOD_REF, header "fRw". This table used to stop
 # after four rows and print "..." -- PA-03-F37. It now runs to 10, which is
 # what the class runs to: it declares no TOTAL_CLASS_LEVELS, and
-# src/Create.cpp:2440 gives every CF_PRESTIGE class 10 levels by default.
+# src/Create.cpp:2535 gives every CF_PRESTIGE class 10 levels by default.
 check sentinel "THE SENTINEL" \
     "1 +0 +0 +2 +0" "2 +0 +0 +3 +0" "3 +0 +1 +3 +1" "4 +1 +1 +4 +1" \
     "5 +1 +1 +4 +1" "6 +1 +2 +5 +2" "7 +1 +2 +5 +2" "8 +2 +2 +6 +2" \

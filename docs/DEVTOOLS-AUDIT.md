@@ -249,7 +249,7 @@ inc-4pt asks to draw explicitly is this:
 - **Already marked SUPERSEDED** — `run_probe.sh` and `flickerscan.sh`.
   `run_probe.sh` was **deleted 2026-08-18** on Brian's decision: its own header
   said it should have gone once its bug was fixed, the bug is fixed
-  (`src/AbiCheck.cpp:11` now guards it at compile time), `play.sh` does
+  (`src/AbiCheck.cpp:40` now guards it at compile time), `play.sh` does
   everything it did and more, and nothing invoked it. `flickerscan.sh` is still
   present and is item 3 of this walkthrough.
 

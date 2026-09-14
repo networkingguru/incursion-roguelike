@@ -4,7 +4,7 @@
 # THE DEFECT. The boots' page, and the Ring of Good Fortune's, each open with
 # "When carried or worn, this item bestows good luck upon its wielder in the
 # form of a magic bonus to his Luck score." Only worn paid. An item's grant is
-# thrown from Wield (src/Inv.cpp:396 and 111) and only for a slot
+# thrown from Wield (src/Inv.cpp:402 and 111) and only for a slot
 # Item::activeSlot calls active; that function exempted stones from the
 # worn-slot rule and nothing else, so a ring or a pair of boots on the belt was
 # inert. The wording is not copied from the Luckstone above them: the Luckstone

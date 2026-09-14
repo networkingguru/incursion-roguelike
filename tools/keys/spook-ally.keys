@@ -2,7 +2,7 @@
 #
 # bd inc-9mhh. Spook is a mobile field centred on its caster, radius 3, that
 # gives every creature inside it a -2 morale penalty to all rolls
-# (lib/wspells.irh:967-976). It carries EF_CASTER_IMMUNE, so the caster is
+# (lib/wspells.irh:984-992). It carries EF_CASTER_IMMUNE, so the caster is
 # spared, and it does NOT carry EF_ALLIES_IMMUNE, so everyone on the caster's
 # own side is not. A night hunter taken as a companion therefore stands beside
 # its master and holds him at -2 for as long as it lives, and the penalty is

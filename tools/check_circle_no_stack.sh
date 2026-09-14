@@ -1,7 +1,7 @@
 #!/bin/bash
 # Regression check for inc-fiiq: overlapping magic circles do not stack.
 #
-# A torch archon's circle carries two grants (lib/wspells.irh:3846-3851): a -3
+# A torch archon's circle carries two grants (lib/wspells.irh:3856-3861): a -3
 # penalty against MA_EVIL and a +4 save bonus for MA_ALLIES.  Before the fix,
 # a creature inside N circles held N rows and every reader summed them, so two
 # archons inflicted -6 instead of -3.  Creature::CalcValues now skips the

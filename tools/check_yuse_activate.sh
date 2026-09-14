@@ -3,13 +3,13 @@
 #
 # THE DEFECT. Brian pressed y, chose Activate, chose a Circlet of Blasting, was
 # never asked for a direction or a target, and the beam hit him. The item
-# script is not at fault: lib/m_items.irh:5440 declares qval: Q_DIR|Q_TAR on
+# script is not at fault: lib/m_items.irh:5876 declares qval: Q_DIR|Q_TAR on
 # the head of the effect chain, and every other activated blast item in lib/
 # declares one too. Player::YuseMenu (src/Player.cpp) simply never read it.
-# The Activate row of YuseCommands (src/Tables.cpp:3052) carries QTarget 0 --
+# The Activate row of YuseCommands (src/Tables.cpp:3141) carries QTarget 0 --
 # it must, because the query belongs to whichever item the player picks -- and
 # nothing after the item menu asked the item. With no target chosen,
-# Magic::MagicEvent (src/Magic.cpp:734) makes the activator the victim.
+# Magic::MagicEvent (src/Magic.cpp:777) makes the activator the victim.
 #
 # THE ORACLE is the message line. A run that was asked to aim shows the prompt
 # TextTerm::EffectPrompt writes for Q_DIR|Q_TAR, "Select direction or target".
@@ -17,7 +17,7 @@
 # creature in range, which is the player: "Your own beam strikes you!". The two
 # are mutually exclusive and both are the game's own words, not the check's.
 #
-# WHY THE 'a' COMMAND IS MEASURED TOO. Player::ItemMenu (src/Player.cpp:1435)
+# WHY THE 'a' COMMAND IS MEASURED TOO. Player::ItemMenu (src/Player.cpp:1564)
 # has always asked the item for its qval, so the same circlet on the same turn
 # prompts under 'a' and did not under 'y'. That second half is what stops this
 # from being "fixed" by deleting the query: it pins the behaviour the y route

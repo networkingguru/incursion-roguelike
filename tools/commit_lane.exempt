@@ -15,8 +15,8 @@
 #   - the `beta` tag contains 04431f2 and is the Steam Deck prerelease the
 #     Ally installs from;
 #   - five in-tree citations name shas in the range --
-#     docs/specs/2026-09-02-demo-level-brief.md:37 and tools/nightly_verify.sh:29
-#     name 04431f2, docs/specs/2026-09-03-fog-brief.md:15 names 0654a25,
+#     docs/specs/2026-09-02-demo-level-brief.md:50 and tools/nightly_verify.sh:66
+#     name 04431f2, docs/specs/2026-09-03-fog-brief.md:27 names 0654a25,
 #     tools/keys/light-fog.keys:20 and tools/keys/lightfilter-show.keys:34
 #     name cab4cd3;
 #   - beads reference 04431f2 and 0747c0c, and those sync to the public tracker;

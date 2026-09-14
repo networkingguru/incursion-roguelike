@@ -2,7 +2,7 @@
 #
 # THE POINT. Two-Weapon Tempest is the largest two-weapon payoff in the game:
 # +10 to speed, which the character sheet renders as +50 percentage points
-# (src/Values.cpp, src/Sheet.cpp:191-198). Character::HasFeat grants a monk
+# (src/Values.cpp, src/Sheet.cpp:193-200). Character::HasFeat grants a monk
 # Two-Weapon Style for the express purpose of letting him buy it, and until
 # inc-nie the feat then did nothing with empty hands, because the whole
 # two-weapon block was gated on two Item pointers and fists are not Items.

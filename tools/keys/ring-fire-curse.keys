@@ -7,7 +7,7 @@
 #                            entries are 'w' alone; the 'y' answers the
 #                            one-time "enter wizard mode?" question.
 #   Wizard Mode Switches     DOWN*7 walks to Infinite Mana, the 8th row
-#   DOWN*7 SPACE ESC         (src/Tables.cpp:2610-2656). SPACE toggles and does
+#   DOWN*7 SPACE ESC         (src/Tables.cpp:2679-2710). SPACE toggles and does
 #                            not move the cursor. Without it the barbarian
 #                            runs out of mana before the wand goes off.
 #   Item Acquisition         RIGHT*26 walks the glyph row to Rings: ItemGlyphs
@@ -21,7 +21,7 @@
 #                            check does not trust that ordering: it reads the
 #                            ring's name back off the inventory screen.
 #   ENTER m SPACE ESC        take it, move the cursor to the Left Ring slot,
-#                            SPACE to put it on (src/Managers.cpp:873), close.
+#                            SPACE to put it on (src/Managers.cpp:911), close.
 #                            The manager refuses to close with an item in the
 #                            air, so a missed SPACE cannot pass unnoticed.
 

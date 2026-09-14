@@ -48,7 +48,7 @@ DIAG='duplicate Effect name "Heartstone"'
 
 # --- 1. the poisoned sandbox: a second same-case "Heartstone" Effect ------
 make_sandbox "$WORK/poisoned"
-# The shape of an existing minimal Effect (lib/m_items.irh:299), so the
+# The shape of an existing minimal Effect (lib/m_items.irh:292), so the
 # compile fails for the duplicate name and not for a syntax error.
 cat >> "$WORK/poisoned/lib/m_items.irh" <<'EOF'
 

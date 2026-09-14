@@ -106,7 +106,7 @@ grep -qE 'Race   Orc' "$WORK/dump.txt" ||
 # 3b. The SAME save, through the graphical binary. src/Dump.cpp has always been
 #     linked into ./incursion, but until 2026-08-18 nothing there parsed -dump,
 #     so the capability was in the shipped release and unreachable. The parse
-#     now lives in src/Wlibtcod.cpp's main(), mirroring src/Wposix.cpp:530-539.
+#     now lives in src/Wlibtcod.cpp's main(), mirroring src/Wposix.cpp:537-562.
 #     If anyone removes it, this step goes red -- which is the only reason the
 #     step exists. The two backends share every line of Dump.cpp and Sheet.cpp,
 #     so the reports must be byte-identical; a difference means one backend is

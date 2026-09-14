@@ -11,11 +11,11 @@
 #     T1->LOption(GETSTR(STACK(1)), (int16)STACK(2), GETSTR(STACK(3)));
 #
 # The value is the caller's own cookie, and every script that opens a menu
-# over objects puts an object handle in it (lib/alchemy.irh:1062 and :1241,
+# over objects puts an object handle in it (lib/alchemy.irh:1108 and :1287,
 # AutoDrop and AutoLoot) or a resource id (lib/abilities.irh:98-237, the
 # undead-form menus). An hObj is a signed 32-bit handle; an rID runs past
 # sixteen million. Neither fits. TextTerm::LOption itself takes an int32 and
-# Option::Val is an int32 (inc/Term.h:236, :637), so only the declaration was
+# Option::Val is an int32 (inc/Term.h:236, :661), so only the declaration was
 # ever narrow.
 #
 # WHY IT WAS INVISIBLE FOR SO LONG. Handles are handed out in order from 128,

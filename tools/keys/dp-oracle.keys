@@ -9,7 +9,7 @@
 # granted Knock Prone before the fix; branch 2 now grants Power Attack.
 #
 # WHY A LEVELLED ORC PRIEST. The branch test is IAttr(A_STR) >= 18, and
-# src/Create.cpp:3962 shows IAttr counts base + racial + ADJUST_INH but NOT the
+# src/Create.cpp:4051 shows IAttr counts base + racial + ADJUST_INH but NOT the
 # spell's own sacred (ADJUST_SAC) bonus. So the caster's INHERENT strength must
 # be 18. A priest gets no Power Attack class feat (so it can reach branch 2), but
 # the orc priest's inherent STR is only 17 (base 13 + 4 natural). Free

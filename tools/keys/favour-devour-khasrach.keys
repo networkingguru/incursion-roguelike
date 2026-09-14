@@ -1,0 +1,26 @@
+# Devour a sapient corpse as Khasrach's champion. bd inc-rgzr.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav \
+#       tools/headless.sh tools/keys/favour-devour-khasrach.keys 5
+#
+# Khasrach's blessings open a box and then ask for an Improved Critical weapon;
+# SPACE dismisses the box and [a] takes the first weapon. Which weapon does not
+# matter here. The rest is tools/keys/favour-devour.keys.
+#
+# The opening 's' buys the one completed turn without which tools/headless.sh
+# reports NO GAMEPLAY; see tools/keys/load-char-sheet.keys.
+
+s
+w
+@while "Enter wizard mode" y
+@until "Wizard Mode Options" w
+@choose "Become Divine Champion"
+"Khasrach"
+ENTER
+@while "more --" SPACE
+@while "bless thee" SPACE
+@while "Choose a Weapon" a
+@while "more --" SPACE
+
+@include favour-devour.keys

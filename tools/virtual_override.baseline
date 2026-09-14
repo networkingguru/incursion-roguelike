@@ -1,0 +1,23 @@
+# Derived member functions that do not track the base declaration they
+# redeclare, already filed. tools/check_virtual_override.sh reports these as
+# KNOWN; any finding not listed here fails it, and so does a line here whose
+# finding is no longer found.
+#
+# This file only shrinks. Fix one, then delete its line.
+# Recorded 2026-09-13 with 14 findings; Character::gainFavour (inc-rgzr
+# instance 1) was fixed in the same change and is not listed.
+#
+# <kind>  <Derived::name>  <Base::name>  <bead and what it is>
+hides    Feature::StatiOff             Thing::StatiOff             inc-rgzr instance 2, live: a summoned Feature never expires
+virtual  Weapon::isMagic               Item::isMagic               inc-rgzr instance 3, live: no call site reaches it
+virtual  Armour::isMagic               Item::isMagic               inc-rgzr instance 3, live: no call site reaches it
+hides    Character::ChallengeRating    Creature::ChallengeRating   inc-rgzr instance 4, masked by the HACKFIX copy in the base
+hides    Armour::Remove                Item::Remove                inc-rgzr, not live: never defined, Remove(Creature*) only hides the name
+virtual  TextTerm::SetQKeyType         Term::SetQKeyType           inc-rgzr, not live: the two bodies are equivalent
+defaults Weapon::Size                  Item::Size                  inc-rgzr, not live: every use of wield is guarded
+defaults Player::ChoicePrompt          Creature::ChoicePrompt      inc-rgzr, not live: default divergence only
+defaults TextTerm::SWrapWrite          Term::SWrapWrite            inc-rgzr, not live: default divergence only
+defaults TextTerm::AcquisitionPrompt   Term::AcquisitionPrompt     inc-rgzr, not live: default divergence only
+defaults libtcodTerm::ChangeDirectory  TextTerm::ChangeDirectory   inc-rgzr, not live: Term and TextTerm both default set=false
+defaults posixTerm::ChangeDirectory    TextTerm::ChangeDirectory   inc-rgzr, not live: Term and TextTerm both default set=false
+defaults cursesTerm::ChangeDirectory   TextTerm::ChangeDirectory   inc-rgzr, not live: Term and TextTerm both default set=false

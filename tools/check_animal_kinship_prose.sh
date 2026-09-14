@@ -5,9 +5,9 @@
 # claim a false "+3 or higher" threshold for that untrained use. The code wins:
 # untrained use already works from +1. The ring's own SKILL_BONUS SK_ANIMAL_EMP
 # (pval PLUS_2PER1) makes SkillLevel(SK_ANIMAL_EMP) nonzero, the Animal-Empathy
-# use-gate (src/Skills.cpp:1111) tests SkillLevel not SkillRanks, and SkillLevel
+# use-gate (src/Skills.cpp:1117) tests SkillLevel not SkillRanks, and SkillLevel
 # sums the item bonus with no trained-only gate zeroing an untrained total
-# (src/Create.cpp:4198-4243). There is no +3 test and no INNATE_KIT grant in the
+# (src/Create.cpp:4267-4312). There is no +3 test and no INNATE_KIT grant in the
 # entity, so the "+3 or higher" clause named a threshold the code never enforced.
 # Red while the Desc still reads "At +3 or higher", green once it drops that
 # threshold and keeps "no ranks in it".

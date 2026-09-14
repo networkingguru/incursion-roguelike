@@ -5,7 +5,7 @@
 # WHY IT EXISTS. The class grants the ability as an innate spell
 # (CA_INNATE_SPELL, lib/prestige.irh) but the effect it names carried
 # EF_ACTIVATE, which marks segment 0 as activation-only. Magic::MagicEvent
-# (src/Magic.cpp:701) skips any segment whose activation flag disagrees with how
+# (src/Magic.cpp:742) skips any segment whose activation flag disagrees with how
 # the effect was invoked, so a Spell-Manager cast (e.isActivation false) ran
 # nothing and the game printed a generic no-op ("Nothing happens."). The effect
 # reached no activate menu either, because CA_INNATE_SPELL grants no activation

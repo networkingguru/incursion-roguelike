@@ -9,7 +9,7 @@
 # THE ORACLE IS THE TURN STAMP that posixTerm::DumpScreen writes into every
 # dump header (src/Wposix.cpp). Deployment on a passed check still takes no
 # time, exactly as the page says. A failed check costs a full round, which the
-# engine values at 50 (src/Fight.cpp:2531, a "full round action" in the base
+# engine values at 50 (src/Fight.cpp:2577, a "full round action" in the base
 # system). So a jammed attempt moves the stamp and a clean one does not, and
 # tools/check_springblade.sh compares consecutive stamps rather than reading a
 # message.

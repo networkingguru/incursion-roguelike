@@ -10,7 +10,7 @@
 # contain no save command at all, so neither of them has any power over that
 # question. See bd inc-i0r.
 #
-# ESC b is the System Menu's [b] Save and Continue (src/Player.cpp:734-747).
+# ESC b is the System Menu's [b] Save and Continue (src/Player.cpp:840-853).
 # It is the only save the game offers that does not also end the session.
 # READ THE WARNING IN tools/keys/explore-mage.keys BEFORE MOVING IT: ESC opens
 # that menu rather than cancelling anything, [a] is Save and Quit, and a stray
@@ -18,12 +18,12 @@
 # after a screen dump, where the screen is known and no other menu is open.
 #
 # Save and Continue costs the player one tick of game time
-# (src/Player.cpp:746 sets Timeout = 1), so this script and its twin
+# (src/Player.cpp:852 sets Timeout = 1), so this script and its twin
 # tools/keys/save-continue-nosave.keys do NOT play the same game. The twin
 # exists to be compared against this one on ONE binary, not to match it.
 #
 # LENGTH. About 110 player commands after character generation. Two limits set
-# that: the game autosaves itself every 200 commands (src/Player.cpp:159), which
+# that: the game autosaves itself every 200 commands (src/Player.cpp:263), which
 # would put a save into the no-save twin as well, and bd inc-dhc records that a
 # long session stops repeating exactly from one run to the next.
 

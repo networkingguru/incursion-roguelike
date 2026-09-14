@@ -10,7 +10,7 @@
 #                            entries need 'w' alone; the 'y' answers the
 #                            one-time "enter wizard mode?" question.
 #   Wizard Mode Switches     DOWN*10 walks to Freeze Monsters, the 11th row
-#   DOWN*10 SPACE ESC        (src/Tables.cpp:2610-2656). SPACE toggles and does
+#   DOWN*10 SPACE ESC        (src/Tables.cpp:2679-2723). SPACE toggles and does
 #                            not move the cursor. Frozen monsters do not walk
 #                            up and attack while the wand is being fetched.
 #   Item Acquisition         RIGHT*4 walks the glyph row to Wands: ItemGlyphs

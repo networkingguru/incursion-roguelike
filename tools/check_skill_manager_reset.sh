@@ -27,7 +27,7 @@
 # THE KEYS ARE NOT AN ODD KEYBOARD CHOICE. poll_gamepad maps the left stick's
 # eight octants onto the numeric keypad (src/Wlibtcod.cpp:729-731). UP-LEFT is
 # KP7 -> KY_HOME -> KY_CMD_NORTHWEST, DOWN-LEFT is KP1 -> KY_END ->
-# KY_CMD_SOUTHWEST (src/Tables.cpp:4653 and :4655). Both are inside the arrow
+# KY_CMD_SOUTHWEST (src/Tables.cpp:4683 and :4685). Both are inside the arrow
 # range GetCharCmd filters on, so both reach the switch, and the switch listed
 # neither. KY_CMD_NORTHEAST and KY_CMD_SOUTHEAST -- the right-hand diagonals --
 # do have cases, which is why Brian reported the two LEFT diagonals firing and

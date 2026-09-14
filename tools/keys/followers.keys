@@ -10,7 +10,7 @@
 # adjacent in Things, which is what summoning several in a row produces --
 # creatures are appended to Things in creation order.
 #
-# Wizard menu letters are positional (src/TextTerm.cpp:941):
+# Wizard menu letters are positional (src/TextTerm.cpp:949):
 #   g = Monster Summoning              (7th option)
 #   p = Ascend / Descend Depth         (16th option)
 #   C = Make Player Master of Monster  (29th option)
@@ -18,7 +18,7 @@
 # for a confirmation the first time only, which is the 'y' below.
 #
 # The wizard summon does NOT make the monster a companion -- that only happens
-# on the spell and wand path (src/Encounter.cpp:2511) -- so each kobold is made
+# on the spell and wand path (src/Encounter.cpp:2571) -- so each kobold is made
 # a follower afterwards with the master command.
 
 @include chargen.keys

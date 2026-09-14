@@ -64,7 +64,7 @@
 # for what a single session sees.
 #
 # THE THREAT-DISENGAGE PROMPT (inc-loa.5). "You are in a threatened area.
-# Abort, Flee or Disengage?" (src/Move.cpp:841) has no OPT_ gate at all, and
+# Abort, Flee or Disengage?" (src/Move.cpp:941) has no OPT_ gate at all, and
 # tools/keys/dive.keys has no 'a'/'f'/'d'/'?'/ESC in its vocabulary, so a
 # session that hits it freezes for the rest of its key budget -- same disease
 # as the death prompt above, one prompt over. tools/gate_lib.sh counts it as

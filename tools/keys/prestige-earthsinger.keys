@@ -21,8 +21,8 @@
 # ethereality test was missing too and has been added.
 #
 # THE ORACLE for PA-03-F5 is the combat message. The effect appends its own
-# term to the damage string, ' %+d GS' (lib/prestige.irh:1610), and
-# src/Fight.cpp:8038 prints that string in the "Damage:" line. So a hit
+# term to the damage string, ' %+d GS' (lib/prestige.irh:1684), and
+# src/Fight.cpp:8532 prints that string in the "Damage:" line. So a hit
 # either says GS or it does not, and the character is wearing ordinary boots
 # while it happens.
 #
@@ -104,7 +104,7 @@ DOWN DOWN
 SPACE   # Free Advancement: NO -> YES
 DOWN*9
 SPACE   # Show All Combat Rolls: NO -> YES. This is what makes the engine
-        #   print the "Damage:" line (src/Fight.cpp:8038), which is where
+        #   print the "Damage:" line (src/Fight.cpp:8532), which is where
         #   Grounded Stance writes its own term.
 ESC
 
@@ -141,14 +141,14 @@ e s n g ENTER           # filename: "esng"
 # The dump above photographs the class. It cannot photograph the ability,
 # because Grounded Stance writes only into a damage roll. So hit something.
 #
-# The subject is a stone jelly (lib/mon3.irh:2652). It is sessile, so it
+# The subject is a stone jelly (lib/mon3.irh:2664). It is sessile, so it
 # cannot walk away between blows, and its armour is high enough that the
 # character takes no risk standing beside it.
 #
 # Every condition the ability names is met here and none of it is arranged:
 # the gnome is Afoot, on the material plane, on ordinary cave floor, and the
 # boot slot is empty because chargen gave him no boots. So a hit either
-# carries the " +2 GS" term the effect appends (lib/prestige.irh:1610) or the
+# carries the " +2 GS" term the effect appends (lib/prestige.irh:1684) or the
 # ability did not fire.
 #
 # Three blows, because one can miss. "Show All Combat Rolls" is already on,
@@ -158,7 +158,7 @@ e s n g ENTER           # filename: "esng"
 # The two-line roll panel at the foot of the map keeps only the newest roll,
 # and the jelly answers every blow, so by the time the screen is dumped the
 # panel is showing the JELLY's attack. The message log is where the rolls
-# accumulate ("Store Rolls in Log", src/Tables.cpp:2229), so the last thing
+# accumulate ("Store Rolls in Log", src/Tables.cpp:2276), so the last thing
 # this script does is open it with 'v' and photograph it.
 w
 @choose "Monster Summoning"

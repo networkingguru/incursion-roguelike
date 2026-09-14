@@ -4,7 +4,7 @@
 #
 # The class's level table lists the ability at 5th level and its prose
 # promises "an extra +1d2 attribute points from any tome they read"
-# (lib/prestige.irh:2052-2053). The Grants block jumped from 3rd level to
+# (lib/prestige.irh:2149-2150). The Grants block jumped from 3rd level to
 # 6th, the EV_ADVANCE handler branched only on levels 2, 4 and 8, and
 # "Bibliographic" appeared nowhere in lib/ except the table row.
 #
@@ -27,7 +27,7 @@
 # gives "base 13, +5 inherent".
 #
 # WHY THE PLUS IS 1. GainInherentBonus caps the total at
-# 5 + CA_INHERANT_POTENTIAL (src/Creature.cpp:1950) and a human carries +3 of
+# 5 + CA_INHERANT_POTENTIAL (src/Creature.cpp:1965) and a human carries +3 of
 # that ability (lib/races.irh:205), so this character saturates at +8. Three
 # tomes at plus 2 reach +8 with or without the fix and measure nothing.
 #

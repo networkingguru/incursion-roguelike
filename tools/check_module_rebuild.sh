@@ -7,7 +7,7 @@
 #        2 nothing was measured, and the reason is printed
 #
 # WHAT THIS IS FOR. mod/Incursion.Mod holds the compiled game scripts. Registry
-# stamps every file with a layout digest (src/Registry.cpp:65) and refuses a
+# stamps every file with a layout digest (src/Registry.cpp:61) and refuses a
 # module built by a different struct layout, so THAT mistake is caught. A module
 # with the right layout and last week's rules is not caught: it loads in
 # silence. build_macos.sh used to compile it only when the file was ABSENT, so

@@ -59,7 +59,7 @@ carries up to three prompts and a flag word:
 - **The prompts run in table order**, target first, unless the entry carries
   `YU_REVERSE`, which asks for the item first. `src/Player.cpp:1621`.
 - **`Q_INV` reaches inside containers.** The item picker walks
-  `FirstInv`/`NextInv`, which descends into packs (`src/Inv.cpp:814`), so
+  `FirstInv`/`NextInv`, which descends into packs (`src/Inv.cpp:820-823`), so
   verbs offer packed items without you unpacking them.
 - **The five most recent verbs float to the top** of the menu
   (`src/Player.cpp:1584`), so the list reorders as you use it. A recent verb

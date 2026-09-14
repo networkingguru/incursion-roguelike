@@ -390,7 +390,7 @@ the job, and each still explains an older log or an older commit.
 
 `run_probe.sh` was **deleted on 2026-08-18**. Its own header said "Delete this
 script once the saved-game position bug is fixed", and that bug is fixed:
-`docs/REPORTING-GATE.md:425` records `*((long*)&hm)` destroying the player's
+`docs/REPORTING-GATE.md:426` records `*((long*)&hm)` destroying the player's
 position as a closed fix, and `src/AbiCheck.cpp:11` now gates the type widths it
 depended on. It was also redundant — `play.sh` sets the same two probes and more
 (`play.sh:41-49`) and prints a report afterwards, which `run_probe.sh` did not.
@@ -405,7 +405,7 @@ Nothing invoked it; the only references were documentation. See
 | `gate_record.sh` | What does this build complain about, recorded as the thing later builds are measured against? | LIVE |
 | `gate_compare.sh` | Did anything get worse since the baseline? | LIVE |
 | `check_gate.sh` | Does the gate actually bite? Feeds it made-up logs in about a second. | LIVE |
-| `nightly_verify.sh` | The wrapper a branch must clear: both builds, the Linux cross-build, the layout sweep, `gate_compare.sh`, then every check that declares a gate tier, ratcheted against a recorded base. `--selftest` drives its own verdict table over made-up checks. | LIVE |
+| `nightly_verify.sh` | The wrapper a branch must clear: both builds, the Linux cross-build, the layout sweep, `gate_compare.sh`, then every check that declares a gate tier, ratcheted against a recorded base. `--selftest` drives its own verdict table over made-up checks. A full pass leaves `nightly-verify-pass.txt` beside the base. `--reuse-pass`, which `finish_bead.sh` runs, re-runs only the cheap tier when that record matches the files on disk, the base and the toolchain and is under 24 hours old; otherwise it is `--compare`. | LIVE |
 
 ### The shared library for new checks
 
@@ -436,6 +436,7 @@ one that guards a real defect, and buys no behaviour. Read the header of
 | `check_char_fixture.sh` | Does a frozen character fixture still load, and is he still the character his own sheet claims? Loads `tools/fixtures/chars/lizardfolk-monk-seed1.sav` and reads his name, race, class and Strength off the character sheet. The oracle is the fixture's own `.sheet.txt`, so regenerating the fixture moves the expectations with it. Two structural assertions ride along: the `.sav` is byte-identical after a run that loaded AND saved it, and the run played its own copy. | LIVE |
 | `check_comment_budget.sh` | Did a comment or `_PROBE` block in `src/` or `inc/` appear over the 30-line ceiling, or grow past its recorded size? Ratcheted against `tools/comment_budget.baseline`; `comment_budget.py` does the measuring. | LIVE |
 | `check_shared_checkout_gate.sh` | Does `.beads/hooks/pre-commit` still refuse new work in the shared checkout, and still let the overnight harness commit on its own `nightly/` branch? Seven cases run against a scratch repository under `TMPDIR`, four that must be refused and three that must be allowed, so a hook that never runs fails as loudly as a hook that refuses everything. The harness is admitted only when `NIGHTLY_BRANCH` names the branch HEAD is actually on, which is a variable one process tree holds and no second session in that directory has. | LIVE |
+| `check_pass_record.sh` | Does a landing reuse a full gate pass on the same files, and only then? Copies `nightly_verify.sh`, `finish_bead.sh` and `docs_only_change.sh` into a scratch repository beside a fake build that counts its calls, then lands scratch beads: an interrupted landing and a gate run before the commit must build nothing, while one changed byte, a master that moved, a changed base or toolchain, and a stale, malformed or missing record must build twice (inc-689z). | LIVE |
 | `check_commit_lane.sh` | Does every commit after `tools/commit_lane.since`, except the ones `tools/commit_lane.exempt` forgives by name, open with one of the seven lanes, and does every `rules:` commit name a design bead? | LIVE |
 | `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? | LIVE |
 | `check_cloak_resistance.sh` | Does a +3 Cloak of Resistance grant resistance rather than magic? One session reads all three saving throws with the cloak alone and with auspicious +2 armour; the control stays fixed and the smaller same-type bonus must not stack. | LIVE |
@@ -592,6 +593,7 @@ tools/check_xprint_tokens.sh    # Literal __XPrint object-token vararg backlog (
 tools/check_error_handling.sh       # greps src/*.cpp for the unbounded writes
 tools/check_upstream_marks.sh       # reads src/, inc/ and docs/REPORTING-GATE.md
 tools/check_api_arity.py            # reads inc/Api.h against the C++ headers
+tools/check_virtual_override.sh     # reads inc/*.h and src/W*.cpp for a redeclaration that hides its base
 tools/check_gate.sh                 # feeds gate_lib.sh made-up logs
 tools/check_escape_sweep.sh         # greps src/ and inc/ for a C escape spelled /n
 tools/check_natural_speed.sh        # reads lib/weapons.irh against inc/Defines.h
@@ -602,6 +604,7 @@ tools/check_gate_membership.sh      # tools/check_* against their own gate marke
 tools/check_bead_publish.py         # reads the bead database against git HEAD
 tools/check_bead_new_gate.sh        # watches tools/bead_new.sh refuse an unfit bead
 tools/check_shared_checkout_gate.sh # commits in a scratch repo against .beads/hooks/pre-commit
+tools/check_pass_record.sh          # lands scratch beads through finish_bead.sh
 ```
 
 `tools/bead_new.sh` is not a check; it is how a bead should be filed.
@@ -616,6 +619,7 @@ These tools prove themselves against known-bad input on demand:
 ```sh
 tools/check_upstream_marks.sh --selftest
 tools/check_api_arity.py --selftest
+tools/check_virtual_override.sh --selftest
 tools/check_headless.sh --selftest
 tools/check_citations.sh --selftest
 tools/check_escape_sweep.sh --selftest
@@ -683,6 +687,7 @@ tools/check_key_directives.sh
 tools/check_menu_value.sh
 tools/check_favour_int32.sh         # favour over 32767 no longer wraps negative
 tools/check_pray_aid_int32.sh       # and still buys the aid the AID_CHART grants
+tools/check_favour_awards.sh        # the five favour awards made in C++ reach the god
 tools/check_sharp_senses.sh
 tools/check_skill_manager_reset.sh
 tools/check_stacked_abilities.sh
@@ -767,7 +772,7 @@ stops one row too early.
 
 `check_load_corrupt.sh:45-51` prefers `./incursion-ubsan` when it exists and
 falls back to `./incursion-headless`. Build the sanitizer variant with the line
-in `build_macos.sh:92-95` if you want the stronger run.
+in `build_macos.sh:136-139` if you want the stronger run.
 
 ### Tier 4 — needs an artefact you built on purpose
 

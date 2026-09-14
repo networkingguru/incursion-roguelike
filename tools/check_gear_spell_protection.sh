@@ -16,7 +16,7 @@
 # WHY A SILVERED MAGIC WARHAMMER, AND NOT A PLAIN MAUL. Not because a mundane
 # weapon cannot carry a grant: inc-kapn inverted the order in Item::Damage, and
 # check_gear_bypass_survives.sh now measures a resistance on a plain iron maul.
-# src/Fight.cpp:2090 still sets ignoreHardness whenever a no-save A_DEQU strikes
+# src/Fight.cpp:2122 still sets ignoreHardness whenever a no-save A_DEQU strikes
 # a NON-magical item, but src/Item.cpp:1451 zeroes only what Hardness() returned
 # and src/Item.cpp:1464 adds the owner's grant after it. The hammer stays
 # because its bare hardness must be a number the creeper can beat: "Warhammer,

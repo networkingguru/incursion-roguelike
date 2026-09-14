@@ -60,7 +60,7 @@ SAVE="$(cd "$(dirname "$SAVE")" && pwd)/$(basename "$SAVE")"
 # Either binary works. ./incursion-headless stays the default because it needs
 # no SDL and is what a harness has to hand, but since 2026-08-18 the graphical
 # ./incursion parses -dump too (src/Wlibtcod.cpp main(), mirroring
-# src/Wposix.cpp:530-539) and prints a byte-identical report -- both walk the
+# src/Wposix.cpp:537-562) and prints a byte-identical report -- both walk the
 # same src/Dump.cpp, and tools/check_dump_save.sh asserts they agree. So a
 # person with only the release build can inspect a save without building a
 # second binary: INCURSION_BIN=./incursion tools/dump_save.sh <save>
@@ -73,7 +73,7 @@ LAUNCHER="${INCURSION_LAUNCHER:-}"
     exit 2
 }
 
-# The process id is part of the name for the reason headless.sh:82 gives: the
+# The process id is part of the name for the reason headless.sh:90 gives: the
 # stamp resolves to the second, and two dumps started inside one second would
 # otherwise share one sandbox (inc-uh0).
 SANDBOX="${INCURSION_DUMP_SANDBOX:-$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$$-dump}"

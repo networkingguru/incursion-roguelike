@@ -29,7 +29,7 @@ push-state.json
 # UNTRACKED ON PURPOSE, inc-wjrj. This was the one tracked file in .beads/ that
 # a tool rewrites continuously, so the shared checkout -- where AGENTS.md keeps
 # master permanently checked out -- was dirty within seconds of any session
-# running bd. tools/finish_bead.sh:199 refuses to merge into a dirty base
+# running bd. tools/finish_bead.sh:208 refuses to merge into a dirty base
 # checkout, so a landing could not pass that guard even with a green gate.
 # Nothing in tools/, docs/ or .beads/ reads this file; the authority is the
 # Dolt database, which syncs over refs/dolt/data, and the sibling export

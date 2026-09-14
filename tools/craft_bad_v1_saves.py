@@ -246,12 +246,12 @@ def craft_player_index_mutants(src_path, cases):
     NotifiedLevel is an int8 the game uses unguarded as
     ExperienceChart[NotifiedLevel+1] (27 entries) and
     NumberNames[NotifiedLevel+1] (31 entries), then PRINTS the const char*
-    the second yields (src/Create.cpp:2086-2088). Past the end of NumberNames
+    the second yields (src/Create.cpp:2147-2149). Past the end of NumberNames
     that pointer is whatever follows the table. cAutoBuff is the cursor
     NextAutoBuff() reads AutoBuffs[64] through, one past the end at 64.
 
     player_index_clamp   both set wild and POSITIVE, which the ++ at
-                         src/Create.cpp:2094 and a completed autobuff walk
+                         src/Create.cpp:2155 and a completed autobuff walk
                          can each reach in play. The file must LOAD, and
                          -schemaload's field lines must show the clamped
                          values -- a clamp that stopped clamping would

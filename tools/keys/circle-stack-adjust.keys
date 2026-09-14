@@ -1,7 +1,7 @@
 # Regression fixture for inc-fiiq: overlapping magic circles must not stack.
 #
 # The character is Neutral EVIL on purpose.  A torch archon's circle inflicts
-# its -3 penalty on MA_EVIL creatures only (lib/wspells.irh:3847-3849), so an
+# its -3 penalty on MA_EVIL creatures only (lib/wspells.irh:3857-3859), so an
 # evil player standing between two archons is the only oracle in the game that
 # shows the summed value on screen: the "Hit:" line of the side panel.
 #

@@ -19,7 +19,7 @@
 #
 # Menu letters are lowercase on purpose. StandardKeySet holds
 # { KY_CMD_CHAR_SHEET, 'D', 0 } and matches toupper(ch) against that raw key
-# with the modifier flags compared exactly (src/Tables.cpp:4706), so the key
+# with the modifier flags compared exactly (src/Tables.cpp:4736), so the key
 # that opens the sheet is lowercase d and never shift-D. The sheet then reads
 # its own menu through toupper() (src/Managers.cpp:2283), so lowercase s
 # reaches its case 'S'.

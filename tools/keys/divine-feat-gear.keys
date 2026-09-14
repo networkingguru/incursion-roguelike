@@ -37,7 +37,7 @@
 # HOW THE CHARACTER GETS CHANNELING. src/Skills.cpp:4492 grants
 # CHANNELING for Charisma x 2 rounds whenever a character with any of seven
 # divine feats uses Turn or Greater Turning. The grant is at :4492 and the turn
-# is rolled at :4496, AFTER it, so the attempt does not have to succeed and no
+# is rolled at :4497, AFTER it, so the attempt does not have to succeed and no
 # undead need be present: this session turns into an empty room and the game
 # answers "You channel the sacred energies of Aiswin. Nothing happens." while
 # still putting Channeling on the status line. What the code does require, all

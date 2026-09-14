@@ -16,7 +16,7 @@
 #
 #   2. MALFORMED MARKS. A comment that says 'upstream' in a marker's shape but
 #      does not spell the tag as the documented `upstream: ` is invisible to
-#      `grep -rn "upstream:" src/ inc/` (docs/REPORTING-GATE.md:154), so pass 1
+#      `grep -rn "upstream:" src/ inc/` (docs/REPORTING-GATE.md:178), so pass 1
 #      never sees it and the old version of this script counted a clean run
 #      while a fix site went unchecked. src/rle.c:270 and src/lz.c:500 both
 #      wrote the tag as `upstream (inc-l0t, Traced, not sent):` and were skipped
@@ -111,8 +111,8 @@ APOS=$(printf '\047')
 BT=$(printf '\140')
 
 # The documented form, and nothing else: the literal token `upstream:` followed
-# by whitespace. This is the pattern docs/REPORTING-GATE.md:154 and
-# docs/FIXED.md:587 tell a reader to grep for, so it is the pattern that
+# by whitespace. This is the pattern docs/REPORTING-GATE.md:178 and
+# docs/FIXED.md:681 tell a reader to grep for, so it is the pattern that
 # defines "well formed".
 WELL_FORMED="(^|[^A-Za-z0-9_])upstream:[[:space:]]"
 
@@ -258,7 +258,7 @@ run_checks() {
 
     # "file<TAB>id" for every id any marker block mentions. The reverse pass
     # reads this. Every id in the block counts, not just the first: the marker
-    # at src/Registry.cpp:726 opens by naming inc-zmk, the fix it builds on, and
+    # at src/Registry.cpp:992 opens by naming inc-zmk, the fix it builds on, and
     # states its own "Tracking: inc-upw.13" eighteen lines later.
     local MARKED=""
 

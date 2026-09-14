@@ -8,8 +8,8 @@
 # stream stays aligned.
 #
 # ONE KNOWN, DELIBERATE DIFFERENCE. Save and Continue sets Timeout = 1
-# (src/Player.cpp:746) and so spends a tick of game time; closing the menu
-# spends none (src/Player.cpp:756, the default arm, leaves Timeout alone). The
+# (src/Player.cpp:852) and so spends a tick of game time; closing the menu
+# spends none (src/Player.cpp:863, the default arm, leaves Timeout alone). The
 # tick is charged by the MENU and not by Registry::SaveGroup, so a screen that
 # differs after the first save may be that tick and not the save. Read this
 # control on both builds and compare the two answers; it cannot on its own

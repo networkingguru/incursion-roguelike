@@ -7,7 +7,7 @@
 #
 # WHY THIS EXACT ARRANGEMENT. src/Values.cpp builds the five attack modes in
 # one loop, and the sheet hides the Brawl block whenever the weapon hand holds
-# a T_WEAPON (src/Sheet.cpp:162), so a plain sword-in-hand character cannot
+# a T_WEAPON (src/Sheet.cpp:165-166), so a plain sword-in-hand character cannot
 # answer the question. A BOW is type T_BOW, not T_WEAPON, so the block is
 # shown; and src/Values.cpp:301-308 moves a bow to the archery slot and then
 # takes the melee weapon from the LEFT SHOULDER instead. That is an ordinary

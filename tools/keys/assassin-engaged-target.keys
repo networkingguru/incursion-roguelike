@@ -3,11 +3,11 @@
 # bd inc-tek.24, finding PA-03-F28 of bd inc-tek.8.3.
 #
 # THE DEFECT. The class page attaches the out-of-combat condition to the
-# assassin alone (lib/prestige.irh:520-524). The gate demanded it of the target
+# assassin alone (lib/prestige.irh:532-534). The gate demanded it of the target
 # too:  if (EActor->isFlatFooted() && EVictim->isFlatFooted()).
 # isFlatFooted() is not the D&D condition; it is a per-creature out-of-combat
-# counter, FFCount > min(5,10+Mod(A_WIS)) (inc/Creature.h:567-568). Any strike
-# zeroes it for both fighters (src/Fight.cpp:3150-3151), so a target already
+# counter, FFCount > min(5,10+Mod(A_WIS)) (inc/Creature.h:623-624). Any strike
+# zeroes it for both fighters (src/Fight.cpp:3310-3311), so a target already
 # fighting -- one the party was holding, say -- could never be assassinated.
 #
 # WHAT THIS RUN ARRANGES, and why it is not the party fight it stands for.
@@ -16,17 +16,17 @@
 # also make the measurement depend on monster AI timing. The engine sets the
 # same field itself, deterministically, at creation: Monster::Initialize gives
 # a creature with Improved Initiative FFCount 0 and everything else FFCount 20
-# (src/Monster.cpp:1443-1446). So the run summons one of each and strikes both.
+# (src/Monster.cpp:1457-1460). So the run summons one of each and strikes both.
 # The only difference between the two victims is the one field the fix reads.
 #
 #   goblin      no Improved Initiative -> FFCount 20 -> relaxed
 #   grippli     Improved Initiative    -> FFCount 0  -> not relaxed
-#               (lib/mon2.irh:3865)
+#               (lib/mon2.irh:3871)
 #
 # THE ORACLE is the ability's own message. Death Attack announces itself on
 # either outcome -- "You assassinate the <victim>!" when the Fortitude save
 # fails and "The <victim> resists your death attack!" when it holds
-# (lib/prestige.irh:677-682). Either line proves the gate opened; neither can
+# (lib/prestige.irh:684-691). Either line proves the gate opened; neither can
 # appear if it did not. So the check does not depend on a saving throw.
 #
 # THE TWO STATES, and why the control is not optional:
@@ -37,14 +37,14 @@
 # THE OTHER CONDITIONS ARE HELD FAVOURABLE, and one line proves it. Death
 # Attack also requires that the target not perceive the assassin, so both
 # victims are put to sleep first: a sleeping creature perceives nothing
-# (src/Vision.cpp:416-419) and the engine skips the Move Silently against
-# Listen contest for it (src/Fight.cpp:3186-3196). That contest is a d20 roll
+# (src/Vision.cpp:448-451) and the engine skips the Move Silently against
+# Listen contest for it (src/Fight.cpp:3346-3352). That contest is a d20 roll
 # and it DID decide an earlier draft of this file -- "The goblin hears you!" --
 # which is exactly the kind of dependency a regression check must not carry.
 #
 # Sleeping is not enough on its own, because the sleeper wakes as the blow
 # lands. The engine's own report that the blow arrived unperceived is the line
-# "Catching him unaware" (src/Fight.cpp:3155-3157), and the check REQUIRES it
+# "Catching him unaware" (src/Fight.cpp:8640-8645), and the check REQUIRES it
 # on both strikes. It separates the two failures that otherwise look the same:
 # a victim that noticed him, and a gate that refused a victim he approached
 # perfectly.
@@ -103,7 +103,7 @@ w       # wizard mode
 y       # "Enter wizard mode?" -- yes
 w       # [w] Wizard Mode Switches
 # The list draws no cursor a screen dump can see, so this counts rows against
-# the option table (src/Tables.cpp:2610-2656). The cursor opens on the first
+# the option table (src/Tables.cpp:2679-2727). The cursor opens on the first
 # row and SPACE does not move it.
 DOWN*2
 SPACE   # 3  Free Advancement:  NO -> YES
@@ -136,7 +136,7 @@ P                               # [P]restige Classes
 @choose "Assassin"
 @while "Choose a feat" a
 
-# The Assassin's 1st level hands over a spellbook (lib/prestige.irh:597-607).
+# The Assassin's 1st level hands over a spellbook (lib/prestige.irh:613-621).
 # It lands in the In-the-Air slot and the game will not leave inventory mode
 # while anything is there, so it must be stowed before any further keystroke.
 ESC

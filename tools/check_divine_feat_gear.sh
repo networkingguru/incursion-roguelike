@@ -26,7 +26,7 @@
 # THE ARITHMETIC, and it is decisive rather than lucky. The firebat's A_DEQU is
 # 1d3 AD_FIRE with NO save DC (lib/mon2.irh:3716) -- the only fire, cold or
 # lightning carrier in lib/ with no DC -- so no Reflex roll decides anything,
-# and src/Fight.cpp:2090 sets e.ignoreHardness because the warhammer is not
+# and src/Fight.cpp:2122 sets e.ignoreHardness because the warhammer is not
 # magical. Iron's fire hardness is 10 and the bypass zeroes it, so the feat's
 # grant is the WHOLE of the number on the line. Charisma 18 is the point-buy
 # cap, so Creature::Mod returns (18-10)/2 = 4. Item::Damage adds that after the
@@ -38,7 +38,7 @@
 # HOW THE CHARACTER GETS CHANNELING, which both feats require. src/Skills.cpp
 # :4492 grants CHANNELING for Charisma x 2 rounds when a character with any of
 # seven divine feats uses Turn Undead. The grant is at :4492 and the turn is
-# rolled at :4496, after it, so the attempt need not succeed and NO UNDEAD NEED
+# rolled at :4497, after it, so the attempt need not succeed and NO UNDEAD NEED
 # BE PRESENT: the key script turns into an empty room, the game answers
 # "Nothing happens", and Channeling appears on the status line all the same.
 # Measured 2026-09-11, seed 5: 36 rounds covers the whole session and

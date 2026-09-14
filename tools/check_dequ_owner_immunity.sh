@@ -5,7 +5,7 @@
 # THE RULE. Soak and rust defences protect gear regardless of the grant's flag;
 # other damage types require EF_PROTECTS_ITEMS. This guards the blanket rust
 # half through gameplay, with the route itself checked by check_item_owner_resist.sh.
-# WHY BLANKET RUST. src/Fight.cpp:7009-7040 damages an item in the rust case
+# WHY BLANKET RUST. src/Fight.cpp:7041-7072 damages an item in the rust case
 # and never costs the creature hit points, so a wearer-only grant is a no-op.
 #
 # WHY THESE GAUNTLETS. Gauntlets of Rust grant total rust immunity, which the

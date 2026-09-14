@@ -2,8 +2,8 @@
 #
 # One assertion: lib/classes.irh grants Ability[CA_KI_STRIKE] at every 4th
 # level starting at 4th, so a Monk 4 carries Ki Strike +1 and a Monk 1 does
-# not. src/Sheet.cpp:546 renders the ability as "Ki Strike +1" in the sheet's
-# Special Abilities block, and src/Tables.cpp:3476 supplies that name, so the
+# not. src/Sheet.cpp:548 renders the ability as "Ki Strike +1" in the sheet's
+# Special Abilities block, and src/Tables.cpp:3579 supplies that name, so the
 # sheet is a true oracle for what the module granted.
 #
 # The chargen prefix is tools/keys/monk-brawl-speed.keys, letter for letter,
@@ -47,7 +47,7 @@ ESC
 
 d       # Display Character Sheet
 # The Special Abilities block sits below the fold, drawn in the right-hand
-# column beside the feat list. DOWN pages the sheet (src/Managers.cpp:2213);
+# column beside the feat list. DOWN pages the sheet (src/Managers.cpp:2296-2297);
 # PGDN moves it one line only, which is not enough.
 DOWN
 @dump:specials1

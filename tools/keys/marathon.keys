@@ -25,7 +25,7 @@
 # src/Managers.cpp:738-741 refuses both ENTER and ESC with "You cannot leave
 # Inventory Mode with an item in your In-the-Air slot." This file's ESCs were
 # its whole defence against a command that opens a menu, and they cannot
-# answer this one. 'd' empties the slot (src/Managers.cpp:774-796), so the
+# answer this one. 'd' empties the slot (src/Managers.cpp:812-834), so the
 # next ESC works.
 #
 # WHAT IT COST BEFORE THE FIX, measured with the game-time report that

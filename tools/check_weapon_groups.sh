@@ -4,8 +4,8 @@
 # WeaponGroupNames[] (src/Tables.cpp) is the only thing that turns a creature's
 # Proficiencies bits into words. Three sites print a proficiency list, and each
 # guards every bit with LookupOnly(WeaponGroupNames, 1L << i): the character
-# sheet (src/Sheet.cpp:855), the class help page (src/Help.cpp:101) and the
-# per-group weapon listing (src/Help.cpp:1240). A bit with no row in the table
+# sheet (src/Sheet.cpp:857), the class help page (src/Help.cpp:101) and the
+# per-group weapon listing (src/Help.cpp:1238). A bit with no row in the table
 # is therefore dropped in silence -- no assert, no error line, just a shorter
 # sentence. WG_LIGHT was missing that row, so no class ever said it was
 # proficient with light weapons; WG_CROSSBOWS had been missing for the same

@@ -607,7 +607,12 @@ class Creature: public Thing, public Magic
       virtual void IdentifyTemp(rID tID);
       virtual void Initialize(bool in_play = false) {}
       virtual void Transgress(rID gID, int16 mag, bool doWrath=false, const char*reason=NULL) { }
-      virtual void gainFavour(rID gID, int16 amt, bool advance=false, bool stack=true) { }
+      /* upstream: this signature must match Character::gainFavour exactly, or
+         a call through a Creature* reaches this empty body. It said int16, so
+         Character's int32 version hid it instead of overriding it. A different
+         parameter type is a different function under MSVC on Win32 too; no
+         typedef or width of this port is involved. Observed; inc-rgzr; not sent. */
+      virtual void gainFavour(rID gID, int32 amt, bool advance=false, bool stack=true) { }
       bool isMType(int32 MType);
       bool isPMType(int32 MType, Creature *cr);
 

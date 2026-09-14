@@ -4,13 +4,13 @@
 # to read what the engine gives him when their levels are supposed to stack.
 #
 # Barbarian and Rogue both carry the sentence "Levels of this ability from the
-# barbarian and rogue classes stack" -- lib/classes.irh:118 and :2395. The
+# barbarian and rogue classes stack" -- lib/classes.irh:118 and :2418. The
 # rogue's own prose ties the thresholds to its class level: off-guard immunity
-# at 3rd, forewarning at 5th, flanking immunity at 6th (lib/classes.irh:2383-
-# 2394). So six levels of the two classes together should reach the flanking
-# threshold, which src/Creature.cpp:637 reads as the number 4.
+# at 3rd, forewarning at 5th, flanking immunity at 6th (lib/classes.irh:2406-
+# 2417). So six levels of the two classes together should reach the flanking
+# threshold, which src/Creature.cpp:638 reads as the number 4.
 #
-# THE ORACLE is the sheet's Special Abilities block: src/Sheet.cpp:580-582
+# THE ORACLE is the sheet's Special Abilities block: src/Sheet.cpp:582-584
 # prints "Improved Uncanny Dodge" at 4 or more and plain "Uncanny Dodge"
 # below it.
 #

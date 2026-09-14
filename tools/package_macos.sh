@@ -6,7 +6,7 @@
 # its data, and the one library macOS does not ship. See inc-9df.4.
 #
 # WHY IT BUILDS TWICE. The module is a memory image welded to the struct layout
-# of the binary that wrote it (Registry.cpp:474 writes whole C++ objects as raw
+# of the binary that wrote it (Registry.cpp:762 writes whole C++ objects as raw
 # bytes), so only a matching binary can produce it -- and only a DEVELOPER binary
 # has the resource compiler at all. But that compiler is the GPLv2 ACCENT runtime
 # which src/Art.cpp:2-7 says must never be distributed. So:
@@ -20,11 +20,11 @@
 # build_macos.sh refuses rather than producing a package with no data.
 #
 # WHY A PLAIN FOLDER AND NOT A .app. The game writes Options.Dat, save/ and
-# logs/ beside itself -- Wlibtcod.cpp:301 returns "." for OptionsSubDir(). An app
+# logs/ beside itself -- Wlibtcod.cpp:441 returns "." for OptionsSubDir(). An app
 # bundle that writes inside itself breaks its own code signature, and a standard
 # user cannot write into /Applications at all. Shipping a .app needs the game to
 # put its writable state under ~/Library/Application Support first, which is a
-# separate change. It finds its data by argv[0] (Wlibtcod.cpp:435-442), so the
+# separate change. It finds its data by argv[0] (Wlibtcod.cpp:592-599), so the
 # folder works wherever it is put.
 #
 # Usage:
@@ -70,7 +70,7 @@ cp "$ROOT/incursion-ship"      "$PKG/incursion"
 cp "$ROOT/mod/Incursion.Mod"   "$PKG/mod/"
 cp "$ROOT"/fonts/*.png         "$PKG/fonts/"
 # The title screen reads this by name, relative to the game directory
-# (src/Wlibtcod.cpp:1563). Without it the title silently falls back to the
+# (src/Wlibtcod.cpp:1574). Without it the title silently falls back to the
 # ASCII wordmark, which is how release 4 shipped on macOS while Linux and
 # Windows showed the real logo. inc-ntjr.
 cp "$ROOT/graphics/logo.png"   "$PKG/graphics/"

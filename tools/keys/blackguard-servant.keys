@@ -8,11 +8,11 @@
 # class gate wants a base attack bonus of +6 and Knowledge (Infernal) 8, and
 # no class with a 100%% attack rate carries that skill, so entry costs eight
 # core levels. Eight plus five is thirteen, in a game that stops at eleven
-# (MAX_CHAR_LEVEL, inc/Defines.h:4367). No character can hold the ability.
+# (MAX_CHAR_LEVEL, inc/Defines.h:4457). No character can hold the ability.
 #
 # WHAT IS DONE INSTEAD. The class grants it as
 #   Ability[CA_INNATE_SPELL,$"fiendish servant"] at 5th level
-# (lib/prestige.irh:852), so the thing being tested is an effect that a
+# (lib/prestige.irh:882), so the thing being tested is an effect that a
 # creature casts, not a passive the class computes. Wizard mode's Learn Any
 # Spell takes a resource name, checks it is a T_TEFFECT and marks it
 # SP_KNOWN|SP_PRIMAL|SP_INNATE (src/Debug.cpp:850-863). That is the same

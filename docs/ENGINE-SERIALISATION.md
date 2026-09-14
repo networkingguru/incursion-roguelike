@@ -217,7 +217,7 @@ ledger sees both, because there they are moved lines in a diff; it is tracked
 separately and does not exist yet.
 
 **Deferred resolution.** Both load paths reload modules only after the save
-group (src/Registry.cpp:1347-1364, src/Dump.cpp:239-264), so at the moment a
+group (src/Registry.cpp:1347-1390, src/Dump.cpp:239-264), so at the moment a
 record is read there is no module to convert against. A v1 load parks the
 saved `rID` in its own slot and queues the slot's address; one
 `SaveV1_ResolveNames()` call after each path's module reload converts every
@@ -284,7 +284,7 @@ again as soon as one exists that merely ADDS tags.
 
 The gate reads the decimal rather than comparing strings, so a refusal can
 say WHICH way the file is wrong, and names both revisions every time
-(src/SaveV1.cpp:2852-2940):
+(src/SaveV1.cpp:2852-2924):
 
 | The file | The refusal |
 |---|---|
@@ -417,8 +417,8 @@ Repaired on load, and nothing else is:
 | vptr | placement new, src/Registry.cpp:944-986 |
 | pointer to an owned heap block | src/Registry.cpp:370, via the 7 direct `r.Block` sites plus every `FIELD_BLOB`/`FIELD_OBJ` line's v0 branch (inc/Base.h:768-773) |
 | `Thing::m` from `Thing::hm` | inc/Map.h:955 |
-| `Player::MyTerm = T1` | inc/Creature.h:1363 |
-| `Module` resource caches zeroed | inc/Res.h:836-837 (save side), :919-920 (load side) |
+| `Player::MyTerm = T1` | inc/Creature.h:1368 |
+| `Module` resource caches zeroed | inc/Res.h:836-837, in `Module::Serialize`, which runs on load as well as save. A load builds the object with the empty `ARCHIVE_CLASS` constructor (inc/Base.h:780), so the zeroing in `Module()` (inc/Res.h:919-920) runs only for the module the resource compiler creates (src/RComp.cpp:141) |
 | module text segment un-inverted | inc/Res.h:908-912 |
 | garbage payload in a loaded `Target` | src/Registry.cpp:1011-1012, src/Target.cpp:1561 |
 

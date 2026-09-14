@@ -16,7 +16,7 @@
 # past the end of the list. That sentence is this script's oracle.
 #
 # WHY A BODAK, and how it keeps the two reflection sites apart. There are TWO
-# places that answer a reflected gaze. src/Fight.cpp:1868 handles the A_GAZE
+# places that answer a reflected gaze. src/Fight.cpp:1900 handles the A_GAZE
 # entry in a monster's attack table and prints "The <EActor>'s gaze is
 # reflected!". src/Magic.cpp:941 handles an EF_GAZE magical effect and prints
 # the sentence above. A bodak (lib/mon3.irh:3422) has no A_GAZE attack at all --
@@ -29,7 +29,7 @@
 # The bodak also announces itself. Its MSG_CAST prints "eyes glow with a black
 # aura", so the screen says the gaze was cast as well as that it came back.
 #
-# WHY A MAGE, AND FIVE LEVELS. "Gaze Reflection" (lib/wspells.irh:2004) is a
+# WHY A MAGE, AND FIVE LEVELS. "Gaze Reflection" (lib/wspells.irh:2009) is a
 # Mage 2 spell, and it is how the player gets the stati. Learn Any Spell teaches
 # it to any class, but the Spell Manager will not cast what the character has no
 # slot for, so the character needs a second-level slot. Four free levels also
@@ -42,7 +42,7 @@
 # [w] below is eaten by the description.
 ESC
 
-# Wizard switches, counted from the top of the list in src/Tables.cpp:2674:
+# Wizard switches, counted from the top of the list in src/Tables.cpp:2680:
 #   1 Cheat Death, 3 Free Advancement, 6 Ignore Spell Failure,
 #   8 Infinite Mana, 10 Wizard Sight. Freeze Monsters is deliberately NOT set:
 # the bodak has to take its turn and cast.
@@ -66,7 +66,7 @@ ESC
 # and a level-up prompt left unanswered swallows every key after it.
 #
 # SPACE, not ESC, leaves the character screen. ESC is a bound command there and
-# the screen simply redraws; the loop at src/Managers.cpp:2287 exits on any key
+# the screen simply redraws; the loop at src/Managers.cpp:2517-2518 exits on any key
 # it does not handle, and SPACE is one.
 d
 G

@@ -19,7 +19,7 @@
 #
 # Getting there. tools/keys/gravestone.keys replays the one reproducible
 # confirmed death this repository already keeps -- tools/keys/dive.keys at seed
-# 11 under the pinned gate settings, the scenario tools/check_headless.sh:387
+# 11 under the pinned gate settings, the scenario tools/check_headless.sh:395
 # uses -- and then answers the "You die... Die? [yn]" prompt and presses ENTER
 # until Player::Gravestone() has drawn. The settings must be pinned: the live
 # Options.Dat is whatever Brian last played with, and OPT_NODEATH is what turns

@@ -1,7 +1,7 @@
 # Fight an armoured monster long enough to check every term of the armour
 # model: graded penetration of coverage, and subtractive damage (inc-b0w2).
 #
-# The subject is a cave ankylosaurus (lib/mon1.irh:4644): Arm 18, Def 10.
+# The subject is a cave ankylosaurus (lib/mon1.irh:4651): Arm 18, Def 10.
 # Heavy armour behind a low Defense Class is what makes it the right subject.
 # Natural armour sits behind NATURAL_COVERAGE, so the bar an attacker must
 # clear to start turning it aside is 10 + 14 = 24, which a levelled barbarian

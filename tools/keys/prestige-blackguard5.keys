@@ -3,7 +3,7 @@
 # neither creature its own description names, and gave it a finite duration
 # although the description says twice that it stays until dismissed.
 #
-# WHY THIS BUILD AND NOT THE OBVIOUS ONE. The gate (lib/prestige.irh:681-715)
+# WHY THIS BUILD AND NOT THE OBVIOUS ONE. The gate (lib/prestige.irh:706-740)
 # wants Evil, Intimidate 12, Knowledge (The Infernal) 10, and a base attack
 # bonus of +6 in one category. The reading that made this finding look
 # unreachable was: BAB +6 needs six levels of a class that attacks at 100%,
@@ -12,7 +12,7 @@
 # in a game that stops at eleven.
 #
 # That reading is wrong, and Character::MaxRanks says why
-# (src/Create.cpp:3620-3651). A skill's rank cap is normally set by the
+# (src/Create.cpp:3977-4008). A skill's rank cap is normally set by the
 # summed levels of the CLASSES that carry it -- which is what makes a second
 # class necessary -- but a skill held as an EXTRA_SKILL stati returns
 # ClassLevelRanks[TotalLevel()] instead, the full character-level cap. A

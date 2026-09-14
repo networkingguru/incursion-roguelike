@@ -8,20 +8,20 @@
 # whole effect resource, not to one segment of it (src/Event.cpp:248-259
 # dispatches by e.eID once per ReThrow(EV_MAGIC_HIT)). So every EA_GRANT
 # block in the entity is behind the same caster-level-three door, the new
-# ones included. ItemPrereq's CLEV_VAL branch (src/Skills.cpp:5681-5692) sums
+# ones included. ItemPrereq's CLEV_VAL branch (src/Skills.cpp:5751-5762) sums
 # the highest SPELL_ACCESS magnitude per casting type, so a Mage 3 reads 3
 # and a Mage 1 reads 1. A barbarian reads 0 and would measure nothing at all.
 #
 # HOW THE LEVELS ARE GAINED. Wizard mode's "Free Advancement" switch lets the
 # character sheet's [G]ain Level work without the experience
-# (src/Managers.cpp:2221). Each mage level opens up to two menus of its own,
+# (src/Managers.cpp:2301). Each mage level opens up to two menus of its own,
 # which cover the sheet, so the level is gained one G at a time and each G is
 # followed by the menus it can raise -- exactly as
 # tools/keys/prestige-loremaster.keys does it.
 #
 # THE ORACLE is read twice, before the staff and after it:
 #   * the character sheet's Skill Ratings block, which prints the item's
-#     contribution as ", +N magic" (src/Sheet.cpp:947);
+#     contribution as ", +N magic" (src/Sheet.cpp:949);
 #   * wizard mode's "Examine Player Data", which prints every stati with its
 #     Val and Mag (src/Debug.cpp:1524-1590). SKILL_BONUS prints its skill by
 #     name and ADJUST prints its attribute by name.
@@ -82,7 +82,7 @@ ESC
 #                the plus its page states.
 #   0 2          the acquisition drops the staff into the backpack, not into
 #                a hand, so it is taken back out by its two-digit container
-#                number (src/Managers.cpp:1005-1033), which lifts it into the
+#                number (src/Managers.cpp:1044-1072), which lifts it into the
 #                in-air slot. 02 is its row; the check does not trust that
 #                either -- it reads the name off the Weapon Hand line.
 #   b SPACE      'b' is the Weapon Hand slot and SPACE swaps the staff into
@@ -90,7 +90,7 @@ ESC
 #                lettering is not simply SlotNames counted from 'a'.
 #   s            the mage's starting knife is pushed out by that swap, and
 #                the manager will not close while anything is held in the
-#                air. 's' stows it in the pack (src/Managers.cpp:835-848).
+#                air. 's' stows it in the pack (src/Managers.cpp:873-886).
 w
 @choose "Item Acquisition"
 RIGHT*3

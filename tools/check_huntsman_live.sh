@@ -10,11 +10,11 @@
 # the three oracles off him.
 #
 # THE ORACLES, and why each is fair:
-#   Smite    src/Sheet.cpp:501-509 prints the CA_SMITE stati's Val through
+#   Smite    src/Sheet.cpp:503-511 prints the CA_SMITE stati's Val through
 #            MTypeNames, so the sheet names the very constant the grant sets.
-#   Tracking src/Sheet.cpp:719 prints AbilityLevel(CA_TRACKING) * 10 as feet,
+#   Tracking src/Sheet.cpp:721 prints AbilityLevel(CA_TRACKING) * 10 as feet,
 #            so the number is the ability level the grant built, times ten.
-#   Spells   src/Create.cpp:4190-4198 builds the castable list by walking the
+#   Spells   src/Create.cpp:4550-4558 builds the castable list by walking the
 #            SPELL_ACCESS stati and reading each granting resource's
 #            SPELL_LIST. The [L]earn Spells menu is that list.
 #
@@ -90,7 +90,7 @@ fi
 #
 # 220 is what Character::CorrectStackedAbilities (src/Create.cpp) then takes
 # off. Both classes open with a one-off +10 at their own 2nd level
-# (lib/classes.irh:2127, lib/prestige.irh:2954), and the huntsman's
+# (lib/classes.irh:2150, lib/prestige.irh:3045), and the huntsman's
 # description stacks his levels with the ranger's, so the character is owed
 # that opening bonus once and not twice. Eight levels at 2 a level is 16,
 # plus the 10, is 22.

@@ -9,7 +9,7 @@
 # compares the character it ends with against the same session run with no
 # failure staged. See bd inc-i0r.
 #
-# ESC b is the System Menu's [b] Save and Continue (src/Player.cpp:734-747).
+# ESC b is the System Menu's [b] Save and Continue (src/Player.cpp:840-853).
 # It is the only save the game offers that does not also end the session, so
 # it is the only way a key script can carry on past one. READ THE WARNING IN
 # tools/keys/explore-mage.keys BEFORE MOVING IT: ESC opens that menu rather

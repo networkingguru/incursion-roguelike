@@ -8,7 +8,7 @@
 # lost three. Monsters were never affected. See src/Create.cpp, HasFeat.
 #
 # This runs the game and reads the character sheet, because that is the screen
-# Brian looked at when he noticed. src/Sheet.cpp:787-788 builds the Feats block
+# Brian looked at when he noticed. src/Sheet.cpp:789-790 builds the Feats block
 # with HasFeat(), so the sheet is a true oracle for the function under test.
 #
 # Usage: tools/check_race_feats.sh      (exits 0 on pass, 1 on fail)

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Does a shield's armour check penalty come from the shield? Bead inc-rsps.
 #
-# THE DEFECT. Armour::PenaltyVal (src/Item.cpp:2147) had two paths. Body
+# THE DEFECT. Armour::PenaltyVal (src/Item.cpp:2214) had two paths. Body
 # armour returned the item's own authored Penalty:. A shield never read its
 # Penalty: at all; it read a ladder of size comparisons, so every shield of a
 # size cost the same, the data had no say, and the ladder's -10 rung was dead
@@ -20,7 +20,7 @@
 #   the Skill Ratings block   "Balance -7 (0 ranks, +3 DEX, -10 armour)"
 #   the Movement Rate line    "x 75% shield", which A_MOV builds from the same
 #                             penalty at 100% + 5% * (penalty/2)
-# The two are independent consumers of PenaltyVal (src/Create.cpp:4278 and
+# The two are independent consumers of PenaltyVal (src/Create.cpp:4298 and
 # src/Values.cpp:914), so a fix that satisfies one and not the other fails
 # here rather than passing.
 #

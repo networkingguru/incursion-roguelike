@@ -21,8 +21,8 @@
 # ethereality test was missing too and has been added.
 #
 # THE ORACLE for PA-03-F5 is the combat message. The effect appends its own
-# term to the damage string, ' %+d GS' (lib/prestige.irh:1610), and
-# src/Fight.cpp:8038 prints that string in the "Damage:" line. So a hit
+# term to the damage string, ' %+d GS' (lib/prestige.irh:1684), and
+# src/Fight.cpp:8532 prints that string in the "Damage:" line. So a hit
 # either says GS or it does not, and the character is wearing ordinary boots
 # while it happens.
 #
@@ -104,7 +104,7 @@ DOWN DOWN
 SPACE   # Free Advancement: NO -> YES
 DOWN*9
 SPACE   # Show All Combat Rolls: NO -> YES. This is what makes the engine
-        #   print the "Damage:" line (src/Fight.cpp:8038), which is where
+        #   print the "Damage:" line (src/Fight.cpp:8532), which is where
         #   Grounded Stance writes its own term.
 ESC
 
@@ -140,10 +140,10 @@ ESC
 # THE ORACLE is the Spell Manager's "Power & Metamagic" column. It prints the
 # effect's pval as a dice expression beside the ability, so the number the
 # player is shown and the number the engine rolls are the same field. Geomancy
-# is granted as Ability[CA_INNATE_SPELL, $"Geomancy"] (lib/prestige.irh:1582),
+# is granted as Ability[CA_INNATE_SPELL, $"Geomancy"] (lib/prestige.irh:1615),
 # so it appears in this manager rather than on a spell list.
 #
-# The class's two descriptions promise 5d12 (lib/prestige.irh:1543 and the
+# The class's two descriptions promise 5d12 (lib/prestige.irh:1576 and the
 # effect's own Desc). The value was 5d12+12, copied whole from the *Mana*
 # potion. tools/check_geomancy.sh reads this dump. bd inc-tek.21.
 m

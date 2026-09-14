@@ -8,12 +8,12 @@
 # carried "xval: MA_DRAGON; rval: $"generic summons";" -- the line above it,
 # copied whole off the Dragon Summoning wand, which is the entry immediately
 # before it in the same file. Magic::Summon copies xval into xe.enConstraint
-# before throwing EV_ENGEN (src/Effects.cpp:1451), and enConstraint is the
+# before throwing EV_ENGEN (src/Effects.cpp:1463), and enConstraint is the
 # monster-type filter the encounter generator selects on, so the wand drew
 # from the dragon list.
 #
 # THE ORACLE is the name of the creature that lands. Magic::Summon prints one
-# "An <Obj> appears!" line per summoned creature (src/Effects.cpp:1493), and
+# "An <Obj> appears!" line per summoned creature (src/Effects.cpp:1503), and
 # this script matches that name against the 474 monsters declared in
 # lib/mon*.irh to recover its MTypes. An animal has MA_ANIMAL; a dragon has
 # MA_DRAGON. Nothing is judged by the wand's own description, which was

@@ -8,12 +8,12 @@
 # The honest oracle is therefore the page as the PLAYER reads it, not the page
 # as lib/m_items.irh stores it: grep over the source would prove only that a
 # file changed. Item::Describe prints the entity's Desc through DESC(eID)
-# (src/Help.cpp:3405-3408), and Inventory Mode's 'x' puts that on screen
-# (src/Managers.cpp:751-754), so this script drives the game to the same
+# (src/Help.cpp:3652-3655), and Inventory Mode's 'x' puts that on screen
+# (src/Managers.cpp:789-792), so this script drives the game to the same
 # screen a player would reach and lets the check read the rendered words.
 #
 # WHY THE PACK IS IDENTIFIED. Item::Describe prints the entity's page only
-# when the item isKnown(KN_MAGIC) (src/Help.cpp:3405). Wizard mode's
+# when the item isKnown(KN_MAGIC) (src/Help.cpp:3652). Wizard mode's
 # "Identify Whole Pack" calls MakeKnown(0xFF) on everything the character
 # carries (src/Debug.cpp:717-720), a worn ring included.
 #
@@ -42,14 +42,14 @@
 #   ENTER m SPACE          take it -- a ring carries no plus, so the
 #                          acquisition asks for no item level -- then put the
 #                          cursor on the Left Ring slot and SPACE to wear it
-#                          (src/Managers.cpp:873). The slot was empty, so
+#                          (src/Managers.cpp:911). The slot was empty, so
 #                          nothing is pushed into the in-air slot and nothing
 #                          needs stowing before the manager will close.
 #   ESC w i m x            leave the manager, identify the pack, reopen the
 #                          manager, put the cursor back on the Left Ring and
 #                          press 'x', which describes what is on it.
 #   DOWN*6 three times     the box shows about forty rows and scrolls one row
-#                          per DOWN (src/TextTerm.cpp:537-540). This page is
+#                          per DOWN (src/TextTerm.cpp:542-545). This page is
 #                          shorter than that, so the first dump already holds
 #                          it whole; the later dumps cost nothing and would
 #                          carry the page if it ever grew past the box.

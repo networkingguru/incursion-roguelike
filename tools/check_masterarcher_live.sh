@@ -4,9 +4,9 @@
 # the bows its own description names.
 #
 # The description is explicit -- "can only be performed with a long bow or
-# short bow", lib/prestige.irh:2276-2278 -- and the only test was
+# short bow", lib/prestige.irh:2361-2363 -- and the only test was
 #     if (e.AType != A_FIRE) return NOTHING;
-# A_FIRE is the generic launcher attack type; inc/Defines.h:1185 even names
+# A_FIRE is the generic launcher attack type; inc/Defines.h:1210 even names
 # the constant "Fire [Cross]bow". So every launcher qualified.
 #
 # The obvious repair, an isType(T_BOW) check like the one the neighbouring
@@ -16,7 +16,7 @@
 # The fix names the bows instead.
 #
 # THE ORACLE is the damage line. A sneak attack appends its own term to it,
-# " +Nd6 SA" (src/Fight.cpp:5135), and the Show All Combat Rolls wizard
+# " +Nd6 SA" (src/Fight.cpp:5445), and the Show All Combat Rolls wizard
 # switch makes the line print.
 #
 # THE MEASUREMENT. tools/keys/prestige-masterarcher.keys builds an
@@ -32,10 +32,10 @@
 #
 # WHY A FRESH OGRE PER SHOT. Sneak attack damage needs the victim off-guard,
 # flanked or surprised, and the attacker within three squares
-# (src/Fight.cpp:5113-5115). Monster::Initialize sets FFCount to 20 on every
-# new monster (src/Monster.cpp:1446) and isFlatFooted() is FFCount > 5, so a
+# (src/Fight.cpp:5422-5424). Monster::Initialize sets FFCount to 20 on every
+# new monster (src/Monster.cpp:1460) and isFlatFooted() is FFCount > 5, so a
 # monster is off-guard on the turn it appears -- and a strike resets both
-# fighters' FFCount to zero (src/Fight.cpp:3039-3040), so the same monster
+# fighters' FFCount to zero (src/Fight.cpp:3310-3311), so the same monster
 # cannot serve twice. An ogre rather than a kobold because a kobold dies to
 # the first hit and the sneak attack block is skipped for a dead victim.
 #

@@ -73,7 +73,7 @@ mutex (`src/Vision.cpp:415-416`), and `Creature::Multiply` refuses to breed past
 mold `lib/mon3.irh:2308` and `lib/mon3.irh:2316`) or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3372`)
 calls `Multiply` -> `Creature::Multiply` (`src/Creature.cpp:486`) -> `mn->PlaceAt` (`:557`)
 throws `EV_PLACE` (`src/Display.cpp:224`, `:248`) and `EV_FIELDON` (`:314`) -> `Creature::FieldOn` re-throws `EV_EFFECT` for
-`FI_MODIFIER` (`src/Status.cpp:1698`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1265`).
+`FI_MODIFIER` (`src/Status.cpp:1750`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1265`).
 *Invariant violated:* `Creature::FieldOn` sets `EActor` to the field's creator, so the script calls `Multiply` on the same
 generation-0 parent every time, and the generation cap at `src/Creature.cpp:510` can never apply to it. Only `m->BreedCount >= 50`
 (`:514`) survives, far above the 128-frame stack. *Fix:* a nesting cap of 4 on `Multiply` (`:498`); `GENERATION` is now stamped at

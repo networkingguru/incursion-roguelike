@@ -1,12 +1,12 @@
 # Punch a weapon-immune creature bare-handed, first without Ki Strike and then
 # with it.
 #
-# The subject is a lemure (lib/mon4.irh:1205-1213), a CR 1 devil carrying
+# The subject is a lemure (lib/mon4.irh:1211-1219), a CR 1 devil carrying
 # ABILITY(CA_WEAPON_IMMUNITY,1). It is the cheapest true subject in the module:
 # the immunity level is 1, so a Monk 4's Ki Strike +1 is exactly enough to beat
 # it and a Monk 1's nothing is exactly not enough.
 #
-# The oracle is the message src/Fight.cpp:8510 prints when e.isWImmune is set:
+# The oracle is the message src/Fight.cpp:8899-8902 prints when e.isWImmune is set:
 # "Your weapon fails to penetrate." Nothing else in the game prints that line.
 #
 # The chargen prefix is tools/keys/monk-brawl-speed.keys, letter for letter,

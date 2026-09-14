@@ -6,9 +6,9 @@
 # have real natural attacks -- two claws and a bite -- which lib/races.irh:1634
 # rates at 100%, slower than most weapons the same hands can pick up.
 #
-# The sheet is the oracle. src/Sheet.cpp:151 lists every attack mode with its
+# The sheet is the oracle. src/Sheet.cpp:153 lists every attack mode with its
 # speed, and it draws the Brawl row from KAttr[A_SPD_BRAWL], which is the value
-# the floor clamps. src/Term.cpp:597 prints the same number in the traits panel.
+# the floor clamps. src/Term.cpp:613 prints the same number in the traits panel.
 #
 # Menu letters move when a list changes. Run with a fixed seed; the callers
 # tools/check_natural_speed_live.sh supplies one.
@@ -42,7 +42,7 @@ ENTER y
 ESC ENTER SPACE
 
 # Chargen perks can hand even a monk a real weapon -- this character starts
-# with a long sword +3 in the weapon hand. src/Sheet.cpp:162 hides the Brawl
+# with a long sword +3 in the weapon hand. src/Sheet.cpp:165-172 hides the Brawl
 # row whenever SL_WEAPON holds a T_WEAPON, and src/Values.cpp:462 feeds the
 # held weapon into the brawl slot anyway, so the hands must be empty before
 # the sheet can answer anything about unarmed speed.

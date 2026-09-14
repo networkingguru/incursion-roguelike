@@ -32,7 +32,7 @@
 #
 # The in-play route reaches the same division: wield the pickaxe, use the Mining
 # skill, walk into a wall of solid igneous rock -- material MAT_MAGMA, hardness
-# -1 for piercing -- which src/MakeLev.cpp:2153 writes around every magma,
+# -1 for piercing -- which src/MakeLev.cpp:2180 writes around every magma,
 # brimstone or igneous floor. That route needs the right region to generate, so
 # it is not what a check should depend on.
 #

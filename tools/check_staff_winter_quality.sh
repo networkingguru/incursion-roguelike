@@ -5,12 +5,12 @@
 # THE DEFECT. The staff's page (lib/m_items.irh) says "A Staff of Winter acts
 # as a <14>+2 quarterstaff of weakening<7>". Its script gave it WQ_NUMBING.
 # Weakening damages Strength and numbing damages Dexterity
-# (src/Tables.cpp:1831-1832), so the player was promised one ability score and
+# (src/Tables.cpp:1840-1841), so the player was promised one ability score and
 # given another. The script is the slip and now says WQ_WEAKENING.
 #
 # WHY THE SCRIPT LOSES HERE, and not the page. WQ_WEAKENING and WQ_NUMBING are
-# adjacent entries in the same table (src/Tables.cpp:1831-1832, and
-# inc/Defines.h:2161-2162 numbers them 37 and 38 with a comment that their
+# adjacent entries in the same table (src/Tables.cpp:1840-1841, and
+# inc/Defines.h:2178-2179 numbers them 37 and 38 with a comment that their
 # order must be kept). This partition has already produced one confirmed slip
 # of exactly that shape: the Ring of Water Elemental Command took MA_FIRE from
 # the line beside MA_WATER (commit c7f8b8b). One line up or down in a table
@@ -18,7 +18,7 @@
 # quality in plain words is not.
 #
 # THE ORACLE is the item description screen -- Inventory Mode, cursor on the
-# item, 'x' (src/Managers.cpp:751-754). It prints the entity's page and then
+# item, 'x' (src/Managers.cpp:789-792). It prints the entity's page and then
 # the item's weapon qualities, so both halves of the contradiction land on one
 # screen and the check reads them off the same box.
 #
@@ -26,7 +26,7 @@
 # one thing and one thing only: it makes Item::xName skip the whole
 # quality-word loop (src/Message.cpp:1241), so the staff is called "Staff +2
 # of Winter" and never "Staff +2 of numbing". The description screen is a
-# different function -- QItem::Describe, src/Help.cpp:3508-3524 -- and has no
+# different function -- QItem::Describe, src/Help.cpp:3755-3771 -- and has no
 # EF_HIDEQUAL test at all, so it still prints "Numbing:" or "Weakening:" and
 # the quality's paragraph beneath it. A name-based check would have shown
 # nothing either side of the fix.
@@ -60,7 +60,7 @@ fi
 scr="$run/logs/screens"
 
 # The description box is drawn by TextTerm::Box, which sizes itself to its
-# longest line (src/TextTerm.cpp:452-455), so its columns move when its text
+# longest line (src/TextTerm.cpp:466-467), so its columns move when its text
 # changes -- and this fix changes its text. Find the box by its own top border
 # rather than by counting columns, then read every row between that border and
 # the closing one and join them into a single string. Joining is the point:
@@ -114,8 +114,8 @@ case "$BOTH" in
        exit 2 ;;
 esac
 # And the quality half. QItem::Describe prints nothing at all for a quality
-# the character has not identified (src/Help.cpp:3509), and prints the
-# entity's page only for an item known to be magical (src/Help.cpp:3405), so
+# the character has not identified (src/Help.cpp:3756), and prints the
+# entity's page only for an item known to be magical (src/Help.cpp:3652), so
 # a session whose "Identify Whole Pack" did not take would show neither line
 # and must not be read as a pass.
 case "$BOTH" in

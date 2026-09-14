@@ -15,7 +15,7 @@
 # the caster level: 8 at level ten. The arithmetic below needs 6; ten is taken
 # for margin and because the sheet then reads a round "Acid 8".
 #
-# WHY A SILVERED MAGIC WARHAMMER. src/Fight.cpp:2090 sets ignoreHardness when a
+# WHY A SILVERED MAGIC WARHAMMER. src/Fight.cpp:2122 sets ignoreHardness when a
 # no-save A_DEQU strikes a NON-magical item, and since inc-kapn
 # src/Item.cpp:1451 zeroes only what Hardness() returned, with the owner's grant
 # added after it at src/Item.cpp:1464. A resistance therefore survives on a
@@ -66,7 +66,7 @@ ESC
 # The three @while guards answer the three prompts a mage meets on the way up;
 # the metamagic one arrives at level five and is easy to forget, and a level-up
 # prompt left unanswered swallows every key after it. SPACE, not ESC, leaves the
-# character screen (src/Managers.cpp:2287).
+# character screen (src/Managers.cpp:2517-2518).
 d
 G
 @while "Bonus To Which Attribute" a

@@ -4,9 +4,9 @@
 # declare the field that grants them. Two of the seven are playable -- the
 # Assassin and the Blackguard -- and both are fixed.
 #
-# THE ORACLE is the sheet's Proficiencies line. src/Sheet.cpp:861-876 walks
+# THE ORACLE is the sheet's Proficiencies line. src/Sheet.cpp:863-878 walks
 # the character's proficiency bits against WeaponGroupNames[]
-# (src/Tables.cpp:1329) and prints the name of every group he holds, so the
+# (src/Tables.cpp:1363) and prints the name of every group he holds, so the
 # line names the very bits the Proficiencies: field sets.
 #
 # WHAT THE TWO CHARACTERS PROVE. Both start as elf rogues, so both carry the

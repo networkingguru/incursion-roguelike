@@ -15,8 +15,8 @@
 #
 # THE FIX. Each of the eight gained CF_PSEUDO, the flag the engine already uses
 # to keep a class out of every list. Every site that builds a class list skips
-# it: src/Managers.cpp:2271 (the [P]restige and [M]ulticlass menus),
-# src/Create.cpp:306 (character generation), src/Help.cpp:763, :789 and :840
+# it: src/Managers.cpp:2351 (the [P]restige and [M]ulticlass menus),
+# src/Create.cpp:325 (character generation), src/Help.cpp:763, :789 and :840
 # (the class-description menu and the printed help pages) and src/Skills.cpp:97
 # (the "which classes take this skill" line). Nothing else in the engine reads
 # the flag, so no mechanic changed and no prose was deleted.

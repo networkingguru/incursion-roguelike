@@ -8,10 +8,10 @@
 #
 # HOW THE RUN GETS "ALREADY FIGHTING", and why it is the engine's own state and
 # not the script's opinion. Creature::isFlatFooted() is a per-creature
-# out-of-combat counter, FFCount > min(5,10+Mod(A_WIS)) (inc/Creature.h:571-572).
-# Any strike zeroes it for both fighters (src/Fight.cpp:3258-3259) and
+# out-of-combat counter, FFCount > min(5,10+Mod(A_WIS)) (inc/Creature.h:623-624).
+# Any strike zeroes it for both fighters (src/Fight.cpp:3310-3311) and
 # Creature::DoTurn() raises it by one per turn out of combat
-# (src/Creature.cpp:1590-1591). So the run swings at the first goblin with the
+# (src/Creature.cpp:1605-1606). So the run swings at the first goblin with the
 # character's ordinary knife, which zeroes the counter whether it lands or not,
 # and only then snaps the blades out.
 #

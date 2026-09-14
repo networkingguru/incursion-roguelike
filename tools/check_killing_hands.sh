@@ -5,7 +5,7 @@
 # WHAT WAS WRONG. Both grants in lib/m_items.irh used pval PLUS_1PER1 although
 # the item's own Desc promises two points per plus.
 #
-# THE ORACLE is the character sheet's Brawl block. src/Sheet.cpp:175-190 prints
+# THE ORACLE is the character sheet's Brawl block. src/Sheet.cpp:177-192 prints
 # KAttr[A_HIT_BRAWL] and KAttr[A_DMG_BRAWL], including each source beside it.
 # Wizard acquisition makes and Auto-Identifies a known +2 pair; the inventory
 # dump proves that plus, and the sheet must print +4 for both Brawl attributes.

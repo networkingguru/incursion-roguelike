@@ -20,17 +20,17 @@
 #      screen, so the patterns below read "SKILL BONUS" and "SK APPRAISE".
 #      This is the authority: it shows what the wielder actually holds.
 #   2. The character sheet, which is what a player sees. Its Skill Ratings
-#      block prints an item's share as ", +N magic" (src/Sheet.cpp:947-948)
+#      block prints an item's share as ", +N magic" (src/Sheet.cpp:949-950)
 #      and its Charisma line the same way (src/Sheet.cpp:93-101).
 #
 # WHY THE SHEET IS NOT ASKED ABOUT APPRAISE. Creature::SkillLevel collects an
 # item's skill bonus with s_item = max(s_item,S->Mag) from a zero start
-# (src/Create.cpp:3972 and :4149), so a NEGATIVE item bonus loses to the zero
+# (src/Create.cpp:4091 and :4268), so a NEGATIVE item bonus loses to the zero
 # and never reaches the total. The -6 is on the character -- the stati dump
 # shows it -- and the engine then drops it on the way to the number. That is
 # an engine defect of its own, older than this fix and shared with the Staff
 # of the Goblin Queen, whose page promises three -4 penalties by the same
-# means (lib/m_items.irh:3229-3233). It is tracked as inc-e7wp. This check
+# means (lib/m_items.irh:3278-3282). It is tracked as inc-e7wp. This check
 # therefore holds the sheet to the two bonuses the engine can carry and holds
 # the stati dump to all three.
 #

@@ -3,7 +3,7 @@
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
 #       tools/headless.sh tools/keys/gear-bypass-survives.keys 5
 #
-# WHAT IS BEING MEASURED. src/Fight.cpp:2090 sets e.ignoreHardness whenever a
+# WHAT IS BEING MEASURED. src/Fight.cpp:2122 sets e.ignoreHardness whenever a
 # no-save A_DEQU strikes a NON-magical item. Item::Damage must read that as a
 # statement about the METAL -- iron does not resist acid -- and not as a
 # statement about the caster's spell, so the owner's gear grant is added AFTER

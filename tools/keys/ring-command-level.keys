@@ -3,16 +3,16 @@
 # tools/check_ring_command_level.sh, finding PA-08-F4 of bd inc-tek.8.8.
 #
 # WHY THIS ORACLE. The number a ring grants is an effective priest turning
-# level, which src/Skills.cpp:4448-4562 adds to a d20 roll and to several
+# level, which src/Skills.cpp:4498-4612 adds to a d20 roll and to several
 # other bonuses before it divides by the target's resistance. Two extra points
 # move a probability and cross no visible threshold, so no amount of watching
 # the game command creatures would measure it. Wizard mode's "Examine Player
 # Data" prints every stati with its Val and its Mag (src/Debug.cpp:1528-1584),
 # and that Mag IS the number this finding changes. Val names the element:
-# MA_WATER 92, MA_AIR 93, MA_EARTH 94, MA_FIRE 95 (inc/Defines.h:1610-1613).
+# MA_WATER 92, MA_AIR 93, MA_EARTH 94, MA_FIRE 95 (inc/Defines.h:1627-1630).
 #
 # The character sheet cannot do this job. Its CA_COMMAND case
-# (src/Sheet.cpp:492-499) prints the element and no number at all, unlike the
+# (src/Sheet.cpp:494-501) prints the element and no number at all, unlike the
 # CA_TURNING case beside it.
 #
 # WHY TWO PASSES. A creature has two ring slots, so only two of the four rings
@@ -23,7 +23,7 @@
 #   w y                      enter wizard mode and open its menu. The second
 #                            and later 'w' need no 'y': the confirmation is
 #                            asked once, when WizardMode goes true
-#                            (src/Player.cpp:773-784).
+#                            (src/Player.cpp:789-800).
 #   Item Acquisition         RIGHT*26 walks the glyph row to Rings: ItemGlyphs
 #   RIGHT*26                 (src/Tables.cpp:320) puts -AI_RING 26 steps along.
 #   @until "<name>" DOWN     the candidate list has no menu letters, so the
@@ -37,12 +37,12 @@
 #                            inventory screen before it believes any number.
 #   ENTER m|n SPACE          take it, move the cursor to a ring slot -- 'm' is
 #                            Left Ring and 'n' is Right Ring -- and SPACE to
-#                            put it on (src/Managers.cpp:873).
+#                            put it on (src/Managers.cpp:911).
 #   s                        stow whatever the swap left in the air. A ring put
 #                            on over an occupied slot pushes the old ring into
 #                            the in-air slot, and the manager refuses to close
 #                            while anything is held there. 's' puts it in the
-#                            pack (src/Managers.cpp:835-848), which also takes
+#                            pack (src/Managers.cpp:873-886), which also takes
 #                            its command ability away again.
 #   ESC w                    leave the manager and reopen the wizard menu.
 #   @until "COMMAND ABILITY" the debug dump is far longer than one screen and

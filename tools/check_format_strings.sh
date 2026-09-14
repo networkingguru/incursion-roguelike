@@ -22,7 +22,7 @@
 # the attribute to warn from. The two declarations that make the compiler able
 # to see them at all are:
 #
-#     inc/Base.h:163      Format()   __attribute__((format(printf,1,2)))
+#     inc/Base.h:185      Format()   __attribute__((format(printf,1,2)))
 #     inc/Globals.h:10    Error()    __attribute__((format(printf,1,2)))
 #
 # THE FLAG ORDER MATTERS AND IS NOT OBVIOUS. clang's -w is not an ordinary -W

@@ -6,7 +6,7 @@
 # commented out because the disabled lines named races that do not exist --
 # $"Gnome, Rock" and $"Gnome, Deep" against the real "Gnome;race" and
 # "Deep Gnome;race" -- so the class told a gnome he might qualify
-# (lib/prestige.irh:1429-1430) and then turned him away.
+# (lib/prestige.irh:1477-1478) and then turned him away.
 #
 # THE ORACLE is whether the character holds the class. tools/keys/
 # prestige-earthsinger.keys builds a rock gnome bard who meets every other
@@ -19,7 +19,7 @@
 # NOT tested here, for two reasons found while trying:
 #
 #   1. The corrected clause is "boots suppress the ability only if they are
-#      magical". Item::isMagic() is `return eID || Plus` (inc/Item.h:92), and
+#      magical". Item::isMagic() is `return eID || Plus` (inc/Item.h:109), and
 #      every pair of boots the game can produce carries one or the other. The
 #      only mundane boots in the ruleset are Item "boots" (lib/mundane.irh:150,
 #      flagged IT_NOGEN, so never generated) and Item "cured leather boots"

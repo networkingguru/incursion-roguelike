@@ -12,7 +12,7 @@ the wrong parameter and the one it meant to set keeps its default.
 The instance that produced this tool (inc-xkd):
 
     inc/Api.h:122     system bool T_MAP::FindOpenAreas(Rect Area, uint16 Flags=0);
-    inc/Map.h:359     bool FindOpenAreas(Rect r, rID regID=0, int16 Flags=0);
+    inc/Map.h:424     bool FindOpenAreas(Rect r, rID regID=0, int16 Flags=0);
 
 The script's second argument is its Flags. In C++ it lands in regID. Tree Stride
 asks for trees-only, the engine hears "region 128", nothing matches, and the
@@ -24,7 +24,7 @@ A C++ method may legitimately carry trailing defaulted parameters that the
 script does not expose. MoveDepth is the benign shape:
 
     inc/Api.h:226     system void T_THING::MoveDepth(int16 NewDepth);
-    inc/Map.h:712     virtual void MoveDepth(int16 NewDepth, bool safe=false);
+    inc/Map.h:1020    virtual void MoveDepth(int16 NewDepth, bool safe=false);
 
 The script's one argument binds to NewDepth, exactly as intended, and `safe`
 takes its default. Counting parameters alone calls that a defect. It is not.
@@ -310,12 +310,12 @@ def cpp_declarations(headers):
             dm = re.match(
                 # The trailing part is optional: several declarations in
                 # inc/Map.h put the opening brace on the NEXT line, and
-                # requiring it here hid Thing::DirTo(Thing*) at inc/Map.h:748.
+                # requiring it here hid Thing::DirTo(Thing*) at inc/Map.h:1072.
                 # A DECLARATION HAS A RETURN TYPE. Requiring at least one word
                 # before the name is what separates
                 #   int8 Exercise(int16 at, ...)      a declaration
                 # from
-                #   Exercise(at, -amt, 0, 0);         a call, inc/Creature.h:212
+                #   Exercise(at, -amt, 0, 0);         a call, inc/Creature.h:258
                 r"\s*(?:virtual\s+|inline\s+|static\s+)*"
                 r"[A-Za-z_][A-Za-z_0-9:<>]*[\s\*&]+"
                 r"\b([A-Za-z_][A-Za-z_0-9]*)\s*\((.*?)\)\s*(?:const)?\s*[;{=]?\s*$",
@@ -326,7 +326,7 @@ def cpp_declarations(headers):
             name, params = dm.groups()
             if name in ("if", "for", "while", "switch", "return", "sizeof"):
                 continue
-            # A CALL is not a declaration. Creature.h:240 holds
+            # A CALL is not a declaration. Creature.h:286 holds
             # 'return HasMFlag(M_BLIND) || HasStati(BLIND);', which otherwise
             # reads as a one-parameter declaration of HasMFlag.
             if re.match(r"\s*(return|\}|else)\b", line):

@@ -6,7 +6,7 @@
 # tools/package_linux.sh was taught to copy it. Release 4 therefore shipped a
 # macOS build whose title screen fell back to the ASCII wordmark while Linux,
 # the Deck and Windows showed the real logo, and no check failed: the fallback
-# is silent by design (src/Wlibtcod.cpp:1560-1566 loads the PNG if it is there
+# is silent by design (src/Wlibtcod.cpp:1571-1577 loads the PNG if it is there
 # and simply does not if it is not). inc-ntjr.
 #
 # tools/check_package.sh inspects one BUILT folder, so it can only speak for the

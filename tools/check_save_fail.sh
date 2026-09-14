@@ -71,7 +71,7 @@ fi
 # same in two runs taken out:
 #   the File: line, because each run has its own scratch directory;
 #   the Secs column of the Level Statistics table, because
-#     Player::StoreLevelStats (src/Player.cpp:2766) accumulates
+#     Player::StoreLevelStats (src/Player.cpp:2983) accumulates
 #     time(NULL) - start_second, so it measures how long the machine took and
 #     not anything about the character. It has been seen to differ by one
 #     between two runs of the same seed. Nothing else in the report is a clock:
