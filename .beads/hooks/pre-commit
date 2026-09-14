@@ -32,6 +32,16 @@ if command -v bd >/dev/null 2>&1; then
 fi
 # --- END BEADS INTEGRATION v1.1.2 ---
 
+if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
+  _inc_head=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+  _inc_nightly=0
+  case "$_inc_head" in
+    nightly/?*)
+      if [ "${NIGHTLY_BRANCH:-}" = "$_inc_head" ]; then _inc_nightly=1; fi
+      ;;
+  esac
+fi
+
 # --- INCURSION: a new bead must be fit to publish before it is committed ---
 # (inc-m7xb, 2026-09-06)
 #
@@ -48,7 +58,10 @@ fi
 # must NEVER block a push: publication is a network operation whose failures have
 # nothing to do with the commits, while an unfit bead is a defect in the commit
 # itself. Brian's ruling on 2026-09-03: make it so you "physically CANNOT post a
-# bead without desc, tags, etc." There is no bypass variable on purpose. The
+# bead without desc, tags, etc." The sole exemption uses the shared-checkout
+# block's same nightly condition: warn, never skip the checker. On 2026-09-13,
+# four beads from other sessions forced the nightly run to commit with
+# --no-verify (inc-loa.50). The
 # native git commit --no-verify flag remains, and using it is a deliberate act.
 #
 # EXIT 2 WARNS, IT DOES NOT BLOCK. Exit 2 means the script could not measure --
@@ -108,13 +121,6 @@ fi
 if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
   _inc_gitdir=$(git rev-parse --absolute-git-dir 2>/dev/null)
   _inc_common=$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd)
-  _inc_head=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
-  _inc_nightly=0
-  case "$_inc_head" in
-    nightly/?*)
-      if [ "${NIGHTLY_BRANCH:-}" = "$_inc_head" ]; then _inc_nightly=1; fi
-      ;;
-  esac
   if [ -n "$_inc_gitdir" ] && [ "$_inc_gitdir" = "$_inc_common" ] \
      && [ ! -e "$_inc_gitdir/MERGE_HEAD" ] && [ "$_inc_nightly" -eq 0 ]; then
     echo >&2 "pre-commit: REFUSED. This is the shared checkout, and new work does not"
@@ -138,10 +144,13 @@ if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
     BD_GIT_HOOK_NESTED=1 "$_inc_root/tools/check_bead_publish.py"
     _inc_pub=$?
     if [ $_inc_pub -eq 1 ]; then
-      echo >&2 "pre-commit: a bead created since the last commit is not fit to publish. Fix it above, or use git commit --no-verify and answer for it."
-      exit 1
-    fi
-    if [ $_inc_pub -ne 0 ]; then
+      if [ "$_inc_nightly" -eq 1 ]; then
+        echo >&2 "pre-commit: the commit CONTINUES because this is the overnight harness on its own nightly branch; the unfit bead still needs its author."
+      else
+        echo >&2 "pre-commit: a bead created since the last commit is not fit to publish. Fix it above, or use git commit --no-verify and answer for it."
+        exit 1
+      fi
+    elif [ $_inc_pub -ne 0 ]; then
       echo >&2 "pre-commit: check_bead_publish.py could not measure (exit $_inc_pub); the commit CONTINUES."
     fi
   fi

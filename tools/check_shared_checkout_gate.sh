@@ -19,9 +19,9 @@
 # repository under TMPDIR, points core.hooksPath at a copy of the hook, and
 # tries a real commit. Nothing here touches the repository it is run from.
 #
-# THE SUITE CANNOT PASS VACUOUSLY. Four cases demand a refusal and three demand
-# a commit, so a hook that never runs fails the first four and a hook that
-# refuses everything fails the last three.
+# THE SUITE CANNOT PASS VACUOUSLY. Six cases demand a refusal and four demand
+# a commit, so a hook that never runs fails the refusal cases and a hook that
+# refuses everything fails the commit cases.
 #
 # PATH IS CUT DOWN ON PURPOSE. The beads block at the top of the hook shells out
 # to `bd`, which would resolve a database from the scratch directory. With bd
@@ -67,10 +67,10 @@ git -C "$REPO" commit -q --no-verify -m "base" || exit 2
 fails=0
 n=0
 
-# try <dir> <allow|refuse> <label>; NIGHTLY_BRANCH comes from the caller's
+# try <dir> <allow|refuse> <label> [required-output]; NIGHTLY_BRANCH comes from the caller's
 # environment, which is the whole point of the exemption under test.
 try() {
-    local dir=$1 want=$2 label=$3 out rc verdict
+    local dir=$1 want=$2 label=$3 marker=${4:-} out rc verdict
     n=$(( n + 1 ))
     echo "line $n" >> "$dir/file.txt"
     git -C "$dir" add file.txt
@@ -78,10 +78,14 @@ try() {
     rc=$?
     if [ $rc -eq 0 ]; then verdict=allow; else verdict=refuse; fi
     if [ "$verdict" = "$want" ]; then
-        echo "ok       $label ($verdict)"
-        return 0
+        if [ -z "$marker" ] || [[ "$out" == *"$marker"* ]]; then
+            echo "ok       $label ($verdict)"
+            return 0
+        fi
+        echo "FAIL     $label: missing output marker: $marker"
+    else
+        echo "FAIL     $label: wanted $want, got $verdict (exit $rc)"
     fi
-    echo "FAIL     $label: wanted $want, got $verdict (exit $rc)"
     echo "$out" | sed 's/^/         | /'
     git -C "$dir" reset -q HEAD -- file.txt
     git -C "$dir" checkout -q -- file.txt
@@ -142,9 +146,30 @@ else
     fails=$(( fails + 1 ))
 fi
 
+# The publish checker is present only for the three new cases (inc-loa.50).
+mkdir -p "$REPO/tools" "$WORK/tools"
+cat > "$REPO/tools/check_bead_publish.py" <<'STUB'
+#!/bin/sh
+echo >&2 "STUB-PUBLISH-CHECK: unfit bead"
+exit 1
+STUB
+chmod +x "$REPO/tools/check_bead_publish.py"
+cp -f "$REPO/tools/check_bead_publish.py" "$WORK/tools/check_bead_publish.py"
+chmod +x "$WORK/tools/check_bead_publish.py"
+
+# 8. The harness must still run the checker, but an unfit bead only warns.
+git -C "$REPO" checkout -q "$NIGHTLY_BRANCH_NAME"
+NIGHTLY_BRANCH="$NIGHTLY_BRANCH_NAME" try "$REPO" allow "case 8: nightly harness, unfit bead" "STUB-PUBLISH-CHECK: unfit bead"
+
+# 9. An ordinary worktree's unfit bead still refuses the commit.
+try "$WORK" refuse "case 9: linked worktree, unfit bead, no NIGHTLY_BRANCH"
+
+# 10. A matching variable on an ordinary branch grants no exemption.
+NIGHTLY_BRANCH=inc-test try "$WORK" refuse "case 10: linked worktree, unfit bead, NIGHTLY_BRANCH=inc-test"
+
 echo
 if [ $fails -eq 0 ]; then
-    echo "=== PASS: the shared-checkout gate refuses new work and admits the harness ==="
+    echo "=== PASS: all ten cases ok (six refused, four allowed); publish check warns only the nightly harness ==="
     exit 0
 fi
 echo "=== FAIL: $fails case(s) behaved differently from the rule in .beads/hooks/pre-commit ==="
