@@ -17,7 +17,7 @@
 # src/Managers.cpp:2332 demands before it will open the prestige list.
 #
 # NOTHING IS TAKEN. Pressing a menu letter TAKES the class (LMenu returns the
-# moment its letter arrives, src/TextTerm.cpp:1217-1231), so this script only
+# moment its letter arrives, src/TextTerm.cpp:1299-1326), so this script only
 # photographs the menu and presses ESC.
 #
 # SEED-INDEPENDENT for what it asserts: the menu is static text built from the

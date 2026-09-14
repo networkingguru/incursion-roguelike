@@ -9,10 +9,10 @@
 #
 #   * A caster needs caster level 5 to learn a 3rd-level spell. The Learn
 #     Spells menu skips any spell whose SAL exceeds AbilityLevel(
-#     CA_SPELLCASTING) (src/Create.cpp:4505-4507), and __SAL is
+#     CA_SPELLCASTING) (src/Create.cpp:4705-4707), and __SAL is
 #     { 0, 1, 3, 5, 7, 9, 12, 14, 16, 18 } (src/Tables.cpp:48).
 #   * The huntsman gains one caster level at every 2nd class level
-#     (lib/prestige.irh:2953), so caster level 5 needs TEN class levels.
+#     (lib/prestige.irh:3043), so caster level 5 needs TEN class levels.
 #   * No prestige class may be taken before three core levels
 #     (src/Managers.cpp:2331), and MAX_CHAR_LEVEL is 11
 #     (inc/Defines.h:4457). 10 + 3 = 13.
@@ -32,8 +32,8 @@
 #
 # ATHLETICS COMES FROM A FEAT. Natural Aptitude (src/FeatTab.cpp:60) is
 # FF_MULTIPLE, so it can be taken again and again, and each one grants an
-# EXTRA_SKILL stati with source SS_CLAS (src/Create.cpp:2832).
-# Character::MaxRanks (src/Create.cpp:3802-3810) answers such a stati with
+# EXTRA_SKILL stati with source SS_CLAS (src/Create.cpp:3009).
+# Character::MaxRanks (src/Create.cpp:3999-4007) answers such a stati with
 # ClassLevelRanks[TotalLevel()] -- the full character-level cap, the same
 # term a racial skill gets, and it does not care which classes the character
 # holds. One feat therefore replaces the three rogue levels the older script
@@ -52,7 +52,7 @@
 #
 # An elf is given Maeve at birth (lib/races.irh:1144-1147).
 #
-# THE ORACLE is the [L]earn Spells menu, which src/Create.cpp:4356-4375
+# THE ORACLE is the [L]earn Spells menu, which src/Create.cpp:4556-4558
 # builds by walking the SPELL_ACCESS stati and reading each granting
 # resource's SPELL_LIST. The menu is that list, filtered by caster level.
 #

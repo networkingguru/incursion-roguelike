@@ -22,7 +22,7 @@
 # as one of his two birth skills (lib/races.irh:197, "Skills: SK_ANY, SK_ANY"
 # -> two Natural Aptitude picks, src/Create.cpp:302-308). A skill held that
 # way caps at the character's own level rather than at the levels of the
-# classes that carry it (src/Create.cpp:3642-3650), so it can reach the 10 the
+# classes that carry it (src/Create.cpp:3999-4007), so it can reach the 10 the
 # gate wants.
 #
 # SEED. The attribute rolls and the offered feats vary with the seed, so the
@@ -109,7 +109,7 @@ G
 @dump:bard7
 
 # The gate wants Disguise 10, Poison Use 10, Hide 7 and Move Silently 7.
-# ISkillLevel (src/Create.cpp:3955) counts training and the inherent
+# ISkillLevel (src/Create.cpp:4315) counts training and the inherent
 # attribute bonus as well as ranks, so filling each to its cap clears them.
 S
 @expect "Unspent Skill Ranks"

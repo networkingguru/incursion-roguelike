@@ -3,7 +3,7 @@
 # proficiencies in their prose and only one of them declares the field.
 #
 # The Assassin's prose promises "crossbows and light weapons"
-# (lib/prestige.irh:509). Before the fix the class had no Proficiencies: line
+# (lib/prestige.irh:526-527). Before the fix the class had no Proficiencies: line
 # at all, so it granted neither. The fix declares
 #   Proficiencies: WG_CROSSBOWS, WG_LIGHT;      lib/prestige.irh:589
 # and WG_CROSSBOWS is a group that had to be invented, because the three

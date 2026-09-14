@@ -2,7 +2,7 @@
 # PA-03-F7 connected: "Surreal Presence", which the class's prose promises at
 # 3rd level and which nothing in the ruleset ever granted.
 #
-# The effect was fully written at lib/prestige.irh:449-461 -- a verbatim copy
+# The effect was fully written at lib/prestige.irh:455-467 -- a verbatim copy
 # of the Spook spell with EF_PERMANANT in place of EF_PERSISTANT -- and no
 # Grants entry, no ThrowEff and no GainPermStati referred to it. The fix adds
 # two lines to the class's own EV_ADVANCE handler (lib/prestige.irh:393-395),
@@ -186,7 +186,7 @@ P                               # [P]restige Classes
 #
 # Summoning a kobold next to her puts it inside the field on the turn it
 # appears, so the message is the oracle, word for word from
-# lib/prestige.irh:456-458.
+# lib/prestige.irh:461-463.
 @until "HP:" ESC
 w
 @choose "Monster Summoning"

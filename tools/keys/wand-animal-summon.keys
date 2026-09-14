@@ -7,7 +7,7 @@
 # that is the monster-type filter, so the wand summoned from the wrong list.
 #
 # THE ORACLE is the line Magic::Summon prints for every creature that lands,
-# "An <Obj> appears!" (src/Effects.cpp:1493). The check reads the creature's
+# "An <Obj> appears!" (src/Effects.cpp:1503). The check reads the creature's
 # name back off the screen and looks its MTypes up in lib/mon*.irh.
 #
 # The steps, in order:
@@ -51,7 +51,7 @@
 #
 # The wand is fired EIGHT times, and every shot is photographed. It has to be.
 # Firing a wand is a Use Magic check against DC 10 + itemlevel/2
-# (src/Magic.cpp:3838), which is DC 15 for a +5 wand, and an orc barbarian
+# (src/Magic.cpp:3947), which is DC 15 for a +5 wand, and an orc barbarian
 # makes about one in two. A single shot would therefore measure nothing half
 # the time. The check reads the shots in order and takes the FIRST one that
 # summoned anything, so eight shots leave about one run in 250 with no

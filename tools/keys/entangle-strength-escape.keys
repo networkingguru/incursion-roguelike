@@ -16,7 +16,7 @@
 #
 # THE HAZARD is "tanglefoot strands", written under the two squares east of
 # him with the wizard terrain command. It is [j] on page 2 of that menu, hence
-# the TAB. Walking in costs a flat Reflex DC 15 (lib/alchemy.irh:282), which
+# the TAB. Walking in costs a flat Reflex DC 15 (lib/alchemy.irh:326), which
 # he fails at -1.
 #
 # THE ORACLE is the two printed check lines. "Strength Check:" cannot appear

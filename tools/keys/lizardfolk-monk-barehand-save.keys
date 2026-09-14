@@ -8,7 +8,7 @@
 # same character exactly as chargen handed him over, with a weapon in his
 # hands. A fixture is frozen and a different character is a new fixture, never
 # an edit (tools/fixtures/README.md), so "the same monk, bare-handed" has to be
-# its own file. It is worth its own file because src/Sheet.cpp:162 hides the
+# its own file. It is worth its own file because src/Sheet.cpp:165-172 hides the
 # whole Brawl block while SL_WEAPON holds a weapon: every check that measures
 # bare-handed fighting must empty the hands first, and until this fixture
 # existed each of them emptied the hands for itself, in its own chargen prefix,
@@ -37,7 +37,7 @@
 #
 # ONE KEY EMPTIES BOTH HANDS, because the quarterstaff is two-handed and fills
 # Ready Hand and Weapon Hand at once. Slot [b] is named rather than [a] because
-# SL_WEAPON is the slot src/Sheet.cpp:162 actually tests.
+# SL_WEAPON is the slot src/Sheet.cpp:165-166 actually tests.
 #
 # ESC b is the System Menu's [b] Save and Continue (src/Player.cpp:843), and it
 # is the only save the game offers that does not also end the session. READ THE
@@ -83,7 +83,7 @@ ESC ENTER SPACE
 # the ESC below and this run would stop here (exit 6) instead of freezing a
 # character who is still holding his staff.
 i                       # Inventory Mode
-b                       # Weapon Hand -- the slot src/Sheet.cpp:162 tests
+b                       # Weapon Hand -- the slot src/Sheet.cpp:165-166 tests
 d                       # Drop. Stowing is refused for size; see the header.
 @expect "Weapon Hand  :Empty"
 @dump:hands-empty

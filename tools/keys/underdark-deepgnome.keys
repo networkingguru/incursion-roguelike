@@ -2,7 +2,7 @@
 # inc-tek.8.3 finding PA-03-F13: the class header and its level table both
 # advertise a good Reflex save, and the class flags gave the poor track.
 #
-# The header at lib/prestige.irh:3038 reads Saves: *<9>FR<1>w*, so Fortitude
+# The header at lib/prestige.irh:3163 reads Saves: *<9>FR<1>w*, so Fortitude
 # and Reflex are highlighted and Will is not. The level table prints
 # +2 +3 +3 +4 +4 in the Reflex column, which is GoodSave[1..5] digit for
 # digit (src/Tables.cpp:100-103). The flags said only CF_GOOD_FORT, and
@@ -120,7 +120,7 @@ d                       # character sheet
 # letters LMenu has to give out, so the entries past the 52nd get a blank
 # bracket. A menu ignores the space bar, so the only way in is to put the
 # cursor on the row and press ENTER. DOWN walks the whole list, column by
-# column, and wraps (src/TextTerm.cpp:1145-1152).
+# column, and wraps (src/TextTerm.cpp:1204-1211).
 @cursorto "Toughness" DOWN
 ENTER
 @until "Choose a feat" G

@@ -47,7 +47,7 @@ ESC
 
 d       # Display Character Sheet
 # The Special Abilities block sits below the fold, drawn in the right-hand
-# column beside the feat list. DOWN pages the sheet (src/Managers.cpp:2213);
+# column beside the feat list. DOWN pages the sheet (src/Managers.cpp:2296-2297);
 # PGDN moves it one line only, which is not enough.
 DOWN
 @dump:specials1

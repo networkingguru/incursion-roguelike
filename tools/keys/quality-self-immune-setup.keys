@@ -47,7 +47,7 @@
 # [w] below is eaten by the description.
 ESC
 
-# Wizard switches, counted from the top of the list in src/Tables.cpp:2674:
+# Wizard switches, counted from the top of the list in src/Tables.cpp:2679:
 #   1 Cheat Death, 3 Free Advancement, 5 Always Rest Safely.
 # Cheat Death is not a convenience: an unanswered death prompt spends every key
 # after it. Always Rest Safely stops new monsters being generated while the

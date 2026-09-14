@@ -6,7 +6,7 @@
 # the immunity level is 1, so a Monk 4's Ki Strike +1 is exactly enough to beat
 # it and a Monk 1's nothing is exactly not enough.
 #
-# The oracle is the message src/Fight.cpp:8510 prints when e.isWImmune is set:
+# The oracle is the message src/Fight.cpp:8899-8902 prints when e.isWImmune is set:
 # "Your weapon fails to penetrate." Nothing else in the game prints that line.
 #
 # The chargen prefix is tools/keys/monk-brawl-speed.keys, letter for letter,

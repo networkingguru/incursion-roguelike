@@ -185,7 +185,7 @@ P                               # [P]restige Classes
 # THE MEASUREMENT. The archer shoots the same kind of target twice: once with
 # the long bow the class description names, and once with a sling. A sneak
 # attack writes its own term into the damage line, " +Nd6 SA"
-# (src/Fight.cpp:5135), and the wizard switch above makes that line print.
+# (src/Fight.cpp:5445), and the wizard switch above makes that line print.
 #
 # WHY THE TARGET IS A FRESHLY SUMMONED MONSTER. Sneak attack damage needs the
 # victim off-guard, flanked or surprised, and the attacker within three

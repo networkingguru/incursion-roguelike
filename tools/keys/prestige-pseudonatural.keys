@@ -17,7 +17,7 @@
 # seven levels of known Weavecraft spells, the Augment Summoning feat, and
 # either Kysul or no god at all.
 #   * A mage carries every Knowledge skill: SK_KNOW_ALL in its skill list
-#     expands to all of them (inc/Defines.h:1888).
+#     expands to all of them (inc/Defines.h:1913).
 #   * Weavecraft is one of the nine specialties a wizard picks at creation,
 #     and its five first-level spells -- Alarm, Mount, Monster Summoning I,
 #     Phase Door and Magic Weapon -- are exactly the five picks character

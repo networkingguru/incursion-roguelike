@@ -1,7 +1,7 @@
 # Build an Elf Rogue 7 / Assassin 3 and photograph his Sneak Attack dice.
 #
 # WHY THIS EXISTS. bd inc-0rw, the parity half of the stacking defect. The
-# Assassin's prose (lib/prestige.irh:547) adds his assassin levels to his
+# Assassin's prose (lib/prestige.irh:530-531) adds his assassin levels to his
 # rogue levels for Sneak Attack. Both grants read
 #   Ability[CA_SNEAK_ATTACK,+1] at every 2nd level starting at 1st
 # (lib/classes.irh:2584 and lib/prestige.irh:596), and each one counts only
@@ -71,7 +71,7 @@ d                               # character sheet
 @dump:rogue7
 
 # The gate wants Disguise 10, Poison Use 10, Hide 7 and Move Silently 7.
-# ISkillLevel (src/Create.cpp:3955) counts training and the inherent
+# ISkillLevel (src/Create.cpp:4315) counts training and the inherent
 # attribute bonus as well as ranks, so filling each to its cap clears them.
 S
 @expect "Unspent Skill Ranks"
@@ -97,7 +97,7 @@ P                               # [P]restige Classes
 #    level below leaves the sheet and re-opens it, and the class line is read
 #    only from a fresh one.
 # 2. The Assassin's 1st level hands over a spellbook
-#    (lib/prestige.irh:609-619). The item lands in the In-the-Air slot, and
+#    (lib/prestige.irh:613-621). The item lands in the In-the-Air slot, and
 #    the game will not leave inventory mode while anything is there -- so it
 #    must be stowed before any further keystroke is spent, or every key after
 #    it goes into the inventory screen instead. That is the lone 's' below.

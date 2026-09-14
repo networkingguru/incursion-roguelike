@@ -10,7 +10,7 @@
 # it was before the first one.
 #
 # WHY THE ITEM MENU IS THE ORACLE. Item::xName appends the plus to the item's
-# name whenever the item is known (src/Message.cpp:1300-1308), and it does so
+# name whenever the item is known (src/Message.cpp:1302-1311), and it does so
 # for an EF_NAMEONLY entity too -- the flag only chooses the base word, the
 # plus is written after it either way. So the 'a' command's own menu, which
 # the player reads before choosing what to activate, spells the number out:

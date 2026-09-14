@@ -3,7 +3,7 @@
 # 5th-level ability, had no implementation of any kind.
 #
 # The prose promises "an extra +1d2 attribute points from any tome they read"
-# (lib/prestige.irh:2052-2053) and the level table lists the ability at 5th.
+# (lib/prestige.irh:2149-2150) and the level table lists the ability at 5th.
 # The Grants block jumped from 3rd level to 6th, the class's EV_ADVANCE
 # handler branched only on levels 2, 4 and 8, and a search for
 # "Bibliographic" across lib/ found nothing but the table row.

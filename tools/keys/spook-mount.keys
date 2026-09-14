@@ -1,11 +1,11 @@
 # Does a mount keep its own aura when you climb on it?
 #
 # bd inc-izzy item 2. Spook is a mobile field centred on its caster
-# (lib/wspells.irh:967-976). A night hunter that a player has tamed stands on
-# the map and holds its aura. Creature::Mount (src/Skills.cpp:4310) takes the
+# (lib/wspells.irh:984-992). A night hunter that a player has tamed stands on
+# the map and holds its aura. Creature::Mount (src/Skills.cpp:4300) takes the
 # steed off the map with Remove(false) before it sets the MOUNT stati, and
 # Thing::Remove destroys every mobile field created by the thing it removes
-# (src/Display.cpp:1968-1973). So climbing on kills the aura the animal is
+# (src/Display.cpp:2043-2053). So climbing on kills the aura the animal is
 # still emitting from underneath you.
 #
 # A second defect lives at the other end of the same journey. Thing::PlaceAt

@@ -42,7 +42,7 @@ ENTER y
 ESC ENTER SPACE
 
 # Chargen perks can hand even a monk a real weapon -- this character starts
-# with a long sword +3 in the weapon hand. src/Sheet.cpp:162 hides the Brawl
+# with a long sword +3 in the weapon hand. src/Sheet.cpp:165-172 hides the Brawl
 # row whenever SL_WEAPON holds a T_WEAPON, and src/Values.cpp:462 feeds the
 # held weapon into the brawl slot anyway, so the hands must be empty before
 # the sheet can answer anything about unarmed speed.

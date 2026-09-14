@@ -6,7 +6,7 @@
 #
 # BOTH HALVES OF THE RULING ARE MEASURED HERE.
 #
-# The ITEM half: wizard option 13, "Add Quality to Armour" (src/Debug.cpp:762),
+# The ITEM half: wizard option 13, "Add Quality to Armour" (src/Debug.cpp:746),
 # puts AQ_FIRE_RES on the worn suit. It draws no random number for an AQ_*
 # value (QItem::AddQuality, src/Item.cpp:2919 onward walks straight to the
 # Qualities array), so the two arms stay in step. Twelve fireballs must then
@@ -24,7 +24,7 @@
 @include quality-self-immune-setup.keys
 
 # AQ_FIRE_RES on the worn suit. The prompt takes the constant's name, which
-# src/Debug.cpp:760 looks up in AQ_CONSTNAMES.
+# src/Debug.cpp:758 looks up in AQ_CONSTNAMES.
 w
 @choose "Add Quality to Armour"
 @expect "Enter Quality Constant"
