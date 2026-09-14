@@ -12,7 +12,7 @@ the wrong parameter and the one it meant to set keeps its default.
 The instance that produced this tool (inc-xkd):
 
     inc/Api.h:122     system bool T_MAP::FindOpenAreas(Rect Area, uint16 Flags=0);
-    inc/Map.h:359     bool FindOpenAreas(Rect r, rID regID=0, int16 Flags=0);
+    inc/Map.h:424     bool FindOpenAreas(Rect r, rID regID=0, int16 Flags=0);
 
 The script's second argument is its Flags. In C++ it lands in regID. Tree Stride
 asks for trees-only, the engine hears "region 128", nothing matches, and the
@@ -24,7 +24,7 @@ A C++ method may legitimately carry trailing defaulted parameters that the
 script does not expose. MoveDepth is the benign shape:
 
     inc/Api.h:226     system void T_THING::MoveDepth(int16 NewDepth);
-    inc/Map.h:712     virtual void MoveDepth(int16 NewDepth, bool safe=false);
+    inc/Map.h:1020    virtual void MoveDepth(int16 NewDepth, bool safe=false);
 
 The script's one argument binds to NewDepth, exactly as intended, and `safe`
 takes its default. Counting parameters alone calls that a defect. It is not.
