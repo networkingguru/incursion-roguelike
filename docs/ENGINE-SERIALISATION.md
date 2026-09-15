@@ -524,13 +524,13 @@ grep -n "virtual" inc/Res.h | head -3                                   # first 
 2. src/Registry.cpp:972-973 vs :981-983 — `T_STAFF` (52) has no case in
    the `LoadGroup` switch and sits inside the item range, so it falls to
    the default and placement-news an `Item`. A staff is built as a `Weapon`
-   (src/Item.cpp:275-276) and sized as one (src/Registry.cpp:324), so a
+   (src/Item.cpp:292-293) and sized as one (src/Registry.cpp:324), so a
    loaded staff keeps the right byte count but gets `Item`'s vtable and
    loses every `Weapon` override, `isWeapon()` included (inc/Item.h:375).
    v1 mirrors this behaviour deliberately (spec risk 3): fixing it is a
    vtable change across a load, out of the schema work's scope.
 3. src/Registry.cpp:967 — the mirror image. `T_COIN` (29) is built as a
-   plain `Item` (src/Item.cpp:308-314) and sized as one, but `LoadGroup`
+   plain `Item` (src/Item.cpp:325-331) and sized as one, but `LoadGroup`
    placement-news a `Coin`, so a coin's vtable changes across a save. Also
    mirrored by v1, same reasoning.
 4. src/Registry.cpp:331 vs :981-985 — `typeSize` handles `T_ANNOT` (90)

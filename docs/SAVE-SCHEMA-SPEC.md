@@ -334,7 +334,7 @@ by the per-player resource memory: `MonMem[szMon]`, `ItemMem[szItm]`,
 `EffMem[szEff]`, `RegMem[szReg]`, addressed arithmetically from the resource's
 position (`Module::GetMemoryPtr`, `src/Res.cpp:719`). `EffMem`
 (`inc/Res.h:1432`) carries `FlavorID` and `PFlavorID` — whole flavour `rID`s,
-assigned by the per-game shuffle in `Game::SetFlavors` (`src/Item.cpp:325`).
+assigned by the per-game shuffle in `Game::SetFlavors` (`src/Item.cpp:342`).
 This is the identification state: which potion looks like what, and what the
 player has tried and knows.
 
