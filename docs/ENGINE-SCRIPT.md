@@ -41,9 +41,9 @@ inside the guarded block (`src/RComp.cpp:1491`, `src/RComp.cpp:1473`), so droppi
 alone fails the link. Each build answers that by excluding whole files.
 **The macOS build takes a `COMPILER` switch** (`build_macos.sh:130`).
 `COMPILER=yes`, the default, defines `DEBUG` and compiles every source
-(`build_macos.sh:177-180`). `COMPILER=no` defines nothing and skips `src/RComp.cpp`,
-`src/Art.cpp`, `src/yygram.cpp` and `src/Tokens.cpp` (`build_macos.sh:182-183`), and
-`src/cpp1-6.c` as well (`build_macos.sh:325-327`). Windows splits the same way by
+(`build_macos.sh:181-184`). `COMPILER=no` defines nothing and skips `src/RComp.cpp`,
+`src/Art.cpp`, `src/yygram.cpp` and `src/Tokens.cpp` (`build_macos.sh:186-187`), and
+`src/cpp1-6.c` as well (`build_macos.sh:329-331`). Windows splits the same way by
 configuration: Debug adds `/DDEBUG` (`build.bat:60`), Release does not (`build.bat:63`)
 and filters `cpp*.c`, `yygram.cpp` and `tokens.cpp` out of the source list
 (`build.bat:93`). Compiled in every configuration: `src/Registry.cpp`,

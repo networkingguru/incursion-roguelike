@@ -45,19 +45,19 @@ BACKEND=posix ./build_macos.sh   # -> ./incursion-headless  the POSIX/ncurses bu
 `OUT=incursion` and `:88` maps `posix` to `OUT=incursion-headless`. Either line
 also compiles `mod/Incursion.Mod`, because both builds carry the resource
 compiler by default. An ordinary build recompiles it every time; a build with
-`EXTRA_CXXFLAGS` set compiles it only when the file is absent (`build_macos.sh:371-381`).
+`EXTRA_CXXFLAGS` set compiles it only when the file is absent (`build_macos.sh:375-385`).
 
 The `posix` build compiles `src/Wposix.cpp` and links `-lz -lncurses`
-(`build_macos.sh:239-248`). ncurses ships with macOS and with every Linux
+(`build_macos.sh:243-252`). ncurses ships with macOS and with every Linux
 distribution, so it adds nothing to install, and it draws only to a real
 terminal — a headless run never calls into it
-(`build_macos.sh:245-247`). The `libtcod` build links SDL2 and OpenGL instead
-(`build_macos.sh:250-255`), and needs `sdl2` and `pkg-config` from Homebrew.
+(`build_macos.sh:249-251`). The `libtcod` build links SDL2 and OpenGL instead
+(`build_macos.sh:254-259`), and needs `sdl2` and `pkg-config` from Homebrew.
 
 **The harness needs the second line.** `headless.sh:82` defaults its binary to
 `./incursion-headless`, and `:85-88` refuses to run without it, printing that
 exact build command. `soak.sh:33-35`, `check_race_feats.sh:23-26` and
-`check_load_corrupt.sh:55-58` all say the same.
+`check_load_corrupt.sh:62-65` all say the same.
 
 Requirements: Xcode command line tools, plus `sdl2` and `pkg-config` from
 Homebrew (`build_macos.sh:4-5`). The POSIX build needs neither SDL nor libtcod
@@ -303,7 +303,7 @@ run was for, which a pid does not, and the count is the only thing that proves
 the runs stayed apart. `soak.sh:59` does this, and so does every check that
 drives more than one session (`check_headless.sh:258`, `:282`, `:292`, `:305`,
 `:327`; `check_layout.sh:89`; `check_dump_save.sh:56`;
-`check_load_corrupt.sh:69`). `check_race_feats.sh:29-30` does NOT — it takes the
+`check_load_corrupt.sh:76`). `check_race_feats.sh:29-30` does NOT — it takes the
 timestamped default and parses the `run:` line out of the harness output. That
 is now safe in a loop as well, because the default name is unique, but it still
 tells you nothing about which run was which.
@@ -770,9 +770,11 @@ read at all. Without the second, the check cannot tell a fixed wildcard from a
 loop that matches everything. Without the third, it cannot see a loop that
 stops one row too early.
 
-`check_load_corrupt.sh:45-51` prefers `./incursion-ubsan` when it exists and
-falls back to `./incursion-headless`. Build the sanitizer variant with the line
-in `build_macos.sh:136-139` if you want the stronger run.
+`check_load_corrupt.sh:47-58` prefers `./incursion-ubsan` when it exists and
+falls back to `./incursion-headless`. It refuses an `./incursion-ubsan` when a
+file in `src/` or `inc/` is newer, because that binary would test old code.
+Build the sanitizer variant with the recipe at `build_macos.sh:142-143` if you
+want the stronger run.
 
 ### Tier 4 — needs an artefact you built on purpose
 

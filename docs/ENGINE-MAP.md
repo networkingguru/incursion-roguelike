@@ -69,7 +69,7 @@ All three `main()`s do the same five things in order: `new Game`, `new <backend>
 
 There is no headless class. `posixTerm` is headless at run time: `useCurses` (`src/Wposix.cpp:121`) is set by `UseTerminal()` (`:216`) from `-headless` and `isatty` (`:572`), and every draw path tests it.
 
-`build_macos.sh` compiles one backend and skips the rest by filename: `BACKEND` defaults to libtcod (`:84`), the posix branch sets `-DPOSIX_TERM` and `SKIP_BACKENDS="Wlibtcod Wcurses"` (`:243-244`), enforced at `:309`. `build.sh:28` instead compiles all three and lets the define empty two. `src/Wcurses.cpp` never builds on macOS.
+`build_macos.sh` compiles one backend and skips the rest by filename: `BACKEND` defaults to libtcod (`:84`), the posix branch sets `-DPOSIX_TERM` and `SKIP_BACKENDS="Wlibtcod Wcurses"` (`:247-248`), enforced at `:313`. `build.sh:28` instead compiles all three and lets the define empty two. `src/Wcurses.cpp` never builds on macOS.
 
 ## How to check this page
 

@@ -33,7 +33,9 @@
 #
 # Set INCURSION_BIN to pick which build drives the check (default: prefer
 # ./incursion-ubsan if it exists, so a regression that only shows up under
-# the sanitizer is still caught; fall back to ./incursion-headless).
+# the sanitizer is still caught; fall back to ./incursion-headless). The
+# default refuses an ./incursion-ubsan when a file in src/ or inc/ is newer,
+# because a stale sanitizer build tests old code and still passes.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -45,6 +47,11 @@ fail() { echo "FAIL: $1"; FAILED=1; }
 if [ -z "${INCURSION_BIN:-}" ]; then
     if [ -x ./incursion-ubsan ]; then
         INCURSION_BIN=./incursion-ubsan
+        NEWER="$(find src inc -type f -newer ./incursion-ubsan -print -quit)"
+        if [ -n "$NEWER" ]; then
+            fail "./incursion-ubsan is older than $NEWER, so it would test old code. Rebuild it with the recipe at build_macos.sh:142-143, or delete it (or set INCURSION_BIN=./incursion-headless) to test the plain build"
+            exit 1
+        fi
     else
         INCURSION_BIN=./incursion-headless
     fi
@@ -53,7 +60,7 @@ export INCURSION_BIN
 export UBSAN_OPTIONS="${UBSAN_OPTIONS:-print_stacktrace=0:halt_on_error=0}"
 
 if [ ! -x "$INCURSION_BIN" ]; then
-    fail "$INCURSION_BIN is not built. Run: BACKEND=posix ./build_macos.sh (or see tools/lz_uncompress_selftest.c's header for the UBSan build line)"
+    fail "$INCURSION_BIN is not built. Run: BACKEND=posix ./build_macos.sh (for ./incursion-ubsan, use the recipe at build_macos.sh:142-143)"
     exit 1
 fi
 

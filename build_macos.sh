@@ -137,6 +137,10 @@ EXTRA_CXXFLAGS="${EXTRA_CXXFLAGS:-}"
 # AddressSanitizer is the one that made this necessary:
 #   EXTRA_CXXFLAGS="-fsanitize=address -g" EXTRA_LDFLAGS=-fsanitize=address \
 #   BACKEND=posix OUT=incursion-asan ./build_macos.sh
+# UndefinedBehaviorSanitizer takes the same two. tools/check_load_corrupt.sh
+# prefers this binary, and refuses it when a file in src/ or inc/ is newer:
+#   EXTRA_CXXFLAGS="-fsanitize=undefined -g" EXTRA_LDFLAGS=-fsanitize=undefined \
+#   BACKEND=posix OUT=incursion-ubsan ./build_macos.sh
 EXTRA_LDFLAGS="${EXTRA_LDFLAGS:-}"
 
 # The C++ warning switch. It defaults to -w, which is what every ordinary build

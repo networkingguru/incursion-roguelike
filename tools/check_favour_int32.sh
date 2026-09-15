@@ -32,7 +32,7 @@
 #
 # THE TWO-PASS BUILD. inc/Api.h is compiled into nothing. The resource compiler
 # READS it and GENERATES lib/dispatch.h (src/RComp.cpp:219, GenerateDispatch),
-# and build_macos.sh:380 runs that regeneration AFTER the binary is linked. One
+# and build_macos.sh:384 runs that regeneration AFTER the binary is linked. One
 # build after the declaration changes therefore links the OLD dispatcher and
 # merely writes the new one to disk; the SECOND build is the one that compiles
 # it in. check_build is overridden below for that reason -- see the comment
