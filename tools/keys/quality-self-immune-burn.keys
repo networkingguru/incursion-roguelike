@@ -29,7 +29,7 @@
 # THE ORACLE is the suit's own page, read before and after. Its hit points are
 # the behavioural half; its hardness table, which ItemHardnessDesc builds by
 # calling Item::Hardness once per damage type, is the direct half. The game's
-# combat-numbers line (src/Item.cpp:1492-1513) prints "vs. 0 (leather)" or
+# combat-numbers line (src/Item.cpp:1511-1531) prints "vs. 0 (leather)" or
 # "vs. Immune (leather)" as it happens, but only the LAST such line survives to
 # a screen dump, so no assertion rests on catching one.
 #

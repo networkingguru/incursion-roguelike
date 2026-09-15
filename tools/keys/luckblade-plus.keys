@@ -19,7 +19,7 @@
 # for GetPlus() == 0, so a drained sword reads plainly as "Luckblade".
 #
 # NOTHING IS IDENTIFIED HERE, and it does not need to be. Item::isActivatable
-# returns false for anything not known to be magical (src/Item.cpp:954-956),
+# returns false for anything not known to be magical (src/Item.cpp:979-980),
 # so an unidentified Luckblade would never appear in the 'a' menu at all and
 # the session would measure nothing. Wizard mode's Item Acquisition hands over
 # an item that is already known -- the run's own inventory screen calls it
