@@ -33,7 +33,7 @@
 #
 # WHY THE DAMAGE COMES FROM MONSTERS AND NOT A SELF-CAST SPELL. Item::Damage
 # reads "If you are attacking your own items, ignore their hardness"
-# (src/Item.cpp:1487) and sets hard = 0, which erases the -1 immunity sentinel.
+# (src/Item.cpp:1485-1488) and sets hard = 0, which erases the -1 immunity sentinel.
 # The equipment block calls ThrowDmg, which clears isTrap and eID, so that test
 # reduces to EActor == owner. A mage fireballing himself and a character
 # stepping on his own trap were both measured on 2026-09-11, and both printed

@@ -554,7 +554,7 @@ check_document() {
     #
     # An embed is a citation of a different kind: it names a file, and the only
     # thing that can be true or false about a binary file is whether it is
-    # there. README.md:16 embeds docs/media/incursion-macos.png, and a README
+    # there. README.md:70 embeds docs/media/incursion-macos-web.png, and a README
     # whose screenshot is not in the tree shows every reader a broken image.
     # Nothing checked this before 2026-08-23; the path went to the source-
     # citation scan instead, which tried to count the lines in a PNG.
@@ -1174,7 +1174,7 @@ selftest() {
     printf 'The call sites are at `program.i:30782` in the generated script.\n' \
         > "$dir/nowhere.md"
 
-    # A document that embeds a binary asset. README.md:16 does exactly this. The
+    # A document that embeds a binary asset. README.md:70 does exactly this. The
     # tool read the PNG as UTF-8, died on byte 0x89, printed the traceback and
     # counted it as a defect in the document. The document was correct. A binary
     # file has no lines, so the only question the tool can ask about it is

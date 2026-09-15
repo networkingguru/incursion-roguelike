@@ -4,7 +4,7 @@
 # guarding HP.
 #
 # THE HAZARD. A Girdle of Tenacity (lib/m_items.irh:275) grants ADJUST/A_CON
-# at 1 per plus. CalcHP keeps DAMAGE, not current HP: cHP -= mHP, rebuild mHP,
+# at 1 per plus. CalcValues keeps DAMAGE, not current HP: cHP -= mHP, rebuild mHP,
 # cHP += mHP (src/Values.cpp:1800,1863), and cHP <= 0 there is a death or a DC
 # 20 Fortitude save to 1 HP (:1865). Worn at +2 on base CON 12 the girdle lifts
 # CON to 14 and max HP 77 -> 85 (6 levels x 1 x 1.25 Toughness). At 7 HP, a

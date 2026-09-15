@@ -11,7 +11,7 @@
 #     save_type stays NOSAVE. The "Breath Weapon" resource (lib/main.irc:193)
 #     carries `sval: REF partial`, which is that flag.
 #   - the save must FAIL, because e.Resist is what the block tests.
-#   - the blast's actor must not be the item's owner. src/Item.cpp:1487 reads
+#   - the blast's actor must not be the item's owner. src/Item.cpp:1485-1488 reads
 #     "If you are attacking your own items, ignore their hardness" and sets
 #     hard = 0, which erases the -1 immunity sentinel along with every other
 #     hardness. ThrowDmg clears isTrap and eID on the way in, so for the
