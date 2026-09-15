@@ -1,7 +1,7 @@
 # Read the armour check penalty of every shield in the game off the character
 # dump, once each, on the same character. Bead inc-rsps.
 #
-# WHAT IS BEING MEASURED. Armour::PenaltyVal (src/Item.cpp:2214) used to price
+# WHAT IS BEING MEASURED. Armour::PenaltyVal (src/Item.cpp:2231) used to price
 # a shield from a size comparison alone and never read the item's own
 # Penalty:, so no shield could differ from another of its size and the buckler
 # cost nothing at all. The figures the game now owes a Medium character are

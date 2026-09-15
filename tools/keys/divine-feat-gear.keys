@@ -28,8 +28,8 @@
 # WHY CHARISMA 18, AND WHY THAT IS DECISIVE RATHER THAN LUCKY. The point-buy
 # screen below spends all 75 points and puts Charisma at its 18 cap, so
 # Creature::Mod returns (18-10)/2 = 4. Iron's fire hardness is 10 and the
-# bypass zeroes it, so Item::Damage (src/Item.cpp:1463) computes hard = 0 + 4
-# and then returns at :1527 whenever hard >= e.vDmg. 1d3 cannot exceed 3 and
+# bypass zeroes it, so Item::Damage (src/Item.cpp:1480) computes hard = 0 + 4
+# and then returns at :1544 whenever hard >= e.vDmg. 1d3 cannot exceed 3 and
 # 4 > 3, so NO roll can reach the warhammer. Charisma 16 would also hold -- 3
 # >= 3 returns too -- but only on the boundary, and 18 is one point clear of
 # the largest roll the die has.

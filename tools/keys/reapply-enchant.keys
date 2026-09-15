@@ -20,7 +20,7 @@
 #
 # WHY NOT THE BLOODSPEAR. Storycraft on the wielded Bloodspear reaches the
 # same line and reads +4 -> +8 vs. spells, but a specific item's level ignores
-# its plus (src/Item.cpp:2366), so XPCost is 0 and ASSERT(XPCost > 0) at
+# its plus (src/Item.cpp:2383), so XPCost is 0 and ASSERT(XPCost > 0) at
 # src/Skills.cpp:3445 fires; tools/headless.sh then exits 7. The periapt's
 # level is 2 per plus, so +1 -> +2 is level 2 -> 4, inside the bard's 8.
 @include reapply-bard.keys

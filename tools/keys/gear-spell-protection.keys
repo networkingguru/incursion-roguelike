@@ -17,13 +17,13 @@
 #
 # WHY A SILVERED MAGIC WARHAMMER. src/Fight.cpp:2122 sets ignoreHardness when a
 # no-save A_DEQU strikes a NON-magical item, and since inc-kapn
-# src/Item.cpp:1451 zeroes only what Hardness() returned, with the owner's grant
-# added after it at src/Item.cpp:1464. A resistance therefore survives on a
+# src/Item.cpp:1468 zeroes only what Hardness() returned, with the owner's grant
+# added after it at src/Item.cpp:1481. A resistance therefore survives on a
 # mundane weapon too; this session buys a magic one for its numbers. "Warhammer,
 # Dwarven Thrower" arrives from the wizard menu at its INITIAL_PLUS of +2
 # (lib/m_items.irh:6861), which is magic and has 45 base hit points (weight 120,
 # lang/Grammar.acc:577). IQ_SILVER makes it silver, whose acid hardness is 5,
-# halved to 2 by the same quality (src/Item.cpp:1344), leaving 2 + 5 x 2 = 12
+# halved to 2 by the same quality (src/Item.cpp:1361), leaving 2 + 5 x 2 = 12
 # for the plus.
 #
 # WHY A MAGMA CREEPER. Its A_DEQU is 3d6 AD_ACID with NO save DC
@@ -33,7 +33,7 @@
 # bare 12 lets a roll of 13 or better through. It has 12 HD and resists blunt,
 # so one creeper survives twelve blows; frozen monsters still answer a hit.
 #
-# The oracle is the game's own combat-numbers line (src/Item.cpp:1494-1514),
+# The oracle is the game's own combat-numbers line (src/Item.cpp:1511-1531),
 # which prints the hardness AFTER the owner's gear resistance is added:
 #   "Warhammer, Dwarven Thrower +2: 3d6 Acid = 5 vs. 20 (silver) [unhurt]"
 # 20 is 12 + 8. Without the flag the same line reads "vs. 12 (silver)".

@@ -30,7 +30,7 @@
 # magical. Iron's fire hardness is 10 and the bypass zeroes it, so the feat's
 # grant is the WHOLE of the number on the line. Charisma 18 is the point-buy
 # cap, so Creature::Mod returns (18-10)/2 = 4. Item::Damage adds that after the
-# bypass (src/Item.cpp:1463) and returns unhurt at :1527 whenever
+# bypass (src/Item.cpp:1480) and returns unhurt at :1544 whenever
 # hard >= e.vDmg. 1d3 cannot exceed 3, and 4 > 3, so no roll can reach the
 # warhammer. Charisma 16 would also hold, because 3 >= 3 returns too, but only
 # on the boundary; 18 is a clear point above the largest roll the die has.

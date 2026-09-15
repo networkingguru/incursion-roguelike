@@ -19,7 +19,7 @@
 # way; it is not part of what this measures.
 #
 # WHY BOTH AMULETS ARE THE SAME KIND. A flavour belongs to an EFFECT, not to
-# an item (Game::SetFlavors, src/Item.cpp:325), so two amulets that read the
+# an item (Game::SetFlavors, src/Item.cpp:342), so two amulets that read the
 # same flavour are two amulets of the same kind. Both here read "pearl
 # amulet".
 #

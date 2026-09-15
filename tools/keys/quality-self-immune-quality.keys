@@ -8,7 +8,7 @@
 #
 # The ITEM half: wizard option 13, "Add Quality to Armour" (src/Debug.cpp:746),
 # puts AQ_FIRE_RES on the worn suit. It draws no random number for an AQ_*
-# value (QItem::AddQuality, src/Item.cpp:2919 onward walks straight to the
+# value (QItem::AddQuality, src/Item.cpp:2936 onward walks straight to the
 # Qualities array), so the two arms stay in step. Twelve fireballs must then
 # leave the suit at 56 of 56 hit points, its numbers line must read
 # "vs. Immune (leather)", and its hardness table must list Fire as an immunity.

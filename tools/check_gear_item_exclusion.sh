@@ -18,14 +18,14 @@
 # WHY A SILVERED MAGIC WARHAMMER AND A MAGMA CREEPER. Both are argued in
 # check_gear_spell_protection.sh, which uses the same weapon, the same monster
 # and the same twelve blows. In short: a no-save A_DEQU sets ignoreHardness on a
-# NON-magical item (src/Fight.cpp:2122), and since inc-kapn src/Item.cpp:1451
+# NON-magical item (src/Fight.cpp:2122), and since inc-kapn src/Item.cpp:1468
 # zeroes only what Hardness() returned, a grant no longer needs a MAGIC victim
 # to survive. The weapon is kept for its numbers: silvered, its acid hardness is
 # 12, and the creeper's 3d6 reaches 18, so an unprotected hammer takes damage.
 # Flag the amulet and 12 + 12 = 24 puts the hammer beyond every roll, which is
 # what makes the mutation bite.
 #
-# THE ORACLE is the game's own combat-numbers line (src/Item.cpp:1494-1514),
+# THE ORACLE is the game's own combat-numbers line (src/Item.cpp:1511-1531),
 # which prints the hardness AFTER GearResistLevel is added to it, and the
 # hammer's own hit points.
 #

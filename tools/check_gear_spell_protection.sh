@@ -17,12 +17,12 @@
 # weapon cannot carry a grant: inc-kapn inverted the order in Item::Damage, and
 # check_gear_bypass_survives.sh now measures a resistance on a plain iron maul.
 # src/Fight.cpp:2122 still sets ignoreHardness whenever a no-save A_DEQU strikes
-# a NON-magical item, but src/Item.cpp:1451 zeroes only what Hardness() returned
-# and src/Item.cpp:1464 adds the owner's grant after it. The hammer stays
+# a NON-magical item, but src/Item.cpp:1468 zeroes only what Hardness() returned
+# and src/Item.cpp:1481 adds the owner's grant after it. The hammer stays
 # because its bare hardness must be a number the creeper can beat: "Warhammer,
 # Dwarven Thrower" arrives at its INITIAL_PLUS of +2 (lib/m_items.irh:6861);
 # IQ_SILVER makes it silver, hardness 5, halved to 2 by that same quality
-# (src/Item.cpp:1344), plus 5 per plus: 12.
+# (src/Item.cpp:1361), plus 5 per plus: 12.
 #
 # WHY A MAGMA CREEPER, AND WHY LEVEL TEN. Its A_DEQU is 3d6 AD_ACID with no save
 # DC (lib/mon3.irh:2828), so no Reflex roll decides the outcome. The spell gives
@@ -30,7 +30,7 @@
 # the dice can reach: the protection is decisive, not lucky. The bare hardness
 # of 12 lets a roll of 13 or better through, which is how the mutated run bites.
 #
-# THE ORACLE is the game's own combat-numbers line (src/Item.cpp:1494-1514),
+# THE ORACLE is the game's own combat-numbers line (src/Item.cpp:1511-1531),
 # which prints the hardness AFTER GearResistLevel is added to it. It needs no
 # lucky roll: every landed blow prints it.
 #

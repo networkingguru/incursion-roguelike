@@ -21,10 +21,10 @@
 # creeper's 3d6 AD_ACID A_DEQU carries no save DC, so no Reflex roll stands
 # between the acid and the hammer. The creeper rolls up to 18, so an unprotected
 # hammer takes damage; add the flag and 12 + 12 = 24 puts it beyond every roll.
-# Since inc-kapn the bypass at src/Item.cpp:1451 zeroes only what Hardness()
+# Since inc-kapn the bypass at src/Item.cpp:1468 zeroes only what Hardness()
 # returned, so the magic is no longer what makes the grant measurable.
 #
-# The oracle is the game's own combat-numbers line (src/Item.cpp:1494-1514),
+# The oracle is the game's own combat-numbers line (src/Item.cpp:1511-1531),
 # which prints the hardness AFTER the owner's gear resistance is added:
 #   "Warhammer, Dwarven Thrower +2: 3d6 Acid = 13 vs. 12 (silver) [1 damage]"
 # 12 is the hardness alone. The amulet's 12 does not appear in it, and the
