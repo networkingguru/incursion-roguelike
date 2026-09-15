@@ -105,14 +105,20 @@
 # goes stale the moment somebody renames a file, and because a reader who opens
 # the document can see which tree its numbers are in.
 #
-# IT FAILS CLOSED. A document that declares nothing is resolved exactly as
-# before: upstream first, fallback second. Nothing about the outgoing path
-# changes unless a writer types the line.
+# IT FAILS CLOSED. A document that declares nothing, and is not a script, is
+# resolved exactly as before: upstream first, fallback second. Nothing about
+# the outgoing path changes unless a writer types the line.
 #
 # A declared document is resolved against FALLBACK_REF FIRST and UPSTREAM_REF
 # second. Every run prints one `tree` line naming the order it used, so no
 # reader can mistake a document checked against ours for one checked against
 # rmtew's.
+#
+# A SCRIPT IS DECLARED BY ITS EXTENSION. A .sh, .keys or .py file cannot carry
+# the line -- bash would try to run it -- and its comments cite this port. So
+# it is resolved as a declared document is, and its `tree` line says a script
+# decided it (inc-loa.36). The default stops at docs/outgoing/: a script there
+# is resolved upstream first, like everything else in that directory.
 #
 # THE DECLARATION IS NOT A SOFTENING, AND THREE RULES KEEP IT FROM BECOMING ONE.
 #   * A number past the end of OUR file is still a defect. src/Annot.cpp is
@@ -280,8 +286,9 @@ in_outgoing() {
     return 1
 }
 
-# Read the per-document tree declaration and set PRIMARY_REF/SECONDARY_REF.
-# Prints the `tree` line, which is the record of which tree answered.
+# Read the per-document tree declaration, or the script default, and set
+# PRIMARY_REF/SECONDARY_REF. Prints the `tree` line, which is the record of
+# which tree answered.
 read_declaration() {
     local doc=$1
     PRIMARY_REF=$UPSTREAM_REF
@@ -313,6 +320,19 @@ read_declaration() {
             "$OURS_MARK_LINES" >&2
         exit 2
     fi
+    # A script cites this port without the line, which bash would try to run
+    # (inc-loa.36). Never under docs/outgoing/: a script there goes to rmtew.
+    case "$doc" in
+        *.sh|*.keys|*.py)
+            if ! in_outgoing "$doc"; then
+                PRIMARY_REF=$FALLBACK_REF
+                SECONDARY_REF=$UPSTREAM_REF
+                printf 'tree     %s is a script, so it cites this port -- resolved against %s first, %s second\n' \
+                    "$doc" "$PRIMARY_REF" "$SECONDARY_REF"
+                return 0
+            fi
+            ;;
+    esac
     printf 'tree     %s declares nothing -- resolved against %s first, %s second\n' \
         "$doc" "$PRIMARY_REF" "$SECONDARY_REF"
 }
@@ -1252,6 +1272,30 @@ selftest() {
     printf 'The status line is drawn at `src/Display.cpp:1720`.\n' \
         >> "$dir/declared-late.md"
 
+    # A SCRIPT CITES THIS PORT WITHOUT DECLARING IT (inc-loa.36). The line is
+    # one past the end of upstream's inc/Base.h, computed from the ref, so it is
+    # always a line rmtew's file does not have. The case can pass only while
+    # our Base.h is the longer one and is read first.
+    local script_line
+    script_line=$(( $(lines_in_ref "$UPSTREAM_REF" inc/Base.h) + 1 ))
+    printf '# inc/Base.h:%s is a line only this port has.\n' "$script_line" > "$dir/script.sh"
+    cp "$dir/script.sh" "$dir/script.keys"
+    cp "$dir/script.sh" "$dir/script.py"
+
+    # Exactly three extensions. A file with none is not a script to this tool.
+    cp "$dir/script.sh" "$dir/script-noext"
+
+    # A SCRIPT IS NOT A SOFTENING. src/Annot.cpp is LONGER upstream, so its last
+    # upstream line is past the end of ours: it passes upstream-first and must
+    # fail for a script. It goes red if our Annot.cpp ever grows to that length.
+    printf '# src/Annot.cpp:%s is the last line.\n' \
+        "$(lines_in_ref "$UPSTREAM_REF" src/Annot.cpp)" > "$dir/script-past-ours.sh"
+
+    # The default stops at docs/outgoing/, which goes to rmtew. The same line
+    # stays a defect there, and the declaration stays a hard error.
+    cp "$dir/script.sh" "$dir/docs/outgoing/draft.sh"
+    { printf '%s\n' "$OURS_MARK"; cat "$dir/script.sh"; } > "$dir/docs/outgoing/declared.keys"
+
     selftest_case "a resolving citation and its expectation" 0 "$dir/good.md" "$dir/good.expect"
     selftest_case "an exact tracked path with an ambiguous basename" 0 "$dir/exact-path.md"
     selftest_case "an ambiguous basename outside the root"    1 "$dir/ambiguous-basename.md"
@@ -1284,6 +1328,13 @@ selftest() {
     selftest_case "a declared document citing no tree's file" 1 "$dir/declared-nowhere.md"
     selftest_case "a declaration inside docs/outgoing"       2 "$dir/docs/outgoing/draft.md"
     selftest_case "a declaration below the header"           2 "$dir/declared-late.md"
+    selftest_case "a script citing a line only this port has" 0 "$dir/script.sh"
+    selftest_case "a .keys file citing that line"            0 "$dir/script.keys"
+    selftest_case "a .py file citing that line"              0 "$dir/script.py"
+    selftest_case "a file with no extension citing that line" 1 "$dir/script-noext"
+    selftest_case "a script past the end of ours"            1 "$dir/script-past-ours.sh"
+    selftest_case "a script inside docs/outgoing"            1 "$dir/docs/outgoing/draft.sh"
+    selftest_case "a declaration in a docs/outgoing script"  2 "$dir/docs/outgoing/declared.keys"
 
     # The bare and the named form of the SAME citation must agree. They did not:
     # the bare form was a hard error whose advice was to write the named form,
@@ -1341,6 +1392,21 @@ selftest() {
         printf 'selftest FAIL: the run does not name the tree it read -- declared=%s undeclared=%s\n' \
             "$decl_line" "$undecl_line"
         sed 's/^/    | /' "$dir/declared.md.out" "$dir/undeclared.md.out"
+        selftest_failures=$((selftest_failures + 1))
+    fi
+
+    # The same rule for the script default: its `tree` line MUST say a script
+    # decided the order, so it cannot be mistaken for a declaration, and a
+    # script under docs/outgoing/ MUST say it was read upstream first.
+    local script_tree outgoing_tree
+    selftest_total=$((selftest_total + 1))
+    script_tree=$(grep -c "^tree .* is a script.* $FALLBACK_REF first" "$dir/script.sh.out")
+    outgoing_tree=$(grep -c "^tree .*declares nothing -- resolved against $UPSTREAM_REF first" \
+        "$dir/docs/outgoing/draft.sh.out")
+    if [ "$script_tree" != 1 ] || [ "$outgoing_tree" != 1 ]; then
+        printf 'selftest FAIL: a script run does not say why it read its tree -- script=%s outgoing=%s\n' \
+            "$script_tree" "$outgoing_tree"
+        sed 's/^/    | /' "$dir/script.sh.out" "$dir/docs/outgoing/draft.sh.out"
         selftest_failures=$((selftest_failures + 1))
     fi
 

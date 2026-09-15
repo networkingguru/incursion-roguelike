@@ -639,7 +639,7 @@ checking anything looks exactly like a check that passes.
 
 `tools/check_citations.sh <document>` also belongs in this tier, but it resolves
 citations against the git refs `upstream/master` and `origin/master`
-(`check_citations.sh:163-164`). Fetch those remotes first, or it reports failures
+(`check_citations.sh:169-170`). Fetch those remotes first, or it reports failures
 that are only missing refs. It is read-only on git.
 
 ### Tier 2 — needs a compiler but no prior build
