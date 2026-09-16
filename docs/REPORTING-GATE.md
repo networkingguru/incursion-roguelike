@@ -198,6 +198,17 @@ literal text that will be published.
 
 ### Base-code bugs fixed locally
 
+**Label the bead as well as filling in this row.** A row here declares its bead
+an upstream defect, so that bead MUST carry the beads label `upstream`:
+
+    bd label add <id> upstream
+
+Without it the published GitHub issue would carry no `upstream` tag, so
+`tools/sync_issues.sh` refuses to run at all. You meet that refusal through
+`tools/check_mirrored_lane.sh`, as an UNMEASURED result in the gate
+`tools/finish_bead.sh` runs before it merges -- which means a full gate run, and
+nothing landed, to be told one word is missing (inc-mqi9).
+
 | Fix | Tier | Sent? | Tracked |
 |---|---|---|---|
 | A successful Trip made the TRIPPER attack himself. `case AD_TRIP` of `Creature::Damage` called `e.EActor->ProvokeAoO(e.EActor)`, and `Creature::ProvokeAoO(c)` builds its event with `c` as the attacker and `this` as the victim, so the same pointer twice made the tripper both. The attack was a real one: it rolled to hit, applied weapon damage and applied the weapon's brand, and `src/Message.cpp` drops the actor clause when actor equals victim, so the player never read who had hit him. The counter-trip path swaps actor and victim and re-enters the same code, so a monster that won a counter-trip attacked itself too -- a mirror case nobody had reported. Line 6960 was the only self-targeted call of the 36 in the tree; the four sibling manoeuvres all pass `e.EVictim`. The intended rule is stated twice in the game's own text: the Trip tactical entry tells the player "you provoke an attack of opportunity when you attempt to trip a foe" (`src/Player.cpp`) and Master Trip says he "does not suffer" it (`src/FeatTab.cpp`), so the foe delivers it. The argument is now `e.EVictim`, and a `c == this` guard in `ProvokeAoO` closes the class rather than the instance. Upstream's, not the port's: `git grep` of cea33d8, Julian's official 0.6.9H3 source, shows the same `e.EActor->ProvokeAoO(e.EActor)` beside eight sibling calls that all pass `e.EVictim`, and the line uses no platform typedef and no compiler-dependent construct, so the Win32 0.6.9 build misbehaves identically (`src/Fight.cpp`) | **Observed** -- `tools/check_trip_aoo.sh`, seed 5, `tools/fixtures/options-2026-08-22.dat`, two binaries differing only by `-DINCURSION_TRIP_AOO_UNFIXED`. Four goblins are summoned around a level 1 orc warrior and tripped one at a time. Three attacks of opportunity are accepted on each build, at the same three turns. Unfixed: `self=1` three times -- `actor=<Holg> victim=<Holg>` twice and `actor=<goblin> victim=<goblin>` once, which is the counter-trip mirror case measured for the first time -- and the player's hit points fall to 34/36 by his own hand. Fixed: `self=0` three times, `actor=<goblin> victim=<Holg>` twice and `actor=<Holg> victim=<goblin>` once. The identical COUNT and TURNS on both builds are the control: the fix redirects the attack and does not delete it, and the check asserts the goblin answering for exactly that reason, because a deleted call would drive `self=1` to zero as surely as a corrected argument. The oracle is `INCURSION_TRIP_AOO_PROBE=1` -> `logs/tripaoo.log`. Exit 1 on the unfixed binary and exit 0 on the fixed one | no | inc-83dw |
