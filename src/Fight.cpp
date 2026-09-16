@@ -91,6 +91,36 @@ static void RiderProbeNote(const char *what, EventInfo &e)
     fflush(f);
 }
 
+/* Probe for inc-83dw. Set INCURSION_TRIP_AOO_PROBE=1 and every attack of
+   opportunity Creature::OAttack accepts writes one line to logs/tripaoo.log
+   naming its actor, its victim and whether they are one creature. "self=1" is
+   the defect: an attack of opportunity whose actor and victim are the same
+   creature. tools/check_trip_aoo.sh counts both columns, because a fix that
+   deleted the call would also drive self=1 to zero. Off and free otherwise. */
+static void TripAoOProbeNote(EventInfo &e)
+{
+    static int on = -1;
+    static FILE *f = NULL;
+    char path[1024];
+
+    if (on == -1)
+        on = getenv("INCURSION_TRIP_AOO_PROBE") ? 1 : 0;
+    if (!on || !e.EActor || !e.EVictim)
+        return;
+    if (!f) {
+        snprintf(path, sizeof(path), "%slogs/tripaoo.log",
+            (const char*)T1->IncursionDirectory);
+        f = fopen(path, "a");
+        if (!f)
+            return;
+    }
+    fprintf(f, "turn %u: oattack actor=<%s> victim=<%s> self=%d atype=%d\n",
+        (unsigned)theGame->Turn, (const char*)e.EActor->Name(0),
+        (const char*)e.EVictim->Name(0),
+        e.EActor == e.EVictim ? 1 : 0, (int)e.AType);
+    fflush(f);
+}
+
 /* Probe for the graded-penetration and subtractive-damage armour model
    (inc-b0w2). Set INCURSION_ARMOUR_PROBE and every resolved attack writes one
    line to logs/armour.log naming every term the model uses, so a scripted
@@ -2913,6 +2943,8 @@ EvReturn Creature::OAttack(EventInfo &e)
     e.isAoO = true; /* Attack of Opportunity flag */
     e.EActor->AoO = max(0,e.EActor->AoO - 1);
 
+    TripAoOProbeNote(e);
+
     if (e.EVictim && e.EVictim->isCreature())
       if (!e.EVictim->HasStati(AFRAID) ||
           e.EVictim->GetStatiVal(AFRAID) == FEAR_SKIRMISH)
@@ -2993,6 +3025,15 @@ void Creature::ProvokeAoO(Creature *c, bool from_move)
 
   if (c) { 
     /* AoO for C only! */
+
+    /* An attack of opportunity whose actor and victim are one creature is
+       never a rule. bd inc-83dw. The #ifndef keeps this guard out of the
+       measurement binary, so that build is the engine as it stood and the
+       check reads the whole defect rather than half of it. */
+#ifndef INCURSION_TRIP_AOO_UNFIXED
+    if (c == this)
+      return;
+#endif
 
     /* This function is called when we:
      * Attempt disarm without Master Disarm
@@ -6956,8 +6997,24 @@ WoundIgnored:
                                             }
                                             if (e.EActor && e.EVictim && e.EActor != e.EVictim &&
                                                 !e.eID && !e.EActor->HasFeat(FT_MASTER_TRIP) &&
-                                                (e.AType == A_TRIP)) 
-                                                e.EActor->ProvokeAoO(e.EActor);              
+                                                (e.AType == A_TRIP))
+                                                /* upstream: the tripped foe makes this attack of
+                                                   opportunity, not the tripper. ProvokeAoO(c)
+                                                   attacks with c and defends with this, so the old
+                                                   e.EActor argument made the tripper hit himself
+                                                   with his own weapon and its brand. The Trip
+                                                   tactical entry (src/Player.cpp) tells the player
+                                                   he provokes, and Master Trip says he "does not
+                                                   suffer" the attack, so the foe delivers it.
+                                                   Upstream's, not the port's: no platform typedef
+                                                   and no compiler-dependent construct, so 0.6.9H3
+                                                   on Win32 misbehaves the same way.
+                                                   Observed, inc-83dw, not sent. */
+                                            #ifdef INCURSION_TRIP_AOO_UNFIXED
+                                                e.EActor->ProvokeAoO(e.EActor);
+                                            #else
+                                                e.EActor->ProvokeAoO(e.EVictim);
+                                            #endif
                                             if (e.EActor->isDead())
                                                 return ABORT;
                                             if (e.saveDC == -1)

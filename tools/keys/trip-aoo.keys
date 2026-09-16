@@ -1,0 +1,130 @@
+# Trip an adjacent goblin six times and record every attack of opportunity the
+# trips raise (bd inc-83dw).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_TRIP_AOO_PROBE=1 \
+#       tools/headless.sh tools/keys/trip-aoo.keys 5
+#
+# WHAT IS BEING MEASURED. src/Fight.cpp, case AD_TRIP, passed e.EActor to
+# Creature::ProvokeAoO where it must pass e.EVictim. ProvokeAoO(c) attacks with
+# c and defends with this, so the tripper became both and hit himself with his
+# own weapon. The probe writes one line per accepted attack of opportunity
+# naming its actor, its victim and whether they are one creature.
+# tools/check_trip_aoo.sh reads logs/tripaoo.log and counts both columns.
+#
+# WHY A GOBLIN. The AD_TRIP case refuses a target that is prone, amorphous,
+# incorporeal or M_NOLIMBS, and SAttack's A_TRIP refuses an aerial target and a
+# swarm. A goblin is none of those, it is the same monster four other checks
+# already summon, and it is weak enough that a level 1 orc warrior is not
+# killed by the fight it starts.
+#
+# WHY FREEZE MONSTERS STAYS ON. dequ-setup.keys turns it on, and the game's own
+# help for that switch says frozen monsters "are still a part of the world and
+# can be affected by spells, take attacks of opportunity and so forth"
+# (src/Tables.cpp). src/Main.cpp confirms it: the freeze skips ChooseAction
+# only, while the refill of every creature's AoO counter runs in the outer loop
+# every 60 segments by map iteration. So the goblin can answer the trip without
+# ever taking a turn of its own.
+#
+# WHY FOUR GOBLINS AND NOT ONE. A landed trip leaves its target PRONE, and both
+# SAttack's A_TRIP and the AD_TRIP case refuse a prone target outright, so the
+# same goblin cannot be tripped twice. Each trip therefore needs a goblin of its
+# own, and they stand east, north, south and west of the character. The trip
+# must also WIN its opposed check to reach Creature::Damage, so four attempts
+# give the run several chances at that.
+#
+# WHY THE FOUR ARE SUMMONED FIRST AND TRIPPED AFTERWARDS. A freshly summoned
+# monster carries no attack of opportunity. The counter is filled for every
+# creature on the map by the outer loop in src/Main.cpp, once every 60 segments,
+# and nothing fills it at birth. A first draft summoned each goblin and tripped
+# it in the next keystroke; three trips landed and not one attack of opportunity
+# followed, because every target still held a zero counter. So all four are
+# placed, the character waits, and only then does he trip. The waits are what
+# make the measurement possible and they MUST NOT be removed.
+#
+# THE SELF-ATTACK CAN KILL THE TRIPPER, which is the defect at its worst, so
+# the screen is dumped after every trip. A run that ends early still leaves its
+# evidence behind, and the probe log is written and flushed line by line.
+
+@include dequ-setup.keys
+
+# Summon a goblin one square east.
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT
+ENTER
+@dump:goblin-east-placed
+
+# Summon a goblin one square north.
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+UP
+ENTER
+@dump:goblin-north-placed
+
+# Summon a goblin one square south.
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+DOWN
+ENTER
+@dump:goblin-south-placed
+
+# Summon a goblin one square west.
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+LEFT
+ENTER
+@dump:goblin-west-placed
+
+# Wait. '.' is Wait One Turn (src/Tables.cpp). Eight of them carry the game
+# well past the next 60-segment boundary, so every goblin holds an attack of
+# opportunity before the first trip. The goblins are frozen and cannot use the
+# time against the character.
+.*8
+@dump:after-wait
+
+# Trip the east goblin. 'c' opens the Tactical Options menu and Trip asks
+# for a direction. @until re-presses 'c' if a message prompt swallowed the
+# first one, which it did on the second trip of an earlier draft.
+@until "Tactical Options" c
+@choose "Trip"
+RIGHT
+@while "Attack the" y
+@dump:trip-east
+
+# Trip the north goblin. 'c' opens the Tactical Options menu and Trip asks
+# for a direction. @until re-presses 'c' if a message prompt swallowed the
+# first one, which it did on the second trip of an earlier draft.
+@until "Tactical Options" c
+@choose "Trip"
+UP
+@while "Attack the" y
+@dump:trip-north
+
+# Trip the south goblin. 'c' opens the Tactical Options menu and Trip asks
+# for a direction. @until re-presses 'c' if a message prompt swallowed the
+# first one, which it did on the second trip of an earlier draft.
+@until "Tactical Options" c
+@choose "Trip"
+DOWN
+@while "Attack the" y
+@dump:trip-south
+
+# Trip the west goblin. 'c' opens the Tactical Options menu and Trip asks
+# for a direction. @until re-presses 'c' if a message prompt swallowed the
+# first one, which it did on the second trip of an earlier draft.
+@until "Tactical Options" c
+@choose "Trip"
+LEFT
+@while "Attack the" y
+@dump:trip-west
+
+@quit
