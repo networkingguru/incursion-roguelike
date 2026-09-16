@@ -69,8 +69,9 @@ mutex (`src/Vision.cpp:415-416`), and `Creature::Multiply` refuses to breed past
 
 ## The three crashes
 **1. Event Stack Overflow: blast -> Multiply -> place -> blast. Fixed (inc-upw.5).** `Magic::Blast` throws `EV_DAMAGE`
-(`src/Effects.cpp:261`) -> a script handler on `POST(EV_DAMAGE)`/`EVICTIM(EV_DAMAGE)` (id moss `lib/mon3.irh:2270`, brown
-mold `lib/mon3.irh:2308` and `lib/mon3.irh:2316`) or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3372`)
+(`src/Effects.cpp:261`) -> a script handler on `POST(EV_DAMAGE)`/`EVICTIM(EV_DAMAGE)` (brown mold `lib/mon3.irh:2308`
+and `lib/mon3.irh:2316`; id moss `lib/mon3.irh:2270` has one too, but `#if 0` at `:2250` keeps it out of the build)
+or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3372`)
 calls `Multiply` -> `Creature::Multiply` (`src/Creature.cpp:486`) -> `mn->PlaceAt` (`:557`)
 throws `EV_PLACE` (`src/Display.cpp:224`, `:248`) and `EV_FIELDON` (`:314`) -> `Creature::FieldOn` re-throws `EV_EFFECT` for
 `FI_MODIFIER` (`src/Status.cpp:1750`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1265`).
