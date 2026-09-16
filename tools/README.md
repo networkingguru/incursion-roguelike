@@ -724,6 +724,7 @@ tools/check_dungeonmap_bounds.sh    # a levitating character on the bottom level
 tools/check_tanglefoot_mount.sh     # tanglefoot catches the mount, not the rider on its back
 tools/check_school_focus_menu.sh    # a school already focused on is off the School Focus menu
 tools/check_school_focus_dc.sh      # School Focus (Illusion) raises the disbelief DC
+tools/check_periodic_interval.sh    # a PERIODIC status effect fires every Val rounds, not Val-1
 ```
 
 `check_gaze_reflect_message.sh` is the live twin of Tier 1's
