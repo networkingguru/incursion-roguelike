@@ -147,7 +147,7 @@ far less ground than its name suggests. Verified by reading the script.
   effect to that target". Nothing else answers `EV_APPLY` except three
   alchemical liquids (`lib/alchemy.irh:82`), poison from a small
   glass vial onto a weapon (`lib/mundane.irh:1016`), the weapon oils
-  (`lib/m_items.irh:1480`) and the lantern below.
+  (`lib/m_items.irh:1477`) and the lantern below.
 - **Dip** has five handlers and they cover two targets: a **fountain**
   (`lib/dungeon.irh:2180` and `:2353`, plus the Spell Storing ring at
   `lib/m_items.irh:5318`) and an **alchemical flask**, where only acid does
@@ -173,7 +173,7 @@ target's `M_MOUNTABLE` flag, hostility, prone/stuck/grappled/asleep, plane,
 size, challenge rating, and whether the creature will accept you at all
 (`src/Skills.cpp:4260`).
 **Dismount** has a second route: the Cancel (`x`) command drops a standing
-`MOUNTED` stati (`src/Skills.cpp:455` and `:573`).
+`MOUNTED` stati (`src/Skills.cpp:455`).
 
 **Shoot and Throw are the same event**, `EV_RATTACK`, differing only in
 prompt wording.
