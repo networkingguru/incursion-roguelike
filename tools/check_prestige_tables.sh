@@ -17,7 +17,7 @@
 # actually reads them from -- the [P]restige Classes menu.
 #
 # What the right numbers are is not a matter of taste. src/Tables.cpp:100-116
-# gives the two save tracks, src/Values.cpp:393-397 picks between them from
+# gives the two save tracks, src/Values.cpp:394-396 picks between them from
 # CF_GOOD_FORT/CF_GOOD_REF/CF_GOOD_WILL, and src/Values.cpp:398 computes the
 # defence bonus as class level / DefMod, where DefMod is the N of "Def: 1/N"
 # (src/yygram.cpp:3956).

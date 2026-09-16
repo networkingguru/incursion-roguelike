@@ -7,7 +7,7 @@
 # THE DEFECT. lib/prestige.irh printed the Sentinel's save columns in the wrong
 # order, so its table promised a good Fortitude save the class does not grant
 # and a poor Reflex save it does. The class's own Flags field says
-# CF_GOOD_REF, and src/Values.cpp:393-397 reads that field and nothing else.
+# CF_GOOD_REF, and src/Values.cpp:394-396 reads that field and nothing else.
 #
 # WHY THIS CHECK IS NOT tools/check_prestige_tables.sh. That one reads the
 # table off the prestige menu. It proves the corrected text is on the screen.
@@ -31,7 +31,7 @@
 # together say the table and the engine agree, and name the number they agree
 # on. src/Tables.cpp:100-103 and :113-116 are where +4 and +1 come from:
 # GoodSave[4] is +4 and PoorSave[4] is +1, selected by the class's CF_GOOD_REF
-# flag at src/Values.cpp:393-397.
+# flag at src/Values.cpp:394-396.
 #
 # Usage: tools/check_sentinel_live.sh     (exits 0 on pass, 1 on fail)
 set -uo pipefail
