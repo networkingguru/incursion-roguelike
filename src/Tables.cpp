@@ -2404,7 +2404,16 @@ Option OptionList[] = {
 
   { OPT_FULL_RES, "Fullscreen Display Resolution",
       "640x480/800x600/1024x768/1280x960/1280x1024/1400x1050/1600x1200/"
-      "1280x768 (wide)/1280x800 (wide)/1920x1080 (wide)/1920x1200 (wide)", 10, 2, 0,
+      /* Default is the LAST entry, not 1024x768 as it shipped. A 4:3 default
+         on a widescreen monitor leaves the grid a different shape from the
+         screen, and the surplus can only become margin (inc-i2h1). Starting
+         at the top costs nothing, because libtcodTerm::Reset steps down the
+         list until one fits the desktop (src/Wlibtcod.cpp:1522), and the
+         four widescreen entries sit at the top of the list, so a widescreen
+         desktop lands on a widescreen grid and a 4:3 desktop still lands on
+         1024x768. Only a fresh options file reads this; an existing player's
+         stored byte is untouched. */
+      "1280x768 (wide)/1280x800 (wide)/1920x1080 (wide)/1920x1200 (wide)", 10, 10, 0,
       "__This option determines what resolution Incursion will attempt to "
       "set the monitor to when playing the game in fullscreen mode. If the "
       "specified display mode cannot be set, the system will try consecutively "
