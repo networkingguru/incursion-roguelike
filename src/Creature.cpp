@@ -1794,7 +1794,16 @@ NoIntervention:;
     StatiIterNature(this,PERIODIC)
         ASSERT(S->Val);
         if (!(++S->Mag % S->Val)) {
-            S->Mag = 1;
+            /* upstream: base-code defect, the fix is ours. It is upstream's
+               because the identical loop stands at hex/master
+               src/Creature.cpp:1682-1685; it is plain integer arithmetic on
+               two stati fields, with no typedef, pointer or platform
+               dependence, so it misbehaves the same way on Win32 with the
+               original typedefs. The line below read S->Mag = 1, which made
+               every firing after the first land one round early: a Val N
+               timer fired every N-1 rounds instead of every N. Tier
+               Observed. inc-7mri. Not sent. */
+            S->Mag = 0;
             EventInfo e;
             e.Clear();
             if (oThing(S->h) && oThing(S->h)->isItem()) {

@@ -1,0 +1,104 @@
+# tools/check_periodic_interval.sh: does a PERIODIC status effect fire every
+# Val rounds, not every Val-1? bd inc-7mri.
+#
+# Grant two test-god blessings (tools/fixtures/periodic-interval-gods.irh,
+# spliced into the module only for this check's own run) and let the game run
+# long enough to see several firings of each. One round is 60 turns
+# (src/Main.cpp:800-802). "Periodic Timer Test A" fires every 3 rounds,
+# "Periodic Timer Test B" every 5.
+
+@include chargen.keys
+
+w
+y                       # Enter wizard mode? [yn] -- only asked once
+@choose "Become Divine Champion"
+"Periodic Timer Test A"
+ENTER
+@while "more --" SPACE
+@while "ESC:Done" ESC
+
+w
+@choose "Become Divine Champion"
+"Periodic Timer Test B"
+ENTER
+@while "more --" SPACE
+@while "ESC:Done" ESC
+
+# Rest through many rounds, dumping the screen periodically so every
+# "PERIODIC-A FIRED" / "PERIODIC-B FIRED" message gets captured before the
+# next one scrolls it off. 30 cycles of 4 waits each is well past the 15
+# rounds (900 turns) both timers need for 3 firings apiece.
+.*4
+@while "more --" SPACE
+@dump:r01
+.*4
+@while "more --" SPACE
+@dump:r02
+.*4
+@while "more --" SPACE
+@dump:r03
+.*4
+@while "more --" SPACE
+@dump:r04
+.*4
+@while "more --" SPACE
+@dump:r05
+.*4
+@while "more --" SPACE
+@dump:r06
+.*4
+@while "more --" SPACE
+@dump:r07
+.*4
+@while "more --" SPACE
+@dump:r08
+.*4
+@while "more --" SPACE
+@dump:r09
+.*4
+@while "more --" SPACE
+@dump:r10
+.*4
+@while "more --" SPACE
+@dump:r11
+.*4
+@while "more --" SPACE
+@dump:r12
+.*4
+@while "more --" SPACE
+@dump:r13
+.*4
+@while "more --" SPACE
+@dump:r14
+.*4
+@while "more --" SPACE
+@dump:r15
+.*4
+@while "more --" SPACE
+@dump:r16
+.*4
+@while "more --" SPACE
+@dump:r17
+.*4
+@while "more --" SPACE
+@dump:r18
+.*4
+@while "more --" SPACE
+@dump:r19
+.*4
+@while "more --" SPACE
+@dump:r20
+.*4
+@while "more --" SPACE
+@dump:r21
+.*4
+@while "more --" SPACE
+@dump:r22
+.*4
+@while "more --" SPACE
+@dump:r23
+.*4
+@while "more --" SPACE
+@dump:r24
+
+@quit

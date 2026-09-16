@@ -1,0 +1,77 @@
+/* periodic-interval-gods.irh -- fixture for tools/check_periodic_interval.sh.
+   Bead inc-7mri: does a PERIODIC status effect fire every Val rounds, not
+   every Val-1?
+
+   Two test gods, each granting a PERIODIC stati (the same call the Ring of
+   Polymorphing's worn-item code uses, src/Magic.cpp:745-751 ->
+   GainPermStati) the moment its follower reaches level 1 -- the pattern is
+   lib/religion.irh:5958, Zurvash's EV_BLESSING handler calling
+   GainPermStati directly. FAVOUR_CHART rung 2 is set far above the 30000
+   favour "Become Divine Champion" (src/Debug.cpp) always grants, so joining
+   lands the follower on rung 1 only: one EV_BLESSING firing, one grant.
+
+     Periodic Timer Test A: Val 3 (fires every 3 rounds = 180 turns)
+     Periodic Timer Test B: Val 5 (fires every 5 rounds = 300 turns)
+
+   NOT part of the shipped module: tools/check_periodic_interval.sh splices
+   one #include of this file into a working copy of lib/main.irc only for
+   the span of its own run, and restores main.irc (and recompiles the real
+   module) before it exits. See that script for why. */
+
+God "Periodic Timer Test A"
+  {
+    Lists:
+      * FAVOUR_CHART
+          1000
+          50000
+          60000
+          70000
+          80000
+          90000
+          100000
+          110000
+          120000
+          130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Periodic Timer Test A") == 1)
+        EActor->GainPermStati(PERIODIC,NULL,SS_BLES,3,0,$"Periodic Timer A Effect");
+      return NOTHING;
+      };
+  }
+
+Effect "Periodic Timer A Effect" : EA_GENERIC
+  {
+    On Event EV_EFFECT {
+      EActor->IPrint(Format("PERIODIC-A FIRED %d",theGame->GetTurn()));
+      return NOTHING;
+      };
+  }
+
+God "Periodic Timer Test B"
+  {
+    Lists:
+      * FAVOUR_CHART
+          1000
+          50000
+          60000
+          70000
+          80000
+          90000
+          100000
+          110000
+          120000
+          130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Periodic Timer Test B") == 1)
+        EActor->GainPermStati(PERIODIC,NULL,SS_MISC,5,0,$"Periodic Timer B Effect");
+      return NOTHING;
+      };
+  }
+
+Effect "Periodic Timer B Effect" : EA_GENERIC
+  {
+    On Event EV_EFFECT {
+      EActor->IPrint(Format("PERIODIC-B FIRED %d",theGame->GetTurn()));
+      return NOTHING;
+      };
+  }
