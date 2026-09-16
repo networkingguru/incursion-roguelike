@@ -468,6 +468,7 @@ one that guards a real defect, and buys no behaviour. Read the header of
 | `check_lz_uncompress.sh` | Can the LZ77 and RLE decoders be made to write past their output buffer? | LIVE |
 | `check_masterarcher_live.sh` | Does the Master Archer's Ranged Sneak Attack fire only with a long bow or a short bow, and not with every launcher? | LIVE |
 | `check_menu_value.sh` | Does a script menu give back the same object handle it was handed, above the 16-bit line? | LIVE |
+| `check_mirrored_lane.sh` | Does a `mirrored` bead stay off everything that WRITES to GitHub, while its open or closed state is still reconciled? Drives the real `sync_issues.sh` with `bd` and `gh` stubbed, then reads the id list handed to `bd github sync`. A regression here silently replaces an outside reporter's issue body with ours. `--selftest` proves the check bites. | LIVE |
 | `check_favour_int32.sh` | Does a favour total over 32767 survive the round trip through `EV_CALC_FAVOUR`, instead of wrapping negative? The script view of `EventInfo::EParam` was int16 while the field is int32, so favour levels 7, 8 and 9 were unreachable. | LIVE |
 | `check_pray_aid_int32.sh` | Does praying for divine aid still grant anything above 32767 favour? `Character::Pray` took the total into an int16 local, so every `AID_CHART` threshold comparison failed past the wrap and the follower got nothing. Sibling of the row above, and a different narrowing: that one is the script view of `EParam`, this one is a C++ local. | LIVE |
 | `check_natural_speed.sh` | Has the hard-coded brawl-speed floor drifted from the fastest weapon in `lib/weapons.irh`? Reads the data; runs nothing. | LIVE |
@@ -551,7 +552,7 @@ state theirs.
 | `package_macos.sh` | Produces `dist/Incursion-macOS-arm64/`, a plain folder with the game and its data. | BUILD INFRASTRUCTURE |
 | `app_launcher.c` | The bundle's entry point. Redirects the game's single read-write directory to `~/Library/Application Support/Incursion/` so nothing writes inside the signed bundle. Compiled by `package_macos_app.sh`. | BUILD INFRASTRUCTURE |
 | `setup_notary.sh` | Stores the notarisation credential in a mode-600 file so a release can be cut from a non-Terminal shell. Run once, by hand. | BUILD INFRASTRUCTURE |
-| `sync_issues.sh` | Publishes every bead labelled `public` to the Issues tab, so a stranger about to report a bug sees it already filed. Reads the live bead database on this machine; `SYNC_REPO` retargets it at a throwaway repository. See "The ones you must not run casually". | PUBLISHES OUTWARD |
+| `sync_issues.sh` | Publishes every bead labelled `public` to the Issues tab, so a stranger about to report a bug sees it already filed. A bead labelled `mirrored` gets its state reconciled and its title and body left alone, because somebody outside wrote that issue. Reads the live bead database on this machine; `SYNC_REPO` retargets it at a throwaway repository. See "The ones you must not run casually". | PUBLISHES OUTWARD |
 
 `package_macos.sh` is not superseded by `package_macos_app.sh`. They produce
 different artefacts for different reasons: a bare executable in a folder cannot
@@ -849,8 +850,14 @@ can quietly undo: GitHub lets you close an issue, never un-file it, and
 everybody watching the repository gets the mail. Run `tools/sync_issues.sh
 --dry-run` first, always. Point `SYNC_REPO` at a throwaway repository to
 rehearse. `tools/check_bead_publish.py` decides what the word `public` means,
-and it is documented under "Every bead carries `public` or `internal`" in
-`AGENTS.md`.
+and it is documented under "Every bead carries `public`, `internal` or
+`mirrored`" in `AGENTS.md`.
+
+A bead labelled `mirrored` is the exception the script makes for a report
+somebody outside filed: it syncs the open or closed state of that person's
+issue and never writes its title or body. Do not relabel a mirrored bead
+`public` to get it published — that publishes this project's text over the
+reporter's own words.
 
 **`tools/gate_record.sh` OVERWRITES a committed baseline.** Verified:
 `:37-38` build `OUT="$ROOT/tools/gates/$NAME.baseline"` from the key script's

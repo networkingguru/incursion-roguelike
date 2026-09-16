@@ -13,6 +13,11 @@ that silently does not exist to the outside world -- and an over-suppressed
 bead is the failure no hold list can ever show you, because it simply never
 appears anywhere.
 
+There is a third lane, `mirrored`, for a game defect that is ALREADY public
+because somebody outside filed it. Its bead keeps an `external_ref` pointing at
+that issue, and sync_issues.sh never writes a title or a body there. See the
+three-lane contract in AGENTS.md, which this script does not restate.
+
 A paragraph in AGENTS.md does not stop that. This project has watched an agent
 walk past a written rule twice on record (2026-08-15, the publishing rule;
 2026-08-23, the standing order). A required field that fails the commit is a
@@ -30,14 +35,18 @@ WHAT IT CHECKS.
      description is what a stranger reads.
 
   B. CLASSIFIED. Every bead created since the last commit carries exactly one
-     of `public` or `internal`. Neither is unclassified; both is a
-     contradiction. Beads that already existed at HEAD are not asked -- editing
-     an old bead must not fail a commit.
+     of `public`, `internal` or `mirrored`. None is unclassified; two or more
+     is a contradiction. Beads that already existed at HEAD are not asked --
+     editing an old bead must not fail a commit.
 
   C. FIT TO PUBLISH. Every newly created `public` bead passes `bd lint`, which
      asks a bug for "## Steps to Reproduce" and "## Acceptance Criteria". A
      defect that reaches a public tracker with no way to reproduce it reads as
      noise.
+
+     `mirrored` is NOT asked, because this gate measures what gets published
+     and a mirrored bead publishes no body. The text a stranger reads is the
+     reporter's own issue, which this project does not write.
 
      This is deliberately asked of NEW beads only. 423 of the 434 beads already
      in the database fail `bd lint`, including beads that cite the exact file,
@@ -47,9 +56,9 @@ WHAT IT CHECKS.
 
   D. ADVISORY, NEVER BLOCKING. The label is a human's judgement, so the script
      does not overrule it. It prints, in both directions, the beads whose title
-     disagrees with their label: a `public` bead that sounds like the harness,
-     and an `internal` bead that sounds like the game. Print only. A wrong
-     label is fixed by a person, not by a word list.
+     disagrees with their label: a `public` or `mirrored` bead that sounds like
+     the harness, and an `internal` bead that sounds like the game. Print only.
+     A wrong label is fixed by a person, not by a word list.
 
      On a commit it advises about the NEW beads only. Sweeping the whole
      database prints about forty lines every time, and an advisory nobody reads
@@ -71,6 +80,15 @@ import sys
 from datetime import datetime
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# The publication lanes. A bead carries exactly one. AGENTS.md holds the
+# contract; tools/sync_issues.sh is the reader that acts on it.
+LANES = {"public", "internal", "mirrored"}
+
+# The lanes whose bead describes the GAME rather than the machinery. Both are
+# measured against HARNESS_WORDS by the advisory, because a title that sounds
+# like a check script is a wrong label in either of them.
+GAME_LANES = {"public", "mirrored"}
 
 # A title that sounds like the harness, the scripts, or the agent process.
 HARNESS_WORDS = [
@@ -173,18 +191,24 @@ def classify(beads, cutoff):
 
     Returns (unclassified, doubly, new_public). Each is a list of ids.
     `cutoff` is HEAD's commit time in seconds, from head_time().
+
+    `doubly` counts ANY two of the three lanes, not `public`+`internal` alone:
+    `public`+`mirrored` is the combination that would publish a body over a
+    reporter's issue, which is the whole reason the third lane exists.
+
+    `new_public` stays the `public` set only. It feeds the lint gate, and a
+    mirrored bead publishes no body for lint to measure.
     """
     unclassified, doubly, new_public = [], [], []
     for b in beads:
         if not is_new(b, cutoff):
             continue
-        labels = set(b.get("labels") or [])
-        pub, internal = "public" in labels, "internal" in labels
-        if pub and internal:
+        lanes = set(b.get("labels") or []) & LANES
+        if len(lanes) > 1:
             doubly.append(b["id"])
-        elif not pub and not internal:
+        elif not lanes:
             unclassified.append(b["id"])
-        elif pub:
+        elif "public" in lanes:
             new_public.append(b["id"])
     return unclassified, doubly, new_public
 
@@ -220,7 +244,7 @@ def disagreements(beads):
     for b in beads:
         title = (b.get("title") or "").lower()
         labels = set(b.get("labels") or [])
-        if "public" in labels:
+        if labels & GAME_LANES:
             hit = [w for w in HARNESS_WORDS if w in title]
             if hit:
                 loud.append((b["id"], hit, b.get("title") or ""))
@@ -254,6 +278,14 @@ FIXTURE = [
     {"id": "new-both", "created_at": "2026-06-01T00:00:00Z",
      "labels": ["public", "internal"], "description": "described, two lanes",
      "title": "two answers is not an answer"},
+    # the third lane: a game defect somebody outside already filed
+    {"id": "new-mirrored", "created_at": "2026-06-01T00:00:00Z",
+     "labels": ["mirrored"], "description": "tripping a foe hits yourself",
+     "title": "the trip manoeuvre damages the tripper"},
+    # the combination that would publish our body over the reporter's issue
+    {"id": "new-pub-mirror", "created_at": "2026-06-01T00:00:00Z",
+     "labels": ["public", "mirrored"], "description": "described, two lanes",
+     "title": "the potion of speed does nothing"},
     # created after, labelled, and empty: the failure that reached GitHub
     {"id": "new-nodesc", "created_at": "2026-06-01T00:00:00Z",
      "labels": ["public"], "description": "   ",
@@ -265,6 +297,11 @@ FIXTURE = [
     {"id": "quiet", "created_at": "2026-01-01T00:00:00Z", "labels": ["internal"],
      "description": "undead take no damage from it",
      "title": "the paladin's weapon deals no damage to undead"},
+    # a mirrored bead whose title sounds like the harness: same advisory as a
+    # public one, because the lane still claims the bead is about the game
+    {"id": "loud-mirror", "created_at": "2026-01-01T00:00:00Z",
+     "labels": ["mirrored"], "description": "it exits 0 on a real failure",
+     "title": "tools/check_baz.sh swallows its own failure"},
 ]
 
 
@@ -287,8 +324,18 @@ def selftest():
     if unclassified != ["new-none"]:
         print("SELFTEST FAIL: unclassified is %r, wanted ['new-none']" % unclassified)
         st = 1
-    if doubly != ["new-both"]:
-        print("SELFTEST FAIL: doubly is %r, wanted ['new-both']" % doubly)
+    if doubly != ["new-both", "new-pub-mirror"]:
+        print("SELFTEST FAIL: doubly is %r, wanted "
+              "['new-both', 'new-pub-mirror']" % doubly)
+        st = 1
+    # `mirrored` is a lane on its own: it must not fail the commit as
+    # unclassified, and it must not enter the lint set, which measures a body
+    # that a mirrored bead never publishes.
+    if "new-mirrored" in unclassified:
+        print("SELFTEST FAIL: a `mirrored` bead counted as unclassified")
+        st = 1
+    if "new-mirrored" in new_public:
+        print("SELFTEST FAIL: a `mirrored` bead entered the lint set")
         st = 1
     if new_public != ["new-public", "new-nodesc"]:
         print("SELFTEST FAIL: new_public is %r, wanted "
@@ -327,6 +374,13 @@ def selftest():
     if "new-internal" in quiet_ids:
         print("SELFTEST FAIL: flagged a plain check-script bead as game work")
         st = 1
+    if "loud-mirror" not in loud_ids:
+        print("SELFTEST FAIL: did not flag a mirrored bead that names a "
+              "check script")
+        st = 1
+    if "new-mirrored" in loud_ids:
+        print("SELFTEST FAIL: flagged a plain mirrored game bug as harness work")
+        st = 1
 
     # --bead names one bead, so its age is not the question and the timestamp
     # must not be consulted at all. A cutoff of 0 looks like it would do that
@@ -350,7 +404,7 @@ def selftest():
         st = 1
 
     if st == 0:
-        print("SELFTEST PASS: check_bead_publish.py bites on all seven failures")
+        print("SELFTEST PASS: check_bead_publish.py bites on all ten failures")
     return st
 
 
@@ -379,18 +433,24 @@ def report(beads, cutoff):
         print("Write it: bd update <id> --description \"...\"")
         fail = 1
     if unclassified:
-        print("FAIL: these new beads carry neither `public` nor `internal`:")
+        print("FAIL: these new beads carry none of `public`, `internal`, "
+              "`mirrored`:")
         for i in unclassified:
             print("  %s" % i)
         print("Decide: `public` is a defect or wanted feature IN THE GAME;")
         print("`internal` is the harness, the scripts, the docs checks, the")
-        print("bead machinery. Then: bd tag <id> public|internal")
+        print("bead machinery; `mirrored` is a game defect somebody OUTSIDE")
+        print("already filed, whose issue we must not overwrite.")
+        print("Then: bd tag <id> public|internal|mirrored")
         fail = 1
     if doubly:
-        print("FAIL: these new beads carry BOTH `public` and `internal`:")
+        print("FAIL: these new beads carry more than one of `public`, "
+              "`internal`, `mirrored`:")
         for i in doubly:
             print("  %s" % i)
-        print("Remove one: bd label remove <id> public|internal")
+        print("A bead has one lane. `public`+`mirrored` is the dangerous one:")
+        print("it would publish our body over the reporter's own issue.")
+        print("Remove one: bd label remove <id> public|internal|mirrored")
         fail = 1
 
     missing = lint_failures(new_public)
