@@ -1,4 +1,6 @@
 #!/bin/bash
+# gate: cheap --selftest
+#
 # Does tools/sync_issues.sh keep a `mirrored` bead out of everything that
 # WRITES to GitHub, while still reconciling its state?
 #
