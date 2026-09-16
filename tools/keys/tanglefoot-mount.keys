@@ -35,7 +35,7 @@
 #
 # THE ORACLE is wizard mode's "Examine Player Data", which prints the rider's
 # whole stati list and then, under a "----MOUNT----" banner, the mount's
-# (src/Debug.cpp:1712-1716). Two screens are dumped out of that one scrolling
+# (src/Debug.cpp:1713-1718). Two screens are dumped out of that one scrolling
 # window, because the two stati lists are 120 lines apart:
 #
 #   rider-stati   20 lines down: the rider's "Stati (7):" list entire, from

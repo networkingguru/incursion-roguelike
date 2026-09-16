@@ -3,7 +3,7 @@
 # tools/check_ring_command_level.sh, finding PA-08-F4 of bd inc-tek.8.8.
 #
 # WHY THIS ORACLE. The number a ring grants is an effective priest turning
-# level, which src/Skills.cpp:4498-4612 adds to a d20 roll and to several
+# level, which src/Skills.cpp:4499-4612 adds to a d20 roll and to several
 # other bonuses before it divides by the target's resistance. Two extra points
 # move a probability and cross no visible threshold, so no amount of watching
 # the game command creatures would measure it. Wizard mode's "Examine Player

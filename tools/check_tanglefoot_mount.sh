@@ -11,7 +11,7 @@
 #
 # THE ORACLE is wizard mode's "Examine Player Data", which prints the rider's
 # stati list and then, under a "----MOUNT----" banner, the mount's
-# (src/Debug.cpp:1712-1716). It names both creatures in one window, which is
+# (src/Debug.cpp:1713-1718). It names both creatures in one window, which is
 # what the original report used. tools/keys/tanglefoot-mount.keys explains the
 # ride, the two scroll depths and why the strands catch a creature LEAVING them
 # rather than one entering.

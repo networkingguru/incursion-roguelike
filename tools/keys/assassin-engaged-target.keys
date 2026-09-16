@@ -37,7 +37,7 @@
 # THE OTHER CONDITIONS ARE HELD FAVOURABLE, and one line proves it. Death
 # Attack also requires that the target not perceive the assassin, so both
 # victims are put to sleep first: a sleeping creature perceives nothing
-# (src/Vision.cpp:448-451) and the engine skips the Move Silently against
+# (src/Vision.cpp:449-452) and the engine skips the Move Silently against
 # Listen contest for it (src/Fight.cpp:3346-3352). That contest is a d20 roll
 # and it DID decide an earlier draft of this file -- "The goblin hears you!" --
 # which is exactly the kind of dependency a regression check must not carry.

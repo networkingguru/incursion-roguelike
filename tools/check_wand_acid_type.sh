@@ -8,7 +8,7 @@
 # Oracle: numeric HP from Creature::Dump across the two observable turns left
 # after a +4 wand activation spends enough time to pay its first two turns. The
 # hell hound is immune to fire and has no acid resistance
-# (lib/mon4.irh:1991-2003), so the unfixed burn dealt 0 residual and the fixed
+# (lib/mon4.irh:1992-2007), so the unfixed burn dealt 0 residual and the fixed
 # burn must lower HP on both turns. Measured red: hell hound 46/46/46 (0, 0
 # residual). Measured green: hell hound 37/31/29 (6, 2 residual).
 #
