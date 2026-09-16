@@ -802,6 +802,15 @@ tools/check_layout_sweep.sh --no-build   # reuse the probe binary already here
 tools/check_layout_sweep.sh --selftest   # stubbed, seconds, needs no build
 ```
 
+`check_libtcod_mode_change.sh` sits here as well. It links the vendored libtcod
+archive that `./build_macos.sh` leaves at `build/libtcod_local.a`, and it is the
+only check that needs a real display. Read the warning below before you run it.
+
+```sh
+./build_macos.sh && tools/check_libtcod_mode_change.sh
+tools/check_libtcod_mode_change.sh --selftest   # proves the harness can fail
+```
+
 ### Tier 5 — the gate, which needs a baseline
 
 ```sh
@@ -842,6 +851,14 @@ directory, so it reads and can write the owner's real `save/`. Second, if the
 script is killed with a signal the trap cannot catch, the live `Options.Dat`
 stays parked at `Options.Dat.checktmp` and the game starts with defaults next
 time. Recover by renaming it back. Do not run this while anyone is playing.
+
+**`tools/check_libtcod_mode_change.sh` takes over the screen.** Its third phase
+opens a real fullscreen window, because that is the only way to read the flag
+and the copy rectangle libtcod uses for a fullscreen console; a key script
+cannot reach the Alt-Enter branch and `@shot` photographs the console surface
+before the faulty copy, so neither can see this defect. The window lives for
+well under a second and the check closes it, but it steals focus while it is
+up. Do not run this while anyone is playing, and do not put it in the ratchet.
 
 **`tools/sync_issues.sh` WRITES TO A PUBLIC ISSUE TRACKER.** It sends every
 bead labelled `public` to the Issues tab of

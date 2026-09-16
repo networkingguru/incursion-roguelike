@@ -154,6 +154,35 @@ static void render(void *vbitmap, TCOD_console_data_t *console) {
 			scale_data.src_proportionate_width = (int)(console_width_p / scale_factor);
 			scale_data.src_proportionate_height = (int)((console_width_p * scale_data.dst_height_width_ratio) / scale_factor);
 
+			/* upstream: the two lines above size the copy box from the
+			   WINDOW's shape, anchored on the console's full width, so a
+			   console whose shape does not match the window loses the
+			   difference off its top and its bottom. At 1.0 zoom a 1020x768
+			   console in a 1920x1080 window copied only rows 97..669 of 768
+			   -- the message log and the status line were off the screen.
+			   Anchor on whichever edge binds instead: when the box is
+			   shorter than the console, grow it to the console's height and
+			   widen it to match, which leaves the surplus as margin at the
+			   sides rather than taking it out of the picture. Zoom is
+			   preserved, because the target height is still divided by
+			   scale_factor. Nothing changes when the shapes already agree,
+			   so windowed rendering is untouched. Not a port artefact: this
+			   is the vendored library's own arithmetic and it drops the
+			   same rows on Win32, with the original typedefs, on the
+			   upstream compiler. Evidence tier: Observed --
+			   tools/check_libtcod_mode_change.sh reads the copy rectangle
+			   before and after. Tracking id inc-i2h1. Not sent upstream.
+			   ponytail: thrown away by the inc-1rak upgrade to 1.24.0,
+			   which deletes this file and scales through its own viewport. */
+			{
+				float contained_height = console_height_p / scale_factor;
+				if ((float)scale_data.src_proportionate_height < contained_height) {
+					scale_data.src_proportionate_height = (int)contained_height;
+					scale_data.src_proportionate_width =
+						(int)(contained_height / scale_data.dst_height_width_ratio);
+				}
+			}
+
 			/* Work out how much of the console to copy. */
 			scale_data.src_x0 = (scale_xc * console_width_p) - (0.5f * scale_data.src_proportionate_width);
 			if (scale_data.src_x0 + scale_data.src_proportionate_width > console_width_p)
@@ -241,6 +270,21 @@ static void create_window(int w, int h, bool fullscreen) {
 	/* Android should always be fullscreen. */
 	TCOD_ctx.fullscreen = fullscreen = true;
 #endif
+	/* upstream: nothing recorded the mode this window was created in, so
+	   TCOD_ctx.fullscreen stayed false after TCOD_console_init_root asked
+	   for fullscreen, and TCOD_console_is_fullscreen() answered false for a
+	   fullscreen window. The same function then computes
+	   TCOD_ctx.fullscreen_offsetx/y through TCOD_sys_init_screen_offset(),
+	   and actual_rendering() uses that offset only when the flag is set, so
+	   create_window() filled in the data and left the flag that enables it
+	   false. Nothing here is port-specific; the Android branch above is the
+	   only place upstream assigned it. libtcod 1.24.0 fixes this at
+	   src/libtcod/console_init.c:62 with this same assignment.
+	   Evidence tier: Observed -- tools/check_libtcod_mode_change.sh read
+	   is_fullscreen=0 after a fullscreen TCOD_console_init_root.
+	   Tracking id inc-i2h1. Not sent upstream.
+	   ponytail: thrown away by the inc-1rak upgrade, not carried forward. */
+	TCOD_ctx.fullscreen = fullscreen;
 	if ( fullscreen  ) {
 		find_resolution();
 #ifndef NO_OPENGL	
@@ -300,6 +344,19 @@ static void destroy_window() {
 		SDL_FreeSurface(scale_screen);
 		scale_screen = NULL;
 	}
+	/* upstream: scale_data outlives the window it describes. This function
+	   already resets scale_screen, the sibling file-scope static that the
+	   window owns, and misses scale_data, so render() goes on copying the
+	   old rectangle after TCOD_console_delete(NULL) and a second
+	   TCOD_console_init_root -- both public calls, with no port code in the
+	   path. Platform-independent C in the SDL2 renderer, so it fails the
+	   same way on Win32, with the original typedefs, on the upstream
+	   compiler. Evidence tier: Observed --
+	   tools/check_libtcod_mode_change.sh read src_copy 800x600 for a
+	   1020x768 console. Tracking id inc-i2h1. Not sent upstream.
+	   ponytail: libtcod 1.24.0 deletes this whole file, so this patch is
+	   thrown away rather than carried forward; see inc-1rak. */
+	scale_data.force_recalc = 1;
 	if (renderer) {
 		SDL_DestroyRenderer(renderer);
 		renderer = NULL;

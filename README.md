@@ -945,6 +945,7 @@ the unfixed tree before it is trusted.
 | `check_item_type_id.sh` | Does identifying one item teach its kind for every flavoured type, so the next of that kind arrives already named? |
 | `check_ki_strike_live.sh` | Does a Monk gain Ki Strike at 4th level, the grant that lets an unarmed attacker harm an incorporeal creature? |
 | `check_ledger_rows.sh` | Does every ledger row in `docs/REPORTING-GATE.md` sit under the heading whose column shape it has, so no tracking id is dropped? |
+| `check_libtcod_mode_change.sh` | Does libtcod recalculate its copy rectangle after a display mode change, so the console is not left clipped to the size of the window before it? Needs a real display and takes over the screen for a moment, so it runs with the builds and not in the ratchet. |
 | `check_luckblade_plus.sh` | Does the Luckblade keep its magical plus when the wish it would charge for is refused, rather than grinding down first? |
 | `check_feat_toggle.sh` | Do two presses of the feat toggle key toggle twice without spending a pick? |
 | `check_menu_overflow.sh` | Does a menu with more than 52 options still draw and select every row, rather than losing the ones past the alphabet? |
