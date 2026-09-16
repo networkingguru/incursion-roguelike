@@ -155,9 +155,21 @@ from what you added. A reviewer's weakest sense is for what is no longer there.
 
 **Every fix to a defect that is upstream's rather than the port's MUST be marked
 at the fix site with a lowercase `upstream:` comment, and MUST get a row in the
-"Base-code bugs fixed locally" table in `docs/REPORTING-GATE.md`.** Most defects
-in this codebase are upstream's, so assume a fix needs this unless you can say
-why it does not.
+"Base-code bugs fixed locally" table in `docs/REPORTING-GATE.md`, and the BEAD
+MUST carry the beads label `upstream`.** Most defects in this codebase are
+upstream's, so assume a fix needs this unless you can say why it does not.
+
+Three obligations, not two. The label is the one people miss, because nothing
+in the code or the table shows it is absent:
+
+    bd label add <id> upstream
+
+Add it when you add the ledger row. Without it `tools/sync_issues.sh` publishes
+the bead's GitHub issue with no `upstream` tag, so it refuses to run, and the
+refusal reaches you through `tools/check_mirrored_lane.sh` as an UNMEASURED
+result in `tools/nightly_verify.sh` -- which is the gate `tools/finish_bead.sh`
+runs BEFORE it merges. Miss the label and you learn about it after a full gate
+run, roughly fifty minutes, with nothing landed (inc-mqi9).
 
 The comment states four things, because a maintainer reading it years from now
 has none of your context:
