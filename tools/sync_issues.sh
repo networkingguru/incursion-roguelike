@@ -13,17 +13,34 @@
 # `--issues <ids>` and `--parent <bead>`. Half the beads have no parent, so
 # `--parent` cannot express the filter, and the filter has to be computed out
 # here and handed over as an id list. The filter itself is a mandatory label:
-# every bead carries exactly one of `public` or `internal`, and
+# every bead carries exactly one of `public`, `internal` or `mirrored`, and
 # tools/check_bead_publish.py fails the commit when a new bead has an empty
-# description, or carries neither label or both. It is wired into
+# description, or carries none of the three or more than one. It is wired into
 # .beads/hooks/pre-commit and blocks (inc-m7xb, 2026-09-06). A required field that blocks a commit is the only kind of rule an
 # agent cannot walk past; a paragraph in AGENTS.md has been walked past twice
 # on record.
 #
 #   public    a defect or a wanted feature IN THE GAME -- rules, engine,
-#             rendering, saves, the shipped builds.
+#             rendering, saves, the shipped builds. Title, body and state are
+#             all written to its issue.
 #   internal  the test harness, the key scripts, the documentation checks, the
 #             bead and gate machinery, agent process. Never published.
+#   mirrored  a game defect that is ALREADY public, because somebody outside
+#             filed it. Its `external_ref` points at THEIR issue. Only the
+#             open/closed state is written. Never the title, never the body.
+#
+# WHY `mirrored` EXISTS. The full sync refreshes titles and descriptions, which
+# is right for an issue this project wrote and destructive for one it did not.
+# On 2026-09-16 two outside reports arrived, GitHub 507 and 508. Filing them as
+# `public` with an `external_ref` pointing at those issues would have replaced
+# the reporters' text and their screenshots on the next push; a --dry-run said
+# "Would update in GitHub" for both. The refs were cleared before any push and
+# nothing was lost. See bead inc-rza6.
+#
+# The diagnosis for a mirrored defect lives in the bead's `notes`, which this
+# script never sends: it publishes the DESCRIPTION and nothing else. Telling
+# the reporter what was found is a COMMENT on their issue. That is a separate
+# act, and it goes through the publishing gate in AGENTS.md.
 #
 # WHY IT RUNS HERE AND NOT IN CI. A GitHub Actions job cannot read this
 # database directly; it would have to bootstrap from the `refs/dolt/data` ref
@@ -93,17 +110,18 @@ export GITHUB_REPOSITORY="$SYNC_REPO"
 # hides it; a bead with both is a contradiction. Either way, stop.
 unlabelled=$(bd list --all --limit 0 --flat --json 2>/dev/null | python3 -c '
 import sys, json
+LANES = {"public", "internal", "mirrored"}
 d = json.load(sys.stdin)
 issues = d if isinstance(d, list) else d.get("issues", [])
 bad = []
 for x in issues:
-    labels = set(x.get("labels") or [])
-    if ("public" in labels) == ("internal" in labels):
+    if len(set(x.get("labels") or []) & LANES) != 1:
         bad.append(x["id"])
 print(" ".join(bad))
 ')
 if [ -n "$unlabelled" ]; then
-    echo "sync_issues: these beads carry neither or both of public/internal:" >&2
+    echo "sync_issues: these beads carry none, or more than one, of" >&2
+    echo "sync_issues: public / internal / mirrored:" >&2
     echo "  $unlabelled" >&2
     echo "sync_issues: label them, then re-run. Nothing was pushed." >&2
     exit 1
@@ -134,31 +152,63 @@ fi
 # of it GitHub's own issue listing.
 beads_json=$(mktemp -t sync_issues) || { echo "sync_issues: no temp file" >&2; exit 1; }
 trap 'rm -f "$beads_json"' EXIT
-bd list --label public --all --limit 0 --flat --json > "$beads_json" 2>/dev/null || {
+# BOTH OUTWARD LANES ARE READ, AND THEY ARE NOT TREATED ALIKE.
+#
+# `public` beads are written to GitHub: title, body and state. `mirrored` beads
+# are NOT written; only their state is reconciled, because the issue they point
+# at belongs to the person who reported it. Reading both here and splitting
+# below keeps the single-read property above: the reconciliation needs the
+# mirrored rows, and a second `bd list` would cost another round trip.
+bd list --label-any public,mirrored --all --limit 0 --flat --json \
+    > "$beads_json" 2>/dev/null || {
     echo "sync_issues: cannot read the bead database" >&2; exit 1; }
 
 # --new-only keeps just the public beads that have no issue yet. The pre-push
 # hook does NOT use it: a push must move statuses too, or a defect closed in
 # beads stays advertised as open on the tracker.
+#
+# `mirrored` is excluded here and nowhere else. This list is what reaches
+# `bd github sync`, which writes titles and descriptions; a mirrored bead in it
+# would overwrite a stranger's bug report. The reconciliation below reads the
+# file again and DOES include them, so their state still tracks the bead.
 export NEW_ONLY="$new_only"
 ids=$(python3 -c '
 import sys, json, os
 d = json.load(sys.stdin)
 issues = d if isinstance(d, list) else d.get("issues", [])
+issues = [x for x in issues if "mirrored" not in set(x.get("labels") or [])]
 if os.environ.get("NEW_ONLY"):
     issues = [x for x in issues if not (x.get("external_ref") or "")]
 print(",".join(x["id"] for x in issues))
 ' < "$beads_json")
 
-if [ -z "$ids" ]; then
-    if [ -n "$new_only" ]; then
-        exit 0          # nothing new to publish; say nothing, this runs on every push
-    fi
-    echo "sync_issues: no bead is labelled public; nothing to push."
+# THE RECONCILIATION SET IS WIDER THAN THE PUSH SET.
+#
+# `ids` is what gets WRITTEN to GitHub, and it never holds a mirrored bead.
+# `recon_ids` is what gets its open/closed state checked, and it holds both
+# lanes: a mirrored bead the port has fixed must stop being advertised as open
+# on the reporter's issue, and closing a state is not writing a body.
+recon_ids=$(python3 -c '
+import sys, json
+d = json.load(sys.stdin)
+issues = d if isinstance(d, list) else d.get("issues", [])
+print(",".join(x["id"] for x in issues))
+' < "$beads_json")
+
+# --new-only asks one question, "is there anything NEW to create", and it must
+# stay cheap and silent: it runs on every push, and the reconciliation below
+# costs a full GitHub issue listing. An empty push set ends the run there, and
+# the state reconciliation waits for the next full sync.
+if [ -n "$new_only" ] && [ -z "$ids" ]; then
     exit 0
 fi
 
-count=$(printf '%s\n' "$ids" | tr ',' '\n' | wc -l | tr -d ' ')
+if [ -z "$recon_ids" ]; then
+    echo "sync_issues: no bead is labelled public or mirrored; nothing to do."
+    exit 0
+fi
+
+count=$(printf '%s\n' "$ids" | tr ',' '\n' | grep -c . || true)
 
 # `bd github sync --issues` takes the whole list as one argument. Assert it
 # fits rather than assuming: ARG_MAX on macOS is about 1 MB, and the list is a
@@ -179,7 +229,11 @@ fi
 # throwaway. Pointing this script at the real repository then updates the
 # rehearsal issues and creates nothing real, silently. So refuse, and say which
 # beads to clear.
-export SYNC_IDS="$ids"
+#
+# Asked of the RECONCILIATION set, not the push set. A mirrored bead is never
+# written to, but its state IS reconciled, so a mirrored bead pointing at a
+# rehearsal repository would close the wrong issue.
+export SYNC_IDS="$recon_ids"
 stale=$(python3 -c '
 import sys, json, os
 repo = os.environ["GITHUB_REPOSITORY"]
@@ -206,12 +260,27 @@ if [ -n "$stale" ]; then
     exit 1
 fi
 
-echo "sync_issues: ${count} public beads -> ${SYNC_REPO} (${length} bytes of ids)"
-bd github sync --push-only --issues "$ids" ${dry_run:+$dry_run}
+mirrored_count=$(python3 -c '
+import sys, json
+d = json.load(sys.stdin)
+issues = d if isinstance(d, list) else d.get("issues", [])
+print(sum(1 for x in issues if "mirrored" in set(x.get("labels") or [])))
+' < "$beads_json")
+
+if [ "$count" -gt 0 ]; then
+    echo "sync_issues: ${count} public beads -> ${SYNC_REPO} (${length} bytes of ids)"
+    bd github sync --push-only --issues "$ids" ${dry_run:+$dry_run}
+else
+    echo "sync_issues: no public bead to write."
+fi
+if [ "$mirrored_count" -gt 0 ]; then
+    echo "sync_issues: ${mirrored_count} mirrored beads: state only, no title and no body."
+fi
 
 # Re-read, because the sync above has just written `external_ref` onto every
 # bead it created an issue for, and the reconciliation below needs those.
-bd list --label public --all --limit 0 --flat --json > "$beads_json" 2>/dev/null || {
+bd list --label-any public,mirrored --all --limit 0 --flat --json \
+    > "$beads_json" 2>/dev/null || {
     echo "sync_issues: cannot re-read the beads; state NOT reconciled" >&2; exit 1; }
 
 # RECONCILE THE OPEN/CLOSED STATE OURSELVES.
@@ -226,7 +295,11 @@ bd list --label public --all --limit 0 --flat --json > "$beads_json" 2>/dev/null
 # invites a stranger to spend an evening on something already done. So the
 # state is not left to bd. `external_ref` on each bead holds the issue URL bd
 # assigned, which is the durable link, and `gh` sets the state directly.
-python3 - "$SYNC_REPO" "$ids" "${dry_run:-}" "$beads_json" <<'PY'
+#
+# Both lanes are reconciled. A mirrored bead's issue belongs to the person who
+# reported it, and closing it is the one write this project may make there:
+# state, never title and never body.
+python3 - "$SYNC_REPO" "$recon_ids" "${dry_run:-}" "$beads_json" <<'PY'
 import json, subprocess, sys
 
 repo, ids, dry, beads_json = (

@@ -37,10 +37,12 @@ fi
 # hook git runs; a script in .git/hooks would never fire.
 #
 # It calls tools/sync_issues.sh, not `bd github sync`, because bare sync has no
-# label filter and would publish `internal` beads -- the harness, the docs
-# checks, the agent process -- to a public tracker. sync_issues.sh computes the
-# `public` set and hands it over as --issues, and reconciles closed state that
-# bd leaves open.
+# label filter. It would publish `internal` beads -- the harness, the docs
+# checks, the agent process -- to a public tracker, and it would write over the
+# body of any `mirrored` bead's issue, which belongs to the person who reported
+# it. sync_issues.sh computes the `public` set and hands that to --issues, it
+# reconciles closed state that bd leaves open, and it reconciles a `mirrored`
+# bead's state without writing that issue's title or body.
 #
 # IT IS THE FULL SYNC, not --new-only. The full run refreshes the titles and
 # descriptions of the issues that already exist and reconciles their open or

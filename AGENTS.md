@@ -258,12 +258,12 @@ This project uses **bd** (beads) for issue tracking. Run `bd prime` for full wor
 > source of truth; don't `bd import` during normal operation; don't
 > reach for third-party Dolt hosting before trying the default).
 
-### Every bead carries `public` or `internal`
+### Every bead carries `public`, `internal` or `mirrored`
 
 **A bead you create MUST have a non-empty description and MUST carry exactly
-one of the labels `public` or `internal`. `tools/check_bead_publish.py` fails
-the commit when a new bead has an empty description, or carries neither label
-or both.** It is wired into `.beads/hooks/pre-commit`, so it blocks, except on the overnight harness's own `nightly/` branch, where it warns; it was
+one of the labels `public`, `internal` or `mirrored`.
+`tools/check_bead_publish.py` fails the commit when a new bead has an empty
+description, or carries none of the three or more than one.** It is wired into `.beads/hooks/pre-commit`, so it blocks, except on the overnight harness's own `nightly/` branch, where it warns; it was
 wired in on 2026-09-06 under inc-m7xb, after four days in which this paragraph
 described a gate that ran nowhere.
 
@@ -285,7 +285,8 @@ whose content lives in its notes reaches the public tracker with an empty body,
 which is how inc-b12m became GitHub issue #381 with nothing in it. The label is not decoration. `tools/sync_issues.sh`
 publishes every `public` bead to the Issues tab of
 `networkingguru/incursion-roguelike` and never publishes an `internal` one, so
-the label decides whether the outside world can see the bead at all.
+the label decides whether the outside world can see the bead at all, and
+whether this project writes to somebody else's issue.
 
 - **`public`** — a defect or a wanted feature IN THE GAME. The rules, the
   engine, the rendering, the saves, the in-game help text, the controller and
@@ -295,15 +296,38 @@ the label decides whether the outside world can see the bead at all.
 - **`internal`** — the test harness, the key scripts, the documentation
   checks, the reporting ledger, the bead and gate machinery, and anything about
   how agents work on this project. Never published.
+- **`mirrored`** — a game defect that is ALREADY public, because somebody
+  outside filed the issue. Its `external_ref` points at THEIR issue. The sync
+  writes only the open or closed state there. It never writes the title and it
+  never writes the body.
+
+**Why `mirrored` exists.** The full sync refreshes the titles and descriptions
+of issues that already exist, which is right for an issue this project wrote
+and destructive for one it did not. On 2026-09-16 two outside reports arrived,
+GitHub 507 and 508. Filing them as `public` with an `external_ref` pointing at
+those issues would have replaced the reporters' text and their screenshots on
+the next push; a `--dry-run` said "Would update in GitHub" for both. The refs
+were cleared before any push and nothing was lost. See bead `inc-rza6`.
+
+**Put the diagnosis in the bead's `notes`.** The sync publishes the DESCRIPTION
+and nothing else, so notes never leave this machine. Verified on 2026-09-16:
+`inc-upw.2` carries 382 characters of notes and none of that text appears in
+the body of issue 14.
+
+**Telling the reporter what you found is a COMMENT on their issue.** It is a
+separate act, it is never a body rewrite, and it goes through the publishing
+rules above: Brian reads the literal text first.
 
 The check also prints, without failing, the beads whose title argues with their
 label in either direction. It is advice from a word list, not a ruling. You
-decide.
+decide. A `mirrored` bead is measured like a `public` one, because both claim
+the bead is about the game.
 
 A new bead labelled `public` must also pass `bd lint`, which asks a bug for
 "## Steps to Reproduce" and "## Acceptance Criteria". The existing backlog is
 exempt and is being drained separately as bead `inc-uh76`; the check asks this
-of new beads only.
+of new beads only. `mirrored` is not asked, because the gate measures what gets
+published and a mirrored bead publishes no body.
 
 ### A quote of Brian goes in the notes, and nowhere else
 
