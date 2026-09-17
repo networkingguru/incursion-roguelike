@@ -36,7 +36,7 @@ sed -n '3135,3453p' src/Tables.cpp |
 
 ## How the menu works
 
-The verbs live in `YuseCommands[]`, `src/Tables.cpp:3135-3453`. Each entry
+The verbs live in `YuseCommands[]`, `src/Tables.cpp:3144-3462`. Each entry
 carries up to three prompts and a flag word:
 
 ```c
@@ -53,7 +53,7 @@ carries up to three prompts and a flag word:
   that returns false for you (`src/Player.cpp:1597-1604`). Two entries carry a
   prerequisite today: **Mount** needs the Ride skill, a humanoid body with
   limbs, and no mount under you already; **Dismount** needs you mounted
-  (`src/Tables.cpp:3124-3133`). If nothing survives both rules the command
+  (`src/Tables.cpp:3133-3142`). If nothing survives both rules the command
   says *"You have no usable verbs."* `tools/check_command_menu_gating.sh`
   reads the `y` screen and fails if a dead verb is on it.
 - **The prompts run in table order**, target first, unless the entry carries
@@ -148,11 +148,14 @@ far less ground than its name suggests. Verified by reading the script.
   alchemical liquids (`lib/alchemy.irh:82`), poison from a small
   glass vial onto a weapon (`lib/mundane.irh:1016`), the weapon oils
   (`lib/m_items.irh:1477`) and the lantern below.
-- **Dip** has five handlers and they cover two targets: a **fountain**
-  (`lib/dungeon.irh:2180` and `:2353`, plus the Spell Storing ring at
-  `lib/m_items.irh:5318`) and an **alchemical flask**, where only acid does
-  anything (`lib/alchemy.irh:97` and `lib/alchemy.irh:623`). Dipping into anything else has
-  nothing behind it.
+- **Dip** has four handlers in the build and they cover two targets: a
+  **fountain** (`lib/dungeon.irh:2180` and `:2353`) and an **alchemical
+  flask**, where only acid does anything (`lib/alchemy.irh:97` and
+  `lib/alchemy.irh:623`). A fifth handler, the Spell Storing ring dipped in a
+  fountain, is written but not compiled: `#if 0` at `lib/m_items.irh:5229`
+  encloses the whole ring through `:5343`, so neither the ring nor its Dip
+  handler reaches `lib/program.i`. Dipping into anything else has nothing
+  behind it.
 - **Fill / Pour** (`lib/mundane.irh:640`) — the only combination implemented
   is refilling a **brass lantern** from a **flask of oil**, and the flask must
   already be identified. Both verbs share that one handler.
@@ -165,7 +168,7 @@ cannot be divided."* The new stack is marked `DROPPED` for 10 turns
 
 **Mount** is offered only to a character who could ride: the Ride skill, a
 humanoid body with limbs, and no mount already under you
-(`src/Tables.cpp:3124-3128`). It is the only command that rides a creature: no
+(`src/Tables.cpp:3133-3137`). It is the only command that rides a creature: no
 key binding throws `EV_MOUNT`, and only this verb and the spells that summon a
 steed do (`lib/wspells.irh:1813` and `:1908`, `lib/pspells.irh:3460`). Once
 picked it runs a full validation path — Ride skill, humanoid form, the

@@ -278,8 +278,9 @@ static void create_window(int w, int h, bool fullscreen) {
 	   and actual_rendering() uses that offset only when the flag is set, so
 	   create_window() filled in the data and left the flag that enables it
 	   false. Nothing here is port-specific; the Android branch above is the
-	   only place upstream assigned it. libtcod 1.24.0 fixes this at
-	   src/libtcod/console_init.c:62 with this same assignment.
+	   only place upstream assigned it. libtcod 1.24.0 carries this same
+	   assignment in its own src/libtcod/console_init.c, a file no clone of
+	   this repository holds, so no line number here can be checked.
 	   Evidence tier: Observed -- tools/check_libtcod_mode_change.sh read
 	   is_fullscreen=0 after a fullscreen TCOD_console_init_root.
 	   Tracking id inc-i2h1. Not sent upstream.

@@ -106,7 +106,7 @@ Text 61; `Effect`+`Disease`+`Poison`+`Spell` all feed one array
 ## How to check this page
 
 Each count carries its command beside it; run them from the repository root.
-Structural claims are read, not counted: `sed -n '1p;1506p' src/RComp.cpp` and
+Structural claims are read, not counted: `sed -n '1p;1518p' src/RComp.cpp` and
 `sed -n '1p;1578p' src/Art.cpp` show the `#ifdef DEBUG` / `#endif` pairs that
 bracket whole files; `grep -n DEBUG build_macos.sh build.bat` shows the split.
 No claim here needed a binary run.
