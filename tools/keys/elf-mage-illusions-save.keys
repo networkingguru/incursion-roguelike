@@ -1,0 +1,49 @@
+# Build the elf mage who carries the four illusion spells, and SAVE him.
+#
+# This script exists to make tools/fixtures/chars/elf-mage-illusions-seed1.sav.
+# It is not a check. tools/check_illusion_flags.sh loads the fixture instead of
+# replaying this, because an rID is a position and one resource added to lib/
+# would otherwise give the check a different character. See
+# tools/fixtures/README.md.
+#
+# The character is an elf, because the elf monster template is the one that
+# grants CA_SHARP_SENSES (lib/races.irh:952), and that ability pierces an
+# ordinary illusion with no saving throw at all (src/Creature.cpp:2281-2284).
+# Elf, Drow and Grey Elf are the only three player races that grant it; no
+# dwarf, lizardfolk or kobold does.
+#
+# The four spells are learned through wizard mode rather than taken at
+# generation, because a first-level mage is never offered them: the level-1
+# pick list holds Chromatic Orb through Wizard Lock and no Phantasmal Force.
+#
+# Infinite Mana is switched on so the saved character can cast all four
+# spells in one session whatever his mana pool is. Freeze Monsters is switched
+# on so nothing walks up and writes over the message a check has to read.
+
+@include chargen-elf-mage.keys
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*7          # Infinite Mana is the 8th switch (OPT_NODEATH..., inc/Defines.h:4137-4147)
+SPACE
+DOWN*3          # Freeze Monsters is the 11th.
+SPACE
+ESC
+
+w
+@choose "Learn Any Spell"
+"Phantasmal Force" ENTER
+w
+@choose "Learn Any Spell"
+"Improved Phantasmal Force" ENTER
+w
+@choose "Learn Any Spell"
+"Spectral Force" ENTER
+w
+@choose "Learn Any Spell"
+"Improved Spectral Force" ENTER
+
+ESC b           # System Menu, [b] Save and Continue -- the only save that does
+                # not also end the session. tools/fixtures/README.md requires it.

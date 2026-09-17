@@ -2275,7 +2275,23 @@ bool Thing::isRealTo(Creature *watcher) {
     if (watcher->HasMFlag(M_MINDLESS))
         return false;
 
-    if (!(s->Val & IL_IMPROVED)) {
+    /* upstream: base-code defect, the fix is ours. This read used s->Val,
+       which is the illusion's SAVE DC -- every grant site fills it from
+       e.saveDC (src/Encounter.cpp:2549, src/Effects.cpp:1971) and
+       DisbeliefCheck spends it as a DC (src/Creature.cpp:2341). The declared
+       flags live on the effect resource's yval, which is what
+       getIllusionFlags returns. IL_IMPROVED is 2, so the old line tested bit 1
+       of the DC and called half of all illusions improved by arithmetic.
+       Upstream's because it is plain integer arithmetic on two Status fields:
+       no typedef, pointer or platform dependence, so Win32 with the original
+       compiler misbehaves identically. hex/master:src/Creature.cpp:2157
+       carries the same line. Tier: Observed -- tools/check_illusion_flags.sh
+       casts four declared illusions from a frozen elf and reads the two
+       Creature::PickUp messages back; before this fix Phantasmal Force (yval
+       0, DC 15) resisted a Sharp Senses elf and Improved Phantasmal Force
+       (IL_IMPROVED, DC 16) did not, both inverted. Tracked as inc-pu6v.43.
+       Not sent. */
+    if (!(getIllusionFlags() & IL_IMPROVED)) {
         int32 P;
         P = watcher->Perceives(this);
 
