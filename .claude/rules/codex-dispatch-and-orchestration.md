@@ -152,15 +152,17 @@ WHAT WAS MISSED, and what it cost:
      into a worktree after Brian asked 'are you working in a branch or whatever
      like you are supposed to?'
 
-WHY READING project CLAUDE.md IS NOT ENOUGH, and this is the structural part.
-CLAUDE.md:195-200 is the only pointer to AGENTS.md and it CLOSED-ENUMERATES the
-contents: 'the standing order, the publishing rules, how to mark a base-code
-bug, how to classify a change, and the comment budget.' That list omits the
-Codex division and omits one-bead-one-worktree. A session that trusts the list
-never opens AGENTS.md. Commit bb65ba9 added the worktree rule to AGENTS.md and
-README.md on 2026-09-11 and did not touch CLAUDE.md. Smaller third hole: the
-sentence that binds CLAUDE sits inside a section headed 'If you are Codex',
-which a Claude reader skips by design.
+WHY READING project CLAUDE.md WAS NOT ENOUGH, and this is the structural part.
+CLAUDE.md used to carry the only pointer to AGENTS.md, and that pointer
+CLOSED-ENUMERATED the contents: 'the standing order, the publishing rules, how
+to mark a base-code bug, how to classify a change, and the comment budget.' The
+list omitted the Codex division and omitted one-bead-one-worktree, so a session
+that trusted the list never opened AGENTS.md. Commit bb65ba9 added the worktree
+rule to AGENTS.md and README.md on 2026-09-11 and did not touch CLAUDE.md.
+Smaller third hole: the sentence that binds CLAUDE sat inside a section headed
+'If you are Codex', which a Claude reader skips by design.
 
-SO, AT SESSION START, IN THIS ORDER: read the persisted hook file, then
-AGENTS.md itself -- not CLAUDE.md's summary of it.
+FIXED 2026-09-17 (bead inc-wknz). CLAUDE.md now opens with an `@AGENTS.md`
+import, so AGENTS.md is loaded whole rather than summarised, and there is no
+enumerated list left to trust. The hook that used to inject it is deleted. See
+`where-rules-live.md`.

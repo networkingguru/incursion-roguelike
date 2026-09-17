@@ -23,11 +23,11 @@ master clean.
 THE LAUNCHD JOB IS STILL REGISTERED. Only tonight's run was killed. It fires
 again at 01:00. If it stalls the same way, the stall is not a one-off.
 
-A REAL BUG IN THE WRAPPER, FOUND WHILE READING IT, NOT FIXED. nightly.sh:509
+A REAL BUG IN THE WRAPPER, FOUND WHILE READING IT, NOT FIXED. nightly-harness/bin/nightly.sh line 509
 gives up when the clock is past DEADLINE=0430. That check sits AFTER the
 launch++ and BEFORE the backoff sleep. At 04:52:21 the wrapper decided to wait
 another 60 minutes instead of giving up, so the guard did not fire when it
-should have. nightly.sh:82 already warns that a leaked TZ in the process's
+should have. nightly-harness/bin/nightly.sh line 82 already warns that a leaked TZ in the process's
 environment breaks the deadline guard, which is the likely cause -- date '+%H%M'
 returning UTC. On 2026-09-09 the same deadline DID fire, at 06:31:46. Worth
 confirming against the 2026-09-09 log before believing either explanation.
