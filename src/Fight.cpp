@@ -7368,7 +7368,16 @@ EvReturn Creature::PDamage(EventInfo &e)
            cause for a disbelief check. Advanced illusions cover
            this with an illusion of death or mortal wounding, 
            however. */
-        if (e.actIllusion && !(e.EActor->GetStatiVal(ILLUSION) & IL_ADVANCED))
+        /* upstream: same base-code defect as src/Creature.cpp:2278, same
+           reasoning, same tier. GetStatiVal(ILLUSION) returns Status::Val,
+           which is the save DC; IL_ADVANCED is 4, so this tested bit 2 of the
+           DC. e.actIllusion is only ever set where HasStati(ILLUSION) holds
+           (src/Fight.cpp:528, 801, 1234), so getIllusionFlags cannot fire its
+           ASSERT here. Tier: Traced -- the three e.actIllusion assignments and
+           the four ILLUSION grant sites were read; this arm was not driven in
+           play, unlike the isRealTo site the same fix repairs. Tracked as
+           inc-pu6v.43. Not sent. */
+        if (e.actIllusion && !(e.EActor->getIllusionFlags() & IL_ADVANCED))
           e.EActor->DisbeliefCheck();
       }
     else
@@ -7383,7 +7392,17 @@ EvReturn Creature::PDamage(EventInfo &e)
            terrain illusions are assumed to be spectral by default. */
         e.EVictim->SetStatiDur(ILLUS_DMG,-1,e.EActor, max(
            e.EVictim->GetStatiMag(ILLUS_DMG,-1,e.EActor), Dice::Roll(3,6) *
-           ( e.EActor->GetStatiVal(ILLUSION) & IL_SPECTRAL ? 100 : 1 ) ) );    
+           /* upstream: same base-code defect again; IL_SPECTRAL is 1, so
+              this tested bit 0 of the save DC and an odd DC bought a
+              hundredfold duration. The isIllusion() arm is NOT part of the
+              defect: the comment above says a terrain illusion carries no
+              ILLUSION stati, and treating that case as spectral is deliberate,
+              so it is spelled out here rather than left to GetStatiVal's -1.
+              getIllusionFlags would ASSERT on that path. Tier: Traced -- the
+              grant sites and the terrain comment above were read; the duration
+              itself was not measured in play. Tracked as inc-pu6v.43. Not sent. */
+           ( (e.EActor->isIllusion() ? e.EActor->getIllusionFlags()
+                                     : IL_SPECTRAL) & IL_SPECTRAL ? 100 : 1 ) ) );    
         e.EVictim->cHP -= e.aDmg;
       }
     return DONE;
