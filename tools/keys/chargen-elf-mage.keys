@@ -1,0 +1,32 @@
+# Make an elf mage and get into the dungeon.
+#
+# An elf, because the elf template grants CA_SHARP_SENSES (lib/races.irh:952) and that
+# ability pierces an ordinary illusion with no saving throw at all
+# (src/Creature.cpp:2281-2284). A mage, because the illusion spells this
+# character has to cast are wizard spells.
+#
+# Everything else follows chargen-mage.keys, including why the race, subrace,
+# class, alignment and specialty are named rather than counted.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Mage"
+a       # Attributes: the first of the five offered sets.
+@choose "Neutral"
+@choose "Illusion"  # Wizard specialty.
+a       # First feat.
+a       # Second feat.
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+@while "wish to worship" y
+
+a       # Personality archetype
+
+# Starting spells: take the first offered until the game stops asking.
+@while "Learn which spell" a
