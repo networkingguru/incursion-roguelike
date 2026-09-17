@@ -4,11 +4,18 @@
       {
         "hooks": [
           {
-            "command": "tools/prime_rules.py",
-            "type": "command"
-          },
-          {
             "command": "tools/held_queue.sh",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ],
+    "InstructionsLoaded": [
+      {
+        "hooks": [
+          {
+            "command": "tools/instructions_loaded.sh",
             "type": "command"
           }
         ],
