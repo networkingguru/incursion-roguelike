@@ -30,7 +30,7 @@
 # FOUR SESSIONS, each from a frozen character (tools/fixtures/README.md says
 # why a seeded chargen would drift):
 #
-#   favour-insight.keys       lizardfolk monk, Xavias     seed 5
+#   favour-insight.keys       lizardfolk monk, Xavias     seed 12
 #   favour-devour-khasrach    lizardfolk monk, Khasrach   seed 5
 #   favour-devour-zurvash     lizardfolk monk, Zurvash    seed 5
 #   favour-trap.keys          kobold rogue,    Semirath   seed 3
@@ -162,8 +162,20 @@ rises() { # <what> <before> <after> <want>
 }
 
 # --- 1. A favoured skill: Knowledge (Theology), which Xavias lists ---------
+#
+# SEED 12, NOT 5. This session needs its Knowledge (Theology) check to SUCCEED
+# before there is an award to measure at all, and the roll is an ordinary draw
+# off the shared random stream. inc-i1eo moved that stream once, when it stopped
+# Character::GodMessage spending a random number per character of every god
+# message, and seed 5's roll fell from a success to 1d20 (9) +4 = 13 vs DC 15.
+# The check reported INCONCLUSIVE, which is correct and is not a regression in
+# what it measures. Seed 12 rolls 1d20 (19) +4 = 23, the widest margin in seeds
+# 1-24; the assertion below is unchanged. Note that margin buys nothing against
+# a FUTURE stream move: any shift redraws the die uniformly, and about 45% of
+# seeds fail this DC. If that becomes tiresome, the durable repair is to stop
+# the award depending on a rolled check, not to hunt for another seed.
 echo "Xavias, a Knowledge (Theology) success"
-session "$MONK" tools/keys/favour-insight.keys 5
+session "$MONK" tools/keys/favour-insight.keys 12
 check_line insight "Knowledge (Theology)"
 set -- $CL
 [ $# -eq 4 ] || inconclusive "no Knowledge (Theology) check line on the insight screen."

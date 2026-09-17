@@ -1887,7 +1887,16 @@ void Character::GodMessage(rID gID, int16 msgnum, ...)
     col = (int16)TGOD(gID)->GetConst(VOICE_COLOUR);
     for (i=0;msg[i];i++)
       {
-        tcol = BlastColourSets[col*4 + random(4)];
+        /* upstream: this drew random(4) once per CHARACTER of the message, so
+           the number of draws a session took off the shared Mersenne Twister
+           depended on the TEXT of every god message it printed. Rewording one
+           moved the stream and with it every later placement roll, at no cost
+           in game time. Win32 and the original typedefs draw the same way, and
+           for a god without GF_SANITY_BLASTING this was the only RNG a god
+           message spent. The shade is presentation, so it takes the flat
+           entry, as Magic.cpp does for a non-beam. Observed, inc-i1eo, NOT
+           sent. */
+        tcol = BlastColourSets[col*4];
         if (msg[i] == '|')
           {
             quoted = !quoted;
