@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # gate: cheap
 #
-# Does a landing reuse a full gate pass on the same files, and only then?
+# The scratch-repo suite for tools/finish_bead.sh landings. It asks two
+# questions: does a landing reuse a full gate pass on the same files, and
+# only then; and does a landing driven from inside its own worktree still
+# work once that worktree is destroyed partway through.
 #
 #   tools/check_pass_record.sh      run every case
 #
@@ -90,6 +93,10 @@ run() {
 }
 gate() { run "$1" tools/nightly_verify.sh "${@:2}"; }
 land() { run "$REPO" tools/finish_bead.sh "$1"; }
+land_in() { run "$1" tools/finish_bead.sh "$2"; }
+# "! git ..." passed through expect's "$@" loses its negation -- bash looks up
+# a literal command named "!" and fails before git ever runs. Wrap it instead.
+branch_gone() { ! git -C "$1" show-ref --verify --quiet "refs/heads/$2"; }
 
 expect() { # expect <label> <command...>
     local label=$1; shift
@@ -160,6 +167,20 @@ export INCURSION_FINISH_GATE="tools/nightly_verify.sh --compare"
 land inc-ffff
 unset INCURSION_FINISH_GATE
 expect "an explicit INCURSION_FINISH_GATE is honoured untouched" [ "$BUILT" = 2 ]
+
+# AGENTS.md makes running finish_bead.sh from inside the bead's own worktree
+# the normal invocation -- every session works in a worktree of its own, never
+# in the shared checkout. Every case above drives the landing from $REPO, the
+# shared checkout, which is exactly the blind spot that let inc-5b76 through:
+# the script used one path both as "where I live" and "the repository", and a
+# worktree-driven landing destroys the first while the run still needs the
+# second to finish deleting the branch.
+bead inc-gggg; W="$TMP/Incursion-inc-gggg"
+echo 'int g;' >> "$W/src/game.c"; commit "$W" "fix: g"
+land_in "$W" inc-gggg
+expect "a landing driven from inside its own worktree lands" [ "$RC" = 0 ]
+expect "  and deletes the branch" branch_gone "$REPO" inc-gggg
+expect "  and removes the worktree" [ ! -d "$W" ]
 
 # The record itself, driven through --reuse-pass in one worktree that never
 # lands. Each case starts from a fresh full pass.
