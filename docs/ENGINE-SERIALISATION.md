@@ -371,7 +371,7 @@ path the body's job is unchanged from upstream: name the heap blocks the
 object owns and convert what a raw byte copy cannot carry — the scalar
 `FIELD_` lines are no-ops here.
 
-`Registry::Block` (:355) is the whole v0 mechanism: on save it parks the
+`Registry::Block` (src/Registry.cpp:355) is the whole v0 mechanism: on save it parks the
 block's handle in the object's own pointer field (:368); on load it swaps
 the handle back for the pointer (:370). The `intptr_t` route there plus
 `static_assert(sizeof(void*) >= sizeof(hData))` (src/AbiCheck.cpp:97) make
@@ -466,7 +466,7 @@ range check at src/Registry.cpp:906-916:
    function (the sole candidate is commented out at inc/Res.h:292), so a
    module data block holds no vptr for the loader to fail to repair.
 4. **Saving allocates handles.** `RegisterBlock` takes `LastUsedHandle++`
-   per block (:549) and the new value is written to `gh.LastHandle`
+   per block (src/Registry.cpp:549) and the new value is written to `gh.LastHandle`
    (:816), so `LastUsedHandle` grows on every save.
 
 ### The module question
@@ -483,7 +483,7 @@ the digest, and still true for the resource tables.**
   `typeSize()` can return, and `SaveFormatID()` renders it as "SF" plus
   eight hex digits. A change to `sizeof(Player)` or `sizeof(Module)` moves
   it by itself.
-- `SaveFormatMatches` also accepts the old `VERSION_STRING` literal (:76),
+- `SaveFormatMatches` also accepts the old `VERSION_STRING` literal (src/Registry.cpp:76),
   so files written before the digest existed still load. That branch is
   marked for deletion in the source.
 - A change to `sizeof(Module)` is caught twice: by the digest, and by the
