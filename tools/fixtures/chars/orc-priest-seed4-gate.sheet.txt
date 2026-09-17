@@ -1,0 +1,241 @@
+=== fixture: orc-priest-seed4-gate ===
+
+This file is the audit record for
+  tools/fixtures/chars/orc-priest-seed4-gate.sav
+and tools/make_char_fixture.sh writes the whole of it. Do not edit it
+by hand: it would then describe a character the .sav beside it does
+not hold, and that is the one failure tools/check_char_fixture.sh
+exists to catch.
+
+made on          2026-09-17 10:34:07 EDT
+made at commit   613cf2c
+                 the working tree was dirty, so this fixture may hold changes that commit does not
+seed             4
+settings         tools/gates/Options.Dat
+key script       tools/keys/chargen-priest-save.keys
+                 copied to tools/fixtures/chars/orc-priest-seed4-gate.keys
+saved in game as Henk.sav
+sha256 .sav      93ac5f304909386180b750067fd687bb1342c1098585b1376adc34fd5d685b39
+sha256 module    ce4d12f0be97b889e4423fd3392cb01906f052bb5c2203f53a8a675d0c3e0b2e
+                 mod/Incursion.Mod is what the save's rID manifest
+                 was written against. A fixture that stops loading
+                 is worth comparing against the module that made it.
+
+regenerate with
+  tools/make_char_fixture.sh orc-priest-seed4-gate tools/keys/chargen-priest-save.keys 4 tools/gates/Options.Dat --force
+Regenerating gives a BYTE-DIFFERENT .sav holding the SAME character:
+a save carries clocks and counters no second run repeats. Judge a
+regeneration by this sheet, never by the size of the diff.
+
+The character below is the engine's own dump. It was taken by LOADING
+the .sav beside this file and saving it again under
+INCURSION_CHAR_PROBE=1 (Game::SaveGame, src/Registry.cpp:1105-1111).
+A few of its lines belong to that reading session and not to the
+character: the torch's remaining turns, the Level Statistics table
+and the Messages at the end all move by the turns
+tools/keys/load-char-sheet.keys spends. Everything above Inventory is the
+character. For the resource ids behind the item names, which are what
+a module change moves, run:
+  tools/dump_save.sh tools/fixtures/chars/orc-priest-seed4-gate.sav
+
+=== the character, as the engine writes him ===
+
+                        Henk the Blooded, The Ambitious Conqueror (Explore Mode)
+
+Gender Male
+Race   Orc
+Class  Priest 1
+Faith  Aiswin
+XP     0
+Next @ 1000
+Align  Lawful Good
+
+
+STR: 15/00 [+2/+2] (base 11, +4 natural)
+DEX: 13/00 [+1/+1] (base 13)
+CON: 17/00 [+3/+3] (base 17)
+INT: 14/04 [+2/+1] (base 16, -2 natural)
+WIS: 18/00 [+4/+3] (base 16, +2 natural)
+CHA: 11/00 [+0/+0] (base 13, -2 natural)
+LUC: 14/00 [+2/+1] (base 14)
+Fortitude   +5(Priest +2, +3 Con)
+Reflex      +1(Priest +0, +1 Dex)
+Will        +6(Priest +2, +4 Wis)
+Melee   +toHit +0  (Priest +0, +2 Str, -2 circumstance)
+        Damage +3  (base 1d6 / 1d6+1, +2 Str, +1 weapon)
+        Speed  140%(base 100%) x 140% weapon
+Size           Human-sized:
+  (base human-sized)
+
+Defense Class  10:
+  (base 10, +1 Dex, -1 encumbrance)
+_______________(6 while casting)
+
+Coverage       8:
+  (base 0, +8 armour)
+
+Movement Rate  45%:
+  (base 100%) x 110% skill x 50% circumstance x 80% encumbrance
+
+Hit Dice Rolls 38:
+   [20 + 1d8 (8) + 3 (CON bonus)] + 25% (Toughness)
+Mana Rolls     26:
+   10 + 1d12 (12) x 1 + 4 (WIS bonus)
+
+Encumbrance    Moderate:
+   (Light 33.3s, Moderate 100.0s, Heavy 200.0s, Extreme 300.0s, Max Press 400.0s)
+
+Spell Slots    1st:
+  1+3
+
+Special Abilities:
+  Devouring
+  Domains:
+    Knowledge
+    Fate
+    Night
+  Fatesense
+  Infravision (90 ft)
+  Scent (30 ft)
+  Spellcasting (1st)
+  Turn Undead: 1
+  Weapon Skill Eligibility:
+  Mastery
+  Spell Fury
+  Caster Level: Divination +1
+
+Feats:
+  Acrobatic
+  Enlarge Spell
+  Scribe Scroll
+  Toughness
+
+Resistances and Armour:
+  Slashing Damage 6
+  Piercing Damage 3
+  Blunt Damage 3
+
+Proficiencies Simple Weapons, Long Blades, Impact, Polearms, Spears, Flails, Light Armour, Medium Armour, short sword and shotput
+
+Skill Ratings:
+  Athletics        +5  (0 ranks, +3 CON, +2 train)
+  Concentration    +7  (2 ranks, +3 CON, +2 train)
+  Craft            +7  (2 ranks, +1 DEX, +2 train, +2 kit)
+  Healing          +9  (2 ranks, +3 WIS, +2 train, +2 kit)
+  Intimidate       +4  (0 ranks, +2 STR, +2 train)
+  Intuition        +10 (1 ranks, +3 WIS, +2 train, +4 domain)
+  Jump             +5  (0 ranks, +2 STR, +3 feat)
+  Knowledge (Theyra) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Infernal) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Magic) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Mythology) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Nature) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Oceans) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Planes) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Theology) +9  (0 ranks, +3 WIS, +2 train, +4 kit)
+  Knowledge (Undead) +3  (0 ranks, +1 INT, +2 train)
+  Metamagic        +3  (0 ranks, +1 INT, +2 train)
+  Seneschal        +3  (0 ranks, +1 INT, +2 train)
+  Spellcraft       +3  (0 ranks, +1 INT, +2 train)
+  Tumble           +4  (0 ranks, +1 DEX, +3 feat)
+
+Spiritual State:
+__You are devoted to Aiswin.
+__Aiswin is noncommital.
+__Aiswin has not aided you.
+____(Favour 0, Lev 0, Pen 0%)
+__You are decisively Good.
+__You are decisively Lawful.
+
+CharGen Options and Choices:
+__You are in Explore Mode.
+__Beginner's Kit: ON
+__Initial Rolling Method: 4d6 + Perks
+__Allow Rerolling: YES
+__Use the Subraces: YES
+__Disallow Wizard Mode: NO
+__Maximum Hit Points: YES
+__Maximum Mana: YES
+__Default Character Gender: MALE
+__Monsters Maximum Hit Points: NO
+__Roll Attributes First: NO
+__Gain Attributes With Levels: YES
+__Allow Rapid Intuition: WEAPONS
+__Monsters Use Djikstra: YES
+__Out-Of-Depth Monsters: YES
+__Transgression Hints: YES
+__Difficulty Level: BASELINE
+__Power Stats: EXTREME
+__Elude Death: SEVEN
+__Disable Complicity Transgressions: YES
+__Natural Weapon Speed: ORIGINAL
+
+
+Inventory:
+  b orcish short sword
+  b orcish longspear
+  b orcish heavy mace
+  clerical vestment
+  b orcish coat of plates
+  Boots of Levitation [-2, -15%, -50%]
+  Holy symbol of Aiswin
+  b orcish knife
+  5 Potions of Healing [2d8+8]
+  68 gold pieces
+  17 vials of holy water [3d6]
+  4 Potions of See Invisibility
+  medium backpack
+  10 food rations
+  10 strips of cured meat
+  4 Antitoxins [+3]
+  5 Potions of Cure Disease [0]
+  2 Potions of Detect Stairs
+  4 Potions of Remove Curse
+  2 Potions of Restoration [4d6]
+  3 Potions of Restore Constitution [6d8]
+  3 Potions of Restore Strength [6d8]
+  craftsman's tools
+  healing kit
+  Wand of Identify (50 charges)
+  6 b orcish shotputs
+
+On The Ground:
+
+Known Spells:
+  True Strike                     1   90%    2 +10
+  Read Magic                      1  100%   10 +5
+  Sleep                           1   75%    3 
+  Bane                            1   90%    2 -1
+  Bless                           1  100%    5 +1
+  Call Light                      1   95%    1 
+  Command                         1   75%    2 
+  Cure Light Wounds               1   90%    0 1d8+1
+  Call Companions                 1   95%    2 
+
+Journal:
+
+12:00 AM, 1st of Suntide: Entry Chamber, 10' (H:38/38 M:26/26 XP:0) 
+  You arrive at 10' in the The Goblin Caves.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:16/23 M:14/14 XP:0) 
+  Starting Perks:
+  Extra Ability: Weapon Skill Eligibility +2.
+  Starting Item: uncursed Boots of Levitation.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:14/21 M:10/10 XP:0) 
+  "You whose people have slain my children for millenia now appeal to me? Suffer!"
+
+Monsters Encountered:
+  Total: 0
+
+Level Statistics:
+
+Lvl | Act | Key | Turns | Secs |  XP | Explored
+----+-----+-----+-------+------+-----+------------------
+1   |    1|   44|      1|     0|    0| 253 / 3190 = 7%
+
+Messages:
+Welcome back to Incursion, Henk!
+"Blessed be those who walk the path of shadows!"
+You find nothing of significance.
+Autosave... 

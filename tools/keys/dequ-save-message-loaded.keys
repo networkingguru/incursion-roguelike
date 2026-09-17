@@ -1,0 +1,40 @@
+# dequ-save-message.keys with its chargen removed: lines 50-end, unchanged.
+# The character comes from tools/fixtures/chars/dequ-save-message-seed5-opt0822.sav. bd inc-vrt8.
+
+@until "Things in View" ESC
+
+# 'w' opens wizard mode and 'y' confirms it the first time. The pair is driven
+# by @until rather than written out, because a keystroke swallowed by a prompt
+# that was still up would spend every key after it on the wrong thing, and that
+# is exactly what happened on the first attempt at this script.
+@until "Wizard Mode Options" w y
+w       # [w] Wizard Mode Switches
+# The switch list draws no cursor a screen dump can see, so this counts rows:
+# Freeze Monsters is the eleventh, and the cursor opens on the first.
+DOWN*10
+SPACE   # Freeze Monsters: NO -> YES
+ESC
+
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "brown pudding"
+RIGHT ENTER
+@dump:pudding-summoned
+
+# Walk into it. Each bump is one melee attack. A miss prints no save message,
+# so swing several times; the pudding is frozen and cannot walk away.
+RIGHT
+@dump:strike-1
+RIGHT
+@dump:strike-2
+RIGHT
+@dump:strike-3
+RIGHT
+@dump:strike-4
+RIGHT
+@dump:strike-5
+RIGHT
+@dump:strike-6
+
+@quit

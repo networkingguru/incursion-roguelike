@@ -1,0 +1,37 @@
+# tools/keys/spook-ally.keys with its chargen removed, for a session that
+# LOADS tools/fixtures/chars/spook-ally-seed5-opt0822.sav instead of rolling
+# the warrior again. Everything below is lines 48-end of that file, unchanged.
+# Written to answer one question: does a check driven off the fixture reach the
+# same numbers as the same check driven off live chargen? bd inc-vrt8.
+
+@until "Things in View" ESC
+
+@dump:no-bat
+
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+# The list draws no cursor a screen dump can see, so this counts rows:
+# Freeze Monsters is the eleventh, and the cursor opens on the first.
+DOWN*10
+SPACE   # Freeze Monsters: NO -> YES
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Bats"
+@choose "night hunter"
+RIGHT ENTER
+@dump:hostile-bat
+
+w
+@choose "Make Player Master of Monster"
+RIGHT ENTER
+
+# Out of the radius, then back into it. Four squares is past a radius of 3.
+LEFT LEFT LEFT LEFT LEFT
+@dump:walked-away
+RIGHT RIGHT RIGHT RIGHT RIGHT
+@dump:walked-back
+
+@quit
