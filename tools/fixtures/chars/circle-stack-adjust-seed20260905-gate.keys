@@ -1,0 +1,86 @@
+# Freeze the character tools/keys/circle-stack-adjust.keys builds, so every check that
+# runs that script can load him instead of rolling him again.
+#
+#   INCURSION_OPTIONS=tools/gates/Options.Dat \
+#       tools/headless.sh tools/keys/circle-stack-adjust-save.keys 20260905
+#
+# THE CHARGEN BELOW IS A COPY of tools/keys/circle-stack-adjust.keys lines 1-28,
+# deliberately unchanged, and the original is NOT edited. That script builds its
+# character inline rather than including a shared chargen-*.keys, so there is
+# nothing to @include. Copying rather than refactoring means no existing check
+# changes what it measures. The same choice, and the same warning, are in
+# tools/keys/lizardfolk-monk-save.keys: do not "improve" this copy -- the
+# fixture is only worth having if it holds THE character that script rolls.
+#
+# WHY A CHARACTER IS FROZEN AT ALL: see the header of
+# tools/keys/chargen-default-save.keys. bd inc-vrt8.
+
+# Regression fixture for inc-fiiq: overlapping magic circles must not stack.
+#
+# The character is Neutral EVIL on purpose.  A torch archon's circle inflicts
+# its -3 penalty on MA_EVIL creatures only (lib/wspells.irh:3857-3859), so an
+# evil player standing between two archons is the only oracle in the game that
+# shows the summed value on screen: the "Hit:" line of the side panel.
+#
+# Three dumps: no circle, one circle, two circles.  The ruling is that the
+# second circle adds nothing, so dump two must equal dump one.
+
+a       # Create a New Character
+n       # Do not alter the chargen options
+y       # Accept Explore Mode
+i       # Race: Orc
+a       # Subrace: Orc (Standard)
+a       # Class: Barbarian
+a       # Attributes: first offered set
+e       # Alignment: Neutral EVIL -- the whole point of this fixture
+a       # First feat
+a       # Second feat
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+y
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+@dump:arrival
+
+# HOW MANY KEYS THE OPENING WANTS IS A PROPERTY OF THE CHARACTER, so no fixed
+# count is right for every chargen. Measured 2026-09-17: tools/keys/chargen.keys
+# leaves NOTHING pending and reaches the System Menu on the first ESC, while
+# tools/keys/chargen-rogue.keys leaves a god's speech and an AutoHide line, so
+# the first ESC only dismisses a message. A hard-coded ESC ENTER SPACE, copied
+# from tools/keys/lizardfolk-monk-save.keys, failed in both directions: it
+# walked INTO the menu for the barbarian and fell short of it for the rogue.
+# @until sends ESC as many times as this character needs and stops the moment
+# the menu is up (src/Wposix.cpp:1318-1326).
+# CHARGEN IS NOT OVER UNTIL THE ARCHETYPE IS PICKED, and ESC will not dismiss
+# that screen -- it is a menu wanting a letter. Measured 2026-09-17: five of
+# these save scripts reached "Your personality archetype has little direct
+# influence..." and spent all 200 of @until's passes pressing ESC at it
+# (src/Wposix.cpp:1568-1571). [a] is The Ambitious Conqueror; the choice only
+# has to be the SAME one every time, because a fixture is a frozen character
+# and the archetype is, in the game's own words, "largely a 'colour' choice".
+@while "personality archetype" a
+
+@until "System Menu" ESC
+
+# @until only warns when it gives up (src/Wposix.cpp:1568-1571), so the
+# assertion stays: it stops the run at exit 6 rather than pressing a letter
+# into whatever screen is really there. [a] beside [b] is Save and Quit.
+@expect "System Menu"
+b                       # [b] Save and Continue (src/Player.cpp:843)
+
+# The save is not written by the keypress. Case 2 of the System Menu sets the
+# autosave flag and Timeout = 1 (src/Player.cpp:851-853); Game::Play writes the
+# file at the top of the next pass of its loop (src/Main.cpp:266-275). This
+# dump therefore fires AFTER the file is on disk, and photographs the engine's
+# own "Autosave... done." line saying so.
+@dump:saved
+
+# NO @quit HERE, DELIBERATELY. @quit becomes KY_CMD_QUICK_QUIT
+# (src/Wposix.cpp:1657-1664), which is Save and Quit: it would write the save a
+# SECOND time and shuffle the first copy off to <name>.sav.backup, leaving the
+# fixture a file no line of this script asked for. Letting the key script run
+# out instead ends the session with exactly one save.

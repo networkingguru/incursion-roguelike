@@ -1,0 +1,57 @@
+# Make the character tools/keys/chargen-priest.keys builds and SAVE him, so he can be
+# frozen into tools/fixtures/chars/.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/chargen-priest-save.keys 4
+#
+# The character is a male orc priest of Aiswin, lawful good. One fixture made here serves
+# the 5 key scripts that include it at the same seed and settings, because a
+# fixture's seed and settings are arguments to tools/make_char_fixture.sh and
+# only the chargen is baked into this file.
+#
+# WHY A CHARACTER IS FROZEN AT ALL, and why the chargen is included rather than
+# copied: see the header of tools/keys/chargen-default-save.keys, which says it
+# once. bd inc-vrt8.
+
+@include chargen-priest.keys
+
+@dump:arrival
+
+# HOW MANY KEYS THE OPENING WANTS IS A PROPERTY OF THE CHARACTER, so no fixed
+# count is right for every chargen. Measured 2026-09-17: tools/keys/chargen.keys
+# leaves NOTHING pending and reaches the System Menu on the first ESC, while
+# tools/keys/chargen-rogue.keys leaves a god's speech and an AutoHide line, so
+# the first ESC only dismisses a message. A hard-coded ESC ENTER SPACE, copied
+# from tools/keys/lizardfolk-monk-save.keys, failed in both directions: it
+# walked INTO the menu for the barbarian and fell short of it for the rogue.
+# @until sends ESC as many times as this character needs and stops the moment
+# the menu is up (src/Wposix.cpp:1318-1326).
+# CHARGEN IS NOT OVER UNTIL THE ARCHETYPE IS PICKED, and ESC will not dismiss
+# that screen -- it is a menu wanting a letter. Measured 2026-09-17: five of
+# these save scripts reached "Your personality archetype has little direct
+# influence..." and spent all 200 of @until's passes pressing ESC at it
+# (src/Wposix.cpp:1568-1571). [a] is The Ambitious Conqueror; the choice only
+# has to be the SAME one every time, because a fixture is a frozen character
+# and the archetype is, in the game's own words, "largely a 'colour' choice".
+@while "personality archetype" a
+
+@until "System Menu" ESC
+
+# @until only warns when it gives up (src/Wposix.cpp:1568-1571), so the
+# assertion stays: it stops the run at exit 6 rather than pressing a letter
+# into whatever screen is really there. [a] beside [b] is Save and Quit.
+@expect "System Menu"
+b                       # [b] Save and Continue (src/Player.cpp:843)
+
+# The save is not written by the keypress. Case 2 of the System Menu sets the
+# autosave flag and Timeout = 1 (src/Player.cpp:851-853); Game::Play writes the
+# file at the top of the next pass of its loop (src/Main.cpp:266-275). This
+# dump therefore fires AFTER the file is on disk, and photographs the engine's
+# own "Autosave... done." line saying so.
+@dump:saved
+
+# NO @quit HERE, DELIBERATELY. @quit becomes KY_CMD_QUICK_QUIT
+# (src/Wposix.cpp:1657-1664), which is Save and Quit: it would write the save a
+# SECOND time and shuffle the first copy off to <name>.sav.backup, leaving the
+# fixture a file no line of this script asked for. Letting the key script run
+# out instead ends the session with exactly one save.

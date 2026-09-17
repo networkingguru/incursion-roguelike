@@ -1,0 +1,94 @@
+# Freeze the character tools/keys/monk-ki-strike.keys builds, so every check that
+# runs that script can load him instead of rolling him again.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat \
+#       tools/headless.sh tools/keys/monk-ki-strike-save.keys 1
+#
+# THE CHARGEN BELOW IS A COPY of tools/keys/monk-ki-strike.keys lines 1-36,
+# deliberately unchanged, and the original is NOT edited. That script builds its
+# character inline rather than including a shared chargen-*.keys, so there is
+# nothing to @include. Copying rather than refactoring means no existing check
+# changes what it measures. The same choice, and the same warning, are in
+# tools/keys/lizardfolk-monk-save.keys: do not "improve" this copy -- the
+# fixture is only worth having if it holds THE character that script rolls.
+#
+# WHY A CHARACTER IS FROZEN AT ALL: see the header of
+# tools/keys/chargen-default-save.keys. bd inc-vrt8.
+
+# Build a 4th-level monk and photograph the Special Abilities block.
+#
+# One assertion: lib/classes.irh grants Ability[CA_KI_STRIKE] at every 4th
+# level starting at 4th, so a Monk 4 carries Ki Strike +1 and a Monk 1 does
+# not. src/Sheet.cpp:548 renders the ability as "Ki Strike +1" in the sheet's
+# Special Abilities block, and src/Tables.cpp:3579 supplies that name, so the
+# sheet is a true oracle for what the module granted.
+#
+# The chargen prefix is tools/keys/monk-brawl-speed.keys, letter for letter,
+# because that path is already proven at seed 1. Menu letters move when a list
+# changes, so run this with the seed its caller supplies and no other.
+#
+# Levels come from wizard mode's Free Advancement switch, the same mechanism
+# tools/keys/prestige-blackguard5.keys uses. Nothing else can reach 4th level
+# in a scripted session of reasonable length.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+h       # Race:     [h] Lizardfolk
+a       # Subrace:  [a] Lizardfolk (Standard)
+e       # Class:    [e] Monk
+a       # Attributes: the first of the five offered sets
+c       # Alignment: [c] Neutral
+a       # First feat
+a       # Second feat
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+y       # Do you wish to worship <god>? -- yes
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+@dump:arrival
+
+# HOW MANY KEYS THE OPENING WANTS IS A PROPERTY OF THE CHARACTER, so no fixed
+# count is right for every chargen. Measured 2026-09-17: tools/keys/chargen.keys
+# leaves NOTHING pending and reaches the System Menu on the first ESC, while
+# tools/keys/chargen-rogue.keys leaves a god's speech and an AutoHide line, so
+# the first ESC only dismisses a message. A hard-coded ESC ENTER SPACE, copied
+# from tools/keys/lizardfolk-monk-save.keys, failed in both directions: it
+# walked INTO the menu for the barbarian and fell short of it for the rogue.
+# @until sends ESC as many times as this character needs and stops the moment
+# the menu is up (src/Wposix.cpp:1318-1326).
+# CHARGEN IS NOT OVER UNTIL THE ARCHETYPE IS PICKED, and ESC will not dismiss
+# that screen -- it is a menu wanting a letter. Measured 2026-09-17: five of
+# these save scripts reached "Your personality archetype has little direct
+# influence..." and spent all 200 of @until's passes pressing ESC at it
+# (src/Wposix.cpp:1568-1571). [a] is The Ambitious Conqueror; the choice only
+# has to be the SAME one every time, because a fixture is a frozen character
+# and the archetype is, in the game's own words, "largely a 'colour' choice".
+@while "personality archetype" a
+
+@until "System Menu" ESC
+
+# @until only warns when it gives up (src/Wposix.cpp:1568-1571), so the
+# assertion stays: it stops the run at exit 6 rather than pressing a letter
+# into whatever screen is really there. [a] beside [b] is Save and Quit.
+@expect "System Menu"
+b                       # [b] Save and Continue (src/Player.cpp:843)
+
+# The save is not written by the keypress. Case 2 of the System Menu sets the
+# autosave flag and Timeout = 1 (src/Player.cpp:851-853); Game::Play writes the
+# file at the top of the next pass of its loop (src/Main.cpp:266-275). This
+# dump therefore fires AFTER the file is on disk, and photographs the engine's
+# own "Autosave... done." line saying so.
+@dump:saved
+
+# NO @quit HERE, DELIBERATELY. @quit becomes KY_CMD_QUICK_QUIT
+# (src/Wposix.cpp:1657-1664), which is Save and Quit: it would write the save a
+# SECOND time and shuffle the first copy off to <name>.sav.backup, leaving the
+# fixture a file no line of this script asked for. Letting the key script run
+# out instead ends the session with exactly one save.
