@@ -46,7 +46,6 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT="$ROOT/tools/finish_bead.sh"
 
-WORKTREE_PARENT="$(dirname "$ROOT")"
 WORKTREE_PREFIX="Incursion-"
 
 # master, except when the end-to-end self-test is driving. The merge and the two
@@ -64,6 +63,17 @@ GATE_OVERRIDDEN=0
 
 die()    { echo "$1" >&2; exit 1; }
 cannot() { echo "INCONCLUSIVE: $1" >&2; exit 2; }
+
+# ROOT is where this script's own file lives -- possibly the very worktree
+# STEP 6 below destroys. SHARED is the repository, resolved from git rather
+# than from $0, so it still names something real after that worktree is gone.
+# git lists the main worktree first, so this is the shared checkout no matter
+# which worktree the script runs from. inc-5b76.
+SHARED="$(git -C "$ROOT" worktree list --porcelain \
+    | sed -n '1s/^worktree //p')"
+[ -n "$SHARED" ] || cannot "could not resolve the shared checkout from $ROOT"
+
+WORKTREE_PARENT="$(dirname "$SHARED")"
 
 is_bead_id() {
     printf '%s' "$1" | grep -Eq '^inc-[a-z0-9]+(\.[0-9]+)?$'
@@ -106,7 +116,7 @@ Land a finished bead on $BASE_BRANCH and delete its branch and worktree."
 
 is_bead_id "$BEAD" || die "REFUSED: '$BEAD' is not a bead id."
 
-git -C "$ROOT" show-ref --verify --quiet "refs/heads/$BEAD" \
+git -C "$SHARED" show-ref --verify --quiet "refs/heads/$BEAD" \
     || die "REFUSED: there is no branch $BEAD.
 Nothing to land. tools/worktree.sh $BEAD starts one."
 
@@ -127,7 +137,7 @@ Commit what belongs to $BEAD, or remove what does not. Removing the worktree
 would destroy anything left here, so this stops instead."
 
 # STEP 2. There must be something to land.
-AHEAD="$(git -C "$ROOT" rev-list --count "$BASE_BRANCH..$BEAD" 2>/dev/null)"
+AHEAD="$(git -C "$SHARED" rev-list --count "$BASE_BRANCH..$BEAD" 2>/dev/null)"
 [ -n "$AHEAD" ] || cannot "could not count commits between $BASE_BRANCH and $BEAD"
 [ "$AHEAD" -gt 0 ] || die "REFUSED: $BEAD has no commits that $BASE_BRANCH lacks.
 Either the work is not committed, or it already landed. Nothing to do."
@@ -135,7 +145,7 @@ Either the work is not committed, or it already landed. Nothing to do."
 # STEP 3. Bring master in FIRST, so the gate measures what master will actually
 # have. A conflict stops here, with the branch and the worktree untouched apart
 # from the merge git leaves in progress, which the message explains how to undo.
-BEHIND="$(git -C "$ROOT" rev-list --count "$BEAD..$BASE_BRANCH" 2>/dev/null)"
+BEHIND="$(git -C "$SHARED" rev-list --count "$BEAD..$BASE_BRANCH" 2>/dev/null)"
 if [ "${BEHIND:-0}" -gt 0 ]; then
     echo "=== bringing $BASE_BRANCH ($BEHIND commit(s)) into $BEAD ==="
     if ! git -C "$WORKTREE" merge --no-edit "$BASE_BRANCH"; then
@@ -199,7 +209,7 @@ fi
 
 # STEP 5. Merge to master. In scratch space unless master is already checked
 # out somewhere, in which case git would refuse a second checkout of it anyway.
-MASTER_WT="$(git -C "$ROOT" worktree list --porcelain \
+MASTER_WT="$(git -C "$SHARED" worktree list --porcelain \
     | awk '/^worktree /{p=$2} /^branch refs\/heads\/'"$BASE_BRANCH"'$/{print p}')"
 
 SCRATCH=""
@@ -211,25 +221,25 @@ Merging there would build on somebody else's uncommitted work. Nothing has
 reached $BASE_BRANCH."
 else
     SCRATCH="$(scratch_dir)"
-    git -C "$ROOT" worktree add "$SCRATCH" "$BASE_BRANCH" >/dev/null 2>&1 \
+    git -C "$SHARED" worktree add "$SCRATCH" "$BASE_BRANCH" >/dev/null 2>&1 \
         || cannot "could not create a scratch worktree for $BASE_BRANCH at $SCRATCH"
     MERGE_IN="$SCRATCH"
 fi
 
 cleanup_scratch() {
-    [ -n "$SCRATCH" ] && git -C "$ROOT" worktree remove --force "$SCRATCH" >/dev/null 2>&1
+    [ -n "$SCRATCH" ] && git -C "$SHARED" worktree remove --force "$SCRATCH" >/dev/null 2>&1
 }
 
 echo "=== merging $BEAD into $BASE_BRANCH (--no-ff) ==="
 if ! git -C "$MERGE_IN" merge --no-ff --no-edit \
-        -m "Merge $BEAD: $(git -C "$ROOT" log -1 --format=%s "$BEAD")" "$BEAD"; then
+        -m "Merge $BEAD: $(git -C "$SHARED" log -1 --format=%s "$BEAD")" "$BEAD"; then
     git -C "$MERGE_IN" merge --abort >/dev/null 2>&1
     cleanup_scratch
     die "STOPPED: $BEAD does not merge cleanly into $BASE_BRANCH.
 Nothing has reached $BASE_BRANCH and the branch and worktree are intact."
 fi
 
-MERGED="$(git -C "$ROOT" rev-parse --short "$BASE_BRANCH")"
+MERGED="$(git -C "$SHARED" rev-parse --short "$BASE_BRANCH")"
 cleanup_scratch
 
 # STEP 6. Prove the work is really on the base branch before destroying anything.
@@ -240,13 +250,13 @@ cleanup_scratch
 # refused a branch that had just merged cleanly, and the script went on to claim
 # the branch was gone when it was not. Ask the question that is actually being
 # asked -- is the branch an ancestor of the base branch -- and only then delete.
-if ! git -C "$ROOT" merge-base --is-ancestor "$BEAD" "$BASE_BRANCH"; then
+if ! git -C "$SHARED" merge-base --is-ancestor "$BEAD" "$BASE_BRANCH"; then
     die "STOPPED: the merge reported success but $BEAD is still not an ancestor of
 $BASE_BRANCH. Nothing has been deleted. Look at this by hand before trusting it:
-  git -C \"$ROOT\" log --oneline $BASE_BRANCH..$BEAD"
+  git -C \"$SHARED\" log --oneline $BASE_BRANCH..$BEAD"
 fi
 
-git -C "$ROOT" worktree remove --force "$WORKTREE" >/dev/null 2>&1 || {
+git -C "$SHARED" worktree remove --force "$WORKTREE" >/dev/null 2>&1 || {
     echo "STOPPED: $BEAD is merged into $BASE_BRANCH at $MERGED, but its worktree at" >&2
     echo "$WORKTREE could not be removed. The branch is NOT deleted either, so the" >&2
     echo "two stay consistent. Remove the worktree by hand and run this again." >&2
@@ -255,9 +265,9 @@ git -C "$ROOT" worktree remove --force "$WORKTREE" >/dev/null 2>&1 || {
 
 # -D, not -d: the ancestry test above is the real check, and -d asks a different
 # question that answers wrongly here.
-git -C "$ROOT" branch -D "$BEAD" >/dev/null 2>&1 || {
+git -C "$SHARED" branch -D "$BEAD" >/dev/null 2>&1 || {
     echo "WARNING: the worktree is gone but branch $BEAD could not be deleted." >&2
-    echo "Delete it by hand:  git -C \"$ROOT\" branch -D $BEAD" >&2
+    echo "Delete it by hand:  git -C \"$SHARED\" branch -D $BEAD" >&2
     exit 1
 }
 
