@@ -1,106 +1,8 @@
+@AGENTS.md
+
 # Project Instructions for AI Agents
 
 This file provides instructions and context for AI coding agents working on this project.
-
-## No autonomous work — propose, then wait
-
-**You have no mandate to operate autonomously.** Brian set this scope on
-2026-09-12: "You do not have mandate to operate autonomously." It replaces the
-standing order that ran from 2026-09-09 to that date, which told a session to
-fix a bug in his own tree without asking.
-
-Before you change a tracked file, say what you found and what you would change,
-then WAIT for his word. This covers a bug fix in his own tree exactly as it
-covers a feature, a refactor, a spec, a rule change or user-facing text. A small
-diff is not an exception. Neither is a defect you are certain about.
-
-Read, grep, build and run the checks freely. Investigation needs no permission.
-Changing his tree does.
-
-**A question is a question.** If he asks why something behaves as it does,
-answer it. He asked for an explanation, not a repair. On 2026-08-23 he reported
-that the Boots of Providence pay no Luck bonus when carried, and he asked for
-nothing else. That session edited four tracked files, rebuilt both binaries and
-the module, and filed a bead. See bead inc-izuu.
-
-Two rules stay exactly as they are, and neither one grants autonomy:
-
-1. **Committing and pushing.** When he says save, commit or push, that is a stop
-   instruction. Nothing else starts a commit.
-2. **Publishing to a tree he does not own.** See "Publishing anything
-   outward-facing" below. Its narrow bead-sync exemption is unchanged: a bug on
-   his own tracker still syncs without a pre-read.
-
-## Publishing anything outward-facing
-
-Two rules. Rule 1 carries one scope limit, stated inside it. Rule 2 has none.
-
-1. **Brian reads the literal text before it is published to a tree he does not
-   own.** Not a diff, not a summary of what it claims — the exact body and
-   title that will be posted. This covers pull requests, issues and review
-   comments on the parent project or any third party's repo, and anything else
-   that appears under his name on somebody else's property. A "go" that answers
-   a plan is NOT approval of wording he has not seen. Paste the text, wait for a
-   yes on that text.
-
-   **One exemption, and it is narrow: BUG TEXT on his own tracker.** A bead
-   filed, updated or synced to `networkingguru/incursion-roguelike` needs no
-   pre-read. Run `tools/sync_issues.sh`, then say what went out. Do not ask
-   first, and do not apologise afterwards. He set the scope on 2026-09-08,
-   after a session apologised for publishing nine of his own beads: "If I post
-   something to someone else's repo, need to read it. A bug in my own, I do
-   not."
-
-   **The exemption is bugs, NOT the repo.** README.md, user-facing docs,
-   release notes, store and itch pages, announcements, and anything else a
-   player or a visitor reads still need his eyes on the literal text before it
-   goes out, even though he owns the tree. He narrowed it in the same
-   conversation: "This is true for beads/bug, not the whole repo. Not the read
-   me, not user-facing docs (unless separately authorized). Just bugs." A
-   separate authorisation for one of those covers that one thing only.
-
-2. **Always disclose AI assistance on public contributions.** Every commit
-   carries a `Co-Authored-By` trailer; so must anything sent to another
-   project. Put the disclosure in before showing him the draft, so what he
-   approves is the disclosed version.
-
-Both were broken on 2026-08-15: two PRs went to the parent project with text he
-had never read and no disclosure, while his own branch commits carried the
-trailer. If a published item must be corrected, prefer adding a comment over
-silently editing the body — a silent edit leaves an "edited" marker and reads
-as concealment.
-
-See `docs/REPORTING-GATE.md` for the separate rule that a public claim needs an
-oracle that changed state, with numbers on both sides.
-
-## Marking base-code bugs
-
-**Every fix to a defect that is upstream's rather than the port's MUST be marked
-at the fix site with a lowercase `upstream:` comment, and MUST get a row in the
-"Base-code bugs fixed locally" table in `docs/REPORTING-GATE.md`.** Most defects
-in this codebase are upstream's, so assume a fix needs this unless you can say
-why it does not.
-
-The comment states four things, because a maintainer reading it years from now
-has none of your context:
-
-1. that the defect is upstream's, **and why** — would it misbehave on Win32,
-   with the original typedefs, on the upstream compiler? If no, it is a port
-   artefact and MUST NOT be marked; claiming ours is theirs costs credibility.
-2. the evidence tier — Observed, Traced or Reasoned.
-3. the tracking id.
-4. whether it has been sent, so nobody re-sends it and nobody assumes it went.
-
-**Marking is not reporting and creates no obligation to report.** It exists so
-the work is findable if the original maintainer ever returns. Sending still goes
-through the gate, and still needs Brian to read the literal text.
-
-The row goes under the exact heading `### Base-code bugs fixed locally`, never
-under `### Not sent`, which is a three-column table that drops the tracking id;
-`tools/check_ledger_rows.sh` is the check for that.
-
-Verify with `tools/check_upstream_marks.sh`. Find them all with
-`grep -rn "upstream:" src/ inc/`.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:6cd5cc61 -->
 ## Beads Issue Tracker
@@ -193,11 +95,3 @@ names the two you must not run casually.
 
 Read `docs/VERIFICATION.md` before you change behaviour. It states the rule this
 project uses instead of hosted CI, and it is not optional.
-
-## Architecture and conventions
-
-`README.md` §For developers describes the harness, the gate and the checks.
-`AGENTS.md` holds the working rules: the no-autonomy rule, the worktree rule,
-the publishing rules, how to mark a base-code bug, how to classify a change,
-and the comment budget. Neither is repeated here, because a third copy would
-drift.
