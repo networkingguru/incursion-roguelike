@@ -121,7 +121,7 @@ them (`src/Debug.cpp`), so adding an option renumbers everything after it —
 dump the menu and read the letter rather than counting. And `w`, not `W`: an
 uppercase token sets SHIFT, and both key tables bind `KY_CMD_WIZMODE` with
 modifier flags of 0, so `W` is a different keystroke that reaches nothing
-(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:4745`/`4865`).
+(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:4754`/`4874`).
 
 `[M] Create Altar` is there for the harness. A sacrifice needs the player to
 be standing on an altar, and the only other source of one is `MakeLev`'s
@@ -748,7 +748,7 @@ number rather than a yes or no: they read the hardness off the game's own
 combat-numbers line, which `Item::Damage` prints AFTER adding the bearer's gear
 resistance to it. Those two silver a magic warhammer for the ordering
 `Item::Damage` used to have: a no-save A_DEQU sets `ignoreHardness` on a plain
-item (`src/Fight.cpp:2122`), and the bearer's grant was added before the bypass
+item (`src/Fight.cpp:2152`), and the bearer's grant was added before the bypass
 emptied it, so a resistance was unmeasurable on ordinary gear. inc-kapn
 inverted that -- the bypass now empties only what `Hardness()` returned -- and
 `check_gear_bypass_survives.sh` measures a resistance on a plain iron maul. The
