@@ -1,0 +1,62 @@
+# spook-mount.keys with its chargen removed: lines 72-end, unchanged.
+# The character comes from tools/fixtures/chars/spook-mount-seed5-opt0822.sav. bd inc-vrt8.
+
+@until "Things in View" ESC
+
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN*10 # Freeze Monsters is the eleventh row; the cursor opens on the first
+SPACE   # Freeze Monsters: NO -> YES
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Bats"
+@choose "night hunter"
+RIGHT ENTER
+
+w
+@choose "Make Player Master of Monster"
+RIGHT ENTER
+SPACE   # flush the message line, so the next command is not eaten by it
+
+# The player stands inside the bat's aura, on foot.
+@dump:on-foot
+
+# Climb on. The bat is one square to the right.
+y
+@choose "Mount"
+RIGHT ENTER
+@dump:mounted
+
+# Get off, step out of the radius and back in, then get on again. Re-entry is
+# the state that matters to a player: the bat is his now, so EF_ALLIES_IMMUNE
+# must spare him, on foot and mounted alike.
+x
+@choose "Dismount"
+SPACE
+LEFT LEFT LEFT LEFT LEFT
+RIGHT RIGHT RIGHT RIGHT RIGHT
+@dump:re-entered
+y
+@choose "Mount"
+# DOWN, not RIGHT. dc6496a made a chosen dismount step the RIDER off the
+# shared square and leave the mount standing, so the bat is now one square
+# SOUTH: the rider took the first open square in DirX order, which is north.
+DOWN ENTER
+@dump:mounted-clean
+
+# Now change level. The rider carries the animal, and the animal's aura with
+# it. Thing::PlaceAt used to hand that aura to the rider on the way.
+w
+@choose "Ascend / Descend Depth"
+2
+ENTER
+SPACE
+SPACE
+x
+@dump:dismiss-after-stairs
+ESC
+
+@quit

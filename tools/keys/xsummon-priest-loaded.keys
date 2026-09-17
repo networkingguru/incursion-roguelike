@@ -1,0 +1,32 @@
+# xsummon-priest.keys with its chargen AND its arrival-description ESC
+# removed: lines 59-end, unchanged. A session that LOADS a save is already
+# in play, so there is no room description to dismiss. bd inc-vrt8.
+
+
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+# The switch list draws no cursor a screen dump can see, so this counts rows
+# instead: Infinite Mana is the eighth, and the cursor opens on the first.
+DOWN*7
+SPACE   # Infinite Mana: NO -> YES
+ESC
+
+w
+@choose "Learn Any Spell"
+"Holy Summoning I" ENTER
+
+# FIRST CAST. It must succeed, or the second proves nothing.
+@until "HP:" ESC
+m
+@choose "Holy Summoning I"
+RIGHT ENTER    # aim one square east of the caster; his own square is refused
+@dump:cast1
+
+# SECOND CAST, on the next turn, while the first outsider is still alive.
+m
+@choose "Holy Summoning I"
+RIGHT ENTER    # aim one square east of the caster; his own square is refused
+@dump:cast2
+
+@quit

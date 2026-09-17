@@ -1,0 +1,220 @@
+=== fixture: circle-stack-adjust-seed20260905-gate ===
+
+This file is the audit record for
+  tools/fixtures/chars/circle-stack-adjust-seed20260905-gate.sav
+and tools/make_char_fixture.sh writes the whole of it. Do not edit it
+by hand: it would then describe a character the .sav beside it does
+not hold, and that is the one failure tools/check_char_fixture.sh
+exists to catch.
+
+made on          2026-09-17 10:34:19 EDT
+made at commit   613cf2c
+                 the working tree was dirty, so this fixture may hold changes that commit does not
+seed             20260905
+settings         tools/gates/Options.Dat
+key script       tools/keys/circle-stack-adjust-save.keys
+                 copied to tools/fixtures/chars/circle-stack-adjust-seed20260905-gate.keys
+saved in game as Thokk.sav
+sha256 .sav      35a3059a0d355f82fc28c259867b5244501acfc4ce9ec86cc2fb13636b991612
+sha256 module    ce4d12f0be97b889e4423fd3392cb01906f052bb5c2203f53a8a675d0c3e0b2e
+                 mod/Incursion.Mod is what the save's rID manifest
+                 was written against. A fixture that stops loading
+                 is worth comparing against the module that made it.
+
+regenerate with
+  tools/make_char_fixture.sh circle-stack-adjust-seed20260905-gate tools/keys/circle-stack-adjust-save.keys 20260905 tools/gates/Options.Dat --force
+Regenerating gives a BYTE-DIFFERENT .sav holding the SAME character:
+a save carries clocks and counters no second run repeats. Judge a
+regeneration by this sheet, never by the size of the diff.
+
+The character below is the engine's own dump. It was taken by LOADING
+the .sav beside this file and saving it again under
+INCURSION_CHAR_PROBE=1 (Game::SaveGame, src/Registry.cpp:1105-1111).
+A few of its lines belong to that reading session and not to the
+character: the torch's remaining turns, the Level Statistics table
+and the Messages at the end all move by the turns
+tools/keys/load-char-sheet.keys spends. Everything above Inventory is the
+character. For the resource ids behind the item names, which are what
+a module change moves, run:
+  tools/dump_save.sh tools/fixtures/chars/circle-stack-adjust-seed20260905-gate.sav
+
+=== the character, as the engine writes him ===
+
+                        Thokk the Anathema, The Manipulative Plotter (Explore Mode)
+
+Gender Male
+Race   Orc
+Class  Barbarian 1
+Faith  Khasrach
+XP     0
+Next @ 1000
+Align  Neutral Evil
+
+
+STR: 18/00 [+4/+3] (base 13, +1 inherent, +4 natural)
+DEX: 16/00 [+3/+2] (base 16)
+CON: 16/00 [+3/+2] (base 14, +2 inherent)
+INT:  7/00 [-1/-2] (base 9, -2 natural)
+WIS: 17/00 [+3/+3] (base 15, +2 natural)
+CHA: 14/00 [+2/+1] (base 16, -2 natural)
+LUC: 13/00 [+1/+1] (base 13)
+Fortitude   +5(Barbarian +2, +3 Con)
+Reflex      +3(Barbarian +0, +3 Dex)
+Will        +3(Barbarian +0, +3 Wis)
+Melee   +toHit +1  (Barbarian +1, +4 Str, +3 magic, +1 weapon, -4 skill, -4 dual-weapon)
+        Damage +7  (base 1d10 / 1d12, +4 Str, +3 magic)
+        Speed  50% (base 100%) x 115% magic x 80% weapon x 50% skill
+Offhand +toHit -1  (Barbarian +1, +4 Str, +3 magic, +1 weapon, -4 skill, -6 dual-weapon)
+        Damage +5  (base 1d10 / 1d12, +2 Str, +3 magic)
+        Speed  45% (base 100%) x 115% magic x 80% weapon x 50% skill x 90% dual-weapon
+Size           Human-sized:
+  (base human-sized)
+
+Defense Class  13:
+  (base 10, +3 Dex)
+
+Coverage       8:
+  (base 0, +8 armour)
+
+Movement Rate  90%:
+  (base 100%) x 80% armour x 120% skill x 90% encumbrance
+
+Hit Dice Rolls 47:
+   [20 + 1d12 (12) + 6 (CON bonus)] + 25% (Toughness)
+Mana Rolls     17:
+   10 + 1d4 (4) x 1 + 3 (WIS bonus)
+
+Encumbrance    Light:
+   (Light 51.0s, Moderate 153.0s, Heavy 306.0s, Extreme 460.0s, Max Press 600.0s)
+
+Special Abilities:
+  Berserk Rage
+  Devouring
+  Infravision (60 ft)
+  Innate Spells:
+    Synaptic Static
+  Scent (30 ft)
+  Tough as Hell
+  Spellbreaker
+  Spell Fury
+
+Feats:
+  Acrobatic
+  Alertness
+  Armour Proficiency: Light
+  Armour Proficiency: Medium
+  Toughness
+
+Resistances and Armour:
+  Slashing Damage 5
+  Piercing Damage 6
+  Blunt Damage 6
+
+Proficiencies Simple Weapons, Long Blades, Axes, Impact, Polearms, Spears, Flails, Light Armour, Medium Armour and shotput
+
+Skill Ratings:
+  Athletics        +8  (2 ranks, +3 STR, +3 train)
+  Balance          -2  (0 ranks, +2 DEX, -4 armour)
+  Craft            +7  (1 ranks, +2 DEX, +2 train, +2 kit)
+  Escape Artist    -2  (0 ranks, +2 DEX, -4 armour)
+  Healing          +5  (0 ranks, +3 WIS, +2 train)
+  Hide in Shadows  -2  (0 ranks, +2 DEX, -4 armour)
+  Intimidate       +6  (0 ranks, +3 STR, +3 train)
+  Intuition        +5  (0 ranks, +3 WIS, +2 train)
+  Jump             +4  (0 ranks, +3 STR, +2 train, +3 feat, -4 armour)
+  Knowledge (Nature) +0  (0 ranks, -2 INT, +2 train)
+  Knowledge (Theology) +7  (0 ranks, +3 WIS, +4 kit)
+  Listen           +8  (0 ranks, +3 WIS, +2 train, +3 feat)
+  Move Silently    -2  (0 ranks, +2 DEX, -4 armour)
+  Pick Pockets     -2  (0 ranks, +2 DEX, -4 armour)
+  Spot             +8  (0 ranks, +3 WIS, +2 train, +3 feat)
+  Swimming         -4  (0 ranks, +2 DEX, +2 train, -8 armour)
+  Tumble           +1  (0 ranks, +2 DEX, +3 feat, -4 armour)
+  Wilderness Lore  +5  (0 ranks, +3 WIS, +2 train)
+
+Spiritual State:
+__You are devoted to Khasrach.
+__Khasrach is noncommital.
+__Khasrach has not aided you.
+____(Favour 0, Lev 0, Pen 0%)
+__You are decisively Evil.
+__You are perfectly neutral with
+____regard to Law and Chaos.
+
+CharGen Options and Choices:
+__You are in Explore Mode.
+__Beginner's Kit: ON
+__Initial Rolling Method: 4d6 + Perks
+__Allow Rerolling: YES
+__Use the Subraces: YES
+__Disallow Wizard Mode: NO
+__Maximum Hit Points: YES
+__Maximum Mana: YES
+__Default Character Gender: MALE
+__Monsters Maximum Hit Points: NO
+__Roll Attributes First: NO
+__Gain Attributes With Levels: YES
+__Allow Rapid Intuition: WEAPONS
+__Monsters Use Djikstra: YES
+__Out-Of-Depth Monsters: YES
+__Transgression Hints: YES
+__Difficulty Level: BASELINE
+__Power Stats: EXTREME
+__Elude Death: SEVEN
+__Disable Complicity Transgressions: YES
+__Natural Weapon Speed: ORIGINAL
+
+
+Inventory:
+  orc double axe +3
+  orcish longspear
+  orcish greatsword
+  loincloth
+  orcish hide armour
+  Holy symbol of Khasrach
+  orcish knife
+  29 gold pieces
+  3 Potions of See Invisibility
+  6 Potions of Remove Curse
+  4 Potions of Cure Disease [0]
+  medium backpack
+  9 food rations
+  11 strips of cured meat
+  4 Antitoxins [+3]
+  2 Potions of Detect Stairs
+  2 Potions of Restoration [4d6]
+  3 Potions of Restore Constitution [6d8]
+  2 Potions of Restore Strength [6d8]
+  craftsman's tools
+  Wand of Identify (50 charges)
+  5 orcish shotputs
+
+On The Ground:
+
+Known Spells:
+  Synaptic Static                 0  100%    0 
+
+Journal:
+
+12:00 AM, 1st of Suntide: Entry Chamber, 10' (H:47/47 M:17/17 XP:0) 
+  You arrive at 10' in the The Goblin Caves.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:17/22 M:13/13 XP:0) 
+  Starting Perks:
+    Wild Talent: Synaptic Static.
+  Starting Item: uncursed orc double axe +3.
+
+Monsters Encountered:
+  Total: 0
+
+Level Statistics:
+
+Lvl | Act | Key | Turns | Secs |  XP | Explored
+----+-----+-----+-------+------+-----+------------------
+1   |    1|  112|      1|     0|    0| 121 / 4286 = 2%
+
+Messages:
+Welcome back to Incursion, Thokk!
+"Smite now your slave-chains with the primal fire of my wrath!"
+You find nothing of significance.
+Autosave... 

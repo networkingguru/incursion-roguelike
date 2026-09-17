@@ -1,0 +1,225 @@
+=== fixture: orc-mage-seed1-opt0822 ===
+
+This file is the audit record for
+  tools/fixtures/chars/orc-mage-seed1-opt0822.sav
+and tools/make_char_fixture.sh writes the whole of it. Do not edit it
+by hand: it would then describe a character the .sav beside it does
+not hold, and that is the one failure tools/check_char_fixture.sh
+exists to catch.
+
+made on          2026-09-17 10:34:03 EDT
+made at commit   613cf2c
+                 the working tree was dirty, so this fixture may hold changes that commit does not
+seed             1
+settings         tools/fixtures/options-2026-08-22.dat
+key script       tools/keys/chargen-mage-save.keys
+                 copied to tools/fixtures/chars/orc-mage-seed1-opt0822.keys
+saved in game as Varag.sav
+sha256 .sav      ae0784b5ceceadb07d83b8234af0f7c025343eecf502e094412edbbe8a0191fc
+sha256 module    ce4d12f0be97b889e4423fd3392cb01906f052bb5c2203f53a8a675d0c3e0b2e
+                 mod/Incursion.Mod is what the save's rID manifest
+                 was written against. A fixture that stops loading
+                 is worth comparing against the module that made it.
+
+regenerate with
+  tools/make_char_fixture.sh orc-mage-seed1-opt0822 tools/keys/chargen-mage-save.keys 1 tools/fixtures/options-2026-08-22.dat --force
+Regenerating gives a BYTE-DIFFERENT .sav holding the SAME character:
+a save carries clocks and counters no second run repeats. Judge a
+regeneration by this sheet, never by the size of the diff.
+
+The character below is the engine's own dump. It was taken by LOADING
+the .sav beside this file and saving it again under
+INCURSION_CHAR_PROBE=1 (Game::SaveGame, src/Registry.cpp:1105-1111).
+A few of its lines belong to that reading session and not to the
+character: the torch's remaining turns, the Level Statistics table
+and the Messages at the end all move by the turns
+tools/keys/load-char-sheet.keys spends. Everything above Inventory is the
+character. For the resource ids behind the item names, which are what
+a module change moves, run:
+  tools/dump_save.sh tools/fixtures/chars/orc-mage-seed1-opt0822.sav
+
+=== the character, as the engine writes him ===
+
+                        Varag the Deathbringer, The Ambitious Conqueror (Explore Mode)
+
+Gender Male
+Race   Orc
+Class  Mage 1
+Faith  Khasrach
+XP     0
+Next @ 1000
+Align  Neutral
+
+
+STR: 16/00 [+3/+2] (base 12, +4 natural)
+DEX: 12/00 [+1/+0] (base 12)
+CON: 12/00 [+1/+0] (base 12)
+INT: 13/00 [+1/+1] (base 15, -2 natural)
+WIS: 16/00 [+3/+2] (base 14, +2 natural)
+CHA: 14/00 [+2/+1] (base 16, -2 natural)
+LUC: 15/00 [+2/+2] (base 15)
+Fortitude   +1(Mage +0, +1 Con)
+Reflex      +1(Mage +0, +1 Dex)
+Will        +5(Mage +2, +3 Wis)
+Melee   +toHit +3  (Mage +0, +3 Str)
+        Damage +4  (base 1d3 / 1d3, +3 Str, +1 weapon)
+        Speed  140%(base 100%) x 140% weapon
+Size           Human-sized:
+  (base human-sized)
+
+Defense Class  11:
+  (base 10, +1 Dex)
+_______________(7 while casting)
+
+Coverage       0:
+  (base 0)
+
+Movement Rate  100%:
+  (base 100%) x 110% skill x 90% encumbrance
+
+Hit Dice Rolls 31:
+   [20 + 1d4 (4) + 1 (CON bonus)] + 25% (Toughness)
+Mana Rolls     33:
+   10 + 1d20 (20) x 1 + 3 (WIS bonus)
+__(Bonus Mana)______(base 33, +40 magic)
+Encumbrance    Light:
+   (Light 38.6s, Moderate 116.0s, Heavy 233.0s, Extreme 350.0s, Max Press 460.0s)
+
+Spell Slots    1st:
+  1+2
+
+Special Abilities:
+  Devouring
+  Infravision (60 ft)
+  Innate Spells:
+    Brain Lock
+  Scent (30 ft)
+  Spellcasting (1st)
+  Specialist:
+    Evocation
+  Spell Fury
+
+Feats:
+  Acrobatic
+  Alertness
+  Light Sleeper
+  Scribe Scroll
+  Toughness
+
+Resistances and Armour:
+  None
+
+Proficiencies Long Blades, Staves, Impact, Polearms, Spears, Daggers and shotput
+
+Skill Ratings:
+  Alchemy          +7  (2 ranks, +1 INT, +2 train, +2 kit)
+  Appraise         +6  (2 ranks, +2 WIS, +2 train)
+  Athletics        +4  (0 ranks, +2 STR, +2 train)
+  Concentration    +3  (1 ranks, +2 train)
+  Craft            +2  (0 ranks, +2 train)
+  Decipher Script  +3  (0 ranks, +1 INT, +2 train)
+  Illusioncraft    +3  (0 ranks, +1 INT, +2 train)
+  Intimidate       +4  (0 ranks, +2 STR, +2 train)
+  Intuition        +4  (0 ranks, +2 WIS, +2 train)
+  Jump             +5  (0 ranks, +2 STR, +3 feat)
+  Knowledge (Theyra) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Infernal) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Magic) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Mythology) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Nature) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Oceans) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Planes) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Theology) +8  (0 ranks, +2 WIS, +2 train, +4 kit)
+  Knowledge (Undead) +3  (0 ranks, +1 INT, +2 train)
+  Listen           +5  (0 ranks, +2 WIS, +3 feat)
+  Metamagic        +3  (0 ranks, +1 INT, +2 train)
+  Spellcraft       +3  (0 ranks, +1 INT, +2 train)
+  Spot             +5  (0 ranks, +2 WIS, +3 feat)
+  Tumble           +3  (0 ranks, +3 feat)
+  Use Magic        +3  (0 ranks, +1 CHA, +2 train)
+
+Spiritual State:
+__You are devoted to Khasrach.
+__Khasrach is noncommital.
+__Khasrach has not aided you.
+____(Favour 0, Lev 0, Pen 0%)
+__You are perfectly neutral with
+____regard to Good and Evil.
+__You are perfectly neutral with
+____regard to Law and Chaos.
+
+CharGen Options and Choices:
+__You are in Explore Mode.
+__Beginner's Kit: ON
+__Initial Rolling Method: 4d6 + Perks
+__Allow Rerolling: YES
+__Use the Subraces: YES
+__Disallow Wizard Mode: NO
+__Maximum Hit Points: YES
+__Maximum Mana: YES
+__Default Character Gender: MALE
+__Monsters Maximum Hit Points: NO
+__Roll Attributes First: NO
+__Gain Attributes With Levels: YES
+__Allow Rapid Intuition: WEAPONS
+__Monsters Use Djikstra: YES
+__Out-Of-Depth Monsters: YES
+__Transgression Hints: YES
+__Difficulty Level: BASELINE
+__Power Stats: EXTREME
+__Elude Death: SEVEN
+__Disable Complicity Transgressions: YES
+__Natural Weapon Speed: ORIGINAL
+
+
+Inventory:
+  orcish knife
+  orcish longspear
+  Scroll of Burning Hands [1d4+6]
+
+On The Ground:
+
+Known Spells:
+  Shield                          1  100%   10 
+  Magic Missile                   1   96%    1 1d4+1
+  Burning Hands                   1  100%    2 1d4+6
+  Convulsion                      1   92%    4 -6
+  Alarm                           1   80%    1 
+  Brain Lock                      0  100%    0 
+
+Journal:
+
+12:00 AM, 1st of Suntide: Entry Chamber, 10' (H:31/31 M:73/73 XP:0) 
+  You arrive at 10' in the The Goblin Caves.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:31/31 M:73/73 XP:0) 
+  enChooseMID Failed: Enc 'gated outsiders', CR 1, Part 0, eimXCR 43, enRegID 'Ice Cavern', e.enConstraint 'unimplemented'.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:31/31 M:73/73 XP:0) 
+  enChooseMID Failed: Enc 'gated outsiders', CR 1, Part 0, eimXCR 1000000, enRegID 'Ice Cavern', e.enConstraint 'unimplemented'.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:31/31 M:73/73 XP:0) 
+  enChooseMID Failed: Enc 'gated outsiders', CR 1, Part 0, eimXCR 1, enRegID 'Ice Cavern', e.enConstraint 'unimplemented'.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:31/31 M:73/73 XP:0) 
+  OOD monster hobgoblin (CR 3) generated on dlev 1 by Encounter 'adventurer'. [EN_SINGLE]
+
+12:00 AM, 1st of Suntide: Unknown Location (H:17/21 M:13/13 XP:0) 
+  Starting Perks:
+     Bonus Feat: Light Sleeper.
+    Wild Talent: Brain Lock.
+
+Monsters Encountered:
+  Total: 0
+
+Level Statistics:
+
+Lvl | Act | Key | Turns | Secs |  XP | Explored
+----+-----+-----+-------+------+-----+------------------
+1   |    1|   68|      1|     0|    0| 121 / 3876 = 3%
+
+Messages:
+Welcome back to Incursion, Varag!
+"Smite now your slave-chains with the primal fire of my wrath!"
+You find nothing of significance.
+Autosave... 

@@ -1,0 +1,121 @@
+# Freeze the character tools/keys/xsummon-priest.keys builds, so every check
+# that runs that script can load him instead of rolling him again.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/xsummon-priest-save.keys 5
+#
+# THE CHARGEN BELOW IS A COPY of tools/keys/xsummon-priest.keys lines 1-56,
+# deliberately unchanged, and the original is NOT edited. Copying rather than
+# refactoring means no existing check changes what it measures; the same choice
+# and the same warning are in tools/keys/lizardfolk-monk-save.keys.
+#
+# THE CUT IS AT LINE 56 AND NOT AT THE LAST "ENTER y", which is where the
+# other copies in this directory end. A PRIEST'S CHARGEN RUNS PAST THE SKILL
+# MANAGER: he picks a personality archetype and then four starting spells.
+# Measured 2026-09-17 by cutting at line 53 instead -- the session stopped at
+# "Learn which spell (1 left)?" and spent all 200 of @until's ESC passes there,
+# because that screen is a menu wanting a letter. The four picks are the
+# script's own generic "a a a a"; the spell this check actually needs, Holy
+# Summoning I, it grants itself later through wizard mode, so nothing the check
+# measures is decided here.
+#
+# WHY A CHARACTER IS FROZEN AT ALL: see tools/keys/chargen-default-save.keys.
+# bd inc-vrt8.
+
+# Prove that a priest cannot stack summons from one summoning spell.
+#
+# THE DEFECT (bd inc-j6ni). The engine carries its own one-at-a-time summon
+# limiter: Magic::Summon aborts a cast when the caster still holds a live
+# creature summoned by the SAME effect, but only for an effect flagged
+# EF_XSUMMON (src/Effects.cpp:1383-1391). The wizard summoning line sets that
+# flag. Holy Summoning I through VI and Summon Nature's Ally I through VI set
+# no Flags clause at all, so a priest or druid could recast without limit --
+# which is what Brian met in play on 2026-08-22, from a monster priest sitting
+# behind Sanctuary.
+#
+# THE ORACLE is the spell's own refusal message, "The outsider you called
+# before still serves you.", thrown as MSG_XSUMMON by the abort path and by
+# nothing else. It appears on the SECOND cast and not on the first. On a module
+# compiled from the pre-fix lib/pspells.irh the second cast summons a second
+# outsider and says nothing.
+#
+# WHY WIZARD MODE. Two switches, and each removes a reason the run could fail
+# for something other than the thing measured:
+#   * Learn Any Spell puts Holy Summoning I in the book whatever god the seed
+#     gave this priest, and whatever four spells generation offered.
+#   * Infinite Mana keeps the second cast from being refused for 3 mana
+#     (src/Magic.cpp:2658) before it ever reaches the summon guard.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+i       # Race:     [i] Orc
+a       # Subrace:  [a] Orc (Standard)
+g       # Class:    [g] Priest
+a       # Attributes: the first of the five offered sets
+c       # Alignment: [c] Neutral
+a       # First feat
+a       # Second feat
+
+# The Skill Manager, three times -- once for the class pool, once for the pool
+# that follows the choice of god, and once more. The conditionals are copied
+# from chargen-priest.keys, where the reasons are written out: the domain
+# prompt and the size of the rank pool both vary with the god.
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+
+y       # Do you wish to worship <god>? -- yes
+
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+
+a a
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+
+a       # Personality archetype
+a a a a # Four starting spells
+
+@dump:arrival
+
+# HOW MANY KEYS THE OPENING WANTS IS A PROPERTY OF THE CHARACTER, so no fixed
+# count is right for every chargen. Measured 2026-09-17: tools/keys/chargen.keys
+# leaves NOTHING pending and reaches the System Menu on the first ESC, while
+# tools/keys/chargen-rogue.keys leaves a god's speech and an AutoHide line, so
+# the first ESC only dismisses a message. A hard-coded ESC ENTER SPACE, copied
+# from tools/keys/lizardfolk-monk-save.keys, failed in both directions: it
+# walked INTO the menu for the barbarian and fell short of it for the rogue.
+# @until sends ESC as many times as this character needs and stops the moment
+# the menu is up (src/Wposix.cpp:1318-1326).
+# CHARGEN IS NOT OVER UNTIL THE ARCHETYPE IS PICKED, and ESC will not dismiss
+# that screen -- it is a menu wanting a letter. Measured 2026-09-17: five of
+# these save scripts reached "Your personality archetype has little direct
+# influence..." and spent all 200 of @until's passes pressing ESC at it
+# (src/Wposix.cpp:1568-1571). [a] is The Ambitious Conqueror; the choice only
+# has to be the SAME one every time, because a fixture is a frozen character
+# and the archetype is, in the game's own words, "largely a 'colour' choice".
+@while "personality archetype" a
+
+@until "System Menu" ESC
+
+# @until only warns when it gives up (src/Wposix.cpp:1568-1571), so the
+# assertion stays: it stops the run at exit 6 rather than pressing a letter
+# into whatever screen is really there. [a] beside [b] is Save and Quit.
+@expect "System Menu"
+b                       # [b] Save and Continue (src/Player.cpp:843)
+
+# The save is not written by the keypress. Case 2 of the System Menu sets the
+# autosave flag and Timeout = 1 (src/Player.cpp:851-853); Game::Play writes the
+# file at the top of the next pass of its loop (src/Main.cpp:266-275). This
+# dump therefore fires AFTER the file is on disk, and photographs the engine's
+# own "Autosave... done." line saying so.
+@dump:saved
+
+# NO @quit HERE, DELIBERATELY. @quit becomes KY_CMD_QUICK_QUIT
+# (src/Wposix.cpp:1657-1664), which is Save and Quit: it would write the save a
+# SECOND time and shuffle the first copy off to <name>.sav.backup, leaving the
+# fixture a file no line of this script asked for. Letting the key script run
+# out instead ends the session with exactly one save.
