@@ -12,6 +12,14 @@ void Error(const char*,...) __attribute__((format(printf,1,2)));
 void init_genrand(unsigned long s);
 unsigned long genrand_int32(void);
 
+/* THE COSMETIC STREAM. A second generator, seeded from the run's seed but
+   advanced entirely separately, for draws whose value reaches nothing but the
+   screen: a colour, a shade, a glyph. Presentation MUST use cosmetic_random()
+   and never random(); see the block above cosmetic_int32 in src/Base.cpp for
+   what goes wrong when it does not. bd inc-rir0. */
+void init_cosmetic_rand(unsigned long s);
+unsigned long cosmetic_int32(void);
+
 int16 strcatf(char*,const char*,...);
 inline int16 random(int16 mx);
 inline const int16 dist(uint16 x1, uint16 y1, uint16 x2, uint16 y2);
