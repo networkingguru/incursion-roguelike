@@ -1,0 +1,42 @@
+# monk-ki-strike.keys with its chargen removed: lines 39-end, unchanged.
+# The character comes from tools/fixtures/chars/monk-ki-strike-seed1-opt0818.sav. bd inc-vrt8.
+
+ESC ENTER SPACE
+
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d       # Display Character Sheet
+# The Special Abilities block sits below the fold, drawn in the right-hand
+# column beside the feat list. DOWN pages the sheet (src/Managers.cpp:2296-2297);
+# PGDN moves it one line only, which is not enough.
+DOWN
+@dump:specials1
+UP
+
+# Three levels. A monk is not offered a bonus feat at every level the way a
+# warrior is, but character level 3 offers a general feat and level 4 offers
+# an attribute bump, so both are guarded.
+G
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+
+@until "Monk 4" ESC
+@expect "Monk 4"
+@dump:level4
+DOWN
+@dump:specials4
+@quit

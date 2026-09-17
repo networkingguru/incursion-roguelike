@@ -1,0 +1,246 @@
+=== fixture: underdark-deepgnome-seed3-opt0818 ===
+
+This file is the audit record for
+  tools/fixtures/chars/underdark-deepgnome-seed3-opt0818.sav
+and tools/make_char_fixture.sh writes the whole of it. Do not edit it
+by hand: it would then describe a character the .sav beside it does
+not hold, and that is the one failure tools/check_char_fixture.sh
+exists to catch.
+
+made on          2026-09-17 10:34:26 EDT
+made at commit   613cf2c
+                 the working tree was dirty, so this fixture may hold changes that commit does not
+seed             3
+settings         tools/fixtures/options-2026-08-18.dat
+key script       tools/keys/underdark-deepgnome-save.keys
+                 copied to tools/fixtures/chars/underdark-deepgnome-seed3-opt0818.keys
+saved in game as Bofi.sav
+sha256 .sav      f5d3997d1014ff35833eab1574cc10995ba2be5f3c8d8c8acb54f626bf9bf4d7
+sha256 module    ce4d12f0be97b889e4423fd3392cb01906f052bb5c2203f53a8a675d0c3e0b2e
+                 mod/Incursion.Mod is what the save's rID manifest
+                 was written against. A fixture that stops loading
+                 is worth comparing against the module that made it.
+
+regenerate with
+  tools/make_char_fixture.sh underdark-deepgnome-seed3-opt0818 tools/keys/underdark-deepgnome-save.keys 3 tools/fixtures/options-2026-08-18.dat --force
+Regenerating gives a BYTE-DIFFERENT .sav holding the SAME character:
+a save carries clocks and counters no second run repeats. Judge a
+regeneration by this sheet, never by the size of the diff.
+
+The character below is the engine's own dump. It was taken by LOADING
+the .sav beside this file and saving it again under
+INCURSION_CHAR_PROBE=1 (Game::SaveGame, src/Registry.cpp:1105-1111).
+A few of its lines belong to that reading session and not to the
+character: the torch's remaining turns, the Level Statistics table
+and the Messages at the end all move by the turns
+tools/keys/load-char-sheet.keys spends. Everything above Inventory is the
+character. For the resource ids behind the item names, which are what
+a module change moves, run:
+  tools/dump_save.sh tools/fixtures/chars/underdark-deepgnome-seed3-opt0818.sav
+
+=== the character, as the engine writes him ===
+
+                        Bofi Nackle, The Ambitious Conqueror (Wizard Mode) (Explore Mode)
+
+Gender Male
+Race   Deep Gnome
+Class  Rogue 6
+XP     0
+Next @ 21000
+Align  Neutral
+
+
+STR: 12/00 [+1/+0] (base 14, -2 natural)
+DEX: 20/00 [+5/+4] (base 18, +2 natural)
+CON: 18/00 [+4/+3] (base 18)
+INT: 16/00 [+3/+2] (base 16)
+WIS: 17/00 [+3/+3] (base 15, +2 natural)
+CHA: 13/00 [+1/+1] (base 17, -4 natural)
+LUC: 15/00 [+2/+2] (base 14, +1 inherent)
+Fortitude   +8(Rogue +2, +4 Con, +2 natural)
+Reflex     +18(Rogue +5, +5 Dex, +6 competence, +2 natural)
+Will        +7(Rogue +2, +3 Wis, +2 natural)
+           (+1 vs. poison, +2 vs. traps, +1 vs. theft, +3 vs. knockdown)
+Melee   +toHit +7  (Rogue +4, +1 Str, +1 weapon, +1 size)
+        Damage +1  (base 1d6 / 1d6+1, +1 Str)
+        Speed  145%(base 100% +5% Rogue) x 140% weapon
+Size           Small:
+  (base small)
+
+Defense Class  22:
+  (base 14, +3 Rogue, +5 Dex, +1 size, -1 encumbrance)
+
+Coverage       8:
+  (base 0, +8 armour)
+
+Movement Rate  35%:
+  (base 75%) x 90% armour x 115% skill x 80% encumbrance x 50% hiding
+
+Hit Dice Rolls 90:
+   [20 + 6d6 (6, 6, 6, 6, 6, 6) + 24 (CON bonus) x 90% (Size)] + 25% (Toughness)
+Mana Rolls     136:
+   10 + 6d6 (6, 6, 6, 6, 6, 6) x 3 + 18 (WIS bonus)
+
+Encumbrance    Moderate:
+   (Light 16.5s, Moderate 49.5s, Heavy 99.7s, Extreme 150.0s, Max Press 130.0s)
+
+Magic Resist   68%:
+  (base 0, +30 inherent, +55 natural)
+
+Special Abilities:
+  Evasion
+  Favoured Enemies:
+    +1 vs. Goblinoids
+  Infravision (120 ft)
+  Innate Spells:
+    Passwall
+    Blur
+    Camouflage
+    Stone Tell
+    Cause Blindness
+  Sneak Attack +3d6
+  Stonework Sense +2
+  Improved Uncanny Dodge
+  Thief in the Night (100%)
+  Unearthly Reflexes
+
+Feats:
+  Armour Proficiency: Light
+  Blind Fight
+  Endurance
+  Roll With It
+  Toughness
+
+Resistances and Armour:
+  Slashing Damage 3
+  Piercing Damage 4
+  Blunt Damage 4
+
+Proficiencies Simple Weapons, Short Blades, Archery, Thrown, Daggers, Flexible and Light Armour
+
+Skill Ratings:
+  Alchemy          +8  (2 ranks, +2 INT, +2 train, +2 kit)
+  Appraise         +7  (2 ranks, +3 WIS, +2 train)
+  Athletics        +7  (2 ranks, +3 CON, +2 train)
+  Balance          +6  (2 ranks, +4 DEX, +2 train, -2 armour)
+  Bluff            +5  (2 ranks, +1 CHA, +2 train)
+  Climb            +13 (9 ranks, +4 DEX, +2 train, -2 armour)
+  Craft            +12 (2 ranks, +3 WIS, +3 train, +2 racial, +2 kit)
+  Decipher Script  +4  (0 ranks, +2 INT, +2 train)
+  Diplomacy        +3  (0 ranks, +1 CHA, +2 train)
+  Disguise         +4  (0 ranks, +2 INT, +2 train)
+  Find Weakness    +5  (0 ranks, +3 WIS, +2 train)
+  Handle Device    +5  (0 ranks, +2 INT, +3 train)
+  Healing          +5  (0 ranks, +3 WIS, +2 train)
+  Hide in Shadows  +22 (9 ranks, +4 DEX, +3 train, +4 racial, -2 armour, +4 size)
+  Intimidate       +3  (0 ranks, +1 CHA, +2 train)
+  Intuition        +5  (0 ranks, +3 WIS, +2 train)
+  Knowledge (Theyra) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Infernal) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Magic) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Mythology) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Nature) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Oceans) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Planes) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Theology) +5  (0 ranks, +3 WIS, +2 train)
+  Knowledge (Undead) +4  (0 ranks, +2 INT, +2 train)
+  Listen           +8  (0 ranks, +3 WIS, +3 train, +2 racial)
+  Lockpicking      +6  (0 ranks, +4 DEX, +2 train)
+  Mining           +4  (0 ranks, +2 train, +2 kit)
+  Move Silently    +13 (9 ranks, +4 DEX, +2 train, -2 armour)
+  Perform          +3  (0 ranks, +1 CHA, +2 train)
+  Poison Use       +4  (0 ranks, +2 INT, +2 train)
+  Ride             +5  (0 ranks, +3 WIS, +2 train)
+  Searching        +6  (0 ranks, +2 INT, +2 train, +2 inherent)
+  Spot             +5  (0 ranks, +3 WIS, +2 train)
+  Swimming         -4  (0 ranks, -4 armour)
+  Use Magic        +4  (0 ranks, +2 INT, +2 train)
+
+Spiritual State:
+__You are not devoted to a
+____single god.
+__You are perfectly neutral with
+____regard to Good and Evil.
+__You are perfectly neutral with
+____regard to Law and Chaos.
+
+CharGen Options and Choices:
+__You are in Wizard Mode.
+__Beginner's Kit: ON
+__Initial Rolling Method: 4d6 + Perks
+____(actually used Point Buy)
+__Allow Rerolling: YES
+__Use the Subraces: YES
+__Disallow Wizard Mode: NO
+__Maximum Hit Points: YES
+__Maximum Mana: YES
+__Default Character Gender: MALE
+__Monsters Maximum Hit Points: NO
+__Roll Attributes First: NO
+__Gain Attributes With Levels: YES
+__Allow Rapid Intuition: WEAPONS
+__Monsters Use Djikstra: YES
+__Out-Of-Depth Monsters: YES
+__Transgression Hints: YES
+__Difficulty Level: BASELINE
+__Power Stats: EXTREME
+__Elude Death: SEVEN
+__Disable Complicity Transgressions: YES
+__Natural Weapon Speed: ORIGINAL
+
+
+Inventory:
+  short sword
+  pickaxe
+  uncocked cranquin
+  peasant garb
+  studded leather
+  Cloak of Nondetection
+  stiletto
+  4 Potions of Invisibility
+  11 Potions of Healing [2d8+8]
+  6 tanglefoot bags
+  8 Potions of Dimension Door [2d20+3]
+  gnomish backpack
+  262 gold pieces
+  13 food rations
+  36 crossbow bolts
+  4 Antitoxins [+3]
+  4 Potions of Cure Disease [0]
+  3 Potions of Detect Stairs
+  5 Potions of Remove Curse
+  2 Potions of Restoration [4d6]
+  3 Potions of Restore Constitution [6d8]
+  3 Potions of Restore Strength [6d8]
+  4 Potions of See Invisibility
+  alchemy set
+  craftsman's tools
+  Wand of Identify (50 charges)
+
+On The Ground:
+
+Known Spells:
+  Passwall                        2  100%    4 3
+  Blur                            2  100%   20 
+  Camouflage                      1  100%    5 +5
+  Stone Tell                      2  100%   15 
+  Cause Blindness                 3  100%    6 
+
+Journal:
+
+12:00 AM, 1st of Suntide: Entry Chamber, 10' (H:27/27 M:19/19 XP:0) 
+  You arrive at 10' in the The Goblin Caves.
+
+Monsters Encountered:
+  Total: 0
+
+Level Statistics:
+
+Lvl | Act | Key | Turns | Secs |  XP | Explored
+----+-----+-----+-------+------+-----+------------------
+1   |    2|  340|     17|     0|    0| 397 / 3897 = 10%
+
+Messages:
+Welcome back to Incursion, Bofi!
+You find nothing of significance.
+Autosave... 

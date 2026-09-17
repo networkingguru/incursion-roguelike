@@ -1,0 +1,72 @@
+# Make the character tools/keys/chargen.keys builds and SAVE him, so he can be
+# frozen into tools/fixtures/chars/.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/chargen-default-save.keys 1
+#
+# WHY THIS EXISTS. Eighty-five key scripts in this directory open with
+# @include chargen.keys, so they all roll the same standard orc barbarian and
+# none of them saves him. An rID in this engine is a POSITION, so one resource
+# added to lib/ shifts every id above it and silently rewrites a seed-pinned
+# character: commit bef32c3 added one Effect to lib/m_items.irh and the seed-1
+# Lizardfolk monk went from STR 18 holding a long sword +3 to STR 14 holding a
+# quarterstaff, on byte-identical attribute dice. A character LOADED from a
+# save does not move, because the v1 save schema converts every saved rID
+# through that save's own per-module manifest (v1ConvertManifestRid,
+# src/SaveV1.cpp). So this script produces the .sav that
+# tools/make_char_fixture.sh freezes, and one fixture made here serves every
+# check that includes chargen.keys at the same seed and settings.
+# See bd inc-1fjk and bd inc-vrt8.
+#
+# THE CHARGEN IS INCLUDED, NOT COPIED, and that is the difference between this
+# script and tools/keys/lizardfolk-monk-save.keys. That one copies its chargen
+# because the character it freezes is built inline inside a scenario script.
+# chargen.keys is already a shared file, so including it keeps this fixture
+# tracking the very chargen those 85 scripts run.
+#
+# THIS FILE IS THE ONE THAT EXPLAINS THE SAVE TAIL. Its four siblings --
+# chargen-mage-save.keys, chargen-paladin-save.keys, chargen-rogue-save.keys
+# and chargen-priest-save.keys -- carry the same tail and point here for it.
+
+@include chargen.keys
+
+@dump:arrival
+
+# HOW MANY KEYS THE OPENING WANTS IS A PROPERTY OF THE CHARACTER, so no fixed
+# count is right for every chargen. Measured 2026-09-17: tools/keys/chargen.keys
+# leaves NOTHING pending and reaches the System Menu on the first ESC, while
+# tools/keys/chargen-rogue.keys leaves a god's speech and an AutoHide line, so
+# the first ESC only dismisses a message. A hard-coded ESC ENTER SPACE, copied
+# from tools/keys/lizardfolk-monk-save.keys, failed in both directions: it
+# walked INTO the menu for the barbarian and fell short of it for the rogue.
+# @until sends ESC as many times as this character needs and stops the moment
+# the menu is up (src/Wposix.cpp:1318-1326).
+# CHARGEN IS NOT OVER UNTIL THE ARCHETYPE IS PICKED, and ESC will not dismiss
+# that screen -- it is a menu wanting a letter. Measured 2026-09-17: five of
+# these save scripts reached "Your personality archetype has little direct
+# influence..." and spent all 200 of @until's passes pressing ESC at it
+# (src/Wposix.cpp:1568-1571). [a] is The Ambitious Conqueror; the choice only
+# has to be the SAME one every time, because a fixture is a frozen character
+# and the archetype is, in the game's own words, "largely a 'colour' choice".
+@while "personality archetype" a
+
+@until "System Menu" ESC
+
+# @until only warns when it gives up (src/Wposix.cpp:1568-1571), so the
+# assertion stays: it stops the run at exit 6 rather than pressing a letter
+# into whatever screen is really there. [a] beside [b] is Save and Quit.
+@expect "System Menu"
+b                       # [b] Save and Continue (src/Player.cpp:843)
+
+# The save is not written by the keypress. Case 2 of the System Menu sets the
+# autosave flag and Timeout = 1 (src/Player.cpp:851-853); Game::Play writes the
+# file at the top of the next pass of its loop (src/Main.cpp:266-275). This
+# dump therefore fires AFTER the file is on disk, and photographs the engine's
+# own "Autosave... done." line saying so.
+@dump:saved
+
+# NO @quit HERE, DELIBERATELY. @quit becomes KY_CMD_QUICK_QUIT
+# (src/Wposix.cpp:1657-1664), which is Save and Quit: it would write the save a
+# SECOND time and shuffle the first copy off to <name>.sav.backup, leaving the
+# fixture a file no line of this script asked for. Letting the key script run
+# out instead ends the session with exactly one save.

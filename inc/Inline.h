@@ -40,7 +40,23 @@ inline int16 random(int16 mx)
     if (!mx) return 0;
     return (int16)(genrand_int32() % mx);
   }
-  
+
+/* A draw for the screen and nothing else -- a colour, a shade, a glyph. It
+   comes off a stream of its own, so however many of these a frame makes, the
+   gameplay stream is where it was and the seed still means the same game. Use
+   it for presentation; use random() for anything the player can act on. The
+   block above cosmetic_int32 in src/Base.cpp says why, and what it cost to
+   learn. bd inc-rir0. */
+inline int16 cosmetic_random(int16 mx)
+  {
+    if (!mx) return 0;
+    return (int16)(cosmetic_int32() % mx);
+  }
+
+/* Seeds the GAMEPLAY stream only. The cosmetic stream is seeded once, in
+   SeedCosmeticStream (src/Main.cpp), and these mid-game re-seeds must not disturb it:
+   they exist to make a store's stock or a spell formula reproducible, which
+   says nothing about what colour a blast should be. */
 #define srand(n) init_genrand(n)
 
 

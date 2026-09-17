@@ -113,6 +113,39 @@ obliged to update stops being true: on 2026-09-11 the hand-written list ran 18 o
 `flickerscan_selftest.py`. Run it when you change the checker. A check that has
 quietly stopped checking anything looks exactly like a check that passes.
 
+## Which random stream a new draw belongs in
+
+**A draw that only reaches the screen MUST use `cosmetic_random()`. Everything
+else uses `random()`.**
+
+Gameplay draws all come off one shared Mersenne Twister, and the simulation
+reads it in a fixed order, so the *number* of draws a session takes is part of
+what a seed means. A draw made for presentation therefore moves every later
+gameplay roll even though it decides nothing.
+
+That is measured, not feared. `Character::GodMessage` drew `random(4)` once per
+CHARACTER of its message text to shade a god's voice, so rewording a line of
+flavour text moved the stream, and two games on the same seed stopped being the
+same game. It broke a seeded check and blocked commits until `04ffaa9` removed
+the draw.
+
+- **Cosmetic** — a colour, a shade, a glyph, a choice between wordings. Anything
+  the player sees and cannot act on. Use `cosmetic_random()` (`inc/Inline.h`).
+- **Gameplay** — damage, saving throws, placement, generation, item rolls, AI
+  decisions. Use `random()`.
+- **When in doubt it is gameplay.** A wrong answer in that direction costs a
+  wasted draw. The other direction silently changes what every seed means.
+
+`tools/check_rng_split.sh` is the standing proof that the cosmetic stream is
+really separate: it burns draws off it and requires a seeded session to be
+byte-identical, then burns one off the gameplay stream and requires it to
+differ, so it cannot pass by being blind.
+
+Six older colour draws in `src/Magic.cpp` and `src/MakeLev.cpp` still use
+`random()`. They are left alone deliberately: none varies with content, so none
+can repeat the defect above, and converting them was measured to take
+`check_wand_acid_type.sh` from PASS to FAIL. New code does not follow them.
+
 ## What this cannot prove
 
 Git records results, not process. The tree at a commit shows that a check exists.

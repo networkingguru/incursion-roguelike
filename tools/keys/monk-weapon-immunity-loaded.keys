@@ -1,0 +1,56 @@
+# monk-weapon-immunity.keys with its chargen removed: lines 41-end, unchanged.
+# The character comes from tools/fixtures/chars/monk-weapon-immunity-seed1-opt0818.sav. bd inc-vrt8.
+
+ESC ENTER SPACE
+
+# Empty both hands. Chargen hands this character a long sword +3, and a held
+# weapon would answer the question with its own plus instead of with Ki Strike.
+i
+b s
+ESC
+
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+@choose "Wizard Mode Switches"
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+# --- FIRST HALF: Monk 1, no Ki Strike, punching a weapon-immune devil -------
+w
+@choose "Monster Summoning"
+@choose "Devils"
+@choose "lemure"
+RIGHT   # the location cursor starts on the player; one step east
+ENTER
+@dump:summoned-lvl1
+
+RIGHT   # walk into it, which is to attack it
+@dump:punch-lvl1
+SPACE SPACE SPACE SPACE
+
+# --- LEVEL TO 4, WHICH IS WHERE KI STRIKE ARRIVES ---------------------------
+# The character sheet is a menu, so no game time passes and the lemure is still
+# standing to the east when this is done.
+d
+G
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@until "Monk 4" ESC
+@expect "Monk 4"
+ESC     # back to the map
+
+# --- SECOND HALF: Monk 4, Ki Strike +1, same fist, same devil ---------------
+SPACE SPACE SPACE SPACE
+RIGHT
+@dump:punch-lvl4
+@quit

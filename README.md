@@ -884,6 +884,7 @@ the unfixed tree before it is trusted.
 | `check_readme_checks.sh` | Was a regression check added without a row in this table? |
 | `check_reapply_single_grant.sh` | Does a worn item keep granting exactly one copy of its bonus when the game re-applies it? Magic Weapon on an orc's Bloodspear, the boost wearing off, Storycraft raising a periapt's plus and a dispel ending must all leave one copy: the Bloodspear read `+4 vs. spells`, then +8, then +12 before the fix. The same run proves the fix keeps an activated Nine Lives Stealer active, loses no unrelated condition to Dispel Magic, and cannot kill a bard at 7 HP. |
 | `check_retributive_mirror.sh` | Does Retributive Mirror reflect one third of incoming damage (`e.vDmg / 3`), the fraction its own description promises, rather than the one fifth it paid before? |
+| `check_rng_split.sh` | Does a random draw made for the screen leave the gameplay stream where it was? Burns draws off the cosmetic stream and requires the seeded session to be identical, then burns one off the gameplay stream and requires it to differ. |
 | `check_reveal_delete.sh` | Can a monster still delete itself inside `Reveal()` and leave the caller holding a dangling map pointer? |
 | `check_ring_fire_terrain.sh` | Can a Ring of Fire Resistance wearer cross magma while the same character without the ring is still refused? |
 | `check_rod_longsword_plus.sh` | Does the Rod of Lordly Might's labeled +1 flaming long sword grant exactly +1 to real to-hit and damage? |

@@ -1,0 +1,104 @@
+# Freeze the character tools/keys/dragonkin-sheet.keys builds, so every check that
+# runs that script can load him instead of rolling him again.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat \
+#       tools/headless.sh tools/keys/dragonkin-sheet-save.keys 1
+#
+# THE CHARGEN BELOW IS A COPY of tools/keys/dragonkin-sheet.keys lines 1-49,
+# deliberately unchanged, and the original is NOT edited. That script builds its
+# character inline rather than including a shared chargen-*.keys, so there is
+# nothing to @include. Copying rather than refactoring means no existing check
+# changes what it measures. The same choice, and the same warning, are in
+# tools/keys/lizardfolk-monk-save.keys: do not "improve" this copy -- the
+# fixture is only worth having if it holds THE character that script rolls.
+#
+# WHY A CHARACTER IS FROZEN AT ALL: see the header of
+# tools/keys/chargen-default-save.keys. bd inc-vrt8.
+
+# Make a Dragonkin and photograph the character sheet.
+#
+# This exists for one assertion: a Dragonkin must have Mantis Leap. The feat is
+# on the species template (lib/subraces.irh:731) and for years no player ever
+# received it, because Character::HasFeat did not read the template. See inc-2a0.
+#
+# Race, subrace, class and alignment use @choose to select by name, so a
+# list added to lib/ cannot change those choices. See src/Wposix.cpp.
+# Run with a fixed seed: attribute rolls change the offered feats, and the
+# attribute set and feat picks stay positional because sets have no names
+# and feats depend on the rolls. Start-menu, question and movement keys
+# stay counted for the reasons below.
+# Header said every choice was a menu letter; corrected 2026-09-12.
+# tools/check_race_feats.sh supplies the seed.
+
+@expect "Initial Choices"
+a       # Create a New Character: start menu is not a screen @choose reads.
+@expect "Alter the character generation options?"
+n       # Alter the character generation options? No: a yes/no question.
+@expect "Explore Mode. Continue?"
+y       # Continue in Explore Mode? Yes: a yes/no question.
+@choose "Lizardfolk"
+@choose "Dragonkin"
+@choose "Barbarian"
+@expect "Which of the five attribute sets"
+a       # First attribute set: the five offered sets have no names.
+@choose "Neutral"
+@expect "Choose a feat"
+a       # First feat: offered feats depend on the attribute rolls.
+@expect "Choose a feat"
+a       # Second feat: offered feats depend on the attribute rolls.
+
+# Skill Manager. Three RIGHTs per skill spends everything available
+# without needing to know how many ranks this character has.
+@expect "Skill Manager"
+# RIGHT/DOWN allocate ranks and move between skills, not named choices.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Finish and keep the ranks: ENTER is a control, y answers yes/no.
+
+@expect "Your personality archetype"
+y       # No match: the sixteen personality entries use [a] through [p].
+
+# RIGHT/DOWN move the personality selection to The Manipulative Plotter.
+# Personality affects only the sheet banner, so its selection is not pinned.
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Accept the selected archetype, then dismiss the entry description.
+
+@dump:arrival
+
+# HOW MANY KEYS THE OPENING WANTS IS A PROPERTY OF THE CHARACTER, so no fixed
+# count is right for every chargen. Measured 2026-09-17: tools/keys/chargen.keys
+# leaves NOTHING pending and reaches the System Menu on the first ESC, while
+# tools/keys/chargen-rogue.keys leaves a god's speech and an AutoHide line, so
+# the first ESC only dismisses a message. A hard-coded ESC ENTER SPACE, copied
+# from tools/keys/lizardfolk-monk-save.keys, failed in both directions: it
+# walked INTO the menu for the barbarian and fell short of it for the rogue.
+# @until sends ESC as many times as this character needs and stops the moment
+# the menu is up (src/Wposix.cpp:1318-1326).
+# CHARGEN IS NOT OVER UNTIL THE ARCHETYPE IS PICKED, and ESC will not dismiss
+# that screen -- it is a menu wanting a letter. [a] is The Ambitious Conqueror;
+# the choice only has to be the SAME one every time. Harmless where the copied
+# chargen above already picked one: @while sends nothing if the screen is gone.
+@while "personality archetype" a
+
+@until "System Menu" ESC
+
+# @until only warns when it gives up (src/Wposix.cpp:1568-1571), so the
+# assertion stays: it stops the run at exit 6 rather than pressing a letter
+# into whatever screen is really there. [a] beside [b] is Save and Quit.
+@expect "System Menu"
+b                       # [b] Save and Continue (src/Player.cpp:843)
+
+# The save is not written by the keypress. Case 2 of the System Menu sets the
+# autosave flag and Timeout = 1 (src/Player.cpp:851-853); Game::Play writes the
+# file at the top of the next pass of its loop (src/Main.cpp:266-275). This
+# dump therefore fires AFTER the file is on disk, and photographs the engine's
+# own "Autosave... done." line saying so.
+@dump:saved
+
+# NO @quit HERE, DELIBERATELY. @quit becomes KY_CMD_QUICK_QUIT
+# (src/Wposix.cpp:1657-1664), which is Save and Quit: it would write the save a
+# SECOND time and shuffle the first copy off to <name>.sav.backup, leaving the
+# fixture a file no line of this script asked for. Letting the key script run
+# out instead ends the session with exactly one save.
