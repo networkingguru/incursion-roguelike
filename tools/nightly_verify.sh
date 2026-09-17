@@ -390,8 +390,75 @@ if [ "${#CHECKS[@]}" = 0 ]; then
     exit 2
 fi
 
+# The build set, named once and read by --record and --compare alike, so the two
+# can never drift into building different things (inc-o5bi). Both backends,
+# because they are separate main()s; posix first, because the libtcod build then
+# leaves mod/Incursion.Mod as the module every live check reads.
+BUILDS=( "BACKEND=posix ./build_macos.sh" "./build_macos.sh" )
+
 # ------------------------------------------------------------------ record ---
+# THE BASE IS BUILT BEFORE IT IS MEASURED (inc-o5bi). Until 2026-09-17 this
+# branch measured the live tier against whatever ./incursion-headless happened
+# to be lying in the tree, while --compare built first. The ratchet then
+# compared two measurements taken against DIFFERENT binaries, so a live check
+# could report BROKEN or FIXED with no source change behind it at all.
+#
+# Observed, 2026-09-12, landing inc-8wsm -- two integers in an options table and
+# no code whatever. --record in the shared checkout, whose ./incursion-headless
+# predated the source, wrote "base 1 tools/check_pray_aid_int32.sh". --compare
+# in a freshly built worktree of that same source answered "FIXED
+# tools/check_pray_aid_int32.sh (was exit 1)". A third run held the source still
+# and changed only the binary, and it reproduced both answers. The source was
+# never the variable.
+#
+# FIXED is the harmless direction, and it is the one that showed. The harmful
+# direction is its mirror and it is silent: a stale binary fails a check that
+# the current source passes, the base writes that check down as failing, the run
+# then breaks that area for real, and the table above reads base-fail plus
+# now-fail as "pre-existing, passes". The merge proceeds. This header already
+# says a tree that does not compile is never safe to merge; the same reasoning
+# applies to the base, because a base measured on a tree that is not the tree
+# under test is not a base.
+#
+# THE SAME BUILDS AS --compare, AND NOTHING ELSE. The Linux cross-build, the
+# layout sweep and the soak stay out of this branch: the state file records none
+# of them, so running them here would cost minutes and tell the ratchet nothing.
+# They are verdicts on the tree, and --record passes no verdict.
+#
+# ONLY WHEN A LIVE CHECK IS THERE TO MEASURE. The builds exist to give the live
+# tier a binary from this source, and a check set holding no live tier needs no
+# binary. That is what keeps --selftest, whose made-up checks are every one of
+# them cheap, at a second rather than a rebuild. --checks-only and --docs-only
+# never reach this branch at all: both set MODE=compare, so the SKIP_BUILDS they
+# set is read further down, and neither one builds anything here or there.
+#
+# A BUILD THAT FAILS WRITES NO BASE AND DELETES THE OLD ONE. A base measured on
+# a tree that does not compile is worse than no base, and the previous run's
+# base left sitting in place is the stale record this whole fix is about. Exit 2
+# is "could not measure". A --compare that finds no base demands that every
+# check pass outright, which is the strict direction to fail in.
 if [ "$MODE" = "record" ]; then
+    record_live=0
+    for entry in "${CHECKS[@]}"; do
+        [ "${entry##*	}" = live ] && record_live=1
+    done
+    if [ "$record_live" = 1 ]; then
+        echo "--- builds (a base is only a base when this source built the binary) ---"
+        for build in "${BUILDS[@]}"; do
+            printf '%s ... ' "$build"
+            if ( eval "$build" ) > /dev/null 2>&1; then
+                echo "ok"
+            else
+                echo "FAILED"
+                echo "    re-run it to see why: $build"
+                rm -f "$STATE"
+                echo "NO base recorded, and $STATE is gone:"
+                echo "a base from a tree that does not compile is worse than none."
+                exit 2
+            fi
+        done
+        echo
+    fi
     mkdir -p "$(dirname "$STATE")" || exit 2
     : > "$STATE"
     for entry in "${CHECKS[@]}"; do
@@ -418,7 +485,7 @@ if [ "$SKIP_BUILDS" = 1 ]; then
     fi
 else
     echo "--- builds, macOS then Linux (absolute: a tree that does not compile never merges) ---"
-    for build in "BACKEND=posix ./build_macos.sh" "./build_macos.sh"; do
+    for build in "${BUILDS[@]}"; do
         printf '%s ... ' "$build"
         if ( eval "$build" ) > /dev/null 2>&1; then
             echo "ok"
