@@ -36,7 +36,7 @@ sed -n '3135,3453p' src/Tables.cpp |
 
 ## How the menu works
 
-The verbs live in `YuseCommands[]`, `src/Tables.cpp:3135-3453`. Each entry
+The verbs live in `YuseCommands[]`, `src/Tables.cpp:3144-3462`. Each entry
 carries up to three prompts and a flag word:
 
 ```c
