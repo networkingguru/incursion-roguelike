@@ -985,6 +985,7 @@ the unfixed tree before it is trusted.
 | `check_xp_penalty_rule.sh` | Does the multiclass experience penalty exempt every class the race favours, honour `CF_FAVOURED`, and charge the manual's 20% rather than 25%? |
 | `check_xsummon_live.sh` | Does a divine summoning spell (Holy Summoning, Summon Nature's Ally) cap its concurrent summons the way the wizard line does? |
 | `check_yuse_activate.sh` | Does activating a blast item from the `y` menu ask where to aim it, rather than resolving the beam on the activator? |
+| `check_illusion_flags.sh` | Does an illusion's declared IL_IMPROVED flag decide who pierces it, rather than the parity of its save DC? |
 
 `tools/README.md` §7 groups these into five tiers by what each needs — a clean
 clone, a compiler, a POSIX build, a built artefact, or a recorded baseline — and
