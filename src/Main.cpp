@@ -53,6 +53,43 @@ unsigned long NextSeed(void) {
     return (unsigned long)time(NULL);
 }
 
+/* Seed the cosmetic stream, ONCE, WITHOUT TOUCHING NextSeed()'S TICK.
+
+   NextSeed() above hands out seed+0, seed+1, seed+2 in call order, and every
+   re-seed point in the game draws from that series: store stock, equipment
+   rolls, spell formulas, and the two in this file. Calling it here for the
+   cosmetic seed would consume a tick and shift every later gameplay seed --
+   which is the defect the cosmetic stream exists to prevent, reappearing one
+   level up and harder to see. So this reads INCURSION_SEED directly and offsets
+   it by a constant, and the tick is left exactly where it was.
+
+   The offset keeps the two streams from starting on the same value, which
+   would make a cosmetic draw and a gameplay draw agree for a while and hide a
+   mistaken call behind a coincidence. bd inc-rir0. */
+static void SeedCosmeticStream(void) {
+    const char *s = getenv("INCURSION_SEED");
+    unsigned long base = (s && *s) ? strtoul(s, NULL, 10)
+                                   : (unsigned long)time(NULL);
+    init_cosmetic_rand(base + 0x5EED0C05UL);
+
+    /* Both hooks exist for tools/check_rng_split.sh and are documented in
+       tools/README.md: they spend draws off one stream so the check can prove
+       the other is unmoved. A burn on the cosmetic stream MUST change nothing
+       a session does; a burn on the gameplay stream MUST change it, which is
+       what stops the check passing for the wrong reason. bd inc-rir0. */
+    {
+        const char *cb = getenv("INCURSION_COSMETIC_BURN");
+        const char *gb = getenv("INCURSION_RNG_BURN");
+        long i, n;
+        if (cb && *cb)
+            for (i = 0, n = strtol(cb, NULL, 10); i < n; i++)
+                (void)cosmetic_int32();
+        if (gb && *gb)
+            for (i = 0, n = strtol(gb, NULL, 10); i < n; i++)
+                (void)genrand_int32();
+    }
+}
+
 Map* TheMainMap;
 extern bool QuestMode;
 Tile *MapLetterArray[127];
@@ -82,6 +119,7 @@ Game::Game() : Object(T_GAME) {
     ItemGenNum = 10;
     DestroyCount = 0;
     srand((unsigned)NextSeed());
+    SeedCosmeticStream();
 }
 
 

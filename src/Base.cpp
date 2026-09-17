@@ -1532,6 +1532,53 @@ unsigned long genrand_int32(void)
     return y;
 }
 
+/* THE COSMETIC STREAM: random numbers that reach the screen and nothing else.
+
+   Every gameplay draw comes off the one Mersenne Twister above, read in a
+   fixed order, so the NUMBER of draws a session takes is part of what its seed
+   means. A draw made for presentation therefore moves every later gameplay
+   roll even though it decides nothing. Measured, not feared: GodMessage drew
+   random(4) once per CHARACTER of its message text to shade a god's voice, so
+   rewording a line of flavour text made two games on the same seed diverge.
+   04ffaa9 fixed that site by deleting the draw; this is where the next author
+   who wants a random shade can put one instead. bd inc-rir0.
+
+   WHAT BELONGS HERE: a value reaching a colour, a shade, a glyph, or a choice
+   between wordings. If it feeds damage, a save, placement, generation, an item
+   roll or an AI decision, it is gameplay and MUST use random(). When in doubt
+   it is gameplay; docs/VERIFICATION.md states the rule.
+
+   NOT A SECOND MERSENNE TWISTER, because the generator above is the Nishimura
+   and Matsumoto reference kept verbatim and instancing it means editing it. A
+   shade picker has no statistical need MT meets and xorshift32 does not.
+
+   IT MUST NOT CALL NextSeed(), which counts a static tick every re-seed point
+   in the game draws from; consuming one would shift every later gameplay seed
+   and reintroduce this very defect one level up. See SeedCosmeticStream
+   (src/Main.cpp). */
+
+static unsigned long cosmeticState = 0x9E3779B9UL;   /* never zero: see below */
+
+void init_cosmetic_rand(unsigned long s)
+  {
+    /* xorshift32 stalls forever on zero, and a zero seed is reachable --
+       INCURSION_SEED=0 is a legal thing for a harness to ask for. The golden
+       ratio constant is an arbitrary non-zero fallback. */
+    cosmeticState = (s & 0xffffffffUL) ? (s & 0xffffffffUL) : 0x9E3779B9UL;
+  }
+
+unsigned long cosmetic_int32(void)
+  {
+    unsigned long x = cosmeticState;
+    x ^= (x << 13) & 0xffffffffUL;
+    x ^= (x >> 17);
+    x ^= (x << 5)  & 0xffffffffUL;
+    cosmeticState = x & 0xffffffffUL;
+    return cosmeticState;
+  }
+
+/* ---------------------------------------------------------------------- */
+
 /* generates a random number on [0,0x7fffffff]-interval */
 long genrand_int31(void)
 {
