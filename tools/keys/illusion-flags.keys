@@ -1,0 +1,90 @@
+# Cast four illusion spells, try to pick up each illusory item, and photograph
+# what the game says. Read by tools/check_illusion_flags.sh. Bead inc-pu6v.43.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/elf-mage-illusions-seed1.sav \
+#       tools/headless.sh tools/keys/illusion-flags.keys 1
+#
+# THE ORACLE is Creature::PickUp (src/Inv.cpp:496-505), which prints one of two
+# lines and never both:
+#
+#   isRealTo false -> "You can't pick up an illusionary item."
+#   isRealTo true  -> "As you reach to pick up the <Obj>, your hand passes
+#                      through it, and it winks out of existence!"
+#
+# The caster is the watcher, and that is legal here: the illusory-ITEM arm of
+# Magic::Illusion (src/Effects.cpp:1969-1973) grants the caster no DISBELIEVED
+# stati, unlike the illusory-CREATURE arm (src/Encounter.cpp:2551). So the elf
+# gets a genuine isRealTo verdict on an illusion he cast himself.
+#
+# THE FOUR SPELLS are a ladder, one level apart, and their declared flags
+# alternate. That is the whole design: the save DC rises by exactly 1 per rung
+# while the declared IL_IMPROVED flag does not, so any code that reads the flag
+# out of the DC must disagree with the declaration on some rung.
+#
+#   spell                       level  DC  yval                     improved?
+#   Phantasmal Force              1    15  0                        no
+#   Improved Phantasmal Force     2    16  IL_IMPROVED              YES
+#   Spectral Force                3    17  IL_SPECTRAL              no
+#   Improved Spectral Force       4    18  IL_SPECTRAL|IL_IMPROVED  YES
+#
+# The DCs are this fixture's, measured: getSpellDC is 10 + level + attribute
+# modifier + school focus (src/Magic.cpp:3334-3396), and for this elf that is
+# 14 + level. The check does not hard-code them; it asserts the MESSAGES, which
+# follow from the declared flags alone and hold at every DC.
+#
+# THE DUMP LABELS are il-a..il-d rather than the spell names, because a glob
+# of "*-phantasmal-force" also matches "*-improved-phantasmal-force" and the
+# check would then read two screens where it meant one.
+#
+# ONE STEP EAST BETWEEN CASTS. An illusion that is refused stays on the floor,
+# and a second item in the same square would turn the next 'g' into a menu.
+# The illusion is placed at the caster's own feet, so moving moves the target.
+#
+# SPACE, NEVER ESC, to clear the "-- more --" prompt. In play mode ESC opens
+# the System Menu, whose [a] is Save and Quit; a stray ESC ends the run and
+# still exits 0.
+
+@dump:arrival
+
+@until "Select Spell" m
+@choose "Phantasmal Force"
+i
+@expect "Target Illusion"
+ENTER
+SPACE
+g
+@dump:il-a-plain
+SPACE SPACE
+RIGHT
+
+@until "Select Spell" m
+@choose "Improved Phantasmal Fo"
+i
+@expect "Target Illusion"
+ENTER
+SPACE
+g
+@dump:il-b-improved
+SPACE SPACE
+RIGHT
+
+@until "Select Spell" m
+@choose "Spectral Force"
+i
+@expect "Target Illusion"
+ENTER
+SPACE
+g
+@dump:il-c-spectral
+SPACE SPACE
+RIGHT
+
+@until "Select Spell" m
+@choose "Improved Spectral Force"
+i
+@expect "Target Illusion"
+ENTER
+SPACE
+g
+@dump:il-d-spectral-improved
