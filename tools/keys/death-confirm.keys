@@ -1,0 +1,55 @@
+# Load tools/fixtures/chars/engaged-hostile.sav, let the bugbear kill him, and
+# ANSWER the death prompt for real, for tools/check_headless.sh step 9
+# (bd inc-gjzx).
+#
+#   INCURSION_OPTIONS=tools/gates/Options.Dat \
+#   INCURSION_LOAD=tools/fixtures/chars/engaged-hostile.sav \
+#       tools/headless.sh tools/keys/death-confirm.keys <seed>
+#
+# Identical to tools/keys/death-freeze.keys up to the death prompt -- read
+# that file's header for why resting cannot fire the threat prompt instead,
+# and for the OPT_NODEATH/OPT_ELUDE_DEATH note about tools/gates/Options.Dat.
+# The prompt's own words are "You die... Die?", so 'y' answers "yes" to
+# dying for real (Fight.cpp's escape-hatch branches only trigger on 'n', "no,
+# do not let me die"). Falling through both escape hatches reaches the real
+# death path and calls NoteCharacterDied (src/Fight.cpp:7819), which appends
+# "=== character died ..." to logs/death.log.
+#
+# TWO 'y' KEYS, MEASURED, NOT GUESSED. At this seed the killing round lands
+# two separate lethal hits against the fixture, and each one raises its own
+# "You die... Die? [yn]" prompt -- confirmed by testing 1, 2 and 10 'y' keys
+# in turn and reading the screens each time:
+#   1 'y'  -> logs/death.log gets ONE entry, but the LAST screen still reads
+#             "You die... Die? [yn]" (unanswered) -- the second prompt is
+#             still open, so this scenario is indistinguishable from
+#             death-freeze.keys by the brief's own negative assertion.
+#   2 'y'  -> logs/death.log gets two entries (both real: the fixture is hit
+#             twice in the one lethal round, and NoteCharacterDied logs each
+#             hit that finishes it, back to back, same timestamp), and the
+#             last screen moves past both prompts to
+#             "Press [ENTER] to continue...", so "Die? [yn]" is gone.
+#   10 'y' -> same two death.log entries as the 2-key case; the extra eight
+#             'y' keys land on the ENTER-to-continue screen, which does not
+#             consume 'y', and change nothing further. Ten was not needed.
+# So this script sends exactly two 'y' keys -- the number this fixture
+# actually asks for, not a copied margin.
+#
+# 'y' alone, with no @dump/@quit, leaves the harness's own exit-dump as the
+# only screen -- and that exit dump is taken from whatever buffer the
+# key-consuming layer last saw, which after two 'y' keys with nothing after
+# them is still the pre-repaint "Die?" frame. An explicit @dump AFTER both
+# 'y' keys, and an explicit @quit, are what actually captures the repainted
+# "Press [ENTER] to continue..." screen -- confirmed by testing 'y y' with no
+# trailing @dump (the old recipe) against 'y y' plus @dump:died and @quit.
+#
+# DONE MEANS, both measured true on this run:
+#   - logs/death.log exists and its first line starts "=== character died"
+#   - the LAST screen file does NOT contain the literal text "Die? [yn]"
+# Measured: the bugbear's attacks land the killing round on the 30th rest key
+# at this seed under this fixture; 50 is kept here for margin, same as
+# death-freeze.keys.
+
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+y y
+@dump:died
+@quit

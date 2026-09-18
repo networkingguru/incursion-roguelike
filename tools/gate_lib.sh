@@ -191,14 +191,34 @@ gate_collect() { # <soakdir>
     # inc-loa.5: sessions frozen at the unguarded threat-disengage prompt
     # (src/Move.cpp:941, "Abort, Flee or Disengage?"). Same shape as 'died'
     # above -- checked by the same "text still on the last screen" signal --
-    # but this prompt has no settings gate and, given dive.keys' vocabulary,
-    # no way to resolve once it fires, so there is only one shape to count.
+    # and this prompt has no settings gate.
+    #
+    # Match the prompt's OWN words, "Abort, Flee or Disengage", not the bare
+    # words "threatened area" that used to be matched here. The prompt's '?'
+    # choice opens the in-game combat manual (src/Move.cpp:943,
+    # lib/help.irh:3320 section {LE}), and that manual page's own prose says
+    # "threatened area" repeatedly while never showing the prompt itself. A
+    # session that answered '?' and escaped into the manual instead of
+    # staying at the prompt matched the old bare-words pattern and was
+    # counted as still frozen AT the prompt, which it was not. Measured
+    # 2026-09-18: tools/keys/dive.keys, seed 11, under tools/gates/Options.Dat,
+    # ends inside that manual.
+    #
+    # The claim this comment used to make -- that dive.keys' vocabulary gives
+    # "no way to resolve" the prompt once it fires -- is also now FALSE.
+    # Commit f7ff2d7 gave every ChoicePrompt arrow-and-ENTER highlight
+    # navigation, and dive.keys' vocabulary already includes arrows and
+    # ENTER, so an arrow key followed by ENTER can select any of
+    # 'a'/'f'/'d'/'?', including '?' -- which is exactly the escape route
+    # measured above. So "frozen" here is no longer a state a session is
+    # guaranteed to stay in; it is a snapshot of the last screen, same as
+    # every other count in this loop.
     threat_frozen=0
     for scr in "$soak"/seed-*/logs/screens; do
         [ -d "$scr" ] || continue
         last="$(ls "$scr" 2>/dev/null | sort | tail -1)"
         [ -n "$last" ] || continue
-        grep -q 'threatened area' "$scr/$last" 2>/dev/null || continue
+        grep -q 'Abort, Flee or Disengage' "$scr/$last" 2>/dev/null || continue
         threat_frozen=$((threat_frozen + 1))
     done
     printf 'threat_frozen\t%s\n' "$threat_frozen"

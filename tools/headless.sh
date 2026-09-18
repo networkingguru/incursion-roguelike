@@ -45,8 +45,9 @@
 # NOT its own exit code: whether either should FAIL a run, versus merely be
 # counted, is a product decision (inc-loa.3, inc-loa.5) that this script does
 # not make. Both are always reported and always countable (logs/death.log or
-# "Die? [yn]" on the last screen; "threatened area" on the last screen) so a
-# caller that cares can decide for itself. See tools/gate_lib.sh, which does.
+# "Die? [yn]" on the last screen; "Abort, Flee or Disengage" on the last
+# screen) so a caller that cares can decide for itself. See tools/gate_lib.sh,
+# which does.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -339,8 +340,19 @@ fi
 # resolve it. Proved on 7 of 40 seeds under tools/gates/Options.Dat
 # (1,15,16,31,32,37,38); see logs/gate/record-dive-89305 for the run that
 # found them.
+#
+# Match the prompt's OWN words, "Abort, Flee or Disengage", not the bare
+# words "threatened area" that used to be matched here. The prompt's '?'
+# choice opens the in-game combat manual (src/Move.cpp:943,
+# lib/help.irh:3320), and that manual page's own prose about attacks of
+# opportunity says "threatened area" repeatedly. A session that answered
+# '?' and landed in the manual instead of staying at the prompt matched the
+# old pattern and was reported as still stuck AT the prompt, which it was
+# not. Measured 2026-09-18: tools/keys/dive.keys, seed 11, ends in the
+# manual (mode 5, MO_HELP) with "threatened area" on its last screen and no
+# "Abort, Flee or Disengage" anywhere on it.
 THREAT_STUCK=0
-_last_screen_shows 'threatened area' && THREAT_STUCK=1
+_last_screen_shows 'Abort, Flee or Disengage' && THREAT_STUCK=1
 if [ "$THREAT_STUCK" -eq 1 ]; then
     echo "stuck-prompt: threat-disengage -- the run ended with 'Abort, Flee or"
     echo "              Disengage?' still on screen, unanswered (inc-loa.5)."

@@ -55,9 +55,10 @@ make_stuck_death() { # <dir> <seed>
         > "$1/seed-$2/logs/screens/0001-final.txt"
 }
 
-# inc-loa.5: same idea, for the unguarded threat-disengage prompt. Only one
-# shape exists for this one -- see tools/gate_lib.sh's comment on why there
-# is no "confirmed" counterpart.
+# inc-loa.5: same idea, for the threat-disengage prompt. f7ff2d7 (2026-08-28)
+# gave ChoicePrompt arrow+ENTER navigation, so this prompt can now be
+# answered ('a'/'f'/'d') or can lead into the combat manual via '?' -- this
+# fixture models the frozen (never-answered) shape only.
 make_threat_frozen() { # <dir> <seed>
     mkdir -p "$1/seed-$2/logs/screens"
     printf '=== screen ===\nYou are in a threatened area. Abort, Flee or Disengage? [afd?]\n' \
