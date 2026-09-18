@@ -5605,7 +5605,7 @@ Priest / Scroll Spell "Heal;spell" : EA_HEALING
     /* upstream: Heal cured nothing at all. It declared HEAL_MALADY with no
        yval, and HEAL_MALADY removes only the one stati that yval names
        (src/Effects.cpp:2355), so it removed stati 0, which is unused. The flag
-       written for this spell, HEAL_ALL_MALADIES (inc/Defines.h:3374), cannot
+       written for this spell, HEAL_ALL_MALADIES (inc/Defines.h:3365), cannot
        be used at all: it is 0x100, and the field that carries it,
        EffectValues::xval, is a uint8 (inc/Res.h:138), so the module compiler
        silently drops the bit (lang/Grammar.acc:695). The cure is therefore done

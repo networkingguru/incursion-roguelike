@@ -4,20 +4,30 @@
 
 **You have no mandate to operate autonomously.** Brian set this scope on
 2026-09-12: "You do not have mandate to operate autonomously." It replaces the
-standing order that ran from 2026-09-09 to that date.
+standing order that ran from 2026-09-09 to that date, which told a session to
+fix a bug in his own tree without asking.
 
 Before you change a tracked file, say what you found and what you would change,
-then WAIT for his word. A bug fix in his own tree needs his word exactly as a
-feature, a refactor, a spec or a rule change does. A small diff is not an
-exception, and neither is a defect you are certain about.
+then WAIT for his word. This covers a bug fix in his own tree exactly as it
+covers a feature, a refactor, a spec, a rule change or user-facing text. A small
+diff is not an exception. Neither is a defect you are certain about.
 
 Read, grep, build and run the checks freely. Investigation needs no permission.
 Changing his tree does.
 
-A question is a question. If he asks why something behaves as it does, answer
-it — he asked for an explanation, not a repair.
+**A question is a question.** If he asks why something behaves as it does,
+answer it. He asked for an explanation, not a repair. On 2026-08-23 he reported
+that the Boots of Providence pay no Luck bonus when carried, and he asked for
+nothing else. That session edited four tracked files, rebuilt both binaries and
+the module, and filed a bead. See bead inc-izuu.
 
-The full statement of this rule, with the incident behind it, is in `CLAUDE.md`.
+Two rules stay exactly as they are, and neither one grants autonomy:
+
+1. **Committing and pushing.** When he says save, commit or push, that is a stop
+   instruction. Nothing else starts a commit.
+2. **Publishing to a tree he does not own.** See "Publishing anything
+   outward-facing" below. Its narrow bead-sync exemption is unchanged: a bug on
+   his own tracker still syncs without a pre-read.
 
 ## One bead, one worktree — never work in the shared checkout
 

@@ -336,7 +336,7 @@ Compile-time:
 
 | Symbol | What it answers |
 |---|---|
-| `-DDIVERGE_PROBE` | Counts every random number drawn. Two runs of one seed draw the same numbers in the same order unless something outside the generator changed a decision, so the first differing count is the first place two runs stopped playing the same game. |
+| `-DDIVERGE_PROBE` | Counts every gameplay random number drawn. The separate cosmetic generator (`cosmetic_int32`, `src/Base.cpp:1570`) increments nothing, by design, so a purely decorative draw cannot move the number. Two runs of one seed draw the same numbers in the same order unless something outside the generator changed a decision, so the first differing count is the first place two runs stopped playing the same game. |
 | `-DINCURSION_LAYOUT` | Shifts every heap allocation by a seeded offset, so an address-dependent decision splits on demand instead of by luck. The other half of `DIVERGE_PROBE`; `tools/check_layout.sh` depends on it. |
 | `-DPATH_PROBE` | Pathfinding work per call. Showed one line to be 89% of a burst. |
 | `-DPALETTE_LOG` | Repaint, keypress, palette and window-rect logging. This is the instrumentation that settled the flicker. |

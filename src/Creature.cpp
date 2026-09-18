@@ -2275,7 +2275,23 @@ bool Thing::isRealTo(Creature *watcher) {
     if (watcher->HasMFlag(M_MINDLESS))
         return false;
 
-    if (!(s->Val & IL_IMPROVED)) {
+    /* upstream: base-code defect, the fix is ours. This read used s->Val,
+       which is the illusion's SAVE DC -- every grant site fills it from
+       e.saveDC (src/Encounter.cpp:2549, src/Effects.cpp:1971) and
+       DisbeliefCheck spends it as a DC (src/Creature.cpp:2341). The declared
+       flags live on the effect resource's yval, which is what
+       getIllusionFlags returns. IL_IMPROVED is 2, so the old line tested bit 1
+       of the DC and called half of all illusions improved by arithmetic.
+       Upstream's because it is plain integer arithmetic on two Status fields:
+       no typedef, pointer or platform dependence, so Win32 with the original
+       compiler misbehaves identically. hex/master:src/Creature.cpp:2157
+       carries the same line. Tier: Observed -- tools/check_illusion_flags.sh
+       casts four declared illusions from a frozen elf and reads the two
+       Creature::PickUp messages back; before this fix Phantasmal Force (yval
+       0, DC 15) resisted a Sharp Senses elf and Improved Phantasmal Force
+       (IL_IMPROVED, DC 16) did not, both inverted. Tracked as inc-pu6v.43.
+       Not sent. */
+    if (!(getIllusionFlags() & IL_IMPROVED)) {
         int32 P;
         P = watcher->Perceives(this);
 
@@ -3464,11 +3480,29 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
       if (type == WILL)
         RemoveOnceStati(i,A_SAV_WILL);
     }
+
+  /* upstream: SRD 3.5 rules a natural 20 on a saving throw always succeeds
+     and a natural 1 always fails, regardless of the total. This function
+     compared only Bonus + roll against DC, missing both rules. It is
+     upstream's: a plain integer comparison on a die roll, with no typedef,
+     pointer or platform dependence, so Win32 with the original typedefs
+     and compiler has the identical defect. Computed once here so every
+     site below -- the message colour, the message word, the Exercise
+     gate and the return -- agrees; a fix that only patched the return
+     would print "[failure]" for a roll the engine had just treated as a
+     success. Evidence: Observed -- a seeded session (bd inc-e68f) prints
+     "Will Save: 1d20 (20) +3 base = 23 vs DC 27 [failure]." against
+     guardian runes, a natural 20 the SRD says must succeed. Tracking:
+     bd inc-e68f. Not sent. */
+  bool succ = (roll == 20) ? true
+            : (roll == 1)  ? false
+            : (Bonus + roll >= DC);
+
   if (show) {
     bStr += Format(" = %d vs DC %d %c[%s]%c.",
-        Bonus + roll, DC, 
-        (Bonus + roll >= DC) ? -EMERALD: -PINK,
-        (Bonus + roll >= DC) ? "success" : "failure",
+        Bonus + roll, DC,
+        succ ? -EMERALD: -PINK,
+        succ ? "success" : "failure",
         -GREY);
     Term * term;
     if (isPlayer()) 
@@ -3487,7 +3521,7 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
       */
   }
 
-  if (isCharacter() && (Bonus + roll >= DC) && DC >= 11)
+  if (isCharacter() && succ && DC >= 11)
     {
       int16 die, col, cap;
       col = EXXX_SAVE;
@@ -3516,7 +3550,7 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
     }
       
 
-  return Bonus + roll >= DC;
+  return succ;
 }
 
 bool Creature::HasInnateSpell(rID spID)

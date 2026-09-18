@@ -66,7 +66,7 @@ die... Die? [yn]" prompt inc-loa.3 instrumented:
 * `OPT_ELUDE_DEATH` (idx 119): **3** (SEVEN free deaths), unchanged. Not
   named by inc-loa.4's text, but it is the mechanism actually firing the
   prompt here since `OPT_NODEATH` is 0 -- see `if (thisp->Opt(OPT_NODEATH))
-  ... else if (Opt(OPT_ELUDE_DEATH))` at src/Fight.cpp:7194-7219. Left as
+  ... else if (Opt(OPT_ELUDE_DEATH))` at src/Fight.cpp:7763-7779. Left as
   pinned rather than defaulted (game default is 0/NO) because changing it
   changes whether a soak character can die at all, which is exactly the
   decision the boundary reserves for Brian.

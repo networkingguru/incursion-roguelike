@@ -45,7 +45,13 @@ BASELINE="tools/probe_hooks.baseline"
 # the OOB probe, a compiled-out diagnostic (only under -DINCURSION_OOB_PROBE)
 # with documented A/B-build usage at src/Display.cpp:768-780; kept for the same
 # reason as the heap-layout switch, not scaffolding waiting to be deleted.
-KNOBS="INCURSION_SEED INCURSION_MAX_KEYS INCURSION_MAP_AUDIT INCURSION_ERROR_PROMPT INCURSION_LAYOUT INCURSION_PAD_HELP INCURSION_OOB_PROBE"
+# INCURSION_COSMETIC_BURN and INCURSION_RNG_BURN are the two halves of one
+# documented facility, not scaffolding: they spend draws off one random stream
+# so tools/check_rng_split.sh can prove the other is unmoved, and the check
+# needs them for as long as the two streams exist. Read in SeedCosmeticStream
+# (src/Main.cpp); the reasoning is above cosmetic_int32 in src/Base.cpp. Kept
+# for the same reason as INCURSION_SEED, which is also only ever set by tools.
+KNOBS="INCURSION_SEED INCURSION_MAX_KEYS INCURSION_MAP_AUDIT INCURSION_ERROR_PROMPT INCURSION_LAYOUT INCURSION_PAD_HELP INCURSION_OOB_PROBE INCURSION_COSMETIC_BURN INCURSION_RNG_BURN"
 
 command -v bd > /dev/null || {
     echo "COULD NOT MEASURE: bd is not on PATH, so no bead status can be read."

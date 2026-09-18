@@ -1,0 +1,223 @@
+=== fixture: spook-ally-seed5-opt0822 ===
+
+This file is the audit record for
+  tools/fixtures/chars/spook-ally-seed5-opt0822.sav
+and tools/make_char_fixture.sh writes the whole of it. Do not edit it
+by hand: it would then describe a character the .sav beside it does
+not hold, and that is the one failure tools/check_char_fixture.sh
+exists to catch.
+
+made on          2026-09-17 10:34:25 EDT
+made at commit   613cf2c
+                 the working tree was dirty, so this fixture may hold changes that commit does not
+seed             5
+settings         tools/fixtures/options-2026-08-22.dat
+key script       tools/keys/spook-ally-save.keys
+                 copied to tools/fixtures/chars/spook-ally-seed5-opt0822.keys
+saved in game as Holg.sav
+sha256 .sav      ae39927c92f8e11f29abf11470f470b227120800f3d9156b53f6a2aedc40f9a0
+sha256 module    ce4d12f0be97b889e4423fd3392cb01906f052bb5c2203f53a8a675d0c3e0b2e
+                 mod/Incursion.Mod is what the save's rID manifest
+                 was written against. A fixture that stops loading
+                 is worth comparing against the module that made it.
+
+regenerate with
+  tools/make_char_fixture.sh spook-ally-seed5-opt0822 tools/keys/spook-ally-save.keys 5 tools/fixtures/options-2026-08-22.dat --force
+Regenerating gives a BYTE-DIFFERENT .sav holding the SAME character:
+a save carries clocks and counters no second run repeats. Judge a
+regeneration by this sheet, never by the size of the diff.
+
+The character below is the engine's own dump. It was taken by LOADING
+the .sav beside this file and saving it again under
+INCURSION_CHAR_PROBE=1 (Game::SaveGame, src/Registry.cpp:1105-1111).
+A few of its lines belong to that reading session and not to the
+character: the torch's remaining turns, the Level Statistics table
+and the Messages at the end all move by the turns
+tools/keys/load-char-sheet.keys spends. Everything above Inventory is the
+character. For the resource ids behind the item names, which are what
+a module change moves, run:
+  tools/dump_save.sh tools/fixtures/chars/spook-ally-seed5-opt0822.sav
+
+=== the character, as the engine writes him ===
+
+                        Holg the Anathema, The Ambitious Conqueror (Explore Mode)
+
+Gender Male
+Race   Orc
+Class  Warrior 1
+Faith  Khasrach
+XP     0
+Next @ 1000
+Align  Chaotic Good
+
+
+STR: 19/00 [+4/+4] (base 14, +1 feat, +4 natural)
+DEX: 17/00 [+0/+0] (base 17)
+CON:  7/00 [-1/-2] (base 7)
+INT: 12/00 [+1/+0] (base 14, -2 natural)
+WIS: 17/00 [+3/+3] (base 15, +2 natural)
+CHA: 13/00 [+1/+1] (base 15, -2 natural)
+LUC: 14/00 [+2/+1] (base 14)
+Fortitude   +1(Warrior +2, -1 Con)
+Reflex      +0(Warrior +0)
+Will        +8(Warrior +2, +3 Wis, +3 morale)
+Melee   +toHit +6  (Warrior +1, +4 Str, +1 magic)
+        Damage +6  (base 1d3 / 1d3, +4 Str, +1 magic, +1 weapon)
+        Speed  150%(base 100% +5% Warrior) x 105% magic x 140% weapon
+Size           Human-sized:
+  (base human-sized)
+
+Defense Class  10:
+  (base 10)
+
+Coverage       10:
+  (base 0, +10 armour)
+
+Movement Rate  75%:
+  (base 100%) x 65% armour x 120% skill x 90% encumbrance
+
+Hit Dice Rolls 36:
+   [20 + 1d10 (10) - 1 (CON bonus)] + 25% (Toughness)
+Mana Rolls     19:
+   10 + 1d6 (6) x 1 + 3 (WIS bonus)
+
+Encumbrance    Light:
+   (Light 57.6s, Moderate 173.0s, Heavy 346.0s, Extreme 520.0s, Max Press 700.0s)
+
+Special Abilities:
+  Devouring
+  Infravision (60 ft)
+  Innate Spells:
+    Disintegrate
+  Scent (30 ft)
+  Lore of Arms (20 hits)
+  Spell Fury
+
+Feats:
+  Acrobatic
+  Alertness
+  Armour Proficiency: Light
+  Armour Proficiency: Medium
+  Armour Proficiency: Heavy
+  Improved Strength
+  Shield Proficiency
+  Toughness
+  Weapon Focus
+
+Resistances and Armour:
+  Slashing Damage 12
+  Piercing Damage 8
+  Blunt Damage 10
+
+Proficiencies Simple Weapons, Short Blades, Long Blades, Axes, Archery, Staves, Impact, Thrown, Polearms, Spears, Lances, Daggers, Flexible, Light Weapons, Flails, Light Armour, Medium Armour, Heavy Armour, shotput and arbalest (focused)
+
+Skill Ratings:
+  Athletics        +9  (2 ranks, +4 STR, +3 train)
+  Balance          -7  (0 ranks, -7 armour)
+  Bluff            +5  (2 ranks, +1 CHA, +2 train)
+  Climb            +0  (1 ranks, +4 STR, +2 train, -7 armour)
+  Craft            +5  (0 ranks, +3 WIS, +2 train)
+  Escape Artist    -7  (0 ranks, -7 armour)
+  Find Weakness    +5  (0 ranks, +3 WIS, +2 train)
+  Healing          +5  (0 ranks, +3 WIS, +2 train)
+  Hide in Shadows  -7  (0 ranks, -7 armour)
+  Intimidate       +7  (0 ranks, +4 STR, +3 train)
+  Intuition        +5  (0 ranks, +3 WIS, +2 train)
+  Jump             +0  (0 ranks, +4 STR, +3 feat, -7 armour)
+  Knowledge (Theology) +7  (0 ranks, +3 WIS, +4 kit)
+  Listen           +6  (0 ranks, +3 WIS, +3 feat)
+  Move Silently    -7  (0 ranks, -7 armour)
+  Pick Pockets     -7  (0 ranks, -7 armour)
+  Ride             +2  (0 ranks, +2 train)
+  Seneschal        +2  (0 ranks, +2 train)
+  Spot             +8  (0 ranks, +3 WIS, +2 train, +3 feat)
+  Swimming         -14 (0 ranks, -14 armour)
+  Tumble           -4  (0 ranks, +3 feat, -7 armour)
+
+Spiritual State:
+__You are devoted to Khasrach.
+__Khasrach is noncommital.
+__Khasrach has not aided you.
+____(Favour 0, Lev 0, Pen 0%)
+__You are decisively Good.
+__You are decisively Chaotic.
+
+CharGen Options and Choices:
+__You are in Explore Mode.
+__Beginner's Kit: ON
+__Initial Rolling Method: 4d6 + Perks
+__Allow Rerolling: YES
+__Use the Subraces: YES
+__Disallow Wizard Mode: NO
+__Maximum Hit Points: YES
+__Maximum Mana: YES
+__Default Character Gender: MALE
+__Monsters Maximum Hit Points: NO
+__Roll Attributes First: NO
+__Gain Attributes With Levels: YES
+__Allow Rapid Intuition: WEAPONS
+__Monsters Use Djikstra: YES
+__Out-Of-Depth Monsters: YES
+__Transgression Hints: YES
+__Difficulty Level: BASELINE
+__Power Stats: EXTREME
+__Elude Death: SEVEN
+__Disable Complicity Transgressions: YES
+__Natural Weapon Speed: ORIGINAL
+
+
+Inventory:
+  orcish knife +1
+  orcish longspear
+  orcish kite shield +1
+  peasant garb
+  orcish banded mail of light fortification
+  Holy symbol of Khasrach
+  312 gold pieces
+  5 Oils of Transformation
+  orcish dagger
+  3 Potions of See Invisibility
+  6 Potions of Remove Curse
+  medium backpack
+  uncocked flaming orcish arbalest +1
+  9 food rations
+  11 strips of cured meat
+  32 orcish crossbow bolts
+  4 Antitoxins [+3]
+  4 Potions of Cure Disease [0]
+  2 Potions of Detect Stairs
+  2 Potions of Restoration [4d6]
+  3 Potions of Restore Constitution [6d8]
+  2 Potions of Restore Strength [6d8]
+  Wand of Identify (50 charges)
+  4 orcish shotputs
+
+On The Ground:
+
+Known Spells:
+  Disintegrate                    6  100%   22 20d6
+
+Journal:
+
+12:00 AM, 1st of Suntide: Entry Chamber, 10' (H:36/36 M:19/19 XP:0) 
+  You arrive at 10' in the The Goblin Caves.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:14/21 M:13/13 XP:0) 
+  Starting Perks:
+   Innate Spell: Disintegrate.
+     Bonus Feat: Improved Strength.
+
+Monsters Encountered:
+  Total: 0
+
+Level Statistics:
+
+Lvl | Act | Key | Turns | Secs |  XP | Explored
+----+-----+-----+-------+------+-----+------------------
+1   |    1|   32|      1|     0|    0| 121 / 3848 = 3%
+
+Messages:
+Welcome back to Incursion, Holg!
+"Smite now your slave-chains with the primal fire of my wrath!"
+You find nothing of significance.
+Autosave... 

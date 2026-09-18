@@ -49,7 +49,7 @@ before and after, on the same seeds.
    sets `.Lit`, and `.Bright` within 3 tiles of a torch in line of sight) and
    by spells. Serialized in v1 saves (`SaveV1.cpp:2487`). Read for "is it lit"
    by vision (`.Lit` at `Vision.cpp:44,59,729`) and hiding
-   (`Map::BrightAt`, `inc/Inline.h:642`).
+   (`Map::BrightAt`, `inc/Inline.h:658`).
 2. **Computed light map.** `src/Light.cpp` `SrcLit`/`Steady`/`Frame`,
    rebuilt every turn from SCANNED live sources: `ScanCreatures` (carried
    light), `ScanFields` (`FI_LIGHT`), `ScanTerrain` (`TF_LOCAL_LIGHT` magma

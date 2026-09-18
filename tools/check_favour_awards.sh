@@ -122,11 +122,25 @@ favour() { # <label> <god>
 }
 
 # CL, "<roll> <total> <dc> <success|failure>", from a skill-check line.
+#
+# An unthreatened check on Escape Artist, Climb, Handle Device, Search or
+# Balance "takes 20" instead of rolling (src/Skills.cpp, commit 0d65181): the
+# line reads "... Check: took 20 +7 = 27 vs DC 20 [success]" rather than
+# "... Check: 1d20 (14) +7 = 21 vs DC 20 [success]". Match either form; a
+# "took 20" line has no die roll to report, so its roll value is the 20 it
+# took.
 check_line() { # <label> <skill name as printed>
     screen "$1"
-    CL="$(grep -ho -- "$2 Check: 1d20 ([0-9]*[^=]*= [0-9-]* vs DC [0-9]* \[[a-z]*\]" "$SCREEN" |
-        head -1 |
-        sed -E 's/.*1d20 \(([0-9]+)[^=]*= ([0-9-]+) vs DC ([0-9]+) \[([a-z]+)\].*/\1 \2 \3 \4/')"
+    local line
+    line="$(grep -ho -- "$2 Check: .*= [0-9-]* vs DC [0-9]* \[[a-z]*\]" "$SCREEN" | head -1)"
+    case "$line" in
+    *"took 20"*)
+        CL="$(sed -E 's/.*took 20[^=]*= ([0-9-]+) vs DC ([0-9]+) \[([a-z]+)\].*/20 \1 \2 \3/' <<<"$line")"
+        ;;
+    *)
+        CL="$(sed -E 's/.*1d20 \(([0-9]+)[^=]*= ([0-9-]+) vs DC ([0-9]+) \[([a-z]+)\].*/\1 \2 \3 \4/' <<<"$line")"
+        ;;
+    esac
 }
 
 # What Creature::SkillCheck pays a god that lists the skill.

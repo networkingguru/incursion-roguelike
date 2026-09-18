@@ -1,0 +1,76 @@
+# Every frozen character this repository wants, one per line.
+#
+#   <name>  <key script>  <seed>  <settings file>
+#
+# The four fields are exactly the four arguments tools/make_char_fixture.sh
+# takes, so a row IS the command that builds its fixture. Fields are separated
+# by whitespace; a '#' starts a comment; blank lines are ignored.
+#
+# WHY THIS FILE EXISTS. Before it, a fixture existed only if somebody had run
+# make_char_fixture.sh by hand and remembered to, so the check suite could not
+# be converted off seed-generated characters without a day of typing (bd
+# inc-sls0). tools/sync_char_fixtures.sh reads this file, builds every fixture
+# that is MISSING, and leaves every fixture that is PRESENT alone.
+#
+# THE JOB DOES NOT CHASE THE MODULE, and that is the point. A fixture exists to
+# escape the rID-position defect: an rID is a POSITION, so one resource added
+# to lib/ shifts every id above it and silently rewrites a seed-pinned
+# character (bef32c3 moved the seed-1 Lizardfolk monk from STR 18 with a long
+# sword +3 to STR 14 with a quarterstaff, on byte-identical dice). Regenerating
+# a fixture after a module change therefore produces A DIFFERENT CHARACTER and
+# retires every check built on the old one. Only a save-format change is a
+# reason to regenerate, and the .sav declares its own format in its header.
+#
+# THE NAME ENCODES WHAT MAKES THE CHARACTER DIFFERENT: who he is, the seed, and
+# the settings. Three settings files appear here and they are not
+# interchangeable -- a fixture is only meaningful with the one that made it:
+#   opt0822  tools/fixtures/options-2026-08-22.dat
+#   opt0818  tools/fixtures/options-2026-08-18.dat
+#   gate     tools/gates/Options.Dat
+#
+# To add a character: write a key script that ends by saving (see
+# tools/keys/chargen-default-save.keys), add a row here, and run
+# tools/sync_char_fixtures.sh. Never edit an existing row -- a fixture is
+# frozen, and a check reads its expectations out of the fixture's own sheet.
+
+circle-stack-adjust-seed20260905-gate  tools/keys/circle-stack-adjust-save.keys   20260905    tools/gates/Options.Dat
+dequ-save-message-seed5-opt0822        tools/keys/dequ-save-message-save.keys     5           tools/fixtures/options-2026-08-22.dat
+dragonkin-sheet-seed1-opt0818          tools/keys/dragonkin-sheet-save.keys       1           tools/fixtures/options-2026-08-18.dat
+elf-search-seed1-opt0818               tools/keys/elf-search-save.keys            1           tools/fixtures/options-2026-08-18.dat
+human-paladin-seed4-gate               tools/keys/chargen-paladin-save.keys       4           tools/gates/Options.Dat
+human-paladin-seed4-opt0822            tools/keys/chargen-paladin-save.keys       4           tools/fixtures/options-2026-08-22.dat
+hunger-penalty-seed1-opt0822           tools/keys/hunger-penalty-save.keys        1           tools/fixtures/options-2026-08-22.dat
+monk-ki-strike-seed1-opt0818           tools/keys/monk-ki-strike-save.keys        1           tools/fixtures/options-2026-08-18.dat
+monk-weapon-immunity-seed1-opt0818     tools/keys/monk-weapon-immunity-save.keys  1           tools/fixtures/options-2026-08-18.dat
+orc-barbarian-seed1-gate               tools/keys/chargen-default-save.keys       1           tools/gates/Options.Dat
+orc-barbarian-seed1-opt0818            tools/keys/chargen-default-save.keys       1           tools/fixtures/options-2026-08-18.dat
+orc-barbarian-seed1-opt0822            tools/keys/chargen-default-save.keys       1           tools/fixtures/options-2026-08-22.dat
+orc-barbarian-seed11-gate              tools/keys/chargen-default-save.keys       11          tools/gates/Options.Dat
+orc-barbarian-seed11-opt0822           tools/keys/chargen-default-save.keys       11          tools/fixtures/options-2026-08-22.dat
+orc-barbarian-seed20260905-gate        tools/keys/chargen-default-save.keys       20260905    tools/gates/Options.Dat
+orc-barbarian-seed20260905-opt0822     tools/keys/chargen-default-save.keys       20260905    tools/fixtures/options-2026-08-22.dat
+orc-barbarian-seed3-gate               tools/keys/chargen-default-save.keys       3           tools/gates/Options.Dat
+orc-barbarian-seed3390-gate            tools/keys/chargen-default-save.keys       3390        tools/gates/Options.Dat
+orc-barbarian-seed4-gate               tools/keys/chargen-default-save.keys       4           tools/gates/Options.Dat
+orc-barbarian-seed5-opt0822            tools/keys/chargen-default-save.keys       5           tools/fixtures/options-2026-08-22.dat
+orc-barbarian-seed7-opt0818            tools/keys/chargen-default-save.keys       7           tools/fixtures/options-2026-08-18.dat
+orc-barbarian-seed7-opt0822            tools/keys/chargen-default-save.keys       7           tools/fixtures/options-2026-08-22.dat
+orc-barbarian-seed99-opt0822           tools/keys/chargen-default-save.keys       99          tools/fixtures/options-2026-08-22.dat
+orc-mage-seed1-opt0822                 tools/keys/chargen-mage-save.keys          1           tools/fixtures/options-2026-08-22.dat
+orc-mage-seed4-gate                    tools/keys/chargen-mage-save.keys          4           tools/gates/Options.Dat
+orc-mage-seed4-opt0822                 tools/keys/chargen-mage-save.keys          4           tools/fixtures/options-2026-08-22.dat
+orc-mage-seed5-opt0822                 tools/keys/chargen-mage-save.keys          5           tools/fixtures/options-2026-08-22.dat
+orc-priest-seed4-gate                  tools/keys/chargen-priest-save.keys        4           tools/gates/Options.Dat
+orc-rogue-seed1-gate                   tools/keys/chargen-rogue-save.keys         1           tools/gates/Options.Dat
+orc-rogue-seed1-opt0818                tools/keys/chargen-rogue-save.keys         1           tools/fixtures/options-2026-08-18.dat
+orc-rogue-seed1-opt0822                tools/keys/chargen-rogue-save.keys         1           tools/fixtures/options-2026-08-22.dat
+orc-rogue-seed4-opt0822                tools/keys/chargen-rogue-save.keys         4           tools/fixtures/options-2026-08-22.dat
+orc-rogue-seed6-opt0822                tools/keys/chargen-rogue-save.keys         6           tools/fixtures/options-2026-08-22.dat
+prestige-earthsinger-seed3-opt0818     tools/keys/prestige-earthsinger-save.keys  3           tools/fixtures/options-2026-08-18.dat
+prestige-earthsinger-seed3-opt0822     tools/keys/prestige-earthsinger-save.keys  3           tools/fixtures/options-2026-08-22.dat
+prestige-geomancy-seed1-opt0822        tools/keys/prestige-geomancy-save.keys     1           tools/fixtures/options-2026-08-22.dat
+skill-by-name-seed1-opt0818            tools/keys/skill-by-name-save.keys         1           tools/fixtures/options-2026-08-18.dat
+spook-ally-seed5-opt0822               tools/keys/spook-ally-save.keys            5           tools/fixtures/options-2026-08-22.dat
+spook-mount-seed5-opt0822              tools/keys/spook-mount-save.keys           5           tools/fixtures/options-2026-08-22.dat
+underdark-deepgnome-seed3-opt0818      tools/keys/underdark-deepgnome-save.keys   3           tools/fixtures/options-2026-08-18.dat
+xsummon-priest-seed5-opt0822           tools/keys/xsummon-priest-save.keys        5           tools/fixtures/options-2026-08-22.dat

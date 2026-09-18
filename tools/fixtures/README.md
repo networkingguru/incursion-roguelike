@@ -99,6 +99,40 @@ class and Strength. A save carries clocks and counters that no second run
 repeats. Judge a regeneration by what the sheet says, never by the size of the
 diff.
 
+**When a fixture stops loading: read the drift message, and look at
+`lib/main.irc`.** A fixture that has worked for weeks and suddenly reports
+`Error reading saved game (File is Corrupt).` has almost certainly not been
+corrupted. A resource was added to the MIDDLE of an array instead of the end,
+and the loader refused the save rather than hand back the wrong character. The
+engine says so precisely, on stderr, and the run keeps it:
+
+```
+incursion: module slot 0 Effect array slid at position 354: the save's manifest
+recorded "Endure Cold" there and the loaded module has "Endure Fire" -- a
+resource was inserted in the middle of the array, which the append-only rule
+forbids
+```
+
+`SaveV1_ResolveNames` throws `ECORRUPT` from `v1ManifestDrift`
+(`src/SaveV1.cpp`) after the save itself has read cleanly, so the probe log
+shows `load: after read` and the failure comes later. Grep the run directory for
+`array slid` or `was reordered` before suspecting anything else.
+
+The fix is never to regenerate the fixture. It is to move the new declaration to
+the END of `lib/main.irc`, which is the end of parse order and where that file's
+own APPEND-ONLY note says new resources go. `4ba035b` is the worked example: it
+declared a resource in the middle of `m_items.irh`, pushed 862 Effects down one
+place, and a save written before it read its owner's Robe of Blending back as a
+Hat of Disguise.
+
+**The end of a lib file is NOT the end of the array.** `lib/main.irc`
+`#include`s the lib files in a fixed order and `m_items.irh` sits in the middle
+of it, so a resource appended to the bottom of `m_items.irh` still lands around
+Effect position 354 of roughly 860. Measured 2026-09-17: appending there made
+every character fixture in this directory unloadable, while the same Effect
+appended to the end of `lib/main.irc` left all 41 of them loading and their
+characters unchanged.
+
 A character fixture is frozen too. If a check needs a different character, add a
 new fixture with its own key script and its own name; never edit an existing
 one, and never hand-edit a `.sheet.txt`, which would leave it describing a

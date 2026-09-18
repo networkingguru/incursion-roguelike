@@ -78,6 +78,13 @@
 # outside the repository), otherwise logs/nightly-verify-base.txt. It is a
 # record of a run, not source: never commit it.
 #
+# WHERE A CHECK'S OUTPUT GOES. nightly-verify/ beside that base, one file per
+# check, written whether the check passed or failed, and named in the terminal
+# whenever a check comes back non-zero. Until 2026-09-16 every check's stdout
+# and stderr went to /dev/null, so a BROKEN verdict named the check and nothing
+# else. run_check carries the whole reason and inc-9diw is the flake that paid
+# for it.
+#
 # A FULL PASS IS REMEMBERED, FOR THE FILES IT MEASURED (inc-689z). Each full
 # --compare that passes writes nightly-verify-pass.txt beside the base. Its key
 # is the hash of the files on disk (tracked, and untracked but not ignored), the
@@ -104,6 +111,13 @@ cd "$ROOT" || exit 2
 
 STATE="${NIGHTLY_VERIFY_STATE:-$ROOT/logs/nightly-verify-base.txt}"
 PASS_RECORD="$(dirname "$STATE")/nightly-verify-pass.txt"
+# One directory of check output, beside the base and the pass record for the
+# same reason they sit together: all three are records of a run and none is
+# source. Left alone that is $ROOT/logs/nightly-verify, and .gitignore already
+# covers logs/ whole, so no run of this gate can dirty `git status`. The
+# selftest points $NIGHTLY_VERIFY_STATE at a directory it deletes on the way
+# out, and the logs of its made-up checks go with it.
+LOG_DIR="$(dirname "$STATE")/nightly-verify"
 PASS_MAX_AGE=86400
 BASE_REF="${NIGHTLY_BASE_REF:-master}"
 # The selftest points this at a directory of made-up checks. Nothing else does.
@@ -179,10 +193,74 @@ discover_checks() {
     fi
 }
 
-run_check() { # run_check "<command line>" -> echoes the exit code
-    local cmd="$1"
-    ( eval "$cmd" ) > /dev/null 2>&1
-    echo $?
+# check_log_path "<check id>" -> the one file that check's output goes to.
+#
+# A check id is a command line, not a name: it holds '/', spaces and '--flags',
+# as in "tools/check_doc_citations.sh --base master". Every character outside
+# [A-Za-z0-9._-] becomes '_', so no '/' survives to make a directory of its own
+# and nothing in an id can steer the write anywhere but $LOG_DIR. A name that
+# would start with a dot is prefixed instead of trimmed, which stops '..' from
+# meaning the parent directory and stops a log from hiding from `ls`.
+check_log_path() {
+    local name="${1//[^A-Za-z0-9._-]/_}"
+    case "$name" in ''|.*) name="check_$name" ;; esac
+    printf '%s/%s.log' "$LOG_DIR" "$name"
+}
+
+# run_check "<check id>" "<command line>" -> echoes the exit code, and leaves
+# everything the check said in check_log_path "<check id>".
+#
+# WHY THE OUTPUT IS KEPT. It used to go to /dev/null. On 2026-09-16
+# tools/check_doc_citations.sh failed inside the gate, passed on three re-runs
+# by hand, and left not one word behind to read: the verdict line named the
+# check, the exit code and nothing else, and the only recourse anybody had was
+# to run the check again and watch it pass (inc-9diw). A check that takes 77
+# seconds and fails once in some unknown number of runs cannot be studied that
+# way. The run that failed has to keep its own words, because it is the only
+# run that has anything to say.
+#
+# A PASSING CHECK KEEPS ITS LOG TOO. It is one code path instead of a
+# delete-when-green branch that could only ever delete the wrong file, the
+# files are small, and $LOG_DIR is ignored by git. It is also the half of
+# inc-9diw that is easy to forget: a flake is diagnosed by reading the run that
+# failed NEXT TO the run that passed, and the gate records both.
+#
+# THE LOG IS A DIAGNOSTIC AND NEVER A VERDICT. A redirection that cannot open
+# its file takes the command's exit status with it, so an unwritable logs/
+# would report a green check as a failure. This proves the file first and falls
+# back to /dev/null -- the behaviour of every run before this one -- rather than
+# let the gate's answer depend on a directory.
+run_check() {
+    local log rc
+    log="$(check_log_path "$1")"
+    mkdir -p "$LOG_DIR" 2> /dev/null
+    ( : > "$log" ) 2> /dev/null || log="/dev/null"
+    # $LOG_DIR holds the last run of every check, and a mode that drops a tier
+    # leaves the previous run's file sitting there untouched. The header is how
+    # a reader tells this morning's log from last week's.
+    printf '=== check:   %s\n=== command: %s\n=== started: %s\n\n' \
+        "$1" "$2" "$(date '+%Y-%m-%d %H:%M:%S %Z')" >> "$log" 2> /dev/null
+    ( eval "$2" ) >> "$log" 2>&1
+    rc=$?
+    printf '\n=== exit %s\n' "$rc" >> "$log" 2> /dev/null
+    echo "$rc"
+}
+
+# show_log "<check id>" <lines>: say where that check's output went, and show
+# the end of it when <lines> is more than zero.
+#
+# Only the verdicts that STOP THE MERGE get the tail. This gate carries a
+# backlog of checks that were already red before the run -- that is the whole
+# reason it ratchets -- and thirty tails would bury the one verdict a reader
+# has to act on. A pre-existing red still gets its path, because the file is
+# there and somebody draining the backlog wants it.
+show_log() {
+    local log
+    log="$(check_log_path "$1")"
+    [ -s "$log" ] || return 0
+    printf '            output: %s\n' "$log"
+    [ "${2:-0}" -gt 0 ] || return 0
+    tail -n "$2" "$log" | sed 's/^/            | /'
 }
 
 # ------------------------------------------------------------- pass record ---
@@ -288,9 +366,12 @@ selftest() {
     # Expanded now, not at exit: $dir is local and gone by the time EXIT fires.
     trap "rm -rf '$dir'" EXIT
 
+    # Each made-up check says one recognisable sentence before it exits, so the
+    # selftest can prove the gate KEPT the words of a check that failed and not
+    # merely that it wrote a file. That is the half inc-9diw was missing.
     _mk() { # _mk <name> <exit-code-when-BEFORE-is-set> <exit-code-otherwise>
-        printf '#!/bin/sh\n# gate: cheap\n[ -n "${BEFORE:-}" ] && exit %s\nexit %s\n' \
-            "$2" "$3" > "$dir/check_$1.sh"
+        printf '#!/bin/sh\n# gate: cheap\necho "check_%s said this and the gate must keep it"\n[ -n "${BEFORE:-}" ] && exit %s\nexit %s\n' \
+            "$1" "$2" "$3" > "$dir/check_$1.sh"
         chmod +x "$dir/check_$1.sh"
     }
     #    name          base  now
@@ -336,6 +417,50 @@ selftest() {
           '^FIXED +tools/check_unmeasured_fixed\.sh'
     _want 'the run as a whole refuses the merge' \
           '=== FAIL'
+
+    # ---- the output a BROKEN verdict leaves behind (inc-9diw) --------------
+    # The verdict must name the file, and the file must hold what the check
+    # said. Before 2026-09-16 it held nothing, because run_check sent every
+    # check's stdout and stderr to /dev/null.
+    _want 'a BROKEN verdict names the file holding the output' \
+          '^ +output: .*tools_check_broke\.sh\.log$'
+    _want 'a pre-existing red names its file too' \
+          '^ +output: .*tools_check_red\.sh\.log$'
+
+    local broke_log="$dir/nightly-verify/tools_check_broke.sh.log"
+    if grep -q 'check_broke said this and the gate must keep it' "$broke_log" 2> /dev/null; then
+        printf '  ok    the log of a failing check holds what the check said\n'
+    else
+        printf '  FAIL  %s does not hold the failing check.s own words\n' "$broke_log"
+        fails=$((fails + 1))
+    fi
+    if grep -q 'check_green said this and the gate must keep it' \
+        "$dir/nightly-verify/tools_check_green.sh.log" 2> /dev/null; then
+        printf '  ok    a passing check keeps its log, to compare against a failing one\n'
+    else
+        printf '  FAIL  a passing check left no log to compare a flake against\n'
+        fails=$((fails + 1))
+    fi
+
+    # ---- the log path cannot leave its directory --------------------------
+    # A check id is a command line: "tools/check_doc_citations.sh --base
+    # master" carries a '/', two spaces and a '--flag'. A name built from one
+    # must not make a directory, climb out of $LOG_DIR, or hide from `ls`.
+    _path() { # _path <check id> <the one file name it may produce>
+        local got
+        got="$(check_log_path "$1")"
+        if [ "$got" = "$LOG_DIR/$2" ]; then
+            printf '  ok    a check id stays one file in one directory: %s\n' "$2"
+        else
+            printf '  FAIL  check_log_path "%s"\n      wanted %s\n      got    %s\n' \
+                "$1" "$LOG_DIR/$2" "$got"
+            fails=$((fails + 1))
+        fi
+    }
+    _path 'tools/check_doc_citations.sh --base master' \
+          'tools_check_doc_citations.sh_--base_master.log'
+    _path '../../etc/passwd' 'check_.._.._etc_passwd.log'
+    _path '..'               'check_...log'
 
     if [ "$rc" != 1 ]; then
         printf '  FAIL  the run exits 1 when it refuses a merge (got %s)\n' "$rc"
@@ -390,14 +515,81 @@ if [ "${#CHECKS[@]}" = 0 ]; then
     exit 2
 fi
 
+# The build set, named once and read by --record and --compare alike, so the two
+# can never drift into building different things (inc-o5bi). Both backends,
+# because they are separate main()s; posix first, because the libtcod build then
+# leaves mod/Incursion.Mod as the module every live check reads.
+BUILDS=( "BACKEND=posix ./build_macos.sh" "./build_macos.sh" )
+
 # ------------------------------------------------------------------ record ---
+# THE BASE IS BUILT BEFORE IT IS MEASURED (inc-o5bi). Until 2026-09-17 this
+# branch measured the live tier against whatever ./incursion-headless happened
+# to be lying in the tree, while --compare built first. The ratchet then
+# compared two measurements taken against DIFFERENT binaries, so a live check
+# could report BROKEN or FIXED with no source change behind it at all.
+#
+# Observed, 2026-09-12, landing inc-8wsm -- two integers in an options table and
+# no code whatever. --record in the shared checkout, whose ./incursion-headless
+# predated the source, wrote "base 1 tools/check_pray_aid_int32.sh". --compare
+# in a freshly built worktree of that same source answered "FIXED
+# tools/check_pray_aid_int32.sh (was exit 1)". A third run held the source still
+# and changed only the binary, and it reproduced both answers. The source was
+# never the variable.
+#
+# FIXED is the harmless direction, and it is the one that showed. The harmful
+# direction is its mirror and it is silent: a stale binary fails a check that
+# the current source passes, the base writes that check down as failing, the run
+# then breaks that area for real, and the table above reads base-fail plus
+# now-fail as "pre-existing, passes". The merge proceeds. This header already
+# says a tree that does not compile is never safe to merge; the same reasoning
+# applies to the base, because a base measured on a tree that is not the tree
+# under test is not a base.
+#
+# THE SAME BUILDS AS --compare, AND NOTHING ELSE. The Linux cross-build, the
+# layout sweep and the soak stay out of this branch: the state file records none
+# of them, so running them here would cost minutes and tell the ratchet nothing.
+# They are verdicts on the tree, and --record passes no verdict.
+#
+# ONLY WHEN A LIVE CHECK IS THERE TO MEASURE. The builds exist to give the live
+# tier a binary from this source, and a check set holding no live tier needs no
+# binary. That is what keeps --selftest, whose made-up checks are every one of
+# them cheap, at a second rather than a rebuild. --checks-only and --docs-only
+# never reach this branch at all: both set MODE=compare, so the SKIP_BUILDS they
+# set is read further down, and neither one builds anything here or there.
+#
+# A BUILD THAT FAILS WRITES NO BASE AND DELETES THE OLD ONE. A base measured on
+# a tree that does not compile is worse than no base, and the previous run's
+# base left sitting in place is the stale record this whole fix is about. Exit 2
+# is "could not measure". A --compare that finds no base demands that every
+# check pass outright, which is the strict direction to fail in.
 if [ "$MODE" = "record" ]; then
+    record_live=0
+    for entry in "${CHECKS[@]}"; do
+        [ "${entry##*	}" = live ] && record_live=1
+    done
+    if [ "$record_live" = 1 ]; then
+        echo "--- builds (a base is only a base when this source built the binary) ---"
+        for build in "${BUILDS[@]}"; do
+            printf '%s ... ' "$build"
+            if ( eval "$build" ) > /dev/null 2>&1; then
+                echo "ok"
+            else
+                echo "FAILED"
+                echo "    re-run it to see why: $build"
+                rm -f "$STATE"
+                echo "NO base recorded, and $STATE is gone:"
+                echo "a base from a tree that does not compile is worse than none."
+                exit 2
+            fi
+        done
+        echo
+    fi
     mkdir -p "$(dirname "$STATE")" || exit 2
     : > "$STATE"
     for entry in "${CHECKS[@]}"; do
         id="${entry%%	*}"
         rest="${entry#*	}"
-        rc="$(run_check "${rest%%	*}")"
+        rc="$(run_check "$id" "${rest%%	*}")"
         printf '%s\t%s\n' "$rc" "$id" >> "$STATE"
         printf 'base %-3s %s\n' "$rc" "$id"
     done
@@ -418,7 +610,7 @@ if [ "$SKIP_BUILDS" = 1 ]; then
     fi
 else
     echo "--- builds, macOS then Linux (absolute: a tree that does not compile never merges) ---"
-    for build in "BACKEND=posix ./build_macos.sh" "./build_macos.sh"; do
+    for build in "${BUILDS[@]}"; do
         printf '%s ... ' "$build"
         if ( eval "$build" ) > /dev/null 2>&1; then
             echo "ok"
@@ -464,7 +656,7 @@ for entry in "${CHECKS[@]}"; do
     rest="${entry#*	}"
     tier="${rest#*	}"
     started=$SECONDS
-    now="$(run_check "${rest%%	*}")"
+    now="$(run_check "$id" "${rest%%	*}")"
     elapsed=$((SECONDS - started))
     was=""
     if [ -r "$STATE" ]; then
@@ -483,15 +675,19 @@ for entry in "${CHECKS[@]}"; do
     elif [ "$now" = "2" ]; then
         if [ "$was" = "0" ]; then
             printf 'UNMEASURED  %s (exit 2; it could be measured before this run)\n' "$id"
+            show_log "$id" 15
             FAILED=1
         else
             printf 'unmeasured  %s (exit 2 before and after -- not this run)\n' "$id"
+            show_log "$id" 0
         fi
     elif [ "$was" != "0" ] && [ "$was" != "2" ]; then
         printf 'pre-existing %s (exit %s now, exit %s before -- not this run)\n' "$id" "$now" "$was"
+        show_log "$id" 0
     else
         printf 'BROKEN      %s (exit %s; it %s before this run)\n' "$id" "$now" \
             "$([ "$was" = 2 ] && echo "could not be measured" || echo "passed")"
+        show_log "$id" 15
         FAILED=1
     fi
     # The cheap tier's whole promise is that it costs seconds, and a check that

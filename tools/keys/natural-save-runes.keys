@@ -1,0 +1,60 @@
+# Edge-case oracle-fodder for tools/check_natural_save.sh (bd inc-e68f).
+#
+# Tanglefoot (tools/keys/natural-save-tangle.keys) proves the invariant holds
+# on ordinary DC 15 saves, but a modest DC and a modest save bonus can never
+# by itself DISTINGUISH the fix from the defect: Bonus + 20 clears DC 15
+# either way, so a natural 20 there "succeeds" whether or not the special
+# case exists. Proving the check can actually go red needs a DC far enough
+# above the subject's bonus that a bare Bonus + 20 comparison would read
+# FAILURE on a natural 20 -- exactly the case the SRD forbids.
+#
+# "guardian runes" (lib/dungeon.irh) rolls Fortitude or Will, DC 27, on
+# every move within it, chosen at random per step -- comfortably out of
+# reach of a level 1 paladin's +3 base. Pinned to seed 4 because the result
+# is otherwise a coin flip: this exact seed, key sequence and settings
+# combination is known (and re-verified when this file was written) to roll
+# a natural 20 within six exposures, printing "Will Save: 1d20 (20) +3
+# base = 23 vs DC 27 [failure]." on the unfixed engine and "...[success]."
+# on the fixed one -- the smoking gun tools/check_natural_save.sh
+# --prove-red reads. Six exposures cost the subject about half his hit
+# points (31 -> 15 measured); this file does not run more than that.
+#
+# Freeze Monsters is on so nothing else moves while this runs.
+
+@include chargen-paladin.keys
+@until "Afoot" ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+w
+@choose "Change terrain type"
+RIGHT
+ENTER
+L
+w
+@choose "Change terrain type"
+RIGHT RIGHT
+ENTER
+L
+@dump:terrain-made
+
+RIGHT
+@while "Confirm" y
+@dump:entry
+
+RIGHT
+LEFT
+RIGHT
+LEFT
+RIGHT
+LEFT
+
+v
+@dump:messages
+@while "Messages" ESC
+@quit
