@@ -1,0 +1,95 @@
+# Bulk oracle-fodder for tools/check_natural_save.sh (bd inc-e68f).
+#
+# Paints a 5-square strip of tanglefoot strands east of the entrance, the
+# same recipe tools/keys/tanglefoot-mount.keys uses (its header explains why
+# the roll happens on LEAVING a strands square, not entering one:
+# src/Event.cpp takes tx,ty from the actor before it moves). Walking back
+# and forth across the strip re-rolls a real "Reflex Save: 1d20 (n) ... vs
+# DC 15 [success|failure]." line on nearly every step, with no damage and no
+# lasting status once the subject clears the strip -- safe to repeat many
+# times without risking the character.
+#
+# Freeze Monsters is on so nothing else moves while this runs.
+#
+# Deliberately seed-agnostic: chargen-paladin.keys' opening room has a clear
+# run of floor at least 5 squares east on every seed tried while building
+# this fixture (1-10), so tools/check_natural_save.sh replays this same
+# script across many seeds to harvest many independent d20 saves cheaply.
+# One roll in twenty is a natural 20 and one in twenty a natural 1; the
+# volume here is what makes seeing both a near-certainty across the seeds
+# the check runs.
+#
+# The harvest is the message log ('v'), not a screen dump of the numbers
+# window: WIN_NUMBERS only ever shows the LAST roll, but OPT_STORE_ROLLS
+# (on in both tools/fixtures/options-2026-08-22.dat and
+# tools/gates/Options.Dat) appends every roll to the scrolling message
+# history, so paging from the very top (PGUP*100, clamped at 0) down through
+# a few PGDN steps dumps the whole session's rolls at once.
+
+@include chargen-paladin.keys
+@until "Afoot" ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+w
+@choose "Change terrain type"
+RIGHT
+ENTER
+TAB
+@choose "tanglefoot strands"
+w
+@choose "Change terrain type"
+RIGHT RIGHT
+ENTER
+TAB
+@choose "tanglefoot strands"
+w
+@choose "Change terrain type"
+RIGHT RIGHT RIGHT
+ENTER
+TAB
+@choose "tanglefoot strands"
+w
+@choose "Change terrain type"
+RIGHT RIGHT RIGHT RIGHT
+ENTER
+TAB
+@choose "tanglefoot strands"
+w
+@choose "Change terrain type"
+RIGHT RIGHT RIGHT RIGHT RIGHT
+ENTER
+TAB
+@choose "tanglefoot strands"
+@dump:terrain-made
+
+RIGHT
+@while "Confirm" y
+@dump:entry
+
+RIGHT*20
+@while "Confirm" y
+LEFT*20
+@while "Confirm" y
+RIGHT*20
+@while "Confirm" y
+LEFT*20
+@while "Confirm" y
+
+v
+@dump:messages-bottom
+PGUP*100
+@dump:messages-top
+PGDN*1
+@dump:messages-mid1
+PGDN*1
+@dump:messages-mid2
+PGDN*1
+@dump:messages-mid3
+@while "Messages" ESC
+@quit
