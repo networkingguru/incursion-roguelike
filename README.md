@@ -988,6 +988,8 @@ the unfixed tree before it is trusted.
 | `check_xsummon_live.sh` | Does a divine summoning spell (Holy Summoning, Summon Nature's Ally) cap its concurrent summons the way the wizard line does? |
 | `check_yuse_activate.sh` | Does activating a blast item from the `y` menu ask where to aim it, rather than resolving the beam on the activator? |
 | `check_illusion_flags.sh` | Does an illusion's declared IL_IMPROVED flag decide who pierces it, rather than the parity of its save DC? |
+| `check_natural_save.sh` | Does a natural 20 on a saving throw always succeed, and a natural 1 always fail, regardless of Bonus + roll vs DC? Reads the printed `Save: 1d20 (roll) ... [success\|failure]` line from many seeded sessions -- DC 15 tanglefoot strands for volume, DC 27 guardian runes (a level 1 paladin's own bonus cannot reach it) for the edge case a modest DC can never supply. |
+| `check_take_twenty.sh` | When nothing threatens him, does a character take 20 on Escape Artist, Climb, Handle Device, Search or Balance -- reading the maximum result, but still adding his modifiers and still measured against the DC -- rather than an accidental natural 20 passing the check however far short of the DC the total lands? Reads the printed `Escape Artist Check: took 20 ... [success\|failure]` line from a frozen paladin in full plate, whose total cannot reach the DC. |
 
 `tools/README.md` §7 groups these into five tiers by what each needs — a clean
 clone, a compiler, a POSIX build, a built artefact, or a recorded baseline — and

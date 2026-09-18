@@ -1557,6 +1557,31 @@ bool Creature::SkillCheck(int16 sk, int16 DC, bool show, int16 mod1, const char*
 			roll = max(roll, min(15, 7 + Mod(A_INT)));
 	}
 
+	/* upstream: SRD 3.5's "taking 20" lets a character forego the die on
+	   Escape Artist, Climb, Open Lock (Handle Device here), Search or
+	   Balance and simply read the maximum result, PROVIDED nothing
+	   threatens or rushes him -- it is never an automatic success
+	   regardless of the DC, and it is never keyed on an ACCIDENTAL natural
+	   20. This function did both: `roll == 20 && !isThreatened() && ...`
+	   treated a lucky die as a free pass no matter how far short of the DC
+	   the total actually landed. It is upstream's: plain integer and
+	   control-flow logic, no typedef, pointer or platform dependence, so
+	   Win32 with the original typedefs and compiler misbehaves the same
+	   way. Evidence tier: Reasoned -- the SRD text and the `!isThreatened`
+	   guard (take-20's own "no threats or distractions" clause) together
+	   identify the mangled rule; no upstream source diff was read. Fixed
+	   by substituting the roll itself, per the owner's ruling (bd
+	   inc-e68f): an unthreatened creature simply reads 20 here, with no
+	   deliberate-action or time cost, and the plain sum below decides
+	   success against the DC like any other check. Tracking: bd inc-e68f.
+	   Not sent. */
+	bool took20 = false;
+	if (!isThreatened() && (sk == SK_ESCAPE_ART || sk == SK_CLIMB ||
+		sk == SK_HANDLE_DEV || sk == SK_SEARCH || sk == SK_BALANCE))
+	{
+		roll = 20;
+		took20 = true;
+	}
 
 	if (sk == SK_LOCKPICKING || sk == SK_HEALING ||
 		sk == SK_HANDLE_DEV || sk == SK_SEARCHING ||
@@ -1596,10 +1621,7 @@ bool Creature::SkillCheck(int16 sk, int16 DC, bool show, int16 mod1, const char*
 		IPrint("<Obj> aids you with <9><Str><7>.", msa,
 			SkillInfo[sk].name);
 
-	bool succ = (sr + roll + mod1 + mod2 + armPen) >= DC ||
-		(roll == 20 && !isThreatened() && (sk == SK_ESCAPE_ART ||
-			sk == SK_CLIMB || sk == SK_HANDLE_DEV || sk == SK_SEARCH ||
-			sk == SK_BALANCE));
+	bool succ = (sr + roll + mod1 + mod2 + armPen) >= DC;
 
 
 	if (show && isPlayer()) {
@@ -1629,13 +1651,19 @@ bool Creature::SkillCheck(int16 sk, int16 DC, bool show, int16 mod1, const char*
 		else
 			sRolls = "";
 
-		sStr = Format((DC == 0) ? "%c%s Check%s%s%s:%c 1d20 (%d%s) %+d%s%s = %d."
-			: "%c%s Check%s%s%s:%c 1d20 (%d%s) %+d%s%s = %d vs DC %d %c[%s]%c.",
+		String rollStr;
+		if (took20)
+			rollStr = "took 20";
+		else
+			rollStr = Format("1d20 (%d%s)", roll, (const char*)sRolls);
+
+		sStr = Format((DC == 0) ? "%c%s Check%s%s%s:%c %s %+d%s%s = %d."
+			: "%c%s Check%s%s%s:%c %s %+d%s%s = %d vs DC %d %c[%s]%c.",
 			-MAGENTA, SkillInfo[sk].name,
 			msa == this ? "" : " [",
 			msa == this ? "" : (const char*)Lower(msa->Name(0)),
 			msa == this ? "" : "]",
-			-GREY, roll, (const char*)sRolls,
+			-GREY, (const char*)rollStr,
 			sr, (const char*)modStr,
 			armPen ? (const char*)Format(" %+d armour", armPen) : "",
 			sr + roll + mod1 + mod2 + armPen, DC, succ ? -EMERALD : -PINK,
