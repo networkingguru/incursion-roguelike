@@ -905,6 +905,7 @@ the unfixed tree before it is trusted.
 | `check_mundane_autopickup.sh` | Does autopickup keep an EF_MUNDANE item -- holy water, tanglefoot bags, the alchemy line -- out of the pack, while still stowing the same drop's unidentified potion? |
 | `check_bloodspear_regen_duration.sh` | Does a Bloodspear critical grant the orc wielder regeneration for amt*20 turns rather than amt*5? |
 | `check_periodic_interval.sh` | Does a PERIODIC status effect fire every Val rounds, not Val-1? Two synthetic gods grant Val 3 and Val 5 timers; fixed, both fire on an even 180- and 300-turn beat across at least three firings apiece, where an unfixed build reads 120 and 240. |
+| `check_heal_maladies.sh` | Does the priest spell Heal remove the maladies its own description promises? It promised poison, disease and stunning and removed nothing at all. A test god afflicts the player with nine maladies at once; he then learns Heal in wizard mode and casts it on himself. A second measurement has him paralyse a kobold with Hold Person and cure that, because a paralysed character cannot cast on himself. The unfixed declaration leaves all ten standing. |
 | `check_horn_goodness_radius.sh` | Does the Horn of Goodness' Magic Circle vs. Evil field have its promised 60-foot (six-square) radius? |
 | `check_horn_sewers_cr.sh` | Does the Horn of the Sewers' description state its summoned rodents have CR twice its magical plus? |
 | `check_javelin_lightning_savedc.sh` | Does the Javelin of Lightning's Reflex save use the DC its description promises? |
