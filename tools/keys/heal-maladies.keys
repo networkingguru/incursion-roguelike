@@ -3,44 +3,59 @@
 # tools/check_heal_maladies.sh. bd inc-xr8i.
 #
 # THE NINE: BLIND, CONFUSED, DISEASED, STUNNED, POISONED, HALLU, BLEEDING,
-# CHOKING, WOUNDED. PARALYSIS is deliberately out of scope (a separate,
-# later design decision) and is never afflicted or checked here.
+# CHOKING, WOUNDED. The second half of this file measures those nine on the
+# PLAYER, afflicted directly by the test god below. PARALYSIS is a separate,
+# later design decision (bd inc-pfmv) and cannot be measured that way -- a
+# paralysed character cannot cast Heal on himself. It is measured instead,
+# on a different creature, in the FIRST half of this file, below.
+#
+# ORDER MATTERS: the paralysis half runs BEFORE the nine-malady half, on
+# purpose. The nine-malady god blinds and stuns the player among other
+# things, and a blind player cannot perceive or target a kobold at all --
+# Q_TAR skips anything unperceived (tools/keys/breath-dice-dragon.keys has
+# the same note about a dragon's shadow). Proving this file red (the mutation
+# that deletes every "and EA_HEALING" malady clause, including PARALYSIS'S)
+# leaves the player blind, stunned and confused for the rest of the session,
+# because that same mutation breaks the nine-malady cure too. Running the
+# paralysis half first means it never has to survive that.
 #
 # THE ROUTE, in two halves.
 #
-#   Half one, AFFLICTION: tools/fixtures/heal-maladies-god.irh, spliced onto
-#   a scratch copy of lib/main.irc by the check script (never onto the
-#   tracked lib/), declares one test god. "Become Divine Champion" (wizard
-#   mode) joins it and grants 30000 favour outright (src/Debug.cpp), which
-#   fires its EV_BLESSING once; the handler calls GainPermStati directly for
-#   all nine maladies, the same call lib/religion.irh:5958 (Zurvash) makes.
-#   No ThrowEff, no scripted spell throw: GainPermStati is not the spell, it
-#   is a shortcut to the AFFLICTION only, so that the CURE below is still the
-#   real thing, cast by the player.
+#   Half one, PARALYSIS: summons a kobold, casts Hold Person at it, confirms
+#   the hold, casts the same innate Heal at it instead of at the player, and
+#   confirms the cure. See the header above that half for the file:line
+#   evidence.
 #
-#   Half two, THE CURE: wizard "Learn Any Spell" teaches "Heal;spell"
-#   (lib/pspells.irh's Priest / Scroll Spell) as an innate ability, then
-#   [u] Innate Heal, ENTER casts it on the default target -- himself. An
-#   innate cast always succeeds (Character::SpellRating returns 100 for
-#   SP_INNATE, src/Magic.cpp:3188-3191) and costs no mana. This is the same
-#   route tools/keys/heal-maladies.keys used for poison alone before this
-#   widening, and reused unchanged.
+#   Half two, THE NINE: tools/fixtures/heal-maladies-god.irh, spliced onto a
+#   scratch copy of lib/main.irc by the check script (never onto the tracked
+#   lib/), declares one test god. "Become Divine Champion" (wizard mode)
+#   joins it and grants 30000 favour outright (src/Debug.cpp), which fires
+#   its EV_BLESSING once; the handler calls GainPermStati directly for all
+#   nine maladies, the same call lib/religion.irh:5958 (Zurvash) makes. No
+#   ThrowEff, no scripted spell throw: GainPermStati is not the spell, it is
+#   a shortcut to the AFFLICTION only, so that the CURE below is still the
+#   real thing, cast by the player. Then wizard "Learn Any Spell" teaches
+#   "Heal;spell" (lib/pspells.irh's Priest / Scroll Spell) as an innate
+#   ability, and [u] Innate Heal, ENTER casts it on the default target --
+#   himself. An innate cast always succeeds (Character::SpellRating returns
+#   100 for SP_INNATE, src/Magic.cpp:3188-3191) and costs no mana.
 #
-# THE ORACLE: wizard "Examine Player Data" (Player::Dump, src/Debug.cpp)
-# prints an unfiltered "Stati (n):" list naming every active status by its
-# full constant name via STATI_CONSTNAMES (src/Tables.cpp) -- unlike the
+# THE ORACLE, both halves: wizard debug Dump() (src/Debug.cpp) prints an
+# unfiltered "Stati (n):" list naming every active status by its full
+# constant name via STATI_CONSTNAMES (src/Tables.cpp) -- unlike the
 # right-hand status panel, which shows at most one malady at a time behind an
 # if/else-if priority chain (src/Term.cpp:426-444) and never mentions HALLU,
-# BLEEDING, CHOKING or WOUNDED at all. The dump scrolls; ten DOWN presses
-# were measured (tools/fixtures/heal-maladies-god.irh's own header run) to
-# bring the whole nine-entry block on screen from a fresh, top-scrolled
-# entry, both before and after the cure, because entering the screen calls
-# ClearScroll(true) each time and resets the scroll position. Do NOT scroll
-# further: past the end of Player::Dump's content, this debug view's
-# scroller segfaults (observed 2026-09-17, unrelated to any of the nine
-# maladies -- reproduced by continuing to press DOWN after the last line of
-# output already showed. Not filed: src/ is off limits for this bead and the
-# view is a wizard/debug tool, not player-facing).
+# BLEEDING, CHOKING or WOUNDED at all, and cannot show more than one creature
+# at once regardless. The dump scrolls; ten DOWN presses were measured
+# (tools/fixtures/heal-maladies-god.irh's own header run) to bring the whole
+# nine-entry block on screen from a fresh, top-scrolled entry, because
+# entering the screen calls ClearScroll(true) each time and resets the
+# scroll position. Do NOT scroll further: past the end of a Dump()'s
+# content, this debug view's scroller segfaults (observed 2026-09-17,
+# unrelated to any of the maladies here -- reproduced by continuing to press
+# DOWN after the last line of output already showed. Not filed: src/ is off
+# limits for this bead and the view is a wizard/debug tool, not
+# player-facing).
 #
 # WHY NOT THE STATUS PANEL: it is a single priority-ordered line (Paralyzed >
 # Poisoned > Diseased > Stunned > Sickly > Confused > Blind), so afflicting
@@ -60,6 +75,87 @@
 
 w
 y                       # Enter wizard mode? [yn] -- only asked once
+
+# FIRST MEASUREMENT: PARALYSIS. A paralysed character cannot act, so he
+# cannot cast Heal on himself -- the patient and the caster must be two
+# different creatures.
+#
+# THE MONSTER: a kobold, summoned nearby. It is MA_PERSON (M_HUMANOID, Size
+# SMALL, not fey/undead/mindless -- src/Values.cpp:2512-2525), which Hold
+# Person requires (tval: MA_PERSON, lib/wspells.irh:4435). Its Will save is
+# POOR: MA_KOBOLD saves only Reflex, never Will (src/Values.cpp:2232-2240,
+# MonGoodSaves). Seed 2 (this file's own seed, see the check script's own
+# header) fails the kobold's save every time this was tried; seed 1 let it
+# succeed, which is why the seed is pinned rather than left to whatever the
+# caller passes.
+#
+# THE HOLD: "Learn Any Spell" teaches Hold Person as an innate ability, cast
+# through 'm' (the same route tools/keys/zeal-strike.keys uses for Zeal) at
+# the kobold one square east. The Q_TAR prompt defaults its cursor onto the
+# caster's own square, so RIGHT then ENTER moves it onto the kobold and
+# confirms -- the same two keys zeal-strike.keys uses for the same reason.
+#
+# THE ORACLE: wizard "Examine Nearby Things" (Player::BrowseThings, true),
+# which opens on the player's own entry and cycles with RIGHT/LEFT through
+# everything within 10 squares. One RIGHT reaches the kobold -- it is the
+# only other thing that close.
+#
+# THE CURE: "Learn Any Spell" teaches "Heal;spell", then the same 'u' Innate
+# Heal route the nine-malady half below uses, but RIGHT then ENTER targets
+# the kobold instead of taking the self default.
+#
+# FREEZE MONSTERS FIRST (the eleventh row of the Wizard Mode Switches list,
+# same DOWN*10 SPACE ESC route tools/keys/zeal-strike.keys uses): a summoned
+# kobold that keeps its activity cycle gets a turn between these menu
+# commands and can attack, which derailed an earlier version of this script
+# into a combat prompt neither @choose nor @dump expected. Freezing does not
+# skip the kobold's saving throw against Hold Person -- only its own turns.
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Kobolds"
+@choose "kobold"
+RIGHT
+ENTER
+
+w
+@choose "Learn Any Spell"
+"Hold Person" ENTER
+
+m
+@choose "Hold Person"
+RIGHT
+ENTER
+
+w
+@choose "Examine Nearby Things"
+RIGHT
+DOWN*10                # scroll the debug dump down to the Stati block
+@dump:para-hold
+ESC
+
+w
+@choose "Learn Any Spell"
+"Heal;spell" ENTER
+
+u
+@choose "Innate Heal"
+RIGHT
+ENTER
+
+w
+@choose "Examine Nearby Things"
+RIGHT
+DOWN*10
+@dump:para-cure
+ESC
+
+# SECOND MEASUREMENT: THE NINE, on the player himself. See the file header.
+w
 @choose "Become Divine Champion"
 "Heal Maladies Test God" ENTER
 @while "more --" SPACE
@@ -71,13 +167,9 @@ DOWN*10                # scroll the debug dump down to the Stati block
 @dump:control
 ESC
 
-w
-@choose "Learn Any Spell"
-"Heal;spell" ENTER
-
 u
 @choose "Innate Heal"
-ENTER                   # confirm the default target: self
+ENTER                   # confirm the default target: self -- already known
 
 w
 @choose "Examine Player Data"
