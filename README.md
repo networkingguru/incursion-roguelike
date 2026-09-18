@@ -10,25 +10,20 @@ the Steam Deck.
 ![latest release](https://img.shields.io/github/v/release/networkingguru/incursion-roguelike?label=release&cacheSeconds=1800)
 ![license](https://img.shields.io/badge/license-Incursion%20%2F%20MIT%20%2F%20OGL-blue)
 
-Incursion is one of the deepest roguelikes ever written. Not a game with a few
-D&D words borrowed for flavour — a real, implemented 3.5 ruleset, with feats that
-combine, classes that branch into prestige paths, and a tactical combat model
-that pays you back for every rule you actually know. The magic is not even
-straight 3.5: Mensch threw out the SRD's eight schools and wrote his own eleven,
-Arcana and Thaumaturgy and Weavecraft among them. He built something enormous and
-then very nearly finished it.
+Incursion is one of the deepest roguelikes ever written: a real, implemented 3.5
+ruleset, with feats that combine, classes that branch into prestige paths, and a
+tactical combat model that pays you back for every rule you know. Mensch even
+threw out the SRD's eight schools of magic and wrote his own eleven.
 
-It has only ever run on Windows. This fork brings it to macOS, to Linux and to
-the Steam Deck — and, in release 4, back to Windows. Four downloads, one commit,
-and it is meant to be played, not built.
+It has only ever run on Windows. This fork brings it to macOS, Linux and the
+Steam Deck, and in release 4 back to Windows. Four downloads, one commit, and it
+is meant to be played, not built.
 
 ![iNCURSION on a MacBook Pro and a Steam Deck](docs/media/incursion-mac-deck-web.png)
 
 ![The release 4 trailer](docs/media/incursion-r4-trailer.gif)
 
-*Ninety seconds in the Lit Deep. Every light in it is the game's own: torch
-archons and lanterns carry their colour with them, and the ice matrix takes what
-passes through its walls.*
+*Ninety seconds in the Lit Deep.* 
 
 **Jump to:** [Get it](#get-it) · [What is new](#what-is-new) ·
 [What is fixed](#what-is-fixed) · [What is next](#what-is-next) ·
@@ -38,13 +33,12 @@ passes through its walls.*
 
 ## Get it
 
-Release 4 is on the
-[Releases](https://github.com/networkingguru/incursion-roguelike/releases) page,
-and every download on it is built from the same commit. No platform is ahead of
-another any more.
+Download release 4 from the
+[Releases](https://github.com/networkingguru/incursion-roguelike/releases) page.
+Every download is built from the same commit.
 
 | Download | For | State |
-|---|---|---|
+| --- | --- | --- |
 | `incursion-macos-arm64.dmg` | macOS on Apple Silicon | Signed and notarised by Apple |
 | `incursion-windows-x86_64.zip` | Windows 10 or later, x86-64 | New in release 4 |
 | `incursion-steamdeck-x86_64.tar.gz` | SteamOS: the Steam Deck, or a handheld running it | Beta |
@@ -52,405 +46,102 @@ another any more.
 
 ### macOS
 
-Download the disk image, open it, drag **Incursion.app** to Applications, and
-double-click it.
+Open the disk image, drag **Incursion.app** to Applications, and double-click it.
 
-There is no installer, no dependency to fetch, and no compiler. The app is signed
-and notarised by Apple, and the notarisation ticket is stapled to the app itself
-rather than only to the disk image, so it still launches after you drag it out of
-the image.
-
-macOS asks once whether you are sure you want to open an app downloaded from the
-Internet, and then never again. That prompt is normal: it is macOS asking for
-consent, and every notarised app gets it on first launch. Two other messages are
-not normal, and mean something is genuinely wrong — *"the developer cannot be
-verified"* and *"the app has been modified or damaged"*. If you see either,
-please open an issue.
+macOS asks once whether you want to open an app downloaded from the Internet.
+That is normal. If it says *"the developer cannot be verified"* or *"the app has
+been modified or damaged"*, something is wrong: please open an issue.
 
 ![iNCURSION running on macOS](docs/media/incursion-macos-web.png)
 
-**Requires** macOS on Apple Silicon. An Intel and universal build is planned; see
-*What is next*.
-
-Your saves, options and logs live in `~/Library/Application Support/Incursion/`.
-Deleting the app leaves them alone; delete that folder as well for a clean sweep.
-They are kept outside the app because an app bundle that writes inside itself
-breaks its own code signature, which macOS then reports as the app having been
-modified or damaged.
+Requires Apple Silicon. Saves, options and logs live in
+`~/Library/Application Support/Incursion/`, and deleting the app leaves them
+alone.
 
 ### Windows
 
-Download `incursion-windows-x86_64.zip`, unpack it wherever you like, and run
-`Incursion.exe` from inside the folder it makes. There is no installer and
-nothing to register.
+Unpack `incursion-windows-x86_64.zip` and run `Incursion.exe` from inside the
+folder it makes. **Keep the folder together:** the game cannot start without the
+files beside it. The executable is not signed yet, so SmartScreen warns you the
+first time: choose *More info*, then *Run anyway*.
 
-**Keep the folder together.** `SDL2.dll`, `fonts/`, `graphics/` and
-`mod/Incursion.Mod` sit beside the executable, and the game finds its own ruleset
-by the path it was started with. An `.exe` carried off on its own cannot start.
-
-The executable is not signed, so Windows SmartScreen calls its publisher
-unrecognised the first time you run it: choose *More info*, then *Run anyway*. A
-signing certificate is on the list; see *What is next*.
-
-**Requires** Windows 10 or later on x86-64, and nothing else. `SDL2.dll` travels
-with the game; everything else the executable imports is Windows' own.
-
-Your saves, options and logs stay inside that folder, beside the binary. Move the
-folder and your characters move with it.
-
-This is the first Windows build this fork has produced. It is the same engine the
-other three downloads carry, and it has been played from the title screen into
-the dungeon — but in one place only, a Windows 11 ARM64 virtual machine, where an
-x86-64 binary runs under emulation. No native x86-64 Windows machine has run it
-yet. Please open an issue for whatever you find.
+Requires Windows 10 or later on x86-64. Saves, options and logs stay in the
+folder. This build has been played only in a Windows 11 ARM64 virtual machine,
+under x86-64 emulation, so please open an issue for whatever you find.
 
 ### Linux and Steam Deck
 
-**These two are a beta, and they say so.** They have had real playtesting on
-handheld hardware, but expect bugs, and expect that a save may not survive the
-next build. Play them to enjoy them and to shake problems out, not for a
-character you would mourn.
+**Both are a beta.** Expect bugs, and expect that a save may not survive the next
+build. Both are Linux builds: a ROG Ally running the Windows it shipped with
+wants the Windows download.
 
-Both are Linux builds, and neither runs on Windows. A ROG Ally with the stock
-Windows install it ships with wants the Windows download above. An Ally running
-SteamOS wants the Deck tarball, and that is the machine it was tested on.
-
-Which of the two you want depends on whether SDL2 is already on the machine.
-
-- `incursion-steamdeck-x86_64.tar.gz` — for **SteamOS**: the Steam Deck, or
-  another handheld running SteamOS in place of the system it shipped with. It
-  uses SteamOS's own SDL2 instead of carrying one. Tested on a ROG Ally running
-  SteamOS.
-- `incursion-linux-x86_64.tar.gz` — any other x86-64 Linux. It carries SDL2 and a
-  launcher with it, so it runs without your installing SDL2 first.
-
-On SteamOS, switch to Desktop mode and open Konsole:
+For **SteamOS** (the Steam Deck, or a handheld running SteamOS), switch to
+Desktop mode and open Konsole. This bundle uses SteamOS's own SDL2, and it was
+tested on a ROG Ally running SteamOS.
 
 ```
 tar -xzf incursion-steamdeck-x86_64.tar.gz
 cd incursion-deck && ./incursion.sh
 ```
 
-Start it through `incursion.sh`, not through the `incursion` binary beside it.
-The script sets the working directory first, because the game writes its
-options, saves and logs next to itself and finds its data module by the path it
-was started with. Each bundle also carries `install-steamos.sh`, which registers
-Incursion with Steam as a non-Steam shortcut and writes a controller layout for
-it, so you can start it from Game Mode with the pad already mapped.
+`install-steamos.sh`, in the same folder, adds Incursion to Steam with a
+controller layout, so you can start it from Game Mode with the pad mapped.
 
-On any other Linux:
+For **any other x86-64 Linux**, use the bundle that carries its own SDL2:
 
 ```
 tar -xzf incursion-linux-x86_64.tar.gz
 cd incursion-linux && ./run.sh
 ```
 
-**Requires** x86-64, and glibc 2.31 or newer. That is the Debian 11 floor, which
-is also the Steam Runtime *sniper* floor, and the release is built against it on
-purpose so that it runs on that and on everything newer. A gamepad is optional,
-and the Deck bundle is built around one.
-
-Your saves, options and logs stay inside the folder you unpacked, beside the
-binary. Move that folder and your characters move with it.
-
-### Three ways to run it
-
-Every download is the windowed SDL build, which is the way to play. Building
-from source also gives you a plain terminal build that needs no graphics at all
-and works over ssh, and a headless mode that plays from a script, which is how
-this fork finds its own bugs.
+Requires x86-64 and glibc 2.31 or newer, which is the Debian 11 level. Start the
+game through its script, not through the binary beside it. Saves, options and
+logs stay in the folder.
 
 ---
 
 ## What playing it is like
 
-You roll a character through a long, gloriously opinionated creation flow — race,
-subrace, class, attributes, alignment, feats, skills, a god — and then you go
-down into the Halls of the Goblin King. Combat is turn-based and genuinely
-tactical. Positioning matters. Attacks of opportunity matter. Two-weapon
-fighting, spell components and saving throws all matter, and the game will
-happily kill you for ignoring any of them. Play it like a hack-and-slash and it
-will teach you otherwise in about ten minutes.
+You roll a character through a long, gloriously opinionated creation flow —
+race, subrace, class, attributes, alignment, feats, skills, a god — and then you
+go down into the Halls of the Goblin King. Combat is turn-based and genuinely
+tactical. Positioning, attacks of opportunity, two-weapon fighting, spell
+components and saving throws all matter, and the game will happily kill you for
+ignoring any of them.
 
 The writing is the other half of it. Every monster, item, spell and class carries
 its own description inside the game — not a stat line, a paragraph with a voice.
 You can read the entire ruleset from inside the game, and it is worth reading.
 
-What works today: character creation, exploration, the full combat model, magic,
-shops, saving and loading. The game compiles its own ruleset into a data module
-at build time, so what you are playing is the whole of Mensch's game and not a
-subset of it.
-
 ---
 
 ## What is new
 
-The newest work is first. **Release 4 is the first release where every
-download is the same program.** macOS, Windows, Linux and the Steam Deck are all
-built from one commit, and no platform is held back while another catches up.
+**Release 4 is the first release where every download is the same program.**
 
-### New in release 4 — in every download
-
-**The map is lit in colour.** Incursion draws its map in the sixteen colours the
-character set gives it, and a lit square used to be no more than a brighter
-version of its own colour. There is now a light map under the display. Every
-torch, lantern, magma pool, glowing creature and light spell casts a coloured
-footprint that falls away with distance, and each source flickers on noise of its
-own — a torch gutters, a lantern is nearly steady, magma breathes slowly. A lit
-cell is a contest between the surface's colour and the light's, so a torch on a
-dark floor takes the cell, while the same torch in a vivid purple room gives
-purple with a yellow cast. Light loses strength and colour crossing ice or fog,
-and it glints off a shiny wall in the colour that struck it. The SDL build
-re-shades while you stand still, so the flicker reads as movement. The terminal
-builds keep their sixteen colours and are unchanged.
+- **The map is lit in colour.** Every torch, lantern, magma pool, glowing
+  creature and light spell casts a coloured light that fades with distance and
+  flickers. Light loses strength crossing ice or fog, and glints off a shiny wall.
+- **Light decides what you can see, and what can see you.** You cannot hide while
+  you carry a lit light.
+- **The game plays on a gamepad**, so the Steam Deck needs no keyboard.
+- **It runs on Windows again**, and on Linux and the Steam Deck.
+- **A quieter colour palette**, chosen on the Options screen.
+- **The Combat and Use menus show only what your character can do.**
+- **More than twenty magic items now do what their own descriptions promise.**
+- **Two deliberate rule changes:** every weapon a Paladin wields strikes as a holy
+  weapon, and Monkey Grip one-hands a bastard sword.
 
 ![Coloured light in an ice cavern](docs/media/incursion-lighting-web.png)
 
-*Three archons light this cavern, each at its own radius and colour, and the ice
-walls take the light as pale blue. Beyond the last source the floor is black, and
-the corridors the character has already walked sit grey and unlit, remembered
-rather than seen.*
+**Your saves survive new content.** Since release 3, a save carries the name of
+every piece of content it was written against, so a new monster or spell cannot
+turn your orc into a lizardfolk. Coming from release 2? Upgrade through release 3 rather than skipping
+it: release 3 converts the save, and a save that never passes through it will
+read one resource off once later content is added.
 
-**Light now decides what you can see, and what can see you.** Twelve creatures and
-the flame template light their surroundings by their own nature rather than only
-by carrying a torch: a mote glows one square, a magma flow four. A creature can no
-longer hide while carrying a lit torch, lantern or glowing weapon, and the Hide
-skill refuses with *"You can't hide while carrying a light."* Hiding, light
-aversion and what the map actually paints all read the same brightness rule now,
-rather than each answering the question its own way.
-
-**The game plays on a gamepad.** The SDL build reads a controller itself. The left
-stick moves in eight directions, with a deadzone and a one-flick-one-step feel;
-the right stick pans the look cursor; the d-pad carries Kick, Pray, Legend and
-Run; and holding a clicked stick rests or exchanges weapons. The `?` screen names
-the pad control beside each key whenever a pad is in front of the game. Menus that
-needed Tab now page with Left and Right, choice screens answer to the arrow keys
-and Enter, and the overview map, the inventory and the Options screen all take the
-pad. This is what makes the Steam Deck bundle playable with no keyboard attached.
-
-**A title screen.** The SDL build opens on the launch logo, letterboxed over the
-title band so that it keeps its shape at every window size and font. The terminal
-and headless builds fall back to the same wordmark redrawn as hard CP437 glyphs in
-sixteen colours, and both keep the *Halls of the Goblin King* subtitle and the
-credits below it.
-
-**It runs on Windows.** Incursion began as a Windows game, and this fork could
-not build it there: `src/ErrorLog.cpp`, added by this port, carried four
-unguarded POSIX includes, and nothing had compiled on Windows since the day that
-file landed. There is now an `Incursion.exe`, cross-built from the Mac with
-mingw-w64, and it has been played through character creation and down into the
-dungeon in a Windows 11 virtual machine. Most of what stood in the way was found
-by the compiler rather than by any reading of the code, exactly as the Linux port
-went: a shim header in `compat/` that shadowed mingw's own `<malloc.h>` and took
-`alloca` away with it, at the same call site where the same mistake had already
-been made on Linux; a vendored library that needs `-std=gnu17`, because GCC 16
-made `bool` a keyword and that library still typedefs it. None of it was visible
-from macOS.
-
-**The one the compiler could not find.** This is the first binary this project
-has ever built with GCC, and it died moments after character creation on an
-invalid object handle. Three binaries were measured in the VM from one source,
-differing only in flags: `-O2` crashes, `-O0` is clean, and `-O2
--flifetime-dse=1` is clean. `Object::operator new` zeroes every allocation, and
-constructors across the object hierarchy lean on that fill instead of setting
-their own members — the same pattern as the `Item` constructor below. C++ says an
-object's lifetime has not begun until its constructor runs, so a compiler is
-entitled to delete that memset as a dead store, and GCC at its default setting
-does. The flag stops it. **It masks the defect rather than removing it:** clang
-holds the same licence and merely does not take it, so the macOS and Linux builds
-are latent rather than safe. The constructor audit that would actually fix this
-is filed and open.
-
-**It runs on Linux and on the Steam Deck, and you can download it.** Six places in
-the port assumed Apple's compiler or Apple's C library: a hardcoded `clang`, a
-shim header that shadowed glibc's own, three missing standard includes, a
-clang-only debug trap, and one double `fclose` the parent project's preprocessor
-has always carried. None of the six was visible from macOS, and all six surfaced
-by building inside a Debian 11 (bullseye) container — glibc 2.31 on x86-64, chosen
-as an old-glibc floor so the binary's versioned symbols resolve on newer
-distributions too, and the same floor the Steam Runtime *sniper* uses. Both
-backends now compile there under either clang or GCC, and a seeded session plays
-through with no errors. There are two tarballs on the Releases page, one for the
-Deck and one for any x86-64 Linux; see [Get it](#get-it). The nightly gate
-cross-builds for Linux, so a Linux break stops a merge.
-
-**A quieter palette, and you choose it.** The sixteen colours the game draws in
-are vivid, and a vivid surface fights the new light rather than takes it. There
-is now a third palette beside the classic and softer ones, picked on the Options
-screen and applied without a restart. Its saturation is a third lower while every
-colour keeps the brightness of its classic counterpart, so a close torch supplies
-62% of a lit cell's hue where the classic table gives it 46%. Darkening it as
-well was tried and reverted: rendered through the real shading function, all
-sixteen colours collapsed toward the same tan under a close torch, lighting a
-green slime and a red imp alike.
-
-**The Combat and Use menus show only what you can actually do.** The Use menu
-(`U`) has always filtered itself against the character. The Combat Options menu
-(`C`) gated 3 of its 21 rows and the YUse menu (`Y`) gated none of its 63, so
-every character was offered every verb whether or not the game could perform it —
-Called Shot's own help text read *"Not implemented yet"* and it was still on the
-menu. Both menus now hide a row when the verb has no implementation, or when the
-character does not meet its prerequisite. Hidden means absent, not greyed.
-Nothing is deleted: the 27 unbuilt verbs are Julian Mensch's recorded intent, and
-each returns to the menu the day somebody builds it.
-
-**Two archons stop putting each other's lights out.** An archon standing inside a
-neighbouring archon's magic circle lost its own light and its own aura for good,
-the moment the two drifted apart. Every archon's circle carries the same effect
-id, so the archon standing inside held two rows under that one id, and leaving
-the neighbour's circle deleted both — the second deletion then reaped the
-creature's own light. The same duplication also paid an overlapping circle's
-bonus, and its penalty, once per circle. It takes two archons in one place to
-show, which is why every single-archon check passed.
-
-**A swallowed creature feels what its swallower walks through.** A creature that
-has been swallowed or engulfed rides at its carrier's square and cannot move
-itself, and the code that announces crossing a field boundary told only the mover
-and the mover's mount. The passenger therefore never gained a status from a field
-its carrier walked into, and never lost one either. It now gets the same events
-its carrier gets.
-
-**Every Item member is set before it is read.** The item constructor worked out a
-new item's hit points from two of its fields — its enchantment id and its plus —
-before it assigned either one, and it never assigned five more members at all. It
-leaned on the zero-fill that object allocation happens to leave behind. clang
-keeps that fill, so the macOS build was never wrong. A GCC build at `-O2` does not
-keep it, and there a garbage plus tripped an assertion and a wild parent handle
-crashed character creation before the first map ever drew. The constructor now
-sets each member before anything reads it, which is the same zero clang already
-produced, so the macOS build is unchanged.
-
-**Magic items now do what their own descriptions promise.** Item after item did
-less than the text the game already shows for it. The Bloodspear named a bane
-creature and wielder bonuses its script never granted; the Sunblade promised cold
-resistance, a sixty-foot burst of light and double damage against Negative-Plane
-creatures it never delivered; the Dwarven Thrower called itself a throwing hammer
-while its base weapon could not be thrown at all; the Holy Avenger dispelled magic
-at a fixed level rather than its paladin wielder's; and a god's holy symbol would
-not stay out of the autopickup pile. More than twenty items across the Bloodspears,
-Sunblades, Staffs, Cloaks, Bracers, Wands, Rods and scrolls were brought into line
-with the one standard the game already sets for each — the description it displays.
-
-**Two deliberate rule changes.** These two are design choices rather than repairs.
-Every weapon a Paladin wields now strikes as a holy weapon, an extra 2d6 against
-evil and undead, even a plain unenchanted blade; it is a 1st-level class feature,
-always on, and it is written into the Paladin's own description and level table.
-Monkey Grip now one-hands a bastard sword without its exotic proficiency, which
-frees the off hand for a shield, swung at the two-handed Strength bonus and -2 to
-hit.
-
-**And a run of smaller fixes.** Walls stopped leaking light after a door in them
-was removed. Illusory damage no longer leaves you permanently above your maximum
-hit points once it wears off.
-Permanent glows and magic auras stopped winking out on their own: an archon's
-continual light and its magic circle destroyed themselves the moment they were
-cast, and every permanent field on a level used to die the first time the in-game
-day rolled over. A target prompt accepts a square with a staircase on it. ESC
-leaves character generation instead of doing nothing. Tanglefoot catches the
-mount, and dismounting no longer drags a stuck mount along.
-
-### New in release 3 — in every download
-
-**Your save survives new content.** Every reference to game content inside a save
-used to be a bare number, and that number was a position in a list. The lists sit
-end to end in one numbering space, so adding a single monster, spell or effect
-anywhere shifted every entry after it, and an existing save then read one
-resource off — an orc came back as a lizardfolk, worshipping the wrong god. A
-save now carries a manifest: the length of each of the 21 lists and every entry's
-name in position order. The reader converts each reference through that manifest
-instead of trusting the number, so content added to the end of a list changes
-nothing about a save written before it.
-
-**Old saves convert themselves.** Release 3 is deliberately content-identical to
-release 2, so a release-2 save loads correctly and is rewritten in the new format
-the first time you save. There is no command to run and nothing to click.
-**Upgrade through release 3 rather than skipping it** — it is the release that
-performs the conversion, and a save that never passes through it will read one
-resource off once later content is added.
-
-**A refused save no longer costs you your file.** The engine now checks whether a
-save can be written before it touches anything on disk. A refusal leaves the
-existing save exactly as it was, instead of a truncated file and a backup.
-
-**A resource inserted in the middle of a list is refused, not guessed at.** If a
-future release ever breaks the append-only rule, the load stops and names what
-moved, down to the list, the position and both names, rather than silently
-handing you different equipment.
-
-**Saves are a fifth of the size.** Tagged records replaced raw structure dumps: a
-2.4 MB character file became 360 KB.
-
-### New in release 2
-
-**The game no longer dies at the bottom of a dungeon.** Moving down from the
-deepest level dereferenced a null dungeon, on all four routes that reach it:
-falling into a chasm there, the plain `>` climb, levitating down, and a scripted
-move. The climb needs no wizard mode and no script. Two more crashes went with
-it — a hiding monster that could delete itself mid-spell and leave the caller
-holding a dangling map pointer, and a room-building rectangle that inverted
-itself in a narrow space and put doors in solid rock.
-
-**The target cursor follows a ring, not an axis.** Arrow keys in target mode
-scored candidates on one axis only, so RIGHT meant "the nearest column to my
-right" and every row in that column tied. The cursor moved sideways while going
-up, skipped near creatures for far ones, and reached places from which most
-presses did nothing. Candidates now form a ring around you ordered by bearing,
-and an arrow steps one place round it. Which things are candidates is unchanged.
-
-**The shop list scrolls.** The store menu never scrolled at all: its redraw
-cleared the scroll offset before every draw, so the selection walked off the page
-and stayed there. It also read a hardcoded 32 visible rows instead of asking the
-window, and its two manual-scroll keys worked only if you had opened the
-inventory screen earlier in the same session.
-
-**`<` and `>` work on the overview map, and find the nearest staircase.** Both
-keys used to close the map instead of doing anything. The search behind them also
-took the next staircase in reading order rather than the near one; each remembered
-staircase is now ranked by what it costs to walk there, so the square the cursor
-lands on is the square `R` will really reach. Repeated presses step down the
-ranked list and wrap.
-
-**Read a save without loading the game.** Point the binary at a save file with
-`-dump` and it prints a full character report to the terminal, then exits. No
-window opens and nothing is written. See
-[Reading a save](#reading-a-save-without-loading-the-game) below.
-
-**A failed save leaves the game standing.** Saving converted every object's
-internal pointers to handles and converted them back afterwards. Any failure
-part-way skipped the conversion back, and the game then crashed on the way out.
-The report now reaches you and play continues. A file the game refuses to load no
-longer takes the process with it either — that fix is a hand-port of Eugene
-Archibald's work, and the root cause and evidence are his.
-
-**Natural Weapon Speed, a new option.** Every weapon carries a speed rating;
-unarmed and natural attacks carried none, so a monk punched at 100% while the
-nunchaku in his pack struck at 160%. The option floors a weapon-capable
-creature's brawl speed at the fastest weapon in the data. Dragons and oozes are
-untouched and keep their own speeds. This is a balance change rather than a
-defect fix, so it is a switch: fresh installs get FLOORED, and an existing
-`Options.Dat` reads ORIGINAL until you flip it once.
-
-**Twenty prestige-class descriptions are now true.** Each was a place where a
-class promised something its own script never did. The Twilight Huntsman shipped
-sixty spells nothing could reach, the Blackguard could not use a shield, and the
-Master Archer's ranged sneak attack fired with a sling.
-
-### Already there, since release 1
-
-**Your saves survive an update.** Save compatibility is keyed on a digest of the
-actual data layout rather than on a version number, so shipping a new release
-does not hide your characters. Previously any version change made every save
-vanish from the load menu without a word. Neither release 2 nor release 3 moves
-that digest, so characters rolled under release 1 still load — and release 3
-converts them to the new format as described above.
-
-**Your species' feats are granted.** Eight racial feats across six races were
-never reaching players. A Dragonkin never had Mantis Leap, a dwarf never had
-Loadbearer. They do now.
-
-**Bare hands are no longer worse than two weapons.** Two empty hands produced one
-attack per swing while two weapons produced two, so a monk was better off holding
-nunchaku than using his fists. Fixed to match the 3.5 rules.
+The full notes for every release are in
+[`docs/RELEASE-NOTES.md`](docs/RELEASE-NOTES.md).
 
 ---
 
@@ -460,10 +151,8 @@ The engineering record is [`docs/FIXED.md`](docs/FIXED.md): every defect, how it
 was verified, what was measured on each side, and the two claims that had to be
 retracted.
 
-The short version:
-
 | Area | What was wrong | Where |
-|---|---|---|
+| --- | --- | --- |
 | Build | Four defects blocked any POSIX build from linking | [FIXED](docs/FIXED.md#the-four-defects-that-blocked-a-posix-build) |
 | Saves | Narrowed typedefs overran the player's position and zeroed it in every save | [FIXED](docs/FIXED.md#the-four-defects-that-blocked-a-posix-build) |
 | Saves | A failed save or a refused load could take the process with it | [FIXED](docs/FIXED.md#robustness-a-failure-should-not-take-the-process-with-it) |
@@ -484,49 +173,32 @@ have gone to the parent project and one is merged.
 
 ### Reading a save without loading the game
 
-Point the app at one of your save files and it prints a full character report to
-the terminal, then exits. The game does not start, and nothing is written — your
-save is opened for reading only.
+Point the game at a save file with `-dump` and it prints a full character report
+to the terminal, then exits. Nothing is written. On macOS:
 
 ```
 /Applications/Incursion.app/Contents/MacOS/Incursion -dump \
     ~/Library/Application\ Support/Incursion/save/YourCharacter.sav
 ```
 
-You get current and maximum hit points, where she is standing and how deep, every
-equipped slot, every effect currently on her, the full inventory including the
-contents of containers, what is lying on the floor beneath her, and then the
-complete character sheet with every feat, skill and save.
-
-It is useful for three things: settling an argument about what a character
-actually has, checking a save that will not load, and keeping a record of a
-character before you take her somewhere dangerous. Redirect it to a file and it is
-a plain-text snapshot you can keep or post.
-
-The report comes from the game's own character-sheet code walking the real save,
-not from a separate reader guessing at the file format, so it cannot drift out of
-step with what the game believes.
-
-*Available in release 2. Release 1 could not do this.*
+The report gives hit points, position and depth, every equipped slot, every
+effect on the character, the full inventory, and the complete character sheet.
+Redirect it to a file to keep a snapshot.
 
 ---
 
 ## What is next
 
-- **Give the Windows and Steam Deck downloads the confidence macOS has.** All
-  four come from one commit, but only macOS has had a signed release behind it
-  since release 1.
+- **Give the Windows and Steam Deck downloads the confidence macOS has.** Only
+  macOS has had a signed release behind it since release 1.
 - **Sign the Windows executable**, so SmartScreen stops calling its publisher
   unrecognised.
-- **Intel and universal Macs**, so this runs on hardware older than Apple Silicon.
-- **Finish the content Mensch already wrote.** This is the exciting one. The game
-  describes a great deal it never quite got round to building: eight races have
-  subrace sections marked *(Unimplemented)* in the game's own help, and whole
-  Fighter capstone feat trees carry the same label. The designs are all there, in
-  his words, waiting. Because every entity's description sits beside its
-  implementation, a mismatch between them is a provable bug rather than a matter
-  of taste. A full read of `lib/` against the code found 480 such disagreements,
-  and they are now filed and being worked.
+- **Intel and universal Macs.**
+- **Finish the content Mensch already wrote.** Eight races have subrace sections
+  marked *(Unimplemented)* in the game's own help, and whole Fighter capstone feat
+  trees carry the same label. A full read of `lib/` against the code found 480
+  places where a description and its implementation disagree, and they are filed
+  and being worked.
 - **Play over ssh**, using the terminal build.
 - **More than was shipped** — world mode, new dungeons — but only after the above.
 
@@ -534,16 +206,7 @@ step with what the game believes.
 
 ## Building from source
 
-You do not need this to play. It is here for people who want to change something.
-
-`master` is the development tip. The `release-4` tag marks the release itself,
-and the Linux and Steam Deck tarballs were built from it. The macOS and Windows
-downloads are newer: both need the mingw-w64 portability work that landed after
-the tag, which the `release-4-windows` tag marks. None of that work changes
-behaviour on macOS or Linux, so all four downloads are the same game. The `release-1` tag marks this fork's first release, but the
-release-1 image was rebuilt after that tag, to carry the module-load and
-Gatekeeper fixes described in [`docs/FIXED.md`](docs/FIXED.md); that tag is not a
-byte-for-byte match for it.
+You do not need this to play.
 
 ```
 brew install sdl2 pkg-config
@@ -551,97 +214,22 @@ brew install sdl2 pkg-config
 ./incursion
 ```
 
-Two minutes from a clean checkout. `BACKEND=posix ./build_macos.sh` builds the
-terminal and headless binary instead. Only one backend can be linked at a time,
-because each defines `main()`, `Error()` and `Fatal()`.
+That takes about two minutes from a clean checkout. `BACKEND=posix ./build_macos.sh` builds the terminal and headless binary instead: it needs no
+graphics, works over ssh, and can play the game from a script.
 
-Both binaries accept `-dump`, so from a source tree the character report is
-`./incursion -dump save/YourCharacter.sav`, and `tools/dump_save.sh` wraps the
-same thing in a disposable sandbox. `tools/check_dump_save.sh` asserts that the
-two builds produce byte-identical reports for the same save.
-
-### Cross-building for Windows
-
-```
-brew install mingw-w64
-TARGET=windows ./build_macos.sh
-```
-
-That produces `Incursion.exe`. `TARGET` picks the compiler and the libraries;
-`BACKEND` picks which source file defines `main()`. They are separate axes, and
-Windows uses the same libtcod backend the Mac does.
-
-Two of the four steps are scripted and two are not, and the split is not
-obvious:
-
-| Step | |
-|---|---|
-| Stage SDL2 and zlib for mingw under `build/win-deps` | manual |
-| Cross-build the vendored libtcod | scripted |
-| Compile and link the `.exe` | scripted |
-| Assemble and zip the package | manual |
-
-You also need one native build first, because a cross-compiled binary cannot
-compile the data module on this machine. `SDL2.dll`, `fonts/`, `graphics/` and
-`mod/Incursion.Mod` must all travel with the executable, and without
-`graphics/logo.png` the title screen silently falls back to the ASCII wordmark.
-
-[`docs/WINDOWS-BUILD.md`](docs/WINDOWS-BUILD.md) is the recipe: the exact
-commands for both manual halves, the versions that matter, the import check that
-says whether the static link held, and what the recipe cannot prove — there is no
-Windows machine here, so no step in it demonstrates that the binary plays.
-
-### Packaging a release
-
-```
-DMG=yes tools/package_macos_app.sh
-```
-
-That produces `Incursion.app` inside a disk image. It builds twice on purpose: a
-developer binary to compile the game module, then a shipping binary without the
-resource compiler, because the compiler carries a GPLv2 runtime that must not be
-distributed. It bundles SDL2, signs, notarises and staples **both the app and the
-image**, and `tools/check_app.sh` refuses to let a broken one out.
-
-`tools/package_macos.sh` still exists and builds the older plain-folder layout. Do
-not ship that: a bare executable cannot be approved by Gatekeeper no matter how
-correctly it is signed, which is what broke the first release.
-
-**Anyone can run this; not everyone can produce a distributable result.** Without
-an Apple signing identity the script prints `SKIPPED`, produces an unsigned image,
-and carries on. That image runs fine on the machine that built it, because a file
-you create yourself carries no quarantine attribute — which is exactly why this
-class of bug is invisible locally. It will be refused on any machine that
-downloads it.
-
-To produce something another Mac will launch you need:
-
-- a paid Apple Developer Program membership;
-- a **Developer ID Application** certificate. An *Apple Development* certificate
-  cannot sign anything distributed outside the App Store — different type, and the
-  distinction is easy to lose a day to;
-- notarisation credentials. Run `tools/setup_notary.sh` once, in a real terminal,
-  and it stores an app-specific password at `~/.config/incursion/notary.env`,
-  mode 600, after validating it against Apple.
-
-Use `setup_notary.sh` rather than `notarytool store-credentials`. A keychain
-profile is only readable by processes on the keychain item's ACL, so a release
-built from anything other than the terminal that created the profile fails with
-`No Keychain password item found` — which means *found but not permitted*, and
-reads like a missing credential. A file has no ACL.
+| To | Read |
+| --- | --- |
+| Cross-build `Incursion.exe` for Windows | [`docs/WINDOWS-BUILD.md`](docs/WINDOWS-BUILD.md) |
+| Package, sign and notarise a macOS release | [`docs/RELEASING.md`](docs/RELEASING.md) |
 
 ---
 
 ## For developers
 
-There is no test suite and no CI. There is a stated verification policy, a
-harness that plays the game unattended, a regression gate, a set of checks that
-each defend one defect, and a set of instruments you switch on with an
-environment variable or a compile flag. Nearly all of it is new in this fork.
-
-Start with [`tools/README.md`](tools/README.md), which documents the harness,
-the gate and the principal checks with a status and a line number for each
-claim. What follows is the map.
+There is no test suite and no CI. There is a stated verification policy,
+a harness that plays the game unattended, a regression gate, a set of checks
+that each defend one defect, and a set of probe switches. Nearly all of it is new
+in this fork.
 
 ```mermaid
 flowchart TB
@@ -652,429 +240,22 @@ flowchart TB
     e --> f["deterministic verification harness<br/>(headless script playback)"]
 ```
 
-The developer binary's resource compiler turns the IncursionScript ruleset into
-the data module the engine loads; the shipping binary drops that compiler, whose
-runtime is GPLv2. One engine drives all three frontends, and the headless one
-feeds the verification harness described below.
-
-### Verification
-
-This project uses local, deterministic verification rather than hosted CI. Every
-change that alters behaviour follows five steps, in this order:
-
-1. add or update one check that defends the new behaviour;
-2. mutate the fix, or the check's own oracle, and confirm the check goes red;
-3. rebuild every target the change reaches — both backends are separate `main()`s;
-4. run that check and `tools/nightly_verify.sh --compare`;
-5. record the commands, the mutation and the result in the commit body or the bead.
-
-`tools/nightly_verify.sh` is the wrapper. It builds both backends, cross-builds
-them for Linux in Docker, sweeps the objects with the layout probe, soaks 40
-seeded sessions against the recorded baseline, then runs every check that
-declares itself part of the gate and compares the result against a base recorded
-before the work started. A check that already failed is not the change's fault; a
-check that passed before and fails after stops the merge. Builds are not
-ratcheted: a tree that does not compile is never safe. A machine that cannot run
-the Linux build, the layout sweep or the soak reports a skip rather than failing
-on it, because a step that measured nothing has not measured a failure.
-
-Which checks it runs is not a list inside it. Each check declares its own tier --
-`# gate: cheap`, `# gate: live` or `# gate: none <why not>` -- and the gate reads
-those markers, so a new check joins the gate when it is written.
-`tools/check_gate_membership.sh` is what obliges a new check to declare one.
-
-The commit body carries the evidence, because git records results and not
-process. State the oracle, the numbers it produced, the mutation that proved it
-bites, and the checks you re-ran. `docs/VERIFICATION.md` has the long form, the
-rules the harness enforces, and what this method cannot prove.
-
-### The harness
-
-| Tool | What it does |
-|---|---|
-| `tools/headless.sh` | Plays one scripted session with no display and no keyboard, in its own sandbox with its own `save/` and `logs/`. Everything else that plays the game calls it. |
-| `tools/soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about by message rather than by session. |
-| `tools/play.sh` | Interactive launcher for a real session with the map audit, save probe and character probe armed. |
-| `tools/nightly_verify.sh` | Builds both backends, cross-builds them for Linux in Docker, runs the layout sweep and the 40-session soak, then runs every check that declares a gate tier and compares the result against a recorded base. `--record` before the work, `--compare` after, `--selftest` to prove the ratchet still bites. A step that cannot run on this machine is skipped, not failed. |
-| `tools/dump_save.sh` | Runs `-dump` against a save in the same sandbox, without playing. |
-| `tools/keys/*.keys` | Key scripts read by both backends. The SDL build supports the shared movement subset (literal and named keys, `*N` repeats, comments, `@include`, `@pause MS` and `@quit`), but not the POSIX screen-scrape directives. In SDL, `@quit` or consuming the last key exits the game; put `@pause` before the end to hold the final frame while its light animates. `@pause` is an instant no-op headlessly. Use `./incursion -load save/<character>.sav -keys tools/keys/trailer-demo.keys` to start a named save directly in play and run the sample. |
-
-Sessions are seeded through `INCURSION_SEED`, so two runs of one seed play the
-same game. That determinism is what every measurement in the project rests on.
-A run that never entered a map exits `NO GAMEPLAY` rather than passing, because a
-session that measured nothing must never be read as a pass — that rule exists
-because a measurement once passed on two runs that both did nothing.
-
-### The regression gate
-
-`tools/gate_record.sh` freezes a build's behaviour into `tools/gates/*.baseline`;
-`tools/gate_compare.sh` re-runs the same seeds and reports what got worse;
-`tools/gate_lib.sh` reduces a soak directory to the numbers being compared;
-`tools/check_gate.sh` proves the gate still bites by feeding it made-up logs.
-
-The gate measures error volume and message-set membership. Screen dumps and
-crashing-seed identity were both tried and both failed, because screens diverge
-from the first changed decision onward, so a gate built on them goes red on every
-correct fix. Every scripted run explicitly selects a frozen settings file from
-`tools/fixtures/` or a purpose-built file such as `tools/gates/Options.Dat`, so
-playing the game cannot move its numbers.
-
-### The checks
-
-The table below lists them. `check_gate.sh` above is not in it, because it
-checks the gate rather than the game. Each check defends one defect or one
-property that was lost by accident at least once, and each is proved red against
-the unfixed tree before it is trusted.
-
-| Check | The question it answers |
-|---|---|
-| `check_command_menu_gating.sh` | Do the Combat (C) and YUse (Y) menus still hide every verb with no implementation, and every verb whose character prerequisite is unmet? It dumps both menus before and after a wielded Quickblade grants Whirlwind Attack: the gated combat row appears only after the feat, and the dead Yuse rows stay absent either way. |
-| `check_orphan_branches.sh` | Is every finished fix actually on master? It lists each branch master has not merged beside its bead's status and age. It fails on a branch whose bead is closed — the shape that stranded b855fe2 for days — and on a branch whose name is not a bead id, because nobody can then say what it was for. |
-| `check_dequ_dice.sh` | Does A_DEQU roll its declared dice without tripling? |
-| `check_dequ_dc.sh` | Do exactly the four SRD monsters retain A_DEQU save DCs in the thirteen-monster roster? |
-| `check_fire_hardness.sh` | Do wood, leather and cloth have zero fire hardness while ironwood, darkwood and dragon hide retain theirs? |
-| `check_item_hardness.sh` | Does Item apply hardness modifiers once after preserving immunity, with QItem delegating? |
-| `check_xprint_tokens.sh` | Ratchet literal __XPrint object-token vararg overruns (inc-upw.30); Python 3 only. |
-| `check_gaze_reflect_message.sh` | When a gaze attack is turned back on the monster that made it, does the sentence on screen name that monster once and read as English? A mage casts Gaze Reflection on himself, the character sheet's Specials column is photographed as proof he carries it, a bodak is summoned, and the message area is read: "The bodak's gaze is reflected back at it!". It is the live twin of `check_xprint_tokens.sh`, which counts tokens in source text and cannot see what a player is shown. |
-| `check_item_owner_resist.sh` | Does item damage use its own defences without owner resistance or immunity? |
-| `check_dequ_magic_hardness.sh` | Against a monster whose A_DEQU carries no save DC, is a plain weapon's hardness bypassed while a magical weapon's is kept? Two sessions strike acid blobs, one with an ordinary long sword and one with a Holy Avenger, and read each sword's own description page before and after. |
-| `check_dequ_reach.sh` | Does a glaive user striking from two squares away now take the equipment retaliation he used to escape? The map shows the two-square gap, the message shows the blow landing, and the glaive's page shows the acid damage. |
-| `check_dequ_sunder.sh` | Does sundering an armed equipment-destroyer damage the striker's weapon rather than the monster's own? A caryatid column's cursed long sword is sundered with a maul, and the maul's page is the oracle. |
-| `check_dequ_owner_immunity.sh` | Does a character's rust immunity shield his gear? Wearing Gauntlets of Rust, his iron maul stays at 262/262 hit points after five small mud elemental retaliations. |
-| `check_item_flag_protection.sh` | Do Bracers of Neutralization keep an iron maul at 262/262 HP against acid-blob retaliation through EF_PROTECTS_ITEMS? |
-| `check_gear_protection_roster.sh` | Does `lib/` still match the whole gear-protection ruling table: the 36 grants that protect a bearer's carried gear, the 22 that protect only the bearer, and the general rules for spells, domains, gods and races? |
-| `check_gear_spell_protection.sh` | Does a spell protect the caster's gear? Under Endure the Elements his silvered warhammer holds 78 hit points through twelve magma creeper retaliations. |
-| `check_gear_item_exclusion.sh` | Does an item ruled wearer-only leave gear exposed? The Amulet of Bile grants acid resistance and the same warhammer still corrodes. |
-| `check_gear_bypass_survives.sh` | Does a resistance spell still protect a plain weapon, where the attack bypasses the metal's own hardness? Under Protection from Acid a mundane iron maul holds 262 hit points through twelve magma creeper retaliations. |
-| `check_quality_self_immune.sh` | Is an armour with a resistance quality immune to that element, while its wearer still gets the resistance? A +0 leather suit of fire resistance holds 56 hit points where the plain one is left mildly burnt. |
-| `check_divine_feat_gear.sh` | Does Divine Resistance protect a priest's gear while he is channeling? At Charisma 18 his plain iron warhammer holds 45 of 45 hit points through five firebat retaliations. |
-| `check_school_focus_menu.sh` | Is a school the character already focuses on kept off the School Focus menu? One orc mage takes the feat twice: Illusion is on the first menu and must be gone from the second, and the character sheet must list both schools, because School Focus is worth nothing taken twice in one school. A second run makes an elf, whose menu must still be short of Necromancy -- the other rule living in the same line. |
-| `check_school_focus_dc.sh` | Does School Focus (Illusion) still raise the DC to disbelieve an illusion? The same mage casts Phantasmal Force at a goblin, and the printed `Will Save: ... vs DC 13` line is the oracle -- the only place a player can read that DC. Unfocused it is 11. |
-| `check_headless.sh` | Do the properties every unattended run depends on still hold, including that two simultaneous runs get separate directories? |
-| `check_field_day_duration.sh` | Does a permanent (`Dur -1`) field still survive a day change? It places a torch archon on depth 2, rests one night on the same map with lowercase `z`, and counts the map's fields either side; the rise in creatures proves `Map::DaysPassed` actually ran. Fixed 1 -> 1, unfixed 1 -> 0. |
-| `check_field_modifier_duration.sh` | Does a living, directly placed torch archon retain both its permanent white light field and its Magic Circle vs. Evil status after the broken 12-turn countdown would have expired many times over? |
-| `check_entangle_escape.sh` | Can a character in heavy armour tear out of glue? A paladin in full plate and a kite shield sits at Escape Artist -11 against a DC of 14, so his ceiling of 9 is five below the floor and no roll closes it. The check requires a *Strength* check that succeeded, not merely an escape, because `src/Skills.cpp:1600` already frees him on a natural 20 while no hostile is within sixteen squares. |
-| `check_options_migrate.sh` | Does an options file written before an option existed come up on that option's real default rather than on its first menu choice, without overruling a setting the player chose on purpose? The file is a bare byte array with no header, so `OPT_SETTINGS_GEN` is what tells the two apart; the decisive case is a file in which the player deliberately picked the first choice, which is byte-identical to an unmigrated one except for the stamp. |
-| `check_open_xy.sh` | Does `Map::GetOpenXY` refuse when no square is open, instead of answering (0,0)? Requires the `NO_OPEN_XY` sentinel to be returned and `Thing::PlaceOpen` to drop the Thing rather than place it in the map's solid outer edge. Three static greps plus a probe build (`EXTRA_CXXFLAGS=-DINCURSION_OPENXY_PROBE BACKEND=posix ./build_macos.sh`, binary named by `INCURSION_BIN`) that counts refusals, disposals and a successful-placement control -- the greps alone once passed a fix that tested the sentinel and then placed at (0,0) anyway. |
-| `check_entangled_acts.sh` | Does passed-save entanglement penalize without disabling? Requires an unanchored rogue, Dexterity 17 to 13 and melee to-hit +2 to +0 on the sheet, then a melee attack and a half-speed move while still entangled, measured against the same subject's own post-combat floor-move cost. |
-| `check_stuck_fights.sh` | Does anchoring stop being a lockdown while still stopping movement? A Stuck paladin must land a weapon attack and print its roll against an adjacent goblin, then fail an escape attempt (both Escape Artist and Strength) and remain Stuck in the same square. |
-| `check_trip_aoo.sh` | Does a successful trip still make the TRIPPER attack himself? `case AD_TRIP` passed the tripper to `ProvokeAoO` where the tripped foe belongs, so the tripper armed his own weapon and swung it at himself, brand and all, and the message dropped the actor clause so he could not read who had hit him. Four goblins are summoned around a level 1 orc warrior and tripped one at a time; a probe names the actor and victim of every attack of opportunity the engine accepts, and any line naming one creature twice fails. The counter-trip mirror case rides along, because a goblin that wins a counter-trip entered the same code. The check also demands a goblin answering a trip, since deleting the call would remove the self-attack as surely as fixing it. |
-| `check_tanglefoot_mount.sh` | Do tanglefoot strands catch the MOUNT and leave the rider free? The mount rolls the reflex save, so the mount is what a failed save must catch. A level-1 paladin rides his sacred mount along a strip of strands until the horse fails; wizard mode's "Examine Player Data" must then show `STUCK from SS ATTK` under the `----MOUNT----` banner, none in the rider's own stati list, and no `Stuck` on his status line. |
-| `check_true_sight.sh` | Does True Seeing let a character SEE an invisible creature, and see through darkness, out to its own range -- rather than only striking the creature at full accuracy while it stays invisible? `TRUE_SIGHT` was named beside `SEE_INVIS` in the combat miss-chance test and appeared nowhere in `src/Vision.cpp`, so sight and combat disagreed about the same spell. A probe grants a player `TRUE_SIGHT` and no `SEE_INVIS`, places one invisible creature 5 squares away in a lit square, 9 squares away in a square it first unlights, and beyond the range, and asserts `Creature::Perceives` at each; it then removes the stati and repeats the first case as a control. |
-| `check_sticky_save.sh` | Does walking onto a pool of slime roll a real Reflex save, and does the STUCK it grants lapse on its own? The DC must print above zero (`SavingThrow` prints nothing at all for `DC <= 0`), and the printed roll line must change after 100 turns of nothing but waiting -- proof a second roll fired, which requires the first grant to have expired, since the same hazard re-catches anyone still standing in it the instant an old grant lapses. |
-| `check_overlapping_modifier_fields.sh` | Do two torch archons that each stand inside the other's magic circle both keep their light field when they separate, and does each end up holding exactly one circle row? Fixed 2 lit, unfixed 0. |
-| `check_circle_creator_death.sh` | When the player kills one of two overlapping archons, does the survivor stay lit? Fixed: survivor alive and white count 1. Unfixed: survivor alive and white count 0 -- alive in the dark, the reported symptom. |
-| `check_circle_no_stack.sh` | Do overlapping magic circles refuse to stack? An evil player between two archons must take -3, not -6, while still holding both status rows, because the leave path needs one row per granting field. Fixed `Hit:-2/-4`, unfixed `Hit:-5/-7`. |
-| `check_field_grant_readers.sh` | Do all five families of modifier reader still route through the shared redundant-field-grant predicate, rather than one of them drifting back to summing duplicates? |
-| `check_cleanup_removal_event.sh` | Does reference cleanup narrow removal to the rows referring to the dying source, and keep the inline fallback that guarantees forward progress? The `EV_REMOVED` event on this path is not new -- the base code already delivered it, measured on a clean HEAD build. Structural only: the narrowing's behavioural oracles are `check_circle_creator_death.sh` and `check_overlapping_modifier_fields.sh`, and the fallback guards a restart loop nobody has reproduced. |
-| `check_illus_refund.sh` | Does the illusory-damage refund still clamp to the maximum, instead of paying above it and stranding a character at 58/56? |
-| `check_abi.sh` | Did any save-format type width move, and does anything cast a handle to a pointer? |
-| `check_abs_path.sh` | Does the game still resolve `argv[0]` to an absolute path? |
-| `check_linux_build.sh` | Do both backends still build on Linux, and does a seeded run still play with no errors? Needs Docker; so does `check_gcc_o2_char_create.sh` below, and no other check. |
-| `check_gcc_o2_char_create.sh` | Does a GCC `-O2` build still play character creation into a map, or has the `Item` constructor's uninitialised-member miscompile (inc-nw0v) returned? Needs Docker and builds with GCC, the converse of `check_linux_build.sh`. |
-| `check_layout_sweep.sh` | Does this build still play the same game when its objects sit somewhere else? Runs `check_layout.sh` over many seeds and key scripts, which is the standing alarm for inc-dhc: the engine reading a heap address as if it were data. Needs lldb and builds the `DIVERGE_PROBE` binary, so it runs with the builds and not in the ratchet. A seed whose session bought too little game time is counted as unmeasured, never as a pass. `--selftest` proves all three verdicts still work. |
-| `check_activate_stack.sh` | Does activating one item out of a stack leave the stack whole, and still fire the effect? |
-| `check_air_ring_spell.sh` | Does the Elemental Command (Air) ring description name the granted staff-spell "gaseous form", rather than the phantom "wind column" that exists nowhere in `lib/`? |
-| `check_alienist_live.sh` | Does an Alienist get Surreal Presence, the ability her own description promises? |
-| `check_animal_kinship_prose.sh` | Does the Ring of Animal Kinship description drop its false "+3 or higher" untrained-use threshold, stating plainly that it lets you use Animal Empathy with no ranks -- which its skill bonus and the `SkillLevel` use-gate already permit? |
-| `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? |
-| `check_virtual_override.sh` | Does every derived class member function track the base declaration it redeclares -- parameter types, arity, const, return type, virtual-ness and default arguments -- across `inc/*.h` and the terminals in `src/W*.cpp`? A mismatch hides the base instead of overriding it, and calls through the base type silently reach the base body. The known cases are listed in `tools/virtual_override.baseline`, which only shrinks. |
-| `check_app.sh` | Can a stranger download `Incursion.app` and open it? Assesses a **quarantined** copy, asks the binary for its own save-layout stamp, and asserts the signature survives a run. |
-| `check_bead_publish.py` | Does every bead created since the last commit have a non-empty description and carry exactly one of `public` or `internal`, and does a new `public` one carry the sections a stranger needs to reproduce it? Wired into `.beads/hooks/pre-commit`, so it blocks a commit, except on the overnight harness's own `nightly/` branch, where it warns. `tools/sync_issues.sh` publishes the description and never the notes, so an undescribed bead reaches the tracker with an empty body; the label decides whether it is shown at all, so an unlabelled bead is an invisible one. |
-| `check_bead_new_gate.sh` | Does `tools/bead_new.sh` actually refuse a bead that is not fit to publish, and pass one that is? Both `bd` and the checker are stubbed on `PATH`, so the run files nothing and deletes nothing -- a deliberately broken bead filed by a test would block the next commit in the tree exactly as a real one does. Also asserts that the wrapper checks the id it just filed, and that `--dry-run` checks nothing. |
-| `check_brazier_prose.sh` | Does the Brazier Commanding Fire Elementals description say it can be lit three times per day, matching its `EF_3PERDAY` flag, rather than the "Once per day" it claimed before? |
-| `check_breath_dice.sh` | Does a breath weapon deliver the dice its statblock declares, and does a dragon's age still scale them? `Creature::SAttack` built the count from the declared dice plus twice the breather's Power and then assigned `max(1,e.Dmg.Number)` over the sum, and `e.Dmg` is zero for every caller on that path, so every breath in the game threw one die. Two sessions read a probe log, because each half alone can be passed by a wrong fix: a hell hound declares 2d6 and has no age template, and a red dragon declares 0d12 and takes every die from the template's Power. Unfixed 1d6 and 1d12, fixed 2d6 and, at Power 5, 10d12. The die sides never move, which is the control. |
-| `check_broken_door.sh` | Does a door still lie about being broken? Covers the stale orientation brand and every reader that asks whether a door is a hole. |
-| `check_char_fixture.sh` | Does a frozen character fixture still load, and is he still the character his own sheet claims? A character built by a key script is not reproducible across module changes -- an rID is a position, so one Effect added to `lib/m_items.irh` took the seed-1 Lizardfolk monk from STR 18 with a long sword +3 to STR 14 with a quarterstaff on byte-identical dice -- while one loaded from a save is converted through that save's own manifest and does not move. The oracle is the fixture's own sheet, so the expectations follow a regeneration instead of rotting inside the check. |
-| `check_chargen_escape.sh` | Does ESC at a character-creation menu offer to abandon the character, restore the same menu unchanged when that offer is refused, and return to the main menu rather than entering play with a half-made character? |
-| `check_circlet_blasting_prose.sh` | Does the Circlet of Blasting description scope its base 5d8 damage to living creatures, matching its base `EA_BLAST` `tval: MA_LIVING` code and its Searing Light twin, rather than the "everything else" it claimed before? |
-| `check_comment_budget.sh` | Did any comment or `_PROBE` block in `src/` or `inc/` appear over the 30-line ceiling, or grow past what the baseline recorded? |
-| `check_palettes.py` | Do the colour palettes hold sixteen distinct entries, does each colour share a hue with its `BRIGHT_MASK` partner, and do `src/Wlibtcod.cpp` and `src/Wcurses.cpp` agree on every palette they both carry? The curses backend compiles on neither macOS build, so this is the only guard on its copy. |
-| `check_fork_release.sh` | Does the release number the game prints on its title page match the release actually cut? `FORK_RELEASE` (`inc/Defines.h`) is compiled in and nothing derives it, so it only changes when somebody remembers; release 4 was signed and notarised still saying "release 3". The oracle is the highest `release-N` git tag. |
-| `check_commit_lane.sh` | Does every commit since the rule started open with one of the seven lanes, and does every `rules:` commit name a design bead? Two hatches: `tools/commit_lane.since` says where the rule starts, and `tools/commit_lane.exempt` forgives six already-pushed commits by name, so a later miss below them still fails. |
-| `check_shared_checkout_gate.sh` | Does `.beads/hooks/pre-commit` still refuse new work in the shared checkout, and still let the overnight harness commit on its own `nightly/` branch? Ten cases run against a scratch repository under `TMPDIR`, six that must be refused and four that must be allowed, so a hook that never runs fails as loudly as a hook that refuses everything. The harness is admitted only when `NIGHTLY_BRANCH` names the branch HEAD is actually on, which is a variable one process tree holds and no second session in that directory has. When the publish check finds an unfit bead, the hook warns the harness and refuses everyone else. |
-| `check_pass_record.sh` | Does a landing reuse a full gate pass on the same files, and only then? It copies `nightly_verify.sh`, `finish_bead.sh` and `docs_only_change.sh` into a scratch repository under `TMPDIR`, beside a fake build that counts its calls. An interrupted landing and a gate run before the commit must build nothing. One changed byte, a master that moved, a changed base or toolchain, and a stale, malformed or missing record must each run the full gate. |
-| `check_rules_channel.sh` | Does the rules channel that replaced the truncating SessionStart hook still actually deliver the rules? A hook payload the host judges too large is replaced by a 2 KB preview and written to a file nobody reads, so the project's rules never reach the session; the failure is silent and sits on the delivery side, not in the content. It runs and measures every registered SessionStart hook against a 9,000-character budget, and asserts that `CLAUDE.md` imports `AGENTS.md`, that `.claude/rules/` holds at least one `*.md` file, and that no instruction file exceeds the memory loader's own 4 MiB skip threshold. |
-| `check_package_parity.sh` | Does every packager ship every directory the game reads at run time? `graphics/logo.png` landed in only `package_linux.sh`, so release 4's macOS downloads fell back to the ASCII title while Linux, the Deck and Windows showed the real logo, and nothing failed: the fallback is silent by design. This reads the packager scripts rather than a built folder, so it also speaks for the platforms this machine cannot build, and a new packager that is not listed in it is itself a failure. |
-| `check_citations.sh` | Does every code citation in an outgoing document resolve in the tree it claims to cite? |
-| `check_cloak_resistance.sh` | Does a +3 Cloak of Resistance keep the same saves alone, yet stop stacking with auspicious +2 armour once both bonuses are resistance? |
-| `check_command_prose.sh` | Does Command's description leave out the CR/level limit the code deliberately removed, rather than still promising "does not affect creatures whose CR is more than 2/3rds your level"? |
-| `check_cowl_warding_prose.sh` | Does the Cowl of Warding description state that its save-versus-spells and armour-luck bonuses scale with the magical plus -- +3 and +5 plus the plus -- rather than the flat "+4"/"+6" it claimed before, matching its `PLUS_ADD3`/`PLUS_ADD5` code? |
-| `check_cure_critical.sh` | Does the Cure Critical Wounds effect roll the `4d8 + LEVEL_MAX20` its own description promises, rather than the `3d8` it paid before? |
-| `check_divination_staff_prose.sh` | Does the Staff of Divination description name the granted spell "true seeing", rather than the phantom "true sight" that exists nowhere in `lib/`? |
-| `check_distant_light_vision.sh` | Does a self-luminous cell within sight range but past the player's own light/shadow range become visible, rather than being dropped when the vision ray dies on the dark cells before it? |
-| `check_divine_aspect_prose.sh` | Does the Lesser Divine Aspect description state that its disease/poison saves and its acid/cold/electricity resistances scale per magical plus, matching its `PLUS_2PER1`/`PLUS_5PER1` code, rather than the flat "+2" and "resistance of 5" it claimed before? |
-| `check_divine_power.sh` | Does Divine Power grant `FT_POWER_ATTACK` when the caster has STR 18 and no Power Attack, yet still grant `FT_KNOCK_PRONE` when he already has Power Attack, as its description promises? |
-| `check_dragonshield_hostility.sh` | Does the Dragonshield anger only chromatic (evil) dragons, matching its description, rather than every dragon including the metallic (good) ones? |
-| `check_dragonshield_plus_prose.sh` | Does the Dragonshield description state a "+2 (or higher)" enhancement floor, matching its `INITIAL_PLUS +2` constant, rather than the unreachable "+1 (or higher)" it claimed before? |
-| `check_dragonshield_prose.sh` | Does the Dragonshield description list the colour names the shield can actually display (yellow, not brown), matching its `EV_GETNAME` name table? |
-| `check_eyes_soul_prose.sh` | Does the Eyes of the Soul description name the Necrophysiology feat the item grants via `EXTRA_FEAT FT_NECROPHYSIOLOGY` -- the feat that lets its holder crit, sneak attack and coup de grace undead -- rather than omitting it as the prose did before? |
-| `check_flame_strike.sh` | Does Flame Strike's description state `1d6` points of damage per caster level, matching its SRD-authentic `(LEVEL_SCALED)d6` script rather than the `1d8` prose it carried before? |
-| `check_goblin_queen_prose.sh` | Does the Staff of the Goblin Queen description scope its +4 bonuses and -4 penalties to goblinoid wielders, matching the all-or-nothing goblinoid gate that governs every effect? |
-| `check_hornblade_roaring.sh` | Does the Hornblade carry no noise-making `WQ_ROARING` quality, which would contradict the concealment design its description and `EF_HIDEQUAL` flag build? |
-| `check_python_rod_prose.sh` | Does the Rod of the Python carry a description at all, and does it name its per-plus poison-save bonus, its per-plus Constitution bonus and its three-times-daily transformation into a boa constrictor, matching its `SN_POISON`, `A_CON` and boa-summoning code? |
-| `check_snowstrike.sh` | Does the Snowstrike blast carry `EF_CASTER_IMMUNE` and `EF_ALLIES_IMMUNE`, so the caster and her allies are immune as its description promises, rather than freezing them? |
-| `check_sunblade_cold.sh` | Does wielding a known +2 Sunblade raise Cold resistance by the promised mild rate of two points? |
-| `check_sunblade_light_range.sh` | Does the Sunblade's activated light field reach the promised 60 feet (6 squares)? |
-| `check_lightmap.sh` | Does the light map obey line of sight — no lit cell that no source can reach through walls — and does a carried light light its bearer? |
-| `check_light_filter.sh` | Does light lose strength and colour crossing an ice wall? Two sessions differ by one terrain letter, and the cell two steps beyond must read dimmer through the ice than through open air. |
-| `check_light_fog.sh` | Does light pass through a cloud of fog, dimmed, instead of stopping at it? One session dumps the same cell before and after a Stinking Cloud is cast across it, and the cell must fall from `3` to `1` — it fails both if the cell does not dim and if it goes dark, because a dark cell means the light map is again asking whether an eye could see through rather than whether light passes. |
-| `check_light_averse.sh` | Does a light-averse creature take its -4 combat penalty and squint in a cell lit only by a dynamic external source, and neither in a merely dim cell? |
-| `check_wall_opacity.sh` | Does a wall left behind where level generation removed a door still stop light, or does it stay solid but see-through? |
-| `check_nonnormal_invariant.sh` | Is non-normal detection (an infravision character in darkness) byte-identical across the inc-jcg4 unified-light change over seeds 1-10? |
-| `check_sunblade_negative_plane.sh` | Does the Sunblade double damage against undead and both named non-undead Negative-Plane creatures, without retaining its old wraith-only `5d6` rider? |
-| `check_holy_undead.sh` | Does a Holy weapon, and holy damage, smite an undead creature that is not evil? Seed 4 gives a neutral zombie-templated black bear as the subject, an evil mummy as the positive control and a living neutral brown bear as the negative one. |
-| `check_sylvan_scimitar_prose.sh` | Does the Sylvan Scimitar description say elves are neutral toward its bearer, matching its `NEUTRAL_TO MA_ELF` grant and that grant's Neutral-quality resolution in `src/Target.cpp`, rather than the "friendly" it claimed before? |
-| `check_shadow_shifting.sh` | Does the Cloak of Shadow Shifting require darkness at both endpoints, with the source refusal before daily charge accounting? |
-| `check_hide_carried_light.sh` | Can a creature carrying a lit light source still hide in shadows (it must not)? |
-| `check_hide_dynamic_light.sh` | Does a creature hiding in a cell lit only by a dynamic external source -- magma, a live wall torch, or another creature's torch, with no static `.Bright` and no carried light -- get its hide broken and warned? |
-| `check_bracers_defense_page.sh` | Does the Bracers of Defense page state that Defense Class improves by the magical plus and Coverage by twice the plus? |
-| `check_shadowstone_page.sh` | Does the Shadowstone page name the stone and state that its Hide bonus is twice its magical plus? |
-| `check_sunblade_acc_crit.sh` | Does the Sunblade still carry a bastard sword's Acc +2 and Crit x2 while keeping its own damage, threat range and short-sword speed? |
-| `check_bloodspear_bane.sh` | Does the Bloodspear carry bane against all five races its page names? |
-| `check_bloodspear_lizardfolk.sh` | Does a lizardfolk wielder get the Bloodspear's +3 wounding tier, as its page promises? |
-| `check_bloodspear_orc_save.sh` | Is the Bloodspear's +4 saving throw versus spells restricted to an orc wielder, rather than granted to anyone who holds it? |
-| `check_bloodspear_regen.sh` | Does the Bloodspear start regeneration at 20 turns per critical-hit damage and extend it at 5 turns per later hit? |
-| `check_holy_avenger_dispel_cl.sh` | Does the Holy Avenger's on-hit dispel use the wielder's paladin level as its caster level, rather than a hardcoded 12? |
-| `check_dwarven_thrower_throwable.sh` | Is the Dwarven Thrower's base item a throwable, non-generated hand-copy of the ordinary warhammer, so the artifact can actually be thrown? |
-| `check_devour_negative_cr.sh` | Does devouring a corpse of negative challenge rating leave experience alone, while an ordinary corpse still pays? |
-| `check_devour_template_source.sh` | Does `Creature::Devour(Corpse*)` read the TEMPLATE stati off the corpse rather than off the eater, with the iteration opening and closing on the same object? |
-| `check_dump_save.sh` | Does `-dump` walk a real save and report the same bytes from both backends? |
-| `check_dungeonmap_bounds.sh` | Does a levitating character on the bottom level of a dungeon stay on it when he asks to go down? `Game::GetDungeonMap` answered a request for one level past the last it had allocated by reading past the end of its own array, and the levitation branch of `Creature::Descend` makes exactly that request. The session walks down to depth 10, levitates over a chasm there, presses `>`, and expects the climb-down prompt and a 100m depth reading rather than "You float downwards." |
-| `check_earth_ring_prose.sh` | Does the Ring of Elemental Command (Earth) description name the wearer's own ring "the ring of earth" in its curse clause, rather than the "ring of air" it copied from the Air ring? |
-| `check_earthsinger_live.sh` | Does the Earthsinger admit the gnomes its own refusal message names? |
-| `check_enchant_graceful.sh` | Do seven compiled item pages advertise their own qualities, caster-level gates, spells and bonus type? |
-| `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? |
-| `check_escape_sweep.sh` | Does any string literal still spell a C escape with a forward slash, the way the port's path sweep wrote `/n` for `\n`? |
-| `check_horn_madness.sh` | Does the Horn of Madness drain and stun a bystander while sparing its blower from both halves? |
-| `check_horn_panic.sh` | Can the Horn of Panic frighten a failed-save bystander while sparing its blower? |
-| `check_horn_plenty_prose.sh` | Does the Horn of Plenty entity declare exactly one description, and does it name the fatigue cost its `LoseFatigue(4)` code charges, rather than the duplicate fatigue-less second description it carried before? |
-| `check_huntsman_live.sh` | Does the Twilight Huntsman reach its own spell list, smite Law rather than Good, and track at the rate it claims to stack with? |
-| `check_fiendish_servant.sh` | Does the Blackguard's Fiendish Servant summon a creature when cast from the spell manager, rather than printing "Nothing happens"? |
-| `check_key_directives.sh` | Do the key-script directives reach a menu entry by name, where counting rows could not? |
-| `check_killing_hands.sh` | Do Bracers of Killing Hands pay two points per plus to both unarmed accuracy and damage? |
-| `check_kobold_horn.sh` | Does the Horn of the Kobolds, blown by a non-kobold wielder, summon hostile kobolds as its page promises, rather than the friendly ones the bare `EA_SUMMON` always gave? |
-| `check_layout.sh` | Does this build play the same game when its objects sit at different addresses? |
-| `check_life_stealing_prose.sh` | Does the ball Wand of Life Stealing description state that its necromantic damage scales per plus, matching its `pval: (PLUS_1PER1)d6` code, rather than the flat "1d6 points of necromantic damage" it claimed before? |
-| `check_light_trim.sh` | Do the two display-only lighting options draw exactly the old picture at their Normal setting, and move it at every other one? Also that neither can shift a cell's hue, that brightening cannot clip a channel, and that a corrupt option byte falls back to Normal rather than to whatever it happens to hold. |
-| `check_load_corrupt.sh` | Does the binary refuse ten hand-corrupted saves cleanly and still load two genuine ones? |
-| `check_logrotate.sh` | Does log rotation keep the right archives and prune only names it made itself? |
-| `check_loremaster_live.sh` | Does a Loremaster gain the extra attribute points a tome promises her? |
-| `check_lz_uncompress.sh` | Can the LZ77 and RLE decoders be made to write past their output buffer? |
-| `check_masterarcher_live.sh` | Does the Master Archer's ranged sneak attack fire with a bow only, and not with a sling? |
-| `check_menu_page_arrows.sh` | Does the RIGHT arrow page a long selection menu forward, so a Steam Deck player who has a stick but no Tab key can reach a row on the second page and still pick it? |
-| `check_pad_help.sh` | Does the `?` screen name the pad control beside each key (`Look ... D-pad > (l)`) when a controller is in front of the game, fit on the screen without an assertion, and stay keyboard-only when none is? The headless build forces the pad screen with `INCURSION_PAD_HELP=1`. |
-| `check_vdf_tokens.sh` | Does every `key_press` token in the Steam Input config use a spelling Steam recognises? An unrecognised token neither rejects the config nor logs anything -- the activator silently never fires -- which is how `key_press MINUS` left the R3-hold Exchange Weapons binding dead in a shipped release. |
-| `check_menu_value.sh` | Does a script menu give back the same object handle it was handed? |
-| `check_mirrored_lane.sh` | Does a bead labelled `mirrored` stay out of everything that WRITES to the public tracker, while its open or closed state is still reconciled? A mirrored bead points at an issue somebody outside this project filed, and the full sync refreshes titles and descriptions, so one reaching `bd github sync` replaces a stranger's bug report with ours. The check drives the real `sync_issues.sh` with `bd` and `gh` stubbed on PATH and reads the id list the script actually handed over. It also asserts the half a naive fix drops: a closed mirrored bead still closes the reporter's issue. |
-| `check_favour_int32.sh` | Does a favour total above 32767 survive the round trip through the script's `EV_CALC_FAVOUR` handlers, or does it come back wrapped and negative? The script view of the event's `EParam` field was declared int16 while the field itself is int32, so every god's write-back was truncated and favour levels 7, 8 and 9 could never be reached. A wizard-mode divine champion of Hesani reads 120000 on the character sheet, at favour level 9. |
-| `check_pray_aid_int32.sh` | Does praying for divine aid still grant anything above 32767 favour? `Character::Pray` read the total into an int16 local, so past the wrap every `AID_CHART` threshold comparison failed and the most devoted follower silently received nothing, while still paying the prayer timeout and the favour penalty. The same wizard-mode champion of Hesani, at 120000 favour, prays and is granted `AID_REFRESH` and `AID_MANA`; the unconditional `MSG_PRAYER` line is the control that proves the prayer happened either way. |
-| `check_favour_awards.sh` | Do the five favour awards the engine makes in C++ reach the god? `Creature::gainFavour` took an int16 amount and `Character::gainFavour` an int32 one, so the character's version hid the base instead of overriding it, and the favoured-skill, Khasrach and Zurvash devour, and Semirath trap awards all landed in an empty base body. Four sessions from frozen characters read the patron's favour off the character sheet either side of each award, and require it to rise by the amount the code computes from the printed roll or the creature's challenge rating. |
-| `check_natural_speed.sh` | Has the hard-coded brawl-speed floor drifted from the fastest weapon in `lib/weapons.irh`? |
-| `check_natural_speed_live.sh` | Does flipping one byte of `Options.Dat` really move the Brawl row on the character sheet, from 100% to 175%? |
-| `check_package.sh` | Is the packaged folder free of ACCENT symbols and Homebrew paths, and does it carry its data? |
-| `check_periapt_closure_prose.sh` | Does the Periapt of Wound Closure description drop its false "removes infections" claim, keeping only the two effects the entity truly provides -- stop bleeding and speed healing? |
-| `check_periapt_poison_prose.sh` | Does the Periapt of Proof against Poisons description state that its saving-throw-versus-poison bonus scales per magical plus, matching its `PLUS_2PER1` code, rather than the flat "+2" it claimed before? |
-| `check_planes_sword_prose.sh` | Does the Sword of the Planes description scope its +3 enhancement tier to outsiders generally, matching its `EV_WATTACK` handler's `MA_OUTSIDER` branch, rather than the narrower "denizens of the ethereal or astral planes" it claimed before? |
-| `check_precision_prose.sh` | Does the Eyes of Precision description state that its lowlight-vision bonus scales at 20 feet (2 squares) per magical plus, matching its CA_LOWLIGHT `PLUS_2PER1` code, rather than the flat "20 feet" it claimed before? |
-| `check_prestige_profs.sh` | Do the Assassin and the Blackguard hold the proficiencies their prose promises? |
-| `check_prestige_tables.sh` | Does each prestige class print the saves and the defence track it really grants? |
-| `check_ptr_sweep.sh` | Does the pointer-ordering sweep still find an ordering, and still ignore an equality? |
-| `check_quiet_lookup.sh` | Does a dead object handle still resolve silently where silence is correct, and still complain where a complaint is correct? |
-| `check_race_feats.sh` | Does a Dragonkin get Mantis Leap on the character sheet? |
-| `check_readme_checks.sh` | Was a regression check added without a row in this table? |
-| `check_reapply_single_grant.sh` | Does a worn item keep granting exactly one copy of its bonus when the game re-applies it? Magic Weapon on an orc's Bloodspear, the boost wearing off, Storycraft raising a periapt's plus and a dispel ending must all leave one copy: the Bloodspear read `+4 vs. spells`, then +8, then +12 before the fix. The same run proves the fix keeps an activated Nine Lives Stealer active, loses no unrelated condition to Dispel Magic, and cannot kill a bard at 7 HP. |
-| `check_retributive_mirror.sh` | Does Retributive Mirror reflect one third of incoming damage (`e.vDmg / 3`), the fraction its own description promises, rather than the one fifth it paid before? |
-| `check_rng_split.sh` | Does a random draw made for the screen leave the gameplay stream where it was? Burns draws off the cosmetic stream and requires the seeded session to be identical, then burns one off the gameplay stream and requires it to differ. |
-| `check_reveal_delete.sh` | Can a monster still delete itself inside `Reveal()` and leave the caller holding a dangling map pointer? |
-| `check_ring_fire_terrain.sh` | Can a Ring of Fire Resistance wearer cross magma while the same character without the ring is still refused? |
-| `check_rod_longsword_plus.sh` | Does the Rod of Lordly Might's labeled +1 flaming long sword grant exactly +1 to real to-hit and damage? |
-| `check_sacrifice.sh` | Does a god's altar read the rows below `MA_ALL`, and does it refuse what it should refuse? |
-| `check_sanctuary_strike.sh` | Does Sanctuary end when the creature it wards throws a melee blow, and survive a turn spent on anything else? |
-| `check_save_fail.sh` | Does a save that fails part-way leave the game playable? Drives real and staged failures. |
-| `check_sentinel_live.sh` | Does a live Sentinel get the saves its corrected level table names? |
-| `check_sharp_senses.sh` | Does Sharp Senses reach Search, and not only Spot and Listen? |
-| `check_buckler_size.sh` | A buckler costs -1 to Balance on both Medium and enlarged Large bearers (inc-drmm). |
-| `check_shield_penalty.sh` | Does a shield's armour check penalty come from the shield, or only from its size beside yours? Puts every shield in a Medium paladin's hand one at a time and reads its cost twice off the character dump -- the skill term and the movement rate -- then does the two a Small halfling can hold, whose figures must be double. |
-| `check_skill_manager_reset.sh` | Does an unrecognised key still wreck the Skill Manager? Presses END and HOME -- what the left stick's two left diagonals send -- twice over: at character generation, where the arm threw every allocated rank away, and at level-up, where the same arm closed the manager without a word. |
-| `check_shift_opcodes.sh` | Does the VM's BSHL shift left while Rect member codegen still uses BSHR for reads and BSHL for writes, and does a script-coloured field cast red rather than black light? |
-| `check_springblade_label.sh` | Do the Springblade Bracers name the pair they actually rolled? Seed 6 rolls the two matched +2 elemental blades, and the name must say so. |
-| `check_stair_cycle.sh` | Does the overview map's staircase search run, pick the cheapest, and wrap? |
-| `check_store_scroll.sh` | Does the shop list follow the selection, in both directions, without wizard mode? |
-| `check_strqueue.sh` | Is the string queue's bound still tested before the write? |
-| `check_symbol_autopickup.sh` | Does autopickup keep a dead priest's holy symbol -- of any god, granting or not -- out of the pack, while still stowing real magic and a granting god-marked shield? |
-| `check_mundane_autopickup.sh` | Does autopickup keep an EF_MUNDANE item -- holy water, tanglefoot bags, the alchemy line -- out of the pack, while still stowing the same drop's unidentified potion? |
-| `check_bloodspear_regen_duration.sh` | Does a Bloodspear critical grant the orc wielder regeneration for amt*20 turns rather than amt*5? |
-| `check_periodic_interval.sh` | Does a PERIODIC status effect fire every Val rounds, not Val-1? Two synthetic gods grant Val 3 and Val 5 timers; fixed, both fire on an even 180- and 300-turn beat across at least three firings apiece, where an unfixed build reads 120 and 240. |
-| `check_heal_maladies.sh` | Does the priest spell Heal remove the maladies its own description promises? It promised poison, disease and stunning and removed nothing at all. A test god afflicts the player with nine maladies at once; he then learns Heal in wizard mode and casts it on himself. A second measurement has him paralyse a kobold with Hold Person and cure that, because a paralysed character cannot cast on himself. The unfixed declaration leaves all ten standing. |
-| `check_horn_goodness_radius.sh` | Does the Horn of Goodness' Magic Circle vs. Evil field have its promised 60-foot (six-square) radius? |
-| `check_horn_sewers_cr.sh` | Does the Horn of the Sewers' description state its summoned rodents have CR twice its magical plus? |
-| `check_javelin_lightning_savedc.sh` | Does the Javelin of Lightning's Reflex save use the DC its description promises? |
-| `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? |
-| `check_target_enter.sh` | Can a target prompt confirm a square that holds a staircase, including the one a character stands on the moment he enters a level? |
-| `check_telepathy_prose.sh` | Does the Telepathy helm description state its scaling telepathy range -- 50 feet plus 10 feet per magic plus -- rather than the flat "60 feet" it claimed before, matching its `pval: PLUS_ADD5` code? |
-| `check_underdark_live.sh` | Does the Underdark Warrior check its race requirement, and refuse the grey elf? |
-| `check_unearthly_harmonies_prose.sh` | Does the Wand of Unearthly Harmonies description state that its Intelligence damage scales per plus, matching its second `EA_BLAST` `pval: (PLUS_1PER1)d2` code, rather than the flat "1d2 points of Intelligence damage" it claimed before? |
-| `check_unholy_blight.sh` | Does Unholy Blight's inflict segment carry one `xval` (`ADJUST_CIRC`) and `yval: A_AID`, so the sicken lands, rather than the doubled `xval` that made it inert? |
-| `check_uninit_reads.sh` | Does the shipping build carry no high-confidence uninitialised-variable reads (`-Wuninitialized`, `-Wsometimes-uninitialized`)? |
-| `check_upstream_label.sh` | Does every bead the reporting ledger lists as a base-code defect carry the beads-label `upstream`, so `sync_issues.sh` publishes its GitHub issue with that tag? |
-| `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? |
-| `check_wand_acid_type.sh` | Does the Wand of Acid's residual burn damage a fire-immune victim? |
-| `check_zeal_strike.sh` | Does Zeal end when the paladin strikes a creature it did not choose, and survive both an ordinary turn and a blow at the target it did choose? |
-| `check_alienist_drain.sh` | Does each Alienist summoning drain the held mana its page names (Summoned Creature's CR x 2), the mana that never regenerates? |
-| `check_armour_model.sh` | Does the armour model penetrate coverage by grade and subtract from damage, with natural armour and a worn suit penetrated independently? |
-| `check_boots_providence.sh` | Do the Boots of Providence pay their Luck bonus while carried, not only while worn? |
-| `check_brawl_weapon.sh` | Does an unarmed attack take nothing from a held weapon -- no accuracy, speed or enchantment reaching the fist? |
-| `check_clock_advance.sh` | Does the game-time oracle still catch a scripted run that burns keys while no game time passes? |
-| `check_consumable_abort.sh` | Does a scroll whose reading is aborted return to the pack, rather than being spent on an action that never happened? |
-| `check_convert_guard.sh` | Does `-convert` refuse the committed evidence fixtures and leave them byte-identical, while still converting a scratch copy? |
-| `check_death_attack.sh` | Does the Assassin's Death Attack gate only on the assassin's own out-of-combat state, so it can strike a target that is already fighting? |
-| `check_dequ_save_message.sh` | Does the equipment-save message name the character and reach him, rather than naming the item twice and speaking to the item? |
-| `check_dig_zero_skill.sh` | Does a dig by a miner with zero Mining skill finish cleanly, rather than dividing by zero? |
-| `check_doc_citations.sh` | Did any document a change touched gain a citation defect above its recorded baseline? |
-| `check_doc_freshness.sh` | Which documents did a range of commits leave stale, and does every line citation in them and in the source they touched still resolve? |
-| `check_drain_selfaim.sh` | Does a monster's drain spell hit an enemy rather than the caster? Minor and Major Drain reach a monster only through the injury-remedy action, which carries no target, and the untargeted fallback used to aim them at the caster -- one feyr drained itself 120 times in thirty turns. Reads the cast probe for a monster attack with no direction and no location, and stops rather than passes if the session never landed the player's control cast. |
-| `check_dup_names.sh` | Does the resource compiler reject a same-case duplicate resource name, with its own duplicate-name diagnostic? |
-| `check_fire_ring_resist.sh` | Does the Ring of Elemental Command (Fire) grant the Fire Resistance of 10 its page promises, rather than the 12 its grant was coded? |
-| `check_flame_tongue_large.sh` | Does the flame tongue sword's tongue-of-flame lash yank a Large corporeal creature, matching its page's "a Large or smaller corporeal creature", rather than excluding Large by an off-by-one `>= SZ_LARGE` size gate? |
-| `check_flame_tongue_range_prose.sh` | Does the flame tongue sword description state its Tongue of Flame reach as a 30-foot base plus 10 feet per point of Charisma modifier (minimum 30 feet), matching its `e.vRange = 3 + max(0, Mod(A_CHA))` squares code at 10 feet per square, rather than the "Charisma modifier times ten in feet (minimum 20)" it claimed before? |
-| `check_flame_tongue_undead.sh` | Does a flame tongue sword set a corporeal undead alight for the 3d6/2d6/1d6 fire its page promises? |
-| `check_flavor_stability.sh` | Does a v1 save's per-player flavour memory -- appearances and their Known/Tried flags -- survive a module rebuild that adds a resource? |
-| `check_format_strings.sh` | Does every printf-style format string in the engine agree with its arguments, or has the warning count risen above the baseline? |
-| `check_gate_membership.sh` | Does every check in `tools/` declare whether the gate should run it? A check carries `# gate: cheap`, `# gate: live` or `# gate: none <why not>`, and `nightly_verify.sh` reads those markers instead of a hand-written list. The checks that predate the rule are excused by `tools/gate_membership.baseline`, which only shrinks. |
-| `check_geomancy.sh` | Does the Earthsinger's Geomancy roll the 5d12 its page names, rather than the 5d12+12 copied from the Mana potion? |
-| `check_gravestone.sh` | Does the death screen render the epitaph's corrected wording and columns, and the date the stone is carved with? |
-| `check_grounded_stance_live.sh` | Does the Earthsinger's Grounded Stance add its damage term to a landed blow when every condition it names is met? |
-| `check_hunger_penalty.sh` | Does a Hungry character pay only the Hungry penalty, so getting hungrier never makes him stronger? |
-| `check_item_type_id.sh` | Does identifying one item teach its kind for every flavoured type, so the next of that kind arrives already named? |
-| `check_ki_strike_live.sh` | Does a Monk gain Ki Strike at 4th level, the grant that lets an unarmed attacker harm an incorporeal creature? |
-| `check_ledger_rows.sh` | Does every ledger row in `docs/REPORTING-GATE.md` sit under the heading whose column shape it has, so no tracking id is dropped? |
-| `check_libtcod_mode_change.sh` | Does libtcod recalculate its copy rectangle after a display mode change, so the console is not left clipped to the size of the window before it? Needs a real display and takes over the screen for a moment, so it runs with the builds and not in the ratchet. |
-| `check_luckblade_plus.sh` | Does the Luckblade keep its magical plus when the wish it would charge for is refused, rather than grinding down first? |
-| `check_feat_toggle.sh` | Do two presses of the feat toggle key toggle twice without spending a pick? |
-| `check_menu_overflow.sh` | Does a menu with more than 52 options still draw and select every row, rather than losing the ones past the alphabet? |
-| `check_module_rebuild.sh` | Does an ordinary build put this tree's scripts into the game, while an instrumented build still leaves the module alone? |
-| `check_prestige_hidden.sh` | Are the eight unfinished prestige classes kept out of every class list, rather than offered and then refused after the pick? |
-| `check_probe_hooks.sh` | Does every debugging hook shipped in the game name a bead, or has an undeclared hook appeared outside the baseline? |
-| `check_rider_corpse.sh` | Does a natural attack's rider clause stop when its victim is dead, rather than striking a corpse and dangling a map pointer? |
-| `check_ring_command_level.sh` | Do the Rings of Elemental Command grant the 12th-level, +6 command power their pages promise, not 10th level and +5? |
-| `check_ring_fire_curse.sh` | Does the Ring of Elemental Command (Fire) curse amplify cold damage alone, rather than rewriting every wound its wearer takes to cold? |
-| `check_ring_preservation_page.sh` | Does the Ring of Item Preservation's page describe the ward the ring actually is, rather than the extradimensional transport that never happens? |
-| `check_ring_water_command.sh` | Does the Ring of Elemental Command (Water) grant command of water creatures, its page's element, rather than fire? |
-| `check_robe_eyes.sh` | Does the Robe of Eyes grant the 60 feet of infravision its page promises? |
-| `check_rod_lordly_might.sh` | Does the Rod of Lordly Might's paralyzing touch grant the three charges its page promises, rather than seven? |
-| `check_schema_roundtrip.sh` | Does each class group of the v1 save schema round-trip field for field, and write a byte-identical second file? |
-| `check_spell_god_drift.sh` | Does a v1 save refuse a reloaded module only on positive evidence that entries moved, while a pure rename still loads? |
-| `check_spook_ally.sh` | Does Spook spare its caster's own side, and does a creature made immune inside a field still shed the stati when it leaves? |
-| `check_spook_mount.sh` | Does a mount keep the aura it emits across being ridden and carried between levels, and keep owning it? |
-| `check_springblade.sh` | Does deploying the Springblade Bracers require a Handle Device check, and does its free off-guard strike fire only once per combat? |
-| `check_stacked_abilities.sh` | Do Uncanny Dodge and Sneak Attack levels stack across the classes that grant them, so a multiclass character serves one waiting period rather than each class's? |
-| `check_staff_abyss_alignment.sh` | Is the Staff of the Abyss inert in a good character's hands, and still whole in a non-good one's, as its page says? |
-| `check_staff_abyss_spell_list.sh` | Does the Staff of the Abyss's page name only the nine spells it actually grants, without the three that have nothing behind them? |
-| `check_staff_winter_grants.sh` | Does the Staff of Winter hand over all four powers its page promises -- the cold spells, and the Charisma, Intimidate and Appraise numbers? |
-| `check_staff_winter_quality.sh` | Does the Staff of Winter carry the weakening quality its page names, rather than the numbing quality the script gave it? |
-| `check_stair_warn.sh` | Does descending an ordinary staircase skip the false unsafe-terrain warning, rather than asking to confirm every descent? |
-| `check_striking_wand_knockback.sh` | Does the Wand of Striking fold its knockback into the telekinetic bolt's single Reflex save, instead of rolling a second, independent one? |
-| `check_two_fist_feats_live.sh` | Do the two-weapon feats reach a pair of empty hands, so a monk's Two-Weapon Tempest speeds his fists? |
-| `check_v1_adversarial.sh` | Does the v1 save reader refuse every crafted corruption, yet still load the case that merely deletes a known tag? |
-| `check_v1_append_survives.sh` | Does a save written before a resource is appended to `lib/` still load to the same character afterward? |
-| `check_v1_full_roundtrip.sh` | Does a real session write a v1 save that reloads to the same character and reaches a save-load-save byte fixpoint? |
-| `check_v1_manifest_parse.sh` | Does the v1 module manifest's load-side parser refuse a manifest corrupted in one field, by name? |
-| `check_wand_animal.sh` | Does a Wand of Animal Summoning summon an animal, rather than a dragon from the line copied above it? |
-| `check_wand_cleansing.sh` | Does a Wand of Cleansing Light roll the damage its own inventory line prints, rather than multiplying its plus twice? |
-| `check_water_ring_prose.sh` | Does the Ring of Elemental Command (Water) description introduce its staff-spells as "elemental water", matching its all-water spell list, rather than the "elemental fire" it copied from the Fire ring? |
-| `check_weapon_groups.sh` | Does every weapon-group bit hold a row in the name table, so a class's proficiency list names it rather than dropping it in silence? |
-| `check_weapon_immunity_live.sh` | Does an unarmed strike meet Weapon Immunity at all, and does Ki Strike carry a fist through it? |
-| `check_xp_penalty.sh` | Does `XPPenalty` survive a character with fewer than three classes, rather than dereferencing a zero class id and crashing? |
-| `check_xp_penalty_rule.sh` | Does the multiclass experience penalty exempt every class the race favours, honour `CF_FAVOURED`, and charge the manual's 20% rather than 25%? |
-| `check_xsummon_live.sh` | Does a divine summoning spell (Holy Summoning, Summon Nature's Ally) cap its concurrent summons the way the wizard line does? |
-| `check_yuse_activate.sh` | Does activating a blast item from the `y` menu ask where to aim it, rather than resolving the beam on the activator? |
-| `check_illusion_flags.sh` | Does an illusion's declared IL_IMPROVED flag decide who pierces it, rather than the parity of its save DC? |
-| `check_natural_save.sh` | Does a natural 20 on a saving throw always succeed, and a natural 1 always fail, regardless of Bonus + roll vs DC? Reads the printed `Save: 1d20 (roll) ... [success\|failure]` line from many seeded sessions -- DC 15 tanglefoot strands for volume, DC 27 guardian runes (a level 1 paladin's own bonus cannot reach it) for the edge case a modest DC can never supply. |
-| `check_take_twenty.sh` | When nothing threatens him, does a character take 20 on Escape Artist, Climb, Handle Device, Search or Balance -- reading the maximum result, but still adding his modifiers and still measured against the DC -- rather than an accidental natural 20 passing the check however far short of the DC the total lands? Reads the printed `Escape Artist Check: took 20 ... [success\|failure]` line from a frozen paladin in full plate, whose total cannot reach the DC. |
-| `check_xp_drain.sh` | Does restoring drained XP clear the drain once, rather than also crediting the same amount back onto XP -- so draining 500 and restoring it returns effective XP exactly to where it started, not 500 above? |
-
-`tools/README.md` §7 groups these into five tiers by what each needs — a clean
-clone, a compiler, a POSIX build, a built artefact, or a recorded baseline — and
-names the two you must not run casually.
-
-### Instruments
-
-All are off by default. The environment-gated ones cost nothing when unset, so
-they ship in every binary; the compile-time ones need
-`EXTRA_CXXFLAGS=-D<SYMBOL> ./build_macos.sh` and reach no shipped build.
-
-| Switch | What it answers |
-|---|---|
-| `INCURSION_SEED` | Determinism. Every measurement rests on it. |
-| `INCURSION_MAP_AUDIT=1` | Does every Thing appear both in `m->Things[]` and in the Contents chain of the square it claims? Runs every tenth turn and the instant an unlink fails. |
-| `INCURSION_SAVE_PROBE=1` | Where was the player either side of the save/load boundary? Tells "never written" apart from "written and not read back". |
-| `INCURSION_MAP_PROBE=1` | Remembered against unseen glyphs per draw. Distinguishes "the map is wrong" from "the map is right and the drawing is wrong". |
-| `INCURSION_CHAR_PROBE=1` | Writes a readable character sheet beside every save, automatically. |
-| `INCURSION_ERROR_PROMPT=1` | Restores the blocking error dialog instead of logging and continuing. |
-| `INCURSION_TARGET_PROBE=1` | Records each target-cursor press and where it landed. Behind `check_target_order.sh`. |
-| `INCURSION_STAIR_PROBE=1` | Logs the staircase candidate list and its ranking. Behind `check_stair_cycle.sh`. |
-| `INCURSION_DOOR_PROBE=1` | Logs `DoorFlags` either side of `Door::SetImage`'s orientation branch, with the four neighbours' solidity. Behind `check_broken_door.sh`. |
-| `INCURSION_TRIP_AOO_PROBE=1` | Logs the actor, the victim and whether they are one creature for every attack of opportunity `Creature::OAttack` accepts. Behind `check_trip_aoo.sh`. |
-| `INCURSION_TRUESIGHT_PROBE=1` | Grants the player `TRUE_SIGHT`, places one invisible creature at three distances and two lighting states, and logs what `Creature::Perceives` returns for each. Behind `check_true_sight.sh`. |
-| `INCURSION_QUIET_PROBE=1` | Logs whether a handle lookup spoke. Behind `check_quiet_lookup.sh`. |
-| `INCURSION_SAVE_FAIL_AT=N` | Stages a save failure at a chosen point, throwing exactly what a short write throws. A real full disk cannot reach the interesting case, because both write loops write into memory first. |
-| `INCURSION_STACK_PROBE=1` | Logs nested entries into depth changes. Found the bottom-of-dungeon crash. |
-| `INCURSION_MAX_KEYS=N` | The headless key budget. |
-| `-DDIVERGE_PROBE` | Counts every random number drawn. Two runs of one seed draw the same numbers in the same order unless something outside the generator changed a decision, so the first differing count is the first place two runs stopped playing the same game. |
-| `-DINCURSION_LAYOUT` | Shifts every heap allocation by a seeded offset, so an address-dependent decision splits on demand instead of by luck. The other half of `DIVERGE_PROBE`. |
-| `-DPATH_PROBE` | Pathfinding work per call. Showed one line to be 89% of a burst. |
-| `-DPALETTE_LOG` | Separates "the game re-applied a palette" from "the game did nothing and the display changed the picture". |
-| `-DINCURSION_TRIP_AOO_UNFIXED` | Restores the trip defect of inc-83dw -- `ProvokeAoO(e.EActor)` and no `c == this` guard -- so the measurement binary is the engine as it stood. The whole of `check_trip_aoo.sh`'s red side. |
-| `-DINCURSION_OOB_PROBE` | Names the creature and code path behind each out-of-bounds map read. |
-
-[`docs/DEVTOOLS-AUDIT.md`](docs/DEVTOOLS-AUDIT.md) carries a verdict on every one
-of these, on two axes: did it settle something, and is it expensive to rebuild.
-It also records the instrument that was deleted for failing a third test, which
-overrides both — an instrument that answers confidently about the wrong thing
-costs more than no instrument. Read that entry before adding one of your own.
-
-### Where the documentation is
-
 | Question | Read |
-|---|---|
-| What is broken, and how each fix was verified | [`docs/FIXED.md`](docs/FIXED.md) |
+| --- | --- |
+| How a change is verified | [`docs/VERIFICATION.md`](docs/VERIFICATION.md) |
+| The harness, the gate, every check and every probe switch | [`tools/README.md`](tools/README.md) |
+| What was broken, and how each fix was verified | [`docs/FIXED.md`](docs/FIXED.md) |
 | The running state of the port, and what is still open | [`docs/PORT-STATUS.md`](docs/PORT-STATUS.md) |
-| Every file under `tools/`, with a status and a citation | [`tools/README.md`](tools/README.md) |
 | A verdict on every instrument in the tree | [`docs/DEVTOOLS-AUDIT.md`](docs/DEVTOOLS-AUDIT.md) |
 | What must be true before a claim goes public | [`docs/REPORTING-GATE.md`](docs/REPORTING-GATE.md) |
 | How the engine fits together | [`docs/ENGINE-MAP.md`](docs/ENGINE-MAP.md) and its four companions |
 | The scripting language the ruleset is written in | [`docs/incursionscript.md`](docs/incursionscript.md) |
 | How the headless backend behaves | [`docs/HEADLESS-SPEC.md`](docs/HEADLESS-SPEC.md) |
+| What each release changed | [`docs/RELEASE-NOTES.md`](docs/RELEASE-NOTES.md) |
 
 Work is tracked in the repository with
 [Beads](https://github.com/gastownhall/beads) — `bd ready` for what is available,
 `bd show <id>` for one issue and its evidence.
-
----
-
-## Windows
-
-Release 4 ships a Windows executable. It is cross-built from macOS with
-mingw-w64 — `TARGET=windows ./build_macos.sh` — and it is the same engine the
-other three downloads carry. [Get it](#get-it) says how to download and run it.
-
-The original MSVC build is still in the tree, and it is not the path this fork
-took. `build_sdl2.bat`, `build_libtcod.bat` and `build_pdcurses.bat` rebuild the
-checked-in dependencies, and `build.bat` produces `IncursionLibtcod.exe` and
-`IncursionCurses.exe`. Three things rule it out, any one of them sufficient: it
-reads a `build/dependencies/` directory that is not in this repository, it never
-compiles the data module, and it has no shipping mode, so everything it can
-produce links `src/Art.cpp` and the GPLv2 ACCENT runtime with it. The cross-build
-answers all three. `src/Wcurses.cpp`, the second Windows frontend, is still built
-by nothing.
-
-**Why the dependencies are checked in, in Richard Tew's words:** bug fixes to
-gameplay require a save game, and a save game only loads in the build that wrote
-it. Character creation is varied enough that a player often cannot remember what
-they picked, so reproducing a report without their save is a wild goose chase.
-Keeping every binary and every source version is what makes an old save
-debuggable at all.
 
 ---
 
