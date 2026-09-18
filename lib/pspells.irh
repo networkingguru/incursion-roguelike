@@ -5595,18 +5595,49 @@ Priest Spell "Etherealness" : EA_INFLICT
       "You return to the material plane.";
   }
 
-Priest Spell "Heal;spell" : EA_HEALING
+/* The scroll form is OURS, not upstream's: the base game never gave Heal one,
+   and a missing scroll is a design choice rather than a defect. A session
+   proposed it on 2026-09-17 while answering a question of Brian's about
+   cure-condition scrolls, and he approved it. It is tracked as inc-pfmv, and it
+   must never be claimed as a base-code fix. */
+Priest / Scroll Spell "Heal;spell" : EA_HEALING
   { SC_THE; Base: SP_EASY; Cost: 15; Level: 6; qval: Q_TAR|Q_NEAR;
-    xval: HEAL_HP|HEAL_XP|HEAL_ATTR|HEAL_MALADY|HEAL_FATIGUE; 
+    /* upstream: Heal cured nothing at all. It declared HEAL_MALADY with no
+       yval, and HEAL_MALADY removes only the one stati that yval names
+       (src/Effects.cpp:2355), so it removed stati 0, which is unused. The flag
+       written for this spell, HEAL_ALL_MALADIES (inc/Defines.h:3365), cannot
+       be used at all: it is 0x100, and the field that carries it,
+       EffectValues::xval, is a uint8 (inc/Res.h:138), so the module compiler
+       silently drops the bit (lang/Grammar.acc:695). The cure is therefore done
+       with one 'and EA_HEALING' block per malady below, each using HEAL_MALADY,
+       which is 0x10 and fits. A declaration missing a field, and a flag too
+       wide for its field, behave the same on Win32, with the original typedefs
+       and on the upstream compiler, so neither is a port artefact. Observed,
+       inc-xr8i, not sent.
+       THE LIST IS NOT UPSTREAM'S. Brian ruled on 2026-09-17 that Heal does not
+       cure POLYMORPH, which upstream's list includes, and that it does cure
+       every PARALYSIS, where upstream's list clears only the dazed kind. Those
+       two decisions are tracked as inc-pfmv and are not part of this repair. */
+    xval: HEAL_HP|HEAL_XP|HEAL_ATTR|HEAL_FATIGUE;
     Purpose: EP_FIX_TROUBLE;
     On Event EV_CALC_EFFECT {
       e.vDmg = 5000;
       return NOTHING;
       };
-    Desc: "Heals the target fully and cures experience drain, attribute 
-      damage and fatigue. In addition, it removes a number of maladies 
-      (e.g., poison, disease, stunning)."; 
+    Desc: "Heals the target fully and cures experience drain, attribute
+      damage and fatigue. In addition, it removes a number of maladies
+      (e.g., poison, disease, stunning).";
   }
+  and EA_HEALING { xval: HEAL_MALADY; yval: BLIND; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: CONFUSED; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: DISEASED; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: STUNNED; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: POISONED; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: HALLU; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: BLEEDING; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: CHOKING; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: WOUNDED; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: PARALYSIS; }
 
 Priest / Scroll Spell "Harm" : EA_BLAST
   { SC_NEC; Base: SP_TRIVIAL; Cost: 12; Level: 6; aval: AR_TOUCH;

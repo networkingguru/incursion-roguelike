@@ -28,23 +28,34 @@
 # WHY THE CHECK ALSO DEMANDS A GOBLIN ATTACKING THE PLAYER. Deleting the
 # ProvokeAoO call would drive self=1 to zero as surely as fixing the argument,
 # and would silently remove a rule the game documents. So the run must show the
-# tripped foe answering: actor=<goblin> victim=<Holg>. Both columns are read for
-# that reason.
+# tripped foe answering: actor=<goblin> victim=<Rathak>, Rathak being seed 2's
+# character. Both columns are read for that reason.
 #
-# Measured 2026-09-16, seed 5, tools/fixtures/options-2026-08-22.dat, two
-# binaries differing only by -DINCURSION_TRIP_AOO_UNFIXED. Three attacks of
-# opportunity on each build, at the same three turns:
+# Measured 2026-09-18, seed 2, tools/fixtures/options-2026-08-22.dat, two
+# binaries differing only by -DINCURSION_TRIP_AOO_UNFIXED. Two attacks of
+# opportunity on each build; both open at turn 198149 and both builds agree
+# on the COUNT, but the second differs by build (198170 fixed, 198191
+# unfixed) -- a self-targeted attack resolves differently from a two-party
+# one and so consumes the RNG stream differently downstream, moving the next
+# scheduled event. Seed 2's character is named Rathak (chargen names him; the
+# seed decides the name, not this script), so the match below is against
+# Rathak, not the seed 5 character Holg -- a re-seed changes the name being
+# matched along with everything else the world generates:
 #
-#   unfixed  self=1 x3   actor=<Holg> victim=<Holg> twice,
-#                        actor=<goblin> victim=<goblin> once (the counter-trip
-#                        mirror case, which nobody had reported); the player's
-#                        hit points fall to 34/36 by his own hand.
-#   fixed    self=0 x3   actor=<goblin> victim=<Holg> twice,
-#                        actor=<Holg> victim=<goblin> once (the counter-trip,
-#                        now delivered by the creature that was tripped).
+#   unfixed  self=1 x2   actor=<Rathak> victim=<Rathak> both times; the
+#                        player's own attack of opportunity strikes himself.
+#   fixed    self=0 x2   actor=<goblin> victim=<Rathak> both times (the
+#                        tripped goblin delivers the attack, as documented).
 #
-# The COUNT and the TURNS are identical on both builds, which is the control:
-# the fix redirects the attack and does not remove it.
+# The COUNT is identical on both builds, which is the control: the fix
+# redirects the attack and does not remove it. Seeds swept in order
+# 1-4, 6-30 (5 is the broken one, see above): most (1, 3, 4, 6-8, 10-12, 14,
+# 15, 17-23, 26, 28-30) ended the session before the trips, because chargen
+# diverges from what dequ-setup.keys expects on that world; seed 9 completed
+# but no trip landed; seeds 13, 16, 24, 25 and 27 completed and had a goblin
+# answer a trip, each under its own chargen-assigned name (Shobri, Shong,
+# Rathak and Zol). Seed 2 is the first seed tried, in order, that both
+# completes and has the tripped goblin answer.
 #
 # HOW TO PROVE THIS RED AGAIN. There is no --prove-red switch, because the red
 # side is a whole build rather than one mutated line:
@@ -64,7 +75,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 2
 
-SEED="${SEED:-5}"
+SEED="${SEED:-2}"
 export INCURSION_OPTIONS="${INCURSION_OPTIONS:-tools/fixtures/options-2026-08-22.dat}"
 export INCURSION_TRIP_AOO_PROBE=1
 
@@ -115,7 +126,7 @@ fi
 
 # A fix that deleted the call would also show zero self-attacks. The tripped
 # foe must be seen answering the trip.
-answered="$(grep -c 'actor=<goblin> victim=<Holg>' "$log")"
+answered="$(grep -c 'actor=<goblin> victim=<Rathak>' "$log")"
 if [ "$answered" -lt 1 ]; then
     echo "INCONCLUSIVE: no self-attack, but no goblin answered a trip either, so"
     echo "              this run cannot tell a corrected argument from a deleted"
