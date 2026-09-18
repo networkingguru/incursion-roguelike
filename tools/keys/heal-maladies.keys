@@ -1,0 +1,88 @@
+# Does the priest spell Heal, cast by the PLAYER himself, cure all nine
+# non-PARALYSIS maladies its "and EA_HEALING" clauses name? Read by
+# tools/check_heal_maladies.sh. bd inc-xr8i.
+#
+# THE NINE: BLIND, CONFUSED, DISEASED, STUNNED, POISONED, HALLU, BLEEDING,
+# CHOKING, WOUNDED. PARALYSIS is deliberately out of scope (a separate,
+# later design decision) and is never afflicted or checked here.
+#
+# THE ROUTE, in two halves.
+#
+#   Half one, AFFLICTION: tools/fixtures/heal-maladies-god.irh, spliced onto
+#   a scratch copy of lib/main.irc by the check script (never onto the
+#   tracked lib/), declares one test god. "Become Divine Champion" (wizard
+#   mode) joins it and grants 30000 favour outright (src/Debug.cpp), which
+#   fires its EV_BLESSING once; the handler calls GainPermStati directly for
+#   all nine maladies, the same call lib/religion.irh:5958 (Zurvash) makes.
+#   No ThrowEff, no scripted spell throw: GainPermStati is not the spell, it
+#   is a shortcut to the AFFLICTION only, so that the CURE below is still the
+#   real thing, cast by the player.
+#
+#   Half two, THE CURE: wizard "Learn Any Spell" teaches "Heal;spell"
+#   (lib/pspells.irh's Priest / Scroll Spell) as an innate ability, then
+#   [u] Innate Heal, ENTER casts it on the default target -- himself. An
+#   innate cast always succeeds (Character::SpellRating returns 100 for
+#   SP_INNATE, src/Magic.cpp:3188-3191) and costs no mana. This is the same
+#   route tools/keys/heal-maladies.keys used for poison alone before this
+#   widening, and reused unchanged.
+#
+# THE ORACLE: wizard "Examine Player Data" (Player::Dump, src/Debug.cpp)
+# prints an unfiltered "Stati (n):" list naming every active status by its
+# full constant name via STATI_CONSTNAMES (src/Tables.cpp) -- unlike the
+# right-hand status panel, which shows at most one malady at a time behind an
+# if/else-if priority chain (src/Term.cpp:426-444) and never mentions HALLU,
+# BLEEDING, CHOKING or WOUNDED at all. The dump scrolls; ten DOWN presses
+# were measured (tools/fixtures/heal-maladies-god.irh's own header run) to
+# bring the whole nine-entry block on screen from a fresh, top-scrolled
+# entry, both before and after the cure, because entering the screen calls
+# ClearScroll(true) each time and resets the scroll position. Do NOT scroll
+# further: past the end of Player::Dump's content, this debug view's
+# scroller segfaults (observed 2026-09-17, unrelated to any of the nine
+# maladies -- reproduced by continuing to press DOWN after the last line of
+# output already showed. Not filed: src/ is off limits for this bead and the
+# view is a wizard/debug tool, not player-facing).
+#
+# WHY NOT THE STATUS PANEL: it is a single priority-ordered line (Paralyzed >
+# Poisoned > Diseased > Stunned > Sickly > Confused > Blind), so afflicting
+# all nine at once would only ever show ONE name there, and it structurally
+# cannot show HALLU, BLEEDING, CHOKING or WOUNDED under any affliction.
+#
+# EMPIRICAL RESULT ON THE BLOCKING-MALADY TRAP: tried, not assumed. One
+# single run affects the player with all nine simultaneously -- including
+# STUNNED, CONFUSED and BLIND -- then teaches and casts Heal in the same run
+# with no split needed. The wizard-mode menu commands and the innate cast
+# both went through untouched: HP stayed 42/42 across the run (no bleed or
+# choke damage: the fixture pins Val/Mag to 0), the cast produced "You feel
+# fully refreshed!", and the after-dump showed all nine gone. Nothing here
+# forced a per-malady run.
+
+@include chargen.keys
+
+w
+y                       # Enter wizard mode? [yn] -- only asked once
+@choose "Become Divine Champion"
+"Heal Maladies Test God" ENTER
+@while "more --" SPACE
+@while "ESC:Done" ESC
+
+w
+@choose "Examine Player Data"
+DOWN*10                # scroll the debug dump down to the Stati block
+@dump:control
+ESC
+
+w
+@choose "Learn Any Spell"
+"Heal;spell" ENTER
+
+u
+@choose "Innate Heal"
+ENTER                   # confirm the default target: self
+
+w
+@choose "Examine Player Data"
+DOWN*10                # same fixed scroll: ClearScroll(true) reset it to top
+@dump:after
+ESC
+
+@quit

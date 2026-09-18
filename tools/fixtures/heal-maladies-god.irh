@@ -1,0 +1,78 @@
+/* heal-maladies-god.irh -- fixture for tools/check_heal_maladies.sh (bd
+   inc-xr8i). Recreated after the earlier fixture of this name was deleted;
+   this one is simpler.
+
+   ONE test god. Joining it (wizard mode "Become Divine Champion") throws
+   EV_BLESSING once with 30000 favour (src/Debug.cpp), and the FAVOUR_CHART
+   below is copied from tools/fixtures/periodic-interval-gods.irh: its first
+   rung (1000) sits under 30000 and its second (50000) sits over it, so a
+   fresh follower always lands on level 1 and this handler fires exactly
+   once, never again on the same character. The one-shot guard is
+   getGodLevel(...)==1, the same gate periodic-interval-gods.irh uses, and it
+   matters: this file's own history includes a fixture that re-afflicted the
+   player every level-up and eventually died SIGSEGV.
+
+   The blessing calls GainPermStati directly on the nine non-PARALYSIS
+   maladies this check covers -- BLIND, CONFUSED, DISEASED, STUNNED,
+   POISONED, HALLU, BLEEDING, CHOKING, WOUNDED -- the same call
+   lib/religion.irh:5958 (Zurvash) makes from its own EV_BLESSING. PARALYSIS
+   is deliberately absent: it is out of scope for inc-xr8i and stays that
+   way.
+
+   Val and Mag are pinned to 0, rather than left at their -1 default, because
+   BLEEDING's per-turn pulse (src/Creature.cpp:1782-1786) reads Mag as a
+   damage amount; an explicit 0 keeps a scripted character from taking
+   surprise damage between the join and the cast this check is timing.
+
+   POISONED and DISEASED name a real eID -- an existing stock Effect
+   resource, $"arsenic" and $"devil chills" -- rather than GainPermStati's
+   default eID of 0. Both have their own per-turn "overcome" loop
+   (Creature::DoTurn's POISONED block, src/Creature.cpp:1748-1774, and
+   Creature::DiseasePulse, src/Creature.cpp:1845-1884) that dereferences
+   TEFF(S->eID) every turn the stati is held: unconditionally, to read the
+   pulse interval, and again inside HasFlag(EF_LETHAL) on a failed save. eID
+   0 names no real resource. Reading its interval field happened not to
+   crash; the HasFlag read did, reproducibly, under lldb: EXC_BAD_ACCESS in
+   Creature::DoTurn, address 0x3b, backtrace Game::Play -> Throw ->
+   RealThrow -> ThrowEvent -> ThrowTo -> Creature::Event -> Creature::DoTurn.
+   Observed 2026-09-17 while diagnosing why --prove-red's mutated run
+   (maladies never cured, so the pulse keeps firing every turn until one
+   fails its save) crashed where the ordinary run (cured before that
+   happened) did not. Not filed as an engine defect: every real caller of
+   GainPermStati(POISONED,...) or GainPermStati(DISEASED,...) already in
+   lib/ names a real eID; this fixture is what had the gap, and the fix
+   belongs here, not in src/.
+
+   NOT part of the shipped module: tools/check_heal_maladies.sh splices this
+   file onto the END of a scratch copy of lib/main.irc, under logs/, for the
+   span of its own run only. No tracked lib/ file is ever touched. */
+
+God "Heal Maladies Test God"
+  {
+    Lists:
+      * FAVOUR_CHART
+          1000
+          50000
+          60000
+          70000
+          80000
+          90000
+          100000
+          110000
+          120000
+          130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Heal Maladies Test God") == 1) {
+        EActor->GainPermStati(BLIND,NULL,SS_MISC,0,0);
+        EActor->GainPermStati(CONFUSED,NULL,SS_MISC,0,0);
+        EActor->GainPermStati(DISEASED,NULL,SS_MISC,0,0,$"devil chills");
+        EActor->GainPermStati(STUNNED,NULL,SS_MISC,0,0);
+        EActor->GainPermStati(POISONED,NULL,SS_MISC,0,0,$"arsenic");
+        EActor->GainPermStati(HALLU,NULL,SS_MISC,0,0);
+        EActor->GainPermStati(BLEEDING,NULL,SS_MISC,0,0);
+        EActor->GainPermStati(CHOKING,NULL,SS_MISC,0,0);
+        EActor->GainPermStati(WOUNDED,NULL,SS_MISC,0,0);
+        }
+      return NOTHING;
+      };
+  }

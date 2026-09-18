@@ -5597,16 +5597,41 @@ Priest Spell "Etherealness" : EA_INFLICT
 
 Priest Spell "Heal;spell" : EA_HEALING
   { SC_THE; Base: SP_EASY; Cost: 15; Level: 6; qval: Q_TAR|Q_NEAR;
-    xval: HEAL_HP|HEAL_XP|HEAL_ATTR|HEAL_MALADY|HEAL_FATIGUE; 
+    /* upstream: Heal cured nothing at all. It declared HEAL_MALADY with no
+       yval, and HEAL_MALADY removes only the one stati that yval names
+       (src/Effects.cpp:2355), so it removed stati 0, which is unused. The flag
+       written for this spell, HEAL_ALL_MALADIES (inc/Defines.h:3374), cannot
+       be used at all: it is 0x100, and the field that carries it,
+       EffectValues::xval, is a uint8 (inc/Res.h:138), so the module compiler
+       silently drops the bit (lang/Grammar.acc:695). The cure is therefore done
+       with one 'and EA_HEALING' block per malady below, each using HEAL_MALADY,
+       which is 0x10 and fits. A declaration missing a field, and a flag too
+       wide for its field, behave the same on Win32, with the original typedefs
+       and on the upstream compiler, so neither is a port artefact. Observed,
+       inc-xr8i, not sent.
+       THE LIST IS NOT UPSTREAM'S. Upstream's list also clears POLYMORPH, and
+       clears only the dazed kind of PARALYSIS. Neither is cured here. The
+       narrow paralysis cure cannot be expressed at all, because HEAL_MALADY
+       removes every instance of the stati it names. */
+    xval: HEAL_HP|HEAL_XP|HEAL_ATTR|HEAL_FATIGUE;
     Purpose: EP_FIX_TROUBLE;
     On Event EV_CALC_EFFECT {
       e.vDmg = 5000;
       return NOTHING;
       };
-    Desc: "Heals the target fully and cures experience drain, attribute 
-      damage and fatigue. In addition, it removes a number of maladies 
-      (e.g., poison, disease, stunning)."; 
+    Desc: "Heals the target fully and cures experience drain, attribute
+      damage and fatigue. In addition, it removes a number of maladies
+      (e.g., poison, disease, stunning).";
   }
+  and EA_HEALING { xval: HEAL_MALADY; yval: BLIND; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: CONFUSED; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: DISEASED; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: STUNNED; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: POISONED; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: HALLU; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: BLEEDING; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: CHOKING; }
+  and EA_HEALING { xval: HEAL_MALADY; yval: WOUNDED; }
 
 Priest / Scroll Spell "Harm" : EA_BLAST
   { SC_NEC; Base: SP_TRIVIAL; Cost: 12; Level: 6; aval: AR_TOUCH;
