@@ -188,3 +188,22 @@ writes `Options.Dat`, `save/` and `logs/` beside its own executable, with no
 per-user data directory anywhere. Installed to `Program Files` and run by a
 **standard** user, the first settings write fails. A CI runner cannot catch this
 because it runs as administrator. Do that test before any Windows release.
+
+## The original MSVC build
+
+The original MSVC build is still in the tree, and it is not the path this fork
+took. `build_sdl2.bat`, `build_libtcod.bat` and `build_pdcurses.bat` rebuild the
+checked-in dependencies, and `build.bat` produces `IncursionLibtcod.exe` and
+`IncursionCurses.exe`. Three things rule it out, any one of them sufficient: it
+reads a `build/dependencies/` directory that is not in this repository, it never
+compiles the data module, and it has no shipping mode, so everything it can
+produce links `src/Art.cpp` and the GPLv2 ACCENT runtime with it. The cross-build
+answers all three. `src/Wcurses.cpp`, the second Windows frontend, is still built
+by nothing.
+
+**Why the dependencies are checked in, in Richard Tew's words:** bug fixes to
+gameplay require a save game, and a save game only loads in the build that wrote
+it. Character creation is varied enough that a player often cannot remember what
+they picked, so reproducing a report without their save is a wild goose chase.
+Keeping every binary and every source version is what makes an old save
+debuggable at all.
