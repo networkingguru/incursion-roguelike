@@ -9164,10 +9164,14 @@ Wizard / Priest Spell "True Seeing" : EA_INFLICT
       the caster to inherently see through every spell of the
       Illusion school -- the effect is automatic and uncontested,
       unless the creator of the illusion has a <9>false vision<1>
-      spell active. Shadow creatures and effects still affect the 
-      caster with regard to the percent that they are real, but she 
-      automatically disbelieves them and never suffers full 
-      damage."; /* True seeing also allows the caster to see
+      spell active. Shadow creatures and effects still affect the
+      caster with regard to the percent that they are real, but she
+      automatically disbelieves them and never suffers full
+      damage. The caster also sees invisible creatures normally
+      and sees through normal and magical darkness, all out to
+      120 feet (12 squares) and no farther; it does not pierce
+      concealment such as <9>fog cloud<1>, and it does not see
+      through solid objects."; /* True seeing also allows the caster to see
       polymorphed or disguised creatures as they truly are, to
       discern creatures which initially appear as other creatures
       (such as rats and plague rats) and, if the caster is a priest,
