@@ -1,0 +1,117 @@
+# Stage a before/after screen for the TRUE_SIGHT fix (bead inc-5bl3): True
+# Seeing is supposed to let the caster see an invisible creature AND see
+# through darkness, out to 12 squares (lib/wspells.irh:9160-9179). This is
+# the gameplay observation the project's before/after rule asks for -- a
+# rendered screen, not a probe.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_RUN_DIR=logs/runs/tsobs-<something-unique> \
+#       tools/headless.sh tools/keys/true-sight-observe.keys <seed>
+#
+# WHAT IT STAGES. A mage (chargen-mage.keys) learns True Seeing through
+# wizard mode's "Learn Any Spell", then wizard mode summons a sprite
+# adjacent to him. The sprite (lib/mon2.irh:3031) carries
+# Stati[INVIS,INV_IMPROVED], so it is invisible with no extra step. The
+# session dumps the screen once with the sprite present and True Seeing not
+# yet cast, casts the spell on himself, and dumps again.
+#
+# WHY THE SCENE MOVES TO DEPTH 2 FIRST. The Entry Chamber the mage arrives in
+# is a fixed, hand-authored room (lib/dungeon.irh:4098, RF_NOGEN) whose own
+# text says the goblins' runes read "light" and "surface" -- it is lit by
+# design, and Creature::DoTurn (src/Creature.cpp:1350-1359) confirms it:
+# standing there fires the M_LIGHT_AVERSE "You squint and stagger in the
+# bright light" message on the very first turn. Wizard mode's "Ascend /
+# Descend Depth" (case 15, src/Debug.cpp) generates depth 2 on the spot and
+# drops the character into it -- an ordinary procedurally-built level, with
+# none of the Entry Chamber's scripted light. Measured on seed 1: only about
+# six squares of corridor show on either side of the player before the cast.
+#
+# WHY INFINITE MANA. True Seeing is learned with SP_KNOWN|SP_PRIMAL|SP_INNATE
+# (src/Debug.cpp:861, wizard case 17), and an innate cast dispatches through
+# EV_INVOKE rather than EV_CAST (src/Player.cpp:828-830), but Infinite Mana is
+# switched on anyway so the cast cannot fail for want of mana on a level-1
+# mage holding a level-6 spell.
+#
+# WHY FREEZE MONSTERS, AND WHY NOT WIZARD SIGHT. Freeze Monsters (the 11th
+# switch) holds the sprite still between the two dumps, so nothing about the
+# scene changes except the cast. Wizard Sight (the 10th switch) is left OFF
+# on purpose: it would light the whole screen for the player and erase the
+# very darkness this script exists to show.
+#
+# WHY "Faerie" FINDS THE SPRITE WITH ONE ANSWER. The monster-summoning
+# category menu only offers a group for a monster type inside
+# 1..MA_LAST_REAL (src/Term.cpp:2885-2890, inc/Defines.h:1608). Of the
+# sprite's three types -- MA_FAERIE (9), MA_SYLVAN (81), MA_COUTSIDER (118)
+# -- only MA_FAERIE is in range, so "Faerie" is the one category the sprite
+# can appear under. Inside it, @choose "sprite" cannot land on "rainbow
+# sprite" instead: FindMenuEntry only accepts a PREFIX match
+# (src/Wposix.cpp:901-913), and "sprite" is not a prefix of "rainbow
+# sprite".
+#
+# WHY NO TARGET PROMPT ON THE CAST. True Seeing's clause carries no qval
+# (lib/wspells.irh:9160-9179), and Magic.cpp treats an untargeted cast with
+# qval == 0 as self-targeted (src/Magic.cpp:2852-2856), so 'm' -> @choose
+# "True Seeing" fires with no further keystroke.
+
+@include chargen-mage.keys
+
+# chargen-mage.keys usually ends with the arrival room description still on
+# screen (its own last comment: "the next keystroke dismisses" it), but not
+# on every seed -- on seed 4242 the three starting-spell picks ('a a a')
+# already used up that dismissal, because that character was offered fewer
+# than three. A bare ESC then hits ordinary play and opens the System Menu
+# instead (ESC's other job -- see tools/keys/explore-mage.keys), which is
+# exactly the failure this line exists to avoid. "mass grave" is a phrase
+# from the Entry Chamber's own description (lib/dungeon.irh:4101-4102) that
+# appears nowhere else on screen, so @while presses ESC only while the box
+# showing it is actually still up.
+@while "mass grave" ESC
+
+# Wizard switches: Infinite Mana is the 8th, Freeze Monsters the 11th.
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*7
+SPACE
+DOWN*3
+SPACE
+ESC
+
+# Off the lit Entry Chamber and onto an ordinary depth-2 level; see header.
+w
+@choose "Ascend / Descend Depth"
+"2"
+ENTER
+
+# Landing inside a NAMED special room (Move.cpp:1626-1642) pops up that
+# room's own description box before the "Done." message that always follows
+# a successful jump; landing in a plain corridor skips the box entirely. The
+# box swallows any non-arrow key, so @until presses one only if "Done." is
+# not already on screen -- zero presses when there was no box, one when
+# there was.
+@until "Done." w
+
+# Learn True Seeing (wizard case 17, a free-text "Enter Spell Name:" prompt).
+w
+@choose "Learn Any Spell"
+"True Seeing"
+ENTER
+
+# Summon an invisible sprite one square east of the player.
+w
+@choose "Monster Summoning"
+@choose "Faerie"
+@choose "sprite"
+RIGHT
+ENTER
+
+@dump:before-trueseeing
+
+# Cast True Seeing on the player -- no target prompt; see header.
+m
+@choose "True Seeing"
+@while "more --" SPACE
+
+@dump:after-trueseeing
+
+@quit

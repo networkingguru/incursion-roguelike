@@ -269,6 +269,11 @@ void Game::Play() {
        tools/check_xp_drain.sh. inc-3gli. */
     pp->XPDrainProbe();
 
+    /* Off unless INCURSION_TRUESIGHT_PROBE is set, and run here because it
+       needs a live player and a live map. See Creature::TrueSightProbe and
+       tools/check_true_sight.sh. inc-5bl3. */
+    pp->TrueSightProbe();
+
     doSave = false;
     doLoad = true;
     doAutoSave = false;

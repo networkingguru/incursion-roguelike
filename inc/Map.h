@@ -453,14 +453,15 @@ class Map: public Object
         const int16 sx, const int16 sy, 
         const int16 tx, const int16 ty, 
         Creature *c, const int16 SightRange, const int16 LightRAnge,
-        const int16 ShadowRange);
+        const int16 ShadowRange, const int16 TrueRange = 0);
     bool BlindsightVisionPath(int8 pn, 
         const int16 sx, const int16 sy, 
         const int16 tx, const int16 ty, 
         Creature *c, const int16 BlindRange);
     bool MarkAsSeen(const int8 pn, const int16 lx, const int16 ly,
         const int16 dist, const int16 SightRange = 1, 
-        const int16 LightRange = 1, const int16 ShadowOrBlindRange = 1);
+        const int16 LightRange = 1, const int16 ShadowOrBlindRange = 1,
+        const int16 TrueRange = 0);
 		void Update(int16 x,int16 y);
     void VUpdate(int16 x, int16 y);
 
