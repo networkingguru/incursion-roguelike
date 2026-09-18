@@ -1,0 +1,49 @@
+=== screen 0002 after-trueseeing  key 111  mode 2  turn 198021 ===
+                                                                |Shagga
+                                                                |Male Orc
+                                                                |Mage 1
+                                                                |0/1000 XP
+                                                                |
+                                                                |12:00 AM
+                                                                |1st of Suntide
+                                                                |
+                                                                |Exploring
+                                                                |Satiated
+                                                                |Afoot
+                                                                |Healthy
+                                                                |Vigorous
+                                                                |
+                                                                |STR: 16
+                                                                |DEX: 12
+                                                                |CON: 12
+                                                                |INT: 13
+                                                                |WIS: 16
+                                                                |CHA: 14
+                                                                |LUC: 15
+                                                                |
+                                  #  # ###########              |Mod:Melee
+                                ............@f......#           |Hit:3
+                                  #  # ###########              |Dmg:1d3+4
+                                                                |Spd:140%
+                                                                |Enc:Light
+                                                                |Def:11
+                                                                |Arm: 0 Slash
+                                                                |     0 Pierce
+                                                                |     0 Blunt
+                                                                |Mov:100%
+                                                                |
+                                                                |Things in View:
+                                                                |f sprite
+                                                                |
+                                                                |
+                                                                |
+                                                                |
+                                                                |
+                                                                |
+                                                                |
+                                                                |
+                                                                |
+                                                                |
+                                                                |
+The Goblin Caves: Ancient Library                           020m|[*************]
+HP:31/31 Mana:73/73 FP:5/5 GP:156                     TrueSight |[*************]

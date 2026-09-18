@@ -1,0 +1,104 @@
+# Build a character standing ADJACENT to an awake, hostile, perceiving
+# monster, then SAVE him, so the pair can be frozen for tools/check_headless.sh
+# steps 8-10 (bd inc-gjzx, docs/specs/2026-09-18-headless-prompt-fixtures-brief.md).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/engaged-hostile-save.keys <seed>
+#
+# WHY THIS EXISTS. Steps 8-10 used to drive tools/keys/dive.keys and hope the
+# generated world produced a death prompt or a threat prompt at a fixed key
+# count. It no longer does (see the brief). This script instead puts a known
+# character next to a known monster and saves that arrangement, so the check
+# can load it and drive the two prompts on purpose.
+#
+# THE CHARGEN BELOW IS A COPY of tools/keys/lizardfolk-monk-save.keys,
+# deliberately unchanged up to the point the character enters play. Do not
+# "improve" it; a different character belongs in a new script and a new
+# fixture, per tools/fixtures/README.md.
+#
+# THE MONSTER: a bugbear (lib/mon2.irh), summoned from the wizard menu and
+# placed one square EAST of the player (RIGHT ENTER on the "Summon where?"
+# targeting prompt).
+#
+#   - HOSTILE by construction, with no wizard forcing needed. Every monster's
+#     default hostility to the player falls through to
+#     TargetSystem::RacialHostility (src/Target.cpp:642-652): "evil creatures
+#     are always looking for an advantage" makes any M_EVIL monster an Enemy
+#     of the player outright, regardless of relative challenge rating, and
+#     the bugbear carries M_EVIL (lib/mon2.irh:757). No ENEMY_TO stati, no
+#     "All Monster Aggravate", nothing else is needed.
+#   - AWAKE and PERCEIVING: Monster::Initialize is called with in_play=true
+#     (src/Debug.cpp:685), which is exactly the branch that SKIPS the
+#     HIDING setup in Monster::Initialize (src/Monster.cpp:1503, guarded by
+#     "!in_play"), and nothing in the bugbear's own On Event handlers puts it
+#     to sleep. Confirmed empirically, not just read: the loaded fixture asks
+#     the threat prompt on the first move away (see threat-freeze.keys) and
+#     it kills a resting character (see death-freeze.keys), both of which
+#     src/Move.cpp:925-928 refuse for a hiding, sleeping, or otherwise
+#     non-perceiving creature.
+#   - WEAKEST-THAT-WORKS: goblin (Hit +0 vs the monk's Def 13, roughly a 40%
+#     hit chance with a d6 weapon) was tried first and measured too slow --
+#     see the fixture's own header for the actual rest-key count this script's
+#     monster needed. Bugbear (Hit +5, Str 15, a morningstar for 1d8+2, Weapon
+#     Focus) kills reliably well inside a two-hundred-key rest budget.
+#
+# THE SQUARE TO THE WEST of the player (where threat-freeze.keys steps) is
+# ordinary room floor, the same open ground the character was created on;
+# confirmed by running threat-freeze.keys and reading its dump, not assumed.
+#
+# Freeze Monsters is NOT touched: a frozen monster cannot land the killing
+# blow death-freeze.keys and death-confirm.keys both need.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+h       # Race:     [h] Lizardfolk
+a       # Subrace:  [a] Lizardfolk (Standard)
+e       # Class:    [e] Monk
+a       # Attributes: the first of the five offered sets
+c       # Alignment: [c] Neutral
+a       # First feat
+a       # Second feat
+
+# Skill Manager, twice. Three RIGHTs per skill spends everything available
+# without needing to know how many ranks this character has.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+y       # Do you wish to worship <god>? -- yes
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+# In the dungeon now. Three keys settle the opening: the room description
+# wants dismissing, then two messages want acknowledging. A fourth ESC here
+# opens the System Menu instead and every later key lands in it.
+ESC ENTER SPACE
+
+@dump:arrival
+
+# ------------------------------------------------------------- the monster
+w                              # invoke the wizard debug menu
+y                               # "Enter wizard mode?" -- yes, first time only
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "bugbear"
+RIGHT ENTER                    # "Summon where?" -- one square east
+@until "HP:" ESC
+
+@dump:engaged
+
+# ------------------------------------------------------------------- save
+ESC                     # System Menu -- and NOT a cancel; see the warning in
+                        # tools/keys/save-continue.keys
+@expect "System Menu"   # refuse to press a letter into any other screen
+b                       # [b] Save and Continue
+
+@dump:saved
+
+# NO @quit HERE, DELIBERATELY: it is Save and Quit (src/Wposix.cpp:1657-1664)
+# and would write the save a second time, after the point this script names,
+# and shuffle the first copy off to <name>.sav.backup. Running out of keys
+# instead ends the session with exactly the one save above.

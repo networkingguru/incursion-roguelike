@@ -90,10 +90,22 @@ assert_stuck_at_prompt() { # <rundir>
 # session that hits it is frozen for the rest of its key budget -- there is
 # no "confirmed, resolved cleanly" counterpart the way there is for the death
 # prompt, because dive.keys can never supply the key that would resolve it.
+#
+# Match the prompt's OWN words, "Abort, Flee or Disengage", not the bare
+# words "threatened area" that used to be matched here. The prompt's '?'
+# choice opens the in-game combat manual at the {LE} anchor
+# (src/Move.cpp:943, lib/help.irh:3320), and that manual page is ALSO
+# titled around attacks of opportunity and says "threatened area" several
+# times in its own prose. So a session that answered '?' and landed in the
+# manual instead of staying at the prompt would match the old pattern and
+# be reported as still frozen AT the prompt, which it is not. Measured
+# 2026-09-18: tools/keys/dive.keys, seed 11, ends in the manual (mode 5,
+# MO_HELP) and its last screen contains "threatened area" as help text with
+# no "Abort, Flee or Disengage" anywhere on it.
 assert_stuck_at_threat_prompt() { # <rundir>
     local last
     last="$(ls "$1/logs/screens" 2>/dev/null | sort | tail -1)"
-    [ -n "$last" ] && grep -q 'threatened area' "$1/logs/screens/$last" 2>/dev/null
+    [ -n "$last" ] && grep -q 'Abort, Flee or Disengage' "$1/logs/screens/$last" 2>/dev/null
 }
 
 # inc-uh0: two sessions started in the same second must each get their own
@@ -218,6 +230,28 @@ if [ "${1:-}" = "--selftest" ]; then
         ok=1
     else
         echo "  death-prompt assertions do not mistake the threat prompt for their own: good"
+    fi
+
+    # Measured 2026-09-18: the prompt's own '?' choice opens the combat manual
+    # at src/Move.cpp:943, lib/help.irh:3320, and that page's own prose about
+    # attacks of opportunity says "threatened area" repeatedly -- but never
+    # "Abort, Flee or Disengage". A session that escaped the prompt into the
+    # manual must be read as NOT stuck at the prompt. This is copied verbatim
+    # from a real manual screen dumped at depth 12, seed 11
+    # (tools/keys/dive.keys, tools/gates/Options.Dat).
+    mkdir -p "$WORK/manual/logs/screens"
+    printf '=== screen 0003 depth12  key 369  mode 5  turn 198315 ===\n%s\n%s\n%s\n' \
+        '| situations provoke these attacks:                              ^|P' \
+        '|   * When a character casts a spell, he provokes an attack of    |' \
+        '| opportunity from any creature that has him in their             |untide' \
+        > "$WORK/manual/logs/screens/0003-final.txt"
+    printf '| threatened area. The Defensive Spell feat can be used to        |\n' \
+        >> "$WORK/manual/logs/screens/0003-final.txt"
+    if assert_stuck_at_threat_prompt "$WORK/manual"; then
+        echo "SELFTEST FAIL: the threat-prompt assertion mistook the combat manual's own prose for its prompt"
+        ok=1
+    else
+        echo "  threat-prompt assertion rejects the combat manual's 'threatened area' prose: good"
     fi
 
     # inc-uh0: the run-directory assertion must reject the collision it exists
@@ -350,24 +384,44 @@ if assert_stuck_at_threat_prompt "$WORK/run1"; then
     fail "an ordinary session with no threat prompt was reported as threat-frozen"
 fi
 
-# 8 and 9. inc-loa.3: the harness must be able to tell "died" and "stuck at
-# the unanswered prompt" apart from an ordinary clean exit, because both
-# currently share its exit code (0) and its "ended: cleanly" text. Both
-# scenarios below are the SAME reproducible case that measured the bug --
-# tools/keys/dive.keys, seed 11, the pinned gate settings
-# (tools/gates/Options.Dat, OPT_NODEATH on) -- kept in
-# logs/gate/compare-dive-87655 as the original evidence. See src/Fight.cpp
-# for where the prompt lives and where the confirmed-death marker is written.
+# 8, 9 and 10 (inc-gjzx). inc-loa.3 and inc-loa.5: the harness must be able to
+# tell three endings apart, and all three share an exit code (0) and an
+# "ended: cleanly"-shaped report: parked at the unanswered death prompt, a
+# confirmed death, and parked at the threat-disengage prompt.
+#
+# All three used to drive tools/keys/dive.keys at a pinned seed and wait for
+# the generated world to produce the prompt they wanted. It stopped doing
+# that: a scripted dive reaches whichever modal prompt the generated world
+# puts in its path first, and that moves whenever lib/ moves, so all three
+# scenarios drifted off the prompts they were pinned to. Measured 2026-09-18
+# at b443f8f: seed 1 now stalls at a "stop searching" prompt, seed 11 lands in
+# the in-game combat manual (its '?' choice, not its death prompt), seed 42
+# stalls at "Confirm enter the magma?" -- none of the three prompts these
+# steps test. See docs/specs/2026-09-18-headless-prompt-fixtures-brief.md.
+#
+# Instead: load a frozen character who is already standing next to a hostile
+# monster (tools/fixtures/chars/engaged-hostile.sav, built by
+# tools/keys/engaged-hostile-save.keys -- a Lizardfolk Monk 1 one square west
+# of an awake, hostile, perceiving bugbear) and drive each ending on purpose
+# with a dedicated key script. Same fixture, same seed, three endings.
 GATE_OPTS="$ROOT/tools/gates/Options.Dat"
+CHAR_FIXTURE="$ROOT/tools/fixtures/chars/engaged-hostile.sav"
 if [ ! -f "$GATE_OPTS" ]; then
     fail "the pinned gate settings are missing: $GATE_OPTS"
+elif [ ! -f "$CHAR_FIXTURE" ]; then
+    fail "the engaged-hostile character fixture is missing: $CHAR_FIXTURE"
 else
-    # 8. Stuck: unmodified dive.keys at seed 11 hits the prompt and then has
-    #    no further 'y' or 'n' anywhere in the rest of the script (only the
-    #    wizard-mode entry line has one, and that fires earlier), so it runs
-    #    out of its whole remaining key budget still parked there.
+    # 8. Stuck: death-freeze.keys (tools/keys/death-freeze.keys) rests in
+    #    place until the bugbear standing beside the fixture kills him, then
+    #    stops. '.' cannot answer TextTerm::yn (src/Term.cpp:3338), which
+    #    loops until it reads 'y' or 'n', so the session parks at
+    #    "You die... Die? [yn]", unanswered, and runs out of its key budget
+    #    still parked there. See that script's own header for why
+    #    OPT_ELUDE_DEATH, not OPT_NODEATH, is what actually reaches this
+    #    prompt under tools/gates/Options.Dat.
     INCURSION_RUN_DIR="$WORK/stuck" INCURSION_OPTIONS="$GATE_OPTS" \
-        ./tools/headless.sh tools/keys/dive.keys 11 > "$WORK/out-stuck" 2>&1 < /dev/null
+    INCURSION_LOAD="$CHAR_FIXTURE" \
+        ./tools/headless.sh tools/keys/death-freeze.keys 1 > "$WORK/out-stuck" 2>&1 < /dev/null
     STATUS=$?
     if [ "$STATUS" -ne 0 ]; then
         echo "--- session output ---"
@@ -386,14 +440,18 @@ else
         fail "the stuck-at-prompt scenario also logged a confirmed death; it should not"
     fi
 
-    # 9. Confirmed: the same run, but with enough trailing 'y' keys appended
-    #    for the still-unanswered prompt to finally land on one. @include
-    #    replays dive.keys in full first, so this is the identical scenario
-    #    up to the point it would otherwise get stuck.
-    printf '@include %s/tools/keys/dive.keys\ny y y y y y y y y y\n@dump:died\n@quit\n' \
-        "$ROOT" > "$WORK/die-for-real.keys"
+    # 9. Confirmed: death-confirm.keys (tools/keys/death-confirm.keys) is the
+    #    identical scenario up to the death prompt, then answers it with 'y' --
+    #    twice, because two lethal hits land on the fixture in the same round
+    #    at this seed and each one opens its own "You die... Die? [yn]"
+    #    prompt (measured, see that script's own header). Both fall through
+    #    to the real death path and each calls NoteCharacterDied
+    #    (src/Fight.cpp:7819), so logs/death.log gets TWO entries here, not
+    #    one -- the existing '^death:.*confirmed' grep still matches either
+    #    count, so it is left as-is.
     INCURSION_RUN_DIR="$WORK/confirmed" INCURSION_OPTIONS="$GATE_OPTS" \
-        ./tools/headless.sh "$WORK/die-for-real.keys" 11 > "$WORK/out-confirmed" 2>&1 < /dev/null
+    INCURSION_LOAD="$CHAR_FIXTURE" \
+        ./tools/headless.sh tools/keys/death-confirm.keys 1 > "$WORK/out-confirmed" 2>&1 < /dev/null
     STATUS=$?
     if [ "$STATUS" -ne 0 ]; then
         echo "--- session output ---"
@@ -412,13 +470,18 @@ else
         fail "the confirmed-death scenario was also read as stuck; the prompt did resolve"
     fi
 
-    # 10. inc-loa.5: the harness must be able to tell "frozen at the
-    # threat-disengage prompt" apart from an ordinary clean exit too, the
-    # same way it does for the death prompt above. Reproduced with
-    # tools/keys/dive.keys, seed 1, the pinned gate settings -- the same
-    # scenario recorded as evidence in logs/gate/record-dive-89305.
+    # 10. inc-loa.5: threat-freeze.keys (tools/keys/threat-freeze.keys) steps
+    #     one square away from the bugbear (off the fixture's engaged square)
+    #     before anything else can happen, firing "You are in a threatened
+    #     area. Abort, Flee or Disengage?" (src/Move.cpp:941). Every key after
+    #     that is '.' (KY_CMD_REST), which ChoicePrompt does not recognise as
+    #     any of "afd?", an arrow, ENTER or ESC, so the prompt just re-asks
+    #     and the session parks there, unanswered, for the rest of its key
+    #     budget. See that script's own header for why a stray arrow or ENTER
+    #     here would instead escape into the combat manual and never return.
     INCURSION_RUN_DIR="$WORK/threatened" INCURSION_OPTIONS="$GATE_OPTS" \
-        ./tools/headless.sh tools/keys/dive.keys 1 > "$WORK/out-threatened" 2>&1 < /dev/null
+    INCURSION_LOAD="$CHAR_FIXTURE" \
+        ./tools/headless.sh tools/keys/threat-freeze.keys 1 > "$WORK/out-threatened" 2>&1 < /dev/null
     STATUS=$?
     if [ "$STATUS" -ne 0 ]; then
         echo "--- session output ---"
