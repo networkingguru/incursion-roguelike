@@ -264,6 +264,11 @@ void Game::Play() {
        tools/check_quiet_lookup.sh. inc-upw.39. */
     theRegistry->QuietProbe();
 
+    /* Off unless INCURSION_XPDRAIN_PROBE is set, and run here because it
+       needs a live player. See Character::XPDrainProbe and
+       tools/check_xp_drain.sh. inc-3gli. */
+    pp->XPDrainProbe();
+
     doSave = false;
     doLoad = true;
     doAutoSave = false;

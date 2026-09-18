@@ -2395,6 +2395,28 @@ void Character::DrainXP(int32 amt)
 
 }
 
+/* INCURSION_XPDRAIN_PROBE -- the runnable check behind the RestoreXP fix
+   below. tools/check_xp_drain.sh drives it; read that script for the pass
+   condition. Measures effective XP (TotalXP() - XPDrained()) where it lands,
+   not the two counters in isolation. Off unless the variable is set, like
+   the other probes in this codebase. inc-3gli. */
+void Character::XPDrainProbe()
+{
+    int32 e0, e1, e2;
+
+    if (!getenv("INCURSION_XPDRAIN_PROBE"))
+        return;
+
+    GainXP(10000);
+    e0 = TotalXP() - (int32)XPDrained();
+    DrainXP(500);
+    e1 = TotalXP() - (int32)XPDrained();
+    RestoreXP(500);
+    e2 = TotalXP() - (int32)XPDrained();
+
+    Error("XPDRAIN_PROBE e0=%d e1=%d e2=%d", e0, e1, e2);
+}
+
 void Creature::ThiefXP(rID regID)
 {
     bool foundTreasure, foundMon;

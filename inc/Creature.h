@@ -767,17 +767,25 @@ class Character: public Creature
       virtual uint32 XPDrained() { return XP_Drained; }
       virtual uint32 GetXP() { return XP; }
       virtual void RestoreXP(uint32 xp)
-        { if (xp > XP_Drained) 
+        { if (xp > XP_Drained)
                 xp = XP_Drained;
-          XP_Drained -= xp; 
-          XP += xp; 
-          // ww: must remove all ADJUST_DMG A_AID statis, otherwise we 
+          /* upstream: base-code defect, the fix is ours. inc-3gli, tier
+             Observed (a live session measured effective XP before and
+             after), NOT sent. It is upstream's because XP and XP_Drained
+             are uint32 under the original typedefs and this is plain
+             arithmetic: clearing XP_Drained while also crediting the same
+             amount to XP pays a drain back twice, identically on Win32. */
+          XP_Drained -= xp;
+          // ww: must remove all ADJUST_DMG A_AID statis, otherwise we
           // continue to suffer "neglev" penalties forever!
-          if (XP_Drained == 0) 
+          if (XP_Drained == 0)
              RemoveStati(ADJUST_DMG,-1,A_AID);
         }
       int16 XPPenalty();
       void DrainXP(int32 xp);
+      /* Self-check for RestoreXP below. Off unless INCURSION_XPDRAIN_PROBE is
+         set. Driven by tools/check_xp_drain.sh. inc-3gli. */
+      void XPDrainProbe();
       void PaladinFall();
       void PaladinAtone();
       void SwapAttributes(int16 n);
