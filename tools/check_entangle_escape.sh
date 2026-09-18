@@ -141,8 +141,11 @@ fi
 # Escape Artist DC). A "fix" that made this skill check passable would
 # satisfy the assertions above for the wrong reason.
 
+# A take-20 line (src/Skills.cpp, commit 0d65181: "Escape Artist Check: took
+# 20 ...") has no die roll at all, so it is excluded alongside a natural 20 --
+# neither is the cheap pass this guard defends against.
 bad="$(grep -h "Escape Artist Check:" "$S"/* | sed 's/ *|.*//' \
-       | grep "\[success\]" | grep -v "1d20 (20)" || true)"
+       | grep "\[success\]" | grep -v "1d20 (20)" | grep -v "took 20" || true)"
 if [ -n "$bad" ]; then
     echo "FAIL: an Escape Artist check passed on a roll below 20, so the skill"
     echo "      check itself has changed. This check defends the Strength exit,"
