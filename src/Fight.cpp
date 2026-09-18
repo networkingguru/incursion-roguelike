@@ -4294,9 +4294,11 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
           if (S->Val == MISS_RANGED &&
               e.AType != A_FIRE && e.AType != A_HURL)
             continue; 
+          const int16 TrueSightSeeRange = e.EActor->TrueSightRange();
           bool can_see_you = 
             e.EActor->HasStati(SEE_INVIS) || 
-            e.EActor->HasStati(TRUE_SIGHT) ||
+            (TrueSightSeeRange && dist(e.EActor->x,e.EActor->y,
+                e.EVictim->x,e.EVictim->y) <= TrueSightSeeRange) ||
             e.EActor->HasMFlag(M_SEE_INVIS) ||
             e.EVictim->HasStati(ILLUMINATED);
 

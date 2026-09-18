@@ -1,5 +1,7 @@
 # check_headless.sh steps 8-10: load a character, stop diving for prompts
 
+<!-- citations: this-port -->
+
 Bead: inc-gjzx. Lane: `tools:`. Label: internal.
 
 ## Goal

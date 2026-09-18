@@ -33,7 +33,7 @@ uint8 lastRegion, playerRegion;
 // in this direction 
 inline bool Map::MarkAsSeen(const int8 pn, const int16 lx, const int16 ly, 
     const int16 dist, const int16 SightRange, const int16 LightRange, 
-    const int16 ShadowOrBlindRange)
+    const int16 ShadowOrBlindRange, const int16 TrueRange)
 {
   static uint16 Mask;
   LocationInfo & Here = At(lx,ly); 
@@ -41,6 +41,9 @@ inline bool Map::MarkAsSeen(const int8 pn, const int16 lx, const int16 ly,
     if (//Here.Dark ||
         dist > SightRange) // beyond your maximum range, period
       return true;
+    // True sight sees through darkness, any lighting, out to its own range.
+    else if (TrueRange && dist <= TrueRange)
+      Mask = (VI_VISIBLE | VI_DEFINED) << (pn*4);
     else if (dist > ShadowOrBlindRange && !Here.Lit && !Here.mLight && !::LightLitAt(lx,ly)) {
       /* upstream: Julian's MarkAsSeen returned true here, which stops the
          whole vision ray at the first unlit cell past shadow range, so a
@@ -145,7 +148,7 @@ inline bool Map::MarkAsSeen(const int8 pn, const int16 lx, const int16 ly,
 // it be a "vision" check that cares about opaque/obscure stuff
 #define CARE_ABOUT_SEEING \
             if  (OpaqueAt(cx,cy)\
-              || (Here.Dark && !ignoreDark)\
+              || (Here.Dark && !(ignoreDarkRange && dist(sx,sy,cx,cy) <= ignoreDarkRange))\
               || (ObscureAt(cx,cy) && !ignoreObscure))\
             return false;
 #define CARE_ABOUT_SOLID \
@@ -211,7 +214,7 @@ bool Map::LineOfVisualSight(int16 sx, int16 sy, int16 tx, int16 ty, Creature *c)
   int16 cx,cy;
   const int8 dirX = (tx >= sx) ? 1 : -1, dirY = (ty >= sy) ? 1 : -1;
   const bool ignoreObscure = c && c->NatureSight; 
-  const bool ignoreDark = false; 
+  const int16 ignoreDarkRange = c ? c->TrueSightRange() : 0;
   HUGE_PATH_MACRO(;, ;, ;, ;, ;, CARE_ABOUT_SEEING)
 } 
 
@@ -242,7 +245,8 @@ bool Map::LineOfSight(int16 sx, int16 sy, int16 tx, int16 ty, Creature *c)
 bool Map::VisionPath(int8 pn, 
     const int16 sx, const int16 sy, 
     const int16 tx, const int16 ty, 
-    Creature *c, const int16 SiR, const int16 LiR, const int16 ShR)
+    Creature *c, const int16 SiR, const int16 LiR, const int16 ShR,
+    const int16 TrR)
 
 {
   int16 cx, cy;
@@ -250,13 +254,13 @@ bool Map::VisionPath(int8 pn,
   lastRegion = At(sx,sy).Region;
 
   bool ignoreObscure = c && c->NatureSight; 
-  bool ignoreDark = false; 
+  const int16 ignoreDarkRange = TrR;
   HUGE_PATH_MACRO(
       if (!Here.Solid) lastRegion = Here.Region,
-      if (MarkAsSeen(pn,cx,cy,abs(sy-cy),SiR,LiR,ShR)) return false,
-      if (MarkAsSeen(pn,cx,cy,abs(sx-cx),SiR,LiR,ShR)) return false,
+      if (MarkAsSeen(pn,cx,cy,abs(sy-cy),SiR,LiR,ShR,TrR)) return false,
+      if (MarkAsSeen(pn,cx,cy,abs(sx-cx),SiR,LiR,ShR,TrR)) return false,
       if (!Here.Solid) lastRegion = Here.Region,
-      if (MarkAsSeen(pn,cx,cy,dist(sx,sy,cx,cy),SiR,LiR,ShR)) return false,
+      if (MarkAsSeen(pn,cx,cy,dist(sx,sy,cx,cy),SiR,LiR,ShR,TrR)) return false,
       CARE_ABOUT_SEEING)
 }
 
@@ -273,10 +277,10 @@ bool Map::BlindsightVisionPath(int8 pn,
 
   HUGE_PATH_MACRO(
       if (!Here.Solid) lastRegion = Here.Region,
-      if (MarkAsSeen(pn,cx,cy,abs(sy-cy),SiR,LiR,BlR)) return false,
-      if (MarkAsSeen(pn,cx,cy,abs(sx-cx),SiR,LiR,BlR)) return false,
+      if (MarkAsSeen(pn,cx,cy,abs(sy-cy),SiR,LiR,BlR,0)) return false,
+      if (MarkAsSeen(pn,cx,cy,abs(sx-cx),SiR,LiR,BlR,0)) return false,
       if (!Here.Solid) lastRegion = Here.Region,
-      if (MarkAsSeen(pn,cx,cy,dist(sx,sy,cx,cy),SiR,LiR,BlR)) return false,
+      if (MarkAsSeen(pn,cx,cy,dist(sx,sy,cx,cy),SiR,LiR,BlR,0)) return false,
       CARE_ABOUT_SOLID)
 }
 
@@ -306,6 +310,7 @@ void Map::VisionThing(int16 pn, Creature *c, bool do_clear)
   const int16 sy = c->y; 
   const int16 LightRange = max(c->LightRange,c->InfraRange);
   const int16 SightRange = c->SightRange;
+  const int16 TrueRange = c->TrueSightRange();
   const int16 ShadowRange = max(c->ShadowRange,LightRange); 
   const int16 BlindRange = c->BlindRange; 
   const int16 PercepRange = c->PercepRange; 
@@ -333,19 +338,19 @@ void Map::VisionThing(int16 pn, Creature *c, bool do_clear)
   }
 
   if (SightRange) { 
-    MarkAsSeen(pn8,sx,sy,0,SightRange,LightRange,ShadowRange);
+    MarkAsSeen(pn8,sx,sy,0,SightRange,LightRange,ShadowRange,TrueRange);
     for (cx=x1;cx<=x2;cx+=1) {
-      VisionPath(pn8,sx,sy,cx,y1,c,SightRange,LightRange,ShadowRange);
-      VisionPath(pn8,sx,sy,cx,y2,c,SightRange,LightRange,ShadowRange);
+      VisionPath(pn8,sx,sy,cx,y1,c,SightRange,LightRange,ShadowRange,TrueRange);
+      VisionPath(pn8,sx,sy,cx,y2,c,SightRange,LightRange,ShadowRange,TrueRange);
     }
     for (cy=y1;cy<=y2;cy+=1) {
-      VisionPath(pn8,sx,sy,x1,cy,c,SightRange,LightRange,ShadowRange);
-      VisionPath(pn8,sx,sy,x2,cy,c,SightRange,LightRange,ShadowRange);
+      VisionPath(pn8,sx,sy,x1,cy,c,SightRange,LightRange,ShadowRange,TrueRange);
+      VisionPath(pn8,sx,sy,x2,cy,c,SightRange,LightRange,ShadowRange,TrueRange);
     }
   }
 
   if (BlindRange) {
-    MarkAsSeen(pn8,sx,sy,0,0,0,BlindRange);
+    MarkAsSeen(pn8,sx,sy,0,0,0,BlindRange,0);
     for (cx=x1;cx<=x2;cx+=1) {
       BlindsightVisionPath(pn8,sx,sy,cx,y1,c,BlindRange);
       BlindsightVisionPath(pn8,sx,sy,cx,y2,c,BlindRange);
@@ -399,6 +404,185 @@ void Map::VisionThing(int16 pn, Creature *c, bool do_clear)
 
 bool Player::Seen(int16 x, int16 y) {
     return m->At(x, y).Memory != 0;
+}
+
+// Squares a TRUE_SIGHT stati reaches: each stati's own Mag when positive,
+// else TRUE_SIGHT_RANGE (the SRD default); the largest of any that apply.
+// 0 with no TRUE_SIGHT stati. One pass, so two stati of different range
+// (a racial one plus an item's) resolve to the longer, not the first found.
+int16 Creature::TrueSightRange() {
+    int16 best = 0;
+    StatiIterNature(this, TRUE_SIGHT)
+        const int16 contrib = S->Mag > 0 ? S->Mag : TRUE_SIGHT_RANGE;
+        if (contrib > best)
+            best = contrib;
+    StatiIterEnd(this)
+    return best;
+}
+
+/* INCURSION_TRUESIGHT_PROBE helpers. TrueSightProbeLine finds a square
+   exactly 'need' squares from the player along a cardinal direction whose
+   whole line back to the player is unobstructed (InBounds, non-opaque) and
+   whose own square is walkable and empty -- the map's own vision scan needs
+   that line to mark the square at all. TrueSightProbeFar finds any walkable,
+   empty square at least 'need' squares out with no such requirement: the
+   outside-range assertion expects the creature hidden by distance alone,
+   before line of sight is ever consulted. */
+static bool TrueSightProbeLine(Map *mp, int16 px, int16 py, int16 need,
+        int16 *rx, int16 *ry) {
+    static const int16 DX[4] = {1,-1,0,0}, DY[4] = {0,0,1,-1};
+    for (int8 dir = 0; dir < 4; dir++)
+        for (int16 d = 1; d <= need; d++) {
+            const int16 tx = px + DX[dir]*d, ty = py + DY[dir]*d;
+            if (!mp->InBounds(tx,ty) || mp->OpaqueAt(tx,ty))
+                break;
+            if (d == need) {
+                if (mp->SolidAt(tx,ty) || mp->FCreatureAt(tx,ty))
+                    break;
+                *rx = tx; *ry = ty;
+                return true;
+            }
+        }
+    return false;
+}
+
+static bool TrueSightProbeFar(Map *mp, int16 px, int16 py, int16 minDist,
+        int16 *rx, int16 *ry) {
+    const int16 span = minDist + 20;
+    for (int16 ddy = -span; ddy <= span; ddy++)
+        for (int16 ddx = -span; ddx <= span; ddx++) {
+            const int16 tx = px + ddx, ty = py + ddy;
+            if (!mp->InBounds(tx,ty))
+                continue;
+            /* InBounds first: dist() takes uint16, and a negative offset
+               here would wrap before the distance check ever saw it. */
+            if (dist(px,py,tx,ty) <= minDist)
+                continue;
+            if (mp->SolidAt(tx,ty) || mp->FCreatureAt(tx,ty))
+                continue;
+            *rx = tx; *ry = ty;
+            return true;
+        }
+    return false;
+}
+
+/* INCURSION_TRUESIGHT_PROBE -- the runnable check behind the true-sight
+   range fix in Perceives and MarkAsSeen. tools/check_true_sight.sh drives
+   it; read that script for the pass condition. Grants the player TRUE_SIGHT,
+   places one temporary invisible giant rat at three distances and two
+   lighting states, and narrates Perceives() against expectation, one
+   TRUESIGHT_PROBE: line per assertion, through Error() because errors.log is
+   the channel under test -- the same pattern check_quiet_lookup.sh and
+   check_xp_drain.sh use. Off unless the variable is set. Leaves no mark on
+   the live game: every stati and every square it touches is put back before
+   it returns. inc-5bl3. */
+void Creature::TrueSightProbe() {
+    if (!getenv("INCURSION_TRUESIGHT_PROBE"))
+        return;
+
+    if (!isPlayer() || !m) {
+        Error("TRUESIGHT_PROBE: INCONCLUSIVE -- no live player and map yet");
+        return;
+    }
+    if (HasStati(TRUE_SIGHT) || HasStati(SEE_INVIS)) {
+        Error("TRUESIGHT_PROBE: INCONCLUSIVE -- the player already has "
+            "TRUE_SIGHT or SEE_INVIS; granting more would corrupt real state");
+        return;
+    }
+
+    const rID ratID = FIND("giant rat");
+    if (!ratID) {
+        Error("TRUESIGHT_PROBE: INCONCLUSIVE -- no 'giant rat' resource to place");
+        return;
+    }
+
+    if (max(SightRange, BlindRange) < TRUE_SIGHT_RANGE + 2) {
+        Error("TRUESIGHT_PROBE: INCONCLUSIVE -- SightRange %d is too short to "
+            "test range %d and beyond it", (int)SightRange, TRUE_SIGHT_RANGE);
+        return;
+    }
+
+    Map *mp = m;
+    const int16 px = x, py = y;
+    int16 lit_x,lit_y, dark_x,dark_y, far_x,far_y;
+    if (!TrueSightProbeLine(mp, px, py, 5, &lit_x, &lit_y)) {
+        Error("TRUESIGHT_PROBE: INCONCLUSIVE -- no open line 5 squares from "
+            "the player to place the lit inside-range square");
+        return;
+    }
+    if (!TrueSightProbeLine(mp, px, py, 9, &dark_x, &dark_y)) {
+        Error("TRUESIGHT_PROBE: INCONCLUSIVE -- no open line 9 squares from "
+            "the player to place the unlit inside-range square");
+        return;
+    }
+    if (!TrueSightProbeFar(mp, px, py, TRUE_SIGHT_RANGE + 2, &far_x, &far_y)) {
+        Error("TRUESIGHT_PROBE: INCONCLUSIVE -- no open square beyond true "
+            "sight's range to place the outside-range square");
+        return;
+    }
+
+    GainPermStati(TRUE_SIGHT, NULL, SS_MISC);
+    const int16 Range = TrueSightRange();
+    Error("TRUESIGHT_PROBE: range expected=12 actual=%d", (int)Range);
+
+    /* Perceives() returns nothing at all before theGame->InPlay() is true,
+       and this probe runs ahead of Game::Play()'s own PlayMode = true (a few
+       lines below its call site in src/Main.cpp). Borrow play mode for the
+       length of this probe only; nothing else runs while it is set. */
+    const bool wasInPlay = theGame->PlayMode;
+    theGame->PlayMode = true;
+
+    Monster *rat = new Monster(ratID);
+    TMON(rat->tmID)->GrantGear(rat, rat->tmID, true);
+    TMON(rat->tmID)->PEvent(EV_BIRTH, rat, rat->tmID);
+    rat->PlaceAt(mp, lit_x, lit_y);
+    rat->Initialize(true);
+    rat->GainPermStati(INVIS, NULL, SS_RACE, INV_NORMAL);
+
+    const bool wasLitLit = mp->At(lit_x,lit_y).Lit;
+    const bool wasLitMLight = mp->At(lit_x,lit_y).mLight;
+    mp->At(lit_x,lit_y).Lit = 1;
+    thisp->CalcVision();
+    uint16 per = Perceives(rat);
+    Error("TRUESIGHT_PROBE: lit-inside expected=visual actual=%s",
+        (per & PER_VISUAL) ? "visual" : "hidden");
+    mp->At(lit_x,lit_y).Lit = wasLitLit;
+    mp->At(lit_x,lit_y).mLight = wasLitMLight;
+
+    const bool wasDarkLit = mp->At(dark_x,dark_y).Lit;
+    const bool wasDarkMLight = mp->At(dark_x,dark_y).mLight;
+    mp->At(dark_x,dark_y).Lit = 0;
+    mp->At(dark_x,dark_y).mLight = 0;
+    rat->PlaceAt(mp, dark_x, dark_y);
+    thisp->CalcVision();
+    if (LightLitAt(dark_x,dark_y))
+        Error("TRUESIGHT_PROBE: INCONCLUSIVE -- the light map still calls "
+            "(%d,%d) lit; cannot test the darkness half here",
+            (int)dark_x, (int)dark_y);
+    else {
+        per = Perceives(rat);
+        Error("TRUESIGHT_PROBE: dark-inside expected=visual actual=%s",
+            (per & PER_VISUAL) ? "visual" : "hidden");
+    }
+    mp->At(dark_x,dark_y).Lit = wasDarkLit;
+    mp->At(dark_x,dark_y).mLight = wasDarkMLight;
+
+    rat->PlaceAt(mp, far_x, far_y);
+    thisp->CalcVision();
+    per = Perceives(rat);
+    Error("TRUESIGHT_PROBE: outside-range expected=hidden actual=%s",
+        (per & PER_VISUAL) ? "visual" : "hidden");
+
+    RemoveStati(TRUE_SIGHT);
+    rat->PlaceAt(mp, lit_x, lit_y);
+    thisp->CalcVision();
+    per = Perceives(rat);
+    Error("TRUESIGHT_PROBE: control expected=hidden actual=%s",
+        (per & PER_VISUAL) ? "visual" : "hidden");
+
+    rat->Remove(true);
+    thisp->CalcVision();
+    theGame->PlayMode = wasInPlay;
 }
 
 // If 'assertLOS' is true, we are sure that 'this' can see the square that
@@ -464,6 +648,7 @@ uint16 Creature::Perceives(Thing *t, bool assertLOS) {
     const bool HasStati_ENGULFED = HasStati(ENGULFED);
     const bool HasStati_BLIND = HasStati(BLIND);
     const bool HasStati_SEE_INVIS = HasStati(SEE_INVIS);
+    const int16 TrueRange = TrueSightRange();
     const int  StatiVal_PERCEPTION = GetStatiVal(PERCEPTION);
     Creature *anim = (Creature *)GetStatiObj(HAS_ANIMAL);
     Creature *druid = (Creature *)GetStatiObj(ANIMAL_COMPANION);
@@ -710,10 +895,21 @@ InvisToTremor:;
                 goto SkipVisual;
         }
 
-    if (t_HasStati_INVIS && !HasStati_SEE_INVIS)    /* later, update */
+    /* upstream: the True Seeing spell and every other TRUE_SIGHT grantor are
+       written to see through invisibility (and through darkness, at the
+       MarkAsSeen site below) out to 120 feet, per the SRD text recorded on
+       the bead; this test and the stati it reads are plain control flow, no
+       dependence on integer width, the typedefs or the compiler, so the same
+       miss happens identically on Win32. Observed: same seed, same keys, two
+       builds -- the sprite and twelve squares of dark corridor appear only on
+       the fixed one (docs/evidence/inc-5bl3). tools/check_true_sight.sh proves
+       red both ways. inc-5bl3. Not sent. */
+    if (t_HasStati_INVIS && !(HasStati_SEE_INVIS ||
+        (TrueRange && Dist <= TrueRange)))    /* later, update */
         goto SkipVisual;
 
-    if (t_HasStati_INVIS_TO && !HasStati_SEE_INVIS)
+    if (t_HasStati_INVIS_TO && !(HasStati_SEE_INVIS ||
+        (TrueRange && Dist <= TrueRange)))
         StatiIterNature(t, INVIS_TO) {
             if (S->Mag == 0 && S->eID) {
                 EventInfo xe;
@@ -740,7 +936,8 @@ InvisToTremor:;
             Per |= PER_VISUAL | PER_SHADOW;
     }
 
-    if (Dist > (LightRange * 2) && !m->At(tx, ty).Lit && !m->At(tx, ty).mLight && !LightLitAt(tx,ty) && t != this) {
+    if (Dist > (LightRange * 2) && !m->At(tx, ty).Lit && !m->At(tx, ty).mLight && !LightLitAt(tx,ty) && t != this &&
+        !(TrueRange && Dist <= TrueRange)) {
         Per &= ~(PER_VISUAL | PER_SHADOW);
     }
 

@@ -159,6 +159,11 @@ struct Counterspeller
 
 inline int16 XCRtoCR(int32 XCR);
 
+/* SRD True Seeing's range, 120 feet at this codebase's 10-feet-per-square
+   scale. A TRUE_SIGHT stati's Mag carries the range; Mag <= 0 falls back
+   to this default. inc-5bl3. */
+#define TRUE_SIGHT_RANGE  12
+
 class Creature: public Thing, public Magic
   {
     ARCHIVE_CLASS(Creature,Thing,r)
@@ -341,6 +346,8 @@ class Creature: public Thing, public Magic
       virtual void RestoreXP(uint32 xp) { return; }
       uint16 Perceives(Thing*, bool assertLOS);
       uint16 Perceives(Thing* t) { return Perceives(t, false); } 
+      int16 TrueSightRange();
+      void TrueSightProbe();
       virtual bool isThreatened(bool perceived_only=true);
       virtual rID getGod() { return 0; }
       virtual const char* ActingVerb();
