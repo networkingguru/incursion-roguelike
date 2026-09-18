@@ -1,0 +1,50 @@
+# Load tools/fixtures/chars/engaged-hostile.sav and park the session at the
+# UNANSWERED death prompt, for tools/check_headless.sh step 8 (bd inc-gjzx).
+#
+#   INCURSION_OPTIONS=tools/gates/Options.Dat \
+#   INCURSION_LOAD=tools/fixtures/chars/engaged-hostile.sav \
+#       tools/headless.sh tools/keys/death-freeze.keys <seed>
+#
+# Rests in place ('.', KY_CMD_REST) until the bugbear standing beside the
+# fixture (see tools/keys/engaged-hostile-save.keys) kills him. Resting never
+# leaves the threatened square, so the threat-disengage prompt cannot fire --
+# only the death prompt can.
+#
+# NOTHING ELSE FOLLOWS THE RESTS BUT THE EXPLICIT DUMP AND QUIT BELOW.
+# tools/gates/Options.Dat runs with OPT_ELUDE_DEATH set (see the note below),
+# so the killing blow asks "You die... Die? [yn]" (src/Fight.cpp) instead of
+# ending the session. TextTerm::yn (src/Term.cpp:3338) loops on GetCharRaw()
+# until it reads 'y' or 'n', and '.' is neither, so every rest key queued
+# after the one that lands the killing blow is silently swallowed by that
+# loop and the session parks at the prompt, unanswered.
+#
+# @dump AND @quit ARE EXPLICIT, not left to tools/headless.sh's own
+# final-screen capture (src/Wposix.cpp:1422, DumpScreen("final")). That exit
+# dump would photograph the same parked prompt here regardless -- confirmed
+# by running this scenario both ways -- but leaving it implicit means this
+# script's last screen is whatever the harness happens to catch, not what
+# this script deliberately asked for. tools/keys/death-confirm.keys needed an
+# explicit @dump to see past a repaint the harness's own exit dump missed;
+# giving this script the same explicit @dump and @quit keeps both scripts'
+# "last screen" meaning the same thing.
+#
+# NOTE ON THE COMMENT tools/check_headless.sh CARRIES (as of b443f8f): it
+# says the gate settings run "with OPT_NODEATH on". Measured here (2026-09-18)
+# and against tools/gates/Options.Dat.md: OPT_NODEATH is explicitly 0 (NO,
+# "Named explicitly in scope"), and it is OPT_ELUDE_DEATH (idx 119, value 3,
+# "SEVEN free deaths") that actually reaches the identical
+# "You die... Die?" yn() call, through Fight.cpp's `else if (Opt(OPT_ELUDE_DEATH))`
+# branch. Both branches ask the same prompt with the same text, so this does
+# not change what either scenario measures -- deathCount starts at 0 for a
+# freshly loaded fixture, and 0 < 7, so the prompt fires exactly the same way
+# a true OPT_NODEATH would produce it. Flagged, not fixed: check_headless.sh
+# is Phase 4's file, not Phase 2/3's.
+#
+# DONE MEANS: the run's last screen contains the literal text "Die? [yn]",
+# and the run has NO logs/death.log. Measured: the bugbear's attacks land the
+# killing blow on the 30th rest key at this seed under this fixture; 50 is
+# kept here for margin.
+
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+@dump:died
+@quit

@@ -1,0 +1,41 @@
+# Load tools/fixtures/chars/engaged-hostile.sav and park the session at the
+# threat-disengage prompt, on purpose, for tools/check_headless.sh step 10
+# (bd inc-gjzx).
+#
+#   INCURSION_OPTIONS=tools/gates/Options.Dat \
+#   INCURSION_LOAD=tools/fixtures/chars/engaged-hostile.sav \
+#       tools/headless.sh tools/keys/threat-freeze.keys <seed>
+#
+# The fixture stands one square WEST of an awake, hostile, perceiving bugbear
+# (see tools/keys/engaged-hostile-save.keys for how and why). ONE key that
+# steps further west leaves the bugbear's threatened square and fires
+# src/Move.cpp:941's "You are in a threatened area. Abort, Flee or Disengage?"
+# before anything else can happen.
+#
+# EVERYTHING AFTER THAT KEY IS '.', AND NOTHING ELSE MAY FOLLOW IT. Commit
+# f7ff2d7 (bd inc-es62) gave ChoicePrompt highlight navigation: an arrow key
+# moves the highlight, ENTER picks whatever is highlighted -- including '?',
+# which opens the combat manual at src/Move.cpp:943 and never returns, because
+# this script carries no ESC to leave it. '.' is KY_CMD_REST, which is not one
+# of ChoicePrompt's choices ("afd?") and not an arrow, ENTER or ESC either, so
+# TextTerm::ChoicePrompt (src/Term.cpp:2823-2868) just loops and asks again --
+# confirmed by reading that loop, not assumed.
+#
+# DONE MEANS: the run's last screen contains the literal text
+# "Abort, Flee or Disengage".
+#
+# THE THREE LEADING '.' KEYS: tools/headless.sh:206-232 promotes a run to
+# exit 5 (NO GAMEPLAY) when logs/session.log is missing, and src/Main.cpp:240
+# writes that file on the FIRST COMPLETED TURN. LEFT as the very first key
+# fires the threat prompt (src/Move.cpp:941) before any turn completes, so
+# the run never plays a turn and is wrongly promoted to exit 5. Three rest
+# keys complete three turns first -- well inside the ~30-rest-key death
+# budget measured in tools/keys/death-freeze.keys's header -- then LEFT still
+# fires the prompt exactly the same way, because resting in place never
+# leaves the threatened square.
+
+. . .
+LEFT
+. . . . . . . . . . . . . . . . . . . .
+
+@dump:threat

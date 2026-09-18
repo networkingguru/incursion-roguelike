@@ -205,9 +205,10 @@ threatened area. Abort, Flee or Disengage?` still on screen
 (`headless.sh:344-347`). That prompt has no option gate at all and fires
 whenever a player-controlled creature moves away from a hostile creature that
 perceives it (`src/Move.cpp:941`, quoted at `headless.sh:330-331`).
-`tools/keys/dive.keys` contains none of `a`, `f`, `d`, `?` or ESC, so once the
-prompt fires the rest of the script is swallowed. Measured on 7 of 40 seeds
-(`headless.sh:339-341`).
+`f7ff2d7` (2026-08-28) gave ChoicePrompt arrow+ENTER navigation, so
+`tools/keys/dive.keys` can now select `a`, `f` or `d` -- but it can also land
+on `?` and open the combat manual, which has no ESC out, so the script still
+stalls there. Measured on 7 of 40 seeds (`headless.sh:339-341`).
 
 **`map audit: armed, no inconsistencies found`** — the audit ran and found
 nothing. `src/MapAudit.cpp:64` writes an `=== map audit armed ... ===` header

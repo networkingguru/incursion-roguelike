@@ -64,13 +64,13 @@
 # for what a single session sees.
 #
 # THE THREAT-DISENGAGE PROMPT (inc-loa.5). "You are in a threatened area.
-# Abort, Flee or Disengage?" (src/Move.cpp:941) has no OPT_ gate at all, and
-# tools/keys/dive.keys has no 'a'/'f'/'d'/'?'/ESC in its vocabulary, so a
-# session that hits it freezes for the rest of its key budget -- same disease
-# as the death prompt above, one prompt over. tools/gate_lib.sh counts it as
-# 'threat_frozen'; this script fails the comparison when that count rises,
-# the same way it does for 'died'. See tools/headless.sh's "stuck-prompt:"
-# line for what a single session sees.
+# Abort, Flee or Disengage?" (src/Move.cpp:941) has no OPT_ gate at all.
+# f7ff2d7 (2026-08-28) gave ChoicePrompt arrow+ENTER navigation, so
+# tools/keys/dive.keys can now select 'a', 'f' or 'd', or land on '?' and
+# get stuck in the combat manual, which has no ESC out. tools/gate_lib.sh
+# counts that stall as 'threat_frozen'; this script fails the comparison
+# when that count rises, the same way it does for 'died'. See
+# tools/headless.sh's "stuck-prompt:" line for what a single session sees.
 #
 # The gate detects only what reaches a log. A defect that silently does the
 # wrong thing and says nothing passes clean. It never replaces a play-test.
