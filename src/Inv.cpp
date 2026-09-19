@@ -499,9 +499,13 @@ EvReturn Character::PickUp(EventInfo &e) {
             IPrint("You can't pick up an illusionary item.");
             return ABORT;
         }
+        /* upstream: the item must reuse argument 1 after Obj2.
+           Base-code token dispatch also advances bare Obj on Win32;
+           no platform typedef or compiler-specific construct is involved.
+           Traced. inc-ur9b. Not sent upstream. */
         IDPrint("As you reach to pick up the <Obj>, your hand passes "
             "through it, and it winks out of existence!",
-            "As the <Obj2> reaches to pick up the <Obj>, <his:Obj2> hand passes "
+            "As the <Obj2> reaches to pick up the <Obj1>, <his:Obj2> hand passes "
             "through it, and it winks out of existence!", e.EItem, this);
 
         /* This warrants a disbelief check! */

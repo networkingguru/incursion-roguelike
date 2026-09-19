@@ -1,0 +1,28 @@
+# Reproduce inc-ur9b: Surrender's lein message must receive its <num> amount.
+# Before the fix __XPrint read past the supplied varargs.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#       tools/headless.sh tools/keys/surrender-lein-message.keys 2
+#
+# A hobgoblin has CR OPT_CR(1,1), so its lein is 750 under either option.
+
+w
+y
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "hobgoblin"
+RIGHT
+ENTER
+
+t
+RIGHT
+ENTER
+s
+y
+@dump:lein
+# The message area wraps between 750 and gold; read the full sentence in the log.
+SPACE
+v
+@dump:lein-message
+@quit
