@@ -716,6 +716,29 @@ void* Game::GetMemory(rID xID,Player *pl)
     return theGame->MDataSeg[(xID >> 24)-1] + theGame->Modules[(xID >> 24)-1]->GetMemoryPtr(xID,i);
   }
 
+/* Record one thing a player has learned about one kind of monster.
+   The key is always the creature's TRUE kind -- Creature::tmID and never the
+   form or the seeming it wears -- so a polymorphed or disguised creature
+   teaches the player nothing about the kind it pretends to be.
+   The rID range check is Module::GetMemoryPtr's own; only the two values
+   Game::GetMemory cannot survive are refused here. bd inc-q98a. */
+void MonMemNote(Player *p, rID mID, int what)
+  {
+    MonMem *mm;
+    if (!p || !mID)
+      return;
+    mm = MONMEM(mID,p);
+    if (!mm)
+      return;
+    if (what & MONMEM_SEEN)
+      mm->Seen = 1;
+    if (what & MONMEM_FOUGHT)
+      mm->Fought = 1;
+    if (what & MONMEM_KILL)
+      if (mm->Kills < MONMEM_MAX_KILLS)
+        mm->Kills++;
+  }
+
 uint32 Module::GetMemoryPtr(rID xID,int8 pn)
   {                                                      
     uint32 ptr;

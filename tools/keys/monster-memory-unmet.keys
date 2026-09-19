@@ -1,0 +1,39 @@
+# Recall a creature the character has never met, then save. (bd inc-q98a)
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/monster-memory-unmet.keys 4
+#
+# The unfixed engine read a hardwired perfect record instead of the player's
+# own (src/Help.cpp, the PerfectMem HACKFIX), so this screen showed the
+# creature's complete entry -- hit dice, attack bonus, defense class, saving
+# throw numbers and every attribute -- to a character who had just arrived.
+# tools/check_monster_memory.sh reads the box this script photographs.
+#
+# WHY HUMAN, AND WHY A BARE ENTER. [R]ecall opens the glyph browser
+# (TextTerm::AcquisitionPrompt, src/Term.cpp), which has neither menu letters
+# nor a '>' marker, so neither @choose nor @cursorto can drive it. It opens on
+# the first glyph category with the first candidate selected, and ENTER takes
+# that one. On this module that is the human, the only entry under "Humans",
+# and an orc barbarian arriving in the goblin caves has met none.
+#
+# The save at the end is the second half of the oracle: tools/dump_save.sh
+# prints the "Monster Memory" section straight from MonMem, so the check can
+# read Seen, Fought and Kills rather than inferring them from prose.
+
+@include chargen.keys
+
+s               # search: one real turn, so the harness counts this a session
+
+d               # Display Character Sheet
+@expect "Gender"
+r               # [R]ecall Monster
+ENTER           # the first candidate of the first glyph category: the human
+@dump:unmet-recall
+
+ESC             # dismiss the description box
+ESC             # leave the character sheet, back to play mode
+
+ESC             # System Menu -- and NOT a cancel
+@expect "System Menu"
+b               # [b] Save and Continue
+@dump:saved

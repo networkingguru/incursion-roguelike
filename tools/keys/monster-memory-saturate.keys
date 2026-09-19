@@ -1,0 +1,78 @@
+# Kill three hundred and twenty humans, and save. (bd inc-q98a)
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/monster-memory-saturate.keys 4
+#
+# MonMem::Kills is eight bits wide (inc/Res.h). The 256th kill of one kind
+# would wrap it to zero and take everything the player knew about that kind
+# with it, so MonMemNote (src/Res.cpp) stops at 255 instead of incrementing.
+# This script is the proof: three hundred and twenty summon-and-kill blocks of
+# one kind, and the saved row must read Kills=255. Wrapping would read 53.
+#
+# NOT IN THE GATE, AND FOR ONE REASON. Every human dies on the same square and
+# leaves a corpse and its gear there, so by the end that square holds some
+# twelve hundred things. tools/headless.sh's map audit then reports "Contents
+# chain too long, probably a cycle" and a thousand "Thing not in the Contents
+# chain of its own square" lines -- a real engine complaint, manufactured by
+# this script and by nothing a player does. A check that runs in the nightly
+# gate must not manufacture one, so tools/check_monster_memory.sh runs this
+# only when it is asked: tools/check_monster_memory.sh --saturate. Spreading
+# the kills does not fix it; thirty kills on one square already trips the
+# audit, and there are only eight squares beside the player.
+#
+# It is a separate script from tools/keys/monster-memory-kills.keys because
+# the two measure different things -- that one measures what ten kills show
+# the player, this one measures only the ceiling -- and because this one does
+# not open the recall box at all.
+#
+# It costs about eleven seconds. A headless session plays several thousand
+# keys a second, so the length is not the reason it sits outside the gate.
+
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+@include monster-memory-ten-kills.keys
+
+@dump:after-kills
+
+ESC             # System Menu -- and NOT a cancel
+@expect "System Menu"
+b               # [b] Save and Continue
+@dump:saved

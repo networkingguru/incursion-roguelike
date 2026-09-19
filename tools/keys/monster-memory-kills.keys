@@ -1,0 +1,50 @@
+# Kill ten humans, recall the human entry, and save. (bd inc-q98a)
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/monster-memory-kills.keys 4
+#
+# The companion to tools/keys/monster-memory-unmet.keys, which recalls the
+# same entry from a character who has met nobody. Ten kills opens three of the
+# thresholds in Monster::Describe -- hit dice and attack bonus at three kills,
+# the attribute sentence at ten -- so the two boxes side by side are what a
+# player feels about this change. tools/check_monster_memory.sh reads both.
+#
+# TEN AND NOT THREE. Three kills would prove the first threshold only, and the
+# attribute sentence is the larger half of what the unfixed build gave away.
+#
+# NOTHING ELSE IS SUMMONED HERE. The summon prompt's cursor does not reliably
+# start on the player when other creatures stand nearby, and a human placed
+# one square off is a human the player walks toward rather than hits. The
+# kobold and the ogre therefore live in their own session,
+# tools/keys/monster-memory-seen.keys.
+#
+# FREEZE MONSTERS FIRST, the eleventh row of the Wizard Mode Switches list, so
+# that a summoned human never strikes back: a hit on the player would write
+# Fought from the other direction and this script would stop measuring which
+# direction set it.
+
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+@include monster-memory-ten-kills.keys
+@dump:after-kills
+
+d               # Display Character Sheet
+@expect "Gender"
+r               # [R]ecall Monster
+ENTER           # the human again, the same entry the unmet script photographs
+@dump:killed-recall
+
+ESC             # dismiss the description box
+ESC             # leave the character sheet, back to play mode
+
+ESC             # System Menu -- and NOT a cancel
+@expect "System Menu"
+b               # [b] Save and Continue
+@dump:saved

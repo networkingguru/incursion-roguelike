@@ -2270,8 +2270,7 @@ String & Monster::Describe(Player *p) {
     int8 MType1, MType2, MType3, lc, sv, n, feats, skills, CR;
     uint8 i;
     String groupStr;
-    /* HACKFIX */
-    static MonMem PerfectMem = { 255, 255, 255, 255, 511, 255, 65535, 1, 1, 65535, 31 };
+    MonMem Unknown;
     TextVal AbilDescs[] = {
         { CA_AURA_OF_MENACE, "It radiates an aura of menace in a %d0-foot radius. " },
         { CA_BERSERK_RAGE, "It can fly into a berserk rage. " },
@@ -2352,10 +2351,30 @@ String & Monster::Describe(Player *p) {
 
     tm = TMON(xID);
 
-    //if (p->WizOpt(OPT_PERFECT_MONMEM))
-    mm = &PerfectMem;
-    //else      
-    //  mm = MONMEM(mID,p);
+    /* upstream: what the player knows about this kind gates everything below,
+       and this read was shortcut to a hardwired perfect record, so a creature
+       nobody had ever met showed its complete entry. The HACKFIX static, the
+       commented-out lookup and the absence of any writer for MonMem are all
+       base code, and the dead branch called p->WizOpt(OPT_PERFECT_MONMEM),
+       which exists nowhere in the tree. Struct reads and integer thresholds
+       only: no typedef, pointer or platform dependence, so Win32 on the
+       original compiler shows the same full entry. Tier: Observed --
+       tools/check_monster_memory.sh recalls the human entry from a character
+       who has met nobody and reads the sparse text, then from one who has
+       killed ten and reads the full one. Tracked as inc-q98a. Not sent.
+
+       Keyed on xID, the kind this description is ABOUT: the true kind once
+       the creature is known, and the form or the seeming while it is not, so
+       a disguise never shows what the player knows about what is under it.
+       Every write keys on the true kind (Creature::tmID), so the record for
+       a kind is always about real creatures of that kind. No caller passes a
+       NULL player today; a zeroed record is what one should read. */
+    if (p)
+        mm = MONMEM(xID,p);
+    else {
+        memset(&Unknown, 0, sizeof(Unknown));
+        mm = &Unknown;
+    }
 
     CR = tm->CR;
     if (isMType(MA_DRAGON))

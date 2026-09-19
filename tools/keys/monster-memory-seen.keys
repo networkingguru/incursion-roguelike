@@ -1,0 +1,62 @@
+# See one kind, strike a second once, kill neither, and save. (bd inc-q98a)
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/monster-memory-seen.keys 4
+#
+# This separates the three things gameplay writes into MonMem, which
+# tools/keys/monster-memory-kills.keys sets all at once:
+#
+#   kobold  summoned north and never touched   -> Seen=1 Fought=0 Kills=0
+#   ogre    summoned south and struck once     -> Seen=1 Fought=1 Kills=0
+#
+# So seeing a kind must not claim it was fought, and fighting one must not
+# claim it was killed. tools/dump_save.sh prints both rows from the save and
+# tools/check_monster_memory.sh reads them.
+#
+# THE OGRE, AND NOT A SECOND KOBOLD. This character hits for 1d3+4 and an
+# ogre's hit dice put it far out of reach of one blow, so the strike cannot
+# turn into a kill and quietly stop measuring what it is here to measure.
+#
+# FREEZE MONSTERS FIRST, the eleventh row of the Wizard Mode Switches list.
+# Without it the ogre strikes back, and a blow from the ogre would set Fought
+# from the other direction -- which is real behaviour, and is not what this
+# script is measuring.
+#
+# NO HUMAN IS SUMMONED HERE. The summon prompt places the creature where the
+# cursor sits, and the cursor starts on the player, but a square that is
+# already taken sends the new creature to a neighbouring one. Keeping the
+# human kills in their own session is what stops the two interfering.
+
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+# Seen, and nothing else.
+@until "Monster Summoning" w
+@choose "Monster Summoning"
+@choose "Kobolds"
+@choose "kobold"
+UP
+ENTER
+@dump:kobold-seen
+
+# Fought, and not killed.
+@until "Monster Summoning" w
+@choose "Monster Summoning"
+@choose "Giants"
+@choose "ogre"
+DOWN
+ENTER
+DOWN
+@while "Confirm attack" y
+@dump:ogre-struck
+
+ESC             # System Menu -- and NOT a cancel
+@expect "System Menu"
+b               # [b] Save and Continue
+@dump:saved
