@@ -117,17 +117,26 @@ expect "the real record path is ignored in this repository" \
 # is dirty, then the same landing again.
 bead inc-aaaa; W="$TMP/Incursion-inc-aaaa"
 echo 'int a;' >> "$W/src/game.c"; commit "$W" "fix: a"
-touch "$REPO/dirt.txt"
+echo 'int dirt;' >> "$REPO/src/game.c"
 land inc-aaaa
 expect "an interrupted landing stops at the dirty master checkout" [ "$RC" = 1 ]
 expect "  after it ran the full gate" [ "$BUILT" = 2 ]
-rm -f "$REPO/dirt.txt"
+git -C "$REPO" checkout -q -- src/game.c
 live=$(calls live)
 land inc-aaaa
 expect "the same landing again lands" [ "$RC" = 0 ]
 expect "  without building" [ "$BUILT" = 0 ]
 expect "  without the live tier" [ "$(calls live)" = "$live" ]
 expect "  and names the pass it reused" says "REUSED from a full pass at"
+
+# An untracked file beside the checkout is not "dirty" for this guard: only a
+# tracked modification refuses a landing (--untracked-files=no, commit 29ffccf).
+bead inc-hhhh; W="$TMP/Incursion-inc-hhhh"
+echo 'int h;' >> "$W/src/game.c"; commit "$W" "fix: h"
+touch "$REPO/dirt.txt"
+land inc-hhhh
+expect "an untracked file in the master checkout does not stop a landing" [ "$RC" = 0 ]
+rm -f "$REPO/dirt.txt"
 
 # The second report: the gate ran before the commit, and the commit changes no
 # file, so the pass still holds.
