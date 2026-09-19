@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # Structural regression check for inc-tek.7.
 #
 # Erich's own script (lib/religion.irh) calls MSG_CUSTOM1 through MSG_CUSTOM5
