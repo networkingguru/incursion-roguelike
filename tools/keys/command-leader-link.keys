@@ -1,0 +1,198 @@
+# Reproduction only for inc-6ax7; no engine probe or fix.
+@include chargen-mage.keys
+@until "Things in View" ESC
+w y                     # Enter wizard mode and confirm.
+@choose "Wizard Mode Switches"
+# Tables.cpp Wizard Options, counted from row 1 Cheat Death:
+# 6 Ignore Spell Failure, 7 Know All Spells, 8 Infinite Mana,
+# 10 Wizard Sight, 11 Freeze Monsters. Cursor starts at row 1.
+DOWN*5 SPACE             # Row 6: Ignore Spell Failure ON.
+DOWN SPACE               # Row 7: Know All Spells ON.
+DOWN SPACE               # Row 8: Infinite Mana ON.
+DOWN*2 SPACE             # Row 10: Wizard Sight ON.
+DOWN SPACE               # Row 11: Freeze Monsters ON.
+@dump:switches
+ESC                     # Return to dungeon.
+# Generate 36,200 XP using wizard J (50 XP per call); four calls per pass
+# keep the loop below its 200-pass bound. Level 9 requires 36,000 XP.
+@until "36200/" w J w J w J w J
+@dump:xp
+# Gain eight Mage levels through the character sheet.
+d                       # Character sheet.
+G                       # Gain the next Mage level.
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+G                       # Gain the next Mage level.
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+G                       # Gain the next Mage level.
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+G                       # Gain the next Mage level.
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+G                       # Gain the next Mage level.
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+G                       # Gain the next Mage level.
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+G                       # Gain the next Mage level.
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+G                       # Gain the next Mage level.
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@dump:level
+ESC                     # Close character sheet.
+# Dominate Monster is an Effect without a Wizard Spell source. Know All
+# Spells alone omits it; Learn Any Spell makes this exact effect castable.
+@until "Wizard Mode Options:" w
+@choose "Learn Any Spell"
+"Dominate Monster" ENTER
+# D reads the message log for an unambiguous "a kobold hits a kobold" line,
+# and the Entry Chamber starts populated (a wild kobold, a baboon, a cave
+# orc, a lizardman). Clear it before either test kobold exists, so nothing
+# summoned below is a wild creature's target or attacker.
+@until "Wizard Mode Options:" w
+@choose "Genocide Everything"
+@until "Wizard Mode Options:" w
+@choose "Monster Summoning"
+@choose "Kobold"
+@choose "kobold"
+RIGHT*3 ENTER           # Creature 1 three squares east of player.
+@until "Wizard Mode Options:" w
+@choose "Monster Summoning"
+@choose "Kobold"
+@choose "kobold"
+LEFT*3 ENTER            # Creature 2 three squares west of player.
+# Give distant summons one turn to acquire targets, then freeze them again
+# before any measurement. Wizard Retarget alone only schedules a retarget.
+@until "Wizard Mode Options:" w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE ESC       # Freeze Monsters OFF for setup only.
+.                       # One setup turn; kobolds may make ranged attacks. No measurement yet.
+@until "Wizard Mode Options:" w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE            # Freeze Monsters ON for all measurements.
+@dump:measurement-switches
+ESC
+# Examine Player Data sizes the shared scroll window before Nearby Things.
+@until "Wizard Mode Options:" w
+@choose "Examine Player Data"
+ESC
+@until "Wizard Mode Options:" w
+@choose "Examine Nearby Things"
+@until "kobold (class" RIGHT
+@dump:control-top
+@until "---------- Target System:" DOWN
+DOWN*41                 # Target header now at top of 42-row debug window.
+@dump:control-page1
+DOWN*42                 # Next non-overlapping page of the same dump.
+@dump:control-page2
+DOWN*42                 # Next non-overlapping page of the same dump.
+@dump:control-page3
+DOWN*42                 # Next non-overlapping page of the same dump.
+@dump:control-page4
+ESC                     # Leave Examine.
+m                       # Cast a spell.
+@dump:spell-menu
+@cursorto:mark "Dominate Monster" DOWN
+@dump:dominate-selected
+1 ENTER                 # Bind spellkey 1, then cast.
+RIGHT ENTER             # Target mode jumps to creature 1 east.
+# Ignore Spell Failure does not suppress saving throws. Retry resisted casts.
+@while "resists your magic" 1 RIGHT ENTER
+@dump:cast-one
+m
+@cursorto:mark "Dominate Monster" DOWN
+@dump:dominate-selected
+1 ENTER                 # Bind spellkey 1, then cast.
+LEFT ENTER              # Target mode jumps to creature 2 west.
+@while "resists your magic" 1 LEFT ENTER
+@dump:cast-two
+@until "Wizard Mode Options:" w
+@choose "Examine Player Data"
+ESC
+@until "Wizard Mode Options:" w
+@choose "Examine Nearby Things"
+@until "kobold (class" RIGHT
+@dump:one-after-top
+@until "CHARMED from" DOWN
+DOWN*3                  # Include CH_DOMINATE and its player/effect source.
+@dump:one-after-status
+UP*200                  # Reset to the top before finding the target section.
+@until "---------- Target System:" DOWN
+DOWN*41                 # Target header now at top of 42-row debug window.
+@dump:one-after-page1
+DOWN*42                 # Next non-overlapping page of the same dump.
+@dump:one-after-page2
+DOWN*42                 # Next non-overlapping page of the same dump.
+@dump:one-after-page3
+DOWN*42                 # Next non-overlapping page of the same dump.
+@dump:one-after-page4
+RIGHT                   # Next summoned creature, creature 2.
+@dump:two-after-top
+@until "CHARMED from" DOWN
+DOWN*3                  # Include CH_DOMINATE and its player/effect source.
+@dump:two-after-status
+UP*200                  # Reset to the top before finding the target section.
+@until "---------- Target System:" DOWN
+DOWN*41                 # Target header now at top of 42-row debug window.
+@dump:two-after-page1
+DOWN*42                 # Next non-overlapping page of the same dump.
+@dump:two-after-page2
+DOWN*42                 # Next non-overlapping page of the same dump.
+@dump:two-after-page3
+DOWN*42                 # Next non-overlapping page of the same dump.
+@dump:two-after-page4
+ESC
+.                       # Complete a gameplay turn with monsters still frozen.
+# --- D: A FIGHT, bd inc-6ax7 ----------------------------------------------
+# A, B and C above read wizard-mode Examine dumps and prove internal state.
+# D proves the game itself: order creature 1 to walk next to creature 2,
+# drop Freeze Monsters, let real turns pass, and read the message log for
+# a kobold striking a kobold. The Entry Chamber was genocided before either
+# kobold was summoned, so the only kobolds left to name are these two.
+@until "Wizard Mode Options:" w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE ESC       # Freeze Monsters OFF; companions may now act.
+y                       # [y] the Yuse verb menu.
+@choose "Order"
+RIGHT*3 ENTER           # Creature 1, three squares east, as summoned above.
+@choose "Travel To Destination"
+LEFT*2 ENTER            # One square east of creature 2, which sits three
+                         # west of the player; creature 1 closes a 4-square
+                         # gap to get there.
+@dump:fight-order-given
+.*40                    # Forty turns, as the earlier no-repro attempt used;
+                         # enough to close the gap and exchange several blows.
+v                       # Open the message log.
+@dump:fight-log
+ESC
+@dump:fight-positions
+@quit
