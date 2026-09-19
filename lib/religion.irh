@@ -1139,7 +1139,24 @@ God "Erich"
       * GODSPEAK_LIST
           MSG_SALUTATION
             "|Let there be zeal in your heart, truth in your words, honour in 
-               your deeds and blood upon your sword!|",
+               your deeds and blood upon your sword!|"
+          /* upstream: base-code defect, not a port artefact -- this is
+             preprocessor content and behaves identically on Win32 with the
+             original typedefs and compiler. Erich's script calls
+             MSG_CUSTOM1..5 but they sat inside the #if 0 below, so
+             Character::GodMessage fell through to its placeholder line.
+             Tier Traced. inc-tek.7. Not sent upstream. */
+          MSG_CUSTOM1
+            "A proud voice booms, |I will cleanse this filth from your presence!|"
+          MSG_CUSTOM2
+            "A proud voice intones, |I cannot aid you against worthy foes. You must
+               fight your own battles, with my blessing.|"
+          MSG_CUSTOM3
+            "A proud voice proclaims, |Use this and find glory in my name!|"
+          MSG_CUSTOM4
+            "A proud voice scorns, |Vile cur, suffer for thy cowardice!|"
+          MSG_CUSTOM5
+            "An angry voice declades, |I deal not with filth and base creatures!|",
           #if 0
           MSG_ANGER
           MSG_PROVE_WORTH
@@ -1184,18 +1201,6 @@ God "Erich"
             "A proud voice booms, |Thou stains my altar with the blood of
               that trash?! Suffer, churl!|"
               
-          MSG_CUSTOM1
-            "A proud voice booms, |I will cleanse this filth from your presence!|"
-          MSG_CUSTOM2
-            "A proud voice intones, |I cannot aid you against worthy foes. You must
-               fight your own battles, with my blessing.|"
-          MSG_CUSTOM3
-            "A proud voice proclaims, |Use this and find glory in my name!|"
-          MSG_CUSTOM4
-            "A proud voice scorns, |Vile cur, suffer for thy cowardice!|"
-          MSG_CUSTOM5
-            "An angry voice declades, |I deal not with filth and base creatures!|"
-          
           MSG_CROWNED
           #endif
       * SACRIFICE_LIST
