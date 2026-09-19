@@ -2713,7 +2713,11 @@ SkipRepeat:;
             return ABORT;
         }
         if (dist(e.EActor->x,e.EActor->y,e.EVictim->x,e.EVictim->y) > 4) {
-            IPrint("The <Obj> is too far away to Spring Attack!");
+            /* upstream: the object token must receive the out-of-reach victim.
+               Base-code format and token dispatch also overread on Win32;
+               no platform typedef or compiler-specific construct is involved.
+               Traced. inc-ur9b. Not sent upstream. */
+            IPrint("The <Obj> is too far away to Spring Attack!", e.EVictim);
             return ABORT;
         }
         /* Later, we should use EV_PUSH to trigger traps, hit barriers,

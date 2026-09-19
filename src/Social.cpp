@@ -1454,7 +1454,11 @@ EvReturn Creature::Surrender(EventInfo &e)
         if (nHands)
           {
             if (getTotalMoney() > 750*BestCR)
-              IPrint("The <Obj> claims <num> gold from you as a lein!", e.EVictim);
+              /* upstream: num must receive the amount charged below as an int.
+                 Base-code format and token dispatch also overread on Win32;
+                 no platform typedef or compiler-specific construct is involved.
+                 Traced. inc-ur9b. Not sent upstream. */
+              IPrint("The <Obj> claims <num> gold from you as a lein!", e.EVictim, 750*BestCR);
             else
               IPrint("All your gold is taken!");
             LoseMoneyTo(750*BestCR, hasHands[random(nHands)]);

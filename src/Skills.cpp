@@ -711,14 +711,22 @@ bool Character::DisarmTrap(Trap *tr, bool active)
 		}
 		if (!SkillCheck(SK_HANDLE_DEV, CheckDC, true))
 		{
+			/* upstream: the trap must reuse argument 1 after Obj2.
+			   Base-code token dispatch also advances bare Obj on Win32;
+			   no platform typedef or compiler-specific construct is involved.
+			   Traced. inc-ur9b. Not sent upstream. */
 			IDPrint("You fail to reset the <Obj>.",
-				"The <Obj2> tries to reset the <Obj>, but fails.",
+				"The <Obj2> tries to reset the <Obj1>, but fails.",
 				tr, this);
 			tr->TrapFlags |= TS_NORESET;
 			return true;
 		}
+		/* upstream: the trap must reuse argument 1 after Obj2.
+		   Base-code token dispatch also advances bare Obj on Win32;
+		   no platform typedef or compiler-specific construct is involved.
+		   Traced. inc-ur9b. Not sent upstream. */
 		IDPrint("You reset the <Obj>.",
-			"The <Obj2> resets the <Obj>.",
+			"The <Obj2> resets the <Obj1>.",
 			tr, this);
 		tr->TrapFlags &= ~TS_DISARMED;
 		tr->GainPermStati(RESET_BY, this, SS_MISC);
@@ -2146,7 +2154,11 @@ void Character::UseAbility(uint8 ab, int16 pa) {
 					continue;
 				if (!(c->Perceives(this) & (PER_VISUAL | PER_INFRA))) {
 					if (XPerceives(c))
-						IPrint("The <Obj> cannot see you, and is thus unaffected.");
+						/* upstream: the object token must receive this loop creature.
+						   Base-code format and token dispatch also overread on Win32;
+						   no platform typedef or compiler-specific construct is involved.
+						   Traced. inc-ur9b. Not sent upstream. */
+						IPrint("The <Obj> cannot see you, and is thus unaffected.", c);
 					continue;
 				}
 				if (c->HasMFlag(M_DEAF) || c->HasMFlag(M_MINDLESS) ||
