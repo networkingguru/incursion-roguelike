@@ -84,6 +84,40 @@ scratch_dir() {
     printf '%s/.finish-bead-%s' "${TMPDIR:-/tmp}" "$$"
 }
 
+# The three checks above never reach STEP 5, so the dirty-check on the shared
+# checkout's master worktree needs its own throwaway repo: a real merge, a
+# real "master already checked out elsewhere" worktree, and a copy of THIS
+# script (so its ROOT/SHARED resolve inside the throwaway repo, not the real
+# one). Prints "<script-copy> <master-checkout>" on success.
+selftest_merge_repo() {
+    local tmp bead="inc-slftst"
+
+    tmp="$(mktemp -d "${TMPDIR:-/tmp}/finish-bead-selftest.XXXXXX")" || return 1
+    mkdir -p "$tmp/work/Incursion/tools" || return 1
+
+    git -C "$tmp/work/Incursion" init -q -b trunk || return 1
+    git -C "$tmp/work/Incursion" config user.email test@example.invalid || return 1
+    git -C "$tmp/work/Incursion" config user.name "finish_bead selftest" || return 1
+    echo base >"$tmp/work/Incursion/base.txt" || return 1
+    git -C "$tmp/work/Incursion" add base.txt || return 1
+    git -C "$tmp/work/Incursion" commit -q -m initial || return 1
+    git -C "$tmp/work/Incursion" branch master trunk || return 1
+
+    git -C "$tmp/work/Incursion" worktree add -q -b "$bead" \
+        "$tmp/work/Incursion-$bead" master || return 1
+    echo bead >"$tmp/work/Incursion-$bead/bead-work.txt" || return 1
+    git -C "$tmp/work/Incursion-$bead" add bead-work.txt || return 1
+    git -C "$tmp/work/Incursion-$bead" commit -q -m "bead work" || return 1
+
+    git -C "$tmp/work/Incursion" worktree add -q \
+        "$tmp/work/master-checkout" master || return 1
+
+    cp "$SCRIPT" "$tmp/work/Incursion/tools/finish_bead.sh" || return 1
+
+    printf '%s %s %s\n' "$tmp" "$tmp/work/Incursion/tools/finish_bead.sh" \
+        "$tmp/work/master-checkout"
+}
+
 selftest() {
     local out status
 
@@ -97,6 +131,35 @@ selftest() {
     out="$("$SCRIPT" inc-zzzzzz 2>&1)"; status=$?
     [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: unknown branch returned $status, expected 1"; return 1; }
     case "$out" in *"no branch"*) ;; *) echo "SELFTEST FAIL: unknown branch said: $out"; return 1;; esac
+
+    # STEP 5's dirty check on the shared checkout's master worktree, all three
+    # verdicts. Each case gets its own throwaway repo, since a landing that
+    # succeeds destroys the bead branch and worktree it used.
+    local tmp copy masterco line
+
+    line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the merge-dirty repo (untracked case)"; return 1; }
+    read -r tmp copy masterco <<<"$line"
+    echo stray >"$masterco/unrelated-untracked.txt"
+    out="$(INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    rm -rf "$tmp"
+    [ "$status" -eq 0 ] || { echo "SELFTEST FAIL: an untracked file in master's worktree refused the merge: $out"; return 1; }
+    case "$out" in *"Landed."*) ;; *) echo "SELFTEST FAIL: untracked-file case did not land: $out"; return 1;; esac
+
+    line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the merge-dirty repo (tracked case)"; return 1; }
+    read -r tmp copy masterco <<<"$line"
+    echo changed >"$masterco/base.txt"
+    out="$(INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    rm -rf "$tmp"
+    [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: a modified TRACKED file in master's worktree did not refuse, status $status: $out"; return 1; }
+    case "$out" in *"REFUSED"*"is checked out at"*"uncommitted"*"tracked"*) ;; *) echo "SELFTEST FAIL: tracked-file case said: $out"; return 1;; esac
+
+    line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the merge-dirty repo (collision case)"; return 1; }
+    read -r tmp copy masterco <<<"$line"
+    echo collide >"$masterco/bead-work.txt"
+    out="$(INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    rm -rf "$tmp"
+    [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: an untracked file colliding with the merge did not stop the run, status $status: $out"; return 1; }
+    case "$out" in *"does not merge cleanly"*) ;; *) echo "SELFTEST FAIL: collision case said: $out"; return 1;; esac
 
     echo "SELFTEST PASS"
     return 0
@@ -215,8 +278,17 @@ MASTER_WT="$(git -C "$SHARED" worktree list --porcelain \
 SCRATCH=""
 if [ -n "$MASTER_WT" ]; then
     MERGE_IN="$MASTER_WT"
-    MERGE_DIRTY="$(git -C "$MERGE_IN" status --porcelain)"
-    [ -z "$MERGE_DIRTY" ] || die "REFUSED: $BASE_BRANCH is checked out at $MERGE_IN and that tree is dirty.
+    # Narrowed 2026-09-19 (inc-wkyf) to ignore untracked files: they cannot
+    # leak into a build the way an uncommitted TRACKED edit can (the
+    # package_linux.sh hazard in the header above). A path git itself needs
+    # to write is still refused -- by git's own merge collision guard, not
+    # by this check.
+    MERGE_DIRTY="$(git -C "$MERGE_IN" status --porcelain --untracked-files=no)"
+    [ -z "$MERGE_DIRTY" ] || die "REFUSED: $BASE_BRANCH is checked out at $MERGE_IN and that tree has
+uncommitted tracked changes:
+
+$MERGE_DIRTY
+
 Merging there would build on somebody else's uncommitted work. Nothing has
 reached $BASE_BRANCH."
 else
