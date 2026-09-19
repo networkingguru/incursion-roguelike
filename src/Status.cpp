@@ -690,10 +690,27 @@ void Creature::StatiOn(Status s) {
             thisp->UpdateMap = true;
         break;
     case CHARMED:
+        /* upstream: removeCreatureTarget(...,TargetAny) must run before
+           MakeCompanion, not after. TargetAny is -1 (inc/Target.h:158), and
+           with type -1 removeCreatureTarget invalidates EVERY entry naming
+           the source creature (src/Target.cpp:1140-1147). MakeCompanion adds
+           a TargetSummoner entry naming the player and an OrderWalkNearMe
+           order naming the player (src/Social.cpp:2417,2419-2420); running
+           the wipe afterward destroys what MakeCompanion just built, and
+           Retarget then drops the invalidated entries for good
+           (src/Target.cpp:1418-1435), so getLeader() (src/Target.cpp:984-997)
+           returns NULL for every creature the player charms, dominates or
+           commands. MakeCompanion's own closing loop (src/Social.cpp:2442-
+           2450) already repairs stale targets on every earlier companion
+           whose getLeader() is the player; it finds nobody while the link is
+           destroyed first. This is plain control flow, no platform typedef
+           or compiler-dependent construct, so a Win32 build with the
+           original typedefs loses the same link. Observed, inc-6ax7, NOT
+           sent. */
+        ts.removeCreatureTarget(oCreature(s.h),TargetAny);
         if (isMonster() && s.h && oThing(s.h)->isPlayer())
             if (s.Val == CH_DOMINATE || s.Val == CH_ALLY || s.Val == CH_COMMAND)
                 thism->MakeCompanion(oPlayer(s.h),s.Val == CH_COMMAND ? PHD_COMMAND : PHD_MAGIC);
-        ts.removeCreatureTarget(oCreature(s.h),TargetAny);
         ts.Retarget(this,true);
         break;
     case ILLUMINATED:
