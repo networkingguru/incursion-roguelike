@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Reproduction for inc-6ax7. Expected RED on the unfixed CHARMED path.
 # Uses only captured wizard Examine screens, never a probe or source grep.
 # A: hostile control; B: retained summoner; C: mutual non-hostility.
