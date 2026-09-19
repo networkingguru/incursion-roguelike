@@ -1420,6 +1420,17 @@ struct MonMem
     unsigned int Flags     :5;
   };
 
+/* What one player has learned about one kind of monster, written from play.
+   MonMem's fields are bitfields, so every writer has to saturate rather than
+   increment: Kills is 8 bits, and a 256th kill that wrapped would erase
+   everything the player knew. MonMemNote is the only writer, so the
+   saturation lives in one place. bd inc-q98a. */
+#define MONMEM_SEEN      1
+#define MONMEM_FOUGHT    2
+#define MONMEM_KILL      4
+#define MONMEM_MAX_KILLS 255     /* MonMem::Kills is 8 bits wide. */
+void MonMemNote(Player *p, rID mID, int what);
+
 struct ItemMem
   {
     unsigned int Known      :1;

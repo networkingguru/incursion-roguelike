@@ -1,0 +1,35 @@
+# Summon one human east of the player and beat it to death. (bd inc-q98a)
+#
+# Not a session of its own: it starts in play mode with wizard mode already
+# entered, and tools/keys/monster-memory-known.keys @includes it ten times.
+# It is a file rather than ten copies because ten copies drift.
+#
+# THE WIZARD MENU IS OPENED BY @until AND NOT BY A BARE w. A long message --
+# the anger line a kill prints, wrapped over two lines -- can take the next
+# keystroke to dismiss itself, and a w spent there leaves the menu shut and
+# every later key in this block against the wrong screen. Measured: the ninth
+# summon of ten lost its w that way. Pressing w until the menu's own text is
+# on screen costs nothing when the first one lands.
+#
+# THE FIRST BLOW NEEDS A YES. A summoned human is created peaceful, so the
+# first strike asks "Confirm attack the human? [yn]". It asks once: the blow
+# makes the human hostile, and no later blow on the same one is questioned.
+# Each summon is a new peaceful human, so the yes belongs here and not in the
+# caller.
+#
+# THE LOOP TESTS "h human", the sidebar's "Things in View" entry for the live
+# creature, which sits above the corpses because creatures sort first. @while
+# tests before each pass, so the loop stops on the blow that kills and the
+# player never steps east onto the corpse -- which is what keeps him adjacent
+# to the square the next summon uses.
+
+@until "Monster Summoning" w
+@choose "Monster Summoning"
+@choose "Humans"
+@choose "human"
+RIGHT
+ENTER
+
+RIGHT
+@while "Confirm attack" y
+@until "killing the" RIGHT

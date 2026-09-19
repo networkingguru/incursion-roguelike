@@ -5143,6 +5143,12 @@ void Player::ScrutinizeMon(Creature *cr)
 		return;
 	cr->StateFlags |= MS_SCRUTINIZED;
 
+	/* The player has now perceived this creature, so he has seen its kind.
+	   This is the site rather than Creature::Perceives because the guard
+	   above has already settled both questions a memory write needs: whose
+	   knowledge it is, and that he really perceived it. bd inc-q98a. */
+	MonMemNote(this, cr->tmID, MONMEM_SEEN);
+
 	if (!(cr->HasAttk(A_SEEM) || cr->HasAttk(A_FORM) || cr->HasStati(TEMPLATE)))
 		return;
 

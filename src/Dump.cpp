@@ -403,6 +403,44 @@ bool RunSaveDump(const char *path) {
     }
     printf("\n");
 
+    /* Per-player resource memory for every Monster, in the same shape and for
+       the same reason as the Effect block above: straight from MonMem through
+       the real MONMEM accessor, so the report cannot drift from what the
+       engine thinks. Seen, Fought and Kills are the three fields gameplay
+       writes (bd inc-q98a); the other eight are still always zero and are
+       printed so that the day one of them gains a writer, this says so.
+       Kinds whose whole row is zero are omitted, exactly as above: a save
+       carries no row for a kind the player has never met. */
+    printf("=== Monster Memory (Seen/Fought/Kills) ===\n");
+    {
+        int shown = 0;
+        for (int ms = 0; ms != MAX_MODULES; ms++) {
+            Module *mod = Game::Modules[ms];
+            if (!mod)
+                continue;
+            for (int32 j = 0; j != mod->szMon; j++) {
+                rID mID = mod->MonsterID((uint16)j);
+                MonMem *mm = MONMEM(mID, p);
+                if (!mm->Seen && !mm->Fought && !mm->Kills && !mm->Battles &&
+                        !mm->Deaths && !mm->pKills && !mm->Attacks &&
+                        !mm->Resists && !mm->Immune && !mm->Feats && !mm->Flags)
+                    continue;
+                printf("  %s: Seen=%d Fought=%d Kills=%d Battles=%d Deaths=%d "
+                       "pKills=%d Attacks=%d Resists=%d Immune=%d Feats=%d "
+                       "Flags=%d\n",
+                    SafeResName(mID),
+                    (int)mm->Seen, (int)mm->Fought, (int)mm->Kills,
+                    (int)mm->Battles, (int)mm->Deaths, (int)mm->pKills,
+                    (int)mm->Attacks, (int)mm->Resists, (int)mm->Immune,
+                    (int)mm->Feats, (int)mm->Flags);
+                shown++;
+            }
+        }
+        if (!shown)
+            printf("  (no monster memory)\n");
+    }
+    printf("\n");
+
     /* Temporary diagnostic (inc-otz): report every portal on the player's map,
        the solidity of its own square and of the eight around it, and whether
        the player can walk to it at all.

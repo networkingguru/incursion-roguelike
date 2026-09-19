@@ -5005,7 +5005,18 @@ EvReturn Creature::Hit(EventInfo &e) /* this == EVictim!! */
 
   oHP = e.EVictim->cHP;
 
-    /* Watch out for Traps in EItem! */ 
+  /* A blow has landed between two creatures, and one of them may be the
+     player. Either direction counts as having fought the kind. This sits
+     above every branch below it, so a blow that is then deflected, resisted
+     or shrugged off still counts as an exchange. bd inc-q98a. */
+  if (e.EActor && e.EVictim) {
+    if (e.EActor->isPlayer() && !e.EVictim->isPlayer())
+      MonMemNote(e.EPActor, e.EVictim->tmID, MONMEM_FOUGHT);
+    else if (e.EVictim->isPlayer() && !e.EActor->isPlayer())
+      MonMemNote(e.EPVictim, e.EActor->tmID, MONMEM_FOUGHT);
+  }
+
+    /* Watch out for Traps in EItem! */
     if (e.EItem && !e.EItem->isItem())
       e.EItem = NULL;
 
@@ -7569,6 +7580,13 @@ EvReturn Creature::Death(EventInfo &e)
 
   if (e.EActor && !e.EVictim->isIllusion())
     e.EActor->KillXP(this);
+  /* The player has killed one of this kind. Guarded exactly as the KillXP
+     line above it is: an illusion is nobody's kill, and the two lines must
+     agree about what a kill is. Not Creature::KillXP itself, which quest and
+     social code also call for XP that is not a kill (src/Social.cpp:381,
+     :501, :1137). bd inc-q98a. */
+  if (e.EActor && e.EActor->isPlayer() && !e.EVictim->isIllusion())
+    MonMemNote(e.EPActor, tmID, MONMEM_KILL);
   if (m) {
     c = new Corpse(this);
     GainPermStati(MY_CORPSE_IS,c,SS_MISC);

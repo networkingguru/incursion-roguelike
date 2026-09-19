@@ -1,0 +1,19 @@
+# Ten summon-and-kill blocks. (bd inc-q98a)
+#
+# Not a session of its own. It exists so that the two scripts that need
+# multiples of ten -- tools/keys/monster-memory-kills.keys, which wants ten,
+# and tools/keys/monster-memory-saturate.keys, which wants two hundred and
+# sixty -- say how many they want instead of carrying that many copies of the
+# block. tools/keys/monster-memory-one-kill.keys is the block itself and
+# explains why it is shaped as it is.
+
+@include monster-memory-one-kill.keys
+@include monster-memory-one-kill.keys
+@include monster-memory-one-kill.keys
+@include monster-memory-one-kill.keys
+@include monster-memory-one-kill.keys
+@include monster-memory-one-kill.keys
+@include monster-memory-one-kill.keys
+@include monster-memory-one-kill.keys
+@include monster-memory-one-kill.keys
+@include monster-memory-one-kill.keys
