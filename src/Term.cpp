@@ -3248,6 +3248,14 @@ String & TextTerm::StringPrompt(int8 col, const char*msg) {
 
 const char* TextTerm::ReadLine(int16 x,int16 y,int16 first_ch) {
     int16 loc, ch;
+    /* upstream: Input[loc++] never tested loc against sizeof(Input), so any
+       prompt taking more than 160 characters wrote past the end of the
+       buffer and into whatever TextTerm member -- or, past the object,
+       whatever heap allocation -- follows it. Upstream's, not the port's: a
+       fixed array and an unchecked monotonic index behave identically under
+       the original 2014 typedefs and compiler; nothing here is
+       platform-specific. Observed: tools/check_readline_overflow.sh, and the
+       SIGSEGV crash report the bead quotes. inc-7ml0. Not sent upstream. */
     SetWin(WIN_SCREEN);
     Write(x,y,"                                                                        ");
     if (first_ch)
@@ -3273,8 +3281,11 @@ const char* TextTerm::ReadLine(int16 x,int16 y,int16 first_ch) {
         Write(x,y,"                                                                              ");
         return (const char*) &(Input[0]);
         }
-      else if (isprint(ch) || ch==' ' || ch=='.' || ch=='_' || ch=='\'')
+      else if ((isprint(ch) || ch==' ' || ch=='.' || ch=='_' || ch=='\'')
+               && loc < (int16)(sizeof(Input) - 1)) {
         Input[loc++] = (char)ch;
+        Input[loc] = 0;
+        }
       if (loc)
         PutChar((x+loc)-1,y,Input[loc-1]);
       PutChar(x+loc,y,' ');
