@@ -1,0 +1,59 @@
+# Regression key script for inc-7ml0: TextTerm::ReadLine wrote every typed
+# character into `char Input[160]` (inc/Term.h:326) with no bound on the
+# index (`Input[loc++] = (char)ch`, src/Term.cpp:3277), so the 161st
+# character -- and the Enter key's terminating NUL right after it -- land
+# outside the buffer.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav \
+#       tools/headless.sh tools/keys/readline-overflow.keys 1
+#
+# WHY THE CHARACTER SHEET'S FILENAME PROMPT, NOT KY_CMD_JOURNAL. The bead
+# names KY_CMD_JOURNAL (Ctrl+E) as an ordinary-play caller, but Ctrl+E only
+# dispatches under RoguelikeKeySet (src/Tables.cpp:4849) -- StandardKeySet has
+# no JOURNAL binding at all (src/Wposix.cpp:1604 picks the keyset from
+# OPT_ROGUELIKE), so a fixture built under this project's usual settings never
+# reaches it. TextTerm::DisplayCharSheet's own loop reads with
+# GetCharCmd(KY_CMD_ARROW_MODE) (src/Managers.cpp:2284), which -- see the
+# `mode == KY_CMD_ARROW_MODE` guard in posixTerm::GetCharCmd
+# (src/Wposix.cpp:1699-1701) -- returns every non-arrow key raw, keyset and
+# options irrelevant. Its [W]rite Dump case (src/Managers.cpp:2500-2509) calls
+# the same ReadLine, with no StringPrompt in between, and needs no wizard mode
+# either: [D] Display Character reaches it from ordinary play
+# (src/Player.cpp:833, KY_CMD_CHAR_SHEET).
+#
+# Types 161 lowercase 'x' -- one more than Input can hold -- as the dump
+# filename, so the stored (and possibly overflowed) text becomes a file name
+# under logs/ that tools/check_readline_overflow.sh can measure directly by
+# its length, with no probe and no screen-width truncation to allow for. Then
+# does it again with a short, ordinary name, to prove the prompt is still
+# usable afterward.
+#
+# 161 is deliberate, not a round number: it is the smallest overflow that
+# still proves the defect, so the corruption this run can cause (if the fix
+# is absent) stays inside the two bytes right after Input -- int8 linepos and
+# int8 linenum (inc/Term.h:327) -- and nowhere near WViewList's Thing*
+# pointer six bytes further on.
+
+@dump:arrival
+
+s                       # one real turn, so this counts as a session
+@dump:played
+
+d                       # KY_CMD_CHAR_SHEET: Display Character
+@expect "[W]rite Dump"
+@dump:sheet
+
+w                       # [W]rite Dump -- "Filename:"
+@dump:filename-prompt
+"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+ENTER
+@dump:overflow-dumped
+
+w                       # the prompt must still work for an ordinary name
+"stillusable"
+ENTER
+@dump:second-dumped
+
+ESC                     # leave the sheet, back to play mode
+@dump:back-in-play
