@@ -9,6 +9,7 @@
 extern KeySetItem StandardKeySet[], RoguelikeKeySet[]; 
 extern int16 CorpseNut[];
 String & DescribeFeat(int16 ft);
+String & DescribeAbility(int16 ca);
 
 static const char *Levs[] = { "ZERO", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE", "EPIC" };
 rID rList[1024];
@@ -1326,6 +1327,15 @@ void HelpCustom(String &helpText, Player *p)
         StatiIterEnd(p)
       }
 
+    // My Abilities {B}
+    helpText += BoxIt("My Abilities {B}",YELLOW,GREY);
+    for (i=0;i!=CA_LAST;i++)
+      {
+        if (!p->AbilityLevel(i))
+          continue;
+        helpText += XPrint(DescribeAbility(i));
+        helpText += "\n";
+      }
 
     helpText += BoxIt("My Feats {F}",YELLOW,GREY);
     for (i=FT_FIRST;i!=FT_LAST;i++)
@@ -4707,5 +4717,32 @@ String & DescribeFeat(int16 ft) {
             }
         }
     }
+    return *tmpstr(s);
+}
+
+/* upstream: base-code defect, the fix is ours. AbilInfo (src/Tables.cpp,
+   inc/Globals.h:242) was declared and never defined; this is its reader,
+   shaped after DescribeFeat above. Upstream's because a table declared and
+   never defined is plain C++: no platform typedef, no width assumption, no
+   compiler-dependent construct, so the Win32 build omits it identically.
+   Tier Traced. Tracking inc-nbjf. Not sent.
+   An ability with no AbilInfo row falls back to the bare ClassAbilities name
+   and no Benefit line, which is exactly the character sheet's behaviour.
+   Lookup() never returns NULL (inc/Inline.h:194), so an unnamed ability
+   prints "(undefined N)" rather than dereferencing null. */
+String & DescribeAbility(int16 ca) {
+    int16 i;
+    String s;
+
+    PurgeStrings();
+    s = "";
+    for (i = 0; AbilInfo[i].ab; i++)
+        if (AbilInfo[i].ab == ca) {
+            s += Format("<14>%s<7>\n", AbilInfo[i].name);
+            s += Format("<13>Benefit:<7> %s\n", AbilInfo[i].desc);
+            return *tmpstr(s);
+        }
+
+    s += Format("<14>%s<7>\n", Lookup(ClassAbilities, ca));
     return *tmpstr(s);
 }

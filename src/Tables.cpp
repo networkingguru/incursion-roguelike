@@ -3679,6 +3679,622 @@ TextVal ClassAbilities[] = {
   { CA_HIDE_IN_PLAIN_SIGHT, "Hide in Plain Sight" },
   { 0, NULL } };
 
+/* upstream: base-code defect, the fix is ours. inc/Creature.h:56 declares
+   AbilityInfoStruct and inc/Globals.h:242 declares AbilInfo[] extern, but no
+   file ever defined it -- grep -rn AbilInfo src/ inc/ lib/ returns only those
+   two lines before this change. A class ability therefore had a name
+   (ClassAbilities, above) and nowhere to carry a description, unlike a feat
+   (FeatInfo, src/FeatTab.cpp) or a skill (SkillInfo, this file). Upstream's
+   because a missing table definition reads the same on Win32, with the
+   original typedefs, on the upstream compiler: plain C++, no platform, width
+   or endianness dependence. Tier Traced. Tracking inc-nbjf. Not sent.
+   The table now carries descriptions for all 96 class abilities live in the
+   game. tools/ability_descs.live and tools/check_ability_descs.sh are what
+   keep it complete; each Name string here MUST stay character-for-character
+   identical to its ClassAbilities entry above. */
+struct AbilityInfoStruct AbilInfo[] = {
+  { CA_ANCESTRAL_MEMORY, "Ancestral Memory",
+    "You can enter a brief trance that calls on inherited memory to sharpen "
+    "one skill of your choice. It costs 2 fatigue and lasts 30 turns plus 5 "
+    "per point of your Concentration skill. The chosen skill's rank rises "
+    "to the maximum a character of your level could have, and you also gain "
+    "up to a further plus 4 insight bonus if your rank was already close to "
+    "that maximum. You cannot start a second trance while one is running." },
+  { CA_ANIMAL_COMP, "Animal Companions",
+    "You can call an animal companion whose power rises with your ability "
+    "level, once per day; resting restores the call. If you already have "
+    "one, calling again lets you dismiss it and summon a replacement "
+    "instead. The companion stays at your side, growing stronger through a "
+    "template chosen to match your level, until you dismiss it or it dies." },
+  { CA_ARCANE_TRICKERY, "Arcane Trickery",
+    "You can cast any spell you already know as an act of arcane trickery, "
+    "up to three times per day. Doing so adds 8 to that casting's save DC, "
+    "and 8 to the DC of any disbelief save if the spell is an illusion. It "
+    "changes only how hard the spell is to resist, not its mana cost, "
+    "casting time, or which spells you may pick." },
+  { CA_AURA_OF_VALOUR, "Aura of Valour",
+    "You radiate courage in a moving field that always extends 3 squares "
+    "from you. Everyone inside it, including you, gains a flat plus 4 bonus "
+    "to saving throws against fear effects. The aura is always active and "
+    "needs no activation, upkeep or fatigue; it simply follows you as you "
+    "move." },
+  { CA_BARDIC_MUSIC, "Bardic Music",
+    "You can perform to inspire or hinder those nearby. Each song costs 1 "
+    "fatigue and reaches a range equal to your Perform skill plus 2; "
+    "starting a new song ends whichever one you were already singing. "
+    "Higher ability levels unlock more songs: Inspire Courage first, which "
+    "frees allies from fear and adds your Charisma bonus to their attacks "
+    "and damage, then Fascination, Countersong, Inspire Competence, Hymn of "
+    "the Phoenix Arisen, Mass Fascination and Spellbreaker Chant. Deaf or "
+    "mindless creatures are unaffected." },
+  { CA_BEGUILING_MAGIC, "Beguiling Magic",
+    "Your magic bends minds more effectively. Whenever you cast a spell "
+    "flagged as a mental effect, you add your Charisma bonus, if it is "
+    "positive, straight onto that spell's save DC. This applies "
+    "automatically to every qualifying spell you cast, stacking with every "
+    "other bonus already raising that DC. There is no cost, activation, or "
+    "daily limit." },
+  { CA_BERSERK_RAGE, "Berserk Rage",
+    "You can fly into a berserk killing rage. The fatigue cost depends on "
+    "your armour: none costs 1, light 2, medium 3, heavy 4, and ability "
+    "level 4 or higher cuts that cost by 1. The rage lasts 10 turns plus 3 "
+    "per ability level and grants a combat bonus that steps up at levels 3, "
+    "10 and 16. You cannot rage while afraid, nor start a new rage before "
+    "the last one ends." },
+  { CA_BLINDSIGHT, "Blindsight",
+    "You can sense creatures and terrain within a range of 10 feet per "
+    "ability level, plus 10 more if you also hold the Blindsight feat, "
+    "without needing to see or have light; this range works even while you "
+    "are blind, and automatically disbelieves illusions within it. A field "
+    "of magical silence blocks it completely, and wearing a metal helm "
+    "halves your range." },
+  { CA_COMMAND, "Command",
+    "You can exercise divine authority over creatures of a type your god "
+    "grants you power over, provided you have a holy symbol of your god "
+    "equipped, or graven armour or a graven shield, and your god's favour. "
+    "It costs 2 fatigue. You then make a turning check against every such "
+    "creature nearby, compared to each one's challenge rating and Turn "
+    "Resistance; enough margin panics them, paralyses them briefly with "
+    "awe, or charms them permanently into your service." },
+  { CA_DEVOURING, "Devouring",
+    "This fires the instant you finish eating a corpse; undead flesh gives "
+    "you nothing. For every damage type the victim resisted better than "
+    "you, you gain a permanent point of that resistance. If a giant's "
+    "Strength, cat's Dexterity, troll's Constitution, illithid's "
+    "Intelligence, naga's Wisdom, faerie's Charisma, mythic beast's Luck, "
+    "or a dragon's Mana beats your own, you gain a permanent inherent point "
+    "there, capped at five plus your Inherent Potential level. You also "
+    "gain experience scaled to the corpse's challenge rating against yours." },
+  { CA_DOMAINS, "Domains",
+    "Taking this for the first time lets you choose two divine domains "
+    "drawn from your god's portfolio. At every level after that, for each "
+    "domain you hold, you automatically learn that domain's spell of your "
+    "newest domain level and gain that domain's granted power at that "
+    "level. It requires a god, and your priest levels set how fast your "
+    "domain level advances." },
+  { CA_DIVINE_GRACE, "Divine Grace",
+    "Whenever your Charisma bonus is positive, this ability adds that same "
+    "bonus to every saving throw you make, Fortitude, Reflex and Will "
+    "alike. It is passive and always active, with no cost, activation, or "
+    "cap beyond your Charisma bonus itself; a negative Charisma bonus "
+    "simply grants nothing, rather than a penalty." },
+  { CA_DWARVEN_FOCUS, "Dwarven Focus",
+    "You can swear a vow to slay one worthy foe, a creature whose challenge "
+    "rating is at least your own. While the vow holds, you gain +4 to Will "
+    "saves and +3 maximum fatigue, plus +2 to attack and damage against "
+    "that foe, but -2 against any other hostile creature. You cannot rest "
+    "while it lives. Killing it grants bonus experience; if it dies some "
+    "other way, you lose experience instead." },
+  { CA_EVASION, "Evasion",
+    "On a successful Reflex save against an area attack, you take no damage "
+    "at all, as long as you are not wearing medium or heavy armour. At "
+    "ability level 10 and above, even a failed Reflex save under the same "
+    "armour limit halves the damage instead of applying it in full." },
+  { CA_FATESENSE, "Fatesense",
+    "You gain a +4 bonus to Intuition checks. You also sense whether an "
+    "item is cursed as soon as the game identifies it for you, such as when "
+    "you first see or pick it up, without needing to check it deliberately; "
+    "you feel a faint shiver when the item is cursed." },
+  { CA_FAV_ENEMY, "Favoured Enemy",
+    "You designate one or more monster types as favoured enemies. Against a "
+    "creature of one of those types, you gain a bonus to attack rolls and "
+    "damage. The bonus grows with the favoured-enemy level you hold for "
+    "that type, and it rises faster per level against a rare monster type "
+    "than against a common one." },
+  { CA_FLIGHT, "Flight",
+    "You can fly, and everything that checks whether you are airborne "
+    "treats you as such. You cross chasms and other fall hazards without "
+    "dropping through them, ignore ground traps and sticky terrain such as "
+    "webs, and cannot be tripped. Water underfoot does not slow you or, "
+    "while hiding, give you away." },
+  { CA_FEAT_OF_STRENGTH, "Feat of Strength",
+    "You can push your strength to the limit for a single moment, at a cost "
+    "of 4 fatigue points. Doing so grants a sacred bonus to Strength equal "
+    "to your ability level, but it lasts only one turn, so you must use it "
+    "right before the attempt that needs the extra muscle." },
+  { CA_FEED_UPON_PAIN, "Feed upon Pain",
+    "Whenever one of your attacks deals more than 10 points of combined "
+    "damage and you are not at full hit points, you heal one tenth of that "
+    "damage, rounded down. This triggers on any single hit that crosses the "
+    "threshold, sneak attack damage included, and needs no action on your "
+    "part." },
+  { CA_GIANT_KILLER, "Giant Killer",
+    "Against a humanoid enemy larger than you, your critical threat range "
+    "widens, based on the size difference, making critical hits easier to "
+    "score. When a larger humanoid attacks you and you are not caught by "
+    "surprise, you gain a bonus to defense of +2 per size category it has "
+    "over you." },
+  { CA_GREATER_TURNING, "Greater Turning",
+    "You can channel divine power at 4 fatigue to turn one monster type you "
+    "have been granted this against, usually undead. Compared to ordinary "
+    "Turning, the same channeling check destroys the target outright at a "
+    "far lower result, but it does not extend to any other monster type you "
+    "have separately learned to turn." },
+  { CA_INCREASED_MOVE, "Increased Move",
+    "You gain a permanent bonus to your movement rate equal to your ability "
+    "level. This raises your base movement stat directly, as a class bonus, "
+    "so you move and act faster on the map than a character without the "
+    "ability, and the bonus grows again whenever your ability level "
+    "increases." },
+  { CA_RAPID_RIDING, "Rapid Riding",
+    "While mounted, your effective speed is based on your mount's speed "
+    "rather than your own, plus half your Ride skill; this ability adds a "
+    "further bonus to that speed equal to your level in it, letting a "
+    "skilled rider push a mount faster than it could otherwise manage." },
+  { CA_INFRAVISION, "Infravision",
+    "You gain darkvision rather than true heat-sight, despite the name: you "
+    "can spot any creature in the dark, not just warm-blooded ones, out to "
+    "a range in squares equal to your ability level, about ten feet per "
+    "level. It works with line of sight like normal vision. Blindness "
+    "disables it completely, dropping your infravision range to zero." },
+  { CA_INHERANT_POTENTIAL, "Inherent Potential",
+    "Raises the highest inherent bonus you can build up in a single "
+    "attribute score, from sources like tomes of exercise or training "
+    "gains. The normal cap on any one inherent bonus is +5; this ability "
+    "raises that cap by your ability level, so at level 3 you can push one "
+    "attribute as high as +8. It only affects the ceiling, not how fast you "
+    "gain the bonus." },
+  { CA_INNATE_SPELL, "Innate Spell",
+    "You know one specific spell as an innate power rather than a learned "
+    "one. You can invoke it without a spellbook and without having it "
+    "memorized, and it always succeeds where an ordinary casting could "
+    "fail. Because you invoke it rather than cast it in the usual way, you "
+    "cannot apply metamagic to it. Each separate grant of this ability "
+    "gives you exactly one named spell." },
+  { CA_KI_STRIKE, "Ki Strike",
+    "When you fight with nothing in either hand, your bare fists count as a "
+    "magical weapon with a bonus equal to your ability level. This lets "
+    "your unarmed blows land on creatures that only magical weapons can "
+    "touch, such as incorporeal ones, and lets you punch through a "
+    "creature's immunity to non-magical or under-enchanted weapons whenever "
+    "your ability level meets or beats its immunity threshold." },
+  { CA_LAY_ON_HANDS, "Lay on Hands",
+    "You touch a creature within reach, spending 2 points of fatigue, to "
+    "heal it or to sear an undead creature with holy energy. Against the "
+    "living, it restores 2d6 plus at least 1, plus twice your Charisma "
+    "modifier, plus your ability level, in hit points, up to their maximum. "
+    "Against an undead target, it deals the same amount as holy damage "
+    "instead." },
+  { CA_LEGEND_LORE, "Legend Lore",
+    "Automatically identifies magic items you find, without a spellbook or "
+    "an identify spell. Each item is checked against 10 plus your ability "
+    "level plus your Intelligence modifier, minus the item's level; a "
+    "positive result reveals it is magical, and a larger result also "
+    "reveals whether it is cursed, blessed, its full nature, and its "
+    "numeric bonus, in that order. It does not work on corpses, chests, "
+    "coins, or statues. It also raises nine Knowledge skills by half your "
+    "ability level, rounded down." },
+  { CA_LIMITED_FREE_ACTION, "Limited Free Action",
+    "When a paralysis effect would take hold of you, from a spell, a "
+    "monster's attack, or a status effect, you can shrug it off "
+    "automatically instead of relying on a saving throw. You get a limited "
+    "number of these free escapes, equal to your ability level, plus twice "
+    "your Constitution modifier if you also have the Resist Paralysis feat. "
+    "The count of uses resets whenever you rest." },
+  { CA_LOWLIGHT, "Lowlight Vision",
+    "If you carry a light source, such as a torch, lantern, or a glowing "
+    "weapon, your ability level is added to how far it casts light. It does "
+    "nothing if you carry no light source at all. The dim band beyond your "
+    "lit radius, where you can still make out shapes, always extends to "
+    "twice your total lit range, so this also pushes that band further out." },
+  { CA_MAGICAL_NATURE, "Magical Nature",
+    "Adds your ability level directly to your maximum mana pool. This "
+    "applies whether or not you belong to a spellcasting class; it is a "
+    "flat bonus stacked on top of whatever mana your race, class, and Mana "
+    "attribute already give you." },
+  { CA_MANIFESTATION, "Manifestation",
+    "Costs 3 points of fatigue to invoke. For a short time, 1d4 rounds plus "
+    "one more for every three character levels, your attacks count as if "
+    "made with a ghost-touch weapon, letting you strike ethereal and "
+    "incorporeal creatures an ordinary weapon cannot harm. While manifest "
+    "you also gain a +4 bonus to Charisma, and shifting between planes will "
+    "not strand your carried gear or dismount you." },
+  { CA_MAXIMIZE_HEALING, "Maximize Healing",
+    "Any healing spell you cast whose spell level is at or below your "
+    "ability level is automatically maximized: it restores the highest "
+    "possible amount instead of rolling dice, at no extra mana cost and "
+    "with nothing extra to prepare. A healing spell whose level is above "
+    "your ability level still rolls its healing normally." },
+  { CA_NATURE_SENSE, "Nature Sense",
+    "You see through terrain that obscures line of sight, such as "
+    "undergrowth or foliage, that would otherwise block your view. You also "
+    "instantly and fully identify every mushroom or herb you find or use, "
+    "learning everything about it at once instead of needing to test or "
+    "study it." },
+  { CA_NOBLE_AEGIS, "Noble Aegis",
+    "You resist underhanded attacks. When caught by surprise, you gain a +4 "
+    "bonus to your defense against that attack. Sneak attack damage against "
+    "you is reduced by 2 points per ability level, and dirty fighting "
+    "damage against you is reduced by 1 point per ability level, which also "
+    "makes the blinding effect that can follow it harder for the attacker "
+    "to land on you." },
+  { CA_PASS_SLIME, "Pass Slime",
+    "You can move over sticky terrain made of a liquid, such as a pool of "
+    "slime or ooze secretion, without the balance check or confirmation "
+    "prompt other creatures face, and without becoming stuck. Terrain made "
+    "of any other sticky material still slows and traps you as normal. The "
+    "ability comes from the priesthood of the Slime domain and works "
+    "automatically; you never have to invoke it." },
+  { CA_PHASE, "Phase",
+    "You can shift, at will, onto another plane of existence and back; the "
+    "shift itself is quick, and you may return the instant you arrive. "
+    "While shifted you count as incorporeal: a corporeal attacker's "
+    "non-magic, non-holy, non-psychic, non-sunlight and non-energy damage "
+    "has a 50 percent chance to pass through you and do nothing at all." },
+  { CA_PREMONITION, "Premonition",
+    "Once per fight, if a foe has caught you flat-footed or off guard, you "
+    "have a 50 percent chance of sensing it coming: the surprise is "
+    "cancelled outright and you defend normally against that attack instead "
+    "of being caught unaware." },
+  { CA_PROTECTIVE_WARD, "Protective Ward",
+    "Once every so often (costing 2 Fatigue Points to invoke), you can call "
+    "on divine aid to grant yourself a bonus to your very next saving "
+    "throw. The bonus equals your level in this ability, and it lasts up to "
+    "20 plus 3 per level before it fades unused." },
+  { CA_RETRIBUTIVE_STRIKE, "Retributive Strike",
+    "When a foe has wounded you recently for at least a tenth of your full "
+    "hit points, you gain a bonus to melee attack rolls against that foe "
+    "equal to your level in this ability, and twice that bonus to the "
+    "damage you deal it, until the grudge fades." },
+  { CA_REVERIE, "Reverie",
+    "When you rest without eating, you use up less of your food reserve "
+    "than most creatures do: you keep three quarters of your remaining "
+    "hunger duration instead of the two thirds a creature without any "
+    "special metabolism keeps, so you can go longer between meals." },
+  { CA_SACRED_AURA, "Sacred Aura",
+    "When you die, if the creature that struck you down is standing right "
+    "beside you, it suffers a burst of holy damage equal to your level in "
+    "this ability rolled in four-sided dice, plus your Charisma bonus. Good "
+    "creatures are unaffected by it, and it deals only half against a "
+    "neutral one." },
+  { CA_SACRED_MOUNT, "Sacred Mount",
+    "Once per day, after resting, you can summon a mount bonded to you from "
+    "the celestial planes to fight and travel at your side; you cannot use "
+    "this until your level in the ability reaches 5, and how powerful a "
+    "mount you may call grows as your level in it rises further." },
+  { CA_SCENT, "Scent",
+    "You can detect and track other creatures by scent within a range of "
+    "ten feet for every level of this ability. While relying on scent, you "
+    "automatically see through ordinary illusions, magical darkness and "
+    "similar obscuring effects, and you are not fooled by a disguise unless "
+    "it is an unusually good one." },
+  { CA_SHARP_SENSES, "Sharp Senses",
+    "You gain an inherent bonus, equal to your level in this ability, to "
+    "your Search, Spot and Listen skill checks, and your sight range is "
+    "extended further still. You also see through ordinary illusions and "
+    "disguises and are not blinded by common darkness or fog effects that a "
+    "keener sense can pierce." },
+  { CA_SHIELD_GROUP, "Shield Group",
+    "Any ally who follows you as their leader gains a bonus to Defense "
+    "equal to your level in this ability whenever they are within nine "
+    "squares of you, protecting them with your presence even when you "
+    "cannot reach them personally in melee." },
+  { CA_SKILL_MASTERY, "Skill Mastery",
+    "The lowest you can ever roll on the d20 for a skill check in a skill "
+    "your class treats as a class skill is 7 plus your Intelligence bonus, "
+    "to a maximum of 15; a lower roll is raised to that floor instead of "
+    "standing as rolled." },
+  { CA_SLOW_FALL, "Slow Fall",
+    "Falling damage that would deal you less than 5 points for every level "
+    "of this ability is entirely avoided as you control your descent. "
+    "Heavier falls are not avoided outright but are lessened by 5 points "
+    "per level of the ability instead." },
+  { CA_SLOW_METABOLISM, "Slow Metabolism",
+    "When you rest for the night, your hunger meter drops by only 15 "
+    "percent instead of the usual 35 percent, so a night's rest costs you "
+    "far less stored food than it costs other races. In exchange, eating "
+    "food restores only about a third of its normal nutrition, so a single "
+    "meal fills you up much less than it would someone else. You end up "
+    "needing food far less often, but a much bigger meal when you do." },
+  { CA_SMITE, "Smite",
+    "When you perform a Great Blow attack against a matching target -- "
+    "evil, good, lawful, or any enemy at all, depending on how you gained "
+    "this ability -- your Charisma bonus, if positive, is added to your "
+    "attack roll, and a bonus is added to your damage. That damage bonus "
+    "grows by one each time you gain or improve this ability, so it tracks "
+    "the level of the class or domain that granted it." },
+  { CA_SNEAK_ATTACK, "Sneak Attack",
+    "When you catch an enemy off guard within 3 squares -- surprised, "
+    "flat-footed, flanked, unable to use its Dexterity to defend, or struck "
+    "by an attack of opportunity while you have Combat Opportunist -- you "
+    "deal extra damage equal to your sneak attack level in six-sided dice, "
+    "or eight-sided with certain fine weapons. This damage ignores the "
+    "target's armor. It fails against creatures immune to critical hits, "
+    "unless they are undead and you have Necrophysiology." },
+  { CA_SOOTHING_WORD, "Soothing Word",
+    "For 3 fatigue points, you speak a word of peace that reaches every "
+    "hostile, non-sapient living creature within 6 squares. Each such "
+    "creature must succeed on a Will save, DC 10 plus half your ability "
+    "level plus your Charisma modifier, against enchantment and magic, or "
+    "it becomes peaceful and stops attacking you." },
+  { CA_SPECIALIST, "Specialist",
+    "You choose one school of magic as your specialty, though elves cannot "
+    "choose Necromancy. Spells from that school become noticeably easier to "
+    "cast, including from wands. Spells from opposed schools cost you more, "
+    "are less reliable, and can drain a point of fatigue when cast, with "
+    "the chance of draining equal to twice the penalty percentage that "
+    "school carries for you." },
+  { CA_SPECIES_AFFINITY, "Species Affinity",
+    "You form a bond with one creature type, chosen when you first gain "
+    "this ability, such as reptiles, vermin, or dragons. Using this ability "
+    "attempts an Animal Empathy check against a creature of that type, even "
+    "though it is not normally the kind of beast, animal, plant, or fungus "
+    "that empathy works on, using whichever is higher: your empathy skill "
+    "level or this ability's magnitude." },
+  { CA_SPELLCASTING, "Spellcasting",
+    "Each level of this ability raises your caster level by one, adding "
+    "spell slots according to your class's slot table and unlocking access "
+    "to higher spell levels as you advance. It also greatly increases the "
+    "size of your mana pool, since a caster rolls a d12 of mana per "
+    "effective level instead of a d4. The first time you gain it, you also "
+    "receive a bonus first-level spell slot based on your Intelligence "
+    "score." },
+  { CA_STONEWORK_SENSE, "Stonework Sense",
+    "While moving underground, you automatically notice secret doors just "
+    "by walking past them, the way elves do, without needing to search. If "
+    "you also have the Mining skill, you can sense the type of rock through "
+    "nearby walls at a range that grows with this ability's level, helping "
+    "you find good places to dig for ore. It also guarantees a tremor sense "
+    "range at least as large as your ability level, letting you sense "
+    "creatures through the ground." },
+  { CA_STRONG_SOUL, "Strong Soul",
+    "Damage and drain to your ability scores is reduced by your ability "
+    "level, and can be reduced to nothing at all. When you rest, you heal "
+    "and recover ability damage at twice the normal rate, and after a full "
+    "night's rest you also recover lost experience, with the amount "
+    "restored increasing with your ability level." },
+  { CA_STUN_ATTACK, "Stun Attack",
+    "When you land an unarmed punch or kick that is a critical hit, a Great "
+    "Blow, or roughly one attack in three, against a living creature that "
+    "is not immune to stun, it must make a Fortitude save, DC 10 plus half "
+    "your ability level plus your Wisdom modifier, or be stunned for "
+    "several rounds." },
+  { CA_SYLVAN_AFFINITY, "Sylvan Affinity",
+    "Wild animals no longer treat you with the automatic wariness they show "
+    "toward non-animal creatures, removing a penalty that would otherwise "
+    "make them see you as an alien threat. It also means you, or a creature "
+    "acting under your control, will never treat a fae or sylvan-type "
+    "creature as worth attacking." },
+  { CA_TOUGH_AS_HELL, "Tough as Hell",
+    "Each level of this ability adds your Constitution bonus (if positive) "
+    "again to your maximum hit points, on top of the Constitution bonus you "
+    "already earn from your levels, effectively doubling how much "
+    "Constitution adds to your hit points. It grants no benefit if your "
+    "Constitution modifier is zero or negative." },
+  { CA_TRACKING, "Tracking",
+    "When you take note of a hostile monster you automatically sense its "
+    "position for a while, within a range of ten feet per level, even "
+    "without seeing it. You can also actively lock onto a chosen creature "
+    "to sense it indefinitely at a longer range; the number of targets you "
+    "can track at once is limited by your Wisdom modifier and your level." },
+  { CA_TREMORSENSE, "Tremorsense",
+    "You sense creatures moving on the ground through vibration, out to a "
+    "range of ten feet per level, even in darkness or while blind. It does "
+    "not detect flying creatures, and a creature with high enough skill at "
+    "Balance can move without being felt, especially one already hiding." },
+  { CA_TURNING, "Turn",
+    "Requires a holy symbol and your god's favour. You channel divine power "
+    "against nearby creatures of the type this ability names, out to a "
+    "range that grows with your turning check. Depending on how badly they "
+    "fail an opposed check against your level, Charisma and feats, they "
+    "become shaken, frightened, stunned, burned by holy energy, or "
+    "destroyed outright. Using it costs fatigue." },
+  { CA_UNARMED_STRIKE, "Unarmed Strike",
+    "Your bare-handed punches and kicks count as a real weapon: they no "
+    "longer provoke an attack of opportunity, and their damage die improves "
+    "as your level in this ability rises, from 1d3 up to 3d8 at high "
+    "levels. Two empty hands count as two light weapons for two-weapon "
+    "fighting, and your fists can parry blows as if enchanted." },
+  { CA_UNCANNY_DODGE, "Uncanny Dodge",
+    "You are never caught flat-footed, so an attacker gets no bonus for "
+    "catching you unaware. At level 3 or higher you are also roused safely "
+    "from sleep the instant danger appears. At level 4 or higher nobody can "
+    "flank you unless their own level in this ability is at least four "
+    "higher than yours." },
+  { CA_UNEARTHLY_LUCK, "Unearthly Luck",
+    "Whenever your Luck attribute modifier is positive, this ability adds "
+    "it as a luck bonus to all three of your saving throws: Fortitude, "
+    "Reflex and Will. A Luck modifier of zero or lower adds nothing to any "
+    "of your saves, and the bonus updates automatically whenever your Luck "
+    "score changes." },
+  { CA_VERSATILITY, "Versatility",
+    "You never pay an experience penalty for multiclassing outside your "
+    "race's favoured classes: every class counts as favoured for you, so "
+    "you can freely mix levels across classes without the experience "
+    "penalty other characters take for levels in classes their race does "
+    "not favour." },
+  { CA_WEAPON_IMMUNITY, "Weapon Immunity",
+    "You take no damage at all from a blow struck by a creature unless the "
+    "weapon's enchantment bonus is at least your immunity level, or an "
+    "unarmed attacker's Ki Strike level meets it. If you are a devil, "
+    "undead, lycanthrope or demon, a blessed or silver weapon still hurts "
+    "you regardless of its enchantment." },
+  { CA_WEAPON_SKILL, "Weapon Skill Eligibility",
+    "This is not a combat effect by itself: it is an eligibility rating "
+    "that unlocks weapon-mastery feats for whichever weapon you specialise "
+    "in. Level 1 qualifies you for Weapon Specialist, level 2 for Weapon "
+    "Mastery, level 3 for Weapon High Mastery, and level 4 for Weapon Grand "
+    "Mastery; each feat also needs its own weapon-skill prerequisite "
+    "besides this rating." },
+  { CA_WHOLENESS_OF_BODY, "Wholeness of Body",
+    "For one fatigue point, you heal a number of hit points equal to three "
+    "times your total character level, counting every class you have taken, "
+    "up to your maximum hit points plus any temporary hit points. It has no "
+    "effect once you are already fully healed." },
+  { CA_WILD_SHAPE, "Wild Shape",
+    "At level 3 or higher, for one fatigue point, you change into an animal "
+    "form: pick from creatures whose Hit Dice do not exceed your level plus "
+    "one and whose Challenge Rating does not exceed your level, no dragons. "
+    "You keep the same fraction of your hit points you had before shifting, "
+    "and other class features may extend which forms you can take." },
+  { CA_WOODLAND_STRIDE, "Woodland Stride",
+    "Difficult terrain never slows you down: your movement cost is always "
+    "treated as normal ground, whatever the terrain would otherwise cost. "
+    "You also move freely through sticky hazards like webs, without any "
+    "chance of becoming stuck or needing a Balance check to cross them "
+    "safely." },
+  { CA_ARCANE_WILL, "Arcane Will",
+    "Your force of will strengthens every spell you cast. Each level of "
+    "this ability adds one to the save DC of your spells and, on top of "
+    "your Wisdom bonus, one to their damage; spells flagged immune to bonus "
+    "damage are unaffected. It is passive and permanent, with no cost, "
+    "activation or limit beyond your ability level." },
+  { CA_BURNING_HUNGER, "Burning Hunger",
+    "Your body burns through food far faster than normal: every turn you "
+    "grow hungrier at twice the usual rate for each level of this ability. "
+    "In exchange you can never overeat badly enough to vomit. The only food "
+    "that nourishes you at all is the fresh blood of a carnivorous "
+    "creature's corpse; a corpse that is spoiled, bloodless, from a "
+    "non-carnivore, or any non-corpse food gives you nothing." },
+  { CA_FATIGUE_REGEN, "Fatigue Regeneration",
+    "Once you have gone more than 50 turns without fighting, you begin "
+    "recovering fatigue on your own: you regain 1 fatigue point roughly "
+    "every 50 divided by your ability level turns, without needing to rest. "
+    "Being hit or attacking resets this clock. Without this ability, "
+    "fatigue only returns when you rest." },
+  { CA_FLURRY_OF_BLOWS, "Flurry of Blows",
+    "You can spend 1 fatigue to flurry for 10 or more turns, longer with "
+    "higher Constitution. While flurrying, and only while wearing no "
+    "armour, you fight faster: unarmed strikes gain extra speed at an "
+    "accuracy penalty that starts near -3 and shrinks as your ability level "
+    "rises, and a martial melee weapon gains the same benefit." },
+  { CA_UNBIND, "Unbind",
+    "For two fatigue points you release creatures that another spellcaster "
+    "has summoned and bound to their service, within a radius of your level "
+    "plus your Charisma modifier. Each freed creature's summoner and you "
+    "make an opposed roll of 1d20 plus Charisma modifier; if you win, that "
+    "creature is liberated from its summoner's control." },
+  { CA_COMMAND_AUTHORITY, "Command Authority",
+    "This raises the limit on how many creatures you can control at once. "
+    "Its ability level adds directly to the maximum combined challenge "
+    "rating of creatures you hold through magical summoning or charming, "
+    "and separately to the maximum combined challenge rating of creatures "
+    "you have cowed into service with Command. Push past either cap and the "
+    "game refuses to let you add another such creature." },
+  { CA_PREPATORY_MAGIC, "Prepatory Magic",
+    "When you cast a spell that buffs a creature (grants a bonus rather "
+    "than harming), the mana cost is reduced by 5 percent for every level "
+    "of this ability you have, to a minimum cost of 1. Spells that harm or "
+    "otherwise are not buffs cost the same as always." },
+  { CA_NEGATE_CRIT, "Negate Crit",
+    "When an enemy scores a critical hit against you, you have a chance to "
+    "negate it, turning it into an ordinary hit instead. The chance is 5 "
+    "percent per ability level." },
+  { CA_FLAWLESS_DODGE, "Flawless Dodge",
+    "You can drop into a defensive stance that turns some incoming hits "
+    "into total misses, drawn only from attacks that would otherwise "
+    "connect, never wasted on ones that would have missed anyway. You have "
+    "a pool of uses per day equal to your ability level plus your Dexterity "
+    "modifier; each dodge used counts against that pool." },
+  { CA_PSYCH_MIGHT, "Psychosomatic Might",
+    "Food you carry weighs only a third as much as normal when your "
+    "carrying capacity is worked out, so you can haul far more rations than "
+    "your Strength alone would allow. Every other kind of item, including "
+    "containers holding non-food goods, is weighed normally." },
+  { CA_SPELLBREAKER, "Spellbreaker",
+    "When you destroy a magic item, using the Break command on the Y-use "
+    "menu, you gain experience as if you had killed a monster with a "
+    "Challenge Rating two below that item's level. Potions and scrolls "
+    "yield only a tenth as much. If you have levels in other classes too, "
+    "you receive only the fraction of that experience equal to your ability "
+    "level divided by your total character level." },
+  { CA_LORE_OF_ARMS, "Lore of Arms",
+    "When you attack with a weapon you have not identified, each hit counts "
+    "down a number of swings set by your ability level, from 20 hits at "
+    "level 1 down to 1 hit at level 9 or higher; once that count is "
+    "reached, you learn whether it is magical, cursed, and its bonus. At "
+    "ability level 3 or higher, the same reveal also happens for your worn "
+    "armour and shield whenever they are struck in combat, using two fewer "
+    "effective levels." },
+  { CA_MIGHTY_STROKE, "Mighty Stroke",
+    "Reduces the fatigue cost of the Great Blow attack option, a single "
+    "all-out melee strike. Great Blow normally costs 2 points of fatigue; "
+    "each ability level you have reduces that cost by 1, so at ability "
+    "level 2 or higher you can use Great Blow for free." },
+  { CA_STORYCRAFT, "Storycraft",
+    "Each level of this ability, after your first, gives you one charge "
+    "that lets you permanently add plus one to the magical bonus of a "
+    "single item you carry. Spending a charge is irreversible and is not "
+    "refunded if the item is later destroyed. You cannot raise an item's "
+    "effective level past your ability level plus your Charisma modifier "
+    "plus one." },
+  { CA_SPELL_FURY, "Spell Fury",
+    "You double your Wisdom bonus as extra damage on your own known wizard "
+    "or sorcerer spells that deal direct physical damage, such as a fire or "
+    "cold blast. This bonus does not apply when you cast the spell from a "
+    "wand, staff, or scroll rather than from your own known spell list." },
+  { CA_FASTING, "Fasting",
+    "You grow hungry more slowly. Each time hunger would advance, the "
+    "chance it does is cut by an amount based on your ability level against "
+    "your challenge rating, roughly two-thirds of that ratio. While merely "
+    "Hungry, if you have gained experience recently, that same drive builds "
+    "your Constitution instead of wearing it down." },
+  { CA_THIEF_IN_THE_NIGHT, "Thief in the Night",
+    "If you handle every piece of magic treasure and coin in a dungeon "
+    "region, then leave it without a single monster there ever becoming "
+    "aware of you, you gain experience for every monster that calls that "
+    "region home, as if you had killed them yourself. The share of "
+    "experience you get for each monster is scaled down against its "
+    "Challenge Rating." },
+  { CA_WEAPONCRAFT, "Weaponcraft",
+    "At a forge, you can spend time working on a weapon or suit of armour "
+    "to either add a magical quality to it or raise its enchantment bonus, "
+    "limited by your Craft skill level. Without access to a forge you "
+    "cannot use this ability at all." },
+  { CA_DEFENSIVE_ROLL, "Defensive Roll",
+    "When a weapon attack against you only barely lands, beating your "
+    "defense by more than 14, and you are wearing medium armour or lighter, "
+    "you roll with the blow and take reduced damage: as little as 5/6 of "
+    "normal in medium armour, less in lighter armour or none, and less "
+    "still if you are small and your attacker is not. Heavier armour blocks "
+    "the roll entirely, and there is no daily limit on how often it "
+    "triggers." },
+  { CA_TRICK_MAGIC, "Trick Magic",
+    "You can use a magic item that is normally restricted to a specific "
+    "class, race or alignment by tricking it into accepting you, provided "
+    "the sum of your Bluff and Use Magic Device skill ranks meets the "
+    "item's difficulty. A combined total of 30 or higher lets you use "
+    "nearly any restricted item you find." },
+  { CA_TATTOOS, "Tattoos",
+    "Each time you gain this ability, every second level as a Tattoo "
+    "Mystic, you choose one new magical tattoo from those you qualify for "
+    "and have not already taken, up to ten in total. Each tattoo grants a "
+    "distinct permanent effect, and many of those effects grow stronger "
+    "with your tattoo mystic level." },
+  { CA_MASTER_ARTISAN, "Master Artisan",
+    "Cuts the material cost in gold of crafting, enchanting, and repairing "
+    "items you have the skill to make. The cost is multiplied by (20 minus "
+    "your ability level) divided by 20, so each ability level trims 5 "
+    "percent off the price, to a floor of an 80 percent reduction once your "
+    "ability level reaches 16." },
+  { CA_HIDE_IN_PLAIN_SIGHT, "Hide in Plain Sight",
+    "You can attempt to hide in shadows under conditions that would "
+    "normally stop anyone: while carrying a light, while standing in a "
+    "brightly lit square, or while a hostile creature can actually see you. "
+    "Without this ability those three conditions each block the attempt "
+    "outright; with it, none of them do." },
+  { 0, NULL, NULL } };
+
 int16 RogueFeats[]   = { 0, 0 };
 int16 MonkFeats[]    = { 0, 0 };
 
