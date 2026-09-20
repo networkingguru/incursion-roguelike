@@ -526,6 +526,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_gear_item_exclusion.sh` | Does an item ruled wearer-only leave gear exposed? The Amulet of Bile grants acid resistance and the same warhammer still corrodes. | LIVE |
 | `check_gear_protection_roster.sh` | Does `lib/` still match the whole `EF_PROTECTS_ITEMS` ruling table? Holds the 36 effects the repo owner ruled protect carried gear, the 22 grants he ruled wearer-only, and his two general rules -- spells are `y`, domains and gods and races and subraces are `n`. `gear_protection_roster.py` does the measuring; `--prove-red` breaks each part in turn and demands that part's own verdict line turn red. Red today on part C1, which names two unflagged priest spells for his ruling. | LIVE |
 | `check_gear_spell_protection.sh` | Does a spell protect the caster's gear? Under Endure the Elements his silvered warhammer holds 78 hit points through twelve magma creeper retaliations. | LIVE |
+| `check_generated_merge.sh` | Does Git conflict on independent edits to `lib/dispatch.h` with the shipped merge guard, but cleanly merge both edits without it? Uses throwaway repositories; tests Git, not the compiler (inc-m1wb). | LIVE |
 | `check_geomancy.sh` | Does the Earthsinger's Geomancy roll the 5d12 its page names, rather than the 5d12+12 copied from the Mana potion? | LIVE |
 | `check_goblin_queen_prose.sh` | Does the Staff of the Goblin Queen description scope its +4 bonuses and -4 penalties to goblinoid wielders, matching the all-or-nothing goblinoid gate that governs every effect? | LIVE |
 | `check_gravestone.sh` | Does the death screen render the epitaph's corrected wording and columns, and the date the stone is carved with? | LIVE |
@@ -827,6 +828,7 @@ tools/check_error_handling.sh       # greps src/*.cpp for the unbounded writes
 tools/check_upstream_marks.sh       # reads src/, inc/ and docs/REPORTING-GATE.md
 tools/check_api_arity.py            # reads inc/Api.h against the C++ headers
 tools/check_virtual_override.sh     # reads inc/*.h and src/W*.cpp for a redeclaration that hides its base
+tools/check_generated_merge.sh      # scratch Git merges: conflict with guard, both edits without it
 tools/check_gate.sh                 # feeds gate_lib.sh made-up logs
 tools/check_escape_sweep.sh         # greps src/ and inc/ for a C escape spelled /n
 tools/check_natural_speed.sh        # reads lib/weapons.irh against inc/Defines.h
