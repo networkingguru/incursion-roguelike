@@ -1,0 +1,125 @@
+# Capture the frozen character's sheet abilities and My Character help page.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-gate.sav \
+#       tools/headless.sh tools/keys/char-abilities.keys 1
+#
+# The harness passes -load: start in play, with no character generation.
+# Search spends one real turn; menus alone report NO GAMEPLAY (exit 5),
+# as explained in load-char-sheet.keys.
+# Gender guards the sheet. Scroll one line at a time until the ability block
+# and its three expected names are visible; @expect makes a missed @until
+# fail instead of accepting the wrong screen after its bounded retry limit.
+# Further Help and [b] guard the menu selection: ? shows the bindings AND
+# this menu, but that screen alone is not the My Character page.
+# My Race guards the page. Successive overlapping page dumps capture its
+# prose, not just its first viewport. Entry Chamber guards the return to play
+# before @quit saves and quits inside the harness's private save directory.
+
+@dump:arrival
+s                       # search: one real turn
+@dump:played
+
+d
+@expect "Gender"
+@until "Infravision" DOWN
+@expect "Special Abilities:"
+@expect "Berserk Rage"
+@expect "Devouring"
+@expect "Infravision"
+@dump:sheet
+ESC
+
+?
+@expect "Further Help"
+@expect "[b] My Character"
+@dump:help-menu
+b
+@expect "MY RACE <R>"
+@dump:mycharacter-00
+PGDN
+@dump:mycharacter-01
+PGDN
+@dump:mycharacter-02
+PGDN
+@dump:mycharacter-03
+PGDN
+@dump:mycharacter-04
+PGDN
+@dump:mycharacter-05
+PGDN
+@dump:mycharacter-06
+PGDN
+@dump:mycharacter-07
+PGDN
+@dump:mycharacter-08
+PGDN
+@dump:mycharacter-09
+PGDN
+@dump:mycharacter-10
+PGDN
+@dump:mycharacter-11
+PGDN
+@dump:mycharacter-12
+PGDN
+@dump:mycharacter-13
+PGDN
+@dump:mycharacter-14
+PGDN
+@dump:mycharacter-15
+PGDN
+@dump:mycharacter-16
+PGDN
+@dump:mycharacter-17
+PGDN
+@dump:mycharacter-18
+PGDN
+@dump:mycharacter-19
+PGDN
+@dump:mycharacter-20
+PGDN
+@dump:mycharacter-21
+PGDN
+@dump:mycharacter-22
+PGDN
+@dump:mycharacter-23
+PGDN
+@dump:mycharacter-24
+PGDN
+@dump:mycharacter-25
+PGDN
+@dump:mycharacter-26
+PGDN
+@dump:mycharacter-27
+PGDN
+@dump:mycharacter-28
+PGDN
+@dump:mycharacter-29
+PGDN
+@dump:mycharacter-30
+PGDN
+@dump:mycharacter-31
+PGDN
+@dump:mycharacter-32
+PGDN
+@dump:mycharacter-33
+PGDN
+@dump:mycharacter-34
+PGDN
+@dump:mycharacter-35
+PGDN
+@dump:mycharacter-36
+PGDN
+@dump:mycharacter-37
+PGDN
+@dump:mycharacter-38
+PGDN
+@dump:mycharacter-39
+PGDN
+@dump:mycharacter-40
+
+ESC
+@until "Entry Chamber" ESC
+@expect "Entry Chamber"
+@dump:returned
+@quit

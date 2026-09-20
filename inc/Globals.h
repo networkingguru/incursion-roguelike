@@ -107,6 +107,7 @@ bool PossiblyPause(Term *T1, int x, int y, int timeout);
 extern String & ItemNameFromEffect(rID eID);
 extern String & DescribeSkill(int16 sk);
 extern String & DescribeFeat(int16 ft);
+extern String & DescribeAbility(int16 ca);
 
 bool isSimilarDir(Dir d, Dir d2);
 

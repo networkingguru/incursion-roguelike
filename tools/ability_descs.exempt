@@ -1,0 +1,82 @@
+# tools/ability_descs.exempt -- abilities that do NOT need a description yet.
+#
+# This is the other half of tools/ability_descs.live. Every ability with a
+# ClassAbilities name row (src/Tables.cpp) either needs a description (it is
+# in ability_descs.live) or is recorded here as not needing one yet. An entry
+# here means "no description required yet", not "never will". tools/
+# check_ability_descs.sh's fourth assertion is the ratchet: any newly granted
+# ability must land in one of these two files or the check fails, so this
+# list SHRINKS over time as abilities move to ability_descs.live -- it never
+# grows except when a genuinely new CA_ constant appears.
+#
+# Format: one CA_ name per line. A line whose first character is '#' is a
+# comment. Anything after the name on its own line, separated by whitespace,
+# is also a comment (see the CA_WEATHER_SENSE line below).
+#
+# Most of the 39 entries below are monster-only abilities granted through
+# ABILITY() in lib/mon*.irh: a polymorphed player can hold one and will see
+# its bare name, exactly as today (docs/specs/2026-09-20-ability-descriptions-
+# spec.md, "The 39 that stay bare").
+#
+# Two more abilities were investigated and are NOT listed below, because
+# neither one is a real, reachable ability at all:
+#   - CA_BANKED_SHOT has no ClassAbilities name row and is not even a defined
+#     CA_ constant in inc/. It exists only as text inside a comment,
+#     lib/prestige.irh:2408 ("/* Ability[CA_BANKED_SHOT,+1] at 10th level; */").
+#   - CA_DISARM_MAGIC_TRAP has no live ClassAbilities name row either: its
+#     row is commented out at src/Tables.cpp:3566, its only grant line is
+#     commented out at lib/classes.irh:2580, and its case in
+#     src/Sheet.cpp:601 is commented out too.
+# Both are granted nowhere and read nowhere. They are recorded here in prose,
+# not as list entries, so nobody re-derives the same dead end; they are not
+# real CA_ names for the check to validate against ClassAbilities.
+CA_ACROBATIC_FIGHTING
+CA_AIR_MASTERY
+CA_AURA_OF_MENACE
+CA_BLACK_MAGIC
+CA_BLOOD_MAGIC
+CA_BONUS_SCHOOL
+CA_BOOK_OF_SHADOWS
+CA_BOOST_RESISTS
+CA_BOOST_SPELLS
+CA_CHANNELING
+CA_CONTACT_MIND
+CA_CRAFT_PSICRYSTAL
+CA_DEATH_AFFINITY
+CA_EARTH_MASTERY
+CA_EARTHMELD
+CA_FAMILIAR
+CA_GASEOUS_FORM
+CA_INSPIRE_ALLIES
+CA_INVOKE_THE_LAND
+CA_KARMIC_IMMUNITY
+CA_LIFE_AFFINITY
+CA_OPPORTUNIST
+CA_PLANT_MASTERY
+CA_PSIONICS
+CA_PURGE_MAGIC
+CA_REGEN
+CA_SENSE_MAGIC
+CA_SIZE_ADVANTAGE
+CA_SLIPPERY_MIND
+CA_SPAWN
+CA_STALKER
+CA_TELEPATHY
+CA_TEMPRATURE_TOL
+CA_TUNNEL
+CA_TURN_RESISTANCE
+CA_WALLWALK
+CA_WATER_MASTERY
+CA_WEATHER_SENSE  # dead in a different way: granted nowhere, its only grant line is commented out at lib/domains.irh:947
+CA_WHITE_MAGIC
+
+# One more entry, past the 39 above, for a different reason. CA_GRANT_ITEM IS
+# granted in lib/ (so assertion 4 in check_ability_descs.sh requires it to
+# land in this file or in ability_descs.live), but it has no ClassAbilities
+# name row and never will: it is not an ability a character holds, it is a
+# delivery mechanism, and Player::GainAbility (src/Create.cpp:3584-3589)
+# zeroes it the instant it fires ("Abilities[ab] = 0;"). It is excluded from
+# ability_descs.live by name (docs/specs/2026-09-20-ability-descriptions-
+# spec.md, "Scope"), and recorded here instead so the ratchet has somewhere
+# to put it.
+CA_GRANT_ITEM
