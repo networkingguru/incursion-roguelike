@@ -2453,6 +2453,15 @@ RestartVerifyMon:
     }
 #endif
 
+    /* inc-5caj: carve a corridor to a portal a solid pocket stranded, before
+       the probe measures. See RepairStrandedPortals at the end of this file. */
+    RepairStrandedPortals(Depth);
+
+    /* inc-5caj: env-gated, read-only portal-reachability measurement. See
+       PortalReachProbe at the end of this file for what it does and why. */
+    extern void PortalReachProbe(Map *m, int16 Depth);
+    PortalReachProbe(this, Depth);
+
     inGenerate = false;
 
     T1->SetWin(WIN_INPUT);
@@ -4057,4 +4066,561 @@ rID Map::StickyAt(int16 x, int16 y) {
         }
     }
     return false;
+}
+
+
+/* inc-5caj: does every portal on a freshly generated level share one
+   passable component with every other portal? Gate: INCURSION_PORTAL_PROBE.
+   Unset -> returns immediately, no allocation, no file open, no log line.
+   Set -> runs once per generated level. Read-only: it calls no random(), and
+   writes nothing to the map.
+
+   PASSABLE, NOT OPEN. A closed door is Solid (src/Feature.cpp:571-583 sets
+   both `.Solid` and `F_SOLID` on the door's own square whenever it is not
+   DF_OPEN or DF_BROKEN), so a plain `!SolidAt` walk stops at every door and
+   turns each room behind one into its own component -- that walk is kept
+   below as the "_nodoor" figures, for contrast, and is not the verdict.
+   The engine's own connectivity pass, Map::FloodConnectA
+   (src/MakeLev.cpp:3882, "this is intentionally not 'SolidAt' for
+   Features"), steps through any square `FDoorAt` finds a door on, open,
+   closed or secret. This probe follows that precedent: a square counts as
+   passable when it holds a door, or otherwise when SolidAt says it is open.
+
+   WHY. src/MakeLev.cpp:1762-1770 forces every up staircase onto the down
+   staircase above it; when that square is solid it opens the one square and
+   seals its eight neighbours as "dungeon wall", leaving the best-effort
+   "Final, Fix-Up Tunneling" pass (src/MakeLev.cpp:1778-1900) to reopen the
+   pocket. That pass sometimes misses one. Evidence tier: Reasoned from the
+   generator's own code, not yet Observed on a live seed. Tracking id
+   inc-5caj; not yet sent anywhere. */
+static int32 PortalReachLabel(Map *m, bool doorAware,
+    int32 *comp, int32 *compSize, int32 *queue);
+
+void PortalReachProbe(Map *m, int16 Depth) {
+    if (!getenv("INCURSION_PORTAL_PROBE"))
+        return;
+
+    int16 sx = m->SizeX(), sy = m->SizeY();
+    int32 cells = (int32)sx * (int32)sy;
+    int32 *compA = (int32*)malloc(sizeof(int32) * cells);
+    int32 *compSizeA = (int32*)malloc(sizeof(int32) * cells);
+    int32 *compB = (int32*)malloc(sizeof(int32) * cells);
+    int32 *compSizeB = (int32*)malloc(sizeof(int32) * cells);
+    int32 *queue = (int32*)malloc(sizeof(int32) * cells);
+
+    /* A: door-aware, the verdict. B: door-blind, kept only so the
+       correction is checkable against what this probe used to measure. */
+    int32 nextCompA = PortalReachLabel(m, true, compA, compSizeA, queue);
+    int32 nextCompB = PortalReachLabel(m, false, compB, compSizeB, queue);
+
+    int32 k, open = 0;
+    for (k = 0; k < nextCompA; k++)
+        open += compSizeA[k];
+
+    int32 portalCount = 0;
+    Thing *t;
+    int32 i;
+    MapIterate(m, t, i)
+        if (t->Type == T_PORTAL)
+            portalCount++;
+
+    int32 *portsInCompA = (int32*)calloc(nextCompA ? nextCompA : 1, sizeof(int32));
+    int32 *portsInCompB = (int32*)calloc(nextCompB ? nextCompB : 1, sizeof(int32));
+    Thing **portals = (Thing**)malloc(sizeof(Thing*) * (portalCount ? portalCount : 1));
+    int32 pc = 0;
+    MapIterate(m, t, i)
+        if (t->Type == T_PORTAL) {
+            portals[pc++] = t;
+            int32 idx = (int32)t->y * sx + t->x;
+            bool openA = m->FDoorAt(t->x, t->y) != NULL || !m->SolidAt(t->x, t->y);
+            bool openB = !m->SolidAt(t->x, t->y);
+            if (openA)
+                portsInCompA[compA[idx]]++;
+            if (openB)
+                portsInCompB[compB[idx]]++;
+        }
+
+    /* The component that holds the most portals wins, on each walk
+       separately -- not necessarily the biggest one. First component found
+       wins a tie. */
+    int32 mainCompA = -1, votesA = -1;
+    for (k = 0; k < nextCompA; k++)
+        if (portsInCompA[k] > votesA) {
+            votesA = portsInCompA[k];
+            mainCompA = k;
+        }
+    int32 mainCompB = -1, votesB = -1;
+    for (k = 0; k < nextCompB; k++)
+        if (portsInCompB[k] > votesB) {
+            votesB = portsInCompB[k];
+            mainCompB = k;
+        }
+    int32 mainOpen = (mainCompA >= 0) ? compSizeA[mainCompA] : 0;
+
+    static FILE *log = NULL;
+    if (!log) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%slogs/portalreach.log",
+            (const char*)T1->IncursionDirectory);
+        log = fopen(path, "a");
+    }
+    if (log) {
+        int32 stranded = 0, strandedNodoor = 0;
+        for (k = 0; k < pc; k++) {
+            int32 idx = (int32)portals[k]->y * sx + portals[k]->x;
+            bool openA = m->FDoorAt(portals[k]->x, portals[k]->y) != NULL ||
+                !m->SolidAt(portals[k]->x, portals[k]->y);
+            bool openB = !m->SolidAt(portals[k]->x, portals[k]->y);
+            int32 cA = openA ? compA[idx] : -1;
+            int32 cB = openB ? compB[idx] : -1;
+            if (pc > 0 && cA != mainCompA)
+                stranded++;
+            if (pc > 0 && cB != mainCompB)
+                strandedNodoor++;
+        }
+
+        fprintf(log,
+            "PORTALREACH depth=%d portals=%d stranded=%d stranded_nodoor=%d open=%d main_open=%d\n",
+            (int)Depth, (int)pc, (int)stranded, (int)strandedNodoor,
+            (int)open, (int)mainOpen);
+
+        for (k = 0; k < pc; k++) {
+            Thing *pt = portals[k];
+            int32 idx = (int32)pt->y * sx + pt->x;
+            bool solid = m->SolidAt(pt->x, pt->y);
+            bool openA = m->FDoorAt(pt->x, pt->y) != NULL || !solid;
+            int32 cA = openA ? compA[idx] : -1;
+            if (pc == 0 || cA == mainCompA)
+                continue;
+            int32 compOpen = (cA >= 0) ? compSizeA[cA] : 0;
+            int32 doorNbrs = 0;
+            for (int16 d = 0; d != 8; d++) {
+                int16 nx = (int16)(pt->x + DirX[d]), ny = (int16)(pt->y + DirY[d]);
+                if (m->InBounds(nx, ny) && m->FDoorAt(nx, ny))
+                    doorNbrs++;
+            }
+            fprintf(log,
+                "PORTALREACH_STRANDED depth=%d x=%d y=%d solid=%d vault=%d comp_open=%d door_nbrs=%d name=\"%s\"\n",
+                (int)Depth, (int)pt->x, (int)pt->y, solid ? 1 : 0,
+                (int)m->At(pt->x, pt->y).isVault, (int)compOpen, (int)doorNbrs,
+                (const char*)pt->Name());
+            for (int16 ny = (int16)(pt->y - 1); ny <= pt->y + 1; ny++) {
+                char row[4] = { 0, 0, 0, 0 };
+                int rn = 0;
+                for (int16 nx = (int16)(pt->x - 1); nx <= pt->x + 1; nx++)
+                    row[rn++] = (!m->InBounds(nx, ny) || m->SolidAt(nx, ny)) ? '#' : '.';
+                fprintf(log, "PORTALREACH_NBR %s\n", row);
+            }
+        }
+        fflush(log);
+    }
+
+    free(compA);
+    free(compSizeA);
+    free(compB);
+    free(compSizeB);
+    free(queue);
+    free(portsInCompA);
+    free(portsInCompB);
+    free(portals);
+}
+
+/* Flood-fills one map's worth of squares, door-aware or not per `doorAware`,
+   into `comp` (component id per cell, -1 for impassable) and `compSize`
+   (open-cell count per component). `queue` is scratch, sized for the whole
+   map by the caller. Returns the number of components found. No RNG, no
+   writes to the map -- PortalReachProbe's own read-only contract. */
+static int32 PortalReachLabel(Map *m, bool doorAware,
+        int32 *comp, int32 *compSize, int32 *queue) {
+    int16 sx = m->SizeX(), sy = m->SizeY();
+    int32 cells = (int32)sx * (int32)sy;
+    int32 k;
+    for (k = 0; k < cells; k++)
+        comp[k] = -1;
+
+    int32 nextComp = 0;
+    int16 x, y;
+    for (y = 0; y < sy; y++)
+        for (x = 0; x < sx; x++) {
+            int32 start = (int32)y * sx + x;
+            bool open0 = doorAware ?
+                (m->FDoorAt(x, y) != NULL || !m->SolidAt(x, y)) : !m->SolidAt(x, y);
+            if (comp[start] != -1 || !open0)
+                continue;
+            int32 qh = 0, qt = 0, size = 0;
+            comp[start] = nextComp;
+            queue[qt++] = start;
+            while (qh < qt) {
+                int32 cur = queue[qh++];
+                int16 cx = (int16)(cur % sx), cy = (int16)(cur / sx);
+                size++;
+                for (int16 d = 0; d != 8; d++) {
+                    int16 ax = (int16)(cx + DirX[d]), ay = (int16)(cy + DirY[d]);
+                    if (!m->InBounds(ax, ay))
+                        continue;
+                    int32 ai = (int32)ay * sx + ax;
+                    if (comp[ai] != -1)
+                        continue;
+                    bool aopen = doorAware ?
+                        (m->FDoorAt(ax, ay) != NULL || !m->SolidAt(ax, ay)) : !m->SolidAt(ax, ay);
+                    if (!aopen)
+                        continue;
+                    comp[ai] = nextComp;
+                    queue[qt++] = ai;
+                }
+            }
+            compSize[nextComp] = size;
+            nextComp++;
+        }
+    return nextComp;
+}
+
+/* The component that holds the most portals wins; a tie goes to the larger
+   passable-square count (inc-5caj). `portals`/`pc` come from
+   PortalReachCollect, `comp`/`compSize`/`nextComp` from PortalReachLabel
+   (door-aware). Returns -1 only when no portal sits on a passable square,
+   which callers already guard against by requiring pc >= 2. */
+static int32 PortalReachMainComponent(Map *m, Thing **portals, int32 pc,
+        int32 *comp, int32 *compSize, int32 nextComp) {
+    int16 sx = m->SizeX();
+    int32 *portsInComp = (int32*)calloc(nextComp ? nextComp : 1, sizeof(int32));
+    int32 k;
+    for (k = 0; k < pc; k++) {
+        int16 px = portals[k]->x, py = portals[k]->y;
+        bool open = m->FDoorAt(px, py) != NULL || !m->SolidAt(px, py);
+        if (open)
+            portsInComp[comp[(int32)py * sx + px]]++;
+    }
+    int32 mainComp = -1, votes = -1, mainSize = -1;
+    for (k = 0; k < nextComp; k++)
+        if (portsInComp[k] > votes ||
+                (portsInComp[k] == votes && compSize[k] > mainSize)) {
+            votes = portsInComp[k];
+            mainSize = compSize[k];
+            mainComp = k;
+        }
+    free(portsInComp);
+    return mainComp;
+}
+
+/* Every Thing of Type T_PORTAL on `m`, as a freshly malloc'd pointer array.
+   The caller frees it. Read-only, no RNG. */
+static int32 PortalReachCollect(Map *m, Thing ***outPortals) {
+    int32 portalCount = 0;
+    Thing *t;
+    int32 i;
+    MapIterate(m, t, i)
+        if (t->Type == T_PORTAL)
+            portalCount++;
+    Thing **portals = (Thing**)malloc(sizeof(Thing*) * (portalCount ? portalCount : 1));
+    int32 pc = 0;
+    MapIterate(m, t, i)
+        if (t->Type == T_PORTAL)
+            portals[pc++] = t;
+    *outPortals = portals;
+    return pc;
+}
+
+/* inc-5caj: silent, read-only, door-aware "does every portal share one
+   component" predicate. Game::GetDungeonMap (src/Feature.cpp) polls this
+   after Generate to decide whether to keep a level or throw it away and
+   generate another -- unlike PortalReachProbe it runs on every level
+   regardless of INCURSION_PORTAL_PROBE, so it must never log or write. Fewer
+   than two portals is trivially connected. */
+bool Map::PortalsConnected() {
+    int16 sx = SizeX(), sy = SizeY();
+    int32 cells = (int32)sx * (int32)sy;
+    int32 *comp = (int32*)malloc(sizeof(int32) * cells);
+    int32 *compSize = (int32*)malloc(sizeof(int32) * cells);
+    int32 *queue = (int32*)malloc(sizeof(int32) * cells);
+    int32 nextComp = PortalReachLabel(this, true, comp, compSize, queue);
+
+    Thing **portals;
+    int32 pc = PortalReachCollect(this, &portals);
+
+    bool result = true;
+    if (pc >= 2) {
+        int32 mainComp = PortalReachMainComponent(this, portals, pc, comp, compSize, nextComp);
+        int32 k;
+        for (k = 0; k < pc; k++) {
+            int16 px = portals[k]->x, py = portals[k]->y;
+            bool open = FDoorAt(px, py) != NULL || !SolidAt(px, py);
+            int32 c = open ? comp[(int32)py * sx + px] : -1;
+            if (c != mainComp)
+                result = false;
+        }
+    }
+
+    free(comp);
+    free(compSize);
+    free(queue);
+    free(portals);
+    return result;
+}
+
+
+/* Which named PRIO_* band a blocking square's current priority falls in --
+   room_furniture(80), river_streamer(90), vault(100), feature_floor(110) or
+   the map border(120, PRIO_MAX) -- or -1 if it is some other value above
+   PRIO_ROOM_FLOOR that names none of them. Order matters: each test is
+   "at or above", so it must run highest first. */
+static int32 PortalReachBandIndex(uint32 pri) {
+    if (pri >= (uint32)PRIO_MAX)            return 4;
+    if (pri >= (uint32)PRIO_FEATURE_FLOOR)  return 3;
+    if (pri >= (uint32)PRIO_VAULT)          return 2;
+    if (pri >= (uint32)PRIO_RIVER_STREAMER) return 1;
+    if (pri >= (uint32)PRIO_ROOM_FURNITURE) return 0;
+    return -1;
+}
+
+/* Is (x,y) a square the repair's search may step onto: already passable
+   (door-aware), or plain interior rock WriteAt would accept a
+   PRIO_ROOM_FLOOR write on. Never the map border -- WriteAt refuses a
+   border write below PRIO_MAX regardless of what is stored there
+   (src/MakeLev.cpp:273: "if (x==0||y==0||x==sizeX-1||y==sizeY-1) if
+   (!Force && Pri<PRIO_MAX ...) return;") -- so a border square only counts
+   when it is already passable. */
+static bool PortalReachEnterable(Map *m, int16 x, int16 y) {
+    if (!m->InBounds(x, y))
+        return false;
+    bool passable = m->FDoorAt(x, y) != NULL || !m->SolidAt(x, y);
+    int16 sx = m->SizeX(), sy = m->SizeY();
+    if (x == 0 || y == 0 || x == sx - 1 || y == sy - 1)
+        return passable;
+    return passable || m->At(x, y).Priority <= (uint32)PRIO_ROOM_FLOOR;
+}
+
+/* Four-way (no diagonals -- a corridor does not cut a corner) breadth-first
+   search from (sx0,sy0) over PortalReachEnterable squares, to the nearest
+   square that is both currently passable and a member of component
+   `goalComp` of the door-aware labelling `comp`. Every square the search
+   steps onto was verified writable or already open before it was accepted,
+   so the caller's carve of the returned path cannot be refused partway --
+   it either completes exactly as searched, or this returns -1 and no
+   square is touched.
+
+   Success: fills `pathX`/`pathY` (goal to start inclusive) and returns the
+   length. Failure: returns -1 and fills `bands[5]` (room_furniture,
+   river_streamer, vault, feature_floor, border) with the count of DISTINCT
+   squares standing on the boundary of the reachable pocket -- one per
+   blocking square, not per edge into it -- so a caller can name what is in
+   the way without rebuilding. `visited`/`blocked`/`parent`/`queue` are
+   caller-owned scratch, each sized for the whole map. */
+static int32 PortalReachSearch(Map *m, int16 sx0, int16 sy0, int32 goalComp,
+        int32 *comp, int8 *visited, int8 *blocked, int32 *parent,
+        int32 *queue, int16 *pathX, int16 *pathY, int32 bands[5]) {
+    int16 sx = m->SizeX(), sy = m->SizeY();
+    int32 cells = (int32)sx * (int32)sy;
+    memset(visited, 0, cells);
+    memset(blocked, 0, cells);
+    int32 bi;
+    for (bi = 0; bi < 5; bi++)
+        bands[bi] = 0;
+
+    static const int16 DX4[4] = { 0, 0, 1, -1 };
+    static const int16 DY4[4] = { -1, 1, 0, 0 };
+
+    int32 qh = 0, qt = 0;
+    int32 start = (int32)sy0 * sx + sx0;
+    visited[start] = 1;
+    parent[start] = -1;
+    queue[qt++] = start;
+    int32 goal = -1;
+
+    while (qh < qt) {
+        int32 cur = queue[qh++];
+        int16 cx = (int16)(cur % sx), cy = (int16)(cur / sx);
+        if (cur != start && comp[cur] == goalComp &&
+                (m->FDoorAt(cx, cy) != NULL || !m->SolidAt(cx, cy))) {
+            goal = cur;
+            break;
+        }
+        int d;
+        for (d = 0; d < 4; d++) {
+            int16 nx = (int16)(cx + DX4[d]), ny = (int16)(cy + DY4[d]);
+            if (!m->InBounds(nx, ny))
+                continue;
+            int32 ni = (int32)ny * sx + nx;
+            if (visited[ni])
+                continue;
+            if (!PortalReachEnterable(m, nx, ny)) {
+                if (!blocked[ni]) {
+                    blocked[ni] = 1;
+                    int32 band = PortalReachBandIndex(m->At(nx, ny).Priority);
+                    if (band >= 0)
+                        bands[band]++;
+                }
+                continue;
+            }
+            visited[ni] = 1;
+            parent[ni] = cur;
+            queue[qt++] = ni;
+        }
+    }
+
+    if (goal == -1)
+        return -1;
+
+    int32 len = 0, at = goal;
+    while (at != -1) {
+        pathX[len] = (int16)(at % sx);
+        pathY[len] = (int16)(at / sx);
+        len++;
+        at = parent[at];
+    }
+    return len;
+}
+
+/* upstream: step 5's best-effort "Final, Fix-Up Tunneling" pass
+   (src/MakeLev.cpp:1778-1900 -- at most 26 rounds, 3 corridors per round,
+   nearest unconnected area per region per round) sometimes leaves a portal
+   sealed behind solid rock with no corridor reaching it. Plain control
+   flow, no dependence on integer width, the typedefs or the compiler, so
+   the original Win32/MSVC build misses the same pockets. Observed: 9 of
+   156 generated levels stranded a portal (tools/check_portal_reach.sh,
+   seeds 1-20). Tracking id inc-5caj. Not sent.
+
+   THE REPAIR. Label door-aware components (PortalReachLabel). For each
+   portal outside the component holding the most portals: if its own square
+   is solid, force it to floor exactly as the up-stairs carve above already
+   does (src/MakeLev.cpp:1765); if it is still solid afterward, the vault
+   guard refused it and this portal is unrepairable. Otherwise
+   PortalReachSearch finds the nearest passable square of the main
+   component over ground that is already open or that WriteAt will accept
+   at PRIO_ROOM_FLOOR, so the carve that follows cannot be refused partway.
+   Never Force=true. Runs on every level, gate or no gate; only its log
+   line is gated, so the probe cannot be the reason a level differs. */
+void Map::RepairStrandedPortals(int16 Depth) {
+    /* inc-5caj: test hook. INCURSION_PORTAL_REPAIR_OFF=carve or =all makes
+       this whole repair a no-op, so the untested regeneration retry it
+       normally prevents (src/Feature.cpp) can be driven on demand instead
+       of staying untested; see tools/check_portal_reach.sh --prove-red.
+       Any other value, or unset, is normal play. */
+    const char *repairOff = getenv("INCURSION_PORTAL_REPAIR_OFF");
+    if (repairOff && (!strcmp(repairOff, "carve") || !strcmp(repairOff, "all")))
+        return;
+
+    int16 sx = SizeX(), sy = SizeY();
+    int32 cells = (int32)sx * (int32)sy;
+    int32 *comp = (int32*)malloc(sizeof(int32) * cells);
+    int32 *compSize = (int32*)malloc(sizeof(int32) * cells);
+    int32 *queue = (int32*)malloc(sizeof(int32) * cells);
+    int32 nextComp = PortalReachLabel(this, true, comp, compSize, queue);
+
+    Thing **portals;
+    int32 pc = PortalReachCollect(this, &portals);
+    if (pc < 2) {
+        free(comp); free(compSize); free(queue); free(portals);
+        return;
+    }
+
+    bool logIt = getenv("INCURSION_PORTAL_PROBE") != NULL;
+    static FILE *replog = NULL;
+    if (logIt && !replog) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%slogs/portalreach.log",
+            (const char*)T1->IncursionDirectory);
+        replog = fopen(path, "a");
+    }
+
+    int8 *visited = (int8*)malloc(cells);
+    int8 *blocked = (int8*)malloc(cells);
+    int32 *parent = (int32*)malloc(sizeof(int32) * cells);
+    int16 *pathX = (int16*)malloc(sizeof(int16) * cells);
+    int16 *pathY = (int16*)malloc(sizeof(int16) * cells);
+
+    Rect r;
+    int32 k;
+    for (k = 0; k < pc; k++) {
+        Thing *pt = portals[k];
+        int16 px = pt->x, py = pt->y;
+
+        /* Recomputed fresh for every portal: an earlier portal's own carve
+           in this same loop can change which component holds the most
+           votes. */
+        int32 mainComp = PortalReachMainComponent(this, portals, pc, comp, compSize, nextComp);
+        bool open = FDoorAt(px, py) != NULL || !SolidAt(px, py);
+        int32 c = open ? comp[(int32)py * sx + px] : -1;
+        if (c == mainComp)
+            continue;
+
+        bool ok = false;
+        int32 pathLen = 0;
+
+        if (SolidAt(px, py)) {
+            r.Set(px - 1, py - 1, px + 1, py + 1);
+            WriteAt(r, px, py, FIND("floor"), RegionAt(px, py), PRIO_FEATURE_FLOOR);
+            if (SolidAt(px, py) && logIt && replog)
+                fprintf(replog,
+                    "PORTALREACH_BLOCKED depth=%d x=%d y=%d reason=own_square priority=%d terrain=\"%s\"\n",
+                    (int)Depth, (int)px, (int)py, (int)At(px, py).Priority,
+                    (const char*)NAME(TerrainAt(px, py)));
+        }
+
+        if (!SolidAt(px, py)) {
+            int32 bands[5];
+            int32 len = PortalReachSearch(this, px, py, mainComp, comp,
+                visited, blocked, parent, queue, pathX, pathY, bands);
+
+            if (len < 0) {
+                if (logIt && replog)
+                    fprintf(replog,
+                        "PORTALREACH_BLOCKED depth=%d x=%d y=%d reason=no_path "
+                        "room_furniture=%d river_streamer=%d vault=%d feature_floor=%d border=%d\n",
+                        (int)Depth, (int)px, (int)py,
+                        (int)bands[0], (int)bands[1], (int)bands[2],
+                        (int)bands[3], (int)bands[4]);
+            } else {
+                rID cr = Con[CORRIDOR_REGION];
+                int32 i2;
+                for (i2 = 0; i2 < len; i2++) {
+                    int16 cx0 = pathX[i2], cy0 = pathY[i2];
+                    if (!At(cx0, cy0).Solid)
+                        continue;
+                    Rect rr;
+                    rr.Set(cx0 - 1, cy0 - 1, cx0 + 1, cy0 + 1);
+                    WriteAt(rr, cx0, cy0, TREG(cr)->Floor, cr, PRIO_ROOM_FLOOR);
+                    int16 w;
+                    for (w = 0; w < 8; w++) {
+                        int16 nx = (int16)(cx0 + DirX[w]), ny = (int16)(cy0 + DirY[w]);
+                        if (!InBounds(nx, ny))
+                            continue;
+                        /* Never wall a square that is already passable --
+                           the class of self-collision found and fixed
+                           during this bead's own testing (comp_open fell
+                           to 6 on seed 3 depth 4 when an unconditional wall
+                           write cut the corridor off from the body it had
+                           just reached). */
+                        if (FDoorAt(nx, ny) != NULL || !SolidAt(nx, ny))
+                            continue;
+                        WriteAt(rr, nx, ny, TREG(cr)->Walls, cr, PRIO_CORRIDOR_WALL);
+                    }
+                }
+                pathLen = len;
+
+                nextComp = PortalReachLabel(this, true, comp, compSize, queue);
+                mainComp = PortalReachMainComponent(this, portals, pc, comp, compSize, nextComp);
+                int32 pIdx = (int32)py * sx + px;
+                ok = (comp[pIdx] >= 0 && comp[pIdx] == mainComp);
+            }
+        }
+
+        if (logIt && replog) {
+            fprintf(replog,
+                "PORTALREACH_REPAIR depth=%d x=%d y=%d name=\"%s\" len=%d ok=%d\n",
+                (int)Depth, (int)px, (int)py, (const char*)pt->Name(),
+                (int)pathLen, ok ? 1 : 0);
+            fflush(replog);
+        }
+    }
+
+    free(visited);
+    free(blocked);
+    free(parent);
+    free(pathX);
+    free(pathY);
+    free(comp);
+    free(compSize);
+    free(queue);
+    free(portals);
 }

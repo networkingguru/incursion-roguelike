@@ -158,7 +158,7 @@ overrun covered the `int16 x,y` declared immediately after it, so **every save
 zeroed the player's position**, in memory and on disk. Loading placed the character
 at (0,0) — the map's solid outer corner — where `Creature::DoTurn()` crushed them to
 death, and the view centred on (0,0) so 91% of the map window was off-grid and blank.
-Fixed by dropping the cast; the reasoning is recorded at `inc/Map.h:935`, which
+Fixed by dropping the cast; the reasoning is recorded at `inc/Map.h:944`, which
 is the only surviving trace of the defect in the tree. **Any save written before
 2026-08-13 17:42 is unrecoverable** and all such files have been deleted.
 Lesson: after changing a typedef's width, audit every cast that assumed the old one.

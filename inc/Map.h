@@ -427,6 +427,15 @@ class Map: public Object
        carry that meaning: it is a real square, and it is always solid rock. */
     uint16 GetOpenXY();
 
+    /* inc-5caj: door-aware connectivity. PortalsConnected is the cheap,
+       silent, read-only predicate -- Game::GetDungeonMap (src/Feature.cpp)
+       polls it after Generate to decide whether to keep a level or
+       regenerate it. RepairStrandedPortals is the corridor carve Generate
+       itself runs, once, before the level is handed back. Both share the
+       door-aware walk PortalReachProbe measures with; see src/MakeLev.cpp. */
+    bool PortalsConnected();
+    void RepairStrandedPortals(int16 Depth);
+
     EvReturn thEnGen(rID xID, uint32 fl, int8 CR, uint16 enAlign);
     EvReturn thEnGenXY(rID xID, uint32 fl, int8 CR, uint16 enAlign, int16 x, int16 y);
     EvReturn thEnGenSummXY(rID xID, uint32 fl, int8 CR, uint16 enAlign, Creature* crea, int16 x, int16 y);
