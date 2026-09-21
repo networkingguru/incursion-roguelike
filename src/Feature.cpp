@@ -1587,9 +1587,58 @@ Found:
 
     for (i = 1; i <= Depth; i++)
         if (!DungeonLevels[n][i]) {
-            m = new Map();
-            DungeonLevels[n][i] = m->myHandle;
-            m->Generate(dID, i, oMap(DungeonLevels[n][i - 1]), (int8)pl->GetAttr(A_LUC));
+            /* inc-5caj: RepairStrandedPortals (src/MakeLev.cpp) carves a
+               corridor to a portal a solid pocket stranded; when the vault
+               guard refuses every route, the portal stays stranded and this
+               discards the level and generates another, bounded so a
+               pathological seed cannot loop forever. ponytail: the ceiling
+               is 10 attempts, untested headroom rather than a measured
+               worst case -- raise it, or make the repair smarter about
+               which anchor it tries, if a seed is ever found that burns
+               through it.
+
+               INCURSION_PORTAL_REPAIR_OFF=all skips this whole retry loop
+               -- a single, unchecked Generate -- so the loop and the
+               `delete m` it depends on can be driven on demand instead of
+               staying untested; see tools/check_portal_reach.sh
+               --prove-red. PORTALREACH_REGEN is logged, probe-gated, each
+               time the loop is about to retry. */
+            const char *repairOff = getenv("INCURSION_PORTAL_REPAIR_OFF");
+            if (repairOff && !strcmp(repairOff, "all")) {
+                m = new Map();
+                DungeonLevels[n][i] = m->myHandle;
+                m->Generate(dID, i, oMap(DungeonLevels[n][i - 1]), (int8)pl->GetAttr(A_LUC));
+            } else {
+                int16 tries;
+                for (tries = 1; tries <= 10; tries++) {
+                    m = new Map();
+                    DungeonLevels[n][i] = m->myHandle;
+                    m->Generate(dID, i, oMap(DungeonLevels[n][i - 1]), (int8)pl->GetAttr(A_LUC));
+                    if (m->PortalsConnected())
+                        break;
+                    if (tries == 10) {
+                        Error("inc-5caj: dID=%d depth=%d kept a portal stranded after 10 regenerations; accepting it.",
+                            (int)dID, (int)i);
+                        break;
+                    }
+                    if (getenv("INCURSION_PORTAL_PROBE")) {
+                        static FILE *regenlog = NULL;
+                        if (!regenlog) {
+                            char rp[1024];
+                            snprintf(rp, sizeof(rp), "%slogs/portalreach.log",
+                                (const char*)T1->IncursionDirectory);
+                            regenlog = fopen(rp, "a");
+                        }
+                        if (regenlog) {
+                            fprintf(regenlog, "PORTALREACH_REGEN depth=%d attempt=%d\n",
+                                (int)i, (int)(tries + 1));
+                            fflush(regenlog);
+                        }
+                    }
+                    DungeonLevels[n][i] = 0;
+                    delete m;
+                }
+            }
         }
 
     /*

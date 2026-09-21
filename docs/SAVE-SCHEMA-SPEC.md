@@ -155,7 +155,7 @@ That rule is the contract. Nothing else about the schema needs remembering.
 `ARCHIVE_CLASS` (`inc/Base.h:778`) already generates a
 `Serialize(Registry&, bool isSave)` that calls its base first, and 20 classes
 already use it. The bodies gain field declarations beside the fixups they
-already carry. `Thing` (`inc/Map.h:934-956`) becomes:
+already carry. `Thing` (`inc/Map.h:943-965`) becomes:
 
 ```cpp
 ARCHIVE_CLASS(Thing,Object,r)
@@ -179,7 +179,7 @@ as `Serialize` does today, so a field cannot be written and not read.
 
 ### The map grid
 
-`Map::Serialize` (`inc/Map.h:665-666`) writes `Grid` as one raw block of
+`Map::Serialize` (`inc/Map.h:674-675`) writes `Grid` as one raw block of
 `sizeof(LocationInfo)*sizeX*sizeY`. `LocationInfo` (`inc/Map.h:36-60`) is
 bitfields, whose order and packing the compiler chooses.
 
