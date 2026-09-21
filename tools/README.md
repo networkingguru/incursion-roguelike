@@ -598,6 +598,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_periapt_poison_prose.sh` | Does the Periapt of Proof against Poisons description state that its saving-throw-versus-poison bonus scales per magical plus, matching its `PLUS_2PER1` code, rather than the flat "+2" it claimed before? | LIVE |
 | `check_periodic_interval.sh` | Does a PERIODIC status effect fire every Val rounds, not Val-1? Two synthetic gods grant Val 3 and Val 5 timers; fixed, both fire on an even 180- and 300-turn beat across at least three firings apiece, where an unfixed build reads 120 and 240. | LIVE |
 | `check_planes_sword_prose.sh` | Does the Sword of the Planes description scope its +3 enhancement tier to outsiders generally, matching its `EV_WATTACK` handler's `MA_OUTSIDER` branch, rather than the narrower "denizens of the ethereal or astral planes" it claimed before? | LIVE |
+| `check_portal_reach.sh` | Does every portal on a generated level share one door-aware passable component with every other portal, so a staircase never lands the player inside a sealed pocket? Sweeps 20 seeded dives, judging only the KEPT level per depth after `Map::RepairStrandedPortals`' corridor search and `src/Feature.cpp`'s discard-and-regenerate retry have had their say. Measured: 9 of 156 generated levels stranded a portal before the fix, 0 of 157 after. `--prove-red` runs the same measurement with `INCURSION_PORTAL_REPAIR_OFF=all` and PASSES only when the check FAILS -- proof this guard can be shown red, not only green. | LIVE |
 | `check_pray_aid_int32.sh` | Does praying for divine aid still grant anything above 32767 favour? `Character::Pray` took the total into an int16 local, so every `AID_CHART` threshold comparison failed past the wrap and the follower got nothing. Sibling of the row above, and a different narrowing: that one is the script view of `EParam`, this one is a C++ local. | LIVE |
 | `check_precision_prose.sh` | Does the Eyes of Precision description state that its lowlight-vision bonus scales at 20 feet (2 squares) per magical plus, matching its CA_LOWLIGHT `PLUS_2PER1` code, rather than the flat "20 feet" it claimed before? | LIVE |
 | `check_prestige_hidden.sh` | Are the eight unfinished prestige classes kept out of every class list, rather than offered and then refused after the pick? | LIVE |
@@ -762,6 +763,8 @@ they ship in every binary; the compile-time ones need
 | `INCURSION_TRIP_AOO_PROBE=1` | Logs the actor, the victim and whether they are one creature for every attack of opportunity `Creature::OAttack` accepts. Behind `check_trip_aoo.sh`. |
 | `INCURSION_TRUESIGHT_PROBE=1` | Grants the player `TRUE_SIGHT`, places one invisible creature at three distances and two lighting states, and logs what `Creature::Perceives` returns for each. Behind `check_true_sight.sh`. |
 | `INCURSION_QUIET_PROBE=1` | Logs whether a handle lookup spoke. Behind `check_quiet_lookup.sh`. |
+| `INCURSION_PORTAL_PROBE=1` | Logs door-aware component reachability, corridor-search repairs and regenerations for every generated level. Behind `check_portal_reach.sh`. |
+| `INCURSION_PORTAL_REPAIR_OFF` | `carve` skips the corridor search only, so the regeneration retry can be exercised for real; `all` also skips the retry, reproducing the unfixed defect. `check_portal_reach.sh --prove-red` sets it to `all`. |
 | `INCURSION_SAVE_FAIL_AT=N` | Stages a save failure at a chosen point, throwing exactly what a short write throws. A real full disk cannot reach the interesting case, because both write loops write into memory first. |
 | `INCURSION_STACK_PROBE=1` | Logs nested entries into depth changes. Found the bottom-of-dungeon crash. |
 | `INCURSION_MAX_KEYS=N` | The headless key budget. |
@@ -963,6 +966,7 @@ tools/check_school_focus_menu.sh    # a school already focused on is off the Sch
 tools/check_school_focus_dc.sh      # School Focus (Illusion) raises the disbelief DC
 tools/check_periodic_interval.sh    # a PERIODIC status effect fires every Val rounds, not Val-1
 tools/check_xp_drain.sh             # RestoreXP clears the drain once, not once plus a matching XP credit
+tools/check_portal_reach.sh         # every portal shares one door-aware component; --prove-red shows it failing
 ```
 
 `check_gaze_reflect_message.sh` is the live twin of Tier 1's

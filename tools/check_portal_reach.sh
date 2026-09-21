@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Does every portal on a generated level share one PASSABLE component with
 # every other portal? (inc-5caj)
 #
