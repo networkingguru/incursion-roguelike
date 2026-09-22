@@ -1,4 +1,6 @@
 #!/bin/bash
+# gate: live
+#
 # Regression check for the saving-throw cover-and-band rule (inc-30ps
 # rework): each occupied square between shooter and target gives a weapon
 # attack a -4 penalty, the target's own square gives a further -4 if the

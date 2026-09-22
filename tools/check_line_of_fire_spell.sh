@@ -1,4 +1,6 @@
 #!/bin/bash
+# gate: live
+#
 # Regression check for the saving-throw cover-and-band rule for a spell
 # bolt (inc-30ps rework): the same -4-per-square rule an arrow gets now
 # applies to an EF_ATTACK bolt, ray or projected touch spell, rolling

@@ -155,10 +155,10 @@ chain order, and the first one to fail takes the shot, so a square's head is
 merely the first name on the list.
 
 That order is the head of the square's contents chain, `At(x,y).Contents`,
-walked by `Map::GetAt` at `src/Display.cpp:1437`.
+walked by `Map::GetAt` at `src/Display.cpp:612`.
 
 The chain is deterministic and it survives a save. Both insertion sites,
-`src/Display.cpp:281-290` on placement and `:1797-1805` on movement, apply one
+`src/Display.cpp:162-174` on placement and `:881-894` on movement, apply one
 rule: if the head is already a creature, splice the newcomer in at position
 two; otherwise make the newcomer the head. So the head is the first creature
 to stand there, and later arrivals follow in reverse order of arrival.
@@ -167,10 +167,10 @@ This is the creature the targeting cursor's `n` key offers first
 (`src/Term.cpp:2714-2727`), so a player can see who is exposed before shooting.
 
 **Hazard.** `Map::GetAt` keeps its cursor in static locals (`curr`, `doneflag`,
-`src/Display.cpp:1439-1440`), so the whole game shares one iterator. A scan of
+`src/Display.cpp:614-615`), so the whole game shares one iterator. A scan of
 square B inside a loop over square A corrupts both. Copy a square's creatures
 into a local array first, as the arrow path already does at
-`src/Fight.cpp:1036-1039`.
+`src/Fight.cpp:839-845`.
 
 ## Precise Shot
 
@@ -318,7 +318,7 @@ the ally is unharmed and the target damaged.
 ### Phase 4 — the unerring bolts
 
 No code change beyond phase 3. Confirm Magic Missile
-(`lib/wspells.irh:1031`), Force Missiles (`:6357`) and Acid;wand
+(`lib/wspells.irh:1031`), Force Missiles (`lib/wspells.irh:6357`) and Acid;wand
 (`lib/m_items.irh:2134`) reach the chosen target past any intervening creature,
 with that creature unharmed. This closes `inc-c4l4`.
 

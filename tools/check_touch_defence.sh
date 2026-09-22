@@ -1,4 +1,6 @@
 #!/bin/bash
+# gate: live
+#
 # Regression check for the phase-1 touch defence (inc-30ps): Creature::TouchDef
 # (src/Values.cpp, computed beside A_CDEF in both branches of
 # Creature::CalcValues) must equal A_DEF less BONUS_ARMOUR (24) and

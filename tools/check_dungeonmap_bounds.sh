@@ -16,14 +16,36 @@
 # levitates over a chasm on depth 10 and presses '>' floated down to a level
 # that the dungeon does not have.
 #
-# THE ROUTE. tools/keys/levitate-bottom.keys walks the nine wizard depth jumps
-# that docs/evidence/inc-x9i/observed-routes/to-bottom-level.keys walked on
-# 2026-08-18, then presses '>'. The walk is not decoration: map content is NOT a
-# property of the seed alone, because generation consumes the RNG stream, so a
-# session that jumps straight to depth 10 gets a different depth 10 from one
-# that walked the nine above it. INCURSION_LEVITATE_CHASM grants LEVITATION and
-# stands the character on a chasm square on arrival at the deepest level. It
-# manufactures no terrain and it is the SETUP, not the oracle.
+# THE ROUTE USED TO BE A WALK, AND IS NOW A LOAD. tools/keys/levitate-bottom.keys
+# walked the nine wizard depth jumps that
+# docs/evidence/inc-x9i/observed-routes/to-bottom-level.keys walked on
+# 2026-08-18, then pressed '>'. That walk is not decoration: map content is NOT
+# a property of the seed alone, because generation consumes the RNG stream, so
+# a session that jumps straight to depth 10 gets a different depth 10 from one
+# that walked the nine above it. Which is exactly what made the walk fragile:
+# inc-30ps's combat rework makes different rolls on its way down, so seed 5's
+# depth 10 changed underneath it, and on this branch that generated map has NO
+# CHASM ANYWHERE -- 0 fall squares, INCURSION_CHASM_WALK probe, where master's
+# same seed logs one at (74,19). Game::GetDungeonMap, the function this check
+# exists to guard, never moved; the RNG stream leading up to it did.
+#
+# So this check now LOADS a frozen character, the way
+# tools/fixtures/README.md's "character-fixtures-load-dont-generate" rule
+# already fixed the same class of fragility for a seed-pinned monk: a
+# GENERATED thing is not reproducible across an unrelated change, so freeze it
+# and load it instead (bd inc-1fjk, bd inc-sls0). The fixture is
+# tools/fixtures/chars/levitate-bottom-seed1.{sav,keys,sheet.txt}, made by
+# tools/keys/levitate-bottom-save.keys, itself the same nine-jump walk (seed 1,
+# which still produces a chasm on this branch: 233 fall squares) ending in a
+# System Menu save instead of the '>' prompt. tools/keys/levitate-bottom.keys
+# and the seed 5 case it walked are UNCHANGED and still work for a human or a
+# future re-freeze; they are simply no longer what this check runs.
+#
+# INCURSION_LEVITATE_CHASM, exported while the FIXTURE was made, granted
+# LEVITATION and stood the character on a chasm square on arrival at the
+# deepest level. It manufactured no terrain, and the save now carries the
+# result: levitating, standing on a chasm, on depth 10. This check's own
+# session sets no probe hook at all -- it only loads and presses keys.
 #
 # THE ORACLE is the three screens, and it is gameplay rather than a probe:
 #
@@ -37,9 +59,10 @@
 #   settled         "100m" after the climb is declined -- he is still on depth
 #                   10. The descent did not happen.
 #
-# On seed 5 the adjacent-chasm search DOES find a square, so the prompt is what
-# appears; "You can't go down here." is the other outcome of that same search
-# and is not what this seed produces. Do not copy the message without re-running.
+# On this fixture the adjacent-chasm search DOES find a square, so the prompt
+# is what appears; "You can't go down here." is the other outcome of that same
+# search and is not what this fixture produces. Do not copy the message
+# without re-running.
 #
 # WHICH ASSERTION CARRIES THE CHECK, because the obvious one does not. The
 # depth reading is the same on both sides: with the overread restored the
@@ -50,9 +73,10 @@
 # only appears when the levitation branch was skipped, and the absence of the
 # levitation branch's own line.
 #
-# PROVED RED on 2026-09-11 by putting the unbounded index back -- the refusal
-# in Game::GetDungeonMap becomes `if (0)`, so depth 11 is read past the end of
-# the allocation again and handed back. The inner run printed:
+# PROVED RED on 2026-09-11, and again on 2026-09-22 against the fixture-loading
+# rewrite, by putting the unbounded index back -- the refusal in
+# Game::GetDungeonMap becomes `if (0)`, so depth 11 is read past the end of the
+# allocation again and handed back. The 2026-09-22 inner run printed:
 #
 #   |   FAIL  0/1 screens carry: Climb down the chasm?
 #   |         it should prove: GetDungeonMap refused depth 11, so Descend fell through to the adjacent-chasm search
@@ -61,6 +85,9 @@
 #   |         first: You float downwards.
 #   | FAIL: a levitating character on the bottom level stays on it
 #   PROVED RED: with src/Feature.cpp mutated, this check exits 1.
+#
+# src/Feature.cpp was restored and rebuilt automatically afterwards;
+# `git diff src/Feature.cpp` is empty.
 #
 # Usage: tools/check_dungeonmap_bounds.sh [--prove-red]
 . "$(dirname "$0")/check_lib.sh"
@@ -71,8 +98,8 @@ check_mutation src/Feature.cpp \
 '    if (Depth < 0 || (uint32)Depth >= allocated) {' \
 '    if (0) {'
 
-export INCURSION_LEVITATE_CHASM=1
-check_run tools/keys/levitate-bottom.keys 5
+export INCURSION_LOAD=tools/fixtures/chars/levitate-bottom-seed1.sav
+check_run tools/keys/levitate-bottom-load.keys 1
 
 check_screens '*-on-bottom'
 check_expect "Flying" \

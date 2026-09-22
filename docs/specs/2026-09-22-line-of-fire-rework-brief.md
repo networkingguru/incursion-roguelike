@@ -98,7 +98,7 @@ through. A ray is a bolt for this rule; say so in one comment at the site.
 ## 7. The predictor has side effects and is now called mid-spell
 
 `Magic::PredictVictimsOfBallBeamBolt` calls `o.Activate()` on the map Overlay.
-`Overlay::Activate` (`src/Display.cpp:1638`) **wipes every glyph slot and the
+`Overlay::Activate` (`src/Display.cpp:751`) **wipes every glyph slot and the
 glyph count**, and its `DeActivate` leaves the overlay inactive. `MagicStrike`
 now calls the predictor from inside `ABallBeamBolt`'s own active overlay
 region, so the projectile animation's buffer is destroyed mid-flight and the

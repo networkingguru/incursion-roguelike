@@ -55,9 +55,9 @@ Do not read the feat here.
 ## Two traps
 
 **The static iterator.** `Map::GetAt` keeps its cursor in static locals
-(`src/Display.cpp:1439-1440`), so one iterator serves the whole game and a
+(`src/Display.cpp:614-615`), so one iterator serves the whole game and a
 nested scan corrupts both walks. Copy a square's creatures into a local array
-before moving on, the way `src/Fight.cpp:1036-1039` does.
+before moving on, the way `src/Fight.cpp:839-845` does.
 
 **The monster aiming predictor.** `Magic::PredictVictimsOfBallBeamBolt`,
 `src/Magic.cpp:2159`, walks the same path separately so the AI can judge a

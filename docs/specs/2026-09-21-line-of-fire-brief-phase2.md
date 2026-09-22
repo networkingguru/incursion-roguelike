@@ -34,10 +34,10 @@ ignoring the shooter itself. Then record the target's own square if the target
 is not the head of it.
 
 **Copy each square's creatures into a local array before moving on.**
-`Map::GetAt` keeps its cursor in static locals (`src/Display.cpp:1439-1440`),
+`Map::GetAt` keeps its cursor in static locals (`src/Display.cpp:614-615`),
 so one iterator serves the whole game and a nested scan corrupts both walks.
-The existing code at `:1036-1039` already copies for this reason. Keep doing
-it.
+The existing code at `src/Fight.cpp:839-845` already copies for this reason.
+Keep doing it.
 
 **Then resolve one strike.** Let `N` be the number of recorded squares. Set
 `e.vDef` to the target's defence plus `4 * N`. Resolve the strike as the code
