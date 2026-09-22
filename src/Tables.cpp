@@ -4203,9 +4203,10 @@ struct AbilityInfoStruct AbilInfo[] = {
   { CA_FLAWLESS_DODGE, "Flawless Dodge",
     "You can drop into a defensive stance that turns some incoming hits "
     "into total misses, drawn only from attacks that would otherwise "
-    "connect, never wasted on ones that would have missed anyway. You have "
-    "a pool of uses per day equal to your ability level plus your Dexterity "
-    "modifier; each dodge used counts against that pool." },
+    "connect, never wasted on ones that would have missed anyway. A "
+    "natural 20 always hits you regardless; this dodge cannot stop one. "
+    "You have a pool of uses per day equal to your ability level plus "
+    "your Dexterity modifier; each dodge used counts against that pool." },
   { CA_PSYCH_MIGHT, "Psychosomatic Might",
     "Food you carry weighs only a third as much as normal when your "
     "carrying capacity is worked out, so you can haul far more rations than "

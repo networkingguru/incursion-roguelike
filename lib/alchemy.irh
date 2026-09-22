@@ -2250,10 +2250,10 @@ AI_PSIONIC Spell "Telekinesis;psi" : EA_GRANT
     Desc: "__This power can be enacted in one of two
       forms, as chosen when the power is manifested:\n
       __<9>Violent Thrust:<1> This form of Telekinesis
-      targets a single creature of your choice,
-      causing them to be knocked down and back
-      up to 3d4 squares and to
-      suffer 5d4 points of blunt damage.\n
+      targets a single creature of your choice. You must
+      succeed on a ranged touch attack to strike them; on a
+      hit, they are knocked down and back up to 3d4 squares
+      and suffer 5d4 points of blunt damage.\n
       __<9>Sustained Force:<1> This version of the
       spell allows you to exert force at a range
       of 60 feet. You can use
@@ -2282,7 +2282,7 @@ AI_PSIONIC Spell "Telekinesis;psi" : EA_GRANT
   
 Effect "Telekinesis;psi-thrust" : EA_BLAST
   { xval: AD_BLUNT; pval: 5d4; Purpose: EP_ATTACK;
-    aval: AR_BOLT; cval: WHITE; }
+    aval: AR_BOLT; cval: WHITE; Flags: EF_ATTACK; }
 and EA_BLAST
   { xval: AD_KNOC; pval: 3d4; }
 

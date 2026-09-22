@@ -211,6 +211,10 @@ class Creature: public Thing, public Magic
       FIELD_U8 (283, ScentRange);
       FIELD_U8 (284, ShadowRange);
       FIELD_U8 (285, NatureSight);
+      /* Touch defence: A_DEF less BONUS_ARMOUR and BONUS_SHIELD only. Not an
+         Attr[] slot -- ATTR_LAST is fixed by the save schema (field 269 is
+         the whole array, sized ATTR_LAST). inc-30ps phase 1. */
+      FIELD_I16(286, TouchDef);
     END_ARCHIVE
 
 	  public:
@@ -223,7 +227,11 @@ class Creature: public Thing, public Magic
       /* ww: Attr[A_MOV], for example, can easily wrap around if you're
        * charging or sprinting and have some magical items or a mount:
        * int8 is just not big enough */ 
-      int16  Attr[ATTR_LAST]; 
+      int16  Attr[ATTR_LAST];
+      /* A_DEF less BONUS_ARMOUR and BONUS_SHIELD only -- what a ranged touch
+         attack rolls against. Computed in CalcValues() beside A_CDEF.
+         inc-30ps phase 1. */
+      int16  TouchDef;
       Dir LastMoveDir;
       int8 AoO, FFCount, HideVal;
 	    int16 StateFlags; int8 AttrDeath;

@@ -904,6 +904,22 @@ NextSegment:
       return r;
 }
 
+/* inc-30ps: the cover-and-band rule ("The rule", docs/specs/2026-09-21-
+   line-of-fire-spec.md), shared with Creature::RAttack (src/Fight.cpp) so
+   an arrow and a spell bolt cannot drift onto two different rules for the
+   same event. Definitions live there; LOFSquare must match that
+   definition member-for-member, the same way the extern declarations
+   below match their real signatures. */
+const int16 LOFMaxSquareMembers = 16;
+struct LOFSquare {
+    Thing *member[LOFMaxSquareMembers];
+    int16 count;
+};
+extern Thing *LineOfFireBand(const LOFSquare squares[], int16 N, int8 D,
+    int16 total);
+extern int8 LineOfFireCoverPenalty(int16 N);
+extern void LOFSetLastVHit(int8 v);
+
 EvReturn Magic::MagicStrike(EventInfo &e) {
     int8 first_efNum = e.efNum;
     uint32 save_fl;
@@ -919,9 +935,107 @@ EvReturn Magic::MagicStrike(EventInfo &e) {
         Base Attack Bonus easily -- it should be the character's
         BAB that's applied here. */
         e.vHit    = (int8)e.EActor->GetBAB(S_ARCHERY);
-        e.vDef    = (int8)e.EVictim->GetAttr(A_DEF);
+
+        /* inc-30ps rework: a bolt, ray or projected touch spell (item 6 --
+           MM_PROJECT carries aval==AR_TOUCH, so it needs naming here
+           explicitly or it is unblockable and takes no cover penalty at
+           all) must know how many bodies stand in its way before it
+           rolls, so the cover-adjusted defence is ready for the one roll
+           this rule allows. Reuse PredictVictimsOfBallBeamBolt's own walk
+           rather than write a third copy of the line-walk geometry
+           Creature::RAttack and Magic::ABallBeamBolt each already have;
+           manageOverlay=false because this call is reentrant, from inside
+           ABallBeamBolt's own already-active overlay region (item 7).
+           isBeam mirrors ABallBeamBolt's own dispatch table exactly (a ray
+           and a projected touch spell are both beams there) so the cover
+           count walks the same squares the real shot does. Anything else
+           with EF_ATTACK (an unprojected touch spell, for instance) has no
+           line to walk, so lofCount stays 0 and nothing here changes for
+           it. */
+        LOFSquare squares[128]; int16 lofCount = 0;
+        if (!e.EMagic)
+            e.EMagic = &TEFF(e.eID)->ef;
+        const bool isProjectedTouch = (e.MM & MM_PROJECT) != 0;
+        if (e.EVictim && !e.isNAttack && e.EMagic &&
+            (e.EMagic->aval == AR_BOLT || e.EMagic->aval == AR_RAY ||
+             isProjectedTouch)) {
+            const bool wasBeam = isProjectedTouch ||
+                e.EMagic->aval == AR_BEAM || e.EMagic->aval == AR_RAY;
+            Creature *lofVictims[1024]; int16 lofNumVic = 0;
+            PredictVictimsOfBallBeamBolt(e, wasBeam,
+                e.EMagic->aval == AR_BALL, false, lofVictims, lofNumVic,
+                false);
+            if (lofNumVic && lofVictims[lofNumVic-1] == e.EVictim)
+                lofCount = lofNumVic - 1;
+            if (lofCount > 128) /* item 5: clamp, matching Fight.cpp */
+                lofCount = 128;
+            /* Rebuild each recorded square's full membership (contents-
+               chain order) for the save walk -- the predictor's own
+               output is heads only. Nothing moves the map between that
+               call and this one, so re-querying it here is safe. */
+            for (int16 i = 0; i < lofCount; i++) {
+                Thing *head = lofVictims[i];
+                LOFSquare &sq = squares[i];
+                sq.count = 0;
+                Creature *cr;
+                for (cr = e.EActor->m->FCreatureAt(head->x, head->y);
+                     cr && sq.count < LOFMaxSquareMembers;
+                     cr = e.EActor->m->NCreatureAt(head->x, head->y))
+                    sq.member[sq.count++] = cr;
+            }
+        }
+
+        /* inc-30ps phase 1/3: a spell's ranged touch attack rolls against
+           TouchDef (A_DEF less BONUS_ARMOUR and BONUS_SHIELD, src/Values.
+           cpp:1491/:1526), not the full A_DEF -- see "Touch defence" --
+           plus 4 per recorded square of cover, same as an arrow. */
+        int8 D = (int8)e.EVictim->TouchDef;
+        e.vDef    = (int8)(D + LineOfFireCoverPenalty(lofCount));
         e.vThreat = 20;
-        return ReThrow(EV_STRIKE,e);
+        r = ReThrow(EV_STRIKE,e);
+        /* e is passed through Strike by reference, so e.vHit here already
+           carries every modifier the roll compared against e.vDef --
+           stashed for LOFSpellProbe's calibration shot, which is called
+           through DoHits' own per-target eCopy (Magic.cpp) and so cannot
+           read this e directly. See the comment on LOFSetLastVHit,
+           src/Fight.cpp. */
+        LOFSetLastVHit(e.vHit);
+
+        /* inc-30ps rework, item 2: gate the band on an arithmetic miss,
+           never on !e.isHit -- a non-arithmetic miss (e.isWildMiss:
+           displacement/blur and the rest, see Creature::RAttack) leaves
+           the whole line alone regardless of total; total < e.vDef
+           excludes FLAWLESS_DODGE and vRideCheck the same way RAttack's
+           own gate does (see the comment there): both can only clear
+           isHit when total already reached e.vDef. FLAWLESS_DODGE's own
+           gate (src/Fight.cpp:5249) now excludes a bare natural 20 as
+           well as requiring e.isHit (ruled 2026-09-22: a nat 20 always
+           hits and Flawless Dodge cannot stop it), so the only isHit it
+           can still revert is one that reached e.vDef by arithmetic. On a
+           genuine arithmetic miss, the band names a square and a Reflex
+           save inside it decides who is hit (item 1); land that on a
+           COPY, without a second roll -- e.AType is already A_SPEL, so
+           this re-entry skips straight past this branch to the effect
+           application below, the same way Creature::RAttack's own
+           redirect (src/Fight.cpp) lands an already-decided hit. The
+           original e stays a genuine miss against the chosen target;
+           Creature::Strike has already printed that message. Spell damage
+           is not size-scaled the way a weapon's is (item 3 does not apply
+           here), so no damage recompute is needed for the new victim. */
+        if (!e.isHit && lofCount > 0) {
+            int16 total = e.vHit + e.vRoll;
+            if (!e.isWildMiss && total < e.vDef) {
+                Thing *bandVictim = LineOfFireBand(squares, lofCount, D, total);
+                if (bandVictim) {
+                    EventInfo re2 = e;
+                    re2.ETarget = bandVictim;
+                    re2.EVictim = (Creature*)bandVictim;
+                    re2.isHit   = true;
+                    ReThrow(EV_MAGIC_STRIKE, re2);
+                }
+            }
+        }
+        return r;
     }
 
     e.Resist = false;
@@ -1173,11 +1287,11 @@ DisbeliefMessageDone:
                 (!e.EMagic || e.EMagic->eval == EA_BLAST)))
             {
                 r = ReThrow(EV_MAGIC_HIT,e);
-                if (r == ABORT) 
+                if (r == ABORT)
                     return ABORT;
                 if (!e.Immune)
                     e.notFullyImmune = true;
-            }   
+            }
 
 SkipSegment:
         /* If there's another effect component right after this one, and
@@ -1623,10 +1737,10 @@ EvReturn Magic::AField(EventInfo &e)
 
 // ww: Beam, Ball and Bolt should all work the same way, more or less
 // let's remove these arbitrary distinctions that make beams only work on
-// cardinal directions and balls occasionally do weird things ... 
+// cardinal directions and balls occasionally do weird things ...
 // If isBeam is true, we travel through creatures and continue to strike
 // things.
-// If isBall is true, at the end of our travels we explode outward. 
+// If isBall is true, at the end of our travels we explode outward.
 
 EvReturn Magic::ABallBeamBolt(EventInfo &e)
 {
@@ -1747,7 +1861,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
 
   Thing * possTarget = NULL;
   bool hitSelf = false;
-  
+
   wasEngulfed = false;
   if (e.EActor->HasStati(ENGULFED))
     {
@@ -1799,8 +1913,71 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
       sx=cx=e.EXVal*2;
       sy=cy=e.EYVal*2;
       goto DoneProject; }
-  
-   
+
+  /* inc-30ps rework, item 4: "A shot with no chosen creature", docs/specs/
+     2026-09-21-line-of-fire-spec.md, applied to a bolt or ray exactly as
+     Creature::RAttack (src/Fight.cpp) already applies it to an arrow. One
+     candidate along the whole path is the target, resolved normally with
+     no penalty; more than one compares a single roll, at a flat -4,
+     against each candidate's own TouchDef in turn, nearest the shooter
+     first -- the first the roll beats is struck. No saving throw and no
+     band here: there is no intended target to supply a DC. isMulti
+     effects (beam, breath, chain) strike everyone by design and are
+     unaffected; ball/burst and a natural attack are unchanged, out of
+     scope here as in PredictVictimsOfBallBeamBolt's matching branch. */
+  if (!e.EVictim && !isMulti && !isBall && !e.isNAttack) {
+      Creature *cands[1024]; int16 candCount = 0;
+      PredictVictimsOfBallBeamBolt(e, isBeam, false, false, cands,
+          candCount, false);
+      if (candCount > 128) /* item 5: clamp, matching Fight.cpp */
+          candCount = 128;
+      Thing *winner = NULL;
+      if (candCount > 0) {
+          const int8 penalty = (candCount == 1) ? 0 :
+              LineOfFireCoverPenalty(1);
+          int8 D0 = (int8)cands[0]->TouchDef;
+          EventInfo se = e;
+          se.ETarget = cands[0];
+          /* Strike() computes a range-dependent part of vHit from e.EXVal/
+             EYVal; e's own EXVal/EYVal are the aim point, which for an
+             empty-square shot is not cands[0]'s square, so aim there
+             directly or the roll is calibrated against the wrong range. */
+          se.EXVal   = cands[0]->x;
+          se.EYVal   = cands[0]->y;
+          se.vHit    = (int8)e.EActor->GetBAB(S_ARCHERY);
+          se.vDef    = (int8)(D0 + penalty);
+          se.vThreat = 20;
+          se.AType   = A_SPEL;
+          ReThrow(EV_STRIKE, se);
+          LOFSetLastVHit(se.vHit);
+          if (se.isHit)
+              winner = cands[0];
+          else {
+              int16 total = se.vHit + se.vRoll;
+              for (int16 idx = 1; idx < candCount; idx++) {
+                  int8 Di = (int8)cands[idx]->TouchDef;
+                  if (total >= Di + penalty) { winner = cands[idx]; break; }
+              }
+          }
+      }
+      /* Land the decided hit directly, without going through TargetList/
+         DoHits: DoHits rebuilds eCopy from the OUTER e, which has never
+         had e.AType set to A_SPEL, so a redispatch through it would enter
+         MagicStrike's kludge branch again and roll a SECOND time -- this
+         rule allows exactly one roll. isHit=true and AType=A_SPEL make
+         MagicStrike skip straight to effect application, the same trick
+         its own band redirect (above) uses on its own re-entry. */
+      if (winner) {
+          EventInfo re2 = e;
+          re2.ETarget = winner;
+          re2.EVictim = (Creature*)winner;
+          re2.isHit   = true;
+          re2.AType   = A_SPEL;
+          ReThrow(EV_MAGIC_STRIKE, re2);
+      }
+      goto DoneProject;
+  }
+
    NextChain:
 
    if (e.EVictim)
@@ -1933,18 +2110,67 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
     if (!m.InBounds(cx/2,cy/2))
       break;
 
-    if (e.EVictim && e.EVictim->x==cx/2 &&
-                     e.EVictim->y==cy/2)
-      { ADD_TARGET(e.EVictim)
-        if (isChain || !isBeam)
-          break; }
-    for(cr=m.FCreatureAt(cx/2,cy/2);cr;cr=m.NCreatureAt(cx/2,cy/2))
-      if (cr!=e.EActor || e.vChainCount != 0)
-        {
+    if (isMulti) {
+      /* Beams, breaths and chains: unchanged. They strike everything in
+         the line by design (see "The rule" in
+         docs/specs/2026-09-21-line-of-fire-spec.md, "Phase 3"). */
+      if (e.EVictim && e.EVictim->x==cx/2 &&
+                       e.EVictim->y==cy/2)
+        { ADD_TARGET(e.EVictim)
+          if (isChain)
+            break; }
+      for(cr=m.FCreatureAt(cx/2,cy/2);cr;cr=m.NCreatureAt(cx/2,cy/2))
+        if (cr!=e.EActor || e.vChainCount != 0)
           if (cr != e.EVictim)
             { ADD_TARGET(cr); }
-          if (!isMulti) goto OuterBreak; 
-        } 
+    } else if (isBall || e.isNAttack || !e.EVictim) {
+      /* Out of scope for inc-30ps phase 3: AR_BALL/AR_BURST (a different
+         mechanic -- an area effect, not a single ranged touch attack; see
+         the report to Brian), a natural attack (isNAttack, which never
+         rolls through MagicStrike here), and a bolt with no chosen
+         creature to route the cover rule around. Preserved exactly as
+         upstream had it. */
+      if (e.EVictim && e.EVictim->x==cx/2 &&
+                       e.EVictim->y==cy/2)
+        { ADD_TARGET(e.EVictim)
+          if (!isBeam)
+            break; }
+      for(cr=m.FCreatureAt(cx/2,cy/2);cr;cr=m.NCreatureAt(cx/2,cy/2))
+        if (cr!=e.EActor || e.vChainCount != 0)
+          {
+            if (cr != e.EVictim)
+              { ADD_TARGET(cr); }
+            goto OuterBreak;
+          }
+    } else {
+      /* upstream: a bolt or ray must reach the creature the caster chose,
+         not whichever body the line-of-fire walk meets first -- the old
+         ADD_TARGET(cr); if (!isMulti) goto OuterBreak; here added the
+         first creature crossed and stopped before e.EVictim's own square
+         was ever reached. Tier Reasoned (the walk depends on no integer
+         width, typedef or platform). Tracking id inc-30ps.3. Not sent to
+         rmtew. */
+
+      /* inc-30ps phase 3: pass every intervening body and reach e.EVictim's
+         own square. The cover-and-band rule itself (docs/specs/2026-09-21-
+         line-of-fire-spec.md, "Phase 3") is resolved upstream of this walk,
+         in Magic::MagicStrike's kludge branch: for an EF_ATTACK effect it
+         has already rolled once against the cover-adjusted touch defence
+         and, on a miss, already reassigned e.EVictim to whichever body the
+         band named, before this function was even called a second time. An
+         unerring effect (no EF_ATTACK) never enters that branch, so
+         e.EVictim here is simply whichever creature the caster chose.
+         Either way, this walk's only remaining job is to get there.
+         inc-30ps rework, item 6: a ray, and a projected touch spell
+         (MM_PROJECT), also land in this branch (isMulti is false for
+         both in the dispatch above) -- deliberately: a ray is a bolt for
+         this rule, and MagicStrike's guard now rolls a projected touch
+         spell the same way. */
+      if (e.EVictim->x==cx/2 && e.EVictim->y==cy/2) {
+        ADD_TARGET(e.EVictim);
+        goto OuterBreak;
+      }
+    }
 
     // finally, if we aimed at *this specific spot* (e.g., to throw a
     // fireball in empty middle square between two enemies), stop here
@@ -2138,10 +2364,10 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
                     "The <EVictim> deflects the <9><Res><7>!",e.eID);
                 continue;
               }
-      
+
       ReThrow(ourEvent, eCopy);
     }
-    
+
   if (wasEngulfed && !e.EActor->HasStati(ENGULFED)) {
     wasEngulfed = false;
     e.EVictim = NULL;
@@ -2155,8 +2381,9 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   return DONE;
 }
 
-void Magic::PredictVictimsOfBallBeamBolt(EventInfo &e, 
-  bool isBeam, bool isBall, bool isChain, Creature * victim[], int16 & numVic)
+void Magic::PredictVictimsOfBallBeamBolt(EventInfo &e,
+  bool isBeam, bool isBall, bool isChain, Creature * victim[], int16 & numVic,
+  bool manageOverlay)
 {
   Feature *ft; Creature *cr;
   TEffect *te = NULL;
@@ -2207,10 +2434,11 @@ void Magic::PredictVictimsOfBallBeamBolt(EventInfo &e,
       (e.EItem->isType(T_WAND) || e.EItem->isType(T_POTION)))
     e.vRange = max(5,e.vRange);
 
-  // map overlay 
+  // map overlay
   Map &m = *(e.EActor->m);
   Overlay &o = e.EActor->m->ov;
-  o.Activate();
+  if (manageOverlay)
+    o.Activate();
 
   int distSoFar = 0;
 
@@ -2280,23 +2508,59 @@ void Magic::PredictVictimsOfBallBeamBolt(EventInfo &e,
       break;
 
 
-    if (e.EVictim && e.EVictim->x==cx/2 &&
-                     e.EVictim->y==cy/2)
-      { 
-        victim[numVic++] = e.EVictim; 
-        if (!isBeam)
-          break;
-      }
-    
-    for(cr=m.FCreatureAt(cx/2,cy/2);cr;cr=m.NCreatureAt(cx/2,cy/2))
-      if (cr!=e.EActor)
-        {
+    if (isBeam) {
+      /* Unchanged: a beam strikes everything in the line. */
+      if (e.EVictim && e.EVictim->x==cx/2 && e.EVictim->y==cy/2)
+        victim[numVic++] = e.EVictim;
+      for(cr=m.FCreatureAt(cx/2,cy/2);cr;cr=m.NCreatureAt(cx/2,cy/2))
+        if (cr!=e.EActor) {
           possTarget = cr;
           if (e.EVictim != cr)
             victim[numVic++] = cr;
-          if (!isBeam) 
-            goto OuterBreak; 
-        } 
+        }
+    } else if (isBall || !e.EVictim) {
+      /* isBall: out of scope for inc-30ps (a different mechanic -- an area
+         effect, not a single ranged touch attack); preserved exactly as
+         upstream had it, one candidate square and stop. !e.EVictim (rework,
+         item 4): "A shot with no chosen creature", docs/specs/2026-09-21-
+         line-of-fire-spec.md -- the caller (Magic::ABallBeamBolt) needs
+         every occupied square's head in order, not just the first, so it
+         can compare its one roll against each in turn; keep walking
+         instead of stopping the whole scan. */
+      if (e.EVictim && e.EVictim->x==cx/2 && e.EVictim->y==cy/2)
+        { victim[numVic++] = e.EVictim; break; }
+      for(cr=m.FCreatureAt(cx/2,cy/2);cr;cr=m.NCreatureAt(cx/2,cy/2))
+        if (cr!=e.EActor)
+          {
+            possTarget = cr;
+            if (e.EVictim != cr)
+              victim[numVic++] = cr;
+            if (isBall)
+              goto OuterBreak;
+            break;
+          }
+    } else {
+      /* inc-30ps phase 3: mirror the real walk in Magic::ABallBeamBolt so
+         a monster does not aim by a rule the game no longer uses. Every
+         recorded square's head creature is a possible victim of an
+         EF_ATTACK effect (the band could name any of them); an unerring
+         effect (no EF_ATTACK) can only ever reach the chosen target. */
+      Creature *sqList[16]; int16 sqc = 0;
+      for (cr = m.FCreatureAt(cx/2,cy/2); cr && sqc < 16;
+           cr = m.NCreatureAt(cx/2,cy/2))
+        sqList[sqc++] = cr;
+
+      bool onTargetSquare = (e.EVictim->x==cx/2 && e.EVictim->y==cy/2);
+      if (te && te->HasFlag(EF_ATTACK))
+        if (sqc && (!onTargetSquare || sqList[0] != e.EVictim))
+          victim[numVic++] = sqList[0];
+
+      if (onTargetSquare) {
+        possTarget = e.EVictim;
+        victim[numVic++] = e.EVictim;
+        goto OuterBreak;
+      }
+    }
 
     if (cx / 2 == e.EXVal && cy / 2 == e.EYVal && !isBeam)
       break; 
@@ -2357,11 +2621,413 @@ void Magic::PredictVictimsOfBallBeamBolt(EventInfo &e,
   } 
 
   // now we're done projecting
-  o.DeActivate();
-  return; 
+  if (manageOverlay)
+    o.DeActivate();
+  return;
 }
 
-                      
+/* INCURSION_LOF_SPELL_PROBE -- the runnable check behind the phase-3
+   cover-and-band rule for a spell bolt (inc-30ps). tools/check_line_of_
+   fire_spell.sh drives it; read that script for the pass condition.
+
+   Places the same four-rat line LineOfFireProbe (src/Fight.cpp) uses:
+   "near" (distance 2) and "far" (distance 3) each alone in their own
+   square, "cover" and "target" sharing the square at distance 4, cover
+   placed first (so it is that square's head) and target placed second (so
+   it is NOT its head, the second -4 the rule adds). N=3, the shape "The
+   rule"'s worked example uses (docs/specs/2026-09-21-line-of-fire-spec.
+   md). TouchDef is pinned to the shooter's own BAB(S_ARCHERY) plus 6, the
+   same offset LineOfFireProbe pins A_DEF to, so every band's forced roll
+   stays inside the d20's 1-20 range.
+
+   Three effects, cast directly through EV_MAGIC_STRIKE (bypassing Cast/
+   Invoke's mana and message overhead, the level LineOfFireProbe bypasses
+   RAttack's own higher setup at): "Eldritch Bolt" (EF_ATTACK, AR_BOLT) for
+   the band matrix; "Magic Missile" (no EF_ATTACK, AR_BOLT) for the
+   unerring case this epic exists to fix (inc-c4l4); "Lightning Bolt"
+   (AR_BEAM) to confirm a beam still strikes every body in the line. Off
+   unless the variable is set, like every other probe in this file; every
+   rat it creates is removed before it returns. */
+void LOFSpellProbe(Player *shooter) {
+    if (!getenv("INCURSION_LOF_SPELL_PROBE"))
+        return;
+
+    if (!shooter || !shooter->m) {
+        Error("LOF_SPELL_PROBE: INCONCLUSIVE -- no live player and map yet");
+        return;
+    }
+
+    const rID ratID      = FIND("giant rat");
+    const rID eldritchID = FIND("Eldritch Bolt");
+    const rID missileID  = FIND("Magic Missile");
+    const rID beamID     = FIND("Lightning Bolt");
+    if (!ratID || !eldritchID || !missileID || !beamID) {
+        Error("LOF_SPELL_PROBE: INCONCLUSIVE -- a required resource is "
+            "missing (rat=%d eldritch=%d missile=%d beam=%d)",
+            (int)ratID, (int)eldritchID, (int)missileID, (int)beamID);
+        return;
+    }
+
+    extern void LOFSetForcedRoll(int8 r);
+    extern void LOFSetForcedSave(int8 failAt);
+    extern void LOFClearForcedSave();
+    extern int8 LOFGetLastSaveDC();
+
+    Map *mp = shooter->m;
+    const int16 px = shooter->x, py = shooter->y;
+
+    /* Find a clear line of 4 squares -- the same requirement
+       LOFProbeFindLine (src/Fight.cpp) searches for, duplicated here in
+       miniature because it is test scaffolding, not the rule this file
+       shares with Fight.cpp via LineOfFireBand/LineOfFireCoverPenalty. */
+    static const int16 DX[4] = {1,-1,0,0}, DY[4] = {0,0,1,-1};
+    int16 dx = 0, dy = 0; bool foundLine = false;
+    for (int8 dir = 0; dir < 4 && !foundLine; dir++) {
+        bool ok = true;
+        for (int16 d = 1; d <= 4; d++) {
+            const int16 tx = px + DX[dir]*d, ty = py + DY[dir]*d;
+            if (!mp->InBounds(tx,ty) || mp->SolidAt(tx,ty)) { ok = false; break; }
+            if (mp->FCreatureAt(tx,ty)) { ok = false; break; }
+        }
+        if (ok && mp->LineOfFire(px, py, px+DX[dir]*4, py+DY[dir]*4, shooter))
+            { dx = DX[dir]; dy = DY[dir]; foundLine = true; }
+    }
+    if (!foundLine) {
+        Error("LOF_SPELL_PROBE: INCONCLUSIVE -- no open line of 4 clear "
+            "squares from the player");
+        return;
+    }
+
+    const bool wasInPlay = theGame->PlayMode;
+    theGame->PlayMode = true;
+
+    /* "extra" shares the distance-4 square with cover and target, so the
+       band-2 square holds three creatures. Contents-chain order splices
+       each newcomer in right after the head, reversing arrival order
+       after position 1 (see LineOfFireProbe, src/Fight.cpp), so placing
+       target before extra is what makes the final chain read [cover,
+       extra, target]; share_square=true, or the second and third rat
+       placed here are silently redirected off this square entirely. */
+    struct Body { const char *name; Monster *c; };
+    Body b[5] = { {"near",NULL}, {"far",NULL}, {"cover",NULL}, {"target",NULL},
+        {"extra",NULL} };
+    const int16 dist[5] = {2, 3, 4, 4, 4};
+    for (int i = 0; i < 5; i++) {
+        const int16 tx = px + dx*dist[i], ty = py + dy*dist[i];
+        mp->At(tx,ty).Lit = 1;
+        Monster *mn = new Monster(ratID);
+        TMON(mn->tmID)->GrantGear(mn, mn->tmID, true);
+        TMON(mn->tmID)->PEvent(EV_BIRTH, mn, mn->tmID);
+        mn->PlaceAt(mp, tx, ty, true);
+        mn->Initialize(true);
+        mn->mHP = mn->cHP = 10000;
+        b[i].c = mn;
+    }
+    Monster *target = b[3].c;
+
+    /* A level-scaled damage effect (e.g. Eldritch Bolt's "(LEVEL_SCALED)
+       d8") reads Magic::CalcEffect's e.vCasterLev, which CalcEffect always
+       recomputes from e.EActor->CasterLev() -- an EventInfo field set by
+       the caller (as the earlier version of this probe tried) is
+       overwritten before the roll ever happens. Zero caster levels means
+       zero damage dice, and a genuine hit then looks identical to a miss.
+       Grant real spellcasting levels instead, the same way this probe
+       already grants Precise Shot for the phase-2 case. */
+    shooter->GainAbility(CA_SPELLCASTING, 10, 0, SS_PERM);
+
+    auto resetHP = [&]() {
+        for (int i = 0; i < 5; i++)
+            b[i].c->mHP = b[i].c->cHP = 10000;
+    };
+    /* close the "first casualty only" hole: report every creature that
+       lost hit points, and fail a case on MULTIPLE rather than silently
+       passing it on the first one found. */
+    auto whoWasHit = [&]() -> const char* {
+        int n = 0; const char *name = "none";
+        for (int i = 0; i < 5; i++)
+            if (b[i].c->cHP < 10000) { n++; name = b[i].name; }
+        return (n == 0) ? "none" : (n > 1) ? "MULTIPLE" : name;
+    };
+    /* touchDef is re-pinned on every call, not once before the loop:
+       TouchDef is real per-creature state, and something in the effect
+       pipeline (plausibly a post-damage CalcValues()) recomputes it from
+       the target's actual attributes after the first cast, silently
+       discarding an earlier pin. Measured: the first shot of an unpinned
+       run read the target's real TouchDef; every shot after read a
+       DIFFERENT, stable value -- never the pin. */
+    auto castOnce = [&](rID eID, int8 roll, int16 touchDef) {
+        resetHP();
+        target->TouchDef = touchDef;
+        LOFSetForcedRoll(roll);
+        EventInfo xe; xe.Clear();
+        xe.EActor     = shooter;
+        xe.EVictim    = target;
+        xe.eID        = eID;
+        xe.vRange     = 20;
+        xe.EMap       = mp;
+        /* EV_EFFECT, not EV_MAGIC_STRIKE: a real cast (Creature::Cast)
+           throws EV_EFFECT, which Magic::MagicEvent walks via
+           Magic::ABallBeamBolt and only then dispatches EV_MAGIC_STRIKE
+           per target from DoHits (below in this file). Casting straight
+           to EV_MAGIC_STRIKE would skip that walk entirely and could not
+           exercise the fix this phase makes to it. */
+        ReThrow(EV_EFFECT, xe);
+        LOFSetForcedRoll(0);
+    };
+
+    /* Calibration: an arbitrary forced roll against an arbitrary defence,
+       graded on nothing. Its only job is to learn the REAL vHit
+       Creature::Strike compares against vDef: Strike() adds its own
+       modifiers (range, actUnseen and the rest) on top of MagicStrike's
+       BAB kludge, so shooter->GetBAB() alone is not what a later roll must
+       be computed relative to. A bolt is cast through DoHits' own
+       per-target eCopy (below in this file), which ReThrow never copies
+       back to castOnce's xe, so LOFGetLastVHit() is read instead --
+       mirrors LineOfFireProbe's identical need for LOFLastVHit
+       (src/Fight.cpp), for the identical reason. */
+    extern int8 LOFGetLastVHit();
+    castOnce(eldritchID, 10, 30);
+    const int16 vHit = LOFGetLastVHit();
+
+    /* D is pinned relative to the calibrated vHit -- not to a fixed number
+       like the worked example's 10 -- so every band's forced roll
+       (total-vHit, total in D..D+11) stays inside the d20's 1-20 range
+       regardless of what this shooter's modifiers turn out to be. +6
+       centres that 13-wide span in the middle of the die, the same offset
+       LineOfFireProbe pins A_DEF to. */
+    const int16 D = vHit + 6;
+
+    int pass = 0, fail = 0;
+    auto checkCase = [&](const char *caseName, const char *expect) {
+        const char *got = whoWasHit();
+        const bool ok = !strcmp(got, expect);
+        Error("LOF_SPELL_PROBE: case=%s expected=%s got=%s %s",
+            caseName, expect, got, ok ? "PASS" : "FAIL");
+        if (ok) pass++; else fail++;
+    };
+    /* Bands 0 and 1 hold one creature apiece, so a real (unforced) save
+       roll would make these boundary cases flaky. Force the one member
+       present to fail -- position 1, the square's head -- so every case
+       here tests only the BAND the roll lands in; tryCaseSave below tests
+       the save walk itself. */
+    auto tryCase = [&](int16 total, const char *name, const char *expect) {
+        const int16 r = total - vHit;
+        if (r < 1 || r > 20) {
+            Error("LOF_SPELL_PROBE: case=%s INCONCLUSIVE -- forced roll %d "
+                "is outside 1-20 (vHit=%d)", name, (int)r, (int)vHit);
+            return;
+        }
+        LOFSetForcedSave(1);
+        castOnce(eldritchID, (int8)r, D);
+        LOFClearForcedSave();
+        checkCase(name, expect);
+    };
+
+    tryCase(D,    "near-lower",  "near");
+    tryCase(D+3,  "near-upper",  "near");
+    tryCase(D+4,  "far-lower",   "far");
+    tryCase(D+7,  "far-upper",   "far");
+    tryCase(D+8,  "cover-lower", "cover");
+    tryCase(D+11, "cover-upper", "cover");
+    tryCase(D-1,  "below-bare",  "none");
+
+    LOFSetForcedSave(1);
+    castOnce(eldritchID, 20, D);
+    LOFClearForcedSave();
+    checkCase("nat20", "target");
+
+    /* item 1 rework: the band names a square; a Reflex save inside it
+       decides who -- cover/target/extra share the band-2 square, in that
+       contents-chain order. */
+    auto tryCaseSave = [&](int16 total, int8 failAt, const char *name,
+            const char *expect) {
+        const int16 r = total - vHit;
+        if (r < 1 || r > 20) {
+            Error("LOF_SPELL_PROBE: case=%s INCONCLUSIVE -- forced roll %d "
+                "is outside 1-20 (vHit=%d)", name, (int)r, (int)vHit);
+            return;
+        }
+        LOFSetForcedSave(failAt);
+        castOnce(eldritchID, (int8)r, D);
+        LOFClearForcedSave();
+        checkCase(name, expect);
+    };
+    tryCaseSave(D+8, 1, "band2-first-fails",  "cover");
+    tryCaseSave(D+8, 2, "band2-second-fails", "extra");
+    tryCaseSave(D+8, 3, "band2-third-fails",  "target");
+    tryCaseSave(D+8, 0, "band2-all-save",     "none");
+
+    /* The save DC is 10+(total-D) -- confirm the probe's own logged DC at
+       two different bands. */
+    auto checkDC = [&](int16 total, const char *name) {
+        const int8 want = (int8)(10 + (total - D));
+        const int8 got = LOFGetLastSaveDC();
+        const bool ok = (want == got);
+        Error("LOF_SPELL_PROBE: case=%s-dc want=%d got=%d %s",
+            name, (int)want, (int)got, ok ? "PASS" : "FAIL");
+        if (ok) pass++; else fail++;
+    };
+    tryCaseSave(D,   1, "band0-dc-setup", "near");
+    checkDC(D, "band0");
+    tryCaseSave(D+8, 1, "band2-dc-setup", "cover");
+    checkDC(D+8, "band2");
+
+    /* defect 2 (must be RED before the fix in this brief): displacement is
+       a miss outright for a spell bolt exactly as it is for an arrow --
+       gate on e.isWildMiss, never on !e.isHit. A 100%-chance MISS_CHANCE
+       on the target must produce a clean miss whether the roll is in band
+       territory or high enough that the bolt would otherwise auto-hit
+       with no save. A literal natural 20 bypasses MISS_CHANCE by design
+       (Creature::Strike's own check is gated vRoll<20) and is confirmed
+       separately rather than asserted as this defect -- see the report. */
+    target->GainTempStati(MISS_CHANCE, target, 50, SS_MISC, 0, 100, 0);
+    tryCase(D+8,  "displaced-band-roll",      "none");
+    tryCase(D+12, "displaced-would-auto-hit", "none");
+    LOFSetForcedSave(1);
+    castOnce(eldritchID, 20, D);
+    LOFClearForcedSave();
+    checkCase("displaced-nat20-bypass", "target");
+    target->RemoveStati(MISS_CHANCE);
+
+    /* defect 4, RULED 2026-09-22: a natural 20 always hits, and Flawless
+       Dodge does not protect against one -- Creature::Strike's own gate
+       (src/Fight.cpp:5249) now excludes e.vRoll == 20 as well as requiring
+       e.isHit, so a nat 20 always lands on the target. Pin touchDef well
+       above this probe's other cases so touchDef+4N (N=3) exceeds
+       vHit+19, the highest total any NON-20 roll could produce here --
+       proving this is the natural-20 clause doing the work, not an
+       ordinary hit that happened to clear the inflated defence. */
+    target->GainPermStati(FLAWLESS_DODGE, NULL, SS_MISC, 1, 0);
+    target->GainPermStati(EXTRA_ABILITY, NULL, SS_MISC, CA_FLAWLESS_DODGE, 5);
+    castOnce(eldritchID, 20, vHit + 16);
+    checkCase("flawless-dodge-nat20", "target");
+
+    /* The real point of job 2, unchanged by the ruling above: an ORDINARY
+       hit -- reached by arithmetic, not the natural-20 clause -- is still
+       a clean miss outright when Flawless Dodge fires, leaving the whole
+       line alone. total here equals touchDef+4N exactly (the would-auto-
+       hit boundary), reached by a forced roll of D+12-vHit -- never 20 --
+       so :5249's nat-20 exclusion does not apply and Flawless Dodge fires
+       as it always did; total already >= e.vDef whenever it does, so the
+       band at the call site is excluded (see the comment at Magic.cpp
+       :1004) and nobody is struck. */
+    castOnce(eldritchID, (int8)(D + 12 - vHit), D);
+    checkCase("flawless-dodge-ordinary-hit", "none");
+    target->RemoveStati(FLAWLESS_DODGE);
+    target->RemoveStati(EXTRA_ABILITY, -1, CA_FLAWLESS_DODGE);
+
+    /* Magic Missile carries no EF_ATTACK: it rolls nothing, so it passes
+       every body in the line -- the defect this whole epic exists to fix
+       (inc-c4l4). */
+    resetHP();
+    { EventInfo xe; xe.Clear(); xe.EActor=shooter; xe.EVictim=target;
+      xe.eID=missileID; xe.vRange=20; xe.vCasterLev=10; xe.EMap=mp;
+      ReThrow(EV_EFFECT, xe); }
+    {
+        const bool allyOK = b[0].c->cHP==10000 && b[1].c->cHP==10000 &&
+            b[2].c->cHP==10000 && b[4].c->cHP==10000;
+        const bool targetOK = target->cHP < 10000;
+        const bool ok = allyOK && targetOK;
+        Error("LOF_SPELL_PROBE: case=unerring-missile near_hp=%d far_hp=%d "
+            "cover_hp=%d target_hp=%d extra_hp=%d %s",
+            (int)b[0].c->cHP, (int)b[1].c->cHP, (int)b[2].c->cHP,
+            (int)target->cHP, (int)b[4].c->cHP, ok ? "PASS" : "FAIL");
+        if (ok) pass++; else fail++;
+    }
+
+    /* A beam strikes everyone in the line by design (isMulti, unchanged by
+       this phase) -- confirm all five still take damage. */
+    resetHP();
+    { EventInfo xe; xe.Clear(); xe.EActor=shooter; xe.EVictim=target;
+      xe.eID=beamID; xe.vRange=20; xe.vCasterLev=10; xe.EMap=mp;
+      ReThrow(EV_EFFECT, xe); }
+    {
+        bool allHit = true;
+        for (int i = 0; i < 5; i++)
+            if (b[i].c->cHP == 10000)
+                allHit = false;
+        Error("LOF_SPELL_PROBE: case=beam-strikes-all near_hp=%d far_hp=%d "
+            "cover_hp=%d target_hp=%d extra_hp=%d %s",
+            (int)b[0].c->cHP, (int)b[1].c->cHP, (int)b[2].c->cHP,
+            (int)target->cHP, (int)b[4].c->cHP, allHit ? "PASS" : "FAIL");
+        if (allHit) pass++; else fail++;
+    }
+
+    /* item 4 rework: "A shot with no chosen creature", docs/specs/2026-09-
+       21-line-of-fire-spec.md, applied to a spell bolt exactly as
+       Creature::RAttack already applies it to an arrow -- fixing the
+       defect this epic exists to fix, a bolt aimed down a corridor
+       killing the first ally it met with certainty. Cast eldritchID at an
+       EMPTY square (isLoc, no EVictim/ETarget) so Magic::ABallBeamBolt's
+       own no-target walk runs. */
+    auto castLoc = [&](int16 tx, int16 ty, int8 roll, const char *caseName,
+            const char *expect) {
+        resetHP();
+        LOFSetForcedRoll(roll);
+        EventInfo xe; xe.Clear();
+        xe.EActor = shooter;
+        xe.eID    = eldritchID;
+        xe.vRange = 20;
+        xe.EMap   = mp;
+        xe.isLoc  = true;
+        xe.EXVal  = tx;
+        xe.EYVal  = ty;
+        ReThrow(EV_EFFECT, xe);
+        LOFSetForcedRoll(0);
+        const char *got = whoWasHit();
+        const bool ok = !strcmp(got, expect);
+        Error("LOF_SPELL_PROBE: case=%s roll=%d expected=%s got=%s %s",
+            caseName, (int)roll, expect, got, ok ? "PASS" : "FAIL");
+        if (ok) pass++; else fail++;
+    };
+
+    /* Take far, cover, target and extra off the map, leaving only "near"
+       on the line, so a bolt aimed past it sees exactly one creature.
+       Distance 3 (far's old square) is now empty and still a valid, in-
+       bounds, non-solid aim point. */
+    b[1].c->Remove(false);
+    b[2].c->Remove(false);
+    b[3].c->Remove(false);
+    b[4].c->Remove(false);
+    const int16 farX = px + dx*dist[1], farY = py + dy*dist[1];
+    /* Re-calibrate, graded on nothing: with far/cover/target/extra off the
+       map, "near" no longer gets whatever flanking bonus the original
+       (five-body) calibration measured, so vHit itself is a few points
+       lower here. One throwaway shot learns the real value for THIS
+       layout, the same reason the outer calibration shot exists at all. */
+    resetHP();
+    b[0].c->TouchDef = 30;
+    LOFSetForcedRoll(10);
+    { EventInfo xe; xe.Clear(); xe.EActor=shooter; xe.eID=eldritchID;
+      xe.vRange=20; xe.EMap=mp; xe.isLoc=true; xe.EXVal=farX; xe.EYVal=farY;
+      ReThrow(EV_EFFECT, xe); }
+    LOFSetForcedRoll(0);
+    const int16 aloneVHit = LOFGetLastVHit();
+    b[0].c->TouchDef = aloneVHit + 6;
+    // Boundary Brian corrected: the lone creature takes no penalty at all.
+    castLoc(farX, farY, (int8)6, "loc-lone-hit",  "near");
+    castLoc(farX, farY, (int8)5, "loc-lone-miss", "none");
+
+    /* Put far back for the multi-creature cases; cover/target/extra stay
+       off so their square (distance 4) is the empty aim point. near and
+       far get pinned to different TouchDefs so "first" and "second" are
+       distinct roll thresholds under the flat -4. */
+    b[1].c->PlaceAt(mp, farX, farY);
+    const int16 coverX = px + dx*dist[2], coverY = py + dy*dist[2];
+    b[0].c->TouchDef = vHit + 10; // near
+    b[1].c->TouchDef = vHit + 2;  // far
+    castLoc(coverX, coverY, (int8)14, "loc-multi-first",  "near");
+    castLoc(coverX, coverY, (int8)6,  "loc-multi-second", "far");
+    castLoc(coverX, coverY, (int8)1,  "loc-multi-none",   "none");
+
+    Error("LOF_SPELL_PROBE: RESULT pass=%d fail=%d", pass, fail);
+
+    LOFSetForcedRoll(0);
+    for (int i = 0; i < 5; i++)
+        b[i].c->Remove(true);
+    theGame->PlayMode = wasInPlay;
+}
+
 EvReturn Magic::ATouch(EventInfo &e)
   {
     if (e.MM & MM_PROJECT) {
