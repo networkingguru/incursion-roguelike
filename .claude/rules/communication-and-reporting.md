@@ -89,3 +89,28 @@ perform, or for unattended runs. Never drive his GUI while he is using the
 machine unless he asked for it.
 
 See `bd memories project-incursion-goals`.
+
+## feedback-one-paragraph-at-a-time
+ONE BLOCK OF PROSE, ONE PARAGRAPH MAXIMUM, THEN STOP AND WAIT. Brian set this
+on 2026-09-22, after a session drafted a seventy-line replacement for a god's
+player-facing description in one go.
+
+THE RULE. When you are writing prose he will have to approve -- a god's Desc,
+an item description, voice lines, help text, release notes, a message the
+player reads -- write ONE paragraph, hand it over, and WAIT for his feedback
+and guidance before writing the next one. Do not draft the whole piece. Do not
+draft "a first pass so you can see the shape". One paragraph.
+
+WHY. His words: "You write a whole bunch of stuff that needs fixing and it is a
+waste of fucking time and tokens. Correct process is one chunk at a time so we
+correct your tone and voice before you waste a whole bunch of time." A long
+draft in the wrong voice is not a draft with some problems in it; it is a whole
+piece to throw away, and he has to read all of it to tell you that.
+
+HOW TO APPLY. Write the paragraph. Say nothing about the paragraphs you intend
+to write afterwards. Wait. Fold his correction into the next one, so the voice
+converges instead of being re-litigated at the end. The same applies to a
+rewrite: one paragraph of it at a time.
+
+THIS DOES NOT APPLY to reports, analysis or answers to his questions, which are
+his to read once and act on. It applies to text that will BE the product.

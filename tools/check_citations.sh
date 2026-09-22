@@ -229,17 +229,19 @@ verdict() {
 CACHE_DIR=$(mktemp -d "${TMPDIR:-/tmp}/checkcit.XXXXXX") || exit 2
 trap 'rm -rf "$CACHE_DIR"' EXIT
 
-list_ref() {
+ref_list_file() {
     # Two statements, not one `local a=.. b=..$a..`: bash expands every word of
     # a single declaration before assigning any of them, so the second would
     # read an unset variable and abort the function under `set -u`.
     local ref=$1
     local cache="$CACHE_DIR/$(printf '%s' "$ref" | tr / _).list"
     [ -s "$cache" ] || git -C "$ROOT" ls-tree -r --name-only "$ref" > "$cache" 2>/dev/null
-    cat "$cache"
+    printf '%s\n' "$cache"
 }
 
-path_in_ref() { list_ref "$1" | grep -qxF "$2"; }
+list_ref() { cat "$(ref_list_file "$1")"; }
+
+path_in_ref() { grep -qxF "$2" "$(ref_list_file "$1")"; }
 
 # Resolve in two steps. First accept the token exactly as written when it is a
 # tracked path: equality cannot launder a wrong citation into a different file.
@@ -247,7 +249,7 @@ path_in_ref() { list_ref "$1" | grep -qxF "$2"; }
 # accepting the name only when exactly one file in the tree carries it.
 resolve_in_ref() {
     local ref=$1 base=$2 hits
-    if list_ref "$ref" | grep -qxF "$base"; then
+    if grep -qxF "$base" "$(ref_list_file "$ref")"; then
         printf '%s\n' "$base"
         return 0
     fi
@@ -293,7 +295,7 @@ read_declaration() {
     local doc=$1
     PRIMARY_REF=$UPSTREAM_REF
     SECONDARY_REF=$FALLBACK_REF
-    if head -n "$OURS_MARK_LINES" "$doc" | grep -qxF "$OURS_MARK"; then
+    if grep -qxF "$OURS_MARK" <<< "$(head -n "$OURS_MARK_LINES" "$doc")"; then
         if in_outgoing "$doc"; then
             # Hard error, not a silent ignore. docs/outgoing/ is what goes to
             # rmtew; a citation there that resolves only in our tree is exactly
@@ -526,7 +528,7 @@ check_document() {
                     fail "link names a ref this clone cannot resolve: $url_ref ($url)"
                     continue
                 fi
-                if list_ref "$url_ref" | grep -qE "^$(printf '%s' "$path" | sed 's/[.[\*^$]/\\&/g')(/|$)"; then
+                if grep -qE "^$(printf '%s' "$path" | sed 's/[.[\*^$]/\\&/g')(/|$)" "$(ref_list_file "$url_ref")"; then
                     printf 'ours     %s  present at %s\n' "$path" "${url_ref:0:10}"
                 else
                     fail "$path is not at $url_ref -- unpushed or misspelt (link: $url)"

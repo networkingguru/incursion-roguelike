@@ -33,18 +33,18 @@ run_keys() { # run_keys <keys> <seed> [allow-death]; S5 judges death itself
     out="$(INCURSION_BIN=./incursion-headless INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$keys" "$seed" 2>&1)"
     rc=$?
     run="$(echo "$out" | awk '/^run:/ {print $2}')"
-    if echo "$out" | grep -q 'NO GAMEPLAY'; then
+    if grep -q 'NO GAMEPLAY' <<< "$out"; then
         echo "FAIL: $keys measured nothing: NO GAMEPLAY" >&2
         echo "$out" >&2
         return 1
     fi
-    if echo "$out" | grep -q 'the key script looked for something\|gave up after'; then
+    if grep -q 'the key script looked for something\|gave up after' <<< "$out"; then
         echo "FAIL: $keys measured nothing: expected screen not reached" >&2
         echo "$out" >&2
         return 1
     fi
     if [ "$rc" != 0 ] || [ ! -d "$run/logs/screens" ] || { [ -z "$allow_death" ] &&
-        ! echo "$out" | grep -q '^death:      none$'; }; then
+        ! grep -q '^death:      none$' <<< "$out"; }; then
         echo "FAIL: $keys measured nothing: unsuccessful gameplay run" >&2
         echo "$out" >&2
         return 1

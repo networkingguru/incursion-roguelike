@@ -1,0 +1,112 @@
+# Phase 6 behaviour check for inc-30ps: Minor Drain becomes a touch spell.
+# Read by tools/check_minor_drain_touch.sh.
+#
+# WHAT "CANNOT BE CAST AT RANGE" MEANS HERE, AND WHY IT IS NOT DRIVEN LIVE.
+# Player::KY_CMD_MAGIC (src/Player.cpp) calls
+#   MyTerm->EffectPrompt(e, TEFF(e.eID)->ef.qval | ((MMFeats(sp) & MM_PROJECT) ? Q_DIR : 0))
+# and TextTerm::EffectPrompt (src/Term.cpp) opens with
+#   if (fl == 0 && ...) fl = TEFF(e.eID)->ef.qval;
+#   typ = fl & 0x000F; ... if (!typ) return true;
+# Minor Drain's qval is now empty and it is not a projected ability, so this
+# call is made with fl == 0 and returns true immediately: no prompt, no
+# target, no way to name a square or a distant creature. That is a direct
+# reading of the dispatch code, not something a key script can demonstrate
+# more convincingly than the absence of qval already does -- so
+# tools/check_line_of_fire_effects.sh's Minor Drain assertions (aval:
+# AR_TOUCH, no qval field) are the proof of "cannot be cast at range", and
+# this script proves the other half: the touch still delivers.
+#
+# WHY WIZARD MODE. No scripted walk can be relied on to find both a known
+# spell and an adjacent monster, so wizard mode supplies both, following the
+# pattern already proven in tools/keys/sanctuary-strike.keys:
+#   * "Learn Any Spell" (src/Debug.cpp:850) takes a typed name and sets
+#     SP_KNOWN|SP_PRIMAL|SP_INNATE. An innate spell costs no mana, so this
+#     needs no spellbook and no mana pool math -- irrelevant to what is being
+#     measured. It still dispatches through Player::CastSpell exactly like a
+#     normally-learned spell (EV_INVOKE instead of EV_CAST; both reach the
+#     same Magic::ATouch/MagicStrike machinery Player::CastSpell uses).
+#   * "Wizard Mode Switches" row 11, Freeze Monsters, stops the goblin doing
+#     anything of its own, so only the player's own touch attack moves HP.
+#   * "Monster Summoning" places a goblin at a KNOWN distance: TWO squares
+#     east (RIGHT RIGHT ENTER), deliberately out of melee reach, so casting
+#     while not adjacent has nothing it could touch.
+#
+# THE ORACLE is the game's own combat text. A touch-attack swing prints text
+# no ordinary unarmed punch does -- "you try to touch a <target>" -- because
+# it is resolved on the A_TUCH branch of Creature::RAttack (src/Fight.cpp),
+# which only exists while TOUCH_ATTACK is armed. That branch is reached only
+# once the caster is adjacent, so:
+#
+#   before-cast   goblin two squares east -- out of reach, nothing to touch
+#   after-cast    immediately after casting -- no prompt, no message, no
+#                 target: the touch is armed and nothing has been delivered
+#   touch-1..N    close the gap by one square, then bump-attack the goblin
+#                 once per dump, until the message names a touch outcome
+#                 other than a miss ("...but miss" is a real touch ATTEMPT
+#                 that did not land, and is retried; anything else -- landing
+#                 and dealing 1-4 points, or landing and killing an 8 HP
+#                 goblin outright -- is the spell actually firing)
+#
+# A landed touch proves the heal fired too, without needing to read it off
+# the status line (the caster starts and stays at full HP, so a 1-4 point
+# heal is invisible there): Minor Drain's only handler is
+#   On Event EV_MAGIC_HIT { EActor->cHP = min(...,EActor->cHP + e.vDmg); }
+# and Creature::RAttack's own touch-discharge code (src/Fight.cpp, the
+# "AfterEffects" block) calls this exact event, unconditionally, the moment
+# a touch attack lands -- there is no code path where the goblin takes the
+# spell's damage without this same line also running.
+#
+# A run against the PRE-FIX tree (aval: AR_BOLT, qval: Q_DIR|Q_TAR|Q_LOC)
+# does not reach after-cast cleanly: casting opens the "Select direction,
+# location or target:" prompt this script never answers, so @dump:after-cast
+# photographs that prompt instead of a normal map screen, and the run ends
+# with the prompt still open and none of the later dumps taken. That is the
+# RED failure tools/check_minor_drain_touch.sh reads.
+
+@include chargen-mage.keys
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+w
+@choose "Learn Any Spell"
+"Minor Drain"
+ENTER
+@dump:before-learn
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT RIGHT ENTER
+@dump:before-cast
+
+m
+@choose "Minor Drain"
+@dump:after-cast
+
+RIGHT
+@dump:closed-distance
+RIGHT
+@while "Confirm attack" y
+@dump:touch-1
+RIGHT
+@while "Confirm attack" y
+@dump:touch-2
+RIGHT
+@while "Confirm attack" y
+@dump:touch-3
+RIGHT
+@while "Confirm attack" y
+@dump:touch-4
+RIGHT
+@while "Confirm attack" y
+@dump:touch-5
+RIGHT
+@while "Confirm attack" y
+@dump:touch-6

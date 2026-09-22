@@ -1,0 +1,119 @@
+# Gameplay observation for inc-30ps: does a creature standing between the
+# player and the player's chosen target eat a Magic Missile cast at that
+# target, or does the missile reach the creature actually chosen?
+#
+# Run identically against the pre-epic tree (master, commit d228dd2) and the
+# inc-30ps branch tip, same seed, same options file, separate run dirs:
+#
+#   cd /Users/brianhill/Scripts/Incursion-baseline
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_RUN_DIR=logs/runs/lof-mm-before \
+#       tools/headless.sh docs/evidence/inc-30ps/lof-magic-missile.keys 1
+#
+#   cd /Users/brianhill/Scripts/Incursion-inc-30ps
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_RUN_DIR=logs/runs/lof-mm-after \
+#       tools/headless.sh docs/evidence/inc-30ps/lof-magic-missile.keys 1
+#
+# SETUP, all via wizard mode, following the pattern already proven in
+# tools/keys/minor-drain-touch.keys and tools/keys/school-focus.keys:
+#   * Freeze Monsters (Wizard Mode Switches row 11) stops either goblin
+#     acting on its own, so only the player's own cast moves HP.
+#   * Learn Any Spell grants Magic Missile as an innate spell (no spellbook,
+#     no mana-pool math needed).
+#   * Monster Summoning places a goblin ONE square east of the player, then
+#     Make Player Master of Monster converts that specific goblin (the only
+#     candidate onscreen at that moment, so the RIGHT ENTER pick is
+#     unambiguous) into the player's own companion -- an ally, not a bystander.
+#   * A second Monster Summoning places a second, still-hostile goblin TWO
+#     squares east of the player -- directly behind the ally, on the same
+#     line.
+#
+# TARGETING. Magic Missile's own qval is bare Q_TAR (lib/wspells.irh), so
+# casting it opens the ring-based target cursor (src/Term.cpp EffectPrompt,
+# typ == Q_TAR branch), not a free-moving location cursor. The cursor starts
+# on the player; the first RIGHT press aims strictly east and lands on the
+# NEAREST candidate in that direction (the ally, one square away); the second
+# RIGHT press advances the cursor along the ring to the next candidate on the
+# same bearing, which BearingCompare (src/Term.cpp) orders by distance when
+# two things share a bearing -- so it lands on the hostile goblin two squares
+# away. This was confirmed empirically before writing this script: pressing
+# 'w' at each cursor position (the wizard "dump whatever the cursor is on"
+# feature, src/Term.cpp:2361-2388) printed X:83 Y:13 after one RIGHT and
+# X:84 Y:13 after two, i.e. the ally then the hostile, on a player standing
+# at X:82 Y:13. ENTER at that point fires at the hostile goblin -- the
+# creature actually chosen, with the ally standing in the way.
+#
+# THE ORACLE is each creature's own HP line from Player::BrowseThings /
+# Creature::Dump ("Examine Nearby Things" in the wizard menu), read before and
+# after the cast. It cycles through nearby things with RIGHT and prints the
+# raw cHP/mHP field, along with the thing's X/Y, so the two goblins are
+# identified by position rather than by list order.
+#
+# A run against the PRE-EPIC tree is expected to show the ally's HP fall and
+# the hostile's HP untouched -- the ally, one square closer, eats the shot
+# meant for the creature the player actually selected. A run against the
+# branch is expected to show the reverse: the ally untouched, the hostile
+# struck.
+
+@include ../../../tools/keys/chargen-mage.keys
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+w
+@choose "Learn Any Spell"
+"Magic Missile"
+ENTER
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+@dump:ally-summoned
+
+w
+@choose "Make Player Master of Monster"
+RIGHT ENTER
+@dump:ally-converted
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT RIGHT ENTER
+@dump:hostile-summoned
+
+w
+@choose "Examine Nearby Things"
+@dump:before-player
+RIGHT
+@dump:before-1
+RIGHT
+@dump:before-2
+ESC
+
+m
+@choose "Magic Missile"
+RIGHT
+RIGHT
+ENTER
+@while "more --" SPACE
+@dump:after-cast
+
+w
+@choose "Examine Nearby Things"
+@dump:after-player
+RIGHT
+@dump:after-1
+RIGHT
+@dump:after-2
+ESC
+
+@quit

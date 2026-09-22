@@ -3088,13 +3088,12 @@ and EA_BLAST
 
 Effect "Venom of Khasrach" : EA_BLAST
   { SC_EVO; Base: SP_EASY; Level: 6; aval: AR_BOLT; qval: Q_DIR|Q_TAR;
-    xval: AD_ACID; lval: 4; sval: REF partial; pval: (LEVEL_1PER1)d10;
-    Purpose: EP_ATTACK; cval: EMERALD;
+    xval: AD_ACID; lval: 4; pval: (LEVEL_1PER1)d10;
+    Purpose: EP_ATTACK; cval: EMERALD; Flags: EF_ATTACK;
     Desc: "The most favoured champions of Khasrach can spit a jet of acid --
       the metaphorical personification of Khasrach's rage -- at their
-      enemies, inflicting 1d10 points of acid damage per character level
-      and allowing the victim a saving throw for half damage. The cost is
-      two fatigue points."; 
+      enemies via a ranged touch attack, inflicting 1d10 points of acid
+      damage per character level. The cost is two fatigue points.";
     On Event EV_EFFECT {
       if (!EActor->LoseFatigue(2,true))
         return ABORT;

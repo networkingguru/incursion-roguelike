@@ -1874,14 +1874,13 @@ AI_EYES Effect "Precision;eyes" : EA_GRANT
    Extra 0, Save -2 == -2. */  
 AI_WAND Effect "Fire Bolts" : EA_BLAST
   { SC_EVO; Cost: 3; xval: AD_FIRE; pval: (PLUS_2PER1)d6;
-    sval: REF; qval: Q_DIR | Q_TAR | Q_LOC; aval: AR_BOLT; 
-    Flags: EF_NEEDS_PLUS, EF_AUTOID; Purpose: EP_ATTACK; 
+    qval: Q_DIR | Q_TAR | Q_LOC; aval: AR_BOLT;
+    Flags: EF_NEEDS_PLUS, EF_AUTOID, EF_ATTACK; Purpose: EP_ATTACK;
     cval: RED; On Event MSG_BLASTNAME "fire bolt"; 
     Level: PLUS_1PER1; 
     Desc: "This wand produces a flaming bolt that strikes a
-      single target for 2d6 fire damage per plus. A successful
-      Reflex saving throw represents dodging the bolt, and
-      completely negates the damage."; }
+      single target for 2d6 fire damage per plus via a ranged
+      touch attack."; }
 
 /* Area +1, Damage 0, Mana 0, DType 0,
    Extra +2, Save 0 == +1. */ 
@@ -2180,16 +2179,16 @@ AI_WAND Effect "Acid;wand" : EA_BLAST
 AI_WAND Effect "Thunderbolts" : EA_BLAST
   {
     SC_EVO; Cost: 5; Purpose: EP_ATTACK; qval: Q_DIR|Q_TAR|Q_LOC;
-    aval: AR_BOLT; cval: YELLOW; Flags: EF_NEEDS_PLUS, EF_AUTOID;
-    sval: REF; xval: AD_ELEC; pval: (PLUS_2PER1)d6;
+    aval: AR_BOLT; cval: YELLOW; Flags: EF_NEEDS_PLUS, EF_AUTOID, EF_ATTACK;
+    xval: AD_ELEC; pval: (PLUS_2PER1)d6;
     Level: PLUS_3PER1_ADD1;
     Desc: "This wand fires a brilliant stroke of lightning about a
       meter long that arcs across space to strike a single target
-      with a terrible thunderclap, inflicting 2d6 points of electrical
-      damage and 1d6 points of sonic damage for every plus the wand
-      possesses. A Reflex save indicates dodging the bolt utterly,
-      but if a target is struck, the must attempt a second Fortitude
-      save or be left stunned for 1d4+1 rounds."; }
+      via a ranged touch attack with a terrible thunderclap, inflicting
+      2d6 points of electrical damage and 1d6 points of sonic damage
+      for every plus the wand possesses. If the target is struck, they
+      must attempt a Fortitude save or be left stunned for 1d4+1
+      rounds."; }
 and EA_BLAST 
   { xval: AD_SONI; pval: (PLUS_1PER1)d6;
     On Event 
@@ -2354,8 +2353,8 @@ AI_WAND Effect "Soul Flaying" : EA_BLAST
 AI_WAND Effect "Striking;wand" : EA_BLAST
   {
     SC_EVO; Cost: 3; Purpose: EP_ATTACK; qval: Q_TAR|Q_DIR|Q_LOC;
-    aval: AR_BOLT; cval: WHITE; Flags: EF_NEEDS_PLUS, EF_AUTOID;
-    sval: REF partial; xval: AD_BLUNT; pval: (PLUS_2PER1)d10;
+    aval: AR_BOLT; cval: WHITE; Flags: EF_NEEDS_PLUS, EF_AUTOID, EF_ATTACK;
+    xval: AD_BLUNT; pval: (PLUS_2PER1)d10;
     Level: PLUS_3PER1_ADD1; 
     On Event
       MSG_BLASTNAME
@@ -2380,6 +2379,12 @@ AI_WAND Effect "Striking;wand" : EA_BLAST
       // (lib/abilities.irh), whose AD_KNOC rider is aval: AR_BOLT with the
       // same `efNum == 1 && e.Resist` handler. Tier Traced; inc-tek.8.8 /
       // PA-08-F72; not sent.
+      // inc-30ps: the primary block's own sval is gone -- damage is now an
+      // attack roll, not a save ("Save -> attack roll", line-of-fire spec).
+      // The knockback rider's sval: REF, below, no longer matches a primary
+      // sval, so it no longer shares a roll with anything; it resolves on
+      // its own, independent Reflex save, and e.Resist at efNum 1 reads
+      // that save alone. The handler needs no change for this.
       PRE(EV_MAGIC_HIT) {
         if (e.efNum == 1 && e.Resist)
           return DONE;
@@ -2387,8 +2392,8 @@ AI_WAND Effect "Striking;wand" : EA_BLAST
         };
     Desc: "This wand fires a telekinetic bolt which strikes a
       single target for 2d10 points of blunt damage per magical
-      plus of the wand. A Reflex save halves the damage, but on
-      failure the target will also be knocked back 1d4 + [magical
+      plus of the wand via a ranged touch attack. On a failed
+      Reflex save the target is also knocked back 1d4 + [magical
       plus] squares.";
   }
 and EA_BLAST 
@@ -4697,9 +4702,10 @@ AI_RING Effect "Regeneration" : EA_GRANT
 AI_RING Effect "the Ram" : EA_BLAST
   { SC_EVO; Cost: 5; xval: AD_BLUNT; pval:(PLUS_1PER1)d10; cval: WHITE;
     aval: AR_BOLT; qval:Q_DIR | Q_TAR; sval: REF Partial; Flags: EF_ACTIVATE; 
-    Purpose: EP_ATTACK; Level: PLUS_2PER1; Flags: EF_NEEDS_PLUS, EF_3PERDAY;
+    Purpose: EP_ATTACK; Level: PLUS_2PER1; Flags: EF_NEEDS_PLUS, EF_3PERDAY, EF_ATTACK;
     Desc: "This ring can project a blast of concussive force shaped vaguely
-      like a ghostly ram's head when activated, inflicting 1d10 points of
+      like a ghostly ram's head when activated. A ranged touch attack is
+      required to strike the target; on a hit it inflicts 1d10 points of
       blunt damage per magical plus. The bolt may also knock its victim
       back, and if the victim fails a Reflex save for half damage, it is
       also stunned. This effect can be used three times per day.";  }
@@ -7366,7 +7372,7 @@ and EA_GRANT
 and EA_GENERIC { }
 
 0 Effect "tongue of flame" : EA_BLAST
-  { xval: AD_FIRE; pval: 4d8; 
+  { xval: AD_FIRE; pval: 4d8; Flags: EF_ATTACK;
     aval: AR_RAY; cval: PINK; qval: Q_TAR;
     On Event POST(EV_MAGIC_HIT) {
       int16 dr;

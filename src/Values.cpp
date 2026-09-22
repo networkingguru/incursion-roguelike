@@ -252,8 +252,40 @@ static int16 NaturalSpeedFloor(Creature *c) {
     return NATURAL_SPD_FLOOR;
     }
 
-int8 Creature::AttrAdj[ATTR_LAST][BONUS_LAST]; 
+int8 Creature::AttrAdj[ATTR_LAST][BONUS_LAST];
 Item *Creature::missileWep, *Creature::thrownWep, *Creature::offhandWep, *Creature::meleeWep;
+
+/* Probe for the phase-1 touch defence (inc-30ps). Set INCURSION_TOUCHDEF_PROBE
+   and every real (non-KnownOnly) CalcValues() on the player writes one line to
+   logs/touchdef.log naming A_DEF, TouchDef and the three subtracted terms, so
+   a scripted session can be checked arithmetically. Follows ArmourProbeNote
+   (src/Fight.cpp) rather than inventing a second way of doing this. Off and
+   free otherwise.
+
+   tools/check_touch_defence.sh asserts on these. Delete with that check. */
+static void TouchDefProbeNote(Creature *c) {
+    static int on = -1;
+    static FILE *f = NULL;
+    char path[1024];
+
+    if (on == -1)
+        on = getenv("INCURSION_TOUCHDEF_PROBE") ? 1 : 0;
+    if (!on || !c->isPlayer())
+        return;
+    if (!f) {
+        snprintf(path, sizeof(path), "%slogs/touchdef.log",
+            (const char*)T1->IncursionDirectory);
+        f = fopen(path, "a");
+        if (!f)
+            return;
+    }
+    fprintf(f, "def %d touchdef %d nat %d arm %d shield %d\n",
+        (int)c->Attr[A_DEF], (int)c->TouchDef,
+        max(0,(int)Creature::AttrAdj[A_DEF][BONUS_NATURAL]),
+        max(0,(int)Creature::AttrAdj[A_DEF][BONUS_ARMOUR]),
+        max(0,(int)Creature::AttrAdj[A_DEF][BONUS_SHIELD]));
+    fflush(f);
+}
 
 void Creature::CalcValues(bool KnownOnly, Item *thrown) {
 #define XMod(a) (KnownOnly ? KMod(a) : Mod(a))
@@ -1489,9 +1521,18 @@ Restart:
                     }
             }
 
-            thisc->KAttr[A_CDEF] = thisc->KAttr[A_DEF] - 
+            thisc->KAttr[A_CDEF] = thisc->KAttr[A_DEF] -
                 (max(0,AttrAdj[A_DEF][BONUS_WEAPON]) + max(0,AttrAdj[A_DEF][BONUS_INSIGHT]) + max(0,AttrAdj[A_DEF][BONUS_DODGE]) + (HasFeat(FT_COMBAT_CASTING) ? 2 : 4));
-        } 
+
+            /* inc-30ps: TouchDef has no KAttr twin -- it is a single member,
+               not a perceived/real pair -- and nothing reads a PERCEIVED
+               touch defence; attack resolution always wants the real value.
+               So this KnownOnly branch must not write it, or a character
+               sheet view (CalcValues(true), src/Sheet.cpp:22) leaves
+               TouchDef holding the perceived A_DEF until the next real
+               recalculation, and a ranged touch attack rolls against the
+               wrong number meanwhile. See the real write below. */
+        }
     } else {
         for(i=0; i!=ATTR_LAST; i++) {
             Attr[i] = 0;
@@ -1525,7 +1566,11 @@ Restart:
 
             Attr[A_CDEF] = Attr[A_DEF] -
                 (max(0,AttrAdj[A_DEF][BONUS_WEAPON]) + max(0,AttrAdj[A_DEF][BONUS_INSIGHT]) + max(0,AttrAdj[A_DEF][BONUS_DODGE]) + (HasFeat(FT_COMBAT_CASTING) ? 2 : 4));
+
+            TouchDef = Attr[A_DEF] -
+                (max(0,AttrAdj[A_DEF][BONUS_ARMOUR]) + max(0,AttrAdj[A_DEF][BONUS_SHIELD]));
         }
+        TouchDefProbeNote(this);
     }
 
     if (theGame->InPlay() && !KnownOnly) {

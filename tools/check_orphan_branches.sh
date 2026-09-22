@@ -63,7 +63,7 @@ upstream-targetsort-handles
 "
 
 is_grandfathered() {
-    printf '%s\n' $GRANDFATHERED | grep -qx -- "$1"
+    grep -qx -- "$1" <<< "$GRANDFATHERED"
 }
 
 # Does a worktree still hold this branch? This is what separates "somebody is
@@ -72,12 +72,11 @@ is_grandfathered() {
 # work was merged, once master moves past both. tools/finish_bead.sh deletes
 # the branch and the worktree together, so one without the other is the tell.
 has_worktree() {
-    git -C "$ROOT" worktree list --porcelain \
-        | grep -qx "branch refs/heads/$1"
+    grep -qx "branch refs/heads/$1" <<< "$(git -C "$ROOT" worktree list --porcelain)"
 }
 
 is_bead_id() {
-    printf '%s' "$1" | grep -Eq '^inc-[a-z0-9]+(\.[0-9]+)?$'
+    grep -Eq '^inc-[a-z0-9]+(\.[0-9]+)?$' <<< "$1"
 }
 
 bead_status() {
@@ -146,7 +145,7 @@ printf '%-30s %-10s %-9s %s\n' "------" "----" "---" "-------"
 
 while read -r branch; do
     [ -n "$branch" ] || continue
-    printf '%s' "$branch" | grep -Eq "$EXEMPT_PATTERN" && continue
+    grep -Eq "$EXEMPT_PATTERN" <<< "$branch" && continue
 
     age="$(git -C "$ROOT" log -1 --format='%cr' "$branch" 2>/dev/null \
            | sed 's/ ago//; s/ minutes*/m/; s/ hours*/h/; s/ days*/d/; s/ weeks*/w/; s/ months*/mo/')"

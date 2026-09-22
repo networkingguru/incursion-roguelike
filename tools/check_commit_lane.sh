@@ -51,12 +51,12 @@ judge() {
     case "$subject" in
         "Merge "*|"Revert "*|fixup\!*|squash\!*|amend\!*) return 0 ;;
     esac
-    if ! printf '%s' "$subject" | grep -qE "^($LANES): ."; then
+    if ! grep -qE "^($LANES): ." <<< "$subject"; then
         REASON="no lane"
         return 1
     fi
-    if printf '%s' "$subject" | grep -qE '^rules: '; then
-        if ! printf '%s' "$body" | grep -qE 'inc-[a-z0-9]+(\.[0-9]+)*'; then
+    if grep -qE '^rules: ' <<< "$subject"; then
+        if ! grep -qE 'inc-[a-z0-9]+(\.[0-9]+)*' <<< "$body"; then
             REASON="rules: with no design bead"
             return 1
         fi
@@ -117,7 +117,7 @@ load_exempt() {
 
 is_exempt() {
     [ -n "$EXEMPT" ] || return 1
-    printf '%s' "$EXEMPT" | grep -qx "$1"
+    grep -qx "$1" <<< "$EXEMPT"
 }
 
 sweep() {

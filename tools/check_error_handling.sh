@@ -29,23 +29,26 @@ FAILED=0
 fail() { echo "FAIL: $1"; FAILED=1; }
 
 # 1. No unbounded writes into the small prompt buffer.
-if grep -n "sprintf(__buff2" src/*.cpp | grep -v "snprintf(__buff2" | grep -q .; then
+hits="$(grep -n "sprintf(__buff2" src/*.cpp | grep -v "snprintf(__buff2")"
+if [ -n "$hits" ]; then
     echo "--- offending lines ---"
-    grep -n "sprintf(__buff2" src/*.cpp | grep -v "snprintf(__buff2"
+    printf '%s\n' "$hits"
     fail "sprintf into __buff2 (80 bytes) can overflow; use snprintf"
 fi
 
 # 2. No unbounded writes into the message buffer.
-if grep -n "vsprintf(__buffer" src/*.cpp | grep -v "vsnprintf(__buffer" | grep -q .; then
+hits="$(grep -n "vsprintf(__buffer" src/*.cpp | grep -v "vsnprintf(__buffer")"
+if [ -n "$hits" ]; then
     echo "--- offending lines ---"
-    grep -n "vsprintf(__buffer" src/*.cpp | grep -v "vsnprintf(__buffer"
+    printf '%s\n' "$hits"
     fail "vsprintf into __buffer is unbounded; use vsnprintf"
 fi
 
 # 3. No caller-controlled format strings.
-if grep -nE "\bprintf\(__buffer\)" src/*.cpp | grep -q .; then
+hits="$(grep -nE "\bprintf\(__buffer\)" src/*.cpp)"
+if [ -n "$hits" ]; then
     echo "--- offending lines ---"
-    grep -nE "\bprintf\(__buffer\)" src/*.cpp
+    printf '%s\n' "$hits"
     fail "printf(__buffer) treats the message as a format string"
 fi
 

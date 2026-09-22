@@ -68,7 +68,7 @@ if [ -z "$LONGEST" ] || [ "$LONGEST" -eq 0 ]; then
     exit 2
 fi
 
-if ! ls "$DUMPDIR" 2>/dev/null | grep -q "^stillusable\.txt$"; then
+if ! grep -q "^stillusable\.txt$" <<< "$(ls "$DUMPDIR" 2>/dev/null)"; then
     echo "FAIL: the second, ordinary-length dump ('stillusable.txt') is"
     echo "      missing -- the prompt did not stay usable after the"
     echo "      overflowing one."

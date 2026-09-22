@@ -371,7 +371,7 @@ H
                VIRTUAL_OVERRIDE_MIN_CLASSES="${4:-1}" VIRTUAL_OVERRIDE_MIN_COMPARED=1 \
                "$SELF" 2>&1)"
         rc=$?
-        if [ "$rc" = "$1" ] && printf '%s' "$out" | grep -qF -- "$2"; then
+        if [ "$rc" = "$1" ] && grep -qF -- "$2" <<< "$out"; then
             printf '  ok    %s\n' "$3"
         else
             printf '  FAIL  %s (exit %s, wanted %s and "%s")\n' "$3" "$rc" "$1" "$2"

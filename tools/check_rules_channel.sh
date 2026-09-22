@@ -159,7 +159,7 @@ JSON
     # match was read as "not found". Capturing the text first removes the
     # pipeline pipefail was watching.
     big_out="$(check_hooks_budget "$tmp/big/.claude/settings.json" "$tmp/big" 2>&1)"
-    if printf '%s' "$big_out" | grep -q "over the $CHAR_BUDGET budget"; then
+    if grep -q "over the $CHAR_BUDGET budget" <<< "$big_out"; then
         echo "  ok    an oversized hook is caught"
     else
         echo "  SELFTEST FAIL: an oversized hook was not caught"
