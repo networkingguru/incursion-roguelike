@@ -1008,7 +1008,7 @@ Wizard Spell "Spook" : EA_INFLICT
 
 Wizard / Scroll Spell "Force Bolt" : EA_BLAST
   { SC_EVO|SC_FORCE; Base: SP_MEDIUM; Cost: 4; Level: 1; qval: Q_DIR | Q_TAR;
-    Purpose: EP_ATTACK (VS_GENERAL); cval: EMERALD;
+    Purpose: EP_ATTACK (VS_GENERAL); cval: EMERALD; Flags: EF_ATTACK;
     xval: AD_KNOC; pval: 1d4;
     sval: REF partial; aval: AR_BOLT; }
   and EA_BLAST
@@ -1503,10 +1503,10 @@ Wizard / Scroll Spell "Minor Drain" : EA_BLAST
   { SC_NEC; Base: SP_MEDIUM; Cost: 1; Level: 1; xval: AD_NECR; 
     Purpose: EP_ATTACK | EP_FIX_TROUBLE (TROUBLE_INJURY); cval: WHITE;
     pval: 1d4; sval: NOSAVE; 
-    qval: Q_DIR|Q_TAR|Q_LOC; aval: AR_BOLT; 
-    Desc: "With this spell, the wizard drains the life force from a target
-    and adds it to his own. The target creature suffers 1-4 damage, while
-    the wizard gains 1-4 hit points. "; 
+    aval: AR_TOUCH;
+    Desc: "With this spell, the wizard drains the life force from a creature
+    he touches and adds it to his own. The target creature suffers 1-4
+    damage, while the wizard gains 1-4 hit points. ";
     On Event EV_MAGIC_HIT {
       EActor->cHP = min(EActor->mHP+EActor->GetAttr(A_THP),EActor->cHP + e.vDmg); 
       return NOTHING; 
@@ -1539,15 +1539,15 @@ Wizard / Scroll Spell "Minor Drain" : EA_BLAST
   }
 
 Effect "Chill Blood" : EA_BLAST
-  { SC_NEC|SC_COLD; Base: SP_MEDIUM; Cost: 4; Level: 1; sval: REF partial;
+  { SC_NEC|SC_COLD; Base: SP_MEDIUM; Cost: 4; Level: 1;
     xval: AD_COLD; pval: (LEVEL_SCALED)d4+(LEVEL_SCALED); Purpose: EP_ATTACK;
     aval: AR_BOLT; qval: Q_DIR | Q_TAR; cval: COL_NECRO; 
-    Flags: EF_LIM_MTYPE, EF_HALF_UNTYPED; tval: MA_HAS_BLOOD;
+    Flags: EF_LIM_MTYPE, EF_HALF_UNTYPED, EF_ATTACK; tval: MA_HAS_BLOOD;
     Desc: "A coruscating black bolt of negative energy is created by this
-    spell. A small amount of the victim's blood suddenly freezes in its
-    veins, causing pain and discomfort. It deals 1d4+1 points of damage per
-    caster level and stuns the target for one round. A subject succeeding
-    in a Reflex save suffers half normal damage and is not stunned. This
+    spell, requiring a ranged touch attack to strike the target. A small
+    amount of the victim's blood suddenly freezes in its veins, causing
+    pain and discomfort. It deals 1d4+1 points of damage per caster level
+    and stuns the target for one round unless a Reflex save is made. This
     spell may only be cast on victims that have blood. Half of the damage
     is cold damage and half of it is untyped and may not be resisted.";
   }
@@ -2743,7 +2743,7 @@ Wizard Spell "Scorcher" : EA_BLAST
 
 Wizard Spell "Acid Arrow" : EA_BLAST
   { SC_EVO; Base: SP_HARD; Cost: 4; Level: 2; Purpose: EP_ATTACK;
-    xval: AD_ACID; pval: 2d4; Flags: EF_SHOWNAME; 
+    xval: AD_ACID; pval: 2d4; Flags: EF_SHOWNAME, EF_ATTACK;
     aval: AR_BOLT; qval: Q_DIR | Q_TAR; cval: GREEN;
     Desc: "A magical arrow of acid springs from your hand and speeds to its
     target. You must succeed on a ranged touch attack to hit your target.
@@ -4633,12 +4633,12 @@ Effect "Flame Arrow;augment" : EA_GENERIC
 
 Wizard  Spell "Icelance" : EA_BLAST
   { SC_EVO|SC_COLD; Base: SP_MEDIUM; Cost: 6; Level: 3; sval: NOSAVE;
-    xval: AD_COLD; pval: 5d6; Purpose: EP_ATTACK;
+    xval: AD_COLD; pval: 5d6; Purpose: EP_ATTACK; Flags: EF_ATTACK;
     aval: AR_BOLT; qval: Q_DIR | Q_TAR; cval: COL_COLD; 
     Desc: "This spell fires a magical lance of ice at a target of the caster's
-    choosing.  It automatically hits, inflicting 5-30 points of damage and
-    forcing the target to make a Fortitude save or be stunned for 1-4
-    rounds.";
+    choosing.  A successful ranged touch attack inflicts 5-30 points of
+    damage and forces the target to make a Fortitude save or be stunned for
+    1-4 rounds.";
   }
   and EA_INFLICT
   { xval: STUNNED; sval: FORT; aval: AR_BOLT; flags: EF_DSHORT; }
@@ -7874,11 +7874,11 @@ Wizard Spell "Telekinesis" : EA_GRANT
     Desc: "__This spell can be enacted in one of two
       forms, as chosen when the spell is cast:\n
       __<9>Violent Thrust:<1> This form of Telekinesis
-      targets a single creature of your choice,
-      causing them to be knocked down and back
-      up to one square per caster level and to
-      suffer 1d4 points of blunt damage for
-      every caster level, scaled after 10th.\n
+      targets a single creature of your choice. You must
+      succeed on a ranged touch attack to strike them; on a
+      hit, they are knocked down and back up to one square
+      per caster level and suffer 1d4 points of blunt damage
+      for every caster level, scaled after 10th.\n
       __<9>Sustained Force:<1> This version of the
       spell allows you to exert force at a range
       of 10 feet per caster level. You can use
@@ -7907,7 +7907,7 @@ Wizard Spell "Telekinesis" : EA_GRANT
   
 Effect "Telekinesis;thrust" : EA_BLAST
   { xval: AD_BLUNT; pval: (LEVEL_SCALED)d4; Purpose: EP_ATTACK;
-    aval: AR_BOLT; cval: WHITE; }
+    aval: AR_BOLT; cval: WHITE; Flags: EF_ATTACK; }
 and EA_BLAST
   { xval: AD_KNOC; pval: LEVEL_SCALED; }
 
@@ -8583,13 +8583,14 @@ Wizard / Scroll Spell "Disintegrate" : EA_BLAST
   { SC_ARC; Base: SP_MEDIUM; Cost: 22; Level: 6; 
     Purpose: EP_ATTACK; qval: Q_TAR|Q_INV|Q_LOC;
     sval: FORT; aval: AR_RAY; cval: GREEN; pval: 20d6; 
-    xval: AD_NORM; Flags: EF_AFFECTS_ITEMS, EF_NO_BONUS_DMG;
+    xval: AD_NORM; Flags: EF_AFFECTS_ITEMS, EF_NO_BONUS_DMG, EF_ATTACK;
     Desc: "This terrifying spell creates a wan green ray that
-      utterly destroys anything it touches, erasing up to 10 
+      utterly destroys anything it touches, erasing up to 10
       cubic feet of matter and leaving behind only a tiny
       trace remnant of grey dust. If a creature, or an item
       in a creature's possession, is the target of this spell,
-      the victim receives a Fortitude save to negate the
+      you must succeed on a ranged touch attack to strike it, and
+      the victim then receives a Fortitude save to negate the
       effect. Since disintegration utterly destroys the target,
       no body remains for resurrection.\n
       __There are some other defenses against disintegration,

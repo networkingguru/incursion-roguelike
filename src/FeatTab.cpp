@@ -1631,10 +1631,11 @@ struct FeatInfoStruct FeatInfo[] = {
     "Your Speed when using a ranged weapon is increased by 25%.",
     {{{FP_FEAT,FT_FAR_SHOT,0},{FP_FEAT,FT_POINT_BLANK_SHOT,0}}}},
   { FT_PRECISE_SHOT, FF_WARRIOR, "Precise Shot",
-    "When you shoot at a target and there is another creature in "
-      "the line of fire, there is only a 25~ chance of the game rolling "
-      "your attack against that creature to see if you hit it instead "
-      "of your target, instead of the normal 75~ chance.",
+    "Normally, every creature standing in the line of fire between you "
+      "and your target gives your attack a -4 penalty, and a bad enough "
+      "miss can strike one of them instead of your target. You take none "
+      "of that penalty, and your shot can never hit anyone but your "
+      "target.",
     {{{FP_FEAT,FT_POINT_BLANK_SHOT}}}},
   { FT_AIMED_SHOT, FF_WARRIOR, "Aimed Shot",
     "You can put an arrow exactly where you want it. When you attack with a "

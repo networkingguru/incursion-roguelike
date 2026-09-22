@@ -17,8 +17,15 @@ class Magic
       EvReturn ABallBeamBolt(EventInfo &e);
 
       // used by the monster AI ...
-      void PredictVictimsOfBallBeamBolt(EventInfo &e, 
-          bool isBeam, bool isBall, bool isChain, Creature * victim[], int16 & numVic);
+      // manageOverlay (inc-30ps rework, item 7): true (default) toggles the
+      // map Overlay itself, as this function always has; MagicStrike's own
+      // reentrant call (inside ABallBeamBolt's already-active overlay,
+      // mid-animation) passes false so it does not wipe the glyph buffer
+      // the outer call is still drawing into. This function draws no
+      // glyphs of its own, so skipping the toggle changes nothing else.
+      void PredictVictimsOfBallBeamBolt(EventInfo &e,
+          bool isBeam, bool isBall, bool isChain, Creature * victim[],
+          int16 & numVic, bool manageOverlay = true);
 
 
       EvReturn ATouch(EventInfo &e);

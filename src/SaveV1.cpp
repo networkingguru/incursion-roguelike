@@ -280,26 +280,43 @@ static const SchemaPad ItemPads[] = {
 /* Creature chain on arm64/LP64: vptr 0-8 and the pad after Object::Type
    10-12, both shared with the Item row above; pad after Creature::cFP
    1558-1560; pad after Creature::concentUsed 1577-1578; tail pad after
-   Creature::NatureSight 1677-1680. ts covers 128-1540 whole, because the
-   FIELD_OBJ embed marks the range and so takes TargetSystem's own interior
-   padding with it. */
+   Creature::LightAverseWasBright 1679-1680. ts covers 128-1540 whole,
+   because the FIELD_OBJ embed marks the range and so takes TargetSystem's
+   own interior padding with it.
+
+   inc-30ps phase 1 moved this tail pad's start from 1677 to 1679: TouchDef
+   (FIELD_I16 286) was declared right after Attr[ATTR_LAST], which shifted
+   every later member of Creature forward by its own 2 bytes, WITHOUT
+   growing sizeof(Creature) -- the insertion exactly consumed what used to
+   be this row's first 2 bytes of tail padding. ShadowRange (FIELD_U8 284)
+   and NatureSight (FIELD_U8 285) are the two members that shift landed on:
+   both are archived fields, and both now sit at 1677 and 1678, inside what
+   this row used to call padding. Measured 2026-09-22 (offsetof: ShadowRange
+   1677, NatureSight 1678, LightAverseWasBright 1679; sizeof(Creature) 1680,
+   unchanged). LightAverseWasBright carries no FIELD_ macro -- it is derived
+   state, not saved -- so it alone is the real 1-byte tail pad left. */
 static const SchemaPad CreaturePads[] = {
-    { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1677, 3 }
+    { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1679, 1 }
 };
 
-/* Monster: CreaturePads, plus the tail pad after Recent[6] ends at 1692
-   and sizeof(Monster) is 1696. */
+/* Monster: CreaturePads (see its comment for the 1679-1680 tail pad, moved
+   there from 1677-1680 by inc-30ps phase 1's TouchDef insertion), plus the
+   tail pad after Recent[6] ends at 1692 and sizeof(Monster) is 1696 --
+   unaffected by the TouchDef shift, because Creature's own size did not
+   change. */
 static const SchemaPad MonsterPads[] = {
-    { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1677, 3 },
+    { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1679, 1 },
     { 1692, 4 }
 };
 
-/* Character: CreaturePads, plus the pads the compiler leaves between its
-   own members. Each one is the gap before the next member's alignment:
-   1937 after SkillRanks[49], 2173 after Abilities[143], 2263 after
-   RageCount, 2278 before LastRest, 2583 after NotifiedLevel, 7038 before
-   SacVals, 8390 before lastPulse, and the 4-byte tail after
-   Proficiencies.
+/* Character: CreaturePads (see its comment for the 1679-1680 tail pad,
+   moved there from 1677-1680 by inc-30ps phase 1's TouchDef insertion),
+   plus the pads the compiler leaves between its own members. Each one is
+   the gap before the next member's alignment: 1937 after SkillRanks[49],
+   2173 after Abilities[143], 2263 after RageCount, 2278 before LastRest,
+   2583 after NotifiedLevel, 7038 before SacVals, 8390 before lastPulse, and
+   the 4-byte tail after Proficiencies. None of these move with TouchDef,
+   because Creature's own size did not change.
 
    No object is ever exactly a Character -- the class is abstract
    (AdvanceLevel is pure virtual) -- so this row is never the one
@@ -307,7 +324,7 @@ static const SchemaPad MonsterPads[] = {
    and its padding is what Player's row inherits: if upstream adds a member
    to Character, the two rows move together and both must be re-measured. */
 static const SchemaPad CharacterPads[] = {
-    { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1677, 3 },
+    { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1679, 1 },
     { 1937, 1 }, { 2173, 1 }, { 2263, 1 }, { 2278, 2 }, { 2583, 1 },
     { 7038, 2 }, { 8390, 2 }, { 8548, 4 }
 };
@@ -316,9 +333,12 @@ static const SchemaPad CharacterPads[] = {
    MapMemoryMask occupies 8548 -- plus Player's own seven gaps and its
    6-byte tail. MessageQueue, QuickKeys, Macros, JournalInfo and
    GameTimeInfo carry no rows: each travels as an embed over its whole
-   range, which marks its interior padding too. */
+   range, which marks its interior padding too. The shared 1679-1680 tail
+   pad (see CreaturePads) and everything after it are unaffected by
+   inc-30ps phase 1's TouchDef insertion, because Creature's own size did
+   not change. */
 static const SchemaPad PlayerPads[] = {
-    { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1677, 3 },
+    { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1679, 1 },
     { 1937, 1 }, { 2173, 1 }, { 2263, 1 }, { 2278, 2 }, { 2583, 1 },
     { 7038, 2 }, { 8390, 2 },
     { 8553, 1 }, { 8618, 2 }, { 17500, 4 }, { 17826, 6 }, { 17858, 6 },
@@ -3555,6 +3575,7 @@ bool Registry::V1RunSchemaTest(const char *outDir)
         mon->ScentRange = 78;
         mon->ShadowRange = 79;
         mon->NatureSight = 80;
+        mon->TouchDef = 87;
 
         /* Three live targets, one per arm of Target::data. All three types
            are on SanitizeLoadedTargets's keep list (src/Target.cpp:1549),
@@ -3656,6 +3677,7 @@ bool Registry::V1RunSchemaTest(const char *outDir)
               V1CMP(0, ScentRange);
               V1CMP(0, ShadowRange);
               V1CMP(0, NatureSight);
+              V1CMP(0, TouchDef);
               V1CMP(0, ts.tCount);
               V1CMP(0, ts.shouldRetarget);
               for (i = 0; i != NUM_TARGETS; i++)
