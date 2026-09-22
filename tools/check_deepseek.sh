@@ -217,13 +217,13 @@ OUT="$TMP/out7.txt"
 OUTPUT="$(INCURSION_DEEPSEEK_KEY="$CANARY" INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
     python3 "$DEEPSEEK" --prompt "$PROMPT" --out "$OUT" 2>&1)"
 LEAK_LIVE=0
-printf '%s' "$OUTPUT" | grep -qF "$CANARY" && LEAK_LIVE=1
+grep -qF "$CANARY" <<< "$OUTPUT" && LEAK_LIVE=1
 grep -qF "$CANARY" "$LEDGER" && LEAK_LIVE=1
 
 DRYOUT="$(INCURSION_DEEPSEEK_KEY="$CANARY" INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
     python3 "$DEEPSEEK" --prompt "$PROMPT" --out "$TMP/out7dry.txt" --dry-run 2>&1)"
 LEAK_DRY=0
-printf '%s' "$DRYOUT" | grep -qF "$CANARY" && LEAK_DRY=1
+grep -qF "$CANARY" <<< "$DRYOUT" && LEAK_DRY=1
 
 if [ "$LEAK_LIVE" -eq 0 ] && [ "$LEAK_DRY" -eq 0 ]; then
     pass "the key never appears in stdout, stderr or the ledger (live and --dry-run)"
