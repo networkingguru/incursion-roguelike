@@ -104,13 +104,13 @@ if [ "${1:-}" = "--selftest" ]; then
 
     got="$(undocumented "$tmp/README.md" "$tmp/tools")"
     st=0
-    printf '%s\n' "$got" | grep -qx 'check_missing.sh' || {
+    grep -qx 'check_missing.sh' <<< "$got" || {
         echo "SELFTEST FAIL: did not report an undocumented check"; st=1; }
-    printf '%s\n' "$got" | grep -qx 'check_documented.sh' && {
+    grep -qx 'check_documented.sh' <<< "$got" && {
         echo "SELFTEST FAIL: reported a check that has a row"; st=1; }
-    printf '%s\n' "$got" | grep -qx 'check_gate.sh' && {
+    grep -qx 'check_gate.sh' <<< "$got" && {
         echo "SELFTEST FAIL: reported the exempt check_gate.sh"; st=1; }
-    printf '%s\n' "$got" | grep -qx 'check_outside.sh' || {
+    grep -qx 'check_outside.sh' <<< "$got" || {
         echo "SELFTEST FAIL: did not report a check named only outside the section"; st=1; }
 
     # Case 5 (rule 2): a document with no such heading makes the script exit 2.

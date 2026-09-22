@@ -127,11 +127,11 @@ ID_RE="inc-[a-z0-9]+(\.[0-9]+)*"
 # One line in, one word out: wellformed, malformed or none.
 classify_line() {
     local text=$1
-    if printf '%s\n' "$text" | grep -qE "$WELL_FORMED"; then
+    if grep -qE "$WELL_FORMED" <<< "$text"; then
         printf 'wellformed\n'; return
     fi
-    if printf '%s\n' "$text" | grep -qE "$MARK_LIKE" &&
-       printf '%s\n' "$text" | grep -qE "$MARK_CONTEXT"; then
+    if grep -qE "$MARK_LIKE" <<< "$text" &&
+       grep -qE "$MARK_CONTEXT" <<< "$text"; then
         printf 'malformed\n'; return
     fi
     printf 'none\n'
@@ -148,7 +148,7 @@ hit_is_negated() {
     joined=$(printf '%s %s\n' "$previous" "$prefix" |
              tr '[:upper:]' '[:lower:]' |
              sed -E "s/[^a-z0-9']+/ /g; s/^[[:space:]]+//; s/[[:space:]]+$//; s/[[:space:]]+/ /g")
-    printf '%s\n' "$joined" | grep -qE '(^| )(no|not a|not an)$'
+    grep -qE '(^| )(no|not a|not an)$' <<< "$joined"
 }
 
 # Emit "id<TAB>path path ..." -- ONE LINE PER ROW -- for every fix site named in
@@ -277,7 +277,7 @@ run_checks() {
         label="$FILE:$LINE"
 
         # 2. evidence tier, in the words docs/REPORTING-GATE.md uses.
-        if ! echo "$BLOCK" | grep -qE "Observed|Traced|Reasoned"; then
+        if ! grep -qE "Observed|Traced|Reasoned" <<< "$BLOCK"; then
             echo "FAIL: $label states no evidence tier (Observed, Traced or Reasoned)"
             FAIL=1
         fi
@@ -294,7 +294,7 @@ run_checks() {
         fi
 
         # 4. sent, or not sent. Either is fine; silence is not.
-        if ! echo "$BLOCK" | grep -qiE "sent|submitted|filed upstream"; then
+        if ! grep -qiE "sent|submitted|filed upstream" <<< "$BLOCK"; then
             echo "FAIL: $label does not say whether it has been sent upstream"
             FAIL=1
         fi
@@ -322,7 +322,7 @@ run_checks() {
             # A row may name more than one id; one marker on the fix site for ANY
             # of them satisfies the row.
             for oneid in ${tid//,/ }; do
-                printf '%s' "$MARKED" | grep -qxF "$tp	$oneid" && matched=1
+                grep -qxF "$tp	$oneid" <<< "$MARKED" && matched=1
             done
         done
         [ -n "$present" ] || continue
@@ -479,10 +479,10 @@ inc-ccc src/Third.cpp'
     # The fourth row proves "at least one" is really at least one: src/MapAudit.cpp
     # carries nothing and src/Registry.cpp carries an inc-zmk marker, so the row
     # must be silent even though half of it is unmarked.
-    if printf '%s\n' "$p3" | grep -q 'WARN: .* names src/MapAudit.cpp as the fix site(s) for inc-aaa' &&
-       printf '%s\n' "$p3" | grep -q 'FAIL: .* names src/NoSuchFile.cpp .* no such file exists' &&
-       ! printf '%s\n' "$p3" | grep -q 'for inc-upw.13' &&
-       ! printf '%s\n' "$p3" | grep -q 'for inc-zmk'; then
+    if grep -q 'WARN: .* names src/MapAudit.cpp as the fix site(s) for inc-aaa' <<< "$p3" &&
+       grep -q 'FAIL: .* names src/NoSuchFile.cpp .* no such file exists' <<< "$p3" &&
+       ! grep -q 'for inc-upw.13' <<< "$p3" &&
+       ! grep -q 'for inc-zmk' <<< "$p3"; then
         printf 'selftest ok    %-34s -> unmatched row named, matched rows silent\n' \
             "table row without its marker"
     else

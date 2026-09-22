@@ -52,7 +52,7 @@ OUT="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh
 RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
 SHEET="$RUN/logs/sheet.txt"
 
-if echo "$OUT" | grep -q "NO GAMEPLAY"; then
+if grep -q "NO GAMEPLAY" <<< "$OUT"; then
     echo "FAIL: the run never entered a map, so it measured nothing"
     exit 1
 fi

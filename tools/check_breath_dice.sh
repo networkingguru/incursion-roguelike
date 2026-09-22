@@ -61,7 +61,7 @@ for scenario in drake dragon; do
     run="$(echo "$out" | awk '/^run:/ {print $2; exit}')"
     log="$run/logs/breath.log"
     echo "$scenario run: ${run:-unreported}"
-    if echo "$out" | grep -q "NO GAMEPLAY"; then
+    if grep -q "NO GAMEPLAY" <<< "$out"; then
         echo "INCONCLUSIVE: the $scenario run never entered a map, so it measured nothing."
         echo "              Run dir: ${run:-unreported}"
         inconclusive=1
