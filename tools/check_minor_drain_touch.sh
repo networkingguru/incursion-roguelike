@@ -49,12 +49,12 @@ if [ -z "$run" ] || [ ! -d "$run" ]; then
     exit 1
 fi
 
-if echo "$out" | grep -q "NO GAMEPLAY"; then
+if grep -q "NO GAMEPLAY" <<< "$out"; then
     echo "FAIL: the run never entered a map, so it measured nothing."
     echo "$out"
     exit 1
 fi
-if echo "$out" | grep -q "the key script looked for something"; then
+if grep -q "the key script looked for something" <<< "$out"; then
     echo "FAIL: the key script did not find a screen it expected; read"
     echo "      $run/logs/screens for the one it was looking at."
     exit 1
@@ -122,7 +122,7 @@ for f in "$screens"/*-touch-*.txt; do
     # The message is the first content line under the "=== screen ... ==="
     # header.
     text="$(awk 'NR==2{print; exit}' "$f")"
-    if echo "$text" | grep -qi "touch a goblin" && ! echo "$text" | grep -qi "but miss"; then
+    if grep -qi "touch a goblin" <<< "$text" && ! grep -qi "but miss" <<< "$text"; then
         landed="$f"
         landed_line="$text"
         break

@@ -42,12 +42,12 @@ KEYS=tools/keys/touch-defence.keys
 out="$(INCURSION_TOUCHDEF_PROBE=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 
-if echo "$out" | grep -q "NO GAMEPLAY"; then
+if grep -q "NO GAMEPLAY" <<< "$out"; then
     echo "FAIL: the run never entered a map, so it measured nothing."
     echo "$out"
     exit 1
 fi
-if echo "$out" | grep -q "the key script looked for something"; then
+if grep -q "the key script looked for something" <<< "$out"; then
     echo "FAIL: the key script did not find a screen it expected; read"
     echo "      $run/logs/screens for the one it was looking at."
     exit 1

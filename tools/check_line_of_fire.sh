@@ -76,7 +76,7 @@ if [ -z "$lines" ]; then
     exit 1
 fi
 
-if echo "$lines" | grep -q 'INCONCLUSIVE'; then
+if grep -q 'INCONCLUSIVE' <<< "$lines"; then
     echo "FAIL: the probe could not run its scenario:"
     echo "$lines" | grep 'INCONCLUSIVE'
     exit 1
