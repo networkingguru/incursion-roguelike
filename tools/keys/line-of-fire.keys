@@ -1,0 +1,16 @@
+# Minimal session for INCURSION_LOF_PROBE (inc-30ps phase 2,
+# Creature::LineOfFireProbe, src/Fight.cpp). The probe runs once,
+# synchronously, at the very top of Game::Play() -- before the arrival
+# screen chargen.keys leaves up is even dismissed -- so nothing after
+# chargen.keys matters to the check itself; this script only needs a clean,
+# deterministic way into a live map and a clean exit.
+#
+# Read by tools/check_line_of_fire.sh, which sets INCURSION_LOF_PROBE=1 and
+# reads the probe's own PASS/FAIL lines out of logs/errors.log.
+
+@include chargen.keys
+
+SPACE*80
+ESC*20
+
+@quit

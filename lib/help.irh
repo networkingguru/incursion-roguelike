@@ -2937,6 +2937,20 @@ Text "help::combat"
       such as the <9>Blink<3> spell or a Cloak of Displacement. If more than one
       miss chance applies, each is rolled separately.\n
 
+      \n__<11>Creature Cover:<3> A body standing between you and your target
+      is cover too, and it stacks with the wall cover above. Each square in
+      the shot's path that holds a creature costs your attack a -4 penalty,
+      and the target's own square costs a further -4 if the target is not
+      the first creature standing there. It does not block the shot the way
+      a wall does.\n
+      \n__A shot that misses the target by little enough can still find one
+      of those bodies instead of sailing past harmlessly. The game picks
+      whichever square the shot's roll came closest to reaching, and every
+      creature standing in that square, one at a time, makes a Reflex save
+      against a Difficulty Class set by how close the shot came. The first
+      one to fail the save is the one who is hit; if everyone in the square
+      saves, the shot misses outright and nothing is struck.\n
+
 
       \n<11>
       \nCOMBAT TIMING TABLE {TT}\n

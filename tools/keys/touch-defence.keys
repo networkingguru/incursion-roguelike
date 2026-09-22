@@ -1,0 +1,64 @@
+# Phase 1 check for inc-30ps: Creature::TouchDef (src/Values.cpp, beside
+# A_CDEF) must equal A_DEF less BONUS_NATURAL, BONUS_ARMOUR and BONUS_SHIELD,
+# each floored at 0. Read by tools/check_touch_defence.sh.
+#
+# The oracle is logs/touchdef.log, written by TouchDefProbeNote (src/Values.cpp)
+# under INCURSION_TOUCHDEF_PROBE. Character::CalcValues() always runs both the
+# KnownOnly and the real pass (src/Values.cpp:1821-1828), so the real pass --
+# and the probe with it -- fires on every recalculation, including the ones
+# chargen itself triggers. The FIRST line of the log is therefore already the
+# bare-handed baseline by the time this script does anything; the LAST line is
+# after armour and a shield are both worn.
+#
+# WHY A MAGE. chargen-mage.keys starts an orc mage with no armour and no
+# shield -- confirmed against tools/fixtures/chars/elf-mage-illusions-seed1
+# .sheet.txt, whose Defense Class breakdown is "(base 10, +2 Dex,
+# -1 encumbrance)" with no armour or shield term. Nothing needs stripping.
+
+@include chargen-mage.keys
+
+# chargen-mage.keys stops on the arrival room description. Dismiss it, or the
+# [w] below is eaten by the description.
+ESC
+
+w
+y
+@until "Things in View" ESC
+
+# --- ARMOUR (mundane, column 15 of the acquisition prompt, src/Tables.cpp:
+# 320-337). Sequence proven by tools/keys/quality-self-immune-setup.keys: the
+# list shows the selected row and the row under it, so @until stops one row
+# above "Leather armour" and the extra DOWN selects it. 'j' is the armour
+# slot. No "Enter Item Level" prompt follows a plain leather suit. ---
+w
+@choose "Item Acquisition"
+RIGHT*15
+@until "Leather armour" DOWN
+DOWN
+ENTER
+j
+SPACE
+@while "two-handed" y
+b
+SPACE
+s
+@until "Things in View" ESC
+
+# --- SHIELD (mundane, column 16). Sequence proven by
+# tools/keys/shield-penalty-small.keys: acquire, answer the item-level prompt
+# with the first option, then equip by typed name from the character sheet. ---
+w
+@choose "Item Acquisition"
+RIGHT*16
+DOWN
+ENTER
+a
+SPACE
+ESC
+d
+W
+k i t e
+ENTER
+ESC
+
+@quit

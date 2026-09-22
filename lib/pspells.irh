@@ -1366,17 +1366,17 @@ Effect "Detect Blood" : EA_INFLICT
   }
 
 Effect "Caustic Vitae" : EA_BLAST
-  { SC_NEC; SC_THA; pval: (LEVEL_SCALED)d8; sval: REF PARTIAL; Level: 1; 
+  { SC_NEC; SC_THA; pval: (LEVEL_SCALED)d8; Level: 1;
     aval: AR_BOLT; qval: Q_DIR | Q_TAR; Purpose: EP_ATTACK;
-    Flags: EF_HALF_UNTYPED, EF_PERMANANT; 
+    Flags: EF_HALF_UNTYPED, EF_PERMANANT, EF_ATTACK;
     Base: SP_TRIVIAL; 
     Desc: "Casting this spell causes your own blood to burst from your
-      veins and fly toward the target of your choice. When it strikes
-      an opponent it does 1d8 points of acid damage per cast level (scaled
-      at 10th level). A Reflex saving throw is allowed for half damage. Due
+      veins and fly toward the target of your choice. A ranged touch
+      attack is required to strike the target; on a hit it does 1d8
+      points of acid damage per cast level (scaled at 10th level). Due
       to the sacrifice involved in casting this spell, half of the damage
       dealt cannot be resisted. Casting this spell carries a heavy toll:
-      the caster takes one-fourth of the damage dealt as blood loss."; 
+      the caster takes one-fourth of the damage dealt as blood loss.";
     On Event EV_EFFECT {
       int32 dmg ; 
       dmg = e.vDmg / 4; 
@@ -1515,16 +1515,19 @@ Effect "Sanguine Touch" : EA_BLAST
 /* fjm: Allowed bonus damage on this one -- it's a low-damage
    spell that does piercing damage, which is easy to resist,
    AND it allows a save for half (used to be save for NONE!) */
+/* inc-30ps: the Silver Marches printing is a ranged touch attack, no save,
+   3d6 force damage -- the note above is superseded. */
 Druid Spell "Alicorn Lance" : EA_BLAST
-  { SC_EVO|SC_FORCE; Base: SP_MEDIUM; Cost: 5; Level: 2; xval: AD_PIERCE; 
-    Purpose: EP_ATTACK (VS_GENERAL); cval: WHITE; Flags: EF_PARTIAL;
-    pval: 3d6; sval: REF; qval: Q_DIR|Q_TAR|Q_LOC; aval: AR_BOLT; 
+  { SC_EVO|SC_FORCE; Base: SP_MEDIUM; Cost: 5; Level: 2; xval: AD_MAGC;
+    Purpose: EP_ATTACK (VS_GENERAL); cval: WHITE; Flags: EF_ATTACK;
+    pval: 3d6; qval: Q_DIR|Q_TAR|Q_LOC; aval: AR_BOLT;
     Desc: "This spell creates a silver-hued, partially ethereal lance
     shaped in the form of an alicorn (a unicorn horn).  The spellcaster
     chooses a target and the alicorn lance instantaneously fires at it,
-    inflicting 3d6 points of piercing damage, with a saving throw for half
-    damage. Because the lance is partially ethereal, it counts as a ghost
-    touch effect and strikes true against incorporeal creatures."; 
+    requiring a ranged touch attack to hit and inflicting 3d6 points of
+    force damage on a successful strike. Because the lance is partially
+    ethereal, it counts as a ghost touch effect and strikes true against
+    incorporeal creatures.";
     On Event MSG_BLASTNAME "silvery lance";
   }
 

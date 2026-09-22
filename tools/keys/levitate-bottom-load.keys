@@ -1,0 +1,32 @@
+# Load a frozen fixture standing on the bottom level of the dungeon,
+# levitating over a chasm, and ask to descend. (bd inc-30ps)
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/levitate-bottom-seed1.sav \
+#       tools/headless.sh tools/keys/levitate-bottom-load.keys 1
+#
+# WHY THIS EXISTS. tools/keys/levitate-bottom.keys walks nine wizard depth
+# jumps to GENERATE this situation, and generation consumes the shared random
+# stream -- an unrelated change to src/ that makes different rolls on the way
+# down can hand back a depth 10 with no chasm at all, which happened to this
+# check under inc-30ps (the combat rework moved the rolls). This script
+# builds no character and generates no map: it LOADS the frozen fixture
+# tools/keys/levitate-bottom-save.keys already stood on a chasm, levitating,
+# so the situation survives a change that moves unrelated rolls. See
+# tools/fixtures/README.md and bd inc-1fjk.
+#
+# The Goblin Caves declares DUN_DEPTH 10 (lib/dungeon.irh), so depth 10 is the
+# bottom and Creature::Descend's levitation branch asks GetDungeonMap for
+# depth 11 -- one past the last handle the allocation holds.
+
+@dump:on-bottom
+
+# Ask to go down while levitating over the chasm.
+>
+@dump:after-descend
+
+# Decline whatever prompt the request raised, so the session ends where it
+# started and the depth reading is readable on the last screen.
+n
+@dump:settled
+@quit

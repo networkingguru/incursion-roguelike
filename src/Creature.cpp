@@ -64,8 +64,13 @@ Creature::Creature(rID _mID, int16 _Type):
     if (!(HasMFlag(M_NEUTER) || HasMFlag(M_ALL_MALE)))
       StateFlags |= MS_FEMALE;
   cFP = Attr[A_FAT] = 0;
-  ManaPulse = 0; 
+  ManaPulse = 0;
   LightAverseWasBright = false;
+  /* inc-30ps: no in-class initialiser gives TouchDef (field 286) a value,
+     so a creature loaded from a save written before that field existed
+     would otherwise hold whatever the allocator left until its first real
+     CalcValues(). Zero here matches Attr[]'s own zero start above. */
+  TouchDef = 0;
 }
                                     
 void Creature::SetImage()         

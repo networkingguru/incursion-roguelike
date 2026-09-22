@@ -347,8 +347,10 @@ Race "Kobold;race"
       cat -- but cats are not nearly as agile as a terrified kobold. In
       game terms, a kobold character can activate this special ability
       once per day to automatically evade up to three plus their primary
-      Dexterity modifier attacks that would have otherwise hit them. If
-      they deactivate it before all the attacks are expended, they may
+      Dexterity modifier attacks that would have otherwise hit them --
+      though no amount of skittering saves them from a foe's flat-out
+      lucky strike, and an attack roll of a natural 20 always connects.
+      If they deactivate it before all the attacks are expended, they may
       activate it again later to evade the remaining number of attacks.\n
       __*_<7>Poison Immunity<2> -- Repeated experimentation and exposure,
       combined with their natural reptilian physiology, has made kobolds

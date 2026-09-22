@@ -163,6 +163,194 @@ static void ArmourProbeNote(EventInfo &e, int natArm, int wornArm,
     fflush(f);
 }
 
+/* Probe for the phase-2 cover-and-band rule (inc-30ps). LOFForcedRoll, once
+   nonzero, makes every Creature::Strike() call use it for e.vRoll instead of
+   random(20)+1 -- zero is not a legal d20 result, so it doubles as "off" and
+   costs one cheap compare when unset. INCURSION_LOF_FORCE_ROLL seeds it once,
+   read the same way the other probes in this file read their variable, for a
+   caller that wants one fixed roll from outside. LineOfFireProbe
+   (below, under INCURSION_LOF_PROBE) needs a DIFFERENT forced roll for each
+   of several shots in one process, so it writes LOFForcedRoll directly for
+   each one after that; LOFInitForcedRoll only ever runs once, so it never
+   overwrites what the probe sets. LOFLastVHit is not itself gated: it is one
+   assignment folded into the resolution the probe already exercises, and it
+   is how the probe reads back e.vHit -- the thrown-weapon formula recomputes
+   it via CalcValues() inside RAttack, so nothing outside that call can
+   predict it -- without needing a second, separate hook.
+   tools/check_line_of_fire.sh asserts on both; delete the hooks with the
+   check. */
+static int8 LOFForcedRoll = 0;
+static int8 LOFLastVHit = 0;
+static void LOFInitForcedRoll()
+{
+    static bool done = false;
+    if (done)
+        return;
+    done = true;
+    const char *s = getenv("INCURSION_LOF_FORCE_ROLL");
+    if (s && *s)
+        LOFForcedRoll = (int8)atoi(s);
+}
+
+/* inc-30ps rework: forces the outcome of the Reflex save the band's per-
+   square walk makes on each creature it checks -- the role LOFForcedRoll
+   (above) plays for the attack roll itself. A probe cannot predict a
+   rat's own save bonus the way it pins vHit and D, so the outcome has to
+   be pinned directly. Off (false) by default; when on,
+   LOFForcedSaveFailAt names the 1-based position, in contents-chain
+   order, of the one creature in the square whose save FAILS -- every
+   other position passes. 0 means nobody fails (the whole square saves: a
+   miss). INCURSION_LOF_FORCE_SAVE seeds it once, read the same way
+   LOFInitForcedRoll reads its own variable. tools/check_line_of_fire.sh
+   and tools/check_line_of_fire_spell.sh delete the hook with the check. */
+static bool LOFForcedSaveOn = false;
+static int8 LOFForcedSaveFailAt = 0;
+static void LOFInitForcedSave()
+{
+    static bool done = false;
+    if (done)
+        return;
+    done = true;
+    const char *s = getenv("INCURSION_LOF_FORCE_SAVE");
+    if (s && *s) {
+        LOFForcedSaveOn = true;
+        LOFForcedSaveFailAt = (int8)atoi(s);
+    }
+}
+void LOFSetForcedSave(int8 failAt)
+{
+    LOFForcedSaveOn = true;
+    LOFForcedSaveFailAt = failAt;
+}
+void LOFClearForcedSave() { LOFForcedSaveOn = false; }
+
+/* inc-30ps: the cover-and-band rule ("The rule", docs/specs/2026-09-21-
+   line-of-fire-spec.md), shared by every ranged attack that can find a
+   body in its way -- an arrow (Creature::RAttack, below) and a spell bolt
+   (Magic::MagicStrike's kludge branch, src/Magic.cpp:916) -- so the two
+   paths cannot drift onto two different rules for one event. Not a class
+   method: both callers are free functions or methods on different
+   classes, and a free function declared extern here (see the local
+   declaration in Magic.cpp) is the same pattern LineOfFireProbe below
+   already uses across files. */
+int8 LineOfFireCoverPenalty(int16 N)
+{
+    return (int8)(4 * N);
+}
+
+/* inc-30ps phase 3: lets Magic.cpp (LOFSpellProbe) drive the same forced
+   roll a spell bolt now also flows through (Creature::Strike, called from
+   MagicStrike's kludge branch), without duplicating the env-var parsing
+   in LOFInitForcedRoll above. See tools/check_line_of_fire_spell.sh. */
+void LOFSetForcedRoll(int8 r) { LOFForcedRoll = r; }
+
+/* inc-30ps phase 3: LOFSpellProbe's own calibration shot, same reason
+   RAttack stashes LOFLastVHit for LineOfFireProbe above -- a spell bolt is
+   cast through DoHits' per-target eCopy (Magic.cpp), which ReThrow never
+   copies back to the caller's own EventInfo, so nothing outside
+   Magic::MagicStrike's kludge branch can read the vHit it computed. */
+void LOFSetLastVHit(int8 v) { LOFLastVHit = v; }
+int8 LOFGetLastVHit() { return LOFLastVHit; }
+
+/* inc-30ps rework: the dice and damage type the last landed band/no-target
+   redirect actually used -- item 3's own oracle, so a probe can confirm a
+   struck bystander's damage came from ITS size and type, not the intended
+   target's, rather than inferring it from a random HP delta. */
+static Dice LOFLastDmgDice;
+static int8 LOFLastDmgType = 0;
+void LOFSetLastDmg(const Dice &d, int8 dtype)
+{
+    LOFLastDmgDice = d;
+    LOFLastDmgType = dtype;
+}
+int8 LOFGetLastDmgNumber() { return LOFLastDmgDice.Number; }
+int8 LOFGetLastDmgSides()  { return LOFLastDmgDice.Sides; }
+int8 LOFGetLastDmgBonus()  { return LOFLastDmgDice.Bonus; }
+int8 LOFGetLastDmgType()   { return LOFLastDmgType; }
+
+/* inc-30ps rework: a recorded square along the line -- every creature
+   standing there, in contents-chain order (Map::GetAt's front is
+   member[0], src/Display.cpp:1437; see "Which creature is front",
+   docs/specs/2026-09-21-line-of-fire-spec.md). LOFMaxSquareMembers
+   matches the 16-slot local buffers (ptList here, sqList in Magic.cpp)
+   both callers already fill this from. */
+const int16 LOFMaxSquareMembers = 16;
+struct LOFSquare {
+    Thing *member[LOFMaxSquareMembers];
+    int16 count;
+};
+
+/* inc-30ps rework: recomputes a struck creature's own damage dice and
+   damage type, replacing whatever was computed against the intended
+   target -- "The rule" says the creature struck takes damage appropriate
+   to itself, not to the target. Mirrors the vicSize-dependent lines in
+   Creature::RAttack exactly, dropping only the size-independent e.vHit/
+   e.AType assignments, which the shot's one roll already used and must
+   not be redone. */
+static void LOFRecomputeDamage(EventInfo &e, Thing *victim)
+{
+    Creature *actor = e.EActor;
+    int16 vicSize = victim->isCreature() ?
+        ((Creature*)victim)->GetAttr(A_SIZ) : SZ_MEDIUM;
+    e.Dmg = (vicSize > SZ_MEDIUM) ? e.EItem2->LDmg() : e.EItem2->SDmg();
+    if (e.EItem) {
+        Dice d2 = vicSize > SZ_MEDIUM ? e.EItem->LDmg() : e.EItem->SDmg();
+        e.Dmg.Number += d2.Number;
+        e.Dmg.Sides  += d2.Sides;
+        e.Dmg.Bonus  += d2.Bonus;
+        e.Dmg.Bonus  += actor->Attr[A_DMG_ARCHERY];
+        if (e.EItem2) {
+            Dice d3 = vicSize > SZ_MEDIUM ?
+                e.EItem2->LDmg() : e.EItem2->SDmg();
+            e.Dmg.Bonus += e.EItem2->GetPlus() + d3.Bonus;
+        }
+    } else
+        e.Dmg.Bonus += actor->Attr[A_DMG_THROWN];
+    e.DType = (int8)(e.EItem ? e.EItem : e.EItem2)->DamageType(victim);
+}
+
+/* inc-30ps rework: the save DC the last LineOfFireBand call computed --
+   10 + (total-D) -- stashed for the probes to log and check, the same
+   role LOFLastVHit plays for the roll. */
+static int8 LOFLastSaveDC = 0;
+int8 LOFGetLastSaveDC() { return LOFLastSaveDC; }
+
+static bool LOFSaveFails(Thing *t, int8 dc, int16 pos1Based)
+{
+    LOFInitForcedSave();
+    if (LOFForcedSaveOn)
+        return pos1Based == LOFForcedSaveFailAt;
+    if (!t->isCreature())
+        return true;
+    return !((Creature*)t)->SavingThrow(REF, dc);
+}
+
+/* inc-30ps rework: "The rule", docs/specs/2026-09-21-line-of-fire-spec.md.
+   squares[] must already be recorded nearest-shooter-first; band index
+   (total-D)/4 addresses it directly, matching the worked example. D is
+   the target's own bare defence; total is vHit+vRoll from the one roll
+   this rule allows. The caller has already handled total >= D+4N as a hit
+   on the target with no save; this is only ever called on an arithmetic
+   miss. Every creature in the named square, in contents-chain order,
+   makes a Reflex save at DC 10+(total-D) until one fails; that creature
+   is struck. Returns NULL when every creature saves -- the shot misses
+   and no other square is tried -- or when total < D (nothing struck). */
+Thing *LineOfFireBand(const LOFSquare squares[], int16 N, int8 D, int16 total)
+{
+    if (N <= 0 || total < D)
+        return NULL;
+    int16 band = (total - D) / 4;
+    if (band >= N)
+        band = N - 1; /* cannot happen: caller gates on total < D+4N first */
+    const int8 dc = (int8)(10 + (total - D));
+    LOFLastSaveDC = dc;
+    const LOFSquare &sq = squares[band];
+    for (int16 i = 0; i < sq.count; i++)
+        if (LOFSaveFails(sq.member[i], dc, (int16)(i + 1)))
+            return sq.member[i];
+    return NULL;
+}
+
 /* upstream: base-code defect, and the fix is upstream's own -- esran's
    ee51c8a, reported in rmtew/incursion-roguelike discussion #38 and never
    merged. Nothing here is platform, width or compiler dependent: the loops
@@ -944,6 +1132,22 @@ EvReturn Creature::RAttack(EventInfo &e)
   int distSoFar = 0;
   bool hitSelf = false;
   Thing * possTarget = NULL;
+
+  /* inc-30ps rework: the cover-and-band rule. squares[] records, in order
+     from the shooter, every creature (contents-chain order, Map::GetAt's
+     front, src/Display.cpp:1437) of every square the line walk crosses
+     that holds a body other than the shooter -- the target's own square
+     counts only when the target is not that square's head. Left empty
+     (lineCount stays 0) by a point-blank shot, which never enters the
+     travel loop below, and by Precise Shot, which never records at all.
+     Read once, after the whole line is known, to set the single strike's
+     penalty and (on a miss) to pick which body took it instead, via a
+     saving throw inside its square. See "The rule" in
+     docs/specs/2026-09-21-line-of-fire-spec.md. */
+  const int16 LOFMaxSquares = 128;
+  LOFSquare squares[LOFMaxSquares];
+  int16 lineCount = 0;
+
   if (Intended && e.EActor && e.EActor->DistFrom(Intended) < 1) {
     // you're shooting at a chest at you feet
     possTarget = Intended;
@@ -1039,94 +1243,247 @@ EvReturn Creature::RAttack(EventInfo &e)
       ptList[ptc++] = possTarget;
     possTarget = NULL;
     
-    if (ptc)
-      {
-        /* If we're shooting into a square with two or more creatures,
-           and one is the intended target, Precise Shot helps us hit
-           the right one, but we still have a better than even chance
-           of doing so anyway. */
-        if (ptc > 1 && Intended && Intended->x == cx/2 && Intended->y == cy/2)
-          if (Dice::Roll(1,100) <= 
-                (e.EActor->HasFeat(FT_PRECISE_SHOT) ? 95 : 60))
-            { possTarget = Intended; goto hitNow; }
-
-        /* Otherwise, choose a random target */
-        possTarget = ptList[random(ptc)];
+    /* inc-30ps rework: record this whole square -- every creature in it, in
+       contents-chain order -- if it holds a body other than the shooter.
+       No attack is attempted here: every square in the line is walked and
+       recorded first, and the strike is resolved once, after the walk
+       ends (see "hitNow" below the loop). The target's own square is
+       recorded only when the target is not its head; every other occupied
+       square is recorded unconditionally. Precise Shot records nothing at
+       all, so it can never be blocked -- except when there is no Intended
+       creature: the feat exists to secure the creature the shooter meant,
+       and a shot with no chosen creature has none to secure, so it does
+       not suppress the recording here. */
+    if (ptc && ptList[0] != e.EActor &&
+        (!e.EActor->HasFeat(FT_PRECISE_SHOT) || !Intended)) {
+      bool isTargetSquare = (Intended && Intended->x == cx/2 && Intended->y == cy/2);
+      if (!isTargetSquare || ptList[0] != Intended) {
+        if (lineCount < LOFMaxSquares) {
+          LOFSquare &sq = squares[lineCount++];
+          sq.count = 0;
+          for (int16 k = 0; k < ptc && sq.count < LOFMaxSquareMembers; k++)
+            sq.member[sq.count++] = ptList[k];
+        }
       }
-
-    /*
-    DOESN'T work well with hanging vines as features, etc.
-    
-    if (!possTarget) {
-      possTarget = m.KnownFeatureAt(cx/2,cy/2); 
-      if (possTarget && possTarget->isType(T_DOOR) && 
-          (((Door *)possTarget)->DoorFlags & DF_OPEN))
-        possTarget = NULL;
-      }
-    */
-    
-    if (possTarget && possTarget != e.EActor) {
-      lx = cx;
-      ly = cy; 
-      if (Intended && (possTarget != Intended))
-        if (Dice::Roll(1,100) <= 
-            (e.EActor->HasFeat(FT_PRECISE_SHOT) ? 75 : 25))
-          goto SkipAttack;
-hitNow: 
-      EventInfo oe = e;
-      e.ETarget = possTarget;
-      int16 vicSize = e.ETarget->isCreature() ? 
-        e.EVictim->GetAttr(A_SIZ) : SZ_MEDIUM; 
-      e.Dmg     = (vicSize > SZ_MEDIUM) ?
-        e.EItem2->LDmg() : e.EItem2->SDmg();
-      if (e.EItem) {
-        Dice d2 = vicSize > SZ_MEDIUM ?
-          e.EItem->LDmg() : e.EItem->SDmg();
-        e.Dmg.Number += d2.Number;
-        e.Dmg.Sides += d2.Sides;
-        e.Dmg.Bonus += d2.Bonus;
-        e.vHit    = (int8)Attr[A_HIT_ARCHERY]; 
-        e.Dmg.Bonus += Attr[A_DMG_ARCHERY];
-        e.AType   = A_FIRE;
-        // ww: +4 arrows give you +4 to hit and +4 to damage
-        if (e.EItem2) {
-          TItem *ti = TITEM(e.EItem2->iID);
-          Dice d3 = vicSize > SZ_MEDIUM ?
-            e.EItem2->LDmg() : e.EItem2->SDmg();
-          e.Dmg.Bonus += e.EItem2->GetPlus() + d3.Bonus;
-          e.vHit += ti->u.w.Acc + e.EItem2->GetPlus() + 
-            e.EItem2->HasQuality(IQ_MITHRIL) - 
-            e.EItem2->HasQuality(IQ_ORCISH);
-        } 
-      }
-      else {
-        // ww: very important, otherwise this stuff never gets calculated
-        e.EActor->CalcValues(false,e.EItem2); 
-        e.vHit       = (int8)Attr[A_HIT_THROWN]; 
-        e.Dmg.Bonus += Attr[A_DMG_THROWN];
-        e.AType      = A_HURL;
-      }
-      e.vDef    = (int8)(e.ETarget->isCreature () ? e.EVictim->getDef() : 0);
-      e.DType   = (int8)(e.EItem ? e.EItem : e.EItem2)->DamageType(e.EVictim);
-      e.vThreat = (int8)(e.EItem ? e.EItem : e.EItem2)->Threat(e.EActor);
-      e.vCrit   = (int8)(e.EItem ? e.EItem : e.EItem2)->CritMult(e.EActor);
-      if (ReThrow(EV_STRIKE, e) == ABORT)
-        break;
-      if (e.isHit)
-        break;
-      e = oe;
     }
-SkipAttack:
 
     // features are things like doors and gravestones
     if (m.SolidAt(cx/2,cy/2))
-      break; 
+      break;
 
     // finally, if we aimed at *this specific spot* (e.g., to throw a
     // fireball in empty middle square between two enemies), stop here
-    if (cx / 2 == e.EXVal && cy / 2 == e.EYVal) 
-      break; 
+    if (cx / 2 == e.EXVal && cy / 2 == e.EYVal)
+      break;
   }
+
+hitNow:
+  /* inc-30ps phase 2: resolve the single strike now that the whole line (or,
+     for a point-blank shot, no line at all -- lineCount is still 0) is
+     known. Intended is NULL only when the player aimed at a location that
+     was already confirmed empty of creatures (see the isLoc search above);
+     there is no target to build a defence around, so nothing is struck --
+     the shot simply passes every body it crosses. */
+  if (Intended) {
+    e.ETarget = Intended;
+    int16 vicSize = e.ETarget->isCreature() ?
+      e.EVictim->GetAttr(A_SIZ) : SZ_MEDIUM;
+    e.Dmg     = (vicSize > SZ_MEDIUM) ?
+      e.EItem2->LDmg() : e.EItem2->SDmg();
+    if (e.EItem) {
+      Dice d2 = vicSize > SZ_MEDIUM ?
+        e.EItem->LDmg() : e.EItem->SDmg();
+      e.Dmg.Number += d2.Number;
+      e.Dmg.Sides += d2.Sides;
+      e.Dmg.Bonus += d2.Bonus;
+      e.vHit    = (int8)Attr[A_HIT_ARCHERY];
+      e.Dmg.Bonus += Attr[A_DMG_ARCHERY];
+      e.AType   = A_FIRE;
+      // ww: +4 arrows give you +4 to hit and +4 to damage
+      if (e.EItem2) {
+        TItem *ti = TITEM(e.EItem2->iID);
+        Dice d3 = vicSize > SZ_MEDIUM ?
+          e.EItem2->LDmg() : e.EItem2->SDmg();
+        e.Dmg.Bonus += e.EItem2->GetPlus() + d3.Bonus;
+        e.vHit += ti->u.w.Acc + e.EItem2->GetPlus() +
+          e.EItem2->HasQuality(IQ_MITHRIL) -
+          e.EItem2->HasQuality(IQ_ORCISH);
+      }
+    }
+    else {
+      // ww: very important, otherwise this stuff never gets calculated
+      e.EActor->CalcValues(false,e.EItem2);
+      e.vHit       = (int8)Attr[A_HIT_THROWN];
+      e.Dmg.Bonus += Attr[A_DMG_THROWN];
+      e.AType      = A_HURL;
+    }
+
+    /* D is the target's own unmodified defence; N is the number of recorded
+       squares -- zero for Precise Shot, which never records one (above).
+       e.vDef carries D plus the whole cover stack into the single roll. */
+    int8  D = (int8)(e.ETarget->isCreature() ? e.EVictim->getDef() : 0);
+    int16 N = e.EActor->HasFeat(FT_PRECISE_SHOT) ? 0 : lineCount;
+    e.vDef    = (int8)(D + LineOfFireCoverPenalty(N));
+    e.DType   = (int8)(e.EItem ? e.EItem : e.EItem2)->DamageType(e.EVictim);
+    e.vThreat = (int8)(e.EItem ? e.EItem : e.EItem2)->Threat(e.EActor);
+    e.vCrit   = (int8)(e.EItem ? e.EItem : e.EItem2)->CritMult(e.EActor);
+    if (ReThrow(EV_STRIKE, e) == ABORT)
+      goto SkipAttack;
+    /* e is passed through PreStrike and Strike by reference, so e.vHit here
+       already carries every modifier either one added (range, actUnseen,
+       and the rest) -- the same total the hit test itself compared against
+       e.vDef. Stashed after the call, not before, for exactly that reason. */
+    LOFLastVHit = e.vHit;
+
+    if (e.isHit) {
+      lx = Intended->x * 2;
+      ly = Intended->y * 2;
+    }
+    else {
+      /* inc-30ps rework, item 2: gate the band on an arithmetic miss,
+         never on !e.isHit. Creature::Strike reports "miss" down several
+         paths that never compare a roll to a defence -- displacement/blur,
+         elevation and shield and corner cover, a stunned attacker
+         (e.isWildMiss, checked before the roll is ever compared to a
+         defence), FLAWLESS_DODGE, and a mounted defence beating
+         vRideCheck -- and every one of those is a miss outright: it
+         leaves the whole line alone, target and bystander both.
+         FLAWLESS_DODGE and vRideCheck need no flag of their own: both can
+         only clear isHit when total already reached e.vDef (FLAWLESS_
+         DODGE's own gate, :5249, now excludes a bare natural 20 as well
+         as requiring e.isHit -- ruled 2026-09-22, a nat 20 always hits and
+         Flawless Dodge cannot stop it -- so the only isHit it can still
+         revert is one that reached e.vDef by arithmetic; vRideCheck only
+         decides anything once total >= vDef), so total < e.vDef already
+         excludes them. Only a genuine arithmetic miss, neither wild nor
+         overridden, may enter the band. */
+      int16 total = e.vHit + e.vRoll;
+      if (!e.isWildMiss && total < e.vDef) {
+        /* item 1: the band names a SQUARE, and a Reflex save inside it
+           decides who (if anyone) is hit -- see LineOfFireBand above. */
+        Thing *bandVictim = LineOfFireBand(squares, N, D, total);
+        if (bandVictim) {
+          lx = bandVictim->x * 2;
+          ly = bandVictim->y * 2;
+
+          /* The save already decided the hit; do not roll again for it.
+             Land it through EV_HIT directly, the way a rider attack
+             (A_ALSO/A_CRIT, just below in Creature::Strike) lands without
+             a roll of its own. item 3: the struck creature's own size and
+             type choose its damage, never the intended target's. */
+          EventInfo strikeE = e;
+          strikeE.ETarget = bandVictim;
+          strikeE.isHit   = true;
+          strikeE.vDef    = (int8)(bandVictim->isCreature() ?
+            strikeE.EVictim->getDef() : 0);
+          LOFRecomputeDamage(strikeE, bandVictim);
+          LOFSetLastDmg(strikeE.Dmg, strikeE.DType);
+          e.EMap->SetQueue(QUEUE_DAMAGE_MSG);
+          ReThrow(EV_HIT, strikeE);
+          e.EMap->UnsetQueue(QUEUE_DAMAGE_MSG);
+          ReThrow(EV_ATTACKMSG, strikeE);
+        }
+        /* else: every creature in the named square saved. A clean miss. */
+      }
+      /* else: total >= e.vDef (D+4N) but e.isHit is false -- one of the
+         non-arithmetic misses above. Leave the line alone. */
+    }
+  } else if (lineCount > 0) {
+    /* inc-30ps rework: no Intended creature -- the shooter aimed at a
+       square, confirmed empty, that the search above never resolved to a
+       creature. squares[] (built above, nearest-shooter-first) is every
+       candidate square the line actually crossed. Exactly one: its head
+       IS the target, resolved normally with no penalty. More than one:
+       the single roll below is compared, at one flat -4
+       (LineOfFireCoverPenalty(1); it does not stack), against each
+       candidate square's own head's bare defence in turn, nearest first,
+       and the first hit wins. See "A shot with no chosen creature",
+       docs/specs/2026-09-21-line-of-fire-spec.md. No saving throw applies
+       here -- there is no intended target to supply a DC. Precise Shot is
+       not consulted: the feat exists to secure the creature the shooter
+       meant, and this shooter meant a square. */
+    const int8 penalty = (lineCount == 1) ? 0 : LineOfFireCoverPenalty(1);
+    e.ETarget = squares[0].member[0];
+    int16 vicSize = e.ETarget->isCreature() ?
+      e.EVictim->GetAttr(A_SIZ) : SZ_MEDIUM;
+    e.Dmg     = (vicSize > SZ_MEDIUM) ?
+      e.EItem2->LDmg() : e.EItem2->SDmg();
+    if (e.EItem) {
+      Dice d2 = vicSize > SZ_MEDIUM ?
+        e.EItem->LDmg() : e.EItem->SDmg();
+      e.Dmg.Number += d2.Number;
+      e.Dmg.Sides += d2.Sides;
+      e.Dmg.Bonus += d2.Bonus;
+      e.vHit    = (int8)Attr[A_HIT_ARCHERY];
+      e.Dmg.Bonus += Attr[A_DMG_ARCHERY];
+      e.AType   = A_FIRE;
+      if (e.EItem2) {
+        TItem *ti = TITEM(e.EItem2->iID);
+        Dice d3 = vicSize > SZ_MEDIUM ?
+          e.EItem2->LDmg() : e.EItem2->SDmg();
+        e.Dmg.Bonus += e.EItem2->GetPlus() + d3.Bonus;
+        e.vHit += ti->u.w.Acc + e.EItem2->GetPlus() +
+          e.EItem2->HasQuality(IQ_MITHRIL) -
+          e.EItem2->HasQuality(IQ_ORCISH);
+      }
+    }
+    else {
+      e.EActor->CalcValues(false,e.EItem2);
+      e.vHit       = (int8)Attr[A_HIT_THROWN];
+      e.Dmg.Bonus += Attr[A_DMG_THROWN];
+      e.AType      = A_HURL;
+    }
+    e.DType   = (int8)(e.EItem ? e.EItem : e.EItem2)->DamageType(e.EVictim);
+    e.vThreat = (int8)(e.EItem ? e.EItem : e.EItem2)->Threat(e.EActor);
+    e.vCrit   = (int8)(e.EItem ? e.EItem : e.EItem2)->CritMult(e.EActor);
+
+    int8 D0 = (int8)(e.ETarget->isCreature() ? e.EVictim->getDef() : 0);
+    e.vDef = (int8)(D0 + penalty);
+    if (ReThrow(EV_STRIKE, e) == ABORT)
+      goto SkipAttack;
+    LOFLastVHit = e.vHit;
+
+    if (e.isHit) {
+      lx = squares[0].member[0]->x * 2;
+      ly = squares[0].member[0]->y * 2;
+    } else {
+      /* squares[0]'s head's own roll missed. Walk the rest of squares[]'
+         heads with the SAME roll (e.vHit + e.vRoll, preserved from the
+         call above) against each candidate's own bare defence plus the
+         same flat penalty, nearest the shooter first; stop at the first
+         hit. Each entry is a creature by construction (only FCreatureAt/
+         NCreatureAt feed squares[]), cast the same way Creature::Strike
+         already casts a Thing* mount or rider elsewhere in this file. */
+      int16 total = e.vHit + e.vRoll;
+      Thing *hitVictim = NULL;
+      for (int16 idx = 1; idx < lineCount; idx++) {
+        Creature *cand = (Creature*)squares[idx].member[0];
+        int8 Di = (int8)(cand->isCreature() ? cand->getDef() : 0);
+        if (total >= Di + penalty) {
+          hitVictim = cand;
+          break;
+        }
+      }
+      if (hitVictim) {
+        lx = hitVictim->x * 2;
+        ly = hitVictim->y * 2;
+
+        /* item 3: recompute damage against the creature actually struck. */
+        EventInfo strikeE = e;
+        strikeE.ETarget = hitVictim;
+        strikeE.isHit   = true;
+        strikeE.vDef    = (int8)(hitVictim->isCreature() ?
+          strikeE.EVictim->getDef() : 0);
+        LOFRecomputeDamage(strikeE, hitVictim);
+        LOFSetLastDmg(strikeE.Dmg, strikeE.DType);
+        e.EMap->SetQueue(QUEUE_DAMAGE_MSG);
+        ReThrow(EV_HIT, strikeE);
+        e.EMap->UnsetQueue(QUEUE_DAMAGE_MSG);
+        ReThrow(EV_ATTACKMSG, strikeE);
+      }
+    }
+  }
+SkipAttack:
 
   o.ShowGlyphs();
   o.DeActivate();
@@ -1192,7 +1549,386 @@ SkipAttack:
   return DONE;
 }
 
+/* INCURSION_LOF_PROBE helper. Finds a cardinal direction with four clear,
+   in-bounds, non-solid, creature-free squares ahead of the player and an
+   open line of fire the whole way, so LineOfFireProbe (below) has
+   somewhere safe to place its four rats. Follows TrueSightProbeLine
+   (src/Vision.cpp) rather than inventing a second way of doing this. */
+static bool LOFProbeFindLine(Map *mp, Creature *shooter, int16 px, int16 py,
+        int16 *dx, int16 *dy) {
+    static const int16 DX[4] = {1,-1,0,0}, DY[4] = {0,0,1,-1};
+    for (int8 dir = 0; dir < 4; dir++) {
+        bool ok = true;
+        for (int16 d = 1; d <= 4; d++) {
+            const int16 tx = px + DX[dir]*d, ty = py + DY[dir]*d;
+            if (!mp->InBounds(tx,ty) || mp->SolidAt(tx,ty)) { ok = false; break; }
+            if (mp->FCreatureAt(tx,ty)) { ok = false; break; }
+        }
+        if (ok && mp->LineOfFire(px, py, px+DX[dir]*4, py+DY[dir]*4, shooter)) {
+            *dx = DX[dir]; *dy = DY[dir];
+            return true;
+        }
+    }
+    return false;
+}
 
+/* INCURSION_LOF_PROBE -- the runnable check behind the phase-2 and phase-2b
+   cover-and-band rule (inc-30ps). tools/check_line_of_fire.sh drives it and
+   states the pass condition; docs/specs/2026-09-21-line-of-fire-spec.md
+   states the rule. A free function, not a Creature method: the brief for
+   this phase forbids touching inc/Creature.h, which phase 1 (TouchDef)
+   already has uncommitted changes in.
+
+   Places four giant rats in a line from the shooter -- "near" (distance 2),
+   "far" (distance 3), and "cover"+"target" sharing distance 4, "cover" head
+   of that square so "target" is not -- the same N=3 shape as the spec's
+   worked example. The target's own Defense Class is pinned relative to the
+   shooter's own to-hit bonus so the bands land on the same relative numbers
+   as that example. Phase 2b takes rats off and back onto the map to test a
+   shot aimed at an empty square instead (see the comment there).
+
+   Throws a dagger under LOFForcedRoll (see the comment above it) and reads
+   which rat lost HP -- the armour model floors connecting damage at 1
+   (inc-b0w2), so any hit is visible. The first shot is a calibration throw:
+   its result is not graded, and its only job is to leave LOFLastVHit holding
+   the real e.vHit the thrown-weapon branch computed (see the comment on
+   LOFLastVHit for why nothing else can predict that number ahead of time).
+
+   Off unless the variable is set, like the other probes in this file. Runs
+   before PlayMode is set (src/Main.cpp), and every rat it creates is removed
+   before it returns; the thrown daggers are left on the floor, harmless
+   litter in a sandboxed headless run. */
+void LineOfFireProbe(Player *shooter) {
+    if (!getenv("INCURSION_LOF_PROBE"))
+        return;
+
+    if (!shooter || !shooter->m) {
+        Error("LOF_PROBE: INCONCLUSIVE -- no live player and map yet");
+        return;
+    }
+
+    const rID ratID = FIND("giant rat");
+    if (!ratID) {
+        Error("LOF_PROBE: INCONCLUSIVE -- no 'giant rat' resource to place");
+        return;
+    }
+    const rID dagID = FIND("dagger");
+    if (!dagID) {
+        Error("LOF_PROBE: INCONCLUSIVE -- no 'dagger' resource to throw");
+        return;
+    }
+
+    Map *mp = shooter->m;
+    const int16 px = shooter->x, py = shooter->y;
+    int16 dx, dy;
+    if (!LOFProbeFindLine(mp, shooter, px, py, &dx, &dy)) {
+        Error("LOF_PROBE: INCONCLUSIVE -- no open line of 4 clear squares "
+            "from the player");
+        return;
+    }
+
+    const bool wasInPlay = theGame->PlayMode;
+    theGame->PlayMode = true;
+
+    /* "extra" shares the distance-4 square with cover and target, so the
+       band-2 square holds three creatures -- enough to prove a save walk
+       reaches a second and a third candidate, not just a head. Contents-
+       chain order splices each newcomer in right after the head (src/
+       Display.cpp:281-290; "Which creature is front", docs/specs/2026-09-
+       21-line-of-fire-spec.md), reversing arrival order after position 1
+       -- so PLACING target before extra is what makes the final chain
+       read [cover, extra, target], the order this probe's case names
+       assume. */
+    struct Body { const char *name; Monster *c; };
+    Body b[5] = { {"near",NULL}, {"far",NULL}, {"cover",NULL}, {"target",NULL},
+        {"extra",NULL} };
+    const int16 dist[5] = {2, 3, 4, 4, 4};
+    for (int i = 0; i < 5; i++) {
+        const int16 tx = px + dx*dist[i], ty = py + dy*dist[i];
+        mp->At(tx,ty).Lit = 1; /* keep the wild-miss "can't see you" branch
+                                   in Creature::Strike out of this probe's way,
+                                   the same reason TrueSightProbe (Vision.cpp)
+                                   forces Lit on its own test squares. */
+        Monster *mn = new Monster(ratID);
+        TMON(mn->tmID)->GrantGear(mn, mn->tmID, true);
+        TMON(mn->tmID)->PEvent(EV_BIRTH, mn, mn->tmID);
+        mn->PlaceAt(mp, tx, ty, true); /* share_square: cover/target/extra
+                                           deliberately stand on one another */
+        mn->Initialize(true);
+        mn->mHP = mn->cHP = 10000;
+        b[i].c = mn;
+    }
+    Monster *target = b[3].c;
+
+    auto resetHP = [&]() {
+        for (int i = 0; i < 5; i++)
+            b[i].c->mHP = b[i].c->cHP = 10000;
+    };
+    /* item: close the "first casualty only" hole both probes' whoWasHit
+       had -- report every creature that lost hit points, and let a case
+       fail on MULTIPLE rather than silently pass on the first one found. */
+    auto whoWasHit = [&]() -> const char* {
+        int n = 0; const char *name = "none";
+        for (int i = 0; i < 5; i++)
+            if (b[i].c->cHP < 10000) { n++; name = b[i].name; }
+        return (n == 0) ? "none" : (n > 1) ? "MULTIPLE" : name;
+    };
+    int pass = 0, fail = 0;
+    auto shootOnce = [&](int8 roll, const char *caseName, const char *expect) {
+        resetHP();
+        LOFForcedRoll = roll;
+        Item *dag = new Weapon(dagID, TITEM(dagID)->IType);
+        Throw(EV_RATTACK, shooter, target, NULL, dag);
+        const char *got = whoWasHit();
+        const bool ok = !strcmp(got, expect);
+        Error("LOF_PROBE: case=%s roll=%d vHit=%d expected=%s got=%s %s",
+            caseName, (int)roll, (int)LOFLastVHit, expect, got,
+            ok ? "PASS" : "FAIL");
+        if (ok) pass++; else fail++;
+    };
+
+    /* Calibration: an arbitrary forced roll against the target's own
+       (unpinned) starting defence, graded on nothing. vHit does not depend
+       on the target's defence at all, so this shot's only job is to leave
+       LOFLastVHit holding the real e.vHit -- the thrown-weapon formula
+       recomputes it via CalcValues() inside RAttack, so nothing outside
+       that call can predict it (see the comment on LOFLastVHit). */
+    resetHP();
+    LOFForcedRoll = 10;
+    { Item *dag = new Weapon(dagID, TITEM(dagID)->IType);
+      Throw(EV_RATTACK, shooter, target, NULL, dag); }
+    const int16 vHit = LOFLastVHit;
+
+    /* D, the target's own unmodified defence, is pinned relative to vHit --
+       not to a fixed number like the worked example's 10 -- so every band's
+       forced roll (total-vHit, total in [D-1, D+11]) stays inside the d20's
+       1-20 range regardless of what this character's to-hit bonus turns out
+       to be. +6 centres that 13-wide span in the middle of the die. */
+    const int16 D = vHit + 6;
+    target->Attr[A_DEF] = D;
+
+    /* Bands 0 and 1 hold one creature apiece, so a real (unforced) save
+       roll would make these boundary cases flaky about a third of the
+       time. Force the one member present to fail -- position 1, the
+       square's head -- so every case here tests only the BAND the roll
+       lands in, matching this probe's pre-save behaviour; tryCaseSave
+       below tests the save walk itself. */
+    auto tryCase = [&](int16 total, const char *name, const char *expect) {
+        const int16 r = total - vHit;
+        if (r < 1 || r > 20) {
+            Error("LOF_PROBE: case=%s INCONCLUSIVE -- forced roll %d is "
+                "outside 1-20 (vHit=%d)", name, (int)r, (int)vHit);
+            return;
+        }
+        /* Re-pin: something in the effect pipeline (plausibly a post-
+           damage CalcValues()) silently recomputes A_DEF from the
+           target's actual attributes the first time any status is
+           granted or removed on it, discarding this pin -- the same
+           gotcha LOFSpellProbe (src/Magic.cpp) already documents for
+           TouchDef. Cheap, and correct either way. */
+        target->Attr[A_DEF] = D;
+        LOFSetForcedSave(1);
+        shootOnce((int8)r, name, expect);
+        LOFClearForcedSave();
+    };
+
+    tryCase(D,    "near-lower",  "near");
+    tryCase(D+3,  "near-upper",  "near");
+    tryCase(D+4,  "far-lower",   "far");
+    tryCase(D+7,  "far-upper",   "far");
+    tryCase(D+8,  "cover-lower", "cover");
+    tryCase(D+11, "cover-upper", "cover");
+    tryCase(D-1,  "below-bare",  "none");
+
+    // A natural 20 always hits the target, whatever the penalties.
+    target->Attr[A_DEF] = D;
+    shootOnce(20, "nat20", "target");
+
+    /* item 1 rework: the band names a square, and a Reflex save inside it
+       decides who -- not always the head. cover/extra/target share the
+       band-2 square, in that contents-chain order; LOFSetForcedSave pins
+       which position's save fails, since a probe cannot predict a rat's
+       own save bonus the way it pins vHit/D. */
+    auto tryCaseSave = [&](int16 total, int8 failAt, const char *name,
+            const char *expect) {
+        const int16 r = total - vHit;
+        if (r < 1 || r > 20) {
+            Error("LOF_PROBE: case=%s INCONCLUSIVE -- forced roll %d is "
+                "outside 1-20 (vHit=%d)", name, (int)r, (int)vHit);
+            return;
+        }
+        target->Attr[A_DEF] = D; // re-pin; see tryCase's comment above
+        LOFSetForcedSave(failAt);
+        shootOnce((int8)r, name, expect);
+        LOFClearForcedSave();
+    };
+    tryCaseSave(D+8, 1, "band2-first-fails",  "cover");
+    tryCaseSave(D+8, 2, "band2-second-fails", "extra");
+    tryCaseSave(D+8, 3, "band2-third-fails",  "target");
+    tryCaseSave(D+8, 0, "band2-all-save",     "none");
+
+    /* The save DC is 10+(total-D) -- confirm the probe's own logged DC at
+       two different bands, not just that a hit landed. */
+    auto checkDC = [&](int16 total, const char *name) {
+        const int8 want = (int8)(10 + (total - D));
+        const int8 got = LOFGetLastSaveDC();
+        const bool ok = (want == got);
+        Error("LOF_PROBE: case=%s-dc want=%d got=%d %s",
+            name, (int)want, (int)got, ok ? "PASS" : "FAIL");
+        if (ok) pass++; else fail++;
+    };
+    tryCaseSave(D,   1, "band0-dc-setup", "near");
+    checkDC(D, "band0");
+    tryCaseSave(D+8, 1, "band2-dc-setup", "cover");
+    checkDC(D+8, "band2");
+
+    /* defect 2 (must be RED before the fix in this brief): displacement/
+       blur is a miss outright -- gate the band on e.isWildMiss, never on
+       !e.isHit alone. A 100%-chance MISS_CHANCE on the target must
+       produce a clean miss, not a redirected bystander hit, whether the
+       forced roll lands in band territory (displaced-band-roll) or is
+       high enough that the shot would otherwise have auto-hit with no
+       save at all (displaced-would-auto-hit, total = D+4N). Creature::
+       Strike's own MISS_CHANCE check is gated `e.vRoll < 20` -- a literal
+       natural 20 bypasses displacement by design (SRD: a natural 20
+       always threatens) and is not this defect; displaced-nat20-bypass
+       below confirms that pre-existing behaviour instead of asserting the
+       brief's literal wording, which does not hold for THIS particular
+       wild-miss path. See the report for why. */
+    target->GainTempStati(MISS_CHANCE, target, 50, SS_MISC, 0, 100, 0);
+    tryCase(D+8,  "displaced-band-roll",      "none");
+    tryCase(D+12, "displaced-would-auto-hit", "none");
+    target->Attr[A_DEF] = D; // re-pin; see tryCase's comment above
+    shootOnce(20, "displaced-nat20-bypass",   "target");
+    target->RemoveStati(MISS_CHANCE);
+
+    /* defect 4, RULED 2026-09-22: a natural 20 always hits, and Flawless
+       Dodge does not protect against one. Before that ruling, :5230's `||
+       e.vRoll == 20` clause could set e.isHit true on a bare natural 20
+       while total was still below e.vDef, and Flawless Dodge's old gate
+       (`if (e.isHit ...)`, :5249) could revert that nat-20 hit before
+       total ever reached e.vDef -- which redirected the shot onto the
+       band and struck a bystander instead. The fix now excludes e.vRoll
+       == 20 at :5249 itself, so a nat 20 always lands on the target. Pin
+       D well above this probe's other cases so D+4N (N=3) exceeds
+       vHit+19, the highest total any NON-20 roll could produce here --
+       proving this is the natural-20 clause doing the work, not an
+       ordinary hit that happened to clear the inflated defence. */
+    target->GainPermStati(FLAWLESS_DODGE, NULL, SS_MISC, 1, 0);
+    target->GainPermStati(EXTRA_ABILITY, NULL, SS_MISC, CA_FLAWLESS_DODGE, 5);
+    target->Attr[A_DEF] = vHit + 16; // D+4N = vHit+28, above any non-20 total
+    shootOnce(20, "flawless-dodge-nat20", "target");
+
+    /* The real point of job 2, unchanged by the ruling above: an ORDINARY
+       hit -- reached by arithmetic, not by the natural-20 clause -- is
+       still a clean miss outright when Flawless Dodge fires, and it still
+       leaves the whole line alone rather than redirecting onto a
+       bystander. total here equals e.vDef exactly, the would-auto-hit
+       boundary (D+4N, D the shared pin below), reached by a forced roll
+       of D+12-vHit -- 18 here, never 20, so :5249's nat-20 exclusion does
+       not apply and Flawless Dodge fires as it always did. Per the
+       comment at :1351, total already >= e.vDef whenever Flawless Dodge
+       fires this way, so the band at the call site is excluded and
+       nobody -- target or bystander -- is struck. */
+    target->Attr[A_DEF] = D;
+    shootOnce((int8)(D + 12 - vHit), "flawless-dodge-ordinary-hit", "none");
+    target->RemoveStati(FLAWLESS_DODGE);
+    target->RemoveStati(EXTRA_ABILITY, -1, CA_FLAWLESS_DODGE);
+
+    /* defect 3 (must be RED before the fix): the struck bystander's own
+       size and type choose its damage, not the target's. Make "cover"
+       Large (LDmg) while the target stays the default Medium (SDmg) --
+       mutating the bystander rather than Intended itself, so this stays a
+       pure damage-formula check and cannot perturb the target's own
+       targeting/placement -- force a band-2 hit onto cover, and compare
+       the logged dice against cover's OWN large dice, not the target's
+       medium ones. */
+    Monster *cover = b[2].c;
+    cover->Attr[A_SIZ] = SZ_LARGE;
+    {
+        Item *probeDag = new Weapon(dagID, TITEM(dagID)->IType);
+        Dice wantMedium = probeDag->SDmg();
+        Dice wantLarge = probeDag->LDmg();
+        target->Attr[A_DEF] = D; // re-pin; see tryCase's comment above
+        LOFSetForcedSave(1);
+        shootOnce((int8)(D+8-vHit), "dmg-uses-own-size", "cover");
+        LOFClearForcedSave();
+        const bool gotLarge = LOFGetLastDmgNumber() == wantLarge.Number &&
+            LOFGetLastDmgSides() == wantLarge.Sides;
+        const bool sizesDiffer = wantLarge.Sides != wantMedium.Sides ||
+            wantLarge.Number != wantMedium.Number;
+        const bool ok = gotLarge && sizesDiffer;
+        Error("LOF_PROBE: case=dmg-uses-own-size got=%dd%d+%d "
+            "want_large=%dd%d+%d want_medium=%dd%d+%d %s",
+            (int)LOFGetLastDmgNumber(), (int)LOFGetLastDmgSides(),
+            (int)LOFGetLastDmgBonus(), (int)wantLarge.Number,
+            (int)wantLarge.Sides, (int)wantLarge.Bonus,
+            (int)wantMedium.Number, (int)wantMedium.Sides,
+            (int)wantMedium.Bonus, ok ? "PASS" : "FAIL");
+        if (ok) pass++; else fail++;
+    }
+    cover->Attr[A_SIZ] = SZ_MEDIUM;
+
+    // Precise Shot removes every penalty and every band: a roll that would
+    // otherwise land on "near" (the lowest band) must hit the target
+    // instead, and can never strike a bystander.
+    if (!shooter->HasFeat(FT_PRECISE_SHOT))
+        shooter->GainFeat(FT_PRECISE_SHOT);
+    tryCase(D, "precise-shot", "target");
+
+    /* inc-30ps rework: "A shot with no chosen creature", docs/specs/
+       2026-09-21-line-of-fire-spec.md. Fires with ThrowXY at an EMPTY
+       square (isLoc, no EVictim), so Intended resolves to NULL inside
+       RAttack and the no-target branch runs. whoWasHit (above) already
+       fails a case outright if more than one rat lost HP. */
+    auto shootLoc = [&](int16 tx, int16 ty, int8 roll, const char *caseName,
+            const char *expect) {
+        resetHP();
+        LOFForcedRoll = roll;
+        Item *dag = new Weapon(dagID, TITEM(dagID)->IType);
+        ThrowXY(EV_RATTACK, tx, ty, shooter, NULL, NULL, dag);
+        const char *got = whoWasHit();
+        const bool ok = !strcmp(got, expect);
+        Error("LOF_PROBE: case=%s roll=%d vHit=%d expected=%s got=%s %s",
+            caseName, (int)roll, (int)LOFLastVHit, expect, got,
+            ok ? "PASS" : "FAIL");
+        if (ok) pass++; else fail++;
+    };
+
+    /* Take far, cover, extra and target off the map, leaving only "near"
+       on the line, so a shot aimed past it sees exactly one creature.
+       Distance 3 (far's old square) is now empty and still a valid, in-
+       bounds, non-solid aim point -- LOFProbeFindLine already proved that
+       square clear before any rat was placed there. */
+    b[1].c->Remove(false);
+    b[2].c->Remove(false);
+    b[3].c->Remove(false);
+    b[4].c->Remove(false);
+    const int16 farX = px + dx*dist[1], farY = py + dy*dist[1];
+    b[0].c->Attr[A_DEF] = vHit + 6;
+    // Boundary Brian corrected: the lone creature takes no penalty at all.
+    shootLoc(farX, farY, (int8)6, "loc-lone-hit",  "near");
+    shootLoc(farX, farY, (int8)5, "loc-lone-miss", "none");
+
+    /* Put far back for the multi-creature cases; cover and target stay off
+       so their square (distance 4) is the empty aim point. near and far get
+       pinned to different defences so "first" and "second" are distinct
+       roll thresholds under the flat -4. */
+    b[1].c->PlaceAt(mp, farX, farY);
+    const int16 coverX = px + dx*dist[2], coverY = py + dy*dist[2];
+    b[0].c->Attr[A_DEF] = vHit + 10; // near
+    b[1].c->Attr[A_DEF] = vHit + 2;  // far
+    shootLoc(coverX, coverY, (int8)14, "loc-multi-first",  "near");
+    shootLoc(coverX, coverY, (int8)6,  "loc-multi-second", "far");
+    shootLoc(coverX, coverY, (int8)1,  "loc-multi-none",   "none");
+
+    Error("LOF_PROBE: RESULT pass=%d fail=%d", pass, fail);
+
+    LOFForcedRoll = 0;
+    for (int i = 0; i < 5; i++)
+        b[i].c->Remove(true);
+    theGame->PlayMode = wasInPlay;
+}
 
 EvReturn Creature::NAttack(EventInfo &e) /* this == EActor */
 {
@@ -4201,6 +4937,9 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
       return ReThrow(EV_DAMAGE,e);
 
     e.vRoll = random(20) + 1;
+    LOFInitForcedRoll();
+    if (LOFForcedRoll)
+      e.vRoll = LOFForcedRoll;
     e.vtRoll = random(20) + 1;
     if (e.EActor->HasFeat(FT_MURDEROUS))
       e.vtRoll += 2;
@@ -4496,8 +5235,18 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
     /* This should always stay the LAST check. You get comparatively
        few FDs each day, so it's important that the game not "burn"
        them on attacks that would be evaded by miss chance, poor
-       attack roll, etc. */
-    if (e.isHit && e.EVictim->HasStati(FLAWLESS_DODGE,1))
+       attack roll, etc.
+       inc-30ps, ruled 2026-09-22: a natural 20 always hits, and Flawless
+       Dodge does not protect against one -- so this gate excludes e.vRoll
+       == 20 as well as requiring e.isHit. Without that exclusion, isHit
+       could be true here purely from :5230's `|| e.vRoll == 20` clause
+       with total still below e.vDef, and Flawless Dodge could then revert
+       a nat-20 hit before total ever reached e.vDef -- which is exactly
+       what let a nat 20 redirect onto a bystander at the call site (see
+       the comment at :1351). Excluding the natural 20 here keeps this
+       gate's own promise true: it can only clear isHit once total already
+       reached e.vDef. */
+    if (e.isHit && e.vRoll != 20 && e.EVictim->HasStati(FLAWLESS_DODGE,1))
       if (e.EVictim->SumStatiMag(FLAWLESS_DODGE) <
             e.EVictim->AbilityLevel(CA_FLAWLESS_DODGE) + e.EVictim->Mod(A_DEX))
         {

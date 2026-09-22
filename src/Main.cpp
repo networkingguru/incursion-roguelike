@@ -269,6 +269,21 @@ void Game::Play() {
        tools/check_xp_drain.sh. inc-3gli. */
     pp->XPDrainProbe();
 
+    /* Off unless INCURSION_LOF_PROBE is set, and run here for the same
+       reason as the others above -- it needs a live player and a live map.
+       A free function (src/Fight.cpp), not a Creature method: this phase's
+       brief forbids touching inc/Creature.h, which phase 1 (TouchDef)
+       already has uncommitted changes in. See LineOfFireProbe and
+       tools/check_line_of_fire.sh. inc-30ps phase 2. */
+    extern void LineOfFireProbe(Player *shooter);
+    LineOfFireProbe(pp);
+
+    /* Off unless INCURSION_LOF_SPELL_PROBE is set, needs the same live
+       player and map. See LOFSpellProbe (src/Magic.cpp) and
+       tools/check_line_of_fire_spell.sh. inc-30ps phase 3. */
+    extern void LOFSpellProbe(Player *shooter);
+    LOFSpellProbe(pp);
+
     /* Off unless INCURSION_TRUESIGHT_PROBE is set, and run here because it
        needs a live player and a live map. See Creature::TrueSightProbe and
        tools/check_true_sight.sh. inc-5bl3. */
