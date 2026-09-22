@@ -470,6 +470,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_cowl_warding_prose.sh` | Does the Cowl of Warding description state that its save-versus-spells and armour-luck bonuses scale with the magical plus -- +3 and +5 plus the plus -- rather than the flat "+4"/"+6" it claimed before, matching its `PLUS_ADD3`/`PLUS_ADD5` code? | LIVE |
 | `check_cure_critical.sh` | Does the Cure Critical Wounds effect roll the `4d8 + LEVEL_MAX20` its own description promises, rather than the `3d8` it paid before? | LIVE |
 | `check_death_attack.sh` | Does the Assassin's Death Attack gate only on the assassin's own out-of-combat state, so it can strike a target that is already fighting? | LIVE |
+| `check_deepseek.sh` | Does `tools/deepseek.py` refuse to spend once its ledger says the budget is gone or poisoned, bill exactly one row per success, bill nothing on an HTTP failure, and never let the DeepInfra key reach stdout, stderr or the ledger (inc-3dgz)? | LIVE |
 | `check_dequ_dc.sh` | Do exactly the four SRD monsters retain A_DEQU save DCs in the thirteen-monster roster? | LIVE |
 | `check_dequ_dice.sh` | Does A_DEQU roll its declared dice without tripling? | LIVE |
 | `check_dequ_magic_hardness.sh` | Against a monster whose A_DEQU carries no save DC, is a plain weapon's hardness bypassed while a magical weapon's is kept? Two sessions strike acid blobs, one with an ordinary long sword and one with a Holy Avenger, and read each sword's own description page before and after. | LIVE |
