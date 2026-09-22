@@ -43,7 +43,7 @@ OUT="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh
 RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
 SHEET="$RUN/logs/sheet.txt"
 
-if echo "$OUT" | grep -q "NO GAMEPLAY"; then
+if grep -q "NO GAMEPLAY" <<< "$OUT"; then
     say_fail "the run never entered a map, so it measured nothing"
 elif [ ! -f "$SHEET" ]; then
     say_fail "the sheet was never written to $SHEET"
@@ -51,7 +51,7 @@ else
     for skill in Listen Lockpicking "Move Silently" Perform "Pick Pockets" \
                  "Poison Use" Ride Spot Tumble; do
         line="$(grep -m1 "^  $skill  *+" "$SHEET")"
-        if echo "$line" | grep -q "(2 ranks"; then
+        if grep -q "(2 ranks" <<< "$line"; then
             echo "  ok: $line"
         else
             say_fail "$skill was named but holds no ranks"
@@ -61,7 +61,7 @@ else
     # The discriminating half: these two are where counting would have put them.
     for skill in Alchemy Appraise; do
         line="$(grep -m1 "^  $skill  *+" "$SHEET")"
-        if echo "$line" | grep -q "(0 ranks"; then
+        if grep -q "(0 ranks" <<< "$line"; then
             echo "  ok: $line"
         else
             say_fail "$skill holds ranks, so the ranks were spent by position"

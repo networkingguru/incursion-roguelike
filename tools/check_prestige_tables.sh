@@ -41,7 +41,7 @@ RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
 SCREENS="$RUN/logs/screens"
 
 # A session that measured nothing must never read as a pass -- inc-loa.3.
-if echo "$OUT" | grep -q "NO GAMEPLAY"; then
+if grep -q "NO GAMEPLAY" <<< "$OUT"; then
     echo "FAIL: the run never entered a map, so it measured nothing"
     exit 1
 fi
@@ -81,7 +81,7 @@ check() {
 
     squeezed="$(sed 's/|//g; s/  */ /g' "$file")"
     for row in "$@"; do
-        if echo "$squeezed" | grep -qF " $row "; then
+        if grep -qF " $row " <<< "$squeezed"; then
             echo "  ok: $dump  $row"
         else
             echo "FAIL: $dump has no row \"$row\""

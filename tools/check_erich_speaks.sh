@@ -39,7 +39,7 @@ live="$(awk '
 
 fail=0
 for msg in MSG_CUSTOM1 MSG_CUSTOM2 MSG_CUSTOM3 MSG_CUSTOM4 MSG_CUSTOM5; do
-    if ! printf '%s\n' "$live" | grep -q "^\s*${msg}\s*$"; then
+    if ! grep -q "^\s*${msg}\s*$" <<< "$live"; then
         echo "FAIL: $msg is not live in Erich's GODSPEAK_LIST (still disabled, or missing)."
         fail=1
     fi
