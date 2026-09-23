@@ -13,6 +13,11 @@ Implementer order; take the first rung that can run:
 Why: keeps implementation detail out of Claude's context; matches model size to task difficulty.
 History: docs/rules-history/codex-dispatch-and-orchestration.md#always-implement-via-codex.
 
+## model-outage-leave-a-note
+When an implementer model family stops on a usage limit (Codex, DeepSeek, a Claude model), write a note for other agents at once: `bd remember --key <family>-out-until-<YYYY-MM-DD> "<text>"`, run from `~/Scripts/Incursion`. The text MUST give the return date and time the error states, the rung to skip until then, and the delete command `bd forget <key>`. Before you dispatch, run `bd memories out-until` and skip any family a note names. When you see a noted family work again, run `bd forget <key>` at once.
+Why: without a note, every later session tries the dead family first and loses a dispatch to the same error.
+History: new rule, no prior narrative to archive. Bead inc-3y49.
+
 ## feedback-claude-dispatches-never-writes-code
 Claude does NOT write code on this project. The main agent MUST NOT edit source, build, or run long noisy commands itself. Dispatch one subagent per finding/task with: file:line evidence, red-before-green-after protocol, `upstream:` comment requirements, ledger row, exact build commands. It reports back SHORT: what changed, red/green measurements, surprises. The main agent still owns: one finding at a time to Brian, verifying claims before quoting numbers, judging report truth — not delegated. Two-line read-only checks MAY stay inline.
 Why: implementation detail in the main agent's own context costs tokens every later turn.
