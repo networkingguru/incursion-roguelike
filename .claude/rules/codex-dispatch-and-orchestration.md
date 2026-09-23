@@ -1,15 +1,15 @@
 # Codex dispatch and orchestration
 
 ## always-implement-via-codex
-Claude's main context does NOT author files — only true prose (report, bead body, memory, brief for Codex, doc paragraph). Every machine-read/run file (C++, headers, Python, shell, `.keys`, `.irh`, config, Makefiles, a red-green mutation into a tracked source) goes to Codex, never a hand edit. Claude still RUNS: builds, `tools/headless.sh`, greps, reads, docker, `bd`, git, investigation, judging diffs.
+Claude's main context does NOT author files — only true prose (report, bead body, memory, brief for Codex, doc paragraph). Every machine-read/run file (C++, headers, Python, shell, `.keys`, `.irh`, config, Makefiles, a red-green mutation into a tracked source) goes to an implementer from the order below, never a hand edit. Claude still RUNS: builds, `tools/headless.sh`, greps, reads, docker, `bd`, git, investigation, judging diffs.
 
-Fallback order when Codex is unavailable:
-  1. Codex.
-  2. DeepSeek V4.1-Flash via `tools/deepseek.py` — a self-contained file from a complete spec; it cannot iterate, so YOU run the check and judge the diff after.
-  3. Agent-tool dispatch, explicit `model:` override (NEVER inherit session model): `haiku` ONLY for mechanical find/replace; `sonnet` for anything needing the code understood; `opus` only when sonnet can't, say why. NEVER `model: 'fable'` without Brian's authorisation that conversation. Use for work needing iteration to finish (a check going green, a blast radius read from the tree).
+Implementer order; take the first rung that can run:
+  1. Codex: `codex exec -C <worktree> -s workspace-write - < <brief>`.
+  2. DeepSeek V4.1-Flash in the opencode harness: `~/Scripts/Incursion/tools/opencode_ds.sh <worktree> <brief>` — ALWAYS the shared checkout's copy, because a worktree's copy reads that worktree's config and sandbox profile, which the agent can edit. It MAY take ANY work Codex or a `sonnet` agent would take — it reads the tree, runs builds and checks, and iterates. It runs under `tools/opencode/sandbox.sb` (writes only inside the worktree, its cache and temp) and `tools/opencode/opencode.json` denies it git, bd, `gh` and `./incursion`. It obeys AGENTS.md "If you are the implementer". NEVER run `opencode` except through this wrapper.
+  3. Agent-tool dispatch, explicit `model:` override (NEVER inherit session model): `haiku` ONLY for mechanical find/replace; `sonnet` only when rung 2 cannot run; `opus` only when sonnet can't, say why. NEVER `model: 'fable'` without Brian's authorisation that conversation.
   4. NEVER Claude's own Edit/Write. If none of 1–3 can run, STOP and tell Brian.
 
-The DeepInfra key behind `tools/deepseek.py` has a 20 USD cap, one allowed model, cannot raise its own cap. Ledger: `logs/deepseek-ledger.jsonl`. If it stops answering, read the ledger, ask Brian before topping up.
+`tools/deepseek.py` stays for one request with no tree access (a text answer, or a self-contained file from a complete spec); it is not an implementer rung. Both DeepSeek paths use one scoped DeepInfra key (20 USD cap, one allowed model, cannot raise its own cap) and one ledger, `logs/deepseek-ledger.jsonl`, which each checks before it spends. If DeepSeek stops answering, read the ledger, ask Brian before topping up.
 Why: keeps implementation detail out of Claude's context; matches model size to task difficulty.
 History: docs/rules-history/codex-dispatch-and-orchestration.md#always-implement-via-codex.
 

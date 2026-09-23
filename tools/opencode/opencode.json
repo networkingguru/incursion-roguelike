@@ -1,0 +1,40 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "deepinfra-ds/deepseek-ai/DeepSeek-V4.1-Flash",
+  "share": "disabled",
+  "autoupdate": false,
+  "provider": {
+    "deepinfra-ds": {
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "https://api.deepinfra.com/v1/openai",
+        "apiKey": "{env:DEEPINFRA_API_KEY}"
+      },
+      "models": {
+        "deepseek-ai/DeepSeek-V4.1-Flash": {
+          "cost": {
+            "input": 0.14,
+            "output": 0.42,
+            "cache_read": 0.0042
+          }
+        }
+      }
+    }
+  },
+  "permission": {
+    "edit": "allow",
+    "webfetch": "deny",
+    "external_directory": "deny",
+    "bash": {
+      "*": "allow",
+      "git *": "deny",
+      "bd *": "deny",
+      "./incursion": "deny",
+      "./incursion *": "deny",
+      "tools/finish_bead.sh*": "deny",
+      "tools/sync_issues.sh*": "deny",
+      "gh *": "deny",
+      "rm -rf /*": "deny"
+    }
+  }
+}

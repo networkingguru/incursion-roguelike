@@ -1,0 +1,11 @@
+(version 1)
+(allow default)
+(deny file-write*)
+(allow file-write*
+    (subpath (param "WORKDIR"))
+    (subpath (param "CACHEDIR"))
+    (subpath "/private/tmp")
+    (subpath "/private/var/folders")
+    (literal "/dev/null")
+    (literal "/dev/tty")
+    (regex #"^/dev/fd/"))

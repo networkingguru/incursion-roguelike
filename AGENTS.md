@@ -21,9 +21,9 @@ Prefer a follow-up comment over silently editing a published body. `docs/REPORTI
 Why: publication under his name is irreversible.
 History: docs/rules-history/AGENTS.md#publishing-anything-outward-facing.
 
-## If you are Codex
+## If you are the implementer (Codex, or DeepSeek in opencode)
 
-Claude plans and reviews; you implement. Disagree with a prompt? Say so in your report, don't choose silently.
+This section binds every implementer Claude dispatches. Claude plans and reviews; you implement. Disagree with a prompt? Say so in your report, don't choose silently.
 - NEVER delete an existing guard, bounds check, invariant, assertion or test to fit new code. If one blocks you, STOP, report file+line, say why.
 - Build ONLY with `BACKEND=posix ./build_macos.sh` (produces `incursion-headless`, compiles `mod/Incursion.Mod` in-sandbox). Use `./incursion-headless` as compiler in scripts.
 - NEVER invoke `./incursion` (SDL, no sandbox). Do NOT run/edit/report-failing: `check_flavor_stability.sh`, `check_dump_save.sh`, `check_convert_guard.sh`, `check_stair_warn.sh`, `check_dup_names.sh` — a human runs these.
