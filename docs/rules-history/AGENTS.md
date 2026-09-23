@@ -169,6 +169,14 @@ loads AGENTS.md and became an implementer that may take any work Codex or a
 Sonnet agent would take. A heading that named only Codex would let it read the
 section as someone else's rules. The obligations did not change.
 
+2026-09-23, bead inc-dz74: added the evidence line. An implementer's sandbox
+lets it write only inside its worktree, and `tools/finish_bead.sh` destroys the
+worktree at landing, so a specimen written anywhere but the gitignored `logs/`
+blocks the landing as an untracked file. The reproduction goes in `tools/` and
+is committed; Claude copies each reported specimen to `docs/evidence/<bead>/`
+in the shared checkout. Implementers read AGENTS.md, not `.claude/rules/`, so
+the line had to live here as well as in publishing.md.
+
 ## Marking base-code bugs
 
 **Every fix to a defect that is upstream's rather than the port's MUST be marked
