@@ -710,6 +710,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_xprint_tokens.sh` | Ratchet literal __XPrint object-token vararg overruns (inc-upw.30); Python 3 only. | LIVE |
 | `check_xsummon_live.sh` | Does a divine summoning spell (Holy Summoning, Summon Nature's Ally) cap its concurrent summons the way the wizard line does? | LIVE |
 | `check_yuse_activate.sh` | Does activating a blast item from the `y` menu ask where to aim it, rather than resolving the beam on the activator? | LIVE |
+| `check_yuse_no_effect.sh` | Does a `y`-menu verb that changed nothing tell the player so, without doubling up on a handler that already spoke? | LIVE |
 | `check_zeal_strike.sh` | Does Zeal end when the paladin strikes a creature it did not choose, and survive both an ordinary turn and a blow at the target it did choose? | LIVE |
 
 ### Diagnostics

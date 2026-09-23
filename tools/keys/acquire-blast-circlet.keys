@@ -7,23 +7,39 @@
 #   w y                      enter wizard mode and open its menu
 #   Item Acquisition         the acquisition browser
 #   RIGHT*19                 walk the glyph row to Headbands. ItemGlyphs
-#                            (src/Tables.cpp:320) puts -AI_HEADBAND 19 steps
+#                            (src/Tables.cpp:340) puts -AI_HEADBAND 19 steps
 #                            along, and the header line names the category, so
 #                            a miscount shows up in a dump as some other word
 #                            after "Acquisition -- [...]:".
-#   @until ... DOWN          the candidate list has no menu letters, so the
-#                            cursor is walked instead. The window shows three
-#                            rows and highlights the middle one, so the run
-#                            stops on the pass where the row BELOW the wanted
-#                            one first appears. That is an ordering assumption
-#                            about lib/m_items.irh, and the check does not
-#                            trust it: tools/check_yuse_activate.sh reads the
-#                            item's name back off the activate menu before
-#                            believing anything else.
-#   ENTER q SPACE ENTER      take it, put it in the helmet slot, leave the
-#                            inventory manager. SPACE is the swap
-#                            (src/Managers.cpp:911); the manager refuses to
-#                            close while anything is still in the air.
+#   @until "Circlet of       the candidate list has no menu letters and no '>'
+#     Blasting" DOWN         marker, so neither @choose nor @cursorto can reach
+#                            a row -- walking the cursor with DOWN is the only
+#                            way in. The window shows three rows and highlights
+#                            the middle one, so @until stops on the pass where
+#                            the wanted name first appears at the BOTTOM of
+#                            that window, and one further DOWN moves the
+#                            highlight onto it. Naming the item itself, rather
+#                            than a neighbour used as a sentinel, is what makes
+#                            this independent of the row's position: the
+#                            acquisition order follows lib/m_items.irh, and a
+#                            new headband moves every row after it.
+#   @expect "Circlet of      nail the name to the row before taking it, so a
+#     Blasting"              drifted cursor stops the run here instead of
+#                            quietly acquiring the neighbour. The check does not
+#                            rely on this alone: tools/check_yuse_activate.sh
+#                            re-reads the item's name off the activate menu.
+#   ENTER                    take it. A non-stacking item lands in the In-the-
+#                            Air slot and opens the inventory manager.
+#   q SPACE ESC              put it on the head and leave. SPACE is the swap
+#                            (src/Managers.cpp:911) and ESC leaves once the air
+#                            slot is empty (src/Managers.cpp:761). The close
+#                            used to be "q SPACE ENTER", and 59c34fa made the
+#                            manager's Enter an unconditional swap, so the old
+#                            ENTER put the circlet on and then lifted it
+#                            straight back into the air, leaving the manager
+#                            open for the next keystroke to land in. Worn, not
+#                            stowed, because the 'a' route measured below lists
+#                            only what the player can actively use.
 
 @include chargen.keys
 
@@ -31,8 +47,8 @@ w
 y
 @choose "Item Acquisition"
 RIGHT*19
-@until "Headband of Tactical Combat" DOWN
+@until "Circlet of Blasting" DOWN
+@expect "Circlet of Blasting"
+DOWN
 ENTER
-q
-SPACE
-ENTER
+q SPACE ESC

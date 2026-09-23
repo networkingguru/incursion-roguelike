@@ -275,6 +275,7 @@ void TextTerm::Message(const char* _Msg) {
     Msg = _Msg;
     if (!Msg.GetTrueLength())
         return;
+    MessageCounter++;
     AddMessage(Msg);
 
     if (Mode != MO_PLAY && Mode != MO_INV) {

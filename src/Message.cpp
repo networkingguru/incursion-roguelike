@@ -46,6 +46,8 @@ EventInfo *ev;
 
 int16 Silence;
 
+uint32 MessageCounter;
+
 int HelpEffectSort(const void *a, const void *b);
 int HelpResourceSort(const void *a, const void *b);
 
@@ -723,6 +725,7 @@ void Player::__IPrint(const char*msg, va_list ap) {
         if (m && m->QueueNum()) {
             MessageQueue[m->QueueNum()] += fm;
             MessageQueue[m->QueueNum()] += " ";
+            MessageCounter++;
         } else
             MyTerm->Message(fm);
     }
