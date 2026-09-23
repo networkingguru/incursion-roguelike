@@ -919,6 +919,7 @@ extern Thing *LineOfFireBand(const LOFSquare squares[], int16 N, int8 D,
     int16 total);
 extern int8 LineOfFireCoverPenalty(int16 N);
 extern void LOFSetLastVHit(int8 v);
+extern void LOFSetLastDmg(const Dice &d, int8 dtype);
 
 EvReturn Magic::MagicStrike(EventInfo &e) {
     int8 first_efNum = e.efNum;
@@ -1925,13 +1926,31 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
      effects (beam, breath, chain) strike everyone by design and are
      unaffected; ball/burst and a natural attack are unchanged, out of
      scope here as in PredictVictimsOfBallBeamBolt's matching branch. */
-  if (!e.EVictim && !isMulti && !isBall && !e.isNAttack) {
+  /* inc-55jl item 6: a real direction cast (EDir != CENTER -- CENTER is
+     "at myself" and is already sent to DoneProject by the self-hit
+     shortcut above, so it never reaches here) arrives with EVictim
+     already set to the caster by MagicEvent's own fallback (:774, upstream,
+     shared by every effect archetype -- left alone). That fallback's mark
+     is not a chosen creature; treat it as none, exactly as a genuine
+     !EVictim square aim is, so a bolt or ray fired down a corridor takes
+     this walk instead of the branch below it that can only ever find a
+     target by re-crossing the caster's own square -- which a shot moving
+     AWAY from the caster never does. */
+  if ((!e.EVictim ||
+       (e.isDir && e.EDir != CENTER && e.EVictim == e.EActor)) &&
+      !isMulti && !isBall && !e.isNAttack) {
       Creature *cands[1024]; int16 candCount = 0;
       PredictVictimsOfBallBeamBolt(e, isBeam, false, false, cands,
           candCount, false);
       if (candCount > 128) /* item 5: clamp, matching Fight.cpp */
           candCount = 128;
       Thing *winner = NULL;
+      /* inc-55jl item 5: cands[0]'s own ReThrow(EV_STRIKE) below already
+         applies the effect once, through Creature::Strike's own DoHit ->
+         "if (e.AType == A_SPEL) if (e.isHit) ReThrow(EV_MAGIC_STRIKE,e)"
+         (src/Fight.cpp). Only a winner found by the walk over cands[1..]
+         still needs the explicit ReThrow(EV_MAGIC_STRIKE) below. */
+      bool winnerNeedsStrike = false;
       if (candCount > 0) {
           const int8 penalty = (candCount == 1) ? 0 :
               LineOfFireCoverPenalty(1);
@@ -1948,6 +1967,14 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
           se.vDef    = (int8)(D0 + penalty);
           se.vThreat = 20;
           se.AType   = A_SPEL;
+          /* inc-55jl item 5 follow-up: capture se.Dmg's dice -- CalcEffect's
+             own maximized (or not) numbers -- BEFORE the strike, not after:
+             on a hit, the strike's own damage application (Blast(),
+             src/Effects.cpp) consumes/clears these fields as a side effect
+             (measured: DmgNum/Sides/Bonus read 0/0/-1 immediately after a
+             hit, still the real dice after a miss), so reading them after
+             is only reliable for the miss case. */
+          LOFSetLastDmg(se.Dmg, se.DType);
           ReThrow(EV_STRIKE, se);
           LOFSetLastVHit(se.vHit);
           if (se.isHit)
@@ -1956,7 +1983,11 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
               int16 total = se.vHit + se.vRoll;
               for (int16 idx = 1; idx < candCount; idx++) {
                   int8 Di = (int8)cands[idx]->TouchDef;
-                  if (total >= Di + penalty) { winner = cands[idx]; break; }
+                  if (total >= Di + penalty) {
+                      winner = cands[idx];
+                      winnerNeedsStrike = true;
+                      break;
+                  }
               }
           }
       }
@@ -1967,7 +1998,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
          rule allows exactly one roll. isHit=true and AType=A_SPEL make
          MagicStrike skip straight to effect application, the same trick
          its own band redirect (above) uses on its own re-entry. */
-      if (winner) {
+      if (winner && winnerNeedsStrike) {
           EventInfo re2 = e;
           re2.ETarget = winner;
           re2.EVictim = (Creature*)winner;
@@ -2786,6 +2817,9 @@ void LOFSpellProbe(Player *shooter) {
        mirrors LineOfFireProbe's identical need for LOFLastVHit
        (src/Fight.cpp), for the identical reason. */
     extern int8 LOFGetLastVHit();
+    extern int8 LOFGetLastDmgNumber();
+    extern int8 LOFGetLastDmgSides();
+    extern int8 LOFGetLastDmgBonus();
     castOnce(eldritchID, 10, 30);
     const int16 vHit = LOFGetLastVHit();
 
@@ -2798,6 +2832,33 @@ void LOFSpellProbe(Player *shooter) {
     const int16 D = vHit + 6;
 
     int pass = 0, fail = 0;
+
+    /* item 7 (inc-55jl phase 3): "An unerring bolt is cast only at a
+       chosen target", docs/specs/2026-09-21-line-of-fire-spec.md. Reads
+       the compiled qval bitmask directly off each resource's first effect
+       segment -- no map or creature needed, so this runs before any of
+       the gameplay setup above. */
+    {
+        static const char *unerringNames[4] = {
+            "Magic Missile", "Force Missiles", "Acid;wand", "Major Drain"
+        };
+        for (int i = 0; i < 4; i++) {
+            const rID qid = FIND(unerringNames[i]);
+            if (!qid) {
+                Error("LOF_SPELL_PROBE: case=qval-%s INCONCLUSIVE -- "
+                    "resource not found", unerringNames[i]);
+                fail++;
+                continue;
+            }
+            EffectValues *ev = TEFF(qid)->Vals(0);
+            const bool ok = ev && !(ev->qval & (Q_DIR | Q_LOC));
+            Error("LOF_SPELL_PROBE: case=qval-%s qval=%d %s",
+                unerringNames[i], (int)(ev ? ev->qval : -1),
+                ok ? "PASS" : "FAIL");
+            if (ok) pass++; else fail++;
+        }
+    }
+
     auto checkCase = [&](const char *caseName, const char *expect) {
         const char *got = whoWasHit();
         const bool ok = !strcmp(got, expect);
@@ -2960,10 +3021,45 @@ void LOFSpellProbe(Player *shooter) {
        killing the first ally it met with certainty. Cast eldritchID at an
        EMPTY square (isLoc, no EVictim/ETarget) so Magic::ABallBeamBolt's
        own no-target walk runs. */
+    /* checkExactLoss is true for all three: candCount==1 for loc-lone-hit;
+       at roll=14 loc-multi-first's own cands[0] ("near", TouchDef
+       vHit+10) hits directly (measured: cand0 touchDef=19 isHit=1,
+       vHit+vRoll==vDef exactly), the "cands[0] hit directly" dispatch
+       item 5 fixes; loc-multi-second's cands[0] ("near") MISSES instead
+       at roll=6 (cand0 touchDef=19 isHit=0), and its winner ("far") is
+       struck through the walk's own separate ReThrow(EV_MAGIC_STRIKE,
+       re2) dispatch -- traced and confirmed single-application on both
+       dispatches (inc-55jl item-5 follow-up), so checking it exactly too
+       cannot prove or disprove item 5 by itself, but costs nothing now
+       that the oracle below is deterministic.
+
+       expectedFull is read back from Magic::MagicStrike's own se.Dmg
+       (LOFSetLastDmg, :1962) -- the maximized dice CalcEffect already
+       fixed before ANY strike, hit/miss or save touches them. Eldritch
+       Bolt carries EF_PARTIAL (lib/wspells.irh): Magic::Blast (src/
+       Effects.cpp:192) rolls a Fortitude save per cast and halves e.vDmg
+       on success. An earlier version of this check tolerated "loss ==
+       full OR half" instead of forcing the save -- but a DOUBLE
+       application where both saves happen to succeed sums to
+       half+half == full, passing with the defect present. castLoc now
+       forces the save itself to fail (LOFSetForcedSaveThrowRoll, src/
+       Fight.cpp, wired into Creature::SavingThrow, src/Creature.cpp:3407)
+       so "loss == expectedFull" is the only value that can ever pass. */
+    extern void LOFSetForcedSaveThrowRoll(int8 r);
+    extern void LOFClearForcedSaveThrowRoll();
     auto castLoc = [&](int16 tx, int16 ty, int8 roll, const char *caseName,
-            const char *expect) {
+            const char *expect, bool checkExactLoss = false) {
         resetHP();
         LOFSetForcedRoll(roll);
+        /* item 5 follow-up: roll==1 makes Creature::SavingThrow's own
+           natural-1-always-fails SRD rule apply to the FORCED roll, so
+           Eldritch Bolt's EF_PARTIAL save (src/Effects.cpp:192) never
+           resists and never halves -- the only way "loss == expectedFull"
+           can be an exact, non-tolerant assertion instead of "== full OR
+           half" (which a double application can also produce: two halved
+           applications sum to a full-looking total). */
+        if (checkExactLoss)
+            LOFSetForcedSaveThrowRoll(1);
         EventInfo xe; xe.Clear();
         xe.EActor = shooter;
         xe.eID    = eldritchID;
@@ -2972,12 +3068,26 @@ void LOFSpellProbe(Player *shooter) {
         xe.isLoc  = true;
         xe.EXVal  = tx;
         xe.EYVal  = ty;
+        xe.MM     = MM_MAXIMIZE;
         ReThrow(EV_EFFECT, xe);
         LOFSetForcedRoll(0);
+        LOFClearForcedSaveThrowRoll();
         const char *got = whoWasHit();
-        const bool ok = !strcmp(got, expect);
-        Error("LOF_SPELL_PROBE: case=%s roll=%d expected=%s got=%s %s",
-            caseName, (int)roll, expect, got, ok ? "PASS" : "FAIL");
+        bool ok = !strcmp(got, expect);
+        int32 loss = -1, expectedFull = -1;
+        if (ok && checkExactLoss && strcmp(expect, "none") != 0) {
+            Monster *hitC = NULL;
+            for (int i = 0; i < 5; i++)
+                if (b[i].c->cHP < 10000)
+                    hitC = b[i].c;
+            loss = hitC ? (int32)(10000 - hitC->cHP) : -1;
+            expectedFull = (int32)LOFGetLastDmgNumber() *
+                LOFGetLastDmgSides() + LOFGetLastDmgBonus();
+            ok = ok && (loss == expectedFull);
+        }
+        Error("LOF_SPELL_PROBE: case=%s roll=%d expected=%s got=%s "
+            "loss=%d want=%d %s", caseName, (int)roll, expect,
+            got, (int)loss, (int)expectedFull, ok ? "PASS" : "FAIL");
         if (ok) pass++; else fail++;
     };
 
@@ -3003,9 +3113,15 @@ void LOFSpellProbe(Player *shooter) {
       ReThrow(EV_EFFECT, xe); }
     LOFSetForcedRoll(0);
     const int16 aloneVHit = LOFGetLastVHit();
+    /* Eldritch Bolt carries EF_PARTIAL (lib/wspells.irh: "allowing a
+       Fortitude save for half damage") -- a SEPARATE save from the cover-
+       and-band Reflex save LOFSetForcedSave controls, resolved inside
+       Creature::SavingThrow (src/Creature.cpp:3407). castLoc forces it to
+       fail via LOFSetForcedSaveThrowRoll(1) whenever checkExactLoss is
+       set, so no Attr pin is needed here. */
     b[0].c->TouchDef = aloneVHit + 6;
     // Boundary Brian corrected: the lone creature takes no penalty at all.
-    castLoc(farX, farY, (int8)6, "loc-lone-hit",  "near");
+    castLoc(farX, farY, (int8)6, "loc-lone-hit",  "near", true);
     castLoc(farX, farY, (int8)5, "loc-lone-miss", "none");
 
     /* Put far back for the multi-creature cases; cover/target/extra stay
@@ -3016,9 +3132,101 @@ void LOFSpellProbe(Player *shooter) {
     const int16 coverX = px + dx*dist[2], coverY = py + dy*dist[2];
     b[0].c->TouchDef = vHit + 10; // near
     b[1].c->TouchDef = vHit + 2;  // far
-    castLoc(coverX, coverY, (int8)14, "loc-multi-first",  "near");
-    castLoc(coverX, coverY, (int8)6,  "loc-multi-second", "far");
+    castLoc(coverX, coverY, (int8)14, "loc-multi-first",  "near", true);
+    castLoc(coverX, coverY, (int8)6,  "loc-multi-second", "far", true);
     castLoc(coverX, coverY, (int8)1,  "loc-multi-none",   "none");
+
+    /* item 6 (inc-55jl phase 3): "A bolt fired in a direction strikes the
+       first creature in its path", docs/specs/2026-09-21-line-of-fire-
+       spec.md. dirVal is the same line (dx,dy) as every case above, just
+       named as a Dir instead of a destination square -- "near" (distance
+       2) is still the first (and, with cover/target/extra off the map,
+       only) body in that direction, "far" (distance 3) the second.
+       xe carries ONLY what EffectPrompt's key path sets (src/Term.cpp:
+       2546): Clear(), EActor, eID, isDir, EDir -- no EXVal/EYVal/vRange,
+       matching the actual bug report exactly rather than a friendlier
+       approximation of it. */
+    const Dir dirVal = (dx == 1) ? EAST : (dx == -1) ? WEST :
+        (dy == 1) ? SOUTH : NORTH;
+    auto castDir = [&](int8 roll, const char *caseName, const char *expect,
+            bool checkExactLoss) {
+        resetHP();
+        LOFSetForcedRoll(roll);
+        if (checkExactLoss)
+            LOFSetForcedSaveThrowRoll(1);
+        EventInfo xe; xe.Clear();
+        xe.EActor = shooter;
+        xe.eID    = eldritchID;
+        xe.isDir  = true;
+        xe.EDir   = dirVal;
+        /* MM_MAXIMIZE is not a field the key path sets either -- unlike
+           isDir/EDir, it changes no aiming/routing decision, only makes
+           the damage number deterministic enough for checkExactLoss to
+           assert on, the same test-precision role it plays in castLoc
+           above. */
+        if (checkExactLoss)
+            xe.MM = MM_MAXIMIZE;
+        ReThrow(EV_EFFECT, xe);
+        LOFSetForcedRoll(0);
+        LOFClearForcedSaveThrowRoll();
+        const char *got = whoWasHit();
+        bool ok = !strcmp(got, expect);
+        int32 loss = -1, expectedFull = -1;
+        if (ok && checkExactLoss && strcmp(expect, "none") != 0) {
+            Monster *hitC = NULL;
+            for (int i = 0; i < 5; i++)
+                if (b[i].c->cHP < 10000)
+                    hitC = b[i].c;
+            loss = hitC ? (int32)(10000 - hitC->cHP) : -1;
+            expectedFull = (int32)LOFGetLastDmgNumber() *
+                LOFGetLastDmgSides() + LOFGetLastDmgBonus();
+            ok = ok && (loss == expectedFull);
+        }
+        Error("LOF_SPELL_PROBE: case=%s roll=%d expected=%s got=%s "
+            "loss=%d want=%d %s", caseName, (int)roll, expect, got,
+            (int)loss, (int)expectedFull, ok ? "PASS" : "FAIL");
+        if (ok) pass++; else fail++;
+    };
+    b[0].c->TouchDef = vHit + 6; // near, the first body on the line
+    castDir((int8)10, "dir-hit-first",  "near", true);
+    castDir((int8)1,  "dir-miss-first", "none", false);
+
+    /* A beam fired by direction is unchanged (isMulti, out of scope for
+       item 6) -- both bodies still on the line (near, far) take damage. */
+    resetHP();
+    { EventInfo xe; xe.Clear();
+      xe.EActor = shooter; xe.eID = beamID; xe.isDir = true; xe.EDir = dirVal;
+      xe.vCasterLev = 10;
+      ReThrow(EV_EFFECT, xe); }
+    {
+        const bool ok = b[0].c->cHP < 10000 && b[1].c->cHP < 10000;
+        Error("LOF_SPELL_PROBE: case=dir-beam-hits-all near_hp=%d far_hp=%d "
+            "%s", (int)b[0].c->cHP, (int)b[1].c->cHP, ok ? "PASS" : "FAIL");
+        if (ok) pass++; else fail++;
+    }
+
+    /* item 6 cascade check: EDir==CENTER -- a self-cast by direction, e.g.
+       KY_CMD_TARGET_SELF && Q_DIR (src/Term.cpp:2429-2432) -- must behave
+       exactly as before this change. The self-hit shortcut earlier in
+       this function (isDir && EDir==CENTER, :1890) sends it to
+       DoneProject before it can ever reach the kludge branch the item-6
+       fix touches, so this measures "same" as: the CASTER takes the
+       spell's ordinary damage, once. Confirmed on this tree with the
+       fallback (:774) AND the item-6 condition both reverted -- master's
+       own behaviour -- and again with the fix restored: identical. */
+    {
+        const int32 beforeHP = shooter->cHP;
+        EventInfo xe; xe.Clear();
+        xe.EActor = shooter; xe.eID = eldritchID; xe.isDir = true;
+        xe.EDir = CENTER;
+        ReThrow(EV_EFFECT, xe);
+        const bool ok = shooter->cHP < beforeHP;
+        Error("LOF_SPELL_PROBE: case=dir-center-hits-self beforeHP=%d "
+            "afterHP=%d %s", (int)beforeHP, (int)shooter->cHP,
+            ok ? "PASS" : "FAIL");
+        if (ok) pass++; else fail++;
+        shooter->cHP = beforeHP;
+    }
 
     Error("LOF_SPELL_PROBE: RESULT pass=%d fail=%d", pass, fail);
 

@@ -374,3 +374,85 @@ takes the `upstream` label.
 
 The cover rule itself is NOT a base-code bug. It is a deliberate rules change
 and MUST NOT be marked `upstream:`.
+
+## Amendment 1 — the flight, the landing square, and returning weapons (inc-55jl)
+
+This amendment corrects five defects that the first implementation (commit
+11a8f7b) introduced. It is normative. Where it conflicts with the text above,
+this amendment wins.
+
+### The shot resolves only against a target the flight reached
+
+The flight MUST reach the target's square before any strike is resolved. The
+flight fails to reach it when it stops first: at a solid square, at a special
+terrain that aborts the missile (a wall of air), or at the map edge. A flight
+that fails to reach the target strikes nothing. No creature is struck, and no
+band is rolled.
+
+A target that is dead, or is no longer on the map, when the strike would be
+resolved is not struck either. An attack of opportunity before the flight can
+kill it. The shot then proceeds as a shot at the target's former square.
+
+### Where the missile lands
+
+The landing square is decided from positions read BEFORE any strike, because a
+killing strike removes the creature from the map.
+
+1. The shot hits the target: the target's square.
+2. The shot hits a creature in a band, or a creature in a shot with no chosen
+   creature: that creature's square.
+3. The shot misses cleanly (the target is not hit and no other creature is):
+   the target's square.
+4. The flight stops before it reaches the target: the last square of the path
+   before the square that stopped it.
+5. A shot with no chosen creature that strikes nothing: where the flight ends.
+
+In every case the missile is then placed through the placement path that
+moves it off a square it cannot rest on (a pit, lava, water), as before. The
+missile never lands off the map.
+
+### A returning weapon never strikes a bystander
+
+A returning weapon (the weapon type flag or the weapon quality) has no band.
+A roll that would enter the band is a clean miss. The returning rules are
+otherwise unchanged.
+
+### A spell bolt applies its effect once
+
+A spell bolt aimed at a square with no chosen creature MUST apply its effect
+exactly once to the creature it strikes. The strike that hits the first
+creature already applies the effect. The code that follows MUST NOT apply it
+again.
+
+### Verification for this amendment
+
+Each of the five points above needs a probe case that goes red with the old
+code and green with the fix: a kill lands on the target's square (both
+branches); a target dead before the strike is not struck and the missile lands
+on the map; a target behind a wall is not struck and the missile lands before
+the wall; a clean miss lands on the target's square; a returning weapon's
+banded roll strikes no bystander; a spell bolt at a square takes the target's
+hit points down by exactly one application.
+
+### A bolt fired in a direction strikes the first creature in its path
+
+A bolt that is not a beam, fired with a direction rather than at a creature or
+a square, MUST strike the first creature its path crosses, as it did before
+commit 11a8f7b. A bolt with `EF_ATTACK` resolves that strike with the rule for
+a shot with no chosen creature. A bolt without it strikes that creature. The
+first implementation struck nothing on a direction cast.
+
+### An unerring bolt is cast only at a chosen target
+
+An unerring bolt is a bolt with no `EF_ATTACK`: it makes no roll and always
+reaches the target. It MUST be cast only at a target the caster selected. It
+MUST NOT accept a direction or a square, because a bolt cannot unerringly hit
+a thing its caster did not aim at. The valid targets are the ones the target
+prompt already offers: a creature, and a door or item only for an effect that
+affects items. Today that means the acid wand may target a door and the others
+may not, which matches the SRD's "Inanimate objects are not damaged by the
+spell" for Magic Missile.
+
+This removes direction and square aim from Force Missiles, the acid wand and
+Major Drain. Magic Missile already accepts a target only. Vitriolic Sphere is
+excluded here, as above (`inc-e2p7`).
