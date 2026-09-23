@@ -4990,7 +4990,7 @@ Wizard Spell "Adamant Facade" : EA_INFLICT
   { SC_NEC; Base: SP_EASY; Cost: 6; Level: 3; xval: AD_NECR; 
     Purpose: EP_ATTACK | EP_FIX_TROUBLE (TROUBLE_INJURY); cval: WHITE;
     pval: (LEVEL_SCALED)d4; sval: NOSAVE; 
-    qval: Q_DIR|Q_TAR|Q_LOC; aval: AR_BOLT; 
+    qval: Q_TAR; aval: AR_BOLT;
     Desc: "With this spell, the wizard drains the life and vital force from
       a target and adds it to his own. The target creature suffers 1d4
       vampiric damage per caster level. If this spell kills a target and the
@@ -6358,7 +6358,7 @@ Wizard  Spell "Force Missiles" : EA_BLAST
   { SC_EVO|SC_FORCE; Base: SP_EASY; Cost: 7; Level: 4; sval: NOSAVE; 
     xval: AD_MAGC; pval: (LEVEL_2PER3)d4; 
     Purpose: EP_ATTACK;
-    aval: AR_BOLT; qval: Q_DIR | Q_TAR; cval: COL_MAGIC; 
+    aval: AR_BOLT; qval: Q_TAR; cval: COL_MAGIC;
     Desc: "This spell creates a brilliant globe of magical energy that
     streaks forth from the caster's hand to unerringly strike its target,
     much like a Magic Missile spell. Each missile does 2d4 points of damage

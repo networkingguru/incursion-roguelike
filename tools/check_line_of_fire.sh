@@ -38,7 +38,24 @@
 # only "near" is on the line for the lone-creature boundary (no penalty,
 # both sides), then far restored with cover/target/extra still off so their
 # square is the empty aim point, exercising "hits the first square", "fails
-# the first, hits the second" and "fails every square" under the flat -4.
+# the first, hits the second" and "fails every square" under the flat -4;
+# and two more (inc-55jl) that force a killing hit -- a natural 20 against
+# a target with cHP=1 -- and confirm the dagger lands on the victim's own
+# former square rather than (1,1) (PlaceAt's crash-guard fallback), once
+# through the Intended branch and once through the no-Intended branch.
+#
+# Amendment 1 (inc-55jl, the rest of the 11a8f7b defects): dead-before-
+# strike (a stale reference to an already-dead/off-map Intended, built like
+# Throw() itself since Throw() carries no X/Y, is not struck and lands at
+# the square its EXVal/EYVal name); target-behind-wall (a "Dungeon Wall"
+# terrain square between shooter and target stops the flight, so a forced
+# nat 20 still strikes nothing and lands on the last clear square);
+# clean-miss-lands-on-target (a forced miss with no band lands on the
+# target's own square -- read from LOFGetLastLandX/Y, the pre-placement
+# decision, since Thing::PlaceNear will not rest an item on the live
+# target's own square and always nudges it one tile off); and
+# returning-no-band (WQ_RETURNING skips the band entirely, so a roll that
+# would otherwise redirect onto a bystander is a clean miss).
 #
 # Each case writes one "LOF_PROBE: case=... PASS|FAIL" line, and a final
 # "LOF_PROBE: RESULT pass=N fail=N" line.
@@ -100,8 +117,8 @@ if [ -z "$pass" ] || [ -z "$fail" ]; then
     exit 1
 fi
 
-if [ "$fail" != "0" ] || [ "$pass" -lt 29 ]; then
-    echo "FAIL: $result (want fail=0 and pass>=29)"
+if [ "$fail" != "0" ] || [ "$pass" -lt 35 ]; then
+    echo "FAIL: $result (want fail=0 and pass>=35)"
     exit 1
 fi
 

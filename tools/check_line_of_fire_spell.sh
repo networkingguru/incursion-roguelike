@@ -43,6 +43,44 @@
 # writes one "LOF_SPELL_PROBE: case=... PASS|FAIL" line, and a final
 # "LOF_SPELL_PROBE: RESULT pass=N fail=N" line.
 #
+# Amendment 1 item 5 (inc-55jl): loc-lone-hit, loc-multi-first and loc-
+# multi-second all cast under MM_MAXIMIZE (fixed, non-random damage dice)
+# and force Eldritch Bolt's own EF_PARTIAL Fortitude save to fail
+# (LOFSetForcedSaveThrowRoll(1), wired into Creature::SavingThrow, src/
+# Creature.cpp:3407 -- forcing a natural 1, which that function's own SRD
+# rule always fails, so it can never accidentally read as the natural-20-
+# always-succeeds rule instead). Each then asserts the struck creature's HP
+# dropped by EXACTLY the maximized dice total, read back from
+# Magic::ABallBeamBolt's own se.Dmg (LOFGetLastDmgNumber/Sides/Bonus)
+# before any strike, hit/miss or save can touch it. A double application
+# (the pre-fix defect) cannot land on that one number: an earlier version
+# of this check tolerated "== full OR half" instead of forcing the save,
+# and a double application where both halves succeeded could sum to a
+# full-looking total and pass wrongly.
+#
+# Amendment 1 item 6 (inc-55jl phase 3): "A bolt fired in a direction
+# strikes the first creature in its path". Fixed in Magic::ABallBeamBolt's
+# own "shot with no chosen creature" walk (the item-5 kludge branch), not
+# in MagicEvent's upstream fallback (:774, shared by every effect
+# archetype, left untouched): a direction cast with EDir != CENTER arrives
+# with EVictim set to the caster by that fallback, not a chosen creature,
+# so the walk's guard now also fires for exactly that case.
+# dir-hit-first/dir-miss-first cast Eldritch Bolt via EV_EFFECT with ONLY
+# the fields EffectPrompt's key path itself sets (Clear(), EActor, eID,
+# isDir, EDir -- no EXVal/EYVal/vRange), reusing the same line (dx,dy) as
+# every case above so "near" is still the first body crossed;
+# dir-beam-hits-all confirms a beam fired by direction is unaffected
+# (isMulti, out of scope for item 6); dir-center-hits-self confirms
+# EDir==CENTER (a self-cast by direction) is untouched -- the self-hit
+# shortcut earlier in ABallBeamBolt sends it to DoneProject before it can
+# ever reach the walk this fix changed.
+#
+# Amendment 1 item 7 (inc-55jl phase 3, data): "An unerring bolt is cast
+# only at a chosen target". qval-* cases read the compiled qval bitmask
+# (TEFF(id)->Vals(0)->qval) off Magic Missile, Force Missiles, Acid;wand
+# and Major Drain directly -- no map or creature needed -- and assert
+# neither Q_DIR nor Q_LOC survives on any of the four.
+#
 # Usage: tools/check_line_of_fire_spell.sh    (exits 0 on pass, 1 on fail)
 set -uo pipefail
 
@@ -100,8 +138,8 @@ if [ -z "$pass" ] || [ -z "$fail" ]; then
     exit 1
 fi
 
-if [ "$fail" != "0" ] || [ "$pass" -lt 28 ]; then
-    echo "FAIL: $result (want fail=0 and pass>=28)"
+if [ "$fail" != "0" ] || [ "$pass" -lt 36 ]; then
+    echo "FAIL: $result (want fail=0 and pass>=36)"
     exit 1
 fi
 

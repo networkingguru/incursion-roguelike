@@ -67,8 +67,9 @@ dolt-pprof/
 # Corrupt backup directories (created by bd doctor --fix recovery)
 *.corrupt.backup/
 
-# Backup data (auto-exported JSONL, local-only)
-backup/
+# Backup data (local-only). Plain `backup` also matches a symlink, which
+# `backup/` does not: .beads/backup may be a link to an off-machine folder.
+backup
 
 # Per-project environment file (Dolt connection config, GH#2520)
 .env
