@@ -1700,7 +1700,24 @@ DoYuse:
     }
 
     e.isVerb = true;
-    ReThrow(YuseCommands[c].Event,e);
+    uint32 spoke = MessageCounter;
+    EvReturn r = ReThrow(YuseCommands[c].Event,e);
+
+    /* upstream: the base code discarded ReThrow's return here, so a verb whose
+       handlers all declined printed nothing at all, while the fallback below is
+       silent when a handler already spoke (MessageCounter moved). Plain control
+       flow, no typedef or platform dependence, so Win32 with the original
+       compiler misbehaves identically. Evidence: Observed --
+       tools/check_yuse_no_effect.sh prints no line before the fix and "cannot
+       be" after. inc-k8uw. Not sent. */
+    if (r == NOTHING && MessageCounter == spoke) {
+        if (e.ETarget)
+            IPrint("<Obj> cannot be <Str>.", e.ETarget, YuseCommands[c].Verbed);
+        else if (!YuseCommands[c].QTarget && e.EItem)
+            IPrint("<Obj> cannot be <Str>.", e.EItem, YuseCommands[c].Verbed);
+        else
+            IPrint("Nothing happens.");
+    }
 
     if (RecentVerbs[0] == c)
         return;
