@@ -1,0 +1,202 @@
+# Cast a real spell through the normal key interface until mana sits inside
+# the 35-80% band the mana-regen floor fix cares about, then wait several
+# turns without resting, with no forced state anywhere. (bd inc-41kg)
+#
+#   INCURSION_OPTIONS=tools/gates/Options.Dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav \
+#       tools/headless.sh tools/keys/mana-regen-cast.keys 4
+#
+# WHY 35 CASTS OF BURNING HANDS. Henk (the fixture) starts at 72/72 mana.
+# Burning Hands (lib/wspells.irh:1061) is Cost 2, Level 1, qval Q_DIR,
+# EF_DEFENSIVE only -- no EF_PERSISTANT/EF_LOSEMANA, so it never touches
+# held mana (hMana stays 0 the whole script). [RIGHT] answers its direction
+# prompt and fires at once, no ENTER. Aimed away from the player rather than
+# at '*' (Target Self): Burning Hands centers on EActor when EDir has no X or
+# Y component (lib/wspells.irh:1093-1098, the `else` branch of the HIT_SPOT
+# dispatch), so '*' would burn the caster himself -- confirmed by reading
+# that branch, not guessed. RIGHT crosses open floor (see the arrival dump)
+# with nothing standing in it, so every cast fizzles harmlessly and only
+# spends mana. Calibrated empirically against the FIXED build, seed 4: 5
+# casts -> 69, 10 -> 65, 20 -> 57, 30 -> 48, 35 -> 43, 40 -> 38 (all /72).
+# Early casts decline slowly because mana starts near full and the (correct)
+# 80%-Concentration floor lets regen partly offset each cast; once mana
+# drops under that floor regen stops and the decline is clean. 35 casts
+# lands at 43/72 = 59.7%, comfortably inside 35-80% with margin either side.
+#
+# WHY THE WAIT IS THREE SEARCHES, NOT ONE. KY_CMD_SEARCH (src/Player.cpp)
+# grants ACTING for 25 rounds and continues the search on its own, so one
+# 's' already spends roughly 25 real turns -- confirmed empirically (turn
+# 198001 -> 199561 off a single 's' once mana was near full). Three searches
+# buys roughly 75 turns, far more than the "at least one point" the fix's
+# own probe check asks for, so an unblocked caster's rise is unmistakable.
+#
+# WHY THE SAVE AT THE END. Same reason as tools/keys/load-char-sheet.keys:
+# it is the read-only channel back to src/Dump.cpp's "Mana: cur/max (spent
+# S, held H)" line, which states held explicitly instead of leaving it to be
+# inferred from the status line. See tools/keys/save-continue.keys before
+# touching the ESC below: it opens the System Menu, not a cancel.
+
+@dump:arrival
+
+d                       # Display Character Sheet -- Concentration is on it
+@expect "Gender"
+@dump:sheet
+ESC                     # leave the sheet, back to play mode
+
+# 35 casts of Burning Hands, aimed RIGHT into open floor.
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+m
+@choose "Burning Hands"
+RIGHT
+
+@dump:after-casts
+
+s                       # wait without resting: ~25 turns each (see header)
+s
+s
+@dump:after-wait
+
+ESC                     # System Menu -- and NOT a cancel; see the header
+@expect "System Menu"
+b                       # [b] Save and Continue
+@dump:saved
+
+# No @quit: it is Save and Quit and would write a second save this script
+# did not ask for. Running out of keys ends the session with exactly the
+# one save above.

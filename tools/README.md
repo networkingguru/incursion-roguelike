@@ -577,6 +577,8 @@ A new check adds its row to this table, in alphabetical order.
 | `check_loremaster_live.sh` | Does the Loremaster's Bibliographic Insight add its extra attribute points when he reads a tome? | LIVE |
 | `check_luckblade_plus.sh` | Does the Luckblade keep its magical plus when the wish it would charge for is refused, rather than grinding down first? | LIVE |
 | `check_lz_uncompress.sh` | Can the LZ77 and RLE decoders be made to write past their output buffer? | LIVE |
+| `check_mana_regen_cast.sh` | Under real play, no forced state: a mage casts Burning Hands 35 times to bring mana into the 35-80% band the regen floor cares about, waits about 75 turns without resting, and stays at the same mana -- rather than rising, which is what the un-fixed floor would let happen. | LIVE |
+| `check_mana_regen_floor.sh` | Does the player mana-regen floor start high and fall with Concentration, rather than starting low and rising? Forces Concentration low then high on a live loaded player and drives 50 real ticks through `Creature::DoTurn`. | LIVE |
 | `check_masterarcher_live.sh` | Does the Master Archer's Ranged Sneak Attack fire only with a long bow or a short bow, and not with every launcher? | LIVE |
 | `check_menu_overflow.sh` | Does a menu with more than 52 options still draw and select every row, rather than losing the ones past the alphabet? | LIVE |
 | `check_menu_page_arrows.sh` | Does the RIGHT arrow page a long selection menu forward, so a Steam Deck player who has a stick but no Tab key can reach a row on the second page and still pick it? | LIVE |
@@ -974,6 +976,8 @@ tools/check_school_focus_dc.sh      # School Focus (Illusion) raises the disbeli
 tools/check_periodic_interval.sh    # a PERIODIC status effect fires every Val rounds, not Val-1
 tools/check_xp_drain.sh             # RestoreXP clears the drain once, not once plus a matching XP credit
 tools/check_portal_reach.sh         # every portal shares one door-aware component; --prove-red shows it failing
+tools/check_mana_regen_floor.sh     # the mana-regen floor starts high and falls with Concentration, not the reverse
+tools/check_mana_regen_cast.sh      # the same fix under real play: cast, wait without resting, mana does not rise
 ```
 
 `check_gaze_reflect_message.sh` is the live twin of Tier 1's
