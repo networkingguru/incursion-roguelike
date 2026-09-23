@@ -1,0 +1,73 @@
+# SAVE/RELOAD CHECK for bead inc-akac: build the same priest as
+# tools/keys/pain-experiment.keys, land a few brawling hits on a summoned
+# bear to build a nonzero PAIN_TALLY leftover, then save and continue. Read
+# the character's name from @dump:played and the resulting save file's path
+# from the "Autosave... done" line in @dump:saved; tools/check_feed_upon_pain.sh
+# does not run this script -- it is a one-off used to confirm the tally
+# survives save/reload (see the bead's own report for how).
+a
+n
+y
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Priest"
+@choose "Khasrach"
+a
+@choose "Chaotic Evil"
+a
+d
+a
+a
+a a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+y
+a
+a a a a
+
+SPACE
+@dump:played
+
+i
+f
+SPACE
+a
+SPACE
+n
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+SPACE
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "brown bear"
+RIGHT RIGHT ENTER
+@until "HP:" ESC
+
+s s s
+@while "Die?" n
+
+RIGHT
+@while "Take opportunity" y
+@while "Die?" n
+RIGHT
+@while "Take opportunity" y
+@while "Die?" n
+RIGHT
+@while "Take opportunity" y
+@while "Die?" n
+RIGHT
+@while "Take opportunity" y
+@while "Die?" n
+@dump:prehit
+
+ESC
+@until "System Menu" ESC
+@expect "System Menu"
+b
+@dump:saved
