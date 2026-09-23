@@ -1,0 +1,20 @@
+# Apply an implemented y-menu verb to a target that cannot respond, and let the
+# screen say whether the game told the player anything. Read by
+# tools/check_yuse_no_effect.sh, bd inc-k8uw.
+#
+# Pour is implemented (src/Tables.cpp:3335) but has no handler for an ordinary
+# item: the one EV_POUR script in the tree refills a brass lantern from a flask
+# of oil (lib/mundane.irh:640) and returns NOTHING for anything else without
+# printing. Player::YuseMenu threw the event and read nothing back, so the
+# player saw no line at all. Two dumps pin the run: pour-target proves the
+# target prompt was reached, after-pour is the screen the check reads.
+
+@include chargen.keys
+
+y
+@choose "Pour"
+@choose "loincloth"
+@dump:pour-target
+@choose "orcish longspear"
+@dump:after-pour
+@quit

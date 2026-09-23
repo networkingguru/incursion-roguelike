@@ -1,0 +1,56 @@
+# Apply a poison vial to a non-weapon item, whose handler prints its own line
+# and returns NOTHING; the y-menu fallback must NOT add a second line. Read by
+# tools/check_yuse_no_effect.sh, bd inc-k8uw.
+#
+# The orc barbarian's kit holds no vial, so the vial is made in wizard mode.
+# Neither chargen nor the standard class kits give a small glass vial to a
+# non-evil character (lib/classes.irh gives one only to an EVIL actor), so the
+# wizard route is used: [w] enters wizard mode, [y] confirms the first time and
+# opens the menu, "Item Acquisition" opens the browser. Item Acquisition does
+# not currently work through tools/check_yuse_activate.sh because its scripted
+# @until target name is stale, but the browser itself works; see that check's
+# header for the general shape.
+#
+# The browser draws its candidates in the message window with the selected row
+# in the middle and NO menu letters, so @until walks DOWN until the wanted name
+# appears at the bottom row, then one more DOWN moves the selection onto it.
+# The glyph strip is walked RIGHT*35 to the Tools category (T_TOOL,
+# ItemGlyphs[src/Tables.cpp:320]); the header line names the category, and
+# after-apply reads the handler's own words, so a miscount shows up as a run
+# that never held the vial rather than as a false pass.
+#
+# GETTING IT INTO THE PACK. The acquisition auto-stows the vial, but on this
+# build it first lands on the floor: the after-apply oracle only means
+# something if the vial is in hand, so the script [g]ets it (opening Inventory
+# Mode with it In the Air) and drops it into the Ready Hand with [a].
+#
+# THE VERB IS APPLY, whose handler is lib/mundane.irh:1016. Applying the vial
+# to a non-weapon, non-missile item reaches "You can only poison weapons and
+# ammunition." and returns NOTHING. Before the guard the y-menu fallback then
+# printed a second line, "The loincloth cannot be applied."; after the guard
+# only the handler's line is on the screen.
+
+@include chargen.keys
+
+# --- acquire a small glass vial --------------------------------------------
+w
+y
+@choose "Item Acquisition"
+RIGHT*35
+@until "Small glass vial" DOWN
+DOWN
+ENTER
+@while "In the Air':small glass" s
+@while "Ready Hand" ESC
+@dump:acquired
+g
+@while "In the Air':small glass" a
+
+# --- apply it to the loincloth ---------------------------------------------
+y
+@choose "Apply"
+@choose "small glass vial"
+i
+@choose "loincloth"
+@dump:after-apply
+@quit

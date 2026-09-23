@@ -114,6 +114,17 @@ bool isSimilarDir(Dir d, Dir d2);
 extern int16 Silence;
 extern int16 __spentHours;
 
+/* Incremented once for every non-empty message accepted for the player, at
+   the two points that reach the player's message line: TextTerm::Message
+   (src/TextTerm.cpp) and the queued branch of Player::__IPrint
+   (src/Message.cpp). Player::YuseMenu reads it around its ReThrow to tell
+   whether a handler already spoke, so a fallback line is printed only when
+   nothing did. A queued message counted here is counted again when
+   Player::DumpQueue drains it through TextTerm::Message; the caller only
+   tests whether the value changed, so the double count is harmless.
+   inc-k8uw. */
+extern uint32 MessageCounter;
+
 extern int16 LastSkillCheckResult;
 
 extern Game* theGame;
