@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Round-trip check for the v1 save schema (docs/SAVE-SCHEMA-SPEC.md).
 # Drives `incursion-headless -schematest`, which runs one section per class
 # group. Each section builds objects through the LoadGroup allocation idiom,
