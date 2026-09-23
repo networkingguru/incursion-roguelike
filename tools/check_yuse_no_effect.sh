@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Does a y-menu verb tell the player what happened? bd inc-k8uw.
 #
 # THE DEFECT. Player::YuseMenu (src/Player.cpp, the DoYuse section) called
@@ -51,7 +52,7 @@ run_case() { # <keyscript> -> echoes the run directory
     out="$(INCURSION_OPTIONS=tools/gates/Options.Dat \
         tools/headless.sh "$1" "$SEED" 2>&1)" || true
     run="$(echo "$out" | awk '/^run:/ {print $2}')"
-    if echo "$out" | grep -q "the key script looked for something"; then
+    if grep -q "the key script looked for something" <<< "$out"; then
         echo "INCONCLUSIVE: $1 could not find something on screen. Run: $run" >&2
         exit 2
     fi
