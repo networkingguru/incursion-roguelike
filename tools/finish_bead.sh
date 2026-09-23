@@ -93,13 +93,19 @@ selftest_merge_repo() {
     local tmp bead="inc-slftst"
 
     tmp="$(mktemp -d "${TMPDIR:-/tmp}/finish-bead-selftest.XXXXXX")" || return 1
-    mkdir -p "$tmp/work/Incursion/tools" || return 1
+    mkdir -p "$tmp/work/Incursion/tools" "$tmp/work/Incursion/src" || return 1
 
     git -C "$tmp/work/Incursion" init -q -b trunk || return 1
     git -C "$tmp/work/Incursion" config user.email test@example.invalid || return 1
     git -C "$tmp/work/Incursion" config user.name "finish_bead selftest" || return 1
     echo base >"$tmp/work/Incursion/base.txt" || return 1
-    git -C "$tmp/work/Incursion" add base.txt || return 1
+    # DOCS.md exists on master from the start and the bead branch below never
+    # touches it, so the inc-oe6h cases can dirty it at the master checkout
+    # and expect it to be let through. src/Foo.cpp is the rename-source case's
+    # code file. inc-oe6h.
+    echo "base docs" >"$tmp/work/Incursion/DOCS.md" || return 1
+    echo "int Foo() { return 1; }" >"$tmp/work/Incursion/src/Foo.cpp" || return 1
+    git -C "$tmp/work/Incursion" add base.txt DOCS.md src/Foo.cpp || return 1
     git -C "$tmp/work/Incursion" commit -q -m initial || return 1
     git -C "$tmp/work/Incursion" branch master trunk || return 1
 
@@ -113,6 +119,8 @@ selftest_merge_repo() {
         "$tmp/work/master-checkout" master || return 1
 
     cp "$SCRIPT" "$tmp/work/Incursion/tools/finish_bead.sh" || return 1
+    cp "$ROOT/tools/docs_only_change.sh" \
+        "$tmp/work/Incursion/tools/docs_only_change.sh" || return 1
 
     printf '%s %s %s\n' "$tmp" "$tmp/work/Incursion/tools/finish_bead.sh" \
         "$tmp/work/master-checkout"
@@ -145,6 +153,9 @@ selftest() {
     [ "$status" -eq 0 ] || { echo "SELFTEST FAIL: an untracked file in master's worktree refused the merge: $out"; return 1; }
     case "$out" in *"Landed."*) ;; *) echo "SELFTEST FAIL: untracked-file case did not land: $out"; return 1;; esac
 
+    # base.txt is deliberately non-.md, so this still exercises the (a) refusal
+    # from inc-oe6h's split: a dirty tracked path that is not documentation
+    # refuses exactly as before, whether or not the bead touches it.
     line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the merge-dirty repo (tracked case)"; return 1; }
     read -r tmp copy masterco <<<"$line"
     echo changed >"$masterco/base.txt"
@@ -160,6 +171,59 @@ selftest() {
     rm -rf "$tmp"
     [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: an untracked file colliding with the merge did not stop the run, status $status: $out"; return 1; }
     case "$out" in *"does not merge cleanly"*) ;; *) echo "SELFTEST FAIL: collision case said: $out"; return 1;; esac
+
+    # inc-oe6h Case 1: an uncommitted edit to a tracked .md path the bead does
+    # NOT touch is allowed through -- it must land, and the edit must still be
+    # there afterwards, uncommitted and byte-identical.
+    line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the merge-dirty repo (doc-allowed case)"; return 1; }
+    read -r tmp copy masterco <<<"$line"
+    echo "local docs edit" >>"$masterco/DOCS.md"
+    want_sum="$(shasum -a 256 "$masterco/DOCS.md" | awk '{print $1}')"
+    out="$(INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    if [ "$status" -ne 0 ]; then
+        echo "SELFTEST FAIL: an uncommitted .md edit the bead does not touch refused the merge, status $status: $out"
+        rm -rf "$tmp"; return 1
+    fi
+    case "$out" in *"Landed."*) ;; *) echo "SELFTEST FAIL: doc-allowed case did not land: $out"; rm -rf "$tmp"; return 1;; esac
+    got_sum="$(shasum -a 256 "$masterco/DOCS.md" | awk '{print $1}')"
+    [ "$got_sum" = "$want_sum" ] || { echo "SELFTEST FAIL: doc-allowed case changed DOCS.md's content"; rm -rf "$tmp"; return 1; }
+    got_dirty="$(git -C "$masterco" status --porcelain --untracked-files=no -- DOCS.md)"
+    [ -n "$got_dirty" ] || { echo "SELFTEST FAIL: doc-allowed case left DOCS.md committed instead of uncommitted"; rm -rf "$tmp"; return 1; }
+    rm -rf "$tmp"
+
+    # inc-oe6h Case 3: an uncommitted edit to a tracked .md path the bead ALSO
+    # touches is refused BEFORE the merge, names the path, and leaves master
+    # exactly where it was.
+    line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the merge-dirty repo (doc-conflict case)"; return 1; }
+    read -r tmp copy masterco <<<"$line"
+    bead_wt="$tmp/work/Incursion-inc-slftst"
+    echo "bead also edits docs" >>"$bead_wt/DOCS.md"
+    git -C "$bead_wt" commit -q -am "bead touches DOCS.md" \
+        || { echo "SELFTEST FAIL: could not extend the bead branch (doc-conflict case)"; rm -rf "$tmp"; return 1; }
+    echo "local docs edit" >>"$masterco/DOCS.md"
+    before_head="$(git -C "$masterco" rev-parse HEAD)"
+    out="$(INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    after_head="$(git -C "$masterco" rev-parse HEAD)"
+    rm -rf "$tmp"
+    [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: an uncommitted .md edit the bead ALSO touches did not refuse, status $status: $out"; return 1; }
+    case "$out" in *"REFUSED"*"DOCS.md"*) ;; *) echo "SELFTEST FAIL: doc-conflict case said: $out"; return 1;; esac
+    [ "$before_head" = "$after_head" ] || { echo "SELFTEST FAIL: doc-conflict case moved master despite refusing"; return 1; }
+
+    # inc-oe6h Case 4: a STAGED rename that turns a non-doc path into a
+    # doc-looking one (git mv src/Foo.cpp notes.md) must still refuse with
+    # the ORIGINAL message. Only checking the new name would let a code
+    # file's removal ride through as "a doc edit".
+    line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the merge-dirty repo (rename case)"; return 1; }
+    read -r tmp copy masterco <<<"$line"
+    git -C "$masterco" mv src/Foo.cpp notes.md \
+        || { echo "SELFTEST FAIL: could not stage the rename (rename case)"; rm -rf "$tmp"; return 1; }
+    before_head="$(git -C "$masterco" rev-parse HEAD)"
+    out="$(INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    after_head="$(git -C "$masterco" rev-parse HEAD)"
+    rm -rf "$tmp"
+    [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: a rename hiding a non-.md ORIG_PATH did not refuse, status $status: $out"; return 1; }
+    case "$out" in *"REFUSED"*"uncommitted tracked changes"*"Foo.cpp"*) ;; *) echo "SELFTEST FAIL: rename case said: $out"; return 1;; esac
+    [ "$before_head" = "$after_head" ] || { echo "SELFTEST FAIL: rename case moved master despite refusing"; return 1; }
 
     echo "SELFTEST PASS"
     return 0
@@ -275,6 +339,22 @@ fi
 MASTER_WT="$(git -C "$SHARED" worktree list --porcelain \
     | awk '/^worktree /{p=$2} /^branch refs\/heads\/'"$BASE_BRANCH"'$/{print p}')"
 
+# A dirty tracked path at the shared master checkout is now allowed through
+# ONLY when BOTH hold: it is a *.md path (tools/docs_only_change.sh's own
+# is_doc_path, reused via --is-doc, so the rule lives in one place), and $BEAD
+# does not also change that path. Anything else refuses as before. A *.md path
+# $BEAD ALSO changes refuses before the merge is attempted. Fails closed: if
+# $BEAD's changed-path list cannot be computed, the whole dirty tree refuses.
+# inc-oe6h.
+path_in_list() { # path_in_list <needle> <haystack...>
+    local needle="$1"; shift; local x
+    for x in "$@"; do [ "$x" = "$needle" ] && return 0; done
+    return 1
+}
+
+ALLOWED_DOC_PATHS=()
+ALLOWED_DOC_SUMS=()
+
 SCRATCH=""
 if [ -n "$MASTER_WT" ]; then
     MERGE_IN="$MASTER_WT"
@@ -283,14 +363,82 @@ if [ -n "$MASTER_WT" ]; then
     # package_linux.sh hazard in the header above). A path git itself needs
     # to write is still refused -- by git's own merge collision guard, not
     # by this check.
-    MERGE_DIRTY="$(git -C "$MERGE_IN" status --porcelain --untracked-files=no)"
-    [ -z "$MERGE_DIRTY" ] || die "REFUSED: $BASE_BRANCH is checked out at $MERGE_IN and that tree has
+    #
+    # -z: NUL-separated porcelain, so a renamed or space-containing path
+    # parses correctly. A rename/copy entry (XY holds R or C) carries a
+    # second NUL-terminated ORIG_PATH field right after PATH. BOTH go into
+    # DIRTY_PATHS: `git mv src/Foo.cpp notes.md` is a doc-looking PATH hiding
+    # a non-doc ORIG_PATH's removal, so the old name must pass the *.md test
+    # too, or the whole rename is refused like any other non-doc change. inc-oe6h.
+    DIRTY_FILE="$(mktemp "${TMPDIR:-/tmp}/finish-bead-dirty.XXXXXX")" \
+        || cannot "could not create a scratch file for $MERGE_IN's status"
+    git -C "$MERGE_IN" status --porcelain -z --untracked-files=no \
+        > "$DIRTY_FILE" 2>/dev/null \
+        || { rm -f "$DIRTY_FILE"; cannot "could not read git status at $MERGE_IN"; }
+    DIRTY_PATHS=()
+    while IFS= read -r -d '' rec; do
+        xy="${rec:0:2}"
+        DIRTY_PATHS+=("${rec:3}")
+        case "$xy" in
+            *R*|*C*) read -r -d '' orig || true; DIRTY_PATHS+=("$orig") ;;
+        esac
+    done < "$DIRTY_FILE"
+    rm -f "$DIRTY_FILE"
+
+    if [ "${#DIRTY_PATHS[@]}" -gt 0 ]; then
+        MERGE_DIRTY="$(git -C "$MERGE_IN" status --porcelain --untracked-files=no)"
+
+        MERGE_BASE="$(git -C "$SHARED" merge-base "$BASE_BRANCH" "$BEAD" 2>/dev/null)"
+        [ -n "$MERGE_BASE" ] \
+            || cannot "could not compute the merge-base of $BASE_BRANCH and $BEAD"
+
+        BEAD_FILE="$(mktemp "${TMPDIR:-/tmp}/finish-bead-paths.XXXXXX")" \
+            || cannot "could not create a scratch file for $BEAD's changed paths"
+        git -C "$SHARED" diff --name-only -z "$MERGE_BASE" "$BEAD" \
+            > "$BEAD_FILE" 2>/dev/null \
+            || { rm -f "$BEAD_FILE"; cannot "could not compute $BEAD's changed paths from $MERGE_BASE"; }
+        BEAD_PATHS=()
+        while IFS= read -r -d '' p; do BEAD_PATHS+=("$p"); done < "$BEAD_FILE"
+        rm -f "$BEAD_FILE"
+
+        BAD_PATHS=()
+        CONFLICT_DOC_PATHS=()
+        for p in "${DIRTY_PATHS[@]}"; do
+            if "$ROOT/tools/docs_only_change.sh" --is-doc "$p"; then
+                # bash 3.2 (macOS's /bin/bash) errors under set -u expanding an
+                # EMPTY array with "${arr[@]}"; only expand once known non-empty.
+                if [ "${#BEAD_PATHS[@]}" -gt 0 ] && path_in_list "$p" "${BEAD_PATHS[@]}"; then
+                    CONFLICT_DOC_PATHS+=("$p")
+                else
+                    ALLOWED_DOC_PATHS+=("$p")
+                fi
+            else
+                BAD_PATHS+=("$p")
+            fi
+        done
+
+        [ "${#BAD_PATHS[@]}" -eq 0 ] || die "REFUSED: $BASE_BRANCH is checked out at $MERGE_IN and that tree has
 uncommitted tracked changes:
 
 $MERGE_DIRTY
 
 Merging there would build on somebody else's uncommitted work. Nothing has
 reached $BASE_BRANCH."
+
+        [ "${#CONFLICT_DOC_PATHS[@]}" -eq 0 ] || die "REFUSED: $BASE_BRANCH is checked out at $MERGE_IN with uncommitted
+edits to *.md path(s) that $BEAD ALSO changes:
+
+$(printf '  %s\n' "${CONFLICT_DOC_PATHS[@]}")
+Merging would overwrite or conflict with those edits. Commit or discard them
+in $MERGE_IN before landing. Nothing has reached $BASE_BRANCH."
+
+        if [ "${#ALLOWED_DOC_PATHS[@]}" -gt 0 ]; then
+            echo "=== leaving uncommitted docs in place at $MERGE_IN, untouched by $BEAD: ${ALLOWED_DOC_PATHS[*]} ==="
+            for i in "${!ALLOWED_DOC_PATHS[@]}"; do
+                ALLOWED_DOC_SUMS[$i]="$(shasum -a 256 "$MERGE_IN/${ALLOWED_DOC_PATHS[$i]}" 2>/dev/null | awk '{print $1}')"
+            done
+        fi
+    fi
 else
     SCRATCH="$(scratch_dir)"
     git -C "$SHARED" worktree add "$SCRATCH" "$BASE_BRANCH" >/dev/null 2>&1 \
@@ -312,6 +460,26 @@ Nothing has reached $BASE_BRANCH and the branch and worktree are intact."
 fi
 
 MERGED="$(git -C "$SHARED" rev-parse --short "$BASE_BRANCH")"
+
+# Prove the uncommitted docs edits let through above are still exactly as they
+# were: same bytes, still uncommitted. $BEAD never touched these paths, so the
+# merge should not have been able to touch them either; this is the check that
+# says so rather than assuming it. inc-oe6h.
+for i in "${!ALLOWED_DOC_PATHS[@]}"; do
+    p="${ALLOWED_DOC_PATHS[$i]}"
+    newsum="$(shasum -a 256 "$MERGE_IN/$p" 2>/dev/null | awk '{print $1}')"
+    [ "$newsum" = "${ALLOWED_DOC_SUMS[$i]}" ] || die "STOPPED: $BEAD merged into $BASE_BRANCH at $MERGED, but the uncommitted
+edit at $MERGE_IN/$p no longer matches what it was before the merge. This
+should not be possible; look at $MERGE_IN/$p by hand before trusting anything
+downstream of this run."
+done
+if [ "${#ALLOWED_DOC_PATHS[@]}" -gt 0 ]; then
+    STILL_DIRTY="$(git -C "$MERGE_IN" status --porcelain --untracked-files=no -- "${ALLOWED_DOC_PATHS[@]}")"
+    [ -n "$STILL_DIRTY" ] || die "STOPPED: $BEAD merged into $BASE_BRANCH at $MERGED, but the uncommitted docs
+left in place at $MERGE_IN no longer show as uncommitted. This should not be
+possible; look at $MERGE_IN by hand before trusting anything downstream."
+fi
+
 cleanup_scratch
 
 # STEP 6. Prove the work is really on the base branch before destroying anything.
