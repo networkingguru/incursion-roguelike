@@ -1,0 +1,88 @@
+# Photograph the sneak-attack gate for a rogue's FIRST blow from Improved
+# Invisibility at range, against a victim that has Blind-Fight. Part of bead
+# inc-nkf2.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-sneak-invis.dat \
+#   INCURSION_SNEAK_PROBE=1 \
+#       tools/headless.sh tools/keys/sneak-invis-ranged.keys <seed>
+#
+# Read the result with tools/check_sneak_invis.sh.
+#
+# THE VICTIM has FT_BLIND_FIGHT. lib/mon2.irh:2004 green hag carries it
+# (Feats: ..., FT_BLIND_FIGHT, ...), is SZ_MEDIUM, living and crit-vulnerable,
+# and has no M_SEE_INVIS. It does have CA_INFRAVISION, which is why this run
+# needs no light spell: in the unlit arrival room the hag perceives the rogue
+# while the rogue is visible (Perceives()'s infravision branch), and
+# invisibility skips that branch too (the INVIS test at src/Vision.cpp:907
+# jumps over the infravision block).
+#
+# THE ATTACK IS THROWN, so it is RANGED. The rogue's orcish knife is
+# IT_THROWABLE; the game's own ranged weapon menu (src/Player.cpp:711 "Throw
+# what?") offers it. The green hag is summoned two squares east, so the
+# throw resolves at distance 2 -- inside the game's ranged band, and squarely
+# the case the brief asks for.
+#
+# WHY NO CONTROL. The question here is narrow: with Blind-Fight the victim's
+# surprise flag is set by the "!Perceives && !HasFeat(FT_BLIND_FIGHT)" test at
+# src/Fight.cpp:4152, which Blind-Fight disables entirely. The probe's "pre"
+# line records isSurprise before the Move Silently vs Listen contest and before
+# damage, so the surprise count is read straight off it. Whether the blow then
+# lands and reaches the sneak gate is counted separately, the same way case A
+# is.
+#
+# The victim is freshly summoned, so it is flat-footed and the sneak gate can
+# open on flatfoot=1 alone even with surprise=0. That is why this case counts
+# surprise and sneak separately rather than claiming sneak proves anything on
+# its own. Measured: the first ranged blow reads surprise=0 with FT_BLIND_FIGHT
+# (unchallenged, since the victim's feat suppresses the unseen-surprise branch
+# outright), while a landed blow is awarded sneak dice through flatfoot=1, not
+# through invisibility.
+
+@include sneak-invis-chargen.keys
+
+SPACE   # dismiss the arrival-room description
+
+w
+y
+@choose "Wizard Mode Switches"
+SPACE   # Cheat Death
+DOWN*7
+SPACE   # Infinite Mana
+ESC
+
+w
+@choose "Learn Any Spell"
+"Improved Invisibility" ENTER
+@until "HP:" ESC
+
+# Cast Improved Invisibility on the rogue first, so the throw below is the
+# first blow after the cast.
+m
+@cursorto:mark "Improved Invisibility" DOWN
+ENTER
+*
+@while "Take opportunity" y
+@while "Die?" n
+@dump:cast
+
+# Summon the green hag two squares east.
+w
+@choose "Monster Summoning"
+@choose "Hags"
+@choose "green hag"
+RIGHT*2 ENTER
+@until "HP:" ESC
+@dump:victim
+
+# The measured blow: throw the knife at the hag, two squares east. The
+# target cursor starts on the rogue's own square, so three steps east lands on
+# the hag.
+f
+@choose "orcish knife"
+RIGHT*2 ENTER
+@while "Take opportunity" y
+@while "Die?" n
+@until "HP:" ESC
+@dump:thrown
+
+@quit

@@ -1,0 +1,28 @@
+# Build a male orc rogue whose two class skill ranks both go to Move
+# Silently, so the Move Silently vs Listen contest after invisibility has a
+# fair chance. Everything else is chargen-rogue.keys verbatim.
+#
+# Included by sneak-invis-melee.keys and sneak-invis-ranged.keys; used only by
+# tools/check_sneak_invis.sh (bead inc-nkf2). The seed still decides the
+# attribute rolls, the offered feats and the Listen rolls.
+a       # Create a New Character
+n       # Alter the character generation options? -- no
+y       # Explore Mode
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Rogue"
+a       # attributes: first set
+@choose "Neutral"
+a       # first feat
+a       # second feat
+
+# Skill Manager: Move Silently first (its maximum at 1st level is two ranks).
+@cursorto:mark "Move Silently" DOWN
+RIGHT*2
+# Drain the rest of the pool the way chargen-rogue.keys does.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, confirm keeping the ranks
+
+y       # Do you wish to worship <god>? -- yes
+a       # Personality archetype

@@ -10,6 +10,7 @@ against. Each is the exact `Options.Dat` blob from the named repository commit:
 | `options-2026-08-13.dat` | `41df62b` | The settings present on 2026-08-13. |
 | `options-2026-08-18.dat` | `2f58be3` | The 2026-08-13 settings plus the 21-byte character-generation profile described below. |
 | `options-2026-08-22.dat` | `2092592` | The 2026-08-18 settings with `OPT_AUTOOPEN` changed from 0 to 2. |
+| `options-sneak-invis.dat` | n/a (derived) | `tools/gates/Options.Dat` with `OPT_AUTOHIDE` (518) forced to 0. `tools/check_sneak_invis.sh` uses it: with Automatic Hide in Shadows on, a rogue auto-hides in the dark and every blow counts as an unseen attack even without a spell, which spoils the visible control. |
 
 The 21 changed bytes in the 2026-08-18 fixture include `OPT_BEGINKIT` and
 `OPT_REROLL` enabled, `OPT_MAX_HP` and `OPT_MAX_MANA` set to 2,

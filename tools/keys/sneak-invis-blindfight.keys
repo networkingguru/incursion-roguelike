@@ -1,0 +1,75 @@
+# Photograph the sneak-attack gate for a rogue's FIRST blow from Improved
+# Invisibility in MELEE against a victim that has Blind-Fight. Part of bead
+# inc-nkf2.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-sneak-invis.dat \
+#   INCURSION_SNEAK_PROBE=1 \
+#       tools/headless.sh tools/keys/sneak-invis-blindfight.keys <seed>
+#
+# Read the result with tools/check_sneak_invis.sh (case D).
+#
+# THE POINT. Blind-Fight protects only against a MELEE unseen attacker (SRD),
+# so in melee the unseen-surprise branch at src/Fight.cpp:4152 must stay off
+# entirely: the probe's "pre" line must read actUnseen=0 and surprise=0. This
+# is the green guard that the ranged case C must NOT borrow Blind-Fight's
+# protection through.
+#
+# THE VICTIM is the same green hag as tools/keys/sneak-invis-ranged.keys:
+# FT_BLIND_FIGHT, SZ_MEDIUM, no M_SEE_INVIS, CA_INFRAVISION. The rogue casts
+# Improved Invisibility before summoning, so the summon does not break it and
+# the first blow is from invisibility. The hag is summoned one square east so
+# the rogue's knife swing is a MELEE attack (walking into it), unlike the
+# throw in the ranged script.
+#
+# No light spell is needed: the unlit arrival room plus the hag's infravision
+# is the configuration the ranged script already explains.
+#
+# The victim is freshly summoned and therefore flat-footed; case D asserts
+# only the "pre" fields actUnseen=0 and surprise=0, which flat-footedness does
+# not touch.
+
+@include sneak-invis-chargen.keys
+
+SPACE   # dismiss the arrival-room description
+
+w
+y
+@choose "Wizard Mode Switches"
+SPACE   # Cheat Death
+DOWN*7
+SPACE   # Infinite Mana
+ESC
+
+w
+@choose "Learn Any Spell"
+"Improved Invisibility" ENTER
+@until "HP:" ESC
+
+# Cast Improved Invisibility on the rogue first, so the blow below is the
+# first blow after the cast.
+m
+@cursorto:mark "Improved Invisibility" DOWN
+ENTER
+*
+@while "Take opportunity" y
+@while "Die?" n
+@dump:cast
+
+# Summon the green hag one square east.
+w
+@choose "Monster Summoning"
+@choose "Hags"
+@choose "green hag"
+RIGHT ENTER
+@until "HP:" ESC
+@dump:victim
+
+# The measured blow: step east into the hag and swing the knife in melee.
+RIGHT
+@while "Confirm attack" y
+@while "Take opportunity" y
+@while "Die?" n
+@until "HP:" ESC
+@dump:melee-strike
+
+@quit
