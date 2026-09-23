@@ -488,6 +488,11 @@ struct MultiplyNestGuard {
   ~MultiplyNestGuard() { MultiplyNesting--; }
 };
 
+/* The copy Multiply is placing right now, or NULL. Thing::PlaceNear reads it
+   for the INCURSION_MULTIPLY_NOROOM fault-injection switch; see the comment at
+   that read in src/Display.cpp. Serves inc-dpni. */
+Thing *MultiplyPlacingCopy = NULL;
+
 void Creature::Multiply(int16 val, bool split, bool msg)
   {
     int16 c;
@@ -559,9 +564,25 @@ void Creature::Multiply(int16 val, bool split, bool msg)
         /* ww: PlaceNear doesn't "initialize" things the same way that
          * PlaceAt() does, which was causing that Weirdness in Remove() */
         /* ww: ok, The Weirdness is back! */
+        MultiplyPlacingCopy = mn;
         mn->PlaceAt(m,x,y);
+        /* upstream: base-code defect, the fix is ours. A copy PlaceAt could not
+           place has already been deleted by PlaceNear's "no good place" path
+           (m == NULL, x == y == -1, F_DELETE). Setting m again and re-placing
+           it deletes it a second time with x == -1, which trips InBounds() in
+           Map::At, and then initialises and heals a deleted copy. This is
+           upstream's -- it is plain ww control flow, with no platform, compiler
+           or typedef dependence, so Win32 misbehaves identically. Tier Observed;
+           tools/check_multiply_noroom.sh. Tracked inc-dpni. Not sent. */
+        if (!mn->m || mn->isDead()) {
+            MultiplyPlacingCopy = NULL;
+            if (!(mn->Flags & F_DELETE))
+                mn->Remove(true);
+            break;
+        }
         mn->m = m; // ww: important!
         mn->PlaceNear(x,y);
+        MultiplyPlacingCopy = NULL;
         // ww: we had forgotten this important call ...
         mn->Initialize(true);
 
