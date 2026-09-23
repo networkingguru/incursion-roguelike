@@ -86,6 +86,9 @@ id_ed25519
 # work.
 .claude/worktrees/
 
+# Python bytecode (tools/__pycache__/), the untracked file that blocked a bead landing. inc-dz74.
+__pycache__/
+
 # One-off overnight run reports and their working papers. Both were tracked once
 # and should not have been: MORNING-REPORT.md is a dated report of a single
 # 2026-08-20 job, nothing in the tree references it, and once tracked it acquired

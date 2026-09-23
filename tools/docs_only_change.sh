@@ -4,8 +4,10 @@
 #   tools/docs_only_change.sh                 master..HEAD
 #   tools/docs_only_change.sh <base> <head>   any two refs
 #   tools/docs_only_change.sh --selftest      prove the refusals fire
+#   tools/docs_only_change.sh --is-doc <path> is-doc-path check, single path
 #
 # Ends: 0 documentation only, 1 something else is in it, 2 could not measure.
+# --is-doc ends 0 (a doc path) or 1 (not).
 #
 # WHY IT EXISTS. tools/finish_bead.sh ran the whole gate on every bead, and on
 # 2026-09-12 a two-file markdown edit paid for both builds, the Linux
@@ -159,6 +161,13 @@ selftest() {
     [ "$fails" -eq 0 ] && echo "SELFTEST PASS"
     return "$fails"
 }
+
+# A single-path query, so another script (tools/finish_bead.sh, inc-oe6h) can
+# reuse is_doc_path without a second copy of the rule.
+if [ "${1:-}" = "--is-doc" ]; then
+    is_doc_path "${2:-}"
+    exit $?
+fi
 
 if [ "${1:-}" = "--selftest" ]; then
     selftest
