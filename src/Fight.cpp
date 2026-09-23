@@ -163,6 +163,63 @@ static void ArmourProbeNote(EventInfo &e, int natArm, int wornArm,
     fflush(f);
 }
 
+/* Reproduction probe for bead inc-nkf2: does a rogue attacking from Improved
+   Invisibility get sneak attack? Set INCURSION_SNEAK_PROBE and every attack
+   resolution writes one line to logs/sneak.log naming the fields the gate at
+   the CA_SNEAK_ATTACK block below reads -- isSurprise/isFlatFoot/isFlanking/
+   noDexDefense/actUnseen, whether the Move Silently vs Listen contest cleared
+   surprise, and whether sneak dice were added. One extra line per "hears you"
+   fire, so a run can count how often invisibility was defeated by hearing.
+   Off and free otherwise. tools/check_sneak_invis.sh reads it. */
+static void SneakProbeNote(const char *what, EventInfo &e)
+{
+    static int on = -1;
+    static FILE *f = NULL;
+    char path[1024];
+
+    if (on == -1)
+        on = getenv("INCURSION_SNEAK_PROBE") ? 1 : 0;
+    if (!on || !e.EActor || !e.EVictim)
+        return;
+    if (!f) {
+        snprintf(path, sizeof(path), "%slogs/sneak.log",
+            (const char*)T1->IncursionDirectory);
+        f = fopen(path, "a");
+        if (!f)
+            return;
+    }
+    if (!strcmp(what, "hears-you")) {
+        fprintf(f, "turn %u: hears-you actor=<%s> victim=<%s> "
+            "ms=%d listen=%d\n", (unsigned)theGame->Turn,
+            (const char*)e.EActor->Name(0), (const char*)e.EVictim->Name(0),
+            (int)e.EActor->SkillLevel(SK_MOVE_SIL),
+            (int)e.EVictim->SkillLevel(SK_LISTEN));
+    } else if (!strcmp(what, "pre")) {
+        fprintf(f, "turn %u: pre actor=<%s> victim=<%s> invisVal=%d "
+            "surprise=%d actUnseen=%d dist=%d ax=%d ay=%d vx=%d vy=%d\n",
+            (unsigned)theGame->Turn,
+            (const char*)e.EActor->Name(0), (const char*)e.EVictim->Name(0),
+            e.EActor->HasStati(INVIS) ? (int)e.EActor->GetStatiVal(INVIS) : -1,
+            e.isSurprise ? 1 : 0, e.actUnseen ? 1 : 0,
+            (int)e.EActor->DistFrom(e.EVictim),
+            (int)e.EActor->x, (int)e.EActor->y,
+            (int)e.EVictim->x, (int)e.EVictim->y);
+    } else {
+        fprintf(f, "turn %u: attack actor=<%s> victim=<%s> inv=%d "
+            "surprise=%d flatfoot=%d flanking=%d noDex=%d actUnseen=%d "
+            "sneak=%d dist=%d saDmg=%d ax=%d ay=%d vx=%d vy=%d\n",
+            (unsigned)theGame->Turn,
+            (const char*)e.EActor->Name(0), (const char*)e.EVictim->Name(0),
+            e.EActor->HasStati(INVIS) ? 1 : 0, e.isSurprise ? 1 : 0,
+            e.isFlatFoot ? 1 : 0, e.isFlanking ? 1 : 0,
+            e.EVictim->noDexDefense() ? 1 : 0, e.actUnseen ? 1 : 0,
+            e.isSneakAttack ? 1 : 0, (int)e.EActor->DistFrom(e.EVictim),
+            e.xDmg, (int)e.EActor->x, (int)e.EActor->y,
+            (int)e.EVictim->x, (int)e.EVictim->y);
+    }
+    fflush(f);
+}
+
 /* Probe for the phase-2 cover-and-band rule (inc-30ps). LOFForcedRoll, once
    nonzero, makes every Creature::Strike() call use it for e.vRoll instead of
    random(20)+1 -- zero is not a legal d20 result, so it doubles as "off" and
@@ -4418,9 +4475,18 @@ EvReturn Creature::PreStrike(EventInfo &e) /* this == EActor */
     
 
     // ww: I think is hiding/surprise/unseen logic can get a lot simpler:
+    /* upstream: Blind-Fight guards only a MELEE unseen attacker (SRD); a
+       ranged attack from an unperceived attacker is still an unseen attack
+       and still opens the sneak gate at the CA_SNEAK_ATTACK block below.
+       Base-code combat condition logic, no typedef or compiler dependence,
+       so Win32 misbehaves identically. Observed. Tracking inc-nkf2. Not sent.
+       (the e.actUnseen read at the sneak gate is the same defect, marked there) */
+    if (!e.EVictim->Perceives(e.EActor) && 
+        (!e.EVictim->HasFeat(FT_BLIND_FIGHT) ||
+         e.AType == A_FIRE || e.AType == A_HURL))
+      e.actUnseen = true;
     if (!e.EVictim->Perceives(e.EActor) && 
         !e.EVictim->HasFeat(FT_BLIND_FIGHT)) {
-      e.actUnseen = true;
       e.isSurprise = true;
       if (e.EActor->HasMFlag(M_HIDE_ABOVE) && 
           !e.EActor->HasStati(CHARGING)) {
@@ -4431,6 +4497,7 @@ EvReturn Creature::PreStrike(EventInfo &e) /* this == EActor */
             */
       }
     }
+    SneakProbeNote("pre", e);
     if (e.EActor->HasStati(INVIS)) {
       if (!(e.EActor->GetStatiVal(INVIS) == INV_IMPROVED)) 
         RemoveStati(INVIS);
@@ -4455,6 +4522,7 @@ EvReturn Creature::PreStrike(EventInfo &e) /* this == EActor */
              e.EVictim->SkillLevel(SK_LISTEN) + Dice::Roll(1,20,0)) {
         e.EActor->IPrint("The <Obj> hears you!",e.EVictim);
         e.isSurprise = false;
+        SneakProbeNote("hears-you", e);
         }
 
     if (e.EVictim->HasStati(SLEEPING)) {
@@ -6551,7 +6619,13 @@ AfterEffects:
     if (HasAbility(CA_SNEAK_ATTACK) && !e.EVictim->isDead() && !HasStati(GRABBED)
           && !HasStati(GRAPPLED) && (e.EVictim->ResistLevel(AD_CRIT) != -1 ||
           (e.EVictim->isMType(MA_UNDEAD) && e.EActor->HasFeat(FT_NECROPHYSIOLOGY))))
-      if ((e.isSurprise || e.isFlatFoot || e.isFlanking || 
+      /* upstream: an attacker the victim never perceived is unaware prey even
+         when the Listen contest cleared isSurprise, and the defence block
+         above already treats actUnseen as no-Dex. Leaving actUnseen out here
+         denied sneak dice to an invisible first blow the victim only heard.
+         Base-code combat condition logic, no typedef or compiler dependence,
+         so Win32 misbehaves identically. Observed. Tracking inc-nkf2. Not sent. */
+      if ((e.actUnseen || e.isSurprise || e.isFlatFoot || e.isFlanking || 
             e.EVictim->noDexDefense() ||
             (e.isAoO && e.EActor->HasFeat(FT_COMBAT_OPPORTUNIST))
           ) && (e.EActor->DistFrom(e.EVictim) <= 3))
@@ -6595,6 +6669,7 @@ AfterEffects:
           e.isSneakAttack = true; 
         }
       }
+    SneakProbeNote("attack", e);
 
     // ww: dirty fighting ... I'm unclear about the wording, I think
     // perhaps this is only supposed to work on each monster once. That

@@ -1,0 +1,133 @@
+# Photograph the sneak-attack gate for a rogue's FIRST blow from Improved
+# Invisibility, and the matching control in plain sight. Part of bead inc-nkf2.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-sneak-invis.dat \
+#   INCURSION_SNEAK_PROBE=1 \
+#       tools/headless.sh tools/keys/sneak-invis-melee.keys <seed>
+#
+# Read the result with tools/check_sneak_invis.sh, which runs this script
+# across many seeds and tallies the probe lines. This file only produces the
+# session and its logs/sneak.log.
+#
+# THE SPELL. lib/wspells.irh:6618 "Improved Invisibility" grants INVIS at
+# INV_NORMAL (1) and, per its own Desc, recurs 1d4+1 rounds after an attack
+# breaks it. INV_NORMAL is not INV_IMPROVED, so src/Fight.cpp:4166-4169 strips
+# the INVIS on the first blow. Only the first blow after each cast is from
+# invisibility; only that blow is measured here.
+#
+# THE VICTIM. A brown bear (lib/mon1.irh:4085) is summoned because it is
+# SZ_MEDIUM, has no M_SEE_INVIS and no FT_BLIND_FIGHT, and -- unlike the
+# ettercap -- does not web the player or hide. It is animal-Intelligence, so
+# its Listen rating is low, which gives the rogue's Move Silently a fair
+# contest (src/Fight.cpp:4184-4191).
+#
+# WHY THE ROOM IS LIT. Perceives() (src/Vision.cpp) lets a monster see the
+# player in an unlit room only through infravision, and invisibility skips
+# even that (the INVIS test at :907 jumps over the infravision block at :947).
+# In the dark the bear cannot see the player AT ALL, so even a plainly visible
+# control blow would be "unseen" and would open the sneak gate by itself. A
+# standing Call Light (lib/pspells.irh:167) onto the player's own square makes
+# the tile lit, so the bear perceives the rogue normally while visible; only
+# invisibility then denies it. The rogue is an orc, which is M_LIGHT_AVERSE, so
+# it takes a -4 to hit in the light (src/Fight.cpp:4424) -- a cost, not a
+# confound, and the check counts across enough seeds to land blows anyway.
+#
+# GETTING THE VICTIM NON-FLAT-FOOTED. A freshly summoned creature has a high
+# FFCount (src/Monster.cpp:1457), so it is flat-footed (inc/Creature.h:643) and
+# a visible blow on it would open the gate on its own. The setup blow below
+# both walks into the bear (prompting "Confirm attack") and zeroes both
+# fighters' FFCount (src/Fight.cpp:4147-4148), whether or not it lands. The
+# control blow after it is therefore at a non-flat-footed victim.
+#
+# Freeze Monsters is deliberately NOT enabled: it makes every victim flat-
+# footed (inc/Creature.h:227) and would spoil both measurements. Cheat Death is
+# enabled so the bear cannot end the session mid-resolution (a death prompt
+# before the sneak gate would swallow the probe line); "n" in the die prompt
+# takes the engine's own "You cheat death" branch (src/Fight.cpp:8596).
+#
+# SEED. The attribute rolls, the offered feats and the Move Silently vs Listen
+# rolls all move with the seed, so one seed is one trial.
+
+@include sneak-invis-chargen.keys
+
+SPACE   # dismiss the arrival-room description
+
+# Wizard mode: Cheat Death (row 1) so a killing blow offers the prompt instead
+# of ending the run, and Infinite Mana (row 8) because Improved Invisibility
+# costs 40 mana and a 1st-level rogue has 19.
+w
+y
+@choose "Wizard Mode Switches"
+SPACE
+DOWN*7
+SPACE
+ESC
+
+# Teach the rogue both spells. Learn Any Spell sets SP_KNOWN|SP_PRIMAL|SP_INNATE
+# (src/Debug.cpp:862), which is enough for SpellManager(SM_CAST) to offer them.
+w
+@choose "Learn Any Spell"
+"Call Light" ENTER
+@until "HP:" ESC
+w
+@choose "Learn Any Spell"
+"Improved Invisibility" ENTER
+@until "HP:" ESC
+
+# Call Light, standing radiance, on our own square: a lit arena.
+m
+@cursorto:mark "Call Light" DOWN
+ENTER
+*
+s
+@while "Take opportunity" y
+@while "Die?" n
+@dump:lit
+
+# Summon the victim one square east (SZ_MEDIUM, so the placement cursor's
+# default tile holds it).
+w
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "brown bear"
+RIGHT ENTER
+@until "HP:" ESC
+@dump:victim
+
+# SETUP: a visible blow at the freshly summoned, flat-footed bear. Not counted.
+RIGHT
+@while "Confirm attack" y
+@while "Take opportunity" y
+@while "Die?" n
+@until "HP:" ESC
+@dump:setup
+
+# CONTROL (case B): a visible blow at a bear that is no longer flat-footed.
+# The probe's attack line for this one must read flatfoot=0 and sneak=0.
+RIGHT
+@while "Confirm attack" y
+@while "Take opportunity" y
+@while "Die?" n
+@until "HP:" ESC
+@dump:control
+
+# Cast Improved Invisibility on the rogue.
+m
+@cursorto:mark "Improved Invisibility" DOWN
+ENTER
+*
+@while "Take opportunity" y
+@while "Die?" n
+@dump:cast
+
+# CASE A: the first blow after the cast. This is the measured blow. Its "pre"
+# line must read invisVal=1; then either "hears-you" (surprise lost to Listen)
+# or an attack line with sneak=1 (surprise held).
+RIGHT
+@while "Confirm attack" y
+@while "Take opportunity" y
+@while "Die?" n
+@until "HP:" ESC
+@dump:invis-strike
+
+@quit
