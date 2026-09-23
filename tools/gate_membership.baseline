@@ -150,7 +150,6 @@ check_rod_lordly_might.sh
 check_sacrifice.sh
 check_sanctuary_strike.sh
 check_save_fail.sh
-check_schema_roundtrip.sh
 check_shadow_shifting.sh
 check_shadowstone_page.sh
 check_sharp_senses.sh

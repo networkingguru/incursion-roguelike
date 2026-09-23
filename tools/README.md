@@ -577,6 +577,8 @@ A new check adds its row to this table, in alphabetical order.
 | `check_loremaster_live.sh` | Does the Loremaster's Bibliographic Insight add its extra attribute points when he reads a tome? | LIVE |
 | `check_luckblade_plus.sh` | Does the Luckblade keep its magical plus when the wish it would charge for is refused, rather than grinding down first? | LIVE |
 | `check_lz_uncompress.sh` | Can the LZ77 and RLE decoders be made to write past their output buffer? | LIVE |
+| `check_mana_regen_cast.sh` | Under real play, no forced state: a mage casts Burning Hands 35 times to bring mana into the 35-80% band the regen floor cares about, waits about 75 turns without resting, and stays at the same mana -- rather than rising, which is what the un-fixed floor would let happen. | LIVE |
+| `check_mana_regen_floor.sh` | Does the player mana-regen floor start high and fall with Concentration, rather than starting low and rising? Forces Concentration low then high on a live loaded player and drives 50 real ticks through `Creature::DoTurn`. | LIVE |
 | `check_masterarcher_live.sh` | Does the Master Archer's Ranged Sneak Attack fire only with a long bow or a short bow, and not with every launcher? | LIVE |
 | `check_menu_overflow.sh` | Does a menu with more than 52 options still draw and select every row, rather than losing the ones past the alphabet? | LIVE |
 | `check_menu_page_arrows.sh` | Does the RIGHT arrow page a long selection menu forward, so a Steam Deck player who has a stick but no Tab key can reach a row on the second page and still pick it? | LIVE |
@@ -635,6 +637,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_sacrifice.sh` | Does a god's altar read the rows BELOW `MA_ALL`, and refuse what it should refuse? | LIVE |
 | `check_sanctuary_strike.sh` | Does Sanctuary end when the creature it wards throws a melee blow, and survive a turn spent on anything else? | LIVE |
 | `check_save_fail.sh` | Does a save that fails part-way leave the game playable? Stages the throw with `INCURSION_SAVE_FAIL_AT` at a chosen object or data block. It does not drive a real disk-full, and cannot: every write goes into a memory `CFile` and the disk is untouched until `CommitCompressed`, so a full disk can only fail once every object is already converted. That case was reproduced by hand instead. | LIVE |
+| `check_save_pad_rows.sh` | Does every `SchemaPad` row in `src/SaveV1.cpp` still match what the compiler actually lays out, rather than what was hand-measured last time a member moved? Runs `tools/save_pad_rows.py`'s own compiler-derived measurement and compares it array by array against the source; `--selftest` inserts an unarchived member into a scratch copy of `inc/Creature.h` and confirms the check goes red naming `Creature` and its descendants. | LIVE |
 | `check_schema_roundtrip.sh` | Does each class group of the v1 save schema round-trip field for field, and write a byte-identical second file? | LIVE |
 | `check_school_focus_dc.sh` | Does School Focus (Illusion) still raise the DC to disbelieve an illusion? The same mage casts Phantasmal Force at a goblin, and the printed `Will Save: ... vs DC 13` line is the oracle -- the only place a player can read that DC. Unfocused it is 11. | LIVE |
 | `check_school_focus_menu.sh` | Is a school the character already focuses on kept off the School Focus menu? One orc mage takes the feat twice: Illusion is on the first menu and must be gone from the second, and the character sheet must list both schools, because School Focus is worth nothing taken twice in one school. A second run makes an elf, whose menu must still be short of Necromancy -- the other rule living in the same line. | LIVE |
@@ -714,6 +717,7 @@ A new check adds its row to this table, in alphabetical order.
 |---|---|---|
 | `sweep_ptr_order.sh` | Where does this codebase put two pointers in order? Drives clang's parse tree through `sweep_ptr_order.py`. | LIVE |
 | `sweep_ptr_order.py` | The parse-tree reader `sweep_ptr_order.sh` pipes into. Not run directly. | LIVE |
+| `save_pad_rows.py` | What are the actual `SchemaPad` rows for every archived class in `src/SaveV1.cpp`, measured from `clang++ -fdump-record-layouts` and cross-referenced against the `FIELD_*`/`FIELD_SKIP` lines in each class's `ARCHIVE_CLASS` chain, never from the save code's own runtime uncovered-byte list? Prints one pasteable C initializer per array, with a comment naming any member a row covers that carries no `FIELD_` line. `tools/check_save_pad_rows.sh` runs it and diffs the result against the source. | LIVE |
 | `flickercapture.sh` | Captures the game window and the frontmost app as fast as stills allow, into one dated directory. | LIVE |
 | `flickerscan.py` | Crops those captures to the game window and correlates brightness against repaints. | LIVE |
 | `flickerscan_selftest.py` | Does `flickerscan.py` still refuse to reach a verdict on black frames? | LIVE |
@@ -975,6 +979,8 @@ tools/check_school_focus_dc.sh      # School Focus (Illusion) raises the disbeli
 tools/check_periodic_interval.sh    # a PERIODIC status effect fires every Val rounds, not Val-1
 tools/check_xp_drain.sh             # RestoreXP clears the drain once, not once plus a matching XP credit
 tools/check_portal_reach.sh         # every portal shares one door-aware component; --prove-red shows it failing
+tools/check_mana_regen_floor.sh     # the mana-regen floor starts high and falls with Concentration, not the reverse
+tools/check_mana_regen_cast.sh      # the same fix under real play: cast, wait without resting, mana does not rise
 ```
 
 `check_gaze_reflect_message.sh` is the live twin of Tier 1's

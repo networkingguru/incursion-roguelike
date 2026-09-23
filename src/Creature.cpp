@@ -1648,7 +1648,15 @@ NoIntervention:;
         // ww: currently the monster AI is not smart enough to conserve mana,
         // so monster mages almost always run out of it fighting each other
         // before you arrive ...
-        if (!isPlayer() || cMana() >= ((nhMana()*min(35+SkillLevel(SK_CONCENT)*2,80))/100)) {
+        // upstream: the regen floor must START high (80%) and FALL with
+        // Concentration (down to 35%), not start low and rise -- the
+        // identical line stands at hex/master:src/Creature.cpp:1534, plain
+        // integer arithmetic with no platform typedef, so a Win32 0.6.9
+        // build behaves the same. Tier: Observed, via
+        // tools/check_mana_regen_floor.sh (forced state) and
+        // tools/check_mana_regen_cast.sh (real play). Tracked as inc-41kg.
+        // Not sent.
+        if (!isPlayer() || cMana() >= ((nhMana()*ManaRegenFloor())/100)) {
             /* 
             * Before it took about 60 turns to get 1 point back if you were
             * down one, and 60X turns if you were down X points. 
