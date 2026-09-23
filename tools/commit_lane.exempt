@@ -40,3 +40,4 @@ d9d950fd195fc2b37ae42ec5d6548218441c0c6a  2026-09-05  fix: the script VM shift o
 dddec749dd5308d8484cae169c416a6ec9e73cac  2026-09-04  docs: bead activity only. "beads: park the tile work behind a libtcod 1.6.3 -> 1.24.0 upgrade"
 0747c0cd7b9387b8b898e23f1dabc39a76467af6  2026-09-03  docs: bead activity only. "chore: bead activity for the fog render tint and the publication-gate hole (inc-qh0w, inc-m7xb)"
 04431f2f073f861b1e33b67836e8cfd98c7c62ec  2026-09-02  graphics: trailer capture playback. "sdl,lib: -keys movement-script playback and -load for trailer capture"
+ec1f04be659efc1df108d45c9087ac4c09d5546b  2026-09-23  tools: made by `bd dolt remote remove`, which commits on its own. "bd: clear sync.remote" -- already merged into inc-55jl, inc-k8uw, inc-nkf2 (inc-3y49)
