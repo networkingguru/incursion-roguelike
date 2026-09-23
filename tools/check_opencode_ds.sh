@@ -15,9 +15,10 @@
 # real harness via INCURSION_OPENCODE_BIN; it records its argv and environment
 # and emits scripted events.jsonl. No network request ever leaves this machine.
 #
-#   tools/check_opencode_ds.sh               run the nine assertions
-#   tools/check_opencode_ds.sh --prove-red   mutate the budget guard and the
-#                                            sandbox prefix, confirm red
+#   tools/check_opencode_ds.sh               run the ten assertions
+#   tools/check_opencode_ds.sh --prove-red   mutate the budget guard, the
+#                                            sandbox prefix and the JSON bash
+#                                            rules, confirm red
 #
 # Exit: 0 pass, 1 fail, 2 could not run.
 
@@ -38,6 +39,7 @@ REAL_HOME="$HOME"
 PROBE_OUTSIDE=""
 BACKUP=""
 BACKUP_PROFILE=""
+BACKUP_CONFIG=""
 
 cleanup() {
     if [ -n "${PROBE_OUTSIDE:-}" ]; then
@@ -59,6 +61,14 @@ cleanup() {
             echo "COULD NOT CONFIRM sandbox.sb WAS RESTORED -- check it by hand" >&2
         fi
     fi
+    if [ -n "$BACKUP_CONFIG" ] && [ -f "$BACKUP_CONFIG" ]; then
+        cp "$BACKUP_CONFIG" "$CONFIG"
+        if cmp -s "$BACKUP_CONFIG" "$CONFIG"; then
+            echo "restored tools/opencode/opencode.json byte-identical to its original"
+        else
+            echo "COULD NOT CONFIRM opencode.json WAS RESTORED -- check it by hand" >&2
+        fi
+    fi
     rm -rf "$TMP"
 }
 trap cleanup EXIT
@@ -70,11 +80,13 @@ fail() { echo "FAIL  $1"; FAIL=1; }
 skip() { echo "SKIP  $1"; SKIP_COUNT=$((SKIP_COUNT + 1)); }
 
 # --- --prove-red ----------------------------------------------------------
-# Handled FIRST, before the nine assertions below ever run. Two mutations,
-# each on its own copy of the wrapper: (a) drop the budget-check call, so
+# Handled FIRST, before the ten assertions below ever run. Four mutations,
+# each restoring the file it touches: (a) drop the budget-check call, so
 # assertion 1 must go red; (b) drop the `sandbox-exec` prefix, so assertion 7
-# must go red. Original files are restored, and the restoration verified
-# byte-identical with cmp, by the EXIT trap above.
+# must go red; (c) strip the read-only-git allow rules from opencode.json, so
+# assertion 10 must go red; (d) drop `"git *": "deny"` from opencode.json, so
+# assertion 10 must go red. Original files are restored, and each restoration
+# verified byte-identical with cmp, by the EXIT trap above.
 if [ "${1:-}" = "--prove-red" ]; then
     PROVE_FAIL=0
     # sandbox-exec cannot nest: under another Seatbelt sandbox, mutation (b) --
@@ -113,6 +125,65 @@ PY
     fi
     cp "$BACKUP" "$WRAPPER"
     cmp -s "$BACKUP" "$WRAPPER" || { echo "restore of opencode_ds.sh failed" >&2; exit 2; }
+
+    # (c) the read-only-git allow rules removed from opencode.json. Assertion
+    # 10 never launches the harness, so this proof runs in any environment --
+    # it is placed before (b), whose early exit under a nested sandbox would
+    # otherwise skip it.
+    BACKUP_CONFIG="$TMP/opencode.json.orig"
+    cp "$CONFIG" "$BACKUP_CONFIG"
+    python3 - "$CONFIG" <<'PY'
+import json, sys
+path = sys.argv[1]
+cfg = json.load(open(path))
+bash = cfg["permission"]["bash"]
+allowed = ("git status", "git status *", "git diff", "git diff *", "git log",
+           "git log *", "git show", "git show *", "git ls-files",
+           "git ls-files *", "git rev-parse *")
+for key in allowed:
+    bash.pop(key, None)
+json.dump(cfg, open(path, "w"), indent=2)
+open(path, "a").write("\n")
+PY
+    echo "mutated tools/opencode/opencode.json: read-only-git allow rules removed"
+    MUT_OUT="$("$ROOT/tools/check_opencode_ds.sh" 2>&1)"
+    MUT_RC=$?
+    if [ "$MUT_RC" -ne 0 ] && grep -q "FAIL.*git" <<< "$MUT_OUT"; then
+        echo "PASS (as intended): assertion 10 (read-only git) went red"
+    else
+        echo "FAIL: assertion 10 stayed green with the allow rules removed (rc=$MUT_RC)"
+        echo "$MUT_OUT" | tail -20
+        PROVE_FAIL=1
+    fi
+    cp "$BACKUP_CONFIG" "$CONFIG"
+    cmp -s "$BACKUP_CONFIG" "$CONFIG" || { echo "restore of opencode.json failed" >&2; exit 2; }
+
+    # (d) `"git *": "deny"` removed from opencode.json. With that block gone the
+    # later allow rules still decide for the read-only commands; a command no
+    # allow rule matches would fall to `"*": "allow"`, so assertion 10 must go
+    # red for the denied set. If the file's ordering ever makes this green,
+    # report it rather than weakening the test.
+    python3 - "$CONFIG" <<'PY'
+import json, sys
+path = sys.argv[1]
+cfg = json.load(open(path))
+bash = cfg["permission"]["bash"]
+bash.pop("git *", None)
+json.dump(cfg, open(path, "w"), indent=2)
+open(path, "a").write("\n")
+PY
+    echo "mutated tools/opencode/opencode.json: \"git *\": \"deny\" removed"
+    MUT_OUT="$("$ROOT/tools/check_opencode_ds.sh" 2>&1)"
+    MUT_RC=$?
+    if [ "$MUT_RC" -ne 0 ] && grep -q "FAIL.*git" <<< "$MUT_OUT"; then
+        echo "PASS (as intended): assertion 10 (read-only git) went red"
+    else
+        echo "FAIL: assertion 10 stayed green with \"git *\": \"deny\" removed (rc=$MUT_RC)"
+        echo "$MUT_OUT" | tail -20
+        PROVE_FAIL=1
+    fi
+    cp "$BACKUP_CONFIG" "$CONFIG"
+    cmp -s "$BACKUP_CONFIG" "$CONFIG" || { echo "restore of opencode.json failed" >&2; exit 2; }
 
     # (b) sandbox-exec prefix removed.
     if [ "$SANDBOX_RUNNABLE" -eq 0 ]; then
@@ -158,7 +229,7 @@ PY
     cmp -s "$BACKUP" "$WRAPPER" || { echo "restore of opencode_ds.sh failed" >&2; exit 2; }
 
     if [ "$PROVE_FAIL" -eq 0 ]; then
-        echo "PASS: --prove-red, both mutations turned the intended assertion red"
+        echo "PASS: --prove-red, all mutations turned the intended assertion red"
         exit 0
     fi
     exit 1
@@ -223,7 +294,8 @@ chmod +x "$FAKE"
 # running this check), `sandbox-exec` itself refuses to apply and exits 71.
 # The assertions that need to LAUNCH the harness (4, 5, 6, 7) cannot run in
 # that environment. Detect it once and report those as SKIP; outside any
-# sandbox they all run. Assertions 1, 2, 3, 8 and 9 never launch the harness.
+# sandbox they all run. Assertions 1, 2, 3, 8, 9 and 10 never launch the
+# harness.
 SANDBOX_OK=1
 PROBE_HOME="$TMP/homeprobe"; mkdir -p "$PROBE_HOME"
 PROBE_WORK="$TMP/wtprobe"; mkdir -p "$PROBE_WORK"
@@ -409,12 +481,85 @@ else
     fail "opencode.json permission check"
 fi
 
+# --- 10. Read-only git is allowed, every other git command stays denied ---
+# Models opencode's DOCUMENTED bash-rule precedence (opencode.ai/docs/
+# permissions): patterns are wildcard-matched, and THE LAST MATCHING RULE
+# WINS, `*` matching any characters. This is a model of that documented rule,
+# NOT opencode itself: no opencode binary runs here. The same evaluator runs
+# under --prove-red, where deleting the allow rules or `"git *": "deny"` must
+# turn it red.
+if python3 - "$CONFIG" <<'PY'
+import json, re, sys
+
+cfg = json.load(open(sys.argv[1]))
+rules = list(cfg["permission"]["bash"].items())
+
+
+def regex_for(pattern):
+    out = "".join(".*" if ch == "*" else re.escape(ch) for ch in pattern)
+    return re.compile("^" + out + "$")
+
+
+compiled = [(regex_for(p), v) for p, v in rules]
+
+
+def verdict(cmd):
+    last = None
+    for rx, v in compiled:
+        if rx.match(cmd):
+            last = v
+    return last
+
+
+allow = [
+    "git status",
+    "git status --porcelain",
+    "git diff",
+    "git diff --stat",
+    "git log --oneline -3",
+    "git show HEAD",
+    "git ls-files tools",
+    "git rev-parse HEAD",
+]
+deny = [
+    "git commit -m x",
+    "git add .",
+    "git checkout -- f",
+    "git reset --hard",
+    "git push",
+    "git stash",
+    "git -C /x status",
+    "bd ready",
+    "gh pr list",
+]
+
+bad = []
+for cmd in allow:
+    got = verdict(cmd)
+    if got != "allow":
+        bad.append((cmd, "allow", got))
+for cmd in deny:
+    got = verdict(cmd)
+    if got != "deny":
+        bad.append((cmd, "deny", got))
+
+if bad:
+    for cmd, want, got in bad:
+        print("  %-24s wanted %-5s got %s" % (cmd, want, got or "none"))
+    sys.exit(1)
+PY
+then
+    pass "read-only git allowed; all other git, bd and gh commands denied"
+else
+    fail "opencode.json bash rule precedence: read-only git / denied git"
+fi
+
 if [ "$FAIL" -eq 0 ] && [ "$SKIP_COUNT" -eq 0 ]; then
-    echo "PASS: check_opencode_ds.sh, all nine assertions"
+    echo "PASS: check_opencode_ds.sh, all ten assertions"
     exit 0
 elif [ "$FAIL" -eq 0 ]; then
     echo "PASS (partial): check_opencode_ds.sh, $SKIP_COUNT assertion(s) skipped and not counted;"
-    echo "                rerun outside any sandbox to run all nine (exit 2 = incomplete)"
+    echo "                rerun outside any sandbox to run all ten (exit 2 = incomplete)"
     exit 2
 else
     echo "FAIL: check_opencode_ds.sh, at least one assertion failed above"

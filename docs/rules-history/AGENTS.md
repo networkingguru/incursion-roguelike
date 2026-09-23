@@ -169,6 +169,15 @@ loads AGENTS.md and became an implementer that may take any work Codex or a
 Sonnet agent would take. A heading that named only Codex would let it read the
 section as someone else's rules. The obligations did not change.
 
+2026-09-23, bead inc-l92q: the git line now allows read-only git. On inc-dz74
+DeepSeek in opencode needed `git status --porcelain` to test its own check,
+was denied by `"git *": "deny"`, and wrote the call into throwaway scripts.
+Measured the same day under `tools/opencode/sandbox.sb`: a git object write
+failed with "Operation not permitted" (the shared `.git` is outside the
+worktree) and `git status` succeeded. The sandbox is the barrier against git
+writes, so denying reads only cost steps. The line also forbids routing git
+through a script.
+
 ## Marking base-code bugs
 
 **Every fix to a defect that is upstream's rather than the port's MUST be marked

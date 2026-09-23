@@ -27,7 +27,7 @@ This section binds every implementer Claude dispatches. Claude plans and reviews
 - NEVER delete an existing guard, bounds check, invariant, assertion or test to fit new code. If one blocks you, STOP, report file+line, say why.
 - Build ONLY with `BACKEND=posix ./build_macos.sh` (produces `incursion-headless`, compiles `mod/Incursion.Mod` in-sandbox). Use `./incursion-headless` as compiler in scripts.
 - NEVER invoke `./incursion` (SDL, no sandbox). Do NOT run/edit/report-failing: `check_flavor_stability.sh`, `check_dump_save.sh`, `check_convert_guard.sh`, `check_stair_warn.sh`, `check_dup_names.sh` — a human runs these.
-- Run NO git commands; leave changes in the working tree.
+- Run NO git command that changes state; leave changes in the working tree. Read-only git (`status`, `diff`, `log`, `show`, `ls-files`, `rev-parse`) is allowed. Never route a git command through a script to get around this.
 - Run NO `bd`; do not open/close/claim/annotate issues.
 - Stay in scope: no spec/plan edits unless told; no unrelated formatting changes; if the spec/plan is wrong, say so with evidence, don't implement what you believe wrong.
 - Report every deletion separately from additions.
