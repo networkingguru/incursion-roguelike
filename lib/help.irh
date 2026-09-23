@@ -3678,23 +3678,26 @@ Text "help::magic"
      spells adjusted by their specialty school modifiers, as described under Schools
      of Magic, below.\n
      __Mana normally replenishes fully when characters rest for the night. Further,
-     Mana may regenerate slowly over time. If a character's Mana pool is half or
-     more empty, it will not regenerate at all until she rests. If it is more than
-     half full, however, the character will regain Mana over time at a speed based 
-     on the proportion of her total Mana she has spent. In other words, a character
-     down only a little Mana will recover quickly, whereas one down more will take
-     exponentially longer to recover. The AutoRest macro can be used to rest until
-     Mana is recovered safety -- holding down the Rest key risks being attacked by
-     surprise and being unable to respond, resulting in seemingly random death.\n
+     Mana may regenerate slowly over time, but only while the pool is nearly full.
+     A character with no skill in Concentration regains Mana only while at least
+     80% of her pool remains, and each point of Concentration lowers that line by
+     2%, to no lower than 35%. Below the line, her Mana will not regenerate at all
+     until she rests. Above it, she regains Mana at a speed based on the proportion
+     of her total Mana she has spent. In other words, a character down only a
+     little Mana will recover quickly, whereas one down more will take much longer
+     to recover. The AutoRest macro can be used to rest until Mana is recovered
+     safety -- holding down the Rest key risks being attacked by surprise and being
+     unable to respond, resulting in seemingly random death.\n
      __Some spells, such as <9>Resist Fire<3> and <9>Bull's Strength<3>, offer
-     protection or enhancement that lasts a full day. Mana spent on these spells
-     is referred to as <11>Held Mana<3> and never regenerates, and the character's 
-     total pool is counted as being that many points lower for determining if and 
-     how quickly a character regenerates Mana. For example, if a character with 100 
-     Mana spends thirty points on self-enhancement spells, she can spend another 35 
-     Mana Points on attack or miscellaneous spells before her pool reaches the point 
-     it will no longer regenerate, because her total Mana pool not counting held 
-     Mana is 70. On the Mana bar in the traits window, held Mana is shown in brown.
+     protection or enhancement that lasts a full day. Mana spent on these spells is
+     referred to as <11>Held Mana<3> and never regenerates, but ALSO is not counted
+     against the character's total mana for determining if and how quickly a
+     character regenerates Mana. For example, if a character with 100 Mana and no
+     skill in Concentration spends thirty points on self-enhancement spells, her
+     total Mana pool not counting held Mana is 70. She can then spend another 14
+     Mana Points on attack or miscellaneous spells and still regenerate, because 56
+     is 80% of 70; one point more and her Mana will not return until she rests. On
+     the Mana bar in the traits window, held Mana is shown in brown.
      \n\n
 
      <11>METAMAGIC {ME}\n

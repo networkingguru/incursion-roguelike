@@ -29,16 +29,50 @@ SERVICE = "incursion-deepseek-scoped"  # macOS Keychain service name
 ACCOUNT = "incursion"  # macOS Keychain account name
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-LEDGER = REPO_ROOT / "logs" / "deepseek-ledger.jsonl"
+
+# The default ledger lives in the MAIN checkout's logs/, not this worktree's:
+# with one git worktree per bead, a per-worktree ledger would let each
+# worktree's check_budget see only its own spend, and the spend would vanish
+# when the worktree is deleted. The main checkout is derived from git (the
+# parent of the shared git common dir), so every worktree resolves the same
+# path. resolve_ledger_path() computes it lazily; INCURSION_DEEPSEEK_LEDGER
+# overrides it first, and if git is unavailable we fall back to REPO_ROOT.
 
 
 def resolve_url():
     return os.environ.get("INCURSION_DEEPSEEK_URL") or URL
 
 
+def default_ledger_path():
+    """The main checkout's ledger, found from git. Falls back to
+    REPO_ROOT/logs/ when git is missing or REPO_ROOT is not a checkout."""
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(REPO_ROOT),
+                "rev-parse",
+                "--path-format=absolute",
+                "--git-common-dir",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            common_dir = result.stdout.strip()
+            if common_dir:
+                main = Path(common_dir).parent
+                return main / "logs" / "deepseek-ledger.jsonl"
+    except Exception:
+        pass
+    return REPO_ROOT / "logs" / "deepseek-ledger.jsonl"
+
+
 def resolve_ledger_path():
     override = os.environ.get("INCURSION_DEEPSEEK_LEDGER")
-    return Path(override) if override else LEDGER
+    return Path(override) if override else default_ledger_path()
 
 
 def resolve_budget():

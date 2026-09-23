@@ -3,8 +3,9 @@
 #
 # Does tools/deepseek.py spend at most one billed call per success, refuse
 # to spend the instant its own ledger says the budget is gone or the ledger
-# disagrees with itself, and never let the DeepInfra key reach stdout,
-# stderr or the ledger? Defends bead inc-3dgz: a scoped, budget-capped
+# disagrees with itself, resolve its default ledger to the MAIN checkout so
+# every worktree shares one budget, and never let the DeepInfra key reach
+# stdout, stderr or the ledger? Defends bead inc-3dgz: a scoped, budget-capped
 # DeepSeek client that must fail closed rather than silently keep spending
 # money once a call's price is unknown.
 #
@@ -12,7 +13,7 @@
 # INCURSION_DEEPSEEK_URL points the client at it, and this check kills the
 # stub in a trap. No network request ever leaves this machine.
 #
-#   tools/check_deepseek.sh               run the seven assertions
+#   tools/check_deepseek.sh               run the eight assertions
 #   tools/check_deepseek.sh --prove-red   mutate the budget guard and
 #                                         confirm the check goes red
 #
@@ -80,7 +81,7 @@ start_stub() {
 req_count() { cat "$TMP/count" 2>/dev/null; }
 
 # --- --prove-red ----------------------------------------------------------
-# Handled FIRST, before the seven assertions below ever run. Mutates the
+# Handled FIRST, before the eight assertions below ever run. Mutates the
 # budget guard in tools/deepseek.py so the tool spends straight past its
 # own cap, re-runs THIS script (fresh stub, fresh tmp dir) against the
 # mutated file, and expects that run to fail. The original file is
@@ -231,8 +232,39 @@ else
     fail "the key leaked: live-leak=$LEAK_LIVE dry-run-leak=$LEAK_DRY"
 fi
 
+# --- 8. The default ledger lives in the main checkout --------------------
+# A per-worktree ledger would let each worktree's budget check see only its
+# own spend, and the spend would vanish with the worktree. Prove that
+# resolve_ledger_path() from a linked worktree finds the MAIN checkout's
+# logs/deepseek-ledger.jsonl. This builds its own throwaway repo under $TMP:
+# git here is the check's, never the project repo, and nothing leaves the
+# machine. The env override is unset so the git-derived default is exercised.
+MAIN_REPO="$(cd "$TMP" && pwd -P)/main"
+WT_REPO="$(cd "$TMP" && pwd -P)/wt"
+git init -q "$MAIN_REPO" 2>/dev/null
+git -C "$MAIN_REPO" -c user.email=check@example.com -c user.name=check \
+    commit -q --allow-empty -m init 2>/dev/null
+git -C "$MAIN_REPO" worktree add -q "$WT_REPO" 2>/dev/null
+mkdir -p "$MAIN_REPO/tools" "$WT_REPO/tools"
+cp -f "$DEEPSEEK" "$MAIN_REPO/tools/deepseek.py"
+cp -f "$DEEPSEEK" "$WT_REPO/tools/deepseek.py"
+RESOLVED="$(env -u INCURSION_DEEPSEEK_LEDGER python3 - "$WT_REPO/tools/deepseek.py" <<'PY'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("deepseek", sys.argv[1])
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+sys.stdout.write(str(mod.resolve_ledger_path()))
+PY
+)"
+EXPECTED="$MAIN_REPO/logs/deepseek-ledger.jsonl"
+if [ -n "$RESOLVED" ] && [ "$RESOLVED" = "$EXPECTED" ]; then
+    pass "default ledger resolves to the main checkout from a linked worktree"
+else
+    fail "default ledger: from worktree resolved '$RESOLVED', expected '$EXPECTED'"
+fi
+
 if [ "$FAIL" -eq 0 ]; then
-    echo "PASS: check_deepseek.sh, all seven assertions"
+    echo "PASS: check_deepseek.sh, all eight assertions"
     exit 0
 else
     echo "FAIL: check_deepseek.sh, at least one assertion failed above"

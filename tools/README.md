@@ -577,6 +577,8 @@ A new check adds its row to this table, in alphabetical order.
 | `check_loremaster_live.sh` | Does the Loremaster's Bibliographic Insight add its extra attribute points when he reads a tome? | LIVE |
 | `check_luckblade_plus.sh` | Does the Luckblade keep its magical plus when the wish it would charge for is refused, rather than grinding down first? | LIVE |
 | `check_lz_uncompress.sh` | Can the LZ77 and RLE decoders be made to write past their output buffer? | LIVE |
+| `check_mana_regen_cast.sh` | Under real play, no forced state: a mage casts Burning Hands 35 times to bring mana into the 35-80% band the regen floor cares about, waits about 75 turns without resting, and stays at the same mana -- rather than rising, which is what the un-fixed floor would let happen. | LIVE |
+| `check_mana_regen_floor.sh` | Does the player mana-regen floor start high and fall with Concentration, rather than starting low and rising? Forces Concentration low then high on a live loaded player and drives 50 real ticks through `Creature::DoTurn`. | LIVE |
 | `check_masterarcher_live.sh` | Does the Master Archer's Ranged Sneak Attack fire only with a long bow or a short bow, and not with every launcher? | LIVE |
 | `check_menu_overflow.sh` | Does a menu with more than 52 options still draw and select every row, rather than losing the ones past the alphabet? | LIVE |
 | `check_menu_page_arrows.sh` | Does the RIGHT arrow page a long selection menu forward, so a Steam Deck player who has a stick but no Tab key can reach a row on the second page and still pick it? | LIVE |
@@ -591,6 +593,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_natural_speed_live.sh` | Does flipping one byte of `Options.Dat` really move the Brawl row on the character sheet, 100% to 175%? Refuses to pass if a run never entered a map. | LIVE |
 | `check_nonnormal_invariant.sh` | Is non-normal detection (an infravision character in darkness) byte-identical across the inc-jcg4 unified-light change over seeds 1-10? | LIVE |
 | `check_open_xy.sh` | Does `Map::GetOpenXY` refuse when no square is open, instead of answering (0,0)? Requires the `NO_OPEN_XY` sentinel to be returned and `Thing::PlaceOpen` to drop the Thing rather than place it in the map's solid outer edge. Three static greps plus a probe build (`EXTRA_CXXFLAGS=-DINCURSION_OPENXY_PROBE BACKEND=posix ./build_macos.sh`, binary named by `INCURSION_BIN`) that counts refusals, disposals and a successful-placement control -- the greps alone once passed a fix that tested the sentinel and then placed at (0,0) anyway. | LIVE |
+| `check_opencode_ds.sh` | Does `tools/opencode_ds.sh` refuse to launch once the DeepSeek ledger says the budget is gone or poisoned, refuse the shared checkout, bill exactly one row for a successful harness run (cost summed from its `step_finish` events, steps counted), poison the ledger when opencode quotes tokens but no usable cost, keep the DeepInfra key out of every file it writes, and confine opencode to the worktree with the Seatbelt profile (inc-h1bq)? | LIVE |
 | `check_options_migrate.sh` | Does an options file written before an option existed come up on that option's real default rather than its first menu choice, and does a setting the player chose on purpose survive? The file has no header, so `OPT_SETTINGS_GEN` is the only thing separating "never chosen" from "deliberately set to the first choice". Links against `OptionsGen.o`, which has no undefined symbols, so it needs no stubs and no session. | LIVE |
 | `check_orphan_branches.sh` | Is every finished fix actually on master? It lists each branch master has not merged beside its bead's status and age. It fails on a branch whose bead is closed — the shape that stranded b855fe2 for days — and on a branch whose name is not a bead id, because nobody can then say what it was for. | LIVE |
 | `check_overlapping_modifier_fields.sh` | Do two torch archons that each stand inside the other's magic circle both keep their light field when they separate, and does each end up holding exactly one circle row? Fixed 2 lit, unfixed 0. | LIVE |
@@ -611,6 +614,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_prestige_tables.sh` | Does each prestige class print the save columns and the defence track its own fields give? | LIVE |
 | `check_probe_hooks.sh` | Does every debugging hook shipped in the game name a bead, or has an undeclared hook appeared outside the baseline? | LIVE |
 | `check_ptr_sweep.sh` | Does `sweep_ptr_order.sh` still find a pointer ordering, and still ignore a pointer equality? | LIVE |
+| `check_pycache_ignored.sh` | Does running a Python check that does not pass `-B` leave the tree clean? Runs `check_ability_descs.sh`, requires the `tools/__pycache__/*.pyc` it writes to stay invisible to git, and exits 2 rather than green when no `.pyc` appeared. `--prove-red` strips `__pycache__/` from a scratch copy of `.gitignore` and requires the same probe to leave litter git can see (inc-dz74). | LIVE |
 | `check_python_rod_prose.sh` | Does the Rod of the Python carry a description at all, and does it name its per-plus poison-save bonus, its per-plus Constitution bonus and its three-times-daily transformation into a boa constrictor, matching its `SN_POISON`, `A_CON` and boa-summoning code? | LIVE |
 | `check_quality_self_immune.sh` | Is an armour with a resistance quality immune to that element, while its wearer still gets the resistance? A +0 leather suit of fire resistance holds 56 hit points where the plain one is left mildly burnt. | LIVE |
 | `check_quiet_lookup.sh` | Does a dead object handle resolve silently where silence is correct, and still complain where a complaint is correct? | LIVE |
@@ -634,6 +638,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_sacrifice.sh` | Does a god's altar read the rows BELOW `MA_ALL`, and refuse what it should refuse? | LIVE |
 | `check_sanctuary_strike.sh` | Does Sanctuary end when the creature it wards throws a melee blow, and survive a turn spent on anything else? | LIVE |
 | `check_save_fail.sh` | Does a save that fails part-way leave the game playable? Stages the throw with `INCURSION_SAVE_FAIL_AT` at a chosen object or data block. It does not drive a real disk-full, and cannot: every write goes into a memory `CFile` and the disk is untouched until `CommitCompressed`, so a full disk can only fail once every object is already converted. That case was reproduced by hand instead. | LIVE |
+| `check_save_pad_rows.sh` | Does every `SchemaPad` row in `src/SaveV1.cpp` still match what the compiler actually lays out, rather than what was hand-measured last time a member moved? Runs `tools/save_pad_rows.py`'s own compiler-derived measurement and compares it array by array against the source; `--selftest` inserts an unarchived member into a scratch copy of `inc/Creature.h` and confirms the check goes red naming `Creature` and its descendants. | LIVE |
 | `check_schema_roundtrip.sh` | Does each class group of the v1 save schema round-trip field for field, and write a byte-identical second file? | LIVE |
 | `check_school_focus_dc.sh` | Does School Focus (Illusion) still raise the DC to disbelieve an illusion? The same mage casts Phantasmal Force at a goblin, and the printed `Will Save: ... vs DC 13` line is the oracle -- the only place a player can read that DC. Unfocused it is 11. | LIVE |
 | `check_school_focus_menu.sh` | Is a school the character already focuses on kept off the School Focus menu? One orc mage takes the feat twice: Illusion is on the first menu and must be gone from the second, and the character sheet must list both schools, because School Focus is worth nothing taken twice in one school. A second run makes an elf, whose menu must still be short of Necromancy -- the other rule living in the same line. | LIVE |
@@ -713,6 +718,7 @@ A new check adds its row to this table, in alphabetical order.
 |---|---|---|
 | `sweep_ptr_order.sh` | Where does this codebase put two pointers in order? Drives clang's parse tree through `sweep_ptr_order.py`. | LIVE |
 | `sweep_ptr_order.py` | The parse-tree reader `sweep_ptr_order.sh` pipes into. Not run directly. | LIVE |
+| `save_pad_rows.py` | What are the actual `SchemaPad` rows for every archived class in `src/SaveV1.cpp`, measured from `clang++ -fdump-record-layouts` and cross-referenced against the `FIELD_*`/`FIELD_SKIP` lines in each class's `ARCHIVE_CLASS` chain, never from the save code's own runtime uncovered-byte list? Prints one pasteable C initializer per array, with a comment naming any member a row covers that carries no `FIELD_` line. `tools/check_save_pad_rows.sh` runs it and diffs the result against the source. | LIVE |
 | `flickercapture.sh` | Captures the game window and the frontmost app as fast as stills allow, into one dated directory. | LIVE |
 | `flickerscan.py` | Crops those captures to the game window and correlates brightness against repaints. | LIVE |
 | `flickerscan_selftest.py` | Does `flickerscan.py` still refuse to reach a verdict on black frames? | LIVE |
@@ -851,6 +857,7 @@ tools/check_bead_publish.py         # reads the bead database against git HEAD
 tools/check_bead_new_gate.sh        # watches tools/bead_new.sh refuse an unfit bead
 tools/check_shared_checkout_gate.sh # commits in a scratch repo against .beads/hooks/pre-commit
 tools/check_pass_record.sh          # lands scratch beads through finish_bead.sh
+tools/check_pycache_ignored.sh      # a Python check leaves the tree clean
 ```
 
 `tools/bead_new.sh` is not a check; it is how a bead should be filed.
@@ -974,6 +981,8 @@ tools/check_school_focus_dc.sh      # School Focus (Illusion) raises the disbeli
 tools/check_periodic_interval.sh    # a PERIODIC status effect fires every Val rounds, not Val-1
 tools/check_xp_drain.sh             # RestoreXP clears the drain once, not once plus a matching XP credit
 tools/check_portal_reach.sh         # every portal shares one door-aware component; --prove-red shows it failing
+tools/check_mana_regen_floor.sh     # the mana-regen floor starts high and falls with Concentration, not the reverse
+tools/check_mana_regen_cast.sh      # the same fix under real play: cast, wait without resting, mana does not rise
 ```
 
 `check_gaze_reflect_message.sh` is the live twin of Tier 1's

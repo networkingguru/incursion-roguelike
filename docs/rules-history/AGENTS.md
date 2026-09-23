@@ -163,6 +163,29 @@ believe is wrong.
 **Report what you removed.** List every deletion your change makes, separately
 from what you added. A reviewer's weakest sense is for what is no longer there.
 
+2026-09-23, bead inc-h1bq: the loaded heading became "If you are the implementer
+(Codex, or DeepSeek in opencode)". DeepSeek, run through `tools/opencode_ds.sh`,
+loads AGENTS.md and became an implementer that may take any work Codex or a
+Sonnet agent would take. A heading that named only Codex would let it read the
+section as someone else's rules. The obligations did not change.
+
+2026-09-23, bead inc-l92q: the git line now allows read-only git. On inc-dz74
+DeepSeek in opencode needed `git status --porcelain` to test its own check,
+was denied by `"git *": "deny"`, and wrote the call into throwaway scripts.
+Measured the same day under `tools/opencode/sandbox.sb`: a git object write
+failed with "Operation not permitted" (the shared `.git` is outside the
+worktree) and `git status` succeeded. The sandbox is the barrier against git
+writes, so denying reads only cost steps. The line also forbids routing git
+through a script.
+
+2026-09-23, bead inc-dz74: added the evidence line. An implementer's sandbox
+lets it write only inside its worktree, and `tools/finish_bead.sh` destroys the
+worktree at landing, so a specimen written anywhere but the gitignored `logs/`
+blocks the landing as an untracked file. The reproduction goes in `tools/` and
+is committed; Claude copies each reported specimen to `docs/evidence/<bead>/`
+in the shared checkout. Implementers read AGENTS.md, not `.claude/rules/`, so
+the line had to live here as well as in publishing.md.
+
 ## Marking base-code bugs
 
 **Every fix to a defect that is upstream's rather than the port's MUST be marked

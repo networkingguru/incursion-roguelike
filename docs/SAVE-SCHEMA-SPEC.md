@@ -140,7 +140,7 @@ save loads under a newer binary. **A tag it does not know MUST refuse the load**
 naming the tag: a field it cannot interpret means the file was written by
 something newer than itself.
 
-### Field numbers: the one rule
+### Field numbers and class layout: the two rules
 
 Each class owns a range of tag numbers. Within that range:
 
@@ -148,7 +148,26 @@ Each class owns a range of tag numbers. Within that range:
 - A retired field's number MUST NOT be reused, ever.
 - A field's number MUST NOT change, ever.
 
-That rule is the contract. Nothing else about the schema needs remembering.
+That is the first rule. The second rule concerns the byte layout of the class.
+
+`src/SaveV1.cpp` holds one pad row per saved class (`CreaturePads`,
+`MonsterPads` and the others in `SchemaPins[]`). A pad row lists every byte of
+the object that no `FIELD_` line covers: the vtable pointer, the compiler's
+padding, and each member that is deliberately not saved. A DEBUG build compares
+those rows with the bytes the field lists actually cover, and it refuses to
+write the save on any difference.
+
+- When you add, remove or resize a member of a saved class, you MUST re-measure
+  the pad rows of that class and of every class derived from it.
+- Run `tools/save_pad_rows.sh`. It reads the layout from the compiler and prints
+  every row in the form `src/SaveV1.cpp` uses. Paste the rows it prints.
+- `tools/check_save_pad_rows.sh` fails when a declared row differs from the
+  measured one.
+
+The member you add is often not the member that breaks. On 2026-09-21 a new
+`int16` in `Creature` (inc-30ps) landed in free space, but it pushed two
+existing saved fields into bytes the rows still called padding. Every save then
+failed with `SCHEMA COVERAGE` errors (inc-xlwa).
 
 ### How a class declares its fields
 

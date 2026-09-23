@@ -30,6 +30,10 @@ Why: a bead wrongly suppressed as `internal` is invisible; a bead wrongly publis
 History: docs/rules-history/publishing.md#feedback-default-a-bead-to-public.
 
 ## feedback-evidence-stays-untracked-until-a-pr-needs-it
-Do NOT commit files under `docs/evidence/` as a matter of course. Create the directory and README, then LEAVE IT UNTRACKED and say so. Add to a commit only when the fix it supports goes out as a PR or issue comment (the `docs/REPORTING-GATE.md` gate moment). ~70 pre-existing tracked files under `docs/evidence/` stay; do not remove them or treat them as precedent to commit more.
-Why: committing large binary evidence before it's needed puts weight in history nobody outside will read.
+Evidence has two parts, and each part has one place:
+- The REPRODUCTION (key script, seed, options file, command) is a tool. It goes in `tools/` and is committed with the bead, ALWAYS — not only when a PR needs it.
+- The SPECIMEN (screen dump, log, save, crash report) is output. It goes in `docs/evidence/<bead>/` IN THE SHARED CHECKOUT `~/Scripts/Incursion`, with its README, and stays UNTRACKED there. Add it to a commit only when the fix it supports goes out as a PR or issue comment (the `docs/REPORTING-GATE.md` gate moment).
+
+NEVER write an uncommitted file of either part inside a bead's worktree: `tools/finish_bead.sh` destroys the worktree at landing, and refuses to land one that holds untracked files. An implementer (Codex, opencode) cannot write outside its worktree, so it writes a specimen under the worktree's `logs/` and names the path in its report; Claude copies it to the shared checkout before the landing. A commit body MUST NOT cite a file that is not in history. ~70 pre-existing tracked files under `docs/evidence/` stay; do not remove them or treat them as precedent to commit more.
+Why: a reproduction in git keeps a claim re-runnable, and a specimen inside a worktree either blocks its own landing or dies with it.
 History: docs/rules-history/publishing.md#feedback-evidence-stays-untracked-until-a-pr-needs-it.
