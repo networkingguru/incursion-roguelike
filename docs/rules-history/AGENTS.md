@@ -1,0 +1,506 @@
+# Archived full text -- not auto-loaded. The loaded rule lives in AGENTS.md.
+
+# Agent Instructions
+
+## No autonomous work — propose, then wait
+
+**You have no mandate to operate autonomously.** Brian set this scope on
+2026-09-12: "You do not have mandate to operate autonomously." It replaces the
+standing order that ran from 2026-09-09 to that date, which told a session to
+fix a bug in his own tree without asking.
+
+Before you change a tracked file, say what you found and what you would change,
+then WAIT for his word. This covers a bug fix in his own tree exactly as it
+covers a feature, a refactor, a spec, a rule change or user-facing text. A small
+diff is not an exception. Neither is a defect you are certain about.
+
+Read, grep, build and run the checks freely. Investigation needs no permission.
+Changing his tree does.
+
+**A question is a question.** If he asks why something behaves as it does,
+answer it. He asked for an explanation, not a repair. On 2026-08-23 he reported
+that the Boots of Providence pay no Luck bonus when carried, and he asked for
+nothing else. That session edited four tracked files, rebuilt both binaries and
+the module, and filed a bead. See bead inc-izuu.
+
+Two rules stay exactly as they are, and neither one grants autonomy:
+
+1. **Committing and pushing.** When he says save, commit or push, that is a stop
+   instruction. Nothing else starts a commit.
+2. **Publishing to a tree he does not own.** See "Publishing anything
+   outward-facing" below. Its narrow bead-sync exemption is unchanged: a bug on
+   his own tracker still syncs without a pre-read.
+
+## One bead, one worktree — never work in the shared checkout
+
+**`~/Scripts/Incursion` is for integration and releases. Your work happens in a
+worktree of its own.** Start with `tools/worktree.sh <bead-id>`, which creates
+branch `<bead-id>` off master and a worktree at `~/Scripts/Incursion-<bead-id>`.
+Work there and nowhere else. `.beads/hooks/pre-commit` refuses a non-merge commit
+made in the shared checkout, so this is enforced rather than remembered. The
+one exemption is the overnight harness: it commits on a `nightly/` branch in
+that checkout, and it exports `NIGHTLY_BRANCH` naming that branch, which no
+other session has (bd inc-loa.46). Nothing else is admitted.
+
+**Why.** Several sessions work here at once, and one directory has one HEAD, one
+index and one working tree. On 2026-09-11 a session ran `git checkout -b
+inc-w26h-remaining` at 13:54:55; a second session, which had read "current
+branch: master" at startup and never touched HEAD, committed at 16:09 and landed
+on that branch. `git commit` takes no branch argument — it advances whatever
+branch HEAD names. Master did not get the fix. In the same hour
+`tools/package_linux.sh`, which exports the working tree, compiled that session's
+uncommitted `src/Values.cpp` and three `lib/*.irh` files into published release
+assets (inc-iezk). The same class stranded b855fe2 on a review branch on
+2026-09-04. The knowledge that a clean worktree was required already existed in
+two notes on the day it happened, and it still happened — which is why it is a
+hook now.
+
+**The branch is scaffolding, and it dies with the bead.** When Brian says commit,
+commit on the branch through the usual gate, then run
+`tools/finish_bead.sh <bead-id>`. That brings master in, re-runs the gate, merges
+with `--no-ff`, deletes the branch and removes the worktree — all of it or none
+of it. A conflict or a red gate stops and leaves everything standing.
+
+**Why it merges immediately.** Brian chose merge-on-completion over
+review-before-merge on 2026-09-11, and gave the reason: nothing merges until he
+says commit, so he is the review. His objection to branches was the opposite
+failure — "I end up with 50 branches and can't remember what goes where and shit
+I fixed ends up never getting into the fucking code." You cannot accumulate fifty
+of something destroyed on completion. Naming the branch for its bead is what
+removes the remembering: branch `inc-abcd`, worktree `Incursion-inc-abcd`, bead
+`inc-abcd`.
+
+**What catches the escapes.** `tools/check_orphan_branches.sh` runs in the
+nightly gate. It fails on a branch whose bead is closed but which master never
+merged, and on a branch whose name is not a bead id. Five branches that predate
+this rule are forgiven by name inside that script; the list must not grow.
+
+## Publishing anything outward-facing
+
+Two rules. Rule 1 carries one scope limit, stated inside it. Rule 2 has none.
+
+1. **Brian reads the literal text before it is published to a tree he does not
+   own.** Not a diff, not a summary of what it claims — the exact body and
+   title that will be posted. This covers pull requests, issues and review
+   comments on the parent project or any third party's repo, and anything else
+   that appears under his name on somebody else's property. A "go" that answers
+   a plan is NOT approval of wording he has not seen. Paste the text, wait for a
+   yes on that text.
+
+   **One exemption, and it is narrow: BUG TEXT on his own tracker.** A bead
+   filed, updated or synced to `networkingguru/incursion-roguelike` needs no
+   pre-read. Run `tools/sync_issues.sh`, then say what went out. Do not ask
+   first, and do not apologise afterwards. He set the scope on 2026-09-08,
+   after a session apologised for publishing nine of his own beads: "If I post
+   something to someone else's repo, need to read it. A bug in my own, I do
+   not."
+
+   **The exemption is bugs, NOT the repo.** README.md, user-facing docs,
+   release notes, store and itch pages, announcements, and anything else a
+   player or a visitor reads still need his eyes on the literal text before it
+   goes out, even though he owns the tree. He narrowed it in the same
+   conversation: "This is true for beads/bug, not the whole repo. Not the read
+   me, not user-facing docs (unless separately authorized). Just bugs." A
+   separate authorisation for one of those covers that one thing only.
+
+2. **Always disclose AI assistance on public contributions.** Every commit
+   carries a `Co-Authored-By` trailer; so must anything sent to another
+   project. Put the disclosure in before showing him the draft, so what he
+   approves is the disclosed version.
+
+Both were broken on 2026-08-15: two PRs went to the parent project with text he
+had never read and no disclosure, while his own branch commits carried the
+trailer. If a published item must be corrected, prefer adding a comment over
+silently editing the body — a silent edit leaves an "edited" marker and reads
+as concealment.
+
+See `docs/REPORTING-GATE.md` for the separate rule that a public claim needs an
+oracle that changed state, with numbers on both sides.
+
+## If you are Codex
+
+Claude plans and reviews. You implement. These rules hold on every run, whether
+or not the prompt repeats them. Where a prompt and this section disagree, say so
+in your report rather than choosing silently.
+
+**Never delete an existing guard, bounds check, invariant, assertion or test to
+make new code fit.** If one blocks you, STOP and report it with its file and
+line and say why it blocks you. Most of them exist because a specific defect got
+through once, and the comment above them usually says which. Deleting one is the
+single most damaging thing you can do here, because every check stays green
+afterwards and the loss is invisible in a report. This was broken on 2026-08-25:
+the AutoBuffs terminator invariant in `inc/Creature.h` was removed while
+reworking how that array is stored. Three loops walk `AutoBuffs` with no index
+limit (`src/Term.cpp:152` and `:234`, `src/Sheet.cpp:778`), so the removal
+re-opened an out-of-bounds read reachable from a crafted save file, on the old
+save path as well as the new one.
+
+**Build only with `BACKEND=posix ./build_macos.sh`.** The default libtcod build
+compiles the game module by RUNNING the SDL binary, which aborts inside your
+sandbox with "the video driver did not add any displays". The posix build
+produces `incursion-headless` and compiles `mod/Incursion.Mod` entirely inside
+the sandbox. Use `./incursion-headless` as the compiler in any script you write.
+
+**Never invoke `./incursion`.** It is the SDL binary and it cannot run in your
+sandbox. Five checks invoke it or invoke git, so you cannot run them:
+`check_flavor_stability.sh`, `check_dump_save.sh`, `check_convert_guard.sh`,
+`check_stair_warn.sh` and `check_dup_names.sh`. Do not run them, do not edit
+them, and do not report them as failures. A human runs them outside the sandbox.
+
+**Run no git commands.** Leave every change in the working tree. A human reads
+the diff and records it.
+
+**Change no issue-tracker state.** Do not run `bd`. You do not open, close,
+claim or annotate issues. This was broken on 2026-08-25: bead `inc-mdi6` was
+closed unasked, with a reason describing different work.
+
+**Stay inside the stated scope.** Do not edit the spec or the plan you were
+given unless the prompt says you may. Do not make unrelated whitespace or
+formatting changes; they hide the real diff. If you believe the spec or the plan
+is wrong, say so in your report with evidence and do not implement what you
+believe is wrong.
+
+**Report what you removed.** List every deletion your change makes, separately
+from what you added. A reviewer's weakest sense is for what is no longer there.
+
+## Marking base-code bugs
+
+**Every fix to a defect that is upstream's rather than the port's MUST be marked
+at the fix site with a lowercase `upstream:` comment, and MUST get a row in the
+"Base-code bugs fixed locally" table in `docs/REPORTING-GATE.md`, and the BEAD
+MUST carry the beads label `upstream`.** Most defects in this codebase are
+upstream's, so assume a fix needs this unless you can say why it does not.
+
+Three obligations, not two. The label is the one people miss, because nothing
+in the code or the table shows it is absent:
+
+    bd label add <id> upstream
+
+Add it when you add the ledger row. Without it `tools/sync_issues.sh` publishes
+the bead's GitHub issue with no `upstream` tag, so it refuses to run, and the
+refusal reaches you through `tools/check_mirrored_lane.sh` as an UNMEASURED
+result in `tools/nightly_verify.sh` -- which is the gate `tools/finish_bead.sh`
+runs BEFORE it merges. Miss the label and you learn about it after a full gate
+run, roughly fifty minutes, with nothing landed (inc-mqi9).
+
+The comment states four things, because a maintainer reading it years from now
+has none of your context:
+
+1. that the defect is upstream's, **and why** — would it misbehave on Win32,
+   with the original typedefs, on the upstream compiler? If no, it is a port
+   artefact and MUST NOT be marked; claiming ours is theirs costs credibility.
+2. the evidence tier — Observed, Traced or Reasoned.
+3. the tracking id.
+4. whether it has been sent, so nobody re-sends it and nobody assumes it went.
+
+**Marking is not reporting and creates no obligation to report.** It exists so
+the work is findable if the original maintainer ever returns. Sending still goes
+through the gate, and still needs Brian to read the literal text.
+
+Verify with `tools/check_upstream_marks.sh`. Find them all with
+`grep -rn "upstream:" src/ inc/`.
+
+## Classifying a change
+
+**Every commit subject MUST open with a lane, and the lane MUST be one of seven.**
+An outsider reading `git log --oneline` has to be able to sort a defect fix from
+a rules redesign without opening a single body. Today they cannot, and that is
+the fault this rule fixes.
+
+| Lane | What belongs in it |
+|---|---|
+| `fix:` | A defect. The behaviour was wrong against the game's own rules or its own documentation. |
+| `port:` | Platform, build, toolchain, packaging. No behaviour a player sees. |
+| `data:` | `lib/*.irh` content that was wrong: a stat, a name, a spell list, a table row. |
+| `rules:` | A deliberate change to the game's rules content: a class, an attribute, a feat, a spell, a balance change, a system redesign. |
+| `graphics:` | The renderer, the light map, terminal output and the look of the game. A lighting or render change is not `rules:`, even when it changes how much of the map the player can see. |
+| `docs:` | Prose only. `README.md`, `docs/`, help text, comments. |
+| `tools:` | The harness, the checks, the gate, packaging scripts. |
+
+Pick the lane by what the change DOES, not by what motivated it. Making the code
+agree with the manual is still `rules:` when a player will feel the difference.
+The armour change (545e07f) is the worked example: the manual was the reason, and
+the lane is `rules:`, because damage now resolves differently.
+
+**A `rules:` commit MUST name a design bead in its body.** The bead holds the
+ruling and the reasoning. The commit holds the change. A `rules:` commit with no
+bead is a balance change nobody agreed to.
+
+**A lane is not a substitute for the verification record.** Whatever the lane,
+the body still states the oracle, the mutation and the checks re-run, as
+`docs/VERIFICATION.md` requires.
+
+**A `fix:`, `rules:` or `graphics:` change a player feels needs a before/after
+observation, or a written exception from Brian.** For `fix:` and `rules:` that
+observation is gameplay. For `graphics:` it is the rendered output itself, the
+same shot before and after, because the whole point of the change is what the
+screen shows. A structural check alone earns Traced, never Observed. See "A
+gameplay fix needs a before/after observation" in `docs/REPORTING-GATE.md`.
+
+Verify with `tools/check_commit_lane.sh`. A commit that is already pushed and
+cannot be reworded is forgiven by name in `tools/commit_lane.exempt`, never by
+advancing `tools/commit_lane.since`, which would grandfather everything behind
+it.
+The `.beads/hooks/commit-msg` hook enforces this rule at commit time.
+Set `INCURSION_NO_LANE_CHECK=1` to bypass it in an emergency.
+
+## The comment budget
+
+**A comment at a fix site states the invariant and stops.** Four things belong
+there, and nothing else: what must be true, the evidence tier, the tracking id,
+and whether it has been sent. That is the `upstream:` marker described above.
+
+**The reproduction, the measurements and the argument go in the bead.** They are
+valuable and they are not source. Reference them by id.
+
+This is not a matter of taste. `tools/check_doc_freshness.sh` records the cost: a
+102-line probe block added at the top of `src/Event.cpp` moved 92 of that page's
+131 line citations, and nothing noticed for days. Bulk in a source file breaks
+every citation below it.
+
+**Limits, enforced by `tools/check_comment_budget.sh`:**
+
+- A comment block in `src/` or `inc/` SHOULD NOT exceed 30 lines.
+- A `#ifdef <NAME>_PROBE` block SHOULD NOT exceed 30 lines. A larger probe moves
+  to its own function, or to its own file, and the site keeps the `#ifdef` call.
+- Neither limit is retroactive. The check ratchets: it fails on a block that grew
+  past the ceiling in this change, not on one that was already over it. The
+  existing oversize blocks are tracked in `tools/comment_budget.baseline`.
+
+## Issue tracking
+
+This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
+
+> **Architecture in one line:** Issues live in a local Dolt database
+> (`.beads/embeddeddolt/`); cross-machine sync uses `bd dolt push/pull` (a
+> git-compatible protocol), stored under `refs/dolt/data` on your git
+> remote — separate from `refs/heads/*` where your code lives.
+> `.beads/issues.jsonl` is a passive export, not the wire protocol.
+>
+> See [sync-concepts.md](https://github.com/gastownhall/beads/blob/main/docs/core-concepts/sync-concepts.md)
+> for the one-screen overview and anti-patterns (don't treat JSONL as the
+> source of truth; don't `bd import` during normal operation; don't
+> reach for third-party Dolt hosting before trying the default).
+
+### Every bead carries `public`, `internal` or `mirrored`
+
+**A bead you create MUST have a non-empty description and MUST carry exactly
+one of the labels `public`, `internal` or `mirrored`.
+`tools/check_bead_publish.py` fails the commit when a new bead has an empty
+description, or carries none of the three or more than one.** It is wired into `.beads/hooks/pre-commit`, so it blocks, except on the overnight harness's own `nightly/` branch, where it warns; it was
+wired in on 2026-09-06 under inc-m7xb, after four days in which this paragraph
+described a gate that ran nowhere.
+
+**File beads with `tools/bead_new.sh`, not `bd create`.** It hands every
+argument to `bd create` unchanged, then runs the same check against the new
+bead at once, so a fault is yours to fix while the bead is still in your head.
+Use it because of where the commit gate has to stand: beads live in Dolt and
+not in git, so a bead is never part of a commit, and the gate can only ask
+"beads created since HEAD" and block every commit in the tree on all of them.
+On 2026-09-07 that stopped one session committing four screenshots because
+another session had filed two beads it had not classified. The wrapper does not
+replace the hook and is not allowed to — `bd create` typed directly walks
+straight past it, which is exactly why the unavoidable gate stays. Prove the
+wrapper still bites with `tools/check_bead_new_gate.sh`.
+
+The description is not optional because
+`tools/sync_issues.sh` publishes the DESCRIPTION and never the notes: a bead
+whose content lives in its notes reaches the public tracker with an empty body,
+which is how inc-b12m became GitHub issue #381 with nothing in it. The label is not decoration. `tools/sync_issues.sh`
+publishes every `public` bead to the Issues tab of
+`networkingguru/incursion-roguelike` and never publishes an `internal` one, so
+the label decides whether the outside world can see the bead at all, and
+whether this project writes to somebody else's issue.
+
+- **`public`** — a defect or a wanted feature IN THE GAME. The rules, the
+  engine, the rendering, the saves, the in-game help text, the controller and
+  keyboard bindings, the builds and the releases a person downloads. When you
+  are unsure, choose this. A bead wrongly published is visible and gets fixed;
+  a bead wrongly suppressed is invisible, and nobody can see what is missing.
+- **`internal`** — the test harness, the key scripts, the documentation
+  checks, the reporting ledger, the bead and gate machinery, and anything about
+  how agents work on this project. Never published.
+- **`mirrored`** — a game defect that is ALREADY public, because somebody
+  outside filed the issue. Its `external_ref` points at THEIR issue. The sync
+  writes only the open or closed state there. It never writes the title and it
+  never writes the body.
+
+**Why `mirrored` exists.** The full sync refreshes the titles and descriptions
+of issues that already exist, which is right for an issue this project wrote
+and destructive for one it did not. On 2026-09-16 two outside reports arrived,
+GitHub 507 and 508. Filing them as `public` with an `external_ref` pointing at
+those issues would have replaced the reporters' text and their screenshots on
+the next push; a `--dry-run` said "Would update in GitHub" for both. The refs
+were cleared before any push and nothing was lost. See bead `inc-rza6`.
+
+**Put the diagnosis in the bead's `notes`.** The sync publishes the DESCRIPTION
+and nothing else, so notes never leave this machine. Verified on 2026-09-16:
+`inc-upw.2` carries 382 characters of notes and none of that text appears in
+the body of issue 14.
+
+**Telling the reporter what you found is a COMMENT on their issue.** It is a
+separate act, it is never a body rewrite, and it goes through the publishing
+rules above: Brian reads the literal text first.
+
+The check also prints, without failing, the beads whose title argues with their
+label in either direction. It is advice from a word list, not a ruling. You
+decide. A `mirrored` bead is measured like a `public` one, because both claim
+the bead is about the game.
+
+A new bead labelled `public` must also pass `bd lint`, which asks a bug for
+"## Steps to Reproduce" and "## Acceptance Criteria". The existing backlog is
+exempt and is being drained separately as bead `inc-uh76`; the check asks this
+of new beads only. `mirrored` is not asked, because the gate measures what gets
+published and a mirrored bead publishes no body.
+
+### A quote of Brian goes in the notes, and nowhere else
+
+**A direct quote of Brian MUST go in a bead's NOTES. It MUST NOT appear in the
+description, the title or the acceptance criteria.** He set this rule on
+2026-09-10: quotes of him are notes, and they are not public facing.
+
+The reason is the publication path. `tools/sync_issues.sh` hands every `public`
+bead to `bd github sync`. That command writes the bead's TITLE as the issue
+title. It writes the DESCRIPTION as the issue body, verbatim. It never writes
+the notes. Measured on 2026-09-10: bead `inc-upw.2` is GitHub issue #14. The
+issue body is 1,380 bytes, which is the exact length of the description. None
+of the 382 bytes of notes appears in it. So a quote in a description is a quote
+on a public tracker, under his name. A quote in the notes stays here.
+
+**The rule covers every bead, `public` and `internal` alike.** A label is one
+`bd update` away from changing, and nobody re-reads a description when they
+change one. Write every bead as though it will be published.
+
+**Put the ruling in the description. Put the words in the notes.** State what he
+decided in neutral third-person prose. Keep every fact the quote carried: the
+number, the file, the refusal, the priority. Then point at the notes for the
+exact words. Move the quote with `bd update <id> --append-notes`, attributed and
+dated where the source gives a date. Never drop information: only the voice
+changes, and a ruling MUST stay as firm in prose as it was in his words.
+
+A worked example. This description line:
+
+    Brian: "Why in the fuck is the warning not keyed to the fucking effect?"
+
+becomes this one:
+
+    The owner requires the warning to key on the effect, not on the material.
+    His exact words are in the notes.
+
+**A quote of anybody else is not covered.** Game prose, a code comment, a
+message the game printed, upstream's author and a third party's review all stay
+in the description. The description is where that evidence belongs.
+
+## Quick Reference
+
+```bash
+bd ready              # Find available work
+bd show <id>          # View issue details
+bd update <id> --claim  # Claim work atomically
+bd close <id>         # Complete work
+bd dolt push          # Push beads data to remote
+```
+
+## Non-Interactive Shell Commands
+
+**ALWAYS use non-interactive flags** with file operations to avoid hanging on confirmation prompts.
+
+Shell commands like `cp`, `mv`, and `rm` may be aliased to include `-i` (interactive) mode on some systems, causing the agent to hang indefinitely waiting for y/n input.
+
+**Use these forms instead:**
+```bash
+# Force overwrite without prompting
+cp -f source dest           # NOT: cp source dest
+mv -f source dest           # NOT: mv source dest
+rm -f file                  # NOT: rm file
+
+# For recursive operations
+rm -rf directory            # NOT: rm -r directory
+cp -rf source dest          # NOT: cp -r source dest
+```
+
+**Other commands that may prompt:**
+- `scp` - use `-o BatchMode=yes` for non-interactive
+- `ssh` - use `-o BatchMode=yes` to fail instead of prompting
+- `apt-get` - use `-y` flag
+- `brew` - use `HOMEBREW_NO_AUTO_UPDATE=1` env var
+
+<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:970c3bf2 -->
+## Beads Issue Tracker
+
+This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
+
+### Quick Reference
+
+```bash
+bd ready              # Find available work
+bd show <id>          # View issue details
+bd update <id> --claim  # Claim work
+bd close <id>         # Complete work
+```
+
+### Rules
+
+- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
+- Run `bd prime` for detailed command reference and session close protocol
+- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+
+**Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
+
+## Agent Context Profiles
+
+The managed Beads block is task-tracking guidance, not permission to override repository, user, or orchestrator instructions.
+
+- **Conservative (default)**: Use `bd` for task tracking. Do not run git commits, git pushes, or Dolt remote sync unless explicitly asked. At handoff, report changed files, validation, and suggested next commands.
+- **Minimal**: Keep tool instruction files as pointers to `bd prime`; use the same conservative git policy unless active instructions say otherwise.
+- **Team-maintainer**: Only when the repository explicitly opts in, agents may close beads, run quality gates, commit, and push as part of session close. A current "do not commit" or "do not push" instruction still wins.
+
+## Session Completion
+
+This protocol applies when ending a Beads implementation workflow. It is subordinate to explicit user, repository, and orchestrator instructions.
+
+1. **File issues for remaining work** - Create beads for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **Handle git/sync by active profile**:
+   ```bash
+   # Conservative/minimal/default: report status and proposed commands; wait for approval.
+   git status
+
+   # Team-maintainer opt-in only, unless current instructions forbid it:
+   git pull --rebase
+   bd dolt push
+   git push
+   git status
+   ```
+5. **Hand off** - Summarize changes, validation, issue status, and any blocked sync/commit/push step
+
+**Critical rules:**
+- Explicit user or orchestrator instructions override this Beads block.
+- Do not commit or push without clear authority from the active profile or the current user request.
+- If a required sync or push is blocked, stop and report the exact command and error.
+<!-- END BEADS INTEGRATION -->
+
+<!-- BEGIN BEADS CODEX SETUP: generated by bd setup codex -->
+## Beads Issue Tracker
+
+Use Beads (`bd`) for durable task tracking in repositories that include it. Use the `beads` skill at `.agents/skills/beads/SKILL.md` (project install) or `~/.agents/skills/beads/SKILL.md` (global install) for Beads workflow guidance, then use the `bd` CLI for issue operations.
+
+### Quick Reference
+
+```bash
+bd ready                # Find available work
+bd show <id>            # View issue details
+bd update <id> --claim  # Claim work
+bd close <id>           # Complete work
+bd prime                # Refresh Beads context
+```
+
+### Rules
+
+- Use `bd` for all task tracking; do not create markdown TODO lists.
+- Run `bd prime` when Beads context is missing or stale. Codex 0.129.0+ can load Beads context automatically through native hooks; use `/hooks` to inspect or toggle them.
+- Keep persistent project memory in Beads via `bd remember`; do not create ad hoc memory files.
+
+**Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
+<!-- END BEADS CODEX SETUP -->
