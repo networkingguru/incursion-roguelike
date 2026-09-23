@@ -163,6 +163,12 @@ believe is wrong.
 **Report what you removed.** List every deletion your change makes, separately
 from what you added. A reviewer's weakest sense is for what is no longer there.
 
+2026-09-23, bead inc-h1bq: the loaded heading became "If you are the implementer
+(Codex, or DeepSeek in opencode)". DeepSeek, run through `tools/opencode_ds.sh`,
+loads AGENTS.md and became an implementer that may take any work Codex or a
+Sonnet agent would take. A heading that named only Codex would let it read the
+section as someone else's rules. The obligations did not change.
+
 ## Marking base-code bugs
 
 **Every fix to a defect that is upstream's rather than the port's MUST be marked
