@@ -3160,7 +3160,8 @@ typedef signed int        hObj;
 #define DEATH_LOC         235
 #define ENCOUNTER         236
 #define ENTANGLED         237
-#define LAST_STATI        238
+#define PAIN_TALLY        238
+#define LAST_STATI        239
   
 
 

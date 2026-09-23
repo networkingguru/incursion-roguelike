@@ -2991,8 +2991,11 @@ Class "Twilight Huntsman"
       causing intense disquiet in others around her; in game terms, she can
       evoke <9>spook<2> as a spell-like ability at will.\n
       __*_<7>Feed Upon Pain<2> -- At 9th level, the twilight huntsman learns
-      to draw strength from those she stalks and wounds, healing one HP of
-      damage for every 10 points she inflicts in combat.\n
+      to draw strength from those she stalks and wounds. She heals one hit
+      point for every 10 points of damage she inflicts in combat, counted
+      across all her blows. This stacks with Feed Upon Pain from any other
+      source, such as the Pain domain: each source heals one more hit point
+      per 10 damage.\n
       __*_<7>One Body, One Soul<2> -- At 10th level, the twilight huntsman
       gains the One Body, One Soul feat, even if she doesn't meet the normal
       requirements for that feat.

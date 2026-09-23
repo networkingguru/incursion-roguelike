@@ -2648,7 +2648,9 @@ AI_TATTOO Effect "Demon" : EA_GRANT
   {
     Desc: "One of the darker tattoos a tattoo mystic can receive, the demon allows
       its bearer to grow strong by feeding on the pain of others -- the mystic
-      regains one hit points for every ten hit points of damage she inflicts.";
+      regains one hit point for every ten points of damage she inflicts,
+      counted across all her blows. This stacks with Feed Upon Pain from any
+      other source: each source heals one more hit point per ten damage.";
     xval: EXTRA_ABILITY; yval: CA_FEED_UPON_PAIN; pval: 1;
   }
   
