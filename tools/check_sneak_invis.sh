@@ -96,7 +96,7 @@ run_one() { # <keyscript> <seed> <label> -> prints the run directory
     out="$(INCURSION_OPTIONS="$OPTIONS" INCURSION_SNEAK_PROBE=1 \
             tools/headless.sh "$keys" "$seed" 2>&1)"
     run="$(echo "$out" | awk '/^run:/ {print $2}')"
-    if echo "$out" | grep -qE 'NO GAMEPLAY|the key script looked for something|WATCHDOG|FATAL'; then
+    if grep -qE 'NO GAMEPLAY|the key script looked for something|WATCHDOG|FATAL' <<< "$out"; then
         FAILED=$((FAILED+1))
     fi
     echo "$run"
