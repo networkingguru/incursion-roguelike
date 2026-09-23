@@ -177,3 +177,10 @@ FIXED 2026-09-17 (bead inc-wknz). CLAUDE.md now opens with an `@AGENTS.md`
 import, so AGENTS.md is loaded whole rather than summarised, and there is no
 enumerated list left to trust. The hook that used to inject it is deleted. See
 `where-rules-live.md`.
+
+REVERSED AND RENAMED 2026-09-23 (bead inc-d6z3) to
+`bd-prime-search-memories-dont-read-all`. `bd prime` now prints all 219 bd
+memories in full, 509 KB, so obeying "read the full output" loaded more context
+than the pantheon dossier material this bead set out to shrink. The gap the rule
+was written for is closed by the `@AGENTS.md` import, so a session now searches
+memories by topic instead.
