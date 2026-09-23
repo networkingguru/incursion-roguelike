@@ -2133,7 +2133,7 @@ AI_WAND Effect "Sound Bursts" : EA_BLAST
 AI_WAND Effect "Acid;wand" : EA_BLAST
   {
     SC_ARC; Cost: 5; Purpose: EP_ATTACK; Level: PLUS_3PER1_ADD3; 
-    qval: Q_DIR | Q_TAR | Q_LOC; aval: AR_BOLT; cval: EMERALD;
+    qval: Q_TAR; aval: AR_BOLT; cval: EMERALD;
     Flags: EF_AUTOID, EF_NEEDS_PLUS, EF_AFFECTS_ITEMS; sval: NOSAVE;
     xval: AD_ACID; pval: (PLUS_1PER1)d8; 
     On Event MSG_BLASTNAME 

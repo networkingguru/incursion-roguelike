@@ -3412,7 +3412,13 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
   if ((isPlayer() || theGame->GetPlayer(0)->XPerceives(this)))
     show = true; 
 
-  int16 roll = Dice::Roll(1,20); 
+  int16 roll = Dice::Roll(1,20);
+  /* inc-55jl item 5 follow-up: a probe-only override, mirroring
+     Creature::Strike's own LOFForcedRoll (src/Fight.cpp). 0 (the default)
+     leaves the real roll alone. */
+  extern int8 LOFGetForcedSaveThrowRoll();
+  { int8 fsr = LOFGetForcedSaveThrowRoll();
+    if (fsr) roll = fsr; }
 
   Bonus = Attr[A_SAV_FORT + type];
 

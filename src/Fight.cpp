@@ -224,6 +224,21 @@ void LOFSetForcedSave(int8 failAt)
 }
 void LOFClearForcedSave() { LOFForcedSaveOn = false; }
 
+/* inc-55jl item 5 follow-up: forces the die roll Creature::SavingThrow
+   itself makes (src/Creature.cpp), a DIFFERENT mechanic from
+   LOFForcedSaveFailAt above (that one picks which band-square position
+   fails; this one is the spell's own inherent save, e.g. Eldritch Bolt's
+   EF_PARTIAL Fortitude half-damage save). 0 means off. A probe wanting a
+   deterministic "never resisted" outcome passes 1: SavingThrow's own
+   natural-1-always-fails SRD rule then applies to the FORCED roll, same
+   as it would to a real one, so this can never accidentally land on the
+   natural-20-always-succeeds rule the way an unforced roll occasionally
+   does. */
+static int8 LOFForcedSaveThrowRoll = 0;
+void LOFSetForcedSaveThrowRoll(int8 r) { LOFForcedSaveThrowRoll = r; }
+void LOFClearForcedSaveThrowRoll() { LOFForcedSaveThrowRoll = 0; }
+int8 LOFGetForcedSaveThrowRoll() { return LOFForcedSaveThrowRoll; }
+
 /* inc-30ps: the cover-and-band rule ("The rule", docs/specs/2026-09-21-
    line-of-fire-spec.md), shared by every ranged attack that can find a
    body in its way -- an arrow (Creature::RAttack, below) and a spell bolt
@@ -267,6 +282,19 @@ int8 LOFGetLastDmgNumber() { return LOFLastDmgDice.Number; }
 int8 LOFGetLastDmgSides()  { return LOFLastDmgDice.Sides; }
 int8 LOFGetLastDmgBonus()  { return LOFLastDmgDice.Bonus; }
 int8 LOFGetLastDmgType()   { return LOFLastDmgType; }
+
+/* inc-55jl: the DECIDED landing square (lx/ly, in tile not half-tile units)
+   RAttack computed at SkipAttack, before PlaceNear's own suitability walk
+   can nudge the missile off a square a live creature is standing on (src/
+   Display.cpp Thing::PlaceNear, ~:456 -- it treats an occupied square the
+   same as a pit for placement, unrelated to items 1-4 here). A probe
+   testing "lands on the target's square" while the target is still ALIVE
+   there needs this: the missile's final resting square is one tile off by
+   design whenever the target survives the shot. */
+static int16 LOFLastLandX = -1, LOFLastLandY = -1;
+void LOFSetLastLand(int16 x, int16 y) { LOFLastLandX = x; LOFLastLandY = y; }
+int16 LOFGetLastLandX() { return LOFLastLandX; }
+int16 LOFGetLastLandY() { return LOFLastLandY; }
 
 /* inc-30ps rework: a recorded square along the line -- every creature
    standing there, in contents-chain order (Map::GetAt's front is
@@ -1032,7 +1060,7 @@ EvReturn Creature::RAttack(EventInfo &e)
   if (!e.EActor->HasFeat(FT_DEFENSIVE_SHOT)) {
     e.EActor->ProvokeAoO();
     if (e.EActor->isDead())
-      return DONE; 
+      return DONE;
   }
   if (e.EActor->isDead())
     return ABORT;
@@ -1095,6 +1123,9 @@ EvReturn Creature::RAttack(EventInfo &e)
   int16 sx, sy, cx, cy, lx, ly;
   lx = sx = cx = e.EActor->x * 2;
   ly = sy = cy = e.EActor->y * 2;
+  /* inc-55jl item 1: true once the flight reaches Intended's square (or
+     trivially, point-blank); hitNow strikes only then. */
+  bool reachedAimSquare = false;
 
   // glyph (colour set below) 
   Glyph g = GLYPH_ID(WHITE);
@@ -1106,8 +1137,13 @@ EvReturn Creature::RAttack(EventInfo &e)
   Fraction slope, test;
   // where are we going? 
   if (e.ETarget) {
-    e.EXVal = e.ETarget->x;
-    e.EYVal = e.ETarget->y;
+    /* inc-55jl item 2: a dead/off-map ETarget's x,y are already -1
+       (Thing::Remove); leave EXVal/EYVal as the caller set them rather
+       than aim the flight at (-1,-1). */
+    if (!(e.ETarget->isDead() || !e.ETarget->m || e.ETarget->x == -1)) {
+      e.EXVal = e.ETarget->x;
+      e.EYVal = e.ETarget->y;
+    }
   }
   if (!e.isDir) {
     // first, handle degenerate cases to avoid slope division by 0
@@ -1151,8 +1187,9 @@ EvReturn Creature::RAttack(EventInfo &e)
   if (Intended && e.EActor && e.EActor->DistFrom(Intended) < 1) {
     // you're shooting at a chest at you feet
     possTarget = Intended;
-    goto hitNow; 
-  } 
+    reachedAimSquare = true;
+    goto hitNow;
+  }
   // if you're intentionally striking yourself, skip the travel phase
   if ((e.isLoc && (e.EXVal == e.EActor->x && e.EYVal == e.EActor->y)) || 
       (e.isDir && (e.EDir == CENTER)) || 
@@ -1273,8 +1310,10 @@ EvReturn Creature::RAttack(EventInfo &e)
 
     // finally, if we aimed at *this specific spot* (e.g., to throw a
     // fireball in empty middle square between two enemies), stop here
-    if (cx / 2 == e.EXVal && cy / 2 == e.EYVal)
+    if (cx / 2 == e.EXVal && cy / 2 == e.EYVal) {
+      reachedAimSquare = true;
       break;
+    }
   }
 
 hitNow:
@@ -1284,8 +1323,14 @@ hitNow:
      was already confirmed empty of creatures (see the isLoc search above);
      there is no target to build a defence around, so nothing is struck --
      the shot simply passes every body it crosses. */
-  if (Intended) {
+  if (Intended && reachedAimSquare) {
     e.ETarget = Intended;
+    /* inc-55jl item 2: dead/off-map before the strike (e.g. an AoO before
+       the flight) is not struck; land at its former square instead. */
+    if (Intended->isDead() || !Intended->m || Intended->x == -1) {
+      lx = e.EXVal * 2;
+      ly = e.EYVal * 2;
+    } else {
     int16 vicSize = e.ETarget->isCreature() ?
       e.EVictim->GetAttr(A_SIZ) : SZ_MEDIUM;
     e.Dmg     = (vicSize > SZ_MEDIUM) ?
@@ -1327,6 +1372,10 @@ hitNow:
     e.DType   = (int8)(e.EItem ? e.EItem : e.EItem2)->DamageType(e.EVictim);
     e.vThreat = (int8)(e.EItem ? e.EItem : e.EItem2)->Threat(e.EActor);
     e.vCrit   = (int8)(e.EItem ? e.EItem : e.EItem2)->CritMult(e.EActor);
+    /* inc-55jl: read the landing square before the strike. A killing
+       strike removes the target (Thing::Remove sets its x,y to -1), so
+       Intended->x/y read AFTER the strike land the missile off-map. */
+    int16 tX = Intended->x, tY = Intended->y;
     if (ReThrow(EV_STRIKE, e) == ABORT)
       goto SkipAttack;
     /* e is passed through PreStrike and Strike by reference, so e.vHit here
@@ -1336,8 +1385,8 @@ hitNow:
     LOFLastVHit = e.vHit;
 
     if (e.isHit) {
-      lx = Intended->x * 2;
-      ly = Intended->y * 2;
+      lx = tX * 2;
+      ly = tY * 2;
     }
     else {
       /* inc-30ps rework, item 2: gate the band on an arithmetic miss,
@@ -1357,11 +1406,20 @@ hitNow:
          decides anything once total >= vDef), so total < e.vDef already
          excludes them. Only a genuine arithmetic miss, neither wild nor
          overridden, may enter the band. */
+      /* inc-55jl item 3: the target was reached; any miss lands on its own
+         square unless a band victim is struck below. */
+      lx = tX * 2;
+      ly = tY * 2;
       int16 total = e.vHit + e.vRoll;
       if (!e.isWildMiss && total < e.vDef) {
         /* item 1: the band names a SQUARE, and a Reflex save inside it
            decides who (if anyone) is hit -- see LineOfFireBand above. */
-        Thing *bandVictim = LineOfFireBand(squares, N, D, total);
+        /* inc-55jl item 4: a returning weapon has no band; a roll into it
+           is a clean miss (same test as the return check below). */
+        bool isReturning = e.EItem2->HasQuality(WQ_RETURNING) ||
+          TITEM(e.EItem2->iID)->HasFlag(WT_RETURNING);
+        Thing *bandVictim = isReturning ? NULL :
+          LineOfFireBand(squares, N, D, total);
         if (bandVictim) {
           lx = bandVictim->x * 2;
           ly = bandVictim->y * 2;
@@ -1386,9 +1444,11 @@ hitNow:
         /* else: every creature in the named square saved. A clean miss. */
       }
       /* else: total >= e.vDef (D+4N) but e.isHit is false -- one of the
-         non-arithmetic misses above. Leave the line alone. */
+         non-arithmetic misses above. lx/ly already set to the target's
+         square above. */
     }
-  } else if (lineCount > 0) {
+    }
+  } else if (!Intended && lineCount > 0) {
     /* inc-30ps rework: no Intended creature -- the shooter aimed at a
        square, confirmed empty, that the search above never resolved to a
        creature. squares[] (built above, nearest-shooter-first) is every
@@ -1439,13 +1499,17 @@ hitNow:
 
     int8 D0 = (int8)(e.ETarget->isCreature() ? e.EVictim->getDef() : 0);
     e.vDef = (int8)(D0 + penalty);
+    /* inc-55jl: read the landing square before the strike. A killing
+       strike removes the target (Thing::Remove sets its x,y to -1), so
+       squares[0].member[0]->x/y read AFTER the strike land off-map. */
+    int16 tX0 = squares[0].member[0]->x, tY0 = squares[0].member[0]->y;
     if (ReThrow(EV_STRIKE, e) == ABORT)
       goto SkipAttack;
     LOFLastVHit = e.vHit;
 
     if (e.isHit) {
-      lx = squares[0].member[0]->x * 2;
-      ly = squares[0].member[0]->y * 2;
+      lx = tX0 * 2;
+      ly = tY0 * 2;
     } else {
       /* squares[0]'s head's own roll missed. Walk the rest of squares[]'
          heads with the SAME roll (e.vHit + e.vRoll, preserved from the
@@ -1484,6 +1548,9 @@ hitNow:
     }
   }
 SkipAttack:
+  /* inc-55jl: the decided landing square, before PlaceNear can nudge it
+     off a live creature's square -- see LOFSetLastLand's comment above. */
+  LOFSetLastLand(lx/2, ly/2);
 
   o.ShowGlyphs();
   o.DeActivate();
@@ -1767,6 +1834,45 @@ void LineOfFireProbe(Player *shooter) {
     tryCaseSave(D+8, 3, "band2-third-fails",  "target");
     tryCaseSave(D+8, 0, "band2-all-save",     "none");
 
+    /* case=returning-no-band: item 4 -- a returning weapon has no band.
+       Reuse the exact band2-first-fails setup just above (same D+8 total,
+       same forced save failure at position 1, "cover" the square's head)
+       -- proven to land in band 2 and strike "cover" there -- but with a
+       WQ_RETURNING dagger this must be a clean miss instead, striking
+       nobody. Placed here, before Precise Shot is granted below (never
+       revoked for the rest of this probe -- no public API strips a
+       granted feat back off) forces N to 0 for every later case
+       (":1355"), which a returning weapon's own empty band could not be
+       told apart from. A fresh body pair at another distance was tried
+       first and discarded: a brand-new creature's first combat
+       interaction, and something about the shooter's own vHit besides,
+       both drift unpredictably enough (measured: a forced roll aimed at a
+       body never fired at before landed nowhere near its intended band)
+       that this reused, already-proven-stable setup is the safer oracle. */
+    {
+        const int16 r = (D+8) - vHit;
+        if (r < 1 || r > 20) {
+            Error("LOF_PROBE: case=returning-no-band INCONCLUSIVE -- "
+                "forced roll %d is outside 1-20 (vHit=%d)", (int)r,
+                (int)vHit);
+        } else {
+            resetHP();
+            target->Attr[A_DEF] = D; // re-pin; see tryCase's comment above
+            LOFSetForcedSave(1);
+            LOFForcedRoll = (int8)r;
+            Item *dag = new Weapon(dagID, TITEM(dagID)->IType);
+            dag->AddQuality(WQ_RETURNING);
+            Throw(EV_RATTACK, shooter, target, NULL, dag);
+            LOFClearForcedSave();
+            const char *got = whoWasHit();
+            const bool ok = !strcmp(got, "none");
+            Error("LOF_PROBE: case=returning-no-band roll=%d vHit=%d "
+                "expected=none got=%s %s", (int)r, (int)LOFLastVHit, got,
+                ok ? "PASS" : "FAIL");
+            if (ok) pass++; else fail++;
+        }
+    }
+
     /* The save DC is 10+(total-D) -- confirm the probe's own logged DC at
        two different bands, not just that a hit landed. */
     auto checkDC = [&](int16 total, const char *name) {
@@ -1921,6 +2027,225 @@ void LineOfFireProbe(Player *shooter) {
     shootLoc(coverX, coverY, (int8)14, "loc-multi-first",  "near");
     shootLoc(coverX, coverY, (int8)6,  "loc-multi-second", "far");
     shootLoc(coverX, coverY, (int8)1,  "loc-multi-none",   "none");
+
+    /* inc-55jl: dagger quantity at a square. Used only by the two kill
+       cases below, which need to tell "this throw's dagger landed here"
+       from "an earlier case already left one here" -- many earlier cases
+       in this probe share the same squares. */
+    auto dagQtyAt = [&](int16 qx, int16 qy) -> uint32 {
+        uint32 qty = 0;
+        for (Item *it = mp->FItemAt(qx,qy); it; it = mp->NItemAt(qx,qy))
+            if (it->iID == dagID) qty += it->Quantity;
+        return qty;
+    };
+
+    /* inc-55jl: force a killing hit (nat 20 always hits; cHP=1 so the
+       armour-floor-1 damage kills) and confirm the dagger lands on the
+       victim's OWN former square -- not (1,1), PlaceAt's crash-guard
+       fallback (src/Display.cpp:265), and not anywhere else. Compares
+       dagger quantity before/after rather than the thrown item's own
+       pointer, which TryStack can free on a stack merge (src/Item.cpp:
+       493) once it lands. victimForKill supplies EVictim for the
+       Intended branch; NULL aims ThrowXY at an empty square for the
+       no-Intended branch. sole is the creature the shot must kill
+       either way. */
+    auto shootKill = [&](Monster *victimForKill, int16 aimX, int16 aimY,
+            Monster *sole, const char *caseName) {
+        resetHP();
+        sole->cHP = 1;
+        LOFForcedRoll = 20;
+        const int16 kx = sole->x, ky = sole->y;
+        const uint32 beforeTarget = dagQtyAt(kx, ky);
+        const uint32 beforeGuard  = dagQtyAt(1, 1);
+        Item *dag = new Weapon(dagID, TITEM(dagID)->IType);
+        if (victimForKill)
+            Throw(EV_RATTACK, shooter, victimForKill, NULL, dag);
+        else
+            ThrowXY(EV_RATTACK, aimX, aimY, shooter, NULL, NULL, dag);
+        if (!(sole->x == -1 && sole->y == -1)) {
+            Error("LOF_PROBE: case=%s INCONCLUSIVE -- forced hit did not "
+                "kill the target", caseName);
+            fail++;
+            return;
+        }
+        const uint32 afterTarget = dagQtyAt(kx, ky);
+        const uint32 afterGuard  = dagQtyAt(1, 1);
+        const bool ok = (afterTarget == beforeTarget + 1) &&
+            (afterGuard == beforeGuard);
+        Error("LOF_PROBE: case=%s qty_target=%u->%u qty_guard=%u->%u %s",
+            caseName, beforeTarget, afterTarget, beforeGuard, afterGuard,
+            ok ? "PASS" : "FAIL");
+        if (ok) pass++; else fail++;
+    };
+
+    /* case=kill-lands-on-target: the Intended branch. Put "target" back
+       on the map at its own former square (coverX,coverY) to attack it
+       directly -- nothing later in this probe still needs it there. */
+    target->PlaceAt(mp, coverX, coverY);
+    shootKill(target, 0, 0, target, "kill-lands-on-target");
+
+    /* case=kill-lands-on-target-noaim: the no-Intended branch, aimed with
+       ThrowXY at the same empty square (coverX,coverY, now empty again
+       since the case above removed "target") as the loc-* cases above.
+       "near" is squares[0]'s head (nearest the shooter), so a hit that
+       kills it exercises squares[0].member[0]->x/y exactly as the fix
+       does. */
+    shootKill(NULL, coverX, coverY, b[0].c, "kill-lands-on-target-noaim");
+
+    /* case=dead-before-strike: "target" is already dead from the case just
+       above (kill-lands-on-target killed it at coverX,coverY) -- reuse it
+       directly, still Intended's raw pointer, exactly what a stale
+       reference into a dead creature looks like. A real Creature::
+       ProvokeAoO can only ever strike the SHOOTER (its c==NULL branch
+       walks creatures adjacent to "this", the actor calling it, never
+       Intended -- src/Fight.cpp Creature::ProvokeAoO), so it cannot put
+       Intended in this state itself; this reproduces the state such an
+       event would leave behind. Thing::Remove sets F_DELETE and wipes
+       x,y to -1 in the SAME call (src/Display.cpp:2098), so nothing later
+       can recover the square from Intended itself -- the fix must use
+       (and this case supplies, the way a caller holding a stale reference
+       would have to) e.EXVal/EYVal instead. Built like Throw() itself
+       (src/Event.cpp) because Throw()'s own 5-arg form has no X/Y
+       parameter to carry the former square through. */
+    {
+        resetHP();
+        const uint32 beforeFormer = dagQtyAt(coverX, coverY);
+        const uint32 beforeGuard  = dagQtyAt(1, 1);
+        LOFForcedRoll = 20;
+        Item *dag = new Weapon(dagID, TITEM(dagID)->IType);
+        extern EvReturn RealThrow(EventInfo &e);
+        if (EventSP > EVENT_STACK_SIZE - 2) {
+            Error("LOF_PROBE: case=dead-before-strike INCONCLUSIVE -- "
+                "event stack near limit");
+        } else {
+            EventSP++;
+            EventStack[EventSP].Clear();
+            EventStack[EventSP].Event = EV_RATTACK;
+            EventStack[EventSP].p[0].o = shooter;
+            EventStack[EventSP].p[1].o = target;
+            EventStack[EventSP].p[2].o = NULL;
+            EventStack[EventSP].p[3].o = dag;
+            EventStack[EventSP].EXVal = coverX;
+            EventStack[EventSP].EYVal = coverY;
+            RealThrow(EventStack[EventSP]);
+            EventSP--;
+        }
+        const char *got = whoWasHit();
+        const uint32 afterFormer = dagQtyAt(coverX, coverY);
+        const uint32 afterGuard  = dagQtyAt(1, 1);
+        const bool ok = !strcmp(got, "none") &&
+            (afterFormer == beforeFormer + 1) && (afterGuard == beforeGuard);
+        Error("LOF_PROBE: case=dead-before-strike struck=%s "
+            "qty_former=%u->%u qty_guard=%u->%u %s",
+            got, beforeFormer, afterFormer, beforeGuard, afterGuard,
+            ok ? "PASS" : "FAIL");
+        if (ok) pass++; else fail++;
+    }
+
+    /* Fresh bodies for the remaining Amendment 1 cases, placed at
+       distances 5-7 along the same line (dx,dy) -- clear of the b[]
+       array's squares (distances 2-4), whose members are by now a mix of
+       dead and off-map from the cases above. Each case cleans up its own
+       bodies before the next runs, so the distances are reused. */
+    auto freshRat = [&](int16 fx, int16 fy) -> Monster* {
+        mp->At(fx,fy).Lit = 1;
+        Monster *mn = new Monster(ratID);
+        TMON(mn->tmID)->GrantGear(mn, mn->tmID, true);
+        TMON(mn->tmID)->PEvent(EV_BIRTH, mn, mn->tmID);
+        mn->PlaceAt(mp, fx, fy, true);
+        mn->Initialize(true);
+        mn->mHP = mn->cHP = 10000;
+        return mn;
+    };
+    auto squareClear = [&](int16 qx, int16 qy) -> bool {
+        return mp->InBounds(qx,qy) && !mp->SolidAt(qx,qy) &&
+            !mp->FCreatureAt(qx,qy);
+    };
+
+    /* case=target-behind-wall: a solid square (distance 5) between the
+       shooter and a target at distance 6. Forced nat 20 -- item 1 must
+       still stop the flight at the wall and strike nothing. */
+    {
+        const int16 wx = px+dx*5, wy = py+dy*5;
+        const int16 tx = px+dx*6, ty = py+dy*6;
+        const int16 lastX = px+dx*4, lastY = py+dy*4; // coverX,coverY
+        if (!squareClear(wx,wy) || !squareClear(tx,ty)) {
+            Error("LOF_PROBE: case=target-behind-wall INCONCLUSIVE -- "
+                "squares not clear");
+        } else {
+            const rID wallID = FIND("Dungeon Wall");
+            if (!wallID) {
+                Error("LOF_PROBE: case=target-behind-wall INCONCLUSIVE -- "
+                    "no 'Dungeon Wall' terrain resource");
+            } else {
+                const rID origTerrain = mp->TerrainAt(wx,wy);
+                mp->WriteTerra(wx,wy,wallID); // Map's own public setter --
+                    // TerrainList is private, out of a free function's reach
+                Monster *wTarget = freshRat(tx,ty);
+                wTarget->Attr[A_DEF] = D;
+                const uint32 beforeLast = dagQtyAt(lastX,lastY);
+                const uint32 beforeGuard = dagQtyAt(1,1);
+                LOFForcedRoll = 20;
+                Item *dag = new Weapon(dagID, TITEM(dagID)->IType);
+                Throw(EV_RATTACK, shooter, wTarget, NULL, dag);
+                const uint32 afterLast = dagQtyAt(lastX,lastY);
+                const uint32 afterGuard = dagQtyAt(1,1);
+                const bool ok = (wTarget->cHP == 10000) &&
+                    (afterLast == beforeLast + 1) && (afterGuard == beforeGuard);
+                Error("LOF_PROBE: case=target-behind-wall targetHP=%d "
+                    "qty_last=%u->%u qty_guard=%u->%u %s",
+                    (int)wTarget->cHP, beforeLast, afterLast, beforeGuard,
+                    afterGuard, ok ? "PASS" : "FAIL");
+                if (ok) pass++; else fail++;
+                mp->WriteTerra(wx,wy,origTerrain);
+                wTarget->Remove(true);
+            }
+        }
+    }
+
+    /* case=clean-miss-lands-on-target (+ adjacent-target variant): a lone
+       target, forced roll below D (no band possible: lineCount is 0), is a
+       clean miss -- item 3 must land the dagger on the target's own
+       square, not the shooter's. */
+    /* No adjacent-target (distance 1) variant: that range is inside the
+       shooter's own melee reach, and something specific to that range
+       (independent of items 1-4; still true with FT_DEFENSIVE_SHOT
+       granted, ruling out ProvokeAoO's own A_DEF drift) turns the forced
+       below-D roll into a real hit. Not chased further -- optional per
+       the brief ("if the probe layout allows"), and orthogonal to the
+       landing-square fix under test here. */
+    auto cleanMissCase = [&](int16 tdist, const char *caseName) {
+        const int16 tx = px+dx*tdist, ty = py+dy*tdist;
+        if (!squareClear(tx,ty)) {
+            Error("LOF_PROBE: case=%s INCONCLUSIVE -- square not clear",
+                caseName);
+            return;
+        }
+        Monster *wTarget = freshRat(tx,ty);
+        wTarget->Attr[A_DEF] = D;
+        const uint32 beforeGuard = dagQtyAt(1,1);
+        LOFForcedRoll = (int8)((D-1) - vHit);
+        Item *dag = new Weapon(dagID, TITEM(dagID)->IType);
+        Throw(EV_RATTACK, shooter, wTarget, NULL, dag);
+        const uint32 afterGuard = dagQtyAt(1,1);
+        /* LOFGetLastLandX/Y read the DECIDED landing square, not the final
+           resting square: wTarget is alive and standing on (tx,ty), and
+           Thing::PlaceNear (src/Display.cpp, unrelated to items 1-4) will
+           not rest an item on a live creature's square, so the dagger
+           always nudges one tile off (tx,ty) once it gets there -- exactly
+           as far off as the pre-fix "one square short" bug lands, so only
+           the pre-nudge decision distinguishes the fix from the defect. */
+        const bool ok = (wTarget->cHP == 10000) &&
+            (LOFGetLastLandX() == tx) && (LOFGetLastLandY() == ty) &&
+            (afterGuard == beforeGuard);
+        Error("LOF_PROBE: case=%s targetHP=%d landed=(%d,%d) want=(%d,%d) "
+            "qty_guard=%u->%u %s", caseName, (int)wTarget->cHP,
+            (int)LOFGetLastLandX(), (int)LOFGetLastLandY(), (int)tx,
+            (int)ty, beforeGuard, afterGuard, ok ? "PASS" : "FAIL");
+        if (ok) pass++; else fail++;
+        wTarget->Remove(true);
+    };
+    cleanMissCase(7, "clean-miss-lands-on-target");
 
     Error("LOF_PROBE: RESULT pass=%d fail=%d", pass, fail);
 
