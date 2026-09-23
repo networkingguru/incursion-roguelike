@@ -38,7 +38,7 @@ History: docs/rules-history/codex-dispatch-and-orchestration.md#feedback-overnig
 Why: Claude Code auto-loads `CLAUDE.md` but never `AGENTS.md` on its own.
 History: docs/rules-history/codex-dispatch-and-orchestration.md#agents-md-is-injected-at-session-start.
 
-## read-the-persisted-bd-prime-output-first
-Read the FULL `bd prime` SessionStart hook output, not just the truncated preview. `CLAUDE.md` now opens with `@AGENTS.md`, closing the hole this rule targeted; still applies to whatever else `bd prime` delivers.
-Why: a rule visible only in the untruncated output is invisible to a session trusting the preview.
+## bd-prime-search-memories-dont-read-all
+Do NOT read the persisted `bd prime` output in full: it prints every bd memory (509 KB at 219 memories). Read its workflow section, then search for the task's topic with `bd memories <keyword>`. `CLAUDE.md` opens with `@AGENTS.md`, so the gap the old rule closed stays closed.
+Why: a full read costs more context than the work it prepares for.
 History: docs/rules-history/codex-dispatch-and-orchestration.md#read-the-persisted-bd-prime-output-first.
