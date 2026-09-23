@@ -261,7 +261,12 @@ DIRTY="$(git -C "$WORKTREE" status --porcelain)"
 $DIRTY
 
 Commit what belongs to $BEAD, or remove what does not. Removing the worktree
-would destroy anything left here, so this stops instead."
+would destroy anything left here, so this stops instead.
+
+A reproduction -- the key script, the seed, the options file, the command --
+belongs in tools/, committed with the bead. A specimen -- a screen dump, a log,
+a save, a crash report -- belongs in docs/evidence/$BEAD/ in the shared checkout
+at $SHARED, untracked and never inside a worktree."
 
 # STEP 2. There must be something to land.
 AHEAD="$(git -C "$SHARED" rev-list --count "$BASE_BRANCH..$BEAD" 2>/dev/null)"

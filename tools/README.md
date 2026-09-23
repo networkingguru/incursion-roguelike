@@ -614,6 +614,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_prestige_tables.sh` | Does each prestige class print the save columns and the defence track its own fields give? | LIVE |
 | `check_probe_hooks.sh` | Does every debugging hook shipped in the game name a bead, or has an undeclared hook appeared outside the baseline? | LIVE |
 | `check_ptr_sweep.sh` | Does `sweep_ptr_order.sh` still find a pointer ordering, and still ignore a pointer equality? | LIVE |
+| `check_pycache_ignored.sh` | Does running a Python check that does not pass `-B` leave the tree clean? Runs `check_ability_descs.sh`, requires the `tools/__pycache__/*.pyc` it writes to stay invisible to git, and exits 2 rather than green when no `.pyc` appeared. `--prove-red` strips `__pycache__/` from a scratch copy of `.gitignore` and requires the same probe to leave litter git can see (inc-dz74). | LIVE |
 | `check_python_rod_prose.sh` | Does the Rod of the Python carry a description at all, and does it name its per-plus poison-save bonus, its per-plus Constitution bonus and its three-times-daily transformation into a boa constrictor, matching its `SN_POISON`, `A_CON` and boa-summoning code? | LIVE |
 | `check_quality_self_immune.sh` | Is an armour with a resistance quality immune to that element, while its wearer still gets the resistance? A +0 leather suit of fire resistance holds 56 hit points where the plain one is left mildly burnt. | LIVE |
 | `check_quiet_lookup.sh` | Does a dead object handle resolve silently where silence is correct, and still complain where a complaint is correct? | LIVE |
@@ -856,6 +857,7 @@ tools/check_bead_publish.py         # reads the bead database against git HEAD
 tools/check_bead_new_gate.sh        # watches tools/bead_new.sh refuse an unfit bead
 tools/check_shared_checkout_gate.sh # commits in a scratch repo against .beads/hooks/pre-commit
 tools/check_pass_record.sh          # lands scratch beads through finish_bead.sh
+tools/check_pycache_ignored.sh      # a Python check leaves the tree clean
 ```
 
 `tools/bead_new.sh` is not a check; it is how a bead should be filed.
