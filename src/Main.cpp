@@ -289,6 +289,11 @@ void Game::Play() {
        tools/check_true_sight.sh. inc-5bl3. */
     pp->TrueSightProbe();
 
+    /* Off unless INCURSION_MANA_FLOOR_PROBE is set, and run here because it
+       needs a live loaded player. See Character::ManaFloorProbe and
+       tools/check_mana_regen_floor.sh. inc-41kg. */
+    pp->ManaFloorProbe();
+
     doSave = false;
     doLoad = true;
     doAutoSave = false;

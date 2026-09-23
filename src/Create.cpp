@@ -2417,6 +2417,37 @@ void Character::XPDrainProbe()
     Error("XPDRAIN_PROBE e0=%d e1=%d e2=%d", e0, e1, e2);
 }
 
+/* INCURSION_MANA_FLOOR_PROBE -- the runnable check behind the mana-regen
+   floor fix in Creature::DoTurn (src/Creature.cpp; see that fix site's own
+   marker comment). Forces held mana to 0 and spent mana to 40% of the pool,
+   forces Concentration LOW then HIGH, clears ManaPulse, and drives 50 real
+   ticks through DoTurn() -- the same per-tick code the live game runs, not
+   a copy of the formula. tools/check_mana_regen_floor.sh reads the two
+   logged lines. inc-41kg. */
+void Character::ManaFloorProbe()
+{
+    if (!getenv("INCURSION_MANA_FLOOR_PROBE"))
+        return;
+
+    int32 before, after; int16 lvl; int16 i;
+    static const char *CASE[2] = {"low","high"};
+    static const int8 RANKS[2] = {0,30};
+
+    for (i = 0; i < 2; i++) {
+        SkillRanks[SK_CONCENT] = RANKS[i];
+        hMana = 0;
+        uMana = tMana() - (tMana()*40/100);
+        ManaPulse = 0;
+        lvl = SkillLevel(SK_CONCENT);
+        before = cMana();
+        for (int16 t = 0; t < 50; t++)
+            DoTurn();
+        after = cMana();
+        Error("MANA_FLOOR_PROBE case=%s skill=%d before=%d after=%d",
+            CASE[i], lvl, before, after);
+    }
+}
+
 void Creature::ThiefXP(rID regID)
 {
     bool foundTreasure, foundMon;

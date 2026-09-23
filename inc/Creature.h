@@ -263,6 +263,11 @@ class Creature: public Thing, public Magic
         { return cMana() > amt; }
       int32 nhMana()
         { return max(0,tMana() - hMana); }
+      /* Percent of nhMana() current mana must reach before per-tick regen
+         ticks at all: starts at 80%, falls 2 points per Concentration rank,
+         floors at 35%. See Creature::DoTurn (src/Creature.cpp). */
+      int32 ManaRegenFloor()
+        { return max(80 - SkillLevel(SK_CONCENT)*2, 35); }
       void GainStatiFromBody(rID _mID);
       void GainStatiFromTemplate(rID _tID, bool turn_on);
       /* Use of an attribute can lead to gains. */
@@ -801,6 +806,10 @@ class Character: public Creature
       /* Self-check for RestoreXP below. Off unless INCURSION_XPDRAIN_PROBE is
          set. Driven by tools/check_xp_drain.sh. inc-3gli. */
       void XPDrainProbe();
+      /* Self-check for Creature::ManaRegenFloor() / DoTurn's mana-regen
+         gate. Off unless INCURSION_MANA_FLOOR_PROBE is set. Driven by
+         tools/check_mana_regen_floor.sh. inc-41kg. */
+      void ManaFloorProbe();
       void PaladinFall();
       void PaladinAtone();
       void SwapAttributes(int16 n);
