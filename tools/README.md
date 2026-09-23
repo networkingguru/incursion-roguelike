@@ -587,6 +587,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_mirrored_lane.sh` | Does a `mirrored` bead stay off everything that WRITES to GitHub, while its open or closed state is still reconciled? Drives the real `sync_issues.sh` with `bd` and `gh` stubbed, then reads the id list handed to `bd github sync`. A regression here silently replaces an outside reporter's issue body with ours. `--selftest` proves the check bites. | LIVE |
 | `check_module_rebuild.sh` | Does an ordinary build put this tree's scripts into the game, while an instrumented build still leaves the module alone? | LIVE |
 | `check_monster_memory.sh` | Does the game record what the player has met, and show him only that? Recalls one creature's entry from a character who has met nobody, then from one who has killed ten, and reads the save's own `MonMem` rows through `tools/dump_save.sh` to keep Seen, Fought and Kills apart -- a kobold only looked at, an ogre struck once, ten humans killed. Before inc-q98a nothing wrote any of those fields and `Monster::Describe` read a hardwired perfect record, so every creature's complete entry was visible from turn one. | LIVE |
+| `check_multiply_noroom.sh` | Does `Creature::Multiply` leave a copy its `PlaceAt` could not place alone? `INCURSION_MULTIPLY_NOROOM` makes `PlaceNear` behave as if no square is free for the copy `Multiply` is placing, so the deleted-copy state is reached on demand; the check fails if `errors.log` carries the `inc/Map.h:275` assert and reports UNMEASURED if the switch refused no copy. | LIVE |
 | `check_mundane_autopickup.sh` | Does autopickup keep an EF_MUNDANE item -- holy water, tanglefoot bags, the alchemy line -- out of the pack, while still stowing the same drop's unidentified potion? | LIVE |
 | `check_natural_save.sh` | Does a natural 20 on a saving throw always succeed, and a natural 1 always fail, regardless of Bonus + roll vs DC? Reads the printed `Save: 1d20 (roll) ... [success\|failure]` line from many seeded sessions -- DC 15 tanglefoot strands for volume, DC 27 guardian runes (a level 1 paladin's own bonus cannot reach it) for the edge case a modest DC can never supply. | LIVE |
 | `check_natural_speed.sh` | Has the hard-coded brawl-speed floor drifted from the fastest weapon in `lib/weapons.irh`? Reads the data; runs nothing. | LIVE |
@@ -985,6 +986,7 @@ tools/check_xp_drain.sh             # RestoreXP clears the drain once, not once 
 tools/check_portal_reach.sh         # every portal shares one door-aware component; --prove-red shows it failing
 tools/check_mana_regen_floor.sh     # the mana-regen floor starts high and falls with Concentration, not the reverse
 tools/check_mana_regen_cast.sh      # the same fix under real play: cast, wait without resting, mana does not rise
+tools/check_multiply_noroom.sh      # Multiply must not re-place, initialise or heal a copy PlaceNear deleted
 ```
 
 `check_gaze_reflect_message.sh` is the live twin of Tier 1's

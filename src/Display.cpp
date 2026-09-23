@@ -43,6 +43,22 @@
 #include "Incursion.h"
 #include "MapAudit.h"
 
+/* Set by Creature::Multiply to the copy it is placing, cleared after. */
+extern Thing *MultiplyPlacingCopy;
+
+/* Fault injection for tools/check_multiply_noroom.sh: set
+   INCURSION_MULTIPLY_NOROOM to make PlaceNear behave as if no square is free,
+   but only for the copy Multiply is placing (this == MultiplyPlacingCopy), so
+   it falls through to its existing "no good place" Remove(true) path. The
+   switch exists to drive a copy whose parent's own square is full, the exact
+   state the deleted-copy defect is reached from. Tracking id inc-dpni. */
+static bool MultiplyNoRoomSwitch() {
+    static int on = -1;
+    if (on < 0)
+        on = getenv("INCURSION_MULTIPLY_NOROOM") ? 1 : 0;
+    return on == 1;
+}
+
 /* Diagnostic only, for bead inc-6d5 ("Contents list wierdless in
    Thing::Remove!"). Logs every Move/Remove/PlaceAt transition for a
    name-matched creature (default "Volgar,Gell" -- the two specimens a fresh
@@ -432,10 +448,19 @@ void Thing::PlaceNear(int16 x,int16 y)
       }
 
     bool isRetry = false;
-    
+
+    /* Fault injection (inc-dpni), read once: refuse the copy Multiply is
+       placing so the search below is skipped and control falls through to the
+       "no good place" branch at the end, which Remove(true)s it. One line to
+       the error log per refused copy, so check_multiply_noroom.sh can count
+       hits. */
+    bool refuseCopy = (this == MultiplyPlacingCopy) && MultiplyNoRoomSwitch();
+    if (refuseCopy)
+      Error("INCURSION_MULTIPLY_NOROOM: refused a copy");
+
     TryAgain:
 
-    for (r=0;r<=(isPlayer() ? 40 : 6);r++) {
+    for (r=0;!refuseCopy && r<=(isPlayer() ? 40 : 6);r++) {
       c = 0;
       for (tx=(x-r);tx<=(x+r);tx++)
         for (ty=(y-r);ty<=(y+r);ty++)
