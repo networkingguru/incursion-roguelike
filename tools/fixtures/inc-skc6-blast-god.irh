@@ -1,0 +1,53 @@
+/* inc-skc6-blast-god.irh -- fixture for the leftover-damage-text repro (bd
+   inc-skc6). Recreated on the pattern of tools/fixtures/heal-maladies-god.irh
+   and tools/fixtures/periodic-interval-gods.irh.
+
+   ONE test god. Joining it (wizard mode "Become Divine Champion", src/Debug.cpp
+   case 34) throws EV_BLESSING once with 30000 favour, and the FAVOUR_CHART below
+   is copied from periodic-interval-gods.irh: its first rung (1000) sits under
+   30000 and its second (50000) sits over it, so a fresh follower always lands on
+   level 1 and this handler fires exactly once, never again on the same
+   character. The one-shot guard is getGodLevel(...)==1, the same gate both other
+   fixtures use.
+
+   Why a test god at all. Magic::Blast appends " +N Lore" to its Damage line when
+   the caster carries FT_LORE_OF_STORMS (src/Effects.cpp:229-239), and that is
+   the modifier text the leftover-strDmg defect prints a second time on the next
+   victim of an area spell. FT_LORE_OF_STORMS needs caster level 5
+   (src/FeatTab.cpp), which no scripted level-1 character reaches, and wizard
+   mode has no "grant a feat" switch -- the switches list (src/Debug.cpp:534-572)
+   has no such entry. The god's EV_BLESSING is the sanctioned route: it calls
+   EActor->GainFeat, the same call lib/classes.irh:1442, lib/races.irh:895 and
+   lib/religion.irh:1791 make from their own handlers.
+
+   FT_LORE_OF_STORMS (electric), not FT_LORE_OF_FLAMES (fire): the repro casts
+   "Electric Loop" (lib/wspells.irh), a Level 2 AR_GLOBE spell, instead of the
+   Level 5 "Fire Lotus". A Level 5 spell's cast time is long enough that a
+   summoned victim can die of something else before the blast ever fires,
+   which is not the leftover-strDmg defect and was measured to make the
+   fixture unusable with Fire Lotus.
+
+   NOT part of the shipped module: the caller splices this file onto the END of a
+   scratch copy of lib/main.irc, under logs/, for the span of its own run only.
+   No tracked lib/ file is ever touched. */
+
+God "Blast Leftover Test God"
+  {
+    Lists:
+      * FAVOUR_CHART
+          1000
+          50000
+          60000
+          70000
+          80000
+          90000
+          100000
+          110000
+          120000
+          130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Blast Leftover Test God") == 1)
+        EActor->GainFeat(FT_LORE_OF_STORMS,0);
+      return NOTHING;
+      };
+  }
