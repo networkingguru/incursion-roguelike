@@ -516,6 +516,43 @@ git -C "$SHARED" branch -D "$BEAD" >/dev/null 2>&1 || {
     exit 1
 }
 
+# STEP 7. Report (never block) on open beads that may duplicate the one just
+# landed. inc-zu0r. This runs AFTER the landing is proven -- STEP 6's ancestry
+# test, and the branch and worktree deletions -- and MUST NOT change this
+# script's exit status. The check is advisory: the bead is already on master,
+# and a bool it cannot prove is not a reason to tell the caller the landing
+# failed. $ROOT may already be a destroyed worktree, so the engine is run from
+# the shared checkout's own copy, and its absence on the base branch is just
+# another failure that prints a line.
+CLOSE_CHECK_RC=0
+if [ -f "$SHARED/tools/bead_dupes.py" ]; then
+    python3 "$SHARED/tools/bead_dupes.py" check-bead "$BEAD" --against open
+    CLOSE_CHECK_RC=$?
+else
+    echo "finish_bead: no $SHARED/tools/bead_dupes.py on $BASE_BRANCH; skipping the duplicate check."
+fi
+
+case $CLOSE_CHECK_RC in
+    0)
+        : ;;
+    1)
+        echo ""
+        echo "Open beads that may duplicate $BEAD — mark each confirmed one:"
+        echo "  bd duplicate <id> --of $BEAD"
+        ;;
+    2|3)
+        echo ""
+        echo "DIRECTIVE TO THE CLOSING AGENT: the duplicate check on $BEAD could not run"
+        echo "(Jev unavailable or bad input). Spawn a subagent with model haiku. Give it"
+        echo "bead $BEAD and the output of \`bd list --all --json\`, and have it name any"
+        echo "bead that describes the same defect or work. Mark each one you confirm with"
+        echo "\`bd duplicate <id> --of $BEAD\`."
+        ;;
+    *)
+        echo "finish_bead: the duplicate check exited $CLOSE_CHECK_RC; continuing anyway."
+        ;;
+esac
+
 echo
 echo "Landed. $BEAD is on $BASE_BRANCH at $MERGED, and its branch and worktree are gone."
 echo "Close the bead when you are satisfied:  bd close $BEAD"
