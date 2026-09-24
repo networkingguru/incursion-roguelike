@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # Does tools/bead_dupes.py actually gate tools/bead_new.sh and report in
 # tools/finish_bead.sh? Offline: no bd, no network, no OpenRouter.
 #
