@@ -3404,19 +3404,9 @@ EvReturn Creature::Cast(EventInfo &e) {
     if (thisp->Spells[e.sp] & (SP_PRIMAL|SP_BARDIC|SP_STAFF|SP_SORCERY))
         goto HasComponent;
 
-    if (thisp->Spells[e.sp] & (SP_DIVINE|SP_DOMAIN)) {
-        int okSlots[] = { SL_READY, SL_WEAPON, SL_AMULET, SL_ARMOUR, 0};
-        Item *it;
-        for (i=0;okSlots[i];i++) {
-            if ((it=InSlot(okSlots[i])) && it->eID && 
-                !strncmp(NAME(it->eID),NAME(thisc->GodID),
-                strlen(NAME(thisc->GodID))))
-                goto HasComponent;
-            if ((it=InSlot(okSlots[i])) && (it->isType(T_ARMOUR) ||
-                it->isType(T_SHIELD)) && it->HasQuality(AQ_GRAVEN))
-                goto HasComponent;
-        } 
-    } 
+    if (thisp->Spells[e.sp] & (SP_DIVINE|SP_DOMAIN))
+        if (HasHolySymbol(thisc->GodID))
+            goto HasComponent;
 
     if (thisp->Spells[e.sp] & SP_ARCANE) {
         Item *bestBook;

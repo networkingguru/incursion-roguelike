@@ -1803,9 +1803,9 @@ Class "Priest"
       spell list, which focuses on healing, divination, protection and the
       augmentation of combat ability. They receive one spellcasting level
       for every class level, and learn spells simply by praying -- priests
-      have no need for spellbooks. A priest
-      must have his holy symbol equipped in the amulet slot or in a hand
-      slot in order to cast spells, however.\n
+      have no need for spellbooks. A priest must wear or hold his holy
+      symbol in order to deploy divine power (including casting spells
+      and turning); a symbol carried in the pack does not count.\n
       __*_<7>Domains<2> -- Every god has a portfolio, a sphere of influence
       over which he has authority. This protectorate is described in game
       terms by two Domains that the diety grants to his priests. Each
