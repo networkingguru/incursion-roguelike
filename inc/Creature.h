@@ -342,6 +342,7 @@ class Creature: public Thing, public Magic
         return StateFlags & MS_FEMALE ? "she" : "he"; }
 		  virtual void DoTurn();
 		  virtual void DiseasePulse(bool force, bool rest);
+		  virtual void PoisonPulse(bool force, bool rest);
       String & BonusBreakdown(int8 at, int16 maxlen=250);
       virtual void ChooseAction()=0;
       virtual void AccessTime(Item *it);
