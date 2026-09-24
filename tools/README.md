@@ -539,6 +539,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_hide_carried_light.sh` | Can a creature carrying a lit light source still hide in shadows (it must not)? | LIVE |
 | `check_hide_dynamic_light.sh` | Does a creature hiding in a cell lit only by a dynamic external source -- magma, a live wall torch, or another creature's torch, with no static `.Bright` and no carried light -- get its hide broken and warned? | LIVE |
 | `check_holy_avenger_dispel_cl.sh` | Does the Holy Avenger's on-hit dispel use the wielder's paladin level as its caster level, rather than a hardcoded 12? | LIVE |
+| `check_holy_symbol_slots.sh` | Does a god-marked helm worn in the helmet slot let a priest turn undead, with the same helm in the pack refused? | LIVE |
 | `check_holy_undead.sh` | Does a Holy weapon, and holy damage, smite an undead creature that is not evil? Seed 4 gives a neutral zombie-templated black bear as the subject, an evil mummy as the positive control and a living neutral brown bear as the negative one. | LIVE |
 | `check_horn_goodness_radius.sh` | Does the Horn of Goodness' Magic Circle vs. Evil field have its promised 60-foot (six-square) radius? | LIVE |
 | `check_horn_madness.sh` | Does the Horn of Madness drain and stun a bystander while sparing its blower from both halves? | LIVE |

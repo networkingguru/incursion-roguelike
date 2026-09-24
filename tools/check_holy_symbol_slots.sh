@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Does a god-marked item worn in a slot OTHER than the old four work as a holy
 # symbol? Bead inc-tf6l.
 #
@@ -90,7 +91,7 @@ status=$?
 echo "$out" | sed 's/^/  | /'
 echo
 
-if echo "$out" | grep -q "the key script looked for something"; then
+if grep -q "the key script looked for something" <<< "$out"; then
     echo "INCONCLUSIVE: the key script could not find the fixture helm on"
     echo "              screen. Run dir: $SCRATCH"
     exit 2
