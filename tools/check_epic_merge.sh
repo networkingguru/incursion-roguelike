@@ -37,7 +37,8 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 # merge is a big hammer, and a branch we cannot identify must not be hit by it.
 is_epic() { # is_epic <branch>
     command -v python3 >/dev/null 2>&1 || return 1
-    ( cd "$ROOT" 2>/dev/null || exit 1
+    local verdict
+    verdict=$( ( cd "$ROOT" 2>/dev/null || exit 1
       "${INCURSION_BD:-bd}" show "$1" --json 2>/dev/null ) \
         | python3 -c 'import json,sys
 try:
@@ -47,7 +48,8 @@ except Exception:
 if isinstance(d, list):
     d = d[0] if d else {}
 print("yes" if isinstance(d, dict) and d.get("issue_type") == "epic" else "no")' \
-        2>/dev/null | grep -qx yes
+        2>/dev/null )
+    [ "$verdict" = yes ]
 }
 
 # The refusal, and the four lines that say how to do it properly.
