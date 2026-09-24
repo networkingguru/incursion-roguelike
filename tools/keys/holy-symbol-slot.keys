@@ -1,0 +1,101 @@
+# Does a god-marked item worn in the HELMET slot work as a holy symbol?
+# Read by tools/check_holy_symbol_slots.sh, bead inc-tf6l.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/holy-symbol-slot.keys 1
+#
+# A priest of Aiswin, built by @include chargen-priest.keys. The session must
+# run against the SCRATCH module the check builds (lib/ plus
+# tools/fixtures/holy-symbol-slot-helm.irh appended), never the shipped one:
+# that fixture adds a helmet whose effect is named "Aiswin Test Helm", which is
+# the god mark the code's own prefix test reads. See the check's header.
+#
+# THE STEPS, and why each is here.
+#
+#   ESC                      chargen-priest ends with the four starting spells
+#                            and leaves a "Select direction, location or
+#                            target:" prompt open; ESC answers it. (Same first
+#                            key as tools/keys/divine-feat-gear.keys.)
+#
+#   i                        the inventory manager. The priest starts with his
+#   o SPACE s                holy symbol WORN in the Neck slot (races.irh's
+#                            EV_BIRTH wields it there via Character::GainItem's
+#                            prefslot). If it stays on, turning works through
+#                            the old amulet slot whatever the fix does. Take it
+#                            off: 'o' selects Neck, SPACE lifts the symbol into
+#                            the air, 's' stows it in the pack, ESC leaves.
+#
+#   w y                      wizard mode, then its options menu. 'w' is the
+#                            wizard key and 'y' answers the enable prompt.
+#
+#   Item Acquisition         the acquisition browser.
+#   RIGHT*18                 walk the glyph row to Helms. ItemGlyphs
+#                            (src/Tables.cpp:339-340) puts -AI_HELM 18 steps
+#                            along, and the header line names the category, so a
+#                            miscount shows as another word after the colon.
+#   @until "Aiswin Test      the candidate list has no menu letters, so the
+#     Helm" DOWN             cursor is walked. @until stops on the pass where
+#                            the wanted name first appears at the bottom of the
+#                            three-row window; one further DOWN moves the
+#                            highlight onto it.
+#   @expect "Aiswin Test     nail the name to the row before taking it, so a
+#     Helm"                  drifted cursor stops the run here instead of
+#                            quietly taking the neighbour.
+#   ENTER                    take it; it lands in the 'In the Air' slot and the
+#                            inventory manager opens.
+#   q SPACE                  'q' selects the Helmet slot and SPACE swaps the helm
+#                            onto the head. ESC leaves the manager.
+#   @dump:helm-worn          the helm is on the head and the Neck slot is empty.
+#
+#   @until "Use which skill" u   the Use menu; @choose "Turn Undead" takes it.
+#   @dump:turn-worn          THE RED/GREEN READING. After the fix the god-marked
+#                            helm in the helmet slot qualifies, so the game
+#                            prints "You channel the sacred energies of Aiswin.
+#                            Nothing happens." Before the fix the four-slot
+#                            search misses the helmet and the game prints "You
+#                            need an appropriate Holy Symbol to affect undead."
+#
+#   i                        take the helm back off into the pack:
+#   q SPACE s                'q' selects Helmet, SPACE lifts the helm into the
+#                            air, 's' stows it. ESC leaves. This is the CONTROL.
+#   @dump:helm-stowed        the helmet slot is empty again.
+#   @dump:turn-pack          turning is refused with the helm in the pack, on
+#                            both builds -- the pack is not a worn slot.
+
+@include chargen-priest.keys
+
+ESC
+
+i
+o SPACE s
+@dump:symbol-stowed
+ESC
+
+w
+y
+@choose "Item Acquisition"
+RIGHT*18
+@until "Aiswin Test Helm" DOWN
+@expect "Aiswin Test Helm"
+DOWN
+ENTER
+q SPACE
+@dump:helm-worn
+ESC
+
+@until "Use which skill" u
+@choose "Turn Undead"
+@while "more --" SPACE
+@dump:turn-worn
+
+@until "Things in View" ESC
+i
+q SPACE s
+@dump:helm-stowed
+ESC
+
+@until "Use which skill" u
+@choose "Turn Undead"
+@while "more --" SPACE
+@dump:turn-pack
+@quit

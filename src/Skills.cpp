@@ -774,7 +774,7 @@ int8 Creature::SkillKitMod(int16 sk) {
 	if (sk == SK_KNOW_THEO && getGod()) {
 		int8 sl;
 		for (sl = 0; sl != SL_LAST; sl++)
-			if (InSlot(sl) && InSlot(sl)->isType(T_SYMBOL) && InSlot(sl)->activeSlot(sl))
+			if (InSlot(sl) && InSlot(sl)->activeSlot(sl))
 				if (InSlot(sl)->eID == TGOD(getGod())->GetConst(HOLY_SYMBOL))
 					best = 4;
 	}
@@ -4495,21 +4495,47 @@ void Creature::FocusCheck(Creature *killer)
 			}
 }
 
+/* upstream: does the caster hold a holy symbol? The four-slot list
+   {SL_READY, SL_WEAPON, SL_AMULET, SL_ARMOUR} used here and in
+   src/Magic.cpp let a god-marked emblem work only from those four worn
+   slots, so the same emblem in a helm, ring, cloak or boot did nothing
+   though the game wears it there. This is upstream's, not the port's: the
+   list and the name-prefix test are byte-identical in Julian's own source,
+   with no typedef, compiler or platform involvement, so a Win32 build
+   refuses the same slots. The rule kept here is that a slot qualifies if
+   the item is active in it (Item::activeSlot, src/Item.cpp:1090 -- every
+   worn slot and, for an EF_CARRIED effect, the five belt slots; never the
+   pack), or if it is one of the four slots that worked before, so nothing
+   that worked may stop. Inside a qualifying slot the god-mark, armour and
+   GRAVEN tests are unchanged. Evidence: Observed -- a god-marked helm is
+   refused before and turns after; see tools/check_holy_symbol_slots.sh.
+   inc-tf6l, not sent. */
+bool Creature::HasHolySymbol(rID godID) {
+	int8 sl;
+	Item *it;
+	for (sl = 0; sl != SL_LAST; sl++) {
+		if (!(it = InSlot(sl)))
+			continue;
+		if (!(it->activeSlot(sl) || sl == SL_READY || sl == SL_WEAPON ||
+			sl == SL_AMULET || sl == SL_ARMOUR))
+			continue;
+		if (it->eID && !strncmp(NAME(it->eID), NAME(godID), strlen(NAME(godID))))
+			return true;
+		if ((it->isType(T_ARMOUR) || it->isType(T_SHIELD)) && it->HasQuality(AQ_GRAVEN))
+			return true;
+	}
+	return false;
+}
+
 EvReturn Creature::Turn(EventInfo &e) {
 	bool printed, found;
-	int16 mag, i;
+	int16 mag;
 	String s, t;
-	int okSlots[] = { SL_READY, SL_WEAPON, SL_AMULET, SL_ARMOUR, 0 };
-	Item *it;
 
 	found = false;
 
-	for (i = 0; okSlots[i]; i++) {
-		if ((it = InSlot(okSlots[i])) && it->eID && !strncmp(NAME(it->eID), NAME(thisc->GodID), strlen(NAME(thisc->GodID))))
-			goto HasComponent;
-		if ((it = InSlot(okSlots[i])) && (it->isType(T_ARMOUR) || it->isType(T_SHIELD)) && it->HasQuality(AQ_GRAVEN))
-			goto HasComponent;
-	}
+	if (HasHolySymbol(thisc->GodID))
+		goto HasComponent;
 	DPrint(e, "You need an appropriate Holy Symbol to affect <Str>.",
 		"The <EActor> lacks a Holy Symbol and fails to affect <Str>.",
 		(const char*)Pluralize(Lookup(MTypeNames, e.EParam)).Lower());

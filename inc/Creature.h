@@ -565,6 +565,7 @@ class Creature: public Thing, public Magic
       virtual EvReturn Counterspell (EventInfo &e, Counterspeller *cs);
  			virtual EvReturn Hide(EventInfo &e);
       virtual EvReturn Turn(EventInfo &e);
+      bool HasHolySymbol(rID godID);
       virtual EvReturn Search(EventInfo &e);
       virtual EvReturn DonDisguise(EventInfo &e);
       virtual EvReturn Research(EventInfo &e);

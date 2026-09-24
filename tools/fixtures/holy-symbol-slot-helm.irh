@@ -1,0 +1,36 @@
+/* holy-symbol-slot-helm.irh -- fixture for tools/check_holy_symbol_slots.sh.
+   Bead inc-tf6l: does a god-marked item worn in a non-old slot (the helm) work
+   as a holy symbol?
+
+   THE PROBLEM THIS FIXTURE SOLVES. The defect is that Creature::Turn and the
+   divine component check search only {SL_READY, SL_WEAPON, SL_AMULET,
+   SL_ARMOUR}. To show the fix, an item must be god-marked and worn in a NEW
+   slot. No shipped data can do that: the only god-marked gear in lib/ is the
+   player's starting `holy symbol` (T_SYMBOL, lib/races.irh) and the shield a
+   priest template stamps (T_SHIELD, lib/mon2.irh), and both are active only in
+   the four old slots. This fixture adds a HELMET effect whose resource name
+   begins with a real god's name, "Aiswin".
+
+   THE MATCH. The two fix sites test a god mark with
+   `!strncmp(NAME(it->eID), NAME(godID), strlen(NAME(godID)))`. A priest of
+   Aiswin has NAME(godID) == "Aiswin"; this helm's eID resource is named
+   "Aiswin Test Helm". NAME() truncates at the first ';' and stops there, so
+   the test is strncmp("Aiswin Test Helm", "Aiswin", 6) == 0 -- a god mark by the
+   code's own rule. Nothing here changes the code; it only supplies the item
+   the shipped data lacks.
+
+   WHY EA_GENERIC. It grants nothing, so the item is a plain helm with an eID
+   and no side effects, which is all the mark test reads.
+
+   NOT part of the shipped module: tools/check_holy_symbol_slots.sh copies lib/
+   to a scratch directory and appends this file to the END of the copy's
+   main.irc for the span of its own run, the same shape
+   tools/check_skc6_blast_text.sh uses. Appending is required, never a mid-file
+   insert: a v1 save records each resource array's length and each entry's name
+   in POSITION order, so a mid-file insert would shift every later resource. No
+   tracked lib/ file is ever touched. */
+
+AI_HELM Effect "Aiswin Test Helm" : EA_GENERIC
+  { Desc: "A test helm bearing the emblem of Aiswin, for the inc-tf6l holy-symbol
+      slot check only. It grants nothing; it exists so a god-marked item can be
+      worn in the helmet slot, which no shipped item can do."; }
