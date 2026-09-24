@@ -1,8 +1,9 @@
 #!/bin/bash
 # Start work on a bead in a worktree of its own.
 #
-#   tools/worktree.sh inc-abcd      create branch inc-abcd and its worktree
-#   tools/worktree.sh --selftest    prove the refusals fire
+#   tools/worktree.sh inc-abcd                 create branch inc-abcd from master
+#   tools/worktree.sh inc-abcd inc-pu6v        ... or from another base branch
+#   tools/worktree.sh --selftest               prove the refusals fire
 #
 # WHY THIS EXISTS. Several agent sessions work in this repository at once, and
 # before 2026-09-11 they all worked in the SAME checkout. One directory has one
@@ -49,8 +50,10 @@ WORKTREE_PREFIX="Incursion-"
 
 # The branch every bead starts from. Not origin/master: the remote is not always
 # reachable, and this repository's master is the integration branch by local
-# convention.
+# convention. A second argument names another base -- an epic branch, e.g.
+# inc-pu6v, so a bead builds on the epic instead of on master.
 BASE_BRANCH="master"
+[ -n "${2:-}" ] && BASE_BRANCH="$2"
 
 die()  { echo "$1" >&2; exit 1; }
 cannot() { echo "INCONCLUSIVE: $1" >&2; exit 2; }
@@ -91,6 +94,22 @@ selftest() {
     out="$("$SCRIPT" inc-zzzzzz 2>&1)"; status=$?
     [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: unknown bead returned $status, expected 1"; return 1; }
     case "$out" in *"no bead"*) ;; *) echo "SELFTEST FAIL: unknown bead said: $out"; return 1;; esac
+
+    # The second argument names the base branch. A well-formed, open bead with
+    # a base branch that does not exist must be refused for THAT reason, before
+    # any worktree is made. bd is stubbed for this one case so the run files
+    # nothing and touches no real bead.
+    local stubdir out2 status2
+    stubdir="$(mktemp -d "${TMPDIR:-/tmp}/worktree-selftest.XXXXXX")" || return 1
+    cat > "$stubdir/bd" <<'STUB'
+#!/bin/sh
+echo '[{"status":"open","issue_type":"task"}]'
+STUB
+    chmod +x "$stubdir/bd"
+    out2="$(PATH="$stubdir:$PATH" "$SCRIPT" inc-testbase no-such-base 2>&1)"; status2=$?
+    rm -rf "$stubdir"
+    [ "$status2" -eq 2 ] || { echo "SELFTEST FAIL: bad base returned $status2, expected 2"; return 1; }
+    case "$out2" in *"no-such-base"*) ;; *) echo "SELFTEST FAIL: bad base said: $out2"; return 1;; esac
 
     echo "SELFTEST PASS"
     return 0

@@ -138,6 +138,18 @@ if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
   fi
 fi
 
+# --- INCURSION: a bare `git merge master` on an epic branch is refused ---
+# (inc-pu6v, 2026-09-24). The reason, the gated path and the escape hatch are
+# in tools/check_epic_merge.sh, whose --selftest proves each case.
+if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
+  _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
+  if [ -x "$_inc_root/tools/check_epic_merge.sh" ]; then
+    "$_inc_root/tools/check_epic_merge.sh"
+    _inc_epic=$?
+    if [ $_inc_epic -ne 0 ]; then exit $_inc_epic; fi
+  fi
+fi
+
 if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
   _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
   if [ -x "$_inc_root/tools/check_bead_publish.py" ]; then
