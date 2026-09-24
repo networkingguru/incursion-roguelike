@@ -1,0 +1,62 @@
+# REPRODUCTION for bead inc-akac: a summoned frost giant (lib/mon2.irh:2450,
+# ABILITY(CA_FEED_UPON_PAIN,6)) is a level-6 source of Feed upon Pain. Its
+# attacks land on the player while the player just waits, read with
+# tools/check_feed_upon_pain.sh via logs/pain.log (INCURSION_PAIN_PROBE=1).
+# Any character works as the punching bag; the rogue chargen is the
+# shortest one already proven reliable
+# (tools/keys/sneak-invis-chargen.keys, bead inc-nkf2). Cheat Death (Wizard
+# Mode Switches row 1, same as tools/keys/sneak-invis-melee.keys) keeps a
+# killing blow from ending the session before enough strikes land.
+
+@include sneak-invis-chargen.keys
+
+SPACE   # dismiss the arrival-room description
+
+w
+y
+@choose "Wizard Mode Switches"
+SPACE
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Giants"
+@choose "frost giant"
+RIGHT RIGHT ENTER
+@until "HP:" ESC
+@dump:victim
+
+s
+@while "stop searching" y
+@while "Die?" n
+@dump:t01
+s
+@while "stop searching" y
+@while "Die?" n
+@dump:t02
+s
+@while "stop searching" y
+@while "Die?" n
+@dump:t03
+s
+@while "stop searching" y
+@while "Die?" n
+@dump:t04
+s
+@while "stop searching" y
+@while "Die?" n
+@dump:t05
+s
+@while "stop searching" y
+@while "Die?" n
+@dump:t06
+s
+@while "stop searching" y
+@while "Die?" n
+@dump:t07
+s
+@while "stop searching" y
+@while "Die?" n
+@dump:t08
+
+@quit

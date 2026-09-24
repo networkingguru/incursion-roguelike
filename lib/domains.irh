@@ -597,8 +597,11 @@ Domain "Nobility" : 0
 
 Domain "Pain" : 0
   {
-    Desc: "__<15>Granted Power:<7> You can feed upon the pain you inflict upon
-      others, healing 1 hit point for every 10 that your attacks inflict.";
+    Desc: "__<15>Granted Power:<7> You feed upon the pain you inflict upon
+      others. Every 10 points of damage your attacks deal, counted across all
+      your hits, heals you 1 hit point. This stacks with Feed upon Pain from
+      any other source: each extra source heals 1 more hit point per 10
+      damage.";
     Grants:
       Ability[CA_FEED_UPON_PAIN] at 1st level;
     Spells:

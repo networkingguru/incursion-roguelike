@@ -3813,11 +3813,13 @@ struct AbilityInfoStruct AbilInfo[] = {
     "to your ability level, but it lasts only one turn, so you must use it "
     "right before the attempt that needs the extra muscle." },
   { CA_FEED_UPON_PAIN, "Feed upon Pain",
-    "Whenever one of your attacks deals more than 10 points of combined "
-    "damage and you are not at full hit points, you heal one tenth of that "
-    "damage, rounded down. This triggers on any single hit that crosses the "
-    "threshold, sneak attack damage included, and needs no action on your "
-    "part." },
+    "Every point of damage your attacks deal, sneak attack damage included, "
+    "goes into a running tally. For every 10 points in the tally, you heal 1 "
+    "hit point for each level you have in this ability, and anything left "
+    "over carries into your next hit. Levels stack: every source that grants "
+    "Feed upon Pain adds one, so two sources heal 2 hit points for every 10 "
+    "damage, three heal 3, and so on. You never heal past your maximum, and "
+    "it needs no action on your part." },
   { CA_GIANT_KILLER, "Giant Killer",
     "Against a humanoid enemy larger than you, your critical threat range "
     "widens, based on the size difference, making critical hits easier to "
@@ -5236,6 +5238,7 @@ TextVal STATI_CONSTNAMES[] = {
   { CRIT_WOUNDED_BY, "CRIT_WOUNDED_BY" },
   { SEEN_RIPPLE, "SEEN_RIPPLE" },
   { STORED_MM, "STORED_MM" },
+  { PAIN_TALLY, "PAIN_TALLY" },
   { LAST_STATI, "LAST_STATI" },
 
   { 0, NULL } };

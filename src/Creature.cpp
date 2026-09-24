@@ -49,6 +49,36 @@
 
 #include "Incursion.h"
 
+/* Reproduction probe for bead inc-akac: does Feed upon Pain run a tally
+   across hits and stack by level? Set INCURSION_PAIN_PROBE=1 and every landed
+   strike writes one line to logs/pain.log naming the actor, its ability level,
+   the damage, the tally before and after and the hit points actually healed.
+   Off and free otherwise. tools/check_feed_upon_pain.sh reads it. */
+static void PainProbeNote(Creature *actor, int dmg, int level,
+    int tallyBefore, int tallyAfter, int healed)
+{
+    static int on = -1;
+    static FILE *f = NULL;
+    char path[1024];
+
+    if (on == -1)
+        on = getenv("INCURSION_PAIN_PROBE") ? 1 : 0;
+    if (!on || !actor)
+        return;
+    if (!f) {
+        snprintf(path, sizeof(path), "%slogs/pain.log",
+            (const char*)T1->IncursionDirectory);
+        f = fopen(path, "a");
+        if (!f)
+            return;
+    }
+    fprintf(f, "turn %u: feed actor=<%s> level=%d dmg=%d tally_before=%d "
+        "tally_after=%d healed=%d\n", (unsigned)theGame->Turn,
+        (const char*)actor->Name(0), level, dmg, tallyBefore, tallyAfter,
+        healed);
+    fflush(f);
+}
+
 Creature::Creature(rID _mID, int16 _Type):
     Thing(0,_Type)
 {
@@ -900,9 +930,31 @@ EvReturn Creature::Event(EventInfo &e) {
 
         /* ww: add xDmg to this calc so that Sneak Attack damage counts
         * -- certainly in character for priests of pain! */
-        if (HasAbility(CA_FEED_UPON_PAIN))
-            if ((e.aDmg + e.xDmg)> 10 && cHP < mHP + Attr[A_THP])
-                cHP = min(mHP + Attr[A_THP],cHP + (e.aDmg + e.xDmg) / 10);
+        /* upstream: the tally must run across hits and carry its remainder,
+           and the ability level must multiply each hit's damage, so N HP are
+           healed per 10. The old single-strike test needed >10 per blow and
+           dropped the remainder, ignoring the level -- pure integer logic with
+           no typedef or platform dependence, so Win32 with the original
+           typedefs and compiler misbehaves identically. Traced before the fix,
+           Observed after (tools/check_feed_upon_pain.sh). inc-akac, not sent. */
+        if (HasAbility(CA_FEED_UPON_PAIN) && e.isHit && (e.aDmg + e.xDmg) > 0) {
+            const int16 lvl = AbilityLevel(CA_FEED_UPON_PAIN);
+            const int dmg = e.aDmg + e.xDmg;
+            Status *ts = GetStati(PAIN_TALLY);
+            int tally = ts ? ts->Mag : 0;
+            const int before = tally;
+            tally += dmg * lvl;
+            const int heal = tally / 10;
+            tally %= 10;
+            if (ts)
+                ts->Mag = (int16)tally;
+            else
+                GainPermStati(PAIN_TALLY,NULL,SS_MISC,0,(int16)tally);
+            const int ohp = cHP;
+            if (heal > 0 && cHP < mHP + Attr[A_THP])
+                cHP = min(mHP + Attr[A_THP], cHP + heal);
+            PainProbeNote(this, dmg, lvl, before, tally, cHP - ohp);
+        }
 
         break;
     case EV_HIT:

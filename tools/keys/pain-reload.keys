@@ -1,0 +1,26 @@
+# SAVE/RELOAD CHECK, part 2, for bead inc-akac: load the character
+# tools/keys/pain-save.keys just saved (PAIN_TALLY leftover = 6 at that
+# point) and land one more brawling hit. If PAIN_TALLY survived the save
+# and reload, the probe's tally_before on this hit reads 6, not 0. Run
+# with INCURSION_LOAD=<the .sav pain-save.keys produced>.
+d
+@expect "Gender"
+@dump:sheet
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "brown bear"
+RIGHT RIGHT ENTER
+@until "HP:" ESC
+
+s s s
+@while "Die?" n
+
+RIGHT
+@while "Take opportunity" y
+@while "Die?" n
+@dump:reload-hit
+
+@quit

@@ -1,0 +1,119 @@
+# REPRODUCTION for bead inc-akac: an orc priest of Khasrach with the Pain
+# domain (Feed upon Pain, ability level 1), fighting a summoned brown bear.
+# Read with tools/check_feed_upon_pain.sh via logs/pain.log
+# (INCURSION_PAIN_PROBE=1).
+#
+# DOMAIN LETTERS. Found by dumping the actual chargen screens: Khasrach's
+# domain list (lib/religion.irh:2676) is laid out column-major, 3 columns.
+# Picking 'a' then 'd' then 'a' gives Hatred, Pain, Destruction -- 'd' is
+# Pain on the SECOND domain screen, once Hatred has already been removed
+# from the list. This is a throwaway reproduction, not a regression
+# fixture; if Khasrach's domain order in lib/religion.irh ever changes,
+# redump the screens (add @dump lines back in) rather than guess new
+# letters.
+#
+# WEAPON SWAP -> BRAWL. A priest of Khasrach starts wielding an orcish
+# longspear two-handed (occupying BOTH Ready Hand and Weapon Hand). A
+# longspear has reach (StateFlags & MS_HAS_REACH, tools/keys/
+# bloodspear-regen-duration.keys documents the same rule): it can only
+# strike a target TWO squares away, never one that is adjacent
+# (src/Player.cpp:1335-1338, k stays at 2 while MS_REACH_ONLY holds). Once
+# the summoned bear closes to melee range (one square), the longspear can
+# no longer land a blow at all -- every RIGHT reads "You cannot move
+# through the brown bear" and costs no game turn. The inventory sequence
+# below moves the carried orcish heavy mace into Ready Hand one-handed;
+# since the longspear was two-handed, this empties Weapon Hand, and
+# AttackMode() returns S_BRAWL the instant that slot is empty
+# (src/Creature.cpp:2750). Fighting bare-fisted has no reach requirement
+# AND deals small, consistent damage (Punch 1d3+3, so 4-6 -- always <= 10,
+# the RED case's threshold), which is exactly what this reproduction wants.
+a
+n
+y
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Priest"
+@choose "Khasrach"
+a
+@choose "Chaotic Evil"
+a
+d
+a
+a
+a a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+y
+a
+a a a a
+
+SPACE
+@dump:played
+
+# Swap the reach longspear for the one-handed heavy mace.
+i
+f
+SPACE
+a
+SPACE
+n
+ESC
+@dump:armed
+
+d
+@expect "Gender"
+@dump:sheet
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+SPACE
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "brown bear"
+RIGHT RIGHT ENTER
+@until "HP:" ESC
+@dump:victim
+
+s s s
+@while "Die?" n
+@dump:hurt
+
+RIGHT
+@while "Take opportunity" y
+@while "Die?" n
+@dump:hit1
+RIGHT
+@while "Take opportunity" y
+@while "Die?" n
+@dump:hit2
+RIGHT
+@while "Take opportunity" y
+@while "Die?" n
+@dump:hit3
+RIGHT
+@while "Take opportunity" y
+@while "Die?" n
+@dump:hit4
+RIGHT
+@while "Take opportunity" y
+@while "Die?" n
+@dump:hit5
+RIGHT
+@while "Take opportunity" y
+@while "Die?" n
+@dump:hit6
+RIGHT
+@while "Take opportunity" y
+@while "Die?" n
+@dump:hit7
+RIGHT
+@while "Take opportunity" y
+@while "Die?" n
+@dump:hit8
+
+@quit
