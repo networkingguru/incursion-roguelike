@@ -25,13 +25,25 @@ FAIL=0
 ok()  { echo "OK    $1"; }
 bad() { echo "FAIL  $1"; FAIL=1; }
 
-# A stub bd that answers `create ... --json` with a fixed id and nothing else.
+# A stub bd that answers `create ... --json` with a fixed id. `list` answers an
+# empty array, so the duplicate check the wrapper now runs finds no candidates
+# and never reaches the network (inc-zu0r phase 2).
 cat > "$TMP/bd" <<'STUB'
 #!/bin/bash
-for a in "$@"; do [ "$a" = "create" ] && { echo '{"id": "inc-stub"}'; exit 0; }; done
+for a in "$@"; do
+    if [ "$a" = "create" ]; then echo '{"id": "inc-stub"}'; exit 0; fi
+    if [ "$a" = "list" ]; then echo '[]'; exit 0; fi
+done
 exit 0
 STUB
 chmod +x "$TMP/bd"
+
+# The wrapper asks tools/bead_dupes.py for the draft before filing. Use the
+# real engine -- its draft-args mode is pure and offline -- and keep the
+# environment keyless so even the check path cannot call out.
+export OPENROUTER_API_KEY=""
+export HOME="$TMP/home"
+mkdir -p "$HOME"
 
 # A stub checker whose verdict the test chooses, so both branches are reachable
 # without depending on what any real bead happens to contain today.
@@ -49,6 +61,7 @@ STUB
 # editing the real one.
 mkdir -p "$TMP/tree/tools"
 cp "$ROOT/tools/bead_new.sh" "$TMP/tree/tools/"
+cp "$ROOT/tools/bead_dupes.py" "$TMP/tree/tools/"
 run_wrapper() {
     make_checker "$1"
     cp "$TMP/check_bead_publish.py" "$TMP/tree/tools/check_bead_publish.py"

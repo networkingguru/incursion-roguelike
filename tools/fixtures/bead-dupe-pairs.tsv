@@ -1,0 +1,34 @@
+# Bead-duplicate judgement fixture, 2026-09-24.
+# Positives (label 1) come from `duplicates` links in the bead database.
+# The last positive, inc-upw.10 inc-dpni, is source `fixed-by`: inc-upw.10 was
+# closed as fixed by inc-dpni rather than linked as a duplicate.
+# Each negative (label 0) is the positive's first bead paired with its
+# highest-scoring non-duplicate under `bd find-duplicates` word overlap.
+# Tab-separated: a<TAB>b<TAB>label<TAB>source.
+a	b	label	source
+inc-pu6v.75	inc-nmue	1	dup-link
+inc-loa.61	inc-mwjc	1	dup-link
+inc-loa.53	inc-loa.47	1	dup-link
+inc-056c	inc-41kg	1	dup-link
+inc-otz	inc-5caj	1	dup-link
+inc-iclq	inc-fsx	1	dup-link
+inc-0wqw	inc-14h0	1	dup-link
+inc-40oi	inc-upw.29	1	dup-link
+inc-8b8	inc-x9i	1	dup-link
+inc-ne2	inc-2sv	1	dup-link
+inc-qgqv	inc-upw.42	1	dup-link
+inc-tek.3.2	inc-k8uw	1	dup-link
+inc-upw.10	inc-dpni	1	fixed-by
+inc-pu6v.75	inc-h6nk	0	hard-negative
+inc-loa.61	inc-rb2q	0	hard-negative
+inc-loa.53	inc-loa.14	0	hard-negative
+inc-056c	inc-bomy	0	hard-negative
+inc-otz	inc-wcf	0	hard-negative
+inc-iclq	inc-sqee	0	hard-negative
+inc-0wqw	inc-q3dt	0	hard-negative
+inc-40oi	inc-mjl6	1	dup-found-by-jev
+inc-8b8	inc-3i3	0	hard-negative
+inc-ne2	inc-c4l4	0	hard-negative
+inc-qgqv	inc-vsw	0	hard-negative
+inc-tek.3.2	inc-q0w0	0	hard-negative
+inc-upw.10	inc-tsf	0	hard-negative
