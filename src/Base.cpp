@@ -157,6 +157,34 @@ String::String(const char*str)
     BUGTRAP
   }
 
+/* upstream: base-code defect, the fix is ours. The invariant is that every
+   String owns its own Buffer. The class declared no copy constructor, so an
+   implicit copy-construction shared the source's Buffer: the first of the two
+   to be destroyed freed it and the second freed it again (double free, abort),
+   and any read after the first free saw freed memory. It is upstream's because
+   a missing copy constructor is language semantics, identical on Win32 with the
+   original typedefs and compiler; the class and the call site
+   (src/Effects.cpp:279) date to the v0.6.5B import 7b8504a and fail identically
+   there. The copy now strdups, NULL staying NULL, matching String(const char*).
+   Tier Observed: one reproduction aborts with exit 134 before the fix and
+   completes cleanly after it, tools/check_skc6_blast_text.sh. inc-skc6.
+   NOT SENT upstream. */
+String::String(const String& s)
+  {
+    if (s.Buffer == NULL)
+      {
+        Buffer = NULL;
+        Length = 0;
+      }
+    else
+      {
+        Buffer = strdup(s.Buffer);
+        Length = s.Length;
+      }
+    Canary = 0;
+    BUGTRAP
+  }
+
 String::~String() 
   { 
     int32 i;

@@ -123,6 +123,7 @@ class String
     public:
       String();                 
       String(const char*str);
+      String(const String& s);
       ~String();
       void Empty();
       operator const char*();

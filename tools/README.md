@@ -652,6 +652,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_shield_penalty.sh` | Does a shield's armour check penalty come from the shield, or only from its size beside yours? Puts every shield in a Medium paladin's hand one at a time and reads its cost twice off the character dump -- the skill term and the movement rate -- then does the two a Small halfling can hold, whose figures must be double. | LIVE |
 | `check_shift_opcodes.sh` | Does the VM's BSHL shift left while Rect member codegen still uses BSHR for reads and BSHL for writes, and does a script-coloured field cast red rather than black light? | LIVE |
 | `check_sigpipe_status.sh` | Does any `tools/*.sh` pipe into an early-exit reader (`grep -q`/`grep -m`/`head`) whose exit status a conditional then reads, the shape whose SIGPIPE race reported real data as a miss on 2026-09-22? Ratcheted against `tools/sigpipe_status.baseline`. | LIVE |
+| `check_skc6_blast_text.sh` | Two measurements. (1) Does the Biocurrent magic touch's Damage line read exactly `Damage: 1d12+2 = <digits> Lightning`, with no garbage between the dice and ` = `? A `String` with no copy constructor shared its `Buffer`, so `src/Effects.cpp:279`'s `?:` freed `e.strDmg` and the process aborted at exit 134. (2) Does a two-victim `Magic::AGlobe` cast (Electric Loop on two summoned brown bears, `tools/keys/inc-skc6-blast-leftover.keys`) leave each victim's Damage line with exactly one Lore term, rather than the second victim inheriting the first's " +N Lore" through the reused `EventInfo`? Either measurement fails if the session aborts or exits nonzero, or if it finds no Damage line at all (bead inc-skc6). Needs the headless build. | LIVE |
 | `check_skill_manager_reset.sh` | Does an unrecognised key still wreck the Skill Manager? Presses END and HOME -- the left stick's two left diagonals -- in both of the screen's modes: character generation, where the ranks were wiped, and level-up, where the manager silently closed. Two sessions. | LIVE |
 | `check_sneak_invis.sh` | Does an unseen attacker get sneak attack when the victim hears it, and does a thrown or fired attack count as unseen against a Blind-Fight victim (bead inc-nkf2)? Needs the headless build. | LIVE |
 | `check_snowstrike.sh` | Does the Snowstrike blast carry `EF_CASTER_IMMUNE` and `EF_ALLIES_IMMUNE`, so the caster and her allies are immune as its description promises, rather than freezing them? | LIVE |
@@ -935,6 +936,7 @@ tools/check_natural_speed_live.sh
 tools/check_quiet_lookup.sh
 tools/check_reveal_delete.sh
 tools/check_save_fail.sh
+tools/check_skc6_blast_text.sh      # a magic touch's Damage line is clean; no abort
 tools/check_stair_cycle.sh
 tools/check_broken_door.sh
 tools/check_store_scroll.sh

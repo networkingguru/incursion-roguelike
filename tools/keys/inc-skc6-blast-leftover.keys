@@ -1,0 +1,106 @@
+# Repro for inc-skc6 (leftover-damage-text): Magic::Blast prints e.strDmg on
+# its Damage line and never clears it, and Magic::AGlobe (src/Magic.cpp,
+# `MapIterate(m,t,i) if (dist(...)<vRadius) { e.ETarget=t; ... ReThrow(
+# EV_MAGIC_STRIKE,e); }`) reuses ONE EventInfo across every victim in its
+# loop, with no per-victim reset. Blast appends " +N Lore" to e.strDmg for a
+# Lore-of-Storms caster (src/Effects.cpp:229-237) but never clears it, so the
+# SECOND victim's Blast call starts from the FIRST victim's already-appended
+# text and appends its own on top.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/inc-skc6-blast-leftover.keys 1
+#
+# THIS IS A THROWAWAY DIAGNOSTIC SCRIPT, not a committed check --
+# tools/check_skc6_blast_text.sh runs it and does the asserting.
+#
+# NOT FIREBALL. A fireball is AR_BALL, delivered by Magic::ABallBeamBolt,
+# whose per-victim loop does `eCopy = e; eCopy.ETarget = TargetList[j]; ...`
+# (src/Magic.cpp ~2379) -- a FRESH copy of the outer, unmutated `e` for every
+# victim, so nothing carries over. AGlobe has no such per-victim reset, which
+# is why this script uses a globe spell (Electric Loop, lib/wspells.irh) and
+# not fireball.
+#
+# NOT FIRE LOTUS. The first two globe spells tried, Fire Lotus (Level 5) and
+# a giant rat, failed to reproduce anything, and the reason took some
+# digging: "Learn Any Spell" casts take about 20 GAME TURNS regardless of
+# spell level (measured identically for Level 5 Fire Lotus and Level 2
+# Electric Loop) -- not 20 ticks, 20 whole turns, even though a giant rat has
+# only 2 HP and there is nothing else nearby to hurt it. With the FIRST
+# giant rat dying to the blast itself, AGlobe's MapIterate(m,t,i) macro
+# (inc/Base.h:105, `for (i=0,...; m->Things[i]; i++, ...)`) walks the map's
+# raw Things[] array by index; killing the current thing mid-loop shifts a
+# later array a slot, and the loop's next index then lands one entry PAST
+# the second victim, silently skipping it -- a real array-mutated-during-
+# iteration defect, but a DIFFERENT one from inc-skc6, and not this bead's
+# concern. Two summoned brown bears (54 HP) survive an Electric Loop hit
+# comfortably, so nothing dies mid-loop and both get a fair turn.
+#
+# WHY TWO SEPARATE ADJACENT SQUARES, NOT BOTH "UP". Electric Loop's lval is
+# 2, and AGlobe's own check is `dist(t->x,t->y,cx,cy) < vRadius` -- strictly
+# less than. Summoning the second bear with the SAME "UP" direction collides
+# with the first, and Thing::PlaceAt's fallback (PlaceNear) lands it two
+# squares off, exactly failing `dist < 2`. UP and LEFT put both bears at
+# dist 1, comfortably inside.
+#
+# Blast Leftover Test God (tools/fixtures/inc-skc6-blast-god.irh) grants
+# FT_LORE_OF_STORMS on joining -- wizard mode has no feat-grant switch, and
+# the feat needs caster level 5 (src/FeatTab.cpp), which no scripted level-1
+# character reaches on its own.
+
+@include chargen-priest.keys
+
+ESC
+
+# Freeze Monsters, the eleventh row of the switches list (see
+# tools/keys/sanctuary-strike.keys) -- stops the bears acting on their own
+# turns while the spell is up.
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+w
+@choose "Learn Any Spell"
+"Electric Loop"
+ENTER
+
+# Lore of Storms, which is what puts " +N Lore" on the Damage line. Wizard
+# mode has no feat switch, so join the test god from tools/fixtures/inc-
+# skc6-blast-god.irh (spliced onto a scratch lib for the run): its
+# EV_BLESSING calls GainFeat(FT_LORE_OF_STORMS).
+w
+@choose "Become Divine Champion"
+"Blast Leftover Test God"
+ENTER
+
+# Two brown bears, one square north and one square west of the player --
+# both inside Electric Loop's radius, and both far too tough (54/52 HP) to
+# die from a single hit, so neither drops out of AGlobe's MapIterate loop.
+w
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "brown bear"
+UP
+ENTER
+@dump:after-summon1
+
+w
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "brown bear"
+LEFT
+ENTER
+@dump:after-summon2
+
+# Electric Loop is centred on the caster (AR_GLOBE, no Q_LOC/Q_TAR) and
+# fires the moment it is chosen -- no direction or location prompt.
+m
+@choose "Electric Loop"
+@dump:after-blast
+
+v
+@dump:message-log
+@while "Messages" ESC
+@quit

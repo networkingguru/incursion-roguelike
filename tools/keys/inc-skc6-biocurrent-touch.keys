@@ -1,0 +1,52 @@
+# Diagnostic repro for inc-skc6: a magic touch attack (the innate power
+# Biocurrent) prints garbage in the combat readout's Damage line. Follows the
+# recipe already proven by tools/keys/sanctuary-strike.keys for wizard-mode
+# spell grant + Spell Manager cast + Monster Summoning + a scripted melee
+# attack.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/inc-skc6-biocurrent-touch.keys 1
+#
+# THIS IS A THROWAWAY DIAGNOSTIC SCRIPT, not a committed check.
+
+@include chargen-priest.keys
+
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+w
+@choose "Learn Any Spell"
+"Biocurrent"
+ENTER
+
+m
+@choose "Biocurrent"
+@dump:after-cast
+
+w
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "giant rat"
+RIGHT
+ENTER
+
+@dump:after-summon
+
+RIGHT
+@while "Confirm attack" y
+@dump:after-strike1
+
+RIGHT
+@while "Confirm attack" y
+@dump:after-strike2
+
+v
+@dump:message-log
+@while "Messages" ESC
+@quit

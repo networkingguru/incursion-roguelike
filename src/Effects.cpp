@@ -134,6 +134,12 @@ EvReturn Magic::Blast(EventInfo &e)
     return DONE;
   } 
 
+  /* inc-skc6: Blast builds its own Damage line from e.strDmg; the caller's
+     text is handed back unchanged so a reused EventInfo (Magic::AGlobe's
+     per-victim loop) does not carry this victim's " +N Lore" into the next. */
+  String savedStrDmg = e.strDmg;
+  e.strDmg = "";
+
   // ww: a poisoned weapon ends up calling Blast() with the poison
   // effect, which reveals a distant rogue 
   if ( (e.EActor->HasFeat(FT_SHOOT_FROM_COVER)) &&
@@ -272,11 +278,13 @@ SkipSave:
       Term * TActor = e.EActor->ShowCombatNumbers();
       Term * TVictim = e.EVictim->ShowCombatNumbers(); 
       if (TActor || TVictim) { 
+      /* inc-skc6: the cast keeps this a const char* and avoids a String
+         temporary that would share and then free e.strDmg's buffer. */
       msg = Format("%cDamage:%c %s%s%s%s%s = %d %s",
           -MAGENTA, -GREY, e.Resist ? "(" : "", (const char*)e.Dmg.Str(), e.eID &&
           (e.MM & MM_EMPOWER) ? " + 50%" : "",
           e.Resist || e.isPartiallyEvaded ? ") / 2" : "", 
-          (const char*)(e.strDmg ? e.strDmg : ""),
+          e.strDmg ? (const char*)e.strDmg : "",
           (int)e.vDmg, Lookup(DTypeNames,e.DType));
         if (TVictim) {
           TVictim->SetWin(WIN_NUMBERS4);
@@ -408,6 +416,8 @@ SkipMessage:
   e.EMap->EmptyQueue(QUEUE_BLAST_MSG);
   e.BlastMessageDone = true;
 
+  /* inc-skc6: hand the caller's text back unchanged. */
+  e.strDmg = savedStrDmg;
   return DONE;
 } 
 
