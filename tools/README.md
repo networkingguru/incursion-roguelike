@@ -582,6 +582,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_lz_uncompress.sh` | Can the LZ77 and RLE decoders be made to write past their output buffer? | LIVE |
 | `check_mana_regen_cast.sh` | Under real play, no forced state: a mage casts Burning Hands 35 times to bring mana into the 35-80% band the regen floor cares about, waits about 75 turns without resting, and stays at the same mana -- rather than rising, which is what the un-fixed floor would let happen. | LIVE |
 | `check_mana_regen_floor.sh` | Does the player mana-regen floor start high and fall with Concentration, rather than starting low and rising? Forces Concentration low then high on a live loaded player and drives 50 real ticks through `Creature::DoTurn`. | LIVE |
+| `check_masterarcher_concentration_prose.sh` | Does the Master Archer class page state Concentration 7+, matching the entry gate's `ISkillLevel(SK_CONCENT) < 7` and the refusal message, rather than the "+10" it advertised before (inc-5zhp / inc-tek.8.3 PA-03-F3)? | LIVE |
 | `check_masterarcher_live.sh` | Does the Master Archer's Ranged Sneak Attack fire only with a long bow or a short bow, and not with every launcher? | LIVE |
 | `check_menu_overflow.sh` | Does a menu with more than 52 options still draw and select every row, rather than losing the ones past the alphabet? | LIVE |
 | `check_menu_page_arrows.sh` | Does the RIGHT arrow page a long selection menu forward, so a Steam Deck player who has a stick but no Tab key can reach a row on the second page and still pick it? | LIVE |
