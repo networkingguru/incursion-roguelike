@@ -1,0 +1,38 @@
+/* blind-fight-god.irh -- fixture for tools/check_blind_fight_miss.sh (bd
+   inc-4k2). One test god. Joining it (wizard mode "Become Divine Champion")
+   throws EV_BLESSING once with 30000 favour (src/Debug.cpp:1118-1135), and
+   the FAVOUR_CHART below is copied from tools/fixtures/periodic-interval-
+   gods.irh: its first rung (1000) sits under 30000 and its second (50000)
+   over it, so a fresh follower always lands on level 1 and this handler fires
+   exactly once, never again on the same character. The one-shot guard is
+   getGodLevel(...)==1, the same gate periodic-interval-gods.irh uses.
+
+   The blessing grants the follower FT_BLIND_FIGHT directly via GainFeat
+   (inc/Api.h:454), the call lib/classes.irh:1442 makes to grant a feat. That
+   makes the ATTACKER hold the Blind-Fight feat deterministically, whatever
+   the seed rolled at character generation.
+
+   NOT part of the shipped module: tools/check_blind_fight_miss.sh splices
+   this file onto the END of a scratch copy of lib/main.irc, under logs/, for
+   the span of its own run only. No tracked lib/ file is ever touched. */
+
+God "Blind Fight Test God"
+  {
+    Lists:
+      * FAVOUR_CHART
+          1000
+          50000
+          60000
+          70000
+          80000
+          90000
+          100000
+          110000
+          120000
+          130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Blind Fight Test God") == 1)
+        EActor->GainFeat(FT_BLIND_FIGHT);
+      return NOTHING;
+      };
+  }

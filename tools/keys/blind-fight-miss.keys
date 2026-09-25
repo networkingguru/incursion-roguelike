@@ -1,0 +1,131 @@
+# Stage a character WITH the Blind-Fight feat attacking an UNSEEN victim, so
+# the vicUnseen miss roll at src/Fight.cpp runs over and over (bd inc-4k2).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_BLINDFIGHT_PROBE=1 \
+#       tools/headless.sh tools/keys/blind-fight-miss.keys <seed>
+#
+# Read the result with tools/check_blind_fight_miss.sh, which builds a scratch
+# module holding the test god, runs this script over many seeds and tallies the
+# probe's logs/blindfight.log. This file only produces the session.
+#
+# THE ORACLE IS THE GAME'S OWN HELP. The Combat Options "Avert Eyes" row
+# (src/Player.cpp:996-997) states the rule this check tests: averting the eyes
+# "gives you a 50% miss chance in combat (25% if you have the Blind Fighting
+# feat)". The defect is that the miss roll asks HasStati(FT_BLIND_FIGHT) -- a
+# status lookup by number -- instead of HasFeat, and FT_BLIND_FIGHT == CHARGING
+# == 75, so an attacker who simply is not charging never gets the 25%.
+#
+# THE ATTACKER'S FEAT is granted deterministically by "Blind Fight Test God"
+# (tools/fixtures/blind-fight-god.irh), spliced onto a scratch module by the
+# check, so it does not depend on what the seed offers at character generation.
+#
+# THE VICTIM is a poltergeist (lib/mon3.irh:3998): SZ_MEDIUM, naturally
+# invisible (INV_IMPROVED), 3 HD. The attacker cannot perceive it, so
+# e.vicUnseen is true and the miss block runs. Freeze Monsters keeps it from
+# taking a turn, retaliating, or chasing the player away, while leaving it
+# attackable. The "Attack" verb in the Combat Options menu (src/Player.cpp:880)
+# exists exactly for a target that is "invisible or otherwise imperceptible",
+# so the attacker can strike what it cannot see.
+#
+# CHEAT DEATH and INFINITE MANA are enabled together with Freeze Monsters in
+# one visit to the wizard switch list (rows 0, 7 and 10).
+#
+# 20 attack repetitions give roughly 20 unseen attacks per session; the check
+# sums them over seeds and asserts on at least 100.
+
+@include sneak-invis-chargen.keys
+
+SPACE   # dismiss the arrival-room description
+
+# Wizard switches: Cheat Death (row 0), Infinite Mana (row 7), Freeze
+# Monsters (row 10).
+w
+y
+@choose "Wizard Mode Switches"
+SPACE
+DOWN*7
+SPACE
+DOWN*3
+SPACE
+ESC
+
+# Grant the attacker FT_BLIND_FIGHT deterministically.
+w
+@choose "Become Divine Champion"
+"Blind Fight Test God" ENTER
+@until "HP:" ESC
+
+# Summon a naturally invisible victim one square east.
+w
+@choose "Monster Summoning"
+@choose "Spirits"
+@choose "poltergeist"
+RIGHT ENTER
+@until "HP:" ESC
+@dump:victim
+
+# The measured attacks: the Combat Options "Attack" verb at the unseen victim.
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+c
+@choose "Attack"
+RIGHT ENTER
+@dump:end
+
+@quit
