@@ -2444,7 +2444,8 @@ Druid Spell "Flame Blade" : EA_GENERIC
   
 Effect "flame blade;augment" : EA_GENERIC
   {
-    qval: Q_INV; Flags: EF_DXLONG;
+    // upstream: the Desc promises both forms last a full day, but the sub-effects expire far sooner; the same data ships on Win32 so it is upstream's; Observed; inc-wbq9 / PA-07-F9; not sent.
+    qval: Q_INV; Flags: EF_PERSISTANT;
     On Event EV_ISTARGET {
       hObj it;
       for(it=EActor->FirstInv();it;it=EActor->NextInv()) {
@@ -2471,9 +2472,10 @@ Effect "flame blade;augment" : EA_GENERIC
         if (ETarget->QualityOK(WQ_FLAMING))
           ETarget->GainTempStati(EXTRA_QUALITY,EActor,e.vDuration,SS_ENCH,
             WQ_FLAMING,WQ_FLAMING,$"flame blade");
+        // upstream: the already-flaming branch must grant WQ_BURST, as the Desc states; the same data ships on Win32 so it is upstream's; Observed; inc-wbq9 / PA-07-F9; not sent.
         else if (ETarget->HasQuality(WQ_FLAMING) && ETarget->QualityOK(WQ_BURST))
           ETarget->GainTempStati(EXTRA_QUALITY,EActor,e.vDuration,SS_ENCH,
-            WQ_FLAMING,WQ_FLAMING,$"flame blade");
+            WQ_BURST,WQ_BURST,$"flame blade");
         }
       return DONE;
       };  
@@ -2482,7 +2484,7 @@ Effect "flame blade;augment" : EA_GENERIC
 Effect "flame blade;conjure" : EA_CREATION
   {
     xval: CREA_WIELD | CREA_TEMP; rval: $"flame blade;weapon"; 
-    Flags: EF_DLONG;  
+    Flags: EF_PERSISTANT;  
   }
 
 Druid Spell "Soften Stone" : EA_TERRAFORM
