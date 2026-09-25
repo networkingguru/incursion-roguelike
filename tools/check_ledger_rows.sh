@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap --selftest
 # Verify that each ledger row in docs/REPORTING-GATE.md sits under the heading
 # whose shape it has.
 #
