@@ -89,7 +89,7 @@ pass_a() {
     local n=0 lineno row
     while IFS=$'\t' read -r lineno row; do
         [ -n "$lineno" ] || continue
-        printf '%s\n' "$row" | grep -qE "$TAIL_ID_RE" || continue
+        grep -qE "$TAIL_ID_RE" <<< "$row" || continue
         echo "FAIL: $REGISTRY:$lineno is a four-column ledger row filed under \"Not sent\""
         echo "      ${row:0:100}..."
         n=$((n + 1))
@@ -114,7 +114,7 @@ pass_b() {
         # Skip the header row and the |---|---| rule that follows it.
         seen=$((seen + 1))
         [ "$seen" -le 2 ] && continue
-        printf '%s\n' "$row" | grep -qE "$TAIL_ID_RE" && continue
+        grep -qE "$TAIL_ID_RE" <<< "$row" && continue
         echo "FAIL: $REGISTRY:$lineno is a ledger row whose last cell is not a tracking id"
         echo "      ${row:0:100}..."
         n=$((n + 1))
@@ -153,7 +153,7 @@ pass_c() {
         ID="$(printf '%s\n' "$BLOCK" | grep -oE "$ID_RE" | head -1)"
         [ -n "$ID" ] || continue          # check_upstream_marks.sh owns that failure
 
-        printf '%s\n' "$ids" | grep -qxF "$ID" && continue
+        grep -qxF "$ID" <<< "$ids" && continue
 
         echo "FAIL: $FILE:$LINE marks a base-code fix tracked as $ID, and no row in"
         echo "      \"$LEDGER_HEAD\" ends with that id."
@@ -207,7 +207,7 @@ selftest() {
         out=$( REGISTRY="$doc" run_checks 2>&1 )
         local got=$?
         FAIL=0
-        if [ "$got" = "$wantrc" ] && printf '%s\n' "$out" | grep -q "$want"; then
+        if [ "$got" = "$wantrc" ] && grep -q "$want" <<< "$out"; then
             printf 'selftest ok    %-38s -> exit %s\n' "$name" "$got"
         else
             printf 'selftest FAIL  %-38s -> exit %s (wanted %s, matching %s)\n' \

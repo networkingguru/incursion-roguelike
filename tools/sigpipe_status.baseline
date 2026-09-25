@@ -68,7 +68,6 @@
 2 tools/check_killing_hands.sh
 4 tools/check_kobold_horn.sh
 1 tools/check_layout_sweep.sh
-4 tools/check_ledger_rows.sh
 1 tools/check_lib.sh
 1 tools/check_life_stealing_prose.sh
 1 tools/check_light_filter.sh
