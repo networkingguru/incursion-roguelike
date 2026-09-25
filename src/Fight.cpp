@@ -220,6 +220,41 @@ static void SneakProbeNote(const char *what, EventInfo &e)
     fflush(f);
 }
 
+/* Reproduction probe for bead inc-4k2: at the unseen-attacker miss roll, does
+   an attacker WITH the Blind-Fight feat get the 25% chance the comment
+   promises, or the 50% the buggy HasStati(FT_BLIND_FIGHT) gives when the
+   attacker is not CHARGING (FT_BLIND_FIGHT == CHARGING == 75)? Set
+   INCURSION_BLINDFIGHT_PROBE and every attack that reaches this site writes
+   one line to logs/blindfight.log: actor name, whether the victim was unseen
+   (so the roll applies), HasFeat(FT_BLIND_FIGHT), HasStati(CHARGING), the
+   roll size the code chose, and whether the "(unable to see)" miss fired.
+   Off and free otherwise. tools/check_blind_fight_miss.sh reads it. */
+static void BlindFightProbeNote(EventInfo &e, bool vicUnseen, bool feat,
+                                bool charging, int rollSize, bool miss)
+{
+    static int on = -1;
+    static FILE *f = NULL;
+    char path[1024];
+
+    if (on == -1)
+        on = getenv("INCURSION_BLINDFIGHT_PROBE") ? 1 : 0;
+    if (!on || !e.EActor || !e.EVictim)
+        return;
+    if (!f) {
+        snprintf(path, sizeof(path), "%slogs/blindfight.log",
+            (const char*)T1->IncursionDirectory);
+        f = fopen(path, "a");
+        if (!f)
+            return;
+    }
+    fprintf(f, "turn %u: attack actor=<%s> victim=<%s> vicUnseen=%d "
+        "feat=%d charging=%d roll=%d miss=%d\n",
+        (unsigned)theGame->Turn, (const char*)e.EActor->Name(0),
+        (const char*)e.EVictim->Name(0), vicUnseen ? 1 : 0, feat ? 1 : 0,
+        charging ? 1 : 0, rollSize, miss ? 1 : 0);
+    fflush(f);
+}
+
 /* Probe for the phase-2 cover-and-band rule (inc-30ps). LOFForcedRoll, once
    nonzero, makes every Creature::Strike() call use it for e.vRoll instead of
    random(20)+1 -- zero is not a legal d20 result, so it doubles as "off" and
@@ -4646,7 +4681,11 @@ EvReturn Creature::PreStrike(EventInfo &e) /* this == EActor */
       }
 
     if (e.EActor->isAerial() && (e.AType == A_FIRE || e.AType == A_SPIT))
-      if (!e.EActor->HasStati(FT_HOVER))
+      /* upstream: a feat is tested with HasFeat, but this read HasStati -- a
+         status lookup by number -- and FT_HOVER == IMMUNITY == 177, so a flier
+         with any IMMUNITY status skipped the penalty and a Hover holder took
+         it. Same on Win32/original typedefs. Traced. inc-4k2, not sent. */
+      if (!e.EActor->HasFeat(FT_HOVER))
         {
           e.vHit -= 2;
           e.strHit += " -2 flight";
@@ -5391,12 +5430,22 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
     if (e.vicUnseen && !e.isSeeking && 
         !e.EActor->HasStati(GRAPPLING,-1,e.EVictim)) {
       /* 50% miss chance; 25% with Blind-Fight */
-      if (!random(e.EActor->HasStati(FT_BLIND_FIGHT) ? 4 : 2))
-        {
-          e.isWildMiss = true;
-          e.strDef += " (unable to see)";
-          goto PostAttack;
-        }
+      /* upstream: a feat is tested with HasFeat, but this read HasStati -- a
+         status lookup by number -- and FT_BLIND_FIGHT == CHARGING == 75, so a
+         CHARGING attacker got the 25% and a non-charging holder kept 50%. The
+         same on Win32/original typedefs. Observed. inc-4k2, not sent. */
+      {
+        int bfRoll = e.EActor->HasFeat(FT_BLIND_FIGHT) ? 4 : 2;
+        bool bfMiss = !random(bfRoll);
+        BlindFightProbeNote(e, true, e.EActor->HasFeat(FT_BLIND_FIGHT),
+            e.EActor->HasStati(CHARGING) ? true : false, bfRoll, bfMiss);
+        if (bfMiss)
+          {
+            e.isWildMiss = true;
+            e.strDef += " (unable to see)";
+            goto PostAttack;
+          }
+      }
 
       }
       
