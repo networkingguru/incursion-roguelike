@@ -1,0 +1,93 @@
+# Does the player's Rest ('z', KY_CMD_SLEEP -> EV_REST) now work while
+# POISONED, and do the poison's Fort saves roll during that rest? Read by
+# tools/check_rest_poison.sh. bd inc-gmrj.
+#
+# 'z' MUST BE LOWERCASE. KY_CMD_SLEEP is { 'Z', 0 } (src/Tables.cpp:5389) and
+# the keyset compares modifier flags exactly, so a shifted 'Z' matches
+# nothing (src/KeyScript.cpp:22, and see tools/keys/field-day-duration.keys's
+# own header, which hit the same trap first). A literal 'Z' in a key script
+# is silently swallowed by no case at all -- confirmed empirically: it left
+# every following screen byte-identical to the one before it.
+#
+# DEPTH 2, NOT 1. Player::Rest refuses depth 1 by design ("you can just climb
+# back out of the dungeon entirely") -- again per field-day-duration.keys's
+# header. GENOCIDE EVERYTHING first: the rest is separately refused while any
+# hostile is in plain sight (Rest's own RestEncounterChance/in_sight check),
+# and the Goblin Caves' entry chamber is littered with corpses AND live
+# monsters in view. Both steps are the same route field-day-duration.keys
+# uses to reach a clean rest.
+#
+# THE ROUTE. tools/fixtures/rest-poison-god.irh, spliced onto a scratch copy
+# of lib/main.irc by the check script (never onto the tracked lib/), declares
+# one test god. "Become Divine Champion" (wizard mode) joins it and grants
+# 30000 favour outright (src/Debug.cpp), which fires its EV_BLESSING once; the
+# handler calls GainPermStati(POISONED,...) with $"arsenic" -- lib/threats.irh
+# :389, cval 4 / sval 13 / lval 3. gainedFavour() prints its own level-up
+# messages, paginated ("more --") and followed by a scrollable "ESC:Done"
+# list -- @while drains both, the same two lines heal-maladies.keys uses for
+# the same god-join step.
+#
+#   CONTROL  wizard "Examine Player Data" dumps the Stati list; it must name
+#            POISONED, or the affliction never landed and the check is
+#            UNMEASURED.
+#   REFUSAL  'z' throws EV_REST. The BEFORE (unfixed) engine refuses at
+#            Player::Rest's POISONED guard and prints "You're too busy dying
+#            at the moment to think about rest." with NO further prompt (the
+#            refusal sits before the REST_DUNGEON confirm block). The fixed
+#            engine instead asks "Confirm rest in dungeon? [yn]" -- OPT_
+#            SAFEREST is off in tools/fixtures/options-2026-08-22.dat, so an
+#            in-dungeon rest always asks.
+#   WOKE     'y' answers the confirm prompt (meaningful only in the fixed
+#            engine; in the unfixed one 'y' lands as an ordinary command key
+#            with the refusal already delivered). The two SPACEs drain any
+#            "-- more --" pagination from the night's own messages (the
+#            poison save line(s), the overcome line, the wake line, the
+#            armour line can together run past one screen). A rest that
+#            completes prints "You awaken feeling well rested and
+#            recovered." (Player.cpp's REST_NOMSG-less wake line).
+#   AFTER    the same dump again; POISONED must be gone (three saves overcame
+#            arsenic, matching Fortitude at these fixtures' levels against DC
+#            13 -- see the fixture's own header) or its save count advanced.
+#
+# THE SEED is pinned by the check script at 1. Tried 1-4: all four resolve
+# the poison and complete the rest with no encounter (Percent 100, full
+#144000-turn night); seed 5 stalled the script differently (an @choose that
+# found nothing) and was dropped rather than chased -- 1 is kept, not
+# special-cased for luck.
+
+@include chargen.keys
+@until "HP:" ESC
+
+w y
+@choose "Ascend / Descend Depth"
+"2" ENTER
+@until "HP:" ESC
+
+w
+@choose "Genocide Everything"
+@until "HP:" ESC
+
+w
+@choose "Become Divine Champion"
+"Rest Poison Test God" ENTER
+@while "more --" SPACE
+@while "ESC:Done" ESC
+
+w
+@choose "Examine Player Data"
+DOWN*10
+@dump:control
+ESC
+
+z
+@dump:refusal
+y
+SPACE SPACE
+@dump:woke
+
+w
+@choose "Examine Player Data"
+DOWN*10
+@dump:after
+ESC
+@quit

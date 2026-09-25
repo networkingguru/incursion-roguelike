@@ -2067,7 +2067,7 @@ EvReturn Player::Rest(EventInfo &e) {
             return ABORT;
         }
 
-        if (HasStati(POISONED) || HasStati(STONING)/* || HasStati(DISEASED) */) {
+        if (HasStati(STONING)/* || HasStati(DISEASED) */) {
             IPrint("You're too busy dying at the moment to think about rest.");
             return ABORT;
         }
@@ -2225,6 +2225,18 @@ EvReturn Player::Rest(EventInfo &e) {
                                 for (i = 0; i != 7; i++)
                                     t->Abuse(i, Dice::Roll(1, 4));
 
+                        }
+
+                        /* fix: a night's rest must resolve a poison, not
+                           just stop refusing to start (bd inc-gmrj). Tier
+                           Observed, not sent (design ruling, not upstream). */
+                        if (!(e.EParam & REST_INSTANT)) {
+                            int32 turns = ((HOUR_TURNS * 8) / 100) * Percent;
+                            for (int32 r = 0; r < turns && t->HasStati(POISONED) &&
+                                    t->m && !t->isDead(); r++)
+                                t->PoisonPulse(false, true);
+                            if (t->isDead())
+                                continue;
                         }
 
                         if (!(e.EParam & REST_NOHEAL) || t != this) {
