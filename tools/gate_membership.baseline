@@ -98,7 +98,6 @@ check_killing_hands.sh
 check_kobold_horn.sh
 check_layout.sh
 check_layout_sweep.sh
-check_ledger_rows.sh
 check_lib.sh
 check_life_stealing_prose.sh
 check_light_averse.sh
