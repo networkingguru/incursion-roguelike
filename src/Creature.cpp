@@ -1831,34 +1831,7 @@ NoIntervention:;
     if (x == -1 || !m)
         return;
 
-    StatiIterNature(this,POISONED)
-        if (HasStati(SLOW_POISON))
-            continue;
-        if (ResistLevel(AD_TOXI) == -1 || ResistLevel(AD_POIS) == -1) {
-            RemoveStati(POISONED);
-            continue;
-        }
-        if (S->Val >= TEFF(S->eID)->ef.cval) {
-            S->Val = 0;
-            if (SavingThrow(FORT,TEFF(S->eID)->ef.sval,SA_POISON)) {
-                S->Mag++;
-                if (S->Mag >= TEFF(S->eID)->ef.lval - HasFeat(FT_HARDINESS)*2) {
-                    IPrint("You have overcome the <Res>.",S->eID);
-                    Exercise(A_CON,random(12)+1,ECON_OVERCOME,50);
-                    RemoveEffStati(S->eID);
-                    break;
-                }
-                IPrint("You bear up under the poison.");
-            } else {
-                if (TEFF(S->eID)->HasFlag(EF_LETHAL))
-                    S->Mag = 0;
-                IPrint("The <Res> courses through your veins...",S->eID);
-                ThrowEff(EV_EFFECT,S->eID,this,this);
-                if (HasStati(ACTING)) HaltAction("poison",false); 
-            }
-        } else
-            S->Val++;
-    StatiIterEnd(this)
+    PoisonPulse(false, false);
 
     DiseasePulse(false, false);
 
@@ -1926,6 +1899,40 @@ NoIntervention:;
             }
         }
     }
+}
+
+/* DoTurn's own POISONED block, moved out so Rest can drive it too (bd
+   inc-gmrj). force matches DiseasePulse's shape, unused so far; rest ORs
+   SA_REST into the save, as DiseasePulse does. */
+void Creature::PoisonPulse(bool force, bool rest) {
+    StatiIterNature(this,POISONED)
+        if (HasStati(SLOW_POISON))
+            continue;
+        if (ResistLevel(AD_TOXI) == -1 || ResistLevel(AD_POIS) == -1) {
+            RemoveStati(POISONED);
+            continue;
+        }
+        if (S->Val >= TEFF(S->eID)->ef.cval || force) {
+            S->Val = 0;
+            if (SavingThrow(FORT,TEFF(S->eID)->ef.sval,SA_POISON | (rest ? SA_REST : 0))) {
+                S->Mag++;
+                if (S->Mag >= TEFF(S->eID)->ef.lval - HasFeat(FT_HARDINESS)*2) {
+                    IPrint("You have overcome the <Res>.",S->eID);
+                    Exercise(A_CON,random(12)+1,ECON_OVERCOME,50);
+                    RemoveEffStati(S->eID);
+                    break;
+                }
+                IPrint("You bear up under the poison.");
+            } else {
+                if (TEFF(S->eID)->HasFlag(EF_LETHAL))
+                    S->Mag = 0;
+                IPrint("The <Res> courses through your veins...",S->eID);
+                ThrowEff(EV_EFFECT,S->eID,this,this);
+                if (HasStati(ACTING)) HaltAction("poison",false);
+            }
+        } else
+            S->Val++;
+    StatiIterEnd(this)
 }
 
 void Creature::DiseasePulse(bool force, bool rest) {

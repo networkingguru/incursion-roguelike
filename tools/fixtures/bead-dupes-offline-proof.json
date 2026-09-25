@@ -1,0 +1,18 @@
+{
+  "issues": [
+    {
+      "id": "inc-fixture-1",
+      "title": "Fake fixture bead one for the offline duplicate check",
+      "description": "A minimal fake bead. It exists only so tools/check_bead_dupe_wiring.sh has a non-empty candidate list to rank. It is not a real bead and names no real defect.",
+      "status": "open",
+      "issue_type": "task"
+    },
+    {
+      "id": "inc-fixture-2",
+      "title": "Fake fixture bead two for the offline duplicate check",
+      "description": "A second minimal fake bead, same purpose as inc-fixture-1: give the offline check-draft call a candidate to judge before it hits the keyless path.",
+      "status": "closed",
+      "issue_type": "task"
+    }
+  ]
+}

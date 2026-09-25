@@ -234,7 +234,7 @@ grep -qx -- "--help" "$TMP/bd.rec" && ok "help: passed straight to bd create" \
 printf 'anything' > "$TMP/real.desc"
 python3 "$REAL_ENGINE" check-draft --title "anything" \
     --description-file "$TMP/real.desc" \
-    --beads-json "$ROOT/logs/bead-dupes-offline-proof.json" \
+    --beads-json "$ROOT/tools/fixtures/bead-dupes-offline-proof.json" \
     --json-out "$TMP/real.json" >"$TMP/real.out" 2>&1
 RC=$?
 [ $RC -eq 3 ] && ok "real engine offline: exit 3" \
