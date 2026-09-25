@@ -1,0 +1,41 @@
+# --prove-red half of tools/keys/rest-poison.keys (bd inc-gmrj), read by
+# tools/check_rest_poison.sh --prove-red.
+#
+# Stops right after the refusal attempt and quits. tools/keys/rest-poison.keys
+# itself cannot be reused for the mutated (unfixed) build: past the refusal,
+# it sends 'y' to answer "Confirm rest in dungeon?" and two SPACEs to drain
+# "-- more --" pagination from the night's own messages, and neither prompt
+# exists when the POISONED refusal fires first -- both keys land as ordinary,
+# unbound commands instead and the run drifts somewhere check_lib.sh's
+# check_run cannot read (measured: an unrelated "What do you want to do?"
+# verb menu, then a later @choose finding nothing and the whole check dying
+# via _check_session_verdict's exit-6 case). This script only needs the
+# refusal to prove red, so it never sends those keys at all.
+
+@include chargen.keys
+@until "HP:" ESC
+
+w y
+@choose "Ascend / Descend Depth"
+"2" ENTER
+@until "HP:" ESC
+
+w
+@choose "Genocide Everything"
+@until "HP:" ESC
+
+w
+@choose "Become Divine Champion"
+"Rest Poison Test God" ENTER
+@while "more --" SPACE
+@while "ESC:Done" ESC
+
+w
+@choose "Examine Player Data"
+DOWN*10
+@dump:control
+ESC
+
+z
+@dump:refusal
+@quit
