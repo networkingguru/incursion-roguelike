@@ -138,3 +138,9 @@ A character fixture is frozen too. If a check needs a different character, add a
 new fixture with its own key script and its own name; never edit an existing
 one, and never hand-edit a `.sheet.txt`, which would leave it describing a
 character the `.sav` beside it does not hold.
+
+## Tool-check fixtures
+
+| Fixture | Contents |
+|---|---|
+| `bead-dupes-offline-proof.json` | Two small fake beads, `bd list --json` shape, no real bead text. `tools/check_bead_dupe_wiring.sh` hands this to `tools/bead_dupes.py check-draft` so it has a candidate to rank before the keyless path exits 3. |
