@@ -1,0 +1,75 @@
+# Observe Flame Blade's augment form lasting until the caster rests, for bd
+# inc-wbq9 (PA-07-F9).
+#
+#   tools/headless.sh tools/keys/flame-blade-augment-duration.keys 1
+#
+# WHAT IS MEASURED. The `flame blade;augment` effect grants an EXTRA_QUALITY
+# stati to a wielded Short/Long Blade with the duration e.vDuration. Before the
+# fix that effect carried EF_DXLONG, so e.vDuration = 1000 + 100*level (1100
+# turns at level 1). After the fix it carries EF_PERSISTANT, so e.vDuration is
+# -2 and lasts until rest. This script casts the plain-blade branch and then
+# spends 1200 turns searching, one turn per search, before reading the weapon's
+# own page again.
+#
+# THE ORACLE is the weapon page's quality prose. WQ_FLAMING reads "Flaming"
+# (src/Tables.cpp APreQualNames / APostQualNames, line 1564). On a build
+# WITHOUT the fix the Flaming quality is gone after the wait; WITH the fix it is
+# still there.
+@include chargen.keys
+
+# Put the orcish greatsword into the Weapon Hand (plain blade: the augment
+# first branch grants it Flaming).
+i
+f
+SPACE
+b
+SPACE
+s
+@dump:wielded
+ESC
+
+# Wizard mode on.
+w
+y
+
+# Make Flame Blade castable regardless of class.
+@choose "Learn Any Spell"
+"Flame Blade"
+ENTER
+
+# Cast Flame Blade on self; answer "Augment or conjure? [aC]" with 'a', then
+# choose the greatsword from the item prompt.
+m
+@choose "Flame Blade"
+a
+@dump:choose-item
+a
+@dump:after-cast
+
+# Read the wielded weapon's page before the wait: expect "Flaming".
+i
+b
+x
+@dump:weapon-before-wait
+ESC
+ESC
+
+# Pass 1200 turns without resting. 's' is Search, a full-turn action, and
+# Thing::UpdateStati decrements a positive Duration once per creature turn
+# (src/Status.cpp:50-60, called from Creature::DoTurn, src/Creature.cpp:1762);
+# 1200 exceeds the pre-fix EF_DXLONG duration of 1000 + 100*1.
+@until "HP:" ESC
+s*1200
+@until "HP:" ESC
+@dump:after-wait
+
+# Read the wielded weapon's page again. Pre-fix: no "Flaming". Post-fix: still
+# "Flaming".
+i
+b
+x
+@dump:weapon-after-wait
+ESC
+ESC
+
+@quit

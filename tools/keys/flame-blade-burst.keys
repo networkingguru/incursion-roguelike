@@ -1,0 +1,72 @@
+# Observe Flame Blade's augment branch granting WQ_BURST to an already-flaming
+# blade, for bd inc-wbq9 (PA-07-F9).
+#
+#   tools/headless.sh tools/keys/flame-blade-burst.keys 1
+#
+# WHAT IS MEASURED. The `flame blade;augment` effect's EV_MAGIC_STRIKE handler
+# has two branches: a plain Short/Long Blade gets WQ_FLAMING, and a blade that
+# ALREADY has WQ_FLAMING is promised Burst ("A weapon that already has the
+# flaming quality is granted the Burst quality instead."). Before the fix the
+# already-flaming branch re-granted WQ_FLAMING, so the blade gained nothing.
+#
+# THE ORACLE is the wielded weapon's own description: WQ_FLAMING reads
+# "Flaming" and WQ_BURST reads "Burst" in the quality prose (src/Tables.cpp
+# APreQualNames / APostQualNames, lines 1564 and 1568). The character starts
+# with an orcish greatsword (WG_LBLADES), on the Right Shoulder.
+#
+#   i f SPACE   move the greatsword off the shoulder into the in-air slot
+#   b SPACE     swap it into the Weapon Hand (the knife goes to in-air)
+#   s           stow the displaced orcish knife
+#   ESC         leave the inventory
+#
+# Wizard option 12, "Add Quality to Weapon", stamps WQ_FLAMING on whatever is
+# in the Weapon Hand (src/Debug.cpp:722 InSlot(SL_WEAPON)) -- now the
+# greatsword -- so the augment cast lands in the already-flaming branch. On a
+# build WITHOUT the fix the sword's page still says only "Flaming" after the
+# cast; WITH the fix it says "Burst" as well.
+@include chargen.keys
+
+# Put the orcish greatsword into the Weapon Hand.
+i
+f
+SPACE
+b
+SPACE
+s
+@dump:wielded
+ESC
+
+# Wizard mode on.
+w
+y
+
+# Stamp WQ_FLAMING on the wielded greatsword (wizard option 12).
+@choose "Add Quality to Weapon"
+"WQ_FLAMING"
+ENTER
+
+# Make Flame Blade castable regardless of class.
+w
+@choose "Learn Any Spell"
+"Flame Blade"
+ENTER
+
+# Cast Flame Blade on self; answer "Augment or conjure? [aC]" with 'a', then
+# choose the greatsword from the item prompt.
+m
+@choose "Flame Blade"
+a
+@dump:choose-item
+a
+@dump:after-cast
+
+# Read the wielded weapon's own page: 'i' inventory, 'b' weapon hand, 'x'
+# examine. Look for "Burst" in the quality prose.
+i
+b
+x
+@dump:weapon-page
+ESC
+ESC
+
+@quit

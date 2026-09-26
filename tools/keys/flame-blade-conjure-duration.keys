@@ -1,0 +1,67 @@
+# Observe Flame Blade's conjure form taking the persistent duration, for bd
+# inc-wbq9 (PA-07-F9).
+#
+#   tools/headless.sh tools/keys/flame-blade-conjure-duration.keys 1
+#
+# WHAT IS MEASURED. `flame blade;conjure` creates a `flame blade;weapon` item
+# and gives it a SUMMONED stati with duration e.vDuration (src/Effects.cpp:2091,
+# CREA_TEMP). Before the fix the effect carried EF_DLONG, so e.vDuration = 100 +
+# 10*level and the conjured blade's status line counted down from about 100.
+# After the fix it carries EF_PERSISTANT, so e.vDuration is -2 and the status
+# line reads "-2 turns" -- the duration that lasts until rest.
+#
+# THE ORACLE is the status line the moment the blade appears: a positive
+# countdown on the pre-fix build, "-2 turns" on the fixed one. This is the
+# duration the engine recorded, read from the game's own display.
+#
+# WHY THE WAIT IS NOT THE ORACLE HERE. A player-conjured blade lands in the
+# In-the-Air slot (Character::GainItem, src/Annot.cpp:895-902) and the engine
+# drops it when the inventory closes; the weapon's own EV_TURN handler then
+# destroys any conjured blade lying on the map (lib/weapons.irh:446-455),
+# whatever its duration. So the blade's countdown is read at cast, and the
+# persistence across many turns is shown by the augment form, whose quality
+# stays on a carried weapon (tools/keys/flame-blade-augment-duration.keys).
+@include chargen.keys
+
+# Wizard mode on.
+w
+y
+
+# Make Flame Blade castable regardless of class.
+@choose "Learn Any Spell"
+"Flame Blade"
+ENTER
+
+# Cast Flame Blade on self; answer "Augment or conjure? [aC]" with 'c'. Read
+# the status line immediately: it shows the conjured blade's recorded duration.
+m
+@choose "Flame Blade"
+c
+@dump:after-cast
+
+# Close the inventory manager the cast opened (Character::GainItem,
+# src/Annot.cpp:900). The same open/examine/close sequence as the burst script
+# returns the game to play mode so the searches below spend game time.
+i
+b
+x
+@dump:weapon-after-cast
+ESC
+ESC
+
+# Pass 200 turns without resting, then look again. On the pre-fix build the
+# positive EF_DLONG duration is spent and the blade is gone; on the fixed build
+# the blade may also have left the In-the-Air slot when the inventory closed,
+# which is why the after-cast line above is the oracle.
+@until "HP:" ESC
+s*200
+@until "HP:" ESC
+@dump:after-wait
+
+# A full rest advances the day and Map::DaysPassed removes every Duration == -2
+# stati (src/Player.cpp:2484/2501), destroying a persistent conjured blade.
+@until "HP:" ESC
+z
+@dump:after-rest
+
+@quit
