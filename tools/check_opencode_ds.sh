@@ -5,17 +5,19 @@
 # budget is gone or poisoned, refuse the shared checkout, bill exactly one
 # ledger row for a successful harness run (cost = the sum of its step_finish
 # costs, steps = the count), poison the ledger when opencode quotes tokens but
-# no usable cost, keep the API key out of every file it writes, and confine
-# opencode to the worktree with the Seatbelt profile? Defends bead inc-h1bq:
-# the opencode rung of the implementer ladder must fail closed rather than
-# silently spend money once a run's price is unknown, and must never touch the
-# shared checkout.
+# no usable cost, keep the API key out of every file it writes, confine
+# opencode to the worktree with the Seatbelt profile, and stop a harness that
+# never writes -- billing it as one killed=startup row at cost 0? Defends
+# beads inc-h1bq and inc-gofz: the opencode rung of the implementer ladder must
+# fail closed rather than silently spend money once a run's price is unknown,
+# must never touch the shared checkout, and must not hang its dispatcher when
+# the harness stalls.
 #
 # Fully offline. A fake `opencode` written into the temp dir stands in for the
 # real harness via INCURSION_OPENCODE_BIN; it records its argv and environment
 # and emits scripted events.jsonl. No network request ever leaves this machine.
 #
-#   tools/check_opencode_ds.sh               run the ten assertions
+#   tools/check_opencode_ds.sh               run the eleven assertions
 #   tools/check_opencode_ds.sh --prove-red   mutate the budget guard, the
 #                                            sandbox prefix and the JSON bash
 #                                            rules, confirm red
@@ -80,7 +82,7 @@ fail() { echo "FAIL  $1"; FAIL=1; }
 skip() { echo "SKIP  $1"; SKIP_COUNT=$((SKIP_COUNT + 1)); }
 
 # --- --prove-red ----------------------------------------------------------
-# Handled FIRST, before the ten assertions below ever run. Four mutations,
+# Handled FIRST, before the eleven assertions below ever run. Four mutations,
 # each restoring the file it touches: (a) drop the budget-check call, so
 # assertion 1 must go red; (b) drop the `sandbox-exec` prefix, so assertion 7
 # must go red; (c) strip the read-only-git allow rules from opencode.json, so
@@ -284,6 +286,9 @@ JSON
     empty)
         : # no events at all: nothing billed
         ;;
+    never)
+        sleep 1000  # writes nothing: the watchdog's startup limit must fire
+        ;;
 esac
 exit "${INCURSION_FAKE_RC:-0}"
 FAKE_EOF
@@ -292,8 +297,8 @@ chmod +x "$FAKE"
 # --- sandbox availability probe ------------------------------------------
 # sandbox-exec cannot nest: inside another Seatbelt sandbox (a Claude session
 # running this check), `sandbox-exec` itself refuses to apply and exits 71.
-# The assertions that need to LAUNCH the harness (4, 5, 6, 7) cannot run in
-# that environment. Detect it once and report those as SKIP; outside any
+# The assertions that need to LAUNCH the harness (4, 5, 6, 7, 11) cannot run
+# in that environment. Detect it once and report those as SKIP; outside any
 # sandbox they all run. Assertions 1, 2, 3, 8, 9 and 10 never launch the
 # harness.
 SANDBOX_OK=1
@@ -310,7 +315,7 @@ PROBE_RC="$(HOME="$PROBE_HOME" INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC
 if grep -rq "sandbox_apply: Operation not permitted" "$PROBE_WORK/logs/opencode" 2>/dev/null; then
     SANDBOX_OK=0
     echo "NOTE  sandbox-exec cannot nest inside this check's own sandbox;"
-    echo "      assertions 4, 5, 6 and 7 are reported SKIP here and must be run"
+    echo "      assertions 4, 5, 6, 7 and 11 are reported SKIP here and must be run"
     echo "      outside any sandbox (the Claude session will do so)."
 fi
 
@@ -554,12 +559,45 @@ else
     fail "opencode.json bash rule precedence: read-only git / denied git"
 fi
 
+# --- 11. A harness that never writes is killed and billed as killed -------
+# The wrapper's watchdog stops a zero-output run, and billing writes exactly
+# one row with killed=startup and cost=0. This launches the harness, so under
+# a nested sandbox it SKIPs (assertion 4's note applies).
+FAKEHOME="$TMP/home11"; mkdir -p "$FAKEHOME"
+WORK="$TMP/wt11"; mkdir -p "$WORK"
+BRIEF="$TMP/brief11.txt"; echo "do a thing" > "$BRIEF"
+LEDGER="$TMP/ledger11.jsonl"; : > "$LEDGER"
+: > "$TMP/rec.11"
+RC="$(HOME="$FAKEHOME" INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC="$TMP/rec.11" INCURSION_FAKE_MODE=never \
+    INCURSION_DEEPSEEK_KEY=canary-x INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
+    INCURSION_WATCHDOG_STARTUP=2 INCURSION_WATCHDOG_POLL=1 INCURSION_WATCHDOG_GRACE=2 \
+    "$WRAPPER" "$WORK" "$BRIEF" > "$TMP/out.11" 2> "$TMP/err.11"; echo $?)"
+ROW_COUNT="$(wc -l < "$LEDGER" | tr -d ' ')"
+RUNDIR_11_RAW="$(ls -d "$WORK"/logs/opencode/* 2>/dev/null | head -n 1)"
+# The wrapper resolves the worktree with pwd -P (/var -> /private/var), so
+# canonicalise before comparing against the path it printed.
+RUNDIR_11=""
+if [ -n "$RUNDIR_11_RAW" ]; then
+    RUNDIR_11="$(cd "$RUNDIR_11_RAW" && pwd -P)"
+fi
+if [ "$SANDBOX_OK" -eq 0 ]; then
+    skip "killed run billing: not run (sandbox-exec cannot nest here)"
+elif [ "$RC" -eq 2 ] && [ "$ROW_COUNT" -eq 1 ] \
+    && grep -q '"killed":"startup"' "$LEDGER" \
+    && grep -q '"cost":0' "$LEDGER" \
+    && grep -q 'startup' "$TMP/err.11" \
+    && [ -n "$RUNDIR_11" ] && grep -qF "$RUNDIR_11" "$TMP/err.11"; then
+    pass "killed run: exit 2 naming startup and the run dir, one row killed=startup cost=0"
+else
+    fail "killed run: rc=$RC rows=$ROW_COUNT rundir=$RUNDIR_11 ledger=$(cat "$LEDGER" 2>/dev/null) -- $(cat "$TMP/err.11")"
+fi
+
 if [ "$FAIL" -eq 0 ] && [ "$SKIP_COUNT" -eq 0 ]; then
-    echo "PASS: check_opencode_ds.sh, all ten assertions"
+    echo "PASS: check_opencode_ds.sh, all eleven assertions"
     exit 0
 elif [ "$FAIL" -eq 0 ]; then
     echo "PASS (partial): check_opencode_ds.sh, $SKIP_COUNT assertion(s) skipped and not counted;"
-    echo "                rerun outside any sandbox to run all ten (exit 2 = incomplete)"
+    echo "                rerun outside any sandbox to run all eleven (exit 2 = incomplete)"
     exit 2
 else
     echo "FAIL: check_opencode_ds.sh, at least one assertion failed above"

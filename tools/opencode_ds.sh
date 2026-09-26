@@ -12,11 +12,14 @@
 # resolve_budget and resolve_key -- it imports the module rather than copying
 # the logic, so the ledger row format and the poison rule stay in one place.
 #
-# ponytail: no wall-clock timeout. macOS ships no `timeout`, and sandbox-exec
-# has no built-in one either, so a wedged opencode run would hang this wrapper.
-# Upgrade path: wrap the sandbox-exec call in a `perl -e 'alarm(N); exec @ARGV'`
-# guard (or add coreutils' `gtimeout` to the requirements) once a bounded run
-# matters more than it does today.
+# The opencode run is launched through tools/watchdog.sh, which stops a stalled
+# run in its own process group and writes the reason to a --status file. Two
+# limits apply: a startup limit (no output at all) and an idle limit (output
+# stopped growing). Tune them with INCURSION_WATCHDOG_STARTUP,
+# INCURSION_WATCHDOG_IDLE, INCURSION_WATCHDOG_POLL and
+# INCURSION_WATCHDOG_GRACE (seconds; see tools/watchdog.sh for defaults). A
+# killed run still writes exactly one ledger row, marked "killed", so a hang
+# neither locks the ledger nor goes unbilled.
 
 set -uo pipefail
 
@@ -129,12 +132,14 @@ mkdir -p "$CACHEDIR" || { echo "could not run: cannot make cache dir $CACHEDIR" 
 
 EVENTS="$RUNDIR/events.jsonl"
 STDERR="$RUNDIR/stderr.log"
+WATCHDOG_STATUS="$RUNDIR/watchdog.status"
 
 # --- 5. launch ------------------------------------------------------------
 BRIEF_TEXT="$(cat "$BRIEF_FILE")"
 OPENCODE_BIN="${INCURSION_OPENCODE_BIN:-opencode}"
 
-env \
+"$REPO/tools/watchdog.sh" --out "$EVENTS" --err "$STDERR" --status "$WATCHDOG_STATUS" -- \
+    env \
     DEEPINFRA_API_KEY="$KEY" \
     OPENCODE_CONFIG="$OPENCODE_CONFIG" \
     OPENCODE_DISABLE_CLAUDE_CODE=1 \
@@ -149,21 +154,34 @@ env \
     XDG_CONFIG_HOME="$RUNDIR/config" \
     XDG_CACHE_HOME="$CACHEDIR" \
     sandbox-exec -f "$SANDBOX_PROFILE" -D WORKDIR="$WORKTREE" -D CACHEDIR="$CACHEDIR" \
-    "$OPENCODE_BIN" run --pure --format json --dir "$WORKTREE" "$BRIEF_TEXT" \
-    > "$EVENTS" 2> "$STDERR"
+    "$OPENCODE_BIN" run --pure --format json --dir "$WORKTREE" "$BRIEF_TEXT"
 OPENCODE_RC=$?
+
+# The watchdog's own exit code is not a signal: opencode can exit 124 itself.
+# Read the --status file for the reason it stopped the run, if any.
+KILLED=""
+if [ -f "$WATCHDOG_STATUS" ]; then
+    KILLED="$(head -n 1 "$WATCHDOG_STATUS" | tr -d '[:space:]')"
+fi
+case "$KILLED" in
+    startup|idle) ;;
+    *) KILLED="" ;;
+esac
 
 # --- 6. bill --------------------------------------------------------------
 # Parse events.jsonl: sum part.cost and the token fields over every
 # step_finish event, then append exactly one ledger row. A run with no
-# step_finish event and no tokens billed nothing, so it writes no row. Any
-# step_finish carrying tokens with a missing/non-numeric cost, or a total
-# cost of 0 with tokens > 0, is a poison: the row goes in with cost null.
-BILL_OUT="$(python3 - "$DEEPSEEK_MODULE" "$EVENTS" "$RUNDIR" "$BRIEF_FILE" "$OPENCODE_RC" <<'PY'
+# step_finish event and no tokens billed nothing, so it writes no row --
+# unless the watchdog killed it, in which case a row is ALWAYS written and
+# marked "killed", so a hang does not lock the ledger (cost 0, not null, when
+# no steps and no tokens). Any step_finish carrying tokens with a
+# missing/non-numeric cost, or a total cost of 0 with tokens > 0, is a poison:
+# the row goes in with cost null.
+BILL_OUT="$(python3 - "$DEEPSEEK_MODULE" "$EVENTS" "$RUNDIR" "$BRIEF_FILE" "$OPENCODE_RC" "$KILLED" <<'PY'
 import importlib.util, json, sys, datetime
 from pathlib import Path
 
-module_path, events_path, rundir, brief_file, rc = sys.argv[1:6]
+module_path, events_path, rundir, brief_file, rc, killed = sys.argv[1:7]
 
 spec = importlib.util.spec_from_file_location("deepseek", module_path)
 mod = importlib.util.module_from_spec(spec)
@@ -222,8 +240,33 @@ for line in raw.splitlines():
     else:
         cost_unknown = True
 
-# Nothing billed: no step_finish and no tokens.
+# Nothing billed: no step_finish and no tokens. A non-killed run writes no
+# row (today's behaviour); a killed run ALWAYS writes exactly one row so a
+# hang does not lock the ledger, with cost 0 (Brian's ruling: not null).
 if steps == 0 and not have_tokens:
+    if killed:
+        ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        row = {
+            "ts": ts,
+            "model": mod.MODEL,
+            "prompt": str(brief_file),
+            "out": str(rundir),
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "cached_tokens": 0,
+            "cost": 0,
+            "id": None,
+            "harness": "opencode",
+            "cost_source": "opencode-estimate",
+            "steps": 0,
+            "killed": killed,
+        }
+        mod.append_ledger_row(mod.resolve_ledger_path(), row)
+        print("BILL row")
+        print("STEPS 0")
+        print("COST 0")
+        print("POISON 0")
+        sys.exit(0)
     print("BILL nothing")
     print("STEPS 0")
     print("COST 0")
@@ -250,6 +293,8 @@ row = {
     "cost_source": "opencode-estimate",
     "steps": steps,
 }
+if killed:
+    row["killed"] = killed
 mod.append_ledger_row(mod.resolve_ledger_path(), row)
 
 print("BILL row")
@@ -292,6 +337,19 @@ PY
 )"
 if [ -n "$FINAL_TEXT" ]; then
     printf '%s\n' "$FINAL_TEXT"
+fi
+
+# A killed run is reported first: the caller must learn which limit fired. The
+# row's cost is already decided by the poison rule above, so a killed run that
+# also poisoned the ledger still says so.
+if [ -n "$KILLED" ]; then
+    echo "rundir=$RUNDIR steps=$STEPS cost=$COST exit=$OPENCODE_RC"
+    echo "watchdog stopped the run ($KILLED limit); rundir=$RUNDIR" >&2
+    if [ "$POISON" -eq 1 ]; then
+        echo "opencode run quoted no usable cost; its ledger row has cost=null." >&2
+        echo "The ledger is now POISONED until a human resolves that row." >&2
+    fi
+    exit 2
 fi
 
 if [ "$POISON" -eq 1 ]; then
