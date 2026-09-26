@@ -1,0 +1,8 @@
+# Clear spell messages, complete a loaded-session turn, then quit.
+# Oracle: BANE_PROBE lines in the isolated run errors.log.
+SPACE*80
+ESC*20
+
+s
+
+@quit

@@ -82,7 +82,10 @@ Druid Spell "Produce Flame" : EA_CREATION
 
 Priest Spell "Bane" : EA_INFLICT
   { SC_THE; Base: SP_EASY; Cost: 2; Level: 1; 
-    aval: AR_GLOBE; lval: 10; cval: RED;
+    /* upstream: radius must cover the 5 squares the Desc promises; 0.6.5B's
+       lval 10 is wrong on every platform (data, not port). Observed
+       (tools/check_bane_radius.sh); inc-7xcu; not sent. */
+    aval: AR_GLOBE; lval: 6; cval: RED;
     xval: ADJUST_MOR; yval: A_AID; pval: -1; tval: MA_ENEMIES; 
     Flags: EF_LIM_MTYPE, EF_DLONG, EF_SHOWNAME, EF_FEAR;
     Purpose: EP_CURSE | AIM_AT_SELF;
