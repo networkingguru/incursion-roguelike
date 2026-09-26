@@ -186,6 +186,14 @@ is committed; Claude copies each reported specimen to `docs/evidence/<bead>/`
 in the shared checkout. Implementers read AGENTS.md, not `.claude/rules/`, so
 the line had to live here as well as in publishing.md.
 
+2026-09-26, bead inc-ipkx: "a human runs these" became "the main Claude
+session runs these, outside the sandbox". The clause only ever meant "someone
+outside the implementer's sandbox", because the five checks call `./incursion`
+or git. A main session read it as "Brian at the keyboard" and reported
+`check_convert_guard.sh` as human-only while landing inc-pu6v.102. Brian
+ruled the same day that nothing in the repository should need his hands on
+the keyboard.
+
 ## Marking base-code bugs
 
 **Every fix to a defect that is upstream's rather than the port's MUST be marked
