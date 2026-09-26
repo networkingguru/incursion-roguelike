@@ -554,30 +554,39 @@ bool Magic::isTarget(EventInfo &_e, Thing *t) {
       } else if (TEFF(e.eID)->Vals((int8)efNum)->eval == EA_BLAST)
           e.DType = TEFF(e.eID)->Vals((int8)efNum)->xval;
 
-      e.Dmg = TEFF(e.eID)->Vals((int8)efNum)->pval.LevelAdjust(e.vCasterLev,
-          ((e.EItem && e.EItem->isItem())) ? e.EItem->GetPlus() : 0);
-      if (e.isSpell || (e.isItem && e.EItem->isType(T_SCROLL))) { 
-          if (e.EMagic->eval == EA_BLAST || e.EMagic->eval == EA_DRAIN)
-              if (e.EMagic->xval <= 16) /* i.e., hit point damage */
-                  e.Dmg.Bonus += e.EActor->SpellDmgBonus(e.eID); 
-          if (e.EMagic->eval == EA_INFLICT)
-              if (IsAdjustStati(e.EMagic->xval) && e.EMagic->yval == A_ARM)
-                  e.Dmg.Bonus += e.EActor->SpellDmgBonus(e.eID); 
-      }
+      auto damageDice = [&]() -> Dice {
+          Dice damage = TEFF(e.eID)->Vals((int8)efNum)->pval.LevelAdjust(e.vCasterLev,
+              ((e.EItem && e.EItem->isItem())) ? e.EItem->GetPlus() : 0);
+          if (e.isSpell || (e.isItem && e.EItem->isType(T_SCROLL))) {
+              if (e.EMagic->eval == EA_BLAST || e.EMagic->eval == EA_DRAIN)
+                  if (e.EMagic->xval <= 16) /* i.e., hit point damage */
+                      damage.Bonus += e.EActor->SpellDmgBonus(e.eID);
+              if (e.EMagic->eval == EA_INFLICT)
+                  if (IsAdjustStati(e.EMagic->xval) && e.EMagic->yval == A_ARM)
+                      damage.Bonus += e.EActor->SpellDmgBonus(e.eID);
+          }
 
-      if (e.MM & MM_MAXIMIZE)
-          e.vDmg = max(0,e.Dmg.Number) * abs(e.Dmg.Sides) + e.Dmg.Bonus;
-      else {
-          if (e.Dmg.Sides < 0)
-              e.Dmg.Sides = -e.Dmg.Sides;
-          if (e.Dmg.Number < 0)
-              e.Dmg.Number = 0;
-          e.vDmg = e.Dmg.Roll();
-      }
-      if (e.MM & MM_EMPOWER)
-          e.vDmg = (e.vDmg*150)/100;
+          return damage;
+      };
+      auto rollDamage = [&]() {
+          if (e.MM & MM_MAXIMIZE)
+              e.vDmg = max(0,e.Dmg.Number) * abs(e.Dmg.Sides) + e.Dmg.Bonus;
+          else {
+              if (e.Dmg.Sides < 0)
+                  e.Dmg.Sides = -e.Dmg.Sides;
+              if (e.Dmg.Number < 0)
+                  e.Dmg.Number = 0;
+              e.vDmg = e.Dmg.Roll();
+          }
+          if (e.MM & MM_EMPOWER)
+              e.vDmg = (e.vDmg*150)/100;
+
+      };
+      e.Dmg = damageDice();
+      rollDamage();
 
       Dice od = e.Dmg;
+      const int16 oldCasterLev = e.vCasterLev;
 
       e.vChainMax = e.vCasterLev/4;
 
@@ -598,7 +607,25 @@ bool Magic::isTarget(EventInfo &_e, Thing *t) {
               e.vDmg = e.Dmg.Roll();
           if (e.MM & MM_EMPOWER)
               e.vDmg = (e.vDmg*150)/100;
+      } else if (e.vCasterLev != oldCasterLev) {
+          /* upstream: EV_CALC_EFFECT caster-level changes must reach damage.
+             Plain control flow misbehaves identically on Win32. Observed via
+             tools/check_music_choir.sh; inc-s3bb, not sent. */
+          Dice damage = damageDice();
+          if (!(e.MM & MM_MAXIMIZE)) {
+              damage.Sides = abs(damage.Sides);
+              damage.Number = max(0,damage.Number);
+          }
+          if (!(od == damage)) {
+              e.Dmg = damage;
+              rollDamage();
+          }
       }
+      if (getenv("INCURSION_MUSIC_CHOIR_PROBE") && e.eID == FIND("Chain Lightning"))
+          Error("MUSIC_CHOIR_PROBE: CHAIN calc target=%d count=%d level=%d damage=%d",
+              e.ETarget ? (int)e.ETarget->myHandle : 0, (int)e.vChainCount,
+              (int)e.vCasterLev, (int)e.vDmg);
+
   }
 
 /* Diagnostic: set INCURSION_SELFAIM_PROBE=1 to record every cast that reaches
@@ -3233,6 +3260,284 @@ void LOFSpellProbe(Player *shooter) {
     LOFSetForcedRoll(0);
     for (int i = 0; i < 5; i++)
         b[i].c->Remove(true);
+    theGame->PlayMode = wasInPlay;
+}
+
+/* inc-s3bb: opt-in live choir, Chain Lightning and Shadow Step oracle.
+   tools/check_music_choir.sh loads the priest fixture and grades these logs. */
+void MusicChoirProbe(Player *caster) {
+    if (!getenv("INCURSION_MUSIC_CHOIR_PROBE"))
+        return;
+
+    if (!caster || !caster->m) {
+        Error("MUSIC_CHOIR_PROBE: INCONCLUSIVE -- no live player and map");
+        return;
+    }
+
+    const rID musicID = FIND("Music of the Spheres");
+    const rID koboldID = FIND("kobold");
+    if (!musicID || !koboldID) {
+        Error("MUSIC_CHOIR_PROBE: INCONCLUSIVE -- missing resource "
+            "(music=%d kobold=%d)", (int)musicID, (int)koboldID);
+        return;
+    }
+
+    extern void LOFSetForcedSaveThrowRoll(int8 r);
+    extern void LOFClearForcedSaveThrowRoll();
+
+    /* The PRE handler's own target alignment for THIS caster, read out of
+       the handler rather than guessed. */
+    int16 targ;
+    if (caster->isCharacter() && caster->GodID == FIND("Maeve"))
+        targ = MA_LAWFUL;
+    else if (caster->isCharacter() && caster->GodID == FIND("Mara"))
+        targ = MA_EVIL;
+    else if (caster->isCharacter() && caster->GodID == FIND("Essiah"))
+        targ = MA_EVIL;
+    else
+        targ = caster->isMType(MA_EVIL) ? MA_GOOD : MA_EVIL;
+
+    Map *mp = caster->m;
+    const int16 px = caster->x, py = caster->y;
+
+    /* A clear square for the target, strictly within the globe's test
+       dist < 5 (the engine default radius). */
+    int16 tx = -1, ty = -1;
+    for (int16 dx = -4; dx <= 4 && tx < 0; dx++)
+        for (int16 dy = -4; dy <= 4 && tx < 0; dy++) {
+            if (!dx && !dy) continue;
+            const int16 nx = px + dx, ny = py + dy;
+            if (dist(px, py, nx, ny) >= 5) continue;
+            if (!mp->InBounds(nx, ny) || mp->SolidAt(nx, ny)) continue;
+            if (mp->FCreatureAt(nx, ny)) continue;
+            tx = nx; ty = ny;
+        }
+    if (tx < 0) {
+        Error("MUSIC_CHOIR_PROBE: INCONCLUSIVE -- no clear target square "
+            "within 4 of the caster");
+        return;
+    }
+
+    /* A clear square for the ally within 8 of the caster. */
+    int16 ax = -1, ay = -1;
+    for (int16 dx = -8; dx <= 8 && ax < 0; dx++)
+        for (int16 dy = -8; dy <= 8 && ax < 0; dy++) {
+            if (!dx && !dy) continue;
+            const int16 nx = px + dx, ny = py + dy;
+            if (dist(px, py, nx, ny) > 8) continue;
+            if (nx == tx && ny == ty) continue;
+            if (!mp->InBounds(nx, ny) || mp->SolidAt(nx, ny)) continue;
+            if (mp->FCreatureAt(nx, ny)) continue;
+            ax = nx; ay = ny;
+        }
+    if (ax < 0) {
+        Error("MUSIC_CHOIR_PROBE: INCONCLUSIVE -- no clear ally square "
+            "within 8 of the caster");
+        return;
+    }
+
+    const bool wasInPlay = theGame->PlayMode;
+    theGame->PlayMode = true;
+
+    auto makeMonster = [&](rID mID, int16 x, int16 y) -> Monster* {
+        mp->At(x, y).Lit = 1;
+        Monster *mn = new Monster(mID);
+        TMON(mn->tmID)->GrantGear(mn, mn->tmID, true);
+        TMON(mn->tmID)->PEvent(EV_BIRTH, mn, mn->tmID);
+        mn->PlaceAt(mp, x, y, true);
+        mn->Initialize(true);
+        mn->mHP = mn->cHP = 10000;
+        return mn;
+    };
+
+    Monster *target = makeMonster(koboldID, tx, ty);
+    Monster *ally   = makeMonster(koboldID, ax, ay);
+
+    auto bail = [&](const char *why) {
+        Error("MUSIC_CHOIR_PROBE: INCONCLUSIVE -- %s", why);
+        target->Remove(true);
+        ally->Remove(true);
+        theGame->PlayMode = wasInPlay;
+    };
+
+    if (!target->isMType(targ)) {
+        bail("the target monster is not of the PRE handler's alignment");
+        return;
+    }
+
+    /* How the engine makes an ally: the caster holds a TargetAlly memory of
+       it, and it holds the caster as its TargetLeader. */
+    caster->ts.addCreatureTarget(ally, TargetAlly);
+    ally->ts.addCreatureTarget(caster, TargetLeader);
+
+    const bool friendly = ally->isFriendlyTo(caster) &&
+        caster->isFriendlyTo(ally);
+    if (!friendly) {
+        bail("the created ally does not read as friendly to the caster");
+        return;
+    }
+
+    caster->GainAbility(CA_SPELLCASTING, 8 - caster->CasterLev(), 0, SS_PERM);
+    const int16 casterLev = caster->CasterLev();
+    const int16 bonus = caster->SpellDmgBonus(musicID);
+    const int16 perLev = 4;
+    const int16 bardLev = 6;
+    const int32 expectedA = perLev * casterLev + bonus;
+
+    auto castAtTarget = [&]() -> int32 {
+        target->mHP = target->cHP = 10000;
+        LOFSetForcedSaveThrowRoll(1);
+        EventInfo xe; xe.Clear();
+        xe.EActor    = caster;
+        xe.ETarget   = target;
+        xe.EVictim   = target;
+        xe.eID       = musicID;
+        xe.vRange    = 20;
+        xe.EMap      = mp;
+        xe.MM        = MM_MAXIMIZE;
+        xe.isSpell   = true;
+        ReThrow(EV_EFFECT, xe);
+        LOFClearForcedSaveThrowRoll();
+        return (int32)(10000 - target->cHP);
+    };
+
+    const int32 lossA = castAtTarget();
+    /* Case B: same cast, but the bardic ally is now in the choir. A monster
+       carries an ability as an EXTRA_ABILITY stati (Creature::AbilityLevel,
+       src/Creature.cpp:3116), not through Player::GainAbility. */
+    ally->GainPermStati(EXTRA_ABILITY, NULL, SS_PERM, CA_BARDIC_MUSIC,
+        bardLev, 0);
+    const int32 lossB = castAtTarget();
+
+    const int32 expectBoost = perLev * (bardLev / 2);
+    const int32 expectedB = expectedA + expectBoost;
+
+    Error("MUSIC_CHOIR_PROBE: caster_lev=%d bonus=%d expectedA=%d lossA=%d "
+        "expectedB=%d lossB=%d boost=%d",
+        (int)casterLev, (int)bonus, (int)expectedA, (int)lossA,
+        (int)expectedB, (int)lossB, (int)expectBoost);
+
+    if (lossA != expectedA) {
+        Error("MUSIC_CHOIR_PROBE: INCONCLUSIVE -- case A (no ally) lost %d, "
+            "the engine's own maximized value is %d", (int)lossA,
+            (int)expectedA);
+        bail("case A did not match the engine's value");
+        return;
+    }
+
+    if (lossB == expectedB)
+        Error("MUSIC_CHOIR_PROBE: PASS");
+    else
+        Error("MUSIC_CHOIR_PROBE: FAIL -- case B (bardic ally) lost %d, "
+            "want %d (case A %d + %d)", (int)lossB, (int)expectedB,
+            (int)lossA, (int)expectBoost);
+
+    /* Measure the value Travel uses as its range, without opening its prompt.
+       SHADOW0 keeps the fixture's own level: 0 Aiswin favour, 0 shadowdancer
+       levels, so the hard-coded maximized range is 12 + 2*0 = 12. */
+    EventInfo shadow0; shadow0.Clear();
+    shadow0.EActor = caster;
+    shadow0.ETarget = caster;
+    shadow0.EMap = mp;
+    shadow0.eID = FIND("Shadow Step");
+    shadow0.MM = MM_MAXIMIZE;
+    caster->CalcEffect(shadow0);
+    Error("MUSIC_CHOIR_PROBE: SHADOW0 %s level=%d expected=12 range=%d",
+        shadow0.vCasterLev == 0 && shadow0.vDmg == 12 ? "PASS" : "FAIL",
+        (int)shadow0.vCasterLev, (int)shadow0.vDmg);
+
+    /* SHADOW3 gives the caster a known shadowdancer class level of 3. The
+       simplest real route is Character::LevelAs (src/Create.cpp:4096), which
+       reads ClassID[1]/Level[1] directly. Save the exact prior pair and
+       restore it afterwards. Expected is the HARD-CODED constant 18:
+       maximized 12 + 2*3. */
+    const rID shadowdancerID = FIND("shadowdancer");
+    const rID savedClass1 = caster->ClassID[1];
+    const int8 savedLevel1 = caster->Level[1];
+    caster->ClassID[1] = shadowdancerID;
+    caster->Level[1] = 3;
+
+    const int16 srcLev = max(caster->getGodLevel(FIND("Aiswin")),
+        caster->LevelAs(shadowdancerID));
+    if (srcLev != 3) {
+        Error("MUSIC_CHOIR_PROBE: SHADOW3 INCONCLUSIVE -- the source reads "
+            "3? god=%d class=%d class0=%d class1=%d level0=%d level1=%d",
+            (int)caster->getGodLevel(FIND("Aiswin")),
+            (int)caster->LevelAs(shadowdancerID),
+            (int)caster->ClassID[0], (int)caster->ClassID[1],
+            (int)caster->Level[0], (int)caster->Level[1]);
+        caster->ClassID[1] = savedClass1;
+        caster->Level[1] = savedLevel1;
+    } else {
+        EventInfo shadow3; shadow3.Clear();
+        shadow3.EActor = caster;
+        shadow3.ETarget = caster;
+        shadow3.EMap = mp;
+        shadow3.eID = FIND("Shadow Step");
+        shadow3.MM = MM_MAXIMIZE;
+        caster->CalcEffect(shadow3);
+        Error("MUSIC_CHOIR_PROBE: SHADOW3 %s level=%d expected=18 range=%d",
+            shadow3.vCasterLev == 3 && shadow3.vDmg == 18 ? "PASS" : "FAIL",
+            (int)shadow3.vCasterLev, (int)shadow3.vDmg);
+        caster->ClassID[1] = savedClass1;
+        caster->Level[1] = savedLevel1;
+    }
+
+    target->Remove(true);
+    ally->Remove(true);
+    static const int16 DX[4] = {1,-1,0,0}, DY[4] = {0,0,1,-1};
+    int16 dx = 0, dy = 0;
+    bool foundLine = false;
+    for (int dir = 0; dir < 4 && !foundLine; ++dir) {
+        bool clear = true;
+        for (int d = 1; d <= 3; ++d) {
+            int16 x = px + DX[dir]*d, y = py + DY[dir]*d;
+            if (!mp->InBounds(x,y) || mp->SolidAt(x,y) || mp->FCreatureAt(x,y)) {
+                clear = false;
+                break;
+            }
+        }
+        if (clear && mp->LineOfFire(px,py,px+DX[dir]*3,py+DY[dir]*3,caster)) {
+            dx = DX[dir]; dy = DY[dir]; foundLine = true;
+        }
+    }
+    if (!foundLine) {
+        Error("MUSIC_CHOIR_PROBE: CHAIN INCONCLUSIVE -- no clear line");
+    } else {
+        Monster *chainTargets[3];
+        for (int i = 0; i < 3; ++i) {
+            chainTargets[i] = makeMonster(koboldID,px+dx*(i+1),py+dy*(i+1));
+            chainTargets[i]->ts.addCreatureTarget(caster,TargetEnemy);
+            caster->ts.addCreatureTarget(chainTargets[i],TargetEnemy);
+        }
+        EventInfo chain; chain.Clear();
+        chain.EActor = caster;
+        chain.ETarget = chainTargets[0];
+        chain.EVictim = chainTargets[0];
+        chain.EMap = mp;
+        chain.eID = FIND("Chain Lightning");
+        chain.MM = MM_MAXIMIZE;
+        chain.isSpell = true;
+        const int16 chainBonus = caster->SpellDmgBonus(chain.eID);
+        LOFSetForcedSaveThrowRoll(1);
+        ReThrow(EV_EFFECT,chain);
+        LOFClearForcedSaveThrowRoll();
+        bool pass = true;
+        for (int i = 0; i < 3; ++i) {
+            const int32 loss = 10000 - chainTargets[i]->cHP;
+            /* Chain Lightning keeps today's full damage on every target:
+               the chain collects all targets first and strikes them with the
+               final arc count, so per-arc reduction cannot apply. inc-5vfs. */
+            const int32 expected = 6*casterLev + chainBonus;
+            Error("MUSIC_CHOIR_PROBE: CHAIN target=%d handle=%d hostile=%d loss=%d expected=%d",
+                i,(int)chainTargets[i]->myHandle,
+                (int)chainTargets[i]->isHostileTo(caster),(int)loss,(int)expected);
+            pass = pass && loss == expected;
+            chainTargets[i]->Remove(true);
+        }
+        Error("MUSIC_CHOIR_PROBE: CHAIN %s final_count=%d caster_lev=%d bonus=%d",
+            pass ? "PASS" : "FAIL",(int)chain.vChainCount,(int)casterLev,(int)chainBonus);
+    }
     theGame->PlayMode = wasInPlay;
 }
 

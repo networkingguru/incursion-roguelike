@@ -677,6 +677,7 @@ class Character: public Creature
     friend class Magic;
     friend class VMachine;
     friend class Player;
+    friend void MusicChoirProbe(Player *caster);
     protected:
 	    hObj Inv[NUM_SLOTS];
       hObj defMelee, defRanged, defAmmo, defOffhand;

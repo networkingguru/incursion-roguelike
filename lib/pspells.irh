@@ -5005,6 +5005,7 @@ Effect "Music of the Spheres" : EA_INFLICT
     xval: PARALYSIS; yval: PARA_HYPNOTIZED; sval: WILL;
     Flags: EF_BLIND_PROMPT, EF_ALLIES_IMMUNE, EF_CASTER_IMMUNE;
     int16 targ, dtype;
+    int16 choir;
     On Event PRE(EV_EFFECT) {
       hObj cr;
       if (EActor->isCharacter() && EActor->GodID == $"Maeve")
@@ -5016,24 +5017,36 @@ Effect "Music of the Spheres" : EA_INFLICT
       else
         { targ = EActor->isMType(MA_EVIL) ? MA_GOOD : MA_EVIL;
           dtype = AD_STUN; }
-      /*
-      for (cr=EActor->FirstAlly();cr;cr=EActor->NextAlly())
-        if (EActor->DistFrom(cr) <= 8 && !cr->HasStati(PARALYSIS) &&
+      /* upstream: eligible allies must contribute to the choir; upstream's
+         commented-out loop disables it on every platform, including Win32.
+         Observed via tools/check_music_choir.sh; inc-s3bb, not sent. */
+      choir = 0;
+      for (cr=EMap->FirstThing();cr;cr=EMap->NextThing())
+        if (cr->isCreature() && cr != GetHandle(EActor) && cr->isFriendlyTo(EActor) &&
+             EActor->DistFrom(cr) <= 8 && !cr->HasStati(PARALYSIS) &&
              !cr->HasStati(STUNNED) && !cr->HasStati(NAUSEA) &&
              !cr->HasStati(CONFUSED) && !cr->HasStati(ASLEEP))
           {
             if (cr->HasAbility(CA_BARDIC_MUSIC))
-              e.vCasterLev += cr->AbilityLevel(CA_BARDIC_MUSIC);
+              choir += cr->AbilityLevel(CA_BARDIC_MUSIC)/2;
             else if (cr->HasAbility(CA_SPELLCASTING) && cr->HasStati(
                        SPELL_ACCESS,SP_DIVINE))
-              e.vCasterLev += cr->CasterLev();
+              choir += cr->CasterLev()/2;
+            else
+              continue;
             cr->IDPrint("You lend your voice to the unearthly choir!",
               "The <hObj> lends <his:hObj> voice to the unearthly choir!",
               cr, cr);
           }
-      */
       return NOTHING;
       },  
+    EV_CALC_EFFECT {
+      if (choir > 0) {
+        e.vCasterLev += choir;
+        e.vDuration += 2*choir;
+        }
+      return NOTHING;
+      },
     EV_ISTARGET {
       if (e.efNum == 0)
         return (EVictim->isHostileTo(EActor)  &&
