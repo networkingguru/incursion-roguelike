@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # Regression check for Flame Blade's duration, inc-wbq9 (PA-07-F9).
 #
 # THE DEFECT. lib/pspells.irh declared both of Flame Blade's forms with a
@@ -49,14 +50,14 @@ check_block() {
 
     flags="$(printf '%s\n' "$block" | grep -E 'Flags:' | head -1)"
 
-    if printf '%s' "$flags" | grep -qE 'EF_DXLONG|EF_DLONG'; then
+    if grep -qE 'EF_DXLONG|EF_DLONG' <<< "$flags"; then
         echo "FAIL(1): '$name' still carries a finite duration flag, so it expires far"
         echo "         sooner than the full day its Desc promises."
         printf '%s\n' "$flags" | sed 's/^/    | /'
         fail=1
     fi
 
-    if ! printf '%s' "$flags" | grep -q 'EF_PERSISTANT'; then
+    if ! grep -q 'EF_PERSISTANT' <<< "$flags"; then
         echo "FAIL(1): '$name' lacks EF_PERSISTANT, so it is not a duration -2 buff"
         echo "         that lasts until the caster rests."
         printf '%s\n' "$flags" | sed 's/^/    | /'

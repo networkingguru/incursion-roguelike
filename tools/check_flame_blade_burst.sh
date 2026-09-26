@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # Regression check for Flame Blade's augment branch, inc-wbq9 (PA-07-F9).
 #
 # THE DEFECT. lib/pspells.irh declared the `flame blade;augment` effect with an
