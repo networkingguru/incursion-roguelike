@@ -666,6 +666,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_sneak_invis.sh` | Does an unseen attacker get sneak attack when the victim hears it, and does a thrown or fired attack count as unseen against a Blind-Fight victim (bead inc-nkf2)? Needs the headless build. | LIVE |
 | `check_snowstrike.sh` | Does the Snowstrike blast carry `EF_CASTER_IMMUNE` and `EF_ALLIES_IMMUNE`, so the caster and her allies are immune as its description promises, rather than freezing them? | LIVE |
 | `check_spell_god_drift.sh` | Does a v1 save refuse a reloaded module only on positive evidence that entries moved, while a pure rename still loads? | LIVE |
+| `check_spiritual_fortitude.sh` | Does the attribute-drain reduction in `Creature::Damage` count SUSTAIN for A_AID, the attribute Spiritual Fortitude grants to sustain all attributes? Structural; `FIGHT_CPP=` points it at another copy for the red side. | LIVE |
 | `check_spook_ally.sh` | Does Spook spare its caster's own side, and does a creature made immune inside a field still shed the stati when it leaves? | LIVE |
 | `check_spook_mount.sh` | Does a mount keep the aura it emits across being ridden and carried between levels, and keep owning it? | LIVE |
 | `check_springblade.sh` | Does deploying the Springblade Bracers require a Handle Device check, and does its free off-guard strike fire only once per combat? | LIVE |

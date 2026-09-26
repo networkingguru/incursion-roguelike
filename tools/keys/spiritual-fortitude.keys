@@ -1,0 +1,102 @@
+# A/B gameplay oracle for inc-vb9n (PA-07-F10): Spiritual Fortitude's
+# SUSTAIN/A_AID +2 must reduce an attribute-draining monster's drain.
+#
+# HOW TO RUN (one build per invocation; the same seed on both):
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       INCURSION_RUN_DIR="$PWD/logs/runs/sf-fixed" \
+#       tools/headless.sh tools/keys/spiritual-fortitude.keys 1
+#
+#   INCURSION_BIN="$PWD/logs/sf-head-tree/incursion-headless" \
+#       INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       INCURSION_RUN_DIR="$PWD/logs/runs/sf-head" \
+#       tools/headless.sh tools/keys/spiritual-fortitude.keys 1
+#
+# The run dir must point at the build's own tree: the HEAD binary lives in
+# logs/sf-head-tree/, which ships its own lib/ and mod/. The fix is src-only
+# (src/Fight.cpp), so the ROOT lib/mod are byte-identical and only the binary
+# differs.
+#
+# WHAT IS MEASURED. A priest casts Spiritual Fortitude -- xval: SUSTAIN;
+# yval: A_AID; pval: +2 (lib/pspells.irh) -- and a summoned shadow, whose
+# statblock carries "A_TUCH for 1d6 AD_DRST (DC 13)" (lib/mon3.irh), lands its
+# first draining touch. The final message-log dump shows the Shadow's Attack
+# d20, the Fortitude Save d20, and the Strength Drain 1d6 as the game prints
+# them. Pre-fix the reduction read only SumStatiMag(SUSTAIN,at), never
+# A_AID, so the landed die was applied in full; post-fix the reduction also
+# counts A_AID (+2), so the same die drains 2 less, floored at zero.
+#
+# ONE LANDED TOUCH ONLY, ON PURPOSE. The game's randomness up to the first
+# drain is identical on both builds -- the fix is pure arithmetic and consumes
+# no RNG, and this script casts the same spell on both sides -- so the attack,
+# save and damage dice are the same numbers. The dump ends immediately after
+# the first touch: a longer run lets the altered Strength feed back into
+# encumbrance, defense and survival, so the two sessions become two different
+# games and their dice stop lining up.
+#
+# WHY THESE WIZARD SWITCHES. Row 8 is Infinite Mana (the cast must not be
+# refused for mana) and row 12 is Show All Combat Rolls (so the shadow's dice
+# are printed). Row 11 is Freeze Monsters -- an earlier draft pressed DOWN*3
+# from row 8, landed on 11, and froze the shadow so it never attacked; DOWN*4
+# is what reaches Show All Combat Rolls. Rows are counted from the top of
+# Player::WizardSwitches; see tools/keys/drain-selfaim.keys for the same
+# numbering (3 Free Advancement, 4 Infinite Fatigue, 8 Infinite Mana, 11
+# Freeze Monsters).
+#
+# The character is an orc priest, so the class already knows the spell; Learn
+# Any Spell makes it castable regardless of the four spells generation offered
+# and whatever god the seed gave him. Monster Summoning places the shadow one
+# square EAST, adjacent, where it can reach the caster.
+
+@include chargen-priest.keys
+
+# chargen-priest ends with four spell picks; clear any stray prompt the same
+# way drain-selfaim.keys does before its first 'w'.
+ESC
+ESC
+ESC
+
+# Wizard switches: 8 Infinite Mana, 12 Show All Combat Rolls.
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*7
+SPACE
+DOWN*4
+SPACE
+ESC
+
+# Make Spiritual Fortitude castable at no mana and regardless of class list.
+w
+@choose "Learn Any Spell"
+"Spiritual Fortitude"
+ENTER
+
+# Baseline Strength before the spell and the shadow.
+d
+@dump:sheet-before
+ESC
+
+# Cast Spiritual Fortitude on the caster himself. "*" targets self.
+m
+@choose "Spiritual Fortitude"
+*
+@dump:after-cast
+
+# The shadow one square EAST of the caster, adjacent.
+w
+@choose "Monster Summoning"
+@choose "Negative Undead"
+@choose "shadow"
+RIGHT
+ENTER
+@dump:shadow-summoned
+
+# One wait (15 game turns) is enough for the adjacent shadow to land a touch.
+# The dump below is the message log, still showing the first landed hit and
+# the dice it used.
+.
+v
+@dump:first-hit-log
+ESC
+@quit
