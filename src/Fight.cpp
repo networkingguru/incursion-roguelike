@@ -7025,6 +7025,7 @@ static bool isBlowStruckByACreature(int8 AType)
 
 EvReturn Creature::Damage(EventInfo &e) {
     int8 subtype = 0, lv, at, Percent;
+    int16 sus;
     uint8 Col;
     int16 n, c, EDType;
     EvReturn r;
@@ -8034,8 +8035,14 @@ WoundIgnored:
                                             e.Resist = true;
                                         }
 
-                                        if (e.EVictim->HasStati(SUSTAIN,at))
-                                            e.vDmg = max(0,e.vDmg - e.EVictim->SumStatiMag(SUSTAIN,at));
+                                        // upstream: attribute drain must count SUSTAIN for A_AID,
+                                        // which Spiritual Fortitude grants to sustain all
+                                        // attributes; Win32 behaves the same. Tier: Observed.
+                                        // inc-vb9n / PA-07-F10; not sent.
+                                        sus = e.EVictim->SumStatiMag(SUSTAIN,at)
+                                            + e.EVictim->SumStatiMag(SUSTAIN,A_AID);
+                                        if (sus > 0)
+                                            e.vDmg = max(0,e.vDmg - sus);
                                         if (!e.vDmg || Attr[at] <= 0) {
                                             e.Immune = true;
                                             break;
