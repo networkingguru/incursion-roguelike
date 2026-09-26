@@ -290,6 +290,10 @@ void Game::Play() {
     extern void MusicChoirProbe(Player *caster);
     MusicChoirProbe(pp);
 
+    /* inc-7xcu: off unless INCURSION_BANE_PROBE is set; needs a live map. */
+    extern void BaneRadiusProbe(Player *caster);
+    BaneRadiusProbe(pp);
+
     /* Off unless INCURSION_TRUESIGHT_PROBE is set, and run here because it
        needs a live player and a live map. See Creature::TrueSightProbe and
        tools/check_true_sight.sh. inc-5bl3. */

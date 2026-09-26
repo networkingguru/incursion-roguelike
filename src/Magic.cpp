@@ -3263,6 +3263,91 @@ void LOFSpellProbe(Player *shooter) {
     theGame->PlayMode = wasInPlay;
 }
 
+/* inc-7xcu: opt-in live Bane radius oracle; no spell data is overridden. */
+void BaneRadiusProbe(Player *caster) {
+    if (!getenv("INCURSION_BANE_PROBE"))
+        return;
+    if (!caster || !caster->m) {
+        Error("BANE_PROBE: INCONCLUSIVE -- no live player and map");
+        return;
+    }
+    const rID baneID = FIND("Bane"), koboldID = FIND("kobold");
+    if (!baneID || !koboldID) {
+        Error("BANE_PROBE: INCONCLUSIVE -- missing Bane or kobold");
+        return;
+    }
+    Map *mp = caster->m;
+    const int16 px = caster->x, py = caster->y;
+    const int distances[4] = {5, 6, 7, 9};
+    Monster *targets[4] = {NULL, NULL, NULL, NULL};
+    const bool wasInPlay = theGame->PlayMode;
+    theGame->PlayMode = true;
+    bool ready = true;
+    for (int i = 0; i < 4; ++i) {
+        const int d = distances[i];
+        int16 tx = -1, ty = -1;
+        for (int dx = -d; dx <= d && tx < 0; ++dx)
+            for (int dy = -d; dy <= d && tx < 0; ++dy) {
+                const int16 nx = px + dx, ny = py + dy;
+                if (dist(px, py, nx, ny) != d) continue;
+                if (!mp->InBounds(nx, ny) || mp->SolidAt(nx, ny)) continue;
+                if (mp->FCreatureAt(nx, ny)) continue;
+                tx = nx; ty = ny;
+            }
+        if (tx < 0) {
+            Error("BANE_PROBE: dist=%d INCONCLUSIVE -- no open floor", d);
+            ready = false;
+            continue;
+        }
+        Monster *mn = targets[i] = new Monster(koboldID);
+        TMON(mn->tmID)->GrantGear(mn, mn->tmID, true);
+        TMON(mn->tmID)->PEvent(EV_BIRTH, mn, mn->tmID);
+        mn->PlaceAt(mp, tx, ty, true);
+        mn->Initialize(true);
+        mn->ts.addCreatureTarget(caster, TargetEnemy);
+        caster->ts.addCreatureTarget(mn, TargetEnemy);
+        if (mn->m != mp || dist(px, py, mn->x, mn->y) != d ||
+            !mn->isHostileTo(caster) || mn->ResistLevel(AD_FEAR) == -1 ||
+            mn->ResistLevel(AD_MIND) == -1 || !mn->isMType(MA_LIVING) ||
+            mn->HasEffStati(ADJUST_MOR, baneID, A_AID)) {
+            Error("BANE_PROBE: dist=%d INCONCLUSIVE -- invalid target", d);
+            ready = false;
+        }
+    }
+    if (ready) {
+        /* Like MusicChoirProbe, dispatch the normal effect path directly:
+           learned-spell selection is bypassed, radius and infliction are not. */
+        extern void LOFSetForcedSaveThrowRoll(int8 r);
+        extern void LOFClearForcedSaveThrowRoll();
+        EventInfo xe; xe.Clear();
+        xe.EActor = caster;
+        xe.ETarget = caster;
+        xe.EVictim = caster;
+        xe.EMap = mp;
+        xe.eID = baneID;
+        xe.isSpell = true;
+        LOFSetForcedSaveThrowRoll(1);
+        ReThrow(EV_EFFECT, xe);
+        LOFClearForcedSaveThrowRoll();
+        bool pass = true;
+        for (int i = 0; i < 4; ++i) {
+            const bool affected =
+                targets[i]->GetEffStatiMag(ADJUST_MOR, baneID, A_AID) == -1;
+            Error("BANE_PROBE: dist=%d affected=%d", distances[i], (int)affected);
+            pass = pass && (affected == (i == 0));
+        }
+        if (pass)
+            Error("BANE_PROBE: PASS");
+        else
+            Error("BANE_PROBE: FAIL -- expected dist 5 affected=1, dist 6/7/9 affected=0");
+    } else {
+        Error("BANE_PROBE: INCONCLUSIVE -- target setup incomplete");
+    }
+    for (int i = 0; i < 4; ++i)
+        if (targets[i]) targets[i]->Remove(true);
+    theGame->PlayMode = wasInPlay;
+}
+
 /* inc-s3bb: opt-in live choir, Chain Lightning and Shadow Step oracle.
    tools/check_music_choir.sh loads the priest fixture and grades these logs. */
 void MusicChoirProbe(Player *caster) {
