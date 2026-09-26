@@ -284,6 +284,12 @@ void Game::Play() {
     extern void LOFSpellProbe(Player *shooter);
     LOFSpellProbe(pp);
 
+    /* Off unless INCURSION_MUSIC_CHOIR_PROBE is set, needs the same live
+       player and map. See MusicChoirProbe (src/Magic.cpp) and
+       tools/check_music_choir.sh. */
+    extern void MusicChoirProbe(Player *caster);
+    MusicChoirProbe(pp);
+
     /* Off unless INCURSION_TRUESIGHT_PROBE is set, and run here because it
        needs a live player and a live map. See Creature::TrueSightProbe and
        tools/check_true_sight.sh. inc-5bl3. */

@@ -1,0 +1,37 @@
+# Drive one loaded-session turn so a run that carries the
+# INCURSION_MUSIC_CHOIR_PROBE probe counts as gameplay. The probe itself
+# runs on entry to Game::Play, before any key is read, so nothing in this
+# script steers the probe. Two things still have to happen.
+#
+# First, the probe's own two casts of "Music of the Spheres" each print a
+# message long enough to trip the engine's "-- more --" page break
+# (TextTerm::Message, src/TextTerm.cpp:352), which blocks on a keystroke.
+# That is the key the old single 's' was eaten by: the first prompt ate it
+# and the second found the script exhausted, so the session ended before
+# the probe's errors.log lines were ever flushed. SPACE clears a prompt
+# (any key but a direction does), so SPACE*80 sits well above the handful
+# of prompts two casts can raise; ESC*20 follows as the line-of-fire
+# keys' own belt-and-braces (tools/keys/line-of-fire.keys).
+#
+# Second, once the prompts are cleared the session must complete at least
+# one real turn, or tools/headless.sh reports NO GAMEPLAY. 's' is search:
+# one completed turn, which is all the NO GAMEPLAY guard wants. @quit then
+# ends the session cleanly (SK_QUIT, src/Wposix.cpp). No @expect/@dump:
+# this script has no screen to read, its oracle is logs/errors.log written
+# by the probe.
+#
+#   INCURSION_MUSIC_CHOIR_PROBE=1 \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav \
+#       tools/headless.sh tools/keys/music-choir.keys 1
+#
+# The character is loaded, not built: a key-built character moves when lib/
+# resource ids move (tools/fixtures/README.md), and this check asserts exact
+# damage numbers read off that character's caster level.
+
+SPACE*80
+ESC*20
+
+s
+
+@quit

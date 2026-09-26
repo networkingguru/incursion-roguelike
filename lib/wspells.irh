@@ -8549,8 +8549,9 @@ Wizard / Scroll Spell "Chain Lightning" : EA_BLAST
         /* Number of Arcs */
         e.vChainMax = e.vCasterLev / 3;
         
-        /* Damage Decrease per Arc */
-        e.vCasterLev -= e.vChainCount*2;
+        /* Per-arc reduction cannot work here: the chain strikes every target
+           with the final arc count, so all targets would take the last arc's
+           damage. See inc-5vfs. */
         
         return NOTHING;
       };
