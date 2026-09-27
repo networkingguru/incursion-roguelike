@@ -1,0 +1,162 @@
+# Charge a Necromancer by character generation, then create undead with the
+# wizard's Create Corporeal Undead and photograph the Group CR Totals block.
+# bd inc-1n74, tools/check_necro_undead_pool.sh.
+#
+# THE GRANT UNDER TEST COMES FROM lib/classes.irh AT GENERATION TIME. A level-1
+# Necromancer is given BONUS_PHD of magnitude 1 against PHD_UNDEAD; a mage of
+# any other school is not. So this script must RUN the chargen -- loading a
+# frozen .sav would bake in whichever lib made that save, and the check could
+# not go red on the lib mutation (see tools/check_necro_undead_pool.sh).
+#
+# The chargen below is tools/keys/chargen-mage.keys' character (male orc mage,
+# neutral, first attribute set, first two feats, three RIGHTs per skill) with
+# one change: the school is Necromancy. The comparison script
+# tools/keys/necro-undead-pool-mage.keys is the same file with Evocation, so the
+# only difference between the two characters is the school.
+#
+# WHY THERE ARE SEVERAL CASTS. One wight proves the GRANT (PHD UNDEAD 2 / 1).
+# The admission change in Monster::MakeCompanion's PHD_UNDEAD branch needs more:
+# it must REFUSE a created undead once undead + magic + party are full. So after
+# the grant reading this script raises wight after wight on the corpses the
+# level leaves behind. Each cast is photographed twice: the cast screen, which
+# carries the caller's own verdict ("The dead rise!" or "shifts briefly, but
+# does not move", lib/abilities.irh:179/187), and the wizard Group CR Totals
+# block, which carries the count that actually joined. The message window is
+# only a few lines deep and a created undead angers many gods, so the window
+# can scroll "The dead rise!" away; the pool reading is the reliable count.
+# On the fixed code the third attempt is refused and the pool stops growing.
+# The mutated run (tools/check_necro_undead_pool.sh --prove-red) sends the
+# PHD_UNDEAD case back to the generic branch, which never refuses here.
+#
+# TARGETING. The corpses are the level's own, at fixed offsets from the player
+# (the player never moves). Create Corporeal Undead's target prompt takes 'l'
+# to move the location cursor, then arrow keys to the square: UP*3 LEFT is the
+# elf corpse, DOWN LEFT*4 the human, DOWN*4 the dwarf, DOWN*3 LEFT the gnome,
+# DOWN*2 RIGHT*3 the kobold. The ring arrows cannot be used here -- after the
+# first wight they include the wights themselves, and the prompt stops on one.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Explore Mode. Continue? -- yes
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Mage"
+a       # Attributes
+@choose "Neutral"
+@choose "Necromancy"
+a       # First feat
+a       # Second feat
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+y       # Worship the offered god
+a       # Personality archetype
+a a a   # Three starting spells
+x       # Dismiss the arrival room description
+
+@until "Things in View" ESC
+w y                     # Enter wizard mode and confirm.
+
+# Infinite Mana (Table row 8) lets a level 1 mage cast a level 5 spell.
+@until "Wizard Mode Options:" w
+@choose "Wizard Mode Switches"
+DOWN*7 SPACE
+ESC
+
+# Create Corporeal Undead is not on the mage list; Learn Any Spell makes it known.
+@until "Wizard Mode Options:" w
+@choose "Learn Any Spell"
+"Create Corporeal Undead" ENTER
+
+# A black orc east of the player, so the level holds a medium humanoid corpse.
+@until "Wizard Mode Options:" w
+@choose "Monster Summoning"
+@choose "Orc"
+a
+RIGHT*3 ENTER
+
+# Clear the level, leaving the corpse(s) and nothing else that makes a pool move.
+@until "Wizard Mode Options:" w
+@choose "Genocide Everything"
+SPACE*40                 # dismiss the genocide message chain
+
+# The control reading: no undead yet. Necromancer PHD UNDEAD max 1, other mage 0.
+@until "Wizard Mode Options:" w
+@choose "Examine Player Data"
+DOWN*200
+@dump:group-before
+ESC
+SPACE*4
+
+# Cast 1: the elf corpse. This is a real Monster::MakeCompanion(PHD_UNDEAD)
+# caller (lib/abilities.irh:177).
+m
+a
+l
+UP*3 LEFT ENTER
+@choose "Wight"
+@dump:raised
+@until "Wizard Mode Options:" w
+@choose "Examine Player Data"
+DOWN*200
+@dump:group-after
+ESC
+SPACE*4
+
+# Cast 2: the human corpse. Kept under the fixed code.
+m
+a
+l
+DOWN LEFT*4 ENTER
+@choose "Wight"
+@dump:cast2
+@until "Wizard Mode Options:" w
+@choose "Examine Player Data"
+DOWN*200
+@dump:group2
+ESC
+SPACE*4
+
+# Cast 3: the dwarf corpse. REFUSED under the fixed code.
+m
+a
+l
+DOWN*4 ENTER
+@choose "Wight"
+@dump:cast3
+@until "Wizard Mode Options:" w
+@choose "Examine Player Data"
+DOWN*200
+@dump:group3
+ESC
+SPACE*4
+
+# Cast 4: the gnome corpse. REFUSED under the fixed code.
+m
+a
+l
+DOWN*3 LEFT ENTER
+@choose "Wight"
+@dump:cast4
+@until "Wizard Mode Options:" w
+@choose "Examine Player Data"
+DOWN*200
+@dump:group4
+ESC
+SPACE*4
+
+# Cast 5: the kobold corpse. REFUSED under the fixed code.
+m
+a
+l
+DOWN*2 RIGHT*3 ENTER
+@choose "Wight"
+@dump:cast5
+@until "Wizard Mode Options:" w
+@choose "Examine Player Data"
+DOWN*200
+@dump:group5
+ESC
+SPACE*4
+
+@quit
