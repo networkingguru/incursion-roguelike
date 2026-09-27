@@ -1726,11 +1726,13 @@ void Player::Dump()
                       "  PHD_PARTY   <Num> / <Num>\n"
                       "  PHD_ANIMAL  <Num> / <Num>\n"
                       "  PHD_MAGIC   <Num> / <Num>\n"
-                      "  PHD_COMMAND <Num> / <Num>\n",
+                      "  PHD_COMMAND <Num> / <Num>\n"
+                      "  PHD_UNDEAD  <Num> / <Num>\n",
                       GetGroupCR(PHD_PARTY),   MaxGroupCR(PHD_PARTY),
                       GetGroupCR(PHD_ANIMAL),  MaxGroupCR(PHD_ANIMAL),
                       GetGroupCR(PHD_MAGIC),   MaxGroupCR(PHD_MAGIC),
-                      GetGroupCR(PHD_COMMAND), MaxGroupCR(PHD_COMMAND)));
+                      GetGroupCR(PHD_COMMAND), MaxGroupCR(PHD_COMMAND),
+                      GetGroupCR(PHD_UNDEAD),  MaxGroupCR(PHD_UNDEAD)));
 
 
                                             

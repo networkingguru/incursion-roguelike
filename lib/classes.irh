@@ -1119,8 +1119,13 @@ Class "Mage"
              listID = $"Necromancer";
              if (EActor->LevelAs($"mage") == 1)
                {
+                 /* upstream: the Necromancer's bonus must feed PHD_UNDEAD,
+                    the pool Animate Dead checks (lib/wspells.irh), not
+                    PHD_COMMAND, which needs CA_COMMAND and so is -10 for a
+                    pure mage. Shared lib data, misbehaves identically on
+                    Win32. Traced, inc-1n74, not sent. */
                  EActor->GainPermStati(BONUS_PHD,NULL,
-                   SS_CLAS,PHD_COMMAND,1,$"mage",0);
+                   SS_CLAS,PHD_UNDEAD,1,$"mage",0);
                  EActor->GainPermStati(SAVE_BONUS,NULL,
                    SS_CLAS,SN_FEAR,2,$"mage",0);
                  EActor->GainPermStati(EXTRA_SKILL,NULL,
