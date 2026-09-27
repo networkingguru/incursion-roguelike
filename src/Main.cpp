@@ -294,6 +294,10 @@ void Game::Play() {
     extern void BaneRadiusProbe(Player *caster);
     BaneRadiusProbe(pp);
 
+    /* inc-g1q1: opt-in live bolt count and fear-save oracle. */
+    extern void GloryProbe(Player *caster);
+    GloryProbe(pp);
+
     /* Off unless INCURSION_TRUESIGHT_PROBE is set, and run here because it
        needs a live player and a live map. See Creature::TrueSightProbe and
        tools/check_true_sight.sh. inc-5bl3. */

@@ -634,6 +634,24 @@ EvReturn ThrowEffXY(int16 Ev,rID eID,int16 x,int16 y,Object *p1, Object *p2, Obj
     return r;
 }
 	
+namespace {
+struct RedirectDCScope {
+    static RedirectDCScope *active;
+    RedirectDCScope *previous;
+    rID source, child;
+    RedirectDCScope(rID from, rID to)
+        : previous(active), source(from), child(to) { active = this; }
+    ~RedirectDCScope() { active = previous; }
+};
+RedirectDCScope *RedirectDCScope::active = NULL;
+}
+
+rID RedirectDCSource(const EventInfo &e) {
+    const RedirectDCScope *scope = RedirectDCScope::active;
+    return scope && e.eID == scope->child
+        ? scope->source : 0;
+}
+
 /*   This if specifically for triggering one effect within another.
    We want the outer event's data to propagate to the inner event,
    but not the other way around -- so that, for example, we don't
@@ -648,6 +666,12 @@ EvReturn RedirectEff(EventInfo &e, rID eID, int16 Ev)
     CHECK_OVERFLOW; 
     EventStack[EventSP].Clear();
     EventStack[EventSP] = e;
+    /* upstream: child DCs use the executing resource even after eID is cleared;
+       resource lookup also loses the parent on Win32. Observed, inc-g1q1, not sent.
+       The source lives only in this call scope, never in copied events. */
+    rID source = ExecutingResource();
+    if (source && RES(source)->Type != T_TEFFECT) source = 0;
+    RedirectDCScope dcScope(source,eID);
     EventStack[EventSP].eID = eID;
     EventStack[EventSP].Event = Ev;
     /* Let an activated item call a spell that doesn't
@@ -659,6 +683,8 @@ EvReturn RedirectEff(EventInfo &e, rID eID, int16 Ev)
       T1->EffectPrompt(EventStack[EventSP], TEFF(e.eID)->Vals(0)->qval);
   
     r = RealThrow(EventStack[EventSP]);
+    extern void GloryProbeRedirect(EventInfo &e);
+    GloryProbeRedirect(EventStack[EventSP]);
     EventSP--;
     return r;
   }

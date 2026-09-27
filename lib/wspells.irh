@@ -4557,8 +4557,10 @@ Wizard / Scroll Spell "Flame Arrow" : EA_GENERIC
       if (!GetHandle(EVictim))
         return NOTHING;
       e.vCasterLev = EActor->CasterLev();
-      e.MM = EActor->GetEffStatiMag(EFF_FLAG1,$"Flame Arrow") +
-             EActor->GetEffStatiMag(EFF_FLAG2,$"Flame Arrow") * 0xFFFF;
+      /* upstream: metamagic halves live in Val, with a 65536 high-word scale;
+         the Mag read and 65535 scale also fail on Win32. Observed, inc-g1q1, not sent. */
+      e.MM = (EActor->GetEffStatiVal(EFF_FLAG1,$"Flame Arrow") & 0xFFFF) +
+             (EActor->GetEffStatiVal(EFF_FLAG2,$"Flame Arrow") & 0xFFFF) * 0x10000;
       RedirectEff(e,$"Flame Arrow;blast",EV_EFFECT);
       return NOTHING;
       },

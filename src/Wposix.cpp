@@ -177,7 +177,24 @@ public:
     virtual int32 ConvertChar(Glyph g, char **out) { return 0; }
 
     /* Input Functions */
-    virtual int16 GetCharRaw() { return GetCharCmd(KY_CMD_RAW); }
+    virtual int16 GetCharRaw() {
+        if (getenv("INCURSION_GLORY_PROBE")) {
+            extern int GloryProbeKey();
+            int key = GloryProbeKey();
+            if (key) return key;
+        }
+        return GetCharCmd(KY_CMD_RAW);
+    }
+    virtual bool EffectPrompt(EventInfo &e, uint16 f, bool look=false,
+                              const char *prompt=NULL) {
+        if (getenv("INCURSION_GLORY_PROBE")) {
+            extern int GloryProbeTarget(EventInfo &e);
+            int target = GloryProbeTarget(e);
+            if (target == 1) return true;
+            if (target == 0) QueuedChar = 27;
+        }
+        return TextTerm::EffectPrompt(e,f,look,prompt);
+    }
     virtual int16 GetCharCmd() { return GetCharCmd(KY_CMD_NORMAL_MODE); }
     virtual int16 GetCharCmd(KeyCmdMode mode);
     /* A script has no idea of "keys already buffered". Draining would eat the

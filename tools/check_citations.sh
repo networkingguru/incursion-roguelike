@@ -121,9 +121,11 @@
 # is resolved upstream first, like everything else in that directory.
 #
 # THE DECLARATION IS NOT A SOFTENING, AND THREE RULES KEEP IT FROM BECOMING ONE.
-#   * A number past the end of OUR file is still a defect. src/Annot.cpp is
-#     1338 lines upstream and 1337 here, so `Annot.cpp:1338` passes undeclared
-#     and fails declared. The selftest holds that case.
+#   * A number past the end of OUR file is still a defect. A file that is
+#     longer upstream than here gives such a line: cite `our-length + 1` and it
+#     resolves upstream-first yet is past the end of ours. The selftest picks
+#     that file at run time from the two refs (find_shorter_fixture), so the
+#     case cannot drift when our copy grows past the cited line.
 #   * A citation that resolves in NEITHER tree is still a defect. Declaring a
 #     tree does not invent a file.
 #   * A document under docs/outgoing/ MUST NOT declare it. That directory is
@@ -341,6 +343,67 @@ read_declaration() {
 
 line_at_ref() { git -C "$ROOT" show "$1:$2" 2>/dev/null | sed -n "${3}p"; }
 lines_in_ref() { git -C "$ROOT" show "$1:$2" 2>/dev/null | grep -c ''; }
+
+# find_shorter_fixture -- print "<path>\t<our-lines>\t<upstream-lines>" for the
+# alphabetically first file tracked in BOTH FALLBACK_REF (ours) and UPSTREAM_REF
+# whose OUR copy is SHORTER than upstream's. Returns 1 when no such file exists.
+#
+# The selftest's "past the end of ours" cases need one file that is longer
+# upstream than here, so that `our-length + 1` is a line upstream has and we do
+# not. That used to be hard-coded to src/Annot.cpp (1338 upstream, 1337 here);
+# inc-g1q1 added eight lines to our Annot.cpp and the line came to exist here,
+# so the fixture stopped testing what it claimed. Chosen from the two refs at
+# run time, it cannot drift that way.
+#
+# The refs, not the working tree: a selftest whose verdict depends on an unsaved
+# buffer is not a selftest. One `git cat-file --batch` per ref counts every
+# common blob's newlines in a single process, because a `git show` per file over
+# 1400 shared files is too slow to carry in the gate.
+find_shorter_fixture() {
+    python3 - "$ROOT" "$FALLBACK_REF" "$UPSTREAM_REF" <<'PYFIND'
+import subprocess, sys
+root, ours_ref, up_ref = sys.argv[1:4]
+def ls(ref):
+    # -z: NUL-separated, so a path containing a space or a newline survives.
+    out = subprocess.run(['git', '-C', root, 'ls-tree', '-r', '-z', '--name-only', ref],
+                         capture_output=True).stdout
+    return [p for p in out.decode('utf-8', 'replace').split('\0') if p]
+def lengths(ref, paths):
+    # One cat-file --batch over every path. A reply is "<sha> blob <size>\n<data>\n"
+    # for a hit and "<input> missing\n" for a path the ref does not carry.
+    p = subprocess.run(['git', '-C', root, 'cat-file', '--batch'],
+                       input=''.join(f'{ref}:{x}\n' for x in paths).encode(),
+                       capture_output=True)
+    data = p.stdout
+    result = {}
+    i = 0
+    for path in paths:
+        hdr_end = data.find(b'\n', i)
+        if hdr_end < 0:
+            break
+        parts = data[i:hdr_end].split()
+        # "missing" replies carry no blob; leave the path out of the map.
+        if len(parts) < 3 or parts[-1] == b'missing':
+            i = hdr_end + 1
+            continue
+        try:
+            size = int(parts[2])
+        except ValueError:
+            break
+        body = data[hdr_end + 1:hdr_end + 1 + size]
+        result[path] = body.count(b'\n')
+        i = hdr_end + 1 + size + 1
+    return result
+shared = sorted(set(ls(ours_ref)) & set(ls(up_ref)))
+ours = lengths(ours_ref, shared)
+up = lengths(up_ref, shared)
+for path in shared:
+    if ours.get(path, 0) < up.get(path, 0):
+        print(f'{path}\t{ours[path]}\t{up[path]}')
+        sys.exit(0)
+sys.exit(1)
+PYFIND
+}
 
 # comment_only <file> -- print the path to feed the citation scanners. For a
 # document (.md) or an unknown type, that is the file itself. For a source file,
@@ -1243,13 +1306,31 @@ selftest() {
         > "$dir/undeclared.md"
 
     # THE DECLARATION IS NOT A SOFTENING, PART ONE. A number past the end of OUR
-    # file is still a defect. src/Annot.cpp is the one file in this tree that is
-    # LONGER upstream -- 1338 lines there, 1337 here -- so `Annot.cpp:1338`
-    # passes undeclared and must fail declared. That asymmetry is what makes
-    # this case able to go red; every other file would fail both ways and prove
-    # nothing about the declaration.
+    # file is still a defect. The fixture is chosen at run time: a file tracked
+    # in BOTH trees whose OUR copy is SHORTER than upstream's, cited at
+    # `our-length + 1`. That line exists upstream and not here, so it passes
+    # undeclared (upstream-first) and must fail declared -- an asymmetry no file
+    # gives once both trees agree on its length. The old fixture hard-coded
+    # src/Annot.cpp:1338 against 1338 upstream / 1337 here; inc-g1q1 grew our
+    # file to 1345 lines, the line came to exist here, and the case stopped
+    # testing what it claimed. Chosen from the refs, it cannot drift that way.
+    local shorter_file shorter_our shorter_up
+    if ! read -r shorter_file shorter_our shorter_up < <(find_shorter_fixture); then
+        # FAIL LOUDLY. A selftest that cannot build its fixture must not pass;
+        # a skipped case is a check that cannot fail, which is the disease this
+        # whole file exists to prevent. The file is still written, citing a line
+        # no tree has, so the case below runs rather than erroring on a missing
+        # fixture -- and this count is what fails the run.
+        printf 'selftest FAIL: no file is shorter in %s than in %s, so the\n' \
+            "$FALLBACK_REF" "$UPSTREAM_REF"
+        printf '              "past the end of ours" fixture cannot be built.\n'
+        selftest_failures=$((selftest_failures + 1))
+        shorter_file=src/Annot.cpp
+        shorter_our=999998
+    fi
     printf '%s\n' "$OURS_MARK" > "$dir/declared-past-ours.md"
-    printf 'The last line is `src/Annot.cpp:1338`.\n' >> "$dir/declared-past-ours.md"
+    printf 'The last line is `%s:%s`.\n' \
+        "$shorter_file" "$((shorter_our + 1))" >> "$dir/declared-past-ours.md"
 
     # THE DECLARATION IS NOT A SOFTENING, PART TWO. Declaring a tree does not
     # invent a file. `program.i` is generated and committed nowhere, so it is
@@ -1287,11 +1368,21 @@ selftest() {
     # Exactly three extensions. A file with none is not a script to this tool.
     cp "$dir/script.sh" "$dir/script-noext"
 
-    # A SCRIPT IS NOT A SOFTENING. src/Annot.cpp is LONGER upstream, so its last
-    # upstream line is past the end of ours: it passes upstream-first and must
-    # fail for a script. It goes red if our Annot.cpp ever grows to that length.
-    printf '# src/Annot.cpp:%s is the last line.\n' \
-        "$(lines_in_ref "$UPSTREAM_REF" src/Annot.cpp)" > "$dir/script-past-ours.sh"
+    # A SCRIPT IS NOT A SOFTENING. The same run-time file from PART ONE: a line
+    # that exists upstream and is past the end of ours. A script is read
+    # ours-first, so the citation must fail there exactly as it does for a
+    # declared document. Hard-coding src/Annot.cpp here drifted the same way
+    # PART ONE did; both now share one rev-from-the-refs choice.
+    if [ -n "${shorter_file:-}" ]; then
+        printf '# %s:%s is the last line.\n' \
+            "$shorter_file" "$((shorter_our + 1))" > "$dir/script-past-ours.sh"
+    else
+        # The fixture could not be built; PART ONE already counted the failure.
+        # Still create the file so the case runs (and cannot silently pass for
+        # the wrong reason), citing a line no tree has.
+        printf '# %s:%s is the last line.\n' \
+            "src/Annot.cpp" 999999 > "$dir/script-past-ours.sh"
+    fi
 
     # The default stops at docs/outgoing/, which goes to rmtew. The same line
     # stays a defect there, and the declaration stays a hard error.

@@ -1095,6 +1095,9 @@ bool Resource::HandlesEvent(uint8 e)
 extern EventInfo *ev;
 
 
+static rID executingResource = 0;
+rID ExecutingResource() { return executingResource; }
+
 EvReturn Resource::Event(EventInfo &e, rID xID, int16 Event)
   {
     Annotation *a; 
@@ -1117,6 +1120,11 @@ EvReturn Resource::Event(EventInfo &e, rID xID, int16 Event)
             
             //PurgeStrings();
                   
+            struct ExecutionScope {
+              rID previous;
+              ExecutionScope(rID id) : previous(executingResource) { executingResource = id; }
+              ~ExecutionScope() { executingResource = previous; }
+            } executionScope(xID);
             res = theGame->VM.Execute(&e, xID, a->u.ev[I(i,5)].MsgOrCode);
             /*if (res == ERROR) 
               Error("Event %s returned ERROR in VCode routine "
