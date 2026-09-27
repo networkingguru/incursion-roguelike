@@ -118,7 +118,7 @@ while IFS='|' read -r name path expect detail; do
     OUT="$WORK/case_$name.out"
     ERR="$WORK/case_$name.err"
     case "$name" in
-      grid_mismatch|seg_row_position_past_array|seg_effmem_flavour_bad_slot)
+      grid_mismatch|seg_row_position_past_array|seg_effmem_flavour_bad_slot|is13_recovered_badrid)
         NEEDS_FULL_PATH=1 ;;
       *)
         NEEDS_FULL_PATH=0 ;;
@@ -127,7 +127,11 @@ while IFS='|' read -r name path expect detail; do
         # These mutants are FULL saves, and only the real load path replays
         # a Map record's fields or a Game record's segment rows -- the
         # -schemaload harness groups carry neither. tools/dump_save.sh is
-        # that path, sandboxed.
+        # that path, sandboxed. is13_recovered_badrid needs it for a
+        # different reason: "=== Script Variables ===" and its per-variable
+        # lines are printed only by -dump (src/Dump.cpp), never by
+        # -schemaload's stub field dump (Registry::V1RunSchemaLoad, which
+        # prints Player/Item fields only).
         INCURSION_DUMP_SANDBOX="$WORK/sandbox_$name" \
             ./tools/dump_save.sh "$path" < /dev/null > "$OUT" 2> "$ERR"
         STATUS=$?
@@ -180,6 +184,27 @@ while IFS='|' read -r name path expect detail; do
                 echo "--- differing field lines ---"
                 diff "$WORK/baseline.fields" "$WORK/case_$name.fields" | head -10
                 fail "$name: expected exactly one field line to change (the deleted field's default), saw $CHANGED"
+            fi
+            ;;
+          is13_recovered_badrid)
+            # Case 28(a): the recovered slot's rID fails manifest conversion,
+            # so the CURRENT module's Create Corporeal Undead::uID variable
+            # (the recovery target, found by name -- not by the frozen
+            # table's own slot number, which is a historical index into a
+            # since-reordered table, not the live module's data-segment
+            # address) must land at 0, and exactly one stderr line must name
+            # it.
+            if ! grep -qF 'owner=Create Corporeal Undead ordinal=0 ident=uID type=rID value=0' "$OUT"; then
+                grep -F 'Create Corporeal Undead' "$OUT"
+                fail "$name: Create Corporeal Undead::uID did not land as the recovered 0"
+            fi
+            ERRLINES="$(wc -l < "$ERR" | tr -d ' ')"
+            if [ "$ERRLINES" -ne 1 ]; then
+                cat "$ERR"
+                fail "$name: expected exactly one stderr line naming the recovered variable, saw $ERRLINES"
+            elif ! grep -qF "'uID'" "$ERR"; then
+                cat "$ERR"
+                fail "$name: the one stderr line does not name uID"
             fi
             ;;
         esac

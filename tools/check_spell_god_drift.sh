@@ -35,9 +35,8 @@
 # manifest, and so no drift to detect. Closes bd inc-kh0b, whose REMOVE
 # control could not be made green under the old design.
 #
-# Needs BOTH builds: ./incursion (the developer build carries -compile) for
-# the five sandbox modules, and ${INCURSION_BIN:-./incursion-headless} for
-# the session and the loads.
+# Uses ./incursion-headless for sandbox module compilation and
+# ${INCURSION_BIN:-./incursion-headless} for the session and loads.
 #
 # Usage: tools/check_spell_god_drift.sh   (exits 0 on pass, 1 on fail)
 set -uo pipefail
@@ -49,12 +48,12 @@ FAILED=0
 fail() { echo "FAIL: $1"; FAILED=1; }
 
 BIN="${INCURSION_BIN:-./incursion-headless}"
-COMPILER=./incursion
+COMPILER=./incursion-headless
 SEED=1
 KEYS="tools/keys/smoke.keys"
 
 [ -x "$BIN" ] || { fail "$BIN is not built. Run: BACKEND=posix ./build_macos.sh"; exit 1; }
-[ -x "$COMPILER" ] || { fail "$COMPILER is not built. Run: ./build_macos.sh"; exit 1; }
+[ -x "$COMPILER" ] || { fail "$COMPILER is not built. Run: BACKEND=posix ./build_macos.sh"; exit 1; }
 
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/incursion-drift.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT

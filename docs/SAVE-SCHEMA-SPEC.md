@@ -3,6 +3,7 @@
 # Spec: a named, extensible save schema
 
 Status: normative. Written 2026-08-24, redesigned with Brian 2026-08-25.
+Amended 2026-09-26 (inc-glnx): script variables, "Script variables" below.
 Background reading: `docs/ENGINE-SERIALISATION.md` describes the format this
 replaces. Read it first; this spec assumes it.
 
@@ -60,6 +61,22 @@ the format's job is to notice when it has been broken.
 The **kinds** of array are append-only on the same terms: a new resource kind
 MAY be added at the end of the list of kinds, and no existing kind may be
 reordered or removed.
+
+**Script variables are append-only within their owner, on the same terms.** A
+script variable declared inside a resource body belongs to that resource. A
+module-level variable belongs to the module's global list. Within one owner, a
+new variable MUST go after the existing ones, and a retired variable MUST stay
+declared. There is no rule about where the owning resource sits, and none for a
+variable in a new resource. A rename in place loads as the new variable at that
+position, as rule 3 says for resources.
+
+**A build-time order check enforces both rules.** A committed ledger records
+every entry of the 21 arrays and every script variable per owner, in order. A
+commit whose module inserts, removes or reorders an entry or a variable fails
+the check, which names the entry. After a legal append the author re-records
+the ledger with `--record` and commits it with the change. "Script variables"
+below gives the check's full rules. The load-time drift rules stay as the
+backstop.
 
 Appending is the only structural change the rule permits, and appending is
 exactly what shifts the running count. So the rule alone does not make saved
@@ -367,11 +384,219 @@ with no row keeps zeroed memory, as a new game gives it. There is no
 discard-on-missing case: under the append-only rule a recorded position always
 exists, and a shorter array has already refused the load.
 
-The script data segment at the front of the block is not covered by this spec.
-It holds compiled script state whose layout the resource compiler chooses. It is
-0 bytes in every real module today. Until that is investigated it stays a raw
-blob inside the segment record, length-checked against the loaded module's
-`szDataSeg`.
+The script data segment at the front of the block holds the script variables.
+"Script variables" below covers it.
+
+### Script variables
+
+**What they are.** The resource compiler gives each script variable one 32-bit
+slot, numbered in the order it reads the declarations (`HeapHead++`,
+`lang/Grammar.acc`). The virtual machine finds slot N at byte 4N of the
+module's data segment. A variable is either module-level (`g_declaration`) or
+declared inside a resource body (`r_declaration`). A `static` declaration
+inside an event handler (`STATIC r_declaration`, `lang/Grammar.acc`) is also a
+resource variable of the enclosing resource: `r_declaration` fixes the event to
+0, so its owner is that resource. No `lib/` file uses `static` today.
+
+**The defect this section repairs (inc-glnx, upstream).** `Module::szDataSeg`
+was never assigned, so it was 0, and the memory rows started at byte 0 on top
+of the variables. Script writes changed the first monster rows, and
+monster-memory updates changed script variables. The compiler MUST set
+`szDataSeg = HeapHead * sizeof(int32)`. The rows then start after the variables.
+
+**The variable table.** The compiled module already stores one `DebugInfo` row
+per compiler binding in `Module::Symbols` (field 792, filled by
+`Module::AddDebugInfo` for every binding). A **variable row** is a row whose
+`BType` is `GLOB_VAR` or `RES_VAR`; every other row is ignored. Its slot is
+`DebugInfo.Address`, its owner is `DebugInfo.xID` (0 for `GLOB_VAR`), its name
+is `DebugInfo.Ident`, and its type is `DebugInfo.DataType`.
+
+A module is valid for this section only when all of these hold, checked on save
+and on load before any value is placed. A failure is `ECORRUPT`:
+
+* `szDataSeg` equals 4 times the number of variable rows. This also refuses a
+  module compiled before the fix (`szDataSeg` 0, variable rows present).
+* The variable rows' addresses are exactly 0 to N−1, with no gap and no repeat.
+* Every `RES_VAR` owner is an `rID` in module slot 0 inside one of the 21
+  arrays. The compiler builds only into slot 0, so only slot 0 carries
+  variables; a variable row in any other slot's module refuses.
+
+The preprocessor truncates every identifier to 31 characters (`IDMAX`,
+`inc/cppdef.h`) before the compiler sees it, so `DebugInfo::Ident` always holds
+the whole name, and two names that agree in 31 characters already collide as a
+duplicate declaration. The compiler MUST also:
+
+* assert, for each `RES_VAR`, that the owner it looked up by name equals the
+  resource it is compiling. The owner lookup (`FIND`) is case-insensitive and
+  searches every pool, so two resources whose names differ only in case could
+  otherwise swap variables.
+
+**The key.** A variable's identity in a save is (owner, ordinal), the same shape
+as a resource's (array, position). The owner is the owning resource's `rID`, or
+0 for a module-level variable. The ordinal is the variable's rank among its
+owner's variables in slot order. The name identifies nothing; it only detects
+drift. The loader does no name lookup to place a value.
+
+**The record.** Inside each slot's segment embed, beside inner tags 2 to 5:
+
+```
+6: K_U32   varCount
+7: K_BLOB  varCount records, in slot order:
+             u32  owner    plain rID of the owning resource, 0 = module level
+             u8   type     declared DT_* type
+             u8   nameLen, then nameLen name bytes
+             i32  value
+```
+
+Accepted type values are 2, 3, 4, 5, 7, 8, 9, 10, 11 and 12
+(`inc/RComp.h`). Type 8 (`Rect`) and every integer or boolean type carry their
+value unchanged. Types 1 (`void`) and 6 refuse, as does any value not listed.
+
+Every slot is written, zero or not. A `DT_HTEXT` value is always written as 0,
+because a text offset belongs to the module that wrote it. Save, load, save
+therefore gives byte-identical files.
+
+**Which tags a revision carries.** At revision 4 a slot's record MUST carry
+tags 2, 3, 6 and 7 together, and MUST NOT carry tag 1; a record with none of
+them is an empty slot, as today. At revision 3 the record MUST carry tags 1, 2
+and 3 together, tag 1 MUST have length 0, and tags 6 and 7 MUST NOT appear.
+Inner tag 1 is retired from revision 4 and never reused.
+
+**The load**, deferred to `SaveV1_ResolveNames()` after the module reload:
+
+1. Group the saved records by owner, in file order. Convert each owner `rID`
+   through the manifest, with the usual abort semantics. Owner 0 stays 0.
+2. Build the loaded module's variable rows per owner, in slot order.
+3. Check each owner for drift. The compiler refuses a duplicate name within one
+   owner, so a name is unique inside its owner. Therefore:
+   * A saved name that appears in the loaded owner's list at a DIFFERENT
+     ordinal refuses (an insertion, a removal or a reorder).
+   * A loaded list shorter than the saved list refuses (a removal).
+   * A saved name that does not appear in the loaded list at all is a rename,
+     and loads at its ordinal.
+   * Loaded variables past the saved range start at 0.
+   * An owner with no saved records keeps all its variables at 0.
+
+   The array drift rules need two consecutive shifted positions, which one or
+   two variables cannot show. Most owners have one variable, so this rule
+   replaces them for variables.
+4. Place each value at the slot the loaded module gives that (owner, ordinal),
+   after checking the slot is below N. `DT_RID` converts through the manifest,
+   with abort semantics; 0 is null. `DT_HOBJ` loads as saved, as `FIELD_H`
+   does. `DT_HTEXT` loads as 0. Every other accepted type loads as saved.
+5. Allocate the segment from the loaded geometry, and place the memory rows
+   after the variables.
+
+Every refusal names the owner, the ordinal, the recorded name and the found
+name. Refusals are collected and thrown as one `ECORRUPT`, as for the rows.
+
+**Old saves: the recovery.** The file's format and stamp select it, never a
+size test. It gives an old character the variable values the pre-fix game
+would read.
+
+*The frozen table.* A table of 97 rows (owner array, owner position, owner
+name, variable name, type), one per slot of the pre-fix module, is committed in
+the source. It is the master variable list from the start of the v1 format up
+to 391e353. Commit 86edfc0 (inc-s3bb) added `choir` to Music of the Spheres,
+making 98. No save file exists from 86edfc0 to the fix (checked 2026-09-26),
+and a save written in that window would recover wrongly from that slot onward.
+The fix bead MUST merge master before it generates the table, and MUST
+generate it from the module at 391e353.
+
+*IS1.3 files* (tag 1 of length 0, no tag 6 or 7):
+
+1. Check the save's manifest against the table. Each of the save's 21 array
+   lengths MUST be no longer than that array's length at 391e353, which the
+   table records. For each table row, the manifest's name at (owner array,
+   owner position) MUST equal the row's owner name. A failure refuses, naming
+   the array or the row. This catches a save written by a module with a
+   different variable list, such as an epic-branch save, which carries
+   resources master does not have.
+2. Unpack monster positions 0 to 24, numbered by the save's manifest, into a
+   400-byte image with row p at byte 16p, as the rev-3 reader lays rows.
+3. Read bytes 0 to 387 of that image as the values of the 97 table slots.
+4. Map each table row to the loaded slot by (owner array, position, ordinal),
+   with the drift checks of load step 3.
+5. Place monster rows from position 25 on, after the variables. Positions 0 to
+   24 load empty: the first 25 monsters lose their memory in an old save. The
+   variables had already corrupted it.
+
+An IS1.3 save keeps a slot only as far as the `MonMem` bitfields cover it: the
+first unit of each row whole, the other three at 17, 18 and 21 low bits. In a
+partial unit, a `DT_HOBJ` or `DT_RID` value loads as 0, because a cut handle
+can name a different live object, and a cut `rID` a different resource. Other
+partial values load as read, which is what the pre-fix game read.
+
+*v0 files* (stamp `SF...` or an old `VERSION_STRING`): a v0 load puts the raw
+block, sized from the file, straight into `MDataSeg`, and `SaveV1_ResolveNames`
+does not act on a v0 file. A v0 branch MUST therefore run in each of the three
+v0 load sites, `LoadNamedGame`, `RunSaveDump` and `RunSaveConvert`, after the
+module reload and before `SaveV1_CanWrite` or any reader of the block:
+
+1. Refuse unless the old block's size equals the loaded module's row total with
+   `szDataSeg` 0.
+2. Allocate a new block from the loaded geometry, and set `MDataSeg[i]` and
+   `MDataSegSize[i]` to it.
+3. Recover bytes 0 to 387 of the old block through the table, as IS1.3 steps
+   3 and 4 do. Every unit is whole in v0.
+4. Copy the old rows from position 25 on after the variables; positions 0 to
+   24 stay empty.
+
+A v0 file carries no manifest, so a v0 file from a module with a different
+variable list is not detected. The v0 recovery is exact only for a file written
+with the table's variable list. The committed v0 fixtures stay unconverted; only
+copies are converted, as today.
+
+`SCHEMA_REV` goes from 3 to 4. `MIN_READ_REV` stays 3, because the rev-3 reader
+stays and the recovery only adds to it.
+
+**What lands in the fix commit.** The `szDataSeg` fix alone makes every existing
+save refuse to load, so one commit MUST carry all of: the fix, the regenerated
+`src/yygram.cpp`, the variable record, the recovery, the revision bump, the
+dump section, the build-time order check with its first ledger, updated
+expectations in `tools/craft_bad_v1_saves.py` and `tools/check_dump_save.sh`,
+the `docs/SCRIPT-DATA-SEGMENT.md` supersession with its `docs/doc-deps.tsv` and
+`tools/doc_citations.baseline` rows, and a re-recorded `tools/gates/dive.baseline`
+with per-seed evidence if the gate moves. Moving the variables off the monster
+rows changes what scripts read, so seeded results can change.
+
+**The build-time order check.** It reads the compiled module and a committed
+ledger, and MUST NOT write any file. For each array, and for each variable
+owner, it compares the ledger's list with the module's list. It fails when:
+
+* the module's list is shorter than the ledger's (a removal); or
+* a name the ledger records at position P is present in the module's list but
+  not at P (an insertion, a removal or a reorder). A name that occurs more than
+  once in the ledger's list is exempt from this test, so a reorder among
+  duplicate names (for example the Flavour array's repeated colours) is not
+  detected.
+
+A name that the ledger records and the module lacks is a rename or a
+replacement, and passes (rule 3). Entries past the ledger's length pass. The
+ledger changes only through `--record`, which MUST refuse exactly what the
+check fails, and MUST accept a rename. The ledger
+diff goes in the same commit as the change that needs it. The check carries a
+`# gate: live` marker, because it needs a compiled module, so
+`tools/nightly_verify.sh` and `tools/finish_bead.sh` run it. Its first ledger
+is recorded from master at the fix commit.
+
+**Merging this into an epic branch.** An epic that added, removed or moved a
+variable inside an existing owner breaks the append rule against the ledger.
+The bead that merges master into the epic (`.claude/rules/epic-branches.md`)
+MUST restore each retired declaration at its old ordinal, place each new
+variable after the owner's existing ones, and re-record the ledger in that bead.
+Saves written by the epic before that merge are IS1.3 files from a different
+variable list, and they MUST convert, not refuse. That bead MUST build the
+epic's module at each commit where the epic's variable list changed, and add
+one frozen table per distinct list, each with its build's array lengths and
+owner names. The recovery tries every table with IS1.3 step 1. Exactly one
+table MUST match, or all matching tables MUST hold the same variable list;
+otherwise the load refuses, naming the matching tables. Masok
+(`~/Scripts/Incursion-inc-pu6v/save/Masok.sav`) MUST convert, and the bead
+MUST show it loading.
+
+`docs/SCRIPT-DATA-SEGMENT.md` is superseded. Its verdict rested on "0 bytes in
+every real module, and no compile path can change it", which was false.
 
 ### Version rules: forward-only
 
@@ -439,9 +664,11 @@ be converted.
 4. **The append-only rule is invisible in a diff.** Positions come from
    declaration order across `lib/*.irh`. Someone alphabetising a file, or moving
    entries between files, breaks every save in the wild from a commit that looks
-   harmless. The drift rules catch it at load; a build-time order check catches
-   it in the diff. Both are wanted.
-5. **The script data segment is unmeasured.** See the memory segment section.
+   harmless. The drift rules catch it at load; the build-time order check
+   (see the project rule) catches it before the commit lands.
+5. **A variable that holds an `rID` but is declared as an integer** carries its
+   value unconverted. The loader trusts the declared type. The four `rID`
+   holders today are declared `rID`.
 6. **Save size.** Measured, not assumed. The manifest costs +21,199 bytes
    compressed on the round-trip check's seed (32,781 -> 53,980). It is a fixed
    per-save cost, so it is 65% of a small early save and under 1% of a 2.4 MB
@@ -504,6 +731,53 @@ Live, as Brian plays:
 14. Convert a save, rebuild the module with one `Effect` appended, load. Every
     potion and scroll appearance, and every Known and Tried flag, unchanged.
     This is the oracle for the memory segment; it fails on the raw block.
+
+Script variables. The `-dump` report MUST print every variable by owner, name,
+type and value; it is the oracle for these cases. It MUST print the values as
+the load placed them, copied before any report step runs game logic: the
+report's own steps (for example `DumpStati`) run scripts that write variables. Legal, which MUST load with
+every existing value unchanged:
+
+15. **Round trip** with the variable records: case 1 holds.
+16. **Append in a body.** One variable appended after an existing god
+    tracker. The old value is unchanged; the new variable is 0.
+17. **Append a module-level variable** after the last one. Same requirement.
+18. **A resource append moves every slot.** Append an Effect that declares a
+    variable. Every older variable keeps its value although its slot moved.
+19. **Rename a variable in place.** Loads silently, value at its position.
+20. **Old saves.** Every `tools/fixtures/chars/*.sav` loads, and so do
+    `save/Keos.sav` and `save/Zakfienal.sav` (copies, in a sandbox). The test
+    MUST name one IS1.3 fixture whose recovered slots are non-zero in a whole
+    unit and in each partial unit (17, 18 and 21 bits), and MUST check each
+    exact expected value, computed from the pre-fix reading.
+21. **v0 convert.** `tools/check_convert_guard.sh` passes.
+
+Illegal, which MUST refuse and name the owner, the ordinal and both names:
+
+22. **Insert** a variable before an existing one in the same body.
+23. **Swap** two variables in one body.
+24. **Remove** a variable from a body, with a save that wrote it.
+25. **Adversarial.** An unknown type byte; types 1 and 6; a name length past
+    the blob; a `varCount` past the blob; an owner outside the manifest; a
+    revision-4 file that carries tag 1, or lacks tag 6 or 7; a revision-3 file
+    whose tag 1 is not empty, or that carries tag 6 or 7. Each refuses cleanly
+    with no out-of-bounds read.
+26. **Build-time order check.** In a sandbox `lib/`: insert a variable before
+    an existing one; remove one; swap two; insert an Effect mid-array; remove
+    one; swap two. The check is red for each, and `--record` refuses each.
+    Append a variable and an Effect: green, and `--record` accepts. Rename a
+    variable and an Effect in place: green, and `--record` accepts.
+27. **Module validity.** A module with `szDataSeg` 0 and variable rows, one
+    with a gap in the addresses, and one with a variable row outside slot 0:
+    each is `ECORRUPT`.
+28. **Recovery edge cases.** A recovered `DT_RID` that fails conversion loads
+    as 0 with one stderr line. A partial-unit `DT_HOBJ` loads as 0. An IS1.3
+    save whose manifest has an array longer than at 391e353 refuses. A v0 copy
+    whose block size does not match refuses.
+29. **A variable in a newly appended resource**, with a save written before
+    the resource existed: loads, the new variable is 0.
+30. **Round trip with a `DT_HTEXT` set**: cast Command, save, load, save; the
+    two files are identical.
 
 Cases 1 to 8 need a deliberately built sandbox **module**, the way
 `tools/check_spell_god_drift.sh` already builds one. Cases 9 to 11 need a

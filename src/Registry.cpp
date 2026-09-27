@@ -1320,6 +1320,7 @@ NoSaved:
 }
 
 bool Game::LoadNamedGame(const char *savefile) {
+    fileHeader recoveryHeader;
     int32 i;
     String fn;
 
@@ -1342,6 +1343,9 @@ bool Game::LoadNamedGame(const char *savefile) {
         T1->Color(WHITE);
         T1->Write("Loading... ");
 
+        T1->OpenRead(fn);
+        T1->FRead(&recoveryHeader, sizeof(recoveryHeader));
+        T1->Close();
         T1->OpenRead(fn);
         /* The central Game object gets overwritten. */
         MainRegistry.RemoveObject(theGame);
@@ -1401,7 +1405,8 @@ bool Game::LoadNamedGame(const char *savefile) {
        the throw to std::terminate and abort the process. Observed doing
        exactly that on 2026-08-24, driven through the load menu. */
     try {
-        SaveV1_ResolveNames();
+        if (strncmp(recoveryHeader.Version, "IS", 2)) SaveV0_RecoverVariables(*this);
+        else SaveV1_ResolveNames();
     } catch (int error_number) {
         Error("Error reading saved game (%s).", Lookup(FileErrors, error_number));
         return false;

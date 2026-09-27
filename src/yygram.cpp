@@ -7913,6 +7913,9 @@ int r_declaration ()
         yyerror("Resource variables of type String cannot be allocated.");
       b = new BResVar();
       b->xID   = FIND(theModule->GetText(theRes->Name));
+      if (((uint32)b->xID >> 24) != 1 || theModule->__GetResource(b->xID) != theRes)
+        yyerror(Format("Variable '%s' owner lookup differs from resource '%s'.",
+                       theSymTab[vn], theModule->GetText(theRes->Name)));
       b->Event = 0;
       if (theSymTab.GetBinding(vn,b->xID,b->Event,RES_VAR))
         Error("Resource variable '%s' declared twice!",theSymTab[vn]);
@@ -7930,6 +7933,9 @@ int r_declaration ()
 #line 1434 "lang/Grammar.acc"
  b = new BResVar();
       b->xID   = FIND(theModule->GetText(theRes->Name));
+      if (((uint32)b->xID >> 24) != 1 || theModule->__GetResource(b->xID) != theRes)
+        yyerror(Format("Variable '%s' owner lookup differs from resource '%s'.",
+                       theSymTab[vn], theModule->GetText(theRes->Name)));
       b->Event = 0;
       if (theSymTab.GetBinding(vn,b->xID,b->Event,RES_VAR))
         Error("Resource variable '%s' declared twice!",theSymTab[vn]);

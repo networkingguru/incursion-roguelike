@@ -462,6 +462,12 @@ static void OnTimeout(int sig) {
    used from exactly one call site, main(), the same way InitGodArrays() is
    forward-declared locally in src/Registry.cpp. */
 extern bool RunSaveDump(const char *path);
+extern bool RunRecoverVars(const char *path);
+extern bool RunScriptVariables();
+
+/* src/SaveV1.cpp: the build-time order check's oracle. Declared locally for
+   the same reason as RunSaveDump. */
+extern bool RunResourceOrder();
 
 /* src/SaveV1.cpp; declared locally for the same reason as RunSaveDump.
    Returns the process exit code directly (0 converted, 2 error, 3 refused
@@ -474,6 +480,9 @@ int main(int argc, char *argv[]) {
     const char *keyScript = NULL;
     const char *loadSave = NULL;
     const char *dumpSave = NULL;
+    const char *recoverSave = NULL;
+    bool scriptVars = false;
+    bool resOrder = false;
     const char *schemaTest = NULL;
     const char *schemaLoad = NULL;
     const char *convertSave = NULL;
@@ -545,6 +554,12 @@ int main(int argc, char *argv[]) {
             forceHeadless = true;
         else if (!strcmp(argv[i], "-dump") && i + 1 < argc)
             dumpSave = argv[++i];
+        else if (!strcmp(argv[i], "-recovervars") && i + 1 < argc)
+            recoverSave = argv[++i];
+        else if (!strcmp(argv[i], "-scriptvars"))
+            scriptVars = true;
+        else if (!strcmp(argv[i], "-resorder"))
+            resOrder = true;
         else if (!strcmp(argv[i], "-schematest") && i + 1 < argc)
             schemaTest = argv[++i];
         else if (!strcmp(argv[i], "-schemaload") && i + 1 < argc)
@@ -590,8 +605,14 @@ int main(int argc, char *argv[]) {
        its sibling flags do: it exits before Initialize()/StartMenu() run,
        exactly the way -compile and -formatid do by returning true from
        RunOnCommandLine (src/TextTerm.cpp:39). */
-    if (dumpSave) {
+    if (scriptVars) {
+        retval = RunScriptVariables() ? 0 : 22;
+    } else if (resOrder) {
+        retval = RunResourceOrder() ? 0 : 22;
+    } else if (dumpSave) {
         retval = RunSaveDump(dumpSave) ? 0 : 22;
+    } else if (recoverSave) {
+        retval = RunRecoverVars(recoverSave) ? 0 : 22;
     } else if (schemaTest) {
         retval = RunSchemaTest(schemaTest) ? 0 : 22;
     } else if (schemaLoad) {

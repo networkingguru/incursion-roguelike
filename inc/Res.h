@@ -97,6 +97,10 @@ class VMachine
       void SetMemberVar(int16 varid, hObj h, int32 val);
   };
 
+class Module;
+bool ValidateScriptVariables(Module *mod, int slot, String &reason);
+bool ScriptVariableOwner(Module *mod, rID owner, int &array, int32 &position);
+
 struct DebugInfo
   {
     rID    xID;

@@ -898,12 +898,17 @@ class Registry
 
 /* Free entry points for the v1 schema (src/SaveV1.cpp). */
 void SaveV1_ResolveNames();
+void SaveV0_RecoverVariables(Game &g);
 void SaveV1_DiscardPending();  /* drop unconsumed resolve state; see LoadGame */
 const char* SaveSchemaID();  /* "IS1." + SCHEMA_REV: "IS1.2" since the
                                 name-keyed memory segment (phase 4) */
 bool SaveV1_Raw();           /* DEBUG && INCURSION_V1_RAW=1 */
 bool RunSchemaTest(const char *outDir);
 bool RunSchemaLoad(const char *path);
+/* The build-time order check's oracle (docs/SAVE-SCHEMA-SPEC.md):
+   print the loaded module's 21 arrays and every script variable per owner,
+   in a fixed, deterministic order. Read-only; writes no file. */
+bool RunResourceOrder();
 
 
 

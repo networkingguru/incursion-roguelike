@@ -24,6 +24,8 @@
      bool RunSaveDump(const char *path)
 */
 
+#include <vector>
+#include <map>
 #include "Incursion.h"
 
 extern void InitGodArrays();
@@ -192,7 +194,105 @@ static const char *RtfName(int r) {
     }
 }
 
-bool RunSaveDump(const char *path) {
+/* The load-time copy of every module's script data segment prefix.
+
+   docs/SAVE-SCHEMA-SPEC.md (test plan, cases 15-30): the -dump report MUST
+   print every variable "as the load placed them, copied before any report
+   step runs game logic: the report's own steps (for example DumpStati) run
+   scripts that write variables." Recovers that: LoadSaveForReport() copies
+   each module's szDataSeg-byte prefix here the instant SaveV1_ResolveNames()
+   / SaveV0_RecoverVariables() has placed it, and PrintScriptVariables reads
+   the values from the copy, never from the live MDataSeg the report's own
+   game-logic steps keep writing. */
+static char  *v1ReportVars[MAX_MODULES];
+static uint32 v1ReportVarsSize[MAX_MODULES];
+
+static void CaptureScriptVariables()
+{
+    for (int ms = 0; ms < MAX_MODULES; ++ms) {
+        if (v1ReportVars[ms]) { free(v1ReportVars[ms]); v1ReportVars[ms] = 0; }
+        v1ReportVarsSize[ms] = 0;
+        Module *mod = Game::Modules[ms];
+        if (!mod || mod->szDataSeg <= 0)
+            continue;
+        if (!theGame->MDataSeg[ms] ||
+                theGame->MDataSegSize[ms] < (uint32)mod->szDataSeg)
+            continue;
+        v1ReportVars[ms] = (char*)malloc(mod->szDataSeg);
+        if (!v1ReportVars[ms])
+            continue;
+        memcpy(v1ReportVars[ms], theGame->MDataSeg[ms], mod->szDataSeg);
+        v1ReportVarsSize[ms] = (uint32)mod->szDataSeg;
+    }
+}
+
+static bool PrintScriptVariables(bool values)
+{
+    for (int ms = 0; ms < MAX_MODULES; ++ms) {
+        Module *mod = Game::Modules[ms];
+        if (!mod) continue;
+        String reason;
+        if (!ValidateScriptVariables(mod, ms, reason)) {
+            printf("Validity: FAIL module=%d: %s\n", ms, (const char*)reason);
+            return false;
+        }
+        std::vector<DebugInfo*> rows(mod->szDataSeg / 4);
+        for (int i = 0; i < mod->Symbols.Total(); ++i) {
+            DebugInfo *d = mod->Symbols[i];
+            if (d->BType == GLOB_VAR || d->BType == RES_VAR)
+                rows[d->Address] = d;
+        }
+        /* The load-time copy is the only sound value source: the report's
+           own game-logic steps (DumpStati, the equipped-slot walk,
+           CreateCharDump) run scripts that write MDataSeg. Fall back to the
+           live segment only for -scriptvars, which loads no save and so
+           takes no copy. See CaptureScriptVariables. */
+        const char *varSeg = v1ReportVars[ms] ? v1ReportVars[ms] : theGame->MDataSeg[ms];
+        uint32 varSegSize = v1ReportVars[ms] ? v1ReportVarsSize[ms] : theGame->MDataSegSize[ms];
+        if (values && !rows.empty() && (!varSeg ||
+                varSegSize < (uint32)mod->szDataSeg)) {
+            printf("Validity: FAIL module=%d: script data segment is missing or short\n", ms);
+            return false;
+        }
+        std::map<rID, int> ordinals;
+        for (size_t slot = 0; slot < rows.size(); ++slot) {
+            DebugInfo *d = rows[slot];
+            rID owner = d->BType == GLOB_VAR ? 0 : d->xID;
+            int ordinal = ordinals[owner]++;
+            const char *name = owner ? mod->GetText(mod->__GetResource(owner)->Name) : "(module)";
+            const char *type = d->DataType == DT_RECT ? "Rect" : Lookup(DataTypeNames, d->DataType);
+            if (values) {
+                int32 value;
+                memcpy(&value, varSeg + slot * 4, sizeof(value));
+                printf("  slot=%u owner=%s ordinal=%d ident=%.*s type=%s value=%d\n",
+                       (unsigned)slot, name, ordinal, 31, d->Ident, type, (int)value);
+            } else {
+                int array = -1; int32 position = -1;
+                if (owner) ScriptVariableOwner(mod, owner, array, position);
+                printf("%d\t%d\t%s\t%d\t%.*s\t%s\t%d\n", array, (int)position,
+                       name, ordinal, 31, d->Ident, type, (int)d->Address);
+            }
+        }
+        printf("Validity: OK module=%d variables=%u szDataSeg=%d\n",
+               ms, (unsigned)rows.size(), (int)mod->szDataSeg);
+    }
+    return true;
+}
+
+bool RunScriptVariables()
+{
+    if (!theGame->LoadModules()) return false;
+    printf("owner-array\towner-position\towner-name\tordinal\tident\ttype\taddress\n");
+    return PrintScriptVariables(false);
+}
+
+/* Load a save exactly as RunSaveDump does, through the deferred name
+   resolution, and stop. A v1 load recovers an old save's script variables
+   here, before any report or gameplay query runs; -recovervars reads them at
+   this point so the value it prints is the load-time recovered value, not a
+   value a later game-logic pass has overwritten. Returns false (having
+   printed) on any refusal. */
+static bool LoadSaveForReport(const char *path, fileHeader &fhdr) {
     if (!T1->Exists(path)) {
         fprintf(stderr, "incursion -dump: no such file: %s\n", path);
         return false;
@@ -209,7 +309,6 @@ bool RunSaveDump(const char *path) {
        save, the SF digest for a v0 one), not this binary's own
        SaveFormatID() or SaveSchemaID(). LoadGroup reads the same bytes
        internally but does not hand them back. */
-    fileHeader fhdr;
     memset(&fhdr, 0, sizeof(fhdr));
 
     try {
@@ -268,12 +367,31 @@ bool RunSaveDump(const char *path) {
        the module reload loop, before anything touches a resource field. A v0
        load queues nothing and this is a no-op for it. */
     try {
-        SaveV1_ResolveNames();
+        if (strncmp(fhdr.Version, "IS", 2)) SaveV0_RecoverVariables(*theGame);
+        else SaveV1_ResolveNames();
     } catch (int error_number) {
         fprintf(stderr, "incursion -dump: %s: %s\n", path,
             Lookup(FileErrors, error_number));
         return false;
     }
+
+    /* Freeze the values the load just placed, here, before any report step
+       (which runs game logic) can write them. The -dump Script Variables
+       section prints this copy. docs/SAVE-SCHEMA-SPEC.md, test plan. */
+    CaptureScriptVariables();
+
+    return true;
+}
+
+bool RunRecoverVars(const char *path) {
+    fileHeader fhdr;
+    if (!LoadSaveForReport(path, fhdr)) return false;
+    return PrintScriptVariables(true);
+}
+
+bool RunSaveDump(const char *path) {
+    fileHeader fhdr;
+    if (!LoadSaveForReport(path, fhdr)) return false;
 
     InitGodArrays();
 
@@ -401,6 +519,10 @@ bool RunSaveDump(const char *path) {
         if (!shown)
             printf("  (no effect memory)\n");
     }
+    printf("\n");
+
+    printf("=== Script Variables ===\n");
+    if (!PrintScriptVariables(true)) return false;
     printf("\n");
 
     /* Per-player resource memory for every Monster, in the same shape and for
