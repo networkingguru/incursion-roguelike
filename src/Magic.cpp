@@ -444,6 +444,11 @@ bool Magic::isTarget(EventInfo &_e, Thing *t) {
               sp_flags |= SP_INNATE;
       }
 
+      // The resource census uses BaseChance to count spells (Debug.cpp).
+      rID dcID = RedirectDCSource(e);
+      if (!dcID || e.isItem || te->BaseChance)
+          dcID = e.eID;
+      TEffect *dcEffect = TEFF(dcID);
       if (e.isItem) {
           e.saveDC = 10 + (e.EItem->GetPlus() * 2);
           if (e.EActor)
@@ -457,11 +462,11 @@ bool Magic::isTarget(EventInfo &_e, Thing *t) {
       } else if ((e.AType == A_BREA || e.AType == A_SPIT || e.DType == AD_SPE1 || e.DType == AD_SPE2) && e.EActor->HasAttk(e.AType))
           e.saveDC = (int8)e.EActor->GetPower(e.EActor->GetAttk(e.AType)->u.a.DC);
       else if (e.isTrap || !e.EActor)
-          e.saveDC = 10 + te->Level;
-      else if (TEFF(e.eID)->HasFlag(EF_SPECABIL))
+          e.saveDC = 10 + dcEffect->Level;
+      else if (dcEffect->HasFlag(EF_SPECABIL))
           e.saveDC = 10 + e.EActor->ChallengeRating() + e.EActor->Mod(A_CHA);
       else 
-          e.saveDC = (int8)e.EActor->getSpellDC(e.eID, e.isArcaneTrickery,(e.MM & MM_HEIGHTEN) == MM_HEIGHTEN);
+          e.saveDC = (int8)e.EActor->getSpellDC(dcID, e.isArcaneTrickery,(e.MM & MM_HEIGHTEN) == MM_HEIGHTEN);
 
       if (e.isItem && e.EItem && e.EItem->isType(T_SCROLL))
           e.vCasterLev = max(TEFF(e.EItem->eID)->Level*2-1,e.EActor->SkillLevel(SK_DECIPHER) - 2); 
@@ -1315,6 +1320,9 @@ DisbeliefMessageDone:
                 (!e.EMagic || e.EMagic->eval == EA_BLAST)))
             {
                 r = ReThrow(EV_MAGIC_HIT,e);
+                /* inc-g1q1: observe the resolved child effect and its real DC. */
+                extern void GloryProbeHit(EventInfo &e);
+                GloryProbeHit(e);
                 if (r == ABORT)
                     return ABORT;
                 if (!e.Immune)
@@ -3260,6 +3268,230 @@ void LOFSpellProbe(Player *shooter) {
     LOFSetForcedRoll(0);
     for (int i = 0; i < 5; i++)
         b[i].c->Remove(true);
+    theGame->PlayMode = wasInPlay;
+}
+
+/* inc-g1q1: fixture-only targeting and observations, inert outside GloryProbe. */
+static Monster *gloryTarget = NULL;
+static rID gloryBoltID = 0;
+static bool gloryCancel = false;
+static int gloryThrown = 0, gloryDC = 0;
+static int gloryQueuedKey = 0;
+int GloryProbeKey() { int key = gloryQueuedKey; gloryQueuedKey = 0; return key; }
+static rID gloryObserveID = 0;
+static int gloryObservedDC = -1;
+static uint32 gloryObservedMM = 0;
+
+void GloryProbeRedirect(EventInfo &e) {
+    if (e.eID == gloryObserveID) {
+        gloryObservedDC = e.saveDC;
+        gloryObservedMM = e.MM;
+    }
+}
+
+int GloryProbeTarget(EventInfo &e) {
+    if (!gloryTarget || e.eID != gloryBoltID) return -1;
+    if (gloryCancel) return 0;
+    e.ETarget = gloryTarget;
+    e.EXVal = gloryTarget->x;
+    e.EYVal = gloryTarget->y;
+    e.isLoc = e.isDir = false;
+    return 1;
+}
+
+void GloryProbeHit(EventInfo &e) {
+    if (!gloryTarget || e.eID != gloryBoltID || e.EVictim != gloryTarget)
+        return;
+    ++gloryThrown;
+    gloryDC = e.saveDC;
+    Error("GLORY_PROBE: hit=%d saveDC=%d fear=%d", gloryThrown, gloryDC,
+        (int)gloryTarget->HasStati(AFRAID));
+}
+
+void GloryProbe(Player *caster) {
+    if (!getenv("INCURSION_GLORY_PROBE")) return;
+    if (!caster || !caster->m) {
+        Error("GLORY_PROBE: INCONCLUSIVE no live caster/map");
+        return;
+    }
+    Error("GLORY_PROBE: sizes Game=%d VMachine=%d EventInfo=%d Resource=%d Magic=%d",
+        (int)sizeof(Game),(int)sizeof(VMachine),(int)sizeof(EventInfo),
+        (int)sizeof(Resource),(int)sizeof(Magic));
+    const rID parent = FIND("Bolts of Glory"), targetID = FIND("quasit");
+    gloryBoltID = FIND("Bolt of Glory");
+    if (!parent || !gloryBoltID || !targetID) {
+        Error("GLORY_PROBE: INCONCLUSIVE missing resources");
+        return;
+    }
+    Map *mp = caster->m;
+    int16 tx = -1, ty = -1;
+    for (int dx = -1; dx <= 1 && tx < 0; ++dx)
+        for (int dy = -1; dy <= 1 && tx < 0; ++dy) {
+            int nx = caster->x + dx, ny = caster->y + dy;
+            if ((!dx && !dy) || !mp->InBounds(nx,ny) || mp->SolidAt(nx,ny)
+                || mp->FCreatureAt(nx,ny)) continue;
+            tx = nx; ty = ny;
+        }
+    if (tx < 0) {
+        Error("GLORY_PROBE: INCONCLUSIVE no adjacent floor");
+        return;
+    }
+    const bool wasInPlay = theGame->PlayMode;
+    theGame->PlayMode = true;
+    Monster *target = new Monster(targetID);
+    TMON(targetID)->GrantGear(target,targetID,true);
+    TMON(targetID)->PEvent(EV_BIRTH,target,targetID);
+    target->PlaceAt(mp,tx,ty,true);
+    target->Initialize(true);
+    target->ts.addCreatureTarget(caster,TargetEnemy);
+    caster->ts.addCreatureTarget(target,TargetEnemy);
+    if (target->m != mp || !target->isMType(MA_EVIL) ||
+        !target->HasMFlag(M_IALIGN) || target->ResistLevel(AD_FEAR) == -1 ||
+        target->ResistLevel(AD_MIND) == -1) {
+        Error("GLORY_PROBE: INCONCLUSIVE invalid inherently evil target");
+        target->Remove(true);
+        theGame->PlayMode = wasInPlay;
+        return;
+    }
+    extern void LOFSetForcedRoll(int8 r);
+    extern void LOFSetForcedSaveThrowRoll(int8 r);
+    extern void LOFClearForcedSaveThrowRoll();
+    const int oldCL = caster->CasterLev();
+    caster->GainAbility(CA_SPELLCASTING,5-oldCL,0,SS_PERM);
+    const uint16 oldFlags = caster->getSpellFlags(parent);
+    caster->setSpellFlags(parent,oldFlags | SP_KNOWN | SP_DIVINE);
+    const int cl = caster->CasterLev();
+    gloryTarget = target;
+    gloryThrown = 0;
+    LOFSetForcedRoll(20);
+    LOFSetForcedSaveThrowRoll(1);
+    auto resetTarget = [&]() {
+        target->mHP = target->cHP = 10000;
+        target->RemoveStati(AFRAID);
+    };
+    resetTarget();
+    EventInfo cast; cast.Clear();
+    cast.EActor = caster; cast.ETarget = caster; cast.EMap = mp;
+    cast.eID = parent; cast.isSpell = true;
+    ReThrow(EV_EFFECT,cast);
+    const int first = gloryThrown;
+    const int storedCL = caster->GetEffStatiCLev(TRAP_EVENT,parent);
+    gloryCancel = true;
+    const int beforeCancel = gloryThrown;
+    Throw(EV_TURN,caster);
+    const int cancelled = gloryThrown - beforeCancel;
+    gloryCancel = false;
+    caster->GainAbility(CA_SPELLCASTING,2,0,SS_PERM);
+    for (int turn = 0; turn < cl+3; ++turn) {
+        resetTarget();
+        Throw(EV_TURN,caster);
+    }
+    const bool active = caster->HasEffStati(TRAP_EVENT,parent) ||
+        caster->HasEffStati(EFF_FLAG1,parent) || caster->HasEffStati(EFF_FLAG2,parent);
+    Error("GLORY_PROBE: cap thrown=%d cl=%d first=%d cancelled=%d storedCL=%d active=%d %s",
+        gloryThrown,cl,first,cancelled,storedCL,(int)active,
+        gloryThrown == cl && first == 1 && cancelled == 0 && storedCL == cl && !active
+            ? "PASS" : "FAIL");
+    caster->RemoveEffStati(parent);
+    for (int pass = 1; pass >= 0; --pass) {
+        resetTarget();
+        const int before = gloryThrown;
+        LOFSetForcedSaveThrowRoll(pass ? 20 : 1);
+        EventInfo bolt; bolt.Clear();
+        bolt.EActor = caster; bolt.ETarget = target; bolt.EMap = mp;
+        bolt.eID = gloryBoltID; bolt.isSpell = true;
+        ReThrow(EV_EFFECT,bolt);
+        const bool fear = target->HasStati(AFRAID);
+        Error("GLORY_PROBE: save forced=%s fear=%d saveDC=%d resolved=%d %s",
+            pass ? "pass" : "fail",(int)fear,gloryDC,gloryThrown-before,
+            fear == !pass && gloryDC > 0 && gloryThrown-before == 1 ? "PASS" : "FAIL");
+    }
+    caster->GainAbility(CA_SPELLCASTING,5-caster->CasterLev(),0,SS_PERM);
+    const uint32 mm = MM_HEIGHTEN | MM_MAXIMIZE;
+    const char *parents[] = {"Bolts of Glory", "Flame Arrow", "Pyrotechnics", "Pyrotechnics"};
+    const char *children[] = {"Bolt of Glory", "Flame Arrow;blast", "Pyrotechnics;smoke", "Pyrotechnics;flash"};
+    for (int i = 0; i < 4; ++i) {
+        rID source = FIND(parents[i]);
+        uint16 flags = caster->getSpellFlags(source);
+        caster->setSpellFlags(source,flags | SP_KNOWN | SP_DIVINE);
+        gloryObserveID = FIND(children[i]);
+        gloryBoltID = gloryObserveID;
+        gloryObservedDC = -1; gloryObservedMM = 0;
+        resetTarget();
+        EventInfo test; test.Clear();
+        test.EActor = caster; test.ETarget = caster; test.EMap = mp;
+        test.eID = source; test.isSpell = true; test.MM = i < 2 ? mm : 0;
+        test.EXVal = tx; test.EYVal = ty;
+        test.vCasterLev = 5; test.vDuration = 10;
+        if (i < 2) {
+            // Run the actual storage and immediate-turn script handlers.
+            TEFF(source)->Event(test,source,EV_MAGIC_HIT);
+            TEFF(source)->Event(test,source,POST(EV_MAGIC_HIT));
+        } else {
+            // EV_EFFECT owns the real choice/redirect; no synthetic child cast.
+            gloryQueuedKey = i == 2 ? 's' : 'f';
+            TEFF(source)->Event(test,source,EV_EFFECT);
+        }
+        int expected = caster->getSpellDC(source,false,i < 2);
+        Error("GLORY_PROBE: dc child=%s actual=%d parent=%d wis=%d %s",
+            children[i],gloryObservedDC,expected,caster->Mod(A_WIS),
+            gloryObservedDC == expected && expected != 10 ? "PASS" : "FAIL");
+        if (i < 2)
+            Error("GLORY_PROBE: mm child=%s actual=%u expected=%u low=%d high=%d %s",
+                children[i],gloryObservedMM,mm,
+                (gloryObservedMM & MM_HEIGHTEN) != 0,
+                (gloryObservedMM & MM_MAXIMIZE) != 0,
+                gloryObservedMM == mm ? "PASS" : "FAIL");
+        caster->RemoveEffStati(source);
+        if (i < 2) {
+            // A borrow across bit 16 makes the 65535 mutation lose QUICKEN.
+            const uint32 scaleMM = MM_AMPLIFY | MM_QUICKEN;
+            test.MM = scaleMM;
+            gloryObservedMM = 0;
+            resetTarget();
+            TEFF(source)->Event(test,source,EV_MAGIC_HIT);
+            TEFF(source)->Event(test,source,POST(EV_MAGIC_HIT));
+            Error("GLORY_PROBE: mm-scale child=%s actual=%u expected=%u low=%d high=%d %s",
+                children[i],gloryObservedMM,scaleMM,
+                (gloryObservedMM & MM_AMPLIFY) != 0,
+                (gloryObservedMM & MM_QUICKEN) != 0,
+                gloryObservedMM == scaleMM ? "PASS" : "FAIL");
+            caster->RemoveEffStati(source);
+        }
+        caster->setSpellFlags(source,flags);
+    }
+    {
+        rID trap = FIND("stinking cloud trap"), spell = FIND("stinking cloud");
+        gloryObserveID = spell; gloryObservedDC = -1;
+        EventInfo test; test.Clear();
+        test.EActor = caster; test.ETarget = target; test.EMap = mp;
+        test.eID = trap; test.isTrap = true; test.EXVal = tx; test.EYVal = ty;
+        TEFF(trap)->Event(test,trap,EV_MAGIC_HIT);
+        int expected = 10 + TEFF(spell)->Level;
+        Error("GLORY_PROBE: fullspell actual=%d expected=%d sourceDC=%d base=%d %s",
+            gloryObservedDC,expected,10+TEFF(trap)->Level,TEFF(spell)->BaseChance,
+            gloryObservedDC == expected && expected != 10+TEFF(trap)->Level ? "PASS" : "FAIL");
+    }
+    {
+        rID shadows = FIND("Animate Shadows");
+        target->RemoveStati(BLIND);
+        caster->GainTempStati(EFF_FLAG1,NULL,10,SS_ENCH,0,23,shadows,5);
+        EventInfo test; test.Clear();
+        test.EActor = caster; test.ETarget = target; test.EMap = mp;
+        test.eID = shadows; test.isSpell = true;
+        caster->CalcEffect(test);
+        TEFF(shadows)->Event(test,shadows,EV_MAGIC_HIT);
+        Error("GLORY_PROBE: shadows actual=%d stored=23 %s",test.saveDC,
+            test.saveDC == 23 ? "PASS" : "FAIL");
+        caster->RemoveEffStati(shadows);
+    }
+    gloryObserveID = 0;
+    LOFSetForcedRoll(0);
+    LOFClearForcedSaveThrowRoll();
+    gloryTarget = NULL;
+    caster->setSpellFlags(parent,oldFlags);
+    caster->GainAbility(CA_SPELLCASTING,oldCL-caster->CasterLev(),0,SS_PERM);
+    target->Remove(true);
     theGame->PlayMode = wasInPlay;
 }
 

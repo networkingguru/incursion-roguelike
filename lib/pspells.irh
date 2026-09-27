@@ -3633,6 +3633,7 @@ Effect "Bolts of Glory" : EA_GENERIC
       saving throw is failed. Hitting a target with a bolt of 
       glory requires a ranged attack roll.";
     On Event META(EV_TURN) {
+      int16 thrown;
       e.eID = $"Bolt of Glory";
       if (!ETerm->EffectPrompt(e,Q_TAR,false,"Target Bolt of Glory:"))
         {
@@ -3642,10 +3643,19 @@ Effect "Bolts of Glory" : EA_GENERIC
       e.eID = (rID) 0;
       if (!GetHandle(EVictim))
         return NOTHING;
-      e.vCasterLev = EActor->CasterLev();
-      e.MM = EActor->GetEffStatiMag(EFF_FLAG1,$"Bolts of Glory") +
-             EActor->GetEffStatiMag(EFF_FLAG2,$"Bolts of Glory") * 0xFFFF;
+      e.vCasterLev = EActor->GetEffStatiCLev(TRAP_EVENT,$"Bolts of Glory");
+      /* upstream: metamagic halves live in Val, with a 65536 high-word scale;
+         the Mag read and 65535 scale also fail on Win32. Observed, inc-g1q1, not sent. */
+      e.MM = (EActor->GetEffStatiVal(EFF_FLAG1,$"Bolts of Glory") & 0xFFFF) +
+             (EActor->GetEffStatiVal(EFF_FLAG2,$"Bolts of Glory") & 0xFFFF) * 0x10000;
       RedirectEff(e,$"Bolt of Glory",EV_EFFECT);
+      /* upstream: only thrown bolts count toward the cast-time level cap;
+         the missing counter also breaks Win32. Observed, inc-g1q1, not sent.
+         TRAP_EVENT stores its event code in Mag, leaving Val for the count. */
+      thrown = EActor->GetEffStatiVal(TRAP_EVENT,$"Bolts of Glory") + 1;
+      EActor->SetEffStatiVal(TRAP_EVENT,$"Bolts of Glory",thrown);
+      if (thrown >= EActor->GetEffStatiCLev(TRAP_EVENT,$"Bolts of Glory"))
+        EActor->RemoveEffStati($"Bolts of Glory");
       return NOTHING;
       },
     EV_MAGIC_HIT {
@@ -3672,8 +3682,11 @@ Effect "Bolt of Glory" : EA_BLAST
   { xval: AD_HOLY; pval: (LEVEL_EVERY2)d8;
     aval: AR_BOLT; cval: WHITE; Flags: EF_GOOD, EF_ATTACK;
     On Event POST(EV_MAGIC_HIT) {
-      if (!e.Resist && EVictim->isMType(MA_EVIL) && 
-             EVictim->HasMFlag(M_IALIGN))
+      /* upstream: inherently evil victims get a Will save against fear;
+         the missing roll also breaks Win32. Observed, inc-g1q1, not sent. */
+      if (!e.Resist && EVictim->isMType(MA_EVIL) &&
+             EVictim->HasMFlag(M_IALIGN) &&
+             !EVictim->SavingThrow(WILL,e.saveDC,SA_MAGIC|SA_SPELLS|SA_FEAR))
         {
           EVictim->GainTempStati(AFRAID,NULL,3d6,SS_ATTK,FEAR_PANIC);
           EVictim->StatiMessage(AFRAID,FEAR_PANIC);
