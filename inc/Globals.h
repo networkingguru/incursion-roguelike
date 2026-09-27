@@ -68,6 +68,8 @@ EvReturn ThrowDmgEff(int16 Ev,int16 DType,int16 DmgVal, const char*s,
                rID eID, Object *p1=NULL, Object *p2=NULL,Object*p3=NULL,
 	             Object *p4=NULL);
 EvReturn RedirectEff(EventInfo &e, rID eID, int16 Ev=EV_EFFECT);
+rID ExecutingResource();
+rID RedirectDCSource(const EventInfo &e);
 
 EvReturn ReThrow(int16 ev, EventInfo &e);
 void SetEvent(EventInfo &e, int16 Ev, Object *p1, Object *p2=NULL, 

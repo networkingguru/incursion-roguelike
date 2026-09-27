@@ -537,6 +537,8 @@ A new check adds its row to this table, in alphabetical order.
 | `check_gear_spell_protection.sh` | Does a spell protect the caster's gear? Under Endure the Elements his silvered warhammer holds 78 hit points through twelve magma creeper retaliations. | LIVE |
 | `check_generated_merge.sh` | Does Git conflict on independent edits to `lib/dispatch.h` with the shipped merge guard, but cleanly merge both edits without it? Uses throwaway repositories; tests Git, not the compiler (inc-m1wb). | LIVE |
 | `check_geomancy.sh` | Does the Earthsinger's Geomancy roll the 5d12 its page names, rather than the 5d12+12 copied from the Mana potion? | LIVE |
+| `check_glory.sh` | Does Bolts of Glory cap its bolts and force a Will save against fear, do redirected child effects use the parent spell's DC, and does metamagic reach the Bolts of Glory and Flame Arrow children? | LIVE |
+| `check_glory_mutations.py` | Does `check_glory.sh` actually go red? This script applies three deliberate mutations -- a lost redirect DC, a `GetEffStatiVal`/`GetEffStatiMag` swap, and a `* 0x10000`/`* 0xFFFF` high-half truncation -- rebuilds, and demands each one fail the cases it should; restores source and build afterwards. | LIVE |
 | `check_goblin_queen_prose.sh` | Does the Staff of the Goblin Queen description scope its +4 bonuses and -4 penalties to goblinoid wielders, matching the all-or-nothing goblinoid gate that governs every effect? | LIVE |
 | `check_gravestone.sh` | Does the death screen render the epitaph's corrected wording and columns, and the date the stone is carved with? | LIVE |
 | `check_grounded_stance_live.sh` | Does the Earthsinger's Grounded Stance add its damage term to a landed blow when every condition it names is met? | LIVE |

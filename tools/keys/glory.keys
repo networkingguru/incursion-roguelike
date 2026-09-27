@@ -1,0 +1,7 @@
+# inc-g1q1: probe supplies targets; real ESC cancels one prompt.
+SPACE*80
+ESC*20
+s
+ESC
+s
+@quit
