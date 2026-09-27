@@ -1,0 +1,12 @@
+# inc-glnx case 30: cast Command on self so its hText str is assigned.
+@include chargen.keys
+w y
+@choose "Learn Any Spell"
+"Command" ENTER
+m
+@choose "Command"
+*
+h
+@dump:command-cast
+@while "You are paralyzed" 1
+@quit

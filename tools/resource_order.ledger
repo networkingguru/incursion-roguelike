@@ -1,0 +1,3628 @@
+# tools/resource_order.ledger -- the build-time order check's baseline.
+# docs/SAVE-SCHEMA-SPEC.md, 'The build-time order check'. One line per
+# resource-array entry and per script variable, in order:
+#   A <slot> <array> <array name>
+#   E <slot> <array> <position> <entry name>
+#   O <slot> <owner array> <owner position> <owner name>
+#   V <slot> <owner array> <owner position> <ordinal> <ident> <type>
+# (owner array -1, position -1 is the module-level variable list)
+# Never edit by hand: after a LEGAL append run
+#   tools/check_resource_order.sh --record
+# It refuses anything but an append, and writes no file otherwise.
+A	0	0	Monster
+E	0	0	0	(Resource Zero)
+E	0	0	1	Beginner's Kit
+E	0	0	2	Resurrection Gear
+E	0	0	3	Universal Gear
+E	0	0	4	human;temp
+E	0	0	5	kobold;temp
+E	0	0	6	gnome;temp
+E	0	0	7	dwarf;temp
+E	0	0	8	elf;temp
+E	0	0	9	drow;temp
+E	0	0	10	halfling;temp
+E	0	0	11	lizardman;temp
+E	0	0	12	orc;temp
+E	0	0	13	Deep Gnome;temp
+E	0	0	14	Grey Dwarf;temp
+E	0	0	15	Grey Elf;temp
+E	0	0	16	Wood Elf;temp
+E	0	0	17	Stoutheart Halfling;temp
+E	0	0	18	Dragonkin;temp
+E	0	0	19	Black Orc;temp
+E	0	0	20	globes of light
+E	0	0	21	phantom horse
+E	0	0	22	phantom pony
+E	0	0	23	animated hemp rope
+E	0	0	24	animated silk rope
+E	0	0	25	animated giant's-hair rope
+E	0	0	26	spectral hand;mon
+E	0	0	27	black tentacle
+E	0	0	28	Roark Ironbeard
+E	0	0	29	goblin family
+E	0	0	30	goblin vizier
+E	0	0	31	Murgash, the Goblin King
+E	0	0	32	dragon
+E	0	0	33	gold dragon
+E	0	0	34	silver dragon
+E	0	0	35	bronze dragon
+E	0	0	36	copper dragon
+E	0	0	37	brass dragon
+E	0	0	38	steel dragon
+E	0	0	39	mercury dragon
+E	0	0	40	white dragon
+E	0	0	41	red dragon
+E	0	0	42	purple dragon
+E	0	0	43	purple dragon;snakeform
+E	0	0	44	black dragon
+E	0	0	45	green dragon
+E	0	0	46	yellow dragon
+E	0	0	47	blue dragon
+E	0	0	48	shadow ur-dragon
+E	0	0	49	brilliant ur-dragon
+E	0	0	50	shattering ur-dragon
+E	0	0	51	plant ur-dragon
+E	0	0	52	water ur-dragon
+E	0	0	53	hatori
+E	0	0	54	blast drake
+E	0	0	55	caustic drake
+E	0	0	56	flame drake
+E	0	0	57	force drake
+E	0	0	58	wyvern
+E	0	0	59	dragon turtle
+E	0	0	60	dragonne
+E	0	0	61	griffon
+E	0	0	62	hippogriff
+E	0	0	63	lammasu
+E	0	0	64	pegasus
+E	0	0	65	peryton
+E	0	0	66	unicorn
+E	0	0	67	pirahna bird
+E	0	0	68	arsinoitherium
+E	0	0	69	juvenile arrowhawk
+E	0	0	70	devilfish
+E	0	0	71	cavefish
+E	0	0	72	chinook salmon
+E	0	0	73	piranha
+E	0	0	74	cave pelican
+E	0	0	75	ixitxachitl
+E	0	0	76	greater ixitxachitl
+E	0	0	77	aurumvorax
+E	0	0	78	basilisk
+E	0	0	79	boalisk
+E	0	0	80	behir
+E	0	0	81	bulette
+E	0	0	82	cateoblepas
+E	0	0	83	cockatrice
+E	0	0	84	couatl
+E	0	0	85	darkmantle
+E	0	0	86	stifler
+E	0	0	87	icemantle
+E	0	0	88	deathshroud
+E	0	0	89	ettercap
+E	0	0	90	fire toad
+E	0	0	91	spitting frog
+E	0	0	92	giant tortoise
+E	0	0	93	grey render
+E	0	0	94	grick
+E	0	0	95	ice toad
+E	0	0	96	froghemoth
+E	0	0	97	osquip
+E	0	0	98	otyugh
+E	0	0	99	owlbear
+E	0	0	100	remorhaz
+E	0	0	101	rust monster
+E	0	0	102	porpoise
+E	0	0	103	cave lizard
+E	0	0	104	shocker lizard
+E	0	0	105	stirge
+E	0	0	106	thunderbeast
+E	0	0	107	juvenile tojanda
+E	0	0	108	tojanda
+E	0	0	109	elder tojanda
+E	0	0	110	winged snake
+E	0	0	111	ape
+E	0	0	112	baboon
+E	0	0	113	blood ape
+E	0	0	114	girallon
+E	0	0	115	monkey
+E	0	0	116	blazing terror
+E	0	0	117	cave lion
+E	0	0	118	cheetah
+E	0	0	119	displacer beast
+E	0	0	120	krenshar
+E	0	0	121	leopard
+E	0	0	122	sea cat
+E	0	0	123	smilodon
+E	0	0	124	tiger
+E	0	0	125	spectral panther
+E	0	0	126	elven cat
+E	0	0	127	badger
+E	0	0	128	bat
+E	0	0	129	bison
+E	0	0	130	black bear
+E	0	0	131	boa constrictor
+E	0	0	132	giant constrictor snake
+E	0	0	133	huge viper
+E	0	0	134	wild boar
+E	0	0	135	arctic boar
+E	0	0	136	brown bear
+E	0	0	137	canis dirus
+E	0	0	138	crocodile
+E	0	0	139	giant crocodile
+E	0	0	140	eagle
+E	0	0	141	giant owl
+E	0	0	142	chilling eel
+E	0	0	143	electric eel
+E	0	0	144	fox
+E	0	0	145	giant deer
+E	0	0	146	giant rat
+E	0	0	147	glyptodon
+E	0	0	148	jackal
+E	0	0	149	monitor lizard
+E	0	0	150	plague rat
+E	0	0	151	rhinoceros
+E	0	0	152	bull shark
+E	0	0	153	huge shark
+E	0	0	154	giant squid
+E	0	0	155	wolf
+E	0	0	156	wolverine
+E	0	0	157	deinonychus
+E	0	0	158	megaraptor
+E	0	0	159	cave ankylosaurus
+E	0	0	160	cave triceratops
+E	0	0	161	cave tyrannosaurus
+E	0	0	162	winter wolf
+E	0	0	163	worg
+E	0	0	164	senmurv
+E	0	0	165	horse
+E	0	0	166	warhorse
+E	0	0	167	riding lizard
+E	0	0	168	war lizard
+E	0	0	169	psionic riding lizard
+E	0	0	170	pony
+E	0	0	171	warpony
+E	0	0	172	riding dog
+E	0	0	173	pygmy war rhino
+E	0	0	174	mastiff
+E	0	0	175	giant badger
+E	0	0	176	elephant
+E	0	0	177	plague of bats
+E	0	0	178	plague of centipedes
+E	0	0	179	plague of locusts
+E	0	0	180	plague of rats
+E	0	0	181	plague of monkeys
+E	0	0	182	plague of spiders
+E	0	0	183	plague of stirges
+E	0	0	184	cave orc
+E	0	0	185	hill orc
+E	0	0	186	black orc
+E	0	0	187	drow
+E	0	0	188	dwarf
+E	0	0	189	elf
+E	0	0	190	gnome
+E	0	0	191	stoutheart halfling
+E	0	0	192	halfling
+E	0	0	193	human
+E	0	0	194	kobold
+E	0	0	195	lizardman
+E	0	0	196	goblin
+E	0	0	197	blue goblin
+E	0	0	198	goblin spider
+E	0	0	199	dekanter goblin
+E	0	0	200	hobgoblin
+E	0	0	201	bugbear
+E	0	0	202	adlet
+E	0	0	203	batkin
+E	0	0	204	gremlin
+E	0	0	205	aasimar
+E	0	0	206	tiefling
+E	0	0	207	air genasi
+E	0	0	208	earth genasi
+E	0	0	209	fire genasi
+E	0	0	210	water genasi
+E	0	0	211	githyanki
+E	0	0	212	githzerai
+E	0	0	213	mongrelman
+E	0	0	214	myconid
+E	0	0	215	grimlock
+E	0	0	216	muckdweller
+E	0	0	217	locathah
+E	0	0	218	minotaur
+E	0	0	219	sahuagin
+E	0	0	220	troll
+E	0	0	221	scrag
+E	0	0	222	chitine
+E	0	0	223	choldrith
+E	0	0	224	kyrie
+E	0	0	225	ursoi
+E	0	0	226	thri-kreen
+E	0	0	227	tabaxi
+E	0	0	228	medusa
+E	0	0	229	sea hag
+E	0	0	230	green hag
+E	0	0	231	annis
+E	0	0	232	night hag
+E	0	0	233	sphinx
+E	0	0	234	hieracosphinx
+E	0	0	235	gynosphinx
+E	0	0	236	criosphinx
+E	0	0	237	androsphinx
+E	0	0	238	hill giant
+E	0	0	239	stone giant
+E	0	0	240	frost giant
+E	0	0	241	fire giant
+E	0	0	242	ogre
+E	0	0	243	ogre mage
+E	0	0	244	merrow
+E	0	0	245	verbeeg
+E	0	0	246	saqualaminoi
+E	0	0	247	sylph
+E	0	0	248	nereid
+E	0	0	249	rainbow sprite
+E	0	0	250	bogwart
+E	0	0	251	leprechaun
+E	0	0	252	nixie
+E	0	0	253	sprite
+E	0	0	254	winterwier
+E	0	0	255	satyr
+E	0	0	256	nymph
+E	0	0	257	grey nymph
+E	0	0	258	naga
+E	0	0	259	water naga
+E	0	0	260	guardian naga
+E	0	0	261	dark naga
+E	0	0	262	spirit naga
+E	0	0	263	banelar
+E	0	0	264	aranea
+E	0	0	265	azmyth
+E	0	0	266	firebat
+E	0	0	267	night hunter
+E	0	0	268	sonic bat
+E	0	0	269	centaur
+E	0	0	270	drider
+E	0	0	271	grippli
+E	0	0	272	jackal lord
+E	0	0	273	wereboar
+E	0	0	274	wererat
+E	0	0	275	weretiger
+E	0	0	276	werewolf
+E	0	0	277	werebear
+E	0	0	278	belabra
+E	0	0	279	cellar dwellar
+E	0	0	280	chuul
+E	0	0	281	cloaker
+E	0	0	282	disir
+E	0	0	283	magori
+E	0	0	284	ethereal filcher
+E	0	0	285	feyr
+E	0	0	286	floating eye
+E	0	0	287	greater floating eye
+E	0	0	288	seven eyes
+E	0	0	289	blurry eye
+E	0	0	290	eye of the storm
+E	0	0	291	ice blue eye
+E	0	0	292	bloodshot eye
+E	0	0	293	eye of the abyss
+E	0	0	294	floating eyesocket
+E	0	0	295	scryer
+E	0	0	296	frost slug
+E	0	0	297	oxthixi
+E	0	0	298	hook horror
+E	0	0	299	mind flayer
+E	0	0	300	nothic
+E	0	0	301	mind flayer warrior
+E	0	0	302	mind flayer mage
+E	0	0	303	quylthulg
+E	0	0	304	tentacle stalker
+E	0	0	305	umber hulk
+E	0	0	306	yellow light
+E	0	0	307	mote of frost
+E	0	0	308	mote of fire
+E	0	0	309	mote of negative energy
+E	0	0	310	mote of pure magic
+E	0	0	311	mote of vacuum
+E	0	0	312	mote of entropy
+E	0	0	313	ball lightning
+E	0	0	314	will-o'-wisp
+E	0	0	315	glass golem
+E	0	0	316	flesh golem
+E	0	0	317	stone golem
+E	0	0	318	scarecrow
+E	0	0	319	repelling column
+E	0	0	320	caryatid column
+E	0	0	321	clockwork horror
+E	0	0	322	necrophidius
+E	0	0	323	vampire melon
+E	0	0	324	deadly nettle
+E	0	0	325	malyss root
+E	0	0	326	assassin vine
+E	0	0	327	blood grass
+E	0	0	328	razor-whip vine
+E	0	0	329	dark tree
+E	0	0	330	shambling mound
+E	0	0	331	tendriculous
+E	0	0	332	treant
+E	0	0	333	strange fungus
+E	0	0	334	aether sponge
+E	0	0	335	brown mold
+E	0	0	336	spectral mold
+E	0	0	337	sonic bloom
+E	0	0	338	caustic fungus
+E	0	0	339	spore patch
+E	0	0	340	shrieker
+E	0	0	341	ascomoid
+E	0	0	342	acid blob
+E	0	0	343	bloodbloater
+E	0	0	344	bloodsucker
+E	0	0	345	stone jelly
+E	0	0	346	shadow ooze
+E	0	0	347	blue jelly
+E	0	0	348	crystal ooze
+E	0	0	349	brown pudding
+E	0	0	350	grey ooze
+E	0	0	351	magma creeper
+E	0	0	352	stunjelly
+E	0	0	353	giant wasp
+E	0	0	354	giant dragonfly
+E	0	0	355	giant bee
+E	0	0	356	giant praying mantis
+E	0	0	357	small monstrous centipede
+E	0	0	358	monstrous centipede
+E	0	0	359	giant soldier ant
+E	0	0	360	large spider
+E	0	0	361	dancing spider
+E	0	0	362	spitting spider
+E	0	0	363	giant spider
+E	0	0	364	pike spider
+E	0	0	365	giant slug
+E	0	0	366	giant blue beetle
+E	0	0	367	giant crustacean
+E	0	0	368	cave cricket
+E	0	0	369	white worm mass
+E	0	0	370	skeleton;mon
+E	0	0	371	corporeal undead
+E	0	0	372	spectral undead
+E	0	0	373	bodak
+E	0	0	374	bonebat
+E	0	0	375	crawling claw
+E	0	0	376	bone delver
+E	0	0	377	tomb guardian
+E	0	0	378	crypt thing
+E	0	0	379	ghoul
+E	0	0	380	ghast
+E	0	0	381	burning ghast
+E	0	0	382	icewight
+E	0	0	383	skeletal foot soldier
+E	0	0	384	skeletal trooper
+E	0	0	385	skeletal skirmisher
+E	0	0	386	skeletal fighter
+E	0	0	387	skeletal warrior
+E	0	0	388	skeletal myrmidon
+E	0	0	389	poltergeist
+E	0	0	390	slow shadow
+E	0	0	391	shadow
+E	0	0	392	blessed soul
+E	0	0	393	shadow haunt
+E	0	0	394	spectre
+E	0	0	395	wight
+E	0	0	396	wraith
+E	0	0	397	mummy
+E	0	0	398	mummy lord
+E	0	0	399	revenant
+E	0	0	400	mourner
+E	0	0	401	vampire spawn
+E	0	0	402	fiend
+E	0	0	403	manes
+E	0	0	404	quasit
+E	0	0	405	rutterkin
+E	0	0	406	jovoc
+E	0	0	407	uridezu
+E	0	0	408	ghour
+E	0	0	409	palrethee
+E	0	0	410	babau
+E	0	0	411	nabassu
+E	0	0	412	vrock
+E	0	0	413	cedar wretch
+E	0	0	414	succubus
+E	0	0	415	buleazu
+E	0	0	416	wastrilith
+E	0	0	417	chasme
+E	0	0	418	hezrou
+E	0	0	419	glabrezu
+E	0	0	420	nalfeshnee
+E	0	0	421	lemure
+E	0	0	422	nupperibo
+E	0	0	423	true imp
+E	0	0	424	advespa
+E	0	0	425	spinagon
+E	0	0	426	black abishai
+E	0	0	427	green abishai
+E	0	0	428	red abishai
+E	0	0	429	osyluth
+E	0	0	430	kocrachon
+E	0	0	431	barbazu
+E	0	0	432	amnizu
+E	0	0	433	hamatula
+E	0	0	434	malebranche
+E	0	0	435	narzugon
+E	0	0	436	cornugon
+E	0	0	437	hell hound
+E	0	0	438	yeth hound
+E	0	0	439	tiny air elemental
+E	0	0	440	small air elemental
+E	0	0	441	medium air elemental
+E	0	0	442	large air elemental
+E	0	0	443	huge air elemental
+E	0	0	444	greater air elemental
+E	0	0	445	elder air elemental
+E	0	0	446	tiny whirlwind
+E	0	0	447	small whirlwind
+E	0	0	448	medium whirlwind
+E	0	0	449	large whirlwind
+E	0	0	450	huge whirlwind
+E	0	0	451	greater whirlwind
+E	0	0	452	elder whirlwind
+E	0	0	453	tiny water elemental
+E	0	0	454	small water elemental
+E	0	0	455	medium water elemental
+E	0	0	456	large water elemental
+E	0	0	457	huge water elemental
+E	0	0	458	greater water elemental
+E	0	0	459	elder water elemental
+E	0	0	460	tiny earth elemental
+E	0	0	461	small earth elemental
+E	0	0	462	medium earth elemental
+E	0	0	463	large earth elemental
+E	0	0	464	huge earth elemental
+E	0	0	465	greater earth elemental
+E	0	0	466	elder earth elemental
+E	0	0	467	tiny fire elemental
+E	0	0	468	small fire elemental
+E	0	0	469	medium fire elemental
+E	0	0	470	large fire elemental
+E	0	0	471	huge fire elemental
+E	0	0	472	greater fire elemental
+E	0	0	473	elder fire elemental
+E	0	0	474	small metal elemental
+E	0	0	475	metal elemental
+E	0	0	476	small mud elemental
+E	0	0	477	fire mephit
+E	0	0	478	ice mephit
+E	0	0	479	water mephit
+E	0	0	480	dust mephit
+E	0	0	481	ooze mephit
+E	0	0	482	earth mephit
+E	0	0	483	salt mephit
+E	0	0	484	air mephit
+E	0	0	485	fog mephit
+E	0	0	486	janni
+E	0	0	487	djinni
+E	0	0	488	efreeti
+E	0	0	489	azer
+E	0	0	490	azerkin
+E	0	0	491	dust devil;monster
+E	0	0	492	thoqqua
+E	0	0	493	vampiric mist
+E	0	0	494	blinding mist
+E	0	0	495	fog elemental
+E	0	0	496	storm elemental
+E	0	0	497	ice serpent
+E	0	0	498	xorn
+E	0	0	499	minor xorn
+E	0	0	500	stone sentinel
+E	0	0	501	torch archon
+E	0	0	502	protectar
+E	0	0	503	shining torch archon
+E	0	0	504	ramadeen
+E	0	0	505	lantern archon
+E	0	0	506	hound archon
+E	0	0	507	lillend
+E	0	0	508	barghest
+E	0	0	509	greater barghest
+E	0	0	510	vaporighu
+E	0	0	511	grid bug
+E	0	0	512	grid bug enforcer
+E	0	0	513	nightmare
+E	0	0	514	phase spider
+E	0	0	515	rakshasa
+E	0	0	516	rast
+E	0	0	517	tatterdemalion
+E	0	0	518	formian worker
+E	0	0	519	formian warrior
+E	0	0	520	formian taskmaster
+E	0	0	521	modron
+E	0	0	522	duodrone
+E	0	0	523	red slaad
+E	0	0	524	blue slaad
+E	0	0	525	green slaad
+E	0	0	526	spiritual hammer;monster
+E	0	0	527	flaming sphere;monster
+E	0	0	528	spectral spider;mon
+E	0	0	529	small spectral spider;mon
+E	0	0	530	miniscule animated object
+E	0	0	531	tiny animated object
+E	0	0	532	small animated object
+E	0	0	533	medium animated object
+E	0	0	534	large animated object
+E	0	0	535	huge animated object
+E	0	0	536	gargantuan animated object
+E	0	0	537	collosal animated object
+A	0	1	Item
+E	0	1	0	blank spellbook
+E	0	1	1	spellbook [Fundamentals of Magick]
+E	0	1	2	spellbook [Adventurers' Arts]
+E	0	1	3	spellbook [Mystic Aegis]
+E	0	1	4	spellbook [Tome of Magic]
+E	0	1	5	spellbook [Practical Divinings]
+E	0	1	6	spellbook [Book of Glamour]
+E	0	1	7	spellbook [Energy Magicks]
+E	0	1	8	spellbook [Magician's Manual]
+E	0	1	9	spellbook [Ars Mortis]
+E	0	1	10	spellbook [Mortal Coil]
+E	0	1	11	spellbook [Place and Time]
+E	0	1	12	spellbook [Venom and Curses]
+E	0	1	13	spellbook [Ars Bellicus]
+E	0	1	14	spellbook [Elemental Covenant]
+E	0	1	15	spellbook [Libram of Silver Magic]
+E	0	1	16	spellbook [Secrets of Abjuration]
+E	0	1	17	spellbook [Conjurations and Summonings]
+E	0	1	18	spellbook [Artificer's Handbook]
+E	0	1	19	spellbook [Tricks and Traps]
+E	0	1	20	spellbook [Magnus Ollam]
+E	0	1	21	spellbook [Lore of Murder I]
+E	0	1	22	spellbook [Lore of Murder II]
+E	0	1	23	spellbook [Twin Axis Defense Sutra]
+E	0	1	24	spellbook [Book of Shadows]
+E	0	1	25	spellbook [Heart of Flame]
+E	0	1	26	spellbook [Shadowcraft]
+E	0	1	27	spellbook [Lordship over Air]
+E	0	1	28	spellbook [Water Authority]
+E	0	1	29	spellbook [Earthsong]
+E	0	1	30	spellbook [Celestial Lion Sutra]
+E	0	1	31	spellbook [Crystal Mind]
+E	0	1	32	spellbook [Elemental Endurance]
+E	0	1	33	spellbook [Words of Power]
+E	0	1	34	spellbook [Grey Ashes Manuscript]
+E	0	1	35	spellbook [Tome of Storms]
+E	0	1	36	spellbook [Smoke and Mirrors]
+E	0	1	37	spellbook [Evelyn's Tactical Codex]
+E	0	1	38	spellbook [Planar Bindings]
+E	0	1	39	spellbook [Mastery over Death]
+E	0	1	40	spellbook [Gift of Death]
+E	0	1	41	spellbook [Crimson Rites]
+E	0	1	42	dire flail
+E	0	1	43	heavy flail
+E	0	1	44	light flail
+E	0	1	45	handaxe
+E	0	1	46	greataxe
+E	0	1	47	orc double axe
+E	0	1	48	battleaxe
+E	0	1	49	dwarven waraxe
+E	0	1	50	halfspear
+E	0	1	51	shortspear
+E	0	1	52	trident
+E	0	1	53	longspear
+E	0	1	54	light lance
+E	0	1	55	heavy lance
+E	0	1	56	great lance
+E	0	1	57	halberd
+E	0	1	58	ranseur
+E	0	1	59	lucern hammer
+E	0	1	60	two-bladed halberd
+E	0	1	61	glaive
+E	0	1	62	guisarme
+E	0	1	63	voulge
+E	0	1	64	saw-toothed glaive
+E	0	1	65	club
+E	0	1	66	large club
+E	0	1	67	huge club
+E	0	1	68	quarterstaff
+E	0	1	69	force construct staff
+E	0	1	70	maul
+E	0	1	71	great maul
+E	0	1	72	light mace
+E	0	1	73	heavy mace
+E	0	1	74	morningstar
+E	0	1	75	huge morningstar
+E	0	1	76	warhammer
+E	0	1	77	short sword
+E	0	1	78	scimitar
+E	0	1	79	falchion
+E	0	1	80	broadsword
+E	0	1	81	flame blade;weapon
+E	0	1	82	long sword
+E	0	1	83	small long sword
+E	0	1	84	two-bladed sword
+E	0	1	85	bastard sword
+E	0	1	86	greatsword
+E	0	1	87	fullblade
+E	0	1	88	rapier
+E	0	1	89	elven thinblade
+E	0	1	90	mercurial broadsword
+E	0	1	91	dagger
+E	0	1	92	stiletto
+E	0	1	93	main gauche
+E	0	1	94	knife
+E	0	1	95	punching dagger
+E	0	1	96	kukri
+E	0	1	97	spiked chain
+E	0	1	98	scourge
+E	0	1	99	whip
+E	0	1	100	scythe
+E	0	1	101	great scythe
+E	0	1	102	sickle
+E	0	1	103	bolas
+E	0	1	104	shotput
+E	0	1	105	fighting stick
+E	0	1	106	nunchaku
+E	0	1	107	chakram
+E	0	1	108	boomerang
+E	0	1	109	sap
+E	0	1	110	hunga-munga
+E	0	1	111	siangham
+E	0	1	112	shuriken
+E	0	1	113	tiger claws
+E	0	1	114	rock
+E	0	1	115	long bow
+E	0	1	116	short bow
+E	0	1	117	sheaf arrow
+E	0	1	118	flight arrow
+E	0	1	119	arbalest
+E	0	1	120	cranquin
+E	0	1	121	hand crossbow
+E	0	1	122	hand crossbow dart
+E	0	1	123	crossbow bolt
+E	0	1	124	javelin
+E	0	1	125	blowpipe
+E	0	1	126	dart
+E	0	1	127	boulder
+E	0	1	128	sling
+E	0	1	129	sling stone
+E	0	1	130	padded armour
+E	0	1	131	cord armour
+E	0	1	132	bonemail armour
+E	0	1	133	leather armour
+E	0	1	134	bark armour
+E	0	1	135	studded leather
+E	0	1	136	coat of plates
+E	0	1	137	chainmail shirt
+E	0	1	138	hide armour
+E	0	1	139	ring mail
+E	0	1	140	scale mail
+E	0	1	141	brigandine
+E	0	1	142	chainmail
+E	0	1	143	chainmail hauberk
+E	0	1	144	breastplate
+E	0	1	145	augmented mail
+E	0	1	146	splint mail
+E	0	1	147	banded mail
+E	0	1	148	plate mail
+E	0	1	149	field plate armour
+E	0	1	150	full plate armour
+E	0	1	151	lamellar armour
+E	0	1	152	hard steel cap
+E	0	1	153	cured leather boots
+E	0	1	154	giant shield
+E	0	1	155	tower shield
+E	0	1	156	kite shield
+E	0	1	157	small shield
+E	0	1	158	buckler;leather
+E	0	1	159	buckler;wooden
+E	0	1	160	springblade
+E	0	1	161	climbing pole;RoLM
+E	0	1	162	pile of fresh food
+E	0	1	163	short sword;sunblade
+E	0	1	164	small hornblade
+E	0	1	165	medium hornblade
+E	0	1	166	large hornblade
+E	0	1	167	brazier
+E	0	1	168	robes;magic
+E	0	1	169	gold nugget
+E	0	1	170	diamond
+E	0	1	171	mithril ingot
+E	0	1	172	adamant ingot
+E	0	1	173	fountain
+E	0	1	174	chatkcha
+E	0	1	175	gythka
+E	0	1	176	ornate shawl
+E	0	1	177	sprite bow
+E	0	1	178	tiny arrow
+E	0	1	179	spinagon spike
+E	0	1	180	minor light;item
+E	0	1	181	edible stone
+E	0	1	182	produced flame
+E	0	1	183	mystic lantern;item
+E	0	1	184	Armour of Darkness;item
+E	0	1	185	fire seeds
+E	0	1	186	flask
+E	0	1	187	Eggshell Bomb
+E	0	1	188	bag
+E	0	1	189	wooden rod
+E	0	1	190	wand
+E	0	1	191	lenses
+E	0	1	192	potion
+E	0	1	193	tablet
+E	0	1	194	tome
+E	0	1	195	ring
+E	0	1	196	bracers
+E	0	1	197	scroll
+E	0	1	198	boots
+E	0	1	199	headband
+E	0	1	200	hat
+E	0	1	201	helm
+E	0	1	202	girdle
+E	0	1	203	amulet
+E	0	1	204	stone
+E	0	1	205	stone;light
+E	0	1	206	cloak
+E	0	1	207	gauntlets
+E	0	1	208	gloves
+E	0	1	209	rod
+E	0	1	210	staff
+E	0	1	211	climbing rig
+E	0	1	212	alchemy set
+E	0	1	213	viewing lens
+E	0	1	214	craftsman's tools
+E	0	1	215	mechanical tools
+E	0	1	216	disguise kit
+E	0	1	217	healing kit
+E	0	1	218	pickaxe
+E	0	1	219	hemp rope
+E	0	1	220	silk rope
+E	0	1	221	giant's-hair rope
+E	0	1	222	lute
+E	0	1	223	mandolin
+E	0	1	224	flute
+E	0	1	225	horn
+E	0	1	226	corpse
+E	0	1	227	statue
+E	0	1	228	figure
+E	0	1	229	robes
+E	0	1	230	white robe
+E	0	1	231	loincloth
+E	0	1	232	clerical vestment
+E	0	1	233	peasant garb
+E	0	1	234	noble attire
+E	0	1	235	holy symbol
+E	0	1	236	torch
+E	0	1	237	brass lantern
+E	0	1	238	trap components
+E	0	1	239	food ration
+E	0	1	240	cottonberry loaf
+E	0	1	241	piece of elven waybread
+E	0	1	242	piece of spider bread
+E	0	1	243	apple
+E	0	1	244	melon
+E	0	1	245	strip of cured meat
+E	0	1	246	holy wafer
+E	0	1	247	large oak chest
+E	0	1	248	large iron chest
+E	0	1	249	large darkwood chest
+E	0	1	250	large adamant chest
+E	0	1	251	medium backpack
+E	0	1	252	small backpack
+E	0	1	253	gnomish backpack
+E	0	1	254	force backpack
+E	0	1	255	placeholder
+E	0	1	256	gold piece
+E	0	1	257	platinum piece
+E	0	1	258	silver piece
+E	0	1	259	copper piece
+E	0	1	260	electrum piece
+E	0	1	261	small glass vial
+E	0	1	262	warhammer;thrown
+A	0	2	Feature
+E	0	2	0	dangling rope
+E	0	2	1	portal;rope trick
+E	0	2	2	oak door
+E	0	2	3	ice door
+E	0	2	4	iron door
+E	0	2	5	darkwood door
+E	0	2	6	vault door
+E	0	2	7	warded oak door
+E	0	2	8	up stairs
+E	0	2	9	down stairs
+E	0	2	10	infernal portal
+E	0	2	11	material portal
+E	0	2	12	ancient passage
+E	0	2	13	cave entrance
+E	0	2	14	tightrope
+E	0	2	15	Pillar
+E	0	2	16	altar
+E	0	2	17	pews
+E	0	2	18	rock column
+E	0	2	19	pile of rubble
+E	0	2	20	hanging vines
+E	0	2	21	tree
+E	0	2	22	giant mushroom
+E	0	2	23	verdant bloom
+E	0	2	24	Tomb
+E	0	2	25	Gravestone
+E	0	2	26	warding rune
+E	0	2	27	Forge
+E	0	2	28	bed
+E	0	2	29	trap
+A	0	3	Effect
+E	0	3	0	unimplemented
+E	0	3	1	Aura of Valour
+E	0	3	2	Ranger Feat
+E	0	3	3	No Mind
+E	0	3	4	Crippling Strike
+E	0	3	5	Soft Steps
+E	0	3	6	Unearthly Reflexes
+E	0	3	7	Peerless Accuracy
+E	0	3	8	Surreal Presence
+E	0	3	9	Death Attack
+E	0	3	10	Aura of Despair
+E	0	3	11	Fiendish Servant
+E	0	3	12	Grounded Stance
+E	0	3	13	Geomancy
+E	0	3	14	Ranged Sneak Attack
+E	0	3	15	Ranged Sneak Attack;2
+E	0	3	16	Opportune Shot
+E	0	3	17	Shadow Companion
+E	0	3	18	Shadow Step
+E	0	3	19	Manual of Gainful Exercise
+E	0	3	20	Treatise of Efficious Celerity
+E	0	3	21	Libram of Bodily Health
+E	0	3	22	Clear Thought
+E	0	3	23	Treatise of Revealed Enlightenment
+E	0	3	24	Leadership and Influence
+E	0	3	25	Manual of Fortuitous Methodology
+E	0	3	26	Giant Strength
+E	0	3	27	Ogre Power
+E	0	3	28	Might
+E	0	3	29	Gloves of Dexterity
+E	0	3	30	Graceful Motion
+E	0	3	31	the Dancer
+E	0	3	32	Health
+E	0	3	33	Tenacity
+E	0	3	34	Periapt of Wisdom
+E	0	3	35	Heartstone
+E	0	3	36	Mystic Insight
+E	0	3	37	Intellect
+E	0	3	38	Mindstone
+E	0	3	39	the Scholar
+E	0	3	40	Charisma
+E	0	3	41	Majesty
+E	0	3	42	the Courtesan
+E	0	3	43	Luckstone
+E	0	3	44	Good Fortune
+E	0	3	45	Providence
+E	0	3	46	the Druid;boots
+E	0	3	47	Libram of Hidden Secrets
+E	0	3	48	the Winterlands
+E	0	3	49	Ice
+E	0	3	50	the Inferno
+E	0	3	51	Fire Resistance
+E	0	3	52	Surtur
+E	0	3	53	Bile
+E	0	3	54	Acid Warding
+E	0	3	55	Brass and Glass
+E	0	3	56	the Stormlord
+E	0	3	57	Periapt of Proof against Poisons
+E	0	3	58	Clear Sound
+E	0	3	59	Musical Defense
+E	0	3	60	quality::light fortification
+E	0	3	61	quality::medium fortification
+E	0	3	62	quality::heavy fortification
+E	0	3	63	quality::auspicious
+E	0	3	64	quality::rapid healing
+E	0	3	65	quality::fire resistance
+E	0	3	66	quality::acid resistance
+E	0	3	67	quality::cold resistance
+E	0	3	68	quality::lightning resistance
+E	0	3	69	quality::sonic resistance
+E	0	3	70	quality::poison resistance
+E	0	3	71	quality::animated
+E	0	3	72	quality::arrow-deflecting
+E	0	3	73	quality::bashing
+E	0	3	74	quality::blinding
+E	0	3	75	quality::etherealness
+E	0	3	76	quality::feather-light
+E	0	3	77	quality::ghost-touch
+E	0	3	78	quality::graceful
+E	0	3	79	quality::invulnerability
+E	0	3	80	quality::great invulnerability
+E	0	3	81	quality::magic resistance
+E	0	3	82	quality::shadow
+E	0	3	83	quality::silent moves
+E	0	3	84	quality::slick
+E	0	3	85	quality::might
+E	0	3	86	quality::agility
+E	0	3	87	quality::endurance
+E	0	3	88	quality::radiant
+E	0	3	89	quality::fearsome
+E	0	3	90	quality::shifting
+E	0	3	91	quality::bane-blind
+E	0	3	92	quality::spiked
+E	0	3	93	quality::resistant
+E	0	3	94	quality::command
+E	0	3	95	quality::sacred
+E	0	3	96	quality::graven
+E	0	3	97	quality::life-keeping
+E	0	3	98	Identify;scroll
+E	0	3	99	*Identify*;scroll
+E	0	3	100	Enchant Armour
+E	0	3	101	Enchant Armour (featherlight)
+E	0	3	102	Enchant Armour (graceful)
+E	0	3	103	Enchant Armour (life-keeping)
+E	0	3	104	Enchant Armour (fortification)
+E	0	3	105	Enchant Armour (resistance)
+E	0	3	106	Fury
+E	0	3	107	Valour;potion
+E	0	3	108	Neutralize Poison;potion
+E	0	3	109	Wakefulness
+E	0	3	110	Healing
+E	0	3	111	Extra-Healing
+E	0	3	112	True-Healing
+E	0	3	113	Mana
+E	0	3	114	*Mana*
+E	0	3	115	*MANA*
+E	0	3	116	Dimunition
+E	0	3	117	Growth
+E	0	3	118	Remove Curse;potion
+E	0	3	119	Giant Strength;potion
+E	0	3	120	Disorientation
+E	0	3	121	Blindness
+E	0	3	122	Beast Control
+E	0	3	123	Undead Control
+E	0	3	124	Elemental Control
+E	0	3	125	Outsider Control
+E	0	3	126	Fire Breath
+E	0	3	127	Vitality
+E	0	3	128	Weakness;potion
+E	0	3	129	Unhealth
+E	0	3	130	Philter of Stammering and Stuttering
+E	0	3	131	Poison
+E	0	3	132	Restore Strength
+E	0	3	133	Restore Dexterity
+E	0	3	134	Restore Constitution
+E	0	3	135	Restore Intelligence
+E	0	3	136	Restore Wisdom
+E	0	3	137	Restore Charisma
+E	0	3	138	Restore Luck
+E	0	3	139	Light;potion
+E	0	3	140	Faerie;potion
+E	0	3	141	Oil of Transformation
+E	0	3	142	See Invisibility;potion
+E	0	3	143	the Endless Wave
+E	0	3	144	Detection
+E	0	3	145	the Eagle
+E	0	3	146	the Soul;eyes
+E	0	3	147	Stability;boots
+E	0	3	148	Contortion
+E	0	3	149	Magical Aptitude
+E	0	3	150	Shadowstone
+E	0	3	151	the Druid;eyes
+E	0	3	152	the Night
+E	0	3	153	Terror;eyes
+E	0	3	154	Stone;eyes
+E	0	3	155	Precision;eyes
+E	0	3	156	Fire Bolts
+E	0	3	157	Ice;wand
+E	0	3	158	Scouring
+E	0	3	159	Ash
+E	0	3	160	Dehydration
+E	0	3	161	Shards
+E	0	3	162	the Void
+E	0	3	163	Life Stealing
+E	0	3	164	Sound Bursts
+E	0	3	165	Acid;wand
+E	0	3	166	Thunderbolts
+E	0	3	167	Surtension
+E	0	3	168	Cleansing Light
+E	0	3	169	Soul Flaying
+E	0	3	170	Striking;wand
+E	0	3	171	the Hellstorm
+E	0	3	172	Unearthly Harmonies
+E	0	3	173	cracked
+E	0	3	174	Negation
+E	0	3	175	Dispelling
+E	0	3	176	Curing;wand
+E	0	3	177	Polymorph
+E	0	3	178	Paralysis
+E	0	3	179	Terror
+E	0	3	180	Sleep;wand
+E	0	3	181	Lethargy
+E	0	3	182	Fey Trapping;wand
+E	0	3	183	Alacrity
+E	0	3	184	Dismissal;wand
+E	0	3	185	Dragon Summoning
+E	0	3	186	Animal Summoning
+E	0	3	187	Goblinoid Summoning
+E	0	3	188	Beast Summoning
+E	0	3	189	Undead Summoning
+E	0	3	190	Vermin Summoning
+E	0	3	191	Identify;wand
+E	0	3	192	Opening
+E	0	3	193	Size Alteration
+E	0	3	194	Fellowship
+E	0	3	195	Healing;staff
+E	0	3	196	the Spider
+E	0	3	197	the Goblin Queen
+E	0	3	198	Exorcism
+E	0	3	199	Abjuration
+E	0	3	200	Illusion
+E	0	3	201	Divination
+E	0	3	202	Earth and Stone
+E	0	3	203	Wind and Water
+E	0	3	204	the Fiery Citadel
+E	0	3	205	Winter
+E	0	3	206	the Abyss
+E	0	3	207	Striding and Springing
+E	0	3	208	Evasive Footwork
+E	0	3	209	the Spur
+E	0	3	210	Elvenkind;boots
+E	0	3	211	Thunder
+E	0	3	212	Levitation;boots
+E	0	3	213	Phasing
+E	0	3	214	Tripping and Stumbling
+E	0	3	215	Archery
+E	0	3	216	the Powerful Grip
+E	0	3	217	the Dervish
+E	0	3	218	Blinding Strikes
+E	0	3	219	Missile Deflection
+E	0	3	220	Neutralization
+E	0	3	221	Grounding
+E	0	3	222	Defense
+E	0	3	223	Killing Hands
+E	0	3	224	Vulnerability
+E	0	3	225	Springblade Bracers
+E	0	3	226	Fumbling
+E	0	3	227	Rust;gauntlet
+E	0	3	228	Lightning;gauntlets
+E	0	3	229	Legerdemain
+E	0	3	230	Nimble Fingers
+E	0	3	231	Identify;ring
+E	0	3	232	Greater Ring of Identify
+E	0	3	233	Evasion
+E	0	3	234	Infravision;ring
+E	0	3	235	the Imp
+E	0	3	236	Ring, Djinn Prison
+E	0	3	237	Mind Shielding
+E	0	3	238	Water Walking;ring
+E	0	3	239	Climbing
+E	0	3	240	the Chameleon
+E	0	3	241	Animal Kinship
+E	0	3	242	Jumping
+E	0	3	243	Invisibility;ring
+E	0	3	244	Penetrating Sight
+E	0	3	245	Channeling
+E	0	3	246	See Invisible
+E	0	3	247	Regeneration
+E	0	3	248	the Ram
+E	0	3	249	Polymorphing
+E	0	3	250	Spell Disruption
+E	0	3	251	Weakness;ring
+E	0	3	252	Ignorance
+E	0	3	253	Free Action;ring
+E	0	3	254	Aggravate Monster
+E	0	3	255	Elemental Command (Air)
+E	0	3	256	Elemental Command (Earth)
+E	0	3	257	Elemental Command (Fire)
+E	0	3	258	Elemental Command (Water)
+E	0	3	259	Item Preservation
+E	0	3	260	Natural Armour
+E	0	3	261	Strangulation
+E	0	3	262	Radiance
+E	0	3	263	Life Protection
+E	0	3	264	Amulet versus Undead
+E	0	3	265	Periapt of Wound Closure
+E	0	3	266	Medallion of ESP
+E	0	3	267	Medallion of Mental Domination
+E	0	3	268	Periapt of Health
+E	0	3	269	Dwarvenkind
+E	0	3	270	the Kobolds
+E	0	3	271	the Gnomes
+E	0	3	272	Elvenkind;ring
+E	0	3	273	Drow Kinship
+E	0	3	274	the Hin
+E	0	3	275	the Lizardfolk
+E	0	3	276	Orcsblood
+E	0	3	277	Fortification
+E	0	3	278	Quietus
+E	0	3	279	Displacement;cloak
+E	0	3	280	Resistance
+E	0	3	281	Shadow Shifting
+E	0	3	282	the Bat
+E	0	3	283	Arachnida
+E	0	3	284	Elvenkind;cloak
+E	0	3	285	Mantle of Magic Resistance
+E	0	3	286	Frostbite
+E	0	3	287	Fireburn
+E	0	3	288	Mana Bleeding
+E	0	3	289	Telepathy
+E	0	3	290	Teleportation
+E	0	3	291	Comprehending Languages and Reading Magic
+E	0	3	292	Lesser Helm of Brilliance
+E	0	3	293	Circlet of Blasting
+E	0	3	294	Tactical Combat
+E	0	3	295	Crown of the Magi
+E	0	3	296	Circlet of Spellbreaking
+E	0	3	297	Cowl of Warding
+E	0	3	298	the Python
+E	0	3	299	Rod of Lordly Might
+E	0	3	300	paralysis;RoLM
+E	0	3	301	life drain;RoLM
+E	0	3	302	fear;RoLM
+E	0	3	303	Fog;horn effect
+E	0	3	304	Goodness
+E	0	3	305	Valhalla
+E	0	3	306	the Kobolds;horn
+E	0	3	307	Madness
+E	0	3	308	Ordered Defense
+E	0	3	309	the Frenzied Hunt
+E	0	3	310	the Sewers
+E	0	3	311	the Tritons
+E	0	3	312	Panic
+E	0	3	313	Blasting
+E	0	3	314	Plenty
+E	0	3	315	Hearthstone of Onanda
+E	0	3	316	Luckblade
+E	0	3	317	Holy Avenger
+E	0	3	318	Sunblade
+E	0	3	319	Hornblade
+E	0	3	320	Dwarven Thrower
+E	0	3	321	Nine Lives Stealer
+E	0	3	322	Bloodspear
+E	0	3	323	Sword of the Planes
+E	0	3	324	flame tongue
+E	0	3	325	tongue of flame
+E	0	3	326	Dragonshield
+E	0	3	327	Lightning;jav
+E	0	3	328	Sylvan Scimitar
+E	0	3	329	Oathbow
+E	0	3	330	Kinslayer
+E	0	3	331	Quickblade
+E	0	3	332	Brazier Commanding Fire Elementals
+E	0	3	333	Hat of Disguise
+E	0	3	334	Robe of Blending
+E	0	3	335	Robe of Eyes
+E	0	3	336	Robe of Scintillating Colours
+E	0	3	337	Vest of Health
+E	0	3	338	Vest of Health;active
+E	0	3	339	Vestment of Faith
+E	0	3	340	Uncanny Growth
+E	0	3	341	Incredible Shrinking
+E	0	3	342	Boldness
+E	0	3	343	Courage
+E	0	3	344	Lesser Divine Aspect
+E	0	3	345	Nondetection;item
+E	0	3	346	Undead Warding
+E	0	3	347	Vermin Friendship
+E	0	3	348	Planar Warding
+E	0	3	349	Devilbane
+E	0	3	350	Elemental Disjunction
+E	0	3	351	Theryan Inviolability
+E	0	3	352	Purity
+E	0	3	353	Endure Fire
+E	0	3	354	Endure Cold
+E	0	3	355	Endure Lightning
+E	0	3	356	Endure Acid
+E	0	3	357	Endure Sound
+E	0	3	358	Mage Armour
+E	0	3	359	Protection from Evil
+E	0	3	360	Protection from Good
+E	0	3	361	Protection from Law
+E	0	3	362	Protection from Chaos
+E	0	3	363	Shield
+E	0	3	364	Spiritwrack
+E	0	3	365	Erase
+E	0	3	366	Feather Fall
+E	0	3	367	Grease
+E	0	3	368	Knock
+E	0	3	369	Mending
+E	0	3	370	Wall of Fog
+E	0	3	371	Wizard Lock
+E	0	3	372	Detect Secret Doors
+E	0	3	373	Detect Stairs
+E	0	3	374	Know Alignment
+E	0	3	375	True Strike
+E	0	3	376	Read Magic
+E	0	3	377	Daggerspell
+E	0	3	378	Arrow Mind
+E	0	3	379	Charm Person
+E	0	3	380	Cause Fear
+E	0	3	381	Friends
+E	0	3	382	Nystrom's Magical Aura
+E	0	3	383	Sleep
+E	0	3	384	Spook
+E	0	3	385	Force Bolt
+E	0	3	386	Magic Missile
+E	0	3	387	Shocking Grasp
+E	0	3	388	Burning Hands
+E	0	3	389	Floating Disc
+E	0	3	390	Chromatic Orb
+E	0	3	391	Colour Spray
+E	0	3	392	Phantasmal Force
+E	0	3	393	Ventriloquism
+E	0	3	394	Change Self
+E	0	3	395	Dancing Lights
+E	0	3	396	Minor Drain
+E	0	3	397	Chill Touch
+E	0	3	398	Chill Blood
+E	0	3	399	Rigor Mortis
+E	0	3	400	Detect Undead
+E	0	3	401	Halt Undead
+E	0	3	402	Protection from Undead
+E	0	3	403	Jump;spell
+E	0	3	404	Enlarge
+E	0	3	405	Expeditious Retreat
+E	0	3	406	Reduce
+E	0	3	407	Spider Climb
+E	0	3	408	False Life
+E	0	3	409	Convulsion
+E	0	3	410	Alarm
+E	0	3	411	Phantom Steed
+E	0	3	412	Mount
+E	0	3	413	Monster Summoning I
+E	0	3	414	Phase Door
+E	0	3	415	Magic Weapon
+E	0	3	416	Protection from Arrows
+E	0	3	417	Gaze Reflection
+E	0	3	418	Iron Mind
+E	0	3	419	Resist Water
+E	0	3	420	Resist Fire
+E	0	3	421	Resist Cold
+E	0	3	422	Resist Lightning
+E	0	3	423	Resist Acid
+E	0	3	424	Resist Sound
+E	0	3	425	Glitterdust
+E	0	3	426	Passwall
+E	0	3	427	Wind Wall
+E	0	3	428	Web
+E	0	3	429	Spirit Net
+E	0	3	430	Wall of Doors
+E	0	3	431	Pyrotechnics
+E	0	3	432	Pyrotechnics;blast
+E	0	3	433	Pyrotechnics;smoke
+E	0	3	434	Pyrotechnics;flash
+E	0	3	435	Animate Rope
+E	0	3	436	Detect Objects
+E	0	3	437	Identify
+E	0	3	438	Infravision
+E	0	3	439	See Invisibility
+E	0	3	440	ESP
+E	0	3	441	Revealed Lore
+E	0	3	442	Eagle's Splendour
+E	0	3	443	Hypnotism
+E	0	3	444	Touch of Idiocy
+E	0	3	445	Hideous Laughter
+E	0	3	446	Dire Charm
+E	0	3	447	Electric Loop
+E	0	3	448	Scorcher
+E	0	3	449	Acid Arrow
+E	0	3	450	Globe of Shadow
+E	0	3	451	Decastave
+E	0	3	452	Shatter
+E	0	3	453	Gust of Wind
+E	0	3	454	Invisibility
+E	0	3	455	Blur
+E	0	3	456	Mirror Image
+E	0	3	457	Hypnotic Pattern
+E	0	3	458	Improved Phantasmal Force
+E	0	3	459	Visage of Death
+E	0	3	460	Aura of Death
+E	0	3	461	Scare
+E	0	3	462	Bladethirst
+E	0	3	463	Ghoul Touch
+E	0	3	464	Choke
+E	0	3	465	Spectral Hand
+E	0	3	466	Levitation
+E	0	3	467	Bull's Strength
+E	0	3	468	Cat's Grace
+E	0	3	469	Bear's Endurance
+E	0	3	470	Ray of Enfeeblement
+E	0	3	471	Heightened Senses
+E	0	3	472	Apportation
+E	0	3	473	Summon Swarm
+E	0	3	474	Monster Summoning II
+E	0	3	475	Transposition
+E	0	3	476	Mana Theft
+E	0	3	477	Ethereal Blade
+E	0	3	478	Dispel Magic
+E	0	3	479	Magic Circle vs. Evil
+E	0	3	480	Magic Circle vs. Good
+E	0	3	481	Magic Circle vs. Law
+E	0	3	482	Magic Circle vs. Chaos
+E	0	3	483	Magic Circle vs. Undead
+E	0	3	484	Minor Globe of Invulnerability
+E	0	3	485	Stinking Cloud
+E	0	3	486	Explosive Runes
+E	0	3	487	Wall of Ice
+E	0	3	488	Keen Edge
+E	0	3	489	Alisdair's Fundamental Breakdown
+E	0	3	490	Minor Creation
+E	0	3	491	Clairvoyance
+E	0	3	492	Detect Monsters
+E	0	3	493	Magic Mapping
+E	0	3	494	Anyspell
+E	0	3	495	Lorecall
+E	0	3	496	Insightful Stroke
+E	0	3	497	Warning
+E	0	3	498	Heroism
+E	0	3	499	Deep Slumber
+E	0	3	500	Hold Person
+E	0	3	501	Sign of Discord
+E	0	3	502	Minor Malison
+E	0	3	503	Suggestion
+E	0	3	504	Fireball
+E	0	3	505	Flame Arrow
+E	0	3	506	Flame Arrow;blast
+E	0	3	507	Flame Arrow;augment
+E	0	3	508	Icelance
+E	0	3	509	Lightning Bolt
+E	0	3	510	Thunderlance
+E	0	3	511	Deeper Darkness
+E	0	3	512	Displacement
+E	0	3	513	Group Invisibility
+E	0	3	514	Nondetection
+E	0	3	515	Spectral Force
+E	0	3	516	Illusory Stance
+E	0	3	517	Animate Shadows
+E	0	3	518	Animate Shadows;spot penalty
+E	0	3	519	Adamant Facade
+E	0	3	520	Major Drain
+E	0	3	521	Vampiric Touch
+E	0	3	522	Spirit Armour
+E	0	3	523	Blackmantle
+E	0	3	524	Animate Dead
+E	0	3	525	Skull Trap
+E	0	3	526	skull trap;trap
+E	0	3	527	Water Walking
+E	0	3	528	Haste
+E	0	3	529	Slow
+E	0	3	530	Polymorph Self
+E	0	3	531	Fly
+E	0	3	532	Gaseous Form
+E	0	3	533	Blink
+E	0	3	534	Monster Summoning III
+E	0	3	535	Dimension Door
+E	0	3	536	Rope Trick
+E	0	3	537	Conjure Vortex
+E	0	3	538	Greater Magic Weapon
+E	0	3	539	Protection from Fire
+E	0	3	540	Protection from Cold
+E	0	3	541	Protection from Lightning
+E	0	3	542	Protection from Acid
+E	0	3	543	Protection from Sound
+E	0	3	544	Endure the Elements
+E	0	3	545	Wandwierd
+E	0	3	546	Dismissal
+E	0	3	547	Aura of Abjuration
+E	0	3	548	Solid Fog
+E	0	3	549	Transmute Rock to Mud
+E	0	3	550	Tremor
+E	0	3	551	Wall of Fire
+E	0	3	552	Copy
+E	0	3	553	Fabricate
+E	0	3	554	Track Monster
+E	0	3	555	Premonition
+E	0	3	556	Detect Magic
+E	0	3	557	Nemesis Spell
+E	0	3	558	Mord's Lucubration
+E	0	3	559	Charm Monster
+E	0	3	560	Confusion
+E	0	3	561	Emotion
+E	0	3	562	Fear
+E	0	3	563	Crushing Despair
+E	0	3	564	Fire Charm
+E	0	3	565	Force Missiles
+E	0	3	566	Shout
+E	0	3	567	Ice Storm
+E	0	3	568	Sleet Storm
+E	0	3	569	Vitriolic Sphere
+E	0	3	570	Fire Shield
+E	0	3	571	Chill Shield
+E	0	3	572	Phantasmal Killer
+E	0	3	573	Improved Spectral Force
+E	0	3	574	Improved Invisibility
+E	0	3	575	Improved Invisibility;renewal
+E	0	3	576	Hallucinatory Terrain
+E	0	3	577	Shadow Monsters
+E	0	3	578	Shadow Magic
+E	0	3	579	Contagion
+E	0	3	580	Enervation
+E	0	3	581	Revenance
+E	0	3	582	Summon Shadows
+E	0	3	583	Polymorph Other
+E	0	3	584	Stoneskin
+E	0	3	585	Burning Blood
+E	0	3	586	Evard's Black Tentacles
+E	0	3	587	Waves of Weariness
+E	0	3	588	Monster Summoning IV
+E	0	3	589	Dimensional Anchor
+E	0	3	590	Shift Level
+E	0	3	591	Lesser Planar Conjuration
+E	0	3	592	Energy Buffer
+E	0	3	593	Mooncloak
+E	0	3	594	Resist the Elements
+E	0	3	595	Cloudkill
+E	0	3	596	Wall of Stone
+E	0	3	597	Major Creation
+E	0	3	598	Watery Double
+E	0	3	599	Wizard Sight
+E	0	3	600	Open the Third Eye
+E	0	3	601	Power Word: Stop
+E	0	3	602	Dominate Person
+E	0	3	603	Hold Monster
+E	0	3	604	Lower Resistance
+E	0	3	605	Fire Lotus
+E	0	3	606	Cone of Cold
+E	0	3	607	Telekinesis
+E	0	3	608	Telekinesis;thrust
+E	0	3	609	Advanced Illusion
+E	0	3	610	Colour Burst
+E	0	3	611	Nightmare;spell
+E	0	3	612	Dream
+E	0	3	613	Misdirection
+E	0	3	614	Demi-Shadow Monsters
+E	0	3	615	Skeletal Spikes
+E	0	3	616	Lesser Symbol
+E	0	3	617	Symbol of Pain
+E	0	3	618	Symbol of Sleep
+E	0	3	619	Eldritch Bolt
+E	0	3	620	Force Shapechange
+E	0	3	621	Distance Distortion
+E	0	3	622	Monster Summoning V
+E	0	3	623	Teleport
+E	0	3	624	Steal Magic
+E	0	3	625	Chain Lightning
+E	0	3	626	Disintegrate
+E	0	3	627	Protection from Elements
+E	0	3	628	Tevlar's Transformation
+E	0	3	629	Fiendform
+E	0	3	630	Immortal Grandeur
+E	0	3	631	Power Word: Stun
+E	0	3	632	Mirage Arcana
+E	0	3	633	Demi-Shadow Magic
+E	0	3	634	Shades
+E	0	3	635	True Seeing
+E	0	3	636	Monster Summoning VI
+E	0	3	637	Othello's Irresistable Dance
+E	0	3	638	Dominate Monster
+E	0	3	639	Unseen Servant
+E	0	3	640	Sculpt Sound
+E	0	3	641	Sound Burst
+E	0	3	642	Serpent Tongue
+E	0	3	643	Commune
+E	0	3	644	Blade Barrier
+E	0	3	645	Word of Recall
+E	0	3	646	Plant Growth
+E	0	3	647	Water Breathing
+E	0	3	648	Wrack
+E	0	3	649	Planar Conjuration
+E	0	3	650	Contact Other Plane
+E	0	3	651	Fog Cloud
+E	0	3	652	Feeblemind
+E	0	3	653	Unholy Aura
+E	0	3	654	Find the Path
+E	0	3	655	Phantasmagoria
+E	0	3	656	Tempus Fugit
+E	0	3	657	Reverse Gravity
+E	0	3	658	Spell Turning
+E	0	3	659	Energy Drain
+E	0	3	660	Rainbow Pattern
+E	0	3	661	Mind Fog
+E	0	3	662	Persistant Illusion
+E	0	3	663	create tightrope bridge
+E	0	3	664	fountain;effect
+E	0	3	665	Fountain Polymorph
+E	0	3	666	Luck Bonus
+E	0	3	667	Detect Gems
+E	0	3	668	Summon Djinni
+E	0	3	669	Snakeform
+E	0	3	670	Corrupt Water
+E	0	3	671	Dominate Reptile
+E	0	3	672	wyvern venom
+E	0	3	673	couatl venom
+E	0	3	674	Stifling Silence
+E	0	3	675	Ettercap Web
+E	0	3	676	ettercap venom
+E	0	3	677	thunderbeast fumes
+E	0	3	678	ink cloud
+E	0	3	679	viper venom
+E	0	3	680	Stunning Jolt
+E	0	3	681	Adlet Frost
+E	0	3	682	silver sword
+E	0	3	683	Mud Spray
+E	0	3	684	choldrith venom
+E	0	3	685	thri-kreen venom
+E	0	3	686	medusa venom
+E	0	3	687	heartstone
+E	0	3	688	Kiss of the Nereid
+E	0	3	689	elfshot
+E	0	3	690	Unearthly Beauty
+E	0	3	691	water naga venom
+E	0	3	692	guardian naga venom
+E	0	3	693	dark naga venom
+E	0	3	694	spirit naga venom
+E	0	3	695	banelar venom
+E	0	3	696	drider venom
+E	0	3	697	Summon Jackals
+E	0	3	698	disir venom
+E	0	3	699	magori venom
+E	0	3	700	Reduce;ray
+E	0	3	701	Inflict Light Wounds;ray
+E	0	3	702	Cause Blindness;ray
+E	0	3	703	Mind Blast
+E	0	3	704	Hypnotic Dance
+E	0	3	705	monstrous centipede venom
+E	0	3	706	spider venom
+E	0	3	707	giant spider venom
+E	0	3	708	elder spider venom
+E	0	3	709	collosal spider venom
+E	0	3	710	Spit Goo
+E	0	3	711	Bodak Death Gaze
+E	0	3	712	ghast stench
+E	0	3	713	Summon Rats
+E	0	3	714	Summon Bats
+E	0	3	715	Summon Wolves
+E	0	3	716	quasit venom
+E	0	3	717	Demonic Burn
+E	0	3	718	Summon Ghasts
+E	0	3	719	Paralyzing Aura
+E	0	3	720	Death Stealing
+E	0	3	721	Vrock Screech
+E	0	3	722	Dance of Ruin
+E	0	3	723	Vrock Spores
+E	0	3	724	Nightmare Smite
+E	0	3	725	Nightmare smite;actual blast
+E	0	3	726	imp venom
+E	0	3	727	black abishai venom
+E	0	3	728	green abishai venom
+E	0	3	729	red abishai venom
+E	0	3	730	osyluth venom
+E	0	3	731	Burn
+E	0	3	732	dehydrate
+E	0	3	733	Minor Light Ray
+E	0	3	734	Major Light Ray
+E	0	3	735	Summon Night Hag
+E	0	3	736	phase spider venom
+E	0	3	737	formian venom
+E	0	3	738	Stunning Croak
+E	0	3	739	red slaad egg infestation
+E	0	3	740	blue slaad transformation disease
+E	0	3	741	Aiswin;symbol
+E	0	3	742	Aiswin's Lore
+E	0	3	743	Asherath;symbol
+E	0	3	744	Asherath Smite
+E	0	3	745	Ekliazeh;symbol
+E	0	3	746	Erich;symbol
+E	0	3	747	Erich's Disfavour
+E	0	3	748	Essiah;symbol
+E	0	3	749	Essiah Dream
+E	0	3	750	Hesani;symbol
+E	0	3	751	Immotian;symbol
+E	0	3	752	Celestial Aid
+E	0	3	753	flask of fine mead
+E	0	3	754	flask of fey wine
+E	0	3	755	vial of blood;potion
+E	0	3	756	Khasrach;symbol
+E	0	3	757	Khasrach's Aegis
+E	0	3	758	Primal Scream
+E	0	3	759	Venom of Khasrach
+E	0	3	760	Kysul;symbol
+E	0	3	761	Pseudonatural Transformation
+E	0	3	762	Mara;symbol
+E	0	3	763	Summon Mourner
+E	0	3	764	Dark Crossing
+E	0	3	765	Maeve;symbol
+E	0	3	766	Maeve's Whimsy
+E	0	3	767	Maeve's Lore
+E	0	3	768	Sabine;symbol
+E	0	3	769	Lightning Bolt;of Sabine
+E	0	3	770	Semirath;symbol
+E	0	3	771	Semirath's Aid
+E	0	3	772	Xavias;symbol
+E	0	3	773	Xel;symbol
+E	0	3	774	Zurvash;symbol
+E	0	3	775	Cruelest Cut
+E	0	3	776	The Multitude;symbol
+E	0	3	777	Demonic Resilience
+E	0	3	778	Death Touch
+E	0	3	779	Ice Dagger
+E	0	3	780	Produce Flame
+E	0	3	781	Bane
+E	0	3	782	Bless
+E	0	3	783	bless;item
+E	0	3	784	Call Light
+E	0	3	785	Minor Light
+E	0	3	786	Command
+E	0	3	787	Cure Light Wounds
+E	0	3	788	Detect Evil
+E	0	3	789	Detect Good
+E	0	3	790	Doom
+E	0	3	791	Divine Favour
+E	0	3	792	Holy Summoning I
+E	0	3	793	Inflict Light Wounds
+E	0	3	794	Invisibility to Undead
+E	0	3	795	Invisibility to Animals
+E	0	3	796	Lifesight
+E	0	3	797	Log of Everburning
+E	0	3	798	Valour
+E	0	3	799	Sanctuary
+E	0	3	800	Shield of Faith
+E	0	3	801	Slow Poison
+E	0	3	802	Vigor
+E	0	3	803	Calm Animals
+E	0	3	804	Camouflage
+E	0	3	805	Dust Devil
+E	0	3	806	Detect Animals and Plants
+E	0	3	807	Entangle
+E	0	3	808	Hawkeye
+E	0	3	809	Longstrider
+E	0	3	810	Call Companions
+E	0	3	811	Sandblast
+E	0	3	812	Warp Wood
+E	0	3	813	Magic Fang
+E	0	3	814	Detect Natural Traps
+E	0	3	815	Puffball
+E	0	3	816	Shillelagh
+E	0	3	817	Faerie Fire
+E	0	3	818	Obscurement
+E	0	3	819	Summon Nature's Ally I
+E	0	3	820	Pass without Trace
+E	0	3	821	Forest Wall
+E	0	3	822	Divine Sacrifice
+E	0	3	823	Silversheen;spell
+E	0	3	824	Succor Contingency
+E	0	3	825	Retributive Mirror
+E	0	3	826	Brand of Hatred
+E	0	3	827	Benevolence
+E	0	3	828	Malignance
+E	0	3	829	Detect Blood
+E	0	3	830	Caustic Vitae
+E	0	3	831	Entropic Shield
+E	0	3	832	Moment
+E	0	3	833	Pain Touch
+E	0	3	834	Protection from Theft
+E	0	3	835	Detect Elementals
+E	0	3	836	Sanguine Touch
+E	0	3	837	Alicorn Lance
+E	0	3	838	Sunscorch
+E	0	3	839	Snowstrike
+E	0	3	840	Rainstorm
+E	0	3	841	Beast Claw
+E	0	3	842	Heal Mount
+E	0	3	843	Aid
+E	0	3	844	Calm Emotions
+E	0	3	845	Chant
+E	0	3	846	Consecrate
+E	0	3	847	Death Knell
+E	0	3	848	Desecrate
+E	0	3	849	Cure Moderate Wounds
+E	0	3	850	Silence
+E	0	3	851	Enthrall
+E	0	3	852	Find Traps
+E	0	3	853	Holy Summoning II
+E	0	3	854	Inflict Moderate Wounds
+E	0	3	855	Make Whole
+E	0	3	856	Magic Stone
+E	0	3	857	Negative Plane Protection
+E	0	3	858	Shield Other
+E	0	3	859	Spiritual Hammer
+E	0	3	860	Blood Fury
+E	0	3	861	Barkskin
+E	0	3	862	Chill Metal
+E	0	3	863	Heat Metal
+E	0	3	864	Hold Beast
+E	0	3	865	Tree Stride
+E	0	3	866	Rooting
+E	0	3	867	Flaming Sphere
+E	0	3	868	Flame Blade
+E	0	3	869	flame blade;augment
+E	0	3	870	flame blade;conjure
+E	0	3	871	Soften Stone
+E	0	3	872	Stone Tell
+E	0	3	873	Forestation
+E	0	3	874	Summon Nature's Ally II
+E	0	3	875	Might of the Oaks
+E	0	3	876	Speed of the Wind
+E	0	3	877	Persistance of the Waves
+E	0	3	878	Creeping Cold
+E	0	3	879	Zeal
+E	0	3	880	Miscast Magic
+E	0	3	881	Mystic Lantern
+E	0	3	882	Bestow Curse
+E	0	3	883	Cause Blindness
+E	0	3	884	Cure Serious Wounds
+E	0	3	885	Cure Disease
+E	0	3	886	Create Food and Water
+E	0	3	887	Create Water
+E	0	3	888	Draw upon Holy Might
+E	0	3	889	Glyph of Warding
+E	0	3	890	Holy Summoning III
+E	0	3	891	Inflict Serious Wounds
+E	0	3	892	Spiritual Fortitude
+E	0	3	893	Magic Vestment
+E	0	3	894	Prayer
+E	0	3	895	Remove Curse
+E	0	3	896	Ring of Blades
+E	0	3	897	Blight Plants
+E	0	3	898	Call Lightning
+E	0	3	899	Dominate Animal
+E	0	3	900	Earthmaw
+E	0	3	901	Ironwood;spell
+E	0	3	902	Meld into Stone
+E	0	3	903	Waterspout
+E	0	3	904	Summon Nature's Ally III
+E	0	3	905	Spectral Spider
+E	0	3	906	Armour of Darkness
+E	0	3	907	Bolts of Glory
+E	0	3	908	Bolt of Glory
+E	0	3	909	Iron Sword
+E	0	3	910	Abjure
+E	0	3	911	Holy Sword
+E	0	3	912	Cure Critical Wounds
+E	0	3	913	Death Ward
+E	0	3	914	Dispel Fatigue
+E	0	3	915	Divine Power
+E	0	3	916	Ethereal Jaunt
+E	0	3	917	Free Action;spell
+E	0	3	918	Holy Summoning IV
+E	0	3	919	Inflict Critical Wounds
+E	0	3	920	Invocation
+E	0	3	921	Neutralize Poison
+E	0	3	922	Part Water
+E	0	3	923	Restoration
+E	0	3	924	Searing Light
+E	0	3	925	Spell Immunity
+E	0	3	926	Whirlpool
+E	0	3	927	Air Walk
+E	0	3	928	Antiplant Shell
+E	0	3	929	Repel Vermin
+E	0	3	930	Summon Nature's Ally IV
+E	0	3	931	Control Plant
+E	0	3	932	Natural Erosion
+E	0	3	933	Dire Regression
+E	0	3	934	Giant Vermin
+E	0	3	935	Thornwrack
+E	0	3	936	Spike Growth
+E	0	3	937	Lesser Aspect of Divinity
+E	0	3	938	Holy Smite
+E	0	3	939	Unholy Blight
+E	0	3	940	Order's Wrath
+E	0	3	941	Chaos Hammer
+E	0	3	942	Infernal Blood
+E	0	3	943	Inflict Light Wounds, Mass
+E	0	3	944	Magic Resistance
+E	0	3	945	Dispel Evil
+E	0	3	946	Disrupting Weapon
+E	0	3	947	Insect Plague
+E	0	3	948	Flame Strike
+E	0	3	949	Divine Agility
+E	0	3	950	Hallow
+E	0	3	951	Slay Living
+E	0	3	952	Holy Summoning V
+E	0	3	953	Righteous Might
+E	0	3	954	Turnclaw
+E	0	3	955	Summon Nature's Ally V
+E	0	3	956	Corrupt Animal
+E	0	3	957	Animal Growth
+E	0	3	958	Baleful Polymorph
+E	0	3	959	Commune With Nature
+E	0	3	960	Wall of Thorns
+E	0	3	961	Control Winds
+E	0	3	962	Raise Dead
+E	0	3	963	Music of the Spheres
+E	0	3	964	Mark of Justice
+E	0	3	965	Mark of Punishment
+E	0	3	966	Conjure Oozes
+E	0	3	967	Antilife Shell
+E	0	3	968	Fire Seeds;spell
+E	0	3	969	Summon Nature's Ally VI
+E	0	3	970	Animate Objects
+E	0	3	971	Banishment
+E	0	3	972	Etherealness
+E	0	3	973	Heal;spell
+E	0	3	974	Harm
+E	0	3	975	Heroes' Feast
+E	0	3	976	Holy Summoning VI
+E	0	3	977	Undeath to Death
+E	0	3	978	Glyph of Warding, Greater
+E	0	3	979	Conjure Earth Elemental
+E	0	3	980	Blasphemy
+E	0	3	981	filth fever
+E	0	3	982	grave rot
+E	0	3	983	blinding sickness
+E	0	3	984	cackle fever
+E	0	3	985	devil chills
+E	0	3	986	demon fever
+E	0	3	987	mindfire
+E	0	3	988	mummy rot
+E	0	3	989	red ache
+E	0	3	990	the Shakes
+E	0	3	991	slimy doom
+E	0	3	992	greenblood oil
+E	0	3	993	bloodroot
+E	0	3	994	blue whinnis
+E	0	3	995	giant bee venom
+E	0	3	996	giant wasp venom
+E	0	3	997	shadow essence
+E	0	3	998	black adder venom
+E	0	3	999	deathblade
+E	0	3	1000	malyss root paste
+E	0	3	1001	nitharit
+E	0	3	1002	dragon bile
+E	0	3	1003	sassone leaf residue
+E	0	3	1004	terinav root
+E	0	3	1005	carrion crawler brain juice
+E	0	3	1006	black lotus extract
+E	0	3	1007	id moss
+E	0	3	1008	striped toadstool
+E	0	3	1009	arsenic
+E	0	3	1010	lich dust
+E	0	3	1011	dark reaver powder
+E	0	3	1012	ungol dust
+E	0	3	1013	karmic venom
+E	0	3	1014	burnt othur fumes
+E	0	3	1015	insanity mist
+E	0	3	1016	bloodroot dart trap
+E	0	3	1017	greenblood needle trap
+E	0	3	1018	razor-wire trap
+E	0	3	1019	confusion trap
+E	0	3	1020	fear trap
+E	0	3	1021	slow trap
+E	0	3	1022	stunning trap
+E	0	3	1023	bane trap
+E	0	3	1024	howling trap
+E	0	3	1025	fatigue trap
+E	0	3	1026	minor dimensional anchor trap
+E	0	3	1027	minor rust trap
+E	0	3	1028	minor decay trap
+E	0	3	1029	minor soaking trap
+E	0	3	1030	minor disruption trap
+E	0	3	1031	grease trap
+E	0	3	1032	reduce trap
+E	0	3	1033	light trap
+E	0	3	1034	faerie fire trap
+E	0	3	1035	stinking cloud trap
+E	0	3	1036	pit trap
+E	0	3	1037	sunscorch trap
+E	0	3	1038	dimension door trap
+E	0	3	1039	miscast magic trap
+E	0	3	1040	cold trap
+E	0	3	1041	minor falling stone trap
+E	0	3	1042	inflict light wounds trap
+E	0	3	1043	javelin trap
+E	0	3	1044	small trapdoor trap
+E	0	3	1045	blue whinnis needle trap
+E	0	3	1046	arsenic dart trap
+E	0	3	1047	tripping chain trap
+E	0	3	1048	caltrop trap
+E	0	3	1049	swarm of insects trap
+E	0	3	1050	pain trap
+E	0	3	1051	cold metal trap
+E	0	3	1052	heat metal trap
+E	0	3	1053	dispelling trap
+E	0	3	1054	dispelling trap;2
+E	0	3	1055	dispelling trap;3
+E	0	3	1056	dimensional anchor trap
+E	0	3	1057	rust trap
+E	0	3	1058	decay trap
+E	0	3	1059	soaking trap
+E	0	3	1060	disruption trap
+E	0	3	1061	inflict moderate wounds trap
+E	0	3	1062	famine trap
+E	0	3	1063	fire trap
+E	0	3	1064	entangling spray trap
+E	0	3	1065	teleport trap
+E	0	3	1066	minor mana trap
+E	0	3	1067	falling stone trap
+E	0	3	1068	wasp nest trap
+E	0	3	1069	idiocy trap
+E	0	3	1070	major magic trap
+E	0	3	1071	minor lightning bolt trap
+E	0	3	1072	blackmantle trap
+E	0	3	1073	holding trap
+E	0	3	1074	inflict serious wounds trap
+E	0	3	1075	cursing trap
+E	0	3	1076	weakening trap
+E	0	3	1077	numbing trap
+E	0	3	1078	withering trap
+E	0	3	1079	water trap
+E	0	3	1080	large trapdoor trap
+E	0	3	1081	terinav root dart trap
+E	0	3	1082	nitharit scythe trap
+E	0	3	1083	searing light trap
+E	0	3	1084	major dimensional anchor trap
+E	0	3	1085	major rust trap
+E	0	3	1086	major decay trap
+E	0	3	1087	major soaking trap
+E	0	3	1088	major disruption trap
+E	0	3	1089	inflict critical wounds trap
+E	0	3	1090	falling boulder trap
+E	0	3	1091	thornwall trap
+E	0	3	1092	chill water trap
+E	0	3	1093	fireball trap
+E	0	3	1094	ungol dust cloud trap
+E	0	3	1095	acid spray trap
+E	0	3	1096	polymorph trap
+E	0	3	1097	id moss needle trap
+E	0	3	1098	reanimation trap
+E	0	3	1099	flame strike trap
+E	0	3	1100	major lightning bolt trap
+E	0	3	1101	wyvern venom dart trap
+E	0	3	1102	major mana trap
+E	0	3	1103	hexing trap
+E	0	3	1104	burnt othur vapor trap
+E	0	3	1105	caustic water trap
+E	0	3	1106	insanity mist vapor trap
+E	0	3	1107	deathblade scythe trap
+E	0	3	1108	harm trap
+E	0	3	1109	Symbol of Pain;trap
+E	0	3	1110	Symbol of Sleep;trap
+E	0	3	1111	water
+E	0	3	1112	tanglefoot bag
+E	0	3	1113	sunrod
+E	0	3	1114	Antitoxin
+E	0	3	1115	Stimtab
+E	0	3	1116	Scentblind
+E	0	3	1117	Universal Solvent
+E	0	3	1118	Acid;alchemy
+E	0	3	1119	Alchemist's Fire
+E	0	3	1120	eggshell flash-bomb
+E	0	3	1121	eggshell smoke-bomb
+E	0	3	1122	Silversheen;alchemy
+E	0	3	1123	twilight salve
+E	0	3	1124	Autobuff
+E	0	3	1125	AutoRest
+E	0	3	1126	AutoDrop
+E	0	3	1127	AutoLoot
+E	0	3	1128	Inertial Barrier
+E	0	3	1129	Expansion
+E	0	3	1130	Chemical Simulation
+E	0	3	1131	Adrenaline Control
+E	0	3	1132	Flesh Armour
+E	0	3	1133	Cell Adjustment
+E	0	3	1134	Body Equilibrium
+E	0	3	1135	Telepathic Awareness
+E	0	3	1136	Ballistic Attack
+E	0	3	1137	Detonate
+E	0	3	1138	Combat Mind
+E	0	3	1139	Brain Lock
+E	0	3	1140	Energy Containment
+E	0	3	1141	Energy Containment;glow
+E	0	3	1142	Ectoplasmic Cocoon
+E	0	3	1143	Whitefire
+E	0	3	1144	Clairvoyance;psi version
+E	0	3	1145	Biocurrent
+E	0	3	1146	Mental Invisibility
+E	0	3	1147	Chameleon Shifting
+E	0	3	1148	Synaptic Static
+E	0	3	1149	Clairvoyance;psi
+E	0	3	1150	Telekinesis;psi
+E	0	3	1151	Telekinesis;psi-thrust
+E	0	3	1152	Translocate
+E	0	3	1153	Butterfly
+E	0	3	1154	Monkey
+E	0	3	1155	Bamboo
+E	0	3	1156	Scorpion
+E	0	3	1157	Dragonfly
+E	0	3	1158	Mountain
+E	0	3	1159	Dragon
+E	0	3	1160	Crane
+E	0	3	1161	Mantis
+E	0	3	1162	Demon
+E	0	3	1163	Spider
+E	0	3	1164	Sun;tattoo
+E	0	3	1165	Eye
+E	0	3	1166	Tiger
+E	0	3	1167	flask of oil
+E	0	3	1168	Circle Kick
+E	0	3	1169	Create Corporeal Undead
+E	0	3	1170	Create Spectral Undead
+E	0	3	1171	Holy Orb
+E	0	3	1172	Necrosynthesis
+E	0	3	1173	Sticks to Snakes
+E	0	3	1174	Protective Ward
+E	0	3	1175	Feat of Strength
+E	0	3	1176	Soulblade
+E	0	3	1177	Demoralize
+E	0	3	1178	Battlefield Inspiration
+E	0	3	1179	Dance of Tukima
+E	0	3	1180	Warcry
+E	0	3	1181	Breath Weapon
+E	0	3	1182	Spit Weapon
+E	0	3	1183	Curse Research
+E	0	3	1184	GodTest
+E	0	3	1185	Display Statistics
+E	0	3	1186	XP Ticker
+E	0	3	1187	flame tongue immolation
+A	0	4	Artifact
+A	0	5	Quest
+A	0	6	Dungeon
+E	0	6	0	The Goblin Caves
+E	0	6	1	The Nine Hells
+E	0	6	2	Monster Evaluation Arena
+A	0	7	Routine
+A	0	8	NPC
+A	0	9	Class
+E	0	9	0	Barbarian
+E	0	9	1	Bard
+E	0	9	2	Druid
+E	0	9	3	Mage
+E	0	9	4	Abjurer
+E	0	9	5	Arcanist
+E	0	9	6	Diviner
+E	0	9	7	Enchanter
+E	0	9	8	Evoker
+E	0	9	9	Illusionist
+E	0	9	10	Necromancer
+E	0	9	11	Thaumaturge
+E	0	9	12	Weaver
+E	0	9	13	Monk
+E	0	9	14	Paladin
+E	0	9	15	Priest
+E	0	9	16	Ranger
+E	0	9	17	Rogue
+E	0	9	18	Warrior
+E	0	9	19	Alienist
+E	0	9	20	Assassin
+E	0	9	21	Blackguard
+E	0	9	22	Bladesinger
+E	0	9	23	Celestial Initiate
+E	0	9	24	Crimson Adept
+E	0	9	25	Duelist
+E	0	9	26	Earthsinger
+E	0	9	27	Elementalist
+E	0	9	28	Horizon Walker
+E	0	9	29	Inquisitor
+E	0	9	30	Loremaster
+E	0	9	31	Loremaster Knowledge
+E	0	9	32	Master Archer
+E	0	9	33	Sentinel
+E	0	9	34	Shadowdancer
+E	0	9	35	Tattoo Mystic
+E	0	9	36	Twilight Huntsman
+E	0	9	37	Undead Slayer
+E	0	9	38	Underdark Warrior
+A	0	10	Race
+E	0	10	0	Human;race
+E	0	10	1	Kobold;race
+E	0	10	2	Gnome;race
+E	0	10	3	Dwarf;race
+E	0	10	4	Elf;race
+E	0	10	5	Drow;race
+E	0	10	6	Halfling;race
+E	0	10	7	Lizardfolk;race
+E	0	10	8	Orc;race
+E	0	10	9	Deep Gnome;race
+E	0	10	10	Grey Dwarf;race
+E	0	10	11	Grey Elf;race
+E	0	10	12	Wood Elf;race
+E	0	10	13	Female Drow;race
+E	0	10	14	Stoutheart Halfling;race
+E	0	10	15	Dragonkin;race
+E	0	10	16	Black Orc;race
+A	0	11	Domain
+E	0	11	0	Air
+E	0	11	1	Animal
+E	0	11	2	Beauty
+E	0	11	3	Chaos
+E	0	11	4	Community
+E	0	11	5	Craft
+E	0	11	6	Death
+E	0	11	7	Destruction
+E	0	11	8	Domination
+E	0	11	9	Earth
+E	0	11	10	Evil
+E	0	11	11	Fate
+E	0	11	12	Fire
+E	0	11	13	Good
+E	0	11	14	Guardian
+E	0	11	15	Hatred
+E	0	11	16	Healing;domain
+E	0	11	17	Knowledge
+E	0	11	18	Law
+E	0	11	19	Liberation
+E	0	11	20	Luck
+E	0	11	21	Magic
+E	0	11	22	Moon
+E	0	11	23	Mysticism
+E	0	11	24	Night
+E	0	11	25	Nobility
+E	0	11	26	Pain
+E	0	11	27	Passion
+E	0	11	28	Planning
+E	0	11	29	Plant
+E	0	11	30	Protection;domain
+E	0	11	31	Retribution
+E	0	11	32	Slime
+E	0	11	33	Spider;domain
+E	0	11	34	Strength
+E	0	11	35	Succor
+E	0	11	36	Sun
+E	0	11	37	Time
+E	0	11	38	Travel
+E	0	11	39	Trickery
+E	0	11	40	War
+E	0	11	41	Water;domain
+E	0	11	42	Weather
+A	0	12	God
+E	0	12	0	Aiswin
+E	0	12	1	Asherath
+E	0	12	2	Ekliazeh
+E	0	12	3	Erich
+E	0	12	4	Essiah
+E	0	12	5	Hesani
+E	0	12	6	Immotian
+E	0	12	7	Khasrach
+E	0	12	8	Kysul
+E	0	12	9	Mara
+E	0	12	10	Maeve
+E	0	12	11	Sabine
+E	0	12	12	Semirath
+E	0	12	13	Xavias
+E	0	12	14	Xel
+E	0	12	15	Zurvash
+E	0	12	16	The Multitude
+A	0	13	Region
+E	0	13	0	Extradimensional Space;rope trick
+E	0	13	1	Underground River
+E	0	13	2	Cooled Magma Flow
+E	0	13	3	Mud-Choked River
+E	0	13	4	Magma Flow
+E	0	13	5	Raging Underground River
+E	0	13	6	Quartz Streamer
+E	0	13	7	Limestone Streamer
+E	0	13	8	Glacial Streamer
+E	0	13	9	Crumbled Crevice
+E	0	13	10	Vast Chasm
+E	0	13	11	Winding Corridor
+E	0	13	12	Rough-Hewn Tunnel
+E	0	13	13	Vaulted Corridor
+E	0	13	14	Icy Corridor
+E	0	13	15	Misty Corridor
+E	0	13	16	Flooded Corridor
+E	0	13	17	Webbed Corridor
+E	0	13	18	Twisty Little Passage
+E	0	13	19	Unworked Stone
+E	0	13	20	Bare Cavern
+E	0	13	21	Smooth Enclosure
+E	0	13	22	Inner Keep
+E	0	13	23	Marble Enclave
+E	0	13	24	Limestone Cave
+E	0	13	25	Ancient Tomb
+E	0	13	26	Graveyard
+E	0	13	27	Orderly Graveyard
+E	0	13	28	Orderly Flood
+E	0	13	29	Island Lake
+E	0	13	30	Cultic Underchamber
+E	0	13	31	Abandoned Temple
+E	0	13	32	Uneven Ampitheater
+E	0	13	33	Vast Ampitheater
+E	0	13	34	Oddly-formed Hall
+E	0	13	35	Fungal Forest
+E	0	13	36	Vine Region
+E	0	13	37	Enchanted Forest
+E	0	13	38	Gardened Forest
+E	0	13	39	Flooded Cavern
+E	0	13	40	Misty Cavern
+E	0	13	41	Earthen Cavern
+E	0	13	42	Acid Fog Cavern
+E	0	13	43	Place of Sanctuary
+E	0	13	44	Ice Cavern
+E	0	13	45	Arachnid Lair
+E	0	13	46	Dragon Cave
+E	0	13	47	Lesser Vault;1
+E	0	13	48	Parthenion
+E	0	13	49	Lesser Vault;2
+E	0	13	50	Unholy Sepulchre
+E	0	13	51	Hellish Rift
+E	0	13	52	Maze
+E	0	13	53	Surreal Maze
+E	0	13	54	Hedge Maze
+E	0	13	55	Underground Farm
+E	0	13	56	Kobold Warren
+E	0	13	57	Twisting Chasm
+E	0	13	58	Vermin Burrow
+E	0	13	59	Magma Vein
+E	0	13	60	Fungi Garden
+E	0	13	61	Slime Chamber
+E	0	13	62	Statue Garden
+E	0	13	63	Orc Barracks
+E	0	13	64	Troll Cave
+E	0	13	65	Illithid Cenaculeum
+E	0	13	66	Naga Cavern
+E	0	13	67	Jagged Chasm
+E	0	13	68	Floating Rock;1
+E	0	13	69	Warded Laboratory
+E	0	13	70	Ritual Chamber
+E	0	13	71	Armoury
+E	0	13	72	Abattoir
+E	0	13	73	Ancient Barracks
+E	0	13	74	Magic Academy
+E	0	13	75	Community Offices
+E	0	13	76	Flooded Encampment
+E	0	13	77	Ice Matrix
+E	0	13	78	Icy Prison
+E	0	13	79	Fiery Prison
+E	0	13	80	Ancient Library
+E	0	13	81	Meeting Hall
+E	0	13	82	Feast Hall
+E	0	13	83	Underking's Court
+E	0	13	84	Hall of Knights
+E	0	13	85	Surreal Chamber
+E	0	13	86	Elemental Chamber
+E	0	13	87	Brimstone Chamber
+E	0	13	88	Entry Chamber;hells
+E	0	13	89	Entry Chamber
+E	0	13	90	The Goblin Encampment
+E	0	13	91	Arena Chamber
+A	0	14	Terrain
+E	0	14	0	strong updraft
+E	0	14	1	strange rune
+E	0	14	2	curtain of flame
+E	0	14	3	curtain of frost
+E	0	14	4	curtain of acid
+E	0	14	5	curtain of vibrating air
+E	0	14	6	curtain of toxic gas
+E	0	14	7	curtain of lightning
+E	0	14	8	Solid Rock
+E	0	14	9	Indestructable Rock
+E	0	14	10	Dungeon Wall
+E	0	14	11	Ice Wall
+E	0	14	12	Wall Torch
+E	0	14	13	quartz
+E	0	14	14	solid igneous rock
+E	0	14	15	limestone
+E	0	14	16	Warded Wall
+E	0	14	17	Building Wall
+E	0	14	18	Adamant Wall
+E	0	14	19	bookshelf
+E	0	14	20	Steel Fence
+E	0	14	21	gold vein
+E	0	14	22	diamond deposit
+E	0	14	23	mithril vein
+E	0	14	24	adamant vein
+E	0	14	25	chasm
+E	0	14	26	Floor
+E	0	14	27	Floor;2
+E	0	14	28	smooth igneous rock
+E	0	14	29	obsidian
+E	0	14	30	bloodstain
+E	0	14	31	pool of blood
+E	0	14	32	pile of trash
+E	0	14	33	pile of bones
+E	0	14	34	pool of slime
+E	0	14	35	Loose-Packed Earth
+E	0	14	36	thorn wall
+E	0	14	37	stinking cloud;terrain
+E	0	14	38	fog
+E	0	14	39	solid fog bank
+E	0	14	40	acid fog
+E	0	14	41	pool of grease
+E	0	14	42	Old Webbing
+E	0	14	43	Webbing
+E	0	14	44	Ice Floor
+E	0	14	45	storm of sleet
+E	0	14	46	bed of spikes
+E	0	14	47	Summoning Circle
+E	0	14	48	shallow water
+E	0	14	49	shallow mud
+E	0	14	50	deep water
+E	0	14	51	turbulent water
+E	0	14	52	magma
+E	0	14	53	brimstone
+E	0	14	54	iron throne
+E	0	14	55	drawbridge
+E	0	14	56	guardian runes
+E	0	14	57	guardian runes;2
+E	0	14	58	Testing Terrain
+E	0	14	59	foul water
+E	0	14	60	Ettercap Webbing
+E	0	14	61	pit
+E	0	14	62	tanglefoot strands
+A	0	15	Text
+E	0	15	0	help::mainmenu
+E	0	15	1	help::intro
+E	0	15	2	help::chargen
+E	0	15	3	help::interface
+E	0	15	4	help::commands
+E	0	15	5	help::adventuring
+E	0	15	6	help::combat
+E	0	15	7	help::magic
+E	0	15	8	help::overland
+E	0	15	9	help::feats
+E	0	15	10	help::skills
+E	0	15	11	help::pantheon
+E	0	15	12	help::OGL
+E	0	15	13	help::animal empathy
+E	0	15	14	help::appraise
+E	0	15	15	help::athletics
+E	0	15	16	help::alchemy
+E	0	15	17	help::balance
+E	0	15	18	help::bluff
+E	0	15	19	help::climb
+E	0	15	20	help::concentration
+E	0	15	21	help::craft
+E	0	15	22	help::decipher script
+E	0	15	23	help::diplomacy
+E	0	15	24	help::disguise
+E	0	15	25	help::escape artist
+E	0	15	26	help::find weakness
+E	0	15	27	help::gather information
+E	0	15	28	help::handle device
+E	0	15	29	help::healing
+E	0	15	30	help::hide in shadows
+E	0	15	31	help::illusioncraft
+E	0	15	32	help::intimidate
+E	0	15	33	help::intuition
+E	0	15	34	help::jump
+E	0	15	35	help::knowledge (Theyra)
+E	0	15	36	help::knowledge (magic)
+E	0	15	37	help::knowledge (theology)
+E	0	15	38	help::knowledge (mythology)
+E	0	15	39	help::knowledge (nature)
+E	0	15	40	help::knowledge (Infernal)
+E	0	15	41	help::knowledge (oceans)
+E	0	15	42	help::knowledge (planes)
+E	0	15	43	help::knowledge (undead)
+E	0	15	44	help::listen
+E	0	15	45	help::lockpicking
+E	0	15	46	help::metamagic
+E	0	15	47	help::move silently
+E	0	15	48	help::mining
+E	0	15	49	help::perform
+E	0	15	50	help::pick pockets
+E	0	15	51	help::poison use
+E	0	15	52	help::Ride
+E	0	15	53	help::searching
+E	0	15	54	help::seneschal
+E	0	15	55	help::spellcraft
+E	0	15	56	help::spot
+E	0	15	57	help::swimming
+E	0	15	58	help::tumble
+E	0	15	59	help::Use Magic
+E	0	15	60	help::Wilderness Lore
+A	0	16	Variable
+A	0	17	Template
+E	0	17	0	hatchling
+E	0	17	1	very young
+E	0	17	2	young
+E	0	17	3	juvenile
+E	0	17	4	young adult
+E	0	17	5	adult
+E	0	17	6	half-red dragon
+E	0	17	7	feral
+E	0	17	8	razorjaw
+E	0	17	9	dire
+E	0	17	10	swarm
+E	0	17	11	corrupted
+E	0	17	12	Companion;1
+E	0	17	13	Companion;2
+E	0	17	14	Companion;3
+E	0	17	15	Companion;4
+E	0	17	16	Companion;5
+E	0	17	17	Companion;6
+E	0	17	18	Companion;7
+E	0	17	19	Companion;8
+E	0	17	20	Companion;9
+E	0	17	21	Companion;10
+E	0	17	22	Companion;11
+E	0	17	23	Companion;12
+E	0	17	24	Sacred;1
+E	0	17	25	Sacred;2
+E	0	17	26	Sacred;3
+E	0	17	27	Sacred;4
+E	0	17	28	Sacred;5
+E	0	17	29	Sacred;6
+E	0	17	30	Sacred;7
+E	0	17	31	Sacred;8
+E	0	17	32	half-fey
+E	0	17	33	skilled
+E	0	17	34	experienced
+E	0	17	35	veteran
+E	0	17	36	elite
+E	0	17	37	master
+E	0	17	38	paragon
+E	0	17	39	legendary
+E	0	17	40	barbarian;template
+E	0	17	41	bard;template
+E	0	17	42	wildshaped druid
+E	0	17	43	druid;template
+E	0	17	44	mage;template
+E	0	17	45	monk;template
+E	0	17	46	undead hunter
+E	0	17	47	knight
+E	0	17	48	pike
+E	0	17	49	worg-rider
+E	0	17	50	giant-rider
+E	0	17	51	paladin;template
+E	0	17	52	priest;template
+E	0	17	53	priest;for giants
+E	0	17	54	Multitude cultist
+E	0	17	55	archer
+E	0	17	56	rogue-archer
+E	0	17	57	ranger;template
+E	0	17	58	rogue;template
+E	0	17	59	warrior;template
+E	0	17	60	reaver
+E	0	17	61	minstrel
+E	0	17	62	grey druid
+E	0	17	63	dark sorcerer
+E	0	17	64	scarlet disciple
+E	0	17	65	blackguard;template
+E	0	17	66	curate
+E	0	17	67	stalker
+E	0	17	68	twilight huntsman;temp
+E	0	17	69	shadowdancer;template
+E	0	17	70	myrmidon
+E	0	17	71	ruby initiate
+E	0	17	72	chieftan
+E	0	17	73	shaman
+E	0	17	74	bandit
+E	0	17	75	outlaw
+E	0	17	76	brigand
+E	0	17	77	ethereal;template
+E	0	17	78	three-eyed
+E	0	17	79	pseudonatural
+E	0	17	80	turbulent
+E	0	17	81	celeritous
+E	0	17	82	monstrous clockwork
+E	0	17	83	clockwork
+E	0	17	84	plantform
+E	0	17	85	vampire
+E	0	17	86	zombie
+E	0	17	87	zombie;visage
+E	0	17	88	skeleton
+E	0	17	89	graveborn;template
+E	0	17	90	avenging spirit
+E	0	17	91	ghost
+E	0	17	92	death knight
+E	0	17	93	elder
+E	0	17	94	ancient
+E	0	17	95	spiked;template
+E	0	17	96	spellstitched
+E	0	17	97	flame
+E	0	17	98	earthen
+E	0	17	99	gaseous
+E	0	17	100	aqueous
+E	0	17	101	celestial
+E	0	17	102	fiendish
+E	0	17	103	half-celestial
+E	0	17	104	half-fiend
+E	0	17	105	clawed;template
+A	0	18	Flavour
+E	0	18	0	clear
+E	0	18	1	crimson
+E	0	18	2	black
+E	0	18	3	emerald
+E	0	18	4	amber
+E	0	18	5	silvery
+E	0	18	6	white
+E	0	18	7	tan
+E	0	18	8	orange
+E	0	18	9	violet
+E	0	18	10	red
+E	0	18	11	blue
+E	0	18	12	green
+E	0	18	13	yellow
+E	0	18	14	indigo
+E	0	18	15	viscious crimson
+E	0	18	16	viscious black
+E	0	18	17	viscious emerald
+E	0	18	18	viscious amber
+E	0	18	19	viscious silvery
+E	0	18	20	viscious white
+E	0	18	21	viscious tan
+E	0	18	22	viscious orange
+E	0	18	23	viscious violet
+E	0	18	24	viscious red
+E	0	18	25	viscious blue
+E	0	18	26	viscious green
+E	0	18	27	viscious yellow
+E	0	18	28	viscious indigo
+E	0	18	29	glowing crimson
+E	0	18	30	glowing black
+E	0	18	31	glowing emerald
+E	0	18	32	glowing amber
+E	0	18	33	glowing silvery
+E	0	18	34	glowing white
+E	0	18	35	glowing tan
+E	0	18	36	glowing orange
+E	0	18	37	glowing violet
+E	0	18	38	glowing red
+E	0	18	39	glowing blue
+E	0	18	40	glowing green
+E	0	18	41	glowing yellow
+E	0	18	42	glowing indigo
+E	0	18	43	metallic crimson
+E	0	18	44	metallic black
+E	0	18	45	metallic emerald
+E	0	18	46	metallic amber
+E	0	18	47	metallic silvery
+E	0	18	48	metallic white
+E	0	18	49	metallic tan
+E	0	18	50	metallic orange
+E	0	18	51	metallic violet
+E	0	18	52	metallic red
+E	0	18	53	metallic blue
+E	0	18	54	metallic green
+E	0	18	55	metallic yellow
+E	0	18	56	metallic indigo
+E	0	18	57	syrupy crimson
+E	0	18	58	syrupy black
+E	0	18	59	syrupy emerald
+E	0	18	60	syrupy amber
+E	0	18	61	syrupy silvery
+E	0	18	62	syrupy white
+E	0	18	63	syrupy tan
+E	0	18	64	syrupy orange
+E	0	18	65	syrupy violet
+E	0	18	66	syrupy red
+E	0	18	67	syrupy blue
+E	0	18	68	syrupy green
+E	0	18	69	syrupy yellow
+E	0	18	70	syrupy indigo
+E	0	18	71	vile-smelling crimson
+E	0	18	72	vile-smelling black
+E	0	18	73	vile-smelling emerald
+E	0	18	74	vile-smelling amber
+E	0	18	75	vile-smelling silvery
+E	0	18	76	vile-smelling white
+E	0	18	77	vile-smelling tan
+E	0	18	78	vile-smelling orange
+E	0	18	79	vile-smelling violet
+E	0	18	80	vile-smelling red
+E	0	18	81	vile-smelling blue
+E	0	18	82	vile-smelling green
+E	0	18	83	vile-smelling yellow
+E	0	18	84	vile-smelling indigo
+E	0	18	85	pasty crimson
+E	0	18	86	pasty black
+E	0	18	87	pasty emerald
+E	0	18	88	pasty amber
+E	0	18	89	pasty silvery
+E	0	18	90	pasty white
+E	0	18	91	pasty tan
+E	0	18	92	pasty orange
+E	0	18	93	pasty violet
+E	0	18	94	pasty red
+E	0	18	95	pasty blue
+E	0	18	96	pasty green
+E	0	18	97	pasty yellow
+E	0	18	98	pasty indigo
+E	0	18	99	bubbly crimson
+E	0	18	100	bubbly black
+E	0	18	101	bubbly emerald
+E	0	18	102	bubbly amber
+E	0	18	103	bubbly silvery
+E	0	18	104	bubbly white
+E	0	18	105	bubbly tan
+E	0	18	106	bubbly orange
+E	0	18	107	bubbly violet
+E	0	18	108	bubbly red
+E	0	18	109	bubbly blue
+E	0	18	110	bubbly green
+E	0	18	111	bubbly yellow
+E	0	18	112	bubbly indigo
+E	0	18	113	foul crimson
+E	0	18	114	foul black
+E	0	18	115	foul emerald
+E	0	18	116	foul amber
+E	0	18	117	foul silvery
+E	0	18	118	foul white
+E	0	18	119	foul tan
+E	0	18	120	foul orange
+E	0	18	121	foul violet
+E	0	18	122	foul red
+E	0	18	123	foul blue
+E	0	18	124	foul green
+E	0	18	125	foul yellow
+E	0	18	126	foul indigo
+E	0	18	127	speckled crimson
+E	0	18	128	speckled black
+E	0	18	129	speckled emerald
+E	0	18	130	speckled amber
+E	0	18	131	speckled silvery
+E	0	18	132	speckled white
+E	0	18	133	speckled tan
+E	0	18	134	speckled orange
+E	0	18	135	speckled violet
+E	0	18	136	speckled red
+E	0	18	137	speckled blue
+E	0	18	138	speckled green
+E	0	18	139	speckled yellow
+E	0	18	140	speckled indigo
+E	0	18	141	smoky crimson
+E	0	18	142	smoky black
+E	0	18	143	smoky emerald
+E	0	18	144	smoky amber
+E	0	18	145	smoky silvery
+E	0	18	146	smoky white
+E	0	18	147	smoky tan
+E	0	18	148	smoky orange
+E	0	18	149	smoky violet
+E	0	18	150	smoky red
+E	0	18	151	smoky blue
+E	0	18	152	smoky green
+E	0	18	153	smoky yellow
+E	0	18	154	smoky indigo
+E	0	18	155	translucent crimson
+E	0	18	156	translucent black
+E	0	18	157	translucent emerald
+E	0	18	158	translucent amber
+E	0	18	159	translucent silvery
+E	0	18	160	translucent white
+E	0	18	161	translucent tan
+E	0	18	162	translucent orange
+E	0	18	163	translucent violet
+E	0	18	164	translucent red
+E	0	18	165	translucent blue
+E	0	18	166	translucent green
+E	0	18	167	translucent yellow
+E	0	18	168	translucent indigo
+E	0	18	169	milky crimson
+E	0	18	170	milky black
+E	0	18	171	milky emerald
+E	0	18	172	milky amber
+E	0	18	173	milky silvery
+E	0	18	174	milky white
+E	0	18	175	milky tan
+E	0	18	176	milky orange
+E	0	18	177	milky violet
+E	0	18	178	milky red
+E	0	18	179	milky blue
+E	0	18	180	milky green
+E	0	18	181	milky yellow
+E	0	18	182	milky indigo
+E	0	18	183	murky crimson
+E	0	18	184	murky black
+E	0	18	185	murky emerald
+E	0	18	186	murky amber
+E	0	18	187	murky silvery
+E	0	18	188	murky white
+E	0	18	189	murky tan
+E	0	18	190	murky orange
+E	0	18	191	murky violet
+E	0	18	192	murky red
+E	0	18	193	murky blue
+E	0	18	194	murky green
+E	0	18	195	murky yellow
+E	0	18	196	murky indigo
+E	0	18	197	oily crimson
+E	0	18	198	oily black
+E	0	18	199	oily emerald
+E	0	18	200	oily amber
+E	0	18	201	oily silvery
+E	0	18	202	oily white
+E	0	18	203	oily tan
+E	0	18	204	oily orange
+E	0	18	205	oily violet
+E	0	18	206	oily red
+E	0	18	207	oily blue
+E	0	18	208	oily green
+E	0	18	209	oily yellow
+E	0	18	210	oily indigo
+E	0	18	211	thick crimson
+E	0	18	212	thick black
+E	0	18	213	thick emerald
+E	0	18	214	thick amber
+E	0	18	215	thick silvery
+E	0	18	216	thick white
+E	0	18	217	thick tan
+E	0	18	218	thick orange
+E	0	18	219	thick violet
+E	0	18	220	thick red
+E	0	18	221	thick blue
+E	0	18	222	thick green
+E	0	18	223	thick yellow
+E	0	18	224	thick indigo
+E	0	18	225	Velex Tharut
+E	0	18	226	Velex Ascid
+E	0	18	227	Velex Cirre
+E	0	18	228	Velex Damhan
+E	0	18	229	Velex Jadis
+E	0	18	230	Vox Tharut
+E	0	18	231	Vox Golag
+E	0	18	232	Vox Damhan
+E	0	18	233	Vox Jadis
+E	0	18	234	Vox Lignis
+E	0	18	235	Ridis Velex
+E	0	18	236	Ridis Virix
+E	0	18	237	Ridis Erdush
+E	0	18	238	Ridis Imran
+E	0	18	239	Ridis Jadis
+E	0	18	240	Olnam Virix
+E	0	18	241	Olnam Kadash
+E	0	18	242	Olnam Ascid
+E	0	18	243	Olnam Jessek
+E	0	18	244	Olnam Jadis
+E	0	18	245	Lux Golag
+E	0	18	246	Lux Balrut
+E	0	18	247	Lux Ascid
+E	0	18	248	Lux Fenrig
+E	0	18	249	Lux Jessek
+E	0	18	250	Golag Ridis
+E	0	18	251	Golag Orvok
+E	0	18	252	Golag Dethak
+E	0	18	253	Golag Damhan
+E	0	18	254	Golag Imran
+E	0	18	255	Temov Solan
+E	0	18	256	Temov Kadash
+E	0	18	257	Temov Cirre
+E	0	18	258	Temov Jessek
+E	0	18	259	Temov Vigsag
+E	0	18	260	Tharut Ridis
+E	0	18	261	Tharut Orvok
+E	0	18	262	Tharut Ultas
+E	0	18	263	Tharut Damhan
+E	0	18	264	Tharut Nul
+E	0	18	265	Solan Vox
+E	0	18	266	Solan Colash
+E	0	18	267	Solan Dethak
+E	0	18	268	Solan Cirre
+E	0	18	269	Solan Nul
+E	0	18	270	Virix Vox
+E	0	18	271	Virix Temov
+E	0	18	272	Virix Damhan
+E	0	18	273	Virix Damhan
+E	0	18	274	Virix Fenrig
+E	0	18	275	Ascid Ridis
+E	0	18	276	Ascid Solan
+E	0	18	277	Ascid Kadash
+E	0	18	278	Ascid Jessek
+E	0	18	279	Ascid Vigsag
+E	0	18	280	Orvok Lux
+E	0	18	281	Orvok Tharut
+E	0	18	282	Orvok Dethak
+E	0	18	283	Orvok Lariat
+E	0	18	284	Balrut Lux
+E	0	18	285	Balrut Virix
+E	0	18	286	Balrut Damhan
+E	0	18	287	Balrut Erdush
+E	0	18	288	Balrut Lariat
+E	0	18	289	Kadash Ridis
+E	0	18	290	Kadash Temov
+E	0	18	291	Kadash Cirre
+E	0	18	292	Kadash Cirre
+E	0	18	293	Kadash Jessek
+E	0	18	294	Colash Virix
+E	0	18	295	Colash Tharut
+E	0	18	296	Colash Damhan
+E	0	18	297	Colash Erdush
+E	0	18	298	Colash Imran
+E	0	18	299	Cirre Virix
+E	0	18	300	Cirre Orvok
+E	0	18	301	Cirre Dethak
+E	0	18	302	Cirre Ultas
+E	0	18	303	Cirre Fenrig
+E	0	18	304	Dethak Golag
+E	0	18	305	Dethak Orvok
+E	0	18	306	Dethak Ultas
+E	0	18	307	Dethak Jadis
+E	0	18	308	Dethak Fenrig
+E	0	18	309	Damhan Golag
+E	0	18	310	Damhan Colash
+E	0	18	311	Damhan Colash
+E	0	18	312	Damhan Himrath
+E	0	18	313	Damhan Nul
+E	0	18	314	Erdush Golag
+E	0	18	315	Erdush Virix
+E	0	18	316	Erdush Kadash
+E	0	18	317	Erdush Ultas
+E	0	18	318	Erdush Imran
+E	0	18	319	Ultas Velex
+E	0	18	320	Ultas Tharut
+E	0	18	321	Ultas Cirre
+E	0	18	322	Ultas Jadis
+E	0	18	323	Fenrig Olnam
+E	0	18	324	Fenrig Virix
+E	0	18	325	Fenrig Orvok
+E	0	18	326	Fenrig Ultas
+E	0	18	327	Fenrig Imran
+E	0	18	328	Himrath Temov
+E	0	18	329	Himrath Ascid
+E	0	18	330	Himrath Orvok
+E	0	18	331	Himrath Jessek
+E	0	18	332	Himrath Lariat
+E	0	18	333	Imran Golag
+E	0	18	334	Imran Solan
+E	0	18	335	Imran Orvok
+E	0	18	336	Imran Jessek
+E	0	18	337	Jadis Tharut
+E	0	18	338	Jadis Ascid
+E	0	18	339	Jadis Erdush
+E	0	18	340	Jadis Cirre
+E	0	18	341	Jadis Imran
+E	0	18	342	Jessek Velex
+E	0	18	343	Jessek Temov
+E	0	18	344	Jessek Kadash
+E	0	18	345	Jessek Dethak
+E	0	18	346	Jessek Fenrig
+E	0	18	347	Nul Golag
+E	0	18	348	Nul Orvok
+E	0	18	349	Nul Cirre
+E	0	18	350	Nul Jadis
+E	0	18	351	Nul Fenrig
+E	0	18	352	Lariat Vox
+E	0	18	353	Lariat Orvok
+E	0	18	354	Lariat Colash
+E	0	18	355	Lariat Erdush
+E	0	18	356	Lariat Himrath
+E	0	18	357	Lignis Tharut
+E	0	18	358	Lignis Colash
+E	0	18	359	Lignis Cirre
+E	0	18	360	Lignis Cirre
+E	0	18	361	Asmodex Lux
+E	0	18	362	Asmodex Virix
+E	0	18	363	Asmodex Colash
+E	0	18	364	Asmodex Damhan
+E	0	18	365	Asmodex Jadis
+E	0	18	366	Vigsag Velex
+E	0	18	367	Vigsag Ascid
+E	0	18	368	Vigsag Orvok
+E	0	18	369	Vigsag Jessek
+E	0	18	370	Vigsag Fenrig
+E	0	18	371	Vugnug Lux
+E	0	18	372	Vugnug Tharut
+E	0	18	373	Vugnug Erdush
+E	0	18	374	Vugnug Imran
+E	0	18	375	Vugnug Imran
+E	0	18	376	Elbib Temov
+E	0	18	377	Elbib Tharut
+E	0	18	378	Elbib Ascid
+E	0	18	379	Elbib Cirre
+E	0	18	380	Elbib Jadis
+E	0	18	381	Elam Tharut
+E	0	18	382	Elam Tharut
+E	0	18	383	Elam Balrut
+E	0	18	384	Elam Ultas
+E	0	18	385	Elam Imran
+E	0	18	386	Tharr Olnam
+E	0	18	387	Tharr Golag
+E	0	18	388	Tharr Colash
+E	0	18	389	Tharr Damhan
+E	0	18	390	Tharr Asmodex
+E	0	18	391	Yed Golag
+E	0	18	392	Yed Balrut
+E	0	18	393	Yed Ultas
+E	0	18	394	Yed Erdush
+E	0	18	395	Yed Nul
+E	0	18	396	Azram Velex
+E	0	18	397	Azram Orvok
+E	0	18	398	Azram Colash
+E	0	18	399	Azram Jessek
+E	0	18	400	Azram Himrath
+E	0	18	401	Kirje Virix
+E	0	18	402	Kirje Orvok
+E	0	18	403	Kirje Kadash
+E	0	18	404	Kirje Dethak
+E	0	18	405	Kirje Jessek
+E	0	18	406	Noxon Ridis
+E	0	18	407	Noxon Colash
+E	0	18	408	Noxon Orvok
+E	0	18	409	Noxon Cirre
+E	0	18	410	Noxon Jadis
+E	0	18	411	Oculon Golag
+E	0	18	412	Oculon Colash
+E	0	18	413	Oculon Cirre
+E	0	18	414	Oculon Ultas
+E	0	18	415	Oculon Asmodex
+E	0	18	416	Pasix Solan
+E	0	18	417	Pasix Orvok
+E	0	18	418	Pasix Damhan
+E	0	18	419	Pasix Jessek
+E	0	18	420	Pasix Jadis
+E	0	18	421	Praedit Lux
+E	0	18	422	Praedit Virix
+E	0	18	423	Praedit Dethak
+E	0	18	424	Praedit Dethak
+E	0	18	425	Praedit Jessek
+E	0	18	426	Qixl Golag
+E	0	18	427	Qixl Kadash
+E	0	18	428	Qixl Cirre
+E	0	18	429	Qixl Ultas
+E	0	18	430	Qixl Nul
+E	0	18	431	Rashem Ridis
+E	0	18	432	Rashem Orvok
+E	0	18	433	Rashem Colash
+E	0	18	434	Rashem Himrath
+E	0	18	435	Rashem Asmodex
+E	0	18	436	Sardox Olnam
+E	0	18	437	Sardox Solan
+E	0	18	438	Sardox Balrut
+E	0	18	439	Sardox Dethak
+E	0	18	440	Sardox Nul
+E	0	18	441	Tuliv Ridis
+E	0	18	442	Tuliv Ascid
+E	0	18	443	Tuliv Kadash
+E	0	18	444	Tuliv Jadis
+E	0	18	445	Tuliv Jessek
+E	0	18	446	Ugnux Vox
+E	0	18	447	Ugnux Orvok
+E	0	18	448	Ugnux Damhan
+E	0	18	449	Ugnux Himrath
+E	0	18	450	Ugnux Lignis
+E	0	18	451	Gornach Vox
+E	0	18	452	Gornach Kadash
+E	0	18	453	Gornach Balrut
+E	0	18	454	Gornach Jessek
+E	0	18	455	Gornach Fenrig
+E	0	18	456	Vedas Velex
+E	0	18	457	Vedas Balrut
+E	0	18	458	Vedas Kadash
+E	0	18	459	Vedas Ultas
+E	0	18	460	Vedas Himrath
+E	0	18	461	Mugmug Vox
+E	0	18	462	Mugmug Temov
+E	0	18	463	Mugmug Ascid
+E	0	18	464	Mugmug Imran
+E	0	18	465	Mugmug Nul
+E	0	18	466	Grabnor Golag
+E	0	18	467	Grabnor Tharut
+E	0	18	468	Grabnor Colash
+E	0	18	469	Grabnor Imran
+E	0	18	470	Grabnor Lignis
+E	0	18	471	blackened
+E	0	18	472	teak
+E	0	18	473	ornate
+E	0	18	474	rosewood
+E	0	18	475	glass
+E	0	18	476	oak
+E	0	18	477	thin
+E	0	18	478	gnarled
+E	0	18	479	engraved
+E	0	18	480	crooked
+E	0	18	481	iron-shod
+E	0	18	482	steel-shod
+E	0	18	483	gem-encrusted
+E	0	18	484	fragile
+E	0	18	485	sturdy
+E	0	18	486	short
+E	0	18	487	long
+E	0	18	488	tapering
+E	0	18	489	ruby
+E	0	18	490	filigreed
+E	0	18	491	plain
+E	0	18	492	twisted
+E	0	18	493	star-tipped
+E	0	18	494	thick
+E	0	18	495	long
+E	0	18	496	pointed
+E	0	18	497	topaz
+E	0	18	498	mithril
+E	0	18	499	adamant
+E	0	18	500	darkwood
+E	0	18	501	huge
+E	0	18	502	rune-covered
+E	0	18	503	black
+E	0	18	504	forked
+E	0	18	505	intertwining
+E	0	18	506	sharpened
+E	0	18	507	fragile
+E	0	18	508	cracked;flavour
+E	0	18	509	truly old
+E	0	18	510	glowing
+E	0	18	511	steel
+E	0	18	512	copper
+E	0	18	513	curved
+E	0	18	514	flexible
+E	0	18	515	orichalchum
+E	0	18	516	moonsilver
+E	0	18	517	inlaid
+E	0	18	518	ivory
+E	0	18	519	obsidian
+E	0	18	520	forged
+E	0	18	521	translucent
+E	0	18	522	ruby-tipped
+E	0	18	523	ruby-studded
+E	0	18	524	diamond-tipped
+E	0	18	525	diamond-studded
+E	0	18	526	emerald-tipped
+E	0	18	527	emerald-studded
+E	0	18	528	sapphire-tipped
+E	0	18	529	sapphire-studded
+E	0	18	530	onyx-tipped
+E	0	18	531	onyx-studded
+E	0	18	532	star-tipped
+E	0	18	533	steel
+E	0	18	534	regal
+E	0	18	535	carved
+E	0	18	536	intertwined
+E	0	18	537	copper
+E	0	18	538	obsidian;flavour
+E	0	18	539	plain
+E	0	18	540	heavy
+E	0	18	541	thin
+E	0	18	542	lead
+E	0	18	543	long
+E	0	18	544	flanged
+E	0	18	545	forged
+E	0	18	546	telescoping
+E	0	18	547	ceremonial
+E	0	18	548	fur-covered
+E	0	18	549	rune-covered
+E	0	18	550	chipped
+E	0	18	551	mithril
+E	0	18	552	short
+E	0	18	553	agate
+E	0	18	554	amber
+E	0	18	555	amethyst
+E	0	18	556	ancestral
+E	0	18	557	blood-stained
+E	0	18	558	brass
+E	0	18	559	bronze
+E	0	18	560	bloody
+E	0	18	561	carved
+E	0	18	562	diamond;flavour
+E	0	18	563	double-banded
+E	0	18	564	dwarven
+E	0	18	565	electrum
+E	0	18	566	elven
+E	0	18	567	emerald
+E	0	18	568	engraved
+E	0	18	569	gem-studded
+E	0	18	570	glass
+E	0	18	571	grass
+E	0	18	572	gold
+E	0	18	573	hand-made
+E	0	18	574	inscribed
+E	0	18	575	iron
+E	0	18	576	jade
+E	0	18	577	kinship
+E	0	18	578	large
+E	0	18	579	moonstone
+E	0	18	580	onxy
+E	0	18	581	opal
+E	0	18	582	ornate
+E	0	18	583	plain
+E	0	18	584	platinum
+E	0	18	585	ruby
+E	0	18	586	rune-covered
+E	0	18	587	sapphire
+E	0	18	588	silver
+E	0	18	589	steel
+E	0	18	590	stylized
+E	0	18	591	tarnished
+E	0	18	592	thick
+E	0	18	593	thin
+E	0	18	594	topaz
+E	0	18	595	wooden
+E	0	18	596	woven vine
+E	0	18	597	beryl
+E	0	18	598	obsidian;1
+E	0	18	599	electrum
+E	0	18	600	monogrammed
+E	0	18	601	adamant
+E	0	18	602	slender
+E	0	18	603	translucent
+E	0	18	604	crudely made
+E	0	18	605	crystal
+E	0	18	606	sigil
+E	0	18	607	black
+E	0	18	608	tooled
+E	0	18	609	plain
+E	0	18	610	rune-covered
+E	0	18	611	ivory
+E	0	18	612	leather
+E	0	18	613	large
+E	0	18	614	sturdy
+E	0	18	615	wood
+E	0	18	616	copper
+E	0	18	617	bass
+E	0	18	618	treble
+E	0	18	619	carved
+E	0	18	620	tight
+E	0	18	621	thin
+E	0	18	622	gem-inset
+E	0	18	623	royal
+E	0	18	624	rune-covered
+E	0	18	625	thick
+E	0	18	626	brass
+E	0	18	627	cloth
+E	0	18	628	leather
+E	0	18	629	wavy
+E	0	18	630	adamant
+E	0	18	631	heavy
+E	0	18	632	outmoded
+E	0	18	633	boxy
+E	0	18	634	brass
+E	0	18	635	bronze
+E	0	18	636	ceremonial
+E	0	18	637	copper
+E	0	18	638	electrum
+E	0	18	639	fancy
+E	0	18	640	gem-encrused
+E	0	18	641	green
+E	0	18	642	heavy
+E	0	18	643	hide
+E	0	18	644	horned
+E	0	18	645	iron
+E	0	18	646	ornate
+E	0	18	647	plain
+E	0	18	648	plumed
+E	0	18	649	red
+E	0	18	650	rune-covered
+E	0	18	651	spiked
+E	0	18	652	steel
+E	0	18	653	winged
+E	0	18	654	hand-made
+E	0	18	655	silk
+E	0	18	656	reinforced
+E	0	18	657	satin
+E	0	18	658	jeweled
+E	0	18	659	thick black
+E	0	18	660	dark crimson
+E	0	18	661	thick
+E	0	18	662	expensive
+E	0	18	663	dark navy
+E	0	18	664	long
+E	0	18	665	stylized
+E	0	18	666	tattered
+E	0	18	667	ragged
+E	0	18	668	fur-trimmed
+E	0	18	669	glossy black
+E	0	18	670	winter
+E	0	18	671	rune-trimmed
+E	0	18	672	star-covered
+E	0	18	673	patterned
+E	0	18	674	heraldic
+E	0	18	675	fashionable
+E	0	18	676	black
+E	0	18	677	blue
+E	0	18	678	buckled
+E	0	18	679	clasped
+E	0	18	680	delicate
+E	0	18	681	gem-encrusted
+E	0	18	682	green
+E	0	18	683	heavy
+E	0	18	684	hemp
+E	0	18	685	iron
+E	0	18	686	leather
+E	0	18	687	leather
+E	0	18	688	pliant
+E	0	18	689	red
+E	0	18	690	reinforced
+E	0	18	691	rune-covered
+E	0	18	692	shiny
+E	0	18	693	studded
+E	0	18	694	thick
+E	0	18	695	thin
+E	0	18	696	tight
+E	0	18	697	tooled
+E	0	18	698	white
+E	0	18	699	adamant-gilded
+E	0	18	700	banded
+E	0	18	701	chipped
+E	0	18	702	cloth
+E	0	18	703	copper-gilded
+E	0	18	704	firm
+E	0	18	705	gold-gilded
+E	0	18	706	heavy
+E	0	18	707	heavy
+E	0	18	708	inscribed
+E	0	18	709	jeweled
+E	0	18	710	leather
+E	0	18	711	light
+E	0	18	712	loose
+E	0	18	713	mithril-gilded
+E	0	18	714	ornate
+E	0	18	715	ornately carved
+E	0	18	716	plate
+E	0	18	717	pliant
+E	0	18	718	polished
+E	0	18	719	rune-covered
+E	0	18	720	rusted
+E	0	18	721	sharp-edged
+E	0	18	722	silver-gilded
+E	0	18	723	spiked
+E	0	18	724	stained
+E	0	18	725	steel-gilded
+E	0	18	726	sturdy
+E	0	18	727	tight-fitting
+E	0	18	728	well-worn
+E	0	18	729	adamant-gilded
+E	0	18	730	banded
+E	0	18	731	chipped
+E	0	18	732	cloth
+E	0	18	733	copper-gilded
+E	0	18	734	firm
+E	0	18	735	gold-gilded
+E	0	18	736	heavy
+E	0	18	737	heavy
+E	0	18	738	inscribed
+E	0	18	739	jeweled
+E	0	18	740	leather
+E	0	18	741	light
+E	0	18	742	loose
+E	0	18	743	mithril-gilded
+E	0	18	744	ornate
+E	0	18	745	ornately carved
+E	0	18	746	plate
+E	0	18	747	pliant
+E	0	18	748	polished
+E	0	18	749	rune-covered
+E	0	18	750	rusted
+E	0	18	751	sharp-edged
+E	0	18	752	silver-gilded
+E	0	18	753	spiked
+E	0	18	754	stained
+E	0	18	755	steel-gilded
+E	0	18	756	sturdy
+E	0	18	757	tight-fitting
+E	0	18	758	well-worn
+E	0	18	759	leather
+E	0	18	760	steel-toed
+E	0	18	761	sturdy
+E	0	18	762	decorative
+E	0	18	763	soft-solved
+E	0	18	764	tanned
+E	0	18	765	primitive
+E	0	18	766	tall
+E	0	18	767	deerskin
+E	0	18	768	well-worn
+E	0	18	769	rune-covered
+E	0	18	770	ankle-high
+E	0	18	771	work
+E	0	18	772	blacksmith's
+E	0	18	773	finely crafted
+E	0	18	774	agni mani
+E	0	18	775	sparkling
+E	0	18	776	andar
+E	0	18	777	black opal
+E	0	18	778	bloodstone
+E	0	18	779	bone
+E	0	18	780	chrysoberyl
+E	0	18	781	clasped
+E	0	18	782	coral
+E	0	18	783	cracked
+E	0	18	784	emerald
+E	0	18	785	fragile
+E	0	18	786	gold
+E	0	18	787	hand-carved
+E	0	18	788	heavy
+E	0	18	789	high
+E	0	18	790	iol
+E	0	18	791	ivory
+E	0	18	792	jade opal
+E	0	18	793	jasper
+E	0	18	794	large
+E	0	18	795	moonsilver
+E	0	18	796	moonstone
+E	0	18	797	obsidian;flavour
+E	0	18	798	painted
+E	0	18	799	pearl
+E	0	18	800	primitive
+E	0	18	801	ruby
+E	0	18	802	ruby-inset
+E	0	18	803	runic
+E	0	18	804	sapphire
+E	0	18	805	scented
+E	0	18	806	shamanic
+E	0	18	807	silver
+E	0	18	808	skull
+E	0	18	809	skydrop
+E	0	18	810	sphere
+E	0	18	811	steel
+E	0	18	812	sunstone
+E	0	18	813	tchazar
+E	0	18	814	water opal
+E	0	18	815	waterstar
+E	0	18	816	wrought iron
+E	0	18	817	ziose
+E	0	18	818	zircon
+E	0	18	819	crimson-tinted
+E	0	18	820	black-tinted
+E	0	18	821	emerald-tinted
+E	0	18	822	amber-tinted
+E	0	18	823	silvery-tinted
+E	0	18	824	white-tinted
+E	0	18	825	tan-tinted
+E	0	18	826	orange-tinted
+E	0	18	827	violet-tinted
+E	0	18	828	red-tinted
+E	0	18	829	blue-tinted
+E	0	18	830	green-tinted
+E	0	18	831	yellow-tinted
+E	0	18	832	indigo-tinted
+E	0	18	833	brass-rimmed
+E	0	18	834	iron-rimmed
+E	0	18	835	circular
+E	0	18	836	square-lensed
+E	0	18	837	rose-tinted
+E	0	18	838	ornate
+E	0	18	839	cracked
+E	0	18	840	thin-lensed
+E	0	18	841	thick-lensed
+E	0	18	842	speckled
+E	0	18	843	toadstool
+E	0	18	844	dark
+E	0	18	845	tiny
+E	0	18	846	crimson
+E	0	18	847	smelly
+E	0	18	848	crooked
+E	0	18	849	colourful
+E	0	18	850	Diver
+E	0	18	851	Ramoth
+E	0	18	852	Rocky
+E	0	18	853	Ruth
+E	0	18	854	Star
+E	0	18	855	Anjou
+E	0	18	856	Aunis
+E	0	18	857	Bearn
+E	0	18	858	Berry
+E	0	18	859	Cerf
+E	0	18	860	Colmar
+E	0	18	861	Dauphine
+E	0	18	862	Lambel
+E	0	18	863	Murale
+E	0	18	864	Rohan
+E	0	18	865	Sarlat
+E	0	18	866	Sinople
+E	0	18	867	Vair
+E	0	18	868	Cahleed
+E	0	18	869	Dace
+E	0	18	870	Farstrider
+E	0	18	871	Fluffy
+E	0	18	872	Izzy
+E	0	18	873	Keeper
+E	0	18	874	Seeker
+E	0	18	875	Shadow
+E	0	18	876	Shadowfax
+E	0	18	877	Shorven
+E	0	18	878	Striker
+E	0	18	879	Taith
+E	0	18	880	Vervain
+E	0	18	881	Whisper
+E	0	18	882	Wixel
+A	0	19	Behaviour
+A	0	20	Encounter
+E	0	20	0	Lone Aquatic Monster
+E	0	20	1	Vault Monster
+E	0	20	2	Holy Summons
+E	0	20	3	Nature's Ally
+E	0	20	4	Summoned Monster
+E	0	20	5	Conjured Vortex
+E	0	20	6	mass summons
+E	0	20	7	gated outsiders
+E	0	20	8	horde of valhalla
+E	0	20	9	Generic Summons
+E	0	20	10	single monster
+E	0	20	11	exact monster
+E	0	20	12	Summoned Goblinoid
+E	0	20	13	Conjured Outsider
+E	0	20	14	Mated Pair of Dragons
+E	0	20	15	Lone Dragon
+E	0	20	16	goblinoid warband
+E	0	20	17	mixed kobold warband
+E	0	20	18	goblinoid war-riders
+E	0	20	19	tribal warband
+E	0	20	20	church knights
+E	0	20	21	Lone Dark-Dwelling Beast
+E	0	20	22	zombie horde
+E	0	20	23	skeletal armada
+E	0	20	24	pack encounter
+E	0	20	25	adventurer
+E	0	20	26	adventuring party
+E	0	20	27	experienced adventuring party
+E	0	20	28	mounted adventuring party
+E	0	20	29	mounted experienced adventuring party
+E	0	20	30	band of outlaws
+E	0	20	31	pack of rats
+E	0	20	32	aberration group
+E	0	20	33	chitine band
+E	0	20	34	mind flayer inquisition
+E	0	20	35	drow scouting party
+E	0	20	36	grippli tribe
+E	0	20	37	band of ixitxachitl
+E	0	20	38	trapper ambush
+E	0	20	39	mixed trapper ambush
+E	0	20	40	oozes
+E	0	20	41	mixed oozes
+E	0	20	42	fungi
+E	0	20	43	mixed fungi
+E	0	20	44	myconid colony
+E	0	20	45	nest of nagas
+E	0	20	46	band of ghouls
+E	0	20	47	flock of birds
+E	0	20	48	graveborn creatures
+E	0	20	49	lone template undead
+E	0	20	50	monstrous animated corpse
+E	0	20	51	mixed corporeal undead
+E	0	20	52	gravestone undead
+E	0	20	53	negative undead
+E	0	20	54	water creatures
+E	0	20	55	fire creatures
+E	0	20	56	earth creatures
+E	0	20	57	air creatures
+E	0	20	58	werebeast and allies
+E	0	20	59	werebeast pack and allies
+E	0	20	60	regiment of devils
+E	0	20	61	horde of demons
+E	0	20	62	lone outsider
+E	0	20	63	druid, with animals
+E	0	20	64	uniform classed group
+E	0	20	65	band of giants
+E	0	20	66	multitude cultists
+E	0	20	67	homogenous fae group
+E	0	20	68	diverse fae group
+E	0	20	69	sylvan creatures
+E	0	20	70	spider encounter
+E	0	20	71	lone vampire
+E	0	20	72	group of minotaurs
+E	0	20	73	plants
+E	0	20	74	druid, with plants
+E	0	20	75	homogenous vermin
+E	0	20	76	mixed vermin
+E	0	20	77	hag covey
+E	0	20	78	formian workgroup
+E	0	20	79	slaad raiders
+E	0	20	80	modron envoy
+E	0	20	81	grid bug patrol
+E	0	20	82	giant, with humanoid followers
+E	0	20	83	dark lord, with slaves
+E	0	20	84	lone pseudonatural
+E	0	20	85	pseudonatural group
+E	0	20	86	clockwork beasts
+E	0	20	87	githzerai rrakkma
+O	0	-1	-1	(module)
+V	0	-1	-1	0	murgash_killed	int16
+V	0	-1	-1	1	murgash_quelled	int16
+O	0	0	96	froghemoth
+V	0	0	96	0	hitCount	int16
+O	0	0	415	buleazu
+V	0	0	415	0	gore_hit	int16
+O	0	0	431	barbazu
+V	0	0	431	0	claw_hits	int16
+O	0	2	13	cave entrance
+V	0	2	13	0	hRoark	hObj
+V	0	2	13	1	hCoins	hObj
+O	0	3	9	Death Attack
+V	0	3	9	0	okForDA	bool
+O	0	3	141	Oil of Transformation
+V	0	3	141	0	currID	rID
+O	0	3	330	Kinslayer
+V	0	3	330	0	kinflag	int16
+O	0	3	368	Knock
+V	0	3	368	0	h	hObj
+O	0	3	371	Wizard Lock
+V	0	3	371	0	h	hObj
+O	0	3	390	Chromatic Orb
+V	0	3	390	0	ch	int32
+V	0	3	390	1	i	int32
+O	0	3	415	Magic Weapon
+V	0	3	415	0	it	hObj
+O	0	3	431	Pyrotechnics
+V	0	3	431	0	hTorch	hObj
+O	0	3	435	Animate Rope
+V	0	3	435	0	hRope	hObj
+O	0	3	451	Decastave
+V	0	3	451	0	it	hObj
+O	0	3	488	Keen Edge
+V	0	3	488	0	it	hObj
+O	0	3	492	Detect Monsters
+V	0	3	492	0	range	int16
+O	0	3	495	Lorecall
+V	0	3	495	0	sk	int16
+V	0	3	495	1	mag	int16
+O	0	3	519	Adamant Facade
+V	0	3	519	0	hLeader	hObj
+V	0	3	519	1	hAlly	hObj
+V	0	3	519	2	hPlayer	hObj
+V	0	3	519	3	hSword	hObj
+O	0	3	524	Animate Dead
+V	0	3	524	0	ch	int16
+V	0	3	524	1	first	int16
+O	0	3	538	Greater Magic Weapon
+V	0	3	538	0	it	hObj
+O	0	3	561	Emotion
+V	0	3	561	0	ch	int32
+O	0	3	579	Contagion
+V	0	3	579	0	diseaseID	rID
+O	0	3	591	Lesser Planar Conjuration
+V	0	3	591	0	hostile_flag	bool
+O	0	3	613	Misdirection
+V	0	3	613	0	hCaster	hObj
+V	0	3	613	1	hTarg	hObj
+V	0	3	613	2	x	int16
+V	0	3	613	3	y	int16
+O	0	3	663	create tightrope bridge
+V	0	3	663	0	feet_needed	int16
+V	0	3	663	1	tx	int16
+V	0	3	663	2	ty	int16
+O	0	3	722	Dance of Ruin
+V	0	3	722	0	vrock_count	int16
+V	0	3	722	1	vrock_caster	hObj
+V	0	3	722	2	the_turn	int32
+O	0	3	739	red slaad egg infestation
+V	0	3	739	0	vx	int16
+V	0	3	739	1	vy	int16
+V	0	3	739	2	vmap	hObj
+O	0	3	740	blue slaad transformation disease
+V	0	3	740	0	vx	int16
+V	0	3	740	1	vy	int16
+V	0	3	740	2	vmap	hObj
+O	0	3	780	Produce Flame
+V	0	3	780	0	it	hObj
+O	0	3	786	Command
+V	0	3	786	0	choice	int16
+V	0	3	786	1	str	hText
+O	0	3	807	Entangle
+V	0	3	807	0	cast_flag	bool
+V	0	3	807	1	found_flag	bool
+O	0	3	812	Warp Wood
+V	0	3	812	0	h	hObj
+O	0	3	816	Shillelagh
+V	0	3	816	0	it	hObj
+O	0	3	822	Divine Sacrifice
+V	0	3	822	0	sac	int16
+O	0	3	823	Silversheen;spell
+V	0	3	823	0	it	hObj
+O	0	3	826	Brand of Hatred
+V	0	3	826	0	it	hObj
+O	0	3	855	Make Whole
+V	0	3	855	0	it	hObj
+O	0	3	856	Magic Stone
+V	0	3	856	0	ch	int32
+O	0	3	893	Magic Vestment
+V	0	3	893	0	it	hObj
+O	0	3	901	Ironwood;spell
+V	0	3	901	0	it	hObj
+O	0	3	932	Natural Erosion
+V	0	3	932	0	it	hObj
+O	0	3	963	Music of the Spheres
+V	0	3	963	0	targ	int16
+V	0	3	963	1	dtype	int16
+V	0	3	963	2	choir	int16
+O	0	3	968	Fire Seeds;spell
+V	0	3	968	0	it	hObj
+O	0	3	975	Heroes' Feast
+V	0	3	975	0	n	int16
+O	0	3	1125	AutoRest
+V	0	3	1125	0	restedTurns	int32
+O	0	3	1126	AutoDrop
+V	0	3	1126	0	it	hObj
+V	0	3	1126	1	doneSelect	bool
+O	0	3	1127	AutoLoot
+V	0	3	1127	0	it	hObj
+V	0	3	1127	1	doneSelect	bool
+V	0	3	1127	2	cKick	int16
+O	0	3	1137	Detonate
+V	0	3	1137	0	hTarget	hObj
+V	0	3	1137	1	hSaver	hObj
+O	0	3	1169	Create Corporeal Undead
+V	0	3	1169	0	uID	rID
+V	0	3	1169	1	hCorpse	hObj
+O	0	3	1170	Create Spectral Undead
+V	0	3	1170	0	uID	rID
+V	0	3	1170	1	hCorpse	hObj
+O	0	3	1173	Sticks to Snakes
+V	0	3	1173	0	ch	int32
+O	0	12	1	Asherath
+V	0	12	1	0	lastRestXP	int32
+O	0	12	4	Essiah
+V	0	12	4	0	oldExploreFavour	int32
+O	0	12	5	Hesani
+V	0	12	5	0	tension	int32
+O	0	12	11	Sabine
+V	0	12	11	0	was_uninjured	bool
+V	0	12	11	1	riskBalance	int32
+O	0	12	12	Semirath
+V	0	12	12	0	riskBalance	int32
+V	0	12	12	1	rbTimer	int32
+O	0	12	14	Xel
+V	0	12	14	0	dailySac	int16
+O	0	14	41	pool of grease
+V	0	14	41	0	mount	hObj
+O	0	14	42	Old Webbing
+V	0	14	42	0	mount	hObj
+O	0	14	43	Webbing
+V	0	14	43	0	mount	hObj
+O	0	14	44	Ice Floor
+V	0	14	44	0	mount	hObj
+O	0	14	45	storm of sleet
+V	0	14	45	0	mount	hObj
+O	0	14	50	deep water
+V	0	14	50	0	mount	hObj
+O	0	14	51	turbulent water
+V	0	14	51	0	mount	hObj
+O	0	14	52	magma
+V	0	14	52	0	mount	hObj
+O	0	14	53	brimstone
+V	0	14	53	0	mount	hObj

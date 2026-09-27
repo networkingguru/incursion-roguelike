@@ -740,8 +740,16 @@ void MonMemNote(Player *p, rID mID, int what)
   }
 
 uint32 Module::GetMemoryPtr(rID xID,int8 pn)
-  {                                                      
+  {
     uint32 ptr;
+    /* upstream: never adds pn*sizeof(Row) to the per-player offset below,
+       so a second player's memory would alias player 0's -- same on Win32.
+       Tier: Traced. Tracking: inc-glnx. Not sent.
+       theGame->NumPlayers() is hard-coded to 1 (inc/Res.h), so pn is always
+       0 in practice; fail loudly rather than silently alias if that changes. */
+    if (pn != 0 || theGame->NumPlayers() != 1)
+      Fatal("Module::GetMemoryPtr: multi-player resource memory is unimplemented "
+            "(pn=%d, NumPlayers=%d)", pn, theGame->NumPlayers());
     ptr = szDataSeg;
     if (xID >= MonsterID(0) && xID <= MonsterID(szMon-1))
       {

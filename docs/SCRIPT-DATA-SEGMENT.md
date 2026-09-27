@@ -2,6 +2,15 @@
 
 # The module script data segment
 
+**SUPERSEDED 2026-09-26 (inc-glnx).** Do not act on this note. Its verdict
+rests on the claim that the segment is 0 bytes and that no compile path can
+change that. That claim is false. The compiler gives every script variable a
+slot (`HeapHead++`), and the shipped module had 97 of them. The segment read
+as 0 bytes only because `Module::szDataSeg` was never assigned, so the
+variables overlapped the monster-memory rows. `docs/SAVE-SCHEMA-SPEC.md`,
+section "Script variables", now governs this region. The text below is kept
+as the record of the earlier reasoning.
+
 Scope: the `szDataSeg` bytes at the front of each `Game::MDataSeg[i]` block.
 This note answers whether the v1 save schema (`docs/SAVE-SCHEMA-SPEC.md`,
 "The resource memory segment") must carry that front region, and how. It is

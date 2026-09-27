@@ -409,6 +409,264 @@ def craft_seg_row_mutants(src_path, cases):
                   "names module slot -1"))
 
 
+# --- revision-4 script-variable records (docs/SAVE-SCHEMA-SPEC.md,
+#     "Script variables"; test-plan cases 25 and 28(a)) --------------------
+#
+# At revision 4 a slot's K_EMBED record carries inner tags 2/3 (the
+# position-keyed memory rows, still handled above), 4/5 (the module manifest)
+# and the two this section mutates: tag 6, a K_U32 varCount, and tag 7, the
+# K_BLOB of owner/type/name/value records. Inner tag 1 (the rev-3 script
+# blob) is RETIRED at revision 4 and MUST NOT appear; a rev-3 file MUST carry
+# it (empty) and MUST NOT carry 6 or 7. The loader refuses every shape below.
+#
+# Unlike the seg-row mutants these edits sit inside the tag-7 blob or
+# alongside tags 6/7, so a shape change moves the slot K_EMBED and the
+# tag-816 K_EMBED that contains it. rebuild_slot() rebuilds the slot field
+# and patches BOTH ancestor embed lengths, then the Game record length and
+# the group sizes -- which is what the first version of these mutants got
+# wrong, leaving the reader's nested field scan short.
+
+SEG_SCRIPT_TAG = 1                # rev-3 only: empty K_BLOB
+SEG_COUNT_TAG = 2                 # K_U32 rowCount
+SEG_ROWS_TAG = 3                  # K_BLOB memory rows
+SEG_LENGTHS_TAG = 4               # K_ARRAY manifest lengths
+SEG_NAMES_TAG = 5                 # K_BLOB manifest names
+SEG_VARCOUNT_TAG = 6              # K_U32 variable count
+SEG_VARBLOB_TAG = 7               # K_BLOB variable records
+VAR_REC_HEADER = 6                # owner u32 + type u8 + nameLen u8
+
+REV4_TAG_SHAPE_MSG = ("revision 4 requires tags 2/3/6/7 and forbids tag 1")
+REV3_TAG_SHAPE_MSG = ("revision 3 requires empty tag 1 and forbids tags 6/7")
+
+
+def patch_field_len(data, field_off, delta):
+    """Add delta to a K_STR/K_BLOB/K_EMBED field's 4-byte length, which sits
+    just after its 2-byte tag and 1-byte kind."""
+    old, = struct.unpack_from("<I", data, field_off + 3)
+    return data[:field_off + 3] + struct.pack("<I", old + delta) \
+        + data[field_off + 7:]
+
+
+def slot_with_variables(v1, src_path):
+    """The single Game record, its tag-816 scope field, the first slot whose
+    K_EMBED carries BOTH variable tags 6 and 7, and that slot's inner fields.
+    The writer emits the variable record for every slot with a module, so the
+    first such slot exists in any genuine full save."""
+    recs = [r for r in v1.records if r["type"] == T_GAME]
+    if len(recs) != 1:
+        die("expected exactly one T_GAME record in %s, found %d"
+            % (src_path, len(recs)))
+    rec = recs[0]
+    seg = [fl for fl in rec["fields"] if fl["tag"] == GAME_MDATASEG_TAG]
+    if len(seg) != 1 or seg[0]["kind"] != K_EMBED:
+        die("expected exactly one tag-%d K_EMBED in %s"
+            % (GAME_MDATASEG_TAG, src_path))
+    seg = seg[0]
+    for sl in v1.parse_fields(seg["off"] + 7, seg["size"] - 7):
+        if sl["kind"] != K_EMBED:
+            continue
+        inner = v1.parse_fields(sl["off"] + 7, sl["size"] - 7)
+        if any(f["tag"] == SEG_VARCOUNT_TAG for f in inner) and \
+                any(f["tag"] == SEG_VARBLOB_TAG for f in inner):
+            return rec, seg, sl, inner
+    die("no module slot in %s carries revision-4 variable records (tags "
+        "6/7); the variable mutants need one" % src_path)
+
+
+def rebuild_slot(base, rec, seg, slot, new_inner):
+    """Replace the slot K_EMBED's inner field stream with new_inner, then fix
+    the slot's own length field, the containing tag-816 K_EMBED's length, the
+    Game record length and the group sizes."""
+    new_slot = struct.pack("<HBI", slot["tag"], K_EMBED, len(new_inner)) \
+        + new_inner
+    f, delta = splice(base, slot["off"], slot["size"], new_slot)
+    f = patch_field_len(f, seg["off"], delta)
+    f = fix_record_length(f, rec["off"], delta)
+    return fix_sizes(f, delta)
+
+
+def inner_bytes(base, inner, mutate=None):
+    """Re-emit the parsed inner fields (which exclude the tag-0 terminator)
+    in order, then the terminator. mutate, if given, is called as
+    mutate(field) -> bytes|None for each field; None keeps it, b'' drops it,
+    any bytes replace it. New fields can be inserted by yielding them before
+    a chosen tag with the `insert_before` helper below."""
+    out = b""
+    for f in inner:
+        if mutate is not None:
+            rep = mutate(f)
+            if rep is not None:
+                out += rep
+                continue
+        out += base[f["off"]:f["off"] + f["size"]]
+    return out + struct.pack("<H", 0)
+
+
+def var_first_record(base, inner):
+    """(absolute offset, nameLen) of the first record in the tag-7 blob."""
+    vb = [f for f in inner if f["tag"] == SEG_VARBLOB_TAG][0]
+    return vb["off"] + 7, base[vb["off"] + 7 + 5]
+
+
+def craft_var_record_mutants(src_path, cases):
+    """Six in-place mutations inside the tag-7 variable blob. None changes a
+    length, so no embed fixup is needed. Each MUST be refused with the
+    reader's File is Corrupt error and no out-of-bounds read."""
+    base = open(src_path, "rb").read()
+    v1 = V1File(base)
+    rec, seg, slot, inner = slot_with_variables(v1, src_path)
+    vc = [f for f in inner if f["tag"] == SEG_VARCOUNT_TAG][0]
+    vb = [f for f in inner if f["tag"] == SEG_VARBLOB_TAG][0]
+    vc_pay = vc["off"] + 3                 # tag (2) + kind (1)
+    blob_pay = vb["off"] + 7               # tag + kind + length
+    blob_len = struct.unpack_from("<I", base, vb["off"] + 3)[0]
+    if blob_len < VAR_REC_HEADER + 1:
+        die("%s carries an empty variable blob" % src_path)
+    first_off, first_namelen = var_first_record(base, inner)
+
+    # The accepted type set is {2,3,4,5,7,8,9,10,11,12}. Probe the genuine
+    # first record so the mutated byte is known to be one the loader accepts.
+    genuine_type = base[first_off + 4]
+    if genuine_type not in (2, 3, 4, 5, 7, 8, 9, 10, 11, 12):
+        die("the genuine first variable record has type %d, outside the "
+            "accepted set; re-derive the mutant" % genuine_type)
+
+    # unknown_type: a byte outside the accepted set (13 is not a DT_*).
+    f = base[:first_off + 4] + bytes([13]) + base[first_off + 5:]
+    cases.append(("var_unknown_type", f, "fail", CORRUPT))
+
+    # type1: DT_VOID. type6: DT_? -- both listed as refusals in the spec.
+    for name, typ in (("var_type1", 1), ("var_type6", 6)):
+        f = base[:first_off + 4] + bytes([typ]) + base[first_off + 5:]
+        cases.append((name, f, "fail", CORRUPT))
+
+    # name_len_past_blob: the first record's nameLen runs past the blob's
+    # end. The per-record bounds check refuses it.
+    f = base[:first_off + 5] + bytes([0xFF]) + base[first_off + 6:]
+    cases.append(("var_name_len_past_blob", f, "fail", CORRUPT))
+
+    # var_count_past_blob: varCount far larger than the blob can hold. The
+    # parser's varCount > size/10 bound refuses it before any record walk.
+    f = base[:vc_pay] + struct.pack("<I", 0xFFFFFFF0) + base[vc_pay + 4:]
+    cases.append(("var_count_past_blob", f, "fail", CORRUPT))
+
+    # owner_outside_manifest: the first record's owner rID is a position past
+    # every array the manifest recorded. Conversion fails and the load MUST
+    # refuse (a variable owner is a reference, not a droppable row).
+    f = base[:first_off] + struct.pack("<I", 0x01FFFFFF) + base[first_off + 4:]
+    cases.append(("var_owner_outside_manifest", f, "fail",
+                  "past the last resource array"))
+
+
+def craft_rev_tag_shape_mutants(src_path, cases):
+    """Five tag-shape mutants built by rebuilding the slot's inner stream.
+    All are refused by SaveV1_SegmentFields' revision-shape branch."""
+    base = open(src_path, "rb").read()
+    v1 = V1File(base)
+    rec, seg, slot, inner = slot_with_variables(v1, src_path)
+
+    def drop(tag):
+        return lambda f: b"" if f["tag"] == tag else None
+
+    # rev4_tag1: revision 4 carrying the retired inner tag 1 (empty K_BLOB).
+    t1 = struct.pack("<HBI", SEG_SCRIPT_TAG, K_BLOB, 0)
+
+    def add_tag1(f):
+        if f["tag"] == SEG_VARCOUNT_TAG:
+            return t1 + base[f["off"]:f["off"] + f["size"]]
+        return None
+    f = rebuild_slot(base, rec, seg, slot, inner_bytes(base, inner, add_tag1))
+    cases.append(("rev4_carries_tag1", f, "fail", CORRUPT))
+
+    # rev4_missing_tag6 / rev4_missing_tag7
+    f = rebuild_slot(base, rec, seg, slot,
+                     inner_bytes(base, inner, drop(SEG_VARCOUNT_TAG)))
+    cases.append(("rev4_missing_tag6", f, "fail", CORRUPT))
+    f = rebuild_slot(base, rec, seg, slot,
+                     inner_bytes(base, inner, drop(SEG_VARBLOB_TAG)))
+    cases.append(("rev4_missing_tag7", f, "fail", CORRUPT))
+
+    # rev3_tag1_not_empty: a file stamped IS1.3 with tags 6/7 removed and a
+    # NON-empty tag 1. Tag 1 must have length 0.
+    t1_ne = struct.pack("<HBI", SEG_SCRIPT_TAG, K_BLOB, 3) + b"abc"
+
+    def to_rev3_nonempty(f):
+        if f["tag"] in (SEG_VARCOUNT_TAG, SEG_VARBLOB_TAG):
+            return b""
+        if f["tag"] == SEG_COUNT_TAG:
+            return t1_ne + base[f["off"]:f["off"] + f["size"]]
+        return None
+    f = rebuild_slot(base, rec, seg, slot,
+                     inner_bytes(base, inner, to_rev3_nonempty))
+    f = f[:4] + b"IS1.3" + b"\0" * 7 + f[16:]
+    cases.append(("rev3_tag1_not_empty", f, "fail", CORRUPT))
+
+    # rev3_carries_tag6_and_7: a file stamped IS1.3 that still carries the
+    # revision-4 variable tags. Tag 1 is required and absent.
+    f = base[:4] + b"IS1.3" + b"\0" * 7 + base[16:]
+    cases.append(("rev3_carries_tag6_and_7", f, "fail", CORRUPT))
+
+
+def is13_slot_inner(base, rec, seg, slot, inner, row=None):
+    """Build the IS1.3 inner stream from a revision-4 slot: drop tags 6/7,
+    insert an empty tag-1 K_BLOB (rev 3 requires it), and optionally replace
+    the tag-3 row blob with `row` (kind,pool,position,payLen,payload...) and
+    the tag-2 rowCount with the number of rows it leaves."""
+    t1 = struct.pack("<HBI", SEG_SCRIPT_TAG, K_BLOB, 0)
+    out = b""
+    inserted = False
+    for f in inner:
+        if f["tag"] in (SEG_VARCOUNT_TAG, SEG_VARBLOB_TAG):
+            continue
+        if f["tag"] == SEG_COUNT_TAG:
+            if not inserted:
+                out += t1
+                inserted = True
+            if row is None:
+                out += base[f["off"]:f["off"] + f["size"]]
+            else:
+                out += struct.pack("<HBI", SEG_COUNT_TAG, K_U32,
+                                   struct.unpack_from("<I", base, f["off"] + 3)[0] + 1)
+            continue
+        if f["tag"] == SEG_ROWS_TAG and row is not None:
+            pay = row + base[f["off"] + 7:f["off"] + f["size"]]
+            out += struct.pack("<HBI", SEG_ROWS_TAG, K_BLOB, len(pay)) + pay
+            continue
+        out += base[f["off"]:f["off"] + f["size"]]
+    return out + struct.pack("<H", 0)
+
+
+def craft_is13_recovered_badrid(src_path, cases):
+    """Case 28(a): an IS1.3 save whose recovered whole-unit DT_RID slot holds
+    a value that fails manifest conversion MUST load, with that variable 0
+    and exactly one stderr line naming it.
+
+    Of the 97 frozen slots only slot 92 (owner "Create Corporeal Undead",
+    variable uID, type 5 == DT_RID) sits in a whole unit (slot % 4 == 0), so
+    its image word is MonsterMemory row 23 word 0. No genuine save carries a
+    row at position 23, so one is synthesized: kind 0, pool SP_MON, position
+    23, a 13-byte payload whose word 0 is the unconvertible rID 0x01FFFFFF.
+    Recovery reads word 0 for slot 92, conversion fails, and the value loads
+    as 0 with the one stderr line.
+
+    The expected detail is the -dump field line showing value=0 for the
+    CURRENT module's Create Corporeal Undead::uID variable (the recovery
+    target is found by name, not by the frozen table's own slot number --
+    see check_v1_adversarial.sh's is13_recovered_badrid case, which also
+    counts the stderr lines)."""
+    base = open(src_path, "rb").read()
+    v1 = V1File(base)
+    rec, seg, slot, inner = slot_with_variables(v1, src_path)
+    bad_row = struct.pack("<BBIB", 0, 0, 23, 13) \
+        + struct.pack("<I", 0x01FFFFFF) + bytes(9)
+    new_inner = is13_slot_inner(base, rec, seg, slot, inner, row=bad_row)
+    f = rebuild_slot(base, rec, seg, slot, new_inner)
+    f = f[:4] + b"IS1.3" + b"\0" * 7 + f[16:]
+    cases.append(("is13_recovered_badrid", f, "ok",
+                  "owner=Create Corporeal Undead ordinal=0 ident=uID "
+                  "type=rID value=0"))
+
+
 def craft_grid_mismatch(src_path, cases):
     """One mutant from the raw-mode FULL save (the only input with a Map
     record; the schematest groups carry none): the grid record's own sizeX
@@ -664,6 +922,12 @@ def main():
     if len(sys.argv) == 6:
         craft_grid_mismatch(sys.argv[5], cases)
         craft_seg_row_mutants(sys.argv[5], cases)
+        # Cases 25 and 28(a): the revision-4 script-variable records. Six
+        # in-place blob edits, five tag-shape rebuilds, and the IS1.3
+        # recovered-bad-rID case that must LOAD with one stderr line.
+        craft_var_record_mutants(sys.argv[5], cases)
+        craft_rev_tag_shape_mutants(sys.argv[5], cases)
+        craft_is13_recovered_badrid(sys.argv[5], cases)
 
     for name, contents, expect, detail in cases:
         path = os.path.join(out_dir, name + ".sav")

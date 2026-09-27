@@ -192,6 +192,10 @@ PreprocError:
         printf("[Compilation Aborted.]\n");
     }
 
+    /* upstream: Reserve every script slot before memory rows; upstream left
+       szDataSeg zero on Win32 too. Traced + Observed; inc-glnx; not sent. */
+    theModule->szDataSeg = HeapHead * sizeof(int32);
+
     theCodeSeg.Generate(HALT);
     theModule->szCodeSeg = theCodeSeg.GetSize();
     theModule->QCodeSeg = (VCode*)calloc(sizeof(VCode), theModule->szCodeSeg + 1);

@@ -164,7 +164,7 @@ if ! diff -q "$WORK/before.norm" "$WORK/after.norm" > /dev/null; then
 fi
 
 # 8. A named spot-check, so a dump that silently emptied cannot pass step 7.
-for want in '^Name:      Varag the Deathbringer$' '^HP:        42 / 42' 'Race   Orc'; do
+for want in '^Name:      Shagga the Avenger$' '^HP:        42 / 42' 'Race   Orc'; do
     grep -qE "$want" "$WORK/after.txt" ||
         fail "the post-append dump lost its '$want' line"
 done

@@ -28,6 +28,8 @@
      bool  RunSchemaTest(const char*);  bool RunSchemaLoad(const char*)
 */
 
+#include <vector>
+#include <map>
 #include "Incursion.h"
 #include <zlib.h>   /* IS1.x compressed payloads are zlib-6; libz was
                        already a link dependency (CFile's LZ path) */
@@ -50,7 +52,8 @@ extern size_t typeSize(int8 Type);
    reorders a resource no longer shifts every row or renumbers the stored
    flavour rIDs. 2 -> 3, each module slot's tag-816 scope gained its
    21-array length and position-ordered resource-name manifest. */
-#define SCHEMA_REV 3
+#define SCHEMA_REV 4
+static uint32 v1FileRevision = 0;
 
 /* The OLDEST revision this binary can still read. A file older than this is
    refused by revision, not left to fail on its own shape.
@@ -187,7 +190,18 @@ struct V1SegRow {
    placement must land -- captured at record-read time so the -schematest /
    -schemaload drivers place into the object the record loaded into, not
    into some global. */
+struct V1Variable {
+    uint32 owner;
+    uint8 type;
+    char name[256];
+    int32 value;
+};
+
 struct V1SegPending {
+    bool variableRecord;
+    bool recovered, rawRecovery;
+    V1Variable *variables;
+    uint32 variableCount;
     bool     present;            /* this slot's record was in the file */
     char   **target;             /* &Game::MDataSeg[slot] of the loaded Game */
     uint32  *sizeTarget;         /* &Game::MDataSegSize[slot] */
@@ -809,6 +823,7 @@ static void v1SegFree(void)
         memset(mp, 0, sizeof(*mp));
 
         V1SegPending *sp = &v1Seg[i];
+        free(sp->variables);
         free(sp->rows);
         free(sp->script);
         memset(sp, 0, sizeof(*sp));
@@ -877,6 +892,127 @@ static bool V1GetPool(Module *mod, int pool, V1Pool *out)
         case SP_ENC: out->base=(char*)mod->QEnc; out->stride=sizeof(TEncounter); out->count=mod->szEnc; return true;
       }
     return false;
+  }
+
+/* Shared by the variable driver and the later save/load placement checks. */
+bool ScriptVariableOwner(Module *mod, rID owner, int &array, int32 &position)
+  {
+    if (((uint32)owner >> 24) != 1)
+      return false;
+    uint32 index = (uint32)owner & 0x00ffffff;
+    for (int p = SP_MON; p <= SP_ENC; ++p)
+      {
+        V1Pool pool;
+        if (!V1GetPool(mod, p, &pool) || pool.count < 0)
+          return false;
+        if (index < (uint32)pool.count)
+          {
+            if (!pool.base) return false;
+            array = p;
+            position = (int32)index;
+            return true;
+          }
+        index -= (uint32)pool.count;
+      }
+    return false;
+  }
+
+bool ValidateScriptVariables(Module *mod, int slot, String &reason)
+  {
+    reason = "";
+    int32 count = 0;
+    for (int i = 0; i < mod->Symbols.Total(); ++i)
+      if (mod->Symbols[i]->BType == GLOB_VAR || mod->Symbols[i]->BType == RES_VAR)
+        ++count;
+    if (count && slot != 0)
+      reason = Format("module slot %d has %d variable rows; only slot 0 may have variables",
+                      slot, (int)count);
+    else if (mod->szDataSeg != count * 4)
+      reason = Format("szDataSeg=%d; %d variable rows require %d bytes",
+                      (int)mod->szDataSeg, (int)count, (int)(count * 4));
+    if (reason.GetLength()) return false;
+    std::vector<bool> seen(count, false);
+    for (int i = 0; i < mod->Symbols.Total(); ++i)
+      {
+        DebugInfo *d = mod->Symbols[i];
+        if (d->BType != GLOB_VAR && d->BType != RES_VAR) continue;
+        if (d->Address < 0 || d->Address >= count)
+          reason = Format("variable '%.*s' address %d outside 0..%d",
+                          31, d->Ident, (int)d->Address, (int)count - 1);
+        else if (seen[d->Address])
+          reason = Format("variable '%.*s' repeats address %d", 31, d->Ident, (int)d->Address);
+        else
+          seen[d->Address] = true;
+        if (reason.GetLength()) return false;
+        int array; int32 position;
+        if (d->BType == RES_VAR && !ScriptVariableOwner(mod, d->xID, array, position))
+          {
+            reason = Format("variable '%.*s' owner 0x%08x is not inside a slot-0 resource array",
+                            31, d->Ident, (unsigned)d->xID);
+            return false;
+          }
+      }
+    return true;
+  }
+
+static bool v1VariableType(uint8 type)
+  {
+    return type == 2 || type == 3 || type == 4 || type == 5 ||
+           type == 7 || type == 8 || type == 9 || type == 10 ||
+           type == 11 || type == 12;
+  }
+
+static std::vector<DebugInfo*> v1VariableTable(Module *mod)
+  {
+    std::vector<DebugInfo*> rows(mod->szDataSeg / 4, (DebugInfo*)NULL);
+    for (int i = 0; i < mod->Symbols.Total(); ++i)
+      {
+        DebugInfo *d = mod->Symbols[i];
+        if (d->BType == GLOB_VAR || d->BType == RES_VAR)
+          rows[d->Address] = d;
+      }
+    return rows;
+  }
+
+static uint32 v1VariableOwner(DebugInfo *d)
+  { return d->BType == GLOB_VAR ? 0 : (uint32)d->xID; }
+
+static void v1WriteVariables(Module *mod, const char *seg)
+  {
+    std::vector<DebugInfo*> table = v1VariableTable(mod);
+    V1Buf records = {};
+    try
+      {
+        for (size_t i = 0; i < table.size(); ++i)
+          {
+            DebugInfo *d = table[i];
+            if (!v1VariableType(d->DataType))
+              {
+                Error("SaveV1: variable owner %u ordinal slot %u recorded '%.*s' found '%.*s': unsupported type %u",
+                      v1VariableOwner(d), (unsigned)i, 31, d->Ident, 31, d->Ident,
+                      (unsigned)d->DataType);
+                throw ECORRUPT;
+              }
+            size_t len = strnlen(d->Ident, 31);
+            int32 value;
+            memcpy(&value, seg + i * 4, 4);
+            if (d->DataType == DT_HTEXT) value = 0;
+            v1PutU32(&records, v1VariableOwner(d));
+            v1PutU8(&records, d->DataType);
+            v1PutU8(&records, (uint8)len);
+            v1Put(&records, d->Ident, len);
+            v1PutU32(&records, (uint32)value);
+          }
+        v1PutU16(&v1Out, 6);
+        v1PutU8(&v1Out, K_U32);
+        v1PutU32(&v1Out, (uint32)table.size());
+        v1PutU16(&v1Out, 7);
+        v1PutU8(&v1Out, K_BLOB);
+        v1PutU32(&v1Out, (uint32)records.len);
+        if (records.len) v1Put(&v1Out, records.p, records.len);
+      }
+    catch (...) { v1BufFree(&records); throw; }
+    v1BufFree(&records);
   }
 
 static const char* V1PoolName(int pool)
@@ -1177,13 +1313,13 @@ static long v1ManifestDrift(void)
    an arbitrary 32-bit number: a zero slot byte indexes Modules[-1]. The walk
    below is what bounds the index, so it MUST run whether or not a manifest
    supplied the lengths. */
-static bool v1ConvertManifestRid(uint32 saved, rID *resolved)
+static bool v1ConvertManifestRid(uint32 saved, rID *resolved, bool quiet = false)
   {
     int slot = (int)(saved >> 24) - 1;
     uint32 index = saved & 0x00FFFFFFu;
     if (slot < 0 || slot >= MAX_MODULES)
       {
-        fprintf(stderr,
+        if (!quiet) fprintf(stderr,
             "incursion: v1 rID %u names module slot %d outside [0, %d)\n",
             (unsigned)saved, slot, MAX_MODULES);
         return false;
@@ -1191,7 +1327,7 @@ static bool v1ConvertManifestRid(uint32 saved, rID *resolved)
     Module *mod = Game::Modules[slot];
     if (!mod)
       {
-        fprintf(stderr,
+        if (!quiet) fprintf(stderr,
             "incursion: v1 rID %u names module slot %d, which did not "
             "load\n", (unsigned)saved, slot);
         return false;
@@ -1210,7 +1346,7 @@ static bool v1ConvertManifestRid(uint32 saved, rID *resolved)
       lengths = mp->lengths;
     else if (v1SegSawGame)
       {
-        fprintf(stderr,
+        if (!quiet) fprintf(stderr,
             "incursion: v1 rID %u names module slot %d, which has no "
             "manifest\n", (unsigned)saved, slot);
         return false;
@@ -1222,7 +1358,7 @@ static bool v1ConvertManifestRid(uint32 saved, rID *resolved)
             V1Pool pl;
             if (!V1GetPool(mod, p, &pl) || pl.count < 0)
               {
-                fprintf(stderr,
+                if (!quiet) fprintf(stderr,
                     "incursion: loaded module slot %d has invalid %s array "
                     "geometry\n", slot, V1PoolName(p));
                 return false;
@@ -1241,7 +1377,7 @@ static bool v1ConvertManifestRid(uint32 saved, rID *resolved)
         position -= lengths[p];
     if (array < 0)
       {
-        fprintf(stderr,
+        if (!quiet) fprintf(stderr,
             "incursion: v1 rID module slot %d index %u is past the last "
             "resource array\n", slot, (unsigned)index);
         return false;
@@ -1409,6 +1545,9 @@ bool SaveV1_CanWrite(Game &g, String &whyNot)
                             "is not loaded", i, i);
             return false;
           }
+        String variableReason;
+        if (!ValidateScriptVariables(mod, i, variableReason))
+          { whyNot = variableReason; return false; }
         size_t start[4], total;
         v1SegStarts(mod, (size_t)g.NumPlayers(), start, &total);
         if (total > (size_t)g.MDataSegSize[i])
@@ -1426,14 +1565,11 @@ bool SaveV1_CanWrite(Game &g, String &whyNot)
 
 /* The per-slot segment record, called from Game's ARCHIVE_CLASS body inside
    the slot's K_EMBED scope (inc/Res.h, tag 816 scope, inner tag 1+slot).
-   The embed's contents are three ordinary tagged fields, so the generic
-   scanner and the harness field parsers keep working:
+   Revision 4 writes variable records instead of an opaque script segment:
 
-     1: K_BLOB  the script data segment: the first szDataSeg bytes, raw.
-                Carried with its own length and length-checked against the
-                LOADED module's szDataSeg at placement time, per
-                docs/SCRIPT-DATA-SEGMENT.md's Verdict (0 bytes in every
-                real module today).
+     1: retired in revision 4; revision 3 requires an empty K_BLOB.
+     6: K_U32 variable count.
+     7: K_BLOB owner/type/name/value records in slot order.
      2: K_U32   rowCount
      3: K_BLOB  rowCount packed row sub-records, memory-layout order:
                   u8  rowKind   0=MonMem 1=ItemMem 2=EffMem 3=RegMem
@@ -1474,6 +1610,9 @@ void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
                   "is not loaded", slot, slot);
             throw ECORRUPT;
           }
+        String variableReason;
+        if (!ValidateScriptVariables(mod, slot, variableReason))
+          { Error("SaveV1: %s", (const char*)variableReason); throw ECORRUPT; }
         const char *seg = g.MDataSeg[slot];
         size_t start[4], total;
         v1SegStarts(mod, (size_t)g.NumPlayers(), start, &total);
@@ -1485,12 +1624,7 @@ void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
             throw ECORRUPT;
           }
 
-        /* 1: the script data segment, raw, with its own length. */
-        v1PutU16(&v1Out, 1);
-        v1PutU8(&v1Out, K_BLOB);
-        v1PutU32(&v1Out, (uint32)mod->szDataSeg);
-        if (mod->szDataSeg)
-          v1Put(&v1Out, seg, (size_t)mod->szDataSeg);
+        v1WriteVariables(mod, seg);
 
         /* The rows, in memory-layout order (pool by pool, declaration
            order within the pool) -- deterministic, so the fixpoint's
@@ -1570,6 +1704,8 @@ void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
     const V1Ent *eRows   = v1Find(3);
     const V1Ent *eLengths = v1Find(4);
     const V1Ent *eNames   = v1Find(5);
+    const V1Ent *eVarCount = v1Find(6);
+    const V1Ent *eVariables = v1Find(7);
 
     /* The writer emits a manifest even when this slot has no memory
        segment, so this must precede the empty-embed return below. */
@@ -1677,13 +1813,26 @@ void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
         mp->present = true;
       }
 
-    if (!eScript && !eCount && !eRows)
-      return;                   /* an empty embed: slot not in use */
-    if (!eScript || !eCount || !eRows)
-      throw ECORRUPT;           /* a partial segment record is corruption */
-    if (eScript->kind != K_BLOB || eCount->kind != K_U32 ||
-        eRows->kind != K_BLOB)
-      throw ECORRUPT;           /* known tag, unexpected kind */
+    if (!eScript && !eCount && !eRows && !eVarCount && !eVariables)
+      return;
+    if (v1FileRevision == 3)
+      {
+        if (!eScript || !eCount || !eRows)
+          throw ECORRUPT;
+        if (eScript->kind != K_BLOB || eCount->kind != K_U32 ||
+            eRows->kind != K_BLOB)
+          throw ECORRUPT;
+        if (eScript->size || eVarCount || eVariables)
+          { Error("SaveV1: revision 3 requires empty tag 1 and forbids tags 6/7"); throw ECORRUPT; }
+      }
+    else
+      {
+        if (eScript || !eCount || !eRows || !eVarCount || !eVariables)
+          { Error("SaveV1: revision 4 requires tags 2/3/6/7 and forbids tag 1"); throw ECORRUPT; }
+        if (eCount->kind != K_U32 || eRows->kind != K_BLOB ||
+            eVarCount->kind != K_U32 || eVariables->kind != K_BLOB)
+          throw ECORRUPT;
+      }
 
     V1SegPending *sp = &v1Seg[slot];
     if (sp->present)
@@ -1711,13 +1860,39 @@ void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
 
     /* Copied OUT of the group buffer: LoadGroupV1 frees it before the
        deferred placement runs. */
-    sp->scriptLen = eScript->size;
-    if (eScript->size)
+    if (eScript)
       {
-        sp->script = (uint8*) malloc(eScript->size);
-        if (!sp->script)
-          throw EMEMORY;
-        memcpy(sp->script, eScript->pay, eScript->size);
+        sp->scriptLen = eScript->size;
+        if (eScript->size)
+          {
+            sp->script = (uint8*) malloc(eScript->size);
+            if (!sp->script) throw EMEMORY;
+            memcpy(sp->script, eScript->pay, eScript->size);
+          }
+      }
+    if (eVarCount)
+      {
+        sp->variableRecord = true;
+        memcpy(&sp->variableCount, eVarCount->pay, 4);
+        if (sp->variableCount > eVariables->size / 10) throw ECORRUPT;
+        sp->variables = (V1Variable*)calloc(sp->variableCount, sizeof(V1Variable));
+        if (sp->variableCount && !sp->variables) throw EMEMORY;
+        size_t pos = 0;
+        for (uint32 k = 0; k < sp->variableCount; ++k)
+          {
+            V1Variable *var = &sp->variables[k];
+            if (eVariables->size - pos < 6) throw ECORRUPT;
+            memcpy(&var->owner, eVariables->pay + pos, 4);
+            var->type = eVariables->pay[pos + 4];
+            uint8 len = eVariables->pay[pos + 5];
+            pos += 6;
+            if (eVariables->size - pos < (size_t)len + 4) throw ECORRUPT;
+            memcpy(var->name, eVariables->pay + pos, len);
+            pos += len;
+            memcpy(&var->value, eVariables->pay + pos, 4);
+            pos += 4;
+          }
+        if (pos != eVariables->size) throw ECORRUPT;
       }
     if (rowCount)
       {
@@ -1760,15 +1935,171 @@ void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
     sp->sizeTarget = &g.MDataSegSize[slot];
   }
 
-/* Placement, phase 2: runs inside SaveV1_ResolveNames(), after the module
-   reload, with the name-table entries already resolved. Allocates each
-   pending slot's MDataSeg from the LOADED module's geometry, places the
-   script blob (length-checked, docs/SCRIPT-DATA-SEGMENT.md), and walks the
-   parsed rows: an inline key that no longer names a resource DISCARDS its
-   row silently-by-design (one stderr line per discard in DEBUG builds, so
-   the behaviour is observable); the EffMem flavour values resolve through
-   the global table with ABORT semantics. Returns the failure count; the
-   caller aggregates and throws. */
+/* Values use converted owner/ordinal keys; names only detect drift. */
+static long v1PlaceVariables(V1SegPending *sp, Module *mod, char *seg)
+  {
+    std::vector<DebugInfo*> table = v1VariableTable(mod);
+    std::vector<uint32> owners(sp->variableCount, 0);
+    std::vector<bool> valid(sp->variableCount, true);
+    long failures = 0;
+    for (uint32 k = 0; k < sp->variableCount; ++k)
+      {
+        V1Variable *var = &sp->variables[k];
+        rID owner = 0;
+        if (sp->recovered) owner = (rID)var->owner;
+        else if (var->owner && !v1ConvertManifestRid(var->owner, &owner))
+          valid[k] = false;
+        owners[k] = (uint32)owner;
+      }
+    for (uint32 k = 0; k < sp->variableCount; ++k)
+      {
+        V1Variable *var = &sp->variables[k];
+        uint32 ordinal = 0;
+        for (uint32 j = 0; j < k; ++j)
+          if (sp->variables[j].owner == var->owner) ++ordinal;
+        std::vector<DebugInfo*> loaded;
+        if (valid[k])
+          for (size_t j = 0; j < table.size(); ++j)
+            if (v1VariableOwner(table[j]) == owners[k]) loaded.push_back(table[j]);
+        const char *found = ordinal < loaded.size() ? loaded[ordinal]->Ident : "<missing>";
+        const char *reason = NULL;
+        if (!valid[k]) reason = "owner conversion failed";
+        else if (!v1VariableType(var->type)) reason = "unsupported recorded type";
+        else if (ordinal >= loaded.size()) reason = "owner list shrank";
+        else
+          {
+            for (size_t j = 0; j < loaded.size(); ++j)
+              if (j != ordinal && !strcmp(var->name, loaded[j]->Ident))
+                reason = "name moved to another ordinal";
+            if (!v1VariableType(loaded[ordinal]->DataType)) reason = "unsupported loaded type";
+            if (loaded[ordinal]->Address < 0 ||
+                (size_t)loaded[ordinal]->Address >= table.size()) reason = "slot outside variable table";
+          }
+        int32 value = var->value;
+        if (!reason && var->type == DT_RID && value)
+          {
+            rID converted;
+            int array; int32 position;
+            bool ok = sp->rawRecovery
+                ? ScriptVariableOwner(mod, (rID)value, array, position)
+                : v1ConvertManifestRid((uint32)value, &converted, sp->recovered);
+            if (!ok && sp->recovered)
+              {
+                fprintf(stderr, "incursion: recovered variable '%s' rID %u cannot convert; loading 0\n",
+                        var->name, (unsigned)value);
+                value = 0;
+              }
+            else if (!ok) reason = "value conversion failed";
+            else if (!sp->rawRecovery) value = (int32)converted;
+          }
+        if (reason)
+          {
+            ++failures;
+            fprintf(stderr, "incursion: variable owner %u ordinal %u recorded '%s' found '%.*s': %s\n",
+                    var->owner, ordinal, var->name, 31, found, reason);
+            continue;
+          }
+        if (var->type == DT_HTEXT) value = 0;
+        memcpy(seg + loaded[ordinal]->Address * 4, &value, 4);
+      }
+    return failures;
+  }
+
+#include "SaveV1PrefixVars.inc"
+
+/* The frozen owner positions select slots; names detect variable drift. */
+static long v1RecoverVariables(Module *mod, char *seg, const uint8 image[400], bool raw)
+  {
+    V1Variable vars[97] = {};
+    for (unsigned k = 0; k < 97; ++k)
+      {
+        const V1PrefixVariable &row = v1PrefixVariables[k];
+        uint32 owner = 0;
+        if (row.array >= 0)
+          {
+            V1Pool pool;
+            if (!V1GetPool(mod, row.array, &pool) || row.position >= (uint32)pool.count)
+              {
+                fprintf(stderr, "incursion: recovery row %u owner array %d position %u is missing\n",
+                        k, row.array, row.position);
+                return 1;
+              }
+            owner = (1u << 24) + row.position;
+            for (int p = 0; p < row.array; ++p)
+              { V1GetPool(mod, p, &pool); owner += pool.count; }
+          }
+        vars[k].owner = owner;
+        vars[k].type = row.type;
+        strcpy(vars[k].name, row.name);
+        memcpy(&vars[k].value, image + 4*k, 4);
+        if (!raw && k % 4 && (row.type == DT_RID || row.type == DT_HOBJ))
+          vars[k].value = 0;
+      }
+    V1SegPending sp = {};
+    sp.variables = vars;
+    sp.variableCount = 97;
+    sp.recovered = true;
+    sp.rawRecovery = raw;
+    return v1PlaceVariables(&sp, mod, seg);
+  }
+
+static bool v1PrefixMatches(V1ManifestPending *mp)
+  {
+    for (int p = 0; p < 21; ++p)
+      if (mp->lengths[p] > v1PrefixLengths[p])
+        {
+          fprintf(stderr, "incursion: recovery array %s length %u exceeds 391e353 length %u\n",
+                  V1PoolName(p), mp->lengths[p], v1PrefixLengths[p]);
+          return false;
+        }
+    for (unsigned k = 0; k < 97; ++k)
+      {
+        const V1PrefixVariable &row = v1PrefixVariables[k];
+        if (row.array < 0) continue;
+        uint32 index = row.position;
+        for (int p = 0; p < row.array; ++p) index += mp->lengths[p];
+        const char *found = row.position < mp->lengths[row.array] ? mp->names[index] : "<missing>";
+        if (strcmp(found, row.owner))
+          {
+            fprintf(stderr, "incursion: recovery row %u array %s position %u owner '%s' found '%s'\n",
+                    k, V1PoolName(row.array), row.position, row.owner, found);
+            return false;
+          }
+      }
+    return true;
+  }
+
+void SaveV0_RecoverVariables(Game &g)
+  {
+    for (int slot = 0; slot < MAX_MODULES; ++slot)
+      {
+        Module *mod = Game::Modules[slot];
+        if (!mod) continue;
+        String reason;
+        if (!ValidateScriptVariables(mod, slot, reason))
+          { fprintf(stderr, "incursion: v0 recovery: %s\n", (const char*)reason); throw ECORRUPT; }
+        size_t start[4], total;
+        v1SegStarts(mod, g.NumPlayers(), start, &total);
+        size_t oldSize = total - mod->szDataSeg;
+        if (!g.MDataSeg[slot] || g.MDataSegSize[slot] != oldSize ||
+            (slot == 0 && oldSize < 400))
+          {
+            fprintf(stderr, "incursion: v0 block slot %d size %u does not match loaded row total %u\n",
+                    slot, g.MDataSegSize[slot], (unsigned)oldSize);
+            throw ECORRUPT;
+          }
+        char *seg = (char*)calloc(total ? total : 1, 1);
+        if (!seg) throw EMEMORY;
+        size_t prefix = slot == 0 ? 25 * sizeof(MonMem) * g.NumPlayers() : 0;
+        if (slot == 0 && v1RecoverVariables(mod, seg, (const uint8*)g.MDataSeg[slot], true))
+          { free(seg); throw ECORRUPT; }
+        memcpy(seg + mod->szDataSeg + prefix, g.MDataSeg[slot] + prefix, oldSize - prefix);
+        free(g.MDataSeg[slot]);
+        g.MDataSeg[slot] = seg;
+        g.MDataSegSize[slot] = (uint32)total;
+      }
+  }
+
 static long v1SegPlace(void)
   {
     long failures = 0;
@@ -1819,15 +2150,20 @@ static long v1SegPlace(void)
             continue;
           }
 
-        if (sp->scriptLen != (uint32)mod->szDataSeg)
+        String variableReason;
+        if (!ValidateScriptVariables(mod, slot, variableReason))
           {
-            /* The Verdict's length guard: the script data segment is
-               opaque VM state and cannot be truncated or zero-extended. */
-            failures++;
-            fprintf(stderr,
-                "incursion: saved script data segment for module slot %d "
-                "is %u bytes; the loaded module's szDataSeg is %u\n",
-                slot, (unsigned)sp->scriptLen, (unsigned)mod->szDataSeg);
+            ++failures;
+            fprintf(stderr, "incursion: script variables slot %d: %s\n", slot,
+                    (const char*)variableReason);
+            continue;
+          }
+        if (!sp->variableRecord && !v1PrefixMatches(mp))
+          { ++failures; continue; }
+        if (!sp->variableRecord && sp->scriptLen != 0)
+          {
+            ++failures;
+            fprintf(stderr, "incursion: IS1.3 recovery requires an empty script segment\n");
             continue;
           }
 
@@ -1839,6 +2175,19 @@ static long v1SegPlace(void)
         memset(seg, 0, total);
         if (sp->scriptLen)
           memcpy(seg, sp->script, sp->scriptLen);
+
+        if (sp->variableRecord)
+          failures += v1PlaceVariables(sp, mod, seg);
+
+        else if (slot == 0)
+          {
+            static_assert(sizeof(MonMem) == 16, "IS1.3 recovery row image");
+            MonMem image[25] = {};
+            for (uint32 k = 0; k < sp->rowCount; ++k)
+              if (sp->rows[k].kind == 0 && sp->rows[k].position < 25)
+                v1SegUnpackRow(0, sp->rows[k].pay, (char*)&image[sp->rows[k].position]);
+            failures += v1RecoverVariables(mod, seg, (const uint8*)image, false);
+          }
 
         for (uint32 k = 0; k != sp->rowCount; k++)
           {
@@ -1864,6 +2213,8 @@ static long v1SegPlace(void)
                     (unsigned)mp->lengths[pool], (unsigned)pl.count);
                 continue;
               }
+            if (!sp->variableRecord && slot == 0 && row->kind == 0 && row->position < 25)
+              continue;
             char *rowp = seg + start[row->kind] +
                 (size_t)row->position * v1SegStride[row->kind] * np;
             if (row->kind == 2)
@@ -2947,6 +3298,7 @@ int16 Registry::LoadGroupV1(Term &t, fileHeader &fh, hObj hGroup)
     v1ResolveTeardown();   /* stale state from an aborted load, if any */
     V1LoadScope guard;
     v1.mode = V1_LOAD;
+    v1FileRevision = fileRev;
 
     /* The group walk, as LoadGroup's (src/Registry.cpp). */
     for (i = 0; i != fh.numGroups; i++)
@@ -4852,6 +5204,124 @@ bool RunSchemaLoad(const char *path)
   { return Registry::V1RunSchemaLoad(path); }
 
 /* ------------------------------------------------------------------------ */
+/*            -resorder: the build-time order check's oracle                */
+/* ------------------------------------------------------------------------ */
+
+/* docs/SAVE-SCHEMA-SPEC.md, "The build-time order check": the check reads the
+   compiled module and a committed ledger and refuses when, for any array or
+   variable owner, the ledger's list is not a prefix of the module's. This
+   driver is the module half of that comparison: it walks the loaded module's
+   21 arrays in the wire order V1GetPool/v1WriteModuleManifest use, then every
+   script variable grouped by owner, and prints one line per entry.
+
+   Output is tab-separated, one record per line, no trailing whitespace. Two
+   sections, in this order:
+
+     A  <slot> <array-index> <array-name>
+     E  <slot> <array-index> <position> <entry-name>
+     O  <slot> <owner-array> <owner-position> <owner-name>
+     V  <slot> <owner-array> <owner-position> <ordinal> <ident> <type>
+
+   Module-level variables use owner-array -1 and owner-position -1, so every
+   variable has exactly one owner key. Owners are emitted with the module list
+   first, then by (owner-array, owner-position) ascending: a resource append
+   moves slots but not owner keys, so the ledger must not reorder when it
+   happens. Within an owner, rows are in slot order -- the ordinal order.
+
+   The manifest walk (v1WriteModuleManifest) writes exactly these arrays and
+   entries into a v1 save; this driver prints the same names so the ledger can
+   be replayed against a later module without a save. It writes nothing. */
+bool RunResourceOrder()
+  {
+    if (!theGame->LoadModules())
+      return false;
+
+    for (int ms = 0; ms < MAX_MODULES; ++ms)
+      {
+        Module *mod = Game::Modules[ms];
+        if (!mod)
+          continue;
+
+        String reason;
+        if (!ValidateScriptVariables(mod, ms, reason))
+          {
+            fprintf(stderr, "incursion -resorder: module=%d: %s\n",
+                    ms, (const char*)reason);
+            return false;
+          }
+
+        V1Pool pools[21];
+        for (int p = SP_MON; p <= SP_ENC; ++p)
+          {
+            if (!V1GetPool(mod, p, &pools[p]) || pools[p].count < 0)
+              {
+                fprintf(stderr,
+                    "incursion -resorder: module=%d has invalid %s geometry\n",
+                    ms, V1PoolName(p));
+                return false;
+              }
+            printf("A\t%d\t%d\t%s\n", ms, p, V1PoolName(p));
+            for (int32 i = 0; i != pools[p].count; ++i)
+              printf("E\t%d\t%d\t%d\t%s\n",
+                     ms, p, (int)i, V1ResName(mod, &pools[p], i));
+          }
+
+        std::vector<DebugInfo*> rows(mod->szDataSeg / 4, (DebugInfo*)NULL);
+        for (int i = 0; i < mod->Symbols.Total(); ++i)
+          {
+            DebugInfo *d = mod->Symbols[i];
+            if (d->BType == GLOB_VAR || d->BType == RES_VAR)
+              rows[d->Address] = d;
+          }
+
+        /* Collect each owner's rows in slot order. An owner is a resource rID
+           or 0; its key is (owner-array, owner-position), module-level being
+           (-1,-1). */
+        std::map<rID, std::vector<DebugInfo*> > byOwner;
+        for (size_t slot = 0; slot < rows.size(); ++slot)
+          {
+            DebugInfo *d = rows[slot];
+            if (!d)
+              continue;
+            rID owner = d->BType == GLOB_VAR ? 0 : d->xID;
+            byOwner[owner].push_back(d);
+          }
+
+        std::map<std::pair<int, int32>, rID> keyOrder;
+        for (std::map<rID, std::vector<DebugInfo*> >::iterator it =
+                 byOwner.begin(); it != byOwner.end(); ++it)
+          {
+            int array = -1; int32 position = -1;
+            if (it->first)
+              ScriptVariableOwner(mod, it->first, array, position);
+            keyOrder[std::make_pair(array, position)] = it->first;
+          }
+
+        for (std::map<std::pair<int, int32>, rID>::iterator it =
+                 keyOrder.begin(); it != keyOrder.end(); ++it)
+          {
+            rID owner = it->second;
+            const char *name = "(module)";
+            if (owner)
+              name = mod->GetText(mod->__GetResource(owner)->Name);
+            printf("O\t%d\t%d\t%d\t%s\n",
+                   ms, it->first.first, (int)it->first.second, name);
+            std::vector<DebugInfo*> &vars = byOwner[owner];
+            for (size_t ord = 0; ord < vars.size(); ++ord)
+              {
+                DebugInfo *d = vars[ord];
+                const char *type = d->DataType == DT_RECT
+                    ? "Rect" : Lookup(DataTypeNames, d->DataType);
+                printf("V\t%d\t%d\t%d\t%u\t%.*s\t%s\n",
+                       ms, it->first.first, (int)it->first.second,
+                       (unsigned)ord, 31, d->Ident, type ? type : "?");
+              }
+          }
+      }
+    return true;
+  }
+
+/* ------------------------------------------------------------------------ */
 /*                      -convert: a v0 file becomes v1                      */
 /* ------------------------------------------------------------------------ */
 
@@ -5045,6 +5515,12 @@ int RunSaveConvert(const char *path)
           }
       }
     theRegistry = &MainRegistry;
+    try { SaveV0_RecoverVariables(*theGame); }
+    catch (int error_number)
+      {
+        fprintf(stderr, "incursion -convert: v0 recovery: %s\n", Lookup(FileErrors, error_number));
+        return 2;
+      }
     /* No SaveV1_ResolveNames() here: the "IS" check above already refused
        every v1 file, and a v0 load queues nothing to resolve. */
 

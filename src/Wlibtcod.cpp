@@ -556,6 +556,12 @@ ExceptionHandler* crashdumpHandler;
    used from exactly one call site, main() -- the same way src/Wposix.cpp:465
    declares it for the other backend. */
 extern bool RunSaveDump(const char *path);
+extern bool RunRecoverVars(const char *path);
+extern bool RunScriptVariables();
+
+/* src/SaveV1.cpp: the build-time order check's oracle. Declared locally for
+   the same reason as RunSaveDump. */
+extern bool RunResourceOrder();
 
 /* src/SaveV1.cpp; declared locally for the same reason as RunSaveDump.
    Returns the process exit code directly (0 converted, 2 error, 3 refused
@@ -567,6 +573,9 @@ int main(int argc, char *argv[]) {
     char executablePath[MAX_PATH_LENGTH] = "";
     char *envPath = getenv("INCURSIONPATH");
     const char *dumpSave = NULL;
+    const char *recoverSave = NULL;
+    bool scriptVars = false;
+    bool resOrder = false;
     const char *keyScript = NULL;
     const char *loadSave = NULL;
     const char *schemaTest = NULL;
@@ -651,10 +660,16 @@ int main(int argc, char *argv[]) {
     for (i = 1; i < argc; i++)
         if (!strcmp(argv[i], "-dump") && i + 1 < argc)
             dumpSave = argv[++i];
+        else if (!strcmp(argv[i], "-recovervars") && i + 1 < argc)
+            recoverSave = argv[++i];
         else if (!strcmp(argv[i], "-keys") && i + 1 < argc)
             keyScript = argv[++i];
         else if (!strcmp(argv[i], "-load") && i + 1 < argc)
             loadSave = argv[++i];
+        else if (!strcmp(argv[i], "-scriptvars"))
+            scriptVars = true;
+        else if (!strcmp(argv[i], "-resorder"))
+            resOrder = true;
         else if (!strcmp(argv[i], "-schematest") && i + 1 < argc)
             schemaTest = argv[++i];
         else if (!strcmp(argv[i], "-schemaload") && i + 1 < argc)
@@ -681,8 +696,14 @@ int main(int argc, char *argv[]) {
        window opens and the report goes to stdout. It is the graphical build's
        door to src/Dump.cpp, which has always been linked into this binary and
        until now was reachable only from the posix build. */
-    if (dumpSave) {
+    if (scriptVars) {
+        retval = RunScriptVariables() ? 0 : 22;
+    } else if (resOrder) {
+        retval = RunResourceOrder() ? 0 : 22;
+    } else if (dumpSave) {
         retval = RunSaveDump(dumpSave) ? 0 : 22;
+    } else if (recoverSave) {
+        retval = RunRecoverVars(recoverSave) ? 0 : 22;
     } else if (schemaTest) {
         retval = RunSchemaTest(schemaTest) ? 0 : 22;
     } else if (schemaLoad) {
