@@ -1,0 +1,85 @@
+# Gameplay reproduction for inc-p0h1 (Bestow Curse redesign), the PLAYER
+# MENU code path this bead adds -- only reachable on the branch build --
+# picking the THIRD of its three curses: a hesitation that costs the victim
+# roughly half its actions. Sibling of
+# tools/keys/bestow-curse-menu-ability.keys; see that file's header for the
+# general wizard-mode setup.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/bestow-curse-menu-hesitation.keys 1
+#
+# NOT Frozen, on purpose: the hesitation roll only happens inside a
+# monster's own turn (src/Monster.cpp:366, "if (HasStati(HESITATION))"), so
+# a frozen goblin -- one that never takes a turn at all -- would never roll
+# it and the message would never print. The goblin is left free to act (and
+# to fight back), and the player spends several turns waiting ('.', Wait One
+# Turn) in place so time passes for it to keep trying -- 's' (Search) will
+# not do this: it cancels itself the instant a hostile is in view ("You
+# stop searching (hostile to goblin)."), spending no game time at all, as
+# measured on this exact scenario.
+#
+# "The <goblin> hesitates, unable to act." (src/Monster.cpp:378, IDPrint,
+# not the victim's own IPrint) is a THIRD-PERSON message shown to any
+# player who perceives the hesitating creature, printed at most once per
+# game tick (Status.Val guards it) with roughly even odds (random(2)) each
+# time the goblin's turn comes up -- so across several of the player's own
+# turns it should repeat, interleaved with the goblin's own attacks on the
+# turns it does NOT hesitate.
+
+@include chargen-priest.keys
+ESC
+
+w
+y
+@choose "Learn Any Spell"
+"Bestow Curse"
+ENTER
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+@dump:goblin-summoned
+
+m
+@choose "Bestow Curse"
+RIGHT
+ENTER
+@dump:curse-menu
+
+@choose "a hesitation that claims half its actions"
+@while "more --" SPACE
+@dump:cast-hesitation
+
+.
+@while "more --" SPACE
+@dump:tick-1
+.
+@while "more --" SPACE
+@dump:tick-2
+.
+@while "more --" SPACE
+@dump:tick-3
+.
+@while "more --" SPACE
+@dump:tick-4
+.
+@while "more --" SPACE
+@dump:tick-5
+.
+@while "more --" SPACE
+@dump:tick-6
+.
+@while "more --" SPACE
+@dump:tick-7
+.
+@while "more --" SPACE
+@dump:tick-8
+
+v
+DOWN*40
+@dump:message-log
+@while "Messages" ESC
+
+@quit

@@ -197,6 +197,19 @@ public:
     }
     virtual int16 GetCharCmd() { return GetCharCmd(KY_CMD_NORMAL_MODE); }
     virtual int16 GetCharCmd(KeyCmdMode mode);
+    /* inc-p0h1: the Bestow Curse probe scripts its two menus and, for the
+       hesitation share, its own timed actions. Off unless the probe env var
+       is set, so live play is untouched. */
+    virtual int32 LMenu(uint16 fl, const char*title,int8 MWin=WIN_MENUBOX,
+                        const char*help=NULL, int8 pos=0) {
+        if (getenv("INCURSION_BESTOW_PROBE")) {
+            extern bool BestowProbeMenuAnswer(const char *title, int32 *out);
+            int32 answer;
+            if (BestowProbeMenuAnswer(title, &answer))
+                return answer;
+        }
+        return TextTerm::LMenu(fl,title,MWin,help,pos);
+    }
     /* A script has no idea of "keys already buffered". Draining would eat the
        next real keystroke, so all three of these do nothing and CheckEscape
        never interrupts. The only thing they can skip is an animation. */
@@ -1643,6 +1656,24 @@ int16 posixTerm::GetCharCmd(KeyCmdMode mode) {
     int16 keyset_start = 0, keyset_delta = 0, keyset_last;
     int16 i, ox, oy, ch;
     TextWin *wn;
+
+    /* inc-p0h1: the Bestow Curse probe drives 200 player turns itself; a
+       queued '.' becomes KY_CMD_REST (the ordinary wait), so a probe run
+       never touches the key script and never blocks on a prompt. */
+    if (mode == KY_CMD_NORMAL_MODE && getenv("INCURSION_BESTOW_PROBE")) {
+        extern int BestowProbeKey();
+        int bkey = BestowProbeKey();
+        if (bkey) return bkey;
+    }
+    /* inc-p0h1 review: TextTerm::LMenu reads KY_CMD_ARROW_MODE, so this is
+       the ESC-safety test's own queue -- it drives the REAL (non-probe)
+       LMenu with a scripted ESC-then-select sequence when the menu-answer
+       queue (BestowProbeMenuAnswer) is deliberately left empty. */
+    if (mode == KY_CMD_ARROW_MODE && getenv("INCURSION_BESTOW_PROBE")) {
+        extern int BestowProbeMenuKey();
+        int bkey = BestowProbeMenuKey();
+        if (bkey) return bkey;
+    }
 
     ActionsSinceLastAutoSave++;
     if (p) p->GameTimeInfo.keystrokes++;
