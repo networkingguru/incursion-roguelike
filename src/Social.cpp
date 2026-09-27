@@ -2360,7 +2360,8 @@ void Player::InitCompanions() {
 extern const char* alliesShouldntCast[];
 
 bool Monster::MakeCompanion(Player *p, int16 CompType) {
-    int16 Total, i; rID eID;
+    int16 i; rID eID;
+    int32 cost, own, oldOver, partyAfter; bool refuse;
 
     if (eID = GetStatiEID(SUMMONED))
         if (TEFF(eID)->HasFlag(EF_XSUMMON))
@@ -2373,14 +2374,27 @@ bool Monster::MakeCompanion(Player *p, int16 CompType) {
     if (isIllusion())
         goto SkipPHDCheck;
 
-    Total = XCRtoCR(XCR(p->MaxGroupCR(CompType)) -
-        XCR(p->GetGroupCR(CompType, ChallengeRating())));
-    if (CompType != PHD_PARTY)
-        Total = XCRtoCR(
-        XCR(Total) +
-        max(0, XCR(p->MaxGroupCR(PHD_PARTY)) -
-        XCR(p->GetGroupCR(PHD_PARTY))));
-    if (Total < 0) {
+    /* upstream: the admission test belongs in XCR units on both sides -- the
+       creature's cost XCR(ChallengeRating()) must fit either its own pool or,
+       for a non-party pool, the party pool that already holds that pool's
+       overflow. Upstream rounded through XCRtoCR, and XCRtoCR of a zero or
+       negative remainder returns -8 whose XCR is +10, so a deficit vanished
+       and was never charged to the party pool; every pool was also one CR
+       short (see GetGroupXCR). Plain arithmetic, no typedef or compiler
+       dependence, so Win32 with the original typedefs misbehaves identically.
+       Observed on the 8/8 "Group CR Totals" display, inc-omm1, not sent. */
+    cost = XCR(ChallengeRating());
+    own = p->GetGroupXCR(CompType) + cost - p->MaxGroupXCR(CompType);
+    if (CompType == PHD_PARTY) {
+        refuse = own > 0;
+    } else {
+        /* GetGroupXCR(PHD_PARTY) already counts the existing overflow of the
+           ANIMAL/MAGIC/COMMAND pools; subtract it so it is not counted twice. */
+        oldOver = max(0, p->GetGroupXCR(CompType) - p->MaxGroupXCR(CompType));
+        partyAfter = p->GetGroupXCR(PHD_PARTY) - oldOver + own;
+        refuse = own > 0 && partyAfter > p->MaxGroupXCR(PHD_PARTY);
+    }
+    if (refuse) {
         switch (CompType) {
         case PHD_UNDEAD:
             return false;
@@ -2456,8 +2470,6 @@ SkipPHDCheck:
 int32 Player::GetGroupXCR(int16 CompType, int16 AddCR) {
     int32 i, j, ct; Creature *c; int32 CRCubed;
 
-#define CUBE(v) (tmp=v+2,tmp*tmp*tmp)
-
     CRCubed = 0;
     MapIterate(m, c, i) {
         if (c->isMonster() && c->ts.isLeader(this)) {
@@ -2484,12 +2496,20 @@ int32 Player::GetGroupXCR(int16 CompType, int16 AddCR) {
             if (ct != CompType)
                 continue;
             j = c->ChallengeRating();
-            CRCubed += max(10, ((j + 2)*(j + 2)*(j + 2)));
+            /* upstream: a follower's XCR cost must be XCR(j) to match the
+               (CR+3)^3 limit in MaxGroupXCR; upstream charged (j+2)^3, one CR
+               short of the limit, so every follower was undercharged and the
+               displayed pool CR (GetGroupCR = XCRtoCR of this) read one low.
+               Plain arithmetic, no typedef or compiler dependence, so Win32
+               with the original typedefs misbehaves identically.
+               Observed on the 8/8 "Group CR Totals" display, inc-omm1, not
+               sent. */
+            CRCubed += XCR(j);
         }
     }
 
     if (AddCR)
-        CRCubed += max(0, (AddCR + 2) * (AddCR + 2) * (AddCR + 2));
+        CRCubed += XCR(AddCR);
 
     /* The CR of party HD includes the CRs of groups that
        overflow into it. For example, a ranger has a 2 HD

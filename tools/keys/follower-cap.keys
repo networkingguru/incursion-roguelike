@@ -1,0 +1,82 @@
+# Exercise the companion-pool follower cap (bd inc-omm1).
+#
+# Loaded character: tools/fixtures/chars/orc-mage-seed1-opt0822.sav (a level 1
+# orc mage, CHA 14). See tools/check_follower_cap.sh.
+#
+# Wizard mode learns Dominate Monster and summons a hill giant (CR 7). A level
+# 1 mage's PHD_MAGIC pool is XCR(1)=64 and its PHD_PARTY pool is XCR(3)=216.
+# The giant's cost XCR(7)=1000 exceeds both, so the corrected rule refuses it
+# while the old rule admitted it. Before that, a summoned kobold (CR 1) is
+# dominated as the fault-1 control: both rules admit it, but they charge it
+# differently, so the displayed magic-pool CR differs.
+
+@until "Things in View" ESC
+w y                     # Enter wizard mode and confirm.
+
+# Wizard switches (Tables.cpp Wizard Options order, row 1 Cheat Death):
+# 6 Ignore Spell Failure, 7 Know All Spells, 8 Infinite Mana,
+# 10 Wizard Sight, 11 Freeze Monsters.
+@choose "Wizard Mode Switches"
+DOWN*5 SPACE
+DOWN SPACE
+DOWN SPACE
+DOWN*2 SPACE
+DOWN SPACE
+ESC
+@dump:switches
+
+# Dominate Monster is a level 5 effect not on the mage list; Learn Any Spell
+# makes it known, and Infinite Mana lets a level 1 mage cast it.
+@until "Wizard Mode Options:" w
+@choose "Learn Any Spell"
+"Dominate Monster" ENTER
+
+# Clear the level so the only creatures named below are ours.
+@until "Wizard Mode Options:" w
+@choose "Genocide Everything"
+
+# Control creature: a kobold east of the player.
+@until "Wizard Mode Options:" w
+@choose "Monster Summoning"
+@choose "Kobold"
+@choose "kobold"
+RIGHT*3 ENTER
+@dump:summon-kobold
+
+# Cast Dominate Monster on the kobold; retry resisted casts.
+m
+@cursorto:mark "Dominate Monster" DOWN
+@dump:dominate-selected
+1 ENTER                 # Bind spellkey 1, then cast.
+RIGHT ENTER
+@while "resists your magic" 1 RIGHT ENTER
+@dump:dominate-kobold
+
+@until "Wizard Mode Options:" w
+@choose "Examine Player Data"
+DOWN*200                 # Scroll to the end, where Group CR Totals prints.
+@dump:group-after-kobold
+ESC
+
+# Fault-2 creature: a hill giant (CR 7) west of the player.
+@until "Wizard Mode Options:" w
+@choose "Monster Summoning"
+@choose "Giants"
+@choose "hill giant"
+LEFT*3 ENTER
+@dump:summon-giant
+
+m
+@cursorto:mark "Dominate Monster" DOWN
+1 ENTER
+LEFT ENTER
+@while "resists your magic" 1 LEFT ENTER
+@dump:dominate-giant
+
+@until "Wizard Mode Options:" w
+@choose "Examine Player Data"
+DOWN*200                 # Scroll to the end, where Group CR Totals prints.
+@dump:group-after-giant
+ESC
+
+@quit
