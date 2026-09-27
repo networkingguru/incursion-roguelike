@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# gate: none -- it edits tracked source, rebuilds and restores to prove
+# tools/check_glory.sh can fail; run it by hand, never in the gate.
 """inc-g1q1: reproduce the three brief-2 mutations, restoring source and build."""
 import os
 from pathlib import Path
