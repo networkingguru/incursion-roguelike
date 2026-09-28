@@ -2870,43 +2870,89 @@ Item "mystic lantern;item" : T_LIGHT
 Priest  Spell "Bestow Curse" : EA_GENERIC
   { SC_ENC; Base: SP_MEDIUM; Cost: 7; Level: 3; qval: Q_TAR; 
     Purpose: EP_CURSE;
+    int16 curseKind; int16 curseAbility;
     sval: WILL; tval: MA_SAPIENT; Flags: EF_LIM_MTYPE;
-    Desc: "Lays a curse on a single sapient enemy that has 
-      an equal chance of causing one of his items to become 
-      cursed, reducing one of his ability scores by six, or 
-      causing him a strange magical affliction.";
-    On Event EV_MAGIC_HIT {
-      int16 i,j; hObj h;
+    Desc: "Lays a curse on a single sapient enemy that fails a
+      Will save. A caster chooses one of three permanent curses and,
+      for the ability curse, which ability to wither; every other
+      source inflicts one at random. The curses are a -6 penalty to
+      one ability score, a -4 penalty to attack rolls, saving throws
+      and skill checks, or a hesitation that robs the victim of half
+      its actions.";
+    /* upstream: the original promised three outcomes but built two -- a
+       cursed item or a random -6 ability penalty, with the third left as a
+       "Later" comment. A player caster now chooses from three SRD curses.
+       Traced; inc-p0h1; not sent. */
+    On Event EV_EFFECT {
+      if (EActor->isPlayer() && !e.isTrap && EActor != ETarget) {
+        ETerm->LOption("a -6 penalty to one ability score",0);
+        ETerm->LOption("a -4 penalty to attacks, saves and skills",1);
+        ETerm->LOption("a hesitation that claims half its actions",2);
+        /* inc-p0h1: no MENU_ESC, as "Contagion" (lib/wspells.irh ~6790) --
+           Creature::Cast has already spent mana and the casting Timeout
+           (src/Magic.cpp: LoseMana at ~4561, "Timeout += castingTimeout"
+           at ~4681, both before "res = ReThrow(EV_EFFECT,e)" at ~4714,
+           whose result Cast returns UNCHANGED with no rollback of either),
+           so an ABORT from ESC here would not give either back -- it would
+           only ever waste the cast, not cancel it. Dropping MENU_ESC keeps
+           curseKind/curseAbility inside their declared LOption range on
+           every path, so curseAbility can never reach GainPermStati
+           outside 0..6. */
+        curseKind = ETerm->LMenu(MENU_BORDER,
+                      "-- Choose a Curse: --", WIN_MENUBOX);
+        if (curseKind == 0) {
+          ETerm->LOption("Strength",0);
+          ETerm->LOption("Dexterity",1);
+          ETerm->LOption("Constitution",2);
+          ETerm->LOption("Intelligence",3);
+          ETerm->LOption("Wisdom",4);
+          ETerm->LOption("Charisma",5);
+          if (ETarget->isCharacter())
+            ETerm->LOption("Luck",6);
+          curseAbility = ETerm->LMenu(MENU_BORDER,
+                      "-- Choose an Ability: --", WIN_MENUBOX);
+          }
+        }
+      else
+        curseKind = -1;
+      },
+    EV_MAGIC_HIT {
+      int16 i;
       if (ETarget == NULL_OBJ || !ETarget->isCreature())
         return ABORT;
-      switch(random(8)) {
-
-        case 0: case 1:
-        case 2: case 3:
-          h = EVictim->FirstInv();
-          while(h != NULL_OBJ && h->isCursed()) 
-            h = EVictim->NextInv();
-          if (h) {
-            h->IFlags |= IF_CURSED;
-            h->IFlags &= ~IF_BLESSED;
-            h->ReApply();
-            VPrint(e,"Your <hObj> glows black.", "The <EVictim>'s <hObj> glows black.",h);
-            return DONE;
-            }
-          /* Drop through to nail an attribute. */
-        case 4: case 5:
-        case 6: case 7:
-          i = random(EVictim->isCharacter() ? 7 : 6);
-          if (!EVictim->HasStati(ADJUST_LUCK,i)) {
-            ETarget->GainPermStati(ADJUST_LUCK,NULL,SS_CURS,i,-6,$"bestow curse");
-            EVictim->IPrint("You feel afflicted!");
-            }
-          else
-            EVictim->IPrint("You feel afflicted, but it passes.");
-          return DONE;
-        /*case 8:
-          Later, chance of polymorphitis, teleportitis, disease, hallu, etc. */
+      if (curseKind == -1) {
+        curseKind = random(3);
+        if (curseKind == 0)
+          curseAbility = random(EVictim->isCharacter() ? 7 : 6);
         }
+      if (curseKind == 0) {
+        i = curseAbility;
+        if (!EVictim->HasStati(ADJUST_LUCK,i)) {
+          ETarget->GainPermStati(ADJUST_LUCK,NULL,SS_CURS,i,-6,$"bestow curse");
+          EVictim->IPrint("You feel afflicted!");
+          }
+        else
+          EVictim->IPrint("You feel afflicted, but it passes.");
+        return DONE;
+        }
+      if (curseKind == 1) {
+        if (!EVictim->HasEffStati(ADJUST_LUCK,$"bestow curse",A_HIT)) {
+          ETarget->GainPermStati(ADJUST_LUCK,NULL,SS_CURS,A_HIT,-4,$"bestow curse");
+          ETarget->GainPermStati(ADJUST_LUCK,NULL,SS_CURS,A_SAV,-4,$"bestow curse");
+          ETarget->GainPermStati(SKILL_BONUS,NULL,SS_CURS,SK_ANY,-4,$"bestow curse");
+          EVictim->IPrint("You feel afflicted!");
+          }
+        else
+          EVictim->IPrint("You feel afflicted, but it passes.");
+        return DONE;
+        }
+      if (!EVictim->HasEffStati(HESITATION,$"bestow curse")) {
+        ETarget->GainPermStati(HESITATION,NULL,SS_CURS,-1,0,$"bestow curse");
+        EVictim->IPrint("You feel afflicted!");
+        }
+      else
+        EVictim->IPrint("You feel afflicted, but it passes.");
+      return DONE;
     };
   }
 
@@ -3174,7 +3220,9 @@ Priest / Scroll Spell "Remove Curse" : EA_GENERIC
       must equal or exceed the curse's level for the spell to succeed.\n
       __Curses include the effects of a cursed item that cannot be removed
       or the effects of spells like <9>bestow curse<1> or <9>mark of justice<1>.
-      A -6 luck penalty to an attribute is a <9>bestow curse<1> effect.
+      A <9>bestow curse<1> is one of three things: a -6 luck penalty to one
+      attribute, a -4 penalty to attack rolls, saving throws and skill checks,
+      or a hesitation that robs the victim of half its actions.
       Other attribute damage, poisoning, diseases and experience drain do not count
       as curses -- though some curse effects do reduce attributes.";
     On Event EV_MAGIC_HIT {	

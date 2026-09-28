@@ -3161,7 +3161,8 @@ typedef signed int        hObj;
 #define ENCOUNTER         236
 #define ENTANGLED         237
 #define PAIN_TALLY        238
-#define LAST_STATI        239
+#define HESITATION        239
+#define LAST_STATI        240
   
 
 

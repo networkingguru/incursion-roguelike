@@ -4137,6 +4137,9 @@ int16 Character::CasterLev()
 int16 Creature::SkillLevel(int16 sk)
 {
     int16 sr = 0, i,j,b = 0;
+    /* Curse skill penalties are negative and must sum, not max -- the
+       per-source buckets below discard any negative with max(). inc-p0h1. */
+    int16 s_curse = 0;
 #define FEAT_SKILL_BONUS        3
 
 
@@ -4323,6 +4326,12 @@ FoundFocus:
           case SS_PERM:
               s_focus = max(s_focus,S->Mag);
               break;
+          /* upstream: every other bucket takes max(), which discards the
+             negative skill penalties of a bestow curse; sum them instead.
+             Traced; inc-p0h1; not sent. */
+          case SS_CURS:
+              s_curse += S->Mag;
+              break;
           default:
               s_enhance = max(s_enhance,S->Mag);
               break;
@@ -4359,7 +4368,8 @@ FoundFocus:
         }
 
         sr += s_racial + s_feat + s_enhance + s_domain + s_item + s_ins + s_syn + 
-            s_comp + s_circ + s_inh + s_size + s_armour + s_train + s_kit + s_focus;
+            s_comp + s_circ + s_inh + s_size + s_armour + s_train + s_kit + s_focus +
+            s_curse;
         sr += Mod2((int8)SkillAttr(sk)); 
 
         return sr;

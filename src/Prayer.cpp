@@ -752,7 +752,17 @@ int16* Creature::getTroubles()
         Troubles[n++] = TROUBLE_CURSED + 
               ( S->Mag <= -4 ? P_HIGH : P_MODERATE) * 256;
     StatiIterEnd(this)
-    
+
+    /* inc-p0h1: a hesitation curse is not ADJUST-type, so the scan above
+       misses it; count it so a god can lift it on prayer. Plain
+       assignment, no StatiIterBreakout -- see the matching comment in
+       Monster.cpp::getTroubles for why a bare-expression Breakout call
+       double-decrements __Stati.Nested. */
+    StatiIterNature(this,HESITATION)
+      if (S->Source == SS_CURS)
+        Troubles[n++] = TROUBLE_CURSED + P_HIGH*256;
+    StatiIterEnd(this)
+
     for (it=FirstInv();it;it=NextInv())
       if (it->IFlags & IF_WORN)
         if (it->isCursed())

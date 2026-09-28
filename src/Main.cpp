@@ -298,6 +298,11 @@ void Game::Play() {
     extern void GloryProbe(Player *caster);
     GloryProbe(pp);
 
+    /* inc-p0h1: off unless INCURSION_BESTOW_PROBE is set; needs a live player
+       and map. See BestowProbe (src/Magic.cpp) and tools/check_bestow_curse.sh. */
+    extern void BestowProbe(Player *caster);
+    BestowProbe(pp);
+
     /* Off unless INCURSION_TRUESIGHT_PROBE is set, and run here because it
        needs a live player and a live map. See Creature::TrueSightProbe and
        tools/check_true_sight.sh. inc-5bl3. */

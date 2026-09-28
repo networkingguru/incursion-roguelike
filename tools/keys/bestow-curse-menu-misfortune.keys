@@ -1,0 +1,66 @@
+# Gameplay reproduction for inc-p0h1 (Bestow Curse redesign), the PLAYER
+# MENU code path this bead adds -- only reachable on the branch build --
+# picking the SECOND of its three curses: a -4 penalty to attack rolls,
+# saving throws and skill checks. Sibling of
+# tools/keys/bestow-curse-menu-ability.keys; see that file's header for the
+# wizard-mode setup this one repeats.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/bestow-curse-menu-misfortune.keys 1
+#
+# The goblin's own Dump() (wizard "Examine Nearby Things") is read before and
+# after: A_HIT and the three A_SAV_* rows should each read four lower, with
+# a "SS_CURS" breakdown line naming "bestow curse" -- the skill penalty
+# (SKILL_BONUS,SK_ANY) has no line in Creature::Dump's fixed PrintAttr table
+# (src/Debug.cpp:1414), so it is not something this screen can show; only
+# the saves and to-hit are checked here.
+
+@include chargen-priest.keys
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+w
+@choose "Learn Any Spell"
+"Bestow Curse"
+ENTER
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+@dump:goblin-summoned
+
+w
+@choose "Examine Nearby Things"
+RIGHT
+@dump:goblin-before
+ESC
+
+m
+@choose "Bestow Curse"
+RIGHT
+ENTER
+@dump:curse-menu
+
+@choose "a -4 penalty to attacks, saves and skills"
+@while "more --" SPACE
+@dump:cast-misfortune
+
+w
+@choose "Examine Nearby Things"
+RIGHT
+@dump:goblin-after
+ESC
+
+v
+@dump:message-log
+@while "Messages" ESC
+
+@quit
