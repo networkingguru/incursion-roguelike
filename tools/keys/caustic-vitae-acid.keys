@@ -1,0 +1,90 @@
+# Reproduction only for inc-aiw5; no game-code or data changes.
+# Run from repository root, with a fresh INCURSION_RUN_DIR under logs/:
+# INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_RUN_DIR="$PWD/logs/inc-aiw5/acid" \
+#   tools/headless.sh tools/keys/caustic-vitae-acid.keys 1
+#
+# WHAT IS BEING MEASURED. Caustic Vitae (lib/pspells.irh:1371) promises
+# "1d8 points of acid damage per cast level" and "half of the damage dealt
+# cannot be resisted". The entity sets no xval, so src/Magic.cpp:560 reads its
+# damage type as 0 = AD_NORM, and the EF_HALF_UNTYPED split at src/Effects.cpp
+# sends BOTH halves as AD_NORM. An acid-immune victim therefore takes the full
+# damage; with the fix it should take only the unresistible half.
+#
+# ROUTE. Caustic Vitae is an Effect, not a Spell, so it never appears in a
+# "Learn which spell" list -- but "Learn Any Spell" (src/Debug.cpp:850) types a
+# name and accepts any T_TEFFECT, which this is. A level-2 orc mage is made by
+# chargen-mage.keys; Free Advancement buys one level, Infinite Mana makes the
+# cast free, and Freeze Monsters stops the victim acting on its own.
+#
+# TARGET. A stunjelly (lib/mon3.irh:2855, MA_JELLY, HD 4, ~31 HP) carries
+# "Immune: OOZE_IMMUNITIES, DF_ACID", so it is acid-immune and survives both
+# the full and the half hit, keeping its HP readable. It is summoned two
+# squares east; Freeze Monsters strips its Dex (Def 17 -> 11), so the bolt's
+# +7 attack lands. The bolt is fired east with D RIGHT.
+#
+# ORACLE. (1) The victim's own HP line in "Examine Nearby Things" (wizard menu
+# item 1), read before and after the cast: the summoned monster is the second
+# thing in map order, one RIGHT after the player. (2) The game's own combat
+# numbers, printed to the message history ('v'): before the fix both halves
+# read "Physical Damage" and sum to the full amount; after the fix the second
+# half is "Acid Damage" and the acid-immune victim is unaffected by it.
+@include chargen-mage.keys
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*2 SPACE   # Free Advancement
+DOWN*5 SPACE   # Infinite Mana
+DOWN*3 SPACE   # Freeze Monsters
+ESC
+
+# One level: effective caster level 2, so the damage is 2d8 + Wis mod (3).
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+SPACE
+@dump:state
+
+w
+@choose "Learn Any Spell"
+"Caustic Vitae"
+ENTER
+@dump:learned
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "stunjelly"
+RIGHT RIGHT ENTER
+@dump:summoned
+
+w
+@choose "Examine Nearby Things"
+@dump:target-before-player
+RIGHT
+@dump:target-before
+ESC
+
+m
+@choose "Caustic Vitae"
+D
+RIGHT
+@while "more --" SPACE
+@dump:after
+v
+@dump:messages
+ESC
+
+w
+@choose "Examine Nearby Things"
+@dump:target-after-player
+RIGHT
+@dump:target-after
+ESC
+
+@quit

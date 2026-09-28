@@ -1,0 +1,71 @@
+# Reproduction only for inc-aiw5; no game-code or data changes.
+# Run from repository root, with a fresh INCURSION_RUN_DIR under logs/:
+# INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_RUN_DIR="$PWD/logs/inc-aiw5/control" \
+#   tools/headless.sh tools/keys/caustic-vitae-control.keys 1
+#
+# The control for tools/keys/caustic-vitae-acid.keys: the same cast, the same
+# character, the same level, but the victim is a bugbear (lib/mon2.irh:747,
+# HD 3) with no acid resistance at all. It must take the full damage both
+# before and after the fix, and its message must name the spell's own damage
+# type (Acid) after the fix -- the acid-immune run is read against this.
+#
+# Every choice and its reason is the acid script's; see that file's header.
+@include chargen-mage.keys
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*2 SPACE   # Free Advancement
+DOWN*5 SPACE   # Infinite Mana
+DOWN*3 SPACE   # Freeze Monsters
+ESC
+
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus metamagic Feat" a
+@while "You feel" ESC
+SPACE
+@dump:state
+
+w
+@choose "Learn Any Spell"
+"Caustic Vitae"
+ENTER
+@dump:learned
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "bugbear"
+RIGHT RIGHT ENTER
+@dump:summoned
+
+w
+@choose "Examine Nearby Things"
+@dump:target-before-player
+RIGHT
+@dump:target-before
+ESC
+
+m
+@choose "Caustic Vitae"
+D
+RIGHT
+@while "more --" SPACE
+@dump:after
+v
+@dump:messages
+ESC
+
+w
+@choose "Examine Nearby Things"
+@dump:target-after-player
+RIGHT
+@dump:target-after
+ESC
+
+@quit

@@ -1368,8 +1368,12 @@ Effect "Detect Blood" : EA_INFLICT
     On Event MSG_STATINAME "DetBlood"; 
   }
 
+// upstream: the entity set no xval, so src/Magic.cpp read its damage type as
+// AD_NORM and both EF_HALF_UNTYPED halves landed as AD_NORM; the same data
+// ships on Win32 with the original compiler and misbehaves identically, so it
+// is not a port artefact. Observed; inc-aiw5; not sent.
 Effect "Caustic Vitae" : EA_BLAST
-  { SC_NEC; SC_THA; pval: (LEVEL_SCALED)d8; Level: 1;
+  { SC_NEC; SC_THA; xval: AD_ACID; pval: (LEVEL_SCALED)d8; Level: 1;
     aval: AR_BOLT; qval: Q_DIR | Q_TAR; Purpose: EP_ATTACK;
     Flags: EF_HALF_UNTYPED, EF_PERMANANT, EF_ATTACK;
     Base: SP_TRIVIAL; 
