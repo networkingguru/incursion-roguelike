@@ -1721,18 +1721,24 @@ void Character::Dump()
 void Player::Dump()
   {
     Character::Dump();
-    if (m != NULL && x != -1) 
+    if (m != NULL && x != -1) {
     T1->SWrite(XPrint("\n<9>Group CR Totals:<7>\n"
                       "  PHD_PARTY   <Num> / <Num>\n"
                       "  PHD_ANIMAL  <Num> / <Num>\n"
-                      "  PHD_MAGIC   <Num> / <Num>\n"
-                      "  PHD_COMMAND <Num> / <Num>\n"
-                      "  PHD_UNDEAD  <Num> / <Num>\n",
+                      "  PHD_MAGIC   <Num> / <Num>\n",
                       GetGroupCR(PHD_PARTY),   MaxGroupCR(PHD_PARTY),
                       GetGroupCR(PHD_ANIMAL),  MaxGroupCR(PHD_ANIMAL),
-                      GetGroupCR(PHD_MAGIC),   MaxGroupCR(PHD_MAGIC),
-                      GetGroupCR(PHD_COMMAND), MaxGroupCR(PHD_COMMAND),
-                      GetGroupCR(PHD_UNDEAD),  MaxGroupCR(PHD_UNDEAD)));
+                      GetGroupCR(PHD_MAGIC),   MaxGroupCR(PHD_MAGIC)));
+    /* upstream: show each command type's own usage and cap. Shared display
+       hides mixed powers on Win32 too. Observed, inc-sgre, not sent. */
+    for (int16 type = 1; type < MA_LAST; ++type)
+        if (HasStati(COMMAND_ABILITY, type))
+            T1->SWrite(Format("  PHD_COMMAND %s %d / %d\n",
+                (const char*)String(Lookup(MTypeNames, type)).Lower(),
+                XCRtoCR(GetCommandXCR(type)), MaxCommandCR(type)));
+    T1->SWrite(XPrint("  PHD_UNDEAD  <Num> / <Num>\n",
+                      GetGroupCR(PHD_UNDEAD), MaxGroupCR(PHD_UNDEAD)));
+    }
 
 
                                             

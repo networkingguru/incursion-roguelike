@@ -268,6 +268,10 @@ Domain "Evil" : 0 {
          Unholy Aura,
          Gate (or Violation) */
     On Event EV_ADVANCE {
+      /* upstream: only priest advances grant domain command levels.
+         Shared event logic also advances on Win32. Observed, inc-sgre, not sent. */
+      if (e.eID != $"priest")
+        return NOTHING;
       if (EActor->isMType(MA_CHAOTIC))
         EActor->GainAbility(CA_COMMAND,MA_DEMON,$"Evil",SS_DOMA);
       else

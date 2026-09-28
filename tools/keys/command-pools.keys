@@ -1,0 +1,71 @@
+# inc-sgre: regenerate so Evil's EV_ADVANCE runs under the tested module.
+# Seed 1, options-2026-08-22.dat. No frozen post-grant save.
+a n y
+@choose "Drow"
+@choose "Priest"
+@choose "Xel"
+a
+@choose "Lawful Evil"
+@choose "Evil"
+@choose "Community"
+@until "Unspent Skill Ranks" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "personality archetype" a
+@while "Learn which spell" a
+@until "Things in View" ESC
+@expect "Priest 1"
+w y
+@choose "Wizard Mode Switches"
+DOWN DOWN SPACE
+ESC
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Learn which spell" a
+ESC
+d
+@expect "Priest 2"
+M
+@choose "Mage"
+@dump:multiclass
+@until "class do you wish to advance" G
+@choose "Mage"
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Learn which spell" a
+@choose "Abjuration"
+@while "Choose a feat" a
+@while "Learn which spell" a
+@dump:mage1
+ESC
+d
+@expect "Mage 1"
+@until "class do you wish to advance" G
+@choose "Mage"
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Learn which spell" a
+ESC
+d
+@expect "Mage 2"
+@until "class do you wish to advance" G
+@choose "Mage"
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Learn which spell" a
+ESC
+d
+@expect "Priest 2"
+@expect "Mage 3"
+@dump:classes
+ESC
+@until "Wizard Mode Options:" w
+@choose "Examine Player Data"
+DOWN*200
+@dump:group
+ESC
+.
+@dump:played
+@quit
