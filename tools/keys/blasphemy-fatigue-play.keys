@@ -1,0 +1,91 @@
+# Gameplay reproduction for inc-fdi2: does casting the priest spell
+# "Blasphemy" (lib/pspells.irh ~5924) actually charge the two fatigue points
+# its own Desc promises? On master the EV_EFFECT handler that would charge
+# them was missing; the worktree branch adds
+#   if (!EActor->LoseFatigue(2,true)) return ABORT;
+#   return NOTHING;
+# Sibling of tools/keys/bestow-curse-menu-ability.keys; see that file's
+# header for the wizard-mode setup this one repeats.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/blasphemy-fatigue-play.keys 1
+#
+# Wizard mode sets up the scenario: a priest, Infinite Mana and Freeze
+# Monsters (Wizard Mode Switches rows 8 and 11) so the mana check on
+# Creature::Invoke (a belt-and-braces measure -- SP_KNOWN|SP_INNATE from
+# Learn Any Spell already skips that check, src/Magic.cpp:4950) and the
+# summoned target's own turn never interfere, and Learn Any Spell for
+# Blasphemy (SP_KNOWN|SP_PRIMAL|SP_INNATE, src/Debug.cpp:862) so a level-1
+# priest can cast a 7th-level, 32-mana spell at all -- this routes the cast
+# through Creature::Invoke and EV_INVOKE (Player.cpp:862), not Creature::Cast,
+# since SP_INNATE is set; EV_INVOKE still ReThrows EV_EFFECT
+# (src/Magic.cpp:5003), which is the event this bead's fix hangs off.
+#
+# The target is a plain "human" (MA_HUMAN, no M_EVIL/M_GOOD/M_LAWFUL/
+# M_CHAOTIC flags in lib/mon2.irh:444) so it is a true-neutral sapient
+# creature Blasphemy actually affects (Evil creatures, like the goblin the
+# sibling scripts use, are immune by the spell's own rule; good and neutral
+# outsiders/creatures are not).
+#
+# The caster's CURRENT fatigue is read off the status line at the bottom of
+# the play screen ("FP:x/5") on the human-summoned and cast-blasphemy dumps --
+# the character sheet's own "Fatigue Points" row (src/Sheet.cpp:322) is the
+# character's MAXIMUM fatigue, which this cast does not change, so the 'd'
+# sheet dumps below are read for confirmation only, not for the delta.
+
+@include chargen-priest.keys
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*7
+SPACE
+DOWN*3
+SPACE
+ESC
+
+w
+@choose "Learn Any Spell"
+"Blasphemy"
+ENTER
+
+w
+@choose "Monster Summoning"
+@choose "Humans"
+@choose "human"
+RIGHT ENTER
+@dump:human-summoned
+
+w
+@choose "Examine Nearby Things"
+RIGHT
+@dump:human-before
+ESC
+
+d
+@dump:fatigue-before
+ESC
+
+m
+@choose "Blasphemy"
+RIGHT
+ENTER
+@while "more --" SPACE
+@dump:cast-blasphemy
+
+d
+@dump:fatigue-after
+ESC
+
+w
+@choose "Examine Nearby Things"
+RIGHT
+@dump:human-after
+ESC
+
+v
+@dump:message-log
+@while "Messages" ESC
+
+@quit

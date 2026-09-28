@@ -1323,6 +1323,8 @@ DisbeliefMessageDone:
                 /* inc-g1q1: observe the resolved child effect and its real DC. */
                 extern void GloryProbeHit(EventInfo &e);
                 GloryProbeHit(e);
+                extern void BlasphemyProbeHit(EventInfo &e);
+                BlasphemyProbeHit(e);
                 if (r == ABORT)
                     return ABORT;
                 if (!e.Immune)
@@ -3269,6 +3271,99 @@ void LOFSpellProbe(Player *shooter) {
     for (int i = 0; i < 5; i++)
         b[i].c->Remove(true);
     theGame->PlayMode = wasInPlay;
+}
+
+/* inc-fdi2: observers and input queue are armed only during the live probe. */
+static rID blasphemyProbeID = 0;
+static int blasphemyHits = 0, blasphemyKey = 0, blasphemyAnswers = 0;
+int BlasphemyProbeKey() {
+    int key = blasphemyKey;
+    blasphemyKey = 0;
+    if (key) ++blasphemyAnswers;
+    return key;
+}
+void BlasphemyProbeHit(EventInfo &e) {
+    if (blasphemyProbeID && e.eID == blasphemyProbeID) ++blasphemyHits;
+}
+void BlasphemyProbe(Player *caster) {
+    if (!getenv("INCURSION_BLASPHEMY_PROBE")) return;
+    const rID spell = FIND("Blasphemy"), animal = FIND("pony");
+    if (!caster || !caster->m || !spell || !animal) {
+        Error("BLASPHEMY_PROBE: setup INCONCLUSIVE missing caster/map/resources");
+        return;
+    }
+    Map *mp = caster->m;
+    Monster *targets[2] = {NULL, NULL};
+    int count = 0;
+    const bool oldPlay = theGame->PlayMode;
+    theGame->PlayMode = true;
+    for (int dx = -1; dx <= 1 && count < 2; ++dx)
+        for (int dy = -1; dy <= 1 && count < 2; ++dy) {
+            int x = caster->x + dx, y = caster->y + dy;
+            if ((!dx && !dy) || !mp->InBounds(x,y) || mp->SolidAt(x,y)
+                || mp->FCreatureAt(x,y)) continue;
+            Monster *target = new Monster(animal);
+            target->PlaceAt(mp,x,y,true);
+            target->Initialize(true);
+            targets[count++] = target;
+        }
+    if (count != 2) {
+        Error("BLASPHEMY_PROBE: setup INCONCLUSIVE fewer than two adjacent targets");
+        for (int i = 0; i < count; ++i) targets[i]->Remove(true);
+        theGame->PlayMode = oldPlay;
+        return;
+    }
+    const int oldFP = caster->cFP, oldCL = caster->CasterLev();
+    const int oldOption = caster->Options[OPT_NO_FATIGUE];
+    const int oldAlign = caster->GetStatiVal(ALIGNMENT);
+    const int8 oldLevel1 = caster->Level[1];
+    caster->SetStatiVal(ALIGNMENT,NULL,AL_EVIL);
+    caster->Options[OPT_NO_FATIGUE] = 0;
+    const int adjustment = 2*(targets[0]->ChallengeRating()+1)
+        - caster->Mod(A_CHA) - oldCL;
+    caster->GainAbility(CA_SPELLCASTING,adjustment,0,SS_PERM);
+    /* The globe includes its own centre, so the caster would be one of its own
+       victims. STUNNED costs a further fatigue (src/Status.cpp:624), which
+       would mask the spell's charge. Raise only the caster's CR -- vPower is
+       CasterLev + CHA, which this does not touch -- so he is out of his own
+       spell's reach while the ponies stay in it. */
+    caster->Level[1] = oldLevel1 + 30;
+    caster->CalcValues();
+    blasphemyProbeID = spell;
+    const char *names[] = {"paid", "one-fatigue", "declined"};
+    for (int test = 0; test < 3; ++test) {
+        for (int i = 0; i < 2; ++i) targets[i]->RemoveStati(STUNNED);
+        caster->RemoveStati(STUNNED);
+        caster->cFP = test == 0 ? 20 : test == 1 ? 1 : -caster->Attr[A_FAT]-1;
+        const int before = caster->cFP;
+        blasphemyHits = blasphemyAnswers = 0;
+        blasphemyKey = test == 2 ? 'n' : 0;
+        EventInfo cast; cast.Clear();
+        cast.EActor = caster; cast.ETarget = caster; cast.EMap = mp;
+        cast.eID = spell; cast.isSpell = true;
+        EvReturn result = ReThrow(EV_EFFECT,cast);
+        int affected = 0;
+        for (int i = 0; i < 2; ++i) affected += targets[i]->HasStati(STUNNED) ? 1 : 0;
+        bool pass = test == 2
+            ? result == ABORT && caster->cFP == before && !blasphemyHits
+                && !affected && blasphemyAnswers == 1
+            : result != ABORT && caster->cFP == before-2
+                && blasphemyHits >= 2 && affected == 2 && !blasphemyAnswers;
+        Error("BLASPHEMY_PROBE: %s before=%d after=%d hits=%d affected=%d declined=%d abort=%d %s",
+            names[test],before,(int)caster->cFP,blasphemyHits,affected,
+            blasphemyAnswers,(int)(result == ABORT),pass ? "PASS" : "FAIL");
+        blasphemyKey = 0;
+    }
+    blasphemyProbeID = 0;
+    for (int i = 0; i < 2; ++i) targets[i]->Remove(true);
+    caster->RemoveStati(STUNNED);
+    caster->GainAbility(CA_SPELLCASTING,-adjustment,0,SS_PERM);
+    caster->SetStatiVal(ALIGNMENT,NULL,oldAlign);
+    caster->Options[OPT_NO_FATIGUE] = oldOption;
+    caster->Level[1] = oldLevel1;
+    caster->cFP = oldFP;
+    caster->CalcValues();
+    theGame->PlayMode = oldPlay;
 }
 
 /* inc-g1q1: fixture-only targeting and observations, inert outside GloryProbe. */
