@@ -43,7 +43,7 @@ OPTIONS=tools/fixtures/options-2026-08-22.dat
 # instead. Prints nothing if no such line exists -- the caller turns that
 # silence into a FAIL.
 _hp_of() { # <dump file>
-    sed -n 's/^HP: *\([0-9][0-9]*\)\/.*Subdual:.*/\1/p' "$1" 2>/dev/null | head -1
+    sed -n -e 's/^HP: *\([0-9][0-9]*\)\/.*Subdual:.*/\1/p' -e 't done' -e 'b' -e ':done' -e 'q' "$1" 2>/dev/null
 }
 
 # The game's own damage figure D for the victim, printed once per combat window.
