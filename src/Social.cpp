@@ -2360,7 +2360,7 @@ void Player::InitCompanions() {
 extern const char* alliesShouldntCast[];
 
 bool Monster::MakeCompanion(Player *p, int16 CompType) {
-    int16 i; rID eID;
+    int16 i, commandType; rID eID;
     int32 cost, own, oldOver, partyAfter; bool refuse;
 
     if (eID = GetStatiEID(SUMMONED))
@@ -2384,7 +2384,13 @@ bool Monster::MakeCompanion(Player *p, int16 CompType) {
        dependence, so Win32 with the original typedefs misbehaves identically.
        Observed on the 8/8 "Group CR Totals" display, inc-omm1, not sent. */
     cost = XCR(ChallengeRating());
-    own = p->GetGroupXCR(CompType) + cost - p->MaxGroupXCR(CompType);
+    /* upstream: admission must charge only the commanded type's XCR pool.
+       Shared arithmetic borrows other types' caps on Win32 too.
+       Traced, inc-sgre, not sent. */
+    commandType = CompType == PHD_COMMAND ? p->CommandTypeOf(this) : -1;
+    own = CompType == PHD_COMMAND
+        ? p->GetCommandXCR(commandType) + cost - p->MaxCommandXCR(commandType)
+        : p->GetGroupXCR(CompType) + cost - p->MaxGroupXCR(CompType);
     if (CompType == PHD_PARTY) {
         refuse = own > 0;
     } else if (CompType == PHD_UNDEAD) {
@@ -2413,7 +2419,9 @@ bool Monster::MakeCompanion(Player *p, int16 CompType) {
     } else {
         /* GetGroupXCR(PHD_PARTY) already counts the existing overflow of the
            ANIMAL/MAGIC/COMMAND pools; subtract it so it is not counted twice. */
-        oldOver = max(0, p->GetGroupXCR(CompType) - p->MaxGroupXCR(CompType));
+        oldOver = CompType == PHD_COMMAND
+            ? max(0, p->GetCommandXCR(commandType) - p->MaxCommandXCR(commandType))
+            : max(0, p->GetGroupXCR(CompType) - p->MaxGroupXCR(CompType));
         partyAfter = p->GetGroupXCR(PHD_PARTY) - oldOver + own;
         refuse = own > 0 && partyAfter > p->MaxGroupXCR(PHD_PARTY);
     }
@@ -2490,7 +2498,40 @@ SkipPHDCheck:
     return true;
 }
 
-int32 Player::GetGroupXCR(int16 CompType, int16 AddCR) {
+/* upstream: each command MA type owns its summed power and XCR pool.
+   Old saves infer the strongest matching type without removing followers;
+   unmatched legacy followers remain in type 0. Shared logic, so Win32
+   conflates the same pools. Traced, inc-sgre, not sent. */
+int16 Player::CommandTypeOf(Creature *c) {
+    int16 type = c->GetStatiMag(CHARMED, CH_COMMAND, this);
+    if (type)
+        return type;
+    int16 best = -32768;
+    for (int16 t = 1; t < MA_LAST; ++t)
+        if (HasStati(COMMAND_ABILITY, t) && c->isMType(t)) {
+            int16 power = SumStatiMag(COMMAND_ABILITY, t);
+            if (power > best) {
+                best = power;
+                type = t;
+            }
+        }
+    return type;
+}
+
+int32 Player::GetCommandXCR(int16 type) {
+    return GetGroupXCR(PHD_COMMAND, 0, type);
+}
+
+int16 Player::MaxCommandCR(int16 type) {
+    return max(1, SumStatiMag(COMMAND_ABILITY, type))
+        + AbilityLevel(CA_COMMAND_AUTHORITY) + HighStatiMag(BONUS_PHD, PHD_COMMAND);
+}
+
+int32 Player::MaxCommandXCR(int16 type) {
+    return XCR(MaxCommandCR(type));
+}
+
+int32 Player::GetGroupXCR(int16 CompType, int16 AddCR, int16 CommandType) {
     int32 i, j, ct; Creature *c; int32 CRCubed;
 
     CRCubed = 0;
@@ -2517,6 +2558,8 @@ int32 Player::GetGroupXCR(int16 CompType, int16 AddCR) {
             else
                 ct = PHD_PARTY;
             if (ct != CompType)
+                continue;
+            if (ct == PHD_COMMAND && CommandType != -1 && CommandTypeOf(c) != CommandType)
                 continue;
             j = c->ChallengeRating();
             /* upstream: a follower's XCR cost must be XCR(j) to match the
@@ -2553,10 +2596,11 @@ int32 Player::GetGroupXCR(int16 CompType, int16 AddCR) {
             CRCubed += GetGroupXCR(PHD_MAGIC);
             CRCubed -= MaxGroupXCR(PHD_MAGIC);
         }
-        if (GetGroupXCR(PHD_COMMAND) > MaxGroupXCR(PHD_COMMAND)) {
-            CRCubed += GetGroupXCR(PHD_COMMAND);
-            CRCubed -= MaxGroupXCR(PHD_COMMAND);
-        }
+        /* upstream: party absorbs the sum of per-type excesses in XCR,
+           never spare capacity in another command type. Plain arithmetic
+           fails on Win32 alike. Traced, inc-sgre, not sent. */
+        for (int16 type = 0; type < MA_LAST; ++type)
+            CRCubed += max(0, GetCommandXCR(type) - MaxCommandXCR(type));
     }
 
     /* PHD_UNDEAD can also overflow into PHD_MAGIC -- any mage can
@@ -2574,6 +2618,13 @@ int32 Player::GetGroupXCR(int16 CompType, int16 AddCR) {
 }
 
 int32 Player::MaxGroupXCR(int16 CompType) {
+    if (CompType == PHD_COMMAND) {
+        int32 total = 0;
+        for (int16 type = 1; type < MA_LAST; ++type)
+            if (HasStati(COMMAND_ABILITY, type))
+                total += MaxCommandXCR(type);
+        return total;
+    }
     return XCR(MaxGroupCR(CompType));
 }
   
@@ -2593,7 +2644,8 @@ int16 Player::MaxGroupCR(int16 CompType) {
     case PHD_COMMAND:
         if (!HasAbility(CA_COMMAND))
             return -10;
-        return max(1, HighStatiMag(COMMAND_ABILITY)) + AbilityLevel(CA_COMMAND_AUTHORITY) + HighStatiMag(BONUS_PHD, CompType);
+        /* Aggregate for legacy callers; admission and overflow use typed pools. */
+        return XCRtoCR(MaxGroupXCR(PHD_COMMAND));
     case PHD_UNDEAD:
         return HighStatiMag(BONUS_PHD, CompType);
     default:
