@@ -358,6 +358,34 @@ void Monster::ChooseAction()
         }
     StatiIterEnd(this)
 
+  /* inc-p0h1: a hesitation curse loses the action half the time, before
+     any decision -- but only ONCE per game tick; see the matching comment
+     in Player::ChooseAction (src/Player.cpp) for why the tick is recorded
+     in the stati's own Val field and why the cost is one standard action
+     at current speed (src/Fight.cpp:1057), not a flat ordinary wait. */
+  if (HasStati(HESITATION))
+    {
+      Status *hs = GetStati(HESITATION);
+      int16 nowTick = (int16)theGame->Turn;
+      if (hs && hs->Val != nowTick) {
+        hs->Val = nowTick;
+        if (getenv("INCURSION_BESTOW_PROBE")) {
+          extern void BestowProbeNoteRoll();
+          BestowProbeNoteRoll();
+        }
+        if (!random(2)) {
+          if (theGame->GetPlayer(0)->XPerceives(this))
+            IDPrint(NULL,"The <Obj> hesitates, unable to act.",this);
+          if (getenv("INCURSION_BESTOW_PROBE")) {
+            extern void BestowProbeNoteLoss();
+            BestowProbeNoteLoss();
+          }
+          Timeout += 3000 / max((100 + Attr[A_SPD_MELEE]*5),10);
+          return;
+        }
+      }
+    }
+
 //RestartLoop:
   inMelee = false; isAfraid = false;
   isSick = false; isBlind = false; isPoisoned = false;
@@ -3069,6 +3097,19 @@ int16* Creature::getTroubles()
             }
       StatiIterEnd(this)
     }
+
+    /* inc-p0h1: a hesitation curse is not ADJUST-type, so the scan above
+       misses it; count it so the monster knows it is cursed. Plain
+       assignment, no StatiIterBreakout -- every other Breakout call in the
+       codebase pairs it with return/goto; used as a bare expression it
+       still falls through to StatiIterEnd's decrement, double-decrementing
+       __Stati.Nested and corrupting it permanently (Observed: 200 calls
+       against a player carrying the curse wedged Nested negative, then
+       every later StatiIter on that player asserted). */
+    StatiIterNature(this,HESITATION)
+      if (S->Source == SS_CURS)
+        Troubles[n++] = TROUBLE_CURSED + P_HIGH*256;
+    StatiIterEnd(this)
 
     if (man <= 50)
       Troubles[n++] = TROUBLE_LOWMANA + P_MODERATE*256;

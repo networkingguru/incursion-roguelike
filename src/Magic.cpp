@@ -3495,6 +3495,447 @@ void GloryProbe(Player *caster) {
     theGame->PlayMode = wasInPlay;
 }
 
+/* inc-p0h1: the runnable oracle behind the Bestow Curse redesign. It needs
+   the live player and map, so it runs from Main.cpp beside the others. Off
+   unless INCURSION_BESTOW_PROBE is set. Every case writes one
+   "BESTOW_PROBE: <case> ... PASS|FAIL|INCONCLUSIVE" line; the menu answers
+   and the timed player keys come from the queues below (src/Wposix.cpp). */
+static int32 bestowMenuQueue[8];
+static int   bestowMenuCount = 0, bestowMenuAt = 0;
+static int   bestowMenuCalls = 0;
+static int   bestowKeyCount = 0;
+/* inc-p0h1 review: the ESC-safety case drives the REAL LMenu (the menu-
+   answer queue above left empty) with a scripted raw-key sequence read
+   through KY_CMD_ARROW_MODE, distinct from bestowKeyCount's NORMAL_MODE
+   queue above. */
+static int32 bestowRawKeyQueue[8];
+static int   bestowRawKeyCount = 0, bestowRawKeyAt = 0;
+/* bestowHesLost counts an actual hesitation loss; bestowRollCount counts
+   every tick the coin flip was actually evaluated (inc-p0h1 review: the
+   roll MUST fire once per game tick, never once per ChooseAction call) --
+   comparing it against the number of ticks a run drove proves the guard,
+   where bestowHesLost alone cannot. */
+static int   bestowHesLost = 0, bestowRollCount = 0;
+
+bool BestowProbeMenuAnswer(const char *title, int32 *out) {
+    ++bestowMenuCalls;
+    if (bestowMenuAt >= bestowMenuCount)
+        return false;
+    *out = bestowMenuQueue[bestowMenuAt++];
+    return true;
+}
+
+int BestowProbeKey() {
+    if (bestowKeyCount <= 0)
+        return 0;
+    --bestowKeyCount;
+    return KY_CMD_REST;
+}
+
+int BestowProbeMenuKey() {
+    if (bestowRawKeyAt >= bestowRawKeyCount)
+        return 0;
+    return bestowRawKeyQueue[bestowRawKeyAt++];
+}
+
+void BestowProbeNoteLoss() { ++bestowHesLost; }
+void BestowProbeNoteRoll() { ++bestowRollCount; }
+
+static bool bestowHas(Creature *c, int nature, rID eid, int val = -1) {
+    return c->HasEffStati((int16)nature, eid, (int16)val);
+}
+
+void BestowProbe(Player *caster) {
+    extern void LOFSetForcedRoll(int8 r);
+    if (!getenv("INCURSION_BESTOW_PROBE"))
+        return;
+    if (!caster || !caster->m) {
+        Error("BESTOW_PROBE: INCONCLUSIVE no live caster/map");
+        return;
+    }
+    const rID curseID = FIND("Bestow Curse"), removeID = FIND("Remove Curse");
+    const rID curseEID = FIND("bestow curse");
+    const rID monsterID = FIND("kobold");
+    if (!curseID || !removeID || !monsterID) {
+        Error("BESTOW_PROBE: INCONCLUSIVE missing resources");
+        return;
+    }
+    Map *mp = caster->m;
+    int16 tx = -1, ty = -1, mx = -1, my = -1;
+    for (int dx = -2; dx <= 2 && tx < 0; ++dx)
+        for (int dy = -2; dy <= 2 && tx < 0; ++dy) {
+            int nx = caster->x + dx, ny = caster->y + dy;
+            if ((!dx && !dy) || !mp->InBounds(nx,ny) || mp->SolidAt(nx,ny)
+                || mp->FCreatureAt(nx,ny)) continue;
+            tx = nx; ty = ny;
+        }
+    for (int dx = -2; dx <= 2 && mx < 0; ++dx)
+        for (int dy = -2; dy <= 2 && mx < 0; ++dy) {
+            int nx = caster->x + dx, ny = caster->y + dy;
+            if ((!dx && !dy) || (nx == tx && ny == ty)
+                || !mp->InBounds(nx,ny) || mp->SolidAt(nx,ny)
+                || mp->FCreatureAt(nx,ny)) continue;
+            mx = nx; my = ny;
+        }
+    if (tx < 0 || mx < 0) {
+        Error("BESTOW_PROBE: INCONCLUSIVE no adjacent floor");
+        return;
+    }
+    const bool wasInPlay = theGame->PlayMode;
+    theGame->PlayMode = true;
+    Monster *target = new Monster(monsterID);
+    TMON(monsterID)->GrantGear(target,monsterID,true);
+    TMON(monsterID)->PEvent(EV_BIRTH,target,monsterID);
+    target->PlaceAt(mp,tx,ty,true);
+    target->Initialize(true);
+    caster->ts.addCreatureTarget(target,TargetEnemy);
+    target->ts.addCreatureTarget(caster,TargetEnemy);
+    /* inc-p0h1: a real monster actor, not the player, for the "monster
+       casts it" case below -- EActor->isPlayer() must read false so the
+       menu gate is skipped the same way it is for a live monster caster,
+       not because the menu queue happens to be empty. Using the player as
+       EActor here previously fell through to the real (non-probe) LMenu,
+       which desynced the whole session (0 turns for the rest of the run). */
+    Monster *monsterCaster = new Monster(monsterID);
+    TMON(monsterID)->GrantGear(monsterCaster,monsterID,true);
+    TMON(monsterID)->PEvent(EV_BIRTH,monsterCaster,monsterID);
+    monsterCaster->PlaceAt(mp,mx,my,true);
+    monsterCaster->Initialize(true);
+
+    EventInfo e; 
+    auto fresh = [&](Creature *t) {
+        t->RemoveStatiSource(SS_CURS);
+        t->CalcValues();
+    };
+    auto castEffect = [&](Creature *actor, Creature *victim, bool isTrap) {
+        EventInfo ev; ev.Clear();
+        ev.EActor = actor; ev.ETarget = victim; ev.EVictim = victim;
+        ev.EMap = mp; ev.eID = curseID; ev.isSpell = true; ev.isTrap = isTrap;
+        TEFF(curseID)->Event(ev, curseID, EV_EFFECT);
+    };
+    auto castHit = [&](Creature *actor, Creature *victim, bool isTrap) {
+        EventInfo ev; ev.Clear();
+        ev.EActor = actor; ev.ETarget = victim; ev.EVictim = victim;
+        ev.EMap = mp; ev.eID = curseID; ev.isSpell = true; ev.isTrap = isTrap;
+        TEFF(curseID)->Event(ev, curseID, EV_MAGIC_HIT);
+        victim->CalcValues();
+    };
+
+    /* -- player menu, ability chosen and honoured ------------------------ */
+    {
+        fresh(target);
+        bestowMenuAt = bestowMenuCount = bestowMenuCalls = 0;
+        bestowMenuQueue[bestowMenuCount++] = 0;   /* ability curse */
+        bestowMenuQueue[bestowMenuCount++] = 3;   /* Intelligence */
+        castEffect(caster, target, false);
+        castHit(caster, target, false);
+        const bool got = bestowHas(target, ADJUST_LUCK, curseEID, A_INT);
+        const int16 mag = target->GetStatiMag(ADJUST_LUCK, A_INT);
+        Error("BESTOW_PROBE: menu-ability calls=%d int=%d mag=%d %s",
+            bestowMenuCalls, (int)got, (int)mag,
+            bestowMenuCalls == 2 && got && mag == -6 ? "PASS" : "FAIL");
+    }
+
+    /* -- player menu, each curse chosen ---------------------------------- */
+    {
+        const int kinds[3] = {0,1,2};
+        const char *names[3] = {"ability","misfortune","hesitation"};
+        for (int k = 0; k < 3; ++k) {
+            fresh(target);
+            bestowMenuAt = bestowMenuCount = bestowMenuCalls = 0;
+            bestowMenuQueue[bestowMenuCount++] = kinds[k];
+            bestowMenuQueue[bestowMenuCount++] = 1; /* Dexterity, if asked */
+            castEffect(caster, target, false);
+            castHit(caster, target, false);
+            bool ok = false;
+            if (k == 0) ok = bestowHas(target,ADJUST_LUCK,curseEID,A_DEX);
+            if (k == 1) ok = bestowHas(target,ADJUST_LUCK,curseEID,A_HIT);
+            if (k == 2) ok = bestowHas(target,HESITATION,curseEID);
+            /* Every curse MUST carry SS_CURS (Remove Curse clears by
+               source, Dispel Magic skips by source) -- checked directly
+               here rather than only through Remove Curse/Dispel Magic
+               downstream, because RemoveEffStati removes every stati
+               sharing one eID once any one of them matches (src/Status.cpp
+               Thing::RemoveEffStati), which would mask a dropped SS_CURS on
+               just one curse, and Dispel Magic's own resist roll can
+               protect a low-CR target regardless of source. */
+            ok = ok && target->HasStatiFromSource(SS_CURS);
+            Error("BESTOW_PROBE: menu-%s present=%d %s", names[k], (int)ok,
+                ok ? "PASS" : "FAIL");
+        }
+    }
+
+    /* -- ESC cannot escape either menu (inc-p0h1 review) -------------------
+       Creature::Cast has already spent mana (LoseMana, src/Magic.cpp:4561)
+       and the casting Timeout ("Timeout += castingTimeout", ~4681) before
+       EV_EFFECT fires (res = ReThrow(EV_EFFECT,e), ~4714, whose result Cast
+       returns UNCHANGED at ~4736 with no rollback of either) -- so an ESC-
+       driven ABORT there would waste the cast, not cancel it. MENU_ESC was
+       dropped from both LMenu calls instead, matching "Contagion"
+       (lib/wspells.irh ~6790, LMenu(0,...) with no MENU_ESC). This drives
+       the REAL LMenu (the menu-answer queue left empty) with two ESC
+       presses then ENTER on each menu, and confirms ESC did nothing: the
+       highlighted (index 0) option lands on both -- the ability curse, then
+       Strength -- so curseAbility never reaches GainPermStati outside
+       0..6, and every queued key is consumed (a still-escapable menu
+       returns after the first ESC, leaving keys unread). */
+    {
+        fresh(target);
+        bestowMenuAt = bestowMenuCount = bestowMenuCalls = 0;   /* real LMenu */
+        bestowRawKeyAt = bestowRawKeyCount = 0;
+        bestowRawKeyQueue[bestowRawKeyCount++] = KY_ESC;
+        bestowRawKeyQueue[bestowRawKeyCount++] = KY_ESC;
+        bestowRawKeyQueue[bestowRawKeyCount++] = KY_ENTER;  /* curseKind=0 */
+        bestowRawKeyQueue[bestowRawKeyCount++] = KY_ESC;
+        bestowRawKeyQueue[bestowRawKeyCount++] = KY_ENTER;  /* curseAbility=0 */
+        castEffect(caster, target, false);
+        castHit(caster, target, false);
+        const bool gotStr = bestowHas(target,ADJUST_LUCK,curseEID,A_STR);
+        const int16 mag = target->GetStatiMag(ADJUST_LUCK, A_STR);
+        const int keysLeft = bestowRawKeyCount - bestowRawKeyAt;
+        Error("BESTOW_PROBE: esc-safety keysLeft=%d str=%d mag=%d %s",
+            keysLeft, (int)gotStr, (int)mag,
+            keysLeft == 0 && gotStr && mag == -6 ? "PASS" : "FAIL");
+    }
+
+    /* -- non-player sources: random, no menu ----------------------------- */
+    auto randomSource = [&](const char *label, Creature *actor, bool isTrap) {
+        int sawAbility = 0, sawMisf = 0, sawHes = 0;
+        for (int i = 0; i < 200; ++i) {
+            fresh(target);
+            bestowMenuAt = bestowMenuCount = bestowMenuCalls = 0;
+            castEffect(actor, target, isTrap);
+            castHit(actor, target, isTrap);
+            if (bestowHas(target,HESITATION,curseEID)) sawHes++;
+            else if (bestowHas(target,ADJUST_LUCK,curseEID,A_HIT)) sawMisf++;
+            else if (target->HasStatiFromSource(SS_CURS)) sawAbility++;
+        }
+        Error("BESTOW_PROBE: %s menuCalls=%d a=%d m=%d h=%d %s", label,
+            bestowMenuCalls, sawAbility, sawMisf, sawHes,
+            bestowMenuCalls == 0 && sawAbility && sawMisf && sawHes
+                ? "PASS" : "FAIL");
+    };
+    /* trap-random: the player is the actor, isTrap=true (a player triggers
+       a cursing trap on himself) -- the gate's !e.isTrap already skips the
+       menu, so this covers the trap path faithfully. monster-random: a real
+       Monster actor, isTrap=false -- the gate's EActor->isPlayer() skips the
+       menu because the actor truly is not the player, not because the probe
+       queue happens to be empty. */
+    randomSource("trap-random", caster, true);
+    randomSource("monster-random", monsterCaster, false);
+
+    /* -- ability curse floors at 1 ----------------------------------------
+       The kobold's own template gives it Str 6 (lib/mon2.irh), so the -6
+       curse drives it to exactly 0 before the floor and to 1 after -- a
+       real exercise of the floor in src/Values.cpp, not a forced value. */
+    {
+        fresh(target);
+        bestowMenuAt = bestowMenuCount = bestowMenuCalls = 0;
+        bestowMenuQueue[bestowMenuCount++] = 0;
+        bestowMenuQueue[bestowMenuCount++] = 0;   /* Strength */
+        const int16 before = target->Attr[A_STR];
+        castEffect(caster, target, false);
+        castHit(caster, target, false);
+        const int16 mag = target->GetStatiMag(ADJUST_LUCK, A_STR);
+        const int16 after = target->Attr[A_STR];
+        Error("BESTOW_PROBE: ability-floor before=%d mag=%d after=%d %s",
+            (int)before, (int)mag, (int)after,
+            before == 6 && mag == -6 && after == 1 ? "PASS" : "FAIL");
+    }
+
+    /* -- misfortune: -4 attack/saves/skill, AC unchanged ----------------- */
+    {
+        fresh(target);
+        bestowMenuAt = bestowMenuCount = bestowMenuCalls = 0;
+        bestowMenuQueue[bestowMenuCount++] = 1;
+        bestowMenuQueue[bestowMenuCount++] = 1;
+        const int16 aDef0 = target->Attr[A_DEF];
+        const int16 hit0 = target->Attr[A_HIT_MELEE];
+        const int16 f0 = target->Attr[A_SAV_FORT], r0 = target->Attr[A_SAV_REF],
+                    w0 = target->Attr[A_SAV_WILL];
+        const int16 sk0 = target->SkillLevel(SK_SPOT);
+        castEffect(caster, target, false);
+        castHit(caster, target, false);
+        const int16 aDef1 = target->Attr[A_DEF];
+        const int16 hit1 = target->Attr[A_HIT_MELEE];
+        const int16 f1 = target->Attr[A_SAV_FORT], r1 = target->Attr[A_SAV_REF],
+                    w1 = target->Attr[A_SAV_WILL];
+        const int16 sk1 = target->SkillLevel(SK_SPOT);
+        Error("BESTOW_PROBE: misfortune hit=%d sav=%d,%d,%d skill=%d ac=%d %s",
+            (int)(hit1-hit0),(int)(f1-f0),(int)(r1-r0),(int)(w1-w0),
+            (int)(sk1-sk0),(int)(aDef1-aDef0),
+            hit1-hit0 == -4 && f1-f0 == -4 && r1-r0 == -4 && w1-w0 == -4
+              && sk1-sk0 == -4 && aDef1-aDef0 == 0 ? "PASS" : "FAIL");
+    }
+
+    /* -- hesitation share: 200 timed actions, player and monster ---------
+       Each iteration is its own game tick (theGame->Turn advances once per
+       iteration, matching src/Main.cpp's real per-tick loop), so the
+       once-per-tick guard (src/Player.cpp, src/Monster.cpp) sees a genuine
+       new tick every time. After any tick whose roll passed, one EXTRA
+       same-tick call is made (Timeout zeroed, Turn unchanged) to stand in
+       for a free action leaving ChooseAction free to run again in the same
+       tick (src/Main.cpp: "while (t->Type==T_PLAYER && !t->Timeout &&
+       !t->HasStati(ACTING))") -- bestowRollCount, incremented only where
+       the coin flip is actually evaluated, proves that extra call does not
+       re-roll. A loss's own Timeout charge is read back and compared
+       against the standard-action formula Creature::Attack charges a melee
+       swing (3000/max(100+Attr[A_SPD_MELEE]*5,10), src/Fight.cpp:1057), and
+       the "time lost" share is measured on that cost, not the flat 15 an
+       ordinary wait charges. */
+    auto hesitateShare = [&](const char *label, Creature *c, bool isPlayer) {
+        fresh(c);
+        c->GainPermStati(HESITATION,NULL,SS_CURS,-1,0,curseEID);
+        c->CalcValues();
+        bestowHesLost = 0;
+        bestowRollCount = 0;
+        const int runs = 200;
+        const int stdCost = 3000 / max((100 + c->Attr[A_SPD_MELEE]*5),10);
+        int observedLossCost = -1, extraCalls = 0, extraRolls = 0;
+        for (int i = 0; i < runs; ++i) {
+            theGame->Turn++;
+            c->Timeout = 0;
+            const int lostBefore = bestowHesLost;
+            if (isPlayer) {
+                bestowKeyCount = 1;   /* one '.' -> KY_CMD_REST -> Timeout 15 */
+                ((Player*)c)->ChooseAction();
+            } else {
+                ((Monster*)c)->ChooseAction();
+            }
+            if (bestowHesLost > lostBefore && observedLossCost < 0)
+                observedLossCost = c->Timeout;
+            if (bestowHesLost == lostBefore) {
+                extraCalls++;
+                c->Timeout = 0;
+                const int rollsBefore2 = bestowRollCount;
+                if (isPlayer) {
+                    bestowKeyCount = 1;
+                    ((Player*)c)->ChooseAction();
+                } else {
+                    ((Monster*)c)->ChooseAction();
+                }
+                if (bestowRollCount > rollsBefore2)
+                    extraRolls++;
+            }
+        }
+        const int lost = bestowHesLost;
+        const int pct = (100 * lost) / runs;
+        Error("BESTOW_PROBE: hesitate-%s lost=%d runs=%d pct=%d %s",
+            label, lost, runs, pct,
+            pct >= 35 && pct <= 65 ? "PASS" : "FAIL");
+        Error("BESTOW_PROBE: hesitate-%s-once-per-tick rolls=%d ticks=%d "
+            "extraCalls=%d extraRolls=%d %s",
+            label, bestowRollCount, runs, extraCalls, extraRolls,
+            bestowRollCount == runs && extraRolls == 0 ? "PASS" : "FAIL");
+        const int timePct = (observedLossCost > 0 && stdCost > 0)
+            ? (100 * (lost * observedLossCost)) / (runs * stdCost) : -1;
+        Error("BESTOW_PROBE: hesitate-%s-time cost=%d stdCost=%d timepct=%d %s",
+            label, observedLossCost, stdCost, timePct,
+            observedLossCost == stdCost && timePct >= 35 && timePct <= 65
+                ? "PASS" : "FAIL");
+        /* inc-p0h1: the player case curses the LIVE caster -- restore him
+           (and his Timeout) so the rest of the headless session, and the
+           key script driving it, plays on as an uncursed character. */
+        fresh(c);
+        c->Timeout = 0;
+    };
+    hesitateShare("player", caster, true);
+    hesitateShare("monster", target, false);
+
+    /* -- remove curse clears all three, dispel clears none ---------------
+       Cast the real spell three times (menu path, one curse per cast) so
+       this exercises whatever Source/eID the script itself grants, rather
+       than a hand-built stati that would pass even if the script forgot
+       SS_CURS on one curse. */
+    {
+        fresh(target);
+        for (int k = 0; k < 3; ++k) {
+            bestowMenuAt = bestowMenuCount = bestowMenuCalls = 0;
+            bestowMenuQueue[bestowMenuCount++] = k;
+            bestowMenuQueue[bestowMenuCount++] = 2;   /* Constitution, if asked */
+            castEffect(caster, target, false);
+            castHit(caster, target, false);
+        }
+        target->CalcValues();
+        EventInfo rv; rv.Clear();
+        rv.EActor = caster; rv.ETarget = target; rv.EVictim = target;
+        rv.EMap = mp; rv.eID = removeID; rv.isSpell = true;
+        rv.vCasterLev = 20;
+        TEFF(removeID)->Event(rv,removeID,EV_MAGIC_HIT);
+        target->CalcValues();
+        /* Remove Curse clears by Source (RemoveStatiSource(SS_CURS),
+           lib/pspells.irh); a curse granted under any other source would
+           survive this call while HasStatiFromSource(SS_CURS) still reads
+           false once the other two are gone, so the nature itself is
+           checked too, not just the source bucket. */
+        const bool gone = !target->HasStatiFromSource(SS_CURS)
+            && !bestowHas(target,ADJUST_LUCK,curseEID,A_CON)
+            && !target->HasStati(HESITATION);
+        Error("BESTOW_PROBE: remove-curse cleared=%d %s", (int)gone,
+            gone ? "PASS" : "FAIL");
+    }
+
+    /* -- repeat curse does nothing --------------------------------------- */
+    {
+        fresh(target);
+        bestowMenuAt = bestowMenuCount = bestowMenuCalls = 0;
+        bestowMenuQueue[bestowMenuCount++] = 2;   /* hesitation */
+        bestowMenuQueue[bestowMenuCount++] = 1;
+        castEffect(caster, target, false);
+        castHit(caster, target, false);
+        const int first = target->CountEffStati(HESITATION,curseEID);
+        castEffect(caster, target, false);
+        castHit(caster, target, false);
+        const int second = target->CountEffStati(HESITATION,curseEID);
+        Error("BESTOW_PROBE: repeat-curse first=%d second=%d %s",
+            first, second, first == 1 && second == 1 ? "PASS" : "FAIL");
+    }
+
+    /* -- dispel magic clears no curse (SS_CURS is skipped) ---------------
+       Cast the real spell (menu path, hesitation) rather than hand-build
+       the stati, and check the NATURE, not only the Source bucket -- a
+       curse a dropped SS_CURS moved to another source would still read
+       "no SS_CURS left" after Dispel Magic even though the affliction
+       itself is gone, which is the opposite of what this proves. */
+    {
+        fresh(target);
+        bestowMenuAt = bestowMenuCount = bestowMenuCalls = 0;
+        bestowMenuQueue[bestowMenuCount++] = 2;   /* hesitation */
+        bestowMenuQueue[bestowMenuCount++] = 2;
+        castEffect(caster, target, false);
+        castHit(caster, target, false);
+        const rID dispelID = FIND("Dispel Magic");
+        bool still;
+        if (!dispelID) {
+            Error("BESTOW_PROBE: dispel-keeps INCONCLUSIVE no Dispel Magic");
+        } else {
+            EventInfo dv; dv.Clear();
+            dv.EActor = caster; dv.ETarget = target; dv.EVictim = target;
+            dv.EMap = mp; dv.eID = dispelID; dv.isSpell = true;
+            dv.EMagic = TEFF(dispelID)->Vals(0);
+            dv.vCasterLev = 20;
+            if (dv.EMagic) {
+                dv.EMagic->xval = DIS_DISPEL;
+                dv.EMagic->yval = 0;
+            }
+            LOFSetForcedRoll(20);
+            Magic mg;
+            mg.MagicHit(dv);
+            LOFSetForcedRoll(0);
+            target->CalcValues();
+            still = target->HasStati(HESITATION) && bestowHas(target,HESITATION,curseEID);
+            Error("BESTOW_PROBE: dispel-keeps curse=%d %s", (int)still,
+                still ? "PASS" : "FAIL");
+        }
+    }
+
+    fresh(target);
+    caster->CalcValues();
+    target->Remove(true);
+    monsterCaster->Remove(true);
+    theGame->PlayMode = wasInPlay;
+}
+
 /* inc-7xcu: opt-in live Bane radius oracle; no spell data is overridden. */
 void BaneRadiusProbe(Player *caster) {
     if (!getenv("INCURSION_BANE_PROBE"))

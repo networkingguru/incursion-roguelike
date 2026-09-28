@@ -1,0 +1,100 @@
+# Gameplay reproduction for inc-p0h1 (Bestow Curse redesign), the RANDOM
+# (no player-choice) code path -- what master runs unconditionally, and what
+# the branch runs for every non-player caster.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/bestow-curse-random.keys 1
+#
+# Priest, not the usual barbarian: Bestow Curse is a Priest spell, and a
+# player must actually cast one to see how the game shows the curse. Wizard
+# mode supplies the spell and the target, following the pattern already
+# proven in tools/keys/sanctuary-strike.keys and tools/keys/lof-magic-missile.keys:
+#   * "Learn Any Spell" grants Bestow Curse as an innate spell (SP_KNOWN|
+#     SP_PRIMAL|SP_INNATE, src/Debug.cpp:862), so no character level or
+#     mana-pool arithmetic stands between chargen and the cast.
+#   * "Monster Summoning" places a goblin one square in the named direction,
+#     a sapient (MA_SAPIENT) target the spell's own Flags: EF_LIM_MTYPE
+#     requires.
+#   * "@while "more --" SPACE" after ENTER, exactly as lof-magic-missile.keys
+#     does: the cast's own messages can outrun the message window, and the
+#     game pages with a "-- more --" prompt that swallows the next scripted
+#     key if it is not cleared first.
+#
+# A fresh goblin per cast, not one goblin re-cast, because
+# Creature::Invoke's own already-has-this-effect refusal (src/Magic.cpp
+# ~4838, "a second invocation would have no effect") fires on ANY second
+# successful landing against the SAME victim, so a repeat cast cannot be
+# trusted to show a second, independent random(8) roll.
+
+@include chargen-priest.keys
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+w
+@choose "Learn Any Spell"
+"Bestow Curse"
+ENTER
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+@dump:goblin-1-summoned
+
+m
+@choose "Bestow Curse"
+RIGHT
+ENTER
+@while "more --" SPACE
+@dump:cast-1
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+UP ENTER
+@dump:goblin-2-summoned
+
+m
+@choose "Bestow Curse"
+UP
+ENTER
+@while "more --" SPACE
+@dump:cast-2
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+DOWN ENTER
+@dump:goblin-3-summoned
+
+m
+@choose "Bestow Curse"
+DOWN
+ENTER
+@while "more --" SPACE
+@dump:cast-3
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+HOME ENTER
+@dump:goblin-4-summoned
+
+m
+@choose "Bestow Curse"
+HOME
+ENTER
+@while "more --" SPACE
+@dump:cast-4
+
+@quit

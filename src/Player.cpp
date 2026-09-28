@@ -306,6 +306,39 @@ void Player::ChooseAction() {
         }
     StatiIterEnd(this)
 
+    /* inc-p0h1: a hesitation curse loses the action half the time, before
+       any prompt -- but only ONCE per game tick. ChooseAction can run again
+       in the same tick after a free action leaves Timeout at 0 (src/Main.cpp:
+       "while (t->Type==T_PLAYER && !t->Timeout && !t->HasStati(ACTING))"), so
+       the last tick checked (theGame->Turn) is recorded in the HESITATION
+       stati's own Val field -- no new class member, so saves stay safe -- and
+       a tick already resolved is not re-rolled. A lost action costs one
+       standard action at the creature's current speed, the same formula
+       Creature::Attack charges a melee swing (src/Fight.cpp:1057,
+       "Timeout += 3000/max(100+Attr[A_SPD_MELEE]*5,10)"), not a flat ordinary
+       wait -- a flat 15 against a ~30-tick real action undercharged the
+       curse to about a third of the creature's time instead of half. */
+    if (HasStati(HESITATION)) {
+        Status *hs = GetStati(HESITATION);
+        int16 nowTick = (int16)theGame->Turn;
+        if (hs && hs->Val != nowTick) {
+            hs->Val = nowTick;
+            if (getenv("INCURSION_BESTOW_PROBE")) {
+                extern void BestowProbeNoteRoll();
+                BestowProbeNoteRoll();
+            }
+            if (!random(2)) {
+                IPrint("You hesitate, unable to act.");
+                if (getenv("INCURSION_BESTOW_PROBE")) {
+                    extern void BestowProbeNoteLoss();
+                    BestowProbeNoteLoss();
+                }
+                Timeout += 3000 / max((100 + Attr[A_SPD_MELEE]*5),10);
+                return;
+            }
+        }
+    }
+
         if (HasStati(PARALYSIS)) {
         IsParalyzed:
             switch (ChoicePrompt("You are paralyzed. Pray, magic or wait 10/20/30?", "pm123", '1')) {

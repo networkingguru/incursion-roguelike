@@ -1,0 +1,82 @@
+# Gameplay reproduction for inc-p0h1 (Bestow Curse redesign), the PLAYER
+# MENU code path this bead adds -- only reachable on the branch build --
+# picking the FIRST of its three curses: a -6 penalty to one ability score.
+# tools/keys/bestow-curse-menu-misfortune.keys and
+# tools/keys/bestow-curse-menu-hesitation.keys are its siblings, one script
+# per curse, because the hesitation curse needs the goblin left UNFROZEN
+# (it must actually try, and fail, to act) while this one and the
+# misfortune one want it frozen (so retaliation doesn't clutter the log).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/bestow-curse-menu-ability.keys 1
+#
+# Wizard mode sets up the scenario, following tools/keys/sanctuary-strike.keys
+# and tools/keys/lof-magic-missile.keys: a priest, Freeze Monsters (Wizard
+# Mode Switches row 11) so the summoned goblin never acts on its own, Learn
+# Any Spell for Bestow Curse (SP_KNOWN|SP_PRIMAL|SP_INNATE, src/Debug.cpp:862).
+#
+# The cast dumps the screen twice: once right after firing at the target, to
+# quote the "-- Choose a Curse: --" menu itself and the "-- Choose an
+# Ability: --" submenu before any key answers either, and once after the
+# pick resolves, to quote the goblin's own Dump() showing the ability score
+# actually moved. "You feel afflicted!" (EVictim->IPrint in lib/pspells.irh)
+# never appears on screen for a monster victim: Creature::IPrint
+# (src/Message.cpp:741) is a no-op stub (its body is commented out), so that
+# line is silent for anyone but a player victim -- upstream/existing
+# behaviour, not part of this bead. The Will Save roll (visible in the
+# message log this script also dumps) and the Dump() delta are the actual
+# evidence that the curse landed.
+
+@include chargen-priest.keys
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+w
+@choose "Learn Any Spell"
+"Bestow Curse"
+ENTER
+
+# --- curse 1: the -6 ability penalty, on the goblin placed east ---------
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+@dump:goblin-east-summoned
+
+w
+@choose "Examine Nearby Things"
+RIGHT
+@dump:goblin-east-before
+ESC
+
+m
+@choose "Bestow Curse"
+RIGHT
+ENTER
+@dump:curse-menu
+
+@choose "a -6 penalty to one ability score"
+@dump:ability-menu
+
+@choose "Strength"
+@while "more --" SPACE
+@dump:cast-ability
+
+w
+@choose "Examine Nearby Things"
+RIGHT
+@dump:goblin-east-after
+ESC
+
+v
+@dump:message-log
+@while "Messages" ESC
+
+@quit
