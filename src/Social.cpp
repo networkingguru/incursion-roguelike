@@ -2387,6 +2387,29 @@ bool Monster::MakeCompanion(Player *p, int16 CompType) {
     own = p->GetGroupXCR(CompType) + cost - p->MaxGroupXCR(CompType);
     if (CompType == PHD_PARTY) {
         refuse = own > 0;
+    } else if (CompType == PHD_UNDEAD) {
+        /* upstream: created undead are admitted against undead, then magic,
+           then party, matching the accounting GetGroupXCR already uses. The
+           old path charged an undead deficit straight to the party pool,
+           bypassing magic, and subtracted an overflow the party sum never
+           held. GetGroupXCR(PHD_MAGIC) already counts the old undead
+           overflow oU, so subtract it before adding the new one.
+           Plain arithmetic, no typedef dependence: Win32 misbehaves alike.
+           Traced, inc-1n74, not sent. */
+        int32 oU, magicAfter, oM;
+        if (own <= 0) {
+            refuse = false;
+        } else {
+            oU = max(0, p->GetGroupXCR(PHD_UNDEAD) - p->MaxGroupXCR(PHD_UNDEAD));
+            magicAfter = p->GetGroupXCR(PHD_MAGIC) - oU + own;
+            if (magicAfter <= p->MaxGroupXCR(PHD_MAGIC)) {
+                refuse = false;
+            } else {
+                oM = max(0, p->GetGroupXCR(PHD_MAGIC) - p->MaxGroupXCR(PHD_MAGIC));
+                partyAfter = p->GetGroupXCR(PHD_PARTY) - oM + (magicAfter - p->MaxGroupXCR(PHD_MAGIC));
+                refuse = partyAfter > p->MaxGroupXCR(PHD_PARTY);
+            }
+        }
     } else {
         /* GetGroupXCR(PHD_PARTY) already counts the existing overflow of the
            ANIMAL/MAGIC/COMMAND pools; subtract it so it is not counted twice. */
@@ -2517,16 +2540,20 @@ int32 Player::GetGroupXCR(int16 CompType, int16 AddCR) {
        level ranger has 15 HD of animals, then he must have
        3 fewer HD worth of party members. */
 
+    /* Compared in XCR, not rounded CR, so the added overflow is exactly
+       the excess over the pool's own limit. The old CR comparison summed
+       a CR-rounded overflow, which did not equal the deficit the
+       admission test subtracts. */
     if (CompType == PHD_PARTY) {
-        if (GetGroupCR(PHD_ANIMAL) > max(0, MaxGroupCR(PHD_ANIMAL))) {
+        if (GetGroupXCR(PHD_ANIMAL) > MaxGroupXCR(PHD_ANIMAL)) {
             CRCubed += GetGroupXCR(PHD_ANIMAL);
             CRCubed -= MaxGroupXCR(PHD_ANIMAL);
         }
-        if (GetGroupCR(PHD_MAGIC) > max(0, MaxGroupCR(PHD_MAGIC))) {
+        if (GetGroupXCR(PHD_MAGIC) > MaxGroupXCR(PHD_MAGIC)) {
             CRCubed += GetGroupXCR(PHD_MAGIC);
             CRCubed -= MaxGroupXCR(PHD_MAGIC);
         }
-        if (GetGroupCR(PHD_COMMAND) > max(0, MaxGroupCR(PHD_COMMAND))) {
+        if (GetGroupXCR(PHD_COMMAND) > MaxGroupXCR(PHD_COMMAND)) {
             CRCubed += GetGroupXCR(PHD_COMMAND);
             CRCubed -= MaxGroupXCR(PHD_COMMAND);
         }
@@ -2538,7 +2565,7 @@ int32 Player::GetGroupXCR(int16 CompType, int16 AddCR) {
        bonus undead pool and the normal magic pool to control created
        undead. */
     if (CompType == PHD_MAGIC)
-        if (GetGroupCR(PHD_UNDEAD) > max(0, MaxGroupCR(PHD_UNDEAD))) {
+        if (GetGroupXCR(PHD_UNDEAD) > MaxGroupXCR(PHD_UNDEAD)) {
             CRCubed += GetGroupXCR(PHD_UNDEAD);
             CRCubed -= MaxGroupXCR(PHD_UNDEAD);
         }
