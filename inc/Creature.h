@@ -678,6 +678,7 @@ class Character: public Creature
     friend class VMachine;
     friend class Player;
     friend void MusicChoirProbe(Player *caster);
+    friend void BlasphemyProbe(Player *caster);
     protected:
 	    hObj Inv[NUM_SLOTS];
       hObj defMelee, defRanged, defAmmo, defOffhand;
@@ -1327,7 +1328,11 @@ class Player: public Character
       void SummonAnimalCompanion(bool mount);
       void WildShape();
       
-      int32 GetGroupXCR(int16 CompType, int16 AddCR=0);
+      int32 GetGroupXCR(int16 CompType, int16 AddCR=0, int16 CommandType=-1);
+      int16 CommandTypeOf(Creature *c);
+      int32 GetCommandXCR(int16 type);
+      int16 MaxCommandCR(int16 type);
+      int32 MaxCommandXCR(int16 type);
       int16 GetGroupCR(int16 CompType, int16 AddCR=0)
         { return XCRtoCR(GetGroupXCR(CompType,AddCR)); }
       int16 MaxGroupCR(int16 CompType);

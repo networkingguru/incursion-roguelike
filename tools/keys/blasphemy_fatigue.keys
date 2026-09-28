@@ -1,0 +1,5 @@
+# inc-fdi2: the probe casts through EV_EFFECT and answers the one exhaustion
+# prompt from its own key queue; these keys only cover normal play.
+SPACE*80
+ESC*20
+@quit

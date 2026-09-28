@@ -4690,7 +4690,9 @@ HasComponent:
 							TPrint(e, "The <EVictim> yields to your will.",
 								"You fall under the <EActor>'s thrall.",
 								"The <EVictim> bows down to the <EActor>.");
-							e.EVictim->GainPermStati(CHARMED, e.EActor, SS_MISC, CH_COMMAND, 0, 0);
+							/* upstream: retain the commanded MA type for its own pool;
+							   shared logic loses it on Win32 too. Traced, inc-sgre, not sent. */
+							e.EVictim->GainPermStati(CHARMED, e.EActor, SS_MISC, CH_COMMAND, e.EParam, 0);
 						} else if (mag > 10) {
 							if (mag > 20) {
 								TPrint(e, "The <EVictim> is paralyzed with awe.",

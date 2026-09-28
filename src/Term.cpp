@@ -3330,6 +3330,14 @@ rID TextTerm::ChooseResource(const char*prompt, int16 RType, rID eID) {
 
 bool TextTerm::yn(const char*msg) {
   	int16 ch='a';
+    /* inc-fdi2: when the Blasphemy probe has armed an answer for the
+       paradox-of-exhaustion prompt, take it; BlasphemyProbeKey returns 0 at
+       every other time, so live play is untouched. */
+    {
+        extern int BlasphemyProbeKey();
+        int key = BlasphemyProbeKey();
+        if (key) return key == 'y';
+    }
     if (Mode == MO_RECREATE)
       {
         ASSERT(strncmp(RInf.Rsp[RInf.cRsp].Question,msg,31) == 0);
