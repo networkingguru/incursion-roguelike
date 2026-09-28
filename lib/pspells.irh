@@ -1901,7 +1901,12 @@ Priest  / Sorcerer Spell "Enthrall" : EA_GENERIC
 
 Priest Spell "Find Traps" : EA_INFLICT
   { SC_DIV; IS_A_BUFF(COST_2); Level 2;
-    xval: SKILL_BONUS; yval: SK_SEARCH; pval: LEVEL_1PER1;
+    // upstream: the Desc above states a +10 maximum that the script never
+    // applied -- pval LEVEL_1PER1 let the Search bonus grow without limit; the
+    // same data ships on Win32 and misbehaves identically there, so it is not a
+    // port artefact. Observed (priest 11, effective CL 12, read +12 enhance
+    // before the fix); inc-8mg9; not sent.
+    xval: SKILL_BONUS; yval: SK_SEARCH; pval: LEVEL_MAX10;
     Desc: "You gain intuitive insight into the workings of traps and 
     hidden things. You gain an bonus equal to your caster
     level (maximum +10) on Search checks made while the spell is
