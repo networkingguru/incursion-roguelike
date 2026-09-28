@@ -5951,7 +5951,14 @@ Priest Spell "Blasphemy" : EA_GENERIC
       above, good outsiders must succeed in a Will saving throw or be
       banished instantly -- this is the only part of the spell subject
       to a saving throw.";
-    On Event EV_MAGIC_HIT {
+    On Event EV_EFFECT {
+      /* upstream: the Desc promised a two-point fatigue cost that the script
+         never charged; Observed, inc-fdi2, not sent. */
+      if (!EActor->LoseFatigue(2,true))
+        return ABORT;
+      return NOTHING;
+      },
+    EV_MAGIC_HIT {
       int16 vPower, vCR;
       vPower = EActor->CasterLev() + EActor->Mod(A_CHA);
       vCR    = EVictim->ChallengeRating();

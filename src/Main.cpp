@@ -294,6 +294,10 @@ void Game::Play() {
     extern void BaneRadiusProbe(Player *caster);
     BaneRadiusProbe(pp);
 
+    /* inc-fdi2: opt-in live Blasphemy fatigue and area-hit oracle. */
+    extern void BlasphemyProbe(Player *caster);
+    BlasphemyProbe(pp);
+
     /* inc-g1q1: opt-in live bolt count and fear-save oracle. */
     extern void GloryProbe(Player *caster);
     GloryProbe(pp);
