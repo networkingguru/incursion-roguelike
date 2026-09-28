@@ -1,0 +1,47 @@
+# Reproduction only for inc-8mg9; no game-code or data changes.
+# Run from repository root, with a fresh INCURSION_RUN_DIR under logs/:
+# INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_RUN_DIR="$PWD/logs/inc-8mg9/control-fresh" \
+#   tools/headless.sh tools/keys/find-traps-control.keys 1
+# Route: chargen-priest, wizard Free Advancement, Priest 1.
+# Learn Any Spell sets SP_INNATE. CalcEffect (src/Magic.cpp) therefore uses
+# ChallengeRating (sum of character class levels), then adds the sheet's
+# Divination +1: effective Find Traps caster level 2, not 1.
+# Observed Search: +2 before, +4 after, delta +2.
+# W writes full sheets beneath the run's logs/; @dump captures skill totals.
+# Search has zero ranks and is omitted from the full sheet before the cast.
+# ESC y aborts the skill manager without allocating any ranks.
+@include chargen-priest.keys
+ESC
+w y
+@choose "Wizard Mode Switches"
+DOWN*2 SPACE # Free Advancement
+DOWN*5 SPACE # Infinite Mana
+DOWN*3 SPACE # Freeze Monsters
+ESC
+w
+@choose "Learn Any Spell"
+"Find Traps" ENTER
+d
+@dump:sheet-before
+W
+"find-traps-before" ENTER
+S
+@cursorto:mark "Searching" DOWN
+@dump:search-before
+ESC y
+ESC
+m
+@choose "Find Traps"
+@while "more --" SPACE
+@dump:cast
+d
+@dump:sheet-after
+W
+"find-traps-after" ENTER
+S
+@cursorto:mark "Searching" DOWN
+@dump:search-after
+ESC y
+ESC
+@quit
