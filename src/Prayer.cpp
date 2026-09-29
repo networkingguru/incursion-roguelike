@@ -1560,7 +1560,15 @@ EvReturn Character::IBlessing(EventInfo &e)
     bool isChosen;
 
     qual = 0;
-    if (e.EItem->isType(T_WEAPON))
+    /* upstream: the chosen weapon quality applies to every weapon type the
+       engine builds as a combat weapon -- T_WEAPON, T_BOW, T_MISSILE (bows,
+       crossbows, slings, blowpipes, and ammunition) -- not T_WEAPON alone;
+       T_STAFF is excluded. The old exact-type test silently blessed Maeve's
+       short bow and Xavias's arbalest with no quality. The type comparison is
+       identical on Win32 and the original compiler, present since the 2014
+       import (7b8504a). Observed, inc-rnp9, not sent. */
+    if (e.EItem->isType(T_WEAPON) || e.EItem->isType(T_BOW) ||
+        e.EItem->isType(T_MISSILE))
       qual = (int8)TGOD(e.eID)->GetConst(CHOSEN_WEAPON_QUALITY);
     else if (e.EItem->isType(T_SHIELD))
       qual = (int8)TGOD(e.eID)->GetConst(CHOSEN_SHIELD_QUALITY);
@@ -1610,6 +1618,68 @@ SkipQuality:
     return DONE;
 }    
   
+/* INCURSION_IBLESSING_PROBE -- the runnable oracle behind the inc-rnp9 fix
+   above. Off unless set; run from Game::Play (src/Main.cpp) on the live
+   player. Builds a +1 item of each weapon type, makes the player a follower
+   of the named god with ample favour, calls Character::IBlessing exactly as
+   the altar does, and logs whether the item gained the god's chosen quality.
+   tools/check_bow_blessing.sh reads the four lines. inc-rnp9. */
+void Character::IBlessingProbe()
+{
+    if (!getenv("INCURSION_IBLESSING_PROBE"))
+        return;
+
+    struct { const char *item, *god; } CASE[4] = {
+        { "arbalest",     "Xavias" },
+        { "short bow",    "Maeve" },
+        { "long sword",   "Asherath" },
+        { "crossbow bolt","Maeve" } };
+
+    rID oldGod = GodID;
+    int16 oldFav[MAX_GODS];
+    for (int g = 0; g < MAX_GODS; g++)
+        oldFav[g] = FavourLev[g];
+
+    for (int c = 0; c < 4; c++) {
+        rID iID = FIND(CASE[c].item), gID = FIND(CASE[c].god);
+        if (!iID || !gID) {
+            Error("IBLESSING_PROBE case=%s INCONCLUSIVE missing resource",
+                CASE[c].item);
+            continue;
+        }
+        int16 gn = theGame->GodNum(gID);
+        int8 qual = (int8)TGOD(gID)->GetConst(CHOSEN_WEAPON_QUALITY);
+        Item *it = Item::Create(iID);
+        if (!it) {
+            Error("IBLESSING_PROBE case=%s INCONCLUSIVE no item", CASE[c].item);
+            continue;
+        }
+        it->SetInherentPlus(1);
+        it->SetQuantity(5);
+
+        GodID = gID;
+        FavourLev[gn] = 9;
+
+        EventInfo e;
+        e.Clear();
+        e.EActor = this;
+        e.EItem = it;
+        e.eID = gID;
+        e.isItem = true;
+        IBlessing(e);
+
+        Error("IBLESSING_PROBE case=%s god=%s qual=%d plus=%d has=%d %s",
+            CASE[c].item, CASE[c].god, (int)qual,
+            (int)it->GetInherentPlus(), (int)it->HasQuality(qual),
+            it->HasQuality(qual) ? "PASS" : "FAIL");
+        delete it;
+    }
+
+    GodID = oldGod;
+    for (int g = 0; g < MAX_GODS; g++)
+        FavourLev[g] = oldFav[g];
+}
+
 void Character::Transgress(rID gID, int16 mag, bool doWrath, const char *reason) {
     EventInfo e;
     

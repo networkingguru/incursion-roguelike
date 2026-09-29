@@ -870,6 +870,7 @@ class Character: public Creature
       EvReturn GiveAid(EventInfo &e);
       EvReturn Retribution(EventInfo &e);
       EvReturn IBlessing(EventInfo &e);
+      void IBlessingProbe();
       EvReturn GodDeflect(EventInfo &e);
       
       void GrantSymbol(rID gID);
