@@ -3296,7 +3296,17 @@ typedef signed int        hObj;
 #define EF_NEEDS_DARK 106
 /* inc-w26h: this grant protects the bearer's gear, not only the bearer. */
 #define EF_PROTECTS_ITEMS 107
-#define EF_LAST       108
+/* inc-kgzx: this effect spends a shared pool of Hit Dice on its targets
+   instead of striking every one of them independently. Magic::AGlobe reads
+   it to pool the effect's own pval dice once per cast and walk the eligible
+   creatures fewest-Hit-Dice-first (src/Magic.cpp). */
+#define EF_HD_POOL    108
+/* ponytail: the pool never touches a creature of EF_HD_POOL_CAP Hit Dice or
+   more. Fixed at 9 because the only user today, Undeath to Death via Circle
+   of Death, has 9; if a second HD-pool spell needs a different cap, promote
+   this to an effect field rather than growing the constant. inc-kgzx. */
+#define EF_HD_POOL_CAP 9
+#define EF_LAST       109
 
 
 #define EA_BLAST    1      /* xval = DType, pval = Damage */

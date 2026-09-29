@@ -5876,24 +5876,25 @@ Priest Spell "Holy Summoning VI" : EA_SUMMON
 // with the original compiler, so it is upstream, not a port artefact. Observed;
 // inc-kgzx; not sent.
 Wizard / Priest Spell "Undeath to Death" : EA_BLAST
-  { SC_NEC; aval: AR_BALL; lval: 3; cval: WHITE; 
-    Base: SP_EASY; Cost: 12; Level: 6; qval: Q_TAR; pval: (LEVEL_1PER1)d8;
-    Desc: "Destroys any undead creature caught within a 60-foot globe
-      centered on the caster that currently has fewer than (1d8 per 
-      caster level) hit points. The effect is all-or-nothing, and no 
-      saving throw is allowed.";
+  { SC_NEC; aval: AR_GLOBE; lval: 4; cval: WHITE; 
+    Base: SP_EASY; Cost: 12; Level: 6; qval: Q_TAR | Q_LOC;
+    sval: WILL; pval: (LEVEL_MAX20)d4;
+    Desc: "Destroys undead creatures within a 40-foot (4 square) radius
+      burst centered on a point you choose. The spell destroys up to
+      1d4 Hit Dice of undead per caster level (maximum 20d4). Undead
+      with the fewest Hit Dice are affected first; among equals, those
+      closest to the center go first. An undead creature of 9 or more
+      Hit Dice is unaffected, and Hit Dice too few to affect the next
+      creature are wasted. Each affected creature may make a Will save
+      to negate the effect, but its Hit Dice still count against the
+      total.";
     On Event EV_MAGIC_HIT {
-      if (EVictim->cHP > e.vDmg)
-        {
-          e.Immune = true;
-          return DONE;
-        }
       VPrint(e,"You return to death!",
                "The <EVictim> returns to death!");
       ThrowDmg(EV_DEATH,AD_NORM,0,"Undeath to Death",EActor,EVictim);
       return DONE;
       };
-    tval: MA_UNDEAD; Flags: EF_LIM_MTYPE; 
+    tval: MA_UNDEAD; Flags: EF_LIM_MTYPE, EF_HD_POOL;
     Purpose: EP_ATTACK;
   }
 

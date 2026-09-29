@@ -1538,6 +1538,55 @@ bool PossiblyPause(Term *T1, int x, int y, int timeout)
 } 
 
 
+/* inc-kgzx: a creature's Hit Dice, the value Undeath to Death's pool spends.
+   The engine has no single accessor -- Creature::CalcHP (src/Values.cpp:2295)
+   derives hit points from it and Creature::ChallengeRating (src/Creature.cpp:
+   2216) substitutes class levels for characters -- so this repeats that same
+   rule rather than inventing one: a character's HD is his total class levels,
+   a monster's is its TMON HitDice with each TEMPLATE's HitDice.Adjust applied
+   exactly as CalcHP applies them. The spell caps at EF_HD_POOL_CAP, so a
+   negative or zero HD simply never fills the pool. */
+static int16 HDPoolCreatureHD(Creature *c)
+{
+    int16 hd;
+    if (c->isCharacter())
+        return ((Character*)c)->TotalLevel();
+    hd = (int16)TMON(c->mID ? c->mID : c->tmID)->HitDice;
+    StatiIterNature(c,TEMPLATE)
+        hd = (int16)TTEM(S->eID)->HitDice.Adjust(hd);
+    StatiIterEnd(c)
+    return hd;
+}
+
+/* inc-kgzx: set INCURSION_HDPOOL_PROBE=1 to record, per cast, the rolled pool
+   and the walk it was spent on -- one line per candidate in walk order with
+   name, square, Hit Dice, distance to the centre, the pool remaining before it
+   and the action (STRIKE, SKIP-CAP, WASTE-STOP), plus a line for every
+   creature in the radius that isTarget rejected (REJECT-TARGET). Writes
+   logs/hdpoolprobe.log. The oracle tools/check_undeath_to_death_pool.sh reads. */
+static bool HDPoolProbeOn(void)
+{
+    return getenv("INCURSION_HDPOOL_PROBE") != NULL;
+}
+
+static void HDPoolProbe(const char *fmt, ...)
+{
+    static FILE *f = NULL;
+    va_list ap;
+    if (!f) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%slogs/hdpoolprobe.log",
+            (const char*)T1->IncursionDirectory);
+        f = fopen(path, "a");
+    }
+    if (!f)
+        return;
+    va_start(ap, fmt);
+    vfprintf(f, fmt, ap);
+    va_end(ap);
+    fflush(f);
+}
+
 EvReturn Magic::AGlobe(EventInfo &e)
   {
     Map *m; Thing *t; Glyph g;
@@ -1586,6 +1635,93 @@ EvReturn Magic::AGlobe(EventInfo &e)
 
     if (!m)
       return DONE;
+
+    /* inc-kgzx: an EF_HD_POOL effect (Undeath to Death) does not strike every
+       creature in the area independently. It rolls one pool of Hit Dice from
+       the effect's own pval -- the engine's already-rolled vDmg, so Maximize
+       and Empower behave exactly as they do for a blast's damage -- and spends
+       it on the eligible undead fewest Hit Dice first, ties to the one nearest
+       the centre. A creature of EF_HD_POOL_CAP HD or more is skipped without
+       touching the pool; when what remains cannot cover the next creature, the
+       rest is wasted and the walk stops. A creature's Hit Dice are subtracted
+       BEFORE its save, so a saved creature still spends them; the save itself,
+       its SR check and the EV_MAGIC_HIT handler remain in MagicStrike, reached
+       by the same ReThrow below. */
+    if (te && te->HasFlag(EF_HD_POOL)) {
+        struct HDPoolEntry { Creature *cr; int16 hd; int16 d; };
+        struct HDPoolEntry pool[256];
+        int16 poolNum = 0, p, q;
+        int16 remaining = e.vDmg;
+
+        if (HDPoolProbeOn())
+            HDPoolProbe("cast centre=(%d,%d) pool=%d radius=%d\n",
+                (int)cx, (int)cy, (int)remaining, (int)e.vRadius);
+
+        MapIterate(m,t,i)
+            if (dist(t->x,t->y,cx,cy) < (int16)e.vRadius) {
+                if (!t->isCreature())
+                    continue;
+                if (t == e.EActor && te->HasFlag(EF_CASTER_IMMUNE))
+                    continue;
+                e.ETarget = t;
+                if (!isTarget(e,t)) {
+                    if (HDPoolProbeOn())
+                        HDPoolProbe("REJECT-TARGET name=\"%s\" x=%d y=%d\n",
+                            (const char*)t->Name(), (int)t->x, (int)t->y);
+                    continue;
+                }
+                if (poolNum < (int16)(sizeof(pool)/sizeof(pool[0]))) {
+                    pool[poolNum].cr = (Creature*)t;
+                    pool[poolNum].hd = HDPoolCreatureHD((Creature*)t);
+                    pool[poolNum].d  = dist(t->x,t->y,cx,cy);
+                    poolNum++;
+                }
+            }
+
+        /* Fewest Hit Dice first, then nearest the centre. Insertion sort over
+           the handful a burst can hold; stable, so MapIterate order breaks any
+           remaining tie and the walk is deterministic. */
+        for (p = 1; p < poolNum; p++) {
+            struct HDPoolEntry key = pool[p];
+            for (q = p - 1; q >= 0 &&
+                 (pool[q].hd > key.hd ||
+                  (pool[q].hd == key.hd && pool[q].d > key.d)); q--)
+                pool[q + 1] = pool[q];
+            pool[q + 1] = key;
+        }
+
+        for (p = 0; p < poolNum; p++) {
+            if (pool[p].hd >= EF_HD_POOL_CAP) {
+                if (HDPoolProbeOn())
+                    HDPoolProbe("WALK name=\"%s\" x=%d y=%d hd=%d dist=%d "
+                        "remaining=%d action=SKIP-CAP\n",
+                        (const char*)pool[p].cr->Name(), (int)pool[p].cr->x,
+                        (int)pool[p].cr->y, (int)pool[p].hd,
+                        (int)pool[p].d, (int)remaining);
+                continue;
+            }
+            if (remaining < pool[p].hd) {
+                if (HDPoolProbeOn())
+                    HDPoolProbe("WALK name=\"%s\" x=%d y=%d hd=%d dist=%d "
+                        "remaining=%d action=WASTE-STOP\n",
+                        (const char*)pool[p].cr->Name(), (int)pool[p].cr->x,
+                        (int)pool[p].cr->y, (int)pool[p].hd,
+                        (int)pool[p].d, (int)remaining);
+                break;
+            }
+            if (HDPoolProbeOn())
+                HDPoolProbe("WALK name=\"%s\" x=%d y=%d hd=%d dist=%d "
+                    "remaining=%d action=STRIKE\n",
+                    (const char*)pool[p].cr->Name(), (int)pool[p].cr->x,
+                    (int)pool[p].cr->y, (int)pool[p].hd,
+                    (int)pool[p].d, (int)remaining);
+            remaining -= pool[p].hd;
+            e.ETarget = pool[p].cr;
+            e.efNum = (int8)_efNum;
+            ReThrow(EV_MAGIC_STRIKE,e);
+        }
+        return DONE;
+    }
 
     MapIterate(m,t,i)
         if (dist(t->x,t->y,cx,cy) < (int16)e.vRadius) {
