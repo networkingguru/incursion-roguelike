@@ -307,6 +307,11 @@ void Game::Play() {
     extern void BestowProbe(Player *caster);
     BestowProbe(pp);
 
+    /* Off unless INCURSION_IBLESSING_PROBE is set, and run here because it
+       needs a live player and map. See Character::IBlessingProbe
+       (src/Prayer.cpp) and tools/check_bow_blessing.sh. inc-rnp9. */
+    pp->IBlessingProbe();
+
     /* Off unless INCURSION_TRUESIGHT_PROBE is set, and run here because it
        needs a live player and a live map. See Creature::TrueSightProbe and
        tools/check_true_sight.sh. inc-5bl3. */
