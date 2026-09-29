@@ -96,6 +96,7 @@ inline int16 LevelAdjust(int16 val, int16 level, int16 spec=1)
         case LEVEL_2EVERY5: return ((level+4)/5)*2;  
 
         case LEVEL_MAX5:    return min(5,level);  
+        case LEVEL_1PER2_MAX5: return min(5,level/2);
         case LEVEL_MAX10:   return min(10,level);  
         case LEVEL_MAX15:   return min(15,level);  
         case LEVEL_MAX20:   return min(20,level);  

@@ -1,0 +1,98 @@
+# Shared setup for the inc-r6u1 Searing Light dice-cap reproduction.
+#
+# Builds an orc priest of Aiswin under wizard mode, raises him to the game's
+# hard maximum character level through Free Advancement, and learns Searing
+# Light through "Learn Any Spell" (which sets SP_INNATE, so CalcEffect uses
+# ChallengeRating = the sum of class levels as the caster level).
+#
+# MAX_CHAR_LEVEL is 11 (inc/Defines.h), and Aiswin's domains (Fate, Knowledge,
+# Night, Planning) grant no SC_EVO or SC_LIGHT school-casting-level bonus, so
+# the effective Searing Light caster level here is 11 -- NOT the 20 the brief
+# assumed. See this bead's report. 10 "G" blocks reach Priest 11.
+#
+# NOT RUN DIRECTLY; included by searing-light-living.keys,
+# searing-light-undead.keys and searing-light-control-six.keys.
+@include chargen-priest.keys
+ESC
+w y
+@choose "Wizard Mode Switches"
+DOWN*2 SPACE
+DOWN*5 SPACE
+DOWN*3 SPACE
+ESC
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+@dump:level
+ESC
+w
+@choose "Learn Any Spell"
+"Searing Light" ENTER
