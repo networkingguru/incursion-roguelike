@@ -8,6 +8,11 @@
 # A bead whose whole diff is *.md gets the cheap gate; see STEP 4. So does a
 # bead whose exact files passed the full gate in the last 24 hours.
 #
+# A landing takes a per-base-branch lock, so two landings onto the SAME base
+# branch wait in line while landings onto different bases (master vs the epic
+# branch INCURSION_BASE_BRANCH names) never block each other. The poll interval
+# is INCURSION_FINISH_LOCK_POLL seconds (default 5). inc-1npn.
+#
 # WHY IT IS ONE SCRIPT AND NOT A CHECKLIST. tools/worktree.sh isolates a bead so
 # two sessions cannot tread on each other. Isolation alone was NOT acceptable to
 # Brian on 2026-09-11: "I end up with 50 branches and can't remember what goes
@@ -242,6 +247,90 @@ RUN_GATE=1
 Land a finished bead on $BASE_BRANCH and delete its branch and worktree."
 
 is_bead_id "$BEAD" || die "REFUSED: '$BEAD' is not a bead id."
+
+# A landing holds a lock for its base branch, so two landings onto the SAME base
+# branch serialise -- each merges into a base the other is no longer changing --
+# while landings onto DIFFERENT bases (master vs an epic branch) never block each
+# other. A directory is the lock (mkdir is atomic; macOS has no flock). The
+# holder is dead when its pid is gone, or reused, or it died between mkdir and
+# write and left the dir older than 60 s. inc-1npn.
+LOCK_KEY="$(printf '%s' "$BASE_BRANCH" | tr '/' '_')"
+[ -d "$SHARED/.git" ] || cannot "$SHARED/.git is not a directory; cannot place the landing lock under it"
+LOCK_PARENT="$SHARED/.git/finish-bead-locks"
+LOCK_DIR="$LOCK_PARENT/$LOCK_KEY.lock"
+LOCK_HELD=0
+
+release_lock() {
+    # Only the process that still owns the lock may remove it: a waiter that
+    # judged this lock stale and recreated it must not have it deleted here.
+    [ "$LOCK_HELD" -eq 1 ] || return 0
+    [ "$(cat "$LOCK_DIR/pid" 2>/dev/null)" = "$$" ] || return 0
+    rm -rf "$LOCK_DIR"
+}
+
+lock_holder_dead() { # lock_holder_dead <pid> <started> -> 0 dead, 1 alive
+    local pid="$1" started="$2" now
+    if [ -n "$pid" ]; then
+        # A pid that no longer exists is gone at once, started or not.
+        kill -0 "$pid" 2>/dev/null || return 0
+        # A live pid with an EMPTY started means acquire_lock is still writing
+        # the lock (pid is written first, started last), so lstart must NOT be
+        # compared -- "" never equals a real lstart, which would judge a live
+        # holder dead and let two landings run at once. Fall through to the age
+        # rule instead. inc-1npn.
+        if [ -n "$started" ]; then
+            [ "$(ps -o lstart= -p "$pid" 2>/dev/null)" = "$started" ] || return 0
+            return 1
+        fi
+    fi
+    # No pid file, or a pid with no recorded start yet: the holder died (or is
+    # still mid-write) ONLY once the dir is old enough that no live holder
+    # could still be writing. A younger one is treated as alive, so a waiter
+    # never steals a fresh lock.
+    now="$(date +%s)"
+    if [ $((now - $(stat -f %m "$LOCK_DIR" 2>/dev/null || echo "$now"))) -gt 60 ]; then
+        return 0
+    fi
+    return 1
+}
+
+acquire_lock() {
+    local waited=0 holder_pid holder_bead holder_started
+    mkdir -p "$LOCK_PARENT" || cannot "could not create $LOCK_PARENT"
+    while true; do
+        if mkdir "$LOCK_DIR" 2>/dev/null; then
+            printf '%s\n' "$$" > "$LOCK_DIR/pid"
+            printf '%s\n' "$BEAD" > "$LOCK_DIR/bead"
+            ps -o lstart= -p "$$" > "$LOCK_DIR/started"
+            LOCK_HELD=1
+            [ "$waited" -eq 0 ] || echo "finish_bead: lock on $BASE_BRANCH acquired."
+            return 0
+        fi
+        holder_pid="$(cat "$LOCK_DIR/pid" 2>/dev/null)"
+        holder_bead="$(cat "$LOCK_DIR/bead" 2>/dev/null)"
+        holder_started="$(cat "$LOCK_DIR/started" 2>/dev/null)"
+        if lock_holder_dead "$holder_pid" "$holder_started"; then
+            # ponytail: two waiters that judge the same dead lock stale in the
+            # same instant can race -- one may rm -rf the other's fresh lock.
+            # Ceiling accepted; upgrade path is an atomic rename of the stale dir
+            # with a pid re-check before removal.
+            echo "finish_bead: clearing a stale landing lock on $BASE_BRANCH left by ${holder_bead:-?} (pid ${holder_pid:-?})"
+            rm -rf "$LOCK_DIR"
+            continue
+        fi
+        if [ "$waited" -eq 0 ]; then
+            echo "finish_bead: ${holder_bead:-?} is landing on $BASE_BRANCH (pid ${holder_pid:-?}); waiting for it to finish."
+        fi
+        waited=1
+        sleep "${INCURSION_FINISH_LOCK_POLL:-5}"
+    done
+}
+
+trap release_lock EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+acquire_lock
 
 git -C "$SHARED" show-ref --verify --quiet "refs/heads/$BEAD" \
     || die "REFUSED: there is no branch $BEAD.

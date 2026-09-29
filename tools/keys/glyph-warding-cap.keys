@@ -1,0 +1,31 @@
+# inc-r6u1 (bounded probe): can a Glyph of Warding blast be driven in play, and
+# does its combat message print the die COUNT the way Searing Light's does?
+#
+# The rune explodes via Terrain "strange rune"'s EV_SPECIAL (lib/wspells.irh),
+# which calls ThrowTerraDmg(EV_DAMAGE, AD_NORM, EMap->GetTerraDmg(...), ...)
+# (src/Event.cpp:733). GetTerraDmg rolls the stored Dice and returns a single
+# integer, so ThrowTerraDmg receives a flat number -- there is no dice string
+# to read. This script is the empirical confirmation of that reading: it casts
+# Greater Glyph of Warding (pval (LEVEL_1PER2_MAX5)d8 / was (LEVEL_SCALED)d8)
+# on the square east of the priest, steps onto it, and dumps the message log.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_RUN_DIR="$PWD/logs/inc-r6u1/glyph-probe" \
+#       tools/headless.sh tools/keys/glyph-warding-cap.keys 1
+@include searing-light-cl11-setup.keys
+w
+@choose "Learn Any Spell"
+"Glyph of Warding, Greater" ENTER
+m
+@choose "Glyph of Warding, Greater"
+RIGHT
+ENTER
+@dump:glyph-placed
+RIGHT
+@while "Confirm enter" y
+@while "more --" SPACE
+@dump:glyph-triggered
+v
+@dump:glyph-messages
+@while "Messages" ESC
+@quit

@@ -204,6 +204,7 @@ typedef signed int        hObj;
 #define LEVEL_MAX10  -123
 #define LEVEL_MAX15  -124
 #define LEVEL_MAX20  -125
+#define LEVEL_1PER2_MAX5 -127 /* min(5,level/2): one die per two levels, capped at 5 */
 
 #define LEVEL_SCALED  -126
 #define LEVEL_SCALED2 -99

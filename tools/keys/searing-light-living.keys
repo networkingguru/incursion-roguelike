@@ -1,0 +1,30 @@
+# inc-r6u1: Searing Light against a LIVING target at the game's maximum
+# reachable effective caster level (Priest 11, ChallengeRating 11). The giant
+# rat is MA_ANIMAL, so CalcEffect picks the `tval: MA_LIVING` branch --
+# `(LEVEL_SCALED2)d8`, which the Desc caps at 5d8.
+#
+# At caster level 11 this branch is already at its cap (min(5,11/2)=5), so the
+# before and after dice are both 5d8; the living half of the defect only shows
+# at caster level 15 or higher, which MAX_CHAR_LEVEL=11 makes unreachable. The
+# undead script is where the defect is visible in play (9d6 -> 10d6).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_RUN_DIR="$PWD/logs/inc-r6u1/living" \
+#       tools/headless.sh tools/keys/searing-light-living.keys 1
+@include searing-light-cl11-setup.keys
+w
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "giant rat"
+RIGHT
+ENTER
+@dump:living-summoned
+m
+@choose "Searing Light"
+RIGHT
+@while "more --" SPACE
+@dump:living-after-cast
+v
+@dump:living-messages
+@while "Messages" ESC
+@quit

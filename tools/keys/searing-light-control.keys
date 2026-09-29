@@ -1,0 +1,91 @@
+# inc-r6u1 control: Searing Light at effective caster level 6 (Priest 6,
+# ChallengeRating 6, no school bonus from Aiswin's Fate domain). At this level
+# both dice formulas are BELOW their caps and the fix must change nothing:
+#   living   (giant rat): LEVEL_SCALED2(6) = 3  -> LEVEL_1PER2_MAX5 = min(5,3) = 3
+#   undead   (mummy):     LEVEL_SCALED(6)  = 6  -> LEVEL_MAX10       = min(10,6) = 6
+# So the before/after damage lines are 3d8+bonus and 6d6+bonus on both builds,
+# proving the cap constants did not switch the spell off below their ceilings.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_RUN_DIR="$PWD/logs/inc-r6u1/control" \
+#       tools/headless.sh tools/keys/searing-light-control.keys 1
+@include chargen-priest.keys
+ESC
+w y
+@choose "Wizard Mode Switches"
+DOWN*2 SPACE
+DOWN*5 SPACE
+DOWN*3 SPACE
+ESC
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+@dump:level
+ESC
+w
+@choose "Learn Any Spell"
+"Searing Light" ENTER
+w
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "giant rat"
+RIGHT
+ENTER
+@dump:control-summoned-living
+m
+@choose "Searing Light"
+RIGHT
+@while "more --" SPACE
+@dump:control-after-living
+v
+@dump:control-messages-living
+@while "Messages" ESC
+w
+@choose "Monster Summoning"
+@choose "Corporeal Undead"
+@choose "mummy"
+RIGHT
+ENTER
+@dump:control-summoned-undead
+m
+@choose "Searing Light"
+RIGHT
+@while "more --" SPACE
+@dump:control-after-undead
+v
+@dump:control-messages-undead
+@while "Messages" ESC
+@quit
