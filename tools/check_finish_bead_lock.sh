@@ -22,6 +22,10 @@
 # gate fails the case instead.
 set -uo pipefail
 
+# A scratch repository answers to nothing the person running this has configured.
+unset INCURSION_FINISH_GATE INCURSION_BASE_BRANCH INCURSION_FINISH_LOCK_POLL \
+      NIGHTLY_VERIFY_STATE NIGHTLY_CHECK_DIR NIGHTLY_BASE_REF
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT="$ROOT/tools/finish_bead.sh"
 DOCS_ONLY="$ROOT/tools/docs_only_change.sh"
