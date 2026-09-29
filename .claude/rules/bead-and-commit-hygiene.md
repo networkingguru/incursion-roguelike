@@ -47,3 +47,8 @@ History: docs/rules-history/bead-and-commit-hygiene.md#feedback-no-beads-sync.
 Do NOT commit session logs or handoff writeups. Use `bd remember`, keyed `resume-<date>`. Commit only code/tests/tooling/docs. "Write notes and commit" means the pending work, not notes.
 Why: a commit describes a code change, not a session log.
 History: docs/rules-history/bead-and-commit-hygiene.md#feedback-handoff-notes-are-not-commits.
+
+## check-bead-status-before-suggesting-or-starting
+Before you name a bead as work to do, run `bd show <id>` in the SAME turn and state its status and assignee. A resume note, a `bd memories` entry or output from an earlier turn MUST NOT count as evidence of status. Start a bead ONLY with `tools/worktree.sh <id> [base]`, which claims it under this session's own actor (`claude-<pid>`) and refuses when another actor holds it. NEVER run `bd update --claim` by hand to start work. When it refuses, report the holder to Brian and STOP; use `--take-over` only when Brian says the holder is gone.
+Why: every session shares git user "Brian Hill", so a status read or a plain claim cannot tell one session's bead from another's.
+History: new rule, no prior narrative to archive. Bead inc-u1mt.
