@@ -76,7 +76,7 @@ for SEED in $(seq 1 10); do
         tools/headless.sh "$KEYS" "$SEED" 2>&1)"
     STATUS=$?
 
-    if echo "$OUT" | grep -q "NO GAMEPLAY"; then
+    if grep -q "NO GAMEPLAY" <<< "$OUT"; then
         fail "seed $SEED never entered a map, so it measured nothing."
     fi
     if [ "$STATUS" -ne 0 ]; then
