@@ -5869,6 +5869,12 @@ Priest Spell "Holy Summoning VI" : EA_SUMMON
     On Event MSG_XSUMMON "The outsider you called before still serves you.";
     ALIENIST_CLAUSE(6) }
 
+// upstream: the spell carried EF_DEATH, which src/Magic.cpp:342-344 isTarget
+// treats as a death effect every necromancy-immune creature ignores, and every
+// undead is necromancy-immune (UNDEAD_IMMUNITIES, lib/defines.irh:7), so the
+// spell could never affect its only targets. The same data misbehaves on Win32
+// with the original compiler, so it is upstream, not a port artefact. Observed;
+// inc-kgzx; not sent.
 Wizard / Priest Spell "Undeath to Death" : EA_BLAST
   { SC_NEC; aval: AR_BALL; lval: 3; cval: WHITE; 
     Base: SP_EASY; Cost: 12; Level: 6; qval: Q_TAR; pval: (LEVEL_1PER1)d8;
@@ -5887,7 +5893,7 @@ Wizard / Priest Spell "Undeath to Death" : EA_BLAST
       ThrowDmg(EV_DEATH,AD_NORM,0,"Undeath to Death",EActor,EVictim);
       return DONE;
       };
-    tval: MA_UNDEAD; Flags: EF_LIM_MTYPE, EF_DEATH; 
+    tval: MA_UNDEAD; Flags: EF_LIM_MTYPE; 
     Purpose: EP_ATTACK;
   }
 

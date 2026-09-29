@@ -1,0 +1,104 @@
+# inc-kgzx: photograph where "Undeath to Death" actually kills, BEFORE the
+# phase-2 rules change.
+#
+# THE CLAIM, as the plan states it. lib/pspells.irh, "Undeath to Death" (the
+# live spell near line 5872):
+#     aval: AR_BALL; lval: 3; qval: Q_TAR; pval: (LEVEL_1PER1)d8; tval: MA_UNDEAD
+# The Desc says a 60-foot globe centred on the caster; the code (src/Magic.cpp,
+# the `if (isBall)` block) explodes where the shot LANDS: MinGlyphs =
+# 3*e.EMagic->lval = 9 squares, about a 2-square radius around the aimed
+# target. Q_TAR (src/Magic.cpp:859) makes the player pick a target first. Each
+# undead caught then rolls its own (caster level)d8 in the EV_MAGIC_HIT handler
+# and dies if that beats its current HP; there is no save.
+#
+# THE PHASE-2 SIDE, for contrast (NOT implemented here): a 4-square-radius
+# burst (AR_GLOBE, lval 4) at the aimed point; ONE pool of (caster level)d4 Hit
+# Dice per cast, max 20d4, spent fewest HD first, ties by distance to the
+# centre; leftover too small for the next creature is wasted; no undead of 9+
+# HD is affected; Will save negates; spell resistance applies.
+#
+# THE SCENE. The caster (orc priest of Aiswin, character level 11 through Free
+# Advancement, "Undeath to Death" learned through Learn Any Spell so it is
+# innate and its caster level is ChallengeRating = 11) stands at (44,111) in
+# the Entry Chamber. The corridor east is open to x+9; a wall sits at x+10.
+# Five undead are summoned in that corridor with Wizard Monster Summoning, on
+# distinct squares:
+#
+#   D  caster+1  (45,111)  a crawling claw, 1 HD -- RIGHT NEXT TO THE CASTER,
+#                          6 squares from the aim point: outside BOTH areas.
+#   B  caster+4  (48,111)  a crawling claw, 1 HD -- 3 squares from the aim
+#                          point: outside TODAY'S ~2-square spread, inside the
+#                          phase-2 4-square radius. Radius observable.
+#   T  caster+7  (51,111)  a crawling claw, 1 HD -- THE AIMED TARGET.
+#   K  caster+8  (52,111)  a bodak, 9 HD (lib/mon3.irh:3422) -- 1 square from
+#                          the aim point: inside both areas. TODAY it dies
+#                          whenever the d8 roll beats its HP; under phase 2 the
+#                          9+ HD cap leaves it untouched. Cap observable.
+#
+# Freeze Monsters (armed in the shared setup) keeps all five on their squares
+# while the screens are photographed; Wizard Sight makes the far end of the
+# corridor perceivable so the target prompt accepts T and K.
+#
+# THE TARGET PROMPT. Q_TAR's cursor (src/Term.cpp:2595) is a ring of candidates
+# ordered by bearing from the player; these creatures all lie due east, so the
+# ring order is by distance. The first RIGHT enters on the nearest (D, +1),
+# then RIGHT steps to B (+4), then to T (+7), then to K (+8). Three RIGHTs
+# confirm on the aimed target T.
+#
+# Run:
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_RUN_DIR="$PWD/logs/inc-kgzx/before/seed-1" \
+#       tools/headless.sh tools/keys/undeath-to-death-area.keys 1
+@include undeath-to-death-setup.keys
+
+# --- SUMMON D, THE CLAW BESIDE THE CASTER (CASTER+1) ------------------------
+w
+@choose "Monster Summoning"
+TAB
+@choose "Zombies"
+@choose "crawling claw"
+RIGHT
+ENTER
+@dump:summon-d
+
+# --- SUMMON B, THE CLAW THREE SQUARES FROM THE AIM POINT (CASTER+4) ---------
+w
+@choose "Monster Summoning"
+TAB
+@choose "Zombies"
+@choose "crawling claw"
+RIGHT*4
+ENTER
+@dump:summon-b
+
+# --- SUMMON T, THE AIMED TARGET (CASTER+7) ----------------------------------
+w
+@choose "Monster Summoning"
+TAB
+@choose "Zombies"
+@choose "crawling claw"
+RIGHT*7
+ENTER
+@dump:summon-t
+
+# --- SUMMON K, THE 9-HD BODAK INSIDE THE AREA (CASTER+8) --------------------
+w
+@choose "Monster Summoning"
+@choose "Outsiders"
+@choose "bodak"
+RIGHT*8
+ENTER
+@dump:summon-k
+
+# --- CAST UNDEATH TO DEATH, AIMED AT T --------------------------------------
+m
+@choose "Undeath to Death"
+RIGHT*3
+@dump:target-prompt
+ENTER
+@while "more --" SPACE
+@dump:after-cast
+v
+@dump:messages
+@while "Messages" ESC
+@quit

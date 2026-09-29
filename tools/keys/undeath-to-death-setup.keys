@@ -1,0 +1,100 @@
+# Shared setup for the inc-kgzx "Undeath to Death" area reproduction.
+#
+# Builds an orc priest of Aiswin under wizard mode, raises him to the game's
+# hard maximum character level (11) through Free Advancement, and learns
+# "Undeath to Death" through "Learn Any Spell" (which sets SP_INNATE, so
+# CalcEffect uses ChallengeRating = the sum of class levels as the caster
+# level -- 11 here, so pval is 11d8).
+#
+# This is tools/keys/searing-light-cl11-setup.keys with the learned spell
+# changed: that script learns Searing Light, this one learns Undeath to Death.
+# The wizard-mode switch block is identical, and among the switches it flips
+# is Freeze Monsters (the eleventh OPC_WIZARD row), so the summoned undead
+# stay on their squares while the screens are photographed.
+#
+# NOT RUN DIRECTLY; included by undeath-to-death-area.keys.
+@include chargen-priest.keys
+ESC
+w y
+@choose "Wizard Mode Switches"
+DOWN*2 SPACE
+DOWN*5 SPACE
+DOWN*3 SPACE
+UP SPACE
+ESC
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+@dump:level
+ESC
+w
+@choose "Learn Any Spell"
+"Undeath to Death" ENTER
