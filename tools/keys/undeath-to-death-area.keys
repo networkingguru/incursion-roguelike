@@ -1,0 +1,108 @@
+# inc-kgzx: photograph where "Undeath to Death" kills, under the phase-2b SRD
+# rule.
+#
+# THE RULE, as lib/pspells.irh now states it (the live spell near line 5878):
+#     aval: AR_GLOBE; lval: 4; qval: Q_TAR | Q_LOC; sval: WILL;
+#     pval: (LEVEL_MAX20)d4; tval: MA_UNDEAD; Flags: EF_LIM_MTYPE, EF_HD_POOL
+# A 4-square-radius burst at the aimed point; ONE pool of (caster level)d4 Hit
+# Dice per cast, max 20d4, spent on the eligible undead fewest Hit Dice first,
+# ties by distance to the centre; an undead of 9+ Hit Dice is skipped without
+# spending or wasting the pool; leftover too small for the next creature is
+# wasted; a creature's Hit Dice are subtracted BEFORE its Will save (a save
+# negates the destruction but not the cost). Magic::AGlobe implements the pool;
+# the save and spell resistance stay in Magic::MagicStrike's strike path.
+#
+# HOW IT WAS BEFORE (phase 2a, committed): aval AR_BALL, lval 3, Q_TAR, pval
+# (LEVEL_1PER1)d8. The ball exploded where the shot landed and each undead
+# rolled its own (caster level)d8, dying if that beat its current HP; no save.
+# The ball stopped at the first creature in its path, so the only undead ever
+# destroyed was D, the claw beside the caster -- see logs/inc-kgzx/after-flag/.
+#
+# THE SCENE. The caster (orc priest of Aiswin, character level 11 through Free
+# Advancement, "Undeath to Death" learned through Learn Any Spell so it is
+# innate and its caster level is ChallengeRating = 11) stands in the Entry
+# Chamber. The corridor east is open to x+9; a wall sits at x+10. Five undead
+# are summoned in that corridor with Wizard Monster Summoning, on distinct
+# squares, at fixed offsets from the caster (the absolute origin moves with the
+# seed, the offsets do not):
+#
+#   D  caster+1  a crawling claw, 1 HD -- RIGHT NEXT TO THE CASTER, 6 squares
+#                from the aim point: outside the 4-square burst.
+#   B  caster+4  a crawling claw, 1 HD -- 3 squares from the aim point: the
+#                outer edge of the burst. Radius observable.
+#   T  caster+7  a crawling claw, 1 HD -- THE AIMED TARGET.
+#   K  caster+8  a bodak, 9 HD (lib/mon3.irh:3422) -- 1 square from the aim
+#                point: inside the burst, but at the cap, so it is skipped. Cap
+#                observable.
+#
+# Freeze Monsters (armed in the shared setup) keeps all five on their squares
+# while the screens are photographed; Wizard Sight makes the far end of the
+# corridor perceivable so the target prompt accepts T and K.
+#
+# THE TARGET PROMPT. qval is Q_TAR | Q_LOC, and OPT_SELECT_JUMP is on, so the
+# cursor opens in target mode (src/Term.cpp:2221) on a ring of candidates
+# ordered by bearing from the player; these creatures all lie due east, so the
+# ring order is by distance. The first RIGHT enters on the nearest (D, +1), then
+# RIGHT steps to B (+4), then to T (+7), then to K (+8). Three RIGHTs confirm on
+# the aimed target T; ENTER makes e.isLoc false and the burst centres on
+# e.ETarget's square, which Magic::AGlobe reads at src/Magic.cpp:1547-1550.
+# (INCURSION_TARGET_PROBE=1 records the chosen square; tools/check_undeath_to_death.sh
+# checks it against caster+7.)
+#
+# Run:
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_RUN_DIR="$PWD/logs/inc-kgzx/after-srd/seed-1" \
+#       tools/headless.sh tools/keys/undeath-to-death-area.keys 1
+@include undeath-to-death-setup.keys
+
+# --- SUMMON D, THE CLAW BESIDE THE CASTER (CASTER+1) ------------------------
+w
+@choose "Monster Summoning"
+TAB
+@choose "Zombies"
+@choose "crawling claw"
+RIGHT
+ENTER
+@dump:summon-d
+
+# --- SUMMON B, THE CLAW THREE SQUARES FROM THE AIM POINT (CASTER+4) ---------
+w
+@choose "Monster Summoning"
+TAB
+@choose "Zombies"
+@choose "crawling claw"
+RIGHT*4
+ENTER
+@dump:summon-b
+
+# --- SUMMON T, THE AIMED TARGET (CASTER+7) ----------------------------------
+w
+@choose "Monster Summoning"
+TAB
+@choose "Zombies"
+@choose "crawling claw"
+RIGHT*7
+ENTER
+@dump:summon-t
+
+# --- SUMMON K, THE 9-HD BODAK INSIDE THE AREA (CASTER+8) --------------------
+w
+@choose "Monster Summoning"
+@choose "Outsiders"
+@choose "bodak"
+RIGHT*8
+ENTER
+@dump:summon-k
+
+# --- CAST UNDEATH TO DEATH, AIMED AT T --------------------------------------
+m
+@choose "Undeath to Death"
+RIGHT*3
+@dump:target-prompt
+ENTER
+@while "more --" SPACE
+@dump:after-cast
+v
+@dump:messages
+@while "Messages" ESC
+@quit

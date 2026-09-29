@@ -721,6 +721,8 @@ A new check adds its row to this table, in alphabetical order.
 | `check_trip_aoo.sh` | Does a trip still make the tripper attack himself? Four goblins are summoned around a level 1 orc warrior and tripped one at a time, and a probe records the actor and victim of every attack of opportunity the engine accepts. Any line whose actor and victim are one creature fails. The check also demands a goblin answering a trip, because deleting the call would remove the self-attack as surely as fixing it. | LIVE |
 | `check_true_sight.sh` | Does True Seeing let a character SEE an invisible creature, and see through darkness, out to its own range -- rather than only striking the creature at full accuracy while it stays invisible? `TRUE_SIGHT` was named beside `SEE_INVIS` in the combat miss-chance test and appeared nowhere in `src/Vision.cpp`, so sight and combat disagreed about the same spell. A probe grants a player `TRUE_SIGHT` and no `SEE_INVIS`, places one invisible creature 5 squares away in a lit square, 9 squares away in a square it first unlights, and beyond the range, and asserts `Creature::Perceives` at each; it then removes the stati and repeats the first case as a control. | LIVE |
 | `check_two_fist_feats_live.sh` | Do the two-weapon feats reach two empty hands? A Monk 1 / Warrior 10 buys Two-Weapon Tempest and the sheet's Brawl row moves 125% to 175%; the 1st-level sidebar must still read two equal fists at full Strength. | LIVE |
+| `check_undeath_to_death.sh` | Does Undeath to Death pool one (caster level)d4 of Hit Dice per cast and spend it by the SRD rule -- a 4-square burst at the aimed point, fewest Hit Dice first, a 9-Hit-Dice cap that neither spends nor wastes, leftover too small for the next creature wasted, and a Will save that does not refund the pool? Seeds 1-10; exactly two saves per cast, no 9-HD bodak touched, the claw beside the caster never affected, both in-area claws destroyed on at least one seed. | LIVE |
+| `check_undeath_to_death_pool.sh` | Does the pool SHORT show all three rules in play? `INCURSION_HDPOOL_PROBE=1` records every candidate in walk order and every rejected creature. Two bursts per seed: one with two 1-HD claws and six 8-HD mummies (50 HD, more than the 11d4 = 44 maximum) that walks fewest-HD/nearest-first and WASTE-STOPs with nothing struck after it; one with a claw and a 9-HD bodak that the cap SKIPs -- proving the undead filter accepts a bodak. Pool within 11..44, remaining never negative, Will save lines equal STRIKE lines; fails if the probe log is missing or empty. | LIVE |
 | `check_underdark_live.sh` | Does the Underdark Warrior check the race it requires, and give the Reflex save it advertises? | LIVE |
 | `check_unearthly_harmonies_prose.sh` | Does the Wand of Unearthly Harmonies description state that its Intelligence damage scales per plus, matching its second `EA_BLAST` `pval: (PLUS_1PER1)d2` code, rather than the flat "1d2 points of Intelligence damage" it claimed before? | LIVE |
 | `check_unholy_blight.sh` | Does Unholy Blight's inflict segment carry one `xval` (`ADJUST_CIRC`) and `yval: A_AID`, so the sicken lands, rather than the doubled `xval` that made it inert? | LIVE |
@@ -809,6 +811,7 @@ they ship in every binary; the compile-time ones need
 | `INCURSION_CHAR_PROBE=1` | Writes a readable character sheet beside every save, automatically. |
 | `INCURSION_ERROR_PROMPT=1` | Restores the blocking error dialog instead of logging and continuing. |
 | `INCURSION_TARGET_PROBE=1` | Records each target-cursor press and where it landed. Behind `check_target_order.sh`. |
+| `INCURSION_HDPOOL_PROBE=1` | Logs, per cast of an `EF_HD_POOL` spell, the rolled pool and every candidate in walk order (name, square, Hit Dice, distance, remaining pool, action STRIKE/SKIP-CAP/WASTE-STOP), plus every radius creature `isTarget` rejected. Behind `check_undeath_to_death_pool.sh`. |
 | `INCURSION_STAIR_PROBE=1` | Logs the staircase candidate list and its ranking. Behind `check_stair_cycle.sh`. |
 | `INCURSION_DOOR_PROBE=1` | Logs `DoorFlags` either side of `Door::SetImage`'s orientation branch, with the four neighbours' solidity. Behind `check_broken_door.sh`. |
 | `INCURSION_TRIP_AOO_PROBE=1` | Logs the actor, the victim and whether they are one creature for every attack of opportunity `Creature::OAttack` accepts. Behind `check_trip_aoo.sh`. |
@@ -1024,6 +1027,8 @@ tools/check_portal_reach.sh         # every portal shares one door-aware compone
 tools/check_mana_regen_floor.sh     # the mana-regen floor starts high and falls with Concentration, not the reverse
 tools/check_mana_regen_cast.sh      # the same fix under real play: cast, wait without resting, mana does not rise
 tools/check_multiply_noroom.sh      # Multiply must not re-place, initialise or heal a copy PlaceNear deleted
+tools/check_undeath_to_death.sh     # Undeath to Death pools one (caster level)d4 of Hit Dice, fewest first, 9-HD cap, Will save
+tools/check_undeath_to_death_pool.sh # the same pool short: fewest-first order, wasted remainder, 9-HD bodak cap
 ```
 
 `check_gaze_reflect_message.sh` is the live twin of Tier 1's
