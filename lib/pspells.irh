@@ -3073,10 +3073,14 @@ and EA_INFLICT
   }
 
 
+// upstream: the die formula did not stop at the maximum the Desc and the SRD
+// state -- (LEVEL_SCALED2) kept climbing; the same data ships on Win32 with the
+// original compiler, so it is upstream, not a port artefact. Observed;
+// inc-r6u1; not sent.
 Priest  Spell "Glyph of Warding" : EA_TERRAFORM
   { SC_ARC; Base: SP_TRIVIAL; Cost 6; Level: 3; qval: Q_LOC;
     xval: TERRA_FLOOR; Purpose: EP_PLAYER_ONLY; 
-    rval: $"strange rune"; sval: REF; pval: (LEVEL_SCALED2)d8;
+    rval: $"strange rune"; sval: REF; pval: (LEVEL_1PER2_MAX5)d8;
     Desc: "Turns one chosen floor square into a rune that explodes
       for 1d8 damage per two levels (max 5d8) when stepped on.";
     On Event MSG_CAST
@@ -4155,9 +4159,13 @@ Priest / Druid / Potion Spell "Restoration" : EA_HEALING
       undead attacks, and similairly restores experience
       points lost due to necromantic effects."; Flags: EF_STAPLE; }
 
+// upstream: the die formula did not stop at the maxima the Desc and the SRD
+// state -- (LEVEL_SCALED2)/(LEVEL_SCALED) kept climbing; the same data ships on
+// Win32 with the original compiler, so it is upstream, not a port artefact.
+// Observed (undead 9d6 before, 10d6 after at CL 11); inc-r6u1; not sent.
 Priest  Spell "Searing Light" : EA_BLAST
   { SC_EVO|SC_LIGHT; Base: SP_EASY; Cost: 7; Level: 4; qval: Q_DIR;
-    xval: AD_SUNL; pval: (LEVEL_SCALED2)d8; tval: MA_LIVING;
+    xval: AD_SUNL; pval: (LEVEL_1PER2_MAX5)d8; tval: MA_LIVING;
     Flags: EF_ATTACK, EF_LIM_MTYPE; aval: AR_BEAM; cval: YELLOW;
     Purpose: EP_ATTACK; On Event MSG_BLASTNAME "ray of searing light";
     Desc: "Projects a blast of searing light that, with a ranged
@@ -4167,10 +4175,10 @@ Priest  Spell "Searing Light" : EA_BLAST
       darkness it comes in contact with, including <9>globe of
       shadow<1>, <9>deeper darkness<1> and <9>animate shadows<1>."; }
 and EA_BLAST
-  { xval: AD_SUNL; pval: (LEVEL_SCALED)d6; tval: MA_UNDEAD;
+  { xval: AD_SUNL; pval: (LEVEL_MAX10)d6; tval: MA_UNDEAD;
     Flags: EF_ATTACK, EF_LIM_MTYPE; aval: AR_BEAM; }
 and EA_BLAST
-  { xval: AD_SUNL; pval: (LEVEL_SCALED2)d6; tval: MA_CONSTRUCT;
+  { xval: AD_SUNL; pval: (LEVEL_1PER2_MAX5)d6; tval: MA_CONSTRUCT;
     Flags: EF_ATTACK, EF_LIM_MTYPE; aval: AR_BEAM; 
     On Event EV_MAGIC_XY {
       if (EMap->DispelField(e.EXVal,e.EYVal,0,$"Globe of Shadow",0) ||
@@ -5883,10 +5891,14 @@ Wizard / Priest Spell "Undeath to Death" : EA_BLAST
     Purpose: EP_ATTACK;
   }
 
+// upstream: the die formula did not stop at the maximum the Desc and the SRD
+// state -- (LEVEL_SCALED) kept climbing; the same data ships on Win32 with the
+// original compiler, so it is upstream, not a port artefact. Observed;
+// inc-r6u1; not sent.
 Priest  Spell "Glyph of Warding, Greater" : EA_TERRAFORM
   { SC_ARC; Base: SP_TRIVIAL; Cost 12; Level: 6; qval: Q_LOC;
     xval: TERRA_FLOOR; Purpose: EP_PLAYER_ONLY; 
-    rval: $"strange rune"; sval: REF; pval: (LEVEL_SCALED)d8;
+    rval: $"strange rune"; sval: REF; pval: (LEVEL_MAX10)d8;
     Desc: "Turns one chosen floor square into a powerful rune that explodes
       for 1d8 damage per level (max 10d8) when stepped on.";
     On Event MSG_CAST

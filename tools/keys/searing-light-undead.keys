@@ -1,0 +1,29 @@
+# inc-r6u1: Searing Light against an UNDEAD target at the game's maximum
+# reachable effective caster level (Priest 11, ChallengeRating 11). The mummy
+# carries M_UNDEAD (lib/mon3.irh), so CalcEffect picks the `tval: MA_UNDEAD`
+# branch -- `(LEVEL_SCALED)d6`, which the Desc caps at 10d6 (1d6/level).
+#
+# LEVEL_SCALED at 11 is 9 + (11-9)/3 = 9, so the unfixed game rolls 9d6 where
+# the Desc promises 10d6. The fix (LEVEL_MAX10 = min(10,level)) makes it 10d6.
+# This is the observable half of the defect at the reachable level cap.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_RUN_DIR="$PWD/logs/inc-r6u1/undead" \
+#       tools/headless.sh tools/keys/searing-light-undead.keys 1
+@include searing-light-cl11-setup.keys
+w
+@choose "Monster Summoning"
+@choose "Corporeal Undead"
+@choose "mummy"
+RIGHT
+ENTER
+@dump:undead-summoned
+m
+@choose "Searing Light"
+RIGHT
+@while "more --" SPACE
+@dump:undead-after-cast
+v
+@dump:undead-messages
+@while "Messages" ESC
+@quit
