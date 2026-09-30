@@ -554,6 +554,17 @@ bool Item::operator==(Item &i)
         case T_FOOD:
         case T_POTION:
         case T_SCROLL:
+        /* upstream: every item gets a fresh GenNum (Item.cpp:89) and the
+           fully-identified rule below is the only thing that lets a book from
+           another generation group stack, so two identical unidentified books
+           take two pack entries. Books are as little distinguishable by
+           generation as scrolls, which are exempted here, so T_BOOK belongs in
+           this group. Upstream's, not the port's: the switch and the GenNum
+           rule are base code with no typedef, pointer or compiler dependence,
+           so the Win32 0.6.9 build misbehaves identically. Observed:
+           tools/check_book_stack.sh, red before and green after. inc-elhn.
+           Not sent. */
+        case T_BOOK:
           easyStack = true;
          break;
         case T_CORPSE:
