@@ -322,6 +322,16 @@ void Game::Play() {
        tools/check_mana_regen_floor.sh. inc-41kg. */
     pp->ManaFloorProbe();
 
+    /* Off unless INCURSION_STUDY_PROBE is set, and run here because it needs
+       a live loaded caster. See Character::StudySlotsProbe and
+       tools/check_study_slots.sh. inc-ngku. */
+    pp->StudySlotsProbe();
+
+    /* Off unless INCURSION_LEVELUP_PROBE is set. The no-study control for
+       inc-ngku: an ordinary caster level-up must still grant the chart's
+       slots. See Character::LevelUpSlotsProbe. */
+    pp->LevelUpSlotsProbe();
+
     doSave = false;
     doLoad = true;
     doAutoSave = false;

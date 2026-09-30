@@ -2448,6 +2448,87 @@ void Character::ManaFloorProbe()
     }
 }
 
+/* INCURSION_STUDY_PROBE -- reproduction of inc-ngku: Intensive Study
+   ("Improve Caster Level") raises AbilityLevel(CA_SPELLCASTING) through
+   IntStudy[STUDY_CASTING] (Creature::AbilityLevel) but Player::GainAbility's
+   CA_SPELLCASTING slot grant indexes SpellTable by the raw Abilities[ab], so
+   no slot follows. lib/help.irh:4076-4086 and src/FeatTab.cpp:507 promise the
+   caster-level rise gives higher-level spell slots. Applies the study exactly
+   as the level-up case does -- IntStudy[choice]++ followed by the
+   RaiseSpellSlotsToChart() call Player::GainFeat now makes for STUDY_CASTING --
+   and logs the raw ability, the effective level, the live SpellSlots[], and
+   SpellTable at both. One line, so it costs one of Error()'s nine distinct
+   messages. Off unless the variable is set. tools/check_study_slots.sh reads
+   it. inc-ngku. */
+void Character::StudySlotsProbe()
+{
+    char slots[128], rawchart[128], effchart[128];
+    int16 i, raw, eff;
+    size_t pos;
+
+    if (!getenv("INCURSION_STUDY_PROBE"))
+        return;
+
+    raw = Abilities[CA_SPELLCASTING];
+    if (raw < 0) raw = 0;
+    if (raw >= 27) raw = 26;
+    IntStudy[STUDY_CASTING]++;
+    RaiseSpellSlotsToChart();
+    eff = AbilityLevel(CA_SPELLCASTING);
+    if (eff < 0) eff = 0;
+    if (eff >= 27) eff = 26;
+
+    pos = 0;
+    for (i = 0; i < 9; i++)
+        pos += snprintf(slots + pos, sizeof(slots) - pos, "%s%d",
+            i ? "," : "", SpellSlots[i]);
+    pos = 0;
+    for (i = 0; i < 9; i++)
+        pos += snprintf(rawchart + pos, sizeof(rawchart) - pos, "%s%d",
+            i ? "," : "", SpellTable[raw][i]);
+    pos = 0;
+    for (i = 0; i < 9; i++)
+        pos += snprintf(effchart + pos, sizeof(effchart) - pos, "%s%d",
+            i ? "," : "", SpellTable[eff][i]);
+
+    Error("STUDY_PROBE raw=%d eff=%d slots=%s rawchart=%s effchart=%s",
+        raw, eff, slots, rawchart, effchart);
+}
+
+/* INCURSION_LEVELUP_PROBE -- the no-study control for inc-ngku. Grants one
+   ordinary caster level through the real Player::GainAbility(CA_SPELLCASTING)
+   path a level-up takes (src/Create.cpp AddAbilities -> GainAbility), with no
+   Intensive Study, and logs the new raw level, the live SpellSlots[] and the
+   chart at that level. An ordinary level-up must still equal the chart. One
+   line, so it costs one of Error()'s nine distinct messages. Off unless the
+   variable is set. inc-ngku. */
+void Character::LevelUpSlotsProbe()
+{
+    char slots[128], chart[128];
+    int16 i, lv;
+    size_t pos;
+
+    if (!getenv("INCURSION_LEVELUP_PROBE"))
+        return;
+
+    GainAbility(CA_SPELLCASTING, 1, 0, SS_CLAS);
+
+    lv = Abilities[CA_SPELLCASTING];
+    if (lv < 0) lv = 0;
+    if (lv >= 27) lv = 26;
+
+    pos = 0;
+    for (i = 0; i < 9; i++)
+        pos += snprintf(slots + pos, sizeof(slots) - pos, "%s%d",
+            i ? "," : "", SpellSlots[i]);
+    pos = 0;
+    for (i = 0; i < 9; i++)
+        pos += snprintf(chart + pos, sizeof(chart) - pos, "%s%d",
+            i ? "," : "", SpellTable[lv][i]);
+
+    Error("LEVELUP_PROBE raw=%d slots=%s chart=%s", lv, slots, chart);
+}
+
 void Creature::ThiefXP(rID regID)
 {
     bool foundTreasure, foundMon;
@@ -3079,6 +3160,8 @@ SelectedFeat:
             choice = (uint16)MyTerm->LMenu(MENU_SORTED|MENU_BORDER,"Choose an area to improve:",WIN_MENUBOX);
 ChosenStudy:
             IntStudy[choice]++;
+            if (choice == STUDY_CASTING)
+                RaiseSpellSlotsToChart();
             tStoryPluses = AbilityLevel(CA_STORYCRAFT);
             break;
     case FT_SCHOOL_FOCUS:
@@ -3357,6 +3440,29 @@ ChooseExotic:
     }
 }
 
+/* upstream: SpellSlots must equal the spellcasting chart at the character's
+   effective caster level -- AbilityLevel(CA_SPELLCASTING), which includes
+   Intensive Study's STUDY_CASTING steps -- not the raw class level. The old
+   CA_SPELLCASTING grant indexed SpellTable by Abilities[ab] alone, so a study
+   raised the caster level and no slot followed, though the game's own help and
+   feat text (lib/help.irh, src/FeatTab.cpp) promise slots at the higher level.
+   Upstream's, not the port's: plain table indexing and integer arithmetic with
+   no typedef, pointer-width or compiler dependence, so a Win32 build misbehaves
+   identically. Observed, inc-ngku, not sent. tools/check_study_slots.sh. */
+void Character::RaiseSpellSlotsToChart()
+{
+    int16 i, lv;
+
+    lv = AbilityLevel(CA_SPELLCASTING);
+    if (lv < 0)
+        lv = 0;
+    if (lv >= 27)
+        lv = 26;
+    for (i = 0; i != 9; i++)
+        while (SpellTable[lv][i] > SpellSlots[i])
+            SpellSlots[i]++;
+}
+
 void Player::GainAbility(int16 ab, uint32 pa, rID sourceID, int16 statiSource) {
     int16 st;
     const char* MTypePrompt;
@@ -3382,10 +3488,7 @@ void Player::GainAbility(int16 ab, uint32 pa, rID sourceID, int16 statiSource) {
         break;
     case CA_SPELLCASTING:
         Abilities[ab] += (uint8)pa;
-        for(i=0; i!=9; i++) {
-            if (SpellTable[Abilities[ab]][i] > SpellSlots[i])
-                SpellSlots[i]++;
-        }
+        RaiseSpellSlotsToChart();
         if (Abilities[ab] == 1) // 1st level
             BonusSlots[0] = BonusSpells[min(max(IAttr(A_INT)-9,0),21)][0];
         break;     
