@@ -1,0 +1,85 @@
+# Shared setup for the inc-l8ws Divine Sacrifice reproduction.
+#
+# Builds an orc priest of Kysul -- Kysul is Neutral Good (lib/religion.irh:3109)
+# and offers the Good domain (lib/domains.irh:325) -- raises him to Priest 3
+# through wizard Free Advancement, and relies on the class's own domain grant
+# (lib/classes.irh:1869, "Ability[CA_DOMAINS] at every level starting at 1st")
+# to learn Divine Sacrifice: CA_DOMAINS 3 selects domain spell slot 2
+# (src/Create.cpp:3365-3401), which is Divine Sacrifice in the Good domain list
+# (lib/domains.irh:333-338).
+#
+# The god is named, not counted, so a new god cannot make this script build a
+# different character. Good is named for the same reason: the domain menu is
+# three picks and the first is chosen by name, the rest filled positionally.
+# Kysul accepts any non-evil alignment, and the Good domain's EV_PREREQ
+# (lib/domains.irh:344) requires MA_GOOD, so the priest is Lawful Good.
+#
+# NOT RUN DIRECTLY; included by divine-sacrifice-before.keys and
+# divine-sacrifice-after.keys.
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Explore Mode. Continue? -- yes
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Priest"
+@choose "Kysul"       # God, asked right after the class (CF_RELIGIOUS).
+a       # Attributes: the first of the five offered sets.
+@choose "Lawful Good" # Alignment.
+a       # First feat.
+@choose "Good"  # domain pick 1: the Good domain, so Divine Sacrifice is granted
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+y       # Do you wish to worship Kysul? -- yes
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+a a
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+a       # Personality archetype
+a a a a # Four starting spells
+
+ESC     # dismiss the arrival-room description; now in play
+
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+# The switch list draws no cursor a screen dump can see, so this counts rows
+# instead: Free Advancement is the third, Infinite Mana the eighth, Freeze
+# Monsters the eleventh, and the cursor opens on the first.
+DOWN*2 SPACE   # Free Advancement: NO -> YES
+DOWN*5 SPACE   # Infinite Mana: NO -> YES
+DOWN*3 SPACE   # Freeze Monsters: NO -> YES
+ESC
+
+# Learn Any Spell puts Divine Sacrifice in the book whatever four spells
+# generation offered. The domain grant already supplies it, but the god's own
+# four starting spell picks are positional "a a a a" and may replace it;
+# SP_INNATE also lets the cast ignore a holy symbol the seed's gear did not
+# equip (src/Magic.cpp:4745-4749), which several seeds otherwise trip.
+w
+@choose "Learn Any Spell"
+"Divine Sacrifice"
+ENTER
+
+# Free Advance twice, from Priest 1 to Priest 3, so the domain's own grant is
+# also exercised (lib/classes.irh:1869; src/Create.cpp:3365-3401).
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+@dump:level
+ESC
