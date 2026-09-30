@@ -814,6 +814,10 @@ class Character: public Creature
          gate. Off unless INCURSION_MANA_FLOOR_PROBE is set. Driven by
          tools/check_mana_regen_floor.sh. inc-41kg. */
       void ManaFloorProbe();
+      /* Self-check for the law/chaos half of Character::AlignedAct. Off
+         unless INCURSION_ALIGN_PROBE is set. Driven by
+         tools/check_align_lawchaos.sh. inc-r6ae. */
+      void AlignLawChaosProbe();
       void PaladinFall();
       void PaladinAtone();
       void SwapAttributes(int16 n);

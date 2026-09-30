@@ -322,6 +322,11 @@ void Game::Play() {
        tools/check_mana_regen_floor.sh. inc-41kg. */
     pp->ManaFloorProbe();
 
+    /* Off unless INCURSION_ALIGN_PROBE is set, and run here because it needs
+       a live player. See Character::AlignLawChaosProbe and
+       tools/check_align_lawchaos.sh. inc-r6ae. */
+    pp->AlignLawChaosProbe();
+
     doSave = false;
     doLoad = true;
     doAutoSave = false;
