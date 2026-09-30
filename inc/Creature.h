@@ -779,6 +779,7 @@ class Character: public Creature
       virtual void AdvanceLevel()=0;
       virtual void GainFeat(int16 list, int32 param=0)=0;
       virtual void GainAbility(int16 ab, uint32 pa, rID sourceID,int16 statiSource)=0;
+      void RaiseSpellSlotsToChart();
       bool FeatPrereq(int16 n, bool fail_if_feat_requires_a_feat = false);
       virtual bool HasFeat(int16 n, bool inh=false, bool list=false);
       virtual bool TwoWeaponFeatWorks();
@@ -814,6 +815,17 @@ class Character: public Creature
          gate. Off unless INCURSION_MANA_FLOOR_PROBE is set. Driven by
          tools/check_mana_regen_floor.sh. inc-41kg. */
       void ManaFloorProbe();
+      /* Reproduction probe for Intensive Study granting no spell slots.
+         Off unless INCURSION_STUDY_PROBE is set. Driven by
+         tools/check_study_slots.sh. inc-ngku. */
+      void StudySlotsProbe();
+      /* No-study control: an ordinary caster level-up grants the chart's
+         slots. Off unless INCURSION_LEVELUP_PROBE is set. inc-ngku. */
+      void LevelUpSlotsProbe();
+      /* Self-check for the law/chaos half of Character::AlignedAct. Off
+         unless INCURSION_ALIGN_PROBE is set. Driven by
+         tools/check_align_lawchaos.sh. inc-r6ae. */
+      void AlignLawChaosProbe();
       void PaladinFall();
       void PaladinAtone();
       void SwapAttributes(int16 n);

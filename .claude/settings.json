@@ -21,6 +21,28 @@
         ],
         "matcher": ""
       }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "command": "tools/resume_gc.sh --hook-end",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "tools/resume_gc.sh --hook-prompt",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
     ]
   }
 }

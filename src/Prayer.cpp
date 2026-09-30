@@ -2214,7 +2214,7 @@ EvReturn Character::AlignedAct(EventInfo &e)
       else if (e.EParam & AL_CHAOTIC)
         alignLC += (int16)e.vMag;
       if (!(dAlign & AL_CHAOTIC))
-        alignLC = max(30, alignLC);
+        alignLC = min(30, alignLC);
       }
     else if (e.EParam & AL_LAWFUL) {
       alignLC -= (int16)e.vMag;
@@ -2222,7 +2222,7 @@ EvReturn Character::AlignedAct(EventInfo &e)
         alignLC = max(alignLC,0);
       }
     else if (e.EParam & AL_CHAOTIC) {
-      alignLC -= (int16)e.vMag;
+      alignLC += (int16)e.vMag;
       if (!(dAlign & AL_CHAOTIC))
         alignLC = min(alignLC,0);
       }
@@ -2230,10 +2230,24 @@ EvReturn Character::AlignedAct(EventInfo &e)
     alignLC = max(-70,min(70,alignLC));
     alignGE = max(-70,min(70,alignGE));
       
+    /* upstream: the law/chaos half must mirror the good/evil half above it
+       (the AL_GOOD/AL_EVIL if/else pair at alignGE). Without the else branches
+       no act can ever set AL_LAWFUL/AL_CHAOTIC, and the neutral-chaotic act
+       moved alignLC the wrong way while the committed-chaotic branch pinned
+       with max(30,...) where its evil twin used min(30,...). Pure control flow
+       and integer arithmetic, no typedef or compiler dependence, so the
+       original Win32 build misbehaves identically. Tier Observed:
+       tools/check_align_lawchaos.sh is red before (five FAILs) and green after,
+       each law/chaos case read against its good/evil twin in the same run.
+       inc-r6ae. Not sent. */
     if (alignLC > -20)
       nAlign &= (~AL_LAWFUL);
+    else
+      nAlign |= AL_LAWFUL;
     if (alignLC < 20)
       nAlign &= (~AL_CHAOTIC);
+    else
+      nAlign |= AL_CHAOTIC;
       
     if (abs(alignLC) < 20 && !(cAlign & (AL_LAWFUL|AL_CHAOTIC)) && 
          (e.EParam & (AL_CHAOTIC|AL_LAWFUL|AL_NONCHAOTIC|AL_NONLAWFUL)))
@@ -2301,6 +2315,48 @@ EvReturn Character::AlignedAct(EventInfo &e)
 EvReturn Character::ChangeAlign(EventInfo &e)
   {
     return NOTHING;
+  }
+
+/* Alignment-probe for inc-r6ae. Off unless INCURSION_ALIGN_PROBE is set.
+   Fires AlignedAct on characters whose alignment half is set six ways, and
+   logs both alignLC and alignGE plus the resulting ALIGNMENT flags. Cases
+   mirror a good/evil twin, redesigned for round 2 of the brief: the
+   neutral-*-desired cases carry a non-zero desiredAlign (a character
+   drifting toward an alignment it desires), the leaving cases start already
+   committed and desire nothing, so they exercise the max(30,...)/min(30,...)
+   pins. Six cases only: Error() caps the distinct messages one session logs
+   (nine, measured), so more would be silently dropped. Driven by
+   tools/check_align_lawchaos.sh. */
+void Character::AlignLawChaosProbe()
+  {
+    if (!getenv("INCURSION_ALIGN_PROBE"))
+      return;
+
+    int16 i;
+    static const char *CASE[6] = {
+      "neutral-lawful-desired", "neutral-chaotic-desired", "chaotic-leaving",
+      "neutral-good-desired",   "neutral-evil-desired",    "evil-leaving"};
+    uint16 start[6] = {0, 0, AL_CHAOTIC, 0, 0, AL_EVIL};
+    uint16 acts[6]  = {AL_LAWFUL, AL_CHAOTIC, AL_NONCHAOTIC,
+                       AL_GOOD, AL_EVIL, AL_NONEVIL};
+    uint16 want[6]  = {AL_LAWFUL, AL_CHAOTIC, 0,
+                       AL_GOOD, AL_EVIL, 0};
+
+    uint16 savedAlign = desiredAlign;
+    for (i = 0; i < 6; i++) {
+      alignLC = (start[i] & AL_CHAOTIC) ? 60 : 0;
+      alignGE = (start[i] & AL_EVIL) ? 60 : 0;
+      desiredAlign = want[i];
+      SetStatiVal(ALIGNMENT,NULL,start[i]);
+      for (int16 n = 0; n < 5; n++)
+        AlignedAct(acts[i], 10, "alignment probe");
+      uint16 a = GetStatiVal(ALIGNMENT);
+      Error("ALIGN_PROBE case=%s acts=5 alignLC=%d alignGE=%d align=0x%x lawful=%d chaotic=%d good=%d evil=%d",
+        CASE[i], (int)alignLC, (int)alignGE, (int)a,
+        (a & AL_LAWFUL) ? 1 : 0, (a & AL_CHAOTIC) ? 1 : 0,
+        (a & AL_GOOD) ? 1 : 0, (a & AL_EVIL) ? 1 : 0);
+    }
+    desiredAlign = savedAlign;
   }
   
 void Character::AlignedAct(uint16 type, int16 mag, const char *reason,Creature *vic)
