@@ -331,6 +331,10 @@ void Game::Play() {
        inc-ngku: an ordinary caster level-up must still grant the chart's
        slots. See Character::LevelUpSlotsProbe. */
     pp->LevelUpSlotsProbe();
+    /* Off unless INCURSION_ALIGN_PROBE is set, and run here because it needs
+       a live player. See Character::AlignLawChaosProbe and
+       tools/check_align_lawchaos.sh. inc-r6ae. */
+    pp->AlignLawChaosProbe();
 
     doSave = false;
     doLoad = true;

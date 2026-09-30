@@ -145,3 +145,5 @@ character the `.sav` beside it does not hold.
 | Fixture | Contents |
 |---|---|
 | `bead-dupes-offline-proof.json` | Two small fake beads, `bd list --json` shape, no real bead text. `tools/check_bead_dupe_wiring.sh` hands this to `tools/bead_dupes.py check-draft` so it has a candidate to rank before the keyless path exits 3. |
+| `opencode-loop/loop.jsonl` | A trimmed opencode `events.jsonl` extract from a run that fell into a DeepSeek repetition loop: one real loop step (its `text` parts and `step_finish`, 3689 output tokens with 17 short lines repeated three or more times) plus a few normal steps. `tools/opencode/loop_check.py` exits 1 on it. Tool outputs are shortened, so the fixture is under 20 KB. |
+| `opencode-loop/clean.jsonl` | A trimmed extract pairing the 10786-token `bsqm` step whose text is mostly repeated ```` ``` ```` and `{ }` lines inside code fences -- the false-positive trap the fence-stripping rule exists for -- with several normal `twr9` steps. `tools/opencode/loop_check.py` exits 0 on it. Under 51 KB. |

@@ -4,15 +4,17 @@
 # Does tools/watchdog.sh stop a command whose output never starts or stops
 # growing, killing the whole process group (grandchildren included), leave a
 # healthy run alone, pass through the command's own exit code, wire --in to
-# the command's stdin, validate its limits, and make tools/codex_exec.sh use
-# it? Defends bead inc-gofz: a stalled implementer run must be stopped rather
-# than hang its dispatcher forever.
+# the command's stdin, validate its limits, run --canary on a growing run and
+# stop only on its exit 1, and make tools/codex_exec.sh use it? Defends bead
+# inc-gofz (a stalled implementer run must be stopped rather than hang its
+# dispatcher forever) and inc-uxmf (a DeepSeek repetition loop keeps writing,
+# so only a canary catches it).
 #
 # Fully offline. Stub commands written into a temp dir stand in for the
 # harnesses; limits of 1-3 seconds via INCURSION_WATCHDOG_* keep the whole
 # check quick. No network request ever leaves this machine.
 #
-#   tools/check_watchdog.sh               run the nine assertions
+#   tools/check_watchdog.sh               run the twelve assertions
 #   tools/check_watchdog.sh --prove-red   neuter the watchdog's kill, confirm
 #                                         assertions a and b go red, restore
 #
@@ -363,8 +365,122 @@ else
     fail "bad env: rc=$RC err=$(cat "$TMP/g.err")"
 fi
 
+# --- h. --canary: an exit 1 stops the run and saves its stdout ------------
+# A fake canary that exits 1 once the out file carries MARKER, a fake canary
+# that exits 0, and one that exits 5 (a crash) exercise the three cases.
+CANARY="$TMP/canary"
+cat > "$CANARY" <<'CANARY_EOF'
+#!/bin/bash
+OUTFILE=""
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --out) OUTFILE="$2"; shift 2 ;;
+        *) shift ;;
+    esac
+done
+if [ -n "${CANARY_MARKER:-}" ] && grep -qF "$CANARY_MARKER" "$OUTFILE" 2>/dev/null; then
+    echo "canary-stop messageID=$CANARY_MARKER output_tokens=9999 repeated_lines=99"
+    exit "${CANARY_RC_HIT:-1}"
+fi
+exit "${CANARY_RC_MISS:-0}"
+CANARY_EOF
+chmod +x "$CANARY"
+
+WRITER="$TMP/canary-writer"
+cat > "$WRITER" <<'WRITER_EOF'
+#!/bin/bash
+echo "first line"
+sleep 1
+echo "MARKER present now"
+sleep 1000
+WRITER_EOF
+chmod +x "$WRITER"
+
+# run_bounded_canary <safety> <out> <err> <status> <canary> [env assignments...]
+#   -- <command...>
+# Like run_bounded, but passes --canary through, so a run that hangs after the
+# canary fires cannot hang the check. The caller's CANARY_MARKER/CANARY_RC_*
+# environment is exported to the canary itself.
+run_bounded_canary() {
+    local safety="$1"; shift
+    local out="$1" err="$2" status="$3" canary="$4"; shift 4
+    local envs=()
+    while [ "$#" -gt 0 ] && [ "$1" != "--" ]; do
+        envs+=("$1"); shift
+    done
+    [ "${1:-}" = "--" ] && shift
+    env "${envs[@]}" "$WATCHDOG" --out "$out" --err "$err" --status "$status" \
+        --canary "$canary" -- "$@" 2> "$err.watchdog" &
+    local wdpid=$!
+    (
+        sleep "$safety"
+        if kill -0 "$wdpid" 2>/dev/null; then
+            kill -KILL "$wdpid" 2>/dev/null
+        fi
+    ) &
+    local safetypid=$!
+    wait "$wdpid"
+    local rc=$?
+    kill "$safetypid" 2>/dev/null
+    wait "$safetypid" 2>/dev/null
+    printf '%s\n' "$rc"
+    return 0
+}
+
+# h1. canary exit 1 stops the run, reason canary, .canary holds its stdout.
+OUT="$TMP/h1.out"; ERR="$TMP/h1.err"; STATUS="$TMP/h1.status"
+rm -f "$OUT" "$ERR" "$STATUS" "$STATUS.canary"
+RC="$(run_bounded_canary 8 "$OUT" "$ERR" "$STATUS" "$CANARY" \
+    CANARY_MARKER=MARKER CANARY_RC_HIT=1 \
+    INCURSION_WATCHDOG_POLL=1 INCURSION_WATCHDOG_STARTUP=5 \
+    INCURSION_WATCHDOG_IDLE=30 INCURSION_WATCHDOG_GRACE=2 \
+    -- "$WRITER")"
+if [ "$RC" -eq 124 ] && [ "$(cat "$STATUS" 2>/dev/null)" = "canary" ] \
+    && grep -q 'canary-stop' "$STATUS.canary" 2>/dev/null; then
+    pass "canary exit 1: run stopped, status canary, stdout saved to .canary"
+else
+    fail "canary exit 1: rc=$RC status=$(cat "$STATUS" 2>/dev/null) canary=$(cat "$STATUS.canary" 2>/dev/null)"
+fi
+
+# h2. canary exit 0 does not stop a run that exits on its own.
+WRITER_OK="$TMP/canary-writer-ok"
+cat > "$WRITER_OK" <<'WRITER_OK_EOF'
+#!/bin/bash
+echo "MARKER and done"
+sleep 2
+exit 0
+WRITER_OK_EOF
+chmod +x "$WRITER_OK"
+OUT="$TMP/h2.out"; ERR="$TMP/h2.err"; STATUS="$TMP/h2.status"
+rm -f "$OUT" "$ERR" "$STATUS" "$STATUS.canary"
+RC="$(run_bounded_canary 8 "$OUT" "$ERR" "$STATUS" "$CANARY" \
+    CANARY_MARKER=MARKER CANARY_RC_HIT=0 \
+    INCURSION_WATCHDOG_POLL=1 INCURSION_WATCHDOG_STARTUP=5 \
+    INCURSION_WATCHDOG_IDLE=30 INCURSION_WATCHDOG_GRACE=2 \
+    -- "$WRITER_OK")"
+if [ "$RC" -eq 0 ] && [ ! -f "$STATUS" ]; then
+    pass "canary exit 0: healthy run exits 0, no status file"
+else
+    fail "canary exit 0: rc=$RC status-exists=$([ -f "$STATUS" ] && echo yes || echo no)"
+fi
+
+# h3. canary exit 5 (a crash) does not stop the run; one warning is printed.
+OUT="$TMP/h3.out"; ERR="$TMP/h3.err"; STATUS="$TMP/h3.status"
+rm -f "$OUT" "$ERR" "$STATUS" "$STATUS.canary"
+RC="$(run_bounded_canary 8 "$OUT" "$ERR" "$STATUS" "$CANARY" \
+    CANARY_MARKER=MARKER CANARY_RC_HIT=5 \
+    INCURSION_WATCHDOG_POLL=1 INCURSION_WATCHDOG_STARTUP=5 \
+    INCURSION_WATCHDOG_IDLE=30 INCURSION_WATCHDOG_GRACE=2 \
+    -- "$WRITER_OK")"
+if [ "$RC" -eq 0 ] && [ ! -f "$STATUS" ] && grep -q 'canary exited 5' "$ERR.watchdog" \
+    && [ "$(grep -c 'canary exited 5' "$ERR.watchdog")" -eq 1 ]; then
+    pass "canary exit 5: run not stopped, one warning on stderr"
+else
+    fail "canary exit 5: rc=$RC status-exists=$([ -f "$STATUS" ] && echo yes || echo no) err=$(cat "$ERR.watchdog")"
+fi
+
 if [ "$FAIL" -eq 0 ]; then
-    echo "PASS: check_watchdog.sh, all nine assertions"
+    echo "PASS: check_watchdog.sh, all twelve assertions"
     exit 0
 else
     echo "FAIL: check_watchdog.sh, at least one assertion failed above"

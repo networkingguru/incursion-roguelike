@@ -822,6 +822,10 @@ class Character: public Creature
       /* No-study control: an ordinary caster level-up grants the chart's
          slots. Off unless INCURSION_LEVELUP_PROBE is set. inc-ngku. */
       void LevelUpSlotsProbe();
+      /* Self-check for the law/chaos half of Character::AlignedAct. Off
+         unless INCURSION_ALIGN_PROBE is set. Driven by
+         tools/check_align_lawchaos.sh. inc-r6ae. */
+      void AlignLawChaosProbe();
       void PaladinFall();
       void PaladinAtone();
       void SwapAttributes(int16 n);
