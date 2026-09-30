@@ -1149,44 +1149,91 @@ Druid Spell "Forest Wall" : EA_TERRAFORM
 Effect "Divine Sacrifice" : EA_INFLICT
   {
     SC_THE; Level: 2; Cost: 3; 
-    Desc: "Casting this spell, you sacrifice between two and ten hit
-      points in order to gain the ability to inflict +1d10 extra damage
-      on the next creature you hit for every 2 hit points you lose.
-      The effect lasts only a short time; if you do not hit within
-      the spell's duration, the sacrificed hit points are wasted. You
-      can sacrifice a maximum number of hit points equal to your
-      paladin level.";
+    Desc: "For 1 round per caster level, you may sacrifice your own life
+      force to strike harder. When you cast the spell, you choose to
+      sacrifice 2, 4, 6, 8 or 10 hit points. Each round, when you make
+      an attack, you lose that many hit points, and your next successful
+      attack deals +1d6 damage for every 2 hit points lost. If you miss,
+      the bonus waits for your next hit, and you lose no more hit points
+      until it is used. The sacrifice is skipped if it would bring you
+      to 0 hit points or below. You can end the spell at any time from
+      the cancel menu.";
+    /* sac: the chosen sacrifice. The chosen amount, the two metamagic
+       flags, the waiting bonus dice and the round of the last payment
+       live in five EFF_FLAG1 stati on the caster, discriminated by Val;
+       the two attack hooks are TRAP_EVENT statis for EV_STRIKE (pay) and
+       PRE(EV_HIT) (spend), the latter built from xval/yval. */
     int16 sac; xval: TRAP_EVENT; yval: PRE(EV_HIT);
-    On Event EV_EFFECT {
-      int16 lv, ch; lv = EActor->LevelAs($"paladin");
+    Flags: EF_CANCEL;
+    On Event EV_CALC_EFFECT {
+      /* e.vDuration defaults to 10 + caster level*2 (src/Magic.cpp:536);
+         this spell's design lasts 1 round per caster level, and one
+         Duration unit is one round (src/Status.cpp:60). */
+      e.vDuration = e.vCasterLev;
+      return NOTHING;
+      },
+    EV_EFFECT {
+      int16 ch;
       ch = EActor->ChoicePrompt("How many extra dice of damage?",
-        lv >= 10 ? "12345" : lv >= 8 ? "1234" : lv >= 6 ? "123" :
-        lv >= 4 ? "12" : "1", '0' + min(5,lv/2));
+        "12345", '1');
       sac = (ch - '0')*2;
-      ThrowDmg(EV_DAMAGE,AD_NORM,sac,"martyrdom",EActor,EActor);
       return NOTHING;
       },
     POST(EV_MAGIC_HIT) {
       EVictim->GainTempStati(EFF_FLAG1,NULL,e.vDuration,SS_ENCH,
-        e.MM, sac, $"Divine Sacrifice", e.vCasterLev);
+        0, sac, $"Divine Sacrifice", e.vCasterLev);
+      EVictim->GainTempStati(EFF_FLAG1,NULL,e.vDuration,SS_ENCH,
+        1, (e.MM & MM_MAXIMIZE) ? 1 : 0, $"Divine Sacrifice", e.vCasterLev);
+      EVictim->GainTempStati(EFF_FLAG1,NULL,e.vDuration,SS_ENCH,
+        2, 0, $"Divine Sacrifice", e.vCasterLev);
+      EVictim->GainTempStati(EFF_FLAG1,NULL,e.vDuration,SS_ENCH,
+        3, 0, $"Divine Sacrifice", e.vCasterLev);
+      EVictim->GainTempStati(EFF_FLAG1,NULL,e.vDuration,SS_ENCH,
+        4, (e.MM & MM_EMPOWER) ? 1 : 0, $"Divine Sacrifice", e.vCasterLev);
+      /* The payment hook. xval/yval can carry only one event, so the
+         EV_STRIKE hook is granted here, the same way Inflict grants the
+         xval/yval one (src/Effects.cpp:511). It fires in the EV_STRIKE
+         main phase, after PreStrike has accepted the attack and before
+         Strike rolls to hit. */
+      EVictim->GainTempStati(TRAP_EVENT,NULL,e.vDuration,SS_ENCH,
+        EV_STRIKE, 0, $"Divine Sacrifice", e.vCasterLev);
+      return NOTHING;
+      },
+    META(EV_STRIKE) {
+      int16 chosen, waiting, last, round;
+      if (EActor->GetEffStatiMag(EFF_FLAG1,$"Divine Sacrifice",2) > 0)
+        return NOTHING;
+      chosen = EActor->GetEffStatiMag(EFF_FLAG1,$"Divine Sacrifice",0);
+      if (chosen <= 0)
+        return NOTHING;
+      if (EActor->cHP - chosen <= 0)
+        return NOTHING;
+      round = theGame->GetTurn()/60;
+      last  = EActor->GetEffStatiMag(EFF_FLAG1,$"Divine Sacrifice",3);
+      if (round == last)
+        return NOTHING;
+      ThrowDmg(EV_DAMAGE,AD_NORM,chosen,"martyrdom",EActor,EActor);
+      EActor->SetEffStatiMag(EFF_FLAG1,$"Divine Sacrifice",
+        chosen/2, 2);
+      EActor->SetEffStatiMag(EFF_FLAG1,$"Divine Sacrifice", round, 3);
       return NOTHING;
       },
     META(PRE(EV_HIT)) {
-      uint32 meta; int16 dt, dmg;
-      meta = EActor->GetEffStatiVal(EFF_FLAG1,$"Divine Sacrifice");
-      sac  = EActor->GetEffStatiMag(EFF_FLAG1,$"Divine Sacrifice")/2;
-      if (sac)
-        {
-          if (meta & MM_MAXIMIZE)
-            dmg = sac * 10;
-          else 
-            dmg = (sac)d10;
-          if (meta & MM_EMPOWER)
-            dmg = (dmg*3)/2;
-          e.bDmg += dmg;
-          e.strDmg += Format(" %+d DSac",dmg);
-          EActor->RemoveEffStati($"Divine Sacrifice");
-        }
+      int16 nd, dmg, maximize, empower;
+      nd = EActor->GetEffStatiMag(EFF_FLAG1,$"Divine Sacrifice",2);
+      if (nd <= 0)
+        return NOTHING;
+      maximize = EActor->GetEffStatiMag(EFF_FLAG1,$"Divine Sacrifice",1);
+      empower  = EActor->GetEffStatiMag(EFF_FLAG1,$"Divine Sacrifice",4);
+      if (maximize)
+        dmg = nd * 6;
+      else
+        dmg = (nd)d6;
+      if (empower)
+        dmg = (dmg*3)/2;
+      e.bDmg += dmg;
+      e.strDmg += Format(" %+d DSac",dmg);
+      EActor->SetEffStatiMag(EFF_FLAG1,$"Divine Sacrifice",0,2);
       return NOTHING;
       };
   }
@@ -5869,25 +5916,32 @@ Priest Spell "Holy Summoning VI" : EA_SUMMON
     On Event MSG_XSUMMON "The outsider you called before still serves you.";
     ALIENIST_CLAUSE(6) }
 
+// upstream: the spell carried EF_DEATH, which src/Magic.cpp:342-344 isTarget
+// treats as a death effect every necromancy-immune creature ignores, and every
+// undead is necromancy-immune (UNDEAD_IMMUNITIES, lib/defines.irh:7), so the
+// spell could never affect its only targets. The same data misbehaves on Win32
+// with the original compiler, so it is upstream, not a port artefact. Observed;
+// inc-kgzx; not sent.
 Wizard / Priest Spell "Undeath to Death" : EA_BLAST
-  { SC_NEC; aval: AR_BALL; lval: 3; cval: WHITE; 
-    Base: SP_EASY; Cost: 12; Level: 6; qval: Q_TAR; pval: (LEVEL_1PER1)d8;
-    Desc: "Destroys any undead creature caught within a 60-foot globe
-      centered on the caster that currently has fewer than (1d8 per 
-      caster level) hit points. The effect is all-or-nothing, and no 
-      saving throw is allowed.";
+  { SC_NEC; aval: AR_GLOBE; lval: 4; cval: WHITE; 
+    Base: SP_EASY; Cost: 12; Level: 6; qval: Q_TAR | Q_LOC;
+    sval: WILL; pval: (LEVEL_MAX20)d4;
+    Desc: "Destroys undead creatures within a 40-foot (4 square) radius
+      burst centered on a point you choose. The spell destroys up to
+      1d4 Hit Dice of undead per caster level (maximum 20d4). Undead
+      with the fewest Hit Dice are affected first; among equals, those
+      closest to the center go first. An undead creature of 9 or more
+      Hit Dice is unaffected, and Hit Dice too few to affect the next
+      creature are wasted. Each affected creature may make a Will save
+      to negate the effect, but its Hit Dice still count against the
+      total.";
     On Event EV_MAGIC_HIT {
-      if (EVictim->cHP > e.vDmg)
-        {
-          e.Immune = true;
-          return DONE;
-        }
       VPrint(e,"You return to death!",
                "The <EVictim> returns to death!");
       ThrowDmg(EV_DEATH,AD_NORM,0,"Undeath to Death",EActor,EVictim);
       return DONE;
       };
-    tval: MA_UNDEAD; Flags: EF_LIM_MTYPE, EF_DEATH; 
+    tval: MA_UNDEAD; Flags: EF_LIM_MTYPE, EF_HD_POOL;
     Purpose: EP_ATTACK;
   }
 

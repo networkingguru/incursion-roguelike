@@ -1,0 +1,195 @@
+# inc-kgzx phase 2c: photograph the Undeath to Death Hit Dice pool SHORT, so
+# fewest-Hit-Dice order (R1), the wasted remainder (R2) and the 9-HD cap (R3)
+# are all visible in play.
+#
+# WHY THIS FILE CASTS TWICE. The pool walks creatures fewest Hit Dice first, so
+# a 9-HD creature always sorts LAST, after every 1-HD and 8-HD one. The moment
+# the pool cannot cover the next sub-cap creature the walk STOPS (R2), so a
+# burst whose sub-cap creatures already exceed the pool can never reach the
+# 9-HD creature, and a burst the pool can cover never wastes. The two rules are
+# therefore mutually exclusive inside one walk: R2 and R3 cannot both be seen
+# in a single cast, whatever the creature mix. This scene shows R1 + R2 in a
+# first burst and R3 in a second, disjoint burst, which is the only way both
+# are Observable rather than Reasoned.
+#
+# THE RULE, as lib/pspells.irh states it: aval AR_GLOBE, lval 4 (a 4-square
+# burst centered on the aimed point, so the game's rounded-Chebyshev dist < 4),
+# pval (LEVEL_MAX20)d4 -- ONE pool of 11d4 here, 11..44, per cast. Spent fewest
+# Hit Dice first, ties nearest the centre; a creature of EF_HD_POOL_CAP (9) or
+# more is skipped without spending; a remainder too small for the next creature
+# is wasted and the walk stops.
+#
+# THE CASTER is an orc priest of Aiswin at character level 11 (Free
+# Advancement), "Undeath to Death" learned through Learn Any Spell so it is
+# innate and its caster level is ChallengeRating = 11. He stands in the Entry
+# Chamber at (44,111), whose floor spans x=34..54, y=107..121. Wizard Sight
+# (armed in the shared setup) makes the whole screen a defined target area;
+# Freeze Monsters keeps every summoned undead on its square.
+#
+# BURST ONE -- R1 + R2, centre Cw = caster+4 east = (48,111):
+#   claw A   caster+3,0  -> Cw-1,0  d1   1 HD   nearest the centre
+#   claw B   caster+2,0  -> Cw-2,0  d2   1 HD   (R1: the farther claw second)
+#   mummy 1  caster+4,0  -> Cw+0,0  d0   8 HD
+#   mummy 2  caster+5,0  -> Cw+1,0  d1   8 HD
+#   mummy 3  caster+6,0  -> Cw+2,0  d2   8 HD
+#   mummy 4  caster+4,-1 -> Cw+0,-1 d1   8 HD
+#   mummy 5  caster+4,+1 -> Cw+0,+1 d1   8 HD
+#   mummy 6  caster+5,-1 -> Cw+1,-1 d1   8 HD
+#   bodak    caster+4,-2 -> Cw+0,-2 d2   9 HD   AT the cap, near the centre
+# The two claws and six mummies are 50 HD of eligible creatures, more than the
+# maximum 11d4 = 44, so every seed wastes on a mummy and stops (R2). The bodak
+# sits in the burst and is ACCEPTED by the undead filter (EF_LIM_MTYPE, tval
+# MA_UNDEAD -- a bodak is MA_OUTSIDER carrying M_UNDEAD), so it never appears
+# as REJECT-TARGET; being last it is never reached once the walk stops, which
+# is why the cap itself is shown in burst two.
+#
+# BURST TWO -- R3, centre Cc = caster-6 east = (38,111), disjoint from burst
+# one (their discs do not overlap; the caster is outside both):
+#   claw     caster-7,0  -> Cc-1,0  d1   1 HD
+#   bodak    caster-5,0  -> Cc+1,0  d1   9 HD   AT the cap, near the centre
+# The pool covers the claw (1 HD) with 10..43 to spare and then reaches the
+# bodak, which the cap skips without spending: SKIP-CAP, never REJECT-TARGET,
+# never STRIKE. This is the line that proves the spell's undead filter accepts
+# a bodak.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_RUN_DIR="$PWD/logs/inc-kgzx/pool/seed-1" \
+#   INCURSION_HDPOOL_PROBE=1 \
+#       tools/headless.sh tools/keys/undeath-to-death-pool.keys 1
+@include undeath-to-death-setup.keys
+
+# =========================================================================
+#  BURST ONE (centre Cw = caster+4 east): R1 order + R2 waste
+# =========================================================================
+
+# --- SUMMON claw A, caster+3 east (1 HD, nearest Cw) -----------------------
+w
+@choose "Monster Summoning"
+TAB
+@choose "Zombies"
+@choose "crawling claw"
+RIGHT*3
+ENTER
+@dump:summon-claw-a
+
+# --- SUMMON claw B, caster+2 east (1 HD) -----------------------------------
+w
+@choose "Monster Summoning"
+TAB
+@choose "Zombies"
+@choose "crawling claw"
+RIGHT*2
+ENTER
+@dump:summon-claw-b
+
+# --- SUMMON mummies 1..6 (8 HD, at mixed distances from Cw) -----------------
+w
+@choose "Monster Summoning"
+@choose "Corporeal Undead"
+@choose "mummy"
+RIGHT*4
+ENTER
+@dump:summon-mummy-1
+
+w
+@choose "Monster Summoning"
+@choose "Corporeal Undead"
+@choose "mummy"
+RIGHT*5
+ENTER
+@dump:summon-mummy-2
+
+w
+@choose "Monster Summoning"
+@choose "Corporeal Undead"
+@choose "mummy"
+RIGHT*6
+ENTER
+@dump:summon-mummy-3
+
+w
+@choose "Monster Summoning"
+@choose "Corporeal Undead"
+@choose "mummy"
+RIGHT*4
+UP
+ENTER
+@dump:summon-mummy-4
+
+w
+@choose "Monster Summoning"
+@choose "Corporeal Undead"
+@choose "mummy"
+RIGHT*4
+DOWN
+ENTER
+@dump:summon-mummy-5
+
+w
+@choose "Monster Summoning"
+@choose "Corporeal Undead"
+@choose "mummy"
+RIGHT*5
+UP
+ENTER
+@dump:summon-mummy-6
+
+# --- SUMMON the bodak near Cw, caster+4 east 2 north (9 HD, AT the cap) -----
+w
+@choose "Monster Summoning"
+@choose "Outsiders"
+@choose "bodak"
+RIGHT*4
+UP*2
+ENTER
+@dump:summon-bodak-w
+
+# --- CAST ONE, centred on Cw (R1 order + R2 waste) -------------------------
+# m opens the spell list; the shot opens in target mode (Q_TAR|Q_LOC, jump on)
+# on the player. 'l' switches to the LOCATION cursor at the player, RIGHT*4
+# moves it to Cw, ENTER confirms a bare location so the burst centres on Cw.
+m
+@choose "Undeath to Death"
+l
+RIGHT*4
+@dump:target-prompt-1
+ENTER
+@while "more --" SPACE
+@dump:after-cast-1
+
+# =========================================================================
+#  BURST TWO (centre Cc = caster-6 east): R3 cap, in a disjoint burst
+# =========================================================================
+
+# --- SUMMON claw, caster-7 east (1 HD) -------------------------------------
+w
+@choose "Monster Summoning"
+TAB
+@choose "Zombies"
+@choose "crawling claw"
+LEFT*7
+ENTER
+@dump:summon-claw-c
+
+# --- SUMMON the bodak, caster-5 east (9 HD, AT the cap, near Cc) ------------
+w
+@choose "Monster Summoning"
+@choose "Outsiders"
+@choose "bodak"
+LEFT*5
+ENTER
+@dump:summon-bodak-c
+
+# --- CAST TWO, centred on Cc (R3: the bodak is SKIP-CAP) -------------------
+m
+@choose "Undeath to Death"
+l
+LEFT*6
+@dump:target-prompt-2
+ENTER
+@while "more --" SPACE
+@dump:after-cast-2
+v
+@dump:messages
+@while "Messages" ESC
+@quit
