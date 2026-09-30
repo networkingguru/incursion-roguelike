@@ -705,6 +705,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_staff_winter_quality.sh` | Does the Staff of Winter carry the weakening quality its page names, rather than the numbing quality the script gave it? | LIVE |
 | `check_stair_cycle.sh` | Does the overview map's staircase search run, pick the cheapest, and wrap? | LIVE |
 | `check_stair_warn.sh` | Does descending an ordinary staircase skip the false unsafe-terrain warning, rather than asking to confirm every descent? | LIVE |
+| `check_study_slots.sh` | Intensive Study (spellcasting) raises spell slots to the chart | LIVE |
 | `check_sticky_save.sh` | Does walking onto a pool of slime roll a real Reflex save, and does the STUCK it grants lapse on its own? The DC must print above zero (`SavingThrow` prints nothing at all for `DC <= 0`), and the printed roll line must change after 100 turns of nothing but waiting -- proof a second roll fired, which requires the first grant to have expired, since the same hazard re-catches anyone still standing in it the instant an old grant lapses. | LIVE |
 | `check_store_scroll.sh` | Does the shop list follow the selection in both directions, reached without wizard mode? | LIVE |
 | `check_striking_wand_knockback.sh` | Does the Wand of Striking fold its knockback into the telekinetic bolt's single Reflex save, instead of rolling a second, independent one? | LIVE |
@@ -995,6 +996,7 @@ tools/check_sharp_senses.sh
 tools/check_skill_manager_reset.sh
 tools/check_stacked_abilities.sh
 tools/check_springblade_label.sh
+tools/check_study_slots.sh           # Intensive Study (spellcasting) raises spell slots to the chart
 tools/check_xp_penalty.sh
 tools/check_xp_penalty_rule.sh
 tools/check_prestige_profs.sh

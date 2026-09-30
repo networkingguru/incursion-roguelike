@@ -1,0 +1,41 @@
+# Load a frozen single-class caster, give him one real level through the
+# character sheet's free-advancement path (Player::AdvanceLevel, the same
+# path a normal level-up takes), and photograph the sheet before and after.
+# bd inc-ngku: a level-up with NO Intensive Study must still grant exactly
+# the spellcasting chart's slots at the new raw class level.
+#
+# WHY THE WIZARD MENU. The fixture's XP is 0 and the settings fixture leaves
+# Free Advancement off, so the sheet's G/A level command refuses. The wizard
+# mode switch (Player::WizardOptions, src/Debug.cpp) turns Free Advancement on
+# for this run, which is the only way a key script reaches AdvanceLevel without
+# grinding XP. The load copies the save into the run sandbox, so the fixture
+# itself is untouched.
+#
+# The character is the single-class Orc Mage 1 of
+# tools/fixtures/chars/orc-mage-seed4-opt0822.sav: ClassID[1] is 0, so
+# AdvanceLevel asks no class menu; its level-2 feat menu is answered with 'a'
+# (the first entry), which the engine accepts as an ordinary choice.
+
+@dump:arrival
+
+s               # one real turn, so this counts as a session
+@dump:played
+
+w               # wizard mode
+y               # "Enter wizard mode?" -- yes
+w               # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE           # Free Advancement: NO -> YES
+ESC
+
+d               # character sheet
+@expect "Class  Mage 1"
+@dump:sheet-before
+
+G               # [G]ain a level -- Player::AdvanceLevel
+@until "Mage 2" a   # answer whatever level-up menu opens (feat pick) and
+                    # let the sheet repaint to the new class line
+@dump:sheet-after
+
+ESC             # leave the sheet, back to play mode
+@quit
