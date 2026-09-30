@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Does the law/chaos half of Character::AlignedAct behave like the good/evil
 # half it is written beside? (bd inc-r6ae)  Round 2: each law/chaos case is
 # asserted against its good/evil twin FROM THE SAME RUN, so the check reads
