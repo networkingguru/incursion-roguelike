@@ -13,10 +13,16 @@
 # re-apply leaves HP at exactly 7. The unfixed engine adds a +3 row beside
 # the +2 one; the max rule for typed bonuses hides it, so HP stays 7 there too.
 #
-# LOW HP. Wizard "Learn Any Spell" (src/Debug.cpp, case 17) teaches Divine
-# Sacrifice (lib/pspells.irh:1146) as an innate spell. For a non-paladin each
-# cast from the Use menu costs exactly 2 HP ("martyrdom", :1163), so 39 casts
-# take 85 to 7 with no randomness and no item damage. Below the pinned low-HP
+# LOW HP. Divine Sacrifice's HP cost moved from cast time to attack time
+# (inc-l8ws): casting alone no longer lowers HP, so the setup instead pays
+# by attacking. Wizard "Learn Any Spell" (src/Debug.cpp, case 17) teaches
+# Divine Sacrifice (lib/pspells.irh:1149) as an innate spell; the Freeze
+# Monsters wizard switch holds a summoned froghemoth still so every bump is
+# an attack that can pay. Each round the caster attacks, Divine Sacrifice
+# pays the chosen 10 HP once (lib/pspells.irh's META(EV_STRIKE): at most
+# once per round, never a payment that would reach 0 HP or below), so four
+# recast-and-attack cycles settle HP at 85 mod 10 = 5 with no randomness,
+# whatever the exact per-cycle payment count. Below the pinned low-HP
 # threshold every drop raises a "Low Hitpoint Warning!" box that waits for a
 # key (src/Player.cpp:275-285).
 #
@@ -47,45 +53,134 @@ w
 @choose "Learn Any Spell"
 "Divine Sacrifice" ENTER
 @dump:learned
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
-u @choose "Innate Divine Sacrifice" 1 @while "Low Hitpoint Warning" SPACE
+
+w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE            # Freeze Monsters: NO -> YES
+ESC
+
+u
+@choose "Innate Divine Sacrifice" 5
+@dump:cast-1
+
+w
+@choose "Monster Summoning"
+@choose "Beasts"
+@choose "froghemoth"
+RIGHT ENTER
+@dump:c1-summoned
+
+RIGHT
+@while "Confirm attack" y
+@dump:c1-a1
+ENTER RIGHT
+@dump:c1-a2
+ENTER RIGHT
+@dump:c1-a3
+ENTER RIGHT
+@dump:c1-a4
+
+ENTER
+w
+@choose "Genocide Everything"
+
+ENTER
+u
+@choose "Innate Divine Sacrifice" 5
+
+ENTER
+w
+@choose "Monster Summoning"
+@choose "Beasts"
+@choose "froghemoth"
+RIGHT ENTER
+@dump:c2-summoned
+
+ENTER RIGHT
+@dump:c2-a1
+ENTER RIGHT
+@dump:c2-a2
+ENTER RIGHT
+@dump:c2-a3
+ENTER RIGHT
+@dump:c2-a4
+
+ENTER
+w
+@choose "Genocide Everything"
+
+ENTER
+u
+@choose "Innate Divine Sacrifice" 5
+
+ENTER
+w
+@choose "Monster Summoning"
+@choose "Beasts"
+@choose "froghemoth"
+RIGHT ENTER
+@dump:c3-summoned
+
+ENTER RIGHT
+@dump:c3-a1
+ENTER RIGHT
+@dump:c3-a2
+ENTER RIGHT
+@dump:c3-a3
+ENTER RIGHT
+@dump:c3-a4
+
+ENTER
+w
+@choose "Genocide Everything"
+
+ENTER
+u
+@choose "Innate Divine Sacrifice" 5
+
+ENTER
+w
+@choose "Monster Summoning"
+@choose "Beasts"
+@choose "froghemoth"
+RIGHT ENTER
+@dump:c4-summoned
+
+ENTER RIGHT
+@dump:c4-a1
+ENTER RIGHT
+@dump:c4-a2
+ENTER RIGHT
+@dump:c4-a3
+ENTER RIGHT
+@dump:c4-a4
+
+ENTER
+w
+@choose "Genocide Everything"
+
+ENTER
+u
+@choose "Innate Divine Sacrifice" 5
+
+ENTER
+w
+@choose "Monster Summoning"
+@choose "Beasts"
+@choose "froghemoth"
+RIGHT ENTER
+@dump:c5-summoned
+
+ENTER RIGHT
+@dump:c5-a1
+ENTER RIGHT
+@dump:c5-a2
+ENTER RIGHT
+@dump:c5-a3
+ENTER RIGHT
+@dump:c5-a4
+
+ENTER
 @dump:hp-before
 
 u

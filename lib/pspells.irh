@@ -1166,13 +1166,9 @@ Effect "Divine Sacrifice" : EA_INFLICT
     int16 sac; xval: TRAP_EVENT; yval: PRE(EV_HIT);
     Flags: EF_CANCEL;
     On Event EV_CALC_EFFECT {
-      /* upstream: e.vDuration defaults to 10 + caster level*2
-         (src/Magic.cpp:536); this spell's design is 1 round per caster
-         level, one Duration unit per round (src/Status.cpp:60, thrown
-         from Creature::DoTurn, only called from case EV_TURN,
-         src/Creature.cpp:1053; EV_TURN fires only when !(Turn%60),
-         src/Main.cpp:898,1311, and T_GAME::GetTurn() returns that same
-         Turn, inc/Res.h:1332). Traced, inc-l8ws, not sent. */
+      /* e.vDuration defaults to 10 + caster level*2 (src/Magic.cpp:536);
+         this spell's design lasts 1 round per caster level, and one
+         Duration unit is one round (src/Status.cpp:60). */
       e.vDuration = e.vCasterLev;
       return NOTHING;
       },
