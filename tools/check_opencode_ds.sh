@@ -9,22 +9,30 @@
 # opencode to the worktree with the Seatbelt profile, stop a harness that
 # never writes -- billing it as one killed=startup row at cost 0 -- and stop a
 # harness stuck in a DeepSeek repetition loop via the loop_check.py canary,
-# billing it as one killed=loop row at exit 3 and copying its events aside?
-# Defends beads inc-h1bq, inc-gofz and inc-uxmf: the opencode rung of the
-# implementer ladder must fail closed rather than silently spend money once a
-# run's price is unknown, must never touch the shared checkout, must not hang
-# its dispatcher when the harness stalls, and must not burn tokens on a loop.
+# billing it as one killed=loop row at exit 3 and copying its run dir aside?
+# Also that tools/opencode/record_proxy.py forwards a POST byte-for-byte,
+# records request/response/meta, streams a chunked reply before upstream
+# finishes, relays the Authorization header without writing it to any file,
+# and that the wrapper wires it in (one recorded request, no proxy left
+# running) and, on a loop kill, copies the run dir including requests/.
+# Defends beads inc-h1bq, inc-gofz, inc-uxmf and inc-oehi: the opencode rung of
+# the implementer ladder must fail closed rather than silently spend money once
+# a run's price is unknown, must never touch the shared checkout, must not hang
+# its dispatcher when the harness stalls, must not burn tokens on a loop, and
+# must keep the exact request of a looping run so it can be replayed.
 #
 # Fully offline. A fake `opencode` written into the temp dir stands in for the
 # real harness via INCURSION_OPENCODE_BIN; it records its argv and environment
 # and emits scripted events.jsonl (the loop case cats
-# tools/fixtures/opencode-loop/loop.jsonl). No network request ever leaves this
-# machine.
+# tools/fixtures/opencode-loop/loop.jsonl). A fake upstream (a tiny stdlib
+# HTTP server) stands in for DeepInfra via INCURSION_DS_UPSTREAM. No network
+# request ever leaves this machine.
 #
-#   tools/check_opencode_ds.sh               run the thirteen assertions
+#   tools/check_opencode_ds.sh               run the eighteen assertions
 #   tools/check_opencode_ds.sh --prove-red   mutate the budget guard, the
 #                                            sandbox prefix, the JSON bash
-#                                            rules and MIN_REPEATED_LINES,
+#                                            rules, MIN_REPEATED_LINES and
+#                                            the proxy's request write,
 #                                            confirm red
 #
 # Exit: 0 pass, 1 fail, 2 could not run.
@@ -35,6 +43,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WRAPPER="$ROOT/tools/opencode_ds.sh"
 CONFIG="$ROOT/tools/opencode/opencode.json"
 PROFILE="$ROOT/tools/opencode/sandbox.sb"
+PROXY="$ROOT/tools/opencode/record_proxy.py"
 
 TMP="$(mktemp -d)" || exit 2
 # The genuine home, captured before any assertion overrides HOME. The sandbox
@@ -47,8 +56,16 @@ PROBE_OUTSIDE=""
 BACKUP=""
 BACKUP_PROFILE=""
 BACKUP_CONFIG=""
+BACKUP_PROXY=""
 
 cleanup() {
+    # stop_upstream is defined below but this trap is set before it; guard.
+    if declare -F stop_upstream >/dev/null 2>&1; then
+        stop_upstream
+    fi
+    if [ -n "${PROXY_PIDS:-}" ]; then
+        for p in $PROXY_PIDS; do kill -KILL "$p" 2>/dev/null; done
+    fi
     if [ -n "${PROBE_OUTSIDE:-}" ]; then
         rm -f "$PROBE_OUTSIDE"
     fi
@@ -74,6 +91,14 @@ cleanup() {
             echo "restored tools/opencode/opencode.json byte-identical to its original"
         else
             echo "COULD NOT CONFIRM opencode.json WAS RESTORED -- check it by hand" >&2
+        fi
+    fi
+    if [ -n "$BACKUP_PROXY" ] && [ -f "$BACKUP_PROXY" ]; then
+        cp "$BACKUP_PROXY" "$PROXY"
+        if cmp -s "$BACKUP_PROXY" "$PROXY"; then
+            echo "restored tools/opencode/record_proxy.py byte-identical to its original"
+        else
+            echo "COULD NOT CONFIRM record_proxy.py WAS RESTORED -- check it by hand" >&2
         fi
     fi
     rm -rf "$TMP"
@@ -161,6 +186,35 @@ PY
     fi
     cp "$BACKUP_LOOP" "$LOOP_CHECK"
     cmp -s "$BACKUP_LOOP" "$LOOP_CHECK" || { echo "restore of loop_check.py failed" >&2; exit 2; }
+
+    # (f) the proxy's request-file write removed, so it records no
+    # NNNN.request.json. Assertion 14's byte-identical comparison must go red.
+    # Direct proxy only, so this proof runs in any environment.
+    BACKUP_PROXY="$TMP/record_proxy.py.orig"
+    cp "$PROXY" "$BACKUP_PROXY"
+    NEEDLE='            fh.write(body)'
+    if ! grep -qF "$NEEDLE" "$PROXY"; then
+        echo "could not find the request-file write to mutate: $NEEDLE" >&2
+        exit 2
+    fi
+    python3 - "$PROXY" "$NEEDLE" <<'PY'
+import sys
+path, needle = sys.argv[1], sys.argv[2]
+src = open(path).read()
+open(path, "w").write(src.replace(needle, "            pass  # MUTATED by --prove-red", 1))
+PY
+    echo "mutated tools/opencode/record_proxy.py: request file never written"
+    MUT_OUT="$("$ROOT/tools/check_opencode_ds.sh" 2>&1)"
+    MUT_RC=$?
+    if [ "$MUT_RC" -ne 0 ] && grep -q "FAIL.*proxy forward" <<< "$MUT_OUT"; then
+        echo "PASS (as intended): assertion 14 (byte-identical request file) went red"
+    else
+        echo "FAIL: assertion 14 stayed green with the request write removed (rc=$MUT_RC)"
+        echo "$MUT_OUT" | tail -20
+        PROVE_FAIL=1
+    fi
+    cp "$BACKUP_PROXY" "$PROXY"
+    cmp -s "$BACKUP_PROXY" "$PROXY" || { echo "restore of record_proxy.py failed" >&2; exit 2; }
 
     # (c) the read-only-git allow rules removed from opencode.json. Assertion
     # 10 never launches the harness, so this proof runs in any environment --
@@ -284,7 +338,34 @@ REC="$INCURSION_FAKE_REC"
     printf 'ENV OPENCODE_DISABLE_CLAUDE_CODE=%s\n' "${OPENCODE_DISABLE_CLAUDE_CODE:-}"
     printf 'ENV OPENCODE_CONFIG=%s\n' "${OPENCODE_CONFIG:-}"
     printf 'ENV DEEPINFRA_API_KEY=%s\n' "${DEEPINFRA_API_KEY:-}"
+    printf 'ENV INCURSION_DS_BASEURL=%s\n' "${INCURSION_DS_BASEURL:-}"
 } >> "$REC"
+
+# When told, make one real HTTP POST to the model endpoint the wrapper pointed
+# us at ($INCURSION_DS_BASEURL, the recording proxy) and record its status and
+# body. This is what proves the wrapper's proxy is wired end to end.
+if [ -n "${INCURSION_FAKE_POST:-}" ]; then
+    python3 - "${INCURSION_DS_BASEURL:-}" "${INCURSION_FAKE_HTTP_OUT:-/dev/null}" <<'PY'
+import sys, urllib.request
+base, out = sys.argv[1], sys.argv[2]
+req = urllib.request.Request(
+    base + "/chat/completions",
+    data=b'{"model":"m","stream":true}',
+    headers={"Content-Type": "application/json",
+             "Authorization": "Bearer SENTINEL-KEY-123"},
+)
+try:
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        body = resp.read()
+        status = resp.status
+except Exception as exc:  # noqa: BLE001 -- recorded, not raised
+    body = str(exc).encode()
+    status = -1
+with open(out, "wb") as fh:
+    fh.write(("STATUS %d\n" % status).encode())
+    fh.write(body)
+PY
+fi
 
 MODE="${INCURSION_FAKE_MODE:-success}"
 case "$MODE" in
@@ -334,13 +415,145 @@ exit "${INCURSION_FAKE_RC:-0}"
 FAKE_EOF
 chmod +x "$FAKE"
 
+# --- fake upstream --------------------------------------------------------
+# A tiny stdlib HTTP server that stands in for DeepInfra, pointed to by
+# INCURSION_DS_UPSTREAM. It binds 127.0.0.1:0, writes its port to argv[1] (temp
+# then rename, like the proxy), and appends every request's path and
+# Authorization header to argv[2]. FU_MODE=plain returns a fixed JSON body;
+# FU_MODE=stream sends one chunk, sleeps FU_SLEEP seconds, then a second, so
+# the proxy's streaming can be timed. It holds no key of its own.
+UPSTREAM="$TMP/fake_upstream.py"
+cat > "$UPSTREAM" <<'UP_EOF'
+import http.server, os, sys, time
+
+port_file, hits_file = sys.argv[1], sys.argv[2]
+MODE = os.environ.get("FU_MODE", "plain")
+SLEEP = float(os.environ.get("FU_SLEEP", "2"))
+
+
+def chunk(b):
+    return ("%x\r\n" % len(b)).encode() + b + b"\r\n"
+
+
+class H(http.server.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
+    def log_message(self, *args):
+        pass
+
+    def do_POST(self):
+        n = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(n)
+        with open(hits_file, "a", encoding="utf-8") as fh:
+            fh.write("PATH %s\n" % self.path)
+            fh.write("AUTH %s\n" % self.headers.get("Authorization", ""))
+            fh.write("BODY %d\n" % len(body))
+        if MODE == "stream":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Transfer-Encoding", "chunked")
+            self.end_headers()
+            self.wfile.write(chunk(b"data: first\n\n"))
+            self.wfile.flush()
+            time.sleep(SLEEP)
+            self.wfile.write(chunk(b"data: second\n\n"))
+            self.wfile.flush()
+            self.wfile.write(b"0\r\n\r\n")
+            self.wfile.flush()
+            return
+        payload = b'{"id":"up","choices":[{"message":{"content":"up"}}]}'
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+        self.wfile.flush()
+
+
+srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+with open(port_file + ".tmp", "w", encoding="utf-8") as fh:
+    fh.write(str(srv.server_address[1]))
+os.replace(port_file + ".tmp", port_file)
+srv.serve_forever()
+UP_EOF
+
+# start_upstream sets globals FU_PID, FU_HITS and FU_PORT (call it plainly,
+# never in a command substitution, or the assignments land in a subshell). An
+# empty FU_PORT means the upstream did not bind in time.
+FU_PID=""
+FU_HITS=""
+FU_PORT=""
+UPSTREAM_PIDS=""
+start_upstream() {
+    local mode="$1" sleep_s="$2"
+    local pf="$TMP/up.port.$RANDOM" hf="$TMP/up.hits.$RANDOM"
+    rm -f "$pf"
+    FU_MODE="$mode" FU_SLEEP="$sleep_s" python3 "$UPSTREAM" "$pf" "$hf" \
+        > "$TMP/up.log" 2>&1 &
+    FU_PID=$!
+    UPSTREAM_PIDS="$UPSTREAM_PIDS $FU_PID"
+    local waited=0
+    while [ "$waited" -lt 100 ]; do
+        [ -f "$pf" ] && break
+        sleep 0.1
+        waited=$((waited + 1))
+    done
+    FU_HITS="$hf"
+    FU_PORT=""
+    if [ -f "$pf" ]; then
+        FU_PORT="$(head -n 1 "$pf" | tr -d '[:space:]')"
+    fi
+}
+stop_upstream() {
+    if [ -n "$FU_PID" ] && kill -0 "$FU_PID" 2>/dev/null; then
+        kill -KILL "$FU_PID" 2>/dev/null
+        wait "$FU_PID" 2>/dev/null
+    fi
+    FU_PID=""
+}
+
+# --- recording proxy under test -------------------------------------------
+# start_proxy sets globals PROXY_PID and PROXY_PORT (call it plainly, never in
+# a command substitution, or the assignments land in a subshell). An empty
+# PROXY_PORT means the proxy did not bind in time. INCURSION_DS_UPSTREAM must
+# name the fake upstream.
+PROXY_PIDS=""
+PROXY_PID=""
+PROXY_PORT=""
+start_proxy() {
+    local rec="$1"
+    local pf="$TMP/proxy.port.$RANDOM"
+    rm -f "$pf"
+    python3 "$PROXY" --dir "$rec" --port-file "$pf" > "$TMP/proxy.log" 2>&1 &
+    PROXY_PID=$!
+    PROXY_PIDS="$PROXY_PIDS $PROXY_PID"
+    local waited=0
+    while [ "$waited" -lt 100 ]; do
+        [ -f "$pf" ] && break
+        sleep 0.1
+        waited=$((waited + 1))
+    done
+    PROXY_PORT=""
+    if [ -f "$pf" ]; then
+        PROXY_PORT="$(head -n 1 "$pf" | tr -d '[:space:]')"
+    fi
+}
+stop_proxy_direct() {
+    if [ -n "$PROXY_PID" ] && kill -0 "$PROXY_PID" 2>/dev/null; then
+        kill -TERM "$PROXY_PID" 2>/dev/null
+        wait "$PROXY_PID" 2>/dev/null
+    fi
+    PROXY_PID=""
+    PROXY_PORT=""
+}
+
 # --- sandbox availability probe ------------------------------------------
 # sandbox-exec cannot nest: inside another Seatbelt sandbox (a Claude session
 # running this check), `sandbox-exec` itself refuses to apply and exits 71.
-# The assertions that need to LAUNCH the harness (4, 5, 6, 7, 11) cannot run
-# in that environment. Detect it once and report those as SKIP; outside any
-# sandbox they all run. Assertions 1, 2, 3, 8, 9 and 10 never launch the
-# harness.
+# The assertions that need to LAUNCH the harness (4, 5, 6, 7, 11, 12, 17, 18)
+# cannot run in that environment. Detect it once and report those as SKIP;
+# outside any sandbox they all run. Assertions 1, 2, 3, 8, 9, 10 and the
+# direct-proxy 13, 14, 15, 16 never launch the harness.
 SANDBOX_OK=1
 PROBE_HOME="$TMP/homeprobe"; mkdir -p "$PROBE_HOME"
 PROBE_WORK="$TMP/wtprobe"; mkdir -p "$PROBE_WORK"
@@ -355,8 +568,8 @@ PROBE_RC="$(HOME="$PROBE_HOME" INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC
 if grep -rq "sandbox_apply: Operation not permitted" "$PROBE_WORK/logs/opencode" 2>/dev/null; then
     SANDBOX_OK=0
     echo "NOTE  sandbox-exec cannot nest inside this check's own sandbox;"
-    echo "      assertions 4, 5, 6, 7 and 11 are reported SKIP here and must be run"
-    echo "      outside any sandbox (the Claude session will do so)."
+    echo "      assertions 4, 5, 6, 7, 11, 12, 17 and 18 are reported SKIP here and"
+    echo "      must be run outside any sandbox (the Claude session will do so)."
 fi
 
 # --- 1. Budget spent -> exit 1, fake never launched, no ledger row --------
@@ -636,10 +849,11 @@ fi
 # The fake emits a real loop step from tools/fixtures/opencode-loop/loop.jsonl
 # and then sleeps; the idle limit is far away, so only the loop_check.py canary
 # stops it. The wrapper exits 3, the row says killed=loop, the saved canary
-# text is printed under the loop header, and the events copy lands under the
-# runs dir the check redirected with INCURSION_OPENCODE_RUNS_DIR (never the
-# real checkout's logs). This launches the harness, so under a nested sandbox
-# it SKIPs (assertion 4's note applies).
+# text is printed under the loop header, and the whole run dir (whose
+# events.jsonl is the fixture) lands under the runs dir the check redirected
+# with INCURSION_OPENCODE_RUNS_DIR (never the real checkout's logs). This
+# launches the harness, so under a nested sandbox it SKIPs (assertion 4's note
+# applies).
 LOOP_FIXTURE="$ROOT/tools/fixtures/opencode-loop/loop.jsonl"
 CLEAN_FIXTURE="$ROOT/tools/fixtures/opencode-loop/clean.jsonl"
 FAKEHOME="$TMP/home12"; mkdir -p "$FAKEHOME"
@@ -656,15 +870,17 @@ RC="$(HOME="$FAKEHOME" INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC="$TMP/r
     INCURSION_WATCHDOG_GRACE=2 \
     "$WRAPPER" "$WORK" "$BRIEF" > "$TMP/out.12" 2> "$TMP/err.12"; echo $?)"
 ROW_COUNT="$(wc -l < "$LEDGER" | tr -d ' ')"
-COPY_12="$(ls "$RUNS12"/*.jsonl 2>/dev/null | head -n 1)"
+COPY_12="$(ls -d "$RUNS12"/*/ 2>/dev/null | head -n 1)"
+COPY_12_EVENTS=""
+[ -n "$COPY_12" ] && COPY_12_EVENTS="$COPY_12/events.jsonl"
 if [ "$SANDBOX_OK" -eq 0 ]; then
     skip "loop stop: not run (sandbox-exec cannot nest here)"
 elif [ "$RC" -eq 3 ] && [ "$ROW_COUNT" -eq 1 ] \
     && grep -q '"killed":"loop"' "$LEDGER" \
     && grep -q 'DeepSeek repetition loop: run stopped (inc-uxmf)' "$TMP/err.12" \
     && grep -q 'loop messageID=' "$TMP/err.12" \
-    && [ -n "$COPY_12" ] && cmp -s "$COPY_12" "$LOOP_FIXTURE"; then
-    pass "loop stop: exit 3, row killed=loop, canary text on stderr, events copied"
+    && [ -f "$COPY_12_EVENTS" ] && cmp -s "$COPY_12_EVENTS" "$LOOP_FIXTURE"; then
+    pass "loop stop: exit 3, row killed=loop, canary text on stderr, run dir copied"
 else
     fail "loop stop: rc=$RC rows=$ROW_COUNT copy=$COPY_12 ledger=$(cat "$LEDGER" 2>/dev/null) -- $(cat "$TMP/err.12")"
 fi
@@ -683,12 +899,212 @@ else
     fail "loop_check: loop rc=$LOOP_RC clean rc=$CLEAN_RC -- $(cat "$TMP/loop13.out") $(cat "$TMP/clean13.out")"
 fi
 
+# --- 14. The proxy forwards a POST and records it byte-identically --------
+# Runs everywhere: the proxy and the fake upstream both bind 127.0.0.1 and
+# never touch the network. A body with a distinctive byte pattern proves the
+# request file is the exact bytes sent, not a re-serialisation.
+REC14="$TMP/rec14"; mkdir -p "$REC14"
+start_upstream plain 0
+UP14="$FU_PORT"
+REQ_BODY='{"model":"deepseek-ai/DeepSeek-V4.1-Flash","stream":true,"messages":[{"role":"user","content":"hello \u00e9\u00ff"}]}'
+if [ -z "$UP14" ]; then
+    fail "proxy forward: fake upstream did not start"
+else
+    export INCURSION_DS_UPSTREAM="http://127.0.0.1:$UP14"
+    start_proxy "$REC14"
+    unset INCURSION_DS_UPSTREAM
+    PX14="$PROXY_PORT"
+    if [ -z "$PX14" ]; then
+        fail "proxy forward: proxy did not start: $(cat "$TMP/proxy.log")"
+    else
+        printf '%s' "$REQ_BODY" > "$TMP/req14.body"
+        BODY_BYTES="$(wc -c < "$TMP/req14.body" | tr -d ' ')"
+        curl -sS -m 10 -o "$TMP/resp14" -w '%{http_code}' \
+            -X POST "http://127.0.0.1:$PX14/v1/openai/chat/completions?beta=1" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer SENTINEL-KEY-123" \
+            --data-binary @"$TMP/req14.body" > "$TMP/code14" 2>"$TMP/curl14.err"
+        HTTP14="$(cat "$TMP/code14")"
+        stop_proxy_direct
+        if [ "$HTTP14" = "200" ] \
+            && cmp -s "$REC14/0001.request.json" "$TMP/req14.body" \
+            && grep -q '"up"' "$REC14/0001.response.txt" \
+            && [ -s "$REC14/0001.meta.json" ] \
+            && grep -q '"status": 200' "$REC14/0001.meta.json" \
+            && grep -q '"path": "/v1/openai/chat/completions?beta=1"' "$REC14/0001.meta.json" \
+            && grep -q "\"request_bytes\": $BODY_BYTES" "$REC14/0001.meta.json"; then
+            pass "proxy forwards a POST and records request byte-identically, plus response and meta"
+        else
+            fail "proxy forward: http=$HTTP14 req-bytes=$(wc -c < "$REC14/0001.request.json" 2>/dev/null)/$BODY_BYTES meta=$(cat "$REC14/0001.meta.json" 2>/dev/null) -- $(cat "$TMP/curl14.err")"
+        fi
+    fi
+fi
+FU_HITS14="${FU_HITS:-}"
+stop_upstream
+
+# --- 15. Streaming reaches the client before upstream finishes ------------
+# The fake upstream holds the second chunk for FU_SLEEP seconds. A raw client
+# must read the first chunk well before the second; a proxy that buffered the
+# whole body would deliver both at once.
+REC15="$TMP/rec15"; mkdir -p "$REC15"
+start_upstream stream 2
+UP15="$FU_PORT"
+if [ -z "$UP15" ]; then
+    fail "streaming: fake upstream did not start"
+else
+    export INCURSION_DS_UPSTREAM="http://127.0.0.1:$UP15"
+    start_proxy "$REC15"
+    unset INCURSION_DS_UPSTREAM
+    PX15="$PROXY_PORT"
+    if [ -z "$PX15" ]; then
+        fail "streaming: proxy did not start: $(cat "$TMP/proxy.log")"
+    else
+        STREAM_OUT="$(python3 - "$PX15" <<'PY'
+import socket, sys, time
+s = socket.create_connection(("127.0.0.1", int(sys.argv[1])))
+s.sendall(b"POST /v1/openai/chat/completions HTTP/1.1\r\nHost: x\r\n"
+          b"Content-Length: 2\r\n\r\n{}")
+t0 = time.time(); s.settimeout(6.0)
+buf = b""; first = second = None
+while True:
+    try:
+        data = s.recv(65536)
+    except socket.timeout:
+        break
+    if not data:
+        break
+    buf += data
+    if first is None and b"data: first" in buf:
+        first = time.time() - t0
+    if second is None and b"data: second" in buf:
+        second = time.time() - t0
+        break
+s.close()
+ok = first is not None and (second is None or first < second - 1.0)
+print("OK" if ok else "BAD first=%s second=%s" % (first, second))
+PY
+)"
+        stop_proxy_direct
+        if [ "$STREAM_OUT" = "OK" ]; then
+            pass "streaming: the first chunk reaches the client before the second is sent"
+        else
+            fail "streaming: $STREAM_OUT"
+        fi
+    fi
+fi
+stop_upstream
+
+# --- 16. The Authorization header is relayed, never recorded --------------
+# The upstream MUST see the header (relay works); no file under the record dir
+# may contain the sentinel (nothing records headers). Assertion 14 sent it.
+LEAK16=0
+if [ -d "$REC14" ]; then
+    grep -rqF "SENTINEL-KEY-123" "$REC14" && LEAK16=1
+fi
+grep -qF "SENTINEL-KEY-123" "$TMP/proxy.log" 2>/dev/null && LEAK16=1
+UPSTREAM_SAW=0
+if [ -n "${FU_HITS14:-}" ] && [ -f "$FU_HITS14" ] \
+    && grep -qF "AUTH Bearer SENTINEL-KEY-123" "$FU_HITS14"; then
+    UPSTREAM_SAW=1
+fi
+if [ "$LEAK16" -eq 0 ] && [ "$UPSTREAM_SAW" -eq 1 ]; then
+    pass "Authorization relayed to upstream; the sentinel key is in no file under the record dir"
+else
+    fail "auth header: leak=$LEAK16 upstream-saw=$UPSTREAM_SAW"
+fi
+
+# --- 17. Wrapper e2e: one HTTP POST to the proxy, one recorded request ----
+# The fake opencode makes a real POST to $INCURSION_DS_BASEURL (the wrapper's
+# proxy) and emits success events. The run dir must hold exactly one recorded
+# request, and the proxy the wrapper recorded in proxy.pid must be gone.
+start_upstream plain 0
+UP17="$FU_PORT"
+if [ -z "$UP17" ]; then
+    skip "wrapper proxy e2e: fake upstream did not start"
+else
+    FAKEHOME="$TMP/home17"; mkdir -p "$FAKEHOME"
+    WORK="$TMP/wt17"; mkdir -p "$WORK"
+    BRIEF="$TMP/brief17.txt"; echo "do a thing" > "$BRIEF"
+    LEDGER="$TMP/ledger17.jsonl"; : > "$LEDGER"
+    : > "$TMP/rec.17"
+    RC="$(HOME="$FAKEHOME" INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC="$TMP/rec.17" \
+        INCURSION_FAKE_MODE=success INCURSION_FAKE_POST=1 INCURSION_FAKE_HTTP_OUT="$TMP/http17.out" \
+        INCURSION_DS_UPSTREAM="http://127.0.0.1:$UP17" \
+        INCURSION_DEEPSEEK_KEY=canary-x INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
+        "$WRAPPER" "$WORK" "$BRIEF" > "$TMP/out.17" 2> "$TMP/err.17"; echo $?)"
+    stop_upstream
+    RUNDIR17_RAW="$(ls -d "$WORK"/logs/opencode/* 2>/dev/null | head -n 1)"
+    RECORDED17=""
+    PROXY_PID17=""
+    if [ -n "$RUNDIR17_RAW" ]; then
+        RUNDIR17="$(cd "$RUNDIR17_RAW" && pwd -P)"
+        RECORDED17="$(ls "$RUNDIR17/requests"/*.request.json 2>/dev/null)"
+        [ -f "$RUNDIR17/proxy.pid" ] && PROXY_PID17="$(cat "$RUNDIR17/proxy.pid")"
+    fi
+    REQ_COUNT17=0
+    if [ -n "$RECORDED17" ]; then
+        REQ_COUNT17="$(printf '%s\n' $RECORDED17 | grep -c .)"
+    fi
+    PROXY_ALIVE17=0
+    if [ -n "$PROXY_PID17" ] && kill -0 "$PROXY_PID17" 2>/dev/null; then
+        PROXY_ALIVE17=1
+    fi
+    if [ "$SANDBOX_OK" -eq 0 ]; then
+        skip "wrapper proxy e2e: not run (sandbox-exec cannot nest here)"
+    elif [ "$REQ_COUNT17" -eq 1 ] && grep -q 'STATUS 200' "$TMP/http17.out" \
+        && [ -n "$PROXY_PID17" ] && [ "$PROXY_ALIVE17" -eq 0 ]; then
+        pass "wrapper e2e: one recorded request in the run dir, proxy dead after exit"
+    else
+        fail "wrapper e2e: rc=$RC requests=$REQ_COUNT17 http=$(head -n 1 "$TMP/http17.out" 2>/dev/null) proxy-pid=$PROXY_PID17 alive=$PROXY_ALIVE17 -- $(cat "$TMP/err.17")"
+    fi
+fi
+
+# --- 18. Loop kill copies the run dir, including requests/, aside ---------
+# A loop kill must preserve the recorded model calls with the events. The fake
+# POSTs once (so requests/ is non-empty) and then emits the loop fixture, so
+# the canary fires. The redirected runs dir must hold a directory containing
+# events.jsonl AND requests/0001.request.json, and must NOT contain the
+# excluded data/ or state/ subdirs.
+start_upstream plain 0
+UP18="$FU_PORT"
+if [ -z "$UP18" ]; then
+    skip "loop-dir copy: fake upstream did not start"
+else
+    FAKEHOME="$TMP/home18"; mkdir -p "$FAKEHOME"
+    WORK="$TMP/wt18"; mkdir -p "$WORK"
+    BRIEF="$TMP/brief18.txt"; echo "do a thing" > "$BRIEF"
+    LEDGER="$TMP/ledger18.jsonl"; : > "$LEDGER"
+    RUNS18="$TMP/runs18"; mkdir -p "$RUNS18"
+    : > "$TMP/rec.18"
+    RC="$(HOME="$FAKEHOME" INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC="$TMP/rec.18" \
+        INCURSION_FAKE_MODE=loop INCURSION_FAKE_EVENTS="$LOOP_FIXTURE" \
+        INCURSION_FAKE_POST=1 INCURSION_FAKE_HTTP_OUT="$TMP/http18.out" \
+        INCURSION_DS_UPSTREAM="http://127.0.0.1:$UP18" \
+        INCURSION_DEEPSEEK_KEY=canary-x INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
+        INCURSION_OPENCODE_RUNS_DIR="$RUNS18" \
+        INCURSION_WATCHDOG_STARTUP=5 INCURSION_WATCHDOG_IDLE=30 INCURSION_WATCHDOG_POLL=1 \
+        INCURSION_WATCHDOG_GRACE=2 \
+        "$WRAPPER" "$WORK" "$BRIEF" > "$TMP/out.18" 2> "$TMP/err.18"; echo $?)"
+    stop_upstream
+    COPYDIR18="$(ls -d "$RUNS18"/*/ 2>/dev/null | head -n 1)"
+    if [ "$SANDBOX_OK" -eq 0 ]; then
+        skip "loop-dir copy: not run (sandbox-exec cannot nest here)"
+    elif [ "$RC" -eq 3 ] && [ -n "$COPYDIR18" ] \
+        && [ -f "$COPYDIR18/events.jsonl" ] \
+        && [ -f "$COPYDIR18/requests/0001.request.json" ] \
+        && [ ! -d "$COPYDIR18/data" ] && [ ! -d "$COPYDIR18/state" ]; then
+        pass "loop kill copies the run dir including requests/, excluding data/ and state/"
+    else
+        fail "loop-dir copy: rc=$RC dir=$COPYDIR18 contents=$(ls -A "$COPYDIR18" 2>/dev/null | tr '\n' ' ') -- $(cat "$TMP/err.18")"
+    fi
+fi
+
 if [ "$FAIL" -eq 0 ] && [ "$SKIP_COUNT" -eq 0 ]; then
-    echo "PASS: check_opencode_ds.sh, all thirteen assertions"
+    echo "PASS: check_opencode_ds.sh, all eighteen assertions"
     exit 0
 elif [ "$FAIL" -eq 0 ]; then
     echo "PASS (partial): check_opencode_ds.sh, $SKIP_COUNT assertion(s) skipped and not counted;"
-    echo "                rerun outside any sandbox to run all thirteen (exit 2 = incomplete)"
+    echo "                rerun outside any sandbox to run all eighteen (exit 2 = incomplete)"
     exit 2
 else
     echo "FAIL: check_opencode_ds.sh, at least one assertion failed above"
