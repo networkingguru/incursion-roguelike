@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Regression check for books being listed under "Other Items" in the inventory,
 # bd inc-twr9.
 #
