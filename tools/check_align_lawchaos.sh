@@ -89,7 +89,7 @@ LOG="$run/logs/errors.log"
 # Drop the indented backtrace blocks headless.sh attaches; they quote the
 # message text and would otherwise be read as extra probe lines.
 line_for() { # <case> -> the probe line, or empty
-    grep -v '^    ' "$LOG" 2>/dev/null | grep "ALIGN_PROBE case=$1 " | head -1
+    awk -v c="ALIGN_PROBE case=$1 " '!/^    / && index($0, c) { print; exit }' "$LOG" 2>/dev/null
 }
 
 field() { # <line> <name> -> value, or empty
