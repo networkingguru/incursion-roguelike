@@ -6,20 +6,26 @@
 #   tools/opencode_ds.sh <worktree-dir> <brief-file>
 #
 # Exit 0 success; 1 refused (budget or poisoned ledger); 2 could not run or
-# opencode failed.
+# opencode failed; 3 the run was stopped as a DeepSeek repetition loop.
 #
 # The wrapper reuses tools/deepseek.py's check_budget, resolve_ledger_path,
 # resolve_budget and resolve_key -- it imports the module rather than copying
 # the logic, so the ledger row format and the poison rule stay in one place.
 #
 # The opencode run is launched through tools/watchdog.sh, which stops a stalled
-# run in its own process group and writes the reason to a --status file. Two
-# limits apply: a startup limit (no output at all) and an idle limit (output
-# stopped growing). Tune them with INCURSION_WATCHDOG_STARTUP,
-# INCURSION_WATCHDOG_IDLE, INCURSION_WATCHDOG_POLL and
-# INCURSION_WATCHDOG_GRACE (seconds; see tools/watchdog.sh for defaults). A
-# killed run still writes exactly one ledger row, marked "killed", so a hang
-# neither locks the ledger nor goes unbilled.
+# run in its own process group and writes the reason to a --status file. Three
+# limits apply: a startup limit (no output at all), an idle limit (output
+# stopped growing), and a canary that runs tools/opencode/loop_check.py on each
+# growing poll to stop a DeepSeek repetition loop the idle limit never sees.
+# Tune them with INCURSION_WATCHDOG_STARTUP, INCURSION_WATCHDOG_IDLE,
+# INCURSION_WATCHDOG_POLL and INCURSION_WATCHDOG_GRACE (seconds; see
+# tools/watchdog.sh for defaults). A killed run still writes exactly one ledger
+# row, marked "killed", so a hang neither locks the ledger nor goes unbilled.
+# A loop kill (killed=canary) is recorded in the row as "killed": "loop".
+#
+# After every run (killed or not) events.jsonl is copied to
+# logs/opencode-runs/<worktree basename>-<STAMP>-$$.jsonl under the repository
+# the wrapper lives in, so a run can be examined after its worktree is gone.
 
 set -uo pipefail
 
@@ -138,7 +144,8 @@ WATCHDOG_STATUS="$RUNDIR/watchdog.status"
 BRIEF_TEXT="$(cat "$BRIEF_FILE")"
 OPENCODE_BIN="${INCURSION_OPENCODE_BIN:-opencode}"
 
-"$REPO/tools/watchdog.sh" --out "$EVENTS" --err "$STDERR" --status "$WATCHDOG_STATUS" -- \
+"$REPO/tools/watchdog.sh" --out "$EVENTS" --err "$STDERR" --status "$WATCHDOG_STATUS" \
+    --canary "$REPO/tools/opencode/loop_check.py" -- \
     env \
     DEEPINFRA_API_KEY="$KEY" \
     OPENCODE_CONFIG="$OPENCODE_CONFIG" \
@@ -164,9 +171,16 @@ if [ -f "$WATCHDOG_STATUS" ]; then
     KILLED="$(head -n 1 "$WATCHDOG_STATUS" | tr -d '[:space:]')"
 fi
 case "$KILLED" in
-    startup|idle) ;;
+    startup|idle|canary) ;;
     *) KILLED="" ;;
 esac
+
+# A canary kill is a DeepSeek repetition loop: the ledger row records it as
+# "killed": "loop", and its saved canary text is printed later.
+LEDGER_KILLED="$KILLED"
+if [ "$KILLED" = "canary" ]; then
+    LEDGER_KILLED="loop"
+fi
 
 # --- 6. bill --------------------------------------------------------------
 # Parse events.jsonl: sum part.cost and the token fields over every
@@ -177,7 +191,7 @@ esac
 # no steps and no tokens). Any step_finish carrying tokens with a
 # missing/non-numeric cost, or a total cost of 0 with tokens > 0, is a poison:
 # the row goes in with cost null.
-BILL_OUT="$(python3 - "$DEEPSEEK_MODULE" "$EVENTS" "$RUNDIR" "$BRIEF_FILE" "$OPENCODE_RC" "$KILLED" <<'PY'
+BILL_OUT="$(python3 - "$DEEPSEEK_MODULE" "$EVENTS" "$RUNDIR" "$BRIEF_FILE" "$OPENCODE_RC" "$LEDGER_KILLED" <<'PY'
 import importlib.util, json, sys, datetime
 from pathlib import Path
 
@@ -313,8 +327,25 @@ STEPS="$(printf '%s\n' "$BILL_OUT" | sed -n 's/^STEPS //p')"
 COST="$(printf '%s\n' "$BILL_OUT" | sed -n 's/^COST //p')"
 POISON="$(printf '%s\n' "$BILL_OUT" | sed -n 's/^POISON //p')"
 
+# After every run, killed or not, keep a copy of events.jsonl under the shared
+# checkout's logs so a run can be examined after its worktree is gone. The
+# destination can be redirected with INCURSION_OPENCODE_RUNS_DIR (the tests use
+# it so they never write into the real checkout's logs). A copy failure only
+# warns; it never changes the exit code.
+RUNS_DIR="${INCURSION_OPENCODE_RUNS_DIR:-$REPO/logs/opencode-runs}"
+EVENTS_COPY="$RUNS_DIR/$(basename "$WORKTREE")-${STAMP}-$$.jsonl"
+if mkdir -p "$RUNS_DIR" && cp -f "$EVENTS" "$EVENTS_COPY" 2>/dev/null; then
+    :
+else
+    echo "warning: could not copy events.jsonl to $EVENTS_COPY" >&2
+fi
+
 # --- 7. report ------------------------------------------------------------
-# Final assistant text: the last type == "text" event's part.text.
+# Final assistant text: the last type == "text" event's part.text. A loop kill
+# skips it: the last text IS the repeated loop, which would flood stdout, and
+# the canary's tail is printed to stderr instead.
+FINAL_TEXT=""
+if [ "$KILLED" != "canary" ]; then
 FINAL_TEXT="$(python3 - "$EVENTS" <<'PY'
 import json, sys
 from pathlib import Path
@@ -335,6 +366,7 @@ for line in raw.splitlines():
 sys.stdout.write(last)
 PY
 )"
+fi
 if [ -n "$FINAL_TEXT" ]; then
     printf '%s\n' "$FINAL_TEXT"
 fi
@@ -344,6 +376,17 @@ fi
 # also poisoned the ledger still says so.
 if [ -n "$KILLED" ]; then
     echo "rundir=$RUNDIR steps=$STEPS cost=$COST exit=$OPENCODE_RC"
+    if [ "$KILLED" = "canary" ]; then
+        echo "DeepSeek repetition loop: run stopped (inc-uxmf); rundir=$RUNDIR" >&2
+        if [ -f "$WATCHDOG_STATUS.canary" ]; then
+            cat "$WATCHDOG_STATUS.canary" >&2
+        fi
+        if [ "$POISON" -eq 1 ]; then
+            echo "opencode run quoted no usable cost; its ledger row has cost=null." >&2
+            echo "The ledger is now POISONED until a human resolves that row." >&2
+        fi
+        exit 3
+    fi
     echo "watchdog stopped the run ($KILLED limit); rundir=$RUNDIR" >&2
     if [ "$POISON" -eq 1 ]; then
         echo "opencode run quoted no usable cost; its ledger row has cost=null." >&2
