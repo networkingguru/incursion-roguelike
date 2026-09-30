@@ -449,6 +449,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_bloodspear_orc_save.sh` | Is the Bloodspear's +4 saving throw versus spells restricted to an orc wielder, rather than granted to anyone who holds it? | LIVE |
 | `check_bloodspear_regen.sh` | Does the Bloodspear start regeneration at 20 turns per critical-hit damage and extend it at 5 turns per later hit? | LIVE |
 | `check_bloodspear_regen_duration.sh` | Does a Bloodspear critical grant the orc wielder regeneration for amt*20 turns rather than amt*5? | LIVE |
+| `check_book_stack.sh` | identical unidentified books stack; a different book does not | LIVE |
 | `check_boots_providence.sh` | Do the Boots of Providence pay their Luck bonus while carried, not only while worn? | LIVE |
 | `check_bow_blessing.sh` | Does an altar blessing give the god's chosen weapon quality to BOWS and AMMUNITION, not only to `T_WEAPON` melee arms? `Character::IBlessing` used an exact `isType(T_WEAPON)` test, so Maeve's short bow and Xavias's arbalest (both `T_BOW`) and every `T_MISSILE` stack were only blessed. `INCURSION_IBLESSING_PROBE` builds a +1 item of each weapon type and calls the real `IBlessing`: arbalest/Xavias -> `WQ_QUICK_LOADING`, short bow/Maeve -> `WQ_CHAOTIC`, crossbow bolts/Maeve -> `WQ_CHAOTIC`, long sword/Asherath -> `WQ_ACCURACY` (the unchanged path). A missing, INCONCLUSIVE or unparsable case line is a FAIL, not a pass. | LIVE |
 | `check_bracers_defense_page.sh` | Does the Bracers of Defense page state the two distinct rates: Defense Class equal to the magical plus and Coverage equal to twice the plus? | LIVE |
@@ -960,6 +961,7 @@ that binary afterwards (`check_strqueue.sh:95`). It copies the frozen
 BACKEND=posix ./build_macos.sh
 tools/check_headless.sh             # run this one FIRST of the tier
 tools/check_feat_toggle.sh
+tools/check_book_stack.sh            # identical unidentified books stack; a different book does not
 tools/check_buckler_size.sh          # Medium and enlarged Large buckler Balance penalty
 tools/check_dump_save.sh
 tools/check_char_fixture.sh         # a frozen character still loads as himself
