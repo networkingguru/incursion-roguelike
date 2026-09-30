@@ -435,6 +435,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_air_ring_spell.sh` | Does the Elemental Command (Air) ring description name the granted staff-spell "gaseous form", rather than the phantom "wind column" that exists nowhere in `lib/`? | LIVE |
 | `check_alienist_drain.sh` | Does each Alienist summoning drain the held mana its page names (Summoned Creature's CR x 2), the mana that never regenerates? | LIVE |
 | `check_alienist_live.sh` | Does the Alienist's Surreal Presence field exist and speak? A kobold summoned beside her must read "seems unsettled". | LIVE |
+| `check_align_lawchaos.sh` | law/chaos alignment drift mirrors good/evil | LIVE |
 | `check_animal_kinship_prose.sh` | Does the Ring of Animal Kinship description drop its false "+3 or higher" untrained-use threshold, stating plainly that it lets you use Animal Empathy with no ranks -- which its skill bonus and the `SkillLevel` use-gate already permit? | LIVE |
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? | LIVE |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? | LIVE |
@@ -572,6 +573,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_huntsman_live.sh` | Does the Twilight Huntsman reach his own spell list, smite Law rather than Good, and track at the ranger's rate, serving the ranger's opening bonus once rather than twice? | LIVE |
 | `check_illus_refund.sh` | Does the illusory-damage refund still clamp to the maximum, instead of paying above it and stranding a character at 58/56? | LIVE |
 | `check_illusion_flags.sh` | Does an illusion's declared IL_IMPROVED flag decide who pierces it, rather than the parity of its save DC? | LIVE |
+| `check_inh_wasteful.sh` | a tome read over the inherent cap is wasted | LIVE |
 | `check_item_flag_protection.sh` | Do Bracers of Neutralization keep an iron maul at 262/262 HP against acid-blob retaliation through EF_PROTECTS_ITEMS? | LIVE |
 | `check_item_hardness.sh` | Does Item apply hardness modifiers once after preserving immunity, with QItem delegating? | LIVE |
 | `check_item_owner_resist.sh` | Does item damage use its own defences without owner resistance or immunity? | LIVE |
@@ -653,6 +655,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_resource_order.sh` | Does the compiled module keep the order recorded in `tools/resource_order.ledger`? The build-time half of the append-only rule (`docs/SAVE-SCHEMA-SPEC.md`, "The build-time order check"): for every one of the 21 resource arrays and every script-variable owner it is red when the module's list is shorter than the ledger's (a removal), or when a name the ledger records at position P appears in the module at a position other than P (an insertion, a removal or a reorder) -- a repeated ledger name is exempt. A name the ledger records and the module lacks is a rename or replacement and is green (rule 3). An **append** is green before the ledger is re-recorded; so is an **in-place rename**, which a prefix test would wrongly reject. The game prints the module's lists with `incursion-headless -resorder` (the same names `v1WriteModuleManifest` writes into a save). Writes no file except under `--record`, which refuses exactly what the check fails and accepts exactly what it passes. `--selftest` proves the rule bites without a build. | LIVE |
 | `check_resource_order_mutations.sh` | The committed reproduction (`docs/SAVE-SCHEMA-SPEC.md`, case 26, amended 2026-09-26) for `check_resource_order.sh`: six sandbox `lib/` edits that must each be red and refused by `--record` (insert, remove or swap a variable in a body; insert, remove or swap an Effect mid-array) and four legal changes that must be green before `--record` and accepted by it -- two appends (a variable at a body's end, an Effect at its array's end) and two in-place renames (a variable, an Effect). Compiles ten sandbox modules, so `gate: none`; the gate runs `check_resource_order.sh` instead. | NONE |
 | `check_rest_poison.sh` | Does the player's Rest work while POISONED, and do the poison's Fortitude saves roll during the rest rather than being skipped? A test god poisons the player with arsenic; Rest used to refuse outright ("too busy dying"), and even without that refusal Rest does not call `DoTurn`, so no save would otherwise roll. `Creature::PoisonPulse`, split out of `DoTurn`'s own POISONED block, now also drives up to (the rest's turn span / the poison's cval) saves per POISONED stati before that creature's healing runs. `--prove-red` reinstates just the old refusal. | LIVE |
+| `check_resume_gc.sh` | Does `tools/resume_gc.sh` delete exactly the old `resume-YYYY-MM-DD-*` memories (strictly older than 7 days, valid dates only), archive each before forgetting, fail safe when the transcript's entrypoint is not `cli`, and warn before the user asks whether it is safe to clear? A stub `bd` is first on `PATH` and `RESUME_GC_ROOT` points the archive and log at a temp dir, so the real database is never touched. `--prove-red` breaks the cutoff and the entrypoint check in turn and demands both go red (inc-gs36). | LIVE |
 | `check_retributive_mirror.sh` | Does Retributive Mirror reflect one third of incoming damage (`e.vDmg / 3`), the fraction its own description promises, rather than the one fifth it paid before? | LIVE |
 | `check_reveal_delete.sh` | Can a monster still delete itself inside `Reveal()` and leave the caller holding a dangling map pointer? | LIVE |
 | `check_rider_corpse.sh` | Does a natural attack's rider clause stop when its victim is dead, rather than striking a corpse and dangling a map pointer? | LIVE |
@@ -705,6 +708,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_staff_winter_quality.sh` | Does the Staff of Winter carry the weakening quality its page names, rather than the numbing quality the script gave it? | LIVE |
 | `check_stair_cycle.sh` | Does the overview map's staircase search run, pick the cheapest, and wrap? | LIVE |
 | `check_stair_warn.sh` | Does descending an ordinary staircase skip the false unsafe-terrain warning, rather than asking to confirm every descent? | LIVE |
+| `check_study_slots.sh` | Intensive Study (spellcasting) raises spell slots to the chart | LIVE |
 | `check_sticky_save.sh` | Does walking onto a pool of slime roll a real Reflex save, and does the STUCK it grants lapse on its own? The DC must print above zero (`SavingThrow` prints nothing at all for `DC <= 0`), and the printed roll line must change after 100 turns of nothing but waiting -- proof a second roll fired, which requires the first grant to have expired, since the same hazard re-catches anyone still standing in it the instant an old grant lapses. | LIVE |
 | `check_store_scroll.sh` | Does the shop list follow the selection in both directions, reached without wizard mode? | LIVE |
 | `check_striking_wand_knockback.sh` | Does the Wand of Striking fold its knockback into the telekinetic bolt's single Reflex save, instead of rolling a second, independent one? | LIVE |
@@ -904,6 +908,7 @@ tools/check_bead_new_gate.sh        # watches tools/bead_new.sh refuse an unfit 
 tools/check_shared_checkout_gate.sh # commits in a scratch repo against .beads/hooks/pre-commit
 tools/check_pass_record.sh          # lands scratch beads through finish_bead.sh
 tools/check_pycache_ignored.sh      # a Python check leaves the tree clean
+tools/check_resume_gc.sh            # resume-note GC against a stub bd and a temp root
 ```
 
 `tools/bead_new.sh` is not a check; it is how a bead should be filed.
@@ -912,6 +917,12 @@ It passes its arguments to `bd create`, then runs
 undescribed or unclassified bead is caught by its author rather than by
 whoever commits next. The pre-commit hook stays as the backstop, because a
 wrapper only fires when somebody calls it.
+
+`tools/resume_gc.sh` is not a check either; it is the `SessionEnd` and
+`UserPromptSubmit` hook (`.claude/settings.json`) that garbage-collects old
+`resume-YYYY-MM-DD-*` notes from bd memory. It deletes a note only at the end
+of a session the user drove, and only one strictly older than seven days;
+`tools/check_resume_gc.sh` is what watches it bite.
 
 These tools prove themselves against known-bad input on demand:
 
@@ -995,11 +1006,13 @@ tools/check_sharp_senses.sh
 tools/check_skill_manager_reset.sh
 tools/check_stacked_abilities.sh
 tools/check_springblade_label.sh
+tools/check_study_slots.sh           # Intensive Study (spellcasting) raises spell slots to the chart
 tools/check_xp_penalty.sh
 tools/check_xp_penalty_rule.sh
 tools/check_prestige_profs.sh
 tools/check_prestige_tables.sh
 tools/check_alienist_live.sh
+tools/check_align_lawchaos.sh        # law/chaos alignment drift mirrors good/evil
 tools/check_earthsinger_live.sh
 tools/check_huntsman_live.sh
 tools/check_loremaster_live.sh
@@ -1015,6 +1028,7 @@ tools/check_hide_carried_light.sh   # a creature carrying a lit source cannot hi
 tools/check_hide_dynamic_light.sh   # a dynamic external light breaks hiding, with no static .Bright
 tools/check_light_averse.sh         # light aversion bites in a dynamically lit cell, not a dim one
 tools/check_shift_opcodes.sh        # a script `<<` shifts left, so a glowing creature's light keeps its colour
+tools/check_inh_wasteful.sh         # a tome read over the inherent cap is wasted
 tools/check_holy_undead.sh          # a Holy weapon smites undead that are not evil
 tools/check_dequ_magic_hardness.sh  # a no-save A_DEQU bypasses a plain weapon's hardness, not a magical one's
 tools/check_dequ_reach.sh           # a blow struck at reach now takes the equipment retaliation
