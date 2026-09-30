@@ -388,6 +388,7 @@ the job, and each still explains an older log or an older commit.
 | `play.sh` | Interactive launcher for a real session, with the map audit, save probe and character probe on. Uses the real `save/`, by design. | LIVE |
 | `dump_save.sh` | What is in this `.sav`, without playing the game? Wraps the binary's `-dump` in the same sandbox `headless.sh` uses. Defaults to `./incursion-headless`; `INCURSION_BIN=./incursion` works too since 2026-08-18 and gives a byte-identical report. | LIVE |
 | `make_char_fixture.sh` | How do I freeze one generated character so a check can load him instead of re-rolling him? Writes the three files of a character fixture into `tools/fixtures/chars/` — the `.sav`, the key script that made it, and the engine's own sheet with its provenance header — and proves the `.sav` loads by reading it back before it publishes. `--force` regenerates an existing fixture. | LIVE |
+| `opencode/loop_check.py` | Is one opencode step a DeepSeek repetition loop? Reads an `events.jsonl`, strips ``` code fences, and counts short non-empty lines repeated three or more times; exits 1 on the first loop step with its tail, 0 otherwise. `tools/opencode_ds.sh` passes it to `tools/watchdog.sh --canary` so a loop that keeps writing is stopped where the idle limit cannot see it (inc-uxmf). Fixtures: `tools/fixtures/opencode-loop/`. | LIVE |
 
 `run_probe.sh` was **deleted on 2026-08-18**. Its own header said "Delete this
 script once the saved-game position bug is fixed", and that bug is fixed:
@@ -433,6 +434,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_air_ring_spell.sh` | Does the Elemental Command (Air) ring description name the granted staff-spell "gaseous form", rather than the phantom "wind column" that exists nowhere in `lib/`? | LIVE |
 | `check_alienist_drain.sh` | Does each Alienist summoning drain the held mana its page names (Summoned Creature's CR x 2), the mana that never regenerates? | LIVE |
 | `check_alienist_live.sh` | Does the Alienist's Surreal Presence field exist and speak? A kobold summoned beside her must read "seems unsettled". | LIVE |
+| `check_align_lawchaos.sh` | law/chaos alignment drift mirrors good/evil | LIVE |
 | `check_animal_kinship_prose.sh` | Does the Ring of Animal Kinship description drop its false "+3 or higher" untrained-use threshold, stating plainly that it lets you use Animal Empathy with no ranks -- which its skill bonus and the `SkillLevel` use-gate already permit? | LIVE |
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? | LIVE |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? | LIVE |
@@ -449,6 +451,8 @@ A new check adds its row to this table, in alphabetical order.
 | `check_bloodspear_orc_save.sh` | Is the Bloodspear's +4 saving throw versus spells restricted to an orc wielder, rather than granted to anyone who holds it? | LIVE |
 | `check_bloodspear_regen.sh` | Does the Bloodspear start regeneration at 20 turns per critical-hit damage and extend it at 5 turns per later hit? | LIVE |
 | `check_bloodspear_regen_duration.sh` | Does a Bloodspear critical grant the orc wielder regeneration for amt*20 turns rather than amt*5? | LIVE |
+| `check_book_section.sh` | books get their own Books inventory section | LIVE |
+| `check_book_stack.sh` | identical unidentified books stack; a different book does not | LIVE |
 | `check_boots_providence.sh` | Do the Boots of Providence pay their Luck bonus while carried, not only while worn? | LIVE |
 | `check_bow_blessing.sh` | Does an altar blessing give the god's chosen weapon quality to BOWS and AMMUNITION, not only to `T_WEAPON` melee arms? `Character::IBlessing` used an exact `isType(T_WEAPON)` test, so Maeve's short bow and Xavias's arbalest (both `T_BOW`) and every `T_MISSILE` stack were only blessed. `INCURSION_IBLESSING_PROBE` builds a +1 item of each weapon type and calls the real `IBlessing`: arbalest/Xavias -> `WQ_QUICK_LOADING`, short bow/Maeve -> `WQ_CHAOTIC`, crossbow bolts/Maeve -> `WQ_CHAOTIC`, long sword/Asherath -> `WQ_ACCURACY` (the unchanged path). A missing, INCONCLUSIVE or unparsable case line is a FAIL, not a pass. | LIVE |
 | `check_bracers_defense_page.sh` | Does the Bracers of Defense page state the two distinct rates: Defense Class equal to the magical plus and Coverage equal to twice the plus? | LIVE |
@@ -494,6 +498,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_divine_aspect_prose.sh` | Does the Lesser Divine Aspect description state that its disease/poison saves and its acid/cold/electricity resistances scale per magical plus, matching its `PLUS_2PER1`/`PLUS_5PER1` code, rather than the flat "+2" and "resistance of 5" it claimed before? | LIVE |
 | `check_divine_feat_gear.sh` | Does Divine Resistance protect a priest's gear while he is channeling? At Charisma 18 his plain iron warhammer holds 45 of 45 hit points through five firebat retaliations. | LIVE |
 | `check_divine_power.sh` | Does Divine Power grant `FT_POWER_ATTACK` when the caster has STR 18 and no Power Attack, yet still grant `FT_KNOCK_PRONE` when he already has Power Attack, as its description promises? | LIVE |
+| `check_divine_sacrifice.sh` | Does Divine Sacrifice offer a level-independent five-dice menu, pay nothing at cast, pay the chosen HP at most once per round and only when it would not bring the caster to 0 HP or below, land +1d6 per 2 HP paid on the next hit (waiting out a miss), last exactly 1 round per caster level, and cancel from the X menu? | LIVE |
 | `check_doc_citations.sh` | Did any document a change touched gain a citation defect above its recorded baseline? | LIVE |
 | `check_doc_freshness.sh` | Which documents did a range of commits leave stale, and does every line citation in them and in the source they touched still resolve? | LIVE |
 | `check_dragonshield_hostility.sh` | Does the Dragonshield anger only chromatic (evil) dragons, matching its description, rather than every dragon including the metallic (good) ones? | LIVE |
@@ -617,7 +622,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_necro_undead_pool.sh` | Does a Necromancer's level-1 BONUS_PHD reach `PHD_UNDEAD`, the pool Animate Dead and Create Undead charge created undead to, instead of `PHD_COMMAND`, which a pure mage cannot carry? Generates both the Necromancer and a non-specialist mage by chargen inside the run (a frozen save would already hold the grant), reads `PHD UNDEAD`'s max off the wizard Group CR Totals block (1 against 0), then creates a wight through a real `MakeCompanion(PHD_UNDEAD)` caller and reads the charged pool: the Necromancer charges it against undead (`PHD UNDEAD 2 / 1`, overflow `PHD MAGIC 1 / 1`), the other mage through magic alone (`PHD UNDEAD 2 / 0`, `PHD MAGIC 2 / 1`). Casts four more times on the level's other corpses: both mages are refused starting at cast 3 and stay refused through cast 5, showing a finite refused count of N=2. The admission chain (undead -> magic -> party) in `Monster::MakeCompanion` is Traced only: its old and new rules differ only while the magic pool has headroom, and a level-1 wight already overflows it, so no level-1 run separates them. | LIVE |
 | `check_nonnormal_invariant.sh` | Is non-normal detection (an infravision character in darkness) byte-identical across the inc-jcg4 unified-light change over seeds 1-10? | LIVE |
 | `check_open_xy.sh` | Does `Map::GetOpenXY` refuse when no square is open, instead of answering (0,0)? Requires the `NO_OPEN_XY` sentinel to be returned and `Thing::PlaceOpen` to drop the Thing rather than place it in the map's solid outer edge. Three static greps plus a probe build (`EXTRA_CXXFLAGS=-DINCURSION_OPENXY_PROBE BACKEND=posix ./build_macos.sh`, binary named by `INCURSION_BIN`) that counts refusals, disposals and a successful-placement control -- the greps alone once passed a fix that tested the sentinel and then placed at (0,0) anyway. | LIVE |
-| `check_opencode_ds.sh` | Does `tools/opencode_ds.sh` refuse to launch once the DeepSeek ledger says the budget is gone or poisoned, refuse the shared checkout, bill exactly one row for a successful harness run (cost summed from its `step_finish` events, steps counted), poison the ledger when opencode quotes tokens but no usable cost, keep the DeepInfra key out of every file it writes, confine opencode to the worktree with the Seatbelt profile, and stop a harness that never writes -- billing it as one `killed=startup` row at cost 0 (inc-h1bq, inc-gofz)? | LIVE |
+| `check_opencode_ds.sh` | Does `tools/opencode_ds.sh` refuse to launch once the DeepSeek ledger says the budget is gone or poisoned, refuse the shared checkout, bill exactly one row for a successful harness run (cost summed from its `step_finish` events, steps counted), poison the ledger when opencode quotes tokens but no usable cost, keep the DeepInfra key out of every file it writes, confine opencode to the worktree with the Seatbelt profile, stop a harness that never writes -- billing it as one `killed=startup` row at cost 0 -- and stop a harness stuck in a DeepSeek repetition loop via the `loop_check.py` canary, billing it as one `killed=loop` row at exit 3 and copying its events aside (inc-h1bq, inc-gofz, inc-uxmf)? | LIVE |
 | `check_options_migrate.sh` | Does an options file written before an option existed come up on that option's real default rather than its first menu choice, and does a setting the player chose on purpose survive? The file has no header, so `OPT_SETTINGS_GEN` is the only thing separating "never chosen" from "deliberately set to the first choice". Links against `OptionsGen.o`, which has no undefined symbols, so it needs no stubs and no session. | LIVE |
 | `check_orphan_branches.sh` | Is every finished fix actually on master? It lists each branch master has not merged beside its bead's status and age. It fails on a branch whose bead is closed — the shape that stranded b855fe2 for days — and on a branch whose name is not a bead id, because nobody can then say what it was for. | LIVE |
 | `check_overlapping_modifier_fields.sh` | Do two torch archons that each stand inside the other's magic circle both keep their light field when they separate, and does each end up holding exactly one circle row? Fixed 2 lit, unfixed 0. | LIVE |
@@ -701,6 +706,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_staff_winter_quality.sh` | Does the Staff of Winter carry the weakening quality its page names, rather than the numbing quality the script gave it? | LIVE |
 | `check_stair_cycle.sh` | Does the overview map's staircase search run, pick the cheapest, and wrap? | LIVE |
 | `check_stair_warn.sh` | Does descending an ordinary staircase skip the false unsafe-terrain warning, rather than asking to confirm every descent? | LIVE |
+| `check_study_slots.sh` | Intensive Study (spellcasting) raises spell slots to the chart | LIVE |
 | `check_sticky_save.sh` | Does walking onto a pool of slime roll a real Reflex save, and does the STUCK it grants lapse on its own? The DC must print above zero (`SavingThrow` prints nothing at all for `DC <= 0`), and the printed roll line must change after 100 turns of nothing but waiting -- proof a second roll fired, which requires the first grant to have expired, since the same hazard re-catches anyone still standing in it the instant an old grant lapses. | LIVE |
 | `check_store_scroll.sh` | Does the shop list follow the selection in both directions, reached without wizard mode? | LIVE |
 | `check_striking_wand_knockback.sh` | Does the Wand of Striking fold its knockback into the telekinetic bolt's single Reflex save, instead of rolling a second, independent one? | LIVE |
@@ -740,7 +746,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_wand_acid_type.sh` | Does the Wand of Acid's residual burn damage a fire-immune victim? | LIVE |
 | `check_wand_animal.sh` | Does a Wand of Animal Summoning summon an animal, rather than a dragon from the line copied above it? | LIVE |
 | `check_wand_cleansing.sh` | Does a Wand of Cleansing Light roll the damage its own inventory line prints, rather than multiplying its plus twice? | LIVE |
-| `check_watchdog.sh` | Does `tools/watchdog.sh` stop a command whose output never starts (`startup`) or stops growing (`idle`), kill the whole process group so grandchildren die too, leave a steadily writing run and its own exit code alone, wire `--in` to the command's stdin, fail closed on a malformed limit, and drive `tools/codex_exec.sh` (inc-gofz)? | LIVE |
+| `check_watchdog.sh` | Does `tools/watchdog.sh` stop a command whose output never starts (`startup`) or stops growing (`idle`), kill the whole process group so grandchildren die too, leave a steadily writing run and its own exit code alone, wire `--in` to the command's stdin, fail closed on a malformed limit, run `--canary` on a growing run and stop only on its exit 1 (saving its stdout to `<status>.canary`, and carrying on with one warning for any other code), and drive `tools/codex_exec.sh` (inc-gofz, inc-uxmf)? | LIVE |
 | `check_water_ring_prose.sh` | Does the Ring of Elemental Command (Water) description introduce its staff-spells as "elemental water", matching its all-water spell list, rather than the "elemental fire" it copied from the Fire ring? | LIVE |
 | `check_weapon_groups.sh` | Does every weapon-group bit hold a row in the name table, so a class's proficiency list names it rather than dropping it in silence? | LIVE |
 | `check_weapon_immunity_live.sh` | Is a bare fist tested against Weapon Immunity, and does Ki Strike beat it? One wizard-mode-summoned lemure, punched by the same character at Monk 1 and at Monk 4: `Your weapon fails to penetrate.` then no such line. | LIVE |
@@ -959,7 +965,9 @@ that binary afterwards (`check_strqueue.sh:95`). It copies the frozen
 ```sh
 BACKEND=posix ./build_macos.sh
 tools/check_headless.sh             # run this one FIRST of the tier
+tools/check_book_section.sh          # books get their own Books inventory section
 tools/check_feat_toggle.sh
+tools/check_book_stack.sh            # identical unidentified books stack; a different book does not
 tools/check_buckler_size.sh          # Medium and enlarged Large buckler Balance penalty
 tools/check_dump_save.sh
 tools/check_char_fixture.sh         # a frozen character still loads as himself
@@ -989,11 +997,13 @@ tools/check_sharp_senses.sh
 tools/check_skill_manager_reset.sh
 tools/check_stacked_abilities.sh
 tools/check_springblade_label.sh
+tools/check_study_slots.sh           # Intensive Study (spellcasting) raises spell slots to the chart
 tools/check_xp_penalty.sh
 tools/check_xp_penalty_rule.sh
 tools/check_prestige_profs.sh
 tools/check_prestige_tables.sh
 tools/check_alienist_live.sh
+tools/check_align_lawchaos.sh        # law/chaos alignment drift mirrors good/evil
 tools/check_earthsinger_live.sh
 tools/check_huntsman_live.sh
 tools/check_loremaster_live.sh
@@ -1031,6 +1041,7 @@ tools/check_mana_regen_cast.sh      # the same fix under real play: cast, wait w
 tools/check_multiply_noroom.sh      # Multiply must not re-place, initialise or heal a copy PlaceNear deleted
 tools/check_undeath_to_death.sh     # Undeath to Death pools one (caster level)d4 of Hit Dice, fewest first, 9-HD cap, Will save
 tools/check_undeath_to_death_pool.sh # the same pool short: fewest-first order, wasted remainder, 9-HD bodak cap
+tools/check_divine_sacrifice.sh     # a level-independent five-dice menu, pay-per-round, low-HP skip, waiting bonus, 1 round per caster level, cancel
 ```
 
 `check_gaze_reflect_message.sh` is the live twin of Tier 1's

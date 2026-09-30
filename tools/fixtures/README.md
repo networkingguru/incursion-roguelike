@@ -11,6 +11,7 @@ against. Each is the exact `Options.Dat` blob from the named repository commit:
 | `options-2026-08-18.dat` | `2f58be3` | The 2026-08-13 settings plus the 21-byte character-generation profile described below. |
 | `options-2026-08-22.dat` | `2092592` | The 2026-08-18 settings with `OPT_AUTOOPEN` changed from 0 to 2. |
 | `options-sneak-invis.dat` | n/a (derived) | `tools/gates/Options.Dat` with `OPT_AUTOHIDE` (518) forced to 0. `tools/check_sneak_invis.sh` uses it: with Automatic Hide in Shadows on, a rogue auto-hides in the dark and every blow counts as an unseen attack even without a spell, which spoils the visible control. |
+| `options-2026-08-22-freeadv.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_FREE_ADV` (803) forced to 1. `tools/keys/levelup-caster-sheet.keys` uses it to buy a real level through the character sheet's `G`/`A` command (Player::AdvanceLevel) on a frozen XP-0 fixture; the inc-ngku no-study control otherwise gets its level-up through `INCURSION_LEVELUP_PROBE`. |
 
 The 21 changed bytes in the 2026-08-18 fixture include `OPT_BEGINKIT` and
 `OPT_REROLL` enabled, `OPT_MAX_HP` and `OPT_MAX_MANA` set to 2,
@@ -144,3 +145,5 @@ character the `.sav` beside it does not hold.
 | Fixture | Contents |
 |---|---|
 | `bead-dupes-offline-proof.json` | Two small fake beads, `bd list --json` shape, no real bead text. `tools/check_bead_dupe_wiring.sh` hands this to `tools/bead_dupes.py check-draft` so it has a candidate to rank before the keyless path exits 3. |
+| `opencode-loop/loop.jsonl` | A trimmed opencode `events.jsonl` extract from a run that fell into a DeepSeek repetition loop: one real loop step (its `text` parts and `step_finish`, 3689 output tokens with 17 short lines repeated three or more times) plus a few normal steps. `tools/opencode/loop_check.py` exits 1 on it. Tool outputs are shortened, so the fixture is under 20 KB. |
+| `opencode-loop/clean.jsonl` | A trimmed extract pairing the 10786-token `bsqm` step whose text is mostly repeated ```` ``` ```` and `{ }` lines inside code fences -- the false-positive trap the fence-stripping rule exists for -- with several normal `twr9` steps. `tools/opencode/loop_check.py` exits 0 on it. Under 51 KB. |
