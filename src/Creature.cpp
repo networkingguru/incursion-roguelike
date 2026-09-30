@@ -2060,17 +2060,83 @@ bool Creature::isDrained(int8 at)
     return false;
   }
 
+/* inc-bsqm: reproduction probe. GainInherentBonus below only prints its
+   "wastefulness" line when CurrBonus is EXACTLY MaxBonus, so a character
+   already ABOVE the cap reads a tome and instead reads a false gain. The
+   over-cap state is reachable in play: a polymorphed shambling mound's
+   electricity handler (lib/mon3.irh:2102) grants an uncapped +1d4
+   ADJUST_INH A_CON on top of a cap already filled by tomes. With
+   INCURSION_INH_PROBE=1 the player's first GainInherentBonus call is
+   preceded by that same uncapped grant, and logs/inh.log records the cap,
+   the total before and after, and whether the wasteful line printed.
+   Off and free otherwise. */
+static int InhProbeWasteful = 0;
+static int InhProbeWatching = 0;
+static int InhProbeRan = 0;
+
+static void InhProbeArm(Creature *c, int16 at)
+  {
+    if (InhProbeRan) return;
+    if (!getenv("INCURSION_INH_PROBE")) return;
+    if (!c->isPlayer()) return;
+    InhProbeRan = 1;
+    int16 base = 5 + c->AbilityLevel(CA_INHERANT_POTENTIAL);
+    const char *off = getenv("INCURSION_INH_PROBE_OFFSET");
+    if (off) {
+      base += atoi(off);
+      if (!c->HasStati(ADJUST_INH,at))
+        c->GainPermStati(ADJUST_INH,NULL,SS_MISC,at,base,0);
+    } else {
+      if (!c->HasStati(ADJUST_INH,at))
+        c->GainPermStati(ADJUST_INH,NULL,SS_MISC,at,
+          5 + c->AbilityLevel(CA_INHERANT_POTENTIAL),0);
+      c->GainTempStati(ADJUST_INH,c,300,SS_MISC,at,1);
+    }
+    InhProbeWasteful = 0;
+    InhProbeWatching = 1;
+  }
+
+static void InhProbeNote(Creature *c, int16 at, int16 max, int16 curr)
+  {
+    static FILE *f = NULL;
+    char path[1024];
+    if (!InhProbeWatching) return;
+    InhProbeWatching = 0;
+    if (!f) {
+      snprintf(path,sizeof(path),"%slogs/inh.log",
+        (const char*)T1->IncursionDirectory);
+      f = fopen(path,"a");
+      if (!f) return;
+    }
+    fprintf(f,"inh: at=%d max=%d curr=%d message=%s after=%d\n",
+      at,max,curr,InhProbeWasteful?"wasteful":"gain",
+      c->SumStatiMag(ADJUST_INH,at));
+    fflush(f);
+  }
+
 void Creature::GainInherentBonus(int16 at, int16 mag, bool msg)
   {
     int16 MaxBonus, CurrBonus;
+
+    InhProbeArm(this,at);
 
     MaxBonus = 5 + AbilityLevel(CA_INHERANT_POTENTIAL);
 
     CurrBonus = SumStatiMag(ADJUST_INH,at);
 
-    if (CurrBonus == MaxBonus) {
+    /* upstream: a tome read at or above the inherent cap is wasted, but the
+       base code tested only equality, so an ABOVE-cap total fell through and
+       printed a false gain (inc-bsqm; Observed via tools/check_inh_wasteful.sh,
+       the polymorph route itself Traced). Live route: the shambling mound's
+       electricity handler grants an uncapped ADJUST_INH A_CON +1d4
+       (lib/mon3.irh:2102) on top of a tome-filled cap, reachable by a player
+       in mound form. Pure control flow, no typedef/compiler dependence, so
+       Win32 with the original typedefs misbehaves identically. Not sent. */
+    if (CurrBonus >= MaxBonus) {
       if (msg)
         IPrint("You feel a profound sense of wastefulness.");
+      InhProbeWasteful = 1;
+      InhProbeNote(this,at,MaxBonus,CurrBonus);
       return;
       }
 
@@ -2092,6 +2158,7 @@ void Creature::GainInherentBonus(int16 at, int16 mag, bool msg)
    if (isPlayer())
      thisp->statiChanged = true;
 
+    InhProbeNote(this,at,MaxBonus,CurrBonus);
   }
   
 bool Creature::hasAccessToSpell(rID spID)
