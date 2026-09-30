@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Regression check for the two identical unidentified books that would not
 # stack, bd inc-elhn.
 #
