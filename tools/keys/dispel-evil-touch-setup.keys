@@ -1,0 +1,101 @@
+# Shared setup for the inc-5v5l "Dispel Evil" touch reproduction.
+#
+# Builds an orc priest of Aiswin under wizard mode, raises him to the game's
+# hard maximum character level (11) through Free Advancement, and learns
+# "Dispel Evil" through "Learn Any Spell" (which sets SP_INNATE, so
+# CalcEffect uses ChallengeRating = the sum of class levels as the caster
+# level -- 11 here, so the touch component's lval applies at CL 11).
+#
+# This is tools/keys/undeath-to-death-setup.keys with the learned spell
+# changed; that file is itself searing-light-cl11-setup.keys with the spell
+# changed. The wizard-mode switch block is identical, and among the switches
+# it flips is Freeze Monsters (the eleventh OPC_WIZARD row), so a creature
+# summoned for the touch stays on its square while the screens are
+# photographed.
+#
+# NOT RUN DIRECTLY; included by dispel-evil-touch.keys.
+@include chargen-priest.keys
+ESC
+w y
+@choose "Wizard Mode Switches"
+DOWN*2 SPACE
+DOWN*5 SPACE
+DOWN*3 SPACE
+UP SPACE
+ESC
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+@dump:level
+ESC
+w
+@choose "Learn Any Spell"
+"Dispel Evil" ENTER
