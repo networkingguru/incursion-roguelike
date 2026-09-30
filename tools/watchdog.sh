@@ -35,7 +35,8 @@
 # To stop a run: kill -TERM the whole process group, wait up to the grace,
 # then kill -KILL the group, and reap the direct child. On a stop the reason
 # ("startup", "idle" or "canary") is written to --status if given, one line naming the
-# command, the --out file, the reason and the limit in seconds is printed to
+# program (not its full argv, which may carry a secret; bead inc-k4wc), the
+# --out file, the reason and the limit in seconds is printed to
 # the watchdog's own stderr, and the watchdog exits 124. Otherwise it exits
 # with the command's own exit code -- so a caller MUST read the --status file,
 # not the exit code, to know whether the watchdog fired (the command can exit
@@ -161,7 +162,7 @@ stop_run() {
     if [ -n "$STATUS" ]; then
         printf '%s\n' "$reason" > "$STATUS"
     fi
-    echo "watchdog: stopped (${reason}, ${limit}s): ${CMD[*]} -- out=$OUT" >&2
+    echo "watchdog: stopped (${reason}, ${limit}s): ${CMD[0]} -- out=$OUT" >&2
     exit 124
 }
 

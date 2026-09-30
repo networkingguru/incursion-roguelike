@@ -214,10 +214,15 @@ fi
 BRIEF_TEXT="$(cat "$BRIEF_FILE")"
 OPENCODE_BIN="${INCURSION_OPENCODE_BIN:-opencode}"
 
+# The key is exported into this wrapper's own shell, never passed as an argv
+# word: a `DEEPINFRA_API_KEY="$KEY"` argument would sit in the process argv
+# (visible to `ps`) and, before the watchdog stopped printing the whole command,
+# in the watchdog's stop message (bead inc-k4wc). The child inherits the export.
+export DEEPINFRA_API_KEY="$KEY"
+
 "$REPO/tools/watchdog.sh" --out "$EVENTS" --err "$STDERR" --status "$WATCHDOG_STATUS" \
     --canary "$REPO/tools/opencode/loop_check.py" -- \
     env \
-    DEEPINFRA_API_KEY="$KEY" \
     INCURSION_DS_BASEURL="http://127.0.0.1:$PROXY_PORT/v1/openai" \
     OPENCODE_CONFIG="$OPENCODE_CONFIG" \
     OPENCODE_DISABLE_CLAUDE_CODE=1 \
@@ -231,7 +236,7 @@ OPENCODE_BIN="${INCURSION_OPENCODE_BIN:-opencode}"
     XDG_STATE_HOME="$RUNDIR/state" \
     XDG_CONFIG_HOME="$RUNDIR/config" \
     XDG_CACHE_HOME="$CACHEDIR" \
-    sandbox-exec -f "$SANDBOX_PROFILE" -D WORKDIR="$WORKTREE" -D CACHEDIR="$CACHEDIR" \
+    sandbox-exec -f "$SANDBOX_PROFILE" -D WORKDIR="$WORKTREE" -D CACHEDIR="$CACHEDIR" -D HOME="$HOME" \
     "$OPENCODE_BIN" run --pure --format json --dir "$WORKTREE" "$BRIEF_TEXT"
 OPENCODE_RC=$?
 

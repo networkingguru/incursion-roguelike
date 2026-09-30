@@ -291,7 +291,7 @@ PY
     BACKUP_PROFILE="$TMP/sandbox.sb.orig"
     cp "$WRAPPER" "$BACKUP"
     cp "$PROFILE" "$BACKUP_PROFILE"
-    NEEDLE='sandbox-exec -f "$SANDBOX_PROFILE" -D WORKDIR="$WORKTREE" -D CACHEDIR="$CACHEDIR" \'
+    NEEDLE='sandbox-exec -f "$SANDBOX_PROFILE" -D WORKDIR="$WORKTREE" -D CACHEDIR="$CACHEDIR" -D HOME="$HOME" \'
     if ! grep -qF "$NEEDLE" "$WRAPPER"; then
         echo "could not find the sandbox-exec prefix to mutate" >&2
         exit 2
