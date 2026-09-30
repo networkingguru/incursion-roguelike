@@ -1,0 +1,68 @@
+# inc-5v5l: Dispel Evil follows the SRD -- one touch per casting, and the
+# touch ends the whole spell.
+#
+# THE RULE. lib/pspells.irh's "Dispel Evil" has two components:
+#   component 0  xval TRAP_EVENT, yval EVICTIM(EV_STRIKE) -- the +4 (+6 vs
+#                inherently evil) deflection bonus, which fires only while
+#                the caster is the victim of a strike.
+#   component 1  aval AR_TOUCH, lval -- one touch per casting, and when that
+#                touch lands on an evil creature the banish or the +10
+#                dispel-magic branch runs and the WHOLE spell must end: the
+#                deflection stati and the remaining TOUCH_ATTACK must both go.
+#
+# THE SCENE. The setup (dispel-evil-touch-setup.keys) builds an orc priest of
+# Aiswin raised to character level 11 through Free Advancement and learns
+# Dispel Evil through Learn Any Spell (innate -> caster level 11). Freeze
+# Monsters keeps everything still.
+#
+# A goblin is summoned TWO squares east: out of melee reach, so nothing can
+# be touched at cast time. Dispel Evil's touch component carries no qval, so
+# casting opens no targeting prompt -- the same shape Minor Drain's phase-6
+# check relies on (tools/keys/minor-drain-touch.keys). The script then closes
+# the gap and bump-attacks once per dump until a touch lands. A touch swing
+# can miss (it rolls against the goblin's touch defence); a miss is retried.
+# The goblin is evil (MA_EVIL) and is not an outsider, so the landed touch
+# takes the dispel-magic branch, not the banish branch.
+#
+# THE ORACLE is the DISPEL_EVIL_PROBE build (src/Fight.cpp), which logs at
+# the landed-touch path, before and after EV_MAGIC_STRIKE:
+#   "before effect=Dispel Evil touch=<mag>/<present> defl=<0|1> evil=<0|1>"
+#   "after  effect=Dispel Evil touch=<mag>/<present> defl=<0|1> evil=<0|1>"
+# tools/check_dispel_evil.sh asserts one "before" with touch magnitude 1, and
+# that the "after" line has touch 0/0 and defl 0 -- nothing of the spell left.
+
+@include dispel-evil-touch-setup.keys
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT RIGHT ENTER
+@dump:before-cast
+
+m
+@choose "Dispel Evil"
+@dump:after-cast
+
+RIGHT
+@dump:closed-distance
+RIGHT
+@while "Confirm attack" y
+@dump:touch-1
+RIGHT
+@while "Confirm attack" y
+@dump:touch-2
+RIGHT
+@while "Confirm attack" y
+@dump:touch-3
+RIGHT
+@while "Confirm attack" y
+@dump:touch-4
+RIGHT
+@while "Confirm attack" y
+@dump:touch-5
+RIGHT
+@while "Confirm attack" y
+@dump:touch-6
+@dump:messages
+@quit

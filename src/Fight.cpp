@@ -51,6 +51,34 @@ static void RoLMProbeNote(EventInfo &e, const char *when)
 }
 #endif
 
+#ifdef DISPEL_EVIL_PROBE
+/* Diagnostic for inc-5v5l. Record, at the landed-touch path, both the
+   TOUCH_ATTACK counter and whether the caster still holds the spell's own
+   TRAP_EVENT stati (the +4/+6 deflection component). Dispel Evil must leave
+   neither after a touch lands on an evil creature.
+   tools/check_dispel_evil.sh reads this log. */
+static void DispelEvilProbeNote(EventInfo &e, const char *when)
+{
+    char path[1024];
+    FILE *f;
+    snprintf(path, sizeof(path), "%slogs/dispel-evil-touch.log",
+        (const char*)T1->IncursionDirectory);
+    f = fopen(path, "a");
+    if (!f)
+        return;
+    fprintf(f, "%s effect=%s touch=%d/%d defl=%d any=%d trapany=%d evil=%d eval=%d xval=%d aval=%d\n", when,
+        (const char*)NAME(e.eID), (int)e.EActor->GetStatiMag(TOUCH_ATTACK),
+        e.EActor->HasStati(TOUCH_ATTACK) ? 1 : 0,
+        e.EActor->HasEffStati(TRAP_EVENT,e.eID) ? 1 : 0,
+        e.EActor->HasEffStati(-1,e.eID) ? 1 : 0,
+        e.EActor->HasStati(TRAP_EVENT) ? 1 : 0,
+        e.EVictim->isMType(MA_EVIL) ? 1 : 0,
+        (int)TEFF(e.eID)->ef.eval, (int)TEFF(e.eID)->ef.xval,
+        (int)TEFF(e.eID)->ef.aval);
+    fclose(f);
+}
+#endif
+
 /* Temporary diagnostic: set INCURSION_RIDER_PROBE=1 to record what an attack
    sequence does to its victim. Three lines can appear.
 
@@ -6437,7 +6465,16 @@ AfterEffects:
 #ifdef ROLM_PROBE
     RoLMProbeNote(e, "before");
 #endif
+#ifdef DISPEL_EVIL_PROBE
+    DispelEvilProbeNote(e, "before");
+#endif
     ReThrow(EV_MAGIC_STRIKE,e);
+#ifdef DISPEL_EVIL_PROBE
+    /* Read before Fight.cpp's own decrement below, which would remove
+       TOUCH_ATTACK on its own once lval is 1 regardless of whether the
+       spell's own EV_MAGIC_HIT handler already discharged it. */
+    DispelEvilProbeNote(e, "mid");
+#endif
 
     /* If this touch spell allows multiple uses, reduce the
        number remaining by one; otherwise, get rid of the 
@@ -6449,6 +6486,9 @@ AfterEffects:
       e.EActor->RemoveStati(TOUCH_ATTACK);
 #ifdef ROLM_PROBE
     RoLMProbeNote(e, "after");
+#endif
+#ifdef DISPEL_EVIL_PROBE
+    DispelEvilProbeNote(e, "after");
 #endif
   }  
 
