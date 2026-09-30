@@ -654,6 +654,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_resource_order.sh` | Does the compiled module keep the order recorded in `tools/resource_order.ledger`? The build-time half of the append-only rule (`docs/SAVE-SCHEMA-SPEC.md`, "The build-time order check"): for every one of the 21 resource arrays and every script-variable owner it is red when the module's list is shorter than the ledger's (a removal), or when a name the ledger records at position P appears in the module at a position other than P (an insertion, a removal or a reorder) -- a repeated ledger name is exempt. A name the ledger records and the module lacks is a rename or replacement and is green (rule 3). An **append** is green before the ledger is re-recorded; so is an **in-place rename**, which a prefix test would wrongly reject. The game prints the module's lists with `incursion-headless -resorder` (the same names `v1WriteModuleManifest` writes into a save). Writes no file except under `--record`, which refuses exactly what the check fails and accepts exactly what it passes. `--selftest` proves the rule bites without a build. | LIVE |
 | `check_resource_order_mutations.sh` | The committed reproduction (`docs/SAVE-SCHEMA-SPEC.md`, case 26, amended 2026-09-26) for `check_resource_order.sh`: six sandbox `lib/` edits that must each be red and refused by `--record` (insert, remove or swap a variable in a body; insert, remove or swap an Effect mid-array) and four legal changes that must be green before `--record` and accepted by it -- two appends (a variable at a body's end, an Effect at its array's end) and two in-place renames (a variable, an Effect). Compiles ten sandbox modules, so `gate: none`; the gate runs `check_resource_order.sh` instead. | NONE |
 | `check_rest_poison.sh` | Does the player's Rest work while POISONED, and do the poison's Fortitude saves roll during the rest rather than being skipped? A test god poisons the player with arsenic; Rest used to refuse outright ("too busy dying"), and even without that refusal Rest does not call `DoTurn`, so no save would otherwise roll. `Creature::PoisonPulse`, split out of `DoTurn`'s own POISONED block, now also drives up to (the rest's turn span / the poison's cval) saves per POISONED stati before that creature's healing runs. `--prove-red` reinstates just the old refusal. | LIVE |
+| `check_resume_gc.sh` | Does `tools/resume_gc.sh` delete exactly the old `resume-YYYY-MM-DD-*` memories (strictly older than 7 days, valid dates only), archive each before forgetting, fail safe when the transcript's entrypoint is not `cli`, and warn before the user asks whether it is safe to clear? A stub `bd` is first on `PATH` and `RESUME_GC_ROOT` points the archive and log at a temp dir, so the real database is never touched. `--prove-red` breaks the cutoff and the entrypoint check in turn and demands both go red (inc-gs36). | LIVE |
 | `check_retributive_mirror.sh` | Does Retributive Mirror reflect one third of incoming damage (`e.vDmg / 3`), the fraction its own description promises, rather than the one fifth it paid before? | LIVE |
 | `check_reveal_delete.sh` | Can a monster still delete itself inside `Reveal()` and leave the caller holding a dangling map pointer? | LIVE |
 | `check_rider_corpse.sh` | Does a natural attack's rider clause stop when its victim is dead, rather than striking a corpse and dangling a map pointer? | LIVE |
@@ -906,6 +907,7 @@ tools/check_bead_new_gate.sh        # watches tools/bead_new.sh refuse an unfit 
 tools/check_shared_checkout_gate.sh # commits in a scratch repo against .beads/hooks/pre-commit
 tools/check_pass_record.sh          # lands scratch beads through finish_bead.sh
 tools/check_pycache_ignored.sh      # a Python check leaves the tree clean
+tools/check_resume_gc.sh            # resume-note GC against a stub bd and a temp root
 ```
 
 `tools/bead_new.sh` is not a check; it is how a bead should be filed.
@@ -914,6 +916,12 @@ It passes its arguments to `bd create`, then runs
 undescribed or unclassified bead is caught by its author rather than by
 whoever commits next. The pre-commit hook stays as the backstop, because a
 wrapper only fires when somebody calls it.
+
+`tools/resume_gc.sh` is not a check either; it is the `SessionEnd` and
+`UserPromptSubmit` hook (`.claude/settings.json`) that garbage-collects old
+`resume-YYYY-MM-DD-*` notes from bd memory. It deletes a note only at the end
+of a session the user drove, and only one strictly older than seven days;
+`tools/check_resume_gc.sh` is what watches it bite.
 
 These tools prove themselves against known-bad input on demand:
 
