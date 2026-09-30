@@ -1,0 +1,72 @@
+# Make chargen.keys' orc barbarian, acquire one book in wizard mode, stow it,
+# and dump the inventory listing so the book's SECTION HEADING can be read.
+# bd inc-twr9.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/book-inventory-section.keys 1
+#
+# WHAT THE DUMP SHOWS. Player::InventoryManager (src/Managers.cpp:610) lists
+# the contents of the current container -- the pack -- grouped by itemGroups[]
+# (src/Managers.cpp:444), and it prints each group's heading from the same
+# table with Lookup(ITypeNames, ...) (src/Managers.cpp:557). A book is a
+# T_BOOK. Before the fix itemGroups[] had no T_BOOK entry, so a book fell
+# through to sortOrder()'s 50, landed in the trailing T_ITEM group, and its
+# heading read "Other Items" (src/Managers.cpp:553). After the fix it gets its
+# own group and its heading reads "Books" (src/Tables.cpp:1031).
+#
+#   w y                      enter wizard mode and open its menu
+#   Item Acquisition         the acquisition browser
+#   RIGHT*7                  walk the glyph row to the book category. ItemGlyphs
+#                            (src/Tables.cpp:320) puts GLYPH_BOOK,T_BOOK 7 steps
+#                            along (potion 0, scroll 1, rod 2, staff 3, wand 4,
+#                            eyes 5, food 6, book 7), and the header line names
+#                            the category, so a miscount shows up in a dump as
+#                            some other word after "Acquisition -- [...]:".
+#   @until "Spellbook" DOWN  the candidate list has no menu letters and no '>'
+#                            marker, so neither @choose nor @cursorto can reach
+#                            a row -- walking the cursor with DOWN is the only
+#                            way in. The window shows three rows and highlights
+#                            the middle one, so @until stops on the pass where
+#                            a spellbook name first appears at the BOTTOM of
+#                            that window, and one further DOWN moves the
+#                            highlight onto it. The capital S is the game's:
+#                            the candidate rows print the item's name, and
+#                            every T_BOOK in lib/sp_books.irh is "Spellbook
+#                            [...]" (lib/m_items.irh's Tomes are T_TOME, a
+#                            different type the book glyph does not reach).
+#   @expect "Spellbook"      nail the name to the row before taking it.
+#   ENTER                    take it. A non-stacking item lands in the In-the-
+#                            Air slot and opens the inventory manager.
+#   @dump:book-in-air        proves a spellbook was acquired: the In-the-Air
+#                            line names it. It is drawn on the slot line, above
+#                            the listing, and carries no heading.
+#   s                        stow it in the backpack (src/Managers.cpp:873), so
+#                            it joins the pack listing that carries the group
+#                            headings.
+#   @until "spellbook" PGDN  scroll the listing down until the book's own row
+#                            is on screen, so the heading above it is captured
+#                            too. @expect makes a scroll that ran out of list
+#                            fail instead of accepting the last screen.
+#   @dump:book-in-inventory  the measurement: the listing with the book in it.
+#   ESC                      leave the inventory.
+#   @quit                    save and quit, so the run ends cleanly.
+
+@include chargen.keys
+
+@dump:arrival
+
+w
+y
+@choose "Item Acquisition"
+RIGHT*7
+@until "Spellbook" DOWN
+@expect "Spellbook"
+DOWN
+ENTER
+@dump:book-in-air
+s
+@until "spellbook" PGDN
+@expect "spellbook"
+@dump:book-in-inventory
+ESC
+@quit
