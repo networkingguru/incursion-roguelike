@@ -1,0 +1,92 @@
+# Prove that two copies of the SAME unidentified book occupy one pack entry,
+# while a DIFFERENT unidentified book is its own entry. Oracle for inc-elhn.
+#
+#   tools/headless.sh tools/keys/book-stack.keys 1
+#
+# THE BOOKS MUST BE UNIDENTIFIED, which is why this script uses wizard mode's
+# [e] "Acquire Unknown Item" and NOT "Item Acquisition". Item::Create gives
+# every item a fresh GenNum (src/Item.cpp:89), and Item::operator== (src/Item.cpp)
+# only lets items from different generation groups stack when they are fully
+# identified (KN_MAGIC|KN_PLUS|KN_BLESS). "Acquire Unknown Item"
+# (src/Debug.cpp:659-668) clears Known to 0 before the pickup, so two books
+# taken this way carry different GenNums and Known 0 -- exactly the case the
+# fix at the T_BOOK case restores to easy-stacking.
+#
+# WHY BOOKS. T_BOOK is the only easy-stackable type whose candidates exist at
+# level 0 in a form a scripted walk can reach by name: the T_BOOK glyph category
+# (ItemGlyphs, src/Tables.cpp:320) offers "Fundamentals of Magick", "Adventurers'
+# Arts", "Mystic Aegis", "Tome of Magic" and more at minlev 0. Spellbooks are
+# also not identified by flavor, so a run that fails to make them unknown still
+# names them -- but the check would then read two entries only if the GenNum
+# guard bit, so the guide name "? spellbook" on the dump is what tells the two
+# apart. The check re-reads that "?" marker and calls a run without it
+# INCONCLUSIVE.
+#
+# THE ACQUISITION LIST HAS NO MENU LETTERS (TextTerm::AcquisitionPrompt,
+# src/Term.cpp), so neither @choose nor @cursorto can reach a row -- walking
+# DOWN is the only way in, and that is the idiom tools/keys/acquire-blast-
+# circlet.keys documents. @until stops on the pass where the wanted name first
+# appears at the bottom of the three-line window; one further DOWN moves the
+# selection onto it. Adding a book to lib/sp_books.irh ahead of one of these
+# moves the rows, so @expect nails each name to the row before ENTER takes it.
+#
+# A book that will not stack lands in the In-the-Air slot and opens the
+# inventory manager, which refuses to close while that slot is full; the
+# @while pair stows it and leaves. A book that stacks (after the fix, once the
+# first copy is already in the pack) is auto-stowed by Character::PickUp
+# (src/Inv.cpp:580-596) and neither @while fires. The "? spellbook" in the
+# stow pattern is deliberate: without it the air-slot text never clears and
+# the loop runs out its passes.
+#
+# One pack dump, scrolled to the "Other Items" section where a book too large
+# for a belt slot is listed. The test is the whole dump:
+#
+#   before the fix  11) ? spellbook [Mystic Aegis]
+#                   12) ? spellbook [Mystic Aegis]      <- two entries
+#                   13) ? spellbook [Tome of Magic]
+#   after the fix   11) 2 ? spellbooks [Mystic Aegis]   <- one entry, count 2
+#                   12) ? spellbook [Tome of Magic]     <- on its own
+
+@include chargen.keys
+
+# --- two copies of "Mystic Aegis" -------------------------------------------
+w
+@until "Wizard Mode Options" y
+@choose "Acquire Unknown Item"
+RIGHT*7
+@until "Spellbook [Mystic Aegis]" DOWN
+@expect "Spellbook [Mystic Aegis]"
+DOWN
+ENTER
+@while "In the Air':? spellbook" s
+@while "Ready Hand" ESC
+
+w
+@until "Wizard Mode Options" y
+@choose "Acquire Unknown Item"
+RIGHT*7
+@until "Spellbook [Mystic Aegis]" DOWN
+@expect "Spellbook [Mystic Aegis]"
+DOWN
+ENTER
+@while "In the Air':? spellbook" s
+@while "Ready Hand" ESC
+
+# --- one copy of a different book, "Tome of Magic" --------------------------
+w
+@until "Wizard Mode Options" y
+@choose "Acquire Unknown Item"
+RIGHT*7
+@until "Spellbook [Tome of Magic]" DOWN
+@expect "Spellbook [Tome of Magic]"
+DOWN
+ENTER
+@while "In the Air':? spellbook" s
+@while "Ready Hand" ESC
+
+i
+PGDN*25
+@dump:pack
+ESC
+
+@quit

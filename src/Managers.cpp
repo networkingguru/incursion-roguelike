@@ -441,9 +441,16 @@ DoneAB:
 const char * SlotLetters =
   "abcefghijklmnopqrtuvwyz";
 
-int16 itemGroups[] = 
+  /* upstream: this table is upstream's byte-for-byte, and it omits T_BOOK --
+   * so every book falls through sortOrder() to the trailing T_ITEM group and
+   * its inventory heading reads "Other Items" rather than "Books" (the name
+   * already exists in ITypeNames, src/Tables.cpp:1031). It would misbehave the
+   * same way on Win32 and the original typedefs; the flaw is the table, not the
+   * port. Observed: tools/check_book_section.sh, red before and green after.
+   * inc-twr9; not sent. */
+int16 itemGroups[] =
   { T_WEAPON, T_BOW, T_MISSILE, T_ARMOUR, T_SHIELD,
-    T_POTION, T_SCROLL, T_WAND, T_TOOL, T_COIN, T_FOOD, T_ITEM, 0 };
+    T_POTION, T_SCROLL, T_BOOK, T_WAND, T_TOOL, T_COIN, T_FOOD, T_ITEM, 0 };
 
 inline int16 sortOrder(Item *it) {
     int16 i;

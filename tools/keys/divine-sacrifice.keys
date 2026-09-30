@@ -1,0 +1,53 @@
+# BEFORE reproduction for inc-l8ws: Divine Sacrifice follows its source book.
+#
+# Run from the repository root, with a fresh INCURSION_RUN_DIR under logs/:
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#     INCURSION_RUN_DIR="$PWD/logs/inc-l8ws/before/seed-1" \
+#     tools/headless.sh tools/keys/divine-sacrifice.keys 1
+#
+# WHAT THE OLD SPELL DOES (lib/pspells.irh:1149, before the fix): at cast time
+# EV_EFFECT sizes its dice menu by paladin level, charges sac HP at once with
+# ThrowDmg, and META(PRE(EV_HIT)) adds (sac/2)d10 to the next hit and removes
+# the stati. This priest has no paladin levels, so the menu is one choice and
+# the bonus is 1d10 ("DSac").
+#
+# ROUTE. tools/keys/divine-sacrifice-setup.keys builds a lawful good orc
+# priest of Kysul (Good domain), turns on Free Advancement, Infinite Mana and
+# Freeze Monsters, learns Divine Sacrifice, and advances him to Priest 3. A
+# stunjelly is summoned one square east (low defence once frozen, enough HP to
+# survive a hit) and the caster walks into it to attack.
+@include divine-sacrifice-setup.keys
+
+# The target: one square east, frozen so it never acts.
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "stunjelly"
+RIGHT ENTER
+@dump:summoned
+
+# Cast Divine Sacrifice on the caster (self-target).
+m
+@choose "Divine Sacrifice"
+*
+@dump:menu
+1
+@dump:cast
+
+# Walk east into the jelly: the first blow needs confirming. Attack a few
+# times so a single unlucky miss (which the old spell does not consume) does
+# not hide the bonus; once one hit lands the old spell drops the stati, so
+# only that hit carries "DSac".
+RIGHT
+@while "Confirm attack" y
+RIGHT
+@while "Confirm attack" y
+RIGHT
+@while "Confirm attack" y
+RIGHT
+@while "Confirm attack" y
+v
+@dump:messages
+ESC
+
+@quit
