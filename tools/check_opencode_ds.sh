@@ -6,21 +6,26 @@
 # ledger row for a successful harness run (cost = the sum of its step_finish
 # costs, steps = the count), poison the ledger when opencode quotes tokens but
 # no usable cost, keep the API key out of every file it writes, confine
-# opencode to the worktree with the Seatbelt profile, and stop a harness that
-# never writes -- billing it as one killed=startup row at cost 0? Defends
-# beads inc-h1bq and inc-gofz: the opencode rung of the implementer ladder must
-# fail closed rather than silently spend money once a run's price is unknown,
-# must never touch the shared checkout, and must not hang its dispatcher when
-# the harness stalls.
+# opencode to the worktree with the Seatbelt profile, stop a harness that
+# never writes -- billing it as one killed=startup row at cost 0 -- and stop a
+# harness stuck in a DeepSeek repetition loop via the loop_check.py canary,
+# billing it as one killed=loop row at exit 3 and copying its events aside?
+# Defends beads inc-h1bq, inc-gofz and inc-uxmf: the opencode rung of the
+# implementer ladder must fail closed rather than silently spend money once a
+# run's price is unknown, must never touch the shared checkout, must not hang
+# its dispatcher when the harness stalls, and must not burn tokens on a loop.
 #
 # Fully offline. A fake `opencode` written into the temp dir stands in for the
 # real harness via INCURSION_OPENCODE_BIN; it records its argv and environment
-# and emits scripted events.jsonl. No network request ever leaves this machine.
+# and emits scripted events.jsonl (the loop case cats
+# tools/fixtures/opencode-loop/loop.jsonl). No network request ever leaves this
+# machine.
 #
-#   tools/check_opencode_ds.sh               run the eleven assertions
+#   tools/check_opencode_ds.sh               run the thirteen assertions
 #   tools/check_opencode_ds.sh --prove-red   mutate the budget guard, the
-#                                            sandbox prefix and the JSON bash
-#                                            rules, confirm red
+#                                            sandbox prefix, the JSON bash
+#                                            rules and MIN_REPEATED_LINES,
+#                                            confirm red
 #
 # Exit: 0 pass, 1 fail, 2 could not run.
 
@@ -127,6 +132,35 @@ PY
     fi
     cp "$BACKUP" "$WRAPPER"
     cmp -s "$BACKUP" "$WRAPPER" || { echo "restore of opencode_ds.sh failed" >&2; exit 2; }
+
+    # (e) loop_check.py's MIN_REPEATED_LINES raised out of reach, so the real
+    # loop fixture must no longer be called a loop and assertion 13 must go red.
+    LOOP_CHECK="$ROOT/tools/opencode/loop_check.py"
+    BACKUP_LOOP="$TMP/loop_check.py.orig"
+    cp "$LOOP_CHECK" "$BACKUP_LOOP"
+    NEEDLE='MIN_REPEATED_LINES = 15'
+    if ! grep -qF "$NEEDLE" "$LOOP_CHECK"; then
+        echo "could not find MIN_REPEATED_LINES to mutate" >&2
+        exit 2
+    fi
+    python3 - "$LOOP_CHECK" "$NEEDLE" <<'PY'
+import sys
+path, needle = sys.argv[1], sys.argv[2]
+src = open(path).read()
+open(path, "w").write(src.replace(needle, "MIN_REPEATED_LINES = 10000", 1))
+PY
+    echo "mutated tools/opencode/loop_check.py: MIN_REPEATED_LINES = 10000"
+    MUT_OUT="$("$ROOT/tools/check_opencode_ds.sh" 2>&1)"
+    MUT_RC=$?
+    if [ "$MUT_RC" -ne 0 ] && grep -q "FAIL.*loop_check" <<< "$MUT_OUT"; then
+        echo "PASS (as intended): assertion 13 (loop_check) went red"
+    else
+        echo "FAIL: assertion 13 stayed green with MIN_REPEATED_LINES = 10000 (rc=$MUT_RC)"
+        echo "$MUT_OUT" | tail -20
+        PROVE_FAIL=1
+    fi
+    cp "$BACKUP_LOOP" "$LOOP_CHECK"
+    cmp -s "$BACKUP_LOOP" "$LOOP_CHECK" || { echo "restore of loop_check.py failed" >&2; exit 2; }
 
     # (c) the read-only-git allow rules removed from opencode.json. Assertion
     # 10 never launches the harness, so this proof runs in any environment --
@@ -285,6 +319,12 @@ JSON
         ;;
     empty)
         : # no events at all: nothing billed
+        ;;
+    loop)
+        # Emit a real loop step, then keep the harness alive so the watchdog's
+        # canary (loop_check.py) fires rather than the idle limit.
+        cat "${INCURSION_FAKE_EVENTS:-/dev/null}"
+        sleep 1000
         ;;
     never)
         sleep 1000  # writes nothing: the watchdog's startup limit must fire
@@ -592,12 +632,63 @@ else
     fail "killed run: rc=$RC rows=$ROW_COUNT rundir=$RUNDIR_11 ledger=$(cat "$LEDGER" 2>/dev/null) -- $(cat "$TMP/err.11")"
 fi
 
+# --- 12. A looping harness is stopped by the canary, billed killed=loop ----
+# The fake emits a real loop step from tools/fixtures/opencode-loop/loop.jsonl
+# and then sleeps; the idle limit is far away, so only the loop_check.py canary
+# stops it. The wrapper exits 3, the row says killed=loop, the saved canary
+# text is printed under the loop header, and the events copy lands under the
+# runs dir the check redirected with INCURSION_OPENCODE_RUNS_DIR (never the
+# real checkout's logs). This launches the harness, so under a nested sandbox
+# it SKIPs (assertion 4's note applies).
+LOOP_FIXTURE="$ROOT/tools/fixtures/opencode-loop/loop.jsonl"
+CLEAN_FIXTURE="$ROOT/tools/fixtures/opencode-loop/clean.jsonl"
+FAKEHOME="$TMP/home12"; mkdir -p "$FAKEHOME"
+WORK="$TMP/wt12"; mkdir -p "$WORK"
+BRIEF="$TMP/brief12.txt"; echo "do a thing" > "$BRIEF"
+LEDGER="$TMP/ledger12.jsonl"; : > "$LEDGER"
+RUNS12="$TMP/runs12"; mkdir -p "$RUNS12"
+: > "$TMP/rec.12"
+RC="$(HOME="$FAKEHOME" INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC="$TMP/rec.12" \
+    INCURSION_FAKE_MODE=loop INCURSION_FAKE_EVENTS="$LOOP_FIXTURE" \
+    INCURSION_DEEPSEEK_KEY=canary-x INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
+    INCURSION_OPENCODE_RUNS_DIR="$RUNS12" \
+    INCURSION_WATCHDOG_STARTUP=5 INCURSION_WATCHDOG_IDLE=30 INCURSION_WATCHDOG_POLL=1 \
+    INCURSION_WATCHDOG_GRACE=2 \
+    "$WRAPPER" "$WORK" "$BRIEF" > "$TMP/out.12" 2> "$TMP/err.12"; echo $?)"
+ROW_COUNT="$(wc -l < "$LEDGER" | tr -d ' ')"
+COPY_12="$(ls "$RUNS12"/*.jsonl 2>/dev/null | head -n 1)"
+if [ "$SANDBOX_OK" -eq 0 ]; then
+    skip "loop stop: not run (sandbox-exec cannot nest here)"
+elif [ "$RC" -eq 3 ] && [ "$ROW_COUNT" -eq 1 ] \
+    && grep -q '"killed":"loop"' "$LEDGER" \
+    && grep -q 'DeepSeek repetition loop: run stopped (inc-uxmf)' "$TMP/err.12" \
+    && grep -q 'loop messageID=' "$TMP/err.12" \
+    && [ -n "$COPY_12" ] && cmp -s "$COPY_12" "$LOOP_FIXTURE"; then
+    pass "loop stop: exit 3, row killed=loop, canary text on stderr, events copied"
+else
+    fail "loop stop: rc=$RC rows=$ROW_COUNT copy=$COPY_12 ledger=$(cat "$LEDGER" 2>/dev/null) -- $(cat "$TMP/err.12")"
+fi
+
+# --- 13. Direct: loop_check.py exits 1 on loop.jsonl, 0 on clean.jsonl -----
+# Runs everywhere, sandbox or not: loop_check.py never launches the harness.
+LOOP_RC=0; CLEAN_RC=0
+python3 "$ROOT/tools/opencode/loop_check.py" "$LOOP_FIXTURE" > "$TMP/loop13.out" 2>&1
+LOOP_RC=$?
+python3 "$ROOT/tools/opencode/loop_check.py" "$CLEAN_FIXTURE" > "$TMP/clean13.out" 2>&1
+CLEAN_RC=$?
+if [ "$LOOP_RC" -eq 1 ] && grep -q '^loop messageID=' "$TMP/loop13.out" \
+    && [ "$CLEAN_RC" -eq 0 ] && [ ! -s "$TMP/clean13.out" ]; then
+    pass "loop_check: loop.jsonl exits 1 with a loop line, clean.jsonl exits 0 silently"
+else
+    fail "loop_check: loop rc=$LOOP_RC clean rc=$CLEAN_RC -- $(cat "$TMP/loop13.out") $(cat "$TMP/clean13.out")"
+fi
+
 if [ "$FAIL" -eq 0 ] && [ "$SKIP_COUNT" -eq 0 ]; then
-    echo "PASS: check_opencode_ds.sh, all eleven assertions"
+    echo "PASS: check_opencode_ds.sh, all thirteen assertions"
     exit 0
 elif [ "$FAIL" -eq 0 ]; then
     echo "PASS (partial): check_opencode_ds.sh, $SKIP_COUNT assertion(s) skipped and not counted;"
-    echo "                rerun outside any sandbox to run all eleven (exit 2 = incomplete)"
+    echo "                rerun outside any sandbox to run all thirteen (exit 2 = incomplete)"
     exit 2
 else
     echo "FAIL: check_opencode_ds.sh, at least one assertion failed above"
