@@ -3,7 +3,7 @@
 # (bead inc-gofz).
 #
 #   tools/watchdog.sh --out <file> --err <file> [--in <file>] [--status <file>]
-#                      -- <command> [args...]
+#                      [--canary <file>] -- <command> [args...]
 #
 # Runs <command> in its own process group with stdout redirected to --out
 # (which is also the liveness signal), stderr to --err, and stdin from --in
@@ -11,12 +11,19 @@
 # bun, bash tool calls -- inherit that group, so stopping the run stops all of
 # them.
 #
-# The watchdog polls the byte size of --out. Two limits stop a stalled run:
+# The watchdog polls the byte size of --out. Three limits stop a stalled run:
 #
 #   startup  -- if --out is still 0 bytes after INCURSION_WATCHDOG_STARTUP
 #               seconds (default 180), stop.
 #   idle     -- once --out is non-empty, if its size has not changed for
 #               INCURSION_WATCHDOG_IDLE seconds (default 1800), stop.
+#   canary   -- when --canary <file> is given, `<file> --out <file>` is run on
+#               each poll whose --out size grew since the last canary run. If
+#               the canary exits 1, stop with reason "canary". Exit 0 or any
+#               other code carries on (a canary crash MUST NOT kill a run; one
+#               warning line is printed to the watchdog's stderr the first
+#               time). This catches a run that keeps writing but is stuck in a
+#               loop the idle limit never sees.
 #
 # Env vars (each a positive integer; anything else exits 2):
 #
@@ -27,7 +34,7 @@
 #
 # To stop a run: kill -TERM the whole process group, wait up to the grace,
 # then kill -KILL the group, and reap the direct child. On a stop the reason
-# ("startup" or "idle") is written to --status if given, one line naming the
+# ("startup", "idle" or "canary") is written to --status if given, one line naming the
 # command, the --out file, the reason and the limit in seconds is printed to
 # the watchdog's own stderr, and the watchdog exits 124. Otherwise it exits
 # with the command's own exit code -- so a caller MUST read the --status file,
@@ -42,13 +49,14 @@
 set -uo pipefail
 
 usage() {
-    echo "usage: tools/watchdog.sh --out <file> --err <file> [--in <file>] [--status <file>] -- <command> [args...]" >&2
+    echo "usage: tools/watchdog.sh --out <file> --err <file> [--in <file>] [--status <file>] [--canary <file>] -- <command> [args...]" >&2
 }
 
 OUT=""
 ERR=""
 IN="/dev/null"
 STATUS=""
+CANARY=""
 HAVE_CMD=0
 CMD=()
 
@@ -66,6 +74,9 @@ while [ "$#" -gt 0 ]; do
         --status)
             [ "$#" -ge 2 ] || { echo "watchdog: --status needs a file" >&2; usage; exit 2; }
             STATUS="$2"; shift 2 ;;
+        --canary)
+            [ "$#" -ge 2 ] || { echo "watchdog: --canary needs a file" >&2; usage; exit 2; }
+            CANARY="$2"; shift 2 ;;
         --)
             shift
             HAVE_CMD=1
@@ -165,6 +176,26 @@ LAST_SIZE=0
 NONEMPTY=0
 IDLE_ELAPSED=0
 STARTUP_ELAPSED=0
+CANARY_WARNED=0
+
+# canary_stop runs the canary against --out (only after a caller has confirmed
+# --out grew) and stops the run when it exits 1. Any other exit is carried on
+# with one warning to the watchdog's own stderr.
+canary_stop() {
+    local canary_out canary_rc
+    canary_out="$("$CANARY" --out "$OUT" 2>/dev/null)"
+    canary_rc=$?
+    if [ "$canary_rc" -eq 1 ]; then
+        if [ -n "$STATUS" ]; then
+            printf '%s\n' "$canary_out" > "$STATUS.canary"
+        fi
+        stop_run "canary" "$POLL"
+    fi
+    if [ "$canary_rc" -ne 0 ] && [ "$CANARY_WARNED" -eq 0 ]; then
+        echo "watchdog: canary exited $canary_rc (not 0 or 1); ignoring it: $CANARY" >&2
+        CANARY_WARNED=1
+    fi
+}
 
 while kill -0 "$CHILD_PID" 2>/dev/null; do
     sleep "$POLL"
@@ -185,6 +216,9 @@ while kill -0 "$CHILD_PID" 2>/dev/null; do
             NONEMPTY=1
             LAST_SIZE="$OUT_SIZE"
             IDLE_ELAPSED=0
+            if [ -n "$CANARY" ]; then
+                canary_stop
+            fi
         else
             STARTUP_ELAPSED=$((STARTUP_ELAPSED + POLL))
             if [ "$STARTUP_ELAPSED" -ge "$STARTUP" ]; then
@@ -195,6 +229,9 @@ while kill -0 "$CHILD_PID" 2>/dev/null; do
         if [ "$OUT_SIZE" -ne "$LAST_SIZE" ]; then
             LAST_SIZE="$OUT_SIZE"
             IDLE_ELAPSED=0
+            if [ -n "$CANARY" ]; then
+                canary_stop
+            fi
         else
             IDLE_ELAPSED=$((IDLE_ELAPSED + POLL))
             if [ "$IDLE_ELAPSED" -ge "$IDLE" ]; then
