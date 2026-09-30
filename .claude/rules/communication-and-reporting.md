@@ -1,5 +1,10 @@
 # Communication and reporting
 
+## rule-triage-discuss-each-finding-first
+In a rule triage (the prose-vs-script audit walk, `inc-tek.8.x`), discuss EACH finding with Brian before you act on it. Present the finding: what the prose says, what the script says, and what you verified in code. Then STOP and wait. Before that discussion ends, you MUST NOT file a bead, make a worktree, write a brief, or dispatch any agent or implementer, including for a reproduction. Read-only checks (read, grep) need no discussion. "Resume the rule triage" means: bring the next finding to the discussion. It does not mean "work the next finding".
+Why: Brian decides each finding, and work started before that decision is waste.
+History: docs/rules-history/communication-and-reporting.md#rule-triage-discuss-each-finding-first. Bead inc-hra5.
+
 ## feedback-a-question-about-a-bug-is-still-a-question
 "Is this a bug?" / "why does it do that?" are QUESTIONS, not work orders. ANSWER AND STOP — no diagnosis, fix, or bead; wait for the literal word "go". Covers a bug Brian reports or one found in requested work, not one he's asking you to confirm exists. Test: does his sentence end in a question mark about the DEFECT, not the FIX? If you overreach: state it plainly, give the exact revert command, no grovelling, wait.
 Why: narrows `feedback-no-work-without-an-ok` to where a question stops being one.

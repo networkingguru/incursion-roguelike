@@ -116,3 +116,15 @@ rewrite: one paragraph of it at a time.
 
 THIS DOES NOT APPLY to reports, analysis or answers to his questions, which are
 his to read once and act on. It applies to text that will BE the product.
+
+## rule-triage-discuss-each-finding-first
+
+2026-09-29. Brian said "resume the rule triage". The session read the resume
+note for inc-tek.8.7, checked the next finding (PA-07-F24, Undeath to Death) in
+code, then filed public bead inc-kgzx, made its worktree, and dispatched
+DeepSeek to build a gameplay reproduction. It did all of this without first
+discussing the finding with Brian. Brian asked whether the finding had been
+verified. It had been checked in code only, not in play. Brian then said: "Just
+for clarity, when i say riule triage, I want a fucking discussion about each
+goddamn one before you dispatch anything. WRITE THIS DOWN". The session stopped
+the DeepSeek run and wrote this rule.
