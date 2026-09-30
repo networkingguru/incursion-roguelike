@@ -434,6 +434,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_air_ring_spell.sh` | Does the Elemental Command (Air) ring description name the granted staff-spell "gaseous form", rather than the phantom "wind column" that exists nowhere in `lib/`? | LIVE |
 | `check_alienist_drain.sh` | Does each Alienist summoning drain the held mana its page names (Summoned Creature's CR x 2), the mana that never regenerates? | LIVE |
 | `check_alienist_live.sh` | Does the Alienist's Surreal Presence field exist and speak? A kobold summoned beside her must read "seems unsettled". | LIVE |
+| `check_align_lawchaos.sh` | law/chaos alignment drift mirrors good/evil | LIVE |
 | `check_animal_kinship_prose.sh` | Does the Ring of Animal Kinship description drop its false "+3 or higher" untrained-use threshold, stating plainly that it lets you use Animal Empathy with no ranks -- which its skill bonus and the `SkillLevel` use-gate already permit? | LIVE |
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? | LIVE |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? | LIVE |
@@ -999,6 +1000,7 @@ tools/check_xp_penalty_rule.sh
 tools/check_prestige_profs.sh
 tools/check_prestige_tables.sh
 tools/check_alienist_live.sh
+tools/check_align_lawchaos.sh        # law/chaos alignment drift mirrors good/evil
 tools/check_earthsinger_live.sh
 tools/check_huntsman_live.sh
 tools/check_loremaster_live.sh

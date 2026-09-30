@@ -1,0 +1,24 @@
+# Drive Character::AlignLawChaosProbe (src/Prayer.cpp) for bd inc-r6ae: does
+# the law/chaos half of Character::AlignedAct ever set AL_LAWFUL/AL_CHAOTIC?
+# Read by tools/check_align_lawchaos.sh.
+#
+# The probe fires once, from Game::Play() (src/Main.cpp), after the player and
+# the map are live -- so this script only has to build a character and reach
+# the dungeon. It starts as the same neutral orc barbarian tools/keys/chargen.keys
+# makes everywhere; the probe resets the alignment stati to neutral itself, so
+# the starting alignment is not what is under test.
+#
+# The probe logs one Error() line per case into logs/errors.log:
+#   ALIGN_PROBE case=neutral-lawful-desired acts=5 alignLC=.. alignGE=..
+#       align=0x.. lawful=. chaotic=. good=. evil=.
+# Three law/chaos cases and three good/evil twin controls, both axes logged
+# so tools/check_align_lawchaos.sh can compare like with like. Six only:
+# Error() caps the distinct messages one session logs.
+
+@include chargen.keys
+
+@dump:arrival
+
+s*3     # search, to run a few turns so the session is a real one
+@dump:walked
+@quit
