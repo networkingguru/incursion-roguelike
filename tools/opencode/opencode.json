@@ -7,7 +7,7 @@
     "deepinfra-ds": {
       "npm": "@ai-sdk/openai-compatible",
       "options": {
-        "baseURL": "https://api.deepinfra.com/v1/openai",
+        "baseURL": "{env:INCURSION_DS_BASEURL}",
         "apiKey": "{env:DEEPINFRA_API_KEY}"
       },
       "models": {

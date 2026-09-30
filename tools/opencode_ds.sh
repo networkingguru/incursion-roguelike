@@ -23,9 +23,24 @@
 # row, marked "killed", so a hang neither locks the ledger nor goes unbilled.
 # A loop kill (killed=canary) is recorded in the row as "killed": "loop".
 #
-# After every run (killed or not) events.jsonl is copied to
-# logs/opencode-runs/<worktree basename>-<STAMP>-$$.jsonl under the repository
-# the wrapper lives in, so a run can be examined after its worktree is gone.
+# Before opencode starts, tools/opencode/record_proxy.py is launched outside
+# the sandbox on a local ephemeral port and opencode is pointed at it with
+# INCURSION_DS_BASEURL; the proxy forwards every model call to DeepInfra and
+# records the exact HTTP request and streamed response under
+# $RUNDIR/requests/, so a request that produced a repetition loop can be
+# replayed later. The proxy holds no key and writes no header value. If the
+# proxy cannot start, the wrapper exits 2 without billing: no model call
+# happened. The proxy is stopped (TERM, then KILL after 5 s) on every exit path
+# after it starts.
+#
+# After every run (killed or not) the run is copied under the repository the
+# wrapper lives in, so it can be examined after its worktree is gone. A loop
+# kill (killed=canary) copies the WHOLE run dir -- requests/, events, status,
+# canary text -- EXCLUDING the data/ and state/ subdirectories (opencode's DB
+# and snapshots, up to 24 MB) to
+# logs/opencode-runs/<worktree basename>-<STAMP>-$$/. Any other run keeps the
+# single events.jsonl copy as before:
+# logs/opencode-runs/<worktree basename>-<STAMP>-$$.jsonl.
 
 set -uo pipefail
 
@@ -139,8 +154,63 @@ mkdir -p "$CACHEDIR" || { echo "could not run: cannot make cache dir $CACHEDIR" 
 EVENTS="$RUNDIR/events.jsonl"
 STDERR="$RUNDIR/stderr.log"
 WATCHDOG_STATUS="$RUNDIR/watchdog.status"
+PROXY_PID_FILE="$RUNDIR/proxy.pid"
+PROXY_PORT_FILE="$RUNDIR/proxy.port"
+REQUESTS_DIR="$RUNDIR/requests"
 
-# --- 5. launch ------------------------------------------------------------
+# --- 5. recording proxy ---------------------------------------------------
+# Start record_proxy.py OUTSIDE the sandbox (it needs the network) and point
+# opencode at it. The proxy records every model call so a request that later
+# produced a repetition loop can be replayed. It holds no key: the client's
+# Authorization header is relayed and never written to a record file.
+PROXY_PID=""
+stop_proxy() {
+    if [ -n "$PROXY_PID" ] && kill -0 "$PROXY_PID" 2>/dev/null; then
+        kill -TERM "$PROXY_PID" 2>/dev/null
+        local waited=0
+        while kill -0 "$PROXY_PID" 2>/dev/null && [ "$waited" -lt 5 ]; do
+            sleep 1
+            waited=$((waited + 1))
+        done
+        if kill -0 "$PROXY_PID" 2>/dev/null; then
+            kill -KILL "$PROXY_PID" 2>/dev/null
+        fi
+        wait "$PROXY_PID" 2>/dev/null
+    fi
+    PROXY_PID=""
+}
+# The proxy is stopped on EVERY exit path once it has started -- success, a
+# watchdog kill, a billing failure, any early error below.
+trap 'stop_proxy' EXIT
+
+mkdir -p "$REQUESTS_DIR" || { echo "could not run: cannot make requests dir $REQUESTS_DIR" >&2; exit 2; }
+rm -f "$PROXY_PORT_FILE"
+python3 "$REPO/tools/opencode/record_proxy.py" --dir "$REQUESTS_DIR" --port-file "$PROXY_PORT_FILE" \
+    > "$RUNDIR/proxy.log" 2>&1 &
+PROXY_PID=$!
+printf '%s\n' "$PROXY_PID" > "$PROXY_PID_FILE"
+
+PROXY_PORT=""
+PROXY_WAIT=0
+while [ "$PROXY_WAIT" -lt 10 ]; do
+    if [ -f "$PROXY_PORT_FILE" ]; then
+        PROXY_PORT="$(head -n 1 "$PROXY_PORT_FILE" | tr -d '[:space:]')"
+        break
+    fi
+    if ! kill -0 "$PROXY_PID" 2>/dev/null; then
+        break
+    fi
+    sleep 1
+    PROXY_WAIT=$((PROXY_WAIT + 1))
+done
+if [ -z "$PROXY_PORT" ]; then
+    stop_proxy
+    echo "could not run: recording proxy failed to start; see $RUNDIR/proxy.log" >&2
+    echo "no model call happened; nothing billed." >&2
+    exit 2
+fi
+
+# --- 6. launch ------------------------------------------------------------
 BRIEF_TEXT="$(cat "$BRIEF_FILE")"
 OPENCODE_BIN="${INCURSION_OPENCODE_BIN:-opencode}"
 
@@ -153,6 +223,7 @@ export DEEPINFRA_API_KEY="$KEY"
 "$REPO/tools/watchdog.sh" --out "$EVENTS" --err "$STDERR" --status "$WATCHDOG_STATUS" \
     --canary "$REPO/tools/opencode/loop_check.py" -- \
     env \
+    INCURSION_DS_BASEURL="http://127.0.0.1:$PROXY_PORT/v1/openai" \
     OPENCODE_CONFIG="$OPENCODE_CONFIG" \
     OPENCODE_DISABLE_CLAUDE_CODE=1 \
     OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1 \
@@ -187,7 +258,7 @@ if [ "$KILLED" = "canary" ]; then
     LEDGER_KILLED="loop"
 fi
 
-# --- 6. bill --------------------------------------------------------------
+# --- 7. bill --------------------------------------------------------------
 # Parse events.jsonl: sum part.cost and the token fields over every
 # step_finish event, then append exactly one ledger row. A run with no
 # step_finish event and no tokens billed nothing, so it writes no row --
@@ -332,20 +403,32 @@ STEPS="$(printf '%s\n' "$BILL_OUT" | sed -n 's/^STEPS //p')"
 COST="$(printf '%s\n' "$BILL_OUT" | sed -n 's/^COST //p')"
 POISON="$(printf '%s\n' "$BILL_OUT" | sed -n 's/^POISON //p')"
 
-# After every run, killed or not, keep a copy of events.jsonl under the shared
-# checkout's logs so a run can be examined after its worktree is gone. The
+# After every run, killed or not, keep a copy under the shared checkout's logs
+# so a run can be examined after its worktree is gone. A loop kill
+# (killed=canary) copies the WHOLE run dir -- requests/ (the recorded model
+# calls), events, status, canary text -- EXCLUDING the data/ and state/
+# subdirectories, which are opencode's DB and snapshots (up to 24 MB and not
+# useful for replay). Any other run keeps the single events.jsonl copy. The
 # destination can be redirected with INCURSION_OPENCODE_RUNS_DIR (the tests use
 # it so they never write into the real checkout's logs). A copy failure only
 # warns; it never changes the exit code.
 RUNS_DIR="${INCURSION_OPENCODE_RUNS_DIR:-$REPO/logs/opencode-runs}"
-EVENTS_COPY="$RUNS_DIR/$(basename "$WORKTREE")-${STAMP}-$$.jsonl"
-if mkdir -p "$RUNS_DIR" && cp -f "$EVENTS" "$EVENTS_COPY" 2>/dev/null; then
-    :
+RUN_NAME="$(basename "$WORKTREE")-${STAMP}-$$"
+if mkdir -p "$RUNS_DIR"; then
+    if [ "$KILLED" = "canary" ]; then
+        RUN_COPY="$RUNS_DIR/$RUN_NAME"
+        rsync -a --exclude 'data/' --exclude 'state/' "$RUNDIR"/ "$RUN_COPY"/ 2>/dev/null \
+            || echo "warning: could not copy the run dir to $RUN_COPY" >&2
+    else
+        EVENTS_COPY="$RUNS_DIR/$RUN_NAME.jsonl"
+        cp -f "$EVENTS" "$EVENTS_COPY" 2>/dev/null \
+            || echo "warning: could not copy events.jsonl to $EVENTS_COPY" >&2
+    fi
 else
-    echo "warning: could not copy events.jsonl to $EVENTS_COPY" >&2
+    echo "warning: could not make runs dir $RUNS_DIR" >&2
 fi
 
-# --- 7. report ------------------------------------------------------------
+# --- 8. report ------------------------------------------------------------
 # Final assistant text: the last type == "text" event's part.text. A loop kill
 # skips it: the last text IS the repeated loop, which would flood stdout, and
 # the canary's tail is printed to stderr instead.
