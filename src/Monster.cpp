@@ -310,6 +310,17 @@ Monster::Monster(rID _mID,int16 _Type)
     ASSERT(mID);
     mMana = TMON(_mID)->Mana;
     BuffCount = 0;
+    /* upstream: this constructor never assigned hObj Inv, leaning on the
+       zero-fill that Object::operator new does (inc/Base.h). Reading a member
+       the constructor leaves indeterminate is undefined, so an optimising
+       compiler that does not preserve that fill reads stale heap bytes. GCC
+       -O2 deletes the memset (-flifetime-dse=2) and Inv holds heap text, which
+       SkillKitMod -> GetInv/InSlot reads as a handle; clang keeps the fill and
+       hides it. Julian Mensch's code (7b8504a, 2014), so it misbehaves the same
+       way on the original Win32 compiler; it is not a port artifact. The fix
+       assigns the member before use, which equals the zero-fill clang already
+       produced, so clang runs are unchanged. Observed, inc-eikp.3, not sent. */
+    Inv = 0;
     GainStatiFromBody(_mID);
     SetImage();
 	}
