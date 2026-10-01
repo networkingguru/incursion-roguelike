@@ -76,13 +76,13 @@ if [ "$STATUS" -ne 0 ]; then
     exit 1
 fi
 
-if printf '%s\n' "$OUT" | grep -q "NO GAMEPLAY"; then
+if grep -q "NO GAMEPLAY" <<<"$OUT"; then
     fail "the GCC raw-DSE dive never entered a map (NO GAMEPLAY)"
     print_errors
     exit 1
 fi
 
-if ! printf '%s\n' "$OUT" | grep -q '^errors:     none'; then
+if ! grep -q '^errors:     none' <<<"$OUT"; then
     fail "the GCC raw-DSE dive logged errors that a clean build does not"
     print_errors
     exit 1
