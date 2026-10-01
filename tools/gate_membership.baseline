@@ -52,7 +52,6 @@ check_dragonshield_hostility.sh
 check_dragonshield_plus_prose.sh
 check_dragonshield_prose.sh
 check_drain_selfaim.sh
-check_dump_save.sh
 check_dup_names.sh
 check_dwarven_thrower_throwable.sh
 check_earth_ring_prose.sh
