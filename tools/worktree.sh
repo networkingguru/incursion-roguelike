@@ -77,9 +77,10 @@ die()  { echo "$1" >&2; exit 1; }
 cannot() { echo "INCONCLUSIVE: $1" >&2; exit 2; }
 
 # A bead id as this repository spells it: the `inc-` prefix, then the short id,
-# optionally a dotted sub-id (inc-loa.40 is a real bead).
+# then any number of dotted numeric sub-ids (inc-loa.40 and inc-tek.8.3 are real
+# beads). inc-1boo.
 is_bead_id() {
-    printf '%s' "$1" | grep -Eq '^inc-[a-z0-9]+(\.[0-9]+)?$'
+    printf '%s' "$1" | grep -Eq '^inc-[a-z0-9]+(\.[0-9]+)*$'
 }
 
 bead_status() {
@@ -150,6 +151,16 @@ selftest() {
     out="$("$SCRIPT" not-a-bead-id 2>&1)"; status=$?
     [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: malformed id returned $status, expected 1"; return 1; }
     case "$out" in *"is not a bead id"*) ;; *) echo "SELFTEST FAIL: malformed id said: $out"; return 1;; esac
+
+    # inc-1boo: is_bead_id accepts any number of dotted numeric suffixes, and
+    # still refuses malformed ids. Called directly so no worktree is created.
+    local id
+    for id in inc-tek.8.3 inc-a.1.2.3; do
+        is_bead_id "$id" || { echo "SELFTEST FAIL: '$id' was not a bead id"; return 1; }
+    done
+    for id in inc-tek. inc-tek..3 inc-tek.8.a INC-tek; do
+        is_bead_id "$id" && { echo "SELFTEST FAIL: '$id' was accepted as a bead id"; return 1; }
+    done
 
     # An id that is well formed but names nothing. inc-zzzzzz is not allocated;
     # if it ever is, this refuses for the closed-bead reason instead and the
