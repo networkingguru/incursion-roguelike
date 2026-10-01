@@ -264,6 +264,8 @@ Registry::Registry()
     memset(ObjTable,0,sizeof(RegNode)*OBJ_TABLE_SIZE);
     memset(DataTable,0,sizeof(DataNode)*DATA_TABLE_SIZE);
     LastUsedHandle = StartingHandle();
+    saveMode = false;
+    loadMode = false;
     reg_log = NULL;
     #ifdef DEBUG_OBJECTS
     String path = T1->IncursionDirectory + "/reglog.txt";
