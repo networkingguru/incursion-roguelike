@@ -28,23 +28,32 @@
 # be empty. A temporary mutation is the only src/ change this check authorises.
 #
 # Usage: tools/check_linux_save_roundtrip.sh [--distro debian11|arch|both]
+#                                        [--cc clang|gcc|both]
 # Exit 0 pass, 1 fail, 2 could not measure.
+#
+# --cc defaults to both. The gcc runs build with INCURSION_GCC_RAW_DSE=1, so
+# this check sees unassigned members rather than the -flifetime-dse=1 mask that
+# build_macos.sh now applies to every GCC build (inc-eikp.3) -- the same reason
+# tools/check_gcc_o2_char_create.sh sets it.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 DISTROS="both"
+CCS="both"
 while [ $# -gt 0 ]; do
     case "$1" in
         --distro) DISTROS="${2:-}"; shift 2 ;;
         --distro=*) DISTROS="${1#--distro=}"; shift ;;
+        --cc) CCS="${2:-}"; shift 2 ;;
+        --cc=*) CCS="${1#--cc=}"; shift ;;
         -h|--help)
-            echo "usage: tools/check_linux_save_roundtrip.sh [--distro debian11|arch|both]"
+            echo "usage: tools/check_linux_save_roundtrip.sh [--distro debian11|arch|both] [--cc clang|gcc|both]"
             exit 0 ;;
         *)
             echo "unknown argument: $1" >&2
-            echo "usage: tools/check_linux_save_roundtrip.sh [--distro debian11|arch|both]"
+            echo "usage: tools/check_linux_save_roundtrip.sh [--distro debian11|arch|both] [--cc clang|gcc|both]"
             exit 2 ;;
     esac
 done
@@ -52,6 +61,11 @@ case "$DISTROS" in
     both)     DISTROS="debian11 arch" ;;
     debian11|arch) ;;
     *) echo "--distro must be debian11, arch or both (got '$DISTROS')" >&2; exit 2 ;;
+esac
+case "$CCS" in
+    both)      CCS="clang gcc" ;;
+    clang|gcc) ;;
+    *) echo "--cc must be clang, gcc or both (got '$CCS')" >&2; exit 2 ;;
 esac
 
 export INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
@@ -121,13 +135,21 @@ expected_from_sheet() { # <sheet.txt> -> prints "name|race|class"
     printf '%s|%s|%s\n' "$name" "$race" "$class"
 }
 
+# Build INCURSION_GCC_RAW_DSE=1 into a gcc run's environment, so a GCC build
+# sees unassigned members instead of the mask (inc-eikp.3). clang must not
+# receive it; build_macos.sh ignores it for clang anyway, but be explicit.
+cc_env() { # <cc>
+    if [ "$1" = gcc ]; then printf 'INCURSION_GCC_RAW_DSE=1';
+    else printf 'INCURSION_GCC_RAW_DSE=0'; fi
+}
+
 # One load case: run load-char-sheet.keys against a save, then apply the oracle.
-# $1 label, $2 distro, $3 save path (host), $4 expected "name|race|class" or ""
-load_case() { # <label> <distro> <save> <expected>
-    local label="$1" distro="$2" save="$3" expected="$4"
+# $1 label, $2 distro, $3 cc, $4 save path (host), $5 expected "name|race|class" or ""
+load_case() { # <label> <distro> <cc> <save> <expected>
+    local label="$1" distro="$2" cc="$3" save="$4" expected="$5"
     local out run status arrival sheet exp_name exp_race exp_class got_name
 
-    out="$("$RUNNER" --distro "$distro" --cc clang --load "$save" "$LOAD_KEYS" 1 2>&1)"
+    out="$(env "$(cc_env "$cc")" "$RUNNER" --distro "$distro" --cc "$cc" --load "$save" "$LOAD_KEYS" 1 2>&1)"
     status=$?
     run="$(printf '%s\n' "$out" | run_dir_from)"
 
@@ -199,20 +221,21 @@ load_case() { # <label> <distro> <save> <expected>
 }
 
 for distro in $DISTROS; do
-    echo "=== $distro ==="
+  for cc in $CCS; do
+    echo "=== $distro ($cc) ==="
     distro_bad=0
 
     # Case A. Save on Linux, then load that save on Linux.
-    SAVE_OUT="$("$RUNNER" --distro "$distro" --cc clang "$CHARGEN_KEYS" 1 2>&1)"
+    SAVE_OUT="$(env "$(cc_env "$cc")" "$RUNNER" --distro "$distro" --cc "$cc" "$CHARGEN_KEYS" 1 2>&1)"
     SAVE_RUN="$(printf '%s\n' "$SAVE_OUT" | run_dir_from)"
     if [ -z "$SAVE_RUN" ] || [ ! -d "$SAVE_RUN" ]; then
-        echo "  FAIL  $distro A-save: the save run produced no run directory"
+        echo "  FAIL  $distro $cc A-save: the save run produced no run directory"
         printf '%s\n' "$SAVE_OUT" | sed 's/^/        /'
         note 1; distro_bad=1
     else
         SAV="$(ls "$SAVE_RUN"/save/*.sav 2>/dev/null | head -1)"
         if [ -z "$SAV" ]; then
-            echo "  cannot measure  $distro Case A: the save run wrote no .sav in $SAVE_RUN/save"
+            echo "  cannot measure  $distro $cc Case A: the save run wrote no .sav in $SAVE_RUN/save"
             printf '%s\n' "$SAVE_OUT" | sed 's/^/        /'
             note 2; distro_bad=1
         else
@@ -220,26 +243,27 @@ for distro in $DISTROS; do
             CH_NAME=""
             [ -n "$SAVED_SCREEN" ] && CH_NAME="$(name_from_saved_screen "$SAVED_SCREEN")"
             if [ -z "$CH_NAME" ]; then
-                echo "  cannot measure  $distro Case A: no character name on the save screen"
+                echo "  cannot measure  $distro $cc Case A: no character name on the save screen"
                 note 2; distro_bad=1
             else
                 # chargen.keys builds a standard orc barbarian; the name is the
                 # seed's, so it is read from the save's own status panel.
                 CASE_A_EXPECT="$CH_NAME|Orc|Barbarian"
-                load_case "$distro Case A" "$distro" "$SAV" "$CASE_A_EXPECT" || distro_bad=1
+                load_case "$distro $cc Case A" "$distro" "$cc" "$SAV" "$CASE_A_EXPECT" || distro_bad=1
             fi
         fi
     fi
 
     # Case B. A macOS-made fixture save, loaded on Linux.
     CASE_B_EXPECT="$(expected_from_sheet "$MAC_SHEET")"
-    load_case "$distro Case B" "$distro" "$MAC_SAV" "$CASE_B_EXPECT" || distro_bad=1
+    load_case "$distro $cc Case B" "$distro" "$cc" "$MAC_SAV" "$CASE_B_EXPECT" || distro_bad=1
 
     if [ "$distro_bad" -eq 0 ]; then
-        echo "PASS  $distro save round trip"
+        echo "PASS  $distro ($cc) save round trip"
     else
-        echo "FAIL  $distro save round trip"
+        echo "FAIL  $distro ($cc) save round trip"
     fi
+  done
 done
 
 case "$overall" in

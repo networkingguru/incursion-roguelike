@@ -37,8 +37,15 @@
 # --cc gcc IS ALLOWED ON PURPOSE. GCC -O2 once corrupted object handles during
 # character creation (inc-nw0v) and check_linux_build.sh tells you not to switch
 # to gcc to green a red run. Here the opposite: being able to build with gcc is
-# the point, so the corruption can be seen. Do not refuse gcc, and do not touch
-# build_macos.sh's flags.
+# the point, so the corruption can be seen.
+#
+# INCURSION_GCC_RAW_DSE IS PART OF THE CACHE IDENTITY. build_macos.sh applies
+# -flifetime-dse=1 to every GCC build (inc-eikp.3), which MASKS unassigned
+# members; INCURSION_GCC_RAW_DSE=1 omits that flag so a guard can see them. The
+# two produce different binaries from the same tree, so they must never share a
+# cache dir or hash file: the flag is folded into CACHE below. It is passed into
+# the container only when set (default off), so an ordinary run is unmasked-GCC
+# for gcc and unaffected for clang.
 #
 # Exit: headless.sh's own exit code inside the container, or 2 when docker or
 #       the environment is not there to run at all.
@@ -93,6 +100,16 @@ case "$CC" in
     *) echo "--cc must be clang or gcc (got '$CC')" >&2; exit 2 ;;
 esac
 
+# The raw-DSE opt-out changes GCC codegen, so it is part of the cache key. The
+# default is off (masked), matching build_macos.sh. Fold a distinct suffix in
+# for the raw build so the two never overwrite each other's binary or hash.
+RAW_DSE="${INCURSION_GCC_RAW_DSE:-0}"
+CACHE_SUFFIX=""
+if [ "$RAW_DSE" = "1" ]; then
+    CACHE_SUFFIX="-rawdse"
+    export INCURSION_GCC_RAW_DSE=1
+fi
+
 # INCURSION_OPTIONS is mandatory, exactly as it is for headless.sh: settings are
 # an input to the result and there is no default.
 if [ -z "${INCURSION_OPTIONS:-}" ]; then
@@ -117,10 +134,10 @@ linux_docker_preflight || exit 2
 # same second would otherwise share a directory, and one run must be one
 # directory.
 if [ -z "$NAME" ]; then
-    NAME="$DISTRO-$CC-$(basename "$KEYS" .keys)-${SEED:-clock}-$(date +%Y%m%d-%H%M%S)-$$"
+    NAME="$DISTRO-$CC$CACHE_SUFFIX-$(basename "$KEYS" .keys)-${SEED:-clock}-$(date +%Y%m%d-%H%M%S)-$$"
 fi
 
-CACHE="$ROOT/logs/linux/$DISTRO-$CC"
+CACHE="$ROOT/logs/linux/$DISTRO-$CC$CACHE_SUFFIX"
 SRC="$CACHE/src"
 HASHFILE="$CACHE/tree.sha256"
 BUILD_LOG="$CACHE/build.log"
@@ -176,7 +193,7 @@ if [ "$REBUILD" -eq 1 ]; then
         -e SDL_VIDEODRIVER=dummy -e SDL_AUDIODRIVER=dummy \
         -v "$SRC:/src" "$(linux_image_tag "$DISTRO")" sh -c '
         set -e
-        CC='"'$BUILD_CC'"' CXX='"'$BUILD_CXX'"' BACKEND=posix ./build_macos.sh
+        CC='"'$BUILD_CC'"' CXX='"'$BUILD_CXX'"' INCURSION_GCC_RAW_DSE='"'$RAW_DSE'"' BACKEND=posix ./build_macos.sh
     ' >"$BUILD_LOG" 2>&1 || {
         echo "FAIL: the posix build failed"
         echo "--- last 30 lines of $BUILD_LOG ---"
