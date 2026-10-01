@@ -20,7 +20,13 @@
 # the implementer ladder must fail closed rather than silently spend money once
 # a run's price is unknown, must never touch the shared checkout, must not hang
 # its dispatcher when the harness stalls, must not burn tokens on a loop, and
-# must keep the exact request of a looping run so it can be replayed.
+# must keep the exact request of a looping run so it can be replayed. Directly
+# checks loop_check.py catches all three loop shapes: repeated short lines
+# (tools/fixtures/opencode-loop/loop.jsonl), a step that printed native
+# tool-call markup as text (tools/opencode/fixtures/markup-dsml.jsonl), and one
+# line of any length repeated many times (tools/opencode/fixtures/
+# one-line-loop.jsonl) -- the last two trimmed from the real captures that the
+# first rule missed.
 #
 # Fully offline. A fake `opencode` written into the temp dir stands in for the
 # real harness via INCURSION_OPENCODE_BIN; it records its argv and environment
@@ -29,10 +35,13 @@
 # HTTP server) stands in for DeepInfra via INCURSION_DS_UPSTREAM. No network
 # request ever leaves this machine.
 #
-#   tools/check_opencode_ds.sh               run the eighteen assertions
+#   tools/check_opencode_ds.sh               run every assertion (eighteen
+#                                            numbered, with 13b's six
+#                                            loop_check sub-checks)
 #   tools/check_opencode_ds.sh --prove-red   mutate the budget guard, the
 #                                            sandbox prefix, the JSON bash
-#                                            rules, MIN_REPEATED_LINES and
+#                                            rules, MIN_REPEATED_LINES,
+#                                            MIN_SAME_LINE, the markup rule and
 #                                            the proxy's request write,
 #                                            confirm red
 #
@@ -113,13 +122,17 @@ fail() { echo "FAIL  $1"; FAIL=1; }
 skip() { echo "SKIP  $1"; SKIP_COUNT=$((SKIP_COUNT + 1)); }
 
 # --- --prove-red ----------------------------------------------------------
-# Handled FIRST, before the eleven assertions below ever run. Four mutations,
-# each restoring the file it touches: (a) drop the budget-check call, so
-# assertion 1 must go red; (b) drop the `sandbox-exec` prefix, so assertion 7
-# must go red; (c) strip the read-only-git allow rules from opencode.json, so
-# assertion 10 must go red; (d) drop `"git *": "deny"` from opencode.json, so
-# assertion 10 must go red. Original files are restored, and each restoration
-# verified byte-identical with cmp, by the EXIT trap above.
+# Handled FIRST, before the assertions below ever run. Each mutation restores
+# the file it touches: (a) drop the budget-check call, so assertion 1 must go
+# red; (b) drop the `sandbox-exec` prefix, so assertion 7 must go red; (c)
+# strip the read-only-git allow rules from opencode.json, so assertion 10 must
+# go red; (d) drop `"git *": "deny"` from opencode.json, so assertion 10 must
+# go red; (e) raise loop_check.py's MIN_REPEATED_LINES, so assertion 13 must go
+# red; (f) remove the proxy's request-file write, so assertion 14 must go red;
+# (g) raise loop_check.py's MIN_SAME_LINE, so assertion 13b's F3 check must go
+# red; (h) disable loop_check.py's markup rule, so assertion 13b's F2 check must
+# go red. Original files are restored, and each restoration verified
+# byte-identical with cmp, by the EXIT trap above.
 if [ "${1:-}" = "--prove-red" ]; then
     PROVE_FAIL=0
     # sandbox-exec cannot nest: under another Seatbelt sandbox, mutation (b) --
@@ -161,6 +174,10 @@ PY
 
     # (e) loop_check.py's MIN_REPEATED_LINES raised out of reach, so the real
     # loop fixture must no longer be called a loop and assertion 13 must go red.
+    # The loop fixture also trips rule 3 (one line repeated 66 times), so rule 3
+    # is raised out of reach too; otherwise it would mask rule 1 and leave
+    # assertion 13 green. The point of this mutation is that rule 1 is
+    # load-bearing, so it must be the one disqualifying the fixture.
     LOOP_CHECK="$ROOT/tools/opencode/loop_check.py"
     BACKUP_LOOP="$TMP/loop_check.py.orig"
     cp "$LOOP_CHECK" "$BACKUP_LOOP"
@@ -173,9 +190,11 @@ PY
 import sys
 path, needle = sys.argv[1], sys.argv[2]
 src = open(path).read()
-open(path, "w").write(src.replace(needle, "MIN_REPEATED_LINES = 10000", 1))
+src = src.replace(needle, "MIN_REPEATED_LINES = 10000", 1)
+src = src.replace("MIN_SAME_LINE = 40", "MIN_SAME_LINE = 10000", 1)
+open(path, "w").write(src)
 PY
-    echo "mutated tools/opencode/loop_check.py: MIN_REPEATED_LINES = 10000"
+    echo "mutated tools/opencode/loop_check.py: MIN_REPEATED_LINES = 10000 (and MIN_SAME_LINE raised, to isolate rule 1)"
     MUT_OUT="$("$ROOT/tools/check_opencode_ds.sh" 2>&1)"
     MUT_RC=$?
     if [ "$MUT_RC" -ne 0 ] && grep -q "FAIL.*loop_check" <<< "$MUT_OUT"; then
@@ -216,6 +235,66 @@ PY
     fi
     cp "$BACKUP_PROXY" "$PROXY"
     cmp -s "$BACKUP_PROXY" "$PROXY" || { echo "restore of record_proxy.py failed" >&2; exit 2; }
+
+    # (g) loop_check.py's MIN_SAME_LINE raised out of reach, so the F3 fixture
+    # must no longer be called a one-line loop and assertion 13b's F3 check
+    # must go red. Restored byte-identical below.
+    BACKUP_LOOP="$TMP/loop_check.py.same.orig"
+    cp "$LOOP_CHECK" "$BACKUP_LOOP"
+    NEEDLE='MIN_SAME_LINE = 40'
+    if ! grep -qF "$NEEDLE" "$LOOP_CHECK"; then
+        echo "could not find MIN_SAME_LINE to mutate" >&2
+        exit 2
+    fi
+    python3 - "$LOOP_CHECK" "$NEEDLE" <<'PY'
+import sys
+path, needle = sys.argv[1], sys.argv[2]
+src = open(path).read()
+open(path, "w").write(src.replace(needle, "MIN_SAME_LINE = 10000", 1))
+PY
+    echo "mutated tools/opencode/loop_check.py: MIN_SAME_LINE = 10000"
+    MUT_OUT="$("$ROOT/tools/check_opencode_ds.sh" 2>&1)"
+    MUT_RC=$?
+    if [ "$MUT_RC" -ne 0 ] && grep -q 'FAIL.*loop_check (F3)' <<< "$MUT_OUT"; then
+        echo "PASS (as intended): assertion 13b (F3 one-line loop) went red"
+    else
+        echo "FAIL: assertion 13b (F3) stayed green with MIN_SAME_LINE = 10000 (rc=$MUT_RC)"
+        echo "$MUT_OUT" | tail -20
+        PROVE_FAIL=1
+    fi
+    cp "$BACKUP_LOOP" "$LOOP_CHECK"
+    cmp -s "$BACKUP_LOOP" "$LOOP_CHECK" || { echo "restore of loop_check.py failed" >&2; exit 2; }
+
+    # (h) loop_check.py's DSML markup rule removed, so the F2 fixture must no
+    # longer be flagged and assertion 13b's markup check must go red.
+    BACKUP_LOOP="$TMP/loop_check.py.dsml.orig"
+    cp "$LOOP_CHECK" "$BACKUP_LOOP"
+    NEEDLE='TOOL_MARKUP_OPEN = "<\uFF5CDSML\uFF5C"'
+    NEEDLE_CLOSE='TOOL_MARKUP_CLOSE = "</\uFF5C"'
+    if ! grep -qF "$NEEDLE" "$LOOP_CHECK" || ! grep -qF "$NEEDLE_CLOSE" "$LOOP_CHECK"; then
+        echo "could not find the markup tokens to mutate" >&2
+        exit 2
+    fi
+    python3 - "$LOOP_CHECK" "$NEEDLE" "$NEEDLE_CLOSE" <<'PY'
+import sys
+path, needle, needle_close = sys.argv[1], sys.argv[2], sys.argv[3]
+src = open(path).read()
+src = src.replace(needle, 'TOOL_MARKUP_OPEN = "MUTATED-NEVER-MATCHES"', 1)
+src = src.replace(needle_close, 'TOOL_MARKUP_CLOSE = "MUTATED-NEVER-MATCHES"', 1)
+open(path, "w").write(src)
+PY
+    echo "mutated tools/opencode/loop_check.py: markup rule disabled"
+    MUT_OUT="$("$ROOT/tools/check_opencode_ds.sh" 2>&1)"
+    MUT_RC=$?
+    if [ "$MUT_RC" -ne 0 ] && grep -q 'FAIL.*loop_check (F2)' <<< "$MUT_OUT"; then
+        echo "PASS (as intended): assertion 13b (F2 markup) went red"
+    else
+        echo "FAIL: assertion 13b (F2) stayed green with the markup rule removed (rc=$MUT_RC)"
+        echo "$MUT_OUT" | tail -20
+        PROVE_FAIL=1
+    fi
+    cp "$BACKUP_LOOP" "$LOOP_CHECK"
+    cmp -s "$BACKUP_LOOP" "$LOOP_CHECK" || { echo "restore of loop_check.py failed" >&2; exit 2; }
 
     # (c) the read-only-git allow rules removed from opencode.json. Assertion
     # 10 never launches the harness, so this proof runs in any environment --
@@ -898,6 +977,96 @@ if [ "$LOOP_RC" -eq 1 ] && grep -q '^loop messageID=' "$TMP/loop13.out" \
     pass "loop_check: loop.jsonl exits 1 with a loop line, clean.jsonl exits 0 silently"
 else
     fail "loop_check: loop rc=$LOOP_RC clean rc=$CLEAN_RC -- $(cat "$TMP/loop13.out") $(cat "$TMP/clean13.out")"
+fi
+
+# --- 13b. Direct: loop_check.py catches the two missed DeepSeek failures ---
+# Runs everywhere, sandbox or not. The F2 and F3 fixtures are trimmed extracts
+# of the real captured events (docs/evidence/inc-w431) that today's rules
+# missed: F2 printed the model's native tool-call markup as text, and F3
+# repeated one line 72 times in one step. Four synthetic steps prove the guards
+# and their limits: a 100-line repeat under the token floor stays green, markup
+# inside a code fence stays green, prose that mentions the bare substring "DSML"
+# stays green, and prose that quotes the full markup token inline in backticks --
+# as an earlier false positive did -- stays green.
+MARKUP_FIXTURE="$ROOT/tools/opencode/fixtures/markup-dsml.jsonl"
+ONELINE_FIXTURE="$ROOT/tools/opencode/fixtures/one-line-loop.jsonl"
+
+python3 - "$TMP/lowtokens.jsonl" "$TMP/fenced-dsml.jsonl" "$TMP/prose-dsml.jsonl" "$TMP/inline-dsml.jsonl" <<'PY'
+import json, sys
+
+low, fenced, prose, inline = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+
+
+def write(path, mid, text, output):
+    with open(path, "w") as fh:
+        fh.write(json.dumps({"type": "step_start", "part": {"messageID": mid}}) + "\n")
+        fh.write(json.dumps({"type": "text", "part": {"messageID": mid, "text": text}}) + "\n")
+        fh.write(json.dumps({"type": "step_finish",
+                             "part": {"messageID": mid,
+                                      "tokens": {"output": output}}}) + "\n")
+
+
+# 100 repeats of one line, but only 1500 output tokens: under MIN_OUTPUT_TOKENS.
+write(low, "msg_lowtokens", ("same repeated line here\n" * 100), 1500)
+# The markup token inside a ``` fence only: stripped before the markup check.
+write(fenced, "msg_fenced", "prose\n```\n<\uFF5CDSML\uFF5Cinvoke>x</invoke>\n```\nmore prose\n", 2500)
+# Plain prose that mentions the bare substring "DSML" and "DSML=True" outside
+# any fence, 500 output tokens: not a leak, must stay green.
+write(prose, "msg_prose", "I saw the DSML substring in the text and DSML=True.\n", 500)
+# Prose that quotes the full markup token inline in backticks, 500 output
+# tokens: the token does not start a line, so it is prose, not a leak.
+write(inline, "msg_inline", "Look at line 2: `<\uFF5CDSML\uFF5C parameter` and `</\uFF5C parameter>`.\n", 500)
+PY
+
+MARKUP_RC=0; ONELINE_RC=0; LOW_RC=0; FENCED_RC=0; PROSE_RC=0; INLINE_RC=0
+python3 "$ROOT/tools/opencode/loop_check.py" "$MARKUP_FIXTURE" > "$TMP/markup13.out" 2>&1
+MARKUP_RC=$?
+python3 "$ROOT/tools/opencode/loop_check.py" "$ONELINE_FIXTURE" > "$TMP/oneline13.out" 2>&1
+ONELINE_RC=$?
+python3 "$ROOT/tools/opencode/loop_check.py" "$TMP/lowtokens.jsonl" > "$TMP/lowtokens13.out" 2>&1
+LOW_RC=$?
+python3 "$ROOT/tools/opencode/loop_check.py" "$TMP/fenced-dsml.jsonl" > "$TMP/fenced13.out" 2>&1
+FENCED_RC=$?
+python3 "$ROOT/tools/opencode/loop_check.py" "$TMP/prose-dsml.jsonl" > "$TMP/prose13.out" 2>&1
+PROSE_RC=$?
+python3 "$ROOT/tools/opencode/loop_check.py" "$TMP/inline-dsml.jsonl" > "$TMP/inline13.out" 2>&1
+INLINE_RC=$?
+
+if [ "$MARKUP_RC" -eq 1 ] && grep -q '^markup ' "$TMP/markup13.out"; then
+    pass "loop_check (F2): native tool-call markup exits 1 with a markup line"
+else
+    fail "loop_check (F2): rc=$MARKUP_RC -- $(cat "$TMP/markup13.out")"
+fi
+
+if [ "$ONELINE_RC" -eq 1 ] && grep -q '^loop ' "$TMP/oneline13.out" \
+    && grep -q 'same_line=' "$TMP/oneline13.out"; then
+    pass "loop_check (F3): one line repeated 72x exits 1 with a same_line loop line"
+else
+    fail "loop_check (F3): rc=$ONELINE_RC -- $(cat "$TMP/oneline13.out")"
+fi
+
+if [ "$LOW_RC" -eq 0 ] && [ ! -s "$TMP/lowtokens13.out" ]; then
+    pass "loop_check: 100 repeats under the 2000-token floor exits 0 silently"
+else
+    fail "loop_check low-tokens: rc=$LOW_RC -- $(cat "$TMP/lowtokens13.out")"
+fi
+
+if [ "$FENCED_RC" -eq 0 ] && [ ! -s "$TMP/fenced13.out" ]; then
+    pass "loop_check: DSML only inside a code fence exits 0 silently"
+else
+    fail "loop_check fenced-markup: rc=$FENCED_RC -- $(cat "$TMP/fenced13.out")"
+fi
+
+if [ "$PROSE_RC" -eq 0 ] && [ ! -s "$TMP/prose13.out" ]; then
+    pass "loop_check: prose mentioning the DSML substring exits 0 silently"
+else
+    fail "loop_check prose-markup: rc=$PROSE_RC -- $(cat "$TMP/prose13.out")"
+fi
+
+if [ "$INLINE_RC" -eq 0 ] && [ ! -s "$TMP/inline13.out" ]; then
+    pass "loop_check: markup token quoted mid-line in backticks exits 0 silently"
+else
+    fail "loop_check inline-markup: rc=$INLINE_RC -- $(cat "$TMP/inline13.out")"
 fi
 
 # --- 14. The proxy forwards a POST and records it byte-identically --------
