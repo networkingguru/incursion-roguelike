@@ -194,6 +194,14 @@ or git. A main session read it as "Brian at the keyboard" and reported
 ruled the same day that nothing in the repository should need his hands on
 the keyboard.
 
+2026-10-01, bead inc-gcmr: `check_dump_save.sh` left the list, so four checks
+remain. It calls `./incursion` only when that binary is built, and an
+implementer's worktree builds only the headless one, so the check skips its
+graphical step there and runs the rest inside the sandbox. The list had made
+the check unfixable: no implementer could edit it, and the orchestrator rule
+barred the main session from editing it too. It had failed unnoticed since
+2026-09-18 (inc-93w9). Brian approved the removal the same day.
+
 ## Marking base-code bugs
 
 **Every fix to a defect that is upstream's rather than the port's MUST be marked
