@@ -22,6 +22,7 @@
 # and cannot drift. Pass the commit that carries the fix; it defaults to HEAD.
 #
 # Usage: tools/check_distant_light_vision.sh [fix-commit]
+#        tools/check_distant_light_vision.sh --selftest
 # Exit:  0 pass, 1 fail (no gain, or the fix reduced visibility somewhere),
 #        2 inconclusive (a build or a run did not produce a probe log).
 #
@@ -36,20 +37,55 @@ KEYS="tools/keys/dive.keys"
 KEYS_ABS="$ROOT/$KEYS"
 SEEDS="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20"
 
+# inc-fxhl: an EXIT trap can only walk state the PARENT shell owns. run_side
+# runs inside "$( )", so a parent array append lands in the subshell's copy and
+# dies with it, and the trap removes nothing. The register is a file so the
+# write survives the subshell; cleanup reads it in the parent.
+REGISTER="$(mktemp "${TMPDIR:-/tmp}/distlight-wt.XXXXXX")" || exit 2
+register_worktree() { printf '%s\n' "$1" >> "$REGISTER"; }
+
+remove_worktree() { # remove_worktree <path>
+    git worktree remove --force "$1" 2>/dev/null || rm -rf "$1"
+}
+
+cleanup() {
+    local wt
+    [ -f "$REGISTER" ] || { git worktree prune 2>/dev/null || true; return 0; }
+    while IFS= read -r wt; do
+        [ -n "$wt" ] || continue
+        remove_worktree "$wt"
+    done < "$REGISTER"
+    rm -f "$REGISTER"
+    git worktree prune 2>/dev/null || true
+}
+on_exit()      { cleanup; }
+on_interrupt() { cleanup; exit 130; }
+on_terminate() { cleanup; exit 143; }
+trap on_exit EXIT
+trap on_interrupt INT
+trap on_terminate TERM
+
+selftest() {
+    local wt="/tmp/distlight-selftest.$$" seen="$REGISTER.seen"
+    local rc=0
+    remove_worktree() { printf '%s\n' "$1" >> "$seen"; }
+    ( register_worktree "$wt" )   # the "$( )"-shaped subshell this script uses
+    cleanup
+    if grep -qxF "$wt" "$seen"; then
+        echo "selftest: PASS register reached the trap ($wt)"
+    else
+        echo "selftest: FAIL register did not reach the trap; trap saw '$(cat "$seen" 2>/dev/null)'"
+        rc=1
+    fi
+    rm -f "$seen"
+    return $rc
+}
+[ "${1:-}" = "--selftest" ] && { selftest; exit $?; }
+
 BEFORE_REF="$(git rev-parse --verify "${FIX}^" 2>/dev/null)" || {
     echo "INCONCLUSIVE: ${FIX}^ does not resolve -- pass the fix commit"; exit 2; }
 AFTER_REF="$(git rev-parse --verify "$FIX" 2>/dev/null)" || {
     echo "INCONCLUSIVE: $FIX does not resolve"; exit 2; }
-
-WORKTREES=()
-cleanup() {
-    for wt in "${WORKTREES[@]:-}"; do
-        [ -n "$wt" ] || continue
-        git worktree remove --force "$wt" 2>/dev/null || rm -rf "$wt"
-    done
-    git worktree prune 2>/dev/null || true
-}
-trap cleanup EXIT
 
 sum_visible() { # sum_visible <mapprobe.log> -> integer
     awk '{for(i=1;i<=NF;i++) if($i ~ /^visible=/){sub("visible=","",$i); s+=$i}}
@@ -61,17 +97,37 @@ sum_visible() { # sum_visible <mapprobe.log> -> integer
 run_side() { # run_side <label> <ref>
     local label="$1" ref="$2"
     local wt="$ROOT/.wt-distlight-$label.$$"
-    WORKTREES+=("$wt")
+    register_worktree "$wt"
     echo ">>> $label: checkout $ref" >&2
     git worktree add --detach "$wt" "$ref" >&2 || return 2
     echo ">>> $label: build" >&2
     ( cd "$wt" && BACKEND=posix ./build_macos.sh ) >&2 || return 2
-    local s out run log
+    local s out run log dest
     for s in $SEEDS; do
         out="$( cd "$wt" && INCURSION_MAP_PROBE=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$KEYS_ABS" "$s" 2>&1 )"
         run="$(printf '%s\n' "$out" | awk '/^run:/ {print $2}')"
+        if [ -z "$run" ]; then
+            # The worktree is about to be removed, so the run dir (or, with no
+            # run dir, headless.sh's captured output) is copied to git-ignored
+            # $ROOT/logs/; print THAT surviving path.
+            dest="$ROOT/logs/distlight-$label-seed$s.$$"
+            mkdir -p "$dest" || return 2
+            printf '%s\n' "$out" > "$dest/headless.out"
+            echo "INCONCLUSIVE: $label seed $s produced no run dir -- headless.sh failed; its output was saved to $dest/headless.out" >&2
+            printf '%s\n' "$out" >&2
+            return 2
+        fi
         log="$run/logs/mapprobe.log"
-        [ -f "$log" ] || { echo "INCONCLUSIVE: no mapprobe.log for $label seed $s" >&2; return 2; }
+        [ -f "$log" ] || {
+            dest="$ROOT/logs/distlight-$label-seed$s.$$"
+            mkdir -p "$dest" || return 2
+            cp -f "$run"/* "$dest"/ 2>/dev/null || cp -rf "$run"/. "$dest"/ 2>/dev/null
+            if git grep -q INCURSION_MAP_PROBE "$ref" -- src 2>/dev/null; then
+                echo "INCONCLUSIVE: no mapprobe.log for $label seed $s: $ref carries the probe, so the run failed: $dest" >&2
+            else
+                echo "INCONCLUSIVE: no mapprobe.log for $label seed $s: $ref does not carry the probe; the run dir was saved to $dest" >&2
+            fi
+            return 2; }
         echo "$s $(sum_visible "$log")"
     done
 }
