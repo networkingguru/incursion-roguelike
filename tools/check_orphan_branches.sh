@@ -75,8 +75,9 @@ has_worktree() {
     grep -qx "branch refs/heads/$1" <<< "$(git -C "$ROOT" worktree list --porcelain)"
 }
 
+# inc-1boo: the id accepts any number of dotted numeric sub-ids.
 is_bead_id() {
-    grep -Eq '^inc-[a-z0-9]+(\.[0-9]+)?$' <<< "$1"
+    grep -Eq '^inc-[a-z0-9]+(\.[0-9]+)*$' <<< "$1"
 }
 
 bead_status() {
@@ -119,6 +120,23 @@ selftest() {
         echo "SELFTEST FAIL: 'inc-loa.40' was rejected as a bead id"
         return 1
     fi
+
+    # inc-1boo: any number of dotted numeric suffixes are accepted, and
+    # malformed ids (trailing dot, empty component, non-numeric component,
+    # uppercase prefix) are still refused.
+    local id
+    for id in inc-tek.8.3 inc-a.1.2.3; do
+        if ! is_bead_id "$id"; then
+            echo "SELFTEST FAIL: '$id' was rejected as a bead id"
+            return 1
+        fi
+    done
+    for id in inc-tek. inc-tek..3 inc-tek.8.a INC-tek; do
+        if is_bead_id "$id"; then
+            echo "SELFTEST FAIL: '$id' was accepted as a bead id"
+            return 1
+        fi
+    done
 
     echo "SELFTEST PASS"
     return 0
