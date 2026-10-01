@@ -52,8 +52,8 @@ A="$TMP/a"
 new_repo "$A" || fail "could not build a throwaway repo"
 
 out="$(run_guard "$A")"; rc=$?
-if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'packaging HEAD' \
-        && printf '%s' "$out" | grep -q 'tree: clean'; then
+if [ "$rc" -eq 0 ] && grep -q 'packaging HEAD' <<< "$out" \
+        && grep -q 'tree: clean' <<< "$out"; then
     pass "clean tree exits 0 and names the commit"
 else
     fail "clean tree: expected exit 0 with 'packaging HEAD' and 'tree: clean', got rc=$rc:"
@@ -62,8 +62,8 @@ fi
 
 printf 'dirty\n' >> "$A/tracked.txt"
 out="$(run_guard "$A")"; rc=$?
-if [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -q 'FAIL: the tree has uncommitted changes' \
-        && printf '%s' "$out" | grep -q 'tracked.txt'; then
+if [ "$rc" -eq 1 ] && grep -q 'FAIL: the tree has uncommitted changes' <<< "$out" \
+        && grep -q 'tracked.txt' <<< "$out"; then
     pass "modified tracked file exits 1 and names it"
 else
     fail "modified tracked file: expected exit 1 naming tracked.txt, got rc=$rc:"
@@ -71,7 +71,7 @@ else
 fi
 
 out="$(run_guard "$A" INCURSION_ALLOW_DIRTY=1)"; rc=$?
-if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'WARNING'; then
+if [ "$rc" -eq 0 ] && grep -q 'WARNING' <<< "$out"; then
     pass "INCURSION_ALLOW_DIRTY=1 warns and exits 0"
 else
     fail "INCURSION_ALLOW_DIRTY=1: expected exit 0 with WARNING, got rc=$rc:"
@@ -83,7 +83,7 @@ git -C "$A" checkout -q -- tracked.txt
 printf 'staged\n' >> "$A/tracked.txt"
 git -C "$A" add tracked.txt
 out="$(run_guard "$A")"; rc=$?
-if [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -q 'tracked.txt'; then
+if [ "$rc" -eq 1 ] && grep -q 'tracked.txt' <<< "$out"; then
     pass "staged-but-uncommitted edit exits 1"
 else
     fail "staged edit: expected exit 1 naming tracked.txt, got rc=$rc:"
@@ -93,7 +93,7 @@ git -C "$A" reset -q --hard >/dev/null
 
 printf 'new\n' > "$A/untracked.txt"
 out="$(run_guard "$A")"; rc=$?
-if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'tree: clean'; then
+if [ "$rc" -eq 0 ] && grep -q 'tree: clean' <<< "$out"; then
     pass "only an untracked file exits 0"
 else
     fail "untracked-only: expected exit 0, got rc=$rc:"
@@ -103,7 +103,7 @@ fi
 NOTREPO="$TMP/notrepo"
 mkdir -p "$NOTREPO"
 out="$(run_guard "$NOTREPO")"; rc=$?
-if [ "$rc" -ne 0 ] && printf '%s' "$out" | grep -q 'FAIL'; then
+if [ "$rc" -ne 0 ] && grep -q 'FAIL' <<< "$out"; then
     pass "outside any git repo exits non-zero"
 else
     fail "outside a repo: expected non-zero with FAIL, got rc=$rc:"
@@ -143,11 +143,11 @@ for pkgr in $PACKAGERS; do
     out="$( cd "$B" && PATH="$TMP/stub:$PATH" "./tools/$(basename "$pkgr")" 2>&1 )"; rc=$?
     bad=0
     [ "$rc" -eq 1 ] || { bad=1; echo "  $pkgr: expected exit 1, got $rc"; }
-    printf '%s' "$out" | grep -q 'FAIL: the tree has uncommitted changes' \
+    grep -q 'FAIL: the tree has uncommitted changes' <<< "$out" \
         || { bad=1; echo "  $pkgr: output lacks the dirty-tree FAIL line"; }
-    printf '%s' "$out" | grep -q 'STUB-REACHED' \
+    grep -q 'STUB-REACHED' <<< "$out" \
         && { bad=1; echo "  $pkgr: reached a build/sign tool (STUB-REACHED)"; }
-    printf '%s' "$out" | grep -qE '=== [0-9]+/' \
+    grep -qE '=== [0-9]+/' <<< "$out" \
         && { bad=1; echo "  $pkgr: a build step started"; }
     if [ "$bad" -eq 0 ]; then
         pass "$(basename "$pkgr") refuses the dirty tree before any build"
