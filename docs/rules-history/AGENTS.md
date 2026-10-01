@@ -202,6 +202,16 @@ the check unfixable: no implementer could edit it, and the orchestrator rule
 barred the main session from editing it too. It had failed unnoticed since
 2026-09-18 (inc-93w9). Brian approved the removal the same day.
 
+2026-10-01, bead inc-6vl9: added "Your brief IS your go". On inc-w431,
+DeepSeek in opencode read "No autonomous work — propose, then wait" as binding
+on itself, proposed three new files and stopped. Brian answered "y". Claude
+then added an approval line to the brief to re-dispatch it. The auto-mode
+classifier denied that edit, and later denied a read-only read of the run's
+output, both as "Auto-Mode Bypass": an approval written by the dispatcher
+looks like a way around the implementer's guard. Brian asked for a rule so
+this class of block never occurs again. With the go stated in AGENTS.md, the
+implementer does not stop, and no approval text is ever written into a brief.
+
 ## Marking base-code bugs
 
 **Every fix to a defect that is upstream's rather than the port's MUST be marked

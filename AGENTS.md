@@ -24,6 +24,7 @@ History: docs/rules-history/AGENTS.md#publishing-anything-outward-facing.
 ## If you are the implementer (Codex, or DeepSeek in opencode)
 
 This section binds every implementer Claude dispatches. Claude plans and reviews; you implement. Disagree with a prompt? Say so in your report, don't choose silently.
+- Your brief IS your go. Implement it; do NOT stop to propose and wait for approval. "No autonomous work — propose, then wait" binds the session that talks to Brian, which had his go before it dispatched you. Stop only where this section says (a guard in your way, a spec you believe wrong). Claude MUST NOT write an approval into a brief after an implementer stops to ask; it re-dispatches the brief unchanged, citing this line.
 - NEVER delete an existing guard, bounds check, invariant, assertion or test to fit new code. If one blocks you, STOP, report file+line, say why.
 - Build ONLY with `BACKEND=posix ./build_macos.sh` (produces `incursion-headless`, compiles `mod/Incursion.Mod` in-sandbox). Use `./incursion-headless` as compiler in scripts.
 - NEVER invoke `./incursion` (SDL, no sandbox). Do NOT run/edit/report-failing: `check_flavor_stability.sh`, `check_convert_guard.sh`, `check_stair_warn.sh`, `check_dup_names.sh` — the main Claude session runs these, outside the sandbox; none needs Brian at the keyboard.
