@@ -91,7 +91,7 @@ screen_of() { # <run dir> <glob>
 # and the run's logs/errors.log is printed when it exists.
 errors_clean() { # <run dir> <headless output> <label>
     local log="$1/logs/errors.log"
-    if printf '%s\n' "$2" | grep -q '^errors:     none'; then
+    if grep -q '^errors:     none' <<< "$2"; then
         return 0
     fi
     echo "  FAIL  $3: the run did not report 'errors:     none'"
