@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gate: cheap
+# gate-serial: waits on a detached forget under a wall-clock poll (wait_detached); CPU load could flip it
 #
 # Does tools/resume_gc.sh delete exactly the right bd resume notes, archive
 # them first, fail safe on the entrypoint, and warn before it is asked

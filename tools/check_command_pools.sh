@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# gate-serial: --prove-red overwrites tracked src/inc/lib files and rebuilds the shared binaries
 # inc-sgre: fresh Priest 2 / Mage 3, Evil domain, no command bonuses.
 # Read Player::Dump, not source text. Old code has one command cap of 5;
 # fixed code has separate spider/devil/undead caps of 2.
