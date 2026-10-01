@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# gate: cheap
 # Red proof for inc-2gl7: with the detached run's second forget delayed past a
 # single 0.1 s poll, the old wait_detached returns after one key and b1 fails;
 # the fixed wait_detached (wait for the expected count) still passes.
