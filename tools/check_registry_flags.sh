@@ -33,7 +33,15 @@
 # 3000-load default takes about 25 s, small next to the ~50-minute gate, so the
 # marker takes no arguments and the gate runs the same loop a manual run does.
 #
+# WHICH BINARY. INCURSION_BIN picks the build to exercise, exactly as
+# tools/headless.sh and the rest of tools/ do; it defaults to
+# ./incursion-headless. --prove-red builds its mutated binary under a private
+# OUT= with a non-empty EXTRA_CXXFLAGS=, so build_macos.sh skips its rewrite of
+# the shared mod/Incursion.Mod (build_macos.sh:375), and points INCURSION_BIN at
+# that binary so the shared ./incursion-headless and module are never touched.
+#
 # Usage: tools/check_registry_flags.sh [--loads N] [--tests M] [--prove-red]
+# Env:   INCURSION_BIN=./incursion-headless   which build to run
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -47,7 +55,7 @@ while [ $# -gt 0 ]; do
         --loads) LOADS="$2"; shift 2 ;;
         --tests) TESTS="$2"; shift 2 ;;
         --prove-red) PROVE_RED=1; shift ;;
-        -h|--help) sed -n '2,38p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,44p' "$0"; exit 0 ;;
         *) echo "unknown argument: $1" >&2; exit 2 ;;
     esac
 done
@@ -55,17 +63,28 @@ done
 FAILED=0
 fail() { echo "FAIL: $1"; FAILED=1; }
 
-if [ ! -x ./incursion-headless ]; then
-    fail "./incursion-headless is not built. Run: BACKEND=posix ./build_macos.sh"
+BIN="${INCURSION_BIN:-./incursion-headless}"
+
+if [ ! -x "$BIN" ]; then
+    fail "$BIN is not built. Run: BACKEND=posix ./build_macos.sh"
     exit 2
 fi
 
 # --prove-red: delete the two initialisations, returning the constructor to
-# the pre-fix state, rebuild, confirm the check goes red, restore the source
-# and rebuild. Follows check_lib.sh's dance, but this check has no session and
-# does not source that library. The mutation is the omission itself, not a
-# forced true: forcing loadMode true in the global registry breaks the module
-# compiler at build time, so the build would fail before the check could run.
+# the pre-fix state, build a PRIVATE mutated binary, confirm the check goes red
+# against that binary, then restore the source and remove the private binary.
+# Follows check_lib.sh's dance, but this check has no session and does not
+# source that library. The mutation is the omission itself, not a forced true:
+# forcing loadMode true in the global registry breaks the module compiler at
+# build time, so the build would fail before the check could run.
+#
+# THE BUILD IS PRIVATE. EXTRA_CXXFLAGS is non-empty and OUT names a binary of
+# its own, the pair that takes build_macos.sh's instrumented path: its own
+# object directory, and no rewrite of the shared mod/Incursion.Mod
+# (build_macos.sh:375). The inner check is then pointed at that binary through
+# INCURSION_BIN, so the shared ./incursion-headless and module are never
+# rewritten -- this check can run beside its peers in the gate. The private
+# binary is removed on the way out; the shared one is left exactly as it was.
 if [ "$PROVE_RED" = 1 ]; then
     FROM='    LastUsedHandle = StartingHandle();
     saveMode = false;
@@ -73,12 +92,14 @@ if [ "$PROVE_RED" = 1 ]; then
     reg_log = NULL;'
     TO='    LastUsedHandle = StartingHandle();
     reg_log = NULL;'
+    PROBE="$ROOT/incursion-regflags-probe"
     KEEP="$(mktemp -d -t check_registry_flags)" || exit 2
     cp -p src/Registry.cpp "$KEEP/original" || { echo "could not copy source aside" >&2; exit 2; }
     _restore() {
         cp -p "$KEEP/original" src/Registry.cpp 2>/dev/null
         [ -f "$KEEP/original" ] && cmp -s "$KEEP/original" src/Registry.cpp \
             || echo "WARNING: src/Registry.cpp may not be restored; original at $KEEP/original" >&2
+        rm -f "$PROBE"
         rm -rf "$KEEP"
     }
     trap '_restore' EXIT INT TERM HUP
@@ -94,30 +115,22 @@ if n != 1:
 open(p, "w", encoding="utf-8", errors="surrogateescape").write(s.replace(a, b))
 PY
     echo "  mutating src/Registry.cpp: removing the saveMode/loadMode initialisations"
-    if ! BACKEND=posix ./build_macos.sh > "$KEEP/build.log" 2>&1; then
+    echo "  building a PRIVATE probe ($PROBE): no shared module or binary is touched"
+    if ! EXTRA_CXXFLAGS=-DREGF_PROBE OUT="$(basename "$PROBE")" BACKEND=posix \
+            ./build_macos.sh > "$KEEP/build.log" 2>&1; then
         tail -20 "$KEEP/build.log"
         fail "the mutated build failed; nothing is proved"
         exit 2
     fi
     echo "  re-running with the fix broken (full N, so the dirty-heap trigger lands)"
-    if "$0" --loads 3000 --tests 200; then
-        _restore
-        trap - EXIT INT TERM HUP
-        if ! BACKEND=posix ./build_macos.sh > /dev/null 2>&1; then
-            fail "the check PASSED with the fix broken, and the restore build failed"
-            exit 2
-        fi
+    if INCURSION_BIN="$PROBE" "$0" --loads 3000 --tests 200; then
         fail "the check PASSED with the initialisations removed -- it measures nothing"
         exit 2
     fi
     INNER_FAILED=1
-    echo "  restoring src/Registry.cpp and rebuilding"
+    echo "  restoring src/Registry.cpp (the shared binary was never rebuilt)"
     _restore
     trap - EXIT INT TERM HUP
-    if ! BACKEND=posix ./build_macos.sh > /dev/null 2>&1; then
-        fail "restored but the rebuild failed"
-        exit 2
-    fi
     [ "$INNER_FAILED" = 1 ] || exit 2
     echo "PROVED RED: removing the initialisations made the check fail"
     exit 0
@@ -128,7 +141,7 @@ trap 'rm -rf "$WORK"' EXIT
 
 # One genuine v1 file for the crafting script to mutate, the way
 # tools/check_v1_adversarial.sh does it.
-if ! INCURSION_V1_RAW=1 ./incursion-headless -schematest "$WORK" -timeout 120 \
+if ! INCURSION_V1_RAW=1 "$BIN" -schematest "$WORK" -timeout 120 \
         < /dev/null > "$WORK/schematest.log" 2>&1; then
     tail -20 "$WORK/schematest.log"
     fail "-schematest could not produce the base file"
@@ -151,7 +164,7 @@ LOADS_BAD=0
 i=0
 while [ "$i" -lt "$LOADS" ]; do
     i=$((i + 1))
-    ./incursion-headless -schemaload "$MUTANT" -timeout 120 \
+    "$BIN" -schemaload "$MUTANT" -timeout 120 \
         < /dev/null > "$WORK/load.out" 2> "$WORK/load.err"
     STATUS=$?
     if [ "$STATUS" -ne 22 ]; then
@@ -173,7 +186,7 @@ i=0
 while [ "$i" -lt "$TESTS" ]; do
     i=$((i + 1))
     mkdir -p "$WORK/testout$i"
-    ./incursion-headless -schematest "$WORK/testout$i" -timeout 120 \
+    "$BIN" -schematest "$WORK/testout$i" -timeout 120 \
         < /dev/null > "$WORK/test.out" 2>&1
     STATUS=$?
     if [ "$STATUS" -ne 0 ]; then
