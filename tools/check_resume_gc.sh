@@ -120,17 +120,16 @@ forgot_keys() { sort "$TMP/forgot.txt" 2>/dev/null | grep -v '^$' || true; }
 # Number of `bd memories` calls recorded by the stub.
 memories_calls() { wc -l < "$TMP/memcalls.txt" 2>/dev/null | tr -d ' ' || echo 0; }
 
-# Wait for the detached --run to stop changing the store, up to ~5s.
+# Wait until the detached --run has forgotten the expected number of keys, up
+# to ~5s. It forgets the keys one after the other; one quiet 0.1 s poll is not
+# proof it is done, so wait for the count. (bd inc-2gl7)
 wait_detached() {
-    local i prev cur
-    prev="$(forgot_keys)"
+    local want="$1" i cur n
     for i in $(seq 1 50); do
-        sleep 0.1
         cur="$(forgot_keys)"
-        if [ "$cur" = "$prev" ] && [ -n "$cur" ]; then
-            return 0
-        fi
-        prev="$cur"
+        n="$(printf '%s' "$cur" | grep -c . || true)"
+        [ "$n" -ge "$want" ] && return 0
+        sleep 0.1
     done
     return 0
 }
@@ -156,7 +155,7 @@ run_suite() {
 EOF
     printf '{"transcript_path":"%s","reason":"exit"}' "$TMP/cli.jsonl" \
         | gc --hook-end >/dev/null 2>&1
-    wait_detached
+    wait_detached 2
     gotf="$(forgot_keys)"
     wantf="$(printf '%s\n%s\n' "$OLD2" "$OLD1" | sort)"
     if [ "$gotf" = "$wantf" ]; then
