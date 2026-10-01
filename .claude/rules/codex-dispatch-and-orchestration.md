@@ -1,16 +1,28 @@
 # Codex dispatch and orchestration
 
 ## always-implement-via-codex
-Claude's main context does NOT author files — only true prose (report, bead body, memory, brief for Codex, doc paragraph). Every machine-read/run file (C++, headers, Python, shell, `.keys`, `.irh`, config, Makefiles, a red-green mutation into a tracked source) goes to an implementer from the order below, never a hand edit. Claude still RUNS: builds, `tools/headless.sh`, greps, reads, docker, `bd`, git, investigation, judging diffs.
+Claude's main context does NOT author files — only true prose (report, bead body, memory, brief for an implementer, doc paragraph). Every machine-read/run file (C++, headers, Python, shell, `.keys`, `.irh`, config, Makefiles, a red-green mutation into a tracked source) goes to an implementer, never a hand edit. Claude still RUNS: builds, `tools/headless.sh`, greps, reads, docker, `bd`, git, investigation, judging diffs.
 
-Implementer order; take the first rung that can run:
-  1. Codex: `~/Scripts/Incursion/tools/codex_exec.sh <worktree> <brief>`. It runs `codex exec` under `tools/watchdog.sh`, which stops a run that writes no event within `INCURSION_WATCHDOG_STARTUP` seconds (default 180) or goes silent for `INCURSION_WATCHDOG_IDLE` seconds (default 1800); exit 2 then names the limit. NEVER run bare `codex exec`. The opencode wrapper in rung 2 uses the same watchdog.
-  2. DeepSeek V4.1-Flash in the opencode harness: `~/Scripts/Incursion/tools/opencode_ds.sh <worktree> <brief>` — ALWAYS the shared checkout's copy, because a worktree's copy reads that worktree's config and sandbox profile, which the agent can edit. It MAY take ANY work Codex or a `sonnet` agent would take — it reads the tree, runs builds and checks, and iterates. It runs under `tools/opencode/sandbox.sb` (writes only inside the worktree, its cache and temp) and `tools/opencode/opencode.json` denies it every git command except read-only ones (status, diff, log, show, ls-files, rev-parse), and bd, `gh` and `./incursion`. It obeys AGENTS.md "If you are the implementer". NEVER run `opencode` except through this wrapper.
-  3. Agent-tool dispatch, explicit `model:` override (NEVER inherit session model): `haiku` ONLY for mechanical find/replace; `sonnet` only when rung 2 cannot run; `opus` only when sonnet can't, say why. NEVER `model: 'fable'` without Brian's authorisation that conversation.
-  4. Claude's own Edit/Write ONLY when no implementer in 1–3 can effectively do the work (none can run, or a rule bars every implementer from the file). Before the first edit, Claude MUST tell Brian what it will change and what context it holds, then WAIT for his word, so he can judge that context. Otherwise NEVER Claude's own Edit/Write.
+Route by the kind of work, then take the first implementer in that row that can run:
 
-`tools/deepseek.py` stays for one request with no tree access (a text answer, or a self-contained file from a complete spec); it is not an implementer rung. Both DeepSeek paths use one scoped DeepInfra key (20 USD cap, one allowed model, cannot raise its own cap) and one ledger, `logs/deepseek-ledger.jsonl`, which each checks before it spends. If DeepSeek stops answering, read the ledger, ask Brian before topping up.
-Why: keeps implementation detail out of Claude's context; matches model size to task difficulty.
+| Work | Route, in order |
+|---|---|
+| Routine coding: the brief names every file and the exact change, and an offline check proves it | DeepSeek → Codex → `sonnet` |
+| Challenging coding: needs a design decision, reasoning across modules, or an engine behaviour change only gameplay can confirm | `sonnet` → Codex → `opus` |
+| Observation or reproduction design: write the key script, choose what to observe, judge the result | Codex → `sonnet` |
+| Running a given reproduction: key script, seed and options supplied; report what the output shows | `haiku` → `sonnet` |
+| Mechanical find/replace | `haiku` |
+
+DeepSeek runs ONE phase per run. NEVER send DeepSeek a brief that continues an earlier run; start a fresh run for each phase, and size each phase to finish under about 150k tokens of context. A `haiku` agent MUST NOT judge whether a defect reproduced beyond reporting what the output shows; Claude judges.
+
+How to run each:
+- Codex: `~/Scripts/Incursion/tools/codex_exec.sh <worktree> <brief>`. It runs `codex exec` under `tools/watchdog.sh`, which stops a run that writes no event within `INCURSION_WATCHDOG_STARTUP` seconds (default 180) or goes silent for `INCURSION_WATCHDOG_IDLE` seconds (default 1800); exit 2 then names the limit. NEVER run bare `codex exec`.
+- DeepSeek V4.1-Flash in the opencode harness: `~/Scripts/Incursion/tools/opencode_ds.sh <worktree> <brief>` — ALWAYS the shared checkout's copy, because a worktree's copy reads that worktree's config and sandbox profile, which the agent can edit. It runs under the same watchdog, under `tools/opencode/sandbox.sb` (writes only inside the worktree, its cache and temp), and `tools/opencode/opencode.json` denies it every git command except read-only ones (status, diff, log, show, ls-files, rev-parse), and bd, `gh` and `./incursion`. It obeys AGENTS.md "If you are the implementer". NEVER run `opencode` except through this wrapper.
+- `haiku`, `sonnet`, `opus`: Agent-tool dispatch with an explicit `model:` override (NEVER inherit the session model). `opus` only when `sonnet` cannot do it; say why. NEVER `model: 'fable'` without Brian's authorisation that conversation.
+- Claude's own Edit/Write ONLY when no implementer above can effectively do the work (none can run, or a rule bars every implementer from the file). Before the first edit, Claude MUST tell Brian what it will change and what context it holds, then WAIT for his word, so he can judge that context. Otherwise NEVER Claude's own Edit/Write.
+
+`tools/deepseek.py` stays for one request with no tree access (a text answer, or a self-contained file from a complete spec); it is not an implementer. Both DeepSeek paths use one scoped DeepInfra key (20 USD cap, one allowed model, cannot raise its own cap) and one ledger, `logs/deepseek-ledger.jsonl`, which each checks before it spends. If DeepSeek stops answering, read the ledger, ask Brian before topping up.
+Why: matches each implementer to the work it does reliably, keeps DeepSeek out of the long runs where it loops, and keeps implementation detail out of Claude's context.
 History: docs/rules-history/codex-dispatch-and-orchestration.md#always-implement-via-codex.
 
 ## model-outage-leave-a-note
