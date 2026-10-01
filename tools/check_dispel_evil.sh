@@ -93,11 +93,11 @@
 # log, or no DispEv attack line in the deflection scene: all three mean the
 # run measured nothing about the thing it exists to check.
 #
-# Build (module first, THEN the probe -- EXTRA_CXXFLAGS builds deliberately
-# do not recompile mod/Incursion.Mod, see build_macos.sh's game-data section,
-# so a stale module would silently hide a lib/ fix):
-#   BACKEND=posix ./build_macos.sh
-#   EXTRA_CXXFLAGS=-DDISPEL_EVIL_PROBE OUT=incursion-dispel-evil BACKEND=posix ./build_macos.sh
+# The check builds its own probe from the current source on every run
+# (private OUT=, EXTRA_CXXFLAGS=-DDISPEL_EVIL_PROBE), so it never measures a
+# stale binary and is safe beside other checks in the parallel gate. It needs
+# ./incursion-headless and mod/Incursion.Mod from the gate's normal build; the
+# probe build reads that module rather than rewriting it.
 # Usage: tools/check_dispel_evil.sh
 set -uo pipefail
 
@@ -114,15 +114,29 @@ field() { # field "<line>" "<prefix>"  ->  value, or empty if absent
     awk -v p="$2" '{for(i=1;i<=NF;i++) if (index($i,p)==1) {print substr($i,length(p)+1); exit}}' <<< "$1"
 }
 
-[ -x "$BIN" ] || {
-    echo "FAIL: $BIN not built. Run:"
-    echo "  BACKEND=posix ./build_macos.sh"
-    echo "  EXTRA_CXXFLAGS=-DDISPEL_EVIL_PROBE OUT=incursion-dispel-evil BACKEND=posix ./build_macos.sh"
-    exit 1
-}
-
 TMP="$(mktemp -d -t dispel-evil-check.XXXXXX)" || exit 2
 trap "rm -rf '$TMP'" EXIT
+
+# Build the probe from the current source, every run, before using it. A
+# previous run's binary may be stale, and building only when ABSENT let the
+# check pass or fail against code that is not this tree. The probe carries a
+# private OUT= and a non-empty EXTRA_CXXFLAGS=, so build_macos.sh gives it its
+# own object directory (build_macos.sh:172-178) and skips the rewrite of the
+# shared mod/Incursion.Mod (build_macos.sh:375) -- it is safe to run beside
+# other checks in the parallel gate. The module is compiled by the gate's
+# ordinary build first; this build only reads it.
+BUILD_LOG="$TMP/probe-build.log"
+printf 'building %s ... ' "$BIN"
+if EXTRA_CXXFLAGS=-DDISPEL_EVIL_PROBE OUT=incursion-dispel-evil BACKEND=posix \
+        ./build_macos.sh > "$BUILD_LOG" 2>&1; then
+    echo "ok"
+else
+    echo "FAILED"
+    echo "COULD NOT MEASURE: the probe build did not compile. A build failure is"
+    echo "not a defect in Dispel Evil. Log tail ($BUILD_LOG):"
+    tail -20 "$BUILD_LOG"
+    exit 2
+fi
 
 # --- scene 1: the touch (assertions a and c) ---------------------------
 RUN="$TMP/touch-run"
