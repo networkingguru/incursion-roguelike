@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# gate-serial: pins a fixed INCURSION_RUN_DIR (logs/runs/necro-undead-pool-*) shared by two runs
 # Does a Necromancer's bonus undead pool reach PHD_UNDEAD, the pool Animate
 # Dead and Create Undead charge created undead to? (bd inc-1n74)
 #

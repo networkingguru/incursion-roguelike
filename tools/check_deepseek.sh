@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: cheap
+# gate-serial: starts a stub on a fixed 127.0.0.1 loopback URL; parallel network timing could flip it
 #
 # Does tools/deepseek.py spend at most one billed call per success, refuse
 # to spend the instant its own ledger says the budget is gone or the ledger

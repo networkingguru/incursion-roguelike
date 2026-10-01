@@ -137,7 +137,6 @@
 2 tools/doc_freshness_cron.sh
 1 tools/finish_bead.sh
 4 tools/gate_compare.sh
-1 tools/nightly_verify.sh
 1 tools/package_linux.sh
 2 tools/probe_hooks_cron.sh
 1 tools/worktree.sh

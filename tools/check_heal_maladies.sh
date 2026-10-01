@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# gate-serial: writes fixed scratch paths logs/heal-maladies-* and rm -rf's them
 # When the PLAYER casts the priest spell Heal on himself, does it cure all
 # nine non-PARALYSIS maladies its "and EA_HEALING" clauses name? (bd inc-xr8i)
 # A second, independent measurement below asks whether the same spell, cast

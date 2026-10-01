@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# gate-serial: writes a fixed logs/inc-kgzx/pool run dir and rm -rf's it
 # inc-kgzx phase 2c: does Undeath to Death spend, cap and waste its Hit Dice
 # pool by the SRD rule, with all three seen in play rather than read off code?
 #

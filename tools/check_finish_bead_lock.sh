@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: cheap
+# gate-serial: races wall-clock landing-lock deadlines (sleep 2/3 s windows); CPU load could flip them
 #
 # Does the per-base-branch landing lock in tools/finish_bead.sh actually
 # serialise two landings, clear a stale lock, spare a different base branch,

@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: cheap
+# gate-serial: race wall-clock watchdog/proxy/stream deadlines; CPU load could flip them
 #
 # Does tools/opencode_ds.sh refuse to launch once the DeepSeek ledger says the
 # budget is gone or poisoned, refuse the shared checkout, bill exactly one

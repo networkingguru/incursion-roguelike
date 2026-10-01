@@ -72,15 +72,30 @@ runs that both did nothing.
 recorded before the work started. A check that already failed is not this
 change's fault. A check that passed before and fails after stops the merge. The
 builds are exempt from the ratchet: a tree that does not compile is never safe.
-`tools/check_linux_build.sh` runs with those builds for the same reason, and it
-is why a full run costs about ten minutes rather than seconds; a machine with no
-Docker skips it rather than failing on it. `tools/check_layout_sweep.sh` runs
+`tools/check_linux_build.sh` runs with those builds for the same reason; a
+machine with no Docker skips it rather than failing on it. `tools/check_layout_sweep.sh` runs
 there too: it builds the `DIVERGE_PROBE` binary and asks whether the tree still
 plays the same game when its objects move, and a machine without lldb skips it.
 `tools/gate_compare.sh` runs there as well, for about a minute: it is the canary
 the checks are not, because it names no rule and instead reports a new complaint
 appearing in several of its 40 sessions at once, fewer sessions reaching a map,
 or more deaths and freezes than the baseline.
+
+**Fast work first, and several checks at once (inc-yg8e).** The gate runs in this
+order: the cheap tier, several checks at a time; the serial cheap checks, one at
+a time; the two macOS builds; the Linux build, the layout sweep and the soak in
+the background while the live tier runs several checks at a time; then the serial
+live checks, one at a time, with nothing else running. A cheap-tier failure stops
+the gate before any build, and a failed build stops it before the live tier.
+`INCURSION_GATE_JOBS` sets how many checks run at once (default: the core count
+minus 2); `INCURSION_GATE_JOBS=1` runs them one at a time. A check that writes a
+shared file or races a wall-clock deadline declares `# gate-serial: <why>` near
+its top, and `tools/check_gate_parallel_safe.sh` fails a check that rebuilds or
+writes the shared module without that line. Measured on 2026-09-30 on a 10-core
+Mac, master's 133 gate checks: a full run took 560 s with the default and 693 s
+with `INCURSION_GATE_JOBS=1`, with the same verdicts. Before this change the
+checks alone summed to 570 s on master, after about 5 minutes of builds and big
+steps, and the epic branch's 204 checks took about 33 minutes end to end.
 
 **A full pass is remembered for the files it measured.** Each full `--compare`
 that passes leaves `nightly-verify-pass.txt` beside the recorded base.

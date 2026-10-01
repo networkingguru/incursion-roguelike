@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# gate-serial: writes a fixed scratch module dir logs/periodic-interval-module and rm -rf's it
 # Does a PERIODIC status effect fire every Val rounds, not every Val-1?
 # (bd inc-7mri)
 #

@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: cheap
+# gate-serial: races INCURSION_WATCHDOG_STARTUP=2 and a SECONDS deadline while sampling ps; CPU load could flip it
 #
 # Does the DeepSeek implementer harness keep its secrets out of reach (bead
 # inc-k4wc)? Two halves:

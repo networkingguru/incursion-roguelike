@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# gate-serial: writes a fixed scratch module dir logs/check-blind-fight-miss/ and rm -rf's it
 # Does an attacker WITH the Blind-Fight feat, attacking a victim it cannot
 # see, get the 25% miss chance the game's own help promises -- or the 50% the
 # buggy HasStati(FT_BLIND_FIGHT) gives when the attacker is not CHARGING?

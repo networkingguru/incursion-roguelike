@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# gate-serial: writes a fixed logs/multiply-noroom run dir and rm -rf's it
 # inc-dpni: a copy Multiply could not place must not be placed again.
 #
 # ORACLE. Creature::Multiply places a copy on the parent's own square; PlaceAt
