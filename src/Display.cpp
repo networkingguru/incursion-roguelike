@@ -588,7 +588,37 @@ FoundGoodPlace:
 
 Map::Map() : Object(T_MAP), ov(myHandle)
 	{
-          nextAvailableTerraKey = 0; 
+          /* upstream: this constructor left every plain member but nextAvailableTerraKey
+             to Object::operator new's zero-fill (inc/Base.h); reading one is undefined,
+             so an optimiser that deletes the fill reads stale heap bytes. Observed:
+             Creature::SetImage reads m->pl[0] during Map::enBuildMon -> "Illegal system
+             object number (96)"; Map::QueueNum indexes QueueStack[QueueSP] with garbage
+             QueueSP -> "Messages (still) queued" and a segfault. Now sizeX/Y, Grid,
+             RegionList, SpecialDepths, TerrainList, CurrThing, QueueStack/SP, dID,
+             PercentSI, inDaysPassed, Depth/Level/EnterX/EnterY, SpecialsLevels, Day,
+             FieldCount, pl, PlayerCount, BreedCount, PreviousAuguries are assigned to
+             that same zero-fill. Julian Mensch's code (7b8504a, 2014); misbehaves
+             identically on Win32, so not a port artifact. Observed, inc-eikp.2, not
+             sent. */
+          sizeX = sizeY = 0;
+          nextAvailableTerraKey = 0;
+          inGenerate = false;
+          Grid = NULL;
+          memset(RegionList,0,sizeof(RegionList));
+          memset(SpecialDepths,0,sizeof(SpecialDepths));
+          memset(TerrainList,0,sizeof(TerrainList));
+          CurrThing = 0;
+          memset(QueueStack,0,sizeof(QueueStack));
+          QueueSP = 0;
+          dID = 0; PercentSI = 0;
+          inDaysPassed = false;
+          Depth = Level = EnterX = EnterY = 0;
+          memset(SpecialsLevels,0,sizeof(SpecialsLevels));
+          Day = 0;
+          FieldCount = 0;
+          pl[0] = 0; pl[1] = 0; pl[2] = 0; pl[3] = 0;
+          PlayerCount = BreedCount = 0;
+          PreviousAuguries = 0;
 	}
 
 void Thing::NotifyGone(hObj h)
