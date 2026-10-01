@@ -598,7 +598,8 @@ A new check adds its row to this table, in alphabetical order.
 | `check_line_of_fire.sh` | Does the saving-throw cover-and-band rule for a weapon shot hold -- a -4 penalty per occupied square between shooter and target, a further -4 for the target's own square when the target is not its head, one roll, and a miss resolved by a per-square Reflex save walking the band in contents-chain order? Oracle is `LineOfFireProbe` (`src/Fight.cpp`) under `INCURSION_LOF_PROBE`, throwing a forced-roll dagger down a five-rat line. | LIVE |
 | `check_line_of_fire_effects.sh` | Do the 15 bolt/ray effects the line-of-fire rework touches carry `EF_ATTACK` and the right save field, while Call Companions gains neither and Magic Missile, Force Missiles and Acid;wand still carry no `EF_ATTACK`? Pure text over `lib/*.irh` via `tools/line_of_fire_effects.py`, no build needed. | LIVE |
 | `check_line_of_fire_spell.sh` | Does the same cover-and-band rule apply to an `EF_ATTACK` spell bolt rolled against touch defence, while an effect with no `EF_ATTACK` (Magic Missile) passes every body in the line unerring and a beam still strikes everyone? Oracle is `LOFSpellProbe` (`src/Magic.cpp`) under `INCURSION_LOF_SPELL_PROBE`, casting Eldritch Bolt down the same five-rat line `check_line_of_fire.sh` uses. | LIVE |
-| `check_linux_build.sh` | Do both backends still build on Linux, and does a seeded run still play with no errors? Needs Docker; so does `check_gcc_o2_char_create.sh` below, and no other check. | LIVE |
+| `check_linux_build.sh` | Do both backends still build on Linux, and does a seeded run still play with no errors? Needs Docker; so do `check_linux_save_roundtrip.sh` below and `check_gcc_o2_char_create.sh` above, and no other check. | LIVE |
+| `check_linux_save_roundtrip.sh` | Does a v1 save still load on x64 Linux? Saves a character on Linux and loads it back (Case A), then loads a macOS-made fixture (Case B), requiring each load run to show the engine's own "Welcome back to Incursion, <name>!" greeting and the character's sheet (inc-eikp.1). Needs Docker; runs both Debian 11 and Arch unless `--distro` narrows it. A run reporting NO GAMEPLAY is a FAIL for a load. | LIVE |
 | `check_load_corrupt.sh` | Does the real binary refuse ten hand-corrupted saves cleanly and still load two genuine ones? | LIVE |
 | `check_logrotate.sh` | Does log rotation keep the right archives and prune only names it made itself? | LIVE |
 | `check_loremaster_live.sh` | Does the Loremaster's Bibliographic Insight add its extra attribute points when he reads a tome? | LIVE |
@@ -1139,6 +1140,38 @@ only check that needs a real display. Read the warning below before you run it.
 ./build_macos.sh && tools/check_libtcod_mode_change.sh
 tools/check_libtcod_mode_change.sh --selftest   # proves the harness can fail
 ```
+
+### Tier 4b — Docker, the only Linux this machine can reach
+
+This project has no Linux host, so the checks that measure x64 Linux live here.
+Docker on this arm64 Mac runs linux/amd64 containers, which execute real x86-64
+code. Each builds a distro image on first use and reuses it after; the first run
+of each costs minutes under emulation.
+
+```sh
+tools/check_linux_build.sh       # both backends build and a seeded run plays
+tools/check_linux_save_roundtrip.sh          # a save round-trips (both distros)
+tools/check_linux_save_roundtrip.sh --distro arch   # just one
+tools/check_gcc_o2_char_create.sh            # the GCC -O2 creation path is clean
+```
+
+`tools/linux_run.sh` is the runner those checks sit on. It takes any key script,
+an optional save to load, a distro and a compiler, and leaves the run's `save/`
+and `logs/` on the host under `logs/linux/runs/` -- outside the cached tree, so
+a later rebuild never deletes an earlier run. It keeps one exported, BUILT tree
+per distro+compiler at `logs/linux/<distro>-<cc>/src`, rebuilt only when the
+tracked content's hash changes, so a second launch does not pay for the build
+again; the build's own output is written to `logs/linux/<distro>-<cc>/build.log`
+and its last 30 lines are printed on failure.
+
+```sh
+INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+    tools/linux_run.sh [--distro debian11|arch] [--cc clang|gcc] \
+        [--load <save>] [--name <run>] <keys> [seed]
+```
+
+`tools/linux_docker.sh` holds the image-build and tree-export logic
+`check_linux_build.sh` and `linux_run.sh` share; it is sourced, never run.
 
 ### Tier 5 — the gate, which needs a baseline
 

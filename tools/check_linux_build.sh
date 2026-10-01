@@ -40,7 +40,9 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-IMAGE="incursion-linux:bullseye"
+. "$ROOT/tools/linux_docker.sh"
+
+IMAGE="$(linux_image_tag debian11)"
 SEED=7
 KEYS="tools/keys/dive.keys"
 
@@ -51,8 +53,7 @@ KEYS="tools/keys/dive.keys"
 # and the ROG Ally are both x86_64.
 PLATFORM="linux/amd64"
 
-command -v docker >/dev/null || { echo "SKIP: docker not installed"; exit 2; }
-docker info >/dev/null 2>&1 || { echo "SKIP: docker daemon not running"; exit 2; }
+linux_docker_preflight || exit 2
 
 # The tree goes in as a clean export, never as a bind mount of the working
 # directory. A bind mount would let the container's build write Linux objects
@@ -61,25 +62,12 @@ docker info >/dev/null 2>&1 || { echo "SKIP: docker daemon not running"; exit 2;
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
-    echo "--- building $IMAGE (first run only) ---"
-    cat > "$TMP/Dockerfile" <<'DOCKERFILE'
-FROM --platform=linux/amd64 debian:11
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential clang pkg-config zlib1g-dev libncurses-dev \
-        libsdl2-dev ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-WORKDIR /src
-DOCKERFILE
-    docker build --platform "$PLATFORM" -t "$IMAGE" -q -f "$TMP/Dockerfile" "$TMP" >/dev/null \
-        || { echo "FAIL: could not build $IMAGE"; exit 2; }
-    rm -f "$TMP/Dockerfile"
-fi
-# Tracked files at their WORKING-TREE content, not at HEAD. `git archive HEAD`
-# would export the last commit and silently ignore the change being checked,
-# which is the opposite of what a pre-commit check is for.
-git ls-files -z | xargs -0 tar -cf - 2>/dev/null | tar -x -C "$TMP" || {
-    echo "FAIL: could not export the working tree"; exit 2; }
+# Build the image on first use, and export the tracked files at their
+# WORKING-TREE content (see tools/linux_docker.sh). `git archive HEAD` would
+# export the last commit and silently ignore the change being checked, which is
+# the opposite of what a pre-commit check is for.
+linux_ensure_image debian11 "$TMP" || exit 2
+linux_export_tree "$TMP" || exit 2
 
 # SDL_VIDEODRIVER=dummy because build_macos.sh finishes by running the binary
 # it just built to compile the module, and the libtcod binary initialises SDL
