@@ -1,0 +1,35 @@
+# inc-zzwm: make a Human Ranger and stop in the arrival room, so the creation kit
+# arrangement can be read from INCURSION_KIT_PROBE. Read by
+# tools/check_kit_arrangement.sh. Race and class are named, not counted;
+# feats are taken by counted letter, so judge the build by the probe's
+# KIT_PROBE line, not by this script.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Human"
+@choose "Athletics"
+@choose "Diplomacy"
+@choose "Ranger"
+a       # Attributes: the first offered set
+a       # Alignment: the first offered
+
+@while "favoured enemy" a      # the class asks for a favoured enemy
+@while "Choose a feat" a
+@while "Combat style" a        # archery: the bow user this build is for
+@while "Choose a feat" a
+@while "Combat style" a
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+@while "wish to worship" y
+@while "personality archetype" a
+
+ESC*3   # dismiss the arrival room description
+s*3     # one turn, so the session counts as played
+@quit
