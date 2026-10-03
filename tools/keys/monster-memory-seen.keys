@@ -55,6 +55,9 @@ ENTER
 DOWN
 @while "Confirm attack" y
 @dump:ogre-struck
+DOWN                    # swing again: the first can miss
+@while "Confirm attack" y
+@dump:ogre-struck-2
 
 ESC             # System Menu -- and NOT a cancel
 @expect "System Menu"

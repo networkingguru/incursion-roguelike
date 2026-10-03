@@ -29,11 +29,22 @@
 # PHD_UNDEAD case back to the generic branch, which never refuses here.
 #
 # TARGETING. The corpses are the level's own, at fixed offsets from the player
-# (the player never moves). Create Corporeal Undead's target prompt takes 'l'
-# to move the location cursor, then arrow keys to the square: UP*3 LEFT is the
-# elf corpse, DOWN LEFT*4 the human, DOWN*4 the dwarf, DOWN*3 LEFT the gnome,
-# DOWN*2 RIGHT*3 the kobold. The ring arrows cannot be used here -- after the
+# (the player never moves); the entry chamber scatters several of them at
+# positions that move with the seed, and the offsets below are the ones read
+# on seed 1. Create Corporeal Undead's target prompt takes 'l' to move the
+# location cursor, then arrow keys to the square: UP*3 RIGHT is the elf
+# corpse, DOWN RIGHT*4 the human, DOWN*4 the dwarf, DOWN*3 RIGHT the gnome,
+# DOWN*2 LEFT*3 the kobold. The ring arrows cannot be used here -- after the
 # first wight they include the wights themselves, and the prompt stops on one.
+#
+# CAST 3 IS PHOTOGRAPHED SEVERAL TIMES. A refused cast prints "The <corpse>
+# shifts briefly, but does not move." and sometimes, ahead of it, a Knowledge
+# message ("Using your knowledge of the undead, you realize ...") that pushes
+# the sentence across a line break and a -more- prompt, so no one screen holds
+# the whole phrase. Whether that message fires is a roll, so the same refusal
+# is repeated on the same corpse (a refusal consumes nothing and moves no pool)
+# and every attempt is dumped under a name ending -cast3; the check reads
+# whichever one carries the sentence on one line.
 
 a       # Initial Choices: [a] Create a New Character
 n       # Alter the character generation options? -- no
@@ -93,7 +104,7 @@ SPACE*4
 m
 a
 l
-UP*3 LEFT ENTER
+UP*3 RIGHT ENTER
 @choose "Wight"
 @dump:raised
 @until "Wizard Mode Options:" w
@@ -107,7 +118,7 @@ SPACE*4
 m
 a
 l
-DOWN LEFT*4 ENTER
+DOWN RIGHT*4 ENTER
 @choose "Wight"
 @dump:cast2
 @until "Wizard Mode Options:" w
@@ -124,6 +135,49 @@ l
 DOWN*4 ENTER
 @choose "Wight"
 @dump:cast3
+SPACE*3
+m
+a
+l
+DOWN*4 ENTER
+@choose "Wight"
+@dump:retry1-cast3
+SPACE*3
+m
+a
+l
+DOWN*4 ENTER
+@choose "Wight"
+@dump:retry2-cast3
+SPACE*3
+m
+a
+l
+DOWN*4 ENTER
+@choose "Wight"
+@dump:retry3-cast3
+SPACE*3
+m
+a
+l
+DOWN*4 ENTER
+@choose "Wight"
+@dump:retry4-cast3
+SPACE*3
+m
+a
+l
+DOWN*4 ENTER
+@choose "Wight"
+@dump:retry5-cast3
+SPACE*3
+m
+a
+l
+DOWN*4 ENTER
+@choose "Wight"
+@dump:retry6-cast3
+SPACE*3
 @until "Wizard Mode Options:" w
 @choose "Examine Player Data"
 DOWN*200
@@ -135,7 +189,7 @@ SPACE*4
 m
 a
 l
-DOWN*3 LEFT ENTER
+DOWN*3 RIGHT ENTER
 @choose "Wight"
 @dump:cast4
 @until "Wizard Mode Options:" w
@@ -149,7 +203,7 @@ SPACE*4
 m
 a
 l
-DOWN*2 RIGHT*3 ENTER
+DOWN*2 LEFT*3 ENTER
 @choose "Wight"
 @dump:cast5
 @until "Wizard Mode Options:" w
