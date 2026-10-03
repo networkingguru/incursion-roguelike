@@ -37,9 +37,9 @@
      char TextTerm::ChoicePrompt(const char*msg,const char*choices,int8 col1, int8 col2)
      Thing* TextTerm::AcquisitionPrompt(int8 Reason, int8 minlev, int8 maxlev, int8 MType)
      virtual rID  ChooseResource(const char*prompt, int16 RType, rID eID)=0;
-     virtual int32 MonsterTypePrompt(const char * prompt, int minCount = 1, int maxCount = 99999)=0;
-     virtual rID MonsterOfTypePrompt(int32 type, const char * prompt)=0;
-     virtual rID MonsterPrompt(const char * prompt)=0; 
+     virtual int32 MonsterTypePrompt(const char * prompt, int minCount = 1, int maxCount = 99999, Player *recallFor = NULL)=0;
+     virtual rID MonsterOfTypePrompt(int32 type, const char * prompt, Player *recallFor = NULL)=0;
+     virtual rID MonsterPrompt(const char * prompt, Player *recallFor = NULL)=0; 
      String TextTerm::StringPrompt(int8 col, const char*msg)
    Splash Screens
      void TextTerm::Title()
@@ -2882,7 +2882,7 @@ char TextTerm::ChoicePrompt(const char*msg,const char*choices,int8 col1, int8 co
     return (char)ch;
 }
 
-int32 TextTerm::MonsterTypePrompt(const char * prompt, int minCount, int maxCount) {
+int32 TextTerm::MonsterTypePrompt(const char * prompt, int minCount, int maxCount, Player *recallFor) {
   int i; String desc;
   for (i=1; i<=MA_LAST_REAL; i++) {
     desc = "";
@@ -2893,7 +2893,12 @@ int32 TextTerm::MonsterTypePrompt(const char * prompt, int minCount, int maxCoun
         rID mID = mod->MonsterID(idx); 
         if (!(mod->QMon[idx].isMType(mID,i)))
           continue;
-        if (mod->QMon[idx].HasFlag(M_NOGEN))
+        if (recallFor) {
+          MonMem *mm = MONMEM(mID, recallFor);
+          if (!(mm && (mm->Seen || mm->Fought || mm->Kills)))
+            continue;
+        }
+        else if (mod->QMon[idx].HasFlag(M_NOGEN))
           continue;
 
 		uint32 gid = GLYPH_ID_VALUE(mod->QMon[idx].Image);
@@ -2917,7 +2922,7 @@ int32 TextTerm::MonsterTypePrompt(const char * prompt, int minCount, int maxCoun
 }
 
 
-rID TextTerm::MonsterOfTypePrompt(int32 type, const char * prompt) {
+rID TextTerm::MonsterOfTypePrompt(int32 type, const char * prompt, Player *recallFor) {
   int count = 0; 
   rID mID = 0; 
   for (int modIdx = 0; modIdx < 1; modIdx++) {
@@ -2926,14 +2931,19 @@ rID TextTerm::MonsterOfTypePrompt(int32 type, const char * prompt) {
       rID mID = mod->MonsterID(idx); 
       if (!(mod->QMon[idx].isMType(mID,type)))
         continue;
-      if (mod->QMon[idx].HasFlag(M_NOGEN))
+      if (recallFor) {
+        MonMem *mm = MONMEM(mID, recallFor);
+        if (!(mm && (mm->Seen || mm->Fought || mm->Kills)))
+          continue;
+      }
+      else if (mod->QMon[idx].HasFlag(M_NOGEN))
         continue;
       mID = mod->MonsterID(idx); 
       Monster * m = new Monster(mID);
 
 
       m->StateFlags |= MS_KNOWN;
-      LOption(m->Name(),mID,m->Describe(NULL));
+      LOption(m->Name(),mID,m->Describe(recallFor));
 
       delete m; 
 
@@ -2947,14 +2957,14 @@ rID TextTerm::MonsterOfTypePrompt(int32 type, const char * prompt) {
   else return mID; 
 } 
 
-rID TextTerm::MonsterPrompt(const char * prompt) {
+rID TextTerm::MonsterPrompt(const char * prompt, Player *recallFor) {
   int matype;
   rID res;
   res = 0;
   do {
-    matype = MonsterTypePrompt(prompt);
+    matype = MonsterTypePrompt(prompt, 1, 99999, recallFor);
     if (matype <= 0) return 0;
-    res = MonsterOfTypePrompt(matype, prompt);
+    res = MonsterOfTypePrompt(matype, prompt, recallFor);
   } while (res <= 0); 
   return res; 
 } 
