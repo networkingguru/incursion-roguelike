@@ -24,15 +24,23 @@ inside ``` code fences:
   3. ONE-LINE LOOP: a single stripped non-empty line, of ANY length, occurs
      MIN_SAME_LINE or more times, AND the step's tokens.output is at least
      MIN_OUTPUT_TOKENS.
+  4. CONTEXT CEILING: the step's context -- tokens.input + tokens.cache.read +
+     tokens.cache.write from its step_finish part (each missing value counts 0;
+     a non-numeric value counts 0) -- is greater than CONTEXT_CEILING
+     (default 100000). The environment variable INCURSION_DS_CONTEXT_CEILING
+     overrides it when it holds a positive integer; any other value is ignored.
+     No token minimum and no text tail.
 
 Exit 1 on the first flagged step, printing to stdout one line
 
     loop messageID=<id> output_tokens=<n> repeated_lines=<n>     (rule 1)
     markup messageID=<id> output_tokens=<n>                      (rule 2)
     loop messageID=<id> output_tokens=<n> same_line=<n>          (rule 3)
+    context messageID=<id> context_tokens=<n> ceiling=<n>        (rule 4)
 
-then the last 600 characters of that step's text. Exit 0 with no output when no
-step is flagged. Exit 2 on a usage error or an unreadable file.
+then the last 600 characters of that step's text (no tail for rule 4). Exit 0
+with no output when no step is flagged. Exit 2 on a usage error or an unreadable
+file.
 
 Used by tools/watchdog.sh as its --canary: run as
 `loop_check.py --out <events.jsonl>` it exits 1 on the first loop step found so
@@ -40,6 +48,7 @@ the watchdog stops a looping run the idle limit would never catch.
 """
 
 import json
+import os
 import sys
 from collections import Counter
 
@@ -49,10 +58,24 @@ SHORT_LINE = 40
 MIN_OCCURRENCES = 3
 MIN_SAME_LINE = 40
 
+CONTEXT_CEILING = 100000
+
 TOOL_MARKUP_OPEN = "<\uFF5CDSML\uFF5C"
 TOOL_MARKUP_CLOSE = "</\uFF5C"
 
 TAIL_CHARS = 600
+
+
+def context_ceiling():
+    raw = os.environ.get("INCURSION_DS_CONTEXT_CEILING")
+    if raw is not None:
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            return CONTEXT_CEILING
+        if value > 0:
+            return value
+    return CONTEXT_CEILING
 
 
 def usage_error(message):
@@ -173,6 +196,20 @@ def output_tokens(part):
     return None
 
 
+def context_tokens(part):
+    tokens = part.get("tokens") or {}
+    if not isinstance(tokens, dict):
+        return 0
+    cache = tokens.get("cache") or {}
+    if not isinstance(cache, dict):
+        cache = {}
+    total = 0
+    for value in (tokens.get("input"), cache.get("read"), cache.get("write")):
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            total += int(value)
+    return total
+
+
 def main(argv):
     path = parse_args(argv)
     events = read_events(path)
@@ -195,29 +232,38 @@ def main(argv):
             sys.stdout.write("\n")
             return 1
 
-        if tokens is None or tokens < MIN_OUTPUT_TOKENS:
-            continue
+        if tokens is not None and tokens >= MIN_OUTPUT_TOKENS:
+            # Rule 1: many distinct short repeated lines.
+            repeated = repeated_line_count(text)
+            if repeated >= MIN_REPEATED_LINES:
+                sys.stdout.write(
+                    "loop messageID=%s output_tokens=%d repeated_lines=%d\n"
+                    % (mid, tokens, repeated)
+                )
+                sys.stdout.write(text[-TAIL_CHARS:])
+                sys.stdout.write("\n")
+                return 1
 
-        # Rule 1: many distinct short repeated lines.
-        repeated = repeated_line_count(text)
-        if repeated >= MIN_REPEATED_LINES:
-            sys.stdout.write(
-                "loop messageID=%s output_tokens=%d repeated_lines=%d\n"
-                % (mid, tokens, repeated)
-            )
-            sys.stdout.write(text[-TAIL_CHARS:])
-            sys.stdout.write("\n")
-            return 1
+            # Rule 3: one line of any length repeated many times.
+            same = same_line_count(text)
+            if same >= MIN_SAME_LINE:
+                sys.stdout.write(
+                    "loop messageID=%s output_tokens=%d same_line=%d\n"
+                    % (mid, tokens, same)
+                )
+                sys.stdout.write(text[-TAIL_CHARS:])
+                sys.stdout.write("\n")
+                return 1
 
-        # Rule 3: one line of any length repeated many times.
-        same = same_line_count(text)
-        if same >= MIN_SAME_LINE:
+        # Rule 4: the step's context passed the ceiling. Evaluated after the
+        # three loop rules for this step; no token minimum and no text tail.
+        ceiling = context_ceiling()
+        context = context_tokens(part)
+        if context > ceiling:
             sys.stdout.write(
-                "loop messageID=%s output_tokens=%d same_line=%d\n"
-                % (mid, tokens, same)
+                "context messageID=%s context_tokens=%d ceiling=%d\n"
+                % (mid, context, ceiling)
             )
-            sys.stdout.write(text[-TAIL_CHARS:])
-            sys.stdout.write("\n")
             return 1
 
     return 0
