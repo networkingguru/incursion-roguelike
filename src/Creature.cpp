@@ -1328,6 +1328,12 @@ void Creature::ExtendedAction() {
     if (s->Val == EV_SATTACK) {
         r = TryToDestroyThing(oThing(s->h));
         // ThrowVal(s->Val,A_KICK,this,oThing(s->h));
+    } else if (s->Val == EV_OPEN || s->Val == EV_PICKLOCK) {
+        /* inc-h22n: a repeated lock-pick. The object is p[2] (EItem), which is
+           where Door::Event and Item::Event's EV_PICKLOCK case expect it; do not
+           fall through to the ThrowDir below, which reads s->Mag as a
+           direction. */
+        r = Throw(s->Val, this, NULL, oThing(s->h));
     } else if (s->h && oThing(s->h)->isCreature()) 
         r = Throw(s->Val,this,oCreature(s->h));
     else {
@@ -3454,22 +3460,12 @@ EvReturn Creature::TryToDestroyThing(Thing *f)
           }
         } 
     } 
-    /* I want to deprecate the idea of using weapon attacks
-       to break down/open doors and chests. There are several
-       reasons for this: first, magic swords are already SO
-       GOOD in any D&D-like setting, it seems cheesy to make
-       them the optimal solution to locked doors as well.
-       Visually, shooting arrows into a door makes NO sense
-       in terms of getting it open, and hacking it with a
-       sword still seems less effective than the classical
-       bodycheck maneuver, in terms of applying force to a
-       wall-like barrier. 
-       Finally, this leads to some wierd situations like
-       archers blowing all their ammo trying to get through
-       doors, and some of it ending up on the other side.
-       So now, weapon attacks against Features inflict 1/3
-       damage, as described in Feature::Event, and here we
-       default to kicking to break features */
+    /* Bodychecking is the classical way to break a barrier open, so a
+       weapon attack on a door defaults to a kick (design point 3 replaces the
+       kick's damage roll with an SRD Strength check). Other features still
+       take weapon attacks: Feature::Event gives a non-blunt swing one third
+       damage, except an axe, which deals full damage to a door (inc-h22n
+       point 4). A wizard lock no longer doubles the door's hardness. */
     if (f->isType(T_DOOR))
       return ThrowVal(EV_SATTACK,A_KICK,this,f);     
     

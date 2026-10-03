@@ -3707,8 +3707,11 @@ SkipRepeat:;
             Timeout += 5000 / 
             max((100 + Attr[A_SPD_BRAWL]*5),10);
         else
-            Timeout += 1000 / 
-            max((100 + Attr[A_SPD_BRAWL]*5),10);
+            /* inc-h22n: a kick against a door is a standard action; the
+               Strength check replaces the damage roll (Door::Event). Kicking a
+               creature is unchanged above. */
+            Timeout += 3000 / 
+            max((100 + Attr[A_SPD_MELEE]*5),10);
         if (startedAfraid)
             e.EActor->Timeout *= 2;
         break;

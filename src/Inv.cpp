@@ -1171,42 +1171,24 @@ EvReturn Container::PickLock(EventInfo &e)
     e.EActor->IPrint("Your hands pass through the <Obj>.",this); 
     return ABORT; 
   } 
-  if (HasStati(TRIED, SK_LOCKPICKING, e.EActor)) { 
-    e.EActor->IPrint("You have already tried to pick the lock on the <Obj>.",this);
-    return ABORT; 
-  } 
-  if (!((e.EActor->isPlayer() &&
-          ((Player *)e.EActor)->Opt(OPT_AUTOOPEN)) || 
-        e.EActor->yn(XPrint("Pick the <Obj>'s lock?",this),true)))
-    return ABORT;
-  e.EActor->Timeout += 30;
-  int diff = 19 + m->Depth;
-  if (HasStati(WIZLOCK) && !HasStati(WIZLOCK,-1,e.EActor)) {
-    e.EActor->IPrint("The <Obj> is more difficult to pick.",this);
-    diff += 10; 
+  /* inc-h22n: a repeating pick was already approved; do not ask again. An
+     untrained player is refused before the prompt and stops. */
+  if (!e.EActor->HasStati(ACTING, EV_PICKLOCK)) {
+    if (!CanPickLock(e.EActor))
+      return ABORT;
+    if (!((e.EActor->isPlayer() &&
+            ((Player *)e.EActor)->Opt(OPT_AUTOOPEN)) ||
+          e.EActor->yn(XPrint("Pick the <Obj>'s lock?",this),true)))
+      return ABORT;
   }
-  if (e.EActor->SkillCheck(SK_LOCKPICKING,diff,true,
-        GetStatiMag(RETRY_BONUS,SK_LOCKPICKING,e.EActor),"retry")) { 
-    e.EActor->IDPrint("You pick the lock!",
-        "The <Obj> picks the lock on the <Obj>.",
-        e.EActor, this);
+  /* inc-h22n: the attempt (DC, wizard lock, roll, messages, XP, repeat) is
+     shared with doors; the chest keeps its own unlock step and, on failure,
+     stops. DC is 25 + 2*depth, +10 if wizard-locked by another. */
+  if (PickLockAttempt(e.EActor, 25 + 2 * m->Depth, EV_PICKLOCK)) {
     RemoveStati(LOCKED); 
-    RemoveStati(TRIED,SS_MISC,SK_LOCKPICKING); 
-    if (!HasStati(TRIED,DF_LOCKED,this) && 
-        !HasStati(SUMMONED,-1,this)) {
-      // see DisarmTrap() 
-      e.EActor->GainXP(90 + (diff - 14) * 10);
-      GainPermStati(TRIED,this,SS_ATTK,DF_LOCKED);
-    } 
     return NOTHING; 
-  } else { 
-    e.EActor->IDPrint("You fail to pick the lock on the <Obj2>. (You can try again after resting.)",
-        "The <Obj1> tries to pick the lock on the <Obj2>, but fails.",
-        e.EActor, this);
-    BoostRetry(SK_LOCKPICKING,e.EActor);
-    GainTempStati(TRIED,e.EActor,-2,SS_MISC,SK_LOCKPICKING); 
-    return ABORT; 
   }
+  return ABORT; 
 }
 
 EvReturn Container::Insert(EventInfo &e, bool force)

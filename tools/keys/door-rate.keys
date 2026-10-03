@@ -1,0 +1,12 @@
+# Generate a depth-1 level and a depth-10 level so the door-generation probe
+# (INCURSION_DOORGEN_PROBE, src/DoorPickProbe.cpp) sees their random doors.
+# Used by tools/check_door_lock_rate.sh with the gate settings file
+# tools/gates/Options.Dat, for which tools/keys/chargen.keys works on every
+# seed the gate uses. A new character starts on a fresh depth-1 level; the
+# wizard 'p' command then jumps to depth 10 and builds every level between.
+@include chargen.keys
+
+@dump:arrival
+w y p "10" ENTER
+s .*2
+@dump:depth10

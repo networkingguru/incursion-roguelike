@@ -105,7 +105,7 @@ Dungeon "Monster Evaluation Arena"
 Feature "oak door" : T_DOOR {
   Image: brown '-';
   Mat:MAT_WOOD;
-  HP: 20; 
+  HP: 10; 
 }
 
 Feature "ice door" : T_DOOR {
@@ -119,7 +119,7 @@ Feature "ice door" : T_DOOR {
 Feature "iron door" : T_DOOR {
   Image: grey '-';
   Mat:MAT_IRON;
-  HP: 40; 
+  HP: 60; 
 }
 
 Feature "darkwood door" : T_DOOR {
@@ -137,7 +137,7 @@ Feature "vault door" : T_DOOR {
 
 Feature "warded oak door" : T_DOOR
   {
-    Image: purple '-'; Mat:MAT_WOOD; HP: 20; 
+    Image: purple '-'; Mat:MAT_WOOD; HP: 10; 
     Desc: "This door has been imbued with mystic runes that keep out
     (or perhaps keep in) incorporeal threats. It is solid (when
     not opened) to creatures on other planes."; 

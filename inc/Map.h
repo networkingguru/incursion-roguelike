@@ -1065,6 +1065,11 @@ class Thing: public Object
       virtual void Remove(bool isDelete, bool keepMobileFields = false);
       virtual void NotifyGone(hObj h);
       void BoostRetry(int16 sk, Creature *c);
+      /* inc-h22n: one lock-picking attempt, shared by a door and a chest. */
+      bool PickLockAttempt(Creature *actor, int16 baseDC, int16 repeatAction);
+      /* inc-h22n: at least one rank of Lockpicking; refuses, with a message,
+         a creature that may not try. Callers ask before prompting. */
+      bool CanPickLock(Creature *actor);
       Thing* ProjectDir(Dir d, int8 range=127)
         {
           switch (d) {
