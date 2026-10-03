@@ -54,7 +54,7 @@ class Door: public Feature
     END_ARCHIVE
 
 		public:
-		Door(rID fID);
+		Door(rID fID, int16 depth = 0);
     ~Door();
 		EvReturn Event(EventInfo &e);
 		void SetImage();

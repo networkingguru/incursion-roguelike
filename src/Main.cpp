@@ -264,6 +264,12 @@ void Game::Play() {
        tools/check_quiet_lookup.sh. inc-upw.39. */
     theRegistry->QuietProbe();
 
+    /* inc-h22n: off unless INCURSION_DOORPICK_PROBE is set; needs a live
+       player and map. See DoorPickProbe (src/DoorPickProbe.cpp) and
+       tools/check_door_pick_kick.sh. */
+    extern void DoorPickProbe(Player *pl);
+    DoorPickProbe(pp);
+
     /* Off unless INCURSION_XPDRAIN_PROBE is set, and run here because it
        needs a live player. See Character::XPDrainProbe and
        tools/check_xp_drain.sh. inc-3gli. */

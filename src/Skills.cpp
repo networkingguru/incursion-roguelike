@@ -1536,6 +1536,12 @@ bool Creature::SkillCheck(int16 sk, int16 DC, bool show, int16 mod1, const char*
 	String sStr, sRolls;
 	Creature *msa;
 
+	/* inc-h22n: off unless INCURSION_DOORPICK_PROBE is set; records each
+	   lock-picking check's DC and bonus. See src/DoorPickProbe.cpp. */
+	if (sk == SK_LOCKPICKING) {
+		extern void LockPickCheckNote(int16, int16);
+		LockPickCheckNote(DC, mod1);
+	}
 	rollA = Dice::Roll(1, 20);
 	rollB = rollC = 0;
 	/* This isn't in the OGL system, but in a roguelike game it is
