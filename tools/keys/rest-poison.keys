@@ -58,6 +58,22 @@
 @include chargen.keys
 @until "HP:" ESC
 
+# STRIP THE WORN ARMOUR. Since the starting kit arranges a proficient
+# character's armour onto its body (bd inc-zzwm), the orc barbarian now sleeps
+# in its orcish hide armour, and Player::Rest prints "You take off your armour
+# to rest." (and puts it back on waking) -- extra lines that push the wake
+# message off the 'woke' screen this check reads. Taking the armour off into
+# the pack here, before any game time is spent, restores the route the check
+# was written for: no armour to doff or don during the night. 'i' opens the
+# inventory, 'j' is the Armour slot letter (src/Managers.cpp:441 SlotLetters;
+# SL_ARMOUR is 9), SPACE lifts the suit into the air, 's' stows it in the pack
+# (the medium backpack the kit grants), and ESC returns to play.
+i
+j
+SPACE
+s
+ESC
+
 w y
 @choose "Ascend / Descend Depth"
 "2" ENTER

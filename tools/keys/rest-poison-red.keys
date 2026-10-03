@@ -15,6 +15,17 @@
 @include chargen.keys
 @until "HP:" ESC
 
+# Same armour-strip step as tools/keys/rest-poison.keys (see its header, bd
+# inc-zzwm): the character now starts WEARING its proficient armour, and this
+# script shares the route up to the refusal. It does not itself rest, so the
+# armour's doff/put-back lines never arrive here, but keeping the two scripts'
+# route identical means a future change to one does not silently diverge them.
+i
+j
+SPACE
+s
+ESC
+
 w y
 @choose "Ascend / Descend Depth"
 "2" ENTER

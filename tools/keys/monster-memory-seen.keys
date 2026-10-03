@@ -63,6 +63,9 @@ ENTER
 DOWN
 @while "Confirm attack" y
 @dump:ogre-struck
+DOWN                    # swing again: the first can miss
+@while "Confirm attack" y
+@dump:ogre-struck-2
 
 d               # Display Character Sheet
 @expect "Gender"

@@ -645,7 +645,7 @@ Restart:
     StateFlags &= ~(MS_HAS_REACH | MS_REACH_ONLY);
     if (InSlot(SL_WEAPON) && InSlot(SL_WEAPON)->HasIFlag(WT_REACH)) {
         StateFlags |= MS_HAS_REACH;
-        if (!InSlot(SL_WEAPON)->HasIFlag(WT_STRIKE_NEAR))
+        if (InSlot(SL_WEAPON)->isReachOnly())
             StateFlags |= MS_REACH_ONLY;
     } else if (InherentCreatureReach())
         StateFlags |= MS_HAS_REACH;

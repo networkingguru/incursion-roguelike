@@ -34,18 +34,27 @@
 
 @until "Afoot" ESC
 
-# --- BASELINE: the kite shield is on a shoulder, so nothing is readied ------
+# --- BASELINE: creation readies the kite shield and wears leather armour, so
+# stow both in the pack (inc-zzwm). 's' stows the slot under the cursor.
+# Slot a is the Ready Hand, slot j the Armour. Nothing is then readied or worn.
+i
+a
+s
+j
+s
+ESC
 d
 W
 n o n e
 ENTER
 ESC
 
-# --- KITE SHIELD: off the shoulder and into the hand ------------------------
-# SPACE lifts the selected slot's item into the air; SPACE on the destination
-# slot puts it down there.
+# --- KITE SHIELD: out of the pack and into the hand -------------------------
+# Pack item 03 is the kite shield (01 lance, 02 leather armour, then 03). The
+# two digits move the cursor to it; SPACE lifts it into the air; SPACE on the
+# destination slot puts it down there.
 i
-f
+0 3
 SPACE
 a
 SPACE

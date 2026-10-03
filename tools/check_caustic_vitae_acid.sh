@@ -30,7 +30,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-SEED=1
+SEED=3
 OPTIONS=tools/fixtures/options-2026-08-22.dat
 
 [ -x ./incursion-headless ] || {

@@ -1191,6 +1191,40 @@ EvReturn Container::PickLock(EventInfo &e)
   return ABORT; 
 }
 
+/* The normal-limit tests that govern a container in play: weight, item count,
+   size and content type, each doubled by Faster-Than-The-Eye where Insert
+   doubles it. Returns which test the item fails, or FITS. The caller supplies
+   packrat so this and KitToPack's spare-weapon placement read one rule. */
+int Container::FitsNormal(Item *it, bool packrat)
+{
+  TItem *ti = TITEM(iID);
+  int32 w = Weight();
+
+  /* Creation seats items in the pack before arranging them; when the item is
+     already a child, Weight() counts it, so subtract it to ask whether the
+     pack could hold it. Insert always calls with an unparented item. */
+  if (it->GetParent() == (Thing*)this)
+    w -= it->Weight();
+
+  if (ti->u.c.WeightLim)
+    if (w + it->Weight() >
+        (ti->u.c.WeightLim * (packrat ? 2 : 1)))
+      return FITS_WEIGHT;
+
+  int cap = ti->u.c.Capacity * (packrat ? 2 : 1);
+  if (cap)
+    if ((*this)[cap])
+      return FITS_COUNT;
+
+  if (it->Size() > ti->u.c.MaxSize + packrat)
+    return FITS_SIZE;
+
+  if (ti->u.c.CType && !it->isType(ti->u.c.CType))
+    return FITS_TYPE;
+
+  return FITS;
+}
+
 EvReturn Container::Insert(EventInfo &e, bool force)
 {
   String s; Item *it; TItem *ti = TITEM(iID);
@@ -1245,31 +1279,25 @@ EvReturn Container::Insert(EventInfo &e, bool force)
   // put anything in the backpack ... because there isn't really
   // anywhere to drop it if we fail! 
   else { 
-    /* Check Capacity, Weight, etc. */
-    if (ti->u.c.WeightLim)
-      if (Weight() + e.EItem2->Weight() > 
-          (TITEM(iID)->u.c.WeightLim * (packrat ? 2 : 1)))
+    /* Check Capacity, Weight, etc. The tests live in FitsNormal so creation's
+       spare-weapon placement reads the same rule (inc-zzwm). */
+    switch (FitsNormal(e.EItem2, packrat))
+    {
+    case FITS_WEIGHT:
+      e.EActor->IPrint("The <Obj> can't hold that much weight.",e.EItem);
+      return ABORT;
+    case FITS_COUNT:
       {
-        e.EActor->IPrint("The <Obj> can't hold that much weight.",e.EItem);
-        return ABORT;
-      }
-    int cap = ti->u.c.Capacity * (packrat ? 2 : 1); 
-    if (cap)
-      if ((*this)[cap])
-      {
+        int cap = ti->u.c.Capacity * (packrat ? 2 : 1);
         e.EActor->IPrint("The <Obj> can only hold <Num> item<Str>.",
             e.EItem,cap,cap == 1 ? "" : "s"); 
-        return ABORT;
       }
-    if (e.EItem2->Size() > ti->u.c.MaxSize + packrat)
-    {
+      return ABORT;
+    case FITS_SIZE:
       e.EActor->IPrint("The <Obj> is too large to fit in the <Obj2>.",
           e.EItem2, e.EItem);
       return ABORT;
-    }
-
-    if (ti->u.c.CType && !e.EItem2->isType(ti->u.c.CType))
-    {
+    case FITS_TYPE:
       s = Lookup(ITypeNames, ti->u.c.CType);
       s = s.Lower();
       e.EActor->IPrint("The <Obj> can only hold <Str>.",
