@@ -5,8 +5,17 @@
 #
 #   tools/opencode_ds.sh <worktree-dir> <brief-file>
 #
+# Every brief is sent with the fixed preamble in front of it (the preamble,
+# a blank line, "---", a blank line, then the brief). The preamble is read
+# from the wrapper's OWN repository at tools/opencode/brief_preamble.md --
+# never the target worktree, which the agent can edit -- because it holds the
+# context budget and the implementer rules, so the agent need not read
+# AGENTS.md. Override that path with INCURSION_DS_PREAMBLE; if the preamble is
+# missing or empty the wrapper refuses (exit 2) before any spend or launch.
+#
 # Exit 0 success; 1 refused (budget or poisoned ledger); 2 could not run or
-# opencode failed; 3 the run was stopped as a DeepSeek repetition loop.
+# opencode failed; 3 the run was stopped as a DeepSeek repetition loop; 4 the
+# run was stopped because its context passed the ceiling.
 #
 # The wrapper reuses tools/deepseek.py's check_budget, resolve_ledger_path,
 # resolve_budget and resolve_key -- it imports the module rather than copying
@@ -16,12 +25,16 @@
 # run in its own process group and writes the reason to a --status file. Three
 # limits apply: a startup limit (no output at all), an idle limit (output
 # stopped growing), and a canary that runs tools/opencode/loop_check.py on each
-# growing poll to stop a DeepSeek repetition loop the idle limit never sees.
-# Tune them with INCURSION_WATCHDOG_STARTUP, INCURSION_WATCHDOG_IDLE,
-# INCURSION_WATCHDOG_POLL and INCURSION_WATCHDOG_GRACE (seconds; see
-# tools/watchdog.sh for defaults). A killed run still writes exactly one ledger
-# row, marked "killed", so a hang neither locks the ledger nor goes unbilled.
-# A loop kill (killed=canary) is recorded in the row as "killed": "loop".
+# growing poll to stop a DeepSeek repetition loop or a run whose context passed
+# a ceiling the idle limit never sees. The canary's context ceiling defaults to
+# 100000 tokens (input + cache.read + cache.write per step) and is overridden
+# with INCURSION_DS_CONTEXT_CEILING. Tune the limits with
+# INCURSION_WATCHDOG_STARTUP, INCURSION_WATCHDOG_IDLE, INCURSION_WATCHDOG_POLL
+# and INCURSION_WATCHDOG_GRACE (seconds; see tools/watchdog.sh for defaults). A
+# killed run still writes exactly one ledger row, marked "killed", so a hang
+# neither locks the ledger nor goes unbilled. A loop kill (killed=canary over
+# the loop rules) is recorded in the row as "killed": "loop"; a context kill
+# (killed=canary over the context rule) as "killed": "context" and exit 4.
 #
 # Before opencode starts, tools/opencode/record_proxy.py is launched outside
 # the sandbox on a local ephemeral port and opencode is pointed at it with
@@ -62,6 +75,11 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 DEEPSEEK_MODULE="$REPO/tools/deepseek.py"
 SANDBOX_PROFILE="$REPO/tools/opencode/sandbox.sb"
 OPENCODE_CONFIG="$REPO/tools/opencode/opencode.json"
+# The fixed preamble prepended to every brief, read from the wrapper's OWN
+# repository (never the target worktree, which the agent can edit). Override
+# with INCURSION_DS_PREAMBLE; the check points it at a missing file to prove
+# the refusal.
+PREAMBLE_FILE="${INCURSION_DS_PREAMBLE:-$REPO/tools/opencode/brief_preamble.md}"
 
 # --- 1. validate ----------------------------------------------------------
 if [ ! -d "$ARG_WORKTREE" ]; then
@@ -83,6 +101,11 @@ if [ ! -f "$BRIEF_FILE" ]; then
 fi
 if [ ! -s "$BRIEF_FILE" ]; then
     echo "refused: brief file is empty: $BRIEF_FILE" >&2
+    exit 2
+fi
+
+if [ ! -s "$PREAMBLE_FILE" ]; then
+    echo "refused: brief preamble missing or empty: $PREAMBLE_FILE" >&2
     exit 2
 fi
 
@@ -211,7 +234,11 @@ if [ -z "$PROXY_PORT" ]; then
 fi
 
 # --- 6. launch ------------------------------------------------------------
-BRIEF_TEXT="$(cat "$BRIEF_FILE")"
+# Every brief is sent with the fixed preamble in front: the preamble text, a
+# blank line, "---", a blank line, then the brief. The preamble holds the
+# context budget and the implementer rules, so the agent need not read
+# AGENTS.md; it is read from the wrapper's own repository, never the worktree.
+BRIEF_TEXT="$(cat "$PREAMBLE_FILE")"$'\n\n---\n\n'"$(cat "$BRIEF_FILE")"
 OPENCODE_BIN="${INCURSION_OPENCODE_BIN:-opencode}"
 
 # The key is exported into this wrapper's own shell, never passed as an argv
@@ -251,11 +278,19 @@ case "$KILLED" in
     *) KILLED="" ;;
 esac
 
-# A canary kill is a DeepSeek repetition loop: the ledger row records it as
-# "killed": "loop", and its saved canary text is printed later.
+# A canary kill is either a DeepSeek repetition loop or a run whose context
+# passed the ceiling: the first line of the saved canary text tells them apart.
+# The ledger row records the former as "killed": "loop" and the latter as
+# "killed": "context"; the saved canary text is printed later either way.
 LEDGER_KILLED="$KILLED"
+CANARY_CONTEXT=0
 if [ "$KILLED" = "canary" ]; then
     LEDGER_KILLED="loop"
+    if [ -f "$WATCHDOG_STATUS.canary" ] \
+        && head -n 1 "$WATCHDOG_STATUS.canary" | grep -q '^context '; then
+        LEDGER_KILLED="context"
+        CANARY_CONTEXT=1
+    fi
 fi
 
 # --- 7. bill --------------------------------------------------------------
@@ -464,6 +499,17 @@ fi
 # also poisoned the ledger still says so.
 if [ -n "$KILLED" ]; then
     echo "rundir=$RUNDIR steps=$STEPS cost=$COST exit=$OPENCODE_RC"
+    if [ "$CANARY_CONTEXT" -eq 1 ]; then
+        echo "DeepSeek context ceiling: run stopped (inc-xiqb); its changes stay in the worktree; start a fresh run for the remaining work; rundir=$RUNDIR" >&2
+        if [ -f "$WATCHDOG_STATUS.canary" ]; then
+            cat "$WATCHDOG_STATUS.canary" >&2
+        fi
+        if [ "$POISON" -eq 1 ]; then
+            echo "opencode run quoted no usable cost; its ledger row has cost=null." >&2
+            echo "The ledger is now POISONED until a human resolves that row." >&2
+        fi
+        exit 4
+    fi
     if [ "$KILLED" = "canary" ]; then
         echo "DeepSeek repetition loop: run stopped (inc-uxmf); rundir=$RUNDIR" >&2
         if [ -f "$WATCHDOG_STATUS.canary" ]; then

@@ -7,13 +7,14 @@ Route by the kind of work, then take the first implementer in that row that can 
 
 | Work | Route, in order |
 |---|---|
-| Routine coding: the brief names every file and the exact change, and an offline check proves it | DeepSeek → Codex → `sonnet` |
-| Challenging coding: needs a design decision, reasoning across modules, or an engine behaviour change only gameplay can confirm | `sonnet` → Codex → `opus` |
+| Coding of any kind: routine or challenging, one module or several, engine behaviour included | DeepSeek → Codex → `sonnet` → `opus` |
 | Observation or reproduction design: write the key script, choose what to observe, judge the result | Codex → `sonnet` |
 | Running a given reproduction: key script, seed and options supplied; report what the output shows | `haiku` → `sonnet` |
 | Mechanical find/replace | `haiku` |
 
-DeepSeek runs ONE phase per run. NEVER send DeepSeek a brief that continues an earlier run; start a fresh run for each phase, and size each phase to finish under about 150k tokens of context. A `haiku` agent MUST NOT judge whether a defect reproduced beyond reporting what the output shows; Claude judges.
+DeepSeek is the primary implementer. Claude MUST split coding work into phases that DeepSeek can finish, and MUST NOT send a phase to `sonnet` because it looks hard. DeepSeek runs ONE phase per run; NEVER send it a brief that continues an earlier run. Size each phase to finish in about 40 steps. `tools/opencode_ds.sh` puts `tools/opencode/brief_preamble.md` (context budget and implementer rules) in front of every brief, so a brief need not repeat them. The wrapper stops a run when one step's context passes 100K tokens (`INCURSION_DS_CONTEXT_CEILING`), records `"killed": "context"` in the ledger and exits 4; the loop detector stops a repetition loop and exits 3. Both leave the run's changes in the worktree. After either stop, Claude reviews the changes, splits what remains into a smaller phase and starts a fresh DeepSeek run. Only when a second DeepSeek run on the same phase also stops does the phase move to the next implementer in its row. A `haiku` agent MUST NOT judge whether a defect reproduced beyond reporting what the output shows; Claude judges.
+
+`tools/dispatch_gate.py` (a PreToolUse hook in `.claude/settings.json`) blocks every Agent dispatch that does not name `model: "haiku"`, unless its description starts with one of three labels: `research:` (no tracked file changes: reading, collecting facts, a dossier brief), `repro-design:` (the observation row above), or `fallback: <run>`, where `<run>` names a DeepSeek run dir from `logs/deepseek-ledger.jsonl` that stopped on a loop or the ceiling, after an earlier stopped run in the same worktree. NEVER put `research:` on a dispatch that changes a tracked file. It logs every such dispatch to `logs/dispatch-log.jsonl`; `tools/dispatch_report.py --since <date>` counts dispatches by label next to DeepSeek runs. `INCURSION_DISPATCH_GATE_OFF=1` bypasses it, for an emergency only, and is logged.
 
 How to run each:
 - Codex: `~/Scripts/Incursion/tools/codex_exec.sh <worktree> <brief>`. It runs `codex exec` under `tools/watchdog.sh`, which stops a run that writes no event within `INCURSION_WATCHDOG_STARTUP` seconds (default 180) or goes silent for `INCURSION_WATCHDOG_IDLE` seconds (default 1800); exit 2 then names the limit. NEVER run bare `codex exec`.
@@ -23,7 +24,7 @@ How to run each:
 
 `tools/deepseek.py` stays for one request with no tree access (a text answer, or a self-contained file from a complete spec); it is not an implementer. Both DeepSeek paths use one scoped DeepInfra key (20 USD cap, one allowed model, cannot raise its own cap) and one ledger, `logs/deepseek-ledger.jsonl`, which each checks before it spends. If DeepSeek stops answering, read the ledger, ask Brian before topping up.
 Why: matches each implementer to the work it does reliably, keeps DeepSeek out of the long runs where it loops, and keeps implementation detail out of Claude's context.
-History: docs/rules-history/codex-dispatch-and-orchestration.md#always-implement-via-codex.
+History: docs/rules-history/codex-dispatch-and-orchestration.md#always-implement-via-codex. Bead inc-xiqb.
 
 ## model-outage-leave-a-note
 When an implementer model family stops on a usage limit (Codex, DeepSeek, a Claude model), write a note for other agents at once: `bd remember --key <family>-out-until-<YYYY-MM-DD> "<text>"`, run from `~/Scripts/Incursion`. The text MUST give the return date and time the error states, the rung to skip until then, and the delete command `bd forget <key>`. Before you dispatch, run `bd memories out-until` and skip any family a note names. When you see a noted family work again, run `bd forget <key>` at once.

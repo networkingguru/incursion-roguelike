@@ -10,7 +10,9 @@
 # opencode to the worktree with the Seatbelt profile, stop a harness that
 # never writes -- billing it as one killed=startup row at cost 0 -- and stop a
 # harness stuck in a DeepSeek repetition loop via the loop_check.py canary,
-# billing it as one killed=loop row at exit 3 and copying its run dir aside?
+# billing it as one killed=loop row at exit 3 and copying its run dir aside,
+# and stop a harness whose step context passed the loop_check.py ceiling via
+# the same canary, billing it as one killed=context row at exit 4?
 # Also that tools/opencode/record_proxy.py forwards a POST byte-for-byte,
 # records request/response/meta, streams a chunked reply before upstream
 # finishes, relays the Authorization header without writing it to any file,
@@ -26,7 +28,8 @@
 # tool-call markup as text (tools/opencode/fixtures/markup-dsml.jsonl), and one
 # line of any length repeated many times (tools/opencode/fixtures/
 # one-line-loop.jsonl) -- the last two trimmed from the real captures that the
-# first rule missed.
+# first rule missed -- and its context-ceiling rule
+# (tools/opencode/fixtures/context-over.jsonl, inc-xiqb).
 #
 # Fully offline. A fake `opencode` written into the temp dir stands in for the
 # real harness via INCURSION_OPENCODE_BIN; it records its argv and environment
@@ -35,15 +38,16 @@
 # HTTP server) stands in for DeepInfra via INCURSION_DS_UPSTREAM. No network
 # request ever leaves this machine.
 #
-#   tools/check_opencode_ds.sh               run every assertion (eighteen
-#                                            numbered, with 13b's six
-#                                            loop_check sub-checks)
+#   tools/check_opencode_ds.sh               run every assertion (twenty-one
+#                                            numbered, with 13b's six and 13c's
+#                                            three loop_check sub-checks)
 #   tools/check_opencode_ds.sh --prove-red   mutate the budget guard, the
 #                                            sandbox prefix, the JSON bash
 #                                            rules, MIN_REPEATED_LINES,
-#                                            MIN_SAME_LINE, the markup rule and
-#                                            the proxy's request write,
-#                                            confirm red
+#                                            MIN_SAME_LINE, the markup rule, the
+#                                            context ceiling, the proxy's
+#                                            request write and the brief's
+#                                            preamble prepend, confirm red
 #
 # Exit: 0 pass, 1 fail, 2 could not run.
 
@@ -54,6 +58,7 @@ WRAPPER="$ROOT/tools/opencode_ds.sh"
 CONFIG="$ROOT/tools/opencode/opencode.json"
 PROFILE="$ROOT/tools/opencode/sandbox.sb"
 PROXY="$ROOT/tools/opencode/record_proxy.py"
+PREAMBLE="$ROOT/tools/opencode/brief_preamble.md"
 
 TMP="$(mktemp -d)" || exit 2
 # The genuine home, captured before any assertion overrides HOME. The sandbox
@@ -131,7 +136,8 @@ skip() { echo "SKIP  $1"; SKIP_COUNT=$((SKIP_COUNT + 1)); }
 # red; (f) remove the proxy's request-file write, so assertion 14 must go red;
 # (g) raise loop_check.py's MIN_SAME_LINE, so assertion 13b's F3 check must go
 # red; (h) disable loop_check.py's markup rule, so assertion 13b's F2 check must
-# go red. Original files are restored, and each restoration verified
+# go red; (j) remove the brief preamble prepend, so assertion 6b must go red.
+# Original files are restored, and each restoration verified
 # byte-identical with cmp, by the EXIT trap above.
 if [ "${1:-}" = "--prove-red" ]; then
     PROVE_FAIL=0
@@ -296,6 +302,37 @@ PY
     cp "$BACKUP_LOOP" "$LOOP_CHECK"
     cmp -s "$BACKUP_LOOP" "$LOOP_CHECK" || { echo "restore of loop_check.py failed" >&2; exit 2; }
 
+    # (i) loop_check.py's context ceiling raised out of reach (10**12), so the
+    # context-over fixture must no longer be flagged and assertion 13c's F4
+    # check must go red. The env override is unset in that mutated run by
+    # raising the default constant; sub-check (a) uses the default ceiling.
+    # Restored byte-identical below.
+    BACKUP_LOOP="$TMP/loop_check.py.context.orig"
+    cp "$LOOP_CHECK" "$BACKUP_LOOP"
+    NEEDLE='CONTEXT_CEILING = 100000'
+    if ! grep -qF "$NEEDLE" "$LOOP_CHECK"; then
+        echo "could not find CONTEXT_CEILING to mutate" >&2
+        exit 2
+    fi
+    python3 - "$LOOP_CHECK" "$NEEDLE" <<'PY'
+import sys
+path, needle = sys.argv[1], sys.argv[2]
+src = open(path).read()
+open(path, "w").write(src.replace(needle, "CONTEXT_CEILING = 10**12", 1))
+PY
+    echo "mutated tools/opencode/loop_check.py: CONTEXT_CEILING = 10**12"
+    MUT_OUT="$("$ROOT/tools/check_opencode_ds.sh" 2>&1)"
+    MUT_RC=$?
+    if [ "$MUT_RC" -ne 0 ] && grep -q 'FAIL.*loop_check (F4)' <<< "$MUT_OUT"; then
+        echo "PASS (as intended): assertion 13c (F4 context ceiling) went red"
+    else
+        echo "FAIL: assertion 13c (F4) stayed green with CONTEXT_CEILING = 10**12 (rc=$MUT_RC)"
+        echo "$MUT_OUT" | tail -20
+        PROVE_FAIL=1
+    fi
+    cp "$BACKUP_LOOP" "$LOOP_CHECK"
+    cmp -s "$BACKUP_LOOP" "$LOOP_CHECK" || { echo "restore of loop_check.py failed" >&2; exit 2; }
+
     # (c) the read-only-git allow rules removed from opencode.json. Assertion
     # 10 never launches the harness, so this proof runs in any environment --
     # it is placed before (b), whose early exit under a nested sandbox would
@@ -398,6 +435,41 @@ PY
     cp "$BACKUP" "$WRAPPER"
     cmp -s "$BACKUP" "$WRAPPER" || { echo "restore of opencode_ds.sh failed" >&2; exit 2; }
 
+    # (j) the preamble prepend removed, so the wrapper sends the brief alone.
+    # Assertion 6b (the argv preamble check) must go red. It reuses run 4,
+    # which launches the harness, so this proof needs an unsandboxed run.
+    if [ "$SANDBOX_RUNNABLE" -eq 0 ]; then
+        echo "SKIP (j): sandbox-exec cannot run inside this sandbox, so"
+        echo "          assertion 6b cannot launch the harness to go red."
+    else
+        BACKUP_PRE="$TMP/opencode_ds.sh.preamble.orig"
+        cp "$WRAPPER" "$BACKUP_PRE"
+        NEEDLE_PRE='BRIEF_TEXT="$(cat "$PREAMBLE_FILE")"$'"'"'\n\n---\n\n'"'"'"$(cat "$BRIEF_FILE")"'
+        if ! grep -qF "$NEEDLE_PRE" "$WRAPPER"; then
+            echo "could not find the brief prepend to mutate" >&2
+            exit 2
+        fi
+        python3 - "$WRAPPER" "$NEEDLE_PRE" <<'PY'
+import sys
+path, needle = sys.argv[1], sys.argv[2]
+src = open(path).read()
+replacement = 'BRIEF_TEXT="$(cat "$BRIEF_FILE")"  # MUTATED by --prove-red'
+open(path, "w").write(src.replace(needle, replacement, 1))
+PY
+        echo "mutated tools/opencode_ds.sh: brief preamble prepend removed"
+        MUT_OUT="$("$ROOT/tools/check_opencode_ds.sh" 2>&1)"
+        MUT_RC=$?
+        if [ "$MUT_RC" -ne 0 ] && grep -q "FAIL.*preamble-prefixed brief" <<< "$MUT_OUT"; then
+            echo "PASS (as intended): assertion 6b (preamble-prefixed brief) went red"
+        else
+            echo "FAIL: assertion 6b stayed green with the prepend removed (rc=$MUT_RC)"
+            echo "$MUT_OUT" | tail -20
+            PROVE_FAIL=1
+        fi
+        cp "$BACKUP_PRE" "$WRAPPER"
+        cmp -s "$BACKUP_PRE" "$WRAPPER" || { echo "restore of opencode_ds.sh failed" >&2; exit 2; }
+    fi
+
     if [ "$PROVE_FAIL" -eq 0 ]; then
         echo "PASS: --prove-red, all mutations turned the intended assertion red"
         exit 0
@@ -484,6 +556,13 @@ JSON
     loop)
         # Emit a real loop step, then keep the harness alive so the watchdog's
         # canary (loop_check.py) fires rather than the idle limit.
+        cat "${INCURSION_FAKE_EVENTS:-/dev/null}"
+        sleep 1000
+        ;;
+    context)
+        # Emit a step_finish whose context (input + cache.read + cache.write)
+        # is over the ceiling, then keep the harness alive so the watchdog's
+        # canary (loop_check.py) fires on the context rule.
         cat "${INCURSION_FAKE_EVENTS:-/dev/null}"
         sleep 1000
         ;;
@@ -630,10 +709,10 @@ stop_proxy_direct() {
 # --- sandbox availability probe ------------------------------------------
 # sandbox-exec cannot nest: inside another Seatbelt sandbox (a Claude session
 # running this check), `sandbox-exec` itself refuses to apply and exits 71.
-# The assertions that need to LAUNCH the harness (4, 5, 6, 7, 11, 12, 17, 18)
-# cannot run in that environment. Detect it once and report those as SKIP;
-# outside any sandbox they all run. Assertions 1, 2, 3, 8, 9, 10 and the
-# direct-proxy 13, 14, 15, 16 never launch the harness.
+# The assertions that need to LAUNCH the harness (4, 5, 6, 6b, 7, 11, 12, 12b,
+# 17, 18) cannot run in that environment. Detect it once and report those as
+# SKIP; outside any sandbox they all run. Assertions 1, 2, 3, 3b, 8, 9, 10 and
+# the direct-proxy 13, 13b, 13c, 14, 15, 16 never launch the harness.
 SANDBOX_OK=1
 PROBE_HOME="$TMP/homeprobe"; mkdir -p "$PROBE_HOME"
 PROBE_WORK="$TMP/wtprobe"; mkdir -p "$PROBE_WORK"
@@ -648,7 +727,7 @@ PROBE_RC="$(HOME="$PROBE_HOME" INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC
 if grep -rq "sandbox_apply: Operation not permitted" "$PROBE_WORK/logs/opencode" 2>/dev/null; then
     SANDBOX_OK=0
     echo "NOTE  sandbox-exec cannot nest inside this check's own sandbox;"
-    echo "      assertions 4, 5, 6, 7, 11, 12, 17 and 18 are reported SKIP here and"
+    echo "      assertions 4, 5, 6, 6b, 7, 11, 12, 17 and 18 are reported SKIP here and"
     echo "      must be run outside any sandbox (the Claude session will do so)."
 fi
 
@@ -696,6 +775,25 @@ if [ "$RC" -eq 2 ] && [ ! -s "$TMP/rec.3" ]; then
     pass "shared checkout refused: exit 2, fake never launched"
 else
     fail "shared checkout: rc=$RC rec=$(cat "$TMP/rec.3" 2>/dev/null) -- $(cat "$TMP/err.3")"
+fi
+
+# --- 3b. Missing preamble -> exit 2, never launched, no ledger row ---------
+# INCURSION_DS_PREAMBLE points the wrapper at a non-existent path, so the
+# refusal must fire BEFORE any spend or launch. The real preamble file is
+# never edited or moved.
+WORK="$TMP/wt3b"; mkdir -p "$WORK"
+BRIEF="$TMP/brief3b.txt"; echo "do a thing" > "$BRIEF"
+LEDGER="$TMP/ledger3b.jsonl"; : > "$LEDGER"
+: > "$TMP/rec.3b"
+RC="$(INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC="$TMP/rec.3b" INCURSION_FAKE_MODE=success \
+    INCURSION_DS_PREAMBLE="$TMP/does-not-exist-preamble.md" \
+    INCURSION_DEEPSEEK_KEY=canary-x INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
+    "$WRAPPER" "$WORK" "$BRIEF" > "$TMP/out.3b" 2> "$TMP/err.3b"; echo $?)"
+if [ "$RC" -eq 2 ] && grep -q "brief preamble missing" "$TMP/err.3b" \
+    && [ ! -s "$TMP/rec.3b" ] && [ ! -s "$LEDGER" ]; then
+    pass "missing preamble refused: exit 2, fake never launched, no ledger row"
+else
+    fail "missing preamble: rc=$RC rec=$(cat "$TMP/rec.3b" 2>/dev/null) ledger=$(cat "$LEDGER" 2>/dev/null) -- $(cat "$TMP/err.3b")"
 fi
 
 # --- 4. Success with two step_finish events -> one row, sum, steps 2 ------
@@ -751,6 +849,51 @@ elif grep -q '^ENV OPENCODE_DISABLE_CLAUDE_CODE=1$' "$TMP/rec.4" \
     pass "fake sees OPENCODE_DISABLE_CLAUDE_CODE=1 and the opencode.json config"
 else
     fail "fake environment: $(cat "$TMP/rec.4" 2>/dev/null)"
+fi
+
+# --- 6b. The brief argument carries the preamble, then ---, then the brief --
+# Reuse run 4's recording. The fake records each argv word as a line
+# "ARG <value>", then its ENV lines; a multi-line brief makes every line up to
+# the first "ENV " line part of the last ARG. The preamble's first line must
+# start the value, it must contain a lone "---" separator, and it must end
+# with the caller's brief text.
+if [ "$SANDBOX_OK" -eq 0 ]; then
+    skip "preamble-prefixed brief: not run (sandbox-exec cannot nest here)"
+else
+    PRE_OUT="$(python3 - "$TMP/rec.4" "$BRIEF" "$PREAMBLE" <<'PY'
+import sys
+rec, brief_path, preamble_path = sys.argv[1], sys.argv[2], sys.argv[3]
+lines = open(rec, encoding="utf-8", errors="replace").read().splitlines()
+start = None
+for i, line in enumerate(lines):
+    if line.startswith("ARG "):
+        start = i
+if start is None:
+    print("NO_ARG")
+    sys.exit(0)
+# The brief value runs from the last ARG line to the first following ENV line.
+end = len(lines)
+for i in range(start + 1, len(lines)):
+    if lines[i].startswith("ENV "):
+        end = i
+        break
+value = "\n".join(lines[start:end])[len("ARG "):]
+# The wrapper passes the brief via "$(cat ...)", which strips trailing
+# newlines; mirror that so the tail comparison is exact.
+brief = open(brief_path, encoding="utf-8").read().rstrip("\n")
+first = open(preamble_path, encoding="utf-8").readline().rstrip("\n")
+ok_first = value.startswith(first)
+ok_sep = "\n---\n" in value
+ok_end = value.endswith(brief)
+print("OK" if (ok_first and ok_sep and ok_end) else
+      "BAD first=%s sep=%s end=%s" % (ok_first, ok_sep, ok_end))
+PY
+)"
+    if [ "$PRE_OUT" = "OK" ]; then
+        pass "brief argument is the preamble, then ---, then the caller's brief"
+    else
+        fail "preamble-prefixed brief: $PRE_OUT"
+    fi
 fi
 
 # --- 7. Sandbox confines writes to the worktree ---------------------------
@@ -942,8 +1085,10 @@ BRIEF="$TMP/brief12.txt"; echo "do a thing" > "$BRIEF"
 LEDGER="$TMP/ledger12.jsonl"; : > "$LEDGER"
 RUNS12="$TMP/runs12"; mkdir -p "$RUNS12"
 : > "$TMP/rec.12"
+# The loop fixture passes 100K context before its loop step, so raise the ceiling to isolate the loop rule.
 RC="$(HOME="$FAKEHOME" INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC="$TMP/rec.12" \
     INCURSION_FAKE_MODE=loop INCURSION_FAKE_EVENTS="$LOOP_FIXTURE" \
+    INCURSION_DS_CONTEXT_CEILING=1000000000000 \
     INCURSION_DEEPSEEK_KEY=canary-x INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
     INCURSION_OPENCODE_RUNS_DIR="$RUNS12" \
     INCURSION_WATCHDOG_STARTUP=5 INCURSION_WATCHDOG_IDLE=30 INCURSION_WATCHDOG_POLL=1 \
@@ -965,12 +1110,47 @@ else
     fail "loop stop: rc=$RC rows=$ROW_COUNT copy=$COPY_12 ledger=$(cat "$LEDGER" 2>/dev/null) -- $(cat "$TMP/err.12")"
 fi
 
+# --- 12b. A run over the context ceiling is stopped, billed killed=context -
+# The fake emits a step_finish whose context is over the ceiling and then
+# sleeps; only the loop_check.py canary stops it. The wrapper exits 4, the row
+# says killed=context (exactly one row), and stderr names the context ceiling.
+# Launches the harness, so under a nested sandbox it SKIPs (as assertion 4).
+CONTEXT_FIXTURE="$ROOT/tools/opencode/fixtures/context-over.jsonl"
+FAKEHOME="$TMP/home12b"; mkdir -p "$FAKEHOME"
+WORK="$TMP/wt12b"; mkdir -p "$WORK"
+BRIEF="$TMP/brief12b.txt"; echo "do a thing" > "$BRIEF"
+LEDGER="$TMP/ledger12b.jsonl"; : > "$LEDGER"
+RUNS12B="$TMP/runs12b"; mkdir -p "$RUNS12B"
+: > "$TMP/rec.12b"
+RC="$(HOME="$FAKEHOME" INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC="$TMP/rec.12b" \
+    INCURSION_FAKE_MODE=context INCURSION_FAKE_EVENTS="$CONTEXT_FIXTURE" \
+    INCURSION_DEEPSEEK_KEY=canary-x INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
+    INCURSION_OPENCODE_RUNS_DIR="$RUNS12B" \
+    INCURSION_WATCHDOG_STARTUP=5 INCURSION_WATCHDOG_IDLE=30 INCURSION_WATCHDOG_POLL=1 \
+    INCURSION_WATCHDOG_GRACE=2 \
+    "$WRAPPER" "$WORK" "$BRIEF" > "$TMP/out.12b" 2> "$TMP/err.12b"; echo $?)"
+ROW_COUNT="$(wc -l < "$LEDGER" | tr -d ' ')"
+if [ "$SANDBOX_OK" -eq 0 ]; then
+    skip "context stop: not run (sandbox-exec cannot nest here)"
+elif [ "$RC" -eq 4 ] && [ "$ROW_COUNT" -eq 1 ] \
+    && grep -q '"killed":"context"' "$LEDGER" \
+    && grep -q 'context ceiling' "$TMP/err.12b" \
+    && grep -q '^context ' "$TMP/err.12b"; then
+    pass "context stop: exit 4, one row killed=context, context ceiling on stderr"
+else
+    fail "context stop: rc=$RC rows=$ROW_COUNT ledger=$(cat "$LEDGER" 2>/dev/null) -- $(cat "$TMP/err.12b")"
+fi
+
 # --- 13. Direct: loop_check.py exits 1 on loop.jsonl, 0 on clean.jsonl -----
 # Runs everywhere, sandbox or not: loop_check.py never launches the harness.
+# clean.jsonl is a real capture whose context grows past 100000, so the loop
+# rules are exercised here with the context ceiling raised out of the way; the
+# ceiling itself is proven by assertion 13c. This keeps the assertion about the
+# loop rules, not about context.
 LOOP_RC=0; CLEAN_RC=0
-python3 "$ROOT/tools/opencode/loop_check.py" "$LOOP_FIXTURE" > "$TMP/loop13.out" 2>&1
+INCURSION_DS_CONTEXT_CEILING=1000000000000 python3 "$ROOT/tools/opencode/loop_check.py" "$LOOP_FIXTURE" > "$TMP/loop13.out" 2>&1
 LOOP_RC=$?
-python3 "$ROOT/tools/opencode/loop_check.py" "$CLEAN_FIXTURE" > "$TMP/clean13.out" 2>&1
+INCURSION_DS_CONTEXT_CEILING=1000000000000 python3 "$ROOT/tools/opencode/loop_check.py" "$CLEAN_FIXTURE" > "$TMP/clean13.out" 2>&1
 CLEAN_RC=$?
 if [ "$LOOP_RC" -eq 1 ] && grep -q '^loop messageID=' "$TMP/loop13.out" \
     && [ "$CLEAN_RC" -eq 0 ] && [ ! -s "$TMP/clean13.out" ]; then
@@ -1067,6 +1247,65 @@ if [ "$INLINE_RC" -eq 0 ] && [ ! -s "$TMP/inline13.out" ]; then
     pass "loop_check: markup token quoted mid-line in backticks exits 0 silently"
 else
     fail "loop_check inline-markup: rc=$INLINE_RC -- $(cat "$TMP/inline13.out")"
+fi
+
+# --- 13c. Direct: loop_check.py's context ceiling (inc-xiqb) --------------
+# Runs everywhere, sandbox or not. The context-over fixture carries one step
+# whose context (input + cache.read + cache.write) is 100001 with no loop text:
+# the default ceiling 100000 must flag it. A copy at exactly 100000 must stay
+# green, and INCURSION_DS_CONTEXT_CEILING=50000 must lower the ceiling so a
+# step at 60000 fires.
+CONTEXT_OV_FIXTURE="$ROOT/tools/opencode/fixtures/context-over.jsonl"
+python3 - "$TMP/context-exact.jsonl" "$TMP/context-env.jsonl" <<'PY'
+import json, sys
+
+exact, env = sys.argv[1], sys.argv[2]
+
+
+def write(path, mid, context_input, cache_read, cache_write):
+    with open(path, "w") as fh:
+        fh.write(json.dumps({"type": "step_start", "part": {"messageID": mid}}) + "\n")
+        fh.write(json.dumps({"type": "text",
+                             "part": {"messageID": mid, "text": "ordinary reply.\n"}}) + "\n")
+        fh.write(json.dumps({"type": "step_finish",
+                             "part": {"messageID": mid, "tokens": {
+                                 "input": context_input, "output": 5,
+                                 "cache": {"read": cache_read, "write": cache_write}}}}) + "\n")
+
+
+# Exactly 100000: 1001 + 50000 + 48999.
+write(exact, "msg_ctxexact", 1001, 50000, 48999)
+# 60000: over the lowered ceiling, under the default.
+write(env, "msg_ctxenv", 1, 50000, 9999)
+PY
+
+CTX_OVER_RC=0; CTX_EXACT_RC=0; CTX_ENV_RC=0
+python3 "$ROOT/tools/opencode/loop_check.py" "$CONTEXT_OV_FIXTURE" > "$TMP/ctxover13.out" 2>&1
+CTX_OVER_RC=$?
+python3 "$ROOT/tools/opencode/loop_check.py" "$TMP/context-exact.jsonl" > "$TMP/ctxexact13.out" 2>&1
+CTX_EXACT_RC=$?
+INCURSION_DS_CONTEXT_CEILING=50000 python3 "$ROOT/tools/opencode/loop_check.py" "$TMP/context-env.jsonl" > "$TMP/ctxenv13.out" 2>&1
+CTX_ENV_RC=$?
+
+if [ "$CTX_OVER_RC" -eq 1 ] && grep -q '^context ' "$TMP/ctxover13.out" \
+    && grep -q 'context_tokens=100001' "$TMP/ctxover13.out" \
+    && ! grep -q '^loop \|^markup ' "$TMP/ctxover13.out"; then
+    pass "loop_check (F4): context 100001 exits 1 with a context line and no text tail"
+else
+    fail "loop_check (F4): rc=$CTX_OVER_RC -- $(cat "$TMP/ctxover13.out")"
+fi
+
+if [ "$CTX_EXACT_RC" -eq 0 ] && [ ! -s "$TMP/ctxexact13.out" ]; then
+    pass "loop_check (F4): context exactly 100000 exits 0 silently"
+else
+    fail "loop_check (F4 exact): rc=$CTX_EXACT_RC -- $(cat "$TMP/ctxexact13.out")"
+fi
+
+if [ "$CTX_ENV_RC" -eq 1 ] && grep -q '^context ' "$TMP/ctxenv13.out" \
+    && grep -q 'ceiling=50000' "$TMP/ctxenv13.out"; then
+    pass "loop_check (F4 env): INCURSION_DS_CONTEXT_CEILING=50000 flags context 60000"
+else
+    fail "loop_check (F4 env): rc=$CTX_ENV_RC -- $(cat "$TMP/ctxenv13.out")"
 fi
 
 # --- 14. The proxy forwards a POST and records it byte-identically --------
@@ -1246,8 +1485,10 @@ else
     LEDGER="$TMP/ledger18.jsonl"; : > "$LEDGER"
     RUNS18="$TMP/runs18"; mkdir -p "$RUNS18"
     : > "$TMP/rec.18"
+    # The loop fixture passes 100K context before its loop step, so raise the ceiling to isolate the loop rule.
     RC="$(HOME="$FAKEHOME" INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC="$TMP/rec.18" \
         INCURSION_FAKE_MODE=loop INCURSION_FAKE_EVENTS="$LOOP_FIXTURE" \
+        INCURSION_DS_CONTEXT_CEILING=1000000000000 \
         INCURSION_FAKE_POST=1 INCURSION_FAKE_HTTP_OUT="$TMP/http18.out" \
         INCURSION_DS_UPSTREAM="http://127.0.0.1:$UP18" \
         INCURSION_DEEPSEEK_KEY=canary-x INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
@@ -1270,11 +1511,11 @@ else
 fi
 
 if [ "$FAIL" -eq 0 ] && [ "$SKIP_COUNT" -eq 0 ]; then
-    echo "PASS: check_opencode_ds.sh, all eighteen assertions"
+    echo "PASS: check_opencode_ds.sh, all twenty-one assertions"
     exit 0
 elif [ "$FAIL" -eq 0 ]; then
     echo "PASS (partial): check_opencode_ds.sh, $SKIP_COUNT assertion(s) skipped and not counted;"
-    echo "                rerun outside any sandbox to run all eighteen (exit 2 = incomplete)"
+    echo "                rerun outside any sandbox to run all twenty-one (exit 2 = incomplete)"
     exit 2
 else
     echo "FAIL: check_opencode_ds.sh, at least one assertion failed above"
