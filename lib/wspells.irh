@@ -692,7 +692,7 @@ Wizard / Druid Spell "Wall of Fog" : EA_TERRAFORM
 Wizard / Scroll Spell "Wizard Lock" : EA_GENERIC
   { SC_ARC; Base: SP_MEDIUM; Cost: 1; Level: 1; qval: 0; 
     Purpose: EP_BUFF | EP_FOIL_PURSUIT | EP_UNLOCK; Flags: EF_DLONG; 
-    Desc: "Magically closes, locks and wizard-locks all doors you can perceive.  A wizard-locked door has double the normal hardness and the DC to pick its locks increases by +10. You can open one of your wizard-locked doors instantaneously with a mental command when next to it. You can close one of your wizard-locked doors normally. Doors that are already wizard-locked are unaffected by this spell.";
+    Desc: "Magically closes, locks and wizard-locks all doors you can perceive.  The DC to pick a wizard-locked door's lock and the DC to break it down each increase by +10. You can open one of your wizard-locked doors instantaneously with a mental command when next to it. You can close one of your wizard-locked doors normally. Doors that are already wizard-locked are unaffected by this spell.";
     hObj h;  
     On Event EV_ISTARGET {
       for(h=EMap->FirstThing();h;h=EMap->NextThing()) 
@@ -2225,8 +2225,7 @@ Wizard Spell "Wall of Doors" : EA_GENERIC
     Desc: "Conjures a solid barrier made out of wooden doors, displacing
       any creatures in its path and blocking further passage. The doors are
       initially locked but can be opened or destroyed normally. At caster
-      level 5 the doors are created Wizard Locked (+10 to Lockpicking DC,
-      double hardness, but they open automatically for you). At caster
+      level 5 the doors are created Wizard Locked (+10 to the Lockpicking and break DCs, but they open automatically for you). At caster
       level 7 the doors are created with wards that prevent incorporeal and
       summoned creatures from passing through a door while it is closed."; 
     On Event MSG_CAST

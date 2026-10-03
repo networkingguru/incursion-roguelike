@@ -26,6 +26,14 @@
 # cursor sits, and the cursor starts on the player, but a square that is
 # already taken sends the new creature to a neighbouring one. Keeping the
 # human kills in their own session is what stops the two interfering.
+#
+# THE RECALL DETOUR, at the end, proves the player is shown what he met and
+# nothing he did not. [R]ecall now opens TextTerm::MonsterPrompt: a type menu
+# (kobold and ogre are both "Humanoids", and the ogre alone is a "Giant"),
+# then a kind menu, then the usual description box. Neither menu has a
+# "Human" or "Humans" entry, because this character has never met one --
+# that absence is what tools/check_monster_memory.sh asserts, and what its
+# `recall` mutation (an unfiltered MonsterPrompt) is built to break.
 
 @include chargen.keys
 
@@ -58,6 +66,21 @@ DOWN
 DOWN                    # swing again: the first can miss
 @while "Confirm attack" y
 @dump:ogre-struck-2
+
+d               # Display Character Sheet
+@expect "Gender"
+r               # [R]ecall Monster
+@dump:met-recall-types
+@expect "Recall which monster?"
+@choose "Giants"
+@dump:met-recall-kind
+@expect "Recall which monster?"
+@choose "ogre"
+@dump:met-recall-ogre
+@expect "The Ogre"
+ESC             # dismiss the description box
+@expect "Gender"
+ESC             # leave the character sheet, back to play mode
 
 ESC             # System Menu -- and NOT a cancel
 @expect "System Menu"
