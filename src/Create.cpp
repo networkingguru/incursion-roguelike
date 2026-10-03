@@ -105,9 +105,26 @@ static void KitProbe(Player *p)
     Item *it; int16 i, sl; const char *where;
     if (!getenv("INCURSION_KIT_PROBE"))
         return;
-    Error("KIT_PROBE race=%s class=%s siz=%d twf=%d",
+    bool packrat = p->HasFeat(FT_FASTER_THAN_THE_EYE);
+    Error("KIT_PROBE race=%s class=%s siz=%d twf=%d packrat=%d",
         NAME(p->RaceID), NAME(p->ClassID[0]), (int)p->Attr[A_SIZ],
-        p->HasFeat(FT_TWO_WEAPON_STYLE) ? 1 : 0);
+        p->HasFeat(FT_TWO_WEAPON_STYLE) ? 1 : 0, packrat ? 1 : 0);
+    /* The pack's normal limits, so the oracle can derive whether a spare weapon
+       would fit it (inc-zzwm). weight/count are the live state, the rest come
+       from the pack's template; count is the number of child stacks. */
+    Item *pack = p->InSlot(SL_PACK);
+    if (pack && pack->isType(T_CONTAIN))
+    {
+        TItem *pt = TITEM(pack->iID);
+        int count = 0;
+        hObj h = ((Container*)pack)->Contents;
+        while (h) { count++; h = oItem(h)->Next; }
+        Error("KIT_PACK weight=%d wlim=%d cap=%d count=%d maxsize=%d",
+            (int)pack->Weight(), (int)pt->u.c.WeightLim,
+            (int)pt->u.c.Capacity, count, (int)pt->u.c.MaxSize);
+    }
+    else
+        Error("KIT_PACK none");
     for (it = p->FirstInv(); it; it = p->NextInv()) {
         sl = (p->InSlot(SL_WEAPON) == it) ? SL_WEAPON : -1;
         for (i = 0; i < SL_LAST && sl < 0; i++)
@@ -122,12 +139,14 @@ static void KitProbe(Player *p)
                      (it->Size(p) + ti->HasFlag(WT_TWO_HANDED) >
                       (p->Attr[A_SIZ] + (it->isType(T_SHIELD) ? 0 : p->HasFeat(FT_MONKEY_GRIP))))) ? 1 : 0;
         Error("KIT_ITEM sl=%d slot=%s name=\"%s\" type=%d group=%u qty=%d eid=%d "
-              "skill=%d size=%d grip2=%d sd=%d,%d,%d ld=%d,%d,%d",
+              "skill=%d size=%d grip2=%d weight=%d sd=%d,%d,%d ld=%d,%d,%d "
+              "reach=%d near=%d",
             (int)(sl >= 0 ? sl : (!strcmp(where,"pack") ? -2 : -1)), where, NAME(it->iID), (int)it->Type, (unsigned)ti->Group,
             (int)it->Quantity, (int)it->eID, (int)p->WepSkill(it),
-            (int)it->Size(p), grip2,
+            (int)it->Size(p), grip2, (int)it->Weight(),
             (int)ti->u.w.SDmg.Number, (int)ti->u.w.SDmg.Sides, (int)ti->u.w.SDmg.Bonus,
-            (int)ti->u.w.LDmg.Number, (int)ti->u.w.LDmg.Sides, (int)ti->u.w.LDmg.Bonus);
+            (int)ti->u.w.LDmg.Number, (int)ti->u.w.LDmg.Sides, (int)ti->u.w.LDmg.Bonus,
+            ti->HasFlag(WT_REACH) ? 1 : 0, ti->HasFlag(WT_STRIKE_NEAR) ? 1 : 0);
     }
     Error("KIT_PROBE end");
 }
@@ -164,6 +183,10 @@ static bool KitMeleeCandidate(Creature *p, Item *it)
     if (it->isGroup(WG_THROWN) && !it->isGroup(WG_DAGGERS))
         return false;
     if (it->eID)
+        return false;
+    /* A weapon that cannot strike an adjacent square may not be the one in
+       hand (inc-zzwm): it becomes a spare and follows R4. */
+    if (it->isReachOnly())
         return false;
     if (it->Size(p) > p->Attr[A_SIZ] + 1)
         return false;
@@ -272,6 +295,56 @@ static void KitToPack(Player *p, Item *it)
     p->GainItem(it,true);
 }
 
+/* Does the pack hold this item within the NORMAL limits Insert applies in
+   play (weight, item count, size, content type), including the
+   Faster-Than-The-Eye doubling? Creation's Insert path skips those limits, so
+   the arrangement asks Container::FitsNormal directly -- one source of truth
+   (inc-zzwm). False when there is no pack container. */
+static bool KitPackFits(Player *p, Item *it)
+{
+    Item *pack = p->InSlot(SL_PACK);
+    if (!pack || !pack->isType(T_CONTAIN))
+        return false;
+    return ((Container*)pack)->FitsNormal(it, p->HasFeat(FT_FASTER_THAN_THE_EYE))
+           == Container::FITS;
+}
+
+/* Place one spare weapon by the settled rule (inc-zzwm): the pack only when it
+   can hold the weapon within its normal limits; otherwise a free shoulder;
+   only when both shoulders are taken, the pack regardless. A weapon already
+   riding a shoulder is left there when the pack cannot hold it. Inventory
+   order is preserved; no heavier-first priority. */
+static void KitSpareWeapon(Player *p, Item *it)
+{
+    if (KitPackFits(p, it))
+    {
+        KitToPack(p,it);
+        return;
+    }
+    if (p->InSlot(SL_LSHOULDER)==it || p->InSlot(SL_RSHOULDER)==it)
+        return;
+    if (!p->InSlot(SL_LSHOULDER))
+        KitToSlot(p,it,SL_LSHOULDER);
+    else if (!p->InSlot(SL_RSHOULDER))
+        KitToSlot(p,it,SL_RSHOULDER);
+    else
+        KitToPack(p,it);
+}
+
+/* True when `it` is a spare weapon the R4 pass governs: a weapon that is
+   neither in hand nor in the ready slot, nor a bow, nor a thrown-only stack
+   (those are seated with the quick-use items). */
+static bool KitIsSpareWeapon(Player *p, Item *it)
+{
+    if (it->Type != T_WEAPON || it->isType(T_BOW))
+        return false;
+    if (p->InSlot(SL_WEAPON)==it || p->InSlot(SL_READY)==it)
+        return false;
+    if (it->isGroup(WG_THROWN) && !it->isGroup(WG_DAGGERS))
+        return false;
+    return true;
+}
+
 /* Best melee candidate by the design's key, excluding one item. `skip` may be
    NULL. Returns NULL when none remains. */
 static Item* KitBestMelee(Player *p, Item *skip)
@@ -375,12 +448,23 @@ static void ArrangeStartingKit(Player *p)
             KitToSlot(p,shield,SL_READY);
     }
 
+    /* A non-weapon on a shoulder (a scroll creation mis-seated, say) never
+       belongs there; clear it before a bow or a spare weapon needs the slot.
+       Slot-keyed, and only non-weapons, so a spare already riding a shoulder
+       is not disturbed here (inc-zzwm). */
+    for (i=SL_LSHOULDER; i<=SL_RSHOULDER; i++)
+        if (p->InSlot(i) && !p->InSlot(i)->isType(T_BOW) &&
+            p->InSlot(i)->Type != T_WEAPON)
+            KitToPack(p,p->InSlot(i));
+
     /* R4: bows ride on a shoulder; thrown-only weapons go to a belt pouch
-       (or the pack when the pouches are full); every other weapon that is not
-       in hand or in the ready slot goes to the pack. A bow on a shoulder is
-       left alone only if it is already there; more than one bow goes to the
-       pack, since the design gives the shoulders to a single bow. Collected
-       first: placement resets the static cursor (inc-zzwm). */
+       (or the pack when the pouches are full); every other spare weapon goes
+       to the pack only when the pack can hold it within its normal limits --
+       otherwise a free shoulder, and only when both shoulders are taken the
+       pack regardless (Brian's ruling, inc-zzwm). A bow on a shoulder is left
+       alone only if it is already there; more than one bow goes to the pack,
+       since the design gives the shoulders to a single bow. Collected first:
+       placement resets the static cursor (inc-zzwm). */
     if (!KitSnapshot(p,snap,KIT_ARR_MAX,&sn))
         return;
     bool bow_placed = false;
@@ -403,25 +487,23 @@ static void ArrangeStartingKit(Player *p)
             else if (p->InSlot(SL_LSHOULDER)!=it && p->InSlot(SL_RSHOULDER)!=it)
                 KitToPack(p,it);
         }
+    /* Pass 1: every spare the pack can hold goes there, freeing a shoulder a
+       later spare may need. Without this, a spare considered while both
+       shoulders held weapons that themselves belong in the pack would be
+       packed although a shoulder frees up moments later (inc-zzwm). */
     if (!KitSnapshot(p,snap,KIT_ARR_MAX,&sn))
         return;
     for (k=0;k<sn;k++)
-    {
-        it = snap[k];
-        if (it->Type == T_WEAPON)
-        {
-            if (it == main || (p->HasFeat(FT_TWO_WEAPON_STYLE) &&
-                               p->InSlot(SL_READY) == it))
-                continue;
-            if (it->isGroup(WG_THROWN) && !it->isGroup(WG_DAGGERS))
-                continue;    /* placed with the other quick-use stacks below */
-            if (p->InSlot(SL_LSHOULDER)==it || p->InSlot(SL_RSHOULDER)==it)
-                KitToPack(p,it);
-            else if (!it->isType(T_BOW) &&
-                     p->InSlot(SL_WEAPON)!=it && p->InSlot(SL_READY)!=it)
-                KitToPack(p,it);
-        }
-    }
+        if (KitIsSpareWeapon(p,snap[k]) && KitPackFits(p,snap[k]))
+            KitToPack(p,snap[k]);
+    /* Pass 2: the spares the pack cannot hold ride a free shoulder; only when
+       both are taken does one go to the pack regardless. Snapshot again: pass 1
+       moved items and reset the inventory cursor (inc-zzwm). */
+    if (!KitSnapshot(p,snap,KIT_ARR_MAX,&sn))
+        return;
+    for (k=0;k<sn;k++)
+        if (KitIsSpareWeapon(p,snap[k]))
+            KitSpareWeapon(p,snap[k]);
 
     /* R5: belt pouches hold only quick-use stacks; quick-use beyond five
        pouches and every non-quick-use item that wandered onto the belt go to
@@ -467,12 +549,21 @@ static void ArrangeStartingKit(Player *p)
         }
     }
 
-    /* R4/R5 tidy-up: nothing but a bow may sit on a shoulder, and no
-       non-quick-use item may sit on the belt. Whatever still does is packed.
-       Slot-keyed, not inventory-iterated. */
+    /* R4/R5 tidy-up: only a bow, or a spare weapon the pack cannot hold within
+       its normal limits, may sit on a shoulder; no non-quick-use item may sit
+       on the belt. Anything else there is packed, and a spare weapon that has
+       come to fit the pack is moved to it. Slot-keyed, not inventory-iterated. */
     for (i=SL_LSHOULDER; i<=SL_RSHOULDER; i++)
         if (p->InSlot(i) && !p->InSlot(i)->isType(T_BOW))
-            KitToPack(p,p->InSlot(i));
+        {
+            Item *s = p->InSlot(i);
+            if (KitPackFits(p,s))
+                KitToPack(p,s);
+            else if (s->Type == T_WEAPON)
+                ;   /* legitimately riding a shoulder: the pack cannot hold it */
+            else
+                KitToPack(p,s);
+        }
     for (i=SL_BELT1; i<=SL_BELT5; i++)
         if (p->InSlot(i) && !KitQuickUse(p->InSlot(i)))
             KitToPack(p,p->InSlot(i));
@@ -4998,6 +5089,12 @@ Item* Creature::getPrimaryMelee()
                 !it->isGroup(WG_DAGGERS))
                 continue;
             if (it->eID)
+                continue;
+            /* A reach-only weapon cannot strike an adjacent square, so it may
+               not be the one in hand; it follows the spare-weapon rule. Brian's
+               ruling (inc-zzwm), the same test Values.cpp uses for
+               MS_REACH_ONLY, via Item::isReachOnly. */
+            if (it->isReachOnly())
                 continue;
             /* A weapon too large to wield cannot be the one in hand; the
                design's "size-appropriate dice" only make sense for a weapon

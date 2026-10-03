@@ -16,7 +16,7 @@ a       # Attributes: the first offered set
 a       # Alignment: the first offered
 
 @while "Choose a feat" a
-@choose "glaive"   # Weapon Focus target: the build's melee weapon
+@choose "quarterstaff"   # Weapon Focus target: the build's melee weapon. A two-handed weapon that is not reach-only, so it can hold the hand and block the shield (inc-zzwm): the former glaive is reach-only and is now a spare.
 
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
 RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
