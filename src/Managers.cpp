@@ -2442,6 +2442,27 @@ void TextTerm::DisplayCharSheet() {
             }
             break;
         case 'R':
+        {
+            /* upstream: upstream's recall listed every monster kind regardless
+               of what the player had met (plain logic, same on Win32 and the
+               original compiler). tier Observed (tools/check_monster_memory.sh);
+               tracking inc-vtq8; Not sent. */
+            bool metAny = false;
+            for (int modIdx = 0; modIdx < 1 && !metAny; modIdx++) {
+                Module *mod = theGame->Modules[modIdx];
+                for (int idx = 0; idx < mod->szMon; idx++) {
+                    rID mID = mod->MonsterID(idx);
+                    MonMem *mm = MONMEM(mID, p);
+                    if (mm && (mm->Seen || mm->Fought || mm->Kills)) {
+                        metAny = true;
+                        break;
+                    }
+                }
+            }
+            if (!metAny) {
+                Message("You recall no monsters.");
+                break;
+            }
             Save();
             SetMode(MO_PLAY);
             SetWin(WIN_MESSAGE);
@@ -2449,15 +2470,19 @@ void TextTerm::DisplayCharSheet() {
             SetWin(WIN_INPUT);
             Clear();
             SetWin(WIN_SCREEN);
-            mn = (Monster*)AcquisitionPrompt(ACQ_RECALL, -10, 20, 0);
+            {
+                rID rid = MonsterPrompt("Recall which monster?", p);
+                if (rid > 0) {
+                    mn = new Monster(rid);
+                    mn->StateFlags |= MS_KNOWN;
+                    Box(WIN_SCREEN, 0, EMERALD, GREY, mn->Describe(p));
+                    delete mn;
+                }
+            }
             SetMode(MO_CHARVIEW);
             Restore();
-            if (mn) {
-                mn->StateFlags |= MS_KNOWN;
-                Box(WIN_SCREEN, 0, EMERALD, GREY, mn->Describe(p));
-                delete mn;
-            }
             break;
+        }
         case 'C':
         {
             /* Later, this should list little text descriptions for Stunned,
