@@ -287,7 +287,7 @@ CANARY_CONTEXT=0
 if [ "$KILLED" = "canary" ]; then
     LEDGER_KILLED="loop"
     if [ -f "$WATCHDOG_STATUS.canary" ] \
-        && head -n 1 "$WATCHDOG_STATUS.canary" | grep -q '^context '; then
+        && grep -q '^context ' <<< "$(head -n 1 "$WATCHDOG_STATUS.canary")"; then
         LEDGER_KILLED="context"
         CANARY_CONTEXT=1
     fi
