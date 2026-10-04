@@ -37,6 +37,14 @@ bool isSimilarDir(Dir d, Dir d2) {
    fixed pair of its own: both checks read the attack's own save DC back
    out of the stati's Mag, which src/Fight.cpp's AD_STUK arm now passes
    there. One table, one lookup, used by the single caller below. */
+/* inc-1xr3: the DC of the Balance check and the Reflex save that together
+   decide whether a move onto sticky terrain sticks the creature. Both the
+   confirm prompt and the deciding code call this, so the odds shown cannot
+   drift from the DC rolled against. */
+static int16 StickyTerrainDC(Map *m) {
+	return 14 + m->Depth;
+}
+
 static void StuckEscapeDCs(int16 val, int16 mag, int16 &escArtDC, int16 &strDC) {
 	static const struct { int16 val, escArt, str; } StuckEscapeTable[] = {
 		{ STUCK_BONDED, 22, 17 },
@@ -144,8 +152,8 @@ EvReturn Creature::Walk(EventInfo &e) {
 			}
 			if (isPlayer())
 				if (!yn(Format("You have a %d~ chance of convincing your mount and a %d~ chance of making the jump. Jump?",
-					100 - max(0, (DC - SkillLevel(SK_RIDE)) * 5),
-					100 - max(0, (DC - mount->SkillLevel(SK_JUMP)) * 5)
+					SkillCheckChance(SK_RIDE, DC),
+					mount->SkillCheckChance(SK_JUMP, DC)
 				)))
 					return ABORT;
 
@@ -163,7 +171,7 @@ EvReturn Creature::Walk(EventInfo &e) {
 			}
 			if (isPlayer())
 				if (!yn(Format("You have a %d~ chance of success. Jump?",
-					100 - max(0, (DC - SkillLevel(SK_JUMP)) * 5))))
+					SkillCheckChance(SK_JUMP, DC))))
 					return ABORT;
 			jcheck = (SkillCheck(SK_JUMP, DC));
 		}
@@ -546,8 +554,11 @@ IgnoreCreature:
 			onPlane() <= PHASE_VORTEX &&
 			ResistLevel(AD_STUK) != -1 &&
 			!HasAbility(CA_WOODLAND_STRIDE)) {
-			if (SkillLevel(SK_BALANCE) < 14 + m->Depth &&
-				!yn(XPrint("Confirm move over the <Res>?", stickyID)))
+			if (SkillCheckChance(SK_BALANCE, StickyTerrainDC(m)) < 100 &&
+				!yn(Format("%s (Balance %d~; else Reflex %d~)",
+					(const char*)XPrint("Confirm move over the <Res>?", stickyID),
+					SkillCheckChance(SK_BALANCE, StickyTerrainDC(m)),
+					SaveChance(REF, StickyTerrainDC(m), SA_GRAB))))
 				return ABORT;
 		}
 	SkipStickyConfirm:
@@ -573,7 +584,9 @@ IgnoreCreature:
 				if ((fe->Flags & (F_WARN)) &&
 					(TFEAT(fe->fID)->PEvent(EV_MON_CONSIDER, this, fe, fe->fID) == ABORT)) {
 					if (isPlayer()) {
-						if (!yn(XPrint("Confirm move over the <Res>?", fe->fID, true)))
+						if (!yn(Format("%s%s",
+							(const char*)XPrint("Confirm move over the <Res>?", fe->fID, true),
+							(const char*)TerrainRiskNote(fe->fID, m, tx, ty))))
 							return ABORT;
 					}
 					else {
@@ -589,7 +602,9 @@ IgnoreCreature:
 	if (m->At(x, y).Terrain != m->At(tx, ty).Terrain || (m->FieldAt(tx, ty, FI_ITERRAIN) && (m->PTerrainAt(x, y, this) != m->PTerrainAt(tx, ty, this)))) {
 		if (TTER(m->PTerrainAt(tx, ty, this))->HasFlag(TF_WARN)) {
 			if (isPlayer() && e.Event == EV_MOVE && (TTER(m->PTerrainAt(tx, ty, this))->PEvent(EV_MON_CONSIDER, this, m->TerrainAt(tx, ty)) == ABORT)) {
-				if (!yn(XPrint("Confirm enter the <Res>?", m->TerrainAt(tx, ty)), true))
+				if (!yn(Format("%s%s",
+					(const char*)XPrint("Confirm enter the <Res>?", m->TerrainAt(tx, ty)),
+					(const char*)TerrainRiskNote(m->TerrainAt(tx, ty), m, tx, ty)), true))
 					return ABORT;
 			}
 			else if (!isPlayer()) {
@@ -952,7 +967,7 @@ SkipConfirms:
 							if (e.Event != EV_MOVE || !e.EActor->Perceives(cr))
 								ch = 'f';
 							else
-								ch = thisp->MyTerm->ChoicePrompt("You are in a threatened area. Abort, Flee or Disengage?", "afd?");
+								ch = thisp->MyTerm->ChoicePrompt("You are in a threatened area. Abort, Flee or Disengage? (Flee: each foe gets a free attack; Disengage: odds unknown)", "afd?");
 							if (ch == '?') {
 								thisp->MyTerm->HelpTopic("help::combat", "LE");
 								goto RepeatPrompt;
@@ -1582,7 +1597,7 @@ void Creature::TerrainEffects() {
 				!yn(XPrint("Confirm move over the <Res>?",stickyID)))
 			  return ABORT;
 			  */
-			if (!SkillCheck(SK_BALANCE, 14 + m->Depth, true, false)) {
+			if (!SkillCheck(SK_BALANCE, StickyTerrainDC(m), true, false)) {
 				/* upstream: both halves below are the base code's, not the
 				   port's -- plain event-flow logic with no platform-specific
 				   type or compiler dependency. R19: the DAMAGE macro never
@@ -1607,7 +1622,7 @@ void Creature::TerrainEffects() {
 				   is not stuck forever. */
 				DAMAGE(this, this, AD_STUK, 20, NAME(stickyID),
 					(xe.EParam = TTER(stickyID)->GetConst(STICK_TYPE),
-					 xe.saveDC = 14 + m->Depth));
+					 xe.saveDC = StickyTerrainDC(m)));
 				if (HasStati(STUCK)) {
 					IDPrint("You get stuck in the <Res2>!",
 						"The <Obj1> gets stuck in the <Res2>!", this, stickyID);

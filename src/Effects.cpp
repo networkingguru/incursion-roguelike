@@ -186,8 +186,14 @@ EvReturn Magic::Blast(EventInfo &e)
       goto SkipSave;
     if (e.EVictim->HasFeat(FT_WEATHER_BLAST) && save_type == REF) {
       if (e.EVictim->AbilityLevel(CA_EVASION))
-        if (e.EVictim->yn("Attempt Reflex save to use Evasion? ",true))
-          goto SkipWeather;
+        {
+          int16 alt = (e.EVictim->Attr[A_SAV_FORT] > 
+              e.EVictim->Attr[A_SAV_REF]) ? FORT : REF;
+          if (e.EVictim->yn(Format("Attempt Reflex save to use Evasion? (Reflex %d~; else %d~)",
+                e.EVictim->SaveChance(REF, e.saveDC),
+                e.EVictim->SaveChance(alt, e.saveDC)),true))
+            goto SkipWeather;
+        }
       save_type = (e.EVictim->Attr[A_SAV_FORT] > 
           e.EVictim->Attr[A_SAV_REF]) ? FORT : REF;
     }
@@ -1744,7 +1750,7 @@ int8 Map::GetTerraDType(int16 x,int16 y)
   }
 
 
-int16 Map::GetTerraDmg(int16 x, int16 y)
+Dice Map::GetTerraDice(int16 x, int16 y)
   {
     int32 i,j;
     for(i=(TerraXY.Total()-1);i>=0;i--)
@@ -1752,10 +1758,15 @@ int16 Map::GetTerraDmg(int16 x, int16 y)
         if (TerraXY[i]->y == y) {
           for (j=0;j!=TerraList.Total();j++)
             if (TerraList[j]->key == TerraXY[i]->key)
-              return TerraList[j]->pval.Roll();
+              return TerraList[j]->pval;
           Error("TerraXY entry without matching TerraList entry (key %d)",TerraXY[i]->key);
           }
-    return 10;
+    { Dice d; d.Set(0,0,10); return d; }
+  }
+
+int16 Map::GetTerraDmg(int16 x, int16 y)
+  {
+    return GetTerraDice(x, y).Roll();
   }
 
 void Map::RemoveTerra(int16 key)

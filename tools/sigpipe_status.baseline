@@ -123,7 +123,6 @@
 2 tools/check_telepathy_prose.sh
 3 tools/check_two_fist_feats_live.sh
 2 tools/check_unearthly_harmonies_prose.sh
-9 tools/check_upstream_label.sh
 1 tools/check_v1_append_survives.sh
 1 tools/check_v1_full_roundtrip.sh
 2 tools/check_wand_acid_type.sh

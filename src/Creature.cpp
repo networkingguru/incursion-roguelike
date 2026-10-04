@@ -2339,7 +2339,8 @@ bool Creature::LoseFatigue(int16 amt, bool avoid) {
         return true;
 
     if (avoid && cFP < -Attr[A_FAT])
-        if (!yn("You are in danger of passing out! Proceed?", true))
+        if (!yn(Format("You are in danger of passing out! (Fortitude %d~) Proceed?",
+            SaveChance(FORT, 10 - (cFP / 2))), true))
             return false;
 
     if (avoid)
@@ -3647,13 +3648,130 @@ int16 Creature::SaveChance(int16 type, int16 DC, uint32 Subtype, int16 cmod)
     return succ * 5;
   }
 
+/* inc-1xr3: build the parenthesised risk note a terrain-warning prompt shows,
+   from the WARN_* constants the terrain itself declares in its script. The
+   terrain's own outcome handler reads those same constants (via GetConst on
+   the terrain under the actor), so the number shown and the number rolled
+   cannot drift apart. An undeclared constant reads 0 (Resource::GetConst's
+   default), which is the signal that this terrain wants no note. */
+String Creature::TerrainRiskNote(rID terrain, Map *map, int16 x, int16 y)
+{
+  Resource *res;
+  int16 sk, dc, sv, svdc, margin, dnum, dsides, dbonus, dtyp;
+  int16 dcFromMap, svdcFromMap, dmgFromMap;
+  int16 mapDC = 15;
+  Dice mapDice; mapDice.Set(0, 0, 0);
+  bool haveMap = (map && map->InBounds(x, y));
+  static const char *saveNames[3] = { "Fortitude", "Reflex", "Will" };
+
+  if (!terrain || !RES(terrain))
+    return "";
+  res = RES(terrain);
+  sk     = (int16)res->GetConst(WARN_SKILL);
+  dc     = (int16)res->GetConst(WARN_DC);
+  sv     = (int16)res->GetConst(WARN_SAVE); /* save type + 1; 0 = none */
+  svdc   = (int16)res->GetConst(WARN_SAVE_DC);
+  margin = (int16)res->GetConst(WARN_MARGIN);
+  dnum   = (int16)res->GetConst(WARN_DMG_NUM);
+  dsides = (int16)res->GetConst(WARN_DMG_SIDES);
+  dbonus = (int16)res->GetConst(WARN_DMG_BONUS);
+  dtyp   = (int16)res->GetConst(WARN_DMG_TYPE);
+  dcFromMap   = (int16)res->GetConst(WARN_DC_FROM_MAP);
+  svdcFromMap = (int16)res->GetConst(WARN_SAVE_DC_FROM_MAP);
+  dmgFromMap  = (int16)res->GetConst(WARN_DMG_FROM_MAP);
+
+  /* inc-1xr3 phase 2j: some terrains take their DC or damage from the map
+     square at run time (grease, strange rune, the curtains). Query the same
+     Map functions the terrain's own handler does, so the note reports the
+     square's real value. The map lookup is skipped when the actor is off the
+     map during teardown; the constant fallbacks then stand. */
+  if (haveMap && (dcFromMap || svdcFromMap))
+    mapDC = map->GetTerraDC(x, y);
+  if (haveMap && dmgFromMap)
+    mapDice = map->GetTerraDice(x, y);
+
+  if (!sk && !sv && dnum <= 0 && dbonus <= 0 && !dmgFromMap)
+    return "";
+  if (sv)
+    sv--; /* WARN_SAVE holds type + 1, so FORT (0) can be declared. */
+  else
+    sv = -1;
+
+  if (dcFromMap)
+    dc = max(dc, mapDC);
+  if (svdcFromMap)
+    svdc = max(svdc, mapDC);
+
+  /* inc-1xr3 phase 2i: the per-step damage some warning terrains deal. The
+     terrain declares the same ndm+b the handler passes to ThrowTerraDmg, so
+     the note and the roll cannot drift. DTypeNames is the engine's own
+     damage-type name table; lowercased so it reads inside the sentence. */
+  String dmg = "";
+  if (dnum > 0 || dbonus > 0 || dmgFromMap)
+    {
+      char typ[32]; int i;
+      const char *tn = (dtyp > 0) ? Lookup(DTypeNames, dtyp) : "";
+      for (i = 0; i < 31 && tn[i]; i++)
+        typ[i] = (tn[i] >= 'A' && tn[i] <= 'Z') ? tn[i] + 32 : tn[i];
+      typ[i] = 0;
+      if (dmgFromMap)
+        /* The handler rolls GetTerraDice(x,y) through ThrowTerraDmg, so the
+           note shows the same dice, not one random sample of the roll. */
+        dmg = Format("%s", (const char*)mapDice.Str());
+      else if (dnum > 0)
+        {
+          dmg = Format("%dd%d", dnum, dsides);
+          if (dbonus)
+            dmg += Format("%+d", dbonus);
+        }
+      else
+        dmg = Format("%d", dbonus);
+      if (i)
+        dmg += Format(" %s", typ);
+      dmg += " per step";
+    }
+
+  if (sk)
+    {
+      String note = Format(" (%s %d~", SkillInfo[sk].name,
+        SkillCheckChance(sk, dc));
+      if (margin > 0)
+        /* The handler drowns/tangles when the check total falls short by
+           more than margin, i.e. when the total is below dc - margin. */
+        note += Format("; fail by %d+ %d~", margin + 1,
+          100 - SkillCheckChance(sk, dc - margin));
+      if (sv >= 0)
+        note += Format("; else %s %d~", saveNames[sv], SaveChance(sv, svdc));
+      if (dnum > 0 || dbonus > 0 || dmgFromMap)
+        note += Format("; %s", (const char*)dmg);
+      note += ")";
+      return note;
+    }
+
+  if (sv >= 0)
+    {
+      String note = Format(" (%s %d~", saveNames[sv], SaveChance(sv, svdc));
+      if (dnum > 0 || dbonus > 0 || dmgFromMap)
+        note += Format("; %s", (const char*)dmg);
+      note += ")";
+      return note;
+    }
+
+  return Format(" (%s)", (const char*)dmg);
+}
+
 inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
                                     int16 cmod, const char *cmod_desc)
 { 
   int16 Bonus, i;
   static const char *save_name[3] = { "Fortitude", "Reflex", "Will" };
-  if (DC <= 0)
+  /* inc-1xr3: predicted chance with the same arguments, before any die. */
+  extern void ChanceProbeNote(const char *, int16, int16, int16, int);
+  int16 chance = SaveChance(type, DC, Subtype, cmod);
+  if (DC <= 0) {
+    ChanceProbeNote("save", type, DC, chance, 0);
     return false;
+  }
   bool show = false; 
 
   if ((isPlayer() || theGame->GetPlayer(0)->XPerceives(this)))
@@ -3755,6 +3873,7 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
     }
       
 
+  ChanceProbeNote("save", type, DC, chance, succ ? 1 : 0);
   return succ;
 }
 

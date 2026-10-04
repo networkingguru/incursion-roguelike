@@ -164,6 +164,25 @@ inline int16 XCRtoCR(int32 XCR);
    to this default. inc-5bl3. */
 #define TRUE_SIGHT_RANGE  12
 
+/* inc-1xr3: the deterministic half of a Creature::SkillCheck, computed with
+   no dice and no state change so the same numbers feed both the check and the
+   chance it advertises.  base is the total bonus; success needs a d20 result
+   of at least need (DC - base); floorRoll is the Skill Mastery floor applied
+   to the roll (0 when the creature has no such floor); nDice is how many d20s
+   are rolled and the best kept.  took20 means the roll is read as 20. msa is
+   the creature whose skill level is used and sr is that level, so the check
+   need not recompute either. */
+struct SkillTarget
+  {
+    int16 base;
+    int16 need;
+    int16 floorRoll;
+    bool  took20;
+    int16 nDice;
+    Creature *msa;
+    int16 sr;
+  };
+
 class Creature: public Thing, public Magic
   {
     ARCHIVE_CLASS(Creature,Thing,r)
@@ -473,9 +492,19 @@ class Creature: public Thing, public Magic
       virtual bool SkillCheck(int16 sk, int16 DC, bool show = true,
                                  int16 mod1=0, const char *mod1Str=NULL,
                                  int16 mod2=0, const char *mod2Str=NULL);
+       SkillTarget SkillCheckTarget(int16 sk, int16 DC, int16 mod1=0, int16 mod2=0);
+       int16 SkillCheckChance(int16 sk, int16 DC, int16 mod1=0, int16 mod2=0);
+       /* inc-1xr3: the parenthesised risk note for a terrain-warning prompt,
+          built from the terrain's own WARN_* constants. Empty when the terrain
+          declares no risk constants, so an unannotated terrain is unchanged. */
+       String TerrainRiskNote(rID terrain, Map *map, int16 x, int16 y);
       virtual Creature * MostSkilledAlly(int16 sk);
       virtual void TrainAs(rID cID) { }
       virtual int16 HungerState();
+      /* inc-1xr3: the nauseated-attack confirmation, shared by the three
+         combat sites so all three show the same Concentration odds. Returns
+         the player's answer; the caller still runs SkillCheck itself. */
+      virtual bool PromptNauseatedAttack();
       virtual bool LoseFatigue(int16 amt, bool avoid=false);
       virtual void Planeshift();
       virtual void Shapeshift(rID mD, bool merge, Item*PolySource=NULL);
@@ -891,6 +920,7 @@ class Character: public Creature
       void GrantSymbol(rID gID);
       void GodMessage(rID gID, int16 msgnum,...);
       int32 calcFavour(rID gID);
+      int16 ResurrectChance();
       void  gainedFavour(rID gID);
       virtual void gainFavour(rID gID, int32 amt, bool advance=false, bool stack=true);
       virtual rID getGod() { return GodID; }

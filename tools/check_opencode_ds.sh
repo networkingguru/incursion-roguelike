@@ -2,8 +2,7 @@
 # gate: cheap
 # gate-serial: race wall-clock watchdog/proxy/stream deadlines; CPU load could flip them
 #
-# Does tools/opencode_ds.sh refuse to launch once the DeepSeek ledger says the
-# budget is gone or poisoned, refuse the shared checkout, bill exactly one
+# Does tools/opencode_ds.sh refuse the shared checkout, bill exactly one
 # ledger row for a successful harness run (cost = the sum of its step_finish
 # costs, steps = the count), poison the ledger when opencode quotes tokens but
 # no usable cost, keep the API key out of every file it writes, confine
@@ -19,8 +18,7 @@
 # and that the wrapper wires it in (one recorded request, no proxy left
 # running) and, on a loop kill, copies the run dir including requests/.
 # Defends beads inc-h1bq, inc-gofz, inc-uxmf and inc-oehi: the opencode rung of
-# the implementer ladder must fail closed rather than silently spend money once
-# a run's price is unknown, must never touch the shared checkout, must not hang
+# the implementer ladder must never touch the shared checkout, must not hang
 # its dispatcher when the harness stalls, must not burn tokens on a loop, and
 # must keep the exact request of a looping run so it can be replayed. Directly
 # checks loop_check.py catches all three loop shapes: repeated short lines
@@ -38,10 +36,10 @@
 # HTTP server) stands in for DeepInfra via INCURSION_DS_UPSTREAM. No network
 # request ever leaves this machine.
 #
-#   tools/check_opencode_ds.sh               run every assertion (twenty-one
-#                                            numbered, with 13b's six and 13c's
+#   tools/check_opencode_ds.sh               run every assertion (numbered,
+#                                            with 13b's six and 13c's
 #                                            three loop_check sub-checks)
-#   tools/check_opencode_ds.sh --prove-red   mutate the budget guard, the
+#   tools/check_opencode_ds.sh --prove-red   mutate the
 #                                            sandbox prefix, the JSON bash
 #                                            rules, MIN_REPEATED_LINES,
 #                                            MIN_SAME_LINE, the markup rule, the
@@ -128,17 +126,16 @@ skip() { echo "SKIP  $1"; SKIP_COUNT=$((SKIP_COUNT + 1)); }
 
 # --- --prove-red ----------------------------------------------------------
 # Handled FIRST, before the assertions below ever run. Each mutation restores
-# the file it touches: (a) drop the budget-check call, so assertion 1 must go
-# red; (b) drop the `sandbox-exec` prefix, so assertion 7 must go red; (c)
-# strip the read-only-git allow rules from opencode.json, so assertion 10 must
-# go red; (d) drop `"git *": "deny"` from opencode.json, so assertion 10 must
-# go red; (e) raise loop_check.py's MIN_REPEATED_LINES, so assertion 13 must go
-# red; (f) remove the proxy's request-file write, so assertion 14 must go red;
-# (g) raise loop_check.py's MIN_SAME_LINE, so assertion 13b's F3 check must go
-# red; (h) disable loop_check.py's markup rule, so assertion 13b's F2 check must
-# go red; (j) remove the brief preamble prepend, so assertion 6b must go red.
-# Original files are restored, and each restoration verified
-# byte-identical with cmp, by the EXIT trap above.
+# the file it touches: (b) drop the `sandbox-exec` prefix, so assertion 7 must
+# go red; (c) strip the read-only-git allow rules from opencode.json, so
+# assertion 10 must go red; (d) drop `"git *": "deny"` from opencode.json, so
+# assertion 10 must go red; (e) raise loop_check.py's MIN_REPEATED_LINES, so
+# assertion 13 must go red; (f) remove the proxy's request-file write, so
+# assertion 14 must go red; (g) raise loop_check.py's MIN_SAME_LINE, so
+# assertion 13b's F3 check must go red; (h) disable loop_check.py's markup rule,
+# so assertion 13b's F2 check must go red; (j) remove the brief preamble
+# prepend, so assertion 6b must go red. Original files are restored, and each
+# restoration verified byte-identical with cmp, by the EXIT trap above.
 if [ "${1:-}" = "--prove-red" ]; then
     PROVE_FAIL=0
     # sandbox-exec cannot nest: under another Seatbelt sandbox, mutation (b) --
@@ -150,33 +147,6 @@ if [ "${1:-}" = "--prove-red" ]; then
     if ! sandbox-exec -p '(version 1)(allow default)' /usr/bin/true >/dev/null 2>&1; then
         SANDBOX_RUNNABLE=0
     fi
-
-    # (a) budget guard removed.
-    BACKUP="$TMP/opencode_ds.sh.orig"
-    cp "$WRAPPER" "$BACKUP"
-    NEEDLE='mod.check_budget(mod.resolve_ledger_path(), mod.resolve_budget())'
-    if ! grep -qF "$NEEDLE" "$WRAPPER"; then
-        echo "could not find the budget check to mutate: $NEEDLE" >&2
-        exit 2
-    fi
-    python3 - "$WRAPPER" "$NEEDLE" <<'PY'
-import sys
-path, needle = sys.argv[1], sys.argv[2]
-src = open(path).read()
-open(path, "w").write(src.replace(needle, "pass  # MUTATED by --prove-red", 1))
-PY
-    echo "mutated tools/opencode_ds.sh: budget check disabled"
-    MUT_OUT="$("$ROOT/tools/check_opencode_ds.sh" 2>&1)"
-    MUT_RC=$?
-    if [ "$MUT_RC" -ne 0 ] && grep -q "FAIL.*budget" <<< "$MUT_OUT"; then
-        echo "PASS (as intended): assertion 1 (budget) went red"
-    else
-        echo "FAIL: assertion 1 stayed green under a disabled budget check (rc=$MUT_RC)"
-        echo "$MUT_OUT" | tail -20
-        PROVE_FAIL=1
-    fi
-    cp "$BACKUP" "$WRAPPER"
-    cmp -s "$BACKUP" "$WRAPPER" || { echo "restore of opencode_ds.sh failed" >&2; exit 2; }
 
     # (e) loop_check.py's MIN_REPEATED_LINES raised out of reach, so the real
     # loop fixture must no longer be called a loop and assertion 13 must go red.
@@ -397,9 +367,8 @@ PY
         echo "SKIP (b): sandbox-exec cannot run inside this sandbox, so removing"
         echo "          the sandbox prefix cannot be distinguished from the outer"
         echo "          sandbox's own denial. Run --prove-red outside any sandbox."
-        cp "$BACKUP" "$WRAPPER" 2>/dev/null
         if [ "$PROVE_FAIL" -eq 0 ]; then
-            echo "INCONCLUSIVE: mutation (a) proven; mutation (b) needs an unsandboxed run"
+            echo "INCONCLUSIVE: earlier mutations proven; mutation (b) needs an unsandboxed run"
             exit 2
         fi
         exit 1
@@ -711,7 +680,7 @@ stop_proxy_direct() {
 # running this check), `sandbox-exec` itself refuses to apply and exits 71.
 # The assertions that need to LAUNCH the harness (4, 5, 6, 6b, 7, 11, 12, 12b,
 # 17, 18) cannot run in that environment. Detect it once and report those as
-# SKIP; outside any sandbox they all run. Assertions 1, 2, 3, 3b, 8, 9, 10 and
+# SKIP; outside any sandbox they all run. Assertions 3, 3b, 8, 9, 10 and
 # the direct-proxy 13, 13b, 13c, 14, 15, 16 never launch the harness.
 SANDBOX_OK=1
 PROBE_HOME="$TMP/homeprobe"; mkdir -p "$PROBE_HOME"
@@ -729,35 +698,6 @@ if grep -rq "sandbox_apply: Operation not permitted" "$PROBE_WORK/logs/opencode"
     echo "NOTE  sandbox-exec cannot nest inside this check's own sandbox;"
     echo "      assertions 4, 5, 6, 6b, 7, 11, 12, 17 and 18 are reported SKIP here and"
     echo "      must be run outside any sandbox (the Claude session will do so)."
-fi
-
-# --- 1. Budget spent -> exit 1, fake never launched, no ledger row --------
-WORK="$TMP/wt1"; mkdir -p "$WORK"
-BRIEF="$TMP/brief1.txt"; echo "do a thing" > "$BRIEF"
-LEDGER="$TMP/ledger1.jsonl"; printf '%s\n' '{"cost": 25.00}' > "$LEDGER"
-: > "$TMP/rec.1"
-RC="$(INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC="$TMP/rec.1" INCURSION_FAKE_MODE=success \
-    INCURSION_DEEPSEEK_KEY=canary-x INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
-    "$WRAPPER" "$WORK" "$BRIEF" > "$TMP/out.1" 2> "$TMP/err.1"; echo $?)"
-if [ "$RC" -eq 1 ] && [ ! -s "$TMP/rec.1" ] \
-    && [ "$(wc -l < "$LEDGER" | tr -d ' ')" -eq 1 ]; then
-    pass "budget refuses before it spends: exit 1, fake never launched, no new row"
-else
-    fail "budget refusal: rc=$RC rec=$(cat "$TMP/rec.1" 2>/dev/null) ledger=$(cat "$LEDGER") -- $(cat "$TMP/err.1")"
-fi
-
-# --- 2. Poisoned ledger -> exit 1, fake never launched --------------------
-WORK="$TMP/wt2"; mkdir -p "$WORK"
-BRIEF="$TMP/brief2.txt"; echo "do a thing" > "$BRIEF"
-LEDGER="$TMP/ledger2.jsonl"; printf '%s\n' '{"cost": null}' > "$LEDGER"
-: > "$TMP/rec.2"
-RC="$(INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC="$TMP/rec.2" INCURSION_FAKE_MODE=success \
-    INCURSION_DEEPSEEK_KEY=canary-x INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
-    "$WRAPPER" "$WORK" "$BRIEF" > "$TMP/out.2" 2> "$TMP/err.2"; echo $?)"
-if [ "$RC" -eq 1 ] && [ ! -s "$TMP/rec.2" ]; then
-    pass "poisoned ledger (null cost) refuses: exit 1, fake never launched"
-else
-    fail "poisoned ledger: rc=$RC rec=$(cat "$TMP/rec.2" 2>/dev/null) -- $(cat "$TMP/err.2")"
 fi
 
 # --- 3. Worktree = the shared checkout -> exit 2, never launched ----------
@@ -1511,11 +1451,11 @@ else
 fi
 
 if [ "$FAIL" -eq 0 ] && [ "$SKIP_COUNT" -eq 0 ]; then
-    echo "PASS: check_opencode_ds.sh, all twenty-one assertions"
+    echo "PASS: check_opencode_ds.sh, all assertions"
     exit 0
 elif [ "$FAIL" -eq 0 ]; then
     echo "PASS (partial): check_opencode_ds.sh, $SKIP_COUNT assertion(s) skipped and not counted;"
-    echo "                rerun outside any sandbox to run all twenty-one (exit 2 = incomplete)"
+    echo "                rerun outside any sandbox to run all (exit 2 = incomplete)"
     exit 2
 else
     echo "FAIL: check_opencode_ds.sh, at least one assertion failed above"

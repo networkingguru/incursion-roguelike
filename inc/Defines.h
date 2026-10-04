@@ -582,6 +582,8 @@ typedef signed int        hObj;
 #define WT_TWO_HANDED        33
 #define WT_FUMBLE1           34
 #define WT_FUMBLE2           35
+#define NOT_PROF_HIT_PENALTY 4   /* inc-1xr3: Values.cpp and the Create.cpp weapon prompt */
+#define NOT_PROF_SPD_PENALTY 10
 #define WT_STR1              36
 #define WT_STR2              37
 #define WT_STR3              38
@@ -3760,7 +3762,19 @@ typedef signed int        hObj;
 #define STICK_TYPE            140 /* Terrain: The kind of sticky terrain that sticky terrain is. */
 #define DRAGON_FEAR_DC        141 /* Monster: +/- modifier to fear saves versus this creature. */
 #define UNIFORMITY_CHANCE     142 /* Unused? */
-#define LAST_DUNCONST         143
+#define WARN_SKILL            143 /* Terrain: Skill id of the check that decides this terrain's warning risk. */
+#define WARN_DC               144 /* Terrain: DC of that skill check. */
+#define WARN_SAVE             145 /* Terrain: Save type (FORT/REF/WILL) plus 1 (0 = none, since FORT is 0) that decides the warning risk instead, or with, the skill. */
+#define WARN_SAVE_DC          146 /* Terrain: DC of that save. */
+#define WARN_MARGIN           147 /* Terrain: If positive, the note also shows the chance of failing the skill check by more than this. */
+#define WARN_DMG_NUM          148 /* Terrain: Number of dice of the per-step damage the warning note reports (0 = no damage). A dice literal is not a cexpr3 scalar, so the die is split across three constants. */
+#define WARN_DMG_SIDES        149 /* Terrain: Sides of each damage die. */
+#define WARN_DMG_BONUS        150 /* Terrain: Flat bonus added to the damage roll. */
+#define WARN_DMG_TYPE         151 /* Terrain: Damage-type id (AD_FIRE etc.) the note names from DTypeNames. */
+#define WARN_DC_FROM_MAP      152 /* Terrain: If set, the warning DC is the map's TerraDC at the tested square (via Map::GetTerraDC), not lower than WARN_DC (i.e. max(WARN_DC, TerraDC)). */
+#define WARN_SAVE_DC_FROM_MAP 153 /* Terrain: If set, the warning save DC is the map's TerraDC at the tested square (via Map::GetTerraDC), not lower than WARN_SAVE_DC (i.e. max(WARN_SAVE_DC, TerraDC)). */
+#define WARN_DMG_FROM_MAP     154 /* Terrain: If set, the warning damage is the map's TerraDmg at the tested square (via Map::GetTerraDmg), overriding the WARN_DMG_NUM/SIDES/BONUS dice. */
+#define LAST_DUNCONST         155
 
 
 #define MSG_IS_ANGRY      1
