@@ -637,8 +637,15 @@ bool Character::DisarmTrap(Trap *tr, bool active)
 		CheckDC += 5;
 	CheckDC += tr->TrapLevel();
 
-	if (!yn(Format("%s -- Handle Device %+d, DC %d. Proceed?", ch == 'd' ?
-		"Disarm" : ch == 'r' ? "Reset" : "Salvage", msa->SkillLevel(SK_HANDLE_DEV), CheckDC)))
+	/* inc-1xr3: mirror the deciding call exactly. Only the disarm arm passes
+	   a retry bonus (src/Skills.cpp:659) and only it rolls the Reflex save on
+	   failure (src/Skills.cpp:681); reset and salvage pass no bonus and never
+	   set off the trap. */
+	if (!yn(Format("%s -- Handle Device %+d, DC %d. Success %d~; trap %d~. Proceed?", ch == 'd' ?
+		"Disarm" : ch == 'r' ? "Reset" : "Salvage", msa->SkillLevel(SK_HANDLE_DEV), CheckDC,
+		SkillCheckChance(SK_HANDLE_DEV, CheckDC,
+			ch == 'd' ? tr->GetStatiMag(RETRY_BONUS, SK_HANDLE_DEV, this) : 0),
+		(ch == 'd' && !HasFeat(FT_LARCENOUS)) ? 100 - SaveChance(REF, 15, SA_TRAPS) : 0)))
 		return true;
 
 	Timeout += 50;
@@ -1531,10 +1538,137 @@ Creature * Creature::MostSkilledAlly(int16 sk) {
    realize this and called it as a pass/fail a bunch of times when implementing
    skills. For intuitiveness, I set it back to bool; you can get the old result
    easily by subtracting the DC you sent it from LastSkillCheckResult. */
+
+/* inc-1xr3: the deterministic half of SkillCheck. Computes the total bonus,
+   the minimum d20 result the DC demands, whether taking 20 applies and how
+   many d20s are rolled. Rolls no dice and changes no state, so the chance
+   below and the check itself cannot disagree. armPen has always been 0 at
+   this site (see SkillCheck) and is folded in as the constant it is. */
+SkillTarget Creature::SkillCheckTarget(int16 sk, int16 DC, int16 mod1, int16 mod2) {
+	SkillTarget t;
+	Creature *msa;
+	int16 armPen = 0;
+
+	t.took20 = (!isThreatened() && (sk == SK_ESCAPE_ART || sk == SK_CLIMB ||
+		sk == SK_HANDLE_DEV || sk == SK_SEARCH || sk == SK_BALANCE));
+
+	if (sk == SK_LOCKPICKING || sk == SK_HEALING ||
+		sk == SK_HANDLE_DEV || sk == SK_SEARCHING ||
+		sk == SK_INTUITION || sk == SK_ANIMAL_EMP ||
+		sk == SK_DIPLOMACY || sk == SK_BLUFF ||
+		sk == SK_INTIMIDATE || sk == SK_DECIPHER)
+		msa = MostSkilledAlly(sk);
+	else
+		msa = this;
+
+	t.msa = msa;
+	t.sr = msa->SkillLevel(sk);
+
+	t.base = msa->SkillLevel(sk) + mod1 + mod2 + armPen;
+
+	/* This isn't in the OGL system... Abilities which work 50% of the time
+	   are useless, so some skills roll more than one d20 and keep the best. */
+	t.nDice = 1;
+	if (sk == SK_USE_MAGIC || sk == SK_ANIMAL_EMP || sk == SK_DECIPHER)
+		t.nDice++;
+	/* Skill Focus: at most one extra die, however many matching stati
+	   there are (SkillCheck rolls a single rollC for all of them). */
+	if (HasStati(SKILL_BONUS, sk))
+	{
+		bool focus = false;
+		StatiIterNature(this, SKILL_BONUS)
+			if (S->Val == sk && S->Source == SS_PERM)
+				focus = true;
+		StatiIterEnd(this)
+		if (focus)
+			t.nDice++;
+	}
+
+	/* Skill Mastery floors the roll itself (not the total). */
+	t.floorRoll = 0;
+	if (HasAbility(CA_SKILL_MASTERY))
+	{
+		// ugly kludge
+		rID rogueID = FIND("rogue");
+		ASSERT(rogueID);
+		if (TCLASS(rogueID)->HasSkill(sk))
+			t.floorRoll = min(15, 7 + Mod(A_INT));
+	}
+
+	t.need = DC - t.base;
+	return t;
+}
+
+/* inc-1xr3: the whole-percent chance SkillCheck succeeds, computed from
+   SkillCheckTarget. SkillCheck applies no natural-1/natural-20 rule, so
+   none is honoured here. Taking 20 reads the die as 20; otherwise a single
+   d20 succeeds when it reaches need (or when the Skill Mastery floor already
+   reaches it), and keeping the best of nDice gives 1-(1-p)^nDice. */
+int16 Creature::SkillCheckChance(int16 sk, int16 DC, int16 mod1, int16 mod2) {
+	SkillTarget t = SkillCheckTarget(sk, DC, mod1, mod2);
+	int32 p; /* per-die numerator out of 20 */
+
+	if (t.took20)
+		return (20 + t.base >= DC) ? 100 : 0;
+
+	if (t.floorRoll >= t.need)
+		p = 20;
+	else if (t.need <= 1)
+		p = 20;
+	else if (t.need > 20)
+		p = 0;
+	else
+		p = 21 - t.need;
+
+	if (p <= 0)
+		return 0;
+	if (t.nDice <= 1 || p >= 20)
+		return (p >= 20) ? 100 : (int16)(p * 5);
+
+	/* best of N: 1-(1-p/20)^N, rounded to the nearest whole percent. */
+	{
+		double per = (double)p / 20.0;
+		double miss = 1.0 - per;
+		double missN = 1.0;
+		int16 i;
+		for (i = 0; i < t.nDice; i++)
+			missN *= miss;
+		return (int16)((1.0 - missN) * 100.0 + 0.5);
+	}
+}
+
+/* inc-1xr3: env-gated probe for the advertised-versus-observed chance. Set
+   INCURSION_CHANCE_PROBE and SkillCheck and SavingThrow each append one line
+   to logs/chance_probe.log: <skill|save> <sk-or-type> <DC> <predicted%>
+   <result 0/1>. The prediction comes from SkillCheckChance / SaveChance with
+   the same arguments and is computed before the dice are rolled. Off and free
+   otherwise. tools/check_chance.sh reads it. */
+void ChanceProbeNote(const char *kind, int16 which, int16 DC, int16 predicted,
+	int result)
+{
+	static int on = -1;
+	static FILE *f = NULL;
+	char path[1024];
+
+	if (on == -1)
+		on = getenv("INCURSION_CHANCE_PROBE") ? 1 : 0;
+	if (!on)
+		return;
+	if (!f) {
+		snprintf(path, sizeof(path), "%slogs/chance_probe.log",
+			(const char*)T1->IncursionDirectory);
+		f = fopen(path, "a");
+		if (!f)
+			return;
+	}
+	fprintf(f, "%s %d %d %d %d\n", kind, (int)which, (int)DC,
+		(int)predicted, result);
+	fflush(f);
+}
+
 bool Creature::SkillCheck(int16 sk, int16 DC, bool show, int16 mod1, const char* mod1Str, int16 mod2, const char* mod2Str) {
 	int16 roll, rollA, rollB, rollC, sr, armPen = 0;
 	String sStr, sRolls;
-	Creature *msa;
 
 	/* inc-h22n: off unless INCURSION_DOORPICK_PROBE is set; records each
 	   lock-picking check's DC and bonus. See src/DoorPickProbe.cpp. */
@@ -1542,6 +1676,16 @@ bool Creature::SkillCheck(int16 sk, int16 DC, bool show, int16 mod1, const char*
 		extern void LockPickCheckNote(int16, int16);
 		LockPickCheckNote(DC, mod1);
 	}
+	/* inc-1xr3: all the deterministic numbers -- bonus, needed roll, take-20
+	   flag, die count and the Skill Mastery floor -- come from one shared
+	   place so the chance we advertise cannot drift from the check. It rolls
+	   no dice and changes no state; the rolls stay here in their old order. */
+	SkillTarget tgt = SkillCheckTarget(sk, DC, mod1, mod2);
+
+	/* inc-1xr3: predicted chance, computed with the same arguments and
+	   BEFORE any die is rolled. Probe only. */
+	int16 chance = SkillCheckChance(sk, DC, mod1, mod2);
+
 	rollA = Dice::Roll(1, 20);
 	rollB = rollC = 0;
 	/* This isn't in the OGL system, but in a roguelike game it is
@@ -1562,14 +1706,7 @@ bool Creature::SkillCheck(int16 sk, int16 DC, bool show, int16 mod1, const char*
 	roll = max(rollA, rollB);
 	roll = max(roll, rollC);
 
-	if (HasAbility(CA_SKILL_MASTERY))
-	{
-		// ugly kludge
-		rID rogueID = FIND("rogue");
-		ASSERT(rogueID);
-		if (TCLASS(rogueID)->HasSkill(sk))
-			roll = max(roll, min(15, 7 + Mod(A_INT)));
-	}
+	roll = max(roll, tgt.floorRoll);
 
 	/* upstream: SRD 3.5's "taking 20" lets a character forego the die on
 	   Escape Artist, Climb, Open Lock (Handle Device here), Search or
@@ -1589,24 +1726,12 @@ bool Creature::SkillCheck(int16 sk, int16 DC, bool show, int16 mod1, const char*
 	   deliberate-action or time cost, and the plain sum below decides
 	   success against the DC like any other check. Tracking: bd inc-e68f.
 	   Not sent. */
-	bool took20 = false;
-	if (!isThreatened() && (sk == SK_ESCAPE_ART || sk == SK_CLIMB ||
-		sk == SK_HANDLE_DEV || sk == SK_SEARCH || sk == SK_BALANCE))
-	{
+	bool took20 = tgt.took20;
+	if (took20)
 		roll = 20;
-		took20 = true;
-	}
 
-	if (sk == SK_LOCKPICKING || sk == SK_HEALING ||
-		sk == SK_HANDLE_DEV || sk == SK_SEARCHING ||
-		sk == SK_INTUITION || sk == SK_ANIMAL_EMP ||
-		sk == SK_DIPLOMACY || sk == SK_BLUFF ||
-		sk == SK_INTIMIDATE || sk == SK_DECIPHER)
-		msa = MostSkilledAlly(sk);
-	else
-		msa = this;
-
-	sr = msa->SkillLevel(sk);
+	Creature *msa = tgt.msa;
+	sr = tgt.sr;
 
 	/* The "Suggestion clause", hardcoded in here because there's no
 	   other easy way to do it; see the Suggestion spell description
@@ -1766,6 +1891,7 @@ bool Creature::SkillCheck(int16 sk, int16 DC, bool show, int16 mod1, const char*
 				}
 			}
 
+	ChanceProbeNote("skill", sk, DC, chance, succ ? 1 : 0);
 	return succ;
 }
 
@@ -3682,14 +3808,14 @@ Create:
 	}
 
 	if (useSkill > 0 && !XPCost) {
-		if (!yn(Format("That takes %d gp, %d hours and is DC %d. Proceed?",
-			gpCost, hours, craftDC))) {
+		if (!yn(Format("That takes %d gp, %d hours and is DC %d (Skill %d~; half gp lost on failure). Proceed?",
+			gpCost, hours, craftDC, SkillCheckChance(useSkill, craftDC)))) {
 			it->Remove(true);
 			return ABORT;
 		}
 	}
 	else if (useSkill > 0)
-		if (!yn(Format("That takes %d XP, %d gp, %d hours and is DC %d. Proceed?", XPCost, gpCost, hours, craftDC))) {
+		if (!yn(Format("That takes %d XP, %d gp, %d hours and is DC %d (Skill %d~; half XP and gp lost on failure). Proceed?", XPCost, gpCost, hours, craftDC, SkillCheckChance(useSkill, craftDC)))) {
 			it->Remove(true);
 			return ABORT;
 		}
@@ -3780,9 +3906,16 @@ Repair:
 		return ABORT;
 	}
 
+	/* inc-1xr3: the hours and check modifier for each repair option, shared
+	   by the prompt and the deciding SpendHours/SkillCheck below. */
+	int16 fastHours = 2, slowHours = 8;
+	int16 fastMod = 0, slowMod = 4;
+
 	ch = thisp->MyTerm->ChoicePrompt(Format(
-		"Craft %+d, DC %d. Proceed, work slowly or cancel?",
-		SkillLevel(SK_CRAFT), repairDC), "psc", CYAN, SKYBLUE);
+		"Craft %+d, DC %d. Proceed, work slowly or cancel? (%d gp; proceed: %d hours, %d~; slowly: %d hours, %d~)",
+		SkillLevel(SK_CRAFT), repairDC, gpCost,
+		fastHours, SkillCheckChance(SK_CRAFT, repairDC, fastMod),
+		slowHours, SkillCheckChance(SK_CRAFT, repairDC, slowMod)), "psc", CYAN, SKYBLUE);
 
 	if (ch == 'c' || ch == -1)
 		return ABORT;
@@ -3791,12 +3924,12 @@ Repair:
 	if (ch == 's')
 		workSlowly = true;
 
-	if (thisp->SpendHours(workSlowly ? 8 : 2, workSlowly ? 8 : 2) != DONE)
+	if (thisp->SpendHours(workSlowly ? slowHours : fastHours, workSlowly ? slowHours : fastHours) != DONE)
 		return ABORT;
 
 	LoseMoneyTo(gpCost, NULL);
 
-	if (SkillCheck(SK_CRAFT, repairDC, true, workSlowly ? 4 : 0, workSlowly ? "patience" : NULL)) {
+	if (SkillCheck(SK_CRAFT, repairDC, true, workSlowly ? slowMod : fastMod, workSlowly ? "patience" : NULL)) {
 		it->MendHP(Dice::Roll(2, 8, SkillLevel(SK_CRAFT) / 3));
 		it->RemoveStati(TRIED, -1, SK_CRAFT);
 		IPrint(Format("You %srepair your damaged %s. (%d/%d).",

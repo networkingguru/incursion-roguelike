@@ -42,6 +42,19 @@
 #define is_elemental_dmg(i) (i == AD_FIRE || i == AD_COLD || i == AD_ELEC || \
                              i == AD_TOXI || i == AD_SONI || i == AD_ACID)  
 
+/* inc-1xr3: the overchannel success chance, in one place for the "Attempt
+   spell anyway?" prompt and the deciding roll. The cast fails when
+   random(25)+80 > rating, so it succeeds for rating-80+1 of the 25 equally
+   likely rolls; both callers pass the same SpellRating(e.eID). */
+static int16 OverchannelChance(int16 rating) {
+    int16 passing = rating - 79;
+    if (passing < 0)
+        passing = 0;
+    if (passing > 25)
+        passing = 25;
+    return (int16)((passing * 100) / 25);
+}
+
 bool effectGivesStati(rID eID)
   {
     EffectValues *ev; int8 i;
@@ -4816,7 +4829,9 @@ HasComponent:
     if ((cMana() < mCost) && !(Type == T_PLAYER && thisp->Opt(OPT_INF_MANA))) {
         IPrint("You don't have enough mana.");
         if (Type == T_PLAYER && cMana() >= (mCost / 2))
-            if (thisp->MyTerm->yn("Attempt spell anyway?")) {
+            if (thisp->MyTerm->yn(Format("Attempt spell anyway? (%d~%s)",
+                    OverchannelChance(SpellRating(e.eID)),
+                    mCost > cMana() ? "; all remaining mana" : ""))) {
                 /* take damage */
                 LoseMana(mCost);
                 if (random(25)+80 > SpellRating(e.eID))
@@ -6019,13 +6034,18 @@ EvReturn Item::ZapWand(EventInfo &e)
           return ABORT;
           }
         if (e.EActor->cMana() >= max(1,Cost/2))
-          if ((e.EItem->isKnown(KN_PLUS|KN_MAGIC)) && e.EActor->yn("Fire it anyway?",true))
+          {
+            /* inc-1xr3: the wand-drain die count, shared by the prompt and
+               the damage roll so the shown NdN cannot drift from the roll. */
+            int16 drainDice = TEFF(e.eID)->ManaCost - (int16)e.EActor->cMana();
+          if ((e.EItem->isKnown(KN_PLUS|KN_MAGIC)) &&
+              e.EActor->yn(Format("Fire it anyway? (takes %dd4 damage)", drainDice),true))
             {
-              ThrowDmg(EV_DAMAGE,AD_NORM,Dice::Roll(TEFF(e.eID)->ManaCost - 
-                (int16)e.EActor->cMana(), 4,0),"wand drain",NULL,e.EActor,e.EItem);
+              ThrowDmg(EV_DAMAGE,AD_NORM,Dice::Roll(drainDice, 4,0),"wand drain",NULL,e.EActor,e.EItem);
               e.EActor->LoseMana(Cost,TEFF(e.eID)->HasFlag(EF_LOSEMANA));
               goto Success;
             }
+          }
         if (!(e.EItem->isKnown(KN_PLUS|KN_MAGIC))) {
           e.EActor->IPrint("Your remaining mana fails to activate the wand.");
           e.EActor->LoseMana(Cost,TEFF(e.eID)->HasFlag(EF_LOSEMANA));

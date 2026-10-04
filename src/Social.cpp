@@ -330,7 +330,7 @@ EvReturn Creature::Cow(EventInfo &e) {
         if (cr->isCreature() && cr->isFriendlyTo(e.EVictim))
             c++;
     if (c > 1)
-        if (yn(XPrint("Cow the <Obj>'s whole group?", e.EVictim))) {
+        if (yn(XPrint("Cow the <Obj>'s whole group? (+10 DC; whole group locked out for a day)", e.EVictim))) {
             doGroup = true;
             CheckDC += 10;
             BestCR = 0;
@@ -454,7 +454,7 @@ EvReturn Creature::OfferTerms(EventInfo &e) {
         if (cr->isCreature() && cr->isFriendlyTo(e.EVictim) && NAT_FEAR(cr))
             c++;
     if (c > 1)
-        if (yn(XPrint("Offer terms to the <Obj>'s whole group?", e.EVictim))) {
+        if (yn(XPrint("Offer terms to the <Obj>'s whole group? (+10 DC; whole group locked out for a day)", e.EVictim))) {
             doGroup = true;
             CheckDC += 10;
             BestCR = 0;
@@ -592,7 +592,8 @@ EvReturn Creature::Distract(EventInfo &e) {
                 BestRes = Res;
         }
 
-    if (c > 1 && yn("Distract Everyone?"))
+    if (c > 1 && yn(Format("Distract Everyone? (group DC %d)",
+           15 + BestRes)))
         doGroup = true;
     else
         doGroup = false;
@@ -1076,11 +1077,16 @@ EvReturn Creature::Quell(EventInfo &e) {
             e.EActor->AlignedAct(AL_GOOD,3,"resolving conflict");
     } else if (wasDamaged) {
         /* Exploitation */
-        if (!e.EActor->yn("Confirm use exploitation?"))
+        /* inc-1xr3: Transgress records anger and is probabilistic (it returns
+           untaken when random(60) exceeds the magnitude, src/Prayer.cpp), so
+           the note names the act rather than offering a fixed favour cost. */
+        int16 exploitTransgress = 5;
+        if (!e.EActor->yn(Format("Confirm use exploitation? (evil act; "
+              "angers Essiah)")))
             return ABORT;
         sk = SK_BLUFF;
         e.EActor->AlignedAct(AL_EVIL,1,"exploitation");
-        e.EActor->Transgress(FIND("Essiah"),5,false,"exploitation");
+        e.EActor->Transgress(FIND("Essiah"),exploitTransgress,false,"exploitation");
     }
 
     CheckDC = 15 + max(0,e.EVictim->ChallengeRating())*3;
@@ -1178,13 +1184,20 @@ EvReturn Creature::Request(EventInfo &e) {
     
     sk = SK_DIPLOMACY;
     if (SkillLevel(SK_INTIMIDATE) > SkillLevel(SK_DIPLOMACY)) {
-      if (yn(Format("Intimidate %c%+d%c, Diplomacy %c%+d%c. Use Intimidate?",
-          -MAGENTA, SkillLevel(SK_INTIMIDATE), -PURPLE, -MAGENTA, SkillLevel(SK_DIPLOMACY), -PURPLE), true))
+      /* inc-1xr3: naming the alignment act this choice will trigger, on the
+         same condition the AlignedAct call below tests. */
+      const char *intimNote = (!e.EVictim->isMType(MA_EVIL)) ? " (coercion)" : "";
+      if (yn(Format("Intimidate %c%+d%c, Diplomacy %c%+d%c. Use Intimidate?%s",
+          -MAGENTA, SkillLevel(SK_INTIMIDATE), -PURPLE, -MAGENTA, SkillLevel(SK_DIPLOMACY), -PURPLE,
+          intimNote), true))
         sk = SK_INTIMIDATE;
-    } else if (SkillLevel(SK_BLUFF) > SkillLevel(SK_DIPLOMACY))
-      if (yn(Format("Bluff %c%+d%c, Diplomacy %c%+d%c. Use Bluff?",
-          -MAGENTA, SkillLevel(SK_BLUFF), -PURPLE, -MAGENTA, SkillLevel(SK_DIPLOMACY), -PURPLE), true))
-        sk = SK_BLUFF;  
+    } else if (SkillLevel(SK_BLUFF) > SkillLevel(SK_DIPLOMACY)) {
+      const char *bluffNote = (!e.EVictim->isMType(MA_EVIL)) ? " (treachery)" : "";
+      if (yn(Format("Bluff %c%+d%c, Diplomacy %c%+d%c. Use Bluff?%s",
+          -MAGENTA, SkillLevel(SK_BLUFF), -PURPLE, -MAGENTA, SkillLevel(SK_DIPLOMACY), -PURPLE,
+          bluffNote), true))
+        sk = SK_BLUFF;
+    }
         
     if (sk == SK_INTIMIDATE && !e.EVictim->isMType(MA_EVIL))
       e.EActor->AlignedAct(AL_NONCHAOTIC|AL_LAWFUL,3,"coercion");
@@ -1288,7 +1301,7 @@ EvReturn Creature::Request(EventInfo &e) {
       if (cr->isCreature() && cr->isFriendlyTo(e.EVictim))
         c++;
     if (c > 1)
-      if (yn(XPrint("Persuade the <Obj>'s whole group?",e.EVictim)))
+      if (yn(XPrint("Persuade the <Obj>'s whole group? (+10 DC; whole group locked out for a day)",e.EVictim)))
         { doGroup = true; DC += 10; BestCR = 0;
           MapIterate(m,cr,i)
             if (cr->isCreature() && cr->isFriendlyTo(e.EVictim))
@@ -1533,7 +1546,8 @@ EvReturn Creature::Taunt(EventInfo &e)
     
     CheckDC = 15;
     
-    if (c > 1 && yn("Taunt the whole encounter?"))
+    if (c > 1 && yn(Format("Taunt the whole encounter? (group +%d DC)",
+            5 + BestWill*2)))
       { doGroup = true;
         CheckDC += 5 + BestWill*2; 
         MapIterate(m,cr,i)

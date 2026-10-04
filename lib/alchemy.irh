@@ -283,6 +283,12 @@ Terrain "tanglefoot strands" {
   } ;
     On Event EV_MOVE, PRE(EV_STRIKE), EV_JUMP_OFF, EV_LAND {
       hObj mount;
+      int16 sv, svdc;
+      /* inc-1xr3: this terrain's own constants, the same ones
+         TerrainRiskNote reports in the prompt. WARN_SAVE holds the save
+         type + 1 (REF is 1), so the note can name it. */
+      sv = $"tanglefoot strands"->GetConst(WARN_SAVE) - 1;
+      svdc = $"tanglefoot strands"->GetConst(WARN_SAVE_DC);
       mount = EActor->GetStatiObj(MOUNTED);
       if (mount) {
         if (mount->HasAbility(CA_WOODLAND_STRIDE) ||
@@ -290,7 +296,7 @@ Terrain "tanglefoot strands" {
             mount->ResistLevel(AD_STUK) == -1 ||
             mount->isAerial())
           return NOTHING;
-        if (mount->SavingThrow(REF,15,SA_GRAB|SA_TRAPS)) {
+        if (mount->SavingThrow(sv,svdc,SA_GRAB|SA_TRAPS)) {
           if (!mount->HasEffStati(ENTANGLED,$"tanglefoot strands"))
             mount->GainPermStati(ENTANGLED,NULL,SS_MISC,0,0,$"tanglefoot strands");
           return NOTHING;
@@ -323,7 +329,7 @@ Terrain "tanglefoot strands" {
             EActor->ResistLevel(AD_STUK) == -1 ||
             EActor->isAerial())
           return NOTHING;
-        if (EActor->SavingThrow(REF,15,SA_GRAB|SA_TRAPS)) {
+        if (EActor->SavingThrow(sv,svdc,SA_GRAB|SA_TRAPS)) {
           if (!EActor->HasEffStati(ENTANGLED,$"tanglefoot strands"))
             EActor->GainPermStati(ENTANGLED,NULL,SS_MISC,0,0,$"tanglefoot strands");
           return NOTHING;
@@ -347,7 +353,12 @@ Terrain "tanglefoot strands" {
        victim stands on, so the two remove-and-regrant blocks above are
        gone -- they used to make GainTempStati (src/Status.cpp:225)
        print "You've become stuck!" a third time. */
-    * STICK_TYPE STUCK_BONDED;
+    * STICK_TYPE STUCK_BONDED,
+    /* inc-1xr3: the Reflex save the prompt advertises and this handler
+       rolls, so the number shown cannot drift from the number rolled.
+       WARN_SAVE holds the save type + 1 (REF is 1, so 1+1=2). */
+    * WARN_SAVE 2,
+    * WARN_SAVE_DC 15;
   }
 
 Item "wooden rod" : T_TOOL

@@ -1,0 +1,36 @@
+# inc-1xr3: prove the deep water handler reads its OWN constants and still
+# makes the Swim check. Place one square of deep water one step east of the
+# player with wizard mode, then walk east into it. The move INTO the terrain
+# is the case the defect was about: EActor still stands on the OLD square
+# when EV_MOVE fires, so reading EMap->TerrainAt(EActor->x,EActor->y) saw the
+# old terrain and rolled SkillCheck(0,0). Read the "Confirm enter the deep
+# water? (...)" prompt and the "Swim Check: ... vs DC 10" line from the
+# screen dumps.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_RUN_DIR=logs/runs/1xr3-deep-water \
+#   tools/headless.sh tools/keys/deep-water-swim.keys 20260905
+
+@include chargen.keys
+
+w
+y
+ESC # Enable wizard mode, then leave its menu without killing anything.
+
+# One square of deep water, one step east of the player.
+w
+@choose "Change terrain type"
+RIGHT ENTER
+@choose "deep water"
+@dump:pool
+
+# Walk east into it. The prompt fires while the player is still on the OLD
+# square; the Swim Check fires after the step.
+RIGHT
+@dump:prompt
+y
+@dump:entered
+RIGHT
+@dump:second
+
+@quit
