@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # inc-1xr3 phase 2c: the social / script / unknown-odds prompts must name the
 # cost or the uncertainty, and every shown number must come from the expression
 # the deciding code uses.
@@ -85,9 +86,9 @@ grep -q 'if (sk == SK_BLUFF && !e.EVictim->isMType(MA_EVIL))' "$SOCIAL" \
     || note "Social.cpp: treachery deciding condition changed"
 
 # (4) rune force prompt names the fatigue; literal kept next to the call.
-grep -c 'force it? (costs 2 fatigue)' "$DUNGEON" | grep -q '^2$' \
+grep -q '^2$' <<< "$(grep -c 'force it? (costs 2 fatigue)' "$DUNGEON")" \
     || note "dungeon.irh: rune prompts do not both name the 2 fatigue"
-grep -c 'LoseFatigue(2,true)' "$DUNGEON" | grep -q '^2$' \
+grep -q '^2$' <<< "$(grep -c 'LoseFatigue(2,true)' "$DUNGEON")" \
     || note "dungeon.irh: LoseFatigue(2,true) call changed"
 
 # (5) immunize prompt prints the ADJUST_INH magnitude.
@@ -95,7 +96,7 @@ grep -q 'permanent mana -<Num>)",' "$PSPELLS" \
     || note "pspells.irh: immunize prompt does not name the permanent loss"
 grep -q 'spID,(spID->Level+1)/2),true)' "$PSPELLS" \
     || note "pspells.irh: immunize prompt does not print (spID->Level+1)/2"
-grep -c -- '-(spID->Level+1)/2' "$PSPELLS" | grep -qE '^[12]$' \
+grep -qE '^[12]$' <<< "$(grep -c -- '-(spID->Level+1)/2' "$PSPELLS")" \
     || note "pspells.irh: ADJUST_INH magnitude changed"
 
 # (6) extra dice prompt names the 2 HP per die.
@@ -121,7 +122,7 @@ grep -q 'Flee: each foe gets a free attack; Disengage: odds unknown' "$MOVE" \
 # (10) the three +10/group-lockout prompts carry the note.
 grep -q "whole group? (+10 DC; whole group locked out for a day)" "$SOCIAL" \
     || note "Social.cpp: a whole-group prompt is missing the +10/lockout note"
-grep -c "whole group? (+10 DC; whole group locked out for a day)" "$SOCIAL" | grep -q '^3$' \
+grep -q '^3$' <<< "$(grep -c "whole group? (+10 DC; whole group locked out for a day)" "$SOCIAL")" \
     || note "Social.cpp: expected exactly 3 whole-group notes (Cow, Offer terms, Persuade)"
 grep -q 'Distract Everyone?' "$SOCIAL" \
     || note "Social.cpp: Distract prompt unexpectedly changed"

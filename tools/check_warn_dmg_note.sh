@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # inc-1xr3 phase 2i reproduction: damage warnings name their per-step damage.
 #
 # Source-level check (no gameplay observation). It asserts:
@@ -33,31 +34,31 @@ grep -q 'GetTerraDmg' "$C" && note "Creature.cpp: note still calls Map::GetTerra
 
 # (1)+(3) magma: 6d6 fire, handler rolls from the constants.
 magma_consts=$(awk '/^Terrain "magma"/,/Desc:/' "$D")
-echo "$magma_consts" | grep -q 'WARN_DMG_NUM 6'   || note "magma: no WARN_DMG_NUM 6"
-echo "$magma_consts" | grep -q 'WARN_DMG_SIDES 6' || note "magma: no WARN_DMG_SIDES 6"
-echo "$magma_consts" | grep -q 'WARN_DMG_TYPE AD_FIRE' || note "magma: no AD_FIRE type"
+grep -q 'WARN_DMG_NUM 6' <<< "$magma_consts"   || note "magma: no WARN_DMG_NUM 6"
+grep -q 'WARN_DMG_SIDES 6' <<< "$magma_consts" || note "magma: no WARN_DMG_SIDES 6"
+grep -q 'WARN_DMG_TYPE AD_FIRE' <<< "$magma_consts" || note "magma: no AD_FIRE type"
 grep -q 'dn = $"magma"->GetConst(WARN_DMG_NUM)' "$D" || note "magma: handler does not read WARN_DMG_NUM"
 grep -q 'dmg = (dn)d(ds) - r;' "$D" || note "magma: handler does not roll from the constants"
 
 # acid fog: 1d6 acid, handler rolls from the constants.
 acid_consts=$(awk '/^Terrain "acid fog"/,/On Event EV_MON_CONSIDER/' "$D")
-echo "$acid_consts" | grep -q 'WARN_DMG_NUM 1'    || note "acid fog: no WARN_DMG_NUM 1"
-echo "$acid_consts" | grep -q 'WARN_DMG_SIDES 6'  || note "acid fog: no WARN_DMG_SIDES 6"
-echo "$acid_consts" | grep -q 'WARN_DMG_TYPE AD_ACID' || note "acid fog: no AD_ACID type"
+grep -q 'WARN_DMG_NUM 1' <<< "$acid_consts"    || note "acid fog: no WARN_DMG_NUM 1"
+grep -q 'WARN_DMG_SIDES 6' <<< "$acid_consts"  || note "acid fog: no WARN_DMG_SIDES 6"
+grep -q 'WARN_DMG_TYPE AD_ACID' <<< "$acid_consts" || note "acid fog: no AD_ACID type"
 grep -q 'dn = $"acid fog"->GetConst(WARN_DMG_NUM)' "$D" || note "acid fog: handler does not read WARN_DMG_NUM"
 grep -q '(dn)d(ds),"acid fog"' "$D" || note "acid fog: handler does not roll from the constants"
 
 # bed of spikes: 1d8 piercing, handler rolls from the constants.
 spikes_consts=$(awk '/^Terrain "bed of spikes"/,/EV_MON_CONSIDER/' "$D")
-echo "$spikes_consts" | grep -q 'WARN_DMG_NUM 1'    || note "bed of spikes: no WARN_DMG_NUM 1"
-echo "$spikes_consts" | grep -q 'WARN_DMG_SIDES 8'  || note "bed of spikes: no WARN_DMG_SIDES 8"
-echo "$spikes_consts" | grep -q 'WARN_DMG_TYPE AD_PIERCE' || note "bed of spikes: no AD_PIERCE type"
+grep -q 'WARN_DMG_NUM 1' <<< "$spikes_consts"    || note "bed of spikes: no WARN_DMG_NUM 1"
+grep -q 'WARN_DMG_SIDES 8' <<< "$spikes_consts"  || note "bed of spikes: no WARN_DMG_SIDES 8"
+grep -q 'WARN_DMG_TYPE AD_PIERCE' <<< "$spikes_consts" || note "bed of spikes: no AD_PIERCE type"
 grep -q '(dn)d(ds),"a bed of spikes"' "$D" || note "bed of spikes: handler does not roll from the constants"
 
 # thorn wall: flat 25 slashing, handler uses the constant.
 thorn_consts=$(awk '/^Terrain "thorn wall"/,/WARN_DMG_TYPE/' "$D")
-echo "$thorn_consts" | grep -q 'WARN_DMG_BONUS 25'   || note "thorn wall: no WARN_DMG_BONUS 25"
-echo "$thorn_consts" | grep -q 'WARN_DMG_TYPE AD_SLASH' || note "thorn wall: no AD_SLASH type"
+grep -q 'WARN_DMG_BONUS 25' <<< "$thorn_consts"   || note "thorn wall: no WARN_DMG_BONUS 25"
+grep -q 'WARN_DMG_TYPE AD_SLASH' <<< "$thorn_consts" || note "thorn wall: no AD_SLASH type"
 grep -q 'dmg = $"thorn wall"->GetConst(WARN_DMG_BONUS);' "$D" || note "thorn wall: handler does not read WARN_DMG_BONUS"
 grep -q 'AD_SLASH,dmg,"a wall of thorns"' "$D" || note "thorn wall: handler does not use the constant"
 
@@ -69,9 +70,9 @@ grep -q 'EMap->GetTerraDmg(e.EXVal,e.EYVal)' lib/wspells.irh \
 for g in "guardian runes" "guardian runes;2"; do
     gc=$(awk -v t="Terrain \"$g\"" 'index($0,t)==1{f=1} f&&/EV_MON_CONSIDER/{exit} f' "$D")
     for c in 'WARN_DMG_NUM 1' 'WARN_DMG_SIDES 6' 'WARN_DMG_BONUS 5'; do
-        echo "$gc" | grep -q "$c" || note "$g: no $c"
+        grep -q "$c" <<< "$gc" || note "$g: no $c"
     done
-    echo "$gc" | grep -q '^ *\* WARN_SAVE ' && note "$g: declares WARN_SAVE (save type is random)"
+    grep -q '^ *\* WARN_SAVE ' <<< "$gc" && note "$g: declares WARN_SAVE (save type is random)"
     grep -qF "\$\"$g\"->GetConst(WARN_DMG_BONUS)" "$D" || note "$g: handler does not read WARN_DMG_BONUS"
 done
 grep -q 'EMap->GetTerraDmg(e.EXVal,e.EYVal)' lib/wspells.irh \

@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Regression check for inc-1xr3: the chance SkillCheckChance / SaveChance
 # advertise must match what SkillCheck / SavingThrow actually do.
 #

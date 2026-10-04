@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: cheap
 # inc-1xr3 phase 2b: the prompt-time numbers must come from the same
 # expression the deciding code uses.
 #
