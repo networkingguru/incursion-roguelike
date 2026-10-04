@@ -20,7 +20,7 @@ row and exits 2, exactly as before.
 This is a measuring tool: it reports numbers (finish reason, token counts, cost,
 tool calls, DSML markup leaks, repeated lines). It judges nothing.
 
-Standard library only. Reuses tools/deepseek.py for key/URL/ledger/budget
+Standard library only. Reuses tools/deepseek.py for key/URL/ledger
 resolution and ledger appending; that file is never modified.
 """
 
@@ -39,8 +39,6 @@ if str(TOOLS_DIR) not in sys.path:
 
 from deepseek import (  # noqa: E402
     append_ledger_row,
-    check_budget,
-    resolve_budget,
     resolve_key,
     resolve_ledger_path,
     resolve_url,
@@ -286,15 +284,13 @@ def write_text(path, text):
     path.write_text(text, encoding="utf-8")
 
 
-def run_one(args, body, run, key, ledger_path, budget, request_path, out_dir):
+def run_one(args, body, run, key, ledger_path, request_path, out_dir):
     response_path = out_dir / f"run-{run:02d}.response.txt"
     summary_path = out_dir / f"run-{run:02d}.summary.json"
     content_path = out_dir / f"run-{run:02d}.content.txt"
     reasoning_path = out_dir / f"run-{run:02d}.reasoning.txt"
 
-    # Step 1: every run re-checks the budget, not just once per invocation.
-    check_budget(ledger_path, budget)
-
+    # Step 1: no budget check -- the ledger records cost but never refuses a run.
     # Step 2 and 3: POST and stream the raw reply to disk as it arrives.
     status, resp = send_stream(resolve_url(), key, body, args.timeout)
 
@@ -436,14 +432,13 @@ def main(argv):
 
     key = resolve_key()
     ledger_path = resolve_ledger_path()
-    budget = resolve_budget()
 
     total_cost = 0.0
     leaks = 0
     lengths = 0
     zero_tools = 0
     for run in range(1, args.runs + 1):
-        run_one(args, body, run, key, ledger_path, budget, request_path, out_dir)
+        run_one(args, body, run, key, ledger_path, request_path, out_dir)
 
     for run in range(1, args.runs + 1):
         summary_path = out_dir / f"run-{run:02d}.summary.json"
