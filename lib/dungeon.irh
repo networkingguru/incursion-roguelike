@@ -1746,7 +1746,15 @@ Terrain "deep water"
         return NOTHING;
       mount = EActor->GetStatiObj(MOUNTED);
       if (mount) {
+        /* upstream: WATER_BREATHING is defined (inc/Defines.h) and granted --
+           Kysul's blessing, and the Ring of Elemental Command (Water),
+           lib/m_items.irh:5114 -- but never read anywhere, so the same defect
+           ships on Win32 with the original typedefs and compiler. Both water
+           terrains here now honour it exactly as M_AMPHIB. Tier Observed,
+           tools/check_water_breathing.sh; tracking bd inc-jkyf; not sent to
+           rmtew. */
         if (mount->HasMFlag(M_AMPHIB) ||
+            mount->HasStati(WATER_BREATHING) ||
             mount->isMType(MA_AQUATIC) ||
             mount->isMType(MA_WATER) ||
             mount->HasMFlag(M_INCOR) ||
@@ -1774,6 +1782,7 @@ Terrain "deep water"
         } 
       } 
       if (EActor->HasMFlag(M_AMPHIB) ||
+          EActor->HasStati(WATER_BREATHING) ||
           EActor->isMType(MA_AQUATIC) ||
           EActor->isMType(MA_WATER) ||
           EActor->HasMFlag(M_INCOR) ||
@@ -1805,6 +1814,7 @@ Terrain "deep water"
         return NOTHING;
       if (mount) {
         if (mount->HasMFlag(M_AMPHIB) ||
+            mount->HasStati(WATER_BREATHING) ||
             mount->isMType(MA_AQUATIC) ||
             mount->isMType(MA_WATER) ||
             mount->HasMFlag(M_INCOR) ||
@@ -1816,6 +1826,7 @@ Terrain "deep water"
           return NOTHING;
       } else { 
         if (EActor->HasMFlag(M_AMPHIB) ||
+            EActor->HasStati(WATER_BREATHING) ||
             EActor->isMType(MA_AQUATIC) ||
             EActor->isMType(MA_WATER) ||
             EActor->HasMFlag(M_INCOR) ||
@@ -1835,8 +1846,9 @@ Terrain "deep water"
     through it requires a Swim skill check (DC 10). Failure means the 
     action is aborted (but it still takes time). Failure by more than 5
     means that you start drowning and take 6d2 points of damage.
-    Amphibians, aquatic creatures, water creatures, water alkers,
-    flyers, and creatures that don't breathe always succeed. Blunt and
+    Amphibians, aquatic creatures, water creatures, water walkers,
+    flyers, creatures that can breathe water, and creatures that don't
+    breathe always succeed. Blunt and
     slashing attacks deal half damage in water squares.
       \n__Water Combat: Thrown weapons are ineffective against targets in
       the water. Fire damage is ineffective against targets in the water
@@ -1907,6 +1919,7 @@ Terrain "turbulent water"
             mount->isAerial())
           return NOTHING; 
         if (mount->HasMFlag(M_AMPHIB) ||
+            mount->HasStati(WATER_BREATHING) ||
             mount->isMType(MA_AQUATIC) ||
             mount->HasMFlag(M_INCOR) ||
             mount->isMType(MA_WATER) ||
@@ -1927,13 +1940,16 @@ Terrain "turbulent water"
             mount->GainTempStati(EXPOSED,NULL,2,SS_MISC,0,2);
             ThrowTerraDmg(EV_DAMAGE,AD_NORM,6d4,"drowning",mount, $"turbulent water");
             ThrowTerraDmg(EV_DAMAGE,AD_SOAK,16d4,"drowning",mount, $"turbulent water");
-            ThrowTerraDmg(EV_DAMAGE,AD_NORM,3d4,"drowning",EActor, $"turbulent water");
-            ThrowTerraDmg(EV_DAMAGE,AD_SOAK,8d4,"drowning",EActor, $"turbulent water");
+            if (!EActor->HasStati(WATER_BREATHING)) {
+              ThrowTerraDmg(EV_DAMAGE,AD_NORM,3d4,"drowning",EActor, $"turbulent water");
+              ThrowTerraDmg(EV_DAMAGE,AD_SOAK,8d4,"drowning",EActor, $"turbulent water");
+            }
             progress = false; 
           } 
         }
       } 
       if (EActor->HasMFlag(M_AMPHIB) ||
+          EActor->HasStati(WATER_BREATHING) ||
           EActor->isMType(MA_AQUATIC) ||
           EActor->isMType(MA_WATER) ||
             EActor->HasMFlag(M_INCOR) ||
@@ -1976,6 +1992,7 @@ Terrain "turbulent water"
             mount->isAerial())
           return NOTHING; 
         if (mount->HasMFlag(M_AMPHIB) ||
+            mount->HasStati(WATER_BREATHING) ||
             mount->isMType(MA_AQUATIC) ||
             mount->isMType(MA_WATER) ||
             mount->HasMFlag(M_INCOR) ||
@@ -1987,6 +2004,7 @@ Terrain "turbulent water"
         } 
       } 
       if (EActor->HasMFlag(M_AMPHIB) ||
+          EActor->HasStati(WATER_BREATHING) ||
           EActor->isMType(MA_AQUATIC) ||
           EActor->isMType(MA_WATER) ||
             EActor->HasMFlag(M_INCOR) ||
@@ -2002,7 +2020,8 @@ Terrain "turbulent water"
     or attack through it requires a Swim skill check (DC 20). Failure means
     the action is aborted (but it still takes time). Failure by more than 5
     means that you start drowning and take 6d4 points of damage.
-    Amphibians, aquatic creatures and water creatures always succeed. Blunt
+    Amphibians, aquatic creatures, water creatures and creatures that can
+    breathe water always succeed. Blunt
     and slashing attacks deal half damage in water squares.
       \n__Water Combat: Thrown weapons are ineffective against targets in
       the water. Fire damage is ineffective against targets in the water
