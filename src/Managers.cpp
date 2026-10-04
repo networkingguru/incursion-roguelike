@@ -1367,7 +1367,7 @@ BuyItem:
         goto Redraw;
     }
 
-    if (!yn(Format("Confirm purchase %s?", (const char*)it->Name(0)))) {
+    if (!yn(Format("Confirm purchase %s? (%d gp)", (const char*)it->Name(0), cost))) {
         Seller->GainItem(it, false);
         goto Redraw;
     }
