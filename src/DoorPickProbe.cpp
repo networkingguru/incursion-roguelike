@@ -79,11 +79,71 @@ static bool freeSq(Map *mp, int x, int y) {
         && !mp->FCreatureAt(x, y);
 }
 
+/* inc-e3oo: intercept only the selected spell, before prompts or effects.
+   Kick notes leave the real kick event running. Active only within a case. */
+static Player *autoPlayer;
+static Door *autoDoor;
+static rID autoSpell;
+static int autoKicks, autoAttempts;
+bool AutoKnockProbeNote(Creature *actor, Thing *target, rID spell) {
+    if (!probeOn("INCURSION_AUTOKNOCK_PROBE") || !autoPlayer ||
+        actor != autoPlayer || target != autoDoor) return false;
+    if (spell) { autoSpell = spell; ++autoAttempts; }
+    else ++autoKicks;
+    return spell != 0;
+}
+
+static void autoKnockCases(Player *pl, Door *door) {
+    uint16 saved[MAX_SPELLS+1];
+    memcpy(saved, pl->Spells, sizeof saved);
+    const int8 knock = pl->Options[OPT_AUTOKNOCK], all = pl->Options[OPT_ALL_SPELLS];
+    const int timeout = pl->Timeout;
+    pl->Options[OPT_AUTOKNOCK] = 1;
+    pl->Options[OPT_ALL_SPELLS] = 0;
+    const char *names[] = {"levitation", "levitation-innate", "wizard-lock",
+                          "knock", "warp-wood", "levitation-knock", "none"};
+    rID lev = FIND("Levitation"), lock = FIND("Wizard Lock"),
+        knockID = FIND("Knock"), wood = FIND("Warp Wood");
+    if (!lev || !lock || !knockID || !wood) {
+        L("INCONCLUSIVE reason=missing-spells");
+    } else for (int c = 0; c < 7; ++c) {
+        memset(pl->Spells, 0, sizeof pl->Spells);
+        rID spell = c < 2 || c == 5 ? lev : c == 2 ? lock :
+                    c == 3 ? knockID : c == 4 ? wood : 0;
+        if (spell) pl->setSpellFlags(spell, c == 1 ? SP_INNATE : SP_KNOWN | SP_ARCANE);
+        if (c == 5) pl->setSpellFlags(knockID, SP_KNOWN | SP_ARCANE);
+        bool eligible = true;
+        for (int i = 0; i < theGame->LastSpell(); ++i)
+            if ((pl->Spells[i] != 0) != (pl->SpellRating(theGame->SpellID(i),0,true) != -1))
+                eligible = false;
+        door->DoorFlags = DF_LOCKED;
+        door->Flags |= F_SOLID;
+        door->cHP = door->mHP = TFEAT(door->fID)->hp;
+        door->SetImage();
+        pl->RemoveStati(ACTING);
+        pl->Timeout = 0;
+        autoPlayer = pl; autoDoor = door;
+        autoSpell = 0; autoKicks = autoAttempts = 0;
+        pl->TryToDestroyThing(door);
+        autoPlayer = NULL; autoDoor = NULL;
+        const char *selected = !autoSpell ? "none" : autoSpell == lev ? "levitation" :
+            autoSpell == lock ? "wizard-lock" : autoSpell == knockID ? "knock" :
+            autoSpell == wood ? "warp-wood" : "unexpected";
+        L("AUTO case=%s eligible=%d spell=%s attempts=%d kicks=%d timeout=%d",
+          names[c], eligible, selected, autoAttempts, autoKicks, (int)pl->Timeout);
+        pl->RemoveStati(ACTING);
+    }
+    memcpy(pl->Spells, saved, sizeof saved);
+    pl->Options[OPT_AUTOKNOCK] = knock; pl->Options[OPT_ALL_SPELLS] = all;
+    pl->Timeout = timeout;
+}
+
 void DoorPickProbe(Player *pl) {
-    if (!gProbeOn()) return;
+    const bool autoMode = probeOn("INCURSION_AUTOKNOCK_PROBE");
+    if (!gProbeOn() && !autoMode) return;
     char path[1024];
-    snprintf(path, sizeof(path), "%slogs/doorpick.log",
-        (const char*)T1->IncursionDirectory);
+    snprintf(path, sizeof(path), "%slogs/%s",
+        (const char*)T1->IncursionDirectory, autoMode ? "autoknock.log" : "doorpick.log");
     gLog = fopen(path, "a");
     if (!gLog) return;
     if (!pl || !pl->m) { L("INCONCLUSIVE reason=no-live-player-or-map"); fclose(gLog); return; }
@@ -166,6 +226,17 @@ void DoorPickProbe(Player *pl) {
     char dcs[256];
 
     newDoor(oak);
+    if (autoMode) {
+        mp->At(X,Y).Lit = 1;
+        pl->CalcVision();
+        autoKnockCases(pl, door);
+        door->Remove(true); chest->Remove(true);
+        pl->Options[OPT_AUTOOPEN] = o_open; pl->Options[OPT_AUTOKICK] = o_kick;
+        pl->Options[OPT_REPEAT_KICK] = o_rep; pl->Options[OPT_AUTOMORE] = o_more;
+        theGame->PlayMode = wasInPlay;
+        L("DONE"); fclose(gLog); gLog = NULL;
+        return;
+    }
 
     /* ---- lock-picking: doors ------------------------------------------ */
     setRanks(0);
