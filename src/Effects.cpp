@@ -1804,6 +1804,28 @@ void Map::RemoveTerra(int16 key)
         {
           t = TTER(TerrainList[TerraXY[i]->old]);
           x = TerraXY[i]->x; y = TerraXY[i]->y; 
+          {
+            /* upstream: STUCK from this terrain outlived the terrain. The
+               strands (and every other sticky terrain) expire here, but
+               nothing ended the STUCK stati they granted: Thing::UpdateStati
+               (src/Status.cpp) only counts down a Duration above zero, so a
+               creature that never made an escape check stayed anchored on a
+               bare square forever. The invariant: STUCK from this source ends
+               when its terrain is removed. Plain platform-independent stati
+               logic, same on Win32. Evidence: Observed,
+               tools/check_tanglefoot_stuck_expiry.sh (b). inc-9smo. Not sent. */
+            int16 stickType = (int16)TTER(TerrainAt(x,y))->GetConst(STICK_TYPE);
+            if (stickType) {
+              Creature *cr;
+              for (cr = FCreatureAt(x,y); cr; cr = NCreatureAt(x,y)) {
+                while (cr->HasStati(STUCK, stickType))
+                  cr->RemoveStati(STUCK,-1,stickType);
+                if (cr->HasStati(MOUNTED))
+                  while (((Creature*)cr->GetStatiObj(MOUNTED))->HasStati(STUCK, stickType))
+                    ((Creature*)cr->GetStatiObj(MOUNTED))->RemoveStati(STUCK,-1,stickType);
+              }
+            }
+          }
           At(x,y).Glyph   = t->Image;
           At(x,y).Solid   = t->HasFlag(TF_SOLID);
           At(x,y).Special = t->HasFlag(TF_SPECIAL);

@@ -454,6 +454,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_bloodspear_orc_save.sh` | Is the Bloodspear's +4 saving throw versus spells restricted to an orc wielder, rather than granted to anyone who holds it? | LIVE |
 | `check_bloodspear_regen.sh` | Does the Bloodspear start regeneration at 20 turns per critical-hit damage and extend it at 5 turns per later hit? | LIVE |
 | `check_bloodspear_regen_duration.sh` | Does a Bloodspear critical grant the orc wielder regeneration for amt*20 turns rather than amt*5? | LIVE |
+| `check_bolas_entangle_expiry.sh` | Does STUCK from a thrown entangling weapon end by itself? A kobold rogue throws bolas at a frozen bugbear; wizard "Examine Nearby Things" must show the bugbear's STUCK with a positive duration that lapses within 150 waits, with no escape-check roll printed. Red before inc-9smo: STUCK [Dur -1] never lapsed. | LIVE |
 | `check_book_section.sh` | books get their own Books inventory section | LIVE |
 | `check_book_stack.sh` | identical unidentified books stack; a different book does not | LIVE |
 | `check_boots_providence.sh` | Do the Boots of Providence pay their Luck bonus while carried, not only while worn? | LIVE |
@@ -747,6 +748,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_symbol_autopickup.sh` | Does autopickup keep a dead priest's holy symbol -- of any god, granting or not -- out of the pack while still stowing real unidentified magic and a granting god-marked shield? | LIVE |
 | `check_take_twenty.sh` | When nothing threatens him, does a character take 20 on Escape Artist, Climb, Handle Device, Search or Balance -- reading the maximum result, but still adding his modifiers and still measured against the DC -- rather than an accidental natural 20 passing the check however far short of the DC the total lands? Reads the printed `Escape Artist Check: took 20 ... [success\|failure]` line from a frozen paladin in full plate, whose total cannot reach the DC. | LIVE |
 | `check_tanglefoot_mount.sh` | Do tanglefoot strands catch the MOUNT and leave the rider free? A level-1 paladin rides his sacred mount along a strip of strands until the mount fails its reflex save; wizard mode's "Examine Player Data" must then show `STUCK from SS ATTK` under the `----MOUNT----` banner and none in the rider's own stati list. | LIVE |
+| `check_tanglefoot_stuck_expiry.sh` | Does STUCK from thrown tanglefoot strands end (a) by its own 2d4-round timeout while the strands remain, and (b) on the first screen after the strands vanish when the creature was caught less than one round before? Runs unmounted and mounted (the mount takes the STUCK). Red before inc-9smo on both. | LIVE |
 | `check_target_enter.sh` | Can a target prompt confirm a square that holds a staircase, including the one a character stands on the moment he enters a level? | LIVE |
 | `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? | LIVE |
 | `check_telepathy_prose.sh` | Does the Telepathy helm description state its scaling telepathy range -- 50 feet plus 10 feet per magic plus -- rather than the flat "60 feet" it claimed before, matching its `pval: PLUS_ADD5` code? | LIVE |
@@ -774,6 +776,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_wand_cleansing.sh` | Does a Wand of Cleansing Light roll the damage its own inventory line prints, rather than multiplying its plus twice? | LIVE |
 | `check_watchdog.sh` | Does `tools/watchdog.sh` stop a command whose output never starts (`startup`) or stops growing (`idle`), kill the whole process group so grandchildren die too, leave a steadily writing run and its own exit code alone, wire `--in` to the command's stdin, fail closed on a malformed limit, run `--canary` on a growing run and stop only on its exit 1 (saving its stdout to `<status>.canary`, and carrying on with one warning for any other code), and drive `tools/codex_exec.sh` (inc-gofz, inc-uxmf)? | LIVE |
 | `check_warn_dmg_note.sh` | Does each damage-dealing terrain declare the damage it deals, and does its handler and warning note read those same declared values? | LIVE |
+| `check_warrior_class_skills.sh` | Can a level-1 Human Warrior, whose racial skill picks are neither, put 2 ranks each in Appraise and Diplomacy, the class skills its help text names (inc-k2ws)? | LIVE |
 | `check_water_ring_prose.sh` | Does the Ring of Elemental Command (Water) description introduce its staff-spells as "elemental water", matching its all-water spell list, rather than the "elemental fire" it copied from the Fire ring? | LIVE |
 | `check_weapon_groups.sh` | Does every weapon-group bit hold a row in the name table, so a class's proficiency list names it rather than dropping it in silence? | LIVE |
 | `check_weapon_immunity_live.sh` | Is a bare fist tested against Weapon Immunity, and does Ki Strike beat it? One wizard-mode-summoned lemure, punched by the same character at Monk 1 and at Monk 4: `Your weapon fails to penetrate.` then no such line. | LIVE |
@@ -1065,7 +1068,9 @@ tools/check_gear_spell_protection.sh # a spell's SIBLING clause protects the cas
 tools/check_gear_item_exclusion.sh  # the wearer-only Amulet of Bile leaves the bearer's gear exposed
 tools/check_gaze_reflect_message.sh # a reflected gaze names the gazing monster once, in a sentence that parses
 tools/check_dungeonmap_bounds.sh    # a levitating character on the bottom level stays on it
+tools/check_bolas_entangle_expiry.sh # STUCK from a thrown entangling weapon ends by itself
 tools/check_tanglefoot_mount.sh     # tanglefoot catches the mount, not the rider on its back
+tools/check_tanglefoot_stuck_expiry.sh # STUCK from thrown tanglefoot strands ends by timeout or when the strands vanish
 tools/check_school_focus_menu.sh    # a school already focused on is off the School Focus menu
 tools/check_school_focus_dc.sh      # School Focus (Illusion) raises the disbelief DC
 tools/check_periodic_interval.sh    # a PERIODIC status effect fires every Val rounds, not Val-1
