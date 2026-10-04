@@ -21,8 +21,11 @@
 # seed 4, for an EDGE CASE a modest DC can never supply: DC 27 is far enough
 # above a level 1 paladin's +3 base that a natural 20 there only reads
 # "success" because of the special rule, not because Bonus + 20 happens to
-# clear the DC anyway. Every harvested line is checked against both halves
-# of the rule.
+# clear the DC anyway. The runes run PINS that natural 20 with
+# INCURSION_FORCE_SAVE_ROLL=20 (src/Fight.cpp's LOFGetForcedSaveThrowRoll)
+# rather than hoping a seed rolls one; an explicit assertion below requires
+# a roll-20-vs-DC-27 line to be present and [success]. Every harvested line
+# is checked against both halves of the rule.
 #
 # A run that never rolls a natural 20 (or never rolls a natural 1) has
 # measured nothing -- a d20 is 5% per roll; volume is what makes seeing both
@@ -63,8 +66,9 @@ check_mutation src/Creature.cpp \
 '    return (Bonus + roll >= DC);'
 
 HARVEST="$(mktemp -t natural_save_harvest)" || _check_die 2 "no temp file"
+RUNES_HARVEST="$(mktemp -t natural_save_runes)" || _check_die 2 "no temp file"
 RESULT="$(mktemp -t natural_save_result)" || _check_die 2 "no temp file"
-trap 'rm -f "$HARVEST" "$RESULT"' EXIT
+trap 'rm -f "$HARVEST" "$RUNES_HARVEST" "$RESULT"' EXIT
 
 # Dedupe the CURRENT run's chosen screens before adding them: the tangle
 # script pages the message log top to bottom with deliberately overlapping
@@ -88,9 +92,19 @@ do_check() {
     done
 
     echo "--- the edge case: DC 27 guardian runes, seed $RUNES_SEED ---"
-    check_run tools/keys/natural-save-runes.keys "$RUNES_SEED"
+    # Pin the roll instead of hoping a seed supplies a natural 20. Exported
+    # for this run only; INCURSION_FORCE_SAVE_ROLL seeds LOFForcedSaveThrowRoll
+    # once in src/Fight.cpp, and the tangle runs above never see it.
+    INCURSION_FORCE_SAVE_ROLL=20 \
+        check_run tools/keys/natural-save-runes.keys "$RUNES_SEED"
     check_screens '*messages*'
     harvest_run
+    # The runes session's own lines, kept apart so the assertion below can
+    # require a roll-20-vs-DC-27 line from THIS session, not from a tangle
+    # seed that happened to roll one against DC 15.
+    grep -h "Save: 1d20 (" "${CHECK_SCREENS[@]}" 2>/dev/null |
+        sed -E 's/^[[:space:]]*\|[[:space:]]*//; s/[[:space:]]*\|[^|]*$//' |
+        sort -u > "$RUNES_HARVEST"
 
     python3 - "$HARVEST" > "$RESULT" <<'PY'
 import re
@@ -147,6 +161,23 @@ if [ "${NAT20:-0}" -eq 0 ]; then
 fi
 if [ "${NAT1:-0}" -eq 0 ]; then
     _check_die 2 "no natural 1 was rolled across the $(echo $TANGLE_SEEDS | wc -w | tr -d ' ') tangle seeds plus the runes seed; this run measured nothing about the rule it exists to check."
+fi
+
+# The pinned edge case: INCURSION_FORCE_SAVE_ROLL=20 was exported for the
+# runes run, so that session MUST show a roll-20-vs-DC-27 save line, and
+# every such line MUST read [success]. A missing line means the forced roll
+# never reached a DC 27 save (the key script or the env hook drifted), which
+# is INCONCLUSIVE, never a pass.
+RUNES_DC27="$(grep -E "Save: 1d20 \(20\).* vs DC 27 \[" "$RUNES_HARVEST" 2>/dev/null)"
+if [ -z "$RUNES_DC27" ]; then
+    _check_die 2 "the runes session (INCURSION_FORCE_SAVE_ROLL=20, seed $RUNES_SEED) shows no roll-20-vs-DC-27 save line, so the pinned edge case measured nothing; the forced roll never reached a DC 27 save."
+fi
+RUNES_DC27_BAD="$(printf '%s\n' "$RUNES_DC27" | grep -v "\[success\]")"
+if [ -n "$RUNES_DC27_BAD" ]; then
+    echo
+    echo "FAIL: a forced natural 20 against DC 27 did not read [success]:"
+    printf '%s\n' "$RUNES_DC27_BAD" | sed 's/^/      /'
+    exit 1
 fi
 
 if [ -n "$VIOLATIONS" ]; then

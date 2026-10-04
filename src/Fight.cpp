@@ -353,11 +353,25 @@ void LOFClearForcedSave() { LOFForcedSaveOn = false; }
    natural-1-always-fails SRD rule then applies to the FORCED roll, same
    as it would to a real one, so this can never accidentally land on the
    natural-20-always-succeeds rule the way an unforced roll occasionally
-   does. */
+   does. INCURSION_FORCE_SAVE_ROLL seeds this once (1..20 only), the same
+   once-only pattern LOFInitForcedRoll uses, for inc-tzcs. */
 static int8 LOFForcedSaveThrowRoll = 0;
 void LOFSetForcedSaveThrowRoll(int8 r) { LOFForcedSaveThrowRoll = r; }
 void LOFClearForcedSaveThrowRoll() { LOFForcedSaveThrowRoll = 0; }
-int8 LOFGetForcedSaveThrowRoll() { return LOFForcedSaveThrowRoll; }
+int8 LOFGetForcedSaveThrowRoll()
+{
+    static bool done = false;
+    if (done)
+        return LOFForcedSaveThrowRoll;
+    done = true;
+    const char *s = getenv("INCURSION_FORCE_SAVE_ROLL");
+    if (s && *s) {
+        int v = atoi(s);
+        if (v >= 1 && v <= 20)
+            LOFForcedSaveThrowRoll = (int8)v;
+    }
+    return LOFForcedSaveThrowRoll;
+}
 
 /* inc-30ps: the cover-and-band rule ("The rule", docs/specs/2026-09-21-
    line-of-fire-spec.md), shared by every ranged attack that can find a
