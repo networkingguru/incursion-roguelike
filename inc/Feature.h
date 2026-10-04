@@ -106,6 +106,8 @@ class Trap: public Feature
       int16 TrapLevel()
         { return TEFF(tID)->Level; }
       EvReturn TriggerTrap(EventInfo &e, bool foundBefore);
+      void AvoidSave(bool foundBefore, uint32 &saveType, int16 &DC);
+      int16 AvoidChance(Creature *cr, bool foundBefore);
   };
 
 

@@ -498,7 +498,21 @@ IgnoreCreature:
 				}
 				if (!(tr->TrapFlags & TS_DISARMED) && !HasFeat(FT_FEATHERFOOT) &&
 					!(tr->GetStatiObj(RESET_BY) == this && !isThreatened())) {
-					if (!yn(XPrint("Confirm move over the <Obj>?", tr), false))
+					/* upstream: the confirm for a found trap gave the player
+					   no odds, so a blind prompt stood where the engine had
+					   already computed the avoidance chance. A plain prompt
+					   with no typedef or platform dependence, so Win32 with
+					   the original typedefs and compiler is blinded
+					   identically. Evidence: Traced -- the chance comes from
+					   the same SaveBonus the save itself uses, read here not
+					   yet measured in play. Tracking: inc-o6xj. Not sent. */
+					String p;
+					if (TEFF(tr->tID)->ef.sval == NOSAVE)
+						p = XPrint("Confirm move over the <Obj>? (cannot be avoided)", tr);
+					else
+						p = XPrint(Format("Confirm move over the <Obj>? (%d%% to avoid)",
+							(int)tr->AvoidChance(this, true)), tr);
+					if (!yn(p, false))
 						return ABORT;
 				}
 			}
