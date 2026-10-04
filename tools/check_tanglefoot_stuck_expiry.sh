@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Does STUCK from thrown tanglefoot strands let go? Bead inc-9smo.
 #
 # THE DEFECT. lib/alchemy.irh sends ThrowDmg(EV_DAMAGE,AD_STUK,-1,"tanglefoot
@@ -231,7 +232,7 @@ one_case() { # one_case <mode> <seed>
         run_keys "$TMP/b.keys" "$seed" "stuckexp-b$tries-$mode-s$seed"; nrun=$((nrun + 1))
         out="$(analyse B "$mode" "$SCREENS")"
         # a step-out outside the last 44 ticks: correct N once from what run B saw
-        if [ "$tries" = 1 ] && echo "$out" | grep -q "SKIP step-out at turn"; then
+        if [ "$tries" = 1 ] && grep -q "SKIP step-out at turn" <<< "$out"; then
             local tb
             tb="$(analyse PLAN "$mode" "$SCREENS" | sed 's/.*t_try=\([0-9]*\).*/\1/')"
             case "$tb" in ''|*[!0-9]*) break ;; esac

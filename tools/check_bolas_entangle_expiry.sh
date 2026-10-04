@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Does an entangling thrown weapon (bolas) let go by itself? Bead inc-9smo.
 #
 # THE DEFECT. src/Fight.cpp Weapon::QualityDmg grants STUCK from an entangling
@@ -56,12 +57,12 @@ for seed in $(seq 1 "$SEEDS"); do
         skipped=$((skipped + 1)); continue
     fi
     thrown="$(cat "$S"/*-thrown.txt)"
-    echo "$thrown" | grep -q "hitting the" && hit=$((hit + 1))
-    echo "$thrown" | grep -q "entangles the bugbear" || continue
+    grep -q "hitting the" <<< "$thrown" && hit=$((hit + 1))
+    grep -q "entangles the bugbear" <<< "$thrown" || continue
     entangled=$((entangled + 1))
     before="$(cat "$S"/*-before.txt)"
     after="$(cat "$S"/*-after.txt)"
-    if ! echo "$before" | grep -q "STUCK from SS_ATTK"; then
+    if ! grep -q "STUCK from SS_ATTK" <<< "$before"; then
         echo "seed $seed: INCONCLUSIVE: entangle message seen but no STUCK on the victim"
         skipped=$((skipped + 1)); continue
     fi
@@ -72,12 +73,12 @@ for seed in $(seq 1 "$SEEDS"); do
     t0="$(echo "$before" | awk 'NR==1 {for(i=1;i<=NF;i++) if($i=="turn") print $(i+1)}')"
     t1="$(echo "$after"  | awk 'NR==1 {for(i=1;i<=NF;i++) if($i=="turn") print $(i+1)}')"
     # Control: a different timed stati on the same victim must have ticked.
-    if echo "$before" | grep -q "TRIED from SS_MISC" && echo "$after" | grep -q "TRIED from SS_MISC"; then
+    if grep -q "TRIED from SS_MISC" <<< "$before" && grep -q "TRIED from SS_MISC" <<< "$after"; then
         echo "seed $seed: INCONCLUSIVE: control stati TRIED did not expire, so the wait did not tick"
         skipped=$((skipped + 1)); continue
     fi
-    line="$(echo "$before" | grep "STUCK from SS_ATTK" | sed 's/ *|.*//')"
-    if echo "$after" | grep -q "STUCK from SS_ATTK"; then
+    line="$(grep "STUCK from SS_ATTK" <<< "$before" | sed 's/ *|.*//')"
+    if grep -q "STUCK from SS_ATTK" <<< "$after"; then
         left="$(echo "$after" | grep "STUCK from SS_ATTK" | sed 's/ *|.*//')"
         echo "seed $seed: FAIL: still stuck after $((t1 - t0)) ticks"
         echo "      entangled: $line"
