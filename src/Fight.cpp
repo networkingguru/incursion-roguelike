@@ -9522,7 +9522,15 @@ EvReturn Weapon::QualityDmg(EventInfo &e) {
         if (!e.EVictim->SavingThrow(REF,e.EActor->WeaponSaveDC(this,WT_ENTANGLE),SA_PARA|SA_GRAB))
         {
           SetSilence();
-          DAMAGE(e.EActor,e.EVictim,AD_STUK,-1,
+          /* upstream: the entangling weapon's STUCK lasted forever. -1
+             reached the AD_STUK arm as e.vDmg and became the stati's
+             Duration, and Thing::UpdateStati (src/Status.cpp) only counts
+             down a Duration above zero, so the victim never let go unless it
+             made an escape check. The invariant: STUCK from this source ends
+             after 2d4 rounds. Plain platform-independent stati logic, same on
+             Win32. Evidence: Observed, tools/check_bolas_entangle_expiry.sh.
+             inc-9smo. Not sent. */
+          DAMAGE(e.EActor,e.EVictim,AD_STUK,Dice::Roll(2,4),
             "entangling weapon",xe.EParam = STUCK_WEAPON);
           UnsetSilence();
           if (e.EVictim->HasStati(STUCK)) {
