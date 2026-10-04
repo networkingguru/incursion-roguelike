@@ -251,7 +251,9 @@ else
     fail "--set assertion failed; sent body: $(cat "$SENT" 2>/dev/null | head -c 300)"
 fi
 
-# --- 6. a ledger at budget refuses before any POST ----------------------
+# --- 6. a ledger over the old cap no longer refuses the POST -------------
+# The budget cap was removed (owner ruling, 2026-10-04): a ledger whose sum
+# exceeds it must not block the call. The stub sees the POST and a row lands.
 start_stub ok
 LEDGER="$TMP/ledger6.jsonl"
 printf '%s\n' '{"cost": 25.00}' > "$LEDGER"
@@ -259,10 +261,11 @@ OUT="$TMP/out6"
 OUTPUT="$("${REPLAY_ENV[@]}" INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
     python3 "$REPLAY" --request "$CAPTURE" --runs 1 --out-dir "$OUT" 2>&1)"
 RC=$?
-if [ "$RC" -ne 0 ] && [ "$(req_count)" = "0" ]; then
-    pass "budget refuses before any POST: nonzero exit, server saw 0 requests"
+if [ "$RC" -eq 0 ] && [ "$(req_count)" = "1" ] \
+    && [ "$(grep -c '' "$LEDGER")" -eq 2 ]; then
+    pass "ledger over the old cap still spends: exit 0, server saw the POST, row appended"
 else
-    fail "budget refusal: rc=$RC requests=$(req_count) -- $OUTPUT"
+    fail "over-cap spend: rc=$RC requests=$(req_count) -- $OUTPUT"
 fi
 
 # --- 7. a stream with no usage poisons the ledger and exits 2 -----------
