@@ -310,7 +310,14 @@ Terrain "tanglefoot strands" {
         // Win32 build. The fix mirrors the "pool of grease" terrain
         // (lib/dungeon.irh), which targets the mount. Evidence: Observed
         // (save/Keos.sav -- rider STUCK, mount not). inc-lxvv. Not sent upstream.
-        ThrowDmg(EV_DAMAGE,AD_STUK,-1,"tanglefoot strands",mount,mount);
+        // upstream: the strands' STUCK lasted forever. The -1 became the
+        // stati's Duration, and Thing::UpdateStati (src/Status.cpp) only
+        // counts down a Duration above zero, so a creature that made no move
+        // made no escape check and never let go. The invariant: STUCK from
+        // this source ends after 2d4 rounds. Plain lib/ script plus
+        // platform-independent stati logic, same on Win32. Evidence: Observed,
+        // tools/check_tanglefoot_stuck_expiry.sh. inc-9smo. Not sent.
+        ThrowDmg(EV_DAMAGE,AD_STUK,2d4,"tanglefoot strands",mount,mount);
         // A2 (inc-18q6): the terrain's own STICK_TYPE constant, declared
         // below, is what tags the hazard kind now -- src/Fight.cpp's
         // AD_STUK arm reads it straight off the square the victim stands
@@ -334,7 +341,14 @@ Terrain "tanglefoot strands" {
             EActor->GainPermStati(ENTANGLED,NULL,SS_MISC,0,0,$"tanglefoot strands");
           return NOTHING;
         }
-        ThrowDmg(EV_DAMAGE,AD_STUK,-1,"tanglefoot strands",EActor,EActor);
+        // upstream: the strands' STUCK lasted forever. The -1 became the
+        // stati's Duration, and Thing::UpdateStati (src/Status.cpp) only
+        // counts down a Duration above zero, so a creature that made no move
+        // made no escape check and never let go. The invariant: STUCK from
+        // this source ends after 2d4 rounds. Plain lib/ script plus
+        // platform-independent stati logic, same on Win32. Evidence: Observed,
+        // tools/check_tanglefoot_stuck_expiry.sh. inc-9smo. Not sent.
+        ThrowDmg(EV_DAMAGE,AD_STUK,2d4,"tanglefoot strands",EActor,EActor);
         // A2 (inc-18q6): see the mount branch above -- the terrain's own
         // STICK_TYPE now tags the hazard kind, so there is nothing to
         // retag here.

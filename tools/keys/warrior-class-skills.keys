@@ -1,0 +1,54 @@
+# inc-k2ws: Human bonuses deliberately exclude Appraise and Diplomacy.
+a
+n
+y
+@choose "Human"
+@choose "Athletics"
+@choose "Bluff"
+@choose "Warrior"
+a
+a
+@while "Choose a feat" a
+@choose "long sword"
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Appraise" DOWN
+RIGHT*2
+@cursorto:mark "Diplomacy" DOWN
+RIGHT*2
+# Return to the top, then spend the remaining ranks on existing class skills.
+UP*100
+@cursorto:mark "Athletics" DOWN
+RIGHT*3
+@cursorto:mark "Bluff" DOWN
+RIGHT*3
+@cursorto:mark "Climb" DOWN
+RIGHT*3
+@cursorto:mark "Craft" DOWN
+RIGHT*3
+@cursorto:mark "Find Weakness" DOWN
+RIGHT*3
+@cursorto:mark "Healing" DOWN
+RIGHT*3
+@cursorto:mark "Intimidate" DOWN
+RIGHT*3
+@cursorto:mark "Intuition" DOWN
+RIGHT*3
+@cursorto:mark "Ride" DOWN
+RIGHT*3
+@cursorto:mark "Seneschal" DOWN
+RIGHT*3
+@cursorto:mark "Spot" DOWN
+RIGHT*3
+ENTER y
+@while "wish to worship" y
+@while "personality archetype" a
+ESC*3
+s*3
+d
+@expect "Race   Human"
+@expect "Warrior"
+W
+s h e e t ENTER
+@dump:afterdump
+ESC
+@quit
