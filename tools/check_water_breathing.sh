@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: live
 # Does deep water honour WATER_BREATHING? bd inc-jkyf.
 #
 # THE DEFECT. The status WATER_BREATHING (inc/Defines.h) is read nowhere.
@@ -37,11 +38,11 @@ out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat INCURSION_RUN_DIR
     tools/headless.sh tools/keys/water-breathing-deep-water.keys 1 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 [ -n "$run" ] || run="$rundir"
-if echo "$out" | grep -q "the key script looked for something"; then
+if grep -q "the key script looked for something" <<< "$out"; then
     echo "INCONCLUSIVE: the key script could not find something on screen. Run: $run"
     exit 2
 fi
-if echo "$out" | grep -q "STALLED"; then
+if grep -q "STALLED" <<< "$out"; then
     echo "INCONCLUSIVE: the session spent no game time, so nothing was measured. Run: $run"
     exit 2
 fi
