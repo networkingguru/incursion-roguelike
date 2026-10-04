@@ -1173,18 +1173,25 @@ EvReturn Container::PickLock(EventInfo &e)
   } 
   /* inc-h22n: a repeating pick was already approved; do not ask again. An
      untrained player is refused before the prompt and stops. */
+  /* inc-1xr3: one base DC for the prompt and the attempt. */
+  int16 lockDC = 25 + 2 * m->Depth;
   if (!e.EActor->HasStati(ACTING, EV_PICKLOCK)) {
     if (!CanPickLock(e.EActor))
       return ABORT;
+    String lockPrompt = XPrint("Pick the <Obj>'s lock?",this);
+    if (e.EActor->isPlayer())
+      lockPrompt = Format("%s (Lockpicking %d~)",
+          (const char*)lockPrompt,
+          e.EActor->SkillCheckChance(SK_LOCKPICKING, PickLockDC(e.EActor, lockDC)));
     if (!((e.EActor->isPlayer() &&
             ((Player *)e.EActor)->Opt(OPT_AUTOOPEN)) ||
-          e.EActor->yn(XPrint("Pick the <Obj>'s lock?",this),true)))
+          e.EActor->yn(lockPrompt,true)))
       return ABORT;
   }
   /* inc-h22n: the attempt (DC, wizard lock, roll, messages, XP, repeat) is
      shared with doors; the chest keeps its own unlock step and, on failure,
      stops. DC is 25 + 2*depth, +10 if wizard-locked by another. */
-  if (PickLockAttempt(e.EActor, 25 + 2 * m->Depth, EV_PICKLOCK)) {
+  if (PickLockAttempt(e.EActor, lockDC, EV_PICKLOCK)) {
     RemoveStati(LOCKED); 
     return NOTHING; 
   }

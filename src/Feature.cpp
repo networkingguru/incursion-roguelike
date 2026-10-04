@@ -260,16 +260,20 @@ bool Thing::CanPickLock(Creature *actor) {
    after 20 attempts it asks whether to keep trying; in combat there is one
    attempt per command. Retries are unlimited and no retry bonus is passed.
    Returns true when the lock opens. */
+int16 Thing::PickLockDC(Creature *actor, int16 baseDC) {
+    if (HasStati(WIZLOCK) && !HasStati(WIZLOCK, -1, actor))
+        return baseDC + 10;
+    return baseDC;
+}
+
 bool Thing::PickLockAttempt(Creature *actor, int16 baseDC, int16 repeatAction) {
     if (!actor)
         return false;
     if (!CanPickLock(actor))
         return false;
-    int16 diff = baseDC;
-    if (HasStati(WIZLOCK) && !HasStati(WIZLOCK, -1, actor)) {
+    int16 diff = PickLockDC(actor, baseDC);
+    if (diff != baseDC)
         actor->IPrint("The <Obj> is more difficult to pick.", this);
-        diff += 10;
-    }
     actor->Timeout += 30;
     if (actor->SkillCheck(SK_LOCKPICKING, diff, true)) {
         actor->IDPrint("You pick the lock!",
@@ -453,8 +457,10 @@ EvReturn Portal::Enter(EventInfo &e) {
 
                 if (unsafe) {
                     asked = true;
-                    if (!e.EActor->yn(XPrint("The stair leads to <Res>. "
-                            "Confirm unsafe action?", terID), true)) {
+                    if (!e.EActor->yn(Format("%s%s",
+                            (const char*)XPrint("The stair leads to <Res>. "
+                            "Confirm unsafe action?", terID),
+                            (const char*)e.EActor->TerrainRiskNote(terID, new_m, nx, ny)), true)) {
                         StairWarnProbe(m->Depth, nx, ny, usable, terID,
                             unsafe, asked);
                         return ABORT;
@@ -745,6 +751,9 @@ EvReturn Door::Event(EventInfo &e) {
         } else if (DoorFlags & DF_LOCKED && !HasStati(WIZLOCK,-1,e.EActor) &&
             !e.EActor->HasEffStati(HOME_REGION,m->RegionAt(x,y))) {
 
+                /* inc-1xr3: one base DC for the prompt and the attempt. */
+                int16 lockDC;
+
                 if (e.EActor->HasStati(RAGING))
                     goto TryKicking;
 
@@ -754,6 +763,7 @@ EvReturn Door::Event(EventInfo &e) {
                 if (e.EActor->isMonster() && !e.EActor->HasSkill(SK_LOCKPICKING))
                     return ABORT;
 
+                lockDC = 20 + 2 * m->Depth;
                 /* inc-h22n: a repeating pick was already approved; do not ask
                    again. An untrained player is refused before the prompt and
                    falls through to the auto-kick path. */
@@ -761,10 +771,17 @@ EvReturn Door::Event(EventInfo &e) {
                     /* repeating: skip the prompt */
                 } else if (!CanPickLock(e.EActor)) {
                     goto TryKicking;
-                } else if (!((e.EActor->isPlayer() && ((Player *)e.EActor)->Opt(OPT_AUTOOPEN)) || e.EActor->yn("Pick the lock?",true)))
-                    return ABORT;
+                } else {
+                    String lockPrompt = e.EActor->isPlayer()
+                        ? Format("Pick the lock? (Lockpicking %d~)",
+                            e.EActor->SkillCheckChance(SK_LOCKPICKING,
+                                PickLockDC(e.EActor, lockDC)))
+                        : String("Pick the lock?");
+                    if (!((e.EActor->isPlayer() && ((Player *)e.EActor)->Opt(OPT_AUTOOPEN)) || e.EActor->yn(lockPrompt,true)))
+                        return ABORT;
+                }
 
-                if (PickLockAttempt(e.EActor, 20 + 2 * m->Depth, EV_OPEN)) {
+                if (PickLockAttempt(e.EActor, lockDC, EV_OPEN)) {
                     DoorFlags &= ~DF_LOCKED;
                 } else {
                     /* Out of combat the attempt repeats itself (ACTING is set

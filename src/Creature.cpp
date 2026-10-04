@@ -2339,7 +2339,8 @@ bool Creature::LoseFatigue(int16 amt, bool avoid) {
         return true;
 
     if (avoid && cFP < -Attr[A_FAT])
-        if (!yn("You are in danger of passing out! Proceed?", true))
+        if (!yn(Format("You are in danger of passing out! (Fortitude %d~) Proceed?",
+            SaveChance(FORT, 10 - (cFP / 2))), true))
             return false;
 
     if (avoid)
@@ -3554,13 +3555,230 @@ int32 Creature::MoveAttr(int from_x, int from_y)
   return HasStati(ENTANGLED) ? result / 2 : result;
 } 
 
+/* inc-1xr3: the deterministic saving-throw bonus, with no side effects -- no
+   RemoveOnceStati, no Exercise, no rolls. SavingThrow calls it for its total
+   so the number it acts on and the number SaveChance advertises agree. When
+   desc is non-NULL the per-term display fragments are appended to it, in the
+   same order and wording the message used before. */
+int16 Creature::SaveBonus(int16 type, uint32 Subtype, int16 cmod, String *desc)
+{
+  int16 Bonus = Attr[A_SAV_FORT + type];
+  String dummy;
+
+  if (!desc) desc = &dummy;
+  if (Bonus)
+    *desc += Format(" %+d base", Bonus);
+
+  StatiIterNature(this,SAVE_BONUS)
+      if (RedundantFieldGrant(S))
+        continue;
+      if (BIT(S->Val) & Subtype) {
+        Bonus += S->Mag;
+        *desc += Format(" %+d (%s)", S->Mag, Lookup(SaveBonusNames, S->Val));
+      }
+  StatiIterEnd(this)
+
+  if (Subtype & SA_REST)
+    {
+      Bonus += 4;
+      *desc += " +4 rest";
+    }
+
+  if (Subtype & SA_KNOCKDOWN)
+    if (HasSkill(SK_BALANCE))
+      {
+        int16 b;
+        b = SkillLevel(SK_BALANCE) / 2;
+        if (b > 0) {
+          Bonus += b;
+          *desc += Format(" %+d Balance", b);
+        }
+      }
+  if (Subtype & SA_POISON)
+    if (HasSkill(SK_POISON_USE))
+      {
+        int16 b;
+        b = SkillLevel(SK_POISON_USE) / 4;
+        if (b > 0) {
+          Bonus += b;
+          *desc += Format(" %+d Poison Use", b);
+        }
+      }
+  if (Subtype & SA_THEFT)
+    if (HasSkill(SK_PICK_POCKET))
+      {
+        int16 b;
+        b = SkillLevel(SK_PICK_POCKET) / 3;
+        if (b > 0) {
+          Bonus += b;
+          *desc += Format(" %+d Pick Pockets", b);
+        }
+      }
+  if (Subtype & (SA_POISON|SA_DISEASE))
+    if (HasFeat(FT_HARDINESS))
+      {
+        Bonus += 2;
+        *desc += " +2 Hardiness";
+      }
+
+  if (cmod) {
+    Bonus += cmod;
+    }
+
+  return Bonus;
+}
+
+/* inc-1xr3: whole-percent chance SavingThrow succeeds, from the same bonus
+   SaveBonus assembles. DC<=0 auto-fails; a natural 20 passes and a natural 1
+   fails whatever the total (the only reroll SavingThrow applies is a probe
+   override, which cannot be predicted and is deliberately not modelled). */
+int16 Creature::SaveChance(int16 type, int16 DC, uint32 Subtype, int16 cmod)
+{
+  int16 need, count;
+  int16 Bonus;
+
+  if (DC <= 0)
+    return 0;
+
+  Bonus = SaveBonus(type, Subtype, cmod);
+  need = DC - Bonus;
+
+  /* Rolls 2..19 pass when they reach need; natural 20 always passes and
+     natural 1 always fails, so the count is bounded to 1..19 of 20. */
+  if (need <= 2)
+    count = 19;
+  else if (need > 20)
+    count = 1;
+  else
+    count = 21 - need;
+
+  return (int16)(count * 5);
+}
+
+/* inc-1xr3: build the parenthesised risk note a terrain-warning prompt shows,
+   from the WARN_* constants the terrain itself declares in its script. The
+   terrain's own outcome handler reads those same constants (via GetConst on
+   the terrain under the actor), so the number shown and the number rolled
+   cannot drift apart. An undeclared constant reads 0 (Resource::GetConst's
+   default), which is the signal that this terrain wants no note. */
+String Creature::TerrainRiskNote(rID terrain, Map *map, int16 x, int16 y)
+{
+  Resource *res;
+  int16 sk, dc, sv, svdc, margin, dnum, dsides, dbonus, dtyp;
+  int16 dcFromMap, svdcFromMap, dmgFromMap;
+  int16 mapDC = 15;
+  Dice mapDice; mapDice.Set(0, 0, 0);
+  bool haveMap = (map && map->InBounds(x, y));
+  static const char *saveNames[3] = { "Fortitude", "Reflex", "Will" };
+
+  if (!terrain || !RES(terrain))
+    return "";
+  res = RES(terrain);
+  sk     = (int16)res->GetConst(WARN_SKILL);
+  dc     = (int16)res->GetConst(WARN_DC);
+  sv     = (int16)res->GetConst(WARN_SAVE); /* save type + 1; 0 = none */
+  svdc   = (int16)res->GetConst(WARN_SAVE_DC);
+  margin = (int16)res->GetConst(WARN_MARGIN);
+  dnum   = (int16)res->GetConst(WARN_DMG_NUM);
+  dsides = (int16)res->GetConst(WARN_DMG_SIDES);
+  dbonus = (int16)res->GetConst(WARN_DMG_BONUS);
+  dtyp   = (int16)res->GetConst(WARN_DMG_TYPE);
+  dcFromMap   = (int16)res->GetConst(WARN_DC_FROM_MAP);
+  svdcFromMap = (int16)res->GetConst(WARN_SAVE_DC_FROM_MAP);
+  dmgFromMap  = (int16)res->GetConst(WARN_DMG_FROM_MAP);
+
+  /* inc-1xr3 phase 2j: some terrains take their DC or damage from the map
+     square at run time (grease, strange rune, the curtains). Query the same
+     Map functions the terrain's own handler does, so the note reports the
+     square's real value. The map lookup is skipped when the actor is off the
+     map during teardown; the constant fallbacks then stand. */
+  if (haveMap && (dcFromMap || svdcFromMap))
+    mapDC = map->GetTerraDC(x, y);
+  if (haveMap && dmgFromMap)
+    mapDice = map->GetTerraDice(x, y);
+
+  if (!sk && !sv && dnum <= 0 && dbonus <= 0 && !dmgFromMap)
+    return "";
+  if (sv)
+    sv--; /* WARN_SAVE holds type + 1, so FORT (0) can be declared. */
+  else
+    sv = -1;
+
+  if (dcFromMap)
+    dc = max(dc, mapDC);
+  if (svdcFromMap)
+    svdc = max(svdc, mapDC);
+
+  /* inc-1xr3 phase 2i: the per-step damage some warning terrains deal. The
+     terrain declares the same ndm+b the handler passes to ThrowTerraDmg, so
+     the note and the roll cannot drift. DTypeNames is the engine's own
+     damage-type name table; lowercased so it reads inside the sentence. */
+  String dmg = "";
+  if (dnum > 0 || dbonus > 0 || dmgFromMap)
+    {
+      char typ[32]; int i;
+      const char *tn = (dtyp > 0) ? Lookup(DTypeNames, dtyp) : "";
+      for (i = 0; i < 31 && tn[i]; i++)
+        typ[i] = (tn[i] >= 'A' && tn[i] <= 'Z') ? tn[i] + 32 : tn[i];
+      typ[i] = 0;
+      if (dmgFromMap)
+        /* The handler rolls GetTerraDice(x,y) through ThrowTerraDmg, so the
+           note shows the same dice, not one random sample of the roll. */
+        dmg = Format("%s", (const char*)mapDice.Str());
+      else if (dnum > 0)
+        {
+          dmg = Format("%dd%d", dnum, dsides);
+          if (dbonus)
+            dmg += Format("%+d", dbonus);
+        }
+      else
+        dmg = Format("%d", dbonus);
+      if (i)
+        dmg += Format(" %s", typ);
+      dmg += " per step";
+    }
+
+  if (sk)
+    {
+      String note = Format(" (%s %d~", SkillInfo[sk].name,
+        SkillCheckChance(sk, dc));
+      if (margin > 0)
+        /* The handler drowns/tangles when the check total falls short by
+           more than margin, i.e. when the total is below dc - margin. */
+        note += Format("; fail by %d+ %d~", margin + 1,
+          100 - SkillCheckChance(sk, dc - margin));
+      if (sv >= 0)
+        note += Format("; else %s %d~", saveNames[sv], SaveChance(sv, svdc));
+      if (dnum > 0 || dbonus > 0 || dmgFromMap)
+        note += Format("; %s", (const char*)dmg);
+      note += ")";
+      return note;
+    }
+
+  if (sv >= 0)
+    {
+      String note = Format(" (%s %d~", saveNames[sv], SaveChance(sv, svdc));
+      if (dnum > 0 || dbonus > 0 || dmgFromMap)
+        note += Format("; %s", (const char*)dmg);
+      note += ")";
+      return note;
+    }
+
+  return Format(" (%s)", (const char*)dmg);
+}
+
 inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
                                     int16 cmod, const char *cmod_desc)
 { 
   int16 Bonus, i;
   static const char *save_name[3] = { "Fortitude", "Reflex", "Will" };
-  if (DC <= 0)
+  /* inc-1xr3: predicted chance with the same arguments, before any die. */
+  extern void ChanceProbeNote(const char *, int16, int16, int16, int);
+  int16 chance = SaveChance(type, DC, Subtype, cmod);
+  if (DC <= 0) {
+    ChanceProbeNote("save", type, DC, chance, 0);
     return false;
+  }
   bool show = false; 
 
   if ((isPlayer() || theGame->GetPlayer(0)->XPerceives(this)))
@@ -3574,75 +3792,19 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
   { int8 fsr = LOFGetForcedSaveThrowRoll();
     if (fsr) roll = fsr; }
 
-  Bonus = Attr[A_SAV_FORT + type];
-
   String bStr ; 
   if (show) { 
     bStr = Format("%c%s Save:%c 1d20 (%d)",
         -AZURE,save_name[type],-GREY,roll);
-    if (Bonus)
-      bStr += Format(" %+d base",Bonus);
   }
 
-  StatiIterNature(this,SAVE_BONUS)
-      if (RedundantFieldGrant(S))
-        continue;
-      if (BIT(S->Val) & Subtype) {
-        Bonus += S->Mag;        
-        if (show) bStr += Format(" %+d (%s)",S->Mag,
-            Lookup(SaveBonusNames, S->Val));
-      }
-  StatiIterEnd(this)
-  
-  if (Subtype & SA_REST)
-    {
-      Bonus += 4;
-      bStr += " +4 rest";
-    }
-  
-  if (Subtype & SA_KNOCKDOWN)
-    if (HasSkill(SK_BALANCE))
-      {
-        int16 b;
-        b = SkillLevel(SK_BALANCE) / 2;
-        if (b > 0) {
-          Bonus += b;        
-          if (show) bStr += Format(" %+d Balance",b);
-          }            
-      }
-  if (Subtype & SA_POISON)
-    if (HasSkill(SK_POISON_USE))
-      {
-        int16 b;
-        b = SkillLevel(SK_POISON_USE) / 4;
-        if (b > 0) {
-          Bonus += b;        
-          if (show) bStr += Format(" %+d Poison Use",b);
-          }            
-      }  
-  if (Subtype & SA_THEFT)
-    if (HasSkill(SK_PICK_POCKET))
-      {
-        int16 b;
-        b = SkillLevel(SK_PICK_POCKET) / 3;
-        if (b > 0) {
-          Bonus += b;        
-          if (show) bStr += Format(" %+d Pick Pockets",b);
-          }            
-      }  
-  if (Subtype & (SA_POISON|SA_DISEASE))
-    if (HasFeat(FT_HARDINESS))
-      {
-        Bonus += 2;
-        if (show)
-          bStr += " +2 Hardiness";
-      }
-      
-  if (cmod) {
-    Bonus += cmod;
+  /* inc-1xr3: one shared, side-effect-free assembly for the total, with the
+     display fragments emitted in the same order and wording as before. */
+  Bonus = this->SaveBonus(type, Subtype, cmod, &bStr);
+  if (cmod)
     bStr += Format(" %+d %s", cmod, cmod_desc);
-    }
-      
+
+
   for (i=ADJUST;i!=ADJUST_LAST+1;i++)
     {
       RemoveOnceStati(i,A_SAV);
@@ -3723,6 +3885,7 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
     }
       
 
+  ChanceProbeNote("save", type, DC, chance, succ ? 1 : 0);
   return succ;
 }
 

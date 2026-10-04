@@ -32,6 +32,16 @@
 
 #include "Incursion.h"
 
+/* inc-1xr3: the nauseated "use Concentration to attack?" confirmation, in
+   one place for the three combat sites that ask it. The odds come from
+   SkillCheckChance with the same skill and DC the deciding
+   SkillCheck(SK_CONCENT,20) uses. Returns the answer only; the caller still
+   runs SkillCheck. */
+bool Creature::PromptNauseatedAttack() {
+    return yn(Format("You are Nauseated. Use Concentration to attack? (Concentration %d~)",
+        SkillCheckChance(SK_CONCENT, 20)));
+}
+
 #ifdef ROLM_PROBE
 /* Diagnostic for inc-tek.8.8. Record the real TOUCH_ATTACK counter at the
    landed-touch path; tools/check_rod_lordly_might.sh counts its transitions. */
@@ -740,11 +750,35 @@ static int32 DualWieldTimeout(int16 spdA, int16 spdB)
            3000 / max((100 + max(spdA,spdB)*5),10) / 2;
 }
 
+/* inc-1xr3 phase 2l: the DC the A_DEQU Reflex save is rolled against. The
+   handler (case A_DEQU, below) and the confirm prompt both call this, so the
+   DC the prompt reasons about and the DC that is rolled cannot drift.
+   inc-1xr3 phase 2m: the actor passed must be the A_DEQU attacker -- the
+   creature that owns ta and whose template GetPower adjusts the raw DC. In
+   the handler that is e2.EActor; in the confirm prompt e.EActor is the
+   PLAYER, and the monster with A_DEQU is e.EVictim, so the prompt passes
+   e.EVictim. SaveChance is therefore also asked of e.EVictim, the creature
+   whose SavingThrow(REF,...) the handler runs. */
+static int DequSaveDC(Creature *actor, TAttack *ta)
+{
+  return (int8)actor->GetPower(ta->u.a.DC);
+}
+
 /* inc-m2zi: confirm each item at risk; unarmed retaliation damages the
-   creature directly and has no equipment to confirm. */
+   creature directly and has no equipment to confirm.
+   inc-1xr3 phase 2l: the prompt also names the item's hardness and the Reflex
+   chance against DequSaveDC, the same two numbers the A_DEQU handler below
+   uses. Hardness is -1 for an immune item, which returns above and never
+   reaches the prompt; a non-positive DC rolls no save, so no chance is shown.
+   inc-1xr3 phase 2m: in this prompt e.EActor is the player and e.EVictim the
+   A_DEQU monster, while the handler saves on the opposite pairing (its
+   e2.EVictim is the player, its e2.EActor the monster). The DC and the
+   chance both belong to the monster, so both read e.EVictim here, matching
+   DequSaveDC(e2.EActor,ta) and e2.EVictim->SavingThrow(REF,...) there. */
 static bool ConfirmDequAttack(EventInfo &e, Item *it)
 {
   String s;
+  int hard = -1;
   if (!e.ETarget || !e.ETarget->isCreature() ||
       !e.EActor->isPlayer() || !e.EPActor->Opt(OPT_WARN_DEQU) ||
       !e.EVictim->HasAttk(A_DEQU))
@@ -756,17 +790,24 @@ static bool ConfirmDequAttack(EventInfo &e, Item *it)
     if (e.EActor->ResistLevel(ta->DType) == -1)
       return true;
   } else {
-    int hard = it->Hardness(ta->DType);
+    hard = it->Hardness(ta->DType);
     if (hard == -1)
       return true;
     int max = ta->u.a.Dmg.Number * ta->u.a.Dmg.Sides + ta->u.a.Dmg.Bonus;
     if ((ta->u.a.DC != 0 || it->isMagic()) && max <= hard)
       return true;
   }
-  s = Format("Attack %s (%s %s)?",
+  s = Format("Attack %s (%s %s",
       (const char*)e.EVictim->Name(NA_THE),
       (const char*)ta->u.a.Dmg.Str(),
       Lookup(DTypeNames,ta->DType));
+  if (hard >= 0)
+    s += Format("; hardness %d", hard);
+  { int svdc = DequSaveDC(e.EVictim,ta);
+    if (svdc > 0)
+      s += Format("; Reflex %d~", e.EActor->SaveChance(REF, svdc));
+  }
+  s += ")?";
   return e.EActor->yn(s,true);
 }
 
@@ -821,7 +862,7 @@ EvReturn Creature::WAttack(EventInfo &e)
       }
     else if (HasStati(NAUSEA)) {
       if (HasSkill(SK_CONCENT) && SkillLevel(SK_CONCENT) >= 10)
-        if (yn("You are Nauseated. Use Concentration to attack?"))
+        if (PromptNauseatedAttack())
           {
             if (SkillCheck(SK_CONCENT,20,true))
               {
@@ -2422,7 +2463,7 @@ EvReturn Creature::NAttack(EventInfo &e) /* this == EActor */
 
     if (HasStati(NAUSEA)) {
       if (HasSkill(SK_CONCENT) && SkillLevel(SK_CONCENT) >= 10)
-        if (yn("You are Nauseated. Use Concentration to attack?"))
+        if (PromptNauseatedAttack())
           {
             if (SkillCheck(SK_CONCENT,20,true))
               {
@@ -2854,7 +2895,7 @@ EvReturn Creature::SAttack(EventInfo &e) { /* this == EActor */
             return ABORT;
         } else if (HasStati(NAUSEA)) {
             if (HasSkill(SK_CONCENT) && SkillLevel(SK_CONCENT) >= 10)
-                if (yn("You are Nauseated. Use Concentration to attack?")) {
+                if (PromptNauseatedAttack()) {
                     if (SkillCheck(SK_CONCENT,20,true)) {
                         IPrint("You overcome your nausea to attack!");
                         goto OvercomeNausea;
@@ -3222,7 +3263,7 @@ SkipSoundAttack:
             e2.DType  = ta->DType;
             e2.isHit = true; 
             e2.strDmg = ""; 
-            e2.saveDC = (int8)e2.EActor->GetPower(ta->u.a.DC);
+            e2.saveDC = (int8)DequSaveDC(e2.EActor,ta);
             /* inc-m2zi: retaliation cannot target the responder's own item. */
             it = e.EItem2;
             if (it && it->Owner() == e.EActor)

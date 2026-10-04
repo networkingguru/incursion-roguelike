@@ -540,8 +540,8 @@ Restart:
         switch(WepSkill(it)) {
         case WS_NOT_PROF:
             if (i != S_BRAWL) { 
-                AddBonus(BONUS_SKILL, A_HIT_ARCHERY+i, -4);
-                AddBonus(BONUS_SKILL, A_SPD_ARCHERY+i, -10);
+                AddBonus(BONUS_SKILL, A_HIT_ARCHERY+i, -NOT_PROF_HIT_PENALTY);
+                AddBonus(BONUS_SKILL, A_SPD_ARCHERY+i, -NOT_PROF_SPD_PENALTY);
             } 
             break;
         case WS_PROFICIENT:

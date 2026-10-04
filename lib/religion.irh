@@ -5725,7 +5725,7 @@ God "Xel"
       if (EActor->GodID != $"Xel")
         return NOTHING;
       if (!dailySac) 
-        if (!EActor->yn("You have not yet offered tribute to Xel today. Continue?"))
+        if (!EActor->yn("You have not yet offered tribute to Xel today. Continue? (-1 favour with Xel)"))
           return ABORT;
       return NOTHING;
       },

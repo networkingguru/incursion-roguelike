@@ -3405,21 +3405,31 @@ void Character::PaladinFall() {
 void Character::PaladinAtone() {
 }
 
+/* inc-1xr3: the Strength a weapon needs to be used proficiently. WepSkill and
+   CheckWeapon both ask it, so the prompt and the play rule cannot differ. */
+static int16 WeaponMinStr(rID wID) {
+    int16 mstr = 5;
+    if (TITEM(wID)->HasFlag(WT_STR1))
+        mstr += 8;
+    if (TITEM(wID)->HasFlag(WT_STR2))
+        mstr += 4;
+    if (TITEM(wID)->HasFlag(WT_STR3))
+        mstr += 2;
+    return mstr;
+}
+
 inline bool CheckWeapon(Player *p, rID wID) {
+    /* Inv.cpp refuses to wield a weapon of this size at all (the same test). */
     if (p->GetAttr(A_SIZ) + 1 < TITEM(wID)->Size)
-        if (!p->yn("That weapon is too large for you normally. Continue?"))
+        if (!p->yn("That weapon is too large for you normally; you will not be able to wield it. Continue?"))
             return false;
 
     {
-        int16 mstr = 5;
-        if (TITEM(wID)->HasFlag(WT_STR1))
-            mstr += 8;
-        if (TITEM(wID)->HasFlag(WT_STR2))
-            mstr += 4;
-        if (TITEM(wID)->HasFlag(WT_STR3))
-            mstr += 2;
+        int16 mstr = WeaponMinStr(wID);
+        /* WepSkill returns WS_NOT_PROF here; Values.cpp applies the penalties. */
         if (p->GetAttr(A_STR) < mstr && mstr > 5)
-            if (!p->yn("You lack that weapon's Minimum Strength. Continue?"))
+            if (!p->yn(Format("You lack that weapon's Minimum Strength (%d). You will not be proficient with it: %d to hit and %d to speed. Continue?",
+                    mstr, -NOT_PROF_HIT_PENALTY, -NOT_PROF_SPD_PENALTY)))
                 return false;
     }
 
@@ -4389,13 +4399,7 @@ int8 Character::WepSkill(rID wID, bool ignore_str)
     int8 best = 0;
 
     if (wID && !ignore_str) {
-        mstr = 5;
-        if (TITEM(wID)->HasFlag(WT_STR1))
-            mstr += 8;
-        if (TITEM(wID)->HasFlag(WT_STR2))
-            mstr += 4;
-        if (TITEM(wID)->HasFlag(WT_STR3))
-            mstr += 2;
+        mstr = WeaponMinStr(wID);
         if (GetAttr(A_STR) < mstr && mstr > 5)
             return WS_NOT_PROF;
     }
