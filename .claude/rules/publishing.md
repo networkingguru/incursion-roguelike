@@ -1,9 +1,10 @@
 # Publishing outward-facing content
 
 ## feedback-never-post-public-unread
-The read-before-publish gate has exactly ONE exemption: BUG TEXT ON HIS OWN TRACKER. Everything else needs Brian's literal-text read first.
+The read-before-publish gate has exactly TWO exemptions: BUG TEXT ON HIS OWN TRACKER, and WIKI PAGES GENERATED VERBATIM FROM THE GAME'S HELP. Everything else needs Brian's literal-text read first.
 - Another project's repo (upstream `rmtew/*`, any third party): PR/issue/review text under his name -> HE READS THE LITERAL TEXT FIRST. No exception.
 - Bugs on his OWN repo (`networkingguru/incursion-roguelike`): a bead filed/updated/synced needs NO pre-read. Run `tools/sync_issues.sh`, then say what went out. Do NOT ask first, do NOT apologise after.
+- Wiki pages on his OWN repo that `tools/publish_wiki.sh` generates verbatim from the game's help: NO pre-read; the pre-push hook publishes them. A hand-written wiki page still needs his read.
 - Everything else on his own repo (`README.md`, user-facing docs, release notes, store/itch pages, announcements) still needs his read, even though he owns the tree.
 
 Never publish outward-facing text until he has read the literal body and title. A "go" answering a plan is NOT approval of wording not yet seen. Prefer a follow-up comment over silently editing a published body. AI disclosure goes in BEFORE he sees the draft (see the 2026-09-17 ruling below for carve-outs).
