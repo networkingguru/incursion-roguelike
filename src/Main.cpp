@@ -284,6 +284,12 @@ void Game::Play() {
     extern void LineOfFireProbe(Player *shooter);
     LineOfFireProbe(pp);
 
+    /* Off unless INCURSION_SAVECHANCE_PROBE is set, and run here because it
+       needs a live player. See SaveChanceProbe (src/Fight.cpp) and
+       tools/check_save_chance.sh. inc-o6xj. */
+    extern void SaveChanceProbe(Player *pl);
+    SaveChanceProbe(pp);
+
     /* Off unless INCURSION_LOF_SPELL_PROBE is set, needs the same live
        player and map. See LOFSpellProbe (src/Magic.cpp) and
        tools/check_line_of_fire_spell.sh. inc-30ps phase 3. */

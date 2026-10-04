@@ -1736,6 +1736,48 @@ SkipAttack:
   return DONE;
 }
 
+/* INCURSION_SAVECHANCE_PROBE -- checks that Creature::SaveChance (the number
+   the trap prompt shows) and Creature::SavingThrow (the code that decides the
+   outcome) agree, for every save type, a spread of DCs, and the save subtypes
+   the trap path uses (0, SA_TRAPS, SA_TRAPS|SA_MAGIC). For each case it reads
+   SaveChance's own number, then forces every d20 result 1..20 through the real
+   SavingThrow via LOFSetForcedSaveThrowRoll (src/Fight.cpp) and counts
+   successes; a mismatch is chance != hits*5. Runs once, after the player
+   exists, and writes one "SAVECHANCE ..." line per case plus a final
+   "SAVECHANCE_DONE mismatches=M". See tools/check_save_chance.sh. inc-o6xj. */
+void SaveChanceProbe(Player *pl) {
+    if (!getenv("INCURSION_SAVECHANCE_PROBE"))
+        return;
+
+    if (!pl) {
+        Error("SAVECHANCE: INCONCLUSIVE -- no live player yet");
+        return;
+    }
+
+    const int16 DCs[8] = {0, 5, 10, 15, 20, 25, 30, 40};
+    const uint32 subs[3] = {0, SA_TRAPS, SA_TRAPS | SA_MAGIC};
+    int mismatches = 0;
+    for (int16 type = FORT; type <= WILL; type++)
+        for (int d = 0; d < 8; d++)
+            for (int s = 0; s < 3; s++) {
+                const int16 dc = DCs[d];
+                const uint32 sub = subs[s];
+                const int16 chance = pl->SaveChance(type, dc, sub);
+                int hits = 0;
+                for (int8 r = 1; r <= 20; r++) {
+                    LOFSetForcedSaveThrowRoll(r);
+                    if (pl->SavingThrow(type, dc, sub))
+                        hits++;
+                }
+                LOFClearForcedSaveThrowRoll();
+                if (chance != hits * 5)
+                    mismatches++;
+                Error("SAVECHANCE type=%d dc=%d sub=%u chance=%d hits=%d",
+                    (int)type, (int)dc, (unsigned)sub, (int)chance, hits);
+            }
+    Error("SAVECHANCE_DONE mismatches=%d", mismatches);
+}
+
 /* INCURSION_LOF_PROBE helper. Finds a cardinal direction with four clear,
    in-bounds, non-solid, creature-free squares ahead of the player and an
    open line of fire the whole way, so LineOfFireProbe (below) has

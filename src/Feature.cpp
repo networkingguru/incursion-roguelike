@@ -1028,6 +1028,28 @@ EvReturn Trap::Event(EventInfo &e) {
     return NOTHING;
 }
 
+void Trap::AvoidSave(bool foundBefore, uint32 &saveType, int16 &DC) {
+    TEffect *te = TEFF(tID);
+    saveType = SA_TRAPS;
+    if (!(te->HasFlag(EF_MUNDANE)))
+        saveType |= SA_MAGIC;
+
+    DC = 15 + te->Level;
+    if (!foundBefore)
+        DC += 5;
+}
+
+int16 Trap::AvoidChance(Creature *cr, bool foundBefore) {
+    TEffect *te = TEFF(tID);
+    if (foundBefore && cr->HasFeat(FT_FEATHERFOOT))
+        return 100;
+    if (te->ef.sval == NOSAVE)
+        return 0;
+    uint32 saveType; int16 DC;
+    AvoidSave(foundBefore, saveType, DC);
+    return cr->SaveChance(te->ef.sval, DC, saveType);
+}
+
 EvReturn Trap::TriggerTrap(EventInfo &e, bool foundBefore) {
     EvReturn r; Creature *cr;
     // ww: if the trap is not mundane, you get a saving throw vs. magic to
@@ -1046,13 +1068,8 @@ EvReturn Trap::TriggerTrap(EventInfo &e, bool foundBefore) {
                     SetImage();
                 }
 
-    uint32 saveType = SA_TRAPS;
-    if (!(te->HasFlag(EF_MUNDANE)))
-        saveType |= SA_MAGIC;
-
-    int16 trapDC = 15 + te->Level;
-    if (!foundBefore)
-        trapDC += 5;
+    uint32 saveType; int16 trapDC;
+    AvoidSave(foundBefore, saveType, trapDC);
 
     if ((foundBefore && e.EActor->HasFeat(FT_FEATHERFOOT)) ||
         (te->ef.sval != NOSAVE &&
