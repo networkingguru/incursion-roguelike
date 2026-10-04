@@ -1,0 +1,64 @@
+# inc-9smo. Throw one set of bolas at a frozen bugbear three squares away, then
+# read the bugbear's own status list (wizard "Examine Nearby Things") before and
+# after a long wait. Driven by tools/check_bolas_entangle_expiry.sh, which runs
+# it once per seed because the entangle needs a hit AND a failed Reflex save.
+#
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/bolas-entangle-expiry.keys <seed>
+#
+# THE SUBJECT is the frozen kobold rogue: a kobold throws bolas proficiently and
+# already carries a set (equipped, so "f a" throws it). Wizard switches: Freeze
+# Monsters (row 10) keeps the bugbear from acting, so it makes no escape check
+# and no attack of opportunity; Show All Combat Rolls (row 11) puts the rolls in
+# the message log. The menu keeps its cursor between openings, so one opening
+# does both. A kobold stands three squares away (bolas range 3) after two moves.
+#
+# THE WAIT is 150 "wait one turn" keys, far past any 2d4-round duration.
+
+w
+@expect "Enter wizard mode"
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+DOWN
+SPACE
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "bugbear"
+RIGHT
+ENTER
+LEFT
+@while "Abort, Flee or Disengage" f
+LEFT
+@while "Abort, Flee or Disengage" f
+
+f
+a
+RIGHT
+@dump:thrown
+
+# The bugbear's status list, before the wait.
+w
+@choose "Examine Nearby Things"
+@until "bugbear (class" RIGHT
+PGDN*40
+@dump:before
+ESC
+
+.*150
+
+w
+@choose "Examine Nearby Things"
+@until "bugbear (class" RIGHT
+PGDN*40
+@dump:after
+ESC
+v
+@dump:log
+ESC
+@quit
