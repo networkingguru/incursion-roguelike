@@ -110,7 +110,7 @@ runs = [
     run("2026-10-03T05:00:00Z", 0.500),
     # Outside the window: a report that ignores --since/--until counts these.
     run("2026-09-30T05:00:00Z", 9.000, "loop"),
-    run("2026-10-04T05:00:00Z", 9.000),
+    run("2099-10-04T05:00:00Z", 9.000),
 ]
 # Single requests: no harness, and a non-opencode harness. Neither is a run.
 runs.append({"ts": "2026-10-01T07:00:00Z", "cost": 5.0, "steps": 1})
@@ -135,7 +135,7 @@ disps = [
     ("2026-10-01T08:07:00Z", None, "do the thing", "allow"),
     # Outside the window.
     ("2026-09-30T08:00:00Z", "sonnet", "fallback: old", "allow"),
-    ("2026-10-04T08:00:00Z", "sonnet", "fallback: new", "allow"),
+    ("2099-10-04T08:00:00Z", "sonnet", "fallback: new", "allow"),
 ]
 with open(log, "w") as fh:
     for ts, model, desc, decision in disps:
