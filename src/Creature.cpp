@@ -3554,6 +3554,99 @@ int32 Creature::MoveAttr(int from_x, int from_y)
   return HasStati(ENTANGLED) ? result / 2 : result;
 } 
 
+/* The single success expression shared by SavingThrow and SaveChance, so the
+   chance shown to the player comes from the same rule that decides the roll. */
+static bool SaveRollSucceeds(int16 roll, int16 Bonus, int16 DC)
+  {
+    return (roll == 20) ? true
+         : (roll == 1)  ? false
+         : (Bonus + roll >= DC);
+  }
+
+int16 Creature::SaveBonus(int16 type, uint32 Subtype, int16 cmod,
+                          String *desc)
+  {
+  int16 Bonus = Attr[A_SAV_FORT + type];
+
+  if (desc) {
+    if (Bonus)
+      *desc += Format(" %+d base",Bonus);
+  }
+
+  StatiIterNature(this,SAVE_BONUS)
+      if (RedundantFieldGrant(S))
+        continue;
+      if (BIT(S->Val) & Subtype) {
+        Bonus += S->Mag;        
+        if (desc) *desc += Format(" %+d (%s)",S->Mag,
+            Lookup(SaveBonusNames, S->Val));
+      }
+  StatiIterEnd(this)
+  
+  if (Subtype & SA_REST)
+    {
+      Bonus += 4;
+      if (desc) *desc += " +4 rest";
+    }
+  
+  if (Subtype & SA_KNOCKDOWN)
+    if (HasSkill(SK_BALANCE))
+      {
+        int16 b;
+        b = SkillLevel(SK_BALANCE) / 2;
+        if (b > 0) {
+          Bonus += b;        
+          if (desc) *desc += Format(" %+d Balance",b);
+          }            
+      }
+  if (Subtype & SA_POISON)
+    if (HasSkill(SK_POISON_USE))
+      {
+        int16 b;
+        b = SkillLevel(SK_POISON_USE) / 4;
+        if (b > 0) {
+          Bonus += b;        
+          if (desc) *desc += Format(" %+d Poison Use",b);
+          }            
+      }  
+  if (Subtype & SA_THEFT)
+    if (HasSkill(SK_PICK_POCKET))
+      {
+        int16 b;
+        b = SkillLevel(SK_PICK_POCKET) / 3;
+        if (b > 0) {
+          Bonus += b;        
+          if (desc) *desc += Format(" %+d Pick Pockets",b);
+          }            
+      }  
+  if (Subtype & (SA_POISON|SA_DISEASE))
+    if (HasFeat(FT_HARDINESS))
+      {
+        Bonus += 2;
+        if (desc)
+          *desc += " +2 Hardiness";
+      }
+      
+  if (cmod) {
+    Bonus += cmod;
+    if (desc) *desc += Format(" %+d", cmod);
+    }
+      
+  return Bonus;
+  }
+
+int16 Creature::SaveChance(int16 type, int16 DC, uint32 Subtype, int16 cmod)
+  {
+    if (DC <= 0)
+      return 0;
+    int16 Bonus = SaveBonus(type, Subtype, cmod, NULL);
+    int16 succ = 0;
+    for (int16 r = 1; r <= 20; r++)
+      if (SaveRollSucceeds(r, Bonus, DC))
+        succ++;
+    return succ * 5;
+  }
+
 inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
                                     int16 cmod, const char *cmod_desc)
 { 
@@ -3574,75 +3667,16 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
   { int8 fsr = LOFGetForcedSaveThrowRoll();
     if (fsr) roll = fsr; }
 
-  Bonus = Attr[A_SAV_FORT + type];
-
   String bStr ; 
   if (show) { 
     bStr = Format("%c%s Save:%c 1d20 (%d)",
         -AZURE,save_name[type],-GREY,roll);
-    if (Bonus)
-      bStr += Format(" %+d base",Bonus);
   }
 
-  StatiIterNature(this,SAVE_BONUS)
-      if (RedundantFieldGrant(S))
-        continue;
-      if (BIT(S->Val) & Subtype) {
-        Bonus += S->Mag;        
-        if (show) bStr += Format(" %+d (%s)",S->Mag,
-            Lookup(SaveBonusNames, S->Val));
-      }
-  StatiIterEnd(this)
-  
-  if (Subtype & SA_REST)
-    {
-      Bonus += 4;
-      bStr += " +4 rest";
-    }
-  
-  if (Subtype & SA_KNOCKDOWN)
-    if (HasSkill(SK_BALANCE))
-      {
-        int16 b;
-        b = SkillLevel(SK_BALANCE) / 2;
-        if (b > 0) {
-          Bonus += b;        
-          if (show) bStr += Format(" %+d Balance",b);
-          }            
-      }
-  if (Subtype & SA_POISON)
-    if (HasSkill(SK_POISON_USE))
-      {
-        int16 b;
-        b = SkillLevel(SK_POISON_USE) / 4;
-        if (b > 0) {
-          Bonus += b;        
-          if (show) bStr += Format(" %+d Poison Use",b);
-          }            
-      }  
-  if (Subtype & SA_THEFT)
-    if (HasSkill(SK_PICK_POCKET))
-      {
-        int16 b;
-        b = SkillLevel(SK_PICK_POCKET) / 3;
-        if (b > 0) {
-          Bonus += b;        
-          if (show) bStr += Format(" %+d Pick Pockets",b);
-          }            
-      }  
-  if (Subtype & (SA_POISON|SA_DISEASE))
-    if (HasFeat(FT_HARDINESS))
-      {
-        Bonus += 2;
-        if (show)
-          bStr += " +2 Hardiness";
-      }
-      
-  if (cmod) {
-    Bonus += cmod;
-    bStr += Format(" %+d %s", cmod, cmod_desc);
-    }
-      
+  Bonus = SaveBonus(type, Subtype, cmod, show ? &bStr : NULL);
+  if (cmod)
+    bStr += Format(" %s", cmod_desc);
+
   for (i=ADJUST;i!=ADJUST_LAST+1;i++)
     {
       RemoveOnceStati(i,A_SAV);
@@ -3667,9 +3701,7 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
      "Will Save: 1d20 (20) +3 base = 23 vs DC 27 [failure]." against
      guardian runes, a natural 20 the SRD says must succeed. Tracking:
      bd inc-e68f. Not sent. */
-  bool succ = (roll == 20) ? true
-            : (roll == 1)  ? false
-            : (Bonus + roll >= DC);
+  bool succ = SaveRollSucceeds(roll, Bonus, DC);
 
   if (show) {
     bStr += Format(" = %d vs DC %d %c[%s]%c.",

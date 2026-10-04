@@ -1,0 +1,33 @@
+# Walk a character onto a trap he has FOUND and photograph the confirm prompt.
+# Read by tools/check_known_trap_prompt.sh, bd inc-o6xj.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#       tools/headless.sh tools/keys/known-trap-prompt.keys 3
+#
+# Move.cpp asks "Confirm move over the <trap>?" before a player steps onto a
+# found, armed trap, and now appends "(N% to avoid)" -- or "(cannot be
+# avoided)" for a trap with no save. The kobold rogue has Handle Device ranks,
+# so OPT_AUTODISARM would disarm the trap before the prompt; that option is 0
+# in options-2026-08-22.dat. The trap is created by wizard mode, not reset by
+# the character, so the RESET_BY skip does not apply. It is a deathblade scythe
+# (level 8, Reflex save, mundane). The answer is "n", so no trap springs.
+#
+#   Create Trap     a hidden trap one square east.
+#   @until "A trap!" s   search until it is found.
+#   RIGHT           step onto it; the prompt opens. Photographed, then "n".
+
+w
+@while "Enter wizard mode" y
+@until "Wizard Mode Options" w
+@choose "Create Trap"
+"deathblade scythe trap"
+ENTER
+RIGHT
+ENTER
+@until "A trap!" s
+
+RIGHT
+@dump:prompt
+n
+@dump:after

@@ -57,10 +57,10 @@ RUNES_SEED=4
 # below ever runs once in this process -- the recursive re-runs inside
 # _check_prove_red do that work instead, once clean and once mutated.
 check_mutation src/Creature.cpp \
-'  bool succ = (roll == 20) ? true
-            : (roll == 1)  ? false
-            : (Bonus + roll >= DC);' \
-'  bool succ = (Bonus + roll >= DC);'
+'    return (roll == 20) ? true
+         : (roll == 1)  ? false
+         : (Bonus + roll >= DC);' \
+'    return (Bonus + roll >= DC);'
 
 HARVEST="$(mktemp -t natural_save_harvest)" || _check_die 2 "no temp file"
 RESULT="$(mktemp -t natural_save_result)" || _check_die 2 "no temp file"

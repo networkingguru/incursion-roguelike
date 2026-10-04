@@ -467,6 +467,9 @@ class Creature: public Thing, public Magic
       int8 WepSkill(Item * it) ;
       bool SavingThrow(int16 type, int16 DC, uint32 Subtype=0,
                          int16 cmod=0, const char*cmod_desc=NULL);
+      int16 SaveBonus(int16 type, uint32 Subtype, int16 cmod=0,
+                        String *desc=NULL);
+      int16 SaveChance(int16 type, int16 DC, uint32 Subtype=0, int16 cmod=0);
       virtual bool SkillCheck(int16 sk, int16 DC, bool show = true,
                                  int16 mod1=0, const char *mod1Str=NULL,
                                  int16 mod2=0, const char *mod2Str=NULL);
