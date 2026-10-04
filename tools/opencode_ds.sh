@@ -13,13 +13,14 @@
 # AGENTS.md. Override that path with INCURSION_DS_PREAMBLE; if the preamble is
 # missing or empty the wrapper refuses (exit 2) before any spend or launch.
 #
-# Exit 0 success; 1 refused (budget or poisoned ledger); 2 could not run or
-# opencode failed; 3 the run was stopped as a DeepSeek repetition loop; 4 the
-# run was stopped because its context passed the ceiling.
+# Exit 0 success; 2 could not run or opencode failed; 3 the run was stopped as
+# a DeepSeek repetition loop; 4 the run was stopped because its context passed
+# the ceiling.
 #
-# The wrapper reuses tools/deepseek.py's check_budget, resolve_ledger_path,
-# resolve_budget and resolve_key -- it imports the module rather than copying
-# the logic, so the ledger row format and the poison rule stay in one place.
+# The wrapper reuses tools/deepseek.py's resolve_ledger_path and resolve_key --
+# it imports the module rather than copying the logic, so the ledger row format
+# stays in one place. The ledger records every run's cost but never refuses a
+# run: spending is controlled on the owner's card (owner ruling, 2026-10-04).
 #
 # The opencode run is launched through tools/watchdog.sh, which stops a stalled
 # run in its own process group and writes the reason to a --status file. Three
@@ -149,23 +150,7 @@ if [ -z "$KEY" ]; then
     exit 2
 fi
 
-# --- 3. budget ------------------------------------------------------------
-# Run check_budget() in its own interpreter: it exits 1 on refusal/poison and
-# 2 on a malformed ledger, and those codes must pass straight through. The
-# ledger path and budget are resolved by the module itself.
-python3 - "$DEEPSEEK_MODULE" <<'PY'
-import importlib.util, sys
-spec = importlib.util.spec_from_file_location("deepseek", sys.argv[1])
-mod = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(mod)
-mod.check_budget(mod.resolve_ledger_path(), mod.resolve_budget())
-PY
-RC=$?
-if [ "$RC" -ne 0 ]; then
-    exit "$RC"
-fi
-
-# --- 4. run dir -----------------------------------------------------------
+# --- 3. run dir -----------------------------------------------------------
 # logs/ is gitignored. XDG_* point inside the run dir; only the provider
 # package cache is shared, so it downloads once across runs.
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"

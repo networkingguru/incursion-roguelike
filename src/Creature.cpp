@@ -3555,44 +3555,50 @@ int32 Creature::MoveAttr(int from_x, int from_y)
   return HasStati(ENTANGLED) ? result / 2 : result;
 } 
 
-/* inc-1xr3: the deterministic saving-throw bonus, with no side effects -- no
-   RemoveOnceStati, no Exercise, no rolls. SavingThrow calls it for its total
-   so the number it acts on and the number SaveChance advertises agree. When
-   desc is non-NULL the per-term display fragments are appended to it, in the
-   same order and wording the message used before. */
-int16 Creature::SaveBonus(int16 type, uint32 Subtype, int16 cmod, String *desc)
-{
-  int16 Bonus = Attr[A_SAV_FORT + type];
-  String dummy;
+/* The single success expression shared by SavingThrow and SaveChance, so the
+   chance shown to the player comes from the same rule that decides the roll. */
+static bool SaveRollSucceeds(int16 roll, int16 Bonus, int16 DC)
+  {
+    return (roll == 20) ? true
+         : (roll == 1)  ? false
+         : (Bonus + roll >= DC);
+  }
 
-  if (!desc) desc = &dummy;
-  if (Bonus)
-    *desc += Format(" %+d base", Bonus);
+int16 Creature::SaveBonus(int16 type, uint32 Subtype, int16 cmod,
+                          String *desc)
+  {
+  int16 Bonus = Attr[A_SAV_FORT + type];
+
+  if (desc) {
+    if (Bonus)
+      *desc += Format(" %+d base",Bonus);
+  }
 
   StatiIterNature(this,SAVE_BONUS)
       if (RedundantFieldGrant(S))
         continue;
       if (BIT(S->Val) & Subtype) {
-        Bonus += S->Mag;
-        *desc += Format(" %+d (%s)", S->Mag, Lookup(SaveBonusNames, S->Val));
+        Bonus += S->Mag;        
+        if (desc) *desc += Format(" %+d (%s)",S->Mag,
+            Lookup(SaveBonusNames, S->Val));
       }
   StatiIterEnd(this)
-
+  
   if (Subtype & SA_REST)
     {
       Bonus += 4;
-      *desc += " +4 rest";
+      if (desc) *desc += " +4 rest";
     }
-
+  
   if (Subtype & SA_KNOCKDOWN)
     if (HasSkill(SK_BALANCE))
       {
         int16 b;
         b = SkillLevel(SK_BALANCE) / 2;
         if (b > 0) {
-          Bonus += b;
-          *desc += Format(" %+d Balance", b);
-        }
+          Bonus += b;        
+          if (desc) *desc += Format(" %+d Balance",b);
+          }            
       }
   if (Subtype & SA_POISON)
     if (HasSkill(SK_POISON_USE))
@@ -3600,60 +3606,47 @@ int16 Creature::SaveBonus(int16 type, uint32 Subtype, int16 cmod, String *desc)
         int16 b;
         b = SkillLevel(SK_POISON_USE) / 4;
         if (b > 0) {
-          Bonus += b;
-          *desc += Format(" %+d Poison Use", b);
-        }
-      }
+          Bonus += b;        
+          if (desc) *desc += Format(" %+d Poison Use",b);
+          }            
+      }  
   if (Subtype & SA_THEFT)
     if (HasSkill(SK_PICK_POCKET))
       {
         int16 b;
         b = SkillLevel(SK_PICK_POCKET) / 3;
         if (b > 0) {
-          Bonus += b;
-          *desc += Format(" %+d Pick Pockets", b);
-        }
-      }
+          Bonus += b;        
+          if (desc) *desc += Format(" %+d Pick Pockets",b);
+          }            
+      }  
   if (Subtype & (SA_POISON|SA_DISEASE))
     if (HasFeat(FT_HARDINESS))
       {
         Bonus += 2;
-        *desc += " +2 Hardiness";
+        if (desc)
+          *desc += " +2 Hardiness";
       }
-
+      
   if (cmod) {
     Bonus += cmod;
+    if (desc) *desc += Format(" %+d", cmod);
     }
-
+      
   return Bonus;
-}
+  }
 
-/* inc-1xr3: whole-percent chance SavingThrow succeeds, from the same bonus
-   SaveBonus assembles. DC<=0 auto-fails; a natural 20 passes and a natural 1
-   fails whatever the total (the only reroll SavingThrow applies is a probe
-   override, which cannot be predicted and is deliberately not modelled). */
 int16 Creature::SaveChance(int16 type, int16 DC, uint32 Subtype, int16 cmod)
-{
-  int16 need, count;
-  int16 Bonus;
-
-  if (DC <= 0)
-    return 0;
-
-  Bonus = SaveBonus(type, Subtype, cmod);
-  need = DC - Bonus;
-
-  /* Rolls 2..19 pass when they reach need; natural 20 always passes and
-     natural 1 always fails, so the count is bounded to 1..19 of 20. */
-  if (need <= 2)
-    count = 19;
-  else if (need > 20)
-    count = 1;
-  else
-    count = 21 - need;
-
-  return (int16)(count * 5);
-}
+  {
+    if (DC <= 0)
+      return 0;
+    int16 Bonus = SaveBonus(type, Subtype, cmod, NULL);
+    int16 succ = 0;
+    for (int16 r = 1; r <= 20; r++)
+      if (SaveRollSucceeds(r, Bonus, DC))
+        succ++;
+    return succ * 5;
+  }
 
 /* inc-1xr3: build the parenthesised risk note a terrain-warning prompt shows,
    from the WARN_* constants the terrain itself declares in its script. The
@@ -3798,12 +3791,9 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
         -AZURE,save_name[type],-GREY,roll);
   }
 
-  /* inc-1xr3: one shared, side-effect-free assembly for the total, with the
-     display fragments emitted in the same order and wording as before. */
-  Bonus = this->SaveBonus(type, Subtype, cmod, &bStr);
+  Bonus = SaveBonus(type, Subtype, cmod, show ? &bStr : NULL);
   if (cmod)
-    bStr += Format(" %+d %s", cmod, cmod_desc);
-
+    bStr += Format(" %s", cmod_desc);
 
   for (i=ADJUST;i!=ADJUST_LAST+1;i++)
     {
@@ -3829,9 +3819,7 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
      "Will Save: 1d20 (20) +3 base = 23 vs DC 27 [failure]." against
      guardian runes, a natural 20 the SRD says must succeed. Tracking:
      bd inc-e68f. Not sent. */
-  bool succ = (roll == 20) ? true
-            : (roll == 1)  ? false
-            : (Bonus + roll >= DC);
+  bool succ = SaveRollSucceeds(roll, Bonus, DC);
 
   if (show) {
     bStr += Format(" = %d vs DC %d %c[%s]%c.",
