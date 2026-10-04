@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# gate: live -- with no argument it runs ./incursion-headless -wikihelp, so it needs the built binary
 """Validate the wiki help export (inc-k2le, spec docs/specs/2026-10-04-wiki-help-spec.md).
 
 Run:
