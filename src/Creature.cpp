@@ -3444,13 +3444,21 @@ EvReturn Creature::TryToDestroyThing(Thing *f)
       for(int i=0;i!=theGame->LastSpell();i++)
         if (thisp->SpellRating(theGame->SpellID(i),0,true) != -1) {
           TEffect *te = TEFF(theGame->SpellID(i));
-          if (te->Purpose & EP_PASSAGE) {
+          /* upstream: the opener must pick a spell that both passes AND
+           * unlocks; upstream's test took any EP_PASSAGE spell, so a Drow
+           * cast Levitation at a door every turn until out of mana. This is
+           * base code, independent of platform or typedefs. Tier Observed
+           * (play, 2026-09-19); reproduced by tools/check_autoknock.sh;
+           * inc-e3oo (networkingguru/incursion-roguelike#558); not sent. */
+          if ((te->Purpose & (EP_PASSAGE|EP_UNLOCK)) == (EP_PASSAGE|EP_UNLOCK)) {
             EventInfo e; 
             e.Clear();
             e.EActor = this;
             e.eID = theGame->SpellID(i);
             // The spell defines what kinds of targets it affects. */
             if (te->PEvent(EV_ISTARGET,this,e.eID) == SHOULD_CAST_IT) {
+              extern bool AutoKnockProbeNote(Creature *, Thing *, rID);
+              if (AutoKnockProbeNote(this, f, e.eID)) return DONE;
               IPrint("You attempt to cast <Res>.",e.eID);
               if (thisp->Spells[i] & SP_INNATE) 
                 return ReThrow(EV_INVOKE,e); 
@@ -3466,8 +3474,11 @@ EvReturn Creature::TryToDestroyThing(Thing *f)
        take weapon attacks: Feature::Event gives a non-blunt swing one third
        damage, except an axe, which deals full damage to a door (inc-h22n
        point 4). A wizard lock no longer doubles the door's hardness. */
-    if (f->isType(T_DOOR))
-      return ThrowVal(EV_SATTACK,A_KICK,this,f);     
+    if (f->isType(T_DOOR)) {
+      extern bool AutoKnockProbeNote(Creature *, Thing *, rID);
+      AutoKnockProbeNote(this, f, 0);
+      return ThrowVal(EV_SATTACK,A_KICK,this,f);
+    }
     
     if ((AttackMode() == S_MELEE || AttackMode() == S_DUAL) && isBeside(f))
       return ThrowVal(EV_WATTACK,A_SWNG,this,f);
