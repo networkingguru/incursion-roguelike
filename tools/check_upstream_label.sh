@@ -119,7 +119,7 @@ run_check() {
     local missing="" id
     while IFS= read -r id; do
         [ -n "$id" ] || continue
-        printf '%s\n' "$labelled" | grep -qxF "$id" || missing="$missing $id"
+        grep -qxF "$id" <<< "$labelled" || missing="$missing $id"
     done <<< "$ids"
 
     local total checked
@@ -157,8 +157,8 @@ selftest() {
     # 1. Every id present -> pass, and the id outside the table is not required.
     out=$( REGISTRY="$dir/ledger.md" LABELED_IDS="inc-aaa inc-f13 inc-5xn" \
            bash "$0" 2>&1 )
-    if printf '%s\n' "$out" | grep -q '^PASS:' &&
-       ! printf '%s\n' "$out" | grep -q 'inc-outside'; then
+    if grep -q '^PASS:' <<< "$out" &&
+       ! grep -q 'inc-outside' <<< "$out"; then
         printf 'selftest ok    %-38s -> pass, row past the table ignored\n' "all labelled"
     else
         printf 'selftest FAIL  %-38s\n%s\n' "all labelled" "$out"; rc=1
@@ -166,9 +166,9 @@ selftest() {
 
     # 2. The second id of the shared row is missing -> fail, naming exactly it.
     out=$( REGISTRY="$dir/ledger.md" LABELED_IDS="inc-aaa inc-f13" bash "$0" 2>&1 )
-    if printf '%s\n' "$out" | grep -q '^FAIL:' &&
-       printf '%s\n' "$out" | grep -qx '  inc-5xn' &&
-       ! printf '%s\n' "$out" | grep -qx '  inc-f13'; then
+    if grep -q '^FAIL:' <<< "$out" &&
+       grep -qx '  inc-5xn' <<< "$out" &&
+       ! grep -qx '  inc-f13' <<< "$out"; then
         printf 'selftest ok    %-38s -> shared-row id checked, not skipped\n' "one id of a shared row missing"
     else
         printf 'selftest FAIL  %-38s\n%s\n' "one id of a shared row missing" "$out"; rc=1
@@ -176,7 +176,7 @@ selftest() {
 
     # 3. A single-id row unlabelled -> fail, naming it.
     out=$( REGISTRY="$dir/ledger.md" LABELED_IDS="inc-f13 inc-5xn" bash "$0" 2>&1 )
-    if printf '%s\n' "$out" | grep -qx '  inc-aaa'; then
+    if grep -qx '  inc-aaa' <<< "$out"; then
         printf 'selftest ok    %-38s -> reported\n' "plain row missing the label"
     else
         printf 'selftest FAIL  %-38s\n%s\n' "plain row missing the label" "$out"; rc=1
@@ -185,8 +185,8 @@ selftest() {
     # 4. Empty parse (no table) must FAIL, never pass green.
     printf '### Something Else\n\nno table here\n' > "$dir/empty.md"
     out=$( REGISTRY="$dir/empty.md" LABELED_IDS="" bash "$0" 2>&1 )
-    if printf '%s\n' "$out" | grep -q 'FAIL:' &&
-       printf '%s\n' "$out" | grep -qi 'nothing was examined'; then
+    if grep -q 'FAIL:' <<< "$out" &&
+       grep -qi 'nothing was examined' <<< "$out"; then
         printf 'selftest ok    %-38s -> fails loudly\n' "empty parse"
     else
         printf 'selftest FAIL  %-38s\n%s\n' "empty parse" "$out"; rc=1

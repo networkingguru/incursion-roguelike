@@ -2129,7 +2129,7 @@ EvReturn Player::Rest(EventInfo &e) {
         if (in_sight) {
             IPrint(Format("You can't break camp while there's hostiles (e.g., %s) in plain sight!", (const char*)in_sight->Name(0)));
             return ABORT;
-        } else if (!MyTerm->yn("Confirm rest in dungeon?"))
+        } else if (!MyTerm->yn("Confirm rest in dungeon? (odds of interruption unknown)"))
             return ABORT;
     }
 

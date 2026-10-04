@@ -3984,6 +3984,16 @@ Wizard Spell "Explosive Runes" : EA_TERRAFORM
 Terrain "strange rune"
   { Image: pink '#'; Mat:MAT_GRANITE; 
     Flags: TF_SPECIAL, TF_EFFECT, TF_WARN; 
+    Constants:
+      /* inc-1xr3 phase 2j: the rune's DC and damage are both the map square's
+         run-time values -- the save DC is the caster's TerraDC and the damage
+         is the caster's TerraDmg dice, rolled by the handler. WARN_SAVE holds
+         REF + 1 so FORT (0) can still be declared; the DC/damage-from-map
+         flags send the note to the same GetTerraD* calls. Half on a save. */
+      * WARN_SAVE 2,
+      * WARN_SAVE_DC 0,
+      * WARN_SAVE_DC_FROM_MAP 1,
+      * WARN_DMG_FROM_MAP 1;
     On Event EV_MON_CONSIDER {
       if (EActor->cHP < EMap->GetTerraDmg(e.EXVal,e.EYVal) &&
           EActor->GetAttr(A_INT) > 10)
@@ -5813,6 +5823,12 @@ Wizard / Druid / Scroll Spell "Wall of Fire" : EA_TERRAFORM
 Terrain "curtain of flame"
   { Image: magenta ';'; Mat:MAT_MINERAL; /* The *floor* */
     Flags: TF_SPECIAL, TF_SHOWNAME, TF_WARN;
+    Constants:
+      /* inc-1xr3 phase 2j: the curtain's per-step damage is the caster's
+         TerraDmg on this square, which the handler passes straight to
+         ThrowTerraDmg and the note reads back from GetTerraDmg. No save. */
+      * WARN_DMG_TYPE AD_FIRE,
+      * WARN_DMG_FROM_MAP 1;
     On Event EV_MON_CONSIDER {
       int16 rl;
       rl = EActor->ResistLevel(AD_FIRE);
@@ -5831,6 +5847,10 @@ Terrain "curtain of flame"
 Terrain "curtain of frost"
   { Image: bright cyan ';'; Mat:MAT_MINERAL; /* The *floor* */
     Flags: TF_SPECIAL, TF_SHOWNAME, TF_WARN;
+    Constants:
+      /* inc-1xr3 phase 2j: run-time TerraDmg, like the flame curtain. */
+      * WARN_DMG_TYPE AD_COLD,
+      * WARN_DMG_FROM_MAP 1;
     On Event EV_MON_CONSIDER {
       int16 rl;
       rl = EActor->ResistLevel(AD_COLD);
@@ -5849,6 +5869,10 @@ Terrain "curtain of frost"
 Terrain "curtain of acid"
   { Image: bright green ';'; Mat:MAT_MINERAL; /* The *floor* */
     Flags: TF_SPECIAL, TF_SHOWNAME, TF_WARN;
+    Constants:
+      /* inc-1xr3 phase 2j: run-time TerraDmg, like the flame curtain. */
+      * WARN_DMG_TYPE AD_ACID,
+      * WARN_DMG_FROM_MAP 1;
     On Event EV_MON_CONSIDER {
       int16 rl;
       rl = EActor->ResistLevel(AD_ACID);
@@ -5867,6 +5891,10 @@ Terrain "curtain of acid"
 Terrain "curtain of vibrating air"
   { Image: bright white ';'; Mat:MAT_MINERAL; /* The *floor* */
     Flags: TF_SPECIAL, TF_SHOWNAME, TF_WARN;
+    Constants:
+      /* inc-1xr3 phase 2j: run-time TerraDmg, like the flame curtain. */
+      * WARN_DMG_TYPE AD_SONI,
+      * WARN_DMG_FROM_MAP 1;
     On Event EV_MON_CONSIDER {
       int16 rl;
       rl = EActor->ResistLevel(AD_SONI);
@@ -5885,6 +5913,10 @@ Terrain "curtain of vibrating air"
 Terrain "curtain of toxic gas"
   { Image: green ';'; Mat:MAT_MINERAL; /* The *floor* */
     Flags: TF_SPECIAL, TF_SHOWNAME, TF_WARN;
+    Constants:
+      /* inc-1xr3 phase 2j: run-time TerraDmg, like the flame curtain. */
+      * WARN_DMG_TYPE AD_TOXI,
+      * WARN_DMG_FROM_MAP 1;
     On Event EV_MON_CONSIDER {
       int16 rl;
       rl = EActor->ResistLevel(AD_TOXI);
@@ -5903,6 +5935,10 @@ Terrain "curtain of toxic gas"
 Terrain "curtain of lightning"
   { Image: bright yellow ';'; Mat:MAT_MINERAL; /* The *floor* */
     Flags: TF_SPECIAL, TF_SHOWNAME, TF_WARN;
+    Constants:
+      /* inc-1xr3 phase 2j: run-time TerraDmg, like the flame curtain. */
+      * WARN_DMG_TYPE AD_ELEC,
+      * WARN_DMG_FROM_MAP 1;
     On Event EV_MON_CONSIDER {
       int16 rl;
       rl = EActor->ResistLevel(AD_ELEC);

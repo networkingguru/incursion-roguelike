@@ -1174,7 +1174,7 @@ Effect "Divine Sacrifice" : EA_INFLICT
       },
     EV_EFFECT {
       int16 ch;
-      ch = EActor->ChoicePrompt("How many extra dice of damage?",
+      ch = EActor->ChoicePrompt("How many extra dice of damage? (2 HP per die per attack)",
         "12345", '1');
       sac = (ch - '0')*2;
       return NOTHING;
@@ -4289,7 +4289,8 @@ Priest / Scroll Spell "Spell Immunity" : EA_GENERIC
           return ABORT;
         }
       
-      if (!EActor->yn(XPrint("Confirm immunize to <Res>?",spID),true))
+      if (!EActor->yn(XPrint("Confirm immunize to <Res>? (permanent mana -<Num>)",
+                             spID,(spID->Level+1)/2),true))
         return ABORT;
       
       EActor->GainPermStati(EFF_FLAG1,NULL,SS_MISC,
