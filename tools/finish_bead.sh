@@ -270,6 +270,7 @@ LOCK_KEY="$(printf '%s' "$BASE_BRANCH" | tr '/' '_')"
 LOCK_PARENT="$SHARED/.git/finish-bead-locks"
 LOCK_DIR="$LOCK_PARENT/$LOCK_KEY.lock"
 LOCK_HELD=0
+LOCK_SIG=""
 
 release_lock() {
     # Only the process that still owns the lock may remove it: a waiter that
@@ -309,14 +310,26 @@ acquire_lock() {
     local waited=0 holder_pid holder_bead holder_started
     mkdir -p "$LOCK_PARENT" || cannot "could not create $LOCK_PARENT"
     while true; do
+        # Defer INT/TERM across the critical section: a signal landing between
+        # mkdir taking the dir and LOCK_HELD=1 used to exit with the dir left
+        # behind, since release_lock only removes a dir it knows it owns. Record
+        # the signal instead, finish claiming the lock, then act on it. inc-fdkz.
+        trap 'LOCK_SIG=130' INT
+        trap 'LOCK_SIG=143' TERM
         if mkdir "$LOCK_DIR" 2>/dev/null; then
+            LOCK_HELD=1
             printf '%s\n' "$$" > "$LOCK_DIR/pid"
             printf '%s\n' "$BEAD" > "$LOCK_DIR/bead"
             ps -o lstart= -p "$$" > "$LOCK_DIR/started"
-            LOCK_HELD=1
+            trap 'exit 130' INT
+            trap 'exit 143' TERM
+            [ -n "$LOCK_SIG" ] && exit "$LOCK_SIG"
             [ "$waited" -eq 0 ] || echo "finish_bead: lock on $BASE_BRANCH acquired."
             return 0
         fi
+        trap 'exit 130' INT
+        trap 'exit 143' TERM
+        [ -n "$LOCK_SIG" ] && exit "$LOCK_SIG"
         holder_pid="$(cat "$LOCK_DIR/pid" 2>/dev/null)"
         holder_bead="$(cat "$LOCK_DIR/bead" 2>/dev/null)"
         holder_started="$(cat "$LOCK_DIR/started" 2>/dev/null)"
