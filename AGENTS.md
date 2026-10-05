@@ -14,7 +14,7 @@ History: docs/rules-history/AGENTS.md#one-bead-one-worktree--never-work-in-the-s
 
 ## Publishing anything outward-facing
 
-1. Brian reads the literal text — exact body and title — before anything is published to a tree he does not own (PRs, issues, review comments, third-party repos). A "go" on a plan is not approval of unseen wording. ONE exemption: bug text to his own tracker (`networkingguru/incursion-roguelike`) needs no pre-read — run `tools/sync_issues.sh`, say what went out, no asking first, no apologising after. Exemption is bugs, NOT the repo: README, user-facing docs, release notes, store/itch pages, announcements still need his read.
+1. Brian reads the literal text — exact body and title — before anything is published to a tree he does not own (PRs, issues, review comments, third-party repos). A "go" on a plan is not approval of unseen wording. TWO exemptions, both on his own repo (`networkingguru/incursion-roguelike`): (a) bug text to his tracker needs no pre-read — run `tools/sync_issues.sh`, say what went out, no asking first, no apologising after; (b) wiki pages `tools/publish_wiki.sh` generates verbatim from the game's help need no pre-read (hand-written wiki pages still do). Exemptions are those two, NOT the repo: README, user-facing docs, release notes, store/itch pages, announcements still need his read.
 2. Always disclose AI assistance on public contributions (every commit carries `Co-Authored-By`), in before he sees the draft.
 
 Prefer a follow-up comment over silently editing a published body. `docs/REPORTING-GATE.md`: a public claim needs an oracle that changed state, numbers both sides.
