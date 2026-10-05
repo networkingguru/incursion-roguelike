@@ -513,6 +513,7 @@ int main(int argc, char *argv[]) {
     const char *recoverSave = NULL;
     bool scriptVars = false;
     bool resOrder = false;
+    const char *wikiHelp = NULL;
     const char *schemaTest = NULL;
     const char *schemaLoad = NULL;
     const char *convertSave = NULL;
@@ -590,6 +591,13 @@ int main(int argc, char *argv[]) {
             scriptVars = true;
         else if (!strcmp(argv[i], "-resorder"))
             resOrder = true;
+        else if (!strcmp(argv[i], "-wikihelp")) {
+            if (i + 1 >= argc || argv[i + 1][0] == '-') {
+                fprintf(stderr, "usage: incursion-headless -wikihelp <dir>\n");
+                return 2;
+            }
+            wikiHelp = argv[++i];
+        }
         else if (!strcmp(argv[i], "-schematest") && i + 1 < argc)
             schemaTest = argv[++i];
         else if (!strcmp(argv[i], "-schemaload") && i + 1 < argc)
@@ -639,6 +647,8 @@ int main(int argc, char *argv[]) {
         retval = RunScriptVariables() ? 0 : 22;
     } else if (resOrder) {
         retval = RunResourceOrder() ? 0 : 22;
+    } else if (wikiHelp) {
+        retval = RunWikiHelp(wikiHelp) ? 0 : 22;
     } else if (dumpSave) {
         retval = RunSaveDump(dumpSave) ? 0 : 22;
     } else if (recoverSave) {

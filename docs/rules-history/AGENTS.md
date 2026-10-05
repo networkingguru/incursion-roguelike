@@ -117,6 +117,8 @@ as concealment.
 See `docs/REPORTING-GATE.md` for the separate rule that a public claim needs an
 oracle that changed state, with numbers on both sides.
 
+2026-10-04 (inc-k2le): Brian added a second exemption for the GitHub Wiki. Asked whether wiki pages generated verbatim from the game's help could update without his read each time, he answered: "y, exempt it". Hand-written wiki pages are not covered.
+
 ## If you are Codex
 
 Claude plans and reviews. You implement. These rules hold on every run, whether

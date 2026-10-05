@@ -57,6 +57,8 @@ outward-facing' in AGENTS.md and CLAUDE.md in the repo.
 See [[incursion-reporting-gate]] for the separate rule that a public claim needs
 an oracle that changed state, with numbers on both sides.
 
+2026-10-04 (inc-k2le): Brian added a second exemption for the GitHub Wiki. Asked whether wiki pages generated verbatim from the game's help could update without his read each time, he answered: "y, exempt it". Hand-written wiki pages are not covered.
+
 ## feedback-ai-disclosure-is-for-authorship-not-copyediting
 **See the 2026-09-17 ruling below (`## AI disclosure: the ruling (2026-09-17)`)
 for the current AI-disclosure default and its carve-outs -- disclosure now
