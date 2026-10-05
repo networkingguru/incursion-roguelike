@@ -61,6 +61,7 @@ bool       Monster::inMelee, Monster::targVis, Monster::isAfraid,
            Monster::isAvoiding, Monster::hasInnateSpellStati, Monster::isMount;
 Creature  *Monster::mtarg, *Monster::rtarg, *Monster::CurrAI;
 int16      Monster::nAct, Monster::nEff, Monster::nStati;
+int        Monster::Initializing = 0;
 uint32     Monster::hasEffFor;
 
 /* Things to do:
@@ -1566,11 +1567,20 @@ void Monster::Initialize(bool in_play)
         GainPermStati(PHASED, NULL, SS_MISC, AbilityLevel(CA_PHASE));
 
 
+    /* upstream: a monster still being initialised must take no fall damage.
+       Its template's EV_INITIALIZE event can shapeshift it (POLYMORPH), and
+       StatiOn then calls ClimbFall on ELEVATED (ELEV_TREE), whose 2d6 AD_FALL
+       drops cHP below mHP+THP and breaks the ASSERT below. ClimbFall reads
+       this counter and skips the damage. The order of these base-code steps is
+       the same on Win32. Observed via tools/check_monster_init_hp.sh;
+       inc-tmys; not sent. */
+    Initializing++;
     TMON(tmID)->PEvent(EV_INITIALIZE,this,tmID);
 
     StatiIterNature(this,TEMPLATE)
         TTEM(S->eID)->PEvent(EV_INITIALIZE,this,S->eID);
     StatiIterEnd(this)
+    Initializing--;
     ASSERT(cHP == mHP + Attr[A_THP]);
     SetSilence();
 
