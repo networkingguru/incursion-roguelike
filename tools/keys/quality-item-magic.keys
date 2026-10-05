@@ -1,0 +1,73 @@
+# Subject for tools/check_quality_item_magic.sh, bd inc-rgzr instance 3.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/quality-item-magic.keys 5
+#
+# Same orc warrior, same long sword, same acid blobs as dequ-hardness-plain.keys.
+# The only difference: after the sword is wielded, wizard option 12 ("Add
+# Quality to Weapon") stamps WQ_FLAMING on it. Plus stays 0 and eID stays 0, so
+# Weapon::isMagic would call it magical (its item level exceeds the base) while
+# Item::isMagic, the one every caller reaches, calls it mundane. Fight.cpp
+# passes e2.ignoreHardness = !isMagic() for a blob's A_DEQU acid, so a
+# "magical" sword keeps its hardness and a "mundane" one is melted.
+
+@include dequ-setup.keys
+
+w
+@choose "Item Acquisition"
+RIGHT*9                 # walk the glyph row to ordinary weapons
+@until "Long sword" DOWN
+DOWN                    # the wanted row is the middle of three; step onto it
+ENTER
+b                       # Weapon Hand -- the slot lettering skips 'd' (Drop)
+SPACE                   # swap the sword into it
+@while "two-handed" n
+s                       # stow the starting knife the swap pushed into the air
+@until "Things in View" ESC   # the swap left the inventory open
+
+w
+@choose "Add Quality to Weapon"
+"WQ_FLAMING"
+ENTER
+@until "SPACE:Swap" i    # the inventory manager, if it is not already open
+@until ">>b)Weapon" b    # select the Weapon Hand
+@until "base value of" x # Examine: the item's own description page
+@dump:quality-before
+@until "Things in View" ESC
+
+# OPT_WARN_DEQU asks before a blow that risks the weapon, so answer it when it
+# is asked. It is asked here and not in the magical run, which is itself a
+# consequence of the same rule.
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@dump:quality-strike-1
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@dump:quality-strike-2
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@dump:quality-strike-3
+
+@until "SPACE:Swap" i
+@until ">>b)Weapon" b
+@until "base value of" x
+@dump:quality-after
+@until "Things in View" ESC
+@quit
