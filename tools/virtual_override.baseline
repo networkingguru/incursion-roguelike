@@ -8,10 +8,6 @@
 # instance 1) was fixed in the same change and is not listed.
 #
 # <kind>  <Derived::name>  <Base::name>  <bead and what it is>
-hides    Feature::StatiOff             Thing::StatiOff             inc-rgzr instance 2, live: a summoned Feature never expires
-virtual  Weapon::isMagic               Item::isMagic               inc-rgzr instance 3, live: no call site reaches it
-virtual  Armour::isMagic               Item::isMagic               inc-rgzr instance 3, live: no call site reaches it
-hides    Character::ChallengeRating    Creature::ChallengeRating   inc-rgzr instance 4, masked by the HACKFIX copy in the base
 hides    Armour::Remove                Item::Remove                inc-rgzr, not live: never defined, Remove(Creature*) only hides the name
 virtual  TextTerm::SetQKeyType         Term::SetQKeyType           inc-rgzr, not live: the two bodies are equivalent
 defaults Weapon::Size                  Item::Size                  inc-rgzr, not live: every use of wield is guarded

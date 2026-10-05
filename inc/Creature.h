@@ -781,12 +781,23 @@ class Character: public Creature
 	                                  if (clID == ClassID[i])
 	                                    return UnspentSP(i);
 	                                 return 0; }
-      virtual int16 ChallengeRating()
+      /* upstream: base-code defect, the fix is ours. Creature::ChallengeRating
+         (inc/Creature.h) is virtual with (bool allow_neg = false) and this
+         declaration was (void), so it hid the base instead of overriding it.
+         Calls made through a Creature* reached the base, whose HACKFIX copy of
+         this rule returned the same level sum, so no number a player saw
+         changed. An arity difference is a different function under MSVC on
+         Win32 with the upstream compiler too; no typedef of this port is
+         involved. Traced; inc-rgzr; not sent. */
+      virtual int16 ChallengeRating(bool allow_neg = false)
         {
           // ww: taking the Creature challenge rating ends up having
           // undesired effects with wild shaped druids
-          return // max(Creature::ChallengeRating()-1,0) + 
+          int16 CR = // max(Creature::ChallengeRating()-1,0) + 
             ((int16)(Level[0]+Level[1]+Level[2]));
+          if (allow_neg)
+            return CR;
+          return max(0,CR);
         }
 	    EvReturn Event(EventInfo &ev);
 

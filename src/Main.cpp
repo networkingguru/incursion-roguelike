@@ -330,6 +330,12 @@ void Game::Play() {
        (src/Prayer.cpp) and tools/check_bow_blessing.sh. inc-rnp9. */
     pp->IBlessingProbe();
 
+    /* inc-3lsp: off unless INCURSION_ACT_OVERFLOW_PROBE is set. See
+       ActOverflowProbe (src/ActOverflowProbe.cpp) and
+       tools/check_act_overflow.sh. */
+    extern void ActOverflowProbe(Player *pl);
+    ActOverflowProbe(pp);
+
     /* Off unless INCURSION_TRUESIGHT_PROBE is set, and run here because it
        needs a live player and a live map. See Creature::TrueSightProbe and
        tools/check_true_sight.sh. inc-5bl3. */

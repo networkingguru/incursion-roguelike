@@ -1575,12 +1575,15 @@ void Monster::Initialize(bool in_play)
        the same on Win32. Observed via tools/check_monster_init_hp.sh;
        inc-tmys; not sent. */
     Initializing++;
+    /* upstream: init-time AddAct calls from a monster's or template's EV_INITIALIZE handler ("archer", "rogue-archer", "ranger;template") accumulate in the static action list across monsters, because nAct resets only in ChooseAction. Map::Generate Initializes many monsters with no ChooseAction between them, so the 64th trips ASSERT(nAct < 63) at inc/Creature.h:1662; with ASSERT compiled out it writes past Acts[63]. Save and restore nAct around these events so a monster Initialized in play keeps the action list another monster is still building. Observed via tools/check_act_overflow.sh; inc-3lsp; not sent. */
+    int16 savedNAct = nAct;
     TMON(tmID)->PEvent(EV_INITIALIZE,this,tmID);
 
     StatiIterNature(this,TEMPLATE)
         TTEM(S->eID)->PEvent(EV_INITIALIZE,this,S->eID);
     StatiIterEnd(this)
     Initializing--;
+    nAct = savedNAct;
     ASSERT(cHP == mHP + Attr[A_THP]);
     SetSilence();
 

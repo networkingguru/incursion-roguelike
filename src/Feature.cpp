@@ -1821,7 +1821,7 @@ void Feature::StatiOn(Status s) {
         }
 }
 
-void Feature::StatiOff(Status s) {
+void Feature::StatiOff(Status s, bool elapsed) {
     EventInfo xe;
     switch (s.Nature) {
     case SUMMONED:
