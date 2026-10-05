@@ -82,7 +82,6 @@
 1 tools/check_natural_speed_live.sh
 1 tools/check_overlapping_modifier_fields.sh
 7 tools/check_pad_help.sh
-1 tools/check_pass_record.sh
 1 tools/check_periapt_closure_prose.sh
 2 tools/check_periapt_poison_prose.sh
 2 tools/check_planes_sword_prose.sh
