@@ -106,7 +106,16 @@ class Item: public Thing, public Magic
 
       /* General Properties */
       bool isEdible(Creature *p);
-      bool isMagic() { return eID || Plus; }
+      /* upstream: base-code defect, the fix is ours. Item::isMagic is not
+         virtual, and both Weapon and Armour declare their own isMagic (which
+         also counts a quality) -- src/Item.cpp. A derived declaration against a
+         non-virtual base opens a new slot instead of overriding, and every
+         caller holds an Item*, so the derived bodies never ran and a +0 weapon
+         or armour with a quality counted as mundane. Upstream's: a missing
+         virtual is a missing virtual under MSVC on Win32 with the upstream
+         compiler too, and no typedef of this port is involved. Observed;
+         inc-rgzr; not sent. */
+      virtual bool isMagic() { return eID || Plus; }
       virtual bool useStrength() { return false; } 
       void MakeMagical(rID eID, int16 spe=0);
       virtual int32 Weight(bool psych_might = false);

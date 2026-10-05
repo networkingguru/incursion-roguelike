@@ -1,0 +1,41 @@
+# Subject for tools/check_summoned_feature_expiry.sh, bd inc-rgzr instance 2.
+#
+# Casts Wall of Doors (lib/wspells.irh), whose doors carry a timed SUMMONED
+# stati of 2d6 + caster level turns, then waits well past the longest possible
+# duration, reading the message log early and the map at the end. Feature::StatiOff is what removes a summoned
+# door when that stati elapses.
+#
+# The cast drops a column of doors, glyph x, west of the player.
+#
+# Same opening as tools/keys/light-fog.keys: chargen-mage.keys on seed 1, one
+# SPACE for the room description, then wizard mode.
+#   w y @choose     wizard mode opens its menu at once; entry "Learn Any Spell", then the name. The
+#                   letters move whenever an option is added, so it is chosen
+#                   by name.
+#   m ENTER         cast the first spell in the list, then aim LEFT.
+
+@include chargen-mage.keys
+@dump:arrival
+
+SPACE
+w y
+@choose "Learn Any Spell"
+"Wall of Doors" ENTER
+@dump:spell-learned
+
+m ENTER
+LEFT ENTER
+@dump:doors-cast
+
+# Each search takes about 1500 game ticks, so three searches outlast the longest
+# duration. The message log is read now, before 57 more searches push the
+# expiry message out of it.
+s*3
+v
+@dump:messages
+ESC
+
+s*57
+@dump:doors-waited
+
+@quit
