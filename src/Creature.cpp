@@ -2293,12 +2293,6 @@ int16 Creature::ChallengeRating(bool allow_neg)
       CR = TTEM(S->eID)->CR.Adjust(CR);
     StatiIterEnd(this)
     
-    /* HACKFIX */
-    if (isCharacter())
-      CR = thisc->Level[0] +
-           thisc->Level[1] +
-           thisc->Level[2];
-    
     if (allow_neg)
       return CR;
     return max(0,CR);

@@ -668,6 +668,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_ptr_sweep.sh` | Does `sweep_ptr_order.sh` still find a pointer ordering, and still ignore a pointer equality? | LIVE |
 | `check_pycache_ignored.sh` | Does running a Python check that does not pass `-B` leave the tree clean? Runs `check_ability_descs.sh`, requires the `tools/__pycache__/*.pyc` it writes to stay invisible to git, and exits 2 rather than green when no `.pyc` appeared. `--prove-red` strips `__pycache__/` from a scratch copy of `.gitignore` and requires the same probe to leave litter git can see (inc-dz74). | LIVE |
 | `check_python_rod_prose.sh` | Does the Rod of the Python carry a description at all, and does it name its per-plus poison-save bonus, its per-plus Constitution bonus and its three-times-daily transformation into a boa constrictor, matching its `SN_POISON`, `A_CON` and boa-summoning code? | LIVE |
+| `check_quality_item_magic.sh` | Does a +0 weapon that carries a quality count as magical? `Item::isMagic` is `eID || Plus` and is NOT virtual, while `Weapon::isMagic` and `Armour::isMagic` declare their own and also count a quality, so the override never ran through an `Item*`. Holds a wizard-stamped `+0 flaming long sword` against an acid blob's no-save `A_DEQU` (the `src/Fight.cpp` hardness bypass branches on `isMagic`): it must keep its 15 hit points, where a plain sword is melted and a Holy Avenger keeps 38 of 35. | LIVE |
 | `check_quality_self_immune.sh` | Is an armour with a resistance quality immune to that element, while its wearer still gets the resistance? A +0 leather suit of fire resistance holds 56 hit points where the plain one is left mildly burnt. | LIVE |
 | `check_quiet_lookup.sh` | Does a dead object handle resolve silently where silence is correct, and still complain where a complaint is correct? | LIVE |
 | `check_race_feats.sh` | Does a Dragonkin get Mantis Leap on the character sheet? | LIVE |
@@ -740,6 +741,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_striking_wand_knockback.sh` | Does the Wand of Striking fold its knockback into the telekinetic bolt's single Reflex save, instead of rolling a second, independent one? | LIVE |
 | `check_strqueue.sh` | Is the string queue's bound still tested before the write? | LIVE |
 | `check_stuck_fights.sh` | Does anchoring stop being a lockdown while still stopping movement? A Stuck paladin must land a weapon attack and print its roll against an adjacent goblin, then fail an escape attempt (both Escape Artist and Strength) and remain Stuck in the same square. | LIVE |
+| `check_summoned_feature_expiry.sh` | Does a door made by a timed SUMMONED stati vanish when the stati elapses? `Thing::StatiOff` takes `(Status s, bool elapsed = false)` but `Feature::StatiOff` declared only `(Status s)`, so the derived declaration hid the base instead of overriding it and the one call, through a `Thing*`, never reached the body that removes the feature. Casts Wall of Doors and counts the door glyph in the map pane after the cast and 60 searches later; the waited dump must be empty and the log must say a door winks out of existence. | LIVE |
 | `check_sunblade_acc_crit.sh` | Does the Sunblade still carry a bastard sword's Acc +2 and Crit x2 while keeping its own damage, threat range and short-sword speed? | LIVE |
 | `check_sunblade_cold.sh` | Does wielding a known +2 Sunblade raise the character sheet's Cold resistance by 2, the `PLUS_1PER1` mild rate, from the pre-wield control? | LIVE |
 | `check_sunblade_light_range.sh` | Does the Sunblade's final, activated `FI_LIGHT` field use radius 6, matching its promised 60-foot range? Structural because headless screen dumps expose activation but not field extent. | LIVE |
@@ -1037,6 +1039,8 @@ tools/check_favour_awards.sh        # the five favour awards made in C++ reach t
 tools/check_sharp_senses.sh
 tools/check_skill_manager_reset.sh
 tools/check_stacked_abilities.sh
+tools/check_summoned_feature_expiry.sh  # a timed summoned door vanishes when the stati elapses
+tools/check_quality_item_magic.sh    # a +0 weapon with a quality counts as magical
 tools/check_springblade_label.sh
 tools/check_study_slots.sh           # Intensive Study (spellcasting) raises spell slots to the chart
 tools/check_xp_penalty.sh
