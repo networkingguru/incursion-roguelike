@@ -1684,6 +1684,15 @@ void Creature::ClimbFall() {
 	IDPrint("You fall!", "The <Obj> falls!", this);
 	RemoveStati(ELEVATED);
 
+	/* upstream: a monster still being initialised (Monster::Initialize
+	   running its EV_INITIALIZE events, inc-tmys) loses ELEVATED here but
+	   takes no damage: the fall is fictitious, and the 2d6 would break the
+	   cHP == mHP + Attr[A_THP] invariant Initialize asserts. The order of
+	   these base-code steps is the same on Win32. Observed via
+	   tools/check_monster_init_hp.sh; inc-tmys; not sent. */
+	if (isMonster() && Monster::Initializing)
+		return;
+
 	ThrowDmg(EV_DAMAGE, AD_FALL, Dice::Roll(2, 6),
 		XPrint(typ == ELEV_TREE ? "falling out of a <Res>" :
 			"falling off the ceiling", m->TerrainAt(x, y)), this, this);

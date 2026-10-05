@@ -306,6 +306,12 @@ void Game::Play() {
     extern void BaneRadiusProbe(Player *caster);
     BaneRadiusProbe(pp);
 
+    /* inc-tmys: off unless INCURSION_MONINIT_PROBE is set; needs a live map.
+       See MonsterInitProbe (src/MonsterInitProbe.cpp) and
+       tools/check_monster_init_hp.sh. */
+    extern void MonsterInitProbe(Player *pl);
+    MonsterInitProbe(pp);
+
     /* inc-fdi2: opt-in live Blasphemy fatigue and area-hit oracle. */
     extern void BlasphemyProbe(Player *caster);
     BlasphemyProbe(pp);

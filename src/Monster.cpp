@@ -61,6 +61,7 @@ bool       Monster::inMelee, Monster::targVis, Monster::isAfraid,
            Monster::isAvoiding, Monster::hasInnateSpellStati, Monster::isMount;
 Creature  *Monster::mtarg, *Monster::rtarg, *Monster::CurrAI;
 int16      Monster::nAct, Monster::nEff, Monster::nStati;
+int        Monster::Initializing = 0;
 uint32     Monster::hasEffFor;
 
 /* Things to do:
@@ -1566,6 +1567,14 @@ void Monster::Initialize(bool in_play)
         GainPermStati(PHASED, NULL, SS_MISC, AbilityLevel(CA_PHASE));
 
 
+    /* upstream: a monster still being initialised must take no fall damage.
+       Its template's EV_INITIALIZE event can shapeshift it (POLYMORPH), and
+       StatiOn then calls ClimbFall on ELEVATED (ELEV_TREE), whose 2d6 AD_FALL
+       drops cHP below mHP+THP and breaks the ASSERT below. ClimbFall reads
+       this counter and skips the damage. The order of these base-code steps is
+       the same on Win32. Observed via tools/check_monster_init_hp.sh;
+       inc-tmys; not sent. */
+    Initializing++;
     /* upstream: init-time AddAct calls from a monster's or template's EV_INITIALIZE handler ("archer", "rogue-archer", "ranger;template") accumulate in the static action list across monsters, because nAct resets only in ChooseAction. Map::Generate Initializes many monsters with no ChooseAction between them, so the 64th trips ASSERT(nAct < 63) at inc/Creature.h:1662; with ASSERT compiled out it writes past Acts[63]. Save and restore nAct around these events so a monster Initialized in play keeps the action list another monster is still building. Observed via tools/check_act_overflow.sh; inc-3lsp; not sent. */
     int16 savedNAct = nAct;
     TMON(tmID)->PEvent(EV_INITIALIZE,this,tmID);
@@ -1573,6 +1582,7 @@ void Monster::Initialize(bool in_play)
     StatiIterNature(this,TEMPLATE)
         TTEM(S->eID)->PEvent(EV_INITIALIZE,this,S->eID);
     StatiIterEnd(this)
+    Initializing--;
     nAct = savedNAct;
     ASSERT(cHP == mHP + Attr[A_THP]);
     SetSilence();

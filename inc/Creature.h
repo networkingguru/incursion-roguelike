@@ -1659,6 +1659,10 @@ class Monster: public Creature
              isDrained, isEnraged, isGrabbed, isAvoiding,
              hasInnateSpellStati, isMount; 
     public:
+      /* Non-zero while at least one Monster::Initialize is running. ClimbFall
+         reads it to skip fall damage for a monster still being initialised
+         (inc-tmys). A counter, not a bool: Initialize can nest. */
+      static int Initializing;
 			hObj GetInvHead() { return Inv; }
       Monster(rID mID,int16 _Type=T_MONSTER);
 			EvReturn Event(EventInfo &e);
