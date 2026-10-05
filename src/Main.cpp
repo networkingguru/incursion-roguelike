@@ -325,9 +325,16 @@ void Game::Play() {
     pp->IBlessingProbe();
 
     /* Off unless INCURSION_WEAPONTYPE_PROBE is set; needs a live player. See
-       WeaponTypeProbe (src/Item.cpp) and tools/check_weapon_types.sh. inc-f38k. */
+       WeaponTypeProbe (src/WeaponTypeProbe.cpp) and
+       tools/check_weapon_types.sh. inc-f38k. */
     extern void WeaponTypeProbe(Player *p);
     WeaponTypeProbe(pp);
+
+    /* inc-3lsp: off unless INCURSION_ACT_OVERFLOW_PROBE is set. See
+       ActOverflowProbe (src/ActOverflowProbe.cpp) and
+       tools/check_act_overflow.sh. */
+    extern void ActOverflowProbe(Player *pl);
+    ActOverflowProbe(pp);
 
     /* Off unless INCURSION_TRUESIGHT_PROBE is set, and run here because it
        needs a live player and a live map. See Creature::TrueSightProbe and

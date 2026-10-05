@@ -16,17 +16,34 @@
 # (a) every line with predicted 0 must have result 0, and every line with
 #     predicted 100 must have result 1;
 # (b) for each 10-point bucket of predicted chance holding at least 30 lines,
-#     the observed success rate must be within 15 points of the bucket's mean
-#     predicted chance.
+#     and for the pooled set of every line with 0 < predicted < 100, the
+#     results must be consistent with each line's own predicted probability
+#     p_i = predicted%/100. With E = sum p_i, V = sum p_i*(1-p_i) and
+#     O = sum results, z = (O - E) / sqrt(V); a test fails when |z| > 4.
+#     A test whose V is 0 is skipped. The pooled test keeps power against a
+#     systematic offset that no single bucket shows.
 #
 # It fails if it finds no probe lines at all, or if the number of run
 # directories found differs from the number of runs.
 #
-# Usage: tools/check_chance.sh    (exits 0 on pass, 1 on fail)
-set -uo pipefail
+# PROVED RED with --prove-red (docs/VERIFICATION.md step 2). The mutation adds
+# a constant +5 to the roll side of SkillCheck's success test (src/Skills.cpp),
+# so the roll succeeds more often than SkillCheckChance predicts; the pooled
+# z then grows past 4 and this check exits 1.
+#
+# Usage: tools/check_chance.sh [--prove-red]  (0 pass, 1 fail)
+. "$(dirname "$0")/check_lib.sh"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+
+# The mutation this check defends: make SkillCheck's success test easier by a
+# fixed +5 on the roll side, so the die succeeds more often than the chance we
+# advertise. Declared before the (build-needing) measurement below so
+# --prove-red intercepts here.
+check_mutation src/Skills.cpp \
+'	bool succ = (sr + roll + mod1 + mod2 + armPen) >= DC;' \
+'	bool succ = (sr + roll + 5 + mod1 + mod2 + armPen) >= DC;'
 
 SEEDS="4242 7 99"
 OPTS=tools/fixtures/options-2026-08-22.dat
@@ -77,35 +94,60 @@ awk -v total="$TOTAL" '
 {
     pred = $4 + 0
     res  = $5 + 0
+    p    = pred / 100.0
     lines++
     # bucket: floor(pred/10)*10
     b = int(pred/10)*10
-    bcount[b]++
-    bsum[b] += pred
-    bok[b] += res
+    bn[b]++
+    bE[b] += p
+    bV[b] += p * (1.0 - p)
+    bO[b] += res
     # (a)
     if (pred == 0 && res != 0) { hard++; print "  predicted 0 but result " res ": " $0 }
     if (pred == 100 && res != 1) { hard++; print "  predicted 100 but result " res ": " $0 }
+    # pooled set: strictly between 0 and 100
+    if (pred > 0 && pred < 100) {
+        pn++
+        pE += p
+        pV += p * (1.0 - p)
+        pO += res
+    }
 }
 END {
     buckets = 0
     fails = 0
-    for (b in bcount) {
-        if (bcount[b] < 30) continue
+    zfails = 0
+    pzfail = 0
+    for (b in bn) {
+        if (bn[b] < 30) continue
         buckets++
-        mean = bsum[b] / bcount[b]
-        obs = 100.0 * bok[b] / bcount[b]
-        d = obs - mean
-        if (d < 0) d = -d
-        if (d > 15) {
+        if (bV[b] <= 0) continue
+        z = (bO[b] - bE[b]) / sqrt(bV[b])
+        printf "  bucket %3d-%3d: n=%d E=%.2f O=%.0f z=%+.3f\n",
+            b, b+9, bn[b], bE[b], bO[b], z
+        if (z < 0) zz = -z; else zz = z
+        if (zz > 4) {
             fails++
-            printf "  bucket %3d-%3d: %d lines, mean %.1f%%, observed %.1f%%, drift %.1f\n",
-                b, b+9, bcount[b], mean, obs, d
+            zfails++
+            printf "  bucket %3d-%3d FAILS: |z|=%.3f > 4\n", b, b+9, zz
         }
+    }
+    if (pV > 0) {
+        pz = (pO - pE) / sqrt(pV)
+        printf "  pooled: n=%d E=%.2f O=%.0f z=%+.3f\n", pn, pE, pO, pz
+        if (pz < 0) pzz = -pz; else pzz = pz
+        if (pzz > 4) {
+            fails++
+            pzfail = 1
+            printf "  pooled FAILS: |z|=%.3f > 4\n", pzz
+        }
+    } else {
+        printf "  pooled: skipped (V=0)\n"
     }
     printf "lines: %d\n", lines
     printf "buckets checked: %d\n", buckets
-    printf "failures: %d (hard %d, bucket %d)\n", hard+fails, hard, fails
+    printf "failures: %d (hard %d, bucket %d, pooled %d)\n", hard+fails, hard,
+        zfails, pzfail
     exit (hard+fails) ? 1 : 0
 }' "$BASE/all.log"
 rc=$?
