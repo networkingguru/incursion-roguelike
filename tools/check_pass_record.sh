@@ -108,7 +108,7 @@ expect() { # expect <label> <command...>
         fails=$(( fails + 1 ))
     fi
 }
-says() { printf '%s\n' "$OUT" | grep -q -- "$1"; }
+says() { grep -q -- "$1" <<< "$OUT"; }
 
 expect "the real record path is ignored in this repository" \
     git -C "$ROOT" check-ignore -q logs/nightly-verify-pass.txt
