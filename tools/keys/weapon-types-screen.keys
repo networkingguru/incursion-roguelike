@@ -1,0 +1,5 @@
+# Key script for tools/check_weapon_types.sh, INCURSION_WEAPONTYPE_PROBE=screen-bow
+# and screen-sword. The probe wields a known Flaming weapon; one search later
+# the sidebar's damage block (TextTerm::ShowDamage) is on screen.
+s
+@dump:sidebar

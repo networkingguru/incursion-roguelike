@@ -2058,8 +2058,15 @@ int32 Item::getShopCost(Creature *Buyer, Creature *Seller) {
                 12000, 16000, 24000, 36000, 48000, 56000,
                 75000, 102000, 128000, 256000, 512000,
                 1000000, 1500000, 2000000 };
+            /* upstream: the high price bracket covers every combat weapon
+               type -- T_WEAPON, T_BOW, T_MISSILE -- not T_WEAPON/T_BOW
+               alone, because isType is an exact match; T_STAFF excluded.
+               Upstream's: an exact type comparison present since the 2014
+               import. Observed via tools/check_weapon_types.sh, inc-f38k,
+               not sent. */
             if (isType(T_WEAPON) || isType(T_ARMOUR) ||
-                isType(T_SHIELD) || isType(T_BOW))
+                isType(T_SHIELD) || isType(T_BOW) ||
+                isType(T_MISSILE))
                 cost += defCost[max(0, min(20, ItemLevel(false)))] * (eID ? 400L : 160L);
             else
                 cost += defCost[max(0, min(20, ItemLevel(false)))] * 70L;

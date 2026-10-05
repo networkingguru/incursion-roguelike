@@ -324,6 +324,11 @@ void Game::Play() {
        (src/Prayer.cpp) and tools/check_bow_blessing.sh. inc-rnp9. */
     pp->IBlessingProbe();
 
+    /* Off unless INCURSION_WEAPONTYPE_PROBE is set; needs a live player. See
+       WeaponTypeProbe (src/Item.cpp) and tools/check_weapon_types.sh. inc-f38k. */
+    extern void WeaponTypeProbe(Player *p);
+    WeaponTypeProbe(pp);
+
     /* Off unless INCURSION_TRUESIGHT_PROBE is set, and run here because it
        needs a live player and a live map. See Creature::TrueSightProbe and
        tools/check_true_sight.sh. inc-5bl3. */

@@ -690,14 +690,25 @@ void TextTerm::ShowDamage(const char*str, Item *w, int8 Mode) {
             && p->AbilityLevel(CA_SNEAK_ATTACK))
       {
         SuperSneak = false;
-        if (w && w->isType(T_WEAPON))
+        /* upstream: the super-sneak flag is read from every combat weapon
+           type -- T_WEAPON, T_BOW, T_MISSILE -- because isType is an exact
+           match; T_STAFF excluded. Upstream's: an exact type comparison
+           present since the 2014 import. Traced, inc-f38k, not sent. */
+        if (w && (w->isType(T_WEAPON) || w->isType(T_BOW) ||
+                  w->isType(T_MISSILE)))
           if (TITEM(w->iID)->HasFlag(WT_SUPER_SNEAK))
             SuperSneak = true;
         Write(Format("    +%dd%d SA\n",p->AbilityLevel(CA_SNEAK_ATTACK),
           SuperSneak ? 8 : (p->HasFeat(FT_MARTIAL_MASTERY) || w) ? 6 : 4));
       }
 
-    if (w && w->isType(T_WEAPON)) {
+    /* upstream: the elemental damage lines print for every combat weapon
+       type -- T_WEAPON, T_BOW, T_MISSILE -- because isType is an exact
+       match; T_STAFF excluded. Upstream's: an exact type comparison present
+       since the 2014 import. Observed via tools/check_weapon_types.sh,
+       inc-f38k, not sent. */
+    if (w && (w->isType(T_WEAPON) || w->isType(T_BOW) ||
+              w->isType(T_MISSILE))) {
       if (w->KnownQuality(WQ_FLAMING))
         Write("    +1d6 Fire\n"); 
       if (w->KnownQuality(WQ_SHOCKING))
@@ -1735,7 +1746,12 @@ void TextTerm::ShowMapOverview() {
 
 static int16 ViewListPriorityMod(Thing *t) {
     if (t->isItem()) {
-      if (t->isType(T_WEAPON) || t->isType(T_ARMOUR))
+      /* upstream: a mundane uninscribed weapon, bow or armour sorts to the
+         bottom of the ground list, because isType is an exact match and
+         T_STAFF is excluded; ammunition already sorts there below.
+         Upstream's: an exact type comparison present since the 2014 import.
+         Observed via tools/check_weapon_types.sh, inc-f38k, not sent. */
+      if (t->isType(T_WEAPON) || t->isType(T_BOW) || t->isType(T_ARMOUR))
         {
           if ((!((Item*)t)->Inscrip.GetLength()) ||
               ((Item*)t)->Inscrip == "{mundane}")

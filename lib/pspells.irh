@@ -1361,21 +1361,26 @@ Effect "Brand of Hatred" : EA_GENERIC
       the Hatred Domain power."; 
     hObj it; Flags: EF_AFFECTS_ITEMS, EF_ITEMS_ONLY;
     On Event 
+      /* upstream: covers T_WEAPON, T_BOW, T_MISSILE because isType is an
+         exact match; T_STAFF excluded. Upstream's type comparison. Observed
+         via tools/check_weapon_types.sh, inc-f38k, not sent. */
       EV_ISTARGET {
         for(it=EActor->FirstInv();it;it=EActor->NextInv()) {
-          if (it->isType(T_WEAPON) || it->isType(T_BOW))
+          if (it->isType(T_WEAPON) || it->isType(T_BOW) || it->isType(T_MISSILE))
             if (it->QualityOK(WQ_BANE))
               return SHOULD_CAST_IT; 
           }
         return CAN_CAST_IT; 
         },
       EV_RATETARG {
-        if (EItem->isType(T_WEAPON) && EItem->QualityOK(WQ_BANE))
+        if ((EItem->isType(T_WEAPON) || EItem->isType(T_BOW) ||
+             EItem->isType(T_MISSILE)) && EItem->QualityOK(WQ_BANE))
           return NOTHING;
         return ABORT;
         },
       EV_MAGIC_HIT {
-        if (ETarget->isType(T_WEAPON) && ETarget->QualityOK(WQ_BANE))
+        if ((ETarget->isType(T_WEAPON) || ETarget->isType(T_BOW) ||
+             ETarget->isType(T_MISSILE)) && ETarget->QualityOK(WQ_BANE))
           ETarget->AddQuality(WQ_BANE,EActor->GetEffStatiVal(FAV_ENEMY,$"hatred"));
         return DONE;
         }; 

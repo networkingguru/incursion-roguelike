@@ -1936,8 +1936,13 @@ Priest / Scroll / Wizard Spell "Magic Weapon" : EA_GENERIC
       other fiends."; 
     hObj it;
     On Event 
+      /* upstream: covers T_WEAPON, T_BOW, T_MISSILE because isType is an
+         exact match; T_STAFF excluded. A bow is single so it takes the
+         GetQuantity()==1 rule; ammunition (T_MISSILE) stays accepted as a
+         stack. Upstream's type comparison. Observed via
+         tools/check_weapon_types.sh, inc-f38k, not sent. */
       EV_ISTARGET {
-        if (ETarget->isType(T_WEAPON))
+        if (ETarget->isType(T_WEAPON) || ETarget->isType(T_BOW))
           if (ETarget->GetQuantity() == 1)
             return CAN_CAST_IT;
         if (ETarget->isType(T_MISSILE))
@@ -1949,7 +1954,8 @@ Priest / Scroll / Wizard Spell "Magic Weapon" : EA_GENERIC
         return CANNOT_CAST_IT; 
         },
       EV_RATETARG {
-        if (EItem->isType(T_WEAPON))
+        if (EItem->isType(T_WEAPON) || EItem->isType(T_BOW) ||
+            EItem->isType(T_MISSILE))
           return NOTHING;
         return ABORT;
         },
