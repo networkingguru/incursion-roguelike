@@ -356,6 +356,14 @@ trap 'exit 143' TERM
 
 acquire_lock
 
+# One check, here, before any work: an overloaded machine makes a correct gate
+# look red (inc-g9wz, inc-xn7g, inc-fdkz). Refuse rather than wait; the EXIT
+# trap above releases the lock. inc-rwha.
+if ! "$ROOT/tools/load_guard.sh"; then
+    cannot "the machine is overloaded, so the gate would measure load, not the bead.
+Nothing reached $BASE_BRANCH. Retry when the machine is quieter."
+fi
+
 git -C "$SHARED" show-ref --verify --quiet "refs/heads/$BEAD" \
     || die "REFUSED: there is no branch $BEAD.
 Nothing to land. tools/worktree.sh $BEAD starts one."
