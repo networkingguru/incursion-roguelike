@@ -534,6 +534,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? | LIVE |
 | `check_escape_sweep.sh` | Does any string literal still spell a C escape with a forward slash, the way the port's path sweep wrote `/n` for `\n`? | LIVE |
 | `check_eyes_soul_prose.sh` | Does the Eyes of the Soul description name the Necrophysiology feat the item grants via `EXTRA_FEAT FT_NECROPHYSIOLOGY` -- the feat that lets its holder crit, sneak attack and coup de grace undead -- rather than omitting it as the prose did before? | LIVE |
+| `check_fast_checks.sh` | Does `tools/fast_checks.sh` still bite? Plants fake checks in a temp directory and demands each verdict: a pass exits 0, a failure exits 1 and names the check, an overrunning check is killed with "TOO SLOW" in under 5 s without flagging a fast check beside it, a check exiting 2 is UNMEASURED and does not fail the run, an unmarked check is not run, an empty directory exits 2, and `check_worktree_untracked.sh` reads a scratch git repo clean/untracked/ignored and lists a filename with a space whole. | LIVE |
 | `check_favour_awards.sh` | Do the five favour awards the engine makes in C++ reach the god? `Creature::gainFavour` took an int16 amount and `Character::gainFavour` an int32 one, so the character's version hid the base instead of overriding it, and the favoured-skill, Khasrach and Zurvash devour, and Semirath trap awards all landed in an empty base body. Four sessions from frozen characters read the patron's favour off the character sheet either side of each award, and require it to rise by the amount the code computes from the printed roll or the creature's challenge rating. | LIVE |
 | `check_favour_int32.sh` | Does a favour total over 32767 survive the round trip through `EV_CALC_FAVOUR`, instead of wrapping negative? The script view of `EventInfo::EParam` was int16 while the field is int32, so favour levels 7, 8 and 9 were unreachable. | LIVE |
 | `check_feat_toggle.sh` | Do two presses of the feat toggle key toggle twice without spending a pick? | LIVE |
@@ -789,6 +790,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_weapon_groups.sh` | Does every weapon-group bit hold a row in the name table, so a class's proficiency list names it rather than dropping it in silence? | LIVE |
 | `check_weapon_immunity_live.sh` | Is a bare fist tested against Weapon Immunity, and does Ki Strike beat it? One wizard-mode-summoned lemure, punched by the same character at Monk 1 and at Monk 4: `Your weapon fails to penetrate.` then no such line. | LIVE |
 | `check_wiki.py` | Does the wiki export (`incursion-headless -wikihelp`) produce a Home page, a sidebar, a non-empty index for every kind, no empty page, no broken `[[link]]`, valid UTF-8, no raw colour tag and balanced bold on every line? `--selftest` proves each fault fails (inc-k2le). | LIVE |
+| `check_worktree_untracked.sh` | Does the worktree hold an untracked file? `git status --porcelain --untracked-files=all` lists it with `??`; the check exits 1 and says a reproduction belongs in `tools/` and a specimen (log, dump, save) in `logs/` or `docs/evidence/<bead>/`, never loose in the worktree. `gate: none` so the landing gate does not run it where untracked evidence is legitimate; the fast set does. | NONE |
 | `check_xp_drain.sh` | Does restoring drained XP clear the drain once, rather than also crediting the same amount back onto XP -- so draining 500 and restoring it returns effective XP exactly to where it started, not 500 above? | LIVE |
 | `check_xp_penalty.sh` | Can a character who holds only two classes read his own sheet? A Wood Elf Rogue 2 / Warrior 1, whose empty third class slot used to segfault `Character::XPPenalty`. | LIVE |
 | `check_xp_penalty_rule.sh` | Does the multiclass experience penalty follow the rule? Favoured and prestige classes leave the comparison, then each remaining class two or more levels below the highest remaining class costs 20% and the costs add. Six characters: an Elf photographed at Barbarian 3, Barbarian 3 / Rogue 1, + Warrior 1 and Barbarian 3 / Rogue 2 / Warrior 2, plus an Elf Rogue 5 / Assassin 2 and a Wood Elf Rogue 2 / Warrior 1. | LIVE |
@@ -948,6 +950,23 @@ tools/check_pass_record.sh          # lands scratch beads through finish_bead.sh
 tools/check_pycache_ignored.sh      # a Python check leaves the tree clean
 tools/check_resume_gc.sh            # resume-note GC against a stub bd and a temp root
 ```
+
+The FAST set is a subset of Tier 1 that a commit can afford to run every time:
+a few checks that finish in seconds, ahead of the landing gate. A check joins
+it with a non-empty `# gate-fast: <reason>` line in its first 40 lines, in the
+same spirit as `# gate-serial:`; the marker does not change the check's own
+`# gate:` tier. `tools/fast_checks.sh` globs `tools/check_*.sh` and
+`tools/check_*.py`, runs every marked check in parallel from the repository
+root, and gives each a hard limit of 15 seconds (`INCURSION_FAST_LIMIT`) --
+a check still running at the limit is killed and counted as a failure, because
+a set that promises seconds must not hang. It exits 0 when all pass, 1 when
+any fails or overruns, and 2 when it finds no fast check at all. A check that
+exits 2 is printed as `UNMEASURED` and does not fail the run, matching the
+pre-commit rule that exit 2 warns and does not block. It is called by
+`.beads/hooks/pre-commit` (from a bead worktree, and not mid-merge) and by
+`tools/finish_bead.sh` at STEP 3b, before the gate; both skip it when
+`INCURSION_NO_FAST_CHECKS=1`. Run it by hand as `tools/fast_checks.sh`;
+`tools/check_fast_checks.sh` is what watches it bite.
 
 `tools/bead_new.sh` is not a check; it is how a bead should be filed.
 It passes its arguments to `bd create`, then runs

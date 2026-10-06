@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: cheap
+# gate-fast: static, reads files only, ~3 s
 # Does every check in tools/ say whether the gate should run it?
 #
 # WHY. tools/nightly_verify.sh used to hold a hand-written list of the checks
