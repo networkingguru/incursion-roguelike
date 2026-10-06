@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# gate-fast: reads the reporting ledger and the beads database, ~2 s
 # Verify that every base-code bug in the reporting ledger carries the beads
 # label `upstream`, so tools/sync_issues.sh publishes its GitHub issue with that
 # label.

@@ -411,6 +411,23 @@ Nothing has reached $BASE_BRANCH."
     fi
 fi
 
+# STEP 3b. The fast set, run in the worktree, for seconds of feedback before
+# the gate. Exit 1 means a fast check failed, so the landing stops before the
+# gate, matching STEP 4's refusal. Exit 2 (could not measure) warns and goes on.
+if [ "${INCURSION_NO_FAST_CHECKS:-}" = "1" ]; then
+    echo "=== fast checks SKIPPED (INCURSION_NO_FAST_CHECKS=1) ==="
+else
+    echo "=== fast checks ==="
+    ( cd "$WORKTREE" && tools/fast_checks.sh )
+    _inc_fast=$?
+    if [ "$_inc_fast" -eq 1 ]; then
+        die "STOPPED: a fast check failed in STEP 3b on $BEAD.
+Nothing has reached $BASE_BRANCH. Fix it in $WORKTREE and run this again."
+    elif [ "$_inc_fast" -ne 0 ]; then
+        echo "=== fast checks could not measure (exit $_inc_fast); continuing to the gate ==="
+    fi
+fi
+
 # STEP 4. The gate, run in the worktree, against the merged result.
 #
 # THE CARVE-OUT. A bead that changes nothing but markdown used to pay for both
