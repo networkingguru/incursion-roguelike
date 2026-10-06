@@ -48,6 +48,9 @@ export PATH=/usr/bin:/bin
 unset NIGHTLY_VERIFY_STATE NIGHTLY_CHECK_DIR NIGHTLY_BASE_REF \
       INCURSION_FINISH_GATE INCURSION_BASE_BRANCH INCURSIONPATH CC CXX
 
+# A fixture landing tests the lock and merge, not machine load (inc-rwha).
+export INCURSION_LOAD_GUARD_OFF=1
+
 REPO="$TMP/repo"
 LOG="$TMP/calls"             # one line per call of the fake build or a fake check
 FAIL_LIVE="$TMP/fail-live"   # while this exists, the live check fails
