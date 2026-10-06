@@ -2582,7 +2582,11 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
                 continue;
               }
 
-      ReThrow(ourEvent, eCopy);
+      /* upstream: EV_HIT goes only to creatures; Creature::Hit treats its
+         victim as a Creature. Re-throwing a natural attack at a door (or other
+         solid feature) as EV_HIT calls a Creature virtual through a Door and
+         misbehaves on Win32 too. Observed, inc-a9m3, not sent. */
+      ReThrow((e.isNAttack && !cr->isCreature()) ? EV_MAGIC_STRIKE : ourEvent, eCopy);
     }
 
   if (wasEngulfed && !e.EActor->HasStati(ENGULFED)) {
