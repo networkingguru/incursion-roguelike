@@ -336,6 +336,11 @@ void Game::Play() {
     extern void ActOverflowProbe(Player *pl);
     ActOverflowProbe(pp);
 
+    /* inc-a9m3: off unless INCURSION_DOOR_BOLT_PROBE is set. See
+       DoorBoltProbe (src/DoorBoltProbe.cpp) and tools/check_door_bolt.sh. */
+    extern void DoorBoltProbe(Player *pl);
+    DoorBoltProbe(pp);
+
     /* Off unless INCURSION_TRUESIGHT_PROBE is set, and run here because it
        needs a live player and a live map. See Creature::TrueSightProbe and
        tools/check_true_sight.sh. inc-5bl3. */
