@@ -6,7 +6,7 @@
 # correct, then reported a red gate nobody had actually failed.
 #
 # It refuses, printing one line per tripped condition to stderr and exiting
-# 2, when the 1-minute load average is above hw.ncpu / 2, when kernel memory
+# 2, when the 1-minute load average is above hw.ncpu, when kernel memory
 # pressure is 2 (warn) or higher, or when another tools/nightly_verify.sh is
 # already running. It exits 0 when the machine is fit. It never waits.
 set -uo pipefail
@@ -32,10 +32,10 @@ else
     ncpu="$(sysctl -n hw.ncpu 2>/dev/null)"
 fi
 
-limit="$(awk -v n="$ncpu" 'BEGIN { printf "%.1f", n / 2 }' 2>/dev/null)"
+limit="$(awk -v n="$ncpu" 'BEGIN { printf "%.1f", n }' 2>/dev/null)"
 above="$(awk -v l="$load" -v lim="$limit" 'BEGIN { print (l > lim) ? 1 : 0 }' 2>/dev/null)"
 if [ "${above:-0}" = "1" ]; then
-    printf 'REFUSED (overload): 1-min load average %s is above the limit %s (half of %s CPUs)\n' \
+    printf 'REFUSED (overload): 1-min load average %s is above the limit %s (%s CPUs)\n' \
         "$load" "$limit" "$ncpu" >&2
     trip=1
 fi

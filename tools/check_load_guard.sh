@@ -49,14 +49,21 @@ idle
 expect "idle values pass" [ "$RC" = 0 ]
 expect "  and say nothing" clean
 
-guard INCURSION_LOAD_GUARD_FAKE_LOAD=6.0 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
+guard INCURSION_LOAD_GUARD_FAKE_LOAD=10.5 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
       INCURSION_LOAD_GUARD_FAKE_PRESSURE=1 INCURSION_LOAD_GUARD_FAKE_GATES=0
-expect "load 6.0 of 10 CPUs is refused" [ "$RC" = 2 ]
+expect "load above 10 CPUs is refused" [ "$RC" = 2 ]
 expect "  and names the load average" says "load average"
 
-guard INCURSION_LOAD_GUARD_FAKE_LOAD=5.0 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
+guard INCURSION_LOAD_GUARD_FAKE_LOAD=10.0 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
       INCURSION_LOAD_GUARD_FAKE_PRESSURE=1 INCURSION_LOAD_GUARD_FAKE_GATES=0
 expect "load exactly at the limit passes" [ "$RC" = 0 ]
+expect "  and says nothing" clean
+
+# The old half-CPU limit (5 on 10 cores) refused 6.0; the whole-CPU limit
+# passes it, so this case is what a restored n / 2 would fail.
+guard INCURSION_LOAD_GUARD_FAKE_LOAD=6.0 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
+      INCURSION_LOAD_GUARD_FAKE_PRESSURE=1 INCURSION_LOAD_GUARD_FAKE_GATES=0
+expect "load 6.0 of 10 CPUs now passes" [ "$RC" = 0 ]
 expect "  and says nothing" clean
 
 guard INCURSION_LOAD_GUARD_FAKE_LOAD=1.0 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
