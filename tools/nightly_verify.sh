@@ -131,9 +131,13 @@ SKIP_LIVE=0
 REUSE=0
 LANDING=0
 PRINT_MODE=0
+PRINT_GATE_NAME=0
 NFLAGS=0
 for arg in "$@"; do
-    [ "$arg" = "--print-mode" ] || NFLAGS=$((NFLAGS + 1))
+    case "$arg" in
+        --print-mode|--print-gate-name) ;;
+        *) NFLAGS=$((NFLAGS + 1)) ;;
+    esac
     case "$arg" in
         --record)      MODE="record" ;;
         --compare)     MODE="compare" ;;
@@ -159,6 +163,7 @@ for arg in "$@"; do
         "")            MODE="compare" ;;
         -h|--help)     sed -n '2,16p' "$0"; exit 0 ;;
         --print-mode)  PRINT_MODE=1 ;;
+        --print-gate-name) PRINT_GATE_NAME=1 ;;
         *)             echo "unknown argument: $arg" >&2; exit 2 ;;
     esac
 done
@@ -182,6 +187,26 @@ fi
 # discovery or build (tools/nightly_verify.sh --print-mode).
 if [ "$PRINT_MODE" = 1 ]; then
     printf 'MODE=%s LANDING=%s REUSE=%s\n' "$MODE" "$LANDING" "$REUSE"
+    exit 0
+fi
+
+# The name of the gate a run that cannot reuse a pass falls through to. With
+# --landing that is the short landing gate; every other mode runs the full
+# gate. Kept as one small function so the fallback line and the selftest read
+# the same choice (inc-nf9h).
+gate_name() {
+    if [ "$LANDING" = 1 ]; then
+        printf 'landing gate\n'
+    else
+        printf 'full gate\n'
+    fi
+}
+
+# A hidden self-test hook, in the style of --print-mode: print the fallback
+# gate's name and leave before any discovery or build, so the selftest can
+# prove the choice without starting a real run (inc-nf9h).
+if [ "$PRINT_GATE_NAME" = 1 ]; then
+    gate_name
     exit 0
 fi
 
@@ -1192,6 +1217,34 @@ selftest() {
     }
     _run_case_landing_steps_copy
 
+    # ---- the reuse fallback names the gate it actually runs (inc-nf9h) ----
+    # Since the landing split the fallback line said "Running the full gate."
+    # even under --landing, which runs the landing gate. The gate-name choice
+    # lives in gate_name(), reachable through the hidden --print-gate-name hook
+    # in the style of --print-mode: this proves the choice without starting a
+    # build or a game session.
+    _run_case_reuse_fallback_name() {
+        local d out
+        d="$dir/fallbackname"; mkdir -p "$d"
+        out="$(NIGHTLY_CHECK_DIR="$d" NIGHTLY_VERIFY_STATE="$d/base.txt" \
+            "$0" --print-gate-name --landing 2>&1)"
+        if [ "$out" = "landing gate" ]; then
+            printf '  ok    the reuse fallback names the landing gate under --landing\n'
+        else
+            printf '  FAIL  --landing fallback gate name: %s\n' "$out"
+            fails=$((fails + 1))
+        fi
+        out="$(NIGHTLY_CHECK_DIR="$d" NIGHTLY_VERIFY_STATE="$d/base.txt" \
+            "$0" --print-gate-name 2>&1)"
+        if [ "$out" = "full gate" ]; then
+            printf '  ok    the reuse fallback names the full gate otherwise\n'
+        else
+            printf '  FAIL  default fallback gate name: %s\n' "$out"
+            fails=$((fails + 1))
+        fi
+    }
+    _run_case_reuse_fallback_name
+
     # ---- the flags combine only as the landing says they may --------------
     # --landing combines with --reuse-pass and nothing else. The two accepted
     # orders must leave the parser at MODE=compare LANDING=1 REUSE=1; every
@@ -1567,7 +1620,7 @@ if [ "$REUSE" = 1 ]; then
     if REUSE_VERDICT="$(pass_matches)"; then
         REUSED=1; SKIP_BUILDS=1; SKIP_LIVE=1
     else
-        echo "--- no pass to reuse: $REUSE_VERDICT. Running the full gate. ---"
+        echo "--- no pass to reuse: $REUSE_VERDICT. Running the $(gate_name). ---"
     fi
 fi
 FULL_RUN=0
@@ -1786,7 +1839,10 @@ if [ "$SKIP_BUILDS" = 1 ]; then
         echo "--- builds SKIPPED (--checks-only) ---"
     fi
 else
-    echo "--- builds, macOS then Linux (absolute: a tree that does not compile never merges) ---"
+    echo "--- builds, macOS only (absolute: a tree that does not compile never merges) ---"
+    if [ "$LANDING" = 0 ]; then
+        echo "    (the Linux cross-build follows as a background step)"
+    fi
     build_failed=0
     for build in ${BUILDS[@]+"${BUILDS[@]}"}; do
         printf '%s ... ' "$build"
