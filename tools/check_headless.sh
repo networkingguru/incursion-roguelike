@@ -1,4 +1,5 @@
 #!/bin/bash
+# gate: smoke
 # Regression check for the headless backend (src/Wposix.cpp, inc-73g).
 #
 # What it protects. Everything else in this project that runs without a person

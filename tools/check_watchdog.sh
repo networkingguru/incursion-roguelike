@@ -1,5 +1,5 @@
 #!/bin/bash
-# gate: cheap
+# gate: live
 # gate-serial: race wall-clock deadlines (INCURSION_WATCHDOG_* seconds); CPU load could flip them
 #
 # Does tools/watchdog.sh stop a command whose output never starts or stops

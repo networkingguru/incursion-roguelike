@@ -1,5 +1,5 @@
 #!/bin/bash
-# gate: live
+# gate: smoke
 # Does a frozen character fixture still load, and is he still the character his
 # own sheet claims? (bd inc-1fjk)
 #

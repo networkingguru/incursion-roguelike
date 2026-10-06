@@ -8,6 +8,8 @@
 #   tools/nightly_verify.sh --selftest  # does the ratchet itself still bite?
 #   tools/nightly_verify.sh --docs-only # *.md changed and nothing else did
 #   tools/nightly_verify.sh --reuse-pass # the landing: reuse a full pass on these files
+#   tools/nightly_verify.sh --landing   # the short gate a landing runs
+#   tools/nightly_verify.sh --landing --reuse-pass # the landing, reusing a pass
 #
 # Exit: 0 safe to merge
 #       1 this run broke something, or a build failed
@@ -127,28 +129,61 @@ MODE="compare"
 SKIP_BUILDS=0
 SKIP_LIVE=0
 REUSE=0
-case "${1:-}" in
-    --record)      MODE="record" ;;
-    --compare)     MODE="compare" ;;
-    # --checks-only exists so the ratchet can be exercised without rebuilding.
-    # A build here overwrites ./incursion and mod/Incursion.Mod, which is not
-    # safe to do while somebody is playing the game out of this directory.
-    --checks-only) MODE="compare"; SKIP_BUILDS=1 ;;
-    # --docs-only is the carve-out for a change that cannot reach the
-    # game: it drops the builds and the live tier and keeps the whole
-    # cheap tier, which is where every documentation check lives. The
-    # CALLER decides a change qualifies, and tools/docs_only_change.sh is
-    # the only thing allowed to make that decision -- this flag trusts it
-    # and asks no questions, so nothing may pass it on a guess.
-    --docs-only)   MODE="compare"; SKIP_BUILDS=1; SKIP_LIVE=1 ;;
-    # --reuse-pass asks no trust of its caller: it checks the pass record
-    # itself, and with no match it is --compare.
-    --reuse-pass)  MODE="compare"; REUSE=1 ;;
-    --selftest)    MODE="selftest" ;;
-    "")            MODE="compare" ;;
-    -h|--help)     sed -n '2,14p' "$0"; exit 0 ;;
-    *)             echo "unknown argument: $1" >&2; exit 2 ;;
-esac
+LANDING=0
+PRINT_MODE=0
+NFLAGS=0
+for arg in "$@"; do
+    [ "$arg" = "--print-mode" ] || NFLAGS=$((NFLAGS + 1))
+    case "$arg" in
+        --record)      MODE="record" ;;
+        --compare)     MODE="compare" ;;
+        # --checks-only exists so the ratchet can be exercised without rebuilding.
+        # A build here overwrites ./incursion and mod/Incursion.Mod, which is not
+        # safe to do while somebody is playing the game out of this directory.
+        --checks-only) MODE="compare"; SKIP_BUILDS=1 ;;
+        # --docs-only is the carve-out for a change that cannot reach the
+        # game: it drops the builds and the live tier and keeps the whole
+        # cheap tier, which is where every documentation check lives. The
+        # CALLER decides a change qualifies, and tools/docs_only_change.sh is
+        # the only thing allowed to make that decision -- this flag trusts it
+        # and asks no questions, so nothing may pass it on a guess.
+        --docs-only)   MODE="compare"; SKIP_BUILDS=1; SKIP_LIVE=1 ;;
+        # --reuse-pass asks no trust of its caller: it checks the pass record
+        # itself, and with no match it is --compare.
+        --reuse-pass)  MODE="compare"; REUSE=1 ;;
+        # --landing is the short gate a landing runs; in this phase it only
+        # parses and is otherwise --compare (spec
+        # docs/specs/2026-10-06-landing-gate-split-spec.md section 4).
+        --landing)     MODE="compare"; LANDING=1 ;;
+        --selftest)    MODE="selftest" ;;
+        "")            MODE="compare" ;;
+        -h|--help)     sed -n '2,16p' "$0"; exit 0 ;;
+        --print-mode)  PRINT_MODE=1 ;;
+        *)             echo "unknown argument: $arg" >&2; exit 2 ;;
+    esac
+done
+
+# Flag combinations. One argument is handled by the loop above; here a lone
+# --landing or --reuse-pass stands as it always did. Two arguments are accepted
+# only as --landing and --reuse-pass in either order. Any other pair, any
+# repeated flag, or three or more flags cannot be trusted to mean one thing.
+# NFLAGS counts every argument but --print-mode.
+if [ "$NFLAGS" -ge 2 ]; then
+    if [ "$NFLAGS" -eq 2 ] && [ "$LANDING" = 1 ] && [ "$REUSE" = 1 ] \
+        && [ "$SKIP_BUILDS" = 0 ] && [ "$SKIP_LIVE" = 0 ]; then
+        :
+    else
+        echo "nightly_verify: these flags do not combine: $*" >&2
+        exit 2
+    fi
+fi
+
+# A hidden self-test hook: print the parser's verdict and leave before any
+# discovery or build (tools/nightly_verify.sh --print-mode).
+if [ "$PRINT_MODE" = 1 ]; then
+    printf 'MODE=%s LANDING=%s REUSE=%s\n' "$MODE" "$LANDING" "$REUSE"
+    exit 0
+fi
 
 # --------------------------------------------------------------- discovery ---
 # Each entry is "<id><TAB><command><TAB><tier>". The id is what the state file
@@ -180,8 +215,9 @@ is_serial_file() { # <check file> -> 0 when it declares a non-empty gate-serial
 
 discover_checks() {
     local f marker tier args id cmd serial
-    local cheap=() live=()
+    local cheap=() smoke=() live=()
     SERIAL_ENTRIES=()
+    LANDING_LIVE_KEPT=0
     for f in "$CHECK_DIR"/check_*.sh "$CHECK_DIR"/check_*.py; do
         [ -f "$f" ] || continue
         marker="$(sed -n '1,40p' "$f" | sed -n 's/^#[[:space:]]*gate:[[:space:]]*//p' | head -1)"
@@ -202,15 +238,34 @@ discover_checks() {
         is_serial_file "$f" && serial=1
         case "$tier" in
             cheap) cheap+=( "$id	$cmd	cheap	$serial" ) ;;
-            live)  live+=( "$id	$cmd	live	$serial" ) ;;
+            smoke) smoke+=( "$id	$cmd	smoke	$serial" ) ;;
+            live)
+                # Under the landing gate only a changed live check is kept. The
+                # match is the file's basename against a whole line of
+                # LANDING_CHANGED, so a check can never be kept by a substring
+                # of another's name. The tier is still the marker on disk.
+                if [ "$LANDING" = 1 ]; then
+                    local _lc _kept=0
+                    while IFS= read -r _lc; do
+                        [ -n "$_lc" ] || continue
+                        [ "$(basename "$f")" = "$_lc" ] && _kept=1 && break
+                    done <<EOF
+$LANDING_CHANGED
+EOF
+                    if [ "$_kept" = 0 ]; then
+                        continue
+                    fi
+                    LANDING_LIVE_KEPT=$((LANDING_LIVE_KEPT + 1))
+                fi
+                live+=( "$id	$cmd	live	$serial" ) ;;
             none)  ;;
-            *) echo "$f: unknown gate tier '$tier' (want cheap, live or none)" >&2 ;;
+            *) echo "$f: unknown gate tier '$tier' (want cheap, smoke, live or none)" >&2 ;;
         esac
-        # A serial live check is still a live check for --docs-only's purpose:
+        # A serial smoke or live check is still one for --docs-only's purpose:
         # it is dropped with the rest of the live tier and never reaches the
         # serial runner. Only this record decides that, so the two rules stay
         # in one place.
-        if [ "$SKIP_LIVE" = 1 ] && [ "$tier" = live ]; then
+        if [ "$SKIP_LIVE" = 1 ] && { [ "$tier" = live ] || [ "$tier" = smoke ]; }; then
             continue
         fi
         if [ "$serial" = 1 ]; then
@@ -222,7 +277,7 @@ discover_checks() {
     if [ "$SKIP_LIVE" = 1 ]; then
         CHECKS=( ${cheap[@]+"${cheap[@]}"} )
     else
-        CHECKS=( ${cheap[@]+"${cheap[@]}"} ${live[@]+"${live[@]}"} )
+        CHECKS=( ${cheap[@]+"${cheap[@]}"} ${smoke[@]+"${smoke[@]}"} ${live[@]+"${live[@]}"} )
     fi
 }
 
@@ -294,7 +349,7 @@ check_log_path() {
 # back to /dev/null -- the behaviour of every run before this one -- rather than
 # let the gate's answer depend on a directory.
 run_check() {
-    local log rc
+    local log rc timefile
     log="$(check_log_path "$1")"
     mkdir -p "$LOG_DIR" 2> /dev/null
     ( : > "$log" ) 2> /dev/null || log="/dev/null"
@@ -303,10 +358,40 @@ run_check() {
     # a reader tells this morning's log from last week's.
     printf '=== check:   %s\n=== command: %s\n=== started: %s\n\n' \
         "$1" "$2" "$(date '+%Y-%m-%d %H:%M:%S %Z')" >> "$log" 2> /dev/null
-    ( eval "$2" ) >> "$log" 2>&1
+    # The CPU time (user + sys, this check and its children) is what the slow
+    # cheap note judges for a PARALLEL check: its wall-clock is shared with
+    # fifty peers, so wall-clock blames the machine and CPU time blames the
+    # check. /usr/bin/time writes the time file and returns the command's exit
+    # status. No time file when the log fell back to /dev/null or /usr/bin/time
+    # is not there: the note falls back to wall-clock.
+    timefile="${log}.time"
+    if [ "$log" != "/dev/null" ] && [ -x /usr/bin/time ]; then
+        rm -f "$timefile" 2> /dev/null
+        /usr/bin/time -p -o "$timefile" bash -c "$2" >> "$log" 2>&1
+    else
+        ( eval "$2" ) >> "$log" 2>&1
+    fi
     rc=$?
     printf '\n=== exit %s\n' "$rc" >> "$log" 2> /dev/null
     echo "$rc"
+}
+
+# cpu_seconds "<time file>": the integer sum of the file's user and sys lines,
+# rounded up, or nothing when the file is missing or unparseable. The parallel
+# runner asks this of each cheap check; an empty answer makes print_verdict
+# fall back to the wall-clock rule.
+cpu_seconds() {
+    awk '
+        /^user / { u = $2 + 0; got = 1 }
+        /^sys /  { s = $2 + 0; got = 1 }
+        END {
+            if (!got) exit 0
+            t = u + s
+            n = int(t)
+            if (t > n) n = n + 1
+            print n
+        }
+    ' "$1" 2> /dev/null
 }
 
 # show_log "<check id>" <lines>: say where that check's output went, and show
@@ -327,15 +412,18 @@ show_log() {
 }
 
 # ------------------------------------------------------------ the verdicts ---
-# print_verdict "<check id>" <now-exit> <elapsed-seconds> <tier>: turn one
-# check's exit code into the line this gate has always printed, and set FAILED
-# when that line stops the merge. Extracted from the old serial loop so the
-# parallel runner, the serial runner and --record all reach one definition of
-# the table and cannot drift.
+# print_verdict "<check id>" <now-exit> <elapsed-seconds> <tier> <serial 0|1>
+# <cpu-seconds-or-empty>: turn one check's exit code into the line this gate has
+# always printed, and set FAILED when that line stops the merge. The last two
+# arguments decide the slow-cheap note (spec §6): a serial check is judged by
+# its wall-clock, a parallel one by its CPU time when known and its wall-clock
+# otherwise. Extracted from the old serial loop so the parallel runner, the
+# serial runner and --record all reach one definition of the table and cannot
+# drift.
 #
 # FAILED is the caller's global, as it always was.
 print_verdict() {
-    local id="$1" now="$2" elapsed="$3" tier="$4" was=""
+    local id="$1" now="$2" elapsed="$3" tier="$4" serial="$5" cpu="$6" was=""
     if [ -r "$STATE" ]; then
         was="$(awk -F'\t' -v c="$id" '$2 == c { print $1 }' "$STATE" | head -1)"
     fi
@@ -369,9 +457,28 @@ print_verdict() {
     fi
     # The cheap tier's whole promise is that it costs seconds, and a check that
     # quietly stops keeping it is how a gate becomes something people skip.
-    if [ "$tier" = "cheap" ] && [ "$elapsed" -gt 30 ]; then
-        printf '            note: %ss. A cheap check should cost seconds --\n' "$elapsed"
-        printf '            mark it "# gate: live" or "# gate: none <why>".\n'
+    # A SERIAL check runs alone, so its wall-clock is its own cost and judges
+    # it. A PARALLEL check shares the machine with its peers, so only its CPU
+    # time blames the check; with no CPU time to read, wall-clock is the
+    # fallback (spec §6). The serial/wall-clock limit is ${NIGHTLY_CHEAP_LIMIT:-30};
+    # the parallel CPU rule has its own limit ${NIGHTLY_CHEAP_CPU_LIMIT:-45}.
+    local limit="${NIGHTLY_CHEAP_LIMIT:-30}"
+    local cpu_limit="${NIGHTLY_CHEAP_CPU_LIMIT:-45}"
+    if [ "$tier" = "cheap" ]; then
+        if [ "$serial" = "1" ]; then
+            if [ "$elapsed" -gt "$limit" ]; then
+                printf '            note: %ss. A cheap check should cost seconds --\n' "$elapsed"
+                printf '            mark it "# gate: live" or "# gate: none <why>".\n'
+            fi
+        elif [ -n "$cpu" ]; then
+            if [ "$cpu" -gt "$cpu_limit" ]; then
+                printf '            note: %ss of CPU. A cheap check should cost seconds --\n' "$cpu"
+                printf '            mark it "# gate: live" or "# gate: none <why>".\n'
+            fi
+        elif [ "$elapsed" -gt "$limit" ]; then
+            printf '            note: %ss. A cheap check should cost seconds --\n' "$elapsed"
+            printf '            mark it "# gate: live" or "# gate: none <why>".\n'
+        fi
     fi
 }
 
@@ -470,7 +577,7 @@ run_phase_parallel() {
     arm_gate_trap
     announce_jobs
 
-    local jobs resdir idx entry id cmd rc elapsed pids
+    local jobs resdir idx entry id cmd rc elapsed cpu pids
     jobs="$(gate_jobs)"
     resdir="$(mktemp -d "${TMPDIR:-/tmp}/nvjobs.XXXXXX")" || { echo "could not make a job dir" >&2; return 2; }
     # A private mktemp dir per phase, so two phases cannot collide and nothing
@@ -516,7 +623,11 @@ run_phase_parallel() {
         [ -n "$rc" ] || rc=2
         elapsed="$(cat "$resdir/$idx.elapsed" 2>/dev/null)"
         [ -n "$elapsed" ] || elapsed=0
-        print_verdict "$id" "$rc" "$elapsed" "$tier"
+        # This parallel check's own CPU time, from the time file run_check left
+        # beside its log. Empty when there is none: the note then falls back to
+        # wall-clock.
+        cpu="$(cpu_seconds "$(check_log_path "$id").time")"
+        print_verdict "$id" "$rc" "$elapsed" "$tier" 0 "$cpu"
     done
     rm -rf "$resdir"
     GATE_WORKERS=""
@@ -540,7 +651,9 @@ run_phase_serial() {
         started=$SECONDS
         now="$(run_check "$id" "$cmd")"
         elapsed=$((SECONDS - started))
-        print_verdict "$id" "$now" "$elapsed" "$et"
+        # A serial check runs alone, so its wall-clock is its own cost and the
+        # note judges that. No CPU time is passed.
+        print_verdict "$id" "$now" "$elapsed" "$et" 1 ""
     done
     return 0
 }
@@ -561,6 +674,28 @@ STEPS=(
     "tools/gate_compare.sh	tools/gate_compare.sh --from <the run it kept>"
 )
 
+# The soak only; spec §4.2. A landing runs this and nothing else.
+LANDING_STEPS=(
+    "tools/gate_compare.sh	tools/gate_compare.sh --from <the run it kept>"
+)
+
+# The selftest points this at a file of made-up steps, one "<command><TAB><hint>"
+# per line. Only the selftest sets it, like $NIGHTLY_CHECK_DIR. Unset, nothing
+# changes.
+if [ -n "${NIGHTLY_STEPS_FILE:-}" ] && [ -r "$NIGHTLY_STEPS_FILE" ]; then
+    STEPS=()
+    while IFS= read -r _step_line; do
+        [ -n "$_step_line" ] && STEPS+=( "$_step_line" )
+    done < "$NIGHTLY_STEPS_FILE"
+    unset _step_line
+fi
+
+# The selftest sets only $NIGHTLY_CHECK_DIR; it must never run a real step.
+if [ -n "${NIGHTLY_CHECK_DIR:-}" ] && [ -z "${NIGHTLY_STEPS_FILE:-}" ]; then
+    STEPS=()
+    LANDING_STEPS=()
+fi
+
 # An array of "<pid><TAB><name><TAB><rerun>" for the steps now running.
 STEP_PIDS=()
 
@@ -571,12 +706,14 @@ step_log_path() { # <command> -> a per-step log beside the check logs
     printf '%s/step_%s.log' "$LOG_DIR" "$name"
 }
 
-start_background_steps() {
+start_background_steps() { # <array name>
     arm_gate_trap
-    local step cmd rerun log
+    local name="$1" step cmd rerun log
+    local list=()
+    eval 'list=( ${'"$name"'[@]+"${'"$name"'[@]}"} )'
     mkdir -p "$LOG_DIR" 2> /dev/null
     STEP_PIDS=()
-    for step in "${STEPS[@]}"; do
+    for step in ${list[@]+"${list[@]}"}; do
         cmd="${step%%	*}"
         rerun="${step#*	}"
         log="$(step_log_path "$cmd")"
@@ -717,17 +854,22 @@ record_field() { sed -n "s/^$1 //p" "$PASS_RECORD" 2>/dev/null; }
 # not, and one line either way saying why. Anything it does not expect is a
 # miss, so the worst a fault here can cost is one full run.
 pass_matches() {
-    local tree base envh rtree rbase renv rtime age
+    local tree base envh rtree rbase renv rtime age rmode want
     [ -e "$PASS_RECORD" ] || { echo "no full pass on record"; return 1; }
     [ -r "$PASS_RECORD" ] || { echo "the pass record cannot be read"; return 1; }
     rtree="$(record_field tree)"; rbase="$(record_field base)"
     renv="$(record_field env)";   rtime="$(record_field time)"
+    rmode="$(record_field mode)"
+    if [ "$LANDING" = 1 ]; then want="landing"; else want="full"; fi
     # At most 12 digits, so the age below cannot overflow into a match.
     case "$rtime" in ''|*[!0-9]*|?????????????*)
         echo "the pass record is malformed"; return 1 ;;
     esac
-    if [ -z "$rtree" ] || [ -z "$rbase" ] || [ -z "$renv" ]; then
+    if [ -z "$rtree" ] || [ -z "$rbase" ] || [ -z "$renv" ] || [ -z "$rmode" ]; then
         echo "the pass record is malformed"; return 1
+    fi
+    if [ "$rmode" != "$want" ]; then
+        echo "the pass record is from the $rmode gate, not the $want gate"; return 1
     fi
     tree="$(content_tree)"; base="$(base_hash)"; envh="$(env_hash)"
     if [ -z "$tree" ] || [ -z "$base" ] || [ -z "$envh" ]; then
@@ -740,7 +882,7 @@ pass_matches() {
     if [ "$age" -lt 0 ] || [ "$age" -gt "$PASS_MAX_AGE" ]; then
         echo "the pass is more than 24 hours old"; return 1
     fi
-    echo "a full pass at $(record_field when): tree $tree, base $base, env $envh"
+    echo "a $rmode pass at $(record_field when): tree $tree, base $base, env $envh"
     return 0
 }
 
@@ -750,8 +892,13 @@ write_pass_record() {
     local tmp="$PASS_RECORD.tmp.$$"
     mkdir -p "$(dirname "$PASS_RECORD")" 2> /dev/null
     if {
-        echo "# A full tools/nightly_verify.sh --compare passed on these files (inc-689z)."
+        echo "# A tools/nightly_verify.sh gate passed on these files (inc-689z)."
         echo "# A record of a run, not source: never commit it."
+        if [ "$LANDING" = 1 ]; then
+            printf 'mode landing\n'
+        else
+            printf 'mode full\n'
+        fi
         printf 'tree %s\nbase %s\nenv %s\ntime %s\nwhen %s\n' "$1" "$2" "$3" \
             "$(date +%s)" "$(date '+%Y-%m-%d %H:%M:%S %Z')"
     } > "$tmp" 2> /dev/null && mv -f "$tmp" "$PASS_RECORD"; then
@@ -942,6 +1089,183 @@ selftest() {
     }
     _run_case_serial_cheap_stop
 
+    # ---- a smoke check runs like a live one, and --docs-only drops it --------
+    # smoke "plays the game briefly": in a full run it behaves exactly like a
+    # live check, and --docs-only drops it as it drops live. A made-up smoke
+    # check touches a marker: --checks-only must run it and leave the marker;
+    # --docs-only must not.
+    _run_case_smoke_tier() {
+        local d="$dir/smoke" out rc marker
+        mkdir -p "$d"
+        marker="$d/smoke-touched"
+        printf '#!/bin/sh\n# gate: smoke\ntouch "%s"\nexit 0\n' "$marker" \
+            > "$d/check_aa_smoke.sh"
+        # A cheap check keeps the set non-empty so --docs-only is a valid run
+        # (an empty set exits 2); the smoke marker is what proves smoke ran.
+        printf '#!/bin/sh\n# gate: cheap\nexit 0\n' > "$d/check_bb_cheap.sh"
+        chmod +x "$d/check_aa_smoke.sh" "$d/check_bb_cheap.sh"
+        out="$(NIGHTLY_CHECK_DIR="$d" NIGHTLY_VERIFY_STATE="$d/base.txt" \
+            "$0" --checks-only 2>&1)"
+        rc=$?
+        if [ "$rc" = 0 ] && [ -e "$marker" ]; then
+            printf '  ok    a smoke check runs under --checks-only\n'
+        else
+            printf '  FAIL  smoke under --checks-only: rc=%s marker=%s\n' "$rc" \
+                "$([ -e "$marker" ] && echo present || echo absent)"
+            printf '%s\n' "$out" | sed 's/^/      | /'
+            fails=$((fails + 1))
+        fi
+        rm -f "$marker"
+        out="$(NIGHTLY_CHECK_DIR="$d" NIGHTLY_VERIFY_STATE="$d/base.txt" \
+            "$0" --docs-only 2>&1)"
+        rc=$?
+        if [ "$rc" = 0 ] && [ ! -e "$marker" ]; then
+            printf '  ok    --docs-only drops the smoke tier\n'
+        else
+            printf '  FAIL  --docs-only ran the smoke tier: rc=%s marker=%s\n' "$rc" \
+                "$([ -e "$marker" ] && echo present || echo absent)"
+            printf '%s\n' "$out" | sed 's/^/      | /'
+            fails=$((fails + 1))
+        fi
+    }
+    _run_case_smoke_tier
+
+    # ---- --record runs every step and records each one's code -------------
+    # The real steps need the binary, so the selftest fakes the step list with
+    # $NIGHTLY_STEPS_FILE: --record must run each entry in order and append one
+    # "<rc><TAB><id>" line per step beside the check lines. One step exits 0 and
+    # one exits 1; the record must hold both, and must exit 0 regardless.
+    _run_case_record_steps() {
+        local d="$dir/recordsteps" out rc state
+        mkdir -p "$d"
+        state="$d/base.txt"
+        printf '#!/bin/sh\n# gate: cheap\nexit 0\n' > "$d/check_aa_cheap.sh"
+        chmod +x "$d/check_aa_cheap.sh"
+        printf '#!/bin/sh\nexit 0\n' > "$d/step_ok.sh"
+        printf '#!/bin/sh\nexit 1\n' > "$d/step_bad.sh"
+        chmod +x "$d/step_ok.sh" "$d/step_bad.sh"
+        printf '%s\t%s\n' "$d/step_ok.sh" "$d/step_ok.sh" > "$d/steps.txt"
+        printf '%s\t%s\n' "$d/step_bad.sh" "$d/step_bad.sh" >> "$d/steps.txt"
+        out="$(NIGHTLY_CHECK_DIR="$d" NIGHTLY_VERIFY_STATE="$state" \
+            NIGHTLY_STEPS_FILE="$d/steps.txt" "$0" --record 2>&1)"
+        rc=$?
+        if [ "$rc" = 0 ] \
+            && grep -q "$(printf '0\ttools/check_aa_cheap.sh')" "$state" \
+            && grep -q "$(printf '0\t%s/step_ok.sh' "$d")" "$state" \
+            && grep -q "$(printf '1\t%s/step_bad.sh' "$d")" "$state"; then
+            printf '  ok    --record runs every step and records each code\n'
+        else
+            printf '  FAIL  --record steps: rc=%s state=%s\n' "$rc" \
+                "$(tr '\n' '|' < "$state" 2>/dev/null)"
+            printf '%s\n' "$out" | sed 's/^/      | /'
+            fails=$((fails + 1))
+        fi
+    }
+    _run_case_record_steps
+
+    # ---- a step command with a space argument survives the array copy -----
+    # The step list is copied by name inside start_background_steps; a command
+    # with spaces must stay one word in the command and its argument must reach
+    # the script intact. The script writes "$1" so an argument destroyed by the
+    # copy is visible as the wrong file contents.
+    _run_case_landing_steps_copy() {
+        local d="$dir/stepcopy" out rc state
+        mkdir -p "$d"
+        state="$d/base.txt"
+        printf '#!/bin/sh\n# gate: cheap\nexit 0\n' > "$d/check_aa_cheap.sh"
+        chmod +x "$d/check_aa_cheap.sh"
+        printf '#!/bin/sh\nprintf %%s "$1" > "$2"\n' > "$d/step_ok.sh"
+        chmod +x "$d/step_ok.sh"
+        printf '%s\t%s\n' "$d/step_ok.sh one-arg $d/got.txt" \
+            "$d/step_ok.sh --from <the run it kept>" > "$d/steps.txt"
+        out="$(NIGHTLY_CHECK_DIR="$d" NIGHTLY_VERIFY_STATE="$state" \
+            NIGHTLY_STEPS_FILE="$d/steps.txt" "$0" --record 2>&1)"
+        rc=$?
+        if [ "$rc" = 0 ] && [ "$(cat "$d/got.txt" 2>/dev/null)" = one-arg ]; then
+            printf '  ok    a step command with a space argument survives the copy\n'
+        else
+            printf '  FAIL  step copy: rc=%s got=%s\n' "$rc" \
+                "$(cat "$d/got.txt" 2>/dev/null)"
+            printf '%s\n' "$out" | sed 's/^/      | /'
+            fails=$((fails + 1))
+        fi
+    }
+    _run_case_landing_steps_copy
+
+    # ---- the flags combine only as the landing says they may --------------
+    # --landing combines with --reuse-pass and nothing else. The two accepted
+    # orders must leave the parser at MODE=compare LANDING=1 REUSE=1; every
+    # other pair, and any unknown flag, must exit 2. The accepted pair is
+    # checked through the hidden --print-mode hook, which leaves before any
+    # discovery or build: a made-up dir has no live or smoke check, but proving
+    # that no build starts without a stub is more than this test needs, so it
+    # reads the parser's own verdict instead.
+    _run_case_flag_combos() {
+        local d out rc
+        d="$dir/flagcombos"; mkdir -p "$d"
+        printf '#!/bin/sh\n# gate: cheap\nexit 0\n' > "$d/check_only.sh"
+        chmod +x "$d/check_only.sh"
+
+        out="$(NIGHTLY_CHECK_DIR="$d" NIGHTLY_VERIFY_STATE="$d/base.txt" \
+            "$0" --print-mode --landing --reuse-pass 2>&1)"
+        if [ "$out" = "MODE=compare LANDING=1 REUSE=1" ]; then
+            printf '  ok    --landing --reuse-pass parses to MODE=compare LANDING=1 REUSE=1\n'
+        else
+            printf '  FAIL  --landing --reuse-pass parsed to: %s\n' "$out"
+            fails=$((fails + 1))
+        fi
+
+        out="$(NIGHTLY_CHECK_DIR="$d" NIGHTLY_VERIFY_STATE="$d/base.txt" \
+            "$0" --print-mode --reuse-pass --landing 2>&1)"
+        if [ "$out" = "MODE=compare LANDING=1 REUSE=1" ]; then
+            printf '  ok    --reuse-pass --landing parses to the same\n'
+        else
+            printf '  FAIL  --reuse-pass --landing parsed to: %s\n' "$out"
+            fails=$((fails + 1))
+        fi
+
+        NIGHTLY_CHECK_DIR="$d" NIGHTLY_VERIFY_STATE="$d/base.txt" \
+            "$0" --landing --docs-only > /dev/null 2>&1
+        rc=$?
+        if [ "$rc" = 2 ]; then
+            printf '  ok    --landing --docs-only exits 2\n'
+        else
+            printf '  FAIL  --landing --docs-only exited %s\n' "$rc"
+            fails=$((fails + 1))
+        fi
+
+        out="$(NIGHTLY_CHECK_DIR="$d" NIGHTLY_VERIFY_STATE="$d/base.txt" \
+            "$0" --print-mode --landing --docs-only 2>/dev/null)"
+        rc=$?
+        if [ "$rc" = 2 ] && [ -z "$out" ]; then
+            printf '  ok    --print-mode --landing --docs-only exits 2 and prints nothing\n'
+        else
+            printf '  FAIL  --print-mode --landing --docs-only exited %s and printed: %s\n' "$rc" "$out"
+            fails=$((fails + 1))
+        fi
+
+        NIGHTLY_CHECK_DIR="$d" NIGHTLY_VERIFY_STATE="$d/base.txt" \
+            "$0" --compare --compare > /dev/null 2>&1
+        rc=$?
+        if [ "$rc" = 2 ]; then
+            printf '  ok    --compare --compare exits 2\n'
+        else
+            printf '  FAIL  --compare --compare exited %s\n' "$rc"
+            fails=$((fails + 1))
+        fi
+
+        NIGHTLY_CHECK_DIR="$d" NIGHTLY_VERIFY_STATE="$d/base.txt" \
+            "$0" --bogus > /dev/null 2>&1
+        rc=$?
+        if [ "$rc" = 2 ]; then
+            printf '  ok    an unknown flag exits 2\n'
+        else
+            printf '  FAIL  --bogus exited %s\n' "$rc"
+            fails=$((fails + 1))
+        fi
+    }
+    _run_case_flag_combos
+
     # ---- the parallel runner is faster than the serial one (inc-yg8e) ------
     # Eight cheap checks that each sleep 2 s: 16 s one at a time, under 8 s with
     # four at once. The runner is a poll loop, not wait -n, so this is the case
@@ -966,6 +1290,35 @@ selftest() {
         fi
     }
     _run_case_speedup
+
+    # ---- the slow-cheap note judges a parallel check by CPU time (spec §6) --
+    # A parallel check that sleeps for 3 s while its peers share the machine
+    # costs almost no CPU, so the note must stay silent even though its
+    # wall-clock passes the limit. A parallel check that burns 3 s of CPU must
+    # get the note, and it must say "of CPU". The low limit makes the sleeping
+    # check's wall-clock the only thing that could trip a wall-clock rule.
+    _run_case_cheap_note() {
+        local d="$dir/cheapnote" out
+        mkdir -p "$d"
+        printf '#!/bin/sh\n# gate: cheap\nsleep 3\nexit 0\n' > "$d/check_sleep.sh"
+        printf '#!/bin/sh\n# gate: cheap\nend=$(( $(date +%%s) + 3 )); while [ $(date +%%s) -lt $end ]; do :; done\nexit 0\n' \
+            > "$d/check_burn.sh"
+        chmod +x "$d/check_sleep.sh" "$d/check_burn.sh"
+        out="$(NIGHTLY_CHEAP_LIMIT=1 NIGHTLY_CHEAP_CPU_LIMIT=1 INCURSION_GATE_JOBS=4 \
+            NIGHTLY_CHECK_DIR="$d" NIGHTLY_VERIFY_STATE="$d/base.txt" \
+            "$0" --checks-only 2>&1)"
+        local sleep_note burn_note
+        sleep_note="$(grep -A1 '^ok          tools/check_sleep.sh$' <<<"$out" | grep 'note:')"
+        burn_note="$(grep -A1 '^ok          tools/check_burn.sh$' <<<"$out" | grep 'note:')"
+        if [ -z "$sleep_note" ] && grep -q 'of CPU' <<<"$burn_note"; then
+            printf '  ok    the parallel note judges CPU time, not wall-clock\n'
+        else
+            printf '  FAIL  cheap note: sleep=[%s] burn=[%s]\n' "$sleep_note" "$burn_note"
+            printf '%s\n' "$out" | sed 's/^/      | /'
+            fails=$((fails + 1))
+        fi
+    }
+    _run_case_cheap_note
 
     # ---- the verdicts do not depend on the job count (inc-yg8e) ------------
     # The existing eight-check table, run at one job and at four, must produce
@@ -1028,6 +1381,172 @@ selftest() {
     }
     _run_case_serial_rule
 
+    # ---- the landing gate keeps only the changed live checks (spec §4) ------
+    # A throwaway git repository with three made-up checks: a smoke, a live
+    # check the bead did not touch, and a live check the bead changed. --landing
+    # must run the smoke and the changed live check, and must NOT run the
+    # unchanged live one. It must also fail closed (exit 2) when the diff ref is
+    # unset or unknown. The builds are stubbed because $NIGHTLY_CHECK_DIR is set
+    # (see BUILDS above).
+    _run_case_landing_set() {
+        local repo d self out rc
+        local smoke_marker live_same_marker live_changed_marker
+        repo="$dir/landrepo"
+        d="$repo/tools"
+        mkdir -p "$d"
+        self="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+        smoke_marker="$d/smoke-touched"
+        live_same_marker="$d/live-same-touched"
+        live_changed_marker="$d/live-changed-touched"
+        printf '#!/bin/sh\n# gate: smoke\ntouch "%s"\nexit 0\n' "$smoke_marker" \
+            > "$d/check_aa_smoke.sh"
+        printf '#!/bin/sh\n# gate: live\ntouch "%s"\nexit 0\n' "$live_same_marker" \
+            > "$d/check_bb_live_same.sh"
+        printf '#!/bin/sh\n# gate: live\ntouch "%s"\nexit 0\n' "$live_changed_marker" \
+            > "$d/check_cc_live_changed.sh"
+        chmod +x "$d/check_aa_smoke.sh" "$d/check_bb_live_same.sh" "$d/check_cc_live_changed.sh"
+        git -C "$repo" init -q
+        git -C "$repo" config user.email selftest@example.invalid
+        git -C "$repo" config user.name selftest
+        git -C "$repo" checkout -q -b base
+        git -C "$repo" add -A
+        git -C "$repo" commit -q -m base
+        git -C "$repo" checkout -q -b bead
+        printf '\n# changed by the bead\n' >> "$d/check_cc_live_changed.sh"
+        git -C "$repo" add -A
+        git -C "$repo" commit -q -m bead
+        rm -f "$smoke_marker" "$live_same_marker" "$live_changed_marker"
+        out="$(cd "$repo" && NIGHTLY_CHECK_DIR="$d" \
+            NIGHTLY_VERIFY_STATE="$repo/base.txt" \
+            INCURSION_LANDING_DIFF_REF=base "$self" --landing 2>&1)"
+        rc=$?
+        if [ "$rc" = 0 ] && [ -e "$smoke_marker" ] \
+            && [ -e "$live_changed_marker" ] && [ ! -e "$live_same_marker" ]; then
+            printf '  ok    --landing runs smoke and the changed live check only\n'
+        else
+            printf '  FAIL  landing set: rc=%s smoke=%s same=%s changed=%s\n' "$rc" \
+                "$([ -e "$smoke_marker" ] && echo present || echo absent)" \
+                "$([ -e "$live_same_marker" ] && echo present || echo absent)" \
+                "$([ -e "$live_changed_marker" ] && echo present || echo absent)"
+            printf '%s\n' "$out" | sed 's/^/      | /'
+            fails=$((fails + 1))
+        fi
+        out="$(cd "$repo" && env -u INCURSION_LANDING_DIFF_REF \
+            NIGHTLY_CHECK_DIR="$d" NIGHTLY_VERIFY_STATE="$repo/base.txt" \
+            "$self" --landing 2>&1)"
+        rc=$?
+        if [ "$rc" = 2 ]; then
+            printf '  ok    --landing with no diff ref exits 2\n'
+        else
+            printf '  FAIL  --landing with no diff ref exited %s\n' "$rc"
+            printf '%s\n' "$out" | sed 's/^/      | /'
+            fails=$((fails + 1))
+        fi
+        out="$(cd "$repo" && NIGHTLY_CHECK_DIR="$d" \
+            NIGHTLY_VERIFY_STATE="$repo/base.txt" \
+            INCURSION_LANDING_DIFF_REF=no-such-ref "$self" --landing 2>&1)"
+        rc=$?
+        if [ "$rc" = 2 ]; then
+            printf '  ok    --landing with an unknown diff ref exits 2\n'
+        else
+            printf '  FAIL  --landing with an unknown diff ref exited %s\n' "$rc"
+            printf '%s\n' "$out" | sed 's/^/      | /'
+            fails=$((fails + 1))
+        fi
+    }
+    _run_case_landing_set
+
+    # ---- a pass record says which gate passed (inc-t3iu) -------------------
+    # A pass of the short landing gate must never be reused by a full run and
+    # the reverse must be refused. A throwaway repository with an always-green
+    # cheap and live check gives a real full pass to record; the mode line is
+    # then hand-edited to drive each refusal. The builds and steps are stubbed
+    # because $NIGHTLY_CHECK_DIR is set.
+    _run_case_reuse_mode() {
+        # The script copy lives in the scratch repo: nightly_verify.sh does
+        # "cd $ROOT" and takes the key of its cwd, so a run from the real ROOT
+        # would key the real files, not the scratch ones. Copying the script in
+        # (as tools/check_pass_record.sh does) makes $ROOT the scratch repo.
+        local repo d self out rc rec
+        repo="$dir/reusemode"
+        d="$repo/tools"
+        mkdir -p "$d"
+        self="$d/nightly_verify.sh"
+        cp "$(cd "$(dirname "$0")" && pwd)/$(basename "$0")" "$self"
+        printf '#!/bin/sh\n# gate: cheap\nexit 0\n' > "$d/check_aa_cheap.sh"
+        printf '#!/bin/sh\n# gate: live\nexit 0\n' > "$d/check_bb_live.sh"
+        printf '#!/bin/sh\nexit 0\n' > "$repo/build_macos.sh"
+        printf 'logs/\n' > "$repo/.gitignore"
+        chmod +x "$self" "$d/check_aa_cheap.sh" "$d/check_bb_live.sh" "$repo/build_macos.sh"
+        git -C "$repo" init -q
+        git -C "$repo" config user.email selftest@example.invalid
+        git -C "$repo" config user.name selftest
+        git -C "$repo" checkout -q -b base
+        git -C "$repo" add -A
+        git -C "$repo" commit -q -m base
+        rec="$repo/logs/nightly-verify-pass.txt"
+        # A real full pass writes a "mode full" record.
+        out="$(cd "$repo" && NIGHTLY_CHECK_DIR="$d" \
+            NIGHTLY_VERIFY_STATE="$repo/logs/nightly-verify-base.txt" "$self" --compare 2>&1)"
+        rc=$?
+        if [ "$rc" = 0 ] && [ "$(sed -n 's/^mode //p' "$rec" 2>/dev/null)" = full ]; then
+            printf '  ok    a full gate writes a "mode full" pass record\n'
+        else
+            printf '  FAIL  full record: rc=%s mode=%s\n' "$rc" \
+                "$(sed -n 's/^mode //p' "$rec" 2>/dev/null)"
+            printf '%s\n' "$out" | sed 's/^/      | /'
+            fails=$((fails + 1))
+        fi
+        # The full record is reused by a plain --reuse-pass.
+        out="$(cd "$repo" && NIGHTLY_CHECK_DIR="$d" \
+            NIGHTLY_VERIFY_STATE="$repo/logs/nightly-verify-base.txt" "$self" --reuse-pass 2>&1)"
+        rc=$?
+        if [ "$rc" = 0 ] && grep -q 'REUSED from a full pass at' <<<"$out"; then
+            printf '  ok    a "mode full" record is reused by --reuse-pass\n'
+        else
+            printf '  FAIL  full reuse: rc=%s\n' "$rc"
+            printf '%s\n' "$out" | sed 's/^/      | /'
+            fails=$((fails + 1))
+        fi
+        # A full record is NOT reused by the landing gate.
+        out="$(cd "$repo" && NIGHTLY_CHECK_DIR="$d" \
+            NIGHTLY_VERIFY_STATE="$repo/logs/nightly-verify-base.txt" \
+            INCURSION_LANDING_DIFF_REF=base "$self" --landing --reuse-pass 2>&1)"
+        rc=$?
+        if grep -q 'the pass record is from the full gate' <<<"$out"; then
+            printf '  ok    a full record is refused by --landing --reuse-pass\n'
+        else
+            printf '  FAIL  landing refused a full record: rc=%s\n' "$rc"
+            printf '%s\n' "$out" | sed 's/^/      | /'
+            fails=$((fails + 1))
+        fi
+        # A landing record is NOT reused by a full --reuse-pass.
+        sed 's/^mode .*/mode landing/' "$rec" > "$rec.new"; mv -f "$rec.new" "$rec"
+        out="$(cd "$repo" && NIGHTLY_CHECK_DIR="$d" \
+            NIGHTLY_VERIFY_STATE="$repo/logs/nightly-verify-base.txt" "$self" --reuse-pass 2>&1)"
+        rc=$?
+        if grep -q 'the pass record is from the landing gate' <<<"$out"; then
+            printf '  ok    a landing record is refused by --reuse-pass\n'
+        else
+            printf '  FAIL  reuse refused a landing record: rc=%s\n' "$rc"
+            printf '%s\n' "$out" | sed 's/^/      | /'
+            fails=$((fails + 1))
+        fi
+        # A record with no mode line at all is stale, and fails closed.
+        sed '/^mode /d' "$rec" > "$rec.new"; mv -f "$rec.new" "$rec"
+        out="$(cd "$repo" && NIGHTLY_CHECK_DIR="$d" \
+            NIGHTLY_VERIFY_STATE="$repo/logs/nightly-verify-base.txt" "$self" --reuse-pass 2>&1)"
+        rc=$?
+        if grep -q 'malformed' <<<"$out"; then
+            printf '  ok    a record with no mode line is malformed\n'
+        else
+            printf '  FAIL  a record with no mode line: rc=%s\n' "$rc"
+            printf '%s\n' "$out" | sed 's/^/      | /'
+            fails=$((fails + 1))
+        fi
+    }
+    _run_case_reuse_mode
+
     echo
     if [ "$fails" = 0 ]; then
         echo "SELFTEST PASS"
@@ -1058,6 +1577,29 @@ if [ "$MODE" = "compare" ] && [ "$SKIP_BUILDS" = 0 ] && [ "$SKIP_LIVE" = 0 ]; th
     KEY_TREE="$(content_tree)"; KEY_BASE="$(base_hash)"; KEY_ENV="$(env_hash)"
 fi
 
+# The landing gate measures ONLY the live checks whose file the branch changed.
+# The changed set comes from the landing script's diff ref; it fails CLOSED,
+# because "could not list the changes" must never read as "no changes" (spec
+# docs/specs/2026-10-06-landing-gate-split-spec.md section 4). Nothing here
+# runs unless LANDING=1, so --compare and --record are untouched.
+LANDING_CHANGED=""
+if [ "$LANDING" = 1 ]; then
+    if [ -z "${INCURSION_LANDING_DIFF_REF:-}" ]; then
+        echo "landing gate: INCURSION_LANDING_DIFF_REF is unset or empty, so the changed live checks cannot be listed" >&2
+        exit 2
+    fi
+    if ! git -C "$CHECK_DIR" rev-parse --verify "${INCURSION_LANDING_DIFF_REF}^{commit}" > /dev/null 2>&1; then
+        echo "landing gate: cannot resolve INCURSION_LANDING_DIFF_REF=$INCURSION_LANDING_DIFF_REF to a commit" >&2
+        exit 2
+    fi
+    LANDING_CHANGED="$(git -C "$CHECK_DIR" diff --name-only --relative "${INCURSION_LANDING_DIFF_REF}...HEAD" -- .)"
+    LANDING_DIFF_RC=$?
+    if [ "$LANDING_DIFF_RC" != 0 ]; then
+        echo "landing gate: git diff against $INCURSION_LANDING_DIFF_REF failed (exit $LANDING_DIFF_RC)" >&2
+        exit 2
+    fi
+fi
+
 discover_checks
 if [ "${#CHECKS[@]}" = 0 ]; then
     echo "no check in $CHECK_DIR declares a '# gate:' tier" >&2
@@ -1069,6 +1611,12 @@ fi
 # because they are separate main()s; posix first, because the libtcod build then
 # leaves mod/Incursion.Mod as the module every live check reads.
 BUILDS=( "BACKEND=posix ./build_macos.sh" "./build_macos.sh" )
+# The selftest points $NIGHTLY_CHECK_DIR at made-up checks and must never run a
+# real build. Nothing else sets it. $NIGHTLY_BUILDS_REAL=1 opts a selftest run
+# back into the real builds.
+if [ -n "${NIGHTLY_CHECK_DIR:-}" ] && [ "${NIGHTLY_BUILDS_REAL:-0}" != 1 ]; then
+    BUILDS=()
+fi
 
 # ------------------------------------------------------------------ record ---
 # THE BASE IS BUILT BEFORE IT IS MEASURED (inc-o5bi). Until 2026-09-17 this
@@ -1117,11 +1665,14 @@ if [ "$MODE" = "record" ]; then
         # entry is "<id>\t<cmd>\t<tier>\t<serial>": strip id and cmd, then the
         # tier is the next field.
         tier="${entry#*	}"; tier="${tier#*	}"; tier="${tier%%	*}"
-        [ "$tier" = live ] && record_live=1
+        { [ "$tier" = live ] || [ "$tier" = smoke ]; } && record_live=1
     done
+    # The real steps need the binary, so build when any step is present; an
+    # empty step list never forces a build.
+    [ "${#STEPS[@]}" -gt 0 ] && record_live=1
     if [ "$record_live" = 1 ]; then
         echo "--- builds (a base is only a base when this source built the binary) ---"
-        for build in "${BUILDS[@]}"; do
+        for build in ${BUILDS[@]+"${BUILDS[@]}"}; do
             printf '%s ... ' "$build"
             if ( eval "$build" ) > /dev/null 2>&1; then
                 echo "ok"
@@ -1148,13 +1699,31 @@ if [ "$MODE" = "record" ]; then
     RESDIR="$(mktemp -d "${TMPDIR:-/tmp}/nvrec.XXXXXX")" || exit 2
     collect_phase_parallel cheap "$RESDIR"
     collect_serial cheap "$RESDIR"
+    collect_phase_parallel smoke "$RESDIR"
+    collect_serial smoke "$RESDIR"
     collect_phase_parallel live "$RESDIR"
     collect_serial live "$RESDIR"
+    # Every step runs here, one after another, each writing its own log. A step
+    # that fails or exits 2 only records its code: it never stops --record and
+    # never deletes the base. Only a failed build does that, above.
+    STEP_RCS=()
+    for step in ${STEPS[@]+"${STEPS[@]}"}; do
+        cmd="${step%%	*}"
+        log="$(step_log_path "$cmd")"
+        ( eval "$cmd" ) > "$log" 2>&1
+        rc=$?
+        STEP_RCS+=( "$rc	${cmd%% *}" )
+    done
     for entry in "${CHECKS[@]}"; do
         id="${entry%%	*}"
         stem="$(id_file_stem "$id")"
         rc="$(cat "$RESDIR/$stem.rc" 2>/dev/null)"
         [ -n "$rc" ] || rc=2
+        printf '%s\t%s\n' "$rc" "$id" >> "$STATE"
+        printf 'base %-3s %s\n' "$rc" "$id"
+    done
+    for entry in ${STEP_RCS[@]+"${STEP_RCS[@]}"}; do
+        rc="${entry%%	*}"; id="${entry#*	}"
         printf '%s\t%s\n' "$rc" "$id" >> "$STATE"
         printf 'base %-3s %s\n' "$rc" "$id"
     done
@@ -1178,6 +1747,9 @@ fi
 FAILED=0
 
 echo
+if [ "$LANDING" = 1 ]; then
+    echo "--- landing gate: cheap, builds, soak, smoke, and $LANDING_LIVE_KEPT changed live check(s) ---"
+fi
 echo "--- checks (ratcheted against the state before the run) ---"
 if [ -r "$STATE" ]; then
     echo "base recorded in $STATE"
@@ -1216,7 +1788,7 @@ if [ "$SKIP_BUILDS" = 1 ]; then
 else
     echo "--- builds, macOS then Linux (absolute: a tree that does not compile never merges) ---"
     build_failed=0
-    for build in "${BUILDS[@]}"; do
+    for build in ${BUILDS[@]+"${BUILDS[@]}"}; do
         printf '%s ... ' "$build"
         if ( eval "$build" ) > /dev/null 2>&1; then
             echo "ok"
@@ -1237,10 +1809,16 @@ else
     #    layout sweep builds the probe with a private OUT= and a non-empty
     #    EXTRA_CXXFLAGS=, so it skips the shared module rewrite; the soak runs
     #    sessions under logs/runs and writes no module or binary.
-    start_background_steps
+    if [ "$LANDING" = 1 ]; then
+        start_background_steps LANDING_STEPS
+    else
+        start_background_steps STEPS
+    fi
 fi
 
-# 4. The live tier, through the parallel runner, while the steps run.
+# 4. The smoke tier, through the parallel runner, then the live tier, while the
+#    steps run. Smoke "plays the game briefly" and needs the builds like live.
+run_phase_parallel smoke
 run_phase_parallel live
 
 # 5. Wait for the steps and print their ok / SKIPPED / FAILED lines.
@@ -1248,8 +1826,10 @@ if [ "$SKIP_BUILDS" = 0 ]; then
     wait_background_steps
 fi
 
-# 6. The SERIAL live checks, one at a time, nothing else running. The serial
-#    cheap checks already ran in step 1b; this is only the live half.
+# 6. The SERIAL smoke then live checks, one at a time, nothing else running. The
+#    serial cheap checks already ran in step 1b; this is only the smoke and live
+#    half.
+run_phase_serial smoke
 run_phase_serial live
 
 echo
