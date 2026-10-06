@@ -62,7 +62,7 @@ BASE_BRANCH="${INCURSION_BASE_BRANCH:-master}"
 # The gate that must be green before anything reaches master. Overridable so a
 # caller can substitute a cheaper check knowingly; the default is the one
 # CLAUDE.md names as this project's answer to hosted CI.
-GATE_CMD="${INCURSION_FINISH_GATE:-tools/nightly_verify.sh --compare}"
+GATE_CMD="${INCURSION_FINISH_GATE:-tools/nightly_verify.sh --landing}"
 GATE_OVERRIDDEN=0
 [ -n "${INCURSION_FINISH_GATE:-}" ] && GATE_OVERRIDDEN=1
 
@@ -444,32 +444,32 @@ fi
 # would be the hole this comment exists to deny.
 #
 # IT FAILS CLOSED, THREE WAYS. An explicit INCURSION_FINISH_GATE is honoured
-# untouched, a verdict of 1 runs the full gate, and a verdict of 2 -- the
-# classifier could not measure -- runs the full gate too. The only path to the
-# cheap gate is a classifier that ran and said yes.
+# untouched, a verdict of 1 runs the landing gate, and a verdict of 2 -- the
+# classifier could not measure -- runs the landing gate too. The only path to
+# the cheap gate is a classifier that ran and said yes.
 #
 # THE SECOND CARVE-OUT asks a different question: have these exact files
-# already passed the full gate? A landing interrupted after a green gate, or a
-# gate run before the commit, used to pay for the whole gate again (inc-689z).
-# So a verdict of 1 runs --reuse-pass. It looks for the record that a full
-# pass leaves, re-runs the cheap tier when one matches, and runs the full gate
-# when none does. It does not widen the docs-only allowlist, and a verdict of
-# 2 does not reach it.
+# already passed the landing gate? A landing interrupted after a green gate, or
+# a gate run before the commit, used to pay for the whole gate again (inc-689z).
+# So a verdict of 1 runs --landing --reuse-pass. It looks for the record that a
+# landing pass leaves, re-runs the cheap tier when one matches, and runs the
+# landing gate when none does. It does not widen the docs-only allowlist, and a
+# verdict of 2 does not reach it.
 if [ "$RUN_GATE" -eq 1 ] && [ "$GATE_OVERRIDDEN" -eq 0 ]; then
     DOCS_VERDICT="$("$ROOT/tools/docs_only_change.sh" "$BASE_BRANCH" "$BEAD" 2>&1)"
     case $? in
         0) echo "=== $DOCS_VERDICT ==="
            echo "=== gate scaled down: builds and the live tier cannot be reached by *.md ==="
            GATE_CMD="tools/nightly_verify.sh --docs-only" ;;
-        1) GATE_CMD="tools/nightly_verify.sh --reuse-pass" ;;
-        *) echo "=== docs-only classifier could not measure; running the full gate ==="
+        1) GATE_CMD="tools/nightly_verify.sh --landing --reuse-pass" ;;
+        *) echo "=== docs-only classifier could not measure; running the landing gate ==="
            echo "$DOCS_VERDICT" ;;
     esac
 fi
 
 if [ "$RUN_GATE" -eq 1 ]; then
     echo "=== gate: $GATE_CMD ==="
-    if ! ( cd "$WORKTREE" && eval "$GATE_CMD" ); then
+    if ! ( cd "$WORKTREE" && export INCURSION_LANDING_DIFF_REF="$BASE_BRANCH" && eval "$GATE_CMD" ); then
         die "STOPPED: the gate is red on $BEAD after merging $BASE_BRANCH.
 Nothing has reached $BASE_BRANCH. Fix it in $WORKTREE and run this again.
 If the gate cannot measure here rather than failing, re-run with --no-gate and

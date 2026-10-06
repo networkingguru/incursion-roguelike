@@ -645,6 +645,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_natural_speed.sh` | Has the hard-coded brawl-speed floor drifted from the fastest weapon in `lib/weapons.irh`? Reads the data; runs nothing. | LIVE |
 | `check_natural_speed_live.sh` | Does flipping one byte of `Options.Dat` really move the Brawl row on the character sheet, 100% to 175%? Refuses to pass if a run never entered a map. | LIVE |
 | `check_necro_undead_pool.sh` | Does a Necromancer's level-1 BONUS_PHD reach `PHD_UNDEAD`, the pool Animate Dead and Create Undead charge created undead to, instead of `PHD_COMMAND`, which a pure mage cannot carry? Generates both the Necromancer and a non-specialist mage by chargen inside the run (a frozen save would already hold the grant), reads `PHD UNDEAD`'s max off the wizard Group CR Totals block (1 against 0), then creates a wight through a real `MakeCompanion(PHD_UNDEAD)` caller and reads the charged pool: the Necromancer charges it against undead (`PHD UNDEAD 2 / 1`, overflow `PHD MAGIC 1 / 1`), the other mage through magic alone (`PHD UNDEAD 2 / 0`, `PHD MAGIC 2 / 1`). Casts four more times on the level's other corpses: both mages are refused starting at cast 3 and stay refused through cast 5, showing a finite refused count of N=2. The admission chain (undead -> magic -> party) in `Monster::MakeCompanion` is Traced only: its old and new rules differ only while the magic pool has headroom, and a level-1 wight already overflows it, so no level-1 run separates them. | LIVE |
+| `check_nightly_bisect.sh` | Does the nightly bisect name the landing that broke a check, and nothing it cannot prove? Builds a throwaway repository of `--no-ff` landings around a made-up check and runs `tools/nightly_bisect.sh` on it: the breaking landing must be named, while a check absent at an early commit, a last good commit off the first-parent line, a check whose result flips on a re-run and a zero time budget must name nothing (inc-t3iu). | LIVE |
 | `check_nonnormal_invariant.sh` | Is non-normal detection (an infravision character in darkness) byte-identical across the inc-jcg4 unified-light change over seeds 1-10? | LIVE |
 | `check_open_xy.sh` | Does `Map::GetOpenXY` refuse when no square is open, instead of answering (0,0)? Requires the `NO_OPEN_XY` sentinel to be returned and `Thing::PlaceOpen` to drop the Thing rather than place it in the map's solid outer edge. Three static greps plus a probe build (`EXTRA_CXXFLAGS=-DINCURSION_OPENXY_PROBE BACKEND=posix ./build_macos.sh`, binary named by `INCURSION_BIN`) that counts refusals, disposals and a successful-placement control -- the greps alone once passed a fix that tested the sentinel and then placed at (0,0) anyway. | LIVE |
 | `check_opencode_ds.sh` | Does `tools/opencode_ds.sh` refuse to launch once the DeepSeek ledger says the budget is gone or poisoned, refuse the shared checkout, bill exactly one row for a successful harness run (cost summed from its `step_finish` events, steps counted), poison the ledger when opencode quotes tokens but no usable cost, keep the DeepInfra key out of every file it writes, confine opencode to the worktree with the Seatbelt profile, stop a harness that never writes -- billing it as one `killed=startup` row at cost 0 -- and stop a harness stuck in a DeepSeek repetition loop via the `loop_check.py` canary, billing it as one `killed=loop` row at exit 3 and copying its run dir aside? Also that `opencode/record_proxy.py` forwards a POST byte-for-byte, records request/response/meta, streams a chunked reply before upstream finishes, relays the Authorization header without recording it, and that the wrapper wires it in (one recorded request, no proxy left running) and copies `requests/` on a loop kill. `--prove-red` also mutates the proxy's request write (inc-h1bq, inc-gofz, inc-uxmf, inc-oehi). | LIVE |
@@ -1243,6 +1244,37 @@ sessions reaching a map, more deaths or freezes.
 `tools/gates/dive.baseline` is committed, so a clone can run `gate_compare.sh`
 without recording anything. Do NOT run `gate_record.sh` unless you mean to
 replace that baseline — see below.
+
+### Where each check runs: the landing gate and the nightly
+
+The tiers above say what a check needs. The `# gate:` marker near the top of
+each check says when the gate runs it (inc-t3iu):
+
+| Marker | What it is | A landing runs it | The nightly runs it |
+|---|---|---|---|
+| `cheap` | no build, no play, seconds | yes | yes |
+| `smoke` | plays the game briefly | yes | yes |
+| `live` | plays the game | only when the bead adds or changes the check's file | yes |
+| `none <reason>` | not for the gate | no | no |
+
+A landing (`tools/finish_bead.sh`) runs `tools/nightly_verify.sh --landing`:
+the cheap tier, both macOS builds, the soak, the `smoke` checks
+(`check_headless.sh`, `check_char_fixture.sh`) and the bead's own changed
+`live` checks. The Linux cross-build and the layout sweep do not run there.
+The nightly run executes the full set with `--record`, which now also runs and
+records the Linux cross-build, the layout sweep and the soak.
+
+After `--record`, the nightly runs `tools/nightly_bisect.sh`. For a check that
+passed on its last good night and fails tonight, it halves the `--no-ff`
+landings on master between the two commits, re-runs the check at the named
+landing and at the commit before it to rule out a flaky result, then builds
+tonight's tip with that landing reverted to look for a second cause (at most
+three). It files a bead per named landing through `tools/bead_new.sh`
+(`public` when the landing changed `src/`, `inc/` or `lib/`, else `internal`),
+or notes the duplicate the Jev judge finds. Its records and report live beside
+`$NIGHTLY_VERIFY_STATE`: `nightly-results/`, `nightly-last-good.tsv` and
+`nightly-bisect/<date>.md`. `INCURSION_BISECT_BUDGET` (default 5400 s) caps it.
+`tools/check_nightly_bisect.sh` proves it on a throwaway repository.
 
 ### The ones you must not run casually
 

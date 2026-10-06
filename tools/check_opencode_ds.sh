@@ -1,5 +1,5 @@
 #!/bin/bash
-# gate: cheap
+# gate: live
 # gate-serial: race wall-clock watchdog/proxy/stream deadlines; CPU load could flip them
 #
 # Does tools/opencode_ds.sh refuse the shared checkout, bill exactly one

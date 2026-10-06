@@ -15,6 +15,7 @@
 #   # gate: cheap              deterministic, needs no build, costs seconds
 #   # gate: cheap --selftest   the same, with arguments; @base becomes the ref
 #   # gate: live               the same, but it plays the game and needs a build
+#   # gate: smoke              plays the game briefly and runs on every landing
 #   # gate: none <reason>      not for the gate, and the reason says why
 #
 # The marker goes in the first 40 lines. Anything that needs a build, a network,
@@ -59,7 +60,8 @@ run() {
             fi
             echo "NO MARKER  $base"
             echo "           add one of: '# gate: cheap', '# gate: live',"
-            echo "           or '# gate: none <why not>' in its first 40 lines."
+            echo "           '# gate: smoke', or '# gate: none <why not>' in its"
+            echo "           first 40 lines."
             unmarked=$((unmarked + 1))
             continue
         fi
@@ -69,7 +71,7 @@ run() {
         rest="${marker#"$tier"}"
         rest="${rest#"${rest%%[![:space:]]*}"}"
         case "$tier" in
-            cheap|live) ;;
+            cheap|live|smoke) ;;
             none)
                 if [ -z "$rest" ]; then
                     echo "NO REASON  $base says 'gate: none' and does not say why."
@@ -77,7 +79,7 @@ run() {
                 fi
                 ;;
             *)
-                echo "BAD TIER   $base says 'gate: $tier' (want cheap, live or none)"
+                echo "BAD TIER   $base says 'gate: $tier' (want cheap, live, smoke or none)"
                 bad=$((bad + 1))
                 ;;
         esac
@@ -121,14 +123,16 @@ selftest() {
     printf '#!/bin/sh\n# nothing here\n'           > "$dir/check_new.sh"
     printf '#!/bin/sh\n# gate: sometimes\n'        > "$dir/check_wrong.sh"
     printf '#!/bin/sh\n# gate: none\n'             > "$dir/check_silent.sh"
+    printf '#!/bin/sh\n# gate: smoke\n'            > "$dir/check_smoke.sh"
+    printf '#!/bin/sh\n# gate: bogus\n'            > "$dir/check_bogus.sh"
     printf 'check_old.sh\n'                        > "$dir/baseline"
 
-    _case() { # _case <expect-rc> <what it proves> <extra files to hide>
-        local want="$1" what="$2"
+    _case() { # _case <expect-rc> <what it proves> [required output grep]
+        local want="$1" what="$2" wanttext="${3:-}"
         local out
         out="$(GATE_MEMBERSHIP_DIR="$dir" GATE_MEMBERSHIP_BASELINE="$dir/baseline" "$0" 2>&1)"
         rc=$?
-        if [ "$rc" = "$want" ]; then
+        if [ "$rc" = "$want" ] && { [ -z "$wanttext" ] || [[ "$out" == *"$wanttext"* ]]; }; then
             printf '  ok    %s\n' "$what"
         else
             printf '  FAIL  %s (exit %s, wanted %s)\n%s\n' "$what" "$rc" "$want" "$out"
@@ -142,7 +146,9 @@ selftest() {
     rm "$dir/check_wrong.sh"
     _case 1 "'none' with no reason fails"
     rm "$dir/check_silent.sh"
-    _case 0 'a marked check, an excused one and a baselined one pass'
+    _case 1 'a made-up tier is reported as BAD TIER' 'BAD TIER'
+    rm "$dir/check_bogus.sh"
+    _case 0 'a marked check, an excused one, a smoke one and a baselined one pass'
 
     echo
     [ "$fails" = 0 ] && { echo "SELFTEST PASS"; return 0; }

@@ -76,7 +76,6 @@ check_geomancy.sh
 check_goblin_queen_prose.sh
 check_gravestone.sh
 check_grounded_stance_live.sh
-check_headless.sh
 check_hide_carried_light.sh
 check_hide_dynamic_light.sh
 check_holy_avenger_dispel_cl.sh
