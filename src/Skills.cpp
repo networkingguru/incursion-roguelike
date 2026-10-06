@@ -3516,7 +3516,15 @@ Augment:
 			continue;
 		if (it->GetInherentPlus() >= 5)
 			continue;
+		/* upstream: Augment's candidate filter and its description selector
+		   must accept every combat weapon type -- T_WEAPON, T_BOW,
+		   T_MISSILE -- not T_WEAPON alone, because isType is an exact
+		   match; T_STAFF excluded. Upstream's: an exact type comparison
+		   present since the 2014 import. Observed via
+		   tools/check_weapon_types.sh, inc-f38k, not sent. */
 		if (weaponsOnly && !(it->isType(T_WEAPON) ||
+			it->isType(T_BOW) ||
+			it->isType(T_MISSILE) ||
 			it->isType(T_ARMOUR) ||
 			it->isType(T_SHIELD)))
 			continue;
@@ -3547,7 +3555,8 @@ Augment:
 			pre = APreQualNames;
 			post = APostQualNames;
 		}
-		else if (it->isType(T_WEAPON)) {
+		else if (it->isType(T_WEAPON) || it->isType(T_BOW) ||
+			it->isType(T_MISSILE)) {
 			desc = QualityDescs;
 			pre = PreQualNames;
 			post = PostQualNames;

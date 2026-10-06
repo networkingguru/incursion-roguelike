@@ -330,6 +330,12 @@ void Game::Play() {
        (src/Prayer.cpp) and tools/check_bow_blessing.sh. inc-rnp9. */
     pp->IBlessingProbe();
 
+    /* Off unless INCURSION_WEAPONTYPE_PROBE is set; needs a live player. See
+       WeaponTypeProbe (src/WeaponTypeProbe.cpp) and
+       tools/check_weapon_types.sh. inc-f38k. */
+    extern void WeaponTypeProbe(Player *p);
+    WeaponTypeProbe(pp);
+
     /* inc-3lsp: off unless INCURSION_ACT_OVERFLOW_PROBE is set. See
        ActOverflowProbe (src/ActOverflowProbe.cpp) and
        tools/check_act_overflow.sh. */

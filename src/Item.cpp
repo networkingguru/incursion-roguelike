@@ -1452,7 +1452,13 @@ EvReturn Item::Damage(EventInfo &e) {
     if (e.EActor == Owner() && e.EActor->GetStatiObj(ACTING) == this)
         no_msg = true;
 
-    if (isType(T_WEAPON) && HasQuality(WQ_ENERGY))
+    /* upstream: an energy weapon cannot be damaged -- the test covers
+       T_WEAPON, T_BOW and T_MISSILE because isType is an exact match;
+       T_STAFF excluded. Upstream's: an exact type comparison present since
+       the 2014 import. Observed via tools/check_weapon_types.sh, inc-f38k,
+       not sent. */
+    if ((isType(T_WEAPON) || isType(T_BOW) || isType(T_MISSILE)) &&
+        HasQuality(WQ_ENERGY))
         return DONE;
 
     ox = x;
@@ -2922,7 +2928,12 @@ void QItem::RemoveQuality(int8 q) {
 void QItem::PurgeAllQualities()
   {
     memset(Qualities,0,sizeof(Qualities));
-    if (isType(T_WEAPON))
+    /* upstream: purging must clear the bane on every combat weapon type --
+       T_WEAPON, T_BOW, T_MISSILE -- as RemoveQuality just above does, because
+       isType is an exact match; T_STAFF excluded. Upstream's: an exact type
+       comparison present since the 2014 import. Observed via
+       tools/check_weapon_types.sh, inc-f38k, not sent. */
+    if (isType(T_WEAPON) || isType(T_BOW) || isType(T_MISSILE))
       SetBane(0);
   }
 

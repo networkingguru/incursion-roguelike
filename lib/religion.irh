@@ -3358,7 +3358,12 @@ God "Kysul"
             hGift->isType(T_POTION) ||
             hGift->isType(T_SCROLL))
           isBad = true;
-        if (hGift->isType(T_WEAPON) || 
+        /* upstream: covers T_WEAPON, T_BOW, T_MISSILE because isType is an
+           exact match; T_STAFF excluded, alongside the unchanged armour and
+           shield checks. Upstream's type comparison. Observed via
+           tools/check_weapon_types.sh, inc-f38k, not sent. */
+        if (hGift->isType(T_WEAPON) || hGift->isType(T_BOW) ||
+            hGift->isType(T_MISSILE) ||
             hGift->isType(T_ARMOUR) ||
             hGift->isType(T_SHIELD))
           if (EActor->WepSkill(hGift->iID) == WS_NOT_PROF)
