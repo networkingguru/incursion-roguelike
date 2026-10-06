@@ -359,7 +359,9 @@ acquire_lock
 # One check, here, before any work: an overloaded machine makes a correct gate
 # look red (inc-g9wz, inc-xn7g, inc-fdkz). Refuse rather than wait; the EXIT
 # trap above releases the lock. inc-rwha.
-if ! "$ROOT/tools/load_guard.sh"; then
+if [ "${INCURSION_LOAD_GUARD_OFF:-}" = "1" ]; then
+    echo "finish_bead: load guard bypassed by INCURSION_LOAD_GUARD_OFF=1"
+elif ! "$ROOT/tools/load_guard.sh"; then
     cannot "the machine is overloaded, so the gate would measure load, not the bead.
 Nothing reached $BASE_BRANCH. Retry when the machine is quieter."
 fi
