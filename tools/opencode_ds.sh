@@ -232,6 +232,8 @@ OPENCODE_BIN="${INCURSION_OPENCODE_BIN:-opencode}"
 # in the watchdog's stop message (bead inc-k4wc). The child inherits the export.
 export DEEPINFRA_API_KEY="$KEY"
 
+# The run data -- XDG_DATA_HOME below -- lives inside the target worktree, so
+# opencode's per-step snapshot copies MUST stay off (inc-5avr).
 "$REPO/tools/watchdog.sh" --out "$EVENTS" --err "$STDERR" --status "$WATCHDOG_STATUS" \
     --canary "$REPO/tools/opencode/loop_check.py" -- \
     env \

@@ -131,6 +131,10 @@ typedef signed int        hObj;
 
 #define HOUR_TURNS 18000L
 
+/* 24 hours in stati units: one unit per EV_TURN, which
+   fires every 60 ticks; HOUR_TURNS ticks per hour. */
+#define MENACE_DURATION (24*HOUR_TURNS/60)
+
 #define CONSTRAINED_ENC(enc,con) (-2) enc con
 #define CON_ENC_MINMAX(enc,con,low,high) (-3) enc con low high
 
