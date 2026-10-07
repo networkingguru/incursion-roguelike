@@ -331,19 +331,20 @@ Restart:
     offhandWep = EInSlot(SL_READY);
     missileWep = EInSlot(SL_ARCHERY);
     thrownWep  = thrown;
+    /* upstream: a weapon slung on a shoulder is not in hand, so it MUST NOT
+       become meleeWep; with a bow or thrown-only weapon held there is no melee
+       weapon, so no parry and no metal penalty from it. Plain slot logic -- no
+       typedef, pointer-width or compiler dependence -- so upstream's Win32 build
+       behaves the same, and its own disabled block below names this same
+       shoulder-parry bug. Observed -- tools/repro_d9gk_shoulder.sh.
+       inc-d9gk. Not sent. */
     if (meleeWep && meleeWep->isType(T_BOW)) {
         missileWep = meleeWep;
         meleeWep = offhandWep = NULL;
-        if (it = EInSlot(SL_LSHOULDER))
-            if (it->isType(T_WEAPON) && !it->isType(T_BOW) && !it->thrownOnly())
-                meleeWep = it;
     }
     if (meleeWep && meleeWep->thrownOnly()) {
         thrownWep = meleeWep;
         meleeWep = offhandWep = NULL;
-        if (it = EInSlot(SL_LSHOULDER))
-            if (it->isType(T_WEAPON) && !it->isType(T_BOW) && !it->thrownOnly())
-                meleeWep = it;
     } else if (meleeWep && meleeWep->HasIFlag(IT_THROWABLE) && !thrownWep)
         thrownWep = meleeWep;
 
