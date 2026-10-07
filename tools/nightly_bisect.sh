@@ -3,8 +3,9 @@
 #
 # The nightly bisect for tools/nightly_verify.sh --record. The harness records
 # tonight's state file, then runs this script in the repository at tonight's
-# commit T. For every check that failed tonight (non-0, non-2) and has a
-# last-good commit G, it bisects G..T by halving, confirms the landing L it
+# commit T. Every check that did not exit 0 tonight and has a last-good commit
+# G is bisected, exit 2 included (a step's own exit 2 then reads as fail; a
+# missing file or failed build stops it); it bisects G..T, confirms the landing L it
 # finds, and writes a report. An absent check, a last-good off the
 # first-parent line, a flaky check and a check without a last good night are
 # all reported "not measured" and name no landing.
@@ -130,7 +131,10 @@ TMP_RESERVED="${TMPDIR:-/tmp}"
 
 # --------------------------------------------------------------- bisect core --
 # test_at <commit> <id> <logfile> [revert-list] -> 0 pass, 1 fail,
-# 2 could not measure, 3 a requested revert conflicted.
+# 2 the check's own exit 2, 3 a requested revert conflicted, 4 ABSENT
+# (the check's file is missing at <commit> or its build failed there).
+# ABSENT is kept apart from the check's own exit 2 so the caller can tell a
+# check that cannot be measured at a candidate from a check that reports 2.
 # Adds a detached worktree at <commit>, reverts each commit in the
 # space-separated <revert-list> in order, builds if the check needs it, and
 # runs the id's command line there. A revert of a merge (two or more parents)
@@ -140,11 +144,11 @@ test_at() {
     local commit="$1" id="$2" log="$3" reverts="${4:-}"
     local tmp file marker c parents
     file="${id%% *}"
-    tmp="$(mktemp -d "$TMP_RESERVED/nlb-wt.XXXXXX")" || return 2
+    tmp="$(mktemp -d "$TMP_RESERVED/nlb-wt.XXXXXX")" || return 4
     rmdir "$tmp" 2>/dev/null
 
     git -C "$REPO" worktree add --detach "$tmp" "$commit" > /dev/null 2>&1 || {
-        rm -rf "$tmp"; return 2; }
+        rm -rf "$tmp"; return 4; }
     WT_LIST="$WT_LIST $tmp"
 
     for c in $reverts; do
@@ -167,11 +171,13 @@ test_at() {
         fi
     done
 
-    # An absent check is never a failure: cannot measure at this commit.
+    # An absent check is never a failure: ABSENT at this commit. It reads 4,
+    # not 2, so a caller bisecting a check that exits 2 tonight does not count
+    # a missing file or a failed build as a fail.
     if [ ! -e "$tmp/$file" ]; then
         git -C "$REPO" worktree remove --force "$tmp" > /dev/null 2>&1
         WT_LIST="${WT_LIST% $tmp}"
-        return 2
+        return 4
     fi
 
     # Build unless the check is cheap at this commit.
@@ -180,7 +186,7 @@ test_at() {
         ( cd "$tmp" && eval "$BUILD_CMD" ) > "$log.build" 2>&1 || {
             git -C "$REPO" worktree remove --force "$tmp" > /dev/null 2>&1
             WT_LIST="${WT_LIST% $tmp}"
-            return 2
+            return 4
         }
     fi
 
@@ -205,6 +211,25 @@ budget_exceeded() {
 NAMED_LANDINGS=""   # one "id<TAB>L" line per named landing.
 # One "id<TAB>L<TAB>second-pass sentence" line per named landing, for filing.
 FILE_LIST=""
+
+# TONIGHT_TWO is 1 while bisecting a check that exited 2 tonight (spec 5.3
+# amendment). Then the check's own exit 2 in a step reads as fail; for a check
+# that failed non-2 tonight it stops the bisect as before. ABSENT (test_at 4)
+# always stops it either way.
+TONIGHT_TWO=0
+
+# step_class <test_at rc> -> PASS, FAIL, ABSENT, CONFLICT or COULDNOT.
+# Reads TONIGHT_TWO to decide what the check's own exit 2 means.
+step_class() {
+    case "$1" in
+        0) printf 'PASS' ;;
+        1) printf 'FAIL' ;;
+        3) printf 'CONFLICT' ;;
+        4) printf 'ABSENT' ;;
+        2) if [ "$TONIGHT_TWO" = 1 ]; then printf 'FAIL'; else printf 'COULDNOT'; fi ;;
+        *) printf 'COULDNOT' ;;
+    esac
+}
 
 # find_landing <id> <lo> <hi> <reverts>: halve lo..hi on the first-parent
 # line with the given revert list, then confirm the landing (it must fail,
@@ -244,19 +269,21 @@ find_landing() {
         fi
         test_at "$mid" "$id" "$BISECT_LOG_DIR/$SHORTDATE-step.log" "$reverts"
         rc=$?
-        case "$rc" in
-            3)
+        local cls
+        cls="$(step_class "$rc")"
+        case "$cls" in
+            CONFLICT)
                 printf 'a second cause may exist; not measured (revert conflict). Range: %s..%s\n' \
                     "$lo" "$hi" >&2
                 FL_STATUS="conflict"
                 return 0 ;;
-            2)
+            ABSENT|COULDNOT)
                 printf 'not measured: could not measure at %s. Range: %s..%s\n' \
                     "$mid" "$lo" "$hi" >&2
                 FL_STATUS="notmeasured"
                 return 0 ;;
-            0) lo="$mid" ;;
-            1) hi="$mid" ;;
+            PASS) lo="$mid" ;;
+            FAIL) hi="$mid" ;;
         esac
     done
 
@@ -272,13 +299,21 @@ find_landing() {
     fi
     test_at "$L" "$id" "$BISECT_LOG_DIR/$SHORTDATE-confirm-L.log" "$reverts"
     rc=$?
-    if [ "$rc" -eq 3 ]; then
+    local cls
+    cls="$(step_class "$rc")"
+    if [ "$cls" = "CONFLICT" ]; then
         printf 'a second cause may exist; not measured (revert conflict). Range: %s..%s\n' \
             "$lo" "$L" >&2
         FL_STATUS="conflict"
         return 0
     fi
-    if [ "$rc" -ne 1 ]; then
+    if [ "$cls" = "ABSENT" ] || [ "$cls" = "COULDNOT" ]; then
+        printf 'not measured: could not measure at %s. Range: %s..%s\n' \
+            "$L" "$lo" "$L" >&2
+        FL_STATUS="notmeasured"
+        return 0
+    fi
+    if [ "$cls" != "FAIL" ]; then
         printf 'Inconsistent results, possibly flaky; not measured. Range: %s..%s\n' \
             "$lo" "$L" >&2
         FL_STATUS="inconsistent"
@@ -294,13 +329,20 @@ find_landing() {
     fi
     test_at "$parent" "$id" "$BISECT_LOG_DIR/$SHORTDATE-confirm-parent.log" "$reverts"
     rc=$?
-    if [ "$rc" -eq 3 ]; then
+    cls="$(step_class "$rc")"
+    if [ "$cls" = "CONFLICT" ]; then
         printf 'a second cause may exist; not measured (revert conflict). Range: %s..%s\n' \
             "$lo" "$L" >&2
         FL_STATUS="conflict"
         return 0
     fi
-    if [ "$rc" -ne 0 ]; then
+    if [ "$cls" = "ABSENT" ] || [ "$cls" = "COULDNOT" ]; then
+        printf 'not measured: could not measure at %s. Range: %s..%s\n' \
+            "$parent" "$lo" "$L" >&2
+        FL_STATUS="notmeasured"
+        return 0
+    fi
+    if [ "$cls" != "PASS" ]; then
         printf 'Inconsistent results, possibly flaky; not measured. Range: %s..%s\n' \
             "$lo" "$L" >&2
         FL_STATUS="inconsistent"
@@ -327,15 +369,15 @@ second_pass() {
     # T with L1 reverted.
     test_at "$T" "$id" "$BISECT_LOG_DIR/$SHORTDATE-second-L1.log" "$L1"
     rc=$?
-    case "$rc" in
-        0)
+    case "$(step_class "$rc")" in
+        PASS)
             SP_STATUS="only"
             return 0 ;;
-        2)
-            SP_STATUS="notmeasured"
-            return 0 ;;
-        3)
+        CONFLICT)
             SP_STATUS="conflict"
+            return 0 ;;
+        ABSENT|COULDNOT)
+            SP_STATUS="notmeasured"
             return 0 ;;
     esac
 
@@ -354,13 +396,13 @@ second_pass() {
     # T with both reverted: does a third cause exist?
     test_at "$T" "$id" "$BISECT_LOG_DIR/$SHORTDATE-second-L12.log" "$L1 $L2"
     rc=$?
-    case "$rc" in
-        0)
+    case "$(step_class "$rc")" in
+        PASS)
             return 0 ;;
-        2)
+        ABSENT|COULDNOT)
             SP_STATUS="notmeasured"
             return 0 ;;
-        3)
+        CONFLICT)
             SP_STATUS="conflict2"
             return 0 ;;
     esac
@@ -380,10 +422,10 @@ second_pass() {
     # T with all three reverted: if it still fails, more may exist.
     test_at "$T" "$id" "$BISECT_LOG_DIR/$SHORTDATE-second-L123.log" "$L1 $L2 $L3"
     rc=$?
-    case "$rc" in
-        0) return 0 ;;
-        3) SP_STATUS="conflict2"; return 0 ;;
-        2) SP_STATUS="notmeasured"; return 0 ;;
+    case "$(step_class "$rc")" in
+        PASS) return 0 ;;
+        CONFLICT) SP_STATUS="conflict2"; return 0 ;;
+        ABSENT|COULDNOT) SP_STATUS="notmeasured"; return 0 ;;
         *) SP_STATUS="more" ;;
     esac
     return 0
@@ -604,9 +646,19 @@ handle_id() {
             printf '%s\t%s\t%s\n' "$id" "$T" "$TODAY" >> "$OUT_LASTGOOD"
             ;;
         2)
-            printf 'Could not measure tonight; not bisected.\n\n' >> "$REPORT"
-            if [ -n "$g" ]; then
+            # Spec 5.3 amendment: a check that exits 2 tonight is bisected when
+            # it has a last-good commit G; with no G it stays not measured.
+            if [ -z "$g" ]; then
+                printf 'Could not measure tonight; not bisected.\n\n' >> "$REPORT"
+            elif [ "$g" = "$T" ]; then
+                printf 'Could not measure tonight but last good is tonight; not bisected.\n\n' >> "$REPORT"
                 printf '%s\t%s\t%s\n' "$id" "$g" "$TODAY" >> "$OUT_LASTGOOD"
+            else
+                printf '%s\t%s\t%s\n' "$id" "$g" "$TODAY" >> "$OUT_LASTGOOD"
+                TONIGHT_TWO=1
+                bisect_one "$id" "$g" >> "$REPORT"
+                TONIGHT_TWO=0
+                printf '\n' >> "$REPORT"
             fi
             ;;
         *)
