@@ -27,9 +27,21 @@ bad() { echo "FAIL  $1"; FAIL=1; }
 
 # A stub bd that answers `create ... --json` with a fixed id. `list` answers an
 # empty array, so the duplicate check the wrapper now runs finds no candidates
-# and never reaches the network (inc-zu0r phase 2).
+# and never reaches the network (inc-zu0r phase 2). It records its argv,
+# NUL-separated, so a test can prove exactly what the wrapper passed through,
+# and rejects --not-a-duplicate with a non-zero exit, as real bd does.
 cat > "$TMP/bd" <<'STUB'
 #!/bin/bash
+for a in "$@"; do
+    if [ "$a" = "--not-a-duplicate" ]; then
+        echo "Error: unknown flag: --not-a-duplicate" >&2
+        exit 1
+    fi
+done
+if [ -n "$BD_ARGV_LOG" ]; then
+    : > "$BD_ARGV_LOG"
+    for a in "$@"; do printf '%s\0' "$a" >> "$BD_ARGV_LOG"; done
+fi
 for a in "$@"; do
     if [ "$a" = "create" ]; then echo '{"id": "inc-stub"}'; exit 0; fi
     if [ "$a" = "list" ]; then echo '[]'; exit 0; fi
@@ -101,6 +113,34 @@ case "$OUT" in
     *"stub checker"*) bad "--dry-run ran the checker on a bead that was never filed" ;;
     *) ok "--dry-run does not run the checker" ;;
 esac
+
+# 5. the --dry-run pass-through must drop the wrapper-only --not-a-duplicate,
+#    or real bd rejects the call it was handed. inc-xuy8.
+LOG="$TMP/passthru.argv"
+OUT=$(BD_ARGV_LOG="$LOG" PATH="$TMP:$PATH" \
+    "$TMP/tree/tools/bead_new.sh" "t" --type task -l internal \
+    --not-a-duplicate -d "two words" --dry-run 2>&1); RC=$?
+[ $RC -eq 0 ] && ok "--dry-run passthrough: exits 0" \
+              || bad "--dry-run passthrough: exited $RC, wanted 0"
+if [ -f "$LOG" ]; then
+    ARGV=$(python3 - "$LOG" <<'PY'
+import sys
+data = open(sys.argv[1], "rb").read()
+print("\n".join(a.decode() for a in data.split(b"\0") if a))
+PY
+)
+    grep -qx -- "--dry-run" <<<"$ARGV" \
+        && ok "--dry-run passthrough: stub received --dry-run" \
+        || bad "--dry-run passthrough: stub did not receive --dry-run"
+    grep -qx -- "two words" <<<"$ARGV" \
+        && ok "--dry-run passthrough: 'two words' arrived as one argument" \
+        || bad "--dry-run passthrough: 'two words' was split or lost"
+    grep -qx -- "--not-a-duplicate" <<<"$ARGV" \
+        && bad "--dry-run passthrough: stub still received --not-a-duplicate" \
+        || ok "--dry-run passthrough: --not-a-duplicate was dropped"
+else
+    bad "--dry-run passthrough: stub recorded no argv"
+fi
 
 echo ""
 [ $FAIL -eq 0 ] && echo "bead_new gate verified" || echo "bead_new gate BROKEN"
