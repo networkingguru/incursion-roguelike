@@ -64,10 +64,16 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ENGINE="$ROOT/tools/bead_dupes.py"
 
 # --help and --dry-run never create anything, so there is nothing to check.
-# Pass them through and answer with bd's own exit code.
+# Pass them through, minus our own --not-a-duplicate, and answer with bd's
+# own exit code.
 for a in "$@"; do
     if [ "$a" = "--help" ] || [ "$a" = "-h" ] || [ "$a" = "--dry-run" ]; then
-        exec bd create "$@"
+        PASSTHRU=()
+        for pa in "$@"; do
+            [ "$pa" = "--not-a-duplicate" ] && continue
+            PASSTHRU+=("$pa")
+        done
+        exec bd create "${PASSTHRU[@]}"
     fi
 done
 
