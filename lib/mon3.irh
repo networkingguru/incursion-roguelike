@@ -3336,26 +3336,6 @@ Effect "Spit Goo" : EA_INFLICT
         "glob of goo";
   }
 
-#if 0
-Monster "scarab swarm" : MA_VERMIN
-  {
-    Image: black 'x'; Size: SZ_GARGANTUAN; Mana: 32;
-    CR: 7; HD: 7; Hit: +8; Def: 26; Mov: 175%; Spd: 200%;
-    Str 6, Dex 14, Con 16, Int 1, Wis 13, Cha 8;
-    /* Add Engulf attack later */
-    Attk: A_BITE for 3d10 AD_PIERCE;
-    ABILITY(CA_TREMORSENSE,12);
-    Flags: M_SWARM, M_AMORPH, M_NEUTER, M_NOHANDS, M_NOLIMBS,
-           M_NOHEAD, M_CARNI, M_MAGIC;
-    Skills: SK_CLIMB, FT_DASH;
-    Desc: "A swarm of flesh-eating scarabs, given a hive-mind
-      intellect by malevolent magic as the instrument of a dark
-      god's wrath. The swarm cannot fly, but it is incredibly
-      fast, flowing across corridors like a chitinous river and
-      devouring everything in its path.";
-  }
-#endif
-
 /* WORMS AND WORM MASSES */
 
 Monster "white worm mass" : MA_WORM, MA_VERMIN

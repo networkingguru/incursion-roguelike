@@ -533,3 +533,42 @@ Item "warhammer;thrown" : T_WEAPON
     Desc: "The warhammer is a blunt weapon designed specifically to
       punch through plate armours. Its blows carry terrible force
       with them."; }
+
+/* APPEND-ONLY (see the notes above and docs/SAVE-SCHEMA-SPEC.md): new
+   resources go HERE, at the end of parse order, never in the middle of an
+   existing list. This is the scarab swarm, rebuilt as a working swarm for
+   bead inc-gapb. */
+Monster "scarab swarm" : MA_SWARM, MA_VERMIN
+{
+  Image: black 'S'; Size: SZ_MINISCULE;
+  CR: 7; HD: 12; Hit: +8; Def: 10; Mov: 175%; Spd: 100%;
+  Str 1, Dex 14, Con 16, Int 1, Wis 13, Cha 8;
+  Attk: A_CPRX for 3d6 AD_PIERCE,
+        A_CPRX for 0d0 AD_DISE (DC 19),
+        A_CPRX for 1d1 AD_SPE1;
+	ABILITY(CA_WEAPON_IMMUNITY,1);
+	ABILITY(CA_TREMORSENSE,12);
+	RACIAL_SKILL(SK_CLIMB,8);
+  Feats: FT_DASH, SK_CLIMB;
+  Immune: DF_MIND;
+  Flags: M_SWARM, M_NO_SIZE_HP, M_NO_CORPSE, M_CARNI, M_NOPOLY,
+         M_AMORPH, M_HIDE_UNDER, M_NEUTER,
+         M_NOHANDS, M_NOLIMBS, M_NOHEAD, M_HOSTILE;
+  Disease: $"filth fever";
+  On Event PRE(EV_DAMAGE) {
+    if (e.DType == AD_SPE1) {
+      if (!EVictim->isDead())
+        if (!EVictim->SavingThrow(FORT,19,SA_CONF))
+          EVictim->GainTempStati(NAUSEA,EVictim,1,SS_ENCH,0,0,
+            $"scarab swarm");
+      return DONE;
+    }
+    return NOTHING;
+  } ,
+  MSG_SPE1DESC "to nauseate (DC 19)";
+  Desc: "A swarm of flesh-eating scarabs, given a hive-mind
+    intellect by malevolent magic as the instrument of a dark
+    god's wrath. The swarm cannot fly, but it is incredibly
+    fast, flowing across corridors like a chitinous river and
+    devouring everything in its path.";
+}
