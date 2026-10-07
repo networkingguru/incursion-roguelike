@@ -764,8 +764,8 @@ void posixTerm::APutChar(int16 x, int16 y, Glyph g) {
        other two backends do. */
     if (fg == 0 && bg == 0)
         g = GLYPH_ID_VALUE(g)
-          | GLYPH_FORE(attr & COLOUR_MASK)
-          | GLYPH_BACK((attr >> COLOUR_BITS) & COLOUR_MASK);
+          | GLYPH_FORE((attr & COLOUR_MASK))
+          | GLYPH_BACK(((attr >> COLOUR_BITS) & COLOUR_MASK));
 
     scr[y][x] = g;
     updated = false;
