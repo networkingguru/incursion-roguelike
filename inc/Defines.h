@@ -4287,6 +4287,10 @@ typedef signed int        hObj;
 #define DARK_MASK				(~BRIGHT_MASK & COLOUR_MASK)
 #define BACK_COLOUR(v)			(v << COLOUR_BITS)
 
+/* upstream: these macros did not bracket their arguments, so an
+   expression argument packed the wrong bits (GLYPH_FORE(a & b) was
+   a & (b << 12)) on every platform. Traced. inc-pnv2; not sent. */
+
 /* Glyph management macros: 
 
    NOTE: If in the future the ATTR is extended to include more than the colour, then all masking should be checked.
@@ -4299,28 +4303,34 @@ typedef signed int        hObj;
 
 #define GLYPH_ID(value)         (value)
 #define GLYPH_ID_MASK			((1 << GLYPH_ID_BITS) - 1)
-#define GLYPH_ID_VALUE(glyph)   (glyph & GLYPH_ID_MASK)
+#define GLYPH_ID_VALUE(glyph)   ((glyph) & GLYPH_ID_MASK)
 
 #define GLYPH_ATTR_SHIFT        (GLYPH_ID_BITS)
-#define GLYPH_ATTR(value)       (value << GLYPH_ATTR_SHIFT)
+#define GLYPH_ATTR(value)       ((value) << GLYPH_ATTR_SHIFT)
 #define GLYPH_ATTR_MASK         (((1 << GLYPH_ATTR_BITS) - 1) << GLYPH_ATTR_SHIFT)
-#define GLYPH_ATTR_VALUE(glyph) ((glyph & GLYPH_ATTR_MASK) >> GLYPH_ATTR_SHIFT)
+#define GLYPH_ATTR_VALUE(glyph) (((glyph) & GLYPH_ATTR_MASK) >> GLYPH_ATTR_SHIFT)
 
 #define GLYPH_FORE_SHIFT        (GLYPH_ATTR_SHIFT)
-#define GLYPH_FORE(value)       (value << GLYPH_FORE_SHIFT)
+#define GLYPH_FORE(value)       ((value) << GLYPH_FORE_SHIFT)
 #define GLYPH_FORE_MASK         (((1 << GLYPH_FORE_BITS) - 1) << GLYPH_FORE_SHIFT)
-#define GLYPH_FORE_VALUE(glyph) ((glyph & GLYPH_FORE_MASK) >> GLYPH_FORE_SHIFT)
+#define GLYPH_FORE_VALUE(glyph) (((glyph) & GLYPH_FORE_MASK) >> GLYPH_FORE_SHIFT)
 
 #define GLYPH_BACK_SHIFT        (GLYPH_ATTR_SHIFT + GLYPH_FORE_BITS)
-#define GLYPH_BACK(value)       (value << GLYPH_BACK_SHIFT)
+#define GLYPH_BACK(value)       ((value) << GLYPH_BACK_SHIFT)
 #define GLYPH_BACK_MASK         (((1 << GLYPH_BACK_BITS) - 1) << GLYPH_BACK_SHIFT)
-#define GLYPH_BACK_VALUE(glyph) ((glyph & GLYPH_BACK_MASK) >> GLYPH_BACK_SHIFT)
+#define GLYPH_BACK_VALUE(glyph) (((glyph) & GLYPH_BACK_MASK) >> GLYPH_BACK_SHIFT)
 
-#define GLYPH_COLOUR(value)     (value << GLYPH_FORE_SHIFT)
+#define GLYPH_COLOUR(value)     ((value) << GLYPH_FORE_SHIFT)
 #define GLYPH_COLOUR_MASK		(GLYPH_FORE_MASK + GLYPH_BACK_MASK)
-#define GLYPH_COLOUR_VALUE(g)   ((g & GLYPH_COLOUR_MASK) >> GLYPH_FORE_SHIFT)
+#define GLYPH_COLOUR_VALUE(g)   (((g) & GLYPH_COLOUR_MASK) >> GLYPH_FORE_SHIFT)
 
 #define GLYPH_VALUE(id, attr)   (GLYPH_ID(id) | GLYPH_ATTR(attr))
+
+#ifdef __cplusplus
+static_assert(GLYPH_FORE(9 & COLOUR_MASK) == (9 << GLYPH_FORE_SHIFT), "GLYPH_FORE must bracket its argument (inc-pnv2)");
+static_assert(GLYPH_BACK(4 | 0) == (4 << GLYPH_BACK_SHIFT), "GLYPH_BACK must bracket its argument (inc-pnv2)");
+static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR must bracket its argument (inc-pnv2)");
+#endif
 
 /* Glyph values. */
 
