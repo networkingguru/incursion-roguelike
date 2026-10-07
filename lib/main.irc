@@ -533,3 +533,11 @@ Item "warhammer;thrown" : T_WEAPON
     Desc: "The warhammer is a blunt weapon designed specifically to
       punch through plate armours. Its blows carry terrible force
       with them."; }
+
+Effect "Aura of Menace" : EA_GENERIC
+  { Purpose: EP_CURSE;
+    Flags: EF_SPECABIL;
+    Desc: "A hostile creature that enters this creature's aura of menace
+      must make a Will save or suffer a -2 penalty on attack rolls,
+      defense and saving throws for the next 24 hours.";
+  }
