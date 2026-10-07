@@ -77,7 +77,7 @@ grep -c 'Effect "Polymorphing"' lib/program.i
 
 Do NOT work out comment boundaries in a `.irh` by hand. On 2026-08-15 an
 anchored `grep -n '^\*/$'` missed a `*/` that had trailing whitespace at
-`m_items.irh:4315`, ran a 19-line comment on to 440 lines, and produced the
+`m_items.irh:4644`, ran a 19-line comment on to 440 lines, and produced the
 claim "an unidentified ring cannot be harmful" — told to Brian while he was
 wearing a Ring of Polymorphing. Spell Disruption, Weakness, Ignorance and
 Aggravate Monster are all live and all cursed.
