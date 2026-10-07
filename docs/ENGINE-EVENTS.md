@@ -10,7 +10,7 @@ Event stack and `Throw*`: `src/Event.cpp`. `EventInfo` and the `PEVENT`/`DAMAGE`
 boundary: `src/Annot.cpp:1098`. Bytecode VM: `src/VMachine.cpp:413`. Generated script-callable C++ API: `lib/dispatch.h`.
 Preprocessed ruleset: `lib/program.i`. Event numbers and `PRE`/`POST`/`META`/`GODWATCH`/`EVICTIM`: `inc/Defines.h:4482-4488`; 183
 `EV_` numbers exist. `EvReturn` is `int8` (`inc/Defines.h:58`): `ERROR -1`, `NOTHING 0`, `DONE 1`, `ABORT 2`, `NOMSG 3`
-(`inc/Defines.h:137-141`).
+(`inc/Defines.h:141-145`).
 
 ## Raising an event
 14 functions push a frame then call `RealThrow`; each starts `EventSP++; CHECK_OVERFLOW;`. They differ only in the fields they
@@ -71,7 +71,7 @@ mutex (`src/Vision.cpp:415-416`), and `Creature::Multiply` refuses to breed past
 **1. Event Stack Overflow: blast -> Multiply -> place -> blast. Fixed (inc-upw.5).** `Magic::Blast` throws `EV_DAMAGE`
 (`src/Effects.cpp:261`) -> a script handler on `POST(EV_DAMAGE)`/`EVICTIM(EV_DAMAGE)` (brown mold `lib/mon3.irh:2308`
 and `lib/mon3.irh:2316`; id moss `lib/mon3.irh:2270` has one too, but `#if 0` at `:2250` keeps it out of the build)
-or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3372`)
+or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3352`)
 calls `Multiply` -> `Creature::Multiply` (`src/Creature.cpp:486`) -> `mn->PlaceAt` (`:557`)
 throws `EV_PLACE` (`src/Display.cpp:224`, `:248`) and `EV_FIELDON` (`:314`) -> `Creature::FieldOn` re-throws `EV_EFFECT` for
 `FI_MODIFIER` (`src/Status.cpp:1750`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1265`).
