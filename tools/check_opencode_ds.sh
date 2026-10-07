@@ -20,7 +20,9 @@
 # Defends beads inc-h1bq, inc-gofz, inc-uxmf and inc-oehi: the opencode rung of
 # the implementer ladder must never touch the shared checkout, must not hang
 # its dispatcher when the harness stalls, must not burn tokens on a loop, and
-# must keep the exact request of a looping run so it can be replayed. Directly
+# must keep the exact request of a looping run so it can be replayed. Also
+# defends inc-5avr: the config must set snapshot false, so opencode writes no
+# per-step undo copy into the run data inside the target. Directly
 # checks loop_check.py catches all three loop shapes: repeated short lines
 # (tools/fixtures/opencode-loop/loop.jsonl), a step that printed native
 # tool-call markup as text (tools/opencode/fixtures/markup-dsml.jsonl), and one
@@ -41,7 +43,8 @@
 #                                            three loop_check sub-checks)
 #   tools/check_opencode_ds.sh --prove-red   mutate the
 #                                            sandbox prefix, the JSON bash
-#                                            rules, MIN_REPEATED_LINES,
+#                                            rules, the snapshot flag,
+#                                            MIN_REPEATED_LINES,
 #                                            MIN_SAME_LINE, the markup rule, the
 #                                            context ceiling, the proxy's
 #                                            request write and the brief's
@@ -134,8 +137,10 @@ skip() { echo "SKIP  $1"; SKIP_COUNT=$((SKIP_COUNT + 1)); }
 # assertion 14 must go red; (g) raise loop_check.py's MIN_SAME_LINE, so
 # assertion 13b's F3 check must go red; (h) disable loop_check.py's markup rule,
 # so assertion 13b's F2 check must go red; (j) remove the brief preamble
-# prepend, so assertion 6b must go red. Original files are restored, and each
-# restoration verified byte-identical with cmp, by the EXIT trap above.
+# prepend, so assertion 6b must go red; (k) remove `"snapshot": false` from
+# opencode.json, so the inc-5avr snapshot assertion must go red. Original files
+# are restored, and each restoration verified byte-identical with cmp, by the
+# EXIT trap above.
 if [ "${1:-}" = "--prove-red" ]; then
     PROVE_FAIL=0
     # sandbox-exec cannot nest: under another Seatbelt sandbox, mutation (b) --
@@ -356,6 +361,29 @@ PY
         echo "PASS (as intended): assertion 10 (read-only git) went red"
     else
         echo "FAIL: assertion 10 stayed green with \"git *\": \"deny\" removed (rc=$MUT_RC)"
+        echo "$MUT_OUT" | tail -20
+        PROVE_FAIL=1
+    fi
+    cp "$BACKUP_CONFIG" "$CONFIG"
+    cmp -s "$BACKUP_CONFIG" "$CONFIG" || { echo "restore of opencode.json failed" >&2; exit 2; }
+
+    # (k) `"snapshot": false` removed from opencode.json. Section 9 never
+    # launches the harness, so this proof runs in any environment (inc-5avr).
+    python3 - "$CONFIG" <<'PY'
+import json, sys
+path = sys.argv[1]
+cfg = json.load(open(path))
+cfg.pop("snapshot", None)
+json.dump(cfg, open(path, "w"), indent=2)
+open(path, "a").write("\n")
+PY
+    echo "mutated tools/opencode/opencode.json: \"snapshot\": false removed"
+    MUT_OUT="$("$ROOT/tools/check_opencode_ds.sh" 2>&1)"
+    MUT_RC=$?
+    if [ "$MUT_RC" -ne 0 ] && grep -q "FAIL.*snapshot" <<< "$MUT_OUT"; then
+        echo "PASS (as intended): assertion 9 (snapshot) went red"
+    else
+        echo "FAIL: assertion 9 stayed green with \"snapshot\": false removed (rc=$MUT_RC)"
         echo "$MUT_OUT" | tail -20
         PROVE_FAIL=1
     fi
@@ -900,6 +928,22 @@ then
     pass "opencode.json parses and denies git *, bd * and external_directory"
 else
     fail "opencode.json permission check"
+fi
+
+# inc-5avr: the run data (XDG_DATA_HOME) lives inside the target worktree, so
+# opencode's per-step snapshot copies would nest inside each other and grow
+# without bound -- 6.1 GB in 53 minutes on 2026-10-07. It must be JSON false,
+# not absent and not a string.
+if python3 - "$CONFIG" <<'PY'
+import json, sys
+cfg = json.load(open(sys.argv[1]))
+assert "snapshot" in cfg, "snapshot missing: opencode would snapshot per step (inc-5avr)"
+assert cfg["snapshot"] is False, "snapshot is not JSON false (inc-5avr)"
+PY
+then
+    pass "opencode.json sets snapshot to JSON false (no per-step undo copies)"
+else
+    fail "opencode.json snapshot must be present and JSON false (inc-5avr; 6.1 GB run on 2026-10-07)"
 fi
 
 # --- 10. Read-only git is allowed, every other git command stays denied ---
