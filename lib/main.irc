@@ -572,3 +572,11 @@ Monster "scarab swarm" : MA_SWARM, MA_VERMIN
     fast, flowing across corridors like a chitinous river and
     devouring everything in its path.";
 }
+
+Effect "Aura of Menace" : EA_GENERIC
+  { Purpose: EP_CURSE;
+    Flags: EF_SPECABIL;
+    Desc: "A hostile creature that enters this creature's aura of menace
+      must make a Will save or suffer a -2 penalty on attack rolls,
+      defense and saving throws for the next 24 hours.";
+  }

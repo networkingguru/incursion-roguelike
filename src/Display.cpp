@@ -369,6 +369,25 @@ void Thing::PlaceAt(Map*_m,int16 _x,int16 _y, bool share_square)
         m->NewField(FI_MOBILE|FI_MODIFIER,x,y,3,GLYPH_VALUE(GLYPH_FLOOR2, WHITE),-1,vID,thisc);
         ValourExists:;
         }
+      if (thisc->HasAbility(CA_AURA_OF_MENACE)) {
+        rID mID = FIND("Aura of Menace");
+        ASSERT(mID);
+        for(i=0;m->Fields[i];i++)
+          if (m->Fields[i]->Creator == myHandle)
+            if (m->Fields[i]->eID == mID)
+              goto MenaceExists;
+        m->NewField(FI_MOBILE|FI_MODIFIER,x,y,thisc->AbilityLevel(CA_AURA_OF_MENACE),
+          GLYPH_VALUE(GLYPH_FLOOR2, RED),-1,mID,thisc);
+        MenaceExists:;
+        }
+      else {
+        /* The ability can be granted as a removable stati, so a creature can
+           lose it. If a Menace field this creature owns is still on this map,
+           remove it. inc-bp44. */
+        rID mID = FIND("Aura of Menace");
+        if (mID)
+          m->RemoveEffFieldFrom(mID,myHandle);
+        }
       if (m == NULL)
         return;
       thisc->TerrainEffects();
