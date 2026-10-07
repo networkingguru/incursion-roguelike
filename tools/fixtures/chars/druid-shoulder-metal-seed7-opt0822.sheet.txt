@@ -1,0 +1,250 @@
+=== fixture: druid-shoulder-metal-seed7-opt0822 ===
+
+This file is the audit record for
+  tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav
+and tools/make_char_fixture.sh writes the whole of it. Do not edit it
+by hand: it would then describe a character the .sav beside it does
+not hold, and that is the one failure tools/check_char_fixture.sh
+exists to catch.
+
+made on          2026-10-07 11:37:23 EDT
+made at commit   2b4199c3
+                 the working tree was dirty, so this fixture may hold changes that commit does not
+seed             7
+settings         tools/fixtures/options-2026-08-22.dat
+key script       tools/keys/druid-shoulder-metal-save.keys
+                 copied to tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.keys
+saved in game as Heian.sav
+sha256 .sav      8af6967c9ab50b0a4368fd148c39c0c1ec6985fd1a8102726ba3f13e3f88145f
+sha256 module    cb14e6fb92858590d530215a56228efa77cab0db7b9836b8c2f156cdca1b1cec
+                 mod/Incursion.Mod is what the save's rID manifest
+                 was written against. A fixture that stops loading
+                 is worth comparing against the module that made it.
+
+regenerate with
+  tools/make_char_fixture.sh druid-shoulder-metal-seed7-opt0822 tools/keys/druid-shoulder-metal-save.keys 7 tools/fixtures/options-2026-08-22.dat --force
+Regenerating gives a BYTE-DIFFERENT .sav holding the SAME character:
+a save carries clocks and counters no second run repeats. Judge a
+regeneration by this sheet, never by the size of the diff.
+
+The character below is the engine's own dump. It was taken by LOADING
+the .sav beside this file and saving it again under
+INCURSION_CHAR_PROBE=1 (Game::SaveGame, src/Registry.cpp:1105-1111).
+A few of its lines belong to that reading session and not to the
+character: the torch's remaining turns, the Level Statistics table
+and the Messages at the end all move by the turns
+tools/keys/load-char-sheet.keys spends. Everything above Inventory is the
+character. For the resource ids behind the item names, which are what
+a module change moves, run:
+  tools/dump_save.sh tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav
+
+=== the character, as the engine writes him ===
+
+                        Heian Diamonddew, The Ambitious Conqueror (Wizard Mode) (Explore Mode)
+
+Gender Male
+Race   Wood Elf
+Class  Druid 1
+Faith  Maeve
+XP     0
+Next @ 1000
+Align  Neutral
+
+
+STR: 14/00 [+2/+1] (base 13, +1 natural)
+DEX: 13/00 [+1/+1] (base 11, +2 natural)
+CON: 16/00 [+3/+2] (base 15, +1 natural)
+INT: 13/00 [+1/+1] (base 13)
+WIS: 14/00 [+2/+1] (base 14)
+CHA: 16/00 [+3/+2] (base 15, +1 natural)
+LUC: 16/00 [+3/+2] (base 17, -1 natural)
+Fortitude   +5(Druid +2, +3 Con)
+Reflex      +1(Druid +0, +1 Dex)
+Will        +4(Druid +2, +2 Wis)
+           (+2 vs. death magic, +2 vs. enchantment)
+Archery +toHit +1  (Druid +0, +1 Dex)
+        Damage +0  (base 1d6 / 1d3)
+        Speed  175%(base 100%) x 175% weapon
+Brawl   +toHit +3  (Druid +1, +2 Str)
+        Damage +2  (base 0, +2 Str)
+        Speed  100%(base 100%)
+Melee   +toHit +4  (Druid +0, +2 Str, +2 weapon)
+        Damage +3  (base 1d8 / 1d8+1, +3 Str)
+        Speed  115%(base 100%) x 115% weapon
+Size           Human-sized:
+  (base human-sized)
+
+Defense Class  14:
+  (base 10, +1 Dex, +3 weapon)
+_______________(7 while casting)
+
+Coverage       6:
+  (base 0, +6 armour)
+
+Movement Rate  90%:
+  (base 100%) x 90% encumbrance
+
+Hit Dice Rolls 31:
+   20 + 1d8 (8) + 3 (CON bonus)
+Mana Rolls     29:
+   15 + 1d12 (12) x 1 + 2 (WIS bonus)
+
+Encumbrance    Light:
+   (Light 28.6s, Moderate 86.0s, Heavy 173.0s, Extreme 260.0s, Max Press 350.0s)
+
+Magic Resist   25%:
+  (base 0, +25 natural)
+
+Spell Slots    1st:
+  1+2
+
+Special Abilities:
+  Animal Companions
+  Lowlight Vision (20 ft)
+  Magical Nature +5
+  Nature Sense
+  Reverie
+  Sharp Senses +1
+  Spellcasting (1st)
+  Species Affinity:
+    Sylvan Creatures
+  Wild Shape (Level 1, Latent)
+  Neutral: Sylvan Creatures
+
+Feats:
+  Acrobatic
+  Expertise
+
+Resistances and Armour:
+  Slashing Damage 3
+  Piercing Damage 1
+  Blunt Damage 2
+  Fire 2
+  Cold 2
+
+Complete Immunities:
+  Sleep
+
+Proficiencies Simple Weapons, Staves, Spears, Light Armour, scythe, scimitar, short bow, long sword, handaxe and long bow
+
+Skill Ratings:
+  Animal Empathy   +6  (2 ranks, +1 WIS, +3 train)
+  Appraise         +5  (2 ranks, +1 WIS, +2 train)
+  Climb            +6  (0 ranks, +1 STR, +2 train, +3 magic)
+  Concentration    +5  (2 ranks, +1 WIS, +2 train)
+  Craft            +6  (1 ranks, +1 DEX, +2 train, +2 kit)
+  Healing          +3  (0 ranks, +1 WIS, +2 train)
+  Jump             +4  (0 ranks, +1 STR, +3 feat)
+  Knowledge (Theyra) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Nature) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Oceans) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Theology) +5  (0 ranks, +1 WIS, +4 kit)
+  Listen           +4  (0 ranks, +1 WIS, +2 train, +1 inherent)
+  Move Silently    +3  (0 ranks, +1 DEX, +2 train)
+  Ride             +3  (0 ranks, +1 DEX, +2 train)
+  Searching        +2  (0 ranks, +1 INT, +1 inherent)
+  Spellcraft       +3  (0 ranks, +1 INT, +2 train)
+  Spot             +2  (0 ranks, +1 WIS, +1 inherent)
+  Swimming         +3  (0 ranks, +1 DEX, +2 train)
+  Tumble           +4  (0 ranks, +1 DEX, +3 feat)
+  Wilderness Lore  +4  (0 ranks, +1 WIS, +3 train)
+
+Spiritual State:
+__You are devoted to Maeve.
+__Maeve is noncommital.
+__Maeve has not aided you.
+____(Favour 0, Lev 0, Pen 0%)
+__You are perfectly neutral with
+____regard to Good and Evil.
+__You are perfectly neutral with
+____regard to Law and Chaos.
+
+CharGen Options and Choices:
+__You are in Wizard Mode.
+__Beginner's Kit: ON
+__Initial Rolling Method: 4d6 + Perks
+__Allow Rerolling: YES
+__Use the Subraces: YES
+__Disallow Wizard Mode: NO
+__Maximum Hit Points: YES
+__Maximum Mana: YES
+__Default Character Gender: MALE
+__Monsters Maximum Hit Points: NO
+__Roll Attributes First: NO
+__Gain Attributes With Levels: YES
+__Allow Rapid Intuition: WEAPONS
+__Monsters Use Djikstra: YES
+__Out-Of-Depth Monsters: YES
+__Transgression Hints: YES
+__Difficulty Level: BASELINE
+__Power Stats: EXTREME
+__Elude Death: SEVEN
+__Disable Complicity Transgressions: YES
+__Natural Weapon Speed: ORIGINAL
+
+
+Inventory:
+  elven darkwood short bow
+  torch (with 2973 turns of light left)
+  long sword
+  robes
+  elven cord armour
+  Ring +1 of Climbing [+3]
+  Holy symbol of Maeve
+  31 elven darkwood sheaf arrows
+  5 Potions of Healing [2d8+8]
+  5 Potions of Dimension Door [2d20+3]
+  4 Potions of See Invisibility
+  5 Potions of Remove Curse
+  medium backpack
+  8 gold pieces
+  9 food rations
+  8 pieces of elven waybread
+  5 torches (with 3000 turns of light left)
+  5 Antitoxins [+3]
+  4 Potions of Cure Disease [0]
+  3 Potions of Detect Stairs
+  2 Potions of Restoration [4d6]
+  2 Potions of Restore Constitution [6d8]
+  3 Potions of Restore Strength [6d8]
+  craftsman's tools
+  Wand of Identify (50 charges)
+  elven ironwood long sword
+
+On The Ground:
+  elven darkwood quarterstaff
+  elven ironwood scythe
+
+Known Spells:
+  Call Light                      1   20%    1 
+  Cure Light Wounds               1   15%    0 1d8+1
+  Calm Animals                    1   15%    2 
+  Call Companions                 1   20%    2 
+  Summon Nature's Ally I          1    2%    2 
+
+Journal:
+
+12:00 AM, 1st of Suntide: Entry Chamber, 10' (H:31/31 M:29/29 XP:0) 
+  You arrive at 10' in the The Goblin Caves.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:31/31 M:29/29 XP:0) 
+  OOD monster elf (CR 3) generated on dlev 1 by Encounter 'adventurer'. [EN_SINGLE]
+
+12:00 AM, 1st of Suntide: Unknown Location (H:18/23 M:12/12 XP:0) 
+  Starting Perks:
+  Extra Ability: Animal Companions.
+
+Monsters Encountered:
+  Total: 0
+
+Level Statistics:
+
+Lvl | Act | Key | Turns | Secs |  XP | Explored
+----+-----+-----+-------+------+-----+------------------
+1   |    7|   97|     93|     0|    0| 390 / 4924 = 7%
+
+Messages:
+Welcome back to Incursion, Heian!
+"And there shall be laughter and magic and blood, and we shall dance our dance until the end of time..."
+You find nothing of significance.
+Autosave... 
