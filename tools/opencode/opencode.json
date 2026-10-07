@@ -3,6 +3,7 @@
   "model": "deepinfra-ds/deepseek-ai/DeepSeek-V4.1-Flash",
   "share": "disabled",
   "autoupdate": false,
+  "snapshot": false,
   "provider": {
     "deepinfra-ds": {
       "npm": "@ai-sdk/openai-compatible",
