@@ -45,8 +45,9 @@ events per record (`:1113-1116`). A positive match runs `theGame->VM.Execute` an
 through `lib/dispatch.h`: it calls `ThrowEff` (`:2533`), `ThrowEffDir` (`:2537`), `ThrowEffXY` (`:2541`), and assigns `pe->eID =
 val` (`:3413`), with no validation.
 
-The build holds 1459 `On Event` occurrences; the `.irh`/`.irc` sources hold 1469 — the figure quoted in the issue. They are not
-the same set: `#if 0` at `lib/main.irc:36` and `:268` and a comment block at `:176` delete source handlers, while macro
+The `.irh`/`.irc` sources held 1469 `On Event` occurrences on 2026-08-16, when this page was written — the figure quoted in
+the issue. That figure is a record and stays as written; both live counts have moved since (see "How to check this page").
+The build's handlers and the source text are not the same set: `#if 0` at `lib/main.irc:36` and `:268` and a comment block at `:176` delete source handlers, while macro
 `ALIENIST_CLAUSE` (`lib/defines.irh:88`) expands one source occurrence into 18 built ones. **1469 counts source text, not handlers
 in the build.**
 
@@ -101,13 +102,16 @@ slot in signed arithmetic and returns NULL with a logged `Error` (`src/Res.cpp:3
 
 ## How to check this page
 ```
-grep -o "On Event" lib/program.i | wc -l              # 1459 handlers in the build
-grep -rho "On Event" lib/*.irh lib/*.irc | wc -l      # 1469 in source (issue figure)
+grep -o "On Event" lib/program.i | wc -l              # handlers in the build; no fixed value, see below
+grep -rho "On Event" lib/*.irh lib/*.irc | wc -l      # source text; printed 1469, the issue figure, on 2026-08-16
 grep -c "^#define EV_" inc/Defines.h                  # 183 event numbers
 grep -c CHECK_OVERFLOW src/Event.cpp                  # 15 = 1 define + 14 push sites
 grep -n "EVENT_STACK_SIZE\|MAX_MODULES" inc/Defines.h # 128, 126
 grep -rn "ALIENIST_CLAUSE" lib/*.irh | grep -v define # 18 macro expansions
 ```
+The first command reads `lib/program.i`, a build product that `.gitignore` excludes and every module build rewrites, so its
+count belongs to the last build, not to the repository; build the module before you trust it. It should come out somewhat
+below the source count, because the `#if 0` and comment blocks above remove more handlers than `ALIENIST_CLAUSE` adds.
 
 ## Suspected defects
 1. Fixed. `src/Creature.cpp:553` now stamps `GENERATION` before `:557` places the child, and `:498` caps `Multiply` nesting at 4.
