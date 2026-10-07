@@ -205,6 +205,72 @@ L3d="$(landing3 M4 'printf "broken\n" > state2.txt; printf "t1\n" > tools/only_t
 [ -n "$L3a" ] && [ -n "$L3b" ] && [ -n "$L3c" ] && [ -n "$L3d" ] || exit 2
 T3="$( cd "$REPO3" && $GIT rev-parse HEAD )"
 
+# --------------------------------------------- extra repos for A, B, C, D ---
+# check_two reads state.txt and exits 2 on "twoword", 1 on "oneword", else 0.
+# It lets a case model a check whose own exit is 2 and a check that failed
+# non-2 tonight. A landing-in-repo helper mirrors landing2/landing3.
+cat > "$TMP/check_two.sh" <<'CHK'
+#!/usr/bin/env bash
+# gate: cheap
+if grep -qw twoword state.txt 2> /dev/null; then exit 2; fi
+if grep -qw oneword state.txt 2> /dev/null; then exit 1; fi
+exit 0
+CHK
+chmod +x "$TMP/check_two.sh"
+
+# landing_in <repo> <name> <cmds...>: branch, run cmds, merge --no-ff.
+landing_in() {
+    local repo="$1" name="$2"; shift 2
+    ( cd "$repo" && $GIT checkout -q -b "$name" master ) || return 1
+    ( cd "$repo" && eval "$*" ) || return 1
+    ( cd "$repo" && $GIT add -A && $GIT commit -q -m "$name work" \
+        && $GIT checkout -q master \
+        && $GIT merge -q --no-ff -m "$name merge" "$name" ) || return 1
+    ( cd "$repo" && $GIT rev-parse HEAD )
+}
+
+# REPO4 (cases A, C, D): base G4 passes check_two; A2 writes twoword to
+# state.txt so check_two exits 2 from then on.
+REPO4="$TMP/repo4"
+mkdir -p "$REPO4/tools" || exit 2
+cp "$TMP/check_two.sh" "$REPO4/tools/check_two.sh"
+( cd "$REPO4" && $GIT init -q -b master . ) > /dev/null 2>&1 || \
+    ( cd "$REPO4" && $GIT init -q . && $GIT symbolic-ref HEAD refs/heads/master ) \
+    > /dev/null 2>&1 || { echo "check_nightly_bisect: git init repo4 failed" >&2; exit 2; }
+printf 'base\n' > "$REPO4/base.txt"
+printf 'ok\n' > "$REPO4/state.txt"
+printf 'a0\n' > "$REPO4/a.txt"
+printf 'c0\n' > "$REPO4/c.txt"
+( cd "$REPO4" && $GIT add -A && $GIT commit -q -m 'base G4' ) || exit 2
+G4="$( cd "$REPO4" && $GIT rev-parse HEAD )"
+A1="$(landing_in "$REPO4" A1 'printf "a1\n" > a.txt')" || exit 2
+A2="$(landing_in "$REPO4" A2 'printf "twoword\n" > state.txt')" || exit 2
+A3="$(landing_in "$REPO4" A3 'printf "c1\n" > c.txt')" || exit 2
+[ -n "$A1" ] && [ -n "$A2" ] && [ -n "$A3" ] || exit 2
+T4="$( cd "$REPO4" && $GIT rev-parse HEAD )"
+
+# REPO5 (case B): base G5 passes; D1 touches a.txt; D2 DELETES check_two so
+# the midpoint candidate of the bisect is absent; D3 re-adds check_two and
+# writes twoword; D4 touches c.txt. The bisect must stop at D2.
+REPO5="$TMP/repo5"
+mkdir -p "$REPO5/tools" || exit 2
+cp "$TMP/check_two.sh" "$REPO5/tools/check_two.sh"
+( cd "$REPO5" && $GIT init -q -b master . ) > /dev/null 2>&1 || \
+    ( cd "$REPO5" && $GIT init -q . && $GIT symbolic-ref HEAD refs/heads/master ) \
+    > /dev/null 2>&1 || { echo "check_nightly_bisect: git init repo5 failed" >&2; exit 2; }
+printf 'base\n' > "$REPO5/base.txt"
+printf 'ok\n' > "$REPO5/state.txt"
+printf 'a0\n' > "$REPO5/a.txt"
+printf 'c0\n' > "$REPO5/c.txt"
+( cd "$REPO5" && $GIT add -A && $GIT commit -q -m 'base G5' ) || exit 2
+G5="$( cd "$REPO5" && $GIT rev-parse HEAD )"
+D1="$(landing_in "$REPO5" D1 'printf "a1\n" > a.txt')" || exit 2
+D2="$(landing_in "$REPO5" D2 'rm -f tools/check_two.sh')" || exit 2
+D3="$(landing_in "$REPO5" D3 "mkdir -p tools; cp \"$TMP/check_two.sh\" tools/check_two.sh; printf \"twoword\\n\" > state.txt")" || exit 2
+D4="$(landing_in "$REPO5" D4 'printf "c1\n" > c.txt')" || exit 2
+[ -n "$D1" ] && [ -n "$D2" ] && [ -n "$D3" ] && [ -n "$D4" ] || exit 2
+T5="$( cd "$REPO5" && $GIT rev-parse HEAD )"
+
 # ------------------------------------------------------------------ helpers ---
 PASS=0
 FAIL=0
@@ -533,6 +599,77 @@ case12() {
     return 0
 }
 
+# ------------------------------------------------------------------ case A ----
+# A check that passes at G4 and exits 2 from A2 on (state.txt = twoword). It
+# exits 2 tonight too. Spec 5.3 amendment: it is bisected and A2 is named.
+caseA() {
+    local d; d="$(fresh_state_dir caseA)" || return 1
+    local stubs bn bd
+    stubs="$(make_stubs "$d/stubs")"; bn="${stubs%%	*}"; bd="${stubs##*	}"
+    printf '2\ttools/check_two.sh\n' > "$d/state.txt"
+    printf 'tools/check_two.sh\t%s\t%s\n' "$G4" "$(date +%Y-%m-%d)" > "$d/nightly-last-good.tsv"
+    run_bisect "$d" "$REPO4" "$bn" "$bd"
+    local rc=$?
+    local rep="$d/nightly-bisect/$(date +%Y-%m-%d).md"
+    [ "$rc" -eq 0 ] || { note FAIL "caseA: exit $rc"; return 1; }
+    names_landing "$rep" "$A2" || { note FAIL "caseA: did not name A2"; return 1; }
+    names_landing "$rep" "$A1" && { note FAIL "caseA: named A1"; return 1; }
+    names_landing "$rep" "$A3" && { note FAIL "caseA: named A3"; return 1; }
+    note ok "caseA: exit-2 check names the 0-to-2 landing"
+    return 0
+}
+
+# ------------------------------------------------------------------ case B ----
+# Same 0-to-2 check, but the midpoint candidate D2 has no check file: ABSENT
+# stops the bisect, reports not measured and names nothing.
+caseB() {
+    local d; d="$(fresh_state_dir caseB)" || return 1
+    printf '2\ttools/check_two.sh\n' > "$d/state.txt"
+    printf 'tools/check_two.sh\t%s\t%s\n' "$G5" "$(date +%Y-%m-%d)" > "$d/nightly-last-good.tsv"
+    run_bisect "$d" "$REPO5" "${GLOBAL_STUB_LINE%%	*}" "${GLOBAL_STUB_LINE##*	}"
+    local rc=$?
+    local rep="$d/nightly-bisect/$(date +%Y-%m-%d).md"
+    [ "$rc" -eq 0 ] || { note FAIL "caseB: exit $rc"; return 1; }
+    grep -qF 'not measured' "$rep" || { note FAIL "caseB: not 'not measured'"; return 1; }
+    grep -qF 'Named landing' "$rep" && { note FAIL "caseB: named a landing"; return 1; }
+    note ok "caseB: absent candidate stops bisect, names nothing"
+    return 0
+}
+
+# ------------------------------------------------------------------ case C ----
+# A check that exits 2 tonight with no last-good commit: not measured, no
+# landing named (unchanged).
+caseC() {
+    local d; d="$(fresh_state_dir caseC)" || return 1
+    printf '2\ttools/check_two.sh\n' > "$d/state.txt"
+    run_bisect "$d" "$REPO4" "${GLOBAL_STUB_LINE%%	*}" "${GLOBAL_STUB_LINE##*	}"
+    local rc=$?
+    local rep="$d/nightly-bisect/$(date +%Y-%m-%d).md"
+    [ "$rc" -eq 0 ] || { note FAIL "caseC: exit $rc"; return 1; }
+    grep -qF 'Could not measure tonight; not bisected.' "$rep" \
+        || { note FAIL "caseC: not 'Could not measure tonight'"; return 1; }
+    grep -qF 'Named landing' "$rep" && { note FAIL "caseC: named a landing"; return 1; }
+    note ok "caseC: exit-2 check without last good names nothing"
+    return 0
+}
+
+# ------------------------------------------------------------------ case D ----
+# A check that failed non-2 tonight (state.txt = oneword) reaches a candidate
+# whose own exit is 2 (twoword): still stops, names nothing (unchanged).
+caseD() {
+    local d; d="$(fresh_state_dir caseD)" || return 1
+    printf '1\ttools/check_two.sh\n' > "$d/state.txt"
+    printf 'tools/check_two.sh\t%s\t%s\n' "$G4" "$(date +%Y-%m-%d)" > "$d/nightly-last-good.tsv"
+    run_bisect "$d" "$REPO4" "${GLOBAL_STUB_LINE%%	*}" "${GLOBAL_STUB_LINE##*	}"
+    local rc=$?
+    local rep="$d/nightly-bisect/$(date +%Y-%m-%d).md"
+    [ "$rc" -eq 0 ] || { note FAIL "caseD: exit $rc"; return 1; }
+    grep -qF 'not measured' "$rep" || { note FAIL "caseD: not 'not measured'"; return 1; }
+    grep -qF 'Named landing' "$rep" && { note FAIL "caseD: named a landing"; return 1; }
+    note ok "caseD: non-2 check hitting a 2 candidate names nothing"
+    return 0
+}
+
 # ------------------------------------------------------------------- drive ----
 run_case() {
     local name="$1" fn="$2"
@@ -555,6 +692,10 @@ run_case case9 case9
 run_case case10 case10
 run_case case11 case11
 run_case case12 case12
+run_case caseA caseA
+run_case caseB caseB
+run_case caseC caseC
+run_case caseD caseD
 
 echo "check_nightly_bisect: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ] || exit 1

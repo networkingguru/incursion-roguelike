@@ -27,9 +27,10 @@
 #      the half the content check cannot give by itself: proof that the WRITE
 #      never crosses the line, not just that nothing looked wrong afterward.
 #
-# 1 alone is already a fail/pass signal; 2 is skipped (not required) when
-# ./incursion-ubsan is not built, so an ordinary run of this check costs one
-# build.
+# 1 alone is already a fail/pass signal; 2 builds ./incursion-ubsan itself when
+# that binary is missing or older than any file under src/ or inc/, so the
+# structural half runs without a manual build. If that build fails the check is
+# inconclusive (exit 2).
 #
 # Usage: tools/check_readline_overflow.sh   (0 pass, 1 fail, 2 inconclusive)
 set -uo pipefail
@@ -84,29 +85,42 @@ if [ "$LONGEST" -gt "$CAP" ]; then
 fi
 
 # --- 2. structure: did the write itself ever cross the bound? ---
-if [ -x ./incursion-ubsan ]; then
-    NEWER="$(find src inc -type f -newer ./incursion-ubsan -print -quit)"
-    if [ -n "$NEWER" ]; then
-        echo "INCONCLUSIVE: ./incursion-ubsan is older than $NEWER, so it would"
-        echo "              test old code. Rebuild it: EXTRA_CXXFLAGS=\"-fsanitize=undefined -g\" EXTRA_LDFLAGS=-fsanitize=undefined BACKEND=posix OUT=incursion-ubsan ./build_macos.sh"
-        FAIL=1
-    else
-        UBWORK="$(mktemp -d "${TMPDIR:-/tmp}/incursion-readline-ubsan.XXXXXX")"
-        UBSAN_OPTIONS="${UBSAN_OPTIONS:-print_stacktrace=0:halt_on_error=0}" \
-        INCURSION_RUN_DIR="$UBWORK/game" \
-            INCURSION_OPTIONS="$OPTS" INCURSION_LOAD="$LOAD" \
-            INCURSION_BIN=./incursion-ubsan \
-            tools/headless.sh "$KEYS" "$SEED" > "$UBWORK/out" 2>&1
-        if grep -qE "src/Term\.cpp:[0-9]+:[0-9]+: runtime error: index [0-9]+ out of bounds for type 'char\[160\]'" "$UBWORK/out"; then
-            echo "FAIL: UndefinedBehaviorSanitizer caught TextTerm::ReadLine writing"
-            echo "      Input[] out of bounds:"
-            grep -E "index [0-9]+ out of bounds for type 'char\[160\]'" "$UBWORK/out"
-            FAIL=1
-        fi
-    fi
+# ./incursion-ubsan feeds the structural half. If it is missing, or older than
+# any file under src/ or inc/, it would test old code, so rebuild it here.
+NEED_UBAN=0
+if [ ! -x ./incursion-ubsan ]; then
+    NEED_UBAN=1
 else
-    echo "NOTE: ./incursion-ubsan not built, so the structural half did not run."
-    echo "      Build it: EXTRA_CXXFLAGS=\"-fsanitize=undefined -g\" EXTRA_LDFLAGS=-fsanitize=undefined BACKEND=posix OUT=incursion-ubsan ./build_macos.sh"
+    NEWER="$(find src inc -type f -newer ./incursion-ubsan -print -quit)"
+    [ -n "$NEWER" ] && NEED_UBAN=1
+fi
+if [ "$NEED_UBAN" -eq 1 ]; then
+    echo "NOTE: ./incursion-ubsan is missing or stale; rebuilding it before the"
+    echo "      structural half."
+    UBLOG="$ROOT/logs/readline-ubsan-build-$(date +%s).log"
+    mkdir -p "$ROOT/logs"
+    if ! EXTRA_CXXFLAGS="-fsanitize=undefined -g" EXTRA_LDFLAGS=-fsanitize=undefined \
+            BACKEND=posix OUT=incursion-ubsan ./build_macos.sh > "$UBLOG" 2>&1; then
+        echo "INCONCLUSIVE: rebuilding ./incursion-ubsan failed; see $UBLOG"
+        exit 2
+    fi
+fi
+if [ ! -x ./incursion-ubsan ]; then
+    echo "INCONCLUSIVE: ./incursion-ubsan is still not built after the rebuild;"
+    echo "              see $UBLOG"
+    exit 2
+fi
+UBWORK="$(mktemp -d "${TMPDIR:-/tmp}/incursion-readline-ubsan.XXXXXX")"
+UBSAN_OPTIONS="${UBSAN_OPTIONS:-print_stacktrace=0:halt_on_error=0}" \
+INCURSION_RUN_DIR="$UBWORK/game" \
+    INCURSION_OPTIONS="$OPTS" INCURSION_LOAD="$LOAD" \
+    INCURSION_BIN=./incursion-ubsan \
+    tools/headless.sh "$KEYS" "$SEED" > "$UBWORK/out" 2>&1
+if grep -qE "src/Term\.cpp:[0-9]+:[0-9]+: runtime error: index [0-9]+ out of bounds for type 'char\[160\]'" "$UBWORK/out"; then
+    echo "FAIL: UndefinedBehaviorSanitizer caught TextTerm::ReadLine writing"
+    echo "      Input[] out of bounds:"
+    grep -E "index [0-9]+ out of bounds for type 'char\[160\]'" "$UBWORK/out"
+    FAIL=1
 fi
 
 if [ "$FAIL" -ne 0 ]; then

@@ -1,0 +1,41 @@
+# inc-d9gk: Wood Elf Druid, seed 7, options-2026-08-22.dat.
+# Expertise makes a held weapon's parry value count toward Defense Class.
+# Item Acquisition supplies a plain iron long sword (a Wood Elf is proficient
+# with it, so its parry modifier of 3 is not cut by the non-proficiency
+# penalty); starting gear is nonmetal.
+a n y
+@choose "Elf"
+@choose "Wood Elf"
+@choose "Druid"
+a e
+@choose "Expertise"
+@while "Choose a feat" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+a
+@while "Choose a feat" a
+a a a a
+@until "Entry Chamber" ESC
+w y
+@choose "Item Acquisition"
+RIGHT*9
+@until "long sword" DOWN
+ENTER
+e SPACE
+b SPACE
+d
+# Quarterstaff does not fit the pack: explicitly drop it.
+f SPACE d
+e x
+@expect "It is metallic."
+@dump:sword-description
+ESC
+@expect "L. Shoulder  :long sword"
+@expect "R. Shoulder  :Empty"
+@expect "Weapon Hand  :elven darkwood short bow"
+@dump:fixture-gear
+ESC
+ESC b
+SPACE
+@dump:saved
+@quit

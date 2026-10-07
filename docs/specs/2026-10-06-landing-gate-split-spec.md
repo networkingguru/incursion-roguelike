@@ -169,8 +169,14 @@ resolve, the check is reported "not measured" and nothing is named. The
 harness makes T the tip of master today, but this script does not trust that.
 
 A check id that has not appeared in tonight's state file for 30 nights is
-dropped from `nightly-last-good.tsv` (a renamed or deleted check). A check that exits 2 tonight is
-not bisected; the report names it as not measured.
+dropped from `nightly-last-good.tsv` (a renamed or deleted check).
+
+Amendment inc-p83y (2026-10-07). A check that exits 2 tonight and has a
+last-good commit G IS bisected. Seed drift usually turns a check from 0 to 2,
+because the pinned scenario stops happening. For such a check the step reads
+the check's own exit 0 as pass and any other exit of the check, 2 included, as
+fail. A check that exits 2 tonight with no last-good commit is still reported
+not measured.
 
 ### 5.4 One bisect step
 
@@ -187,6 +193,14 @@ whatever the result. The temporary directory is under `$TMPDIR`.
 
 A step that reads 2 stops the bisect for C. The report gives the narrowed
 range and says "not measured", and names no landing.
+
+Amendment inc-p83y. The step keeps two results apart: ABSENT (C's file does
+not exist at X, or C's build fails at X) and the check's own exit 2. ABSENT
+always stops the bisect as above. The check's own exit 2 stops it only when C
+exited non-0 and non-2 tonight; when C exits 2 tonight (the 0-to-2 case of
+5.3), the check's own exit 2 reads as fail. The flaky confirmation below runs
+unchanged for both cases, so an environmental 2 that does not repeat at L
+names nothing.
 
 Test the candidates by halving. The first candidate where C fails, after a
 candidate where it passes (or after G), is the guilty landing L.

@@ -10,8 +10,8 @@
 # switch INCURSION_MULTIPLY_NOROOM makes PlaceNear refuse the copy Multiply is
 # placing, so the state is reached on demand and the switch line is countable.
 #
-# Pinned seeds 11 and 23, tools/gates/Options.Dat, tools/keys/dive.keys: each
-# produced refused copies (4 and 5). Raise the build first:
+# Pinned seeds 6 and 10, tools/gates/Options.Dat, tools/keys/dive.keys: each
+# produced refused copies (4 and 2). Raise the build first:
 #   BACKEND=posix ./build_macos.sh
 #
 # Exit: 0 PASS (guard held, no Map.h:275 assert); 1 FAIL (the assert fired);
@@ -25,7 +25,10 @@ cd "$ROOT" || exit 2
     exit 2
 }
 
-SEEDS="11 23"
+# Re-pinned 2026-10-07 (bd inc-pl4b, seed drift): on the old seeds 11 and 23 the
+# level-1 Barbarian died near key 369 of dive.keys after commits 3a2d0ab2 and
+# bf526e50 moved the random draws, so no copy was ever refused.
+SEEDS="6 10"
 RUNDIR="$ROOT/logs/multiply-noroom"
 mkdir -p "$RUNDIR"
 HITS=0

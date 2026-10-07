@@ -1701,6 +1701,60 @@ void Monster::Initialize(bool in_play)
 
 
 
+/* FAILED-ROUTE MEMORY. inc-gst2.
+   Invariant: within FAILED_ROUTE_WINDOW_ROUNDS of a failed ShortestPath to a
+   square on this map, a monster does not search that same square again; it
+   returns CENTER immediately. Successes are never memoed. The table is
+   file-static (no saved class gains a member), keyed by the monster's and the
+   map's stable handles plus the target square, and is bounded: an entry
+   expires after the window and the fixed table overwrites its oldest slot on
+   collision, so it cannot grow without bound. The window is short enough that
+   a recycled handle cannot inherit a live entry that matters. */
+#define FAILED_ROUTE_WINDOW_ROUNDS 5
+#define FAILED_ROUTE_WINDOW_TICKS  (FAILED_ROUTE_WINDOW_ROUNDS * 60)
+#define FAILED_ROUTE_SLOTS         256
+
+struct FailedRoute { hObj mon, map; int16 tx, ty; uint32 expiry; };
+static FailedRoute FailedRoutes[FAILED_ROUTE_SLOTS];
+
+static unsigned FailedRouteHash(hObj mon, hObj map, int16 tx, int16 ty)
+  {
+    unsigned h = (unsigned)mon * 2654435761u;
+    h ^= (unsigned)map * 2246822519u;
+    h ^= (unsigned)(uint16)tx * 3266489917u;
+    h ^= (unsigned)(uint16)ty * 668265263u;
+    return h % FAILED_ROUTE_SLOTS;
+  }
+
+static bool FailedRouteRecent(hObj mon, hObj map, int16 tx, int16 ty, uint32 now)
+  {
+    unsigned i, s = FailedRouteHash(mon, map, tx, ty);
+    for (i = 0; i < FAILED_ROUTE_SLOTS; i++)
+      {
+        FailedRoute &e = FailedRoutes[(s + i) % FAILED_ROUTE_SLOTS];
+        if (!e.mon) return false;
+        if (e.mon == mon && e.map == map && e.tx == tx && e.ty == ty)
+          return e.expiry > now;
+      }
+    return false;
+  }
+
+static void FailedRouteRecord(hObj mon, hObj map, int16 tx, int16 ty, uint32 now)
+  {
+    unsigned i, s = FailedRouteHash(mon, map, tx, ty);
+    uint32 expire = now + FAILED_ROUTE_WINDOW_TICKS;
+    for (i = 0; i < FAILED_ROUTE_SLOTS; i++)
+      {
+        FailedRoute &e = FailedRoutes[(s + i) % FAILED_ROUTE_SLOTS];
+        if (!e.mon || !(e.expiry > now)
+            || (e.mon == mon && e.map == map && e.tx == tx && e.ty == ty))
+          {
+            e.mon = mon; e.map = map; e.tx = tx; e.ty = ty; e.expiry = expire;
+            return;
+          }
+      }
+  }
+
 Dir Monster::SmartDirTo(int16 tx, int16 ty, bool is_pet)
   {
     static uint16 thePath[MAX_PATH_LENGTH];
@@ -1710,10 +1764,14 @@ Dir Monster::SmartDirTo(int16 tx, int16 ty, bool is_pet)
         (theGame->Opt(OPT_MON_DJIKSTRA) == 2 && is_pet)) {
       if (m->LineOfFire(x,y,tx,ty,this))
         return DirTo(tx,ty);
+      if (FailedRouteRecent(myHandle,m->myHandle,tx,ty,theGame->Turn))
+        return CENTER;
       bool blocked; int16 dx, dy;
       blocked = !m->ShortestPath((uint8)x,(uint8)y,(uint8)tx,(uint8)ty,this,0,thePath);
-      if (blocked)
+      if (blocked) {
+        FailedRouteRecord(myHandle,m->myHandle,tx,ty,theGame->Turn);
         return CENTER;
+        }
       dx = thePath[1] % 256;
       dy = thePath[1] / 256;
       return DirTo(dx,dy);
