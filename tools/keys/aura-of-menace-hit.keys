@@ -1,0 +1,117 @@
+# CASE B variant: melee the owner. Put a Chaotic Evil orc barbarian five squares west of a hostile HOUND archon
+# (a lantern archon has weapon immunity, so a mundane blow "fails to penetrate"),
+# then walk him into the archon's Aura of Menace (radius 2) and dump what the
+# game says (bd inc-bp44). Read the result with tools/check_aura_of_menace.sh.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/aura-of-menace.keys <seed>
+#
+# THE STAGING. Wizard mode (src/Player.cpp KY_CMD_WIZMODE) offers "Monster
+# Summoning" (src/Debug.cpp case 6). The summoned archon is placed five squares
+# east. Freeze Monsters (wizard switch row 10) holds it still, so the walk below
+# ends two squares from it every time. Cheat Death (row 0) and Infinite Mana
+# (row 7) are set in the same visit, as tools/keys/blind-fight-miss.keys does.
+#
+# WHY CHAOTIC EVIL. The archon is lawful good and only an evil visitor is hostile
+# to it (src/Target.cpp HostilitySmite); a neutral character is "weak neutrality".
+# The character is a barbarian because a rogue's Bluff can hide his alignment
+# (Creature::isPMType).
+#
+# THE WALK. Three RIGHT steps leave the barbarian two squares from the archon.
+# An orc is light-averse and the archon sheds light, so the game asks "Confirm
+# enter the brightly-lit area?"; @while answers it only while it is on screen.
+
+@include aura-of-menace-chargen.keys
+
+SPACE   # dismiss the arrival-room description
+
+# Wizard switches: Cheat Death (row 0), Infinite Mana (row 7), Freeze Monsters
+# (row 10).
+w
+y
+@choose "Wizard Mode Switches"
+SPACE
+DOWN*7
+SPACE
+DOWN*3
+SPACE
+ESC
+
+# A hostile lantern archon, five squares east.
+w
+@choose "Monster Summoning"
+@choose "Celestials"
+@choose "hound archon"
+RIGHT*5 ENTER
+@until "HP:" ESC
+@dump:summoned
+
+# Walk to two squares from the archon, then read the Stati list (before).
+RIGHT
+@while "brightly-lit" y
+RIGHT
+@while "brightly-lit" y
+RIGHT
+@while "brightly-lit" y
+@dump:walked
+w
+@choose "Examine Nearby Things"
+DOWN*40
+@dump:stati-before
+ESC
+
+# Step adjacent, then strike. Each strike is followed by a Stati dump.
+RIGHT
+@while "brightly-lit" y
+RIGHT
+@while "brightly-lit" y
+@dump:hit1
+w
+@choose "Examine Nearby Things"
+DOWN*40
+@dump:stati-hit1
+ESC
+RIGHT
+@while "brightly-lit" y
+@dump:hit2
+w
+@choose "Examine Nearby Things"
+DOWN*40
+@dump:stati-hit2
+ESC
+RIGHT
+@while "brightly-lit" y
+@dump:hit3
+w
+@choose "Examine Nearby Things"
+DOWN*40
+@dump:stati-hit3
+ESC
+RIGHT
+@while "brightly-lit" y
+@dump:hit4
+w
+@choose "Examine Nearby Things"
+DOWN*40
+@dump:stati-hit4
+ESC
+RIGHT
+@while "brightly-lit" y
+@dump:hit5
+w
+@choose "Examine Nearby Things"
+DOWN*40
+@dump:stati-hit5
+ESC
+RIGHT
+@while "brightly-lit" y
+@dump:hit6
+w
+@choose "Examine Nearby Things"
+DOWN*40
+@dump:stati-hit6
+ESC
+v
+@dump:log
+ESC
+@quit

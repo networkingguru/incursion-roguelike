@@ -6335,6 +6335,25 @@ EvReturn Creature::Hit(EventInfo &e) /* this == EVictim!! */
       MonMemNote(e.EPVictim, e.EActor->tmID, MONMEM_FOUGHT);
   }
 
+  /* A blow landed, so if the attacker was suffering an Aura of Menace whose
+     owner is the victim, hitting the owner shakes it off: the penalties end
+     and the attacker is immune to that owner's aura for 24 hours (the
+     EFF_FLAG1 immunity marker that Creature::FieldOn grants). inc-bp44.
+
+     Here `this` is the ATTACKER, not the victim: src/Creature.cpp's EV_HIT
+     dispatch (case EV_HIT) calls Hit(e) only when e.EActor == this. So the
+     penalised creature is `this`, and the aura's owner (the victim) is
+     e.EVictim. */
+  if (e.EVictim && e.EVictim != this) {
+    rID mID = FIND("Aura of Menace");
+    if (mID && this->HasEffStati(ADJUST, mID, -1, e.EVictim)) {
+      this->RemoveEffStati(mID, EV_REMOVED, 0, e.EVictim);
+      this->GainTempStati(EFF_FLAG1,e.EVictim,MENACE_DURATION,SS_MISC,0,0,mID,0);
+      if (this->isPlayer())
+        IPrint("You shake off the aura of menace.");
+    }
+  }
+
     /* Watch out for Traps in EItem! */
     if (e.EItem && !e.EItem->isItem())
       e.EItem = NULL;
