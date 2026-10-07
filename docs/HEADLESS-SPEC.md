@@ -51,11 +51,11 @@ Both existing backends store the screen in their graphics library's own buffer
 `posixTerm` stores `Glyph scr[48][80]` directly.
 
 A `Glyph` is a `uint32`: 12 bits of glyph id, 4 of foreground, 4 of background
-(`inc/Defines.h:4264`). Storing it verbatim makes `AGetChar` exact. The libtcod
+(`inc/Defines.h:4299`). Storing it verbatim makes `AGetChar` exact. The libtcod
 backend cannot do that — it stores the character its glyph table produced, so
 `GetGlyph` → `PutGlyph` round trips lose the glyph id. The callers
-(`src/Term.cpp:2252`, `src/Magic.cpp:1416`, `src/Skills.cpp:1966`,
-`src/Skills.cpp:2885`) mask with `GLYPH_ID_MASK` and put the result back, so
+(`src/Term.cpp:2268`, `src/Magic.cpp:1630`, `src/Skills.cpp:2106`,
+`src/Skills.cpp:3029`) mask with `GLYPH_ID_MASK` and put the result back, so
 exactness is what they want.
 
 This also means the rendering target is not the screen model. The same array
@@ -85,7 +85,7 @@ comment. Tokens:
 | `@dump` `@dump:label` | write the current screen to `logs/screens/` |
 | `@quit` | leave the game at the next key read |
 
-SHIFT matters and is not cosmetic. `StandardKeySet` (`src/Tables.cpp:4686`)
+SHIFT matters and is not cosmetic. `StandardKeySet` (`src/Tables.cpp:5307`)
 matches `toupper(ch)` against `raw_key` and then compares the modifier flags
 exactly, so `{ KY_CMD_ALL_ALLIES, 'A', 0 }` is reached by lowercase `a` and
 *not* by `A`. A script that ignored SHIFT would silently dispatch the wrong
@@ -181,7 +181,7 @@ the two tables above as the starting point, not as the current list.
   *name*; `@expect "text"`, which stops the run unless the screen shows
   *text*; `@while "text" KEY` and `@until "text" KEY`; and `@cursorto "name"
   KEY` with its `@cursorto:mark` variant. All are parsed in
-  `src/Wposix.cpp:1245-1391`.
+  `src/Wposix.cpp:1306-1452`.
 - The command line also takes `-timeout SECONDS`, the watchdog for an
   unattended run, and `-dump SAVEFILE`, which prints a save file and exits
   without starting the game.
