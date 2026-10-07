@@ -41,21 +41,21 @@ backend can be linked at a time, because each defines `main()`, `Error()` and
 BACKEND=posix ./build_macos.sh   # -> ./incursion-headless  the POSIX/ncurses build
 ```
 
-`build_macos.sh:84` defaults `BACKEND` to `libtcod`; `:87` maps that to
-`OUT=incursion` and `:88` maps `posix` to `OUT=incursion-headless`. Either line
+`build_macos.sh:121` defaults `BACKEND` to `libtcod`; `:124` maps that to
+`OUT=incursion` and `:125` maps `posix` to `OUT=incursion-headless`. Either line
 also compiles `mod/Incursion.Mod`, because both builds carry the resource
 compiler by default. An ordinary build recompiles it every time; a build with
-`EXTRA_CXXFLAGS` set compiles it only when the file is absent (`build_macos.sh:375-385`).
+`EXTRA_CXXFLAGS` set compiles it only when the file is absent (`build_macos.sh:393-403`).
 
 The `posix` build compiles `src/Wposix.cpp` and links `-lz -lncurses`
-(`build_macos.sh:243-252`). ncurses ships with macOS and with every Linux
+(`build_macos.sh:260-269`). ncurses ships with macOS and with every Linux
 distribution, so it adds nothing to install, and it draws only to a real
 terminal — a headless run never calls into it
-(`build_macos.sh:249-251`). The `libtcod` build links SDL2 and OpenGL instead
-(`build_macos.sh:254-259`), and needs `sdl2` and `pkg-config` from Homebrew.
+(`build_macos.sh:266-268`). The `libtcod` build links SDL2 and OpenGL instead
+(`build_macos.sh:271-276`), and needs `sdl2` and `pkg-config` from Homebrew.
 
-**The harness needs the second line.** `headless.sh:82` defaults its binary to
-`./incursion-headless`, and `:85-88` refuses to run without it, printing that
+**The harness needs the second line.** `headless.sh:83` defaults its binary to
+`./incursion-headless`, and `:86-89` refuses to run without it, printing that
 exact build command. `soak.sh:33-35`, `check_race_feats.sh:23-26` and
 `check_load_corrupt.sh:62-65` all say the same.
 
@@ -71,7 +71,7 @@ Homebrew (`build_macos.sh:4-5`). The POSIX build needs neither SDL nor libtcod
 `tools/keys/` inside its own directory under `logs/runs/`, with its own `save/`
 and `logs/`, and with `mod/` and `lib/` symlinked in (`headless.sh:13-16`). It
 exists so that an unattended run cannot destroy a real character. Use it and
-never the binary directly (`headless.sh:55-58`).
+never the binary directly (`headless.sh:56-59`).
 
 The harness takes two environment variables as inputs beside the key script and
 the seed. `INCURSION_OPTIONS` is mandatory and names the settings file (Trap 2
@@ -121,11 +121,11 @@ them (`src/Debug.cpp`), so adding an option renumbers everything after it —
 dump the menu and read the letter rather than counting. And `w`, not `W`: an
 uppercase token sets SHIFT, and both key tables bind `KY_CMD_WIZMODE` with
 modifier flags of 0, so `W` is a different keystroke that reaches nothing
-(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:4754`/`4874`).
+(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:5375`/`4874`).
 
 `[M] Create Altar` is there for the harness. A sacrifice needs the player to
 be standing on an altar, and the only other source of one is `MakeLev`'s
-random assignment (`src/MakeLev.cpp:2107-2123`), which picks from seven gods
+random assignment (`src/MakeLev.cpp:2112-2128`), which picks from seven gods
 and cannot be asked for a particular one. The command prompts for a god name
 and builds the feature exactly as `MakeLev.cpp:1143-1145` does.
 `check_sacrifice.sh` is the first thing to use it.
@@ -165,11 +165,11 @@ self-explanatory.
 
 **`ended: NO GAMEPLAY`** — the run never entered a map, so it measured nothing.
 `Game::Play` writes `logs/session.log` on the first completed turn, so that file
-exists if and only if the session reached gameplay (`headless.sh:230-231`). When
-it is missing and the run would otherwise have exited 0 or 3, `headless.sh:232-234`
+exists if and only if the session reached gameplay (`headless.sh:231-232`). When
+it is missing and the run would otherwise have exited 0 or 3, `headless.sh:233-235`
 rewrites the exit code to 5. Do not count such a run as a pass. Screens are not
 a substitute test: `@dump` lines fire even in a session that never entered a map,
-and one vacuous run left 11 of them (`headless.sh:224-226`).
+and one vacuous run left 11 of them (`headless.sh:225-227`).
 
 **`ended: ASSERT`** — the engine logged an `ASSERT failed` whose condition is
 not listed in `tools/known_asserts.txt`, and the run would otherwise have
@@ -182,29 +182,29 @@ assert, and the check that drove the session read only the screen dump.
 
 **`ended: WATCHDOG`** — exit 4. The game stopped asking for keystrokes, which is
 the signature of a hang (`headless.sh:38-39`). `SIGALRM` fires in
-`src/Wposix.cpp:450-458`, which writes `incursion: watchdog timeout, no key read
+`src/Wposix.cpp:480-488`, which writes `incursion: watchdog timeout, no key read
 in time` and exits with `EXIT_OUT_OF_TIME`, defined as 4 at `src/Wposix.cpp:85`.
 The alarm is 300 seconds (`src/Wposix.cpp:80`) and it measures the GAP between
 keystrokes, not the length of the run, so a long honest session is safe
-(`src/Wposix.cpp:1595-1599`). It is never armed when a person is at the keyboard
-(`src/Wposix.cpp:580-584`).
+(`src/Wposix.cpp:1656-1660`). It is never armed when a person is at the keyboard
+(`src/Wposix.cpp:633-637`).
 
 **`death: STUCK`** — the run ended with `Die? [yn]` still on the last screen,
-unanswered (`headless.sh:321-324`). The pinned settings run with `OPT_NODEATH`
+unanswered (`headless.sh:322-325`). The pinned settings run with `OPT_NODEATH`
 on, so a killing blow asks that question instead of ending the game, and a key
 script answers it blind with whatever token comes next
-(`headless.sh:290-293`). If no `y` or `n` remains in the script, every later
+(`headless.sh:291-294`). If no `y` or `n` remains in the script, every later
 keystroke is swallowed and the run still reports `ended: cleanly`
-(`headless.sh:303-306`). A confirmed death prints `death: N confirmed` instead
+(`headless.sh:304-307`). A confirmed death prints `death: N confirmed` instead
 and is logged to `logs/death.log`. Neither gets its own exit code, on purpose:
 whether a death should fail a run is a product decision the script does not make
-(`headless.sh:44-49`).
+(`headless.sh:44-50`).
 
 **`stuck-prompt: threat-disengage`** — the run ended with `You are in a
 threatened area. Abort, Flee or Disengage?` still on screen
-(`headless.sh:344-347`). That prompt has no option gate at all and fires
+(`headless.sh:356-359`). That prompt has no option gate at all and fires
 whenever a player-controlled creature moves away from a hostile creature that
-perceives it (`src/Move.cpp:941`, quoted at `headless.sh:330-331`).
+perceives it (`src/Move.cpp:970`, quoted at `headless.sh:331-332`).
 `f7ff2d7` (2026-08-28) gave ChoicePrompt arrow+ENTER navigation, so
 `tools/keys/dive.keys` can now select `a`, `f` or `d` -- but it can also land
 on `?` and open the combat manual, which has no ESC out, so the script still
@@ -213,8 +213,8 @@ stalls there. Measured on 7 of 40 seeds (`headless.sh:339-341`).
 **`map audit: armed, no inconsistencies found`** — the audit ran and found
 nothing. `src/MapAudit.cpp:64` writes an `=== map audit armed ... ===` header
 whenever the audit is on, so the log carries a line even on a clean run. That is
-what lets `headless.sh:404-405` tell "clean" apart from "never ran". A missing
-log is reported three different ways depending on why (`headless.sh:396-403`),
+what lets `headless.sh:416-417` tell "clean" apart from "never ran". A missing
+log is reported three different ways depending on why (`headless.sh:408-415`),
 because merging them is the exact defect this code used to have.
 
 ---
@@ -223,8 +223,8 @@ because merging them is the exact defect this code used to have.
 
 **Trap 1 — every script resolves the repo root itself.** The idiom is
 `ROOT="$(cd "$(dirname "$0")/.." && pwd)"` followed by `cd "$ROOT"`
-(`headless.sh:52-53`, `soak.sh:24-25`, `gate_record.sh:17-18`,
-`check_headless.sh:38-39`, and most other scripts here). So you may call any of
+(`headless.sh:53-54`, `soak.sh:24-25`, `gate_record.sh:17-18`,
+`check_headless.sh:39-40`, and most other scripts here). So you may call any of
 them from any working directory, and the path arguments they take are relative
 to the REPO ROOT, not to where you are standing. `gate_lib.sh:43` uses `BASH_SOURCE` instead
 because it is sourced, not executed.
@@ -232,7 +232,7 @@ because it is sourced, not executed.
 **Trap 2 — every `headless.sh` run must choose its settings.** Set
 `INCURSION_OPTIONS` to one of the frozen files in `tools/fixtures/`, or to a
 purpose-built file such as `tools/gates/Options.Dat`. The harness refuses an
-unset variable or a path that is not a file (`headless.sh:105-113`). This keeps
+unset variable or a path that is not a file (`headless.sh:106-114`). This keeps
 checks independent of the repository-root `Options.Dat`, which belongs to the
 player and is rewritten every session. Settings change the game: on 2026-08-15
 the same binary, seed and key script gave different screens either side of a
@@ -245,21 +245,21 @@ answer for (`tools/keys/chargen-priest.keys:24-28`). Anything that compares one
 run against another MUST pass `INCURSION_OPTIONS`. The gate pins
 `tools/gates/Options.Dat` and records its checksum in the baseline
 (`gate_lib.sh:43-44`, `gate_record.sh:28-34`). A run that does not choose a
-file, or names one it cannot have, is an error (`headless.sh:105-113`).
+file, or names one it cannot have, is an error (`headless.sh:106-114`).
 
 **Trap 3 — the map audit is ON by default and it is expensive.**
-`headless.sh:169` sets `INCURSION_MAP_AUDIT` to 1 unless you override it. A
+`headless.sh:170` sets `INCURSION_MAP_AUDIT` to 1 unless you override it. A
 sample of a headless run on 2026-08-15 put 75 percent of the run inside
 `AuditMap`, so a session with the audit on measures the audit and not the game
-(`headless.sh:165-168`). **Anything timing the engine MUST set
+(`headless.sh:166-169`). **Anything timing the engine MUST set
 `INCURSION_MAP_AUDIT=0`. Anything hunting defects MUST leave it on.**
 
 **Trap 4 — a key script longer than the budget stops early and exits 3, and
 that looks like a short run rather than a failure.** The budget is
 `DEFAULT_MAX_KEYS 20000` (`src/Wposix.cpp:79`, applied at `:150`). It counts keys
-READ, one per `GetChar` call (`src/Wposix.cpp:1592`), and when it runs out
+READ, one per `GetChar` call (`src/Wposix.cpp:1653`), and when it runs out
 the game dumps a screen named `maxkeys` and exits with `EXIT_OUT_OF_KEYS`, which
-is 3. Raise it with `INCURSION_MAX_KEYS` (`src/Wposix.cpp:574-575`).
+is 3. Raise it with `INCURSION_MAX_KEYS` (`src/Wposix.cpp:627-628`).
 
 **Correction, 2026-08-17: `marathon.keys` does NOT need a raised cap, and the
 usage line in its own header was wrong.** That header told everyone to run
@@ -284,7 +284,7 @@ factor of about 2.5, and both are now the measured numbers.
 
 **Trap 5 — two runs started in the same second used to SHARE a run directory.
 Fixed; the history is here because the number it corrupted was published.**
-`headless.sh:97` now names the default run directory
+`headless.sh:98` now names the default run directory
 `logs/runs/$(date +%Y%m%d-%H%M%S)-<pid>-<script>`. The stamp alone resolves to
 the SECOND, so before the process id joined it, a loop that started several
 sessions inside one second gave them all the same directory, and any probe that
@@ -302,8 +302,8 @@ loop, then count the run directories and confirm the count equals the number of
 runs before you believe any per-seed number.** A name you chose says what the
 run was for, which a pid does not, and the count is the only thing that proves
 the runs stayed apart. `soak.sh:59` does this, and so does every check that
-drives more than one session (`check_headless.sh:258`, `:282`, `:292`, `:305`,
-`:327`; `check_layout.sh:89`; `check_dump_save.sh:56`;
+drives more than one session (`check_headless.sh:293`, `:317`, `:327`, `:340`,
+`:362`; `check_layout.sh:89`; `check_dump_save.sh:97`;
 `check_load_corrupt.sh:76`). `check_race_feats.sh:29-30` does NOT — it takes the
 timestamped default and parses the `run:` line out of the harness output. That
 is now safe in a loop as well, because the default name is unique, but it still
@@ -393,7 +393,7 @@ the job, and each still explains an older log or an older commit.
 
 `run_probe.sh` was **deleted on 2026-08-18**. Its own header said "Delete this
 script once the saved-game position bug is fixed", and that bug is fixed:
-`docs/REPORTING-GATE.md:427` records `*((long*)&hm)` destroying the player's
+`docs/REPORTING-GATE.md:516` records `*((long*)&hm)` destroying the player's
 position as a closed fix, and `src/AbiCheck.cpp:11` now gates the type widths it
 depended on. It was also redundant — `play.sh` sets the same two probes and more
 (`play.sh:41-49`) and prints a report afterwards, which `run_probe.sh` did not.
@@ -461,7 +461,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_boots_providence.sh` | Do the Boots of Providence pay their Luck bonus while carried, not only while worn? | LIVE |
 | `check_bow_blessing.sh` | Does an altar blessing give the god's chosen weapon quality to BOWS and AMMUNITION, not only to `T_WEAPON` melee arms? `Character::IBlessing` used an exact `isType(T_WEAPON)` test, so Maeve's short bow and Xavias's arbalest (both `T_BOW`) and every `T_MISSILE` stack were only blessed. `INCURSION_IBLESSING_PROBE` builds a +1 item of each weapon type and calls the real `IBlessing`: arbalest/Xavias -> `WQ_QUICK_LOADING`, short bow/Maeve -> `WQ_CHAOTIC`, crossbow bolts/Maeve -> `WQ_CHAOTIC`, long sword/Asherath -> `WQ_ACCURACY` (the unchanged path). A missing, INCONCLUSIVE or unparsable case line is a FAIL, not a pass. | LIVE |
 | `check_weapon_types.sh` | Do places that test `isType(T_WEAPON)` exactly treat bows (`T_BOW`) and ammunition (`T_MISSILE`) as weapons? `INCURSION_WEAPONTYPE_PROBE` (`src/WeaponTypeProbe.cpp`) drives the real code at 11 sites with a bow, a bolt and a `T_WEAPON` control: Magic Weapon, Brand of Hatred, `getShopCost`, `PurgeAllQualities`, `Item::Damage` (energy), the hezrou's half damage, `GrantGear` (exotic proficiency), the ground-list sort, Kysul's gift (2000 pulses), Augment's menus and the sidebar's `ShowDamage` lines (key-driven, read from screen dumps). Not observed: the `Map::DaysPassed` loot weakening and the super-sneak branch (header says why). `--prove-red <site>` proves one of 15 mutations red per run (usage in the header). A missing or unparsable line is a FAIL. | LIVE |
-| `check_act_overflow.sh` | Does `Monster::Initialize` overflow the 63-slot action list? `Monster::nAct` is reset only by `ChooseAction`, but the archer, rogue-archer and ranger templates call `AddAct(ACT_EQUIP)` from `EV_INITIALIZE`, so the 64th such monster initialised in one level generation fails `ASSERT(nAct < 63)` (`inc/Creature.h:1662`). `INCURSION_ACT_OVERFLOW_PROBE` Initializes 64 archer goblins and logs `nAct`; an ASSERT line, `nAct >= 63`, or a missing probe line fails. | LIVE |
+| `check_act_overflow.sh` | Does `Monster::Initialize` overflow the 63-slot action list? `Monster::nAct` is reset only by `ChooseAction`, but the archer, rogue-archer and ranger templates call `AddAct(ACT_EQUIP)` from `EV_INITIALIZE`, so the 64th such monster initialised in one level generation fails `ASSERT(nAct < 63)` (`inc/Creature.h:1677`). `INCURSION_ACT_OVERFLOW_PROBE` Initializes 64 archer goblins and logs `nAct`; an ASSERT line, `nAct >= 63`, or a missing probe line fails. | LIVE |
 | `check_door_bolt.sh` | Does a natural-attack breath through a closed door crash? `Magic::ABallBeamBolt` targets the door, then re-throws `EV_HIT` at it for a natural attack; `Creature::Hit` treats the door as a creature (a wild virtual call, SIGBUS). `INCURSION_DOOR_BOLT_PROBE` has a water mephit breathe at the player through a door; a signal exit or a missing completion line fails. | LIVE |
 | `check_bracers_defense_page.sh` | Does the Bracers of Defense page state the two distinct rates: Defense Class equal to the magical plus and Coverage equal to twice the plus? | LIVE |
 | `check_brawl_weapon.sh` | Does a fist still borrow the sword? An elf ranger holds his bow and carries his sword on his back, where the sheet will show both the Brawl and the Melee block, and the Brawl block must name no weapon at all. | LIVE |
@@ -530,7 +530,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_earth_ring_prose.sh` | Does the Ring of Elemental Command (Earth) description name the wearer's own ring "the ring of earth" in its curse clause, rather than the "ring of air" it copied from the Air ring? | LIVE |
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the rock gnome its own refusal message names? | LIVE |
 | `check_enchant_graceful.sh` | Do seven compiled item pages advertise their own qualities, caster-level gates, spells and bonus type? | LIVE |
-| `check_entangle_escape.sh` | Can a character in heavy armour tear out of glue? A paladin in full plate and a kite shield sits at Escape Artist -11 against a DC of 14, so his ceiling of 9 is five below the floor and no roll closes it. The check requires a *Strength* check that succeeded, not merely an escape, because `src/Skills.cpp:1600` already frees him on a natural 20 while no hostile is within sixteen squares. | LIVE |
+| `check_entangle_escape.sh` | Can a character in heavy armour tear out of glue? A paladin in full plate and a kite shield sits at Escape Artist -11 against a DC of 14, so his ceiling of 9 is five below the floor and no roll closes it. The check requires a *Strength* check that succeeded, not merely an escape, because `src/Skills.cpp:1739` already frees him on a natural 20 while no hostile is within sixteen squares. | LIVE |
 | `check_entangled_acts.sh` | Does passed-save entanglement penalize without disabling? Requires an unanchored rogue, Dexterity 17 to 13 and melee to-hit +2 to +0 on the sheet, then a melee attack and a half-speed move while still entangled, measured against the same subject's own post-combat floor-move cost. | LIVE |
 | `check_epic_merge.sh` | Does `.beads/hooks/pre-commit` still refuse a bare `git merge master` committed ON an epic branch, while allowing the escape hatch, a non-epic branch and any non-master source? An epic is a base other beads land into, so an ungated merge on it breaks the next bead's landing gate. Proves all seven cases against a scratch repo. | LIVE |
 | `check_erich_speaks.sh` | Are the five `MSG_CUSTOM1` through `MSG_CUSTOM5` messages Erich's own script (`lib/religion.irh`) calls still live in his `GODSPEAK_LIST`, rather than sitting disabled inside its `#if 0` block? | LIVE |
@@ -725,7 +725,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_shield_penalty.sh` | Does a shield's armour check penalty come from the shield, or only from its size beside yours? Puts every shield in a Medium paladin's hand one at a time and reads its cost twice off the character dump -- the skill term and the movement rate -- then does the two a Small halfling can hold, whose figures must be double. | LIVE |
 | `check_shift_opcodes.sh` | Does the VM's BSHL shift left while Rect member codegen still uses BSHR for reads and BSHL for writes, and does a script-coloured field cast red rather than black light? | LIVE |
 | `check_sigpipe_status.sh` | Does any `tools/*.sh` pipe into an early-exit reader (`grep -q`/`grep -m`/`head`) whose exit status a conditional then reads, the shape whose SIGPIPE race reported real data as a miss on 2026-09-22? Ratcheted against `tools/sigpipe_status.baseline`. | LIVE |
-| `check_skc6_blast_text.sh` | Two measurements. (1) Does the Biocurrent magic touch's Damage line read exactly `Damage: 1d12+2 = <digits> Lightning`, with no garbage between the dice and ` = `? A `String` with no copy constructor shared its `Buffer`, so `src/Effects.cpp:279`'s `?:` freed `e.strDmg` and the process aborted at exit 134. (2) Does a two-victim `Magic::AGlobe` cast (Electric Loop on two summoned brown bears, `tools/keys/inc-skc6-blast-leftover.keys`) leave each victim's Damage line with exactly one Lore term, rather than the second victim inheriting the first's " +N Lore" through the reused `EventInfo`? Either measurement fails if the session aborts or exits nonzero, or if it finds no Damage line at all (bead inc-skc6). Needs the headless build. | LIVE |
+| `check_skc6_blast_text.sh` | Two measurements. (1) Does the Biocurrent magic touch's Damage line read exactly `Damage: 1d12+2 = <digits> Lightning`, with no garbage between the dice and ` = `? A `String` with no copy constructor shared its `Buffer`, so `src/Effects.cpp:293`'s `?:` freed `e.strDmg` and the process aborted at exit 134. (2) Does a two-victim `Magic::AGlobe` cast (Electric Loop on two summoned brown bears, `tools/keys/inc-skc6-blast-leftover.keys`) leave each victim's Damage line with exactly one Lore term, rather than the second victim inheriting the first's " +N Lore" through the reused `EventInfo`? Either measurement fails if the session aborts or exits nonzero, or if it finds no Damage line at all (bead inc-skc6). Needs the headless build. | LIVE |
 | `check_skill_manager_reset.sh` | Does an unrecognised key still wreck the Skill Manager? Presses END and HOME -- the left stick's two left diagonals -- in both of the screen's modes: character generation, where the ranks were wiped, and level-up, where the manager silently closed. Two sessions. | LIVE |
 | `check_sneak_invis.sh` | Does an unseen attacker get sneak attack when the victim hears it, and does a thrown or fired attack count as unseen against a Blind-Fight victim (bead inc-nkf2)? Needs the headless build. | LIVE |
 | `check_snowstrike.sh` | Does the Snowstrike blast carry `EF_CASTER_IMMUNE` and `EF_ALLIES_IMMUNE`, so the caster and her allies are immune as its description promises, rather than freezing them? | LIVE |
@@ -1010,7 +1010,7 @@ checking anything looks exactly like a check that passes.
 
 `tools/check_citations.sh <document>` also belongs in this tier, but it resolves
 citations against the git refs `upstream/master` and `origin/master`
-(`check_citations.sh:169-170`). Fetch those remotes first, or it reports failures
+(`check_citations.sh:171-172`). Fetch those remotes first, or it reports failures
 that are only missing refs. It is read-only on git.
 
 ### Tier 2 — needs a compiler but no prior build
@@ -1137,7 +1137,7 @@ number rather than a yes or no: they read the hardness off the game's own
 combat-numbers line, which `Item::Damage` prints AFTER adding the bearer's gear
 resistance to it. Those two silver a magic warhammer for the ordering
 `Item::Damage` used to have: a no-save A_DEQU sets `ignoreHardness` on a plain
-item (`src/Fight.cpp:2152`), and the bearer's grant was added before the bypass
+item (`src/Fight.cpp:3430`), and the bearer's grant was added before the bypass
 emptied it, so a resistance was unmeasurable on ordinary gear. inc-kapn
 inverted that -- the bypass now empties only what `Hardness()` returned -- and
 `check_gear_bypass_survives.sh` measures a resistance on a plain iron maul. The
@@ -1165,7 +1165,7 @@ stops one row too early.
 `check_load_corrupt.sh:47-58` prefers `./incursion-ubsan` when it exists and
 falls back to `./incursion-headless`. It refuses an `./incursion-ubsan` when a
 file in `src/` or `inc/` is newer, because that binary would test old code.
-Build the sanitizer variant with the recipe at `build_macos.sh:142-143` if you
+Build the sanitizer variant with the recipe at `build_macos.sh:179-180` if you
 want the stronger run.
 
 ### Tier 4 — needs an artefact you built on purpose
@@ -1283,10 +1283,10 @@ or notes the duplicate the Jev judge finds. Its records and report live beside
 **`tools/check_distant_light_vision.sh` and `tools/check_nonnormal_invariant.sh`
 are A/B checks that build both sides themselves.** Each one runs
 `git worktree add --detach` for the before ref and the after ref
-(`check_distant_light_vision.sh:66`, `check_nonnormal_invariant.sh:55`), builds
+(`check_distant_light_vision.sh:102`, `check_nonnormal_invariant.sh:55`), builds
 `BACKEND=posix ./build_macos.sh` inside each, and on exit runs
 `git worktree remove --force` and `git worktree prune`
-(`check_distant_light_vision.sh:48-50`, `check_nonnormal_invariant.sh:42-45`).
+(`check_distant_light_vision.sh:48-59`, `check_nonnormal_invariant.sh:42-45`).
 So they cost two full builds, not one run, and they touch this repository's
 worktree list. They belong to Tier 3 by what they measure and to this section
 by what they cost. `check_nonnormal_invariant.sh` sweeps seeds 1-10, so budget
