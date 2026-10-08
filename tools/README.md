@@ -600,6 +600,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_illusion_flags.sh` | Does an illusion's declared IL_IMPROVED flag decide who pierces it, rather than the parity of its save DC? | LIVE |
 | `check_inh_wasteful.sh` | a tome read over the inherent cap is wasted | LIVE |
 | `check_inh_wasteful_play.sh` | Played, not probed: does an orc barbarian who fills Constitution to the cap with a tome, goes above it the only live way (a shambling mound's electricity handler, reached by polymorphing and taking a lightning bite), and reads a second tome from the pack, see "You feel a profound sense of wastefulness." with his CON unchanged -- rather than the false "You feel hardier." the unfixed `==` test printed? | LIVE |
+| `check_intensive_study_play.sh` | Does taking Intensive Study's caster-level study through the ordinary level-up feat menu raise the character sheet's Spell Slots line to the spellcasting chart at the new effective caster level, read off the screen after a real `Player::AdvanceLevel` level-up rather than a probe? | LIVE |
 | `check_item_flag_protection.sh` | Do Bracers of Neutralization keep an iron maul at 262/262 HP against acid-blob retaliation through EF_PROTECTS_ITEMS? | LIVE |
 | `check_item_hardness.sh` | Does Item apply hardness modifiers once after preserving immunity, with QItem delegating? | LIVE |
 | `check_item_owner_resist.sh` | Does item damage use its own defences without owner resistance or immunity? | LIVE |
@@ -1103,6 +1104,7 @@ tools/check_light_averse.sh         # light aversion bites in a dynamically lit 
 tools/check_shift_opcodes.sh        # a script `<<` shifts left, so a glowing creature's light keeps its colour
 tools/check_inh_wasteful.sh         # a tome read over the inherent cap is wasted
 tools/check_inh_wasteful_play.sh    # played, not probed: the same over-cap tome read, in mound form
+tools/check_intensive_study_play.sh # Intensive Study's caster-level study raises Spell Slots to the chart, read off the sheet after a real level-up
 tools/check_holy_undead.sh          # a Holy weapon smites undead that are not evil
 tools/check_dequ_magic_hardness.sh  # a no-save A_DEQU bypasses a plain weapon's hardness, not a magical one's
 tools/check_dequ_reach.sh           # a blow struck at reach now takes the equipment retaliation

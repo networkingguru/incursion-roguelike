@@ -1,0 +1,55 @@
+# Load a frozen caster, level him up twice through the ordinary sheet G
+# command (Player::AdvanceLevel), take Intensive Study on the second level-up
+# (the feat auto-picks its only eligible study, "Improve Caster Level"), and
+# photograph the sheet's Spell Slots line before and after. bd inc-ngku: the
+# study raising AbilityLevel(CA_SPELLCASTING) must raise Spell Slots to the
+# spellcasting chart at the new effective caster level, not leave it at the
+# raw class level's slots.
+#
+# THE CHARACTER. tools/fixtures/chars/prestige-geomancy-seed1-opt0822.sav is
+# Ferris, a single-class Bard 7 whose Spellcasting ability sits at 3rd
+# (sheet line "Spellcasting (3rd)"), well behind the 4/5-of-character-level
+# cap Character::getEligableStudies() (src/Create.cpp:3877) checks, so
+# Intensive Study's caster-level study (STUDY_CASTING) is eligible. The
+# fixture's settings (options-2026-08-22-freeadv.dat, OPT_FREE_ADV forced to
+# 1) leave XP-gated advancement off, so the sheet's G command works without
+# any wizard-mode setup -- and the load copies the .sav into the run
+# sandbox, so the fixture itself is untouched. The character sheet header
+# shows he is already in Wizard Mode from how the fixture was made; that
+# only changes which key opens the debug menu (unused here), not gameplay.
+#
+# THE TWO LEVEL-UPS. Player::AdvanceLevel (src/Create.cpp:2672) grants a
+# feat only when the new TotalLevel() is 1 or a multiple of 3
+# (src/Create.cpp:2834). Bard 7 -> 8 is not (8%3), so the first G only
+# raises the level and offers the attribute-bonus menu because 8%4==0
+# (src/Create.cpp:2747) -- @until presses 'a' (Strength) until the sheet's
+# Class line shows Bard 8, soaking up that menu and the "You feel stronger"
+# message box in one step, the same pattern tools/keys/levelup-caster-sheet.keys
+# uses. Bard 8 -> 9 IS a multiple of 3, so the second G calls
+# GainFeat(FT_FULL_LIST) and Intensive Study is on that MENU_SORTED list,
+# so @choose finds it by name. FT_INTENSIVE_STUDY's own case
+# (src/Create.cpp:3143) finds only one eligible study at this point
+# (getEligableStudies() has one bit set) and takes it without a further
+# "Choose an area to improve:" menu -- confirmed by dumping the raw screen
+# right after choosing the feat before adding this line.
+
+@dump:arrival
+
+s               # one real turn (Search, finds nothing), so this counts as a
+                # session
+@dump:played
+
+d               # character sheet
+@expect "Class  Bard 7"
+@dump:sheet-before
+
+G               # Bard 7 -> 8: no feat (8%3 != 0); attribute bonus offered
+@until "Class  Bard 8" a
+@dump:after-level8
+
+G               # Bard 8 -> 9: feat granted (9%3==0)
+@choose "Intensive Study"
+@dump:sheet-after
+
+ESC             # leave the sheet, back to play mode
+@quit

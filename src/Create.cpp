@@ -3921,7 +3921,11 @@ ChooseExotic:
    feat text (lib/help.irh, src/FeatTab.cpp) promise slots at the higher level.
    Upstream's, not the port's: plain table indexing and integer arithmetic with
    no typedef, pointer-width or compiler dependence, so a Win32 build misbehaves
-   identically. Observed, inc-ngku, not sent. tools/check_study_slots.sh. */
+   identically. Observed, inc-ngku, not sent. tools/check_study_slots.sh.
+   Gameplay: tools/keys/intensive-study-caster-sheet.keys takes the study
+   through the level-up feat menu; tools/check_intensive_study_play.sh reads
+   the sheet. Before: "Spell Slots    5th  3+5 (7) / 2+2 (4)". After:
+   "Spell Slots    5th  3+5 (7) / 2+2 (4) / 1+1 (2)". */
 void Character::RaiseSpellSlotsToChart()
 {
     int16 i, lv;
