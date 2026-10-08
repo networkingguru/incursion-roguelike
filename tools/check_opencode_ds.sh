@@ -11,7 +11,9 @@
 # harness stuck in a DeepSeek repetition loop via the loop_check.py canary,
 # billing it as one killed=loop row at exit 3 and copying its run dir aside,
 # and stop a harness whose step context passed the loop_check.py ceiling via
-# the same canary, billing it as one killed=context row at exit 4?
+# the same canary, billing it as one killed=context row at exit 4, and record
+# a run that ends on a provider error (429) as one killed=provider row at
+# exit 5?
 # Also that tools/opencode/record_proxy.py forwards a POST byte-for-byte,
 # records request/response/meta, streams a chunked reply before upstream
 # finishes, relays the Authorization header without writing it to any file,
@@ -47,8 +49,10 @@
 #                                            MIN_REPEATED_LINES,
 #                                            MIN_SAME_LINE, the markup rule, the
 #                                            context ceiling, the proxy's
-#                                            request write and the brief's
-#                                            preamble prepend, confirm red
+#                                            request write, the brief's
+#                                            preamble prepend and the
+#                                            provider-error detection,
+#                                            confirm red
 #
 # Exit: 0 pass, 1 fail, 2 could not run.
 
@@ -467,6 +471,41 @@ PY
         cmp -s "$BACKUP_PRE" "$WRAPPER" || { echo "restore of opencode_ds.sh failed" >&2; exit 2; }
     fi
 
+    # (l) the provider-error detection skipped, so assertion 12c cannot set
+    # killed=provider and must go red. It launches the harness, so this proof
+    # needs an unsandboxed run.
+    if [ "$SANDBOX_RUNNABLE" -eq 0 ]; then
+        echo "SKIP (l): sandbox-exec cannot run inside this sandbox, so"
+        echo "          assertion 12c cannot launch the harness to go red."
+    else
+        BACKUP_PROV="$TMP/opencode_ds.sh.provider.orig"
+        cp "$WRAPPER" "$BACKUP_PROV"
+        NEEDLE_PROV='if not killed and last_error is not None and last_error is last_event:'
+        if ! grep -qF "$NEEDLE_PROV" "$WRAPPER"; then
+            echo "could not find the provider detection to mutate" >&2
+            exit 2
+        fi
+        python3 - "$WRAPPER" "$NEEDLE_PROV" <<'PY'
+import sys
+path, needle = sys.argv[1], sys.argv[2]
+src = open(path).read()
+open(path, "w").write(src.replace(
+    needle, 'if False and not killed and last_error is not None and last_error is last_event:  # MUTATED by --prove-red', 1))
+PY
+        echo "mutated tools/opencode_ds.sh: provider-error detection skipped"
+        MUT_OUT="$("$ROOT/tools/check_opencode_ds.sh" 2>&1)"
+        MUT_RC=$?
+        if [ "$MUT_RC" -ne 0 ] && grep -q "FAIL.*provider stop" <<< "$MUT_OUT"; then
+            echo "PASS (as intended): assertion 12c (provider stop) went red"
+        else
+            echo "FAIL: assertion 12c stayed green with the provider detection skipped (rc=$MUT_RC)"
+            echo "$MUT_OUT" | tail -20
+            PROVE_FAIL=1
+        fi
+        cp "$BACKUP_PROV" "$WRAPPER"
+        cmp -s "$BACKUP_PROV" "$WRAPPER" || { echo "restore of opencode_ds.sh failed" >&2; exit 2; }
+    fi
+
     if [ "$PROVE_FAIL" -eq 0 ]; then
         echo "PASS: --prove-red, all mutations turned the intended assertion red"
         exit 0
@@ -562,6 +601,11 @@ JSON
         # canary (loop_check.py) fires on the context rule.
         cat "${INCURSION_FAKE_EVENTS:-/dev/null}"
         sleep 1000
+        ;;
+    provider)
+        # Emit a run that ends on a provider error event (429/5xx), then exit
+        # cleanly. The wrapper must bill it killed=provider and exit 5.
+        cat "${INCURSION_FAKE_EVENTS:-/dev/null}"
         ;;
     never)
         sleep 1000  # writes nothing: the watchdog's startup limit must fire
@@ -707,7 +751,7 @@ stop_proxy_direct() {
 # sandbox-exec cannot nest: inside another Seatbelt sandbox (a Claude session
 # running this check), `sandbox-exec` itself refuses to apply and exits 71.
 # The assertions that need to LAUNCH the harness (4, 5, 6, 6b, 7, 11, 12, 12b,
-# 17, 18) cannot run in that environment. Detect it once and report those as
+# 12c, 17, 18) cannot run in that environment. Detect it once and report those as
 # SKIP; outside any sandbox they all run. Assertions 3, 3b, 8, 9, 10 and
 # the direct-proxy 13, 13b, 13c, 14, 15, 16 never launch the harness.
 SANDBOX_OK=1
@@ -724,7 +768,7 @@ PROBE_RC="$(HOME="$PROBE_HOME" INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC
 if grep -rq "sandbox_apply: Operation not permitted" "$PROBE_WORK/logs/opencode" 2>/dev/null; then
     SANDBOX_OK=0
     echo "NOTE  sandbox-exec cannot nest inside this check's own sandbox;"
-    echo "      assertions 4, 5, 6, 6b, 7, 11, 12, 17 and 18 are reported SKIP here and"
+    echo "      assertions 4, 5, 6, 6b, 7, 11, 12, 12b, 12c, 17 and 18 are reported SKIP here and"
     echo "      must be run outside any sandbox (the Claude session will do so)."
 fi
 
@@ -1123,6 +1167,37 @@ elif [ "$RC" -eq 4 ] && [ "$ROW_COUNT" -eq 1 ] \
     pass "context stop: exit 4, one row killed=context, context ceiling on stderr"
 else
     fail "context stop: rc=$RC rows=$ROW_COUNT ledger=$(cat "$LEDGER" 2>/dev/null) -- $(cat "$TMP/err.12b")"
+fi
+
+# --- 12c. A run that ends on a provider error is billed killed=provider ----
+# The fake emits a real events.jsonl whose last event is an error with
+# statusCode 429, then exits. The wrapper must record "killed": "provider",
+# exit 5, and name the provider stop and the status code on stderr. This
+# launches the harness, so under a nested sandbox it SKIPs (as assertion 4).
+PROVIDER_FIXTURE="$ROOT/tools/fixtures/opencode-provider/provider-429.jsonl"
+FAKEHOME="$TMP/home12c"; mkdir -p "$FAKEHOME"
+WORK="$TMP/wt12c"; mkdir -p "$WORK"
+BRIEF="$TMP/brief12c.txt"; echo "do a thing" > "$BRIEF"
+LEDGER="$TMP/ledger12c.jsonl"; : > "$LEDGER"
+RUNS12C="$TMP/runs12c"; mkdir -p "$RUNS12C"
+: > "$TMP/rec.12c"
+RC="$(HOME="$FAKEHOME" INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC="$TMP/rec.12c" \
+    INCURSION_FAKE_MODE=provider INCURSION_FAKE_EVENTS="$PROVIDER_FIXTURE" \
+    INCURSION_DEEPSEEK_KEY=canary-x INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
+    INCURSION_OPENCODE_RUNS_DIR="$RUNS12C" \
+    INCURSION_WATCHDOG_STARTUP=5 INCURSION_WATCHDOG_IDLE=30 INCURSION_WATCHDOG_POLL=1 \
+    INCURSION_WATCHDOG_GRACE=2 \
+    "$WRAPPER" "$WORK" "$BRIEF" > "$TMP/out.12c" 2> "$TMP/err.12c"; echo $?)"
+ROW_COUNT="$(wc -l < "$LEDGER" | tr -d ' ')"
+if [ "$SANDBOX_OK" -eq 0 ]; then
+    skip "provider stop: not run (sandbox-exec cannot nest here)"
+elif [ "$RC" -eq 5 ] && [ "$ROW_COUNT" -eq 1 ] \
+    && grep -q '"killed":"provider"' "$LEDGER" \
+    && grep -q 'DeepSeek provider error: run stopped (inc-6ymr)' "$TMP/err.12c" \
+    && grep -q 'status 429' "$TMP/err.12c"; then
+    pass "provider stop: exit 5, one row killed=provider, status 429 on stderr"
+else
+    fail "provider stop: rc=$RC rows=$ROW_COUNT ledger=$(cat "$LEDGER" 2>/dev/null) -- $(cat "$TMP/err.12c")"
 fi
 
 # --- 13. Direct: loop_check.py exits 1 on loop.jsonl, 0 on clean.jsonl -----

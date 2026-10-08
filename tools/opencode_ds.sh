@@ -15,7 +15,7 @@
 #
 # Exit 0 success; 2 could not run or opencode failed; 3 the run was stopped as
 # a DeepSeek repetition loop; 4 the run was stopped because its context passed
-# the ceiling.
+# the ceiling; 5 the run was stopped by a provider error (429 or 5xx).
 #
 # The wrapper reuses tools/deepseek.py's resolve_ledger_path and resolve_key --
 # it imports the module rather than copying the logic, so the ledger row format
@@ -35,7 +35,9 @@
 # killed run still writes exactly one ledger row, marked "killed", so a hang
 # neither locks the ledger nor goes unbilled. A loop kill (killed=canary over
 # the loop rules) is recorded in the row as "killed": "loop"; a context kill
-# (killed=canary over the context rule) as "killed": "context" and exit 4.
+# (killed=canary over the context rule) as "killed": "context" and exit 4. A run
+# whose last event is an error with status 429 or 500-599 is recorded as
+# "killed": "provider" and exits 5.
 #
 # Before opencode starts, tools/opencode/record_proxy.py is launched outside
 # the sandbox on a local ephemeral port and opencode is pointed at it with
@@ -310,6 +312,9 @@ cache_read_total = 0
 cache_write_total = 0
 have_tokens = False
 cost_unknown = False
+last_event = None
+last_error = None
+provider_status = None
 
 for line in raw.splitlines():
     line = line.strip()
@@ -319,6 +324,9 @@ for line in raw.splitlines():
         ev = json.loads(line)
     except json.JSONDecodeError:
         continue
+    last_event = ev
+    if ev.get("type") == "error":
+        last_error = ev
     if ev.get("type") != "step_finish":
         continue
     part = ev.get("part") or {}
@@ -352,6 +360,21 @@ for line in raw.splitlines():
     else:
         cost_unknown = True
 
+# A provider error that ended the run is a stop too: if the LAST error event is
+# the last event of the run and its status is 429 or 500-599, the provider stopped
+# the run, so record it as killed=provider (unless a watchdog kill already
+# says otherwise).
+if not killed and last_error is not None and last_error is last_event:
+    data = (last_error.get("error") or {}).get("data") or {}
+    status = data.get("statusCode")
+    if (
+        isinstance(status, int)
+        and not isinstance(status, bool)
+        and (status == 429 or 500 <= status <= 599)
+    ):
+        killed = "provider"
+        provider_status = status
+
 # Nothing billed: no step_finish and no tokens. A non-killed run writes no
 # row (today's behaviour); a killed run ALWAYS writes exactly one row so a
 # hang does not lock the ledger, with cost 0 (Brian's ruling: not null).
@@ -378,11 +401,17 @@ if steps == 0 and not have_tokens:
         print("STEPS 0")
         print("COST 0")
         print("POISON 0")
+        print("KILLED %s" % killed)
+        if provider_status is not None:
+            print("PROVIDER_STATUS %d" % provider_status)
         sys.exit(0)
     print("BILL nothing")
     print("STEPS 0")
     print("COST 0")
     print("POISON 0")
+    print("KILLED %s" % killed)
+    if provider_status is not None:
+        print("PROVIDER_STATUS %d" % provider_status)
     sys.exit(0)
 
 # Poison: a priced field is missing/not a number, or tokens > 0 priced at 0.
@@ -413,6 +442,9 @@ print("BILL row")
 print("STEPS %d" % steps)
 print("COST %s" % ("" if poison else repr(cost_total)))
 print("POISON %d" % (1 if poison else 0))
+print("KILLED %s" % killed)
+if provider_status is not None:
+    print("PROVIDER_STATUS %d" % provider_status)
 PY
 )"
 BILL_RC=$?
@@ -424,6 +456,8 @@ fi
 STEPS="$(printf '%s\n' "$BILL_OUT" | sed -n 's/^STEPS //p')"
 COST="$(printf '%s\n' "$BILL_OUT" | sed -n 's/^COST //p')"
 POISON="$(printf '%s\n' "$BILL_OUT" | sed -n 's/^POISON //p')"
+BILL_KILLED="$(printf '%s\n' "$BILL_OUT" | sed -n 's/^KILLED //p')"
+PROVIDER_STATUS="$(printf '%s\n' "$BILL_OUT" | sed -n 's/^PROVIDER_STATUS //p')"
 
 # After every run, killed or not, keep a copy under the shared checkout's logs
 # so a run can be examined after its worktree is gone. A loop kill
@@ -479,6 +513,19 @@ PY
 fi
 if [ -n "$FINAL_TEXT" ]; then
     printf '%s\n' "$FINAL_TEXT"
+fi
+
+# A provider error that ended the run is a stop (exit 5): the provider refused
+# or failed (429 or 5xx), so the run is billed killed=provider and the caller is
+# told which status stopped it.
+if [ "$BILL_KILLED" = "provider" ]; then
+    echo "rundir=$RUNDIR steps=$STEPS cost=$COST exit=$OPENCODE_RC"
+    echo "DeepSeek provider error: run stopped (inc-6ymr); status $PROVIDER_STATUS; rundir=$RUNDIR" >&2
+    if [ "$POISON" -eq 1 ]; then
+        echo "opencode run quoted no usable cost; its ledger row has cost=null." >&2
+        echo "The ledger is now POISONED until a human resolves that row." >&2
+    fi
+    exit 5
 fi
 
 # A killed run is reported first: the caller must learn which limit fired. The

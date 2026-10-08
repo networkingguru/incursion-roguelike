@@ -20,10 +20,11 @@ explicitly a haiku dispatch or the emergency bypass is set:
   `fallback: <run-id>` spends the DeepSeek retry budget a stopped run left
   behind, and it is only valid when TWO stopped DeepSeek runs exist for the
   SAME worktree: the run it names must be in the ledger, its `killed` must be
-  `loop` or `context`, AND an EARLIER row with the same worktree must also
-  have been stopped by `loop` or `context`. In other words a fallback needs
-  two stopped DeepSeek runs for the same worktree -- the earlier one is the
-  right to try again, the named one is what is being spent.
+  `loop`, `context` or `provider`, AND an EARLIER row with the same worktree
+  must also have been stopped by `loop`, `context` or `provider`. In other
+  words a fallback needs two stopped DeepSeek runs for the same worktree --
+  the earlier one is the right to try again, the named one is what is being
+  spent. (`provider` is a run the provider stopped with 429/5xx.)
 
 Every Agent/Task call is appended to the dispatch log as one JSON line, so a
 human can see what was dispatched and why it was let through.
@@ -51,7 +52,7 @@ DEFAULT_LOG = "~/Scripts/Incursion/logs/dispatch-log.jsonl"
 DEFAULT_LEDGER = "~/Scripts/Incursion/logs/deepseek-ledger.jsonl"
 
 LABELS = ("research:", "repro-design:", "fallback:")
-STOPPED = ("loop", "context")
+STOPPED = ("loop", "context", "provider")
 
 BLOCK_MESSAGE = (
     "dispatch gate: this Agent/Task dispatch is unlabelled.\n"
@@ -60,8 +61,8 @@ BLOCK_MESSAGE = (
     "  repro-design: <...>\n"
     "  fallback: <run-id>\n"
     "Only a haiku dispatch is exempt. A fallback needs two stopped DeepSeek\n"
-    "runs for the same worktree: an earlier run stopped by `loop` or `context`\n"
-    "and the named run also stopped by `loop` or `context`.\n"
+    "runs for the same worktree: an earlier run stopped by `loop`, `context` or\n"
+    "`provider`, and the named run also stopped by one of those.\n"
 )
 
 
@@ -170,7 +171,7 @@ def check_fallback(rows, run_id):
     if row is None:
         return f"fallback run not found: {run_id}"
     if row.get("killed") not in STOPPED:
-        return f"fallback run {run_id} was not stopped by loop or context"
+        return f"fallback run {run_id} was not stopped by loop, context or provider"
     if not has_earlier_stopped(rows, row):
         return (
             f"no earlier stopped run for worktree {worktree_of(row.get('out'))}"

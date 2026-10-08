@@ -1,0 +1,3 @@
+{"type":"step_start","timestamp":1790856550273,"sessionID":"ses_provider429","part":{"id":"prt_prov0000001","messageID":"msg_provider429","sessionID":"ses_provider429","type":"step-start"}}
+{"type":"text","timestamp":1790856551754,"sessionID":"ses_provider429","part":{"id":"prt_prov0000002","messageID":"msg_provider429","sessionID":"ses_provider429","type":"text","text":"partial reply before the provider refused.\n"}}
+{"type":"error","timestamp":1790856551804,"sessionID":"ses_provider429","error":{"name":"APIError","data":{"message":"Model busy, retry later","statusCode":429,"isRetryable":true,"responseHeaders":{},"responseBody":"{\"error\":\"Model busy, retry later\"}","metadata":{}}}}
