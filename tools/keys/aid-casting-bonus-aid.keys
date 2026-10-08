@@ -1,0 +1,21 @@
+# Join the test god (a +5 morale A_AID bonus), then open the same spell
+# description and photograph its Chance line. tools/check_aid_casting_bonus.sh
+# (bd inc-9uuj). Wizard-mode steps are those of natural-one-attack.keys.
+w
+@expect "Enter wizard mode"
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+w
+@choose "Become Divine Champion"
+"Aid Casting Bonus Test God" ENTER
+@until "HP:" ESC
+
+m PGDN*20
+@expect "Chance:"
+@dump:spell
+ESC
+@quit
