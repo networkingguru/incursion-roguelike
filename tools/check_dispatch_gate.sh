@@ -5,8 +5,8 @@
 # and does it demand TWO stopped DeepSeek runs for the same worktree before
 # it honours a `fallback:`? Defends bead inc-xiqb: the hook must name the
 # three labels, refuse a fallback with no label, no found run, a run that was
-# not stopped by loop/context, or no earlier stopped run for that worktree,
-# and log every dispatch it sees.
+# not stopped by loop/context/provider, or no earlier stopped run for that
+# worktree, and log every dispatch it sees.
 #
 # Fully offline, against a temp ledger and a temp log (env overrides); it never
 # touches the real files. Every case asserts the exit code AND exactly one new
@@ -14,10 +14,12 @@
 #
 #   tools/check_dispatch_gate.sh               run the cases
 #   tools/check_dispatch_gate.sh --prove-red   mutate the gate so an unlabelled
-#                                              sonnet is allowed, confirm the
-#                                              "sonnet, no label" case goes
-#                                              red, restore, and verify the
-#                                              restore with cmp
+#                                              sonnet is allowed and so
+#                                              "provider" is dropped from
+#                                              STOPPED, confirm the "sonnet, no
+#                                              label" and the provider-fallback
+#                                              cases go red, restore, and verify
+#                                              each restore with cmp
 #
 # Exit: 0 pass, 1 fail, 2 could not run.
 
@@ -53,6 +55,7 @@ fail() { echo "FAIL  $1"; FAIL=1; }
 # allowed, re-run this script, expect the "sonnet, no label" case to fail,
 # then let the EXIT trap restore the byte-identical original.
 if [ "${1:-}" = "--prove-red" ]; then
+    PROVE_FAIL=0
     BACKUP="$TMP/dispatch_gate.py.orig"
     cp "$GATE" "$BACKUP"
 
@@ -81,14 +84,47 @@ PY
 
     if [ "$MUTATED_RC" -ne 0 ] && grep -q 'FAIL.*sonnet, no label' <<< "$MUTATED_OUTPUT"; then
         echo "PASS (as intended): the 'sonnet, no label' case went red under the mutation"
-        exit 0
-    elif [ "$MUTATED_RC" -ne 0 ]; then
-        echo "FAIL: the run went red but not on the 'sonnet, no label' case"
-        exit 1
     else
-        echo "FAIL: check_dispatch_gate.sh stayed green with the label check disabled"
-        exit 1
+        echo "FAIL: the 'sonnet, no label' case did not go red with the label check disabled (rc=$MUTATED_RC)"
+        PROVE_FAIL=1
     fi
+    cp "$BACKUP" "$GATE"
+    cmp -s "$BACKUP" "$GATE" || { echo "restore of dispatch_gate.py failed" >&2; exit 2; }
+
+    # Drop "provider" from STOPPED: the provider-only fallback case (two
+    # killed=provider rows) must then block instead of allow, so it goes red.
+    NEEDLE_STOPPED='STOPPED = ("loop", "context", "provider")'
+    if ! grep -qF "$NEEDLE_STOPPED" "$GATE"; then
+        echo "could not find STOPPED to mutate: $NEEDLE_STOPPED" >&2
+        exit 2
+    fi
+    python3 - "$GATE" "$NEEDLE_STOPPED" <<'PY'
+import sys
+path, needle = sys.argv[1], sys.argv[2]
+src = open(path).read()
+open(path, "w").write(src.replace(
+    needle, 'STOPPED = ("loop", "context")  # MUTATED by --prove-red', 1))
+PY
+    echo "mutated tools/dispatch_gate.py: \"provider\" removed from STOPPED"
+    MUTATED_OUTPUT="$("$ROOT/tools/check_dispatch_gate.sh")"
+    MUTATED_RC=$?
+    echo "--- output of the mutated run ---"
+    echo "$MUTATED_OUTPUT"
+    echo "--- end output of the mutated run ---"
+    if [ "$MUTATED_RC" -ne 0 ] && grep -q 'FAIL.*fallback valid provider' <<< "$MUTATED_OUTPUT"; then
+        echo "PASS (as intended): the provider-fallback case went red with provider dropped from STOPPED"
+    else
+        echo "FAIL: the provider-fallback case stayed green with provider dropped from STOPPED (rc=$MUTATED_RC)"
+        PROVE_FAIL=1
+    fi
+    cp "$BACKUP" "$GATE"
+    cmp -s "$BACKUP" "$GATE" || { echo "restore of dispatch_gate.py failed" >&2; exit 2; }
+
+    if [ "$PROVE_FAIL" -eq 0 ]; then
+        echo "PASS: --prove-red, all mutations turned their intended case red"
+        exit 0
+    fi
+    exit 1
 fi
 
 # --- helpers --------------------------------------------------------------
@@ -238,6 +274,25 @@ if [ "$rc" = 0 ] && [ "$(log_lines)" = "1" ] \
     pass "fallback valid (basename): allow, log run set"
 else
     fail "fallback valid (rc=$rc decision=$(log_field decision) run=$got_run)"
+fi
+
+# --- case: fallback valid, both runs stopped by provider ------------------
+# A provider stop (429/5xx) is a stop too: two provider rows in the same
+# worktree, the named one the later, must admit the fallback.
+write_ledger \
+    "{\"ts\":\"2026-10-03T12:00:00Z\",\"out\":\"$EARLIER\",\"killed\":\"provider\"}" \
+    "{\"ts\":\"2026-10-03T13:18:20Z\",\"out\":\"$LATER\",\"killed\":\"provider\"}"
+payload Agent sonnet "fallback: 20261003T131816Z-74757" general > "$TMP/in.json"
+rc=0
+run_gate || rc=$?
+got_run="$(log_field run)"
+if [ "$rc" = 0 ] && [ "$(log_lines)" = "1" ] \
+    && [ "$(log_field decision)" = "allow" ] \
+    && [ "$(log_field label)" = "fallback" ] \
+    && [ "$got_run" = "20261003T131816Z-74757" ]; then
+    pass "fallback valid (both stopped by provider): allow, log run set"
+else
+    fail "fallback valid provider (rc=$rc decision=$(log_field decision) run=$got_run)"
 fi
 
 # --- case: fallback naming the earlier run (no earlier stopped row) -------
