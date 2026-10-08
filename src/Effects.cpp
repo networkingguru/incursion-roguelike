@@ -1208,7 +1208,11 @@ EvReturn Magic::Reveal(EventInfo &e) {
 
 FoundCorpse:
       //tlev = (EffectLevel() + TMON(theCorpse->mID)->Level + 1) / 2;
-      DPrint(e,NULL, "The <EActor> cuts open the <Obj> and reads auguries from its entrails.");
+      /* upstream: the format must supply one argument per consuming <Obj>
+         token. Base-code text and the base-code formatter, no typedef or
+         platform dependence, so Win32 misreads it the same way. Traced --
+         latent in single-player. inc-ur9b; not sent. */
+      DPrint(e,NULL, "The <EActor> cuts open the <Obj> and reads auguries from its entrails.", theCorpse);
       Text += SC("You cut open the ") + theCorpse->Name() + SC("and read auguries from its entrails.  ");
       }
 

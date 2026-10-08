@@ -896,13 +896,19 @@ EvReturn Character::GiveAid(EventInfo &e) {
     case AID_UNCURSE:
         for (int8 i = 0; i != SL_LAST; i++)
             if ((it = InSlot(i)) && it->isCursed()) {
+                /* upstream: both formats must supply one argument per
+                   consuming <Obj> token. Base-code text and the base-code
+                   formatter, no typedef or platform dependence, so Win32
+                   misreads it the same way. Observed --
+                   tools/repro_uncurse_aid.sh crashed unfixed. inc-ur9b;
+                   not sent. */
                 if (it->eID && TEFF(it->eID)->HasFlag(EF_CURSED)) {
                     DPrint(e, "Your <Obj> crumbles to ash!",
-                        "The <EActor>'s <Obj> crumbles to ash!");
+                        "The <EActor>'s <Obj> crumbles to ash!", it);
                     it->Remove(true);
                 } else {
                     DPrint(e, "Your <Obj> glows with a soft blue light.",
-                        "The <EActor>'s <Obj> glows with a soft blue light.");
+                        "The <EActor>'s <Obj> glows with a soft blue light.", it);
                     it->IFlags &= ~(IF_CURSED);
                 }
             }
