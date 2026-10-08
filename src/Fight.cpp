@@ -5772,6 +5772,7 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
 
     /* This uses the *exact* logic of the OGL system, as follows:
        - An unmodified roll of a 20 is always a hit
+       - An unmodified roll of a 1 is always a miss
        - An unmodified roll within the threat range of an attack
          scores a threat, provided it hits, but does not score an
          automatic hit. Thus, 1st level fighters with rapiers hit
@@ -5796,7 +5797,10 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
               e.EVictim->IPrint("You fail to catch the thrown <Obj>!", e.EItem2);
           }                                  
                             
-    if ((e.vHit + e.vRoll >= max(e.vDef,
+    /* upstream: the OGL rule makes a natural 1 an automatic miss; upstream's hit test omitted it on every platform. Observed. inc-bp2y. Not sent. */
+    if (e.vRoll == 1)
+      e.isHit = false;
+    else if ((e.vHit + e.vRoll >= max(e.vDef,
           (e.vRideCheck ? e.vRideCheck : -40))) || e.vRoll == 20)
       e.isHit = true;
     else
