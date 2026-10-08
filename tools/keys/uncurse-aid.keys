@@ -1,0 +1,42 @@
+# inc-ur9b reproduction: a god answers a prayer with AID_UNCURSE.
+# Character::GiveAid (src/Prayer.cpp, case AID_UNCURSE) calls DPrint with
+# "Your <Obj> crumbles to ash!" and passes no argument for <Obj>.
+#
+# Route: orc warrior (dequ-setup.keys, seed 5, options-2026-08-22.dat), wizard
+# Item Acquisition of a Ring of Spell Disruption (EF_CURSED, lib/m_items.irh),
+# put it on (Inv.cpp sets IF_CURSED on wear), Become Divine Champion of Hesani
+# (AID_CHART row AID_UNCURSE P_LOW 100, lib/religion.irh), pray with 'p'.
+# A worn cursed item makes getTroubles report TROUBLE_CURSED (Prayer.cpp).
+# Run with tools/repro_uncurse_aid.sh.
+
+@include dequ-setup.keys
+
+w
+@choose "Item Acquisition"
+RIGHT*26
+@until "Weakness" DOWN
+ENTER
+m
+SPACE
+ESC
+@dump:worn
+
+w
+@choose "Become Divine Champion"
+H e s a n i
+ENTER
+@while "more --" SPACE
+d
+DOWN*20
+ESC
+
+p
+@expect "Request aid"
+a
+@while "more --" SPACE
+@dump:prayed
+@quit
+# The unfixed build never reaches @dump:prayed: GiveAid's DPrint makes
+# __XPrint return the literal format, and Player::__IPrint then writes
+# toupper() into that read-only literal (src/Message.cpp:724), so the process
+# dies with EXC_BAD_ACCESS inside the 'a' keystroke. A fixed build reaches it.

@@ -388,6 +388,18 @@ Resurrected:
     MaxDist = 30;
     pp->MyTerm->RefreshMap();
 
+    /* inc-o4y1 reproduction only: print ONE message whose format the __XPrint
+       net rejects, so Player::__IPrint stores through the read-only literal
+       __XPrint returns on that path. Fires once, here where the player is on
+       a map with a terminal. Do not fix __IPrint here. */
+    if (getenv("INCURSION_XPRINT_REJECT_PROBE")) {
+        static bool xprint_reject_probe_done = false;
+        if (!xprint_reject_probe_done) {
+            xprint_reject_probe_done = true;
+            pp->IPrint("<Obj> xprint reject probe.", (Thing*)3);
+        }
+    }
+
     srand(NextSeed());
 
     /* NOTE(rmtew): This is the main game loop.  Once we're in here, we have to
