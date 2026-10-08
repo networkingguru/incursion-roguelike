@@ -185,7 +185,15 @@ void Creature::AddBonus(int8 btype,int8 attr,int16 bonus) {
         AttrAdj[A_SAV_REF][btype] = WESMAX(AttrAdj[A_SAV_REF][btype], bonus);         
         AttrAdj[A_SAV_WILL][btype] = WESMAX(AttrAdj[A_SAV_WILL][btype], bonus);        
         AttrAdj[A_ARC][btype] = WESMAX(AttrAdj[A_ARC][btype], bonus);             
-        AttrAdj[A_DIV][btype] = WESMAX(AttrAdj[A_DIV][btype], bonus);             
+        AttrAdj[A_DIV][btype] = WESMAX(AttrAdj[A_DIV][btype], bonus);
+        /* upstream: a positive A_AID bonus MUST reach all five casting
+           attributes, as StackBonus does. A_SOR, A_PRI and A_BAR were
+           missing, so druids, sorcerers and bards got no benefit from
+           Bless and the like. Observed (tools/check_aid_casting_bonus.sh).
+           inc-9uuj. not sent. */
+        AttrAdj[A_SOR][btype] = WESMAX(AttrAdj[A_SOR][btype], bonus);
+        AttrAdj[A_PRI][btype] = WESMAX(AttrAdj[A_PRI][btype], bonus);
+        AttrAdj[A_BAR][btype] = WESMAX(AttrAdj[A_BAR][btype], bonus);
         break;
     case A_SAV:
         AttrAdj[A_SAV_FORT][btype] = WESMAX(AttrAdj[A_SAV_FORT][btype], bonus);        
