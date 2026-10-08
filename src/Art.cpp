@@ -343,7 +343,7 @@ PRIVATE void print_coordinate(int i)
    int l = pos / 1000;
    int c = pos % 1000;
 
-   T1->CWrite(Format("line %d, col %d of grammar", l, c));
+   printf("line %d, col %d of grammar", l, c);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -360,9 +360,9 @@ PRIVATE void print_tree(int i)
    if (yygrammar[dot[i]] < 0 ) {
       /* end of rule */
       for (k = 1; k <= indent; k++) printf("  ");
-      T1->CWrite(Format("%s alternative at ", yyprintname(-yygrammar[dot[i]])));
+      printf("%s alternative at ", yyprintname(-yygrammar[dot[i]]));
       print_coordinate(dot[i]+1);
-      T1->CWrite(" {\n");
+      printf(" {\n");
       indent++;
    }
 
@@ -378,9 +378,9 @@ PRIVATE void print_tree(int i)
       if (sym > term_base) {
          for (k = 1; k <= indent; k++) printf("  ");
 	 if (sym < term_base+max_char+1)
-            T1->CWrite(Format("'%c'\n", yygrammar[dot[i]-1]-term_base));
+            printf("'%c'\n", yygrammar[dot[i]-1]-term_base);
 	 else
-	    T1->CWrite(Format("%s\n", yyprintname(sym)));
+	    printf("%s\n", yyprintname(sym));
       }
    }
 
@@ -391,8 +391,8 @@ PRIVATE void print_tree(int i)
    if (yygrammar[dot[i]] < 0 ) {
       /* end of rule */
       indent--;
-      for (k = 1; k <= indent; k++) T1->CWrite("  ");
-      T1->CWrite("}\n");
+      for (k = 1; k <= indent; k++) printf("  ");
+      printf("}\n");
    }
 }
 
@@ -878,105 +878,61 @@ PRIVATE void simple_ambiguity(int i, int d, int l, int s)
  * introduce a simple ambiguity
  */
 {
-   /* Simple Ambiguity */
-   T1->SetWin(WIN_SCREEN);
-   T1->Clear(); T1->GotoXY(0,0);
-   T1->CursorOn();
-
-   int sub1, sub2, prio1, prio2;
+   /* inc-xbxf: an ambiguity fails the compile and is never resolved silently.
+      This path writes only to stdout; a compile has no console. */
 
 #if TRACE
    printf("simple amiguity\n");
    printf("i = %d\n", i);
    printf("last_item+1 = %d\n", last_item+1);
 #endif
-   sub1 = sub[i];
-   sub2 = s;
 
-   prio1 = getprio(sub1);
-   prio2 = getprio(sub2);
+   printf("\n");
+   printf("GRAMMAR DEBUG INFORMATION\n");
+   printf("\n");
+   printf("Grammar ambiguity detected.\n");
+   printf
+      ("Two different ``%s'' derivation trees for the same phrase.\n",
+      yyprintname(yygrammar[d-1]));
 
-   if (prio1 == -1 || prio2 == -1) {
-      /* undefined prio */
+   printf("\n");
+   printf("TREE 1\n");
+   printf("------\n");
+   printf("\n");
+   print_tree(sub[i]);
+   printf("\n");
 
-      printf("\n");
-      printf("GRAMMAR DEBUG INFORMATION\n");
-      printf("\n");
-      printf("Grammar ambiguity detected.\n");
+   printf("TREE 2\n");
+   printf("------\n");
+   printf("\n");
+   print_tree(s);
+   printf("\n");
+
+   if (test_for_cycle(s, sub[i])) {
+      /* not possible */
+      printf("Tree 1 contains tree 2 as subtree.\n");
       printf
-	 ("Two different ``%s'' derivation trees for the same phrase.\n",
-	 yyprintname(yygrammar[d-1]));
-
-      printf("\n");
-      printf("TREE 1\n");
-      printf("------\n");
-      printf("\n");
-      print_tree(sub[i]);
-      printf("\n");
-      T1->GetCharRaw();
-      T1->Clear(); T1->GotoXY(0,0);
-      T1->CursorOn();
-
-      printf("TREE 2\n");
-      printf("------\n");
-      printf("\n");
-      print_tree(s);
-      printf("\n");
-
-      if (test_for_cycle(s, sub[i])) {
-	 /* not possible */
-	 printf("Tree 1 contains tree 2 as subtree.\n");
-	 printf
-	    ("Use %%prio annotation to select the second tree.\n");
-	 printf("An annotation selecting the first tree\n");
-	 printf("would not resolve the ambiguity.\n");
-      }
-      else if (test_for_cycle(sub[i], s)) {
-	 printf("Tree 2 contains tree 1 as subtree.\n");
-	 printf
-	    ("Use %%prio annotation to select the first tree.\n");
-	 printf("An annotation selecting the second tree\n");
-	 printf("would not resolve the ambiguity.\n");
-      }
-      else {
-	 printf("Use %%prio annotation to select an alternative.\n");
-      }
-
-      printf("\nEND OF GRAMMAR DEBUG INFORMATION\n\n");
-
-      yyerror("source text uncovers unhandled grammar ambiguity");
-      exit(1);
-
+	 ("Use %%prio annotation to select the second tree.\n");
+      printf("An annotation selecting the first tree\n");
+      printf("would not resolve the ambiguity.\n");
    }
-
-   else if (prio1 > prio2) {
-#if TRACE
-      printf("old value wins\n");
-#endif
+   else if (test_for_cycle(sub[i], s)) {
+      printf("Tree 2 contains tree 1 as subtree.\n");
+      printf
+	 ("Use %%prio annotation to select the first tree.\n");
+      printf("An annotation selecting the second tree\n");
+      printf("would not resolve the ambiguity.\n");
    }
    else {
-#if TRACE
-      printf("new value wins\n");
-      printf("sub[%d] was %d\n", i, sub[i]);
-      printf("sub[%d] becomes %d\n", i, s);
-#endif
-
-#if DYNAMICCYCLECHECK
-      if (s >= i) {
-	 if (test_for_cycle(i, s)) {
-	    printf("\n");
-	    printf("GRAMMAR DEBUG INFORMATION\n");
-	    printf("\n");
-	    printf("Annotation for ``%s'' allows cyclic derivation.\n",
-	       yyprintname(yygrammar[d-1]));
-	    printf("\nEND OF GRAMMAR DEBUG INFORMATION\n\n");
-	    yyerror("source text uncovers unhandled grammar ambiguity");
-	    exit(1);
-	 }
-      }
-#endif
-      sub[i] = s;
+      printf("Use %%prio annotation to select an alternative.\n");
    }
+
+   printf("\nEND OF GRAMMAR DEBUG INFORMATION\n\n");
+
+   yyerror("source text is ambiguous: two parse trees remain for one phrase; "
+	   "rewrite the script (for example, add braces) so only one parse "
+	   "remains");
+   exit(1);
 }
 
 /*============================================================================*/
