@@ -1,0 +1,33 @@
+# Rapid Reload, WITHOUT the feat. inc-l59x.
+#
+# Load the frozen Warrior who has NO FT_RAPID_RELOAD and equip him with an
+# arbalest, then crank it once. Paired with tools/keys/rapid-reload-feat.keys;
+# tools/check_rapid_reload.sh compares the two crank costs.
+#
+# This character's arbalest is buried in his backpack, so he is put into
+# wizard mode and a fresh arbalest is drawn from Item Acquisition straight
+# into the Weapon Hand, the way tools/keys/prestige-masterarcher.keys does.
+# The `@until "]: Missile Weapons"` walks the acquisition tabs to Missile
+# Weapons and `DOWN*2` reaches the arbalest row.
+#
+# `w y` enters wizard mode; the game then asks its own "Enter wizard mode?"
+# prompt, answered `y`. The `s` buys the real turn a loaded session needs.
+
+@dump:arrival
+s
+@dump:searched
+
+w
+y
+@choose "Item Acquisition"
+@until "]: Missile Weapons" RIGHT
+DOWN*2
+ENTER
+b SPACE                 # the arbalest into the Weapon Hand
+@while "ESC:Done" ESC
+@dump:wielded
+
+f                       # fire: the uncocked crossbow is cranked instead
+@dump:reloaded
+
+@quit
