@@ -3,8 +3,10 @@
 # One assertion: the sheet's Proficiencies line must name every weapon group
 # the class grants. The bard grants WG_SIMPLE, WG_DAGGERS, WG_LIGHT,
 # WG_SBLADES and WG_ARCHERY (lib/classes.irh:444; the same five bits appear as
-# 0x00000001, 0x00001000, 0x00010000, 0x00000004, 0x00000020 at
-# lib/program.i:3328, which is what the compiler actually reads). The bard's
+# 0x00000001, 0x00001000, 0x00010000, 0x00000004, 0x00000020 on the bard's
+# Proficiencies line in lib/program.i, which is what the compiler actually
+# reads -- no line number, because every build regenerates that file, so
+# grep -n '0x00000001, 0x00001000' lib/program.i). The bard's
 # own prose promises "simple weapons, light weapons, short blades, daggers and
 # archery" (lib/classes.irh:289-290).
 #

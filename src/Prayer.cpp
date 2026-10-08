@@ -2265,10 +2265,16 @@ EvReturn Character::AlignedAct(EventInfo &e)
        moved alignLC the wrong way while the committed-chaotic branch pinned
        with max(30,...) where its evil twin used min(30,...). Pure control flow
        and integer arithmetic, no typedef or compiler dependence, so the
-       original Win32 build misbehaves identically. Tier Observed:
-       tools/check_align_lawchaos.sh is red before (five FAILs) and green after,
-       each law/chaos case read against its good/evil twin in the same run.
-       inc-r6ae. Not sent. */
+       original Win32 build misbehaves identically. Tier Observed, probe:
+       tools/check_align_lawchaos.sh (five FAILs before, green after). Tier
+       Observed, play, one check per changed line: check_align_coercion_play.sh
+       (Lawful else branch -- "You are now Lawful Neutral."; before, nothing),
+       check_align_treachery_play.sh (neutral-chaotic sign -- "You are now
+       Chaotic Neutral."; before, the score moves toward Lawful, never),
+       check_align_leave_chaotic_play.sh (committed-chaotic clamp -- coercion
+       decay reaches "You are now True Neutral." on the third act; before, the
+       score pins at 30 and the character never leaves Chaotic). inc-r6ae.
+       Not sent. */
     if (alignLC > -20)
       nAlign &= (~AL_LAWFUL);
     else

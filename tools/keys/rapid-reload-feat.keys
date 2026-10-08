@@ -1,0 +1,28 @@
+# Rapid Reload, WITH the feat. inc-l59x.
+#
+# Load the frozen Bard who has FT_RAPID_RELOAD (lib/FeatTab.cpp:1154) and an
+# uncocked arbalest, put the arbalest in the Weapon Hand, and crank it once.
+# The turn stamps of the @dump lines before and after the crank are what
+# tools/check_rapid_reload.sh reads: the crank's cost is
+# Creature::LoadCrossbow's `Timeout += N` (src/Item.cpp), made visible as the
+# turns that pass before the game asks for the next key.
+#
+# The arbalest starts worn in the L. Shoulder slot, so `e SPACE` lifts it into
+# the air and `b SPACE` sets it down in the Weapon Hand (the long sword comes
+# out). The `s` before the dumps buys the one real turn a loaded session needs
+# to count as gameplay rather than a stall (tools/headless.sh, inc-loa.3).
+
+@dump:arrival
+s
+@dump:searched
+
+i
+e SPACE
+b SPACE
+@while "ESC:Done" ESC
+@dump:wielded
+
+f                       # fire: the uncocked crossbow is cranked instead
+@dump:reloaded
+
+@quit

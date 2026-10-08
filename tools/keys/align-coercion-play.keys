@@ -1,0 +1,148 @@
+# Become Lawful Neutral by the ordinary "Issue Request" command, as a Neutral
+# character who has stated a Lawful desired alignment. This is the game-play
+# half of bd inc-r6ae; tools/check_align_coercion_play.sh reads it.
+#
+# WHAT IS BEING OBSERVED. Character::AlignedAct (src/Prayer.cpp) moves the
+# law/chaos score (alignLC) when a Neutral character commits a Lawful or
+# Chaotic act, and must set AL_LAWFUL / AL_CHAOTIC once that score passes its
+# threshold -- exactly as its good/evil twin sets AL_GOOD / AL_EVIL. Before the
+# fix the else branches that set the two flags were missing, so the score could
+# move all the way to the cap and the character's alignment never changed and
+# the game never printed "You are now ...". This run prints it.
+#
+# THE CHARACTER is tools/keys/chargen.keys' standard male orc barbarian,
+# Neutral, patron Khasrach. He carries no Diplomacy at all and Intimidate +6
+# (0 ranks, +3 Strength, +3 training) -- the sheet says so -- so
+# Creature::Request (src/Social.cpp) offers the "Use Intimidate?" prompt and
+# the coercion aligned act (AL_NONCHAOTIC|AL_LAWFUL, magnitude 3) fires. That
+# is the whole reason an orc barbarian is the right character here: no Bluff,
+# no ranks spent, and the Intimidate route is reachable immediately.
+#
+# THE DESIRED ALIGNMENT is stated with the character sheet's '[D] Alignment'
+# command (src/Managers.cpp), an ordinary player command, and set to Lawful
+# Neutral. Without it AlignedAct clamps the score back to zero as a designed
+# guard, and no number of coercions could ever show the fix.
+#
+# THE VICTIM is a human conjured by wizard mode, one square east. Wizard mode
+# sets up state a player could reach -- a talkable, non-evil creature to issue
+# a request to -- but every coercion below is the ordinary command. The victim
+# cannot answer: Freeze Monsters is on, and a human has no fear resistance, so
+# the Intimidate path takes the early-out at src/Social.cpp:1283. The aligned
+# act sits ABOVE that early-out, so the act fires and the check still bounds
+# the run.
+#
+# WHY "Go To Location" AND ESC. The aligned act fires before the request is
+# chosen and before any skill check, so each coercion aborts at the location
+# prompt. An aborted request sets no TRIED flag, so the same victim can be
+# coerced again and again -- one summon, no consumables, no waiting for a new
+# day. A chosen request that then failed would mark the victim TRIED and stop
+# the run after one attempt.
+#
+# THE COUNT. alignLC starts at 0 and each coercion costs 3, so the threshold at
+# |20| is crossed on the seventh (alignLC = -21). Eight are sent for margin;
+# the eighth changes nothing and prints nothing, which is itself correct.
+#
+# Determinism: seed 1, tools/fixtures/options-2026-08-22.dat. Every menu is
+# reached by name through @choose, and each dump names its own screen.
+
+@include chargen.keys
+
+.*2
+@dump:arrival
+
+d               # character sheet
+@until "Desired Alignment" D
+@choose "Lawful Neutral"
+@dump:desired
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+@expect "Freeze Monsters"
+DOWN*10
+@expect "all monsters are denied their"
+SPACE
+@expect "Wizard Mode Options"
+ESC
+@dump:frozen
+
+w
+@choose "Monster Summoning"
+@choose "Humans"
+@choose "human"
+RIGHT ENTER
+@dump:summoned
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Use Intimidate?" y
+@dump:coerce1
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Use Intimidate?" y
+@dump:coerce2
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Use Intimidate?" y
+@dump:coerce3
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Use Intimidate?" y
+@dump:coerce4
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Use Intimidate?" y
+@dump:coerce5
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Use Intimidate?" y
+@dump:coerce6
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Use Intimidate?" y
+@dump:coerce7
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Use Intimidate?" y
+@dump:coerce8
+@choose "Go To Location"
+ESC
+
+v
+@dump:messages
+ESC
+
+d
+@dump:sheet-after
+ESC
+@quit
