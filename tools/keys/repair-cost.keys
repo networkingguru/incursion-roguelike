@@ -1,0 +1,41 @@
+# Read the gold a Craft repair asks for, against the item's own hit points and
+# base value (bd inc-nc1). tools/check_repair_cost.sh reads the three dumps.
+#
+# WHY THIS FIXTURE. human-paladin-seed4-opt0822.sav wears leather armour +3, a
+# 2136 gp item that is not metal, so Craft needs no forge. It carries 11 gp, so
+# the repair stops at "That would cost N gp in materials, but you only have 11
+# gp." -- the same gpCost the Proceed prompt prints, with nothing spent.
+#
+# HOW THE ARMOUR GETS DAMAGED. A wizard-made "minor decay trap" is placed on the
+# square to the east and walked onto. At seed 1 the trap hits the armour and
+# leaves it at 78/86 hit points. The first RIGHT after the placement is eaten by
+# the "You find a trap" interrupt; the second RIGHT opens the confirm prompt.
+#
+# WHAT IS DUMPED. exam: the item's description ("base value of N gp", "N out of
+# M hit points"). menu: the "Repair which item?" list with (hp/max). cost: the
+# gold message.
+
+w
+@while "Enter wizard mode" y
+@until "Wizard Mode Options" w
+@choose "Create Trap"
+"minor decay trap" ENTER
+RIGHT
+ENTER
+RIGHT
+RIGHT
+y
+
+i
+j
+x
+@dump:exam
+ESC
+ESC
+
+u
+@choose "Craft"
+r
+@dump:menu
+a
+@dump:cost

@@ -3908,8 +3908,12 @@ Repair:
 	// retry penalties -- +2 per failed check
 	repairDC += it->GetStatiMag(TRIED, SK_CRAFT);
 
+	/* upstream: a repair costs more the more damaged the item is, as the DC
+	   above does. The multiplier was the tenths LEFT, so a wrecked item was
+	   nearly free. Plain integer math, so Win32 prices it the same way.
+	   Observed via tools/check_repair_cost.sh, inc-nc1, not sent. */
 	gpCost = it->getShopCost(NULL, NULL);
-	gpCost *= ((it->GetHP() * 10) / it->MaxHP());
+	gpCost *= 10 - ((it->GetHP() * 10) / it->MaxHP());
 	gpCost /= 30;
 
 	if (HasAbility(CA_MASTER_ARTISAN))
