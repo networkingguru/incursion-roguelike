@@ -715,19 +715,24 @@ void Player::EmptyQueue(int16 Queue) {
 }
 
 void Player::__IPrint(const char*msg, va_list ap) {
-    const char* fm;
     if (Silence)
         return;
 
     if (msg) {
-        fm = __XPrint(this, msg, ap);
-        ((char*)fm)[0] = toupper(fm[0]);
+        /* upstream: __IPrint must not write into the text __XPrint returns,
+           because on a rejected format that is the caller's read-only literal;
+           the store is base code, and an optimized MSVC build pools literals
+           read-only, so Win32 faults the same way (Reasoned); crash Observed
+           on macOS via tools/check_xprint_reject.sh; inc-o4y1; not sent. */
+        String s(__XPrint(this, msg, ap));
+        if (s.GetLength())
+            s.SetAt(0, toupper(s[0]));
         if (m && m->QueueNum()) {
-            MessageQueue[m->QueueNum()] += fm;
+            MessageQueue[m->QueueNum()] += (const char*)s;
             MessageQueue[m->QueueNum()] += " ";
             MessageCounter++;
         } else
-            MyTerm->Message(fm);
+            MyTerm->Message((const char*)s);
     }
 }
 
