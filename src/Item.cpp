@@ -2050,17 +2050,23 @@ EvReturn Creature::LoadCrossbow(EventInfo &e)
       IPrint("You need to have hands to do that.");
       return ABORT;
       }
+    /* upstream: RAPID_RELOAD must give the BETTER reload on all three
+       counts -- 10 segments (not 30), no attack of opportunity, and a cock
+       twice as long (40, not 20). The branch bodies were swapped, so the
+       feat cost 30 and this plain crank 10. Upstream source, not a port
+       artefact, so Win32 behaves the same. Tier: Observed
+       (check_rapid_reload.sh red then green). inc-l59x, not sent. */
     if (HasFeat(FT_RAPID_RELOAD)) {
       DPrint(e,"You rapidly crank your <Obj>.",
              "The <EActor> rapidly reloads <his:EActor> <Obj>.",e.EItem);
-    e.EItem->GainTempStati(COCKED,NULL,20,SS_MISC);
-      e.EActor->Timeout += 30; 
-    e.EActor->ProvokeAoO();
+      e.EActor->Timeout += 10;
+      e.EItem->GainTempStati(COCKED,NULL,40,SS_MISC);
     } else {
       DPrint(e,"You crank your <Obj>.",
              "The <EActor> reloads <his:EActor> <Obj>.",e.EItem);
-      e.EActor->Timeout += 10; 
-      e.EItem->GainTempStati(COCKED,NULL,40,SS_MISC);
+      e.EActor->Timeout += 30;
+      e.EItem->GainTempStati(COCKED,NULL,20,SS_MISC);
+      e.EActor->ProvokeAoO();
     } 
     return DONE;
   }
