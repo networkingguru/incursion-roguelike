@@ -61,7 +61,7 @@
 # Amendment 1 item 6 (inc-55jl phase 3): "A bolt fired in a direction
 # strikes the first creature in its path". Fixed in Magic::ABallBeamBolt's
 # own "shot with no chosen creature" walk (the item-5 kludge branch), not
-# in MagicEvent's upstream fallback (:774, shared by every effect
+# in MagicEvent's upstream fallback (src/Magic.cpp:822, shared by every effect
 # archetype, left untouched): a direction cast with EDir != CENTER arrives
 # with EVictim set to the caster by that fallback, not a chosen creature,
 # so the walk's guard now also fires for exactly that case.
