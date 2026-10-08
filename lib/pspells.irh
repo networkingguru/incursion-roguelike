@@ -4157,7 +4157,8 @@ Priest / Druid Spell "Invocation" : EA_INFLICT
       a +3 sacred bonus to attack rolls, damage and saving throws.";
   }
 
-// ww: antitoxins cover this potion effect
+// antitoxin only adds to poison saves; it does not cure. Neutralize Poison is the cure.
+// upstream: original comment claimed antitoxin covers this effect; Reasoned (lib/alchemy.irh antitoxin has no HEAL_MALADY); inc-gmrj; not sent.
 Priest / Druid / Scroll Spell "Neutralize Poison" : EA_INFLICT
   { SC_THE; Base: SP_TRIVIAL; Cost: 7; Level: 4; qval: Q_TAR;
     Desc: "Purges all toxins from the subject's body, preventing
