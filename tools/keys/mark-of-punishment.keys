@@ -1,0 +1,203 @@
+# Observe Mark of Punishment, for bd inc-7mkt.
+#
+#   INCURSION_OPTIONS=tools/gates/Options.Dat INCURSION_FORCE_SAVE_ROLL=1 \
+#       tools/headless.sh tools/keys/mark-of-punishment.keys 2
+#
+# WHAT IS MEASURED. Mark of Punishment (lib/pspells.irh) puts a TRAP_EVENT stati
+# on the MARKED creature, and its META(POST(EV_STRIKE)) hook runs each time that
+# creature strikes. In the hook EActor is the marked creature and EVictim is the
+# creature it struck. Ruled behavior: when the marked creature strikes a LAWFUL
+# creature, the MARKED creature makes the Will save against the DC on its own
+# stati; on a failure it takes Con damage (AD_DACO) equal to the count of its
+# unlawful strikes so far (1, then 2, then 3). The lawful creature struck takes
+# no Con damage. The unfixed hook saves and damages the lawful VICTIM instead.
+#
+# HOW. The mark is a TOUCH spell, so it cannot be put on the caster: casting it
+# charges the caster's touch, and the next blow delivers it. The marked creature
+# is therefore a hostile ogre (MA_GIANT, chaotic, Con 15) that the player
+# touches. The lawful creature is the PLAYER: a human paladin (lawful good) in
+# field plate, who shrugs off the ogre's blows. The paladin stows his sword
+# first, because only a creature with an empty weapon slot delivers a touch
+# spell (src/Fight.cpp: WAttack hands a wielder to the weapon, and only NAttack
+# discharges TOUCH_ATTACK). The marked ogre then strikes the paladin on its
+# own while the script waits. Cheat Death covers a killing blow (answer "n" to
+# "You die... Die?"). Genocide Everything first removes the paladin's warhorse
+# and every other monster, so only the ogre acts. The caller sets
+# INCURSION_FORCE_SAVE_ROLL=1, so every saving throw is a natural 1 and fails
+# (src/Fight.cpp LOFGetForcedSaveThrowRoll): the failed-save branch is
+# deterministic.
+#
+# THE SEED. The touch is an attack roll and can miss. Seed 2 is a seed whose
+# first touch hits; the check asserts the "You have marked the ogre." line, so
+# a drifted seed reads as INCONCLUSIVE and not as a pass.
+#
+# READ-OUTS. The sidebar CON is the paladin's Constitution. "Examine Nearby
+# Things" prints the ogre's attributes; its A_CON line is the ogre's
+# Constitution. Labels: state-00 right after the touch, state-NN after the NNth
+# turn of waiting. The message log is dumped last.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Human"
+@choose "Athletics"      # first racial skill
+@choose "Diplomacy"      # second racial skill
+@choose "Paladin"
+@choose "Erich"
+a       # Attributes: the first of the offered sets
+a       # Alignment: the first offered (lawful good, so MA_LAWFUL holds)
+@while "Choose a feat" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y # Done, and confirm keeping the ranks
+@while "wish to worship" y
+@while "personality archetype" a
+@until "Afoot" ESC
+
+# Wizard switches, rows from 0: Cheat Death (0). First wizard entry needs the
+# "Enter wizard mode? [yn]" confirm (w y).
+w
+y
+@choose "Wizard Mode Switches"
+SPACE
+ESC
+
+# Stow the sword. 'i' opens the inventory, 'b' is the Weapon Hand row, SPACE
+# lifts the sword, 's' puts it in the pack, ESC returns to play.
+i
+b
+SPACE
+s
+ESC
+
+# Make Mark of Punishment castable regardless of class.
+w
+@choose "Learn Any Spell"
+"Mark of Punishment"
+ENTER
+
+# Remove the warhorse and every other monster, then summon the ogre one square
+# east of the paladin.
+w
+@choose "Genocide Everything"
+w
+@choose "Monster Summoning"
+@choose "Giant"
+@choose "ogre"
+RIGHT
+ENTER
+@while "Die?" n
+@dump:summoned
+
+# Cast Mark of Punishment. It is a touch spell: it charges the caster's touch.
+m
+@choose "Mark of Punishment"
+@while "more" SPACE
+@while "Die?" n
+@while "Abort" a
+
+# Touch the ogre (one square east). This marks it.
+RIGHT
+@while "onfirm" y
+@while "more" SPACE
+@while "Die?" n
+@dump:touched
+
+# state-00: the ogre's Constitution right after the touch.
+w
+@choose "Examine Nearby Things"
+@until "'H'" RIGHT
+@dump:state-00
+ESC
+
+# Wait one turn at a time, and read the ogre's Constitution after every turn.
+# Labels state-01 .. state-08. One turn can hold more than one strike, so the
+# check accepts a step that equals the sum of consecutive damages.
+.
+@while "more" SPACE
+@while "Die?" n
+w
+@choose "Examine Nearby Things"
+@until "'H'" RIGHT
+@dump:state-01
+ESC
+
+.
+@while "more" SPACE
+@while "Die?" n
+w
+@choose "Examine Nearby Things"
+@until "'H'" RIGHT
+@dump:state-02
+ESC
+
+.
+@while "more" SPACE
+@while "Die?" n
+w
+@choose "Examine Nearby Things"
+@until "'H'" RIGHT
+@dump:state-03
+ESC
+
+.
+@while "more" SPACE
+@while "Die?" n
+w
+@choose "Examine Nearby Things"
+@until "'H'" RIGHT
+@dump:state-04
+ESC
+
+.
+@while "more" SPACE
+@while "Die?" n
+w
+@choose "Examine Nearby Things"
+@until "'H'" RIGHT
+@dump:state-05
+ESC
+
+.
+@while "more" SPACE
+@while "Die?" n
+w
+@choose "Examine Nearby Things"
+@until "'H'" RIGHT
+@dump:state-06
+ESC
+
+.
+@while "more" SPACE
+@while "Die?" n
+w
+@choose "Examine Nearby Things"
+@until "'H'" RIGHT
+@dump:state-07
+ESC
+
+.
+@while "more" SPACE
+@while "Die?" n
+w
+@choose "Examine Nearby Things"
+@until "'H'" RIGHT
+@dump:state-08
+ESC
+
+# The ogre's stati, to show the mark on the ogre and not on the paladin.
+w
+@choose "Examine Nearby Things"
+@until "'H'" RIGHT
+DOWN*16
+@dump:ogre-stati
+ESC
+
+# The message log: every strike and smite, newest page first.
+v
+@dump:log0
+PGUP
+@dump:log1
+PGUP
+@dump:log2
+@while "Messages" ESC
+@quit
