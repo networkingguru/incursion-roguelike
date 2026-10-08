@@ -77,8 +77,17 @@ fi
 echo "  ok: a Ranger 5 / Bard 3 / Master Archer 1 exists"
 
 # The last damage line in each log is the shot that log was taken for. The
-# earlier ones are the shots before it, still in the message history.
-shot() { grep -h "Damage:" "$SCR"/*-"$1".txt | grep -v "Aust's\|Ogre's" | tail -1; }
+# earlier ones are the shots before it, still in the message history. The line
+# is wrapped by the screen dump: "Damage: ... = 6" then "| +1d6 SA = 9 |". A
+# damage term continuation always begins with '+', so each damage line is
+# joined with an immediately following '+' line before the SA term is tested
+# -- otherwise a bow's own sneak attack reads as absent (bd inc-tacy).
+shot() {
+    awk '/Damage:/ && !/Aust.s|Ogre.s/ { sub(/^ *\| */, ""); if (d != "") last = d; d = $0; next }
+         /^[^|]*\| *\+/ && d != "" { sub(/^ *\| */, "", $0); sub(/ *\|.*$/, "", $0); d = d " " $0; next }
+         { if (d != "") last = d; d = "" }
+         END { if (d != "") last = d; print last }' "$SCR"/*-"$1".txt
+}
 
 fail=0
 

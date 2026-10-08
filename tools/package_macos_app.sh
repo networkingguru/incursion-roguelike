@@ -18,6 +18,7 @@
 # Usage:
 #     VERSION=2.0 tools/package_macos_app.sh            build, assemble, sign, verify
 #     VERSION=2.0 DMG=yes tools/package_macos_app.sh    also notarise a disk image
+#     INCURSION_ALLOW_DIRTY=1 tools/package_macos_app.sh   ship uncommitted tracked edits deliberately
 #
 # VERSION is required. The script refuses to build without it; see the check
 # below for why.
@@ -28,6 +29,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+"$ROOT/tools/require_clean_tree.sh"
 
 ARCH="$(uname -m)"
 NAME="Incursion-macOS-$ARCH-app"

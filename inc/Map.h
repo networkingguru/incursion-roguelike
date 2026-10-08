@@ -498,6 +498,7 @@ class Map: public Object
     int8 GetTerraDC(int16 x,int16 y);
     Creature * GetTerraCreator(int16 x,int16 y);
     int8 GetTerraDType(int16 x,int16 y);
+    Dice GetTerraDice(int16 x, int16 y);
     int16 GetTerraDmg(int16 x, int16 y);
     void RemoveTerra(int16 key);
     void RemoveTerraXY(int16 x,int16 y,rID xID=0);
@@ -1065,6 +1066,16 @@ class Thing: public Object
       virtual void Remove(bool isDelete, bool keepMobileFields = false);
       virtual void NotifyGone(hObj h);
       void BoostRetry(int16 sk, Creature *c);
+      /* inc-h22n: one lock-picking attempt, shared by a door and a chest. */
+      bool PickLockAttempt(Creature *actor, int16 baseDC, int16 repeatAction);
+      /* inc-1xr3: the effective lock DC a given actor faces -- the caller's
+         base DC plus 10 when the lock was wizard-locked by another. Both the
+         prompt and PickLockAttempt call this, so the odds shown match the
+         DC rolled. Bears the <Obj>, so IPrint is not called here. */
+      int16 PickLockDC(Creature *actor, int16 baseDC);
+      /* inc-h22n: at least one rank of Lockpicking; refuses, with a message,
+         a creature that may not try. Callers ask before prompting. */
+      bool CanPickLock(Creature *actor);
       Thing* ProjectDir(Dir d, int8 range=127)
         {
           switch (d) {

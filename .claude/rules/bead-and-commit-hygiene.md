@@ -6,7 +6,7 @@ Why: approving twice wastes a round trip and can deadlock the merge gate.
 History: docs/rules-history/bead-and-commit-hygiene.md#commit-approves-the-text-it-carries.
 
 ## commit-gate-stage-before-commit
-NEVER combine staging and committing in one Bash call — stage, then commit SEPARATELY, or `commit-gate.py` sees an empty staged index and fails closed to BLOCK. Keep "commit gate" out of `bd-remember` content (substring-matched). Do NOT weaken the hook to parse chained staging. Auto mode denies `create-approval-marker.py`; use bang-prefix or leave auto mode for a non-docs commit.
+NEVER combine staging and committing in one Bash call — stage, then commit SEPARATELY, or `commit-gate.py` sees an empty staged index and fails closed to BLOCK. Keep "commit gate" out of `bd-remember` content (substring-matched). Do NOT weaken the hook to parse chained staging. `commit-gate.py` allows a commit only when Brian's latest message says commit, save or push, or answers yes to a commit Claude proposed; there is no approval marker.
 Why: a chained call hides that the change is docs-only from the hook.
 History: docs/rules-history/bead-and-commit-hygiene.md#commit-gate-stage-before-commit.
 

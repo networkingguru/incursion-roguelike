@@ -1,0 +1,7 @@
+# Start from a frozen character and take one turn, so that Game::Play runs
+# the door/lock probe (INCURSION_DOORPICK_PROBE, src/DoorPickProbe.cpp) before
+# the first key. Used by tools/check_door_pick_kick.sh with INCURSION_LOAD
+# set. The probe does all the work; the key script only has to reach play.
+@dump:arrival
+s
+@dump:played

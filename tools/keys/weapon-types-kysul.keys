@@ -1,0 +1,7 @@
+# Key script for tools/check_weapon_types.sh, INCURSION_WEAPONTYPE_PROBE=kysul.
+#
+# The probe runs Kysul's EV_GODPULSE 2000 times. Each pulse shows a message box
+# that waits for a key, so the script supplies a spare key for each box, then
+# one search so the run counts as a session (see load-char-sheet.keys).
+SPACE*2500
+s

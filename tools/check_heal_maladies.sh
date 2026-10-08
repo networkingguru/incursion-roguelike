@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# gate-serial: writes fixed scratch paths logs/heal-maladies-* and rm -rf's them
 # When the PLAYER casts the priest spell Heal on himself, does it cure all
 # nine non-PARALYSIS maladies its "and EA_HEALING" clauses name? (bd inc-xr8i)
 # A second, independent measurement below asks whether the same spell, cast
@@ -45,13 +46,15 @@
 # to prove anything, and it says so instead of running when there is no
 # green to start from.
 #
-# THE SEED IS PINNED AT 2, not 1, because of the paralysis measurement below:
+# THE SEED IS PINNED AT 5, because of the paralysis measurement below:
 # Hold Person rolls a real Will save against the kobold, and that roll is not
-# scripted. Seed 1 let the kobold succeed its save; of seeds 2-6 tried, only
-# 3 and 4 did. Seed 2 is kept because a check that sometimes has nothing to
-# measure is worse than one pinned to a seed that reliably does. The
-# nine-malady half does not roll anything -- it afflicts the player directly
-# -- so this change does not touch it.
+# scripted. Which seeds let the kobold fail its save moves with the draws a
+# new character's starting kit consumes: seed 2 (the pin before the kit
+# rearrangement) and seeds 3 and 4 now leave the kobold unheld or an affliction
+# unlanded, while seeds 1 and 5 measure both halves. Seed 5 is kept because a
+# check that sometimes has nothing to measure is worse than one pinned to a
+# seed that reliably does. The nine-malady half is seed-dependent too: on
+# seeds 2 and 3 the control dump lacked DISEASED (and on seed 2 WOUNDED).
 #
 # Usage: tools/check_heal_maladies.sh [--prove-red]
 . "$(dirname "$0")/check_lib.sh"
@@ -114,7 +117,7 @@ _build_scratch() {
 # a $(...) capture would run it in a subshell and lose that.
 _read_run() {
     local dir="$1" mal
-    INCURSION_RUN_DIR="$dir" check_run tools/keys/heal-maladies.keys 2
+    INCURSION_RUN_DIR="$dir" check_run tools/keys/heal-maladies.keys 5
 
     CONTROL_MISSING=()
     check_screens '*control*'

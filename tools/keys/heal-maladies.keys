@@ -131,6 +131,13 @@ m
 RIGHT
 ENTER
 
+# RETRY (bd inc-icns): the kobold's Will save is a real roll that drifts with
+# every random draw content adds or removes. While the message line still says
+# the kobold resisted, cast again. 'a' is Hold Person's menu letter: it is the
+# only spell known at this point. An innate cast costs no mana. The loop ends
+# when the message changes, or after the harness's own bound of 200 passes.
+@while "resists your magic" m a RIGHT ENTER
+
 w
 @choose "Examine Nearby Things"
 RIGHT

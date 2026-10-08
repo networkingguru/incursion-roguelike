@@ -1,0 +1,7 @@
+# Open the first spell's description and photograph its Chance line, with NO
+# bonus granted. The control half of tools/check_aid_casting_bonus.sh (bd inc-9uuj).
+m PGDN*20
+@expect "Chance:"
+@dump:spell
+ESC
+@quit

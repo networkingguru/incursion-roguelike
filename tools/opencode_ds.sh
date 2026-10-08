@@ -5,27 +5,56 @@
 #
 #   tools/opencode_ds.sh <worktree-dir> <brief-file>
 #
-# Exit 0 success; 1 refused (budget or poisoned ledger); 2 could not run or
-# opencode failed; 3 the run was stopped as a DeepSeek repetition loop.
+# Every brief is sent with the fixed preamble in front of it (the preamble,
+# a blank line, "---", a blank line, then the brief). The preamble is read
+# from the wrapper's OWN repository at tools/opencode/brief_preamble.md --
+# never the target worktree, which the agent can edit -- because it holds the
+# context budget and the implementer rules, so the agent need not read
+# AGENTS.md. Override that path with INCURSION_DS_PREAMBLE; if the preamble is
+# missing or empty the wrapper refuses (exit 2) before any spend or launch.
 #
-# The wrapper reuses tools/deepseek.py's check_budget, resolve_ledger_path,
-# resolve_budget and resolve_key -- it imports the module rather than copying
-# the logic, so the ledger row format and the poison rule stay in one place.
+# Exit 0 success; 2 could not run or opencode failed; 3 the run was stopped as
+# a DeepSeek repetition loop; 4 the run was stopped because its context passed
+# the ceiling.
+#
+# The wrapper reuses tools/deepseek.py's resolve_ledger_path and resolve_key --
+# it imports the module rather than copying the logic, so the ledger row format
+# stays in one place. The ledger records every run's cost but never refuses a
+# run: spending is controlled on the owner's card (owner ruling, 2026-10-04).
 #
 # The opencode run is launched through tools/watchdog.sh, which stops a stalled
 # run in its own process group and writes the reason to a --status file. Three
 # limits apply: a startup limit (no output at all), an idle limit (output
 # stopped growing), and a canary that runs tools/opencode/loop_check.py on each
-# growing poll to stop a DeepSeek repetition loop the idle limit never sees.
-# Tune them with INCURSION_WATCHDOG_STARTUP, INCURSION_WATCHDOG_IDLE,
-# INCURSION_WATCHDOG_POLL and INCURSION_WATCHDOG_GRACE (seconds; see
-# tools/watchdog.sh for defaults). A killed run still writes exactly one ledger
-# row, marked "killed", so a hang neither locks the ledger nor goes unbilled.
-# A loop kill (killed=canary) is recorded in the row as "killed": "loop".
+# growing poll to stop a DeepSeek repetition loop or a run whose context passed
+# a ceiling the idle limit never sees. The canary's context ceiling defaults to
+# 100000 tokens (input + cache.read + cache.write per step) and is overridden
+# with INCURSION_DS_CONTEXT_CEILING. Tune the limits with
+# INCURSION_WATCHDOG_STARTUP, INCURSION_WATCHDOG_IDLE, INCURSION_WATCHDOG_POLL
+# and INCURSION_WATCHDOG_GRACE (seconds; see tools/watchdog.sh for defaults). A
+# killed run still writes exactly one ledger row, marked "killed", so a hang
+# neither locks the ledger nor goes unbilled. A loop kill (killed=canary over
+# the loop rules) is recorded in the row as "killed": "loop"; a context kill
+# (killed=canary over the context rule) as "killed": "context" and exit 4.
 #
-# After every run (killed or not) events.jsonl is copied to
-# logs/opencode-runs/<worktree basename>-<STAMP>-$$.jsonl under the repository
-# the wrapper lives in, so a run can be examined after its worktree is gone.
+# Before opencode starts, tools/opencode/record_proxy.py is launched outside
+# the sandbox on a local ephemeral port and opencode is pointed at it with
+# INCURSION_DS_BASEURL; the proxy forwards every model call to DeepInfra and
+# records the exact HTTP request and streamed response under
+# $RUNDIR/requests/, so a request that produced a repetition loop can be
+# replayed later. The proxy holds no key and writes no header value. If the
+# proxy cannot start, the wrapper exits 2 without billing: no model call
+# happened. The proxy is stopped (TERM, then KILL after 5 s) on every exit path
+# after it starts.
+#
+# After every run (killed or not) the run is copied under the repository the
+# wrapper lives in, so it can be examined after its worktree is gone. A loop
+# kill (killed=canary) copies the WHOLE run dir -- requests/, events, status,
+# canary text -- EXCLUDING the data/ and state/ subdirectories (opencode's DB
+# and snapshots, up to 24 MB) to
+# logs/opencode-runs/<worktree basename>-<STAMP>-$$/. Any other run keeps the
+# single events.jsonl copy as before:
+# logs/opencode-runs/<worktree basename>-<STAMP>-$$.jsonl.
 
 set -uo pipefail
 
@@ -47,6 +76,11 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 DEEPSEEK_MODULE="$REPO/tools/deepseek.py"
 SANDBOX_PROFILE="$REPO/tools/opencode/sandbox.sb"
 OPENCODE_CONFIG="$REPO/tools/opencode/opencode.json"
+# The fixed preamble prepended to every brief, read from the wrapper's OWN
+# repository (never the target worktree, which the agent can edit). Override
+# with INCURSION_DS_PREAMBLE; the check points it at a missing file to prove
+# the refusal.
+PREAMBLE_FILE="${INCURSION_DS_PREAMBLE:-$REPO/tools/opencode/brief_preamble.md}"
 
 # --- 1. validate ----------------------------------------------------------
 if [ ! -d "$ARG_WORKTREE" ]; then
@@ -68,6 +102,11 @@ if [ ! -f "$BRIEF_FILE" ]; then
 fi
 if [ ! -s "$BRIEF_FILE" ]; then
     echo "refused: brief file is empty: $BRIEF_FILE" >&2
+    exit 2
+fi
+
+if [ ! -s "$PREAMBLE_FILE" ]; then
+    echo "refused: brief preamble missing or empty: $PREAMBLE_FILE" >&2
     exit 2
 fi
 
@@ -111,23 +150,7 @@ if [ -z "$KEY" ]; then
     exit 2
 fi
 
-# --- 3. budget ------------------------------------------------------------
-# Run check_budget() in its own interpreter: it exits 1 on refusal/poison and
-# 2 on a malformed ledger, and those codes must pass straight through. The
-# ledger path and budget are resolved by the module itself.
-python3 - "$DEEPSEEK_MODULE" <<'PY'
-import importlib.util, sys
-spec = importlib.util.spec_from_file_location("deepseek", sys.argv[1])
-mod = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(mod)
-mod.check_budget(mod.resolve_ledger_path(), mod.resolve_budget())
-PY
-RC=$?
-if [ "$RC" -ne 0 ]; then
-    exit "$RC"
-fi
-
-# --- 4. run dir -----------------------------------------------------------
+# --- 3. run dir -----------------------------------------------------------
 # logs/ is gitignored. XDG_* point inside the run dir; only the provider
 # package cache is shared, so it downloads once across runs.
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
@@ -139,15 +162,82 @@ mkdir -p "$CACHEDIR" || { echo "could not run: cannot make cache dir $CACHEDIR" 
 EVENTS="$RUNDIR/events.jsonl"
 STDERR="$RUNDIR/stderr.log"
 WATCHDOG_STATUS="$RUNDIR/watchdog.status"
+PROXY_PID_FILE="$RUNDIR/proxy.pid"
+PROXY_PORT_FILE="$RUNDIR/proxy.port"
+REQUESTS_DIR="$RUNDIR/requests"
 
-# --- 5. launch ------------------------------------------------------------
-BRIEF_TEXT="$(cat "$BRIEF_FILE")"
+# --- 5. recording proxy ---------------------------------------------------
+# Start record_proxy.py OUTSIDE the sandbox (it needs the network) and point
+# opencode at it. The proxy records every model call so a request that later
+# produced a repetition loop can be replayed. It holds no key: the client's
+# Authorization header is relayed and never written to a record file.
+PROXY_PID=""
+stop_proxy() {
+    if [ -n "$PROXY_PID" ] && kill -0 "$PROXY_PID" 2>/dev/null; then
+        kill -TERM "$PROXY_PID" 2>/dev/null
+        local waited=0
+        while kill -0 "$PROXY_PID" 2>/dev/null && [ "$waited" -lt 5 ]; do
+            sleep 1
+            waited=$((waited + 1))
+        done
+        if kill -0 "$PROXY_PID" 2>/dev/null; then
+            kill -KILL "$PROXY_PID" 2>/dev/null
+        fi
+        wait "$PROXY_PID" 2>/dev/null
+    fi
+    PROXY_PID=""
+}
+# The proxy is stopped on EVERY exit path once it has started -- success, a
+# watchdog kill, a billing failure, any early error below.
+trap 'stop_proxy' EXIT
+
+mkdir -p "$REQUESTS_DIR" || { echo "could not run: cannot make requests dir $REQUESTS_DIR" >&2; exit 2; }
+rm -f "$PROXY_PORT_FILE"
+python3 "$REPO/tools/opencode/record_proxy.py" --dir "$REQUESTS_DIR" --port-file "$PROXY_PORT_FILE" \
+    > "$RUNDIR/proxy.log" 2>&1 &
+PROXY_PID=$!
+printf '%s\n' "$PROXY_PID" > "$PROXY_PID_FILE"
+
+PROXY_PORT=""
+PROXY_WAIT=0
+while [ "$PROXY_WAIT" -lt 10 ]; do
+    if [ -f "$PROXY_PORT_FILE" ]; then
+        PROXY_PORT="$(head -n 1 "$PROXY_PORT_FILE" | tr -d '[:space:]')"
+        break
+    fi
+    if ! kill -0 "$PROXY_PID" 2>/dev/null; then
+        break
+    fi
+    sleep 1
+    PROXY_WAIT=$((PROXY_WAIT + 1))
+done
+if [ -z "$PROXY_PORT" ]; then
+    stop_proxy
+    echo "could not run: recording proxy failed to start; see $RUNDIR/proxy.log" >&2
+    echo "no model call happened; nothing billed." >&2
+    exit 2
+fi
+
+# --- 6. launch ------------------------------------------------------------
+# Every brief is sent with the fixed preamble in front: the preamble text, a
+# blank line, "---", a blank line, then the brief. The preamble holds the
+# context budget and the implementer rules, so the agent need not read
+# AGENTS.md; it is read from the wrapper's own repository, never the worktree.
+BRIEF_TEXT="$(cat "$PREAMBLE_FILE")"$'\n\n---\n\n'"$(cat "$BRIEF_FILE")"
 OPENCODE_BIN="${INCURSION_OPENCODE_BIN:-opencode}"
 
+# The key is exported into this wrapper's own shell, never passed as an argv
+# word: a `DEEPINFRA_API_KEY="$KEY"` argument would sit in the process argv
+# (visible to `ps`) and, before the watchdog stopped printing the whole command,
+# in the watchdog's stop message (bead inc-k4wc). The child inherits the export.
+export DEEPINFRA_API_KEY="$KEY"
+
+# The run data -- XDG_DATA_HOME below -- lives inside the target worktree, so
+# opencode's per-step snapshot copies MUST stay off (inc-5avr).
 "$REPO/tools/watchdog.sh" --out "$EVENTS" --err "$STDERR" --status "$WATCHDOG_STATUS" \
     --canary "$REPO/tools/opencode/loop_check.py" -- \
     env \
-    DEEPINFRA_API_KEY="$KEY" \
+    INCURSION_DS_BASEURL="http://127.0.0.1:$PROXY_PORT/v1/openai" \
     OPENCODE_CONFIG="$OPENCODE_CONFIG" \
     OPENCODE_DISABLE_CLAUDE_CODE=1 \
     OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1 \
@@ -160,7 +250,7 @@ OPENCODE_BIN="${INCURSION_OPENCODE_BIN:-opencode}"
     XDG_STATE_HOME="$RUNDIR/state" \
     XDG_CONFIG_HOME="$RUNDIR/config" \
     XDG_CACHE_HOME="$CACHEDIR" \
-    sandbox-exec -f "$SANDBOX_PROFILE" -D WORKDIR="$WORKTREE" -D CACHEDIR="$CACHEDIR" \
+    sandbox-exec -f "$SANDBOX_PROFILE" -D WORKDIR="$WORKTREE" -D CACHEDIR="$CACHEDIR" -D HOME="$HOME" \
     "$OPENCODE_BIN" run --pure --format json --dir "$WORKTREE" "$BRIEF_TEXT"
 OPENCODE_RC=$?
 
@@ -175,14 +265,22 @@ case "$KILLED" in
     *) KILLED="" ;;
 esac
 
-# A canary kill is a DeepSeek repetition loop: the ledger row records it as
-# "killed": "loop", and its saved canary text is printed later.
+# A canary kill is either a DeepSeek repetition loop or a run whose context
+# passed the ceiling: the first line of the saved canary text tells them apart.
+# The ledger row records the former as "killed": "loop" and the latter as
+# "killed": "context"; the saved canary text is printed later either way.
 LEDGER_KILLED="$KILLED"
+CANARY_CONTEXT=0
 if [ "$KILLED" = "canary" ]; then
     LEDGER_KILLED="loop"
+    if [ -f "$WATCHDOG_STATUS.canary" ] \
+        && grep -q '^context ' <<< "$(head -n 1 "$WATCHDOG_STATUS.canary")"; then
+        LEDGER_KILLED="context"
+        CANARY_CONTEXT=1
+    fi
 fi
 
-# --- 6. bill --------------------------------------------------------------
+# --- 7. bill --------------------------------------------------------------
 # Parse events.jsonl: sum part.cost and the token fields over every
 # step_finish event, then append exactly one ledger row. A run with no
 # step_finish event and no tokens billed nothing, so it writes no row --
@@ -327,20 +425,32 @@ STEPS="$(printf '%s\n' "$BILL_OUT" | sed -n 's/^STEPS //p')"
 COST="$(printf '%s\n' "$BILL_OUT" | sed -n 's/^COST //p')"
 POISON="$(printf '%s\n' "$BILL_OUT" | sed -n 's/^POISON //p')"
 
-# After every run, killed or not, keep a copy of events.jsonl under the shared
-# checkout's logs so a run can be examined after its worktree is gone. The
+# After every run, killed or not, keep a copy under the shared checkout's logs
+# so a run can be examined after its worktree is gone. A loop kill
+# (killed=canary) copies the WHOLE run dir -- requests/ (the recorded model
+# calls), events, status, canary text -- EXCLUDING the data/ and state/
+# subdirectories, which are opencode's DB and snapshots (up to 24 MB and not
+# useful for replay). Any other run keeps the single events.jsonl copy. The
 # destination can be redirected with INCURSION_OPENCODE_RUNS_DIR (the tests use
 # it so they never write into the real checkout's logs). A copy failure only
 # warns; it never changes the exit code.
 RUNS_DIR="${INCURSION_OPENCODE_RUNS_DIR:-$REPO/logs/opencode-runs}"
-EVENTS_COPY="$RUNS_DIR/$(basename "$WORKTREE")-${STAMP}-$$.jsonl"
-if mkdir -p "$RUNS_DIR" && cp -f "$EVENTS" "$EVENTS_COPY" 2>/dev/null; then
-    :
+RUN_NAME="$(basename "$WORKTREE")-${STAMP}-$$"
+if mkdir -p "$RUNS_DIR"; then
+    if [ "$KILLED" = "canary" ]; then
+        RUN_COPY="$RUNS_DIR/$RUN_NAME"
+        rsync -a --exclude 'data/' --exclude 'state/' "$RUNDIR"/ "$RUN_COPY"/ 2>/dev/null \
+            || echo "warning: could not copy the run dir to $RUN_COPY" >&2
+    else
+        EVENTS_COPY="$RUNS_DIR/$RUN_NAME.jsonl"
+        cp -f "$EVENTS" "$EVENTS_COPY" 2>/dev/null \
+            || echo "warning: could not copy events.jsonl to $EVENTS_COPY" >&2
+    fi
 else
-    echo "warning: could not copy events.jsonl to $EVENTS_COPY" >&2
+    echo "warning: could not make runs dir $RUNS_DIR" >&2
 fi
 
-# --- 7. report ------------------------------------------------------------
+# --- 8. report ------------------------------------------------------------
 # Final assistant text: the last type == "text" event's part.text. A loop kill
 # skips it: the last text IS the repeated loop, which would flood stdout, and
 # the canary's tail is printed to stderr instead.
@@ -376,6 +486,17 @@ fi
 # also poisoned the ledger still says so.
 if [ -n "$KILLED" ]; then
     echo "rundir=$RUNDIR steps=$STEPS cost=$COST exit=$OPENCODE_RC"
+    if [ "$CANARY_CONTEXT" -eq 1 ]; then
+        echo "DeepSeek context ceiling: run stopped (inc-xiqb); its changes stay in the worktree; start a fresh run for the remaining work; rundir=$RUNDIR" >&2
+        if [ -f "$WATCHDOG_STATUS.canary" ]; then
+            cat "$WATCHDOG_STATUS.canary" >&2
+        fi
+        if [ "$POISON" -eq 1 ]; then
+            echo "opencode run quoted no usable cost; its ledger row has cost=null." >&2
+            echo "The ledger is now POISONED until a human resolves that row." >&2
+        fi
+        exit 4
+    fi
     if [ "$KILLED" = "canary" ]; then
         echo "DeepSeek repetition loop: run stopped (inc-uxmf); rundir=$RUNDIR" >&2
         if [ -f "$WATCHDOG_STATUS.canary" ]; then

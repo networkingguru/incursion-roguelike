@@ -25,6 +25,9 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 FAIL=0
 
+# A fixture landing tests the lock and merge, not machine load (inc-rwha).
+export INCURSION_LOAD_GUARD_OFF=1
+
 ok()  { echo "OK    $1"; }
 bad() { echo "FAIL  $1"; FAIL=1; }
 

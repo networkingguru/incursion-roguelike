@@ -167,3 +167,31 @@ if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
     fi
   fi
 fi
+
+# --- INCURSION: run the FAST set in a bead worktree before the commit lands ---
+# (inc-3s7w). tools/fast_checks.sh is the seconds-long subset of the cheap tier;
+# the landing gate in tools/finish_bead.sh runs the same checks and more. This
+# block covers ONLY bead worktrees (the shared checkout has its own gate) and
+# only when no merge is in progress, because finish_bead.sh makes the merge
+# commit and runs the fast set itself. Exit 1 refuses the commit; exit 2 is
+# "could not measure" and only warns; INCURSION_NO_FAST_CHECKS=1 skips it.
+if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
+  _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
+  _inc_gitdir=$(git rev-parse --absolute-git-dir 2>/dev/null)
+  _inc_common=$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd)
+  if [ "${INCURSION_NO_FAST_CHECKS:-}" = "1" ]; then
+    echo >&2 "pre-commit: fast checks skipped by INCURSION_NO_FAST_CHECKS."
+  elif [ -n "$_inc_gitdir" ] && [ "$_inc_gitdir" != "$_inc_common" ] \
+       && [ ! -e "$_inc_gitdir/MERGE_HEAD" ] \
+       && [ -x "$_inc_root/tools/fast_checks.sh" ]; then
+    _inc_fast_out=$("$_inc_root/tools/fast_checks.sh" 2>&1)
+    _inc_fast=$?
+    if [ $_inc_fast -eq 1 ]; then
+      echo "$_inc_fast_out"
+      echo >&2 "pre-commit: a fast check failed (above). Fix it before committing; the landing gate runs the same checks and more."
+      exit 1
+    elif [ $_inc_fast -ne 0 ]; then
+      echo >&2 "pre-commit: tools/fast_checks.sh could not measure (exit $_inc_fast); the commit CONTINUES."
+    fi
+  fi
+fi

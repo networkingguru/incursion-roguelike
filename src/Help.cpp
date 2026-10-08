@@ -4,6 +4,16 @@
    as well as any functions which provide descriptions of
    things in plain English, such as the monster memory. */
 
+#include <string>
+#include <vector>
+#include <map>
+#include <cerrno>
+#include <sys/stat.h>
+#ifdef WIN32
+#include <direct.h>
+#else
+#include <unistd.h>
+#endif
 #include "Incursion.h"
 
 extern KeySetItem StandardKeySet[], RoguelikeKeySet[]; 
@@ -2094,6 +2104,977 @@ NewTopic:
       }
     while(1);
   }
+
+struct WikiChapter {
+    const char *topic;
+    const char *page;
+};
+
+/* The prose chapters, in the order the manual presents them (spec section
+   1): mainmenu is the Home page, the rest follow the in-game help order. */
+static const WikiChapter WikiChapters[] = {
+    { "mainmenu", "Home" },
+    { "intro", "Introduction" },
+    { "chargen", "Character Generation" },
+    { "commands", "Commands" },
+    { "interface", "Interface" },
+    { "adventuring", "Adventuring" },
+    { "combat", "Combat" },
+    { "magic", "Magic" },
+    { "overland", "Overland" },
+    { "OGL", "OGL" }
+};
+
+static std::string WikiTopicPage(const std::string &topic) {
+    for (const WikiChapter &chapter : WikiChapters)
+        if (!stricmp(chapter.topic, topic.c_str()))
+            return chapter.page;
+    static const WikiChapter references[] = {
+        { "races", "Races" }, { "classes", "Classes" },
+        { "pantheon", "Gods" }, { "domains", "Domains" },
+        { "feats", "Feats" }, { "skills", "Skills" },
+        { "arcane spells", "Arcane Spells" },
+        { "divine spells", "Divine Spells" },
+        { "druid spells", "Druid Spells" },
+        { "other spells", "Other Spells" },
+        { "powers", "Powers" }, { "spell index", "Spell Index" }
+    };
+    /* No "custom" -> "My Character" mapping: nothing in this mode generates a
+       My Character page (spec section 1 permits dropping it). Any topic with
+       no generated page (help::custom, for example) resolves to the empty
+       string; WikiMarkdown then drops the link and leaves its plain label
+       text, exactly as the upstream HTML exporter drops such links. */
+    for (const WikiChapter &reference : references)
+        if (!stricmp(reference.topic, topic.c_str()))
+            return reference.page;
+    return "";
+}
+
+/* Unicode code points for the glyph ids the game encodes after LITERAL_CHAR.
+   Copied from glyphchar_to_chtype's lookup_table in src/Wcurses.cpp, which the
+   posix build does not link; index = glyph id - 256 (GLYPH_FIRST). A zero
+   entry means the terminal table has no entry (or none we copied), and the
+   converter writes '?'. ids 256..375, i.e. GLYPH_FIRST..GLYPH_LAST. */
+static const uint32 WikiGlyphCP[] = {
+        0x2665, 0x253C, 0x2248, 0x007E, 0x25AA, 0x0023,  /* 256..261 */
+        0x2248, 0x263C, 0x2592, 0x2591, 0x2588, 0x25CB,
+        0x25CB, 0x220F, 0x256A, 0x263C, 0x00A1, 0x00BF,
+        0x0000, 0x221A, 0x007C, 0x002F, 0x002D, 0x0025,  /* 274 absent */
+        0x0025, 0x25AA, 0x007D, 0x03A3, 0x03A3, 0x03A3,
+        0x005D, 0x03C3, 0x00A2, 0x00A2, 0x03B1, 0x03B1,
+        0x0393, 0x00B6, 0x2302, 0x005E, 0x2261, 0x2261,
+        0x03B4, 0x2642, 0x00A3, 0x0026, 0x221E, 0x0022,
+        0x03C0, 0x2666, 0x0024, 0x03A9, 0x0028, 0x0029,
+        0x0026, 0x2302, 0x2665, 0x2660, 0x002A, 0x00C6,
+        0x0038, 0x2320, 0x255B, 0x00D8, 0x0022, 0x003A,
+        0x003D, 0x00B7, 0x25AA, 0x2502, 0x2500, 0x002B,
+        0x00B1, 0x0030, 0x2261, 0x00A7, 0x00B6, 0x2551,
+        0x2550, 0x2558, 0x003C, 0x003E, 0x00A5, 0x221A,
+        0x25AA, 0x003F, 0x0026, 0x0026, 0x221A, 0x03F7,
+        0x00F7, 0x2191, 0x2191, 0x2193, 0x2192, 0x2190,
+        0x00EE, 0x00EF, 0x00EC, 0x0069, 0x00F9, 0x00FC,
+        0x00F6, 0x00D6, 0x00FF, 0x0040, 0x263A, 0x263B,
+        0x0110, 0x00F0, 0x00F0, 0x2502, 0x2500, 0x00F7,
+        0x2248, 0x25AA, 0x03F4, 0x25C4, 0x25BA, 0x0020,
+};
+
+/* The Unicode code point for a decoded glyph id, or 0 when the id has no
+   entry (the converter then writes '?'). ids below 128 are the character. */
+static uint32 WikiGlyphCodePoint(uint32 id) {
+    if (id < 128)
+        return id;
+    if (id < 256 || id > 375)
+        return 0;
+    return WikiGlyphCP[id - 256];
+}
+
+static void WikiEmitUTF8(std::string &out, uint32 cp) {
+    if (cp < 0x80)
+        out += static_cast<char>(cp);
+    else if (cp < 0x800) {
+        out += static_cast<char>(0xC0 | (cp >> 6));
+        out += static_cast<char>(0x80 | (cp & 0x3F));
+    } else {
+        out += static_cast<char>(0xE0 | (cp >> 12));
+        out += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+        out += static_cast<char>(0x80 | (cp & 0x3F));
+    }
+}
+
+/* Convert one raw help line (no newline) to Markdown body text. `bright`
+   carries the bright/normal colour state across lines, exactly as the
+   single-pass converter did. `bold` is closed at every line end. */
+static std::string WikiMarkdownLine(const std::string &line, bool &bright) {
+    std::string out;
+    bool bold = false, lineStart = true;
+    for (size_t i = 0; i < line.size(); ++i) {
+        signed char sc = static_cast<signed char>(line[i]);
+        if (sc == LITERAL_CHAR) {
+            /* Decode the two glyph bytes exactly as TextTerm::Write does
+               (src/TextTerm.cpp:229-239): the high byte is inverted and
+               sign-extended, the low byte is unsigned. */
+            uint32 gid = 0;
+            if (i + 2 < line.size()) {
+                signed char high = static_cast<signed char>(line[i + 1]);
+                gid = static_cast<uint32>(~high << 8);
+                gid |= static_cast<uint8>(line[i + 2]);
+                i += 2;
+            }
+            uint32 cp = WikiGlyphCodePoint(gid);
+            if (cp == 0)
+                cp = '?';
+            if (bright && !bold) {
+                out += "<b>";
+                bold = true;
+            }
+            if (cp < 128) {
+                /* Escape like any other character. */
+                switch (static_cast<char>(cp)) {
+                    case '_': out += "&nbsp;"; break;
+                    case '~': out += "%"; break;
+                    case '<': out += "&lt;"; break;
+                    case '>': out += "&gt;"; break;
+                    case '&': out += "&amp;"; break;
+                    case '*': case '#': case '|': case '`': case '[':
+                    case ']': case '\\':
+                        out += "\\";
+                        out += static_cast<char>(cp);
+                        break;
+                    default:
+                        out += static_cast<char>(cp);
+                        break;
+                }
+            } else
+                WikiEmitUTF8(out, cp);
+            lineStart = false;
+            continue;
+        }
+        int c = sc;
+        if (c == WRAP_BREAK || c == WRAP_INDENT)
+            continue;
+        if (c <= -BLUE && c >= -WHITE) {
+            if (c == -SHADOW)
+                continue;
+            bright = c <= -AZURE;
+            if (!bright && bold) {
+                out += "</b>";
+                bold = false;
+            }
+            continue;
+        }
+        if (line[i] == '\r')
+            continue;
+        std::string token;
+        if (line[i] == '{') {
+            size_t end = line.find('}', i + 1);
+            if (end != std::string::npos) {
+                size_t colon = line.find(':', i + 1);
+                if (colon != std::string::npos && colon < end) {
+                    std::string page =
+                        WikiTopicPage(line.substr(colon + 1, end - colon - 1));
+                    if (!page.empty())
+                        token = "[[" + page + "]]";
+                }
+                i = end;
+                if (token.empty())
+                    continue;
+            } else
+                token = "{";
+        } else if (line[i] == ' ') {
+            size_t end = i;
+            while (end + 1 < line.size() && line[end + 1] == ' ')
+                ++end;
+            if (lineStart || end != i)
+                for (size_t s = i; s <= end; ++s)
+                    token += "&nbsp;";
+            else
+                token = " ";
+            i = end;
+        } else {
+            switch (line[i]) {
+                case '_': token = "&nbsp;"; break;
+                case '~': token = "%"; break;
+                case '<': token = "&lt;"; break;
+                case '>': token = "&gt;"; break;
+                case '&': token = "&amp;"; break;
+                case '*': case '#': case '|': case '`': case '[': case ']':
+                case '\\':
+                    token = "\\";
+                    token += line[i];
+                    break;
+                case '\t': token = " "; break;
+                default: token = line[i]; break;
+            }
+        }
+        if (bright && !bold) {
+            out += "<b>";
+            bold = true;
+        }
+        out += token;
+        lineStart = false;
+    }
+    if (bold)
+        out += "</b>";
+    return out;
+}
+
+/* Strip every colour byte and the `__` indent marker, for testing a line's
+   shape (heading rules). */
+static std::string WikiStripMarkup(const std::string &line) {
+    std::string s;
+    for (size_t i = 0; i < line.size(); ++i) {
+        int c = static_cast<signed char>(line[i]);
+        if (c <= -BLUE && c >= -WHITE)
+            continue;
+        if (line[i] == '_' && i + 1 < line.size() && line[i + 1] == '_') {
+            ++i;
+            continue;
+        }
+        s += line[i];
+    }
+    return s;
+}
+
+static bool WikiIsRuleLine(const std::string &line) {
+    std::string s = WikiStripMarkup(line);
+    bool saw = false;
+    for (size_t i = 0; i < s.size(); ++i) {
+        if (s[i] == ' ' || s[i] == '\t')
+            continue;
+        if (s[i] != '=')
+            return false;
+        saw = true;
+    }
+    return saw;
+}
+
+/* The title of a heading line: its markup, its `{XX}` anchor and surrounding
+   whitespace removed. */
+static std::string WikiHeadingTitle(const std::string &line) {
+    std::string s = WikiStripMarkup(line);
+    std::string t;
+    for (size_t i = 0; i < s.size(); ++i) {
+        if (s[i] == '{') {
+            size_t end = s.find('}', i + 1);
+            if (end != std::string::npos) {
+                i = end;
+                continue;
+            }
+        }
+        t += s[i];
+    }
+    size_t b = t.find_first_not_of(" \t=");
+    if (b == std::string::npos)
+        return "";
+    size_t e = t.find_last_not_of(" \t=");
+    return t.substr(b, e - b + 1);
+}
+
+/* Advance the bright/normal colour state over a line whose text is not
+   emitted (a heading rule or title), so later lines see the right state. */
+static void WikiAdvanceColors(const std::string &line, bool &bright) {
+    for (size_t i = 0; i < line.size(); ++i) {
+        signed char sc = static_cast<signed char>(line[i]);
+        if (sc == LITERAL_CHAR) {
+            if (i + 2 < line.size())
+                i += 2;
+            continue;
+        }
+        int c = sc;
+        if (c <= -BLUE && c >= -WHITE) {
+            if (c == -SHADOW)
+                continue;
+            bright = c <= -AZURE;
+        } else if (line[i] == '{') {
+            size_t end = line.find('}', i + 1);
+            if (end != std::string::npos)
+                i = end;
+        }
+    }
+}
+
+static std::string WikiMarkdown(const char *text) {
+    std::vector<std::string> lines;
+    std::vector<bool> terminated; // the line was followed by a newline
+    std::string cur;
+    for (const char *p = text; *p; ++p) {
+        if (*p == '\n') {
+            lines.push_back(cur);
+            terminated.push_back(true);
+            cur.clear();
+        } else if (*p == '\r') {
+            if (p[1] == '\n')
+                continue;
+            lines.push_back(cur);
+            terminated.push_back(true);
+            cur.clear();
+        } else
+            cur += *p;
+    }
+    if (!cur.empty()) {
+        lines.push_back(cur);
+        terminated.push_back(false);
+    }
+
+    std::string out;
+    bool bright = false;
+    size_t i = 0;
+    while (i < lines.size()) {
+        /* Boxed title: a rule, a title, a rule. */
+        if (i + 2 < lines.size() && WikiIsRuleLine(lines[i]) &&
+            WikiIsRuleLine(lines[i + 2])) {
+            std::string title = WikiHeadingTitle(lines[i + 1]);
+            if (!title.empty() && !WikiIsRuleLine(lines[i + 1])) {
+                WikiAdvanceColors(lines[i], bright);
+                WikiAdvanceColors(lines[i + 1], bright);
+                WikiAdvanceColors(lines[i + 2], bright);
+                out += "## " + title + "\n";
+                i += 3;
+                continue;
+            }
+        }
+        /* Underlined title: a text line, then a rule. */
+        if (i + 1 < lines.size() && WikiIsRuleLine(lines[i + 1]) &&
+            !WikiIsRuleLine(lines[i])) {
+            std::string title = WikiHeadingTitle(lines[i]);
+            if (!title.empty()) {
+                WikiAdvanceColors(lines[i], bright);
+                WikiAdvanceColors(lines[i + 1], bright);
+                out += "## " + title + "\n";
+                i += 2;
+                continue;
+            }
+        }
+        std::string body = WikiMarkdownLine(lines[i], bright);
+        if (body.empty())
+            out += "\n";
+        else if (terminated[i])
+            out += body + "<br>\n";
+        else
+            out += body + "\n";
+        ++i;
+    }
+    return out;
+}
+
+static bool WriteWikiPage(const std::string &dir, const char *page,
+                          const std::string &body) {
+    std::string path = dir + "/";
+    for (const char *p = page; *p; ++p) {
+        if (*p == ' ')
+            path += '-';
+        else if ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
+                 (*p >= '0' && *p <= '9') || strchr("()'+,._-", *p))
+            path += *p;
+    }
+    path += ".md";
+    FILE *file = fopen(path.c_str(), "wb");
+    if (!file) {
+        fprintf(stderr, "-wikihelp: %s: %s\n", path.c_str(), strerror(errno));
+        return false;
+    }
+    bool ok = fwrite(body.data(), 1, body.size(), file) == body.size();
+    if (fclose(file) != 0)
+        ok = false;
+    if (!ok)
+        fprintf(stderr, "-wikihelp: failed writing %s\n", path.c_str());
+    return ok;
+}
+
+/* --- Phase 2 (inc-k2le): entry pages and index pages ---------------------
+   The entries are enumerated with the same loops and filters as the existing
+   help builders (HelpRaces, HelpClasses, HelpPantheon, HelpDomains, HelpFeats,
+   HelpSkills, HelpSpells, HelpWizSpells, HelpOtherSpells, HelpPowers,
+   HelpSpellIndex). Every entry is collected first, then page names are
+   resolved (spec section 1), then pages are written. A spell on several lists
+   is one entry. */
+
+enum WikiKind {
+    WIKI_RACE, WIKI_CLASS, WIKI_GOD, WIKI_DOMAIN, WIKI_FEAT, WIKI_SKILL,
+    WIKI_SPELL
+};
+
+static const char *WikiKindName[] = {
+    "Race", "Class", "God", "Domain", "Feat", "Skill", "Spell"
+};
+
+enum WikiIndexNo {
+    WIKI_IX_RACES, WIKI_IX_CLASSES, WIKI_IX_GODS, WIKI_IX_DOMAINS,
+    WIKI_IX_FEATS, WIKI_IX_SKILLS, WIKI_IX_ARCANE, WIKI_IX_DIVINE,
+    WIKI_IX_DRUID, WIKI_IX_OTHER, WIKI_IX_POWERS, WIKI_IX_SPELLINDEX,
+    WIKI_IX_COUNT
+};
+
+struct WikiIndexPage {
+    const char *page;
+    const char *topic; // help topic carrying the introductory prose, or NULL
+};
+
+static const WikiIndexPage WikiIndexPages[WIKI_IX_COUNT] = {
+    { "Races",       NULL },
+    { "Classes",     NULL },
+    { "Gods",        "pantheon" },
+    { "Domains",     NULL },
+    { "Feats",       "feats" },
+    { "Skills",      "skills" },
+    { "Arcane Spells", NULL },
+    { "Divine Spells", NULL },
+    { "Druid Spells",  NULL },
+    { "Other Spells",  NULL },
+    { "Powers",        NULL },
+    { "Spell Index",   NULL }
+};
+
+struct WikiEntry {
+    int kind;
+    std::string name;      // display name
+    std::string body;      // raw game text, still colour-coded
+    std::vector<rID> domains; // gods only: domain links
+    std::string page;      // resolved page name
+};
+
+/* One group of an index page: a heading (may be empty) and the entries it
+   lists, in the order the matching help topic presents them. */
+struct WikiIndexGroup {
+    std::string header;
+    std::vector<int> entries;
+};
+
+struct WikiData {
+    std::vector<WikiEntry> entries;
+    std::vector<WikiIndexGroup> groups[WIKI_IX_COUNT];
+    std::map<rID, int> spells;    // effect rID -> entry
+    std::map<rID, int> domainIDs; // domain rID -> entry
+
+    int AddEntry(int kind, const std::string &name, const std::string &body) {
+        WikiEntry e;
+        e.kind = kind;
+        e.name = name;
+        e.body = body;
+        entries.push_back(e);
+        return (int)entries.size() - 1;
+    }
+
+    /* Start a group with this header if the last group has another one, then
+       append the entry. A negative entry starts the group without adding. */
+    void AddToGroup(int ix, const std::string &header, int entry) {
+        if (groups[ix].empty() || groups[ix].back().header != header) {
+            WikiIndexGroup g;
+            g.header = header;
+            groups[ix].push_back(g);
+        }
+        if (entry >= 0)
+            groups[ix].back().entries.push_back(entry);
+    }
+};
+
+/* File name for a page name, exactly as WriteWikiPage builds it. */
+static std::string WikiFileName(const std::string &page) {
+    std::string path;
+    for (size_t i = 0; i < page.size(); ++i) {
+        char c = page[i];
+        if (c == ' ')
+            path += '-';
+        else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+                 (c >= '0' && c <= '9') || strchr("()'+,._-", c))
+            path += c;
+    }
+    return path + ".md";
+}
+
+static void WikiCollectRaces(WikiData &wd) {
+    int core = 0, sub = 0;
+    rID list[1024];
+    for (int mIdx = 0; theGame->Modules[mIdx]; mIdx++) {
+        Module *m = theGame->Modules[mIdx];
+        for (int i = 0; i < m->szRac; i++) {
+            rID id = m->RaceID(i);
+            if (TRACE(id)->BaseRace)
+                continue;
+            list[core++] = id;
+        }
+    }
+    qsort(list, core, sizeof(list[0]), HelpResourceSort);
+    for (int i = 0; i < core; i++) {
+        PurgeStrings();
+        rID id = list[i];
+        std::string name = NAME(id);
+        std::string body = XPrint(DESC(id));
+        int e = wd.AddEntry(WIKI_RACE, name, body);
+        wd.AddToGroup(WIKI_IX_RACES, "Core Races", e);
+    }
+    for (int mIdx = 0; theGame->Modules[mIdx]; mIdx++) {
+        Module *m = theGame->Modules[mIdx];
+        for (int i = 0; i < m->szRac; i++) {
+            rID id = m->RaceID(i);
+            if (!TRACE(id)->BaseRace)
+                continue;
+            list[sub++] = id;
+        }
+    }
+    qsort(list, sub, sizeof(list[0]), HelpResourceSort);
+    for (int i = 0; i < sub; i++) {
+        PurgeStrings();
+        rID id = list[i];
+        std::string name = NAME(id);
+        std::string body = XPrint(DESC(id));
+        int e = wd.AddEntry(WIKI_RACE, name, body);
+        wd.AddToGroup(WIKI_IX_RACES, "Subraces", e);
+    }
+}
+
+static void WikiCollectClasses(WikiData &wd) {
+    int core = 0, pres = 0;
+    rID list[1024];
+    for (int mIdx = 0; theGame->Modules[mIdx]; mIdx++) {
+        Module *m = theGame->Modules[mIdx];
+        for (int i = 0; i < m->szCla; i++) {
+            rID id = m->ClassID(i);
+            if (TCLASS(id)->HasFlag(CF_PRESTIGE) ||
+                TCLASS(id)->HasFlag(CF_PSEUDO))
+                continue;
+            list[core++] = id;
+        }
+    }
+    qsort(list, core, sizeof(list[0]), HelpResourceSort);
+    for (int i = 0; i < core; i++) {
+        PurgeStrings();
+        rID id = list[i];
+        std::string name = NAME(id);
+        std::string body = XPrint(DESC(id));
+        int e = wd.AddEntry(WIKI_CLASS, name, body);
+        wd.AddToGroup(WIKI_IX_CLASSES, "Core Classes", e);
+    }
+    for (int mIdx = 0; theGame->Modules[mIdx]; mIdx++) {
+        Module *m = theGame->Modules[mIdx];
+        for (int i = 0; i < m->szCla; i++) {
+            rID id = m->ClassID(i);
+            if (!TCLASS(id)->HasFlag(CF_PRESTIGE) ||
+                TCLASS(id)->HasFlag(CF_PSEUDO))
+                continue;
+            list[pres++] = id;
+        }
+    }
+    qsort(list, pres, sizeof(list[0]), HelpResourceSort);
+    for (int i = 0; i < pres; i++) {
+        PurgeStrings();
+        rID id = list[i];
+        std::string name = NAME(id);
+        std::string body = XPrint(DESC(id));
+        int e = wd.AddEntry(WIKI_CLASS, name, body);
+        wd.AddToGroup(WIKI_IX_CLASSES, "Prestige Classes", e);
+    }
+}
+
+static void WikiCollectGods(WikiData &wd) {
+    rID list[1024];
+    int count = 0;
+    for (int mIdx = 0; theGame->Modules[mIdx]; mIdx++) {
+        Module *m = theGame->Modules[mIdx];
+        for (int i = 0; i < m->szGod; i++)
+            list[count++] = m->GodID(i);
+    }
+    qsort(list, count, sizeof(list[0]), HelpResourceSort);
+    for (int i = 0; i < count; i++) {
+        PurgeStrings();
+        rID id = list[i];
+        std::string name = NAME(id);
+        std::string body = XPrint(DESC(id));
+        int e = wd.AddEntry(WIKI_GOD, name, body);
+        for (int d = 0; d < 12 && TGOD(id)->Domains[d]; d++)
+            wd.entries[e].domains.push_back(TGOD(id)->Domains[d]);
+        wd.AddToGroup(WIKI_IX_GODS, "", e);
+    }
+}
+
+static void WikiCollectDomains(WikiData &wd) {
+    rID list[1024];
+    int count = 0;
+    for (int mIdx = 0; theGame->Modules[mIdx]; mIdx++) {
+        Module *m = theGame->Modules[mIdx];
+        for (int i = 0; i < m->szDom; i++)
+            list[count++] = m->DomainID(i);
+    }
+    qsort(list, count, sizeof(list[0]), HelpResourceSort);
+    for (int i = 0; i < count; i++) {
+        PurgeStrings();
+        rID id = list[i];
+        std::string name = NAME(id);
+        std::string body = XPrint((const char*)TDOM(id)->Describe(true));
+        int e = wd.AddEntry(WIKI_DOMAIN, name, body);
+        wd.domainIDs[id] = e;
+        wd.AddToGroup(WIKI_IX_DOMAINS, "", e);
+    }
+}
+
+static void WikiCollectFeats(WikiData &wd) {
+    for (int16 i = FT_FIRST; i < FT_LAST; i++) {
+        if (FeatUnimplemented(i))
+            continue;
+        PurgeStrings();
+        std::string name = FeatName(i);
+        std::string body = XPrint((const char*)DescribeFeat(i));
+        int e = wd.AddEntry(WIKI_FEAT, name, body);
+        wd.AddToGroup(WIKI_IX_FEATS, "", e);
+    }
+}
+
+static void WikiCollectSkills(WikiData &wd) {
+    for (int16 i = 1; i < SK_LAST; i++) {
+        PurgeStrings();
+        std::string name = SkillInfo[i].name;
+        std::string body = XPrint((const char*)DescribeSkill(i));
+        int e = wd.AddEntry(WIKI_SKILL, name, body);
+        wd.AddToGroup(WIKI_IX_SKILLS, "", e);
+    }
+}
+
+/* Add a spell entry once; if it already exists, just link it into the group.
+   Returns the entry index. */
+static int WikiAddSpell(WikiData &wd, int ix, const std::string &header,
+                        rID spID) {
+    std::map<rID, int>::iterator it = wd.spells.find(spID);
+    int e;
+    if (it != wd.spells.end())
+        e = it->second;
+    else {
+        PurgeStrings();
+        std::string name = NAME(spID);
+        std::string body = XPrint((const char*)TEFF(spID)->Describe(NULL));
+        e = wd.AddEntry(WIKI_SPELL, name, body);
+        wd.spells[spID] = e;
+    }
+    wd.AddToGroup(ix, header, e);
+    return e;
+}
+
+static void WikiCollectDivine(WikiData &wd, int ix, int32 source,
+                              const char *label) {
+    rID list[2048];
+    int count = 0;
+    for (int mIdx = 0; theGame->Modules[mIdx]; mIdx++) {
+        Module *m = theGame->Modules[mIdx];
+        for (int i = 0; i < m->szEff; i++) {
+            rID id = m->EffectID(i);
+            if (TEFF(id)->HasSource((int8)source))
+                list[count++] = id;
+        }
+    }
+    qsort(list, count, sizeof(list[0]), HelpEffectIDSort);
+    std::string header;
+    for (int i = 0; i < count; i++) {
+        rID id = list[i];
+        if (TEFF(id)->Level > 9 || TEFF(id)->Level < 1)
+            continue;
+        if (TEFF(id)->HasFlag(EF_SPECABIL))
+            continue;
+        header = std::string("Level ") +
+            Levs[TEFF(id)->Level] + " " + label + " Spells";
+        WikiAddSpell(wd, ix, header, id);
+    }
+}
+
+static void WikiCollectArcane(WikiData &wd) {
+    static const uint16 Schools[] = { SC_ABJ, SC_ARC, SC_DIV, SC_ENC, SC_EVO,
+        SC_ILL, SC_NEC, SC_THA, SC_WEA, 0 };
+    static const char *Schs[] = { "Abjuration", "Arcana", "Divination",
+        "Enchantment", "Evocation", "Illusion", "Necromancy", "Thaumaturgy",
+        "Weavecraft" };
+    for (int16 lev = 1; lev <= 6; lev++)
+        for (int sch = 0; Schools[sch]; sch++) {
+            rID list[256];
+            int count = 0;
+            for (int mIdx = 0; theGame->Modules[mIdx]; mIdx++) {
+                Module *m = theGame->Modules[mIdx];
+                for (int i = 0; i < m->szEff; i++) {
+                    rID id = m->EffectID(i);
+                    TEffect *eff = TEFF(id);
+                    if (eff->HasSource(AI_WIZARDRY))
+                        if (eff->Level == lev)
+                            if (eff->Schools & Schools[sch])
+                                list[count++] = id;
+                }
+            }
+            qsort(list, count, sizeof(list[0]), HelpEffectIDSort);
+            std::string header = std::string(Schs[sch]) + " " +
+                Levs[lev];
+            for (int i = 0; i < count; i++)
+                WikiAddSpell(wd, WIKI_IX_ARCANE, header, list[i]);
+        }
+}
+
+static void WikiCollectOther(WikiData &wd) {
+    Player *p = new Player(NULL, T_PLAYER);
+    rID UnimpID = FIND("Unimplemented");
+    for (int q = 0; q != 1; q++)
+        for (int i = 0; i != theGame->Modules[q]->szCla; i++) {
+            rID clID = theGame->Modules[q]->ClassID(i);
+            rID spList[64];
+            if (!TCLASS(clID)->GetList(SPELL_LIST, spList, 64))
+                continue;
+            if (!stricmp(NAME(clID), "mage") ||
+                !stricmp(NAME(clID), "priest") ||
+                !stricmp(NAME(clID), "druid") ||
+                !stricmp(NAME(clID), "abjurer") ||
+                !stricmp(NAME(clID), "arcanist") ||
+                !stricmp(NAME(clID), "diviner") ||
+                !stricmp(NAME(clID), "enchanter") ||
+                !stricmp(NAME(clID), "evoker") ||
+                !stricmp(NAME(clID), "illusionist") ||
+                !stricmp(NAME(clID), "thaumaturge") ||
+                !stricmp(NAME(clID), "necromancer") ||
+                !stricmp(NAME(clID), "weaver"))
+                continue;
+            p->RemoveStati(SPELL_ACCESS);
+            p->GainPermStati(SPELL_ACCESS, NULL, SS_MISC, -1, 20, clID);
+            LearnableSpell *ls = p->CalcSpellAccess();
+            for (int j = 0; ls[j].spID; j++) {
+                if (ls[j].spID == UnimpID)
+                    continue;
+                std::string h = std::string(Upper(NAME(clID))) +
+                    " Spells, Level " + Levs[ls[j].Level];
+                WikiAddSpell(wd, WIKI_IX_OTHER, h, ls[j].spID);
+            }
+        }
+}
+
+static void WikiCollectPowers(WikiData &wd) {
+    TextVal types[] = {
+        { AI_ALCHEMY, "Alchemical Items" },
+        { AI_PSIONIC, "Psionic Powers" },
+        { AI_POISON, "Poisons" },
+        { 0, NULL }
+    };
+    for (int i = 0; types[i].Val; i++) {
+        rID list[256];
+        int count = 0;
+        for (int n = 0; n != theGame->LastSpell(); n++) {
+            rID tID = theGame->SpellID(n);
+            if (!(TEFF(tID)->HasSource((int8)types[i].Val) ||
+                (types[i].Val == AI_POISON &&
+                TEFF(tID)->ef.aval == AR_POISON)))
+                continue;
+            list[count++] = tID;
+        }
+        qsort(list, count, sizeof(list[0]), HelpEffectIDSort);
+        for (int n = 0; n < count; n++)
+            WikiAddSpell(wd, WIKI_IX_POWERS, types[i].Text, list[n]);
+    }
+}
+
+static void WikiCollectSpellIndex(WikiData &wd) {
+    static const TextVal Groups[] = {
+        { SC_ABJ, "Abjuration" }, { SC_ARC, "Arcana" },
+        { SC_DIV, "Divination" }, { SC_ENC, "Enchantment" },
+        { SC_EVO, "Evocation" }, { SC_ILL, "Illusion" },
+        { SC_NEC, "Necromancy" }, { SC_THA, "Thaumaturgy" },
+        { SC_WEA, "Weavecraft" }, { SC_FIRE, "Fire Magic" },
+        { SC_EARTH, "Earth Magic" }, { SC_AIR, "Air Magic" },
+        { SC_WATER, "Water Magic" }, { SC_LIGHT, "Light Spells" },
+        { SC_DARKNESS, "Darkness Spells" },
+        { -AI_WIZARDRY, "Wizard Spells" },
+        { -AI_THEURGY, "Priest Spells" },
+        { -AI_DRUIDIC, "Druid Spells" },
+        { 0, NULL }
+    };
+    for (int i = 0; Groups[i].Text; i++) {
+        rID list[4096];
+        int count = 0;
+        for (int j = 0; j != theGame->LastSpell(); j++) {
+            rID sID = theGame->SpellID(j);
+            if (Groups[i].Val < 0) {
+                if (TEFF(sID)->HasSource((int8)-Groups[i].Val))
+                    list[count++] = sID;
+            } else if (TEFF(sID)->HasSource(AI_WIZARDRY) ||
+                       Groups[i].Val > SC_WEA) {
+                if (TEFF(sID)->Schools & Groups[i].Val)
+                    list[count++] = sID;
+            }
+        }
+        qsort(list, count, sizeof(list[0]), HelpEffectIDSort);
+        for (int j = 0; j < count; j++)
+            WikiAddSpell(wd, WIKI_IX_SPELLINDEX, Groups[i].Text, list[j]);
+    }
+}
+
+/* Resolve page names: page name is the display name, but when two entries of
+   different kinds share a name both get the " (<Kind>)" suffix. Returns false
+   on a duplicate file name, which must not happen. */
+static bool WikiResolvePages(WikiData &wd, const std::string &output) {
+    std::map<std::string, int> nameCount; // name -> number of entries
+    std::map<std::pair<std::string, int>, int> kindSeen; // (name,kind) -> count
+    for (size_t i = 0; i < wd.entries.size(); i++)
+        nameCount[wd.entries[i].name]++;
+    /* An entry whose name is a prose chapter or index page name (a domain
+       named "Magic", for example) must be suffixed too, or its file would
+       overwrite that reserved page. Force the same suffix by counting the
+       reserved name as one more entry. */
+    for (const WikiChapter &chapter : WikiChapters)
+        if (nameCount[chapter.page] < 2)
+            nameCount[chapter.page] = 2;
+    for (int ix = 0; ix < WIKI_IX_COUNT; ix++)
+        if (nameCount[WikiIndexPages[ix].page] < 2)
+            nameCount[WikiIndexPages[ix].page] = 2;
+    for (size_t i = 0; i < wd.entries.size(); i++) {
+        WikiEntry &e = wd.entries[i];
+        if (nameCount[e.name] == 1) {
+            e.page = e.name;
+            continue;
+        }
+        /* The spec suffixes both entries when two kinds share a name. Some
+           names are shared by entries of the SAME kind (the game lists
+           psionic and wizard spells of one name, for example); the spec
+           gives no suffix for those, so add a stable ordinal to keep the
+           page names and file names unique. */
+        int n = ++kindSeen[std::make_pair(e.name, e.kind)];
+        e.page = e.name + " (" + WikiKindName[e.kind] +
+            (n > 1 ? " " + std::to_string(n) : "") + ")";
+    }
+    std::map<std::string, int> files; // file -> first entry index
+    bool ok = true;
+    for (size_t i = 0; i < wd.entries.size(); i++) {
+        std::string f = WikiFileName(wd.entries[i].page);
+        std::map<std::string, int>::iterator it = files.find(f);
+        if (it != files.end()) {
+            const WikiEntry &a = wd.entries[it->second];
+            fprintf(stderr,
+                "-wikihelp: %s: %s (%s) and %s (%s) map to one file\n",
+                output.c_str(), a.page.c_str(), WikiKindName[a.kind],
+                wd.entries[i].page.c_str(), WikiKindName[wd.entries[i].kind]);
+            ok = false;
+        } else
+            files[f] = (int)i;
+    }
+    return ok;
+}
+
+bool RunWikiHelp(const char *dir) {
+    char cwd[4096];
+#ifdef WIN32
+    if (!_getcwd(cwd, sizeof(cwd)))
+#else
+    if (!getcwd(cwd, sizeof(cwd)))
+#endif
+        return false;
+    // LoadModules changes the working directory; resolve the output first.
+    std::string output = dir;
+    if (output.empty())
+        return false;
+    if (output[0] != '/' && output[0] != '\\' &&
+        !(output.size() > 1 && output[1] == ':'))
+        output = std::string(cwd) + "/" + output;
+#ifdef WIN32
+    int made = _mkdir(output.c_str());
+#else
+    int made = mkdir(output.c_str(), 0755);
+#endif
+    if (made != 0 && errno != EEXIST) {
+        fprintf(stderr, "-wikihelp: %s: %s\n", output.c_str(), strerror(errno));
+        return false;
+    }
+    if (!theGame->LoadModules())
+        return false;
+
+    // 1. Collect every entry.
+    WikiData wd;
+    WikiCollectRaces(wd);
+    WikiCollectClasses(wd);
+    WikiCollectGods(wd);
+    WikiCollectDomains(wd);
+    WikiCollectFeats(wd);
+    WikiCollectSkills(wd);
+    WikiCollectDivine(wd, WIKI_IX_DIVINE, AI_THEURGY, "Divine");
+    WikiCollectDivine(wd, WIKI_IX_DRUID, AI_DRUIDIC, "Druid");
+    WikiCollectArcane(wd);
+    WikiCollectOther(wd);
+    WikiCollectPowers(wd);
+    WikiCollectSpellIndex(wd);
+
+    // 2. Resolve page names, then check for file-name collisions.
+    if (!WikiResolvePages(wd, output))
+        return false;
+
+    // 3. Write entry pages.
+    for (size_t i = 0; i < wd.entries.size(); i++) {
+        WikiEntry &e = wd.entries[i];
+        std::string body = "# " + e.page + "\n\n";
+        body += WikiMarkdown(e.body.c_str());
+        if (!e.domains.empty()) {
+            body += "\n\nDomains: ";
+            for (size_t d = 0; d < e.domains.size(); d++) {
+                std::map<rID, int>::iterator it =
+                    wd.domainIDs.find(e.domains[d]);
+                if (it == wd.domainIDs.end())
+                    continue;
+                if (d)
+                    body += ", ";
+                body += "[[" + wd.entries[it->second].page + "]]";
+            }
+            body += "\n";
+        }
+        if (!WriteWikiPage(output, e.page.c_str(), body))
+            return false;
+    }
+
+    // 4. Write index pages.
+    for (int ix = 0; ix < WIKI_IX_COUNT; ix++) {
+        std::string body;
+        if (WikiIndexPages[ix].topic) {
+            String text;
+            String topic = SC("help::") + SC(WikiIndexPages[ix].topic);
+            rID id = FIND(topic);
+            if (!id || !RES(id)->Desc) {
+                fprintf(stderr, "-wikihelp: missing topic %s\n",
+                    WikiIndexPages[ix].topic);
+                return false;
+            }
+            isHTML = true;
+            ((TextTerm*)T1)->GetHelp(text, topic);
+            isHTML = false;
+            body = WikiMarkdown(text);
+        }
+        for (size_t g = 0; g < wd.groups[ix].size(); g++) {
+            const WikiIndexGroup &grp = wd.groups[ix][g];
+            if (grp.entries.empty())
+                continue;
+            if (!grp.header.empty())
+                body += "\n\n## " + grp.header + "\n\n";
+            else
+                body += "\n\n";
+            for (size_t n = 0; n < grp.entries.size(); n++)
+                body += "* [[" + wd.entries[grp.entries[n]].page + "]]\n";
+        }
+        if (body.empty())
+            body = "# " + std::string(WikiIndexPages[ix].page) + "\n";
+        if (!WriteWikiPage(output, WikiIndexPages[ix].page, body))
+            return false;
+    }
+
+    // 5. Prose chapters and the sidebar.
+    std::string sidebar = "* [[Home]]\n";
+    for (const WikiChapter &chapter : WikiChapters) {
+        String text;
+        String topic = SC("help::") + SC(chapter.topic);
+        rID id = FIND(topic);
+        if (!id || !RES(id)->Desc) {
+            fprintf(stderr, "-wikihelp: missing topic %s\n", chapter.topic);
+            return false;
+        }
+        /* Set isHTML exactly as WriteHTMLHelp does around GetHelp. Checked
+           2026-10-04: no active code reads it, so the text is byte-identical
+           either way; kept for parity with the reference exporter. */
+        isHTML = true;
+        ((TextTerm*)T1)->GetHelp(text, topic);
+        isHTML = false;
+        if (!WriteWikiPage(output, chapter.page, WikiMarkdown(text)))
+            return false;
+        if (strcmp(chapter.page, "Home"))
+            sidebar += std::string("* [[") + chapter.page + "]]\n";
+    }
+    for (int ix = 0; ix < WIKI_IX_COUNT; ix++)
+        sidebar += std::string("* [[") + WikiIndexPages[ix].page + "]]\n";
+    return WriteWikiPage(output, "_Sidebar", sidebar);
+}
 
 struct HelpFile
   {

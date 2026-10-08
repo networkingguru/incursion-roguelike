@@ -283,7 +283,8 @@ EvReturn Character::Insight(EventInfo &e)
              (e.eID == GodID ? 1 : (int32)TEFF(GodID)->GetConst(LAY_MULTIPLIER)))
         {
           if (first) {
-            if (!yn("Do you want to seek divine insight into your possessions?"))
+            if (!yn(Format("Do you want to seek divine insight into your possessions? (favour cost %d)",
+                  (int16)TGOD(e.eID)->GetConst(INTERVENTION_COST))))
               return DONE;
             if (e.eID != GodID)
               ReThrow(EV_JEALOUSY,e);
@@ -1188,9 +1189,17 @@ EvReturn Character::Convert(EventInfo &e)
             if (e.eID == GodList[j])
               goto GodIsOkay;
           
-          if (!yn(XPrint("<Res> is not a <Res> god! Confirm attempt conversion?",
-                   e.eID,ClassID[i])))
-            return ABORT;
+          {
+            /* inc-1xr3: on a paladin the fall is immediate, even if the
+               conversion later fails (needs calcFavour >= MIN_CONVERT_FAVOUR);
+               say so in the same prompt. */
+            String convPrompt = XPrint("<Res> is not a <Res> god! Confirm attempt conversion?",
+                   e.eID,ClassID[i]);
+            if (TCLASS(ClassID[i])->HasFlag(CF_PALADIN))
+              convPrompt += " (you will fall as a paladin)";
+            if (!yn(convPrompt))
+              return ABORT;
+          }
           if (TCLASS(ClassID[i])->HasFlag(CF_PALADIN))
             PaladinFall();
           GodIsOkay:;
@@ -1435,6 +1444,21 @@ EvReturn Character::GodDeflect(EventInfo &e)
     
   }
 
+/* inc-1xr3: the whole-percent chance the resurrection in GodRaise succeeds.
+   The cast is `resChance < random(100)`, and random(100) returns
+   genrand_int32()%100, an integer in 0..99. The raise therefore fails when
+   that draw exceeds resChance, and succeeds for the resChance+1 values
+   0..resChance -- clamped to 0..100. Shared by the prompt and the test so the
+   number shown cannot drift from the die. */
+int16 Character::ResurrectChance()
+{
+  if (resChance < 0)
+    return 0;
+  if (resChance >= 99)
+    return 100;
+  return (int16)(resChance + 1);
+}
+
 EvReturn Player::GodRaise(EventInfo &e)
   {
     int16 i; rID aidChart[64]; Item *it;
@@ -1473,10 +1497,15 @@ EvReturn Player::GodRaise(EventInfo &e)
     GodMessage(GodID,MSG_OFFER_RAISE);
     MyTerm->SetWin(WIN_MAP);
     MyTerm->Clear();
-    if (!yn("Do you want to return to life?"))
+    /* inc-1xr3: the post-raise XP total, shared by the prompt and the
+       assignment below so the shown cost cannot drift. */
+    int32 newResXP = max(0,min(XP-2000,(XP*85L)/100L));
+    if (!yn(Format("Do you want to return to life? (%d~; lose %d XP, permanent -1 CON, favour cost %d)",
+          (int)ResurrectChance(), XP - newResXP,
+          (int16)TGOD(GodID)->GetConst(RESURRECTION_COST))))
       return DONE;
   
-    if (resChance < random(100))
+    if (random(100) >= ResurrectChance())
       {
         IPrint("Your soul does not prove strong enough to withstand "
                "the trauma of an attempted resurrection.");
@@ -1497,7 +1526,7 @@ EvReturn Player::GodRaise(EventInfo &e)
     
     /* You have enough XP for the level right below the one you are
        currently at -- simulate losing a level. */
-    XP = max(0,min(XP-2000,(XP*85L)/100L));
+    XP = newResXP;
     
     /* Reduce Con by one permanently */
     BAttr[A_CON]--;

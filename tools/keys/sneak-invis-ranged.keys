@@ -41,6 +41,13 @@
 @include sneak-invis-chargen.keys
 
 SPACE   # dismiss the arrival-room description
+i       # inventory: the starting kit leaves the knife in the pack, and the
+0 1     # throw menu offers only what is wielded or on the belt, so take
+SPACE   # the knife (pack item 01) out, put it on the weapon hand (b), and
+b       # answer the swap prompts
+SPACE
+n
+ESC
 
 w
 y

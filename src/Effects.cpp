@@ -186,8 +186,14 @@ EvReturn Magic::Blast(EventInfo &e)
       goto SkipSave;
     if (e.EVictim->HasFeat(FT_WEATHER_BLAST) && save_type == REF) {
       if (e.EVictim->AbilityLevel(CA_EVASION))
-        if (e.EVictim->yn("Attempt Reflex save to use Evasion? ",true))
-          goto SkipWeather;
+        {
+          int16 alt = (e.EVictim->Attr[A_SAV_FORT] > 
+              e.EVictim->Attr[A_SAV_REF]) ? FORT : REF;
+          if (e.EVictim->yn(Format("Attempt Reflex save to use Evasion? (Reflex %d~; else %d~)",
+                e.EVictim->SaveChance(REF, e.saveDC),
+                e.EVictim->SaveChance(alt, e.saveDC)),true))
+            goto SkipWeather;
+        }
       save_type = (e.EVictim->Attr[A_SAV_FORT] > 
           e.EVictim->Attr[A_SAV_REF]) ? FORT : REF;
     }
@@ -1744,7 +1750,7 @@ int8 Map::GetTerraDType(int16 x,int16 y)
   }
 
 
-int16 Map::GetTerraDmg(int16 x, int16 y)
+Dice Map::GetTerraDice(int16 x, int16 y)
   {
     int32 i,j;
     for(i=(TerraXY.Total()-1);i>=0;i--)
@@ -1752,10 +1758,15 @@ int16 Map::GetTerraDmg(int16 x, int16 y)
         if (TerraXY[i]->y == y) {
           for (j=0;j!=TerraList.Total();j++)
             if (TerraList[j]->key == TerraXY[i]->key)
-              return TerraList[j]->pval.Roll();
+              return TerraList[j]->pval;
           Error("TerraXY entry without matching TerraList entry (key %d)",TerraXY[i]->key);
           }
-    return 10;
+    { Dice d; d.Set(0,0,10); return d; }
+  }
+
+int16 Map::GetTerraDmg(int16 x, int16 y)
+  {
+    return GetTerraDice(x, y).Roll();
   }
 
 void Map::RemoveTerra(int16 key)
@@ -1793,6 +1804,28 @@ void Map::RemoveTerra(int16 key)
         {
           t = TTER(TerrainList[TerraXY[i]->old]);
           x = TerraXY[i]->x; y = TerraXY[i]->y; 
+          {
+            /* upstream: STUCK from this terrain outlived the terrain. The
+               strands (and every other sticky terrain) expire here, but
+               nothing ended the STUCK stati they granted: Thing::UpdateStati
+               (src/Status.cpp) only counts down a Duration above zero, so a
+               creature that never made an escape check stayed anchored on a
+               bare square forever. The invariant: STUCK from this source ends
+               when its terrain is removed. Plain platform-independent stati
+               logic, same on Win32. Evidence: Observed,
+               tools/check_tanglefoot_stuck_expiry.sh (b). inc-9smo. Not sent. */
+            int16 stickType = (int16)TTER(TerrainAt(x,y))->GetConst(STICK_TYPE);
+            if (stickType) {
+              Creature *cr;
+              for (cr = FCreatureAt(x,y); cr; cr = NCreatureAt(x,y)) {
+                while (cr->HasStati(STUCK, stickType))
+                  cr->RemoveStati(STUCK,-1,stickType);
+                if (cr->HasStati(MOUNTED))
+                  while (((Creature*)cr->GetStatiObj(MOUNTED))->HasStati(STUCK, stickType))
+                    ((Creature*)cr->GetStatiObj(MOUNTED))->RemoveStati(STUCK,-1,stickType);
+              }
+            }
+          }
           At(x,y).Glyph   = t->Image;
           At(x,y).Solid   = t->HasFlag(TF_SOLID);
           At(x,y).Special = t->HasFlag(TF_SPECIAL);

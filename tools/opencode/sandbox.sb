@@ -9,3 +9,25 @@
     (literal "/dev/null")
     (literal "/dev/tty")
     (regex #"^/dev/fd/"))
+; Secrets deny list (bead inc-k4wc). This profile starts from (allow default),
+; so it can only keep a sandboxed process out of secrets it already knows about:
+; a location not named here is still readable. It is a deny list, not a
+; complete boundary -- assume it can miss a location.
+(deny mach-lookup
+    (global-name "com.apple.SecurityServer")
+    (global-name "com.apple.securityd")
+    (global-name "com.apple.security.agent"))
+(deny file-read*
+    (subpath (string-append (param "HOME") "/Library/Keychains")))
+(deny file-read*
+    (subpath (string-append (param "HOME") "/.ssh"))
+    (subpath (string-append (param "HOME") "/.config/gh"))
+    (subpath (string-append (param "HOME") "/.aws"))
+    (subpath (string-append (param "HOME") "/.claude"))
+    (subpath (string-append (param "HOME") "/.codex"))
+    (subpath (string-append (param "HOME") "/Library/Application Support/Google/Chrome"))
+    (subpath (string-append (param "HOME") "/Library/Application Support/Firefox"))
+    (subpath (string-append (param "HOME") "/Library/Safari"))
+    (subpath (string-append (param "HOME") "/Library/Cookies"))
+    (literal (string-append (param "HOME") "/.git-credentials"))
+    (literal (string-append (param "HOME") "/.netrc")))

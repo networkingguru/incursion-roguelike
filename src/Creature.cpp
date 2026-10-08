@@ -1328,6 +1328,12 @@ void Creature::ExtendedAction() {
     if (s->Val == EV_SATTACK) {
         r = TryToDestroyThing(oThing(s->h));
         // ThrowVal(s->Val,A_KICK,this,oThing(s->h));
+    } else if (s->Val == EV_OPEN || s->Val == EV_PICKLOCK) {
+        /* inc-h22n: a repeated lock-pick. The object is p[2] (EItem), which is
+           where Door::Event and Item::Event's EV_PICKLOCK case expect it; do not
+           fall through to the ThrowDir below, which reads s->Mag as a
+           direction. */
+        r = Throw(s->Val, this, NULL, oThing(s->h));
     } else if (s->h && oThing(s->h)->isCreature()) 
         r = Throw(s->Val,this,oCreature(s->h));
     else {
@@ -2291,12 +2297,6 @@ int16 Creature::ChallengeRating(bool allow_neg)
       CR = TTEM(S->eID)->CR.Adjust(CR);
     StatiIterEnd(this)
     
-    /* HACKFIX */
-    if (isCharacter())
-      CR = thisc->Level[0] +
-           thisc->Level[1] +
-           thisc->Level[2];
-    
     if (allow_neg)
       return CR;
     return max(0,CR);
@@ -2337,7 +2337,8 @@ bool Creature::LoseFatigue(int16 amt, bool avoid) {
         return true;
 
     if (avoid && cFP < -Attr[A_FAT])
-        if (!yn("You are in danger of passing out! Proceed?", true))
+        if (!yn(Format("You are in danger of passing out! (Fortitude %d~) Proceed?",
+            SaveChance(FORT, 10 - (cFP / 2))), true))
             return false;
 
     if (avoid)
@@ -3111,6 +3112,11 @@ bool Creature::HasAbility(int16 n, bool inh) {
                     s->Source == SS_DOMA)
           return true;
 
+    /* inc-08js: the Cannibalism feat grants the Devouring ability.
+       HasFeat is virtual on Creature and safe for a plain Monster. */
+    if (n == CA_DEVOURING && HasFeat(FT_CANNIBALISM))
+      return true;
+
     if (isCharacter())
       if (thisp->Abilities[n])
         return true;
@@ -3442,13 +3448,21 @@ EvReturn Creature::TryToDestroyThing(Thing *f)
       for(int i=0;i!=theGame->LastSpell();i++)
         if (thisp->SpellRating(theGame->SpellID(i),0,true) != -1) {
           TEffect *te = TEFF(theGame->SpellID(i));
-          if (te->Purpose & EP_PASSAGE) {
+          /* upstream: the opener must pick a spell that both passes AND
+           * unlocks; upstream's test took any EP_PASSAGE spell, so a Drow
+           * cast Levitation at a door every turn until out of mana. This is
+           * base code, independent of platform or typedefs. Tier Observed
+           * (play, 2026-09-19); reproduced by tools/check_autoknock.sh;
+           * inc-e3oo (networkingguru/incursion-roguelike#558); not sent. */
+          if ((te->Purpose & (EP_PASSAGE|EP_UNLOCK)) == (EP_PASSAGE|EP_UNLOCK)) {
             EventInfo e; 
             e.Clear();
             e.EActor = this;
             e.eID = theGame->SpellID(i);
             // The spell defines what kinds of targets it affects. */
             if (te->PEvent(EV_ISTARGET,this,e.eID) == SHOULD_CAST_IT) {
+              extern bool AutoKnockProbeNote(Creature *, Thing *, rID);
+              if (AutoKnockProbeNote(this, f, e.eID)) return DONE;
               IPrint("You attempt to cast <Res>.",e.eID);
               if (thisp->Spells[i] & SP_INNATE) 
                 return ReThrow(EV_INVOKE,e); 
@@ -3458,24 +3472,17 @@ EvReturn Creature::TryToDestroyThing(Thing *f)
           }
         } 
     } 
-    /* I want to deprecate the idea of using weapon attacks
-       to break down/open doors and chests. There are several
-       reasons for this: first, magic swords are already SO
-       GOOD in any D&D-like setting, it seems cheesy to make
-       them the optimal solution to locked doors as well.
-       Visually, shooting arrows into a door makes NO sense
-       in terms of getting it open, and hacking it with a
-       sword still seems less effective than the classical
-       bodycheck maneuver, in terms of applying force to a
-       wall-like barrier. 
-       Finally, this leads to some wierd situations like
-       archers blowing all their ammo trying to get through
-       doors, and some of it ending up on the other side.
-       So now, weapon attacks against Features inflict 1/3
-       damage, as described in Feature::Event, and here we
-       default to kicking to break features */
-    if (f->isType(T_DOOR))
-      return ThrowVal(EV_SATTACK,A_KICK,this,f);     
+    /* Bodychecking is the classical way to break a barrier open, so a
+       weapon attack on a door defaults to a kick (design point 3 replaces the
+       kick's damage roll with an SRD Strength check). Other features still
+       take weapon attacks: Feature::Event gives a non-blunt swing one third
+       damage, except an axe, which deals full damage to a door (inc-h22n
+       point 4). A wizard lock no longer doubles the door's hardness. */
+    if (f->isType(T_DOOR)) {
+      extern bool AutoKnockProbeNote(Creature *, Thing *, rID);
+      AutoKnockProbeNote(this, f, 0);
+      return ThrowVal(EV_SATTACK,A_KICK,this,f);
+    }
     
     if ((AttackMode() == S_MELEE || AttackMode() == S_DUAL) && isBeside(f))
       return ThrowVal(EV_WATTACK,A_SWNG,this,f);
@@ -3551,13 +3558,223 @@ int32 Creature::MoveAttr(int from_x, int from_y)
   return HasStati(ENTANGLED) ? result / 2 : result;
 } 
 
+/* The single success expression shared by SavingThrow and SaveChance, so the
+   chance shown to the player comes from the same rule that decides the roll. */
+static bool SaveRollSucceeds(int16 roll, int16 Bonus, int16 DC)
+  {
+    return (roll == 20) ? true
+         : (roll == 1)  ? false
+         : (Bonus + roll >= DC);
+  }
+
+int16 Creature::SaveBonus(int16 type, uint32 Subtype, int16 cmod,
+                          String *desc)
+  {
+  int16 Bonus = Attr[A_SAV_FORT + type];
+
+  if (desc) {
+    if (Bonus)
+      *desc += Format(" %+d base",Bonus);
+  }
+
+  StatiIterNature(this,SAVE_BONUS)
+      if (RedundantFieldGrant(S))
+        continue;
+      if (BIT(S->Val) & Subtype) {
+        Bonus += S->Mag;        
+        if (desc) *desc += Format(" %+d (%s)",S->Mag,
+            Lookup(SaveBonusNames, S->Val));
+      }
+  StatiIterEnd(this)
+  
+  if (Subtype & SA_REST)
+    {
+      Bonus += 4;
+      if (desc) *desc += " +4 rest";
+    }
+  
+  if (Subtype & SA_KNOCKDOWN)
+    if (HasSkill(SK_BALANCE))
+      {
+        int16 b;
+        b = SkillLevel(SK_BALANCE) / 2;
+        if (b > 0) {
+          Bonus += b;        
+          if (desc) *desc += Format(" %+d Balance",b);
+          }            
+      }
+  if (Subtype & SA_POISON)
+    if (HasSkill(SK_POISON_USE))
+      {
+        int16 b;
+        b = SkillLevel(SK_POISON_USE) / 4;
+        if (b > 0) {
+          Bonus += b;        
+          if (desc) *desc += Format(" %+d Poison Use",b);
+          }            
+      }  
+  if (Subtype & SA_THEFT)
+    if (HasSkill(SK_PICK_POCKET))
+      {
+        int16 b;
+        b = SkillLevel(SK_PICK_POCKET) / 3;
+        if (b > 0) {
+          Bonus += b;        
+          if (desc) *desc += Format(" %+d Pick Pockets",b);
+          }            
+      }  
+  if (Subtype & (SA_POISON|SA_DISEASE))
+    if (HasFeat(FT_HARDINESS))
+      {
+        Bonus += 2;
+        if (desc)
+          *desc += " +2 Hardiness";
+      }
+      
+  if (cmod) {
+    Bonus += cmod;
+    if (desc) *desc += Format(" %+d", cmod);
+    }
+      
+  return Bonus;
+  }
+
+int16 Creature::SaveChance(int16 type, int16 DC, uint32 Subtype, int16 cmod)
+  {
+    if (DC <= 0)
+      return 0;
+    int16 Bonus = SaveBonus(type, Subtype, cmod, NULL);
+    int16 succ = 0;
+    for (int16 r = 1; r <= 20; r++)
+      if (SaveRollSucceeds(r, Bonus, DC))
+        succ++;
+    return succ * 5;
+  }
+
+/* inc-1xr3: build the parenthesised risk note a terrain-warning prompt shows,
+   from the WARN_* constants the terrain itself declares in its script. The
+   terrain's own outcome handler reads those same constants (via GetConst on
+   the terrain under the actor), so the number shown and the number rolled
+   cannot drift apart. An undeclared constant reads 0 (Resource::GetConst's
+   default), which is the signal that this terrain wants no note. */
+String Creature::TerrainRiskNote(rID terrain, Map *map, int16 x, int16 y)
+{
+  Resource *res;
+  int16 sk, dc, sv, svdc, margin, dnum, dsides, dbonus, dtyp;
+  int16 dcFromMap, svdcFromMap, dmgFromMap;
+  int16 mapDC = 15;
+  Dice mapDice; mapDice.Set(0, 0, 0);
+  bool haveMap = (map && map->InBounds(x, y));
+  static const char *saveNames[3] = { "Fortitude", "Reflex", "Will" };
+
+  if (!terrain || !RES(terrain))
+    return "";
+  res = RES(terrain);
+  sk     = (int16)res->GetConst(WARN_SKILL);
+  dc     = (int16)res->GetConst(WARN_DC);
+  sv     = (int16)res->GetConst(WARN_SAVE); /* save type + 1; 0 = none */
+  svdc   = (int16)res->GetConst(WARN_SAVE_DC);
+  margin = (int16)res->GetConst(WARN_MARGIN);
+  dnum   = (int16)res->GetConst(WARN_DMG_NUM);
+  dsides = (int16)res->GetConst(WARN_DMG_SIDES);
+  dbonus = (int16)res->GetConst(WARN_DMG_BONUS);
+  dtyp   = (int16)res->GetConst(WARN_DMG_TYPE);
+  dcFromMap   = (int16)res->GetConst(WARN_DC_FROM_MAP);
+  svdcFromMap = (int16)res->GetConst(WARN_SAVE_DC_FROM_MAP);
+  dmgFromMap  = (int16)res->GetConst(WARN_DMG_FROM_MAP);
+
+  /* inc-1xr3 phase 2j: some terrains take their DC or damage from the map
+     square at run time (grease, strange rune, the curtains). Query the same
+     Map functions the terrain's own handler does, so the note reports the
+     square's real value. The map lookup is skipped when the actor is off the
+     map during teardown; the constant fallbacks then stand. */
+  if (haveMap && (dcFromMap || svdcFromMap))
+    mapDC = map->GetTerraDC(x, y);
+  if (haveMap && dmgFromMap)
+    mapDice = map->GetTerraDice(x, y);
+
+  if (!sk && !sv && dnum <= 0 && dbonus <= 0 && !dmgFromMap)
+    return "";
+  if (sv)
+    sv--; /* WARN_SAVE holds type + 1, so FORT (0) can be declared. */
+  else
+    sv = -1;
+
+  if (dcFromMap)
+    dc = max(dc, mapDC);
+  if (svdcFromMap)
+    svdc = max(svdc, mapDC);
+
+  /* inc-1xr3 phase 2i: the per-step damage some warning terrains deal. The
+     terrain declares the same ndm+b the handler passes to ThrowTerraDmg, so
+     the note and the roll cannot drift. DTypeNames is the engine's own
+     damage-type name table; lowercased so it reads inside the sentence. */
+  String dmg = "";
+  if (dnum > 0 || dbonus > 0 || dmgFromMap)
+    {
+      char typ[32]; int i;
+      const char *tn = (dtyp > 0) ? Lookup(DTypeNames, dtyp) : "";
+      for (i = 0; i < 31 && tn[i]; i++)
+        typ[i] = (tn[i] >= 'A' && tn[i] <= 'Z') ? tn[i] + 32 : tn[i];
+      typ[i] = 0;
+      if (dmgFromMap)
+        /* The handler rolls GetTerraDice(x,y) through ThrowTerraDmg, so the
+           note shows the same dice, not one random sample of the roll. */
+        dmg = Format("%s", (const char*)mapDice.Str());
+      else if (dnum > 0)
+        {
+          dmg = Format("%dd%d", dnum, dsides);
+          if (dbonus)
+            dmg += Format("%+d", dbonus);
+        }
+      else
+        dmg = Format("%d", dbonus);
+      if (i)
+        dmg += Format(" %s", typ);
+      dmg += " per step";
+    }
+
+  if (sk)
+    {
+      String note = Format(" (%s %d~", SkillInfo[sk].name,
+        SkillCheckChance(sk, dc));
+      if (margin > 0)
+        /* The handler drowns/tangles when the check total falls short by
+           more than margin, i.e. when the total is below dc - margin. */
+        note += Format("; fail by %d+ %d~", margin + 1,
+          100 - SkillCheckChance(sk, dc - margin));
+      if (sv >= 0)
+        note += Format("; else %s %d~", saveNames[sv], SaveChance(sv, svdc));
+      if (dnum > 0 || dbonus > 0 || dmgFromMap)
+        note += Format("; %s", (const char*)dmg);
+      note += ")";
+      return note;
+    }
+
+  if (sv >= 0)
+    {
+      String note = Format(" (%s %d~", saveNames[sv], SaveChance(sv, svdc));
+      if (dnum > 0 || dbonus > 0 || dmgFromMap)
+        note += Format("; %s", (const char*)dmg);
+      note += ")";
+      return note;
+    }
+
+  return Format(" (%s)", (const char*)dmg);
+}
+
 inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
                                     int16 cmod, const char *cmod_desc)
 { 
   int16 Bonus, i;
   static const char *save_name[3] = { "Fortitude", "Reflex", "Will" };
-  if (DC <= 0)
+  /* inc-1xr3: predicted chance with the same arguments, before any die. */
+  extern void ChanceProbeNote(const char *, int16, int16, int16, int);
+  int16 chance = SaveChance(type, DC, Subtype, cmod);
+  if (DC <= 0) {
+    ChanceProbeNote("save", type, DC, chance, 0);
     return false;
+  }
   bool show = false; 
 
   if ((isPlayer() || theGame->GetPlayer(0)->XPerceives(this)))
@@ -3571,75 +3788,16 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
   { int8 fsr = LOFGetForcedSaveThrowRoll();
     if (fsr) roll = fsr; }
 
-  Bonus = Attr[A_SAV_FORT + type];
-
   String bStr ; 
   if (show) { 
     bStr = Format("%c%s Save:%c 1d20 (%d)",
         -AZURE,save_name[type],-GREY,roll);
-    if (Bonus)
-      bStr += Format(" %+d base",Bonus);
   }
 
-  StatiIterNature(this,SAVE_BONUS)
-      if (RedundantFieldGrant(S))
-        continue;
-      if (BIT(S->Val) & Subtype) {
-        Bonus += S->Mag;        
-        if (show) bStr += Format(" %+d (%s)",S->Mag,
-            Lookup(SaveBonusNames, S->Val));
-      }
-  StatiIterEnd(this)
-  
-  if (Subtype & SA_REST)
-    {
-      Bonus += 4;
-      bStr += " +4 rest";
-    }
-  
-  if (Subtype & SA_KNOCKDOWN)
-    if (HasSkill(SK_BALANCE))
-      {
-        int16 b;
-        b = SkillLevel(SK_BALANCE) / 2;
-        if (b > 0) {
-          Bonus += b;        
-          if (show) bStr += Format(" %+d Balance",b);
-          }            
-      }
-  if (Subtype & SA_POISON)
-    if (HasSkill(SK_POISON_USE))
-      {
-        int16 b;
-        b = SkillLevel(SK_POISON_USE) / 4;
-        if (b > 0) {
-          Bonus += b;        
-          if (show) bStr += Format(" %+d Poison Use",b);
-          }            
-      }  
-  if (Subtype & SA_THEFT)
-    if (HasSkill(SK_PICK_POCKET))
-      {
-        int16 b;
-        b = SkillLevel(SK_PICK_POCKET) / 3;
-        if (b > 0) {
-          Bonus += b;        
-          if (show) bStr += Format(" %+d Pick Pockets",b);
-          }            
-      }  
-  if (Subtype & (SA_POISON|SA_DISEASE))
-    if (HasFeat(FT_HARDINESS))
-      {
-        Bonus += 2;
-        if (show)
-          bStr += " +2 Hardiness";
-      }
-      
-  if (cmod) {
-    Bonus += cmod;
-    bStr += Format(" %+d %s", cmod, cmod_desc);
-    }
-      
+  Bonus = SaveBonus(type, Subtype, cmod, show ? &bStr : NULL);
+  if (cmod)
+    bStr += Format(" %s", cmod_desc);
+
   for (i=ADJUST;i!=ADJUST_LAST+1;i++)
     {
       RemoveOnceStati(i,A_SAV);
@@ -3664,9 +3822,7 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
      "Will Save: 1d20 (20) +3 base = 23 vs DC 27 [failure]." against
      guardian runes, a natural 20 the SRD says must succeed. Tracking:
      bd inc-e68f. Not sent. */
-  bool succ = (roll == 20) ? true
-            : (roll == 1)  ? false
-            : (Bonus + roll >= DC);
+  bool succ = SaveRollSucceeds(roll, Bonus, DC);
 
   if (show) {
     bStr += Format(" = %d vs DC %d %c[%s]%c.",
@@ -3720,6 +3876,7 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
     }
       
 
+  ChanceProbeNote("save", type, DC, chance, succ ? 1 : 0);
   return succ;
 }
 

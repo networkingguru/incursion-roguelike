@@ -32,6 +32,16 @@
 
 #include "Incursion.h"
 
+/* inc-1xr3: the nauseated "use Concentration to attack?" confirmation, in
+   one place for the three combat sites that ask it. The odds come from
+   SkillCheckChance with the same skill and DC the deciding
+   SkillCheck(SK_CONCENT,20) uses. Returns the answer only; the caller still
+   runs SkillCheck. */
+bool Creature::PromptNauseatedAttack() {
+    return yn(Format("You are Nauseated. Use Concentration to attack? (Concentration %d~)",
+        SkillCheckChance(SK_CONCENT, 20)));
+}
+
 #ifdef ROLM_PROBE
 /* Diagnostic for inc-tek.8.8. Record the real TOUCH_ATTACK counter at the
    landed-touch path; tools/check_rod_lordly_might.sh counts its transitions. */
@@ -47,6 +57,34 @@ static void RoLMProbeNote(EventInfo &e, const char *when)
     fprintf(f, "%s effect=%s magnitude=%d present=%d\n", when,
         (const char*)NAME(e.eID), (int)e.EActor->GetStatiMag(TOUCH_ATTACK),
         e.EActor->HasStati(TOUCH_ATTACK) ? 1 : 0);
+    fclose(f);
+}
+#endif
+
+#ifdef DISPEL_EVIL_PROBE
+/* Diagnostic for inc-5v5l. Record, at the landed-touch path, both the
+   TOUCH_ATTACK counter and whether the caster still holds the spell's own
+   TRAP_EVENT stati (the +4/+6 deflection component). Dispel Evil must leave
+   neither after a touch lands on an evil creature.
+   tools/check_dispel_evil.sh reads this log. */
+static void DispelEvilProbeNote(EventInfo &e, const char *when)
+{
+    char path[1024];
+    FILE *f;
+    snprintf(path, sizeof(path), "%slogs/dispel-evil-touch.log",
+        (const char*)T1->IncursionDirectory);
+    f = fopen(path, "a");
+    if (!f)
+        return;
+    fprintf(f, "%s effect=%s touch=%d/%d defl=%d any=%d trapany=%d evil=%d eval=%d xval=%d aval=%d\n", when,
+        (const char*)NAME(e.eID), (int)e.EActor->GetStatiMag(TOUCH_ATTACK),
+        e.EActor->HasStati(TOUCH_ATTACK) ? 1 : 0,
+        e.EActor->HasEffStati(TRAP_EVENT,e.eID) ? 1 : 0,
+        e.EActor->HasEffStati(-1,e.eID) ? 1 : 0,
+        e.EActor->HasStati(TRAP_EVENT) ? 1 : 0,
+        e.EVictim->isMType(MA_EVIL) ? 1 : 0,
+        (int)TEFF(e.eID)->ef.eval, (int)TEFF(e.eID)->ef.xval,
+        (int)TEFF(e.eID)->ef.aval);
     fclose(f);
 }
 #endif
@@ -325,11 +363,25 @@ void LOFClearForcedSave() { LOFForcedSaveOn = false; }
    natural-1-always-fails SRD rule then applies to the FORCED roll, same
    as it would to a real one, so this can never accidentally land on the
    natural-20-always-succeeds rule the way an unforced roll occasionally
-   does. */
+   does. INCURSION_FORCE_SAVE_ROLL seeds this once (1..20 only), the same
+   once-only pattern LOFInitForcedRoll uses, for inc-tzcs. */
 static int8 LOFForcedSaveThrowRoll = 0;
 void LOFSetForcedSaveThrowRoll(int8 r) { LOFForcedSaveThrowRoll = r; }
 void LOFClearForcedSaveThrowRoll() { LOFForcedSaveThrowRoll = 0; }
-int8 LOFGetForcedSaveThrowRoll() { return LOFForcedSaveThrowRoll; }
+int8 LOFGetForcedSaveThrowRoll()
+{
+    static bool done = false;
+    if (done)
+        return LOFForcedSaveThrowRoll;
+    done = true;
+    const char *s = getenv("INCURSION_FORCE_SAVE_ROLL");
+    if (s && *s) {
+        int v = atoi(s);
+        if (v >= 1 && v <= 20)
+            LOFForcedSaveThrowRoll = (int8)v;
+    }
+    return LOFForcedSaveThrowRoll;
+}
 
 /* inc-30ps: the cover-and-band rule ("The rule", docs/specs/2026-09-21-
    line-of-fire-spec.md), shared by every ranged attack that can find a
@@ -712,11 +764,35 @@ static int32 DualWieldTimeout(int16 spdA, int16 spdB)
            3000 / max((100 + max(spdA,spdB)*5),10) / 2;
 }
 
+/* inc-1xr3 phase 2l: the DC the A_DEQU Reflex save is rolled against. The
+   handler (case A_DEQU, below) and the confirm prompt both call this, so the
+   DC the prompt reasons about and the DC that is rolled cannot drift.
+   inc-1xr3 phase 2m: the actor passed must be the A_DEQU attacker -- the
+   creature that owns ta and whose template GetPower adjusts the raw DC. In
+   the handler that is e2.EActor; in the confirm prompt e.EActor is the
+   PLAYER, and the monster with A_DEQU is e.EVictim, so the prompt passes
+   e.EVictim. SaveChance is therefore also asked of e.EVictim, the creature
+   whose SavingThrow(REF,...) the handler runs. */
+static int DequSaveDC(Creature *actor, TAttack *ta)
+{
+  return (int8)actor->GetPower(ta->u.a.DC);
+}
+
 /* inc-m2zi: confirm each item at risk; unarmed retaliation damages the
-   creature directly and has no equipment to confirm. */
+   creature directly and has no equipment to confirm.
+   inc-1xr3 phase 2l: the prompt also names the item's hardness and the Reflex
+   chance against DequSaveDC, the same two numbers the A_DEQU handler below
+   uses. Hardness is -1 for an immune item, which returns above and never
+   reaches the prompt; a non-positive DC rolls no save, so no chance is shown.
+   inc-1xr3 phase 2m: in this prompt e.EActor is the player and e.EVictim the
+   A_DEQU monster, while the handler saves on the opposite pairing (its
+   e2.EVictim is the player, its e2.EActor the monster). The DC and the
+   chance both belong to the monster, so both read e.EVictim here, matching
+   DequSaveDC(e2.EActor,ta) and e2.EVictim->SavingThrow(REF,...) there. */
 static bool ConfirmDequAttack(EventInfo &e, Item *it)
 {
   String s;
+  int hard = -1;
   if (!e.ETarget || !e.ETarget->isCreature() ||
       !e.EActor->isPlayer() || !e.EPActor->Opt(OPT_WARN_DEQU) ||
       !e.EVictim->HasAttk(A_DEQU))
@@ -728,17 +804,24 @@ static bool ConfirmDequAttack(EventInfo &e, Item *it)
     if (e.EActor->ResistLevel(ta->DType) == -1)
       return true;
   } else {
-    int hard = it->Hardness(ta->DType);
+    hard = it->Hardness(ta->DType);
     if (hard == -1)
       return true;
     int max = ta->u.a.Dmg.Number * ta->u.a.Dmg.Sides + ta->u.a.Dmg.Bonus;
     if ((ta->u.a.DC != 0 || it->isMagic()) && max <= hard)
       return true;
   }
-  s = Format("Attack %s (%s %s)?",
+  s = Format("Attack %s (%s %s",
       (const char*)e.EVictim->Name(NA_THE),
       (const char*)ta->u.a.Dmg.Str(),
       Lookup(DTypeNames,ta->DType));
+  if (hard >= 0)
+    s += Format("; hardness %d", hard);
+  { int svdc = DequSaveDC(e.EVictim,ta);
+    if (svdc > 0)
+      s += Format("; Reflex %d~", e.EActor->SaveChance(REF, svdc));
+  }
+  s += ")?";
   return e.EActor->yn(s,true);
 }
 
@@ -793,7 +876,7 @@ EvReturn Creature::WAttack(EventInfo &e)
       }
     else if (HasStati(NAUSEA)) {
       if (HasSkill(SK_CONCENT) && SkillLevel(SK_CONCENT) >= 10)
-        if (yn("You are Nauseated. Use Concentration to attack?"))
+        if (PromptNauseatedAttack())
           {
             if (SkillCheck(SK_CONCENT,20,true))
               {
@@ -1708,6 +1791,48 @@ SkipAttack:
   return DONE;
 }
 
+/* INCURSION_SAVECHANCE_PROBE -- checks that Creature::SaveChance (the number
+   the trap prompt shows) and Creature::SavingThrow (the code that decides the
+   outcome) agree, for every save type, a spread of DCs, and the save subtypes
+   the trap path uses (0, SA_TRAPS, SA_TRAPS|SA_MAGIC). For each case it reads
+   SaveChance's own number, then forces every d20 result 1..20 through the real
+   SavingThrow via LOFSetForcedSaveThrowRoll (src/Fight.cpp) and counts
+   successes; a mismatch is chance != hits*5. Runs once, after the player
+   exists, and writes one "SAVECHANCE ..." line per case plus a final
+   "SAVECHANCE_DONE mismatches=M". See tools/check_save_chance.sh. inc-o6xj. */
+void SaveChanceProbe(Player *pl) {
+    if (!getenv("INCURSION_SAVECHANCE_PROBE"))
+        return;
+
+    if (!pl) {
+        Error("SAVECHANCE: INCONCLUSIVE -- no live player yet");
+        return;
+    }
+
+    const int16 DCs[8] = {0, 5, 10, 15, 20, 25, 30, 40};
+    const uint32 subs[3] = {0, SA_TRAPS, SA_TRAPS | SA_MAGIC};
+    int mismatches = 0;
+    for (int16 type = FORT; type <= WILL; type++)
+        for (int d = 0; d < 8; d++)
+            for (int s = 0; s < 3; s++) {
+                const int16 dc = DCs[d];
+                const uint32 sub = subs[s];
+                const int16 chance = pl->SaveChance(type, dc, sub);
+                int hits = 0;
+                for (int8 r = 1; r <= 20; r++) {
+                    LOFSetForcedSaveThrowRoll(r);
+                    if (pl->SavingThrow(type, dc, sub))
+                        hits++;
+                }
+                LOFClearForcedSaveThrowRoll();
+                if (chance != hits * 5)
+                    mismatches++;
+                Error("SAVECHANCE type=%d dc=%d sub=%u chance=%d hits=%d",
+                    (int)type, (int)dc, (unsigned)sub, (int)chance, hits);
+            }
+    Error("SAVECHANCE_DONE mismatches=%d", mismatches);
+}
+
 /* INCURSION_LOF_PROBE helper. Finds a cardinal direction with four clear,
    in-bounds, non-solid, creature-free squares ahead of the player and an
    open line of fire the whole way, so LineOfFireProbe (below) has
@@ -2394,7 +2519,7 @@ EvReturn Creature::NAttack(EventInfo &e) /* this == EActor */
 
     if (HasStati(NAUSEA)) {
       if (HasSkill(SK_CONCENT) && SkillLevel(SK_CONCENT) >= 10)
-        if (yn("You are Nauseated. Use Concentration to attack?"))
+        if (PromptNauseatedAttack())
           {
             if (SkillCheck(SK_CONCENT,20,true))
               {
@@ -2826,7 +2951,7 @@ EvReturn Creature::SAttack(EventInfo &e) { /* this == EActor */
             return ABORT;
         } else if (HasStati(NAUSEA)) {
             if (HasSkill(SK_CONCENT) && SkillLevel(SK_CONCENT) >= 10)
-                if (yn("You are Nauseated. Use Concentration to attack?")) {
+                if (PromptNauseatedAttack()) {
                     if (SkillCheck(SK_CONCENT,20,true)) {
                         IPrint("You overcome your nausea to attack!");
                         goto OvercomeNausea;
@@ -3194,7 +3319,7 @@ SkipSoundAttack:
             e2.DType  = ta->DType;
             e2.isHit = true; 
             e2.strDmg = ""; 
-            e2.saveDC = (int8)e2.EActor->GetPower(ta->u.a.DC);
+            e2.saveDC = (int8)DequSaveDC(e2.EActor,ta);
             /* inc-m2zi: retaliation cannot target the responder's own item. */
             it = e.EItem2;
             if (it && it->Owner() == e.EActor)
@@ -3679,8 +3804,11 @@ SkipRepeat:;
             Timeout += 5000 / 
             max((100 + Attr[A_SPD_BRAWL]*5),10);
         else
-            Timeout += 1000 / 
-            max((100 + Attr[A_SPD_BRAWL]*5),10);
+            /* inc-h22n: a kick against a door is a standard action; the
+               Strength check replaces the damage roll (Door::Event). Kicking a
+               creature is unchanged above. */
+            Timeout += 3000 / 
+            max((100 + Attr[A_SPD_MELEE]*5),10);
         if (startedAfraid)
             e.EActor->Timeout *= 2;
         break;
@@ -5644,6 +5772,7 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
 
     /* This uses the *exact* logic of the OGL system, as follows:
        - An unmodified roll of a 20 is always a hit
+       - An unmodified roll of a 1 is always a miss
        - An unmodified roll within the threat range of an attack
          scores a threat, provided it hits, but does not score an
          automatic hit. Thus, 1st level fighters with rapiers hit
@@ -5668,7 +5797,10 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
               e.EVictim->IPrint("You fail to catch the thrown <Obj>!", e.EItem2);
           }                                  
                             
-    if ((e.vHit + e.vRoll >= max(e.vDef,
+    /* upstream: the OGL rule makes a natural 1 an automatic miss; upstream's hit test omitted it on every platform. Observed. inc-bp2y. Not sent. */
+    if (e.vRoll == 1)
+      e.isHit = false;
+    else if ((e.vHit + e.vRoll >= max(e.vDef,
           (e.vRideCheck ? e.vRideCheck : -40))) || e.vRoll == 20)
       e.isHit = true;
     else
@@ -6207,6 +6339,25 @@ EvReturn Creature::Hit(EventInfo &e) /* this == EVictim!! */
       MonMemNote(e.EPVictim, e.EActor->tmID, MONMEM_FOUGHT);
   }
 
+  /* A blow landed, so if the attacker was suffering an Aura of Menace whose
+     owner is the victim, hitting the owner shakes it off: the penalties end
+     and the attacker is immune to that owner's aura for 24 hours (the
+     EFF_FLAG1 immunity marker that Creature::FieldOn grants). inc-bp44.
+
+     Here `this` is the ATTACKER, not the victim: src/Creature.cpp's EV_HIT
+     dispatch (case EV_HIT) calls Hit(e) only when e.EActor == this. So the
+     penalised creature is `this`, and the aura's owner (the victim) is
+     e.EVictim. */
+  if (e.EVictim && e.EVictim != this) {
+    rID mID = FIND("Aura of Menace");
+    if (mID && this->HasEffStati(ADJUST, mID, -1, e.EVictim)) {
+      this->RemoveEffStati(mID, EV_REMOVED, 0, e.EVictim);
+      this->GainTempStati(EFF_FLAG1,e.EVictim,MENACE_DURATION,SS_MISC,0,0,mID,0);
+      if (this->isPlayer())
+        IPrint("You shake off the aura of menace.");
+    }
+  }
+
     /* Watch out for Traps in EItem! */
     if (e.EItem && !e.EItem->isItem())
       e.EItem = NULL;
@@ -6437,7 +6588,16 @@ AfterEffects:
 #ifdef ROLM_PROBE
     RoLMProbeNote(e, "before");
 #endif
+#ifdef DISPEL_EVIL_PROBE
+    DispelEvilProbeNote(e, "before");
+#endif
     ReThrow(EV_MAGIC_STRIKE,e);
+#ifdef DISPEL_EVIL_PROBE
+    /* Read before Fight.cpp's own decrement below, which would remove
+       TOUCH_ATTACK on its own once lval is 1 regardless of whether the
+       spell's own EV_MAGIC_HIT handler already discharged it. */
+    DispelEvilProbeNote(e, "mid");
+#endif
 
     /* If this touch spell allows multiple uses, reduce the
        number remaining by one; otherwise, get rid of the 
@@ -6449,6 +6609,9 @@ AfterEffects:
       e.EActor->RemoveStati(TOUCH_ATTACK);
 #ifdef ROLM_PROBE
     RoLMProbeNote(e, "after");
+#endif
+#ifdef DISPEL_EVIL_PROBE
+    DispelEvilProbeNote(e, "after");
 #endif
   }  
 
@@ -9479,7 +9642,15 @@ EvReturn Weapon::QualityDmg(EventInfo &e) {
         if (!e.EVictim->SavingThrow(REF,e.EActor->WeaponSaveDC(this,WT_ENTANGLE),SA_PARA|SA_GRAB))
         {
           SetSilence();
-          DAMAGE(e.EActor,e.EVictim,AD_STUK,-1,
+          /* upstream: the entangling weapon's STUCK lasted forever. -1
+             reached the AD_STUK arm as e.vDmg and became the stati's
+             Duration, and Thing::UpdateStati (src/Status.cpp) only counts
+             down a Duration above zero, so the victim never let go unless it
+             made an escape check. The invariant: STUCK from this source ends
+             after 2d4 rounds. Plain platform-independent stati logic, same on
+             Win32. Evidence: Observed, tools/check_bolas_entangle_expiry.sh.
+             inc-9smo. Not sent. */
+          DAMAGE(e.EActor,e.EVictim,AD_STUK,Dice::Roll(2,4),
             "entangling weapon",xe.EParam = STUCK_WEAPON);
           UnsetSilence();
           if (e.EVictim->HasStati(STUCK)) {

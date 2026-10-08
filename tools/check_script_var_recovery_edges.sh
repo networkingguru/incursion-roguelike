@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# gate-serial: builds the 391e353 sandbox from git archive and times a -timeout run; CPU load could flip it
 # inc-glnx recovery edge cases, docs/SAVE-SCHEMA-SPEC.md test plan:
 #   case 28(c) an IS1.3 save whose manifest has an array longer than at
 #              391e353 refuses, naming the array;

@@ -48,6 +48,9 @@ export PATH=/usr/bin:/bin
 unset NIGHTLY_VERIFY_STATE NIGHTLY_CHECK_DIR NIGHTLY_BASE_REF \
       INCURSION_FINISH_GATE INCURSION_BASE_BRANCH INCURSIONPATH CC CXX
 
+# A fixture landing tests the lock and merge, not machine load (inc-rwha).
+export INCURSION_LOAD_GUARD_OFF=1
+
 REPO="$TMP/repo"
 LOG="$TMP/calls"             # one line per call of the fake build or a fake check
 FAIL_LIVE="$TMP/fail-live"   # while this exists, the live check fails
@@ -92,6 +95,10 @@ run() {
     BUILT=$(( $(calls build) - b ))
 }
 gate() { run "$1" tools/nightly_verify.sh "${@:2}"; }
+# A direct landing run needs a diff ref, exactly as finish_bead.sh supplies it.
+# finish_bead.sh sets it to $BASE_BRANCH (master here), so the record's env
+# fingerprint matches the reuse a landing makes.
+landgate() { run "$1" env INCURSION_LANDING_DIFF_REF=master tools/nightly_verify.sh --landing; }
 land() { run "$REPO" tools/finish_bead.sh "$1"; }
 land_in() { run "$1" tools/finish_bead.sh "$2"; }
 # "! git ..." passed through expect's "$@" loses its negation -- bash looks up
@@ -108,7 +115,7 @@ expect() { # expect <label> <command...>
         fails=$(( fails + 1 ))
     fi
 }
-says() { printf '%s\n' "$OUT" | grep -q -- "$1"; }
+says() { grep -q -- "$1" <<< "$OUT"; }
 
 expect "the real record path is ignored in this repository" \
     git -C "$ROOT" check-ignore -q logs/nightly-verify-pass.txt
@@ -120,14 +127,16 @@ echo 'int a;' >> "$W/src/game.c"; commit "$W" "fix: a"
 echo 'int dirt;' >> "$REPO/src/game.c"
 land inc-aaaa
 expect "an interrupted landing stops at the dirty master checkout" [ "$RC" = 1 ]
-expect "  after it ran the full gate" [ "$BUILT" = 2 ]
+expect "  after it ran the landing gate" [ "$BUILT" = 2 ]
 git -C "$REPO" checkout -q -- src/game.c
 live=$(calls live)
 land inc-aaaa
 expect "the same landing again lands" [ "$RC" = 0 ]
 expect "  without building" [ "$BUILT" = 0 ]
+# The bead changed only src/game.c, so the landing keeps no live check: its
+# live tier must stay untouched across the reuse.
 expect "  without the live tier" [ "$(calls live)" = "$live" ]
-expect "  and names the pass it reused" says "REUSED from a full pass at"
+expect "  and names the pass it reused" says "REUSED from a landing pass at"
 
 # An untracked file beside the checkout is not "dirty" for this guard: only a
 # tracked modification refuses a landing (--untracked-files=no, commit 29ffccf).
@@ -138,34 +147,62 @@ land inc-hhhh
 expect "an untracked file in the master checkout does not stop a landing" [ "$RC" = 0 ]
 rm -f "$REPO/dirt.txt"
 
-# The second report: the gate ran before the commit, and the commit changes no
-# file, so the pass still holds.
+# A landing reuses only a landing pass. A full --compare pass on the same files
+# is a different gate's record and must not be reused: the landing builds again
+# and says why.
 bead inc-bbbb; W="$TMP/Incursion-inc-bbbb"
 echo 'int b;' >> "$W/src/game.c"
 gate "$W" --compare
 commit "$W" "fix: b"
 land inc-bbbb
-expect "a gate run before the commit counts at the landing" [ "$RC" = 0 ]
-expect "  so the landing does not build" [ "$BUILT" = 0 ]
-expect "  and says so" says "REUSED from a full pass at"
+expect "a full pass is not reused by the landing" [ "$RC" = 0 ]
+expect "  so the landing builds again" [ "$BUILT" = 2 ]
+expect "  and says the record is from the full gate" says "the pass record is from the full gate"
 
-# One byte changed after the pass.
+# One byte changed after a landing pass.
 bead inc-cccc; W="$TMP/Incursion-inc-cccc"
 echo 'int c;' >> "$W/src/game.c"
-gate "$W" --compare
+landgate "$W"
 printf x >> "$W/src/game.c"; commit "$W" "fix: c"
 land inc-cccc
 expect "one byte changed after the pass runs the full gate" [ "$BUILT" = 2 ]
 expect "  and says why" says "the files differ"
 
+# A landing keeps the live checks the bead's diff touched. A bead that edits a
+# live check must run it, where a bead that edits only src/ must not.
+bead inc-iiii; W="$TMP/Incursion-inc-iiii"
+printf '# touched\n' >> "$W/tools/check_fake_live.sh"
+commit "$W" "fix: i touches a live check"
+live_before=$(calls live)
+land inc-iiii
+expect "a landing that edits a live check lands" [ "$RC" = 0 ]
+expect "  and runs that live check" [ "$(calls live)" -gt "$live_before" ]
+
+# The docs-only classifier cannot measure, so nothing scales the gate down and
+# the DEFAULT gate runs. Pointing the classifier at a repository that is not
+# there is exactly that: it exits 2, and finish_bead.sh falls through to its
+# default. That default must be the landing gate (it was --compare until
+# inc-t3iu); the landing banner and the untouched live tier both say which gate
+# actually ran, so this case fails if the default regresses.
+bead inc-jjjj; W="$TMP/Incursion-inc-jjjj"
+echo 'int j;' >> "$W/src/game.c"; commit "$W" "fix: j"
+live_before=$(calls live)
+export DOCS_ONLY_ROOT="$TMP/no-such-repo"
+land inc-jjjj
+unset DOCS_ONLY_ROOT
+expect "a classifier that cannot measure lands through the default gate" [ "$RC" = 0 ]
+expect "  and that default gate is the landing gate" says "--- landing gate:"
+expect "  so the live tier the bead did not touch does not run" [ "$(calls live)" = "$live_before" ]
+
 # Master moved after the pass, so the landing's merge changes the files.
 bead inc-dddd; W="$TMP/Incursion-inc-dddd"
 echo 'int d;' >> "$W/src/game.c"
-gate "$W" --compare
+landgate "$W"
 commit "$W" "fix: d"
 echo 'int m;' > "$REPO/src/other.c"; commit "$REPO" "fix: master moves"
 land inc-dddd
 expect "a master that moved after the pass runs the full gate" [ "$BUILT" = 2 ]
+expect "  and the record is refused because the files differ" says "the files differ"
 
 # An explicit INCURSION_FINISH_GATE is run as given, record or no record.
 bead inc-ffff; W="$TMP/Incursion-inc-ffff"

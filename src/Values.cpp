@@ -185,7 +185,15 @@ void Creature::AddBonus(int8 btype,int8 attr,int16 bonus) {
         AttrAdj[A_SAV_REF][btype] = WESMAX(AttrAdj[A_SAV_REF][btype], bonus);         
         AttrAdj[A_SAV_WILL][btype] = WESMAX(AttrAdj[A_SAV_WILL][btype], bonus);        
         AttrAdj[A_ARC][btype] = WESMAX(AttrAdj[A_ARC][btype], bonus);             
-        AttrAdj[A_DIV][btype] = WESMAX(AttrAdj[A_DIV][btype], bonus);             
+        AttrAdj[A_DIV][btype] = WESMAX(AttrAdj[A_DIV][btype], bonus);
+        /* upstream: a positive A_AID bonus MUST reach all five casting
+           attributes, as StackBonus does. A_SOR, A_PRI and A_BAR were
+           missing, so druids, sorcerers and bards got no benefit from
+           Bless and the like. Observed (tools/check_aid_casting_bonus.sh).
+           inc-9uuj. not sent. */
+        AttrAdj[A_SOR][btype] = WESMAX(AttrAdj[A_SOR][btype], bonus);
+        AttrAdj[A_PRI][btype] = WESMAX(AttrAdj[A_PRI][btype], bonus);
+        AttrAdj[A_BAR][btype] = WESMAX(AttrAdj[A_BAR][btype], bonus);
         break;
     case A_SAV:
         AttrAdj[A_SAV_FORT][btype] = WESMAX(AttrAdj[A_SAV_FORT][btype], bonus);        
@@ -331,19 +339,20 @@ Restart:
     offhandWep = EInSlot(SL_READY);
     missileWep = EInSlot(SL_ARCHERY);
     thrownWep  = thrown;
+    /* upstream: a weapon slung on a shoulder is not in hand, so it MUST NOT
+       become meleeWep; with a bow or thrown-only weapon held there is no melee
+       weapon, so no parry and no metal penalty from it. Plain slot logic -- no
+       typedef, pointer-width or compiler dependence -- so upstream's Win32 build
+       behaves the same, and its own disabled block below names this same
+       shoulder-parry bug. Observed -- tools/repro_d9gk_shoulder.sh.
+       inc-d9gk. Not sent. */
     if (meleeWep && meleeWep->isType(T_BOW)) {
         missileWep = meleeWep;
         meleeWep = offhandWep = NULL;
-        if (it = EInSlot(SL_LSHOULDER))
-            if (it->isType(T_WEAPON) && !it->isType(T_BOW) && !it->thrownOnly())
-                meleeWep = it;
     }
     if (meleeWep && meleeWep->thrownOnly()) {
         thrownWep = meleeWep;
         meleeWep = offhandWep = NULL;
-        if (it = EInSlot(SL_LSHOULDER))
-            if (it->isType(T_WEAPON) && !it->isType(T_BOW) && !it->thrownOnly())
-                meleeWep = it;
     } else if (meleeWep && meleeWep->HasIFlag(IT_THROWABLE) && !thrownWep)
         thrownWep = meleeWep;
 
@@ -540,8 +549,8 @@ Restart:
         switch(WepSkill(it)) {
         case WS_NOT_PROF:
             if (i != S_BRAWL) { 
-                AddBonus(BONUS_SKILL, A_HIT_ARCHERY+i, -4);
-                AddBonus(BONUS_SKILL, A_SPD_ARCHERY+i, -10);
+                AddBonus(BONUS_SKILL, A_HIT_ARCHERY+i, -NOT_PROF_HIT_PENALTY);
+                AddBonus(BONUS_SKILL, A_SPD_ARCHERY+i, -NOT_PROF_SPD_PENALTY);
             } 
             break;
         case WS_PROFICIENT:
@@ -645,7 +654,7 @@ Restart:
     StateFlags &= ~(MS_HAS_REACH | MS_REACH_ONLY);
     if (InSlot(SL_WEAPON) && InSlot(SL_WEAPON)->HasIFlag(WT_REACH)) {
         StateFlags |= MS_HAS_REACH;
-        if (!InSlot(SL_WEAPON)->HasIFlag(WT_STRIKE_NEAR))
+        if (InSlot(SL_WEAPON)->isReachOnly())
             StateFlags |= MS_REACH_ONLY;
     } else if (InherentCreatureReach())
         StateFlags |= MS_HAS_REACH;
@@ -2656,6 +2665,26 @@ bool Creature::isMType(int32 mt)
         Error("Strange MA_XXX constant sent to TMonster::isMType!");
       return false;
   }
+}
+
+bool Creature::isSameRaceAs(rID corpseMonID)
+{
+  /* inc-08js: one shared same-race (cannibalism) test for both alignment
+     moments. Eater and corpse must share a racial type. The MA_REPTILE
+     clause keeps the dragonkin subrace, which has no MA_LIZARDFOLK. */
+  if ((isMType(MA_HUMAN)     && TMON(corpseMonID)->isMType(corpseMonID,MA_HUMAN)) ||
+      (isMType(MA_DWARF)     && TMON(corpseMonID)->isMType(corpseMonID,MA_DWARF)) ||
+      (isMType(MA_ELF)       && TMON(corpseMonID)->isMType(corpseMonID,MA_ELF)) ||
+      (isMType(MA_GNOME)     && TMON(corpseMonID)->isMType(corpseMonID,MA_GNOME)) ||
+      (isMType(MA_HALFLING)  && TMON(corpseMonID)->isMType(corpseMonID,MA_HALFLING)) ||
+      (isMType(MA_DROW)      && TMON(corpseMonID)->isMType(corpseMonID,MA_DROW)) ||
+      (isMType(MA_KOBOLD)    && TMON(corpseMonID)->isMType(corpseMonID,MA_KOBOLD)) ||
+      (isMType(MA_ORC)       && TMON(corpseMonID)->isMType(corpseMonID,MA_ORC)) ||
+      (isMType(MA_LIZARDFOLK)&& TMON(corpseMonID)->isMType(corpseMonID,MA_LIZARDFOLK)) ||
+      (isMType(MA_REPTILE)   && TMON(corpseMonID)->isMType(corpseMonID,MA_REPTILE)
+                             && TMON(corpseMonID)->isMType(corpseMonID,MA_HUMANOID)))
+    return true;
+  return false;
 }
 
 String & Creature::BonusBreakdown(int8 at, int16 maxlen)

@@ -115,7 +115,9 @@ changed_docs() {
     {
         git diff --name-only "$BASE_REF...HEAD" -- '*.md'
         git diff --name-only HEAD -- '*.md'
-        git ls-files --others --exclude-standard -- '*.md'
+        # Untracked evidence specimens stay untracked by project rule and are not
+        # project docs, so skip untracked files under docs/evidence/.
+        git ls-files --others --exclude-standard -- '*.md' | { grep -v '^docs/evidence/' || true; }
     } 2>/dev/null | LC_ALL=C sort -u | while read -r d; do
         [ -f "$d" ] && echo "$d"
     done

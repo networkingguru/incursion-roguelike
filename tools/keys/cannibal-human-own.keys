@@ -1,0 +1,54 @@
+# Case 1 of tools/check_cannibal_alignment.sh (bd inc-08js): a lawful good human
+# eats a human. Loaded from tools/fixtures/chars/human-paladin-seed4-opt0822.sav.
+
+# Summon the corpse-to-be at the cursor (ENTER takes the default square, the one
+# to the player's right), then kill it with the wizard menu's Genocide
+# Everything. A melee kill is not used: a paladin who attacks a summoned
+# creature raises god-message boxes and alignment penalties of its own, and the
+# orc paladin cannot reliably finish a cave orc barehanded. Genocide kills
+# every monster on the level and leaves a corpse of each; the one beside the
+# player is the one eaten below.
+w
+y                       # Wizard Mode: confirm leaving Explore Mode
+@choose "Monster Summoning"
+@choose "Humans"
+@choose "human"
+RIGHT
+ENTER
+w
+@choose "Genocide Everything"
+@dump:killed
+
+d                       # Display Character
+@expect "Gender"
+w                       # [W]rite Dump -- "Filename:"
+"human-own-pre"
+ENTER
+ESC
+
+# Step onto the corpse and eat it to the end: the first bite and the finishing
+# charge both land. Stepping onto it opens a "You see here" panel that swallows
+# the next key. SPACE answers each -- more -- the meal raises.
+RIGHT
+@while "You see here" ESC
+e
+@choose "(ground) human corpse"
+@while "Stop eating" n
+@while "-- more --" SPACE
+@while "Eating" SPACE
+@while "-- more --" SPACE
+@while "#------" SPACE
+
+# The message log says the meal ended: without it a case that expects NO change
+# would pass on a session that never ate.
+v
+@dump:log-human-own
+@while "Messages" ESC
+
+d
+@expect "Gender"
+w
+"human-own-post"
+ENTER
+ESC
+@quit

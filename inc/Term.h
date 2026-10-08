@@ -437,9 +437,9 @@ public:
     virtual char ChoicePrompt(const char*msg,const char*choices,int8 col1=BROWN,  int8 col2=YELLOW,bool preprompt=true,char def=0)=0;
     virtual Thing* AcquisitionPrompt(int8 Reason, int8 minlev, int8 maxlev, int8 MType=0)=0;
     virtual rID  ChooseResource(const char*prompt, int16 RType, rID eID)=0;
-    virtual int32 MonsterTypePrompt(const char * prompt, int minCount = 1, int maxCount = 99999)=0;
-    virtual rID MonsterOfTypePrompt(int32 type, const char * prompt)=0;
-    virtual rID MonsterPrompt(const char * prompt)=0;
+    virtual int32 MonsterTypePrompt(const char * prompt, int minCount = 1, int maxCount = 99999, Player *recallFor = NULL)=0;
+    virtual rID MonsterOfTypePrompt(int32 type, const char * prompt, Player *recallFor = NULL)=0;
+    virtual rID MonsterPrompt(const char * prompt, Player *recallFor = NULL)=0;
     virtual String & StringPrompt(int8 Color, const char*msg)=0;
     virtual const char* ReadLine(int16 x,int16 y, int16 first_ch=0)=0;
     virtual const char* ReadLine()=0;
@@ -702,9 +702,9 @@ public:
         int8 col2=YELLOW,bool preprompt=true,char def=0);
     virtual Thing* AcquisitionPrompt(int8 Reason, int8 minlev, int8 maxlev, int8 MType);
     virtual rID  ChooseResource(const char*prompt, int16 RType, rID eID);
-    virtual int32 MonsterTypePrompt(const char * prompt, int minCount = 1, int maxCount = 99999);
-    virtual rID MonsterOfTypePrompt(int32 type, const char * prompt);
-    virtual rID MonsterPrompt(const char * prompt);
+    virtual int32 MonsterTypePrompt(const char * prompt, int minCount = 1, int maxCount = 99999, Player *recallFor = NULL);
+    virtual rID MonsterOfTypePrompt(int32 type, const char * prompt, Player *recallFor = NULL);
+    virtual rID MonsterPrompt(const char * prompt, Player *recallFor = NULL);
     virtual String & StringPrompt(int8 Color, const char*msg);
     virtual const char* ReadLine(int16 x,int16 y, int16 first_ch=0);
     virtual const char* ReadLine() { return ReadLine(cx,cy); }

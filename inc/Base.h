@@ -909,6 +909,7 @@ bool RunSchemaLoad(const char *path);
    print the loaded module's 21 arrays and every script variable per owner,
    in a fixed, deterministic order. Read-only; writes no file. */
 bool RunResourceOrder();
+bool RunWikiHelp(const char *dir);
 
 
 

@@ -369,6 +369,25 @@ void Thing::PlaceAt(Map*_m,int16 _x,int16 _y, bool share_square)
         m->NewField(FI_MOBILE|FI_MODIFIER,x,y,3,GLYPH_VALUE(GLYPH_FLOOR2, WHITE),-1,vID,thisc);
         ValourExists:;
         }
+      if (thisc->HasAbility(CA_AURA_OF_MENACE)) {
+        rID mID = FIND("Aura of Menace");
+        ASSERT(mID);
+        for(i=0;m->Fields[i];i++)
+          if (m->Fields[i]->Creator == myHandle)
+            if (m->Fields[i]->eID == mID)
+              goto MenaceExists;
+        m->NewField(FI_MOBILE|FI_MODIFIER,x,y,thisc->AbilityLevel(CA_AURA_OF_MENACE),
+          GLYPH_VALUE(GLYPH_FLOOR2, RED),-1,mID,thisc);
+        MenaceExists:;
+        }
+      else {
+        /* The ability can be granted as a removable stati, so a creature can
+           lose it. If a Menace field this creature owns is still on this map,
+           remove it. inc-bp44. */
+        rID mID = FIND("Aura of Menace");
+        if (mID)
+          m->RemoveEffFieldFrom(mID,myHandle);
+        }
       if (m == NULL)
         return;
       thisc->TerrainEffects();
@@ -588,7 +607,37 @@ FoundGoodPlace:
 
 Map::Map() : Object(T_MAP), ov(myHandle)
 	{
-          nextAvailableTerraKey = 0; 
+          /* upstream: this constructor left every plain member but nextAvailableTerraKey
+             to Object::operator new's zero-fill (inc/Base.h); reading one is undefined,
+             so an optimiser that deletes the fill reads stale heap bytes. Observed:
+             Creature::SetImage reads m->pl[0] during Map::enBuildMon -> "Illegal system
+             object number (96)"; Map::QueueNum indexes QueueStack[QueueSP] with garbage
+             QueueSP -> "Messages (still) queued" and a segfault. Now sizeX/Y, Grid,
+             RegionList, SpecialDepths, TerrainList, CurrThing, QueueStack/SP, dID,
+             PercentSI, inDaysPassed, Depth/Level/EnterX/EnterY, SpecialsLevels, Day,
+             FieldCount, pl, PlayerCount, BreedCount, PreviousAuguries are assigned to
+             that same zero-fill. Julian Mensch's code (7b8504a, 2014); misbehaves
+             identically on Win32, so not a port artifact. Observed, inc-eikp.2, not
+             sent. */
+          sizeX = sizeY = 0;
+          nextAvailableTerraKey = 0;
+          inGenerate = false;
+          Grid = NULL;
+          memset(RegionList,0,sizeof(RegionList));
+          memset(SpecialDepths,0,sizeof(SpecialDepths));
+          memset(TerrainList,0,sizeof(TerrainList));
+          CurrThing = 0;
+          memset(QueueStack,0,sizeof(QueueStack));
+          QueueSP = 0;
+          dID = 0; PercentSI = 0;
+          inDaysPassed = false;
+          Depth = Level = EnterX = EnterY = 0;
+          memset(SpecialsLevels,0,sizeof(SpecialsLevels));
+          Day = 0;
+          FieldCount = 0;
+          pl[0] = 0; pl[1] = 0; pl[2] = 0; pl[3] = 0;
+          PlayerCount = BreedCount = 0;
+          PreviousAuguries = 0;
 	}
 
 void Thing::NotifyGone(hObj h)

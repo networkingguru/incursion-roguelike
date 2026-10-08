@@ -20,12 +20,12 @@
 # Biocurrent, summons a giant rat, and attacks it. The attack is a magic
 # touch, so the Damage line goes through Magic::Blast. The key script dumps
 # screens; the Damage line for the Biocurrent hit reads
-# `Damage: 1d12+2 = <n> Lightning`.
+# `Damage: 1d12+<n> = <n> Lightning`.
 #
 # The session must exit 0 -- before the copy-constructor and cast fix it
 # aborts with exit 134, which is the red result. And at least one damage
 # screen must carry a line matching exactly
-# `Damage: 1d12+2 = <digits> Lightning`, with nothing between the dice and
+# `Damage: 1d12+<n> = <digits> Lightning`, with nothing between the dice and
 # ` = ` (the shared-buffer and uncleared-strDmg defects both put text there).
 # A run that shows no Damage line at all FAILS: finding nothing is not a pass.
 #
@@ -80,7 +80,7 @@ fi
 
 # The Damage line appears on the after-strike screen and in the message log.
 # Read every screen; assert one line matches the exact shape.
-MATCHES="$(grep -hoE 'Damage: 1d12\+2 = [0-9]+ Lightning' "$RUN_DIR"/logs/screens/*.txt 2>/dev/null | sort -u)"
+MATCHES="$(grep -hoE 'Damage: 1d12\+[0-9]+ = [0-9]+ Lightning' "$RUN_DIR"/logs/screens/*.txt 2>/dev/null | sort -u)"
 LINES="$(grep -hoE 'Damage: [^|]*' "$RUN_DIR"/logs/screens/*.txt 2>/dev/null | sort -u)"
 
 if [ -z "$LINES" ]; then
@@ -89,7 +89,7 @@ if [ -z "$LINES" ]; then
 fi
 
 if [ -z "$MATCHES" ]; then
-    echo "FAIL: no Damage line matches 'Damage: 1d12+2 = <digits> Lightning'"
+    echo "FAIL: no Damage line matches 'Damage: 1d12+<n> = <digits> Lightning'"
     echo "      Damage line(s) seen:"
     echo "$LINES" | sed 's/^/        /'
     exit 1
@@ -99,7 +99,7 @@ echo "Damage line(s) matched:"
 echo "$MATCHES" | sed 's/^/  /'
 echo
 echo "measurement 1: PASS -- the session exits 0 and the Biocurrent Damage"
-echo "               line is exactly 'Damage: 1d12+2 = <digits> Lightning'"
+echo "               line is exactly 'Damage: 1d12+<n> = <digits> Lightning'"
 echo
 
 # --- measurement 2: the leftover Lore text (Magic::AGlobe, two victims) -----

@@ -41,21 +41,21 @@ backend can be linked at a time, because each defines `main()`, `Error()` and
 BACKEND=posix ./build_macos.sh   # -> ./incursion-headless  the POSIX/ncurses build
 ```
 
-`build_macos.sh:84` defaults `BACKEND` to `libtcod`; `:87` maps that to
-`OUT=incursion` and `:88` maps `posix` to `OUT=incursion-headless`. Either line
+`build_macos.sh:121` defaults `BACKEND` to `libtcod`; `:124` maps that to
+`OUT=incursion` and `:125` maps `posix` to `OUT=incursion-headless`. Either line
 also compiles `mod/Incursion.Mod`, because both builds carry the resource
 compiler by default. An ordinary build recompiles it every time; a build with
-`EXTRA_CXXFLAGS` set compiles it only when the file is absent (`build_macos.sh:375-385`).
+`EXTRA_CXXFLAGS` set compiles it only when the file is absent (`build_macos.sh:393-403`).
 
 The `posix` build compiles `src/Wposix.cpp` and links `-lz -lncurses`
-(`build_macos.sh:243-252`). ncurses ships with macOS and with every Linux
+(`build_macos.sh:260-269`). ncurses ships with macOS and with every Linux
 distribution, so it adds nothing to install, and it draws only to a real
 terminal — a headless run never calls into it
-(`build_macos.sh:249-251`). The `libtcod` build links SDL2 and OpenGL instead
-(`build_macos.sh:254-259`), and needs `sdl2` and `pkg-config` from Homebrew.
+(`build_macos.sh:266-268`). The `libtcod` build links SDL2 and OpenGL instead
+(`build_macos.sh:271-276`), and needs `sdl2` and `pkg-config` from Homebrew.
 
-**The harness needs the second line.** `headless.sh:82` defaults its binary to
-`./incursion-headless`, and `:85-88` refuses to run without it, printing that
+**The harness needs the second line.** `headless.sh:83` defaults its binary to
+`./incursion-headless`, and `:86-89` refuses to run without it, printing that
 exact build command. `soak.sh:33-35`, `check_race_feats.sh:23-26` and
 `check_load_corrupt.sh:62-65` all say the same.
 
@@ -71,7 +71,7 @@ Homebrew (`build_macos.sh:4-5`). The POSIX build needs neither SDL nor libtcod
 `tools/keys/` inside its own directory under `logs/runs/`, with its own `save/`
 and `logs/`, and with `mod/` and `lib/` symlinked in (`headless.sh:13-16`). It
 exists so that an unattended run cannot destroy a real character. Use it and
-never the binary directly (`headless.sh:55-58`).
+never the binary directly (`headless.sh:56-59`).
 
 The harness takes two environment variables as inputs beside the key script and
 the seed. `INCURSION_OPTIONS` is mandatory and names the settings file (Trap 2
@@ -121,11 +121,11 @@ them (`src/Debug.cpp`), so adding an option renumbers everything after it —
 dump the menu and read the letter rather than counting. And `w`, not `W`: an
 uppercase token sets SHIFT, and both key tables bind `KY_CMD_WIZMODE` with
 modifier flags of 0, so `W` is a different keystroke that reaches nothing
-(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:4754`/`4874`).
+(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:5375`/`4874`).
 
 `[M] Create Altar` is there for the harness. A sacrifice needs the player to
 be standing on an altar, and the only other source of one is `MakeLev`'s
-random assignment (`src/MakeLev.cpp:2107-2123`), which picks from seven gods
+random assignment (`src/MakeLev.cpp:2112-2128`), which picks from seven gods
 and cannot be asked for a particular one. The command prompts for a god name
 and builds the feature exactly as `MakeLev.cpp:1143-1145` does.
 `check_sacrifice.sh` is the first thing to use it.
@@ -165,11 +165,11 @@ self-explanatory.
 
 **`ended: NO GAMEPLAY`** — the run never entered a map, so it measured nothing.
 `Game::Play` writes `logs/session.log` on the first completed turn, so that file
-exists if and only if the session reached gameplay (`headless.sh:230-231`). When
-it is missing and the run would otherwise have exited 0 or 3, `headless.sh:232-234`
+exists if and only if the session reached gameplay (`headless.sh:231-232`). When
+it is missing and the run would otherwise have exited 0 or 3, `headless.sh:233-235`
 rewrites the exit code to 5. Do not count such a run as a pass. Screens are not
 a substitute test: `@dump` lines fire even in a session that never entered a map,
-and one vacuous run left 11 of them (`headless.sh:224-226`).
+and one vacuous run left 11 of them (`headless.sh:225-227`).
 
 **`ended: ASSERT`** — the engine logged an `ASSERT failed` whose condition is
 not listed in `tools/known_asserts.txt`, and the run would otherwise have
@@ -182,29 +182,29 @@ assert, and the check that drove the session read only the screen dump.
 
 **`ended: WATCHDOG`** — exit 4. The game stopped asking for keystrokes, which is
 the signature of a hang (`headless.sh:38-39`). `SIGALRM` fires in
-`src/Wposix.cpp:450-458`, which writes `incursion: watchdog timeout, no key read
+`src/Wposix.cpp:480-488`, which writes `incursion: watchdog timeout, no key read
 in time` and exits with `EXIT_OUT_OF_TIME`, defined as 4 at `src/Wposix.cpp:85`.
 The alarm is 300 seconds (`src/Wposix.cpp:80`) and it measures the GAP between
 keystrokes, not the length of the run, so a long honest session is safe
-(`src/Wposix.cpp:1595-1599`). It is never armed when a person is at the keyboard
-(`src/Wposix.cpp:580-584`).
+(`src/Wposix.cpp:1656-1660`). It is never armed when a person is at the keyboard
+(`src/Wposix.cpp:633-637`).
 
 **`death: STUCK`** — the run ended with `Die? [yn]` still on the last screen,
-unanswered (`headless.sh:321-324`). The pinned settings run with `OPT_NODEATH`
+unanswered (`headless.sh:322-325`). The pinned settings run with `OPT_NODEATH`
 on, so a killing blow asks that question instead of ending the game, and a key
 script answers it blind with whatever token comes next
-(`headless.sh:290-293`). If no `y` or `n` remains in the script, every later
+(`headless.sh:291-294`). If no `y` or `n` remains in the script, every later
 keystroke is swallowed and the run still reports `ended: cleanly`
-(`headless.sh:303-306`). A confirmed death prints `death: N confirmed` instead
+(`headless.sh:304-307`). A confirmed death prints `death: N confirmed` instead
 and is logged to `logs/death.log`. Neither gets its own exit code, on purpose:
 whether a death should fail a run is a product decision the script does not make
-(`headless.sh:44-49`).
+(`headless.sh:44-50`).
 
 **`stuck-prompt: threat-disengage`** — the run ended with `You are in a
 threatened area. Abort, Flee or Disengage?` still on screen
-(`headless.sh:344-347`). That prompt has no option gate at all and fires
+(`headless.sh:356-359`). That prompt has no option gate at all and fires
 whenever a player-controlled creature moves away from a hostile creature that
-perceives it (`src/Move.cpp:941`, quoted at `headless.sh:330-331`).
+perceives it (`src/Move.cpp:970`, quoted at `headless.sh:331-332`).
 `f7ff2d7` (2026-08-28) gave ChoicePrompt arrow+ENTER navigation, so
 `tools/keys/dive.keys` can now select `a`, `f` or `d` -- but it can also land
 on `?` and open the combat manual, which has no ESC out, so the script still
@@ -213,8 +213,8 @@ stalls there. Measured on 7 of 40 seeds (`headless.sh:339-341`).
 **`map audit: armed, no inconsistencies found`** — the audit ran and found
 nothing. `src/MapAudit.cpp:64` writes an `=== map audit armed ... ===` header
 whenever the audit is on, so the log carries a line even on a clean run. That is
-what lets `headless.sh:404-405` tell "clean" apart from "never ran". A missing
-log is reported three different ways depending on why (`headless.sh:396-403`),
+what lets `headless.sh:416-417` tell "clean" apart from "never ran". A missing
+log is reported three different ways depending on why (`headless.sh:408-415`),
 because merging them is the exact defect this code used to have.
 
 ---
@@ -223,8 +223,8 @@ because merging them is the exact defect this code used to have.
 
 **Trap 1 — every script resolves the repo root itself.** The idiom is
 `ROOT="$(cd "$(dirname "$0")/.." && pwd)"` followed by `cd "$ROOT"`
-(`headless.sh:52-53`, `soak.sh:24-25`, `gate_record.sh:17-18`,
-`check_headless.sh:38-39`, and most other scripts here). So you may call any of
+(`headless.sh:53-54`, `soak.sh:24-25`, `gate_record.sh:17-18`,
+`check_headless.sh:39-40`, and most other scripts here). So you may call any of
 them from any working directory, and the path arguments they take are relative
 to the REPO ROOT, not to where you are standing. `gate_lib.sh:43` uses `BASH_SOURCE` instead
 because it is sourced, not executed.
@@ -232,7 +232,7 @@ because it is sourced, not executed.
 **Trap 2 — every `headless.sh` run must choose its settings.** Set
 `INCURSION_OPTIONS` to one of the frozen files in `tools/fixtures/`, or to a
 purpose-built file such as `tools/gates/Options.Dat`. The harness refuses an
-unset variable or a path that is not a file (`headless.sh:105-113`). This keeps
+unset variable or a path that is not a file (`headless.sh:106-114`). This keeps
 checks independent of the repository-root `Options.Dat`, which belongs to the
 player and is rewritten every session. Settings change the game: on 2026-08-15
 the same binary, seed and key script gave different screens either side of a
@@ -245,21 +245,21 @@ answer for (`tools/keys/chargen-priest.keys:24-28`). Anything that compares one
 run against another MUST pass `INCURSION_OPTIONS`. The gate pins
 `tools/gates/Options.Dat` and records its checksum in the baseline
 (`gate_lib.sh:43-44`, `gate_record.sh:28-34`). A run that does not choose a
-file, or names one it cannot have, is an error (`headless.sh:105-113`).
+file, or names one it cannot have, is an error (`headless.sh:106-114`).
 
 **Trap 3 — the map audit is ON by default and it is expensive.**
-`headless.sh:169` sets `INCURSION_MAP_AUDIT` to 1 unless you override it. A
+`headless.sh:170` sets `INCURSION_MAP_AUDIT` to 1 unless you override it. A
 sample of a headless run on 2026-08-15 put 75 percent of the run inside
 `AuditMap`, so a session with the audit on measures the audit and not the game
-(`headless.sh:165-168`). **Anything timing the engine MUST set
+(`headless.sh:166-169`). **Anything timing the engine MUST set
 `INCURSION_MAP_AUDIT=0`. Anything hunting defects MUST leave it on.**
 
 **Trap 4 — a key script longer than the budget stops early and exits 3, and
 that looks like a short run rather than a failure.** The budget is
 `DEFAULT_MAX_KEYS 20000` (`src/Wposix.cpp:79`, applied at `:150`). It counts keys
-READ, one per `GetChar` call (`src/Wposix.cpp:1592`), and when it runs out
+READ, one per `GetChar` call (`src/Wposix.cpp:1653`), and when it runs out
 the game dumps a screen named `maxkeys` and exits with `EXIT_OUT_OF_KEYS`, which
-is 3. Raise it with `INCURSION_MAX_KEYS` (`src/Wposix.cpp:574-575`).
+is 3. Raise it with `INCURSION_MAX_KEYS` (`src/Wposix.cpp:627-628`).
 
 **Correction, 2026-08-17: `marathon.keys` does NOT need a raised cap, and the
 usage line in its own header was wrong.** That header told everyone to run
@@ -284,7 +284,7 @@ factor of about 2.5, and both are now the measured numbers.
 
 **Trap 5 — two runs started in the same second used to SHARE a run directory.
 Fixed; the history is here because the number it corrupted was published.**
-`headless.sh:97` now names the default run directory
+`headless.sh:98` now names the default run directory
 `logs/runs/$(date +%Y%m%d-%H%M%S)-<pid>-<script>`. The stamp alone resolves to
 the SECOND, so before the process id joined it, a loop that started several
 sessions inside one second gave them all the same directory, and any probe that
@@ -302,8 +302,8 @@ loop, then count the run directories and confirm the count equals the number of
 runs before you believe any per-seed number.** A name you chose says what the
 run was for, which a pid does not, and the count is the only thing that proves
 the runs stayed apart. `soak.sh:59` does this, and so does every check that
-drives more than one session (`check_headless.sh:258`, `:282`, `:292`, `:305`,
-`:327`; `check_layout.sh:89`; `check_dump_save.sh:56`;
+drives more than one session (`check_headless.sh:293`, `:317`, `:327`, `:340`,
+`:362`; `check_layout.sh:89`; `check_dump_save.sh:97`;
 `check_load_corrupt.sh:76`). `check_race_feats.sh:29-30` does NOT — it takes the
 timestamped default and parses the `run:` line out of the harness output. That
 is now safe in a loop as well, because the default name is unique, but it still
@@ -388,11 +388,12 @@ the job, and each still explains an older log or an older commit.
 | `play.sh` | Interactive launcher for a real session, with the map audit, save probe and character probe on. Uses the real `save/`, by design. | LIVE |
 | `dump_save.sh` | What is in this `.sav`, without playing the game? Wraps the binary's `-dump` in the same sandbox `headless.sh` uses. Defaults to `./incursion-headless`; `INCURSION_BIN=./incursion` works too since 2026-08-18 and gives a byte-identical report. | LIVE |
 | `make_char_fixture.sh` | How do I freeze one generated character so a check can load him instead of re-rolling him? Writes the three files of a character fixture into `tools/fixtures/chars/` — the `.sav`, the key script that made it, and the engine's own sheet with its provenance header — and proves the `.sav` loads by reading it back before it publishes. `--force` regenerates an existing fixture. | LIVE |
-| `opencode/loop_check.py` | Is one opencode step a DeepSeek repetition loop? Reads an `events.jsonl`, strips ``` code fences, and counts short non-empty lines repeated three or more times; exits 1 on the first loop step with its tail, 0 otherwise. `tools/opencode_ds.sh` passes it to `tools/watchdog.sh --canary` so a loop that keeps writing is stopped where the idle limit cannot see it (inc-uxmf). Fixtures: `tools/fixtures/opencode-loop/`. | LIVE |
+| `opencode/loop_check.py` | Is one opencode step a DeepSeek failure? Reads an `events.jsonl`, strips ``` code fences, and flags the first step that hits ANY of three rules: 15+ distinct short lines each repeated 3+ times (2000-token floor), a line that begins (after leading whitespace) with the native tool-call markup (`<|dsml|` or `</|`, the model printed it as text, no token floor), or one line of any length repeated 40+ times (2000-token floor). Exits 1 with the step's tail, 0 otherwise. `tools/opencode_ds.sh` passes it to `tools/watchdog.sh --canary` so a loop that keeps writing is stopped where the idle limit cannot see it (inc-uxmf, inc-w431). Fixtures: `tools/fixtures/opencode-loop/` and `tools/opencode/fixtures/`. | LIVE |
+| `opencode/record_proxy.py` | What was the exact HTTP request a DeepSeek model call sent? A stdlib recording proxy that `tools/opencode_ds.sh` starts outside the sandbox in front of DeepInfra, records every request body as `NNNN.request.json`, every streamed response as `NNNN.response.txt` and a `NNNN.meta.json`, and relays the client's Authorization header without ever writing it or any key to a file. Set `INCURSION_DS_UPSTREAM` to point it elsewhere (inc-oehi). | LIVE |
 
 `run_probe.sh` was **deleted on 2026-08-18**. Its own header said "Delete this
 script once the saved-game position bug is fixed", and that bug is fixed:
-`docs/REPORTING-GATE.md:427` records `*((long*)&hm)` destroying the player's
+`docs/REPORTING-GATE.md:516` records `*((long*)&hm)` destroying the player's
 position as a closed fix, and `src/AbiCheck.cpp:11` now gates the type widths it
 depended on. It was also redundant — `play.sh` sets the same two probes and more
 (`play.sh:41-49`) and prints a report afterwards, which `run_probe.sh` did not.
@@ -431,14 +432,19 @@ A new check adds its row to this table, in alphabetical order.
 | `check_ability_descs.sh` | Does every live class ability have a description, do the two ability-name tables still agree, and does every newly granted ability land in `tools/ability_descs.live` or `tools/ability_descs.exempt`? | LIVE |
 | `check_abs_path.sh` | Does the game still resolve `argv[0]` to an absolute path? **Unsafe, see §7.** | LIVE |
 | `check_activate_stack.sh` | Does activating one item out of a stack leave the stack whole, and still fire the effect? | LIVE |
+| `check_aid_casting_bonus.sh` | Does a positive A_AID bonus raise a druid's primal casting term as well as a mage's arcane one? | LIVE |
 | `check_air_ring_spell.sh` | Does the Elemental Command (Air) ring description name the granted staff-spell "gaseous form", rather than the phantom "wind column" that exists nowhere in `lib/`? | LIVE |
 | `check_alienist_drain.sh` | Does each Alienist summoning drain the held mana its page names (Summoned Creature's CR x 2), the mana that never regenerates? | LIVE |
 | `check_alienist_live.sh` | Does the Alienist's Surreal Presence field exist and speak? A kobold summoned beside her must read "seems unsettled". | LIVE |
 | `check_align_lawchaos.sh` | law/chaos alignment drift mirrors good/evil | LIVE |
 | `check_animal_kinship_prose.sh` | Does the Ring of Animal Kinship description drop its false "+3 or higher" untrained-use threshold, stating plainly that it lets you use Animal Empathy with no ranks -- which its skill bonus and the `SkillLevel` use-gate already permit? | LIVE |
+| `check_antitoxin_comment.sh` | Does the comment above Neutralize Poison in `lib/pspells.irh` state that antitoxin only adds to poison saves, rather than the old claim that it covers the cure (inc-gmrj)? | LIVE |
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? | LIVE |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? | LIVE |
 | `check_armour_model.sh` | Does the armour model penetrate coverage by grade and subtract from damage, with natural armour and a worn suit penetrated independently? | LIVE |
+| `check_aura_of_menace.sh` | Does a hostile creature entering an Aura of Menace (a lantern archon summoned in wizard mode) get the save and its -2 penalty or immunity, and (hit mode) does landing a blow on the owner end the penalty? Seeds 4 and 5. | LIVE |
+| `check_autoknock.py` | Analyser behind `check_autoknock.sh`: reads the auto-knock probe log, fails on a missing case or log, and proves itself with `selftest` on a good and a bad log (inc-e3oo). | LIVE |
+| `check_autoknock.sh` | With Auto-Knock Locks on, does kicking a locked door cast only a spell that both passes and unlocks (Knock, Warp Wood), and kick instead when the only spells known are Levitation or Wizard Lock? `INCURSION_AUTOKNOCK_PROBE=1` calls the real `TryToDestroyThing` once per spell set; `--selftest` proves the analyser (inc-e3oo). | LIVE |
 | `check_bead_dupe_wiring.sh` | Does `tools/bead_new.sh` refuse a draft that `tools/bead_dupes.py` calls a duplicate, and does `tools/finish_bead.sh` STEP 7 report duplicates without ever failing a landing? Offline: `bd`, the engine's verdict and the publish checker are stubs, and `finish_bead.sh` runs only its tail, in a throwaway repo. | LIVE |
 | `check_bead_dupes.sh` | Does the duplicate judge still find a known duplicate? Re-filing inc-056c's own text MUST surface inc-41kg. `--selftest` runs the offline engine selftest alone; the full run needs the OpenRouter key and the network, and exits 2, never 0, without them. | LIVE |
 | `check_bead_new_gate.sh` | Does `tools/bead_new.sh` actually refuse a bead that is not fit to publish, and pass one that is? Both `bd` and the checker are stubbed on `PATH`, so the run files nothing and deletes nothing -- a deliberately broken bead filed by a test would block the next commit in the tree exactly as a real one does. Also asserts that the wrapper checks the id it just filed, and that `--dry-run` checks nothing. | LIVE |
@@ -451,17 +457,25 @@ A new check adds its row to this table, in alphabetical order.
 | `check_bloodspear_orc_save.sh` | Is the Bloodspear's +4 saving throw versus spells restricted to an orc wielder, rather than granted to anyone who holds it? | LIVE |
 | `check_bloodspear_regen.sh` | Does the Bloodspear start regeneration at 20 turns per critical-hit damage and extend it at 5 turns per later hit? | LIVE |
 | `check_bloodspear_regen_duration.sh` | Does a Bloodspear critical grant the orc wielder regeneration for amt*20 turns rather than amt*5? | LIVE |
+| `check_bolas_entangle_expiry.sh` | Does STUCK from a thrown entangling weapon end by itself? A kobold rogue throws bolas at a frozen bugbear; wizard "Examine Nearby Things" must show the bugbear's STUCK with a positive duration that lapses within 150 waits, with no escape-check roll printed. Red before inc-9smo: STUCK [Dur -1] never lapsed. | LIVE |
 | `check_book_section.sh` | books get their own Books inventory section | LIVE |
 | `check_book_stack.sh` | identical unidentified books stack; a different book does not | LIVE |
 | `check_boots_providence.sh` | Do the Boots of Providence pay their Luck bonus while carried, not only while worn? | LIVE |
 | `check_bow_blessing.sh` | Does an altar blessing give the god's chosen weapon quality to BOWS and AMMUNITION, not only to `T_WEAPON` melee arms? `Character::IBlessing` used an exact `isType(T_WEAPON)` test, so Maeve's short bow and Xavias's arbalest (both `T_BOW`) and every `T_MISSILE` stack were only blessed. `INCURSION_IBLESSING_PROBE` builds a +1 item of each weapon type and calls the real `IBlessing`: arbalest/Xavias -> `WQ_QUICK_LOADING`, short bow/Maeve -> `WQ_CHAOTIC`, crossbow bolts/Maeve -> `WQ_CHAOTIC`, long sword/Asherath -> `WQ_ACCURACY` (the unchanged path). A missing, INCONCLUSIVE or unparsable case line is a FAIL, not a pass. | LIVE |
+| `check_crowd_turn_cost.sh` | How many milliseconds does one game turn cost on a level crowded with 90 creatures, hostile or following the player, against the same level empty? Measures; sets no threshold, and fails only if a scenario cannot prove its crowd or its turn count. `--census` counts the squares the player remembers, `--profile hostile\|allies` takes a `sample` profile. Needs the posix build. inc-gst2. | LIVE |
+| `check_weapon_types.sh` | Do places that test `isType(T_WEAPON)` exactly treat bows (`T_BOW`) and ammunition (`T_MISSILE`) as weapons? `INCURSION_WEAPONTYPE_PROBE` (`src/WeaponTypeProbe.cpp`) drives the real code at 11 sites with a bow, a bolt and a `T_WEAPON` control: Magic Weapon, Brand of Hatred, `getShopCost`, `PurgeAllQualities`, `Item::Damage` (energy), the hezrou's half damage, `GrantGear` (exotic proficiency), the ground-list sort, Kysul's gift (2000 pulses), Augment's menus and the sidebar's `ShowDamage` lines (key-driven, read from screen dumps). Not observed: the `Map::DaysPassed` loot weakening and the super-sneak branch (header says why). `--prove-red <site>` proves one of 15 mutations red per run (usage in the header). A missing or unparsable line is a FAIL. | LIVE |
+| `check_act_overflow.sh` | Does `Monster::Initialize` overflow the 63-slot action list? `Monster::nAct` is reset only by `ChooseAction`, but the archer, rogue-archer and ranger templates call `AddAct(ACT_EQUIP)` from `EV_INITIALIZE`, so the 64th such monster initialised in one level generation fails `ASSERT(nAct < 63)` (`inc/Creature.h:1677`). `INCURSION_ACT_OVERFLOW_PROBE` Initializes 64 archer goblins and logs `nAct`; an ASSERT line, `nAct >= 63`, or a missing probe line fails. | LIVE |
+| `check_door_bolt.sh` | Does a natural-attack breath through a closed door crash? `Magic::ABallBeamBolt` targets the door, then re-throws `EV_HIT` at it for a natural attack; `Creature::Hit` treats the door as a creature (a wild virtual call, SIGBUS). `INCURSION_DOOR_BOLT_PROBE` has a water mephit breathe at the player through a door; a signal exit or a missing completion line fails. | LIVE |
 | `check_bracers_defense_page.sh` | Does the Bracers of Defense page state the two distinct rates: Defense Class equal to the magical plus and Coverage equal to twice the plus? | LIVE |
 | `check_brawl_weapon.sh` | Does a fist still borrow the sword? An elf ranger holds his bow and carries his sword on his back, where the sheet will show both the Brawl and the Melee block, and the Brawl block must name no weapon at all. | LIVE |
 | `check_brazier_prose.sh` | Does the Brazier Commanding Fire Elementals description say it can be lit three times per day, matching its `EF_3PERDAY` flag, rather than the "Once per day" it claimed before? | LIVE |
 | `check_breath_dice.sh` | Does a breath weapon deliver the dice its statblock declares, and does a dragon's age still scale them? `Creature::SAttack` built the count from the declared dice plus twice the breather's Power and then assigned `max(1,e.Dmg.Number)` over the sum, and `e.Dmg` is zero for every caller on that path, so every breath in the game threw one die. Two sessions read a probe log, because each half alone can be passed by a wrong fix: a hell hound declares 2d6 and has no age template, and a red dragon declares 0d12 and takes every die from the template's Power. Unfixed 1d6 and 1d12, fixed 2d6 and, at Power 5, 10d12. The die sides never move, which is the control. | LIVE |
 | `check_broken_door.sh` | Does a door still lie about being broken? Asserts the one predicate every reader asks, and runs a generated level to prove no door ends it closed and branded broken in a readable doorframe. | LIVE |
 | `check_buckler_size.sh` | A buckler costs -1 to Balance on both Medium and enlarged Large bearers (inc-drmm). | LIVE |
+| `check_cannibal_alignment.sh` | Does eating a sapient corpse charge non-lawful (except orc/kobold/lizardfolk/drow eaters) and, for the eater's own race, non-good? Reads the character dump before and after a meal (inc-08js). | LIVE |
+| `check_cannibalism_feat.sh` | Does the Cannibalism feat give a non-good character the Devouring benefit (XP from a corpse), and is it not offered to a good character (inc-08js)? | LIVE |
 | `check_caustic_vitae_acid.sh` | Does Caustic Vitae deal acid damage, so an acid-immune victim takes only the half its own description says cannot be resisted? Two sessions read the victim's HP either side of the cast: the acid run puts a level-2 orc mage's bolt into an acid-immune stunjelly (which must lose only the game's own half-figure D) and the control puts the same cast into a bugbear with no acid resistance (which must lose the full 2D). A run with no victim HP line or no game damage line is a FAIL, not a pass. | LIVE |
+| `check_chance.sh` | Does the success chance `SkillCheckChance` / `SaveChance` advertise match what `SkillCheck` / `SavingThrow` actually do, judged against the game's own probe log? | LIVE |
 | `check_char_fixture.sh` | Does a frozen character fixture still load, and is he still the character his own sheet claims? Loads `tools/fixtures/chars/lizardfolk-monk-seed1.sav` and reads his name, race, class and Strength off the character sheet. The oracle is the fixture's own `.sheet.txt`, so regenerating the fixture moves the expectations with it. Two structural assertions ride along: the `.sav` is byte-identical after a run that loaded AND saved it, and the run played its own copy. | LIVE |
 | `check_chargen_escape.sh` | Does ESC at a character-creation menu offer to abandon the character, restore the same menu unchanged when that offer is refused, and return to the main menu rather than entering play with a half-made character? | LIVE |
 | `check_circle_creator_death.sh` | When the player kills one of two overlapping archons, does the survivor stay lit? Fixed: survivor alive and white count 1. Unfixed: survivor alive and white count 0 -- alive in the dark, the reported symptom. | LIVE |
@@ -471,6 +485,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_cleanup_removal_event.sh` | Does reference cleanup narrow removal to the rows referring to the dying source, and keep the inline fallback that guarantees forward progress? The `EV_REMOVED` event on this path is not new -- the base code already delivered it, measured on a clean HEAD build. Structural only: the narrowing's behavioural oracles are `check_circle_creator_death.sh` and `check_overlapping_modifier_fields.sh`, and the fallback guards a restart loop nobody has reproduced. | LIVE |
 | `check_cloak_resistance.sh` | Does a +3 Cloak of Resistance grant resistance rather than magic? One session reads all three saving throws with the cloak alone and with auspicious +2 armour; the control stays fixed and the smaller same-type bonus must not stack. | LIVE |
 | `check_clock_advance.sh` | Does the game-time oracle still catch a scripted run that burns keys while no game time passes? | LIVE |
+| `check_close_gate.sh` | Does `tools/close_gate.py` refuse `bd close <id>` while the bead's branch `refs/heads/<id>` is still unlanded, allow an unknown id, honour the `-r`/`--reason`/`-m`/`--message` option values, ignore `cd` chains and non-close subcommands, honour the `INCURSION_CLOSE_GATE_OFF=1` bypass, ignore non-Bash tools and allow on garbage input (inc-79p2)? | LIVE |
 | `check_command_leader_link.sh` | Does a creature the player charms, dominates or commands keep the summoner link `MakeCompanion` gives it, and do two such companions leave each other alone? Dominates two kobolds in turn, reads the game's own Examine dump for the link and for both hostility directions, then unfreezes monsters for 40 turns and reads the message log for one striking the other. | LIVE |
 | `check_command_menu_gating.sh` | Do the Combat (C) and YUse (Y) menus still hide every verb with no implementation, and every verb whose character prerequisite is unmet? It dumps both menus before and after a wielded Quickblade grants Whirlwind Attack: the gated combat row appears only after the feat, and the dead Yuse rows stay absent either way. | LIVE |
 | `check_command_pools.sh` | Does each command type get its own pool and cap, and does the Evil domain's devil/demon command power grow with priest levels only? Makes a Priest 2 / Mage 3 Evil-domain drow and reads the Group CR Totals in the player dump: separate spider, devil and undead caps of 2, where the old code showed one cap of 5. `--prove-red` builds HEAD's sources and requires the failure. | LIVE |
@@ -481,8 +496,9 @@ A new check adds its row to this table, in alphabetical order.
 | `check_convert_guard.sh` | Does `-convert` refuse the committed evidence fixtures and leave them byte-identical, while still converting a scratch copy? | LIVE |
 | `check_cowl_warding_prose.sh` | Does the Cowl of Warding description state that its save-versus-spells and armour-luck bonuses scale with the magical plus -- +3 and +5 plus the plus -- rather than the flat "+4"/"+6" it claimed before, matching its `PLUS_ADD3`/`PLUS_ADD5` code? | LIVE |
 | `check_cure_critical.sh` | Does the Cure Critical Wounds effect roll the `4d8 + LEVEL_MAX20` its own description promises, rather than the `3d8` it paid before? | LIVE |
+| `check_curses_pen_colour.sh` | Does the Linux terminal (curses) build send a pen-coloured character in its pen colour, not black on black? Runs the Skill Manager in `--tty` mode and reads the colour in force at the first unspent-rank star: it must be bold blue (inc-u69w). | LIVE |
 | `check_death_attack.sh` | Does the Assassin's Death Attack gate only on the assassin's own out-of-combat state, so it can strike a target that is already fighting? | LIVE |
-| `check_deepseek.sh` | Does `tools/deepseek.py` refuse to spend once its ledger says the budget is gone or poisoned, bill exactly one row per success, bill nothing on an HTTP failure, and never let the DeepInfra key reach stdout, stderr or the ledger (inc-3dgz)? | LIVE |
+| `check_deepseek.sh` | Does `tools/deepseek.py` bill exactly one row per success, bill nothing on an HTTP failure, and never let the DeepInfra key reach stdout, stderr or the ledger (inc-3dgz)? | LIVE |
 | `check_dequ_dc.sh` | Do exactly the four SRD monsters retain A_DEQU save DCs in the thirteen-monster roster? | LIVE |
 | `check_dequ_dice.sh` | Does A_DEQU roll its declared dice without tripling? | LIVE |
 | `check_dequ_magic_hardness.sh` | Against a monster whose A_DEQU carries no save DC, is a plain weapon's hardness bypassed while a magical weapon's is kept? Two sessions strike acid blobs, one with an ordinary long sword and one with a Holy Avenger, and read each sword's own description page before and after. | LIVE |
@@ -493,6 +509,9 @@ A new check adds its row to this table, in alphabetical order.
 | `check_devour_negative_cr.sh` | Does devouring a corpse of negative challenge rating leave experience alone, while an ordinary corpse still pays? | LIVE |
 | `check_devour_template_source.sh` | Does `Creature::Devour(Corpse*)` read the TEMPLATE stati off the corpse rather than off the eater, with the iteration opening and closing on the same object? | LIVE |
 | `check_dig_zero_skill.sh` | Does a dig by a miner with zero Mining skill finish cleanly, rather than dividing by zero? | LIVE |
+| `check_dispatch_gate.sh` | Does `tools/dispatch_gate.py` block an unlabelled opus/sonnet/inherited Agent/Task dispatch, allow haiku and the `research:`/`repro-design:`/`fallback:` labels, demand two stopped DeepSeek runs for the same worktree for a `fallback:`, honour the `INCURSION_DISPATCH_GATE_OFF=1` bypass, and log every dispatch (inc-xiqb)? | LIVE |
+| `check_dispatch_report.sh` | Does `tools/dispatch_report.py` count DeepSeek runs and agent dispatches over the right `--since`/`--until` window, count only `harness: opencode` rows as runs and the rest as single requests, break stopped runs out by `killed` reason, sum cost with a null billed as zero, break allowed and bypassed dispatches out by model and label, keep blocked/`research`/`repro-design`/haiku dispatches out of the implementation share, and print `n/a` when both sides are zero (inc-xiqb)? | LIVE |
+| `check_dispel_evil.sh` | Does Dispel Evil grant exactly one touch per casting rather than one per two caster levels; does the +4/+6 deflection bonus actually apply on a real attack rather than sit as a dead, never-granted stati; and does a touch landing on an evil creature discharge the whole spell -- the touch and the deflection bonus alike? | LIVE |
 | `check_distant_light_vision.sh` | Does a self-luminous cell within sight range but past the player's own light/shadow range become visible, rather than being dropped when the vision ray dies on the dark cells before it? | LIVE |
 | `check_divination_staff_prose.sh` | Does the Staff of Divination description name the granted spell "true seeing", rather than the phantom "true sight" that exists nowhere in `lib/`? | LIVE |
 | `check_divine_aspect_prose.sh` | Does the Lesser Divine Aspect description state that its disease/poison saves and its acid/cold/electricity resistances scale per magical plus, matching its `PLUS_2PER1`/`PLUS_5PER1` code, rather than the flat "+2" and "resistance of 5" it claimed before? | LIVE |
@@ -501,24 +520,30 @@ A new check adds its row to this table, in alphabetical order.
 | `check_divine_sacrifice.sh` | Does Divine Sacrifice offer a level-independent five-dice menu, pay nothing at cast, pay the chosen HP at most once per round and only when it would not bring the caster to 0 HP or below, land +1d6 per 2 HP paid on the next hit (waiting out a miss), last exactly 1 round per caster level, and cancel from the X menu? | LIVE |
 | `check_doc_citations.sh` | Did any document a change touched gain a citation defect above its recorded baseline? | LIVE |
 | `check_doc_freshness.sh` | Which documents did a range of commits leave stale, and does every line citation in them and in the source they touched still resolve? | LIVE |
+| `check_door_axe_wizlock.sh` | Does an axe (`WG_AXES`) deal full damage minus hardness to an oak door while a long sword still deals one third, and does a wizard lock no longer double the door's hardness? The probe hands `Door::Event` a fixed 30-point damage event and reads the door's lost hit points (inc-h22n point 4). | LIVE |
+| `check_door_lock_rate.sh` | Does a closed random door lock about 25% of the time at depth 1 and about 75% at depth 10? `INCURSION_DOORGEN_PROBE=1` logs every door `Map::MakeDoor` places over 10 seeded new characters; `--selftest` proves the analyser without the game (inc-h22n point 1). | LIVE |
+| `check_door_pick_kick.sh` | Do lock-picking and kicking follow the settled design: untrained creatures cannot pick, DC `20+2*depth` for a door and `25+2*depth` for a chest (+10 wizard locked), no retry bonus, unlimited retries, repeat out of combat only, and a kick is a d20 + Strength + size check against each door's Break DC with no damage on a failure? `INCURSION_DOORPICK_PROBE=1` drives the real event paths; `--selftest` proves the analyser (inc-h22n points 2 and 3). | LIVE |
+| `check_door_probe.py` | Analyser behind `check_door_pick_kick.sh` and `check_door_axe_wizlock.sh`: reads the door probe log, names the design point each assertion covers, and proves itself with `selftest` on a pre-design and a design-conformant log (inc-h22n). | LIVE |
 | `check_dragonshield_hostility.sh` | Does the Dragonshield anger only chromatic (evil) dragons, matching its description, rather than every dragon including the metallic (good) ones? | LIVE |
 | `check_dragonshield_plus_prose.sh` | Does the Dragonshield description state a "+2 (or higher)" enhancement floor, matching its `INITIAL_PLUS +2` constant, rather than the unreachable "+1 (or higher)" it claimed before? | LIVE |
 | `check_dragonshield_prose.sh` | Does the Dragonshield description list the colour names the shield can actually display (yellow, not brown), matching its `EV_GETNAME` name table? | LIVE |
 | `check_drain_selfaim.sh` | Does a monster's drain spell hit an enemy rather than the caster? Minor and Major Drain reach a monster only through the injury-remedy action, which carries no target, and the untargeted fallback used to aim them at the caster -- one feyr drained itself 120 times in thirty turns. Reads the cast probe for a monster attack with no direction and no location, and stops rather than passes if the session never landed the player's control cast. | LIVE |
-| `check_dump_save.sh` | Does `-dump` still walk a real save and report the right fields, from BOTH backends? | LIVE |
+| `check_dump_save.sh` | Does `-dump` still walk a real save and report the right fields, from BOTH backends? Reads a fresh seed-1 save, then checks its Name and Race against `logs/charprobe.txt` (the engine's own `DumpCharacter` output written by `Game::SaveGame` under `INCURSION_CHAR_PROBE=1`) and its HP against the session's own screen status line, so the expected values are not seed literals that content changes move. `--prove-red` breaks `src/Dump.cpp`'s Name walk and rebuilds privately. | LIVE |
 | `check_dungeonmap_bounds.sh` | Does a levitating character on the bottom level still stay on it? `Game::GetDungeonMap` answered a request for one level past its own allocation by reading past the end of the array, and `Creature::Descend`'s levitation branch makes that request from depth 10. Loads `tools/fixtures/chars/levitate-bottom-seed1.sav`, a character frozen levitating on a depth-10 chasm (a generated depth 10 is not reproducible across an unrelated change, so this check loads one rather than walking to it fresh), presses `>`, and expects the climb-down prompt and a 100m depth reading. | LIVE |
 | `check_dup_names.sh` | Does the resource compiler reject a same-case duplicate resource name, with its own duplicate-name diagnostic? | LIVE |
 | `check_dwarven_thrower_throwable.sh` | Is the Dwarven Thrower's base item a throwable, non-generated hand-copy of the ordinary warhammer, so the artifact can actually be thrown? | LIVE |
 | `check_earth_ring_prose.sh` | Does the Ring of Elemental Command (Earth) description name the wearer's own ring "the ring of earth" in its curse clause, rather than the "ring of air" it copied from the Air ring? | LIVE |
 | `check_earthsinger_live.sh` | Does the Earthsinger admit the rock gnome its own refusal message names? | LIVE |
 | `check_enchant_graceful.sh` | Do seven compiled item pages advertise their own qualities, caster-level gates, spells and bonus type? | LIVE |
-| `check_entangle_escape.sh` | Can a character in heavy armour tear out of glue? A paladin in full plate and a kite shield sits at Escape Artist -11 against a DC of 14, so his ceiling of 9 is five below the floor and no roll closes it. The check requires a *Strength* check that succeeded, not merely an escape, because `src/Skills.cpp:1600` already frees him on a natural 20 while no hostile is within sixteen squares. | LIVE |
+| `check_entangle_escape.sh` | Can a character in heavy armour tear out of glue? A paladin in full plate and a kite shield sits at Escape Artist -11 against a DC of 14, so his ceiling of 9 is five below the floor and no roll closes it. The check requires a *Strength* check that succeeded, not merely an escape, because `src/Skills.cpp:1739` already frees him on a natural 20 while no hostile is within sixteen squares. | LIVE |
 | `check_entangled_acts.sh` | Does passed-save entanglement penalize without disabling? Requires an unanchored rogue, Dexterity 17 to 13 and melee to-hit +2 to +0 on the sheet, then a melee attack and a half-speed move while still entangled, measured against the same subject's own post-combat floor-move cost. | LIVE |
 | `check_epic_merge.sh` | Does `.beads/hooks/pre-commit` still refuse a bare `git merge master` committed ON an epic branch, while allowing the escape hatch, a non-epic branch and any non-master source? An epic is a base other beads land into, so an ungated merge on it breaks the next bead's landing gate. Proves all seven cases against a scratch repo. | LIVE |
 | `check_erich_speaks.sh` | Are the five `MSG_CUSTOM1` through `MSG_CUSTOM5` messages Erich's own script (`lib/religion.irh`) calls still live in his `GODSPEAK_LIST`, rather than sitting disabled inside its `#if 0` block? | LIVE |
 | `check_error_handling.sh` | Did anyone reintroduce the `Error()` buffer overflow or the modal freeze? | LIVE |
 | `check_escape_sweep.sh` | Does any string literal still spell a C escape with a forward slash, the way the port's path sweep wrote `/n` for `\n`? | LIVE |
+| `check_exchange_no_false_fumble.sh` | Does the swap-weapons command print a false "You fumble the items you were trying to exchange, dropping them!" when it fails before picking up any item? Loads a frozen character with no default weapons, presses `-`, and requires the explanatory "default melee and ranged" line while rejecting the fumble line on every dump. | LIVE |
 | `check_eyes_soul_prose.sh` | Does the Eyes of the Soul description name the Necrophysiology feat the item grants via `EXTRA_FEAT FT_NECROPHYSIOLOGY` -- the feat that lets its holder crit, sneak attack and coup de grace undead -- rather than omitting it as the prose did before? | LIVE |
+| `check_fast_checks.sh` | Does `tools/fast_checks.sh` still bite? Plants fake checks in a temp directory and demands each verdict: a pass exits 0, a failure exits 1 and names the check, an overrunning check is killed with "TOO SLOW" in under 5 s without flagging a fast check beside it, a check exiting 2 is UNMEASURED and does not fail the run, an unmarked check is not run, an empty directory exits 2, and `check_worktree_untracked.sh` reads a scratch git repo clean/untracked/ignored and lists a filename with a space whole. | LIVE |
 | `check_favour_awards.sh` | Do the five favour awards the engine makes in C++ reach the god? `Creature::gainFavour` took an int16 amount and `Character::gainFavour` an int32 one, so the character's version hid the base instead of overriding it, and the favoured-skill, Khasrach and Zurvash devour, and Semirath trap awards all landed in an empty base body. Four sessions from frozen characters read the patron's favour off the character sheet either side of each award, and require it to rise by the amount the code computes from the printed roll or the creature's challenge rating. | LIVE |
 | `check_favour_int32.sh` | Does a favour total over 32767 survive the round trip through `EV_CALC_FAVOUR`, instead of wrapping negative? The script view of `EventInfo::EParam` was int16 while the field is int32, so favour levels 7, 8 and 9 were unreachable. | LIVE |
 | `check_feat_toggle.sh` | Do two presses of the feat toggle key toggle twice without spending a pick? | LIVE |
@@ -542,8 +567,9 @@ A new check adds its row to this table, in alphabetical order.
 | `check_fork_release.sh` | Does the release number the game prints on its title page match the release actually cut? `FORK_RELEASE` (`inc/Defines.h`) is compiled in and nothing derives it, so it only changes when somebody remembers; release 4 was signed and notarised still saying "release 3". The oracle is the highest `release-N` git tag. | LIVE |
 | `check_format_strings.sh` | Does every printf-style format string in the engine agree with its arguments, or has the warning count risen above the baseline? | LIVE |
 | `check_gate_membership.sh` | Does every check in this directory declare whether the gate should run it? Each carries `# gate: cheap`, `# gate: live` or `# gate: none <why not>` in its first 40 lines, and `nightly_verify.sh` reads those markers instead of a hand-written list. `gate_membership.baseline` excuses the 206 checks that predate the rule and only shrinks. Proves itself with `--selftest`. | LIVE |
+| `check_gate_parallel_safe.sh` | Does every gate check that writes a shared artefact declare `# gate-serial: <why>` so the parallel runner keeps it out of a peer's way? The gate runs the non-serial cheap and live checks several at a time (inc-yg8e); this fails a check that runs `build_macos.sh` without both a private `OUT=` and a non-empty `EXTRA_CXXFLAGS=`, or writes `mod/Incursion.Mod` or a shared binary, without the marker. A line heuristic over shell text, not a parser: its header states the limits. Proves itself with `--selftest`. | LIVE |
 | `check_gaze_reflect_message.sh` | When a gaze attack is turned back on the monster that made it, does the sentence on screen name that monster once and read as English? A mage casts Gaze Reflection on himself, the character sheet's Specials column is photographed as proof he carries it, a bodak is summoned, and the message area is read: "The bodak's gaze is reflected back at it!". It is the live twin of `check_xprint_tokens.sh`, which counts tokens in source text and cannot see what a player is shown. | LIVE |
-| `check_gcc_o2_char_create.sh` | Does a GCC `-O2` build still play character creation into a map, or has the `Item` constructor's uninitialised-member miscompile (inc-nw0v) returned? Needs Docker and builds with GCC, the converse of `check_linux_build.sh`. | LIVE |
+| `check_gcc_o2_char_create.sh` | Does a GCC `-O2` build still play character creation into a map, or has the `Item` constructor's uninitialised-member miscompile (inc-nw0v) returned? Needs Docker and builds with GCC, the converse of `check_linux_build.sh`; builds with `INCURSION_GCC_RAW_DSE=1` so it sees an unassigned member rather than the `-flifetime-dse=1` mask build_macos.sh applies to every GCC build (inc-eikp.3). | LIVE |
 | `check_gear_bypass_survives.sh` | Does a resistance spell still protect a plain weapon, where the attack bypasses the metal's own hardness? Under Protection from Acid a mundane iron maul holds 262 hit points through twelve magma creeper retaliations. | LIVE |
 | `check_gear_item_exclusion.sh` | Does an item ruled wearer-only leave gear exposed? The Amulet of Bile grants acid resistance and the same warhammer still corrodes. | LIVE |
 | `check_gear_protection_roster.sh` | Does `lib/` still match the whole `EF_PROTECTS_ITEMS` ruling table? Holds the 36 effects the repo owner ruled protect carried gear, the 22 grants he ruled wearer-only, and his two general rules -- spells are `y`, domains and gods and races and subraces are `n`. `gear_protection_roster.py` does the measuring; `--prove-red` breaks each part in turn and demands that part's own verdict line turn red. Red today on part C1, which names two unflagged priest spells for his ruling. | LIVE |
@@ -580,9 +606,12 @@ A new check adds its row to this table, in alphabetical order.
 | `check_item_type_id.sh` | Does identifying one item teach its kind for every flavoured type, so the next of that kind arrives already named? | LIVE |
 | `check_javelin_lightning_savedc.sh` | Does the Javelin of Lightning's Reflex save use the DC its description promises? | LIVE |
 | `check_key_directives.sh` | Do the screen-driven key-script directives `@choose`, `@cursorto`, `@cursorto:mark` and `@expect` reach a menu entry that counting could not? | LIVE |
+| `check_kit_arrangement.py` | The rule engine behind `check_kit_arrangement.sh`: reads one run's `KIT_PROBE` lines from `errors.log` and judges rules R1-R5. `--selftest` runs twelve hand-written arrangements, one right and the rest each wrong in one rule. `gate: none`; the gate runs the `.sh`. | NONE |
+| `check_kit_arrangement.sh` | Does creation arrange the starting kit by the design (inc-zzwm)? Eight seeded builds (`tools/keys/kit-*.keys`); `INCURSION_KIT_PROBE` logs every stack's slot, skill, dice and grip at the end of creation, and `check_kit_arrangement.py` derives the expected arrangement per build and prints which of R1 (worn gear, proficiency), R2 (weapon in hand), R3 (off hand), R4 (other weapons), R5 (belt pouches) failed. `--selftest` proves the rules go green and red without a game run. RED on master until inc-zzwm lands. | LIVE |
 | `check_ki_strike_live.sh` | Does the module grant a Monk Ki Strike? One session photographs the character sheet's Special Abilities block at 1st level and again at 4th: nothing, then `Ki Strike +1`. Reads a compiled module, so a red run after editing `lib/` usually means `./incursion -compile main.irc` was not run. | LIVE |
 | `check_killing_hands.sh` | Do Bracers of Killing Hands pay two points per plus to both unarmed accuracy and damage? Equips a known, identified +2 pair and requires +4 on both lines of the sheet's Brawl block. | LIVE |
 | `check_kobold_horn.sh` | Does the Horn of the Kobolds, blown by a non-kobold wielder, summon hostile kobolds as its page promises, rather than the friendly ones the bare `EA_SUMMON` always gave? | LIVE |
+| `check_known_trap_prompt.sh` | Does the confirm shown before a player steps onto a found trap state the odds, "(N% to avoid)" or "(cannot be avoided)"? Runs `tools/keys/known-trap-prompt.keys` (kobold rogue fixture, a found deathblade scythe trap, seed 3), reads the screen dump of the open prompt, FAILS when no prompt is on screen, and checks N against 5 x the d20 results that beat DC 23 with the sheet's Reflex +4. | LIVE |
 | `check_layout.sh` | Does this build play the same game when its objects sit at different addresses? | LIVE |
 | `check_layout_sweep.sh` | The same question over many seeds and key scripts, which is the only form of it that can close the inc-dhc class. Builds the probe binary itself and runs with the builds in `nightly_verify.sh`. A seed whose session bought too little game time is reported as unmeasured, never as a pass. | LIVE |
 | `check_ledger_rows.sh` | Does every ledger row in `docs/REPORTING-GATE.md` sit under the heading whose column shape it has, so no tracking id is dropped? | LIVE |
@@ -596,8 +625,11 @@ A new check adds its row to this table, in alphabetical order.
 | `check_line_of_fire.sh` | Does the saving-throw cover-and-band rule for a weapon shot hold -- a -4 penalty per occupied square between shooter and target, a further -4 for the target's own square when the target is not its head, one roll, and a miss resolved by a per-square Reflex save walking the band in contents-chain order? Oracle is `LineOfFireProbe` (`src/Fight.cpp`) under `INCURSION_LOF_PROBE`, throwing a forced-roll dagger down a five-rat line. | LIVE |
 | `check_line_of_fire_effects.sh` | Do the 15 bolt/ray effects the line-of-fire rework touches carry `EF_ATTACK` and the right save field, while Call Companions gains neither and Magic Missile, Force Missiles and Acid;wand still carry no `EF_ATTACK`? Pure text over `lib/*.irh` via `tools/line_of_fire_effects.py`, no build needed. | LIVE |
 | `check_line_of_fire_spell.sh` | Does the same cover-and-band rule apply to an `EF_ATTACK` spell bolt rolled against touch defence, while an effect with no `EF_ATTACK` (Magic Missile) passes every body in the line unerring and a beam still strikes everyone? Oracle is `LOFSpellProbe` (`src/Magic.cpp`) under `INCURSION_LOF_SPELL_PROBE`, casting Eldritch Bolt down the same five-rat line `check_line_of_fire.sh` uses. | LIVE |
-| `check_linux_build.sh` | Do both backends still build on Linux, and does a seeded run still play with no errors? Needs Docker; so does `check_gcc_o2_char_create.sh` below, and no other check. | LIVE |
+| `check_linux_build.sh` | Do both backends still build on Linux, and does a seeded run still play with no errors? Needs Docker; so do `check_linux_save_roundtrip.sh` below and `check_gcc_o2_char_create.sh` above, and no other check. | LIVE |
+| `check_linux_gcc_dive.sh` | Guards inc-eikp.2 — `Map::Map` (and any constructor on the new-map path) must assign its members rather than lean on operator-new zero-fill. Runs `dive.keys` seed 1 on Arch GCC with `INCURSION_GCC_RAW_DSE=1` via `tools/linux_run.sh`, so it reaches the map-generation path chargen-only checks never reach. Needs Docker, run by hand. | LIVE |
+| `check_linux_save_roundtrip.sh` | Does a v1 save still load on x64 Linux? Saves a character on Linux and loads it back (Case A), then loads a macOS-made fixture (Case B), requiring each load run to show the engine's own "Welcome back to Incursion, <name>!" greeting and the character's sheet (inc-eikp.1). Needs Docker; runs both Debian 11 and Arch unless `--distro` narrows it, and both clang and gcc unless `--cc` narrows it. A `--cc gcc` run builds with `INCURSION_GCC_RAW_DSE=1`, so it sees unassigned members rather than the `-flifetime-dse=1` mask (inc-eikp.3). A run reporting NO GAMEPLAY is a FAIL for a load. | LIVE |
 | `check_load_corrupt.sh` | Does the real binary refuse ten hand-corrupted saves cleanly and still load two genuine ones? | LIVE |
+| `check_load_guard.sh` | It forces each overload condition of `tools/load_guard.sh` through test-only variables and checks the landing is refused. | LIVE |
 | `check_logrotate.sh` | Does log rotation keep the right archives and prune only names it made itself? | LIVE |
 | `check_loremaster_live.sh` | Does the Loremaster's Bibliographic Insight add its extra attribute points when he reads a tome? | LIVE |
 | `check_luckblade_plus.sh` | Does the Luckblade keep its magical plus when the wish it would charge for is refused, rather than grinding down first? | LIVE |
@@ -608,6 +640,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_masterarcher_live.sh` | Does the Master Archer's Ranged Sneak Attack fire only with a long bow or a short bow, and not with every launcher? | LIVE |
 | `check_music_choir.sh` | Maximized live Music of the Spheres damage at caster level 8, with and without a level-6 bardic ally; Chain Lightning full damage on each of three hostile targets; Shadow Step's calculated range at shadowdancer level 0 (`SHADOW0`, expected 12) and at a temporary shadowdancer level 3 (`SHADOW3`, hard-coded expected 18). Loads a frozen priest through `MusicChoirProbe` (`src/Magic.cpp`), logs actual arc counts, and requires every case to pass. | LIVE |
 | `check_bane_radius.sh` | Live Bane morale status at engine distances 5, 6, 7 and 9 from a loaded priest. Requires only distance 5 affected; FAIL, INCONCLUSIVE or missing results exit nonzero. Opt-in `BaneRadiusProbe` dispatches the spell effect directly, bypassing learned-spell selection. | LIVE |
+| `check_monster_init_hp.sh` | inc-tmys: does `Monster::Initialize` keep `cHP == mHP + Attr[A_THP]` for a tree-elevated elf that takes the "wildshaped druid" template? Builds that monster in a loaded session through opt-in `MonsterInitProbe` (`src/MonsterInitProbe.cpp`, forces `ELEVATED` in place of a tree square) and fails while the ASSERT at the end of the EV_INITIALIZE events fires, or when the probe does not complete the path. Green once the fix lands; `--prove-red` restores the fall damage inside Initialize. | LIVE |
 | `check_menu_overflow.sh` | Does a menu with more than 52 options still draw and select every row, rather than losing the ones past the alphabet? | LIVE |
 | `check_menu_page_arrows.sh` | Does the RIGHT arrow page a long selection menu forward, so a Steam Deck player who has a stick but no Tab key can reach a row on the second page and still pick it? | LIVE |
 | `check_menu_value.sh` | Does a script menu give back the same object handle it was handed, above the 16-bit line? | LIVE |
@@ -617,17 +650,21 @@ A new check adds its row to this table, in alphabetical order.
 | `check_monster_memory.sh` | Does the game record what the player has met, and show him only that? Recalls one creature's entry from a character who has met nobody, then from one who has killed ten, and reads the save's own `MonMem` rows through `tools/dump_save.sh` to keep Seen, Fought and Kills apart -- a kobold only looked at, an ogre struck once, ten humans killed. Before inc-q98a nothing wrote any of those fields and `Monster::Describe` read a hardwired perfect record, so every creature's complete entry was visible from turn one. | LIVE |
 | `check_multiply_noroom.sh` | Does `Creature::Multiply` leave a copy its `PlaceAt` could not place alone? `INCURSION_MULTIPLY_NOROOM` makes `PlaceNear` behave as if no square is free for the copy `Multiply` is placing, so the deleted-copy state is reached on demand; the check fails if `errors.log` carries the `inc/Map.h:275` assert and reports UNMEASURED if the switch refused no copy. | LIVE |
 | `check_mundane_autopickup.sh` | Does autopickup keep an EF_MUNDANE item -- holy water, tanglefoot bags, the alchemy line -- out of the pack, while still stowing the same drop's unidentified potion? | LIVE |
+| `check_natural_one_attack.sh` | Does a natural 1 on an attack roll always miss, even when the total beats the defense? Pins the d20 with `INCURSION_LOF_FORCE_ROLL` on a frozen mage given +30 to hit by a scratch-module god, and reads the engine's own `Attack: 1d20 (n) ... [hit\|miss]` line: roll 1 must miss, roll 2 and roll 20 must hit. | LIVE |
 | `check_natural_save.sh` | Does a natural 20 on a saving throw always succeed, and a natural 1 always fail, regardless of Bonus + roll vs DC? Reads the printed `Save: 1d20 (roll) ... [success\|failure]` line from many seeded sessions -- DC 15 tanglefoot strands for volume, DC 27 guardian runes (a level 1 paladin's own bonus cannot reach it) for the edge case a modest DC can never supply. | LIVE |
 | `check_natural_speed.sh` | Has the hard-coded brawl-speed floor drifted from the fastest weapon in `lib/weapons.irh`? Reads the data; runs nothing. | LIVE |
 | `check_natural_speed_live.sh` | Does flipping one byte of `Options.Dat` really move the Brawl row on the character sheet, 100% to 175%? Refuses to pass if a run never entered a map. | LIVE |
 | `check_necro_undead_pool.sh` | Does a Necromancer's level-1 BONUS_PHD reach `PHD_UNDEAD`, the pool Animate Dead and Create Undead charge created undead to, instead of `PHD_COMMAND`, which a pure mage cannot carry? Generates both the Necromancer and a non-specialist mage by chargen inside the run (a frozen save would already hold the grant), reads `PHD UNDEAD`'s max off the wizard Group CR Totals block (1 against 0), then creates a wight through a real `MakeCompanion(PHD_UNDEAD)` caller and reads the charged pool: the Necromancer charges it against undead (`PHD UNDEAD 2 / 1`, overflow `PHD MAGIC 1 / 1`), the other mage through magic alone (`PHD UNDEAD 2 / 0`, `PHD MAGIC 2 / 1`). Casts four more times on the level's other corpses: both mages are refused starting at cast 3 and stay refused through cast 5, showing a finite refused count of N=2. The admission chain (undead -> magic -> party) in `Monster::MakeCompanion` is Traced only: its old and new rules differ only while the magic pool has headroom, and a level-1 wight already overflows it, so no level-1 run separates them. | LIVE |
+| `check_nightly_bisect.sh` | Does the nightly bisect name the landing that broke a check, and nothing it cannot prove? Builds a throwaway repository of `--no-ff` landings around a made-up check and runs `tools/nightly_bisect.sh` on it: the breaking landing must be named, while a check absent at an early commit, a last good commit off the first-parent line, a check whose result flips on a re-run and a zero time budget must name nothing (inc-t3iu). | LIVE |
 | `check_nonnormal_invariant.sh` | Is non-normal detection (an infravision character in darkness) byte-identical across the inc-jcg4 unified-light change over seeds 1-10? | LIVE |
 | `check_open_xy.sh` | Does `Map::GetOpenXY` refuse when no square is open, instead of answering (0,0)? Requires the `NO_OPEN_XY` sentinel to be returned and `Thing::PlaceOpen` to drop the Thing rather than place it in the map's solid outer edge. Three static greps plus a probe build (`EXTRA_CXXFLAGS=-DINCURSION_OPENXY_PROBE BACKEND=posix ./build_macos.sh`, binary named by `INCURSION_BIN`) that counts refusals, disposals and a successful-placement control -- the greps alone once passed a fix that tested the sentinel and then placed at (0,0) anyway. | LIVE |
-| `check_opencode_ds.sh` | Does `tools/opencode_ds.sh` refuse to launch once the DeepSeek ledger says the budget is gone or poisoned, refuse the shared checkout, bill exactly one row for a successful harness run (cost summed from its `step_finish` events, steps counted), poison the ledger when opencode quotes tokens but no usable cost, keep the DeepInfra key out of every file it writes, confine opencode to the worktree with the Seatbelt profile, stop a harness that never writes -- billing it as one `killed=startup` row at cost 0 -- and stop a harness stuck in a DeepSeek repetition loop via the `loop_check.py` canary, billing it as one `killed=loop` row at exit 3 and copying its events aside (inc-h1bq, inc-gofz, inc-uxmf)? | LIVE |
+| `check_opencode_ds.sh` | Does `tools/opencode_ds.sh` refuse to launch once the DeepSeek ledger says the budget is gone or poisoned, refuse the shared checkout, bill exactly one row for a successful harness run (cost summed from its `step_finish` events, steps counted), poison the ledger when opencode quotes tokens but no usable cost, keep the DeepInfra key out of every file it writes, confine opencode to the worktree with the Seatbelt profile, stop a harness that never writes -- billing it as one `killed=startup` row at cost 0 -- and stop a harness stuck in a DeepSeek repetition loop via the `loop_check.py` canary, billing it as one `killed=loop` row at exit 3 and copying its run dir aside? Also that `opencode/record_proxy.py` forwards a POST byte-for-byte, records request/response/meta, streams a chunked reply before upstream finishes, relays the Authorization header without recording it, and that the wrapper wires it in (one recorded request, no proxy left running) and copies `requests/` on a loop kill. `--prove-red` also mutates the proxy's request write (inc-h1bq, inc-gofz, inc-uxmf, inc-oehi). | LIVE |
+| `check_opencode_sandbox.sh` | Are the DeepSeek key and the login secrets out of the implementer's reach (inc-k4wc)? The Keychain, `~/.ssh`, the gh token and the other stores named in `tools/opencode/sandbox.sb` must all fail inside the sandbox the wrapper applies, while a WORKDIR file must still read (the positive control; a sandbox that does not apply is UNMEASURED, not a pass). Then the key must never reach an argv: `tools/opencode_ds.sh` runs against a temp worktree with a canary key and a silent fake opencode, `ps -axww -o args=` is sampled for the canary, and stdout, stderr and every `logs/` file are grepped after the watchdog stops the run (a run that is not stopped is UNMEASURED). Run outside any sandbox; `sandbox-exec` cannot nest. | LIVE |
 | `check_options_migrate.sh` | Does an options file written before an option existed come up on that option's real default rather than its first menu choice, and does a setting the player chose on purpose survive? The file has no header, so `OPT_SETTINGS_GEN` is the only thing separating "never chosen" from "deliberately set to the first choice". Links against `OptionsGen.o`, which has no undefined symbols, so it needs no stubs and no session. | LIVE |
 | `check_orphan_branches.sh` | Is every finished fix actually on master? It lists each branch master has not merged beside its bead's status and age. It fails on a branch whose bead is closed — the shape that stranded b855fe2 for days — and on a branch whose name is not a bead id, because nobody can then say what it was for. | LIVE |
 | `check_overlapping_modifier_fields.sh` | Do two torch archons that each stand inside the other's magic circle both keep their light field when they separate, and does each end up holding exactly one circle row? Fixed 2 lit, unfixed 0. | LIVE |
 | `check_package.sh` | Is the packaged folder free of ACCENT symbols and Homebrew paths, and does it carry its data? | LIVE |
+| `check_package_dirty_guard.sh` | Does every packager refuse a dirty working tree before it builds, signs or ships anything? A release on 2026-09-11 shipped another session's uncommitted files, because the packagers stage the working tree rather than a commit (inc-iezk). Exercises `require_clean_tree.sh` in throwaway repos -- clean, tracked edit, staged edit, `INCURSION_ALLOW_DIRTY=1`, untracked-only, outside a repo -- then runs every `tools/package_*.sh` in a dirty repo with stub `docker`/`codesign`/`xcrun`/`hdiutil` first on PATH and requires it to fail before any build. No Docker and no real build needed. | LIVE |
 | `check_package_parity.sh` | Does every packager ship every directory the game reads at run time? `graphics/logo.png` landed in only `package_linux.sh`, so release 4's macOS downloads fell back to the ASCII title while Linux, the Deck and Windows showed the real logo, and nothing failed: the fallback is silent by design. This reads the packager scripts rather than a built folder, so it also speaks for the platforms this machine cannot build, and a new packager that is not listed in it is itself a failure. | LIVE |
 | `check_pad_help.sh` | Does the `?` screen name the pad control beside each key (`Look ... D-pad > (l)`) when a controller is in front of the game, fit on the screen without an assertion, and stay keyboard-only when none is? The headless build forces the pad screen with `INCURSION_PAD_HELP=1`. | LIVE |
 | `check_palettes.py` | Do the colour palettes hold sixteen distinct entries, does each colour share a hue with its `BRIGHT_MASK` partner, and do `src/Wlibtcod.cpp` and `src/Wcurses.cpp` agree on every palette they both carry? The curses backend compiles on neither macOS build, so this is the only guard on its copy. | LIVE |
@@ -642,20 +679,26 @@ A new check adds its row to this table, in alphabetical order.
 | `check_prestige_hidden.sh` | Are the eight unfinished prestige classes kept out of every class list, rather than offered and then refused after the pick? | LIVE |
 | `check_prestige_profs.sh` | Does a prestige class grant the weapon and armour proficiencies its own prose promises? | LIVE |
 | `check_prestige_tables.sh` | Does each prestige class print the save columns and the defence track its own fields give? | LIVE |
+| `check_prompt_chances.sh` | Do the prompt-time success numbers on the overchannel, fire-anyway, craft and repair prompts come from the same expression the deciding code uses? | LIVE |
+| `check_prompt_costs.sh` | Do the social, script and unknown-odds prompts name the cost or the uncertainty, with every shown number taken from the deciding expression? | LIVE |
 | `check_probe_hooks.sh` | Does every debugging hook shipped in the game name a bead, or has an undeclared hook appeared outside the baseline? | LIVE |
 | `check_ptr_sweep.sh` | Does `sweep_ptr_order.sh` still find a pointer ordering, and still ignore a pointer equality? | LIVE |
 | `check_pycache_ignored.sh` | Does running a Python check that does not pass `-B` leave the tree clean? Runs `check_ability_descs.sh`, requires the `tools/__pycache__/*.pyc` it writes to stay invisible to git, and exits 2 rather than green when no `.pyc` appeared. `--prove-red` strips `__pycache__/` from a scratch copy of `.gitignore` and requires the same probe to leave litter git can see (inc-dz74). | LIVE |
 | `check_python_rod_prose.sh` | Does the Rod of the Python carry a description at all, and does it name its per-plus poison-save bonus, its per-plus Constitution bonus and its three-times-daily transformation into a boa constrictor, matching its `SN_POISON`, `A_CON` and boa-summoning code? | LIVE |
+| `check_quality_item_magic.sh` | Does a +0 weapon that carries a quality count as magical? `Item::isMagic` is `eID || Plus` and is NOT virtual, while `Weapon::isMagic` and `Armour::isMagic` declare their own and also count a quality, so the override never ran through an `Item*`. Holds a wizard-stamped `+0 flaming long sword` against an acid blob's no-save `A_DEQU` (the `src/Fight.cpp` hardness bypass branches on `isMagic`): it must keep its 15 hit points, where a plain sword is melted and a Holy Avenger keeps 38 of 35. | LIVE |
 | `check_quality_self_immune.sh` | Is an armour with a resistance quality immune to that element, while its wearer still gets the resistance? A +0 leather suit of fire resistance holds 56 hit points where the plain one is left mildly burnt. | LIVE |
 | `check_quiet_lookup.sh` | Does a dead object handle resolve silently where silence is correct, and still complain where a complaint is correct? | LIVE |
 | `check_race_feats.sh` | Does a Dragonkin get Mantis Leap on the character sheet? | LIVE |
+| `check_racial_cannibalism.sh` | Do the Orc, Black Orc and Dragonkin races still devour now that the Cannibalism feat grants it: does a new Lawful Good orc, a new Black Orc and a new dragonkin list the feat, and does a pre-change orc save and dragonkin save still gain XP from a bear corpse (inc-6at2)? | LIVE |
 | `check_readline_overflow.sh` | Does `TextTerm::ReadLine` refuse the 161st character of a text prompt instead of writing past the end of its 160-byte `Input` buffer? Content half: the longest run typed into the character sheet's dump filename stays at 159 (`sizeof(Input) - 1`) rather than reaching the full 161 typed. Structural half, when `./incursion-ubsan` is built: UndefinedBehaviorSanitizer reports no out-of-bounds write to `Input[]`. | LIVE |
 | `check_readme_checks.sh` | Was a regression check added with no row in the `README.md` check table? Ratcheted against `tools/readme_checks.baseline`, which holds the 58-row backlog. | LIVE |
 | `check_reapply_single_grant.sh` | Does a worn item keep granting exactly one copy of its bonus when the game re-applies it? Magic Weapon on an orc's Bloodspear, the boost wearing off, Storycraft raising a periapt's plus and a dispel ending must all leave one copy: the Bloodspear read `+4 vs. spells`, then +8, then +12 before the fix. The same run proves the fix keeps an activated Nine Lives Stealer active, loses no unrelated condition to Dispel Magic, and cannot kill a bard at 7 HP. | LIVE |
+| `check_registry_flags.sh` | Do the heap-built save-format test registries start with zeroed mode flags? `Registry::Registry()` never initialised `saveMode`/`loadMode`; the game's registries are globals and zero by luck, but `V1RunSchemaLoad` and the six in `V1RunSchemaTest` call `new Registry()`, and a stray `loadMode` makes `Array::Array()` leave `Items` random (its destructor then frees a random pointer: SIGTRAP, exit 133). Drives `-schemaload` on `unterminated_version.sav` 3000 times (each must exit 22) and `-schematest` 200 times (each must exit 0 with no MISMATCH). The gate runs the full default. `--prove-red` removes the two initialisations and requires the check red (inc-38d5). | LIVE |
 | `check_resource_order.sh` | Does the compiled module keep the order recorded in `tools/resource_order.ledger`? The build-time half of the append-only rule (`docs/SAVE-SCHEMA-SPEC.md`, "The build-time order check"): for every one of the 21 resource arrays and every script-variable owner it is red when the module's list is shorter than the ledger's (a removal), or when a name the ledger records at position P appears in the module at a position other than P (an insertion, a removal or a reorder) -- a repeated ledger name is exempt. A name the ledger records and the module lacks is a rename or replacement and is green (rule 3). An **append** is green before the ledger is re-recorded; so is an **in-place rename**, which a prefix test would wrongly reject. The game prints the module's lists with `incursion-headless -resorder` (the same names `v1WriteModuleManifest` writes into a save). Writes no file except under `--record`, which refuses exactly what the check fails and accepts exactly what it passes. `--selftest` proves the rule bites without a build. | LIVE |
 | `check_resource_order_mutations.sh` | The committed reproduction (`docs/SAVE-SCHEMA-SPEC.md`, case 26, amended 2026-09-26) for `check_resource_order.sh`: six sandbox `lib/` edits that must each be red and refused by `--record` (insert, remove or swap a variable in a body; insert, remove or swap an Effect mid-array) and four legal changes that must be green before `--record` and accepted by it -- two appends (a variable at a body's end, an Effect at its array's end) and two in-place renames (a variable, an Effect). Compiles ten sandbox modules, so `gate: none`; the gate runs `check_resource_order.sh` instead. | NONE |
 | `check_rest_poison.sh` | Does the player's Rest work while POISONED, and do the poison's Fortitude saves roll during the rest rather than being skipped? A test god poisons the player with arsenic; Rest used to refuse outright ("too busy dying"), and even without that refusal Rest does not call `DoTurn`, so no save would otherwise roll. `Creature::PoisonPulse`, split out of `DoTurn`'s own POISONED block, now also drives up to (the rest's turn span / the poison's cval) saves per POISONED stati before that creature's healing runs. `--prove-red` reinstates just the old refusal. | LIVE |
 | `check_resume_gc.sh` | Does `tools/resume_gc.sh` delete exactly the old `resume-YYYY-MM-DD-*` memories (strictly older than 7 days, valid dates only), archive each before forgetting, fail safe when the transcript's entrypoint is not `cli`, and warn before the user asks whether it is safe to clear? A stub `bd` is first on `PATH` and `RESUME_GC_ROOT` points the archive and log at a temp dir, so the real database is never touched. `--prove-red` breaks the cutoff and the entrypoint check in turn and demands both go red (inc-gs36). | LIVE |
+| `check_resume_gc_waitrace.sh` | Does `wait_detached` wait for both forgotten keys when the second forget arrives late? It injects a 1 s delay before the detached run's second forget, demands the old wait loop go red and the fixed loop go green (inc-2gl7). | LIVE |
 | `check_retributive_mirror.sh` | Does Retributive Mirror reflect one third of incoming damage (`e.vDmg / 3`), the fraction its own description promises, rather than the one fifth it paid before? | LIVE |
 | `check_reveal_delete.sh` | Can a monster still delete itself inside `Reveal()` and leave the caller holding a dangling map pointer? | LIVE |
 | `check_rider_corpse.sh` | Does a natural attack's rider clause stop when its victim is dead, rather than striking a corpse and dangling a map pointer? | LIVE |
@@ -671,6 +714,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_rules_channel.sh` | Does the rules channel that replaced the truncating SessionStart hook still actually deliver the rules? A hook payload the host judges too large is replaced by a 2 KB preview and written to a file nobody reads, so the project's rules never reach the session; the failure is silent and sits on the delivery side, not in the content. It runs and measures every registered SessionStart hook against a 9,000-character budget, and asserts that `CLAUDE.md` imports `AGENTS.md`, that `.claude/rules/` holds at least one `*.md` file, and that no instruction file exceeds the memory loader's own 4 MiB skip threshold. | LIVE |
 | `check_sacrifice.sh` | Does a god's altar read the rows BELOW `MA_ALL`, and refuse what it should refuse? | LIVE |
 | `check_sanctuary_strike.sh` | Does Sanctuary end when the creature it wards throws a melee blow, and survive a turn spent on anything else? | LIVE |
+| `check_save_chance.sh` | Do the avoid-chance the known-trap prompt shows (`Creature::SaveChance`) and the outcome `Creature::SavingThrow` decides come from one rule? Oracle is `SaveChanceProbe` (`src/Fight.cpp`) under `INCURSION_SAVECHANCE_PROBE`: for every save type (FORT/REF/WILL), a spread of DCs, and the trap subtypes, it reads `SaveChance`, forces each d20 result 1..20 through the real `SavingThrow`, and demands `chance == hits*5` on all 72 cases. | LIVE |
 | `check_save_fail.sh` | Does a save that fails part-way leave the game playable? Stages the throw with `INCURSION_SAVE_FAIL_AT` at a chosen object or data block. It does not drive a real disk-full, and cannot: every write goes into a memory `CFile` and the disk is untouched until `CommitCompressed`, so a full disk can only fail once every object is already converted. That case was reproduced by hand instead. | LIVE |
 | `check_save_pad_rows.sh` | Does every `SchemaPad` row in `src/SaveV1.cpp` still match what the compiler actually lays out, rather than what was hand-measured last time a member moved? Runs `tools/save_pad_rows.py`'s own compiler-derived measurement and compares it array by array against the source; `--selftest` inserts an unarchived member into a scratch copy of `inc/Creature.h` and confirms the check goes red naming `Creature` and its descendants. | LIVE |
 | `check_schema_roundtrip.sh` | Does each class group of the v1 save schema round-trip field for field, and write a byte-identical second file? | LIVE |
@@ -690,7 +734,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_shield_penalty.sh` | Does a shield's armour check penalty come from the shield, or only from its size beside yours? Puts every shield in a Medium paladin's hand one at a time and reads its cost twice off the character dump -- the skill term and the movement rate -- then does the two a Small halfling can hold, whose figures must be double. | LIVE |
 | `check_shift_opcodes.sh` | Does the VM's BSHL shift left while Rect member codegen still uses BSHR for reads and BSHL for writes, and does a script-coloured field cast red rather than black light? | LIVE |
 | `check_sigpipe_status.sh` | Does any `tools/*.sh` pipe into an early-exit reader (`grep -q`/`grep -m`/`head`) whose exit status a conditional then reads, the shape whose SIGPIPE race reported real data as a miss on 2026-09-22? Ratcheted against `tools/sigpipe_status.baseline`. | LIVE |
-| `check_skc6_blast_text.sh` | Two measurements. (1) Does the Biocurrent magic touch's Damage line read exactly `Damage: 1d12+2 = <digits> Lightning`, with no garbage between the dice and ` = `? A `String` with no copy constructor shared its `Buffer`, so `src/Effects.cpp:279`'s `?:` freed `e.strDmg` and the process aborted at exit 134. (2) Does a two-victim `Magic::AGlobe` cast (Electric Loop on two summoned brown bears, `tools/keys/inc-skc6-blast-leftover.keys`) leave each victim's Damage line with exactly one Lore term, rather than the second victim inheriting the first's " +N Lore" through the reused `EventInfo`? Either measurement fails if the session aborts or exits nonzero, or if it finds no Damage line at all (bead inc-skc6). Needs the headless build. | LIVE |
+| `check_skc6_blast_text.sh` | Two measurements. (1) Does the Biocurrent magic touch's Damage line read exactly `Damage: 1d12+2 = <digits> Lightning`, with no garbage between the dice and ` = `? A `String` with no copy constructor shared its `Buffer`, so `src/Effects.cpp:293`'s `?:` freed `e.strDmg` and the process aborted at exit 134. (2) Does a two-victim `Magic::AGlobe` cast (Electric Loop on two summoned brown bears, `tools/keys/inc-skc6-blast-leftover.keys`) leave each victim's Damage line with exactly one Lore term, rather than the second victim inheriting the first's " +N Lore" through the reused `EventInfo`? Either measurement fails if the session aborts or exits nonzero, or if it finds no Damage line at all (bead inc-skc6). Needs the headless build. | LIVE |
 | `check_skill_manager_reset.sh` | Does an unrecognised key still wreck the Skill Manager? Presses END and HOME -- the left stick's two left diagonals -- in both of the screen's modes: character generation, where the ranks were wiped, and level-up, where the manager silently closed. Two sessions. | LIVE |
 | `check_sneak_invis.sh` | Does an unseen attacker get sneak attack when the victim hears it, and does a thrown or fired attack count as unseen against a Blind-Fight victim (bead inc-nkf2)? Needs the headless build. | LIVE |
 | `check_snowstrike.sh` | Does the Snowstrike blast carry `EF_CASTER_IMMUNE` and `EF_ALLIES_IMMUNE`, so the caster and her allies are immune as its description promises, rather than freezing them? | LIVE |
@@ -702,6 +746,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_springblade.sh` | Does deploying the Springblade Bracers require a Handle Device check, and does its free off-guard strike fire only once per combat? | LIVE |
 | `check_springblade_label.sh` | Does the Springblade Bracers type-3 pair name both of its +2 elemental blades accurately? Seed 6 reads the rolled suffix from the activation menu. | LIVE |
 | `check_stacked_abilities.sh` | Do abilities whose prose says their levels stack across classes actually stack, charging one waiting period rather than one per class? Five characters: a Rogue 6 invariant, a Barbarian 3 / Rogue 3, a Bard 7 / Assassin 4, an Elf Rogue 7 / Assassin 3 and a control. | LIVE |
+| `check_stale_quotes.sh` | Does a check or a document still quote a C/C++ string literal this change removed from `src/`, `inc/` or `lib/`? Compares the whole literal and each speech segment split on `|` (the mark the renderer turns into `"` and drops), with a leading `__` also stripped; a message built from a format string, colour escapes or several concatenated literals is not caught. Drops a candidate under 20 characters and one that still appears verbatim in the source (a move, not a stale quote), skips `docs/REPORTING-GATE.md`, `docs/rules-history/`, `docs/evidence/` and git-ignored files, and honours a first-40-lines `stale-quote-ok:` marker in a file that quotes removed text on purpose. Proves itself with `--selftest`. | LIVE |
 | `check_staff_abyss_alignment.sh` | Is the Staff of the Abyss inert in a good character's hands, and still whole in a non-good one's, as its page says? | LIVE |
 | `check_staff_abyss_spell_list.sh` | Does the Staff of the Abyss's page name only the nine spells it actually grants, without the three that have nothing behind them? | LIVE |
 | `check_staff_winter_grants.sh` | Does the Staff of Winter hand over all four powers its page promises -- the cold spells, and the Charisma, Intimidate and Appraise numbers? | LIVE |
@@ -714,6 +759,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_striking_wand_knockback.sh` | Does the Wand of Striking fold its knockback into the telekinetic bolt's single Reflex save, instead of rolling a second, independent one? | LIVE |
 | `check_strqueue.sh` | Is the string queue's bound still tested before the write? | LIVE |
 | `check_stuck_fights.sh` | Does anchoring stop being a lockdown while still stopping movement? A Stuck paladin must land a weapon attack and print its roll against an adjacent goblin, then fail an escape attempt (both Escape Artist and Strength) and remain Stuck in the same square. | LIVE |
+| `check_summoned_feature_expiry.sh` | Does a door made by a timed SUMMONED stati vanish when the stati elapses? `Thing::StatiOff` takes `(Status s, bool elapsed = false)` but `Feature::StatiOff` declared only `(Status s)`, so the derived declaration hid the base instead of overriding it and the one call, through a `Thing*`, never reached the body that removes the feature. Casts Wall of Doors and counts the door glyph in the map pane after the cast and 60 searches later; the waited dump must be empty and the log must say a door winks out of existence. | LIVE |
 | `check_sunblade_acc_crit.sh` | Does the Sunblade still carry a bastard sword's Acc +2 and Crit x2 while keeping its own damage, threat range and short-sword speed? | LIVE |
 | `check_sunblade_cold.sh` | Does wielding a known +2 Sunblade raise the character sheet's Cold resistance by 2, the `PLUS_1PER1` mild rate, from the pre-wield control? | LIVE |
 | `check_sunblade_light_range.sh` | Does the Sunblade's final, activated `FI_LIGHT` field use radius 6, matching its promised 60-foot range? Structural because headless screen dumps expose activation but not field extent. | LIVE |
@@ -723,6 +769,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_symbol_autopickup.sh` | Does autopickup keep a dead priest's holy symbol -- of any god, granting or not -- out of the pack while still stowing real unidentified magic and a granting god-marked shield? | LIVE |
 | `check_take_twenty.sh` | When nothing threatens him, does a character take 20 on Escape Artist, Climb, Handle Device, Search or Balance -- reading the maximum result, but still adding his modifiers and still measured against the DC -- rather than an accidental natural 20 passing the check however far short of the DC the total lands? Reads the printed `Escape Artist Check: took 20 ... [success\|failure]` line from a frozen paladin in full plate, whose total cannot reach the DC. | LIVE |
 | `check_tanglefoot_mount.sh` | Do tanglefoot strands catch the MOUNT and leave the rider free? A level-1 paladin rides his sacred mount along a strip of strands until the mount fails its reflex save; wizard mode's "Examine Player Data" must then show `STUCK from SS ATTK` under the `----MOUNT----` banner and none in the rider's own stati list. | LIVE |
+| `check_tanglefoot_stuck_expiry.sh` | Does STUCK from thrown tanglefoot strands end (a) by its own 2d4-round timeout while the strands remain, and (b) on the first screen after the strands vanish when the creature was caught less than one round before? Runs unmounted and mounted (the mount takes the STUCK). Red before inc-9smo on both. | LIVE |
 | `check_target_enter.sh` | Can a target prompt confirm a square that holds a staircase, including the one a character stands on the moment he enters a level? | LIVE |
 | `check_target_order.sh` | Does the target cursor step round the ring instead of scoring one axis? | LIVE |
 | `check_telepathy_prose.sh` | Does the Telepathy helm description state its scaling telepathy range -- 50 feet plus 10 feet per magic plus -- rather than the flat "60 feet" it claimed before, matching its `pval: PLUS_ADD5` code? | LIVE |
@@ -749,9 +796,14 @@ A new check adds its row to this table, in alphabetical order.
 | `check_wand_animal.sh` | Does a Wand of Animal Summoning summon an animal, rather than a dragon from the line copied above it? | LIVE |
 | `check_wand_cleansing.sh` | Does a Wand of Cleansing Light roll the damage its own inventory line prints, rather than multiplying its plus twice? | LIVE |
 | `check_watchdog.sh` | Does `tools/watchdog.sh` stop a command whose output never starts (`startup`) or stops growing (`idle`), kill the whole process group so grandchildren die too, leave a steadily writing run and its own exit code alone, wire `--in` to the command's stdin, fail closed on a malformed limit, run `--canary` on a growing run and stop only on its exit 1 (saving its stdout to `<status>.canary`, and carrying on with one warning for any other code), and drive `tools/codex_exec.sh` (inc-gofz, inc-uxmf)? | LIVE |
+| `check_warn_dmg_note.sh` | Does each damage-dealing terrain declare the damage it deals, and does its handler and warning note read those same declared values? | LIVE |
+| `check_warrior_class_skills.sh` | Can a level-1 Human Warrior, whose racial skill picks are neither, put 2 ranks each in Appraise and Diplomacy, the class skills its help text names (inc-k2ws)? | LIVE |
+| `check_water_breathing.sh` | Do deep and turbulent water treat a WATER_BREATHING character like an amphibian (no warning, no Swim check, no drowning) (inc-jkyf)? | LIVE |
 | `check_water_ring_prose.sh` | Does the Ring of Elemental Command (Water) description introduce its staff-spells as "elemental water", matching its all-water spell list, rather than the "elemental fire" it copied from the Fire ring? | LIVE |
 | `check_weapon_groups.sh` | Does every weapon-group bit hold a row in the name table, so a class's proficiency list names it rather than dropping it in silence? | LIVE |
 | `check_weapon_immunity_live.sh` | Is a bare fist tested against Weapon Immunity, and does Ki Strike beat it? One wizard-mode-summoned lemure, punched by the same character at Monk 1 and at Monk 4: `Your weapon fails to penetrate.` then no such line. | LIVE |
+| `check_wiki.py` | Does the wiki export (`incursion-headless -wikihelp`) produce a Home page, a sidebar, a non-empty index for every kind, no empty page, no broken `[[link]]`, valid UTF-8, no raw colour tag and balanced bold on every line? `--selftest` proves each fault fails (inc-k2le). | LIVE |
+| `check_worktree_untracked.sh` | Does the worktree hold an untracked file? `git status --porcelain --untracked-files=all` lists it with `??`; the check exits 1 and says a reproduction belongs in `tools/` and a specimen (log, dump, save) in `logs/` or `docs/evidence/<bead>/`, never loose in the worktree. `gate: none` so the landing gate does not run it where untracked evidence is legitimate; the fast set does. | NONE |
 | `check_xp_drain.sh` | Does restoring drained XP clear the drain once, rather than also crediting the same amount back onto XP -- so draining 500 and restoring it returns effective XP exactly to where it started, not 500 above? | LIVE |
 | `check_xp_penalty.sh` | Can a character who holds only two classes read his own sheet? A Wood Elf Rogue 2 / Warrior 1, whose empty third class slot used to segfault `Character::XPPenalty`. | LIVE |
 | `check_xp_penalty_rule.sh` | Does the multiclass experience penalty follow the rule? Favoured and prestige classes leave the comparison, then each remaining class two or more levels below the highest remaining class costs 20% and the costs add. Six characters: an Elf photographed at Barbarian 3, Barbarian 3 / Rogue 1, + Warrior 1 and Barbarian 3 / Rogue 2 / Warrior 2, plus an Elf Rogue 5 / Assassin 2 and a Wood Elf Rogue 2 / Warrior 1. | LIVE |
@@ -765,6 +817,7 @@ A new check adds its row to this table, in alphabetical order.
 
 | File | The question it answers | Status |
 |---|---|---|
+| `crowd_turn_cost.py` | The key-script generator and analyser behind `check_crowd_turn_cost.sh`. Its header says how the crowd is made, proven and survived. Not run directly. | LIVE |
 | `sweep_ptr_order.sh` | Where does this codebase put two pointers in order? Drives clang's parse tree through `sweep_ptr_order.py`. | LIVE |
 | `sweep_ptr_order.py` | The parse-tree reader `sweep_ptr_order.sh` pipes into. Not run directly. | LIVE |
 | `save_pad_rows.py` | What are the actual `SchemaPad` rows for every archived class in `src/SaveV1.cpp`, measured from `clang++ -fdump-record-layouts` and cross-referenced against the `FIELD_*`/`FIELD_SKIP` lines in each class's `ARCHIVE_CLASS` chain, never from the save code's own runtime uncovered-byte list? Prints one pasteable C initializer per array, with a comment naming any member a row covers that carries no `FIELD_` line. `tools/check_save_pad_rows.sh` runs it and diffs the result against the source. | LIVE |
@@ -850,6 +903,7 @@ costs more than no instrument. Read that entry before adding one of your own.
 |---|---|---|
 | `package_macos_app.sh` | Produces `Incursion.app` that Gatekeeper approves, inside a draggable disk image. | BUILD INFRASTRUCTURE |
 | `package_macos.sh` | Produces `dist/Incursion-macOS-arm64/`, a plain folder with the game and its data. | BUILD INFRASTRUCTURE |
+| `require_clean_tree.sh` | Refuses to package a working tree with uncommitted tracked edits and prints the HEAD commit being packaged. Called by every `tools/package_*.sh` before it builds; `INCURSION_ALLOW_DIRTY=1` warns and proceeds deliberately (inc-iezk). | BUILD INFRASTRUCTURE |
 | `app_launcher.c` | The bundle's entry point. Redirects the game's single read-write directory to `~/Library/Application Support/Incursion/` so nothing writes inside the signed bundle. Compiled by `package_macos_app.sh`. | BUILD INFRASTRUCTURE |
 | `setup_notary.sh` | Stores the notarisation credential in a mode-600 file so a release can be cut from a non-Terminal shell. Run once, by hand. | BUILD INFRASTRUCTURE |
 | `sync_issues.sh` | Publishes every bead labelled `public` to the Issues tab, so a stranger about to report a bug sees it already filed. A bead labelled `mirrored` gets its state reconciled and its title and body left alone, because somebody outside wrote that issue. Reads the live bead database on this machine; `SYNC_REPO` retargets it at a throwaway repository. See "The ones you must not run casually". | PUBLISHES OUTWARD |
@@ -911,6 +965,23 @@ tools/check_pycache_ignored.sh      # a Python check leaves the tree clean
 tools/check_resume_gc.sh            # resume-note GC against a stub bd and a temp root
 ```
 
+The FAST set is a subset of Tier 1 that a commit can afford to run every time:
+a few checks that finish in seconds, ahead of the landing gate. A check joins
+it with a non-empty `# gate-fast: <reason>` line in its first 40 lines, in the
+same spirit as `# gate-serial:`; the marker does not change the check's own
+`# gate:` tier. `tools/fast_checks.sh` globs `tools/check_*.sh` and
+`tools/check_*.py`, runs every marked check in parallel from the repository
+root, and gives each a hard limit of 15 seconds (`INCURSION_FAST_LIMIT`) --
+a check still running at the limit is killed and counted as a failure, because
+a set that promises seconds must not hang. It exits 0 when all pass, 1 when
+any fails or overruns, and 2 when it finds no fast check at all. A check that
+exits 2 is printed as `UNMEASURED` and does not fail the run, matching the
+pre-commit rule that exit 2 warns and does not block. It is called by
+`.beads/hooks/pre-commit` (from a bead worktree, and not mid-merge) and by
+`tools/finish_bead.sh` at STEP 3b, before the gate; both skip it when
+`INCURSION_NO_FAST_CHECKS=1`. Run it by hand as `tools/fast_checks.sh`;
+`tools/check_fast_checks.sh` is what watches it bite.
+
 `tools/bead_new.sh` is not a check; it is how a bead should be filed.
 It passes its arguments to `bd create`, then runs
 `tools/check_bead_publish.py --bead <id>` on what it just filed, so an
@@ -949,7 +1020,7 @@ checking anything looks exactly like a check that passes.
 
 `tools/check_citations.sh <document>` also belongs in this tier, but it resolves
 citations against the git refs `upstream/master` and `origin/master`
-(`check_citations.sh:169-170`). Fetch those remotes first, or it reports failures
+(`check_citations.sh:171-172`). Fetch those remotes first, or it reports failures
 that are only missing refs. It is read-only on git.
 
 ### Tier 2 — needs a compiler but no prior build
@@ -1005,6 +1076,8 @@ tools/check_favour_awards.sh        # the five favour awards made in C++ reach t
 tools/check_sharp_senses.sh
 tools/check_skill_manager_reset.sh
 tools/check_stacked_abilities.sh
+tools/check_summoned_feature_expiry.sh  # a timed summoned door vanishes when the stati elapses
+tools/check_quality_item_magic.sh    # a +0 weapon with a quality counts as magical
 tools/check_springblade_label.sh
 tools/check_study_slots.sh           # Intensive Study (spellcasting) raises spell slots to the chart
 tools/check_xp_penalty.sh
@@ -1040,7 +1113,9 @@ tools/check_gear_spell_protection.sh # a spell's SIBLING clause protects the cas
 tools/check_gear_item_exclusion.sh  # the wearer-only Amulet of Bile leaves the bearer's gear exposed
 tools/check_gaze_reflect_message.sh # a reflected gaze names the gazing monster once, in a sentence that parses
 tools/check_dungeonmap_bounds.sh    # a levitating character on the bottom level stays on it
+tools/check_bolas_entangle_expiry.sh # STUCK from a thrown entangling weapon ends by itself
 tools/check_tanglefoot_mount.sh     # tanglefoot catches the mount, not the rider on its back
+tools/check_tanglefoot_stuck_expiry.sh # STUCK from thrown tanglefoot strands ends by timeout or when the strands vanish
 tools/check_school_focus_menu.sh    # a school already focused on is off the School Focus menu
 tools/check_school_focus_dc.sh      # School Focus (Illusion) raises the disbelief DC
 tools/check_periodic_interval.sh    # a PERIODIC status effect fires every Val rounds, not Val-1
@@ -1073,7 +1148,7 @@ number rather than a yes or no: they read the hardness off the game's own
 combat-numbers line, which `Item::Damage` prints AFTER adding the bearer's gear
 resistance to it. Those two silver a magic warhammer for the ordering
 `Item::Damage` used to have: a no-save A_DEQU sets `ignoreHardness` on a plain
-item (`src/Fight.cpp:2152`), and the bearer's grant was added before the bypass
+item (`src/Fight.cpp:3430`), and the bearer's grant was added before the bypass
 emptied it, so a resistance was unmeasurable on ordinary gear. inc-kapn
 inverted that -- the bypass now empties only what `Hardness()` returned -- and
 `check_gear_bypass_survives.sh` measures a resistance on a plain iron maul. The
@@ -1101,7 +1176,7 @@ stops one row too early.
 `check_load_corrupt.sh:47-58` prefers `./incursion-ubsan` when it exists and
 falls back to `./incursion-headless`. It refuses an `./incursion-ubsan` when a
 file in `src/` or `inc/` is newer, because that binary would test old code.
-Build the sanitizer variant with the recipe at `build_macos.sh:142-143` if you
+Build the sanitizer variant with the recipe at `build_macos.sh:179-180` if you
 want the stronger run.
 
 ### Tier 4 — needs an artefact you built on purpose
@@ -1136,6 +1211,38 @@ only check that needs a real display. Read the warning below before you run it.
 tools/check_libtcod_mode_change.sh --selftest   # proves the harness can fail
 ```
 
+### Tier 4b — Docker, the only Linux this machine can reach
+
+This project has no Linux host, so the checks that measure x64 Linux live here.
+Docker on this arm64 Mac runs linux/amd64 containers, which execute real x86-64
+code. Each builds a distro image on first use and reuses it after; the first run
+of each costs minutes under emulation.
+
+```sh
+tools/check_linux_build.sh       # both backends build and a seeded run plays
+tools/check_linux_save_roundtrip.sh          # a save round-trips (both distros)
+tools/check_linux_save_roundtrip.sh --distro arch   # just one
+tools/check_gcc_o2_char_create.sh            # the GCC -O2 creation path is clean
+```
+
+`tools/linux_run.sh` is the runner those checks sit on. It takes any key script,
+an optional save to load, a distro and a compiler, and leaves the run's `save/`
+and `logs/` on the host under `logs/linux/runs/` -- outside the cached tree, so
+a later rebuild never deletes an earlier run. It keeps one exported, BUILT tree
+per distro+compiler at `logs/linux/<distro>-<cc>/src`, rebuilt only when the
+tracked content's hash changes, so a second launch does not pay for the build
+again; the build's own output is written to `logs/linux/<distro>-<cc>/build.log`
+and its last 30 lines are printed on failure.
+
+```sh
+INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+    tools/linux_run.sh [--distro debian11|arch] [--cc clang|gcc] \
+        [--load <save>] [--name <run>] <keys> [seed]
+```
+
+`tools/linux_docker.sh` holds the image-build and tree-export logic
+`check_linux_build.sh` and `linux_run.sh` share; it is sourced, never run.
+
 ### Tier 5 — the gate, which needs a baseline
 
 ```sh
@@ -1151,15 +1258,46 @@ sessions reaching a map, more deaths or freezes.
 without recording anything. Do NOT run `gate_record.sh` unless you mean to
 replace that baseline — see below.
 
+### Where each check runs: the landing gate and the nightly
+
+The tiers above say what a check needs. The `# gate:` marker near the top of
+each check says when the gate runs it (inc-t3iu):
+
+| Marker | What it is | A landing runs it | The nightly runs it |
+|---|---|---|---|
+| `cheap` | no build, no play, seconds | yes | yes |
+| `smoke` | plays the game briefly | yes | yes |
+| `live` | plays the game | only when the bead adds or changes the check's file | yes |
+| `none <reason>` | not for the gate | no | no |
+
+A landing (`tools/finish_bead.sh`) runs `tools/nightly_verify.sh --landing`:
+the cheap tier, both macOS builds, the soak, the `smoke` checks
+(`check_headless.sh`, `check_char_fixture.sh`) and the bead's own changed
+`live` checks. The Linux cross-build and the layout sweep do not run there.
+The nightly run executes the full set with `--record`, which now also runs and
+records the Linux cross-build, the layout sweep and the soak.
+
+After `--record`, the nightly runs `tools/nightly_bisect.sh`. For a check that
+passed on its last good night and fails tonight, it halves the `--no-ff`
+landings on master between the two commits, re-runs the check at the named
+landing and at the commit before it to rule out a flaky result, then builds
+tonight's tip with that landing reverted to look for a second cause (at most
+three). It files a bead per named landing through `tools/bead_new.sh`
+(`public` when the landing changed `src/`, `inc/` or `lib/`, else `internal`),
+or notes the duplicate the Jev judge finds. Its records and report live beside
+`$NIGHTLY_VERIFY_STATE`: `nightly-results/`, `nightly-last-good.tsv` and
+`nightly-bisect/<date>.md`. `INCURSION_BISECT_BUDGET` (default 5400 s) caps it.
+`tools/check_nightly_bisect.sh` proves it on a throwaway repository.
+
 ### The ones you must not run casually
 
 **`tools/check_distant_light_vision.sh` and `tools/check_nonnormal_invariant.sh`
 are A/B checks that build both sides themselves.** Each one runs
 `git worktree add --detach` for the before ref and the after ref
-(`check_distant_light_vision.sh:66`, `check_nonnormal_invariant.sh:55`), builds
+(`check_distant_light_vision.sh:102`, `check_nonnormal_invariant.sh:55`), builds
 `BACKEND=posix ./build_macos.sh` inside each, and on exit runs
 `git worktree remove --force` and `git worktree prune`
-(`check_distant_light_vision.sh:48-50`, `check_nonnormal_invariant.sh:42-45`).
+(`check_distant_light_vision.sh:48-59`, `check_nonnormal_invariant.sh:42-45`).
 So they cost two full builds, not one run, and they touch this repository's
 worktree list. They belong to Tier 3 by what they measure and to this section
 by what they cost. `check_nonnormal_invariant.sh` sweeps seeds 1-10, so budget

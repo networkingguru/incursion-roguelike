@@ -1,0 +1,51 @@
+# Orc barbarian of Chaotic Evil alignment, so a lawful good archon is hostile to him
+# (inc-bp44). A copy of chargen.keys with the alignment changed. A rogue does not
+# work: Creature::isPMType lets a Bluff above the observer's Appraise hide alignment.
+# Make a character and get into the dungeon. Included by six of the eighteen
+# files in this directory: dive.keys, dive12.keys, explore.keys, followers.keys,
+# marathon.keys and smoke.keys. The header used to claim every other script
+# included it, which is wrong; check with
+# grep -l "@include chargen.keys" tools/keys/*.keys before relying on it.
+#
+# The character is a standard male orc barbarian, neutral, worshipping
+# whichever god the game offers. Orc barbarian is deliberate: it is the
+# hardiest starting combination the game recommends to a new player, so a
+# scripted walk survives long enough to be worth watching.
+#
+# The race, subrace, class and alignment are named, not counted, so a race or
+# class added to lib/ cannot make this script build a different character.
+# See @choose in src/Wposix.cpp. Run with a fixed seed all the same
+# (tools/headless.sh <script> <seed>): the attribute rolls decide which feats
+# the game offers, and the two feat picks below are still positional.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Barbarian"
+a       # Attributes: the first of the five offered sets. The sets have no
+        #   names, so this one stays positional.
+@choose "Chaotic Evil"   # and not Neutral Good or Neutral Evil: a name that
+                    #   matches an entry outright beats one that is merely
+                    #   a prefix of it.
+a       # First feat.  Which feats are offered depends on the attribute
+a       # Second feat. rolls, so these two stay counted.
+
+# Skill Manager, twice: once for the class pool and once for the pool that
+# follows the choice of god. RIGHT spends a rank on the selected skill and
+# stops at the skill's maximum, DOWN moves to the next skill, so three RIGHTs
+# per skill spends everything available without needing to know how many
+# ranks this character has. Character generation will not let go until the
+# pool is empty.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+y       # Do you wish to worship <god>? -- yes
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+# The next keystroke lands in the dungeon, in play mode.

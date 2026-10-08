@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gate: cheap
+# gate-fast: static, reads files only, ~3 s
 #
 # Does every regression check have a row in tools/README.md's check table?
 #

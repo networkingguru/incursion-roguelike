@@ -106,7 +106,16 @@ class Item: public Thing, public Magic
 
       /* General Properties */
       bool isEdible(Creature *p);
-      bool isMagic() { return eID || Plus; }
+      /* upstream: base-code defect, the fix is ours. Item::isMagic is not
+         virtual, and both Weapon and Armour declare their own isMagic (which
+         also counts a quality) -- src/Item.cpp. A derived declaration against a
+         non-virtual base opens a new slot instead of overriding, and every
+         caller holds an Item*, so the derived bodies never ran and a +0 weapon
+         or armour with a quality counted as mundane. Upstream's: a missing
+         virtual is a missing virtual under MSVC on Win32 with the upstream
+         compiler too, and no typedef of this port is involved. Observed;
+         inc-rgzr; not sent. */
+      virtual bool isMagic() { return eID || Plus; }
       virtual bool useStrength() { return false; } 
       void MakeMagical(rID eID, int16 spe=0);
       virtual int32 Weight(bool psych_might = false);
@@ -118,6 +127,11 @@ class Item: public Thing, public Magic
       virtual bool HasIFlag(uint8 fl) { return TITEM(iID)->HasFlag(fl); }
       virtual bool isGroup(uint32 gr) { return false; }
       virtual bool thrownOnly() { return false; }
+      /* A reach-only weapon has WT_REACH but not WT_STRIKE_NEAR: it can strike
+         at reach but not an adjacent square (src/Values.cpp MS_REACH_ONLY).
+         The single source of the test, so kit arrangement and stat calculation
+         never disagree (inc-zzwm). */
+      bool isReachOnly() { return HasIFlag(WT_REACH) && !HasIFlag(WT_STRIKE_NEAR); }
       virtual bool KnownQuality(int16 q) { return false; }
       virtual void RemoveQuality(int8 q) 
         { Error("Removing quality to non-Weapon/Armour Item!"); }
@@ -350,6 +364,12 @@ class Container: public QItem
       void Unlist(Item *);
       void Sort(int comparison(const void *, const void *));
       bool XInsert(Item*);
+      /* Which normal-limit test (the ones Insert applies in play, including
+         the Faster-Than-The-Eye doubling) an item fails for this container.
+         One source of truth for Insert and for creation's spare-weapon
+         placement (inc-zzwm). A return of FITS means the pack can hold it. */
+      enum { FITS = 0, FITS_WEIGHT, FITS_COUNT, FITS_SIZE, FITS_TYPE };
+      int FitsNormal(Item *it, bool packrat);
       EvReturn PickLock(EventInfo &e);
       EvReturn Insert(EventInfo &e, bool force);
       EvReturn TakeOut(EventInfo &e);
