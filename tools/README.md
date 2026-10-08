@@ -437,6 +437,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_alienist_live.sh` | Does the Alienist's Surreal Presence field exist and speak? A kobold summoned beside her must read "seems unsettled". | LIVE |
 | `check_align_lawchaos.sh` | law/chaos alignment drift mirrors good/evil | LIVE |
 | `check_animal_kinship_prose.sh` | Does the Ring of Animal Kinship description drop its false "+3 or higher" untrained-use threshold, stating plainly that it lets you use Animal Empathy with no ranks -- which its skill bonus and the `SkillLevel` use-gate already permit? | LIVE |
+| `check_antitoxin_comment.sh` | Does the comment above Neutralize Poison in `lib/pspells.irh` state that antitoxin only adds to poison saves, rather than the old claim that it covers the cure (inc-gmrj)? | LIVE |
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? | LIVE |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? | LIVE |
 | `check_armour_model.sh` | Does the armour model penetrate coverage by grade and subtract from damage, with natural armour and a worn suit penetrated independently? | LIVE |
