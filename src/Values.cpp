@@ -2659,6 +2659,26 @@ bool Creature::isMType(int32 mt)
   }
 }
 
+bool Creature::isSameRaceAs(rID corpseMonID)
+{
+  /* inc-08js: one shared same-race (cannibalism) test for both alignment
+     moments. Eater and corpse must share a racial type. The MA_REPTILE
+     clause keeps the dragonkin subrace, which has no MA_LIZARDFOLK. */
+  if ((isMType(MA_HUMAN)     && TMON(corpseMonID)->isMType(corpseMonID,MA_HUMAN)) ||
+      (isMType(MA_DWARF)     && TMON(corpseMonID)->isMType(corpseMonID,MA_DWARF)) ||
+      (isMType(MA_ELF)       && TMON(corpseMonID)->isMType(corpseMonID,MA_ELF)) ||
+      (isMType(MA_GNOME)     && TMON(corpseMonID)->isMType(corpseMonID,MA_GNOME)) ||
+      (isMType(MA_HALFLING)  && TMON(corpseMonID)->isMType(corpseMonID,MA_HALFLING)) ||
+      (isMType(MA_DROW)      && TMON(corpseMonID)->isMType(corpseMonID,MA_DROW)) ||
+      (isMType(MA_KOBOLD)    && TMON(corpseMonID)->isMType(corpseMonID,MA_KOBOLD)) ||
+      (isMType(MA_ORC)       && TMON(corpseMonID)->isMType(corpseMonID,MA_ORC)) ||
+      (isMType(MA_LIZARDFOLK)&& TMON(corpseMonID)->isMType(corpseMonID,MA_LIZARDFOLK)) ||
+      (isMType(MA_REPTILE)   && TMON(corpseMonID)->isMType(corpseMonID,MA_REPTILE)
+                             && TMON(corpseMonID)->isMType(corpseMonID,MA_HUMANOID)))
+    return true;
+  return false;
+}
+
 String & Creature::BonusBreakdown(int8 at, int16 maxlen)
   {
     String Long, Short; int16 i; 

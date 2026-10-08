@@ -669,6 +669,7 @@ class Creature: public Thing, public Magic
       virtual void gainFavour(rID gID, int32 amt, bool advance=false, bool stack=true) { }
       bool isMType(int32 MType);
       bool isPMType(int32 MType, Creature *cr);
+      bool isSameRaceAs(rID corpseMonID);
 
       bool okWildShape(int16 lev, rID mID, rID tID);
       bool okAnimalComp(int16 lev, rID mID, rID tID);

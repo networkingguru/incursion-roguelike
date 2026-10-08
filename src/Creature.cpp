@@ -3108,6 +3108,11 @@ bool Creature::HasAbility(int16 n, bool inh) {
                     s->Source == SS_DOMA)
           return true;
 
+    /* inc-08js: the Cannibalism feat grants the Devouring ability.
+       HasFeat is virtual on Creature and safe for a plain Monster. */
+    if (n == CA_DEVOURING && HasFeat(FT_CANNIBALISM))
+      return true;
+
     if (isCharacter())
       if (thisp->Abilities[n])
         return true;

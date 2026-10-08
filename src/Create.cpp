@@ -4259,6 +4259,11 @@ bool Character::FeatPrereq(int16 feat, bool fail_if_feat_requires_a_feat)
         if (Proficiencies & WG_HARMOUR)
             return false;
 
+    /* inc-08js: Cannibalism has no FP_ kind for alignment; only a
+       character who is not good may learn it. */
+    if (feat == FT_CANNIBALISM && isMType(MA_GOOD))
+        return false;
+
     for (i=0; FeatInfo[i].feat; i++) 
         if (FeatInfo[i].feat == feat) {
             if (FeatInfo[i].flags & (FF_UNIMP|FF_MONSTER)) 

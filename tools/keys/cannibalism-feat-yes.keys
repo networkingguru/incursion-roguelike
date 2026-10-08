@@ -1,0 +1,23 @@
+# Case "feat" of tools/check_cannibalism_feat.sh (bd inc-08js): a NEUTRAL human
+# fighter takes the Cannibalism feat at character creation, then finishes a
+# corpse. Humans get bonus feats at first level; the feat menu lists
+# Cannibalism for a character who is not good, and @choose takes it by name.
+a
+n
+y
+@choose "Human"
+@choose "Athletics"
+@choose "Diplomacy"
+@choose "Warrior"
+a
+@choose "Neutral"
+@dump:featlist
+@choose "Cannibalism"
+@while "Choose a feat" a
+@until "Unspent Skill Ranks" ENTER
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "wish to worship" y
+@while "personality archetype" a
+ESC
+@include cannibalism-feat-meal.keys

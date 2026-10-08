@@ -1925,24 +1925,19 @@ EvReturn Food::Eat(EventInfo &e)
     if (isType(T_CORPSE)) {
       Corpse * c = (Corpse *)this;
       
-      if (TMON(c->mID)->isMType(c->mID,MA_SAPIENT) && !TMON(c->mID)->isMType(c->mID,MA_ORC) &&
+      if (TMON(c->mID)->isMType(c->mID,MA_SAPIENT) &&
           !c->HasStati(TRIED,SK_WILD_LORE + 100*EV_ALIGNED,e.EActor))
         {
-          bool isCannibal;
-          isCannibal = false;
-          if ((e.EActor->isMType(MA_HUMAN) && TMON(c->mID)->isMType(c->mID,MA_HUMAN)) ||
-              (e.EActor->isMType(MA_DWARF) && TMON(c->mID)->isMType(c->mID,MA_DWARF)) ||
-              (e.EActor->isMType(MA_GNOME) && TMON(c->mID)->isMType(c->mID,MA_GNOME)) ||
-              (e.EActor->isMType(MA_HALFLING) && TMON(c->mID)->isMType(c->mID,MA_HALFLING)) ||
-              (e.EActor->isMType(MA_ELF) && TMON(c->mID)->isMType(c->mID,MA_ELF)) ||
-              (e.EActor->isMType(MA_DROW) && TMON(c->mID)->isMType(c->mID,MA_DROW)) ||
-              (e.EActor->isMType(MA_KOBOLD) && TMON(c->mID)->isMType(c->mID,MA_KOBOLD)) ||
-              (e.EActor->isMType(MA_REPTILE) && TMON(c->mID)->isMType(c->mID,MA_REPTILE)
-                 && TMON(c->mID)->isMType(c->mID,MA_HUMANOID)))
-            isCannibal = true;
+          /* inc-08js: first bite. Any sapient corpse is non-lawful unless the
+             eater is orc/kobold/lizardfolk/drow; eating one's own race is
+             non-good cannibalism for every eater. */
+          bool isCannibal = e.EActor->isSameRaceAs(c->mID);
           c->GainPermStati(TRIED,e.EActor,SS_MISC,SK_WILD_LORE + 100*EV_ALIGNED);
-          e.EActor->AlignedAct(AL_NONLAWFUL,2 + isCannibal*3,
-            isCannibal ? "cannibalism" : "eating sapient creatures");
+          if (!(e.EActor->isMType(MA_ORC) || e.EActor->isMType(MA_KOBOLD) ||
+                e.EActor->isMType(MA_REPTILE) || e.EActor->isMType(MA_DROW)))
+            e.EActor->AlignedAct(AL_NONLAWFUL,2,"eating sapient creatures");
+          if (isCannibal)
+            e.EActor->AlignedAct(AL_NONGOOD,5,"cannibalism");
         } 
               
       

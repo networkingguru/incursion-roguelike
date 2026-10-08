@@ -805,6 +805,19 @@ struct FeatInfoStruct FeatInfo[] = {
     "long sword inflicts 1d10 base damage instead of 1d8.",
     {{{FP_WEP_SKILL,WS_HIGH_MASTERY,0,
        FP_ABILITY,CA_WEAPON_SKILL, 4}}}},
+  /* inc-08js: general Cannibalism feat, always available; alignment is
+     checked in Character::FeatPrereq. */
+  { FT_CANNIBALISM, 0, "Cannibalism",
+    "Through experimentation or hardship, you have learned to not only "
+    "stomach the flesh of your own kind, but to enjoy it. This dark art "
+    "has allowed you to consume the flesh of nearly any creature. You gain "
+    "the Devouring ability: each time you finish eating "
+    "a corpse, you can gain permanent resistances, attribute points and "
+    "experience from it. Eating any sapient creature is a chaotic act "
+    "unless you are an orc, kobold, lizardfolk or drow. Eating a member "
+    "of your own race is also an evil act, whatever your race. Only a "
+    "character who is not good can learn this feat.",
+    {{{FP_ALWAYS}}}},
 
   { FT_WEAPON_FINESSE, FF_WARRIOR|FF_AGILE, "Weapon Finesse",
     "When using a qualifying melee weapon, you modify your attack rolls in combat "
