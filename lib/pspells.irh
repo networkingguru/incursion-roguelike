@@ -5350,17 +5350,34 @@ Effect "Mark of Punishment" : EA_INFLICT
     MSG_CAST
       "Your hands glow with a deep vermillion aura!" /
       "The <EActor>'s hands glow with a deep vermillion aura!",
+    // upstream: the hook saved and damaged EVictim (the lawful creature struck) instead of EActor (the marked striker), read DC -1 and a NULL source from it, and crashed on the NULL source; the damage never escalated against the Desc's "gradually-increasing"; same data on Win32 with the original compiler, so upstream, not a port artifact; Observed (tools/check_mark_of_punishment.sh, exit 139 before); inc-7mkt; not sent.
     META(POST(EV_STRIKE)) {
+      int16 count;
+      hObj src;
       if (EVictim->isMType(MA_LAWFUL))
-        if (!EVictim->SavingThrow(WILL,EVictim->GetEffStatiVal(
-               TRAP_EVENT,$"Mark of Punishment"),SA_MAGIC|SA_ENCH|SA_SPELLS))
-          {
-            EActor->IDPrint("Lawful power smites you!",
-                            "Lawful power smites the <hObj>!", EActor);
-            ThrowDmg(EV_DAMAGE,AD_DACO,1d2,"a Mark of Justice",
-              EVictim->GetEffStatiObj(TRAP_EVENT,$"Mark of Punishment"), 
-                EVictim);
-          }
+        {
+          count = EActor->GetEffStatiMag(EFF_FLAG1,$"Mark of Punishment");
+          if (count == 0)
+            EActor->GainPermStati(EFF_FLAG1, NULL, SS_CURS, 0, 1,
+              $"Mark of Punishment", 0);
+          else
+            EActor->SetEffStatiMag(EFF_FLAG1,$"Mark of Punishment", count+1);
+          count = count + 1;
+          if (!EActor->SavingThrow(WILL,EActor->GetEffStatiVal(
+                 TRAP_EVENT,$"Mark of Punishment"),SA_MAGIC|SA_ENCH|SA_SPELLS))
+            {
+              EActor->IDPrint("Lawful power smites you!",
+                              "Lawful power smites the <hObj>!", EActor);
+              src = EActor->GetEffStatiObj(TRAP_EVENT,$"Mark of Punishment");
+              if (src == NULL)
+                src = EActor;
+              while (count > 0 && !EActor->isDead())
+                {
+                  ThrowDmg(EV_DAMAGE,AD_DACO,1,"a Mark of Justice", src, EActor);
+                  count = count - 1;
+                }
+            }
+        }
       return NOTHING;
       },
     PRE(EV_MAGIC_HIT) {
