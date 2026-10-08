@@ -547,8 +547,16 @@ void PurgeStrings()
     int32 i;
     if (iStrBufDelQueue < 256)
       return;
-    for (i=0;StrBufDelQueue[i];i++)
+    /* upstream: the walk is bounded by the count and skips NULL slots, because
+       a full queue has no NULL terminator and ~String NULLs a slot when that
+       String dies first. The sentinel loop is in the v0.6.5B source (7b8504a),
+       plain logic with no typedef or platform dependence, so Win32 with the
+       original compiler misreads a full queue the same way. Tier Observed.
+       inc-lqbd. NOT SENT upstream. */
+    for (i=0; i<iStrBufDelQueue; i++)
       {
+        if (StrBufDelQueue[i] == NULL)
+          continue;
         if (StrBufDelQueue[i]->Canary != 0xABCDEF12)
           goto SkipThisFree;
         //delete (StrBufDelQueue[i]);
