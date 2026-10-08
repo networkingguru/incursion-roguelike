@@ -2066,9 +2066,13 @@ void Character::UseAbility(uint8 ab, int16 pa) {
 	case CA_MANIFESTATION:
 		if (!LoseFatigue(3, true))
 			return;
+		/* upstream: the format must supply one argument per consuming <Obj>
+		   token. Base-code text and the base-code formatter, no typedef or
+		   platform dependence, so Win32 misreads it the same way. Traced --
+		   latent in single-player. inc-ur9b; not sent. */
 		IDPrint("Your mind travels back to the ancient ages of faerie, and you "
 			"feel eldritch power well up within you...",
-			"The <Obj> becomes a spectable of searing, terrible majesty...");
+			"The <Obj> becomes a spectable of searing, terrible majesty...", this);
 		GainTempStati(MANIFEST, NULL, Dice::Roll(1, 4, TotalLevel() / 3), SS_MISC, 0, 0, 0);
 		break;
 	case CA_PROTECTIVE_WARD:
@@ -2092,8 +2096,15 @@ void Character::UseAbility(uint8 ab, int16 pa) {
 		e.Clear();
 		e.EActor = this;
 		e.EVictim = NULL;
+		/* upstream: <Obj2> already consumed argument 2, so msg2's god-name
+		   token must be numbered <Str1> to reuse argument 1; a bare <Str>
+		   would read a missing argument 3. Passing the god name twice was
+		   reverted: it defeats the parameter-mismatch net. Base-code text
+		   and formatter, no typedef or platform dependence, so Win32
+		   misreads it the same way. Traced -- latent in single-player.
+		   inc-ur9b; not sent. */
 		DPrint(e, "You invoke the liberating power of <Str>!",
-			"<Obj2> invokes the power of <Str> to free the enslaved!",
+			"<Obj2> invokes the power of <Str1> to free the enslaved!",
 			isCharacter() ? NAME(thisp->GodID) : "Semirath", this);
 		i = max(1, AbilityLevel(CA_UNBIND) + Mod(A_CHA));
 
@@ -2199,24 +2210,28 @@ void Character::UseAbility(uint8 ab, int16 pa) {
 
 		GainTempStati(SINGING, NULL, 5 + (max(0, Mod(A_CON)) + SkillLevel(SK_PERFORM)) * 3, SS_MISC, song, range, 0);
 
+		/* upstream: all five song formats must supply one argument per
+		   consuming <Obj> token. Base-code text and the base-code formatter,
+		   no typedef or platform dependence, so Win32 misreads it the same
+		   way. Traced -- latent in single-player. inc-ur9b; not sent. */
 		switch (song) {
 		case BARD_COURAGE:
 		case BARD_COMP:
 			IDPrint("You begin an awesome, uplifting song.",
-				"The <Obj> sings an awe-inspiring song!"); break;
+				"The <Obj> sings an awe-inspiring song!", this); break;
 		case BARD_PHOENIX:
 			IDPrint("You begin a rousing, vital ballad.",
-				"The <Obj> sings an awe-inspiring song!"); break;
+				"The <Obj> sings an awe-inspiring song!", this); break;
 		case BARD_SPELLBREAK:
 			IDPrint("You begin a sonorous, rhythmic chant.",
-				"The <Obj> sings an awe-inspiring song!"); break;
+				"The <Obj> sings an awe-inspiring song!", this); break;
 		case BARD_FASCINATE:
 		case BARD_MASS:
 			IDPrint("You begin a lilting, hypnotic melody.",
-				"The <Obj> sings an awe-inspiring song!"); break;
+				"The <Obj> sings an awe-inspiring song!", this); break;
 		case BARD_COUNTER:
 			IDPrint("You begin singing an aggressive, engulfing crescendo.",
-				"The <Obj> sings an awe-inspiring song!"); break;
+				"The <Obj> sings an awe-inspiring song!", this); break;
 		}
 		switch (song) {
 		case BARD_COURAGE:
