@@ -44,6 +44,7 @@ carry no maps and no Game record.
 import struct
 import sys
 import os
+import re
 
 FH_SIZE = 96
 GH_SIZE = 28
@@ -636,6 +637,333 @@ def is13_slot_inner(base, rec, seg, slot, inner, row=None):
     return out + struct.pack("<H", 0)
 
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+V1_PREFIX_VARS_INC = os.path.join(SCRIPT_DIR, os.pardir, "src",
+                                  "SaveV1PrefixVars.inc")
+V1_PREFIX_ARRAY_COUNT = 21
+
+
+def read_frozen_prefix_lengths(inc_path=None):
+    """Parse the frozen `v1PrefixLengths[21] = {...}` line of
+    src/SaveV1PrefixVars.inc (the 391e353 array geometry the IS1.3 recovery
+    guard checks against). Raises RuntimeError with a clear message if the
+    line cannot be found or does not hold exactly 21 numbers."""
+    path = inc_path or V1_PREFIX_VARS_INC
+    try:
+        with open(path, "r") as fh:
+            text = fh.read()
+    except OSError as e:
+        raise RuntimeError("cannot read frozen prefix lengths from %s: %s"
+                           % (path, e))
+    m = re.search(r"v1PrefixLengths\s*\[\s*21\s*\]\s*=\s*\{([^}]*)\}", text)
+    if not m:
+        raise RuntimeError("no 'v1PrefixLengths[21] = {...}' line in %s"
+                           % path)
+    nums = re.findall(r"\d+", m.group(1))
+    if len(nums) != V1_PREFIX_ARRAY_COUNT:
+        raise RuntimeError("v1PrefixLengths in %s holds %d numbers, expected "
+                           "%d" % (path, len(nums), V1_PREFIX_ARRAY_COUNT))
+    return [int(n) for n in nums]
+
+
+def parse_inner_stream(stream):
+    """Walk an inner field stream (tag..payload fields ended by a tag-0
+    terminator) and return {tag: (kind, payload_bytes)} for every field.
+    Mirrors V1File.parse_fields, but keeps the payload instead of the offset
+    so a rebuilt stream can be spliced."""
+    fields = {}
+    pos = 0
+    while pos < len(stream):
+        tag, = struct.unpack_from("<H", stream, pos)
+        if tag == 0:
+            pos += 2
+            break
+        kind = stream[pos + 2]
+        pos += 3
+        if kind in FIXED:
+            pos += FIXED[kind]
+        elif kind in (K_STR, K_BLOB, K_EMBED):
+            l, = struct.unpack_from("<I", stream, pos)
+            pos += 4
+            fields[tag] = (kind, stream[pos:pos + l])
+            pos += l
+        elif kind == K_ARRAY:
+            c, e = struct.unpack_from("<II", stream, pos)
+            fields[tag] = (kind, stream[pos:pos + 8 + c * e])
+            pos += 8 + c * e
+        else:
+            raise RuntimeError("unknown field kind %d in inner stream" % kind)
+    if pos != len(stream):
+        raise RuntimeError("inner field stream has trailing bytes")
+    return fields
+
+
+def trim_is13_manifest(new_inner, frozen):
+    """Cut every manifest array longer than its frozen 391e353 length down
+    to that length, so the file passes the IS1.3 recovery guard. The tag-5
+    names blob holds the entries array after array, so the tail of each
+    trimmed array is dropped from the blob (keeping every later array's
+    names in place) and the tag-4 length for that array shrinks to match.
+
+    Returns (trimmed_inner, removed, new_lengths), where removed is a list
+    of (array, position, name) for every entry the trim drops and
+    new_lengths is the trimmed 21-array geometry."""
+    fields = parse_inner_stream(new_inner)
+    if SEG_LENGTHS_TAG not in fields or SEG_NAMES_TAG not in fields:
+        raise RuntimeError("IS1.3 inner stream carries no manifest tags 4/5")
+    kind4, pay4 = fields[SEG_LENGTHS_TAG]
+    if kind4 != K_ARRAY:
+        raise RuntimeError("manifest tag 4 is kind %d, expected K_ARRAY"
+                           % kind4)
+    count, elem = struct.unpack_from("<II", pay4, 0)
+    if count != V1_PREFIX_ARRAY_COUNT or elem != 4:
+        raise RuntimeError("manifest tag 4 has count %d elem %d, expected "
+                           "%d/4" % (count, elem, V1_PREFIX_ARRAY_COUNT))
+    lengths = list(struct.unpack_from("<%dI" % count, pay4, 8))
+    kind5, pay5 = fields[SEG_NAMES_TAG]
+    if kind5 != K_BLOB:
+        raise RuntimeError("manifest tag 5 is kind %d, expected K_BLOB"
+                           % kind5)
+    names = []
+    pos = 0
+    while pos < len(pay5):
+        if len(pay5) - pos < 2:
+            raise RuntimeError("manifest names blob ends mid-length")
+        l, = struct.unpack_from("<H", pay5, pos)
+        pos += 2
+        if l > len(pay5) - pos:
+            raise RuntimeError("manifest name length runs past the blob")
+        names.append(pay5[pos:pos + l])
+        pos += l
+    if sum(lengths) != len(names):
+        raise RuntimeError("manifest lengths sum %d != name count %d"
+                           % (sum(lengths), len(names)))
+
+    removed = []
+    new_lengths = list(lengths)
+    kept = []
+    base = 0
+    for p in range(count):
+        n = lengths[p]
+        f = frozen[p]
+        if n > f:
+            for i in range(f, n):
+                removed.append((p, i, names[base + i].decode("latin1")))
+            kept.extend(names[base:base + f])
+            new_lengths[p] = f
+        else:
+            kept.extend(names[base:base + n])
+        base += n
+
+    new4 = struct.pack("<HBII%dI" % count, SEG_LENGTHS_TAG, K_ARRAY,
+                       count, 4, *new_lengths)
+    blob = b"".join(struct.pack("<H", len(nm)) + nm for nm in kept)
+    new5 = struct.pack("<HBI", SEG_NAMES_TAG, K_BLOB, len(blob)) + blob
+
+    out = b""
+    pos = 0
+    while pos < len(new_inner):
+        tag, = struct.unpack_from("<H", new_inner, pos)
+        if tag == 0:
+            out += new_inner[pos:pos + 2]
+            break
+        start = pos
+        kind = new_inner[pos + 2]
+        pos += 3
+        if kind in FIXED:
+            pos += FIXED[kind]
+        elif kind in (K_STR, K_BLOB, K_EMBED):
+            l, = struct.unpack_from("<I", new_inner, pos)
+            pos += 4 + l
+        elif kind == K_ARRAY:
+            c, e = struct.unpack_from("<II", new_inner, pos)
+            pos += 8 + c * e
+        else:
+            raise RuntimeError("unknown field kind %d in inner stream" % kind)
+        if tag == SEG_LENGTHS_TAG:
+            out += new4
+        elif tag == SEG_NAMES_TAG:
+            out += new5
+        else:
+            out += new_inner[start:pos]
+    return out, removed, new_lengths
+
+
+V1_POOL_NAMES = ["Monster", "Item", "Feature", "Effect", "Artifact",
+                 "Quest", "Dungeon", "Routine", "NPC", "Class", "Race",
+                 "Domain", "God", "Region", "Terrain", "Text", "Variable",
+                 "Template", "Flavour", "Behaviour", "Encounter"]
+
+
+def V1PoolName_py(pool):
+    if 0 <= pool < len(V1_POOL_NAMES):
+        return V1_POOL_NAMES[pool]
+    return "?"
+
+
+def saved_rid_parts(saved, lengths):
+    """Mirror v1ConvertManifestRid's walk: map a saved flat rID index to
+    (array, position) through `lengths`, or None if it is past the last
+    array. Returns (slot, array, position); slot is the raw high byte."""
+    slot = (saved >> 24) - 1
+    index = saved & 0x00FFFFFF
+    position = index
+    for p in range(V1_PREFIX_ARRAY_COUNT):
+        if position < lengths[p]:
+            return (slot, p, position)
+        position -= lengths[p]
+    return (slot, None, None)
+
+
+def _manifests_from_game(v1, base):
+    """{module slot: [21 lengths]} for every Game-record slot that carries a
+    manifest (tags 4/5). These are the SAVE's own numbering, the lengths its
+    rID indices were written against."""
+    out = {}
+    for rec in v1.records:
+        if rec["type"] != T_GAME:
+            continue
+        for sl in v1.parse_fields(rec["off"] + 9, rec["length"]):
+            if sl["tag"] != GAME_MDATASEG_TAG or sl["kind"] != K_EMBED:
+                continue
+            for slot_i, slot_f in enumerate(
+                    v1.parse_fields(sl["off"] + 7, sl["size"] - 7)):
+                if slot_f["kind"] != K_EMBED:
+                    continue
+                inner = v1.parse_fields(slot_f["off"] + 7,
+                                        slot_f["size"] - 7)
+                lens = [f for f in inner if f["tag"] == SEG_LENGTHS_TAG]
+                if len(lens) != 1 or lens[0]["kind"] != K_ARRAY:
+                    continue
+                pay = lens[0]["off"] + 3
+                count, elem = struct.unpack_from("<II", base, pay)
+                if count == V1_PREFIX_ARRAY_COUNT and elem == 4:
+                    out[slot_i] = list(struct.unpack_from("<21I", base,
+                                                          pay + 8))
+    return out
+
+
+def rewrite_is13_manifest_rids(base, v1, removed, trimmed):
+    """Rewrite every saved rID the base save carries so it still names the
+    same manifest entry after `trim_is13_manifest` shortens arrays, and
+    refuse any rID that points at a removed entry.
+
+    A saved rID is `((slot+1) << 24) + flat_index`, the flat index running
+    across all 21 arrays in order. `trim_is13_manifest` drops the tail of
+    every array longer than its frozen 391e353 length, so an rID whose
+    original mapping lands past that point in ANY shortened array now
+    resolves one-or-more entries too far. This walks the same reference
+    sites phase 1 did:
+      - every K_RID field, at the top level of a record and recursively
+        inside K_EMBED fields (the slotQ/statQ object references);
+      - the tag-3 memory rows' EffMem (kind 2) FlavorID/PFlavorID words.
+    (rIDs inside K_ARRAY payloads are not visible to this walk, the stated
+    phase-1 limit.)
+
+    The tag-7 variable blob is dropped from an IS1.3 file, so its DT_RID
+    values are not rewritten; it is scanned only to refuse a removed entry.
+
+    For each reference the ORIGINAL manifest lengths map the rID to
+    (array, position). If that (array, position) is one the trim drops,
+    die() with the phase-1 "pick another seed" line. Otherwise the new flat
+    index is computed with the TRIMMED lengths and the 4-byte rID value is
+    written back in place (same slot byte). Because the rID field always
+    carries its slot byte, only the low three bytes move; the site's own
+    offset and size are unchanged. Returns a NEW bytes object; `base` is
+    left untouched. The synthesized bad row is added later and is not seen
+    here, so 0x01FFFFFF stays unconvertible."""
+    removed_at = {(a, p): nm for (a, p, nm) in removed}
+    manifests = _manifests_from_game(v1, base)
+    rewritten = []
+
+    def refuse(array, position):
+        die("is13_recovered_badrid: the base save uses %s \"%s\" "
+            "(position %d), added after 391e353; the fake IS1.3 save "
+            "cannot be made -- pick another seed"
+            % (V1PoolName_py(array), removed_at[(array, position)],
+               position))
+
+    def new_rid(saved, off):
+        slot = (saved >> 24) - 1
+        orig = manifests.get(slot)
+        if orig is None:
+            return
+        _, array, position = saved_rid_parts(saved, orig)
+        if array is None:
+            return
+        if (array, position) in removed_at:
+            refuse(array, position)
+        new_index = sum(trimmed[p] for p in range(array)) + position
+        newval = ((slot + 1) << 24) + new_index
+        if newval != saved:
+            out[off:off + 4] = struct.pack("<I", newval)
+        rewritten.append((off, saved, newval, slot, array, position))
+
+    def scan_fields(start, length):
+        for f in v1.parse_fields(start, length):
+            if f["kind"] == K_RID:
+                val, = struct.unpack_from("<I", base, f["off"] + 3)
+                if val != 0:
+                    new_rid(val, f["off"] + 3)
+            elif f["kind"] == K_EMBED:
+                l, = struct.unpack_from("<I", base, f["off"] + 3)
+                scan_fields(f["off"] + 7, l)
+
+    out = bytearray(base)
+    for rec in v1.records:
+        scan_fields(rec["off"] + 9, rec["length"])
+
+    for rec in v1.records:
+        if rec["type"] != T_GAME:
+            continue
+        for sl in v1.parse_fields(rec["off"] + 9, rec["length"]):
+            if sl["tag"] != GAME_MDATASEG_TAG or sl["kind"] != K_EMBED:
+                continue
+            inner = v1.parse_fields(sl["off"] + 7, sl["size"] - 7)
+            vb = [f for f in inner if f["tag"] == SEG_VARBLOB_TAG]
+            if vb and vb[0]["kind"] == K_BLOB:
+                pay = base[vb[0]["off"] + 7:vb[0]["off"] + vb[0]["size"]]
+                pos = 0
+                while pos + 6 <= len(pay):
+                    pos += 4
+                    typ = pay[pos]
+                    pos += 1
+                    nl = pay[pos]
+                    pos += 1
+                    pos += nl
+                    if pos + 4 > len(pay):
+                        break
+                    val, = struct.unpack_from("<I", pay, pos)
+                    pos += 4
+                    if typ == 5 and val != 0:
+                        slot = (val >> 24) - 1
+                        orig = manifests.get(slot)
+                        if orig is not None:
+                            _, array, position = saved_rid_parts(val, orig)
+                            if array is not None and \
+                                    (array, position) in removed_at:
+                                refuse(array, position)
+            rows = [f for f in inner if f["tag"] == SEG_ROWS_TAG]
+            if rows and rows[0]["kind"] == K_BLOB:
+                pay = base[rows[0]["off"] + 7:rows[0]["off"] + rows[0]["size"]]
+                pos = 0
+                while pos + 7 <= len(pay):
+                    kind = pay[pos]
+                    pos += 6
+                    paylen = pay[pos]
+                    pos += 1
+                    if pos + paylen > len(pay):
+                        break
+                    if kind == 2 and paylen >= 8:
+                        off = rows[0]["off"] + 7 + pos
+                        for w in (0, 4):
+                            val, = struct.unpack_from("<I", base, off + w)
+                            if val != 0:
+                                new_rid(val, off + w)
+                    pos += paylen
+    return bytes(out), rewritten
+
+
 def craft_is13_recovered_badrid(src_path, cases):
     """Case 28(a): an IS1.3 save whose recovered whole-unit DT_RID slot holds
     a value that fails manifest conversion MUST load, with that variable 0
@@ -656,10 +984,23 @@ def craft_is13_recovered_badrid(src_path, cases):
     counts the stderr lines)."""
     base = open(src_path, "rb").read()
     v1 = V1File(base)
+    frozen = read_frozen_prefix_lengths()
     rec, seg, slot, inner = slot_with_variables(v1, src_path)
+    # The trim shortens arrays, so the base save's rIDs must be renumbered
+    # BEFORE is13_slot_inner copies its tag-3 rows into the IS1.3 inner.
+    # The manifest tags pass through is13_slot_inner unchanged, so trim a
+    # manifest-only stream to learn the removed entries and the new geometry.
+    # The synthesized bad row is added after, so 0x01FFFFFF stays untouched.
+    manifest = b"".join(base[f["off"]:f["off"] + f["size"]] for f in inner
+                        if f["tag"] in (SEG_LENGTHS_TAG, SEG_NAMES_TAG))
+    _, removed, new_lengths = trim_is13_manifest(manifest
+                                                 + struct.pack("<H", 0),
+                                                 frozen)
+    base, _ = rewrite_is13_manifest_rids(base, v1, removed, new_lengths)
     bad_row = struct.pack("<BBIB", 0, 0, 23, 13) \
         + struct.pack("<I", 0x01FFFFFF) + bytes(9)
     new_inner = is13_slot_inner(base, rec, seg, slot, inner, row=bad_row)
+    new_inner, _, _ = trim_is13_manifest(new_inner, frozen)
     f = rebuild_slot(base, rec, seg, slot, new_inner)
     f = f[:4] + b"IS1.3" + b"\0" * 7 + f[16:]
     cases.append(("is13_recovered_badrid", f, "ok",
