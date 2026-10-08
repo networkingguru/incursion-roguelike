@@ -1,0 +1,42 @@
+# The meal, shared by cannibalism-feat-yes.keys and cannibalism-feat-no.keys.
+# Wizard summon a brown bear (CR 5, measured: 250 XP = 50 x CR; non-sapient, so no alignment charge; a corpse whose challenge rating exceeds the eater's pays full experience in Creature::DevourMonster), Genocide Everything leaves its corpse, eat it to the
+# end. The sheet's "XP" line before and after is the oracle.
+w
+y
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "brown bear"
+RIGHT
+ENTER
+w
+@choose "Genocide Everything"
+@dump:killed
+
+d
+@expect "Gender"
+w
+"meal-pre"
+ENTER
+ESC
+
+RIGHT
+@while "You see here" ESC
+e
+@choose "(ground) brown bear corpse"
+@while "Stop eating" n
+@while "-- more --" SPACE
+@while "Eating" SPACE
+@while "-- more --" SPACE
+@while "#------" SPACE
+
+v
+@dump:log-meal
+@while "Messages" ESC
+
+d
+@expect "Gender"
+w
+"meal-post"
+ENTER
+ESC
+@quit

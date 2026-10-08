@@ -1,0 +1,21 @@
+# Make a standard orc paladin (lawful good, forced by the class) and stop in
+# the dungeon. Included by cannibal-orc-own.keys and cannibal-orc-other.keys
+# (tools/check_cannibal_alignment.sh, bd inc-08js). Paladin is chosen because
+# only a Good and Lawful eater can show either half of the alignment charge:
+# AlignedAct (src/Prayer.cpp) lets AL_NONGOOD move only a Good character and
+# AL_NONLAWFUL only a Lawful one.
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Explore Mode -- continue
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Paladin"
+a       # Attributes: the first of the offered sets
+@until "Choose a feat" a   # Alignment (one entry, Lawful Good) and its help page
+@while "Choose a feat" a
+@until "Unspent Skill Ranks" ENTER
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y # Done, and confirm keeping the ranks
+@while "wish to worship" y
+@while "personality archetype" a
+ESC     # dismiss the arrival room description

@@ -3139,8 +3139,13 @@ MA_MYTHIC,        // 1 hobbit: 18
 		Transgress(FIND("Xavias"), 3, false, "eating sapient creatures");
 		Transgress(FIND("Hesani"), 3, false, "eating sapient creatures");
 		gainFavour(FIND("Khasrach"), 10 * m->ChallengeRating(), false, true);
-		if (!(isMType(MA_ORC) || isMType(MA_REPTILE)))
+		/* inc-08js: finishing the corpse. Non-lawful for any sapient unless
+		   the eater is orc/kobold/lizardfolk/drow; own-race is non-good
+		   cannibalism for every eater. */
+		if (!(isMType(MA_ORC) || isMType(MA_KOBOLD) || isMType(MA_REPTILE) || isMType(MA_DROW)))
 			AlignedAct(AL_NONLAWFUL, 3, "eating sapient creatures");
+		if (isSameRaceAs(m->mID))
+			AlignedAct(AL_NONGOOD, 3, "cannibalism");
 	}
 	gainFavour(FIND("Zurvash"), 5 * m->ChallengeRating(), false, true);
 

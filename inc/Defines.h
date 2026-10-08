@@ -2630,7 +2630,10 @@ typedef signed int        hObj;
 #define FT_WILD_SHAPE_MASTERY  (FT_TUVWXYZ + 43)
 #define FT_WEAPON_HIGH_MASTERY (FT_TUVWXYZ + 44)
 #define FT_WEAPON_GRAND_MASTERY (FT_TUVWXYZ + 45)
-#define FT_LAST                (FT_TUVWXYZ + 46)
+/* inc-08js: general Cannibalism feat, appended after FT_WEAPON_GRAND_MASTERY
+   so existing feat numbers stored in saves are unchanged. */
+#define FT_CANNIBALISM         (FT_TUVWXYZ + 46)
+#define FT_LAST                (FT_TUVWXYZ + 47)
 
 #define MM_AMPLIFY       0x00000001  /* Penetrates magic resistance */
 #define MM_AUGMENT       0x00000002  /* Summoned creatures stronger */
