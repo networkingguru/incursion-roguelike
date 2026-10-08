@@ -1,0 +1,13 @@
+# As aid-casting-bonus-aid.keys, for a character that is already in wizard
+# mode (the frozen druid is: `w` opens the menu with no confirmation prompt).
+# tools/check_aid_casting_bonus.sh (bd inc-9uuj).
+w
+@choose "Become Divine Champion"
+"Aid Casting Bonus Test God" ENTER
+@until "HP:" ESC
+
+m PGDN*20
+@expect "Chance:"
+@dump:spell
+ESC
+@quit
