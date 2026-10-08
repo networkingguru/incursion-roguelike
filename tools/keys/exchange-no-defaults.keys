@@ -1,0 +1,31 @@
+# Press the swap-weapons command ('-') on a character with NO default melee or
+# ranged weapon set. Character::Exchange (src/Inv.cpp) takes its first early
+# path: it prints the explanatory "You need to set your default melee and
+# ranged weapons ..." line and then, before inc-3ax, also printed the false
+# "You fumble the items you were trying to exchange, dropping them!" line.
+#
+# WHY A FIXTURE. tools/fixtures/chars/lizardfolk-monk-seed1.sav carries no
+# default weapons, so the swap command cannot even begin; that is the path under
+# test. The character is frozen, so the same save takes the same path on every
+# run.
+#
+# WHY THE ESC. While the inventory manager owns the screen the queued messages
+# are not drawn, so the after-dash dump shows only the explanatory line. The
+# ESC leaves the inventory and lets Game::Play dump the queue onto the message
+# window, which is where the false fumble line shows up. tools/check_exchange_no_false_fumble.sh
+# reads both dumps.
+#
+# Run with a fixed seed; the check supplies one.
+
+@dump:arrival
+
+-               # swap weapons: Character::Exchange, early path (no defaults)
+@dump:after-dash
+
+ESC             # leave the inventory; the queued messages are drawn now
+@dump:after-esc
+
+# One real turn, so the run counts as a session (headless.sh reports NO
+# GAMEPLAY otherwise). The messages above are already dumped.
+s
+@dump:after-turn

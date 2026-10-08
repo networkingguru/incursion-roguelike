@@ -861,7 +861,7 @@ void Character::Exchange()
       { IPrint("You need to set your default melee and ranged weapons "
                "before you can use the swap weapons command effectively. "
                "Type '?' on the inventory window for more information.");
-        goto XAbort; }
+        goto XAbortNoItem; }
         
     if (Inv[SL_WEAPON] && oItem(Inv[SL_WEAPON])->isCursed())
       {
@@ -885,7 +885,7 @@ void Character::Exchange()
           if (Inv[si] == defRanged)
             { sl1 = si; goto foundRanged; }
         IPrint("Your default ranged weapon isn't easily accessible right now.");
-        goto XAbort;
+        goto XAbortNoItem;
 
         foundRanged:
         new1 = oItem(defRanged);
@@ -898,7 +898,7 @@ void Character::Exchange()
         }
       else {
         IPrint("You have no default ranged weapon selected.");
-        goto XAbort;
+        goto XAbortNoItem;
         }
       }
     else {
@@ -907,7 +907,7 @@ void Character::Exchange()
           if (Inv[si] == defMelee)
             { sl1 = si; goto foundMelee; }
         IPrint("Your default melee weapon isn't easily accessible right now.");
-        goto XAbort;
+        goto XAbortNoItem;
 
         foundMelee:
         if (!defOffhand)
@@ -916,7 +916,7 @@ void Character::Exchange()
           if (Inv[si] == defOffhand)
             { sl2 = si; goto foundBoth; }
         IPrint("Your default offhand weapon isn't easily accessible right now.");
-        goto XAbort;
+        goto XAbortNoItem;
 
         foundBoth:
         new1 = oItem(defMelee);
@@ -935,7 +935,7 @@ void Character::Exchange()
           if (Inv[si] == defOffhand)
             { sl2 = si; goto foundOffOnly; }
         IPrint("Your default offhand weapon isn't easily accessible right now.");
-        goto XAbort;
+        goto XAbortNoItem;
 
         foundOffOnly:
         new1 = NULL;
@@ -946,7 +946,7 @@ void Character::Exchange()
         }
       else {
         IPrint("You have no default melee weapon selected.");
-        goto XAbort;
+        goto XAbortNoItem;
         }
       }
 
@@ -1073,6 +1073,15 @@ Abort:
     if (HasFeat(FT_QUICK_DRAW))
       Timeout /= 4;
       
+XAbortNoItem:
+    /* upstream: the fumble message MUST appear only when an item is actually
+       dropped. The early paths (no default weapons, a default not accessible,
+       none selected) arrive before old1/old2/new1/new2 are set and drop
+       nothing; XAbort below still prints it wherever something can drop.
+       Tier Observed; inc-3ax; not sent. */
+    isExchange = false;
+    return;
+
 XAbort:
     /* Put everything back where it was by the brute force method. */
     IPrint("You fumble the items you were trying to exchange, dropping them!");
