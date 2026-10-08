@@ -1,0 +1,128 @@
+# Stop being Chaotic -- leave Chaotic for True Neutral by the ordinary
+# "Issue Request" command, as a Chaotic character whose desired alignment is
+# Neutral. This is the leaving-Chaotic half of bd inc-r6ae;
+# tools/check_align_leave_chaotic_play.sh reads it.
+#
+# WHAT IS BEING OBSERVED. A Chaotic character who commits a non-chaotic act
+# decays the law/chaos score (alignLC) in Character::AlignedAct
+# (src/Prayer.cpp) and, once the score falls below +20, must clear AL_CHAOTIC.
+# Before the fix the committed-chaotic branch pinned the score with
+# max(30, alignLC) where its good/evil twin used min(30, alignLC), so the score
+# could never fall below 20 and the character stayed Chaotic however many acts
+# were committed. This run leaves Chaotic.
+#
+# THE CHARACTER is tools/keys/chargen.keys' standard orc barbarian, but with
+# Chaotic Neutral chosen at generation rather than Neutral. Generation sets
+# alignLC to +50 for a Chaotic character (src/Create.cpp:473-474). He carries no
+# Diplomacy and Intimidate +6, so Creature::Request (src/Social.cpp:1189-1190)
+# offers "Use Intimidate?" and fires the COERCION aligned act
+# (AL_NONCHAOTIC|AL_LAWFUL, magnitude 3). The AL_NONCHAOTIC half is what decays.
+#
+# THE DESIRED ALIGNMENT is stated with the character sheet's own
+# '[D] Alignment' command (src/Managers.cpp:2315-2322) and set to Neutral.
+# This matters: AlignedAct clamps the score with min(30, alignLC) only while
+# the character does NOT desire Chaotic (the `if (!(dAlign & AL_CHAOTIC))`
+# guard). Left desiring Chaotic, the clamp is skipped and the score would not
+# change.
+#
+# THE VICTIM is a human conjured by wizard mode, one square east, and frozen;
+# every coercion is the ordinary command. Each coercion aborts at the "Direct
+# Creature Where" prompt, so no TRIED flag is set and the same victim serves
+# again.
+#
+# THE COUNT, from the arithmetic: alignLC 50 -> *7/10 -> 35 -> min(30) -> 30
+# -> *7/10 -> 21 -> min(30) -> 21 -> *7/10 -> 14 -> min(30) -> 14, which is
+# below 20, so the THIRD coercion clears AL_CHAOTIC and the game prints
+# "You are now True Neutral.". Four are sent for margin; the fourth neither
+# moves a flag nor prints. With the defect (max(30,...)) the score pins at 30
+# and no count ever leaves Chaotic.
+#
+# Determinism: seed 1, tools/fixtures/options-2026-08-22.dat.
+
+a
+n
+y
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Barbarian"
+a
+@choose "Chaotic Neutral"
+a
+a
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+y
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+.*2
+@dump:arrival
+
+d
+@until "Desired Alignment" D
+@choose "Neutral"
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+@expect "Freeze Monsters"
+DOWN*10
+@expect "all monsters are denied their"
+SPACE
+@expect "Wizard Mode Options"
+ESC
+@dump:frozen
+
+w
+@choose "Monster Summoning"
+@choose "Humans"
+@choose "human"
+RIGHT ENTER
+@dump:summoned
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Use Intimidate?" y
+@dump:coerce1
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Use Intimidate?" y
+@dump:coerce2
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Use Intimidate?" y
+@dump:coerce3
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Use Intimidate?" y
+@dump:coerce4
+@choose "Go To Location"
+ESC
+
+v
+@dump:messages
+ESC
+
+d
+@dump:sheet-after
+ESC
+@quit

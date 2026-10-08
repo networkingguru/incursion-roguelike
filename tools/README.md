@@ -436,7 +436,10 @@ A new check adds its row to this table, in alphabetical order.
 | `check_air_ring_spell.sh` | Does the Elemental Command (Air) ring description name the granted staff-spell "gaseous form", rather than the phantom "wind column" that exists nowhere in `lib/`? | LIVE |
 | `check_alienist_drain.sh` | Does each Alienist summoning drain the held mana its page names (Summoned Creature's CR x 2), the mana that never regenerates? | LIVE |
 | `check_alienist_live.sh` | Does the Alienist's Surreal Presence field exist and speak? A kobold summoned beside her must read "seems unsettled". | LIVE |
+| `check_align_coercion_play.sh` | Does a Neutral character who states a Lawful desired alignment become Lawful Neutral through the ordinary Issue Request command -- the game printing "You are now Lawful Neutral." and the character sheet's Align line changing? | LIVE |
 | `check_align_lawchaos.sh` | law/chaos alignment drift mirrors good/evil | LIVE |
+| `check_align_leave_chaotic_play.sh` | Does a Chaotic character whose desired alignment is Neutral stop being Chaotic through the ordinary Issue Request command -- the game printing "You are now True Neutral." and the character sheet's Align line changing? | LIVE |
+| `check_align_treachery_play.sh` | Does a Neutral character who states a Chaotic desired alignment become Chaotic Neutral through the ordinary Issue Request command -- the game printing "You are now Chaotic Neutral." and the character sheet's Align line changing? | LIVE |
 | `check_animal_kinship_prose.sh` | Does the Ring of Animal Kinship description drop its false "+3 or higher" untrained-use threshold, stating plainly that it lets you use Animal Empathy with no ranks -- which its skill bonus and the `SkillLevel` use-gate already permit? | LIVE |
 | `check_antitoxin_comment.sh` | Does the comment above Neutralize Poison in `lib/pspells.irh` state that antitoxin only adds to poison saves, rather than the old claim that it covers the cure (inc-gmrj)? | LIVE |
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? | LIVE |
@@ -1087,6 +1090,9 @@ tools/check_prestige_profs.sh
 tools/check_prestige_tables.sh
 tools/check_alienist_live.sh
 tools/check_align_lawchaos.sh        # law/chaos alignment drift mirrors good/evil
+tools/check_align_coercion_play.sh   # the same fix under real play: a Neutral orc who states a Lawful desire prints "You are now Lawful Neutral."
+tools/check_align_treachery_play.sh  # the same fix's Chaotic sign under real play: a Neutral elf who states a Chaotic desire prints "You are now Chaotic Neutral."
+tools/check_align_leave_chaotic_play.sh # the same fix's Chaotic clamp under real play: a Chaotic orc who states a Neutral desire prints "You are now True Neutral."
 tools/check_earthsinger_live.sh
 tools/check_huntsman_live.sh
 tools/check_loremaster_live.sh

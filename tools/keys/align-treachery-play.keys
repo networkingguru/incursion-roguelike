@@ -1,0 +1,180 @@
+# Become Chaotic Neutral by the ordinary "Issue Request" command, as a
+# Neutral character who has stated a Chaotic desired alignment. This is the
+# treachery half of bd inc-r6ae; tools/check_align_treachery_play.sh reads it.
+#
+# WHAT IS BEING OBSERVED. Character::AlignedAct (src/Prayer.cpp) moves the
+# law/chaos score (alignLC) on a Chaotic act and must set AL_CHAOTIC once that
+# score passes +20 -- exactly as its good/evil twin sets AL_EVIL. Before the fix
+# the else branch that sets the flag was missing AND a Neutral character's
+# Chaotic act moved alignLC the WRONG WAY (-=, toward Lawful); the score could
+# never reach +20, the alignment never changed and the game never printed
+# "You are now ...". This run prints it.
+#
+# THE CHARACTER is an elf rogue who spends all eighteen skill ranks on skills
+# other than Bluff's rivals, so Bluff +7 outranks both Intimidate +5 and
+# Diplomacy +5. Creature::Request (src/Social.cpp:1184-1192) checks Intimidate
+# first and Bluff second: with Intimidate not greater than Diplomacy, and Bluff
+# greater, it offers "Use Bluff?" and fires the TREACHERY aligned act
+# (AL_NONLAWFUL|AL_CHAOTIC, magnitude 3). An ORC cannot be used here: the orc
+# race grants Intimidate as a racial skill (lib/races.irh:1867) and +4 Strength,
+# so an orc's Intimidate outscores its Diplomacy and the game always offers
+# Intimidate, never Bluff. An elf has neither Intimidate nor Bluff as a racial
+# skill (lib/races.irh:1124).
+#
+# THE DESIRED ALIGNMENT is stated with the character sheet's own
+# '[D] Alignment' command (src/Managers.cpp:2315-2322) and set to Chaotic
+# Neutral. Without it AlignedAct clamps the score back to zero as a designed
+# guard.
+#
+# THE VICTIM is a human conjured by wizard mode, one square east, and frozen.
+# Wizard mode sets up state a player could reach; every coercion below is the
+# ordinary command. Elf rogues start hiding, so the first request answers a
+# "Confirm reveal yourself by talking?" prompt; the guard covers it and is
+# harmless once it stops appearing.
+#
+# THE COUNT. alignLC starts at 0 and each treachery adds 3, so the +20 threshold
+# is crossed on the seventh (alignLC = 21). Eight are sent for margin.
+#
+# Determinism: seed 1, tools/fixtures/options-2026-08-22.dat.
+
+a
+n
+y
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Rogue"
+a
+@choose "Neutral"
+a
+a
+
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Bluff" DOWN
+RIGHT*3
+@cursorto:mark "Listen" DOWN
+RIGHT*3
+@cursorto:mark "Lockpicking" DOWN
+RIGHT*3
+@cursorto:mark "Move Silently" DOWN
+RIGHT*3
+@cursorto:mark "Perform" DOWN
+RIGHT*3
+@cursorto:mark "Pick Pockets" DOWN
+RIGHT*3
+@cursorto:mark "Poison Use" DOWN
+RIGHT*3
+@cursorto:mark "Ride" DOWN
+RIGHT*3
+@cursorto:mark "Spot" DOWN
+RIGHT*3
+ENTER y
+
+y
+a
+
+.*2
+@dump:arrival
+
+d
+@until "Desired Alignment" D
+@choose "Chaotic Neutral"
+ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+@expect "Freeze Monsters"
+DOWN*10
+@expect "all monsters are denied their"
+SPACE
+@expect "Wizard Mode Options"
+ESC
+@dump:frozen
+
+w
+@choose "Monster Summoning"
+@choose "Humans"
+@choose "human"
+RIGHT ENTER
+@dump:summoned
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Confirm reveal yourself" y
+@while "Use Bluff?" y
+@dump:coerce1
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Confirm reveal yourself" y
+@while "Use Bluff?" y
+@dump:coerce2
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Confirm reveal yourself" y
+@while "Use Bluff?" y
+@dump:coerce3
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Confirm reveal yourself" y
+@while "Use Bluff?" y
+@dump:coerce4
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Confirm reveal yourself" y
+@while "Use Bluff?" y
+@dump:coerce5
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Confirm reveal yourself" y
+@while "Use Bluff?" y
+@dump:coerce6
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Confirm reveal yourself" y
+@while "Use Bluff?" y
+@dump:coerce7
+@choose "Go To Location"
+ESC
+
+y
+@choose "Issue Request"
+RIGHT ENTER
+@while "Confirm reveal yourself" y
+@while "Use Bluff?" y
+@dump:coerce8
+@choose "Go To Location"
+ESC
+
+v
+@dump:messages
+ESC
+
+d
+@dump:sheet-after
+ESC
+@quit
