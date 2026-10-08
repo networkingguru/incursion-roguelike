@@ -120,7 +120,7 @@ or friendly.
 |---|---|---|
 | Activate | trigger an item's power | `src/Item.cpp:874` |
 | Drink | drink a potion | `src/Item.cpp:851` |
-| Eat | eat food | `src/Item.cpp:2042` |
+| Eat | eat food | `src/Item.cpp:2037` |
 | Read | read a scroll or book | `src/Item.cpp:858` |
 | Zap | aim a wand at a target | `src/Item.cpp:844` |
 | Wield | equip a weapon | `src/Creature.cpp:1003` |
