@@ -45,7 +45,8 @@ fi
 mkdir -p "$WORK/run/logs" "$WORK/run/save"
 ln -sfn "$ROOT/mod" "$WORK/run/mod"
 ln -sfn "$ROOT/lib" "$WORK/run/lib"
-cp "$ROOT/tools/fixtures/options-2026-08-13.dat" "$WORK/run/Options.Dat"
+# 08-22 carries the character-generation profile that tools/keys/chargen.keys expects; inc-lqbd.
+cp "$ROOT/tools/fixtures/options-2026-08-22.dat" "$WORK/run/Options.Dat"
 
 INCURSIONPATH="$WORK/run/" INCURSION_SEED=7 \
     ./incursion-strqueue -keys tools/keys/smoke.keys \
