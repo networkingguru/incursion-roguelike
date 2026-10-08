@@ -1,0 +1,67 @@
+/* kxc6-error-encounter.irh -- fixture for tools/check_throwevent_error.sh.
+   Bead inc-kxc6: ThrowEvent's e.EMap ERROR arm (src/Event.cpp:315-319) reads
+   e.p[i] with i left over from the two god-watch loops above it (lines
+   263-302), which leave i == nGods (17 gods declared in lib/religion.irh on
+   master) when no god returns early. EvParam p[5] (inc/Events.h:207) holds
+   only indices 0-4, so e.p[17] is an out-of-bounds read, followed by a call
+   through whatever object pointer those bytes happen to hold.
+
+   "kxc6 error god" grants the instant its follower reaches level 1 -- the
+   same FAVOUR_CHART/EV_BLESSING pattern as
+   tools/fixtures/periodic-interval-gods.irh, itself copied from
+   lib/religion.irh:5973 (Zurvash's EV_BLESSING). Reaching level 1 calls
+   EMap->thEnGenSummXY with the PLAYER as crea, targeting the Encounter
+   below. Map::Event (src/MakeLev.cpp:107-122) sends EV_ENGEN to the
+   encounter resource's own handler first (SEND_TO(enID)); this fixture's
+   handler returns ERROR before any monster generation runs, so
+   Map::Event -> ThrowTo -> ThrowEvent's e.EMap ERROR arm fires with i left
+   at nGods from the god loop a few lines above it in the SAME ThrowEvent
+   call.
+
+   Two Error() controls (KXC6-TRIGGER, KXC6-HANDLER) are logged -- and
+   fflush()ed, src/ErrorLog.cpp:163 -- before the OOB read, so
+   tools/check_throwevent_error.sh can tell "the trigger/handler never
+   fired" from "fired, and then the session (maybe) crashed".
+
+   NOT part of the shipped module: tools/check_throwevent_error.sh splices
+   this file into a working copy of lib/main.irc only for the span of its
+   own run, the same splice tools/check_periodic_interval.sh uses for
+   tools/fixtures/periodic-interval-gods.irh. Never inserted into the
+   tracked lib/. */
+
+God "kxc6 error god"
+  {
+    Lists:
+      * FAVOUR_CHART
+          1000
+          50000
+          60000
+          70000
+          80000
+          90000
+          100000
+          110000
+          120000
+          130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"kxc6 error god") == 1)
+        {
+          Error("KXC6-TRIGGER: EV_BLESSING reached level 1, calling thEnGenSummXY");
+          EMap->thEnGenSummXY($"kxc6 error encounter", EN_CREATOR|EN_SUMMON|EN_SINGLE,
+            1, 0, EActor, EActor->x, EActor->y);
+        }
+      return NOTHING;
+      };
+  }
+
+Encounter "kxc6 error encounter"
+  {
+    CR: 1+;
+    Parts:
+      * 1 of any MA_ALL [EP_SKILLMAX];
+    Flags: NF_NOGEN, NF_SINGLE;
+    On Event PRE(EV_ENGEN) {
+      Error("KXC6-HANDLER: PRE(EV_ENGEN) reached for kxc6 error encounter, returning ERROR");
+      return ERROR;
+      };
+  }

@@ -312,9 +312,13 @@ EvReturn ThrowEvent(EventInfo &e) {
             return ABORT;
         case DONE:
             return DONE;
+        /* upstream: the map ERROR arm read e.p[i] after the god loops left
+           i == nGods, past the 5-element p; it names the map whose handler
+           failed. Base-code control flow, identical on Win32 with the
+           original typedefs. Observed, inc-kxc6, not sent. */
         case ERROR:
             Error(Format("Event %s::%s routine returned ERROR!",
-                e.p[i].o ? (const char*) e.p[i].o->Name(0) : "(null)",
+                e.EMap ? (const char*) e.EMap->Name(0) : "(null)",
                 Lookup(EV_CONSTNAMES,e.Event%500)));
             return ABORT;
         }
