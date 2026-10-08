@@ -1,0 +1,22 @@
+# tools/check_throwevent_error.sh: does ThrowEvent's e.EMap ERROR arm
+# (src/Event.cpp:315-319) read e.p[i] with i left over from the god-watch
+# loop at i==nGods, an out-of-bounds read of EvParam p[5]? bd inc-kxc6.
+#
+# Grants "kxc6 error god"'s blessing (tools/fixtures/kxc6-error-encounter.irh,
+# spliced into the module only for this check's own run). Its EV_BLESSING
+# handler calls EMap->thEnGenSummXY with the PLAYER as crea, targeting the
+# fixture Encounter, whose own PRE(EV_ENGEN) handler logs a control and
+# returns ERROR before any monster generation runs.
+
+@include chargen.keys
+
+w
+y                       # Enter wizard mode? [yn] -- only asked once
+@choose "Become Divine Champion"
+"kxc6 error god"
+ENTER
+@while "more --" SPACE
+@while "ESC:Done" ESC
+
+@dump:after
+@quit
