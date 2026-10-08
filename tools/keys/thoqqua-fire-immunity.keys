@@ -1,0 +1,26 @@
+# Summon a thoqqua and read its resistances in the wizard's Examine Nearby
+# Things. (bd inc-ejq)
+#
+#   tools/check_thoqqua_fire.sh
+#
+# The Resists: block of that screen (src/Debug.cpp) lists every damage type the
+# creature's ResistLevel is not zero for; -1 is immunity. Frozen monsters, set
+# by dequ-setup.keys, leave the thoqqua where it is and keep it from burning
+# the character.
+
+@include dequ-setup.keys
+
+@until "Monster Summoning" w
+@choose "Monster Summoning"
+@choose "Elementalkin"
+@choose "thoqqua"
+RIGHT
+ENTER
+s*3                 # let some game time pass, so the session is not a stall
+
+w
+@choose "Examine Nearby Things"
+@until "thoqqua (class" RIGHT
+@dump:examined
+ESC
+@until "Things in View" ESC
