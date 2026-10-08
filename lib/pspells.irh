@@ -5091,9 +5091,10 @@ Druid Spell "Wall of Thorns" : EA_TERRAFORM
     aval: AR_GLOBE; lval: 2; rval: $"thorn wall"; 
     xval: TERRA_OPEN; 
     Purpose: EP_CURSE|EP_FOIL_PURSUIT|EP_ESCAPE|EP_BARRIER | AIM_AT_ENEMY;
+    // upstream: the Desc promised a 5-square diameter but lval: 2 with AGlobe's dist < radius test fills a 3-square one; the same data ships on Win32 with the original compiler, so it is upstream, not a port artifact; the SCRIPT is correct, so nobody should raise lval to match the old prose; Traced (prose-only, no in-play value changes); inc-paq9; not sent.
     Desc: "Conjures a solid barrier composed of thick shrubbery
       interwoven with razor-sharp, thorny vines. The wall of thorns
-      fills an area with diameter 50 feet (5 squares). Any creature
+      fills an area with diameter 30 feet (3 squares). Any creature
       attempting to move through it must make an Escape Artist check
       (DC 30). If successful it moves at 15% normal speed and takes
       25 points of slashing damage."; }
