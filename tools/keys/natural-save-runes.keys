@@ -10,14 +10,13 @@
 #
 # "guardian runes" (lib/dungeon.irh) rolls Fortitude or Will, DC 27, on
 # every move within it, chosen at random per step -- comfortably out of
-# reach of a level 1 paladin's +3 base. Pinned to seed 4 because the result
-# is otherwise a coin flip: this exact seed, key sequence and settings
-# combination is known (and re-verified when this file was written) to roll
-# a natural 20 within six exposures, printing "Will Save: 1d20 (20) +3
-# base = 23 vs DC 27 [failure]." on the unfixed engine and "...[success]."
-# on the fixed one -- the smoking gun tools/check_natural_save.sh
-# --prove-red reads. Six exposures cost the subject about half his hit
-# points (31 -> 15 measured); this file does not run more than that.
+# reach of a level 1 paladin's +3 base. The natural 20 this file needs is
+# no longer left to seed-luck: tools/check_natural_save.sh exports
+# INCURSION_FORCE_SAVE_ROLL=20 for this run only, so every saving throw here
+# rolls a 20 and the session prints "Will Save: 1d20 (20) +3 base = 23 vs
+# DC 27 [failure]." on the unfixed engine and "...[success]." on the fixed
+# one -- the smoking gun tools/check_natural_save.sh --prove-red reads.
+# Seed 4 is still pinned so the rest of the session is reproducible.
 #
 # Freeze Monsters is on so nothing else moves while this runs.
 

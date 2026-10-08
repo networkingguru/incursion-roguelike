@@ -8,17 +8,39 @@ and non-JSON lines are tolerated) and inspects each step_finish event. A step's
 text is the concatenation of every "text" part carrying the same messageID; the
 step_finish arrives after those text parts.
 
-A step is a LOOP STEP when, after removing everything inside ``` code fences,
-the stripped non-empty lines shorter than SHORT_LINE characters include
-MIN_REPEATED_LINES or more distinct lines each occurring MIN_OCCURRENCES or
-more times, AND the step's tokens.output is at least MIN_OUTPUT_TOKENS.
+A step is flagged when ANY of three rules fires. After removing everything
+inside ``` code fences:
 
-Exit 1 on the first loop step, printing to stdout one line
+  1. REPEATED LINES: the stripped non-empty lines shorter than SHORT_LINE
+     characters include MIN_REPEATED_LINES or more distinct lines each
+     occurring MIN_OCCURRENCES or more times, AND the step's tokens.output is
+     at least MIN_OUTPUT_TOKENS.
+  2. MARKUP: some line of the step's text, after its leading whitespace is
+     stripped, BEGINS with "<|dsml|" or "</|" (U+FF5C FULLWIDTH VERTICAL LINE
+     in place of the pipe), the form a real leak takes: the model printed its
+     tool-call markup as text, so opencode got no tool call, one markup element
+     per line. Prose that merely quotes the token inline (e.g. inside backticks
+     mid-line) does not match. No token minimum.
+  3. ONE-LINE LOOP: a single stripped non-empty line, of ANY length, occurs
+     MIN_SAME_LINE or more times, AND the step's tokens.output is at least
+     MIN_OUTPUT_TOKENS.
+  4. CONTEXT CEILING: the step's context -- tokens.input + tokens.cache.read +
+     tokens.cache.write from its step_finish part (each missing value counts 0;
+     a non-numeric value counts 0) -- is greater than CONTEXT_CEILING
+     (default 100000). The environment variable INCURSION_DS_CONTEXT_CEILING
+     overrides it when it holds a positive integer; any other value is ignored.
+     No token minimum and no text tail.
 
-    loop messageID=<id> output_tokens=<n> repeated_lines=<n>
+Exit 1 on the first flagged step, printing to stdout one line
 
-then the last 600 characters of that step's text. Exit 0 with no output when no
-loop step is found. Exit 2 on a usage error or an unreadable file.
+    loop messageID=<id> output_tokens=<n> repeated_lines=<n>     (rule 1)
+    markup messageID=<id> output_tokens=<n>                      (rule 2)
+    loop messageID=<id> output_tokens=<n> same_line=<n>          (rule 3)
+    context messageID=<id> context_tokens=<n> ceiling=<n>        (rule 4)
+
+then the last 600 characters of that step's text (no tail for rule 4). Exit 0
+with no output when no step is flagged. Exit 2 on a usage error or an unreadable
+file.
 
 Used by tools/watchdog.sh as its --canary: run as
 `loop_check.py --out <events.jsonl>` it exits 1 on the first loop step found so
@@ -26,6 +48,7 @@ the watchdog stops a looping run the idle limit would never catch.
 """
 
 import json
+import os
 import sys
 from collections import Counter
 
@@ -33,8 +56,26 @@ MIN_REPEATED_LINES = 15
 MIN_OUTPUT_TOKENS = 2000
 SHORT_LINE = 40
 MIN_OCCURRENCES = 3
+MIN_SAME_LINE = 40
+
+CONTEXT_CEILING = 100000
+
+TOOL_MARKUP_OPEN = "<\uFF5CDSML\uFF5C"
+TOOL_MARKUP_CLOSE = "</\uFF5C"
 
 TAIL_CHARS = 600
+
+
+def context_ceiling():
+    raw = os.environ.get("INCURSION_DS_CONTEXT_CEILING")
+    if raw is not None:
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            return CONTEXT_CEILING
+        if value > 0:
+            return value
+    return CONTEXT_CEILING
 
 
 def usage_error(message):
@@ -110,6 +151,23 @@ def repeated_line_count(text):
     return sum(1 for count in counts.values() if count >= MIN_OCCURRENCES)
 
 
+def same_line_count(text):
+    visible = strip_code_fences(text)
+    counts = Counter(
+        line.strip() for line in visible.splitlines() if line.strip()
+    )
+    return max(counts.values()) if counts else 0
+
+
+def has_markup_leak(text):
+    visible = strip_code_fences(text)
+    for line in visible.splitlines():
+        stripped = line.lstrip()
+        if stripped.startswith(TOOL_MARKUP_OPEN) or stripped.startswith(TOOL_MARKUP_CLOSE):
+            return True
+    return False
+
+
 def step_texts_and_finishes(events):
     texts = {}
     finishes = []
@@ -138,6 +196,20 @@ def output_tokens(part):
     return None
 
 
+def context_tokens(part):
+    tokens = part.get("tokens") or {}
+    if not isinstance(tokens, dict):
+        return 0
+    cache = tokens.get("cache") or {}
+    if not isinstance(cache, dict):
+        cache = {}
+    total = 0
+    for value in (tokens.get("input"), cache.get("read"), cache.get("write")):
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            total += int(value)
+    return total
+
+
 def main(argv):
     path = parse_args(argv)
     events = read_events(path)
@@ -145,17 +217,53 @@ def main(argv):
 
     for mid, part in finishes:
         tokens = output_tokens(part)
-        if tokens is None or tokens < MIN_OUTPUT_TOKENS:
-            continue
         text = "".join(texts.get(mid, []))
-        repeated = repeated_line_count(text)
-        if repeated >= MIN_REPEATED_LINES:
+
+        # Rule 2: markup. The model printed its native tool-call markup as
+        # text, so opencode got no tool call. A real leak starts its markup at
+        # a line start; prose that quotes the token mid-line does not. No token
+        # minimum.
+        if has_markup_leak(text):
             sys.stdout.write(
-                "loop messageID=%s output_tokens=%d repeated_lines=%d\n"
-                % (mid, tokens, repeated)
+                "markup messageID=%s output_tokens=%s\n"
+                % (mid, tokens if tokens is not None else "?")
             )
             sys.stdout.write(text[-TAIL_CHARS:])
             sys.stdout.write("\n")
+            return 1
+
+        if tokens is not None and tokens >= MIN_OUTPUT_TOKENS:
+            # Rule 1: many distinct short repeated lines.
+            repeated = repeated_line_count(text)
+            if repeated >= MIN_REPEATED_LINES:
+                sys.stdout.write(
+                    "loop messageID=%s output_tokens=%d repeated_lines=%d\n"
+                    % (mid, tokens, repeated)
+                )
+                sys.stdout.write(text[-TAIL_CHARS:])
+                sys.stdout.write("\n")
+                return 1
+
+            # Rule 3: one line of any length repeated many times.
+            same = same_line_count(text)
+            if same >= MIN_SAME_LINE:
+                sys.stdout.write(
+                    "loop messageID=%s output_tokens=%d same_line=%d\n"
+                    % (mid, tokens, same)
+                )
+                sys.stdout.write(text[-TAIL_CHARS:])
+                sys.stdout.write("\n")
+                return 1
+
+        # Rule 4: the step's context passed the ceiling. Evaluated after the
+        # three loop rules for this step; no token minimum and no text tail.
+        ceiling = context_ceiling()
+        context = context_tokens(part)
+        if context > ceiling:
+            sys.stdout.write(
+                "context messageID=%s context_tokens=%d ceiling=%d\n"
+                % (mid, context, ceiling)
+            )
             return 1
 
     return 0

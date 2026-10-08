@@ -1757,6 +1757,40 @@ EvReturn Creature::FieldOn(EventInfo &e) {
                     IPrint("You enter a globe of pervasive shadows.");
                 break;
             case FI_MODIFIER:
+                /* upstream: CA_AURA_OF_MENACE was declared (inc/Defines.h),
+                   carried by seven monsters (lib/mon3.irh, lib/mon4.irh) and
+                   given a help string (src/Help.cpp), but no engine code ever
+                   read it, so it did nothing -- identically on Win32. The fix
+                   is ours. Traced, inc-bp44 / GitHub #562, not sent.
+                   Invariant: a hostile creature entering the owner's aura
+                    saves once (Will, DC 10 + half the owner's CR + CHA + 2);
+                   failure costs -2 hit, AC and save for 24 hours, success
+                   immunises it to that owner for 24 hours, and leaving the
+                   aura changes neither. */
+                if (e.EField->eID == FIND("Aura of Menace") &&
+                    e.EField->Creator && theRegistry->Exists(e.EField->Creator)) {
+                    Creature *owner = oCreature(e.EField->Creator);
+                    rID mID = e.EField->eID;
+                    if (owner && owner != this && isHostileTo(owner) &&
+                        owner->HasAbility(CA_AURA_OF_MENACE) &&
+                        !HasEffStati(ADJUST,  mID, -1, owner) &&
+                        !HasEffStati(EFF_FLAG1,mID, -1, owner)) {
+                        int16 dc = 10 + owner->ChallengeRating()/2 + owner->Mod(A_CHA) + 2;
+                        if (SavingThrow(WILL,dc,SA_MAGIC|SA_FEAR)) {
+                            GainTempStati(EFF_FLAG1,owner,MENACE_DURATION,SS_MISC,0,0,mID,0);
+                            if (!e.Terse)
+                                IPrint("You steel yourself against the aura of menace.");
+                        } else {
+                            GainTempStati(ADJUST,owner,MENACE_DURATION,SS_MISC,A_HIT,-2,mID,0);
+                            GainTempStati(ADJUST,owner,MENACE_DURATION,SS_MISC,A_DEF,-2,mID,0);
+                            GainTempStati(ADJUST,owner,MENACE_DURATION,SS_MISC,A_SAV,-2,mID,0);
+                            if (!e.Terse)
+                                IPrint("An aura of menace washes over you!");
+                        }
+                    }
+                    break;
+                }
+                {
                 EventInfo e2;
                 e2.Clear();
                 e2.eID = e.EField->eID;
@@ -1766,6 +1800,7 @@ EvReturn Creature::FieldOn(EventInfo &e) {
                 e2.vDuration = e.EField->Dur;
                 e2.Terse = e.Terse;
                 ReThrow(EV_EFFECT,e2);
+                }
                 break;
 
         }

@@ -747,7 +747,7 @@ Race "Dragonkin;race" : $"lizardfolk;race"
       Ability[CA_SPECIES_AFFINITY,MA_DRAGON,+1] at every level starting at 1st,
       Stati[DETECTING_TYPE,T_CORPSE,25] at 1st level,
       Stati[SKILL_BONUS,SK_JUMP,+2] at every level starting at 1st level,
-      Ability[CA_DEVOURING] at 1st level;
+      Feat[FT_CANNIBALISM] at 1st level;
     Desc: "<15>Str:<1>+2 <15>Dex:<1>+2 <15>Con:<1>+2 <15>Int:<1>-1 
       <15>Wis:<1>-- <15>Cha:<1>-2 <15>Luc:<1>-4
       \n<15>Favoured Classes:<2> Barbarian, Warrior
@@ -851,7 +851,7 @@ Race "Black Orc;race" : $"orc;race"
     Skills: SK_SPELLCRAFT, SK_KNOW_THEO, SK_CONCENTRATION;
     Grants:
       Stati[NEUTRAL_TO,MA_UNDEAD] at 1st level,
-      Ability[CA_DEVOURING] at 1st level,
+      Feat[FT_CANNIBALISM] at 1st level,
       Stati[SAVE_BONUS,SN_ENCH,-6] at 1st level,
       Ability[CA_MAGICAL_NATURE,+1] at every level starting at 2nd;
     On Event EV_STARTING_ITEM {

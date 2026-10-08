@@ -30,6 +30,7 @@
 # Usage:
 #     tools/package_macos.sh            build, package, verify
 #     DMG=yes tools/package_macos.sh    also produce a signed disk image
+#     INCURSION_ALLOW_DIRTY=1 tools/package_macos.sh   ship uncommitted tracked edits deliberately
 #
 # Signing is automatic when a Developer ID Application certificate is on the
 # keychain, and skipped with a note when it is not.
@@ -37,6 +38,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+"$ROOT/tools/require_clean_tree.sh"
 
 NAME="Incursion-macOS-$(uname -m)"
 DIST="$ROOT/dist"

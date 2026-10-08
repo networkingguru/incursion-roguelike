@@ -22,6 +22,11 @@
 # that a summoned human never strikes back: a hit on the player would write
 # Fought from the other direction and this script would stop measuring which
 # direction set it.
+#
+# THE RECALL NAVIGATION. [R]ecall now opens TextTerm::MonsterPrompt: a type
+# menu ("Humans (1)", since this character has met nothing else) and then a
+# kind menu ("human") before the usual description box, rather than the old
+# glyph browser's bare ENTER.
 
 @include chargen.keys
 
@@ -38,10 +43,17 @@ ESC
 d               # Display Character Sheet
 @expect "Gender"
 r               # [R]ecall Monster
-ENTER           # the human again, the same entry the unmet script photographs
+@dump:killed-type-menu
+@expect "Recall which monster?"
+@choose "Humans"
+@dump:killed-kind-menu
+@expect "Recall which monster?"
+@choose "human"
 @dump:killed-recall
+@expect "The Human"
 
 ESC             # dismiss the description box
+@expect "Gender"
 ESC             # leave the character sheet, back to play mode
 
 ESC             # System Menu -- and NOT a cancel

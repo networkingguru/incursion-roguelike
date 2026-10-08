@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# gate-serial: drives incursion-headless -schematest under a 120s wall-clock -timeout; CPU load could flip it
 # Round-trip check for the v1 save schema (docs/SAVE-SCHEMA-SPEC.md).
 # Drives `incursion-headless -schematest`, which runs one section per class
 # group. Each section builds objects through the LoadGroup allocation idiom,

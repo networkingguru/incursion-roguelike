@@ -1,0 +1,60 @@
+# Stage one melee attack whose attack roll is pinned from outside, so
+# tools/check_natural_one_attack.sh can read the engine's own verdict for a
+# forced natural 1, 2 and 20 (bd inc-bp2y).
+#
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.sav \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOF_FORCE_ROLL=1 \
+#       tools/headless.sh tools/keys/natural-one-attack.keys 1
+#
+# Read the result with tools/check_natural_one_attack.sh, which is what
+# asserts; this file only produces the session.
+#
+# THE SUBJECT is the frozen orc mage of tools/fixtures/chars/orc-mage-seed1-
+# opt0822.sav (Melee +3). "Natural One Attack Test God" (tools/fixtures/
+# natural-one-attack-god.irh, spliced onto a scratch module by the check)
+# grants +30 to hit on joining, so 3 + 30 = +33 beats any summoned goblin's
+# Defense even on a forced roll of 1. The defect is therefore load-bearing:
+# the arithmetic alone hits, and only the natural-1 clause can miss.
+#
+# THE ORACLE is the game's own attack line in the message log --
+# "Attack: 1d20 (n) ... vs. Def D [hit|miss]" (src/Fight.cpp) -- which
+# OPT_STORE_ROLLS keeps in the scrolling history. 'v' opens the history and
+# @dump:messages photographs it; the check reads the [hit|miss] verdict off
+# that line. INCURSION_LOF_FORCE_ROLL pins the d20 (src/Fight.cpp's
+# LOFInitForcedRoll), so one run per forced value covers each case.
+#
+# Freeze Monsters (the eleventh row of the Wizard Mode Switches list) stops
+# the goblin acting, so the only Attack line in the log is the player's own.
+# The "Become Divine Champion" blessing grants the to-hit bonus; the ESC
+# answers whatever the blessing's messages left open.
+
+w
+@expect "Enter wizard mode"
+y
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+w
+@choose "Become Divine Champion"
+"Natural One Attack Test God" ENTER
+@until "HP:" ESC
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT
+ENTER
+
+# One melee blow at the goblin one square east.
+RIGHT
+@while "Confirm attack" y
+@dump:attacked
+
+v
+@dump:messages
+@while "Messages" ESC
+@quit

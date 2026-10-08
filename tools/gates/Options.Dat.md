@@ -39,7 +39,7 @@ are applied on top of it. Nothing else changed.
 
 | Option | idx | old | new | Why |
 |---|---|---|---|---|
-| `OPT_GENDER` | 107 | 2 | 2 (no-op here; was already fixed in the base file) | Create.cpp:157 asks "Is this character male or female?" only when this is 0 (ASK). Any other value skips it. MALE chosen over RANDOM for a deterministic harness. |
+| `OPT_GENDER` | 107 | 2 | 2 (no-op here; was already fixed in the base file) | Create.cpp:639 asks "Is this character male or female?" only when this is 0 (ASK). Any other value skips it. MALE chosen over RANDOM for a deterministic harness. |
 | `OPT_AUTOMORE` | 201 | 0 | 1 | The `--more--` suppressor named directly in inc-loa.4. Off by default: any message-window overflow becomes a keystroke-eating prompt. |
 | `OPT_STOP_INTER` | 303 | 1 | 0 | The one `OPT_STOP_*` run-interrupter that defaulted ON. Stopping a running character mid-script leaves the next scripted key landing somewhere unplanned. |
 | `OPT_LOWHP_WARN` | 307 | 3 | 0 | Suppresses the low-HP message outright, per "cut off all warnings about everything." Not itself blocking (`OPT_LOWHP_AGG`, already off, is the blocking one) but still unrequested output. |
@@ -66,25 +66,25 @@ die... Die? [yn]" prompt inc-loa.3 instrumented:
 * `OPT_ELUDE_DEATH` (idx 119): **3** (SEVEN free deaths), unchanged. Not
   named by inc-loa.4's text, but it is the mechanism actually firing the
   prompt here since `OPT_NODEATH` is 0 -- see `if (thisp->Opt(OPT_NODEATH))
-  ... else if (Opt(OPT_ELUDE_DEATH))` at src/Fight.cpp:7763-7779. Left as
+  ... else if (Opt(OPT_ELUDE_DEATH))` at src/Fight.cpp:9151-9167. Left as
   pinned rather than defaulted (game default is 0/NO) because changing it
   changes whether a soak character can die at all, which is exactly the
   decision the boundary reserves for Brian.
 
 ## What this does NOT fix, and why
 
-* **"Invalid depth."** (Debug.cpp:807) -- refused wizard depth-jumps past
+* **"Invalid depth."** (Debug.cpp:808) -- refused wizard depth-jumps past
   `DUN_DEPTH`. Not gated by any option; it is `tools/keys/dive.keys` asking
   for depths the dungeon does not have. inc-loa.2's territory.
-* **"Abort, Flee or Disengage?"** (Move.cpp:841) -- confirmed by reading
+* **"Abort, Flee or Disengage?"** (Move.cpp:970) -- confirmed by reading
   every `Opt(OPT_` check in Move.cpp that no option gates it. Worse than a
-  single eaten keystroke: `ChoicePrompt` (Term.cpp:2823) blocks in its input
-  loop (`:2858`) until the key is one of `a`/`f`/`d`/`?`, or ESC. See
+  single eaten keystroke: `ChoicePrompt` (Term.cpp:2839) blocks in its input
+  loop (`:2874`) until the key is one of `a`/`f`/`d`/`?`, or ESC. See
   inc-loa.5, filed the night this file was written, with the repro.
   **The freeze claim this paragraph carried is no longer safe.** It said the
   session was frozen for the rest of its run because `dive.keys` presses none
   of those keys. `f7ff2d7` (2026-08-28) added arrow-key navigation and made
-  ENTER take the highlighted choice (`src/Term.cpp:2863-2864`), and this call
+  ENTER take the highlighted choice (`src/Term.cpp:2879-2880`), and this call
   passes four choices (`"afd?"`), so ENTER now leaves the prompt -- and
   `dive.keys` presses ENTER 36 times. Whether a session still freezes depends
   on where in the queue the prompt fires, and that has not been re-measured.

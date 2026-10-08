@@ -861,7 +861,7 @@ void Character::Exchange()
       { IPrint("You need to set your default melee and ranged weapons "
                "before you can use the swap weapons command effectively. "
                "Type '?' on the inventory window for more information.");
-        goto XAbort; }
+        goto XAbortNoItem; }
         
     if (Inv[SL_WEAPON] && oItem(Inv[SL_WEAPON])->isCursed())
       {
@@ -885,7 +885,7 @@ void Character::Exchange()
           if (Inv[si] == defRanged)
             { sl1 = si; goto foundRanged; }
         IPrint("Your default ranged weapon isn't easily accessible right now.");
-        goto XAbort;
+        goto XAbortNoItem;
 
         foundRanged:
         new1 = oItem(defRanged);
@@ -898,7 +898,7 @@ void Character::Exchange()
         }
       else {
         IPrint("You have no default ranged weapon selected.");
-        goto XAbort;
+        goto XAbortNoItem;
         }
       }
     else {
@@ -907,7 +907,7 @@ void Character::Exchange()
           if (Inv[si] == defMelee)
             { sl1 = si; goto foundMelee; }
         IPrint("Your default melee weapon isn't easily accessible right now.");
-        goto XAbort;
+        goto XAbortNoItem;
 
         foundMelee:
         if (!defOffhand)
@@ -916,7 +916,7 @@ void Character::Exchange()
           if (Inv[si] == defOffhand)
             { sl2 = si; goto foundBoth; }
         IPrint("Your default offhand weapon isn't easily accessible right now.");
-        goto XAbort;
+        goto XAbortNoItem;
 
         foundBoth:
         new1 = oItem(defMelee);
@@ -935,7 +935,7 @@ void Character::Exchange()
           if (Inv[si] == defOffhand)
             { sl2 = si; goto foundOffOnly; }
         IPrint("Your default offhand weapon isn't easily accessible right now.");
-        goto XAbort;
+        goto XAbortNoItem;
 
         foundOffOnly:
         new1 = NULL;
@@ -946,7 +946,7 @@ void Character::Exchange()
         }
       else {
         IPrint("You have no default melee weapon selected.");
-        goto XAbort;
+        goto XAbortNoItem;
         }
       }
 
@@ -1073,6 +1073,15 @@ Abort:
     if (HasFeat(FT_QUICK_DRAW))
       Timeout /= 4;
       
+XAbortNoItem:
+    /* upstream: the fumble message MUST appear only when an item is actually
+       dropped. The early paths (no default weapons, a default not accessible,
+       none selected) arrive before old1/old2/new1/new2 are set and drop
+       nothing; XAbort below still prints it wherever something can drop.
+       Tier Observed; inc-3ax; not sent. */
+    isExchange = false;
+    return;
+
 XAbort:
     /* Put everything back where it was by the brute force method. */
     IPrint("You fumble the items you were trying to exchange, dropping them!");
@@ -1171,42 +1180,65 @@ EvReturn Container::PickLock(EventInfo &e)
     e.EActor->IPrint("Your hands pass through the <Obj>.",this); 
     return ABORT; 
   } 
-  if (HasStati(TRIED, SK_LOCKPICKING, e.EActor)) { 
-    e.EActor->IPrint("You have already tried to pick the lock on the <Obj>.",this);
-    return ABORT; 
-  } 
-  if (!((e.EActor->isPlayer() &&
-          ((Player *)e.EActor)->Opt(OPT_AUTOOPEN)) || 
-        e.EActor->yn(XPrint("Pick the <Obj>'s lock?",this),true)))
-    return ABORT;
-  e.EActor->Timeout += 30;
-  int diff = 19 + m->Depth;
-  if (HasStati(WIZLOCK) && !HasStati(WIZLOCK,-1,e.EActor)) {
-    e.EActor->IPrint("The <Obj> is more difficult to pick.",this);
-    diff += 10; 
+  /* inc-h22n: a repeating pick was already approved; do not ask again. An
+     untrained player is refused before the prompt and stops. */
+  /* inc-1xr3: one base DC for the prompt and the attempt. */
+  int16 lockDC = 25 + 2 * m->Depth;
+  if (!e.EActor->HasStati(ACTING, EV_PICKLOCK)) {
+    if (!CanPickLock(e.EActor))
+      return ABORT;
+    String lockPrompt = XPrint("Pick the <Obj>'s lock?",this);
+    if (e.EActor->isPlayer())
+      lockPrompt = Format("%s (Lockpicking %d~)",
+          (const char*)lockPrompt,
+          e.EActor->SkillCheckChance(SK_LOCKPICKING, PickLockDC(e.EActor, lockDC)));
+    if (!((e.EActor->isPlayer() &&
+            ((Player *)e.EActor)->Opt(OPT_AUTOOPEN)) ||
+          e.EActor->yn(lockPrompt,true)))
+      return ABORT;
   }
-  if (e.EActor->SkillCheck(SK_LOCKPICKING,diff,true,
-        GetStatiMag(RETRY_BONUS,SK_LOCKPICKING,e.EActor),"retry")) { 
-    e.EActor->IDPrint("You pick the lock!",
-        "The <Obj> picks the lock on the <Obj>.",
-        e.EActor, this);
+  /* inc-h22n: the attempt (DC, wizard lock, roll, messages, XP, repeat) is
+     shared with doors; the chest keeps its own unlock step and, on failure,
+     stops. DC is 25 + 2*depth, +10 if wizard-locked by another. */
+  if (PickLockAttempt(e.EActor, lockDC, EV_PICKLOCK)) {
     RemoveStati(LOCKED); 
-    RemoveStati(TRIED,SS_MISC,SK_LOCKPICKING); 
-    if (!HasStati(TRIED,DF_LOCKED,this) && 
-        !HasStati(SUMMONED,-1,this)) {
-      // see DisarmTrap() 
-      e.EActor->GainXP(90 + (diff - 14) * 10);
-      GainPermStati(TRIED,this,SS_ATTK,DF_LOCKED);
-    } 
     return NOTHING; 
-  } else { 
-    e.EActor->IDPrint("You fail to pick the lock on the <Obj2>. (You can try again after resting.)",
-        "The <Obj1> tries to pick the lock on the <Obj2>, but fails.",
-        e.EActor, this);
-    BoostRetry(SK_LOCKPICKING,e.EActor);
-    GainTempStati(TRIED,e.EActor,-2,SS_MISC,SK_LOCKPICKING); 
-    return ABORT; 
   }
+  return ABORT; 
+}
+
+/* The normal-limit tests that govern a container in play: weight, item count,
+   size and content type, each doubled by Faster-Than-The-Eye where Insert
+   doubles it. Returns which test the item fails, or FITS. The caller supplies
+   packrat so this and KitToPack's spare-weapon placement read one rule. */
+int Container::FitsNormal(Item *it, bool packrat)
+{
+  TItem *ti = TITEM(iID);
+  int32 w = Weight();
+
+  /* Creation seats items in the pack before arranging them; when the item is
+     already a child, Weight() counts it, so subtract it to ask whether the
+     pack could hold it. Insert always calls with an unparented item. */
+  if (it->GetParent() == (Thing*)this)
+    w -= it->Weight();
+
+  if (ti->u.c.WeightLim)
+    if (w + it->Weight() >
+        (ti->u.c.WeightLim * (packrat ? 2 : 1)))
+      return FITS_WEIGHT;
+
+  int cap = ti->u.c.Capacity * (packrat ? 2 : 1);
+  if (cap)
+    if ((*this)[cap])
+      return FITS_COUNT;
+
+  if (it->Size() > ti->u.c.MaxSize + packrat)
+    return FITS_SIZE;
+
+  if (ti->u.c.CType && !it->isType(ti->u.c.CType))
+    return FITS_TYPE;
+
+  return FITS;
 }
 
 EvReturn Container::Insert(EventInfo &e, bool force)
@@ -1263,31 +1295,25 @@ EvReturn Container::Insert(EventInfo &e, bool force)
   // put anything in the backpack ... because there isn't really
   // anywhere to drop it if we fail! 
   else { 
-    /* Check Capacity, Weight, etc. */
-    if (ti->u.c.WeightLim)
-      if (Weight() + e.EItem2->Weight() > 
-          (TITEM(iID)->u.c.WeightLim * (packrat ? 2 : 1)))
+    /* Check Capacity, Weight, etc. The tests live in FitsNormal so creation's
+       spare-weapon placement reads the same rule (inc-zzwm). */
+    switch (FitsNormal(e.EItem2, packrat))
+    {
+    case FITS_WEIGHT:
+      e.EActor->IPrint("The <Obj> can't hold that much weight.",e.EItem);
+      return ABORT;
+    case FITS_COUNT:
       {
-        e.EActor->IPrint("The <Obj> can't hold that much weight.",e.EItem);
-        return ABORT;
-      }
-    int cap = ti->u.c.Capacity * (packrat ? 2 : 1); 
-    if (cap)
-      if ((*this)[cap])
-      {
+        int cap = ti->u.c.Capacity * (packrat ? 2 : 1);
         e.EActor->IPrint("The <Obj> can only hold <Num> item<Str>.",
             e.EItem,cap,cap == 1 ? "" : "s"); 
-        return ABORT;
       }
-    if (e.EItem2->Size() > ti->u.c.MaxSize + packrat)
-    {
+      return ABORT;
+    case FITS_SIZE:
       e.EActor->IPrint("The <Obj> is too large to fit in the <Obj2>.",
           e.EItem2, e.EItem);
       return ABORT;
-    }
-
-    if (ti->u.c.CType && !e.EItem2->isType(ti->u.c.CType))
-    {
+    case FITS_TYPE:
       s = Lookup(ITypeNames, ti->u.c.CType);
       s = s.Lower();
       e.EActor->IPrint("The <Obj> can only hold <Str>.",

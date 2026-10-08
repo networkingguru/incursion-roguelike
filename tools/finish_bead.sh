@@ -62,7 +62,7 @@ BASE_BRANCH="${INCURSION_BASE_BRANCH:-master}"
 # The gate that must be green before anything reaches master. Overridable so a
 # caller can substitute a cheaper check knowingly; the default is the one
 # CLAUDE.md names as this project's answer to hosted CI.
-GATE_CMD="${INCURSION_FINISH_GATE:-tools/nightly_verify.sh --compare}"
+GATE_CMD="${INCURSION_FINISH_GATE:-tools/nightly_verify.sh --landing}"
 GATE_OVERRIDDEN=0
 [ -n "${INCURSION_FINISH_GATE:-}" ] && GATE_OVERRIDDEN=1
 
@@ -80,8 +80,9 @@ SHARED="$(git -C "$ROOT" worktree list --porcelain \
 
 WORKTREE_PARENT="$(dirname "$SHARED")"
 
+# inc-1boo: the id accepts any number of dotted numeric sub-ids.
 is_bead_id() {
-    printf '%s' "$1" | grep -Eq '^inc-[a-z0-9]+(\.[0-9]+)?$'
+    printf '%s' "$1" | grep -Eq '^inc-[a-z0-9]+(\.[0-9]+)*$'
 }
 
 # Where a scratch checkout of master can live without colliding with anything.
@@ -140,6 +141,16 @@ selftest() {
     out="$("$SCRIPT" not-a-bead-id 2>&1)"; status=$?
     [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: malformed id returned $status, expected 1"; return 1; }
     case "$out" in *"is not a bead id"*) ;; *) echo "SELFTEST FAIL: malformed id said: $out"; return 1;; esac
+
+    # inc-1boo: is_bead_id accepts any number of dotted numeric suffixes, and
+    # still refuses malformed ids. Called directly so nothing is landed.
+    local id
+    for id in inc-tek.8.3 inc-a.1.2.3; do
+        is_bead_id "$id" || { echo "SELFTEST FAIL: '$id' was not a bead id"; return 1; }
+    done
+    for id in inc-tek. inc-tek..3 inc-tek.8.a INC-tek; do
+        is_bead_id "$id" && { echo "SELFTEST FAIL: '$id' was accepted as a bead id"; return 1; }
+    done
 
     out="$("$SCRIPT" inc-zzzzzz 2>&1)"; status=$?
     [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: unknown branch returned $status, expected 1"; return 1; }
@@ -259,6 +270,7 @@ LOCK_KEY="$(printf '%s' "$BASE_BRANCH" | tr '/' '_')"
 LOCK_PARENT="$SHARED/.git/finish-bead-locks"
 LOCK_DIR="$LOCK_PARENT/$LOCK_KEY.lock"
 LOCK_HELD=0
+LOCK_SIG=""
 
 release_lock() {
     # Only the process that still owns the lock may remove it: a waiter that
@@ -298,14 +310,26 @@ acquire_lock() {
     local waited=0 holder_pid holder_bead holder_started
     mkdir -p "$LOCK_PARENT" || cannot "could not create $LOCK_PARENT"
     while true; do
+        # Defer INT/TERM across the critical section: a signal landing between
+        # mkdir taking the dir and LOCK_HELD=1 used to exit with the dir left
+        # behind, since release_lock only removes a dir it knows it owns. Record
+        # the signal instead, finish claiming the lock, then act on it. inc-fdkz.
+        trap 'LOCK_SIG=130' INT
+        trap 'LOCK_SIG=143' TERM
         if mkdir "$LOCK_DIR" 2>/dev/null; then
+            LOCK_HELD=1
             printf '%s\n' "$$" > "$LOCK_DIR/pid"
             printf '%s\n' "$BEAD" > "$LOCK_DIR/bead"
             ps -o lstart= -p "$$" > "$LOCK_DIR/started"
-            LOCK_HELD=1
+            trap 'exit 130' INT
+            trap 'exit 143' TERM
+            [ -n "$LOCK_SIG" ] && exit "$LOCK_SIG"
             [ "$waited" -eq 0 ] || echo "finish_bead: lock on $BASE_BRANCH acquired."
             return 0
         fi
+        trap 'exit 130' INT
+        trap 'exit 143' TERM
+        [ -n "$LOCK_SIG" ] && exit "$LOCK_SIG"
         holder_pid="$(cat "$LOCK_DIR/pid" 2>/dev/null)"
         holder_bead="$(cat "$LOCK_DIR/bead" 2>/dev/null)"
         holder_started="$(cat "$LOCK_DIR/started" 2>/dev/null)"
@@ -331,6 +355,16 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 acquire_lock
+
+# One check, here, before any work: an overloaded machine makes a correct gate
+# look red (inc-g9wz, inc-xn7g, inc-fdkz). Refuse rather than wait; the EXIT
+# trap above releases the lock. inc-rwha.
+if [ "${INCURSION_LOAD_GUARD_OFF:-}" = "1" ]; then
+    echo "finish_bead: load guard bypassed by INCURSION_LOAD_GUARD_OFF=1"
+elif ! "$ROOT/tools/load_guard.sh"; then
+    cannot "the machine is overloaded, so the gate would measure load, not the bead.
+Nothing reached $BASE_BRANCH. Retry when the machine is quieter."
+fi
 
 git -C "$SHARED" show-ref --verify --quiet "refs/heads/$BEAD" \
     || die "REFUSED: there is no branch $BEAD.
@@ -377,6 +411,23 @@ Nothing has reached $BASE_BRANCH."
     fi
 fi
 
+# STEP 3b. The fast set, run in the worktree, for seconds of feedback before
+# the gate. Exit 1 means a fast check failed, so the landing stops before the
+# gate, matching STEP 4's refusal. Exit 2 (could not measure) warns and goes on.
+if [ "${INCURSION_NO_FAST_CHECKS:-}" = "1" ]; then
+    echo "=== fast checks SKIPPED (INCURSION_NO_FAST_CHECKS=1) ==="
+else
+    echo "=== fast checks ==="
+    ( cd "$WORKTREE" && tools/fast_checks.sh )
+    _inc_fast=$?
+    if [ "$_inc_fast" -eq 1 ]; then
+        die "STOPPED: a fast check failed in STEP 3b on $BEAD.
+Nothing has reached $BASE_BRANCH. Fix it in $WORKTREE and run this again."
+    elif [ "$_inc_fast" -ne 0 ]; then
+        echo "=== fast checks could not measure (exit $_inc_fast); continuing to the gate ==="
+    fi
+fi
+
 # STEP 4. The gate, run in the worktree, against the merged result.
 #
 # THE CARVE-OUT. A bead that changes nothing but markdown used to pay for both
@@ -393,32 +444,32 @@ fi
 # would be the hole this comment exists to deny.
 #
 # IT FAILS CLOSED, THREE WAYS. An explicit INCURSION_FINISH_GATE is honoured
-# untouched, a verdict of 1 runs the full gate, and a verdict of 2 -- the
-# classifier could not measure -- runs the full gate too. The only path to the
-# cheap gate is a classifier that ran and said yes.
+# untouched, a verdict of 1 runs the landing gate, and a verdict of 2 -- the
+# classifier could not measure -- runs the landing gate too. The only path to
+# the cheap gate is a classifier that ran and said yes.
 #
 # THE SECOND CARVE-OUT asks a different question: have these exact files
-# already passed the full gate? A landing interrupted after a green gate, or a
-# gate run before the commit, used to pay for the whole gate again (inc-689z).
-# So a verdict of 1 runs --reuse-pass. It looks for the record that a full
-# pass leaves, re-runs the cheap tier when one matches, and runs the full gate
-# when none does. It does not widen the docs-only allowlist, and a verdict of
-# 2 does not reach it.
+# already passed the landing gate? A landing interrupted after a green gate, or
+# a gate run before the commit, used to pay for the whole gate again (inc-689z).
+# So a verdict of 1 runs --landing --reuse-pass. It looks for the record that a
+# landing pass leaves, re-runs the cheap tier when one matches, and runs the
+# landing gate when none does. It does not widen the docs-only allowlist, and a
+# verdict of 2 does not reach it.
 if [ "$RUN_GATE" -eq 1 ] && [ "$GATE_OVERRIDDEN" -eq 0 ]; then
     DOCS_VERDICT="$("$ROOT/tools/docs_only_change.sh" "$BASE_BRANCH" "$BEAD" 2>&1)"
     case $? in
         0) echo "=== $DOCS_VERDICT ==="
            echo "=== gate scaled down: builds and the live tier cannot be reached by *.md ==="
            GATE_CMD="tools/nightly_verify.sh --docs-only" ;;
-        1) GATE_CMD="tools/nightly_verify.sh --reuse-pass" ;;
-        *) echo "=== docs-only classifier could not measure; running the full gate ==="
+        1) GATE_CMD="tools/nightly_verify.sh --landing --reuse-pass" ;;
+        *) echo "=== docs-only classifier could not measure; running the landing gate ==="
            echo "$DOCS_VERDICT" ;;
     esac
 fi
 
 if [ "$RUN_GATE" -eq 1 ]; then
     echo "=== gate: $GATE_CMD ==="
-    if ! ( cd "$WORKTREE" && eval "$GATE_CMD" ); then
+    if ! ( cd "$WORKTREE" && export INCURSION_LANDING_DIFF_REF="$BASE_BRANCH" && eval "$GATE_CMD" ); then
         die "STOPPED: the gate is red on $BEAD after merging $BASE_BRANCH.
 Nothing has reached $BASE_BRANCH. Fix it in $WORKTREE and run this again.
 If the gate cannot measure here rather than failing, re-run with --no-gate and

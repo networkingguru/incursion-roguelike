@@ -681,6 +681,13 @@ Terrain "pit"
   { 
     Image: brown GLYPH_PIT; Mat:MAT_GRANITE; 
     Flags: TF_WARN, TF_SPECIAL, TF_SHOWNAME, TF_PIT; 
+    Constants:
+      /* inc-1xr3: the Climb check the prompt advertises and the handler
+         below rolls when leaving the pit, so the number shown cannot
+         drift from the number rolled. Entering is a certain fall; the
+         note is about climbing out. */
+      * WARN_SKILL SK_CLIMB,
+      * WARN_DC 20;
     On Event EV_ENTER {
       if (EActor->isAerial())
         return NOTHING;
@@ -700,12 +707,17 @@ Terrain "pit"
       return ABORT;
       },
     PRE(EV_MOVE) {
+      int16 sk, dc;
+      /* inc-1xr3: this terrain's own constants, the same ones
+         TerrainRiskNote reports in the prompt. */
+      sk = $"pit"->GetConst(WARN_SKILL);
+      dc = $"pit"->GetConst(WARN_DC);
       if (EActor->isAerial())
         return NOTHING;
       if (EActor->HasStati(PRONE))
         return NOTHING;
       EActor->Timeout += 30;
-      if (!EActor->SkillCheck(SK_CLIMB,20,true)) {
+      if (!EActor->SkillCheck(sk,dc,true)) {
         EActor->IPrint("You try to climb out of the pit, but fall back in!");
         ThrowDmg(EV_DAMAGE,AD_FALL,(max(1,min(EMap->Depth,2)))d6,
           "failing to climb out of a pit trap",EActor,EActor);

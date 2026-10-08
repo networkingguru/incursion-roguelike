@@ -34,7 +34,7 @@ and "What Task 9 must do" below.
 ## What it is
 
 `Game::MDataSeg[i]` is one flat byte block per loaded module. Its length is
-`MDataSegSize[i]`, computed at `src/Main.cpp:632` as:
+`MDataSegSize[i]`, computed at `src/Main.cpp:739` as:
 
 ```
 szDataSeg + ( szMon*sizeof(MonMem) + szItm*sizeof(ItemMem)
@@ -49,15 +49,15 @@ The block has two parts, in this order (Traced):
    global variable is a bare index into it (`MEMORY(pv)` in `VMachine::Value1`,
    `src/VMachine.cpp:347`).
 2. **The per-player resource memory rows** — bytes `[szDataSeg, MDataSegSize)`.
-   `Module::GetMemoryPtr` (`src/Res.cpp:719`) addresses these arithmetically;
-   it starts its offset at `szDataSeg` (`src/Res.cpp:722`, `ptr = szDataSeg`)
+   `Module::GetMemoryPtr` (`src/Res.cpp:742`) addresses these arithmetically;
+   it starts its offset at `szDataSeg` (`src/Res.cpp:753`, `ptr = szDataSeg`)
    and adds `MonMem`/`ItemMem`/`EffMem`/`RegMem` rows keyed by the resource's
    position. Those rows are what the spec's "resource memory segment" section
    replaces with name-keyed records; this note is only about part 1 in front of
    them.
 
-`szDataSeg` is a serialized field of the `Module` object (`inc/Res.h:848`,
-`FIELD_I32(2, szDataSeg)`; declared at `inc/Res.h:988`).
+`szDataSeg` is a serialized field of the `Module` object (`inc/Res.h:852`,
+`FIELD_I32(2, szDataSeg)`; declared at `inc/Res.h:992`).
 
 ## How it is written
 
@@ -65,12 +65,12 @@ The block has two parts, in this order (Traced):
 central finding.)
 
 - A grep of `src/` and `inc/` for an assignment to `szDataSeg` finds none. The
-  compiler assigns its two siblings — `szCodeSeg` at `src/RComp.cpp:196` and
-  `szTextSeg` at `src/RComp.cpp:445` — but never `szDataSeg`.
+  compiler assigns its two siblings — `szCodeSeg` at `src/RComp.cpp:200` and
+  `szTextSeg` at `src/RComp.cpp:449` — but never `szDataSeg`.
 - `Module` is created with `new Module`, and `Object::operator new` zeroes the
-  whole allocation (`inc/Base.h:668`, `memset(vp,0,sz + pad)`). So `szDataSeg`
+  whole allocation (`inc/Base.h:669`, `memset(vp,0,sz + pad)`). So `szDataSeg`
   starts at 0 and, absent any assignment, stays 0 through compile and through
-  the serialize at `inc/Res.h:848`.
+  the serialize at `inc/Res.h:852`.
 - The VM's global-variable machinery does exist: the grammar assigns each
   global an address `Address = HeapHead++` (`lang/Grammar.acc:1363`, generated
   into `src/yygram.cpp:7797`), where `HeapHead` is a plain counter starting at 0
@@ -84,15 +84,15 @@ this port**: the region in front of the memory rows is empty.
 ### Measurements
 
 Method: the resource compiler writes each module as an LZ-compressed group
-(`src/Registry.cpp:1460`, `SaveGroup(..., true, true)`; the compress happens at
-`src/Registry.cpp:808`). Inside the group each object is written as one type
-byte then its raw struct bytes (`src/Registry.cpp:760` and `:762`). A scratch C
+(`src/Registry.cpp:1467`, `SaveGroup(..., true, true)`; the compress happens at
+`src/Registry.cpp:810`). Inside the group each object is written as one type
+byte then its raw struct bytes (`src/Registry.cpp:762` and `:764`). A scratch C
 harness (`scratchpad/modpeek3.c`) decompresses the group with the game's own
 `LZ_Uncompress` and reads `szTextSeg`, `szDataSeg`, `szCodeSeg` straight out of
 the `Module` struct image. The read is cross-checked: the `szTextSeg` value must
 equal the size of the module's `QTextSeg` data node, and it does, which fixes
 the field offset beyond doubt. The `Module` struct is 49464 bytes, matching the
-pin at `inc/Res.h:833`.
+pin at `inc/Res.h:837`.
 
 Three modules, all built at HEAD `0e62b33`:
 
@@ -189,11 +189,11 @@ Rejected alternatives:
    of `MDataSeg[i]`. Today that blob is empty.
 2. Write the resource memory *rows* that follow (bytes `[szDataSeg, MDataSegSize)`)
    as the name-keyed records the spec requires. These replace the raw
-   `FIELD_BLOB` at `inc/Res.h:1234` and its embed at `inc/Res.h:1231`.
+   `FIELD_BLOB` at `inc/Res.h:1234` and its embed at `inc/Res.h:1257`.
 3. On load, after the loaded module is known, compare the saved segment length
    against the loaded module's `szDataSeg`. If they differ, throw `ECORRUPT`.
    If they match (always, today), copy the blob to the front of the freshly
-   allocated `MDataSeg[i]` (allocated at `src/Main.cpp:638`) and lay the
+   allocated `MDataSeg[i]` (allocated at `src/Main.cpp:745`) and lay the
    name-keyed rows in behind it.
 
 **If a future change wires `szDataSeg` to `HeapHead` and a global ever holds an

@@ -1,0 +1,152 @@
+# inc-9smo case B: mounted, thrown tanglefoot bag. See tanglefoot-wait50.keys.
+@include chargen-paladin.keys
+@until "Afoot" ESC
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE
+DOWN*9
+SPACE
+ESC
+y
+@choose "Mount"
+LEFT ENTER
+@dump:mounted
+SPACE SPACE
+w
+@choose "Item Acquisition"
+@until "Tanglefoot bag" RIGHT
+ENTER
+@dump:acquired
+@while "In the Air':Tanglefoot" s
+@while "Ready Hand" ESC
+a
+@choose "(ground) tanglefoot bag"
+ENTER
+@dump:thrown
+RIGHT
+@while "Confirm" y
+@dump:try1
+RIGHT
+@while "Confirm" y
+@dump:try2
+RIGHT
+@while "Confirm" y
+@dump:try3
+w
+@choose "Examine Player Data"
+DOWN*148
+@dump:mount-t0
+ESC
+.
+.
+@dump:w02
+.
+.
+@dump:w04
+.
+.
+@dump:w06
+.
+.
+@dump:w08
+.
+.
+@dump:w10
+.
+.
+@dump:w12
+.
+.
+@dump:w14
+.
+.
+@dump:w16
+.
+.
+@dump:w18
+.
+.
+@dump:w20
+.
+.
+@dump:w22
+.
+.
+@dump:w24
+.
+.
+@dump:w26
+.
+.
+@dump:w28
+.
+.
+@dump:w30
+w
+@choose "Examine Player Data"
+DOWN*148
+@dump:mount-w30
+ESC
+.
+.
+@dump:w32
+.
+.
+@dump:w34
+w
+@choose "Examine Player Data"
+DOWN*148
+@dump:mount-w34
+ESC
+.
+.
+@dump:w36
+.
+.
+@dump:w38
+w
+@choose "Examine Player Data"
+DOWN*148
+@dump:mount-w38
+ESC
+.
+.
+@dump:w40
+.
+.
+@dump:w42
+.
+.
+@dump:w44
+.
+.
+@dump:w46
+.
+.
+@dump:w48
+.
+.
+@dump:w50
+.
+.
+@dump:w52
+.
+.
+@dump:w54
+.
+.
+@dump:w56
+.
+.
+@dump:w58
+.
+.
+@dump:w60
+w
+@choose "Examine Player Data"
+DOWN*148
+@dump:mount-w60
+ESC
+@quit

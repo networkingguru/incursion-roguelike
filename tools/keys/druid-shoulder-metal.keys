@@ -1,0 +1,76 @@
+# inc-d9gk: load druid-shoulder-metal-seed7-opt0822.sav.
+# Five measurements use the same character and the same sword, in one run.
+# The last two put a thrown-only weapon (bolas) in the weapon hand, in place of
+# the bow. A javelin does not qualify: its group holds WG_SPEARS, so
+# Item::thrownOnly() is false for it.
+i
+@dump:left-gear
+ESC
+m PGDN*20
+@expect "Chance:"
+@dump:left-spell
+ESC
+d
+@expect "Defense Class"
+@dump:left-sheet
+ESC
+i e SPACE f SPACE
+@dump:right-gear
+ESC
+m PGDN*20
+@expect "Chance:"
+@dump:right-spell
+ESC
+d
+@expect "Defense Class"
+@dump:right-sheet
+ESC
+# Both shoulders empty; drop this same sword on the ground.
+i f SPACE d
+@dump:neither-gear
+ESC
+m PGDN*20
+@expect "Chance:"
+@dump:neither-spell
+ESC
+d
+@expect "Defense Class"
+@dump:neither-sheet
+ESC
+# Thrown-only weapon in the weapon hand; the bow goes to the ground.
+w
+@choose "Item Acquisition"
+RIGHT*9
+@until "Bolas" DOWN
+DOWN
+ENTER
+i b SPACE n d
+@dump:thrownnone-gear
+ESC
+m PGDN*20
+@expect "Chance:"
+@dump:thrownnone-spell
+ESC
+d
+@expect "Defense Class"
+@dump:thrownnone-sheet
+ESC
+# The same sword on the left shoulder again.
+w
+@choose "Item Acquisition"
+RIGHT*9
+@until "Long sword" DOWN
+DOWN
+ENTER
+i e SPACE
+@dump:thrownleft-gear
+ESC
+m PGDN*20
+@expect "Chance:"
+@dump:thrownleft-spell
+ESC
+d
+@expect "Defense Class"
+@dump:thrownleft-sheet
+ESC
+@quit

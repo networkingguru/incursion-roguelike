@@ -1,0 +1,6 @@
+# Case "new orc" of tools/check_racial_cannibalism.sh (bd inc-6at2): a NEW
+# Lawful Good orc paladin finishes a brown bear corpse, then quits. The quit
+# saves, and INCURSION_CHAR_PROBE=1 makes that save write logs/charprobe.txt,
+# whose "Feats:" list is the second oracle.
+@include cannibal-orc-chargen.keys
+@include cannibalism-feat-meal.keys

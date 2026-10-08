@@ -117,6 +117,8 @@ as concealment.
 See `docs/REPORTING-GATE.md` for the separate rule that a public claim needs an
 oracle that changed state, with numbers on both sides.
 
+2026-10-04 (inc-k2le): Brian added a second exemption for the GitHub Wiki. Asked whether wiki pages generated verbatim from the game's help could update without his read each time, he answered: "y, exempt it". Hand-written wiki pages are not covered.
+
 ## If you are Codex
 
 Claude plans and reviews. You implement. These rules hold on every run, whether
@@ -193,6 +195,24 @@ or git. A main session read it as "Brian at the keyboard" and reported
 `check_convert_guard.sh` as human-only while landing inc-pu6v.102. Brian
 ruled the same day that nothing in the repository should need his hands on
 the keyboard.
+
+2026-10-01, bead inc-gcmr: `check_dump_save.sh` left the list, so four checks
+remain. It calls `./incursion` only when that binary is built, and an
+implementer's worktree builds only the headless one, so the check skips its
+graphical step there and runs the rest inside the sandbox. The list had made
+the check unfixable: no implementer could edit it, and the orchestrator rule
+barred the main session from editing it too. It had failed unnoticed since
+2026-09-18 (inc-93w9). Brian approved the removal the same day.
+
+2026-10-01, bead inc-6vl9: added "Your brief IS your go". On inc-w431,
+DeepSeek in opencode read "No autonomous work — propose, then wait" as binding
+on itself, proposed three new files and stopped. Brian answered "y". Claude
+then added an approval line to the brief to re-dispatch it. The auto-mode
+classifier denied that edit, and later denied a read-only read of the run's
+output, both as "Auto-Mode Bypass": an approval written by the dispatcher
+looks like a way around the implementer's guard. Brian asked for a rule so
+this class of block never occurs again. With the go stated in AGENTS.md, the
+implementer does not stop, and no approval text is ever written into a brief.
 
 ## Marking base-code bugs
 

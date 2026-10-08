@@ -38,8 +38,16 @@ class Feature: public Thing
     }
 		virtual String & Name(int16 Flags=0);
 		virtual String & Describe(Player *p);
-		virtual void StatiOn(Status s);
-    virtual void StatiOff(Status s);
+    virtual void StatiOn(Status s);
+    /* upstream: base-code defect, the fix is ours. Thing::StatiOff (inc/Map.h)
+       is virtual with (Status s, bool elapsed = false) and Feature::StatiOff
+       declared only (Status s), so the derived declaration hid the base instead
+       of overriding it. The one call, in the stati-expiry macro in inc/Map.h,
+       goes through a Thing*, so this body (src/Feature.cpp) never ran and a
+       summoned door never vanished. An arity difference is a different function
+       under MSVC on Win32 with the upstream compiler too; no typedef of this
+       port is involved. Observed; inc-rgzr; not sent. */
+    virtual void StatiOff(Status s, bool elapsed = false);
     EvReturn Event(EventInfo &e);
     virtual int8 Material() {
       return TFEAT(fID)->Material;
@@ -54,7 +62,7 @@ class Door: public Feature
     END_ARCHIVE
 
 		public:
-		Door(rID fID);
+		Door(rID fID, int16 depth = 0);
     ~Door();
 		EvReturn Event(EventInfo &e);
 		void SetImage();
@@ -106,6 +114,8 @@ class Trap: public Feature
       int16 TrapLevel()
         { return TEFF(tID)->Level; }
       EvReturn TriggerTrap(EventInfo &e, bool foundBefore);
+      void AvoidSave(bool foundBefore, uint32 &saveType, int16 &DC);
+      int16 AvoidChance(Creature *cr, bool foundBefore);
   };
 
 

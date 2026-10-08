@@ -1,0 +1,40 @@
+# inc-jkyf: a creature with WATER_BREATHING must be treated like an amphibian
+# by deep water (no Swim roll, no drowning, no warning prompt). Wear the Ring of
+# Elemental Command (Water), which grants WATER_BREATHING through its EA_GRANT
+# (lib/m_items.irh:5113), then place one square of deep water east of the
+# player and step into it. Read by tools/check_water_breathing.sh.
+#   ring-on   the ring is on a finger (the grant is the ring's).
+#   pool      the deep water square exists east of the player.
+#   prompt    the screen right after the step east: the "Confirm enter the deep
+#             water?" prompt must NOT be there.
+#   entered   y answers the prompt only if one showed (@while).
+#   steps     two more steps east, so a Swim check or drowning would print.
+
+@include chargen.keys
+
+w
+y
+@choose "Item Acquisition"
+RIGHT*26
+@until "Ring of Item Preservation" DOWN
+ENTER
+m
+SPACE
+@dump:ring-on
+ESC
+
+w
+@choose "Change terrain type"
+RIGHT ENTER
+@choose "deep water"
+@dump:pool
+
+RIGHT
+@dump:prompt
+@while "Confirm enter the deep water" y
+@dump:entered
+RIGHT
+RIGHT
+@dump:steps
+
+@quit

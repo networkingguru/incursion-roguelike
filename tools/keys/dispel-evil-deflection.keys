@@ -1,0 +1,71 @@
+# inc-5v5l: does Dispel Evil's +4/+6 deflection bonus (component 0, xval
+# TRAP_EVENT, yval EVICTIM(EV_STRIKE)) actually apply on a REAL attack, not
+# just get read from code?
+#
+# THE SCENE. A fresh orc priest of Aiswin (chargen-priest.keys) turns on
+# Infinite Mana only (Wizard Mode Switches row 8 -- src/Tables.cpp's Wizard
+# Options list: Cheat Death, Auto-Identify Items, Free Advancement, Infinite
+# Fatigue, Always Rest Safely, Ignore Spell Failure, Know All Spells,
+# Infinite Mana is the 8th), so casting the level-5, 16-mana spell is never
+# refused for mana. Learns Dispel Evil through Learn Any Spell and casts it
+# -- no Free Advancement, because the deflection bonus is a flat +4/+6, not
+# scaled by caster level. Freeze Monsters is left OFF on purpose: a summoned
+# goblin one square east (RIGHT ENTER, adjacent) is hostile and, left
+# unfrozen, attacks the caster on its own turn. '.' (Wait One Turn) lets it
+# act three times, which is more than enough for one goblin turn.
+#
+# THE ORACLE is the game's own combat-roll line, already stored in the
+# message log because OPT_STORE_ROLLS is on in tools/gates/Options.Dat
+# (src/Fight.cpp:9831-9836 prints "Attack: 1d20 (n) ... vs. Def [<breakdown>
+# = N][hit/miss]", and the handler's own e.strDef append -- src/Fight.cpp's
+# generic breakdown, this spell's own " +N DispEv" -- lands inside that
+# bracket). tools/check_dispel_evil.sh pages the whole log ('v', PGUP*100,
+# then PGDN) and greps for "DispEv" in an "Attack:" line. The goblin is the
+# only creature in the scene that can attack the caster, so any such line is
+# unambiguous.
+
+@include chargen-priest.keys
+ESC
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*7
+SPACE
+ESC
+
+w
+@choose "Learn Any Spell"
+"Dispel Evil" ENTER
+@dump:learned
+
+m
+@choose "Dispel Evil"
+@dump:after-cast
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+@dump:goblin-summoned
+
+.
+@while "more --" SPACE
+@dump:after-wait-1
+.
+@while "more --" SPACE
+@dump:after-wait-2
+.
+@while "more --" SPACE
+@dump:after-wait-3
+
+v
+@dump:messages-bottom
+PGUP*100
+@dump:messages-top
+PGDN*1
+@dump:messages-mid1
+PGDN*1
+@dump:messages-mid2
+@while "Messages" ESC
+@quit

@@ -105,7 +105,7 @@ Dungeon "Monster Evaluation Arena"
 Feature "oak door" : T_DOOR {
   Image: brown '-';
   Mat:MAT_WOOD;
-  HP: 20; 
+  HP: 10; 
 }
 
 Feature "ice door" : T_DOOR {
@@ -119,7 +119,7 @@ Feature "ice door" : T_DOOR {
 Feature "iron door" : T_DOOR {
   Image: grey '-';
   Mat:MAT_IRON;
-  HP: 40; 
+  HP: 60; 
 }
 
 Feature "darkwood door" : T_DOOR {
@@ -137,7 +137,7 @@ Feature "vault door" : T_DOOR {
 
 Feature "warded oak door" : T_DOOR
   {
-    Image: purple '-'; Mat:MAT_WOOD; HP: 20; 
+    Image: purple '-'; Mat:MAT_WOOD; HP: 10; 
     Desc: "This door has been imbued with mystic runes that keep out
     (or perhaps keep in) incorporeal threats. It is solid (when
     not opened) to creatures on other planes."; 
@@ -949,6 +949,16 @@ Feature "verdant bloom" : T_FEATURE
 Terrain "thorn wall"
   { Image: green GLYPH_HEDGE; Mat:MAT_VEGGY; 
     Flags: TF_TREE, TF_OPAQUE, TF_WARN, TF_SPECIAL, TF_SHOWNAME; Mov: 15%; 
+    Constants:
+      /* inc-1xr3: the Escape Artist check the prompt advertises and this
+         handler rolls, so the number shown cannot drift from the number
+         rolled. */
+      * WARN_SKILL SK_ESCAPE_ART,
+      * WARN_DC 30,
+      /* inc-1xr3 phase 2i: the 25 slashing the handler deals on a passed
+         check. Flat damage, so it lives in WARN_DMG_BONUS with no dice. */
+      * WARN_DMG_BONUS 25,
+      * WARN_DMG_TYPE AD_SLASH;
     On Event EV_MON_CONSIDER {
       if (EActor->HasAbility(CA_WOODLAND_STRIDE) ||
           EActor->onPlane() != PHASE_MATERIAL ||
@@ -970,10 +980,21 @@ Terrain "thorn wall"
       return NOTHING;
       };
     On Event EV_MOVE {
+      int16 sk, dc, dmg;
+      /* inc-1xr3: this terrain's own constants, the same ones
+         TerrainRiskNote reports in the prompt. Read them from this
+         handler's resource literal, never from the square EActor
+         currently stands on: on a move INTO the terrain that is the
+         OLD square, whose GetConst returns 0. */
+      sk = $"thorn wall"->GetConst(WARN_SKILL);
+      dc = $"thorn wall"->GetConst(WARN_DC);
+      /* inc-1xr3 phase 2i: the damage the note reports, rolled from the
+         same constants (WARN_DMG_BONUS holds the flat 25). */
+      dmg = $"thorn wall"->GetConst(WARN_DMG_BONUS);
       if (EActor->HasAbility(CA_WOODLAND_STRIDE) ||
           EActor->onPlane() != PHASE_MATERIAL)
         return NOTHING;
-      if (!EActor->SkillCheck(SK_ESCAPE_ART,30,true,false))
+      if (!EActor->SkillCheck(sk,dc,true,false))
         {
           DPrint(e,"You are still tangled in the thorn wall!",
             "An <EActor> remains tangled in the thorn wall!");
@@ -982,7 +1003,7 @@ Terrain "thorn wall"
           EActor->Timeout += 30;
           return ABORT;
         }
-      ThrowTerraDmg(EV_DAMAGE,AD_SLASH,25,"a wall of thorns",EActor, $"thorn wall"); 
+      ThrowTerraDmg(EV_DAMAGE,AD_SLASH,dmg,"a wall of thorns",EActor, $"thorn wall"); 
       return NOTHING;
     };
     Desc: "A towering wall of thorns. Moving out of a thorn wall requires a
@@ -998,10 +1019,19 @@ Terrain "thorn wall"
 Terrain "stinking cloud;terrain"
   { Image: green '~'; Mat:MAT_EMPTYNESS; 
     Flags: TF_OBSCURE, TF_SHOWNAME, TF_WARN, TF_SPECIAL; 
+    Constants:
+      /* inc-1xr3: the Fortitude save the prompt advertises and this
+         handler rolls, so the number shown cannot drift from the number
+         rolled. WARN_SAVE holds the save type + 1 (FORT is 0, so 0+1=1). */
+      * WARN_SAVE 1,
+      * WARN_SAVE_DC 20;
     On Event EV_MOVE {
+      int16 sv, svdc;
+      sv = $"stinking cloud;terrain"->GetConst(WARN_SAVE) - 1;
+      svdc = $"stinking cloud;terrain"->GetConst(WARN_SAVE_DC);
       if (EActor->onPlane() == PHASE_MATERIAL &&
           EActor->isMType(MA_BREATHER) && 
-          !EActor->SavingThrow(FORT,20))
+          !EActor->SavingThrow(sv,svdc))
         EActor->GainTempStati(NAUSEA,EVictim,2d4,SS_ENCH,0,0,
           $"stinking cloud");
     } , EV_MON_CONSIDER {
@@ -1048,6 +1078,13 @@ Terrain "solid fog bank"
 Terrain "acid fog"
   { Image: brown '~'; Mat:MAT_EMPTYNESS; 
     Flags: TF_OBSCURE, TF_SHOWNAME, TF_SPECIAL, TF_WARN; 
+    Constants:
+      /* inc-1xr3 phase 2i: the 1d6 acid the handler deals per move. Dice
+         are split across two constants, as with bed of spikes. No skill
+         or save: this terrain's risk is the damage alone. */
+      * WARN_DMG_NUM 1,
+      * WARN_DMG_SIDES 6,
+      * WARN_DMG_TYPE AD_ACID;
     On Event EV_MON_CONSIDER {
       if ((EActor->onPlane() != PHASE_MATERIAL) ||
           (EActor->ResistLevel(AD_ACID) == -1) ||
@@ -1057,9 +1094,14 @@ Terrain "acid fog"
         return ABORT; 
     } ;
     On Event EV_MOVE, EV_STRIKE, EV_CAST {
+      int16 dn, ds;
+      /* inc-1xr3 phase 2i: roll 1d6 acid from this terrain's constants,
+         the same ones TerrainRiskNote reports. */
+      dn = $"acid fog"->GetConst(WARN_DMG_NUM);
+      ds = $"acid fog"->GetConst(WARN_DMG_SIDES);
       if (EActor->onPlane() != PHASE_MATERIAL)
         return NOTHING;
-      ThrowTerraDmg(EV_DAMAGE,AD_ACID,1d6,"acid fog",EActor, $"acid fog"); 
+      ThrowTerraDmg(EV_DAMAGE,AD_ACID,(dn)d(ds),"acid fog",EActor, $"acid fog"); 
       if (EActor->isDead())
         return ABORT;
       if (EActor->ResistLevel(AD_ACID) < 6) {
@@ -1083,6 +1125,14 @@ Terrain "acid fog"
 Terrain "pool of grease"
   { Image: yellow GLYPH_WATER on brown; Mat:MAT_OIL; /* Flammable! */
     Flags: TF_WARN, TF_SPECIAL, TF_NOGEN, TF_SHOWNAME; 
+    Constants:
+      /* inc-1xr3 phase 2j: the Balance DC is max(15, the map square's
+         TerraDC), because a grease spell can be cast at a higher DC. The
+         handler reads WARN_DC and the map; WARN_DC_FROM_MAP tells the note to
+         do the same. No damage -- a failure trips. */
+      * WARN_SKILL SK_BALANCE,
+      * WARN_DC 15,
+      * WARN_DC_FROM_MAP 1;
     hObj mount;
     On Event EV_MON_CONSIDER {
       if (EActor->HasStati(ON_BRIDGE))
@@ -1127,7 +1177,7 @@ Terrain "pool of grease"
             mount->isMType(MA_OOZE) ||
             mount->HasMFlag(M_INCOR))
           return NOTHING; 
-        if (!mount->SkillCheck(SK_BALANCE,max(15,EMap->GetTerraDC(EActor->x,EActor->y)),true,false)) {
+        if (!mount->SkillCheck(SK_BALANCE,max($"pool of grease"->GetConst(WARN_DC),EMap->GetTerraDC(EActor->x,EActor->y)),true,false)) {
           DPrint(e,"Your mount slips and falls!", 
                    "An <EActor>'s mount slips and falls!");
           ThrowTerraDmg(EV_DAMAGE,AD_TRIP,-1,"pool of grease",mount, $"pool of grease"); 
@@ -1141,7 +1191,7 @@ Terrain "pool of grease"
             || EActor->HasMFlag(M_INCOR) 
             || EActor->isAerial())
           return NOTHING;
-        if (!EActor->SkillCheck(SK_BALANCE,max(15,EMap->GetTerraDC(EActor->x,EActor->y)),true,false)) {
+        if (!EActor->SkillCheck(SK_BALANCE,max($"pool of grease"->GetConst(WARN_DC),EMap->GetTerraDC(EActor->x,EActor->y)),true,false)) {
           DPrint(e,"You slip and fall!",
               "An <EActor> slips and falls!");
           ThrowTerraDmg(EV_DAMAGE,AD_TRIP,-1,"pool of grease",EActor, $"pool of grease"); 
@@ -1360,6 +1410,12 @@ Terrain "storm of sleet"
   { Image: bright cyan '~' on blue; Mat:MAT_ICE;
     Flags: TF_SPECIAL, TF_SHOWNAME, TF_OBSCURE, TF_WARN; Move: 50%;  
     hObj mount;
+    Constants:
+      /* inc-1xr3: the Balance check the mount prompt advertises and this
+         handler rolls, so the number shown cannot drift from the number
+         rolled. */
+      * WARN_SKILL SK_BALANCE,
+      * WARN_DC 10;
     On Event EV_MON_CONSIDER {
       if (!EActor) return ABORT; 
       mount = EActor->GetStatiObj(MOUNTED);
@@ -1370,6 +1426,11 @@ Terrain "storm of sleet"
       return NOTHING; 
     } ;
     On Event PRE(EV_MOVE), PRE(EV_STRIKE), PRE(EV_JUMP_OFF), EV_LAND {
+      int16 sk, dc;
+      /* inc-1xr3: this terrain's own constants, the same ones
+         TerrainRiskNote reports in the prompt. */
+      sk = $"storm of sleet"->GetConst(WARN_SKILL);
+      dc = $"storm of sleet"->GetConst(WARN_DC);
       if (!EActor) return ABORT; 
       if (EActor->HasStati(ON_BRIDGE))
         return NOTHING;
@@ -1386,7 +1447,7 @@ Terrain "storm of sleet"
              ( (EItem && !EItem->useStrength()) ||
                (EItem2 && !EItem2->useStrength()) )))
           return NOTHING; 
-        if (!mount->SkillCheck(SK_BALANCE,10,true,false))
+        if (!mount->SkillCheck(sk,dc,true,false))
           {
             DPrint(e,"Your mount slips on the ice!",
               "An <EActor>'s mount slips on the ice!");
@@ -1404,7 +1465,7 @@ Terrain "storm of sleet"
              ( (EItem && !EItem->useStrength()) ||
                (EItem2 && !EItem2->useStrength()) )))
         return NOTHING;
-      if (!EActor->SkillCheck(SK_BALANCE,10,true,false))
+      if (!EActor->SkillCheck(sk,dc,true,false))
         {
           DPrint(e,"You slip on the ice!",
             "An <EActor> slips on the ice!");
@@ -1424,6 +1485,19 @@ Terrain "storm of sleet"
 Terrain "bed of spikes"
   { Image: brown '^'; Mat:MAT_GRANITE; Mov: 50%;
     Flags: TF_WARN, TF_SPECIAL, TF_SHOWNAME;
+    Constants:
+      /* inc-1xr3: the Escape Artist check the prompt advertises and this
+         handler rolls, so the number shown cannot drift from the number
+         rolled. */
+      * WARN_SKILL SK_ESCAPE_ART,
+      * WARN_DC 15,
+      /* inc-1xr3 phase 2i: the 1d8 piercing the handler deals on a passed
+         check. A dice literal is not a cexpr3 scalar, so the die is split
+         across WARN_DMG_NUM/WARN_DMG_SIDES; the handler rolls them as a
+         dice expression so the note and the roll cannot drift. */
+      * WARN_DMG_NUM 1,
+      * WARN_DMG_SIDES 8,
+      * WARN_DMG_TYPE AD_PIERCE;
     On Event EV_MON_CONSIDER {
       if (EActor->isAerial() || EActor->HasAbility(CA_WOODLAND_STRIDE) 
            || EActor->HasStati(ON_BRIDGE))
@@ -1432,13 +1506,21 @@ Terrain "bed of spikes"
         return ABORT; 
       }; 
     On Event EV_MOVE {
+      int16 sk, dc, dn, ds;
+      /* inc-1xr3: this terrain's own constants, the same ones
+         TerrainRiskNote reports in the prompt. */
+      sk = $"bed of spikes"->GetConst(WARN_SKILL);
+      dc = $"bed of spikes"->GetConst(WARN_DC);
+      /* inc-1xr3 phase 2i: roll 1d8 from this terrain's constants. */
+      dn = $"bed of spikes"->GetConst(WARN_DMG_NUM);
+      ds = $"bed of spikes"->GetConst(WARN_DMG_SIDES);
       if (EActor->isAerial() || EActor->HasAbility(CA_WOODLAND_STRIDE))
         return NOTHING;
       if (EActor->HasStati(ON_BRIDGE))
         return NOTHING;
       if (EActor->isIllusion())
         return NOTHING;
-      if (!EActor->SkillCheck(SK_ESCAPE_ART,15,true,false))
+      if (!EActor->SkillCheck(sk,dc,true,false))
         {
           DPrint(e,"You are still tangled in the spikes!",
             "An <EActor> remains tangled in the spikes!");
@@ -1447,7 +1529,7 @@ Terrain "bed of spikes"
           EActor->Timeout += 30;
           return ABORT;
         }
-      ThrowTerraDmg(EV_DAMAGE,AD_PIERCE,1d8,"a bed of spikes",EActor, $"bed of spikes"); 
+      ThrowTerraDmg(EV_DAMAGE,AD_PIERCE,(dn)d(ds),"a bed of spikes",EActor, $"bed of spikes"); 
       return NOTHING;
       };
   }
@@ -1614,6 +1696,12 @@ Terrain "deep water"
   { Image: blue GLYPH_WATER; Mat:MAT_LIQUID;
     Flags: TF_SHOWNAME, TF_SPECIAL, TF_WATER, TF_WARN, TF_DEEP_LIQ; 
     hObj mount;
+    Constants:
+      /* inc-1xr3: the Swim check the prompt advertises and this handler
+         rolls, so the number shown cannot drift from the number rolled. */
+      * WARN_SKILL SK_SWIM,
+      * WARN_DC 10,
+      * WARN_MARGIN 5;
     On Event EV_DROP {
       DPrint(e,"The <EItem> is quickly swept away.",
                "The <EActor> drops an <EItem>, and it is quickly swept away.");
@@ -1638,7 +1726,16 @@ Terrain "deep water"
       return ABORT; 
     },
     EV_MOVE, PRE(EV_STRIKE), EV_LAND, PRE(EV_CAST) {
-      int16 res;
+      int16 res, sk, dc, margin;
+      /* inc-1xr3: read this terrain's own constants, the same ones
+         TerrainRiskNote reports in the prompt, from this handler's
+         resource literal. Reading them from EActor's square made the
+         check depend on where EActor stands: on a move INTO the water
+         that square is the OLD one, whose GetConst returns 0, giving
+         SkillCheck(0,0) which always passes. */
+      sk = $"deep water"->GetConst(WARN_SKILL);
+      dc = $"deep water"->GetConst(WARN_DC);
+      margin = $"deep water"->GetConst(WARN_MARGIN);
       // We only want to apply terrain limitations if the caster is present at this location.
       if (e.Event == PRE(EV_CAST) && e.isLoc) {
         if (EActor->x != e.EXVal || EActor->y != e.EYVal) {
@@ -1649,7 +1746,15 @@ Terrain "deep water"
         return NOTHING;
       mount = EActor->GetStatiObj(MOUNTED);
       if (mount) {
+        /* upstream: WATER_BREATHING is defined (inc/Defines.h) and granted --
+           Kysul's blessing, and the Ring of Elemental Command (Water),
+           lib/m_items.irh:5114 -- but never read anywhere, so the same defect
+           ships on Win32 with the original typedefs and compiler. Both water
+           terrains here now honour it exactly as M_AMPHIB. Tier Observed,
+           tools/check_water_breathing.sh; tracking bd inc-jkyf; not sent to
+           rmtew. */
         if (mount->HasMFlag(M_AMPHIB) ||
+            mount->HasStati(WATER_BREATHING) ||
             mount->isMType(MA_AQUATIC) ||
             mount->isMType(MA_WATER) ||
             mount->HasMFlag(M_INCOR) ||
@@ -1657,11 +1762,11 @@ Terrain "deep water"
             mount->HasStati(WATER_WALKING) ||
             mount->isAerial())
           return NOTHING;
-        mount->SkillCheck(SK_SWIM,10,true,false);
-        res = LastSkillCheckResult() - 10;
+        mount->SkillCheck(sk,dc,true,false);
+        res = LastSkillCheckResult() - dc;
         if (res >= 0)
           return NOTHING;
-        else if (res >= -5) {
+        else if (res >= -margin) {
           EActor->Timeout += 30;
           EActor->IPrint("Your mount fails to make progress in the water.");
           return ABORT;
@@ -1677,6 +1782,7 @@ Terrain "deep water"
         } 
       } 
       if (EActor->HasMFlag(M_AMPHIB) ||
+          EActor->HasStati(WATER_BREATHING) ||
           EActor->isMType(MA_AQUATIC) ||
           EActor->isMType(MA_WATER) ||
           EActor->HasMFlag(M_INCOR) ||
@@ -1685,11 +1791,11 @@ Terrain "deep water"
           EActor->isAerial())
         return NOTHING;
 
-      EActor->SkillCheck(SK_SWIM,10,true,false);
-      res = LastSkillCheckResult() - 10;
+      EActor->SkillCheck(sk,dc,true,false);
+      res = LastSkillCheckResult() - dc;
       if (res >= 0)
         return NOTHING;
-      else if (res >= -5) {
+      else if (res >= -margin) {
         EActor->Timeout += 30;
         EActor->IPrint("You fail to make progress in the water.");
         return ABORT;
@@ -1708,6 +1814,7 @@ Terrain "deep water"
         return NOTHING;
       if (mount) {
         if (mount->HasMFlag(M_AMPHIB) ||
+            mount->HasStati(WATER_BREATHING) ||
             mount->isMType(MA_AQUATIC) ||
             mount->isMType(MA_WATER) ||
             mount->HasMFlag(M_INCOR) ||
@@ -1719,6 +1826,7 @@ Terrain "deep water"
           return NOTHING;
       } else { 
         if (EActor->HasMFlag(M_AMPHIB) ||
+            EActor->HasStati(WATER_BREATHING) ||
             EActor->isMType(MA_AQUATIC) ||
             EActor->isMType(MA_WATER) ||
             EActor->HasMFlag(M_INCOR) ||
@@ -1738,8 +1846,9 @@ Terrain "deep water"
     through it requires a Swim skill check (DC 10). Failure means the 
     action is aborted (but it still takes time). Failure by more than 5
     means that you start drowning and take 6d2 points of damage.
-    Amphibians, aquatic creatures, water creatures, water alkers,
-    flyers, and creatures that don't breathe always succeed. Blunt and
+    Amphibians, aquatic creatures, water creatures, water walkers,
+    flyers, creatures that can breathe water, and creatures that don't
+    breathe always succeed. Blunt and
     slashing attacks deal half damage in water squares.
       \n__Water Combat: Thrown weapons are ineffective against targets in
       the water. Fire damage is ineffective against targets in the water
@@ -1756,6 +1865,15 @@ Terrain "turbulent water"
   { Image: cyan GLYPH_WATER; Mat:MAT_LIQUID;
     Flags: TF_SHOWNAME, TF_SPECIAL, TF_WATER, TF_WARN, TF_DEEP_LIQ; 
     hObj mount;
+    Constants:
+      /* inc-1xr3: the Swim check the prompt advertises and the player's
+         own handler below rolls, so the number shown cannot drift from
+         the number rolled. The mounted branch at ~:1863 still rolls a
+         literal DC 10; that is a separate mismatch reported, not fixed
+         here. WARN_DC matches the unmounted (player) roll and the Desc. */
+      * WARN_SKILL SK_SWIM,
+      * WARN_DC 20,
+      * WARN_MARGIN 5;
       
     WATER_COMBAT; 
 
@@ -1783,8 +1901,15 @@ Terrain "turbulent water"
       return ABORT; 
     },
     EV_MOVE, PRE(EV_STRIKE), EV_LAND, PRE(EV_CAST) {
-      int16 res;
+      int16 res, sk, dc, margin;
       bool progress; 
+      /* inc-1xr3: this terrain's own constants, the same ones
+         TerrainRiskNote reports in the prompt. The mounted branch below
+         keeps its literal DC 10; only the player's own check reads them,
+         so no roll changes. */
+      sk = $"turbulent water"->GetConst(WARN_SKILL);
+      dc = $"turbulent water"->GetConst(WARN_DC);
+      margin = $"turbulent water"->GetConst(WARN_MARGIN);
       if (EActor->HasStati(ON_BRIDGE))
         return NOTHING;
       progress = true; 
@@ -1794,6 +1919,7 @@ Terrain "turbulent water"
             mount->isAerial())
           return NOTHING; 
         if (mount->HasMFlag(M_AMPHIB) ||
+            mount->HasStati(WATER_BREATHING) ||
             mount->isMType(MA_AQUATIC) ||
             mount->HasMFlag(M_INCOR) ||
             mount->isMType(MA_WATER) ||
@@ -1814,13 +1940,16 @@ Terrain "turbulent water"
             mount->GainTempStati(EXPOSED,NULL,2,SS_MISC,0,2);
             ThrowTerraDmg(EV_DAMAGE,AD_NORM,6d4,"drowning",mount, $"turbulent water");
             ThrowTerraDmg(EV_DAMAGE,AD_SOAK,16d4,"drowning",mount, $"turbulent water");
-            ThrowTerraDmg(EV_DAMAGE,AD_NORM,3d4,"drowning",EActor, $"turbulent water");
-            ThrowTerraDmg(EV_DAMAGE,AD_SOAK,8d4,"drowning",EActor, $"turbulent water");
+            if (!EActor->HasStati(WATER_BREATHING)) {
+              ThrowTerraDmg(EV_DAMAGE,AD_NORM,3d4,"drowning",EActor, $"turbulent water");
+              ThrowTerraDmg(EV_DAMAGE,AD_SOAK,8d4,"drowning",EActor, $"turbulent water");
+            }
             progress = false; 
           } 
         }
       } 
       if (EActor->HasMFlag(M_AMPHIB) ||
+          EActor->HasStati(WATER_BREATHING) ||
           EActor->isMType(MA_AQUATIC) ||
           EActor->isMType(MA_WATER) ||
             EActor->HasMFlag(M_INCOR) ||
@@ -1829,11 +1958,11 @@ Terrain "turbulent water"
           EActor->isAerial()) {
         // actor is OK ...
       } else if (!EActor->isDead()) { 
-        EActor->SkillCheck(SK_SWIM,20,true,false);
-        res = LastSkillCheckResult() - 20;
+        EActor->SkillCheck(sk,dc,true,false);
+        res = LastSkillCheckResult() - dc;
         if (res >= 0)
           return NOTHING;
-        else if (res >= -5) {
+        else if (res >= -margin) {
           EActor->Timeout += 30;
           EActor->IPrint("You fail to make progress in the water.");
           ThrowTerraDmg(EV_DAMAGE,AD_SOAK,1d4,"drowning",EActor, $"turbulent water");
@@ -1863,6 +1992,7 @@ Terrain "turbulent water"
             mount->isAerial())
           return NOTHING; 
         if (mount->HasMFlag(M_AMPHIB) ||
+            mount->HasStati(WATER_BREATHING) ||
             mount->isMType(MA_AQUATIC) ||
             mount->isMType(MA_WATER) ||
             mount->HasMFlag(M_INCOR) ||
@@ -1874,6 +2004,7 @@ Terrain "turbulent water"
         } 
       } 
       if (EActor->HasMFlag(M_AMPHIB) ||
+          EActor->HasStati(WATER_BREATHING) ||
           EActor->isMType(MA_AQUATIC) ||
           EActor->isMType(MA_WATER) ||
             EActor->HasMFlag(M_INCOR) ||
@@ -1889,7 +2020,8 @@ Terrain "turbulent water"
     or attack through it requires a Swim skill check (DC 20). Failure means
     the action is aborted (but it still takes time). Failure by more than 5
     means that you start drowning and take 6d4 points of damage.
-    Amphibians, aquatic creatures and water creatures always succeed. Blunt
+    Amphibians, aquatic creatures, water creatures and creatures that can
+    breathe water always succeed. Blunt
     and slashing attacks deal half damage in water squares.
       \n__Water Combat: Thrown weapons are ineffective against targets in
       the water. Fire damage is ineffective against targets in the water
@@ -1909,6 +2041,13 @@ Terrain "turbulent water"
 Terrain "magma"
   { Image: pink GLYPH_LAVA; Mat:MAT_MAGMA; 
     Flags: TF_WARN, TF_SPECIAL, TF_SHOWNAME, TF_LOCAL_LIGHT, TF_DEEP_LIQ; 
+    Constants:
+      /* inc-1xr3 phase 2i: the 6d6 fire the handler deals per move, minus
+         ResistLevel(AD_FIRE). Dice split across two constants; no skill or
+         save -- this terrain's risk is the damage alone. */
+      * WARN_DMG_NUM 6,
+      * WARN_DMG_SIDES 6,
+      * WARN_DMG_TYPE AD_FIRE;
     Desc: "Magma deals 6d6 points of fire damage to your or your mount
     as you cross it, land on it or jump out of it."; 
     hObj mount;
@@ -1941,7 +2080,11 @@ Terrain "magma"
       return ABORT; 
     } ;
     On Event EV_MOVE, EV_JUMP_OFF, EV_LAND, EV_STRIKE {
-      int16 r, dmg; 
+      int16 r, dmg, dn, ds; 
+      /* inc-1xr3 phase 2i: roll 6d6 from this terrain's constants, the same
+         ones TerrainRiskNote reports. */
+      dn = $"magma"->GetConst(WARN_DMG_NUM);
+      ds = $"magma"->GetConst(WARN_DMG_SIDES);
       if (!GetHandle(EActor)) return ABORT; 
       if (EActor->HasStati(ON_BRIDGE))
         return NOTHING;
@@ -1956,7 +2099,7 @@ Terrain "magma"
           return NOTHING;
         r = mount->ResistLevel(AD_FIRE);
         if (r == -1) return NOTHING;
-        dmg = (6d6) - r;
+        dmg = (dn)d(ds) - r;
         if (dmg <= 0) return NOTHING;
         ThrowTerraDmg(EV_DAMAGE,AD_FIRE,dmg,"magma",mount,$"magma");
         DPrint(e,"Your mount is burned by the magma!",
@@ -1970,7 +2113,7 @@ Terrain "magma"
           return NOTHING;
       r = EActor->ResistLevel(AD_FIRE);
       if (r == -1) return NOTHING;
-      dmg = (6d6) - r;
+      dmg = (dn)d(ds) - r;
       if (dmg <= 0) return NOTHING;
       ThrowTerraDmg(EV_DAMAGE,AD_FIRE,dmg,"magma",EActor,$"magma");
       if (EActor->isDead())
@@ -1993,6 +2136,13 @@ Terrain "magma"
 Terrain "brimstone"
   { Image: red GLYPH_LAVA; Mat:MAT_MAGMA;
     Flags: TF_WARN, TF_SPECIAL, TF_SHOWNAME, TF_LOCAL_LIGHT, TF_DEEP_LIQ; 
+    Constants:
+      /* inc-1xr3 phase 2j: the handler deals 1d6 fire, minus
+         ResistLevel(AD_FIRE); the die lives in WARN_DMG_NUM/WARN_DMG_SIDES so
+         the warning note reports the same roll magma's note does. */
+      * WARN_DMG_NUM 1,
+      * WARN_DMG_SIDES 6,
+      * WARN_DMG_TYPE AD_FIRE;
     Desc: "Brimstone deals 1d6 points of fire damage to your or your mount
     as you cross it, land on it or jump out of it."; 
     hObj mount;
@@ -2025,7 +2175,11 @@ Terrain "brimstone"
       return ABORT; 
     } ;
     On Event EV_MOVE, EV_JUMP_OFF, EV_LAND, EV_STRIKE {
-      int16 r, dmg; 
+      int16 r, dmg, dn, ds; 
+      /* inc-1xr3 phase 2j: roll 1d6 from this terrain's constants, the same
+         ones TerrainRiskNote reports. */
+      dn = $"brimstone"->GetConst(WARN_DMG_NUM);
+      ds = $"brimstone"->GetConst(WARN_DMG_SIDES);
       if (!GetHandle(EActor)) 
         return ABORT; 
       if (EActor->HasStati(ON_BRIDGE))
@@ -2041,7 +2195,7 @@ Terrain "brimstone"
           return NOTHING;
         r = mount->ResistLevel(AD_FIRE);
         if (r == -1) return NOTHING;
-        dmg = (1d6) - r;
+        dmg = (dn)d(ds) - r;
         if (dmg <= 0) return NOTHING;
         ThrowTerraDmg(EV_DAMAGE,AD_FIRE,dmg,"brimstone",mount,$"brimstone");
         DPrint(e,"Your mount is burned by the brimstone!",
@@ -2055,7 +2209,7 @@ Terrain "brimstone"
           return NOTHING;
       r = EActor->ResistLevel(AD_FIRE);
       if (r == -1) return NOTHING;
-      dmg = (1d6) - r;
+      dmg = (dn)d(ds) - r;
       if (dmg <= 0) return NOTHING;
       ThrowTerraDmg(EV_DAMAGE,AD_FIRE,dmg,"brimstone",EActor,$"brimstone");
       if (EActor->isDead())
@@ -4370,7 +4524,16 @@ Terrain "drawbridge"
 
 Terrain "guardian runes"
   { Image: pink GLYPH_FLOOR; Mat:MAT_GRANITE; 
-    Flags: TF_SHOWNAME, TF_WARN, TF_SPECIAL; 
+    Flags: TF_SHOWNAME, TF_WARN, TF_SPECIAL;
+    Constants:
+      /* inc-1xr3: the runes' damage (5 + 1d6, the old 6 + random(6)) of a random type, save DC 27,
+         read by the handler and by the warning note. The save TYPE is random
+         (Fortitude or Will by effect), so no WARN_SAVE is declared and the
+         note shows damage only. No WARN_DMG_TYPE: the type is random. */
+      * WARN_SAVE_DC 27,
+      * WARN_DMG_NUM 1,
+      * WARN_DMG_SIDES 6,
+      * WARN_DMG_BONUS 5; 
     On Event EV_MON_CONSIDER {
       return NOTHING; 
       }, 
@@ -4384,7 +4547,8 @@ Terrain "guardian runes"
         DPrint(e,"The guardian runes flare at you!",
             "The guardian runes flare at an <EActor>!");
         
-        dmg = 6 + random(6);
+        dmg = $"guardian runes"->GetConst(WARN_DMG_BONUS) +
+          ($"guardian runes"->GetConst(WARN_DMG_NUM))d($"guardian runes"->GetConst(WARN_DMG_SIDES));
         
         switch (random(6)) {
           case 0: typ = AD_FEAR; break;
@@ -4396,7 +4560,7 @@ Terrain "guardian runes"
         }
         
         if (EActor->SavingThrow((typ == AD_SLOW || typ == AD_EVIL || 
-              typ == AD_RUST) ? FORT : WILL, 27, SA_MAGIC|SA_EVIL |
+              typ == AD_RUST) ? FORT : WILL, $"guardian runes"->GetConst(WARN_SAVE_DC), SA_MAGIC|SA_EVIL |
               (typ == AD_FEAR ? SA_FEAR : 0) |
               (typ == AD_CONF ? SA_CONF : 0)))
           {
@@ -4428,7 +4592,7 @@ Terrain "guardian runes"
           e.eID == $"Teleportation") && !EActor->isMType(MA_GOBLIN))
         {
           if (EActor->HasStati(SPECIALTY_SCHOOL,8))
-            if (EActor->yn("The runes try to block your weavecraft; force it?"))
+            if (EActor->yn("The runes try to block your weavecraft; force it? (costs 2 fatigue)"))
               if (EActor->LoseFatigue(2,true))
                 return NOTHING;
           EActor->IPrint("The guardian runes flare. You flicker, but remain
@@ -4441,7 +4605,16 @@ Terrain "guardian runes"
 
 Terrain "guardian runes;2"
   { Image: red GLYPH_FLOOR; Mat:MAT_GRANITE; 
-    Flags: TF_SHOWNAME, TF_WARN, TF_SPECIAL; 
+    Flags: TF_SHOWNAME, TF_WARN, TF_SPECIAL;
+    Constants:
+      /* inc-1xr3: the runes' damage (5 + 1d6, the old 6 + random(6)) of a random type, save DC 27,
+         read by the handler and by the warning note. The save TYPE is random
+         (Fortitude or Will by effect), so no WARN_SAVE is declared and the
+         note shows damage only. No WARN_DMG_TYPE: the type is random. */
+      * WARN_SAVE_DC 27,
+      * WARN_DMG_NUM 1,
+      * WARN_DMG_SIDES 6,
+      * WARN_DMG_BONUS 5; 
     On Event EV_MON_CONSIDER {
       if (EActor->isMType(MA_GOBLIN))
         return ABORT;
@@ -4456,7 +4629,8 @@ Terrain "guardian runes;2"
           return NOTHING;
         DPrint(e,"The guardian runes flare at you!",
             "The guardian runes flare at an <EActor>!");
-        dmg = 6 + random(6);
+        dmg = $"guardian runes;2"->GetConst(WARN_DMG_BONUS) +
+          ($"guardian runes;2"->GetConst(WARN_DMG_NUM))d($"guardian runes;2"->GetConst(WARN_DMG_SIDES));
         // this requires you to have good saves or not to move around that
         // much
         switch (random(6)) {
@@ -4469,7 +4643,7 @@ Terrain "guardian runes;2"
           }
 
         if (EActor->SavingThrow((typ == AD_SLOW || typ == AD_EVIL || 
-              typ == AD_RUST) ? FORT : WILL, 27, SA_MAGIC | SA_EVIL |
+              typ == AD_RUST) ? FORT : WILL, $"guardian runes;2"->GetConst(WARN_SAVE_DC), SA_MAGIC | SA_EVIL |
               (typ == AD_FEAR ? SA_FEAR : 0) |
               (typ == AD_CONF ? SA_CONF : 0)))
           {
@@ -4502,7 +4676,7 @@ Terrain "guardian runes;2"
           e.eID == $"Teleportation") && !EActor->isMType(MA_GOBLIN))
         {
           if (EActor->HasStati(SPECIALTY_SCHOOL,8))
-            if (EActor->yn("The runes try to block your weavecraft; force it?"))
+            if (EActor->yn("The runes try to block your weavecraft; force it? (costs 2 fatigue)"))
               if (EActor->LoseFatigue(2,true))
                 return NOTHING;
           EActor->IPrint("The guardian runes flare. You flicker, but remain

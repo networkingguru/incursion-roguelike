@@ -124,7 +124,7 @@ that date (`INCURSION_HANDLE_BASE`, `INCURSION_RIDER_PROBE`,
 which was 28 + 3 - 1 = 30. Six more have arrived since -- `INCURSION_ARMOUR_PROBE`,
 `INCURSION_DEQU_FORCE_SAVE`, `INCURSION_LIGHT_PROBE`, `INCURSION_PAD_HELP`,
 `INCURSION_V1_RAW`, and `SteamGameId`, which is Steam's own variable rather than
-ours (`src/Wlibtcod.cpp:849`) -- and `INCURSION_DESCEND_PROBE` left in `ccf91de`,
+ours (`src/Wlibtcod.cpp:870`) -- and `INCURSION_DESCEND_PROBE` left in `ccf91de`,
 which is 30 + 6 - 1 = 35.
 
 `getenv` costs nothing when the variable is unset, so unlike the compile-time
@@ -197,7 +197,7 @@ An earlier draft of this audit said one of the two should survive and the other
 should go. That was written before either was read properly, and it is wrong.
 Acting on it would have removed a capability.
 
-- `INCURSION_CHAR_PROBE` (`src/Registry.cpp:1105-1112`, eight lines) hooks
+- `INCURSION_CHAR_PROBE` (`src/Registry.cpp:1107-1114`, eight lines) hooks
   `Game::SaveGame`. It fires automatically, needs no one to remember it, and
   describes only the save just written, overwriting the last report.
 - `src/Dump.cpp` (268 lines, `-dump`, bd inc-loa.1) loads *any* existing save
@@ -207,7 +207,7 @@ Acting on it would have removed a capability.
 Neither is a superset of the other in access, so both stay.
 
 **What the audit did miss.** `src/Dump.cpp` compiles into every binary the
-project builds, but until 2026-08-18 only the posix backend parsed `-dump`, today at `src/Wposix.cpp:546-547`.
+project builds, but until 2026-08-18 only the posix backend parsed `-dump`, today at `src/Wposix.cpp:586-587`.
 The shipped graphical release therefore carried the save decoder and could not
 reach it — `nm -C incursion | grep RunSaveDump` found the symbol at
 `T RunSaveDump(char const*)` with no caller in that backend.

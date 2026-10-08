@@ -1871,7 +1871,7 @@ Race "Orc;race"
       Feat[FT_WEAPON_PROFICIENCY,$"shotput"] at 1st level,
       Feat[FT_TOUGHNESS] at 1st level,
       Ability[CA_SPELL_FURY] at 1st level,
-      Ability[CA_DEVOURING] at 1st level;
+      Feat[FT_CANNIBALISM] at 1st level;
     On Event EV_STARTING_ITEM {
         if (EItem->QualityOK(IQ_ORCISH))
             EItem->AddQuality(IQ_ORCISH);

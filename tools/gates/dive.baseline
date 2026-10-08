@@ -1,17 +1,20 @@
 # Incursion regression baseline -- see tools/gate_compare.sh.
-# Recorded 2026-08-16 22:54 from cc4148e.
+# Recorded 2026-10-05 20:34 from 04c1b57.
 # Metric: error volume and message-set membership. A message that is
 # not in this file is a regression; a message that has left it is a fix.
+# Re-recorded in inc-f38k (bows and ammunition count as weapons), which
+# changes play. Per-seed died/stuck vs master 0ba7f4b (master 23, here 25):
+# seeds 14, 17, 29 survive on master and die here; seed 34 dies on master
+# and survives here. Both directions, no engine error in either run.
+# exits 6=1 is seed 12: the key script fails at "Neutral" in character
+# creation, on master too, before any map.
 keys	tools/keys/dive.keys
 first	1
 options	7451fefbc35a76140100abf57a171bb82c129585d8ec58d55508c58c1467206d
 sessions	40
 played	40
-exits	0=40
-lines	3
-findings	2
-died	24
-threat_frozen	7
-message	2	2	audit: orphan: claims this map but is in neither list
-message	1	1	err: ASSERT failed: 'OpenC' in file src/MakeLev.cpp, line 3405.
-message	2	2	err: Contents list wierdless in Thing::Remove!
+exits	0=39	6=1
+lines	0
+findings	0
+died	25
+threat_frozen	0

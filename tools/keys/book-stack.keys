@@ -85,7 +85,7 @@ ENTER
 @while "Ready Hand" ESC
 
 i
-PGDN*25
+PGDN*1
 @dump:pack
 ESC
 

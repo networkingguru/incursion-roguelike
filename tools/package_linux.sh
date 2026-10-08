@@ -49,10 +49,12 @@
 #
 # Usage:
 #     tools/package_linux.sh          build in Docker, assemble both, tar, verify
+#     INCURSION_ALLOW_DIRTY=1 tools/package_linux.sh   ship uncommitted tracked edits deliberately
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+"$ROOT/tools/require_clean_tree.sh"
 
 IMAGE="incursion-linux:bullseye"        # same image as tools/check_linux_build.sh
 PLATFORM="linux/amd64"

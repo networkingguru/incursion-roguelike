@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gate: cheap
+# gate-fast: static, reads files only, ~3 s
 #
 #   tools/check_sigpipe_status.sh              scan every file, then selftest
 #   tools/check_sigpipe_status.sh --record     re-record tools/sigpipe_status.baseline

@@ -82,7 +82,6 @@
 1 tools/check_natural_speed_live.sh
 1 tools/check_overlapping_modifier_fields.sh
 7 tools/check_pad_help.sh
-1 tools/check_pass_record.sh
 1 tools/check_periapt_closure_prose.sh
 2 tools/check_periapt_poison_prose.sh
 2 tools/check_planes_sword_prose.sh
@@ -123,7 +122,6 @@
 2 tools/check_telepathy_prose.sh
 3 tools/check_two_fist_feats_live.sh
 2 tools/check_unearthly_harmonies_prose.sh
-9 tools/check_upstream_label.sh
 1 tools/check_v1_append_survives.sh
 1 tools/check_v1_full_roundtrip.sh
 2 tools/check_wand_acid_type.sh
@@ -137,7 +135,6 @@
 2 tools/doc_freshness_cron.sh
 1 tools/finish_bead.sh
 4 tools/gate_compare.sh
-1 tools/nightly_verify.sh
 1 tools/package_linux.sh
 2 tools/probe_hooks_cron.sh
 1 tools/worktree.sh

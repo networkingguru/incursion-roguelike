@@ -1,0 +1,89 @@
+# inc-gapb: loaded orc barbarian, seed 1; run with tools/repro_inc_gapb.sh.
+# Wizard freeze stops movement, but proximity attacks still fire.
+@until "Things in View" ESC
+@until "Wizard Mode Options" w y
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE ESC
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+TAB
+@choose "Vermin"
+@choose "scarab swarm"
+RIGHT ENTER
+@dump:scarab-adjacent
+RIGHT
+@while "Confirm attack" y
+@dump:weapon-01
+RIGHT
+@while "Confirm attack" y
+@dump:weapon-02
+RIGHT
+@while "Confirm attack" y
+@dump:weapon-03
+RIGHT
+@while "Confirm attack" y
+@dump:weapon-04
+RIGHT
+@while "Confirm attack" y
+@dump:weapon-05
+RIGHT
+@while "Confirm attack" y
+@dump:weapon-06
+RIGHT
+@while "Confirm attack" y
+@dump:weapon-07
+RIGHT
+@while "Confirm attack" y
+@dump:weapon-08
+@until "Wizard Mode Options" w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE ESC
+.
+@while "Die?" n
+@dump:proximity-01
+.
+@while "Die?" n
+@dump:proximity-02
+.
+@while "Die?" n
+@dump:proximity-03
+.
+@while "Die?" n
+@dump:proximity-04
+.
+@while "Die?" n
+@dump:proximity-05
+.
+@while "Die?" n
+@dump:proximity-06
+.
+@while "Die?" n
+@dump:proximity-07
+.
+@while "Die?" n
+@dump:proximity-08
+.
+@while "Die?" n
+@dump:proximity-09
+.
+@while "Die?" n
+@dump:proximity-10
+.
+@while "Die?" n
+@dump:proximity-11
+.
+@while "Die?" n
+@dump:proximity-12
+v
+PGUP*100
+@dump:messages-top
+ESC
+@until "Wizard Mode Options" w
+@choose "Examine Player Data"
+@dump:player-data-top
+DOWN*20
+@dump:player-stati
+DOWN*20
+@dump:player-inventory
+ESC
+@quit

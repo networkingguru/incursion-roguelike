@@ -283,6 +283,12 @@ Terrain "tanglefoot strands" {
   } ;
     On Event EV_MOVE, PRE(EV_STRIKE), EV_JUMP_OFF, EV_LAND {
       hObj mount;
+      int16 sv, svdc;
+      /* inc-1xr3: this terrain's own constants, the same ones
+         TerrainRiskNote reports in the prompt. WARN_SAVE holds the save
+         type + 1 (REF is 1), so the note can name it. */
+      sv = $"tanglefoot strands"->GetConst(WARN_SAVE) - 1;
+      svdc = $"tanglefoot strands"->GetConst(WARN_SAVE_DC);
       mount = EActor->GetStatiObj(MOUNTED);
       if (mount) {
         if (mount->HasAbility(CA_WOODLAND_STRIDE) ||
@@ -290,7 +296,7 @@ Terrain "tanglefoot strands" {
             mount->ResistLevel(AD_STUK) == -1 ||
             mount->isAerial())
           return NOTHING;
-        if (mount->SavingThrow(REF,15,SA_GRAB|SA_TRAPS)) {
+        if (mount->SavingThrow(sv,svdc,SA_GRAB|SA_TRAPS)) {
           if (!mount->HasEffStati(ENTANGLED,$"tanglefoot strands"))
             mount->GainPermStati(ENTANGLED,NULL,SS_MISC,0,0,$"tanglefoot strands");
           return NOTHING;
@@ -304,7 +310,14 @@ Terrain "tanglefoot strands" {
         // Win32 build. The fix mirrors the "pool of grease" terrain
         // (lib/dungeon.irh), which targets the mount. Evidence: Observed
         // (save/Keos.sav -- rider STUCK, mount not). inc-lxvv. Not sent upstream.
-        ThrowDmg(EV_DAMAGE,AD_STUK,-1,"tanglefoot strands",mount,mount);
+        // upstream: the strands' STUCK lasted forever. The -1 became the
+        // stati's Duration, and Thing::UpdateStati (src/Status.cpp) only
+        // counts down a Duration above zero, so a creature that made no move
+        // made no escape check and never let go. The invariant: STUCK from
+        // this source ends after 2d4 rounds. Plain lib/ script plus
+        // platform-independent stati logic, same on Win32. Evidence: Observed,
+        // tools/check_tanglefoot_stuck_expiry.sh. inc-9smo. Not sent.
+        ThrowDmg(EV_DAMAGE,AD_STUK,2d4,"tanglefoot strands",mount,mount);
         // A2 (inc-18q6): the terrain's own STICK_TYPE constant, declared
         // below, is what tags the hazard kind now -- src/Fight.cpp's
         // AD_STUK arm reads it straight off the square the victim stands
@@ -323,12 +336,19 @@ Terrain "tanglefoot strands" {
             EActor->ResistLevel(AD_STUK) == -1 ||
             EActor->isAerial())
           return NOTHING;
-        if (EActor->SavingThrow(REF,15,SA_GRAB|SA_TRAPS)) {
+        if (EActor->SavingThrow(sv,svdc,SA_GRAB|SA_TRAPS)) {
           if (!EActor->HasEffStati(ENTANGLED,$"tanglefoot strands"))
             EActor->GainPermStati(ENTANGLED,NULL,SS_MISC,0,0,$"tanglefoot strands");
           return NOTHING;
         }
-        ThrowDmg(EV_DAMAGE,AD_STUK,-1,"tanglefoot strands",EActor,EActor);
+        // upstream: the strands' STUCK lasted forever. The -1 became the
+        // stati's Duration, and Thing::UpdateStati (src/Status.cpp) only
+        // counts down a Duration above zero, so a creature that made no move
+        // made no escape check and never let go. The invariant: STUCK from
+        // this source ends after 2d4 rounds. Plain lib/ script plus
+        // platform-independent stati logic, same on Win32. Evidence: Observed,
+        // tools/check_tanglefoot_stuck_expiry.sh. inc-9smo. Not sent.
+        ThrowDmg(EV_DAMAGE,AD_STUK,2d4,"tanglefoot strands",EActor,EActor);
         // A2 (inc-18q6): see the mount branch above -- the terrain's own
         // STICK_TYPE now tags the hazard kind, so there is nothing to
         // retag here.
@@ -347,7 +367,12 @@ Terrain "tanglefoot strands" {
        victim stands on, so the two remove-and-regrant blocks above are
        gone -- they used to make GainTempStati (src/Status.cpp:225)
        print "You've become stuck!" a third time. */
-    * STICK_TYPE STUCK_BONDED;
+    * STICK_TYPE STUCK_BONDED,
+    /* inc-1xr3: the Reflex save the prompt advertises and this handler
+       rolls, so the number shown cannot drift from the number rolled.
+       WARN_SAVE holds the save type + 1 (REF is 1, so 1+1=2). */
+    * WARN_SAVE 2,
+    * WARN_SAVE_DC 15;
   }
 
 Item "wooden rod" : T_TOOL

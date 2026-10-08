@@ -784,7 +784,15 @@ void Resource::GrantGear(Creature *c, rID xID, bool doRanged)
 
             if (c->isPlayer())
               it->MakeKnown(-1);
-            else if (TITEM(it->iID)->IType == T_WEAPON &&
+            /* upstream: an exotic-weapon proficiency grant must fire for
+               every combat weapon type -- IType T_WEAPON, T_BOW or
+               T_MISSILE -- because the comparison is an exact match;
+               T_STAFF excluded. Upstream's: an exact type comparison
+               present since the 2014 import. Observed via
+               tools/check_weapon_types.sh, inc-f38k, not sent. */
+            else if ((TITEM(it->iID)->IType == T_WEAPON ||
+                      TITEM(it->iID)->IType == T_BOW ||
+                      TITEM(it->iID)->IType == T_MISSILE) &&
                      TITEM(it->iID)->Group & WG_EXOTIC) {
               /* ww: if an NPC is created with Weapon X, make sure that it
                * can use Weapon X */

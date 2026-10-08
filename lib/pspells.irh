@@ -1174,7 +1174,7 @@ Effect "Divine Sacrifice" : EA_INFLICT
       },
     EV_EFFECT {
       int16 ch;
-      ch = EActor->ChoicePrompt("How many extra dice of damage?",
+      ch = EActor->ChoicePrompt("How many extra dice of damage? (2 HP per die per attack)",
         "12345", '1');
       sac = (ch - '0')*2;
       return NOTHING;
@@ -1361,21 +1361,26 @@ Effect "Brand of Hatred" : EA_GENERIC
       the Hatred Domain power."; 
     hObj it; Flags: EF_AFFECTS_ITEMS, EF_ITEMS_ONLY;
     On Event 
+      /* upstream: covers T_WEAPON, T_BOW, T_MISSILE because isType is an
+         exact match; T_STAFF excluded. Upstream's type comparison. Observed
+         via tools/check_weapon_types.sh, inc-f38k, not sent. */
       EV_ISTARGET {
         for(it=EActor->FirstInv();it;it=EActor->NextInv()) {
-          if (it->isType(T_WEAPON) || it->isType(T_BOW))
+          if (it->isType(T_WEAPON) || it->isType(T_BOW) || it->isType(T_MISSILE))
             if (it->QualityOK(WQ_BANE))
               return SHOULD_CAST_IT; 
           }
         return CAN_CAST_IT; 
         },
       EV_RATETARG {
-        if (EItem->isType(T_WEAPON) && EItem->QualityOK(WQ_BANE))
+        if ((EItem->isType(T_WEAPON) || EItem->isType(T_BOW) ||
+             EItem->isType(T_MISSILE)) && EItem->QualityOK(WQ_BANE))
           return NOTHING;
         return ABORT;
         },
       EV_MAGIC_HIT {
-        if (ETarget->isType(T_WEAPON) && ETarget->QualityOK(WQ_BANE))
+        if ((ETarget->isType(T_WEAPON) || ETarget->isType(T_BOW) ||
+             ETarget->isType(T_MISSILE)) && ETarget->QualityOK(WQ_BANE))
           ETarget->AddQuality(WQ_BANE,EActor->GetEffStatiVal(FAV_ENEMY,$"hatred"));
         return DONE;
         }; 
@@ -4152,7 +4157,8 @@ Priest / Druid Spell "Invocation" : EA_INFLICT
       a +3 sacred bonus to attack rolls, damage and saving throws.";
   }
 
-// ww: antitoxins cover this potion effect
+// antitoxin only adds to poison saves; it does not cure. Neutralize Poison is the cure.
+// upstream: original comment claimed antitoxin covers this effect; Reasoned (lib/alchemy.irh antitoxin has no HEAL_MALADY); inc-gmrj; not sent.
 Priest / Druid / Scroll Spell "Neutralize Poison" : EA_INFLICT
   { SC_THE; Base: SP_TRIVIAL; Cost: 7; Level: 4; qval: Q_TAR;
     Desc: "Purges all toxins from the subject's body, preventing
@@ -4289,7 +4295,8 @@ Priest / Scroll Spell "Spell Immunity" : EA_GENERIC
           return ABORT;
         }
       
-      if (!EActor->yn(XPrint("Confirm immunize to <Res>?",spID),true))
+      if (!EActor->yn(XPrint("Confirm immunize to <Res>? (permanent mana -<Num>)",
+                             spID,(spID->Level+1)/2),true))
         return ABORT;
       
       EActor->GainPermStati(EFF_FLAG1,NULL,SS_MISC,
@@ -4671,23 +4678,23 @@ Priest / Sorcerer Spell "Magic Resistance" : EA_INFLICT
     Desc: "Grants you a +5~ bonus to your magic resistance per caster level."; 
     }
 
-Priest Spell "Dispel Evil" : EA_GENERIC
+Priest Spell "Dispel Evil" : EA_INFLICT
   { SC_ABJ; Base: SP_MEDIUM; Cost: 16; Level: 5; sval: WILL + 10;
     Desc: "Casting this spell empowers you to drive away evil influences
-      with a touch. It has a tripartate effect:\n
+      with a touch. It has a tripartite effect:\n
       __<9>1._<1>You gain a +4 deflection bonus to DC against attacks by
       evil creatures, which increases to +6 against <9>inherently<1>
       evil creatures.\n
       __<9>2._<1>You are empowered with a touch attack which can banish
       evil outsiders of Challenge Rating equal to or lower than your
-      caster level, provided they fail a Will save. You get one touch
-      for every 3 caster levels.\n 
+      caster level, provided they fail a Will save.\n
       __<9>3._<1>If an evil outsider resists your banishment, or you touch
       an evil creature not subject to the second effect, they are subject
       to a <9>dispel magic<1> effect with a +10 bonus to the caster level
       check.\n
-      __One casting of this spell gives you one touch for every two full
-      caster levels you possess.";
+      __One casting of this spell gives you a single touch. Once that touch
+      lands on an evil creature, the spell ends, and the deflection bonus
+      ends with it.";
     Purpose: EP_BUFF; Flags: EF_GOOD;
     xval: TRAP_EVENT; yval: EVICTIM(EV_STRIKE);
     On Event META(EVICTIM(EV_STRIKE)) 
@@ -4699,7 +4706,7 @@ Priest Spell "Dispel Evil" : EA_GENERIC
             curr = EVictim->HighStatiMag(ADJUST_DEFL,A_DEF);
             if (bonus > curr)
               {
-                e.strDef += XPrint(" +%d DispEv",bonus - curr);
+                e.strDef += XPrint(" +<Num> DispEv",bonus - curr);
                 e.vDef   += bonus - curr;
               }
           }
@@ -4707,7 +4714,26 @@ Priest Spell "Dispel Evil" : EA_GENERIC
       };
   }
 and EA_GENERIC
-  { aval: AR_TOUCH; lval: LEVEL_1PER2;
+  /* upstream: three Dispel Evil defects, this file, tracking inc-5v5l, not
+     sent. (1) The touch: the SRD gives a single touch per casting, ending
+     the whole spell once it lands on an evil creature. lval carried
+     LEVEL_1PER2 (one touch per two caster levels) and the touch handler
+     below never ended the spell, so a high-level priest kept the
+     deflection bonus and further touches after landing one. (2) The
+     deflection grant: the first component above declared EA_GENERIC, whose
+     dispatch (Magic::MagicHit's eval switch) does nothing for that action
+     type, so the +4/+6 TRAP_EVENT stati it names was never granted at
+     cast and the bonus never fired in play; changed to EA_INFLICT, the
+     working pattern "Combat Mind" (lib/alchemy.irh) uses for the same
+     xval:TRAP_EVENT/On Event META(EVICTIM(EV_STRIKE)) idiom. (3) The
+     deflection label: that handler's own XPrint call used printf's %d
+     instead of XPrint's own <Num> token, so once (2) let it actually run
+     the combat log printed the literal text "+%d DispEv" rather than the
+     real bonus; changed to <Num>, the form every other numeric XPrint call
+     in lib/ uses. All three are plain script data and control flow, so
+     Win32 with the original data misbehaves identically. Observed once
+     tools/check_dispel_evil.sh is green. */
+  { aval: AR_TOUCH; lval: 1;
     On Event EV_MAGIC_HIT
       {
         if (e.efNum == 1)
@@ -4720,6 +4746,7 @@ and EA_GENERIC
                   VPrint(e,"You feel a strong urge to leave this plane!",
                             "The <EVictim> feels an urge to leave this plane!");
                   ThrowDmg(EV_DEATH,AD_NORM,0,"banishment",EActor,EVictim);
+                  EActor->RemoveEffStati(e.eID);
                   return DONE;
                 }
             if (EVictim->isMType(MA_EVIL))
@@ -4727,6 +4754,7 @@ and EA_GENERIC
                 e.vCasterLev += 10;
                 RedirectEff(e,$"dispel magic",EV_MAGIC_HIT);
                 e.vCasterLev -= 10;
+                EActor->RemoveEffStati(e.eID);
               }
             return DONE;
           }

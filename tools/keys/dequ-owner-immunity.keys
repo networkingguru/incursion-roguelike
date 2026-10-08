@@ -29,6 +29,13 @@
 
 @include dequ-setup.keys
 
+# The starting kit now readies a shield, and a two-handed weapon will not go
+# into a hand pair that holds one (inc-zzwm): stow it before the swap below.
+@until "SPACE:Swap" i
+@until ">>a)Ready" a
+s
+@until "Things in View" ESC
+
 # --- the gauntlets that make the character immune to rust ---
 w
 @choose "Item Acquisition"

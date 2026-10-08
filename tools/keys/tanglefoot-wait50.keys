@@ -1,0 +1,142 @@
+# Regression fixture for inc-mc37 (tanglefoot half). Player::AutoPickupFloor's
+# unidentified-magic branch (src/Player.cpp) must NOT auto-stow an EF_MUNDANE
+# item -- here a tanglefoot bag -- while it still stows real unidentified magic
+# (the rogue-archer's dimension-door potion). Read by
+# tools/check_mundane_autopickup.sh.
+#
+# Route: an orc barbarian; wizard-summon a base human to the east; add the
+# "rogue-archer" template, whose gear is a GUARANTEED 1d2 tanglefoot bag
+# (lib/mon2.irh) plus a 1d1 dimension-door potion; genocide it so the pile drops
+# on one tile; step onto the tile so AutoPickupFloor runs. The tanglefoot bag
+# must REMAIN in view (not stowed); the potion must be gone (stowed), proving
+# the branch still hoards real magic.
+@include chargen.keys
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE
+DOWN*9
+SPACE
+ESC
+w
+@expect "Wizard Mode Options:"
+@choose "Monster Summoning"
+@choose "Humans"
+@choose "Human"
+RIGHT
+ENTER
+w
+@choose "Add Template to Creature"
+RIGHT
+ENTER
+@choose "Rogue-Archer"
+w
+@choose "Genocide Everything"
+RIGHT
+@dump:before
+SPACE
+g
+@choose "tanglefoot bag"
+@while "In the Air':tanglefoot bag" s
+@while "Ready Hand" ESC
+@dump:picked
+a
+@choose "(in pack) tanglefoot bag"
+@dump:aim
+ENTER
+@dump:thrown
+RIGHT
+@while "Confirm" y
+@dump:try1
+.
+.
+@dump:w02
+.
+.
+@dump:w04
+.
+.
+@dump:w06
+.
+.
+@dump:w08
+.
+.
+@dump:w10
+.
+.
+@dump:w12
+.
+.
+@dump:w14
+.
+.
+@dump:w16
+.
+.
+@dump:w18
+.
+.
+@dump:w20
+.
+.
+@dump:w22
+.
+.
+@dump:w24
+.
+.
+@dump:w26
+.
+.
+@dump:w28
+.
+.
+@dump:w30
+.
+.
+@dump:w32
+.
+.
+@dump:w34
+.
+.
+@dump:w36
+.
+.
+@dump:w38
+.
+.
+@dump:w40
+.
+.
+@dump:w42
+.
+.
+@dump:w44
+.
+.
+@dump:w46
+.
+.
+@dump:w48
+.
+.
+@dump:w50
+.
+.
+@dump:w52
+.
+.
+@dump:w54
+.
+.
+@dump:w56
+.
+.
+@dump:w58
+.
+.
+@dump:w60
+@quit

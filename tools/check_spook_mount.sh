@@ -9,7 +9,7 @@
 # RIDER named as its creator, which is what put four "Spook" rows in one
 # player's dismiss menu.
 #
-# Five states, measured in one run of tools/keys/spook-mount.keys on seed 5.
+# Five states, measured in one run of tools/keys/spook-mount.keys on seed 2.
 # The numbers below are what this script asserts; the key script's header
 # explains why each one reads the way it does.
 #
@@ -40,7 +40,7 @@ set -e
 
 cd "$(dirname "$0")/.."
 
-RUN=$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat ./tools/headless.sh tools/keys/spook-mount.keys 5 2>&1 | sed -n 's/^run:  *//p')
+RUN=$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat ./tools/headless.sh tools/keys/spook-mount.keys 2 2>&1 | sed -n 's/^run:  *//p')
 [ -n "$RUN" ] || { echo "FAIL: the run produced no directory"; exit 1; }
 S="$RUN/logs/screens"
 

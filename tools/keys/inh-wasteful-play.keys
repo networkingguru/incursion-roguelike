@@ -1,0 +1,144 @@
+# The over-cap tome fix (inc-bsqm), played for real: an orc barbarian fills
+# his Constitution inherent bonus to the cap with one tome, goes ABOVE the
+# cap by the one live route the game offers, then reads a second tome.
+# Read by tools/check_inh_wasteful_play.sh.
+#
+# The over-cap route: only the shambling mound's electricity handler
+# (lib/mon3.irh:2100-2103) grants an uncapped +1d4 ADJUST_INH A_CON, and only
+# a player in mound form can reach it. Wizard mode supplies what a player
+# cannot roll for in a short script -- the tomes, the transformation, a
+# weak monster to provide the electric hit -- but the tome read that is
+# actually under test happens through the ordinary 'r' command, and the
+# result is read off the screen, not an internal probe.
+#
+#   w y                            wizard mode
+#   Item Acquisition -> Tomes      walk to "]: Tomes" (RIGHT from the first
+#                                   category), then to "Libram of Bodily
+#                                   Health" (the Constitution tome)
+#   ENTER "5" ENTER                take it at +5: one read grants e.vDmg=5,
+#                                   which exactly fills the cap for a
+#                                   character with no CA_INHERANT_POTENTIAL
+#                                   (MaxBonus = 5 + AbilityLevel(...) = 5)
+#   @while "Air'" s                 the item lands 'In the Air'; this label
+#                                   stays on screen even once the slot is
+#                                   empty, so the loop always "gives up"
+#                                   after stowing on the first press -- a
+#                                   known, harmless idiom, not a failure
+#   r -> (in pack) Libram...        read it: CON's inherent bonus is now at
+#                                   the cap (5)
+#   [repeat acquisition]           a second +5 Libram, left in the pack for
+#                                   the real test below
+#   Polymorph the PC ->
+#     Plant Creatures ->
+#     Shambling mound               Shapeshift(), the same call Wild Shape
+#                                   and a polymorph item use. The "falls
+#                                   free" message that follows uses
+#                                   "-- more --", not "--More--" -- a
+#                                   different prompt style from the tome
+#                                   read's, so the two dismiss loops use
+#                                   different literal text
+#   Monster Summoning -> TAB ->
+#     Vermin -> grid bug            a CR -4 vermin whose only attack is
+#                                   "A_BITE for 1d3 AD_ELEC" (lib/mon4.irh)
+#                                   -- weak enough that the mound's 165 HP
+#                                   and electricity immunity are never in
+#                                   question, but its bite is lightning
+#                                   damage, and ANY electricity hit on a
+#                                   mound-formed creature runs the handler
+#                                   that grants the uncapped +1d4, win or
+#                                   lose on the enclosing attack roll
+#   s*30                            wait while the bug attacks; the seed is
+#                                   fixed, so the same hit lands the same
+#                                   way every run (confirmed: "Grid Bug's
+#                                   Attack ... [hit] ... 1 Lightning" at the
+#                                   first wait on seed 1)
+#   r -> (in pack) Libram...        read the second tome. This is the call
+#                                   under test: the character is now ABOVE
+#                                   the cap, not merely at it, because the
+#                                   bug's temporary ADJUST_INH stacks with
+#                                   the tome's permanent one.
+#
+# A wand needed a Use Magic Device check most barbarians fail outright (DC
+# 18 vs a +1 or so modifier); the grid bug's melee attack needs no check
+# from the player at all, so it is the more reliable route in a short,
+# deterministic script.
+#
+# 'a' (KY_CMD_ACTIVATE) lists only worn wondrous items, not wands -- wands
+# use 'b' (KY_CMD_BLAST_WAND, src/Player.cpp:559-560). @choose needs the
+# "(in pack) " prefix FindMenuEntry actually draws (src/Wposix.cpp
+# MenuLabel/NameMatches match from the start of the line, not a substring
+# search), which is also why this script always writes out "(in pack)
+# Libram of Bodily Health", never just the item name.
+@include chargen.keys
+w
+y
+
+# tome 1: fill CON to the cap
+@choose "Item Acquisition"
+@until "]: Tomes" RIGHT
+@until "Libram of Bodily Health" DOWN
+@expect "Libram of Bodily Health"
+DOWN
+ENTER
+"5" ENTER
+@while "Air'" s
+@while "ESC:Done" ESC
+r
+@choose "(in pack) Libram of Bodily Health"
+@while "--More--" ENTER
+@while "ESC:Done" ESC
+
+# tome 2: acquire, leave in the pack for the over-cap read below
+w
+@choose "Item Acquisition"
+@until "]: Tomes" RIGHT
+@until "Libram of Bodily Health" DOWN
+@expect "Libram of Bodily Health"
+DOWN
+ENTER
+"5" ENTER
+@while "Air'" s
+@while "ESC:Done" ESC
+
+# polymorph into a shambling mound
+w
+@choose "Polymorph the PC"
+@until "]: Plant Creatures" RIGHT
+@until "Shambling mound" DOWN
+@expect "Shambling mound"
+DOWN
+ENTER
+@while "-- more --" ENTER
+
+d
+@dump:sheet-at-cap
+@until "HP:" ESC
+
+# summon a grid bug (1d3 AD_ELEC bite) next to the mound
+w
+@choose "Monster Summoning"
+TAB
+@choose "Vermin"
+@choose "grid bug"
+RIGHT
+ENTER
+@dump:summoned
+
+s*30
+@dump:elec-hit
+
+d
+@dump:sheet-over-cap
+@until "HP:" ESC
+
+# read tome 2 -- above the cap, the call under test
+r
+@dump:read-menu-2
+@choose "(in pack) Libram of Bodily Health"
+@while "--More--" ENTER
+@dump:read-result
+
+d
+@dump:sheet-post-read
+@until "HP:" ESC
+@quit
