@@ -2875,8 +2875,11 @@ Class "Warrior"
            S_MELEE    100,
            S_THROWN 100,
            S_ARCHERY  100;    
-    Skills[4]: SK_ATHLETICS, SK_BLUFF, SK_CLIMB, SK_CRAFT,
-      SK_FIND_WEAKNESS, SK_HEALING, SK_INTIMIDATE, SK_INTUITION, 
+    // upstream: Warrior must include Appraise and Diplomacy named by its help.
+    // Plain resource data, independent of platform/typedefs: Win32 also omits them.
+    // Observed via tools/check_warrior_class_skills.sh; inc-k2ws; not sent.
+    Skills[4]: SK_APPRAISE, SK_ATHLETICS, SK_BLUFF, SK_CLIMB, SK_CRAFT,
+      SK_DIPLOMACY, SK_FIND_WEAKNESS, SK_HEALING, SK_INTIMIDATE, SK_INTUITION,
       SK_RIDE, SK_SPOT, SK_SENESCHAL;
     Proficiencies: WG_SIMPLE, WG_AXES, WG_ARCHERY, WG_STAVES, WG_IMPACT,
       WG_THROWN, WG_POLEARMS, WG_SPEARS, WG_LANCES, WG_DAGGERS, WG_FLEXIBLE,

@@ -264,6 +264,12 @@ void Game::Play() {
        tools/check_quiet_lookup.sh. inc-upw.39. */
     theRegistry->QuietProbe();
 
+    /* inc-h22n: off unless INCURSION_DOORPICK_PROBE is set; needs a live
+       player and map. See DoorPickProbe (src/DoorPickProbe.cpp) and
+       tools/check_door_pick_kick.sh. */
+    extern void DoorPickProbe(Player *pl);
+    DoorPickProbe(pp);
+
     /* Off unless INCURSION_XPDRAIN_PROBE is set, and run here because it
        needs a live player. See Character::XPDrainProbe and
        tools/check_xp_drain.sh. inc-3gli. */
@@ -277,6 +283,12 @@ void Game::Play() {
        tools/check_line_of_fire.sh. inc-30ps phase 2. */
     extern void LineOfFireProbe(Player *shooter);
     LineOfFireProbe(pp);
+
+    /* Off unless INCURSION_SAVECHANCE_PROBE is set, and run here because it
+       needs a live player. See SaveChanceProbe (src/Fight.cpp) and
+       tools/check_save_chance.sh. inc-o6xj. */
+    extern void SaveChanceProbe(Player *pl);
+    SaveChanceProbe(pp);
 
     /* Off unless INCURSION_LOF_SPELL_PROBE is set, needs the same live
        player and map. See LOFSpellProbe (src/Magic.cpp) and
@@ -293,6 +305,12 @@ void Game::Play() {
     /* inc-7xcu: off unless INCURSION_BANE_PROBE is set; needs a live map. */
     extern void BaneRadiusProbe(Player *caster);
     BaneRadiusProbe(pp);
+
+    /* inc-tmys: off unless INCURSION_MONINIT_PROBE is set; needs a live map.
+       See MonsterInitProbe (src/MonsterInitProbe.cpp) and
+       tools/check_monster_init_hp.sh. */
+    extern void MonsterInitProbe(Player *pl);
+    MonsterInitProbe(pp);
 
     /* inc-fdi2: opt-in live Blasphemy fatigue and area-hit oracle. */
     extern void BlasphemyProbe(Player *caster);
@@ -311,6 +329,23 @@ void Game::Play() {
        needs a live player and map. See Character::IBlessingProbe
        (src/Prayer.cpp) and tools/check_bow_blessing.sh. inc-rnp9. */
     pp->IBlessingProbe();
+
+    /* Off unless INCURSION_WEAPONTYPE_PROBE is set; needs a live player. See
+       WeaponTypeProbe (src/WeaponTypeProbe.cpp) and
+       tools/check_weapon_types.sh. inc-f38k. */
+    extern void WeaponTypeProbe(Player *p);
+    WeaponTypeProbe(pp);
+
+    /* inc-3lsp: off unless INCURSION_ACT_OVERFLOW_PROBE is set. See
+       ActOverflowProbe (src/ActOverflowProbe.cpp) and
+       tools/check_act_overflow.sh. */
+    extern void ActOverflowProbe(Player *pl);
+    ActOverflowProbe(pp);
+
+    /* inc-a9m3: off unless INCURSION_DOOR_BOLT_PROBE is set. See
+       DoorBoltProbe (src/DoorBoltProbe.cpp) and tools/check_door_bolt.sh. */
+    extern void DoorBoltProbe(Player *pl);
+    DoorBoltProbe(pp);
 
     /* Off unless INCURSION_TRUESIGHT_PROBE is set, and run here because it
        needs a live player and a live map. See Creature::TrueSightProbe and

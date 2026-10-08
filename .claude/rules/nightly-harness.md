@@ -5,7 +5,7 @@ Stale incident, no standing instruction. Nightly logs: `~/Library/Logs/incursion
 History: docs/rules-history/nightly-harness.md#nightly-2026-09-12-stalled-and-killed.
 
 ## nightly-autonomy-resume
-Stale resume note. Nightly harness lives at `~/Scripts/nightly-harness` (outside this repo, not under git); install with `cd ~/Scripts/nightly-harness && bin/install-agent.sh incursion`.
+Stale resume note. Nightly harness lives at `~/Scripts/nightly-harness` (outside this repo, and its own git repository: check `git -C ~/Scripts/nightly-harness status` before editing there, and commit work there separately); install with `cd ~/Scripts/nightly-harness && bin/install-agent.sh incursion`.
 History: docs/rules-history/nightly-harness.md#nightly-autonomy-resume.
 
 ## nightly-commit-hook-conflict

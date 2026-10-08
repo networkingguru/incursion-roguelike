@@ -1,0 +1,16 @@
+# Case "good" of tools/check_cannibalism_feat.sh (bd inc-08js): a human paladin
+# (Lawful Good, forced by the class) reaches the first feat menu. The menu hides
+# a feat the character fails Character::FeatPrereq for, so Cannibalism must not
+# be listed. @dump:featlist photographs the menu.
+a
+n
+y
+@choose "Human"
+@choose "Athletics"
+@choose "Diplomacy"
+@choose "Paladin"
+@choose "Erich"
+a
+a
+@dump:featlist
+@quit

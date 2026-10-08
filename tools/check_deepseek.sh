@@ -1,21 +1,18 @@
 #!/bin/bash
 # gate: cheap
+# gate-serial: starts a stub on a fixed 127.0.0.1 loopback URL; parallel network timing could flip it
 #
-# Does tools/deepseek.py spend at most one billed call per success, refuse
-# to spend the instant its own ledger says the budget is gone or the ledger
-# disagrees with itself, resolve its default ledger to the MAIN checkout so
-# every worktree shares one budget, and never let the DeepInfra key reach
-# stdout, stderr or the ledger? Defends bead inc-3dgz: a scoped, budget-capped
-# DeepSeek client that must fail closed rather than silently keep spending
-# money once a call's price is unknown.
+# Does tools/deepseek.py spend at most one billed call per success, resolve its
+# default ledger to the MAIN checkout so every worktree shares one ledger, and
+# never let the DeepInfra key reach stdout, stderr or the ledger? Defends bead
+# inc-3dgz: a scoped DeepSeek client. The ledger records every run's cost but
+# never refuses a run (owner ruling, 2026-10-04).
 #
 # Fully offline. tools/deepseek_stub.py stands in for api.deepinfra.com;
 # INCURSION_DEEPSEEK_URL points the client at it, and this check kills the
 # stub in a trap. No network request ever leaves this machine.
 #
-#   tools/check_deepseek.sh               run the eight assertions
-#   tools/check_deepseek.sh --prove-red   mutate the budget guard and
-#                                         confirm the check goes red
+#   tools/check_deepseek.sh               run the assertions
 #
 # Exit: 0 pass, 1 fail, 2 could not run.
 
@@ -81,43 +78,7 @@ start_stub() {
 req_count() { cat "$TMP/count" 2>/dev/null; }
 
 # --- --prove-red ----------------------------------------------------------
-# Handled FIRST, before the eight assertions below ever run. Mutates the
-# budget guard in tools/deepseek.py so the tool spends straight past its
-# own cap, re-runs THIS script (fresh stub, fresh tmp dir) against the
-# mutated file, and expects that run to fail. The original file is
-# restored, and the restoration verified byte-identical with cmp, by the
-# EXIT trap above -- BACKUP is set only in this branch.
-if [ "${1:-}" = "--prove-red" ]; then
-    BACKUP="$TMP/deepseek.py.orig"
-    cp "$DEEPSEEK" "$BACKUP"
-
-    NEEDLE="if total >= budget:"
-    if ! grep -qF "$NEEDLE" "$DEEPSEEK"; then
-        echo "could not find the budget guard to mutate: $NEEDLE" >&2
-        exit 2
-    fi
-    python3 - "$DEEPSEEK" "$NEEDLE" <<'PY'
-import sys
-path, needle = sys.argv[1], sys.argv[2]
-src = open(path).read()
-open(path, "w").write(src.replace(needle, "if False:  # MUTATED by --prove-red", 1))
-PY
-    echo "mutated tools/deepseek.py: '$NEEDLE' -> 'if False:' (budget guard disabled)"
-
-    MUTATED_OUTPUT="$("$ROOT/tools/check_deepseek.sh")"
-    MUTATED_RC=$?
-    echo "--- output of the mutated run ---"
-    echo "$MUTATED_OUTPUT"
-    echo "--- end output of the mutated run ---"
-
-    if [ "$MUTATED_RC" -ne 0 ]; then
-        echo "PASS (as intended): check_deepseek.sh went red under the mutation, rc=$MUTATED_RC"
-        exit 0
-    else
-        echo "FAIL: check_deepseek.sh stayed green under a disabled budget guard"
-        exit 1
-    fi
-fi
+# (removed 2026-10-04: the budget guard it mutated no longer exists)
 
 PROMPT="$TMP/prompt.txt"
 echo "hello" > "$PROMPT"
@@ -137,34 +98,6 @@ if [ "$RC" -eq 0 ] \
     pass "happy path: exit 0, output written, ledger gains one correct row"
 else
     fail "happy path: rc=$RC output=$OUTPUT ledger=$(cat "$LEDGER" 2>/dev/null)"
-fi
-
-# --- 2. The budget refuses before it spends -----------------------------
-start_stub ok
-LEDGER="$TMP/ledger2.jsonl"
-printf '%s\n' '{"cost": 25.00}' > "$LEDGER"
-OUT="$TMP/out2.txt"
-OUTPUT="$(INCURSION_DEEPSEEK_KEY=test-key INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
-    python3 "$DEEPSEEK" --prompt "$PROMPT" --out "$OUT" 2>&1)"
-RC=$?
-if [ "$RC" -eq 1 ] && [ "$(req_count)" = "0" ] && [ ! -e "$OUT" ]; then
-    pass "budget refuses before it spends: exit 1, no request, no output"
-else
-    fail "budget refusal: rc=$RC requests=$(req_count) out-exists=$([ -e "$OUT" ] && echo yes || echo no) -- $OUTPUT"
-fi
-
-# --- 3. A poisoned ledger refuses ---------------------------------------
-start_stub ok
-LEDGER="$TMP/ledger3.jsonl"
-printf '%s\n' '{"cost": null}' > "$LEDGER"
-OUT="$TMP/out3.txt"
-OUTPUT="$(INCURSION_DEEPSEEK_KEY=test-key INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
-    python3 "$DEEPSEEK" --prompt "$PROMPT" --out "$OUT" 2>&1)"
-RC=$?
-if [ "$RC" -eq 1 ] && [ "$(req_count)" = "0" ]; then
-    pass "poisoned ledger (null cost) refuses: exit 1, no request"
-else
-    fail "poisoned ledger: rc=$RC requests=$(req_count) -- $OUTPUT"
 fi
 
 # --- 4. A malformed ledger line is a hard error -------------------------
@@ -264,7 +197,7 @@ else
 fi
 
 if [ "$FAIL" -eq 0 ]; then
-    echo "PASS: check_deepseek.sh, all eight assertions"
+    echo "PASS: check_deepseek.sh, all assertions"
     exit 0
 else
     echo "FAIL: check_deepseek.sh, at least one assertion failed above"

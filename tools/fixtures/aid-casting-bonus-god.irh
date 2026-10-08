@@ -1,0 +1,34 @@
+/* aid-casting-bonus-god.irh -- fixture for tools/check_aid_casting_bonus.sh
+   (bd inc-9uuj).
+
+   ONE test god. Joining it (wizard mode "Become Divine Champion") throws
+   EV_BLESSING once; the FAVOUR_CHART and the one-shot getGodLevel(...)==1
+   guard are the ones tools/fixtures/natural-one-attack-god.irh uses.
+
+   The blessing grants a +5 morale A_AID bonus, the same stati Bless
+   (lib/pspells.irh) applies with +1. Creature::AddBonus must carry it to all
+   five casting attributes.
+
+   NOT part of the shipped module: the check splices this file onto the END of
+   a scratch copy of lib/main.irc, under logs/ only. */
+
+God "Aid Casting Bonus Test God"
+  {
+    Lists:
+      * FAVOUR_CHART
+          1000
+          50000
+          60000
+          70000
+          80000
+          90000
+          100000
+          110000
+          120000
+          130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Aid Casting Bonus Test God") == 1)
+        EActor->GainPermStati(ADJUST_MOR,NULL,SS_MISC,A_AID,5);
+      return NOTHING;
+      };
+  }

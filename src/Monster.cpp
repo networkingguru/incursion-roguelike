@@ -61,6 +61,7 @@ bool       Monster::inMelee, Monster::targVis, Monster::isAfraid,
            Monster::isAvoiding, Monster::hasInnateSpellStati, Monster::isMount;
 Creature  *Monster::mtarg, *Monster::rtarg, *Monster::CurrAI;
 int16      Monster::nAct, Monster::nEff, Monster::nStati;
+int        Monster::Initializing = 0;
 uint32     Monster::hasEffFor;
 
 /* Things to do:
@@ -310,6 +311,17 @@ Monster::Monster(rID _mID,int16 _Type)
     ASSERT(mID);
     mMana = TMON(_mID)->Mana;
     BuffCount = 0;
+    /* upstream: this constructor never assigned hObj Inv, leaning on the
+       zero-fill that Object::operator new does (inc/Base.h). Reading a member
+       the constructor leaves indeterminate is undefined, so an optimising
+       compiler that does not preserve that fill reads stale heap bytes. GCC
+       -O2 deletes the memset (-flifetime-dse=2) and Inv holds heap text, which
+       SkillKitMod -> GetInv/InSlot reads as a handle; clang keeps the fill and
+       hides it. Julian Mensch's code (7b8504a, 2014), so it misbehaves the same
+       way on the original Win32 compiler; it is not a port artifact. The fix
+       assigns the member before use, which equals the zero-fill clang already
+       produced, so clang runs are unchanged. Observed, inc-eikp.3, not sent. */
+    Inv = 0;
     GainStatiFromBody(_mID);
     SetImage();
 	}
@@ -1555,11 +1567,23 @@ void Monster::Initialize(bool in_play)
         GainPermStati(PHASED, NULL, SS_MISC, AbilityLevel(CA_PHASE));
 
 
+    /* upstream: a monster still being initialised must take no fall damage.
+       Its template's EV_INITIALIZE event can shapeshift it (POLYMORPH), and
+       StatiOn then calls ClimbFall on ELEVATED (ELEV_TREE), whose 2d6 AD_FALL
+       drops cHP below mHP+THP and breaks the ASSERT below. ClimbFall reads
+       this counter and skips the damage. The order of these base-code steps is
+       the same on Win32. Observed via tools/check_monster_init_hp.sh;
+       inc-tmys; not sent. */
+    Initializing++;
+    /* upstream: init-time AddAct calls from a monster's or template's EV_INITIALIZE handler ("archer", "rogue-archer", "ranger;template") accumulate in the static action list across monsters, because nAct resets only in ChooseAction. Map::Generate Initializes many monsters with no ChooseAction between them, so the 64th trips ASSERT(nAct < 63) at inc/Creature.h:1662; with ASSERT compiled out it writes past Acts[63]. Save and restore nAct around these events so a monster Initialized in play keeps the action list another monster is still building. Observed via tools/check_act_overflow.sh; inc-3lsp; not sent. */
+    int16 savedNAct = nAct;
     TMON(tmID)->PEvent(EV_INITIALIZE,this,tmID);
 
     StatiIterNature(this,TEMPLATE)
         TTEM(S->eID)->PEvent(EV_INITIALIZE,this,S->eID);
     StatiIterEnd(this)
+    Initializing--;
+    nAct = savedNAct;
     ASSERT(cHP == mHP + Attr[A_THP]);
     SetSilence();
 
@@ -1677,6 +1701,60 @@ void Monster::Initialize(bool in_play)
 
 
 
+/* FAILED-ROUTE MEMORY. inc-gst2.
+   Invariant: within FAILED_ROUTE_WINDOW_ROUNDS of a failed ShortestPath to a
+   square on this map, a monster does not search that same square again; it
+   returns CENTER immediately. Successes are never memoed. The table is
+   file-static (no saved class gains a member), keyed by the monster's and the
+   map's stable handles plus the target square, and is bounded: an entry
+   expires after the window and the fixed table overwrites its oldest slot on
+   collision, so it cannot grow without bound. The window is short enough that
+   a recycled handle cannot inherit a live entry that matters. */
+#define FAILED_ROUTE_WINDOW_ROUNDS 5
+#define FAILED_ROUTE_WINDOW_TICKS  (FAILED_ROUTE_WINDOW_ROUNDS * 60)
+#define FAILED_ROUTE_SLOTS         256
+
+struct FailedRoute { hObj mon, map; int16 tx, ty; uint32 expiry; };
+static FailedRoute FailedRoutes[FAILED_ROUTE_SLOTS];
+
+static unsigned FailedRouteHash(hObj mon, hObj map, int16 tx, int16 ty)
+  {
+    unsigned h = (unsigned)mon * 2654435761u;
+    h ^= (unsigned)map * 2246822519u;
+    h ^= (unsigned)(uint16)tx * 3266489917u;
+    h ^= (unsigned)(uint16)ty * 668265263u;
+    return h % FAILED_ROUTE_SLOTS;
+  }
+
+static bool FailedRouteRecent(hObj mon, hObj map, int16 tx, int16 ty, uint32 now)
+  {
+    unsigned i, s = FailedRouteHash(mon, map, tx, ty);
+    for (i = 0; i < FAILED_ROUTE_SLOTS; i++)
+      {
+        FailedRoute &e = FailedRoutes[(s + i) % FAILED_ROUTE_SLOTS];
+        if (!e.mon) return false;
+        if (e.mon == mon && e.map == map && e.tx == tx && e.ty == ty)
+          return e.expiry > now;
+      }
+    return false;
+  }
+
+static void FailedRouteRecord(hObj mon, hObj map, int16 tx, int16 ty, uint32 now)
+  {
+    unsigned i, s = FailedRouteHash(mon, map, tx, ty);
+    uint32 expire = now + FAILED_ROUTE_WINDOW_TICKS;
+    for (i = 0; i < FAILED_ROUTE_SLOTS; i++)
+      {
+        FailedRoute &e = FailedRoutes[(s + i) % FAILED_ROUTE_SLOTS];
+        if (!e.mon || !(e.expiry > now)
+            || (e.mon == mon && e.map == map && e.tx == tx && e.ty == ty))
+          {
+            e.mon = mon; e.map = map; e.tx = tx; e.ty = ty; e.expiry = expire;
+            return;
+          }
+      }
+  }
+
 Dir Monster::SmartDirTo(int16 tx, int16 ty, bool is_pet)
   {
     static uint16 thePath[MAX_PATH_LENGTH];
@@ -1686,10 +1764,14 @@ Dir Monster::SmartDirTo(int16 tx, int16 ty, bool is_pet)
         (theGame->Opt(OPT_MON_DJIKSTRA) == 2 && is_pet)) {
       if (m->LineOfFire(x,y,tx,ty,this))
         return DirTo(tx,ty);
+      if (FailedRouteRecent(myHandle,m->myHandle,tx,ty,theGame->Turn))
+        return CENTER;
       bool blocked; int16 dx, dy;
       blocked = !m->ShortestPath((uint8)x,(uint8)y,(uint8)tx,(uint8)ty,this,0,thePath);
-      if (blocked)
+      if (blocked) {
+        FailedRouteRecord(myHandle,m->myHandle,tx,ty,theGame->Turn);
         return CENTER;
+        }
       dx = thePath[1] % 256;
       dy = thePath[1] / 256;
       return DirTo(dx,dy);

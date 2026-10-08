@@ -692,7 +692,7 @@ Wizard / Druid Spell "Wall of Fog" : EA_TERRAFORM
 Wizard / Scroll Spell "Wizard Lock" : EA_GENERIC
   { SC_ARC; Base: SP_MEDIUM; Cost: 1; Level: 1; qval: 0; 
     Purpose: EP_BUFF | EP_FOIL_PURSUIT | EP_UNLOCK; Flags: EF_DLONG; 
-    Desc: "Magically closes, locks and wizard-locks all doors you can perceive.  A wizard-locked door has double the normal hardness and the DC to pick its locks increases by +10. You can open one of your wizard-locked doors instantaneously with a mental command when next to it. You can close one of your wizard-locked doors normally. Doors that are already wizard-locked are unaffected by this spell.";
+    Desc: "Magically closes, locks and wizard-locks all doors you can perceive.  The DC to pick a wizard-locked door's lock and the DC to break it down each increase by +10. You can open one of your wizard-locked doors instantaneously with a mental command when next to it. You can close one of your wizard-locked doors normally. Doors that are already wizard-locked are unaffected by this spell.";
     hObj h;  
     On Event EV_ISTARGET {
       for(h=EMap->FirstThing();h;h=EMap->NextThing()) 
@@ -1936,8 +1936,13 @@ Priest / Scroll / Wizard Spell "Magic Weapon" : EA_GENERIC
       other fiends."; 
     hObj it;
     On Event 
+      /* upstream: covers T_WEAPON, T_BOW, T_MISSILE because isType is an
+         exact match; T_STAFF excluded. A bow is single so it takes the
+         GetQuantity()==1 rule; ammunition (T_MISSILE) stays accepted as a
+         stack. Upstream's type comparison. Observed via
+         tools/check_weapon_types.sh, inc-f38k, not sent. */
       EV_ISTARGET {
-        if (ETarget->isType(T_WEAPON))
+        if (ETarget->isType(T_WEAPON) || ETarget->isType(T_BOW))
           if (ETarget->GetQuantity() == 1)
             return CAN_CAST_IT;
         if (ETarget->isType(T_MISSILE))
@@ -1949,7 +1954,8 @@ Priest / Scroll / Wizard Spell "Magic Weapon" : EA_GENERIC
         return CANNOT_CAST_IT; 
         },
       EV_RATETARG {
-        if (EItem->isType(T_WEAPON))
+        if (EItem->isType(T_WEAPON) || EItem->isType(T_BOW) ||
+            EItem->isType(T_MISSILE))
           return NOTHING;
         return ABORT;
         },
@@ -2225,8 +2231,7 @@ Wizard Spell "Wall of Doors" : EA_GENERIC
     Desc: "Conjures a solid barrier made out of wooden doors, displacing
       any creatures in its path and blocking further passage. The doors are
       initially locked but can be opened or destroyed normally. At caster
-      level 5 the doors are created Wizard Locked (+10 to Lockpicking DC,
-      double hardness, but they open automatically for you). At caster
+      level 5 the doors are created Wizard Locked (+10 to the Lockpicking and break DCs, but they open automatically for you). At caster
       level 7 the doors are created with wards that prevent incorporeal and
       summoned creatures from passing through a door while it is closed."; 
     On Event MSG_CAST
@@ -3985,6 +3990,16 @@ Wizard Spell "Explosive Runes" : EA_TERRAFORM
 Terrain "strange rune"
   { Image: pink '#'; Mat:MAT_GRANITE; 
     Flags: TF_SPECIAL, TF_EFFECT, TF_WARN; 
+    Constants:
+      /* inc-1xr3 phase 2j: the rune's DC and damage are both the map square's
+         run-time values -- the save DC is the caster's TerraDC and the damage
+         is the caster's TerraDmg dice, rolled by the handler. WARN_SAVE holds
+         REF + 1 so FORT (0) can still be declared; the DC/damage-from-map
+         flags send the note to the same GetTerraD* calls. Half on a save. */
+      * WARN_SAVE 2,
+      * WARN_SAVE_DC 0,
+      * WARN_SAVE_DC_FROM_MAP 1,
+      * WARN_DMG_FROM_MAP 1;
     On Event EV_MON_CONSIDER {
       if (EActor->cHP < EMap->GetTerraDmg(e.EXVal,e.EYVal) &&
           EActor->GetAttr(A_INT) > 10)
@@ -5814,6 +5829,12 @@ Wizard / Druid / Scroll Spell "Wall of Fire" : EA_TERRAFORM
 Terrain "curtain of flame"
   { Image: magenta ';'; Mat:MAT_MINERAL; /* The *floor* */
     Flags: TF_SPECIAL, TF_SHOWNAME, TF_WARN;
+    Constants:
+      /* inc-1xr3 phase 2j: the curtain's per-step damage is the caster's
+         TerraDmg on this square, which the handler passes straight to
+         ThrowTerraDmg and the note reads back from GetTerraDmg. No save. */
+      * WARN_DMG_TYPE AD_FIRE,
+      * WARN_DMG_FROM_MAP 1;
     On Event EV_MON_CONSIDER {
       int16 rl;
       rl = EActor->ResistLevel(AD_FIRE);
@@ -5832,6 +5853,10 @@ Terrain "curtain of flame"
 Terrain "curtain of frost"
   { Image: bright cyan ';'; Mat:MAT_MINERAL; /* The *floor* */
     Flags: TF_SPECIAL, TF_SHOWNAME, TF_WARN;
+    Constants:
+      /* inc-1xr3 phase 2j: run-time TerraDmg, like the flame curtain. */
+      * WARN_DMG_TYPE AD_COLD,
+      * WARN_DMG_FROM_MAP 1;
     On Event EV_MON_CONSIDER {
       int16 rl;
       rl = EActor->ResistLevel(AD_COLD);
@@ -5850,6 +5875,10 @@ Terrain "curtain of frost"
 Terrain "curtain of acid"
   { Image: bright green ';'; Mat:MAT_MINERAL; /* The *floor* */
     Flags: TF_SPECIAL, TF_SHOWNAME, TF_WARN;
+    Constants:
+      /* inc-1xr3 phase 2j: run-time TerraDmg, like the flame curtain. */
+      * WARN_DMG_TYPE AD_ACID,
+      * WARN_DMG_FROM_MAP 1;
     On Event EV_MON_CONSIDER {
       int16 rl;
       rl = EActor->ResistLevel(AD_ACID);
@@ -5868,6 +5897,10 @@ Terrain "curtain of acid"
 Terrain "curtain of vibrating air"
   { Image: bright white ';'; Mat:MAT_MINERAL; /* The *floor* */
     Flags: TF_SPECIAL, TF_SHOWNAME, TF_WARN;
+    Constants:
+      /* inc-1xr3 phase 2j: run-time TerraDmg, like the flame curtain. */
+      * WARN_DMG_TYPE AD_SONI,
+      * WARN_DMG_FROM_MAP 1;
     On Event EV_MON_CONSIDER {
       int16 rl;
       rl = EActor->ResistLevel(AD_SONI);
@@ -5886,6 +5919,10 @@ Terrain "curtain of vibrating air"
 Terrain "curtain of toxic gas"
   { Image: green ';'; Mat:MAT_MINERAL; /* The *floor* */
     Flags: TF_SPECIAL, TF_SHOWNAME, TF_WARN;
+    Constants:
+      /* inc-1xr3 phase 2j: run-time TerraDmg, like the flame curtain. */
+      * WARN_DMG_TYPE AD_TOXI,
+      * WARN_DMG_FROM_MAP 1;
     On Event EV_MON_CONSIDER {
       int16 rl;
       rl = EActor->ResistLevel(AD_TOXI);
@@ -5904,6 +5941,10 @@ Terrain "curtain of toxic gas"
 Terrain "curtain of lightning"
   { Image: bright yellow ';'; Mat:MAT_MINERAL; /* The *floor* */
     Flags: TF_SPECIAL, TF_SHOWNAME, TF_WARN;
+    Constants:
+      /* inc-1xr3 phase 2j: run-time TerraDmg, like the flame curtain. */
+      * WARN_DMG_TYPE AD_ELEC,
+      * WARN_DMG_FROM_MAP 1;
     On Event EV_MON_CONSIDER {
       int16 rl;
       rl = EActor->ResistLevel(AD_ELEC);

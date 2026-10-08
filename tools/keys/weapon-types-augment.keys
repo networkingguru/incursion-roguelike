@@ -1,0 +1,24 @@
+# Key script for tools/check_weapon_types.sh, INCURSION_WEAPONTYPE_PROBE=augment.
+#
+# The probe calls Character::CraftItem (Augment) three times, once per item:
+# a short bow, a crossbow bolt, a long sword. It hides every other item from the
+# candidate list, so the item under test is menu entry [a]. Each call takes:
+#   q    "Add quality" at the Add quality or improve plus? prompt
+#   a    the one candidate
+# then the quality menu is on screen and is dumped; ESC leaves it. The check
+# reads each dump. There is no @expect: a bow that is not a candidate must make
+# the check FAIL, and an @expect that misses ends the run with exit 6, which the
+# harness reads as "nothing measured".
+q
+a
+@dump:augment-1-short-bow
+ESC
+q
+a
+@dump:augment-2-crossbow-bolt
+ESC
+q
+a
+@dump:augment-3-long-sword
+ESC
+s

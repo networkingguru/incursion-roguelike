@@ -14,7 +14,7 @@ History: docs/rules-history/AGENTS.md#one-bead-one-worktree--never-work-in-the-s
 
 ## Publishing anything outward-facing
 
-1. Brian reads the literal text — exact body and title — before anything is published to a tree he does not own (PRs, issues, review comments, third-party repos). A "go" on a plan is not approval of unseen wording. ONE exemption: bug text to his own tracker (`networkingguru/incursion-roguelike`) needs no pre-read — run `tools/sync_issues.sh`, say what went out, no asking first, no apologising after. Exemption is bugs, NOT the repo: README, user-facing docs, release notes, store/itch pages, announcements still need his read.
+1. Brian reads the literal text — exact body and title — before anything is published to a tree he does not own (PRs, issues, review comments, third-party repos). A "go" on a plan is not approval of unseen wording. TWO exemptions, both on his own repo (`networkingguru/incursion-roguelike`): (a) bug text to his tracker needs no pre-read — run `tools/sync_issues.sh`, say what went out, no asking first, no apologising after; (b) wiki pages `tools/publish_wiki.sh` generates verbatim from the game's help need no pre-read (hand-written wiki pages still do). Exemptions are those two, NOT the repo: README, user-facing docs, release notes, store/itch pages, announcements still need his read.
 2. Always disclose AI assistance on public contributions (every commit carries `Co-Authored-By`), in before he sees the draft.
 
 Prefer a follow-up comment over silently editing a published body. `docs/REPORTING-GATE.md`: a public claim needs an oracle that changed state, numbers both sides.
@@ -24,9 +24,10 @@ History: docs/rules-history/AGENTS.md#publishing-anything-outward-facing.
 ## If you are the implementer (Codex, or DeepSeek in opencode)
 
 This section binds every implementer Claude dispatches. Claude plans and reviews; you implement. Disagree with a prompt? Say so in your report, don't choose silently.
+- Your brief IS your go. Implement it; do NOT stop to propose and wait for approval. "No autonomous work — propose, then wait" binds the session that talks to Brian, which had his go before it dispatched you. Stop only where this section says (a guard in your way, a spec you believe wrong). Claude MUST NOT write an approval into a brief after an implementer stops to ask; it re-dispatches the brief unchanged, citing this line.
 - NEVER delete an existing guard, bounds check, invariant, assertion or test to fit new code. If one blocks you, STOP, report file+line, say why.
 - Build ONLY with `BACKEND=posix ./build_macos.sh` (produces `incursion-headless`, compiles `mod/Incursion.Mod` in-sandbox). Use `./incursion-headless` as compiler in scripts.
-- NEVER invoke `./incursion` (SDL, no sandbox). Do NOT run/edit/report-failing: `check_flavor_stability.sh`, `check_dump_save.sh`, `check_convert_guard.sh`, `check_stair_warn.sh`, `check_dup_names.sh` — the main Claude session runs these, outside the sandbox; none needs Brian at the keyboard.
+- NEVER invoke `./incursion` (SDL, no sandbox). Do NOT run/edit/report-failing: `check_flavor_stability.sh`, `check_convert_guard.sh`, `check_stair_warn.sh`, `check_dup_names.sh` — the main Claude session runs these, outside the sandbox; none needs Brian at the keyboard.
 - Run NO git command that changes state; leave changes in the working tree. Read-only git (`status`, `diff`, `log`, `show`, `ls-files`, `rev-parse`) is allowed. Never route a git command through a script to get around this.
 - Put a reproduction (key script, seed, options file, command) in `tools/`, and leave it in the working tree for the commit. Write no specimen (screen dump, log, save, crash report) outside `logs/`. Name each specimen path in your report.
 - Run NO `bd`; do not open/close/claim/annotate issues.

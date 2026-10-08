@@ -131,6 +131,10 @@ typedef signed int        hObj;
 
 #define HOUR_TURNS 18000L
 
+/* 24 hours in stati units: one unit per EV_TURN, which
+   fires every 60 ticks; HOUR_TURNS ticks per hour. */
+#define MENACE_DURATION (24*HOUR_TURNS/60)
+
 #define CONSTRAINED_ENC(enc,con) (-2) enc con
 #define CON_ENC_MINMAX(enc,con,low,high) (-3) enc con low high
 
@@ -582,6 +586,8 @@ typedef signed int        hObj;
 #define WT_TWO_HANDED        33
 #define WT_FUMBLE1           34
 #define WT_FUMBLE2           35
+#define NOT_PROF_HIT_PENALTY 4   /* inc-1xr3: Values.cpp and the Create.cpp weapon prompt */
+#define NOT_PROF_SPD_PENALTY 10
 #define WT_STR1              36
 #define WT_STR2              37
 #define WT_STR3              38
@@ -2624,7 +2630,10 @@ typedef signed int        hObj;
 #define FT_WILD_SHAPE_MASTERY  (FT_TUVWXYZ + 43)
 #define FT_WEAPON_HIGH_MASTERY (FT_TUVWXYZ + 44)
 #define FT_WEAPON_GRAND_MASTERY (FT_TUVWXYZ + 45)
-#define FT_LAST                (FT_TUVWXYZ + 46)
+/* inc-08js: general Cannibalism feat, appended after FT_WEAPON_GRAND_MASTERY
+   so existing feat numbers stored in saves are unchanged. */
+#define FT_CANNIBALISM         (FT_TUVWXYZ + 46)
+#define FT_LAST                (FT_TUVWXYZ + 47)
 
 #define MM_AMPLIFY       0x00000001  /* Penetrates magic resistance */
 #define MM_AUGMENT       0x00000002  /* Summoned creatures stronger */
@@ -3760,7 +3769,19 @@ typedef signed int        hObj;
 #define STICK_TYPE            140 /* Terrain: The kind of sticky terrain that sticky terrain is. */
 #define DRAGON_FEAR_DC        141 /* Monster: +/- modifier to fear saves versus this creature. */
 #define UNIFORMITY_CHANCE     142 /* Unused? */
-#define LAST_DUNCONST         143
+#define WARN_SKILL            143 /* Terrain: Skill id of the check that decides this terrain's warning risk. */
+#define WARN_DC               144 /* Terrain: DC of that skill check. */
+#define WARN_SAVE             145 /* Terrain: Save type (FORT/REF/WILL) plus 1 (0 = none, since FORT is 0) that decides the warning risk instead, or with, the skill. */
+#define WARN_SAVE_DC          146 /* Terrain: DC of that save. */
+#define WARN_MARGIN           147 /* Terrain: If positive, the note also shows the chance of failing the skill check by more than this. */
+#define WARN_DMG_NUM          148 /* Terrain: Number of dice of the per-step damage the warning note reports (0 = no damage). A dice literal is not a cexpr3 scalar, so the die is split across three constants. */
+#define WARN_DMG_SIDES        149 /* Terrain: Sides of each damage die. */
+#define WARN_DMG_BONUS        150 /* Terrain: Flat bonus added to the damage roll. */
+#define WARN_DMG_TYPE         151 /* Terrain: Damage-type id (AD_FIRE etc.) the note names from DTypeNames. */
+#define WARN_DC_FROM_MAP      152 /* Terrain: If set, the warning DC is the map's TerraDC at the tested square (via Map::GetTerraDC), not lower than WARN_DC (i.e. max(WARN_DC, TerraDC)). */
+#define WARN_SAVE_DC_FROM_MAP 153 /* Terrain: If set, the warning save DC is the map's TerraDC at the tested square (via Map::GetTerraDC), not lower than WARN_SAVE_DC (i.e. max(WARN_SAVE_DC, TerraDC)). */
+#define WARN_DMG_FROM_MAP     154 /* Terrain: If set, the warning damage is the map's TerraDmg at the tested square (via Map::GetTerraDmg), overriding the WARN_DMG_NUM/SIDES/BONUS dice. */
+#define LAST_DUNCONST         155
 
 
 #define MSG_IS_ANGRY      1
@@ -4269,6 +4290,10 @@ typedef signed int        hObj;
 #define DARK_MASK				(~BRIGHT_MASK & COLOUR_MASK)
 #define BACK_COLOUR(v)			(v << COLOUR_BITS)
 
+/* upstream: these macros did not bracket their arguments, so an
+   expression argument packed the wrong bits (GLYPH_FORE(a & b) was
+   a & (b << 12)) on every platform. Traced. inc-pnv2; not sent. */
+
 /* Glyph management macros: 
 
    NOTE: If in the future the ATTR is extended to include more than the colour, then all masking should be checked.
@@ -4281,28 +4306,34 @@ typedef signed int        hObj;
 
 #define GLYPH_ID(value)         (value)
 #define GLYPH_ID_MASK			((1 << GLYPH_ID_BITS) - 1)
-#define GLYPH_ID_VALUE(glyph)   (glyph & GLYPH_ID_MASK)
+#define GLYPH_ID_VALUE(glyph)   ((glyph) & GLYPH_ID_MASK)
 
 #define GLYPH_ATTR_SHIFT        (GLYPH_ID_BITS)
-#define GLYPH_ATTR(value)       (value << GLYPH_ATTR_SHIFT)
+#define GLYPH_ATTR(value)       ((value) << GLYPH_ATTR_SHIFT)
 #define GLYPH_ATTR_MASK         (((1 << GLYPH_ATTR_BITS) - 1) << GLYPH_ATTR_SHIFT)
-#define GLYPH_ATTR_VALUE(glyph) ((glyph & GLYPH_ATTR_MASK) >> GLYPH_ATTR_SHIFT)
+#define GLYPH_ATTR_VALUE(glyph) (((glyph) & GLYPH_ATTR_MASK) >> GLYPH_ATTR_SHIFT)
 
 #define GLYPH_FORE_SHIFT        (GLYPH_ATTR_SHIFT)
-#define GLYPH_FORE(value)       (value << GLYPH_FORE_SHIFT)
+#define GLYPH_FORE(value)       ((value) << GLYPH_FORE_SHIFT)
 #define GLYPH_FORE_MASK         (((1 << GLYPH_FORE_BITS) - 1) << GLYPH_FORE_SHIFT)
-#define GLYPH_FORE_VALUE(glyph) ((glyph & GLYPH_FORE_MASK) >> GLYPH_FORE_SHIFT)
+#define GLYPH_FORE_VALUE(glyph) (((glyph) & GLYPH_FORE_MASK) >> GLYPH_FORE_SHIFT)
 
 #define GLYPH_BACK_SHIFT        (GLYPH_ATTR_SHIFT + GLYPH_FORE_BITS)
-#define GLYPH_BACK(value)       (value << GLYPH_BACK_SHIFT)
+#define GLYPH_BACK(value)       ((value) << GLYPH_BACK_SHIFT)
 #define GLYPH_BACK_MASK         (((1 << GLYPH_BACK_BITS) - 1) << GLYPH_BACK_SHIFT)
-#define GLYPH_BACK_VALUE(glyph) ((glyph & GLYPH_BACK_MASK) >> GLYPH_BACK_SHIFT)
+#define GLYPH_BACK_VALUE(glyph) (((glyph) & GLYPH_BACK_MASK) >> GLYPH_BACK_SHIFT)
 
-#define GLYPH_COLOUR(value)     (value << GLYPH_FORE_SHIFT)
+#define GLYPH_COLOUR(value)     ((value) << GLYPH_FORE_SHIFT)
 #define GLYPH_COLOUR_MASK		(GLYPH_FORE_MASK + GLYPH_BACK_MASK)
-#define GLYPH_COLOUR_VALUE(g)   ((g & GLYPH_COLOUR_MASK) >> GLYPH_FORE_SHIFT)
+#define GLYPH_COLOUR_VALUE(g)   (((g) & GLYPH_COLOUR_MASK) >> GLYPH_FORE_SHIFT)
 
 #define GLYPH_VALUE(id, attr)   (GLYPH_ID(id) | GLYPH_ATTR(attr))
+
+#ifdef __cplusplus
+static_assert(GLYPH_FORE(9 & COLOUR_MASK) == (9 << GLYPH_FORE_SHIFT), "GLYPH_FORE must bracket its argument (inc-pnv2)");
+static_assert(GLYPH_BACK(4 | 0) == (4 << GLYPH_BACK_SHIFT), "GLYPH_BACK must bracket its argument (inc-pnv2)");
+static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR must bracket its argument (inc-pnv2)");
+#endif
 
 /* Glyph values. */
 

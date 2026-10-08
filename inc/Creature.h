@@ -164,6 +164,25 @@ inline int16 XCRtoCR(int32 XCR);
    to this default. inc-5bl3. */
 #define TRUE_SIGHT_RANGE  12
 
+/* inc-1xr3: the deterministic half of a Creature::SkillCheck, computed with
+   no dice and no state change so the same numbers feed both the check and the
+   chance it advertises.  base is the total bonus; success needs a d20 result
+   of at least need (DC - base); floorRoll is the Skill Mastery floor applied
+   to the roll (0 when the creature has no such floor); nDice is how many d20s
+   are rolled and the best kept.  took20 means the roll is read as 20. msa is
+   the creature whose skill level is used and sr is that level, so the check
+   need not recompute either. */
+struct SkillTarget
+  {
+    int16 base;
+    int16 need;
+    int16 floorRoll;
+    bool  took20;
+    int16 nDice;
+    Creature *msa;
+    int16 sr;
+  };
+
 class Creature: public Thing, public Magic
   {
     ARCHIVE_CLASS(Creature,Thing,r)
@@ -467,12 +486,25 @@ class Creature: public Thing, public Magic
       int8 WepSkill(Item * it) ;
       bool SavingThrow(int16 type, int16 DC, uint32 Subtype=0,
                          int16 cmod=0, const char*cmod_desc=NULL);
+      int16 SaveBonus(int16 type, uint32 Subtype, int16 cmod=0,
+                        String *desc=NULL);
+      int16 SaveChance(int16 type, int16 DC, uint32 Subtype=0, int16 cmod=0);
       virtual bool SkillCheck(int16 sk, int16 DC, bool show = true,
                                  int16 mod1=0, const char *mod1Str=NULL,
                                  int16 mod2=0, const char *mod2Str=NULL);
+       SkillTarget SkillCheckTarget(int16 sk, int16 DC, int16 mod1=0, int16 mod2=0);
+       int16 SkillCheckChance(int16 sk, int16 DC, int16 mod1=0, int16 mod2=0);
+       /* inc-1xr3: the parenthesised risk note for a terrain-warning prompt,
+          built from the terrain's own WARN_* constants. Empty when the terrain
+          declares no risk constants, so an unannotated terrain is unchanged. */
+       String TerrainRiskNote(rID terrain, Map *map, int16 x, int16 y);
       virtual Creature * MostSkilledAlly(int16 sk);
       virtual void TrainAs(rID cID) { }
       virtual int16 HungerState();
+      /* inc-1xr3: the nauseated-attack confirmation, shared by the three
+         combat sites so all three show the same Concentration odds. Returns
+         the player's answer; the caller still runs SkillCheck itself. */
+      virtual bool PromptNauseatedAttack();
       virtual bool LoseFatigue(int16 amt, bool avoid=false);
       virtual void Planeshift();
       virtual void Shapeshift(rID mD, bool merge, Item*PolySource=NULL);
@@ -637,6 +669,7 @@ class Creature: public Thing, public Magic
       virtual void gainFavour(rID gID, int32 amt, bool advance=false, bool stack=true) { }
       bool isMType(int32 MType);
       bool isPMType(int32 MType, Creature *cr);
+      bool isSameRaceAs(rID corpseMonID);
 
       bool okWildShape(int16 lev, rID mID, rID tID);
       bool okAnimalComp(int16 lev, rID mID, rID tID);
@@ -749,12 +782,23 @@ class Character: public Creature
 	                                  if (clID == ClassID[i])
 	                                    return UnspentSP(i);
 	                                 return 0; }
-      virtual int16 ChallengeRating()
+      /* upstream: base-code defect, the fix is ours. Creature::ChallengeRating
+         (inc/Creature.h) is virtual with (bool allow_neg = false) and this
+         declaration was (void), so it hid the base instead of overriding it.
+         Calls made through a Creature* reached the base, whose HACKFIX copy of
+         this rule returned the same level sum, so no number a player saw
+         changed. An arity difference is a different function under MSVC on
+         Win32 with the upstream compiler too; no typedef of this port is
+         involved. Traced; inc-rgzr; not sent. */
+      virtual int16 ChallengeRating(bool allow_neg = false)
         {
           // ww: taking the Creature challenge rating ends up having
           // undesired effects with wild shaped druids
-          return // max(Creature::ChallengeRating()-1,0) + 
+          int16 CR = // max(Creature::ChallengeRating()-1,0) + 
             ((int16)(Level[0]+Level[1]+Level[2]));
+          if (allow_neg)
+            return CR;
+          return max(0,CR);
         }
 	    EvReturn Event(EventInfo &ev);
 
@@ -888,6 +932,7 @@ class Character: public Creature
       void GrantSymbol(rID gID);
       void GodMessage(rID gID, int16 msgnum,...);
       int32 calcFavour(rID gID);
+      int16 ResurrectChance();
       void  gainedFavour(rID gID);
       virtual void gainFavour(rID gID, int32 amt, bool advance=false, bool stack=true);
       virtual rID getGod() { return GodID; }
@@ -1615,6 +1660,10 @@ class Monster: public Creature
              isDrained, isEnraged, isGrabbed, isAvoiding,
              hasInnateSpellStati, isMount; 
     public:
+      /* Non-zero while at least one Monster::Initialize is running. ClimbFall
+         reads it to skip fall damage for a monster still being initialised
+         (inc-tmys). A counter, not a bool: Initialize can nest. */
+      static int Initializing;
 			hObj GetInvHead() { return Inv; }
       Monster(rID mID,int16 _Type=T_MONSTER);
 			EvReturn Event(EventInfo &e);

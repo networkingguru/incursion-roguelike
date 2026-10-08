@@ -9,12 +9,13 @@
 # throw numbers and every attribute -- to a character who had just arrived.
 # tools/check_monster_memory.sh reads the box this script photographs.
 #
-# WHY HUMAN, AND WHY A BARE ENTER. [R]ecall opens the glyph browser
-# (TextTerm::AcquisitionPrompt, src/Term.cpp), which has neither menu letters
-# nor a '>' marker, so neither @choose nor @cursorto can drive it. It opens on
-# the first glyph category with the first candidate selected, and ENTER takes
-# that one. On this module that is the human, the only entry under "Humans",
-# and an orc barbarian arriving in the goblin caves has met none.
+# WHY A MESSAGE, AND NOT A MENU. [R]ecall now checks whether the player has
+# any monster-memory row at all (src/Managers.cpp, case 'R') before it opens
+# TextTerm::MonsterPrompt; a character with no row at all is told
+# "You recall no monsters." and the menu never opens. An orc barbarian who
+# has just searched once in the goblin caves has met nobody, so that is what
+# this script photographs. The message is itself a Box(), dismissed the same
+# way the old description box was: any key, here ENTER.
 #
 # The save at the end is the second half of the oracle: tools/dump_save.sh
 # prints the "Monster Memory" section straight from MonMem, so the check can
@@ -27,10 +28,10 @@ s               # search: one real turn, so the harness counts this a session
 d               # Display Character Sheet
 @expect "Gender"
 r               # [R]ecall Monster
-ENTER           # the first candidate of the first glyph category: the human
 @dump:unmet-recall
-
-ESC             # dismiss the description box
+@expect "You recall no monsters."
+ENTER           # dismiss the message box
+@expect "Gender"
 ESC             # leave the character sheet, back to play mode
 
 ESC             # System Menu -- and NOT a cancel

@@ -1,0 +1,20 @@
+# Control for cannibalism-feat-yes.keys: the SAME neutral human warrior, but every
+# feat is the first one offered (@while "Choose a feat" a), so he does not take
+# Cannibalism, then he finishes the same corpse.
+a
+n
+y
+@choose "Human"
+@choose "Athletics"
+@choose "Diplomacy"
+@choose "Warrior"
+a
+@choose "Neutral"
+@while "Choose a feat" a
+@until "Unspent Skill Ranks" ENTER
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "wish to worship" y
+@while "personality archetype" a
+ESC
+@include cannibalism-feat-meal.keys

@@ -28,6 +28,10 @@
 # run this again. The seed-7 run segfaults (exit 139), never enters a map, and
 # logs "invalid object handle (1344285811)". This guard then FAILS.
 #
+# It builds with INCURSION_GCC_RAW_DSE=1 because build_macos.sh now masks this
+# whole defect class on every GCC build with -flifetime-dse=1 (inc-eikp.3).
+# This guard exists to SEE an unassigned member, so it must omit the mask.
+#
 # Usage: tools/check_gcc_o2_char_create.sh   (exits 0 on pass, 1 on fail,
 #                                             2 on could-not-measure)
 set -uo pipefail
@@ -73,7 +77,7 @@ OUT="$(docker run --rm --platform "$PLATFORM" \
         -e SDL_VIDEODRIVER=dummy -e SDL_AUDIODRIVER=dummy \
         -v "$TMP:/src" "$IMAGE" sh -c '
     set -e
-    CC=gcc CXX=g++ BACKEND=posix ./build_macos.sh >/dev/null 2>&1 \
+    CC=gcc CXX=g++ INCURSION_GCC_RAW_DSE=1 BACKEND=posix ./build_macos.sh >/dev/null 2>&1 \
         || { echo "POSIX-BUILD-FAILED"; exit 0; }
     INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh '"$KEYS"' '"$SEED"' 2>&1 | tail -40
 ' 2>&1)"

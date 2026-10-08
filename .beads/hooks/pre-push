@@ -62,3 +62,16 @@ if [ -z "${INCURSION_NO_BEAD_SYNC:-}" ] && [ -z "${BD_GIT_HOOK_NESTED:-}" ]; the
       echo >&2 "pre-push: bead publication failed; the push CONTINUES. Run tools/sync_issues.sh to see why."
   fi
 fi
+
+# --- INCURSION: regenerate the public wiki on push (inc-k2le, 2026-10-04) ---
+# tools/publish_wiki.sh exports a clean tree, builds its own incursion-wiki,
+# generates the wiki pages from the in-game help, validates them and pushes
+# them to the wiki repo. It MUST NEVER BLOCK A PUSH, so it runs detached in
+# the background and this hook does not wait for it. Set INCURSION_NO_WIKI=1
+# to skip it.
+if [ -z "${INCURSION_NO_WIKI:-}" ] && [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
+  _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
+  if [ -x "$_inc_root/tools/publish_wiki.sh" ]; then
+    nohup "$_inc_root/tools/publish_wiki.sh" >/dev/null 2>&1 &
+  fi
+fi

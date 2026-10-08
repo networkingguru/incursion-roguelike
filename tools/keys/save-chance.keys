@@ -1,0 +1,16 @@
+# Minimal session for INCURSION_SAVECHANCE_PROBE (inc-o6xj,
+# SaveChanceProbe, src/Fight.cpp). The probe runs once, synchronously, at the
+# top of Game::Play() -- before the arrival screen chargen.keys leaves up is
+# dismissed -- so nothing after chargen.keys matters to the check itself; this
+# script only needs a clean, deterministic way into a live map and a clean
+# exit.
+#
+# Read by tools/check_save_chance.sh, which sets INCURSION_SAVECHANCE_PROBE=1
+# and reads the probe's own SAVECHANCE lines out of logs/errors.log.
+
+@include chargen.keys
+
+SPACE*80
+ESC*20
+
+@quit

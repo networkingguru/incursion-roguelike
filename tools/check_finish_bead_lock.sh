@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: cheap
+# gate-serial: races wall-clock landing-lock deadlines (sleep 2/3 s windows); CPU load could flip them
 #
 # Does the per-base-branch landing lock in tools/finish_bead.sh actually
 # serialise two landings, clear a stale lock, spare a different base branch,
@@ -25,6 +26,9 @@ set -uo pipefail
 # A scratch repository answers to nothing the person running this has configured.
 unset INCURSION_FINISH_GATE INCURSION_BASE_BRANCH INCURSION_FINISH_LOCK_POLL \
       NIGHTLY_VERIFY_STATE NIGHTLY_CHECK_DIR NIGHTLY_BASE_REF
+
+# A fixture landing tests the lock and merge, not machine load (inc-rwha).
+export INCURSION_LOAD_GUARD_OFF=1
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT="$ROOT/tools/finish_bead.sh"
@@ -365,8 +369,58 @@ case_live_no_started() {
     return 0
 }
 
+# ---------------------------------------------------------------------------
+# Case 6: a landing killed INSIDE acquire_lock's critical section -- between
+# mkdir taking the lock dir and LOCK_HELD=1 -- must still release the lock and
+# leave master untouched. A SIGTERM landing in that window used to exit with the
+# lock dir left behind, so the next landing waited on a corpse. `ps` is stubbed
+# to sleep, stretching the window wide enough to hit reliably. inc-fdkz.
+# ---------------------------------------------------------------------------
+case_interrupt_in_window() {
+    local tmp lock sha pid status
+    tmp="$(build_repo inc-lckw)" || { bad "case 6: could not build the repo"; return 2; }
+    lock="$tmp/work/Incursion/.git/finish-bead-locks/master.lock"
+    local copy="$tmp/work/Incursion/tools/finish_bead.sh"
+    sha="$(bead_sha "$tmp" inc-lckw)" || { bad "case 6: no inc-lckw commit"; rm -rf "$tmp"; return 2; }
+
+    mkdir -p "$tmp/bin" || { bad "case 6: could not make the stub bin"; rm -rf "$tmp"; return 2; }
+    printf '#!/bin/sh\nsleep 3\nexec /bin/ps "$@"\n' >"$tmp/bin/ps" || {
+        bad "case 6: could not write the ps stub"; rm -rf "$tmp"; return 2; }
+    chmod +x "$tmp/bin/ps" || { bad "case 6: could not chmod the ps stub"; rm -rf "$tmp"; return 2; }
+
+    PATH="$tmp/bin:$PATH" INCURSION_FINISH_GATE="sleep 3" INCURSION_FINISH_LOCK_POLL=1 \
+        "$copy" inc-lckw >"$tmp/w.out" 2>&1 &
+    pid=$!
+    CHILD_PIDS+=("$pid")
+
+    if ! wait_for_lock "$lock" 10; then
+        kill "$pid" 2>/dev/null
+        bad "case 6: inc-lckw never took the lock (could not measure)"
+        rm -rf "$tmp"; return 2
+    fi
+    # The child is inside its slow `ps`, i.e. inside the window.
+    kill -TERM "$pid" 2>/dev/null
+    if ! wait_pid "$pid" 15; then
+        kill -KILL "$pid" 2>/dev/null
+        bad "case 6: inc-lckw survived SIGTERM"
+        rm -rf "$tmp"; return 1
+    fi
+    status=$WAIT_RC
+    [ "$status" -ne 0 ] && ok "case 6: inc-lckw exited non-zero ($status) on SIGTERM" \
+        || bad "case 6: inc-lckw exited 0 despite SIGTERM"
+    [ -d "$lock" ] && bad "case 6: the lock dir survived the interrupt" \
+        || ok "case 6: the lock dir is gone after SIGTERM"
+    is_ancestor "$tmp" "$sha" && bad "case 6: inc-lckw reached master despite SIGTERM" \
+        || ok "case 6: inc-lckw did not reach master"
+    if [ "$FAIL" -ne 0 ]; then
+        echo "---- inc-lckw output ----"; cat "$tmp/w.out"
+    fi
+    rm -rf "$tmp"
+    return 0
+}
+
 MEASURED=0
-for c in case_serialisation case_stale case_per_branch case_interrupt case_live_no_started; do
+for c in case_serialisation case_stale case_per_branch case_interrupt case_live_no_started case_interrupt_in_window; do
     "$c"; rc=$?
     [ "$rc" -eq 2 ] && MEASURED=1
 done

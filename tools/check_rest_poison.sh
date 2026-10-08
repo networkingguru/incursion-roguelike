@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# gate-serial: writes a fixed scratch dir logs/rest-poison-scratch and rm -rf's it
 # Does the player's Rest ('z', KY_CMD_SLEEP -> EV_REST) work while POISONED,
 # and do the poison's Fort saves roll during the rest? (bd inc-gmrj)
 #

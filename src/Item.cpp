@@ -1452,7 +1452,13 @@ EvReturn Item::Damage(EventInfo &e) {
     if (e.EActor == Owner() && e.EActor->GetStatiObj(ACTING) == this)
         no_msg = true;
 
-    if (isType(T_WEAPON) && HasQuality(WQ_ENERGY))
+    /* upstream: an energy weapon cannot be damaged -- the test covers
+       T_WEAPON, T_BOW and T_MISSILE because isType is an exact match;
+       T_STAFF excluded. Upstream's: an exact type comparison present since
+       the 2014 import. Observed via tools/check_weapon_types.sh, inc-f38k,
+       not sent. */
+    if ((isType(T_WEAPON) || isType(T_BOW) || isType(T_MISSILE)) &&
+        HasQuality(WQ_ENERGY))
         return DONE;
 
     ox = x;
@@ -1919,24 +1925,19 @@ EvReturn Food::Eat(EventInfo &e)
     if (isType(T_CORPSE)) {
       Corpse * c = (Corpse *)this;
       
-      if (TMON(c->mID)->isMType(c->mID,MA_SAPIENT) && !TMON(c->mID)->isMType(c->mID,MA_ORC) &&
+      if (TMON(c->mID)->isMType(c->mID,MA_SAPIENT) &&
           !c->HasStati(TRIED,SK_WILD_LORE + 100*EV_ALIGNED,e.EActor))
         {
-          bool isCannibal;
-          isCannibal = false;
-          if ((e.EActor->isMType(MA_HUMAN) && TMON(c->mID)->isMType(c->mID,MA_HUMAN)) ||
-              (e.EActor->isMType(MA_DWARF) && TMON(c->mID)->isMType(c->mID,MA_DWARF)) ||
-              (e.EActor->isMType(MA_GNOME) && TMON(c->mID)->isMType(c->mID,MA_GNOME)) ||
-              (e.EActor->isMType(MA_HALFLING) && TMON(c->mID)->isMType(c->mID,MA_HALFLING)) ||
-              (e.EActor->isMType(MA_ELF) && TMON(c->mID)->isMType(c->mID,MA_ELF)) ||
-              (e.EActor->isMType(MA_DROW) && TMON(c->mID)->isMType(c->mID,MA_DROW)) ||
-              (e.EActor->isMType(MA_KOBOLD) && TMON(c->mID)->isMType(c->mID,MA_KOBOLD)) ||
-              (e.EActor->isMType(MA_REPTILE) && TMON(c->mID)->isMType(c->mID,MA_REPTILE)
-                 && TMON(c->mID)->isMType(c->mID,MA_HUMANOID)))
-            isCannibal = true;
+          /* inc-08js: first bite. Any sapient corpse is non-lawful unless the
+             eater is orc/kobold/lizardfolk/drow; eating one's own race is
+             non-good cannibalism for every eater. */
+          bool isCannibal = e.EActor->isSameRaceAs(c->mID);
           c->GainPermStati(TRIED,e.EActor,SS_MISC,SK_WILD_LORE + 100*EV_ALIGNED);
-          e.EActor->AlignedAct(AL_NONLAWFUL,2 + isCannibal*3,
-            isCannibal ? "cannibalism" : "eating sapient creatures");
+          if (!(e.EActor->isMType(MA_ORC) || e.EActor->isMType(MA_KOBOLD) ||
+                e.EActor->isMType(MA_REPTILE) || e.EActor->isMType(MA_DROW)))
+            e.EActor->AlignedAct(AL_NONLAWFUL,2,"eating sapient creatures");
+          if (isCannibal)
+            e.EActor->AlignedAct(AL_NONGOOD,5,"cannibalism");
         } 
               
       
@@ -2922,7 +2923,12 @@ void QItem::RemoveQuality(int8 q) {
 void QItem::PurgeAllQualities()
   {
     memset(Qualities,0,sizeof(Qualities));
-    if (isType(T_WEAPON))
+    /* upstream: purging must clear the bane on every combat weapon type --
+       T_WEAPON, T_BOW, T_MISSILE -- as RemoveQuality just above does, because
+       isType is an exact match; T_STAFF excluded. Upstream's: an exact type
+       comparison present since the 2014 import. Observed via
+       tools/check_weapon_types.sh, inc-f38k, not sent. */
+    if (isType(T_WEAPON) || isType(T_BOW) || isType(T_MISSILE))
       SetBane(0);
   }
 

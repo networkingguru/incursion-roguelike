@@ -22,6 +22,9 @@ DOWN*5 SPACE
 DOWN*3 SPACE
 UP SPACE
 ESC
+# Wizard Sight can raise appraisal messages that end in a more-prompt, which
+# would swallow the next keys.
+@while "more --" SPACE
 d
 G
 @while "Bonus To Which Attribute" a

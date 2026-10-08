@@ -232,6 +232,85 @@ void Thing::BoostRetry(int16 sk, Creature *c) {
         GainPermStati(RETRY_BONUS, c, SS_MISC, sk, +4);
 }
 
+/* inc-h22n: at least one rank of Lockpicking; a monster is "trained" when it
+   has the skill at all (its ranks are derived). An untrained creature is
+   refused here with the message, so a caller can ask before its prompt. */
+bool Thing::CanPickLock(Creature *actor) {
+    if (!actor)
+        return false;
+    int16 ranks = actor->isCharacter()
+        ? ((Character*)actor)->GetSkillRanks(SK_LOCKPICKING)
+        : (actor->HasSkill(SK_LOCKPICKING) ? 1 : 0);
+    if (ranks < 1) {
+        actor->IPrint("You have no idea how to pick the lock on the <Obj>.", this);
+        return false;
+    }
+    return true;
+}
+
+/* inc-h22n: one lock-picking attempt, shared by doors and chests so the two
+   mechanics are equal. The caller passes the base DC (a door is 20 + 2*depth,
+   a chest is 25 + 2*depth) and the extended-action value it repeats with
+   (EV_OPEN for a door, EV_PICKLOCK for a chest). Each caller keeps its own
+   unlock step and its own failure fallback.
+     At least one rank of Lockpicking is needed: an untrained creature cannot
+   try, and the player is told so. A wizard lock cast by another adds +10. An
+   attempt costs a full round (Timeout += 30). A failure repeats by itself when
+   the player is not threatened, the way OPT_REPEAT_KICK repeats a kick, and
+   after 20 attempts it asks whether to keep trying; in combat there is one
+   attempt per command. Retries are unlimited and no retry bonus is passed.
+   Returns true when the lock opens. */
+int16 Thing::PickLockDC(Creature *actor, int16 baseDC) {
+    if (HasStati(WIZLOCK) && !HasStati(WIZLOCK, -1, actor))
+        return baseDC + 10;
+    return baseDC;
+}
+
+bool Thing::PickLockAttempt(Creature *actor, int16 baseDC, int16 repeatAction) {
+    if (!actor)
+        return false;
+    if (!CanPickLock(actor))
+        return false;
+    int16 diff = PickLockDC(actor, baseDC);
+    if (diff != baseDC)
+        actor->IPrint("The <Obj> is more difficult to pick.", this);
+    actor->Timeout += 30;
+    if (actor->SkillCheck(SK_LOCKPICKING, diff, true)) {
+        actor->IDPrint("You pick the lock!",
+            "The <Obj> picks the lock on the <Obj>.", actor, this);
+        if (!HasStati(TRIED, DF_LOCKED, this) && !HasStati(SUMMONED, -1, this)) {
+            actor->GainXP(90 + (diff - 14) * 10);
+            GainPermStati(TRIED, this, SS_ATTK, DF_LOCKED);
+        }
+        /* stop an out-of-combat repeat now that the lock is open */
+        if (actor->HasStati(ACTING, repeatAction))
+            actor->RemoveStati(ACTING);
+        return true;
+    }
+    actor->IDPrint("You fail to pick the lock on the <Obj2>.",
+        "The <Obj1> tries to pick the lock on the <Obj2>, but fails.", actor, this);
+    /* Out of combat a failure repeats by itself, as a kick does under
+       OPT_REPEAT_KICK. In combat the caller runs its own fallback. */
+    if (actor->isPlayer() && !actor->isThreatened()) {
+        if (!actor->HasStati(ACTING, repeatAction)) {
+            actor->RemoveStati(ACTING);
+            actor->GainPermStati(ACTING, this, SS_MISC, repeatAction, 20);
+        } else {
+            int16 mag = actor->GetStatiMag(ACTING);
+            if (mag <= 0) {
+                actor->HaltAction("not picked after 20 attempts", false);
+                if (actor->HasStati(ACTING)) {
+                    actor->RemoveStati(ACTING);
+                    actor->GainPermStati(ACTING, this, SS_MISC, repeatAction, 20);
+                }
+            } else {
+                actor->SetStatiMag(ACTING, -1, NULL, mag - 1);
+            }
+        }
+    }
+    return false;
+}
+
 Portal::Portal(rID _pID) : Feature(TFEAT(_pID)->Image,_pID,T_PORTAL) { }
 
 EvReturn Portal::Event(EventInfo &e) {
@@ -378,8 +457,10 @@ EvReturn Portal::Enter(EventInfo &e) {
 
                 if (unsafe) {
                     asked = true;
-                    if (!e.EActor->yn(XPrint("The stair leads to <Res>. "
-                            "Confirm unsafe action?", terID), true)) {
+                    if (!e.EActor->yn(Format("%s%s",
+                            (const char*)XPrint("The stair leads to <Res>. "
+                            "Confirm unsafe action?", terID),
+                            (const char*)e.EActor->TerrainRiskNote(terID, new_m, nx, ny)), true)) {
                         StairWarnProbe(m->Depth, nx, ny, usable, terID,
                             unsafe, asked);
                         return ABORT;
@@ -440,20 +521,27 @@ bool Portal::EnterDir(Dir d) {
     }
 }
 
-Door::Door(rID fID) : Feature(TFEAT(fID)->Image, fID, T_DOOR) {
+Door::Door(rID fID, int16 depth) : Feature(TFEAT(fID)->Image, fID, T_DOOR) {
 #ifndef WEIMER
     DoorFlags = 0;
+    /* inc-h22n: a closed random door locks at the depth-scaled rate
+       25 + (depth-1)*50/9 percent (25% at depth 1, 75% at depth 10). The
+       depth of the level being built is passed in by its generator; 0 means
+       no level context and falls back to the depth-1 rate. */
+    int lockChance = 25 + (depth - 1) * 50 / 9;
+    if (lockChance < 0) lockChance = 0;
+    if (lockChance > 100) lockChance = 100;
     if (!random(10))
         DoorFlags |= DF_OPEN;
     else {
         Flags |= F_SOLID;
-        if (!random(2))
+        if (random(100) < lockChance)
             DoorFlags |= DF_LOCKED;
     }
     if (!random(7)) {
         DoorFlags &= ~DF_OPEN;
         DoorFlags |= DF_SECRET;
-        if (!random(2))
+        if (random(100) < lockChance)
             DoorFlags |= DF_LOCKED;
     }
 #else
@@ -595,9 +683,40 @@ void Door::SetImage() {
         m->VUpdate(x, y);
 }
 
+/* inc-h22n: Break DCs and SRD size modifiers for the Strength check that
+   replaces a kick's damage roll against a door. Incursion has eight size
+   steps where the SRD has nine, so MINISCULE is the SRD's Fine and the rest
+   follow in order. The table is stated here only; tools/check_door_probe.py
+   repeats it as the oracle. */
+static int16 DoorBreakDC(rID fID) {
+    /* NAME() yields a temporary String; copy it before its buffer dies. */
+    String nm = NAME(fID);
+    const char *n = nm;
+    if (!n) return 0;
+    if (!strcmp(n, "oak door") || !strcmp(n, "warded oak door")) return 15;
+    if (!strcmp(n, "ice door"))   return 18;
+    if (!strcmp(n, "iron door") || !strcmp(n, "darkwood door")) return 28;
+    if (!strcmp(n, "vault door")) return 35;
+    return 0;
+}
+
+static int16 KickSizeMod(int8 size) {
+    switch (size) {
+    case 1: return -16;   /* MINISCULE: SRD Fine */
+    case 2: return -8;    /* TINY */
+    case 3: return -4;    /* SMALL */
+    case 4: return 0;     /* MEDIUM */
+    case 5: return 4;     /* LARGE */
+    case 6: return 8;     /* HUGE */
+    case 7: return 12;    /* GARGANTUAN */
+    case 8: return 16;    /* COLLOSAL */
+    default: return 0;
+    }
+}
+
 EvReturn Door::Event(EventInfo &e) {
     EvReturn res;
-    int16 hard, hardwizlock, diff;
+    int16 hard;
     String s;
     res = TFEAT(fID)->Event(e,fID);
     if (res == DONE || res == ERROR)
@@ -632,63 +751,43 @@ EvReturn Door::Event(EventInfo &e) {
         } else if (DoorFlags & DF_LOCKED && !HasStati(WIZLOCK,-1,e.EActor) &&
             !e.EActor->HasEffStati(HOME_REGION,m->RegionAt(x,y))) {
 
+                /* inc-1xr3: one base DC for the prompt and the attempt. */
+                int16 lockDC;
+
                 if (e.EActor->HasStati(RAGING))
                     goto TryKicking;
 
-                if (HasStati(TRIED, SK_LOCKPICKING, e.EActor)) { 
-                    e.EActor->IPrint("You have already tried to pick the lock on the <Obj>.",this);
-                    if (e.EActor->isPlayer() && e.EPActor->Opt(OPT_AUTOKICK))
-                        return e.EActor->TryToDestroyThing(this);
-                    else
-                        return DONE;
-                } 
                 e.EActor->IPrint("The <Obj> is locked.",this);
-                /* Players can attempt to pick locks without the skill; monsters
-                can not. This avoids players herding around charmed creatures
-                as lockpicks, and other abuses. 
-                ww: That is not a problem, really! 
-                fjm: It may be, once I add the Diplomacy stuff. Also, monsters
-                currently move to the player too quickly -- you meet a whole
-                bunch, and then you wander through a bunch of empty rooms. This
-                might be part of the issue.
-                */
+                /* Monsters without the skill can not pick this door -- this
+                   avoids players herding charmed creatures around as lockpicks. */
                 if (e.EActor->isMonster() && !e.EActor->HasSkill(SK_LOCKPICKING))
                     return ABORT;
 
-                if (!((e.EActor->isPlayer() && ((Player *)e.EActor)->Opt(OPT_AUTOOPEN)) || e.EActor->yn("Pick the lock?",true)))
-                    return ABORT;
-                // ww: trying to pick it takes time: a full-round action, pass or
-                // fail
-
-
-                e.EActor->Timeout += 30;
-                diff = 14 + m->Depth;
-                if (HasStati(WIZLOCK) && !HasStati(WIZLOCK,-1,e.EActor)) {
-                    e.EActor->IPrint("The <Obj> is more difficult to pick.",this);
-                    diff += 10; 
+                lockDC = 20 + 2 * m->Depth;
+                /* inc-h22n: a repeating pick was already approved; do not ask
+                   again. An untrained player is refused before the prompt and
+                   falls through to the auto-kick path. */
+                if (e.EActor->HasStati(ACTING, EV_OPEN)) {
+                    /* repeating: skip the prompt */
+                } else if (!CanPickLock(e.EActor)) {
+                    goto TryKicking;
+                } else {
+                    String lockPrompt = e.EActor->isPlayer()
+                        ? Format("Pick the lock? (Lockpicking %d~)",
+                            e.EActor->SkillCheckChance(SK_LOCKPICKING,
+                                PickLockDC(e.EActor, lockDC)))
+                        : String("Pick the lock?");
+                    if (!((e.EActor->isPlayer() && ((Player *)e.EActor)->Opt(OPT_AUTOOPEN)) || e.EActor->yn(lockPrompt,true)))
+                        return ABORT;
                 }
-                if (e.EActor->SkillCheck(SK_LOCKPICKING,diff,true,
-                    GetStatiMag(RETRY_BONUS,SK_LOCKPICKING,e.EActor),"retry")) { 
-                        e.EActor->IDPrint("You pick the lock!",
-                            "The <Obj> picks the lock on the <Obj>.",
-                            e.EActor, this);
-                        DoorFlags &= ~DF_LOCKED;
-                        RemoveStati(TRIED,SS_MISC,SK_LOCKPICKING); 
 
-                        if (!HasStati(TRIED,DF_LOCKED,this) && 
-                            !HasStati(SUMMONED,-1,this)) {
-                                // see DisarmTrap() 
-                                e.EActor->GainXP(90 + (diff - 14) * 10);
-                                GainPermStati(TRIED,this,SS_ATTK,DF_LOCKED);
-                        }
-
-                } else { 
-                    e.EActor->IDPrint("You fail to pick the lock on the <Obj2>. (You can try again after resting.)",
-                        "The <Obj1> tries to pick the lock on the <Obj2>, but fails.",
-                        e.EActor, this);
-                    BoostRetry(SK_LOCKPICKING,e.EActor);
-                    GainTempStati(TRIED,e.EActor,-2,SS_MISC,SK_LOCKPICKING); 
-
+                if (PickLockAttempt(e.EActor, lockDC, EV_OPEN)) {
+                    DoorFlags &= ~DF_LOCKED;
+                } else {
+                    /* Out of combat the attempt repeats itself (ACTING is set
+                       by PickLockAttempt); do not also fall into a kick. */
+                    if (e.EActor->HasStati(ACTING, EV_OPEN))
+                        return DONE;
 TryKicking:
                     if (e.EActor->isPlayer() && 
                         ((Player *)e.EActor)->Opt(OPT_AUTOKICK)) {
@@ -758,8 +857,51 @@ TryKicking:
         }
         if ((DoorFlags & (DF_OPEN|DF_BROKEN)) && e.AType == A_KICK)
             return DONE; 
+        /* inc-h22n: a kick against a door is an SRD Strength check, not a
+           damage roll -- d20 + Str modifier + SRD size modifier vs the door's
+           Break DC, +10 wizard-locked by another, -2 at half HP or less. It is
+           all-or-nothing: a success breaks the door open, a failure does no
+           damage. Kicking a creature is untouched. */
+        if (e.AType == A_KICK) {
+            int16 dc = DoorBreakDC(fID);
+            if (dc <= 0) {
+                e.EActor->IPrint("You cannot break the <Obj> down.", this);
+                return DONE;
+            }
+            if (HasStati(WIZLOCK) && !HasStati(WIZLOCK, -1, e.EActor))
+                dc += 10;
+            if (mHP > 0 && cHP * 2 <= mHP)
+                dc -= 2;
+            int16 roll = random(20) + 1 + e.EActor->Mod(A_STR)
+                + KickSizeMod(e.EActor->GetAttr(A_SIZ));
+            if (roll < dc) {
+                e.EActor->IPrint("The <Obj> holds!", this);
+                if (e.EActor->isCharacter() && !HasStati(TRIED,945))
+                    GainPermStati(TRIED,e.EActor,SS_MISC,945);
+                goto KickHolds;
+            }
+            cHP = 0;
+            VPrint(e, NULL, "The <Obj> breaks open!", this);
+            DoorFlags &= (DF_LOCKED | DF_SECRET);
+            DoorFlags |= DF_OPEN | DF_BROKEN;
+            SetImage();
+            Hear(e,20,"You hear a loud *crack*.");
+            e.EActor->RemoveStati(ACTING);
+            e.Died = true;
+            if (e.EActor->isCharacter() && !HasStati(TRIED,945))
+                e.EActor->Exercise(A_STR,random(12)+1,ESTR_DOOR,35);
+            if (e.EActor && e.EMap->FTrapAt(x,y) && e.EActor->isBeside(this)) {
+                e.EActor->IPrint("The <Obj> was trapped!",this);
+                e.EMap->FTrapAt(x,y)->TriggerTrap(e,false);
+            }
+            return DONE;
+        }
+        /* inc-h22n: an axe (WG_AXES) is built for chopping wood, so it deals
+           full damage to a door; every other non-blunt swing still deals one
+           third. */
         if (e.AType == A_SWNG && (!e.EItem || !e.EItem->HasIFlag(WT_BLUNT)))
-            e.vDmg /= 3;
+            if (!e.EItem || !e.EItem->isGroup(WG_AXES))
+                e.vDmg /= 3;
         if (e.DType == AD_PIERCE && !(e.EItem && e.EItem->HasIFlag(WT_BLUNT))
             && !(e.EItem && e.EItem->HasIFlag(WT_SLASHING)))
             goto Immune;
@@ -772,9 +914,8 @@ Immune:
             return DONE; 
         } 
 
-        hardwizlock = 0;
-        if (HasStati(WIZLOCK))
-            hardwizlock = 2;
+        /* inc-h22n: a wizard lock no longer doubles hardness against a
+           weapon. That rule lives only in the pick and break DCs now. */
 
         if (e.EActor->isPlayer()) {
             if (e.Dmg.Number == 0 && e.Dmg.Sides == 0 && e.Dmg.Bonus == 0) {
@@ -792,11 +933,6 @@ Immune:
             }
 
             s += Format(" vs. %d (%s)",hard,(const char*)Lookup(MaterialDescs,TFEAT(fID)->Material));
-
-            if (hardwizlock) {
-                hard *= hardwizlock;
-                s += Format(" x%d (wizlock) = %d",hardwizlock,hard);
-            }
 
             s += Format(" <%d>[%s]<7>",
                 e.vDmg > hard ? EMERALD : PINK,
@@ -855,6 +991,7 @@ Immune:
 
         //Hear(e,20,"You hear a muffled *thud*.");                         
 
+    KickHolds:
         if (e.EActor->isPlayer() && e.EPActor->Opt(OPT_REPEAT_KICK) &&
             e.AType == A_KICK) {
                 if (!e.EActor->HasStati(ACTING,EV_SATTACK)) {
@@ -908,6 +1045,28 @@ EvReturn Trap::Event(EventInfo &e) {
     return NOTHING;
 }
 
+void Trap::AvoidSave(bool foundBefore, uint32 &saveType, int16 &DC) {
+    TEffect *te = TEFF(tID);
+    saveType = SA_TRAPS;
+    if (!(te->HasFlag(EF_MUNDANE)))
+        saveType |= SA_MAGIC;
+
+    DC = 15 + te->Level;
+    if (!foundBefore)
+        DC += 5;
+}
+
+int16 Trap::AvoidChance(Creature *cr, bool foundBefore) {
+    TEffect *te = TEFF(tID);
+    if (foundBefore && cr->HasFeat(FT_FEATHERFOOT))
+        return 100;
+    if (te->ef.sval == NOSAVE)
+        return 0;
+    uint32 saveType; int16 DC;
+    AvoidSave(foundBefore, saveType, DC);
+    return cr->SaveChance(te->ef.sval, DC, saveType);
+}
+
 EvReturn Trap::TriggerTrap(EventInfo &e, bool foundBefore) {
     EvReturn r; Creature *cr;
     // ww: if the trap is not mundane, you get a saving throw vs. magic to
@@ -926,13 +1085,8 @@ EvReturn Trap::TriggerTrap(EventInfo &e, bool foundBefore) {
                     SetImage();
                 }
 
-    uint32 saveType = SA_TRAPS;
-    if (!(te->HasFlag(EF_MUNDANE)))
-        saveType |= SA_MAGIC;
-
-    int16 trapDC = 15 + te->Level;
-    if (!foundBefore)
-        trapDC += 5;
+    uint32 saveType; int16 trapDC;
+    AvoidSave(foundBefore, saveType, trapDC);
 
     if ((foundBefore && e.EActor->HasFeat(FT_FEATHERFOOT)) ||
         (te->ef.sval != NOSAVE &&
@@ -1667,7 +1821,7 @@ void Feature::StatiOn(Status s) {
         }
 }
 
-void Feature::StatiOff(Status s) {
+void Feature::StatiOff(Status s, bool elapsed) {
     EventInfo xe;
     switch (s.Nature) {
     case SUMMONED:

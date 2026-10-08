@@ -17,7 +17,8 @@ Every change that alters behaviour follows five steps, in this order.
 3. **Rebuild every target the change reaches.** `./build_macos.sh` and
    `BACKEND=posix ./build_macos.sh` are separate `main()`s. A change can break
    one while the other compiles.
-4. **Run the check and the gate.** `tools/nightly_verify.sh --compare`.
+4. **Run the check and the gate.** `tools/finish_bead.sh` runs the landing
+   gate, `tools/nightly_verify.sh --landing`; `--compare` runs the full set.
 5. **Record it.** The commands, the mutation and the result go in the commit body
    or in the bead the commit names.
 
@@ -52,8 +53,10 @@ first changed decision onward, so a gate built on them goes red on every correct
 fix.
 
 `tools/nightly_verify.sh` is the wrapper. `--record` freezes what already fails.
-`--compare` re-measures and reports what this work broke. It exits 0 for safe to
-merge, 1 for broke something or failed to build, 2 for could not measure.
+`--compare` re-measures and reports what this work broke. `--landing` is the
+short gate a landing runs (see "A landing runs a short gate" below). It exits 0
+for safe to merge, 1 for broke something or failed to build, 2 for could not
+measure.
 
 `tools/README.md` §7 groups every check into five tiers, by whether it needs a
 clean clone, a compiler, a POSIX build, a built artefact or a recorded baseline.
@@ -72,9 +75,8 @@ runs that both did nothing.
 recorded before the work started. A check that already failed is not this
 change's fault. A check that passed before and fails after stops the merge. The
 builds are exempt from the ratchet: a tree that does not compile is never safe.
-`tools/check_linux_build.sh` runs with those builds for the same reason, and it
-is why a full run costs about ten minutes rather than seconds; a machine with no
-Docker skips it rather than failing on it. `tools/check_layout_sweep.sh` runs
+In the full set, `tools/check_linux_build.sh` runs with those builds for the same reason; a
+machine with no Docker skips it rather than failing on it. `tools/check_layout_sweep.sh` runs
 there too: it builds the `DIVERGE_PROBE` binary and asks whether the tree still
 plays the same game when its objects move, and a machine without lldb skips it.
 `tools/gate_compare.sh` runs there as well, for about a minute: it is the canary
@@ -82,11 +84,48 @@ the checks are not, because it names no rule and instead reports a new complaint
 appearing in several of its 40 sessions at once, fewer sessions reaching a map,
 or more deaths and freezes than the baseline.
 
-**A full pass is remembered for the files it measured.** Each full `--compare`
-that passes leaves `nightly-verify-pass.txt` beside the recorded base.
-`tools/finish_bead.sh` runs `--reuse-pass`, which re-runs only the cheap tier
-when that record matches the files on disk, the recorded base and the toolchain,
-and is under 24 hours old. Anything else runs the full gate. The cheap tier
+**Fast work first, and several checks at once (inc-yg8e).** The gate runs in this
+order: the cheap tier, several checks at a time; the serial cheap checks, one at
+a time; the two macOS builds; the Linux build, the layout sweep and the soak in
+the background while the live tier runs several checks at a time; then the serial
+live checks, one at a time, with nothing else running. A cheap-tier failure stops
+the gate before any build, and a failed build stops it before the live tier.
+`INCURSION_GATE_JOBS` sets how many checks run at once (default: the core count
+minus 2); `INCURSION_GATE_JOBS=1` runs them one at a time. A check that writes a
+shared file or races a wall-clock deadline declares `# gate-serial: <why>` near
+its top, and `tools/check_gate_parallel_safe.sh` fails a check that rebuilds or
+writes the shared module without that line. Measured on 2026-09-30 on a 10-core
+Mac, master's 133 gate checks: a full run took 560 s with the default and 693 s
+with `INCURSION_GATE_JOBS=1`, with the same verdicts. Before this change the
+checks alone summed to 570 s on master, after about 5 minutes of builds and big
+steps, and the epic branch's 204 checks took about 33 minutes end to end.
+
+**A landing runs a short gate; the nightly runs the rest (inc-t3iu).** A
+landing runs the cheap tier, both macOS builds, the soak, the `smoke` checks
+and only those `live` checks whose file the bead adds or changes. The Linux
+cross-build, the layout sweep and every other `live` check run nightly, and
+`tools/nightly_bisect.sh` names the landing that broke a check that passed the
+night before (`tools/README.md` §7, "Where each check runs"). The accepted
+cost: a defect only the nightly set catches can sit on master until that night.
+Measured on 2026-10-06 on a 10-core Mac: the full gate took 926 s (load average
+107); the landing gate took 222 s (load average about 7), of which the cheap
+tier took 92 s. Before this work the cheap tier alone took 244 s, because two
+serial checks, `check_watchdog.sh` (80 s) and `check_opencode_ds.sh` (64 s),
+were marked cheap; both are now `live`. The gate's "should cost seconds" note
+judges a serial cheap check by its wall-clock time (over 30 s) and a parallel
+one by its CPU time (over 45 s, `NIGHTLY_CHEAP_CPU_LIMIT`), because 50 checks
+sharing the machine inflate every wall-clock. The CPU limit is higher because a
+check that starts child processes uses more CPU than wall-clock time:
+`check_format_strings.sh`, `check_ledger_rows.sh --selftest` and
+`check_probe_hooks.sh` each take 18 to 20 s alone and 32 to 33 s of CPU.
+
+**A pass is remembered for the files it measured.** Each `--compare` or
+`--landing` that passes leaves `nightly-verify-pass.txt` beside the recorded
+base, marked `mode full` or `mode landing`. `tools/finish_bead.sh` runs
+`--landing --reuse-pass`, which re-runs only the cheap tier when a `landing`
+record matches the files on disk, the recorded base and the toolchain, and is
+under 24 hours old. A `full` record is not reused by a landing, nor the
+reverse. Anything else runs the landing gate. The cheap tier
 always runs again, because some of its checks read commit messages, HEAD and the
 branches, and no hash of the files covers those. `tools/check_pass_record.sh`
 proves the rules against a scratch repository (inc-689z).
@@ -100,6 +139,7 @@ on 2026-09-11 and proved with `tools/nightly_verify.sh --selftest`.
 
 **The gate has no list of checks in it.** Each check declares its own tier near
 the top of its own file -- `# gate: cheap` for deterministic and build-free,
+`# gate: smoke` for one that plays the game briefly and runs on every landing,
 `# gate: live` for one that plays the game, `# gate: none <why not>` for
 everything else -- and `nightly_verify.sh` reads those markers. A list nobody is
 obliged to update stops being true: on 2026-09-11 the hand-written list ran 18 of

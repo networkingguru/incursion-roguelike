@@ -1125,7 +1125,7 @@ void Map::WriteMap(Rect &r, rID regID) {
                     if (t->xID && RES(t->xID)->Type == T_TFEATURE) {
                         /* Create the Feature */
                         if (TFEAT(t->xID)->FType == T_DOOR) {
-                            ft = new Door(t->xID);
+                            ft = new Door(t->xID, Depth);
                             ((Door*)ft)->DoorFlags &= ~DF_VERTICAL;
                             if (t->fl & TILE_HIDDEN)
                                 ((Door*)ft)->DoorFlags |= DF_SECRET;
@@ -1226,7 +1226,7 @@ void Map::WriteMap(Rect &r, rID regID) {
                     Door *d;
                     ASSERT(DoorID);
                     if (DoorID) {
-                        d = new Door(DoorID);
+                        d = new Door(DoorID, Depth);
                         d->DoorFlags &= DF_VERTICAL;
                         d->PlaceAt(this, r.x1 + x, r.y1 + y);
                     }
@@ -1302,9 +1302,14 @@ void Map::MakeDoor(uint8 x, uint8 y, rID fID) {
     ASSERT(fID);
     if (FFeatureAt(x, y))
         return;
-    d = new Door(fID);
+    d = new Door(fID, Depth);
     d->PlaceAt(this, x, y);
     d->SetImage();
+    /* inc-h22n: off unless INCURSION_DOORGEN_PROBE is set. Keep this call the
+       LAST statement here: it reads the flags the generator finally leaves on
+       a random door. See tools/check_door_lock_rate.sh. */
+    extern void DoorGenProbe(Map *, Door *);
+    DoorGenProbe(this, d);
 }
 
 void Map::MakeSecretDoor(uint8 x, uint8 y, rID fID) {
@@ -1314,7 +1319,7 @@ void Map::MakeSecretDoor(uint8 x, uint8 y, rID fID) {
     ASSERT(fID);
     if (FFeatureAt(x, y))
         return;
-    d = new Door(fID);
+    d = new Door(fID, Depth);
     d->DoorFlags &= (~DF_VERTICAL);
     d->DoorFlags |= DF_SECRET | DF_LOCKED;
     d->PlaceAt(this, x, y);

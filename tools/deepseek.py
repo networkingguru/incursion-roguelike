@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""A scoped, budget-capped DeepSeek client for this project (bead inc-3dgz).
+"""A scoped DeepSeek client for this project (bead inc-3dgz).
 
 Sends ONE chat completion to DeepInfra, writes the reply to a file, and
-records what it cost in an append-only ledger. The ledger is read and its
-running sum is checked against a fixed budget BEFORE any network call is
-made, every time -- a call this script cannot price is treated as a poison
-that stops every later call until a human fixes the ledger by hand.
+records what it cost in an append-only ledger. The ledger is append-only
+bookkeeping: every run's cost is recorded, but no run is ever refused on
+the basis of accumulated spend. Spending is controlled on the owner's card
+(owner ruling, 2026-10-04).
 
-Standard library only. No --model flag: one model, one constant. The
-spending cap and the model allowlist are enforced on the API key itself,
-server side; a flag here would only add a way to get it wrong.
+Standard library only. No --model flag: one model, one constant. The model
+allowlist is enforced on the API key itself, server side; a flag here would
+only add a way to get it wrong.
 """
 
 import argparse
@@ -24,19 +24,18 @@ from pathlib import Path
 
 MODEL = "deepseek-ai/DeepSeek-V4.1-Flash"
 URL = "https://api.deepinfra.com/v1/openai/chat/completions"
-BUDGET = 20.00  # US dollars
 SERVICE = "incursion-deepseek-scoped"  # macOS Keychain service name
 ACCOUNT = "incursion"  # macOS Keychain account name
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # The default ledger lives in the MAIN checkout's logs/, not this worktree's:
-# with one git worktree per bead, a per-worktree ledger would let each
-# worktree's check_budget see only its own spend, and the spend would vanish
-# when the worktree is deleted. The main checkout is derived from git (the
-# parent of the shared git common dir), so every worktree resolves the same
-# path. resolve_ledger_path() computes it lazily; INCURSION_DEEPSEEK_LEDGER
-# overrides it first, and if git is unavailable we fall back to REPO_ROOT.
+# with one git worktree per bead, a per-worktree ledger would record only its
+# own spend, and the record would vanish when the worktree is deleted. The main
+# checkout is derived from git (the parent of the shared git common dir), so
+# every worktree resolves the same path. resolve_ledger_path() computes it
+# lazily; INCURSION_DEEPSEEK_LEDGER overrides it first, and if git is
+# unavailable we fall back to REPO_ROOT.
 
 
 def resolve_url():
@@ -75,11 +74,6 @@ def resolve_ledger_path():
     return Path(override) if override else default_ledger_path()
 
 
-def resolve_budget():
-    override = os.environ.get("INCURSION_DEEPSEEK_BUDGET")
-    return float(override) if override else BUDGET
-
-
 def resolve_key():
     """Step 1: get the API key, from the env override or the Keychain.
     Exits 2 and prints the fix command on failure. Never prints the key."""
@@ -116,42 +110,25 @@ def resolve_key():
     return key
 
 
-def check_budget(ledger_path, budget):
-    """Step 2: sum the ledger's cost column and refuse to spend past budget.
-    Exits 1 on refusal or poison, exits 2 on a malformed line. Returns
-    nothing on success -- the caller may proceed."""
+def validate_ledger(ledger_path):
+    """Read the ledger before spending and exit 2 if any line is malformed.
+    The ledger is never summed or capped: its numbers are a record, not a
+    limit. The parse guard stays so a corrupt ledger is noticed, not silently
+    appended to. Returns nothing on success -- the caller may proceed."""
     if not ledger_path.exists():
         return
     text = ledger_path.read_text()
-    total = 0.0
     for lineno, line in enumerate(text.splitlines(), 1):
         if not line.strip():
             continue
         try:
-            row = json.loads(line)
+            json.loads(line)
         except json.JSONDecodeError:
             print(
                 f"malformed ledger line {lineno} in {ledger_path}: not valid JSON",
                 file=sys.stderr,
             )
             sys.exit(2)
-        cost = row.get("cost")
-        if cost is None:
-            print(
-                f"ledger is POISONED at line {lineno} of {ledger_path}: "
-                "cost is null, a call was billed and its price is unknown. "
-                "A human must resolve this row before any further call.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-        total += cost
-    if total >= budget:
-        print(
-            f"refused: ledger sum {total} is at or past the budget {budget}; "
-            "making no request.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
 
 
 def build_body(prompt_path, system_path, max_tokens, temperature):
@@ -215,10 +192,8 @@ def run(argv):
     # Step 1: resolve the key.
     key = resolve_key()
 
-    # Step 2: read the ledger and decide whether to spend. Exits on refusal.
     ledger_path = resolve_ledger_path()
-    budget = resolve_budget()
-    check_budget(ledger_path, budget)
+    validate_ledger(ledger_path)
 
     body = build_body(args.prompt, args.system, args.max_tokens, args.temperature)
 

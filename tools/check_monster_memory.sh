@@ -68,15 +68,15 @@ CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 
 # --------------------------------------------------------------------------
 # Which mutation --prove-red performs. check_lib performs the FIRST mutation a
-# check declares and no other, so the four writable ones are declared in an
+# check declares and no other, so the five writable ones are declared in an
 # order this argument chooses. Every declaration is still asserted to be
 # present, and present exactly once, on an ordinary run.
 CHECK_FIRST=""
 for _arg in ${CHECK_ARGS[@]+"${CHECK_ARGS[@]}"}; do
     case "$_arg" in
-        seen|fought|kill|read) CHECK_FIRST="$_arg" ;;
+        seen|fought|kill|read|recall) CHECK_FIRST="$_arg" ;;
         *)
-            echo "usage: $0 [seen|fought|kill|read] [--prove-red]"
+            echo "usage: $0 [seen|fought|kill|read|recall] [--prove-red]"
             exit 2 ;;
     esac
 done
@@ -112,9 +112,21 @@ mutate_read() {
         '        mm = MONMEM(xID,p);' \
         '        { memset(&Unknown, 255, sizeof(Unknown)); mm = &Unknown; }'
 }
+# [R]ecall's filter: TextTerm::MonsterPrompt, called with the player so it can
+# gate each menu on his own MonMem rows (src/Managers.cpp case 'R'). Passing
+# NULL instead puts back the old unfiltered browse -- every kind regardless of
+# what the player met -- so assertion B's "no Human entry" check is what goes
+# red. The "no monsters at all" message above it in case 'R' is a separate
+# guard this mutation does not touch, which is why assertion A still passes
+# unmutated.
+mutate_recall() {
+    check_mutation src/Managers.cpp \
+        '                rID rid = MonsterPrompt("Recall which monster?", p);' \
+        '                rID rid = MonsterPrompt("Recall which monster?", NULL);'
+}
 
 _declared=""
-for _m in $CHECK_FIRST seen fought kill read saturate; do
+for _m in $CHECK_FIRST seen fought kill read recall saturate; do
     case " $_declared " in *" $_m "*) continue ;; esac
     _declared="$_declared $_m"
     "mutate_$_m"
@@ -148,19 +160,19 @@ read_memory() { # -> adds *-savedump to the session's screens
 
 # --------------------------------------------------------------------------
 # 1 and 5: a character who has met nobody.
+#
+# ANSWER TO A (docs/VERIFICATION.md step 1, and this check's own header): this
+# character's save carries no monster-memory row at all -- tools/dump_save.sh
+# prints "(no monster memory)" -- so [R]ecall takes the "nothing met" branch
+# in src/Managers.cpp case 'R' and never reaches TextTerm::MonsterPrompt. The
+# message is itself a Box(), which is why this is the live screen to assert
+# on rather than a screen the old "sparse human entry" checks read: that box
+# cannot open here, because no entry at all is on offer.
 echo "--- a kind the character has never met ---"
 check_run tools/keys/monster-memory-unmet.keys 4
 check_screens '*unmet-recall*'
-check_expect "Humans are the dominant race" \
-    "the recall box is open on the human entry"
-check_expect "naturally weak Fortitude" \
-    "the saving throw sentence is there, without its numbers"
-check_reject "hit points" \
-    "no hit dice: that sentence needs three kills"
-check_reject "dexterity" \
-    "no attribute sentence: that needs ten kills"
-check_reject "(+0)" \
-    "no saving throw numbers: those need more than fifty kills"
+check_expect "You recall no monsters." \
+    "a character with no monster-memory row at all is told so, not shown a menu"
 
 read_memory
 check_screens '*savedump*'
@@ -180,6 +192,27 @@ check_expect "  kobold: Seen=1 Fought=0 Kills=0" \
     "a kobold he only looked at is seen and nothing more"
 check_expect "  ogre: Seen=1 Fought=1 Kills=0" \
     "an ogre he struck once is fought and not killed"
+
+# --------------------------------------------------------------------------
+# B: met some, not humans. [R]ecall's type menu (TextTerm::MonsterTypePrompt)
+# must offer only what this character has met -- kobolds and ogres, grouped
+# under "Humanoids" and "Giants" -- and a kind menu must open the ogre's own
+# box. "Humans" (the type entry, plural) and "Human (" (the kind-list and
+# box header, singular-plus-paren) are the two literal shapes a human entry
+# takes on these screens; bare "Human" is rejected nowhere, because it is
+# also the first five letters of "Humanoids", which legitimately appears
+# here since both met kinds are of that type.
+check_screens '*met-recall-types*'
+check_expect "Giants" \
+    "the ogre's type is offered"
+check_reject "Humans (" \
+    "no Human type entry: the player has not met one"
+check_reject "Human (" \
+    "no Human kind entry in the side pane either"
+
+check_screens '*met-recall-ogre*'
+check_expect "The Ogre" \
+    "picking the ogre's type and then the ogre opens its recall box"
 
 # --------------------------------------------------------------------------
 # 4 and 5: ten kills, and what they show him.

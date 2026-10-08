@@ -2129,7 +2129,7 @@ EvReturn Player::Rest(EventInfo &e) {
         if (in_sight) {
             IPrint(Format("You can't break camp while there's hostiles (e.g., %s) in plain sight!", (const char*)in_sight->Name(0)));
             return ABORT;
-        } else if (!MyTerm->yn("Confirm rest in dungeon?"))
+        } else if (!MyTerm->yn("Confirm rest in dungeon? (odds of interruption unknown)"))
             return ABORT;
     }
 
@@ -2669,7 +2669,16 @@ RestartTerra:
                             repetition. */
                             for (it = cr->FirstInv(); it; it = cr->NextInv())
                                 if (it->isMagic() && it->ItemLevel() > min(Depth / 2, Depth - 4)) {
-                                    if (it->isType(T_WEAPON) || it->isType(T_ARMOUR) ||
+                                    /* upstream: the weakened item is any
+                                       combat weapon -- T_WEAPON, T_BOW,
+                                       T_MISSILE -- as the RemoveQuality idiom
+                                       (src/Item.cpp) uses, because isType is
+                                       an exact match; T_STAFF excluded.
+                                       Upstream's: an exact type comparison
+                                       present since the 2014 import. Traced,
+                                       inc-f38k, not sent. */
+                                    if (it->isType(T_WEAPON) || it->isType(T_BOW) ||
+                                        it->isType(T_ARMOUR) ||
                                         it->isType(T_SHIELD) || it->isType(T_MISSILE) ||
                                         it->isType(T_CONTAIN))
                                     {
