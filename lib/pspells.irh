@@ -396,12 +396,13 @@ Priest Spell "Doom" : EA_INFLICT
         "You feel gravely threatened.";
   }
 
+    // upstream: data typo -- this Desc repeated "+5" at 21st, but its pval LEVEL_EVERY4 ((level+3)/4) yields +6 at level 21; the same data ships on Win32, so it is upstream; Traced (prose-only, no in-play value changes); inc-5hp1 / inc-tek.8.7 PA-07-F34; not sent.
 Priest  Spell "Divine Favour" : EA_INFLICT
   { SC_THE; IS_A_BUFF(COST_1); Level: 1; 
     xval: ADJUST_SAC; yval: A_DMG; pval: LEVEL_EVERY4; 
     Desc: "Increases your attack rolls and the damage you inflict in combat 
 	  by +1 per blow at 1st level, +2 at fifth, +3 at 9th, +4 at 13th, +5 
-	  at 17th, +5 at 21st, and so forth.";
+	  at 17th, +6 at 21st, and so forth.";
     On Event EV_MAGIC_HIT
       "You feel worthy.",
     EV_ELAPSED
