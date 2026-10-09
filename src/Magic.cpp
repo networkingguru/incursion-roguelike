@@ -1451,11 +1451,15 @@ EvReturn Magic::MagicHit(EventInfo &e) {
     return r;
   }
 
+/* inc-lmw4: set only by AreaRadiusProbe (src/AreaRadiusProbe.cpp). */
+void (*AreaProbeXYHook)(int16,int16) = NULL;
+
 EvReturn Magic::MagicXY(EventInfo &e,int16 tx,int16 ty)
   {
     Map *m; EvReturn r, r2; int16 oe, o_efNum;
 
     e.EXVal = tx; e.EYVal = ty;
+    if (AreaProbeXYHook) AreaProbeXYHook(tx,ty);
     if (!e.EActor) return DONE;
     m = e.EActor->m;
     if (!m) return DONE; 
@@ -1624,7 +1628,7 @@ EvReturn Magic::AGlobe(EventInfo &e)
     if (m && (!m->isGenerating()) && e.EMagic->cval && PossiblyPause(T1,cx,cy,0)) {
       for(x = cx-e.vRadius; x <= cx+e.vRadius; x++)
         for(y = cy-e.vRadius; y <= cy+e.vRadius; y++)
-          if ((dist(cx,cy,x,y) < e.vRadius) && m->InBounds(x,y))
+          if ((dist(cx,cy,x,y) <= e.vRadius) && m->InBounds(x,y))
             {
               g = T1->GetGlyph(x,y);
               g = (g & GLYPH_ID_MASK) | GLYPH_FORE(e.EMagic->cval);
@@ -1638,7 +1642,8 @@ EvReturn Magic::AGlobe(EventInfo &e)
     
     for(x = cx-e.vRadius; x <= cx+e.vRadius; x++)
       for(y = cy-e.vRadius; y <= cy+e.vRadius; y++)
-        if ((dist(cx,cy,x,y) < e.vRadius) && m->InBounds(x,y))
+        /* upstream: a globe/field's first pass must use Field::inArea's dist <= radius test, so lval N reaches N squares; the original source ships '<' on every platform. Observed, tools/check_area_radius.sh. inc-lmw4, not sent. */
+        if ((dist(cx,cy,x,y) <= e.vRadius) && m->InBounds(x,y))
           {
             MagicXY(e,x,y);
             e.isFirstBlastXY = false;
@@ -1671,7 +1676,7 @@ EvReturn Magic::AGlobe(EventInfo &e)
                 (int)cx, (int)cy, (int)remaining, (int)e.vRadius);
 
         MapIterate(m,t,i)
-            if (dist(t->x,t->y,cx,cy) < (int16)e.vRadius) {
+            if (dist(t->x,t->y,cx,cy) <= (int16)e.vRadius) {
                 if (!t->isCreature())
                     continue;
                 if (t == e.EActor && te->HasFlag(EF_CASTER_IMMUNE))
@@ -1737,7 +1742,7 @@ EvReturn Magic::AGlobe(EventInfo &e)
     }
 
     MapIterate(m,t,i)
-        if (dist(t->x,t->y,cx,cy) < (int16)e.vRadius) {
+        if (dist(t->x,t->y,cx,cy) <= (int16)e.vRadius) {
             e.ETarget = t;
             e.efNum = (int8)_efNum;
             if (t == e.EActor && te && te->HasFlag(EF_CASTER_IMMUNE))
@@ -1908,7 +1913,7 @@ EvReturn Magic::AField(EventInfo &e)
     
     for(x = tx-e.vRadius; x <= tx+e.vRadius; x++)
       for(y = ty-e.vRadius; y <= ty+e.vRadius; y++)
-        if ((dist(tx,ty,x,y) < e.vRadius) && e.EActor->m->InBounds(x,y))
+        if ((dist(tx,ty,x,y) <= e.vRadius) && e.EActor->m->InBounds(x,y))
           {
             MagicXY(e,x,y);
             e.isFirstBlastXY = false;
