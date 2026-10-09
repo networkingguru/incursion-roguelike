@@ -4613,6 +4613,10 @@ String & Item::Describe(Player *p) {
               !(TSPELL(theGame->SpellID(i))->Sources & my sources))
               Illegible++
               else */
+            /* upstream: the book listing named EA_NOTIMP stub spells with no
+               marker; upstream behaves the same on Win32 (this code is
+               upstream's, not a port change). Tier Observed
+               (tools/check_book_notimp_listing.sh); id inc-lqc7; not sent. */
             if (!sn.GetLength())
                 sn = NAME(sID);
             else {
@@ -4623,6 +4627,8 @@ String & Item::Describe(Player *p) {
                 second = true;
                 sn = NAME(sID);
             }
+            if (TEFF(sID)->Vals(0)->eval == EA_NOTIMP)
+                sn += SC(" <13>(not implemented yet)<7>");
         }
         if (second)
             Desc += SC("<7> and <1>") + sn + SC("<7>.\n");

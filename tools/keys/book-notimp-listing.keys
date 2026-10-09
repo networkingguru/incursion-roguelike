@@ -1,0 +1,22 @@
+# Show Planar Bindings' own item description, including its spell list.
+# Reproduction for inc-lqc7; seed 1, options-2026-08-22.dat.
+# The acquisition browser highlights its middle row: when the desired book
+# first appears at the bottom, one more DOWN selects it (book-stack.keys).
+@include chargen.keys
+
+w
+@until "Wizard Mode Options" y
+@choose "Item Acquisition"
+RIGHT*7
+@until "Spellbook [Planar Bindings]" DOWN
+@expect "Spellbook [Planar Bindings]"
+DOWN
+ENTER
+# Examine the item while it is still in the In-the-Air slot.
+x
+@expect "Spellbook:"
+@dump:book-notimp-listing
+ESC
+s
+ESC
+@quit
