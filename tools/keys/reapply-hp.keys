@@ -29,7 +29,11 @@
 # THE RE-APPLY is Storycraft -> SetInherentPlus -> Item::ReApply, the same
 # path as reapply-enchant.keys, whose header cites it line by line. It spends
 # no game time for a bard, so natural healing cannot move HP between dumps.
-@include reapply-bard.keys
+#
+# inc-stzd: this used to @include reapply-bard.keys; see reapply-enchant.keys's
+# header for why it now starts from the same INCURSION_LOAD fixture instead
+# (tools/fixtures/chars/orc-bard-reapply-seed1.sav) -- that script's own CON
+# base of 12, which this section's HP arithmetic depends on, is unchanged.
 
 d
 @dump:sheet-without-girdle

@@ -82,10 +82,11 @@ Druid Spell "Produce Flame" : EA_CREATION
 
 Priest Spell "Bane" : EA_INFLICT
   { SC_THE; Base: SP_EASY; Cost: 2; Level: 1; 
-    /* upstream: radius must cover the 5 squares the Desc promises; 0.6.5B's
-       lval 10 is wrong on every platform (data, not port). Observed
-       (tools/check_bane_radius.sh); inc-7xcu; not sent. */
-    aval: AR_GLOBE; lval: 6; cval: RED;
+    /* upstream: lval 5 reaches the 5 squares the Desc promises under the
+       dist <= radius test; 0.6.5B's lval 10 is wrong on every platform (data,
+       not port). Observed (tools/check_bane_radius.sh); inc-7xcu, inc-lmw4;
+       not sent. */
+    aval: AR_GLOBE; lval: 5; cval: RED;
     xval: ADJUST_MOR; yval: A_AID; pval: -1; tval: MA_ENEMIES; 
     Flags: EF_LIM_MTYPE, EF_DLONG, EF_SHOWNAME, EF_FEAR;
     Purpose: EP_CURSE | AIM_AT_SELF;
@@ -395,12 +396,13 @@ Priest Spell "Doom" : EA_INFLICT
         "You feel gravely threatened.";
   }
 
+    // upstream: data typo -- this Desc repeated "+5" at 21st, but its pval LEVEL_EVERY4 ((level+3)/4) yields +6 at level 21; the same data ships on Win32, so it is upstream; Traced (prose-only, no in-play value changes); inc-5hp1 / inc-tek.8.7 PA-07-F34; not sent.
 Priest  Spell "Divine Favour" : EA_INFLICT
   { SC_THE; IS_A_BUFF(COST_1); Level: 1; 
     xval: ADJUST_SAC; yval: A_DMG; pval: LEVEL_EVERY4; 
     Desc: "Increases your attack rolls and the damage you inflict in combat 
 	  by +1 per blow at 1st level, +2 at fifth, +3 at 9th, +4 at 13th, +5 
-	  at 17th, +5 at 21st, and so forth.";
+	  at 17th, +6 at 21st, and so forth.";
     On Event EV_MAGIC_HIT
       "You feel worthy.",
     EV_ELAPSED
@@ -1080,7 +1082,7 @@ Wizard / Druid  Spell "Obscurement" : EA_INFLICT
     rval: FI_FOG; cval: GREY; Purpose: EP_BUFF|EP_STEALTH; aval: AR_MFIELD;
     Flags: EF_GLYPH_FOG;
     Desc: "Conjures a bank of fog which travels with you and limits
-    normal vision and infravision to 10 feet. Wood Elves, second level
+    normal vision and darkvision to 10 feet. Wood Elves, second level
     Druids and other creatures with the Nature Sense ability can see
     through fog. The fog bank has a radius of 30 feet (3 squares) plus
     10 feet (1 square) for every two caster levels. The fog also muffles
@@ -1808,14 +1810,15 @@ Priest Spell "Lawful Weapons" : EA_GENERIC
   }
 #endif
 
+    // upstream: data error -- the Desc put the dice steps every four levels from 3rd (2d8 at 7th), but pval (LEVEL_EVERY4)d8 = (level+3)/4 dice gives 2d8 at 5th; Traced (prose-only, no in-play value changes); inc-1o01 / inc-tek.8.7 PA-07-F35; not sent.
 Priest / Druid Spell "Aid" : EA_INFLICT
   { SC_THE; IS_A_BUFF(COST_2); Level: 2; qval: Q_TAR;
     xval: ADJUST_SAC; yval: A_AID; pval: +1; }
 and EA_INFLICT
   { xval: ADJUST_SAC; yval: A_THP; pval: (LEVEL_EVERY4)d8; 
     Desc: "Grants the chosen subject a +1 bonus to hit and damage,
-      as well as 1d8 temporary hit points for every four caster
-      levels, starting with 1d8 at 3rd level."; 
+      as well as 1d8 temporary hit points at 3rd level, 2d8 at 5th,
+      and 1d8 more every four caster levels after that."; 
     Constants:
       * SERVICE_SPELL_COST 75;
   }
@@ -5088,10 +5091,10 @@ Druid Spell "Commune With Nature" : EA_GENERIC
 
 Druid Spell "Wall of Thorns" : EA_TERRAFORM
   { SC_ARC; Base: SP_EASY; Cost: 10; Level: 5; qval: Q_TAR; sval: NOSAVE;
-    aval: AR_GLOBE; lval: 2; rval: $"thorn wall"; 
+    aval: AR_GLOBE; lval: 1; rval: $"thorn wall"; 
     xval: TERRA_OPEN; 
     Purpose: EP_CURSE|EP_FOIL_PURSUIT|EP_ESCAPE|EP_BARRIER | AIM_AT_ENEMY;
-    // upstream: the Desc promised a 5-square diameter but lval: 2 with AGlobe's dist < radius test fills a 3-square one; the same data ships on Win32 with the original compiler, so it is upstream, not a port artifact; the SCRIPT is correct, so nobody should raise lval to match the old prose; Traced (prose-only, no in-play value changes); inc-paq9; not sent.
+    // upstream: the Desc's 3 squares is correct, and lval 1 fills that 3-square diameter under the dist <= radius test; the same data ships on Win32 with the original compiler, so it is upstream, not a port artifact; Traced (prose-only, no in-play value changes); inc-paq9, inc-lmw4; not sent.
     Desc: "Conjures a solid barrier composed of thick shrubbery
       interwoven with razor-sharp, thorny vines. The wall of thorns
       fills an area with diameter 30 feet (3 squares). Any creature
@@ -5136,7 +5139,7 @@ Effect "Raise Dead" : EA_NOTIMP { }
 
 /* -- DOMAIN 5 -- */
 
-Effect "Music of the Spheres" : EA_INFLICT
+Effect "Music of the Spheres" : EA_BLAST
   {
     SC_EVO; Base : SP_EASY; Cost: 12; Level: 5; 
     Desc: "Casting this spell allows the priest to produce music
@@ -5158,8 +5161,8 @@ Effect "Music of the Spheres" : EA_INFLICT
       cooperative manner, forming a choir. A bardic ally adds
       half her bardic music level to the effect's caster level,
       while a priestly ally adds half her caster level.";
-    aval: AR_GLOBE; cval: MAGENTA; Purpose: EP_PLAYER_ONLY;
-    xval: PARALYSIS; yval: PARA_HYPNOTIZED; sval: WILL;
+    lval: 8; aval: AR_GLOBE; cval: MAGENTA; Purpose: EP_PLAYER_ONLY;
+    xval: AD_SONI; pval: (LEVEL)d4; sval: WILL+10;
     Flags: EF_BLIND_PROMPT, EF_ALLIES_IMMUNE, EF_CASTER_IMMUNE;
     int16 targ, dtype;
     int16 choir;
@@ -5198,18 +5201,27 @@ Effect "Music of the Spheres" : EA_INFLICT
       return NOTHING;
       },  
     EV_CALC_EFFECT {
+      /* upstream: the text gives a 1d4-round paralysis, but the script set no
+         duration, so the engine fallback of 10+2*CL applied on Win32 too. The
+         choir adds to the god's condition only, never to the paralysis. The
+         blast part runs first, so damage and the god's condition land before
+         the paralysis and cannot free it (src/Fight.cpp:7877).
+         Observed via tools/check_music_spheres_area.sh; inc-ctee, not sent. */
+      if (e.efNum == 1)
+        e.vDuration = 1d4;
       if (choir > 0) {
         e.vCasterLev += choir;
-        e.vDuration += 2*choir;
+        if (e.efNum != 1)
+          e.vDuration += 2*choir;
         }
       return NOTHING;
       },
     EV_ISTARGET {
-      if (e.efNum == 0)
+      if (e.efNum == 1)
         return (EVictim->isHostileTo(EActor)  &&
           EVictim->ChallengeRating() <= 5) ?
           SHOULD_CAST_IT : CANNOT_CAST_IT;
-      else if (e.efNum == 1)
+      else if (e.efNum == 0)
         return EVictim->isMType(targ) ?
           SHOULD_CAST_IT : CANNOT_CAST_IT;
       },
@@ -5219,12 +5231,12 @@ Effect "Music of the Spheres" : EA_INFLICT
     MSG_BLASTNAME
       "unearthly music";
   }
-and EA_BLAST
+and EA_INFLICT
   { 
-    xval: AD_SONI; pval: (LEVEL)d4; sval: WILL+10;
+    lval: 8; xval: PARALYSIS; yval: PARA_HYPNOTIZED; sval: WILL;
     On Event POST(EV_MAGIC_HIT)
       {
-        if (e.efNum == 1)
+        if (e.efNum == 0)
           ThrowDmg(EV_DAMAGE,dtype,e.vDuration,"",EActor,EVictim);
         return NOTHING;
       };

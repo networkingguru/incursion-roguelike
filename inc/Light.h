@@ -72,12 +72,12 @@ LightRGB LightMemory(int idx, float unlit, int step = LIGHT_STEP_NORMAL);
    this can never clip a channel and never washes a lit cell toward white.
    Black stays black at every step. LIGHT_STEP_NORMAL returns `c` unchanged. */
 LightRGB LightGain(LightRGB c, int step);
-/* Heat sight discards a surface's hue and shows only how bright it is, so
-   the picture is monochrome red and cannot be mistaken for torchlight. */
-LightRGB LightInfra(int idx, bool warm);
-/* Heat sight over a lit colour. 'infra' is the spatial strength,
+/* Darkvision discards a surface's hue and shows only how bright it is, so
+   the picture is monochrome gray and cannot be mistaken for torchlight. */
+LightRGB LightInfra(int idx);
+/* Darkvision over a lit colour. 'infra' is the spatial strength,
    0..1, and any light at LIGHT_INFRA_YIELD or above wins outright. */
-LightRGB LightInfraMix(LightRGB lit, int idx, bool warm,
+LightRGB LightInfraMix(LightRGB lit, int idx,
                        LightRGB L, float infra);
 /* The glow a lit cell paints across its whole square, behind the glyph. */
 LightRGB LightGlow(int idx, LightRGB L);
@@ -113,13 +113,12 @@ static const LightRGB LIGHT_ICE_BASE = { 70, 115, 235 }; /* ice glyph base colou
 #define LIGHT_REFLECT_MIN 16    /* least light, 0..255, on a wall for it to reflect at all */
 #define LIGHT_REFLECT_SAT 1.00f /* how far the glint keeps its selected colour vs white; separate from the through-light tint */
 #define LIGHT_GLINT_MODE   1     /* glint colour: 0 = incoming light only, 1 = light x material colour */
-#define LIGHT_INFRA_R     200   /* the heat-sight ramp: a dim red, hue only */
-#define LIGHT_INFRA_G      60
-#define LIGHT_INFRA_B      60
-#define LIGHT_INFRA_FLOOR 0.35f /* the darkest a surface reads under heat sight */
-#define LIGHT_INFRA_COLD  0.65f /* cold terrain, against a warm body's full ramp */
-#define LIGHT_INFRA_YIELD 0.35f /* the light at which heat sight has wholly given way */
-#define LIGHT_INFRA_FADE  2     /* cells over which the edge of heat sight tapers out */
+#define LIGHT_INFRA_R      85   /* the darkvision ramp: neutral gray, hue only (inc-moh9) */
+#define LIGHT_INFRA_G      85
+#define LIGHT_INFRA_B      85
+#define LIGHT_INFRA_FLOOR 0.35f /* the darkest a surface reads under darkvision */
+#define LIGHT_INFRA_YIELD 0.35f /* the light at which darkvision has wholly given way */
+#define LIGHT_INFRA_FADE  2     /* cells over which the edge of darkvision tapers out */
 int LightMode(Player *p);
 
 #endif

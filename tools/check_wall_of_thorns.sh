@@ -1,9 +1,10 @@
 #!/bin/bash
 # gate: cheap
 # Regression check for inc-paq9: Druid "Wall of Thorns" description must state the
-# 30-foot (3-square) diameter its lval: 2 globe actually fills, not the 50-foot
-# (5-square) one it used to advertise. Magic::AGlobe fills each square with
-# dist(cx,cy,x,y) < e.vRadius, and vRadius is lval (2), so the wall is 3x3.
+# 30-foot (3-square) diameter its lval globe actually fills, not the 50-foot
+# (5-square) one it used to advertise. Under the inc-lmw4 `dist <= e.vRadius`
+# test, Magic::AGlobe fills each square with dist(cx,cy,x,y) <= e.vRadius, and
+# vRadius is lval (1), so the wall is still 3x3.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -38,9 +39,9 @@ if ! grep -Fq '30 feet (3 squares)' <<< "$block"; then
     exit 1
 fi
 
-if ! grep -Fq 'lval: 2;' <<< "$block"; then
-    echo "FAIL: Wall of Thorns block no longer has lval: 2 (the script must stay)."
+if ! grep -Fq 'lval: 1;' <<< "$block"; then
+    echo "FAIL: Wall of Thorns block no longer has lval: 1 (which under the inc-lmw4 <= test fills the stated 3-square diameter)."
     exit 1
 fi
 
-echo "PASS: inc-paq9 Wall of Thorns description states the 30-foot (3-square) diameter its lval: 2 globe fills."
+echo "PASS: inc-paq9 Wall of Thorns description states the 30-foot (3-square) diameter its lval: 1 globe fills under the inc-lmw4 dist <= radius test."

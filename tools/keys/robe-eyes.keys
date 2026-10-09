@@ -1,7 +1,7 @@
 # Does the Robe of Eyes grant the infravision its own page promises? Read by
 # tools/check_robe_eyes.sh, bead inc-tek.8.8, finding PA-08-F12.
 #
-# The robe's Desc says it "grants the wearer 60 feet of Infravison"
+# The robe's Desc says it "grants the wearer 60 feet of Darkvision"
 # (lib/m_items.irh, entity AI_WONDER Effect "Robe of Eyes"). The entity's grant
 # blocks gave Spot, Search, See Invisible, Improved Initiative and a gaze-attack
 # handler, and no infravision at all.
@@ -9,7 +9,7 @@
 # The oracle is the character dump, not a screen. [W]rite Dump on the character
 # sheet calls TextTerm::DumpCharacter (src/Sheet.cpp), which writes the whole
 # sheet to logs/<name>.txt. The "Special Abilities" block of that file prints
-# "Infravision (%d ft)" from src/Sheet.cpp:540, and the number is
+# "Darkvision (%d ft)" from src/Sheet.cpp:540, and the number is
 # Creature::AbilityLevel(CA_INFRAVISION) * 10. That function ADDS every
 # EXTRA_ABILITY stati to the racial level (src/Creature.cpp:2998-3006), so a
 # worn robe must raise the number rather than replace it.

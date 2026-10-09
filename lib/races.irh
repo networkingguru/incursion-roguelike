@@ -332,8 +332,8 @@ Race "Kobold;race"
       Simple weapon groups are automatically proficient with the whip,
       and those who are proficient with Thrown weapons are automatically
       proficient with bolas.\n
-      __*_<7>Infravision<2> -- Like the majority of the races who dwell
-      underground, kobolds possess infravision to a range of 60 feet (6
+      __*_<7>Darkvision<2> -- Like the majority of the races who dwell
+      underground, kobolds possess darkvision to a range of 60 feet (6
       squares).\n
       __*_<7>Trapcraft<2> -- Kobolds know and understand traps, snares
       and mechanical dangers better than members of any other race -- and
@@ -806,8 +806,8 @@ Race "Dwarf;race"
       __<7>*<2>_If the enemy dies from some cause other than the dwarf's attacks,
       the dwarf similarly suffers a 200 experience point per character level
       penalty, and the focus is of course finished.\n
-      __*_<7>Infravision<2> -- Dwarves are naturally able to see clearly in
-      perfect darkness, having infravision to a range of 60 feet (6 squares).\n
+      __*_<7>Darkvision<2> -- Dwarves are naturally able to see clearly in
+      perfect darkness, having darkvision to a range of 60 feet (6 squares).\n
       __*_<7>Weaponcraft<2> -- While magical arms and armour are usually
       crafted by spellcasters arcane or divine, dwarves without any other
       magical skill have been known to craft such items, simply as a result
@@ -1343,7 +1343,7 @@ Race "Drow;race"
       is used by the drow to poison victims from a distance: all drow 
       missiles start the game coated with Elfshot, a poison that causes 
       sleep in its victims.\n
-      __*_<7>Infravision<2> -- Drow have the sharpest infravision of any
+      __*_<7>Darkvision<2> -- Drow have the sharpest darkvision of any
       beings living on Therya, being able to see with absolute clarity
       out to a range of 120 feet (12 squares) when in absolute darkness.\n
       __*_<7>Innate Magic<2> -- Living amidst the magical radiations of the
@@ -2009,8 +2009,8 @@ Race "Orc;race"
       __*_<7>Scent<2> -- Orcs have a highly acute sense of smell, and are
       able to track their enemies by scent. They receive the Scent ability
       with a range of 30 feet.\n
-      __*_<7>Infravision<2> -- Dwelling underground and upon the surface
-      with equal ease, orcs have Infravision to a range of 60 feet.\n
+      __*_<7>Darkvision<2> -- Dwelling underground and upon the surface
+      with equal ease, orcs have Darkvision to a range of 60 feet.\n
       __*_<7>Spell Fury<2> -- Orcs are not particulairly adept at magecraft
       overall, but the sheer primal anger they bring to magical workings
       lends them a certain power as mages. In game terms, orcs double their
@@ -2026,7 +2026,7 @@ Race "Orc;race"
       a longspear or ranseur, some cured meat and a knife.\n\n
       <10>ORC SUBRACES <5>(Unimplemented)<2>\n
       __Cave orcs are the most fecund, and most common, of the orc subraces.
-      Adapted to Underdark life, the cave orcs have superior infravision, a
+      Adapted to Underdark life, the cave orcs have superior darkvision, a
       racial aptitude for climbing and the ability to scale even sheer surfaces
       easily, along with an understanding of swarm tactics and an aptitude for
       underground survival, but they are even more craven than the majority of 

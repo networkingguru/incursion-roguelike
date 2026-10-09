@@ -1,6 +1,7 @@
 #!/bin/bash
 # gate: live
-# inc-7xcu: live Bane radius; expected red until the separate spell-data fix.
+# inc-7xcu, inc-lmw4: live Bane radius check -- Bane reaches distance 5 and not
+# 6, 7 or 9.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

@@ -1,0 +1,108 @@
+# inc-stzd: builds the SAME character tools/keys/reapply-bard.keys does, for
+# tools/make_char_fixture.sh to freeze, and SAVES him instead of handing
+# control back to a caller. Not included by anything; reapply-enchant.keys
+# and reapply-hp.keys load the frozen fixture directly once it exists.
+#
+# WHY A NEW SCRIPT, NOT A FIXTURE OF reapply-bard.keys AS WRITTEN. That
+# script's "a # the first attribute set" (seed 1, orc bard) draws "Save
+# Bonus: +4 vs. Poison" as this seed's attribute-set perk -- src/Create.cpp:1690
+# draws it from random(FT_LAST - FT_FIRST) + FT_FIRST, so inc-08js's
+# Cannibalism feat (FT_LAST 362 -> 363) changed what seed 1 draws here, and
+# the +4 rode under every Will-vs-poison reading tools/check_reapply_single_grant.sh's
+# S2 takes. A fixture freezes whatever this script draws for good, so this is
+# the one chance to pick a cleaner draw instead of carrying that +4 forever.
+#
+# PICKING BY CONTENT, AS FAR AS THE SCREEN ALLOWS. @choose cannot read this
+# screen -- tried "Favoured Enemy: Trolls" and src/Wposix.cpp's FindMenuEntry
+# finds no such entry, because the five offered sets are not LMenu options
+# with searchable names, just lettered blocks of plain text. So the choice
+# below is verified by eye, once, against this seed's fixed reroll sequence
+# (deterministic: "x" is Reroll Five More Sets, and seed 1's reroll stream
+# does not change), and the content is checked by what this fixture's own
+# .sheet.txt says afterward, not by a key the game can search:
+#
+#   x seven times, then [a]: STR 14  DEX 14  CON 12  INT 17  WIS 15  CHA 13
+#   LUC 15, perks "Starting Item: uncursed Lenses +3 of the Scholar" and
+#   "Favoured Enemy: Trolls" -- no Bonus Feat, no Save Bonus, nothing that
+#   plants a stati before chargen even finishes.
+#
+# WHY CON 12 AND NOT THE ORIGINAL SET'S OTHER STATS. reapply-bard.keys' own
+# header says S5 (tools/keys/reapply-hp.keys) depends on CON staying at base
+# 12, so that is the one value this draw was chosen to match. CHA moved from
+# 14 to 13 (mod +2 -> +1), which is the only other value either S2 or S5
+# reads (Storycraft's item-level cap, AbilityLevel + CHA mod + 1): at bard 6
+# that is 5 + 1 + 1 = 7, not 8, and the periapt (level 2 -> 4) and the girdle
+# (level 4 -> 6) both still land inside 7, so neither augment this fixture
+# will be asked to perform is affected. No other stat (STR, DEX, INT, WIS,
+# LUC) is read by either section's key script or by
+# tools/check_reapply_single_grant.sh.
+#
+# EVERYTHING BELOW THIS POINT IS reapply-bard.keys, UNCHANGED, up to the
+# attribute-set line, and then its exact "left on an empty level" ending,
+# followed by the save. Do not re-derive it from scratch; copy forward.
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Bard"
+x*7     # reroll until the perk-free CON-12 set above is offered as [a]
+a       # that set
+@choose "Neutral"
+a       # first feat; which feats are offered depends on the rolls
+a       # second feat
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # leave the Skill Manager and keep the ranks
+@while "wish to worship" n
+@choose "The Witty Thrillseeker"    # personality archetype
+@choose "Sleep"                     # the bard's first spell
+@until "Afoot" ESC
+
+w y     # wizard mode, and confirm entering it
+@choose "Wizard Mode Switches"
+DOWN SPACE              # Auto-Identify Items
+DOWN SPACE              # Free Advancement
+ESC
+
+d
+G
+@while "Bonus To Which Attribute" a
+@while "You feel stronger" SPACE
+@while "Choose a feat" a
+@while "Learn which spell" a
+G
+@while "Bonus To Which Attribute" a
+@while "You feel stronger" SPACE
+@while "Choose a feat" a
+@while "Learn which spell" a
+G
+@while "Bonus To Which Attribute" a
+@while "You feel stronger" SPACE
+@while "Choose a feat" a
+@while "Learn which spell" a
+G
+@while "Bonus To Which Attribute" a
+@while "You feel stronger" SPACE
+@while "Choose a feat" a
+@while "Learn which spell" a
+G
+@while "Bonus To Which Attribute" a
+@while "You feel stronger" SPACE
+@while "Choose a feat" a
+@while "Learn which spell" a
+@expect "Class  Bard 6 "
+ESC
+
+w
+@choose "Genocide Everything"   # nothing may walk up and change HP
+@until "HP:" ESC
+
+# ESC b is the System Menu's [b] Save and Continue (src/Player.cpp:843), the
+# only save that does not also end the session. See the warning in
+# tools/keys/save-continue.keys before moving it: a stray ESC here would open
+# [a] Save and Quit instead. No @quit after: that would be a second save.
+ESC
+@expect "System Menu"
+b
+@dump:saved

@@ -188,7 +188,7 @@ with tempfile.TemporaryDirectory(prefix="ability-descs-selftest-") as tmp:
     t3 = tmp / "Tables3.cpp"
     mutated = mutate_abilinfo(
         tables.read_text(),
-        '{ CA_INFRAVISION, "Infravision",', '{ CA_NO_SUCH_ABILITY, "Infravision",'
+        '{ CA_INFRAVISION, "Darkvision",', '{ CA_NO_SUCH_ABILITY, "Darkvision",'
     )
     t3.write_text(mutated)
     ok3, fails3 = run(t3, live, exempt)

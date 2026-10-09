@@ -7,7 +7,12 @@
 #    reads +4 before, during and after the boost; item text proves start/end.
 # S2 Storycraft on a worn Periapt of Proof against Poisons (orc bard, seed 1):
 #    +1 -> +2 must take Will "vs. poison" from +2 to +4. The key script's
-#    header traces Storycraft -> SetInherentPlus -> ReApply by file:line.
+#    header traces Storycraft -> SetInherentPlus -> ReApply by file:line. S2
+#    and S5 start from a frozen character, tools/fixtures/chars/orc-bard-reapply-seed1.sav
+#    (tools/fixtures/README.md), rather than building one fresh: a live build
+#    on this seed draws a permanent "Save Bonus: +4 vs. Poison" attribute-set
+#    perk (src/Create.cpp:1690's random(FT_LAST - FT_FIRST) draw, shifted by
+#    inc-08js's Cannibalism feat) that used to ride under every reading here.
 # S3 the Nine Lives Stealer SS_ENCH activation row (seed 4) is not a standing
 #    grant and must survive a Magic Weapon re-apply.
 # S4 Dispel Magic on the Bloodspear wielder (seed 1): Will "vs. spells"
@@ -28,9 +33,10 @@ cd "$ROOT"
     echo 'FAIL: measured nothing; build with BACKEND=posix ./build_macos.sh'
     exit 1
 }
-run_keys() { # run_keys <keys> <seed> [allow-death]; S5 judges death itself
-    local keys="$1" seed="$2" allow_death="${3:-}" out run rc
-    out="$(INCURSION_BIN=./incursion-headless INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$keys" "$seed" 2>&1)"
+run_keys() { # run_keys <keys> <seed> [allow-death] [load-fixture]; S5 judges death itself
+    local keys="$1" seed="$2" allow_death="${3:-}" load="${4:-}" out run rc
+    out="$(INCURSION_BIN=./incursion-headless INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+           INCURSION_LOAD="$load" tools/headless.sh "$keys" "$seed" 2>&1)"
     rc=$?
     run="$(echo "$out" | awk '/^run:/ {print $2}')"
     if grep -q 'NO GAMEPLAY' <<< "$out"; then
@@ -54,18 +60,23 @@ run_keys() { # run_keys <keys> <seed> [allow-death]; S5 judges death itself
 need_screen() {
     [ -f "$1" ] || { echo "FAIL: measured nothing: no screen $1" >&2; return 1; }
 }
+# S2 and S5 share a frozen orc bard (tools/fixtures/README.md) instead of
+# building one fresh each run; see check_reapply_single_grant.sh's S2 comment
+# above for why.
+FIXTURE=tools/fixtures/chars/orc-bard-reapply-seed1.sav
 status=0
 for section in S1 S2 S3 S4 S5; do
     allow_death=
+    load=
     case "$section" in
         S1) keys=magic-weapon; seed=4 ;;
-        S2) keys=enchant; seed=1 ;;
+        S2) keys=enchant; seed=1; load="$FIXTURE" ;;
         S3) keys=activation; seed=4 ;;
         S4) keys=dispel; seed=1 ;;
-        S5) keys=hp; seed=1; allow_death=1 ;;
+        S5) keys=hp; seed=1; allow_death=1; load="$FIXTURE" ;;
     esac
     echo "$section seed=$seed"
-    run="$(run_keys "tools/keys/reapply-$keys.keys" "$seed" "$allow_death")" || { status=1; continue; }
+    run="$(run_keys "tools/keys/reapply-$keys.keys" "$seed" "$allow_death" "$load")" || { status=1; continue; }
     echo "screens: $run/logs/screens"
     need_screen "$run/logs/screens/0001-"*.txt || { status=1; continue; }
     python3 - "$section" "$run/logs/screens" <<'PY'

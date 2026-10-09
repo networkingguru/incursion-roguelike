@@ -183,7 +183,7 @@ struct FeatInfoStruct FeatInfo[] = {
 
   { FT_ACUTE_SENSES, 0, "Acute Senses",
     "Your senses extend out beyond their normal ranges for your race. Your sight, "
-    "shadow, infravision and scent ranges are increased by 50~.",
+    "shadow, darkvision and scent ranges are increased by 50~.",
     {{{FP_FEAT,FT_ALERTNESS,0}}}},
 
   { FT_BRACHIATION, 0, "Brachiation",

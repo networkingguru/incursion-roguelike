@@ -520,7 +520,7 @@ Effect "Summon Ghasts" : EA_SUMMON
       "The <EActor> calls upon unholy aid!"; }
  
 Effect "Paralyzing Aura" : EA_INFLICT
-  { SC_THA; Cost: 12; aval: AR_GLOBE; lval: 2; cval: BLUE;
+  { SC_THA; Cost: 12; aval: AR_GLOBE; lval: 1; cval: BLUE;
     xval: PARALYSIS; yval: PARA_HELD; sval: WILL; Level: 6;
     Flags: EF_SPECABIL, EF_ALLIES_IMMUNE;
     Desc: "A nabassu can eminate an aura of paralyzation within

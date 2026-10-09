@@ -1452,11 +1452,15 @@ EvReturn Magic::MagicHit(EventInfo &e) {
     return r;
   }
 
+/* inc-lmw4: set only by AreaRadiusProbe (src/AreaRadiusProbe.cpp). */
+void (*AreaProbeXYHook)(int16,int16) = NULL;
+
 EvReturn Magic::MagicXY(EventInfo &e,int16 tx,int16 ty)
   {
     Map *m; EvReturn r, r2; int16 oe, o_efNum;
 
     e.EXVal = tx; e.EYVal = ty;
+    if (AreaProbeXYHook) AreaProbeXYHook(tx,ty);
     if (!e.EActor) return DONE;
     m = e.EActor->m;
     if (!m) return DONE; 
@@ -1625,7 +1629,7 @@ EvReturn Magic::AGlobe(EventInfo &e)
     if (m && (!m->isGenerating()) && e.EMagic->cval && PossiblyPause(T1,cx,cy,0)) {
       for(x = cx-e.vRadius; x <= cx+e.vRadius; x++)
         for(y = cy-e.vRadius; y <= cy+e.vRadius; y++)
-          if ((dist(cx,cy,x,y) < e.vRadius) && m->InBounds(x,y))
+          if ((dist(cx,cy,x,y) <= e.vRadius) && m->InBounds(x,y))
             {
               g = T1->GetGlyph(x,y);
               g = (g & GLYPH_ID_MASK) | GLYPH_FORE(e.EMagic->cval);
@@ -1639,7 +1643,8 @@ EvReturn Magic::AGlobe(EventInfo &e)
     
     for(x = cx-e.vRadius; x <= cx+e.vRadius; x++)
       for(y = cy-e.vRadius; y <= cy+e.vRadius; y++)
-        if ((dist(cx,cy,x,y) < e.vRadius) && m->InBounds(x,y))
+        /* upstream: a globe/field's first pass must use Field::inArea's dist <= radius test, so lval N reaches N squares; the original source ships '<' on every platform. Observed, tools/check_area_radius.sh. inc-lmw4, not sent. */
+        if ((dist(cx,cy,x,y) <= e.vRadius) && m->InBounds(x,y))
           {
             MagicXY(e,x,y);
             e.isFirstBlastXY = false;
@@ -1672,7 +1677,7 @@ EvReturn Magic::AGlobe(EventInfo &e)
                 (int)cx, (int)cy, (int)remaining, (int)e.vRadius);
 
         MapIterate(m,t,i)
-            if (dist(t->x,t->y,cx,cy) < (int16)e.vRadius) {
+            if (dist(t->x,t->y,cx,cy) <= (int16)e.vRadius) {
                 if (!t->isCreature())
                     continue;
                 if (t == e.EActor && te->HasFlag(EF_CASTER_IMMUNE))
@@ -1738,7 +1743,7 @@ EvReturn Magic::AGlobe(EventInfo &e)
     }
 
     MapIterate(m,t,i)
-        if (dist(t->x,t->y,cx,cy) < (int16)e.vRadius) {
+        if (dist(t->x,t->y,cx,cy) <= (int16)e.vRadius) {
             e.ETarget = t;
             e.efNum = (int8)_efNum;
             if (t == e.EActor && te && te->HasFlag(EF_CASTER_IMMUNE))
@@ -1909,7 +1914,7 @@ EvReturn Magic::AField(EventInfo &e)
     
     for(x = tx-e.vRadius; x <= tx+e.vRadius; x++)
       for(y = ty-e.vRadius; y <= ty+e.vRadius; y++)
-        if ((dist(tx,ty,x,y) < e.vRadius) && e.EActor->m->InBounds(x,y))
+        if ((dist(tx,ty,x,y) <= e.vRadius) && e.EActor->m->InBounds(x,y))
           {
             MagicXY(e,x,y);
             e.isFirstBlastXY = false;
@@ -4739,9 +4744,15 @@ EvReturn Creature::Cast(EventInfo &e) {
                 }
             }
             if (bestBook) {
-                if (bestPercent < 100)
-                    if (!SkillCheck(SK_DECIPHER,10+bestPercent/10,true))
+                if (bestPercent < 100) {
+                    int16 rlm = thisp->ReadLightDCMod();
+                    if (rlm < 0) {
+                        IPrint("It is too dark to read your damaged spellbook.");
+                        return ABORT;
+                    }
+                    if (!SkillCheck(SK_DECIPHER,10+bestPercent/10+rlm,true))
                         dmgFail = true;
+                }
                 goto HasComponent;
             }
     }
@@ -5840,11 +5851,58 @@ static void DisposeScroll(Item *it, Creature *cr, bool preserved)
       it->Remove(true);
   }
 
+/* inc-caq8: logs one line of light facts for the reader's square when a scroll
+   is read. No game effect; a no-op unless INCURSION_READ_LIGHT_PROBE is set.
+   Appends to logs/read-light.log key=value: turn, actor, x, y, mapfor, level,
+   bright, lit, lightrange, infra, stack. Reader: tools/check_read_light.sh. */
+static void ReadLightProbe(EventInfo &e)
+  {
+    FILE *f;
+    if (!(f = fopen("logs/read-light.log", "a")))
+      return;
+    Creature *cr = e.EActor;
+    Map *m = cr->m;
+    fprintf(f, "turn=%u actor=%d x=%d y=%d mapfor=%d level=%d bright=%d"
+      " lit=%d lightrange=%d infra=%d stack=%u\n",
+      (unsigned)theGame->Turn, cr->isPlayer() ? 1 : 0, cr->x, cr->y,
+      LightMapIsFor(m) ? 1 : 0, (int)LightLevelAt(cr->x, cr->y),
+      m->BrightAt(cr->x, cr->y) ? 1 : 0, m->LightAt(cr->x, cr->y) ? 1 : 0,
+      (int)cr->LightRange, (int)cr->InfraRange,
+      (unsigned)e.EItem->Quantity);
+    fclose(f);
+  }
+
+/* inc-caq8: reading magic writing needs light on the reader's square.
+   Bands: dark (level < LIGHT_SEE_MIN) cannot read -> -1; dim (up to
+   LIGHT_HIDE_MIN) -> +10 DC unless low-light vision -> 0; bright -> 0;
+   infravision counts as bright. bead inc-caq8 */
+int16 Creature::ReadLightDCMod()
+  {
+    if (InfraRange > 0) return 0;
+    if (LightMapIsFor(m)) {
+      uint8 lv = LightLevelAt(x, y);
+      if (lv < LIGHT_SEE_MIN) return -1;
+      if (lv < LIGHT_HIDE_MIN) return AbilityLevel(CA_LOWLIGHT) > 0 ? 0 : 10;
+      return 0;
+    }
+    if (m->BrightAt(x, y) || LightRange > 0) return 0;
+    if (m->LightAt(x, y)) return AbilityLevel(CA_LOWLIGHT) > 0 ? 0 : 10;
+    return -1;
+  }
+
 EvReturn Item::ReadScroll(EventInfo &e)
   {
     EvReturn result, csr; int8 sLevel, cLevel;
     bool preserved;
     bool didRead = false;
+    if (getenv("INCURSION_READ_LIGHT_PROBE"))
+      ReadLightProbe(e);
+    int16 rlm = e.EActor->ReadLightDCMod();
+    if (rlm < 0)
+      {
+        e.EActor->IPrint("It is too dark to read the scroll.");
+        return ABORT;
+      }
     e.EActor->AccessTime(e.EItem);
     e.EItem = e.EItem->TakeOne();
     preserved = false;
@@ -5899,7 +5957,7 @@ EvReturn Item::ReadScroll(EventInfo &e)
             }
       }
       
-    if (!e.EActor->SkillCheck(SK_DECIPHER,10 + sLevel,true))
+    if (!e.EActor->SkillCheck(SK_DECIPHER,10 + sLevel + rlm,true))
       {
         DPrint(e,"The magic runs amok!","The magic runs amok!");
         /* WildMagic(e,sLevel); */               

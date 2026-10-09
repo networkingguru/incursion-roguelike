@@ -2,13 +2,13 @@
 # Regression check for the Robe of Eyes' infravision, bead inc-tek.8.8, finding
 # PA-08-F12.
 #
-# The robe's own page promises that it "grants the wearer 60 feet of Infravison"
+# The robe's own page promises that it "grants the wearer 60 feet of Darkvision"
 # (lib/m_items.irh, entity AI_WONDER Effect "Robe of Eyes"). The entity granted
 # Spot +5, Search +5, See Invisible, Improved Initiative and a gaze-attack
 # handler, and no infravision at all, so the sentence was false for every wearer.
 #
 # The oracle is the character dump written by [W]rite Dump, because its
-# "Special Abilities" block prints "Infravision (%d ft)" from src/Sheet.cpp:540
+# "Special Abilities" block prints "Darkvision (%d ft)" from src/Sheet.cpp:540
 # and that number is Creature::AbilityLevel(CA_INFRAVISION) * 10 -- the very
 # function the missing grant feeds. The run dumps the sheet three times: before
 # the robe exists, with it worn, and after it comes off.
@@ -52,7 +52,7 @@ done
 # further down names potions and must not be searched.
 infra() {
     sed -n '/^Special Abilities:$/,/^$/p' "$RUN/logs/$1.txt" |
-        sed -n 's/^  Infravision (\([0-9]*\) ft)$/\1/p'
+        sed -n 's/^  Darkvision (\([0-9]*\) ft)$/\1/p'
 }
 
 fail=0

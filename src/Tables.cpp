@@ -2370,7 +2370,7 @@ Option OptionList[] = {
   { OPT_SHOW_HOW_SEE, "Show Perception Modes", "NO/YES", 1, 0, 0,
       "__When this option is active and a creature is examined with the 'l'ook"
       "command, a description of how the created is perceived (e.g., sight, "
-      "infravision, detection, ESP) will be given." },
+      "darkvision, detection, ESP) will be given." },
   { OPT_CONTEXT_HELP, "Context-Based Help", "NO/YES", 1, 1, 0,
       "__When this option is active, the help menus only show descriptions "
       "for the race and class(es) that you are currently playing, rather than "
@@ -3579,7 +3579,7 @@ TextVal ClassAbilities[] = {
   { CA_GASEOUS_FORM, "Gaseous Form" },
   { CA_INCREASED_MOVE, "Increased Move" },
   { CA_RAPID_RIDING, "Rapid Riding" },
-  { CA_INFRAVISION, "Infravision" },
+  { CA_INFRAVISION, "Darkvision" },
   { CA_INHERANT_POTENTIAL, "Inherent Potential" },
   { CA_INNATE_SPELL, "Innate Spell" },
   { CA_INSPIRE_ALLIES, "Inspire Allies" },
@@ -3843,12 +3843,11 @@ struct AbilityInfoStruct AbilInfo[] = {
     "rather than your own, plus half your Ride skill; this ability adds a "
     "further bonus to that speed equal to your level in it, letting a "
     "skilled rider push a mount faster than it could otherwise manage." },
-  { CA_INFRAVISION, "Infravision",
-    "You gain darkvision rather than true heat-sight, despite the name: you "
-    "can spot any creature in the dark, not just warm-blooded ones, out to "
-    "a range in squares equal to your ability level, about ten feet per "
+  { CA_INFRAVISION, "Darkvision",
+    "You can spot any creature in the dark, not just warm-blooded ones, out "
+    "to a range in squares equal to your ability level, about ten feet per "
     "level. It works with line of sight like normal vision. Blindness "
-    "disables it completely, dropping your infravision range to zero." },
+    "disables it completely, dropping your darkvision range to zero." },
   { CA_INHERANT_POTENTIAL, "Inherent Potential",
     "Raises the highest inherent bonus you can build up in a single "
     "attribute score, from sources like tomes of exercise or training "

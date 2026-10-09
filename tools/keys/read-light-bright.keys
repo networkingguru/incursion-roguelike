@@ -1,0 +1,24 @@
+@include read-light-setup.keys
+w K RIGHT ENTER e
+w K RIGHT*2 ENTER e
+w K RIGHT*2 ENTER p
+# Stow the equipped light source; the wall torch placed above supplies the
+# bright level instead. tools/check_read_light.sh runs this case with a
+# no-infravision fixture; the stow is a harmless no-op if its light slot is
+# already empty.
+i c s ESC
+s
+r
+@choose "(in pack) 2 Scrolls of Wizard Sight"
+@while "Stop reading?" n
+@dump:read
+v
+@dump:rolls
+ESC
+i
+@dump:after-pack
+ESC
+r
+@dump:after-scrolls
+ESC
+@quit

@@ -8,7 +8,7 @@
 # WHY THIS EXISTS ALONGSIDE char-abilities.keys. That script proves the My
 # Character page's My Abilities section for the orc barbarian fixture, and it
 # does it by naming his three abilities in its guards ("Berserk Rage",
-# "Devouring", "Infravision"). Those guards make it fail on every OTHER
+# "Devouring", "Darkvision"). Those guards make it fail on every OTHER
 # fixture -- a human paladin or a prestige earthsinger never rolls "Berserk
 # Rage". This script asks the same question, does My Abilities render and
 # does it agree with the sheet, without knowing in advance which abilities a

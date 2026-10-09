@@ -1,0 +1,58 @@
+# inc-moh9: infravision-vs-light-source reproduction scene.
+#
+# Fixture: tools/fixtures/chars/kobold-rogue-seed1.sav (Tizzit, Kobold Rogue 1).
+# Options: tools/fixtures/options-2026-08-22.dat (the settings this fixture
+#   was made and sheeted with; see its .sheet.txt header).
+# Run with:
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#       tools/headless.sh tools/keys/inc-moh9-darkvision-scene.keys 1
+# (or the SDL build the same way, for the real @shot capture).
+#
+# THE SCENE. The fixture's own inventory carries no torch, lantern or other
+# light item (checked against its .sheet.txt), and a kobold has Infravision
+# (60 ft = 6 squares; src/Sheet.cpp prints InfraRange*10, src/Values.cpp sets
+# InfraRange from the CA_INFRAVISION ability level). The character arrives at
+# (111,110) in the Goblin Caves' Entry Chamber, and INCURSION_LIGHT_PROBE=1
+# confirms the whole room is unlit before any change: "plight=0" for the
+# player's own cell, and the light-map grid around (111,110) is all '.'
+# (unlit floor) or '#' (unlit wall) -- nothing a real light touches. The
+# room is visible at all only because of the kobold's own infravision.
+#
+# Wizard Mode's [K] "Change terrain type" command (src/Debug.cpp) can convert
+# any cell into a real light-emitting terrain feature. Placing a Wall Torch
+# 6 squares east of the player -- at the edge of the kobold's infravision
+# range, and inside the "3-8 cells away" distant-light band -- adds a real
+# light source without touching the player's own light slot. Re-running with
+# INCURSION_LIGHT_PROBE=1 confirms the new source: "S 117 110 ..." and a
+# brightness gradient on the player's own row (x=111 player, x=117 torch):
+#   x:       111 112 113 114 115 116 117 118 119 120 121
+#   lightlog: .   .   .   1   3   7   %   7   3   1   .
+# so squares 1-2 east of the player stay fully unlit (infravision-only), the
+# gradient climbs through squares 3-5, and the torch itself (square 6, '%' =
+# opaque+lit) and its immediate neighbours are genuinely lit -- the border
+# the scene is built to show. Everywhere else near the player (checked out
+# to the room's walls in all four directions) stayed unlit throughout.
+#
+# [K] is Wizard Mode's menu letter for "Change terrain type" and [p] is the
+# "Wall Torch" entry on its "Which terrain type?" submenu, both read off a
+# dump of the actual menus this session (letters are positional and move
+# when Player::WizardOptions gains or loses an entry -- re-dump if this ever
+# stops matching).
+
+# Enter Wizard Mode (prompts "Enter Wizard Mode?"; 'y' confirms it and the
+# confirmation keystroke falls through to open the Wizard Mode menu).
+w y
+
+# [K] Change terrain type -> move the location cursor 6 squares east of the
+# player -> ENTER picks that square -> [p] Wall Torch on the terrain-type
+# submenu. The player does not move; only the terrain 6 squares away changes.
+K RIGHT*6 ENTER p
+
+# Hold the frame so the light map settles after the terrain edit, then
+# capture it, matching the border between the infravision-only squares next
+# to the player and the torch-lit squares around the new wall torch.
+@pause 1500
+@shot SHOTFILE_PLACEHOLDER
+@pause 300
+@quit

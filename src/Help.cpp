@@ -3272,7 +3272,7 @@ String & Monster::Describe(Player *p) {
         { CA_EARTHMELD, "It can phase through earth and stone as easily as walking through air. " },
         { CA_EVASION, "It can evade area attacks just as a rogue or monk does. " },
         { CA_FLIGHT, "It can fly very fast. " },
-        { CA_INFRAVISION, "It has infravision to a range of %d0 ft. " },
+        { CA_INFRAVISION, "It has darkvision to a range of %d0 ft. " },
         { CA_KI_STRIKE, "Its natural attacks count as magical %+d weapons. " },
         { CA_LAY_ON_HANDS, "It can lay on hands as a level %d paladin would. " },
         { CA_LOWLIGHT, "It has lowlight vision to a range of %d0 ft. " },

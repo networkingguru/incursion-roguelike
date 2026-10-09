@@ -1689,10 +1689,10 @@ Text "help::adventuring"
         movable objects are removed from the map, and only the glyph of the player's
         character and her memory of wall and floor squares remain shown -- if you are 
         blind (either naturally or by some effect), your Light, Shadow, Sight and 
-        Infravision ranges are all 0. All monsters
+        Darkvision ranges are all 0. All monsters
         are described as 'something', and no warnings will be given for attacking
         friendly or neutral creatures, walking over traps or hazardous terrain and so
-        forth. Blindness negates normal sight and infravision, but not tremorsense,
+        forth. Blindness negates normal sight and darkvision, but not tremorsense,
         blindsight, telepathy, scent or detection magics.\n
         __Blindness can last for a relatively short duration measured in turns, or can
         be a much more serious affliction that can only be cured magically. Fortunately,
@@ -1806,16 +1806,15 @@ Text "help::adventuring"
         skill. Sight is blocked by obscuring terrain (e.g., fog,
         trees).\n\n
 
-        <9>Infravision<1>\n     
-        __Your infravision range is determined by your race (usually
+        <9>Darkvision<1>\n     
+        __Your darkvision range is determined by your race (usually
         60 feet for most races that have it, or 120 feet for deep
         dwellers like Dark Elves and Gray Dwarves). Within this
         range you can see creatures, items and dungeon features
-        perfectly. In Incursion, infravision is 'darksight' rather
-        than 'heatsight'. Infravision does not automatically
-        reveal hiding creatures, you still need a Spot check.
-        Infravision is not blocked by light sources. Infravision is
-        blocked by obscuring terrain (e.g., fog, trees).\n\n
+        perfectly. Darkvision does not automatically reveal hiding
+        creatures, you still need a Spot check. Darkvision is not
+        blocked by light sources. Darkvision is blocked by
+        obscuring terrain (e.g., fog, trees).\n\n
 
         <9>Telepathy<1>\n     
         __The telepathy ability allows a character to sense the
@@ -1896,17 +1895,17 @@ Text "help::adventuring"
         Scent) they could not otherwise surprise.\n\n
 
         __The option 'Show Perception Modes' will reveal the combination of
-        perception modes (e.g., infravision and telepathy) that is allowing you to
+        perception modes (e.g., darkvision and telepathy) that is allowing you to
         sense a creature using the Look command.\n\n
 
         __Finally, with one exception the rules are the same for the players and the
         monsters. The exception: monsters with no hands for torches and no other
-        perception modes get 60 feet of infravision for free. This usually applies
+        perception modes get 60 feet of darkvision for free. This usually applies
         to mundane animals (e.g., bison, boa constrictors, ...) that really have no
         place in the dark dungeon but are there for variety and to give Druids and
         animal spells something to do. The lack of symmetry is that if you, the
         player, polymorph or wildshape into such a creature you do not get the free
-        infravision.\n\n
+        darkvision.\n\n
 
          <9>TRAINING ATTRIBUTES {TA}\n
             ===================\n<1>

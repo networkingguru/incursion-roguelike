@@ -77,8 +77,8 @@ Race "Deep Gnome;race" : $"gnome;race"
       for their small size. In addition, Deep Gnome bodies have an innate
       nondetection that prevents them from being detected by scent,
       tremorsense, blindsight, telepathy, or magical detection. \n
-      __*_<7>Infravision<2> -- Like many who live far underground, Deep
-      Gnomes have excellent infravision and are able to see 120 feet (12
+      __*_<7>Darkvision<2> -- Like many who live far underground, Deep
+      Gnomes have excellent darkvision and are able to see 120 feet (12
       squares) in the dark.\n
       __*_<7>Magical Abilities<2> -- All Deep Gnomes possess powerful and
       varied innate magical abilities. They can cast 
@@ -202,7 +202,7 @@ Race "Grey Dwarf;race" : $"dwarf;race"
       __*_<7>Dwarven Focus<2> -- Grey Dwarves lack the strength of will
       normally associated with dwarves, and as a result do not possess this
       ability.\n
-      __*_<7>Infravision<2> -- Grey Dwarves have infravision to 120 feet
+      __*_<7>Darkvision<2> -- Grey Dwarves have darkvision to 120 feet
       (12 squares). In addition, Grey Dwarves gain a +1 racial bonus to
       Listen and Spot checks and a +4 racial bonus to Move Silently checks.
       \n
@@ -779,7 +779,7 @@ Race "Dragonkin;race" : $"lizardfolk;race"
       trance-like racial memory associated with their cousins. \n
       __*_<7>Draconic Traits<2> -- Dragonkin are, like red dragons, immune
       to flames, paralysis (but not entangling) and sleep. They have
-      infravision to 60 feet (6 squares). They lack wings and the power of
+      darkvision to 60 feet (6 squares). They lack wings and the power of
       true flight, but their jumping prowess is unequalled: they gain a +2
       racial bonus to Jump checks with every level and enjoy the benefit of
       the Mantis Leap feat, allowing them to gain a charge bonus in combat

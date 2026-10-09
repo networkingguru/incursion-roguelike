@@ -29,7 +29,7 @@ Item "spellbook [Adventurers' Arts]" : T_BOOK
     Weight: 40;
     Spells: $"Magic Missile", $"Expeditious Retreat", $"Alarm",
       $"Mage Armour", $"Resist Fire", $"Detect Monsters", $"Mount",
-      $"Phase Door", $"Infravision", $"Resist Water", $"Jump;spell",
+      $"Phase Door", $"Darkvision", $"Resist Water", $"Jump;spell",
       $"spider climb", $"Passwall", $"Knock", $"mending", $"shield",
       $"see invisibility", $"floating disc", $"minor light";
     On Event MSG_STATINAME "AdventArts";
@@ -275,7 +275,7 @@ Item "spellbook [Lore of Murder I]" : T_BOOK
     Spells: $"change self", $"convulsion", $"expeditious retreat", $"magic weapon",
       $"obscurement", $"passwall", $"read magic", $"shield", $"sleep", 
       $"spider climb", $"true strike", $"ventriloquism", $"choke", $"ESP",
-      $"globe of shadow", $"hypnotic pattern", $"infravision", $"invisibility",
+      $"globe of shadow", $"hypnotic pattern", $"darkvision", $"invisibility",
       $"pass without trace", $"levitation", $"bladethirst", $"rope trick", 
       $"web";
     On Event MSG_STATINAME "Murder2";

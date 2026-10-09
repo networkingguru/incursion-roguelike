@@ -334,7 +334,7 @@ private:
     /* Every map cell drawn through the light, so a tick can re-shade it
        without the game: what PutGlyph passed, plus a flag that a plain
        APutChar clears when something else is drawn over the cell. */
-    struct LitCell { Glyph g; int16 mx, my, fi, bi; float floor, infra; bool remembered, warm, ice, lit; };
+    struct LitCell { Glyph g; int16 mx, my, fi, bi; float floor, infra; bool remembered, ice, lit; };
     LitCell *litCells = NULL, *litSaved = NULL;
     uint32 ticks_light_last = 0;
     void LitAlloc();
@@ -381,7 +381,7 @@ public:
     virtual void APutChar(int16 x, int16 y, Glyph g);
     virtual void APutCharLit(int16 x, int16 y, Glyph g, int16 mx, int16 my,
                              int16 fi, int16 bi, float floor, bool remembered,
-                             float infra, bool warm, bool ice);
+                             float infra, bool ice);
     virtual void PutChar(int16 x, int16 y, Glyph g);
     virtual Glyph AGetChar(int16 x, int16 y);
     virtual void GotoXY(int16 x, int16 y);
@@ -1169,14 +1169,14 @@ void libtcodTerm::APutChar(int16 x, int16 y, Glyph g) {
 
 void libtcodTerm::APutCharLit(int16 x, int16 y, Glyph g, int16 mx, int16 my,
                               int16 fi, int16 bi, float floor, bool remembered,
-                              float infra, bool warm, bool ice) {
+                              float infra, bool ice) {
 	if (!litCells || x < 0 || y < 0 || x >= sizeX || y >= sizeY) {
 		APutChar(x, y, g);
 		return;
 	}
 	LitCell &lc = litCells[y * sizeX + x];
 	lc.g = g; lc.mx = mx; lc.my = my; lc.fi = fi; lc.bi = bi;
-	lc.floor = floor; lc.remembered = remembered; lc.infra = infra; lc.warm = warm;
+	lc.floor = floor; lc.remembered = remembered; lc.infra = infra;
 	lc.ice = ice;
 	LitPaint(y * sizeX + x);
 	lc.lit = !remembered;
@@ -1207,7 +1207,7 @@ void libtcodTerm::LitPaint(int32 idx) {
 	LightRGB fogc;
 	if (LightFogAt(lc.mx, lc.my, fogc))
 		{ fg = LightFogMix(fg, fogc, L); bg = LightFogMix(bg, fogc, L); }
-	fg = LightInfraMix(fg, lc.fi, lc.warm, L, lc.infra);
+	fg = LightInfraMix(fg, lc.fi, L, lc.infra);
 	/* Last of all, so the gain trims the finished picture and every blend
 	   above it has already happened at the untrimmed brightness. */
 	fg = LightGain(fg, bright);
