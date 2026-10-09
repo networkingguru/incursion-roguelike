@@ -165,8 +165,8 @@ Lesson: after changing a typedef's width, audit every cast that assumed the old 
 There were three `(long*)` casts in the tree; the two in `src/Registry.cpp` wrote
 into a `void*` and were size-correct on LP64. They now go through `intptr_t`
 instead. **2026-08-17: "no `(long*)` cast remains" was too strong.** Eight
-survive, all in `src/Art.cpp` (`:550`, `:552`, `:554`, `:556`, `:1337`, `:1339`,
-`:1341`, `:1343`). They are not the same defect: each casts the return of
+survive, all in `src/Art.cpp` (`:550`, `:552`, `:554`, `:556`, `:1293`, `:1295`,
+`:1297`, `:1299`). They are not the same defect: each casts the return of
 `malloc`/`realloc` for an array declared `long`, and the matching `sizeof(long)`
 is on both sides, so the width is self-consistent whatever it is. Nothing is
 serialised through them. Correct the sentence, do not "fix" the casts. The audit
@@ -336,7 +336,7 @@ Compile-time:
 
 | Symbol | What it answers |
 |---|---|
-| `-DDIVERGE_PROBE` | Counts every gameplay random number drawn. The separate cosmetic generator (`cosmetic_int32`, `src/Base.cpp:1598`) increments nothing, by design, so a purely decorative draw cannot move the number. Two runs of one seed draw the same numbers in the same order unless something outside the generator changed a decision, so the first differing count is the first place two runs stopped playing the same game. |
+| `-DDIVERGE_PROBE` | Counts every gameplay random number drawn. The separate cosmetic generator (`cosmetic_int32`, `src/Base.cpp:1606`) increments nothing, by design, so a purely decorative draw cannot move the number. Two runs of one seed draw the same numbers in the same order unless something outside the generator changed a decision, so the first differing count is the first place two runs stopped playing the same game. |
 | `-DINCURSION_LAYOUT` | Shifts every heap allocation by a seeded offset, so an address-dependent decision splits on demand instead of by luck. The other half of `DIVERGE_PROBE`; `tools/check_layout.sh` depends on it. |
 | `-DPATH_PROBE` | Pathfinding work per call. Showed one line to be 89% of a burst. |
 | `-DPALETTE_LOG` | Repaint, keypress, palette and window-rect logging. This is the instrumentation that settled the flicker. |
