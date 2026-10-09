@@ -489,6 +489,12 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
     case 91:
         VERIFY(h,T_MAP,"enWarn")
         ASSERT(REGS(63) >= 1)
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(1)), false);
+          if (fp_) {
+            Error("Bad format in %s in script routine $\"%s\"::%s: %s.",
+              "enWarn", xID ? ((const char*)NAME(xID)) : "<NULL>",
+              pe ? ((const char*)EventName(pe->Event)) : "???", fp_);
+            return; } }
         oMap(h)->enWarn(GETSTR(STACK(1)),
                       VSTACK(2),VSTACK(3),VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9));
         return;
@@ -625,12 +631,30 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
     case 118:
         VERIFY(h,T_THING,"IPrint")
         ASSERT(REGS(63) >= 1)
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(1)), false);
+          if (fp_) {
+            Error("Bad format in %s in script routine $\"%s\"::%s: %s.",
+              "IPrint", xID ? ((const char*)NAME(xID)) : "<NULL>",
+              pe ? ((const char*)EventName(pe->Event)) : "???", fp_);
+            return; } }
         oThing(h)->IPrint(GETSTR(STACK(1)),
                       VSTACK(2),VSTACK(3),VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9));
         return;
     case 119:
         VERIFY(h,T_THING,"IDPrint")
         ASSERT(REGS(63) >= 2)
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(1)), false);
+          if (fp_) {
+            Error("Bad format in %s in script routine $\"%s\"::%s: %s.",
+              "IDPrint", xID ? ((const char*)NAME(xID)) : "<NULL>",
+              pe ? ((const char*)EventName(pe->Event)) : "???", fp_);
+            return; } }
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(2)), false);
+          if (fp_) {
+            Error("Bad format in %s in script routine $\"%s\"::%s: %s.",
+              "IDPrint", xID ? ((const char*)NAME(xID)) : "<NULL>",
+              pe ? ((const char*)EventName(pe->Event)) : "???", fp_);
+            return; } }
         oThing(h)->IDPrint(GETSTR(STACK(1)), GETSTR(STACK(2)),
                       VSTACK(3),VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9),VSTACK(10));
         return;
@@ -1585,8 +1609,10 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
     case 307:
         VERIFY(h,T_CHARACTER,"GodMessage")
         ASSERT(REGS(63) >= 2)
+        ScriptGodMessageDepth++;
         oCharacter(h)->GodMessage(STACK(1), (int16)STACK(2),
                       VSTACK(3),VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9),VSTACK(10));
+        ScriptGodMessageDepth--;
         return;
     case 308:
         VERIFY(h,T_CHARACTER,"calcFavour")
@@ -2348,11 +2374,25 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         return;
     case 464:
         ASSERT(REGS(63) >= 1)
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(1)), true);
+          if (fp_) {
+            Error("Bad format in %s in script routine $\"%s\"::%s: %s.",
+              "Format", xID ? ((const char*)NAME(xID)) : "<NULL>",
+              pe ? ((const char*)EventName(pe->Event)) : "???", fp_);
+            GETSTR(-1) = "[bad format]";
+            return; } }
         GETSTR(-1) = Format(GETSTR(STACK(1)),
                       VSTACK(2),VSTACK(3),VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9));
         return;
     case 465:
         ASSERT(REGS(63) >= 1)
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(1)), false);
+          if (fp_) {
+            Error("Bad format in %s in script routine $\"%s\"::%s: %s.",
+              "XPrint", xID ? ((const char*)NAME(xID)) : "<NULL>",
+              pe ? ((const char*)EventName(pe->Event)) : "???", fp_);
+            GETSTR(-1) = "[bad format]";
+            return; } }
         GETSTR(-1) = XPrint(GETSTR(STACK(1)),
                       VSTACK(2),VSTACK(3),VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9));
         return;
@@ -2399,26 +2439,80 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         return;
     case 477:
         ASSERT(REGS(63) >= 3)
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(2)), false);
+          if (fp_) {
+            Error("Bad format in %s in script routine $\"%s\"::%s: %s.",
+              "DPrint", xID ? ((const char*)NAME(xID)) : "<NULL>",
+              pe ? ((const char*)EventName(pe->Event)) : "???", fp_);
+            return; } }
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(3)), false);
+          if (fp_) {
+            Error("Bad format in %s in script routine $\"%s\"::%s: %s.",
+              "DPrint", xID ? ((const char*)NAME(xID)) : "<NULL>",
+              pe ? ((const char*)EventName(pe->Event)) : "???", fp_);
+            return; } }
         DPrint(*pe, GETSTR(STACK(2)), GETSTR(STACK(3)),
                       VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9),VSTACK(10),VSTACK(11));
         return;
     case 478:
         ASSERT(REGS(63) >= 3)
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(2)), false);
+          if (fp_) {
+            Error("Bad format in %s in script routine $\"%s\"::%s: %s.",
+              "VPrint", xID ? ((const char*)NAME(xID)) : "<NULL>",
+              pe ? ((const char*)EventName(pe->Event)) : "???", fp_);
+            return; } }
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(3)), false);
+          if (fp_) {
+            Error("Bad format in %s in script routine $\"%s\"::%s: %s.",
+              "VPrint", xID ? ((const char*)NAME(xID)) : "<NULL>",
+              pe ? ((const char*)EventName(pe->Event)) : "???", fp_);
+            return; } }
         VPrint(*pe, GETSTR(STACK(2)), GETSTR(STACK(3)),
                       VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9),VSTACK(10),VSTACK(11));
         return;
     case 479:
         ASSERT(REGS(63) >= 4)
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(2)), false);
+          if (fp_) {
+            Error("Bad format in %s in script routine $\"%s\"::%s: %s.",
+              "TPrint", xID ? ((const char*)NAME(xID)) : "<NULL>",
+              pe ? ((const char*)EventName(pe->Event)) : "???", fp_);
+            return; } }
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(3)), false);
+          if (fp_) {
+            Error("Bad format in %s in script routine $\"%s\"::%s: %s.",
+              "TPrint", xID ? ((const char*)NAME(xID)) : "<NULL>",
+              pe ? ((const char*)EventName(pe->Event)) : "???", fp_);
+            return; } }
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(4)), false);
+          if (fp_) {
+            Error("Bad format in %s in script routine $\"%s\"::%s: %s.",
+              "TPrint", xID ? ((const char*)NAME(xID)) : "<NULL>",
+              pe ? ((const char*)EventName(pe->Event)) : "???", fp_);
+            return; } }
         TPrint(*pe, GETSTR(STACK(2)), GETSTR(STACK(3)), GETSTR(STACK(4)),
                       VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9),VSTACK(10),VSTACK(11),VSTACK(12));
         return;
     case 480:
         ASSERT(REGS(63) >= 2)
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(2)), false);
+          if (fp_) {
+            Error("Bad format in %s in script routine $\"%s\"::%s: %s.",
+              "APrint", xID ? ((const char*)NAME(xID)) : "<NULL>",
+              pe ? ((const char*)EventName(pe->Event)) : "???", fp_);
+            return; } }
         APrint(*pe, GETSTR(STACK(2)),
                       VSTACK(3),VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9),VSTACK(10));
         return;
     case 481:
         ASSERT(REGS(63) >= 2)
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(2)), false);
+          if (fp_) {
+            Error("Bad format in %s in script routine $\"%s\"::%s: %s.",
+              "SinglePrintXY", xID ? ((const char*)NAME(xID)) : "<NULL>",
+              pe ? ((const char*)EventName(pe->Event)) : "???", fp_);
+            return; } }
         SinglePrintXY(*pe, GETSTR(STACK(2)),
                       VSTACK(3),VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9),VSTACK(10));
         return;
@@ -2428,11 +2522,21 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         return;
     case 483:
         ASSERT(REGS(63) >= 1)
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(1)), true);
+          if (fp_) {
+            Error("Bad format in %s in script routine $\"%s\"::%s: %s.",
+              "Error", xID ? ((const char*)NAME(xID)) : "<NULL>",
+              pe ? ((const char*)EventName(pe->Event)) : "???", fp_);
+            return; } }
         Error(GETSTR(STACK(1)),
                       VSTACK(2),VSTACK(3),VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9));
         return;
     case 484:
         ASSERT(REGS(63) >= 1)
+        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(1)), true);
+          if (fp_) {
+            Fatal("Bad format in script Fatal call: %s", fp_);
+            return; } }
         Fatal(GETSTR(STACK(1)),
                       VSTACK(2),VSTACK(3),VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9));
         return;

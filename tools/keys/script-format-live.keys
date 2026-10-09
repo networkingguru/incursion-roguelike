@@ -1,0 +1,6 @@
+# Search ten turns so a handler on a map item gets its EV_TURN.
+# Used by tools/check_vararg_format_live.sh (inc-ac0l), on a loaded fixture.
+@dump:arrival
+s*10
+@dump:after
+@quit
