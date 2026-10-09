@@ -307,6 +307,11 @@ void Game::Play() {
     extern void MusicAreaProbe(Player *pl);
     MusicAreaProbe(pp);
 
+    /* inc-q33r: off unless INCURSION_STUN_DUR_PROBE is set. See
+       StunDurProbe (src/StunDurProbe.cpp). */
+    extern void StunDurProbe(Player *pl);
+    StunDurProbe(pp);
+
     /* inc-7xcu: off unless INCURSION_BANE_PROBE is set; needs a live map. */
     extern void BaneRadiusProbe(Player *caster);
     BaneRadiusProbe(pp);

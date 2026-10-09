@@ -35,10 +35,9 @@ void MusicAreaProbe(Player *pl) {
     extern void LOFSetForcedSaveThrowRoll(int8 r);
     extern void LOFClearForcedSaveThrowRoll();
 
-    /* Essiah's condition (NAUSEA, evil targets) is the one whose duration
-       reaches the stati intact: the plain-stun branch passes SS_ATTK as the
-       duration (src/Fight.cpp AD_STUN), so the fixture's own god cannot show
-       10+2*CL. The god is borrowed for the probe and restored at the end. */
+    /* The probe borrows Essiah so it measures one fixed condition (NAUSEA on
+       evil targets) whose duration reaches the stati intact and can show
+       10+2*CL. The god is restored at the end. */
     const rID savedGod = pl->GodID, essiahID = FIND("Essiah");
     if (!essiahID) {
         Error("MUSIC_AREA_PROBE: INCONCLUSIVE -- missing Essiah");
