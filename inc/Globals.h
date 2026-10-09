@@ -84,6 +84,13 @@ String & GameDate(uint32 turn);
 const char* __XPrint(Player *POV, const char *msg,va_list args);
 const char* XPrint(const char*msg,...);
 const char* PPrint(Player *POV, const char*msg, ...);
+/* Static check of a script-supplied format string; NULL means safe. */
+const char* ScriptFormatProblem(const char* fmt, bool printfStyle);
+/* Which argument of a script-called API function holds its format string(s). */
+struct ScriptFormatBinding { const char* name; bool printfStyle; int8 fmtPos[3]; };
+const ScriptFormatBinding* FindScriptFormatBinding(const char* name);
+/* Nonzero only while a script call of GodMessage is on the stack. */
+extern int16 ScriptGodMessageDepth;
 /* Display a message to all players who xperceive the event. */
 void APrint(EventInfo &e, const char *msg1, ...);
 /* Display one message to the acting player, and another to any players who xperceive the actor. */

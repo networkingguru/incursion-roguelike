@@ -571,6 +571,34 @@ void Module::AddDebugInfo(int32 ID, Binding *b)
       }
   }
 
+/* Emit the run-time format guard for a script-called API function. The guard
+   scans each resolved format argument before the native call and, on a
+   problem, reports a script error and returns without calling. inc-ac0l */
+static void EmitScriptFormatGuard(FILE *fp, const char *name, int returnType) {
+    const ScriptFormatBinding *fb = FindScriptFormatBinding(name);
+    int p;
+    if (!fb)
+        return;
+    for (p = 0; p < 3 && fb->fmtPos[p]; p++) {
+        fprintf(fp,
+            "        { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(%d)), %s);\n"
+            "          if (fp_) {\n",
+            fb->fmtPos[p], fb->printfStyle ? "true" : "false");
+        if (!strcmp(name, "Fatal"))
+            fprintf(fp, "            Fatal(\"Bad format in script Fatal call: %%s\", fp_);\n");
+        else
+            fprintf(fp,
+                "            Error(\"Bad format in %%s in script routine "
+                "$\\\"%%s\\\"::%%s: %%s.\",\n"
+                "              \"%s\", xID ? ((const char*)NAME(xID)) : \"<NULL>\",\n"
+                "              pe ? ((const char*)EventName(pe->Event)) : \"???\", fp_);\n",
+                name);
+        if (returnType == DT_STRING)
+            fprintf(fp, "            GETSTR(-1) = \"[bad format]\";\n");
+        fprintf(fp, "            return; } }\n");
+    }
+}
+
 void GenerateDispatch() {
     int16 i,j,k; FILE *fp; String After;
     BMemFunc *b; BMemVar *b2;
@@ -614,6 +642,9 @@ Repeat:
             else if (b->type == MEM_FUNC && b->OType != T_TERM)
                 fprintf(fp,"        VERIFY(h,%s,\"%s\")\n",Lookup(T_CONSTNAMES,b->OType),theSymTab[i]);
             fprintf(fp,"        ASSERT(REGS(63) >= %d)\n", b->ParamCount);
+            EmitScriptFormatGuard(fp, theSymTab[i], b->ReturnType);
+            if (!strcmp(theSymTab[i], "GodMessage"))
+                fprintf(fp,"        ScriptGodMessageDepth++;\n");
 
             switch(b->ReturnType) {
             case DT_VOID:
@@ -716,6 +747,8 @@ Repeat:
                 j+1,j+2,j+3,j+4,j+5,j+6,j+7,j+8);
             if (b->ReturnType == DT_HOBJ)
                 fprintf(fp,");\n        REGS(n) = t ? t->myHandle : 0;\n        return;\n");
+            else if (!strcmp(theSymTab[i], "GodMessage"))
+                fprintf(fp,");\n        ScriptGodMessageDepth--;\n        return;\n");
             else
                 fprintf(fp,");\n        return;\n");
         }
@@ -730,6 +763,7 @@ Repeat:
         fprintf(fp,"    case %d:\n",rb->funcid);
         while (rb) {
             if (rb->type == RES_FUNC) {          
+                EmitScriptFormatGuard(fp, theSymTab[i], rb->ReturnType);
                 /* This is a hideous kludge -- IS currently doesn't support functions
                 attached to the base resource type for some convoluted reason I 
                 don't remember right now, so we hardcode in that the test for correct
