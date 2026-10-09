@@ -5136,7 +5136,7 @@ Effect "Raise Dead" : EA_NOTIMP { }
 
 /* -- DOMAIN 5 -- */
 
-Effect "Music of the Spheres" : EA_INFLICT
+Effect "Music of the Spheres" : EA_BLAST
   {
     SC_EVO; Base : SP_EASY; Cost: 12; Level: 5; 
     Desc: "Casting this spell allows the priest to produce music
@@ -5158,8 +5158,8 @@ Effect "Music of the Spheres" : EA_INFLICT
       cooperative manner, forming a choir. A bardic ally adds
       half her bardic music level to the effect's caster level,
       while a priestly ally adds half her caster level.";
-    aval: AR_GLOBE; cval: MAGENTA; Purpose: EP_PLAYER_ONLY;
-    xval: PARALYSIS; yval: PARA_HYPNOTIZED; sval: WILL;
+    lval: 9; aval: AR_GLOBE; cval: MAGENTA; Purpose: EP_PLAYER_ONLY;
+    xval: AD_SONI; pval: (LEVEL)d4; sval: WILL+10;
     Flags: EF_BLIND_PROMPT, EF_ALLIES_IMMUNE, EF_CASTER_IMMUNE;
     int16 targ, dtype;
     int16 choir;
@@ -5198,18 +5198,27 @@ Effect "Music of the Spheres" : EA_INFLICT
       return NOTHING;
       },  
     EV_CALC_EFFECT {
+      /* upstream: the text gives a 1d4-round paralysis, but the script set no
+         duration, so the engine fallback of 10+2*CL applied on Win32 too. The
+         choir adds to the god's condition only, never to the paralysis. The
+         blast part runs first, so damage and the god's condition land before
+         the paralysis and cannot free it (src/Fight.cpp:7877).
+         Observed via tools/check_music_spheres_area.sh; inc-ctee, not sent. */
+      if (e.efNum == 1)
+        e.vDuration = 1d4;
       if (choir > 0) {
         e.vCasterLev += choir;
-        e.vDuration += 2*choir;
+        if (e.efNum != 1)
+          e.vDuration += 2*choir;
         }
       return NOTHING;
       },
     EV_ISTARGET {
-      if (e.efNum == 0)
+      if (e.efNum == 1)
         return (EVictim->isHostileTo(EActor)  &&
           EVictim->ChallengeRating() <= 5) ?
           SHOULD_CAST_IT : CANNOT_CAST_IT;
-      else if (e.efNum == 1)
+      else if (e.efNum == 0)
         return EVictim->isMType(targ) ?
           SHOULD_CAST_IT : CANNOT_CAST_IT;
       },
@@ -5219,12 +5228,12 @@ Effect "Music of the Spheres" : EA_INFLICT
     MSG_BLASTNAME
       "unearthly music";
   }
-and EA_BLAST
+and EA_INFLICT
   { 
-    xval: AD_SONI; pval: (LEVEL)d4; sval: WILL+10;
+    lval: 9; xval: PARALYSIS; yval: PARA_HYPNOTIZED; sval: WILL;
     On Event POST(EV_MAGIC_HIT)
       {
-        if (e.efNum == 1)
+        if (e.efNum == 0)
           ThrowDmg(EV_DAMAGE,dtype,e.vDuration,"",EActor,EVictim);
         return NOTHING;
       };
