@@ -31,6 +31,7 @@
 */
 
 #include "Incursion.h"
+#include "HideCheck.h"
 
 /* inc-1xr3: the nauseated "use Concentration to attack?" confirmation, in
    one place for the three combat sites that ask it. The odds come from
@@ -3138,6 +3139,11 @@ OvercomeNausea:
                     if (!((Creature*)t)->HasMFlag(M_DEAF) && ((Creature*)t)->ResistLevel(AD_SONI) != -1) {
                         if (e.EActor == t)
                             continue;
+                        /* inc-u3dp phase 4: every creature the roar reaches is
+                           marked with a live roar, before any of its follow-on
+                           attacks run. The roarer (skipped just above), the
+                           deaf and the sonic-immune (filtered above) are not. */
+                        HideSetKey((Creature*)t, HK_ROAR, NULL, HideRoundStamp());
                         e.isNAttack = true;
                         for (int j=0;j<max;j++) {
                             TAttack * ta = &buf[j]; 
@@ -5705,6 +5711,8 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
          (!(e.EActor->isBeside(e.EVictim))) &&
          (e.EActor->HasStati(HIDING)) )) {
       e.EVictim->ts.HearNoise(e.EVictim,(uint8)e.EActor->x,(uint8)e.EActor->y);
+      if (e.EActor && e.EActor->m)
+        HideTrigger(e.EActor, HIDE_SNIPE_PENALTY);
     } else 
       e.EActor->Reveal(true);
     e.EVictim->Reveal(false);
@@ -5924,6 +5932,18 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
 
     Map *mp; mp = e.EMap;
     mp->SetQueue(QUEUE_DAMAGE_MSG);
+
+    /* inc-u3dp phase 4: an attack roll has been resolved (this is the single
+       site both melee and ranged reach, after the to-hit roll and its cover /
+       maneuver gates, just before EV_HIT/EV_MISS). Mark BOTH the attacker and
+       the target as distracted for their next action. One entry per (key,src);
+       a dead or deleted creature is skipped. */
+    if (e.EActor && e.EActor->isCreature() &&
+        !e.EActor->isDead() && !(e.EActor->Flags & F_DELETE))
+      HideSetKey(e.EActor, HK_DISTRACT, NULL, 1);
+    if (e.EVictim && e.EVictim->isCreature() &&
+        !e.EVictim->isDead() && !(e.EVictim->Flags & F_DELETE))
+      HideSetKey(e.EVictim, HK_DISTRACT, NULL, 1);
 
     if(e.isHit) {
       ReThrow(EV_HIT,e);

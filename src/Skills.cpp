@@ -28,6 +28,7 @@
 */
 
 #include "Incursion.h"
+#include "HideCheck.h"
 
 int16 LastSkillCheckResult = 0;
 
@@ -2210,6 +2211,36 @@ void Character::UseAbility(uint8 ab, int16 pa) {
 
 		GainTempStati(SINGING, NULL, 5 + (max(0, Mod(A_CON)) + SkillLevel(SK_PERFORM)) * 3, SS_MISC, song, range, 0);
 
+		/* inc-u3dp phase 4: a countersong removes a live roar from every
+		   creature on the map within the song's range (the Mag given to the
+		   SINGING stati just now, i.e. `range`). Snapshot the creatures before
+		   the loop so a stati removal cannot corrupt the iteration. */
+		if (song == BARD_COUNTER && m) {
+			hObj snap[HIDE_WATCH_MAX];
+			int nSnap = 0;
+			Creature *cc; int ii;
+			MapIterate(m, cc, ii)
+				if (cc && cc->isCreature() && dist(x, y, cc->x, cc->y) <= range) {
+					if (nSnap >= HIDE_WATCH_MAX) break;
+					snap[nSnap++] = cc->myHandle;
+				}
+			for (int kk = 0; kk < nSnap; kk++) {
+				if (!isValidHandle(snap[kk])) continue;
+				Creature *ck = oCreature(snap[kk]);
+				if (!ck || ck->isDead() || (ck->Flags & F_DELETE)) continue;
+				HideClearKey(ck, HK_ROAR, NULL);
+			}
+		}
+
+		/* inc-u3dp phase 3: starting a song ends a hide. Reveal(true) can
+		   delete this creature, so nothing here may touch `this` after it;
+		   the function's normal result is a plain return. */
+		if (HasStati(HIDING))
+			{
+			Reveal(true);
+			return;
+			}
+
 		/* upstream: all five song formats must supply one argument per
 		   consuming <Obj> token. Base-code text and the base-code formatter,
 		   no typedef or platform dependence, so Win32 misreads it the same
@@ -2991,6 +3022,10 @@ EvReturn Creature::Hide(EventInfo &e) {
 		IPrint("You can't hide while glowing.");
 		return ABORT;
 	}
+	if (HasStati(SINGING)) {
+		IPrint("You can't hide while singing.");
+		return ABORT;
+	}
 
 	if (!HasAbility(CA_HIDE_IN_PLAIN_SIGHT))
 		switch (e.EParam) {
@@ -3030,13 +3065,21 @@ EvReturn Creature::Hide(EventInfo &e) {
 
 	Timeout += 15;
 	GainPermStati(HIDING, NULL, SS_CLAS, (int16)e.EParam, SkillLevel(SK_HIDE));
-	HideVal = random(11) - 5;
+	HideStarted(this, true);
 	return DONE;
 }
 
 EvReturn Creature::Search(EventInfo &e) {
 	int16 dx, dy, i; Thing *t; Glyph g;
 	bool found = false, tfound = false, think = false;
+	/* inc-u3dp phase 5: a search also runs the spot checks for hidden
+	   creatures. Done before anything below, because a SpotCheck's event can
+	   delete or move `this`. A deliberate search is a normal check (penalty 0)
+	   and runs in addition to the secret-door and trap search below. */
+	const hObj searcher = myHandle;
+	HideSearch(this);
+	if (!isValidHandle(searcher) || isDead() || (Flags & F_DELETE))
+		return DONE;
 	for (dx = x - 5; dx <= x + 5; dx++)
 		for (dy = y - 5; dy <= y + 5; dy++)
 			if ((dist(x, y, dx, dy) <= 5) && m->InBounds(dx, dy)) {

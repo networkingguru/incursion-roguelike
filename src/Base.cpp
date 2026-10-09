@@ -1528,9 +1528,18 @@ void SetHeapLayout(void) {
 #endif
 
 /* generates a random number on [0,0xffffffff]-interval */
+/* inc-u3dp phase 2a-1: armed by the hide-roll probe only, so a no-consume
+   proof can watch the gameplay stream without exposing its static state. */
+static bool HideRollRngArmed = false;
+static unsigned long long HideRollRngCalls = 0;
+void HideRollArmRngCount(bool on) { HideRollRngArmed = on; }
+unsigned long long HideRollRngCount(void) { return HideRollRngCalls; }
+
 unsigned long genrand_int32(void)
 {
     unsigned long y;
+    if (HideRollRngArmed)
+        HideRollRngCalls++;
 #ifdef DIVERGE_PROBE
     RNGCalls++;
 #endif

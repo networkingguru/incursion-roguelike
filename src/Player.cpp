@@ -16,6 +16,7 @@
 */
 
 #include "Incursion.h"
+#include "HideCheck.h"
 
 #include <time.h>
 
@@ -244,6 +245,19 @@ void Player::ChooseAction() {
     static int16 LastAutoSave = 0;
     static int16 oldHP;
     int16 look_dx = 0, look_dy = 0;
+
+    /* inc-u3dp 2b: the hide per-action hook runs when the player begins a timed
+       action. Main.cpp's do-while re-calls ChooseAction for each free action
+       (one that leaves Timeout at 0), so without a guard the hook -- and any
+       spot check it rolls -- would fire once per keypress in a tick. theGame->
+       Turn is the same per-tick stamp HESITATION uses below: a tick already
+       hooked is not hooked again, while a later timed action sees a new tick
+       and does run the hook. */
+    static uint32 LastHideTurnStart = (uint32)-1;
+    if (theGame->Turn != LastHideTurnStart) {
+        LastHideTurnStart = theGame->Turn;
+        HideTurnStart(this);
+    }
 
     GameTimeInfo.actions++;
 
