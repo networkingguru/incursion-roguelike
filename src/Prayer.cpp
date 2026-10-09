@@ -1982,7 +1982,16 @@ void Character::GodMessage(rID gID, int16 msgnum, ...)
     FoundMsg:
 
     if (isCustom || msgnum == MSG_SAFEPRAY) 
-      msg = __XPrint(thisp,msg,ap);
+      {
+        /* A script format never reaches a pointer-reading tag. inc-ac0l
+           upstream: a script handle is not a pointer on Win32 either; Traced; inc-ac0l; not sent. */
+        const char *fp;
+        if (ScriptGodMessageDepth > 0 && (fp = ScriptFormatProblem(msg,false))) {
+            Error("Bad format in GodMessage for %s: %s.", NAME(gID), fp);
+            goto Done;
+        }
+        msg = __XPrint(thisp,msg,ap);
+      }
     else
       msg = XPrint(msg,gID);
     
