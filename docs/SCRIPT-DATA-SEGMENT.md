@@ -34,7 +34,7 @@ and "What Task 9 must do" below.
 ## What it is
 
 `Game::MDataSeg[i]` is one flat byte block per loaded module. Its length is
-`MDataSegSize[i]`, computed at `src/Main.cpp:739` as:
+`MDataSegSize[i]`, computed at `src/Main.cpp:751` as:
 
 ```
 szDataSeg + ( szMon*sizeof(MonMem) + szItm*sizeof(ItemMem)
@@ -193,7 +193,7 @@ Rejected alternatives:
 3. On load, after the loaded module is known, compare the saved segment length
    against the loaded module's `szDataSeg`. If they differ, throw `ECORRUPT`.
    If they match (always, today), copy the blob to the front of the freshly
-   allocated `MDataSeg[i]` (allocated at `src/Main.cpp:745`) and lay the
+   allocated `MDataSeg[i]` (allocated at `src/Main.cpp:757`) and lay the
    name-keyed rows in behind it.
 
 **If a future change wires `szDataSeg` to `HeapHead` and a global ever holds an
