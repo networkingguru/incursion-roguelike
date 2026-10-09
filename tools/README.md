@@ -461,6 +461,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_bloodspear_regen.sh` | Does the Bloodspear start regeneration at 20 turns per critical-hit damage and extend it at 5 turns per later hit? | LIVE |
 | `check_bloodspear_regen_duration.sh` | Does a Bloodspear critical grant the orc wielder regeneration for amt*20 turns rather than amt*5? | LIVE |
 | `check_bolas_entangle_expiry.sh` | Does STUCK from a thrown entangling weapon end by itself? A kobold rogue throws bolas at a frozen bugbear; wizard "Examine Nearby Things" must show the bugbear's STUCK with a positive duration that lapses within 150 waits, with no escape-check roll printed. Red before inc-9smo: STUCK [Dur -1] never lapsed. | LIVE |
+| `check_book_notimp_listing.sh` | a spellbook's listing marks an unimplemented spell; an implemented one stays unmarked | LIVE |
 | `check_book_section.sh` | books get their own Books inventory section | LIVE |
 | `check_book_stack.sh` | identical unidentified books stack; a different book does not | LIVE |
 | `check_boots_providence.sh` | Do the Boots of Providence pay their Luck bonus while carried, not only while worn? | LIVE |
@@ -1057,6 +1058,7 @@ that binary afterwards (`check_strqueue.sh:96`). It copies the frozen
 ```sh
 BACKEND=posix ./build_macos.sh
 tools/check_headless.sh             # run this one FIRST of the tier
+tools/check_book_notimp_listing.sh   # a spellbook marks an unimplemented spell
 tools/check_book_section.sh          # books get their own Books inventory section
 tools/check_feat_toggle.sh
 tools/check_book_stack.sh            # identical unidentified books stack; a different book does not
