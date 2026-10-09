@@ -8579,7 +8579,10 @@ SkipTripSave:
                                         if (!e.EVictim->SavingThrow(FORT,e.saveDC,SA_PARA)) {
                                             if (!e.Terse)
                                                 VPrint(e,"You are stunned!", "The <EVictim> is stunned!"); 
-                                            e.EVictim->GainTempStati(STUNNED,0,SS_ATTK,(int8)e.vDmg);
+                                            /* upstream: Duration and Cause were swapped, so every AD_STUN
+                                               stun lasted SS_ATTK (6) rounds. Wrong against GainTempStati's
+                                               signature on any platform/compiler. Observed; inc-q33r; not sent. */
+                                            e.EVictim->GainTempStati(STUNNED,NULL,max(1,(int)e.vDmg),SS_ATTK);
                                         }
                                         else
                                             e.Resist = true;
