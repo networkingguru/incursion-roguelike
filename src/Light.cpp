@@ -244,25 +244,24 @@ LightRGB LightMemory(int idx, float unlit, int step) {
   return LightMemoryBase(Palette[idx & COLOUR_MASK], unlit, step);
 }
 
-LightRGB LightInfra(int idx, bool warm) {
+LightRGB LightInfra(int idx) {
   LightRGB b = Palette[idx & COLOUR_MASK], o;
   float v = ColValue(b);
-  float s = (LIGHT_INFRA_FLOOR + (1.0f - LIGHT_INFRA_FLOOR) * v)
-            * (warm ? 1.0f : LIGHT_INFRA_COLD);
+  float s = LIGHT_INFRA_FLOOR + (1.0f - LIGHT_INFRA_FLOOR) * v;
   o.r = LightChannel(LIGHT_INFRA_R * s);
   o.g = LightChannel(LIGHT_INFRA_G * s);
   o.b = LightChannel(LIGHT_INFRA_B * s);
   return o;
 }
 
-LightRGB LightInfraMix(LightRGB lit, int idx, bool warm,
+LightRGB LightInfraMix(LightRGB lit, int idx,
                        LightRGB L, float infra) {
   if (infra <= 0.0f) return lit;
   float i = ColValue(L) / LIGHT_INFRA_YIELD;
   if (i > 1.0f) i = 1.0f;
-  float k = infra * (1.0f - i);      /* how much red survives */
+  float k = infra * (1.0f - i);      /* how much darkvision survives */
   if (k <= 0.0f) return lit;
-  LightRGB h = LightInfra(idx, warm), o;
+  LightRGB h = LightInfra(idx), o;
   o.r = LightChannel(lit.r + (h.r - lit.r) * k);
   o.g = LightChannel(lit.g + (h.g - lit.g) * k);
   o.b = LightChannel(lit.b + (h.b - lit.b) * k);

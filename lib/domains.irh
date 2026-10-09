@@ -555,8 +555,8 @@ Domain "Mysticism" : 0
 
 Domain "Night" : 0
   {
-    Desc: "__<15>Granted Power:<7> You have infravision out to a range of 30 feet, or 
-      your existing infravision has its range extended by 30 feet. Starting at
+    Desc: "__<15>Granted Power:<7> You have darkvision out to a range of 30 feet, or 
+      your existing darkvision has its range extended by 30 feet. Starting at
       5th level, you can use <9>Deeper Darkness<7> as an innate spell-like
       ability at will.";
     Grants:

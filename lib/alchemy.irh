@@ -697,7 +697,7 @@ AI_ALCHEMY Effect "Acid;alchemy" : EA_BLAST
                               it, before it finally engulfs and dissolves it.");
             doID = true;
            break;
-          case $"Infravision":
+          case $"Darkvision":
             EActor->IPrint("Shadows seem to part in the wake of the fumes rising
                               from the flask.");
             doID = true;

@@ -706,7 +706,7 @@ void TextTerm::CreateCharSheet(CharSheet &cs)
   if (p->SightRange) cs.sPerception += 
     Format("  Sight Range:        %3d ft\n", p->SightRange * 10);
   if (p->InfraRange) cs.sPerception += 
-    Format("  Infravision Range:  %3d ft\n", p->InfraRange * 10);
+    Format("  Darkvision Range:   %3d ft\n", p->InfraRange * 10);
   if (p->TelepRange) cs.sPerception += 
     Format("  Telepathy Range:    %3d ft\n", p->TelepRange * 10);
   if (p->BlindRange) cs.sPerception += 
@@ -745,7 +745,7 @@ void TextTerm::CreateCharSheet(CharSheet &cs)
   if (p->HasStati(NONDETECTION)) { 
     i = p->GetStatiVal(NONDETECTION);
     if (i & PER_VISUAL) cs.sPerception += "  Nondetection: Visual\n";
-    if (i & PER_INFRA) cs.sPerception += "  Nondetection: Infravision\n";
+    if (i & PER_INFRA) cs.sPerception += "  Nondetection: Darkvision\n";
     if (i & PER_SCENT) cs.sPerception += "  Nondetection: Scent\n";
     if (i & PER_BLIND) cs.sPerception += "  Nondetection: Blindsight\n";
     if (i & PER_PERCEPT) cs.sPerception += "  Nondetection: Wizard Sight\n";
