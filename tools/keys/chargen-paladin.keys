@@ -28,6 +28,17 @@
 #   skill ranks          one pool
 #   personality          colour only
 #
+# inc-stzd: alignment is not always asked right after attributes. On some
+# seeds (measured: seed 5) the game auto-settles the single offered
+# alignment with no prompt at all, and "Choose a feat" appears immediately;
+# on others the alignment prompt surfaces only after the first feat pick.
+# src/Create.cpp:1690 draws each attribute set's own bonus feat from
+# random(FT_LAST - FT_FIRST) + FT_FIRST, so a feat-table change (like
+# inc-08js's Cannibalism) changes which build, and therefore which prompt
+# order, a given seed produces. Below, the alignment and feat loops each run
+# twice and shrug when their text is not showing, so either order -- or no
+# alignment prompt at all -- reaches the Skill Manager the same way.
+#
 # The trailing ESC dismisses the room description box that the game puts up
 # on arrival ("Entry Chamber ... your first sight of the goblin caves").
 # Without it the next key in the caller's script is eaten dismissing the box,
@@ -51,8 +62,9 @@ y       # Your options will place the game in Explore Mode. Continue? -- yes
 @choose "Erich"
 
 a       # Attributes: the first of the offered sets
-a       # Alignment:  the first offered
-
+@while "Alignment determines" a   # the first offered, when asked here
+@while "Choose a feat" a
+@while "Alignment determines" a   # ...or asked only after one feat pick
 @while "Choose a feat" a
 
 # Skill Manager. RIGHT spends a rank on the selected skill and stops at that
