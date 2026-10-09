@@ -302,6 +302,11 @@ void Game::Play() {
     extern void MusicChoirProbe(Player *caster);
     MusicChoirProbe(pp);
 
+    /* inc-ctee: off unless INCURSION_MUSIC_AREA_PROBE is set. See
+       MusicAreaProbe (src/MusicAreaProbe.cpp). */
+    extern void MusicAreaProbe(Player *pl);
+    MusicAreaProbe(pp);
+
     /* inc-7xcu: off unless INCURSION_BANE_PROBE is set; needs a live map. */
     extern void BaneRadiusProbe(Player *caster);
     BaneRadiusProbe(pp);
