@@ -82,10 +82,11 @@ Druid Spell "Produce Flame" : EA_CREATION
 
 Priest Spell "Bane" : EA_INFLICT
   { SC_THE; Base: SP_EASY; Cost: 2; Level: 1; 
-    /* upstream: radius must cover the 5 squares the Desc promises; 0.6.5B's
-       lval 10 is wrong on every platform (data, not port). Observed
-       (tools/check_bane_radius.sh); inc-7xcu; not sent. */
-    aval: AR_GLOBE; lval: 6; cval: RED;
+    /* upstream: lval 5 reaches the 5 squares the Desc promises under the
+       dist <= radius test; 0.6.5B's lval 10 is wrong on every platform (data,
+       not port). Observed (tools/check_bane_radius.sh); inc-7xcu, inc-lmw4;
+       not sent. */
+    aval: AR_GLOBE; lval: 5; cval: RED;
     xval: ADJUST_MOR; yval: A_AID; pval: -1; tval: MA_ENEMIES; 
     Flags: EF_LIM_MTYPE, EF_DLONG, EF_SHOWNAME, EF_FEAR;
     Purpose: EP_CURSE | AIM_AT_SELF;
@@ -5088,10 +5089,10 @@ Druid Spell "Commune With Nature" : EA_GENERIC
 
 Druid Spell "Wall of Thorns" : EA_TERRAFORM
   { SC_ARC; Base: SP_EASY; Cost: 10; Level: 5; qval: Q_TAR; sval: NOSAVE;
-    aval: AR_GLOBE; lval: 2; rval: $"thorn wall"; 
+    aval: AR_GLOBE; lval: 1; rval: $"thorn wall"; 
     xval: TERRA_OPEN; 
     Purpose: EP_CURSE|EP_FOIL_PURSUIT|EP_ESCAPE|EP_BARRIER | AIM_AT_ENEMY;
-    // upstream: the Desc promised a 5-square diameter but lval: 2 with AGlobe's dist < radius test fills a 3-square one; the same data ships on Win32 with the original compiler, so it is upstream, not a port artifact; the SCRIPT is correct, so nobody should raise lval to match the old prose; Traced (prose-only, no in-play value changes); inc-paq9; not sent.
+    // upstream: the Desc's 3 squares is correct, and lval 1 fills that 3-square diameter under the dist <= radius test; the same data ships on Win32 with the original compiler, so it is upstream, not a port artifact; Traced (prose-only, no in-play value changes); inc-paq9, inc-lmw4; not sent.
     Desc: "Conjures a solid barrier composed of thick shrubbery
       interwoven with razor-sharp, thorny vines. The wall of thorns
       fills an area with diameter 30 feet (3 squares). Any creature
@@ -5158,7 +5159,7 @@ Effect "Music of the Spheres" : EA_BLAST
       cooperative manner, forming a choir. A bardic ally adds
       half her bardic music level to the effect's caster level,
       while a priestly ally adds half her caster level.";
-    lval: 9; aval: AR_GLOBE; cval: MAGENTA; Purpose: EP_PLAYER_ONLY;
+    lval: 8; aval: AR_GLOBE; cval: MAGENTA; Purpose: EP_PLAYER_ONLY;
     xval: AD_SONI; pval: (LEVEL)d4; sval: WILL+10;
     Flags: EF_BLIND_PROMPT, EF_ALLIES_IMMUNE, EF_CASTER_IMMUNE;
     int16 targ, dtype;
@@ -5230,7 +5231,7 @@ Effect "Music of the Spheres" : EA_BLAST
   }
 and EA_INFLICT
   { 
-    lval: 9; xval: PARALYSIS; yval: PARA_HYPNOTIZED; sval: WILL;
+    lval: 8; xval: PARALYSIS; yval: PARA_HYPNOTIZED; sval: WILL;
     On Event POST(EV_MAGIC_HIT)
       {
         if (e.efNum == 0)
