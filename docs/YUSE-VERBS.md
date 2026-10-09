@@ -125,7 +125,7 @@ or friendly.
 | Zap | aim a wand at a target | `src/Item.cpp:844` |
 | Wield | equip a weapon | `src/Creature.cpp:1003` |
 | Shoot / Throw | ranged attack — **one event**, `EV_RATTACK` | `src/Creature.cpp:888` |
-| Insert | put an item into a container | `src/Inv.cpp:1115` |
+| Insert | put an item into a container | `src/Inv.cpp:1124` |
 | Divide | split a stack; refuses singular items; the new stack is `DROPPED` for 10 turns | `src/Player.cpp:1795` |
 | Open / Open With | doors and containers | `src/Feature.cpp:731` |
 | Close | shut a door | `src/Feature.cpp:826` |
