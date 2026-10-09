@@ -365,6 +365,7 @@ class Creature: public Thing, public Magic
       String & BonusBreakdown(int8 at, int16 maxlen=250);
       virtual void ChooseAction()=0;
       virtual void AccessTime(Item *it);
+      int16 ReadLightDCMod();
       virtual void ExtendedAction();
       virtual void HaltAction(const char *why, bool force_halt=true);
       virtual int16 ChallengeRating(bool allow_neg = false);

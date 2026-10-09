@@ -1,0 +1,30 @@
+# inc-caq8 dim/lowlight: an elf reads a scroll on a dim square. Elves have
+# CA_LOWLIGHT 2 and no infravision (lib/races.irh, "elf;temp"), so low-light
+# vision must treat the dim square as bright: no +10 DC. This is the dim case
+# of tools/keys/read-light-dim.keys, preceded by a page dismissal: the elf
+# fixture's arrival greeting overflows the message window ("-- more --"),
+# which the human/orc fixtures do not, and the setup's first key otherwise
+# lands in the pager instead of the game.
+@while "more --" SPACE
+@include read-light-setup.keys
+w K RIGHT ENTER e
+w K RIGHT*2 ENTER e
+w K RIGHT*2 ENTER P
+# Stow the equipped light source; the magma source placed above supplies the
+# dim level instead.
+i c s ESC
+s
+r
+@choose "(in pack) 2 Scrolls of Wizard Sight"
+@while "Stop reading?" n
+@dump:read
+v
+@dump:rolls
+ESC
+i
+@dump:after-pack
+ESC
+r
+@dump:after-scrolls
+ESC
+@quit

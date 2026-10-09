@@ -1,0 +1,21 @@
+# inc-caq8: shared setup for a loaded fixture; freeze monsters, acquire scrolls.
+@until "Wizard Mode Options" w y
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE ESC
+w
+@choose "Item Acquisition"
+RIGHT DOWN*116
+@expect "Scroll of Wizard Sight"
+ENTER
+@while "In the Air':Scroll" s
+@while "Ready Hand" ESC
+w
+@choose "Item Acquisition"
+RIGHT DOWN*116
+@expect "Scroll of Wizard Sight"
+ENTER
+@while "In the Air':Scroll" s
+@while "Ready Hand" ESC
+i
+@dump:setup-pack
+ESC
