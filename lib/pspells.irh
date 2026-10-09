@@ -1810,14 +1810,15 @@ Priest Spell "Lawful Weapons" : EA_GENERIC
   }
 #endif
 
+    // upstream: data error -- the Desc put the dice steps every four levels from 3rd (2d8 at 7th), but pval (LEVEL_EVERY4)d8 = (level+3)/4 dice gives 2d8 at 5th; Traced (prose-only, no in-play value changes); inc-1o01 / inc-tek.8.7 PA-07-F35; not sent.
 Priest / Druid Spell "Aid" : EA_INFLICT
   { SC_THE; IS_A_BUFF(COST_2); Level: 2; qval: Q_TAR;
     xval: ADJUST_SAC; yval: A_AID; pval: +1; }
 and EA_INFLICT
   { xval: ADJUST_SAC; yval: A_THP; pval: (LEVEL_EVERY4)d8; 
     Desc: "Grants the chosen subject a +1 bonus to hit and damage,
-      as well as 1d8 temporary hit points for every four caster
-      levels, starting with 1d8 at 3rd level."; 
+      as well as 1d8 temporary hit points at 3rd level, 2d8 at 5th,
+      and 1d8 more every four caster levels after that."; 
     Constants:
       * SERVICE_SPELL_COST 75;
   }

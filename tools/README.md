@@ -434,6 +434,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_abs_path.sh` | Does the game still resolve `argv[0]` to an absolute path? **Unsafe, see §7.** | LIVE |
 | `check_activate_stack.sh` | Does activating one item out of a stack leave the stack whole, and still fire the effect? | LIVE |
 | `check_aid_casting_bonus.sh` | Does a positive A_AID bonus raise a druid's primal casting term as well as a mage's arcane one? | LIVE |
+| `check_aid_desc.sh` | Does the Aid description in `lib/pspells.irh` say "1d8 ... at 3rd level, 2d8 at 5th", matching its `LEVEL_EVERY4` value, rather than the old "starting with 1d8 at 3rd level" step-every-four-levels wording (inc-1o01)? | LIVE |
 | `check_air_ring_spell.sh` | Does the Elemental Command (Air) ring description name the granted staff-spell "gaseous form", rather than the phantom "wind column" that exists nowhere in `lib/`? | LIVE |
 | `check_alienist_drain.sh` | Does each Alienist summoning drain the held mana its page names (Summoned Creature's CR x 2), the mana that never regenerates? | LIVE |
 | `check_alienist_live.sh` | Does the Alienist's Surreal Presence field exist and speak? A kobold summoned beside her must read "seems unsettled". | LIVE |
