@@ -29,13 +29,13 @@ are zero bytes and dead, not stubs. Purposes are read from each file's header co
 The spine. Every hop is a direct call; nothing is queued or deferred.
 
 1. `main()` `src/Wposix.cpp:507` builds `theGame` and the backend, assigns `T1`, calls `T1->Initialize()` then `theGame->StartMenu()` (`:663-672`).
-2. `Game::StartMenu()` `src/Main.cpp:2309`; menu choice 0 runs `LoadModules()` (`src/Registry.cpp:1480`), `NewGame()` (`src/Main.cpp:128`), `Play()` (`:2385-2400`).
-3. `Game::Play()` `src/Main.cpp:253`; the `do {} while(1)` at `:251` is the game loop. It walks every `Thing` on the player's map (`:430`), decrements `Timeout`, calls `ChooseAction()` on whatever is ready (`:492`).
+2. `Game::StartMenu()` `src/Main.cpp:2321`; menu choice 0 runs `LoadModules()` (`src/Registry.cpp:1480`), `NewGame()` (`src/Main.cpp:128`), `Play()` (`:2397-2412`).
+3. `Game::Play()` `src/Main.cpp:253`; the `do {} while(1)` at `:408` is the game loop. It walks every `Thing` on the player's map (`:442`), decrements `Timeout`, calls `ChooseAction()` on whatever is ready (`:504`).
 4. `Player::ChooseAction()` `src/Player.cpp:233` redraws status, then blocks on `MyTerm->GetCharCmd()` (`src/Player.cpp:406`).
 5. `posixTerm::GetCharCmd()` `src/Wposix.cpp:1664` flushes the screen *first* (`Update()`, `:1725`), reads one raw key (`NextKey()`, `:1730`), maps it to a `KY_CMD_*` by scanning the active keyset (`:1776-1785`). Redraw-before-read is why the screen is always current when the game waits.
 6. `switch (ch)` `src/Player.cpp:427`; a direction key lands at `src/Player.cpp:1319` and, with no attack chosen, throws `ThrowDir(EV_MOVE, ...)` (`src/Player.cpp:1418`).
-7. `ThrowDir` `src/Event.cpp:537` fills an `EventInfo` and calls `RealThrow` (`:414`), which fires PRE, event, POST (`:439-449`).
-8. `ThrowEvent` `src/Event.cpp:152` offers the event to region, terrain, dungeon, field and effect resources in that order (`:170-257`); `ThrowTo` (`:363`) then walks the C++ hierarchy from concrete type up to base via the `HIER` macro (`:371-407`).
+7. `ThrowDir` `src/Event.cpp:537` fills an `EventInfo` and calls `RealThrow` (`:418`), which fires PRE, event, POST (`:443-453`).
+8. `ThrowEvent` `src/Event.cpp:152` offers the event to region, terrain, dungeon, field and effect resources in that order (`:170-257`); `ThrowTo` (`:367`) then walks the C++ hierarchy from concrete type up to base via the `HIER` macro (`:375-411`).
 9. `Creature::Walk()` `src/Move.cpp:84` is the handler `EV_MOVE` reaches (`:207`); it ends at `Move(tx, ty, ...)` (`src/Move.cpp:1074`).
 10. `Thing::Move()` `src/Display.cpp:1773` relinks square contents, calls `M->Update()` on both changed squares (`:1891-1892`), and sets the player's `UpdateMap` (`:1907`).
 11. `Map::Update(x,y)` `src/Term.cpp:748` picks one square's glyph and pushes it to `PutChar`.
