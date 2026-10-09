@@ -491,7 +491,7 @@ public:
        (bead inc-bjgh). */
     virtual void APutCharLit(int16 x, int16 y, Glyph g, int16 mx, int16 my,
                              int16 fi, int16 bi, float floor, bool remembered,
-                             float infra, bool warm, bool ice)
+                             float infra, bool ice)
       { APutChar(x, y, g); }
     virtual void PutChar(int16 x, int16 y, Glyph g)=0;
     virtual Glyph AGetChar(int16 x, int16 y)=0;
