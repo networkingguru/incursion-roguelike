@@ -37,7 +37,7 @@ Monster "cave orc" : MA_ORC, MA_ADVENTURER
           25% $"strip of cured meat"; 
     Desc: "Cave orcs are the most fecund, and most common, of the orc
     subraces.  Adapted to Underdark life, the cave orcs have superior
-    infravision, a racial aptitude for climbing and the ability to scale
+    darkvision, a racial aptitude for climbing and the ability to scale
     even sheer surfaces easily, along with an understanding of swarm
     tactics and an aptitude for underground survival, but they are even
     more craven than the majority of the orcish race, and more

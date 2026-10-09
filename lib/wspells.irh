@@ -2556,12 +2556,12 @@ Wizard Spell "Identify" : EA_GENERIC
       * SERVICE_SPELL_COST 50;
   }
 
-Wizard / Scroll / Druid Spell "Infravision" : EA_INFLICT
+Wizard / Scroll / Druid Spell "Darkvision" : EA_INFLICT
   { SC_DIV; IS_A_BUFF(COST_2); Level: 2;
     xval: EXTRA_ABILITY; yval: CA_INFRAVISION; pval: 6;
-    Desc: "Grants the caster temporary magical infravision out to
+    Desc: "Grants the caster temporary magical darkvision out to
       a range of 60 feet (6 squares), or increases his existing
-      infravision by a similar amount.";
+      darkvision by a similar amount.";
   }
 
 Wizard / Scroll Spell "See Invisibility" : EA_INFLICT
@@ -7788,7 +7788,7 @@ Wizard Spell "Open the Third Eye" : EA_GENERIC
     Desc: "Casting this irrevocable spell opens a mystical third eye in
     the center of the caster's forehead. 
     The caster gains a +6 racial bonus to Spot and Search checks as
-    well as 60 feet of infravision. The caster also gains a gaze attack
+    well as 60 feet of darkvision. The caster also gains a gaze attack
     that confuses victims for 1d8 rounds (Fortitude save, DC 14).\n
     __Casting this spell costs the caster 5000 XP."; 
   }
@@ -8246,7 +8246,7 @@ Wizard Spell "Vampirism" : EA_GENERIC
     hit, a +6 bonus to defense, and casts spells as if two levels higher. 
     The caster gains a +10 natural armour bonus. The caster gains a
     vampire's draining bite, fearsome gaze, gaseous form, regeneration (5
-    hit points per round), 120 foot infravision, and racial skill bonuses
+    hit points per round), 120 foot darkvision, and racial skill bonuses
     to Bluff, Hide, Listen, Move Silently, Search and Spot (+8 to each) as
     well as four levels of turn resistance. All of these bonuses are
     template bonuses. The caster also gains all of the traditional undead

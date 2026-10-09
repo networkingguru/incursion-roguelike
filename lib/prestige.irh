@@ -71,7 +71,7 @@
         Slow Fall
         Innate /Rooting/
       Underground:
-        +3 Infravision
+        +3 Darkvision
         +4 Mining
         +4 Searching
         Stonework Sense +1
@@ -557,7 +557,7 @@ Class "Assassin"
       magic weapon, obscurement, passwall, read magic, shield, sleep,
       spider climb, true strike, ventriloquism.\n
       <15>__2nd level -- <1>bladethirst, choke, ESP, globe of shadow, 
-      hypnotic pattern, infravision, invisibility, levitation, 
+      hypnotic pattern, darkvision, invisibility, levitation, 
       pass without trace, rope trick, web.\n
       <15>__3rd level -- <1>animate shadows, blink, clairvoyance, deeper 
       darkness, deep slumber, displacement, gaseous form, greater magic
@@ -628,7 +628,7 @@ Class "Assassin"
             $"obscurement" $"passwall" $"read magic" $"shield" $"sleep" $"spider climb" 
             $"true strike" $"ventriloquism"
           2 $"choke" $"ESP" $"globe of shadow" $"hypnotic pattern"
-            $"infravision" $"invisibility" $"pass without trace" $"levitation"
+            $"darkvision" $"invisibility" $"pass without trace" $"levitation"
             $"bladethirst" $"rope trick" $"web"
           3 $"deeper darkness" $"nondetection" $"displacement"
             $"animate shadows" $"illusory stance" $"blink" $"clairvoyance"
@@ -2538,7 +2538,7 @@ Class "Sentinel"
       innate ability to cast <9>detect good<2> and <9>detect evil<2>.\n
       __*_<6>3rd Level: <7>Acute Senses<2> -- The sentinel gains the
       Acute Senses feat, increasing her Sight, Shadow,
-      Infravision and Scent Ranges by 50~.\n
+      Darkvision and Scent Ranges by 50~.\n
       __*_<6>4th Level: <7>Blindsight<2> -- Using senses not available to
       normal adventurers, the sentinel can function in total darkness using
       a form of sonar that allows them to locate objects and creatures
@@ -2656,8 +2656,8 @@ Class "Shadowdancer"
       a rogue's, starting at 3rd level and advancing every third level after
       that. Levels of this ability from shadowdancer, rogue, assassin and any
       similar class stack.\n
-      __*_<7>Infravision<2> -- A shadowdancer gains the ability to see in 
-      the dark for 20 feet (2 squares) or has her darkvision range extended 
+      __*_<7>Darkvision<2> -- A shadowdancer gains darkvision out to 
+      20 feet (2 squares), or has her darkvision range extended 
       by 20 feet (2 squares) culmulatively at 2nd, 5th and 9th levels.\n
       __*_<7>Shadow Illusion<2> -- A shadowdancer gains the innate ability to 
       use <9>animate shadows<2> at 2nd level, <9>mirror image<2> at 7th level
@@ -2692,19 +2692,19 @@ Class "Shadowdancer"
       \n\n<10>THE SHADOWDANCER<15>\n
       __Level__Def__Fort_Refl_Will_Special Abilities<1>\n
       ____1____+0____+0___+2___+0__Evasion, Uncanny Dodge\n
-      ____2____+1____+0___+3___+0__Infravision (20 ft),\n
+      ____2____+1____+0___+3___+0__Darkvision (20 ft),\n
       _____________________________Shadow Illusion I\n
       ____3____+1____+1___+3___+1__Hide In Plain Sight\n 
       _____________________________Sneak Attack +1d6\n
       ____4____+2____+1___+4___+1__Shadow Step, Shadow Com.\n
       ____5____+2____+1___+4___+1__Defensive Roll,\n
-      _____________________________Infravision (40 ft)\n
+      _____________________________Darkvision (40 ft)\n
       ____6____+3____+2___+5___+2__Elder Companions,\n
       _____________________________Sneak Attack +2d6\n
       ____7____+3____+2___+5___+2__Shadow Illusion II\n
       ____8____+4____+2___+6___+2__Ancient Companions\n
       ____9____+4____+3___+6___+3__Sneak Attack +3d6,\n
-      _____________________________Infravision (60 ft)\n
+      _____________________________Darkvision (60 ft)\n
       ____10___+5____+3___+7___+3__Shadow Illusion III\n";
     HitDice: 8; Mana: 4; Def: 1/2;
     Attk:  S_BRAWL    75,

@@ -22,11 +22,11 @@ s                       # search: one real turn
 
 d
 @expect "Gender"
-@until "Infravision" DOWN
+@until "Darkvision" DOWN
 @expect "Special Abilities:"
 @expect "Berserk Rage"
 @expect "Devouring"
-@expect "Infravision"
+@expect "Darkvision"
 @dump:sheet
 ESC
 

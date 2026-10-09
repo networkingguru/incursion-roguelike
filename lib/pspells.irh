@@ -1080,7 +1080,7 @@ Wizard / Druid  Spell "Obscurement" : EA_INFLICT
     rval: FI_FOG; cval: GREY; Purpose: EP_BUFF|EP_STEALTH; aval: AR_MFIELD;
     Flags: EF_GLYPH_FOG;
     Desc: "Conjures a bank of fog which travels with you and limits
-    normal vision and infravision to 10 feet. Wood Elves, second level
+    normal vision and darkvision to 10 feet. Wood Elves, second level
     Druids and other creatures with the Nature Sense ability can see
     through fog. The fog bank has a radius of 30 feet (3 squares) plus
     10 feet (1 square) for every two caster levels. The fog also muffles

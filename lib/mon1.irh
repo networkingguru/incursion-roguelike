@@ -4892,7 +4892,7 @@ Monster "riding lizard" : MA_QUADRUPED, MA_ANIMAL, MA_REPTILE
         lizards as well.\n
         __Riding lizards look much like geckos the size of horses.
         They are placid creatures and feed on various herbs and fungi,
-        and have mottled orange or grey skin. They possess infravision,
+        and have mottled orange or grey skin. They possess darkvision,
         allowing them to navigate in the darkness, and the adhesive
         pads on their feet make them outstanding climbers.";
   }
@@ -4920,7 +4920,7 @@ Monster "war lizard" : MA_QUADRUPED, MA_ANIMAL, MA_REPTILE
         lizards as well.\n
         __Riding lizards look much like geckos the size of horses.
         They are placid creatures and feed on various herbs and fungi,
-        and have mottled orange or grey skin. They possess infravision,
+        and have mottled orange or grey skin. They possess darkvision,
         allowing them to navigate in the darkness, and the adhesive
         pads on their feet make them outstanding climbers.\n
         __This particular breed of riding lizard has been bred and 
@@ -4950,7 +4950,7 @@ Monster "psionic riding lizard" : MA_QUADRUPED, MA_ANIMAL, MA_REPTILE
       lizards as well.\n
       __Riding lizards look much like geckos the size of horses.
       They are placid creatures and feed on various herbs and fungi,
-      and have mottled orange or grey skin. They possess infravision,
+      and have mottled orange or grey skin. They possess darkvision,
       allowing them to navigate in the darkness, and the adhesive
       pads on their feet make them outstanding climbers.\n
       __This particular breed of riding lizard has been fed a specific

@@ -1744,8 +1744,8 @@ AI_EYES Effect "the Druid;eyes" : EA_GRANT
 AI_EYES Effect "the Night" : EA_GRANT
   { SC_THA; xval: EXTRA_ABILITY; yval: CA_INFRAVISION; pval: +6; 
     Level: 1;
-    Desc: "This grants you Infravision to a range of 60 feet, or
-      improves the range of your existing Infravision by 60 feet."; }
+    Desc: "This grants you Darkvision to a range of 60 feet, or
+      improves the range of your existing Darkvision by 60 feet."; }
 
 AI_EYES Effect "Terror;eyes" : EA_GRANT
   { SC_NEC; xval: SKILL_BONUS; yval: SK_INTIMIDATE; pval: +5; 
@@ -4495,11 +4495,11 @@ AI_RING Effect "Evasion" : EA_GRANT
       saving throw you take no damage. If the spell does not normally
       allow a saving throw, you take half damage."; }
     
-AI_RING Effect "Infravision;ring" : EA_GRANT
+AI_RING Effect "Darkvision;ring" : EA_GRANT
   { SC_THA; xval: EXTRA_ABILITY; yval: CA_INFRAVISION; pval: +6; 
     Level: 1;
-    Desc: "This ring grants you Infravision to a range of 60 feet, or
-      improves the range of your existing Infravision by 60 feet."; }
+    Desc: "This ring grants you Darkvision to a range of 60 feet, or
+      improves the range of your existing Darkvision by 60 feet."; }
 
 /* Later, remember to add EV_REMOVE for both of these, so that
    if you take the ring off, you lose the summoned creature
@@ -5550,7 +5550,7 @@ and EA_GRANT
     Flags: EF_AUTOID | EF_NEEDS_PLUS; Level: PLUS_3PER1; 
     Desc: "This graceful set of lenses conveys or augments many of the inborn talents
     of the drow people to the wearer: grace and cunning, a resistance to
-    magic and unparalled infravision." ; } 
+    magic and unparalled darkvision." ; } 
 
 AI_CLOAK Effect "the Hin" : EA_GRANT
   { xval: SKILL_BONUS; yval: SK_TUMBLE; pval: PLUS_2PER1; }
@@ -8182,7 +8182,7 @@ AI_WONDER Effect "Robe of Eyes" : EA_GRANT
       living eyes open all over the robe to enhance the wearer's
       perception. A Robe of Eyes grants a +5 magic bonus to all
       Search and Spot checks, grants the wearer 60 feet of
-      Infravison and the ability to see invisible and ethereal
+      Darkvision and the ability to see invisible and ethereal
       creatures as well as letting her see in a full 360 degree
       arc, making her very difficult to surprise. In game terms,
       this grants her the benefit of the Improved Initiative 
@@ -8193,7 +8193,7 @@ and EA_GRANT
   { xval: SKILL_BONUS; yval: SK_SEARCH; pval: 5; }
 and EA_GRANT
   { xval: SEE_INVIS; }
-/* upstream: the Desc above promises "60 feet of Infravison" and no grant block
+/* upstream: the Desc above promises "60 feet of Darkvision" and no grant block
    ever delivered it, so the sentence was false for every wearer. The defect is
    upstream's, not the port's: it is an omitted grant in a data file that the
    resource compiler reads identically on Win32, with the original typedefs and

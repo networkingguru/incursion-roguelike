@@ -8,7 +8,7 @@
 # handler, and no infravision at all, so the sentence was false for every wearer.
 #
 # The oracle is the character dump written by [W]rite Dump, because its
-# "Special Abilities" block prints "Infravision (%d ft)" from src/Sheet.cpp:540
+# "Special Abilities" block prints "Darkvision (%d ft)" from src/Sheet.cpp:540
 # and that number is Creature::AbilityLevel(CA_INFRAVISION) * 10 -- the very
 # function the missing grant feeds. The run dumps the sheet three times: before
 # the robe exists, with it worn, and after it comes off.
@@ -52,7 +52,7 @@ done
 # further down names potions and must not be searched.
 infra() {
     sed -n '/^Special Abilities:$/,/^$/p' "$RUN/logs/$1.txt" |
-        sed -n 's/^  Infravision (\([0-9]*\) ft)$/\1/p'
+        sed -n 's/^  Darkvision (\([0-9]*\) ft)$/\1/p'
 }
 
 fail=0

@@ -548,6 +548,7 @@ E	0	0	534	large animated object
 E	0	0	535	huge animated object
 E	0	0	536	gargantuan animated object
 E	0	0	537	collosal animated object
+E	0	0	538	scarab swarm
 A	0	1	Item
 E	0	1	0	blank spellbook
 E	0	1	1	spellbook [Fundamentals of Magick]
@@ -1078,7 +1079,7 @@ E	0	3	230	Nimble Fingers
 E	0	3	231	Identify;ring
 E	0	3	232	Greater Ring of Identify
 E	0	3	233	Evasion
-E	0	3	234	Infravision;ring
+E	0	3	234	Darkvision;ring
 E	0	3	235	the Imp
 E	0	3	236	Ring, Djinn Prison
 E	0	3	237	Mind Shielding
@@ -1282,7 +1283,7 @@ E	0	3	434	Pyrotechnics;flash
 E	0	3	435	Animate Rope
 E	0	3	436	Detect Objects
 E	0	3	437	Identify
-E	0	3	438	Infravision
+E	0	3	438	Darkvision
 E	0	3	439	See Invisibility
 E	0	3	440	ESP
 E	0	3	441	Revealed Lore
@@ -2032,6 +2033,7 @@ E	0	3	1184	GodTest
 E	0	3	1185	Display Statistics
 E	0	3	1186	XP Ticker
 E	0	3	1187	flame tongue immolation
+E	0	3	1188	Aura of Menace
 A	0	4	Artifact
 A	0	5	Quest
 A	0	6	Dungeon
@@ -3560,6 +3562,9 @@ O	0	3	855	Make Whole
 V	0	3	855	0	it	hObj
 O	0	3	856	Magic Stone
 V	0	3	856	0	ch	int32
+O	0	3	882	Bestow Curse
+V	0	3	882	0	curseKind	int16
+V	0	3	882	1	curseAbility	int16
 O	0	3	893	Magic Vestment
 V	0	3	893	0	it	hObj
 O	0	3	901	Ironwood;spell
