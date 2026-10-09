@@ -22,8 +22,18 @@
 # same line and reads +4 -> +8 vs. spells, but a specific item's level ignores
 # its plus (src/Item.cpp:2383), so XPCost is 0 and ASSERT(XPCost > 0) at
 # src/Skills.cpp:3445 fires; tools/headless.sh then exits 7. The periapt's
-# level is 2 per plus, so +1 -> +2 is level 2 -> 4, inside the bard's 8.
-@include reapply-bard.keys
+# level is 2 per plus, so +1 -> +2 is level 2 -> 4, inside the bard's 7.
+#
+# inc-stzd: this used to @include reapply-bard.keys and build the character
+# fresh every run. That script's attribute-set draw (seed 1, orc bard) bundles
+# a permanent "Save Bonus: +4 vs. Poison" perk -- src/Create.cpp:1690's
+# random(FT_LAST - FT_FIRST) + FT_FIRST, shifted by inc-08js's Cannibalism
+# feat -- which rode under every Will-vs-poison reading below. Now the caller
+# starts this script from INCURSION_LOAD=tools/fixtures/chars/orc-bard-reapply-seed1.sav
+# instead: a character frozen (tools/keys/reapply-bard-save.keys) from a
+# reroll of that same draw with no Poison perk at all, so the session begins
+# already in play, on the saved empty level, wizard mode already on, and
+# "Afoot" already showing. See tools/fixtures/README.md.
 
 d
 @dump:sheet-without-periapt
