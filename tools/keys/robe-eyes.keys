@@ -1,7 +1,7 @@
 # Does the Robe of Eyes grant the infravision its own page promises? Read by
 # tools/check_robe_eyes.sh, bead inc-tek.8.8, finding PA-08-F12.
 #
-# The robe's Desc says it "grants the wearer 60 feet of Infravison"
+# The robe's Desc says it "grants the wearer 60 feet of Darkvision"
 # (lib/m_items.irh, entity AI_WONDER Effect "Robe of Eyes"). The entity's grant
 # blocks gave Spot, Search, See Invisible, Improved Initiative and a gaze-attack
 # handler, and no infravision at all.

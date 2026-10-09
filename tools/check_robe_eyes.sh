@@ -2,7 +2,7 @@
 # Regression check for the Robe of Eyes' infravision, bead inc-tek.8.8, finding
 # PA-08-F12.
 #
-# The robe's own page promises that it "grants the wearer 60 feet of Infravison"
+# The robe's own page promises that it "grants the wearer 60 feet of Darkvision"
 # (lib/m_items.irh, entity AI_WONDER Effect "Robe of Eyes"). The entity granted
 # Spot +5, Search +5, See Invisible, Improved Initiative and a gaze-attack
 # handler, and no infravision at all, so the sentence was false for every wearer.
