@@ -1049,8 +1049,8 @@ tools/check_strqueue.sh             # builds its own probe binary, then deletes 
 
 `check_strqueue.sh:36-38` calls `./build_macos.sh` itself with
 `OUT=incursion-strqueue`, so it costs a full build the first time. It removes
-that binary afterwards (`check_strqueue.sh:95`). It copies the frozen
-`fixtures/options-2026-08-13.dat` into its sandbox (`check_strqueue.sh:48`).
+that binary afterwards (`check_strqueue.sh:96`). It copies the frozen
+`fixtures/options-2026-08-22.dat` into its sandbox (`check_strqueue.sh:49`).
 
 ### Tier 3 — needs `BACKEND=posix ./build_macos.sh` first
 
