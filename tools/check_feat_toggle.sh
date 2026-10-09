@@ -1,7 +1,12 @@
 #!/bin/bash
 # gate: live
 # inc-cmo5: the port's paged feat toggle must not spend a pick.
-# Seed 7: h toggles 59 -> 224 -> 59 entries; the sheet keeps all three picks.
+# Seed 7: h toggles 59 -> 225 -> 59 entries; the sheet keeps all three picks.
+# The 225 is the game's total feat count, not part of the toggle behaviour
+# under test; it moved from 224 after inc-08js appended the Cannibalism feat
+# (FT_LAST 362 -> 363). The historical --prove-red measurement below, taken
+# 2026-09-11 before that feat existed, is left reading 224: it records what
+# was actually seen that day.
 # --prove-red removes the conditional pos argument from GainFeat's LMenu call.
 # Measured 2026-09-11, --prove-red (old call, exit 1):
 #   FAIL  0/1 screens carry: [h] (Hide Unavailab
@@ -25,7 +30,7 @@ check_expect '[h] (Show All Feats)'
 check_expect '52-59 of 59'
 check_screens '*-toggle-on'
 check_expect '[h] (Hide Unavailab'
-check_expect '52-102 of 224'
+check_expect '52-102 of 225'
 check_screens '*-toggle-off'
 check_expect '[h] (Show All Feats)'
 check_expect '52-59 of 59'

@@ -6,6 +6,14 @@
 # So the before/after damage lines are 3d8+bonus and 6d6+bonus on both builds,
 # proving the cap constants did not switch the spell off below their ceilings.
 #
+# inc-stzd: Searing Light's own to-hit roll is a normal d20 attack, so one
+# cast in twenty misses on a natural 1 and prints no Damage line -- the
+# living cast is cast TWICE below so a single bad roll does not starve the
+# whole section. The giant rat is also left alive by a miss, and the undead
+# section used to cast "RIGHT" at whatever still stood there instead of the
+# freshly summoned mummy; Genocide Everything clears the board between the
+# two casts so the second one can only hit the mummy.
+#
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
 #   INCURSION_RUN_DIR="$PWD/logs/inc-r6u1/control" \
 #       tools/headless.sh tools/keys/searing-light-control.keys 1
@@ -69,10 +77,17 @@ m
 @choose "Searing Light"
 RIGHT
 @while "more --" SPACE
+m
+@choose "Searing Light"
+RIGHT
+@while "more --" SPACE
 @dump:control-after-living
 v
 @dump:control-messages-living
 @while "Messages" ESC
+w
+@choose "Genocide Everything"   # the rat (hit or missed) must not take the
+@until "HP:" ESC                #   mummy's cast below
 w
 @choose "Monster Summoning"
 @choose "Corporeal Undead"

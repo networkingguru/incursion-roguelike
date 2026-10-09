@@ -1,5 +1,17 @@
 # inc-cmo5: seed-7 human paladin, literal h twice on the toggle page.
 # First entry stays on page 1; TAB reaches the toggle on page 2.
+#
+# inc-stzd: seed 7's first offered attribute set (picked below with the
+# literal "a") bundles a free "Bonus Feat: Iron Will" -- src/Create.cpp:1690
+# draws that bonus from random(FT_LAST - FT_FIRST) + FT_FIRST, so adding a
+# feat to the table (inc-08js, FT_LAST 362 -> 363) changed what every seed's
+# draw lands on; Iron Will is simply this seed's new answer, and HasFeat
+# then excludes it from the manual "Choose a feat" list regardless of the
+# Hide/Show toggle. Picking Iron Will by name below would therefore fail on
+# ANY tree with a different feat-table size, Cannibalism or not -- so this
+# script no longer picks it manually; it is already on the sheet via the
+# bonus, and the two manual picks below are by name, immune to table size.
+
 a       # Initial Choices: [a] Create a New Character
 n       # Alter the character generation options? -- no
 y       # Your options will place the game in Explore Mode. Continue? -- yes
@@ -22,10 +34,13 @@ h
 @dump:toggle-off
 @until "Great Fortitude" TAB
 @choose "Great Fortitude"
-@until "Iron Will" TAB
-@choose "Iron Will"
-# Only the fixed build has a third pick left; page-1 b is Alertness.
-@while "Choose a feat" b
+@until "Alertness" TAB
+@choose "Alertness"
+# Iron Will came free with the attribute set; a further pick is offered only
+# on the fixed build (inc-cmo5). Whatever it offers, take the top entry --
+# the sheet check below does not care which extra feat this is, only that
+# Battlefield Inspiration (the toggle bug's own symptom) is not it.
+@while "Choose a feat" a
 
 # Skill Manager. RIGHT spends a rank on the selected skill and stops at that
 # skill's maximum; DOWN moves to the next skill. The loop matches the stars
