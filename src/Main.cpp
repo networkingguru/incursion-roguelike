@@ -316,6 +316,11 @@ void Game::Play() {
     extern void BaneRadiusProbe(Player *caster);
     BaneRadiusProbe(pp);
 
+    /* inc-lmw4: off unless INCURSION_AREA_PROBE is set; needs a live map.
+       See AreaRadiusProbe (src/AreaRadiusProbe.cpp). */
+    extern void AreaRadiusProbe(Player *pl);
+    AreaRadiusProbe(pp);
+
     /* inc-tmys: off unless INCURSION_MONINIT_PROBE is set; needs a live map.
        See MonsterInitProbe (src/MonsterInitProbe.cpp) and
        tools/check_monster_init_hp.sh. */
