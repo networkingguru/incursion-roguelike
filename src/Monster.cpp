@@ -2444,6 +2444,9 @@ void Monster::ListEffects()
         if (it->Type == T_SCROLL && !HasSkill(SK_DECIPHER))
           continue;
 
+        if (it->Type == T_SCROLL && ReadLightDCMod() < 0)
+          continue;
+
         AddEffect(te,it->eID,it);
       }
       while (it = oItem(it->Next));

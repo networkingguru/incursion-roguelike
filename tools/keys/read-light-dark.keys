@@ -1,0 +1,21 @@
+@include read-light-setup.keys
+# Stow the equipped light source so the reader's square goes dark.
+# tools/check_read_light.sh loads a no-infravision fixture (equipped torch)
+# for this case and a separate infravision fixture for the dark/infravision
+# case; the stow is a harmless no-op if a fixture's light slot is empty.
+i c s ESC
+s
+r
+@choose "(in pack) 2 Scrolls of Wizard Sight"
+@while "Stop reading?" n
+@dump:read
+v
+@dump:rolls
+ESC
+i
+@dump:after-pack
+ESC
+r
+@dump:after-scrolls
+ESC
+@quit

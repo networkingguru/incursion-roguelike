@@ -5235,8 +5235,9 @@ void Character::LegendIdent(Item *it) {
 				if (strstr(flav, RunicWords[i]))
 					isRunic = true;
 		}
-		if (isRunic) {
-			if (SkillCheck(SK_DECIPHER, 10 + it->ItemLevel() * 2, true)) {
+		int16 rlm = ReadLightDCMod();
+		if (isRunic && rlm >= 0) {
+			if (SkillCheck(SK_DECIPHER, 10 + it->ItemLevel() * 2 + rlm, true)) {
 				IPrint("By translating the runes covering the <Obj>, "
 					"you discern that it is in fact <str>!",
 					it, (const char*)it->Name(NA_A | NA_IDENT));
@@ -5247,7 +5248,8 @@ void Character::LegendIdent(Item *it) {
 				IPrint("You fail to translate the runes covering the <Obj>.", it);
 
 		}
-		it->IFlags |= IF_DECIPHERED;
+		if (rlm >= 0)
+			it->IFlags |= IF_DECIPHERED;
 	}
 
 
