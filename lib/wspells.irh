@@ -2728,7 +2728,7 @@ Wizard  Spell "Electric Loop" : EA_BLAST
   { SC_EVO; Base: SP_TRIVIAL; Cost: 3; Level: 2; sval: REF partial;
     xval: AD_ELEC; pval: (LEVEL_MAX5)d4; Purpose: EP_ATTACK;
     Flags: EF_CASTER_IMMUNE, EF_DEFENSIVE; 
-    aval: AR_GLOBE; cval: COL_ELEC; lval: 2;
+    aval: AR_GLOBE; cval: COL_ELEC; lval: 1;
     Desc: "Creates a ring of electricity that deals 1d4 points of
     lightning damage (max 5d4) to all creatures adjacent to the caster.
     In addition, creatures that fail a Reflex save are stunned for one
@@ -2736,7 +2736,7 @@ Wizard  Spell "Electric Loop" : EA_BLAST
   }
   and EA_INFLICT
   { xval: STUNNED; sval: REF; Flags: EF_D1ROUND, EF_CASTER_IMMUNE; 
-    aval: AR_GLOBE; lval: 2; }
+    aval: AR_GLOBE; lval: 1; }
 
 Wizard Spell "Scorcher" : EA_BLAST
   { SC_EVO|SC_FIRE; Base: SP_EASY; Cost: 4; Level: 2; aval: AR_BEAM; qval: Q_DIR|Q_TAR;

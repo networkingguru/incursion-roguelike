@@ -445,6 +445,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_antitoxin_comment.sh` | Does the comment above Neutralize Poison in `lib/pspells.irh` state that antitoxin only adds to poison saves, rather than the old claim that it covers the cure (inc-gmrj)? | LIVE |
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? | LIVE |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? | LIVE |
+| `check_area_radius.sh` | Does a globe or field with radius value N reach N squares? `INCURSION_AREA_PROBE=1` casts Bless (radius 6) at allies at distances 5, 6 and 7, and Silence (radius 4) to compare its first pulse with its lasting field at distances 3, 4 and 5. FAIL, INCONCLUSIVE or missing results exit nonzero (inc-lmw4). | LIVE |
 | `check_armour_model.sh` | Does the armour model penetrate coverage by grade and subtract from damage, with natural armour and a worn suit penetrated independently? | LIVE |
 | `check_aura_of_menace.sh` | Does a hostile creature entering an Aura of Menace (a lantern archon summoned in wizard mode) get the save and its -2 penalty or immunity, and (hit mode) does landing a blow on the owner end the penalty? Seeds 4 and 5. | LIVE |
 | `check_autoknock.py` | Analyser behind `check_autoknock.sh`: reads the auto-knock probe log, fails on a missing case or log, and proves itself with `selftest` on a good and a bad log (inc-e3oo). | LIVE |

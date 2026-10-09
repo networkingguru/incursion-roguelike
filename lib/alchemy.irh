@@ -219,7 +219,7 @@ Item "bag" : T_TOOL
   }
 
 AI_ALCHEMY Effect "tanglefoot bag" : EA_TERRAFORM { 
-  SC_ARC; Cost: 0; aval: AR_GLOBE; Level: 1; lval: 2; qval: Q_LOC;
+  SC_ARC; Cost: 0; aval: AR_GLOBE; Level: 1; lval: 1; qval: Q_LOC;
   Flags: EF_NAMEONLY, EF_AUTOID, EF_MUNDANE, EF_ACTIVATE; 
   xval: TERRA_OPEN; rval: $"tanglefoot strands"; sval: NOSAVE; 
   Purpose: EP_ATTACK | EP_FOIL_PURSUIT | EP_CURSE | AIM_AT_ENEMY; 
@@ -1834,7 +1834,7 @@ AI_PSIONIC Effect "Ballistic Attack" : EA_INFLICT
 AI_PSIONIC Effect "Detonate" : EA_BLAST
   {
     Flags: EF_MUNDANE, EF_AFFECTS_ITEMS; Purpose: EP_ATTACK; 
-    aval: AR_GLOBE; lval: 2; cval: PINK; qval: Q_TAR | Q_INV | Q_ITM;
+    aval: AR_GLOBE; lval: 1; cval: PINK; qval: Q_TAR | Q_INV | Q_ITM;
     xval: AD_BLUNT; pval: 2d10;
     Desc: "By focusing her will into an explosive pinpoint pressure, a
       character with this power can cause any mindless, unliving
