@@ -1,0 +1,12 @@
+# Generate dungeon level 2 once and stop (inc-ydmt). Level 2 carries two
+# dungeon specials, "ancient library" and "Parthenion" (lib/dungeon.irh:19-24);
+# tools/check_special_room_overlap.sh reads where each was placed.
+#
+#   INCURSION_SPECIAL_PROBE=1 INCURSION_OPTIONS=... tools/headless.sh tools/keys/special-room-depth2.keys 1
+
+@include chargen.keys
+
+w y p "2" ENTER
+s .*2
+@dump:final
+@quit

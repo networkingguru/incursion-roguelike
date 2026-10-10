@@ -57,6 +57,26 @@ extern void OobProbeRoomClear(void);
 
 static LocationInfo * GridBackup;
 
+/* inc-ydmt: INCURSION_SPECIAL_PROBE logs each dungeon special placed, in map
+   squares, to logs/special.log. Diagnostic only; placement is unchanged. */
+static void SpecialProbe(int16 depth, rID regID, const char *branch,
+    int x1, int y1, int x2, int y2) {
+    static FILE *spLog = NULL;
+    if (!getenv("INCURSION_SPECIAL_PROBE"))
+        return;
+    if (!spLog) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%slogs/special.log",
+            (const char*)T1->IncursionDirectory);
+        spLog = fopen(path, "a");
+    }
+    if (spLog) {
+        fprintf(spLog, "SPECIAL depth=%d name=\"%s\" branch=%s x1=%d y1=%d x2=%d y2=%d\n",
+            (int)depth, NAME(regID), branch, x1, y1, x2, y2);
+        fflush(spLog);
+    }
+}
+
 Fraction Map::slope1, Map::slope2, Map::slope3, Map::test;
 int32 Map::TotalCorridorLength;
 int32 Map::RoomsTouched[32];
@@ -1603,8 +1623,22 @@ SecondStreamerSame:
                                             Tries++;
                                             goto NewLocation;
                                         }
+                                /* upstream: a fixed-grid special region must
+                                   not be written over a panel another
+                                   special already drew. This code is
+                                   unchanged from the original 0.6.5B source
+                                   and the same logic runs on Win32. Tier
+                                   Observed, tools/check_special_room_overlap.sh
+                                   (seed 22). Tracked as inc-ydmt. NOT SENT. */
+                                for (x = px; x != px + cx; x++)
+                                    for (y = py; y != py + cy; y++)
+                                        if ((PanelsDrawn[y] & (1 << x)) && Tries < 100) {
+                                            Tries++;
+                                            goto NewLocation;
+                                        }
 
                                 WriteMap(r, a->u.ds[i].xID);
+                                SpecialProbe(Depth, regID, "grid", r.x1, r.y1, r.x2, r.y2);
                                 /* Touch the used panels */
                                 for (x = px; x != px + cx; x++)
                                     for (y = py; y != py + cy; y++)
@@ -1628,6 +1662,10 @@ SecondStreamerSame:
                                     px = random(xg);
                                     py = random(yg);
                                 } while (PanelsDrawn[py] & (1 << px));
+                                SpecialProbe(Depth, regID, "panel",
+                                    px*Con[PANEL_SIZEX], py*Con[PANEL_SIZEY],
+                                    px*Con[PANEL_SIZEX] + Con[PANEL_SIZEX] - 1,
+                                    py*Con[PANEL_SIZEY] + Con[PANEL_SIZEY] - 1);
                                 DrawPanel((uint8)px, (uint8)py, regID);
                             }
                             break;
