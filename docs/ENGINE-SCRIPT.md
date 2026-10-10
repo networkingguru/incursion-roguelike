@@ -37,7 +37,7 @@ configuration (`build.bat:67-74`) and by `build.sh:125-129`. Stage 3 has no
 into any distributed binaries" (`:3`). `src/Tokens.cpp` and `src/yygram.cpp`
 carry no such guard, and `src/yygram.cpp` calls `AllocString()` and
 `AllocRegister()` unconditionally (`:7857`, `:8554`). Both functions live
-inside the guarded block (`src/RComp.cpp:1495`, `src/RComp.cpp:1477`), so dropping `DEBUG`
+inside the guarded block (`src/RComp.cpp:1529`, `src/RComp.cpp:1511`), so dropping `DEBUG`
 alone fails the link. Each build answers that by excluding whole files.
 **The macOS build takes a `COMPILER` switch** (`build_macos.sh:167`).
 `COMPILER=yes`, the default, defines `DEBUG` and compiles every source
