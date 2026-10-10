@@ -170,7 +170,7 @@ cannot be divided."* The new stack is marked `DROPPED` for 10 turns
 humanoid body with limbs, and no mount already under you
 (`src/Tables.cpp:3133-3137`). It is the only command that rides a creature: no
 key binding throws `EV_MOUNT`, and only this verb and the spells that summon a
-steed do (`lib/wspells.irh:1813` and `:1908`, `lib/pspells.irh:3581`). Once
+steed do (`lib/wspells.irh:1813` and `:1908`, `lib/pspells.irh:3585`). Once
 picked it runs a full validation path — Ride skill, humanoid form, the
 target's `M_MOUNTABLE` flag, hostility, prone/stuck/grappled/asleep, plane,
 size, challenge rating, and whether the creature will accept you at all
