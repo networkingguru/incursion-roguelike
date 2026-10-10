@@ -1,0 +1,31 @@
+/* inc-gatz-growth.irh -- fixture for tools/check_inc_gatz.sh (bead inc-gatz).
+   A monster that owns a STATIC modifier field (no FI_MOBILE, so wandering
+   cannot move it) whose effect grows the entrant two size categories. A
+   Medium creature that walks into it becomes Huge. FaceRadius[SZ_HUGE] is 1,
+   so Creature::CalcValues (src/Values.cpp:1798) makes an FI_SIZE field and
+   calls PlaceNear on the walker while Thing::Move is still inside its
+   EV_FIELDON loop.
+   NOT part of the shipped module: the check appends it to a scratch copy of
+   lib/main.irc. */
+
+Monster "gatz growth archon" : MA_CELESTIAL
+  { Image: brown 'A'; Size: SZ_SMALL; Mana: 1;
+    CR: 0; HD: 1; Hit: +1; Def: 14; Mov: 100%; Spd: 100%;
+    Str 1, Dex 11, Con 10, Int 6, Wis 11, Cha 10;
+    Flags: M_LAWFUL, M_GOOD, M_IALIGN, M_NOHANDS, M_NOLIMBS,
+      M_NOBODY, M_NO_CORPSE, M_NEUTER, M_NO_BLOOD;
+    On Event EV_INITIALIZE {
+      EMap->NewField(FI_MODIFIER,EActor->x,EActor->y,1,
+        GLYPH_VALUE(GLYPH_FLOOR2, GREEN),-1,$"gatz growth aura",EActor);
+      };
+    Desc: "A test fixture for bead inc-gatz.";
+  }
+
+Effect "gatz growth aura" : EA_INFLICT
+  { aval: AR_MFIELD; rval: FI_MODIFIER;
+    xval: ADJUST_CIRC; yval: A_SIZ; pval: +2;
+    Purpose: EP_BUFF; Flags: EF_CASTER_IMMUNE;
+    On Event
+      EV_FIELDON "You swell enormously!",
+      EV_FIELDOFF "You shrink back.";
+  }

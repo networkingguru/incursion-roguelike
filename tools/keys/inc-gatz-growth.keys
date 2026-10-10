@@ -1,0 +1,34 @@
+# Reproduction for bead inc-gatz: a creature that walks into a field whose
+# effect enlarges it to a size with a FaceRadius is relinked at the wrong
+# square (Thing::Move relinks after EV_FIELDON; Values.cpp:1798 PlaceNear moved
+# it meanwhile). Needs the scratch module with tools/fixtures/inc-gatz-growth.irh
+# appended (tools/check_inc_gatz.sh builds it).
+
+@include chargen.keys
+@until "HP:" ESC
+
+w y
+@choose "Ascend / Descend Depth"
+"2" ENTER
+@until "HP:" ESC
+
+w
+@choose "Genocide Everything"
+@until "HP:" ESC
+
+w
+@choose "Monster Summoning"
+@choose "Celestials"
+@choose "gatz growth archon"
+RIGHT*4 ENTER
+@dump:summoned
+
+RIGHT
+@dump:step1
+RIGHT
+@dump:step2
+RIGHT
+@dump:step3
+RIGHT
+@dump:step4
+@quit
