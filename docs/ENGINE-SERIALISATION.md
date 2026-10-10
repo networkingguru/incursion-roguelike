@@ -417,7 +417,7 @@ Repaired on load, and nothing else is:
 | vptr | placement new, src/Registry.cpp:946-988 |
 | pointer to an owned heap block | src/Registry.cpp:372, via the 7 direct `r.Block` sites plus every `FIELD_BLOB`/`FIELD_OBJ` line's v0 branch (inc/Base.h:769-774) |
 | `Thing::m` from `Thing::hm` | inc/Map.h:966 |
-| `Player::MyTerm = T1` | inc/Creature.h:1465 |
+| `Player::MyTerm = T1` | inc/Creature.h:1467 |
 | `Module` resource caches zeroed | inc/Res.h:840-841, in `Module::Serialize`, which runs on load as well as save. A load builds the object with the empty `ARCHIVE_CLASS` constructor (inc/Base.h:781), so the zeroing in `Module()` (inc/Res.h:923-924) runs only for the module the resource compiler creates (src/RComp.cpp:141) |
 | module text segment un-inverted | inc/Res.h:912-916 |
 | garbage payload in a loaded `Target` | src/Registry.cpp:1013-1014, src/Target.cpp:1561 |
