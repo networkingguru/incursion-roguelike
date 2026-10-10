@@ -9,7 +9,7 @@ Navigational page for bead inc-e2j. Every claim carries file:line; counts carry 
 - `Registry` owns every `Object` by handle `hObj` (`inc/Base.h:790`; `Object::myHandle` `inc/Base.h:631`). `theRegistry->Exists(h)` is the liveness test. Handles 1..127 are reserved (`src/Registry.cpp:251-260`).
 - `Map: public Object` (`inc/Map.h:190`) owns `LocationInfo *Grid` (`inc/Map.h:201`), sized `sizeX*sizeY`. Serialization takes one of two paths (`inc/Map.h:670`): a v1 save embeds the grid through `V1EmbedBegin`/`GridFieldsV1` (`inc/Map.h:672-674`); the legacy v0 path writes it as one block with `r.Block` (`inc/Map.h:677`).
 - `Thing: public Object` (`inc/Map.h:943`) holds `Map* m; hObj Next, hm; int16 x,y` (`inc/Map.h:969-971`). `m` is a raw pointer; `hm` is only its save form (`inc/Map.h:951-953`).
-- Hierarchy: `Creature: Thing, Magic` (`inc/Creature.h:186`) -> `Character` (`inc/Creature.h:701`) -> `Player` (`inc/Creature.h:1274`); `Monster: Creature` (`inc/Creature.h:1643`). `Item: Thing, Magic` (`inc/Item.h:13`). `Feature: Thing` (`inc/Feature.h:11`) -> `Door`/`Trap`/`Portal`.
+- Hierarchy: `Creature: Thing, Magic` (`inc/Creature.h:186`) -> `Character` (`inc/Creature.h:703`) -> `Player` (`inc/Creature.h:1276`); `Monster: Creature` (`inc/Creature.h:1645`). `Item: Thing, Magic` (`inc/Item.h:13`). `Feature: Thing` (`inc/Feature.h:11`) -> `Door`/`Trap`/`Portal`.
 - Type tests are numeric, not virtual (`inc/Base.h:632-636`). `isType(T_THING)` is always true (`inc/Base.h:643`), so `Map::FirstAt` returns any Thing.
 
 ## The two lists — the central invariant
