@@ -28,6 +28,7 @@
 */
 
 #include "Incursion.h"
+#include "HideCheck.h"
 
 #ifdef INCURSION_OOB_PROBE
 /* Diagnostic only, for bead inc-5xn and upstream issue #40. Defined in
@@ -334,6 +335,11 @@ void Monster::ChooseAction()
   Creature *c, *bc, *charmer;
   static int16 aCandidates[1024];
   static rID   sCandidates[1024];
+
+  /* inc-u3dp 2b: this action starts now, so re-check the hider against the
+     watchers it can newly see, its light band and its distraction. Runs before
+     the monster reads the world for this action. */
+  HideTurnStart(this);
 
 
   TMonster *tm    = TMON(mID),
@@ -771,6 +777,26 @@ SkipShifting:
     }    
 
     ASSERT(x!=-1);               
+
+    /* inc-u3dp phase 5: a monster that has lost sight of a hostile, or that is
+       investigating a heard noise, may spend the turn searching for a hidden
+       creature. One turn in three. A search is useful but not urgent, so
+       P_MODERATE (4): below combat and casting (P_HIGH/P_URGENT) and above
+       idle wandering (P_LOW). Never proposed asleep, blind or fleeing. */
+    if (!HasStati(ASLEEP) && !isBlind && !isAfraid && !random(3)) {
+      bool lostSight = false, heardNoise = false;
+      for (i = 0; i < ts.tCount; i++) {
+        if (!ts.t[i].isValid()) continue;
+        if ((ts.t[i].type == TargetEnemy || ts.t[i].type == OrderAttackTarget)
+            && !ts.t[i].vis)
+          lostSight = true;
+        else if (ts.t[i].type == TargetArea
+                 && ts.t[i].why.type == TargetHeardNoise)
+          heardNoise = true;
+      }
+      if (lostSight || heardNoise)
+        AddAct(ACT_SEARCH, P_MODERATE, NULL);
+    }
 
     if (!isTAfraid && !inMelee && !isEnraged && 
            !(isIllusion() && !isShade()) &&
@@ -1219,6 +1245,23 @@ NothingToDo:
         case ACT_HIDE:
           res = ThrowVal(EV_HIDE,(int16)Acts[j].Val,this);
           break;
+        case ACT_SEARCH:
+          /* inc-u3dp phase 5: searching is a standard action, so it spends the
+             turn like ACT_WAIT does (Timeout += 15). HideSearch runs the spot
+             checks for hidden creatures; it never returns a fresh monster
+             action, so the turn is done. */
+          if (getenv("INCURSION_HIDE_SEARCH_PROBE"))
+            Error("HIDE_SEARCH ACT watcher=%d", (int)myHandle);
+          {
+            const hObj searcher = myHandle;
+            HideSearch(this);
+            /* a spot-check event's scripts may have deleted this monster */
+            if (!isValidHandle(searcher) || isDead() || (Flags & F_DELETE))
+              return;
+          }
+          Timeout += 15;
+          res = DONE;
+          break;
         case ACT_SHIFT:
           switch (Acts[j].Val) {                                       
             case 0: res = ThrowEff(EV_SHIFT,tmID ,this); break;
@@ -1544,20 +1587,20 @@ void Monster::Initialize(bool in_play)
           !HasStati(ASLEEP)) {
       if (HasMFlag(M_AQUATIC) && TTER(m->TerrainAt(x,y))->HasFlag(TF_WATER)) {
         GainPermStati(HIDING,NULL,SS_CLAS,HI_WATER,SkillLevel(SK_HIDE));
-        HideVal = random(11)-5;
+        HideStarted(this, false);
       } else if (HasMFlag(M_HIDE_ABOVE)) {
         GainPermStati(HIDING,NULL,SS_CLAS,HI_CEILING,SkillLevel(SK_HIDE));
-        HideVal = random(11)-5;
+        HideStarted(this, false);
       } else if (HasMFlag(M_HIDE_UNDER) && m->FItemAt(x,y)) {
         if (TITEM(m->FItemAt(x,y)->iID)->Size >= TMON(mID)->Size) {
           GainPermStati(HIDING,NULL,SS_CLAS,HI_UNDER,SkillLevel(SK_HIDE));
-          HideVal = random(11)-5;
+          HideStarted(this, false);
         } 
       /* upstream: BrightAt and LightRange are upstream-identical, so Win32 also lets a torch carrier spawn hidden; the port's render light map only exposed the gap.
          Traced; inc-nhrk; not sent. */
       } else if (!m->BrightAt(x,y) && !LightRange) {
         GainPermStati(HIDING,NULL,SS_CLAS,HI_SHADOWS,SkillLevel(SK_HIDE));
-        HideVal = random(11)-5;
+        HideStarted(this, false);
       } 
       /* Start Shapechanged? */
     }

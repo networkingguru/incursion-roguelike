@@ -32,6 +32,7 @@
 */
 
 #include "Incursion.h"
+#include "HideCheck.h"
 #include <stdarg.h>
 #include <stdint.h>
 
@@ -1044,7 +1045,7 @@ String & Creature::Name(int16 Flags) {
             Player *p = theGame->GetPlayer(0);
             if (p->HasStati(HIDING))
                 if (p->SkillLevel(SK_APPRAISE) - 4 >= SkillLevel(SK_BLUFF))
-                    s = SC((Perceives(p) ? "aware " : "unaware ")) + s;
+                    s = SC((IsSpotted(this, p) ? "aware " : "unaware ")) + s;
         }
         if (isFriendlyTo(theGame->GetPlayer(0)) && !isPlayer())
             s = SC("allied ") + s;

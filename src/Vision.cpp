@@ -14,6 +14,7 @@
 */
 
 #include "Incursion.h"
+#include "HideCheck.h"
 
 /* WW. Things like SightRange and BlindRange used to be Vision global
  * variables, but it was giving bad results when a monster would want to
@@ -886,9 +887,12 @@ InvisToTremor:;
     if (HasStati_ENGULFED)
         goto SkipVisual;
 
+    /* upstream: the fixed comparison (hide + a once-rolled value against the
+       watcher's bare Spot, no watcher die) is plain integer logic with no
+       platform, typedef or compiler dependence and misbehaves identically on
+       Win32; Observed, tools/check_hide_no_spot_roll.sh; inc-u3dp; not sent. */
     if (t_HasStati_HIDING && t_isCreature)
-        if (((Creature*)t)->SkillLevel(SK_HIDE) +
-            ((Creature*)t)->HideVal > SkillLevel(SK_SPOT)) {
+        if (!IsSpotted(this, (Creature*)t)) {
             /* ww: in isHostileTo, a hiding player is never hostile!
              * thus, enemies always saw through the PC's Hide In Shadows! */
             if (!((Creature*)t)->isLedBy(this) || t->isPlayer())

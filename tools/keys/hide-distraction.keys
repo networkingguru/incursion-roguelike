@@ -1,0 +1,12 @@
+# inc-u3dp phase 4: the countersong case opens the Bardic Music menu once.
+# The probe grants CA_BARDIC_MUSIC level 5 first, so the menu is Inspire
+# Courage, Fascination, Countersong (src/Skills.cpp:2183-2187). DOWN*2
+# highlights Countersong; ENTER sings it. The final s keeps the run in play
+# so the harness counts it as gameplay.
+# The step case moves the player next to a hostile rat and the game asks a
+# yes/no question; n declines it. The first key is that answer.
+n
+DOWN*2
+ENTER
+s
+@dump:hide-distraction

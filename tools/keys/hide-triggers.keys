@@ -1,0 +1,4 @@
+# Loaded rogue; the action probe opens the Bardic Music choice once.
+ENTER
+s
+@dump:hide-triggers

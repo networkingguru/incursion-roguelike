@@ -32,6 +32,7 @@
 */
 
 #include "Incursion.h"
+#include "HideCheck.h"
 
 /* Door redraw probe. Off unless INCURSION_DOOR_PROBE is set to something other
    than 0; writes logs/doorprobe.log, one line per Door::SetImage call.
@@ -814,6 +815,8 @@ TryKicking:
         m->At(x,y).Opaque = TTER(m->TerrainAt(x,y))->HasFlag(TF_OPAQUE);
 
         SetImage();
+        if (e.EActor && e.EActor->m)
+            HideTrigger(e.EActor, HIDE_DOOR_PENALTY);
         /*
         if (e.EActor->isPlayer())
         if (TREG(m->RegionAt(x,y))->HasFlag(RF_AUTODESC))
@@ -845,6 +848,8 @@ TryKicking:
         Flags |= F_SOLID;
         DoorFlags &= ~DF_OPEN;
         SetImage();
+        if (e.EActor && e.EActor->m)
+            HideTrigger(e.EActor, HIDE_DOOR_PENALTY);
         return DONE; 
     case EV_DAMAGE:     
         if (e.ETarget != this)

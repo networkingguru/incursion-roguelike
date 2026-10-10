@@ -33,6 +33,7 @@
 */
 
 #include "Incursion.h"
+#include "HideCheck.h"
 
 /* Kludge to convey extra info */
 
@@ -147,6 +148,8 @@ EvReturn Magic::Blast(EventInfo &e)
       (e.EActor->HasStati(HIDING)) ) {
     if (e.EVictim->isCreature())
         e.EVictim->ts.HearNoise(e.EVictim,(uint8)e.EActor->x,(uint8)e.EActor->y);
+    if (e.EActor && e.EActor->m)
+        HideTrigger(e.EActor, HIDE_SNIPE_PENALTY);
   } else 
     e.EActor->Reveal(true);
   if (e.EVictim->isCreature())

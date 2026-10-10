@@ -1,0 +1,4 @@
+# inc-u3dp: arrive on a level with a rogue; INCURSION_HIDE_PROBE does the rest.
+@include chargen-rogue.keys
+ESC
+@quit
