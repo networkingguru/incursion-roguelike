@@ -163,10 +163,13 @@ if ! diff -q "$WORK/before.norm" "$WORK/after.norm" > /dev/null; then
     fail "the append moved the character's resources -- references were not converted"
 fi
 
-# 8. A named spot-check, so a dump that silently emptied cannot pass step 7.
-for want in '^Name:      Shagga the Avenger$' '^HP:        42 / 42' 'Race   Orc'; do
+# 8. Non-empty of character lines, so a dump that silently emptied cannot pass
+#    step 7. No literal: seed 1's character moves with content, so naming one
+#    would fail on the literal while the save loads fine. Step 7 already proves
+#    identity; this only proves the dumps carry Name/HP/Race at all (inc-oxkh).
+for want in '^Name: +[^ ]' '^HP: +[0-9]' '^Race +[^ ]'; do
     grep -qE "$want" "$WORK/after.txt" ||
-        fail "the post-append dump lost its '$want' line"
+        fail "the post-append dump lost its character line matching /$want/"
 done
 
 if [ "$FAILED" -ne 0 ]; then
