@@ -14,7 +14,7 @@ is `docs/incursionscript.md`; the module format `docs/modules.md`.
 | 3 | Preprocess | `src/cpp1.c:484`, DECUS cpp in `src/cpp1-6.c` | `lib/main.irc` -> `lib/program.i` |
 | 4 | Pass 1, count | `src/RComp.cpp:252` `CountResources()` | lex-only scan; sizes and names 21 resource arrays |
 | 5 | Pass 2, parse | `src/RComp.cpp:184` `yyparse()`, `src/yygram.cpp` + `src/Tokens.cpp` | tokens -> filled `Module` object |
-| 6 | Emit dispatch | `src/RComp.cpp:574` `GenerateDispatch()` | symbol table -> `lib/dispatch.h`, a C++ **source** file |
+| 6 | Emit dispatch | `src/RComp.cpp:602` `GenerateDispatch()` | symbol table -> `lib/dispatch.h`, a C++ **source** file |
 | 7 | Serialise | `src/RComp.cpp:227` -> `src/Registry.cpp:1445` | `Module` -> `mod/Incursion.Mod` |
 | 8 | Load | `src/Registry.cpp:1492` scans `mod/*.Mod` | file -> live `Module*` in `Modules[slot]` (`src/Registry.cpp:1522`) |
 | 9 | Execute | `src/VMachine.cpp`, `#include "dispatch.h"` at `:175` | `VCode` bytecode -> C++ calls |
@@ -37,7 +37,7 @@ configuration (`build.bat:67-74`) and by `build.sh:125-129`. Stage 3 has no
 into any distributed binaries" (`:3`). `src/Tokens.cpp` and `src/yygram.cpp`
 carry no such guard, and `src/yygram.cpp` calls `AllocString()` and
 `AllocRegister()` unconditionally (`:7857`, `:8554`). Both functions live
-inside the guarded block (`src/RComp.cpp:1495`, `src/RComp.cpp:1477`), so dropping `DEBUG`
+inside the guarded block (`src/RComp.cpp:1529`, `src/RComp.cpp:1511`), so dropping `DEBUG`
 alone fails the link. Each build answers that by excluding whole files.
 **The macOS build takes a `COMPILER` switch** (`build_macos.sh:167`).
 `COMPILER=yes`, the default, defines `DEBUG` and compiles every source
@@ -122,6 +122,6 @@ No claim here needed a binary run.
    defines empty `CallMemberFunc`, `GetMemberVar` and `SetMemberVar` when
    `DISPATCH` is undefined -- no warning, scripts just stop having effects.
 3. **`GenerateDispatch` checks the `fopen` and nothing after it**
-   (`src/RComp.cpp:595-596`, `fclose` at `src/RComp.cpp:959`), so a full disk yields a
+   (`src/RComp.cpp:623-624`, `fclose` at `src/RComp.cpp:993`), so a full disk yields a
    truncated `dispatch.h` the next build consumes as complete. `AddDebugInfo`
    is gated by `if (1)` at `src/RComp.cpp:539`.

@@ -1,20 +1,23 @@
 # Incursion regression baseline -- see tools/gate_compare.sh.
-# Recorded 2026-10-05 20:34 from 04c1b57.
+# Recorded 2026-10-10 08:02 from d4c4ae05.
 # Metric: error volume and message-set membership. A message that is
 # not in this file is a regression; a message that has left it is a fix.
-# Re-recorded in inc-f38k (bows and ammunition count as weapons), which
-# changes play. Per-seed died/stuck vs master 0ba7f4b (master 23, here 25):
-# seeds 14, 17, 29 survive on master and die here; seed 34 dies on master
-# and survives here. Both directions, no engine error in either run.
-# exits 6=1 is seed 12: the key script fails at "Neutral" in character
-# creation, on master too, before any map.
+# Re-recorded in inc-upw.7 (a nested encounter no longer runs below its
+# own minimum CR), which changes play. Per-seed died/stuck vs master
+# d4c4ae05 (master 19, here 16): seeds 5, 14, 24, 39 die on master and
+# survive here; seed 33 survives on master and dies here; seeds 28 and 32
+# play differently and end the same. No engine error in either run. The
+# previous baseline (25 died, from 04c1b57) was already stale: master gave
+# 19 before this change. The audit message below occurs on master too, on
+# seed 4, which this change leaves byte-identical; it is tracked as inc-gatz.
 keys	tools/keys/dive.keys
 first	1
 options	7451fefbc35a76140100abf57a171bb82c129585d8ec58d55508c58c1467206d
 sessions	40
 played	40
-exits	0=39	6=1
+exits	0=40
 lines	0
-findings	0
-died	25
+findings	3
+died	16
 threat_frozen	0
+message	1	3	audit: Thing linked at a square it does not claim

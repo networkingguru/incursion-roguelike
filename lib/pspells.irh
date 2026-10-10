@@ -1990,6 +1990,7 @@ Priest Spell "Holy Summoning II" : EA_SUMMON
     ALIENIST_CLAUSE(2) }
 
 
+    // upstream: data typo -- the Desc capped the damage at "1d8+10", but pval 2d8 + LEVEL_MAX10 (min(10,level)) caps at 2d8+10; Traced (prose-only, no in-play value changes); inc-24wm / inc-tek.8.7 PA-07-F36; not sent.
 Priest Spell "Inflict Moderate Wounds" : EA_BLAST
   { SC_NEC; Base: SP_TRIVIAL; Cost: 3; Level: 2; aval: AR_TOUCH;
     xval: AD_NECR; pval: 2d8 + LEVEL_MAX10; cval: BROWN; 
@@ -2000,7 +2001,7 @@ Priest Spell "Inflict Moderate Wounds" : EA_BLAST
      EV_MAGIC_HIT
       "Wounds appear on your body!" /
       "Wounds appear on the <EVictim>'s body!";
-    Desc: "Inflicts 2d8 + caster level (maximum 1d8+10) points of necromantic
+    Desc: "Inflicts 2d8 + caster level (maximum 2d8+10) points of necromantic
       damage on the next creature you touch.";
   }
 

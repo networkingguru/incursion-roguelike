@@ -54,7 +54,7 @@ A `Glyph` is a `uint32`: 12 bits of glyph id, 4 of foreground, 4 of background
 (`inc/Defines.h:4299`). Storing it verbatim makes `AGetChar` exact. The libtcod
 backend cannot do that — it stores the character its glyph table produced, so
 `GetGlyph` → `PutGlyph` round trips lose the glyph id. The callers
-(`src/Term.cpp:2268`, `src/Magic.cpp:1630`, `src/Skills.cpp:2117`,
+(`src/Term.cpp:2267`, `src/Magic.cpp:1634`, `src/Skills.cpp:2117`,
 `src/Skills.cpp:3044`) mask with `GLYPH_ID_MASK` and put the result back, so
 exactness is what they want.
 
@@ -85,7 +85,7 @@ comment. Tokens:
 | `@dump` `@dump:label` | write the current screen to `logs/screens/` |
 | `@quit` | leave the game at the next key read |
 
-SHIFT matters and is not cosmetic. `StandardKeySet` (`src/Tables.cpp:5307`)
+SHIFT matters and is not cosmetic. `StandardKeySet` (`src/Tables.cpp:5306`)
 matches `toupper(ch)` against `raw_key` and then compares the modifier flags
 exactly, so `{ KY_CMD_ALL_ALLIES, 'A', 0 }` is reached by lowercase `a` and
 *not* by `A`. A script that ignored SHIFT would silently dispatch the wrong

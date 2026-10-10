@@ -92,8 +92,8 @@ down path read `RES(0)` whenever `BELOW_DUNGEON` is unset, which is every dungeo
 `src/Feature.cpp:1415` stops it.
 
 **3. Wild resource id crashes `Game::Get` inside `Magic::Blast`. Fixed (inc-upw.16).** Handlers get ids from three unvalidated
-places: the `eID` a caller put in the frame (`src/Event.cpp:598`), script assignment `pe->eID = val` (`lib/dispatch.h:3413`), and
-script `ThrowEff` with an arbitrary int32 (`lib/dispatch.h:2533`). *Invariant violated:* `Game::Get` indexed the module table by
+places: the `eID` a caller put in the frame (`src/Event.cpp:598`), script assignment `pe->eID = val` (`lib/dispatch.h:3517`), and
+script `ThrowEff` with an arbitrary int32 (`lib/dispatch.h:2637`). *Invariant violated:* `Game::Get` indexed the module table by
 the top byte, `Modules[(xID >> 24)-1]`, `MAX_MODULES` being 126 (`inc/Defines.h:4493`), so an id with a zero top byte indexed
 `Modules[-1]`. The guard was `ASSERT(Modules[(xID >> 24)-1])`, and `ASSERT` only calls `Error` and falls through
 (`inc/Defines.h:101`) — it did not stop the next line's dereference. Hence SIGBUS with no log: if the out-of-range slot held
