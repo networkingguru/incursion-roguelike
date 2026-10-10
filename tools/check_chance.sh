@@ -45,7 +45,11 @@ check_mutation src/Skills.cpp \
 '	bool succ = (sr + roll + mod1 + mod2 + armPen) >= DC;' \
 '	bool succ = (sr + roll + 5 + mod1 + mod2 + armPen) >= DC;'
 
-SEEDS="4242 7 99"
+# Seeds re-picked in inc-upw.7. After the nested-encounter fix changed level
+# generation, 4242 7 99 gave 136 probe lines and one bucket of 30+, so (b)
+# barely tested anything. 36 45 56 give 511 lines and eight buckets of 30+,
+# the smallest holding 35 (scan of seeds 1-80 on that build).
+SEEDS="36 45 56"
 OPTS=tools/fixtures/options-2026-08-22.dat
 KEYS=tools/keys/dive.keys
 

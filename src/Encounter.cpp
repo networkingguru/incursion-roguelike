@@ -1362,6 +1362,15 @@ RetryPart:
             ne = e;
             ne.enXCR = e.eimXCR;
             ne.enCR = XCRtoCR(ne.enXCR);
+            /* upstream: a nested encounter MUST run at no less than its own
+               minCR, the CR enChooseMID admitted it at; below it every Part
+               is skipped and the slot builds nothing. Plain CR arithmetic,
+               no platform or typedef dependence, so Win32 behaves the same.
+               Tier Observed; inc-upw.7; not sent. */
+            if (ne.enCR < (TENC(e.ep_mID))->minCR) {
+                ne.enCR = (TENC(e.ep_mID))->minCR;
+                ne.enXCR = XCR(ne.enCR);
+            }
             ne.enID = e.ep_mID;
             ne.cPart = 0;
             ne.enFlags = (e.enFlags | EN_NESTED);
