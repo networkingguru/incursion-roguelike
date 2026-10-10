@@ -60,6 +60,7 @@
 */
 
 #include "Incursion.h"
+#include "HideCheck.h"
 
 int16 CorpseNut[] = { 0, 1, 10, 25, 50, 100, 300, 500, 800 };
 
@@ -843,7 +844,12 @@ EvReturn Item::Event(EventInfo &e) {
         return NOTHING;
     case EV_ZAP:
         if (Type == T_WAND)
-            return ZapWand(e);
+            {
+            EvReturn zr = ZapWand(e);
+            if (zr != ABORT && e.EActor && e.EActor->m)
+                HideTrigger(e.EActor, 0);
+            return zr;
+            }
         if (Type == T_STAFF)
             return UseStaff(e);
         e.EActor->IPrint("That can't be zapped.");
@@ -877,7 +883,12 @@ EvReturn Item::Event(EventInfo &e) {
             return ABORT;
         }
         if (isActivatable() || e.eID)
-            return Activate(e);
+            {
+            EvReturn ar = Activate(e);
+            if (ar != ABORT && e.EActor && e.EActor->m)
+                HideTrigger(e.EActor, 0);
+            return ar;
+            }
         e.EActor->IPrint("That can't be activated.");
         return ABORT;
     case POST(EV_EFFECT):

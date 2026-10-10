@@ -4721,6 +4721,8 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define EV_ENGEN_MOUNT  191
 #define EV_ENGEN_ALIGN  192
 
+#define EV_SPOT_CHECK   300  /* hide/spot check state keys (see inc/HideCheck.h) */
+
 #define MSG_BLASTNAME   200  /* "fireball", "hail of burning stones" */
 #define MSG_CHATTER     201 
 #define MSG_INSULT      202

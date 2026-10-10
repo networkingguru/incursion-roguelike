@@ -48,6 +48,7 @@
 
 
 #include "Incursion.h"
+#include "HideCheck.h"
 
 /* Reproduction probe for bead inc-akac: does Feed upon Pain run a tally
    across hits and stack by level? Set INCURSION_PAIN_PROBE=1 and every landed
@@ -361,6 +362,11 @@ void Map::MakeNoiseXY(int16 x, int16 y, int16 radius)
         /* Should this be more than just SLEEP_NATURAL? A Sleep
            spell should be disrupted by noise, perhaps? */
         cr->Awaken(SLEEP_NATURAL);
+        /* inc-u3dp phase 4: a heard noise distracts every creature in range
+           except the noise maker itself (the creature on the noise's own
+           square). No roll is made here -- this is not a hide/spot check. */
+        if (cr->x != x || cr->y != y)
+          HideSetKey(cr, HK_DISTRACT, NULL, 1);
         /* Reveal location to monsters */
         if (!cr->HasStati(ASLEEP))
           cr->ts.HearNoise(cr,(uint8)x,(uint8)y);

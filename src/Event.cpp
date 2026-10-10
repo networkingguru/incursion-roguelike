@@ -259,11 +259,14 @@ EvReturn ThrowEvent(EventInfo &e) {
             e.Terse = true;
     }
 
-    /* Let the gods evaluate the EActor's conduct*/
+    /* Let the gods evaluate the EActor's conduct. inc-u3dp: the HIDE_GOD probe
+       below logs the god-watch dispatch of EV_SPOT_CHECK for
+       tools/check_hide_god_event.sh. */
     if (e.EActor && e.EActor->isCharacter()) {
         for (i=0;i!=nGods;i++) {
             oEv = e.Event;
             e.Event = GODWATCH(e.Event);
+            if (getenv("INCURSION_HIDE_GOD_PROBE") && (e.Event == GODWATCH(EV_SPOT_CHECK) || e.Event == GODWATCH(EVICTIM(EV_SPOT_CHECK)))) Error("HIDE_GOD dispatched ev=%d actor=%d victim=%d", (int)e.Event, (int)(e.EActor ? e.EActor->myHandle : 0), (int)(e.EVictim ? e.EVictim->myHandle : 0));
             res = GodList[i]->Event(e,GodIDList[i]);
             e.Event = oEv;
             if (res == ERROR) {
@@ -285,6 +288,7 @@ EvReturn ThrowEvent(EventInfo &e) {
         for (i=0;i!=nGods;i++) {
             oEv = e.Event;
             e.Event = GODWATCH(EVICTIM(e.Event));
+            if (getenv("INCURSION_HIDE_GOD_PROBE") && (e.Event == GODWATCH(EV_SPOT_CHECK) || e.Event == GODWATCH(EVICTIM(EV_SPOT_CHECK)))) Error("HIDE_GOD dispatched ev=%d actor=%d victim=%d", (int)e.Event, (int)(e.EActor ? e.EActor->myHandle : 0), (int)(e.EVictim ? e.EVictim->myHandle : 0));
             res = GodList[i]->Event(e,GodIDList[i]);
             e.Event = oEv;
             if (res == ERROR) {

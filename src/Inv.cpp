@@ -35,6 +35,7 @@
 */
 
 #include "Incursion.h"
+#include "HideCheck.h"
 
 bool isExchange = false;
 
@@ -207,6 +208,8 @@ EvReturn Monster::PickUp(EventInfo &e)
     Inv = e.EItem->myHandle;
     
     e.EItem->SetOwner(e.EActor->myHandle);
+    if (e.EActor && e.EActor->m)
+      HideTrigger(e.EActor, ItemSizePenalty(e.EItem));
     return DONE;
   }
 
@@ -218,11 +221,14 @@ EvReturn Monster::Drop(EventInfo &e) {
     if (Throw(EV_TAKEOFF,this,NULL,e.EItem) == ABORT)
       return ABORT;
 
+  int16 sizePen = ItemSizePenalty(e.EItem);
   /* Place it on the map */
   e.EItem->Remove(false);
   e.EItem->PlaceAt(m,x,y);
   Timeout += FE(1000) / (100 + 10 * Mod(A_DEX));
   DPrint(e,NULL,"An <EActor> drops an <EItem>."); 
+  if (e.EActor && e.EActor->m)
+    HideTrigger(e.EActor, sizePen);
   return DONE; // ww: had no return value!
 }
 
@@ -566,6 +572,7 @@ EvReturn Character::PickUp(EventInfo &e) {
     }
     Timeout += FE(1500) / (100 + 10 * Mod(A_DEX));
 
+    int16 sizePen = ItemSizePenalty(e.EItem);
     e.EItem->Remove(false);
     e.EItem->SetOwner(e.EActor->myHandle);
     LegendIdent(e.EItem); 
@@ -575,6 +582,8 @@ EvReturn Character::PickUp(EventInfo &e) {
         if (InSlot(i) && !e.EItem->activeSlot(i))
             if (InSlot(i)->TryStack(e.EItem)) {
                 e.EItem = NULL;
+                if (e.EActor && e.EActor->m)
+                    HideTrigger(e.EActor, sizePen);
                 return DONE;
             }
     if (this->isPlayer()) {
@@ -589,8 +598,11 @@ EvReturn Character::PickUp(EventInfo &e) {
                     for (int j=0; (*pack)[j] != NULL; j++) {
                         if (*((*pack)[j]) == *e.EItem) {
                             IPrint("AutoStowing: <Obj>.",e.EItem);
-                            if (Throw(EV_INSERT,this,NULL,pack,e.EItem)==DONE)
+                            if (Throw(EV_INSERT,this,NULL,pack,e.EItem)==DONE) {
+                                if (e.EActor && e.EActor->m)
+                                    HideTrigger(e.EActor, sizePen);
                                 return DONE;
+                            }
                         }
                     } 
         } 
@@ -603,6 +615,8 @@ EvReturn Character::PickUp(EventInfo &e) {
         thisp->MyTerm->InventoryManager(true);
     else if (!isPlayer())
         Error("NPC Inventory?!");
+    if (e.EActor && e.EActor->m)
+        HideTrigger(e.EActor, sizePen);
     return DONE;
 }
 
@@ -626,11 +640,14 @@ EvReturn Character::Drop(EventInfo &e)
       if (Inv[i] == e.EItem->myHandle)
         Inv[i] = 0;
 
+    int16 sizePen = ItemSizePenalty(e.EItem);
     e.EItem->PlaceAt(m,x,y);
     Timeout += FE(1000) / (100 + 10 * Mod(A_DEX));
     DPrint(e,NULL,"An <EActor> drops an <EItem>."); 
     e.EItem->GainPermStati(DROPPED,e.EActor,SS_MISC);
     
+    if (e.EActor && e.EActor->m)
+      HideTrigger(e.EActor, sizePen);
     return DONE;
   }
 

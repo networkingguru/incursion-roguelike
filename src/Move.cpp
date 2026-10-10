@@ -10,6 +10,7 @@
 */
 
 #include "Incursion.h"
+#include "HideCheck.h"
 extern Attack Punch;
 
 int8 DirX[] = { 0,  0, 1,-1,  1, -1, 1,-1, 0 };
@@ -1153,8 +1154,14 @@ SkipConfirms:
 	for (i = 0; i != 9; i++)
 		for (cr = m->FCreatureAt(tx + DirX[i], ty + DirY[i]); cr; cr = m->NCreatureAt(tx + DirX[i], ty + DirY[i]))
 			if (cr->isHostileTo(this) && !cr->HasMFlag(M_DEAF))
-				if (onPlane() == cr->onPlane())
-					if (cr->SkillLevel(SK_LISTEN) + Dice::Roll(1, 20, 0) > MoveSilRoll) {
+				if (onPlane() == cr->onPlane()) {
+					const int listenMod = ListenModifiers(cr);
+					const int listenRoll = Dice::Roll(1, 20, 0);
+					if (getenv("INCURSION_HIDE_DIST_PROBE"))
+						Error("HIDE_STEP listener=%d listen=%d mod=%d roll=%d ms=%d",
+							(int)cr->myHandle, (int)cr->SkillLevel(SK_LISTEN),
+							listenMod, listenRoll, (int)MoveSilRoll);
+					if (cr->SkillLevel(SK_LISTEN) + listenMod + listenRoll > MoveSilRoll) {
 						if (HasStati(HIDING)) {
 							if (!Perceives(cr))
 								IPrint("You catch a flash of movement -- something unseen heard you!");
@@ -1180,6 +1187,7 @@ SkipConfirms:
 						((Player*)cr)->statiChanged = true;
 						*/
 					}
+				}
 
 	if (HasStati(CHARGING))
 		GetStati(CHARGING)->Mag++;
@@ -1383,6 +1391,13 @@ SkipConfirms:
 		if (m->RegionAt(ox, oy) != m->RegionAt(x, y) ||
 			m->TerrainAt(ox, oy) != m->TerrainAt(x, y))
 			thisp->MyTerm->ShowTraits();
+
+	/* inc-u3dp 2b: the creature actually moved, so watchers here may have
+	   gained or lost line of sight and the light on the destination may differ.
+	   Re-check the pairs; HidePairsFor re-fetches this creature from its handle
+	   across every spot check, so it is safe even if one deletes it. */
+	if (!isDead() && m && m->InBounds(x, y))
+		HidePairsFor(this);
 
 	return DONE;
 }

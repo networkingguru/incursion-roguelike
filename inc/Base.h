@@ -33,6 +33,16 @@
   #define HEAP_PAD 0
 #endif
 
+/* inc-u3dp phase 2a-1: the gameplay RNG (MT19937 in src/Base.cpp) has no
+   public state to save and restore -- mt[N] and mti are static there -- so the
+   probe cannot snapshot the stream. Instead it counts every draw: the counter
+   is armed by the probe (behind INCURSION_HIDE_ROLL_PROBE) and genrand_int32
+   bumps it only while armed, so an ordinary build pays one predictable branch
+   and no state is exposed to game code. A pure function that draws nothing
+   leaves the count unchanged. See src/HideRollProbe.cpp. */
+void HideRollArmRngCount(bool on);
+unsigned long long HideRollRngCount(void);
+
 template<class S, int32 Initial, int32 Delta>
   class Array
 	{

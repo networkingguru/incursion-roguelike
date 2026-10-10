@@ -38,6 +38,7 @@
 */
 
 #include "Incursion.h"
+#include "HideCheck.h"
 
 #define is_elemental_dmg(i) (i == AD_FIRE || i == AD_COLD || i == AD_ELEC || \
                              i == AD_TOXI || i == AD_SONI || i == AD_ACID)  
@@ -5830,6 +5831,8 @@ EvReturn Item::DrinkPotion(EventInfo &e)
     else
       e.EItem->Remove(true);
 
+    if (result != ABORT && e.EActor && e.EActor->m)
+      HideTrigger(e.EActor, 0);
     return result;
   }
 
@@ -5891,6 +5894,7 @@ EvReturn Item::ReadScroll(EventInfo &e)
   {
     EvReturn result, csr; int8 sLevel, cLevel;
     bool preserved;
+    bool didRead = false;
     if (getenv("INCURSION_READ_LIGHT_PROBE"))
       ReadLightProbe(e);
     int16 rlm = e.EActor->ReadLightDCMod();
@@ -5974,6 +5978,8 @@ EvReturn Item::ReadScroll(EventInfo &e)
       
     e.eID = eID;
 
+    didRead = true;
+
     csr = e.EActor->Counterspell(e,NULL);
     if (csr == ABORT)
       {
@@ -5981,6 +5987,8 @@ EvReturn Item::ReadScroll(EventInfo &e)
            this reader preserves his scrolls, which the exit below honours
            and this one used to ignore. */
         DisposeScroll(e.EItem, e.EActor, preserved);
+        if (e.EActor && e.EActor->m)
+          HideTrigger(e.EActor, 0);
         return DONE;
       }
 
@@ -6001,6 +6009,8 @@ Failed:
         e.EActor->LoseMana((TEFF(eID)->ManaCost*2)/3,TEFF(eID)->HasFlag(EF_LOSEMANA));
       }   
     DisposeScroll(e.EItem, e.EActor, preserved);
+    if (didRead && e.EActor && e.EActor->m)
+      HideTrigger(e.EActor, 0);
     return result;
   }
       
@@ -6053,6 +6063,8 @@ EvReturn Item::Activate(EventInfo &e)
 EvReturn Item::UseStaff(EventInfo &e)
   {
 
+    if (e.EActor && e.EActor->m)
+      HideTrigger(e.EActor, 0);
     return DONE;
   }
 

@@ -22,6 +22,7 @@
 #endif
 
 #include "Incursion.h"
+#include "HideCheck.h"
 #include "MapAudit.h"
 #include <time.h>
 
@@ -367,6 +368,38 @@ void Game::Play() {
        tools/check_true_sight.sh. inc-5bl3. */
     pp->TrueSightProbe();
 
+    /* inc-u3dp: off unless INCURSION_HIDE_PROBE is set. See HideProbe
+       (src/HideProbe.cpp) and tools/check_hide_no_spot_roll.sh. */
+    extern void HideProbe(Player *pl);
+    HideProbe(pp);
+
+    /* inc-u3dp phase 1, part 3: off unless INCURSION_HIDE_MOD_PROBE is set.
+       See HideModProbe (src/HideModProbe.cpp) and
+       tools/check_hide_modifiers.sh. */
+    extern void HideModProbe(Player *pl);
+    HideModProbe(pp);
+
+    /* inc-u3dp phase 2a-1: off unless INCURSION_HIDE_ROLL_PROBE is set. See
+       HideRollProbe (src/HideRollProbe.cpp) and tools/check_hide_roll.sh. */
+    extern void HideRollProbe(Player *pl);
+    HideRollProbe(pp);
+
+    /* inc-u3dp: command-event action checks; env-gated in the probe. */
+    extern void HideTriggerProbe(Player *pl);
+    HideTriggerProbe(pp);
+
+    /* inc-u3dp phase 5: searching finds hidden creatures. Off unless
+       INCURSION_HIDE_SEARCH_PROBE is set. See HideSearchProbe
+       (src/HideSearchProbe.cpp) and tools/check_hide_search.sh. */
+    extern void HideSearchProbe(Player *pl);
+    HideSearchProbe(pp);
+
+    /* inc-u3dp phase 4: distraction/roar/step writers through real events.
+       Off unless INCURSION_HIDE_DIST_PROBE is set. See HideDistProbe
+       (src/HideDistProbe.cpp) and tools/check_hide_distraction.sh. */
+    extern void HideDistProbe(Player *pl);
+    HideDistProbe(pp);
+
     /* Off unless INCURSION_MANA_FLOOR_PROBE is set, and run here because it
        needs a live loaded player. See Character::ManaFloorProbe and
        tools/check_mana_regen_floor.sh. inc-41kg. */
@@ -504,8 +537,12 @@ NowDoTheMount:
                     if ((t->HasStati(PARALYSIS) && !t->isPlayer()) || t->HasStati(SLEEPING))
                         goto FauxContinue;
 
-                    if (t->HasStati(ACTING)) 
+                    if (t->HasStati(ACTING)) {
+                        /* inc-u3dp 2b: the extended-action path skips
+                           ChooseAction, so run the hide per-action hook here. */
+                        HideTurnStart((Creature*)t);
                         ((Creature*)t)->ExtendedAction();
+                    }
                     else if (t->isMonster() && pp->Opt(OPT_FREEZE_MON))
                         t->Timeout += 30; 
                     else do {
@@ -903,18 +940,18 @@ void Game::MonsterEvaluation(void)
         m2->GainPermStati(IGNORES_WEAPON_IMMUNITY,m2,SS_MISC);
         m1->RemoveStati(TELEPORTED);
         m2->RemoveStati(TELEPORTED);
-        int32 h1 = m1->HasStati(HIDING) ? 
-            m1->SkillLevel(SK_HIDE) + m1->HideVal : 0;
-        int32 h2 = m2->HasStati(HIDING) ? 
-            m2->SkillLevel(SK_HIDE) + m2->HideVal : 0;
+        if (m1->HasStati(HIDING))
+          SpotCheck(m2, m1, 0);
+        if (m2->HasStati(HIDING))
+          SpotCheck(m1, m2, 0);
         /* ww: if neither of them can see the other, it would be a boring
          * fight so we make one of them visible */
-        if (h1 > m2->SkillLevel(SK_SPOT) &&
-            h2 > m1->SkillLevel(SK_SPOT)) {
-          if (h1 > h2) 
-            m2->RemoveStati(HIDING);
-          else 
+        if (m1->HasStati(HIDING) && !IsSpotted(m2, m1) &&
+            m2->HasStati(HIDING) && !IsSpotted(m1, m2)) {
+          if (m1->SkillLevel(SK_HIDE) < m2->SkillLevel(SK_HIDE))
             m1->RemoveStati(HIDING);
+          else
+            m2->RemoveStati(HIDING);
         } 
 
         /* 
@@ -941,8 +978,11 @@ void Game::MonsterEvaluation(void)
                 }
                 if ((t->HasStati(PARALYSIS) && !t->isPlayer()) || t->HasStati(SLEEPING))
                   continue;
-                if (t->HasStati(ACTING)) 
+                if (t->HasStati(ACTING)) {
+                  /* inc-u3dp 2b: extended-action path skips ChooseAction. */
+                  HideTurnStart((Creature*)t);
                   ((Creature*)t)->ExtendedAction();
+                }
                 else do {
                   ((Creature*)t)->ChooseAction();
                   now_time = time(NULL);
@@ -1319,18 +1359,18 @@ void Game::MonsterEvaluationCR(void)
         m2->GainPermStati(IGNORES_WEAPON_IMMUNITY,m2,SS_MISC);
         m1->RemoveStati(TELEPORTED);
         m2->RemoveStati(TELEPORTED);
-        int32 h1 = m1->HasStati(HIDING) ? 
-            m1->SkillLevel(SK_HIDE) + m1->HideVal : 0;
-        int32 h2 = m2->HasStati(HIDING) ? 
-            m2->SkillLevel(SK_HIDE) + m2->HideVal : 0;
+        if (m1->HasStati(HIDING))
+          SpotCheck(m2, m1, 0);
+        if (m2->HasStati(HIDING))
+          SpotCheck(m1, m2, 0);
         /* ww: if neither of them can see the other, it would be a boring
          * fight so we make one of them visible */
-        if (h1 > m2->SkillLevel(SK_SPOT) &&
-            h2 > m1->SkillLevel(SK_SPOT)) {
-          if (h1 > h2) 
-            m2->RemoveStati(HIDING);
-          else 
+        if (m1->HasStati(HIDING) && !IsSpotted(m2, m1) &&
+            m2->HasStati(HIDING) && !IsSpotted(m1, m2)) {
+          if (m1->SkillLevel(SK_HIDE) < m2->SkillLevel(SK_HIDE))
             m1->RemoveStati(HIDING);
+          else
+            m2->RemoveStati(HIDING);
         } 
 
         /* 
@@ -1356,8 +1396,11 @@ void Game::MonsterEvaluationCR(void)
                 }
                 if ((t->HasStati(PARALYSIS) && !t->isPlayer()) || t->HasStati(SLEEPING))
                   continue;
-                if (t->HasStati(ACTING)) 
+                if (t->HasStati(ACTING)) {
+                  /* inc-u3dp 2b: extended-action path skips ChooseAction. */
+                  HideTurnStart((Creature*)t);
                   ((Creature*)t)->ExtendedAction();
+                }
                 else do
                   ((Creature*)t)->ChooseAction();
                 while (t->Type == T_PLAYER && !t->Timeout && !t->HasStati(ACTING));
@@ -1781,8 +1824,11 @@ void Game::WeaponEvaluation(void)
                 }
                 if ((t->HasStati(PARALYSIS) && !t->isPlayer()) || t->HasStati(SLEEPING))
                   continue;
-                if (t->HasStati(ACTING)) 
+                if (t->HasStati(ACTING)) {
+                  /* inc-u3dp 2b: extended-action path skips ChooseAction. */
+                  HideTurnStart((Creature*)t);
                   ((Creature*)t)->ExtendedAction();
+                }
                 else do
                   ((Creature*)t)->ChooseAction();
                 while (t->Type == T_PLAYER && !t->Timeout && !t->HasStati(ACTING));
