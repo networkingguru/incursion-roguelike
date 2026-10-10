@@ -1842,7 +1842,14 @@ void Thing::Move(int16 newx,int16 newy, bool is_walk)
       }
 
     /* If moving a field caused our death, don't put us back on the map! */
-    if (isDead() || !m) {
+    if (isDead() || !m || m != M || x != ox || y != oy) {
+      /* upstream: a Thing that a field event re-placed during Move must not be
+         linked again at newx,newy. A field effect can Remove, PlaceAt and Move
+         the mover elsewhere (e.g. a growth effect -> Creature::CalcValues ->
+         PlaceNear, src/Values.cpp:1798), and this outer Move would then link it
+         at the new square while it is still linked at the square PlaceNear
+         chose. Upstream logic, plain control flow, fails the same way on Win32
+         with the original typedefs. Observed, inc-gatz, not sent. */
       INC6D5_PROBE_CALL("Move:deadOrGoneSkip", this, "");
       goto DoneContentsAdd;
     }
