@@ -27,11 +27,12 @@
 # before and green after.
 #
 # WHY THE ESCAPE ALONE PROVES NOTHING, and why this script does not accept it:
-# src/Skills.cpp:1600 already frees the character on a natural 20 for Escape
-# Artist, provided no hostile is within sixteen squares. This fixture runs in
-# an empty entry chamber, so that clause is live and would eventually free him
-# on an unfixed tree too. The script therefore requires a Strength check that
-# SUCCEEDED, not merely an escape.
+# until inc-e68f, src/Skills.cpp freed the character on a natural 20 for
+# Escape Artist whenever no hostile was within sixteen squares. That is fixed:
+# an unthreatened character now takes 20 instead of rolling
+# (src/Skills.cpp:1730-1732), and against the tanglefoot Escape Artist DC of
+# 22 (src/Move.cpp:51) that still fails by a wide margin. The script therefore
+# still requires a Strength check that SUCCEEDED, not merely an escape.
 #
 # The fixture uses the WORST case rather than a flattering one: seed 4 rolls
 # the paladin STR 10, so his Strength check is a bare d20 with no bonus. A real

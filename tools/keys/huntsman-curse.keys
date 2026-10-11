@@ -39,16 +39,15 @@
 # holds. One feat therefore replaces the three rogue levels the older script
 # spent on Athletics.
 #
-# WHY A RANGER AND NOT A ROGUE, which would also carry Athletics.
-# Character::XPPenalty (src/Create.cpp:2196-2199) reads
+# WHY A RANGER AND NOT A ROGUE, which would also carry Athletics. When this
+# script was written, Character::XPPenalty read
 # TCLASS(ClassID[2])->HasFlag(CF_FAVOURED) without checking that a third
-# class exists, and RES(0) is NULL. A two-class character reaches that line
-# whenever his first class is not favoured for his race AND his
-# CF_FAVOURED class is not his highest. An Elf Rogue 3 / Twilight Huntsman 1
-# is exactly that, and drawing his sheet segfaults. The ranger is a favoured
-# class of elves (lib/races.irh:967), so he answers the first test while he
-# is the higher of the two, and the huntsman -- which is CF_FAVOURED -- answers
-# the second test from his 4th level on. The null line is never reached.
+# class exists, and RES(0) is NULL, so an Elf Rogue 3 / Twilight Huntsman 1
+# segfaulted drawing his own sheet. That is fixed (bd inc-5y8):
+# src/Create.cpp:2811 now skips an empty class slot before the CF_FAVOURED
+# read at :2816, so a rogue entry would no longer crash. The ranger stays
+# because the keystrokes below are built around him, and he carries every
+# entry skill but Athletics (THE THREE-LEVEL ENTRY, above).
 #
 # An elf is given Maeve at birth (lib/races.irh:1144-1147).
 #
