@@ -1207,6 +1207,19 @@ void TargetSystem::RateAsTarget(Creature *me, Thing *t, Target & newT)
         me->isPlayer())
       return;
 
+    /* inc-a7jq: the loot claim. A live claim on a floor item keeps any
+       creature that is not hostile to the claimant from rating it, so a
+       non-hostile bystander never walks to the drop or picks it up. */
+    if (i->HasStati(LOOT_CLAIM) && LootClaimLive(i))
+      {
+        Player *lootP = NULL;
+        Thing *lootO = i->GetStatiObj(LOOT_CLAIM);
+        if (lootO && lootO->isPlayer())
+          lootP = (Player*)lootO;
+        if (lootP && !me->isHostileTo(lootP))
+          return;
+      }
+
     if (t->isIllusion())
       {
         Creature *cr = (Creature*)t->GetStatiObj(ILLUSION);

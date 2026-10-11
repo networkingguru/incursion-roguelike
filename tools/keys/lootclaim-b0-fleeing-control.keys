@@ -1,0 +1,102 @@
+# Reproduction for bd inc-a7jq, scenario B0. Read by tools/check_loot_claim.sh.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22-noroomdesc.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav \
+#       tools/headless.sh tools/keys/b0-fleeing-control 4
+#
+# THE CHARACTER is the Lawful Good paladin fixture, on the cave entrance
+# stairs. THE MONSTER is a wizard-summoned black orc: hostile, and sapient, so
+# attacking it while it flees is a breach of chivalry (getChivalryBreach,
+# src/Fight.cpp).
+#
+# SCENARIO B0, the control for B. The same orc, frightened and attacked the same
+# way, but monsters never unfreeze, so it holds nothing from the kill. The
+# paladin MUST still get the fleeing-victim prompt, with and without the
+# feature. It proves the check can see that prompt.
+
+@dump:arrival
+w
+y
+@choose "Genocide Everything"
+w
+@choose "Wizard Mode Switches"
+DOWN*5 SPACE DOWN SPACE DOWN SPACE DOWN*3 SPACE   # spell failure off, all spells, infinite mana, Freeze ON
+@dump:switches-1
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Kobolds"
+@choose "kobold"
+LEFT ENTER              # the victim, adjacent west
+@while "|0/1000 XP" LEFT
+RIGHT*3
+@dump:killed
+
+w
+@choose "Monster Summoning"
+@choose "Orcs"
+a                       # black orc, on the drop square: where B's orc stands
+LEFT*4 ENTER
+
+@dump:switches-2
+@dump:switches-3
+@dump:taken
+
+w
+@choose "Learn Any Spell"
+"Cause Fear"
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+v
+@dump:fearlog
+ESC
+@until "o@" LEFT        # walk up to the orc
+@dump:adjacent
+LEFT                    # attack it
+@dump:attack            # today: "Confirm attack fleeing victim? [yn]"
+@while "Confirm attack" y
+.
+v
+@dump:log
+ESC
+@quit

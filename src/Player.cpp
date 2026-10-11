@@ -15,6 +15,8 @@
      void Map::DaysPassed()
 */
 
+#include <vector>
+
 #include "Incursion.h"
 #include "HideCheck.h"
 
@@ -257,6 +259,29 @@ void Player::ChooseAction() {
     if (theGame->Turn != LastHideTurnStart) {
         LastHideTurnStart = theGame->Turn;
         HideTurnStart(this);
+
+        /* inc-a7jq: the loot claim. Once per tick, drop every claim whose
+           item no longer qualifies (LootClaimLive ends a dead claim itself).
+           Handles are collected first: LootClaimLive removes LOOT_CLAIMS
+           stati from this player, which would upset a live stati walk. */
+        {
+            std::vector<hObj> claims;
+            size_t ci;
+            StatiIterNature(this, LOOT_CLAIMS)
+                claims.push_back((hObj)S->h);
+            StatiIterEnd(this)
+            for (ci = 0; ci != claims.size(); ci++) {
+                Object *o = theRegistry->GetQuiet(claims[ci]);
+                if (o && o->isItem())
+                    LootClaimLive((Item*)o);
+                else {
+                    StatiIterNature(this, LOOT_CLAIMS)
+                        if (S->h == claims[ci])
+                            StatiIter_RemoveCurrent(this);
+                    StatiIterEnd(this)
+                }
+            }
+        }
     }
 
     GameTimeInfo.actions++;
@@ -1385,7 +1410,9 @@ ChargeMoveOk:
                 if (m->InBounds(x + dx*k, y + dy*k) && (targ = m->FCreatureAt(x + dx*k, y + dy*k)))
                     if (Perceives(targ) && !((Creature*)targ)->isFriendlyTo(this) && !MyTerm->CtrlDown()) {
                     NormalAttack:
-                        if (targ->isCreature() && !((Creature*)targ)->isHostileToPartyOf(this))
+                        /* inc-a7jq: no confirm prompt for the player's thief. */
+                        if (targ->isCreature() && !((Creature*)targ)->isHostileToPartyOf(this)
+                            && !LootIsThiefOf((Creature*)targ, this))
                             if (!yn(XPrint("Confirm attack the <Obj>?", targ), true))
                                 break;
 
