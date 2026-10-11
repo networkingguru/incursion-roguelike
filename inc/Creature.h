@@ -183,6 +183,11 @@ struct SkillTarget
     int16 sr;
   };
 
+/* inc-i9q.2 phase 4: the GetHungrier call counter behind
+   Character::HungerProbe() case=base. */
+void HungerProbeResetCalls();
+int  HungerProbeGetCalls();
+
 class Creature: public Thing, public Magic
   {
     ARCHIVE_CLASS(Creature,Thing,r)
@@ -620,7 +625,16 @@ class Creature: public Thing, public Magic
       virtual void IdentByTrial(Item *it,int16 Quality=0) {}
       virtual bool ItemPrereq(rID xID, int16 ReqLevel, int16 TrickDC);
       virtual void GainInherentBonus(int16 at, int16 mag, bool msg=true);
-      virtual void GetHungrier(int16 amt);
+      virtual void GetHungrier(bool healing);
+      /* inc-i9q.2: the per-update hunger multiplier in percent (100 normal),
+         product of Burning Hunger, speed, a CA_REGEN heal, and Fasting. No
+         dice, so Rest (phase 2) can reuse it. */
+      int32 HungerDrainPercent(bool healing);
+      /* inc-i9q.2: the hunger points a stretch of `ticks` costs at the plain
+         waking rate; `resting` adds the Slow Metabolism (15/35) or Reverie
+         (25/35) factor, Slow Metabolism winning if both. One 64-bit
+         expression, one division, no dice. */
+      int32 HungerForTicks(int32 ticks, bool resting);
       virtual int16 getBestKnowSkill(Creature *cr, bool isCombat);
 
       void Reveal(bool intentional = false);
@@ -860,6 +874,10 @@ class Character: public Creature
          gate. Off unless INCURSION_MANA_FLOOR_PROBE is set. Driven by
          tools/check_mana_regen_floor.sh. inc-41kg. */
       void ManaFloorProbe();
+      /* Self-check for the per-turn hunger clock. Off unless
+         INCURSION_HUNGER_PROBE is set. Driven by tools/check_hunger_clock.sh.
+         inc-i9q.2. */
+      void HungerProbe();
       /* Reproduction probe for Intensive Study granting no spell slots.
          Off unless INCURSION_STUDY_PROBE is set. Driven by
          tools/check_study_slots.sh. inc-ngku. */

@@ -47,6 +47,15 @@ void Thing::UpdateStati() {
         // trouble placing it (this happened Thu Jan 15 10:16:04 PST 2004)
         if (isCreature() && (isDead() || !m || x == -1)) 
             StatiIterBreakout(this,return)
+        /* inc-i9q.2: HUNGER is drained once per DoTurn via Creature::GetHungrier
+           (after the CA_REGEN block). When that drain reaches 0 it leaves
+           Duration == 0 and the status must end here, exactly as the old
+           in-loop GetHungrier(1) did. HUNGER never falls through to
+           S->Duration--. */
+        if (S->Nature == HUNGER && isCreature() && S->Duration == 0) {
+            StatiIter_ElapseCurrent(this);
+            continue;
+        }
         if (S->Duration > 0) {
             // ww: I've gotten an invalid object handle on the oThing() below,
             // so we add this sanity check
@@ -55,7 +64,7 @@ void Thing::UpdateStati() {
             if (S->Nature == POISONED && HasStati(SLOW_POISON))
                 continue;
             if (S->Nature == HUNGER && isCreature())
-                thisc->GetHungrier(1);
+                ; /* drained once per DoTurn; no S->Duration-- here */
             else  
                 S->Duration--;
 

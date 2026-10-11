@@ -3530,13 +3530,13 @@ typedef signed int        hObj;
 #define MENU_REDRAW       0x2000
 
 #define BLOATED   3000
-#define SATIATED  2500    
-#define CONTENT   2000
-#define PECKISH   1500
-#define HUNGRY    1000 
-#define STARVING   480
-#define WEAK       240
-#define FAINTING   120
+#define SATIATED  2900    
+#define CONTENT   2850
+#define PECKISH   2800
+#define HUNGRY    2750 
+#define STARVING  1000
+#define WEAK       500
+#define FAINTING   250
 #define STARVED      0
 
 #define SS_ITEM  1  /* Permanent while worn */

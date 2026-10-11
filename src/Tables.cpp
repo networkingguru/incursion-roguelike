@@ -3967,9 +3967,9 @@ struct AbilityInfoStruct AbilInfo[] = {
     "damage you deal it, until the grudge fades." },
   { CA_REVERIE, "Reverie",
     "When you rest without eating, you use up less of your food reserve "
-    "than most creatures do: you keep three quarters of your remaining "
-    "hunger duration instead of the two thirds a creature without any "
-    "special metabolism keeps, so you can go longer between meals." },
+    "than most creatures do: a full night's rest costs you about 70 percent "
+    "of the food it costs a creature without any special metabolism, so you "
+    "can go longer between meals." },
   { CA_SACRED_AURA, "Sacred Aura",
     "When you die, if the creature that struck you down is standing right "
     "beside you, it suffers a burst of holy damage equal to your level in "
@@ -4009,12 +4009,11 @@ struct AbilityInfoStruct AbilInfo[] = {
     "Heavier falls are not avoided outright but are lessened by 5 points "
     "per level of the ability instead." },
   { CA_SLOW_METABOLISM, "Slow Metabolism",
-    "When you rest for the night, your hunger meter drops by only 15 "
-    "percent instead of the usual 35 percent, so a night's rest costs you "
-    "far less stored food than it costs other races. In exchange, eating "
-    "food restores only about a third of its normal nutrition, so a single "
-    "meal fills you up much less than it would someone else. You end up "
-    "needing food far less often, but a much bigger meal when you do." },
+    "Your body burns food slowly: every hour, awake or resting, costs you "
+    "less than half the food it costs other races. In exchange, eating food "
+    "restores only about a third of its normal nutrition, so a single meal "
+    "fills you up much less than it would someone else. You end up needing "
+    "food far less often, but a much bigger meal when you do." },
   { CA_SMITE, "Smite",
     "When you perform a Great Blow attack against a matching target -- "
     "evil, good, lawful, or any enemy at all, depending on how you gained "
@@ -4169,8 +4168,9 @@ struct AbilityInfoStruct AbilInfo[] = {
     "damage are unaffected. It is passive and permanent, with no cost, "
     "activation or limit beyond your ability level." },
   { CA_BURNING_HUNGER, "Burning Hunger",
-    "Your body burns through food far faster than normal: every turn you "
-    "grow hungrier at twice the usual rate for each level of this ability. "
+    "Your body burns through food far faster than normal: you grow hungry "
+    "at the usual rate multiplied by the level of this ability, up to seven "
+    "times as fast. "
     "In exchange you can never overeat badly enough to vomit. The only food "
     "that nourishes you at all is the fresh blood of a carnivorous "
     "creature's corpse; a corpse that is spoiled, bloodless, from a "

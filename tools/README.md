@@ -614,6 +614,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_horn_sewers_cr.sh` | Does the Horn of the Sewers' description state its summoned rodents have CR twice its magical plus? | LIVE |
 | `check_hornblade_roaring.sh` | Does the Hornblade carry no noise-making `WQ_ROARING` quality, which would contradict the concealment design its description and `EF_HIDEQUAL` flag build? | LIVE |
 | `check_hunger_penalty.sh` | Does getting hungrier still make a character stronger? Photographs one Dragonkin fed, Hungry and Starving, and refuses an order in which Hungry costs more than Starving. | LIVE |
+| `check_hunger_clock.sh` | Does the per-turn hunger clock spend 1 point per 1008 ticks, with Burning Hunger multipliers capped at 7, speed at half its distance from 100% (M=125/-4 M=90/+20 M=150), x2 while regenerating, Fasting reducing, and starvation death at 0? | LIVE |
 | `check_huntsman_live.sh` | Does the Twilight Huntsman reach his own spell list, smite Law rather than Good, and track at the ranger's rate, serving the ranger's opening bonus once rather than twice? | LIVE |
 | `check_illus_refund.sh` | Does the illusory-damage refund still clamp to the maximum, instead of paying above it and stranding a character at 58/56? | LIVE |
 | `check_illusion_flags.sh` | Does an illusion's declared IL_IMPROVED flag decide who pierces it, rather than the parity of its save DC? | LIVE |

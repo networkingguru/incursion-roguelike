@@ -1890,8 +1890,7 @@ NoIntervention:;
         }
     StatiIterEnd(this)
 
-    if ((i = AbilityLevel(CA_BURNING_HUNGER)))
-        GetHungrier(i*2);
+    bool hungerHealed = false;
 
     if (HasAbility(CA_REGEN)) {
         // ww: constant regeneration makes you hungry!
@@ -1907,10 +1906,15 @@ NoIntervention:;
                     "The <Obj> regenerates<Str2>.",
                     this, cHP == (mHP + Attr[A_THP]) ?
                     " fully" : "");
-                GetHungrier(5);
+                hungerHealed = true;
             }
         }
     }
+
+    /* inc-i9q.2: one drain per update, after the CA_REGEN block so the heal
+       above is known. Burning Hunger is a factor inside HungerDrainPercent. */
+    if (isCreature() && HasStati(HUNGER) && GetStatiDur(HUNGER) > 0)
+        GetHungrier(hungerHealed);
 }
 
 /* DoTurn's own POISONED block, moved out so Rest can drive it too (bd
@@ -1989,26 +1993,104 @@ void Creature::DiseasePulse(bool force, bool rest) {
     StatiIterEnd(this)  
   }
 
-void Creature::GetHungrier(int16 amt)
+/* inc-i9q.2: the per-update hunger multiplier in percent (100 = normal),
+   the product of Burning Hunger, speed, an actual CA_REGEN heal this update,
+   and Fasting. Phase 2 reuses it for rest, so it must not roll dice. */
+int32 Creature::HungerDrainPercent(bool healing)
   {
-    int16 fast_percent, hunger_val;
+    int32 M = 100;
+    int16 s, bh;
+
+    if (HasAbility(CA_BURNING_HUNGER)) {
+      bh = AbilityLevel(CA_BURNING_HUNGER);
+      if (bh > 7) bh = 7;
+      M *= bh;
+    }
+
+    s = 100 + 5 * Attr[A_SPD];
+    if (s < 0) s = 0;
+    M = M * (100 + (s - 100) / 2) / 100;
+
+    if (healing)
+      M *= 2;
+
+    if (HasAbility(CA_FASTING)) {
+      /* upstream: base-code defect, the fix is ours. It is upstream's
+         because the identical comparison stood at hex/master
+         src/Creature.cpp (~1992) and it is plain integer arithmetic on two
+         stati fields, with no typedef, pointer or platform dependence, so it
+         misbehaves the same way on Win32 with the original typedefs. The old
+         code read `Dice::Roll(1,100) > fast_percent`, which with the normal
+         fast_percent of 100 was never true, so the per-turn drain was dead
+         for everyone and Fasting only made it worse; the corrected shape
+         multiplies the drain by fast_percent, so Fasting REDUCES it. Tier
+         Observed (raw hunger 2490 unchanged over a 4000-step walk,
+         2026-09-24). inc-i9q.2. Not sent. */
+      M = M * (100 - (66 * AbilityLevel(CA_FASTING)) / ChallengeRating()) / 100;
+    }
+
+    return M;
+  }
+
+/* inc-i9q.2: the hunger points `ticks` ticks cost at the plain waking rate
+   (1 point per 1008 ticks, times HungerDrainPercent(false)/100), scaled for a
+   special metabolism: a factor of 15/35 for CA_SLOW_METABOLISM, awake or
+   resting, or 25/35 for CA_REVERIE when resting and Slow Metabolism is absent.
+   Everything is computed in one long long expression with a single final
+   division, so 144000 ticks with Slow Metabolism give 61, not the 60 a
+   two-step 142*15/35 would produce. */
+int32 Creature::HungerForTicks(int32 ticks, bool resting)
+  {
+    long long M = HungerDrainPercent(false);
+
+    if (HasAbility(CA_SLOW_METABOLISM))
+      return (int32)((long long)ticks * M * 15 / (1008LL * 100 * 35));
+    else if (resting && HasAbility(CA_REVERIE))
+      return (int32)((long long)ticks * M * 25 / (1008LL * 100 * 35));
+
+    return (int32)((long long)ticks * M / (1008LL * 100));
+  }
+
+/* inc-i9q.2: one hunger drain per status update. M is the multiplier in
+   percent; x = 600*M/100 is ten-thousandths of a point (base 6 hundredths per
+   update, one point per 1008 ticks), and with Slow Metabolism x is scaled by
+   15/35. Drain x/10000 whole points plus one more when random(10000) < x%10000;
+   exactly one random call per update. Hunger is floored at 0; a status drained
+   to exactly 0 ends in Thing::UpdateStati, which fires the starvation death. */
+/* inc-i9q.2 phase 4: counts GetHungrier calls that got past the early
+   returns, so HungerProbe can prove the per-turn drain ran once per DoTurn.
+   Not compiled out; it is one increment. */
+static int hungerProbeCalls = 0;
+
+void HungerProbeResetCalls() { hungerProbeCalls = 0; }
+int  HungerProbeGetCalls()   { return hungerProbeCalls; }
+
+void Creature::GetHungrier(bool healing)
+  {
+    long long x;
+    int32 M;
+    int16 hunger_val;
+
     if (!HasStati(HUNGER))
       return;
-    fast_percent = 100 - (HasAbility(CA_FASTING) ? 
-      ((66 * AbilityLevel(CA_FASTING)) / ChallengeRating()) : 0);
-      
     hunger_val = GetStatiDur(HUNGER);
-    
-    if (amt < 3)
-      {
-        if (Dice::Roll(1,100) > fast_percent)
-          hunger_val -= amt;
-      }
+    if (hunger_val <= 0)
+      return;
+
+    hungerProbeCalls++;
+
+    M = HungerDrainPercent(healing);
+    if (HasAbility(CA_SLOW_METABOLISM))
+      x = (long long)600 * M * 15 / (100 * 35);
     else
-      hunger_val -= max((amt*fast_percent)/100,1);
-    
-    hunger_val = max(0,hunger_val);
-    
+      x = 600 * M / 100;
+
+    hunger_val -= (int16)(x / 10000);
+    if (random(10000) < x % 10000)
+      hunger_val--;
+    if (hunger_val < 0)
+      hunger_val = 0;
+
     SetStatiDur(HUNGER,-1,NULL,hunger_val);
   }
 
@@ -2275,8 +2357,6 @@ int16 Creature::HungerState()
     if (!GetStati(HUNGER))
       return isPlayer() ? STARVED : CONTENT;
     i = GetStati(HUNGER)->Duration;
-    if (TMON(mID)->Size >= SZ_LARGE) 
-      i /= 2; // ww: large creatures can hold more food
     if (i > SATIATED)
       return BLOATED;
     if (i > CONTENT)

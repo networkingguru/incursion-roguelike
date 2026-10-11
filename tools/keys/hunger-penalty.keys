@@ -5,20 +5,15 @@
 # stronger. The sidebar prints STR and CON (src/Term.cpp), and those two
 # numbers must not go UP between the two photographs.
 #
-# WHY A DRAGONKIN. The ordinary once-per-turn hunger tick does nothing at all
-# for anybody -- that is bd inc-i9q.2, a separate defect, still open. A
-# Dragonkin has Burning Hunger, which calls Creature::GetHungrier with 6
-# rather than 1 and so takes the arm of that function which works. He is
-# therefore the only character in the game who can be made hungry in a
-# scripted session of any reasonable length. When inc-i9q.2 is fixed this
-# script will still work; it will simply arrive sooner.
+# Keep the original Dragonkin barbarian: Burning Hunger rank 3 multiplies
+# the new per-turn clock by three (inc-i9q.2).
 #
-# THE COUNTS. Each Search command spends about 100 points of hunger, from a
-# starting 2490. Hungry runs from 1000 down to 481 and Starving from 480 down
-# to 241 (inc/Defines.h:3504-3512), so eleven Searches land inside Hungry and
-# four more land inside Starving. The sidebar prints the state as a word, and
-# tools/check_hunger_penalty.sh refuses to compare two photographs that are
-# not one Hungry and one Starving.
+# THE COUNTS. Starting hunger is 2890. A Search advances about 1500 ticks,
+# costing roughly 4 points at rank 3 after the Spd 70% multiplier
+# (3 * 0.85 * 1500 / 1008), not the old 100. Searches shorten as hunger grows.
+# Sixty Searches reach Hungry (1001..2750); 440 more reach Starving
+# (501..1000). Seed 1 and options-2026-08-22.dat pin the random drain.
+# The state assertions and the unchanged check verify all three photographs.
 #
 # Race, subrace, class and alignment use @choose by name, so changing a
 # list cannot shift these selections. Run with a fixed seed;
@@ -70,11 +65,11 @@ ENTER y
 @expect "Satiated"
 @dump:fed
 
-s*11    # Search, eleven times
+s*60    # Search, sixty times
 @expect "Hungry"
 @dump:hungry
 
-s*4     # four more
+s*440   # 440 more Searches (500 total)
 @expect "Starving"
 @dump:starving
 

@@ -4,44 +4,10 @@
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
 #       tools/headless.sh tools/keys/hunger-penalty-save.keys 1
 #
-# THE CHARGEN BELOW IS A COPY of tools/keys/hunger-penalty.keys lines 1-65,
-# deliberately unchanged, and the original is NOT edited. That script builds its
-# character inline rather than including a shared chargen-*.keys, so there is
-# nothing to @include. Copying rather than refactoring means no existing check
-# changes what it measures. The same choice, and the same warning, are in
-# tools/keys/lizardfolk-monk-save.keys: do not "improve" this copy -- the
-# fixture is only worth having if it holds THE character that script rolls.
-#
-# WHY A CHARACTER IS FROZEN AT ALL: see the header of
-# tools/keys/chargen-default-save.keys. bd inc-vrt8.
-
-# Make a Dragonkin, let him grow Hungry, photograph him, let him grow
-# Starving, photograph him again.
-#
-# ONE ASSERTION, bd inc-i9q.3: getting hungrier must never make a character
-# stronger. The sidebar prints STR and CON (src/Term.cpp), and those two
-# numbers must not go UP between the two photographs.
-#
-# WHY A DRAGONKIN. The ordinary once-per-turn hunger tick does nothing at all
-# for anybody -- that is bd inc-i9q.2, a separate defect, still open. A
-# Dragonkin has Burning Hunger, which calls Creature::GetHungrier with 6
-# rather than 1 and so takes the arm of that function which works. He is
-# therefore the only character in the game who can be made hungry in a
-# scripted session of any reasonable length. When inc-i9q.2 is fixed this
-# script will still work; it will simply arrive sooner.
-#
-# THE COUNTS. Each Search command spends about 100 points of hunger, from a
-# starting 2490. Hungry runs from 1000 down to 481 and Starving from 480 down
-# to 241 (inc/Defines.h:3504-3512), so eleven Searches land inside Hungry and
-# four more land inside Starving. The sidebar prints the state as a word, and
-# tools/check_hunger_penalty.sh refuses to compare two photographs that are
-# not one Hungry and one Starving.
-#
-# Race, subrace, class and alignment use @choose by name, so changing a
-# list cannot shift these selections. Run with a fixed seed;
-# tools/check_hunger_penalty.sh supplies one. Attribute sets have no names,
-# and the rolls decide which feats are offered, so those picks stay counted.
-# Start-menu, yes/no and movement keys stay positional for the reasons below.
+# Only the character-creation commands are copied from hunger-penalty.keys.
+# No hunger-draining commands are included: the fixture freezes arrival.
+# Changing that check's Search counts does not require regenerating this save.
+# The archived fixture .keys records its original generation unchanged.
 
 @expect "Initial Choices"
 a       # Create a New Character: start menu is not a screen @choose reads.

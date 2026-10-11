@@ -2911,6 +2911,152 @@ void Character::ManaFloorProbe()
     }
 }
 
+/* INCURSION_HUNGER_PROBE -- the runnable check behind the per-turn hunger
+   clock (inc-i9q.2). Drives the SAME drain the live update runs,
+   Creature::GetHungrier, for 17000 updates (the base drain is 6 hundredths
+   of a point per update, so about 1020), and reads the multiplier
+   Creature::HungerDrainPercent for each forced input. Inputs are forced
+   through Attr[A_SPD] and Abilities[] and restored. One Error() line per
+   case; tools/check_hunger_clock.sh reads them. */
+void Character::HungerProbe()
+{
+    if (!getenv("INCURSION_HUNGER_PROBE"))
+        return;
+
+    int16 oldSpd, oldHunger; uint8 oldBH, oldFast;
+    int32 before, after, t;
+
+    oldSpd = Attr[A_SPD];
+    oldBH = Abilities[CA_BURNING_HUNGER];
+    oldFast = Abilities[CA_FASTING];
+    oldHunger = HasStati(HUNGER) ? GetStatiDur(HUNGER) : -1;
+
+    /* a. base drain over 17000 turns, driven through the LIVE path: DoTurn()
+       itself, not GetHungrier() directly, so disabling the per-turn drain call
+       in Creature::DoTurn turns this case red. Attr[A_SPD] is recomputed by
+       DoTurn, so it is not forced here; the fixture must have normal speed. */
+    Abilities[CA_BURNING_HUNGER] = 0;
+    Abilities[CA_FASTING] = 0;
+    SetStatiDur(HUNGER,-1,NULL,2890);
+    before = GetStatiDur(HUNGER);
+    HungerProbeResetCalls();
+    for (t = 0; t < 17000; t++)
+        DoTurn();
+    after = GetStatiDur(HUNGER);
+    Error("HUNGER_PROBE case=base before=%d after=%d drop=%d spd=%d M=%d calls=%d",
+        before, after, before - after, (int)Attr[A_SPD],
+        HungerDrainPercent(false), HungerProbeGetCalls());
+
+    /* b. HungerDrainPercent for each forced input. */
+    Attr[A_SPD] = 0;
+    Abilities[CA_BURNING_HUNGER] = 0;
+    Abilities[CA_FASTING] = 0;
+    Error("HUNGER_PROBE case=M name=base M=%d", HungerDrainPercent(false));
+    Abilities[CA_BURNING_HUNGER] = 3;
+    Error("HUNGER_PROBE case=M name=rank3 M=%d", HungerDrainPercent(false));
+    Abilities[CA_BURNING_HUNGER] = 9;
+    Error("HUNGER_PROBE case=M name=rank9 M=%d", HungerDrainPercent(false));
+    Abilities[CA_BURNING_HUNGER] = 0;
+    Attr[A_SPD] = 10;
+    Error("HUNGER_PROBE case=M name=spd+10 M=%d", HungerDrainPercent(false));
+    Attr[A_SPD] = -4;
+    Error("HUNGER_PROBE case=M name=spd-4 M=%d", HungerDrainPercent(false));
+    Attr[A_SPD] = 20;
+    Error("HUNGER_PROBE case=M name=spd+20 M=%d", HungerDrainPercent(false));
+    Attr[A_SPD] = 0;
+    Error("HUNGER_PROBE case=M name=healing M=%d", HungerDrainPercent(true));
+    Abilities[CA_FASTING] = 1;
+    Error("HUNGER_PROBE case=M name=fasting M=%d", HungerDrainPercent(false));
+
+    /* c. Fasting drains less than base over the same 17000 updates. */
+    Abilities[CA_BURNING_HUNGER] = 0;
+    Attr[A_SPD] = 0;
+    Abilities[CA_FASTING] = 1;
+    SetStatiDur(HUNGER,-1,NULL,2890);
+    before = GetStatiDur(HUNGER);
+    for (t = 0; t < 17000; t++)
+        GetHungrier(false);
+    after = GetStatiDur(HUNGER);
+    Error("HUNGER_PROBE case=fasting before=%d after=%d drop=%d",
+        before, after, before - after);
+
+    /* c2. inc-i9q.2 phase 3: Slow Metabolism drains less than base over the
+       same 17000 updates, awake as well as resting. */
+    Abilities[CA_BURNING_HUNGER] = 0;
+    Attr[A_SPD] = 0;
+    Abilities[CA_FASTING] = 0;
+    Abilities[CA_SLOW_METABOLISM] = 1;
+    SetStatiDur(HUNGER,-1,NULL,2890);
+    before = GetStatiDur(HUNGER);
+    for (t = 0; t < 17000; t++)
+        GetHungrier(false);
+    after = GetStatiDur(HUNGER);
+    Abilities[CA_SLOW_METABOLISM] = 0;
+    Error("HUNGER_PROBE case=slowmet before=%d after=%d drop=%d",
+        before, after, before - after);
+
+    /* d. inc-i9q.2: whenever rest and SpendHours cost hunger by elapsed time.
+       Force the same neutral inputs the M cases above use (Burning Hunger off,
+       Fasting off, speed neutral) so only the rest factors vary. A raw
+       Abilities[] write IS what HasAbility reads for a character
+       (Creature.cpp:3172-3174), so no status wrapper is needed. */
+    Abilities[CA_BURNING_HUNGER] = 0;
+    Attr[A_SPD] = 0;
+    Abilities[CA_FASTING] = 0;
+    Error("HUNGER_PROBE case=rest name=base pts=%d",
+        HungerForTicks(HOUR_TURNS * 8, true));
+    Abilities[CA_SLOW_METABOLISM] = 1;
+    Error("HUNGER_PROBE case=rest name=slowmet pts=%d",
+        HungerForTicks(HOUR_TURNS * 8, true));
+    Abilities[CA_SLOW_METABOLISM] = 0;
+    Abilities[CA_REVERIE] = 1;
+    Error("HUNGER_PROBE case=rest name=reverie pts=%d",
+        HungerForTicks(HOUR_TURNS * 8, true));
+    Abilities[CA_REVERIE] = 0;
+    Abilities[CA_SLOW_METABOLISM] = 1;
+    Error("HUNGER_PROBE case=rest name=hours8 pts=%d",
+        HungerForTicks(HOUR_TURNS * 8, false));
+    Abilities[CA_SLOW_METABOLISM] = 0;
+
+    Attr[A_SPD] = oldSpd;
+    Abilities[CA_BURNING_HUNGER] = oldBH;
+    Abilities[CA_FASTING] = oldFast;
+    if (oldHunger >= 0)
+        SetStatiDur(HUNGER,-1,NULL,oldHunger);
+
+    if (getenv("INCURSION_HUNGER_DEATH_PROBE")) {
+        SetStatiDur(HUNGER,-1,NULL,0);
+        Error("HUNGER_PROBE death before has=%d", (int)HasStati(HUNGER));
+        /* HUNGER is a Nature with no effect id (Create.cpp:979 gains it with
+           no eID), so Thing::UpdateStati's HUNGER-at-0 branch removes it
+           through Stati_RemoveInline, which calls StatiOff with elapsed=false
+           and so skips the starvation branch. Take a copy before the removal
+           and then drive the elapsed StatiOff explicitly, which is the branch
+           that fires the starvation death. */
+        Status deathStati = *GetStati(HUNGER);
+        /* Player::Death answers OPT_NODEATH and OPT_ELUDE_DEATH with a
+           blocking "You die... Die?" prompt, which no key script can answer
+           from here. Silence the fixture's escape hatches for the one call so
+           the death walks the real code path (F_DELETE set, corpse placed)
+           instead of the prompt, and restore them afterwards. */
+        int8 savedNodeath = thisp->Options[OPT_NODEATH];
+        int8 savedElude  = thisp->Options[OPT_ELUDE_DEATH];
+        thisp->Options[OPT_NODEATH] = 0;
+        thisp->Options[OPT_ELUDE_DEATH] = 0;
+        UpdateStati();
+        StatiOff(deathStati, true);
+        thisp->Options[OPT_NODEATH] = savedNodeath;
+        thisp->Options[OPT_ELUDE_DEATH] = savedElude;
+        Error("HUNGER_PROBE death after has=%d dead=%d",
+            (int)HasStati(HUNGER), (int)isDead());
+        /* The death above is the one measured; put the fixture back on his
+           feet so the key script that runs after the probes (which reads the
+           character sheet) still has a live character. F_DELETE is what
+           isDead() reports. */
+        Flags &= ~(F_DELETE | F_INVIS);
+    }
+}
+
 /* INCURSION_STUDY_PROBE -- reproduction of inc-ngku: Intensive Study
    ("Improve Caster Level") raises AbilityLevel(CA_SPELLCASTING) through
    IntStudy[STUDY_CASTING] (Creature::AbilityLevel) but Player::GainAbility's
