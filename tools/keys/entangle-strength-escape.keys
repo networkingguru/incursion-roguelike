@@ -21,12 +21,14 @@
 #
 # THE ORACLE is the two printed check lines. "Strength Check:" cannot appear
 # on a tree without the fix -- that is the assertion that discriminates. The
-# escape itself is NOT enough on its own, because Skills.cpp:1600 already
-# frees him on a natural 20 while no hostile is within sixteen squares, and
-# this fixture deliberately runs in an empty room. See tools/check_entangle_escape.sh.
+# escape itself is NOT enough on its own: until inc-e68f, Skills.cpp freed
+# him on a natural 20 while no hostile was within sixteen squares. Today he
+# takes 20 instead (src/Skills.cpp:1730-1732), which against the tanglefoot
+# DC of 22 still fails by a wide margin, and this fixture deliberately runs
+# in an empty room. See tools/check_entangle_escape.sh.
 #
-# Twenty attempts. At STR 10 each attempt is 35%, so twenty of them fail
-# together about one time in ten thousand -- and the seed is fixed, so it
+# Twenty attempts. At STR 10 each attempt is 20% (DC 17), so twenty of them
+# fail together about one time in ninety -- and the seed is fixed, so it
 # either passes or it does not.
 
 @include chargen-paladin.keys
