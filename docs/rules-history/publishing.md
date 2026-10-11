@@ -103,6 +103,8 @@ WHY. He is deliberately removing himself from the loop on internal work so the n
 
 HOW TO APPLY. A nightly or cron agent that finds something worth sending upstream writes it to the HELD queue and stops. The next interactive session puts the literal text to him and waits for a yes on that text. See CLAUDE.md 'Publishing anything outward-facing', docs/REPORTING-GATE.md, [[feedback-never-post-public-unread]] and [[incursion-check-the-world-not-the-tracker]].
 
+NARROWED 2026-10-10 (inc-loa.66, inc-loa.68). On 2026-10-07 the overnight run deleted two stale probe hooks from src/Fight.cpp, and commit-gate.py refused the commit. Asked whether the overnight run should be able to commit a source change, Brian ruled: "No, I do not want overnight making source changes". The unattended agent now reviews and commits documentation only. commit-gate.py keeps no nightly exemption, and the overnight brief sends stale probe hooks to the held queue.
+
 ## feedback-default-a-bead-to-public
 DEFAULT A BEAD TO public, NOT internal. Brian's rule, 2026-09-06: 'everything is public unless it is strictly tooling for ME or clearly internal.' A performance concern inside a public change is PUBLIC -- the point is that people can see the work was done, including the work that found nothing wrong.
 
