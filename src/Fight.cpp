@@ -442,6 +442,15 @@ void LOFSetLastLand(int16 x, int16 y) { LOFLastLandX = x; LOFLastLandY = y; }
 int16 LOFGetLastLandX() { return LOFLastLandX; }
 int16 LOFGetLastLandY() { return LOFLastLandY; }
 
+/* inc-nssk: the last square the flight animation drew a missile glyph on
+   (tile units). RAttack resets it before the travel loop and sets it at
+   the drawing call itself, so it tracks the drawing as that call moves;
+   LineOfFireProbe reads it to catch a missile drawn past its landing. */
+static int16 LOFLastDrawX = -1, LOFLastDrawY = -1;
+void LOFSetLastDraw(int16 x, int16 y) { LOFLastDrawX = x; LOFLastDrawY = y; }
+int16 LOFGetLastDrawX() { return LOFLastDrawX; }
+int16 LOFGetLastDrawY() { return LOFLastDrawY; }
+
 /* inc-30ps rework: a recorded square along the line -- every creature
    standing there, in contents-chain order (Map::GetAt's front is
    member[0], src/Display.cpp:1437; see "Which creature is front",
@@ -1393,6 +1402,17 @@ EvReturn Creature::RAttack(EventInfo &e)
   LOFSquare squares[LOFMaxSquares];
   int16 lineCount = 0;
 
+  /* inc-nssk: the flight is recorded as it walks and drawn only after the
+     strike decides where it lands, so a missile is never drawn past its
+     landing square. The walk steps each axis on its own, so a crossing of
+     the largest map the engine allows (coordinates are uint8, inc/Map.h:181)
+     visits at most one square per row plus one per column: 256 + 256. */
+  const int16 MAP_MAX_DIM = 256;
+  struct LOFPathStep { int16 x, y; Glyph glyph; };
+  const int16 LOFMaxPath = MAP_MAX_DIM + MAP_MAX_DIM;
+  LOFPathStep path[LOFMaxPath];
+  int16 pathCount = 0;
+
   if (Intended && e.EActor && e.EActor->DistFrom(Intended) < 1) {
     // you're shooting at a chest at you feet
     possTarget = Intended;
@@ -1410,6 +1430,8 @@ EvReturn Creature::RAttack(EventInfo &e)
     hitSelf = true; 
     goto hitNow; 
   }
+  LOFSetLastDraw(-1, -1); // inc-nssk: reset before the flight animation
+
   // travel! 
   while(!hitSelf && m.InBounds(cx/2,cy/2)// && !m.At(cx/2,cy/2).Solid
       ) {
@@ -1438,13 +1460,14 @@ EvReturn Creature::RAttack(EventInfo &e)
     lx = cx;
     ly = cy;
 
-    // draw something on this square? 
+    // record this square for the flight replay below; draw nothing here 
     if (m.At(cx/2,cy/2).Visibility & VI_DEFINED) {
-      o.AddGlyph(cx/2,cy/2, g | gcolour);
-      o.ShowGlyphs();
-      PossiblyPause(T1,cx/2,cy/2,30);
-      o.DeActivate();
-      o.Activate();
+      if (pathCount < LOFMaxPath) {
+        path[pathCount].x = cx/2;
+        path[pathCount].y = cy/2;
+        path[pathCount].glyph = g | gcolour;
+        pathCount++;
+      }
     }
 
     // move to the next spot! 
@@ -1760,6 +1783,20 @@ SkipAttack:
   /* inc-55jl: the decided landing square, before PlaceNear can nudge it
      off a live creature's square -- see LOFSetLastLand's comment above. */
   LOFSetLastLand(lx/2, ly/2);
+
+  /* inc-nssk: replay the recorded flight now that the strike has decided the
+     landing square (lx/2,ly/2), so the missile is never drawn past where it
+     lands. Port regression from inc-30ps, not upstream; bead inc-nssk. */
+  for (int16 i = 0; i < pathCount; i++) {
+    o.AddGlyph(path[i].x, path[i].y, path[i].glyph);
+    LOFSetLastDraw(path[i].x, path[i].y);
+    o.ShowGlyphs();
+    PossiblyPause(T1, path[i].x, path[i].y, 30);
+    o.DeActivate();
+    o.Activate();
+    if (path[i].x == lx/2 && path[i].y == ly/2)
+      break;
+  }
 
   o.ShowGlyphs();
   o.DeActivate();
@@ -2497,6 +2534,132 @@ void LineOfFireProbe(Player *shooter) {
         wTarget->Remove(true);
     };
     cleanMissCase(7, "clean-miss-lands-on-target");
+
+    /* inc-nssk: three cases guard that the flight animation ends where the
+       missile lands. Two fire by direction (no chosen creature) and one uses
+       ThrowXY at an empty square beyond the rat. Each compares the last drawn
+       square (LOFGetLastDrawX/Y) with the rat's square or the landing square.
+       Bead inc-nssk. */
+    {
+        for (int i = 0; i < 5; i++)
+            if (b[i].c->x != -1)
+                b[i].c->Remove(false);
+    }
+    int16 lineDir = -1;
+    for (int d = 0; d < 9; d++)
+        if (DirX[d] == dx && DirY[d] == dy) { lineDir = (int16)d; break; }
+    if (lineDir < 0) {
+        Error("LOF_PROBE: case=dir-hit-draw-stops INCONCLUSIVE -- no Dir "
+            "for line (%d,%d)", (int)dx, (int)dy);
+        fail++;
+    } else {
+        const Dir fireDir = (Dir)lineDir;
+        auto lineClearTo7 = [&](const char *caseName, Monster *placed) -> bool {
+            for (int i = 1; i <= 7; i++) {
+                const int16 qx = px + dx*i, qy = py + dy*i;
+                if (placed && placed->x == qx && placed->y == qy)
+                    continue;
+                if (!squareClear(qx, qy)) {
+                    Error("LOF_PROBE: case=%s INCONCLUSIVE -- square at "
+                        "distance %d (%d,%d) not clear", caseName, i,
+                        (int)qx, (int)qy);
+                    fail++;
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        /* case=dir-hit-draw-stops: a forced natural 20 strikes the rat at
+           distance 2, and the drawn flight MUST end on the rat's square. */
+        {
+            const int16 rx = px + dx*2, ry = py + dy*2;
+            if (lineClearTo7("dir-hit-draw-stops", NULL)) {
+                Monster *rat = freshRat(rx, ry);
+                rat->Attr[A_DEF] = D;
+                LOFForcedRoll = 20;
+                Item *dag = new Weapon(dagID, TITEM(dagID)->IType);
+                ThrowDir(EV_RATTACK, fireDir, shooter, NULL, NULL, dag);
+                const bool hit = rat->cHP < 10000;
+                const bool ok = hit && LOFGetLastDrawX() == rx &&
+                    LOFGetLastDrawY() == ry;
+                Error("LOF_PROBE: case=dir-hit-draw-stops ratHP=%d "
+                    "drawn=(%d,%d) landing=(%d,%d) rat=(%d,%d) %s",
+                    (int)rat->cHP, (int)LOFGetLastDrawX(),
+                    (int)LOFGetLastDrawY(), (int)LOFGetLastLandX(),
+                    (int)LOFGetLastLandY(), (int)rx, (int)ry,
+                    ok ? "PASS" : "FAIL");
+                if (ok) pass++; else fail++;
+                rat->Remove(true);
+            }
+        }
+
+        /* case=dir-miss-draw-to-end: an arithmetic miss leaves the rat
+           untouched and the missile flies on, so the last drawn square MUST be
+           past the rat and no farther than the landing square; the flight draws
+           only squares the player has seen, so a landing square beyond sight is
+           never drawn. */
+        {
+            const int16 rx = px + dx*2, ry = py + dy*2;
+            if (lineClearTo7("dir-miss-draw-to-end", NULL)) {
+                Monster *rat = freshRat(rx, ry);
+                rat->Attr[A_DEF] = D;
+                const int forcedRoll = (D-1) - vHit - 3;
+                if (forcedRoll < 2) {
+                    Error("LOF_PROBE: case=dir-miss-draw-to-end "
+                        "INCONCLUSIVE -- forced roll below 2");
+                    fail++;
+                    rat->Remove(true);
+                } else {
+                LOFForcedRoll = (int8)forcedRoll;
+                Item *dag = new Weapon(dagID, TITEM(dagID)->IType);
+                ThrowDir(EV_RATTACK, fireDir, shooter, NULL, NULL, dag);
+                const bool missed = rat->cHP == 10000;
+                const int16 drawDist = (int16)max(abs(LOFGetLastDrawX() - px),
+                    abs(LOFGetLastDrawY() - py));
+                const int16 landDist = (int16)max(abs(LOFGetLastLandX() - px),
+                    abs(LOFGetLastLandY() - py));
+                const bool ok = missed && drawDist > 2 &&
+                    drawDist <= landDist;
+                Error("LOF_PROBE: case=dir-miss-draw-to-end ratHP=%d "
+                    "drawn=(%d,%d) landing=(%d,%d) rat=(%d,%d) %s",
+                    (int)rat->cHP, (int)LOFGetLastDrawX(),
+                    (int)LOFGetLastDrawY(), (int)LOFGetLastLandX(),
+                    (int)LOFGetLastLandY(), (int)rx, (int)ry,
+                    ok ? "PASS" : "FAIL");
+                if (ok) pass++; else fail++;
+                rat->Remove(true);
+                }
+            }
+        }
+
+        /* case=loc-hit-draw-stops: one fresh rat at distance 2, aimed with
+           ThrowXY at the empty square at distance 6 on the same line. A forced
+           natural 20 strikes the rat at distance 2, and the drawn flight MUST
+           end on the rat's square. */
+        {
+            const int16 rx = px + dx*2, ry = py + dy*2;
+            const int16 aimX = px + dx*6, aimY = py + dy*6;
+            if (lineClearTo7("loc-hit-draw-stops", NULL)) {
+                Monster *rat = freshRat(rx, ry);
+                rat->Attr[A_DEF] = D;
+                LOFForcedRoll = 20;
+                Item *dag = new Weapon(dagID, TITEM(dagID)->IType);
+                ThrowXY(EV_RATTACK, aimX, aimY, shooter, NULL, NULL, dag);
+                const bool hit = rat->cHP < 10000;
+                const bool ok = hit && LOFGetLastDrawX() == rx &&
+                    LOFGetLastDrawY() == ry;
+                Error("LOF_PROBE: case=loc-hit-draw-stops ratHP=%d "
+                    "drawn=(%d,%d) landing=(%d,%d) rat=(%d,%d) %s",
+                    (int)rat->cHP, (int)LOFGetLastDrawX(),
+                    (int)LOFGetLastDrawY(), (int)LOFGetLastLandX(),
+                    (int)LOFGetLastLandY(), (int)rx, (int)ry,
+                    ok ? "PASS" : "FAIL");
+                if (ok) pass++; else fail++;
+                rat->Remove(true);
+            }
+        }
+    }
 
     Error("LOF_PROBE: RESULT pass=%d fail=%d", pass, fail);
 

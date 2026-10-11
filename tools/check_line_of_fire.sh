@@ -60,6 +60,11 @@
 # Each case writes one "LOF_PROBE: case=... PASS|FAIL" line, and a final
 # "LOF_PROBE: RESULT pass=N fail=N" line.
 #
+# inc-nssk adds three cases (dir-hit-draw-stops, dir-miss-draw-to-end,
+# loc-hit-draw-stops) that compare the last square the flight animation
+# drew against the decided landing square: a missile with no Intended
+# creature is drawn past the creature it hits.
+#
 # Usage: tools/check_line_of_fire.sh    (exits 0 on pass, 1 on fail)
 set -uo pipefail
 
@@ -117,8 +122,8 @@ if [ -z "$pass" ] || [ -z "$fail" ]; then
     exit 1
 fi
 
-if [ "$fail" != "0" ] || [ "$pass" -lt 35 ]; then
-    echo "FAIL: $result (want fail=0 and pass>=35)"
+if [ "$fail" != "0" ] || [ "$pass" -lt 38 ]; then
+    echo "FAIL: $result (want fail=0 and pass>=38)"
     exit 1
 fi
 
