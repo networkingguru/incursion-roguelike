@@ -59,7 +59,7 @@ carries up to three prompts and a flag word:
 - **The prompts run in table order**, target first, unless the entry carries
   `YU_REVERSE`, which asks for the item first. `src/Player.cpp:1695`.
 - **`Q_INV` reaches inside containers.** The item picker walks
-  `FirstInv`/`NextInv`, which descends into packs (`src/Inv.cpp:824-827`), so
+  `FirstInv`/`NextInv`, which descends into packs (`src/Inv.cpp:844-847`), so
   verbs offer packed items without you unpacking them.
 - **The five most recent verbs float to the top** of the menu
   (`src/Player.cpp:1658`), so the list reorders as you use it. A recent verb
@@ -74,7 +74,7 @@ carries up to three prompts and a flag word:
 
 You cannot pick one from this menu any more, because the menu does not list it.
 The path is still there for an event thrown by any other route: nothing handles
-it, so it falls through to `Creature::HandleVerb` (`src/Player.cpp:1785` via
+it, so it falls through to `Creature::HandleVerb` (`src/Player.cpp:1826` via
 `src/Creature.cpp:1093`), which prints **"That verb can't be used that way."**
 for post-phase events and otherwise returns silently.
 
@@ -174,9 +174,9 @@ steed do (`lib/wspells.irh:1813` and `:1908`, `lib/pspells.irh:3585`). Once
 picked it runs a full validation path — Ride skill, humanoid form, the
 target's `M_MOUNTABLE` flag, hostility, prone/stuck/grappled/asleep, plane,
 size, challenge rating, and whether the creature will accept you at all
-(`src/Skills.cpp:4439-4505`).
+(`src/Skills.cpp:4482-4548`).
 **Dismount** has a second route: the Cancel (`x`) command drops a standing
-`MOUNTED` stati (`src/Skills.cpp:455`).
+`MOUNTED` stati (`src/Skills.cpp:456`).
 
 **Shoot and Throw are the same event**, `EV_RATTACK`, differing only in
 prompt wording.
