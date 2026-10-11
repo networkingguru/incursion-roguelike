@@ -9,10 +9,11 @@
 #   tools/keys/light-ice-off.keys   wall torch, clear cell, floor beyond
 #   tools/keys/light-ice-on.keys    wall torch, ICE WALL,   floor beyond
 #
-# Both place the trio on seed 1, where the player arrives at (111,110): the
-# torch at (112,110), the changed cell at (113,110) and the measured floor at
-# (114,110), two steps from the torch. The measured cell must be dimmer in the
-# ice run, and only the ice run may mark (113,110) in the FILTER grid.
+# Both place the trio RELATIVE to the player: the torch at px+1, the changed
+# cell at px+2 and the measured floor at px+3, two steps from the torch, all on
+# the player's row py. The cells are found from the player's position because a
+# module change moves the seeded arrival. The measured cell must be dimmer in
+# the ice run, and only the ice run may mark (px+2,py) in the FILTER grid.
 #
 # Usage: tools/check_light_filter.sh   exit 0 pass, 1 fail, 2 inconclusive
 #
@@ -20,8 +21,6 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-
-ICE_X=113; MEASURE_X=114; ROW=110
 
 [ -x ./incursion-headless ] || {
     echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
@@ -42,11 +41,14 @@ play() {
         echo "INCONCLUSIVE: no light.log in $run -- the probe switch did not take" >&2
         return 2
     }
-    python3 - "$log" "$ROW" "$ICE_X" "$MEASURE_X" "$run" <<'PY'
+    python3 - "$log" "$run" <<'PY'
 import sys
-log, row, ice_x, measure_x, run = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), sys.argv[5]
+log, run = sys.argv[1], sys.argv[2]
 block = open(log).read().split("LIGHT ")[-1].split("\n")
-h = int(block[0].split("map=")[1].split()[1])
+header = block[0]
+h = int(header.split("map=")[1].split()[1])
+px, py = (int(v) for v in header.split("player=")[1].split()[0:2])
+ice_x, measure_x, row = px + 2, px + 3, py
 i = 1
 while block[i].startswith("S "):
     i += 1
@@ -55,14 +57,25 @@ if block[i + h] != "FILTER":
     sys.stderr.write("INCONCLUSIVE: %s has no FILTER grid\n" % log)
     sys.exit(2)
 filt = block[i + h + 1:i + h + 1 + h]
-print("%s %s %s" % (grid[row][measure_x], filt[row][ice_x], run))
+print("%s %s %s %d %d %d" % (grid[row][measure_x], filt[row][ice_x], run,
+                              px, py, ice_x))
 PY
 }
 
 clear_read="$(play tools/keys/light-ice-off.keys)" || exit 2
 ice_read="$(play tools/keys/light-ice-on.keys)"    || exit 2
-set -- $clear_read; clear_lit="$1"; clear_mark="$2"; clear_run="$3"
-set -- $ice_read;   ice_lit="$1";   ice_mark="$2";   ice_run="$3"
+set -- $clear_read; clear_lit="$1"; clear_mark="$2"; clear_run="$3"; clear_px="$4"; clear_py="$5"; clear_ice_x="$6"
+set -- $ice_read;   ice_lit="$1";   ice_mark="$2";   ice_run="$3";   ice_px="$4";   ice_py="$5";   ice_ice_x="$6"
+
+if [ "$clear_px" != "$ice_px" ] || [ "$clear_py" != "$ice_py" ]; then
+    echo "INCONCLUSIVE: the runs arrive at different player positions:"
+    echo "  control: player=($clear_px,$clear_py) in $clear_run"
+    echo "  ice:     player=($ice_px,$ice_py) in $ice_run"
+    exit 2
+fi
+PX="$clear_px"; PY="$clear_py"
+ICE_X="$clear_ice_x"; MEASURE_X="$((PX + 3))"; ROW="$PY"
+echo "player=($PX,$PY); ice cell ($ICE_X,$ROW); measured cell ($MEASURE_X,$ROW)"
 
 fail=0
 if [ "$clear_mark" != "-" ]; then

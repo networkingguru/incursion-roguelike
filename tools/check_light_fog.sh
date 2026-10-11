@@ -20,8 +20,9 @@
 # them and explain the difference away. The source lines are compared as the
 # control, ignoring each source's footprint size, which fog can shrink.
 #
-# On seed 1 chargen-mage.keys lands the mage at (82,13):
-#   (79,13) the wall torch   (80,13) the crossed cell   (81,13) measured
+# The cells are found from the player's position because a module change moves
+# the seeded arrival: the wall torch at px-3, the crossed cell at px-2 and the
+# measured cell at px-1, all on the player's row py.
 #
 # Usage: tools/check_light_fog.sh   exit 0 pass, 1 fail, 2 inconclusive
 #
@@ -29,8 +30,6 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-
-FOG_X=80; MEASURE_X=81; ROW=13
 
 [ -x ./incursion-headless ] || {
     echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
@@ -53,12 +52,10 @@ log="$run/logs/light.log"
     exit 2
 }
 
-python3 - "$log" "$ROW" "$FOG_X" "$MEASURE_X" "$run" "$label" <<'PY'
+python3 - "$log" "$run" "$label" <<'PY'
 import sys
 
-log, row, fog_x, measure_x, run, label = (
-    sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), sys.argv[5],
-    sys.argv[6])
+log, run, label = sys.argv[1], sys.argv[2], sys.argv[3]
 
 def parse(block):
     """A dump block as (sources, light grid, filter grid)."""
@@ -84,6 +81,11 @@ after = parsed[-1]
 if after is None:
     sys.stderr.write("INCONCLUSIVE: a dump block in %s has no FILTER grid\n" % log)
     sys.exit(2)
+
+px, py = (int(v) for v in blocks[-1].split("player=")[1].split()[0:2])
+fog_x, measure_x, row = px - 2, px - 1, py
+print("player=(%d,%d); fog cell (%d,%d); measured cell (%d,%d)"
+      % (px, py, fog_x, row, measure_x, row))
 
 def level(ch):
     """Brightness as a number: -1 dark, 0 lit but faint, 1-9 brighter."""
