@@ -122,13 +122,13 @@ them (`src/Debug.cpp`), so adding an option renumbers everything after it —
 dump the menu and read the letter rather than counting. And `w`, not `W`: an
 uppercase token sets SHIFT, and both key tables bind `KY_CMD_WIZMODE` with
 modifier flags of 0, so `W` is a different keystroke that reaches nothing
-(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:5374`/`5494`).
+(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:5377`/`5497`).
 
 `[M] Create Altar` is there for the harness. A sacrifice needs the player to
 be standing on an altar, and the only other source of one is `MakeLev`'s
-random assignment (`src/MakeLev.cpp:2112-2128`), which picks from seven gods
+random assignment (`src/MakeLev.cpp:2150-2166`), which picks from seven gods
 and cannot be asked for a particular one. The command prompts for a god name
-and builds the feature exactly as `MakeLev.cpp:1143-1145` does.
+and builds the feature exactly as `MakeLev.cpp:1163-1165` does.
 `check_sacrifice.sh` is the first thing to use it.
 
 The Watery Double fixtures use seed `20260905` and
@@ -205,7 +205,7 @@ whether a death should fail a run is a product decision the script does not make
 threatened area. Abort, Flee or Disengage?` still on screen
 (`headless.sh:356-359`). That prompt has no option gate at all and fires
 whenever a player-controlled creature moves away from a hostile creature that
-perceives it (`src/Move.cpp:970`, quoted at `headless.sh:331-332`).
+perceives it (`src/Move.cpp:971`, quoted at `headless.sh:331-332`).
 `f7ff2d7` (2026-08-28) gave ChoicePrompt arrow+ENTER navigation, so
 `tools/keys/dive.keys` can now select `a`, `f` or `d` -- but it can also land
 on `?` and open the combat manual, which has no ESC out, so the script still
@@ -765,7 +765,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_shield_penalty.sh` | Does a shield's armour check penalty come from the shield, or only from its size beside yours? Puts every shield in a Medium paladin's hand one at a time and reads its cost twice off the character dump -- the skill term and the movement rate -- then does the two a Small halfling can hold, whose figures must be double. | LIVE |
 | `check_shift_opcodes.sh` | Does the VM's BSHL shift left while Rect member codegen still uses BSHR for reads and BSHL for writes, and does a script-coloured field cast red rather than black light? | LIVE |
 | `check_sigpipe_status.sh` | Does any `tools/*.sh` pipe into an early-exit reader (`grep -q`/`grep -m`/`head`) whose exit status a conditional then reads, the shape whose SIGPIPE race reported real data as a miss on 2026-09-22? Ratcheted against `tools/sigpipe_status.baseline`. | LIVE |
-| `check_skc6_blast_text.sh` | Two measurements. (1) Does the Biocurrent magic touch's Damage line read exactly `Damage: 1d12+2 = <digits> Lightning`, with no garbage between the dice and ` = `? A `String` with no copy constructor shared its `Buffer`, so `src/Effects.cpp:293`'s `?:` freed `e.strDmg` and the process aborted at exit 134. (2) Does a two-victim `Magic::AGlobe` cast (Electric Loop on two summoned brown bears, `tools/keys/inc-skc6-blast-leftover.keys`) leave each victim's Damage line with exactly one Lore term, rather than the second victim inheriting the first's " +N Lore" through the reused `EventInfo`? Either measurement fails if the session aborts or exits nonzero, or if it finds no Damage line at all (bead inc-skc6). Needs the headless build. | LIVE |
+| `check_skc6_blast_text.sh` | Two measurements. (1) Does the Biocurrent magic touch's Damage line read exactly `Damage: 1d12+2 = <digits> Lightning`, with no garbage between the dice and ` = `? A `String` with no copy constructor shared its `Buffer`, so `src/Effects.cpp:296`'s `?:` freed `e.strDmg` and the process aborted at exit 134. (2) Does a two-victim `Magic::AGlobe` cast (Electric Loop on two summoned brown bears, `tools/keys/inc-skc6-blast-leftover.keys`) leave each victim's Damage line with exactly one Lore term, rather than the second victim inheriting the first's " +N Lore" through the reused `EventInfo`? Either measurement fails if the session aborts or exits nonzero, or if it finds no Damage line at all (bead inc-skc6). Needs the headless build. | LIVE |
 | `check_skill_manager_reset.sh` | Does an unrecognised key still wreck the Skill Manager? Presses END and HOME -- the left stick's two left diagonals -- in both of the screen's modes: character generation, where the ranks were wiped, and level-up, where the manager silently closed. Two sessions. | LIVE |
 | `check_sneak_invis.sh` | Does an unseen attacker get sneak attack when the victim hears it, and does a thrown or fired attack count as unseen against a Blind-Fight victim (bead inc-nkf2)? Needs the headless build. | LIVE |
 | `check_snowstrike.sh` | Does the Snowstrike blast carry `EF_CASTER_IMMUNE` and `EF_ALLIES_IMMUNE`, so the caster and her allies are immune as its description promises, rather than freezing them? | LIVE |
@@ -1194,7 +1194,7 @@ number rather than a yes or no: they read the hardness off the game's own
 combat-numbers line, which `Item::Damage` prints AFTER adding the bearer's gear
 resistance to it. Those two silver a magic warhammer for the ordering
 `Item::Damage` used to have: a no-save A_DEQU sets `ignoreHardness` on a plain
-item (`src/Fight.cpp:3430`), and the bearer's grant was added before the bypass
+item (`src/Fight.cpp:3440`), and the bearer's grant was added before the bypass
 emptied it, so a resistance was unmeasurable on ordinary gear. inc-kapn
 inverted that -- the bypass now empties only what `Hardness()` returned -- and
 `check_gear_bypass_survives.sh` measures a resistance on a plain iron maul. The
