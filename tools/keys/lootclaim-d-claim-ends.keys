@@ -1,0 +1,63 @@
+# Reproduction for bd inc-a7jq, scenario D: the claim ends when the player
+# leaves the room and cannot see the drop. Read by tools/check_loot_claim.sh.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22-noroomdesc.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav \
+#       tools/headless.sh tools/keys/lootclaim-d-claim-ends.keys 4
+#
+# With monsters frozen the paladin kills a kobold beside the stairs and a
+# wizard-summoned human (non-hostile) stands next to the drops. The paladin
+# walks out the south door, which closes behind him, so the drops are out of
+# the room and out of view ("Things in View" must no longer list them). Monsters
+# unfreeze for three turns and the human takes the drops. Monsters freeze, the
+# paladin walks back to the stairs and attacks the human. The claim ended
+# before the pickup, so the human is not a thief and the game must still ask
+# "Confirm attack the human?". The script answers n.
+
+@dump:arrival
+w
+y
+@choose "Genocide Everything"
+w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE           # Freeze Monsters ON (row 11)
+@dump:switches-1
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Humans"
+@choose "human"
+LEFT*2 ENTER            # the non-hostile creature, two squares west
+
+w
+@choose "Monster Summoning"
+@choose "Kobolds"
+@choose "kobold"
+LEFT ENTER              # the victim, adjacent west
+@while "|0/1000 XP" LEFT
+@dump:killed
+
+DOWN*13                 # 10 rows to the bottom, open the door, onto it, past it
+@dump:outside
+
+w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE           # Freeze Monsters OFF
+@dump:switches-2
+ESC
+.*3                     # three turns out of the room and out of view
+w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE           # Freeze Monsters ON again
+@dump:switches-3
+ESC
+
+@until "(cave entrance)" UP     # back to the stairs: the status line names the square
+@dump:back
+@until "h@" LEFT        # stand next to the human if it is not already
+LEFT                    # attack west
+@dump:attack            # must show "Confirm attack the human? [yn]"
+@while "Confirm attack the human" n
+@dump:declined
+@quit

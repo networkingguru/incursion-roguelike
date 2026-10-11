@@ -1,0 +1,47 @@
+# Reproduction for bd inc-a7jq, scenario A: a non-hostile creature takes the
+# drop of a creature the player killed, while the player stands in the room.
+# Read by tools/check_loot_claim.sh. Run it as the header of
+# lootclaim-b-thief-attack.keys says, with this file's name.
+#
+# The victim is a kobold summoned beside the player; the player kills it with
+# the ordinary attack key while monsters are frozen, so the drop list can be
+# read before anything moves. The non-hostile creature is a wizard-summoned
+# human, which never attacks the player, standing next to the drops. Then
+# monsters unfreeze and ten turns pass with the player in the room, in view.
+# "Things in View" before and after shows whether the drops stayed on the floor.
+
+@dump:arrival
+w
+y
+@choose "Genocide Everything"
+w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE           # Freeze Monsters ON (row 11)
+@dump:freeze-on
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Humans"
+@choose "human"
+LEFT*2 ENTER            # the non-hostile creature, two squares west
+
+w
+@choose "Monster Summoning"
+@choose "Kobolds"
+@choose "kobold"
+LEFT ENTER              # the victim, adjacent west
+@while "|0/1000 XP" LEFT   # attack west until the sidebar's XP moves
+@dump:killed
+
+w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE           # Freeze Monsters OFF
+@dump:freeze-off
+ESC
+.*10                    # ten turns, the player in the room and in view
+@dump:waited
+v
+@dump:log
+ESC
+@quit

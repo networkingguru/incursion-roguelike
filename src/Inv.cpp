@@ -34,6 +34,7 @@
 
 */
 
+#include <vector>
 #include "Incursion.h"
 #include "HideCheck.h"
 
@@ -208,6 +209,7 @@ EvReturn Monster::PickUp(EventInfo &e)
     Inv = e.EItem->myHandle;
     
     e.EItem->SetOwner(e.EActor->myHandle);
+    LootClaimTaken(e.EItem, e.EActor);
     if (e.EActor && e.EActor->m)
       HideTrigger(e.EActor, ItemSizePenalty(e.EItem));
     return DONE;
@@ -575,6 +577,7 @@ EvReturn Character::PickUp(EventInfo &e) {
     int16 sizePen = ItemSizePenalty(e.EItem);
     e.EItem->Remove(false);
     e.EItem->SetOwner(e.EActor->myHandle);
+    LootClaimTaken(e.EItem, e.EActor);
     LegendIdent(e.EItem); 
     /* ww: do this before stacking, otherwise if you have a healing potion and
     * you have wiz-ident you pick up an unidentified one */
@@ -1686,3 +1689,176 @@ Item* Creature::RandGoodInv(int32 minval)
     return it;
   }
 
+/* inc-a7jq: the loot claim. LootClaimant walks the killer's leader chain
+   (at most 4 steps, stopping at NULL or a repeat) looking for the player who
+   owns the claim on a kill's drops. */
+Player *LootClaimant(Creature *killer)
+  {
+    int16 i;
+    Creature *c = killer;
+    if (!c)
+      return NULL;
+    for (i = 0; i < 4 && c; i++)
+      {
+        if (c->isPlayer())
+          return (Player*)c;
+        {
+          Creature *nxt = c->getLeader();
+          if (!nxt || nxt == c)
+            break;
+          c = nxt;
+        }
+      }
+    return NULL;
+  }
+
+/* inc-a7jq: the loot claim. LootRoomHolds is true when (px,py) lies in the
+   same room as the drop (dx,dy): a corridor is never a room, and otherwise an
+   8-connected flood over squares sharing the drop square's Region index.
+   ponytail: the fill stops at 1500 squares, so a single region larger than
+   that counts as no room and only the view test applies; the upgrade path is
+   a per-room id stored at level generation. */
+bool LootRoomHolds(Map *m, int16 dx, int16 dy, int16 px, int16 py)
+  {
+    const int16 FILL_CAP = 1500;
+    int16 sx, sy, nx, ny, k;
+    uint8 reg;
+    int16 i;
+    std::vector<int16> fx, fy;
+    std::vector<bool> seen;
+
+    if (!m || !m->InBounds(dx,dy) || !m->InBounds(px,py))
+      return false;
+    if (TREG(m->RegionAt(dx,dy))->HasFlag(RF_CORRIDOR))
+      return false;
+
+    if (dx == px && dy == py)
+      return true;
+
+    reg = (uint8)m->At(dx,dy).Region;
+    seen.assign((size_t)m->SizeX() * m->SizeY(), false);
+    fx.push_back(dx);
+    fy.push_back(dy);
+    seen[(size_t)dy * m->SizeX() + dx] = true;
+
+    for (i = 0; i < (int16)fx.size(); i++)
+      {
+        if ((int16)fx.size() > FILL_CAP)
+          return false;
+        sx = fx[i];
+        sy = fy[i];
+        for (k = 0; k < 8; k++)
+          {
+            static const int8 ox[8] = { -1, 0, 1, -1, 1, -1, 0, 1 };
+            static const int8 oy[8] = { -1, -1, -1, 0, 0, 1, 1, 1 };
+            nx = sx + ox[k];
+            ny = sy + oy[k];
+            if (!m->InBounds(nx,ny))
+              continue;
+            if ((uint8)m->At(nx,ny).Region != reg)
+              continue;
+            if (seen[(size_t)ny * m->SizeX() + nx])
+              continue;
+            if (nx == px && ny == py)
+              return true;
+            seen[(size_t)ny * m->SizeX() + nx] = true;
+            fx.push_back(nx);
+            fy.push_back(ny);
+          }
+      }
+    return false;
+  }
+
+/* inc-a7jq: the loot claim. LootClaimLive is true while a claimed item's
+   claimant is a player on the same map, the item lies on the map floor, and
+   the player either sees the square or shares the drop's room. A claim that
+   fails this ends for good: both the item's LOOT_CLAIM and the player's
+   matching LOOT_CLAIMS are removed. */
+bool LootClaimLive(Item *it)
+  {
+    Status *claim = NULL;
+    Player *p;
+    bool live = false;
+
+    if (!it || !it->isItem())
+      return false;
+
+    StatiIterNature(it, LOOT_CLAIM)
+      claim = S;
+      break;
+    StatiIterEnd(it)
+
+    if (!claim || !claim->h)
+      return false;
+
+    {
+      Object *o = theRegistry->GetQuiet((hObj)claim->h);
+      p = (o && o->isPlayer()) ? (Player*)o : NULL;
+    }
+
+    if (p && p->m == it->m && it->m &&
+        !it->Owner() &&
+        ((it->m->At(it->x,it->y).Visibility & VI_VISIBLE) ||
+         LootRoomHolds(it->m, it->x, it->y, p->x, p->y)))
+      live = true;
+
+    if (!live)
+      {
+        it->RemoveStati(LOOT_CLAIM);
+        if (p)
+          p->RemoveStati(LOOT_CLAIMS, -1, -1, -1, it);
+      }
+    return live;
+  }
+
+/* inc-a7jq: the loot claim. LootClaimTaken ends the claim on an item that has
+   just become a creature's, so a later viewer sees no live claim; a taker who
+   is not the claimant is marked LOOT_THIEF with the item it took. */
+void LootClaimTaken(Item *it, Creature *taker)
+  {
+    Player *p = NULL;
+
+    if (!it || !it->isItem() || !it->HasStati(LOOT_CLAIM))
+      return;
+
+    {
+      Thing *o = it->GetStatiObj(LOOT_CLAIM);
+      p = (o && o->isPlayer()) ? (Player*)o : NULL;
+    }
+    it->RemoveStati(LOOT_CLAIM);
+    if (p)
+      p->RemoveStati(LOOT_CLAIMS, -1, -1, -1, it);
+
+    if (p && taker && taker != p)
+      taker->GainPermStati(LOOT_THIEF, it, SS_MISC);
+  }
+
+/* inc-a7jq: the loot claim. LootIsThiefOf is true when actor is the player and
+   victim still carries an item it took under a claim. A LOOT_THIEF whose item
+   no longer resolves or is no longer carried by victim is dropped. */
+bool LootIsThiefOf(Creature *victim, Creature *actor)
+  {
+    std::vector<hObj> dead;
+    bool thief = false;
+
+    if (!victim || !actor || !actor->isPlayer())
+      return false;
+
+    StatiIterNature(victim, LOOT_THIEF)
+      Object *o = theRegistry->GetQuiet((hObj)S->h);
+      if (!o || !o->isItem())
+        dead.push_back((hObj)S->h);
+      else if (((Item*)o)->Owner() == victim)
+        thief = true;
+      else
+        dead.push_back((hObj)S->h);
+    StatiIterEnd(victim)
+
+    for (size_t d = 0; d != dead.size(); d++)
+      StatiIterNature(victim, LOOT_THIEF)
+        if (S->h == dead[d])
+          StatiIter_RemoveCurrent(victim);
+      StatiIterEnd(victim)
+
+    return thief;
+  }

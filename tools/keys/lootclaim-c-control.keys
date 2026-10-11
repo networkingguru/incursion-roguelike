@@ -1,0 +1,44 @@
+# Reproduction for bd inc-a7jq, scenario C: the control. The drops here are NOT
+# from a kill by the player's party: the victim dies to the wizard-mode
+# "Genocide Everything", which is the victim's own death with no killer. A
+# non-hostile human must still take them. Read by tools/check_loot_claim.sh.
+# This is the same arrangement as scenario A, so a difference between the two
+# is the kill and nothing else.
+
+@dump:arrival
+w
+y
+@choose "Genocide Everything"
+w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE           # Freeze Monsters ON (row 11)
+@dump:freeze-on
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Kobolds"
+@choose "kobold"
+LEFT ENTER              # the victim, adjacent west
+
+w
+@choose "Genocide Everything"   # the kobold dies with no killer; its drops fall
+
+w
+@choose "Monster Summoning"
+@choose "Humans"
+@choose "human"
+LEFT*2 ENTER            # the non-hostile creature, two squares west
+@dump:killed
+
+w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE           # Freeze Monsters OFF
+@dump:freeze-off
+ESC
+.*10                    # ten turns, the player in the room and in view
+@dump:waited
+v
+@dump:log
+ESC
+@quit

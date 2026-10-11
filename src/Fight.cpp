@@ -30,6 +30,7 @@
 
 */
 
+#include <vector>
 #include "Incursion.h"
 #include "HideCheck.h"
 
@@ -670,6 +671,9 @@ int16 getChivalryBreach(EventInfo &e) {
     if (!e.EVictim)
         return breach;
     if (!e.EVictim->isCreature())
+        return breach;
+    /* inc-a7jq: no chivalry breach against the player's thief. */
+    if (LootIsThiefOf(e.EVictim, e.EActor))
         return breach;
 
     vicFleeing = e.EVictim->HasStati(AFRAID) && e.EVictim->GetStatiVal(AFRAID) != FEAR_SKIRMISH;
@@ -7237,7 +7241,8 @@ EvReturn Creature::Damage(EventInfo &e) {
     if (e.AType == A_GAZE && !e.wasFriendly)
         goto IgnoreMorality;
 
-    if (e.wasFriendly) {
+    /* inc-a7jq: a thief is not a friendly ally, so no unprovoked/unlawful penalty. */
+    if (e.wasFriendly && !LootIsThiefOf(e.EVictim, e.EActor)) {
         int16 mag;
         if (e.DType == AD_NECR && e.EVictim->isMType(MA_UNDEAD))
             goto IgnoreMorality;
@@ -7284,7 +7289,9 @@ EvReturn Creature::Damage(EventInfo &e) {
             ((breach == AL_NONLAWFUL) ? "unchivalrous attack" : "merciless attack"),
             e.EVictim);
 
-    if (e.EVictim->HasStati(TRIED,SK_DIPLOMACY+EV_SURRENDER*100,e.EActor)) {
+    /* inc-a7jq: no surrender penalty against the player's thief. */
+    if (!LootIsThiefOf(e.EVictim, e.EActor) &&
+        e.EVictim->HasStati(TRIED,SK_DIPLOMACY+EV_SURRENDER*100,e.EActor)) {
         e.EActor->AlignedAct(AL_NONLAWFUL, 5, "attacking surrendered creatures", e.EVictim);
         if (!e.EVictim->isMType(MA_EVIL))
             e.EActor->AlignedAct(AL_NONGOOD, 2, "attacking surrendered creatures", e.EVictim);
@@ -9099,8 +9106,38 @@ EvReturn Creature::Death(EventInfo &e)
 
   RemoveStati(SUMMONED);
 
+  /* inc-a7jq: the loot claim. A kill's drops belong to the killer's player
+     while the claim is live. Collect the carried item handles BEFORE DropAll
+     (it empties the inventory), then claim each item that landed on the map
+     floor -- never the corpse. Killer may be NULL. */
+  Player *lootP = LootClaimant(e.EActor);
+  std::vector<hObj> lootItems;
+  if (lootP)
+    {
+      Item *li;
+      for (li = FirstInv(); li; li = NextInv())
+        lootItems.push_back(li->myHandle);
+    }
+
   if (!isIllusion())
     DropAll();
+
+  if (lootP)
+    {
+      size_t lk;
+      for (lk = 0; lk != lootItems.size(); lk++)
+        {
+          Object *o = theRegistry->GetQuiet(lootItems[lk]);
+          if (!o || !o->isItem())
+            continue;
+          Item *li = (Item*)o;
+          if (li->m != m || li->Owner())
+            continue;
+          li->GainPermStati(LOOT_CLAIM, lootP, SS_MISC);
+          lootP->GainPermStati(LOOT_CLAIMS, li, SS_MISC);
+        }
+    }
+
   Timeout = 0;              
     
   if (m) 

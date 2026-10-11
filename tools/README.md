@@ -651,6 +651,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_load_corrupt.sh` | Does the real binary refuse ten hand-corrupted saves cleanly and still load two genuine ones? | LIVE |
 | `check_load_guard.sh` | It forces each overload condition of `tools/load_guard.sh` through test-only variables and checks the landing is refused. | LIVE |
 | `check_logrotate.sh` | Does log rotation keep the right archives and prune only names it made itself? | LIVE |
+| `check_loot_claim.sh` | With a paladin loaded, do non-hostile creatures leave a party kill's drops alone while the paladin is in the room, may a thief that took one be attacked with no prompt or guilt, does a fleeing creature without one still raise the prompt, and does the claim end once the paladin leaves the room and loses sight of the drops? (inc-a7jq) | LIVE |
 | `check_loremaster_live.sh` | Does the Loremaster's Bibliographic Insight add its extra attribute points when he reads a tome? | LIVE |
 | `check_luckblade_plus.sh` | Does the Luckblade keep its magical plus when the wish it would charge for is refused, rather than grinding down first? | LIVE |
 | `check_lz_uncompress.sh` | Can the LZ77 and RLE decoders be made to write past their output buffer? | LIVE |

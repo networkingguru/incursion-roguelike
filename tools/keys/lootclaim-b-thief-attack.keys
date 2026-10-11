@@ -1,0 +1,117 @@
+# Reproduction for bd inc-a7jq, scenario B. Read by tools/check_loot_claim.sh.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22-noroomdesc.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav \
+#       tools/headless.sh tools/keys/b-thief-attack 4
+#
+# THE CHARACTER is the Lawful Good paladin fixture, on the cave entrance
+# stairs. THE MONSTER is a wizard-summoned black orc: hostile, and sapient, so
+# attacking it while it flees is a breach of chivalry (getChivalryBreach,
+# src/Fight.cpp).
+#
+# SCENARIO B. The paladin kills a kobold and steps three squares east of the
+# stairs, still in the room and in view of the drops. A black orc is summoned
+# ON the drop square, so it need not walk or choose between throwing and
+# moving. Monsters unfreeze for ONE turn: the orc takes the drops while the
+# claim is live (only a hostile creature may). Monsters freeze again, the
+# paladin casts Cause Fear on the orc until the log says it is terrified, walks
+# up and attacks it. With the feature the orc is a thief and the attack raises
+# no prompt and no penalty. Today it asks "Confirm attack fleeing victim?".
+
+@dump:arrival
+w
+y
+@choose "Genocide Everything"
+w
+@choose "Wizard Mode Switches"
+DOWN*5 SPACE DOWN SPACE DOWN SPACE DOWN*3 SPACE   # spell failure off, all spells, infinite mana, Freeze ON
+@dump:switches-1
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Kobolds"
+@choose "kobold"
+LEFT ENTER              # the victim, adjacent west
+@while "|0/1000 XP" LEFT
+RIGHT*3
+@dump:killed
+
+w
+@choose "Monster Summoning"
+@choose "Orcs"
+a                       # black orc, on the drop square
+LEFT*4 ENTER
+@dump:orc
+
+
+w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE           # Freeze Monsters OFF
+@dump:switches-2
+ESC
+.                       # one turn: the orc acts once, standing on the drops
+w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE           # Freeze Monsters ON again
+@dump:switches-3
+ESC
+@dump:taken
+
+w
+@choose "Learn Any Spell"
+"Cause Fear"
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+v
+@dump:fearlog
+ESC
+@until "o@" LEFT        # walk up to the orc
+@dump:adjacent
+LEFT                    # attack it
+@dump:attack            # today: "Confirm attack fleeing victim? [yn]"
+@while "Confirm attack" y
+.
+v
+@dump:log
+ESC
+@quit

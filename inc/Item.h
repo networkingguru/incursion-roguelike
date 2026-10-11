@@ -488,3 +488,13 @@ extern ItemGen DungeonItems[],
                ChestItems[],
                MageItems[],
                StapleItems[];
+
+/* inc-a7jq: the loot claim (src/Inv.cpp). LootClaimant maps a kill's killer
+   to the player who owns the claim; LootRoomHolds tests whether the claim's
+   player is in the drop's room; LootClaimLive reports whether a claimed item
+   still holds its claim and ends it when it does not. */
+Player *LootClaimant(Creature *killer);
+bool LootRoomHolds(Map *m, int16 dx, int16 dy, int16 px, int16 py);
+bool LootClaimLive(Item *it);
+void LootClaimTaken(Item *it, Creature *taker);
+bool LootIsThiefOf(Creature *victim, Creature *actor);

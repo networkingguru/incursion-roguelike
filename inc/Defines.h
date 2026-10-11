@@ -3172,7 +3172,13 @@ typedef signed int        hObj;
 #define ENTANGLED         237
 #define PAIN_TALLY        238
 #define HESITATION        239
-#define LAST_STATI        240
+/* inc-a7jq: the loot claim. LOOT_CLAIM (item) names the claiming player's
+   handle; LOOT_CLAIMS (player) names a claimed item's handle; LOOT_THIEF
+   (creature) names an item taken under a claim. */
+#define LOOT_CLAIM        240
+#define LOOT_CLAIMS       241
+#define LOOT_THIEF        242
+#define LAST_STATI        243
   
 
 
