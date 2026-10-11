@@ -662,11 +662,13 @@ bool isLegalPersonTo(Creature *Actor, Creature *Victim)
 }
 
 /* Determines both breach of chivalry and attacking fleeing foe */
-int16 getChivalryBreach(EventInfo &e) {
+int16 getChivalryBreach(EventInfo &e, bool *fleeingBreach) {
     int16 i, breach;
     bool givenTerms, isLegalPerson, vicFleeing, vicUnready;
 
     breach = 0;
+    if (fleeingBreach)
+        *fleeingBreach = false;
 
     if (!e.EVictim)
         return breach;
@@ -698,6 +700,10 @@ int16 getChivalryBreach(EventInfo &e) {
         breach |= AL_NONGOOD;
         if (isLegalPerson)
             breach |= AL_NONLAWFUL;
+        /* inc-gfq2: record that the breach is the fleeing-victim branch,
+           distinct from the unready (prone/blind/paralysed/stuck) branch. */
+        if (fleeingBreach)
+            *fleeingBreach = true;
     }
 
     /* Only paladins, heavy armour wearers, mounted fighters and followers of Erich are subject to the code of chivalry... */
@@ -712,20 +718,43 @@ int16 getChivalryBreach(EventInfo &e) {
 }
   
 bool attackSanity(EventInfo &e) {
-    bool doAlignWarning; 
+    bool doAlignWarning, fleeingBreach; 
     int16 breach;
     Creature *l;
     
-    breach = getChivalryBreach(e);
-    doAlignWarning = false;
-    if (e.EActor->isMType(MA_LAWFUL) || (e.EActor->isCharacter() && 
-           e.EPActor->desiredAlign & AL_LAWFUL))
-      if (breach & AL_NONLAWFUL)
-        doAlignWarning = true;
-    if (e.EActor->isMType(MA_GOOD) || (e.EActor->isCharacter() && 
-           e.EPActor->desiredAlign & AL_GOOD))
-      if (breach & AL_NONGOOD)
-        doAlignWarning = true;
+    auto alignWarning = [&](int16 br) {
+        if (e.EActor->isMType(MA_LAWFUL) || (e.EActor->isCharacter() && 
+               e.EPActor->desiredAlign & AL_LAWFUL))
+          if (br & AL_NONLAWFUL)
+            return true;
+        if (e.EActor->isMType(MA_GOOD) || (e.EActor->isCharacter() && 
+               e.EPActor->desiredAlign & AL_GOOD))
+          if (br & AL_NONGOOD)
+            return true;
+        return false;
+    };
+
+    breach = getChivalryBreach(e, &fleeingBreach);
+    doAlignWarning = alignWarning(breach);
+
+    /* inc-gfq2: when the player attacks a fleeing sapient the alignment forbids
+       striking, offer terms by the Offer Terms command's own event path (EV_TERMS)
+       before the prompt; accepted means no attack. A refusal leaves the victim
+       hostile, so the TRIED stati it now holds can end the fleeing breach, and
+       breach/doAlignWarning must be recomputed before the prompt. ABORT
+       (skirmish/magical fear, already offered, social sanity) is unchanged. */
+    if (e.EActor->isPlayer() && e.EPActor->Opt(OPT_AUTO_TERMS) &&
+        doAlignWarning && fleeingBreach && !e.isAoO) {
+        EventInfo termsEvent; EvReturn termsResult;
+        termsEvent = e;
+        termsResult = ReThrow(EV_TERMS, termsEvent);
+        if (termsResult != ABORT) {
+            if (!e.EVictim->isHostileTo(e.EActor))
+                return false;
+            breach = getChivalryBreach(e, &fleeingBreach);
+            doAlignWarning = alignWarning(breach);
+        }
+    }
         
     if (doAlignWarning)
       if (!e.EActor->yn(Format("%s %s victim?",

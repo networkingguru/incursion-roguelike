@@ -2537,6 +2537,14 @@ Option OptionList[] = {
   { OPT_WARN_DROP, "Confirm Drop Equipment", "NO/YES", 1, 0, 0,
     "__If this option is active, you will be asked to confirm before dropping "
     "an item on the inventory screen." },
+  { OPT_AUTO_TERMS, "Auto-Offer Terms", "NO/YES", 1, 1, 0,
+    "__When enabled, before attacking a fleeing enemy your character will Offer "
+    "Terms to the enemy, making the same Diplomacy roll as if you had done so "
+    "manually. If successful, the enemy will surrender to you and become "
+    "non-hostile (giving the correct non-violent defeat XP award as well). If "
+    "Offer Terms fails, the enemy will continue to flee and your character will "
+    "attack it, but since terms were offered, this will not be a breach of your "
+    "alignment." },
   
   { OPT_TWO_WEP, "Two-Weapon Fighting", "Never/Always/Smart/Bash", 3, 2, 0,
       "__This option determines when you will elect to make an attack with both "

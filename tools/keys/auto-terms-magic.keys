@@ -1,0 +1,94 @@
+# bd inc-gfq2: the Auto-Offer Terms option against a MAGICALLY frightened victim.
+# Read by tools/check_auto_terms.sh (outcomes 3 and 4). Staging is copied from
+# tools/keys/lootclaim-b0-fleeing-control.keys: the Lawful Good paladin fixture,
+# a wizard-summoned black orc made to flee by repeated Cause Fear (FEAR_MAGIC),
+# Freeze Monsters on. Offering terms is refused by the rules for FEAR_MAGIC
+# ("You can't offer terms to magically frightened creatures."), so the existing
+# fleeing-victim prompt MUST appear whether the option is on or off.
+
+@dump:arrival
+w
+y
+@choose "Genocide Everything"
+w
+@choose "Wizard Mode Switches"
+DOWN*5 SPACE DOWN SPACE DOWN SPACE DOWN*3 SPACE   # spell failure off, all spells, infinite mana, Freeze ON
+@dump:switches-1
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Kobolds"
+@choose "kobold"
+LEFT ENTER              # the victim, adjacent west
+@while "|0/1000 XP" LEFT
+RIGHT*3
+@dump:killed
+
+w
+@choose "Monster Summoning"
+@choose "Orcs"
+a                       # black orc, on the drop square: where B's orc stands
+LEFT*4 ENTER
+
+@dump:switches-2
+@dump:switches-3
+@dump:taken
+
+w
+@choose "Learn Any Spell"
+"Cause Fear"
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+m
+@choose "Cause Fear"
+LEFT*4
+ENTER
+v
+@dump:fearlog
+ESC
+@until "o@" LEFT        # walk up to the orc
+@dump:adjacent
+LEFT                    # attack it
+@dump:attack            # today: "Confirm attack fleeing victim? [yn]"
+@while "Confirm attack" y
+.
+v
+@dump:log
+ESC
+@quit

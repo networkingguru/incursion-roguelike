@@ -1,0 +1,47 @@
+# bd inc-gfq2: the Auto-Offer Terms option against a NATURALLY frightened
+# victim. Read by tools/check_auto_terms.sh (outcomes 1, 2 and 4).
+#
+#   INCURSION_OPTIONS=<noroomdesc settings, byte 312 set or clear> \
+#   INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav \
+#       tools/headless.sh tools/keys/auto-terms-natural.keys <seed>
+#
+# THE CHARACTER is the Lawful Good paladin fixture. THE VICTIM is a
+# wizard-summoned ogre, adjacent west: sapient and hostile. Cheat Death is on
+# and Show All Combat Rolls is on (so the Diplomacy roll is in the log). The
+# paladin hits the ogre until it passes one third of its hit points and the
+# engine itself gives it AFRAID, FEAR_HP (src/Monster.cpp, "turns to flee!").
+# That is natural fear, which Creature::OfferTerms accepts, and it carries no
+# TRIED mark, so the fleeing-victim breach stands. Freeze Monsters is then
+# switched on so the ogre stays beside the paladin, and the paladin attacks it
+# once more: that attack is the thing under test.
+#
+# A seed in which the ogre dies before it flees never reaches the dump named
+# "attack"; the check skips such seeds.
+
+w
+y
+@choose "Genocide Everything"
+w
+@choose "Wizard Mode Switches"
+SPACE DOWN*11 SPACE
+ESC
+w
+@choose "Monster Summoning"
+@choose "Giants"
+@choose "ogre"
+LEFT ENTER
+@until "turns to flee" LEFT
+@dump:flee
+w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE
+@dump:switches
+ESC
+LEFT
+@dump:attack
+@while "Confirm attack" y
+@dump:after
+v
+@dump:log
+ESC
+@quit
