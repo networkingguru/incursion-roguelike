@@ -21,10 +21,10 @@ State the call path from a user action to the defect, with file and line at
 every hop. "This cast is wrong" is not a chain. This is:
 
 ```
-MakeLev.cpp:1128   builds a Door
+MakeLev.cpp:1148   builds a Door
   -> ft->PlaceAt(...)
-  -> Display.cpp:165  Thing::PlaceAt
-  -> Display.cpp:278  m->Things.Add(myHandle)   (only T_MAP is excluded)
+  -> Display.cpp:181  Thing::PlaceAt
+  -> Display.cpp:294  m->Things.Add(myHandle)   (only T_MAP is excluded)
   => every dungeon with a door puts a Door* in the list Augury walks
 ```
 
