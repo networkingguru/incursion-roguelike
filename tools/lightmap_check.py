@@ -16,9 +16,14 @@ Invariants checked, on every block:
   3. Every non-opaque neighbour of a source with radius at least one is lit.
   4. Among cells reached by only one source, brightness never rises with
      distance from that same source.
+  5. No AMBIENT cell marks Frame below its static light 'X': the per-channel
+     max joining static light to source light never lowers it.
+
+Whole-log: at least one block must have an 'A' AMBIENT cell -- static light
+inside a source's reach -- or invariant 5 was never exercised.
 
 Usage: tools/lightmap_check.py <light.log>      exit 0 pass, 1 fail, 2 no blocks
-       tools/lightmap_check.py --selftest       proves all four assertions bite
+       tools/lightmap_check.py --selftest       proves all five assertions bite
 """
 import re
 import sys
@@ -72,8 +77,14 @@ def parse(text):
             i += 1
             filter_grid = lines[i:i + h]
             i += h
+        ambient_grid = None
+        if i < len(lines) and lines[i] == "AMBIENT":
+            i += 1
+            ambient_grid = lines[i:i + h]
+            i += h
         blocks.append(dict(w=w, h=h, px=px, py=py, plight=plight,
-                           sources=sources, grid=grid, filter=filter_grid))
+                           sources=sources, grid=grid, filter=filter_grid,
+                           ambient=ambient_grid))
     return blocks
 
 
@@ -128,6 +139,15 @@ def check_block(b, where):
     if b["filter"] is not None and (len(b["filter"]) != b["h"]
                                     or any(len(r) != b["w"] for r in b["filter"])):
         return ["%s: FILTER grid is not %dx%d" % (where, b["w"], b["h"])]
+    if b["ambient"] is not None and (len(b["ambient"]) != b["h"]
+                                     or any(len(r) != b["w"] for r in b["ambient"])):
+        return ["%s: AMBIENT grid is not %dx%d" % (where, b["w"], b["h"])]
+    if b["ambient"] is not None:
+        for y in range(b["h"]):
+            for x in range(b["w"]):
+                if b["ambient"][y][x] == "X":
+                    fails.append("%s: cell (%d,%d) Frame is below its static light"
+                                 % (where, x, y))
     g = b["grid"]
     sole_lit = {}
     for y in range(b["h"]):
@@ -195,6 +215,12 @@ def check(text):
     fails = []
     for n, b in enumerate(blocks):
         fails += check_block(b, "block %d" % (n + 1))
+    if any(b["ambient"] is not None for b in blocks):
+        if not any(b["ambient"] is not None and any("A" in row for row in b["ambient"])
+                   for b in blocks):
+            fails.append("no block has an 'A' ambient cell: the session never put "
+                         "static light inside a source's reach, so invariant 5 was "
+                         "not exercised")
     return (1 if fails else 0), fails
 
 
@@ -249,8 +275,25 @@ def selftest():
                      "-------\n"
                      "-------\n")
     unmarked_filtered_rise = filtered_rise.split("FILTER\n", 1)[0]
+    good_ambient = (good + "AMBIENT\n"
+                    "-------\n"
+                    "-AA----\n"
+                    "-aa----\n"
+                    "-a-----\n"
+                    "-------\n")
+    x_ambient = good_ambient.replace("-AA----", "-AX----")
+    no_a_ambient = (good + "AMBIENT\n"
+                    "-------\n"
+                    "-aa----\n"
+                    "-aa----\n"
+                    "-a-----\n"
+                    "-------\n")
     results = [
         ("a clean block passes", check(good)[0] == 0),
+        ("a block with an 'A' ambient cell passes", check(good_ambient)[0] == 0),
+        ("an 'X' ambient cell fails invariant 5", check(x_ambient)[0] == 1),
+        ("AMBIENT grids with no 'A' anywhere fail the whole-log rule",
+         check(no_a_ambient)[0] == 1),
         ("light behind a wall fails", check(wall_leak)[0] == 1),
         ("an unlit player with a light fails", check(dark_player)[0] == 1),
         ("an empty log is inconclusive", check("")[0] == 2),
