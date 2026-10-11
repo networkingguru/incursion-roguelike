@@ -36,13 +36,16 @@
 # tools/check_lib.sh reads as INCONCLUSIVE -- and _check_prove_red refuses
 # INCONCLUSIVE as evidence, on purpose. The break that leaves a session playing
 # is a fixture whose sheet no longer describes its save, so that is what is
-# declared: the sheet's STR goes back to 14/00 -> 18/00, which is the exact
-# drift bef32c3 caused. It restores the pre-shift claim without touching the
-# .sav, the loaded character is unchanged, and the check must notice they
-# disagree. The exactly-once guard check_mutation applies on an ordinary run
-# is worth having on its own: it fails if the fixture is ever regenerated into
-# a character with a different Strength, which is a thing somebody should be
-# told about rather than discover.
+# declared: the sheet's stored Strength base goes 12 -> 16, the exact drift
+# bef32c3 caused. The check compares stored Strength (base and natural bonus),
+# not displayed Strength, because displayed Strength moves with hunger and a
+# transient hunger state must not decide this claim. It restores the pre-shift
+# claim without touching the .sav, the loaded character is unchanged, and the
+# check must notice they disagree. The exactly-once guard check_mutation
+# applies on an ordinary run is worth having on its own: it fails if the
+# fixture is ever regenerated into a character with a different stored
+# Strength, which is a thing somebody should be told about rather than
+# discover.
 #
 # Usage: tools/check_char_fixture.sh [--prove-red]
 . "$(dirname "$0")/check_lib.sh"
@@ -66,7 +69,7 @@ for f in "$SAV" "$SHEET"; do
         "  tools/make_char_fixture.sh $FIXTURE tools/keys/lizardfolk-monk-save.keys $SEED $CHECK_OPTIONS"
 done
 
-check_mutation "$SHEET" 'STR: 14/00' 'STR: 18/00'
+check_mutation "$SHEET" '(base 12, +2 natural)' '(base 16, +2 natural)'
 
 # ---------------------------------------------------------------------------
 # What the fixture claims. Each value is lifted VERBATIM, label and padding
@@ -81,7 +84,12 @@ sheet_line() { # <anchored sed expression> -> the matched text, trailing space c
 
 WANT_RACE="$(sheet_line 's/^\(Race  *[^ ].*\)$/\1/p')"
 WANT_CLASS="$(sheet_line 's/^\(Class  *[^ ].*\)$/\1/p')"
-WANT_STR="$(sheet_line 's/^\(STR: *[0-9]*\/[0-9]*\).*/\1/p')"
+# The stored Strength, not the displayed one: the STR line's parenthesized
+# breakdown up to and including any natural-bonus component. Transient lines
+# such as ", -N hunger" follow it and move with the character's state, so they
+# are excluded -- displayed STR moves with hunger, the stored base and natural
+# do not.
+WANT_STR="$(sheet_line 's/^STR:.*\((base [0-9]*\(, [+-][0-9]* natural\)*\).*/\1/p')"
 # The engine writes a space inside a name as an underscore in this dump (it is
 # the same marker that indents the Spiritual State block), while the screen
 # draws the space. Translate rather than assert the underscore, which appears
@@ -103,7 +111,7 @@ SAY_RACE="$(say "$WANT_RACE")"
 SAY_CLASS="$(say "$WANT_CLASS")"
 SAY_STR="$(say "$WANT_STR")"
 
-echo "  fixture: $FIXTURE claims $WANT_NAME, a $SAY_RACE $SAY_CLASS with STR $SAY_STR"
+echo "  fixture: $FIXTURE claims $WANT_NAME, a $SAY_RACE $SAY_CLASS with stored Strength $SAY_STR"
 
 BEFORE="$(shasum -a 256 "$SAV" | awk '{print $1}')"
 
@@ -117,7 +125,7 @@ check_screens '*-sheet'
 check_expect "$WANT_NAME"  "the loaded character is $WANT_NAME"
 check_expect "$WANT_RACE"  "he is still a $SAY_RACE"
 check_expect "$WANT_CLASS" "he is still a $SAY_CLASS"
-check_expect "$WANT_STR"   "his Strength is still the fixture's $SAY_STR"
+check_expect "$WANT_STR"   "his stored Strength is still the fixture's $SAY_STR"
 
 check_screens '*-saved'
 check_expect "Autosave...  Done." "the loaded session saved, so it owned a save file"
@@ -148,4 +156,4 @@ else
     CHECK_FAIL=1
 fi
 
-check_done "$FIXTURE loads as $WANT_NAME, a $SAY_RACE $SAY_CLASS with STR $SAY_STR, and comes through the run byte-identical"
+check_done "$FIXTURE loads as $WANT_NAME, a $SAY_RACE $SAY_CLASS with stored Strength $SAY_STR, and comes through the run byte-identical"
