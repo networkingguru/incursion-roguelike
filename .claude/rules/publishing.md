@@ -21,7 +21,7 @@ DEFAULT TO DISCLOSING — when in doubt, disclose. BRIAN NAMES THE EXCEPTIONS; d
 History: docs/rules-history/publishing.md#ai-disclosure-the-ruling-2026-09-17.
 
 ## feedback-nightly-never-publishes
-NOTHING GOES UPSTREAM WITHOUT BRIAN'S EXPRESS CONSENT. An unattended agent may read, fix, review, update docs and commit. It MUST NOT publish anything outward-facing (PR, issue, comment, release, email) to `rmtew`'s project or anywhere else. Consent is per item and per literal text, never standing. A nightly/cron agent that finds something worth sending upstream writes it to the HELD queue and stops; the next interactive session pastes the literal text and waits for a yes.
+NOTHING GOES UPSTREAM WITHOUT BRIAN'S EXPRESS CONSENT. An unattended agent may read, review, update documentation and commit documentation. It MUST NOT change source (inc-loa.66). It MUST NOT publish anything outward-facing (PR, issue, comment, release, email) to `rmtew`'s project or anywhere else. Consent is per item and per literal text, never standing. A nightly/cron agent that finds something worth sending upstream writes it to the HELD queue and stops; the next interactive session pastes the literal text and waits for a yes.
 Why: publication cannot be undone and carries his name.
 History: docs/rules-history/publishing.md#feedback-nightly-never-publishes.
 
