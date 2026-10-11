@@ -45,5 +45,7 @@ void MigrateOptions(int8 *opt) {
         opt[OPT_LIGHT_EXPLORED] = LIGHT_STEP_NORMAL;
         opt[OPT_LIGHT_BRIGHT]   = LIGHT_STEP_NORMAL;
     }
+    if (gen < OPT_GEN_AUTO_TERMS)
+        opt[OPT_AUTO_TERMS] = 1;
     opt[OPT_SETTINGS_GEN] = OPT_GEN_CURRENT;
 }

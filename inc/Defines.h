@@ -4128,6 +4128,7 @@ typedef signed int        hObj;
 #define OPT_WARN_EMPTY_HAND     309
 #define OPT_WARN_DEQU           310
 #define OPT_WARN_DROP           311
+#define OPT_AUTO_TERMS          312
 #define OPT_HIGH_HIDE           350
 #define OPT_HIGH_FRIEND         351
 #define OPT_HIGH_SLEEP          352
@@ -4208,7 +4209,8 @@ typedef signed int        hObj;
 #define OPT_SETTINGS_GEN        437
 #define OPT_GEN_NONE            0   /* written before this field existed */
 #define OPT_GEN_LIGHT_TRIM      1   /* added OPT_LIGHT_EXPLORED, OPT_LIGHT_BRIGHT */
-#define OPT_GEN_CURRENT         1
+#define OPT_GEN_AUTO_TERMS      2   /* added OPT_AUTO_TERMS */
+#define OPT_GEN_CURRENT         2
 
 
 #define OPC_TACTICAL            500

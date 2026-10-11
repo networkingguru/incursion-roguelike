@@ -22,20 +22,25 @@
 #
 # Exit 0 pass, 1 behavioural failure, 2 missing or incomplete measurement.
 #
-# Mutations confirmed RED here on 2026-09-10:
+# Mutations confirmed RED here on 2026-10-11 (at OPT_GEN_CURRENT = 2):
 #   drop the `gen >= OPT_GEN_CURRENT` guard   (a newer file is stamped backwards)
 #   judge by the option values, not the stamp (a chosen Dimmest is overwritten)
 #   drop the stamp write                      (nothing ever settles)
 #   stamp with OPT_GEN_NONE                   (the same)
 #   also write a neighbouring option          (it clobbers an untouched setting)
 #   migrate to Dimmer rather than Normal      (an old file lands off default)
+#   value-sniff the light branch, guard kept   (a chosen Dimmest is overwritten)
+#   drop the generation-2 branch              (312 is left at the zero byte)
 #
-# Three further mutations are EQUIVALENT while only one generation exists, and
-# are deliberately not claimed above: `gen >` for `gen >=`, stamping before the
-# branch instead of after, and value-sniffing with the guard left in place. The
-# first two are no-ops because `gen` is read into a local before anything is
-# written; the third never reaches its test. Each becomes a real defect the
-# moment OPT_GEN_CURRENT reaches 2, so add a case here when that happens.
+# Two further mutations remain EQUIVALENT at generation 2, and are deliberately
+# not claimed above: `gen >` for `gen >=`, and stamping before the branch
+# instead of after. Both are no-ops because `gen` is copied into a local before
+# anything is written, and every branch then tests that local with a strict `<`;
+# a file stamped exactly at OPT_GEN_CURRENT fires no branch, so raising the
+# stamp (the same value) first or falling through the guard both leave the array
+# unchanged. Only `gen`-driven value-sniffing becomes real once a second
+# generation exists, because a file stamped at the older generation now passes
+# the guard and reaches the sniff.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -72,25 +77,34 @@ $CXX -std=c++17 -o "$WORK/probe" "$WORK/probe.o" "$OBJ" || {
 python3 - "$WORK/out.txt" <<'PYCODE'
 import sys
 
-rows, flags = {}, {}
+rows, flags, consts = {}, {}, {}
 for line in open(sys.argv[1]).read().splitlines():
     f = line.split()
     if not f:
         continue
-    if len(f) == 4:
+    if len(f) == 5:
         rows[f[0]] = tuple(int(x) for x in f[1:])
     elif len(f) == 2:
-        flags[f[0]] = int(f[1])
+        if f[0].startswith("GEN_"):
+            consts[f[0]] = int(f[1])
+        else:
+            flags[f[0]] = int(f[1])
 
-WANT_CASES = ["old", "chosen", "future", "twice", "kept"]
+WANT_CASES = ["old", "chosen", "future", "twice", "kept",
+              "gen1", "off-at-gen2", "gen0"]
 missing = [c for c in WANT_CASES if c not in rows] + \
           ([] if "old-neighbours" in flags else ["old-neighbours"])
+need_consts = ["GEN_NONE", "GEN_LIGHT_TRIM", "GEN_AUTO_TERMS", "GEN_CURRENT"]
+missing += [c for c in need_consts if c not in consts]
 if missing:
     print("INCONCLUSIVE: the probe did not report: %s" % ", ".join(missing))
     sys.exit(2)
 
 DIMMEST, DIMMER, NORMAL, BRIGHTER, BRIGHTEST = 0, 1, 2, 3, 4
-GEN_NONE, GEN_CURRENT = 0, 1
+GEN_NONE = consts["GEN_NONE"]
+GEN_LIGHT_TRIM = consts["GEN_LIGHT_TRIM"]
+GEN_AUTO_TERMS = consts["GEN_AUTO_TERMS"]
+GEN_CURRENT = consts["GEN_CURRENT"]
 
 fails = []
 def check(cond, msg):
@@ -98,30 +112,30 @@ def check(cond, msg):
         fails.append(msg)
 
 # 1. The case every existing installation is in.
-check(rows["old"] == (NORMAL, NORMAL, GEN_CURRENT),
+check(rows["old"] == (NORMAL, NORMAL, 1, GEN_CURRENT),
       "an options file written before these options existed migrated to %s; "
-      "wanted both at Normal (%d) and the stamp at %d"
-      % (rows["old"], NORMAL, GEN_CURRENT))
+      "wanted both lights at Normal (%d), byte %d set to 1, and the stamp at %d"
+      % (rows["old"], NORMAL, 312, GEN_CURRENT))
 
 # The whole point: an unmigrated file must NOT be left reading the zero byte.
 check(rows["old"][0] != DIMMEST and rows["old"][1] != DIMMEST,
       "an old file came out at the zero byte (%s), which is Dimmest, not "
       "Normal -- the migration did nothing" % (rows["old"],))
 
-# 2. Nothing outside the new generation may be touched.
+# 2. Nothing outside the new generations may be touched.
 check(flags["old-neighbours"] == 1,
-      "the migration changed a neighbouring display option; it may write only "
-      "the options belonging to a generation newer than the file's")
+      "the migration changed a neighbouring option; it may write only the "
+      "options belonging to a generation newer than the file's")
 
 # 3. The case a value-sniffing migration would get wrong.
-check(rows["chosen"] == (DIMMEST, DIMMEST, GEN_CURRENT),
+check(rows["chosen"] == (DIMMEST, DIMMEST, 1, GEN_CURRENT),
       "a file already at generation %d, in which the player chose Dimmest on "
       "purpose, came back as %s; a deliberate setting MUST survive, and the "
       "stamp is the only thing that distinguishes it from an old file"
       % (GEN_CURRENT, rows["chosen"]))
 
 # 4. A file from a newer build is left alone, stamp included.
-check(rows["future"] == (BRIGHTEST, BRIGHTER, GEN_CURRENT + 7),
+check(rows["future"] == (BRIGHTEST, BRIGHTER, 0, GEN_CURRENT + 7),
       "a file from a newer generation came back as %s; downgrading must lose "
       "nothing and must not stamp the file backwards" % (rows["future"],))
 
@@ -131,9 +145,28 @@ check(rows["twice"] == rows["old"],
       "every load and must settle" % (rows["twice"], rows["old"]))
 
 # 6. The round trip: migrate, player picks a setting, load again.
-check(rows["kept"] == (NORMAL, BRIGHTEST, GEN_CURRENT),
+check(rows["kept"] == (NORMAL, BRIGHTEST, 1, GEN_CURRENT),
       "after migrating and then choosing Brightest, a reload gave %s; the "
       "setting a player changed must survive the next load" % (rows["kept"],))
+
+# 7. A file stamped at the light-trim generation gets byte 312 set to 1,
+#    with its light options left exactly as written.
+check(rows["gen1"] == (BRIGHTEST, DIMMER, 1, GEN_CURRENT),
+      "a file stamped at generation %d came back as %s; its light options "
+      "must be untouched and byte %d must be set to 1"
+      % (GEN_LIGHT_TRIM, rows["gen1"], 312))
+
+# 8. A file already at generation 2 with byte 312 = 0: the player turned the
+#    option off. The stamp is current, so the zero must be left alone.
+check(rows["off-at-gen2"] == (DIMMEST, DIMMEST, 0, GEN_AUTO_TERMS),
+      "a file stamped at generation %d with byte 312 deliberately 0 came back "
+      "as %s; a current-generation setting must not be overwritten"
+      % (GEN_AUTO_TERMS, rows["off-at-gen2"]))
+
+# 9. A file stamped at generation 0 gets both the light step and byte 312 = 1.
+check(rows["gen0"] == (NORMAL, NORMAL, 1, GEN_CURRENT),
+      "a file stamped at generation %d came back as %s; it must get both the "
+      "light step and byte %d = 1" % (GEN_NONE, rows["gen0"], 312))
 
 if fails:
     for m in fails:
