@@ -64,6 +64,7 @@ static bool    lmLegacy = false;    /* the option turned the lighting off */
 static int16   lmW = 0, lmH = 0;
 static int32   lmCells = 0;
 static LightRGB *Steady = NULL, *Frame = NULL;   /* per cell */
+static LightRGB *Ambient = NULL;                 /* per cell: static room light */
 static LightRGB *SrcCol = NULL;                  /* summed primary source colour */
 static uint8 *SrcLit = NULL;                     /* strongest source light, 0..255 */
 static uint8 *FogCol = NULL;                     /* fog palette index plus one, or zero */
@@ -299,11 +300,12 @@ int LightMode(Player *p) {
 static void EnsureCells(Map *m) {
   if (m->SizeX() == lmW && m->SizeY() == lmH && Steady)
     return;
-  delete[] Steady; delete[] Frame; delete[] SrcCol; delete[] SrcLit; delete[] FogCol;
-  Steady = NULL; Frame = NULL; SrcCol = NULL; SrcLit = NULL; FogCol = NULL;
+  delete[] Steady; delete[] Frame; delete[] Ambient; delete[] SrcCol; delete[] SrcLit; delete[] FogCol;
+  Steady = NULL; Frame = NULL; Ambient = NULL; SrcCol = NULL; SrcLit = NULL; FogCol = NULL;
   lmW = m->SizeX(); lmH = m->SizeY(); lmCells = (int32)lmW * lmH;
   Steady = new LightRGB[lmCells];
   Frame  = new LightRGB[lmCells];
+  Ambient = new LightRGB[lmCells];
   SrcCol = new LightRGB[lmCells];
   SrcLit = new uint8[lmCells];
   FogCol = new uint8[lmCells];
@@ -636,13 +638,16 @@ static void SumSteady(Map *m) {
       int32 idx = (int32)y * lmW + x;
       LightRGB &d = Steady[idx];
       d.r = d.g = d.b = 0;
+      LightRGB &a = Ambient[idx];
+      a.r = a.g = a.b = 0;
       const LocationInfo &at = m->At(x, y);
-      /* Legacy static light contributes only outside live footprints and dark fields. inc-jcg4 */
-      if (!SrcLit[idx] && !m->FieldAt(x, y, FI_DARKNESS | FI_SHADOW)) {
+      /* Static light is kept per cell and joined to source light by a per-channel
+         max in ComposeFrame, so a source neither double-counts it nor removes it. inc-7x99 */
+      if (!m->FieldAt(x, y, FI_DARKNESS | FI_SHADOW)) {
         if (at.Bright)
-          AddScaled(d, LIGHT_LEGACY_COLOUR, LIGHT_LEGACY_BRIGHT / 255.0f);
+          AddScaled(a, LIGHT_LEGACY_COLOUR, LIGHT_LEGACY_BRIGHT / 255.0f);
         else if (at.Lit)
-          AddScaled(d, LIGHT_LEGACY_COLOUR, LIGHT_LEGACY_LIT / 255.0f);
+          AddScaled(a, LIGHT_LEGACY_COLOUR, LIGHT_LEGACY_LIT / 255.0f);
       }
     }
   for (int32 i = 0; i < nSrc; i++) {
@@ -661,6 +666,11 @@ static void ComposeFrame() {
     for (int32 k = s.first; k < s.first + s.count; k++)
       AddScaledF(Frame[Foot[k].idx], s.c,
                  Foot[k].w / 255.0f * s.noise, Foot[k]);
+  }
+  for (int32 i = 0; i < lmCells; i++) {
+    if (Ambient[i].r > Frame[i].r) Frame[i].r = Ambient[i].r;
+    if (Ambient[i].g > Frame[i].g) Frame[i].g = Ambient[i].g;
+    if (Ambient[i].b > Frame[i].b) Frame[i].b = Ambient[i].b;
   }
 }
 
@@ -855,6 +865,25 @@ static void ProbeDump(Map *m, Player *p) {
   for (int16 y = 0; y < lmH; y++) {
     for (int16 x = 0; x < lmW; x++)
       fputc(FilterMark(m, x, y), fp);
+    fputc('\n', fp);
+  }
+  fprintf(fp, "AMBIENT\n");
+  for (int16 y = 0; y < lmH; y++) {
+    for (int16 x = 0; x < lmW; x++) {
+      int32 idx = (int32)y * lmW + x;
+      const LightRGB &a = Ambient[idx];
+      const LightRGB &f = Frame[idx];
+      char ch;
+      if (!a.r && !a.g && !a.b)
+        ch = '-';
+      else if (f.r < a.r || f.g < a.g || f.b < a.b)
+        ch = 'X';
+      else if (SrcLit[idx] > 0)
+        ch = 'A';
+      else
+        ch = 'a';
+      fputc(ch, fp);
+    }
     fputc('\n', fp);
   }
   fprintf(fp, "P plight=%d pbright=%d psource=%d punified=%d\n",
