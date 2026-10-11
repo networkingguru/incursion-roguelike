@@ -2113,6 +2113,17 @@ EvReturn Player::SpendHours(int16 minHours, int16 maxHours, int16 &hoursSpent, b
     hoursSpent = min(maxHours, (int16)((AllowedTime - AwakeTime) / HOUR_TURNS));
 
     theGame->Turn += hoursSpent * HOUR_TURNS;
+    /* inc-i9q.2: the hours spent cost hunger for their ticks at the plain
+       waking rate (no Slow Metabolism or Reverie factor), floored at 1 so
+       working never starves the character. */
+    {
+        int32 hv = GetStatiDur(HUNGER);
+        if (hv > 1) {
+            hv -= HungerForTicks(hoursSpent * HOUR_TURNS, false);
+            if (hv < 1) hv = 1;
+            SetStatiDur(HUNGER, -1, NULL, hv);
+        }
+    }
     if (hoursSpent == 1)
         IPrint("An hour passes.");
     else
@@ -2279,19 +2290,25 @@ EvReturn Player::Rest(EventInfo &e) {
                                 m->DaysPassed();
                             }
 
-                            /* Hunger should be halved, or 4/5ths for elves with
-                             * Reverie.  Repopulate dungeon if # monsters lower than
-                             * MONSTER_EQUILIBRIUM, adding REPLENISH_MONSTERS monsters
-                             * to distant squares at a time.
+                            /* inc-i9q.2: a rest costs hunger for the ticks it
+                             * took, at the waking rate (HungerForTicks with
+                             * resting true) -- 15/35 of that for Slow
+                             * Metabolism, 25/35 for Reverie, and it is floored
+                             * at 1 so the rest can never starve the character
+                             * to death; the per-turn clock carries that out
+                             * instead.
                              */
                             if (e.EParam & REST_FOOD || t != this)
                                 t->SetStatiDur(HUNGER, -1, NULL, SATIATED);
-                            else if (t->HasAbility(CA_SLOW_METABOLISM))
-                                t->SetStatiDur(HUNGER, -1, NULL, (t->GetStatiDur(HUNGER) * 85) / 100);
-                            else if (t->HasAbility(CA_REVERIE))
-                                t->SetStatiDur(HUNGER, -1, NULL, (t->GetStatiDur(HUNGER) * 75) / 100);
-                            else
-                                t->SetStatiDur(HUNGER, -1, NULL, (t->GetStatiDur(HUNGER) * 65) / 100);
+                            else {
+                                int32 restTicks = ((HOUR_TURNS * 8) / 100) * Percent;
+                                int32 hv = t->GetStatiDur(HUNGER);
+                                if (hv > 1) {
+                                    hv -= t->HungerForTicks(restTicks, true);
+                                    if (hv < 1) hv = 1;
+                                    t->SetStatiDur(HUNGER, -1, NULL, hv);
+                                }
+                            }
 
                             t->RemoveStati(LFA_COUNT);
 

@@ -405,6 +405,11 @@ void Game::Play() {
        tools/check_mana_regen_floor.sh. inc-41kg. */
     pp->ManaFloorProbe();
 
+    /* Off unless INCURSION_HUNGER_PROBE is set, and run here because it needs
+       a live loaded player. See Character::HungerProbe and
+       tools/check_hunger_clock.sh. inc-i9q.2. */
+    pp->HungerProbe();
+
     /* Off unless INCURSION_STUDY_PROBE is set, and run here because it needs
        a live loaded caster. See Character::StudySlotsProbe and
        tools/check_study_slots.sh. inc-ngku. */

@@ -98,13 +98,12 @@ Text "help::intro"
      of game turns -- instead, they must use the Rest command ('z') to
      recover, which means finding a way to be safe from encounters while 
      you sleep. The design intent behind this is to make Hit Point loss a
-     serious detriment to a player, rather than a nuisance. The time
-     cycle in Incursion is different from that found in games like NetHack
-     and Crawl, where every turn contributes to hunger. Because individual turns 
-     are not that valuable, players can take the time to explore and experiment,
-     but whenever you rest, more monsters are generated in the dungeon (until it 
-     reaches equilibrium), so there is a definite pressure to accomplish as much 
-     as possible in a day.\n
+     serious detriment to a player, rather than a nuisance. Time still
+     matters in Incursion: every turn burns a little food, so a character who
+     dawdles must eventually eat. A single turn costs little, though, so players
+     can take the time to explore and experiment. Whenever you rest, more
+     monsters are generated in the dungeon (until it reaches equilibrium), so
+     there is a definite pressure to accomplish as much as possible in a day.\n
      __Initially, a character can rest safely by returning to the
      surface world, and in the mid-levels of the dungeon there are special
      areas where one can rest safely -- but eventually a character will need
