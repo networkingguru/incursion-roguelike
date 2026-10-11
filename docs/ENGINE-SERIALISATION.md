@@ -35,10 +35,10 @@ I ran; commands at the bottom). Normative spec: `docs/SAVE-SCHEMA-SPEC.md`.
 
 | Thing | File:line |
 |---|---|
-| `fileHeader` / `groupHeader` (both formats) | inc/Base.h:711 / :711 |
+| `fileHeader` / `groupHeader` (both formats) | inc/Base.h:711 / :721 |
 | v1 wire kinds `K_*`, pool ids `SP_*`, tag ranges | inc/Base.h:734-763 |
 | `FIELD_*` macros (one line, four duties) | inc/Base.h:769-787 |
-| `ARCHIVE_CLASS` / `END_ARCHIVE` | inc/Base.h:789 / :786 |
+| `ARCHIVE_CLASS` / `END_ARCHIVE` | inc/Base.h:789 / :796 |
 | `class Registry` (`saveMode`, `loadMode`, `hCurrent`) | inc/Base.h:800 |
 | v0 `Registry::SaveGroup` / `LoadGroup` (+ v1 dispatch) | src/Registry.cpp:669 / :839 (:862-867) |
 | v1 `Registry::SaveGroupV1` / `LoadGroupV1` | src/SaveV1.cpp:3076 / :3246 |
@@ -418,7 +418,7 @@ Repaired on load, and nothing else is:
 | pointer to an owned heap block | src/Registry.cpp:372, via the 7 direct `r.Block` sites plus every `FIELD_BLOB`/`FIELD_OBJ` line's v0 branch (inc/Base.h:779-784) |
 | `Thing::m` from `Thing::hm` | inc/Map.h:966 |
 | `Player::MyTerm = T1` | inc/Creature.h:1467 |
-| `Module` resource caches zeroed | inc/Res.h:840-841, in `Module::Serialize`, which runs on load as well as save. A load builds the object with the empty `ARCHIVE_CLASS` constructor (inc/Base.h:781), so the zeroing in `Module()` (inc/Res.h:923-924) runs only for the module the resource compiler creates (src/RComp.cpp:141) |
+| `Module` resource caches zeroed | inc/Res.h:840-841, in `Module::Serialize`, which runs on load as well as save. A load builds the object with the empty `ARCHIVE_CLASS` constructor (inc/Base.h:791), so the zeroing in `Module()` (inc/Res.h:923-924) runs only for the module the resource compiler creates (src/RComp.cpp:141) |
 | module text segment un-inverted | inc/Res.h:912-916 |
 | garbage payload in a loaded `Target` | src/Registry.cpp:1013-1014, src/Target.cpp:1574 |
 
