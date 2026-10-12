@@ -2835,6 +2835,21 @@ bool Creature::CanAddTemplate(rID tID)
     if (tt->PEvent(EV_ISTARGET,this,tID) == -1)
       return false;
 
+    /* upstream: a template that adds an alignment flag could attach to a
+       creature already carrying the opposite flag without clearing it, so a
+       sahuagin (Evil) took paladin;template (Good) and ended Evil and Good at
+       once. Plain flag arithmetic, no platform dependence, so Win32
+       misbehaves the same way. Evidence: Observed
+       (tools/check_template_alignment.sh). Tracking: inc-n0ie. Not sent. */
+    if (tt->AddsFlag(M_GOOD) && HasMFlag(M_EVIL) && !tt->SubsFlag(M_EVIL))
+      return false;
+    if (tt->AddsFlag(M_EVIL) && HasMFlag(M_GOOD) && !tt->SubsFlag(M_GOOD))
+      return false;
+    if (tt->AddsFlag(M_LAWFUL) && HasMFlag(M_CHAOTIC) && !tt->SubsFlag(M_CHAOTIC))
+      return false;
+    if (tt->AddsFlag(M_CHAOTIC) && HasMFlag(M_LAWFUL) && !tt->SubsFlag(M_LAWFUL))
+      return false;
+
     return true; 
 } 
 
