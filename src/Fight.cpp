@@ -957,8 +957,10 @@ EvReturn Creature::WAttack(EventInfo &e)
           return ReThrow(EV_NATTACK,e);
         else 
           return ABORT; 
-    } 
+    }
 
+    { extern void CleaveIllusionProbe(Creature*,Creature*,int,bool); /* inc-k0e1 */
+      CleaveIllusionProbe(e.EActor,e.EVictim,0,false); }
     if (HasStati(ILLUSION)) {
       if (!e.ETarget->isCreature())
         return ABORT;
@@ -1043,6 +1045,13 @@ EvReturn Creature::WAttack(EventInfo &e)
     CleaveCount = 0;
 
 DoCleave:
+    /* upstream: base-code defect, fix is ours. Tier Observed --
+       tools/check_cleave_illusion.sh crashed with SIGSEGV before this line.
+       vicIllusion must describe the CURRENT EVictim, because Cleave jumps back
+       here (goto DoCleave) with a new victim; set once above, it kept the first
+       victim's value. Upstream's own goto, no port or compiler dependence.
+       Tracking inc-k0e1. Not sent upstream. */
+    e.vicIllusion = e.EVictim->HasStati(ILLUSION);
     if (e.ETarget->HasStati(GRABBED,0,e.EActor))
       if (e.EActor->HasStati(GRAPPLING))
         e.vicHeld = true;
@@ -1146,6 +1155,8 @@ DoCleave:
             }
             
             
+            { extern void CleaveIllusionProbe(Creature*,Creature*,int,bool); /* inc-k0e1 */
+              CleaveIllusionProbe(e.EActor,c,1,e.vicIllusion); }
             e.EVictim = c;
             goto DoCleave;
           }
@@ -7574,6 +7585,8 @@ IgnoreMorality:;
                                     /* When you trade blows with a non-Improved illusion, you
                                     automatically get a chance to disbelieve it every hit
                                     that lands, due to the absence of kinetics, smell, etc. */
+                                    { extern void CleaveIllusionProbe(Creature*,Creature*,int,bool); /* inc-k0e1 */
+                                      CleaveIllusionProbe(e.EActor,e.EVictim,2,e.vicIllusion); }
                                     if (e.vicIllusion && e.EActor)
                                         if (!(e.EVictim->getIllusionFlags() & IL_IMPROVED))
                                             e.EVictim->DisbeliefCheck(e.EActor);
