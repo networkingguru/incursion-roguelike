@@ -1,0 +1,5 @@
+# inc-n0ie: finish a loaded-session turn after the opt-in probe.
+SPACE*80
+ESC*20
+s
+@quit
