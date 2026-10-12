@@ -1,0 +1,11 @@
+# inc-6w5x: minimal session for INCURSION_RANGED_ILLUSION_PROBE
+# (RangedIllusionProbe, src/RangedIllusionProbe.cpp). The probe runs once at the
+# start of Game::Play(), so this script only needs a way into a live map and a
+# clean exit. Read by tools/check_ranged_illusion.sh.
+
+@include chargen.keys
+
+SPACE*80
+ESC*20
+
+@quit
