@@ -1,0 +1,6 @@
+# The opt-in Game::Play probe drives EV_MOVE and EV_PICKUP, as DoorPickProbe does.
+# Snapshot its messages, finish a turn for the harness, and exit.
+@dump:belt-potion
+SPACE*8
+s
+@quit
