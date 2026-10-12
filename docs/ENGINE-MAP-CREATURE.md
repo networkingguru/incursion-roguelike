@@ -9,7 +9,7 @@ Navigational page for bead inc-e2j. Every claim carries file:line; counts carry 
 - `Registry` owns every `Object` by handle `hObj` (`inc/Base.h:800`; `Object::myHandle` `inc/Base.h:641`). `theRegistry->Exists(h)` is the liveness test. Handles 1..127 are reserved (`src/Registry.cpp:251-260`).
 - `Map: public Object` (`inc/Map.h:190`) owns `LocationInfo *Grid` (`inc/Map.h:201`), sized `sizeX*sizeY`. Serialization takes one of two paths (`inc/Map.h:670`): a v1 save embeds the grid through `V1EmbedBegin`/`GridFieldsV1` (`inc/Map.h:672-674`); the legacy v0 path writes it as one block with `r.Block` (`inc/Map.h:677`).
 - `Thing: public Object` (`inc/Map.h:943`) holds `Map* m; hObj Next, hm; int16 x,y` (`inc/Map.h:969-971`). `m` is a raw pointer; `hm` is only its save form (`inc/Map.h:951-953`).
-- Hierarchy: `Creature: Thing, Magic` (`inc/Creature.h:186`) -> `Character` (`inc/Creature.h:703`) -> `Player` (`inc/Creature.h:1276`); `Monster: Creature` (`inc/Creature.h:1645`). `Item: Thing, Magic` (`inc/Item.h:13`). `Feature: Thing` (`inc/Feature.h:11`) -> `Door`/`Trap`/`Portal`.
+- Hierarchy: `Creature: Thing, Magic` (`inc/Creature.h:191`) -> `Character` (`inc/Creature.h:717`) -> `Player` (`inc/Creature.h:1294`); `Monster: Creature` (`inc/Creature.h:1663`). `Item: Thing, Magic` (`inc/Item.h:13`). `Feature: Thing` (`inc/Feature.h:11`) -> `Door`/`Trap`/`Portal`.
 - Type tests are numeric, not virtual (`inc/Base.h:642-646`). `isType(T_THING)` is always true (`inc/Base.h:653`), so `Map::FirstAt` returns any Thing.
 
 ## The two lists — the central invariant
@@ -33,7 +33,7 @@ INVARIANT: only one F/N iteration may be live at a time, process-wide. Nothing e
 
 `Map::Fields` is an `OArray<Field,10,5>` of values, not pointers (`inc/Map.h:248`, next to the author's own "something is scribbling over Fields" note at `:245-247`). `LocationInfo::hasField` (`inc/Map.h:47`) caches "some field covers me"; `Map::FieldAt` short-circuits on it (`inc/Inline.h:422-432`).
 
-INVARIANT: `hasField` is true exactly when some `Fields[i]->inArea(x,y)`. Set in `NewField` (`src/Status.cpp:1493`), recomputed in `RemoveField` (`src/Status.cpp:1417`) and `MoveField` (`src/Status.cpp:1662`) — each only over the affected field's own bounding box. `RemoveField` matches by pointer identity (`src/Status.cpp:1411`) into an array that memmoves on `Remove` and reallocs on `Enlarge` (`src/Base.cpp:619-656`), so a `Field*` held across another field operation is stale (read).
+INVARIANT: `hasField` is true exactly when some `Fields[i]->inArea(x,y)`. Set in `NewField` (`src/Status.cpp:1502`), recomputed in `RemoveField` (`src/Status.cpp:1426`) and `MoveField` (`src/Status.cpp:1671`) — each only over the affected field's own bounding box. `RemoveField` matches by pointer identity (`src/Status.cpp:1420`) into an array that memmoves on `Remove` and reallocs on `Enlarge` (`src/Base.cpp:619-656`), so a `Field*` held across another field operation is stale (read).
 
 FI_SIZE (`inc/Defines.h:3489`) is the bulk of a creature above size Large, created at `src/Monster.cpp:1715` and `src/Values.cpp:1790`; `GetAt` treats it as a creature standing on every covered square (`src/Display.cpp:1601-1613`).
 
