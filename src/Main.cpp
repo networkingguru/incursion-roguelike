@@ -328,6 +328,10 @@ void Game::Play() {
     extern void MonsterInitProbe(Player *pl);
     MonsterInitProbe(pp);
 
+    /* inc-n0ie: opt-in template alignment reproduction. */
+    extern void TemplateAlignmentProbe(Player *pl);
+    TemplateAlignmentProbe(pp);
+
     /* inc-fdi2: opt-in live Blasphemy fatigue and area-hit oracle. */
     extern void BlasphemyProbe(Player *caster);
     BlasphemyProbe(pp);
