@@ -595,6 +595,10 @@ bool Item::operator==(Item &i)
       BOOST_PLUS,
       EXTRA_QUALITY,
       HOME_REGION,
+      // A kill drop's LOOT_CLAIM MUST NOT stop it stacking with the same
+      // item the player carries. Tracking: inc-s1m5; tier Observed,
+      // tools/check_belt_potion_stack.sh. Port defect (port-added status).
+      LOOT_CLAIM,
       0
     } ;
 
