@@ -1,0 +1,15 @@
+# inc-c36o: as fear-flight-plain.keys, then make the goblin a blackguard (fear-immune, not M_PSYCHO).
+@include chargen.keys
+.*2
+w
+y
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT*3 ENTER
+w
+@choose "Add Template to Creature"
+RIGHT*3 ENTER
+@choose "blackguard"
+.*16
+@dump:end

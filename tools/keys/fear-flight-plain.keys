@@ -1,0 +1,11 @@
+# inc-c36o: wizard-summon a bugbear 3 squares east, then wait 16 turns.
+@include chargen.keys
+.*2
+w
+y
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "bugbear"
+RIGHT*3 ENTER
+.*16
+@dump:end
