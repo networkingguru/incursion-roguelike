@@ -8,7 +8,7 @@ the only route to several actions that have no key of their own, **Mount**
 among them.
 
 The game documents the command but not its contents. `lib/help.irh` gives the
-`y` key its own help entry (`lib/help.irh:1272`) and names the menu again
+`y` key its own help entry (`lib/help.irh:1271`) and names the menu again
 under Quick Keys, Dip, mounted combat and oils. None of those lists
 the verbs. There is no verb listing in the manual, in the help topics, or
 anywhere else. This file is that listing.
@@ -53,7 +53,7 @@ carries up to three prompts and a flag word:
   that returns false for you (`src/Player.cpp:1671-1678`). Two entries carry a
   prerequisite today: **Mount** needs the Ride skill, a humanoid body with
   limbs, and no mount under you already; **Dismount** needs you mounted
-  (`src/Tables.cpp:3133-3142`). If nothing survives both rules the command
+  (`src/Tables.cpp:3141-3150`). If nothing survives both rules the command
   says *"You have no usable verbs."* `tools/check_command_menu_gating.sh`
   reads the `y` screen and fails if a dead verb is on it.
 - **The prompts run in table order**, target first, unless the entry carries
@@ -168,7 +168,7 @@ cannot be divided."* The new stack is marked `DROPPED` for 10 turns
 
 **Mount** is offered only to a character who could ride: the Ride skill, a
 humanoid body with limbs, and no mount already under you
-(`src/Tables.cpp:3133-3137`). It is the only command that rides a creature: no
+(`src/Tables.cpp:3141-3145`). It is the only command that rides a creature: no
 key binding throws `EV_MOUNT`, and only this verb and the spells that summon a
 steed do (`lib/wspells.irh:1813` and `:1908`, `lib/pspells.irh:3585`). Once
 picked it runs a full validation path — Ride skill, humanoid form, the
