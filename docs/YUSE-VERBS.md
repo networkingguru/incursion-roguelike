@@ -24,10 +24,10 @@ dead is what this file exists to record.
 Derive the menu size, the distinct verb count, and how many of them are dead:
 
 ```sh
-sed -n '3144,3462p' src/Tables.cpp | grep -c '^  { EV_'
-sed -n '3144,3462p' src/Tables.cpp | grep '^  { EV_' |
+sed -n '3152,3470p' src/Tables.cpp | grep -c '^  { EV_'
+sed -n '3152,3470p' src/Tables.cpp | grep '^  { EV_' |
     sed 's/^  { \(EV_[A-Z_]*\),.*/\1/' | sort -u | wc -l
-sed -n '3144,3462p' src/Tables.cpp |
+sed -n '3152,3470p' src/Tables.cpp |
     awk '/^  \{ EV_/ { match($0,/EV_[A-Z_]+/); v=substr($0,RSTART,RLENGTH) }
          /true *\}/ { print v }' | sort -u | wc -l
 ```
@@ -36,7 +36,7 @@ sed -n '3144,3462p' src/Tables.cpp |
 
 ## How the menu works
 
-The verbs live in `YuseCommands[]`, `src/Tables.cpp:3144-3462`. Each entry
+The verbs live in `YuseCommands[]`, `src/Tables.cpp:3152-3470`. Each entry
 carries up to three prompts and a flag word:
 
 ```c
@@ -174,7 +174,7 @@ steed do (`lib/wspells.irh:1813` and `:1908`, `lib/pspells.irh:3585`). Once
 picked it runs a full validation path — Ride skill, humanoid form, the
 target's `M_MOUNTABLE` flag, hostility, prone/stuck/grappled/asleep, plane,
 size, challenge rating, and whether the creature will accept you at all
-(`src/Skills.cpp:4482-4548`).
+(`src/Skills.cpp:4483-4548`).
 **Dismount** has a second route: the Cancel (`x`) command drops a standing
 `MOUNTED` stati (`src/Skills.cpp:456`).
 
