@@ -583,9 +583,16 @@ RestartTargetLoop:
   ASSERT(x!=-1);               
 
   nAct = 0; 
-  if (!(HasMFlag(M_PSYCHO) || HasMFlag(M_MINDLESS) || isEnraged || isIllusion())) {
+  extern void LowHpFearProbe(Monster *m, int phase); /* inc-c36o */
+  LowHpFearProbe(this, 0);
+  if (!(HasMFlag(M_PSYCHO) || HasMFlag(M_MINDLESS) || isEnraged || isIllusion() || ResistLevel(AD_FEAR) == -1)) {
+  /* upstream: a fear-immune creature never gains AFRAID from this morale check;
+   * every other fear source tests ResistLevel(AD_FEAR) == -1 first. Same code in
+   * the original source, no port or typedef dependence, so Win32 flees likewise.
+   * Evidence tier Observed: tools/check_fear_immune_flight.sh; inc-c36o; not sent. */
     if (cHP*3 < (mHP+Attr[A_THP]) && !isAfraid)
     {
+      LowHpFearProbe(this, 1); /* inc-c36o */
       if (Attr[A_MOV] > -20)
         IDPrint(NULL,"The <Obj> turns to flee!",this);
       GainTempStati(AFRAID,NULL,10+random(50),SS_MONI,FEAR_HP);
