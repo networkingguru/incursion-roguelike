@@ -400,6 +400,11 @@ elif [ ! -f "$ROOT/mod/Incursion.Mod" ] || { [ -z "$EXTRA_CXXFLAGS" ] && [ "$COM
     fi
     echo "--- compiling game data module (this takes ~5s) ---"
     "$ROOT/$OUT" -compile main.irc
+    # inc-4320: the save format is append-only, so a misplaced resource or
+    # script variable must fail the build minutes after the edit, not at the
+    # landing gate. This build just compiled the module, so run the order guard
+    # on it and fail closed.
+    "$ROOT/tools/order_guard.sh" || exit 1
 fi
 
 echo
