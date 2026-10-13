@@ -334,6 +334,12 @@ git -C "$ROOT" worktree add -b "$BEAD" "$WORKTREE" "$BASE_BRANCH" >/dev/null 2>&
     || die "FAILED: git worktree add refused. Run it by hand to see why:
   git -C \"$ROOT\" worktree add -b \"$BEAD\" \"$WORKTREE\" \"$BASE_BRANCH\""
 
+# Record the base branch so the number allocator (tools/next_number.sh) can
+# pick this bead's band. A failure here must not fail the worktree, which
+# already exists; warn and carry on. inc-24cc.
+git -C "$ROOT" config "branch.$BEAD.incursionBase" "$BASE_BRANCH" \
+    || echo "worktree: warning: could not record branch.$BEAD.incursionBase" >&2
+
 echo "Bead $BEAD is open in a worktree of its own."
 echo "  branch:   $BEAD (from $BASE_BRANCH at $(git -C "$ROOT" rev-parse --short "$BASE_BRANCH"))"
 echo "  worktree: $WORKTREE"

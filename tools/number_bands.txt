@@ -1,0 +1,8 @@
+# Number bands for the shared stat/event allocator (bead inc-24cc).
+# Spec: docs/specs/2026-10-13-number-bands-brief.md
+# Columns: <family> <branch> <low> <high>, inclusive. Comment lines start #.
+# Families: STATI (stati indices) and EV (event numbers).
+STATI master   243 255
+STATI inc-pu6v 300 399
+EV    master   301 499
+EV    inc-pu6v 221 299

@@ -150,6 +150,27 @@ if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
   fi
 fi
 
+# --- INCURSION: refuse a staged number outside its band (inc-24cc) ---
+# The allocator tools/next_number.sh hands out a number inside the branch's
+# band and records it in issued.log; this block refuses a staged inc/Defines.h
+# that adds a covered constant by hand instead. Exit 1 refuses the commit; exit
+# 2 is "could not measure" and only warns. The rules and the self-test are in
+# tools/check_number_bands.py.
+if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
+  _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
+  if [ -x "$_inc_root/tools/check_number_bands.sh" ]; then
+    _inc_nb_out=$("$_inc_root/tools/check_number_bands.sh" --staged 2>&1)
+    _inc_nb=$?
+    if [ $_inc_nb -eq 1 ]; then
+      echo "$_inc_nb_out"
+      echo >&2 "pre-commit: REFUSED. A new stati or event number is outside its band, duplicates another, or was not issued by tools/next_number.sh (above)."
+      exit 1
+    elif [ $_inc_nb -ne 0 ]; then
+      echo >&2 "pre-commit: tools/check_number_bands.sh could not measure (exit $_inc_nb); the commit CONTINUES."
+    fi
+  fi
+fi
+
 if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
   _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
   if [ -x "$_inc_root/tools/check_bead_publish.py" ]; then
