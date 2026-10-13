@@ -2424,12 +2424,26 @@ bool Map::enTemplateOk(EventInfo &e, rID tID, bool force)
     {
       MinTest:
       Monster *mn = new Monster(e.ep_mID);
-      if (e.ep_tID)
+      /* inc-pp9w: build as enBuildMon does, CalcValues before each AddTemplate,
+         so the probe holds the same templates the real monster will. Traced. */
+      /* upstream: the probe monster took AddTemplate with no CalcValues first,
+         so CanAddTemplate refused the earlier templates silently and the probe
+         held fewer than the real monster, which enBuildMon builds with
+         CalcValues before each AddTemplate. Same code on Win32. Tier: Observed
+         (tools/check_template_pair_refused.sh, red before, green after).
+         Tracking: inc-pp9w. Not sent. */
+      if (e.ep_tID) {
+        mn->CalcValues();
         mn->AddTemplate(e.ep_tID);
-      if (e.ep_tID2)
+      }
+      if (e.ep_tID2) {
+        mn->CalcValues();
         mn->AddTemplate(e.ep_tID2);
-      if (e.ep_tID3)
+      }
+      if (e.ep_tID3) {
+        mn->CalcValues();
         mn->AddTemplate(e.ep_tID3);
+      }
       mn->CalcValues();
       if (!mn->CanAddTemplate(tID))
         { delete mn; return false; }

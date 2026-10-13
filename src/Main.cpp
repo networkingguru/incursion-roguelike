@@ -340,6 +340,10 @@ void Game::Play() {
     extern void TemplateAlignmentProbe(Player *pl);
     TemplateAlignmentProbe(pp);
 
+    /* inc-pp9w: opt-in template chooser/builder pair oracle. */
+    extern void TemplatePairProbe(Player *pl);
+    TemplatePairProbe(pp);
+
     /* inc-e46n: opt-in Seneschal follower-ladder oracle. */
     extern void SeneschalProbe(Player *pl);
     SeneschalProbe(pp);
