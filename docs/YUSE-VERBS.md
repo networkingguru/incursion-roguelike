@@ -118,11 +118,11 @@ or friendly.
 
 | Verb | What it does | Handler |
 |---|---|---|
-| Activate | trigger an item's power | `src/Item.cpp:880` |
-| Drink | drink a potion | `src/Item.cpp:857` |
-| Eat | eat food | `src/Item.cpp:2048` |
-| Read | read a scroll or book | `src/Item.cpp:864` |
-| Zap | aim a wand at a target | `src/Item.cpp:845` |
+| Activate | trigger an item's power | `src/Item.cpp:884` |
+| Drink | drink a potion | `src/Item.cpp:861` |
+| Eat | eat food | `src/Item.cpp:2052` |
+| Read | read a scroll or book | `src/Item.cpp:868` |
+| Zap | aim a wand at a target | `src/Item.cpp:849` |
 | Wield | equip a weapon | `src/Creature.cpp:1009` |
 | Shoot / Throw | ranged attack — **one event**, `EV_RATTACK` | `src/Creature.cpp:894` |
 | Insert | put an item into a container | `src/Inv.cpp:1144` |

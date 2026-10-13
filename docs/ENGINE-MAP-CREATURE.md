@@ -35,7 +35,7 @@ INVARIANT: only one F/N iteration may be live at a time, process-wide. Nothing e
 
 INVARIANT: `hasField` is true exactly when some `Fields[i]->inArea(x,y)`. Set in `NewField` (`src/Status.cpp:1502`), recomputed in `RemoveField` (`src/Status.cpp:1426`) and `MoveField` (`src/Status.cpp:1671`) — each only over the affected field's own bounding box. `RemoveField` matches by pointer identity (`src/Status.cpp:1420`) into an array that memmoves on `Remove` and reallocs on `Enlarge` (`src/Base.cpp:619-656`), so a `Field*` held across another field operation is stale (read).
 
-FI_SIZE (`inc/Defines.h:3489`) is the bulk of a creature above size Large, created at `src/Monster.cpp:1715` and `src/Values.cpp:1790`; `GetAt` treats it as a creature standing on every covered square (`src/Display.cpp:1601-1613`).
+FI_SIZE (`inc/Defines.h:3489`) is the bulk of a creature above size Large, created at `src/Monster.cpp:1722` and `src/Values.cpp:1790`; `GetAt` treats it as a creature standing on every covered square (`src/Display.cpp:1601-1613`).
 
 `Thing::__Stati` is a hand-rolled `StatiCollection`, deliberately not an Array (`inc/Map.h:812-820`): live `S[]`, pending `Added[]`, per-nature index `Idx`, and a `Nested` depth so removal inside an iteration defers compaction to `_FixupStati` (`inc/Map.h:730-735`). `Thing::backRefs` (`inc/Map.h:978`) is the reverse edge; `FixupBackrefs` (`inc/Map.h:1306`) requires every `Status::h` aimed at a Thing to have a matching backref there.
 
