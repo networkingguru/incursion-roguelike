@@ -2380,31 +2380,11 @@ void Player::InitCompanions() {
 
 extern const char* alliesShouldntCast[];
 
-bool Monster::MakeCompanion(Player *p, int16 CompType) {
-    int16 i, commandType; rID eID;
-    int32 cost, own, oldOver, partyAfter; bool refuse;
-
-    if (eID = GetStatiEID(SUMMONED))
-        if (TEFF(eID)->HasFlag(EF_XSUMMON))
-            goto SkipPHDCheck;
-    if (CompType == PHD_FREEBIE) {
-        if (!HasStati(NO_PHD, -1, p))
-            GainPermStati(NO_PHD, p, SS_MISC);
-        goto SkipPHDCheck;
-    }
-    if (isIllusion())
-        goto SkipPHDCheck;
-
-    /* upstream: the admission test belongs in XCR units on both sides -- the
-       creature's cost XCR(ChallengeRating()) must fit either its own pool or,
-       for a non-party pool, the party pool that already holds that pool's
-       overflow. Upstream rounded through XCRtoCR, and XCRtoCR of a zero or
-       negative remainder returns -8 whose XCR is +10, so a deficit vanished
-       and was never charged to the party pool; every pool was also one CR
-       short (see GetGroupXCR). Plain arithmetic, no typedef or compiler
-       dependence, so Win32 with the original typedefs misbehaves identically.
-       Observed on the 8/8 "Group CR Totals" display, inc-omm1, not sent. */
-    cost = XCR(ChallengeRating());
+/* Returns true if player p's pool for CompType would refuse a follower that
+   costs cost XCR. No side effects. */
+bool Monster::PoolRefuses(Player *p, int16 CompType, int32 cost) {
+    int16 commandType;
+    int32 own, oldOver, partyAfter; bool refuse;
     /* upstream: admission must charge only the commanded type's XCR pool.
        Shared arithmetic borrows other types' caps on Win32 too.
        Traced, inc-sgre, not sent. */
@@ -2446,6 +2426,221 @@ bool Monster::MakeCompanion(Player *p, int16 CompType) {
         partyAfter = p->GetGroupXCR(PHD_PARTY) - oldOver + own;
         refuse = own > 0 && partyAfter > p->MaxGroupXCR(PHD_PARTY);
     }
+    return refuse;
+}
+
+/* inc-e46n: a follower is Seneschal-eligible iff player p leads it directly,
+   it is a real sapient creature (not an illusion, summon or dominated charme)
+   and it is not a dragon. */
+bool Monster::SeneschalQualifies(Player *p) {
+    return ts.isLeader(p) && !isIllusion() && !HasStati(SUMMONED)
+        && !HasStati(CHARMED, CH_DOMINATE, p)
+        && isMType(MA_SAPIENT) && !isMType(MA_DRAGON);
+}
+
+/* inc-e46n: credit this follower with a kill of victim. The tally is a raw
+   kill-experience total (Mag, 0..32767); a later phase spends it to advance
+   the follower up the skill-template ladder. */
+void Monster::SeneschalKill(Creature *victim) {
+    int16 s, vCR, dCR, Scale[] = { 10, 20, 30, 40, 50, 60, 70, 80, 90, 100,
+        125, 150, 175, 200, 250, 300, 400, 500, 600, 800 };
+    int32 award, tally;
+
+    Creature *l = ts.getLeader();
+    if (!l || !l->isPlayer())
+        return;
+    Player *p = (Player*)l;
+    if (!SeneschalQualifies(p))
+        return;
+
+    if (victim == this || victim->isIllusion() || victim->HasStati(SUMMONED))
+        return;
+
+    vCR = victim->ChallengeRating(true);
+    dCR = ChallengeRating(true);
+
+    switch (vCR) {
+      case -6: award = 10; break;
+      case -5: award = 15; break;
+      case -4: award = 20; break;
+      case -3: award = 25; break;
+      case -2: award = 35; break;
+      case -1: award = 50; break;
+      case 0:  award = 75; break;
+      default:
+          if (vCR > 0)
+              award = 100 * vCR;
+          else
+              award = 5;
+          break;
+    }
+
+    s = vCR - dCR;
+    if (s > 10)
+        s = 10;
+    if (s < -9)
+        s = -9;
+    award = (award * Scale[s+9]) / 100;
+
+    Status *ts_st = GetStati(SENESCHAL_TALLY);
+    tally = ts_st ? ts_st->Mag : 0;
+    tally += award;
+    /* ponytail: the tally stops at 32767 (an s16 Mag); upgrade path is
+       splitting it across Val and Mag. */
+    if (tally > 32767)
+        tally = 32767;
+    if (ts_st)
+        ts_st->Mag = (int16)tally;
+    else
+        GainPermStati(SENESCHAL_TALLY, NULL, SS_MISC, 0, (int16)tally);
+
+    SeneschalPromote(p);
+}
+
+/* inc-e46n: a qualifying follower spends its kill tally (SENESCHAL_TALLY Mag)
+   to climb the skill-template ladder one rung at a time, as far as the tally,
+   the leader's SK_SENESCHAL ceiling, availability and the leader's command
+   pools allow. Invariant: promotion never lowers max HP -- AddTemplate runs
+   before RemoveEffStati(curRung) (src/Values.cpp:1854-1926), so a wounded
+   follower is not killed by a temporary max-HP dip. */
+void Monster::SeneschalPromote(Player *p) {
+    static const char *Ladder[] = { "skilled", "experienced", "veteran",
+        "elite", "master", "paragon", "legendary", NULL };
+    static const char *Ending[] = { "skilled", "experienced", "a veteran",
+        "one of the elite", "a master", "a paragon", "legendary" };
+    rID rung[7];
+    int16 i, cur, next, nRungs = 0;
+    int32 tally, threshold;
+    bool refuse;
+    /* inc-e46n: Named.GetLength() && (StateFlags & MS_KNOWN) is the same test
+       Creature::Name uses (src/Message.cpp:931) to decide whether the player
+       knows the follower by a name; <Obj> then prints just the first name. */
+    bool named = Named.GetLength() && (StateFlags & MS_KNOWN);
+
+    if (!SeneschalQualifies(p))
+        return;
+
+    for (i = 0; Ladder[i]; i++) {
+        rung[i] = FIND(Ladder[i]);
+        if (!rung[i])
+            return;
+        nRungs++;
+    }
+
+    /* Highest-index ladder entry the follower already has, or -1 for none. */
+    cur = -1;
+    for (i = 0; i < nRungs; i++)
+        if (HasEffStati(TEMPLATE, rung[i]))
+            cur = i;
+    if (cur == nRungs - 1)
+        return;
+
+    for (next = cur + 1; next < nRungs; next++) {
+        int16 newCR = ChallengeRatingSwapped(cur >= 0 ? rung[cur] : 0,
+            rung[next], true);
+
+        Status *ts_st = GetStati(SENESCHAL_TALLY);
+        tally = ts_st ? ts_st->Mag : 0;
+
+        threshold = 400 * max(1, (int32)newCR);
+        if (tally < threshold)
+            return;
+        if (newCR > p->SkillLevel(SK_SENESCHAL)) {
+            /* inc-e46n: announce the ceiling refusal once per follower, ever.
+               Bit 2 (value 2) of the SENESCHAL_TALLY Val records it; bit 1
+               (value 1) records the budget refusal below. Never clear them. */
+            Status *cs_st = GetStati(SENESCHAL_TALLY);
+            if (!cs_st) {
+                GainPermStati(SENESCHAL_TALLY, NULL, SS_MISC, 2, 0);
+            } else if (cs_st->Val & 2) {
+                return;
+            } else {
+                cs_st->Val |= 2;
+            }
+            if (named)
+                p->IPrint("<Obj> is ready to advance, but your Seneschal "
+                    "skill is not high enough to command such an advanced "
+                    "follower.", this);
+            else
+                p->IPrint("The <Res> is ready to advance, but your "
+                    "Seneschal skill is not high enough to command such an "
+                    "advanced follower.", mID, this);
+            return;
+        }
+        if (!CanAddTemplate(rung[next]))
+            return;
+
+        if (HasStati(NO_PHD, -1, p)) {
+            refuse = false;
+        } else {
+            GainPermStati(NO_PHD, p, SS_MISC);
+            refuse = PoolRefuses(p, p->PoolOf(this), XCR(newCR));
+            RemoveStati(NO_PHD, -1, -1, -1, p);
+        }
+        if (refuse) {
+            /* Re-fetch: GainPermStati/RemoveStati above may have moved S. */
+            ts_st = GetStati(SENESCHAL_TALLY);
+            if (!ts_st) {
+                GainPermStati(SENESCHAL_TALLY, NULL, SS_MISC, 1, 0);
+            } else if (ts_st->Val & 1) {
+                return;
+            } else {
+                ts_st->Val |= 1;
+            }
+            if (named)
+                p->IPrint("<Obj> is ready to advance, but you cannot lead "
+                    "a party that strong.", this);
+            else
+                p->IPrint("The <Res> is ready to advance, but you cannot "
+                    "lead a party that strong.", mID, this);
+            return;
+        }
+
+        AddTemplate(rung[next]);
+        if (cur >= 0)
+            RemoveEffStati(rung[cur]);
+        CalcValues();
+
+        ts_st = GetStati(SENESCHAL_TALLY);
+        if (ts_st) {
+            ts_st->Mag = (int16)(tally - threshold);
+        }
+        if (named)
+            p->IPrint("<Obj> has learned from <his:Obj> battles, and is now "
+                "<str>.", this, Ending[next]);
+        else
+            p->IPrint("The <Res> has learned from its battles, and is now "
+                "<str>.", mID, Ending[next]);
+        cur = next;
+    }
+}
+
+bool Monster::MakeCompanion(Player *p, int16 CompType) {
+    int16 i; rID eID;
+    int32 cost; bool refuse;
+
+    if (eID = GetStatiEID(SUMMONED))
+        if (TEFF(eID)->HasFlag(EF_XSUMMON))
+            goto SkipPHDCheck;
+    if (CompType == PHD_FREEBIE) {
+        if (!HasStati(NO_PHD, -1, p))
+            GainPermStati(NO_PHD, p, SS_MISC);
+        goto SkipPHDCheck;
+    }
+    if (isIllusion())
+        goto SkipPHDCheck;
+
+    /* upstream: the admission test belongs in XCR units on both sides -- the
+       creature's cost XCR(ChallengeRating()) must fit either its own pool or,
+       for a non-party pool, the party pool that already holds that pool's
+       overflow. Upstream rounded through XCRtoCR, and XCRtoCR of a zero or
+       negative remainder returns -8 whose XCR is +10, so a deficit vanished
+       and was never charged to the party pool; every pool was also one CR
+       short (see GetGroupXCR). Plain arithmetic, no typedef or compiler
+       dependence, so Win32 with the original typedefs misbehaves identically.
+       Observed on the 8/8 "Group CR Totals" display, inc-omm1, not sent. */
+    cost = XCR(ChallengeRating());
+    refuse = PoolRefuses(p, CompType, cost);
     if (refuse) {
         switch (CompType) {
         case PHD_UNDEAD:
@@ -2552,6 +2747,23 @@ int32 Player::MaxCommandXCR(int16 type) {
     return XCR(MaxCommandCR(type));
 }
 
+/* Returns the command/power pool (PHD_*) that creature c belongs to. */
+int16 Player::PoolOf(Creature *c) {
+    int16 ct = PHD_PARTY;
+    if (c->HasStati(CHARMED, CH_DOMINATE, this) ||
+        c->HasStati(SUMMONED, -1, this))
+        ct = PHD_MAGIC;
+    else if (c->HasStati(CHARMED, CH_COMMAND, this))
+        ct = PHD_COMMAND;
+    else if (c->isMType(MA_ANIMAL))
+        ct = PHD_ANIMAL;
+    else if (c->isMType(MA_UNDEAD))
+        ct = PHD_UNDEAD;
+    else
+        ct = PHD_PARTY;
+    return ct;
+}
+
 int32 Player::GetGroupXCR(int16 CompType, int16 AddCR, int16 CommandType) {
     int32 i, j, ct; Creature *c; int32 CRCubed;
 
@@ -2567,17 +2779,7 @@ int32 Player::GetGroupXCR(int16 CompType, int16 AddCR, int16 CommandType) {
                 if (eID && TEFF(eID)->HasFlag(EF_XSUMMON))
                     continue;
             }
-            if (c->HasStati(CHARMED, CH_DOMINATE, this) ||
-                c->HasStati(SUMMONED, -1, this))
-                ct = PHD_MAGIC;
-            else if (c->HasStati(CHARMED, CH_COMMAND, this))
-                ct = PHD_COMMAND;
-            else if (c->isMType(MA_ANIMAL))
-                ct = PHD_ANIMAL;
-            else if (c->isMType(MA_UNDEAD))
-                ct = PHD_UNDEAD;
-            else
-                ct = PHD_PARTY;
+            ct = PoolOf(c);
             if (ct != CompType)
                 continue;
             if (ct == PHD_COMMAND && CommandType != -1 && CommandTypeOf(c) != CommandType)

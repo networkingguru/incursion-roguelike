@@ -3517,6 +3517,16 @@ GodIsOkay:;
 
     if (isPlayer())
         thisp->statiChanged = true;
+
+    /* inc-e46n: on level-up, give every follower a chance to spend its kill
+       tally on the next skill rung, now that SK_SENESCHAL and the pools may
+       have grown. */
+    if (m) {
+        Creature *c; int32 fi;
+        MapIterate(m, c, fi)
+            if (c->isMonster() && c->ts.isLeader(this))
+                ((Monster *)c)->SeneschalPromote(this);
+    }
 }
 
 // TODO(unreliable-code): Verify that the loss of abilities in a Paladin-fall is correct.
