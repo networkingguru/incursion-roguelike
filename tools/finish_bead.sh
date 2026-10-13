@@ -648,6 +648,15 @@ git -C "$SHARED" worktree remove --force "$WORKTREE" >/dev/null 2>&1 || {
     exit 1
 }
 
+# inc-4320. The bead is landed, so its one-bead approval is spent: delete the
+# file order_guard.sh reads, resolved from the password database (never $HOME).
+# Absence is not an error -- most beads never needed an approval.
+_inc_approval="$("$SHARED/tools/order_approval_path.sh" "$BEAD" 2>/dev/null || true)"
+if [ -n "$_inc_approval" ] && [ -f "$_inc_approval" ]; then
+    rm -f "$_inc_approval"
+    echo "Removed $BEAD's order approval at $_inc_approval."
+fi
+
 # -D, not -d: the ancestry test above is the real check, and -d asks a different
 # question that answers wrongly here.
 git -C "$SHARED" branch -D "$BEAD" >/dev/null 2>&1 || {

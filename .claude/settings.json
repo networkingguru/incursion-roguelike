@@ -64,5 +64,13 @@
         "matcher": "Bash"
       }
     ]
+  },
+  "permissions": {
+    "deny": [
+      "Bash(*approve_order_break*)",
+      "Bash(*order-approvals*)",
+      "Bash(*order_approval_path*)",
+      "Edit(~/.config/incursion/**)"
+    ]
   }
 }

@@ -216,3 +216,23 @@ if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
     fi
   fi
 fi
+
+# --- INCURSION: staged lib/ needs a fresh module and the order check (inc-4320) ---
+# ponytail: the module is built from the working tree, not the index, so a partly staged lib/ file is checked as it is on disk.
+if [ -z "${BD_GIT_HOOK_NESTED:-}" ] && [ ! -e "$(git rev-parse --git-path MERGE_HEAD 2>/dev/null)" ]; then
+  _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
+  _inc_mod="$_inc_root/mod/Incursion.Mod"
+  _inc_lib=$(git diff --cached --name-only -- lib/ 2>/dev/null)
+  if [ -n "$_inc_lib" ]; then
+    for _inc_f in $_inc_lib; do
+      [ -f "$_inc_root/$_inc_f" ] || continue
+      if [ ! -f "$_inc_mod" ] || [ "$_inc_root/$_inc_f" -nt "$_inc_mod" ]; then
+        echo >&2 "lib/ changed since the module was built. Run BACKEND=posix ./build_macos.sh, then commit."
+        exit 1
+      fi
+    done
+    if [ -x "$_inc_root/tools/order_guard.sh" ]; then
+      "$_inc_root/tools/order_guard.sh" >&2 || exit 1
+    fi
+  fi
+fi
