@@ -3178,7 +3178,8 @@ typedef signed int        hObj;
 #define LOOT_CLAIM        240
 #define LOOT_CLAIMS       241
 #define LOOT_THIEF        242
-#define LAST_STATI        243
+#define SENESCHAL_TALLY   243
+#define LAST_STATI        244
   
 
 

@@ -4168,8 +4168,15 @@ Template "skilled" : TM_SKILL for MA_SAPIENT
       return NOTHING;
       },
     EV_ISTARGET {
-      if (mID_isMType(EActor->tmID,MA_UNDEAD) || EActor->isMType(MA_DRAGON) )
+      // inc-e46n: a player's undead follower may take a rung (Seneschal); dragons and random undead may not.
+      if (EActor->isMType(MA_DRAGON))
         return -1;
+      if (mID_isMType(EActor->tmID,MA_UNDEAD)) {
+        if (!isValidHandle(EActor->getLeader()))
+          return -1;
+        if (!EActor->getLeader()->isPlayer())
+          return -1;
+        }
       return 0;
       };
   }
@@ -4185,8 +4192,14 @@ Template "experienced" : TM_SKILL for MA_SAPIENT
       return NOTHING;
       },
     EV_ISTARGET {
-      if (mID_isMType(EActor->tmID,MA_UNDEAD) || EActor->isMType(MA_DRAGON) )
+      if (EActor->isMType(MA_DRAGON))
         return -1;
+      if (mID_isMType(EActor->tmID,MA_UNDEAD)) {
+        if (!isValidHandle(EActor->getLeader()))
+          return -1;
+        if (!EActor->getLeader()->isPlayer())
+          return -1;
+        }
       return 0;
       };
   }
@@ -4203,8 +4216,14 @@ Template "veteran" : TM_SKILL for MA_SAPIENT
       return NOTHING;
       },
     EV_ISTARGET {
-      if (mID_isMType(EActor->tmID,MA_UNDEAD) || EActor->isMType(MA_DRAGON) )
+      if (EActor->isMType(MA_DRAGON))
         return -1;
+      if (mID_isMType(EActor->tmID,MA_UNDEAD)) {
+        if (!isValidHandle(EActor->getLeader()))
+          return -1;
+        if (!EActor->getLeader()->isPlayer())
+          return -1;
+        }
       return 0;
       };
   }
@@ -4219,8 +4238,14 @@ Template "elite" : TM_SKILL for MA_SAPIENT
       return NOTHING;
       },
     EV_ISTARGET {
-      if (mID_isMType(EActor->tmID,MA_UNDEAD) || EActor->isMType(MA_DRAGON) )
+      if (EActor->isMType(MA_DRAGON))
         return -1;
+      if (mID_isMType(EActor->tmID,MA_UNDEAD)) {
+        if (!isValidHandle(EActor->getLeader()))
+          return -1;
+        if (!EActor->getLeader()->isPlayer())
+          return -1;
+        }
       return 0;
       };
   }
@@ -4235,8 +4260,14 @@ Template "master" : TM_SKILL for MA_SAPIENT
       return NOTHING;
       },
     EV_ISTARGET {
-      if (mID_isMType(EActor->tmID,MA_UNDEAD) || EActor->isMType(MA_DRAGON) )
+      if (EActor->isMType(MA_DRAGON))
         return -1;
+      if (mID_isMType(EActor->tmID,MA_UNDEAD)) {
+        if (!isValidHandle(EActor->getLeader()))
+          return -1;
+        if (!EActor->getLeader()->isPlayer())
+          return -1;
+        }
       return 0;
       };
   }
@@ -4251,8 +4282,14 @@ Template "paragon" : TM_SKILL for MA_SAPIENT
       return NOTHING;
       },
     EV_ISTARGET {
-      if (mID_isMType(EActor->tmID,MA_UNDEAD) || EActor->isMType(MA_DRAGON) )
+      if (EActor->isMType(MA_DRAGON))
         return -1;
+      if (mID_isMType(EActor->tmID,MA_UNDEAD)) {
+        if (!isValidHandle(EActor->getLeader()))
+          return -1;
+        if (!EActor->getLeader()->isPlayer())
+          return -1;
+        }
       return 0;
       };
   }
@@ -4267,8 +4304,14 @@ Template "legendary" : TM_SKILL for MA_SAPIENT
       return NOTHING;
       },
     EV_ISTARGET {
-      if (mID_isMType(EActor->tmID,MA_UNDEAD) || EActor->isMType(MA_DRAGON) )
+      if (EActor->isMType(MA_DRAGON))
         return -1;
+      if (mID_isMType(EActor->tmID,MA_UNDEAD)) {
+        if (!isValidHandle(EActor->getLeader()))
+          return -1;
+        if (!EActor->getLeader()->isPlayer())
+          return -1;
+        }
       return 0;
       };
   }

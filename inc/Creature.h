@@ -374,6 +374,7 @@ class Creature: public Thing, public Magic
       virtual void ExtendedAction();
       virtual void HaltAction(const char *why, bool force_halt=true);
       virtual int16 ChallengeRating(bool allow_neg = false);
+      int16 ChallengeRatingSwapped(rID dropT, rID addT, bool allow_neg = false);
       virtual void GainXP(uint32 XP) { return; }
       virtual int32 TotalXP() { return 0; }
       virtual void KillXP(Creature*kill, int16 percent=100);
@@ -1406,6 +1407,8 @@ class Player: public Character
       void WildShape();
       
       int32 GetGroupXCR(int16 CompType, int16 AddCR=0, int16 CommandType=-1);
+      // Returns the PHD_* command/power pool that creature c belongs to.
+      int16 PoolOf(Creature *c);
       int16 CommandTypeOf(Creature *c);
       int32 GetCommandXCR(int16 type);
       int16 MaxCommandCR(int16 type);
@@ -1724,6 +1727,11 @@ class Monster: public Creature
       void MonsterGear();
       virtual void GainItem(Item *it, bool starting=false);
       bool MakeCompanion(Player *p, int16 CompType);
+      // Returns true if player p's pool for CompType would refuse a follower costing cost XCR.
+      bool PoolRefuses(Player *p, int16 CompType, int32 cost);
+      bool SeneschalQualifies(Player *p);
+      void SeneschalKill(Creature *victim);
+      void SeneschalPromote(Player *p);
       
       // Target System Wrappers
       void    TurnHostileTo(Creature *cr) { ts.TurnHostileTo(this,cr); }

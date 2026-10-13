@@ -2388,6 +2388,24 @@ int16 Creature::ChallengeRating(bool allow_neg)
     return max(0,CR);
   }
 
+/* inc-e46n: ChallengeRating as if template stati dropT were absent and
+   template addT present; the Seneschal ladder needs this to price a
+   follower's current template against a candidate one. Same floor rule. */
+int16 Creature::ChallengeRatingSwapped(rID dropT, rID addT, bool allow_neg)
+  {
+    int16 CR = TMON(mID)->CR;
+    StatiIterNature(this,TEMPLATE)
+      if (S->eID != dropT)
+        CR = TTEM(S->eID)->CR.Adjust(CR);
+    StatiIterEnd(this)
+    if (addT)
+      CR = TTEM(addT)->CR.Adjust(CR);
+
+    if (allow_neg)
+      return CR;
+    return max(0,CR);
+  }
+
 
 
 /*

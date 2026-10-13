@@ -4764,7 +4764,15 @@ SkillInfoStruct SkillInfo[] = {
      A_INT, A_INT, true, 0}, 
 
   { SK_SENESCHAL, "Seneschal", false, false, 
-    "__Wes has no idea what Julian wants this skill to be.",
+    "__This skill lets the intelligent creatures who follow you grow in skill "
+    "through their own fighting. Each follower keeps track of the foes it "
+    "kills itself, and when it has fought enough, it advances one rank: "
+    "skilled, experienced, veteran, elite, master, paragon and finally "
+    "legendary. Your Seneschal rating limits how far each follower can rise: "
+    "no follower can advance to a challenge rating above your rating. A "
+    "follower ready to advance must also fit the strength of the party you "
+    "can lead. Animals, mindless creatures and followers bound by magic never "
+    "advance this way.",
   A_INT, A_INT, false, 0}, 
 
   { SK_SPELLCRAFT, "Spellcraft", true, false, 
@@ -5250,6 +5258,7 @@ TextVal STATI_CONSTNAMES[] = {
   { LOOT_CLAIM, "LOOT_CLAIM" },
   { LOOT_CLAIMS, "LOOT_CLAIMS" },
   { LOOT_THIEF, "LOOT_THIEF" },
+  { SENESCHAL_TALLY, "SENESCHAL_TALLY" },
   { LAST_STATI, "LAST_STATI" },
 
   { 0, NULL } };

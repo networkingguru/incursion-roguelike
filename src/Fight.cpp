@@ -9202,6 +9202,11 @@ EvReturn Creature::Death(EventInfo &e)
 
   if (e.EActor && !e.EVictim->isIllusion())
     e.EActor->KillXP(this);
+  /* inc-e46n: a sapient follower led by a player keeps a tally of its own
+     killing blows (Seneschal skill, phase 2 -- no promotion yet). */
+  if (e.EActor && e.EActor != this && e.EActor->isMonster()
+      && !e.EVictim->isIllusion())
+    ((Monster *)e.EActor)->SeneschalKill(this);
   /* The player has killed one of this kind. Guarded exactly as the KillXP
      line above it is: an illusion is nobody's kill, and the two lines must
      agree about what a kill is. Not Creature::KillXP itself, which quest and

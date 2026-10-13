@@ -1656,10 +1656,22 @@ Text "help::searching"
 
 Text "help::seneschal"
   { "__The Seneschal skill has the following uses:\n
+     __<15>* <11>Steward of Followers (Passive):<3> Intelligent creatures who
+     follow you grow stronger through their own fighting. Each follower keeps
+     a tally of the foes it slays itself; a foe near the follower's own
+     strength counts fully, a much weaker one counts for very little. When
+     the tally is large enough, the follower advances one rank, from skilled
+     through experienced, veteran, elite, master and paragon to legendary,
+     gaining hit points, accuracy, speed and every attribute. No follower can
+     advance to a challenge rating above your Seneschal rating, and an advance
+     must also fit the strength of the party you can lead. A follower that
+     cannot yet advance keeps its tally, and advances when it next kills or
+     when you next gain a level. Animals, mindless creatures, dragons and
+     followers bound by magic never advance this way.\n
      __<15>* <11>Claim Keep (Active, <4>Unimplemented<11>):<3> The Seneschal skill covers
      courtly etiquette, medieval finance and moneylending and general
      lordly competence. In game terms, it allows a character to own
-     property and manage it competrntly, building and maintaining a
+     property and manage it competently, building and maintaining a
      keep or fortress somewhere on the overland map should she complete
      a quest that would award her with such. In addition to providing
      her with a safe place to keep items she doesn't carry with her,

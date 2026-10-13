@@ -853,6 +853,7 @@ void Creature::StatiOn(Status s) {
       case NEUTRAL_TO:
       case NONDETECTION:
       case PAIN_TALLY:
+      case SENESCHAL_TALLY:
       case PRACTICE_MISS_CHANCE:
       case REGEN:
       case RETRY_BONUS:
