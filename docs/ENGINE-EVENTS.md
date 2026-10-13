@@ -87,7 +87,7 @@ calls `TerrainEffects` (`:393`) -> a portal or terrain handler calls `MoveDepth`
 `src/Move.cpp:1585`, inside `Creature::TerrainEffects` at `src/Move.cpp:1446`). The re-entry path is ordinary event dispatch; no
 C++ call from `MoveDepth` to `MoveDepth` exists. *Invariant violated:* a function its caller can re-enter must hold no
 call-lifetime state in `static` storage. The follower array is now local, `Thing *GoWith[64]` (`src/Feature.cpp:1328`), bounded at
-`:1470`; `static Creature* Displace[64]` (`src/Display.cpp:448`) still violates it. *Fix:* the re-entry was not the cause. The
+`:1475`; `static Creature* Displace[64]` (`src/Display.cpp:448`) still violates it. *Fix:* the re-entry was not the cause. The
 down path read `RES(0)` whenever `BELOW_DUNGEON` is unset, which is every dungeon in `lib/`; the zero check at
 `src/Feature.cpp:1420` stops it.
 
