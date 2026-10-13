@@ -247,18 +247,55 @@ def display(path):
         return str(path)
 
 
-def check(module_root, ledger_path):
+def canonical_failures(module_root, ledger_path):
+    """The failure list, or None when the check cannot measure.
+
+    The single comparison path the plain check, --failures and --failure-hash
+    all share. Returns a (failures, message, module) triple: `message` is set
+    and `failures` is None exactly when the check cannot measure (exit 2).
+    """
     if not BIN.exists():
-        print("INCONCLUSIVE: %s is not built. Run: BACKEND=posix ./build_macos.sh"
-              % BIN.name)
-        return 2
+        return None, ("INCONCLUSIVE: %s is not built. Run: BACKEND=posix "
+                      "./build_macos.sh" % BIN.name), None
     module = parse(module_report(module_root))
     ledger = load_ledger(ledger_path)
     if ledger is None:
-        print("FAIL: no ledger at %s. Record the first one with: "
-              "tools/check_resource_order.sh --record" % display(ledger_path))
-        return 1
-    failures = order_failures(ledger, module)
+        return None, ("FAIL: no ledger at %s. Record the first one with: "
+                      "tools/check_resource_order.sh --record"
+                      % display(ledger_path)), None
+    return order_failures(ledger, module), None, module
+
+
+def failures_mode(module_root, ledger_path):
+    """--failures: the canonical failure lines, one per line, nothing else."""
+    failures, message, _module = canonical_failures(module_root, ledger_path)
+    if failures is None:
+        print(message)
+        return 2
+    for line in failures:
+        print(line)
+    return 1 if failures else 0
+
+
+def failure_hash_mode(module_root, ledger_path):
+    """--failure-hash: the sha256 hex of the canonical failure list."""
+    import hashlib
+    failures, message, _module = canonical_failures(module_root, ledger_path)
+    if failures is None:
+        print(message)
+        return 2
+    body = "\n".join(failures)
+    if failures:
+        body += "\n"
+    print(hashlib.sha256(body.encode("utf-8")).hexdigest())
+    return 1 if failures else 0
+
+
+def check(module_root, ledger_path):
+    failures, message, module = canonical_failures(module_root, ledger_path)
+    if failures is None:
+        print(message)
+        return 1 if message.startswith("FAIL") else 2
     if failures:
         print("FAIL: the module breaks the order rule recorded in %s:"
               % display(ledger_path))
@@ -460,6 +497,54 @@ def selftest():
         print("selftest FAIL  a comment-only ledger did not parse to empty")
         ok = False
 
+    # --failures and --failure-hash. The modes print the very lines the check
+    # prints, in the check's own order, so the list and the hash are tested on
+    # the same order_failures output the plain check uses.
+    import hashlib
+
+    def failure_hash(failures):
+        body = "\n".join(failures)
+        if failures:
+            body += "\n"
+        return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+    red = order_failures(base, variant(arrays={(0, 0): ["a", "c", "b"],
+                                               (0, 1): ["x"]}))
+    green = order_failures(base, base)
+    if red:
+        print("selftest ok    %-46s -> %d line(s)"
+              % ("--failures lists a failure", len(red)))
+    else:
+        print("selftest FAIL  --failures found no failure where there is one")
+        ok = False
+    if not green:
+        print("selftest ok    %-46s -> %d line(s)"
+              % ("--failures lists nothing when the order holds", len(green)))
+    else:
+        print("selftest FAIL  --failures listed a failure for a clean module")
+        ok = False
+
+    if failure_hash(red) and failure_hash(red) != failure_hash(green):
+        print("selftest ok    %-46s -> different hashes"
+              % "two failure lists hash differently")
+    else:
+        print("selftest FAIL  two different failure lists hashed the same")
+        ok = False
+    red2 = order_failures(base, variant(owners={(0, 0, 0): ["v2", "v1"],
+                                                (0, -1, -1): ["g"]}))
+    if failure_hash(red) != failure_hash(red2):
+        print("selftest ok    %-46s -> different hashes"
+              % "two different red cases hash differently")
+    else:
+        print("selftest FAIL  two different red cases hashed the same")
+        ok = False
+    if failure_hash(green) == hashlib.sha256(b"").hexdigest() and not green:
+        print("selftest ok    %-46s -> empty-body sha256"
+              % "an empty list hashes the empty body")
+    else:
+        print("selftest FAIL  an empty list did not hash the empty body")
+        ok = False
+
     print()
     print("selftest: %s" % ("pass" if ok else "FAIL"))
     return 0 if ok else 1
@@ -476,18 +561,27 @@ def main(argv):
             mode = "record"
         elif arg == "--selftest":
             mode = "selftest"
+        elif arg == "--failures":
+            mode = "failures"
+        elif arg == "--failure-hash":
+            mode = "failure_hash"
         elif arg == "--module-root" and rest:
             module_root = rest.pop(0)
         elif arg == "--ledger" and rest:
             ledger_path = pathlib.Path(rest.pop(0))
         else:
-            sys.stderr.write("usage: %s [--record] [--selftest] "
-                             "[--module-root DIR] [--ledger FILE]\n" % argv[0])
+            sys.stderr.write("usage: %s [--record] [--selftest] [--failures] "
+                             "[--failure-hash] [--module-root DIR] "
+                             "[--ledger FILE]\n" % argv[0])
             return 2
     if mode == "selftest":
         return selftest()
     if mode == "record":
         return record(module_root, ledger_path)
+    if mode == "failures":
+        return failures_mode(module_root, ledger_path)
+    if mode == "failure_hash":
+        return failure_hash_mode(module_root, ledger_path)
     return check(module_root, ledger_path)
 
 
