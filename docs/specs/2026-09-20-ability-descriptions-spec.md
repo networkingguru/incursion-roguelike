@@ -173,11 +173,11 @@ the tables, then restores. A check that cannot be shown to fail is not evidence
 ### 5. Devouring's own text
 
 Read from `Creature::DevourMonster` (`src/Skills.cpp:2963-3116`) and
-`Creature::Devour` (`src/Skills.cpp:3119`), and from the call site at `src/Item.cpp:1963`.
+`Creature::Devour` (`src/Skills.cpp:3119`), and from the call site at `src/Item.cpp:1990`.
 The description must state:
 
 - It triggers when you finish eating a corpse, not when you start one
-  (`src/Item.cpp:1955`, `Eaten >= 100`).
+  (`src/Item.cpp:1982`, `Eaten >= 100`).
 - Undead flesh gives nothing (`src/Skills.cpp:3021`).
 - You gain a permanent point of resistance for each damage type the victim
   resisted more strongly than you do (`src/Skills.cpp:3026-3060`).

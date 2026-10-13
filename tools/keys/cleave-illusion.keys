@@ -1,0 +1,19 @@
+# inc-k0e1: wizard-summon a goblin directly east of the player, then attack east.
+# The probe (INCURSION_CLEAVE_ILLUSION_PROBE) gives the player Cleave, spawns a real
+# bugbear beside the player, holds the goblin at 1 HP and, in illusion mode, makes it
+# an illusion.
+@include chargen.keys
+.*2
+w
+y
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+RIGHT
+.*2
+RIGHT
+.*2
+RIGHT
+.*2
+@dump:end

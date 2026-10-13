@@ -66,7 +66,7 @@ die... Die? [yn]" prompt inc-loa.3 instrumented:
 * `OPT_ELUDE_DEATH` (idx 119): **3** (SEVEN free deaths), unchanged. Not
   named by inc-loa.4's text, but it is the mechanism actually firing the
   prompt here since `OPT_NODEATH` is 0 -- see `if (thisp->Opt(OPT_NODEATH))
-  ... else if (Opt(OPT_ELUDE_DEATH))` at src/Fight.cpp:9151-9167. Left as
+  ... else if (Opt(OPT_ELUDE_DEATH))` at src/Fight.cpp:9439-9455. Left as
   pinned rather than defaulted (game default is 0/NO) because changing it
   changes whether a soak character can die at all, which is exactly the
   decision the boundary reserves for Brian.
@@ -84,7 +84,7 @@ die... Die? [yn]" prompt inc-loa.3 instrumented:
   **The freeze claim this paragraph carried is no longer safe.** It said the
   session was frozen for the rest of its run because `dive.keys` presses none
   of those keys. `f7ff2d7` (2026-08-28) added arrow-key navigation and made
-  ENTER take the highlighted choice (`src/Term.cpp:2879-2880`), and this call
+  ENTER take the highlighted choice (`src/Term.cpp:2878-2879`), and this call
   passes four choices (`"afd?"`), so ENTER now leaves the prompt -- and
   `dive.keys` presses ENTER 36 times. Whether a session still freezes depends
   on where in the queue the prompt fires, and that has not been re-measured.

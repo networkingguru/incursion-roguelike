@@ -289,6 +289,10 @@ void Game::Play() {
     extern void LineOfFireProbe(Player *shooter);
     LineOfFireProbe(pp);
 
+    /* Off unless INCURSION_RANGED_ILLUSION_PROBE is set. inc-6w5x. */
+    extern void RangedIllusionProbe(Player *shooter);
+    RangedIllusionProbe(pp);
+
     /* Off unless INCURSION_SAVECHANCE_PROBE is set, and run here because it
        needs a live player. See SaveChanceProbe (src/Fight.cpp) and
        tools/check_save_chance.sh. inc-o6xj. */

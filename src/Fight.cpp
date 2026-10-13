@@ -957,8 +957,10 @@ EvReturn Creature::WAttack(EventInfo &e)
           return ReThrow(EV_NATTACK,e);
         else 
           return ABORT; 
-    } 
+    }
 
+    { extern void CleaveIllusionProbe(Creature*,Creature*,int,bool); /* inc-k0e1 */
+      CleaveIllusionProbe(e.EActor,e.EVictim,0,false); }
     if (HasStati(ILLUSION)) {
       if (!e.ETarget->isCreature())
         return ABORT;
@@ -1043,6 +1045,13 @@ EvReturn Creature::WAttack(EventInfo &e)
     CleaveCount = 0;
 
 DoCleave:
+    /* upstream: base-code defect, fix is ours. Tier Observed --
+       tools/check_cleave_illusion.sh crashed with SIGSEGV before this line.
+       vicIllusion must describe the CURRENT EVictim, because Cleave jumps back
+       here (goto DoCleave) with a new victim; set once above, it kept the first
+       victim's value. Upstream's own goto, no port or compiler dependence.
+       Tracking inc-k0e1. Not sent upstream. */
+    e.vicIllusion = e.EVictim->HasStati(ILLUSION);
     if (e.ETarget->HasStati(GRABBED,0,e.EActor))
       if (e.EActor->HasStati(GRAPPLING))
         e.vicHeld = true;
@@ -1146,6 +1155,8 @@ DoCleave:
             }
             
             
+            { extern void CleaveIllusionProbe(Creature*,Creature*,int,bool); /* inc-k0e1 */
+              CleaveIllusionProbe(e.EActor,c,1,e.vicIllusion); }
             e.EVictim = c;
             goto DoCleave;
           }
@@ -1557,6 +1568,20 @@ hitNow:
      the shot simply passes every body it crosses. */
   if (Intended && reachedAimSquare) {
     e.ETarget = Intended;
+    /* inc-6w5x: vicIllusion must describe the creature actually struck,
+       set at each place the struck creature is fixed. It was set once from
+       the aimed e.EVictim above, so a line-of-fire strike on a different
+       creature kept the aimed creature's flag; Creature::Damage then read
+       getIllusionFlags() on a real creature. Tier Observed,
+       tools/check_ranged_illusion.sh. Tracking inc-6w5x. The sites 2, 4
+       and the line-of-fire choice came from the port (inc-30ps, 11a8f7bc),
+       so they are not upstream; the aim-at-a-square case is.
+       upstream: upstream's original RAttack also set the flag only from
+       EVictim, NULL when aiming at a square, so a struck illusion got no
+       disbelief save. Tier Observed (tools/check_ranged_illusion.sh),
+       upstream's own logic, no port or compiler dependence.
+       Tracking inc-6w5x. Not sent. */
+    e.vicIllusion = Intended && Intended->HasStati(ILLUSION);
     /* inc-55jl item 2: dead/off-map before the strike (e.g. an AoO before
        the flight) is not struck; land at its former square instead. */
     if (Intended->isDead() || !Intended->m || Intended->x == -1) {
@@ -1663,6 +1688,7 @@ hitNow:
              type choose its damage, never the intended target's. */
           EventInfo strikeE = e;
           strikeE.ETarget = bandVictim;
+          strikeE.vicIllusion = bandVictim->HasStati(ILLUSION); /* inc-6w5x: see above */
           strikeE.isHit   = true;
           strikeE.vDef    = (int8)(bandVictim->isCreature() ?
             strikeE.EVictim->getDef() : 0);
@@ -1696,6 +1722,7 @@ hitNow:
        meant, and this shooter meant a square. */
     const int8 penalty = (lineCount == 1) ? 0 : LineOfFireCoverPenalty(1);
     e.ETarget = squares[0].member[0];
+    e.vicIllusion = e.ETarget && e.ETarget->HasStati(ILLUSION); /* inc-6w5x: see above */
     int16 vicSize = e.ETarget->isCreature() ?
       e.EVictim->GetAttr(A_SIZ) : SZ_MEDIUM;
     e.Dmg     = (vicSize > SZ_MEDIUM) ?
@@ -1767,6 +1794,7 @@ hitNow:
         /* item 3: recompute damage against the creature actually struck. */
         EventInfo strikeE = e;
         strikeE.ETarget = hitVictim;
+        strikeE.vicIllusion = hitVictim->HasStati(ILLUSION); /* inc-6w5x: see above */
         strikeE.isHit   = true;
         strikeE.vDef    = (int8)(hitVictim->isCreature() ?
           strikeE.EVictim->getDef() : 0);
@@ -7574,6 +7602,10 @@ IgnoreMorality:;
                                     /* When you trade blows with a non-Improved illusion, you
                                     automatically get a chance to disbelieve it every hit
                                     that lands, due to the absence of kinetics, smell, etc. */
+                                    { extern void CleaveIllusionProbe(Creature*,Creature*,int,bool); /* inc-k0e1 */
+                                      CleaveIllusionProbe(e.EActor,e.EVictim,2,e.vicIllusion); }
+                                    { extern void RangedIllusionDamageProbe(Creature*,bool); /* inc-6w5x */
+                                      RangedIllusionDamageProbe(e.EVictim,e.vicIllusion); }
                                     if (e.vicIllusion && e.EActor)
                                         if (!(e.EVictim->getIllusionFlags() & IL_IMPROVED))
                                             e.EVictim->DisbeliefCheck(e.EActor);
