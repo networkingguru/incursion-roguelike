@@ -84,7 +84,7 @@ die... Die? [yn]" prompt inc-loa.3 instrumented:
   **The freeze claim this paragraph carried is no longer safe.** It said the
   session was frozen for the rest of its run because `dive.keys` presses none
   of those keys. `f7ff2d7` (2026-08-28) added arrow-key navigation and made
-  ENTER take the highlighted choice (`src/Term.cpp:2879-2880`), and this call
+  ENTER take the highlighted choice (`src/Term.cpp:2878-2879`), and this call
   passes four choices (`"afd?"`), so ENTER now leaves the prompt -- and
   `dive.keys` presses ENTER 36 times. Whether a session still freezes depends
   on where in the queue the prompt fires, and that has not been re-measured.
