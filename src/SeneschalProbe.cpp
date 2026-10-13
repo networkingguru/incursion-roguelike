@@ -111,6 +111,7 @@ static int fillPartyPool(Player *pl, Monster **fillerOut) {
 }
 
 void SeneschalProbe(Player *pl) {
+    /* inc-e46n: opt-in; off unless INCURSION_SENESCHAL_PROBE is set. */
     if (!getenv("INCURSION_SENESCHAL_PROBE")) return;
     char path[1024];
     snprintf(path, sizeof(path), "%slogs/seneschal.log",

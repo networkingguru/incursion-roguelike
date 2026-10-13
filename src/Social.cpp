@@ -2606,7 +2606,7 @@ void Monster::SeneschalPromote(Player *p) {
             ts_st->Mag = (int16)(tally - threshold);
         }
         if (named)
-            p->IPrint("<Obj> has learned from <his:Obj> battles, and is now "
+            p->IPrint("<Obj1> has learned from <his:Obj1> battles, and is now "
                 "<str>.", this, Ending[next]);
         else
             p->IPrint("The <Res> has learned from its battles, and is now "
