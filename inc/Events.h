@@ -235,7 +235,7 @@ struct EventInfo {
     int16 terraKey, terrainListIndex;
     uint16 illFlags; char illType; int16 godNum;
     rID eID, ill_eID;
-    bool  isHit, isCrit, isFumble, Died, ADied, Blocked, Saved, Immune, MagicRes,
+    bool  isHit, isCrit, isFumble, Died, ADied, Eluded, Blocked, Saved, Immune, MagicRes,
         Resist, Absorb, wasFriendly, actUnseen, vicUnseen, vicCharging, Whirlwind, Graze,
         Stun, actIncor, vicIncor, Ranged, vicHeld, isDir, isWImmune, isTelekinetic,
         isLoc, isActivation, isSomething, isWield, isRemove, isEnter, effDisbelieved, 

@@ -287,6 +287,106 @@ Found:
     mon->ProvokeAoO();
 }
 
+/* Probe for inc-6vrn. INCURSION_ELUDE_PROBE="<monster name>:<hp>" waits for a
+   hostile monster of that name beside the player (the key script summons it
+   from the wizard menu), then, once per tick, sets his hit points to <hp> and
+   makes the monster throw one natural-attack sequence at him. It stops when
+   Elude Death has carried him off the square, and logs to logs/elude.log where
+   he stands, how far the attacker is, and whether he is grabbed. The strikes
+   of the sequence are logged from Creature::Strike (src/Fight.cpp).
+   Env-gated and inert when the variable is unset. */
+void EludeProbeArm(int16 ax, int16 ay);
+static void EludeProbeArrange(Player *pp)
+{
+    static int state = -1, attempts = 0;
+    static rID want = 0;
+    static int hp = 1;
+    static Monster *mon = NULL;
+    static int16 ax, ay;
+    int16 i, cx, cy;
+    FILE *f;
+    char path[1024];
+    Monster *c;
+
+    if (state == -1) {
+        const char *v = getenv("INCURSION_ELUDE_PROBE");
+        char buf[256], *colon;
+        state = 9;
+        if (v && strlen(v) < sizeof(buf)) {
+            strcpy(buf, v);
+            colon = strrchr(buf, ':');
+            if (colon) {
+                *colon = 0;
+                hp = atoi(colon + 1);
+                want = FIND(buf);
+                if (want)
+                    state = 0;
+            }
+        }
+    }
+    if (state == 9 || !pp->m)
+        return;
+    snprintf(path, sizeof(path), "%slogs/elude.log",
+        (const char*)T1->IncursionDirectory);
+
+    if (state == 0) {
+        for (i = 0; i != 8 && !mon; i++) {
+            cx = pp->x + DirX[i];
+            cy = pp->y + DirY[i];
+            if (!pp->m->InBounds(cx, cy))
+                continue;
+            c = (Monster*)pp->m->FCreatureAt(cx, cy);
+            if (c && c->isMonster() && c->tmID == want &&
+                (c->isHostileTo(pp) || pp->isHostileTo(c)))
+                mon = c;
+        }
+        if (!mon)
+            return;
+        state = 1;
+        ax = pp->x;
+        ay = pp->y;
+        EludeProbeArm(ax, ay);
+        f = fopen(path, "a");
+        if (f) {
+            fprintf(f, "arranged: %s at %d,%d, player at %d,%d, hp %d\n",
+                (const char*)mon->Name(0), (int)mon->x, (int)mon->y,
+                (int)ax, (int)ay, hp);
+            fclose(f);
+        }
+    }
+
+    if (mon->isDead() || attempts >= 40) {
+        state = 9;
+        f = fopen(path, "a");
+        if (f) {
+            fprintf(f, "gave up: attempts %d, monster %s\n", attempts,
+                mon->isDead() ? "dead" : "alive");
+            fclose(f);
+        }
+        return;
+    }
+    attempts++;
+    pp->cHP = hp;
+    f = fopen(path, "a");
+    if (f) {
+        fprintf(f, "attempt %d\n", attempts);
+        fclose(f);
+    }
+    Throw(EV_NATTACK, mon, pp);
+    if (pp->x != ax || pp->y != ay) {
+        state = 9;
+        f = fopen(path, "a");
+        if (f) {
+            fprintf(f, "result: player at %d,%d armed %d,%d moved=1 dist=%d "
+                "grabbed=%d grappling=%d deaths=%d\n", (int)pp->x, (int)pp->y,
+                (int)ax, (int)ay, (int)mon->DistFrom(pp),
+                pp->HasStati(GRABBED) ? 1 : 0,
+                mon->HasStati(GRAPPLING) ? 1 : 0, (int)pp->deathCount);
+            fclose(f);
+        }
+    }
+}
+
 void Player::ChooseAction() {
     int16 k, ch, sp, cdir, n, gx, gy;
     int16 dx, dy;
@@ -342,6 +442,7 @@ void Player::ChooseAction() {
 
     RiderProbeArrange(this);
     AoOProbeArrange(this);
+    EludeProbeArrange(this);
 
     //IPrint(Format("Chill Shield: %d/%d %d %d.",
     //  TEFF(FIND("chill shield")) - theGame->Modules[0]->QEff,
