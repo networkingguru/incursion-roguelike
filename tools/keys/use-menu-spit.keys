@@ -1,0 +1,41 @@
+# Reproduction for bd inc-6sm3, part (b): a polymorphed PC that picks a spit
+# attack from the use menu (U). Before the fix, Player::UseMenu's ATTK_VAL
+# switch (src/Skills.cpp) had no A_SPIT case and logged "Unimplemented PC
+# polymorph attack!"; after it, the spit fires like a breath: a direction
+# prompt, then EV_SATTACK.
+#
+# Read by tools/check_use_menu_skills.sh with the kobold rogue fixture loaded
+# (INCURSION_LOAD), so the first key is a game command.
+#
+#   w y, Polymorph the PC -> Spiders -> Spitting spider
+#       the acquisition list shows the highlighted entry on its middle line and
+#       the next one below it, so @until stops one DOWN short of the entry.
+#   Monster Summoning -> Kobolds -> kobold, one square west
+#       a target. The spit is a ray in a direction; with the target adjacent
+#       the engine prints "Your poison cloud strikes a kobold."
+#   u -> Spit Weapon -> LEFT
+#       @expect fails the run (exit 6) if the polymorph did not happen or the
+#       entry is absent from the menu.
+w
+y
+@choose "Polymorph the PC"
+@until "]: Spiders" RIGHT
+@until "Spitting spider" DOWN
+DOWN
+ENTER
+@while "-- more --" ENTER
+w
+@choose "Monster Summoning"
+@choose "Kobolds"
+@choose "kobold"
+LEFT ENTER
+@while "-- more --" ENTER
+u
+@expect "Use which skill, feat or ability?"
+@expect "Spit Weapon"
+@dump:spit-menu
+@choose "Spit Weapon"
+LEFT
+@dump:spit-fired
+@while "-- more --" ENTER
+@quit

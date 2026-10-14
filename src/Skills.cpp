@@ -271,13 +271,23 @@ HasSuppliedIndex:
 		e.EActor = this;
 		e.EParam = ActiveTraits[i] % 1000;
 		switch (ActiveTraits[i] % 1000) {
+		/* upstream: this switch omitted A_SPIT and A_GEST, so those two
+		   polymorph attacks hit the default Error and could not be used
+		   from the PC U-menu. The engine already handles them in
+		   Creature special attacks (Fight.cpp), A_SPIT with A_BREA and
+		   A_GEST with A_ROAR. Plain switch logic -- no platform or
+		   typedef dependence, so Win32 behaves the same: upstream's
+		   defect, not a port artefact. Tier Observed:
+		   tools/check_use_menu_skills.sh. inc-6sm3. NOT SENT upstream. */
 		case A_BREA:
 		case A_BRE2:
+		case A_SPIT:
 			if (!MyTerm->EffectPrompt(e, Q_DIR | Q_TAR | Q_LOC))
 				return;
 			ReThrow(EV_SATTACK, e);
 			break;
 		case A_ROAR:
+		case A_GEST:
 			ReThrow(EV_SATTACK, e);
 			break;
 		default:

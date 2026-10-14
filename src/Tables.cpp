@@ -4332,6 +4332,14 @@ int16 RangerEnemies[] = {
   0, 0 };
 
 
+/* upstream: listed SK_APPRAISE, SK_DECIPHER and SK_ESCAPE_ART here, but
+   UseSkill has no case for them, so every menu pick printed "That skill
+   isn't implemented yet." Those three are passive-only; their passive
+   uses stay. SkillInfo's active flags are aligned so every skill this
+   menu can list is marked active. Plain table data -- no platform or
+   typedef dependence, so Win32 behaves the same: it is upstream's defect,
+   not a port artefact. Tier Observed: tools/check_use_menu_skills.sh.
+   inc-6sm3. NOT SENT upstream. */
 uint16 ActiveTraits[] = {
   SK_ALCHEMY + SKILL_VAL,
   CA_ANCESTRAL_MEMORY + ABIL_VAL,
@@ -4348,11 +4356,9 @@ uint16 ActiveTraits[] = {
   CA_COMMAND + ABIL_VAL,
   SK_CRAFT + SKILL_VAL,
   FT_DANCE_OF_TUKIMA + FEAT_VAL,
-  SK_DECIPHER + SKILL_VAL,
   SK_DISGUISE + SKILL_VAL,
   CA_DWARVEN_FOCUS + ABIL_VAL,
   FT_EAGLE_CLAW_ATTACK + FEAT_VAL,
-  SK_ESCAPE_ART + SKILL_VAL,
   CA_FEAT_OF_STRENGTH + ABIL_VAL,
   CA_FLAWLESS_DODGE + ABIL_VAL,
   CA_FLURRY_OF_BLOWS + ABIL_VAL,
@@ -4379,7 +4385,6 @@ uint16 ActiveTraits[] = {
   FT_SCRIBE_SCROLL + FEAT_VAL,
   CA_STORYCRAFT + ABIL_VAL,
   A_ROAR + ATTK_VAL,
-  SK_APPRAISE + SKILL_VAL,
   FT_SHIELD_BASH + FEAT_VAL,
   CA_SOOTHING_WORD + ABIL_VAL,
   CA_SPECIES_AFFINITY + ABIL_VAL,
@@ -4417,7 +4422,7 @@ SkillInfoStruct SkillInfo[] = {
      "skill check is 15 + the challenge rating of the animal.",
      A_INT, A_WIS, false, 0 }, 
 
-  { SK_APPRAISE, "Appraise", true, true, 
+  { SK_APPRAISE, "Appraise", true, false, 
      "__This skill gives you a chance to determine a creature's alignment and "
      "personality archetype, and certain other intentions in a situation. It "
      "also gives you heightened skill when bargaining with the shopkeepers, "
@@ -4594,7 +4599,7 @@ SkillInfoStruct SkillInfo[] = {
     "bonus to their hit points.",
      A_INT, A_INT, false, 0 }, 
 
-  { SK_KNOW_MAGIC, "Knowledge (Magic)", true, false,
+  { SK_KNOW_MAGIC, "Knowledge (Magic)", true, true,
     "__This skill gives a character inherent knowledge of a number of spells,"
     " thereby allowing him to cast them without a spellbook. The character has"
     " to spend spell slots to learn these spells normally, of course.",
@@ -4677,7 +4682,7 @@ SkillInfoStruct SkillInfo[] = {
      A_INT, A_INT, false, 0 }, 
 
 
-  { SK_LISTEN, "Listen", true, false, 
+  { SK_LISTEN, "Listen", true, true, 
     "You Listen skill is used against an enemy's Move Silently skill to "
     "determine if you are surprised by an unseen attack. If you happen to "
     "possess Blindsight, it is also used to detect nearby hiding enemies. "
@@ -4710,7 +4715,7 @@ SkillInfoStruct SkillInfo[] = {
      "DC 15, the fatigue cost for such a spell is reduced by 1.", 
      A_INT, A_INT, false, 0}, 
 
-  { SK_MINING, "Mining", true, false, 
+  { SK_MINING, "Mining", true, true, 
      "__This skill increases the effectiveness and decreases the time required "
      "when trying to tunnel through walls in the dungeon. It also lets you "
      "appraise veins of minerals in the dungeon, identify gems and, at higher "
@@ -4740,7 +4745,7 @@ SkillInfoStruct SkillInfo[] = {
      "monsters stealing your own possessions!", 
      A_DEX, A_CHA, false, 1}, 
 
-  { SK_POISON_USE, "Poison Use", true, false, 
+  { SK_POISON_USE, "Poison Use", true, true, 
     "__This skill allows you to Apply poison to weapons and missiles without "
     "poisoning yourself. A typical DC for such an action is 10, and poisons "
     "that can be applied in such a manner are often stored in small glass "

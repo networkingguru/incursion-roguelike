@@ -1,0 +1,14 @@
+# Reproduction for bd inc-6sm3, part (a): the use-skill menu (U) must not list
+# Appraise, Decipher Script or Escape Artist. Before the fix they were listed
+# (Player::ActiveTraits, src/Tables.cpp), and picking one printed "That skill
+# isn't implemented yet." (src/Skills.cpp UseSkill default).
+#
+# Read by tools/check_use_menu_skills.sh, which loads the kobold rogue fixture
+# (tools/fixtures/chars/kobold-rogue-seed1.sav; he has all three skills) with
+# INCURSION_LOAD, so the session starts in play and the first key is a game
+# command. @expect stops the run (exit 6) if the menu never opened.
+u
+@expect "Use which skill, feat or ability?"
+@dump:use-menu
+ESC
+@quit
