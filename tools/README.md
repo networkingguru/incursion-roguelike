@@ -833,6 +833,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_uninit_reads.sh` | Does the shipping build carry no high-confidence uninitialised-variable reads (`-Wuninitialized`, `-Wsometimes-uninitialized`)? | LIVE |
 | `check_upstream_label.sh` | Does every bead the reporting ledger lists as a base-code defect carry the beads-label `upstream`, so `sync_issues.sh` publishes its GitHub issue with that tag? Reads all ids in each row, so a shared row is not skipped. | LIVE |
 | `check_upstream_marks.sh` | Is every base-code fix marked, marked well-formed, and matched to a row in the reporting table? | LIVE |
+| `check_use_menu_skills.sh` | Does the use-skill (U) menu leave out Appraise, Decipher Script and Escape Artist, which have no active use, and does a PC polymorphed into a spitting spider spit from that menu (inc-6sm3)? Loads `kobold-rogue-seed1.sav` on seed 1. Before the fix the menu listed all three, and the spit logged "Unimplemented PC polymorph attack!" and did not fire. `--prove-red` restores the pre-fix `src/Tables.cpp` and `src/Skills.cpp`. | LIVE |
 | `check_v1_adversarial.sh` | Does the v1 save reader refuse every crafted corruption, yet still load the case that merely deletes a known tag? | LIVE |
 | `check_v1_append_survives.sh` | Does a save written before a resource is appended to `lib/` still load to the same character afterward? | LIVE |
 | `check_v1_full_roundtrip.sh` | Does a real session write a v1 save that reloads to the same character and reaches a save-load-save byte fixpoint? | LIVE |
