@@ -1005,8 +1005,13 @@ Restart:
     case 29: 
         MapIterate(m,t,i) {
             if (t->isMonster())
+                /* upstream: the sixth argument of GainPermStati is a resource
+                   id, but an object handle (myHandle) was passed, so the stati
+                   lookup read a missing resource and the game segfaulted.
+                   Same line in rmtew/master src/Debug.cpp:1008; no platform or
+                   typedef dependence. Observed, inc-hy9u, not sent. */
                 ((Monster *)t)->GainPermStati(ENEMY_TO,t,SS_PERM,-1,-1,
-                myHandle,9);
+                0,9);
         }
         break;
 

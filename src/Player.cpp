@@ -233,6 +233,60 @@ Found:
     }
 }
 
+/* Temporary diagnostic: set INCURSION_AOO_PROBE=1 to stage, once, the state
+   inc-m2zi edit 12 is about -- a monster provoking an attack of opportunity,
+   so Creature::OAttack (src/Fight.cpp) reaches ConfirmDequAttack and shows its
+   "Attack the <monster> (" prompt on an AoO rather than on a deliberate blow.
+
+   The probe looks at the eight squares beside the player for the first
+   monster that is hostile and carries an A_DEQU attack, logs it to
+   logs/aoo.log, and calls the no-argument ProvokeAoO() on it, which offers an
+   attack of opportunity to every adjacent hostile creature, the player
+   included. It waits, without firing, until such a monster exists -- the
+   session summons the acid blob from the wizard menu.
+
+   Env-gated and compiled into every build (no #ifdef); with the variable
+   unset it does nothing. Nothing ships active. bd inc-hy9u. */
+static void AoOProbeArrange(Player *pp)
+{
+    static int done = -1;
+    Monster *mon;
+    int16 i, cx, cy;
+    FILE *f;
+    char path[1024];
+
+    if (done == -1)
+        done = getenv("INCURSION_AOO_PROBE") ? 0 : 1;
+    if (done || !pp->m)
+        return;
+
+    for (i = 0; i != 8; i++) {
+        cx = pp->x + DirX[i];
+        cy = pp->y + DirY[i];
+        if (!pp->m->InBounds(cx, cy))
+            continue;
+        for (mon = (Monster*)pp->m->FCreatureAt(cx, cy); mon;
+             mon = (Monster*)pp->m->NCreatureAt(cx, cy))
+            if (mon->isMonster() && mon->HasAttk(A_DEQU) &&
+                (mon->isHostileTo(pp) || pp->isHostileTo(mon)))
+                goto Found;
+    }
+    return;
+
+Found:
+    done = 1;
+    snprintf(path, sizeof(path), "%slogs/aoo.log",
+        (const char*)T1->IncursionDirectory);
+    f = fopen(path, "a");
+    if (f) {
+        fprintf(f, "provoked: %s at %d,%d, player at %d,%d, turn %u\n",
+            (const char*)mon->Name(0), (int)cx, (int)cy, (int)pp->x,
+            (int)pp->y, (unsigned)theGame->Turn);
+        fclose(f);
+    }
+    mon->ProvokeAoO();
+}
+
 void Player::ChooseAction() {
     int16 k, ch, sp, cdir, n, gx, gy;
     int16 dx, dy;
@@ -287,6 +341,7 @@ void Player::ChooseAction() {
     GameTimeInfo.actions++;
 
     RiderProbeArrange(this);
+    AoOProbeArrange(this);
 
     //IPrint(Format("Chill Shield: %d/%d %d %d.",
     //  TEFF(FIND("chill shield")) - theGame->Modules[0]->QEff,
