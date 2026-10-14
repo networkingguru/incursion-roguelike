@@ -17,9 +17,16 @@
 # cannot open the menu, polymorph, or find "Spit Weapon" ends INCONCLUSIVE
 # (the key script's @expect), never green.
 #
-# --prove-red restores the pre-fix src/Tables.cpp and src/Skills.cpp from HEAD
-# (git show), rebuilds, requires BOTH parts to go red, then puts the fixed
-# files back and rebuilds. A trap restores on any exit.
+# --prove-red breaks ONE site at a time with tools/check_lib.sh's
+# check_mutation (docs/VERIFICATION.md step 2): it requires a green run, applies
+# one literal-from/literal-to mutation, rebuilds, re-runs this check, restores
+# the source and rebuilds again. There are two mutations and a run proves the
+# FIRST one it declares, so USE_MENU_MUTATE=menu|spit (default menu) chooses
+# which site is declared first:
+#   menu  put SK_DECIPHER back into ActiveTraits[]; the menu must then list
+#         Decipher Script, so part (a) goes red.
+#   spit  remove the A_SPIT case from the breath group; the polymorph spit then
+#         logs "Unimplemented PC polymorph attack!", so part (b) goes red.
 #
 # Usage: tools/check_use_menu_skills.sh [--prove-red]  (0 pass, 1 fail, 2 inconclusive)
 . "$(dirname "$0")/check_lib.sh"
@@ -27,54 +34,45 @@
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 FIXTURE=tools/fixtures/chars/kobold-rogue-seed1.sav
 SEED=1
-SRC_FILES="src/Tables.cpp src/Skills.cpp"
 
 [ -f "$FIXTURE" ] || _check_die 2 "fixture missing: $FIXTURE"
 export INCURSION_LOAD="$FIXTURE"
 
-# --- --prove-red: mutate to the pre-fix source, run twice, restore. ---------
-if [ "$CHECK_PROVE_RED" = 1 ]; then
-    keep="$(mktemp -d -t use_menu_prove_red)" || _check_die 2 "no temp directory"
-    restored=0
-    restore() {
-        [ "$restored" = 1 ] && return 0
-        local f ok=0
-        for f in $SRC_FILES; do
-            cp -p "$keep/$(basename "$f")" "$f" && cmp -s "$keep/$(basename "$f")" "$f" || ok=1
-        done
-        if [ "$ok" = 0 ]; then
-            restored=1
-            echo "  restored the fixed source; rebuilding"
-            BACKEND=posix ./build_macos.sh > "$keep/rebuild.log" 2>&1 ||
-                echo "INCONCLUSIVE: rebuild after restore failed, see $keep/rebuild.log" >&2
-        else
-            echo "INCONCLUSIVE: restore failed; originals are in $keep" >&2
-        fi
-    }
-    trap 'restore' EXIT
-    trap 'restore; exit 130' INT TERM HUP
+# Two mutation sites, both guarded on every ordinary run. USE_MENU_MUTATE picks
+# which one --prove-red reaches (it performs the first mutation declared).
+USE_MENU_MUTATE="${USE_MENU_MUTATE:-menu}"
+case "$USE_MENU_MUTATE" in
+    menu|spit) ;;
+    *) _check_die 2 "USE_MENU_MUTATE must be menu or spit, not '$USE_MENU_MUTATE'" ;;
+esac
 
-    echo "--- prove red, step 1: the check must be green on the fixed source ---"
-    ( CHECK_PROVE_RED=0 "$CHECK_SELF" ) 2>&1 | sed 's/^/  | /'
-    [ "${PIPESTATUS[0]}" -eq 0 ] || _check_die 2 "not green to begin with; nothing is proved."
+# part (a): the pre-fix ActiveTraits[] listed Decipher Script, which has no
+# UseSkill case. Put that line back in front of Disguise.
+_mut_menu() {
+    check_mutation src/Tables.cpp \
+'  SK_DISGUISE + SKILL_VAL,
+' \
+'  SK_DECIPHER + SKILL_VAL,
+  SK_DISGUISE + SKILL_VAL,
+'
+}
+# part (b): the pre-fix breath group had no A_SPIT case, so Player::UseMenu
+# Error()ed on a polymorphed spit. Drop the case.
+_mut_spit() {
+    check_mutation src/Skills.cpp \
+'		case A_BRE2:
+		case A_SPIT:
+' \
+'		case A_BRE2:
+'
+}
 
-    for f in $SRC_FILES; do cp -p "$f" "$keep/$(basename "$f")" || _check_die 2 "cannot copy $f"; done
-    echo "--- prove red, step 2: pre-fix source from HEAD ---"
-    for f in $SRC_FILES; do
-        git show "HEAD:$f" > "$f" || _check_die 2 "git show HEAD:$f failed"
-    done
-    git diff --quiet HEAD -- $SRC_FILES || _check_die 2 "source still differs from HEAD after restore-to-HEAD"
-    BACKEND=posix ./build_macos.sh > "$keep/mutant-build.log" 2>&1 ||
-        _check_die 2 "pre-fix build failed, see $keep/mutant-build.log"
-    out="$( ( CHECK_PROVE_RED=0 "$CHECK_SELF" ) 2>&1 )"; inner=$?
-    printf '%s\n' "$out" | sed 's/^/  | /'
-    restore
-    [ "$restored" = 1 ] || exit 2
-    [ "$inner" -eq 1 ] || _check_die 2 "pre-fix run exited $inner, wanted 1 (FAIL)"
-    printf '%s\n' "$out" | grep -q 'FAIL (a)' || { echo "FAIL: part (a) did not go red on the pre-fix source"; exit 1; }
-    printf '%s\n' "$out" | grep -q 'FAIL (b)' || { echo "FAIL: part (b) did not go red on the pre-fix source"; exit 1; }
-    echo "PROVED RED: parts (a) and (b) both failed on the pre-fix source; fixed source restored and rebuilt"
-    exit 0
+if [ "$USE_MENU_MUTATE" = spit ]; then
+    _mut_spit
+    _mut_menu
+else
+    _mut_menu
+    _mut_spit
 fi
 
 # --- (a) the menu ----------------------------------------------------------
