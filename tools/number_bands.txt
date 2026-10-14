@@ -1,8 +1,18 @@
-# Number bands for the shared stat/event allocator (bead inc-24cc).
+# Number bands for the shared number allocator (bead inc-24cc).
 # Spec: docs/specs/2026-10-13-number-bands-brief.md
 # Columns: <family> <branch> <low> <high>, inclusive. Comment lines start #.
-# Families: STATI (stati indices) and EV (event numbers).
+# Families: STATI (stati indices), EV (event numbers), and the god message
+# families MSG_SINGLE, MSG_BADSAC, MSG_BLESSING, MSG_CUSTOM, MSG_AID, MSG_FALL,
+# MSG_HATE and MSG_SHEET (god messages live only on inc-pu6v; 1000 codes each).
 STATI master   243 255
 STATI inc-pu6v 300 399
 EV    master   301 499
 EV    inc-pu6v 221 299
+MSG_SINGLE   inc-pu6v 1000 1999
+MSG_BADSAC   inc-pu6v 2000 2999
+MSG_BLESSING inc-pu6v 3000 3999
+MSG_CUSTOM   inc-pu6v 4000 4999
+MSG_AID      inc-pu6v 5000 5999
+MSG_FALL     inc-pu6v 6000 6999
+MSG_HATE     inc-pu6v 7000 7999
+MSG_SHEET    inc-pu6v 8000 8999
