@@ -29,8 +29,8 @@ are zero bytes and dead, not stubs. Purposes are read from each file's header co
 The spine. Every hop is a direct call; nothing is queued or deferred.
 
 1. `main()` `src/Wposix.cpp:507` builds `theGame` and the backend, assigns `T1`, calls `T1->Initialize()` then `theGame->StartMenu()` (`:663-672`).
-2. `Game::StartMenu()` `src/Main.cpp:2399`; menu choice 0 runs `LoadModules()` (`src/Registry.cpp:1480`), `NewGame()` (`src/Main.cpp:129`), `Play()` (`:2475-2490`).
-3. `Game::Play()` `src/Main.cpp:254`; the `do {} while(1)` at `:473` is the game loop. It walks every `Thing` on the player's map (`:507`), decrements `Timeout`, calls `ChooseAction()` on whatever is ready (`:573`).
+2. `Game::StartMenu()` `src/Main.cpp:2407`; menu choice 0 runs `LoadModules()` (`src/Registry.cpp:1480`), `NewGame()` (`src/Main.cpp:129`), `Play()` (`:2483-2498`).
+3. `Game::Play()` `src/Main.cpp:254`; the `do {} while(1)` at `:481` is the game loop. It walks every `Thing` on the player's map (`:515`), decrements `Timeout`, calls `ChooseAction()` on whatever is ready (`:581`).
 4. `Player::ChooseAction()` `src/Player.cpp:236` redraws status, then blocks on `MyTerm->GetCharCmd()` (`src/Player.cpp:445`).
 5. `posixTerm::GetCharCmd()` `src/Wposix.cpp:1664` flushes the screen *first* (`Update()`, `:1725`), reads one raw key (`NextKey()`, `:1730`), maps it to a `KY_CMD_*` by scanning the active keyset (`:1776-1785`). Redraw-before-read is why the screen is always current when the game waits.
 6. `switch (ch)` `src/Player.cpp:466`; a direction key lands at `src/Player.cpp:1358` and, with no attack chosen, throws `ThrowDir(EV_MOVE, ...)` (`src/Player.cpp:1459`).
