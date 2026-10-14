@@ -5,18 +5,34 @@
 
 Spec: docs/specs/2026-10-13-number-bands-brief.md
 
-Families and band selection come from tools/next_number.sh / number_bands.py:
+Families and band selection come from tools/next_number.sh / number_bands.py.
+The set of families checked is NOT hard-coded: it is every family the band table
+has rows for AND number_bands.py can parse. Today that is STATI and EV (stati
+indices and event numbers) plus the god message families MSG_SINGLE, MSG_BADSAC,
+MSG_BLESSING, MSG_CUSTOM, MSG_AID, MSG_FALL, MSG_HATE and MSG_SHEET (banded on
+inc-pu6v only). A family's members come from number_bands.py's parser for it:
 every "#define NAME <int>" between GENERIC_STATI and LAST_STATI is a STATI
-member, every "#define EV_<NAME> <int>" is an EV member, and a branch's band is
-master's row for master or nightly/*, else a row named for the branch, else the
-first row found along the branch.<branch>.incursionBase chain (at most 10 hops,
-stopping on a repeated name; the first branch in the chain that is master or has
-a row wins). When no band can be proved (a detached HEAD, or a branch with no row
-and no usable base chain) a new in-scope member is refused rather than measured
-against master.
+member, every "#define EV_<NAME> <int>" is an EV member, every
+"#define MSG_<NAME> <int>" (not MSG_BAND_*) inside a message family's range is a
+member of that family.
+
+A branch's band is master's row for master or nightly/*, else a row named for
+the branch, else the first row found along the branch.<branch>.incursionBase
+chain (at most 10 hops, stopping on a repeated name; the first branch in the
+chain that is master or has a row wins). When no band can be proved (a detached
+HEAD, or a branch with no row and no usable base chain) a new in-scope member is
+refused rather than measured against master.
 
 A member is IN SCOPE when its value is >= FLOOR(its family), the lowest `low`
-of that family's rows (STATI 243, EV 221 today).
+of that family's rows (STATI 243, EV 221, each message family 1000x today). Every
+parsed message member is inside its family range and so at or above its floor;
+the in-scope floor must not drop them.
+
+A "#define MSG_<NAME> <int>" (not MSG_BAND_*) whose value is >= the lowest
+message-family low and lies in NO message family's range (e.g. 9500) is a typo
+or a missing family: refused when new in staged mode, reported in --tree and
+merge mode. Values below that low (monster messages, e.g. MSG_* 200) are out of
+scope and never refused.
 
 ponytail: the floor is a value test, not a name test. The STATI line range
 also holds small non-stati constants (flag values, COMPEL_WALK_STUCK_TURNS 50),
@@ -44,10 +60,25 @@ FAMILIES = ("STATI", "EV")
 DEFINES_REL = "inc/Defines.h"
 RES_REL = "inc/Res.h"
 
-FAMILY_PARSER = {
+# Order families are checked in: STATI then EV then the message families, so the
+# STATI and EV behavior and output order are unchanged. The families actually
+# checked are the ones the band table has rows for (see families_for).
+_FAMILY_ORDER = FAMILIES + tuple(sorted(number_bands.MSG_RANGES))
+
+_FAMILY_PARSER = {
     "STATI": number_bands.parse_stati,
     "EV": number_bands.parse_events,
 }
+for _fam in number_bands.MSG_RANGES:
+    _FAMILY_PARSER[_fam] = (lambda text, f=_fam: number_bands.parse_msg(text, f))
+
+
+def families_for(rows):
+    """Families the band table has rows for AND number_bands.py can parse.
+
+    Ordering follows _FAMILY_ORDER so STATI and EV come first, unchanged.
+    """
+    return [f for f in _FAMILY_ORDER if f in rows and f in _FAMILY_PARSER]
 
 BAND_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s+(\S+)\s+([0-9]+)\s+([0-9]+)\s*$")
 
@@ -176,7 +207,76 @@ def branch_band(rows, family, branch, config_get):
 
 def members(text, family):
     """[(value, name), ...] for a family, via the phase-1 parser."""
-    return FAMILY_PARSER[family](text)
+    return _FAMILY_PARSER[family](text)
+
+
+MSG_DEFINE_RE = re.compile(
+    r"^\s*#define\s+(MSG_[A-Za-z0-9_]*)\s+(.+?)\s*$")
+
+
+def _msg_int_value(text):
+    """Every (value, name) for "#define MSG_<NAME> <int>", MSG_BAND_* dropped.
+
+    Range is NOT filtered: this is the raw scan rule 3 needs to see a value that
+    falls in no family's range. Non-integer values are dropped, as elsewhere.
+    """
+    out = []
+    for line in text.splitlines():
+        m = MSG_DEFINE_RE.match(line)
+        if not m:
+            continue
+        name, value = m.group(1), number_bands.define_value(m.group(2))
+        if name.startswith("MSG_BAND_"):
+            continue
+        if not number_bands.INT_RE.match(value):
+            continue
+        out.append((int(value), name))
+    return out
+
+
+def msg_low(rows):
+    """Lowest `low` across the message families' rows, or None when none."""
+    lows = []
+    for family, fam_rows in rows.items():
+        if family.startswith("MSG_") and family in _FAMILY_PARSER:
+            lows.extend(low for (_branch, low, _high) in fam_rows)
+    return min(lows) if lows else None
+
+
+def msg_ranges(rows):
+    """(low, high) for every message family row, for the in-no-family test."""
+    ranges = []
+    for family, fam_rows in rows.items():
+        if family.startswith("MSG_") and family in _FAMILY_PARSER:
+            ranges.extend((low, high) for (_branch, low, high) in fam_rows)
+    return ranges
+
+
+def out_of_family_msgs(text, rows):
+    """(value, name) MSG defines >= the message floor in no family range.
+
+    Only a value at or above the lowest message-family low matters (below it are
+    monster messages, out of scope). A value inside any message family's range is
+    that family's member and is checked by the family rules instead.
+    """
+    low = msg_low(rows)
+    if low is None:
+        return []
+    ranges = msg_ranges(rows)
+    out = []
+    for v, name in _msg_int_value(text):
+        if v < low:
+            continue
+        if any(rlow <= v <= rhigh for (rlow, rhigh) in ranges):
+            continue
+        out.append((v, name))
+    return out
+
+
+def out_of_family_new(index_text, head_text, rows):
+    """Out-of-family MSG defines that are new in the index vs HEAD."""
+    head = set(out_of_family_msgs(head_text, rows))
+    return [p for p in out_of_family_msgs(index_text, rows) if p not in head]
 
 
 def in_scope(rows, family, pairs):
@@ -274,7 +374,7 @@ def check_staged(cwd, rows, table_path):
     lines = []
     refused = False
 
-    for family in FAMILIES:
+    for family in families_for(rows):
         if family not in rows:
             continue
         scope = in_scope(rows, family, members(index_text, family))
@@ -336,14 +436,20 @@ def check_staged(cwd, rows, table_path):
                                      "not in issued.log"))
                 refused = True
 
+    # rule 3: a new MSG define at or above the message floor that lies in no
+    # message family's range (a typo or a missing family row).
+    for v, name in out_of_family_new(index_text, head_text, rows):
+        lines.append(out_of_family_refusal(name, v))
+        refused = True
+
     return (1 if refused else 0), lines
 
 
 def check_merge(cwd, rows, index_text, width):
-    """Merge in progress: the width rule and rule 2, over the whole index."""
+    """Merge in progress: the width rule, rule 2 and rule 3, over the index."""
     lines = []
     refused = False
-    for family in FAMILIES:
+    for family in families_for(rows):
         if family not in rows:
             continue
         scope = in_scope(rows, family, members(index_text, family))
@@ -360,6 +466,9 @@ def check_merge(cwd, rows, index_text, width):
                 lines.append(
                     "DUPLICATE: %s value %d is used by %s in the index (merge)"
                     % (family, v, ", ".join(sorted(names))))
+    for v, name in out_of_family_msgs(index_text, rows):
+        lines.append(out_of_family_refusal(name, v))
+        refused = True
     return (1 if refused else 0), lines
 
 
@@ -407,6 +516,13 @@ def no_row_refusal(family, branch):
     )
 
 
+def out_of_family_refusal(name, value):
+    return (
+        "MSG_%s = %d is in no message family band; add a family row to "
+        "tools/number_bands.txt" % (name, value)
+    )
+
+
 def check_tree(cwd, rows, text, width):
     """Mode --tree: the width rule and an in-scope duplicate over the tree.
 
@@ -415,7 +531,7 @@ def check_tree(cwd, rows, text, width):
     """
     lines = []
     refused = False
-    for family in FAMILIES:
+    for family in families_for(rows):
         if family not in rows:
             continue
         scope = in_scope(rows, family, members(text, family))
@@ -433,6 +549,9 @@ def check_tree(cwd, rows, text, width):
                 lines.append(
                     "REFUSED: %s value %d is used by %s in the working tree" % (
                         family, v, ", ".join(sorted(names))))
+    for v, name in out_of_family_msgs(text, rows):
+        lines.append(out_of_family_refusal(name, v))
+        refused = True
     return (1 if refused else 0), lines
 
 
@@ -454,6 +573,16 @@ SELFTEST_DEFINES = """\
 #define EV_PUTON 13
 #define EV_WEAR 13
 #define EV_ALIAS EV_MOVE
+"""
+
+# The message families live on inc-pu6v only; these base members give the
+# parsers something in range to see. MSG_BAND_SINGLE is a boundary constant the
+# parser must ignore and MSG_MONSTER 200 is a monster message below the floor.
+SELFTEST_MSG_DEFINES = SELFTEST_DEFINES + """\
+#define MSG_BAND_SINGLE 1000
+#define MSG_BAND_END 9000
+#define MSG_FOO 1005
+#define MSG_MONSTER 200
 """
 
 SELFTEST_RES_8 = """\
@@ -783,6 +912,145 @@ def selftest():
 
         git("config", "--unset", "branch.cyc_b.incursionBase")
         git("config", "--unset", "branch.cyc_a.incursionBase")
+        git("checkout", "-q", "master")
+        _write(os.path.join(repo, RES_REL), SELFTEST_RES_8)
+        git("add", RES_REL)
+
+        # --- god message families (phase 2) ---------------------------------
+
+        # A branch whose base chain reaches inc-pu6v, the only branch with MSG
+        # rows. Commit the MSG base members so a new one is a new member.
+        git("checkout", "-q", "-b", "msgsub")
+        git("config", "branch.msgsub.incursionBase", "inc-pu6v")
+        _write(os.path.join(repo, DEFINES_REL), SELFTEST_MSG_DEFINES)
+        git("add", DEFINES_REL)
+        case(git("-c", "user.email=t@t", "-c", "user.name=t",
+                 "commit", "-qm", "msg base") == 0,
+             "msg base commit succeeds")
+
+        # staged: a new MSG in its band, issued, unique -> passes. 1088 is in
+        # MSG_SINGLE (1000-1999) on inc-pu6v.
+        _write(os.path.join(numdir, "issued.log"),
+               "MSG_SINGLE 1088 MSG_C master t\n")
+        stage(lambda t: t + "#define MSG_C 1088\n")
+        rc, out = run(["--staged"])
+        case(rc == 0, "staged new MSG in band, issued, unique passes",
+             "(rc=%d)\n%s" % (rc, out))
+        unstage()
+
+        # the same without the issued.log row -> refused "not in issued.log".
+        _write(os.path.join(numdir, "issued.log"), "")
+        stage(lambda t: t + "#define MSG_C 1088\n")
+        rc, out = run(["--staged"])
+        case(rc == 1 and "not in issued.log" in out,
+             "staged new MSG without issued row refused",
+             "(rc=%d)\n%s" % (rc, out))
+        unstage()
+
+        # a new MSG recorded under the WRONG family is refused (the issued test
+        # is a (family, value, name) triple); the same value under its correct
+        # family, MSG_AID 5005, passes.
+        _write(os.path.join(numdir, "issued.log"),
+               "MSG_SINGLE 5005 MSG_D master t\n")
+        stage(lambda t: t + "#define MSG_D 5005\n")
+        rc, out = run(["--staged"])
+        case(rc == 1 and "not in issued.log" in out,
+             "staged new MSG issued under the wrong family refused",
+             "(rc=%d)\n%s" % (rc, out))
+        unstage()
+        _write(os.path.join(numdir, "issued.log"),
+               "MSG_AID 5005 MSG_D master t\n")
+        stage(lambda t: t + "#define MSG_D 5005\n")
+        rc, out = run(["--staged"])
+        case(rc == 0, "staged new MSG issued under its correct family passes",
+             "(rc=%d)\n%s" % (rc, out))
+        unstage()
+
+        # staged: a new MSG 9500 lies in no message family -> refused (rule 3).
+        _write(os.path.join(numdir, "issued.log"), "")
+        stage(lambda t: t + "#define MSG_E 9500\n")
+        rc, out = run(["--staged"])
+        case(rc == 1 and "in no message family" in out,
+             "staged new MSG in no family refused",
+             "(rc=%d)\n%s" % (rc, out))
+        unstage()
+
+        # a monster message below the floor is out of scope for rule 3.
+        _write(os.path.join(numdir, "issued.log"), "")
+        stage(lambda t: t + "#define MSG_X 200\n")
+        rc, out = run(["--staged"])
+        case(rc == 0, "staged monster MSG below the floor passes",
+             "(rc=%d)\n%s" % (rc, out))
+        unstage()
+
+        # --tree: MSG_BAND_ZZZ 1087 next to MSG_A 1087 is NOT a duplicate.
+        _write(os.path.join(repo, DEFINES_REL),
+               SELFTEST_MSG_DEFINES
+               + "#define MSG_A 1087\n#define MSG_BAND_ZZZ 1087\n")
+        rc, out = run(["--tree"])
+        case(rc == 0 and "DUPLICATE" not in out and "duplicate" not in out,
+             "--tree MSG_BAND_ZZZ is not a duplicate",
+             "(rc=%d)\n%s" % (rc, out))
+
+        # --tree: monster MSG_X 200 with MSG_Y 200 is not refused here.
+        _write(os.path.join(repo, DEFINES_REL),
+               SELFTEST_MSG_DEFINES
+               + "#define MSG_X 200\n#define MSG_Y 200\n")
+        rc, out = run(["--tree"])
+        case(rc == 0, "--tree monster MSG duplicate not refused",
+             "(rc=%d)\n%s" % (rc, out))
+
+        # --tree: two in-family MSG defines at the same value ARE refused, and
+        # both names are in the output.
+        _write(os.path.join(repo, DEFINES_REL),
+               SELFTEST_MSG_DEFINES
+               + "#define MSG_A 1087\n#define MSG_B 1087\n")
+        rc, out = run(["--tree"])
+        case(rc == 1 and "MSG_A" in out and "MSG_B" in out,
+             "--tree in-family MSG duplicate refused, names both",
+             "(rc=%d)\n%s" % (rc, out))
+
+        # --tree: a value in no family is reported (rule 3).
+        _write(os.path.join(repo, DEFINES_REL),
+               SELFTEST_MSG_DEFINES + "#define MSG_E 9500\n")
+        rc, out = run(["--tree"])
+        case(rc == 1 and "in no message family" in out,
+             "--tree MSG in no family reported", "(rc=%d)\n%s" % (rc, out))
+
+        # merge: two MSG defines at 1087 are refused and both named.
+        _write(os.path.join(repo, DEFINES_REL), SELFTEST_MSG_DEFINES)
+        git("checkout", "--", DEFINES_REL)
+        git("add", "-A")
+        git("-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "clean")
+        stage(lambda t: t + "#define MSG_A 1087\n#define MSG_B 1087\n")
+        _write(os.path.join(gitdir, "MERGE_HEAD"), "0" * 40 + "\n")
+        rc, out = run(["--staged"])
+        case(rc == 1 and "MSG_A" in out and "MSG_B" in out,
+             "merge MSG duplicate refused, names both", "(rc=%d)\n%s" % (rc, out))
+        os.remove(os.path.join(gitdir, "MERGE_HEAD"))
+        unstage()
+
+        # merge: a value in no family is reported (rule 3).
+        _write(os.path.join(repo, DEFINES_REL), SELFTEST_MSG_DEFINES)
+        stage(lambda t: t + "#define MSG_E 9500\n")
+        _write(os.path.join(gitdir, "MERGE_HEAD"), "0" * 40 + "\n")
+        rc, out = run(["--staged"])
+        case(rc == 1 and "in no message family" in out,
+             "merge MSG in no family reported", "(rc=%d)\n%s" % (rc, out))
+        os.remove(os.path.join(gitdir, "MERGE_HEAD"))
+        unstage()
+
+        # number_bands.py's own range filter: MSG_AID sees 5000, not 1005.
+        p = subprocess.run(
+            [sys.executable, "-I", os.path.join(SELF_DIR, "number_bands.py"),
+             "MSG_AID"],
+            input="#define MSG_FOO 1005\n#define MSG_BAR 5000\n",
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        case(p.returncode == 0 and p.stdout.strip() == "5000 MSG_BAR",
+             "number_bands.py MSG_AID filters by range",
+             "(rc=%d)\n%s%s" % (p.returncode, p.stdout, p.stderr))
+
+        _write(os.path.join(repo, DEFINES_REL), SELFTEST_DEFINES)
         git("checkout", "-q", "master")
         _write(os.path.join(repo, RES_REL), SELFTEST_RES_8)
         git("add", RES_REL)

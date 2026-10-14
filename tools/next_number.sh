@@ -1,12 +1,14 @@
 #!/bin/bash
-# Allocate the next free stati or event number in the caller's band (inc-24cc).
+# Allocate the next free number in the caller's band for a family (inc-24cc).
 #
 #   tools/next_number.sh <FAMILY> <NAME>
 #
-# FAMILY is STATI or EV. NAME is the define's name (^[A-Z][A-Z0-9_]*$). The
-# script prints the issued number on stdout and nothing else there; on a
-# successful issue it also prints one line "band: <BAND_BRANCH> <LOW>-<HIGH>"
-# to stderr.
+# FAMILY is any family with a row in tools/number_bands.txt (STATI, EV, and the
+# god message families MSG_SINGLE, MSG_BADSAC, MSG_BLESSING, MSG_CUSTOM,
+# MSG_AID, MSG_FALL, MSG_HATE, MSG_SHEET). NAME is the define's name
+# (^[A-Z][A-Z0-9_]*$). The script prints the issued number on stdout and nothing
+# else there; on a successful issue it also prints one line "band: <BAND_BRANCH>
+# <LOW>-<HIGH>" to stderr.
 #
 # Bands live in tools/number_bands.txt. The caller's band is chosen from its
 # branch, in order: master or nightly/* use master's row; a row named for the
@@ -42,7 +44,22 @@ NUMBER_BANDS_PY="$SELF_DIR/number_bands.py"
 RES_H="${INCURSION_NUMBERS_RES_H:-inc/Res.h}"
 
 usage() {
-    echo "usage: next_number.sh <STATI|EV> <NAME>" >&2
+    echo "usage: next_number.sh <STATI|EV|MSG_SINGLE|MSG_BADSAC|MSG_BLESSING|MSG_CUSTOM|MSG_AID|MSG_FALL|MSG_HATE|MSG_SHEET> <NAME>" >&2
+}
+
+# List the families that have a row in the band table, one per line, ignoring
+# comments. Used to validate FAMILY and to build the refusal message.
+known_families() {
+    [ -f "$NUMBER_BANDS" ] || return 0
+    while read -r fam _; do
+        case "$fam" in ''|\#*) continue ;; esac
+        printf '%s\n' "$fam"
+    done < "$NUMBER_BANDS" | sort -u
+}
+
+# 0 when <family> names a row in the band table, 1 otherwise.
+family_known() { # family_known <family>
+    grep -qxF "$1" <<< "$(known_families)"
 }
 
 # Read the table and set BAND_LOW/BAND_HIGH for <family> <branch>, or return 1
@@ -203,6 +220,13 @@ selftest() {
 #define EV_BREAK 2
 #define EV_CMT 301 // note
 #define EV_ALIAS EV_MOVE
+#define MSG_BAND_SINGLE 1000
+#define MSG_BAND_END 9000
+#define MSG_BAND_SIZE 1000
+#define MSG_BAND_ZZZ 1900
+#define MSG_FOO 1005
+#define MSG_BAR 5000
+#define MSG_BLASTNAME 200
 DEF
     cat > "$main/inc/Res.h" <<'RES'
 struct Status
@@ -478,6 +502,36 @@ PY
     ( cd "$repo" && git config --unset branch.workb2.incursionBase )
     ( cd "$repo" && git config branch.workb.incursionBase master )
 
+    # 8d2. god message families: on a branch whose chain reaches inc-pu6v,
+    #      MSG_SINGLE issues above the highest in-range MSG member. The fixture
+    #      has MSG_FOO 1005 (1000-1999) and MSG_BAND_ZZZ 1900 (a MSG_BAND_*
+    #      constant the parser must ignore), so the first number is 1006, not
+    #      1901. MSG_AID issues above MSG_BAR 5000, so 5001.
+    rm -rf "$numdir"; mkdir -p "$numdir"
+    ( cd "$repo" && git config branch.workb.incursionBase workb2 )
+    ( cd "$repo" && git config branch.workb2.incursionBase inc-pu6v )
+    a="$(cd "$repo" && "$SCRIPT" MSG_SINGLE X 2>/dev/null)"; rc=$?
+    if [ "$rc" -eq 0 ] && [ "$a" = "1006" ]; then pass=$((pass+1)); else
+        echo "SELFTEST FAIL: MSG_SINGLE returned '$a' (rc=$rc), expected 1006 (above MSG_FOO 1005; MSG_BAND_* ignored)"; fails=$((fails+1)); fi
+    a="$(cd "$repo" && "$SCRIPT" MSG_AID Y 2>/dev/null)"; rc=$?
+    if [ "$rc" -eq 0 ] && [ "$a" = "5001" ]; then pass=$((pass+1)); else
+        echo "SELFTEST FAIL: MSG_AID returned '$a' (rc=$rc), expected 5001 (above MSG_BAR 5000)"; fails=$((fails+1)); fi
+
+    # 8d3. a master-based branch has no MSG row, so a message family exits 2
+    #      with empty stdout, as for any family with a missing master row.
+    ( cd "$repo" && git config --unset branch.workb.incursionBase )
+    ( cd "$repo" && git config --unset branch.workb2.incursionBase )
+    ( cd "$repo" && git config branch.workb.incursionBase master )
+    rm -rf "$numdir"; mkdir -p "$numdir"
+    a="$(cd "$repo" && "$SCRIPT" MSG_SINGLE X 2>/dev/null)"; rc=$?
+    if [ "$rc" -eq 2 ] && [ -z "$a" ]; then pass=$((pass+1)); else
+        echo "SELFTEST FAIL: master-based MSG_SINGLE exited $rc, stdout='$a', expected exit 2, empty stdout"; fails=$((fails+1)); fi
+
+    # 8d4. an unknown message family exits 2.
+    ( cd "$repo" && "$SCRIPT" MSG_NOPE X >/dev/null 2>&1 ); rc=$?
+    if [ "$rc" -eq 2 ]; then pass=$((pass+1)); else
+        echo "SELFTEST FAIL: unknown MSG family exited $rc, expected 2"; fails=$((fails+1)); fi
+
     # 8e. base cycle a -> b -> a with no rows refuses: exit 5 and does not hang
     #     (hop limit / repeat guard).
     rm -rf "$numdir"; mkdir -p "$numdir"
@@ -574,10 +628,11 @@ ORIG_ARGS=("$@")
 FAMILY="${1:-}"
 NAME="${2:-}"
 
-case "$FAMILY" in
-    STATI|EV) ;;
-    *) usage >&2; echo "next_number: FAMILY must be STATI or EV, got '${FAMILY}'" >&2; exit 2 ;;
-esac
+if ! family_known "$FAMILY"; then
+    usage >&2
+    echo "next_number: FAMILY must be one of: $(known_families | paste -sd, -), got '${FAMILY}'" >&2
+    exit 2
+fi
 
 case "$NAME" in
     '') usage >&2; echo "next_number: NAME is required" >&2; exit 2 ;;
