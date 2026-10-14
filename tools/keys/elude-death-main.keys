@@ -1,0 +1,29 @@
+# Case (a) of inc-6vrn: Elude Death fires on the MAIN hit of a natural attack
+# that carries FT_NATURAL_GRAB, and the sequence must stop there.
+#
+#   INCURSION_ELUDE_PROBE="giant soldier ant:1" \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/elude-death-main.keys 5
+#
+# The character is the frozen orc warrior of dequ-setup.keys; the options file
+# has Elude Death set to SEVEN. The ant is summoned beside him from the wizard
+# menu. EludeProbeArrange (src/Player.cpp) then sets his hit points to 1 and
+# throws the ant's natural-attack sequence (bite, natural grab, sting). The
+# first bite that lands kills him, the "You die... Die?" prompt appears and
+# this script answers n. Read by tools/check_elude_death_followup.sh.
+@include dequ-setup.keys
+
+w
+@choose "Monster Summoning"
+TAB                     # the category list runs to a second page
+@choose "Vermin"
+@choose "giant soldier ant"
+RIGHT ENTER             # summon it east of the player
+@until "Die?" .         # the probe attacks at the next tick and the prompt rises
+@dump:prompt
+n                       # Elude Death: refuse to die
+@until "world shifts" .
+@dump:shifted
+.
+@dump:after
+@quit

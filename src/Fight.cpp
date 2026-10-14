@@ -161,6 +161,43 @@ static void TripAoOProbeNote(EventInfo &e)
     fflush(f);
 }
 
+/* Probe for inc-6vrn (Elude Death does not end the attack sequence). Armed by
+   Player.cpp EludeProbeArrange through INCURSION_ELUDE_PROBE. Once armed, every
+   strike or rider thrown at the player writes one line to logs/elude.log with
+   moved=0 while he stands on the armed square and moved=1 once Elude Death has
+   carried him off it. tools/check_elude_death_followup.sh reads the log.
+   Off and free otherwise. */
+static int16 EludeX = -1, EludeY = -1;
+
+void EludeProbeArm(int16 ax, int16 ay)
+{
+    EludeX = ax;
+    EludeY = ay;
+}
+
+static void EludeProbeNote(const char *what, EventInfo &e)
+{
+    static int on = -1;
+    FILE *f;
+    char path[1024];
+
+    if (on == -1)
+        on = getenv("INCURSION_ELUDE_PROBE") ? 1 : 0;
+    if (!on || EludeX < 0 || !e.EVictim || !e.EActor || !e.EVictim->isPlayer())
+        return;
+    snprintf(path, sizeof(path), "%slogs/elude.log",
+        (const char*)T1->IncursionDirectory);
+    f = fopen(path, "a");
+    if (!f)
+        return;
+    fprintf(f, "%s: atype=%d actor=<%s> victim at %d,%d moved=%d dist=%d\n",
+        what, (int)e.AType, (const char*)e.EActor->Name(0),
+        (int)e.EVictim->x, (int)e.EVictim->y,
+        (e.EVictim->x != EludeX || e.EVictim->y != EludeY) ? 1 : 0,
+        (int)e.EActor->DistFrom(e.EVictim));
+    fclose(f);
+}
+
 /* Probe for the graded-penetration and subtractive-damage armour model
    (inc-b0w2). Set INCURSION_ARMOUR_PROBE and every resolved attack writes one
    line to logs/armour.log naming every term the model uses, so a scripted
@@ -562,6 +599,53 @@ static bool RiderStopsAtCorpse(EventInfo &e)
     return true;
 }
 
+/* inc-6vrn reach formula, moved here from Creature::SAttack so one copy
+   exists. SAttack's behavior is unchanged: it calls this. */
+static int16 AttackReachDist(Creature *actor, Thing *target)
+{
+    int16 reachDist = 1 + FaceRadius[actor->GetAttr(A_SIZ)] +
+        (actor->StateFlags & MS_HAS_REACH ? 1 : 0);
+    if (target && target->isCreature())
+        reachDist += FaceRadius[((Creature*)target)->GetAttr(A_SIZ)];
+    return reachDist;
+}
+
+/* upstream: base-code defect, fix is ours. Tier Observed
+   (tools/check_elude_death_followup.sh). Tracking inc-6vrn. Not sent to rmtew.
+
+   THE INVARIANT. A follow-up of an attack sequence must not reach a victim that
+   Elude Death has moved, or that is otherwise out of reach. Player::Death's
+   Elude Death branch restores hit points and calls PlaceSomewhereSafe, moving
+   the player far away, but it never stops the attacker's sequence: the loops in
+   Creature::NAttack, the off-hand swing in Creature::WAttack, the rider loop in
+   Creature::Strike and Hit's after-effects all go on throwing at the moved
+   victim, and the FT_NATURAL_GRAB rider is a plain EV_STRIKE that never sees
+   SAttack's reach check. This helper is the one test those sites share.
+
+   WHY IT IS UPSTREAM'S. The sequence loops and Player::Death are plain event
+   logic with no platform or typedef dependence, so they misbehave the same way
+   on Win32 with the original typedefs and compiler. */
+
+/* True when this event's follow-up can still legitimately reach its target.
+   startDist is the distance recorded once at the start of the sequence, so a
+   legitimate follow-up at the distance the sequence began is never cut off. */
+static bool FollowUpReaches(EventInfo &e, int16 startDist)
+{
+    int16 reachDist;
+    if (!e.ETarget || e.Eluded)
+        return false;
+    if (e.ETarget->isCreature() && ((Creature*)e.ETarget)->isDead())
+        return false;
+    if (e.EActor->m != e.ETarget->m)
+        return false;
+    if (e.ETarget->x == -1)
+        return false;
+    if (e.isTelekinetic)
+        return true;
+    reachDist = AttackReachDist(e.EActor, e.ETarget);
+    return e.EActor->DistFrom(e.ETarget) <= max(startDist, reachDist);
+}
+
 /* Occasional messages:
    Name screams in agony
    Your Weapon crushes Name's skull!
@@ -907,6 +991,10 @@ EvReturn Creature::WAttack(EventInfo &e)
       e.EActor->IPrint("You can't attack that sort of thing.");
       return ABORT; 
     }
+
+    /* inc-6vrn: the distance the sequence began at, recorded once so a
+       legitimate follow-up at that distance is never cut off. */
+    int16 startDist = e.EActor->DistFrom(e.ETarget);
     
     if (HasStati(AFRAID) && !(e.EVictim && !e.EVictim->isCreature())
                && !HasFeat(FT_LION_HEART)) {
@@ -1080,7 +1168,9 @@ DoCleave:
       return ABORT;
     bool isProneNow = e.ETarget->HasStati(PRONE);
 
+    /* inc-6vrn: skip the off-hand swing once Elude Death has moved him. */
     if (AttackMode() == S_DUAL && !(e.ETarget->isDead()) &&
+        FollowUpReaches(e, startDist) &&
         ConfirmDequAttack(e,EInSlot(SL_READY)))
         {
           e.isOffhand = true; isTWF = true;
@@ -1164,7 +1254,9 @@ SkipThisTarget:;
         } 
     }
 
-    if (e.EActor->HasMFlag(M_XTRA_TOUCH) && !isDead())
+    /* inc-6vrn: skip the extra touch once Elude Death has moved him. */
+    if (e.EActor->HasMFlag(M_XTRA_TOUCH) && !isDead() &&
+        FollowUpReaches(e, startDist))
       if (at = e.EActor->GetAttk(A_TUCH))
         {
           
@@ -2875,6 +2967,10 @@ EvReturn Creature::NAttack(EventInfo &e) /* this == EActor */
     max = ListAttacks(buf,1024);
   int count = 0, i =0; 
 
+  /* inc-6vrn: the distance the sequence began at, so a legitimate follow-up at
+     that distance is never cut off by FollowUpReaches below. */
+  int16 startDist = (e.EActor && e.ETarget) ? e.EActor->DistFrom(e.ETarget) : 0;
+
   if (e.vicHeld && !e.isTelekinetic) {
     for (i=0;i<max;i++) { 
       TAttack * at = & buf[i]; 
@@ -2885,6 +2981,9 @@ EvReturn Creature::NAttack(EventInfo &e) /* this == EActor */
           continue;
         if (at->AType == A_ALSO)
           continue;
+        /* inc-6vrn: stop the post-grab sequence once Elude Death has moved him. */
+        if (!FollowUpReaches(e, startDist))
+          goto DoneSequence;
         e.EItem     = NULL;
         e.vHit      = (int8)Attr[A_HIT_BRAWL];
         e.vDef      = e.ETarget->isCreature() ? e.EVictim->getDef() : 0;
@@ -2922,6 +3021,9 @@ EvReturn Creature::NAttack(EventInfo &e) /* this == EActor */
         continue;
       if (at->AType == A_ALSO)
         continue;
+      /* inc-6vrn: stop the standard sequence once Elude Death has moved him. */
+      if (!FollowUpReaches(e, startDist))
+        goto DoneSequence;
       e.vHit = e.isHit = e.isCrit = e.isFumble = e.Immune = 
         e.MagicRes = e.Resist = e.isWImmune = e.isEvaded = 
         e.isPartiallyEvaded = false;  
@@ -3000,6 +3102,10 @@ EvReturn Creature::NAttack(EventInfo &e) /* this == EActor */
         goto DoneSequence;
       } 
       else if (e.isHit && e.EActor->HasFeat(FT_NATURAL_GRAB) && !e.isTelekinetic) {
+        /* inc-6vrn: the grab rider is a plain EV_STRIKE, so it never sees
+           SAttack's reach check. Stop it once Elude Death has moved him. */
+        if (!FollowUpReaches(e, startDist))
+          goto DoneSequence;
         if (HitCount == 1 || e.EActor->HasFeat(FT_MULTIATTACK)) {
           /* ww: srd: you can then start a grapple attack as a free
            * action without provoking an attack of opportunity ... */
@@ -3025,6 +3131,9 @@ EvReturn Creature::NAttack(EventInfo &e) /* this == EActor */
   }
 
   if (e.EActor->HasFeat(FT_RAKE) && ClawCount >= 2) {
+    /* inc-6vrn: no rake once Elude Death has moved him. */
+    if (!FollowUpReaches(e, startDist))
+      goto DoneSequence;
     at = e.EActor->GetAttk(A_CLAW);
     ASSERT(at);
     e.EItem     = NULL;
@@ -3049,6 +3158,9 @@ EvReturn Creature::NAttack(EventInfo &e) /* this == EActor */
           e.EActor->HasStati(MOUNT) && !e.isTelekinetic)
     if (((Creature*)e.EActor->GetStatiObj(MOUNT))->HasFeat(FT_OVERRUN))
     {
+      /* inc-6vrn: no Overrun damage once Elude Death has moved him. */
+      if (!FollowUpReaches(e, startDist))
+        goto DoneSequence;
       e.saveDC = 10 + ((Creature*)e.EActor->GetStatiObj(MOUNT))->
         SkillLevel(SK_RIDE) / 2;
       e.DType = AD_TRIP;
@@ -3056,6 +3168,9 @@ EvReturn Creature::NAttack(EventInfo &e) /* this == EActor */
     }
 
   if (e.EActor->HasFeat(FT_TRAMPLE) && e.EVictim->HasStati(PRONE) && !e.isTelekinetic) {
+    /* inc-6vrn: no trample once Elude Death has moved him. */
+    if (!FollowUpReaches(e, startDist))
+      goto DoneSequence;
     e.EItem     = NULL;
     e.vHit      = (int8)Attr[A_HIT_BRAWL];
     e.vDef = e.ETarget->isCreature() ? e.EVictim->getDef() : 0;
@@ -3153,9 +3268,7 @@ EvReturn Creature::SAttack(EventInfo &e) { /* this == EActor */
             return ABORT;
 
     if (e.AType == A_GRAB || e.AType == A_BULL || e.AType == A_KICK || e.AType == A_THRO || e.AType == A_DISA || e.AType == A_TRIP || e.AType == A_PREC) {
-        int16 reachDist = 1 + FaceRadius[e.EActor->GetAttr(A_SIZ)] + (e.EActor->StateFlags & MS_HAS_REACH ? 1 : 0);
-        if (e.EVictim->isCreature())
-            reachDist += FaceRadius[e.EVictim->GetAttr(A_SIZ)];
+        int16 reachDist = AttackReachDist(e.EActor, e.EVictim);
         if (e.EActor->DistFrom(e.EVictim) > reachDist) {
             if (e.EActor->HasStati(TELEKINETIC) && e.EActor->HighStatiMag(TELEKINETIC) >= e.EActor->DistFrom(e.EVictim))
                 e.isTelekinetic = true;
@@ -5719,6 +5832,8 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
     if (e.EItem && !e.EItem->isItem())
       e.EItem = NULL;
 
+    EludeProbeNote("strike", e);
+
     if (e.EActor->isMType(MA_FUNGI) && e.EVictim->isMType(MA_FUNGI))
       if (e.EActor->tmID == e.EVictim->tmID)
         return ABORT;
@@ -6185,6 +6300,10 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
              RiderStopsAtCorpse above for why, and for inc-upw.32. */
           if (RiderStopsAtCorpse(e))
             break;
+          /* inc-6vrn: Elude Death moved the victim, so no more riders reach
+             him. (Set below once a rider's own after-effect shifts him.) */
+          if (e.Eluded)
+            break;
           if (at->AType == A_ALSO || at->AType == A_CRIT) {
             if (at->AType == A_ALSO || e.isCrit)
               {
@@ -6195,7 +6314,14 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
                 eCopy.Resist = false;
                 eCopy.saveDC = (int8)e.EActor->GetPower(at->u.a.DC);
                 RiderProbeNote("rider-thrown", eCopy);
+                EludeProbeNote("rider-thrown", eCopy);
                 ReThrow(EV_HIT,eCopy);
+                EludeProbeNote("rider-done", eCopy);
+                /* inc-6vrn: this rider's after-effect shifted him; stop. */
+                if (eCopy.Eluded) {
+                  e.Eluded = true;
+                  break;
+                }
               }
             } 
           else break; 
@@ -6572,6 +6698,11 @@ EvReturn Creature::Hit(EventInfo &e) /* this == EVictim!! */
 
   oHP = e.EVictim->cHP;
 
+  /* inc-6vrn: where the victim stood when this hit began. If a rider or
+     after-effect shifts him (Elude Death), we stop the remaining effects. */
+  Map *entryMap = e.EVictim->m;
+  int16 entryX = e.EVictim->x, entryY = e.EVictim->y;
+
   /* A blow has landed between two creatures, and one of them may be the
      player. Either direction counts as having fought the kind. This sits
      above every branch below it, so a blow that is then deflected, resisted
@@ -6813,6 +6944,11 @@ EvReturn Creature::Hit(EventInfo &e) /* this == EVictim!! */
 
   if (e.AType != A_TUCH || e.EActor->HasAttk(A_TUCH))
     r = ReThrow(EV_DAMAGE,e);
+
+  /* inc-6vrn: the main damage landed and Elude Death moved him, so skip every
+     after-effect below (knockdown, stun, poison, critical riders). */
+  if (e.Eluded)
+    return DONE;
 
 AfterEffects:
   
@@ -7112,6 +7248,15 @@ AfterEffects:
           // which makes life tricky for the low-level rogue ...
           ThrowDmg(EV_DAMAGE,AD_NORM,i,XPrint("an <Obj>'s sneak attack",e.EActor),
               e.EActor,e.EVictim,e.EItem,e.EItem2);
+          /* inc-6vrn: the sneak damage is a fresh event that never copies back,
+             so detect an Elude Death shift by the victim's position: if the
+             player was moved, stop the rest of this hit's effects. */
+          if (e.EVictim->isPlayer() &&
+              (e.EVictim->m != entryMap || e.EVictim->x != entryX ||
+               e.EVictim->y != entryY)) {
+            e.Eluded = true;
+            return DONE;
+          }
           if ((e.EItem && e.EItem->HasQuality(WQ_NIGHT) ||
                 (e.EItem2 && e.EItem2->HasQuality(WQ_NIGHT)))) {
             int16 DC; DC = 20 - e.EVictim->ResistLevel(AD_SLEE);
@@ -9489,6 +9634,9 @@ EvReturn Player::Death(EventInfo &e)
           AttrDeath = 0;
           RemoveStati(ADJUST_DMG);
           }
+        /* inc-6vrn: tell the running attack sequence that Elude Death has moved
+           this character, so no follow-up or after-effect reaches him. */
+        e.Eluded = true;
         PlaceSomewhereSafe();
         return DONE;
       }    
