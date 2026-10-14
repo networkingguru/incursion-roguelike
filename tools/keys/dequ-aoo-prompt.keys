@@ -1,0 +1,58 @@
+# Stage an attack of opportunity against an acid blob and read the A_DEQU
+# confirmation prompt the AoO raises (bd inc-hy9u, inc-m2zi edit 12).
+#
+#   INCURSION_AOO_PROBE=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/dequ-aoo-prompt.keys 5
+#
+# WHAT IS BEING MEASURED. Creature::OAttack (src/Fight.cpp) calls
+# ConfirmDequAttack before it resolves the blow. For a player with
+# OPT_WARN_DEQU on, striking a monster whose A_DEQU risks the weapon, that
+# helper asks "Attack the <monster> (". No key script can make a MONSTER
+# provoke an AoO, so the prompt has never been seen on an AoO. The probe
+# INCURSION_AOO_PROBE (AoOProbeArrange, src/Player.cpp) closes the gap: it
+# reads the eight squares beside the player and, the first tick a hostile
+# A_DEQU monster stands in one, calls that monster's ProvokeAoO(), which
+# offers the player his attack of opportunity.
+#
+# THE WEAPON MUST NOT BE MAGICAL. The setup's starting weapon is an orcish
+# dagger +1, and for a magical item the blob's 2d4 acid cannot beat hardness
+# and ConfirmDequAttack returns quietly. So, as dequ-hardness-plain.keys does,
+# an ordinary (non-magical) long sword is bought and swapped into the Weapon
+# Hand first: edit 5 bypasses hardness for a non-magical item, so its A_DEQU
+# damage reaches the prompt.
+#
+# The blob is summoned east of the player. The prompt is declined with 'n':
+# this check reads the prompt, not the strike.
+#
+# Read by tools/check_dequ_aoo_prompt.sh. Its evidence is logs/aoo.log (the
+# probe staged an AoO) and the aoo-prompt screen dump (the prompt was shown).
+@include dequ-setup.keys
+
+w
+@choose "Item Acquisition"
+RIGHT*9                 # walk the glyph row to ordinary weapons
+@until "Long sword" DOWN
+DOWN                    # the wanted row is the middle of three; step onto it
+ENTER
+b                       # Weapon Hand -- the slot lettering skips 'd' (Drop)
+SPACE                   # swap the sword into it
+@while "two-handed" n
+s                       # stow the starting knife the swap pushed into the air
+@until "SPACE:Swap" i    # the inventory manager, if it is not already open
+@until ">>b)Weapon" b    # select the Weapon Hand
+@until "base value of" x # Examine: confirms the ordinary sword is wielded
+@dump:armed
+@until "Things in View" ESC
+
+w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER             # summon it east of the player
+@dump:summoned
+.                       # wait one turn; the probe fires at the next tick
+@until "Attack the" .   # if the prompt is not up yet, wait it out
+@dump:aoo-prompt
+n                       # decline: the check only needs the prompt shown
+@dump:after
+@quit

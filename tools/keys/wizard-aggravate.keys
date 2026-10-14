@@ -1,0 +1,53 @@
+# Reproduction for bd inc-hy9u. Two wizard commands, in sequence, as
+# acceptance criterion 1 asks: "All Monster Aggravate" then "All Monsters
+# Retarget". The aggravate entry crashed the session. src/Debug.cpp:1005
+# (case 29) passed myHandle -- an object handle -- as the sixth argument of
+# GainPermStati, which is a resource id (rID eID, inc/Map.h). Thing::
+# GainPermStati then runs ASSERT(theGame->Get(eID)) (src/Status.cpp:197) on a
+# number that names no resource, Game::Get logs "resource id 129 names module
+# slot -1, out of range", and the process segfaults. Retarget (case 26) had no
+# defect; it is exercised here only so the run covers both commands.
+#
+# Read by tools/check_wizard_aggravate.sh. The fix passes 0 there, the same
+# shape as src/Main.cpp:937 and src/Player.cpp:222; after it the aggravate
+# completes and the next turn may be dumped. On the unfixed build the
+# after-turn dump is never written and errors.log carries the ASSERT line.
+#
+# Navigation follows tools/keys/breath-dice-dragon.keys lines 1-40: chargen
+# ends in play mode, so the first key is a game command, not a prompt
+# dismissal. Enter wizard mode with 'w' (the first entry asks for
+# confirmation: 'y'), turn the Wizard Mode Switches on ('w', the menu,
+# SPACE, ESC), then summon and aggravate.
+@include chargen.keys
+
+w
+y
+@choose "Wizard Mode Switches"
+SPACE
+ESC
+
+# One monster, summoned beside the player. Kobolds has a single kind whose
+# prompt list is short, so the wording below is a named pick, not a count.
+w
+@choose "Monster Summoning"
+@choose "Kobolds"
+@choose "kobold"
+LEFT ENTER              # adjacent west of the player
+@dump:summoned
+
+# This is the crashing entry on the unfixed build.
+w
+@choose "All Monster Aggravate"
+@dump:after-aggravate
+
+# The second wizard command of criterion 1: "All Monsters Retarget" (case 26).
+# It had no defect; run here only so the sequence covers both commands.
+w
+@choose "All Monsters Retarget"
+@dump:after-retarget
+
+# One turn, so the aggravate's effect is allowed to settle; the dump after it
+# is the check's evidence that the session survived.
+.
+@dump:after-turn
+@quit

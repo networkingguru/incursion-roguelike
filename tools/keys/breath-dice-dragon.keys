@@ -47,12 +47,6 @@ RIGHT*6
 ENTER
 @dump:dragon-summoned
 
-# NO "All Monster Aggravate" HERE. That wizard entry crashes the game:
-# src/Debug.cpp:1005 passes myHandle -- an object handle -- as the rID
-# argument of GainPermStati, Thing::GainPermStati asserts theGame->Get(eID)
-# on it (src/Status.cpp:188), and the session then segfaults. A monster the
-# wizard menu summons is hostile already, so the aggravate was never needed.
-
 # Each dot gives the monsters a turn. In Player::Death, n declines death
 # and restores HP; y accepts death and can prevent the next breath.
 .
