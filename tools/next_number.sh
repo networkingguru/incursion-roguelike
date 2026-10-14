@@ -4,19 +4,34 @@
 #   tools/next_number.sh <FAMILY> <NAME>
 #
 # FAMILY is STATI or EV. NAME is the define's name (^[A-Z][A-Z0-9_]*$). The
-# script prints the issued number on stdout and nothing else there.
+# script prints the issued number on stdout and nothing else there; on a
+# successful issue it also prints one line "band: <BAND_BRANCH> <LOW>-<HIGH>"
+# to stderr.
 #
 # Bands live in tools/number_bands.txt. The caller's band is chosen from its
-# branch: master or nightly/* use master's row; a row named for the branch wins
-# next; else branch.<branch>.incursionBase (recorded by tools/worktree.sh)
-# names a branch whose row is used; else master's row.
+# branch, in order: master or nightly/* use master's row; a row named for the
+# branch wins next; else follow the branch.<branch>.incursionBase chain
+# (recorded by tools/worktree.sh) b -> base1 -> base2 ..., taking the first
+# branch that is master or has a row (stop after 10 hops or on a repeat); else
+# refuse with exit 5. A number is issued only when the band can be proved.
 #
 # Counters are per family and band, kept outside the tree in
 # $(git rev-parse --git-common-dir)/incursion-numbers/ so every worktree on the
 # machine shares them. A tracked counter would conflict at merge -- the fault
-# this bead removes. A mkdir lock serialises calls.
+# this bead removes. Two locks serialise calls: /usr/bin/lockf holds a kernel
+# flock on $STATE_DIR/alloc.lock for the whole run (the kernel drops it when the
+# holder dies, so there is no stale lock to break, and two waiters cannot both
+# judge the same dead holder), and the older mkdir lock inside the child
+# additionally excludes worktrees on older branches that still run the old
+# script and know only the mkdir lock. No number is issued from the main worktree
+# unless the branch is nightly/*: that checkout belongs to no bead, so the script
+# refuses and names the fix.
 #
-# Exit codes: 2 bad arguments, 3 lock timeout, 4 band exhausted.
+# Exit codes: 1 cannot create or resolve the state dir, 2 bad arguments or no
+# master band row, 3 lock failure (timeout, missing lockf, INCURSION_NUMBERS_LOCKED
+# set but the lock not held, allocation child died by a signal, cannot create the
+# lock file), 4 band exhausted or number out of width, 5 refused, band cannot be
+# proved (main worktree off nightly/*, detached HEAD, outside a repo, no band).
 #
 # --selftest needs no build and no network.
 set -uo pipefail
@@ -47,21 +62,41 @@ lookup_band() { # lookup_band <family> <branch> -> 0 found, 1 not
 }
 
 branch_band() { # branch_band <family> -> sets BAND_BRANCH/BAND_LOW/BAND_HIGH
-    local family="$1" branch base
+    # 0 found; 1 no master row; 5 band cannot be proved.
+    local family="$1" branch cand base hops seen
     branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
-    BAND_BRANCH="master"
     if [ "$branch" = "master" ] || [ "${branch#nightly/}" != "$branch" ]; then
         BAND_BRANCH="master"
     elif lookup_band "$family" "$branch"; then
         BAND_BRANCH="$branch"
         return 0
     else
-        base="$(git config --get "branch.$branch.incursionBase" 2>/dev/null)"
-        if [ -n "$base" ] && lookup_band "$family" "$base"; then
-            BAND_BRANCH="$base"
-            return 0
-        fi
-        BAND_BRANCH="master"
+        # Follow the incursionBase chain. Take the first branch that is master
+        # or has a row for this family. Stop after 10 hops or on a repeat.
+        cand="$branch"
+        seen=" "
+        hops=0
+        while [ "$hops" -lt 10 ]; do
+            base="$(git config --get "branch.$cand.incursionBase" 2>/dev/null)"
+            [ -n "$base" ] || break
+            case "$seen" in
+                *" $base "*) break ;;
+            esac
+            seen="$seen$base "
+            if [ "$base" = "master" ]; then
+                BAND_BRANCH="master"
+                lookup_band "$family" "master" || return 1
+                return 0
+            fi
+            if lookup_band "$family" "$base"; then
+                BAND_BRANCH="$base"
+                return 0
+            fi
+            cand="$base"
+            hops=$((hops + 1))
+        done
+        echo "next_number: branch '$branch' has no band and no recorded base; record one with: git config branch.$branch.incursionBase <base-branch>" >&2
+        return 5
     fi
     lookup_band "$family" "master" || return 1
     return 0
@@ -106,9 +141,12 @@ acquire_lock() { # acquire_lock <dir>
         pid="$(cat "$LOCK_DIR/pid" 2>/dev/null)"
         if lock_holder_dead "$pid"; then
             # ponytail: two waiters that both judge the same dead holder can race
-            # on this remove; the ceiling is a lock broken twice after a killed
-            # run, and the upgrade path is an atomic mv of the lock dir plus a
-            # pid re-read.
+            # on this remove -- but only a caller on an older branch, still
+            # running the old script with no lockf wrap around it, can be in this
+            # path against another old-script caller; every caller that carries
+            # this script is already serialised by the outer lockf, so the race is
+            # removed once every branch carries this script. The upgrade path
+            # remains an atomic mv of the lock dir plus a pid re-read.
             rm -rf "$LOCK_DIR" 2>/dev/null
             continue
         fi
@@ -145,14 +183,15 @@ highest_seen() { # highest_seen <family> <bandbranch> <low> <high>
 
 selftest() {
     local tmp rc=0 fails=0 pass=0
+    unset INCURSION_NUMBERS_LOCKED INCURSION_NUMBERS_NO_LOCK INCURSION_NUMBERS_SELFTEST
     tmp="$(mktemp -d "${TMPDIR:-/tmp}/next-number-selftest.XXXXXX")" || return 1
     trap 'rm -rf "$tmp"' RETURN
 
-    local repo="$tmp/repo" numdir="$tmp/nums" bands="$tmp/bands.txt"
-    mkdir -p "$repo/inc" || return 1
+    local main="$tmp/main" repo="$tmp/repo" numdir="$tmp/nums" bands="$tmp/bands.txt"
+    mkdir -p "$main/inc" || return 1
     cp "$NUMBER_BANDS" "$bands"
 
-    cat > "$repo/inc/Defines.h" <<'DEF'
+    cat > "$main/inc/Defines.h" <<'DEF'
 #define GENERIC_STATI 0
 #define SICKNESS 1
 #define BLINDNESS 3
@@ -165,16 +204,24 @@ selftest() {
 #define EV_CMT 301 // note
 #define EV_ALIAS EV_MOVE
 DEF
-    cat > "$repo/inc/Res.h" <<'RES'
+    cat > "$main/inc/Res.h" <<'RES'
 struct Status
 {
   unsigned int Nature :8;
   signed int Val      :16;
 };
 RES
-    ( cd "$repo" && git init -q && git add -A && \
-      git -c user.email=t@t -c user.name=t commit -qm init && \
-      git checkout -q -b workb ) || { echo "selftest: repo setup failed"; rm -rf "$tmp"; return 1; }
+    # $repo must be a LINKED worktree, not the main one, so the main-worktree
+    # refusal does not fire for the existing cases. Build the main worktree on
+    # master, commit, then add $repo as a linked worktree on branch workb.
+    ( cd "$main" && git init -q -b master && git add -A && \
+      git -c user.email=t@t -c user.name=t commit -qm init ) || { echo "selftest: repo setup failed"; rm -rf "$tmp"; return 1; }
+    git -C "$main" worktree add -q -b workb "$repo" || { echo "selftest: worktree add failed"; rm -rf "$tmp"; return 1; }
+    # workb is a master-based bead branch: record its base so the band chain
+    # resolves to master's row (defect 3 replaces the old silent fall-through).
+    ( cd "$repo" && git config branch.workb.incursionBase master )
+    local main_branch
+    main_branch="$(git -C "$main" rev-parse --abbrev-ref HEAD)"
 
     export INCURSION_NUMBER_BANDS="$bands"
     export INCURSION_NUMBERS_DIR="$numdir"
@@ -327,16 +374,19 @@ PY
     git -C "$repo" checkout -q -- inc/Defines.h
 
     # 5. branch.<name>.incursionBase=inc-pu6v selects the inc-pu6v band; an
-    #    unknown branch with no base record gets master's.
+    #    unknown branch with no base record now refuses (defect 3): exit 5,
+    #    empty stdout.
     rm -rf "$numdir"
     ( cd "$repo" && git config branch.workb.incursionBase inc-pu6v )
     a="$(cd "$repo" && "$SCRIPT" EV EV_BASE 2>/dev/null)"
     if [ "$a" = "221" ]; then pass=$((pass+1)); else
         echo "SELFTEST FAIL: base-branch band returned '$a', expected 221"; fails=$((fails+1)); fi
     ( cd "$repo" && git config --unset branch.workb.incursionBase )
-    a="$(cd "$repo" && "$SCRIPT" EV EV_NOBASE 2>/dev/null)"
-    if [ "$a" = "302" ]; then pass=$((pass+1)); else
-        echo "SELFTEST FAIL: unknown branch returned '$a', expected 302"; fails=$((fails+1)); fi
+    a="$(cd "$repo" && "$SCRIPT" EV EV_NOBASE 2>/dev/null)"; rc=$?
+    if [ "$rc" -eq 5 ] && [ -z "$a" ]; then pass=$((pass+1)); else
+        echo "SELFTEST FAIL: unknown branch exited $rc, stdout='$a', expected exit 5, empty stdout"; fails=$((fails+1)); fi
+    # Restore workb's base to master so later cases see a master-based branch.
+    ( cd "$repo" && git config branch.workb.incursionBase master )
 
     # 6. invalid FAMILY or NAME exits 2.
     ( cd "$repo" && "$SCRIPT" NOPE X >/dev/null 2>&1 ); rc=$?
@@ -345,6 +395,161 @@ PY
     ( cd "$repo" && "$SCRIPT" STATI bad_name >/dev/null 2>&1 ); rc=$?
     if [ "$rc" -eq 2 ]; then pass=$((pass+1)); else
         echo "SELFTEST FAIL: bad name exited $rc, expected 2"; fails=$((fails+1)); fi
+
+    # 7. main worktree on master refuses: exit 5, empty stdout, and neither the
+    #    counter nor issued.log is created or changed.
+    rm -rf "$numdir"; mkdir -p "$numdir"
+    printf '5\n' > "$numdir/STATI.master"
+    local before_counter after_counter
+    before_counter="$(cat "$numdir/STATI.master")"
+    a="$(cd "$main" && "$SCRIPT" STATI X 2>/dev/null)"; rc=$?
+    after_counter="$(cat "$numdir/STATI.master")"
+    if [ "$rc" -eq 5 ] && [ -z "$a" ] && \
+       [ "$before_counter" = "$after_counter" ] && [ ! -f "$numdir/issued.log" ]; then
+        pass=$((pass+1))
+    else
+        echo "SELFTEST FAIL: main-worktree refusal exited $rc, stdout='$a', counter $before_counter->$after_counter, issued.log present: $([ -f "$numdir/issued.log" ] && echo yes || echo no)"; fails=$((fails+1))
+    fi
+
+    # 7b. main worktree on a nightly/* branch is allowed to issue.
+    ( cd "$main" && git checkout -q -b nightly/x ) || { echo "selftest: nightly branch failed"; fails=$((fails+1)); }
+    rm -rf "$numdir"; mkdir -p "$numdir"
+    a="$(cd "$main" && "$SCRIPT" EV EV_NIGHT 2>/dev/null)"; rc=$?
+    if [ "$rc" -eq 0 ] && [ -n "$a" ]; then pass=$((pass+1)); else
+        echo "SELFTEST FAIL: nightly main-worktree call exited $rc, stdout='$a'"; fails=$((fails+1)); fi
+    ( cd "$main" && git checkout -q "$main_branch" ) || true
+
+    # 7c. linked worktree issues, stdout is digits only, and stderr carries the
+    #     band line.
+    rm -rf "$numdir"; mkdir -p "$numdir"
+    a="$(cd "$repo" && "$SCRIPT" STATI LW 2>"$tmp/lw.err")"; rc=$?
+    if [ "$rc" -eq 0 ] && [ -n "$a" ] && [ -z "${a//[0-9]/}" ] && \
+       grep -qE '^band: [^ ]+ [0-9]+-[0-9]+$' "$tmp/lw.err"; then
+        pass=$((pass+1))
+    else
+        echo "SELFTEST FAIL: linked worktree exited $rc, stdout='$a', stderr='$(cat "$tmp/lw.err")'"; fails=$((fails+1))
+    fi
+
+    # 8a. cwd outside any repo refuses: exit 5, empty stdout, no issued.log, and
+    #     stderr names the worktree fix (defect 1: refuse when git gives no
+    #     answer, rather than fall through).
+    local outside
+    outside="$(mktemp -d "${TMPDIR:-/tmp}/next-number-outside.XXXXXX")"
+    rm -rf "$numdir"; mkdir -p "$numdir"
+    a="$(cd "$outside" && "$SCRIPT" STATI OUT 2>"$tmp/out.err")"; rc=$?
+    if [ "$rc" -eq 5 ] && [ -z "$a" ] && [ ! -f "$numdir/issued.log" ] && \
+       grep -q 'not inside an Incursion worktree' "$tmp/out.err"; then
+        pass=$((pass+1))
+    else
+        echo "SELFTEST FAIL: outside-repo exited $rc, stdout='$a', stderr='$(cat "$tmp/out.err")', issued.log present: $([ -f "$numdir/issued.log" ] && echo yes || echo no), expected exit 5, empty stdout, 'not inside an Incursion worktree'"; fails=$((fails+1))
+    fi
+    rm -rf "$outside"
+
+    # 8b. detached HEAD in the linked worktree refuses: exit 5, empty stdout;
+    #     restore the branch afterwards.
+    rm -rf "$numdir"; mkdir -p "$numdir"
+    ( cd "$repo" && git checkout -q --detach ) || { echo "selftest: detach in repo failed"; fails=$((fails+1)); }
+    a="$(cd "$repo" && "$SCRIPT" STATI DET 2>/dev/null)"; rc=$?
+    if [ "$rc" -eq 5 ] && [ -z "$a" ]; then pass=$((pass+1)); else
+        echo "SELFTEST FAIL: linked detached HEAD exited $rc, stdout='$a', expected exit 5, empty stdout"; fails=$((fails+1)); fi
+    ( cd "$repo" && git checkout -q workb ) || { echo "selftest: restore repo branch failed"; fails=$((fails+1)); }
+
+    # 8c. detached HEAD in the main worktree refuses: exit 5, and stderr must
+    #     NOT contain "branch 'HEAD'".
+    rm -rf "$numdir"; mkdir -p "$numdir"
+    ( cd "$main" && git checkout -q --detach ) || { echo "selftest: detach in main failed"; fails=$((fails+1)); }
+    a="$(cd "$main" && "$SCRIPT" STATI DETM 2>"$tmp/detm.err")"; rc=$?
+    if [ "$rc" -eq 5 ] && [ -z "$a" ] && ! grep -q "branch 'HEAD'" "$tmp/detm.err"; then
+        pass=$((pass+1))
+    else
+        echo "SELFTEST FAIL: main detached HEAD exited $rc, stdout='$a', stderr='$(cat "$tmp/detm.err")', expected exit 5, empty stdout, no \"branch 'HEAD'\""; fails=$((fails+1))
+    fi
+    ( cd "$main" && git checkout -q "$main_branch" ) || true
+
+    # 8d. chain walk: sub -> workb2 -> inc-pu6v, and inc-pu6v has a band row, so
+    #     the call issues inside the inc-pu6v EV band (221-299).
+    rm -rf "$numdir"; mkdir -p "$numdir"
+    ( cd "$repo" && git config branch.workb.incursionBase workb2 )
+    ( cd "$repo" && git config branch.workb2.incursionBase inc-pu6v )
+    a="$(cd "$repo" && "$SCRIPT" EV EV_CHAIN 2>/dev/null)"; rc=$?
+    if [ "$rc" -eq 0 ] && [ -n "$a" ] && [ "$a" -ge 221 ] && [ "$a" -le 299 ]; then pass=$((pass+1)); else
+        echo "SELFTEST FAIL: chain walk exited $rc, stdout='$a', expected an EV number in 221-299"; fails=$((fails+1)); fi
+    ( cd "$repo" && git config --unset branch.workb.incursionBase )
+    ( cd "$repo" && git config --unset branch.workb2.incursionBase )
+    ( cd "$repo" && git config branch.workb.incursionBase master )
+
+    # 8e. base cycle a -> b -> a with no rows refuses: exit 5 and does not hang
+    #     (hop limit / repeat guard).
+    rm -rf "$numdir"; mkdir -p "$numdir"
+    ( cd "$repo" && git config branch.workb.incursionBase cyc_a )
+    ( cd "$repo" && git config branch.cyc_a.incursionBase cyc_b )
+    ( cd "$repo" && git config branch.cyc_b.incursionBase cyc_a )
+    if command -v timeout >/dev/null 2>&1; then
+        a="$(cd "$repo" && timeout 10 "$SCRIPT" EV EV_CYCLE 2>/dev/null)"; rc=$?
+    else
+        a="$(cd "$repo" && "$SCRIPT" EV EV_CYCLE 2>/dev/null)"; rc=$?
+    fi
+    if [ "$rc" -eq 5 ] && [ -z "$a" ]; then pass=$((pass+1)); else
+        echo "SELFTEST FAIL: base cycle exited $rc, stdout='$a', expected exit 5, empty stdout"; fails=$((fails+1)); fi
+    ( cd "$repo" && git config --unset branch.workb.incursionBase )
+    ( cd "$repo" && git config --unset branch.cyc_a.incursionBase )
+    ( cd "$repo" && git config --unset branch.cyc_b.incursionBase )
+    ( cd "$repo" && git config branch.workb.incursionBase master )
+
+    # 8f. a numeric counter below the band floor is clamped: seed the STATI
+    #     master counter with 5; a master-based branch must issue 243 or higher,
+    #     never below 243.
+    rm -rf "$numdir"; mkdir -p "$numdir"
+    printf '5\n' > "$numdir/STATI.master"
+    a="$(cd "$repo" && "$SCRIPT" STATI CLAMP 2>/dev/null)"; rc=$?
+    if [ "$rc" -eq 0 ] && [ -n "$a" ] && [ "$a" -ge 243 ]; then pass=$((pass+1)); else
+        echo "SELFTEST FAIL: below-floor counter exited $rc, stdout='$a', expected a STATI >= 243"; fails=$((fails+1)); fi
+
+    # 8g. INCURSION_NUMBERS_LOCKED=1 without the caller actually holding the
+    #     lock must refuse: the in-process probe finds the lock free, so exit 3
+    #     and empty stdout (finding 1).
+    rm -rf "$numdir"; mkdir -p "$numdir"
+    a="$(cd "$repo" && INCURSION_NUMBERS_LOCKED=1 "$SCRIPT" STATI LOCKFALSE 2>/dev/null)"; rc=$?
+    if [ "$rc" -eq 3 ] && [ -z "$a" ]; then pass=$((pass+1)); else
+        echo "SELFTEST FAIL: LOCKED=1 with no lock exited $rc, stdout='$a', expected exit 3, empty stdout"; fails=$((fails+1)); fi
+
+    # 8h. a relative INCURSION_NUMBERS_DIR whose parent does not exist must
+    #     refuse (finding 3), and must NOT create anything at the root-level path
+    #     the old cd-failure fallback would have produced.
+    local badbase="incursion-nonexistent-$$-$$"
+    local badroot="/$badbase"
+    a="$(cd "$repo" && INCURSION_NUMBERS_DIR="incursion-no-such-parent-$$/$badbase" "$SCRIPT" STATI RELBAD 2>/dev/null)"; rc=$?
+    if [ "$rc" -eq 1 ] && [ -z "$a" ] && [ ! -e "$badroot" ]; then pass=$((pass+1)); else
+        echo "SELFTEST FAIL: relative bad dir exited $rc, stdout='$a', root path '$badroot' exists: $([ -e "$badroot" ] && echo yes || echo no), expected exit 1, empty stdout, no root path"; fails=$((fails+1)); fi
+
+    # 8i. a 2-cycle (a -> b -> a) is caught by the repeat guard, not the hop
+    #     limit. Count git-config lookups: a repeat guard breaks after 2 lookups,
+    #     while the 10-hop limit would need 10. The wrapper is a git shim that
+    #     logs each config --get, so fewer than 5 lookups proves the repeat guard.
+    rm -rf "$numdir"; mkdir -p "$numdir"
+    ( cd "$repo" && git config branch.workb.incursionBase cyc2_a )
+    ( cd "$repo" && git config branch.cyc2_a.incursionBase cyc2_b )
+    ( cd "$repo" && git config branch.cyc2_b.incursionBase cyc2_a )
+    local shimdir="$tmp/shim" gitlog="$tmp/gitcalls.log"
+    mkdir -p "$shimdir"
+    : > "$gitlog"
+    cat > "$shimdir/git" <<SHIM
+#!/bin/bash
+if [ "\$1" = "config" ] && [ "\$2" = "--get" ]; then
+    printf '%s\n' "\$3" >> "$gitlog"
+fi
+exec /usr/bin/git "\$@"
+SHIM
+    chmod +x "$shimdir/git"
+    a="$(cd "$repo" && PATH="$shimdir:$PATH" "$SCRIPT" EV EV_CYCLE2 2>/dev/null)"; rc=$?
+    local lookups
+    lookups="$(wc -l < "$gitlog" | tr -d ' ')"
+    if [ "$rc" -eq 5 ] && [ -z "$a" ] && [ "$lookups" -lt 5 ]; then pass=$((pass+1)); else
+        echo "SELFTEST FAIL: 2-cycle exited $rc, stdout='$a', git-config lookups=$lookups, expected exit 5, empty stdout, <5 lookups (repeat guard, not hop limit)"; fails=$((fails+1)); fi
+    ( cd "$repo" && git config --unset branch.workb.incursionBase )
+    ( cd "$repo" && git config --unset branch.cyc2_a.incursionBase )
+    ( cd "$repo" && git config --unset branch.cyc2_b.incursionBase )
+    ( cd "$repo" && git config branch.workb.incursionBase master )
 
     unset INCURSION_NUMBER_BANDS INCURSION_NUMBERS_DIR
     rm -rf "$tmp"
@@ -362,6 +567,10 @@ if [ "${1:-}" = "--selftest" ]; then
     exit $?
 fi
 
+# Save the original arguments before any parsing could shift them: the lockf
+# wrap below re-execs this script and must hand it the exact same call.
+ORIG_ARGS=("$@")
+
 FAMILY="${1:-}"
 NAME="${2:-}"
 
@@ -377,14 +586,98 @@ case "$NAME" in
     *[!A-Z0-9_]*|[!A-Z]*) usage >&2; echo "next_number: NAME '$NAME' must match ^[A-Z][A-Z0-9_]*$" >&2; exit 2 ;;
 esac
 
-branch_band "$FAMILY" || { echo "next_number: no $FAMILY band row for master" >&2; exit 2; }
+# Refuse to allocate from the main worktree. Its checkout belongs to no bead,
+# so a number picked there would come from the wrong band. The nightly harness
+# is the one caller that legitimately runs on a nightly/* branch from main.
+cur_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+git_dir="$(git rev-parse --path-format=absolute --git-dir 2>/dev/null)"
+git_common="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"
+
+# Defect 1: fail open. If git gives no answer (cwd outside any repo, or a git
+# without --path-format) the worktree is unknown, so refuse rather than guess.
+if [ -z "$git_dir" ] || [ -z "$git_common" ]; then
+    echo "next_number: no number issued: not inside an Incursion worktree" >&2
+    exit 5
+fi
+
+# Defect 2: a detached HEAD prints 'HEAD'. The band cannot be proved, so refuse
+# in any worktree before the main-worktree check, whose message would otherwise
+# name branch 'HEAD'.
+if [ "$cur_branch" = "HEAD" ]; then
+    echo "next_number: no number issued: detached HEAD; check out the bead's branch" >&2
+    exit 5
+fi
+
+if [ "$git_dir" = "$git_common" ]; then
+    case "$cur_branch" in
+        nightly/*) ;;
+        *)
+            echo "next_number: no number issued: you are in the main worktree on branch '${cur_branch:-?}'; run it from the bead's worktree: tools/worktree.sh <bead-id>, then cd ~/Scripts/Incursion-<bead-id>" >&2
+            exit 5
+            ;;
+    esac
+fi
+
+branch_band "$FAMILY"
+rc=$?
+case "$rc" in
+    0) ;;
+    1) echo "next_number: no $FAMILY band row for master" >&2; exit 2 ;;
+    *) exit "$rc" ;;
+esac
 
 STATE_DIR="${INCURSION_NUMBERS_DIR:-$(git rev-parse --git-common-dir)/incursion-numbers}"
 case "$STATE_DIR" in
     /*) ;;
-    *) STATE_DIR="$(cd "$(dirname "$STATE_DIR")" 2>/dev/null && pwd)/$(basename "$STATE_DIR")" ;;
+    *)
+        if ! STATE_DIR="$(cd "$(dirname "$STATE_DIR")" 2>/dev/null && pwd)/$(basename "$STATE_DIR")"; then
+            echo "next_number: cannot resolve INCURSION_NUMBERS_DIR '$STATE_DIR': its parent directory does not exist" >&2
+            exit 1
+        fi
+        ;;
 esac
 mkdir -p "$STATE_DIR" || { echo "next_number: cannot create state dir $STATE_DIR" >&2; exit 1; }
+
+# Serialise the whole critical section with a kernel flock via /usr/bin/lockf.
+# The kernel releases the lock when the holder dies, so there is no stale lock to
+# break and no window where two waiters can both judge the same dead holder. The
+# child (this same script, flagged) does all the work; its stdout and stderr pass
+# through unchanged. The existing mkdir lock stays inside the child to exclude
+# callers on older branches that still run the old, lockf-less script.
+if [ "${INCURSION_NUMBERS_NO_LOCK:-}" = "1" ] && [ "${INCURSION_NUMBERS_SELFTEST:-}" = "1" ]; then
+    :
+elif [ "${INCURSION_NUMBERS_LOCKED:-}" = "1" ]; then
+    # The caller claims to hold the allocation lock for us. It is only truth if
+    # the parent lockf really holds it: a nested lockf probe on the same file
+    # must block (exit 75) while the lock is held, and succeed (exit 0) when it
+    # is free. Any other exit means the lock is not held, so refuse.
+    /usr/bin/lockf -k -s -t 0 "$STATE_DIR/alloc.lock" true
+    probe=$?
+    if [ "$probe" -ne 75 ]; then
+        echo "next_number: INCURSION_NUMBERS_LOCKED is set but the allocation lock is not held" >&2
+        exit 3
+    fi
+else
+    if [ ! -x /usr/bin/lockf ]; then
+        echo "next_number: /usr/bin/lockf is missing or not executable; refusing to issue a number without a lock" >&2
+        exit 3
+    fi
+    /usr/bin/lockf -k -t 30 "$STATE_DIR/alloc.lock" env INCURSION_NUMBERS_LOCKED=1 bash "$0" "${ORIG_ARGS[@]}"
+    rc=$?
+    if [ "$rc" -eq 75 ]; then
+        echo "next_number: lock timeout after 30s" >&2
+        exit 3
+    fi
+    if [ "$rc" -eq 70 ]; then
+        echo "next_number: allocation child died" >&2
+        exit 3
+    fi
+    if [ "$rc" -eq 73 ]; then
+        echo "next_number: cannot create lock file $STATE_DIR/alloc.lock" >&2
+        exit 3
+    fi
+    exit "$rc"
+fi
 
 acquire_lock "$STATE_DIR"
 rc=$?
@@ -402,6 +695,11 @@ fi
 case "$counter" in
     ''|*[!0-9]*) counter=$((BAND_LOW - 1)) ;;
 esac
+# Defect 4: a numeric counter below the band floor must not issue an out-of-band
+# number; clamp it to BAND_LOW - 1 so the next number is in band.
+if [ "$counter" -lt "$((BAND_LOW - 1))" ]; then
+    counter=$((BAND_LOW - 1))
+fi
 
 seen="$(highest_seen "$FAMILY" "$BAND_BRANCH" "$BAND_LOW" "$BAND_HIGH")"
 [ -n "$seen" ] || seen=0
@@ -442,5 +740,6 @@ mv -f "$tmpfile" "$COUNTER_FILE" || { rm -f "$tmpfile"; echo "next_number: canno
 printf '%s %s %s %s %s\n' "$FAMILY" "$next" "$NAME" "$BAND_BRANCH" \
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$STATE_DIR/issued.log"
 
+printf 'band: %s %s-%s\n' "$BAND_BRANCH" "$BAND_LOW" "$BAND_HIGH" >&2
 printf '%s\n' "$next"
 exit 0

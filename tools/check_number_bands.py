@@ -9,7 +9,11 @@ Families and band selection come from tools/next_number.sh / number_bands.py:
 every "#define NAME <int>" between GENERIC_STATI and LAST_STATI is a STATI
 member, every "#define EV_<NAME> <int>" is an EV member, and a branch's band is
 master's row for master or nightly/*, else a row named for the branch, else the
-branch.<branch>.incursionBase row, else master's.
+first row found along the branch.<branch>.incursionBase chain (at most 10 hops,
+stopping on a repeated name; the first branch in the chain that is master or has
+a row wins). When no band can be proved (a detached HEAD, or a branch with no row
+and no usable base chain) a new in-scope member is refused rather than measured
+against master.
 
 A member is IN SCOPE when its value is >= FLOOR(its family), the lowest `low`
 of that family's rows (STATI 243, EV 221 today).
@@ -48,6 +52,13 @@ FAMILY_PARSER = {
 BAND_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s+(\S+)\s+([0-9]+)\s+([0-9]+)\s*$")
 
 REFUSAL_FIX = "get a number with tools/next_number.sh %s %s"
+
+# Returned as the band_branch when no band can be proved.
+BAND_UNKNOWN = "<no band>"
+# Returned as the band_branch when the family has rows but the chosen band
+# branch has none: the allocator refuses this (exit 2, "no <FAMILY> band row for
+# master"), so the checker must refuse it too rather than pass silently.
+BAND_NO_ROW = "<no band row>"
 
 
 class CouldNotMeasure(Exception):
@@ -110,7 +121,18 @@ def floor_of(rows, family):
 
 
 def branch_band(rows, family, branch, config_get):
-    """Return (band_branch, low, high) by next_number.sh's rules."""
+    """Return (band_branch, low, high) by next_number.sh's rules.
+
+    Returns (None, None, None) three ways, told apart by the sentinel:
+      - BAND_UNKNOWN: the band cannot be proved (detached HEAD, or a branch with
+        no row and no usable base chain);
+      - BAND_NO_ROW: the family has rows, but the band branch the rules chose
+        (master or a chain base) has no row for it. The allocator refuses this
+        with exit 2, so it is not the same as having no rows at all;
+      - a plain (None, None, None): the family has no rows at all.
+    """
+    if not branch or branch == "HEAD":
+        return BAND_UNKNOWN, None, None
     if branch == "master" or branch.startswith("nightly/"):
         chosen = "master"
     else:
@@ -120,17 +142,35 @@ def branch_band(rows, family, branch, config_get):
                 chosen = branch
                 break
         if chosen is None:
-            base = config_get("branch.%s.incursionBase" % branch)
-            if base:
+            # Follow the incursionBase chain. Take the first branch that is
+            # master or has a row for this family. Stop after 10 hops or on a
+            # repeat.
+            cand = branch
+            seen = set()
+            hops = 0
+            while hops < 10:
+                base = config_get("branch.%s.incursionBase" % cand)
+                if not base or base in seen:
+                    break
+                seen.add(base)
+                if base == "master":
+                    chosen = "master"
+                    break
                 for (row_branch, _low, _high) in rows.get(family, []):
                     if row_branch == base:
                         chosen = base
                         break
+                if chosen is not None:
+                    break
+                cand = base
+                hops += 1
         if chosen is None:
-            chosen = "master"
+            return BAND_UNKNOWN, None, None
     for (row_branch, low, high) in rows.get(family, []):
         if row_branch == chosen:
             return chosen, low, high
+    if rows.get(family):
+        return BAND_NO_ROW, None, None
     return None, None, None
 
 
@@ -242,6 +282,33 @@ def check_staged(cwd, rows, table_path):
         new_scope = [(v, n) for (v, n) in new if (v, n) in set(scope)]
 
         band_branch, low, high = branch_band(rows, family, branch, get)
+
+        if band_branch == BAND_UNKNOWN:
+            # rule 2 still runs: any in-scope duplicate in the index.
+            if new_scope:
+                lines.append(no_band_refusal(branch))
+                refused = True
+                by_value = {}
+                for v, n in scope:
+                    by_value.setdefault(v, []).append(n)
+                for v, name in new_scope:
+                    if family == "STATI" and v > 2 ** width - 1:
+                        lines.append(width_refusal(name, v, width))
+                        refused = True
+                    others = [n for n in by_value.get(v, []) if n != name]
+                    if others:
+                        lines.append(duplicate_refusal(
+                            family, name, v, ", ".join(sorted(others))))
+                        refused = True
+            continue
+        if band_branch == BAND_NO_ROW:
+            # The family has rows, but the chosen band branch has none: the
+            # allocator refuses this with exit 2, so refuse a new member too
+            # rather than pass silently.
+            if new_scope:
+                lines.append(no_row_refusal(family, branch))
+                refused = True
+            continue
         if low is None:
             continue
 
@@ -311,6 +378,32 @@ def refusal(family, name, value, band_branch, low, high, why):
             family, name, value, why, family, low, high, band_branch,
             REFUSAL_FIX % (family, name),
         )
+    )
+
+
+def duplicate_refusal(family, name, value, others):
+    return (
+        "REFUSED: %s %s = %d is also used by %s in the index. "
+        "Fix: %s" % (
+            family, name, value, others, REFUSAL_FIX % (family, name),
+        )
+    )
+
+
+def no_band_refusal(branch):
+    if branch == "HEAD":
+        return "REFUSED: detached HEAD; check out the bead's branch"
+    return (
+        "REFUSED: branch '%s' has no band and no recorded base; record one with: "
+        "git config branch.%s.incursionBase <base-branch>" % (branch, branch)
+    )
+
+
+def no_row_refusal(family, branch):
+    return (
+        "REFUSED: no %s band row for the branch '%s' selects; the allocator "
+        "refuses this, so add a %s row for that branch to the band table"
+        % (family, branch, family)
     )
 
 
@@ -417,7 +510,7 @@ def selftest():
 
         _write(os.path.join(repo, DEFINES_REL), SELFTEST_DEFINES)
         _write(os.path.join(repo, RES_REL), SELFTEST_RES_8)
-        if git("init", "-q") != 0 or git("add", "-A") != 0 or \
+        if git("init", "-q", "-b", "master") != 0 or git("add", "-A") != 0 or \
                 git("-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init") != 0:
             print("selftest: repo setup failed")
             return 1
@@ -453,6 +546,19 @@ def selftest():
                                   "#define NEWSTATI 250\n#define LAST_STATI 251"))
         rc, out = run(["--staged"])
         case(rc == 0, "legal new stati passes", "(rc=%d)\n%s" % (rc, out))
+        unstage()
+
+        # master has no STATI row for the family (scratch table): a new member
+        # must be refused, consistent with the allocator's exit 2, rather than
+        # pass silently.
+        scratch_bands = os.path.join(tmp, "scratch-bands.txt")
+        _write(scratch_bands, "STATI other 243 255\nEV master 301 499\n")
+        _write(os.path.join(numdir, "issued.log"), "")
+        stage(lambda t: t.replace("#define LAST_STATI 5",
+                                  "#define NOROW 250\n#define LAST_STATI 251"))
+        rc, out = run(["--staged"], extra_env={"INCURSION_NUMBER_BANDS": scratch_bands})
+        case(rc == 1 and "no STATI band row" in out,
+             "master with no family row refuses the new member", "(rc=%d)\n%s" % (rc, out))
         unstage()
 
         # outside band -> refused. EV master is 301-499, so 500 is at or above
@@ -605,6 +711,81 @@ def selftest():
         git("reset", "-q")
         rc, out = run(["--staged"])
         case(rc == 0, "nothing staged exits 0", "(rc=%d)\n%s" % (rc, out))
+
+        # --- band selection: next_number.sh's chain / no-base / cycle rules ---
+
+        # two-hop chain: sub -> mid -> inc-pu6v (rows). A new STATI inside the
+        # inc-pu6v band passes; the 16-bit Res.h is staged so the width rule
+        # cannot mask the band choice.
+        git("checkout", "-q", "-b", "mid")
+        git("checkout", "-q", "-b", "sub")
+        git("config", "branch.sub.incursionBase", "mid")
+        git("config", "branch.mid.incursionBase", "inc-pu6v")
+        _write(os.path.join(repo, RES_REL), SELFTEST_RES_16)
+        git("add", RES_REL)
+        case(git("-c", "user.email=t@t", "-c", "user.name=t",
+                 "commit", "-qm", "16-bit res") == 0,
+             "16-bit res commit succeeds")
+        _write(os.path.join(numdir, "issued.log"), "STATI 350 CHAINOK sub t\n")
+        stage(lambda t: t.replace("#define LAST_STATI 5",
+                                  "#define CHAINOK 350\n#define LAST_STATI 351"))
+        rc, out = run(["--staged"])
+        case(rc == 0, "two-hop chain: stati in inc-pu6v band passes",
+             "(rc=%d)\n%s" % (rc, out))
+        unstage()
+
+        # a value inside the master band (243-255) is outside the inc-pu6v band
+        # (300-399) -> refused naming the inc-pu6v band, not master.
+        _write(os.path.join(numdir, "issued.log"), "STATI 250 CHAINBAD sub t\n")
+        stage(lambda t: t.replace("#define LAST_STATI 5",
+                                  "#define CHAINBAD 250\n#define LAST_STATI 251"))
+        rc, out = run(["--staged"])
+        case(rc == 1 and "outside" in out and "300-399" in out,
+             "two-hop chain: master-band stati refused as outside inc-pu6v",
+             "(rc=%d)\n%s" % (rc, out))
+        unstage()
+
+        # no base: a branch with no row and no base adding a new member is
+        # refused with the config-fix line; a commit adding no new member passes.
+        git("checkout", "-q", "master")
+        git("checkout", "-q", "-b", "orphan")
+        git("config", "--unset", "branch.orphan.incursionBase")
+        _write(os.path.join(numdir, "issued.log"), "STATI 250 ORPHAN orphan t\n")
+        stage(lambda t: t.replace("#define LAST_STATI 5",
+                                  "#define ORPHAN 250\n#define LAST_STATI 251"))
+        rc, out = run(["--staged"])
+        case(rc == 1 and "has no band" in out and "git config branch.orphan.incursionBase" in out,
+             "no-base branch with a new member refused with the config-fix line",
+             "(rc=%d)\n%s" % (rc, out))
+        unstage()
+
+        # the same branch adding no new number passes.
+        _write(os.path.join(numdir, "issued.log"), "")
+        _write(os.path.join(repo, DEFINES_REL), SELFTEST_DEFINES)
+        stage(lambda t: t.replace("#define LAST_STATI 5", "#define LAST_STATI 6"))
+        rc, out = run(["--staged"])
+        case(rc == 0, "no-base branch with no new member passes",
+             "(rc=%d)\n%s" % (rc, out))
+        unstage()
+
+        # base cycle a -> b -> a with no rows: refused, does not hang.
+        git("checkout", "-q", "-b", "cyc_a")
+        git("checkout", "-q", "-b", "cyc_b")
+        git("config", "branch.cyc_b.incursionBase", "cyc_a")
+        git("config", "branch.cyc_a.incursionBase", "cyc_b")
+        _write(os.path.join(numdir, "issued.log"), "STATI 250 CYCADD cyc_b t\n")
+        stage(lambda t: t.replace("#define LAST_STATI 5",
+                                  "#define CYCADD 250\n#define LAST_STATI 251"))
+        rc, out = run(["--staged"])
+        case(rc == 1 and "has no band" in out,
+             "base cycle refused and does not hang", "(rc=%d)\n%s" % (rc, out))
+        unstage()
+
+        git("config", "--unset", "branch.cyc_b.incursionBase")
+        git("config", "--unset", "branch.cyc_a.incursionBase")
+        git("checkout", "-q", "master")
+        _write(os.path.join(repo, RES_REL), SELFTEST_RES_8)
+        git("add", RES_REL)
 
         print("selftest: %d passed" % passed)
         return 1 if fails else 0
