@@ -1,0 +1,37 @@
+# inc-kzp1: human Paladin with starting perks (4d6 + perks), seed 21, attribute
+# set [e], whose perks include "uncursed plate mail +2". Dumps the
+# attribute screen, then saves so INCURSION_CHAR_PROBE=1 writes
+# logs/charprobe.txt (journal "Starting Perks" + inventory).
+# Run: INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#      INCURSION_CHAR_PROBE=1 INCURSION_KIT_PROBE=1 tools/headless.sh \
+#      tools/keys/kzp1-perk-armor.keys 21
+# Set letter [e] holds only for seed 21; see tools/keys/kzp1-attrs.keys.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Human"
+@choose "Athletics"
+@choose "Diplomacy"
+@choose "Paladin"
+@choose "Erich"   # the god the class offers
+@dump:attrs
+e       # Attributes: set [e] of seed 21, the plate mail +2 set
+a       # Alignment: the first offered
+
+@while "Choose a feat" a
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+@while "wish to worship" y
+@while "personality archetype" a
+
+ESC*3   # dismiss the arrival room description
+s*3
+ESC
+@expect "System Menu"
+b       # Save and Continue
+@dump:saved
