@@ -71,7 +71,7 @@ migration allowance that is marked for deletion.
 
 `fh.Compression` was declared and never assigned or tested in the original
 code; **v1 gave it a meaning**: 1 = the payload is zlib level 6
-(src/SaveV1.cpp:3163-3172), 0 = raw, which DEBUG builds write when
+(src/SaveV1.cpp:3164-3176), 0 = raw, which DEBUG builds write when
 `INCURSION_V1_RAW=1` so the mutation tools can craft byte-exact test files
 (src/SaveV1.cpp:87-95). The v1 reader follows the file's field
 (src/SaveV1.cpp:3338-3368). The v0 paths still ignore it: v0's LZ-versus-RLE
