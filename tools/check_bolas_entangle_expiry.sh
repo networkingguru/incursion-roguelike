@@ -73,7 +73,12 @@ for seed in $(seq 1 "$SEEDS"); do
     t0="$(echo "$before" | awk 'NR==1 {for(i=1;i<=NF;i++) if($i=="turn") print $(i+1)}')"
     t1="$(echo "$after"  | awk 'NR==1 {for(i=1;i<=NF;i++) if($i=="turn") print $(i+1)}')"
     # Control: a different timed stati on the same victim must have ticked.
-    if grep -q "TRIED from SS_MISC" <<< "$before" && grep -q "TRIED from SS_MISC" <<< "$after"; then
+    # inc-kbws: the grep is narrowed to the TIMED TRIED row. inc-u3dp's opposed
+    # hide check makes HideSetKey call GainPermStati, which writes a PERMANENT
+    # "TRIED from SS_MISC" row (no [Dur ...]) that correctly never expires; the
+    # old grep matched it too and read the control as un-ticked. Only the timed
+    # row, which shows [Dur ...], is the control that proves expiry happens.
+    if grep -q "TRIED from SS_MISC.*\[Dur" <<< "$before" && grep -q "TRIED from SS_MISC.*\[Dur" <<< "$after"; then
         echo "seed $seed: INCONCLUSIVE: control stati TRIED did not expire, so the wait did not tick"
         skipped=$((skipped + 1)); continue
     fi
