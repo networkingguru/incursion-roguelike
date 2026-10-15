@@ -68,7 +68,7 @@ ITEM_RE = re.compile(
     r'KIT_ITEM sl=(-?\d+) slot=(.*?)\s+name="(.*?)" type=(\d+) group=(\d+) '
     r'qty=(\d+) eid=(-?\d+) skill=(-?\d+) size=(-?\d+) grip2=(\d) '
     r'weight=(-?\d+) sd=(-?\d+),(-?\d+),(-?\d+) ld=(-?\d+),(-?\d+),(-?\d+) '
-    r'reach=(\d) near=(\d)')
+    r'reach=(\d) near=(\d) arm=(-?\d+)')
 
 PACK_RE = re.compile(
     r'KIT_PACK weight=(-?\d+) wlim=(-?\d+) cap=(-?\d+) count=(-?\d+) '
@@ -117,9 +117,16 @@ class Item:
         # twice the average, so the comparison stays in integers
         self.dmg2 = n * (s + 1) + 2 * b if self.type == T["T_WEAPON"] else 0
         self.reach, self.near = int(g[17]), int(g[18])
+        # total armour value across all three damage types, including the
+        # enchantment and the adamant/orcish/dwarven qualities (arm= field the
+        # probe logs via KitArmourValue). 0 for non-armour (inc-kzp1).
+        self.arm = int(g[19])
 
     def key(self):
         return (self.skill, self.dmg2)
+
+    def key2(self):
+        return (self.skill, self.arm)
 
     @property
     def reach_only(self):
@@ -201,6 +208,23 @@ def evaluate(head, items, pack=None):
             for i in group:
                 if i.sl not in slots:
                     fail("R1", "%s should be worn (slot %s) but sits at slot %d" % (i.name, list(slots), i.sl))
+
+    # R1 armour choice: when the wearer has more proficient armour than the
+    # single armour slot, the worn one is the best by proficiency, then by
+    # total armour value including the enchantment -- so a plate mail +2 beats
+    # a plain field plate (inc-kzp1).
+    armour_slot = WORN_SLOTS[T["T_ARMOUR"]]
+    skilled_armour = [i for i in items
+                      if i.type == T["T_ARMOUR"] and i.skill > 0]
+    if len(skilled_armour) > len(armour_slot):
+        seen.add("R1-armour-choice")
+        want = max(i.key2() for i in skilled_armour)
+        worn = [i for i in skilled_armour if i.sl in armour_slot]
+        if not worn or worn[0].key2() != want:
+            fail("R1", "armour slot holds %s; expected %s with skill/arm %s" %
+                 ((worn[0].name if worn else "nothing"),
+                  sorted({i.name for i in skilled_armour if i.key2() == want}),
+                  want))
 
     # ---- R2: weapon in hand -------------------------------------------
     cands = [i for i in items if i.melee_candidate and i.size <= siz + 1]
@@ -333,12 +357,12 @@ def evaluate(head, items, pack=None):
 
 
 def _line(sl, name, typ, skill, grip2=0, group=0, qty=1, eid=0, size=3,
-          weight=4, sd=(0, 0, 0), reach=0, near=0):
+          weight=4, sd=(0, 0, 0), reach=0, near=0, arm=0):
     return ("KIT_ITEM sl=%d slot=x  name=\"%s\" type=%d group=%d qty=%d eid=%d "
             "skill=%d size=%d grip2=%d weight=%d sd=%d,%d,%d ld=0,0,0 "
-            "reach=%d near=%d" %
+            "reach=%d near=%d arm=%d" %
             ((sl, name, typ, group, qty, eid, skill, size, grip2, weight) + sd
-             + (reach, near)))
+             + (reach, near, arm)))
 
 
 def selftest():
@@ -350,11 +374,11 @@ def selftest():
     DAG = WG_THROWN | WG_DAGGERS
 
     def kit(sword=2, shield=1, dagger=-2, gold=-2, arm_sl=9, arm_skill=1,
-            axe=None, extra=()):
+            axe=None, extra=(), arm_val=0):
         rows = [
             _line(sword, "long sword", W, 2, sd=(1, 8, 0)),
             _line(shield, "kite shield", SH, 1),
-            _line(arm_sl, "banded mail", AR, arm_skill),
+            _line(arm_sl, "banded mail", AR, arm_skill, arm=arm_val),
             _line(dagger, "dagger", W, 1, group=DAG, sd=(1, 4, 0)),
             _line(gold, "gold piece", CO, 0),
             _line(18, "potion", PO, 0), _line(19, "potion", PO, 0),
@@ -391,6 +415,18 @@ def selftest():
         ("gold in a pouch", kit(gold=22, extra=[]), 0, "R5"),
         ("non-proficient armour worn", kit(arm_skill=0), 0, "R1"),
         ("non-proficient armour packed", kit(arm_skill=0, arm_sl=PACK), 0, None),
+        # inc-kzp1 R1 armour choice: with more proficient armour than slots, the
+        # worn one is the best by total armour value including enchantment.
+        # A field plate (base arm 30) and a plate mail +2 (base arm 28 + 2 = 34);
+        # both proficient. The +2 wins on total value, not on proficiency.
+        ("best enchanted armour worn (plate mail +2 over field plate)",
+         kit(arm_sl=9, arm_val=34,
+             extra=[_line(PACK, "field plate armour", AR, 1, arm=30)]),
+         0, None),
+        ("plain field plate worn over enchanted plate mail +2 (old tie-break)",
+         kit(arm_sl=9, arm_val=30,
+             extra=[_line(PACK, "plate mail", AR, 1, arm=34)]),
+         0, "R1"),
         ("spare dagger left on a belt", kit(dagger=19), 0, "R4,R5"),
         ("two-handed glaive in hand, shield packed",
          kit(sword=-2, shield=PACK, axe=2), 0, None),

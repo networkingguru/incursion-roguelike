@@ -61,6 +61,7 @@ String & DescribeSkill(int16 sk);
 static void GrantPerks(PerkSet& p, Player *target);
 static Item *BuildPerkItem(Perk &pk, Perk &qsrc);
 static void PerkCurseProbe(Player *p);
+static int16 KitArmourValue(Item *it);
 
 String & PickName(const char*NameList) {
     int16 i, NamePos[128], n;
@@ -142,13 +143,14 @@ static void KitProbe(Player *p)
                       (p->Attr[A_SIZ] + (it->isType(T_SHIELD) ? 0 : p->HasFeat(FT_MONKEY_GRIP))))) ? 1 : 0;
         Error("KIT_ITEM sl=%d slot=%s name=\"%s\" type=%d group=%u qty=%d eid=%d "
               "skill=%d size=%d grip2=%d weight=%d sd=%d,%d,%d ld=%d,%d,%d "
-              "reach=%d near=%d",
+              "reach=%d near=%d arm=%d",
             (int)(sl >= 0 ? sl : (!strcmp(where,"pack") ? -2 : -1)), where, NAME(it->iID), (int)it->Type, (unsigned)ti->Group,
             (int)it->Quantity, (int)it->eID, (int)p->WepSkill(it),
             (int)it->Size(p), grip2, (int)it->Weight(),
             (int)ti->u.w.SDmg.Number, (int)ti->u.w.SDmg.Sides, (int)ti->u.w.SDmg.Bonus,
             (int)ti->u.w.LDmg.Number, (int)ti->u.w.LDmg.Sides, (int)ti->u.w.LDmg.Bonus,
-            ti->HasFlag(WT_REACH) ? 1 : 0, ti->HasFlag(WT_STRIKE_NEAR) ? 1 : 0);
+            ti->HasFlag(WT_REACH) ? 1 : 0, ti->HasFlag(WT_STRIKE_NEAR) ? 1 : 0,
+            it->isType(T_ARMOUR) ? (int)KitArmourValue(it) : 0);
     }
     Error("KIT_PROBE end");
 }
@@ -199,6 +201,15 @@ static int16 KitDmg2(Item *it)
 {
     Dice d = TITEM(it->iID)->u.w.SDmg;
     return d.Number * (d.Sides + 1) + 2 * d.Bonus;
+}
+
+/* Total armour value of an armour item across all three damage types. ArmVal
+   is called with knownOnly=false so the plus and the adamant/orcish/dwarven
+   qualities always count, even before the item is identified (inc-kzp1). */
+static int16 KitArmourValue(Item *it)
+{
+    return ((Armour*)it)->ArmVal(0,false) + ((Armour*)it)->ArmVal(1,false) +
+           ((Armour*)it)->ArmVal(2,false);
 }
 
 /* Quick-use items the design puts in a belt pouch: potions, ammunition,
@@ -384,12 +395,22 @@ static void ArrangeStartingKit(Player *p)
     /* Read-only, so the static cursor is safe to use directly. */
     for (it=p->FirstInv();it;it=p->NextInv())
         if (it->isType(T_ARMOUR) && p->WepSkill(it) > 0)
+            /* Best proficient armour by total armour value including its
+               enchantment, so a plate mail +2 can beat a plain field plate
+               (inc-kzp1). Proficiency stays the primary key. */
             if (!wear || p->WepSkill(it) > p->WepSkill(wear) ||
                 (p->WepSkill(it) == p->WepSkill(wear) &&
-                 KitDmg2(it) > KitDmg2(wear)))
+                 KitArmourValue(it) > KitArmourValue(wear)))
                 wear = it;
     if (wear && p->InSlot(SL_ARMOUR) != wear)
+    {
+        Item *old = p->InSlot(SL_ARMOUR);
         KitToSlot(p,wear,SL_ARMOUR);
+        /* A displaced worn armour goes to the pack, never orphaned: Wield
+           overwrites the slot without removing the old armour (inc-kzp1). */
+        if (old && old != wear && old->GetParent() == p)
+            KitToPack(p,old);
+    }
 
     /* R2: the weapon in hand is the design's best melee weapon. */
     main = p->getPrimaryMelee();
