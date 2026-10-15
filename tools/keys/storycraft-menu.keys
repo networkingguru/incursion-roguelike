@@ -1,0 +1,13 @@
+# inc-1brg A and D: what Storycraft's "Augment which item?" menu offers. Read by
+# tools/check_storycraft.sh (seed 1), from the frozen orc bard
+# tools/fixtures/chars/orc-bard-reapply-seed1.sav. Kept apart from
+# storycraft-confirm.keys because that script's @choose aborts the whole run
+# when the item is missing, which would hide the menu this one photographs.
+i
+@dump:inventory-before
+ESC
+u
+@choose "Storycraft"
+@dump:augment-menu
+ESC
+@quit
