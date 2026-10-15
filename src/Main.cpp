@@ -430,6 +430,10 @@ void Game::Play() {
        tools/check_hunger_clock.sh. inc-i9q.2. */
     pp->HungerProbe();
 
+    /* Off unless INCURSION_REVERIE_PROBE is set. inc-mknk; see
+       ReverieRestProbe (src/Player.cpp) and tools/check_reverie_rest.sh. */
+    pp->ReverieRestProbe();
+
     /* Off unless INCURSION_STUDY_PROBE is set, and run here because it needs
        a live loaded caster. See Character::StudySlotsProbe and
        tools/check_study_slots.sh. inc-ngku. */

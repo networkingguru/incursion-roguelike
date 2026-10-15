@@ -1443,6 +1443,7 @@ class Player: public Character
       void CursorKeys(Dir d, uint8 ControlKeys);
       virtual EvReturn SpendHours(int16 minHours, int16 maxHours, 
                      int16 &hoursSpent=__spentHours, bool isHeal=false);
+      void ReverieRestProbe();                    /* inc-mknk */
       virtual EvReturn Rest(EventInfo &e);        
       virtual EvReturn GodRaise(EventInfo &e);
       virtual void MoveDepth(int16 NewDepth, bool safe=false);
