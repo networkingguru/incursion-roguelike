@@ -62,7 +62,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 [ -x ./incursion-headless ] || { echo "INCONCLUSIVE: build with BACKEND=posix ./build_macos.sh"; exit 2; }
 
-TRIALS="${1:-25}"
+# inc-kbws: the opposed hide roll (inc-u3dp) shifted the RNG stream, so the
+# old 25-trial default sampled too few heard blows for case A. 50 trials clears
+# the MIN_COUNT=5 threshold with margin; the threshold itself is unchanged.
+TRIALS="${1:-50}"
 MIN_COUNT=5
 # SEED_BASE: the trials run seeds SEED_BASE+1 .. SEED_BASE+TRIALS. Seeds 1-25
 # gave only 3 heard-and-landed blows for case A (need 5) once the new-character
@@ -85,6 +88,13 @@ B_HIT=0; B_OK=0; B_BAD=0; SETUP_HIT=0
 C_PRE=0; C_PRE_AU=0; C_PRE_SU=0; C_HIT=0; C_NFF=0; C_NFF_SN=0
 D_PRE=0; D_PRE_AU=0; D_PRE_SU=0; D_HIT=0
 MELEE_LINES=0; RANGED_LINES=0; BF_LINES=0; FAILED=0
+# inc-kbws: blows whose victim was already removed from the map (the blow
+# killed it). The engine adds sneak dice only while the victim is alive -- the
+# src/Fight.cpp:7211 gate reads !e.EVictim->isDead() -- so these blows correctly
+# get sneak=0 and must not be counted as a heard/landed blow that missed sneak
+# dice. The probe samples the victim's position after the kill, so such a blow
+# shows vx=-1 vy=-1 with a meaningless dist. Excluded per case, then reported.
+A_KILLED=0; C_KILLED=0; D_KILLED=0
 
 # Fresh directory per trial. The probe appends, so a reused directory would
 # double the counts on a second invocation; the token makes two concurrent
@@ -115,12 +125,17 @@ for seed in $(seq $((SEED_BASE+1)) $((SEED_BASE+TRIALS))); do
     RUN="$(run_one "$MELEE_KEY" "$seed" melee)"
     LOG="$RUN/logs/sneak.log"
     [ -f "$LOG" ] || continue
-    read -r ah ahnff ahnffsn ahsn au aunff aunffsn ausn setup bh bok bbad lines < <(awk -v v="$MELEE_VICTIM" '
+    read -r ah ahnff ahnffsn ahsn au aunff aunffsn ausn setup bh bok bbad akilled lines < <(awk -v v="$MELEE_VICTIM" '
         $0 ~ ("victim=<" v ">") {
             if (/ pre /) { lines++; if (/invisVal=1/) { invisSeen=1; heard=0 } }
             if (/hears-you/) { if (invisSeen) heard=1 }
             if (/ attack /) {
                 lines++
+                # inc-kbws: a blow that killed the victim was probed after the
+                # kill, with the victim off the map (vx=-1 vy=-1); the engine
+                # adds no sneak dice once isDead() (src/Fight.cpp:7211). Exclude
+                # it from the sneak expectation and tally it.
+                if (/vx=-1 vy=-1/) { akilled++; if (invisSeen) { invisSeen=0; heard=0 }; next }
                 ff=(/flatfoot=1/); sn=(/sneak=1/)
                 if (invisSeen) {
                     if (heard) { ah++; if(!ff){ ahnff++; if(sn) ahnffsn++ } ; if(sn) ahsn++ }
@@ -131,11 +146,12 @@ for seed in $(seq $((SEED_BASE+1)) $((SEED_BASE+TRIALS))); do
                 }
             }
         }
-        END { print ah+0, ahnff+0, ahnffsn+0, ahsn+0, au+0, aunff+0, aunffsn+0, ausn+0, setup+0, bh+0, bok+0, bbad+0, lines+0 }
+        END { print ah+0, ahnff+0, ahnffsn+0, ahsn+0, au+0, aunff+0, aunffsn+0, ausn+0, setup+0, bh+0, bok+0, bbad+0, akilled+0, lines+0 }
     ' "$LOG")
     A_HIT=$((A_HIT+ah)); A_NFF=$((A_NFF+ahnff)); A_NFF_SN=$((A_NFF_SN+ahnffsn)); A_SN=$((A_SN+ahsn))
     A2_HIT=$((A2_HIT+au)); A2_NFF=$((A2_NFF+aunff)); A2_NFF_SN=$((A2_NFF_SN+aunffsn)); A2_SN=$((A2_SN+ausn))
     B_HIT=$((B_HIT+bh)); B_OK=$((B_OK+bok)); B_BAD=$((B_BAD+bbad)); SETUP_HIT=$((SETUP_HIT+setup))
+    A_KILLED=$((A_KILLED+akilled))
     MELEE_LINES=$((MELEE_LINES+lines))
 done
 
@@ -143,6 +159,7 @@ echo "A. invisible first blow (melee), victim HEARD the rogue:"
 echo "     blows at a non-flat-footed victim that reached the gate:  $A_NFF"
 echo "     ...of those, sneak=1 (must be all):                       $A_NFF_SN"
 echo "     (all heard blows, any flatfoot state:                     $A_HIT; sneak=1: $A_SN)"
+echo "     excluded killing blows (victim off map, vx=-1 vy=-1):     $A_KILLED"
 echo
 echo "A2. invisible first blow (melee), victim did NOT hear:"
 echo "     blows at a non-flat-footed victim that reached the gate:  $A2_NFF"
@@ -160,15 +177,22 @@ for seed in $(seq $((SEED_BASE+1)) $((SEED_BASE+TRIALS))); do
     RUN="$(run_one "$RANGED_KEY" "$seed" ranged)"
     LOG="$RUN/logs/sneak.log"
     [ -f "$LOG" ] || continue
-    read -r cp cpau cpsu ch cnff cnffsn lines < <(awk -v v="$RANGED_VICTIM" '
+    read -r cp cpau cpsu ch cnff cnffsn ckilled lines < <(awk -v v="$RANGED_VICTIM" '
         $0 ~ ("victim=<" v ">") {
             if (/ pre /) { lines++; if (/invisVal=1/ && /dist=[23]/) { invisSeen=1; cp++; if (/actUnseen=1/) cpau++; if (/surprise=1/) cpsu++ } }
-            if (/ attack / && /dist=[23]/) { lines++; if (invisSeen) { ch++; if (/flatfoot=0/) { cnff++; if (/sneak=1/) cnffsn++ } ; invisSeen=0 } }
+            if (/ attack / && /dist=[23]/) {
+                lines++
+                # inc-kbws: exclude a killing blow (victim off map): the engine
+                # adds no sneak dice once isDead() (src/Fight.cpp:7211).
+                if (/vx=-1 vy=-1/) { ckilled++; if (invisSeen) invisSeen=0; next }
+                if (invisSeen) { ch++; if (/flatfoot=0/) { cnff++; if (/sneak=1/) cnffsn++ } ; invisSeen=0 }
+            }
         }
-        END { print cp+0, cpau+0, cpsu+0, ch+0, cnff+0, cnffsn+0, lines+0 }
+        END { print cp+0, cpau+0, cpsu+0, ch+0, cnff+0, cnffsn+0, ckilled+0, lines+0 }
     ' "$LOG")
     C_PRE=$((C_PRE+cp)); C_PRE_AU=$((C_PRE_AU+cpau)); C_PRE_SU=$((C_PRE_SU+cpsu))
     C_HIT=$((C_HIT+ch)); C_NFF=$((C_NFF+cnff)); C_NFF_SN=$((C_NFF_SN+cnffsn))
+    C_KILLED=$((C_KILLED+ckilled))
     RANGED_LINES=$((RANGED_LINES+lines))
 done
 
@@ -186,6 +210,7 @@ else
     echo "     landed blows at a non-flat-footed victim:                 $C_NFF"
     echo "     SNEAK HALF OF C UNMEASURED: fewer than $MIN_COUNT such blows; not asserted"
 fi
+echo "     excluded killing blows (victim off map, vx=-1 vy=-1):     $C_KILLED"
 echo
 
 # ---------------------------------------------------------------- case D
@@ -193,14 +218,21 @@ for seed in $(seq $((SEED_BASE+1)) $((SEED_BASE+TRIALS))); do
     RUN="$(run_one "$BLINDFIGHT_KEY" "$seed" blindfight)"
     LOG="$RUN/logs/sneak.log"
     [ -f "$LOG" ] || continue
-    read -r dp dpau dpsu dh lines < <(awk -v v="$BLINDFIGHT_VICTIM" '
+    read -r dp dpau dpsu dh dkilled lines < <(awk -v v="$BLINDFIGHT_VICTIM" '
         $0 ~ ("victim=<" v ">") {
             if (/ pre /) { lines++; if (/invisVal=1/) { invisSeen=1; dp++; if (/actUnseen=1/) dpau++; if (/surprise=1/) dpsu++ } }
-            if (/ attack /) { lines++; if (invisSeen) { dh++; invisSeen=0 } }
+            if (/ attack /) {
+                lines++
+                # inc-kbws: exclude a killing blow (victim off map): the engine
+                # adds no sneak dice once isDead() (src/Fight.cpp:7211).
+                if (/vx=-1 vy=-1/) { dkilled++; if (invisSeen) invisSeen=0; next }
+                if (invisSeen) { dh++; invisSeen=0 }
+            }
         }
-        END { print dp+0, dpau+0, dpsu+0, dh+0, lines+0 }
+        END { print dp+0, dpau+0, dpsu+0, dh+0, dkilled+0, lines+0 }
     ' "$LOG")
     D_PRE=$((D_PRE+dp)); D_PRE_AU=$((D_PRE_AU+dpau)); D_PRE_SU=$((D_PRE_SU+dpsu)); D_HIT=$((D_HIT+dh))
+    D_KILLED=$((D_KILLED+dkilled))
     BF_LINES=$((BF_LINES+lines))
 done
 
@@ -209,6 +241,7 @@ echo "     invisVal=1 pre lines:                                     $D_PRE"
 echo "     ...of those, actUnseen=1 (must be 0):                     $D_PRE_AU"
 echo "     ...of those, surprise=1 (must be 0):                      $D_PRE_SU"
 echo "     first blows that reached the gate:                        $D_HIT"
+echo "     excluded killing blows (victim off map, vx=-1 vy=-1):     $D_KILLED"
 echo
 echo "probe lines seen: melee=$MELEE_LINES ranged=$RANGED_LINES blindfight=$BF_LINES; failed runs=$FAILED"
 echo

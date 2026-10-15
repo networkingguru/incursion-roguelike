@@ -33,7 +33,7 @@
 #   favour-insight.keys       lizardfolk monk, Xavias     seed 12
 #   favour-devour-khasrach    lizardfolk monk, Khasrach   seed 5
 #   favour-devour-zurvash     lizardfolk monk, Zurvash    seed 5
-#   favour-trap.keys          kobold rogue,    Semirath   seed 3
+#   favour-trap.keys          kobold rogue,    Semirath   seed 1  # inc-kbws: was 3, re-staged after the opposed hide check shifted the RNG stream
 #
 # The trap session measures the favoured-skill award a second time, for a
 # second god: Semirath lists Handle Device, and a reset takes two Handle Device
@@ -229,7 +229,11 @@ rises "Zurvash, devour, 5 x CR $TABAXI_CR" "$z1" "$z2" $((5 * TABAXI_CR))
 
 # --- 4 and 5. A trap the character reset, killing twice --------------------
 echo "Semirath, Handle Device and a reset trap"
-session "$KOBOLD" tools/keys/favour-trap.keys 3
+# inc-kbws: seed 3 no longer stages the trap session after the opposed hide
+# check (inc-u3dp) shifted the shared RNG stream; the favour-trap session pins
+# no RNG-sensitive event beyond reaching the trap, and seed 1 does stage it at
+# tip. See the header table.
+session "$KOBOLD" tools/keys/favour-trap.keys 1
 hd=0
 for label in disarm reset; do
     check_line "$label" "Handle Device"
