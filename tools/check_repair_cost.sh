@@ -22,7 +22,10 @@
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 
-SEED=1
+# inc-kbws: was seed 1; the opposed hide check (inc-u3dp) shifted the shared
+# RNG stream, so seed 1 no longer walks the decay trap onto the armour at tip.
+# Seeds 2-5 stage it; seed 2 is used.
+SEED=2
 KEYS=tools/keys/repair-cost.keys
 LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav
 

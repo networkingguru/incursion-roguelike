@@ -20,6 +20,10 @@
 # THE WALK. Three RIGHT steps leave the barbarian two squares from the archon.
 # An orc is light-averse and the archon sheds light, so the game asks "Confirm
 # enter the brightly-lit area?"; @while answers it only while it is on screen.
+#
+# THE STRIKE. A fixed six swings used to miss every time once the RNG stream
+# shifted (inc-kbws). The strike is now an @until loop over RIGHT -- the attack,
+# since the archon is adjacent and frozen -- that stops on the first landed blow.
 
 @include aura-of-menace-chargen.keys
 
@@ -60,57 +64,28 @@ DOWN*40
 @dump:stati-before
 ESC
 
-# Step adjacent, then strike. Each strike is followed by a Stati dump.
+# Step adjacent. An orc is light-averse and the archon sheds light, so the
+# step asks "Confirm enter the brightly-lit area?"; @while answers it only while
+# it is on screen.
 RIGHT
 @while "brightly-lit" y
-RIGHT
-@while "brightly-lit" y
-@dump:hit1
+
+# Swing until the first blow lands. At Defense 20 the barbarian needs a threat
+# (natural 20), so a fixed handful of swings misses most of the time (bd
+# inc-bp44); a fixed six left every swing a miss at tip. The @until repeats
+# RIGHT -- the attack, since the archon is adjacent and frozen -- until the
+# game prints a hit, "You swing ..., hitting the hound archon." on one row.
+# @until is bounded by SK_LOOP_MAX (200 passes), a generous ceiling over the
+# ~4-swing average, so the loop cannot spin forever. (inc-kbws)
+@until "hitting the hound" RIGHT
+@dump:hit
 w
 @choose "Examine Nearby Things"
 DOWN*40
 @dump:stati-hit1
 ESC
-RIGHT
-@while "brightly-lit" y
-@dump:hit2
-w
-@choose "Examine Nearby Things"
-DOWN*40
-@dump:stati-hit2
-ESC
-RIGHT
-@while "brightly-lit" y
-@dump:hit3
-w
-@choose "Examine Nearby Things"
-DOWN*40
-@dump:stati-hit3
-ESC
-RIGHT
-@while "brightly-lit" y
-@dump:hit4
-w
-@choose "Examine Nearby Things"
-DOWN*40
-@dump:stati-hit4
-ESC
-RIGHT
-@while "brightly-lit" y
-@dump:hit5
-w
-@choose "Examine Nearby Things"
-DOWN*40
-@dump:stati-hit5
-ESC
-RIGHT
-@while "brightly-lit" y
-@dump:hit6
-w
-@choose "Examine Nearby Things"
-DOWN*40
-@dump:stati-hit6
-ESC
+
+# The message log, to read the shake-off and the landed blow.
 v
 @dump:log
 ESC

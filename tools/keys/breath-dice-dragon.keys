@@ -35,6 +35,13 @@
 # can give every summoned monster a turn.
 w
 y
+# Clear the level first so the dragon's only target is the player. Without
+# this, a level-generated monster (a wolf zombie on seed 1) outranks the player
+# as a target and the dragon walks off to it instead of breathing. With the
+# level empty the dragon still needs many turns to find the player: it first
+# breathed after more than 20 waits on seed 1, so the loop below waits 80.
+@choose "Genocide Everything"
+w
 @choose "Wizard Mode Switches"
 SPACE
 ESC
@@ -51,63 +58,171 @@ ENTER
 # and restores HP; y accepts death and can prevent the next breath.
 .
 @while "Die?" n
-@dump:wait01
 .
 @while "Die?" n
-@dump:wait02
 .
 @while "Die?" n
-@dump:wait03
 .
 @while "Die?" n
-@dump:wait04
 .
 @while "Die?" n
-@dump:wait05
 .
 @while "Die?" n
-@dump:wait06
 .
 @while "Die?" n
-@dump:wait07
 .
 @while "Die?" n
-@dump:wait08
 .
 @while "Die?" n
-@dump:wait09
 .
 @while "Die?" n
 @dump:wait10
 .
 @while "Die?" n
-@dump:wait11
 .
 @while "Die?" n
-@dump:wait12
 .
 @while "Die?" n
-@dump:wait13
 .
 @while "Die?" n
-@dump:wait14
 .
 @while "Die?" n
-@dump:wait15
 .
 @while "Die?" n
-@dump:wait16
 .
 @while "Die?" n
-@dump:wait17
 .
 @while "Die?" n
-@dump:wait18
 .
 @while "Die?" n
-@dump:wait19
 .
 @while "Die?" n
 @dump:wait20
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+@dump:wait30
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+@dump:wait40
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+@dump:wait50
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+@dump:wait60
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+@dump:wait70
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+.
+@while "Die?" n
+@dump:wait80
 
 @quit
