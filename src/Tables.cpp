@@ -3966,10 +3966,12 @@ struct AbilityInfoStruct AbilInfo[] = {
     "equal to your level in this ability, and twice that bonus to the "
     "damage you deal it, until the grudge fades." },
   { CA_REVERIE, "Reverie",
-    "When you rest without eating, you use up less of your food reserve "
-    "than most creatures do: a full night's rest costs you about 70 percent "
-    "of the food it costs a creature without any special metabolism, so you "
-    "can go longer between meals." },
+    "When you rest without eating, you use up less of your food reserve than "
+    "most creatures do: a full night's rest costs you about 70 percent of the "
+    "food it costs a creature without any special metabolism, so you can go "
+    "longer between meals. Your reverie is also light and watchful: monsters "
+    "are far less likely to find you while you rest, and if they do, you come "
+    "to your senses at once instead of waking slowly." },
   { CA_SACRED_AURA, "Sacred Aura",
     "When you die, if the creature that struck you down is standing right "
     "beside you, it suffers a burst of holy damage equal to your level in "

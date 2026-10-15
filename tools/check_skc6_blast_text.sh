@@ -67,8 +67,11 @@ echo "--- measurement 1: the shared-buffer abort (Biocurrent touch) ---"
 echo "options: $OPTIONS"
 echo "keys:    $KEYS"
 
+# Seed pinned 2 (was 1) for inc-uwxp: commit 127e63ef made CanAddTemplate refuse
+# a two-alignment template, shifting the monster population and the RNG stream,
+# so seed 1's Biocurrent touch now misses the giant rat and prints no Damage line.
 out="$(INCURSION_OPTIONS="$OPTIONS" INCURSION_RUN_DIR="$RUN_DIR" \
-        tools/headless.sh "$KEYS" 1 2>&1)"
+        tools/headless.sh "$KEYS" 2 2>&1)"
 STATUS=$?
 echo "$out" | sed 's/^/  | /'
 echo
@@ -136,8 +139,12 @@ echo "--- measurement 2: the leftover Lore text (two-victim AGlobe) ---"
 echo "options: $OPTIONS"
 echo "keys:    $LEFTOVER_KEYS"
 
+# Seed pinned 2 (was 1) for inc-uwxp: commit 127e63ef's CanAddTemplate refusal
+# shifted the RNG stream, so seed 1's Electric Loop now hits only one of the two
+# brown bears (one Damage line), which cannot show leftover text. Seed 2 gives
+# two distinct Lightning Damage lines.
 out2="$(INCURSION_OPTIONS="$OPTIONS" INCURSION_RUN_DIR="$SCRATCH_DIR" \
-        tools/headless.sh "$LEFTOVER_KEYS" 1 2>&1)"
+        tools/headless.sh "$LEFTOVER_KEYS" 2 2>&1)"
 STATUS2=$?
 echo "$out2" | sed 's/^/  | /'
 echo
