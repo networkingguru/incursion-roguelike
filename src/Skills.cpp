@@ -3579,7 +3579,12 @@ Temper:
 
 Augment:
 	for (c = 0, it = FirstInv(); it; it = NextInv()) {
-		if (improveOnly && !it->GetInherentPlus())
+		/* Storycraft may give a first plus only to weapons, armor and shields (inc-1brg). */
+		if (improveOnly && !it->GetInherentPlus() && !(it->isType(T_WEAPON) ||
+			it->isType(T_BOW) ||
+			it->isType(T_MISSILE) ||
+			it->isType(T_ARMOUR) ||
+			it->isType(T_SHIELD)))
 			continue;
 		if (!it->isKnown(KN_MAGIC | KN_PLUS | KN_BLESS))
 			continue;
@@ -3709,6 +3714,10 @@ Augment:
 	gpCost = XPCost * 25;
 
 	if (isBardic) {
+		IPrint(Format("Raising %s to %+d spends one Storycraft charge and is permanent.",
+			(const char*)it->Name(NA_THE), it->GetInherentPlus() + 1));
+		if (!yn("Spend the charge?"))
+			return ABORT;
 		aStoryPluses++;
 		IPrint("You have a sense of mythic grandeur about your <Obj>.", it);
 	}
