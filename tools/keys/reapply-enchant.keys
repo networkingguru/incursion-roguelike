@@ -35,6 +35,12 @@
 # already in play, on the saved empty level, wizard mode already on, and
 # "Afoot" already showing. See tools/fixtures/README.md.
 
+e                       # eat once: the frozen fixture loads Hungry, whose
+a                       # -1 CON would ride under every reading below
+@while "Stop eating" y
+@while "-- more --" SPACE
+@dump:ate
+
 d
 @dump:sheet-without-periapt
 ESC
