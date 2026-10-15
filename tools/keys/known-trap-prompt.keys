@@ -17,6 +17,12 @@
 #   @until "A trap!" s   search until it is found.
 #   RIGHT           step onto it; the prompt opens. Photographed, then "n".
 
+e                       # eat once: the fixture loads Hungry (-1 DEX), which
+a                       # would drop the Reflex bonus the prompt's odds use
+@while "Stop eating" y
+@while "-- more --" SPACE
+@dump:ate
+
 w
 @while "Enter wizard mode" y
 @until "Wizard Mode Options" w

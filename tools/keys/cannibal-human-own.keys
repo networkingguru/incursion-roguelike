@@ -35,6 +35,9 @@ e
 @choose "(ground) human corpse"
 @while "Stop eating" n
 @while "-- more --" SPACE
+@while "Stop eating" n
+@while "Eating" SPACE
+@while "Stop eating" n
 @while "Eating" SPACE
 @while "-- more --" SPACE
 @while "#------" SPACE

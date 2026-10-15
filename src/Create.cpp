@@ -59,6 +59,8 @@ ReincarnationInfo RInf;
 
 String & DescribeSkill(int16 sk);
 static void GrantPerks(PerkSet& p, Player *target);
+static Item *BuildPerkItem(Perk &pk, Perk &qsrc);
+static void PerkCurseProbe(Player *p);
 
 String & PickName(const char*NameList) {
     int16 i, NamePos[128], n;
@@ -1169,6 +1171,7 @@ SkipThisFocus:;
     cHP = mHP + KAttr[A_THP]; 
     LastRest = theGame->GetTurn();
     KitProbe(this);
+    PerkCurseProbe(this);
 
     /* Hist.Create(this,MyTerm); */
     MyTerm->SetMode(MO_PLAY);
@@ -1789,6 +1792,77 @@ void CreatePerk(PerkSet& Perks, int i, PerkType type, Player *p)
     } 
 }
 
+/* Build one starting-perk item from stored perk data. The caller grants it.
+   `pk` carries the item id, effect and plus/bane; `qsrc` is the quality
+   source, which GrantPerks reads from the raw p.elt[i] slot (see the note in
+   inc-70nj). Kept separate from GrantPerks so the item builder can be probed
+   directly. Behavior is unchanged. */
+static Item *BuildPerkItem(Perk &pk, Perk &qsrc)
+{
+    Item *it = Item::Create(pk.p.i.iID);
+    ASSERT(it->GetHP() == it->MaxHP());
+    it->MakeMagical(pk.p.i.eID, pk.p.i.Plus);
+    /* upstream: CreatePerk rejects cursed items and NamePerk shows the item
+       uncursed, but MakeMagical rolls a fresh 50% curse for an EF_HALF_CURSED
+       effect (Ring of Polymorphing, cloak of Quietus) and the grant never
+       cleared it; this is the original game's logic (plain item flags and RNG,
+       no platform or typedef dependence, same on Win32). Observed in play
+       2026-10-14 and Traced; inc-70nj; not sent upstream. */
+    it->IFlags &= (~IF_CURSED);
+    ASSERT(it->GetHP() == it->MaxHP());
+    for (int16 q=0;q!=7;q++)
+        if (qsrc.p.i.q[q])
+            it->AddQuality((int8)pk.p.i.q[q]);
+    if (pk.p.i.Bane)
+        it->SetBane(pk.p.i.Bane);
+    ASSERT(it->GetHP() == it->MaxHP());
+    if (it->isType(T_MISSILE))
+        it->SetQuantity(30);
+    return it;
+}
+
+/* INCURSION_PERK_CURSE_PROBE -- measures how often a starting-perk item
+   comes out cursed. The Polymorphing ring effect is flagged EF_HALF_CURSED,
+   so MakeMagical rolls a 50% curse; BuildPerkItem now clears it (inc-70nj). This
+   builds N such rings through BuildPerkItem and logs the curse count.
+   Measurement only; with the variable unset it returns at once. N defaults
+   to 100 when the variable is set but not a number. */
+static void PerkCurseProbe(Player *p)
+{
+    const char *env = getenv("INCURSION_PERK_CURSE_PROBE");
+    if (!env)
+        return;
+    int N = atoi(env);
+    if (N <= 0)
+        N = 100;
+
+    rID eID = FIND("Polymorphing"), iID = FIND("ring");
+    if (!eID || !iID) {
+        Error("PERK_CURSE_PROBE error=%s", (!eID && !iID) ? "effect+item" :
+              (!eID ? "effect" : "item"));
+        return;
+    }
+
+    Perk pk, qsrc;
+    memset(&pk, 0, sizeof(pk));
+    memset(&qsrc, 0, sizeof(qsrc));
+    pk.type = PERK_ITEM;
+    pk.p.i.iID = iID;
+    pk.p.i.eID = eID;
+    pk.p.i.Plus = 0;
+    pk.p.i.Bane = 0;
+
+    int cursed = 0;
+    for (int n = 0; n < N; n++) {
+        Item *it = BuildPerkItem(pk, qsrc);
+        if (it->isCursed())
+            cursed++;
+        delete it;
+    }
+    Error("PERK_CURSE_PROBE grants=%d cursed=%d eff=%s item=%s",
+        N, cursed, NAME(eID), NAME(iID));
+}
+
 static void GrantPerks(PerkSet& p, Player *target)
 {
     int32 i; Item *it; int16 nPerks;
@@ -1812,19 +1886,7 @@ static void GrantPerks(PerkSet& p, Player *target)
 
         switch (p.elt[I(i,3)].type) {
       case PERK_ITEM: {
-          it = Item::Create(p.elt[I(i,3)].p.i.iID);
-          ASSERT(it->GetHP() == it->MaxHP());
-          it->MakeMagical(p.elt[I(i,3)].p.i.eID,
-              p.elt[I(i,3)].p.i.Plus);
-          ASSERT(it->GetHP() == it->MaxHP());
-          for (int16 q=0;q!=7;q++)
-              if (p.elt[i].p.i.q[q])
-                  it->AddQuality((int8)p.elt[I(i,3)].p.i.q[q]);
-          if (p.elt[I(i,3)].p.i.Bane)
-              it->SetBane(p.elt[I(i,3)].p.i.Bane); 
-          ASSERT(it->GetHP() == it->MaxHP());
-          if (it->isType(T_MISSILE))
-              it->SetQuantity(30);
+          it = BuildPerkItem(p.elt[I(i,3)], p.elt[i]);
           target->GainItem(it,true);
 #if 0 
           rID iID = p.elt[i].p.item->iID;

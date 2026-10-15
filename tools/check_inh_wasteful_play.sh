@@ -48,7 +48,11 @@ cd "$ROOT"
     exit 2
 }
 
-SEED=1
+# Seed pinned 3 (was 1) for inc-uwxp: commit 127e63ef made CanAddTemplate refuse
+# a two-alignment template, shifting the monster population and the RNG stream,
+# so on seed 1 the grid bug's electric bite now misses and the character is never
+# pushed above the cap. Seed 3 lands the bite and stages the over-cap read.
+SEED=3
 KEYS=tools/keys/inh-wasteful-play.keys
 OPTIONS="${INCURSION_OPTIONS:-tools/fixtures/options-2026-08-18.dat}"
 [ -f "$OPTIONS" ] || {

@@ -46,7 +46,12 @@ check_mutation src/Prayer.cpp \
 '    int32 cFavour;' \
 '    int16 cFavour;'
 
-check_run tools/keys/pray-aid-int32.keys 5
+# inc-uwxp: seed moved 5 -> 2. Merge 127e63ef (inc-n0ie) made CanAddTemplate
+# refuse a template that gives a monster two opposed alignments, which shifts
+# level generation and the RNG stream. On seed 5 the prayer skill roll fails,
+# so no aid appears; seed 2 stages it (screens show the prayer message, the
+# fatigue refresh and the mana replenishment).
+check_run tools/keys/pray-aid-int32.keys 2
 
 check_screens '*-prayed'
 # FRAGMENTS, NOT WHOLE SENTENCES. The three messages land on one wrapped

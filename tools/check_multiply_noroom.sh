@@ -28,7 +28,11 @@ cd "$ROOT" || exit 2
 # Re-pinned 2026-10-07 (bd inc-pl4b, seed drift): on the old seeds 11 and 23 the
 # level-1 Barbarian died near key 369 of dive.keys after commits 3a2d0ab2 and
 # bf526e50 moved the random draws, so no copy was ever refused.
-SEEDS="6 10"
+# Re-pinned again for inc-uwxp: commit 127e63ef made CanAddTemplate refuse a
+# two-alignment template, shifting the monster population and the RNG stream, so
+# seeds 6 and 10 now refuse no copy (the refusal path is never reached). Seeds 1
+# and 7 each refuse two copies with no Map.h:275 assert.
+SEEDS="1 7"
 RUNDIR="$ROOT/logs/multiply-noroom"
 mkdir -p "$RUNDIR"
 HITS=0
