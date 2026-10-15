@@ -1,0 +1,12 @@
+# inc-kzp1: stop at the attribute screen of a human paladin so the five perk
+# sets can be read from the dump. Used to choose the seed for kzp1-perk-armor.keys.
+a
+n
+y
+@choose "Human"
+@choose "Athletics"
+@choose "Diplomacy"
+@choose "Paladin"
+@choose "Erich"
+@dump:attrs
+@quit
