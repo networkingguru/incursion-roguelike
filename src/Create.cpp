@@ -61,6 +61,12 @@ String & DescribeSkill(int16 sk);
 static void GrantPerks(PerkSet& p, Player *target);
 static Item *BuildPerkItem(Perk &pk, Perk &qsrc);
 static void PerkCurseProbe(Player *p);
+static void PerkQualityProbe(Player *p);
+/* inc-4qni probe capture: when perkQualityCapture is set, CreatePerk copies
+   the rolled item qualities into perkQualityGen for PerkQualityProbe. */
+static bool perkQualityCapture = false;
+static bool perkQualityGot = false;
+static int16 perkQualityGen[8];
 
 String & PickName(const char*NameList) {
     int16 i, NamePos[128], n;
@@ -1172,6 +1178,7 @@ SkipThisFocus:;
     LastRest = theGame->GetTurn();
     KitProbe(this);
     PerkCurseProbe(this);
+    PerkQualityProbe(this);
 
     /* Hist.Create(this,MyTerm); */
     MyTerm->SetMode(MO_PLAY);
@@ -1676,8 +1683,18 @@ void CreatePerk(PerkSet& Perks, int i, PerkType type, Player *p)
                 Perks.elt[I(i,3)].p.i.iID    = it->iID;
                 Perks.elt[I(i,3)].p.i.Plus   = it->GetInherentPlus();
                 Perks.elt[I(i,3)].p.i.eID    = it->eID;
+                if (perkQualityCapture) {
+                    for (int16 k=0;k!=8;k++)
+                        perkQualityGen[I(k,8)] = it->GetQuality(k);
+                    perkQualityGot = true;
+                }
+                /* upstream: copy each quality slot q; the original read GetQuality(i),
+                   the perk number, so every slot held one quality and the granted item
+                   lost the rest (original game's logic: plain array indexing, no platform
+                   or typedef dependence, same on Win32). Observed via
+                   tools/check_perk_quality.sh; inc-4qni; not sent upstream. */
                 for (int16 q=0;q!=8;q++)
-                    Perks.elt[I(i,3)].p.i.q[I(q,8)] = it->GetQuality(i);
+                    Perks.elt[I(i,3)].p.i.q[I(q,8)] = it->GetQuality(q);
                 Perks.elt[I(i,3)].p.i.Bane   = it->GetBane();
                 delete it;
                 break; 
@@ -1861,6 +1878,66 @@ static void PerkCurseProbe(Player *p)
     }
     Error("PERK_CURSE_PROBE grants=%d cursed=%d eff=%s item=%s",
         N, cursed, NAME(eID), NAME(iID));
+}
+
+/* INCURSION_PERK_QUALITY_PROBE -- measures whether a granted starting-perk
+   item carries the qualities the generator rolled. CreatePerk once copied
+   quality i (the perk number) into every stored slot (inc-4qni). This builds
+   N item perks per perk slot, captures the rolled qualities inside CreatePerk
+   (perkQualityCapture), rebuilds each item through BuildPerkItem, and logs
+   how many quality sets differ. Measurement only; with the variable unset it
+   returns at once. N defaults to 100 when set but not a number. */
+static void PerkQualityProbe(Player *p)
+{
+    const char *env = getenv("INCURSION_PERK_QUALITY_PROBE");
+    if (!env)
+        return;
+    int N = atoi(env);
+    if (N <= 0)
+        N = 100;
+
+    int built = 0, withq = 0, mismatch = 0, nocapture = 0;
+    for (int n = 0; n < N; n++)
+        for (int i = 0; i < 3; i++) {
+            PerkSet ps;
+            memset(&ps, 0, sizeof(ps));
+            perkQualityCapture = true;
+            perkQualityGot = false;
+            CreatePerk(ps, i, PERK_ITEM, p);
+            perkQualityCapture = false;
+            if (!perkQualityGot) {
+                nocapture++;
+                continue;
+            }
+            Item *it = BuildPerkItem(ps.elt[i], ps.elt[i]);
+            built++;
+            bool gen[256], grt[256];
+            memset(gen, 0, sizeof(gen));
+            memset(grt, 0, sizeof(grt));
+            int gcount = 0;
+            for (int k = 0; k < 8; k++)
+                if (perkQualityGen[k]) {
+                    if (!gen[(unsigned char)perkQualityGen[k]]) gcount++;
+                    gen[(unsigned char)perkQualityGen[k]] = true;
+                }
+            for (int k = 0; k < 8; k++) {
+                int qv = it->GetQuality(k);
+                if (qv)
+                    grt[(unsigned char)qv] = true;
+            }
+            if (gcount)
+                withq++;
+            bool diff = false;
+            for (int c = 0; c < 256; c++)
+                if (gen[c] != grt[c])
+                    diff = true;
+            if (diff)
+                mismatch++;
+            delete it;
+        }
+
+    Error("PERK_QUALITY_PROBE items=%d withq=%d mismatch=%d nocapture=%d",
+        built, withq, mismatch, nocapture);
 }
 
 static void GrantPerks(PerkSet& p, Player *target)
