@@ -1,0 +1,44 @@
+# inc-6fii: make a Human Paladin with the Shield Expert feat and stop in the
+# arrival room, saving once so INCURSION_CHAR_PROBE=1 writes logs/charprobe.txt.
+#
+# The bug: Universal Gear (lib/races.irh) grants a kite shield to any character
+# with FT_SHIELD_FOCUS or FT_SHIELD_EXPERT, and the Paladin class kit
+# (lib/classes.irh:1651-1652) already grants a kite shield, so a Shield Expert
+# paladin ends up with a stack of "2 kite shields". This script builds that
+# character so the charprobe sheet can be read.
+#
+# Reconstructed here from the class-kit scripts (tools/keys/kit-paladin.keys):
+# the class kit scripts stop in the arrival room and read INCURSION_KIT_PROBE;
+# this one instead saves once, the action that makes INCURSION_CHAR_PROBE write
+# logs/charprobe.txt (Game::SaveGame, src/Registry.cpp:1105-1111). Race and
+# class are named, not counted; Shield Expert is named on the feat menu.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Human"
+@choose "Athletics"
+@choose "Diplomacy"
+@choose "Paladin"
+@choose "Erich"   # the god the class offers
+a       # Attributes: the first offered set
+a       # Alignment: the first offered
+
+@choose "Shield Expert"   # the feat the bug needs (needs Shield Proficiency)
+@while "Choose a feat" a  # any remaining first-level feats
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+@while "wish to worship" y
+@while "personality archetype" a
+
+ESC*3   # dismiss the arrival room description
+s*3     # one turn, so the session counts as played
+
+ESC               # System Menu -- NOT a cancel; see load-char-sheet.keys
+@expect "System Menu"
+b                 # [b] Save and Continue: writes logs/charprobe.txt
+@dump:saved

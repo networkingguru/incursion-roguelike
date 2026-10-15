@@ -364,6 +364,154 @@ static bool KitIsSpareWeapon(Player *p, Item *it)
     return true;
 }
 
+/* A new character's starting inventory must not hold two copies of the same
+   base item, from whatever source (class kit, race kit, Universal Gear, perks,
+   god gifts); when copies collide creation keeps the better one and discards
+   the rest (inc-6fii). "Same" is the same base item (same iID), whatever its
+   plus or qualities. The kinds below may repeat or stack and are exempt: gold,
+   food, potions, scrolls, ammunition, thrown-only weapons, herbs, mushrooms,
+   dusts and light sources. Every other kind appears at most once. */
+static bool KitDedupeExempt(Item *it)
+{
+    switch (it->Type)
+    {
+    case T_COIN: case T_FOOD: case T_POTION: case T_SCROLL:
+    case T_MISSILE: case T_HERB: case T_MUSH: case T_DUST: case T_LIGHT:
+        return true;
+    default:
+        /* Thrown-only weapons may stack; a thrown dagger is not thrown-only
+           and follows the same test as KitIsSpareWeapon/KitQuickUse. */
+        return it->isType(T_WEAPON) && it->isGroup(WG_THROWN) &&
+               !it->isGroup(WG_DAGGERS);
+    }
+}
+
+/* True when copy `cand` is the better of two copies of one base item: higher
+   GetPlus, then one carrying an effect over one without, then (both being
+   ties) the earlier copy wins, so callers scanning a snapshot in order reach
+   the same keeper. DedupeStartingKit uses one keeper for a whole run, and its
+   container rescue must agree with it, or an item could be moved into a copy
+   that the pass then destroys. */
+static bool KitBetterCopy(Item *cand, Item *best)
+{
+    return cand->GetPlus() > best->GetPlus() ||
+           (cand->GetPlus() == best->GetPlus() &&
+            cand->eID != 0 && best->eID == 0);
+}
+
+/* Move every item out of a duplicate container and into the copy that will be
+   kept, before the duplicate is destroyed. An item the kept container will not
+   accept within its normal limits goes to the character instead. The invariant
+   this protects: a container is never destroyed while it still holds an item,
+   so Remove(true) can never take the contents with it (inc-6fii). The contents
+   are collected first; a removal would otherwise reset the walk's cursor. */
+static void KitDrainContainer(Player *p, Container *keep, Container *doomed)
+{
+    Item *it, *snap[KIT_ARR_MAX]; int sn, k; hObj h;
+
+    sn = 0;
+    for (h = doomed->Contents; h && sn < KIT_ARR_MAX; h = oItem(h)->Next)
+        snap[sn++] = oItem(h);
+    for (k = 0; k < sn; k++)
+    {
+        it = snap[k];
+        SetSilence();
+        it->Remove(false);
+        if (keep->FitsNormal(it, p->HasFeat(FT_FASTER_THAN_THE_EYE))
+            == Container::FITS)
+            Throw(EV_INSERT,p,NULL,keep,it);
+        UnsetSilence();
+        /* Insert either appended `it` to the keeper or merged it into an
+           identical child, which destroys `it` (Item::TryStack). Only an item
+           that went neither way -- the keeper refused it -- goes to the
+           character, so a merged stack is never handed back to GainItem. */
+        if (it->GetParent() != (Thing*)keep && !(it->Flags & F_DELETE))
+            p->GainItem(it,true);
+    }
+}
+
+/* Remove duplicate base items from the starting kit (inc-6fii). Called once at
+   the end of Player::Create, after all gear is granted and before the kit is
+   arranged. The inventory is collected first: KitSnapshot covers worn, carried
+   and pack contents, and the removal calls below reset the static inventory
+   cursor. A non-exempt stack (one iID, Quantity > 1) is cut to a single unit;
+   several items with the same iID keep the better one -- higher GetPlus, then
+   one with an effect over one without, then the first in inventory order -- and
+   the rest are removed from the character and destroyed.
+
+   A duplicate that is a container (T_CONTAIN: backpack, pouch, quiver) must
+   not be destroyed with its contents: the rescue pass moves each doomed
+   container's contents into the keeper first, then the inventory is collected
+   again so the moved items -- now loose -- take their turn in the duplicate
+   pass instead of vanishing with the container. */
+static void DedupeStartingKit(Player *p)
+{
+    Item *it, *snap[KIT_ARR_MAX]; int sn, a, b;
+
+    if (!KitSnapshot(p,snap,KIT_ARR_MAX,&sn))
+        return;
+
+    /* Pass one: drain every doomed duplicate container into its keeper. */
+    for (a=0;a<sn;a++)
+    {
+        Item *keep = snap[a];
+        if (!keep || KitDedupeExempt(keep) || !keep->isType(T_CONTAIN))
+            continue;
+        for (b=a+1;b<sn;b++)
+        {
+            Item *cand = snap[b];
+            if (!cand || cand->iID != keep->iID || KitDedupeExempt(cand))
+                continue;
+            if (KitBetterCopy(cand, keep))
+                keep = cand;
+        }
+        for (b=a;b<sn;b++)
+            if (snap[b] && snap[b] != keep && !KitDedupeExempt(snap[b]) &&
+                snap[b]->iID == keep->iID)
+                KitDrainContainer(p, (Container*)keep, (Container*)snap[b]);
+    }
+
+    /* Pass two: the inventory changed above, so collect it again. Contents the
+       rescue freed now appear as loose items and are deduped like any other. */
+    if (!KitSnapshot(p,snap,KIT_ARR_MAX,&sn))
+        return;
+
+    /* A single non-exempt stack of one base item is cut to one unit. */
+    for (a=0;a<sn;a++)
+        if (!KitDedupeExempt(snap[a]) && snap[a]->GetQuantity() > 1)
+            snap[a]->SetQuantity(1);
+
+    /* Among several items with the same iID, keep the best and destroy the
+       rest. GetInv walks pack contents too, so a packed copy collides with a
+       worn or carried one; a removed item is skipped by later comparisons. */
+    for (a=0;a<sn;a++)
+    {
+        Item *best = snap[a];
+        if (!best || KitDedupeExempt(best))
+            continue;
+        for (b=a+1;b<sn;b++)
+        {
+            Item *cand = snap[b];
+            if (!cand || cand->iID != best->iID || KitDedupeExempt(cand))
+                continue;
+            if (KitBetterCopy(cand, best))
+                best = cand;
+        }
+        for (b=a;b<sn;b++)
+            if (snap[b] && snap[b] != best && !KitDedupeExempt(snap[b]) &&
+                snap[b]->iID == best->iID)
+            {
+                /* inc-6fii: never destroy a container that still holds an
+                   item. Pass one drains duplicates, so this should not fire. */
+                if (snap[b]->isType(T_CONTAIN) &&
+                    ((Container*)snap[b])->Contents)
+                    continue;
+                snap[b]->Remove(true);
+                snap[b] = NULL;
+            }
+    }
+}
+
 /* Best melee candidate by the design's key, excluding one item. `skip` may be
    NULL. Returns NULL when none remains. */
 static Item* KitBestMelee(Player *p, Item *skip)
@@ -1187,6 +1335,11 @@ SkipThisFocus:;
        daggers out of hand and let the first weapon in inventory hold the slot.
        ArrangeStartingKit now implements the settled design (inc-zzwm rules
        1-3); a dagger may win and be wielded. */
+    /* upstream: the original data gives a shield-feat Paladin or Warrior a kit
+       shield and a Universal Gear shield, so the character started with two;
+       upstream because it is plain resource data and misbehaves identically on
+       Win32; Observed; tracking inc-6fii; not sent. */
+    DedupeStartingKit(this);
     ArrangeStartingKit(this);
 
     while (SpellSlots[0] + BonusSlots[0] > SpellsLearned[0])

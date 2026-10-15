@@ -8,7 +8,7 @@
 # test checks bow names. So a kit's first weapon wins, a proficient shield rides
 # on a shoulder, and belt pouches fill with gold, tools, scrolls and spares.
 #
-# THE DESIGN (five rules, derived per build from the probe's facts -- see
+# THE DESIGN (six rules, derived per build from the probe's facts -- see
 # tools/check_kit_arrangement.py for the exact reading):
 #   R1 worn gear is worn when proficient; non-proficient armour/shield is packed
 #   R2 the weapon in hand has the top WepSkill, tie -> higher average damage
@@ -18,6 +18,8 @@
 #   R4 bow on a shoulder; thrown weapons in a pouch; every other weapon packed
 #   R5 pouches hold only potions, ammunition, thrown weapons, wands, herbs,
 #      dusts, mushrooms; quick-use beyond five pouches goes to the pack
+#   R6 no base item outside the exempt kinds appears more than once or with
+#      qty > 1 (inc-6fii)
 #
 # THE ORACLE is INCURSION_KIT_PROBE (src/Create.cpp KitProbe): at the end of
 # creation it logs one KIT_ITEM line per stack to logs/errors.log with its slot,
@@ -89,5 +91,5 @@ if [ "$UNMEAS" -ne 0 ]; then
     echo "INCONCLUSIVE: a build could not be measured or did not exercise its kit."
     exit 2
 fi
-echo "PASS: all five kit rules hold on all $N builds."
+echo "PASS: all six kit rules hold on all $N builds."
 exit 0

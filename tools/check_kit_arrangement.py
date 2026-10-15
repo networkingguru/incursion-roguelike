@@ -12,7 +12,7 @@ asks for FROM those facts, so the check never hard-codes a class's kit. A kit
 that a build did not get (seed, rolled gear) is reported as "not exercised",
 never as a pass.
 
-The five rules (inc-zzwm settled design):
+The six rules (inc-zzwm settled design; R6 inc-6fii):
   R1 basic    proficient worn gear is worn; non-proficient armour/shield is in
               the pack
   R2 weapon   the melee weapon in hand has the highest WepSkill; tie -> higher
@@ -27,6 +27,11 @@ The five rules (inc-zzwm settled design):
               weapon in the pack
   R5 pouches  belt pouches hold only quick-use items; quick-use beyond five
               pouches goes to the pack
+  R6 dedupe   no base item outside the exempt kinds (gold, food, potions,
+              scrolls, ammunition, thrown-only weapons, herbs, mushrooms,
+              dusts, light sources) appears more than once or with qty > 1.
+              "Same base item" is the probe's name= (NAME(iID), the base name),
+              so the rule holds wherever a copy sits, pack contents included.
 
 Exit 0 all rules hold, 1 a rule failed, 2 the run proved nothing.
 """
@@ -63,6 +68,13 @@ WORN_SLOTS = {
 }
 QUICK = {T["T_POTION"], T["T_MISSILE"], T["T_WAND"], T["T_HERB"],
          T["T_DUST"], T["T_MUSH"]}
+
+# R6: kinds that may repeat or stack in the starting kit (inc-6fii). Mirrors
+# KitDedupeExempt in src/Create.cpp; thrown-only weapons are added per item by
+# Item.exempt below.
+EXEMPT_TYPES = {T["T_COIN"], T["T_FOOD"], T["T_POTION"], T["T_SCROLL"],
+                T["T_MISSILE"], T["T_HERB"], T["T_MUSH"], T["T_DUST"],
+                T["T_LIGHT"]}
 
 ITEM_RE = re.compile(
     r'KIT_ITEM sl=(-?\d+) slot=(.*?)\s+name="(.*?)" type=(\d+) group=(\d+) '
@@ -153,6 +165,11 @@ class Item:
     def quick(self):
         return self.type in QUICK or self.thrown_only
 
+    @property
+    def exempt(self):
+        """R6: this kind may repeat or stack in the starting kit."""
+        return self.type in EXEMPT_TYPES or self.thrown_only
+
 
 def parse(path, siz_limit):
     head, items, pack = None, [], None
@@ -184,7 +201,7 @@ def best_of(units):
 
 def evaluate(head, items, pack=None):
     race, cls, siz, twf, packrat = head
-    res = {r: [] for r in ("R1", "R2", "R3", "R4", "R5")}
+    res = {r: [] for r in ("R1", "R2", "R3", "R4", "R5", "R6")}
     seen = set()  # rules the build actually exercised
 
     def fail(rule, msg):
@@ -353,6 +370,29 @@ def evaluate(head, items, pack=None):
         fail("R5", "%d quick-use stacks, %d pouches full of them; expected %d" % (len(quick), got, want))
     if len(quick) > 5:
         seen.add("R5-overflow")
+
+    # ---- R6: no duplicate base item outside the exempt kinds ------------
+    # "Same base item" is the probe's name= (NAME(iID)); qty>1 on a non-exempt
+    # kind is the same defect as a second copy, and a stack is one line with
+    # qty counted. A kind is exercised once any non-exempt item is present.
+    counted = {}
+    for i in items:
+        if i.type == T["T_COIN"]:
+            seen.add("R6-exempt-coin")
+        if i.exempt:
+            continue
+        counted.setdefault(i.name, []).append(i)
+    if counted:
+        seen.add("R6")
+    for name, group in sorted(counted.items()):
+        if len(group) > 1:
+            fail("R6", "%s appears %d times (slots %s); every non-exempt base "
+                 "item may appear at most once" %
+                 (name, len(group), [g.sl for g in group]))
+        for i in group:
+            if i.qty > 1:
+                fail("R6", "%s has qty %d; every non-exempt base item may "
+                     "appear at most once" % (name, i.qty))
     return res, seen
 
 
@@ -405,8 +445,8 @@ def selftest():
     # 1200 against a 1000 pack limit; FIT_PACK can hold it.
     HEAVY_PACK = (0, 1000, 50, 5, 4)
     FIT_PACK = (0, 2000, 50, 5, 4)
-    heavy = lambda sl: _line(sl, "glaive", W, 2, eid=1, size=4, weight=1200,
-                             sd=(1, 10, 0))
+    heavy = lambda sl, nm="glaive": _line(sl, nm, W, 2, eid=1, size=4,
+                                          weight=1200, sd=(1, 10, 0))
 
     cases = [
         ("right arrangement", kit(), 0, None),
@@ -443,9 +483,9 @@ def selftest():
         ("over-limit spare in the pack with a free shoulder",
          kit(extra=[heavy(PACK)]), 0, "R4", 0, (1200, 1000, 50, 6, 4)),
         ("two over-limit spares fill both shoulders",
-         kit(extra=[heavy(4), heavy(5)]), 0, None, 0, HEAVY_PACK),
+         kit(extra=[heavy(4), heavy(5, "halberd")]), 0, None, 0, HEAVY_PACK),
         ("third over-limit spare packed with both shoulders full",
-         kit(extra=[heavy(4), heavy(5), heavy(PACK)]),
+         kit(extra=[heavy(4), heavy(5, "halberd"), heavy(PACK, "bec de corbin")]),
          0, None, 0, HEAVY_PACK),
         ("over-limit spare on a shoulder although the pack fits it",
          kit(extra=[heavy(4)]), 0, "R4", 0, FIT_PACK),
@@ -464,8 +504,15 @@ def selftest():
         # candidate, so its higher skill wins the hand.
         ("reach weapon that strikes near may hold the hand",
          kit(sword=-2, extra=[_line(2, "preternatural longspear", W, 3, reach=1,
-                                    near=1, sd=(1, 8, 0))]),
-         0, None),
+                                     near=1, sd=(1, 8, 0))]),
+          0, None),
+        # inc-6fii R6: a duplicate non-exempt base item is red wherever it sits,
+        # and a stacked non-exempt item is red on its qty. Two potions, by
+        # contrast, are exempt and stay green.
+        ("two kite shields (duplicate base item)",
+         kit(extra=[_line(PACK, "kite shield", SH, 1)]), 0, "R6"),
+        ("two potions (exempt kind)",
+         kit(extra=[_line(PACK, "potion", PO, 0)]), 0, None),
     ]
     bad = 0
     for case in cases:
