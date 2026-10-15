@@ -2288,6 +2288,27 @@ EvReturn Player::SpendHours(int16 minHours, int16 maxHours, int16 &hoursSpent, b
     return DONE;
 }
 
+/* inc-mknk: INCURSION_REVERIE_PROBE. Armed only by ReverieRestProbe() below,
+   never by play. Hooks in Player::Rest: RestProbeRaw (after
+   RestEncounterChance, before any Reverie cut) and RestProbeFinal (after the
+   watch subtraction, before the encounter roll). tools/check_reverie_rest.sh. */
+static bool  RestProbeArmed = false;
+static int16 RestProbeRollVal = 0;
+static int16 RestProbeRawVal = 0;
+
+static void RestProbeRaw(int16 &Chance) {
+    if (!RestProbeArmed) return;
+    if (Chance == 0) Chance = 100;
+    RestProbeRawVal = Chance;
+}
+
+static void RestProbeFinal(Player *p, int16 &Roll, int16 Chance) {
+    if (!RestProbeArmed) return;
+    Roll = RestProbeRollVal;
+    Error("REVERIE_PROBE rest roll=%d raw=%d chance=%d reverie=%d",
+        (int)Roll, (int)RestProbeRawVal, (int)Chance, p->HasAbility(CA_REVERIE) ? 1 : 0);
+}
+
 EvReturn Player::Rest(EventInfo &e) {
     int16 i, j, pc, Roll, Chance, Percent;
     Creature *in_sight = NULL; const char* wakeSafely;
@@ -2333,11 +2354,22 @@ EvReturn Player::Rest(EventInfo &e) {
     if (e.EParam & REST_DUNGEON) {
 
         RestEncounterChance(0, PartyID, in_sight, Chance);
+        RestProbeRaw(Chance);
+        /* upstream: inc-mknk: In Reverie, a character's rest encounter chance
+           is cut to a quarter and an interrupted rest wakes safely, as the elf
+           race text in lib/races.irh promises; the wakeSafely chain below also
+           grants this.
+           Upstream's defect: v0.6.5B (commit 7b8504a3) carries the same race text
+           and no Reverie check in the rest code; plain game logic, it would
+           behave the same on Win32. Evidence tier Observed
+           (tools/check_reverie_rest.sh); tracking id inc-mknk; not sent. */
+        if (HasAbility(CA_REVERIE))
+            Chance /= 4;
 
         if (in_sight) {
             IPrint(Format("You can't break camp while there's hostiles (e.g., %s) in plain sight!", (const char*)in_sight->Name(0)));
             return ABORT;
-        } else if (!MyTerm->yn("Confirm rest in dungeon? (odds of interruption unknown)"))
+        } else if (!RestProbeArmed && !MyTerm->yn("Confirm rest in dungeon? (odds of interruption unknown)"))
             return ABORT;
     }
 
@@ -2403,6 +2435,8 @@ EvReturn Player::Rest(EventInfo &e) {
                 wakeSafely = "Your vigilance provides forewarning!";
         }
     }
+
+    RestProbeFinal(this, Roll, Chance);
 
     if (Roll < Chance && !(e.EParam & REST_SAFE))
         Percent = 10 + random(81);
@@ -2676,6 +2710,8 @@ EvReturn Player::Rest(EventInfo &e) {
             wakeSafely = "Your uncanny instincts provide forewarning!";
         else if (HasFeat(FT_LIGHT_SLEEPER) && !wakeSafely)
             wakeSafely = "As danger looms, you wake alert and ready!";
+        else if (HasAbility(CA_REVERIE) && !wakeSafely)
+            wakeSafely = "Your reverie breaks at once, and you are ready!";
 
         if (wakeSafely) {
             IPrint(wakeSafely);
@@ -2701,6 +2737,38 @@ EvReturn Player::Rest(EventInfo &e) {
         IPrint("You get back on your mount.");
 
     return DONE;
+}
+
+/* inc-mknk: drives the real Player::Rest for each of Reverie off and on, then
+   reports. Called from Game::Play (src/Main.cpp); off unless
+   INCURSION_REVERIE_PROBE is set. */
+void Player::ReverieRestProbe() {
+    Player *pl = this;
+    if (!getenv("INCURSION_REVERIE_PROBE")) return;
+    uint8 old = pl->Abilities[CA_REVERIE];
+    int16 PartyID, raw; Creature *seen; EventInfo e;
+    for (int rev = 0; rev < 2; rev++) {
+        pl->Abilities[CA_REVERIE] = rev;
+        seen = NULL;
+        pl->RestEncounterChance(0, PartyID, seen, raw);
+        Error("REVERIE_PROBE raw reverie=%d chance=%d", rev, (int)raw);
+    }
+    RestProbeArmed = true;
+    for (int pass = 0; pass < 2; pass++)
+        for (int rev = 0; rev < 2; rev++) {
+            pl->Abilities[CA_REVERIE] = rev;
+            RestProbeRollVal = pass ? -1 : 1000;
+            e.Clear();
+            e.EParam = REST_DUNGEON | REST_INSTANT | REST_NOIDENT | REST_NOMSG;
+            pl->Rest(e);
+            if (pass)
+                Error("REVERIE_PROBE wake reverie=%d sleeping=%d timeout=%d",
+                    rev, pl->HasStati(SLEEPING) ? 1 : 0, (int)pl->Timeout);
+            pl->RemoveStati(SLEEPING);
+            pl->Timeout = 0;
+        }
+    RestProbeArmed = false;
+    pl->Abilities[CA_REVERIE] = old;
 }
 
 void Map::DaysPassed() {
