@@ -1,0 +1,53 @@
+# inc-1brg: Storycraft gives a first plus to a +0 weapon/armor, after a yes/no
+# prompt. Read by tools/check_storycraft.sh (seed 1). Starts from the frozen
+# orc bard tools/fixtures/chars/orc-bard-reapply-seed1.sav, loaded already in
+# play: 5 unspent Storycraft charges, carrying a plain (+0) suit of orcish
+# studded leather, worn +0 noble attire (clothing, not armor), and Lenses +3 of the Scholar (control:
+# a non-weapon that already has a plus).
+# The character sheet is long; Storycraft's line sits below the first screen,
+# so each sheet read scrolls with PGDN until "unallocated" shows.
+d
+@until "unallocated" PGDN
+@dump:sheet-before
+ESC
+
+u
+@choose "Storycraft"
+@choose "40 orcish sheaf arrows"
+@dump:prompt-arrows
+n
+d
+@until "unallocated" PGDN
+@dump:sheet-after-arrows
+ESC
+
+u
+@choose "Storycraft"
+@choose "a suit of orcish studded leather"
+@dump:prompt-no
+n
+@dump:after-no
+i
+@dump:inventory-after-no
+ESC
+d
+@until "unallocated" PGDN
+@dump:sheet-after-no
+ESC
+
+u
+@choose "Storycraft"
+@dump:augment-menu-2
+@choose "a suit of orcish studded leather"
+@dump:prompt-yes
+y
+@dump:after-yes
+@while "[more]" SPACE
+d
+@until "unallocated" PGDN
+@dump:sheet-after-yes
+ESC
+i
+@dump:inventory-after-yes
+ESC
+@quit

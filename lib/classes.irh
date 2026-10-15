@@ -384,15 +384,23 @@ Class "Bard"
       the very fabric of legend with their words.
       Needless to say, this gives them no small degree
       of power over magical items and artifacts.\n
-      __In game terms, every bard level taken after the
-      first gives a
-      character the ability to increase the magical
-      plus of any single magical item by one. This can
-      only be done if doing so would not increase the
-      item's Item Level to a greater total than the
-      bard's [Bard Level + Charisma modifier]. The
-      increase is permanent and irreversable, and is
-      not refunded if the item is destroyed.\n
+      __In game terms, every bard level after the
+      first gives the bard one Storycraft charge.
+      Each charge raises the magical plus of one item
+      by one. A bard can give a first plus to any
+      weapon, armor or shield, magical or plain. Any
+      other item must already have a plus. Storycraft
+      cannot raise an item above +5. It cannot raise
+      the item's Item Level above the bard's [Bard
+      Level + Charisma modifier], and never above 20.
+      It does not work on cursed items, potions or
+      scrolls. It also does not work on an item whose
+      magic, plus and blessing are not all identified.
+      A charge costs no experience, gold or time, and
+      the game asks you to confirm before it spends
+      one. The increase is permanent and irreversible.
+      The charge is not refunded if the item is
+      destroyed.\n
       __[ In the full-release version of Incursion,
       this will only be possible in a tavern, where
       the bard can tell stories to an appreuciative
