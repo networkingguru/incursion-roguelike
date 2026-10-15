@@ -65,11 +65,14 @@ DOWN*10 # Freeze Monsters is the eleventh row; the cursor opens on the first
 SPACE   # Freeze Monsters: NO -> YES
 ESC
 
-# Climb on. chargen-paladin.keys' header records that the sacred mount is the
-# 'q' immediately WEST of the '@' on this seed.
+# Climb on. The prompt's cursor starts on the player, and an arrow steps round
+# the ring of creatures in reach by bearing (src/Term.cpp, Q_TAR case): RIGHT
+# goes clockwise to the nearest one. The sacred mount spawns beside the '@' and
+# is the nearest creature, so RIGHT picks it wherever it stands. Do not use LEFT
+# here: that worked only while the mount happened to be west of the '@'.
 y
 @choose "Mount"
-LEFT ENTER
+RIGHT ENTER
 @dump:mounted
 SPACE SPACE
 

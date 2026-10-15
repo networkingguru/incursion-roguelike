@@ -50,11 +50,17 @@ check_mutation lib/alchemy.irh \
 
 check_run tools/keys/tanglefoot-mount.keys 4
 
+# The sacred mount's name is drawn from the RNG stream, so it changes whenever
+# level generation does. Read it off the mount's own section and hold the other
+# screen to that same name; the oracle is unchanged.
+MOUNT_NAME="$(sed -n 's/.*horse named \([A-Za-z]*\) .*/\1/p' "$CHECK_RUN"/logs/screens/*-mount-stati.txt | head -1)"
+MOUNT_NAME="${MOUNT_NAME:-<no mount name on screen>}"
+
 # --- the mount is the one that is stuck -----------------------------------
 check_screens '*-mount-stati'
 check_expect "----MOUNT----" \
     "the dump reached the mount's own section"
-check_expect "horse named Keeper" \
+check_expect "horse named $MOUNT_NAME" \
     "and that section is the sacred mount, not some other creature"
 check_expect "STUCK from SS ATTK" \
     "THE RULE, positive half: the mount carries STUCK"
@@ -67,7 +73,7 @@ check_screens '*-rider-stati'
 check_expect "Stati (" \
     "the rider's stati list drew"
 check_expect "MOUNTED from SS MISC" \
-    "and it is his list: it names Keeper as the mount he is on"
+    "and it is his list: it names the mount he is on"
 check_expect "Inventory:" \
     "and it drew whole, so an absent STUCK is absence and not a cut-off screen"
 check_reject "STUCK" \
@@ -75,7 +81,7 @@ check_reject "STUCK" \
 
 # --- and the player is told so, in his own words ---------------------------
 check_screens '*-crossed'
-check_expect "Keeper seems to be stuck." \
+check_expect "$MOUNT_NAME seems to be stuck." \
     "the message line names the mount as the creature the strands caught"
 check_reject "Stuck" \
     "and no status line on that screen says the rider is Stuck"
