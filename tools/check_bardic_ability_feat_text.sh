@@ -4,6 +4,7 @@
 # additional Storycraft plusses", but AbilityLevel(CA_STORYCRAFT) adds
 # IntStudy[STUDY_BARDIC]*2 to the effective level, so each study does give
 # one more Storycraft plus to spend. This is a prose-only check, no build.
+# stale-quote-ok: --prove-red restores the old feat text in a copy to prove the check goes red.
 
 ROOT="$(dirname "$0")/.."
 FEATS="$ROOT/src/FeatTab.cpp"
