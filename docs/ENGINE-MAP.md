@@ -22,7 +22,7 @@ are zero bytes and dead, not stubs. Purposes are read from each file's header co
 | Creatures | `Creature.cpp:1`, `Monster.cpp:1` AI, `Player.cpp:1` keyboard switch, `Create.cpp:1`, `Values.cpp:1`, `Status.cpp:1`, `Move.cpp:1`, `Fight.cpp:1`, `Skills.cpp:1`, `FeatTab.cpp:1`, `Social.cpp:1`, `Target.cpp:1` |
 | Items, magic | `Item.cpp:1`, `Inv.cpp:1`, `Magic.cpp:1`, `Effects.cpp:1`, `Prayer.cpp:1` |
 | UI | `Term.cpp:1` and `TextTerm.cpp:1` are the portable `TextTerm` class; `Managers.cpp:1` screens, `Sheet.cpp:1`, `Message.cpp:1`, `Help.cpp:1`, `Debug.cpp:1` |
-| Script tools | `yygram.cpp:1` generated parser, `Tokens.cpp:1` generated lexer, `RComp.cpp:2` driver, `VMachine.cpp:1` interpreter, `Art.cpp:1` ACCENT runtime, `cpp1.c`–`cpp6.c` DECUS preprocessor. `RComp.cpp` and `Art.cpp` sit wholly inside `#ifdef DEBUG`, so a release build cannot compile a module (`src/TextTerm.cpp:64`) |
+| Script tools | `yygram.cpp:1` generated parser, `Tokens.cpp:1` generated lexer, `RComp.cpp:2` driver, `VMachine.cpp:1` interpreter, `Art.cpp:1` ACCENT runtime, `cpp1.c`–`cpp6.c` DECUS preprocessor. `RComp.cpp` and `Art.cpp` sit wholly inside `#ifdef DEBUG`, so a release build cannot compile a module (`src/TextTerm.cpp:65-66`) |
 
 ## 2. Keystroke to redrawn screen
 
