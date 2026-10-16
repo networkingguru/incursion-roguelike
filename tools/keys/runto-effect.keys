@@ -1,0 +1,30 @@
+# Case E of tools/check_runto_hazards.sh, bd inc-vmpk: Run to Point over a
+# hazard, every prompt answered yes. Same corridor as runto-hazard.keys. The
+# six [y] cover the longest chain: "No safe path found", "revealing terrain" or
+# similar, the hazard's own confirm, and a "Do you want to stop" prompt if one
+# opens after the effect. A [y] left over is read as a command in play.
+#
+#   INCURSION_RUNTO_PROBE=1 INCURSION_RUNTO_STAGE=T|D \
+#   INCURSION_RUNTO_TRAP=<trap> INCURSION_RUNTO_TERRAIN=<terrain> \
+#   INCURSION_FORCE_SAVE_ROLL=<1..20> INCURSION_RUNTO_SKILL_ROLL=<1..20> \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#       tools/headless.sh tools/keys/runto-effect.keys 3
+
+.*2
+l o
+RIGHT*10
+r
+y
+@dump:y1
+y
+@dump:y2
+y
+@dump:y3
+y
+@dump:y4
+y
+@dump:y5
+y
+@dump:end
+@quit

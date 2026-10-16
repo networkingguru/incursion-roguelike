@@ -18,7 +18,7 @@
      void Creature::ExtendedAction()
      void Creature::HaltAction(bool force_halt)
      void Player::RunDir(Dir d)
-     bool Player::RunTo(int16 tx, int16 ty)
+     bool Player::RunTo(int16 tx, int16 ty, bool *declined)
      void Creature::DoTurn()
      EvReturn Character::Event(EventInfo &e)
      bool Creature::isBoosted(int8 at)
@@ -1348,7 +1348,11 @@ void Creature::ExtendedAction() {
             if (!xy)
             { RemoveStati(ACTING); return; }
             i = DirTo(xy%256,xy/256);
+            { extern void RunToProbe(const char *, ...);
+              RunToProbe("step from=%d,%d to=%d,%d\n", (int)x, (int)y, xy%256, xy/256); }
             r = ThrowDir(s->Val,(Dir)i,this,NULL,oThing(s->h));
+            { extern void RunToProbe(const char *, ...);
+              RunToProbe("step now=%d,%d r=%d hp=%d acting=%d\n", (int)x, (int)y, (int)r, (int)cHP, (int)HasStati(ACTING)); }
             s->Mag++;
         } else if (s->Mag || s->Val == EV_MOVE)
             r = ThrowDir(s->Val,s->Mag,this,NULL,oThing(s->h));
@@ -1394,17 +1398,39 @@ void Player::RunDir(Dir d)
   }
 
 
-bool Player::RunTo(int16 tx, int16 ty)
+bool Player::RunTo(int16 tx, int16 ty, bool *declined)
   {
     if (HasStati(ACTING))
       return false;
-    if (!m->ShortestPath((uint8)x,(uint8)y,(uint8)tx,(uint8)ty,this,DF_ALL_SAFE) &&
-        !m->ShortestPath((uint8)x,(uint8)y,(uint8)tx,(uint8)ty,this,DF_IGNORE_TRAPS) &&
-        !m->ShortestPath((uint8)x,(uint8)y,(uint8)tx,(uint8)ty,this,DF_IGNORE_TRAPS|DF_IGNORE_TERRAIN))
-      return false;
-    GainPermStati(ACTING,NULL,SS_MISC,EV_MOVE,50,0);
-    Timeout++;
-    return true;
+    extern void RunToProbe(const char *, ...);
+    RunToProbe("runto from=%d,%d to=%d,%d\n", (int)x, (int)y, (int)tx, (int)ty);
+    if (m->ShortestPath((uint8)x,(uint8)y,(uint8)tx,(uint8)ty,this,DF_ALL_SAFE))
+      {
+        RunToProbe("runto accepted\n");
+        GainPermStati(ACTING,NULL,SS_MISC,EV_MOVE,50,0);
+        Timeout++;
+        return true;
+      }
+    if (m->ShortestPath((uint8)x,(uint8)y,(uint8)tx,(uint8)ty,this,DF_IGNORE_TRAPS) ||
+        m->ShortestPath((uint8)x,(uint8)y,(uint8)tx,(uint8)ty,this,DF_IGNORE_TRAPS|DF_IGNORE_TERRAIN))
+      {
+        /* upstream: base-code defect. Observed. inc-vmpk. Not sent.
+             With no safe route, RunTo fell back to a route over found traps
+           or dangerous terrain and started it unasked. The player now chooses. */
+        if (!yn("No safe path found: look for dangerous paths?", false))
+          {
+            RunToProbe("runto declined\n");
+            if (declined)
+              *declined = true;
+            return false;
+          }
+        RunToProbe("runto accepted\n");
+        GainPermStati(ACTING,NULL,SS_MISC,EV_MOVE,50,0);
+        Timeout++;
+        return true;
+      }
+    RunToProbe("runto refused\n");
+    return false;
   }
 
 /* Notes of Poison and Disease:

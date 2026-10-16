@@ -533,6 +533,7 @@ class Map: public Object
 #define RTF_UNEXPLORED  2   /* a corridor exists but crosses unremembered ground */
 #define RTF_HOSTILE     3   /* a perceived hostile stands on every route */
 #define RTF_DOOR        4   /* an impassable door blocks every route */
+#define RTF_TOOSMALL    5   /* a region too small for the runner blocks every route */
     int    RunToFailReason(Creature *runner, int16 tx, int16 ty);
 
     /* Encounter Generation */

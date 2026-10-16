@@ -1343,7 +1343,7 @@ class Player: public Character
       virtual void NotifyGone(hObj h);
 	 	  virtual void ChooseAction();
 	 	  virtual void UseItemMenu(const char*msg, const char*haveno, int16 ty);
-      bool RunTo(int16 x, int16 y);
+      bool RunTo(int16 x, int16 y, bool *declined = NULL);
       void RunDir(Dir d);
       void CalcVision();
       virtual void DumpQueue(int16 Queue);
