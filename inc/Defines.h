@@ -330,6 +330,7 @@ typedef signed int        hObj;
 #define IF_DECIPHERED  0x0100
 #define IF_GHOST_TOUCH 0x0200
 #define IF_REAPPLYING  0x0400
+#define IF_LEGEND_ROLLED 0x0800
 
 /* The core game objects */
 #define T_GAME     1

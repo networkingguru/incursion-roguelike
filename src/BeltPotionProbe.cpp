@@ -34,7 +34,7 @@ static void bpCompare(const char *stage, Item *belt, Item *floor) {
     bpDump(stage, "belt", belt);
     bpDump(stage, "floor", floor);
     fprintf(bpLog, "MATCH stage=%s equal=%d ignored_IFlags=%u LOOT_CLAIM=%d\n",
-        stage, *belt == *floor, unsigned(IF_WORN|IF_INTUITED|IF_DECIPHERED), LOOT_CLAIM);
+        stage, *belt == *floor, unsigned(IF_WORN|IF_INTUITED|IF_DECIPHERED|IF_LEGEND_ROLLED), LOOT_CLAIM);
     // A detached copy tests the claim alone; the real floor item is untouched.
     if (floor->HasStati(LOOT_CLAIM)) {
         Item *copy = new Item(floor);

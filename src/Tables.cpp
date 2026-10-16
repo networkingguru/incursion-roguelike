@@ -3885,14 +3885,16 @@ struct AbilityInfoStruct AbilInfo[] = {
     "Against an undead target, it deals the same amount as holy damage "
     "instead." },
   { CA_LEGEND_LORE, "Legend Lore",
-    "Automatically identifies magic items you find, without a spellbook or "
-    "an identify spell. Each item is checked against 10 plus your ability "
-    "level plus your Intelligence modifier, minus the item's level; a "
-    "positive result reveals it is magical, and a larger result also "
-    "reveals whether it is cursed, blessed, its full nature, and its "
-    "numeric bonus, in that order. It does not work on corpses, chests, "
-    "coins, or statues. It also raises nine Knowledge skills by half your "
-    "ability level, rounded down." },
+    "Identifies magic items you find, without a spellbook or an identify "
+    "spell. The first time you see or pick up an unidentified magic item, "
+    "you make one Knowledge (Magic) check against the item's level. The "
+    "more your check beats that level, the more you learn, in this order: "
+    "its nature, whether it is cursed, whether it is blessed, its magic, "
+    "its plus, its second plus, and whether it is an artifact. Each item "
+    "allows only one such check. It does not work on corpses, chests, "
+    "coins, or statues. It adds your full ability level to Knowledge "
+    "(Magic) and Intuition, and half of it, rounded down, to the other "
+    "eight Knowledge skills." },
   { CA_LIMITED_FREE_ACTION, "Limited Free Action",
     "When a paralysis effect would take hold of you, from a spell, a "
     "monster's attack, or a status effect, you can shrug it off "

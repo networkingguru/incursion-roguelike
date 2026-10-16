@@ -5288,7 +5288,14 @@ int16 Creature::SkillLevel(int16 sk)
     if (sk == SK_KNOW_GEO || sk == SK_KNOW_INF || sk == SK_KNOW_MAGIC ||
         sk == SK_KNOW_MYTH || sk == SK_KNOW_NATURE || sk == SK_KNOW_OCEANS ||
         sk == SK_KNOW_PLANES || sk == SK_KNOW_UNDEAD || sk == SK_KNOW_THEO)
-        s_inh = AbilityLevel(CA_LEGEND_LORE) / 2;
+        /* Legend Lore feeds the Knowledge skills; Knowledge (Magic) is what
+           actually identifies items, so it gets the full bonus. inc-8chz. */
+        s_inh = (sk == SK_KNOW_MAGIC) ? AbilityLevel(CA_LEGEND_LORE)
+                                      : AbilityLevel(CA_LEGEND_LORE) / 2;
+
+    /* inc-8chz: Intuition also inherits from Legend Lore. */
+    if (sk == SK_INTUITION)
+        s_inh = AbilityLevel(CA_LEGEND_LORE);
 
     s_kit = SkillKitMod(sk);
 

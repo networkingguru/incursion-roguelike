@@ -630,8 +630,8 @@ bool Item::operator==(Item &i)
 
     // ww: don't check for Known again here -- we already did it above 
     VeryEasyStack:
-    if (((IFlags|IF_WORN|IF_INTUITED|IF_DECIPHERED) == 
-       (i.IFlags|IF_WORN|IF_INTUITED|IF_DECIPHERED)) &&
+    if (((IFlags|IF_WORN|IF_INTUITED|IF_DECIPHERED|IF_LEGEND_ROLLED) == 
+       (i.IFlags|IF_WORN|IF_INTUITED|IF_DECIPHERED|IF_LEGEND_ROLLED)) &&
       (Plus == i.Plus) &&
       (cHP == i.cHP) &&
       (Flavor == i.Flavor) &&

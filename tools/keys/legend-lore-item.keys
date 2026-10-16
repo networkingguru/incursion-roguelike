@@ -1,0 +1,43 @@
+# inc-8chz B: Legend Lore rolls Knowledge (Magic) ONCE per magic item. Read by
+# tools/check_legend_lore.sh (seed 1) with INCURSION_LEGEND_LORE_PROBE=1, from
+# the frozen orc bard tools/fixtures/chars/orc-bard-reapply-seed1.sav (Legend
+# Lore at 6th level, already in wizard mode, with Auto-Identify Items ON).
+#
+# Auto-Identify returns from Character::LegendIdent before Legend Lore runs
+# (src/Skills.cpp), so the first step turns it OFF in the Wizard Mode Switches
+# menu (DOWN, SPACE), as tools/keys/fire-ring-resist.keys turns it on.
+#
+# The item comes from wizard mode "Acquire Unknown Item" (an unidentified item;
+# the fixture owns none), walking the acquisition list as
+# tools/keys/acquire-blast-circlet.keys does. It lands in the In-the-Air slot
+# (one LegendIdent call). Leaving the manager drops it to the floor, and each
+# turn the floor sweep (Player, src/Player.cpp) calls LegendIdent on it again;
+# those calls must NOT roll. The pickup is another call.
+w
+@choose "Wizard Mode Switches"
+@dump:switches-before
+DOWN
+SPACE
+@dump:switches-after
+ESC
+
+w
+@choose "Acquire Unknown Item"
+RIGHT*19
+@until "Circlet of Blasting" DOWN
+@expect "Circlet of Blasting"
+DOWN
+ENTER
+@dump:acquired
+ESC
+@dump:left-manager
+s
+s
+s
+@dump:after-search
+g
+@dump:picked-up
+ESC
+s
+s
+@quit

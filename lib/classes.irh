@@ -365,13 +365,15 @@ Class "Bard"
       may be so enthralled at a time, and that being's CR may not exceed the bard's level
       plus her Charisma bonus. No loyalty checks are made for this creature, and it does
       not count toward either the bard's party HD or summoned/charmed HD.\n
-      __*_<7>Legend Lore<2> -- Bards are familiar with a wide variety of legends, and have
-      a reasonable chance of identifying any item or monster on sight. A bard makes a 
-      one-time lore check when first picking up any unidentified item; success allows
-      the bard to fully identify the item. The check is not a skill check, but an opposed
-      roll of the character's bard levels versus the item's own level. Bards have a similar
-      chance to identify monsters completely upon first inflicting damage upon a given
-      monster.\n
+      __*_<7>Legend Lore<2> -- Bards are familiar with a wide variety of legends. A bard's
+      Legend Lore level equals her bard level. It adds its full value to her Knowledge
+      (Magic) and Intuition skills, and half its value to her other Knowledge skills.
+      The first time a bard sees or picks up an unidentified magic item, she makes one
+      Knowledge (Magic) check against the item's level. The more her check beats the
+      item's level, the more she learns, in this order: its nature, whether it is cursed,
+      whether it is blessed, its magic, its plus, its second plus, and whether it is an
+      artifact. Each item allows only one such check. Her higher Knowledge skills also
+      help her recognize monsters on sight.\n
       __*_<7>Storycraft<2> -- Artifacts are more than magical items; they are
       legends. Quite literally, an artifact gains its
       enchantment not from a mage's workings, but from
@@ -446,9 +448,9 @@ Class "Bard"
           S_ARCHERY 75,
           S_THROWN 75;
     Skills[8]: SK_ALCHEMY, SK_BLUFF, SK_CONCENTRATION, SK_CRAFT, SK_DECIPHER,
-      SK_DIPLOMACY, SK_DISGUISE, SK_ESCAPE_ART, SK_HEAL, SK_HIDE, SK_JUMP,
-      SK_KNOW_ALL, SK_LISTEN, SK_MOVE_SILENTLY, SK_PERFORM, SK_PICK_POCKET, 
-      SK_APPRAISE, SK_SWIMMING, SK_USE_MAGIC;
+      SK_DIPLOMACY, SK_DISGUISE, SK_ESCAPE_ART, SK_HEAL, SK_HIDE, SK_INTUITION,
+      SK_JUMP, SK_KNOW_ALL, SK_LISTEN, SK_MOVE_SILENTLY, SK_PERFORM,
+      SK_PICK_POCKET, SK_APPRAISE, SK_SWIMMING, SK_USE_MAGIC;
     Proficiencies: WG_SIMPLE, WG_DAGGERS, WG_LIGHT, WG_SBLADES, WG_ARCHERY;
     Flags: CF_GOOD_REF, CF_GOOD_WILL;
     Grants:
