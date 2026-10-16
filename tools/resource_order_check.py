@@ -58,7 +58,11 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-BIN = ROOT / "incursion-headless"
+# inc-ep4y: the build runs this check on the module it just compiled with the
+# binary that compiled it, passed in via INCURSION_ORDER_BIN. Absent or empty,
+# fall back to the developer binary as before.
+BIN = pathlib.Path(os.environ["INCURSION_ORDER_BIN"]) \
+    if os.environ.get("INCURSION_ORDER_BIN") else ROOT / "incursion-headless"
 LEDGER = ROOT / "tools" / "resource_order.ledger"
 
 # A parsed record set: the module's arrays and variable owners, in order.

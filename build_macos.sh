@@ -404,7 +404,9 @@ elif [ ! -f "$ROOT/mod/Incursion.Mod" ] || { [ -z "$EXTRA_CXXFLAGS" ] && [ "$COM
     # script variable must fail the build minutes after the edit, not at the
     # landing gate. This build just compiled the module, so run the order guard
     # on it and fail closed.
-    "$ROOT/tools/order_guard.sh" || exit 1
+    # inc-ep4y: guard with the binary that just wrote the module, not a stray
+    # incursion-headless (unbuilt here).
+    INCURSION_ORDER_BIN="$ROOT/$OUT" "$ROOT/tools/order_guard.sh" || exit 1
 fi
 
 echo
