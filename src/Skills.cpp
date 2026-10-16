@@ -1698,6 +1698,7 @@ bool Creature::SkillCheck(int16 sk, int16 DC, bool show, int16 mod1, const char*
 	int16 chance = SkillCheckChance(sk, DC, mod1, mod2);
 
 	rollA = Dice::Roll(1, 20);
+	{ extern int RunToSkillRoll(); int f = RunToSkillRoll(); if (f) rollA = f; }
 	rollB = rollC = 0;
 	/* This isn't in the OGL system, but in a roguelike game it is
 	   important that rogues be able to read scrolls and fire wands,

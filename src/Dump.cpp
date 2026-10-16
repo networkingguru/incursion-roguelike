@@ -176,6 +176,10 @@ static String GateBlockReason(Map *m, Player *p, int16 x, int16 y) {
     for (dr = m->FDoorAt(x, y); dr; dr = m->NDoorAt(x, y))
         if (!dr->isPassable())
             return String("impassable door -- locked, stuck or broken shut");
+    if (m->RegionAt(x, y) && m->RegionAt(x, y) != m->RegionAt(p->x, p->y)
+        && TREG(m->RegionAt(x, y))->Size < p->GetAttr(A_SIZ)
+        && p->onPlane() == PHASE_MATERIAL && !p->HasAbility(CA_EARTHMELD))
+        return String("region too small for the runner");
     return String("blocked, but by nothing in the never-relaxed set "
                   "-- recheck against RunOver");
 }
@@ -190,6 +194,7 @@ static const char *RtfName(int r) {
     case RTF_UNEXPLORED: return "unexplored ground on the route";
     case RTF_HOSTILE:    return "a perceived hostile on the route";
     case RTF_DOOR:       return "an impassable door on the route";
+    case RTF_TOOSMALL:   return "a region too small for the runner on the route";
     default:             return "none (target is reachable)";
     }
 }

@@ -273,6 +273,8 @@ void TextTerm::Message(const char* _Msg) {
     bool autoMore = p ? p->Opt(OPT_AUTOMORE) != 0 : false;
 
     Msg = _Msg;
+    { extern void RunToProbe(const char *, ...);
+      RunToProbe("msg %s\n", (const char*)Msg); }
     if (!Msg.GetTrueLength())
         return;
     MessageCounter++;

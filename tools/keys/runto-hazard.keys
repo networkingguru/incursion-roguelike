@@ -1,0 +1,27 @@
+# Run to Point across a hazard on the only route. Read by
+# tools/check_runto_hazards.sh, bd inc-vmpk.
+#
+#   INCURSION_RUNTO_PROBE=1 INCURSION_RUNTO_STAGE=T|D|S \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#       tools/headless.sh tools/keys/runto-hazard.keys 3
+#
+# INCURSION_RUNTO_STAGE makes the game wall in a ten-square corridor east of
+# the character when the overview map first opens (src/RunToProbe.cpp), with
+# the hazard on its fifth square. The key script is the same for all three
+# cases. [l] [o] opens the overview map (see tools/keys/stair-cycle.keys), the
+# cursor starts on the character, ten RIGHT presses put it on the far end,
+# and [R] runs. The next key is the answer to the fixed build's "No safe path
+# found" prompt: [n]. On today's build no such prompt opens, so that [n] is
+# read as a command in play.
+
+.*2
+l o
+@dump:map-open
+RIGHT*10
+@dump:cursor-at-end
+r
+@dump:after-run
+n
+@dump:after-n
+@quit

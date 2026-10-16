@@ -7818,13 +7818,17 @@ DoneResistMsg:
 
 
                                     if (HasStati(ACTING)) {
+                                        Status *s = GetStati(ACTING);
+                                        /* inc-vmpk: damage ends a Run to Point run without asking; other
+                                           actions still ask. */
+                                        bool force_halt = s && s->Val == EV_MOVE && s->Mag >= 50;
                                         why = 
                                             (e.EActor && e.EActor != this) ? 
                                             Format("%s: %s",(const char*)
                                             Lower(Lookup(DTypeNames,e.DType)),
                                             (const char*)e.EActor->Name(NA_A))
                                             : Lower(Lookup(DTypeNames,e.DType));
-                                        HaltAction(why,false); 
+                                        HaltAction(why,force_halt); 
                                     }
 
                                     EDType = e.DType;
