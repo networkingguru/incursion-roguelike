@@ -329,6 +329,25 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
 uint16 Map::PathPoint(int16 n)
   { return ThePath[n]; }
 
+/* The route gate movement refuses: a material-plane mover without
+   CA_EARTHMELD may not leave its region for a region smaller than its A_SIZ.
+   src/Move.cpp tests exactly this, and only when the two squares are in
+   different regions, so a creature already inside may move within it.
+   Shared by Map::RunOver and Map::RunToFailReason so the two cannot drift. */
+static bool RegionTooSmallFor(Map *m, int16 x, int16 y, Creature *c)
+{
+  if (!c)
+    return false;
+  if (c->onPlane() != PHASE_MATERIAL || c->HasAbility(CA_EARTHMELD))
+    return false;
+  rID r = m->RegionAt(x, y);
+  if (!r)
+    return false;
+  if (r == m->RegionAt(c->x, c->y))
+    return false;
+  return TREG(r)->Size < c->GetAttr(A_SIZ);
+}
+
 uint16 Map::RunOver(uint8 x, uint8 y, bool memonly, Creature *c,
                   int32 dangerFactor, bool Incor, bool Meld)
 {
@@ -343,6 +362,13 @@ uint16 Map::RunOver(uint8 x, uint8 y, bool memonly, Creature *c,
     } else return 0;
   } 
   if (memonly && !At(x,y).Memory)
+    return 0;
+  /* upstream: base-code defect. Observed. inc-vmpk. Not sent.
+       A region smaller than the mover is a wall: movement refuses the
+     step (src/Move.cpp, "too large to enter"), so a route through it
+     strands the mover at its edge. Mirrors Move.cpp's test, including
+     the same-region exemption. */
+  if (RegionTooSmallFor(this, x, y, c))
     return 0;
   if (At(x,y).Contents) {
     Creature *ca; Trap *tr; Door *dr;
@@ -502,7 +528,9 @@ int Map::RunToFailReason(Creature *runner, int16 tx, int16 ty)
             if (!named)
               for (Door *dr = FDoorAt(x, y); dr; dr = NDoorAt(x, y))
                 if (!dr->isPassable())
-                  { reason = RTF_DOOR; break; }
+                  { reason = RTF_DOOR; named = true; break; }
+            if (!named && RegionTooSmallFor(this, x, y, runner))
+              reason = RTF_TOOSMALL;
           }
       }
 

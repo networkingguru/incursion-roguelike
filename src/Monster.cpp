@@ -1810,6 +1810,11 @@ Dir Monster::SmartDirTo(int16 tx, int16 ty, bool is_pet)
     static uint16 thePath[MAX_PATH_LENGTH];
     if (!m->InBounds(tx,ty))
       return CENTER;
+    { extern hObj RunToWatched; extern void RunToProbe(const char *, ...);
+      if (RunToWatched && myHandle == RunToWatched && is_pet)
+        RunToProbe("mon at=%d,%d tgt=%d,%d turn=%d opt=%d pet=%d\n", (int)x, (int)y,
+                   (int)tx, (int)ty, (int)theGame->Turn, (int)theGame->Opt(OPT_MON_DJIKSTRA),
+                   (int)is_pet); }
     if (theGame->Opt(OPT_MON_DJIKSTRA) == 1 || 
         (theGame->Opt(OPT_MON_DJIKSTRA) == 2 && is_pet)) {
       if (m->LineOfFire(x,y,tx,ty,this))
@@ -1824,6 +1829,10 @@ Dir Monster::SmartDirTo(int16 tx, int16 ty, bool is_pet)
         }
       dx = thePath[1] % 256;
       dy = thePath[1] / 256;
+      { extern hObj RunToWatched; extern void RunToProbe(const char *, ...);
+        if (RunToWatched && myHandle == RunToWatched && is_pet)
+          RunToProbe("plan at=%d,%d tgt=%d,%d next=%d,%d pet=%d\n", (int)x, (int)y,
+                     (int)tx, (int)ty, (int)dx, (int)dy, (int)is_pet); }
       return DirTo(dx,dy);
       }
     else

@@ -1389,6 +1389,7 @@ static void StairProbe(const char *fmt, ...) {
 void TextTerm::ShowMapOverview() {
     int16 sx, sy, x, y, mx, my, x1, x2, y1, y2, vx, vy, tx, ty;
     bool open, seen, onmap; int16 ch, mag, magn;
+    bool declined;
     Glyph force;
     int force_priority;
 
@@ -1412,6 +1413,7 @@ void TextTerm::ShowMapOverview() {
        opened and the staircase keys did nothing". Only the first of those
        is an inconclusive session; the second is the inc-pw1.5 regression. */
     StairProbe("open at=%d,%d\n", (int)p->x, (int)p->y);
+    { extern void RunToStage(Map *, Player *); RunToStage(m, p); }
 
     /* Tell the gamepad poller we are on the overview map, so the left stick
        repeats (hold to pan) and the right stick zooms. The flag clears at the
@@ -1541,6 +1543,7 @@ void TextTerm::ShowMapOverview() {
             /* All kinds of checks... */
             tx = ty = -1;
             seen = open = false;
+            declined = false;
             for (x = vx; x != vx + mag; x++)
                 for (y = vy; y != vy + mag; y++)
                 {
@@ -1569,10 +1572,14 @@ void TextTerm::ShowMapOverview() {
             }
             if (tx == -1)
                 break;
-            if (!p->RunTo(tx, ty))
+            { extern void RunToProbe(const char *, ...);
+              RunToProbe("R target=%d,%d\n", (int)tx, (int)ty); }
+            if (!p->RunTo(tx, ty, &declined))
             {
                 /* Name why RunTo refused, so 'R' does not fall back to one
                    catch-all line. inc-otz. */
+                if (declined)
+                    break;
                 switch (m->RunToFailReason(p, tx, ty))
                 {
                 case RTF_UNEXPLORED:
@@ -1581,6 +1588,8 @@ void TextTerm::ShowMapOverview() {
                     Message("Something hostile stands on the only way to there."); break;
                 case RTF_DOOR:
                     Message("A door you cannot pass blocks the way to there."); break;
+                case RTF_TOOSMALL:
+                    Message("You are too large to fit through the only way to there."); break;
                 case RTF_NOROUTE:
                     Message("There is no route to that area."); break;
                 default:
@@ -3355,6 +3364,8 @@ rID TextTerm::ChooseResource(const char*prompt, int16 RType, rID eID) {
 
 bool TextTerm::yn(const char*msg) {
   	int16 ch='a';
+    { extern void RunToProbe(const char *, ...);
+      RunToProbe("yn at=%d,%d msg=%s\n", p ? (int)p->x : -1, p ? (int)p->y : -1, msg); }
     /* inc-fdi2: when the Blasphemy probe has armed an answer for the
        paradox-of-exhaustion prompt, take it; BlasphemyProbeKey returns 0 at
        every other time, so live play is untouched. */
