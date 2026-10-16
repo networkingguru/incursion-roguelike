@@ -9937,7 +9937,10 @@ ElemQuality:
 
     case WQ_BANE:
       if (!e.ETarget->isCreature()) break; 
-      if (e.EVictim->isMType(Bane))
+      /* upstream: base-code defect, not a port artefact: isMType(Bane) misses
+         every BANE_LIST weapon (Bane == -2) on Win32 with the original
+         typedefs and compiler too. Observed, inc-1mec, NOT sent. */
+      if (isBaneOf(e.EVictim))
       {
         VPrint(e, "The <Obj> bites deep!",
             "The <Obj> bites deep!",this);
@@ -9950,7 +9953,10 @@ ElemQuality:
       break;
     case WQ_SLAYING:
       if (!e.ETarget->isCreature()) break; 
-      if (e.EVictim->isMType(Bane))
+      /* upstream: base-code defect, not a port artefact: isMType(Bane) misses
+         every BANE_LIST weapon (Bane == -2) on Win32 with the original
+         typedefs and compiler too. Traced (latent), inc-1mec, NOT sent. */
+      if (isBaneOf(e.EVictim))
       {
         id = true;
         if (!e.isCrit)

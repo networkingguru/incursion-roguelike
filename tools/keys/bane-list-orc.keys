@@ -1,0 +1,19 @@
+# Listed target; separate session keeps the control's message log independent.
+@include bane-list-setup.keys
+w
+@choose "Monster Summoning"
+@choose "Orcs"
+@choose "black orc"
+RIGHT ENTER
+# Keep the target alive through base damage, so weapon qualities run.
+w
+@choose "Add Template to Creature"
+RIGHT ENTER
+@choose "paragon"
+@expect "Template added."
+@until "hitting the black orc" RIGHT
+@dump:strike
+v
+@dump:hit
+ESC
+@quit

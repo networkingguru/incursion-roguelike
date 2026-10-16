@@ -1,0 +1,19 @@
+# Unlisted target: a landed blow must not contain +2d6 bane.
+@include bane-list-setup.keys
+w
+@choose "Monster Summoning"
+@choose "Kobolds"
+@choose "kobold"
+RIGHT ENTER
+# Keep the target alive through base damage, so weapon qualities run.
+w
+@choose "Add Template to Creature"
+RIGHT ENTER
+@choose "paragon"
+@expect "Template added."
+@until "hitting the kobold" RIGHT
+@dump:strike
+v
+@dump:hit
+ESC
+@quit

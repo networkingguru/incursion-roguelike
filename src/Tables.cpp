@@ -4062,13 +4062,15 @@ struct AbilityInfoStruct AbilInfo[] = {
     "receive a bonus first-level spell slot based on your Intelligence "
     "score." },
   { CA_STONEWORK_SENSE, "Stonework Sense",
-    "While moving underground, you automatically notice secret doors just "
-    "by walking past them, the way elves do, without needing to search. If "
-    "you also have the Mining skill, you can sense the type of rock through "
-    "nearby walls at a range that grows with this ability's level, helping "
-    "you find good places to dig for ore. It also guarantees a tremor sense "
-    "range at least as large as your ability level, letting you sense "
-    "creatures through the ground." },
+    "You gain an inherent bonus, equal to your level in this ability, "
+    "to your Search skill checks. When you walk past a secret door, you "
+    "get a free Search check to notice it, the way elves do, without "
+    "stopping to search. You also remember the shape of the solid stone "
+    "around you, out to a range equal to your ability level, even where "
+    "you cannot see it. If you also have the Mining skill, you can sense "
+    "the type of rock through nearby walls at a range that grows "
+    "with this ability's level, helping you find good places to dig "
+    "for ore." },
   { CA_STRONG_SOUL, "Strong Soul",
     "Damage and drain to your ability scores is reduced by your ability "
     "level, and can be reduced to nothing at all. When you rest, you heal "
