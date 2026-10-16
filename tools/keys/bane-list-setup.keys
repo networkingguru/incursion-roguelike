@@ -1,0 +1,32 @@
+# inc-1mec: ordinary wizard acquisition, no combat probe.
+# Seed 1; tools/gates/Options.Dat stores combat rolls in the message log.
+@include chargen.keys
+@until "Afoot" ESC
+w
+y
+@choose "Wizard Mode Switches"
+DOWN
+SPACE                   # Auto-Identify Items
+DOWN*9
+SPACE                   # Freeze Monsters
+ESC
+w
+@choose "Item Acquisition"
+RIGHT*10
+@until "Sylvan Scimitar" DOWN
+DOWN
+ENTER
+2
+ENTER
+b
+SPACE
+@while "two-handed" n
+s
+@until "Things in View" ESC
+w
+@choose "Identify Whole Pack"
+i
+b
+x
+@dump:wielded
+@until "Things in View" ESC
