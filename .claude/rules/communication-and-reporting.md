@@ -38,3 +38,8 @@ History: docs/rules-history/communication-and-reporting.md#feedback-incursion-br
 For prose Brian must approve (Desc, item description, voice lines, help text, release notes, player-facing message): write ONE paragraph, hand it over, WAIT for feedback before the next. Do NOT draft the whole piece or a "first pass". Fold corrections into the next paragraph. Does NOT apply to reports/analysis/answers — only text that will BE the product.
 Why: a long draft in the wrong voice is a whole piece to throw away, and he must read all of it to say so.
 History: docs/rules-history/communication-and-reporting.md#feedback-one-paragraph-at-a-time.
+
+## approval-text-show-only-the-new-part
+When text for Brian's approval repeats text he already approved, show ONLY the new part and write `<REPEATED DESC>` where the approved text goes; the last lines shown are the ones he must approve. Example: "Identifies magic items you find, without a spellbook. <REPEATED DESC>. It does not work on corpses, chests, coins, or statues." Two texts that explain the same mechanic (class help and ability entry, help and Desc) MUST state it identically, so the repeated part needs no second read.
+Why: re-reading an approved description to find the few changed words wastes his time and hides what he is approving.
+History: docs/rules-history/communication-and-reporting.md#approval-text-show-only-the-new-part. Bead inc-ybiw.
