@@ -5230,8 +5230,12 @@ DoDig:
 
 }
 
+extern void LegendLoreProbe(const char *, Item *, int, int, int, const char *);
+extern void LegendLoreProbeBits(char *, Item *);
+
 void Character::LegendIdent(Item *it) {
 	bool anything = false, isRunic;
+	bool rolledNow = false; char probeBits[8] = "";
 	int16 i; String flav;
 	/* Later, legend lore should apply to monsters as well as
 	items, upon first striking or being struck by an unidentified
@@ -5356,8 +5360,28 @@ void Character::LegendIdent(Item *it) {
 		return;
 
 	if (it->isMagic()) {
-		i = (10 + AbilityLevel(CA_LEGEND_LORE) + Mod(A_INT)) - it->ItemLevel();
+		/* upstream: the class help promised a one-time lore roll, but the
+		   code computed a fixed score (10 + Legend Lore + INT - item level)
+		   with no roll. A rules defect in the shipped logic, identical on
+		   Win32. Owner ruling: roll Knowledge (Magic) once per item
+		   (IF_LEGEND_ROLLED); the old steps apply to the margin over item
+		   level. Observed. inc-8chz. Not sent upstream. */
+		if (!(it->IFlags & IF_LEGEND_ROLLED) &&
+			!(it->isKnown(KN_NATURE) && it->isKnown(KN_CURSE) &&
+			  it->isKnown(KN_BLESS) && it->isKnown(KN_MAGIC) &&
+			  it->isKnown(KN_PLUS) && it->isKnown(KN_PLUS2) &&
+			  it->isKnown(KN_ARTI))) {
+			/* Silent: a printed roll on magic items only would reveal that
+			   the item is magic even when the roll fails. */
+			SkillCheck(SK_KNOW_MAGIC, it->ItemLevel(), false);
+			i = LastSkillCheckResult - it->ItemLevel();
+			it->IFlags |= IF_LEGEND_ROLLED;
+			rolledNow = true;
+		}
+		else
+			i = 0;
 
+		LegendLoreProbeBits(probeBits, it);
 		if (i > 0 && !it->isKnown(KN_NATURE)) {
 			it->MakeKnown(KN_NATURE);
 			anything = true;
@@ -5386,6 +5410,7 @@ void Character::LegendIdent(Item *it) {
 			it->MakeKnown(KN_ARTI);
 			anything = true;
 		}
+		LegendLoreProbe("LEGEND", it, rolledNow, LastSkillCheckResult, i, probeBits);
 		if (anything) {
 			IPrint("Drawing on old legends and stories, you recognize this as an <Obj>.", it);
 			if (i >= 10)
