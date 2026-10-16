@@ -51,6 +51,15 @@ static const char *OobActName(int8 act)
 
 bool thousandItemsError = false;
 
+/* inc-9622: theGame->Turn is counted in Timeout ticks. A normal-speed monster
+   spends MoveTimeout ticks (1000 / 100% == 10, inc/Creature.h:334) on each of
+   its own turns, so the investigation expiry is expressed in whole normal-speed
+   monster turns converted to ticks. The arrival search is counted in the
+   monster's own turns directly and needs no conversion. */
+static const uint32 TICKS_PER_MONSTER_TURN    = 10;
+static const uint32 INVESTIGATE_SEARCH_TURNS  = 5;
+static const uint32 INVESTIGATE_EXPIRY_TURNS  = 30;
+
 ActionInfo Monster::Acts[64];
 EffectInfo Monster::Effs[1024];
 bool       Monster::inMelee, Monster::targVis, Monster::isAfraid,
@@ -490,6 +499,15 @@ RestartTargetLoop:
             goto RestartTargetLoop;
           }
           ts.t[i].vis = Perceives(it);
+          /* inc-9622 phase 2a: remember the last square where this enemy was
+             actually perceived, as an investigate target. The square is
+             written only while the enemy is perceived, so after loss it holds
+             the last perceived square, and the monster never learns the
+             enemy's current square. Adding a TargetArea here cannot disturb
+             this loop: a TargetArea slot is skipped by this arm (its type
+             differs) and the loop is restarted by goto after removals. */
+          if (ts.t[i].vis && it != charmer)
+            ts.SetInvestigateTarget(this, it->x, it->y, TargetLostTrack);
           if (ts.t[i].vis && it != charmer) {
             hasTarget = true; 
             if ((isBeside(it) && (StateFlags & MS_REACH_ONLY)))
@@ -789,19 +807,58 @@ SkipShifting:
        investigating a heard noise, may spend the turn searching for a hidden
        creature. One turn in three. A search is useful but not urgent, so
        P_MODERATE (4): below combat and casting (P_HIGH/P_URGENT) and above
-       idle wandering (P_LOW). Never proposed asleep, blind or fleeing. */
-    if (!HasStati(ASLEEP) && !isBlind && !isAfraid && !random(3)) {
-      bool lostSight = false, heardNoise = false;
+       idle wandering (P_LOW). Never proposed asleep, blind or fleeing.
+
+       inc-9622: an investigate target (a TargetArea with why.type
+       TargetHeardNoise or TargetLostTrack) is walked to and then searched.
+       The search is counted in the monster's own ChooseAction turns, not in
+       ticks: data.Area.searchTurns starts at 1 on arrival and each pass while
+       arrived counts one more own turn, so the monster searches
+       INVESTIGATE_SEARCH_TURNS own turns whatever its speed, and the target is
+       then removed. The whole investigation still expires
+       INVESTIGATE_EXPIRY_TURNS own turns after why.turnOfBirth (game time,
+       counted in Timeout ticks). */
+    if (!HasStati(ASLEEP) && !isBlind && !isAfraid) {
+      bool lostSight = false, arrivedSearch = false;
       for (i = 0; i < ts.tCount; i++) {
         if (!ts.t[i].isValid()) continue;
         if ((ts.t[i].type == TargetEnemy || ts.t[i].type == OrderAttackTarget)
-            && !ts.t[i].vis)
+            && !ts.t[i].vis) {
           lostSight = true;
-        else if (ts.t[i].type == TargetArea
-                 && ts.t[i].why.type == TargetHeardNoise)
-          heardNoise = true;
+          continue;
+        }
+        if (ts.t[i].type != TargetArea ||
+            (ts.t[i].why.type != TargetHeardNoise &&
+             ts.t[i].why.type != TargetLostTrack))
+          continue;
+        /* Give up 30 turns after the noise, arrived or not. */
+        if (theGame->Turn >
+            ts.t[i].why.turnOfBirth + INVESTIGATE_EXPIRY_TURNS * TICKS_PER_MONSTER_TURN) {
+          ts.RemoveTargetNumber(i);
+          i--;
+          continue;
+        }
+        /* Arrived when within one square of the remembered spot. On arrival
+           open the search window at one own turn. */
+        if (ts.t[i].data.Area.searchTurns == 0
+            && ts.t[i].DistanceFrom(this) <= 1)
+          ts.t[i].data.Area.searchTurns = 1;
+        if (ts.t[i].data.Area.searchTurns != 0) {
+          /* This pass is one of the monster's own turns. The count runs 1..5;
+             each of those searches, and the pass after the fifth forgets the
+             spot without searching. */
+          if (ts.t[i].data.Area.searchTurns > INVESTIGATE_SEARCH_TURNS) {
+            ts.RemoveTargetNumber(i);
+            i--;
+            continue;
+          }
+          arrivedSearch = true;
+          ts.t[i].data.Area.searchTurns++;
+        }
       }
-      if (lostSight || heardNoise)
+      /* The every-turn arrival search is unconditional; the older lost-sight /
+         heard-noise case still rolls one turn in three (phase 5). */
+      if (arrivedSearch || ((lostSight) && !random(3)))
         AddAct(ACT_SEARCH, P_MODERATE, NULL);
     }
 
@@ -1511,6 +1568,12 @@ NothingToDo:
           if (Effs[k].Purpose & EP_BUFF)
             BuffCount++;
 
+      /* inc-9622: observe attempted actions without changing their result. */
+      if (getenv("INCURSION_LOST_ENEMY_PROBE")) {
+        extern void LostEnemyProbeAction(Monster *, int, int);
+        LostEnemyProbeAction(this, Acts[j].Act, res);
+      }
+
       if (isDead() || res == DONE || Timeout)
         return;
 
@@ -1904,6 +1967,26 @@ EvReturn Monster::Movement() {
     bool any_objective;
     any_objective = false;
 
+    /* inc-9622: an investigate target is a TargetArea carrying why.type
+       TargetHeardNoise or TargetLostTrack. While the monster perceives no
+       hostile, following it IS a real objective -- it counts as one, so
+       Wanderlust is never called and the monster does not wander off, and a
+       TargetWander must not pull it elsewhere. Once a hostile is perceived
+       (a visible TargetEnemy / OrderAttackTarget), the investigate target must
+       not steer at all: the normal chase wins. */
+    bool perceiveHostile = false, hasInvestigate = false;
+    for (i=0; i<ts.tCount; i++) {
+        if (!ts.t[i].isValid())
+            continue;
+        if ((ts.t[i].type == TargetEnemy || ts.t[i].type == OrderAttackTarget)
+            && ts.t[i].vis != 0)
+            perceiveHostile = true;
+        else if (ts.t[i].type == TargetArea
+                 && (ts.t[i].why.type == TargetHeardNoise ||
+                     ts.t[i].why.type == TargetLostTrack))
+            hasInvestigate = true;
+    }
+
 RetryTargets:
     for (i=0; i<ts.tCount; i++) {
         if (!ts.t[i].isValid()) 
@@ -1922,8 +2005,32 @@ RetryTargets:
         case TargetAlly:
         */
         case TargetWander:
+            /* inc-9622: while an investigate target is being followed (and no
+               hostile is seen), wandering must not pull the monster away. */
+            if (ts.t[i].type == TargetWander && hasInvestigate && !perceiveHostile)
+                continue;
             any_objective = true;
             break; // these are OK things to chase! 
+        case TargetArea:
+            /* upstream: upstream's own code makes an "investigate!" noise
+               target (HearNoise) that no movement code reads, and keeps no
+               memory of a lost enemy -- a logic gap that misbehaves the same on
+               Win32 and the original compiler, so not a port artefact. Tier
+               Observed: tools/check_lost_enemy.sh RED before, GREEN after.
+               Tracking inc-9622, networkingguru/incursion-roguelike#981. Not
+               sent upstream. */
+            /* inc-9622: only an investigate-area steers; a plain TargetArea
+               (none are made today) is ignored. It yields to a perceived
+               hostile, and once arrived it stops steering. */
+            if (ts.t[i].why.type != TargetHeardNoise &&
+                ts.t[i].why.type != TargetLostTrack)
+                continue;
+            if (perceiveHostile)
+                continue;
+            if (ts.t[i].data.Area.searchTurns != 0)
+                continue;
+            any_objective = true;
+            break;
         default: 
             continue;
         } 

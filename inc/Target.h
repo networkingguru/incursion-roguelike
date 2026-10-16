@@ -94,7 +94,10 @@ typedef enum {
     TargetWanderlust,
     TargetLiberated,
     TargetOrderedTo,
-    TargetResents
+    TargetResents,
+    /* inc-9622 phase 1: append only. TargetWhy::type is stored in saves as a
+       raw int, so every existing value keeps its number. Phase 2 uses this. */
+    TargetLostTrack
 } TargetWhyType;
 
 typedef struct TargetWhy {
@@ -170,6 +173,13 @@ typedef struct Target {
     } Creature;
     struct {
       uint8     x,y;
+      /* inc-9622: own-turn search count for an investigate target (why.type is
+         TargetHeardNoise or TargetLostTrack). 0 means not arrived; arrival sets
+         1; each ChooseAction pass while arrived searches and increments it, and
+         the pass after INVESTIGATE_SEARCH_TURNS forgets the target. Sits in the
+         padding after x,y: the union arm stays 8 bytes, so the FieldsV1
+         static_asserts (src/Target.cpp) are unchanged. */
+      uint8     searchTurns;
     } Area;
     struct {
       hObj      i;
@@ -250,6 +260,13 @@ public:
    * not be able to see the noise-maker, and there might not even be one
    * (ventriloquism) */
   void          HearNoise(Creature *me, uint8 x, uint8 y);
+
+  /* inc-9622: set the monster's single investigate target to square (x,y)
+   * with the given why type (TargetHeardNoise or TargetLostTrack). If an
+   * investigate target already exists it is moved and re-aged; otherwise a
+   * new TargetArea with priority 1 is added. */
+  void          SetInvestigateTarget(Creature *me, uint8 x, uint8 y,
+                                     TargetWhyType type);
 
   /* 't' just struck us! 't' may be an ally, at which point we should
    * shrug it off ...*/

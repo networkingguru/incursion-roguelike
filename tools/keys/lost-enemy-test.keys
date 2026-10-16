@@ -1,0 +1,4 @@
+# Probe runs on load; one search completes a gameplay turn for headless.sh.
+ENTER
+s
+@dump:lost-enemy-finished
