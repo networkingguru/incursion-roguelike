@@ -174,7 +174,7 @@ steed do (`lib/wspells.irh:1813` and `:1908`, `lib/pspells.irh:3585`). Once
 picked it runs a full validation path — Ride skill, humanoid form, the
 target's `M_MOUNTABLE` flag, hostility, prone/stuck/grappled/asleep, plane,
 size, challenge rating, and whether the creature will accept you at all
-(`src/Skills.cpp:4483-4548`).
+(`src/Skills.cpp:4502-4567`).
 **Dismount** has a second route: the Cancel (`x`) command drops a standing
 `MOUNTED` stati (`src/Skills.cpp:456`).
 
