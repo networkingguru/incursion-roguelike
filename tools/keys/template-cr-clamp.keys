@@ -1,0 +1,68 @@
+# inc-dp5u: read a summoned monster's challenge rating after wizard mode adds
+# CR templates to it. Read the screens with tools/check_template_cr_clamp.sh.
+# Myconid is CR -2 (lib/mon2.irh:1315). skilled is CR +1 (lib/mon2.irh:4161)
+# and experienced is CR +2 (lib/mon2.irh:4184); neither has a Min bound. The
+# sidebar of a Creature::Dump shows ChallengeRating() with allow_neg false, so
+# a negative CR reads as 0: only a result above zero can show the clamp.
+@include chargen.keys
+
+w
+y
+@choose "Genocide Everything"
+w
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+
+# --- case skilled-experienced: skilled (+1) then experienced (+2). Base -2 + 1 + 2 = 1.
+w
+@choose "Monster Summoning"
+@choose "Aberration"
+@choose "myconid"
+RIGHT
+ENTER
+w
+@choose "Add Template to Creature"
+RIGHT
+ENTER
+@choose "skilled"
+w
+@choose "Add Template to Creature"
+RIGHT
+ENTER
+@choose "experienced"
+w
+@choose "Examine Nearby Things"
+@until "class T_MONSTER" RIGHT
+@dump:skilled-experienced
+ESC
+w
+@choose "Genocide Everything"
+
+# --- case experienced-skilled: experienced (+2) then skilled (+1). Same sum, 1.
+w
+@choose "Monster Summoning"
+@choose "Aberration"
+@choose "myconid"
+RIGHT
+ENTER
+w
+@choose "Add Template to Creature"
+RIGHT
+ENTER
+@choose "experienced"
+w
+@choose "Add Template to Creature"
+RIGHT
+ENTER
+@choose "skilled"
+w
+@choose "Examine Nearby Things"
+@until "class T_MONSTER" RIGHT
+@dump:experienced-skilled
+ESC
+w
+@choose "Genocide Everything"
+
+@quit
