@@ -128,3 +128,17 @@ verified. It had been checked in code only, not in play. Brian then said: "Just
 for clarity, when i say riule triage, I want a fucking discussion about each
 goddamn one before you dispatch anything. WRITE THIS DOWN". The session stopped
 the DeepSeek run and wrote this rule.
+
+## approval-text-show-only-the-new-part
+
+2026-10-16, bead inc-8chz. The session brought Brian the Legend Lore Bard help
+paragraph, which he approved, and then the Legend Lore ability entry in
+src/Tables.cpp, which described the same mechanic in nearly the same words.
+Brian asked: "I am very confussed. Like two interactions ago you gave me what
+appears to be a very similar blob of text. What is the distincvtion?" After the
+answer (one is the class help, one is the ability entry) he approved it and
+said: "y, but in general, if you are bginging me text where part of the desc is
+identical (and in desc that is explaining mechanics, they BETTER be if the same
+mech is being explained), then just present the new part: THis skill is blah.
+<REPEATED DESC>. Last lines I need to approve. Like that". Asked whether to
+write it down as a rule, he said: "y, add it."
