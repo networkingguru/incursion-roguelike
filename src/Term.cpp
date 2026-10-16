@@ -3250,7 +3250,7 @@ DragonAgeCat:
     /* Assumption: all age categories are in Module 0. */
     for (i = 0; i != theGame->Modules[0]->szTem; i++)
         if (theGame->Modules[0]->QTem[i].TType & TM_AGECAT)
-            if (theGame->Modules[0]->QTem[i].CR.Adjust(mn->ChallengeRating()) <= maxlev)
+            if (theGame->Modules[0]->QTem[i].CR.AdjustCR(mn->ChallengeRating()) <= maxlev)
                 LOption(NAME(theGame->Modules[0]->TemplateID(i)), theGame->Modules[0]->TemplateID(i));
 
     xID = LMenu(MENU_BORDER, "Choose an age category:", WIN_MENUBOX);

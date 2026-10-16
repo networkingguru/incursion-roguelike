@@ -470,19 +470,19 @@ void Map::enCalcCurrPartXCR(EventInfo &e)
       { e.epCurrXCR = 0; return; }
     e.ep_monCR = TMON(e.ep_mID)->CR;
     if (e.ep_tID)
-      e.ep_monCR = TTEM(e.ep_tID)->CR.Adjust(e.ep_monCR);
+      e.ep_monCR = TTEM(e.ep_tID)->CR.AdjustCR(e.ep_monCR);
     if (e.ep_tID2)
-      e.ep_monCR = TTEM(e.ep_tID2)->CR.Adjust(e.ep_monCR);
+      e.ep_monCR = TTEM(e.ep_tID2)->CR.AdjustCR(e.ep_monCR);
     if (e.ep_tID3)
-      e.ep_monCR = TTEM(e.ep_tID3)->CR.Adjust(e.ep_monCR);
+      e.ep_monCR = TTEM(e.ep_tID3)->CR.AdjustCR(e.ep_monCR);
     e.epCurrXCR = (int16)XCR(e.ep_monCR);
     
     if (e.ep_hmID) {
       e.ep_mountCR = TMON(e.ep_hmID)->CR;
       if (e.ep_htID)
-        e.ep_mountCR = TTEM(e.ep_htID)->CR.Adjust(e.ep_mountCR);
+        e.ep_mountCR = TTEM(e.ep_htID)->CR.AdjustCR(e.ep_mountCR);
       if (e.ep_htID2)
-        e.ep_mountCR = TTEM(e.ep_htID2)->CR.Adjust(e.ep_mountCR);
+        e.ep_mountCR = TTEM(e.ep_htID2)->CR.AdjustCR(e.ep_mountCR);
       e.epCurrXCR += (int16)XCR(e.ep_mountCR);
       }
       
@@ -924,11 +924,11 @@ EvReturn Map::enGenerate(EventInfo &e) {
         int16 CR;
         CR = TMON(EncMem[i].mID)->CR;
         if (EncMem[i].tID)
-          CR = TTEM(EncMem[i].tID)->CR.Adjust(CR);
+          CR = TTEM(EncMem[i].tID)->CR.AdjustCR(CR);
         if (EncMem[i].tID2)
-          CR = TTEM(EncMem[i].tID2)->CR.Adjust(CR);
+          CR = TTEM(EncMem[i].tID2)->CR.AdjustCR(CR);
         if (EncMem[i].tID3)
-          CR = TTEM(EncMem[i].tID3)->CR.Adjust(CR);
+          CR = TTEM(EncMem[i].tID3)->CR.AdjustCR(CR);
         totXCR += XCR(CR);
       }
     Deviance = (int16)((abs(e.enXCR-totXCR) * 100L) / e.enXCR);
@@ -1871,7 +1871,7 @@ EvReturn Map::enGenMount(EventInfo &e)
                 if ((wtList[j] < 0x01000000) || 
                     (RES(wtList[j])->Type != T_TTEMPLATE))
                   break;
-                theCR = TTEM(wtList[j])->CR.Adjust(theCR);
+                theCR = TTEM(wtList[j])->CR.AdjustCR(theCR);
               }
             lowCR = min(theCR,lowCR);
             highCR = max(theCR,highCR);
@@ -2048,8 +2048,8 @@ EvReturn Map::enSelectTemps(EventInfo &e)
             int16 bestCR; rID bestID;
             bestID = 0; bestCR = 100;
             for(i=0;i!=c;i++)
-              if (TTEM(tmList[i])->CR.Adjust(TMON(e.ep_mID)->CR) < bestCR)
-                { bestCR = TTEM(tmList[i])->CR.Adjust(TMON(e.ep_mID)->CR);
+              if (TTEM(tmList[i])->CR.AdjustCR(TMON(e.ep_mID)->CR) < bestCR)
+                { bestCR = TTEM(tmList[i])->CR.AdjustCR(TMON(e.ep_mID)->CR);
                   bestID = tmList[i]; }
             if (bestID)
               enAddTemp(e,bestID);
@@ -2059,8 +2059,8 @@ EvReturn Map::enSelectTemps(EventInfo &e)
             int16 bestCR; rID bestID;
             bestID = 0; bestCR = -100;
             for(i=0;i!=c;i++)
-              if (TTEM(tmList[i])->CR.Adjust(TMON(e.ep_mID)->CR) > bestCR)
-                { bestCR = TTEM(tmList[i])->CR.Adjust(TMON(e.ep_mID)->CR);
+              if (TTEM(tmList[i])->CR.AdjustCR(TMON(e.ep_mID)->CR) > bestCR)
+                { bestCR = TTEM(tmList[i])->CR.AdjustCR(TMON(e.ep_mID)->CR);
                   bestID = tmList[i]; }
             if (bestID)
               enAddTemp(e,bestID);
@@ -2297,8 +2297,8 @@ EvReturn Map::enChooseTemp(EventInfo &e)
         int16 bestCR; rID bestID;
         bestID = 0; bestCR = 100;
         for(i=0;i!=nTemp;i++)
-          if (TTEM(tmList[i])->CR.Adjust(TMON(e.ep_mID)->CR) < bestCR)
-            { bestCR = TTEM(tmList[i])->CR.Adjust(TMON(e.ep_mID)->CR);
+          if (TTEM(tmList[i])->CR.AdjustCR(TMON(e.ep_mID)->CR) < bestCR)
+            { bestCR = TTEM(tmList[i])->CR.AdjustCR(TMON(e.ep_mID)->CR);
               bestID = tmList[i]; }        
         e.chResult = bestID;
         return DONE;
@@ -2308,8 +2308,8 @@ EvReturn Map::enChooseTemp(EventInfo &e)
         int16 bestCR; rID bestID;
         bestID = 0; bestCR = -100;
         for(i=0;i!=nTemp;i++)
-          if (TTEM(tmList[i])->CR.Adjust(TMON(e.ep_mID)->CR) > bestCR)
-            { bestCR = TTEM(tmList[i])->CR.Adjust(TMON(e.ep_mID)->CR);
+          if (TTEM(tmList[i])->CR.AdjustCR(TMON(e.ep_mID)->CR) > bestCR)
+            { bestCR = TTEM(tmList[i])->CR.AdjustCR(TMON(e.ep_mID)->CR);
               bestID = tmList[i]; }        
         e.chResult = bestID;
         return DONE;
@@ -2320,10 +2320,10 @@ EvReturn Map::enChooseTemp(EventInfo &e)
       {          
         int16 bestCR = -100, n; rID highlist[32];
         for (i=0;i!=nTemp;i++)
-          if (TTEM(tmList[i])->CR.Adjust(TMON(e.ep_mID)->CR) > bestCR)
-            bestCR = TTEM(tmList[i])->CR.Adjust(TMON(e.ep_mID)->CR);
+          if (TTEM(tmList[i])->CR.AdjustCR(TMON(e.ep_mID)->CR) > bestCR)
+            bestCR = TTEM(tmList[i])->CR.AdjustCR(TMON(e.ep_mID)->CR);
         for (i=0,n=0;i!=nTemp;i++)
-          if (TTEM(tmList[i])->CR.Adjust(TMON(e.ep_mID)->CR) >= bestCR)
+          if (TTEM(tmList[i])->CR.AdjustCR(TMON(e.ep_mID)->CR) >= bestCR)
             highlist[n++] = tmList[i];
         if (n)
           e.chResult = highlist[random(n)];
@@ -2338,8 +2338,8 @@ EvReturn Map::enChooseTemp(EventInfo &e)
         rID aID, bID;
         aID = tmList[random(nTemp)];
         bID = tmList[random(nTemp)];
-        if (TTEM(aID)->CR.Adjust(0) >
-            TTEM(bID)->CR.Adjust(0))
+        if (TTEM(aID)->CR.AdjustCR(0) >
+            TTEM(bID)->CR.AdjustCR(0))
           e.chResult = aID;
         else
           e.chResult = bID;
@@ -2399,7 +2399,7 @@ bool Map::enTemplateOk(EventInfo &e, rID tID, bool force)
     
     newXCR = e.epCurrXCR -
              XCR(e.ep_monCR) +
-             XCR(tt->CR.Adjust(e.ep_monCR));
+             XCR(tt->CR.AdjustCR(e.ep_monCR));
     if (newXCR > e.eimXCR)
       return false;
       
