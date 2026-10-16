@@ -29,8 +29,7 @@ else
 fi
 
 # Case B: the build must pass the binary it just built to the guard.
-if grep -q 'INCURSION_ORDER_BIN="\$ROOT/\$OUT" "\$ROOT/tools/order_guard.sh"' \
-        build_macos.sh; then
+if grep -q 'INCURSION_ORDER_BIN="\$ROOT/\$OUT" "\$ROOT/tools/order_guard.sh"' 'build_macos.sh'; then
     echo "case B: PASS -- build_macos.sh guards with INCURSION_ORDER_BIN=\"\$ROOT/\$OUT\""
 else
     echo "case B: FAIL -- build_macos.sh's order_guard call lacks INCURSION_ORDER_BIN=\"\$ROOT/\$OUT\""
