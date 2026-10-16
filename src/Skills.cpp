@@ -5862,7 +5862,7 @@ bool Creature::okWildShape(int16 lev, rID mID, rID tID)
 		  */
 
 	if (tID)
-		CR = TTEM(tID)->CR.Adjust(CR);
+		CR = TTEM(tID)->CR.AdjustCR(CR);
 
 	if (CR > lev || tm->isMType(mID, MA_DRAGON))
 		return false;
@@ -5950,7 +5950,7 @@ bool Creature::okAnimalComp(int16 lev, rID mID, rID tID)
 		direID = FIND("dire");
 
 	if (tID)
-		CR = TTEM(tID)->CR.Adjust(CR);
+		CR = TTEM(tID)->CR.AdjustCR(CR);
 
 	if (CR > lev)
 		return false;
@@ -5984,7 +5984,7 @@ bool Creature::okBondedMount(int16 lev, rID mID, rID tID)
 		return false;
 
 	if (tID) {
-		CR = TTEM(tID)->CR.Adjust(CR);
+		CR = TTEM(tID)->CR.AdjustCR(CR);
 		Size = TTEM(tID)->Size.Adjust(Size);
 	}
 

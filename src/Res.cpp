@@ -570,7 +570,7 @@ rID Game::GetTempID(uint16 Types, rID mID, int8 maxCR)
             continue;
           if (Modules[q]->QTem[i].HasFlag(TMF_NOGEN))
             continue;
-          if (Modules[q]->QTem[i].CR.Adjust(tm->CR) > maxCR)
+          if (Modules[q]->QTem[i].CR.AdjustCR(tm->CR) > maxCR)
             continue;
           // ww: if you are trying to modify a CR 1 warrior and max CR is
           // 5, we'd prefer to take VeryExperience (CR+4) over RankAmateur
@@ -581,11 +581,11 @@ rID Game::GetTempID(uint16 Types, rID mID, int8 maxCR)
             Format("TempID %d %s %d %s %d.",
                     Types, NAME(mID), maxCR,
                     NAME(Modules[q]->TemplateID(i)),
-                    Modules[q]->QTem[i].CR.Adjust(tm->CR)));
+                    Modules[q]->QTem[i].CR.AdjustCR(tm->CR)));
                     */
 
           for (spread = 0; 
-               spread < max(Modules[q]->QTem[i].CR.Adjust(tm->CR),1);
+               spread < max(Modules[q]->QTem[i].CR.AdjustCR(tm->CR),1);
                spread++)
                 Candidates[n++] = Modules[q]->TemplateID(i);
         }

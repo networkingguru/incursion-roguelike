@@ -2406,7 +2406,7 @@ int16 Creature::ChallengeRating(bool allow_neg)
   {
     int16 CR = TMON(mID)->CR;
     StatiIterNature(this,TEMPLATE)
-      CR = TTEM(S->eID)->CR.Adjust(CR);
+      CR = TTEM(S->eID)->CR.AdjustCR(CR);
     StatiIterEnd(this)
     
     if (allow_neg)
@@ -2422,10 +2422,10 @@ int16 Creature::ChallengeRatingSwapped(rID dropT, rID addT, bool allow_neg)
     int16 CR = TMON(mID)->CR;
     StatiIterNature(this,TEMPLATE)
       if (S->eID != dropT)
-        CR = TTEM(S->eID)->CR.Adjust(CR);
+        CR = TTEM(S->eID)->CR.AdjustCR(CR);
     StatiIterEnd(this)
     if (addT)
-      CR = TTEM(addT)->CR.Adjust(CR);
+      CR = TTEM(addT)->CR.AdjustCR(CR);
 
     if (allow_neg)
       return CR;

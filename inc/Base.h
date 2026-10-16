@@ -225,14 +225,14 @@ struct MVal
     unsigned int VType:4;
     signed int Bound:10;
     unsigned int BType:4;
-    int16 Adjust(int16 oval) {
+    int16 adjust_(int16 oval, bool clampAdd) {
       int16 nval;
       switch (VType) {
         case MVAL_NONE:
           nval = oval;
          break;
         case MVAL_ADD:
-          nval = (int16)max(0,oval+Value);
+          nval = clampAdd ? (int16)max(0,oval+Value) : (int16)(oval+Value);
          break;
         case MVAL_SET:
           nval = Value;
@@ -262,6 +262,19 @@ struct MVal
           Error("MVal::Adjust -- illegal BType!");
         } 
       return nval;                                
+    }
+    int16 Adjust(int16 oval) {
+      return adjust_(oval,true);
+    }
+    /* upstream: base-code defect, the fix is ours. A template's CR bonus
+       adds to a negative base CR without the max(0,..) floor that Adjust
+       applies to every other field, so the result does not depend on
+       template order. The floor is upstream's (0.6.5B source, commit
+       7b8504a3) and misbehaves on any platform, so Win32 fails the same
+       way. Tier Observed (tools/check_template_cr_clamp.sh). inc-dp5u.
+       NOT SENT upstream. */
+    int16 AdjustCR(int16 oval) {
+      return adjust_(oval,false);
     }
   };
 
