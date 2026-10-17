@@ -816,6 +816,22 @@ void TextTerm::CreateCharSheet(CharSheet &cs)
           StatiIterEnd(p)
           break; 
 
+        case FT_INHERANT_SPELL:
+          cs.sFeats += "  Inherent Spell:\n";
+          for (j=0;j!=theGame->LastSpell();j++)
+            if (p->Spells[j] & SP_INHERENT)
+              cs.sFeats += Format("    %s\n",
+                  NAME(theGame->SpellID(j)));
+          break;
+
+        case FT_LUCUBRATION:
+          cs.sFeats += "  Lucubration:\n";
+          StatiIterNature(p, LUCUBRATION)
+            if (S->eID && TITEM(S->eID)->IType == T_BOOK)
+              cs.sFeats += Format("    %s\n", NAME(S->eID));
+          StatiIterEnd(p)
+          break;
+
         default: 
           cs.sFeats += Format("  %s\n", FeatName(i));
       } 

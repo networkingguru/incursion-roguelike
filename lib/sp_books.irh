@@ -408,7 +408,7 @@ Item "spellbook [Crystal Mind]" : T_BOOK
     Mat: MAT_PAPER; Weight: 40;
     Spells: $"copy", $"detect secret doors", $"detect magic", 
             $"read magic", $"iron mind", $"Telekinesis", $"apportation",
-            $"ESP", $"Mord's Lucubration", $"dominate person",
+            $"ESP", $"dominate person",
             $"Revealed Lore", $"Wizard Sight", $"warning",
             $"insightful stroke", $"anyspell", $"true seeing";
     On Event MSG_STATINAME "CrysMind";

@@ -93,7 +93,6 @@ void Player::ToggleMM(uint32 mm,int16 sp)
         case MM_FOCUS:      ft = FT_FOCUS_SPELL;      break;
         case MM_FORTIFY:    ft = FT_FORTIFY_SPELL;    break;
         case MM_HEIGHTEN:   ft = FT_HEIGHTEN_SPELL;   break;
-        case MM_INHERANT:   ft = FT_INHERANT_SPELL;   break;
         case MM_JUDICIOUS:  ft = FT_JUDICIOUS_SPELL;  break;
         case MM_MAXIMIZE:   ft = FT_MAXIMIZE_SPELL;   break;
         case MM_EXTEND:     ft = FT_EXTEND_SPELL;     break;
@@ -4673,7 +4672,7 @@ EvReturn Creature::Cast(EventInfo &e) {
     }
 
     if (isPlayer())
-        e.MM = MMFeats(e.sp);
+        e.MM = MMFeats(e.sp) & ~MM_INHERANT;
     else
         e.MM = thism->SetMetamagic(e.eID,e.ETarget,(uint16)TEFF(e.eID)->Purpose);
 
@@ -4715,7 +4714,7 @@ EvReturn Creature::Cast(EventInfo &e) {
     if (e.isStaffSpell)
         goto HasComponent;
 
-    if (e.MM & MM_INHERANT)
+    if (isPlayer() && (thisp->Spells[e.sp] & SP_INHERENT))
         goto HasComponent;
 
     /* An arcane spell needs no spellbook to cast; the book matters only
@@ -5360,7 +5359,7 @@ int16 Character::SpellRating(rID eID, uint32 mm, bool perceived)
     }
 
     /* Is the spell known? */
-    if (!(Spells[sp] & (SP_KNOWN|SP_DOMAIN))) {
+    if (!(Spells[sp] & (SP_KNOWN|SP_DOMAIN|SP_INHERENT))) {
       if (Type == T_PLAYER)
         if (thisp->Opt(OPT_ALL_SPELLS)) {
           if (TEFF(eID)->Level > ((CasterLev()+1)/2))
