@@ -488,6 +488,57 @@ void LOFSetLastDraw(int16 x, int16 y) { LOFLastDrawX = x; LOFLastDrawY = y; }
 int16 LOFGetLastDrawX() { return LOFLastDrawX; }
 int16 LOFGetLastDrawY() { return LOFLastDrawY; }
 
+/* inc-sg9o: whether a living creature stood on the flight's STOP (landing)
+   square at the moment the drawing finished. The flight is now drawn before
+   any damage, so a creature killed by the shot is still alive there and this
+   reads true -- the invariant LineOfFireProbe's kill cases check. */
+static bool LOFLastDrawOccupied = false;
+void LOFSetLastDrawOccupied(bool v) { LOFLastDrawOccupied = v; }
+bool LOFGetLastDrawOccupied() { return LOFLastDrawOccupied; }
+
+/* inc-sg9o: a missile in flight, recorded and replayed when its landing
+   square is known and before any damage, so a kill is drawn before its
+   results. One RAttack holds exactly one LOFFlight on its own stack and
+   points LOFPendingFlight at it across each ReThrow(EV_STRIKE); a nested
+   RAttack saves and restores that pointer, so the outer flight survives. The
+   drawn flag makes a second call for the same shot a no-op, so the flight is
+   drawn exactly once. */
+struct LOFPathStep { int16 x, y; Glyph glyph; };
+struct LOFFlight {
+    const LOFPathStep *path;
+    int16 count;
+    Overlay *o;
+    Map *m;
+    int pause;
+    Thing *shooter;
+    bool drawn;
+};
+static LOFFlight *LOFPendingFlight = NULL;
+
+/* inc-sg9o: draw the flight from its first recorded square up to and
+   including the stop square (sx,sy) -- the landing square, in tile units --
+   and mark it drawn. Draws nothing once drawn, so the flight cannot be drawn
+   twice or past its landing. LOFSetLastDrawOccupied records whether a
+   creature stands on the stop square at this moment, before any strike
+   removes it. */
+static void LOFDrawFlight(LOFFlight *f, int16 sx, int16 sy)
+{
+    if (!f || f->drawn || !f->o)
+        return;
+    for (int16 i = 0; i < f->count; i++) {
+        f->o->AddGlyph(f->path[i].x, f->path[i].y, f->path[i].glyph);
+        LOFSetLastDraw(f->path[i].x, f->path[i].y);
+        f->o->ShowGlyphs();
+        PossiblyPause(T1, f->path[i].x, f->path[i].y, f->pause);
+        f->o->DeActivate();
+        f->o->Activate();
+        if (f->path[i].x == sx && f->path[i].y == sy)
+            break;
+    }
+    LOFSetLastDrawOccupied(f->m && f->m->FCreatureAt(sx, sy) != NULL);
+    f->drawn = true;
+}
+
 /* inc-30ps rework: a recorded square along the line -- every creature
    standing there, in contents-chain order (Map::GetAt's front is
    member[0], src/Display.cpp:1437; see "Which creature is front",
@@ -1440,6 +1491,12 @@ EvReturn Creature::RAttack(EventInfo &e)
    * would never actually reach its square. Now we steal the BallBeamBolt
    * trajectory code. */ 
 
+  /* inc-sg9o: this shot's flight, filled once the travel loop ends (below,
+     at hitNow) with the recorded path and drawn before any damage -- a
+     killing strike draws it while the target still stands on it. */
+  LOFFlight flight;
+  flight.drawn = false;
+
   // where do we start? 
   int16 sx, sy, cx, cy, lx, ly;
   lx = sx = cx = e.EActor->x * 2;
@@ -1511,7 +1568,6 @@ EvReturn Creature::RAttack(EventInfo &e)
      the largest map the engine allows (coordinates are uint8, inc/Map.h:181)
      visits at most one square per row plus one per column: 256 + 256. */
   const int16 MAP_MAX_DIM = 256;
-  struct LOFPathStep { int16 x, y; Glyph glyph; };
   const int16 LOFMaxPath = MAP_MAX_DIM + MAP_MAX_DIM;
   LOFPathStep path[LOFMaxPath];
   int16 pathCount = 0;
@@ -1652,6 +1708,19 @@ EvReturn Creature::RAttack(EventInfo &e)
   }
 
 hitNow:
+  /* inc-sg9o: fill this shot's flight now that the travel loop (or the
+     point-blank shortcut above) has recorded the path. Filled before any
+     strike so every path -- including a shot that never strikes -- draws a
+     valid flight; a killing strike draws it while its target still stands
+     on the stop square. A nested RAttack inside the strike saves and
+     restores LOFPendingFlight, so the outer flight still draws. */
+  flight.path = path;
+  flight.count = pathCount;
+  flight.o = &o;
+  flight.m = &m;
+  flight.pause = 30;
+  flight.shooter = e.EActor;
+  flight.drawn = false;
   /* inc-30ps phase 2: resolve the single strike now that the whole line (or,
      for a point-blank shot, no line at all -- lineCount is still 0) is
      known. Intended is NULL only when the player aimed at a location that
@@ -1725,7 +1794,12 @@ hitNow:
        strike removes the target (Thing::Remove sets its x,y to -1), so
        Intended->x/y read AFTER the strike land the missile off-map. */
     int16 tX = Intended->x, tY = Intended->y;
-    if (ReThrow(EV_STRIKE, e) == ABORT)
+    /* inc-sg9o: point LOFPendingFlight at this flight across the strike. */
+    LOFFlight *savedFlight = LOFPendingFlight;
+    LOFPendingFlight = &flight;
+    EvReturn strikeRes = ReThrow(EV_STRIKE, e);
+    LOFPendingFlight = savedFlight;
+    if (strikeRes == ABORT)
       goto SkipAttack;
     /* e is passed through PreStrike and Strike by reference, so e.vHit here
        already carries every modifier either one added (range, actUnseen,
@@ -1786,6 +1860,9 @@ hitNow:
             strikeE.EVictim->getDef() : 0);
           LOFRecomputeDamage(strikeE, bandVictim);
           LOFSetLastDmg(strikeE.Dmg, strikeE.DType);
+          /* inc-sg9o: draw the flight to this bystander's square before the
+             redirect reports its damage. */
+          LOFDrawFlight(&flight, lx/2, ly/2);
           e.EMap->SetQueue(QUEUE_DAMAGE_MSG);
           ReThrow(EV_HIT, strikeE);
           e.EMap->UnsetQueue(QUEUE_DAMAGE_MSG);
@@ -1854,7 +1931,12 @@ hitNow:
        strike removes the target (Thing::Remove sets its x,y to -1), so
        squares[0].member[0]->x/y read AFTER the strike land off-map. */
     int16 tX0 = squares[0].member[0]->x, tY0 = squares[0].member[0]->y;
-    if (ReThrow(EV_STRIKE, e) == ABORT)
+    /* inc-sg9o: point LOFPendingFlight at this flight across the strike. */
+    LOFFlight *savedFlight = LOFPendingFlight;
+    LOFPendingFlight = &flight;
+    EvReturn strikeRes = ReThrow(EV_STRIKE, e);
+    LOFPendingFlight = savedFlight;
+    if (strikeRes == ABORT)
       goto SkipAttack;
     LOFLastVHit = e.vHit;
 
@@ -1892,6 +1974,9 @@ hitNow:
           strikeE.EVictim->getDef() : 0);
         LOFRecomputeDamage(strikeE, hitVictim);
         LOFSetLastDmg(strikeE.Dmg, strikeE.DType);
+        /* inc-sg9o: draw the flight to this bystander's square before the
+           redirect reports its damage. */
+        LOFDrawFlight(&flight, lx/2, ly/2);
         e.EMap->SetQueue(QUEUE_DAMAGE_MSG);
         ReThrow(EV_HIT, strikeE);
         e.EMap->UnsetQueue(QUEUE_DAMAGE_MSG);
@@ -1904,19 +1989,11 @@ SkipAttack:
      off a live creature's square -- see LOFSetLastLand's comment above. */
   LOFSetLastLand(lx/2, ly/2);
 
-  /* inc-nssk: replay the recorded flight now that the strike has decided the
-     landing square (lx/2,ly/2), so the missile is never drawn past where it
-     lands. Port regression from inc-30ps, not upstream; bead inc-nssk. */
-  for (int16 i = 0; i < pathCount; i++) {
-    o.AddGlyph(path[i].x, path[i].y, path[i].glyph);
-    LOFSetLastDraw(path[i].x, path[i].y);
-    o.ShowGlyphs();
-    PossiblyPause(T1, path[i].x, path[i].y, 30);
-    o.DeActivate();
-    o.Activate();
-    if (path[i].x == lx/2 && path[i].y == ly/2)
-      break;
-  }
+  /* inc-nssk, inc-sg9o: the flight is drawn when the landing square is known
+     and before any damage, so a kill is drawn before it is reported; it never
+     passes its landing square. Every shot fills its flight, so every shot
+     draws exactly once -- a strike that landed already marked it drawn. */
+  LOFDrawFlight(&flight, lx/2, ly/2);
 
   o.ShowGlyphs();
   o.DeActivate();
@@ -2782,6 +2859,85 @@ void LineOfFireProbe(Player *shooter) {
                     ok ? "PASS" : "FAIL");
                 if (ok) pass++; else fail++;
                 rat->Remove(true);
+            }
+        }
+
+        /* case=dir-empty-draws: no creature on the line -- the shot at an
+           empty direction must still draw its flight. The last drawn square
+           must be a real square (not the reset (-1,-1)) and no farther from
+           the shooter than the landing square. */
+        {
+            if (lineClearTo7("dir-empty-draws", NULL)) {
+                Item *dag = new Weapon(dagID, TITEM(dagID)->IType);
+                ThrowDir(EV_RATTACK, fireDir, shooter, NULL, NULL, dag);
+                const int16 drawDist = (int16)max(abs(LOFGetLastDrawX() - px),
+                    abs(LOFGetLastDrawY() - py));
+                const int16 landDist = (int16)max(abs(LOFGetLastLandX() - px),
+                    abs(LOFGetLastLandY() - py));
+                const bool ok = !(LOFGetLastDrawX() == -1 &&
+                    LOFGetLastDrawY() == -1) && drawDist <= landDist;
+                Error("LOF_PROBE: case=dir-empty-draws drawn=(%d,%d) "
+                    "landing=(%d,%d) %s", (int)LOFGetLastDrawX(),
+                    (int)LOFGetLastDrawY(), (int)LOFGetLastLandX(),
+                    (int)LOFGetLastLandY(), ok ? "PASS" : "FAIL");
+                if (ok) pass++; else fail++;
+            }
+        }
+
+        /* case=dir-kill-draw-before-death: a forced natural 20 kills a rat
+           with cHP=1 at distance 2. The invariant: the rat must still stand
+           on the landing square at the moment the flight is drawn, i.e. the
+           flight is drawn before the strike kills it, so the stop square
+           reads occupied. */
+        {
+            const int16 rx = px + dx*2, ry = py + dy*2;
+            if (lineClearTo7("dir-kill-draw-before-death", NULL)) {
+                Monster *rat = freshRat(rx, ry);
+                rat->Attr[A_DEF] = D;
+                rat->mHP = rat->cHP = 1; /* any hit kills */
+                LOFForcedRoll = 20;
+                Item *dag = new Weapon(dagID, TITEM(dagID)->IType);
+                ThrowDir(EV_RATTACK, fireDir, shooter, NULL, NULL, dag);
+                const bool dead = rat->isDead();
+                const bool ok = dead && LOFGetLastDrawX() == rx &&
+                    LOFGetLastDrawY() == ry && LOFGetLastDrawOccupied();
+                Error("LOF_PROBE: case=dir-kill-draw-before-death dead=%d "
+                    "drawn=(%d,%d) occupied=%d rat=(%d,%d) %s",
+                    dead ? 1 : 0, (int)LOFGetLastDrawX(),
+                    (int)LOFGetLastDrawY(), LOFGetLastDrawOccupied() ? 1 : 0,
+                    (int)rx, (int)ry, ok ? "PASS" : "FAIL");
+                if (ok) pass++; else fail++;
+                if (!rat->isDead()) rat->Remove(true);
+            }
+        }
+
+        /* case=loc-kill-draw-before-death: the same kill, but aimed with
+           ThrowXY at the rat's own square so the rat is the chosen target.
+           No "last drawn == rat square" clause: aiming at the target's own
+           square makes the travel loop break at the aim square before the
+           next iteration records it, so that square is never in path[] and
+           the last DRAWN square is always one short. The invariant under
+           test is the occupation, not the last drawn square: the rat must
+           be alive on the landing square at the moment the flight is drawn,
+           i.e. before the strike kills it. */
+        {
+            const int16 rx = px + dx*2, ry = py + dy*2;
+            if (lineClearTo7("loc-kill-draw-before-death", NULL)) {
+                Monster *rat = freshRat(rx, ry);
+                rat->Attr[A_DEF] = D;
+                rat->mHP = rat->cHP = 1; /* any hit kills */
+                LOFForcedRoll = 20;
+                Item *dag = new Weapon(dagID, TITEM(dagID)->IType);
+                ThrowXY(EV_RATTACK, rx, ry, shooter, NULL, NULL, dag);
+                const bool dead = rat->isDead();
+                const bool ok = dead && LOFGetLastDrawOccupied();
+                Error("LOF_PROBE: case=loc-kill-draw-before-death dead=%d "
+                    "drawn=(%d,%d) occupied=%d rat=(%d,%d) %s",
+                    dead ? 1 : 0, (int)LOFGetLastDrawX(),
+                    (int)LOFGetLastDrawY(), LOFGetLastDrawOccupied() ? 1 : 0,
+                    (int)rx, (int)ry, ok ? "PASS" : "FAIL");
+                if (ok) pass++; else fail++;
+                if (!rat->isDead()) rat->Remove(true);
             }
         }
     }
@@ -6288,6 +6444,17 @@ EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
     if (e.EVictim && e.EVictim->isCreature() &&
         !e.EVictim->isDead() && !(e.EVictim->Flags & F_DELETE))
       HideSetKey(e.EVictim, HK_DISTRACT, NULL, 1);
+
+    /* inc-sg9o: a ranged shot that connects draws its recorded flight now,
+       before EV_HIT applies any damage and removes a killed target, so the
+       death is never shown before the missile's flight. The pending flight
+       is armed only by RAttack and belongs to this strike's shooter; a miss
+       draws nothing here (the flight runs on to its landing at SkipAttack),
+       and a melee strike never arms one. */
+    if (LOFPendingFlight && !LOFPendingFlight->drawn &&
+        LOFPendingFlight->shooter == e.EActor && e.isHit && e.ETarget &&
+        e.ETarget->x != -1)
+      LOFDrawFlight(LOFPendingFlight, e.ETarget->x, e.ETarget->y);
 
     if(e.isHit) {
       ReThrow(EV_HIT,e);
