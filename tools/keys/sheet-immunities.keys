@@ -1,0 +1,33 @@
+# Give the player the "plantform" template (lib/mon3.irh: Immune to acid, fear,
+# blindness, confusion, charm and sleep) and open the character sheet (bd inc-h8lc). Read the result with
+# tools/check_sheet_immunities.sh.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/sheet-immunities.keys <seed>
+#
+# Wizard mode "Add Template to Creature" (src/Debug.cpp case 16) targets the
+# player himself (the targeting cursor starts on him); Creature::ResistLevel then
+# ORs the template's AddImm into the monster's Imm mask, so AD_CONF returns -1.
+# (Polymorph the PC does not work: the sheet then shows no immunities at all.)
+@include chargen.keys
+
+SPACE   # dismiss the arrival-room description
+
+w
+y
+@choose "Add Template to Creature"
+ENTER
+@choose "plantform"
+@dump:template
+
+d               # Display Character Sheet
+@expect "Gender"
+@dump:sheet
+# Scroll until the Complete Immunities heading is on screen (it never appears
+# if the sheet hides the immunity; @until then gives up after 200 passes).
+@until "Complete Immunities" PGDN
+PGDN*30
+@dump:immune
+ESC
+
+@quit

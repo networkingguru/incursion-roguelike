@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gate: cheap
-# gate-fast: static, reads files only, ~3 s
+# gate-fast: static, reads files only, ~0.3 s
 #
 # Does every regression check have a row in tools/README.md's check table?
 #
@@ -62,29 +62,32 @@ have_section() {
     grep -qF "$SECTION_HEADING" "$1"
 }
 
-# True (exit 0) if a line INSIDE the "### The regression checks" section of
-# $2 begins with "| `$1` |". The section runs from the heading to the next
-# line that begins with "#". Matched as a fixed string (awk substr, not a
-# regex), because a check name contains "." and must not be read as one.
-row_in_section() {
-    local name="$1" readme="$2"
-    awk -v target="| \`${name}\` |" -v heading="$SECTION_HEADING" '
+# Print the NAME of every row "| `NAME` |" INSIDE the "### The regression
+# checks" section of $1, one per line. The section runs from the heading to
+# the next line that begins with "#". One awk pass reads the whole section.
+# Bash 3.2 (the /bin/bash on macOS) has no associative arrays, so membership
+# is tested later with one grep -Fx call, not one lookup per check.
+section_rows() {
+    awk -v heading="$SECTION_HEADING" '
         index($0, heading) == 1 { insec=1; next }
         insec && substr($0, 1, 1) == "#" { insec=0 }
-        insec && substr($0, 1, length(target)) == target { found=1 }
-        END { exit !found }
-    ' "$readme"
+        insec && substr($0, 1, 3) == "| `" {
+            rest = substr($0, 4); p = index(rest, "` |")
+            if (p > 0) print substr(rest, 1, p - 1)
+        }
+    ' "$1"
 }
 
 # Echo every check script that has no row in the section of the given README.
 undocumented() {
-    local readme="$1" dir="$2" f name
+    local readme="$1" dir="$2" f names=()
     for f in "$dir"/check_*.sh "$dir"/check_*.py; do
         [ -e "$f" ] || continue
-        name="$(basename "$f")"
-        exempt "$name" && continue
-        row_in_section "$name" "$readme" || echo "$name"
+        exempt "${f##*/}" && continue
+        names+=("${f##*/}")
     done
+    [ "${#names[@]}" -gt 0 ] || return 0
+    printf '%s\n' "${names[@]}" | grep -Fvx -f <(section_rows "$readme")
 }
 
 if [ "${1:-}" = "--selftest" ]; then

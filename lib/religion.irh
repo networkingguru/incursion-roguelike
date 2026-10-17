@@ -3325,7 +3325,13 @@ God "Kysul"
       /* Ability[CA_INNATE_SPELL,$"Dissolving Touch"] at 4th level, */
       Stati[PERCEPTION,1,+3] at 5th level,
       Stati[PERCEPTION,1,+1] at every level starting at 6th level,
-      Ability[CA_INNATE_SPELL,$"Nightmare"] at 6th level,
+      /* upstream: a $"name" grant must name the spell's full resource name,
+         because Module::FindResource (src/Res.cpp) takes the FIRST full-name
+         match and searches monsters before spells, so "Nightmare" matched the
+         monster and SpellNum() returned -1. Plain data and lookup order, no
+         platform dependence, so Win32 0.6.5B misbehaves identically. Evidence
+         tier Observed. Tracking id inc-pu6v.282. Not sent. */
+      Ability[CA_INNATE_SPELL,$"Nightmare;spell"] at 6th level,
       Stati[COMMAND_ABILITY,MA_ABERRATION,+7] at 6th level,
       Stati[COMMAND_ABILITY,MA_ABERRATION,+3] at every level starting at 7th level,
       Ability[CA_INNATE_SPELL,$"Premonition"] at 7th level,

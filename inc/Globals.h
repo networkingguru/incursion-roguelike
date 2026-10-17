@@ -108,6 +108,7 @@ void SinglePrintXY(EventInfo &e, const char*msg,...);
 
 int8 MonHDType(int8 MType);
 int8 MonGoodSaves(int8 MType);
+int16 DisplayResistTypes(int16 *out, int16 max);
 int16 ResourceLevel(rID xID);
 bool ResourceHasFlag(rID xID, int16 fl);
 int16 MaxItemPlus(int16 MaxLev,rID eID);

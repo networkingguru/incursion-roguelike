@@ -2215,6 +2215,33 @@ int16 Creature::ResistLevel(int16 DType, int16 NatIgnored, int16 WornIgnored)
     return total;
 }
 
+/* upstream: the sheet, side panel and wizard dump each listed resistances
+   from a fixed array, so an immunity to a type missing from it (confusion,
+   blindness, knockback, trip, stat drain and damage) never showed although
+   ResistLevel reported it; upstream's arrays, same on Win32. Observed;
+   inc-h8lc; not sent. */
+int16 DisplayResistTypes(int16 *out, int16 max)
+  {
+    int16 n = 0, d;
+
+    if (n < max) out[n++] = AD_SLASH;
+    if (n < max) out[n++] = AD_PIERCE;
+    if (n < max) out[n++] = AD_BLUNT;
+
+    for (d = 1; d <= AD_FALL; d++)
+      {
+        if (d == AD_SLASH || d == AD_PIERCE || d == AD_BLUNT)
+          continue;
+        if (d == AD_NORM || d == AD_POIS || d == AD_DREX)
+          continue;
+        if (!LookupOnly(DTypeNames,d))
+          continue;
+        if (n < max) out[n++] = d;
+      }
+
+    return n;
+  }
+
 int8 MonHDType(int8 MType)
   {
     switch (MType) {
