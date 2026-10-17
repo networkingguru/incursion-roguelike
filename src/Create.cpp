@@ -6357,6 +6357,7 @@ void Player::ApplySpellSelection() {
     if (changed)
         RecalcCraftFormulas();
 
+    /* inc-4999: the SPELLFLAG_PROBE diagnostic after a rest. */
     if (getenv("INCURSION_SPELLFLAG_PROBE"))
         SpellFlagProbe(false);
 }
@@ -6805,6 +6806,7 @@ void Player::MigrateSpellFlagsRev6() {
     for (i = 0; i < 10; i++)
         if (oldLearned[i] != SpellsLearned[i])
             differs = true;
+    /* inc-4999: the SPELLFLAG_MIGRATE6 learned-differs diagnostic. */
     if (getenv("INCURSION_SPELLFLAG_PROBE"))
         Error("SPELLFLAG_MIGRATE6 learned_differs=%d", differs ? 1 : 0);
 

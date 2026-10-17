@@ -46,7 +46,7 @@
 /* inc-1xr3: the overchannel success chance, in one place for the "Attempt
    spell anyway?" prompt and the deciding roll. The cast fails when
    random(25)+80 > rating, so it succeeds for rating-80+1 of the 25 equally
-   likely rolls; both callers pass the same SpellRating(e.eID). */
+   likely rolls; both callers pass the same SpellRating(e.eID,0,false,e.SpellSource). */
 static int16 OverchannelChance(int16 rating) {
     int16 passing = rating - 79;
     if (passing < 0)
