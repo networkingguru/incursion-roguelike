@@ -803,9 +803,9 @@ Class "Mage"
       __*_<7>Proficiencies<2> -- The mage is proficient only with daggers
       and staves. Few mages rely upon material weapons with any regularity.\n
       __*_<7>Spells<2> -- Mages receive one spellcasting level for
-      every mage class level they possess. Mage spells must be studied
-      and cast from spellbooks, and are all but impossible to cast while
-      wearing armour. However, the mage spell list is the most flexible
+      every mage class level they possess. Mage spells must be memorized
+      from spellbooks at a full rest, and are all but impossible to cast
+      while wearing armor. However, the mage spell list is the most flexible
       and diverse list in Incursion. They have access to all arcane spells, 
       though they must study them from a spellbook in order to learn them.\n
       __*_<7>Magical Diversity<2> -- The arcane knowledge of mages is truly

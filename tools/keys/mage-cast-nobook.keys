@@ -1,0 +1,50 @@
+# inc-q04n: a Mage casts a memorized arcane spell with no spellbook in the
+# pack. Read by tools/check_mage_cast_nobook.sh.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.sav \
+#       tools/headless.sh tools/keys/mage-cast-nobook.keys 1
+#
+# THE CHARACTER. Varag, the frozen Orc Mage (see mage-loadout-rest.keys). Burning
+# Hands is one of his memorized level-1 picks. He carries six spellbooks.
+#
+# WHY BURNING HANDS. It is memorized in the fixture, it is Q_DIR, and aimed RIGHT
+# into open floor with every monster genocided it hits nothing and only spends
+# mana (see tools/keys/mana-regen-cast.keys). No target is needed.
+#
+# THE ROUTE (each @dump label is one assertion screen in the check):
+#   1. Wizard mode, depth 2, genocide everything (as mage-loadout-rest.keys).
+#   2. Drop all six books (inventory item 16, six times).     books-gone
+#   3. 'm' opens the cast menu.                               cast-menu
+#      Burning Hands, RIGHT. Screen after the cast.           after-cast
+#      'v' reads the message log.                             msgs
+
+s                       # one real turn: this counts as a session
+w y                     # wizard mode, confirm
+@choose "Ascend / Descend Depth"
+"2" ENTER
+@until "HP:" ESC
+w
+@choose "Genocide Everything"
+@until "HP:" ESC
+
+@dump:before-drop
+i
+1 6 d
+1 6 d
+1 6 d
+1 6 d
+1 6 d
+1 6 d
+@dump:books-gone
+ESC
+@until "Things in View" ESC
+
+m
+@dump:cast-menu
+@choose "Shield"
+@dump:after-cast
+v
+@dump:msgs
+ESC
+@dump:end

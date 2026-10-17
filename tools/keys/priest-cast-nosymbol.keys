@@ -1,0 +1,34 @@
+# inc-q04n control: a Priest with no holy symbol equipped still cannot cast a
+# divine spell. Read by tools/check_mage_cast_nobook.sh. This must read the same
+# before and after the arcane spellbook requirement is removed.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav \
+#       tools/headless.sh tools/keys/priest-cast-nosymbol.keys 1
+#
+# THE CHARACTER. Holg, the frozen Orc Priest of Aiswin. His Holy symbol of
+# Aiswin hangs in the Neck slot (inventory row o). Creature::HasHolySymbol
+# (src/Skills.cpp) reads only the equipment slots.
+#
+# WHY BLESS. A level-1 divine spell (SP_DIVINE) in his cast menu that asks for
+# no target, so the cast reaches the component test at once.
+#
+# THE ROUTE (each @dump label is one assertion screen in the check):
+#   1. 'i', 'o', 'd' drops the symbol out of the Neck slot.   symbol-gone
+#   2. 'm', Bless. The refusal is on screen and in the log.   after-cast, msgs
+
+s                       # one real turn: this counts as a session
+i
+o
+d
+@dump:symbol-gone
+ESC
+@until "Things in View" ESC
+
+m
+@choose "Bless"
+@dump:after-cast
+v
+@dump:msgs
+ESC
+@dump:end
