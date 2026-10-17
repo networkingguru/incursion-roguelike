@@ -122,8 +122,8 @@ if [ -z "$pass" ] || [ -z "$fail" ]; then
     exit 1
 fi
 
-if [ "$fail" != "0" ] || [ "$pass" -lt 38 ]; then
-    echo "FAIL: $result (want fail=0 and pass>=38)"
+if [ "$fail" != "0" ] || [ "$pass" -lt 41 ]; then
+    echo "FAIL: $result (want fail=0 and pass>=41)"
     exit 1
 fi
 
