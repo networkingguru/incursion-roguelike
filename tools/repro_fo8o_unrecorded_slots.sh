@@ -18,6 +18,10 @@
 #   (c) insert a SECOND Effect ahead of the first new one
 #         plain check --ledger <copy>         -> exit 1 (the first new slot moved)
 #   (d) tools/order_guard.sh --ledger <copy> -> exit 1 (the landing check)
+#   (e) tools/order_guard.sh --bead <id> with an UNBUILT INCURSION_ORDER_BIN
+#                                            -> exit 2 (could not measure, not 1)
+#   (f) the OLD order_guard.sh (git show 744b3e82:) fails the old STEP 4b call
+#         pattern; the SHARED guard's --module-root call passes on a clean module
 #
 # Case (c) is the one that broke Semirath's flute on the inc-pu6v epic: a plain
 # append looked legal, and a later bead inserted ahead of it. Each sandbox is a
@@ -162,6 +166,43 @@ INCURSION_ORDER_BIN="$ROOT/$BIN" tools/order_guard.sh \
     --module-root "$sb" --ledger "$copy" > "$sb/guard.log" 2>&1
 expect_rc "order guard --ledger copy sees the moved slot" 1 $?
 
+# (e) inc-fo8o: a non-zero exit that is NOT a move. An unbuilt
+# INCURSION_ORDER_BIN makes the check unable to measure, and the guard must say
+# so with exit 2, so STEP 4b can tell "could not measure" from "moved a slot".
+echo "(e) tools/order_guard.sh --bead <id> with an unbuilt binary:"
+INCURSION_ORDER_BIN="$WORK/does-not-exist" tools/order_guard.sh \
+    --module-root "$sb" --ledger "$copy" --bead inc-fo8o \
+    > "$sb/guard-unbuilt.log" 2>&1
+expect_rc "unbuilt binary exits 2, not 1" 2 $?
+
+# (f) inc-fo8o: the landing must not depend on the bead branch's copy of the
+# tools. Take the OLD order_guard.sh (inc-pu6v.293's tip, no --ledger), show the
+# old STEP 4b call pattern fails on it, then show the SHARED guard's
+# --module-root call passes on a CLEAN module.
+echo "(f) an old order_guard.sh vs the shared guard:"
+git show 744b3e82:tools/order_guard.sh > "$WORK/order_guard.old.sh" 2> "$sb/oldfetch.log" \
+    || fail "could not read the old order_guard.sh from 744b3e82"
+oldguard="$WORK/order_guard.old.sh"
+chmod +x "$oldguard"
+
+clean="$(new_sandbox "clean")"
+compile_sandbox "$clean"
+clean_copy="$clean/ledger.copy"
+cp -f "$LEDGER" "$clean_copy"
+
+INCURSION_ORDER_BIN="$ROOT/$BIN" "$oldguard" \
+    --module-root "$clean" --ledger "$clean_copy" > "$sb/old-call.log" 2>&1
+old_rc=$?
+[ "$old_rc" -ne 0 ] || fail "the old guard's --ledger call unexpectedly succeeded"
+grep -q "usage:" "$sb/old-call.log" \
+    || fail "the old guard did not report a usage error on --ledger"
+pass "old guard rejects --ledger (exit $old_rc)"
+
+INCURSION_ORDER_BIN="$ROOT/$BIN" tools/order_guard.sh \
+    --module-root "$clean" --ledger "$clean_copy" --bead inc-fo8o \
+    > "$sb/clean-guard.log" 2>&1
+expect_rc "shared guard --module-root passes on a clean module" 0 $?
+
 echo
 if [ "$FAILED" -ne 0 ]; then
     echo "FAIL: see above. Every specimen is under $WORK"
@@ -169,5 +210,7 @@ if [ "$FAILED" -ne 0 ]; then
 fi
 echo "PASS: an unrecorded append passes the plain check but not --require-recorded;"
 echo "      --record against a ledger copy records it; a later insert ahead of the"
-echo "      new slot then fails both the plain check and the landing guard."
+echo "      new slot then fails both the plain check and the landing guard; an"
+echo "      unbuilt binary exits 2 (not 1); and the shared guard passes on a clean"
+echo "      module where an old guard's --ledger call fails."
 echo "      Specimens: $WORK"
