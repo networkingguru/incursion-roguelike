@@ -6298,7 +6298,7 @@ void Player::MigrateSpellFlagsRev5() {
    whether this call followed a migration and the file's revision. Written
    through Error() so it lands in the run's logs/errors.log beside every other
    probe. Uses the same NAME() spelling the character sheet draws, with spaces
-   turned to underscores so the line stays one token per fact. */
+   turned to underscores so the line stays one token per fact. Bead inc-j5yo. */
 void Player::SpellFlagProbe(bool migrated) {
     if (!getenv("INCURSION_SPELLFLAG_PROBE"))
         return;
