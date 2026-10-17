@@ -191,7 +191,7 @@ failed with `SCHEMA COVERAGE` errors (inc-xlwa).
 `ARCHIVE_CLASS` (`inc/Base.h:802`) already generates a
 `Serialize(Registry&, bool isSave)` that calls its base first, and 20 classes
 already use it. The bodies gain field declarations beside the fixups they
-already carry. `Thing` (`inc/Map.h:945-967`) becomes:
+already carry. `Thing` (`inc/Map.h:946-968`) becomes:
 
 ```cpp
 ARCHIVE_CLASS(Thing,Object,r)
@@ -215,7 +215,7 @@ as `Serialize` does today, so a field cannot be written and not read.
 
 ### The map grid
 
-`Map::Serialize` (`inc/Map.h:676-677`) writes `Grid` as one raw block of
+`Map::Serialize` (`inc/Map.h:677-678`) writes `Grid` as one raw block of
 `sizeof(LocationInfo)*sizeX*sizeY`. `LocationInfo` (`inc/Map.h:36-60`) is
 bitfields, whose order and packing the compiler chooses.
 
@@ -328,7 +328,7 @@ Otherwise step 4 always succeeds for any position the manifest covers, because
 an array can only have grown.
 
 **Sequencing.** Both load paths reload modules only after the save group is read
-(`src/Registry.cpp:1353-1396`, `src/Dump.cpp:319-363`), so `Game::Modules` is
+(`src/Registry.cpp:1353-1396`, `src/Dump.cpp:324-368`), so `Game::Modules` is
 stale or zeroed while records are being replayed. The manifest MUST be parsed
 with the records and the conversion MUST be deferred to `SaveV1_ResolveNames()`,
 which already runs after the reload.
