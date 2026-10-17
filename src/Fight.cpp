@@ -2387,7 +2387,12 @@ void LineOfFireProbe(Player *shooter) {
        brief's literal wording, which does not hold for THIS particular
        wild-miss path. See the report for why. */
     target->GainTempStati(MISS_CHANCE, target, 50, SS_MISC, 0, 100, 0);
+    /* Each displaced case runs with no practice bonus, so its miss is certain.
+       Creature::Strike raises PRACTICE_MISS_CHANCE on every shot at a displaced
+       target. inc-ohkm. */
+    shooter->RemoveStati(PRACTICE_MISS_CHANCE);
     tryCase(D+8,  "displaced-band-roll",      "none");
+    shooter->RemoveStati(PRACTICE_MISS_CHANCE);
     tryCase(D+12, "displaced-would-auto-hit", "none");
     target->Attr[A_DEF] = D; // re-pin; see tryCase's comment above
     shootOnce(20, "displaced-nat20-bypass",   "target");

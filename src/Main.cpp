@@ -414,6 +414,10 @@ void Game::Play() {
     extern void HideSearchProbe(Player *pl);
     HideSearchProbe(pp);
 
+    /* inc-9622: opt-in lost-enemy/heard-noise reproduction. */
+    extern void LostEnemyProbe(Player *pl);
+    LostEnemyProbe(pp);
+
     /* inc-u3dp phase 4: distraction/roar/step writers through real events.
        Off unless INCURSION_HIDE_DIST_PROBE is set. See HideDistProbe
        (src/HideDistProbe.cpp) and tools/check_hide_distraction.sh. */

@@ -150,6 +150,9 @@ String & TargetWhy::Dump(const char * toWhat)
     case TargetResents:
       s = "it resents having been charmed";
      break;
+    case TargetLostTrack:
+      s = "it lost track of an enemy";
+     break;
   }
   return *tmpstr(Format("because %s %d turns ago", (const char*)s, 
       theGame->Turn - turnOfBirth));
@@ -1628,6 +1631,36 @@ void TargetSystem::Consider(Creature *me, Thing *t)
     addTarget(newT);
 }
 
+void TargetSystem::SetInvestigateTarget(Creature *me, uint8 x, uint8 y,
+                                        TargetWhyType type)
+{
+  /* inc-9622: one investigate target per monster, not one per noise (see the
+     ponytail note below). A second noise does not pile up a second TargetArea
+     -- it moves the existing one to the new square, resets its age and
+     clears any arrival already recorded, so the monster re-investigates.
+     ponytail: one investigate target per monster, not one per enemy;
+     upgrade path = one per enemy. */
+  Target *old = getTargetOfType(TargetArea);
+  if (old && (old->why.type == TargetHeardNoise ||
+              old->why.type == TargetLostTrack)) {
+    old->data.Area.x = x;
+    old->data.Area.y = y;
+    old->why.type = type;
+    old->why.turnOfBirth = theGame->Turn;
+    old->data.Area.searchTurns = 0;
+    old->vis = false;
+    return;
+  }
+  // investigate!
+  Target newT = {};
+  newT.type = TargetArea;
+  newT.priority = 1;
+  newT.why.Set(type);
+  newT.data.Area.x = x;
+  newT.data.Area.y = y;
+  addTarget(newT);
+}
+
 void TargetSystem::HearNoise(Creature *me, uint8 x, uint8 y)
 {
   if (!me || !me->m) 
@@ -1638,14 +1671,7 @@ void TargetSystem::HearNoise(Creature *me, uint8 x, uint8 y)
   else if (c) {
     Consider(me,c);
   } else {
-    // investigate!
-    Target newT = {};
-    newT.type = TargetArea;
-    newT.priority = 1;
-    newT.why.Set(TargetHeardNoise);
-    newT.data.Area.x = x;
-    newT.data.Area.y = y;
-    addTarget(newT);
+    SetInvestigateTarget(me, x, y, TargetHeardNoise);
   } 
 }
 
