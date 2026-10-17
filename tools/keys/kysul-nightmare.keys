@@ -1,0 +1,65 @@
+# Make a Kysul follower through the wizard menu and dump every page of the
+# character sheet, so the page holding "Innate Spells" is in a dump. Read by
+# tools/check_kysul_nightmare.sh, bd inc-pu6v.282.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_RUN_DIR=logs/runs/kn2 \
+#       tools/headless.sh tools/keys/kysul-nightmare.keys 1
+#
+# THE DEFECT THIS OBSERVES. Kysul's rank-6 grant in lib/religion.irh read
+#   Ability[CA_INNATE_SPELL,$"Nightmare"]
+# but $"name" is resolved by Module::FindResource (src/Res.cpp), which matches
+# the FULL name case-insensitively and searches monsters before spells. The
+# monster "nightmare" (lib/mon4.irh) matched first, so Player::GainAbility's
+# CA_INNATE_SPELL case took -1 from SpellNum() and granted nothing. The grant
+# must name the spell's full resource name: $"Nightmare;spell"
+# (lib/wspells.irh). The fix is already in lib/religion.irh; this script
+# photographs the character sheet that proves it.
+#
+# WHY "Become Divine Champion" IS ENOUGH. It sets SacVals[god][8] = 30000 and
+# calls gainedFavour ten times (src/Debug.cpp). gainedFavour (src/Prayer.cpp)
+# raises the god level one rung per call while the raw favour exceeds the
+# next FAVOUR_CHART rung (lib/religion.irh: Kysul's are 300, 750, 1500, 3000,
+# 12000, 24000, 48000, 64000, 96000, 128000). 30000 clears the first six
+# rungs and stops at the 48000 rung, so the character lands on god level 6.
+# That is the rung that carries the Nightmare grant; Distance Distortion is
+# on the 4th-level grant and so is granted on the way up. AddAbilities
+# (src/Create.cpp) hands each rung's grants out as the rung is reached.
+#
+# WHY THE SHEET IS DUMPED PAGE BY PAGE. CreateCharSheet (src/Sheet.cpp) builds
+# the whole sheet as one long column and DisplayCharSheet (src/Managers.cpp)
+# scrolls it with DOWN; the "Innate Spells" block lives in the Special
+# Abilities column, which is below the first screen. Each @dump photographs
+# the current scroll position, and DOWN advances it by WinSizeY()-6.
+#
+# The 's' after the wizard menu buys the one completed turn without which
+# tools/headless.sh reports NO GAMEPLAY; entering wizard mode spends none.
+# See tools/keys/load-char-sheet.keys for the same one-turn idiom.
+
+@include chargen.keys
+
+w
+y
+@choose "Become Divine Champion"
+"Kysul" ENTER
+@while "more --" SPACE
+
+# One completed turn (see the header). Searching spends a turn without moving.
+s
+
+d
+@dump:s0
+DOWN
+@dump:s1
+DOWN
+@dump:s2
+DOWN
+@dump:s3
+DOWN
+@dump:s4
+DOWN
+@dump:s5
+DOWN
+@dump:s6
+
+@quit
