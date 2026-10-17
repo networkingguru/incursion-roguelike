@@ -1,0 +1,33 @@
+# inc-2jd0: loaded Priest buys Bless through GainFeat.
+s
+i
+o
+d
+@dump:symbol-gone
+ESC
+@until "Things in View" ESC
+@include feat-level3.keys
+@choose "Inherent Spell"
+@dump:feat-pick
+@choose "Call Light"
+@dump:freed-slot
+ENTER
+@until "Things in View" ESC
+m
+@dump:cast-menu
+@choose "(div)Call Light"
+c
+ENTER
+s
+@dump:after-cast
+v
+@dump:msgs
+ESC
+@until "Things in View" ESC
+m
+@choose "(div)Bless"
+ENTER
+@dump:control-refused
+v
+@dump:control-msgs
+ESC

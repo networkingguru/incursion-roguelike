@@ -59,6 +59,8 @@ c                       # Attributes: the third of the five offered sets. The
                         #   sets have no names, so this one stays positional.
                         #   It is 'c' and not 'a' because 'c' is what the
                         #   off-by-one stream was really pressing here.
+@while "Choose a skill" a   # Set c can carry the bonus feat Natural Aptitude, which asks
+                        #   for a skill first; whether it does follows the roll.
 @choose "Lawful Good"   # Alignment. The god decides which are on offer.
 a                       # First feat. Which feats the game offers depends on
                         #   the attribute rolls, so this one stays counted.

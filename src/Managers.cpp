@@ -99,8 +99,6 @@ Redraw:
     { FeatKeys += "F"; FeatList += "<15>F<9>ortify/"; }
     if (p->HasFeat(FT_HEIGHTEN_SPELL))
     { FeatKeys += "H"; FeatList += "<15>H<9>eighten/"; }
-    if (p->HasFeat(FT_INHERANT_SPELL))
-    { FeatKeys += "I"; FeatList += "<15>I<9>nherant/"; }
     if (p->HasFeat(FT_MAXIMIZE_SPELL))
     { FeatKeys += "M"; FeatList += "<15>M<9>aximize/"; }
     if (p->HasFeat(FT_PROJECT_SPELL))
@@ -159,7 +157,7 @@ ProcessSpells:
                     e.SpellSource = srcKind;
                     // ww: no meta-magic for innate abilities
                     if (p->Spells[i] & SP_KNOWN) 
-                        e.MM = p->MMFeats(i);
+                        e.MM = p->MMFeats(i) & ~MM_INHERANT;
                     if (Purpose & SM_TRICKERY)
                         e.isArcaneTrickery = true;
                     e.EActor->CalcEffect(e);
@@ -303,7 +301,6 @@ ProcessSpells:
                     if (p->HasMM(MM_FOCUS,i)) myline +=  " Fc";/* Focused Spell */
                     if (p->HasMM(MM_FORTIFY,i)) myline +=  " Fr";/* Fortify Spell */
                     if (p->HasMM(MM_HEIGHTEN,i)) myline +=  " He";/* Heighten Spell */
-                    if (p->HasMM(MM_INHERANT,i)) myline +=  " In";/* Inherent Spell */
                     if (p->HasMM(MM_JUDICIOUS,i)) myline +=  " Ju";/* Judicious Spell */
                     if (p->HasMM(MM_MAXIMIZE,i)) myline +=  " Ma";/* Maximize Spell */
                     if (p->HasMM(MM_PROJECT,i)) myline +=  " Pr";/* Project Spell */

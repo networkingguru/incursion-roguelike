@@ -3731,19 +3731,19 @@ Text "help::magic"
      cost of Metamagicked spells. The number of Metamagic levels that each feat adds
      are shown in the following table:<15>
      \n__Metamagic Feat_________Lev__Metamagic Feat_________Lev<1>
-     \n__Amplify Spell___________2___Inherent Spell__________1
-     \n__Augment Summoning_______2___Maximize Spell__________3
-     \n__Bind Spell______________1___Persistant Spell________3
-     \n__Consecrate Spell________2___Project Spell___________2
-     \n__Control Spell___________3___Quicken Spell___________4
-     \n__Defensive Spell_________2___Repeat Spell____________3
-     \n__Discerning Spell________2___Still Spell_____________1
-     \n__Empower Spell___________2___Sure Spell______________2
-     \n__Enlarge Spell___________1___Transmute Spell_________1
-     \n__Extend Spell____________1___Unseen Spell____________2
-     \n__Focus Spell_____________1___Vile Spell______________2
-     \n__Fortify Spell___________1___Vocalize Spell__________1
-     \n__Heighten Spell__________2___Warp Spell______________2
+      \n__Amplify Spell___________2___Maximize Spell__________3
+      \n__Augment Summoning_______2___Persistant Spell________3
+      \n__Bind Spell______________1___Project Spell___________2
+      \n__Consecrate Spell________2___Quicken Spell___________4
+      \n__Control Spell___________3___Repeat Spell____________3
+      \n__Defensive Spell_________2___Still Spell_____________1
+      \n__Discerning Spell________2___Sure Spell______________2
+      \n__Empower Spell___________2___Transmute Spell_________1
+      \n__Enlarge Spell___________1___Unseen Spell____________2
+      \n__Extend Spell____________1___Vile Spell______________2
+      \n__Focus Spell_____________1___Vocalize Spell__________1
+      \n__Fortify Spell___________1___Warp Spell______________2
+      \n__Heighten Spell__________2
     \n\n 
     
     <15>Schools of Magic {SC}\n
@@ -4398,6 +4398,8 @@ Text "help::feats"
       * Combat Casting <6>(Caster Level 1+)<7>\n
       * Counterspell <6>(Caster Level 1+)<7>\n
       * School Focus <6>(Caster Level 1+)<7>\n
+      * Inherent Spell <6>(Caster Level 1+)<7>\n
+      * Lucubration <6>(Mage 1+)<7>\n
       * Loadbearer <6>(Str 13+)<7>\n\n
 
       <13>SHIELD FEATS\n
@@ -4430,7 +4432,6 @@ Text "help::feats"
       * Focus Spell\n
       * Fortify Spell\n
       * Heighten Spell\n
-      * Inherent Spell\n
       * Judicious Spell\n
       * Maximize Spell\n
       * Project Spell\n

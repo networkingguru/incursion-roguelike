@@ -82,7 +82,7 @@ unset _arg
 _mut_unknown_clear() {
     check_mutation src/Create.cpp \
 '    for (i = 0; i <= MAX_SPELLS; i++) {
-        if (Spells[i] & SP_KNOWN)
+        if (Spells[i] & (SP_KNOWN | SP_INHERENT))
             continue;
         Spells[i] &= ~(SP_ARCANE | SP_DIVINE | SP_PRIMAL | SP_BARDIC
             | SP_PENDING | SP_PEND_DIV | SP_PEND_PRI);

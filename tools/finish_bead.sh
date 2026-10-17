@@ -479,6 +479,57 @@ else
     echo "=== gate SKIPPED (--no-gate) ==="
 fi
 
+# STEP 4b (inc-fo8o). The gate builds the merged result and, on a green plain
+# check, records any legal append into the worktree's ledger -- so the module
+# has been built by the time we get here. The order guard in the worktree only
+# compares the module with THAT ledger, which the bead may have just moved. Load
+# the ledger $BASE_BRANCH actually records and run the same guard against it:
+# a slot the base branch recorded and this bead moved is a save-format break the
+# bead's own ledger cannot show. Absent on the base branch is not an error --
+# most branches predate the ledger -- so warn and go on.
+#
+# The guard and the checker come from THIS (shared) checkout, never from the
+# worktree. A bead whose branch predates a tool change -- inc-pu6v.293's old
+# order_guard.sh had no --ledger and no --bead -- would otherwise fail on its
+# own out-of-date copy and read as "moved a slot". --module-root points the
+# shared checker at the worktree's built module; --bead names the approval to
+# look for, since the shared checkout is on $BASE_BRANCH, not the bead.
+BASE_LEDGER_TMP="$(mktemp "${TMPDIR:-/tmp}/finish-bead-order-ledger.XXXXXX")" \
+    || cannot "could not create a scratch file for $BASE_BRANCH's ledger"
+if ! git -C "$SHARED" cat-file -e "$BASE_BRANCH:tools/resource_order.ledger" 2>/dev/null; then
+    echo "=== $BASE_BRANCH has no tools/resource_order.ledger; skipping the order guard against it ==="
+elif [ ! -x "$WORKTREE/incursion-headless" ] || [ ! -f "$WORKTREE/mod/Incursion.Mod" ]; then
+    # --no-gate (or a gate that reused a pass) can leave the tree unbuilt.
+    echo "=== $WORKTREE has no built module; skipping the order guard against $BASE_BRANCH's ledger ==="
+else
+    git -C "$SHARED" show "$BASE_BRANCH:tools/resource_order.ledger" > "$BASE_LEDGER_TMP" \
+        || { rm -f "$BASE_LEDGER_TMP"; cannot "could not read $BASE_BRANCH's tools/resource_order.ledger"; }
+    INCURSION_ORDER_BIN="$WORKTREE/incursion-headless" \
+        "$SHARED/tools/order_guard.sh" --module-root "$WORKTREE" \
+        --ledger "$BASE_LEDGER_TMP" --bead "$BEAD"
+    guard_rc=$?
+    case "$guard_rc" in
+        0)
+            ;;
+        1)
+            rm -f "$BASE_LEDGER_TMP"
+            die "STOPPED: this bead moved a slot that $BASE_BRANCH had recorded in
+tools/resource_order.ledger. A save written before the move will not load on
+$BASE_BRANCH. The gate ran against the bead's own ledger, which hides the move.
+Nothing has reached $BASE_BRANCH. Fix the order in $WORKTREE (an append at the
+END only) and run this again."
+            ;;
+        *)
+            rm -f "$BASE_LEDGER_TMP"
+            cannot "the base-ledger order check could not measure (guard exit $guard_rc).
+The guard and checker run from $SHARED against the module in $WORKTREE; the
+output above says which step could not run (an unbuilt binary, a bad module root,
+or a bad bead id). This is not a slot move. Re-run once the cause is fixed."
+            ;;
+    esac
+fi
+rm -f "$BASE_LEDGER_TMP"
+
 # STEP 5. Merge to master. In scratch space unless master is already checked
 # out somewhere, in which case git would refuse a second checkout of it anyway.
 MASTER_WT="$(git -C "$SHARED" worktree list --porcelain \

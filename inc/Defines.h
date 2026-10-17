@@ -1879,13 +1879,13 @@ typedef signed int        hObj;
 #define SP_STAFF     0x0040
 #define SP_INNATE    0x0080
 #define SP_DOMAIN    0x0100
-#define SP_FORGOTTEN 0x0200
+#define SP_PEND_PRI  0x0200 /* primal selection, takes effect at the next rest */
 #define SP_CREATE    0x0400
 #define SP_TINNATE   0x0800
 #define SP_PENDING   0x1000 /* selected for the next rest (arcane) */
 #define SP_GRANTED   0x2000 /* given by a script or class grant, uses no slot */
-#define SP_PEND_DIV  0x4000 /* divine selection, takes effect at the next rest */
-#define SP_PEND_PRI  0x8000 /* primal selection, takes effect at the next rest */
+#define SP_INHERENT  0x4000 /* picked by the Inherent Spell feat; castable without being memorized; needs no focus */
+#define SP_PEND_DIV  0x8000 /* divine selection, takes effect at the next rest */
 
 /* inc-4999 phase 4a: a "version" is a (spell number, source) pair, so the
    player can choose which held version of a spell to cast. MAX_SPELLS is 2048,
@@ -2655,7 +2655,10 @@ typedef signed int        hObj;
 /* inc-08js: general Cannibalism feat, appended after FT_WEAPON_GRAND_MASTERY
    so existing feat numbers stored in saves are unchanged. */
 #define FT_CANNIBALISM         (FT_TUVWXYZ + 46)
-#define FT_LAST                (FT_TUVWXYZ + 47)
+/* inc-2jd0: Lucubration, appended after FT_CANNIBALISM so existing feat
+   numbers stored in saves are unchanged. */
+#define FT_LUCUBRATION         (FT_TUVWXYZ + 47)
+#define FT_LAST                (FT_TUVWXYZ + 48)
 
 #define MM_AMPLIFY       0x00000001  /* Penetrates magic resistance */
 #define MM_AUGMENT       0x00000002  /* Summoned creatures stronger */

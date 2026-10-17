@@ -14,6 +14,11 @@ History: docs/rules-history/bead-and-commit-hygiene.md#commit-gate-stage-before-
 "commit"/"save"/"push" means LAND IT, in order: (1) `git commit` on the bead's branch through the gate; (2) `tools/finish_bead.sh <bead-id>` (gate, merge `--no-ff`, delete branch, drop worktree); (3) `bd close <bead-id>` ONLY AFTER the merge lands. Closing before step 2 makes `tools/check_orphan_branches.sh` red and blocks the merge — recover with `bd update <id> --status open`, re-run, then close. Exception: a worktree holding another bead's uncommitted work — commit only your own paths, say so, don't land that bead.
 History: docs/rules-history/bead-and-commit-hygiene.md#commit-means-land-the-bead.
 
+## wait-on-the-load-guard-before-a-commit
+Before `git commit` and before `tools/finish_bead.sh`, wait until the machine is fit: `until tools/load_guard.sh; do sleep 30; done`, in a background Bash call. `tools/load_guard.sh` refuses (exit 2) while the 1-minute load average is above the CPU count, memory pressure is high, or another `tools/nightly_verify.sh` runs; it never waits on its own. A fast check that fails "TOO SLOW" on an overloaded machine is a timing failure, not a defect: wait on the guard and commit again. NEVER bypass it with `--no-verify` or `INCURSION_LOAD_GUARD_OFF=1`.
+Why: on an overloaded machine a correct timed check fails on time alone, and the pre-commit hook does not call the guard.
+History: new rule, no prior narrative to archive. Bead inc-r80o.
+
 ## beads-blocking-a-commit-fix-the-bead
 A bead blocking your commit: LOOK IT UP AND FIX IT, don't stop/ask/present options. Write missing `## Steps to Reproduce`/`## Acceptance Criteria` from the bead's own description, even if another session filed it. Block only if truly unable to work it out. NEVER `git commit --no-verify`.
 Why: asking turns a one-command fix into a round trip.

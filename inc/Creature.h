@@ -1462,6 +1462,12 @@ class Player: public Character
       virtual void GainAbility(int16 ab, uint32 pa, rID sourceID,int16 statiSource);
       bool LearnSpell(bool left = false);
       void ApplySpellSelection();
+      bool InherentPickable(int16 sn);
+      bool ChooseInherentSpell();
+      void MigrateInherentSpell();
+      bool LucubrationPickable(rID bookKind);
+      bool ChooseLucubrationBook();
+      bool HasBookFor(int16 sn);
       void MigrateSpellFlagsRev5();
       void MigrateSpellFlagsRev6();
       /* Diagnostic behind INCURSION_SPELLFLAG_PROBE: one errors.log line per

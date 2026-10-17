@@ -4169,6 +4169,16 @@ ChosenStudy:
         GainPermStati(SCHOOL_FOCUS,NULL,SS_MISC,0,i,0);
         break;
 
+    case FT_INHERANT_SPELL:
+        if (isPlayer())
+            thisp->ChooseInherentSpell();
+        break;
+
+    case FT_LUCUBRATION:
+        if (isPlayer())
+            thisp->ChooseLucubrationBook();
+        break;
+
 #if 0
     case FT_WILD_SHAPE_TYPE: 
         if (param)
@@ -4729,6 +4739,14 @@ void Character::UpdateTattoos() {
     UnsetSilence();
 }
 
+/* inc-2jd0: the Lucubration feat. A pick is a LUCUBRATION status whose eID is
+   the item resource (book kind) of a carried spellbook. A status from the
+   retired LUCUBRATION spell has the spell's eID, not an item resource, so every
+   reader must ignore a status whose eID is not a T_BOOK item resource. */
+static bool IsLucubrationPick(Status *S) {
+    return S->eID && RES(S->eID)->Type == T_TITEM && TITEM(S->eID)->IType == T_BOOK;
+}
+
 
 bool Character::FeatPrereq(int16 feat, bool fail_if_feat_requires_a_feat)
 {
@@ -4754,6 +4772,49 @@ bool Character::FeatPrereq(int16 feat, bool fail_if_feat_requires_a_feat)
        character who is not good may learn it. */
     if (feat == FT_CANNIBALISM && isMType(MA_GOOD))
         return false;
+
+    /* inc-2jd0: Inherent Spell dropped FF_META, so restore its old
+       caster-level prereq explicitly. */
+    if (feat == FT_INHERANT_SPELL && CasterLev() == 0)
+        return false;
+
+    /* inc-2jd0: the feat also needs at least one spell eligible to be taken. */
+    if (feat == FT_INHERANT_SPELL && isPlayer()) {
+        bool any = false;
+        for (int16 sn = 0; sn < (int16)theGame->LastSpell(); sn++)
+            if (((Player*)this)->InherentPickable(sn)) {
+                any = true;
+                break;
+            }
+        if (!any)
+            return false;
+    }
+
+    /* inc-2jd0: Lucubration needs a Mage level, room under the Intelligence
+       bonus, and at least one carried book kind not yet picked. */
+    if (feat == FT_LUCUBRATION) {
+        if (!isPlayer())
+            return false;
+        if (LevelAs(FIND("Mage")) == 0)
+            return false;
+        Player *lp = (Player*)this;
+        int16 picks = 0;
+        StatiIterNature(this, LUCUBRATION)
+            if (IsLucubrationPick(S))
+                picks++;
+        StatiIterEnd(this)
+        if (picks >= Mod(A_INT))
+            return false;
+        bool any = false;
+        Item *it;
+        for (it = FirstInv(); it; it = NextInv())
+            if (TITEM(it->iID)->IType == T_BOOK && lp->LucubrationPickable(it->iID)) {
+                any = true;
+                break;
+            }
+        if (!any)
+            return false;
+    }
 
     for (i=0; FeatInfo[i].feat; i++) 
         if (FeatInfo[i].feat == feat) {
@@ -5820,14 +5881,14 @@ static uint16 SpellPendBit(uint16 type) {
    it is held from at least one source; it stops being known when its last kind
    bit goes, unless a grant, domain or innate flag still makes it castable. */
 static void SpellSyncKnown(uint16 *f) {
-    if (*f & (SP_ARCANE | SP_DIVINE | SP_PRIMAL | SP_BARDIC))
+    if (*f & (SP_ARCANE | SP_DIVINE | SP_PRIMAL | SP_BARDIC | SP_INHERENT))
         *f |= SP_KNOWN;
     else if (!(*f & (SP_GRANTED | SP_DOMAIN | SP_INNATE | SP_TINNATE)))
         *f &= ~SP_KNOWN;
 }
 
 bool Player::LearnSpell(bool left) {
-    bool areSpells, noBook, hasBook, known, marked, reMem, locked;
+    bool areSpells, noBook, hasBook, known, marked, reMem, locked, inherent;
     bool anyReMem, changed, learnedFill, reChanged, markable;
     int16 i, n, L, cap, bardHeld, nRows, nEmitted;
     int32 sn, v;
@@ -5949,20 +6010,25 @@ bool Player::LearnSpell(bool left) {
         get noticable delays when opening Learn Spell, I'll rewrite
         this test. */
         hasBook = false;
-        if (ls[i].Type == SP_ARCANE) {
-            for (it = FirstInv(); it; it = NextInv())
-                if (it->HasSpell(sn)) {
-                    hasBook = true;
-                    break;
-                }
-        }
+        if (ls[i].Type == SP_ARCANE)
+            hasBook = HasBookFor(sn);
         noBook = (ls[i].Type == SP_ARCANE) && !hasBook;
 
         areSpells = true;
-        if (noBook && !(f & (ls[i].Type | pendBit)) && !Opt(OPT_SHOW_ALL_SPELLS))
+        inherent = (f & SP_INHERENT) != 0;
+        if (!inherent && noBook && !(f & (ls[i].Type | pendBit))
+            && !Opt(OPT_SHOW_ALL_SPELLS))
             continue;
 
         st[i] = LS_PASS;
+        if (inherent) {
+            /* An inherent spell is always shown, locked, and never counts
+               toward a level's slot cap. */
+            st[i] |= LS_LOCKED;
+            if (noBook)
+                st[i] |= LS_NOBOOK;
+            continue;
+        }
         /* A row re-picks at a full rest when its source memorizes: arcane,
            divine and primal. A bard's known spells are permanent. */
         if ((ls[i].Type == SP_ARCANE || ls[i].Type == SP_DIVINE
@@ -5995,6 +6061,8 @@ bool Player::LearnSpell(bool left) {
             if (ls[i].Type != SP_BARDIC)
                 continue;
             f = Spells[theGame->SpellNum(ls[i].spID)];
+            if ((f & SP_INHERENT))
+                continue;
             if ((f & SP_BARDIC) && !(f & (SP_GRANTED|SP_DOMAIN)))
                 bardHeld++;
         }
@@ -6023,6 +6091,7 @@ bool Player::LearnSpell(bool left) {
             noBook = (st[i] & LS_NOBOOK) != 0;
             pendBit = SpellPendBit(ls[i].Type);
             known = (f & ls[i].Type) != 0;
+            inherent = (f & SP_INHERENT) != 0;
 
             /* inc-4999 phase 5: every row leads with its source tag, so a long
                name cannot hide it; a source-less row (no kind bit) gets none. */
@@ -6031,13 +6100,18 @@ bool Player::LearnSpell(bool left) {
                 menu_name += " (memorized)";
             if (locked)
                 menu_name += " (locked)";
+            if (inherent)
+                menu_name += " (inherent)";
             if (noBook)
                 menu_name += " (no book)";
 
             fl = 0;
             color = 0;
             reason = NULL;
-            if (locked) {
+            if (inherent) {
+                fl |= MO_LOCKED;
+                reason = "This spell is inherent and stays.";
+            } else if (locked) {
                 fl |= MO_LOCKED;
                 if (f & (SP_GRANTED|SP_DOMAIN))
                     reason = "This spell is a class grant and stays.";
@@ -6055,7 +6129,9 @@ bool Player::LearnSpell(bool left) {
                 color = GREY;
             }
 
-            if (reMem) {
+            if (inherent)
+                marked = false;
+            else if (reMem) {
                 if (left)
                     marked = known;
                 else
@@ -6131,6 +6207,10 @@ bool Player::LearnSpell(bool left) {
         marked = (st[i] & LS_MARK) != 0;
         pendBit = SpellPendBit(ls[i].Type);
         before = Spells[sn];
+
+        /* An inherent spell is never cleared or marked: leave all its flags. */
+        if (Spells[sn] & SP_INHERENT)
+            continue;
 
         if (st[i] & LS_REMEM) {
             if (!left) {
@@ -6208,7 +6288,6 @@ void Player::ApplySpellSelection() {
     int32 sn;
     uint16 f, kind, pendBit;
     bool changed, held, pend;
-    Item *it;
     String noBookList;
     LearnableSpell *ls = CalcSpellAccess();
 
@@ -6227,6 +6306,8 @@ void Player::ApplySpellSelection() {
         f = Spells[sn];
         if (f & (SP_GRANTED | SP_DOMAIN))
             continue;
+        if (f & SP_INHERENT)
+            continue;
 
         held = (f & kind) != 0;
         pend = (f & pendBit) != 0;
@@ -6234,11 +6315,7 @@ void Player::ApplySpellSelection() {
         if (pend) {
             bool hasBook = (kind != SP_ARCANE);
             if (kind == SP_ARCANE)
-                for (it = FirstInv(); it; it = NextInv())
-                    if (it->HasSpell(sn)) {
-                        hasBook = true;
-                        break;
-                    }
+                hasBook = HasBookFor(sn);
 
             if (hasBook) {
                 if (!held) {
@@ -6284,6 +6361,232 @@ void Player::ApplySpellSelection() {
         SpellFlagProbe(false);
 }
 
+/* inc-2jd0: a spell the Inherent Spell feat may pick. sn is a spell index. */
+bool Player::InherentPickable(int16 sn) {
+    int16 L, i;
+    uint16 f;
+    bool arcane;
+    LearnableSpell *ls;
+
+    if (sn < 0 || sn >= (int16)theGame->LastSpell())
+        return false;
+
+    if (Spells[sn] & SP_INHERENT)
+        return false;
+
+    L = TEFF(theGame->SpellID(sn))->Level;
+    if (L < 1 || L > 9)
+        return false;
+
+    f = Spells[sn];
+
+    /* Arcane: carried in a spellbook, a free slot at its level, and on this
+       player's arcane list. CalcSpellAccess gives one row per (spell, source),
+       so ask it for an SP_ARCANE row for this spell rather than reading a
+       stamped kind bit. */
+    arcane = false;
+    ls = CalcSpellAccess();
+    for (i = 0; ls[i].spID; i++)
+        if (ls[i].Type == SP_ARCANE
+            && theGame->SpellNum(ls[i].spID) == sn) {
+            arcane = true;
+            break;
+        }
+    free(ls);
+
+    if (arcane) {
+        if (!HasBookFor(sn))
+            return false;
+        if (SpellSlots[L-1] + BonusSlots[L-1] <= 0)
+            return false;
+        return true;
+    }
+
+    /* Divine: held as a divine spell, or held as a domain spell. */
+    return (f & (SP_DIVINE | SP_DOMAIN)) != 0;
+}
+
+bool Player::ChooseInherentSpell() {
+    int16 sn, L, nSpells, chosen, i;
+    uint16 f;
+    bool freed, arcane;
+    LearnableSpell *ls;
+
+    for (;;) {
+        nSpells = 0;
+        for (sn = 0; sn < (int16)theGame->LastSpell(); sn++)
+            if (InherentPickable(sn)) {
+                L = TEFF(theGame->SpellID(sn))->Level;
+                MyTerm->LOption(Format("%s (level %d)", (const char*)NAME(theGame->SpellID(sn)), (int)L),
+                    sn + 1);
+                nSpells++;
+            }
+
+        if (nSpells == 0) {
+            IPrint("You have no spell you can take as an inherent spell.");
+            return false;
+        }
+
+        chosen = (int16)MyTerm->LMenu(MENU_BORDER, "Choose an inherent spell:", WIN_MENUBOX);
+        MyTerm->LOptionClear();
+
+        if (chosen <= 0)
+            continue;
+
+        sn = chosen - 1;
+        if (!InherentPickable(sn))
+            continue;
+
+        L = TEFF(theGame->SpellID(sn))->Level;
+        f = Spells[sn];
+
+        freed = false;
+        if ((f & SP_KNOWN) && !(f & (SP_GRANTED | SP_DOMAIN))) {
+            if (SpellsLearned[L-1] > 0)
+                SpellsLearned[L-1]--;
+            freed = true;
+        }
+
+        /* An inherent spell is held: SP_KNOWN stays, no pending bit and exactly
+           one kind bit -- the source this pick is held from. inc-4999: a spell
+           the player has not learned carries no kind bit, so the source comes
+           from the player's list rows (as InherentPickable tests), not from the
+           stamped bit. An arcane row wins; otherwise the pick is divine. */
+        arcane = false;
+        ls = CalcSpellAccess();
+        for (i = 0; ls[i].spID; i++)
+            if (ls[i].Type == SP_ARCANE
+                && theGame->SpellNum(ls[i].spID) == sn) {
+                arcane = true;
+                break;
+            }
+        free(ls);
+
+        Spells[sn] |= SP_INHERENT | SP_KNOWN;
+        Spells[sn] &= ~(SP_PENDING | SP_PEND_DIV | SP_PEND_PRI);
+        if (arcane)
+            Spells[sn] = (Spells[sn] & ~(SP_DIVINE | SP_PRIMAL | SP_BARDIC))
+                | SP_ARCANE;
+        else
+            Spells[sn] = (Spells[sn] & ~(SP_ARCANE | SP_PRIMAL | SP_BARDIC))
+                | SP_DIVINE;
+
+        /* If it was a known divine spell and we just freed its slot, offer the
+           freed slot the same way level-up does. LearnSpell is the one
+           checklist for all levels, so a single call offers the freed slot. */
+        if (freed && (f & SP_DIVINE))
+            LearnSpell(true);
+
+        return true;
+    }
+}
+
+/* inc-2jd0: a save made before the Inherent Spell change can hold a character
+   with FT_INHERANT_SPELL but no spell with SP_INHERENT; ask for the pick now,
+   the same as a new purchase. ChooseInherentSpell prints and returns false
+   when nothing can be picked, so the condition stays true and the next load
+   asks again. */
+void Player::MigrateInherentSpell() {
+    int16 sn;
+
+    if (!HasFeat(FT_INHERANT_SPELL))
+        return;
+    for (sn = 0; sn < (int16)theGame->LastSpell(); sn++)
+        if (Spells[sn] & SP_INHERENT)
+            return;
+    ChooseInherentSpell();
+}
+
+/* True when bookKind is a book kind this player carries but has not picked. */
+bool Player::LucubrationPickable(rID bookKind) {
+    if (!bookKind || RES(bookKind)->Type != T_TITEM || TITEM(bookKind)->IType != T_BOOK)
+        return false;
+
+    Item *it;
+    bool carried = false;
+    for (it = FirstInv(); it; it = NextInv())
+        if (it->iID == bookKind) {
+            carried = true;
+            break;
+        }
+    if (!carried)
+        return false;
+
+    StatiIterNature(this, LUCUBRATION)
+        if (IsLucubrationPick(S) && S->eID == bookKind)
+            StatiIterBreakout(this, return false);
+    StatiIterEnd(this)
+
+    return true;
+}
+
+bool Player::ChooseLucubrationBook() {
+    rID kinds[64];
+    int16 nKinds = 0, chosen, i;
+    bool have;
+    Item *it;
+
+    for (it = FirstInv(); it; it = NextInv()) {
+        if (TITEM(it->iID)->IType != T_BOOK)
+            continue;
+        if (!LucubrationPickable(it->iID))
+            continue;
+        have = false;
+        for (i = 0; i < nKinds; i++)
+            if (kinds[i] == it->iID) {
+                have = true;
+                break;
+            }
+        if (have)
+            continue;
+        if (nKinds < 64)
+            kinds[nKinds++] = it->iID;
+    }
+
+    if (nKinds == 0) {
+        IPrint("You carry no spellbook you have not already studied.");
+        return false;
+    }
+
+    for (;;) {
+        for (i = 0; i < nKinds; i++)
+            MyTerm->LOption(NAME(kinds[i]), i + 1);
+
+        chosen = (int16)MyTerm->LMenu(MENU_BORDER, "Choose a spellbook to study:", WIN_MENUBOX);
+        MyTerm->LOptionClear();
+
+        if (chosen <= 0)
+            continue;
+
+        if (!LucubrationPickable(kinds[chosen - 1]))
+            continue;
+
+        GainPermStati(LUCUBRATION, NULL, SS_MISC, 0, 0, kinds[chosen - 1]);
+        return true;
+    }
+}
+
+/* True when the player can treat spell sn as present in a carried book: a
+   carried item that lists the spell, or a valid Lucubration pick whose book
+   kind lists it. sn is a spell index. */
+bool Player::HasBookFor(int16 sn) {
+    Item *it;
+    rID sID, sID2 = theGame->SpellID(sn);
+
+    for (it = FirstInv(); it; it = NextInv())
+        if (it->HasSpell(sn))
+            return true;
+
+    StatiIterNature(this, LUCUBRATION)
+        if (IsLucubrationPick(S))
+            for (sID = TITEM(S->eID)->FirstRes(AN_SPELLS); sID; sID = TITEM(S->eID)->NextRes(AN_SPELLS))
+                if (sID == sID2)
+                    StatiIterBreakout(this, return true);
+    StatiIterEnd(this)
+
+    return false;
+}
+
 /* inc-j5yo revision-5 migration. Before the checklist change a Mage's known
    arcane spells were castable the moment LearnSpell set SP_KNOWN; now an
    arcane selection is SP_PENDING until the next full rest, and the two spells
@@ -6326,7 +6629,7 @@ void Player::MigrateSpellFlagsRev5() {
        granted spell nor a domain spell: that becomes the pending selection. */
     for (i = 0; i <= MAX_SPELLS; i++)
         if ((Spells[i] & (SP_KNOWN | SP_ARCANE)) == (SP_KNOWN | SP_ARCANE) &&
-            !(Spells[i] & (SP_GRANTED | SP_DOMAIN)))
+            !(Spells[i] & (SP_GRANTED | SP_DOMAIN | SP_INHERENT)))
             Spells[i] |= SP_PENDING;
 
     /* The caller runs SpellFlagProbe once after every migration in this load. */
@@ -6355,7 +6658,6 @@ void Player::MigrateSpellFlagsRev6() {
     int32 sn;
     bool differs;
     LearnableSpell *ls = CalcSpellAccess();
-    Item *it;
     uint8 oldLearned[10];
 
     for (i = 0; i < 10; i++)
@@ -6365,7 +6667,7 @@ void Player::MigrateSpellFlagsRev6() {
        bit on every spell of every class list, so this is what "unlearns" the
        spells the character never learned. */
     for (i = 0; i <= MAX_SPELLS; i++) {
-        if (Spells[i] & SP_KNOWN)
+        if (Spells[i] & (SP_KNOWN | SP_INHERENT))
             continue;
         Spells[i] &= ~(SP_ARCANE | SP_DIVINE | SP_PRIMAL | SP_BARDIC
             | SP_PENDING | SP_PEND_DIV | SP_PEND_PRI);
@@ -6408,8 +6710,13 @@ void Player::MigrateSpellFlagsRev6() {
     /* Rule 2 and 3: each known spell keeps one source. */
     for (sn = 0; sn <= MAX_SPELLS; sn++) {
         uint16 f = Spells[sn];
-        if (!(f & SP_KNOWN))
+        if (!(f & (SP_KNOWN | SP_INHERENT)))
             continue;
+
+        /* An inherent spell is held like a grant: it is known, keeps exactly
+           one source and takes no pending bit. */
+        if (f & SP_INHERENT)
+            Spells[sn] |= SP_KNOWN;
 
         /* a. A domain spell is divine. */
         if (f & SP_DOMAIN) {
@@ -6436,12 +6743,7 @@ void Player::MigrateSpellFlagsRev6() {
                    when a carried item holds the spell (as LearnSpell's hasBook
                    test does). Otherwise the first non-arcane source, in
                    divine, then primal, then bardic order. */
-                bool hasBook = false;
-                for (it = FirstInv(); it; it = NextInv())
-                    if (it->HasSpell((int16)sn)) {
-                        hasBook = true;
-                        break;
-                    }
+                bool hasBook = HasBookFor((int16)sn);
                 if (hasBook)
                     chosen = SP_ARCANE;
                 else if (hasDivine)
@@ -6469,7 +6771,7 @@ void Player::MigrateSpellFlagsRev6() {
         Spells[sn] &= ~(SP_ARCANE | SP_DIVINE | SP_PRIMAL | SP_BARDIC
             | SP_PENDING | SP_PEND_DIV | SP_PEND_PRI);
         Spells[sn] |= chosen;
-        if (!(f & (SP_GRANTED | SP_DOMAIN))) {
+        if (!(f & (SP_GRANTED | SP_DOMAIN | SP_INHERENT))) {
             chosenPend = SpellPendBit(chosen);
             Spells[sn] |= chosenPend;
         }
@@ -6481,7 +6783,7 @@ void Player::MigrateSpellFlagsRev6() {
         SpellsLearned[i] = 0;
     for (sn = 0; sn <= MAX_SPELLS; sn++) {
         uint16 f = Spells[sn];
-        if (!(f & SP_KNOWN) || (f & (SP_GRANTED | SP_DOMAIN)))
+        if (!(f & SP_KNOWN) || (f & (SP_GRANTED | SP_DOMAIN | SP_INHERENT)))
             continue;
         kind = f & (SP_ARCANE | SP_DIVINE | SP_PRIMAL | SP_BARDIC);
         if (!kind)

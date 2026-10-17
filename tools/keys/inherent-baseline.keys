@@ -1,0 +1,16 @@
+# inc-2jd0: establish the unmodified fixture's spell selection and mana.
+s
+d
+L
+@dump:baseline-checklist
+ESC
+@until "Things in View" ESC
+m
+@dump:baseline-cast
+ESC
+i
+1 6
+@dump:baseline-inventory
+ESC
+@until "Things in View" ESC
+@dump:baseline-status

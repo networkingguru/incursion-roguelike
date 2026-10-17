@@ -407,6 +407,17 @@ elif [ ! -f "$ROOT/mod/Incursion.Mod" ] || { [ -z "$EXTRA_CXXFLAGS" ] && [ "$COM
     # inc-ep4y: guard with the binary that just wrote the module, not a stray
     # incursion-headless (unbuilt here).
     INCURSION_ORDER_BIN="$ROOT/$OUT" "$ROOT/tools/order_guard.sh" || exit 1
+    # inc-fo8o: the guard above only fires on a BREAK, so a legal append still
+    # leaves the ledger lagging the module. When the plain check is green (no
+    # Brian-approved break is in play) demand the ledger records the module, and
+    # re-record a legal append here so the build records it. A break keeps the
+    # ledger untouched: only a green plain check reaches --record.
+    if INCURSION_ORDER_BIN="$ROOT/$OUT" python3 "$ROOT/tools/resource_order_check.py"; then
+        if ! INCURSION_ORDER_BIN="$ROOT/$OUT" python3 "$ROOT/tools/resource_order_check.py" --require-recorded; then
+            INCURSION_ORDER_BIN="$ROOT/$OUT" python3 "$ROOT/tools/resource_order_check.py" --record || exit 1
+            echo "order ledger: recorded the module's new entries; stage tools/resource_order.ledger with this change."
+        fi
+    fi
 fi
 
 echo

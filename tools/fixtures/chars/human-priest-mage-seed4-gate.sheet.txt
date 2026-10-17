@@ -7,16 +7,16 @@ by hand: it would then describe a character the .sav beside it does
 not hold, and that is the one failure tools/check_char_fixture.sh
 exists to catch.
 
-made on          2026-10-17 14:02:02 EDT
-made at commit   36884b9a
+made on          2026-10-17 16:23:07 EDT
+made at commit   68c6125b
                  the working tree was dirty, so this fixture may hold changes that commit does not
 seed             4
 settings         tools/gates/Options.Dat
 key script       tools/keys/chargen-human-priest-mage-save.keys
                  copied to tools/fixtures/chars/human-priest-mage-seed4-gate.keys
 saved in game as Kethad.sav
-sha256 .sav      59b9dcd673fa0328d5e96c09608e1b8b56be45ea05afb993d3554d328fb2b455
-sha256 module    8c1b1f99d72749b46d63e13edaca6332bd05470604f05890eef94f551708d92c
+sha256 .sav      64d8d4cd56368be9c7eb5e495000ec20a3442ce663318c7d77ce461e1648a045
+sha256 module    b87c54f80b4c388d1c231c1b05638aae7c3b8250f52a4b4f92a6ab8c9712b98f
                  mod/Incursion.Mod is what the save's rID manifest
                  was written against. A fixture that stops loading
                  is worth comparing against the module that made it.
@@ -215,15 +215,15 @@ Inventory:
 On The Ground:
 
 Known Spells:
-  Mage Armour                     1  100%   10 +6
-  Shield                          1  100%   10 
-  True Strike                     1   90%    2 +10
-  Read Magic                      1  100%   10 +5
-  Sleep                           1   77%    3 
-  Bane                            1   90%    2 -1
-  Bless                           1  100%    5 +1
-  Cure Light Wounds               1   90%    0 1d8+2
-  Call Companions                 1   95%    2 
+  (arc)Mage Armour                1  100%   10 +6
+  (arc)Shield                     1  100%   10 
+  (div)True Strike                1   90%    2 +10
+  (div)Read Magic                 1  100%   10 +5
+  (div)Sleep                      1   77%    3 
+  (div)Bane                       1   90%    2 -1
+  (div)Bless                      1  100%    5 +1
+  (div)Cure Light Wounds          1   90%    0 1d8+2
+  (div)Call Companions            1   95%    2 
   Chemical Simulation             0  100%    0 2d8+2
 
 Journal:

@@ -1441,6 +1441,9 @@ bool Game::LoadNamedGame(const char *savefile) {
 
     oPlayer(p[0])->MyTerm = T1;
     T1->SetPlayer(oPlayer(p[0]));
+    /* inc-2jd0: an old save may hold FT_INHERANT_SPELL with no SP_INHERENT
+       spell; ask the player for the pick now. */
+    oPlayer(p[0])->MigrateInherentSpell();
     /* inc-qhux: heal the current level's wall opacity on load, so a save
        written before the generation fix stops leaking light through its walls.
        Other levels heal as the player enters them (Game::GetDungeonMap). */
