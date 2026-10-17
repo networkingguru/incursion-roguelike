@@ -88,6 +88,24 @@ static_assert(sizeof(LocationInfo) == 20,
 static_assert(sizeof(TAttack) == 8,
     "AbiCheck: TAttack changed size. It is written raw inside TMonster.");
 
+/* LMenuOption is not written raw on its own, but Term holds an array of it
+   and sizeof(Term) feeds SaveFormatID, so growing LMenuOption changes the
+   digest and makes every v0 save refuse to convert. The fields inc-j5yo added
+   (Flags, Color, Cap) sit in the master layout's trailing padding; this pins
+   that. Declared locally so the comparison is against a literal record of the
+   master layout, not against anything the current build might drift to.     */
+
+struct LMenuOptionMaster {
+  String Text;
+  String Desc;
+  int32 Val;
+  int32 SortKey;
+  bool isMarked;
+};
+
+static_assert(sizeof(LMenuOption) == sizeof(LMenuOptionMaster),
+    "AbiCheck: LMenuOption changed size; Term holds an array of it and sizeof(Term) feeds SaveFormatID, so every v0 save would refuse to convert.");
+
 /* --------------------------------------------------- pointer-slot reuse ----
    Registry::Block() parks a data handle in the object's pointer field while
    the object is written out, then swaps the real pointer back afterwards.

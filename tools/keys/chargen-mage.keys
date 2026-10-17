@@ -51,9 +51,15 @@ y       # Do you wish to worship <god>? -- yes
 a       # Personality archetype
 
 # Three starting spells. A first-level mage is offered exactly three picks on
-# every seed tested; the menu says how many are left, and the run ends on the
-# room description rather than on a spell list when the count is right.
-a a a
+# every seed tested. The checklist marks rows with SPACE and takes the first
+# rows by name; the level's header refuses every mark past the cap, so eight
+# attempts fill the three slots and ENTER confirms. Character generation asks
+# again until the slots are full, and the run ends on the room description
+# rather than on a spell list when they are.
+@expect "(Space marks,"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
 
 # The next keystroke dismisses the arrival room description and lands in the
 # dungeon, in play mode.

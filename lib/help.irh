@@ -3603,13 +3603,24 @@ Text "help::magic"
 
      <11>LEARNING SPELLS {LE}\n
      ===============<3>\n
-     __You can learn spells by typing 'L' or 'E' on the character
-     sheet screen. This brings up a menu with all the possible spells you could
-     learn at the moment; for Clerics and Druids, this is every unlearned spell
-     of a level for which you currently have a free spell slot. For wizards, however,
-     this list shows only the spells that you have a spellbook for somewhere in your
-     inventory. If, after surveying the list, you don't find a spell you want, you
-     can press [ESC] to cancel the menu and not learn any spell.\n\n
+     __You choose your spells by typing 'L' or 'E' on the character sheet screen.
+     This opens a checklist with one section for each spell level. Each
+     section's header shows how many of that level's slots are filled. Press
+     [SPACE] to mark or unmark a spell, [TAB] to jump to the next spell level,
+     and [ENTER] to confirm. Press [ESC] to close the checklist without any
+     change.\n\n
+     __If you are a Mage, the checklist lists the spells in the spellbooks you
+     carry, and the spells marked 'memorized' are the ones you can cast now.
+     Your marks are the spells you will memorize at your next full rest. A
+     change does not take effect before then. At that rest, each marked spell
+     needs its spellbook in your inventory. A marked spell whose book is missing
+     is not memorized, and it stays marked for your next rest. A complete rest
+     is required to memorize new spells.\n\n
+     __If you are a Cleric, Druid or Bard, a spell you learn is yours for good. It
+     takes effect at once, and the checklist shows it locked. You can mark
+     spells only for slots that are still empty. Spells that your class,
+     specialty school or domain grants also show locked. They use no slot and
+     need no spellbook.\n\n
   
      <11>THE SPELL MANAGER AND SPELLCASTING {SM}\n
      ==================================<3>\n     

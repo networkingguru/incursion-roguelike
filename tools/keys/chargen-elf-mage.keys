@@ -29,4 +29,7 @@ ENTER y # Done, and confirm keeping the ranks
 a       # Personality archetype
 
 # Starting spells: take the first offered until the game stops asking.
-@while "Learn which spell" a
+@expect "(Space marks,"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER

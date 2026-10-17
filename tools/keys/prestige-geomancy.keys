@@ -94,7 +94,10 @@ RIGHT*3
 ENTER y # Done, and confirm keeping the ranks
 
 a       # Personality archetype
-@while "Learn which spell" a    # a bard picks spells; any will do here
+@expect "(Space marks,"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
 
 ESC     # dismiss the arrival-room description; now in play
 w       # wizard mode
@@ -112,7 +115,7 @@ d                               # character sheet
 # Levelling a bard opens a spell-learning menu at most levels, so the plain
 # "press G until the level arrives" shape is not enough on its own.
 @until "Class  Bard 7" G
-@while "Learn which spell" a
+@while "(Space marks," ESC
 
 S
 @expect "Unspent Skill Ranks"

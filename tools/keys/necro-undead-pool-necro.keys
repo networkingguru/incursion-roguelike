@@ -32,9 +32,11 @@
 # (the player never moves); the entry chamber scatters several of them at
 # positions that move with the seed, and the offsets below are the ones read
 # on seed 1. Create Corporeal Undead's target prompt takes 'l' to move the
-# location cursor, then arrow keys to the square: UP*3 RIGHT is the elf
-# corpse, DOWN RIGHT*4 the human, DOWN*4 the dwarf, DOWN*3 RIGHT the gnome,
-# DOWN*2 LEFT*3 the kobold. The ring arrows cannot be used here -- after the
+# location cursor, then arrow keys to the square: UP*3 LEFT is the elf
+# corpse, DOWN LEFT*4 the human, DOWN*4 the dwarf, DOWN*3 LEFT the gnome,
+# DOWN*2 RIGHT*3 the kobold. (Read again on seed 1 after the spell checklist
+# replaced the starting-spell menu: the level now comes out mirrored left to
+# right, so every horizontal offset changed sign.) The ring arrows cannot be used here -- after the
 # first wight they include the wights themselves, and the prompt stops on one.
 #
 # CAST 3 IS PHOTOGRAPHED SEVERAL TIMES. A refused cast prints "The <corpse>
@@ -62,7 +64,10 @@ RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
 ENTER y
 y       # Worship the offered god
 a       # Personality archetype
-a a a   # Three starting spells
+@expect "(Space marks,"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
 x       # Dismiss the arrival room description
 
 @until "Things in View" ESC
@@ -104,7 +109,7 @@ SPACE*4
 m
 a
 l
-UP*3 RIGHT ENTER
+UP*3 LEFT ENTER
 @choose "Wight"
 @dump:raised
 @until "Wizard Mode Options:" w
@@ -118,7 +123,7 @@ SPACE*4
 m
 a
 l
-DOWN RIGHT*4 ENTER
+DOWN LEFT*4 ENTER
 @choose "Wight"
 @dump:cast2
 @until "Wizard Mode Options:" w
@@ -189,7 +194,7 @@ SPACE*4
 m
 a
 l
-DOWN*3 RIGHT ENTER
+DOWN*3 LEFT ENTER
 @choose "Wight"
 @dump:cast4
 @until "Wizard Mode Options:" w
@@ -203,7 +208,7 @@ SPACE*4
 m
 a
 l
-DOWN*2 LEFT*3 ENTER
+DOWN*2 RIGHT*3 ENTER
 @choose "Wight"
 @dump:cast5
 @until "Wizard Mode Options:" w

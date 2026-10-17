@@ -992,48 +992,9 @@ Class "Mage"
        * to find those) */
        if (EActor->LevelAs($"mage") == 1)
          switch (EActor->GetStatiVal(SPECIALTY_SCHOOL)) {
-           case 0: // abj
-             EActor->GainSpell($"shield",SP_KNOWN|SP_ARCANE);
-             EActor->GainSpell($"mage armour",SP_KNOWN|SP_ARCANE);
-            break;           
-           case 1: // arc             
-             /* I know these aren't Arcana spells. Arcana has entirely
-                utility spells at 1st, except Chromatic Orb, which is
-                more an Illusionist signature than an Arcanist. Give the
-                player the fundamentals and let him choose from there;
-                arcanists are suposed to be diverse. */ 
-             EActor->GainSpell($"magic missile",SP_KNOWN|SP_ARCANE);
-             EActor->GainSpell($"phase door",SP_KNOWN|SP_ARCANE);
-            break;
-           case 2: // div
-             EActor->GainSpell($"read magic",SP_KNOWN|SP_ARCANE);
-             EActor->GainSpell($"phase door",SP_KNOWN|SP_ARCANE);
-            break;
-           case 3: // enc
-             EActor->GainSpell($"charm person",SP_KNOWN|SP_ARCANE);
-             EActor->GainSpell($"shield",SP_KNOWN|SP_ARCANE);
-            break;
-           case 4: // evo
-             EActor->GainSpell($"magic missile",SP_KNOWN|SP_ARCANE);
-             EActor->GainSpell($"shield",SP_KNOWN|SP_ARCANE);
-            break;
-           case 5: // ill
-             EActor->GainSpell($"phantasmal force",SP_KNOWN|SP_ARCANE);
-             EActor->GainSpell($"phase door",SP_KNOWN|SP_ARCANE);
-            break;
-           case 6: // nec
-             EActor->GainSpell($"minor drain",SP_KNOWN|SP_ARCANE);
-             EActor->GainSpell($"phase door",SP_KNOWN|SP_ARCANE);
-            break;
            case 7: // tha
-             EActor->GainSpell($"false life",SP_KNOWN|SP_ARCANE);
-             EActor->GainSpell($"convulsion",SP_KNOWN|SP_ARCANE);
              EActor->Proficiencies |= WG_LIGHT;
             break;
-           case 8: // wea
-             EActor->GainSpell($"monster summoning i",SP_KNOWN|SP_ARCANE);
-             EActor->GainSpell($"phase door",SP_KNOWN|SP_ARCANE);
-            break;         
            } 
        
        /* Hey, Wes,
@@ -1180,6 +1141,16 @@ Class "Mage"
             $"create corporeal undead"
           7 $"create spectral undead"
           8 $"etherealness";
+      * SPECIALTY_SPELLS
+          $"shield" $"mage armour"
+          $"magic missile" $"phase door"
+          $"read magic" $"phase door"
+          $"charm person" $"shield"
+          $"magic missile" $"shield"
+          $"phantasmal force" $"phase door"
+          $"minor drain" $"phase door"
+          $"false life" $"convulsion"
+          $"monster summoning i" $"phase door";
   }                
   
 Class "Abjurer"

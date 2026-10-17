@@ -1,0 +1,36 @@
+# Load a frozen character fixture, take one turn so the session counts, save it,
+# and let the session end. The migration half of inc-j5yo's revision-5 check.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.sav \
+#       tools/headless.sh tools/keys/spellflag-migrate.keys 1
+#
+# WHY THIS EXISTS. Regression 5 of the migration work: loading a pre-revision-5
+# save must run Player::MigrateSpellFlagsRev5() once (the probe reports
+# migrated=1 rev=4), and the save this session writes must come back at
+# revision 5 without migrating again (migrated=0 rev=5). The two runs of
+# tools/check_spellflag_migrate.sh share this script; only INCURSION_LOAD and
+# the probe's expectations differ between them.
+#
+# THE SEARCH IS NOT FILLER. tools/headless.sh reports NO GAMEPLAY (exit 5)
+# unless a turn completes, and the assertion library refuses to read a session
+# that measured nothing. The 's' buys that one turn.
+#
+# THE SAVE IS THE POINT. ESC b is the System Menu's [b] Save and Continue; it
+# is the only save the game offers that does not also end the session. Running
+# out of keys then ends the session with exactly the one save above. Read the
+# warning in tools/keys/save-continue.keys: ESC opens the System Menu rather
+# than cancelling anything, so the ESC below sits where the screen is known.
+
+@dump:arrival
+
+s               # search: one real turn, so this counts as a session
+@dump:played
+
+ESC             # System Menu -- and NOT a cancel
+@expect "System Menu"
+b               # [b] Save and Continue
+
+# Fires after the save lands, and photographs the engine's own
+# "Autosave...  Done." line, which is the oracle that it did.
+@dump:saved

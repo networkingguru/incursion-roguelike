@@ -78,10 +78,19 @@ a       # Personality archetype
 # Weavecraft spells are offered -- the menu shows a subset of the school, and
 # which subset depends on the seed -- so three of the seven levels the gate
 # counts are bought here and the rest are taken below.
-@choose "Alarm"
-@choose "Mount"
-@choose "Spiritwrack"
-@while "Learn which spell" a
+# The checklist lists level 1 by name. Rows 1-3 are Alarm, Burning Hands and
+# Call Companions; Mount is row 15 and Spiritwrack row 22. Monster Summoning I
+# and Phase Door are locked grants and take no mark. The five marked spells
+# are the five the old menu produced: Alarm, Mount and Spiritwrack by name,
+# then the first two rows left. The guard below stops the run if a row moved.
+@expect "(Space marks,"
+SPACE DOWN SPACE DOWN SPACE
+DOWN*12
+SPACE
+DOWN*7
+SPACE
+@expect "[*] Spiritwrack"
+ENTER
 
 ESC     # dismiss the arrival-room description; now in play
 w       # wizard mode
@@ -98,28 +107,28 @@ d                               # character sheet
 # menus cover the sheet -- so the level never becomes visible, and 'g' is
 # itself a menu letter, so the stray presses pick spells at random.
 G
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 G
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 G
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 G
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 G
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 G
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 G
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 G
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 @expect "Mage 5"
 
@@ -147,32 +156,32 @@ P                               # [P]restige Classes
 @choose "Alienist"
 @expect "Alienist 0"            # the gate let him in
 
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @until "class do you wish to advance" G
 @choose "Alienist"
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @until "class do you wish to advance" G
 @choose "Alienist"
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @until "class do you wish to advance" G
 @choose "Alienist"
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @until "class do you wish to advance" G
 @choose "Alienist"
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @until "class do you wish to advance" G
 @choose "Alienist"
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @expect "Alienist 5"

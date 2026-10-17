@@ -1882,6 +1882,8 @@ typedef signed int        hObj;
 #define SP_FORGOTTEN 0x0200
 #define SP_CREATE    0x0400
 #define SP_TINNATE   0x0800
+#define SP_PENDING   0x1000 /* selected for the next rest */
+#define SP_GRANTED   0x2000 /* given by a script or class grant, uses no slot */
 
 #define SK_ALCHEMY    1
 #define SK_ANIMAL_EMP 2
@@ -3635,6 +3637,7 @@ typedef signed int        hObj;
 #define FAVOURED_SKILLS        32
 #define ALLOWED_GODS          33
 #define TEXT_LIST             34
+#define SPECIALTY_SPELLS      35 /* two spells per specialist school, school order 0-8 */
 
 #define GROUP_LEADER          100
 #define GROUP_FOLLOWER        101

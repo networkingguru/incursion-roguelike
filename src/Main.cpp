@@ -393,6 +393,12 @@ void Game::Play() {
     extern void HideProbe(Player *pl);
     HideProbe(pp);
 
+    /* inc-j5yo phase 1: off unless INCURSION_MULTISELECT_PROBE is set. See
+       MultiSelectProbe (src/MultiSelectProbe.cpp) and
+       tools/keys/multiselect-probe.keys. */
+    extern void MultiSelectProbe();
+    MultiSelectProbe();
+
     /* inc-u3dp phase 1, part 3: off unless INCURSION_HIDE_MOD_PROBE is set.
        See HideModProbe (src/HideModProbe.cpp) and
        tools/check_hide_modifiers.sh. */

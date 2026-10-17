@@ -230,12 +230,25 @@ extern KeySetItem StandardKeySet[], RoguelikeKeySet[];
 
 #define MAX_MENU_OPTIONS 510
 
+/* inc-j5yo: flags for LMenuOption.Flags, used by LMultiSelect. */
+#define MO_HEADER  0x0001  /* row is a group header, not selectable */
+#define MO_LOCKED  0x0002  /* row cannot change its mark */
+#define MO_NOMARK  0x0004  /* row may be unmarked but not marked */
+
 typedef struct LMenuOption {
   String Text;
   String Desc;
   int32 Val;
   int32 SortKey; // for non-alphabetical sorting
   bool isMarked;
+  /* inc-j5yo phase 4c: the three fields below sit in the trailing padding
+     that the master layout left after isMarked. sizeof(LMenuOption) must
+     stay equal to the master size -- Term holds an array of it and
+     sizeof(Term) feeds SaveFormatID, so a grown struct would make every
+     v0 save refuse to convert. AbiCheck.cpp guards this at compile time. */
+  uint8 Flags;   // inc-j5yo: MO_HEADER, MO_LOCKED, MO_NOMARK (only 0x01-0x04 used)
+  int8 Color;    // inc-j5yo: 0 = default WHITE
+  int16 Cap;     // inc-j5yo: header group cap; -1 = no cap
 } LMenuOption;
 
 typedef struct WViewListElt {
@@ -393,6 +406,10 @@ public:
         QuickKeys = qk;
     }
     virtual void LOption(const char*text,int32 val,const char*desc=NULL, int32 sortkey=0)=0;
+    virtual void LOptionFlags(uint16 fl, int8 color=0)=0;
+    virtual void LOptionMark(bool)=0;
+    virtual void LOptionReason(const char*)=0;
+    virtual void LOptionCap(int16)=0;
     virtual void LOptionClear()=0;
     virtual void HelpTopic(const char*topic, const char*link=NULL)=0;
     virtual int32 FirstSelected()=0;
@@ -576,6 +593,11 @@ protected:
                                   // overview map stick-repeat and right-stick zoom.
     int16 Mode;
 
+    /* inc-j5yo phase 4c: refusal messages, parallel to Term::Option. Kept
+       out of LMenuOption so sizeof(LMenuOption) -- and therefore sizeof(Term)
+       and SaveFormatID -- stays unchanged. TextTerm is not in the digest. */
+    String OptionReason[1024];
+
     /* Inventory Variables */
     int8 CurrSlot;
     int8 InvMode;
@@ -660,6 +682,10 @@ public:
 
     virtual void LOption(const char*text,int32 val,const char*desc=NULL,
         int32 sortkey=0);
+    virtual void LOptionFlags(uint16 fl, int8 color=0);
+    virtual void LOptionMark(bool);
+    virtual void LOptionReason(const char*);
+    virtual void LOptionCap(int16);
     virtual void LOptionClear();
     virtual void HelpTopic(const char*topic, const char*link=NULL);
     virtual int32 FirstSelected();

@@ -27,7 +27,10 @@ a # First offered feat; availability depends on the seed-pinned attribute rolls.
 @while "|  *" RIGHT RIGHT RIGHT DOWN
 ENTER y
 @while "personality archetype" a
-@while "Learn which spell" a
+@expect "(Space marks,"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
 @until "Things in View" ESC
 @expect "Mage 1"
 @expect "Spd:100%"

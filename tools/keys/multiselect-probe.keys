@@ -1,0 +1,46 @@
+# inc-j5yo phase 2: exercise the LMultiSelect group caps, refusal
+# messages, live header text and Tab.
+#
+#   INCURSION_MULTISELECT_PROBE=1 \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   tools/headless.sh tools/keys/multiselect-probe.keys
+#
+# The probe (src/MultiSelectProbe.cpp) opens a fixed menu at the start of
+# Game::Play. Rows are (index): 0 header "Level 1 - %d of %d slots" (Cap 1,
+# Reason "Level 1 is full."), 1 Alpha (marked), 2 Bravo (blue), 3 Charlie
+# (locked, marked, Reason "Charlie is locked."), 4 header "Level 2 - %d of
+# %d slots" (Cap 1), 5 Delta, 6 Echo (MO_NOMARK, Reason "Echo has no book.").
+#
+# The cursor starts on Alpha. This script:
+#   Down Space       land on Bravo, try to mark -- refused (Level 1 full)
+#   Up Space         land on Alpha, unmark it
+#   Down Space       land on Bravo, mark it (Level 1 now 1 of 1)
+#   Tab              cursor to the first selectable row of the next group (Delta)
+#   Down Space       land on Echo, try to mark -- refused (no book)
+#   Up Space         land on Delta, mark it
+#   Enter            confirm
+# Expected marks are Bravo (2), Charlie (3), Delta (4). See the brief.
+#
+# The opening is chargen.keys, as dive.keys uses; these keys then answer the
+# probe menu, which appears before the first in-game turn. The quit is the
+# way dive.keys quits.
+
+@include chargen.keys
+
+# Capture the open menu: the two YELLOW headers with live counts, the BLUE
+# Bravo row, Charlie drawn with '#'/locked box, Echo with a '*' box.
+@dump:menu-open
+
+DOWN SPACE
+@dump:full-refused
+UP SPACE
+DOWN SPACE
+TAB
+DOWN SPACE
+@dump:nomark-refused
+UP SPACE
+@dump:before-enter
+ENTER
+
+@dump:multiselect-probe
+@quit

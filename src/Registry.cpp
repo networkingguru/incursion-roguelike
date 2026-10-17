@@ -1413,6 +1413,21 @@ bool Game::LoadNamedGame(const char *savefile) {
         Error("Error reading saved game (%s).", Lookup(FileErrors, error_number));
         return false;
     }
+    /* inc-j5yo: revision 5 changed the meaning of Player spell flags
+       (SP_PENDING, SP_GRANTED). A v1 file older than revision 5 holds only
+       SP_KNOWN bits, so its spell flags are migrated once here -- after the
+       player object and modules are fully loaded and SaveV1_ResolveNames()
+       has converted every queued reference, and before any CalcValues/report
+       code reads a spell flag. This is the one restore path both a load from
+       the title menu (Game::LoadGame) and INCURSION_LOAD (Game::LoadNamedGame,
+       which the -load option calls directly) take. A file at revision 5 needs
+       no migration; the probe still runs once after every v1 load. */
+    if (!strncmp(recoveryHeader.Version, "IS", 2)) {
+        if (SaveV1_FileRevision() < 5)
+            oPlayer(p[0])->MigrateSpellFlagsRev5();
+        else
+            oPlayer(p[0])->SpellFlagProbe(false);
+    }
     memset(oPlayer(p[0])->MessageQueue, 0, sizeof(String) * 8);
     InitGodArrays();
 

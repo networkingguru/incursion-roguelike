@@ -12,7 +12,10 @@ a
 @while "|  *" RIGHT RIGHT RIGHT DOWN
 ENTER y
 @while "personality archetype" a
-@while "Learn which spell" a
+@expect "(Space marks,"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
 @until "Things in View" ESC
 @expect "Priest 1"
 w y
@@ -23,7 +26,7 @@ d
 G
 @while "Bonus To Which Attribute" a
 @while "Choose a feat" a
-@while "Learn which spell" a
+@while "(Space marks," ESC
 ESC
 d
 @expect "Priest 2"
@@ -34,10 +37,10 @@ M
 @choose "Mage"
 @while "Bonus To Which Attribute" a
 @while "Choose a feat" a
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @choose "Abjuration"
 @while "Choose a feat" a
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @dump:mage1
 ESC
 d
@@ -46,7 +49,7 @@ d
 @choose "Mage"
 @while "Bonus To Which Attribute" a
 @while "Choose a feat" a
-@while "Learn which spell" a
+@while "(Space marks," ESC
 ESC
 d
 @expect "Mage 2"
@@ -54,7 +57,7 @@ d
 @choose "Mage"
 @while "Bonus To Which Attribute" a
 @while "Choose a feat" a
-@while "Learn which spell" a
+@while "(Space marks," ESC
 ESC
 d
 @expect "Priest 2"

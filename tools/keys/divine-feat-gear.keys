@@ -115,6 +115,12 @@ ENTER y
 @while "Choose a Domain" a
 @while "|  *" RIGHT RIGHT RIGHT DOWN
 ENTER y
+@while "personality archetype" a
+@expect "(Space marks,"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
+ESC     # dismiss the arrival description
 
 # Freeze Monsters is the eleventh wizard switch. A frozen monster takes no turn
 # of its own but still ANSWERS a blow, which is the whole point here.

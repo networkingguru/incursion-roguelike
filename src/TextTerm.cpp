@@ -921,7 +921,41 @@ void TextTerm::LOption(const char*text,int32 val,const char*desc,
     Option[OptionCount].Desc = desc;
     Option[OptionCount].SortKey = sortkey;
     Option[OptionCount].isMarked = false;
+    Option[OptionCount].Flags = 0;
+    Option[OptionCount].Color = 0;
+    Option[OptionCount].Cap = -1;
+    OptionReason[OptionCount] = "";
     OptionCount++;
+  }
+
+void TextTerm::LOptionFlags(uint16 fl, int8 color)
+  {
+    if (OptionCount <= 0)
+      return;
+    Option[OptionCount-1].Flags |= fl;
+    if (color)
+      Option[OptionCount-1].Color = color;
+  }
+
+void TextTerm::LOptionMark(bool marked)
+  {
+    if (OptionCount <= 0)
+      return;
+    Option[OptionCount-1].isMarked = marked;
+  }
+
+void TextTerm::LOptionReason(const char*reason)
+  {
+    if (OptionCount <= 0)
+      return;
+    OptionReason[OptionCount-1] = reason;
+  }
+
+void TextTerm::LOptionCap(int16 cap)
+  {
+    if (OptionCount <= 0)
+      return;
+    Option[OptionCount-1].Cap = cap;
   }
 
 void TextTerm::LOptionClear()
@@ -1332,12 +1366,35 @@ InvalidChar:
     } while(1);
 }
 
+/* inc-j5yo: the header row that governs option i, or -1 if none. A header
+   governs the rows after it up to the next header. */
+static int16 MSHeaderOf(LMenuOption *o, int16 n, int16 i)
+{
+    for (int16 h = i; h >= 0; h--)
+        if (o[h].Flags & MO_HEADER)
+            return h;
+    return -1;
+}
+
+/* inc-j5yo: marked rows in the group that are not MO_LOCKED. Locked rows do
+   not count against a cap; header rows never mark. */
+static int16 MSGroupCount(LMenuOption *o, int16 n, int16 hdr)
+{
+    int16 count = 0;
+    for (int16 k = hdr + 1; k < n && !(o[k].Flags & MO_HEADER); k++)
+        if (o[k].isMarked && !(o[k].Flags & MO_LOCKED))
+            count++;
+    return count;
+}
+
 bool TextTerm::LMultiSelect(uint16 fl, const char* _title,int8 MWin,const char*help,
                             int8 pos)
 {
     int16 ch, i,j,c,p,szCol, Rows, Cols, Width, Height, DY, barlen;
     int16 vStart, vRows;
     String title;
+    String refusal;                 /* inc-j5yo: pending refusal message */
+    bool   refused = false;         /* set while refusal holds a message */
     title = _title;
 
     barlen = 5;
@@ -1345,8 +1402,41 @@ bool TextTerm::LMultiSelect(uint16 fl, const char* _title,int8 MWin,const char*h
         barlen = max(barlen,(int16)Option[i].Text.GetTrueLength()+6);
 
 
-    if (fl & MENU_SORTED)
-        qsort(Option,OptionCount,sizeof(Option[0]),LMenuOptionAlphaSort);
+    /* inc-j5yo: sorting would separate rows from the headers that own them,
+       and would also desynchronise Option from the parallel OptionReason
+       array. Skip sorting if any row carries a refusal reason. */
+    if (fl & MENU_SORTED) {
+        bool anyHeader = false, anyReason = false;
+        for (i=0;i!=OptionCount;i++) {
+            if (Option[i].Flags & MO_HEADER)
+                anyHeader = true;
+            if (OptionReason[i].GetLength())
+                anyReason = true;
+        }
+        if (!anyHeader && !anyReason)
+            qsort(Option,OptionCount,sizeof(Option[0]),LMenuOptionAlphaSort);
+    }
+
+    /* inc-j5yo phase 2b: replay. A LMultiSelect recorded under MO_CREATE is
+       replayed here from RInf exactly as LMenu replays a pick: the choices
+       are Answers terminated by -1, with the menu title as the Question.
+       This mirrors LMenu's placement -- before any drawing. */
+    if (Mode == MO_RECREATE) {
+        /* Clear every mark that replay may set: non-header, non-locked rows. */
+        for (i=0;i!=OptionCount;i++)
+            if (!(Option[i].Flags & (MO_HEADER | MO_LOCKED)))
+                Option[i].isMarked = false;
+        while (RInf.Rsp[RInf.cRsp].Answer != -1) {
+            ASSERT(strncmp(RInf.Rsp[RInf.cRsp].Question,title,31) == 0);
+            int32 ans = RInf.Rsp[RInf.cRsp++].Answer;
+            for (i=0;i!=OptionCount;i++)
+                if (!(Option[i].Flags & MO_HEADER) && Option[i].Val == ans)
+                    Option[i].isMarked = true;
+        }
+        ASSERT(strncmp(RInf.Rsp[RInf.cRsp].Question,title,31) == 0);
+        RInf.cRsp++;   /* consume the terminator */
+        return true;
+    }
 
     PrePrompt();
 
@@ -1358,6 +1448,9 @@ Restart:
             if (Option[i].Val == pos) 
                 c = i; 
     } 
+    /* inc-j5yo: the cursor never rests on a header row. */
+    while (c < OptionCount && (Option[c].Flags & MO_HEADER))
+        c++;
 
     Cols = (fl & MENU_4COLS) ? 4 :
         (fl & MENU_3COLS) ? 3 :
@@ -1426,7 +1519,10 @@ Restart:
     if (fl & MENU_BORDER)
         DrawBorder(MWin,EMERALD);
     for (i=0;i!=OptionCount;i++)
-        Option[i].Text = Option[i].Text.Left(szCol - 4); // ww: - "[A] "
+        /* inc-j5yo: a capped header keeps its full printf format; the draw
+           clips it with %.*s. Truncating here would cut the format. */
+        if (!(Option[i].Flags & MO_HEADER))
+            Option[i].Text = Option[i].Text.Left(szCol - 4); // ww: - "[A] "
 
     /*
     SetWin(MWin);
@@ -1483,11 +1579,31 @@ Restart:
         SetWin(MWin);
         for(i=vStart;i!=min(OptionCount,vStart+vRows*Cols);i++) {
             GotoXY(((i-vStart)/vRows)*szCol,((i-vStart)%vRows)+DY);
-            Color(WHITE);
-            Write(Format("  [%c%c%c] %.*s",-PINK,Option[i].isMarked ? '*' : ' ',-GREY,
-                szCol - 5, 
-                (const char*) Option[i].Text
-                ));
+            if (Option[i].Flags & MO_HEADER) {
+                /* inc-j5yo: a header row draws its text with no box, in
+                   YELLOW, and is never markable or cursor-selectable. A
+                   capped header's Text is a printf format with two %d:
+                   the group's marked count and the cap. */
+                Color(YELLOW);
+                if (Option[i].Cap >= 0)
+                    Write(Format("  %.*s",szCol - 5,
+                        (const char*) Format((const char*) Option[i].Text,
+                            (int) MSGroupCount(Option,OptionCount,i),
+                            (int) Option[i].Cap)));
+                else
+                    Write(Format("  %.*s",szCol - 5,
+                        (const char*) Option[i].Text));
+                continue;
+            }
+            Color(Option[i].Color ? (int16)Option[i].Color : WHITE);
+            if (Option[i].Flags & MO_LOCKED)
+                Write(Format("  [%c%c%c] %.*s",-PINK,
+                    Option[i].isMarked ? '#' : ' ',-GREY,
+                    szCol - 5, (const char*) Option[i].Text));
+            else
+                Write(Format("  [%c%c%c] %.*s",-PINK,
+                    Option[i].isMarked ? '*' : ' ',-GREY,
+                    szCol - 5, (const char*) Option[i].Text));
             for (j=((i-vStart)/vRows)*szCol+1+activeWin->Left;
                 j!=((i-vStart)/vRows)*szCol+1+min(barlen,szCol)+activeWin->Left;j++)
                 APutChar(j,((i-vStart)%vRows)+DY+activeWin->Top,
@@ -1496,10 +1612,21 @@ Restart:
         }
         if (fl & MENU_DESC) {
             ClearScroll();
-            Color(BLUE);
-            SWrapWrite(3,0,XPrint(Option[c].Desc),WinSizeX()-2,WIN_MENUDESC);
+            if (refused) {
+                Color(YELLOW);
+                SWrapWrite(3,0,XPrint(refusal),WinSizeX()-2,WIN_MENUDESC);
+            } else {
+                Color(BLUE);
+                SWrapWrite(3,0,XPrint(Option[c].Desc),WinSizeX()-2,WIN_MENUDESC);
+            }
             UpdateScrollArea(0,WIN_MENUDESC);
             SetWin(MWin);
+        } else if (refused) {
+            /* inc-j5yo: with no description pane the refusal draws on the
+               menu's title line. */
+            Color(YELLOW);
+            GotoXY(0,(MWin == WIN_MENUBOX) ? 0 : 1);
+            Write(Format("  %.*s",WinSizeX()-2,(const char*) refusal));
         }
 
 InvalidChar:
@@ -1512,6 +1639,8 @@ InvalidChar:
             else
                 ch = GetCharCmd(KY_CMD_ARROW_MODE);
             SetMode(oldMode);
+            /* inc-j5yo: a refusal message stays until the next key. */
+            refused = false;
         }
 
         switch(ch) {
@@ -1530,32 +1659,136 @@ InvalidChar:
             } 
             goto InvalidChar;
         case KY_CMD_NORTH:
-            if (c > 0)
-                c--;
-            else
-                c = OptionCount - 1; 
+            /* inc-j5yo: skip header rows in both directions. */
+            {
+                int16 start = c;
+                do {
+                    if (c > 0)
+                        c--;
+                    else
+                        c = OptionCount - 1;
+                } while ((Option[c].Flags & MO_HEADER) && c != start);
+            }
             break;
         case KY_CMD_SOUTH:
-            if (c < OptionCount-1)
-                c++;
-            else  {
-                vStart = 0; 
-                c = 0; 
+            {
+                int16 start = c;
+                do {
+                    if (c < OptionCount-1)
+                        c++;
+                    else  {
+                        vStart = 0; 
+                        c = 0; 
+                    }
+                } while ((Option[c].Flags & MO_HEADER) && c != start);
             }
             break;
         case KY_CMD_WEST:
-            if (c - vRows >= vStart)
-                c -= vRows;
+            /* inc-j5yo: step over header rows in the same direction. */
+            {
+                int16 start = c;
+                if (c - vRows >= vStart) {
+                    c -= vRows;
+                    while ((Option[c].Flags & MO_HEADER) && c - vRows >= vStart
+                           && c >= 0 && c != start)
+                        c -= vRows;
+                }
+            }
             break;
         case KY_CMD_EAST:
-            if (c + vRows <= min(OptionCount-1,vStart+(vRows*Cols-1)))
-                c += vRows;
+            /* inc-j5yo: step over header rows in the same direction. */
+            {
+                int16 start = c;
+                if (c + vRows <= min(OptionCount-1,vStart+(vRows*Cols-1))) {
+                    c += vRows;
+                    while ((Option[c].Flags & MO_HEADER) && c + vRows <=
+                           min(OptionCount-1,vStart+(vRows*Cols-1))
+                           && c != start)
+                        c += vRows;
+                }
+            }
             break;   
+        case KY_TAB:
+            /* inc-j5yo: jump to the first selectable row after the next
+               header, wrapping to the first group. If no other group
+               exists, do nothing. */
+            {
+                int16 h = -1, k;
+                for (k = c + 1; k < OptionCount; k++)
+                    if (Option[k].Flags & MO_HEADER) { h = k; break; }
+                if (h < 0) {
+                    for (k = 0; k < OptionCount; k++)
+                        if (Option[k].Flags & MO_HEADER) { h = k; break; }
+                    if (h >= 0 && h <= c)
+                        h = -1;   /* no other group */
+                }
+                if (h >= 0) {
+                    int16 t = h + 1;
+                    while (t < OptionCount && (Option[t].Flags & MO_HEADER))
+                        t++;
+                    if (t < OptionCount && t != c)
+                        c = t;
+                }
+            }
+            break;
         case KY_SPACE:
-            Option[c].isMarked = !Option[c].isMarked;
+            /* inc-j5yo: a locked or MO_NOMARK row may not be marked, a
+               locked row may not be unmarked, and a full group may not
+               take another mark. Each refusal sets a message that shows
+               until the next key. */
+            if (!Option[c].isMarked) {
+                if (Option[c].Flags & (MO_LOCKED | MO_NOMARK)) {
+                    refused = true;
+                    refusal = OptionReason[c].GetLength()
+                        ? OptionReason[c] : "That line cannot change.";
+                } else {
+                    int16 hdr = MSHeaderOf(Option,OptionCount,c);
+                    if (hdr >= 0 && Option[hdr].Cap >= 0 &&
+                        MSGroupCount(Option,OptionCount,hdr) >= Option[hdr].Cap) {
+                        refused = true;
+                        refusal = OptionReason[hdr].GetLength()
+                            ? OptionReason[hdr] : "That line cannot change.";
+                    } else {
+                        Option[c].isMarked = true;
+                    }
+                }
+            } else {
+                if (Option[c].Flags & MO_LOCKED) {
+                    refused = true;
+                    refusal = OptionReason[c].GetLength()
+                        ? OptionReason[c] : "That line cannot change.";
+                } else {
+                    Option[c].isMarked = false;
+                }
+            }
             break;
         case KY_ENTER:
             Restore();
+            /* inc-j5yo phase 2b: record the checklist as Responses so a
+               reincarnation can replay it. One Response per marked
+               non-header option, Question = title as LMenu does, Answer =
+               the option's Val, then one terminator with Answer = -1. */
+            if (Mode == MO_CREATE) {
+                int16 n = 0;
+                for (i=0;i!=OptionCount;i++)
+                    if (Option[i].isMarked && !(Option[i].Flags & MO_HEADER))
+                        n++;
+                if (RInf.nRsp + n + 1 > 128)
+                    Error("LMultiSelect: replay record full");
+                else {
+                    for (i=0;i!=OptionCount;i++)
+                        if (Option[i].isMarked && !(Option[i].Flags & MO_HEADER)) {
+                            strncpy(RInf.Rsp[RInf.nRsp].Question,title,31);
+                            RInf.Rsp[RInf.nRsp].Question[31] = 0;
+                            RInf.Rsp[RInf.nRsp].Answer = Option[i].Val;
+                            RInf.nRsp++;
+                        }
+                    strncpy(RInf.Rsp[RInf.nRsp].Question,title,31);
+                    RInf.Rsp[RInf.nRsp].Question[31] = 0;
+                    RInf.Rsp[RInf.nRsp].Answer = -1;
+                    RInf.nRsp++;
+                }
+            }
             return true;
         case KY_ESC:
             if (fl & MENU_ESC)
@@ -1591,7 +1824,8 @@ int32 TextTerm::FirstSelected()
     do {
       if (cOption >= OptionCount)
         return 0;
-      if (Option[cOption].isMarked)
+      /* inc-j5yo: header rows are never returned. */
+      if (!(Option[cOption].Flags & MO_HEADER) && Option[cOption].isMarked)
         return Option[cOption].Val;
       cOption++;
       }
@@ -1604,7 +1838,8 @@ int32 TextTerm::NextSelected()
     do {
       if (cOption >= OptionCount)
         return 0;
-      if (Option[cOption].isMarked)
+      /* inc-j5yo: header rows are never returned. */
+      if (!(Option[cOption].Flags & MO_HEADER) && Option[cOption].isMarked)
         return Option[cOption].Val;
       cOption++;
       }
