@@ -4605,10 +4605,19 @@ SkillInfoStruct SkillInfo[] = {
     "bonus to their hit points.",
      A_INT, A_INT, false, 0 }, 
 
+/* upstream: base-code defect, the fix is ours. The old description promised
+   casting without a spellbook, but the arcane book check in Creature::Cast
+   (src/Magic.cpp) never reads SK_KNOW_MAGIC. Upstream's because a description
+   string in a static table reads the same on Win32, with the original
+   typedefs, on the upstream compiler: no platform dependence. Tier Traced.
+   inc-gx1v. NOT SENT upstream. */
   { SK_KNOW_MAGIC, "Knowledge (Magic)", true, true,
-    "__This skill gives a character inherent knowledge of a number of spells,"
-    " thereby allowing him to cast them without a spellbook. The character has"
-    " to spend spell slots to learn these spells normally, of course.",
+    "__This skill covers the lore of magic. A character with this skill can"
+    " research unknown magic items, and has a chance to identify a magic item"
+    " each time it uses one. The skill also gives knowledge of magical"
+    " creatures such as floating eyes and vortices. A character with the"
+    " Scribe Scroll feat learns scroll formulas from this skill, and cannot"
+    " scribe a scroll of a higher level than its skill rating.",
      A_INT, A_INT, false, 0 }, 
 
   { SK_KNOW_MYTH, "Knowledge (Mythology)", true, false,
