@@ -1928,7 +1928,15 @@ void TextTerm::ShowViewList() {
         y = 2; Color(GREY);
         for (i = 0; i != 10; i++)
             if (p->SpellKeys[i] >= 0) {
-                Write(Format("%c%c%c %s", -SKYBLUE, '0' + i, -GREY,
+                /* inc-4999 phase 5: tag each spellkey with its source. */
+                String tag;
+                static const uint16 skHeldKinds[4] =
+                    { SP_ARCANE, SP_DIVINE, SP_PRIMAL, SP_BARDIC };
+                for (int16 hk = 0; hk != 4; hk++)
+                    if (p->Spells[p->SpellKeys[i]] & skHeldKinds[hk])
+                        tag += SpellSrcTagName(skHeldKinds[hk]);
+                Write(Format("%c%c%c %s%s", -SKYBLUE, '0' + i, -GREY,
+                    (const char*)tag,
                     NAME(theGame->SpellID(p->SpellKeys[i]))).TrueLeft(WinSizeX() - 1));
                 Write("\n");
 
@@ -3178,6 +3186,20 @@ FoundProto:
             else
             str = Format("%s",NAME(Candidates[n-j+i]));*/
             str.SetAt(0, toupper(str[0]));
+            /* inc-4999 phase 5: a known-spell picker (Scribe Scroll, Brew
+               Potion) leads each entry with its source tag, after the name's
+               capitalisation so the tag does not steal it. */
+            if (!xID && Reason == ACQ_KNOWN) {
+                static const uint16 acqHeldKinds[4] =
+                    { SP_ARCANE, SP_DIVINE, SP_PRIMAL, SP_BARDIC };
+                int16 spn = theGame->SpellNum(Candidates[n - j + i]);
+                String tag;
+                for (int16 hk = 0; hk != 4; hk++)
+                    if (p->Spells[spn] & acqHeldKinds[hk])
+                        tag += SpellSrcTagName(acqHeldKinds[hk]);
+                if (tag.GetLength())
+                    str = tag + str;
+            }
             Write(0, i, str);
         }
         SetWin(WIN_INPUT);

@@ -1,0 +1,38 @@
+# inc-4999 phase 4a: a Priest/Mage chooses WHICH held version of one spell to
+# cast. Read by tools/check_cast_version.sh.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/human-priest-mage-dual-seed4-gate.sav \
+#   INCURSION_CAST_PROBE=1 \
+#       tools/headless.sh tools/keys/cast-version-dual.keys 4
+#
+# THE CHARACTER. Kethad, the frozen Priest 1 / Mage 1 who holds Protection from
+# Evil from BOTH sources (arcane=1 divine=1) and carries a spellbook [Mystic
+# Aegis]. He is saved in wizard mode at depth 2, already rested, so this script
+# does NOT descend or genocide: it only opens the cast menu and casts the two
+# rows of one spell.
+#
+# THE ROUTE (each @dump label is one assertion screen in the check):
+#   1. 'm' opens the cast menu. The same spell has two rows, tagged
+#      "(arc)Protection from E" and "(div)Protection from E".  cast-menu
+#      @choose the arcane row, which casts it (Protection from Evil has qval 0,
+#      so there is no target prompt).                       after-arcane
+#   2. 'm' opens the menu again; @choose the divine row.    after-divine
+#      'v' reads the message log.                            msgs
+#
+# The CAST_PROBE lines the check reads are written by Creature::Cast at entry,
+# so one line per cast (source=arcane then source=divine) lands in
+# logs/errors.log even if a later rule refused the spell.
+
+m
+@dump:cast-menu
+@choose "(arc)Protection from"
+@dump:after-arcane
+m
+@dump:cast-menu-2
+@choose "(div)Protection from"
+@dump:after-divine
+v
+@dump:msgs
+ESC
+@dump:end

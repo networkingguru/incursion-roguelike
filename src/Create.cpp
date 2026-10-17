@@ -1427,6 +1427,8 @@ SkipThisFocus:;
         MyTerm->Close();
         delete[] ri;
     }
+    /* inc-4999: a fresh character can be probed without a save. */
+    SpellFlagProbe(false);
     return true;
 }
 
@@ -5683,7 +5685,6 @@ LearnableSpell* Character::CalcSpellAccess() {
     */
 #define ADD_SPELL(sp,lv,typ)                    \
         {                                             \
-    Spells[theGame->SpellNum(sp)] |= typ;       \
     added = false;                              \
     for (k=0;k!=c;k++)                          \
     if (ls[k].spID == sp)                     \
@@ -5700,9 +5701,6 @@ LearnableSpell* Character::CalcSpellAccess() {
         }                                         \
     ASSERT(c < (MAX_SPELLS*4));                 \
         }                                             
-
-    for (i = 0; i != MAX_SPELLS; i++)
-        Spells[i] &= ~(SP_ARCANE | SP_DIVINE | SP_PRIMAL | SP_BARDIC);
 
     c = 0;
     lev = 1;
@@ -5805,18 +5803,41 @@ LearnableSpell* Character::CalcSpellAccess() {
     return ls;
 }
 
+/* inc-4999: the pending bit a learnable row's source re-picks at a full rest.
+   Arcane rows use SP_PENDING (its name predates this phase); divine and primal
+   rows get a bit of their own so a mark on one row survives the marks on the
+   others. Bardic rows never re-pick, so they have no pending bit. */
+static uint16 SpellPendBit(uint16 type) {
+    switch (type) {
+        case SP_ARCANE: return SP_PENDING;
+        case SP_DIVINE: return SP_PEND_DIV;
+        case SP_PRIMAL: return SP_PEND_PRI;
+        default:        return 0;
+    }
+}
+
+/* inc-4999: keep SP_KNOWN in step with the kind bits. A spell is known while
+   it is held from at least one source; it stops being known when its last kind
+   bit goes, unless a grant, domain or innate flag still makes it castable. */
+static void SpellSyncKnown(uint16 *f) {
+    if (*f & (SP_ARCANE | SP_DIVINE | SP_PRIMAL | SP_BARDIC))
+        *f |= SP_KNOWN;
+    else if (!(*f & (SP_GRANTED | SP_DOMAIN | SP_INNATE | SP_TINNATE)))
+        *f &= ~SP_KNOWN;
+}
+
 bool Player::LearnSpell(bool left) {
     bool areSpells, noBook, hasBook, known, marked, reMem, locked;
     bool anyReMem, changed, learnedFill, reChanged, markable;
-    int16 i, j, c, n, L, cap, arcMem, lockedUse, nRows, nEmitted;
+    int16 i, n, L, cap, bardHeld, nRows, nEmitted;
     int32 sn, v;
-    uint16 f, before, fl;
+    uint16 f, before, fl, pendBit;
     int8 color;
     Item *it;
     LearnableSpell *ls = CalcSpellAccess();
     unsigned char *st = NULL;
     int16 *ord = NULL, k;
-    String menu_name, typ_str;
+    String menu_name;
     String levelReason[10];
     const char *title, *reason;
 
@@ -5892,17 +5913,20 @@ bool Player::LearnSpell(bool left) {
         sn = theGame->SpellNum(ls[i].spID);
         f = Spells[sn];
         L = ls[i].Level;
-        known = (f & SP_KNOWN) != 0;
+        pendBit = SpellPendBit(ls[i].Type);
+        /* This row is held from its own source; SP_KNOWN alone would say the
+           spell is held from *some* source, which may be a different row. */
+        known = (f & ls[i].Type) != 0;
 
         /* Do we have the chart level to even consider this
         spell as an option? */
         if ((SAL(ls[i].Level) > AbilityLevel(CA_SPELLCASTING))
             && !HasStati(BONUS_SLOTS,min(9,max(1,ls[i].Level)))
-            && !(f & (SP_KNOWN|SP_PENDING)))
+            && !(f & (ls[i].Type | pendBit)))
             continue;
 
-        /* A level with no slots still shows the spells already known or pending there. */
-        if (SpellSlots[L-1] + BonusSlots[L-1] == 0 && !(f & (SP_KNOWN|SP_PENDING)))
+        /* A level with no slots still shows the spells already held or pending there. */
+        if (SpellSlots[L-1] + BonusSlots[L-1] == 0 && !(f & (ls[i].Type | pendBit)))
             continue;
 
         /* Clerics and other divine casters can't learn spells
@@ -5935,12 +5959,17 @@ bool Player::LearnSpell(bool left) {
         noBook = (ls[i].Type == SP_ARCANE) && !hasBook;
 
         areSpells = true;
-        if (noBook && !(f & (SP_KNOWN|SP_PENDING)) && !Opt(OPT_SHOW_ALL_SPELLS))
+        if (noBook && !(f & (ls[i].Type | pendBit)) && !Opt(OPT_SHOW_ALL_SPELLS))
             continue;
 
         st[i] = LS_PASS;
-        if (ls[i].Type == SP_ARCANE && !(f & (SP_GRANTED|SP_DOMAIN)))
+        /* A row re-picks at a full rest when its source memorizes: arcane,
+           divine and primal. A bard's known spells are permanent. */
+        if ((ls[i].Type == SP_ARCANE || ls[i].Type == SP_DIVINE
+            || ls[i].Type == SP_PRIMAL) && !(f & (SP_GRANTED|SP_DOMAIN)))
             st[i] |= LS_REMEM;
+        /* Granted and domain rows are locked outright; a held bardic row is
+           locked too, since a bard's learned spells never change. */
         if ((f & (SP_GRANTED|SP_DOMAIN)) || (!(st[i] & LS_REMEM) && known))
             st[i] |= LS_LOCKED;
         if (noBook)
@@ -5953,23 +5982,26 @@ bool Player::LearnSpell(bool left) {
     nEmitted = 0;
     for (L = 1; L <= 9; L++) {
         nRows = 0;
-        arcMem = 0;
+        bardHeld = 0;
         for (i = 0; i < n; i++) {
             if (!(st[i] & LS_PASS) || ls[i].Level != L)
                 continue;
             nRows++;
+            /* Only a held bardic version occupies a slot permanently: arcane,
+               divine and primal versions are all re-picked at a full rest, so
+               their slots stay available to the checklist. Count only the
+               spell's own bardic row, or a spell that also sits on another
+               list would be counted once per row. */
+            if (ls[i].Type != SP_BARDIC)
+                continue;
             f = Spells[theGame->SpellNum(ls[i].spID)];
-            if ((f & (SP_KNOWN|SP_ARCANE)) == (SP_KNOWN|SP_ARCANE)
-                && !(f & (SP_GRANTED|SP_DOMAIN)))
-                arcMem++;
+            if ((f & SP_BARDIC) && !(f & (SP_GRANTED|SP_DOMAIN)))
+                bardHeld++;
         }
         if (nRows == 0)
             continue;
 
-        lockedUse = SpellsLearned[L-1] - arcMem;
-        if (lockedUse < 0)
-            lockedUse = 0;
-        cap = SpellSlots[L-1] + BonusSlots[L-1] - lockedUse;
+        cap = SpellSlots[L-1] + BonusSlots[L-1] - bardHeld;
         if (cap < 0)
             cap = 0;
 
@@ -5989,27 +6021,12 @@ bool Player::LearnSpell(bool left) {
             reMem = (st[i] & LS_REMEM) != 0;
             locked = (st[i] & LS_LOCKED) != 0;
             noBook = (st[i] & LS_NOBOOK) != 0;
-            known = (f & SP_KNOWN) != 0;
+            pendBit = SpellPendBit(ls[i].Type);
+            known = (f & ls[i].Type) != 0;
 
-            if (ls[i].Type == SP_ARCANE)
-                typ_str = " (Arcane)";
-            else if (ls[i].Type == SP_DIVINE)
-                typ_str = " (Divine)";
-            else if (ls[i].Type == SP_PRIMAL)
-                typ_str = " (Primal)";
-            else if (ls[i].Type == SP_SORCERY)
-                typ_str = " (Sorcerous)";
-            else
-                typ_str = " (Bardic)";
-
-            /* Disambiguate shared spells, so that mage/priests get both
-            Call Light (Arcane) and Call Light (Divine). */
-            for (j = 0, c = 0; j < n; j++)
-                if (ls[j].spID == ls[i].spID)
-                    c++;
-            menu_name = NAME(ls[i].spID);
-            if (c > 1)
-                menu_name += typ_str;
+            /* inc-4999 phase 5: every row leads with its source tag, so a long
+               name cannot hide it; a source-less row (no kind bit) gets none. */
+            menu_name = String(SpellSrcTagName(ls[i].Type)) + NAME(ls[i].spID);
             if (reMem && known)
                 menu_name += " (memorized)";
             if (locked)
@@ -6025,7 +6042,7 @@ bool Player::LearnSpell(bool left) {
                 if (f & (SP_GRANTED|SP_DOMAIN))
                     reason = "This spell is a class grant and stays.";
                 else
-                    reason = "Your learned divine, primal and bardic spells are permanent.";
+                    reason = "Your learned bardic spells are permanent.";
             }
             if (noBook) {
                 fl |= MO_NOMARK;
@@ -6042,7 +6059,7 @@ bool Player::LearnSpell(bool left) {
                 if (left)
                     marked = known;
                 else
-                    marked = (f & SP_PENDING) != 0;
+                    marked = (f & pendBit) != 0;
             } else {
                 marked = known;
             }
@@ -6112,30 +6129,35 @@ bool Player::LearnSpell(bool left) {
         sn = theGame->SpellNum(ls[i].spID);
         L = ls[i].Level;
         marked = (st[i] & LS_MARK) != 0;
+        pendBit = SpellPendBit(ls[i].Type);
         before = Spells[sn];
 
         if (st[i] & LS_REMEM) {
             if (!left) {
-                if (marked) {
-                    Spells[sn] |= SP_PENDING | SP_ARCANE;
-                } else {
-                    Spells[sn] &= ~SP_PENDING;
-                    if (!(Spells[sn] & SP_KNOWN))
-                        Spells[sn] &= ~SP_ARCANE;
-                }
-            } else if (marked && !(Spells[sn] & SP_KNOWN)) {
-                Spells[sn] |= SP_KNOWN | SP_PENDING | SP_ARCANE;
+                /* Outside creation a mark on this row only marks it pending;
+                   it takes effect at the next full rest (phase 3). */
+                if (marked)
+                    Spells[sn] |= pendBit;
+                else
+                    Spells[sn] &= ~pendBit;
+            } else if (marked && !(Spells[sn] & ls[i].Type)) {
+                Spells[sn] |= ls[i].Type | pendBit;
                 SpellsLearned[L-1]++;
-            } else if (!marked && (Spells[sn] & SP_KNOWN)) {
-                Spells[sn] &= ~(SP_KNOWN | SP_PENDING | SP_ARCANE);
+                SpellSyncKnown(&Spells[sn]);
+            } else if (!marked && (Spells[sn] & ls[i].Type)) {
+                Spells[sn] &= ~(ls[i].Type | pendBit);
                 if (SpellsLearned[L-1] > 0)
                     SpellsLearned[L-1]--;
+                SpellSyncKnown(&Spells[sn]);
             } else if (marked) {
-                Spells[sn] |= SP_PENDING;
+                Spells[sn] |= pendBit;
             }
         } else if (!(st[i] & LS_LOCKED) && marked) {
-            Spells[sn] |= SP_KNOWN | ls[i].Type;
-            SpellsLearned[L-1]++;
+            if (!(Spells[sn] & ls[i].Type)) {
+                Spells[sn] |= ls[i].Type;
+                SpellsLearned[L-1]++;
+                SpellSyncKnown(&Spells[sn]);
+            }
         }
 
         if (Spells[sn] != before) {
@@ -6163,17 +6185,29 @@ bool Player::LearnSpell(bool left) {
     return left ? markable : changed;
 }
 
-/* inc-j5yo Phase 5b: apply a pending arcane selection at a full rest. For each
-   arcane spell the character could learn: a known-but-not-pending spell is
-   forgotten (its slot is freed); a pending spell with a carried spellbook is
-   memorized; a pending spell with no book is forgotten but stays pending, and
-   is named in one message. Specialty grants (SP_GRANTED) and domain spells
-   (SP_DOMAIN) are never touched. */
+/* inc-4999 Phase 3: apply every source's pending selection at a full rest.
+   CalcSpellAccess gives one row per (spell, source); each row is judged on its
+   OWN kind bit and pending bit, so forgetting one source's version never
+   touches another source's version of the same spell.
+
+   For a re-picking row (ARCANE, DIVINE or PRIMAL; bardic never changes):
+
+     pend and held    the version stays held; nothing changes.
+     pend, not held   the version becomes held (it is gained).
+     held, not pend   the version is forgotten (its slot is freed).
+     neither          nothing to do.
+
+   An arcane row has one extra condition: a version can only become held while
+   a carried spellbook holds the spell. A pending arcane row with no such book
+   is NOT held (so a held version of it is forgotten), keeps SP_PENDING as the
+   player's still-standing selection, and is named in one "could not memorize"
+   message. Specialty grants (SP_GRANTED), domain spells (SP_DOMAIN) and every
+   bardic row are never touched. */
 void Player::ApplySpellSelection() {
     int16 i, L;
     int32 sn;
-    uint16 f;
-    bool changed;
+    uint16 f, kind, pendBit;
+    bool changed, held, pend;
     Item *it;
     String noBookList;
     LearnableSpell *ls = CalcSpellAccess();
@@ -6181,57 +6215,59 @@ void Player::ApplySpellSelection() {
     changed = false;
 
     for (i = 0; ls[i].spID; i++) {
-        int16 first;
-
-        if (ls[i].Type != SP_ARCANE)
+        if (ls[i].Type != SP_ARCANE && ls[i].Type != SP_DIVINE
+            && ls[i].Type != SP_PRIMAL)
             continue;
 
         sn = theGame->SpellNum(ls[i].spID);
         L = ls[i].Level;
-
-        /* Each spell once: skip a spell number already handled. */
-        for (first = 0; first < i; first++)
-            if (ls[first].Type == SP_ARCANE
-                && theGame->SpellNum(ls[first].spID) == sn)
-                break;
-        if (first < i)
-            continue;
+        kind = ls[i].Type;
+        pendBit = SpellPendBit(kind);
 
         f = Spells[sn];
         if (f & (SP_GRANTED | SP_DOMAIN))
             continue;
 
-        if ((f & SP_KNOWN) && !(f & SP_PENDING)) {
-            Spells[sn] &= ~(SP_KNOWN | SP_ARCANE);
-            if (SpellsLearned[L-1] > 0)
-                SpellsLearned[L-1]--;
-            changed = true;
-        } else if (f & SP_PENDING) {
-            bool hasBook = false;
-            for (it = FirstInv(); it; it = NextInv())
-                if (it->HasSpell(sn)) {
-                    hasBook = true;
-                    break;
-                }
+        held = (f & kind) != 0;
+        pend = (f & pendBit) != 0;
+
+        if (pend) {
+            bool hasBook = (kind != SP_ARCANE);
+            if (kind == SP_ARCANE)
+                for (it = FirstInv(); it; it = NextInv())
+                    if (it->HasSpell(sn)) {
+                        hasBook = true;
+                        break;
+                    }
 
             if (hasBook) {
-                if (!(f & SP_KNOWN)) {
-                    Spells[sn] |= SP_KNOWN | SP_ARCANE;
+                if (!held) {
+                    Spells[sn] |= kind;
                     SpellsLearned[L-1]++;
                     changed = true;
+                    SpellSyncKnown(&Spells[sn]);
                 }
             } else {
-                if (f & SP_KNOWN) {
-                    Spells[sn] &= ~SP_KNOWN;
+                /* No book: not held. Forget a held version, keep SP_PENDING
+                   as the selection that still stands. */
+                if (held) {
+                    Spells[sn] &= ~kind;
                     if (SpellsLearned[L-1] > 0)
                         SpellsLearned[L-1]--;
                     changed = true;
+                    SpellSyncKnown(&Spells[sn]);
                 }
-                /* Keep SP_PENDING and SP_ARCANE. */
                 if (noBookList.GetLength())
                     noBookList += ", ";
                 noBookList += NAME(ls[i].spID);
             }
+        } else if (held) {
+            /* Held but not pending: this source forgot it. */
+            Spells[sn] &= ~kind;
+            if (SpellsLearned[L-1] > 0)
+                SpellsLearned[L-1]--;
+            changed = true;
+            SpellSyncKnown(&Spells[sn]);
         }
     }
 
@@ -6243,6 +6279,9 @@ void Player::ApplySpellSelection() {
 
     if (changed)
         RecalcCraftFormulas();
+
+    if (getenv("INCURSION_SPELLFLAG_PROBE"))
+        SpellFlagProbe(false);
 }
 
 /* inc-j5yo revision-5 migration. Before the checklist change a Mage's known
@@ -6290,7 +6329,184 @@ void Player::MigrateSpellFlagsRev5() {
             !(Spells[i] & (SP_GRANTED | SP_DOMAIN)))
             Spells[i] |= SP_PENDING;
 
-    SpellFlagProbe(true);
+    /* The caller runs SpellFlagProbe once after every migration in this load. */
+}
+
+/* inc-4999 revision-6 migration. Revision 6 redefines a kind bit (SP_ARCANE,
+   SP_DIVINE, SP_PRIMAL, SP_BARDIC) in Player::Spells[] to mean "held from that
+   source" and tracks pending per source (SP_PENDING arcane, SP_PEND_DIV,
+   SP_PEND_PRI primal; bardic has none). A file written before revision 6
+   carries the old meaning: every spell on any of the character's class lists
+   was stamped with that list's kind bit, learned or not, so on load a spell
+   that was never learned reads as held.
+
+   The rules (owner ruling, design rule 6 of bead inc-4999):
+     - Unknown spells lose every kind bit and every pending bit.
+     - A known spell keeps exactly one kind bit, chosen from its rows.
+     - A known, non-granted/non-domain spell is left pending on its chosen
+       source, so the first rest changes nothing.
+     - SpellsLearned is recomputed from the surviving held spells.
+
+   CalcSpellAccess() no longer writes Spells[]; it is called once here for the
+   per-(spell, source) rows and the result is freed. */
+void Player::MigrateSpellFlagsRev6() {
+    int16 i, best;
+    uint16 kind, chosen, chosenPend;
+    int32 sn;
+    bool differs;
+    LearnableSpell *ls = CalcSpellAccess();
+    Item *it;
+    uint8 oldLearned[10];
+
+    for (i = 0; i < 10; i++)
+        oldLearned[i] = SpellsLearned[i];
+
+    /* Rule 1: an unknown spell holds nothing. The old build stamped a kind
+       bit on every spell of every class list, so this is what "unlearns" the
+       spells the character never learned. */
+    for (i = 0; i <= MAX_SPELLS; i++) {
+        if (Spells[i] & SP_KNOWN)
+            continue;
+        Spells[i] &= ~(SP_ARCANE | SP_DIVINE | SP_PRIMAL | SP_BARDIC
+            | SP_PENDING | SP_PEND_DIV | SP_PEND_PRI);
+    }
+
+    /* bead inc-4999, owner ruling of 2026-10-17: the class grants a new
+       character gets through GainSpell (a Priest's Bless and Cure Light
+       Wounds, lib/classes.irh; a Druid's Summon Nature's Ally I and Cure
+       Light Wounds) carry SP_GRANTED. A save written before revision 5 never
+       had it, so restore it here for a spell the character already holds.
+       SP_GRANTED leaves the spell locked in the Learn Spell checklist, using
+       no slot; Rules 2-4 below then give it no pending bit and keep it out of
+       SpellsLearned. The kind bit set beside it keeps the grant's own source
+       (a granted Bless keeps SP_DIVINE, a Druid's grants SP_PRIMAL). */
+    {
+        rID sp;
+        bool isPriest = LevelAs(FIND("Priest")) > 0;
+        bool isDruid = LevelAs(FIND("Druid")) > 0;
+        struct { bool grant; uint16 kind; const char *name; } grants[4] = {
+            { isPriest, SP_DIVINE, "bless" },
+            { isPriest, SP_DIVINE, "cure light wounds" },
+            { isDruid,  SP_PRIMAL, "summon nature's ally i" },
+            { isDruid,  SP_PRIMAL, "cure light wounds" },
+        };
+        int g;
+        for (g = 0; g < 4; g++) {
+            if (!grants[g].grant)
+                continue;
+            sp = FIND(grants[g].name);
+            if (!sp)
+                continue;
+            sn = theGame->SpellNum(sp);
+            if (sn <= 0 || sn > MAX_SPELLS)
+                continue;
+            if (Spells[sn] & SP_KNOWN)
+                Spells[sn] |= SP_GRANTED | grants[g].kind;
+        }
+    }
+
+    /* Rule 2 and 3: each known spell keeps one source. */
+    for (sn = 0; sn <= MAX_SPELLS; sn++) {
+        uint16 f = Spells[sn];
+        if (!(f & SP_KNOWN))
+            continue;
+
+        /* a. A domain spell is divine. */
+        if (f & SP_DOMAIN) {
+            chosen = SP_DIVINE;
+        } else {
+            /* b/c. Collect the sources of this spell's ls[] rows. A row whose
+               Type is not one of the four kinds (a sorcery row) carries no
+               kind bit and is not a source. */
+            bool hasArcane = false, hasDivine = false, hasPrimal = false;
+            bool hasBardic = false;
+            for (i = 0; ls[i].spID; i++) {
+                if (theGame->SpellNum(ls[i].spID) != sn)
+                    continue;
+                switch (ls[i].Type) {
+                    case SP_ARCANE: hasArcane = true; break;
+                    case SP_DIVINE: hasDivine = true; break;
+                    case SP_PRIMAL: hasPrimal = true; break;
+                    case SP_BARDIC: hasBardic = true; break;
+                    default: break;
+                }
+            }
+            if (hasArcane && (hasDivine || hasPrimal || hasBardic)) {
+                /* Several sources and arcane is among them: arcane wins only
+                   when a carried item holds the spell (as LearnSpell's hasBook
+                   test does). Otherwise the first non-arcane source, in
+                   divine, then primal, then bardic order. */
+                bool hasBook = false;
+                for (it = FirstInv(); it; it = NextInv())
+                    if (it->HasSpell((int16)sn)) {
+                        hasBook = true;
+                        break;
+                    }
+                if (hasBook)
+                    chosen = SP_ARCANE;
+                else if (hasDivine)
+                    chosen = SP_DIVINE;
+                else if (hasPrimal)
+                    chosen = SP_PRIMAL;
+                else
+                    chosen = SP_BARDIC;
+            } else if (hasArcane) {
+                chosen = SP_ARCANE;
+            } else if (hasDivine) {
+                chosen = SP_DIVINE;
+            } else if (hasPrimal) {
+                chosen = SP_PRIMAL;
+            } else if (hasBardic) {
+                chosen = SP_BARDIC;
+            } else {
+                /* d. No row at all (a script grant or innate spell off every
+                   list): keep whichever kind bits it has now; if it has none,
+                   leave it with none. */
+                chosen = f & (SP_ARCANE | SP_DIVINE | SP_PRIMAL | SP_BARDIC);
+            }
+        }
+
+        Spells[sn] &= ~(SP_ARCANE | SP_DIVINE | SP_PRIMAL | SP_BARDIC
+            | SP_PENDING | SP_PEND_DIV | SP_PEND_PRI);
+        Spells[sn] |= chosen;
+        if (!(f & (SP_GRANTED | SP_DOMAIN))) {
+            chosenPend = SpellPendBit(chosen);
+            Spells[sn] |= chosenPend;
+        }
+    }
+
+    /* Rule 4: recompute SpellsLearned, one per held, non-granted, non-domain
+       spell, at the level of its chosen source's row (lowest if several). */
+    for (i = 0; i < 10; i++)
+        SpellsLearned[i] = 0;
+    for (sn = 0; sn <= MAX_SPELLS; sn++) {
+        uint16 f = Spells[sn];
+        if (!(f & SP_KNOWN) || (f & (SP_GRANTED | SP_DOMAIN)))
+            continue;
+        kind = f & (SP_ARCANE | SP_DIVINE | SP_PRIMAL | SP_BARDIC);
+        if (!kind)
+            continue;
+        best = -1;
+        for (i = 0; ls[i].spID; i++) {
+            if (theGame->SpellNum(ls[i].spID) != sn)
+                continue;
+            if (ls[i].Type != kind)
+                continue;
+            if (best < 0 || ls[i].Level < best)
+                best = ls[i].Level;
+        }
+        if (best >= 1 && best <= 9)
+            SpellsLearned[best-1]++;
+    }
+
+    differs = false;
+    for (i = 0; i < 10; i++)
+        if (oldLearned[i] != SpellsLearned[i])
+            differs = true;
+    if (getenv("INCURSION_SPELLFLAG_PROBE"))
+        Error("SPELLFLAG_MIGRATE6 learned_differs=%d", differs ? 1 : 0);
+
+    free(ls);
 }
 
 /* The INCURSION_SPELLFLAG_PROBE diagnostic, off unless the variable is set.
@@ -6307,7 +6523,9 @@ void Player::SpellFlagProbe(bool migrated) {
         const char *s;
         int32 j;
         uint32 fl;
-        if (!(Spells[i] & SP_KNOWN))
+        fl = Spells[i];
+        if (!(fl & (SP_KNOWN | SP_ARCANE | SP_DIVINE | SP_PRIMAL
+            | SP_BARDIC | SP_PENDING | SP_PEND_DIV | SP_PEND_PRI)))
             continue;
         /* NAME() can yield a temporary String whose cast to const char* is
            only valid inside the full expression that produced it, so the
@@ -6317,10 +6535,13 @@ void Player::SpellFlagProbe(bool migrated) {
              s++, j++)
             nm[j] = (*s == ' ') ? '_' : *s;
         nm[j] = '\0';
-        fl = Spells[i];
-        Error("SPELLFLAG_PROBE %s known=1 pending=%d granted=%d arcane=%d",
-            nm, (fl & SP_PENDING) ? 1 : 0, (fl & SP_GRANTED) ? 1 : 0,
-            (fl & SP_ARCANE) ? 1 : 0);
+        Error("SPELLFLAG_PROBE %s known=%d pending=%d granted=%d domain=%d "
+            "arcane=%d divine=%d primal=%d bardic=%d pend_div=%d pend_pri=%d",
+            nm, (fl & SP_KNOWN) ? 1 : 0, (fl & SP_PENDING) ? 1 : 0,
+            (fl & SP_GRANTED) ? 1 : 0, (fl & SP_DOMAIN) ? 1 : 0,
+            (fl & SP_ARCANE) ? 1 : 0, (fl & SP_DIVINE) ? 1 : 0,
+            (fl & SP_PRIMAL) ? 1 : 0, (fl & SP_BARDIC) ? 1 : 0,
+            (fl & SP_PEND_DIV) ? 1 : 0, (fl & SP_PEND_PRI) ? 1 : 0);
     }
     Error("SPELLFLAG_PROBE migrated=%d rev=%d", migrated ? 1 : 0,
         (int)SaveV1_FileRevision());

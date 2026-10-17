@@ -26,7 +26,7 @@ ESC
 @until "Things in View" ESC
 
 m
-@choose "Bless"
+@choose "(div)Bless"
 @dump:after-cast
 v
 @dump:msgs
