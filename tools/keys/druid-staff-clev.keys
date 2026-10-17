@@ -1,0 +1,33 @@
+# inc-7y8u: same loaded-fixture script for Druid and Priest; read by tools/check_druid_staff_clev.sh.
+s
+w
+@while "Enter wizard mode" y
+@choose "Item Acquisition"
+RIGHT*3
+@until "Staff of Healing" DOWN
+DOWN
+ENTER
+1 ENTER
+SPACE b SPACE s
+@dump:staff-wielded
+ESC
+w
+@choose "Examine Player Data"
+@until "Stati (" DOWN
+@dump:stati-1
+DOWN*15
+@dump:stati-2
+DOWN*15
+@dump:stati-3
+DOWN*15
+@dump:stati-4
+DOWN*15
+@dump:stati-5
+ESC
+m
+@dump:spells
+ESC
+ESC
+@expect "System Menu"
+b
+@dump:saved
