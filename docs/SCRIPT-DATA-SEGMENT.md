@@ -34,7 +34,7 @@ and "What Task 9 must do" below.
 ## What it is
 
 `Game::MDataSeg[i]` is one flat byte block per loaded module. Its length is
-`MDataSegSize[i]`, computed at `src/Main.cpp:832` as:
+`MDataSegSize[i]`, computed at `src/Main.cpp:836` as:
 
 ```
 szDataSeg + ( szMon*sizeof(MonMem) + szItm*sizeof(ItemMem)
@@ -68,7 +68,7 @@ central finding.)
   compiler assigns its two siblings — `szCodeSeg` at `src/RComp.cpp:200` and
   `szTextSeg` at `src/RComp.cpp:449` — but never `szDataSeg`.
 - `Module` is created with `new Module`, and `Object::operator new` zeroes the
-  whole allocation (`inc/Base.h:679`, `memset(vp,0,sz + pad)`). So `szDataSeg`
+  whole allocation (`inc/Base.h:692`, `memset(vp,0,sz + pad)`). So `szDataSeg`
   starts at 0 and, absent any assignment, stays 0 through compile and through
   the serialize at `inc/Res.h:852`.
 - The VM's global-variable machinery does exist: the grammar assigns each
@@ -193,7 +193,7 @@ Rejected alternatives:
 3. On load, after the loaded module is known, compare the saved segment length
    against the loaded module's `szDataSeg`. If they differ, throw `ECORRUPT`.
    If they match (always, today), copy the blob to the front of the freshly
-   allocated `MDataSeg[i]` (allocated at `src/Main.cpp:838`) and lay the
+   allocated `MDataSeg[i]` (allocated at `src/Main.cpp:842`) and lay the
    name-keyed rows in behind it.
 
 **If a future change wires `szDataSeg` to `HeapHead` and a global ever holds an

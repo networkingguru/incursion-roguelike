@@ -122,7 +122,7 @@ them (`src/Debug.cpp`), so adding an option renumbers everything after it —
 dump the menu and read the letter rather than counting. And `w`, not `W`: an
 uppercase token sets SHIFT, and both key tables bind `KY_CMD_WIZMODE` with
 modifier flags of 0, so `W` is a different keystroke that reaches nothing
-(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:5394`/`5514`).
+(`src/Wposix.cpp` `TokenToKey`, `src/Tables.cpp:5405`/`5525`).
 
 `[M] Create Altar` is there for the harness. A sacrifice needs the player to
 be standing on an altar, and the only other source of one is `MakeLev`'s
@@ -544,6 +544,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_dragonshield_plus_prose.sh` | Does the Dragonshield description state a "+2 (or higher)" enhancement floor, matching its `INITIAL_PLUS +2` constant, rather than the unreachable "+1 (or higher)" it claimed before? | LIVE |
 | `check_dragonshield_prose.sh` | Does the Dragonshield description list the colour names the shield can actually display (yellow, not brown), matching its `EV_GETNAME` name table? | LIVE |
 | `check_drain_selfaim.sh` | Does a monster's drain spell hit an enemy rather than the caster? Minor and Major Drain reach a monster only through the injury-remedy action, which carries no target, and the untargeted fallback used to aim them at the caster -- one feyr drained itself 120 times in thirty turns. Reads the cast probe for a monster attack with no direction and no location, and stops rather than passes if the session never landed the player's control cast. | LIVE |
+| `check_druid_staff_clev.sh` | Does a Druid who wields a wished staff of Healing pass its divine-or-primal caster-level requirement rather than failing it, so the staff grants its STAFF SPELLS stati? Loads the Druid fixture and dumps the stati list; `--priest` is the positive control (inc-7y8u). | LIVE |
 | `check_dump_save.sh` | Does `-dump` still walk a real save and report the right fields, from BOTH backends? Reads a fresh seed-1 save, then checks its Name and Race against `logs/charprobe.txt` (the engine's own `DumpCharacter` output written by `Game::SaveGame` under `INCURSION_CHAR_PROBE=1`) and its HP against the session's own screen status line, so the expected values are not seed literals that content changes move. `--prove-red` breaks `src/Dump.cpp`'s Name walk and rebuilds privately. | LIVE |
 | `check_dungeonmap_bounds.sh` | Does a levitating character on the bottom level still stay on it? `Game::GetDungeonMap` answered a request for one level past its own allocation by reading past the end of the array, and `Creature::Descend`'s levitation branch makes that request from depth 10. Loads `tools/fixtures/chars/levitate-bottom-seed1.sav`, a character frozen levitating on a depth-10 chasm (a generated depth 10 is not reproducible across an unrelated change, so this check loads one rather than walking to it fresh), presses `>`, and expects the climb-down prompt and a 100m depth reading. | LIVE |
 | `check_dup_names.sh` | Does the resource compiler reject a same-case duplicate resource name, with its own duplicate-name diagnostic? | LIVE |
@@ -1226,7 +1227,7 @@ number rather than a yes or no: they read the hardness off the game's own
 combat-numbers line, which `Item::Damage` prints AFTER adding the bearer's gear
 resistance to it. Those two silver a magic warhammer for the ordering
 `Item::Damage` used to have: a no-save A_DEQU sets `ignoreHardness` on a plain
-item (`src/Fight.cpp:3660`), and the bearer's grant was added before the bypass
+item (`src/Fight.cpp:3934`), and the bearer's grant was added before the bypass
 emptied it, so a resistance was unmeasurable on ordinary gear. inc-kapn
 inverted that -- the bypass now empties only what `Hardness()` returned -- and
 `check_gear_bypass_survives.sh` measures a resistance on a plain iron maul. The

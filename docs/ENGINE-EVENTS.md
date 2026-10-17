@@ -8,7 +8,7 @@ inc-s6m: inc-upw.5 (P1), inc-upw.16 (P1) and inc-upw.15 (P0). inc-s6m is closed 
 ## Where it lives
 Event stack and `Throw*`: `src/Event.cpp`. `EventInfo` and the `PEVENT`/`DAMAGE`/`THROW` macros: `inc/Events.h`. C++ -> script
 boundary: `src/Annot.cpp:1109`. Bytecode VM: `src/VMachine.cpp:413`. Generated script-callable C++ API: `lib/dispatch.h`.
-Preprocessed ruleset: `lib/program.i`. Event numbers and `PRE`/`POST`/`META`/`GODWATCH`/`EVICTIM`: `inc/Defines.h:4535-4541`; 183
+Preprocessed ruleset: `lib/program.i`. Event numbers and `PRE`/`POST`/`META`/`GODWATCH`/`EVICTIM`: `inc/Defines.h:4536-4542`; 183
 `EV_` numbers exist. `EvReturn` is `int8` (`inc/Defines.h:58`): `ERROR -1`, `NOTHING 0`, `DONE 1`, `ABORT 2`, `NOMSG 3`
 (`inc/Defines.h:141-145`).
 
@@ -55,7 +55,7 @@ in the build.**
 `EventInfo EventStack[EVENT_STACK_SIZE]`, `EventSP` starting at -1 (`src/Event.cpp:130-131`); the size is 128
 (`inc/Defines.h:80`). The only bound is `CHECK_OVERFLOW` (`src/Event.cpp:128`), which calls `Fatal("Event Stack Overflow!")` and
 exits. There is no depth budget, no recursion counter and no cycle detection in `src/Event.cpp`. Unrelated code reads frames
-assuming the enclosing context: `src/Fight.cpp:775-782`, `src/Prayer.cpp:589`, `src/Skills.cpp:1750`, `src/Target.cpp:1739`.
+assuming the enclosing context: `src/Fight.cpp:826-833`, `src/Prayer.cpp:589`, `src/Skills.cpp:1751`, `src/Target.cpp:1765`.
 
 ## Re-entrancy
 **The system has no general protection against re-entrancy.** Shared by every nested event: `VMachine::Regs[64]`, `SRegs[64]`,
@@ -65,7 +65,7 @@ are `static` on `Resource` (`inc/Res.h:228-229`) — one annotation cursor for t
 FAnnot/NAnnot doesn't normally [work]" (`src/Annot.cpp:619-621`); `FAnnot2` is a one-level kludge, and depth 3 has no cursor.
 `Thing::PlaceNear` holds `static Creature* Displace[64]` (`src/Display.cpp:448`) and re-enters itself via `PlaceAt` (`:594`),
 which the code notes can overflow the C stack (`:588-590`). Only three places are protected: `StatiCollection::Nested` defers
-stati fixups to the outermost iteration (`inc/Map.h:730-735`, field at `:820`), `Creature::Perceives` uses a static counter as a recursion
+stati fixups to the outermost iteration (`inc/Map.h:731-736`, field at `:821`), `Creature::Perceives` uses a static counter as a recursion
 mutex (`src/Vision.cpp:600-601`), and `Creature::Multiply` refuses to breed past a nesting depth of 4 (`src/Creature.cpp:544`).
 
 ## The three crashes
@@ -94,7 +94,7 @@ down path read `RES(0)` whenever `BELOW_DUNGEON` is unset, which is every dungeo
 **3. Wild resource id crashes `Game::Get` inside `Magic::Blast`. Fixed (inc-upw.16).** Handlers get ids from three unvalidated
 places: the `eID` a caller put in the frame (`src/Event.cpp:602`), script assignment `pe->eID = val` (`lib/dispatch.h:3517`), and
 script `ThrowEff` with an arbitrary int32 (`lib/dispatch.h:2637`). *Invariant violated:* `Game::Get` indexed the module table by
-the top byte, `Modules[(xID >> 24)-1]`, `MAX_MODULES` being 126 (`inc/Defines.h:4505`), so an id with a zero top byte indexed
+the top byte, `Modules[(xID >> 24)-1]`, `MAX_MODULES` being 126 (`inc/Defines.h:4506`), so an id with a zero top byte indexed
 `Modules[-1]`. The guard was `ASSERT(Modules[(xID >> 24)-1])`, and `ASSERT` only calls `Error` and falls through
 (`inc/Defines.h:101`) — it did not stop the next line's dereference. Hence SIGBUS with no log: if the out-of-range slot held
 non-zero garbage, `ASSERT` passed silently and `->GetResource` ran on a garbage `Module*`. *Fix:* `Game::Get` range-checks the

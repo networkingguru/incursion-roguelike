@@ -6084,12 +6084,17 @@ bool Creature::ItemPrereq(rID xID, int16 ReqLevel, int16 TrickDC)
 			return GetAttr((int8)(xID - ATTR_VAL)) >= ReqLevel;
 	}
 
+	/* upstream: types[] ended with a 0 end mark, but SP_SORCERY is itself
+	 * 0x0000, so the loop stopped before SP_PRIMAL and a Druid's caster level
+	 * never counted. Present in the original v0.6.5B source (commit 7b8504a3)
+	 * and misbehaves on any platform/compiler. Observed:
+	 * tools/check_druid_staff_clev.sh. inc-7y8u; not sent. */
 	if (IS_VAL(xID, CLEV_VAL)) {
 		int16 clev[6], j, types[] = {
-		  SP_ARCANE, SP_DIVINE, SP_BARDIC, SP_SORCERY, SP_PRIMAL, 0 };
+		  SP_ARCANE, SP_DIVINE, SP_BARDIC, SP_SORCERY, SP_PRIMAL };
 		memset(clev, 0, sizeof(int16) * 6);
 		StatiIterNature(this, SPELL_ACCESS)
-			for (j = 0; types[j]; j++)
+			for (j = 0; j < (int)(sizeof(types) / sizeof(types[0])); j++)
 				if (S->Val & (xID - CLEV_VAL) & types[j])
 					clev[j] = max(clev[j], S->Mag);
 		StatiIterEnd(this);
