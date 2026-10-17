@@ -131,7 +131,7 @@ A v1 save is a header, a module manifest, and a stream of tagged records.
 
 ### Header
 
-The existing `fileHeader` (`inc/Base.h:711-719`) is kept for the fields the
+The existing `fileHeader` (`inc/Base.h:724-732`) is kept for the fields the
 load menu already reads — `Sig`, `Name`, `numGroups`. `Version[12]` carries
 `"IS1"` plus a decimal schema revision instead of the ABI digest. The reader
 MUST dispatch on this field: `"SF"` prefix means the v0 raw reader, `"IS"` means
@@ -188,7 +188,7 @@ failed with `SCHEMA COVERAGE` errors (inc-xlwa).
 
 ### How a class declares its fields
 
-`ARCHIVE_CLASS` (`inc/Base.h:789`) already generates a
+`ARCHIVE_CLASS` (`inc/Base.h:802`) already generates a
 `Serialize(Registry&, bool isSave)` that calls its base first, and 20 classes
 already use it. The bodies gain field declarations beside the fixups they
 already carry. `Thing` (`inc/Map.h:945-967`) becomes:
@@ -655,7 +655,7 @@ be converted.
    its constructed default. Mitigated by the round-trip test below, and by a
    debug-build check that every byte of the object is covered by exactly one
    field declaration.
-2. **`TargetSystem::Serialize` is empty** (`src/Target.cpp:1460-1462`) and
+2. **`TargetSystem::Serialize` is empty** (`src/Target.cpp:1463-1465`) and
    correct only by luck, as `docs/ENGINE-SERIALISATION.md` records. It gains a
    real field list here.
 3. **`T_STAFF` and `T_COIN` change vtable across a save today** (defects 2 and 3
