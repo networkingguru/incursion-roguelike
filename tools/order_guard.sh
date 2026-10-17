@@ -12,8 +12,11 @@
 #
 # --module-root DIR passes through to the check, which measures the module in
 # DIR instead of this checkout. --ledger FILE passes through too, so the check
-# compares against FILE instead of the committed ledger. The build never passes
-# either; the reproduction does.
+# compares against FILE instead of the committed ledger. --bead ID names the
+# bead whose approval to look for, instead of the current branch: a landing that
+# runs the SHARED guard while on the bead's worktree branch (inc-fo8o) must
+# still find the approval under the bead's own id. The build never passes any of
+# these; the reproduction and tools/finish_bead.sh do.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -21,25 +24,42 @@ cd "$ROOT"
 
 CHECK=tools/resource_order_check.py
 
+usage() {
+    echo "usage: tools/order_guard.sh [--module-root DIR] [--ledger FILE] [--bead ID]" >&2
+    exit 2
+}
+
+bead_arg=""
 module_args=()
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --module-root)
-            [ "$#" -ge 2 ] || { echo "usage: tools/order_guard.sh [--module-root DIR] [--ledger FILE]" >&2; exit 2; }
+            [ "$#" -ge 2 ] || usage
             module_args+=(--module-root "$2")
             shift 2
             ;;
         --ledger)
-            [ "$#" -ge 2 ] || { echo "usage: tools/order_guard.sh [--module-root DIR] [--ledger FILE]" >&2; exit 2; }
+            [ "$#" -ge 2 ] || usage
             module_args+=(--ledger "$2")
             shift 2
             ;;
+        --bead)
+            [ "$#" -ge 2 ] || usage
+            bead_arg="$2"
+            shift 2
+            ;;
         *)
-            echo "usage: tools/order_guard.sh [--module-root DIR] [--ledger FILE]" >&2
-            exit 2
+            usage
             ;;
     esac
 done
+
+# Same pattern as tools/approve_order_break.sh: an approval is only ever looked
+# up for a real bead id.
+if [ -n "$bead_arg" ] && ! [[ "$bead_arg" =~ ^inc-[a-z0-9]+(\.[0-9]+)*$ ]]; then
+    echo "refuse: '$bead_arg' is not a bead id (^inc-[a-z0-9]+(\\.[0-9]+)*\$)" >&2
+    exit 2
+fi
 
 out="$(python3 "$CHECK" "${module_args[@]+${module_args[@]}}" 2>&1)"
 rc=$?
@@ -49,13 +69,19 @@ case "$rc" in
         exit 0
         ;;
     2)
+        # The check could not measure (unbuilt binary, bad module root). That
+        # is not "the order is broken": tell callers apart with exit 2.
         echo "$out"
-        exit 1
+        exit 2
         ;;
 esac
 
 # rc == 1: the module breaks the order rule. Look for Brian's approval.
-bead="$(git rev-parse --abbrev-ref HEAD)"
+if [ -n "$bead_arg" ]; then
+    bead="$bead_arg"
+else
+    bead="$(git rev-parse --abbrev-ref HEAD)"
+fi
 approval="$(tools/order_approval_path.sh "$bead")"
 hash_now="$(python3 "$CHECK" "${module_args[@]+${module_args[@]}}" --failure-hash 2>/dev/null || true)"
 
