@@ -822,23 +822,18 @@ void TextTerm::CreateCharSheet(CharSheet &cs)
 
   cs.sResists = Format("%cResistances and Armour:%c\n",-WHITE,-GREY);
 
-  int8 ResistsShown[] = {
-    AD_SLASH, AD_PIERCE, AD_BLUNT, 
-    AD_FIRE, AD_COLD, AD_SONI, AD_ACID, AD_ELEC, AD_TOXI, AD_NECR, AD_PSYC,
-    AD_MAGC, AD_SLEE, AD_STUN, AD_SLOW, AD_PLYS, AD_STUK, AD_STON, AD_POLY,
-    AD_CHRM, AD_DISN, AD_CRIT, AD_DISE, AD_FEAR, AD_RUST, AD_HOLY, AD_EVIL,
-    AD_LAWF, AD_CHAO, AD_SOAK, AD_SUNL, AD_DCAY, 0 
-  };
+  int16 ResistTypes[128];
+  int16 RTC = DisplayResistTypes(ResistTypes,128);
 
-  for (i=0;ResistsShown[i];i++)
-    if (p->ResistLevel(ResistsShown[i]))
+  for (i=0;i<RTC;i++)
+    if (p->ResistLevel(ResistTypes[i]))
     {
 
-      if (p->ResistLevel(ResistsShown[i]) == -1)
+      if (p->ResistLevel(ResistTypes[i]) == -1)
         HasImmunity = true;
       else {
-        cs.sResists += Format("  %s %d\n", Lookup(DTypeNames,ResistsShown[i]),
-            p->ResistLevel(ResistsShown[i]));
+        cs.sResists += Format("  %s %d\n", Lookup(DTypeNames,ResistTypes[i]),
+            p->ResistLevel(ResistTypes[i]));
         HasResist = true;
       }
     }
@@ -849,9 +844,9 @@ void TextTerm::CreateCharSheet(CharSheet &cs)
   if (HasImmunity) {
     cs.sImmune = Format("%cComplete Immunities:%c\n",-WHITE,-GREY);
 
-    for (i=0;ResistsShown[i];i++)
-      if (p->ResistLevel(ResistsShown[i]) == -1)
-        cs.sImmune += Format("  %s\n",Lookup(DTypeNames,ResistsShown[i]));
+    for (i=0;i<RTC;i++)
+      if (p->ResistLevel(ResistTypes[i]) == -1)
+        cs.sImmune += Format("  %s\n",Lookup(DTypeNames,ResistTypes[i]));
   }
 
   cs.sProfs = Format("%cProficiencies %c%c",-YELLOW,WRAP_INDENT,-GREY);

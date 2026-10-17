@@ -1504,21 +1504,16 @@ void Creature::Dump()
     T1->SWrite("Resists:\n"); 
     T1->Color(GREY);
 
-  int8 ResistsShown[] = {
-    AD_SLASH, AD_PIERCE, AD_BLUNT, 
-    AD_FIRE, AD_COLD, AD_SONI, AD_ACID, AD_ELEC, AD_TOXI, AD_NECR, AD_PSYC,
-    AD_MAGC, AD_SLEE, AD_STUN, AD_PLYS, AD_STON, AD_POLY, AD_CHRM, AD_DISN,
-    AD_CRIT, AD_DISE, AD_FEAR, AD_RUST, AD_HOLY, AD_EVIL, AD_LAWF, AD_CHAO, 
-    AD_SOAK, 0 
-  };
+  int16 ResistTypes[128];
+  int16 RTC = DisplayResistTypes(ResistTypes,128);
 
-    for (i=0;ResistsShown[i];i++) {
+    for (i=0;i<RTC;i++) {
       int l1, l2;
-      l1 = ResistLevel(ResistsShown[i],false);
-      l2 = ResistLevel(ResistsShown[i],true);
+      l1 = ResistLevel(ResistTypes[i],false);
+      l2 = ResistLevel(ResistTypes[i],true);
       if (l1 != 0 || l2 != 0)
         T1->SWrite(Format("  %c%s%c %d (bypass = %d)\n", -YELLOW, 
-              (const char*)Lookup(DTypeNames,ResistsShown[i]),-GREY,l1,l2));
+              (const char*)Lookup(DTypeNames,ResistTypes[i]),-GREY,l1,l2));
     } 
 
     T1->Color(AZURE); 
