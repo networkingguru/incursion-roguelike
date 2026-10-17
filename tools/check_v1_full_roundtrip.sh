@@ -47,6 +47,12 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# The current schema stamp, read from the source of truth rather than
+# hardcoded: a literal here rots into a false failure the moment SCHEMA_REV
+# moves, and the check then reports a format problem that does not exist.
+SCHEMA_STAMP="IS1.$(sed -n 's/^#define SCHEMA_REV \([0-9]*\).*/\1/p' src/SaveV1.cpp)"
+[ -n "${SCHEMA_STAMP#IS1.}" ] || { echo "cannot read SCHEMA_REV from src/SaveV1.cpp" >&2; exit 1; }
+
 FAILED=0
 fail() { echo "FAIL: $1"; FAILED=1; }
 
@@ -94,8 +100,8 @@ fi
 # 2. The file's own Version field says v1. Offset 4 because fileHeader is
 #    { uint32 Sig; char Version[12]; ... } (inc/Base.h).
 STAMP="$(dd if="$SAVE1" bs=1 skip=4 count=5 2>/dev/null)"
-if [ "$STAMP" != "IS1.4" ]; then
-    fail "save Version field reads \"$STAMP\", wanted \"IS1.4\" -- real saves are not at the current v1 revision"
+if [ "$STAMP" != "$SCHEMA_STAMP" ]; then
+    fail "save Version field reads \"$STAMP\", wanted \"$SCHEMA_STAMP\" -- real saves are not at the current v1 revision"
 fi
 
 # 3. The v1 save reloads to the same character. Exact values, not "present":
@@ -111,8 +117,8 @@ grep -qE '^Name:      Shagga the Avenger$' "$WORK/dump1.txt" ||
     fail "Name: line missing or not 'Shagga the Avenger' -- the v1 save did not reload to the same character"
 grep -qE '^HP:        42 / 42' "$WORK/dump1.txt" ||
     fail "HP: line missing or not '42 / 42' after the v1 reload"
-grep -qE '^Format:    IS1\.4$' "$WORK/dump1.txt" ||
-    fail "Format: line missing or not IS1.4 -- -dump does not name the file's own stamp"
+grep -qE "^Format:    ${SCHEMA_STAMP//./\\.}$" "$WORK/dump1.txt" ||
+    fail "Format: line missing or not $SCHEMA_STAMP -- -dump does not name the file's own stamp"
 grep -qE 'Race   Orc' "$WORK/dump1.txt" ||
     fail "the character-sheet dump lost the expected race line after the v1 reload"
 

@@ -1,0 +1,146 @@
+# inc-j5yo: a Mage changes his spell loadout in the checklist, and the change
+# takes effect only at the next full rest. Read by tools/check_mage_loadout.sh.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.sav \
+#       tools/headless.sh tools/keys/mage-loadout-rest.keys 1
+#
+# THE CHARACTER. Varag, the frozen Orc Mage (tools/fixtures/chars/). The save
+# is older than spell-flag revision 5, so loading migrates it: Shield and Magic
+# Missile become class grants (locked), and Alarm, Burning Hands and Convulsion
+# become the memorized arcane picks (level 1: 3 of 3 slots). He carries six
+# spellbooks in his pack.
+#
+# THE ROUTE (each @dump label is one assertion screen in the check):
+#   1. Wizard mode: descend to depth 2 (a rest is refused at depth 1) and
+#      genocide everything (a rest is refused with a hostile in view).
+#   2. d, L opens the checklist.                              open
+#      DOWN*3 SPACE: mark Endure Cold with no slot free.      refused
+#      UP SPACE: unmark Convulsion. DOWN SPACE: mark Endure
+#      Cold.                                                  swapped
+#      DOWN*10 SPACE: try to unmark Magic Missile (a grant).  locked
+#      ENTER confirms. 'v' reads the message log.             msgs-enter
+#      'm' opens the cast menu: Convulsion still castable,
+#      Endure Cold not yet.                                   cast-before
+#   3. Reopen, unmark Alarm, ESC: the change is discarded.    esc-pre, esc-post
+#   4. Drop all six books (inventory item 16, six times).
+#      Reopen: pending rows read "(no book)".                 rows-nobook
+#   5. 'z' 'y' rests. The message names the three spells it
+#      could not memorize; the cast menu has lost Convulsion
+#      and gained nothing.                                    msgs-rest1, cast-nobook
+#   6. Pick all six books up again ('g', choose, 's' stows),
+#      rest again: Endure Cold, Alarm and Burning Hands are
+#      memorized, Convulsion is gone.                         msgs-rest2, cast-after
+#
+# Keys that bite: lowercase 'v' is View Messages and 'z' is Rest (uppercase
+# sets SHIFT and matches nothing, see src/KeyScript.cpp). The first ESC after
+# ENTER only closes the sheet's message, so every exit uses
+# @until "Things in View" ESC. Row counts (DOWN*3, DOWN*10) are positions in
+# this frozen character's sorted level-1 list; LearnSpell sorts rows by name.
+
+s                       # one real turn: this counts as a session
+w y                     # wizard mode, confirm
+@choose "Ascend / Descend Depth"
+"2" ENTER
+@until "HP:" ESC
+w
+@choose "Genocide Everything"
+@until "HP:" ESC
+
+d
+L
+@dump:open
+DOWN*3
+SPACE
+@dump:refused
+UP
+SPACE
+DOWN
+SPACE
+@dump:swapped
+DOWN*10
+SPACE
+@dump:locked
+ENTER
+@until "Things in View" ESC
+v
+@dump:msgs-enter
+ESC
+m
+@dump:cast-before
+ESC
+
+d
+L
+SPACE
+@dump:esc-pre
+ESC
+L
+@dump:esc-post
+ESC
+@until "Things in View" ESC
+
+i
+1 6 d
+1 6 d
+1 6 d
+1 6 d
+1 6 d
+1 6 d
+ESC
+@until "Things in View" ESC
+d
+L
+@dump:rows-nobook
+ESC
+@until "Things in View" ESC
+
+z
+y
+v
+@dump:msgs-rest1
+ESC
+m
+@dump:cast-nobook
+ESC
+
+g
+@while "Pick up what?" a
+s
+ESC
+@until "Things in View" ESC
+g
+@while "Pick up what?" a
+s
+ESC
+@until "Things in View" ESC
+g
+@while "Pick up what?" a
+s
+ESC
+@until "Things in View" ESC
+g
+@while "Pick up what?" a
+s
+ESC
+@until "Things in View" ESC
+g
+@while "Pick up what?" a
+s
+ESC
+@until "Things in View" ESC
+g
+@while "Pick up what?" a
+s
+ESC
+@until "Things in View" ESC
+
+z
+y
+v
+@dump:msgs-rest2
+ESC
+m
+@dump:cast-after
+ESC
+@dump:end

@@ -12,7 +12,7 @@
 # damage; with the fix it should take only the unresistible half.
 #
 # ROUTE. Caustic Vitae is an Effect, not a Spell, so it never appears in a
-# "Learn which spell" list -- but "Learn Any Spell" (src/Debug.cpp:850) types a
+# Learn Spells checklist -- but "Learn Any Spell" (src/Debug.cpp:850) types a
 # name and accepts any T_TEFFECT, which this is. A level-2 orc mage is made by
 # chargen-mage.keys; Free Advancement buys one level, Infinite Mana makes the
 # cast free, and Freeze Monsters stops the victim acting on its own.

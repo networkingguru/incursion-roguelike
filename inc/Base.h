@@ -923,6 +923,10 @@ class Registry
 void SaveV1_ResolveNames();
 void SaveV0_RecoverVariables(Game &g);
 void SaveV1_DiscardPending();  /* drop unconsumed resolve state; see LoadGame */
+/* The decimal revision of the most recent v1 file read (0 before any load).
+   The normal load path reads it here after the modules are reloaded, to
+   decide a one-time post-load migration; see Player::MigrateSpellFlagsRev5. */
+uint32 SaveV1_FileRevision();
 const char* SaveSchemaID();  /* "IS1." + SCHEMA_REV: "IS1.2" since the
                                 name-keyed memory segment (phase 4) */
 bool SaveV1_Raw();           /* DEBUG && INCURSION_V1_RAW=1 */

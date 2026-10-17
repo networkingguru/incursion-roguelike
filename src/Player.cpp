@@ -2727,6 +2727,8 @@ EvReturn Player::Rest(EventInfo &e) {
     CalcValues();
     statiChanged = true;
     LastRest = theGame->GetTurn();
+    if (Percent == 100)
+        ApplySpellSelection();
 
     if (!(e.EParam & REST_NOMSG))
         IPrint("You awaken feeling well rested and recovered.");

@@ -1401,7 +1401,13 @@ class Player: public Character
       virtual void AdvanceLevel();
       virtual void GainFeat(int16 list, int32 param=0);
       virtual void GainAbility(int16 ab, uint32 pa, rID sourceID,int16 statiSource);
-      void LearnSpell(bool left = false);
+      bool LearnSpell(bool left = false);
+      void ApplySpellSelection();
+      void MigrateSpellFlagsRev5();
+      /* Diagnostic behind INCURSION_SPELLFLAG_PROBE: one errors.log line per
+         known spell plus a summary. Called at the end of the migration and
+         once after every load (migrated or not). */
+      void SpellFlagProbe(bool migrated);
       void InitCompanions();
       void SummonAnimalCompanion(bool mount);
       void WildShape();
@@ -1419,7 +1425,7 @@ class Player: public Character
       int32 MaxGroupXCR(int16 CompType);
       int16 FixSummonCR(int16 enCR, int16 CompType=PHD_MAGIC);
       void GainSpell(rID sID,int16 Flags)
-        { Spells[theGame->SpellNum(sID)] |= Flags; }
+        { Spells[theGame->SpellNum(sID)] |= Flags | SP_GRANTED; }
       virtual void IdentByTrial(Item *it, int16 Quality=0);
       void ShowStats();
       //String BonusBreakdown(int8 at, int16 maxlen=250);

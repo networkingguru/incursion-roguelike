@@ -159,7 +159,7 @@ P                               # [P]restige Classes
 # asks which one to advance in and the answer is given by name.
 @until "class do you wish to advance" G
 @choose "Blackguard"
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "choose a Warrior Feat" a
 @while "Choose a feat" a
 @while "Focus on which Weapon" a
@@ -168,7 +168,7 @@ P                               # [P]restige Classes
 @until "Skill Ratings" d
 @until "class do you wish to advance" G
 @choose "Blackguard"
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "choose a Warrior Feat" a
 @while "Choose a feat" a
 @while "Focus on which Weapon" a
@@ -177,7 +177,7 @@ P                               # [P]restige Classes
 @until "Skill Ratings" d
 @until "class do you wish to advance" G
 @choose "Blackguard"
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "choose a Warrior Feat" a
 @while "Choose a feat" a
 @while "Focus on which Weapon" a
@@ -186,7 +186,7 @@ P                               # [P]restige Classes
 @until "Skill Ratings" d
 @until "class do you wish to advance" G
 @choose "Blackguard"
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "choose a Warrior Feat" a
 @while "Choose a feat" a
 @while "Focus on which Weapon" a
@@ -195,7 +195,7 @@ P                               # [P]restige Classes
 @until "Skill Ratings" d
 @until "class do you wish to advance" G
 @choose "Blackguard"
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "choose a Warrior Feat" a
 @while "Choose a feat" a
 @while "Focus on which Weapon" a

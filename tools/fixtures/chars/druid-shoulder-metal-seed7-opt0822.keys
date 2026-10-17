@@ -14,7 +14,11 @@ a e
 ENTER y
 a
 @while "Choose a feat" a
-a a a a
+@expect "(Space marks,"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
+ESC     # dismiss the arrival description (the old fourth pick did)
 @until "Entry Chamber" ESC
 w y
 @choose "Item Acquisition"

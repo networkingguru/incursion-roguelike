@@ -1342,8 +1342,8 @@ SkipThisFocus:;
     DedupeStartingKit(this);
     ArrangeStartingKit(this);
 
-    while (SpellSlots[0] + BonusSlots[0] > SpellsLearned[0])
-        LearnSpell(true);
+    while (SpellSlots[0] + BonusSlots[0] > SpellsLearned[0] && LearnSpell(true))
+        ;
 
     CalcValues();
     SetImage();
@@ -3746,6 +3746,22 @@ GodIsOkay:;
         RES(RaceID)->Event(xe,RaceID);
         RES(ClassID[c])->Event(xe,ClassID[c]);
 
+        if (LevelAs(ClassID[c]) == 1) {
+            rID spList[32];
+            if (TCLASS(ClassID[c])->GetList(SPECIALTY_SPELLS, spList, 31)) {
+                int32 nSpells = 0;
+                while (nSpells < 31 && spList[nSpells])
+                    nSpells++;
+                if (nSpells >= 18) {
+                    int16 school = GetStatiVal(SPECIALTY_SCHOOL);
+                    if (school >= 0 && school <= 8) {
+                        GainSpell(spList[school*2], SP_KNOWN|SP_ARCANE);
+                        GainSpell(spList[school*2+1], SP_KNOWN|SP_ARCANE);
+                    }
+                }
+            }
+        }
+
         if (GodID)
             RES(GodID)->Event(xe,ClassID[c]);
 
@@ -5789,12 +5805,24 @@ LearnableSpell* Character::CalcSpellAccess() {
     return ls;
 }
 
-void Player::LearnSpell(bool left) {
-    bool areSpells, areBookSpells, noBook; 
-    int16 i,j,c;
+bool Player::LearnSpell(bool left) {
+    bool areSpells, noBook, hasBook, known, marked, reMem, locked;
+    bool anyReMem, changed, learnedFill, reChanged, markable;
+    int16 i, j, c, n, L, cap, arcMem, lockedUse, nRows, nEmitted;
+    int32 sn, v;
+    uint16 f, before, fl;
+    int8 color;
     Item *it;
     LearnableSpell *ls = CalcSpellAccess();
+    unsigned char *st = NULL;
+    int16 *ord = NULL, k;
     String menu_name, typ_str;
+    String levelReason[10];
+    const char *title, *reason;
+
+    /* Row state, one byte per ls entry. */
+    enum { LS_PASS = 1, LS_REMEM = 2, LS_LOCKED = 4, LS_NOBOOK = 8,
+           LS_MARK = 16, LS_EMIT = 32 };
 
     if (ls[0].spID == 0) {
         /* The more technically correct message would be, "You have no levels
@@ -5803,16 +5831,46 @@ void Player::LearnSpell(bool left) {
         if (CasterLev()) {
             IPrint("You have casting ability but no class spell "
                 "list. This is a bug or an oversight in class design.");
-            return;
+            free(ls);
+            return false;
         }
 
         IPrint("You have no spellcasting ability.");
-        return;
+        free(ls);
+        return false;
     }
 
+    for (n = 0; ls[n].spID; n++)
+        ;
+    st = (unsigned char*)calloc(n + 1, 1);
+    if (!st) {
+        Error("LearnSpell: out of memory");
+        free(ls);
+        return false;
+    }
+    /* Row order inside a level: by spell name, case-insensitive (the old
+       menu was MENU_SORTED), so "mark the first K rows" is deterministic. */
+    ord = (int16*)calloc(n + 1, sizeof(int16));
+    if (!ord) {
+        Error("LearnSpell: out of memory");
+        free(ls);
+        free(st);
+        free(ord);
+        return false;
+    }
+    for (i = 0; i < n; i++) {
+        for (k = i; k > 0; k--) {
+            int cmp = strcasecmp(NAME(ls[ord[k-1]].spID), NAME(ls[i].spID));
+            if (cmp < 0 || (cmp == 0 && ls[ord[k-1]].Type <= ls[i].Type))
+                break;
+            ord[k] = ord[k-1];
+        }
+        ord[k] = i;
+    }
+
+    /* Pass 0: filters and classification. */
     areSpells = false;
-    areBookSpells = false;
-    for (i=0;ls[i].spID;i++) {
+    for (i = 0; i < n; i++) {
         /* Elves can't learn Necromancy spells. */
         if (isMType(MA_ELF) && (TEFF(ls[i].spID)->Schools & SC_NEC)
             && !(TEFF(ls[i].spID)->Schools & SC_ABJ))
@@ -5821,37 +5879,30 @@ void Player::LearnSpell(bool left) {
         if (ls[i].Level > 9 || ls[i].Level < 1)
             continue;
 
-        /* Get set up for the spell Type */
-        if (ls[i].Type == SP_ARCANE)
-            typ_str = " (Arcane)";
-        else if (ls[i].Type == SP_DIVINE)
-            typ_str = " (Divine)"; 
-        else if (ls[i].Type == SP_PRIMAL)
-            typ_str = " (Primal)"; 
-        else if (ls[i].Type == SP_SORCERY)
-            typ_str = " (Sorcerous)"; 
-        else if (ls[i].Type == SP_BARDIC)
-            typ_str = " (Bardic)";
-        else {
+        if (ls[i].Type != SP_ARCANE && ls[i].Type != SP_DIVINE
+            && ls[i].Type != SP_PRIMAL && ls[i].Type != SP_SORCERY
+            && ls[i].Type != SP_BARDIC) {
             Error("Spell with strange Type!");
             free(ls);
-            return;
+            free(st);
+            free(ord);
+            return false;
         }
+
+        sn = theGame->SpellNum(ls[i].spID);
+        f = Spells[sn];
+        L = ls[i].Level;
+        known = (f & SP_KNOWN) != 0;
 
         /* Do we have the chart level to even consider this
         spell as an option? */
         if ((SAL(ls[i].Level) > AbilityLevel(CA_SPELLCASTING))
-            && !HasStati(BONUS_SLOTS,min(9,max(1,ls[i].Level))))
+            && !HasStati(BONUS_SLOTS,min(9,max(1,ls[i].Level)))
+            && !(f & (SP_KNOWN|SP_PENDING)))
             continue;
 
-        /* Can't learn a spell you've already learned */
-        if (Spells[theGame->SpellNum(ls[i].spID)] & (SP_KNOWN|SP_DOMAIN))
-            continue;
-
-        /* Can't learn a spell if you have 0 open slots for that
-        spell's level and type. */
-        if (SpellSlots[ls[i].Level-1] + BonusSlots[ls[i].Level-1] <= 
-            SpellsLearned[ls[i].Level-1])
+        /* A level with no slots still shows the spells already known or pending there. */
+        if (SpellSlots[L-1] + BonusSlots[L-1] == 0 && !(f & (SP_KNOWN|SP_PENDING)))
             continue;
 
         /* Clerics and other divine casters can't learn spells
@@ -5873,91 +5924,404 @@ void Player::LearnSpell(bool left) {
         player brings up the Learn Spell menu. If high-level mages
         get noticable delays when opening Learn Spell, I'll rewrite
         this test. */
-        noBook = false;
+        hasBook = false;
         if (ls[i].Type == SP_ARCANE) {
-            for (it = FirstInv(); it ;it=NextInv())
-                if (it->HasSpell(theGame->SpellNum(ls[i].spID)))
-                    goto HasComponent;
-            noBook = true;
-HasComponent:
-            ;
+            for (it = FirstInv(); it; it = NextInv())
+                if (it->HasSpell(sn)) {
+                    hasBook = true;
+                    break;
+                }
         }
+        noBook = (ls[i].Type == SP_ARCANE) && !hasBook;
 
-        areSpells = true;         
-        if (!Opt(OPT_SHOW_ALL_SPELLS))
-            if (noBook)
+        areSpells = true;
+        if (noBook && !(f & (SP_KNOWN|SP_PENDING)) && !Opt(OPT_SHOW_ALL_SPELLS))
+            continue;
+
+        st[i] = LS_PASS;
+        if (ls[i].Type == SP_ARCANE && !(f & (SP_GRANTED|SP_DOMAIN)))
+            st[i] |= LS_REMEM;
+        if ((f & (SP_GRANTED|SP_DOMAIN)) || (!(st[i] & LS_REMEM) && known))
+            st[i] |= LS_LOCKED;
+        if (noBook)
+            st[i] |= LS_NOBOOK;
+    }
+
+    /* Emit one header per level that has a row, then its rows. */
+    anyReMem = false;
+    markable = false;
+    nEmitted = 0;
+    for (L = 1; L <= 9; L++) {
+        nRows = 0;
+        arcMem = 0;
+        for (i = 0; i < n; i++) {
+            if (!(st[i] & LS_PASS) || ls[i].Level != L)
+                continue;
+            nRows++;
+            f = Spells[theGame->SpellNum(ls[i].spID)];
+            if ((f & (SP_KNOWN|SP_ARCANE)) == (SP_KNOWN|SP_ARCANE)
+                && !(f & (SP_GRANTED|SP_DOMAIN)))
+                arcMem++;
+        }
+        if (nRows == 0)
+            continue;
+
+        lockedUse = SpellsLearned[L-1] - arcMem;
+        if (lockedUse < 0)
+            lockedUse = 0;
+        cap = SpellSlots[L-1] + BonusSlots[L-1] - lockedUse;
+        if (cap < 0)
+            cap = 0;
+
+        levelReason[L] = Format("Level %d has no free slot.", (int)L);
+        MyTerm->LOption(Format("Level %d - %%d of %%d slots", (int)L), 1000 + L, "", 0);
+        MyTerm->LOptionFlags(MO_HEADER, 0);
+        MyTerm->LOptionCap(cap);
+        MyTerm->LOptionReason((const char*)levelReason[L]);
+
+        for (k = 0; k < n; k++) {
+            i = ord[k];
+            if (!(st[i] & LS_PASS) || ls[i].Level != L)
                 continue;
 
-        areBookSpells = true;
+            sn = theGame->SpellNum(ls[i].spID);
+            f = Spells[sn];
+            reMem = (st[i] & LS_REMEM) != 0;
+            locked = (st[i] & LS_LOCKED) != 0;
+            noBook = (st[i] & LS_NOBOOK) != 0;
+            known = (f & SP_KNOWN) != 0;
 
-        /* Disambiguate shared spells, so that mage/priests get both
-        Call Light (Arcane) and Call Light (Divine), avoiding them
-        accidently wasting a 2nd-level arcane slot on it, as opposed
-        to a 1st-level divine. */
-        menu_name = NAME(ls[i].spID);
-        for (j=0,c=0;ls[j].spID;j++)
-            if (ls[j].spID == ls[i].spID)
-                c++;
-        if (c > 1)
-            menu_name += typ_str;
+            if (ls[i].Type == SP_ARCANE)
+                typ_str = " (Arcane)";
+            else if (ls[i].Type == SP_DIVINE)
+                typ_str = " (Divine)";
+            else if (ls[i].Type == SP_PRIMAL)
+                typ_str = " (Primal)";
+            else if (ls[i].Type == SP_SORCERY)
+                typ_str = " (Sorcerous)";
+            else
+                typ_str = " (Bardic)";
 
-        if (noBook)
-            menu_name = Format("%c%s%c", -BLUE, (const char*)menu_name, -GREY);
+            /* Disambiguate shared spells, so that mage/priests get both
+            Call Light (Arcane) and Call Light (Divine). */
+            for (j = 0, c = 0; j < n; j++)
+                if (ls[j].spID == ls[i].spID)
+                    c++;
+            menu_name = NAME(ls[i].spID);
+            if (c > 1)
+                menu_name += typ_str;
+            if (reMem && known)
+                menu_name += " (memorized)";
+            if (locked)
+                menu_name += " (locked)";
+            if (noBook)
+                menu_name += " (no book)";
 
-        MyTerm->LOption(menu_name,
-            noBook ? (-(i+10)) : i,
-            TEFF(ls[i].spID)->Describe(thisp),
-            Opt(OPT_SORT_SPELLS) ? ls[i].Level : 0);
+            fl = 0;
+            color = 0;
+            reason = NULL;
+            if (locked) {
+                fl |= MO_LOCKED;
+                if (f & (SP_GRANTED|SP_DOMAIN))
+                    reason = "This spell is a class grant and stays.";
+                else
+                    reason = "Your learned divine, primal and bardic spells are permanent.";
+            }
+            if (noBook) {
+                fl |= MO_NOMARK;
+                color = BLUE;
+                if (!reason)
+                    reason = "You carry no spellbook with this spell.";
+            } else if (reMem && known) {
+                color = CYAN;
+            } else if (locked) {
+                color = GREY;
+            }
+
+            if (reMem) {
+                if (left)
+                    marked = known;
+                else
+                    marked = (f & SP_PENDING) != 0;
+            } else {
+                marked = known;
+            }
+
+            /* Creation mode re-prompts only while a row can take a mark. */
+            if (!locked && !(fl & MO_NOMARK))
+                markable = true;
+            if ((fl & MO_NOMARK) && marked)
+                markable = true;
+
+            MyTerm->LOption(menu_name, i + 1, TEFF(ls[i].spID)->Describe(thisp), 0);
+            MyTerm->LOptionFlags(fl, color);
+            MyTerm->LOptionMark(marked);
+            if (reason)
+                MyTerm->LOptionReason(reason);
+            st[i] |= LS_EMIT;
+            nEmitted++;
+            if (reMem)
+                anyReMem = true;
+        }
     }
 
-    for (j=1;j!=10;j++) {
-        if (SpellSlots[j-1] + BonusSlots[j-1] > 
-            SpellsLearned[j-1])
-            goto OpenSlot;
+    if (nEmitted == 0) {
+        if (!areSpells)
+            IPrint("There are no remaining unlearned spells on your class "
+                "spell list (or lists) that you have open slots for.");
+        else
+            IPrint("You have no spellbooks with unlearned spells for the "
+                "spell slots you have open.");
+        free(ls);
+        free(st);
+        free(ord);
+        return false;
     }
 
-    IPrint("You have no unfilled spell slots.");
-    MyTerm->LOptionClear();
-    return;
-
-OpenSlot:                        
-    if (!areSpells) {
-        IPrint("There are no remaining unlearned spells on your class "
-            "spell list (or lists) that you have open slots for.");
-        MyTerm->LOptionClear();
-        return;
-    }
-
-    if (!areBookSpells) {
-        IPrint("You have no spellbooks with unlearned spells for the "
-            "spell slots you have open.");
-        MyTerm->LOptionClear();
-        return;
-    }
-
-    String prompt;
     if (left)
-        prompt = Format("Learn which spell (%d left)?", 
-            (int)(SpellSlots[0] + BonusSlots[0] - SpellsLearned[0]));
+        title = "Choose your starting spells (Space marks, Tab next level, Enter confirms)";
+    else if (anyReMem)
+        title = "Choose spells for your next rest (Space marks, Tab next level, Enter confirms)";
     else
-        prompt = "Learn which spell?";
+        title = "Learn spells (Space marks, Tab next level, Enter confirms)";
 
-    i = (int16)MyTerm->LMenu(MENU_SORTED|MENU_3COLS|MENU_ESC|MENU_DESC|MENU_BORDER,prompt,WIN_MENUBOX,"help::magic,LE");    
-    if (i == -1)
-        return;
-
-    if (i < 0) {
-        IPrint("You don't have a spellbook for that spell.");
-        return;
+    fl = MENU_DESC | MENU_BORDER;
+    if (!left)
+        fl |= MENU_ESC;
+    if (!MyTerm->LMultiSelect(fl, title, WIN_MENUBOX, "help::magic,LE")) {
+        MyTerm->LOptionClear();
+        free(ls);
+        free(st);
+        free(ord);
+        return false;
     }
 
-    Spells[theGame->SpellNum(ls[i].spID)] |= SP_KNOWN | ls[i].Type;
-    SpellsLearned[ls[i].Level-1]++;
+    for (v = MyTerm->FirstSelected(); v; v = MyTerm->NextSelected())
+        if (v >= 1 && v < 1000 && v <= n && (st[v-1] & LS_EMIT))
+            st[v-1] |= LS_MARK;
+    MyTerm->LOptionClear();
 
-    if (!left)
+    /* Apply the marks. Locked rows never change. */
+    changed = false;
+    learnedFill = false;
+    reChanged = false;
+    for (i = 0; i < n; i++) {
+        if (!(st[i] & LS_EMIT))
+            continue;
+
+        sn = theGame->SpellNum(ls[i].spID);
+        L = ls[i].Level;
+        marked = (st[i] & LS_MARK) != 0;
+        before = Spells[sn];
+
+        if (st[i] & LS_REMEM) {
+            if (!left) {
+                if (marked) {
+                    Spells[sn] |= SP_PENDING | SP_ARCANE;
+                } else {
+                    Spells[sn] &= ~SP_PENDING;
+                    if (!(Spells[sn] & SP_KNOWN))
+                        Spells[sn] &= ~SP_ARCANE;
+                }
+            } else if (marked && !(Spells[sn] & SP_KNOWN)) {
+                Spells[sn] |= SP_KNOWN | SP_PENDING | SP_ARCANE;
+                SpellsLearned[L-1]++;
+            } else if (!marked && (Spells[sn] & SP_KNOWN)) {
+                Spells[sn] &= ~(SP_KNOWN | SP_PENDING | SP_ARCANE);
+                if (SpellsLearned[L-1] > 0)
+                    SpellsLearned[L-1]--;
+            } else if (marked) {
+                Spells[sn] |= SP_PENDING;
+            }
+        } else if (!(st[i] & LS_LOCKED) && marked) {
+            Spells[sn] |= SP_KNOWN | ls[i].Type;
+            SpellsLearned[L-1]++;
+        }
+
+        if (Spells[sn] != before) {
+            changed = true;
+            if (st[i] & LS_REMEM)
+                reChanged = true;
+            else
+                learnedFill = true;
+        }
+    }
+
+    if (!left && learnedFill)
         IPrint("Learned.");
+    if (!left && reChanged)
+        IPrint("Your selection takes effect at your next full rest.");
 
     /* If we learn a spell we previously knew how to scribe scrolls of, we get
        the slot back and learn a new scroll spell. */
-    RecalcCraftFormulas();
+    if (changed)
+        RecalcCraftFormulas();
+
+    free(ls);
+    free(st);
+    free(ord);
+    return left ? markable : changed;
+}
+
+/* inc-j5yo Phase 5b: apply a pending arcane selection at a full rest. For each
+   arcane spell the character could learn: a known-but-not-pending spell is
+   forgotten (its slot is freed); a pending spell with a carried spellbook is
+   memorized; a pending spell with no book is forgotten but stays pending, and
+   is named in one message. Specialty grants (SP_GRANTED) and domain spells
+   (SP_DOMAIN) are never touched. */
+void Player::ApplySpellSelection() {
+    int16 i, L;
+    int32 sn;
+    uint16 f;
+    bool changed;
+    Item *it;
+    String noBookList;
+    LearnableSpell *ls = CalcSpellAccess();
+
+    changed = false;
+
+    for (i = 0; ls[i].spID; i++) {
+        int16 first;
+
+        if (ls[i].Type != SP_ARCANE)
+            continue;
+
+        sn = theGame->SpellNum(ls[i].spID);
+        L = ls[i].Level;
+
+        /* Each spell once: skip a spell number already handled. */
+        for (first = 0; first < i; first++)
+            if (ls[first].Type == SP_ARCANE
+                && theGame->SpellNum(ls[first].spID) == sn)
+                break;
+        if (first < i)
+            continue;
+
+        f = Spells[sn];
+        if (f & (SP_GRANTED | SP_DOMAIN))
+            continue;
+
+        if ((f & SP_KNOWN) && !(f & SP_PENDING)) {
+            Spells[sn] &= ~(SP_KNOWN | SP_ARCANE);
+            if (SpellsLearned[L-1] > 0)
+                SpellsLearned[L-1]--;
+            changed = true;
+        } else if (f & SP_PENDING) {
+            bool hasBook = false;
+            for (it = FirstInv(); it; it = NextInv())
+                if (it->HasSpell(sn)) {
+                    hasBook = true;
+                    break;
+                }
+
+            if (hasBook) {
+                if (!(f & SP_KNOWN)) {
+                    Spells[sn] |= SP_KNOWN | SP_ARCANE;
+                    SpellsLearned[L-1]++;
+                    changed = true;
+                }
+            } else {
+                if (f & SP_KNOWN) {
+                    Spells[sn] &= ~SP_KNOWN;
+                    if (SpellsLearned[L-1] > 0)
+                        SpellsLearned[L-1]--;
+                    changed = true;
+                }
+                /* Keep SP_PENDING and SP_ARCANE. */
+                if (noBookList.GetLength())
+                    noBookList += ", ";
+                noBookList += NAME(ls[i].spID);
+            }
+        }
+    }
+
+    free(ls);
+
+    if (noBookList.GetLength())
+        IPrint(Format("Without its spellbook you could not memorize: %s.",
+            noBookList.GetData()));
+
+    if (changed)
+        RecalcCraftFormulas();
+}
+
+/* inc-j5yo revision-5 migration. Before the checklist change a Mage's known
+   arcane spells were castable the moment LearnSpell set SP_KNOWN; now an
+   arcane selection is SP_PENDING until the next full rest, and the two spells
+   a specialist gets at first level are SP_GRANTED so the rest step leaves them
+   alone (they use no slot and need no book). A file written before revision 5
+   holds only SP_KNOWN bits, so on load we reconstruct which known arcane
+   spells were the class grant and mark the rest pending.
+
+   This changes NO other flag and NO SpellsLearned value: it only adds
+   SP_GRANTED and SP_PENDING, so a spell that was memorized stays memorized
+   until the rest step of the play session that follows. */
+void Player::MigrateSpellFlagsRev5() {
+    int16 c, school;
+    int32 i, nSpells;
+    rID spList[32];
+
+    /* The class grant: exactly the two spells of the specialist school on the
+       class's SPECIALTY_SPELLS list, and only where they already carry
+       SP_KNOWN. The list is the same copy the chargen grant reads (the Phase 3
+       block after EV_ADVANCE). */
+    for (c = 0; c != 6; c++) {
+        if (!ClassID[c])
+            continue;
+        if (!TCLASS(ClassID[c])->GetList(SPECIALTY_SPELLS, spList, 31))
+            continue;
+        for (nSpells = 0; nSpells < 31 && spList[nSpells]; nSpells++)
+            ;
+        if (nSpells < 18)
+            continue;
+        school = GetStatiVal(SPECIALTY_SCHOOL);
+        if (school < 0 || school > 8)
+            continue;
+        if (Spells[theGame->SpellNum(spList[school*2])] & SP_KNOWN)
+            Spells[theGame->SpellNum(spList[school*2])] |= SP_GRANTED;
+        if (Spells[theGame->SpellNum(spList[school*2+1])] & SP_KNOWN)
+            Spells[theGame->SpellNum(spList[school*2+1])] |= SP_GRANTED;
+    }
+
+    /* Everything else the old build knew how to cast was arcane and neither a
+       granted spell nor a domain spell: that becomes the pending selection. */
+    for (i = 0; i <= MAX_SPELLS; i++)
+        if ((Spells[i] & (SP_KNOWN | SP_ARCANE)) == (SP_KNOWN | SP_ARCANE) &&
+            !(Spells[i] & (SP_GRANTED | SP_DOMAIN)))
+            Spells[i] |= SP_PENDING;
+
+    SpellFlagProbe(true);
+}
+
+/* The INCURSION_SPELLFLAG_PROBE diagnostic, off unless the variable is set.
+   One line per spell index that carries SP_KNOWN, then a summary line carrying
+   whether this call followed a migration and the file's revision. Written
+   through Error() so it lands in the run's logs/errors.log beside every other
+   probe. Uses the same NAME() spelling the character sheet draws, with spaces
+   turned to underscores so the line stays one token per fact. Bead inc-j5yo. */
+void Player::SpellFlagProbe(bool migrated) {
+    if (!getenv("INCURSION_SPELLFLAG_PROBE"))
+        return;
+    for (int32 i = 0; i <= MAX_SPELLS; i++) {
+        char nm[160];
+        const char *s;
+        int32 j;
+        uint32 fl;
+        if (!(Spells[i] & SP_KNOWN))
+            continue;
+        /* NAME() can yield a temporary String whose cast to const char* is
+           only valid inside the full expression that produced it, so the
+           copy below is made from `sn`, a String that owns its buffer. */
+        String sn = NAME(theGame->SpellID((int16)i));
+        for (j = 0, s = (const char*)sn; *s && j < (int32)sizeof(nm) - 1;
+             s++, j++)
+            nm[j] = (*s == ' ') ? '_' : *s;
+        nm[j] = '\0';
+        fl = Spells[i];
+        Error("SPELLFLAG_PROBE %s known=1 pending=%d granted=%d arcane=%d",
+            nm, (fl & SP_PENDING) ? 1 : 0, (fl & SP_GRANTED) ? 1 : 0,
+            (fl & SP_ARCANE) ? 1 : 0);
+    }
+    Error("SPELLFLAG_PROBE migrated=%d rev=%d", migrated ? 1 : 0,
+        (int)SaveV1_FileRevision());
 }

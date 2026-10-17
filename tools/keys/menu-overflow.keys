@@ -46,7 +46,11 @@ e       # Alignment: [e] Neutral. Nine fixed entries, so the letter is safe,
 ENTER y                          # Done, and confirm keeping the ranks
 a                                # Personality archetype
 @while "Choose a feat" a
-a a a a                          # starting spells
+@expect "(Space marks,"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
+ESC                              # dismiss the arrival description (the old fourth pick did)
 
 @until "Entry Chamber" ESC       # in play
 d                                # character sheet

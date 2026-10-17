@@ -1,0 +1,46 @@
+# The Necromancy sibling of tools/keys/specialty-grant-check.keys: the same
+# first-level specialist mage, but specialising in Necromancy, so the two
+# expected specialty spells are Minor Drain and Phase Door (lib/classes.irh
+# SPECIALTY_SPELLS, school 6). Run it the same way:
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_CHAR_PROBE=1 \
+#       tools/headless.sh tools/keys/specialty-grant-check-nec.keys 42
+#
+# See that file's header for why the school is chosen by name, why the script
+# saves (the character probe fires from Game::SaveGame), and why one turn is
+# searched before saving.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Mage"
+a       # Attributes: the first of the five offered sets
+@choose "Neutral"    # Alignment
+@choose "Necromancy" # Wizard specialty
+a       # First feat.  Which feats are offered depends on the attribute
+a       # Second feat. rolls, so these two stay counted.
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+@while "wish to worship" y
+@expect "personality archetype"
+a       # Personality archetype
+
+@expect "(Space marks,"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
+@until "Things in View" ESC
+
+s
+@dump:played
+
+ESC
+@expect "System Menu"
+b
+@dump:saved

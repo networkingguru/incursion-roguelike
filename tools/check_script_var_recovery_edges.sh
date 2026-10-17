@@ -27,6 +27,12 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# The current schema stamp, read from the source of truth rather than
+# hardcoded: a literal here rots into a false failure the moment SCHEMA_REV
+# moves, and the check then reports a format problem that does not exist.
+SCHEMA_STAMP="IS1.$(sed -n 's/^#define SCHEMA_REV \([0-9]*\).*/\1/p' src/SaveV1.cpp)"
+[ -n "${SCHEMA_STAMP#IS1.}" ] || { echo "cannot read SCHEMA_REV from src/SaveV1.cpp" >&2; exit 1; }
+
 FAILED=0
 fail() { echo "FAIL: $1"; FAILED=1; }
 
@@ -174,8 +180,8 @@ else
     [ -f "$WORK/copy.sav.v0" ] || fail "case 21: conversion left no copy.sav.v0 backup"
     cmp -s "$WORK/copy.sav.v0" "$FIX" || fail "case 21: copy.sav.v0 does not hold the original v0 bytes"
     STAMP="$(dd if="$WORK/copy.sav" bs=1 skip=4 count=5 2>/dev/null)"
-    [ "$STAMP" = "IS1.4" ] || fail "case 21: the converted file's stamp is \"$STAMP\", wanted IS1.4"
-    echo "case 21: converted to IS1.4 with a byte-exact .v0 backup"
+    [ "$STAMP" = "$SCHEMA_STAMP" ] || fail "case 21: the converted file's stamp is \"$STAMP\", wanted $SCHEMA_STAMP"
+    echo "case 21: converted to $SCHEMA_STAMP with a byte-exact .v0 backup"
 fi
 
 # --- nothing real touched -----------------------------------------------

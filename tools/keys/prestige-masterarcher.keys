@@ -117,7 +117,7 @@ M       # [M]ulticlass
 # Bard 1 is total level 6, so this level offers the last feat the gate needs.
 @until "class do you wish to advance" G
 @choose "Bard"
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Bonus To Which Attribute" c
 @while "You feel hardier" ESC   # the pop-up that announces it eats the next key
 @cursorto "Zen Archery" DOWN
@@ -126,14 +126,14 @@ ENTER
 @until "Skill Ratings" d
 @until "class do you wish to advance" G
 @choose "Bard"
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Bonus To Which Attribute" c
 @while "You feel hardier" ESC   # the pop-up that announces it eats the next key
 @while "Choose a feat" a
 @until "Skill Ratings" d
 @until "class do you wish to advance" G
 @choose "Bard"
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Bonus To Which Attribute" c
 @while "You feel hardier" ESC   # the pop-up that announces it eats the next key
 @while "Choose a feat" a

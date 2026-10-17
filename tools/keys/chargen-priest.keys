@@ -86,4 +86,7 @@ ENTER y
 a       # Personality archetype
 
 # Four starting spells.
-a a a a
+@expect "(Space marks,"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER

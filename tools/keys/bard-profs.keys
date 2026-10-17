@@ -38,7 +38,11 @@ RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
 ENTER y                 # leave the Skill Manager and accept the allocation
 
 @choose "The Witty Thrillseeker"    # personality archetype
-@choose "Sleep"         # a bard learns one spell at first level. A rogue is
+@expect "(Space marks,"    # the bard's first spell: Sleep is row 27 of level 1 by name
+DOWN*26
+SPACE
+@expect "[*] Sleep"
+ENTER   # a bard learns one spell at first level. A rogue is
                         #   never asked this, which is why elf-search.keys has
                         #   no line here.
 

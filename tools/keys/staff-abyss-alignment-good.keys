@@ -42,6 +42,9 @@ ENTER y # Done, and confirm keeping the ranks
 
 y       # Do you wish to worship <god>? -- yes
 a       # Personality archetype
-a a a   # Three starting spells
+@expect "(Space marks,"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
 
 @include staff-abyss-alignment-body.keys

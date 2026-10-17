@@ -51,8 +51,11 @@ extern size_t typeSize(int8 Type);
    (SaveV1_SegmentFields below), so a module rebuild that adds, removes or
    reorders a resource no longer shifts every row or renumbers the stored
    flavour rIDs. 2 -> 3, each module slot's tag-816 scope gained its
-   21-array length and position-ordered resource-name manifest. */
-#define SCHEMA_REV 4
+   21-array length and position-ordered resource-name manifest.
+   4 -> 5, the meaning of Player spell flags changed: SP_PENDING (0x1000)
+   and SP_GRANTED (0x2000) now exist, so a file written before revision 5
+   needs its spell flags migrated on load (bead inc-j5yo). */
+#define SCHEMA_REV 5
 static uint32 v1FileRevision = 0;
 
 /* The OLDEST revision this binary can still read. A file older than this is
@@ -79,6 +82,11 @@ const char* SaveSchemaID()
     if (!id[0])
       snprintf(id, sizeof(id), "IS1.%d", SCHEMA_REV);
     return id;
+  }
+
+uint32 SaveV1_FileRevision()
+  {
+    return v1FileRevision;
   }
 
 /* Raw (uncompressed) payload mode, for the mutation tools: DEBUG builds

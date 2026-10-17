@@ -50,45 +50,45 @@ d       # character sheet
 # passes cover any order of two menus. A pass whose menu never appears costs
 # nothing.
 G
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @while "Bonus To Which Attribute" c
 @while "You feel hardier" ESC
-@while "Learn which spell" a
-@while "Choose a bonus metamagic" a
-@while "Choose a feat" a
-@while "Bonus To Which Attribute" c
-@while "You feel hardier" ESC
-G
-@while "Learn which spell" a
-@while "Choose a bonus metamagic" a
-@while "Choose a feat" a
-@while "Bonus To Which Attribute" c
-@while "You feel hardier" ESC
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @while "Bonus To Which Attribute" c
 @while "You feel hardier" ESC
 G
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @while "Bonus To Which Attribute" c
 @while "You feel hardier" ESC
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @while "Bonus To Which Attribute" c
 @while "You feel hardier" ESC
 G
-@while "Learn which spell" a
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @while "Bonus To Which Attribute" c
 @while "You feel hardier" ESC
-@while "Learn which spell" a
+@while "(Space marks," ESC
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+G
+@while "(Space marks," ESC
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@while "Bonus To Which Attribute" c
+@while "You feel hardier" ESC
+@while "(Space marks," ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @while "Bonus To Which Attribute" c

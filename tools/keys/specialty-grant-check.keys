@@ -1,0 +1,75 @@
+# Make a first-level specialist mage, finish character generation, save him,
+# and let INCURSION_CHAR_PROBE=1 write logs/charprobe.txt -- whose "Known
+# Spells:" section is the oracle for the two specialty spells the class grant
+# is supposed to give.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_CHAR_PROBE=1 \
+#       tools/headless.sh tools/keys/specialty-grant-check.keys 42
+#
+# WHAT IS BEING MEASURED. The Mage class's EV_ADVANCE used to gain the two
+# spells of the specialist's school from a switch in lib/classes.irh. That
+# grant now lives in a * SPECIALTY_SPELLS list (school order 0-8, two spells
+# each) read from src/Create.cpp. The two spells must still be known at level
+# one, or the character sheet's Known Spells list loses them.
+#
+# WHY THE SCHOOL IS NAMED. @choose matches a menu entry by name (see @choose
+# in src/Wposix.cpp), so adding a race, class or school cannot silently move
+# the pick the way a counted letter would. The seed is fixed all the same:
+# the attribute rolls decide which feats are offered, and the letters below
+# for attributes and feats stay positional.
+#
+# WHY THIS ONE SAVES. The engine writes the character dump (DumpCharacter,
+# src/Sheet.cpp) only from Game::SaveGame, under INCURSION_CHAR_PROBE=1
+# (src/Registry.cpp:1105-1111). Saving is therefore how the check reads the
+# Known Spells list; a session that only opened menus would write nothing and
+# headless.sh would report NO GAMEPLAY.
+#
+# The school is Evocation, so the two expected spells are Magic Missile and
+# Shield (lib/classes.irh SPECIALTY_SPELLS, school 4). The sibling file
+# specialty-grant-check-nec.keys is the same script with Necromancy chosen.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Mage"
+a       # Attributes: the first of the five offered sets
+@choose "Neutral"   # Alignment
+@choose "Evocation" # Wizard specialty
+a       # First feat.  Which feats are offered depends on the attribute
+a       # Second feat. rolls, so these two stay counted.
+
+# Skill Manager. RIGHT spends a rank on the selected skill and stops at the
+# skill's maximum, DOWN moves to the next, so three RIGHTs per skill spends
+# everything available without needing to know how many ranks this character
+# has. Character generation will not let go until the pool is empty.
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+@while "wish to worship" y
+@expect "personality archetype"
+a       # Personality archetype
+
+# The starting spells. A first-level mage is offered exactly three picks; the
+# specialty spells are already known and are NOT on this list, so these picks
+# are whatever the list opens on. @while rather than three counted a's.
+@expect "(Space marks,"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
+@until "Things in View" ESC
+
+# One real turn, so this counts as a session and headless.sh does not report
+# NO GAMEPLAY.
+s
+@dump:played
+
+# Save. ESC opens the System Menu rather than cancelling anything, and [b] is
+# Save and Continue: the save triggers the character probe.
+ESC
+@expect "System Menu"
+b
+@dump:saved

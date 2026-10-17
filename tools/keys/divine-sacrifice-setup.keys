@@ -39,7 +39,10 @@ a a
 @while "|  *" RIGHT RIGHT RIGHT DOWN
 ENTER y
 a       # Personality archetype
-a a a a # Four starting spells
+@expect "(Space marks,"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
 
 ESC     # dismiss the arrival-room description; now in play
 
