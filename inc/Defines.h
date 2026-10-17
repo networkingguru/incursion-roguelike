@@ -1879,12 +1879,30 @@ typedef signed int        hObj;
 #define SP_STAFF     0x0040
 #define SP_INNATE    0x0080
 #define SP_DOMAIN    0x0100
-#define SP_FORGOTTEN 0x0200
+#define SP_PEND_PRI  0x0200 /* primal selection, takes effect at the next rest */
 #define SP_CREATE    0x0400
 #define SP_TINNATE   0x0800
-#define SP_PENDING   0x1000 /* selected for the next rest */
+#define SP_PENDING   0x1000 /* selected for the next rest (arcane) */
 #define SP_GRANTED   0x2000 /* given by a script or class grant, uses no slot */
 #define SP_INHERENT  0x4000 /* picked by the Inherent Spell feat; castable without being memorized; needs no focus */
+#define SP_PEND_DIV  0x8000 /* divine selection, takes effect at the next rest */
+
+/* inc-4999 phase 4a: a "version" is a (spell number, source) pair, so the
+   player can choose which held version of a spell to cast. MAX_SPELLS is 2048,
+   so a spell number fits in 11 bits. Pack the source code into bits 12-14:
+   1 arcane, 2 divine, 3 primal, 4 bardic, 0 none. A value with source code 0
+   is a plain spell number, which is what old saves and every non-player path
+   hold. The unpacked source is returned as an SP_* kind bit (0 when none). */
+#define SP_SRC_NONE   0
+#define SP_SRC_ARCANE 1
+#define SP_SRC_DIVINE 2
+#define SP_SRC_PRIMAL 3
+#define SP_SRC_BARDIC 4
+
+/* The SpellVersionPack/SpellVersionSpell/SpellVersionSrcCode/
+   SpellSrcCodeKind/SpellKindSrcCode helpers live in inc/Creature.h, near the
+   other spell helpers, because the game-data module compiler parses this
+   header and does not understand C++ `inline`. */
 
 #define SK_ALCHEMY    1
 #define SK_ANIMAL_EMP 2

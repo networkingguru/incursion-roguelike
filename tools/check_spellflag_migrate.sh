@@ -2,7 +2,10 @@
 # gate: live
 # inc-j5yo revision 5: loading a pre-revision-5 save migrates the player's
 # spell flags exactly once, and the save that session writes comes back at
-# revision 5 without migrating again.
+# the current revision without migrating again.
+#
+# inc-4999 raised the schema to revision 6, so a save written by this build is
+# IS1.6; Run B therefore expects migrated=0 rev=6.
 #
 # WHAT IS BEING GUARDED. Revision 5 gave SP_PENDING and SP_GRANTED meaning
 # (the arcane selection for the next rest; a spell handed out by a class or
@@ -14,7 +17,7 @@
 #   Run A  loads tools/fixtures/chars/orc-mage-seed1-opt0822.sav and must
 #          report migrated=1 with the file's own revision. That fixture is
 #          IS1.3, so the expected line is migrated=1 rev=3.
-#   Run B  loads the save Run A wrote and must report migrated=0 rev=5, with
+#   Run B  loads the save Run A wrote and must report migrated=0 rev=6, with
 #          every spell flag exactly as Run A ended.
 #
 # THE ORACLE is INCURSION_SPELLFLAG_PROBE (src/Create.cpp, Player::
@@ -32,8 +35,10 @@
 # but those two.
 #
 # PROVED RED with --prove-red (docs/VERIFICATION.md step 2). The mutation
-# removes the SP_PENDING assignment loop; the pending=1 spells then log
-# pending=0 and this check exits 1. Recorded result in the report.
+# removes the two SP_GRANTED assignments to the specialist school's spells; the
+# class grant then lands on neither granted=1 nor (since the pending loop still
+# runs) a distinctive state, and the "Shield and Magic Missile are granted"
+# assertion fails. Recorded result in the report.
 #
 # Usage: tools/check_spellflag_migrate.sh [--prove-red]  (0 pass, 1 fail, 2 inconclusive)
 . "$(dirname "$0")/check_lib.sh"
@@ -43,15 +48,16 @@ CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 FIXTURE=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
 SEED=1
 
-# The mutation this check defends: the SP_PENDING assignment loop from
-# Player::MigrateSpellFlagsRev5 (src/Create.cpp). Declared before any run so
-# --prove-red intercepts here, before the (build-needing) measurement runs.
+# The mutation this check defends: the two SP_GRANTED assignments that stamp
+# the specialist school's spells in Player::MigrateSpellFlagsRev5
+# (src/Create.cpp). Declared before any run so --prove-red intercepts here,
+# before the (build-needing) measurement runs.
 check_mutation src/Create.cpp \
-'    for (i = 0; i <= MAX_SPELLS; i++)
-        if ((Spells[i] & (SP_KNOWN | SP_ARCANE)) == (SP_KNOWN | SP_ARCANE) &&
-            !(Spells[i] & (SP_GRANTED | SP_DOMAIN)))
-            Spells[i] |= SP_PENDING;' \
-'    /* mutation: SP_PENDING loop disabled */'
+'        if (Spells[theGame->SpellNum(spList[school*2])] & SP_KNOWN)
+            Spells[theGame->SpellNum(spList[school*2])] |= SP_GRANTED;
+        if (Spells[theGame->SpellNum(spList[school*2+1])] & SP_KNOWN)
+            Spells[theGame->SpellNum(spList[school*2+1])] |= SP_GRANTED;' \
+'    /* mutation: the specialist-school SP_GRANTED assignments disabled */'
 
 [ -f "$FIXTURE" ] || _check_die 2 \
     "no $FIXTURE, so there is no pre-revision-5 save to migrate."
@@ -113,6 +119,24 @@ while IFS= read -r line; do
     fi
 done <<< "$A_SPELLS"
 
+# The specialty grants must survive: MigrateSpellFlagsRev5 marks the two spells
+# of the specialist school SP_GRANTED. The mutation above removes those two
+# assignments, and this is the assertion that sees it -- in the migrated mage
+# fixture Shield and Magic Missile are the school's grant and must read
+# granted=1. (Without this, the loop above still passes under the mutation,
+# because the pending loop marks the same spells pending instead.)
+for g in Shield Magic_Missile; do
+    line="$(printf '%s\n' "$A_SPELLS" | grep -E "SPELLFLAG_PROBE $g known=" | head -1)"
+    if [ -z "$line" ]; then
+        echo "FAIL: the mage fixture holds $g but the probe logged no line."
+        FAIL=1
+    elif [ "$(printf '%s' "$line" | grep -oE 'granted=[01]' | sed 's/granted=//')" != "1" ]; then
+        echo "FAIL: $g is a specialist-school grant and must read granted=1:"
+        echo "      $line"
+        FAIL=1
+    fi
+done
+
 # ---------------------------------------------------------------------------
 # Run B: load the save Run A wrote. It must not migrate a second time, and
 # the flags must match Run A's end state exactly.
@@ -121,8 +145,8 @@ A_SAVE="$(ls -t "$RUN_A"/save/*.sav 2>/dev/null | head -1)"
     "Run A wrote no save under $RUN_A/save, so there is nothing to reload." \
     "The keys script must reach the System Menu's [b] Save and Continue."
 STAMP_A="$(dd if="$A_SAVE" bs=1 skip=4 count=5 2>/dev/null)"
-[ "$STAMP_A" = "IS1.5" ] || {
-    echo "FAIL: Run A's save stamp is \"$STAMP_A\", wanted IS1.5."
+[ "$STAMP_A" = "IS1.6" ] || {
+    echo "FAIL: Run A's save stamp is \"$STAMP_A\", wanted IS1.6."
     FAIL=1
 }
 cp "$A_SAVE" "$RUN_A/runA.sav"
@@ -138,8 +162,8 @@ B_SUM="$(summary "$CLEAN_B")"
 if [ -z "$B_SUM" ]; then
     echo "FAIL: Run B logged no SPELLFLAG_PROBE summary line."
     FAIL=1
-elif ! printf '%s\n' "$B_SUM" | grep -q 'migrated=0 rev=5$'; then
-    echo "FAIL: Run B reloaded a revision-5 save and must not migrate; it reads:"
+elif ! printf '%s\n' "$B_SUM" | grep -q 'migrated=0 rev=6$'; then
+    echo "FAIL: Run B reloaded a revision-6 save and must not migrate; it reads:"
     echo "      $B_SUM"
     FAIL=1
 fi
@@ -155,7 +179,7 @@ fi
 echo
 echo "--- Run A (IS1.$REV fixture) ---"
 printf '%s\n' "$A_SPELLS"; printf '%s\n' "$A_SUM"
-echo "--- Run B (Run A's IS1.5 save) ---"
+echo "--- Run B (Run A's IS1.6 save) ---"
 printf '%s\n' "$B_SPELLS"; printf '%s\n' "$B_SUM"
 echo "specimen A: $LOG_A"
 echo "specimen B: $LOG_B"
@@ -167,5 +191,5 @@ fi
 echo
 echo "PASS: the IS1.$REV fixture migrated once (migrated=1 rev=$REV), every"
 echo "      known arcane spell ended granted or pending, and reloading the"
-echo "      IS1.5 save it wrote did not migrate again (migrated=0 rev=5)."
+echo "      IS1.6 save it wrote did not migrate again (migrated=0 rev=6)."
 exit 0

@@ -234,6 +234,10 @@ struct EventInfo {
     int16 vDepth, vLevel, vAlign, vDefRoll;
     int16 terraKey, terrainListIndex;
     uint16 illFlags; char illType; int16 godNum;
+    /* inc-4999 phase 4a: the source the caster chose for this cast, as an SP_*
+       kind bit (SP_ARCANE/SP_DIVINE/SP_PRIMAL/SP_BARDIC). 0 means no source was
+       chosen, so the rule readers fall back to the spell's held sources. */
+    uint16 SpellSource;
     rID eID, ill_eID;
     bool  isHit, isCrit, isFumble, Died, ADied, Eluded, Blocked, Saved, Immune, MagicRes,
         Resist, Absorb, wasFriendly, actUnseen, vicUnseen, vicCharging, Whirlwind, Graze,

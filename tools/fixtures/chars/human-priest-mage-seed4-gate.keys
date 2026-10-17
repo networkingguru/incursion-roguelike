@@ -1,0 +1,54 @@
+# Human Priest 1 / Mage 1 for a frozen fixture (bd inc-4999). Priest chargen, then wizard-mode Free Advancement, train as Mage, advance once in Mage, save.
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Human"
+@choose "Poison Use"
+@choose "Spot"
+@choose "Priest"
+@choose "Aiswin"        # God, asked here rather than after the skill ranks,
+c                       # Attributes: the third of the five offered sets. The
+@choose "Lawful Good"   # Alignment. The god decides which are on offer.
+a                       # First feat. Which feats the game offers depends on
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y # Done, and confirm keeping the ranks
+y       # Do you wish to worship <god>? -- yes
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+a a
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+a       # Personality archetype
+@expect "(Space marks,"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
+@dump:chargen-done
+@while "personality archetype" a
+@until "System Menu" ESC
+@expect "System Menu"
+ESC
+s
+w
+y
+w
+DOWN DOWN
+SPACE
+ESC
+d
+@expect "Class  Priest 1"
+M
+@choose "Mage"
+@dump:trained
+G
+@choose "Mage"
+@until "Mage 1" a
+@dump:sheet-after
+ESC
+ESC
+@expect "System Menu"
+b
+@dump:saved

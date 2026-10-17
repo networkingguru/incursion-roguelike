@@ -1,0 +1,90 @@
+# Human Priest 1 / Mage 1 holding Protection from Evil from BOTH sources, carrying Mystic Aegis (bd inc-4999).
+# Same character as chargen-human-priest-mage-save.keys; after Mage 1 it conjures the book (wizard Item
+# Acquisition), marks both Protection from Evil rows in Learn Spell (Call Companions unmarked to free
+# a level-1 slot), descends to depth 2 + genocides (rest needs both), takes one full rest, and saves.
+# Rows by position in the sorted level-1 list: DOWN*2 = Call Companions, then DOWN*19 = Prot. from Evil (Arcane).
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Human"
+@choose "Poison Use"
+@choose "Spot"
+@choose "Priest"
+@choose "Aiswin"        # God, asked here rather than after the skill ranks,
+c                       # Attributes: the third of the five offered sets. The
+@choose "Lawful Good"   # Alignment. The god decides which are on offer.
+a                       # First feat. Which feats the game offers depends on
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y # Done, and confirm keeping the ranks
+y       # Do you wish to worship <god>? -- yes
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+a a
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+a       # Personality archetype
+@expect "(Space marks,"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
+@dump:chargen-done
+@while "personality archetype" a
+@until "System Menu" ESC
+@expect "System Menu"
+ESC
+s
+w
+y
+w
+DOWN DOWN
+SPACE
+ESC
+d
+@expect "Class  Priest 1"
+M
+@choose "Mage"
+@dump:trained
+G
+@choose "Mage"
+@until "Mage 1" a
+@dump:sheet-after
+ESC
+@until "Things in View" ESC
+w
+@choose "Item Acquisition"
+RIGHT*7
+@until "Mystic Aegis" DOWN
+@expect "Mystic Aegis"
+DOWN
+ENTER
+s
+ESC
+@until "Things in View" ESC
+d
+L
+DOWN*2
+SPACE
+DOWN*19
+SPACE
+DOWN
+SPACE
+@dump:marked
+ENTER
+@until "Things in View" ESC
+w
+@choose "Ascend / Descend Depth"
+"2" ENTER
+@until "HP:" ESC
+w
+@choose "Genocide Everything"
+@until "HP:" ESC
+z
+y
+@dump:rested
+ESC
+@expect "System Menu"
+b
+@dump:saved

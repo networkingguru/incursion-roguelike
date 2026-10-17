@@ -92,40 +92,40 @@ PY
     result "$?" "mana falls by $cost between $before and $after"
 }
 if run inherent-mage "$MAGE"; then
-    observe baseline-checklist '[ ] Mage Armour' 'Mage Armour starts unmemorized'
-    observe baseline-cast '] Shield' 'baseline cast menu was reached'
-    observe baseline-cast '] Mage Armour' 'Mage Armour starts uncastable' absent
+    observe baseline-checklist '[ ] (arc)Mage Armour' 'Mage Armour starts unmemorized'
+    observe baseline-cast '] (arc)Shield' 'baseline cast menu was reached'
+    observe baseline-cast '] (arc)Mage Armour' 'Mage Armour starts uncastable' absent
     observe baseline-inventory "spellbook [Adventurers' Arts]" 'Mage carries the source book'
     observe feat-pick 'Choose an inherent spell:' 'GainFeat opens the inherent pick menu'
     observe checklist 'Mage Armour (locked) (inherent)' 'Mage Armour is inherent and locked'
-    observe cast-menu '] Mage Armour' 'Mage Armour becomes castable without resting'
+    observe cast-menu '] (arc)Mage Armour' 'Mage Armour becomes castable without resting'
     observe after-cast 'You feel safe.' 'Mage Armour takes effect'
     mana before-cast after-cast 8
 fi
 if run lucubration-mage "$MAGE"; then
     observe book-pick 'Choose a spellbook to study:' 'GainFeat opens the book pick menu'
     observe book-pick '[e] spellbook [Elemental Covenant]' 'the selected book kind is carried'
-    observe selected '[*] Endure Cold' 'Endure Cold is selected for the next rest'
-    observe cast-before '] Alarm' 'unpicked-book control starts memorized'
-    observe cast-before '] Endure Cold' 'Endure Cold is not yet memorized' absent
+    observe selected '[*] (arc)Endure Cold' 'Endure Cold is selected for the next rest'
+    observe cast-before '] (arc)Alarm' 'unpicked-book control starts memorized'
+    observe cast-before '] (arc)Endure Cold' 'Endure Cold is not yet memorized' absent
     observe books-before "spellbook [Adventurers' Arts]" 'the control book is carried before dropping'
     observe books-gone 'Wand of Identify' 'post-drop inventory was reached'
     observe books-gone 'spellbook [' 'all six books have left the pack' absent
-    observe pending-nobook '[*] Alarm (memorized) (no book)' 'Alarm remains selected with its unstudied book absent'
-    observe pending-nobook '[*] Endure Cold' 'studied-book selection survives dropping its book'
+    observe pending-nobook '[*] (arc)Alarm (memorized) (no book)' 'Alarm remains selected with its unstudied book absent'
+    observe pending-nobook '[*] (arc)Endure Cold' 'studied-book selection survives dropping its book'
     observe rest-msgs 'You awaken feeling well rested and recovered.' 'a full rest completed'
     observe rest-msgs 'could not memorize: Alarm,' 'rest refuses the unstudied-book control'
-    observe cast-after '] Endure Cold' 'studied-book spell is memorized after rest'
-    observe cast-after '] Alarm' 'unstudied-book spell is not memorized after rest' absent
+    observe cast-after '] (arc)Endure Cold' 'studied-book spell is memorized after rest'
+    observe cast-after '] (arc)Alarm' 'unstudied-book spell is not memorized after rest' absent
 fi
 if run inherent-priest "$PRIEST"; then
     observe symbol-gone ')Neck         :Empty' 'Priest drops the holy symbol before taking the feat'
     observe feat-pick 'Choose an inherent spell:' 'Priest reaches the inherent pick menu'
-    observe freed-slot 'Bless (locked) (inherent)' 'Bless is the inherent pick'
-    observe cast-menu '] Bless' 'Bless remains castable'
-    observe after-cast 'You feel righteous.' 'Bless casts without the holy symbol'
-    mana cast-menu after-cast 5
-    observe control-refused 'You need to have a holy symbol equipped to cast divine spells.' 'non-inherent Call Light is refused without the symbol'
+    observe freed-slot 'Call Light (locked) (inherent)' 'Call Light is the inherent pick'
+    observe cast-menu '] (div)Call Light' 'Call Light remains castable'
+    observe after-cast 'A bright golden radiance illuminates the area.' 'Call Light casts without the holy symbol'
+    mana cast-menu after-cast 1
+    observe control-msgs 'You need to have a holy symbol equipped to cast divine' 'non-inherent Bless is refused without the symbol'
     mana after-cast control-refused 0
 fi
 result "$FAIL" 'Inherent Spell and Lucubration observations'

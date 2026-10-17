@@ -46,7 +46,7 @@
 /* inc-1xr3: the overchannel success chance, in one place for the "Attempt
    spell anyway?" prompt and the deciding roll. The cast fails when
    random(25)+80 > rating, so it succeeds for rating-80+1 of the 25 equally
-   likely rolls; both callers pass the same SpellRating(e.eID). */
+   likely rolls; both callers pass the same SpellRating(e.eID,0,false,e.SpellSource). */
 static int16 OverchannelChance(int16 rating) {
     int16 passing = rating - 79;
     if (passing < 0)
@@ -112,6 +112,46 @@ void Player::ToggleMM(uint32 mm,int16 sp)
     if (!HasFeat(ft))
       return;
     MMArray[sp] |= mm;
+  }
+
+/* inc-4999 phase 4a: the source a cast of the given packed version uses. A
+   non-zero source code in the version is used as-is. When it is 0 (old quick
+   key, autobuff, script, any non-menu cast) and the spell is held from exactly
+   one source, that source is used; when held from several, the first in the
+   order arcane, divine, primal, bardic; when held from none, 0. */
+int16 Player::CastSourceFor(int16 version)
+  {
+    static const uint16 kinds[4] = { SP_ARCANE, SP_DIVINE, SP_PRIMAL, SP_BARDIC };
+    int16 sp, srcCode, i;
+    sp = SpellVersionSpell(version);
+    if (sp < 0 || sp > MAX_SPELLS)
+      return 0;
+    srcCode = SpellVersionSrcCode(version);
+    if (srcCode != SP_SRC_NONE)
+      return SpellSrcCodeKind(srcCode);
+    for (i = 0; i != 4; i++)
+      if (Spells[sp] & kinds[i])
+        return kinds[i];
+    return 0;
+  }
+
+/* inc-4999 phase 4b: Spells[sp] with the four kind bits replaced by the cast's
+   source. When src is 0 and this is a Player, CastSourceFor(sp) picks the
+   fallback version. Non-kind bits are kept as held. */
+uint16 Character::SpellCastFlags(int16 sp, uint16 src)
+  {
+    static const uint16 kinds[4] = { SP_ARCANE, SP_DIVINE, SP_PRIMAL, SP_BARDIC };
+    uint16 flags = Spells[sp];
+    int16 i;
+    if (sp < 0 || sp > MAX_SPELLS)
+      return flags;
+    for (i = 0; i != 4; i++)
+      flags &= ~kinds[i];
+    if (!src && Type == T_PLAYER)
+      src = thisp->CastSourceFor(SpellVersionPack(sp, SP_SRC_NONE));
+    if (src & (SP_ARCANE|SP_DIVINE|SP_PRIMAL|SP_BARDIC))
+      flags |= (src & (SP_ARCANE|SP_DIVINE|SP_PRIMAL|SP_BARDIC));
+    return flags;
   }
 
 int16 Creature::SpellDmgBonus(rID eID) 
@@ -448,7 +488,7 @@ bool Magic::isTarget(EventInfo &_e, Thing *t) {
       if (e.isTrap || e.isItem)
           sp_flags = 0;
       else if (e.EActor->isCharacter())
-          sp_flags = e.EPActor->Spells[theGame->SpellNum(e.eID)];
+          sp_flags = e.EPActor->SpellCastFlags(theGame->SpellNum(e.eID), e.SpellSource);
       else {
           sp_flags = SP_ARCANE | SP_DIVINE | SP_SORCERY | SP_PRIMAL;
 
@@ -479,7 +519,7 @@ bool Magic::isTarget(EventInfo &_e, Thing *t) {
       else if (dcEffect->HasFlag(EF_SPECABIL))
           e.saveDC = 10 + e.EActor->ChallengeRating() + e.EActor->Mod(A_CHA);
       else 
-          e.saveDC = (int8)e.EActor->getSpellDC(dcID, e.isArcaneTrickery,(e.MM & MM_HEIGHTEN) == MM_HEIGHTEN);
+          e.saveDC = (int8)e.EActor->getSpellDC(dcID, e.isArcaneTrickery,(e.MM & MM_HEIGHTEN) == MM_HEIGHTEN, e.SpellSource);
 
       if (e.isItem && e.EItem && e.EItem->isType(T_SCROLL))
           e.vCasterLev = max(TEFF(e.EItem->eID)->Level*2-1,e.EActor->SkillLevel(SK_DECIPHER) - 2); 
@@ -4581,12 +4621,44 @@ EvReturn Creature::Cast(EventInfo &e) {
         TEFF(e.eID)->Level));
     int16 specMod; 
     Counterspeller csp[64]; int16 cc; EvReturn csr;
+    /* inc-4999 phase 4b: the focus this cast needs, for the CAST_RULES probe. */
+    const char *focusReq = "none";
 
     dmgFail = false;
     roll = 1;
     rating = dmg_pen = 0;
 
     e.sp = theGame->SpellNum(e.eID);
+
+    /* inc-4999 phase 4b: a Player cast that carries no chosen source (autobuff,
+       script, quick key from an old save) follows one version too -- the first
+       held source CastSourceFor names. Set before the probe so the probe, the
+       focus tests and the rule readers all see the same version. */
+    if (isPlayer() && !e.SpellSource)
+        e.SpellSource = thisp->CastSourceFor(e.sp);
+
+    /* inc-4999 phase 4a: when INCURSION_CAST_PROBE is set, write one
+       errors.log line per player cast at entry, naming the spell (spaces as
+       underscores) and the source this cast uses. Read by
+       tools/check_cast_version.sh. */
+    if (isPlayer() && getenv("INCURSION_CAST_PROBE")) {
+        const char *srcName, *s;
+        String sn = NAME(theGame->SpellID(e.sp));
+        char nm[160];
+        int32 nj;
+        for (nj = 0, s = (const char*)sn; *s && nj < (int32)sizeof(nm) - 1;
+             s++, nj++)
+            nm[nj] = (*s == ' ') ? '_' : *s;
+        nm[nj] = '\0';
+        switch (e.SpellSource) {
+            case SP_ARCANE: srcName = "arcane"; break;
+            case SP_DIVINE: srcName = "divine"; break;
+            case SP_PRIMAL: srcName = "primal"; break;
+            case SP_BARDIC: srcName = "bardic"; break;
+            default:        srcName = "none";   break;
+        }
+        Error("CAST_PROBE spell=%s source=%s", nm, srcName);
+    }
 
     if (isCharacter())
         if (thisc->Spells[e.sp] & SP_INNATE)
@@ -4717,24 +4789,36 @@ EvReturn Creature::Cast(EventInfo &e) {
     if (isPlayer() && (thisp->Spells[e.sp] & SP_INHERENT))
         goto HasComponent;
 
+    /* inc-4999 phase 4b: the focus tests read the CAST version's flags, so an
+       arcane cast needs no holy symbol (and no god) and a divine cast of a
+       spell also held arcane still needs both. */
+    {
+    uint16 castFlags = thisc->SpellCastFlags(e.sp, e.SpellSource);
+
+    if (castFlags & (SP_DIVINE|SP_DOMAIN))
+        focusReq = "symbol";
+    else if (!(castFlags & (SP_ARCANE|SP_PRIMAL|SP_BARDIC|SP_STAFF|SP_SORCERY)))
+        focusReq = "book";
+
     /* An arcane spell needs no spellbook to cast; the book matters only
        when a Mage memorizes at a full rest. (inc-q04n) */
-    if (thisp->Spells[e.sp] & (SP_ARCANE|SP_PRIMAL|SP_BARDIC|SP_STAFF|SP_SORCERY))
+    if (castFlags & (SP_ARCANE|SP_PRIMAL|SP_BARDIC|SP_STAFF|SP_SORCERY))
         goto HasComponent;
 
-    if (thisp->Spells[e.sp] & (SP_DIVINE|SP_DOMAIN))
+    if (castFlags & (SP_DIVINE|SP_DOMAIN))
         if (HasHolySymbol(thisc->GodID))
             goto HasComponent;
 
-    if (thisp->Spells[e.sp] & (SP_DIVINE|SP_DOMAIN))
+    if (castFlags & (SP_DIVINE|SP_DOMAIN))
         IPrint("You need to have a holy symbol equipped to cast divine spells.");
     else
         IPrint("You don't have a spellbook with that spell currently in your inventory.");
     return ABORT;
+    }
 
 HasComponent:
 
-    if (isCharacter() && thisp->Spells[e.sp] & (SP_DIVINE|SP_DOMAIN)) {
+    if (isCharacter() && thisc->SpellCastFlags(e.sp, e.SpellSource) & (SP_DIVINE|SP_DOMAIN)) {
         if (!thisp->GodID) {
             IPrint("You must have a god to cast spells.");
             return ABORT;
@@ -4803,7 +4887,7 @@ HasComponent:
                 }
     }
 
-    mCost = getSpellMana(e.eID,e.MM,&specMod);
+    mCost = getSpellMana(e.eID,e.MM,&specMod,e.SpellSource);
 
     if (e.MM & MM_QUICKEN) 
         castingTimeout /= 2; 
@@ -4815,11 +4899,11 @@ HasComponent:
         IPrint("You don't have enough mana.");
         if (Type == T_PLAYER && cMana() >= (mCost / 2))
             if (thisp->MyTerm->yn(Format("Attempt spell anyway? (%d~%s)",
-                    OverchannelChance(SpellRating(e.eID)),
+                    OverchannelChance(SpellRating(e.eID,0,false,e.SpellSource)),
                     mCost > cMana() ? "; all remaining mana" : ""))) {
                 /* take damage */
                 LoseMana(mCost);
-                if (random(25)+80 > SpellRating(e.eID))
+                if (random(25)+80 > SpellRating(e.eID,0,false,e.SpellSource))
                     goto SpellFails;
                 goto ContinueCasting;
             }
@@ -4945,8 +5029,35 @@ ContinueCasting:
     StatiIterEnd(e.EActor)     
 
     /* Get Spell Rating */
-    rating = SpellRating(e.eID,e.MM);
+    rating = SpellRating(e.eID,e.MM,false,e.SpellSource);
     roll   = random(100)+1;
+
+    /* inc-4999 phase 4b: the CAST_RULES probe, once the cast's success chance,
+       save DC and its attribute are known. Read by tools/check_cast_rules.sh.
+       dcattr names the save-DC attribute; focus is the focus this version
+       required. */
+    if (isPlayer() && getenv("INCURSION_CAST_PROBE")) {
+        const char *srcName, *s;
+        String sn = NAME(theGame->SpellID(e.sp));
+        char nm[160];
+        int32 nj;
+        for (nj = 0, s = (const char*)sn; *s && nj < (int32)sizeof(nm) - 1;
+             s++, nj++)
+            nm[nj] = (*s == ' ') ? '_' : *s;
+        nm[nj] = '\0';
+        switch (e.SpellSource) {
+            case SP_ARCANE: srcName = "arcane"; break;
+            case SP_DIVINE: srcName = "divine"; break;
+            case SP_PRIMAL: srcName = "primal"; break;
+            case SP_BARDIC: srcName = "bardic"; break;
+            default:        srcName = "none";   break;
+        }
+        getSpellDC(e.eID, e.isArcaneTrickery,
+                   (e.MM & MM_HEIGHTEN) == MM_HEIGHTEN, e.SpellSource);
+        Error("CAST_RULES spell=%s source=%s chance=%d raw=%d dcattr=%s focus=%s",
+              nm, srcName, (int)rating,
+              (int)(p_base + p_int + p_lev + p_meta + p_spec + p_calc + p_circ + p_conc),
+              dcs_attr ? dcs_attr : "?", focusReq);    }
 
     dmg_pen = 0;
     if (oHP > cHP) {
@@ -5289,7 +5400,7 @@ Counterspelled:
 }
    
 
-int16 Creature::SpellRating(rID eID, uint32 mm, bool perceived)
+int16 Creature::SpellRating(rID eID, uint32 mm, bool perceived, uint16 src)
   {
     int16 Chance;
 
@@ -5327,12 +5438,13 @@ int16 p_base, p_int, p_lev, p_conc,
 String ps_circ;
 const char* ps_perfect, *ps_calc;
 
-int16 Character::SpellRating(rID eID, uint32 mm, bool perceived)
+int16 Character::SpellRating(rID eID, uint32 mm, bool perceived, uint16 src)
   {
     int16 Chance,j; uint32 i;
     int16 concentLeft;
     int16 sp = theGame->SpellNum(eID);
     TEffect *te = TEFF(eID);
+    uint16 flags = SpellCastFlags(sp, src);
     
     p_base = p_lev = p_circ = p_spec = p_meta = p_calc = p_int = p_conc = 0;
     ps_circ.Empty(); ps_perfect = NULL; ps_calc = NULL;
@@ -5343,8 +5455,8 @@ int16 Character::SpellRating(rID eID, uint32 mm, bool perceived)
     
     /* Does the character have the needed spellbook equipped? */
     // ignore for now...
-    if ((Spells[sp] & (SP_INNATE|SP_STAFF))) {
-      ps_perfect = (Spells[sp] & SP_INNATE) ? "innate" : "staff";
+    if ((flags & (SP_INNATE|SP_STAFF))) {
+      ps_perfect = (flags & SP_INNATE) ? "innate" : "staff";
       return 100;
     } 
     if (HasStati(POLYMORPH)) {
@@ -5359,7 +5471,7 @@ int16 Character::SpellRating(rID eID, uint32 mm, bool perceived)
     }
 
     /* Is the spell known? */
-    if (!(Spells[sp] & (SP_KNOWN|SP_DOMAIN|SP_INHERENT))) {
+    if (!(flags & (SP_KNOWN|SP_DOMAIN|SP_INHERENT))) {
       if (Type == T_PLAYER)
         if (thisp->Opt(OPT_ALL_SPELLS)) {
           if (TEFF(eID)->Level > ((CasterLev()+1)/2))
@@ -5397,7 +5509,7 @@ int16 Character::SpellRating(rID eID, uint32 mm, bool perceived)
 
     p_meta = -MMFeatLevels(mm)*5;
     
-    if (HasStati(SPECIALTY_SCHOOL) && (Spells[sp] & (SP_ARCANE))) {
+    if (HasStati(SPECIALTY_SCHOOL) && (flags & (SP_ARCANE))) {
       i = GetStatiVal(SPECIALTY_SCHOOL);
       p_spec = -50;
       /* Choose the most favourable modifier out of all the
@@ -5409,14 +5521,6 @@ int16 Character::SpellRating(rID eID, uint32 mm, bool perceived)
       if (p_spec == -50)
         p_spec = 0;
       }     
-    /* If the spell is on your list as both arcane and divine/primal,
-       you benefit from the positive specMod, but aren't hindered by
-       the negative one -- you don't get WORSE at casting any of your
-       druidic Evocations when you become an Illusionist, but you do
-       get better at shared mage/druid illusions. */
-    if (Spells[sp] & (SP_DIVINE|SP_BARDIC|SP_PRIMAL|SP_SORCERY))
-      p_spec = max(p_spec,0);
-    
 
     int16 *at;
     if (perceived) 
@@ -5425,19 +5529,19 @@ int16 Character::SpellRating(rID eID, uint32 mm, bool perceived)
       at = Attr;
       
     p_calc = -100;
-    if (Spells[sp] & (SP_DIVINE|SP_DOMAIN))
+    if (flags & (SP_DIVINE|SP_DOMAIN))
       if (at[A_DIV]*5 > p_calc)
         { p_calc = at[A_DIV]*5; ps_calc = "divine"; }
-    if (Spells[sp] & (SP_BARDIC))
+    if (flags & (SP_BARDIC))
       if (at[A_BAR]*5 > p_calc)
         { p_calc = at[A_BAR]*5; ps_calc = "bardic"; }
-    if (Spells[sp] & (SP_PRIMAL))
+    if (flags & (SP_PRIMAL))
       if (at[A_PRI]*5 > p_calc)
         { p_calc = at[A_PRI]*5; ps_calc = "primal"; }
-    if (Spells[sp] & (SP_SORCERY))
+    if (flags & (SP_SORCERY))
       if (at[A_SOR]*5 > p_calc)
         { p_calc = at[A_SOR]*5; ps_calc = "sorcery"; }
-    if (Spells[sp] & (SP_ARCANE))
+    if (flags & (SP_ARCANE))
       if (at[A_ARC]*5 > p_calc)
         { p_calc = at[A_ARC]*5; ps_calc = "arcane"; }
     if (p_calc == -100)
@@ -5489,7 +5593,7 @@ int16 dc_base, dc_attr, dc_focus, dc_trick, dc_will,
       dc_beguile, dc_hard, dc_lev, dc_height, dc_affinity;
 const char *dcs_attr;
   
-int16 Creature::getSpellDC(rID spID, bool isTrick, bool isHeight)
+int16 Creature::getSpellDC(rID spID, bool isTrick, bool isHeight, uint16 src)
   {
     int32 sp_flags;
     dc_base = 10;
@@ -5497,7 +5601,7 @@ int16 Creature::getSpellDC(rID spID, bool isTrick, bool isHeight)
     dc_lev = TEFF(spID)->Level;
   
     if (isCharacter())
-      sp_flags = ((Character*)this)->Spells[theGame->SpellNum(spID)];
+      sp_flags = ((Character*)this)->SpellCastFlags(theGame->SpellNum(spID), src);
     else
       sp_flags = SP_ARCANE | SP_DIVINE | SP_SORCERY | SP_PRIMAL;
       
@@ -5554,19 +5658,21 @@ int16 Creature::getSpellDC(rID spID, bool isTrick, bool isHeight)
            dc_beguile + dc_trick + dc_hard + dc_height + dc_affinity; 
   }
   
-int16 Creature::getSpellMana(rID spID, uint32 MM, int16 *specMod2)
+int16 Creature::getSpellMana(rID spID, uint32 MM, int16 *specMod2, uint16 src)
   {
     int16 mCost, mult, sp, specMod, j, sch;
     sp = theGame->SpellNum(spID);
+    uint16 flags = isCharacter() ? ((Character*)this)->SpellCastFlags(sp, src)
+                                 : (uint16)(SP_ARCANE|SP_DIVINE|SP_SORCERY|SP_PRIMAL);
     
     mCost = TEFF(spID)->ManaCost;
 
     if (specMod2)
       *specMod2 = 0;
     
-    if (!(isPlayer() && (thisp->Spells[sp] & SP_KNOWN)))
+    if (!(isPlayer() && (flags & SP_KNOWN)))
       if (HasEffStati(INNATE_SPELL,spID) || (isPlayer() && 
-             (thisp->Spells[sp] & SP_INNATE)))
+             (flags & SP_INNATE)))
         goto SkipSpellSpecifics;
         
     if (MM)
@@ -5584,7 +5690,7 @@ int16 Creature::getSpellMana(rID spID, uint32 MM, int16 *specMod2)
        their strategy. This serves to diffrentiate the specialists from
        each other in play. */
     specMod = 0;
-    if ((!isPlayer()) || (thisp->Spells[sp] & SP_ARCANE))
+    if ((!isPlayer()) || (flags & SP_ARCANE))
       if (HasStati(SPECIALTY_SCHOOL)) {
         sch = GetStatiVal(SPECIALTY_SCHOOL);
         specMod = -50;
@@ -5597,9 +5703,6 @@ int16 Creature::getSpellMana(rID spID, uint32 MM, int16 *specMod2)
         if (specMod == -50)
           specMod = 0;
         }     
-    if (isPlayer() && (thisp->Spells[sp] & 
-          (SP_DIVINE|SP_BARDIC|SP_PRIMAL|SP_SORCERY)))
-      specMod = max(specMod,0);
 
     
     if (TEFF(spID)->Purpose & EP_BUFF)

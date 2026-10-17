@@ -1364,18 +1364,33 @@ void TextTerm::CreateCharDump(String &str)
 
   ss = Format("\n%cKnown Spells:%c\n",-WHITE,-GREY);
 
-  for (int16 ii=0;ii!=theGame->LastSpell();ii++) 
-    if ((j = p->SpellRating(theGame->SpellID(ii),0,true)) != -1) {
+  for (int16 ii=0;ii!=theGame->LastSpell();ii++) {
+    /* inc-4999 phase 5: one line per held version, tag before the name, each
+       version rated as its own source. A spell held from no source keeps one
+       untagged line. */
+    static const uint16 heldKinds[4] =
+      { SP_ARCANE, SP_DIVINE, SP_PRIMAL, SP_BARDIC };
+    uint16 srcKinds[4]; int16 nSrc = 0, si;
+    for (int16 z=0;z!=4;z++)
+      if (p->Spells[ii] & heldKinds[z])
+        srcKinds[nSrc++] = heldKinds[z];
+    if (!nSrc)
+      srcKinds[nSrc++] = 0;
+    for (si=0;si!=nSrc;si++) {
+      if ((j = p->SpellRating(theGame->SpellID(ii),0,true,srcKinds[si])) == -1)
+        continue;
       int mana = (TEFF(theGame->SpellID(ii))->ManaCost);
       ss += Format("  %c%-30s%c %2d  %3d~ %4d %s\n",
                       (p->Spells[ii] & SP_DOMAIN) ? -PURPLE : -BLUE,
-                      NAME(theGame->SpellID(ii)), -GREY,
+                      (const char*)(String(SpellSrcTagName(srcKinds[si]))
+                          + NAME(theGame->SpellID(ii))), -GREY,
                       TEFF(theGame->SpellID(ii))->Level, 
                       j, mana, 
                       (const char*)
                       (TEFF(theGame->SpellID(ii))->Power((int8)p->CasterLev(),p,theGame->SpellID(ii)))
                   );
-        }
+    }
+  }
 
   js = Format("\n%cJournal:%c\n",-WHITE,-GREY);
 

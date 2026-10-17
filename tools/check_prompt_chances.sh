@@ -9,8 +9,8 @@
 #
 #   (1) the overchannel success chance shown on "Attempt spell anyway?"
 #       is OverchannelChance(...), and the deciding roll keeps the original
-#       `random(25)+80 > SpellRating(e.eID)` test -- the helper is not a
-#       second, drifting formula;
+#       `random(25)+80 > SpellRating(e.eID,0,false,e.SpellSource)` test -- the
+#       helper is not a second, drifting formula;
 #   (2) that helper agrees with the deciding test for every integer rating
 #       the game can produce (exhaustive sweep over -64..200);
 #   (3) the "Fire it anyway?" prompt prints the same die count the damage
@@ -33,9 +33,9 @@ MAGIC=src/Magic.cpp
 SKILLS=src/Skills.cpp
 
 # (1) prompt uses the helper, deciding roll is unchanged.
-grep -q 'OverchannelChance(SpellRating(e.eID))' "$MAGIC" \
-    || note "Magic.cpp: prompt does not call OverchannelChance(SpellRating(e.eID))"
-grep -q 'random(25)+80 > SpellRating(e.eID)' "$MAGIC" \
+grep -q 'OverchannelChance(SpellRating(e.eID,0,false,e.SpellSource))' "$MAGIC" \
+    || note "Magic.cpp: prompt does not call OverchannelChance(SpellRating(e.eID,0,false,e.SpellSource))"
+grep -q 'random(25)+80 > SpellRating(e.eID,0,false,e.SpellSource)' "$MAGIC" \
     || note "Magic.cpp: deciding overchannel roll changed"
 
 # (2) exhaustive agreement between helper and deciding test.

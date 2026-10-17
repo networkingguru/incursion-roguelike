@@ -3616,11 +3616,17 @@ Text "help::magic"
      needs its spellbook in your inventory. A marked spell whose book is missing
      is not memorized, and it stays marked for your next rest. A complete rest
      is required to memorize new spells.\n\n
-     __If you are a Cleric, Druid or Bard, a spell you learn is yours for good. It
-     takes effect at once, and the checklist shows it locked. You can mark
-     spells only for slots that are still empty. Spells that your class,
-     specialty school or domain grants also show locked. They use no slot and
-     need no spellbook.\n\n
+     __If you are a Priest, Druid, Paladin or Ranger, the checklist lists
+     every spell on your class list, and you need no spellbook. Your marks
+     work as a Mage's do: a change takes effect at your next full rest, and
+     the spells marked 'memorized' are the ones you can cast now. A spell on
+     two of your class lists shows twice, once for each source, such as
+     '(arc)Detect Evil' and '(div)Detect Evil'. Each version you mark uses its
+     own slot. Spells that your class, specialty school or domain grants show
+     locked. They use no slot and need no spellbook.\n\n
+     __If you are a Bard, a spell you learn is yours for good. It takes effect
+     at once, and the checklist shows it locked. You can mark spells only for
+     slots that are still empty.\n\n
   
      <11>THE SPELL MANAGER AND SPELLCASTING {SM}\n
      ==================================<3>\n     
@@ -4050,12 +4056,14 @@ Text "help::magic"
     it's good or bad and suffers penalties to her casting if she does it in
     armor. When she casts <9>Bless<3>, however, she gains no specialist bonus or
     penalty, is able to cast freely in armor and needs a holy symbol.\n
-    __<9>Magic Weapon<3> is an odd case, since it is on both the Mage and Priest
-    spell lists as a 1st-level spell. When this is the case, the caster gains
-    the best of both (or all) worlds -- she can cast the spell in armour without
-    penalty, gains either her Mage specialist modifier or a 0~ modifier (whichever
-    favours her more) and can choose to use either a spellbook or a holy symbol as
-    her focus for the spell.\n\n
+    __<9>Magic Weapon<3> is on both the Mage and Priest spell lists as a
+    1st-level spell, so she can learn it twice, once from each list. Each
+    version uses its own slot and shows its source before its name:
+    '(arc)Magic Weapon' and '(div)Magic Weapon'. The version she casts decides
+    every rule. Cast as arcane, it takes her specialist modifier, suffers the
+    armor penalty, uses Intelligence for its save DC and needs no focus. Cast
+    as divine, it takes no specialist modifier, has no armor penalty, uses
+    Wisdom for its save DC and needs a holy symbol.\n\n
     
     <15>Practical Examples<3>\n
     __Consider the following characters to illustrate how multi-class spellcasters

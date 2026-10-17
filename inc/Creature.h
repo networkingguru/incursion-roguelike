@@ -6,6 +6,55 @@
 
 #include <time.h>
 
+/* inc-4999 phase 4a: a "version" is a (spell number, source) pair, so the
+   player can choose which held version of a spell to cast. MAX_SPELLS is 2048,
+   so a spell number fits in 11 bits. Pack the source code into bits 12-14:
+   1 arcane, 2 divine, 3 primal, 4 bardic, 0 none. A value with source code 0
+   is a plain spell number, which is what old saves and every non-player path
+   hold. The unpacked source is returned as an SP_* kind bit (0 when none).
+   These live here rather than in Defines.h because the game-data module
+   compiler parses Defines.h and does not understand C++ `inline`. */
+static inline int32 SpellVersionPack(int16 sp, int16 srcCode) {
+    return (int32)(((srcCode & 0x7) << 12) | (sp & 0xFFF));
+}
+static inline int16 SpellVersionSpell(int32 ver) {
+    return (int16)(ver & 0xFFF);
+}
+static inline int16 SpellVersionSrcCode(int32 ver) {
+    return (int16)((ver >> 12) & 0x7);
+}
+static inline uint16 SpellSrcCodeKind(int16 srcCode) {
+    switch (srcCode) {
+        case SP_SRC_ARCANE: return SP_ARCANE;
+        case SP_SRC_DIVINE: return SP_DIVINE;
+        case SP_SRC_PRIMAL: return SP_PRIMAL;
+        case SP_SRC_BARDIC: return SP_BARDIC;
+        default:            return 0;
+    }
+}
+static inline int16 SpellKindSrcCode(uint16 kind) {
+    switch (kind) {
+        case SP_ARCANE: return SP_SRC_ARCANE;
+        case SP_DIVINE: return SP_SRC_DIVINE;
+        case SP_PRIMAL: return SP_SRC_PRIMAL;
+        case SP_BARDIC: return SP_SRC_BARDIC;
+        default:        return SP_SRC_NONE;
+    }
+}
+/* inc-4999 phase 5: the short source tag shown BEFORE a spell's name in every
+   spell menu, so a long name cannot hide which source the row is held from:
+   "(arc)", "(div)", "(pri)", "(brd)", "(sor)". A kind bit of 0 (innate, staff,
+   a script grant with no kind bit; SP_SORCERY is itself 0) gets no tag. */
+static inline const char *SpellSrcTagName(uint16 kind) {
+    switch (kind) {
+        case SP_ARCANE: return "(arc)";
+        case SP_DIVINE: return "(div)";
+        case SP_PRIMAL: return "(pri)";
+        case SP_BARDIC: return "(brd)";
+        default:        return "";
+    }
+}
+
 struct ActionInfo 
   {
     int8 Act;
@@ -535,9 +584,12 @@ class Creature: public Thing, public Magic
 
 
       /* Spell and Innate Ability Functions */
-      virtual int16 SpellRating(rID eID,uint32 mm=0,bool perceived=false);
-      virtual int16 getSpellDC(rID spID, bool isTrick, bool isHeight);
-      virtual int16 getSpellMana(rID spID, uint32 MM, int16 *specMod2);
+      /* inc-4999 phase 4b: the trailing `src` is the cast's chosen source (an
+         SP_* kind bit, 0 = none); the rule readers see only that source's kind
+         bits, so "best of both" no longer applies. */
+      virtual int16 SpellRating(rID eID,uint32 mm=0,bool perceived=false,uint16 src=0);
+      virtual int16 getSpellDC(rID spID, bool isTrick, bool isHeight, uint16 src=0);
+      virtual int16 getSpellMana(rID spID, uint32 MM, int16 *specMod2, uint16 src=0);
       virtual uint32 getStoredMM(rID spID);
       virtual uint16 getSpellFlags(rID spID) // horrid kludge used for counterspells
          { return CasterLev() >= SAL(TEFF(spID)->Level) ? SP_KNOWN : 0; }
@@ -912,7 +964,7 @@ class Character: public Creature
       virtual int16 KMod2(int8 a);
       virtual void Exercise(int16 at, int16 amt, int16 col, int16 cap);
       /* Spell and Innate Ability Functions */
-      virtual int16 SpellRating(rID eID, uint32 mm=0,bool perceived=false);
+      virtual int16 SpellRating(rID eID, uint32 mm=0,bool perceived=false,uint16 src=0);
       virtual uint16 getSpellFlags(rID spID) 
                        { return Spells[theGame->SpellNum(spID)]; }
       virtual void   setSpellFlags(rID spID, uint16 fl) 
@@ -920,6 +972,13 @@ class Character: public Creature
       virtual int16  GetSkillRanks(int16 sk)
                        { return SkillRanks[sk]; }
       virtual int16  GetBAB(int16 mode);
+      /* inc-4999 phase 4b: the spell's flags with its four kind bits
+         (SP_ARCANE/SP_DIVINE/SP_PRIMAL/SP_BARDIC) replaced by the cast's source
+         `src` (an SP_* kind bit). Non-kind bits (SP_DOMAIN, SP_INNATE,
+         SP_STAFF, SP_SORCERY, SP_KNOWN, ...) are kept. When `src` is 0 and the
+         character is a Player, CastSourceFor(sp) supplies the source. A caster
+         with no spell knowledge (a monster) keeps its caller-supplied flags. */
+      uint16 SpellCastFlags(int16 sp, uint16 src);
 
       /* Functions for Performing Actions */
       //virtual EvReturn AttackMsg(EventInfo&e);
@@ -1410,6 +1469,7 @@ class Player: public Character
       bool ChooseLucubrationBook();
       bool HasBookFor(int16 sn);
       void MigrateSpellFlagsRev5();
+      void MigrateSpellFlagsRev6();
       /* Diagnostic behind INCURSION_SPELLFLAG_PROBE: one errors.log line per
          known spell plus a summary. Called at the end of the migration and
          once after every load (migrated or not). */
@@ -1459,6 +1519,10 @@ class Player: public Character
       virtual EvReturn Rest(EventInfo &e);        
       virtual EvReturn GodRaise(EventInfo &e);
       virtual void MoveDepth(int16 NewDepth, bool safe=false);
+      /* inc-4999 phase 4a: the source (SP_* kind bit) a cast of the given
+         packed version uses. 0 when the version carries no source and the spell
+         is held from no source. See the SpellVersion* helpers above. */
+      int16 CastSourceFor(int16 version);
       int16 FirstAutoBuff() { cAutoBuff = 0; return AutoBuffs[cAutoBuff++]; }
       int16 NextAutoBuff()  { return AutoBuffs[cAutoBuff++]; }
       void ScrutinizeMon(Creature *cr);

@@ -133,7 +133,7 @@ String & DescribeSkill(int16 sk)
 
 void Player::UseMenu(int32 SuppliedIndex) {
 	int32 i = 0;
-	uint16 j;
+	uint16 j, k;
 	bool found = false;
 	EventInfo e; String str;
 
@@ -190,9 +190,16 @@ void Player::UseMenu(int32 SuppliedIndex) {
 					Lookup(ClassAbilities, ActiveTraits[i] % 1000),
 					total - GetStatiMag(FLAWLESS_DODGE)), i);
 			} else if (ActiveTraits[i] == CA_INNATE_SPELL + ABIL_VAL) {
+				static const uint16 innateHeldKinds[4] =
+					{ SP_ARCANE, SP_DIVINE, SP_PRIMAL, SP_BARDIC };
 				for (j = 0; j != MAX_SPELLS; j++)
 					if (Spells[j] & SP_INNATE) {
+						String tag;
+						for (k = 0; k != 4; k++)
+							if (Spells[j] & innateHeldKinds[k])
+								tag += SpellSrcTagName(innateHeldKinds[k]);
 						str = "Innate <6>";
+						str += tag;
 						str += NAME(theGame->SpellID(j));
 						str += "<7>";
 						MyTerm->LOption(XPrint(str), i + j * 1000);
@@ -202,7 +209,12 @@ void Player::UseMenu(int32 SuppliedIndex) {
 					for (rID sID = tm->FirstRes(AN_INNATE); sID;
 						sID = tm->NextRes(AN_INNATE)) {
 						j = theGame->SpellNum(sID);
+						String tag;
+						for (k = 0; k != 4; k++)
+							if (Spells[j] & innateHeldKinds[k])
+								tag += SpellSrcTagName(innateHeldKinds[k]);
 						str = Format("Innate (%s) <6>", NAME(mID));
+						str += tag;
 						str += NAME(theGame->SpellID(j));
 						str += "<7>";
 						MyTerm->LOption(XPrint(str), i + j * 1000);
@@ -2469,12 +2481,13 @@ void Character::UseAbility(uint8 ab, int16 pa) {
 
 		e.Clear();
 		e.EActor = this;
-		e.eID = theGame->SpellID(sp);
+		e.eID = theGame->SpellID(SpellVersionSpell(sp));
+		e.SpellSource = thisp->CastSourceFor(sp);
 		e.isArcaneTrickery = true;
 		if (!thisp->MyTerm->EffectPrompt(e, TEFF(e.eID)->ef.qval |
-			((MMFeats(sp) & MM_PROJECT) ? Q_DIR : 0)))
+			((MMFeats(SpellVersionSpell(sp)) & MM_PROJECT) ? Q_DIR : 0)))
 			break;
-		if (Spells[sp] & SP_INNATE)
+		if (Spells[SpellVersionSpell(sp)] & SP_INNATE)
 			ReThrow(EV_INVOKE, e);
 		else
 			ReThrow(EV_CAST, e);

@@ -1050,11 +1050,12 @@ DoMagic:
 CastSpell:
             e.Clear();
             e.EActor = this;
-            e.eID = theGame->SpellID(sp);
+            e.eID = theGame->SpellID(SpellVersionSpell(sp));
+            e.SpellSource = CastSourceFor(sp);
             if (!MyTerm->EffectPrompt(e, TEFF(e.eID)->ef.qval |
-                ((MMFeats(sp) & MM_PROJECT) ? Q_DIR : 0)))
+                ((MMFeats(SpellVersionSpell(sp)) & MM_PROJECT) ? Q_DIR : 0)))
                 break;
-            if (Spells[sp] & SP_INNATE)
+            if (Spells[SpellVersionSpell(sp)] & SP_INNATE)
                 ReThrow(EV_INVOKE, e);
             else
                 ReThrow(EV_CAST, e);

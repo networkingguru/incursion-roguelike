@@ -22,12 +22,19 @@
 *                             Various Managers                               *
 \*****************************************************************************/
 
+/* inc-4999 phase 4a: the source kinds a spell can be held from, in the order
+   arcane, divine, primal, bardic. SpellHeldSrcs returns the subset of these the
+   spell's flags carry; the tag name comes from SpellSrcTagName (inc/Creature.h,
+   inc-4999 phase 5). */
+static const uint16 SpellHeldKinds[4] =
+    { SP_ARCANE, SP_DIVINE, SP_PRIMAL, SP_BARDIC };
+
 int16 TextTerm::SpellManager(int16 Purpose) {
     String FeatList, FeatKeys; EventInfo e; String sch, the_name, desc; int16 Key, abKey;
     static const char * SaveNames[] = { "Fort", "Ref ", "Will", "----" };
     static const char * WinTitle = " == Spell Manager == ";
     int16 NumSpells, Line,i,j,k,z,sp,curr,offset, mana, oldMode;
-    char ch; int16 Spells[1024];
+    char ch; int32 Spells[1024];
     NumSpells = 0;
     rID autobuffID = FIND("Autobuff");
     abKey = 0;
@@ -41,8 +48,15 @@ int16 TextTerm::SpellManager(int16 Purpose) {
     String spell_line[1024]; 
 
     for(i=0;i!=theGame->LastSpell();i++)
-        if (p->SpellRating(theGame->SpellID(i),0,true) != -1)
-            NumSpells++;
+        if (p->SpellRating(theGame->SpellID(i),0,true) != -1) {
+            /* One entry per held version; a spell held from no source (innate,
+               staff, domain-only, script grant) still gets one entry. */
+            k = 0;
+            for (j = 0; j != 4; j++)
+                if (p->Spells[i] & SpellHeldKinds[j])
+                    k++;
+            NumSpells += k ? k : 1;
+        }
     if(!NumSpells)
     {
         SetMode(oldMode);
@@ -122,17 +136,34 @@ ProcessSpells:
     for (int desiredLev = 9; desiredLev >= 0; desiredLev--)
         for (i=0;i!=theGame->LastSpell();i++)
             if (TEFF(theGame->SpellID(i))->Level == desiredLev)
-                if ((j = p->SpellRating(theGame->SpellID(i),p->MMFeats(i),true)) != -1) {
+                if (1) {
+                    /* inc-4999 phase 4a/4b: one menu entry per held version. A
+                       spell held from no source gets a single entry with source
+                       0, a plain spell number (innate, staff, domain, grant).
+                       Each entry rates, costs and saves as ITS OWN source. */
+                    uint16 srcKinds[4]; int16 nSrc = 0, si;
+                    for (z = 0; z != 4; z++)
+                        if (p->Spells[i] & SpellHeldKinds[z])
+                            srcKinds[nSrc++] = SpellHeldKinds[z];
+                    if (!nSrc) {
+                        srcKinds[0] = 0; nSrc = 1;
+                    }
+                    for (si = 0; si != nSrc; si++) {
+                    uint16 srcKind = srcKinds[si];
+                    if ((j = p->SpellRating(theGame->SpellID(i),p->MMFeats(i),true,srcKind)) == -1)
+                        continue;
+                    int32 version = SpellVersionPack(i, SpellKindSrcCode(srcKind));
                     e.eID = theGame->SpellID(i);
+                    e.SpellSource = srcKind;
                     // ww: no meta-magic for innate abilities
                     if (p->Spells[i] & SP_KNOWN) 
                         e.MM = p->MMFeats(i) & ~MM_INHERANT;
                     if (Purpose & SM_TRICKERY)
                         e.isArcaneTrickery = true;
                     e.EActor->CalcEffect(e);
-                    Spells[Line] = i;
+                    Spells[Line] = version;
                     Color(GREY);
-                    mana = p->getSpellMana(e.eID,e.MM,NULL);
+                    mana = p->getSpellMana(e.eID,e.MM,NULL,srcKind);
                     /*
                     switch(TEFF(theGame->SpellID(i))->Schools)
                     {
@@ -152,7 +183,7 @@ ProcessSpells:
                     Key = 0;
                     for(k=0;k!=MAX_QKEYS;k++) {
                         if (p->QuickKeys[k].Type == QKY_SPELL)
-                            if (p->QuickKeys[k].Value == i)
+                            if ((int32)p->QuickKeys[k].Value == version)
                                 Key = '0' + k;
                     }
                     // Write(0,1,"  Key Spell                  Mana Time Succ CLev Save DC Power & Feats");
@@ -193,14 +224,17 @@ ProcessSpells:
                     int mana_color = (ManaPulse == 0 ? -GREEN :
                         (ManaPulse == 1 ? -YELLOW : -RED));
 
+                    /* inc-4999 phase 4b: the save-DC hint uses only THIS
+                       entry's source (plus non-kind bits like SP_INNATE). */
+                    uint16 dcFlags = p->SpellCastFlags(i, srcKind);
                     int savedc = 10 + TEFF(e.eID)->Level;
-                    if ((p->Spells[i] & (SP_ARCANE|SP_INNATE))) 
+                    if ((dcFlags & (SP_ARCANE|SP_INNATE))) 
                         savedc = max(savedc,10+TEFF(e.eID)->Level+e.EActor->Mod(A_INT));
-                    if ((p->Spells[i] & (SP_DIVINE|SP_INNATE))) 
+                    if ((dcFlags & (SP_DIVINE|SP_INNATE))) 
                         savedc = max(savedc,10+TEFF(e.eID)->Level+e.EActor->Mod(A_WIS));
-                    if ((p->Spells[i] & (SP_PRIMAL|SP_INNATE))) 
+                    if ((dcFlags & (SP_PRIMAL|SP_INNATE))) 
                         savedc = max(savedc,10+TEFF(e.eID)->Level+e.EActor->Mod(A_WIS));
-                    if ((p->Spells[i] & (SP_SORCERY|SP_INNATE))) 
+                    if ((dcFlags & (SP_SORCERY|SP_BARDIC|SP_INNATE))) 
                         savedc = max(savedc,10+TEFF(e.eID)->Level+e.EActor->Mod(A_CHA));
 
 
@@ -215,7 +249,7 @@ ProcessSpells:
                             e.saveDC);
                     } 
 
-                    the_name = NAME(theGame->SpellID(i));
+                    the_name = String(SpellSrcTagName(srcKind)) + NAME(theGame->SpellID(i));
 
                     /* Yes, we want == here -- the fatigue cost does not 
                     apply if you know the spell AND get it from the
@@ -227,7 +261,9 @@ ProcessSpells:
                             the_name += Format(" {%d}",fat);
                     }
 
-                    the_name = the_name.Left(22); 
+                    /* inc-4999 phase 5: the tag leads, so it survives the cut;
+                       a long name loses its end, never the tag. */
+                    the_name = the_name.Left(22);
                     if (TEFF(e.eID)->HasFlag(EF_VARMANA))
                         myline = Format("[%c%c%c] %c%-22s%c    %cV%c %c%4d%c %c%3d~%c %c%4d%c %c%.7s%c %s",
                             KY_color, Key ? Key : (ch <= 'z' ? ch : ' '), -GREY,
@@ -284,6 +320,7 @@ ProcessSpells:
                     // _snprintf(Text[Line],160,"%s%c",(const char*)myline,0);
                     if (ch <= 'z')
                         ch++;
+                    }
                 }
 
     Line++;
@@ -312,9 +349,9 @@ ProcessSpells:
         Color(BLUE);
 
         ClearScroll();
-        if (DESC(theGame->SpellID(Spells[curr]))) {
+        if (DESC(theGame->SpellID(SpellVersionSpell(Spells[curr])))) {
             SGotoXY(0,0);
-            desc = XPrint(TEFF(theGame->SpellID(Spells[curr]))->Describe(p));
+            desc = XPrint(TEFF(theGame->SpellID(SpellVersionSpell(Spells[curr])))->Describe(p));
             if (theGame->Opt(OPT_MONO_HELP)) {
                 int32 p;
                 for (p=0;desc[p];p++)
@@ -367,37 +404,38 @@ GetKey:
             SetMode(oldMode);
             return Spells[curr];
             break;
-        case 'A': p->ToggleMM(MM_AMPLIFY,Spells[curr]); goto ProcessSpells;
-        case 'B': p->ToggleMM(MM_BIND,Spells[curr]); goto ProcessSpells;
-        case 'C': p->ToggleMM(MM_CONTROL,Spells[curr]); goto ProcessSpells;      
-        case 'D': p->ToggleMM(MM_DEFENSIVE,Spells[curr]); goto ProcessSpells;
-        case 'E': p->ToggleMM(MM_EMPOWER,Spells[curr]); goto ProcessSpells;
-        case 'F': p->ToggleMM(MM_FORTIFY,Spells[curr]); goto ProcessSpells;
-        case 'G': p->ToggleMM(MM_AUGMENT,Spells[curr]); goto ProcessSpells;    
-        case 'H': p->ToggleMM(MM_HEIGHTEN,Spells[curr]); goto ProcessSpells;
-        case 'J': p->ToggleMM(MM_JUDICIOUS,Spells[curr]); goto ProcessSpells;
-        case 'L': p->ToggleMM(MM_ENLARGE,Spells[curr]); goto ProcessSpells;          
-        case 'M': p->ToggleMM(MM_MAXIMIZE,Spells[curr]); goto ProcessSpells;
-        case 'N': p->ToggleMM(MM_CONSECRATE,Spells[curr]); goto ProcessSpells;
-        case 'O': p->ToggleMM(MM_FOCUS,Spells[curr]); goto ProcessSpells;
-        case 'P': p->ToggleMM(MM_PROJECT,Spells[curr]); goto ProcessSpells;
-        case 'Q': p->ToggleMM(MM_QUICKEN,Spells[curr]); goto ProcessSpells;
-        case 'R': p->ToggleMM(MM_REPEAT,Spells[curr]); goto ProcessSpells;
-        case 'S': p->ToggleMM(MM_STILL,Spells[curr]); goto ProcessSpells;
-        case 'T': p->ToggleMM(MM_TRANSMUTE,Spells[curr]); goto ProcessSpells;
-        //case 'U': p->ToggleMM(MM_UNSEEN,Spells[curr]); goto ProcessSpells;
-        case 'U': p->ToggleMM(MM_SURE,Spells[curr]); goto ProcessSpells;
-        case 'V': p->ToggleMM(MM_VOCALIZE,Spells[curr]); goto ProcessSpells;
-        case 'Y': p->ToggleMM(MM_VILE,Spells[curr]); goto ProcessSpells;
-        case 'W': p->ToggleMM(MM_WARP,Spells[curr]); goto ProcessSpells;
-        case 'X': p->ToggleMM(MM_EXTEND,Spells[curr]); goto ProcessSpells;      
+        case 'A': p->ToggleMM(MM_AMPLIFY,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'B': p->ToggleMM(MM_BIND,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'C': p->ToggleMM(MM_CONTROL,SpellVersionSpell(Spells[curr])); goto ProcessSpells;      
+        case 'D': p->ToggleMM(MM_DEFENSIVE,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'E': p->ToggleMM(MM_EMPOWER,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'F': p->ToggleMM(MM_FORTIFY,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'G': p->ToggleMM(MM_AUGMENT,SpellVersionSpell(Spells[curr])); goto ProcessSpells;    
+        case 'H': p->ToggleMM(MM_HEIGHTEN,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'I': p->ToggleMM(MM_INHERANT,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'J': p->ToggleMM(MM_JUDICIOUS,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'L': p->ToggleMM(MM_ENLARGE,SpellVersionSpell(Spells[curr])); goto ProcessSpells;          
+        case 'M': p->ToggleMM(MM_MAXIMIZE,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'N': p->ToggleMM(MM_CONSECRATE,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'O': p->ToggleMM(MM_FOCUS,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'P': p->ToggleMM(MM_PROJECT,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'Q': p->ToggleMM(MM_QUICKEN,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'R': p->ToggleMM(MM_REPEAT,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'S': p->ToggleMM(MM_STILL,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'T': p->ToggleMM(MM_TRANSMUTE,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        //case 'U': p->ToggleMM(MM_UNSEEN,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'U': p->ToggleMM(MM_SURE,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'V': p->ToggleMM(MM_VOCALIZE,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'Y': p->ToggleMM(MM_VILE,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'W': p->ToggleMM(MM_WARP,SpellVersionSpell(Spells[curr])); goto ProcessSpells;
+        case 'X': p->ToggleMM(MM_EXTEND,SpellVersionSpell(Spells[curr])); goto ProcessSpells;      
         default:
             if (sp == abKey) {
-                if (TEFF(theGame->SpellID(Spells[curr]))->Vals(0)->qval &&
-                    !(TEFF(theGame->SpellID(Spells[curr]))->Vals(0)->qval & Q_TAR))
+                if (TEFF(theGame->SpellID(SpellVersionSpell(Spells[curr])))->Vals(0)->qval &&
+                    !(TEFF(theGame->SpellID(SpellVersionSpell(Spells[curr])))->Vals(0)->qval & Q_TAR))
                     goto DoneAB;
                 for (z=0;p->AutoBuffs[z] && z!=63;z++)
-                    if (p->AutoBuffs[z] == Spells[curr]) {
+                    if (p->AutoBuffs[z] == SpellVersionSpell(Spells[curr])) {
                         memmove(&p->AutoBuffs[z],&p->AutoBuffs[z+1],
                             sizeof(p->AutoBuffs[0]) * (63 - z));
                         p->AutoBuffs[63] = 0; 
@@ -407,7 +445,7 @@ GetKey:
                     }       
                 for (z=0;z!=63;z++)
                     if (!p->AutoBuffs[z]) {
-                        p->AutoBuffs[z] = Spells[curr];
+                        p->AutoBuffs[z] = SpellVersionSpell(Spells[curr]);
                         //p->IPrint("<Res> added to autobuff list.",
                         //          theGame->SpellID(Spells[curr]));
                         goto DoneAB;  

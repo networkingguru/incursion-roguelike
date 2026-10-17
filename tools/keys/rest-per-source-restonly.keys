@@ -1,0 +1,34 @@
+# inc-4999 phase 3: load a frozen caster fixture, descend to depth 2, genocide
+# everything, and take one full rest with NO Learn Spell menu change. Read by
+# tools/check_rest_per_source.sh cases a (Priest/Mage) and c (Bard). Both frozen
+# fixtures were saved IN wizard mode, so `w` opens the wizard menu at once: this
+# script has no `y` (an orc fixture saved outside wizard mode needs `w y`).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/<name>.sav \
+#       tools/headless.sh tools/keys/rest-per-source-restonly.keys 1
+#
+# THE ROUTE. Player::Rest refuses depth 1 ("you can just climb back out of the
+# dungeon entirely") and refuses while a hostile is in plain sight, so this
+# descends to depth 2 (wizard mode) and genocides everything first -- the same
+# route tools/keys/mage-loadout-rest.keys uses. INCURSION_SPELLFLAG_PROBE=1
+# makes the load and the rest each log SPELLFLAG_PROBE lines to
+# logs/errors.log; the check reads both.
+#
+# 'z' MUST BE LOWERCASE: KY_CMD_SLEEP is { 'Z', 0 } and the keyset compares
+# modifier flags exactly, so a shifted 'Z' matches nothing (src/KeyScript.cpp).
+
+s                       # one real turn: this counts as a session (exit 5 otherwise)
+w                       # wizard menu (already in wizard mode)
+@choose "Ascend / Descend Depth"
+"2" ENTER
+@until "HP:" ESC
+w
+@choose "Genocide Everything"
+@until "HP:" ESC
+
+@dump:before-rest
+z
+y
+@dump:after-rest
+@dump:end

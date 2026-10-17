@@ -1,0 +1,13 @@
+s
+m
+@choose "(arc)Protection from"
+@until "HP:" ESC
+@dump:after-arcane
+m
+@choose "(div)Protection from"
+@until "HP:" ESC
+@dump:after-divine
+v
+@dump:msgs
+ESC
+@dump:end

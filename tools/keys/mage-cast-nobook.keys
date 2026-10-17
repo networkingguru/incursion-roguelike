@@ -42,7 +42,7 @@ ESC
 
 m
 @dump:cast-menu
-@choose "Shield"
+@choose "(arc)Shield"
 @dump:after-cast
 v
 @dump:msgs

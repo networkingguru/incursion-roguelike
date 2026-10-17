@@ -9,20 +9,23 @@ ESC
 @include feat-level3.keys
 @choose "Inherent Spell"
 @dump:feat-pick
-@choose "Bless"
+@choose "Call Light"
 @dump:freed-slot
 ENTER
 @until "Things in View" ESC
 m
 @dump:cast-menu
-@choose "Bless"
+@choose "(div)Call Light"
 c
+ENTER
+s
 @dump:after-cast
 v
 @dump:msgs
 ESC
+@until "Things in View" ESC
 m
-@choose "Call Light"
+@choose "(div)Bless"
 ENTER
 @dump:control-refused
 v
