@@ -885,9 +885,19 @@ struct FeatInfoStruct FeatInfo[] = {
   { FT_HEIGHTEN_SPELL, FF_META|FF_WIZARD, "Heighten Spell",
     "A heightened spell has the DC of its saving throw increased by "
       "+4, and the maximum Hit Dice it can affect increased by 50%." },
-  { FT_INHERANT_SPELL, FF_META|FF_WIZARD, "Inherent Spell",
-    "An inherent spell does not require a spellbook or holy symbol "
-      "to cast, and thus has no 'material component'." },
+  { FT_INHERANT_SPELL, FF_WIZARD|FF_MULTIPLE, "Inherent Spell",
+    "You know one spell so well that it is always ready. When you take this "
+      "feat, choose a spell you can cast from a spellbook you carry; a divine "
+      "caster chooses a divine spell it can cast. You can always cast that "
+      "spell. It uses no memorized-spell slot, and casting it needs no holy "
+      "symbol. You can take this feat more than once, for a different spell "
+      "each time." },
+  { FT_LUCUBRATION, FF_WIZARD|FF_MULTIPLE, "Lucubration",
+    "You have studied one spellbook until you know it by heart. When you take "
+      "this feat, choose a spellbook you carry. From then on, you can memorize "
+      "that book's spells at a full rest without the book. You can take this "
+      "feat a number of times equal to your Intelligence bonus.",
+    {{{FP_ALWAYS}}} },
   { FT_MAXIMIZE_SPELL, FF_META|FF_WIZARD, "Maximize Spell",
     "A maximized spell inflicts the maximum damage it possibly could, "
       "or otherwise benifits from a maximized dice roll." },

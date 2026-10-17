@@ -1884,6 +1884,7 @@ typedef signed int        hObj;
 #define SP_TINNATE   0x0800
 #define SP_PENDING   0x1000 /* selected for the next rest */
 #define SP_GRANTED   0x2000 /* given by a script or class grant, uses no slot */
+#define SP_INHERENT  0x4000 /* picked by the Inherent Spell feat; castable without being memorized; needs no focus */
 
 #define SK_ALCHEMY    1
 #define SK_ANIMAL_EMP 2
@@ -2636,7 +2637,10 @@ typedef signed int        hObj;
 /* inc-08js: general Cannibalism feat, appended after FT_WEAPON_GRAND_MASTERY
    so existing feat numbers stored in saves are unchanged. */
 #define FT_CANNIBALISM         (FT_TUVWXYZ + 46)
-#define FT_LAST                (FT_TUVWXYZ + 47)
+/* inc-2jd0: Lucubration, appended after FT_CANNIBALISM so existing feat
+   numbers stored in saves are unchanged. */
+#define FT_LUCUBRATION         (FT_TUVWXYZ + 47)
+#define FT_LAST                (FT_TUVWXYZ + 48)
 
 #define MM_AMPLIFY       0x00000001  /* Penetrates magic resistance */
 #define MM_AUGMENT       0x00000002  /* Summoned creatures stronger */

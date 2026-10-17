@@ -1,0 +1,21 @@
+# inc-2jd0: loaded Mage buys an unmemorized spell, then casts without rest.
+@include inherent-baseline.keys
+@include feat-level3.keys
+@choose "Inherent Spell"
+@dump:feat-pick
+@choose "Mage Armour"
+@until "Things in View" ESC
+s
+d
+L
+@dump:checklist
+ESC
+@until "Things in View" ESC
+@dump:before-cast
+m
+@dump:cast-menu
+@choose "Mage Armour"
+@dump:after-cast
+v
+@dump:msgs
+ESC

@@ -6137,48 +6137,10 @@ Wizard Spell "Nemesis Spell" : EA_GENERIC
       and the creature must still be destroyed within 13 rounds.";
   }
 
-Wizard Spell "Mord's Lucubration" : EA_INFLICT
-  { SC_DIV; IS_A_BUFF(COST_3X); Level: 4;
-    xval: LUCUBRATION; yval: 6; pval: 1d4+LEVEL_1PER5;
-    Desc: "Casting this spell allows you to cast any other arcane
-      spell of up to sixth level that you know but do not have a 
-      scroll or spellbook for -- the Lucubration allows perfect 
-      recall of the spell's details without a physical referance. 
-      A single casting of Lucubration allows you to so recall 1d4 
-      spells, plus 1 per 5 caster levels."; }
-and EA_INFLICT
-  { xval: TRAP_EVENT; yval: POST(EV_CAST);
-    On Event META(POST(EV_CAST))
-      {
-        hObj h; int16 i;
-        for(h=EActor->FirstInv();h;h=EActor->NextInv()) 
-          {
-            if (h->isType(T_SCROLL))
-              if (h->ieID == e.eID)
-                return NOTHING;
-            if (h->isType(T_BOOK))
-              if (h->HasSpell(e.sp))
-                return NOTHING;
-          }
-        i = EActor->GetEffStatiMag(LUCUBRATION,$"Mord's Lucubration");
-        if (i <= 1)
-          EActor->RemoveEffStati($"Mord's Lucubration");
-        else
-          EActor->SetEffStatiMag(LUCUBRATION,$"Mord's Lucubration",i-1);
-        return NOTHING;
-      },
-    EV_CAST
-      {
-        if (EActor->HasEffStati(LUCUBRATION,$"Mord's Lucubration"))
-          {
-            EActor->IPrint("You cannot stack multiple castings of 
-              <9>Mord's Lucubration<7>.");
-            return ABORT;
-          }
-        return NOTHING;
-      },
-    MSG_STATINAME "MordLuc" / "Luc";
-  }
+// inc-2jd0: retired in place (save-schema append-only); see the Lucubration feat.
+Spell "Mord's Lucubration" : EA_GENERIC
+  { SC_DIV; Flags: EF_NOGEN;
+    Desc: "This spell no longer exists. Its study is now the Lucubration feat."; }
 
             
 /* --ENCHANTMENT 4-- */

@@ -622,8 +622,6 @@ inline int16 MMFeatLevels(uint32 MM)
       i += 1;
     if (MM & MM_HEIGHTEN)
       i += 2;
-    if (MM & MM_INHERANT)
-      i += 1;
     if (MM & MM_MAXIMIZE)
       i += 3;
     if (MM & MM_PROJECT)

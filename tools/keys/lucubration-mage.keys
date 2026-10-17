@@ -1,0 +1,49 @@
+# inc-2jd0: Elemental Covenant is studied; Adventurers' Arts is not.
+@include feat-level3.keys
+@choose "Lucubration"
+@dump:book-pick
+@expect "[e] spellbook [Elemental Covenant]"
+e
+@until "Things in View" ESC
+w
+@choose "Ascend / Descend Depth"
+"2" ENTER
+@until "HP:" ESC
+w
+@choose "Genocide Everything"
+@until "HP:" ESC
+d
+L
+@dump:checklist
+DOWN*3 SPACE
+@dump:selected
+ENTER
+@until "Things in View" ESC
+m
+@dump:cast-before
+ESC
+i
+1 6
+@dump:books-before
+# Drop all six books, including the picked kind and the unpicked control.
+d
+1 6 d
+1 6 d
+1 6 d
+1 6 d
+1 6 d
+@dump:books-gone
+ESC
+@until "Things in View" ESC
+d
+L
+@dump:pending-nobook
+ESC
+@until "Things in View" ESC
+z y
+v
+@dump:rest-msgs
+ESC
+m
+@dump:cast-after
+ESC
