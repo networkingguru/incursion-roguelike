@@ -3651,9 +3651,9 @@ Text "help::magic"
      first. The letter in the box beside the spell will change to a number to
      confirm the assignment of the spellkey.\n
      __<11>Casting Requisites:<3> In order to cast a spell, some classes need to
-     have a certain item. Mages must have a spellbook that contains the spell in
-     question somewhere in their inventory, while Priests must have their holy
-     symbol equipped in their amulet slot in order to cast spells. In addition,
+     have a certain item. Priests must have their holy symbol equipped in their
+     amulet slot in order to cast spells. Mages need no item to cast; their
+     spellbooks matter only when they memorize spells at a full rest. In addition,
      a caster must have one hand free in order to perform the somatic components
      of spellcasting, and since spells also have verbal incantations, they cannot
      be cast in areas of magical silence. These requirements can be negated by
@@ -4042,15 +4042,14 @@ Text "help::magic"
     __In addition to determining what spells a character can place in her spell
     slots, spell access determines what restrictions a character has on casting
     those spells. For example, Clerics must have a holy symbol to cast a spell,
-    but can cast spells in armour, while Mages suffer severe penalties for casting
-    spells in armour, have their success chances adjusted by specialist modifiers
-    and must possess a spellbook with the spell in it to cast it. So consider the
-    cast of a Priest 1/Mage 1 who knows <9>Chromatic Orb<3>, <9>Bless<3> and
-    <9>Magic Weapon<3>. <9>Chromatic Orb<3> is a Mage spell, so she must have a spellbook
-    to cast it, gains the specialist modifier regardless of whether it's good or
-    bad and suffers penalties to her casting if she does it in armour. When she
-    casts <9>Bless<3>, however, she gains no specialist bonus or penalty, is
-    able to cast freely in armour and needs a holy symbol.\n
+    but can cast spells in armor, while Mages suffer severe penalties for casting
+    spells in armor and have their success chances adjusted by specialist
+    modifiers. So consider the case of a Priest 1/Mage 1 who knows
+    <9>Chromatic Orb<3>, <9>Bless<3> and <9>Magic Weapon<3>. <9>Chromatic Orb<3>
+    is a Mage spell, so she gains the specialist modifier regardless of whether
+    it's good or bad and suffers penalties to her casting if she does it in
+    armor. When she casts <9>Bless<3>, however, she gains no specialist bonus or
+    penalty, is able to cast freely in armor and needs a holy symbol.\n
     __<9>Magic Weapon<3> is an odd case, since it is on both the Mage and Priest
     spell lists as a 1st-level spell. When this is the case, the caster gains
     the best of both (or all) worlds -- she can cast the spell in armour without

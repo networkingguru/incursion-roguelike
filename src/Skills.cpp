@@ -4108,14 +4108,9 @@ void Character::RecalcCraftFormulas() {
 		{
 			te = TEFF(theGame->SpellID(j));
 			if (te->HasSource((int8)src)) {
-				/* If you know the actual spell as a spellcaster,
-				   you automatically are able to scribe a scroll
-				   of it, and it should not count as one of your
-				   known scroll formulas. If you had it as one of
-				   your known scroll formulas and then learned it
-				   as a spell, remove the formula flag. */
-				if (Spells[j] & SP_KNOWN)
-					Spells[j] &= ~SP_CREATE;
+				/* A memorized spell keeps its scroll formula, because
+				   a Mage's memorized set changes at each rest and
+				   clearing the formula here would lose it on each swap. (inc-q04n) */
 				if (Spells[j] & SP_CREATE)
 					cKnown++;
 			}

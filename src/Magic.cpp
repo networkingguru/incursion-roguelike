@@ -4718,44 +4718,14 @@ EvReturn Creature::Cast(EventInfo &e) {
     if (e.MM & MM_INHERANT)
         goto HasComponent;
 
-    if (thisp->Spells[e.sp] & (SP_PRIMAL|SP_BARDIC|SP_STAFF|SP_SORCERY))
+    /* An arcane spell needs no spellbook to cast; the book matters only
+       when a Mage memorizes at a full rest. (inc-q04n) */
+    if (thisp->Spells[e.sp] & (SP_ARCANE|SP_PRIMAL|SP_BARDIC|SP_STAFF|SP_SORCERY))
         goto HasComponent;
 
     if (thisp->Spells[e.sp] & (SP_DIVINE|SP_DOMAIN))
         if (HasHolySymbol(thisc->GodID))
             goto HasComponent;
-
-    if (thisp->Spells[e.sp] & SP_ARCANE) {
-        Item *bestBook;
-        int16 bestPercent, per;
-
-        if (HasStati(LUCUBRATION))
-            if (GetStatiVal(LUCUBRATION) >= TEFF(e.eID)->Level)
-                goto HasComponent;
-
-        bestPercent = 0;
-        bestBook = NULL;
-        for (it = FirstInv(); it ;it=NextInv())
-            if (it->HasSpell(e.sp)) {
-                per = (it->GetHP()*100) / it->MaxHP();
-                if (!bestBook || per > bestPercent) {
-                    bestBook = it;
-                    bestPercent = per;
-                }
-            }
-            if (bestBook) {
-                if (bestPercent < 100) {
-                    int16 rlm = thisp->ReadLightDCMod();
-                    if (rlm < 0) {
-                        IPrint("It is too dark to read your damaged spellbook.");
-                        return ABORT;
-                    }
-                    if (!SkillCheck(SK_DECIPHER,10+bestPercent/10+rlm,true))
-                        dmgFail = true;
-                }
-                goto HasComponent;
-            }
-    }
 
     if (thisp->Spells[e.sp] & (SP_DIVINE|SP_DOMAIN))
         IPrint("You need to have a holy symbol equipped to cast divine spells.");
