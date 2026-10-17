@@ -52,7 +52,9 @@ echo "Specimens: $WORK"
 # --- the fake git, written here so the repro needs nothing from an earlier run.
 # It answers only the read-only queries the hook and tools/order_guard.sh make:
 # FAKE_ROOT is the root the hook treats as the toplevel, FAKE_STAGED is the
-# staged lib/ list, FAKE_MERGE=1 makes a merge commit, FAKE_BEAD names the branch.
+# staged lib/ list, FAKE_MERGE=1 makes a merge commit, FAKE_BEAD names the branch,
+# and FAKE_LEDGER is the file `git show :tools/resource_order.ledger` prints (an
+# empty file makes the hook refuse the commit, as case 7 checks).
 cat > "$WORK/bin/git" <<'GIT'
 #!/bin/sh
 root="${FAKE_ROOT:?FAKE_ROOT unset}"
@@ -70,6 +72,8 @@ case "$args" in
     for f in ${FAKE_STAGED:-}; do echo "$f"; done ;;
   "diff --cached --name-only"*)
     for f in ${FAKE_STAGED:-}; do echo "$f"; done ;;
+  "show :tools/resource_order.ledger")
+    cat "${FAKE_LEDGER:?FAKE_LEDGER unset}" ;;
   *) : ;;
 esac
 exit 0
@@ -150,7 +154,7 @@ printf '\n# APPENDED AFTER THE INC-4320 BLOCK, FOR THE TEST ONLY\necho "REACHED-
 run() {
     hook="$1"; rroot="$2"; staged="$3"; merge="$4"; label="$5"
     out="$WORK/$label.out"
-    FAKE_ROOT="$rroot" FAKE_STAGED="$staged" FAKE_MERGE="$merge" \
+    FAKE_ROOT="$rroot" FAKE_STAGED="$staged" FAKE_MERGE="$merge" FAKE_LEDGER="$ROOT/tools/resource_order.ledger" \
         sh "$hook" >"$out" 2>&1
     rc=$?
 }
@@ -208,9 +212,22 @@ expect "case5-order-fail" 1 "a variable was inserted, removed or swapped" ""
 run "$WORK/hook-tail-copy" "$GOOD" "" "" "case6-after-block"
 expect "case6-after-block" 0 "REACHED-AFTER-BLOCK" ""
 
+# Case 7: a fresh good module with an EMPTY staged ledger must be refused, not
+# skipped: a commit that empties the ledger cannot satisfy the records-the-module
+# check, so the hook fails closed.
+: > "$WORK/empty-ledger"
+out="$WORK/case7-empty-ledger.out"
+FAKE_ROOT="$GOOD" FAKE_STAGED="lib/classes.irh" FAKE_MERGE="" \
+    FAKE_LEDGER="$WORK/empty-ledger" \
+    sh "$WORK/hook-copy" >"$out" 2>&1
+rc=$?
+expect "case7-empty-ledger" 1 \
+    "pre-commit: cannot read the staged tools/resource_order.ledger; the commit is refused." \
+    "skipping the records-the-module check"
+
 echo
 if [ "$FAILED" -ne 0 ]; then
     echo "FAIL: see the CASE lines above. Every specimen is under $WORK"
     exit 1
 fi
-echo "PASS: all six cases held. Specimens: $WORK"
+echo "PASS: all seven cases held. Specimens: $WORK"

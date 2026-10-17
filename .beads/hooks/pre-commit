@@ -234,5 +234,29 @@ if [ -z "${BD_GIT_HOOK_NESTED:-}" ] && [ ! -e "$(git rev-parse --git-path MERGE_
     if [ -x "$_inc_root/tools/order_guard.sh" ]; then
       "$_inc_root/tools/order_guard.sh" >&2 || exit 1
     fi
+    # inc-fo8o: the guard above passes on a legal append too, so it cannot see
+    # that the STAGED ledger still lags the module. Only when the plain check is
+    # green (no Brian-approved break is in play) demand the staged ledger record
+    # the module, comparing against the staged copy so an unstaged ledger cannot
+    # stand in for it.
+    if python3 "$_inc_root/tools/resource_order_check.py" >/dev/null 2>&1; then
+      _inc_ledger_tmp="$(mktemp "${TMPDIR:-/tmp}/inc-order-ledger.XXXXXX")" || {
+        echo >&2 "pre-commit: could not create a scratch file for the staged ledger."
+        exit 1
+      }
+      if ! git show :tools/resource_order.ledger > "$_inc_ledger_tmp" 2>/dev/null \
+           || [ ! -s "$_inc_ledger_tmp" ]; then
+        rm -f "$_inc_ledger_tmp"
+        echo >&2 "pre-commit: cannot read the staged tools/resource_order.ledger; the commit is refused."
+        exit 1
+      fi
+      if ! python3 "$_inc_root/tools/resource_order_check.py" --require-recorded \
+             --ledger "$_inc_ledger_tmp" >&2; then
+        rm -f "$_inc_ledger_tmp"
+        echo >&2 "The staged tools/resource_order.ledger does not record this module. Build (it records appends), then: git add tools/resource_order.ledger"
+        exit 1
+      fi
+      rm -f "$_inc_ledger_tmp"
+    fi
   fi
 fi

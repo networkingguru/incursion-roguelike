@@ -11,7 +11,9 @@
 # place it is read. No environment variable changes it.
 #
 # --module-root DIR passes through to the check, which measures the module in
-# DIR instead of this checkout. The build never passes it; the reproduction does.
+# DIR instead of this checkout. --ledger FILE passes through too, so the check
+# compares against FILE instead of the committed ledger. The build never passes
+# either; the reproduction does.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -23,12 +25,17 @@ module_args=()
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --module-root)
-            [ "$#" -ge 2 ] || { echo "usage: tools/order_guard.sh [--module-root DIR]" >&2; exit 2; }
-            module_args=(--module-root "$2")
+            [ "$#" -ge 2 ] || { echo "usage: tools/order_guard.sh [--module-root DIR] [--ledger FILE]" >&2; exit 2; }
+            module_args+=(--module-root "$2")
+            shift 2
+            ;;
+        --ledger)
+            [ "$#" -ge 2 ] || { echo "usage: tools/order_guard.sh [--module-root DIR] [--ledger FILE]" >&2; exit 2; }
+            module_args+=(--ledger "$2")
             shift 2
             ;;
         *)
-            echo "usage: tools/order_guard.sh [--module-root DIR]" >&2
+            echo "usage: tools/order_guard.sh [--module-root DIR] [--ledger FILE]" >&2
             exit 2
             ;;
     esac

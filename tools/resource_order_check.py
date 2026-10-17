@@ -4,6 +4,9 @@
     tools/check_resource_order.sh              check the module against the ledger
     tools/check_resource_order.sh --record     re-record the ledger after a legal append
     tools/check_resource_order.sh --selftest   prove the check still bites, no build
+    tools/check_resource_order.sh --require-recorded
+                                               the order holds AND the ledger
+                                               records it (no lagging ledger)
 
 WHAT IT CHECKS. docs/SAVE-SCHEMA-SPEC.md, "The project rule this rests on":
 resource lists in lib/ are append-only. This is the check that enforces it
@@ -50,6 +53,14 @@ writes the first one.
 
 THIS CHECK WRITES NOTHING WITHOUT --record. That is a hard rule: a check that
 rewrites its own baseline is a check that can be made to pass by running it.
+
+--require-recorded runs the same order comparison, and when the order holds it
+also requires the ledger's text to equal record_text(module_text), so a ledger
+that lags the module by an unrecorded append or an in-place rename fails even
+though the plain check passes. It reports the count of new entries (module
+entries past the ledger's length per array/owner list) and renames (same-
+position name differences), and exits 1; a header-only difference still exits 1
+with 0 new and 0 renamed. It writes nothing.
 """
 
 import os
@@ -237,6 +248,35 @@ def record_text(module_text):
     return header + module_text
 
 
+def recorded_diff(ledger_text, module_text):
+    """Compare the module report with the ledger text for --require-recorded.
+
+    `ledger_text` is the ledger file's text, `module_text` the driver's report.
+    Returns (new, renamed, identical): `new` counts module entries past the
+    ledger's length per array/owner list, `renamed` counts same-position name
+    differences, and `identical` is True exactly when record_text(module_text)
+    equals the ledger text byte for byte. The order comparison is NOT done here;
+    the caller runs order_failures first, exactly as the plain check does.
+    """
+    if record_text(module_text) == ledger_text:
+        return 0, 0, True
+    ledger = parse(ledger_text)
+    module = parse(module_text)
+    new = 0
+    renamed = 0
+    for attr in ("arrays", "owners"):
+        led = getattr(ledger, attr)
+        mod = getattr(module, attr)
+        for key, want in led.items():
+            have = mod.get(key, [])
+            if len(have) > len(want):
+                new += len(have) - len(want)
+            for p, name in enumerate(want):
+                if p < len(have) and have[p] != name:
+                    renamed += 1
+    return new, renamed, False
+
+
 def load_ledger(path):
     if not path.exists():
         return None
@@ -318,6 +358,45 @@ def check(module_root, ledger_path):
     print("PASS: the module keeps the ledger's order: %d array entries, "
           "%d owners, %d variables."
           % (n_entries, len(module.owners), n_vars))
+    return 0
+
+
+def require_recorded_mode(module_root, ledger_path):
+    """--require-recorded: the order holds AND the ledger records it.
+
+    Runs the plain check's comparison first; if the module breaks the ledger,
+    print what the plain check prints and exit 1. If the order holds but the
+    ledger's text differs from record_text(module_text), the ledger lags the
+    module -- exit 1 with the N new / M renamed counts. Otherwise PASS.
+    """
+    failures, message, module = canonical_failures(module_root, ledger_path)
+    if failures is None:
+        print(message)
+        return 1 if message.startswith("FAIL") else 2
+    if failures:
+        print("FAIL: the module breaks the order rule recorded in %s:"
+              % display(ledger_path))
+        for line in failures:
+            print("  " + line)
+        print("The append-only rule (docs/SAVE-SCHEMA-SPEC.md) forbids this. "
+              "Restore the")
+        print("table's order in lib/, or -- if and only if this is a legal "
+              "append or an")
+        print("in-place rename -- run tools/check_resource_order.sh --record "
+              "and commit the")
+        print("ledger with the change.")
+        return 1
+    module_text = module_report(module_root)
+    ledger_text = ledger_path.read_text(encoding="utf-8")
+    new, renamed, identical = recorded_diff(ledger_text, module_text)
+    if not identical:
+        print("FAIL: %s does not record the module's current order (%d new "
+              "entries, %d renamed). Run BACKEND=posix ./build_macos.sh (it "
+              "records appends) or tools/check_resource_order.sh --record, then "
+              "stage %s."
+              % (display(ledger_path), new, renamed, display(ledger_path)))
+        return 1
+    print("PASS: the ledger records the module's current order.")
     return 0
 
 
@@ -501,6 +580,59 @@ def selftest():
         print("selftest FAIL  a comment-only ledger did not parse to empty")
         ok = False
 
+    # --require-recorded: recorded_diff compares the ledger TEXT with
+    # record_text(module_text), no binary. The order comparison is separate;
+    # these cases also assert the plain check passes, so they show the new
+    # comparison fails exactly where the plain check is green.
+    def module_text_of(module):
+        text = ""
+        for key in sorted(module.arrays):
+            slot, idx = key
+            text += "A\t%d\t%d\t%s\n" % (slot, idx, module.array_names[key])
+            for p, name in enumerate(module.arrays[key]):
+                text += "E\t%d\t%d\t%d\t%s\n" % (slot, idx, p, name)
+        for key in sorted(module.owners):
+            slot, oa, op = key
+            text += "O\t%d\t%d\t%d\t%s\n" % (slot, oa, op, module.owner_names[key])
+            for p, name in enumerate(module.owners[key]):
+                text += "V\t%d\t%d\t%d\t%d\t%s\t%s\n" % (slot, oa, op, p, name, "int")
+        return text
+
+    def ledger_of(module_report):
+        return record_text(module_text_of(module_report))
+
+    def expect_recorded(name, ledger_text, module, want_fail):
+        new, renamed, identical = recorded_diff(ledger_text, module_text_of(module))
+        got = bool(order_failures(parse(ledger_text), module)) or not identical
+        if got == want_fail:
+            print("selftest ok    %-46s -> %s (%d new, %d renamed)"
+                  % (name, "red" if got else "green", new, renamed))
+        else:
+            print("selftest FAIL  %-46s -> %s (wanted %s)"
+                  % (name, "red" if got else "green",
+                     "red" if want_fail else "green"))
+            return False
+        return True
+
+    # (a) ledger equal to the module report -> pass.
+    ok &= expect_recorded("ledger records the module exactly",
+                          ledger_of(base), base, False)
+    # (b) module with one entry appended past the ledger -> plain check passes,
+    #     the recorded comparison fails.
+    appended = variant(arrays={(0, 0): ["a", "b", "c", "d"], (0, 1): ["x"]})
+    if order_failures(base, appended):
+        print("selftest FAIL  the append case is not green under the plain check")
+        ok = False
+    ok &= expect_recorded("an unrecorded append fails the comparison",
+                          ledger_of(base), appended, True)
+    # (c) module with an in-place rename -> plain check passes, comparison fails.
+    renamed_mod = variant(arrays={(0, 0): ["a", "RENAMED", "c"], (0, 1): ["x"]})
+    if order_failures(base, renamed_mod):
+        print("selftest FAIL  the rename case is not green under the plain check")
+        ok = False
+    ok &= expect_recorded("an unrecorded in-place rename fails the comparison",
+                          ledger_of(base), renamed_mod, True)
+
     # --failures and --failure-hash. The modes print the very lines the check
     # prints, in the check's own order, so the list and the hash are tested on
     # the same order_failures output the plain check uses.
@@ -569,14 +701,16 @@ def main(argv):
             mode = "failures"
         elif arg == "--failure-hash":
             mode = "failure_hash"
+        elif arg == "--require-recorded":
+            mode = "require_recorded"
         elif arg == "--module-root" and rest:
             module_root = rest.pop(0)
         elif arg == "--ledger" and rest:
             ledger_path = pathlib.Path(rest.pop(0))
         else:
             sys.stderr.write("usage: %s [--record] [--selftest] [--failures] "
-                             "[--failure-hash] [--module-root DIR] "
-                             "[--ledger FILE]\n" % argv[0])
+                             "[--failure-hash] [--require-recorded] "
+                             "[--module-root DIR] [--ledger FILE]\n" % argv[0])
             return 2
     if mode == "selftest":
         return selftest()
@@ -586,6 +720,8 @@ def main(argv):
         return failures_mode(module_root, ledger_path)
     if mode == "failure_hash":
         return failure_hash_mode(module_root, ledger_path)
+    if mode == "require_recorded":
+        return require_recorded_mode(module_root, ledger_path)
     return check(module_root, ledger_path)
 
 
