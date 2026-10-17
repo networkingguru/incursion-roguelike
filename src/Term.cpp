@@ -1802,12 +1802,8 @@ static int WViewListSortB(const void *a, const void *b) {
 }
 
 void TextTerm::ShowViewList() {
-    int8 ResistsShown[] = {
-        AD_FIRE, AD_COLD, AD_SONI,
-        AD_ACID, AD_ELEC, AD_TOXI, AD_NECR, AD_PSYC, AD_MAGC,
-        AD_SLEE, AD_STUN, AD_PLYS, AD_STON, AD_POLY, AD_CHRM,
-        AD_DISN, AD_CRIT, AD_DISE, AD_FEAR, 0
-    };
+    int16 ResistTypes[128];
+    int16 RTC = DisplayResistTypes(ResistTypes,128);
     int16 y, i, j;
     String nm;
     Container *pack;
@@ -1866,11 +1862,14 @@ void TextTerm::ShowViewList() {
     case 1: /* Resists */
         Write("\nResistances:\n");
         y = 2; Color(GREY);
-        for (i = 0; ResistsShown[i]; i++)
-            if (j = p->ResistLevel(ResistsShown[i])) {
-                nm = Lookup(DTypeNames, ResistsShown[i]);
-                if (nm.Right(6) == "Damage")
-                    nm = nm.Left(nm.GetLength() - 7);
+        for (i = 0; i < RTC; i++) {
+            if (is_wepdmg(ResistTypes[i]))
+                continue;
+            if (j = p->ResistLevel(ResistTypes[i])) {
+                nm = Lookup(DTypeNames, ResistTypes[i]);
+                if (ResistTypes[i] < AD_DAST || ResistTypes[i] > AD_DALU)
+                    if (nm.Right(6) == "Damage")
+                        nm = nm.Left(nm.GetLength() - 7);
                 if (j == -1)
                     Write(Format("  %s (Immune)\n", (const char*)nm).Left(WinSizeX() - 1));
                 else
@@ -1879,6 +1878,7 @@ void TextTerm::ShowViewList() {
                 if (y > activeWin->Bottom)
                     break;
             }
+        }
         if (y == 2)
             Write("  None\n");
         break;

@@ -1145,13 +1145,16 @@ TextVal DTypeNames[] = {
   { AD_SOAK, "Water Damage" },
   { AD_TRIP, "Tripping" },
 
-  { AD_DAST, "Strength Drain" },
-  { AD_DADX, "Dexterity Drain" },
-  { AD_DACO, "Constitution Drain" },
-  { AD_DAIN, "Intelligence Drain" },
-  { AD_DAWI, "Wisdom Drain" },
-  { AD_DACH, "Charisma Drain" },
-  { AD_DALU, "Luck Drain" },
+  /* upstream: the stat-damage types shared the stat-drain names, so a list
+     of both printed each name twice; upstream's table. Traced; inc-h8lc; not
+     sent. */
+  { AD_DAST, "Strength Damage" },
+  { AD_DADX, "Dexterity Damage" },
+  { AD_DACO, "Constitution Damage" },
+  { AD_DAIN, "Intelligence Damage" },
+  { AD_DAWI, "Wisdom Damage" },
+  { AD_DACH, "Charisma Damage" },
+  { AD_DALU, "Luck Damage" },
 
   { AD_VAMP, "Vampiric" },
   { AD_NECR, "Necromatic" },
