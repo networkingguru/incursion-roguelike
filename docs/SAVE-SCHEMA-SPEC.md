@@ -12,9 +12,9 @@ replaces. Read it first; this spec assumes it.
 Two defects, both observed, both caused by the same thing.
 
 **A save is a byte dump of live C++ objects.** `Registry::SaveGroup` writes
-`typeSize(Type)` raw bytes per object (`src/Registry.cpp:764`), vtable pointer
+`typeSize(Type)` raw bytes per object (`src/Registry.cpp:768`), vtable pointer
 and padding included. So the file is welded to the compiled layout of the
-binary that produced it. `SaveFormatID()` (`src/AbiCheck.cpp:167`) exists only
+binary that produced it. `SaveFormatID()` (`src/AbiCheck.cpp:185`) exists only
 to notice that weld breaking. It has already fired in anger: the shipping build
 and the developer build computed different digests of the same file, and the
 released package could not load its own module (`inc-tm4`).
@@ -103,7 +103,7 @@ The format MUST satisfy four properties.
 
 ## Non-goals
 
-- **Modules stay on the raw path.** `Game::SaveModule` (`src/Registry.cpp:1445`)
+- **Modules stay on the raw path.** `Game::SaveModule` (`src/Registry.cpp:1490`)
   keeps calling the existing `SaveGroup`. `mod/Incursion.Mod` is a separate file
   written by the resource compiler (`src/RComp.cpp:227`) and read at startup by
   `LoadModules()`. A save never contains a module; it refers to one. A module is
@@ -113,7 +113,7 @@ The format MUST satisfy four properties.
   in `src/Create.cpp`.
 - **`String` and `Array` are not touched.** `FIELD_STR` and `FIELD_OBJ` write
   their contents inline on the v1 path, so `Registry::Block`
-  (`src/Registry.cpp:357`) and the one-line `String::Serialize`
+  (`src/Registry.cpp:361`) and the one-line `String::Serialize`
   (`src/Base.cpp:532`) are needed only by the v0 reader, which keeps them
   unchanged. No type used across the app changes at all.
 - **No change to in-memory representation.** An `rID` stays a 32-bit index at
@@ -248,7 +248,7 @@ Position 0 is `Monster`, and the order is exactly the walk order of
 ```
 
 This order is a wire constant. It MUST match `__GetResource`'s walk and
-`V1GetPool`'s switch (`src/SaveV1.cpp:868`). A new kind is appended at 21.
+`V1GetPool`'s switch (`src/SaveV1.cpp:878`). A new kind is appended at 21.
 
 ### The module manifest
 

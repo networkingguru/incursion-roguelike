@@ -15,8 +15,8 @@ is `docs/incursionscript.md`; the module format `docs/modules.md`.
 | 4 | Pass 1, count | `src/RComp.cpp:252` `CountResources()` | lex-only scan; sizes and names 21 resource arrays |
 | 5 | Pass 2, parse | `src/RComp.cpp:184` `yyparse()`, `src/yygram.cpp` + `src/Tokens.cpp` | tokens -> filled `Module` object |
 | 6 | Emit dispatch | `src/RComp.cpp:602` `GenerateDispatch()` | symbol table -> `lib/dispatch.h`, a C++ **source** file |
-| 7 | Serialise | `src/RComp.cpp:227` -> `src/Registry.cpp:1445` | `Module` -> `mod/Incursion.Mod` |
-| 8 | Load | `src/Registry.cpp:1492` scans `mod/*.Mod` | file -> live `Module*` in `Modules[slot]` (`src/Registry.cpp:1522`) |
+| 7 | Serialise | `src/RComp.cpp:227` -> `src/Registry.cpp:1490` | `Module` -> `mod/Incursion.Mod` |
+| 8 | Load | `src/Registry.cpp:1537` scans `mod/*.Mod` | file -> live `Module*` in `Modules[slot]` (`src/Registry.cpp:1567`) |
 | 9 | Execute | `src/VMachine.cpp`, `#include "dispatch.h"` at `:175` | `VCode` bytecode -> C++ calls |
 
 Generator sources are kept: `lang/Tokens.lex` (flex -> `src/Tokens.cpp`) and
@@ -67,15 +67,15 @@ only works in debug builds" -- holds for Windows Release and for
    masks with `0x00FFFFFF` and walks the 21 arrays in the fixed order at
    `inc/Res.h:945-965` (`src/Res.cpp:110`).
 4. **The module is raw struct bytes.** `SaveGroup` writes `typeSize(Type)` bytes
-   straight out of the object (`src/Registry.cpp:764`); `Module::ARCHIVE_CLASS`
+   straight out of the object (`src/Registry.cpp:768`); `Module::ARCHIVE_CLASS`
    hands each resource array over as one block of `sizeof(TMonster)*szMon` and
    so on (`inc/Res.h:874-894`). Rebuild per platform, per ABI. `src/AbiCheck.cpp`
    pins the widths and five bitfield structs, and says plainly it does not make
    the format portable (`:21-24`).
 5. **The only gate on the file is a layout digest**: `LoadGroup` throws
-   `EBADVER` when `SaveFormatMatches(fh.Version)` fails (`src/Registry.cpp:872`,
+   `EBADVER` when `SaveFormatMatches(fh.Version)` fails (`src/Registry.cpp:876`,
    `src/Registry.cpp:61`). The stamp is `SaveFormatID()`, an FNV digest of every size the save
-   format depends on (`src/AbiCheck.cpp:167`, `:144`), so adding a field to a
+   format depends on (`src/AbiCheck.cpp:185`, `:144`), so adding a field to a
    serialised class rejects old files by itself. The old stamp `VERSION_STRING`,
    `"0.6.9Y19"` (`inc/Defines.h:23`), is still accepted as a migration
    allowance, and that branch is marked for deletion (`src/Registry.cpp:66`).
