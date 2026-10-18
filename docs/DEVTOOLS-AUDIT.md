@@ -182,7 +182,7 @@ confident wrong number, because the check fails when it does.
 | `INCURSION_STAIR_PROBE` | What was the staircase candidate list, and how was it ranked? | `tools/check_stair_cycle.sh` |
 | `INCURSION_DOOR_PROBE` | What did `Door::SetImage` do to this door's flags, and what geometry did it read? | `tools/check_broken_door.sh` |
 | `INCURSION_QUIET_PROBE` | Did this handle lookup speak, and should it have? | `tools/check_quiet_lookup.sh` |
-| `INCURSION_HANDLE_BASE` | Does a defect appear only once an object handle stops fitting in sixteen bits? It starts the handle counter at a chosen number instead of at 128 (`src/Registry.cpp:251-260`), so a one-second session reaches a state that otherwise needs an evening of play. | `tools/check_menu_value.sh` |
+| `INCURSION_HANDLE_BASE` | Does a defect appear only once an object handle stops fitting in sixteen bits? It starts the handle counter at a chosen number instead of at 128 (`src/Registry.cpp:255-264`), so a one-second session reaches a state that otherwise needs an evening of play. | `tools/check_menu_value.sh` |
 | `INCURSION_SAVE_FAIL_AT` | Not a probe but a fault injector: it stages a save failure at a chosen point, throwing exactly what a short write throws, and fires once per process. It exists because a real full disk cannot reach the case the design turns on — both write loops write into memory and the disk is untouched until the commit. | `tools/check_save_fail.sh` |
 
 `INCURSION_SAVE_FAIL_AT` is the one to look at twice. A fault injector ships in
