@@ -591,7 +591,7 @@ class Creature: public Thing, public Magic
       virtual int16 getSpellDC(rID spID, bool isTrick, bool isHeight, uint16 src=0);
       virtual int16 getSpellMana(rID spID, uint32 MM, int16 *specMod2, uint16 src=0);
       virtual uint32 getStoredMM(rID spID);
-      virtual uint16 getSpellFlags(rID spID) // horrid kludge used for counterspells
+      virtual uint32 getSpellFlags(rID spID) // horrid kludge used for counterspells
          { return CasterLev() >= SAL(TEFF(spID)->Level) ? SP_KNOWN : 0; }
       virtual int16 CasterLev()
         { return max(ChallengeRating(),1); }
@@ -817,7 +817,11 @@ class Character: public Creature
       uint16 RecentSpells[10];
       uint16 RecentSkills[5];
       uint16 RecentItems[5];
-      uint16 Spells[MAX_SPELLS+1];
+      /* inc-vqla phase 1: a per-spell flag word; SP_* uses all 16 bits, so
+         this is uint32 to leave 0x10000 and up free. v1 tag 448 (v0/v1 tag
+         434 was the uint16 form); a pre-change v1 save widens on read via
+         V1ArrayWiden16. */
+      uint32 Spells[MAX_SPELLS+1];
       rID    Tattoos[10];
       int16  resChance;
       
@@ -965,9 +969,9 @@ class Character: public Creature
       virtual void Exercise(int16 at, int16 amt, int16 col, int16 cap);
       /* Spell and Innate Ability Functions */
       virtual int16 SpellRating(rID eID, uint32 mm=0,bool perceived=false,uint16 src=0);
-      virtual uint16 getSpellFlags(rID spID) 
+      virtual uint32 getSpellFlags(rID spID) 
                        { return Spells[theGame->SpellNum(spID)]; }
-      virtual void   setSpellFlags(rID spID, uint16 fl) 
+      virtual void   setSpellFlags(rID spID, uint32 fl) 
                        { Spells[theGame->SpellNum(spID)] = fl; }
       virtual int16  GetSkillRanks(int16 sk)
                        { return SkillRanks[sk]; }
@@ -978,7 +982,7 @@ class Character: public Creature
          SP_STAFF, SP_SORCERY, SP_KNOWN, ...) are kept. When `src` is 0 and the
          character is a Player, CastSourceFor(sp) supplies the source. A caster
          with no spell knowledge (a monster) keeps its caller-supplied flags. */
-      uint16 SpellCastFlags(int16 sp, uint16 src);
+      uint32 SpellCastFlags(int16 sp, uint16 src);
 
       /* Functions for Performing Actions */
       //virtual EvReturn AttackMsg(EventInfo&e);
@@ -1065,7 +1069,7 @@ class Character: public Creature
          which are real rIDs and are named. Upgrade path: write these as
          rows keyed through the name table, the way the spec's "resource
          memory segment" section already requires for MonMem/EffMem. */
-      static_assert(sizeof(Character) == 8552,
+      static_assert(sizeof(Character) == 12648,
                     "Character's coverage pin row pads assume this");
       static_assert(sizeof(hObj) == 4, "handles are one 32-bit word");
       static_assert(sizeof(rID) == 4, "rIDs are one 32-bit word");
@@ -1135,7 +1139,10 @@ class Character: public Creature
       FIELD_ARRAY(431, RecentSpells, sizeof(uint16), 10);
       FIELD_ARRAY(432, RecentSkills, sizeof(uint16), 5);
       FIELD_ARRAY(433, RecentItems, sizeof(uint16), 5);
-      FIELD_ARRAY(434, Spells, sizeof(uint16), MAX_SPELLS+1);
+      FIELD_ARRAY(448, Spells, sizeof(uint32), MAX_SPELLS+1);
+      /* inc-vqla: widened from tag 434's uint16 array; the legacy read below
+         folds a pre-change save's flags up, tag 448 winning if both present. */
+      r.V1ArrayWiden16(448, 434, Spells, MAX_SPELLS+1);
       r.V1EmbedBegin(435, Tattoos, sizeof(Tattoos));
       for (i = 0; i != 10; i++)
         FIELD_RID((uint16)(1 + i), Tattoos[i]);
@@ -1551,7 +1558,7 @@ class Player: public Character
          SpellKeys[] and QuickKeys[].Value hold spell and ability numbers,
          not rIDs. Same ceiling and same upgrade path as the note in
          Character's list above. */
-      static_assert(sizeof(Player) == 19616,
+      static_assert(sizeof(Player) == 23712,
                     "Player's coverage pin row pads assume this");
       static_assert(sizeof(JournalInfoType) == 360, "JournalInfo embed range");
       static_assert(sizeof(GameTimeInfoType) == 384, "GameTimeInfo embed range");

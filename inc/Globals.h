@@ -333,4 +333,9 @@ unsigned long NextSeed(void);
    why VERSION_STRING used to do this job badly. Fits char Version[12]. */
 const char* SaveFormatID(void);
 
+/* True for a v0 save stamp this build cannot read for a layout reason (the old
+   VERSION_STRING, or an "SF" digest from a different layout). Defined in
+   src/Registry.cpp; used by the load list and by -convert. */
+bool IsOldV0Stamp(const char *stamp);
+
 extern "C" int yyerror(const char*);

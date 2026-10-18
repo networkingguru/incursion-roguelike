@@ -226,7 +226,7 @@ ProcessSpells:
 
                     /* inc-4999 phase 4b: the save-DC hint uses only THIS
                        entry's source (plus non-kind bits like SP_INNATE). */
-                    uint16 dcFlags = p->SpellCastFlags(i, srcKind);
+                    uint32 dcFlags = p->SpellCastFlags(i, srcKind);
                     int savedc = 10 + TEFF(e.eID)->Level;
                     if ((dcFlags & (SP_ARCANE|SP_INNATE))) 
                         savedc = max(savedc,10+TEFF(e.eID)->Level+e.EActor->Mod(A_INT));

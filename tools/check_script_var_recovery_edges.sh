@@ -4,9 +4,8 @@
 # inc-glnx recovery edge cases, docs/SAVE-SCHEMA-SPEC.md test plan:
 #   case 28(c) an IS1.3 save whose manifest has an array longer than at
 #              391e353 refuses, naming the array;
-#   case 28(d) a v0 copy whose block size does not match refuses;
-#   case 21    a v0 copy converts against a matching module, keeping the
-#              original bytes at <file>.v0 (the v0 recovery path).
+#   case 21    a v0 copy is refused by its stamp with the release-4 message,
+#              before any write, leaving no .v0 sibling (inc-vqla).
 #
 # The crafted-malformed-file parts of case 28 (an out-of-range recovered rID,
 # a name length past the blob, and so on) are NOT here: tools/craft_bad_v1_saves.py
@@ -131,58 +130,22 @@ PY
     fi
 fi
 
-# --- case 28(d) and case 21: the v0 -convert path -----------------------
-# The fixture predates 4ba035b (the immolation Effect), so the matching
-# module is HEAD scripts with lib/m_items.irh and lib/main.irc reverted to
-# 4ba035b^ -- the exact procedure tools/check_convert_guard.sh uses (it may
-# not be run by this role). The mismatch module is HEAD plus one Effect.
+# --- case 21: a v0 save is refused by its stamp before any write ---------
+# inc-vqla widened Character::Spells[], so a v0 (raw-dump) save can no longer
+# be read at this build's sizes: -convert refuses it by its stamp, before the
+# raw reader runs and before any .v0 backup is written.
 FIX="$ROOT/docs/evidence/inc-upw.13/Furious_Fox.sav"
 [ -f "$FIX" ] || fail "fixture Furious_Fox.sav is missing"
 
-PRE="$WORK/pre4ba035b"
-mkdir -p "$PRE/mod" "$PRE/save" "$PRE/logs"
-cp -Rf "$ROOT/lib" "$PRE/lib"
-ln -sfn "$ROOT/inc" "$PRE/inc"
-for f in lib/m_items.irh lib/main.irc; do
-    if ! git -C "$ROOT" show "4ba035b^:$f" > "$PRE/$f"; then
-        fail "git show 4ba035b^:$f failed"
-        exit 1
-    fi
-done
-INCURSIONPATH="$PRE/" "$COMPILER" -compile main.irc < /dev/null > "$PRE/compile.log" 2>&1
-[ -f "$PRE/mod/Incursion.Mod" ] || { tail -10 "$PRE/compile.log"; fail "the pre-4ba035b module did not compile"; }
-
-convert() { # <sandbox> <path> <log>
-    INCURSIONPATH="$1/" INCURSION_MAX_KEYS=40 \
-        "$BIN" -headless -timeout 60 -convert "$2" > "$3" 2>&1 < /dev/null
-}
-
-# 28(d): the mismatched HEAD+1 Effect module refuses with the target intact.
-if [ -n "${HEADW:-}" ] && [ -f "$HEADW/mod/Incursion.Mod" ]; then
-    cp -f "$FIX" "$WORK/copy_mismatch.sav"
-    convert "$HEADW" "$WORK/copy_mismatch.sav" "$WORK/mismatch.out"
-    STATUS=$?
-    [ "$STATUS" -eq 2 ] || { head -6 "$WORK/mismatch.out"; fail "28(d): mismatched-module -convert exited $STATUS, wanted 2"; }
-    cmp -s "$WORK/copy_mismatch.sav" "$FIX" || fail "28(d): the mismatched run changed the target file"
-    [ ! -e "$WORK/copy_mismatch.sav.v0" ] || fail "28(d): the mismatched run left a .v0 behind"
-    grep -qi "does not match" "$WORK/mismatch.out" || fail "28(d): the refusal does not say the module does not match"
-    echo "28(d): REFUSED -- $(grep -o 'v0 block slot 0 size [0-9]* does not match loaded row total [0-9]*' "$WORK/mismatch.out" | head -1)"
-fi
-
-# 21: the matching pre-4ba035b module converts the copy.
 cp -f "$FIX" "$WORK/copy.sav"
-convert "$PRE" "$WORK/copy.sav" "$WORK/copy.out"
+INCURSIONPATH="$ROOT/" "$BIN" -headless -timeout 60 -convert "$WORK/copy.sav" \
+    > "$WORK/convert.out" 2>&1 < /dev/null
 STATUS=$?
-if [ "$STATUS" -ne 0 ]; then
-    tail -10 "$WORK/copy.out"
-    fail "case 21: -convert on a scratch copy (matching module) exited $STATUS, wanted 0"
-else
-    [ -f "$WORK/copy.sav.v0" ] || fail "case 21: conversion left no copy.sav.v0 backup"
-    cmp -s "$WORK/copy.sav.v0" "$FIX" || fail "case 21: copy.sav.v0 does not hold the original v0 bytes"
-    STAMP="$(dd if="$WORK/copy.sav" bs=1 skip=4 count=5 2>/dev/null)"
-    [ "$STAMP" = "$SCHEMA_STAMP" ] || fail "case 21: the converted file's stamp is \"$STAMP\", wanted $SCHEMA_STAMP"
-    echo "case 21: converted to $SCHEMA_STAMP with a byte-exact .v0 backup"
-fi
+[ "$STATUS" -eq 2 ] || { head -6 "$WORK/convert.out"; fail "case 21: v0 -convert exited $STATUS, wanted 2"; }
+grep -qi "release 4" "$WORK/convert.out" || fail "case 21: the refusal does not carry the release-4 message"
+cmp -s "$WORK/copy.sav" "$FIX" || fail "case 21: the refused run changed the target file"
+[ ! -e "$WORK/copy.sav.v0" ] || fail "case 21: the refused run left a .v0 behind"
+echo "case 21: v0 -convert REFUSED with the release-4 message, target intact"
 
 # --- nothing real touched -----------------------------------------------
 REAL_SAVE_AFTER="$(find "$ROOT/save" -type f -print0 2>/dev/null | sort -z | xargs -0 md5 2>/dev/null)"
@@ -192,7 +155,7 @@ REAL_SAVE_AFTER="$(find "$ROOT/save" -type f -print0 2>/dev/null | sort -z | xar
 if [ "$FAILED" -ne 0 ]; then
     exit 1
 fi
-echo "PASS: an over-long IS1.3 save was refused by the recovery table; a"
-echo "      mismatched v0 module refused with the target intact; a matching"
-echo "      v0 module converted with a byte-exact .v0 backup."
+echo "PASS: an over-long IS1.3 save was refused by the recovery table; a v0"
+echo "      copy was refused by its stamp with the release-4 message and left"
+echo "      intact with no .v0 sibling."
 exit 0

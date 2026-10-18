@@ -5277,7 +5277,7 @@ String & TEffect::Describe(Player *p) {
     String s, s2, descs, levs; bool dual = false, first = false;
     int8 Sources[] = { AI_WIZARDRY, AI_THEURGY, AI_DRUIDIC, 0 };
     int i,j, mIdx; rID spID, dID, spList[MAX_SPELLS+1], clID;
-    uint16 osf;
+    uint32 osf;
 
     spID = theGame->SpellID(this - theGame->Modules[0]->QEff);
     //ASSERT(this == TEFF(spID));

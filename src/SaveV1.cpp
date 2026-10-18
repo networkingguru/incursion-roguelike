@@ -350,11 +350,11 @@ static const SchemaPad MonsterPads[] = {
 static const SchemaPad CharacterPads[] = {
     { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1679, 1 },
     { 1937, 1 }, { 2173, 1 }, { 2263, 1 }, { 2278, 2 }, { 2583, 1 },
-    { 7038, 2 }, { 8390, 2 }, { 8548, 4 }
+    { 2698, 2 }, { 11138, 2 }, { 12490, 2 }
 };
 
 /* Player: CharacterPads without Character's tail pad -- Player's
-   MapMemoryMask occupies 8548 -- plus Player's own seven gaps and its
+   MapMemoryMask occupies 12490 -- plus Player's own seven gaps and its
    6-byte tail. MessageQueue, QuickKeys, Macros, JournalInfo and
    GameTimeInfo carry no rows: each travels as an embed over its whole
    range, which marks its interior padding too. The shared 1679-1680 tail
@@ -364,9 +364,9 @@ static const SchemaPad CharacterPads[] = {
 static const SchemaPad PlayerPads[] = {
     { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1679, 1 },
     { 1937, 1 }, { 2173, 1 }, { 2263, 1 }, { 2278, 2 }, { 2583, 1 },
-    { 7038, 2 }, { 8390, 2 },
-    { 8553, 1 }, { 8618, 2 }, { 17500, 4 }, { 17826, 6 }, { 17858, 6 },
-    { 18258, 6 }, { 18649, 3 }, { 19610, 6 }
+    { 2698, 2 }, { 11138, 2 }, { 12490, 2 },
+    { 12653, 1 }, { 12718, 2 }, { 21922, 6 }, { 21954, 6 },
+    { 22354, 6 }, { 22745, 3 }, { 23706, 6 }
 };
 
 /* Feature chain on arm64/LP64: vptr 0-8 and the pad after Object::Type
@@ -2715,6 +2715,37 @@ void Registry::V1Array(uint16 tag, void *p, size_t elemSize, uint32 count)
       memcpy(p, e->pay + 8, (size_t)c * es);
   }
 
+/* inc-vqla: read a fixed uint16 array written under a retired tag and widen
+   it into the uint32 array this build holds. V1_OFF (v0 raw dump) and V1_SAVE
+   (writes newTag through FIELD_ARRAY instead, never oldTag) are no-ops. On a
+   load, v1Find marks oldTag used so v1PopFrame does not refuse the frame; the
+   shape must be exactly a uint16 array of `count` elements. If newTag is also
+   in the frame, the new form is the truth: consume oldTag but copy nothing. */
+void Registry::V1ArrayWiden16(uint16 newTag, uint16 oldTag, uint32 *p,
+                              uint32 count)
+  {
+    if (v1.mode != V1_LOAD)
+      return;
+    const V1Ent *e = v1Find(oldTag);
+    if (!e)
+      return;
+    if (e->kind != K_ARRAY)
+      throw ECORRUPT;
+    uint32 c, es;
+    memcpy(&c, e->pay, 4);
+    memcpy(&es, e->pay + 4, 4);
+    if (c != count || es != 2)
+      throw ECORRUPT;
+    if (v1Find(newTag))
+      return;   /* the widened form supersedes the old one */
+    for (uint32 i = 0; i != count; i++)
+      {
+        uint16 v;
+        memcpy(&v, e->pay + 8 + (size_t)i * 2, 2);
+        p[i] = (uint32)v;
+      }
+  }
+
 void Registry::V1EmbedBegin(uint16 tag, void *member, size_t size)
   {
     if (v1.mode == V1_OFF)
@@ -4229,7 +4260,7 @@ bool Registry::V1RunSchemaTest(const char *outDir)
           { pl->RecentSkills[i] = (uint16)(i + 41);
             pl->RecentItems[i] = (uint16)(i + 51); }
         for (i = 0; i != MAX_SPELLS + 1; i++)
-          pl->Spells[i] = (uint16)(i & 0xFF);
+          pl->Spells[i] = (uint32)((i & 0xFF) | ((i & 0xFF) << 16));
         for (i = 0; i != 10; i++)
           pl->Tattoos[i] = mod->EffectID((uint16)(20 + i));
         pl->resChance = 113;
@@ -5455,6 +5486,19 @@ int RunSaveConvert(const char *path)
             "incursion -convert: %s is already a v1 save (%.12s); there are\n"
             "  no v0 bytes to convert or to back up.\n",
             resolved, oldfh.Version);
+        return 2;
+      }
+
+    /* inc-vqla: a v0 save from a build whose layout predates the Spells[]
+       widening cannot be read at this build's sizes, so refuse before the
+       load (and before any .v0 backup) rather than misreading it. */
+    if (IsOldV0Stamp(oldfh.Version))
+      {
+        fprintf(stderr,
+            "incursion -convert: %s: Some saved games were written by an "
+            "older version of Incursion and cannot be loaded here. Open each "
+            "one once in Incursion release 4, save it, then load it here.\n",
+            resolved);
         return 2;
       }
 

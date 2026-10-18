@@ -63,20 +63,24 @@ static bool SaveFormatMatches(const char *stamp)
     if (!stricmp(stamp, SaveFormatID()))
         return true;
 
-    /* MIGRATION ALLOWANCE, AND IT IS MEANT TO BE DELETED. Files written before
-       the digest existed carry VERSION_STRING instead. Rejecting them outright
-       would have made every character created up to 2026-08-16 vanish from the
-       load list -- silently, because src/Registry.cpp:907 skips a mismatch
-       without saying anything. Accepting them is a bet that they came from a
-       binary built from this source, which was true of every such file in
-       existence at the time. It is NOT true in general: a file stamped
-       "0.6.9Y19" could have come from any build of any layout, which is exactly
-       the weakness the digest replaces. Nothing written from now on takes this
-       path, so delete this branch once the old saves are gone. */
-    if (!stricmp(stamp, VERSION_STRING))
-        return true;
+    /* A file stamped VERSION_STRING (rather than a digest) is refused since
+       inc-vqla: widening Character::Spells[] changed the layout, so reading
+       such a file at this build's sizes would misread it. */
 
     return false;
+  }
+
+/* True when this stamp belongs to a v0 (raw-dump) save that this build cannot
+   read for a layout reason rather than a corruption one: either the old
+   VERSION_STRING, or a "SF" digest from a build whose layout differs from
+   SaveFormatID(). src/Registry.cpp's load list and src/SaveV1.cpp's -convert
+   use this to tell the player, once, that such a file needs a round trip
+   through release 4 instead of hiding it in silence. */
+bool IsOldV0Stamp(const char *stamp)
+  {
+    if (stamp[0] != 'S' || stamp[1] != 'F')
+        return !stricmp(stamp, VERSION_STRING);
+    return !SaveFormatMatches(stamp);
   }
 
 /* upstream: LoadGroup and SaveGroup leak their Registry mode flag on every
@@ -1276,14 +1280,21 @@ NoSaved:
         T1->Clear(); T1->GotoXY(0, 0);
         i = 0;
         found = false;
+        /* inc-vqla: v0 saves from a previous layout are still hidden from the
+           list, but the player is told once that they exist and how to bring
+           them forward, rather than being left to wonder where they went. */
+        int32 oldStamps = 0;
         do {
             T1->FRead(&fh, sizeof(fh));
             T1->Close();
             /* A v1 save ("IS1." prefix) is listed beside the v0 files this
                binary's own stamp matches. */
             if (!SaveFormatMatches(fh.Version) &&
-                strncmp(fh.Version, "IS1.", 4))
+                strncmp(fh.Version, "IS1.", 4)) {
+                if (IsOldV0Stamp(fh.Version))
+                    oldStamps++;
                 continue;
+            }
 
             Filenames[i] = T1->GetFileName();
             Filedescs[i] = fh.Name;
@@ -1297,6 +1308,14 @@ NoSaved:
 
             i++;
         } while (T1->NextFile() && i < 128);
+
+        /* The player sees this before the list, so a save that vanished from
+           the picker is explained. T1->Box is this load screen's one-line
+           notice mechanism (the same call the NoSaved path above uses). */
+        if (oldStamps)
+            T1->Box("Some saved games were written by an older version of "
+                "Incursion and cannot be loaded here. Open each one once in "
+                "Incursion release 4, save it, then load it here.");
 
         if (!found)
             goto NoSaved;

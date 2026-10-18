@@ -94,7 +94,7 @@ bool AutoKnockProbeNote(Creature *actor, Thing *target, rID spell) {
 }
 
 static void autoKnockCases(Player *pl, Door *door) {
-    uint16 saved[MAX_SPELLS+1];
+    uint32 saved[MAX_SPELLS+1];
     memcpy(saved, pl->Spells, sizeof saved);
     const int8 knock = pl->Options[OPT_AUTOKNOCK], all = pl->Options[OPT_ALL_SPELLS];
     const int timeout = pl->Timeout;
