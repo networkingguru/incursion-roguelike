@@ -97,7 +97,7 @@ ENTER
 # Electric Loop is centred on the caster (AR_GLOBE, no Q_LOC/Q_TAR) and
 # fires the moment it is chosen -- no direction or location prompt.
 m
-@choose "Electric Loop"
+@choose "(pri)Electric Loop"
 @dump:after-blast
 
 v

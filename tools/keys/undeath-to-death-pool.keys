@@ -149,7 +149,7 @@ ENTER
 # on the player. 'l' switches to the LOCATION cursor at the player, RIGHT*4
 # moves it to Cw, ENTER confirms a bare location so the burst centres on Cw.
 m
-@choose "Undeath to Death"
+@choose "(pri)Undeath to Death"
 l
 RIGHT*4
 @dump:target-prompt-1
@@ -182,7 +182,7 @@ ENTER
 
 # --- CAST TWO, centred on Cc (R3: the bodak is SKIP-CAP) -------------------
 m
-@choose "Undeath to Death"
+@choose "(pri)Undeath to Death"
 l
 LEFT*6
 @dump:target-prompt-2

@@ -76,13 +76,13 @@ w
 # FIRST CAST. It must succeed, or the second proves nothing.
 @until "HP:" ESC
 m
-@choose "Holy Summoning I"
+@choose "(pri)Holy Summoning I"
 RIGHT ENTER    # aim one square east of the caster; his own square is refused
 @dump:cast1
 
 # SECOND CAST, on the next turn, while the first outsider is still alive.
 m
-@choose "Holy Summoning I"
+@choose "(pri)Holy Summoning I"
 RIGHT ENTER    # aim one square east of the caster; his own square is refused
 @dump:cast2
 

@@ -39,7 +39,7 @@ w
 @dump:learned
 
 m
-@choose "Dispel Evil"
+@choose "(pri)Dispel Evil"
 @dump:after-cast
 
 w
