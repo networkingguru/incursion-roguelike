@@ -19,9 +19,9 @@
 # v1 tagged-record file ("IS1.x", zlib-6 payload): the corpus exercises the
 # v1 reader's header path -- the fileHeader/groupHeader sanity checks it
 # shares with the v0 reader -- and its zlib decompression bounds. The v0
-# raw reader stays covered elsewhere, by the two v0 evidence fixtures under
-# docs/evidence/inc-upw.13/, which tools/check_convert_guard.sh loads (and
-# dumps) through it on every run.
+# raw reader is not exercised by the inc-upw.13 fixtures any more: since
+# inc-vqla a v0 player save is refused by its stamp before the raw reader
+# runs, so tools/check_convert_guard.sh no longer loads one through it.
 #
 # tools/check_lz_uncompress.sh is the unit-level half of this same
 # verification: it proves the two decoder primitives are safe in isolation,

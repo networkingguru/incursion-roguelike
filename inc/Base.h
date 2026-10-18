@@ -905,6 +905,12 @@ class Registry
        address; this stages Status::eID through the name table itself. */
     void V1RidStatus(uint16 tag, Status &s);
     void V1Array(uint16 tag, void *p, size_t elemSize, uint32 count);
+    /* The widening read for a fixed array whose element type grew. newTag is
+       what this build writes; oldTag is a retired tag holding the same array
+       with a narrower element. V1_OFF and V1_SAVE write nothing; a load reads
+       oldTag, requires K_ARRAY / count / 2-byte elements, and widens each
+       element into p[]. If newTag is also present it wins. See inc-vqla. */
+    void V1ArrayWiden16(uint16 newTag, uint16 oldTag, uint32 *p, uint32 count);
     void V1EmbedBegin(uint16 tag, void *member, size_t size);
     void V1EmbedEnd();
     void V1Cover(const void *p, size_t size);

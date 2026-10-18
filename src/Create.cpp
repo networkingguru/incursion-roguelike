@@ -5880,7 +5880,7 @@ static uint16 SpellPendBit(uint16 type) {
 /* inc-4999: keep SP_KNOWN in step with the kind bits. A spell is known while
    it is held from at least one source; it stops being known when its last kind
    bit goes, unless a grant, domain or innate flag still makes it castable. */
-static void SpellSyncKnown(uint16 *f) {
+static void SpellSyncKnown(uint32 *f) {
     if (*f & (SP_ARCANE | SP_DIVINE | SP_PRIMAL | SP_BARDIC | SP_INHERENT))
         *f |= SP_KNOWN;
     else if (!(*f & (SP_GRANTED | SP_DOMAIN | SP_INNATE | SP_TINNATE)))
@@ -5892,7 +5892,7 @@ bool Player::LearnSpell(bool left) {
     bool anyReMem, changed, learnedFill, reChanged, markable;
     int16 i, n, L, cap, bardHeld, nRows, nEmitted;
     int32 sn, v;
-    uint16 f, before, fl, pendBit;
+    uint32 f, before, fl, pendBit;
     int8 color;
     Item *it;
     LearnableSpell *ls = CalcSpellAccess();
@@ -6286,7 +6286,7 @@ bool Player::LearnSpell(bool left) {
 void Player::ApplySpellSelection() {
     int16 i, L;
     int32 sn;
-    uint16 f, kind, pendBit;
+    uint32 f, kind, pendBit;
     bool changed, held, pend;
     String noBookList;
     LearnableSpell *ls = CalcSpellAccess();
@@ -6365,7 +6365,7 @@ void Player::ApplySpellSelection() {
 /* inc-2jd0: a spell the Inherent Spell feat may pick. sn is a spell index. */
 bool Player::InherentPickable(int16 sn) {
     int16 L, i;
-    uint16 f;
+    uint32 f;
     bool arcane;
     LearnableSpell *ls;
 
@@ -6409,7 +6409,7 @@ bool Player::InherentPickable(int16 sn) {
 
 bool Player::ChooseInherentSpell() {
     int16 sn, L, nSpells, chosen, i;
-    uint16 f;
+    uint32 f;
     bool freed, arcane;
     LearnableSpell *ls;
 
@@ -6655,7 +6655,7 @@ void Player::MigrateSpellFlagsRev5() {
    per-(spell, source) rows and the result is freed. */
 void Player::MigrateSpellFlagsRev6() {
     int16 i, best;
-    uint16 kind, chosen, chosenPend;
+    uint32 kind, chosen, chosenPend;
     int32 sn;
     bool differs;
     LearnableSpell *ls = CalcSpellAccess();
@@ -6710,7 +6710,7 @@ void Player::MigrateSpellFlagsRev6() {
 
     /* Rule 2 and 3: each known spell keeps one source. */
     for (sn = 0; sn <= MAX_SPELLS; sn++) {
-        uint16 f = Spells[sn];
+        uint32 f = Spells[sn];
         if (!(f & (SP_KNOWN | SP_INHERENT)))
             continue;
 
@@ -6783,7 +6783,7 @@ void Player::MigrateSpellFlagsRev6() {
     for (i = 0; i < 10; i++)
         SpellsLearned[i] = 0;
     for (sn = 0; sn <= MAX_SPELLS; sn++) {
-        uint16 f = Spells[sn];
+        uint32 f = Spells[sn];
         if (!(f & SP_KNOWN) || (f & (SP_GRANTED | SP_DOMAIN | SP_INHERENT)))
             continue;
         kind = f & (SP_ARCANE | SP_DIVINE | SP_PRIMAL | SP_BARDIC);
@@ -6814,11 +6814,16 @@ void Player::MigrateSpellFlagsRev6() {
 }
 
 /* The INCURSION_SPELLFLAG_PROBE diagnostic, off unless the variable is set.
-   One line per spell index that carries SP_KNOWN, then a summary line carrying
-   whether this call followed a migration and the file's revision. Written
-   through Error() so it lands in the run's logs/errors.log beside every other
-   probe. Uses the same NAME() spelling the character sheet draws, with spaces
-   turned to underscores so the line stays one token per fact. Bead inc-j5yo. */
+   One line per spell index whose whole flag word is non-zero, then a summary
+   line carrying whether this call followed a migration and the file's
+   revision. Written through Error() so it lands in the run's logs/errors.log
+   beside every other probe. Uses the same NAME() spelling the character sheet
+   draws, with spaces turned to underscores so the line stays one token per
+   fact. The trailing idx= and raw= fields were appended (inc-vqla phase 2) so
+   an oracle can compare a pre-widening save's uint16 flag words, read
+   independently from the file, against what the loader actually restored; the
+   earlier fields are unchanged so every existing grep still parses. Bead
+   inc-j5yo. */
 void Player::SpellFlagProbe(bool migrated) {
     if (!getenv("INCURSION_SPELLFLAG_PROBE"))
         return;
@@ -6828,8 +6833,11 @@ void Player::SpellFlagProbe(bool migrated) {
         int32 j;
         uint32 fl;
         fl = Spells[i];
-        if (!(fl & (SP_KNOWN | SP_ARCANE | SP_DIVINE | SP_PRIMAL
-            | SP_BARDIC | SP_PENDING | SP_PEND_DIV | SP_PEND_PRI)))
+        /* inc-vqla: print every index whose whole flag word is non-zero, not
+           only those carrying a bit named in this probe. Phase 2's old-save
+           oracle (tools/check_spells_widen.sh) compares the raw words the file
+           carries to these lines, so an unnamed bit must not be invisible. */
+        if (!fl)
             continue;
         /* NAME() can yield a temporary String whose cast to const char* is
            only valid inside the full expression that produced it, so the
@@ -6840,12 +6848,14 @@ void Player::SpellFlagProbe(bool migrated) {
             nm[j] = (*s == ' ') ? '_' : *s;
         nm[j] = '\0';
         Error("SPELLFLAG_PROBE %s known=%d pending=%d granted=%d domain=%d "
-            "arcane=%d divine=%d primal=%d bardic=%d pend_div=%d pend_pri=%d",
+            "arcane=%d divine=%d primal=%d bardic=%d pend_div=%d pend_pri=%d "
+            "idx=%d raw=0x%08X",
             nm, (fl & SP_KNOWN) ? 1 : 0, (fl & SP_PENDING) ? 1 : 0,
             (fl & SP_GRANTED) ? 1 : 0, (fl & SP_DOMAIN) ? 1 : 0,
             (fl & SP_ARCANE) ? 1 : 0, (fl & SP_DIVINE) ? 1 : 0,
             (fl & SP_PRIMAL) ? 1 : 0, (fl & SP_BARDIC) ? 1 : 0,
-            (fl & SP_PEND_DIV) ? 1 : 0, (fl & SP_PEND_PRI) ? 1 : 0);
+            (fl & SP_PEND_DIV) ? 1 : 0, (fl & SP_PEND_PRI) ? 1 : 0,
+            (int)i, (unsigned)fl);
     }
     Error("SPELLFLAG_PROBE migrated=%d rev=%d", migrated ? 1 : 0,
         (int)SaveV1_FileRevision());

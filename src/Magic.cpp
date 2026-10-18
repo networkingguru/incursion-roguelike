@@ -138,10 +138,10 @@ int16 Player::CastSourceFor(int16 version)
 /* inc-4999 phase 4b: Spells[sp] with the four kind bits replaced by the cast's
    source. When src is 0 and this is a Player, CastSourceFor(sp) picks the
    fallback version. Non-kind bits are kept as held. */
-uint16 Character::SpellCastFlags(int16 sp, uint16 src)
+uint32 Character::SpellCastFlags(int16 sp, uint16 src)
   {
     static const uint16 kinds[4] = { SP_ARCANE, SP_DIVINE, SP_PRIMAL, SP_BARDIC };
-    uint16 flags = Spells[sp];
+    uint32 flags = Spells[sp];
     int16 i;
     if (sp < 0 || sp > MAX_SPELLS)
       return flags;
@@ -3651,7 +3651,7 @@ void GloryProbe(Player *caster) {
     extern void LOFClearForcedSaveThrowRoll();
     const int oldCL = caster->CasterLev();
     caster->GainAbility(CA_SPELLCASTING,5-oldCL,0,SS_PERM);
-    const uint16 oldFlags = caster->getSpellFlags(parent);
+    const uint32 oldFlags = caster->getSpellFlags(parent);
     caster->setSpellFlags(parent,oldFlags | SP_KNOWN | SP_DIVINE);
     const int cl = caster->CasterLev();
     gloryTarget = target;
@@ -3705,7 +3705,7 @@ void GloryProbe(Player *caster) {
     const char *children[] = {"Bolt of Glory", "Flame Arrow;blast", "Pyrotechnics;smoke", "Pyrotechnics;flash"};
     for (int i = 0; i < 4; ++i) {
         rID source = FIND(parents[i]);
-        uint16 flags = caster->getSpellFlags(source);
+        uint32 flags = caster->getSpellFlags(source);
         caster->setSpellFlags(source,flags | SP_KNOWN | SP_DIVINE);
         gloryObserveID = FIND(children[i]);
         gloryBoltID = gloryObserveID;
@@ -4793,7 +4793,7 @@ EvReturn Creature::Cast(EventInfo &e) {
        arcane cast needs no holy symbol (and no god) and a divine cast of a
        spell also held arcane still needs both. */
     {
-    uint16 castFlags = thisc->SpellCastFlags(e.sp, e.SpellSource);
+    uint32 castFlags = thisc->SpellCastFlags(e.sp, e.SpellSource);
 
     if (castFlags & (SP_DIVINE|SP_DOMAIN))
         focusReq = "symbol";
@@ -5444,7 +5444,7 @@ int16 Character::SpellRating(rID eID, uint32 mm, bool perceived, uint16 src)
     int16 concentLeft;
     int16 sp = theGame->SpellNum(eID);
     TEffect *te = TEFF(eID);
-    uint16 flags = SpellCastFlags(sp, src);
+    uint32 flags = SpellCastFlags(sp, src);
     
     p_base = p_lev = p_circ = p_spec = p_meta = p_calc = p_int = p_conc = 0;
     ps_circ.Empty(); ps_perfect = NULL; ps_calc = NULL;
@@ -5662,8 +5662,8 @@ int16 Creature::getSpellMana(rID spID, uint32 MM, int16 *specMod2, uint16 src)
   {
     int16 mCost, mult, sp, specMod, j, sch;
     sp = theGame->SpellNum(spID);
-    uint16 flags = isCharacter() ? ((Character*)this)->SpellCastFlags(sp, src)
-                                 : (uint16)(SP_ARCANE|SP_DIVINE|SP_SORCERY|SP_PRIMAL);
+    uint32 flags = isCharacter() ? ((Character*)this)->SpellCastFlags(sp, src)
+                                 : (uint32)(SP_ARCANE|SP_DIVINE|SP_SORCERY|SP_PRIMAL);
     
     mCost = TEFF(spID)->ManaCost;
 

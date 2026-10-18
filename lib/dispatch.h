@@ -1579,7 +1579,7 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
     case 301:
         VERIFY(h,T_CHARACTER,"setSpellFlags")
         ASSERT(REGS(63) >= 2)
-        oCharacter(h)->setSpellFlags(STACK(1), (uint16)STACK(2));
+        oCharacter(h)->setSpellFlags(STACK(1), STACK(2));
         return;
     case 302:
         VERIFY(h,T_CHARACTER,"GetSkillRanks")

@@ -463,8 +463,8 @@ system int16  T_CHARACTER::IAttr(int8 a);
 system int16  T_CHARACTER::LevelAs(rID cID);
 system int16  T_CHARACTER::TotalLevel();
 system int32  T_CHARACTER::SpellKnown(int16 spNum);
-system uint16 T_CHARACTER::getSpellFlags(rID spID);
-system void   T_CHARACTER::setSpellFlags(rID spID, uint16 fl);
+system uint32 T_CHARACTER::getSpellFlags(rID spID);
+system void   T_CHARACTER::setSpellFlags(rID spID, uint32 fl);
 system int16  T_CHARACTER::GetSkillRanks(int16 sk);
 system void   T_CHARACTER::SetInvSlot(int16 sl, hObj:T_ITEM it);
 
