@@ -75,9 +75,10 @@
 #     strike the other creature afterwards: a babau has 7d20+35 hit points
 #     against a first-level paladin's 1d8+1 +2d6-vs-evil, and a goblin would
 #     not have lived through the first blow.
-#   * The paladin's sacred mount stands immediately WEST of him on arrival, so
-#     the two babaus go EAST (the chosen target) and NORTH (the other one).
-#     Striking west would hit his own horse.
+#   * Genocide Everything clears the level first. The paladin's sacred mount
+#     arrives on a random square next to him, so without this it can stand
+#     where a blow or the target cursor lands. The two babaus go EAST (the
+#     chosen target) and NORTH (the other one).
 #
 # @choose "Zeal" presses the Spell Manager letter beside the spell, which casts
 # it outright -- ENTER afterwards would be a second, separate command. The
@@ -105,6 +106,13 @@ w
 @choose "Learn Any Spell"
 "Zeal"
 ENTER
+
+# Remove the paladin's horse. It arrives on a random square next to him
+# (Thing::PlaceNear), and in the Zeal target prompt RIGHT aims at the nearest
+# creature east of him, so a horse to the north-east or south-east would take
+# the spell's target. Genocide Everything kills every monster on the level.
+w
+@choose "Genocide Everything"
 
 # The chosen target, east of the player.
 w
