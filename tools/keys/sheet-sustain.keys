@@ -1,0 +1,53 @@
+# Wear the Ring of Elemental Command (Earth) (SUSTAIN STR +10, CON +10) and open the character
+# sheet at its Special Abilities list (bd inc-j2wy). Read the result with
+# tools/check_sheet_sustain.sh.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/sheet-sustain.keys <seed>
+#
+# The ring comes from wizard mode's Item Acquisition, as in
+# tools/keys/sheet-water-breathing-true-sight.keys.
+#   ring-on     the ring is on a finger.
+#   stati       wizard "Examine Player Data" lists the SUSTAIN stati the ring granted.
+#   specials    the sheet scrolled until its Perception heading shows, with the Special Abilities list above it.
+
+@include chargen-mage.keys
+
+@while "mass grave" ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*7
+SPACE
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*26
+@until "Ring of Elemental Command (Earth)" DOWN
+DOWN
+ENTER
+m
+SPACE
+@dump:ring-on
+ESC
+
+w
+@choose "Examine Player Data"
+@until "SUSTAIN" DOWN
+DOWN*2
+@dump:stati
+ESC*3
+
+d
+@expect "Spell Slots"
+PGUP*60
+@expect "Gender"
+C
+ESC
+@until "Perception and Vision" PGDN
+@dump:specials
+ESC
+
+@quit
