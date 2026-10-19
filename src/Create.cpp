@@ -5910,7 +5910,7 @@ static int16 LearnSrcRank(uint16 kind) {
 
 bool Player::LearnSpell(bool left) {
     bool areSpells, noBook, hasBook, known, marked, reMem, locked, inherent;
-    bool anyReMem, changed, learnedFill, reChanged, markable;
+    bool anyReMem, changed, learnedFill, reChanged, markable, heldNow;
     int16 i, n, L, cap, bardHeld, nRows, nEmitted;
     int32 sn;
     uint32 f, before, fl, pendBit;
@@ -6275,6 +6275,7 @@ bool Player::LearnSpell(bool left) {
         marked = (st[i] & LS_MARK) != 0;
         pendBit = SpellPendBit(ls[i].Type);
         before = Spells[sn];
+        heldNow = false;
 
         /* An inherent spell is never cleared or marked: leave all its flags. */
         if (Spells[sn] & SP_INHERENT)
@@ -6282,12 +6283,21 @@ bool Player::LearnSpell(bool left) {
 
         if (st[i] & LS_REMEM) {
             if (!left) {
-                /* Outside creation a mark on this row only marks it pending;
-                   it takes effect at the next full rest (phase 3). */
-                if (marked)
+                /* inc-5p2z: a divine/primal pick into a free slot is held at
+                   once; a swap (or no free slot) stays pending, taking effect
+                   at the next full rest. */
+                if (marked && (ls[i].Type == SP_DIVINE || ls[i].Type == SP_PRIMAL)
+                    && !(Spells[sn] & ls[i].Type)
+                    && SpellsLearned[L-1] < SpellSlots[L-1] + BonusSlots[L-1]) {
+                    Spells[sn] |= ls[i].Type | pendBit;
+                    SpellsLearned[L-1]++;
+                    SpellSyncKnown(&Spells[sn]);
+                    heldNow = true;
+                } else if (marked) {
                     Spells[sn] |= pendBit;
-                else
+                } else {
                     Spells[sn] &= ~pendBit;
+                }
             } else if (marked && !(Spells[sn] & ls[i].Type)) {
                 Spells[sn] |= ls[i].Type | pendBit;
                 SpellsLearned[L-1]++;
@@ -6310,7 +6320,7 @@ bool Player::LearnSpell(bool left) {
 
         if (Spells[sn] != before) {
             changed = true;
-            if (st[i] & LS_REMEM)
+            if ((st[i] & LS_REMEM) && !heldNow)
                 reChanged = true;
             else
                 learnedFill = true;

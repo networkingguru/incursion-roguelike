@@ -1,0 +1,35 @@
+# inc-5p2z: a Priest gains a level, marks a NEW divine spell into a FREE slot,
+# confirms, and opens the cast menu WITHOUT resting. Read by
+# tools/check_newlevel_divine_spell.sh.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-priest-seed4-gate.sav \
+#       tools/headless.sh tools/keys/newlevel-divine-mark.keys 4
+#
+# THE CHARACTER. Henk, Orc Priest 1, not saved in wizard mode (so `w y`). At
+# Priest 2 the Learn Spells screen reads "Level 1 - 4 of 5 slots": one free slot.
+# The wizard switch Free Advancement lets `G` on the sheet gain the level.
+# Detect Evil is row 7 of the name-sorted list (Bane is row 1, so DOWN*6).
+
+s                       # one real turn: this counts as a session
+w y                     # enter wizard mode
+w                       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE                   # Free Advancement: NO -> YES
+ESC
+d                       # character sheet
+G                       # gain a level
+@until "Priest 2" a     # answer the level-up menu, wait for the new class line
+L                       # Learn Spells
+@dump:before-mark
+DOWN*6
+SPACE                   # mark Detect Evil
+@dump:marked
+ENTER                   # confirm
+@dump:confirmed
+ESC
+@until "HP:" ESC
+m                       # cast menu, no rest taken
+@dump:castmenu
+ESC
+@dump:end

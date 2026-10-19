@@ -4,9 +4,12 @@
 # Agent/Task dispatch while letting haiku and labelled dispatches through,
 # and does it demand TWO stopped DeepSeek runs for the same worktree before
 # it honours a `fallback:`? Defends bead inc-xiqb: the hook must name the
-# three labels, refuse a fallback with no label, no found run, a run that was
+# four labels, refuse a fallback with no label, no found run, a run that was
 # not stopped by loop/context/provider, or no earlier stopped run for that
 # worktree, and log every dispatch it sees.
+#
+# Defends bead inc-cfnm too: a `budget:` dispatch is allowed ONLY when the
+# model is exactly `sonnet` AND tools/claude_budget.py reports `sonnet-first`.
 #
 # Fully offline, against a temp ledger and a temp log (env overrides); it never
 # touches the real files. Every case asserts the exit code AND exactly one new
@@ -14,12 +17,14 @@
 #
 #   tools/check_dispatch_gate.sh               run the cases
 #   tools/check_dispatch_gate.sh --prove-red   mutate the gate so an unlabelled
-#                                              sonnet is allowed and so
-#                                              "provider" is dropped from
-#                                              STOPPED, confirm the "sonnet, no
-#                                              label" and the provider-fallback
-#                                              cases go red, restore, and verify
-#                                              each restore with cmp
+#                                              sonnet is allowed, so "provider"
+#                                              is dropped from STOPPED, and so
+#                                              the budget model check is
+#                                              skipped, confirm the "sonnet, no
+#                                              label", the provider-fallback and
+#                                              the "budget, opus" cases go red,
+#                                              restore, and verify each restore
+#                                              with cmp
 #
 # Exit: 0 pass, 1 fail, 2 could not run.
 
@@ -120,6 +125,35 @@ PY
     cp "$BACKUP" "$GATE"
     cmp -s "$BACKUP" "$GATE" || { echo "restore of dispatch_gate.py failed" >&2; exit 2; }
 
+    # Skip the model check for `budget:`: a budget dispatch with the wrong
+    # model becomes allowed, so the "budget, opus" case goes red.
+    NEEDLE_MODEL='        if model_raw != "sonnet":'
+    if ! grep -qF "$NEEDLE_MODEL" "$GATE"; then
+        echo "could not find the budget model check to mutate: $NEEDLE_MODEL" >&2
+        exit 2
+    fi
+    python3 - "$GATE" "$NEEDLE_MODEL" <<'PY'
+import sys
+path, needle = sys.argv[1], sys.argv[2]
+src = open(path).read()
+open(path, "w").write(src.replace(
+    needle, '        if False:  # MUTATED by --prove-red', 1))
+PY
+    echo "mutated tools/dispatch_gate.py: budget model check skipped"
+    MUTATED_OUTPUT="$("$ROOT/tools/check_dispatch_gate.sh")"
+    MUTATED_RC=$?
+    echo "--- output of the mutated run ---"
+    echo "$MUTATED_OUTPUT"
+    echo "--- end output of the mutated run ---"
+    if [ "$MUTATED_RC" -ne 0 ] && grep -q 'FAIL.*budget, opus' <<< "$MUTATED_OUTPUT"; then
+        echo "PASS (as intended): the 'budget, opus' case went red with the budget model check skipped"
+    else
+        echo "FAIL: the 'budget, opus' case stayed green with the budget model check skipped (rc=$MUTATED_RC)"
+        PROVE_FAIL=1
+    fi
+    cp "$BACKUP" "$GATE"
+    cmp -s "$BACKUP" "$GATE" || { echo "restore of dispatch_gate.py failed" >&2; exit 2; }
+
     if [ "$PROVE_FAIL" -eq 0 ]; then
         echo "PASS: --prove-red, all mutations turned their intended case red"
         exit 0
@@ -160,6 +194,51 @@ run_gate() {
 }
 
 log_lines() { wc -l < "$LOG" 2>/dev/null | tr -d ' '; }
+
+# --- budget fixtures (bead inc-cfnm) --------------------------------------
+USAGE="$TMP/statusline.json"
+BUDGET_NOW=1792410600
+# Day 1 window: resets_at 604800s ahead minus 43200, so now - start is 43200s
+# (day 1 in the middle of the day).
+R_DAY1=$((BUDGET_NOW + 604800 - 43200))
+
+# Write a usage file at `used` percent with a seven_day window ending at
+# `resets_at`, then set its mtime 60s before BUDGET_NOW (fresh).
+write_usage() {
+    python3 - "$USAGE" "$1" "$2" <<'PY'
+import json, os, sys
+path, used, resets = sys.argv[1], sys.argv[2], sys.argv[3]
+data = {"rate_limits": {"seven_day": {
+    "used_percentage": int(used), "resets_at": int(resets)}}}
+open(path, "w").write(json.dumps(data))
+now = 1792410600
+os.utime(path, (now - 60, now - 60))
+PY
+}
+
+# Run the gate with the budget usage path and pinned now. The payload must
+# already be in $TMP/in.json.
+run_gate_budget() {
+    : > "$LOG"
+    INCURSION_DISPATCH_LOG="$LOG" INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
+        INCURSION_CLAUDE_USAGE="$USAGE" INCURSION_CLAUDE_BUDGET_NOW="$BUDGET_NOW" \
+        python3 "$GATE" < "$TMP/in.json" > "$TMP/last.out" 2> "$TMP/last.stderr"
+    return $?
+}
+
+# Replace the usage file with `text` (or remove it) and refresh its mtime.
+write_usage_raw() {
+    if [ "$1" = "MISSING" ]; then
+        rm -f "$USAGE"
+        return
+    fi
+    printf '%s' "$1" > "$USAGE"
+    python3 - "$USAGE" <<'PY'
+import os, sys
+now = 1792410600
+os.utime(sys.argv[1], (now - 60, now - 60))
+PY
+}
 
 # Log field reader: jq is not assumed; use python3.
 log_field() { python3 - "$LOG" "$1" <<'PY'
@@ -330,6 +409,72 @@ payload Agent sonnet "fallback: 20261003T131816Z-74757" general > "$TMP/in.json"
 rc=0
 run_gate || rc=$?
 expect "two stopped rows in DIFFERENT worktrees: block" 2 block fallback "$rc" 1
+
+# --- case: budget, sonnet, under the day-1 threshold ----------------------
+# Day 1 threshold is 5%, so 4% is under it and a sonnet budget dispatch passes.
+write_usage 4 $R_DAY1
+payload Agent sonnet "budget: x" general > "$TMP/in.json"
+rc=0
+run_gate_budget || rc=$?
+expect "budget, sonnet, under threshold: allow" 0 allow budget "$rc" 1
+
+# --- case: budget, sonnet, at the day-1 threshold -------------------------
+# At 5% (not under it) the weekly budget blocks the dispatch.
+write_usage 5 $R_DAY1
+payload Agent sonnet "budget: x" general > "$TMP/in.json"
+rc=0
+run_gate_budget || rc=$?
+expect "budget, sonnet, at threshold: block" 2 block budget "$rc" 1
+
+# --- case: budget, sonnet, missing usage ----------------------------------
+# No usage file at all: the verdict is unavailable, so the dispatch blocks.
+write_usage_raw MISSING
+payload Agent sonnet "budget: x" general > "$TMP/in.json"
+rc=0
+run_gate_budget || rc=$?
+expect "budget, sonnet, missing usage: block" 2 block budget "$rc" 1
+
+# --- case: budget, opus (wrong model) -------------------------------------
+# A budget dispatch needs model sonnet; opus is blocked.
+write_usage 4 $R_DAY1
+payload Agent opus "budget: x" general > "$TMP/in.json"
+rc=0
+run_gate_budget || rc=$?
+expect "budget, opus: block" 2 block budget "$rc" 1
+
+# --- case: budget, no model -----------------------------------------------
+# A budget dispatch with no model at all is blocked too.
+write_usage 4 $R_DAY1
+payload Agent EMPTY "budget: x" general > "$TMP/in.json"
+rc=0
+run_gate_budget || rc=$?
+expect "budget, no model: block" 2 block budget "$rc" 1
+
+# --- case: budget, sonnet, budget module missing --------------------------
+# Copy ONLY the gate into its own directory, so claude_budget.py is not next
+# to it. The usage file is under the threshold, so only the failed import can
+# block: the dispatch MUST be blocked with "budget verdict unavailable".
+BUDGET_LONE="$TMP/lone-gate"
+mkdir -p "$BUDGET_LONE"
+cp "$ROOT/tools/dispatch_gate.py" "$BUDGET_LONE/dispatch_gate.py"
+write_usage 4 $R_DAY1
+payload Agent sonnet "budget: x" general > "$TMP/in.json"
+rc=0
+: > "$LOG"
+( cd "$TMP" && env -u PYTHONPATH \
+    INCURSION_DISPATCH_LOG="$LOG" INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
+    INCURSION_CLAUDE_USAGE="$USAGE" INCURSION_CLAUDE_BUDGET_NOW="$BUDGET_NOW" \
+    PYTHONPATH= python3 "$BUDGET_LONE/dispatch_gate.py" \
+        < "$TMP/in.json" > "$TMP/last.out" 2> "$TMP/last.stderr" ) || rc=$?
+got_reason="$(log_field reason)"
+if [ "$rc" = 2 ] && [ "$(log_lines)" = "1" ] \
+    && [ "$(log_field decision)" = "block" ] \
+    && [ "$(log_field label)" = "budget" ] \
+    && [[ "$got_reason" == budget\ verdict\ unavailable* ]]; then
+    pass "budget, sonnet, budget module missing: block"
+else
+    fail "budget, sonnet, budget module missing (rc=$rc decision=$(log_field decision) label=$(log_field label) reason=$got_reason)"
+fi
 
 # --- case: bypass env with no label ---------------------------------------
 payload Agent opus "do the thing" general > "$TMP/in.json"
