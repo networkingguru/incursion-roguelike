@@ -1,0 +1,59 @@
+# Wear the Ring of Elemental Command (Water) (WATER_BREATHING) and cast True
+# Seeing (TRUE_SIGHT), then open the character sheet and dump its Specials and
+# Perception sections (bd inc-frhx). Read the result with
+# tools/check_sheet_water_true_sight.sh.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/sheet-water-breathing-true-sight.keys <seed>
+#
+# The ring comes from wizard mode's Item Acquisition, as in
+# tools/keys/water-breathing-deep-water.keys. True Seeing comes from wizard
+# mode's Learn Any Spell and a self-cast, as in tools/keys/true-sight-observe.keys.
+#   ring-on     the ring is on a finger.
+#   truesight   the screen after the cast (the spell's message).
+#   specials    the sheet scrolled until its Perception heading shows, with the Special Abilities list above it.
+#   perception  eight lines further, so the Perception and Vision rows are on screen.
+
+@include chargen-mage.keys
+
+@while "mass grave" ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*7
+SPACE
+ESC
+
+w
+@choose "Item Acquisition"
+RIGHT*26
+@until "Ring of Item Preservation" DOWN
+ENTER
+m
+SPACE
+@dump:ring-on
+ESC
+
+w
+@choose "Learn Any Spell"
+"True Seeing"
+ENTER
+
+m
+@choose "True Seeing"
+@while "more --" SPACE
+@dump:truesight
+
+d
+@expect "Gender"
+C
+@dump:cond
+ESC
+@until "Perception and Vision" PGDN
+@dump:specials
+PGDN*8
+@dump:perception
+ESC
+
+@quit
