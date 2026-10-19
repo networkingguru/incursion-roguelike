@@ -706,6 +706,22 @@ void TextTerm::CreateCharSheet(CharSheet &cs)
     }
   StatiIterEnd(p)
 
+  // upstream: the Special Abilities list had no entry for SUSTAIN, so the
+  // sheet hid every stat sustain from every source; a data/logic omission,
+  // identical on Win32 with the original typedefs and compiler. Observed
+  // (tools/check_sheet_sustain.sh red, then green); bd inc-j2wy; not sent to
+  // rmtew.
+  for (int8 at = A_STR; at <= A_AID; at++) {
+    int16 sus;
+    if (at > A_LUC && at != A_AID)
+      continue;
+    sus = p->SumStatiMag(SUSTAIN,at);
+    if (sus <= 0) /* the drain code protects only when the sum is above 0 */
+      continue;
+    cs.sSpecials += Format("  Sustain %s: %+d\n",
+        at == A_AID ? "All Attributes" : AttrTitle[at], sus);
+  }
+
   cs.sPerception = Format("%cPerception and Vision:%c\n",-WHITE,-GREY);
   if (p->LightRange) cs.sPerception += 
     Format("  Light Range:        %3d ft\n", p->LightRange * 10);
