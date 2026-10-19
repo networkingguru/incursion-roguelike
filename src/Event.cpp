@@ -26,6 +26,11 @@
 
 #include "Incursion.h"
 
+/* inc-e5ke: probe the POST step of an EV_DAMAGE event, so the doubled
+   POST(EV_DAMAGE) of a converted hit becomes countable. Defined in
+   src/DmgPostProbe.cpp; off unless INCURSION_DMGPOST_PROBE is set. */
+extern void DmgPostPostProbe(EventInfo &e);
+
 /* Diagnostic only, for bead inc-6d5. src/Display.cpp's INC6D5_PROBE catches
    every m/x/y change made through Thing::Move/PlaceAt/Remove for a
    name-matched creature, but a fresh 40-seed dive.keys sweep on seed 21
@@ -129,6 +134,11 @@ static void Inc6d5EventDriftCheck(const char *where, EventInfo &e) {
 
 EventInfo EventStack[EVENT_STACK_SIZE];
 int16     EventSP = -1;
+
+/* inc-e5ke: one flag per event-stack slot, set when a re-thrown
+   ReThrow(EV_DAMAGE,e) has already delivered the POST step of the converted
+   hit in that slot, so the outer event does not deliver it a second time. */
+static bool DmgPostDelivered[EVENT_STACK_SIZE];
 
 TGod*     GodList[MAX_GODS];
 rID       GodIDList[MAX_GODS];
@@ -423,6 +433,8 @@ EvReturn RealThrow(EventInfo &e) {
     EvReturn r;
     int16 Ev;
 
+    DmgPostDelivered[EventSP] = false;
+
     INC6D5_EVENT_DRIFT("enter", e);
 
     if (EventSP > 0) {
@@ -453,9 +465,20 @@ EvReturn RealThrow(EventInfo &e) {
         INC6D5_EVENT_DRIFT("afterMAIN", e);
     }
     if (r != ABORT) {
-        e.Event=POST(Ev);
-        ThrowEvent(e);
-        INC6D5_EVENT_DRIFT("afterPOST", e);
+        /* upstream: a converted damage type (AD_CHAO, AD_LAWF, AD_EVIL, ...) is
+           re-delivered as EV_DAMAGE by Creature::Damage; the inner event runs
+           this POST step, so the outer event must not run it again. INVARIANT:
+           one POST(EV_DAMAGE) per wound. Upstream's: plain control flow, no
+           typedef or compiler dependence, so Win32 misbehaves identically.
+           Observed via tools/check_dmgpost_once.sh (inc-e5ke); not sent. */
+        bool doPost = !(Ev == EV_DAMAGE && DmgPostDelivered[EventSP]);
+        if (doPost) {
+            if (Ev == EV_DAMAGE) DmgPostPostProbe(e);
+            e.Event=POST(Ev);
+            ThrowEvent(e);
+            INC6D5_EVENT_DRIFT("afterPOST", e);
+        }
+        DmgPostDelivered[EventSP] = false;
     }
     if(r==NOTHING) {
         /* For now, PRE and POST events don't *need* to be handled. */
@@ -489,6 +512,12 @@ EvReturn ReThrow(int16 ev,EventInfo &e)
     e = EventStack[EventSP];
     e.Terse = ter;
     EventSP--;
+    /* inc-e5ke: the inner EV_DAMAGE event just ran its POST step. If it was
+       re-thrown from the outer event's main EV_DAMAGE step (not from a PRE or
+       POST handler), mark the outer slot so its own POST step is skipped. */
+    if (ev == EV_DAMAGE && EventSP >= 0 &&
+        EventStack[EventSP].Event == EV_DAMAGE)
+        DmgPostDelivered[EventSP] = true;
     return r;
 	}
 
