@@ -131,7 +131,7 @@ UP
 ENTER
 
 m
-@choose "(pri)Zeal"
+@choose "Zeal"
 RIGHT
 ENTER
 @dump:after-cast

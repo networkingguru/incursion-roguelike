@@ -7,9 +7,11 @@
 #       tools/headless.sh tools/keys/newlevel-divine-mark.keys 4
 #
 # THE CHARACTER. Henk, Orc Priest 1, not saved in wizard mode (so `w y`). At
-# Priest 2 the Learn Spells screen reads "Level 1 - 4 of 5 slots": one free slot.
+# Priest 2 the Learn Spells table reads "Learn Spells: Level 1 (4 of 5 slots
+# used)": one free slot.
 # The wizard switch Free Advancement lets `G` on the sheet gain the level.
-# Detect Evil is row 7 of the name-sorted list (Bane is row 1, so DOWN*6).
+# Detect Evil is row 7 of the source-then-name sorted list (Bane is row 1, so
+# DOWN*6). ENTER opens the summary box (a pick changed); a second ENTER confirms.
 
 s                       # one real turn: this counts as a session
 w y                     # enter wizard mode
@@ -25,8 +27,9 @@ L                       # Learn Spells
 DOWN*6
 SPACE                   # mark Detect Evil
 @dump:marked
-ENTER                   # confirm
-@dump:confirmed
+ENTER                   # open the summary box
+@dump:summary
+ENTER                   # confirm the box
 ESC
 @until "HP:" ESC
 m                       # cast menu, no rest taken

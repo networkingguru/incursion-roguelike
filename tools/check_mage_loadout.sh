@@ -46,8 +46,7 @@ check_run tools/keys/mage-loadout-rest.keys "$SEED"
 # a. the table opens with a level header and the memorized spells marked
 check_screens '*-open'
 check_expect "Learn Spells: Level 1 (3 of 3 slots used)" "a: a level header with live slot counts"
-# old checklist rows "[*] (arc)Alarm (memorized)" now read as a table row with
-# the same Pick mark and a Memorized Status word.
+# A memorized row has a "[*]" Pick mark and a Memorized Status word.
 check_expect "[*]  Alarm                  Arcane  Weavecraft      1   Memorized" \
     "a: Alarm is marked and memorized"
 check_expect "[*]  Burning Hands          Arcane  Evocation       1   Memorized" \
@@ -67,8 +66,7 @@ check_expect "[*]  Endure Cold            Arcane  Abjuration      2   Learn at r
     "b: Endure Cold is marked"
 check_screens '*-locked'
 check_expect "This spell is a class grant and stays." "d: unmarking a specialty spell is refused"
-# old "[#] (arc)Magic Missile (locked)" is now a blank Pick cell marked
-# "Class grant" (the lock reason the dump shows).
+# A locked specialty spell has a blank Pick cell and Status "Class grant".
 check_expect "     Magic Missile          Arcane  Evocation       1   Class grant" \
     "d: Magic Missile has a blank Pick cell and Status 'Class grant'"
 
@@ -76,9 +74,9 @@ check_expect "     Magic Missile          Arcane  Evocation       1   Class gran
 check_screens '*-msgs-enter'
 check_expect "Your selection takes effect at your next full rest." "b: the player is told"
 check_screens '*-cast-before'
-check_expect "] (arc)Convulsion"              "b: the dropped spell is still castable"
-check_expect "] (arc)Magic Missile"             "b: the cast menu is the spell list (control)"
-check_reject "] (arc)Endure Cold"               "b: the new spell is not castable yet"
+check_expect "] Convulsion"              "b: the dropped spell is still castable"
+check_expect "] Magic Missile"             "b: the cast menu is the spell list (control)"
+check_reject "] Endure Cold"               "b: the new spell is not castable yet"
 
 # d. Esc discards
 check_screens '*-esc-pre'
@@ -101,18 +99,18 @@ check_expect "Without its spellbook you could not memorize: Alarm, Burning" \
     "d: the rest names the spells it could not memorize"
 check_expect "Endure Cold."                       "d: Endure Cold is among them"
 check_screens '*-cast-nobook'
-check_expect "] (arc)Magic Missile"             "d: the cast menu is the spell list (control)"
-check_reject "] (arc)Endure Cold"               "d: no book, so Endure Cold is not memorized"
-check_reject "] (arc)Convulsion"                "c: the rest forgot the unpicked Convulsion"
+check_expect "] Magic Missile"             "d: the cast menu is the spell list (control)"
+check_reject "] Endure Cold"               "d: no book, so Endure Cold is not memorized"
+check_reject "] Convulsion"                "c: the rest forgot the unpicked Convulsion"
 
 # c, d. the books are back and the second rest applies the selection
 check_screens '*-msgs-rest2'
 check_expect "You awaken feeling well rested" "c: the second rest completed"
 check_screens '*-cast-after'
-check_expect "] (arc)Endure Cold"             "c: the new spell is castable after the rest"
-check_expect "] (arc)Burning Hands"               "d: a spell memorized after the books came back"
-check_expect "] (arc)Alarm"                       "d: a spell memorized after the books came back"
-check_expect "] (arc)Magic Missile"                "c: the grant stays"
-check_reject "] (arc)Convulsion"                   "c: the dropped spell is not castable after the rest"
+check_expect "] Endure Cold"             "c: the new spell is castable after the rest"
+check_expect "] Burning Hands"               "d: a spell memorized after the books came back"
+check_expect "] Alarm"                       "d: a spell memorized after the books came back"
+check_expect "] Magic Missile"                "c: the grant stays"
+check_reject "] Convulsion"                   "c: the dropped spell is not castable after the rest"
 
 check_done "the loadout changes only at a full rest, and needs the spellbook"

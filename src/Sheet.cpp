@@ -1382,8 +1382,7 @@ void TextTerm::CreateCharDump(String &str)
       int mana = (TEFF(theGame->SpellID(ii))->ManaCost);
       ss += Format("  %c%-30s%c %2d  %3d~ %4d %s\n",
                       (p->Spells[ii] & SP_DOMAIN) ? -PURPLE : -BLUE,
-                      (const char*)(String(SpellSrcTagName(srcKinds[si]))
-                          + NAME(theGame->SpellID(ii))), -GREY,
+                      NAME(theGame->SpellID(ii)), -GREY,
                       TEFF(theGame->SpellID(ii))->Level, 
                       j, mana, 
                       (const char*)

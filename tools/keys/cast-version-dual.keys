@@ -13,11 +13,10 @@
 # rows of one spell.
 #
 # THE ROUTE (each @dump label is one assertion screen in the check):
-#   1. 'm' opens the cast menu. The same spell has two rows, tagged
-#      "(arc)Protection from E" and "(div)Protection from E".  cast-menu
-#      @choose the arcane row, which casts it (Protection from Evil has qval 0,
+#   1. 'm' opens the cast menu. The same spell has two rows, Src arc/div.  cast-menu
+#      cursor to the arcane row and ENTER casts it (Protection from Evil has qval 0,
 #      so there is no target prompt).                       after-arcane
-#   2. 'm' opens the menu again; @choose the divine row.    after-divine
+#   2. 'm' opens the menu again; cursor to the divine row and ENTER.    after-divine
 #      'v' reads the message log.                            msgs
 #
 # The CAST_PROBE lines the check reads are written by Creature::Cast at entry,
@@ -26,11 +25,13 @@
 
 m
 @dump:cast-menu
-@choose "(arc)Protection from"
+@cursorto:mark "Protection from Evil   arc" DOWN
+ENTER
 @dump:after-arcane
 m
 @dump:cast-menu-2
-@choose "(div)Protection from"
+@cursorto:mark "Protection from Evil   div" DOWN
+ENTER
 @dump:after-divine
 v
 @dump:msgs
