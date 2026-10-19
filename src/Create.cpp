@@ -3245,6 +3245,8 @@ void Character::HungerProbe()
     oldBH = Abilities[CA_BURNING_HUNGER];
     oldFast = Abilities[CA_FASTING];
     oldHunger = HasStati(HUNGER) ? GetStatiDur(HUNGER) : -1;
+    /* inc-4us6: the character's own, unforced values. */
+    Error("HUNGER_PROBE case=live fasting=%d M=%d", (int)AbilityLevel(CA_FASTING), HungerDrainPercent(false));
 
     /* a. base drain over 17000 turns, driven through the LIVE path: DoTurn()
        itself, not GetHungrier() directly, so disabling the per-turn drain call

@@ -2145,6 +2145,11 @@ Class "Ranger"
       Ability[CA_WOODLAND_STRIDE]       at 3rd level,
       Ability[CA_ANIMAL_COMP]           at every level starting at 1st,
       Ability[CA_SPELLCASTING]          at every 2nd level starting at 4th,
+      // upstream: the Ranger help promises Fasting but this list never granted
+      // it; help and Grants are both upstream data with no platform or typedef
+      // dependence, so Win32 upstream misbehaves the same. Tier Observed
+      // (tools/check_ranger_fasting.sh). inc-4us6. Not sent.
+      Ability[CA_FASTING,+1]            at every level starting at 1st,
       Stati[SPELL_ACCESS,SP_BARDIC,+1]  at every level starting at 3rd;
     Flags: CF_GOOD_FORT, CF_GOOD_REF;
     On Event EV_BIRTH {
