@@ -1,12 +1,12 @@
 #!/bin/bash
 # gate: live
 # inc-cmo5: the port's paged feat toggle must not spend a pick.
-# Seed 7: h toggles 59 -> 225 -> 59 entries; the sheet keeps all three picks.
-# The 225 is the game's total feat count, not part of the toggle behaviour
-# under test; it moved from 224 after inc-08js appended the Cannibalism feat
-# (FT_LAST 362 -> 363). The historical --prove-red measurement below, taken
-# 2026-09-11 before that feat existed, is left reading 224: it records what
-# was actually seen that day.
+# Seed 7: h toggles 59 available feats -> the full list -> 59; the sheet keeps
+# all three picks (Great Fortitude, Alertness, Acrobatic). The full-list total
+# is not hard-coded: the check requires it to exceed the 59 available feats, so
+# appending a feat does not break it. The sheet check names the three picks,
+# not the random starting perk feat. The historical --prove-red measurement
+# below, taken 2026-09-11, is left as seen that day (total then 224).
 # --prove-red removes the conditional pos argument from GainFeat's LMenu call.
 # Measured 2026-09-11, --prove-red (old call, exit 1):
 #   FAIL  0/1 screens carry: [h] (Hide Unavailab
@@ -30,14 +30,22 @@ check_expect '[h] (Show All Feats)'
 check_expect '52-59 of 59'
 check_screens '*-toggle-on'
 check_expect '[h] (Hide Unavailab'
-check_expect '52-102 of 225'
+# N in "52-102 of N" is the full feat list; it must exceed the 59 available.
+total="$(grep -ho -- '52-102 of [0-9]*' "${CHECK_SCREENS[@]}" 2>/dev/null | head -1 | sed 's/.* //')"
+if [ -n "$total" ] && [ "$total" -gt 59 ]; then
+    CHECK_EXPECTS=$((CHECK_EXPECTS + 1))
+    printf '  ok    full feat list shows 52-102 of %s (> 59)\n' "$total"
+else
+    printf '  FAIL  toggle-on screen needs "52-102 of N" with N > 59; found: %s\n' "${total:-no such line}"
+    CHECK_FAIL=1
+fi
 check_screens '*-toggle-off'
 check_expect '[h] (Show All Feats)'
 check_expect '52-59 of 59'
 check_screens '*-sheet-feats'
 check_expect 'Feats:'
 check_expect 'Alertness'
-check_expect 'Iron Will'
+check_expect 'Acrobatic'
 check_expect 'Great Fortitude'
 check_reject 'Battlefield Inspiration'
 check_done 'two toggle keypresses toggle twice and spend no feat pick'

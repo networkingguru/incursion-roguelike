@@ -1210,8 +1210,11 @@ AI_MACRO Effect "AutoLoot" : EA_GENERIC
       the items in your square, both those in chests and on the ground, and
       allow you to mark the ones you would like to pick up. Then it will
       pick the selected items up one by one, placing them in your pack if
-      possible, otherwise bringing up the inventory screen to allow you to
-      select where to put the item before moving on to the next one.";
+      possible. If your pack cannot take an item, it tries any other
+      container you hold in a slot, such as a second pack or a bag on your
+      belt, skipping locked ones. Only when none will take the item does it
+      bring up the inventory screen to allow you to select where to put the
+      item before moving on to the next one.";
     hObj it; bool doneSelect; int16 cKick;
     On Event EV_INITIALIZE {
       doneSelect = false;
@@ -1220,7 +1223,7 @@ AI_MACRO Effect "AutoLoot" : EA_GENERIC
       },
     EV_MACRO {      
       hObj h, h2, pack;
-      int16 i, cnum; 
+      int16 i, cnum; EvReturn r;
       String s; bool found, first;
 
       if (EActor->InSlot(SL_INAIR))
@@ -1372,13 +1375,30 @@ AI_MACRO Effect "AutoLoot" : EA_GENERIC
             }
           if (EActor->isCharacter())
             EActor->SetInvSlot(SL_INAIR,NULL_OBJ);
-          pack = EActor->InSlot(SL_PACK);
-          if (pack != NULL_OBJ && pack->isType(T_CONTAIN)) {
-            if (Throw(EV_INSERT,EActor,NULL_OBJ,pack,it) == DONE) {
+          /* Try the pack slot first, then every other slot in order, with
+             messages off. A locked container is skipped, because inserting
+             into it would start a lock-pick. */
+          for (i=-1;i!=SL_LAST;i++) {
+            if (i == SL_PACK)
+              continue;
+            pack = EActor->InSlot(i == -1 ? SL_PACK : i);
+            if (pack == NULL_OBJ || !pack->isType(T_CONTAIN) ||
+                pack->HasStati(LOCKED))
+              continue;
+            SetSilence();
+            r = Throw(EV_INSERT,EActor,NULL_OBJ,pack,it);
+            UnsetSilence();
+            if (r == DONE) {
               EActor->IPrint("<hObj> taken.", it);
               return DONE;
               }
             }
+          /* Nothing took it: repeat the pack-slot attempt with messages on,
+             so the player sees why it was refused. */
+          pack = EActor->InSlot(SL_PACK);
+          if (pack != NULL_OBJ && pack->isType(T_CONTAIN) &&
+              !pack->HasStati(LOCKED))
+            Throw(EV_INSERT,EActor,NULL_OBJ,pack,it);
           /* Here we tag the item so that if the user drops it in the
              inventory manager, we don't just pick it right up again
              in an infinite loop! */
