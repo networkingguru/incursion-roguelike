@@ -41,11 +41,11 @@ ESC
 
 d       # character sheet
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @expect "Mage 3"

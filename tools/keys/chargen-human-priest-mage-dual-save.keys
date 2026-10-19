@@ -2,7 +2,9 @@
 # Same character as chargen-human-priest-mage-save.keys; after Mage 1 it conjures the book (wizard Item
 # Acquisition), marks both Protection from Evil rows in Learn Spell (Call Companions unmarked to free
 # a level-1 slot), descends to depth 2 + genocides (rest needs both), takes one full rest, and saves.
-# Rows by position in the sorted level-1 list: DOWN*2 = Call Companions, then DOWN*19 = Prot. from Evil (Arcane).
+# The level-1 table sorts by source (Arcane, then Divine), then by name, so Prot.
+# from Evil (Arcane) is row 6, Call Companions (Divine) row 12, and Prot. from
+# Evil (Divine) row 25.
 a       # Initial Choices: [a] Create a New Character
 n       # Alter the character generation options? -- no
 y       # Your options will place the game in Explore Mode. Continue? -- yes
@@ -26,7 +28,7 @@ a a
 @while "|  *" RIGHT RIGHT RIGHT DOWN
 ENTER y
 a       # Personality archetype
-@expect "(Space marks,"    # the starting-spells checklist
+@expect "Learn Spells: Level"    # the starting-spells checklist
 SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
 SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
 ENTER
@@ -65,13 +67,14 @@ ESC
 @until "Things in View" ESC
 d
 L
-DOWN*2
+DOWN*6
 SPACE
-DOWN*19
+DOWN*6
 SPACE
-DOWN
+DOWN*13
 SPACE
 @dump:marked
+ENTER
 ENTER
 @until "Things in View" ESC
 w

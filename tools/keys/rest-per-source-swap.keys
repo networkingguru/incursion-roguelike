@@ -1,9 +1,11 @@
 # inc-4999 phase 3: Priest swap with no book. Read by tools/check_rest_per_source.sh
 # case b. Load tools/fixtures/chars/orc-priest-seed4-gate.sav (not in wizard
 # mode, so `w y` is needed). Descend to depth 2, genocide everything, open Learn
-# Spells (the list is name-sorted; this character holds 6 of 4 level-1 slots),
-# unmark Bane, Bless and Call Companions (the level must drop below 4 before a
-# mark is accepted), mark Detect Evil (row 7), confirm, rest.
+# Spells (the table sorts by source then name; this character holds only divine
+# spells, so the rows are in name order -- this character holds 6 of 4 level-1
+# slots), unmark Bane, Bless and Call Companions (the level must drop below 4
+# before a mark is accepted), mark Detect Evil (row 7), confirm (ENTER opens the
+# summary box, a second ENTER confirms), rest.
 s                       # one real turn: this counts as a session (exit 5 otherwise)
 w y
 @choose "Ascend / Descend Depth"
@@ -23,6 +25,7 @@ SPACE
 DOWN*4
 SPACE
 @dump:swapped
+ENTER
 ENTER
 @until "Things in View" ESC
 @dump:before-rest

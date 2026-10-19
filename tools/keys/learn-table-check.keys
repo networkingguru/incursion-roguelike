@@ -1,0 +1,74 @@
+# inc-g045 phase 4: drives the Learn Spells table for tools/check_learn_table.sh.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/human-priest-mage-dual-seed4-gate.sav \
+#   INCURSION_RUN_DIR=logs/inc-g045-p4 \
+#       tools/headless.sh tools/keys/learn-table-check.keys 4
+#
+# The route reaches the table exactly as tools/keys/spell-tags.keys does: 's'
+# for one real turn, 'm' then ESC for the cast menu, 'd' for the character
+# sheet and 'L' for Learn Spells. The fixture Kethad is Priest 1 / Mage 1, so
+# its table has ONE page, Level 1 (TAB wraps straight back to it).
+#
+#   t1-table        the fixed level 1 page, before any key is pressed
+#   t2-tab          after TAB: still Level 1 -- the only level the fixture has
+#   t2-tab2         after a second TAB: Level 1 again (wrap)
+#   t3-summary      the box on Enter: At your next full rest / Learn: Endure
+#                   Cold (Arcane, L1) / Forget: Protection from Evil
+#                   (Arcane, L1), with no table text inside the walls
+#   t4-table-back   after ESC: the table again, marks as they were
+#   t3-summary-confirm  the same box, drawn again
+#   t5-reopened     after the confirming Enter and 'L' again: Endure Cold
+#                   reads "Learn at rest", the arcane Protection from Evil
+#                   "Forget at rest"
+#   t6-sheet        ENTER with no toggle: no box, straight back to the sheet
+#
+# On the level 1 page the cursor starts on row 0 (Endure Cold, a "[ ]" row).
+# The level has no free slot (3 of 3), so the cursor walks DOWN 6 to the
+# Memorized "Protection from Evil (Arcane)" row and SPACE unmarks it
+# (3 of 3 -> 2 of 3). UP 6 returns to row 0 and SPACE marks Endure Cold.
+# Enter draws the summary box, ESC returns to the table, Enter draws it again,
+# and the second Enter confirms.
+#
+# "L" IS PRESSED TWICE at t5. Confirming the box returns to the character
+# sheet, but the key the box consumed to confirm is still being unwound, and
+# the sheet eats the next token; the second 'L' is what actually opens the
+# table. Whichever of the two the sheet takes, the table is on screen when
+# t5-reopened is dumped.
+#
+# The script ENDS at t6-sheet, on purpose, with no System-Menu save. The check
+# reads only the dumps above it; a save would add keys whose answer depends on
+# the whole flow, and --prove-red's mutation (Enter never draws the box) sends
+# the later keys somewhere else entirely. With no @expect behind them, that
+# divergence cannot turn the run into a "could not measure": it ends cleanly
+# and the T3 assertions are what fail, which is the red result prove-red wants.
+
+s
+
+m
+@dump:cast-menu
+ESC
+
+d
+L
+@dump:t1-table
+TAB
+@dump:t2-tab
+TAB
+@dump:t2-tab2
+DOWN*6
+SPACE
+UP*6
+SPACE
+ENTER
+@dump:t3-summary
+ESC
+@dump:t4-table-back
+ENTER
+@dump:t3-summary-confirm
+ENTER
+L
+L
+@dump:t5-reopened
+ENTER
+@dump:t6-sheet

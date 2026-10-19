@@ -56,7 +56,7 @@ a       # Personality archetype
 # The starting spells. A first-level mage is offered exactly three picks; the
 # specialty spells are already known and are NOT on this list, so these picks
 # are whatever the list opens on. @while rather than three counted a's.
-@expect "(Space marks,"    # the starting-spells checklist
+@expect "Learn Spells: Level"    # the starting-spells checklist
 SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
 SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
 ENTER

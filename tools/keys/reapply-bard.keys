@@ -28,7 +28,7 @@ RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
 ENTER y # leave the Skill Manager and keep the ranks
 @while "wish to worship" n
 @choose "The Witty Thrillseeker"    # personality archetype
-@expect "(Space marks,"    # the bard's first spell: Sleep is row 27 of level 1 by name
+@expect "Learn Spells: Level"    # the bard's first spell: Sleep is row 27 of level 1 by name
 DOWN*26
 SPACE
 @expect "[*] Sleep"
@@ -46,27 +46,27 @@ G
 @while "Bonus To Which Attribute" a
 @while "You feel stronger" SPACE
 @while "Choose a feat" a
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 G
 @while "Bonus To Which Attribute" a
 @while "You feel stronger" SPACE
 @while "Choose a feat" a
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 G
 @while "Bonus To Which Attribute" a
 @while "You feel stronger" SPACE
 @while "Choose a feat" a
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 G
 @while "Bonus To Which Attribute" a
 @while "You feel stronger" SPACE
 @while "Choose a feat" a
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 G
 @while "Bonus To Which Attribute" a
 @while "You feel stronger" SPACE
 @while "Choose a feat" a
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @expect "Class  Bard 6 "
 ESC
 

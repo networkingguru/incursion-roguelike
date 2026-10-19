@@ -19,7 +19,8 @@
 #      UP SPACE: unmark Convulsion. DOWN SPACE: mark Endure
 #      Cold.                                                  swapped
 #      DOWN*10 SPACE: try to unmark Magic Missile (a grant).  locked
-#      ENTER confirms. 'v' reads the message log.             msgs-enter
+#      ENTER opens the "At your next full rest:" box (summary),
+#      a second ENTER confirms. 'v' reads the message log.    msgs-enter
 #      'm' opens the cast menu: Convulsion still castable,
 #      Endure Cold not yet.                                   cast-before
 #   3. Reopen, unmark Alarm, ESC: the change is discarded.    esc-pre, esc-post
@@ -61,6 +62,8 @@ SPACE
 DOWN*10
 SPACE
 @dump:locked
+ENTER
+@dump:summary
 ENTER
 @until "Things in View" ESC
 v

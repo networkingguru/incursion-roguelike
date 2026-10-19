@@ -22,8 +22,12 @@
 #     name column is cut to 22 characters (src/Managers.cpp) and the tag leads,
 #     so the arcane row also proves the tag survives the cut on a long name:
 #     tag+name is 25 characters, the name's tail is lost, the tag is not.
-#   B (Learn Spells). The checklist shows "(arc)Protection from Evil" and
-#     "(div)Protection from Evil" rows.
+#   B (Learn Spells). The Learn Spells table (Term::LearnTable, src/TextTerm.cpp)
+#     shows each held version of Protection from Evil as a table row carrying its
+#     source in the Source column, rather than a tag before the name: one row
+#     reads "Protection from Evil   Arcane" and the other
+#     "Protection from Evil   Divine". A row with no source still keeps no tag
+#     (there is no Source column entry to read either way).
 #   C (character sheet). ESC leaves the sheet, then ESC opens the System Menu
 #     and 'b' is Save and Continue. INCURSION_CHAR_PROBE=1 makes Game::SaveGame
 #     write logs/charprobe.txt -- the character sheet's full "Known Spells"
@@ -67,10 +71,11 @@ check_expect "(div)Protection from" "A: the divine cast-menu row leads with its 
 check_expect "(arc)Protection from E" \
     "A2: the tag survives the 22-character name column on a long name"
 
-# B. the Learn Spell checklist leads every row with its tag.
+# B. the Learn Spells table names each held version's source in its Source
+# column (the table replaced the old "(arc)"/"(div)"-prefixed checklist rows).
 check_screens '*-learn-spells'
-check_expect "(arc)Protection from Evil" "B: the arcane checklist row leads with its tag"
-check_expect "(div)Protection from Evil" "B: the divine checklist row leads with its tag"
+check_expect "Protection from Evil   Arcane" "B: the arcane table row names its source"
+check_expect "Protection from Evil   Divine" "B: the divine table row names its source"
 
 # C. the character sheet's Known Spells list leads each held version with its
 # own tag (and rates that version). charprobe.txt is that whole sheet.

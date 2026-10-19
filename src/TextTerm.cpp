@@ -1818,6 +1818,494 @@ InvalidChar:
     while(1);
 }
 
+/* inc-g045 phase 1: the Learn Spells table widget. A full-width, full-screen
+   table with one page per spell level. This phase builds the widget only; the
+   caller (Player::LearnSpell) still enters through LMultiSelect. */
+bool TextTerm::LearnTable(LearnRow *rows, int16 nRows, const int16 *cap,
+                          bool creation, const char *replayKey,
+                          const char *help) {
+    int16 i, L, p, np, ch, c, vStart, vRows, listBot, descTop, descBot;
+    int16 used, nPage;
+    int16 pages[10];              /* level of each page, ascending */
+    int16 firstRow[10], rowCount[10]; /* page's first index and row count */
+    const char *rkey;
+    String title, refusal;
+    bool refused = false;
+    /* inc-g045 phase 3: the summary box shown on Enter. ent holds each
+       group's entries in array order; group 0 is "at rest / Learn", 1 is
+       "at rest / Forget", 2 is "now, permanently / Learn". */
+    String ent[3][64];
+    int16 cnt[3];
+    String sLines[64];
+    int16 nSL, g, e, bleft, btop, bright, bbot, CW;
+
+    rkey = replayKey ? replayKey : "";
+
+    /* Group the flat array into one page per level that has at least one row.
+       A page holds the rows of its level in the array's order. */
+    np = 0;
+    for (L = 1; L <= 9; L++) {
+        int16 first = -1, count = 0;
+        for (i = 0; i < nRows; i++)
+            if (rows[i].Level == L) {
+                if (first < 0)
+                    first = i;
+                count++;
+            }
+        if (count) {
+            pages[np] = L;
+            firstRow[np] = first;
+            rowCount[np] = count;
+            np++;
+        }
+    }
+    if (np == 0)
+        return false;
+
+    /* inc-g045: replay. Recorded under MO_CREATE keyed by replayKey; a
+       reincarnation replays it here exactly as LMultiSelect/LMenu replay a
+       pick. Clear every non-locked mark first, then set the recorded ones. */
+    if (Mode == MO_RECREATE) {
+        for (i = 0; i < nRows; i++)
+            if (!rows[i].Locked)
+                rows[i].isMarked = false;
+        while (RInf.Rsp[RInf.cRsp].Answer != -1) {
+            ASSERT(strncmp(RInf.Rsp[RInf.cRsp].Question,rkey,31) == 0);
+            int32 ans = RInf.Rsp[RInf.cRsp++].Answer;
+            for (i = 0; i < nRows; i++)
+                if (!rows[i].Locked && rows[i].Val == ans)
+                    rows[i].isMarked = true;
+        }
+        ASSERT(strncmp(RInf.Rsp[RInf.cRsp].Question,rkey,31) == 0);
+        RInf.cRsp++;   /* consume the terminator */
+        return true;
+    }
+
+    PrePrompt();
+
+    p = 0;              /* start on the lowest level's page */
+    c = 0;              /* cursor on that page's first row */
+    vStart = 0;
+    Save();
+    SetWin(WIN_SCREEN);
+    SizeWin(WIN_MENUBOX, 0, 0, WinSizeX() - 1, WinSizeY() - 1);
+    SetWin(WIN_MENUBOX);
+
+    /* How many list rows fit above the description pane. */
+    descBot = WinSizeY() - 4;             /* last description row */
+    descTop = WinSizeY() - 3 - 15;        /* 15 rows tall, clamped below */
+    if (descTop < 2 + 2)                  /* keep at least 2 list rows */
+        descTop = 2 + 2;
+    listBot = descTop - 2;                /* separator sits at descTop-1 */
+    vRows = listBot - 1;                  /* list starts at row 2 */
+
+    do {
+        SetWin(WIN_MENUBOX);
+        Clear();
+
+        /* Outer walls, from the top of the screen. */
+        Color(EMERALD);
+        for (i = 0; i < WinSizeX(); i++) {
+            PutChar(i, 0, GLYPH_STORE_HWALL);
+            PutChar(i, WinSizeY() - 1, GLYPH_STORE_HWALL);
+        }
+        for (i = 1; i < WinSizeY() - 1; i++) {
+            PutChar(0, i, GLYPH_STORE_VWALL);
+            PutChar(WinSizeX() - 1, i, GLYPH_STORE_VWALL);
+        }
+        Color(YELLOW);
+        PutChar(0, 0, GLYPH_SOLID);
+        PutChar(WinSizeX() - 1, 0, GLYPH_SOLID);
+        PutChar(0, WinSizeY() - 1, GLYPH_SOLID);
+        PutChar(WinSizeX() - 1, WinSizeY() - 1, GLYPH_SOLID);
+
+        /* Title, centered in the top border: level N and its slot count. */
+        L = pages[p];
+        used = 0;
+        for (i = 0; i < nRows; i++)
+            if (rows[i].Level == L && rows[i].isMarked && !rows[i].Locked)
+                used++;
+        title = Format(" == Learn Spells: Level %d (%d of %d slots used) == ",
+            (int)L, (int)used, (int)cap[L]);
+        Color(WHITE);
+        Write(max(1, (WinSizeX() - title.GetLength()) / 2), 0, title);
+
+        /* Column header. */
+        Color(WHITE);
+        Write(1, 1, Format("%-14s%-18s%-8s%-13s%4s   %s",
+            "    Pick Spell", "", "Source", "School", "Mana", "Status"));
+
+        /* List, scrolled with the cursor. */
+        SetWin(WIN_MENUBOX);
+        nPage = rowCount[p];
+        if (c >= vStart + vRows)
+            vStart = c - (vRows - 1);
+        if (c < vStart || vStart < 0)
+            vStart = c;
+        for (i = vStart; i < min(nPage, vStart + vRows); i++) {
+            int16 ri = firstRow[p] + i;
+            LearnRow *r = &rows[ri];
+            const char *pick;
+            if (r->Locked || (r->NoMark && !r->isMarked))
+                pick = "   ";
+            else
+                pick = r->isMarked ? "[*]" : "[ ]";
+            Color(r->Color ? (int16)r->Color : WHITE);
+            GotoXY(1, 2 + (i - vStart));
+            Write(Format("  %c %s  %-22.22s %-7.7s %-13.13s%4d   %s",
+                (c == i) ? '>' : ' ', pick,
+                (const char*)r->Spell, (const char*)r->Source,
+                (const char*)r->School, (int)r->Mana,
+                (const char*)(r->isMarked ? r->StatusMarked
+                                          : r->StatusUnmarked)));
+        }
+
+        /* Separator above the description pane. */
+        Color(EMERALD);
+        for (i = 1; i < WinSizeX() - 1; i++)
+            PutChar(i, descTop - 1, GLYPH_STORE_HWALL);
+
+        /* Description pane below the list. */
+        SetWin(WIN_SCREEN);
+        SizeWin(WIN_MENUDESC, 2, descTop, WinSizeX() - 3, descBot);
+        ClearScroll();
+        if (refused) {
+            Color(YELLOW);
+            SWrapWrite(3, 0, XPrint(refusal), WinSizeX() - 6, WIN_MENUDESC);
+        } else {
+            int16 ri = firstRow[p] + c;
+            Color(BLUE);
+            SWrapWrite(3, 0, XPrint(rows[ri].Desc), WinSizeX() - 6, WIN_MENUDESC);
+        }
+        UpdateScrollArea(0, WIN_MENUDESC);
+
+        /* inc-g045 phase 3: a horizontal wall between the description pane and
+           the bottom key line, drawn like the separator above the pane. The
+           pane keeps its 15 rows; the blank row below it holds the wall. */
+        SetWin(WIN_MENUBOX);
+        Color(EMERALD);
+        for (i = 1; i < WinSizeX() - 1; i++)
+            PutChar(i, descBot + 1, GLYPH_STORE_HWALL);
+
+        /* Bottom key line. */
+        SetWin(WIN_MENUBOX);
+        Color(AZURE);
+        if (creation)
+            Write(1, WinSizeY() - 2,
+                "  [Space] Pick  [Tab] Next level  [Enter] Confirm");
+        else
+            Write(1, WinSizeY() - 2,
+                "  [Space] Pick  [Tab] Next level  [Enter] Confirm  [ESC] Cancel");
+
+InvalidChar:
+        {
+            int16 oldMode;
+            oldMode = GetMode();
+            SetMode(MO_DIALOG);
+            ch = GetCharCmd(KY_CMD_ARROW_MODE);
+            SetMode(oldMode);
+            /* A refusal message stays until the next key. */
+            refused = false;
+        }
+
+        switch (ch) {
+        case KY_CMD_NORTHEAST:
+        case KY_CMD_NORTHWEST:
+            SetWin(WIN_MENUBOX);
+            ScrollUp(WIN_MENUDESC);
+            goto InvalidChar;
+        case KY_CMD_SOUTHEAST:
+        case KY_CMD_SOUTHWEST:
+            SetWin(WIN_MENUBOX);
+            ScrollDown(WIN_MENUDESC);
+            goto InvalidChar;
+        case KY_CMD_NORTH:
+            if (nPage) {
+                if (c > 0)
+                    c--;
+                else
+                    c = nPage - 1;
+            }
+            break;
+        case KY_CMD_SOUTH:
+            if (nPage) {
+                if (c < nPage - 1)
+                    c++;
+                else
+                    c = 0;
+            }
+            break;
+        case KY_TAB:
+            /* Next page, wrapping to the first. Cursor goes to its first row. */
+            p++;
+            if (p >= np)
+                p = 0;
+            c = 0;
+            vStart = 0;
+            break;
+        case KY_SPACE:
+            {
+                LearnRow *r = &rows[firstRow[p] + c];
+                if (!r->isMarked) {
+                    if (r->Locked || r->NoMark) {
+                        refused = true;
+                        refusal = r->Reason.GetLength()
+                            ? r->Reason : "That line cannot change.";
+                    } else {
+                        used = 0;
+                        for (i = 0; i < nRows; i++)
+                            if (rows[i].Level == pages[p] && rows[i].isMarked
+                                && !rows[i].Locked)
+                                used++;
+                        if (used >= cap[pages[p]]) {
+                            refused = true;
+                            refusal = Format("Level %d has no free slot.",
+                                (int)pages[p]);
+                        } else {
+                            r->isMarked = true;
+                        }
+                    }
+                } else {
+                    if (r->Locked) {
+                        refused = true;
+                        refusal = r->Reason.GetLength()
+                            ? r->Reason : "That line cannot change.";
+                    } else {
+                        r->isMarked = false;
+                    }
+                }
+            }
+            break;
+        case KY_ENTER:
+            {
+                /* inc-g045 phase 3: no box during creation, and none when no
+                   non-locked row changed. Those confirm at once. */
+                bool changing = false;
+                for (i = 0; i < nRows; i++)
+                    if (!rows[i].Locked
+                        && rows[i].isMarked != rows[i].wasMarked)
+                        changing = true;
+
+                if (creation || !changing) {
+                    Restore();
+                    /* Record the table as Responses so a reincarnation can
+                       replay it. One Response per marked non-locked row,
+                       Question = replayKey, Answer = the row's Val, then one
+                       terminator with Answer = -1. */
+                    if (Mode == MO_CREATE) {
+                        int16 n = 0;
+                        for (i = 0; i < nRows; i++)
+                            if (rows[i].isMarked && !rows[i].Locked)
+                                n++;
+                        if (RInf.nRsp + n + 1 > 128)
+                            Error("LearnTable: replay record full");
+                        else {
+                            for (i = 0; i < nRows; i++)
+                                if (rows[i].isMarked && !rows[i].Locked) {
+                                    strncpy(RInf.Rsp[RInf.nRsp].Question,
+                                        rkey,31);
+                                    RInf.Rsp[RInf.nRsp].Question[31] = 0;
+                                    RInf.Rsp[RInf.nRsp].Answer = rows[i].Val;
+                                    RInf.nRsp++;
+                                }
+                            strncpy(RInf.Rsp[RInf.nRsp].Question,rkey,31);
+                            RInf.Rsp[RInf.nRsp].Question[31] = 0;
+                            RInf.Rsp[RInf.nRsp].Answer = -1;
+                            RInf.nRsp++;
+                        }
+                    }
+                    return true;
+                }
+
+                /* Sort every changed non-locked row into its group, in the
+                   array's order (level 1 first). */
+                cnt[0] = cnt[1] = cnt[2] = 0;
+                for (i = 0; i < nRows; i++) {
+                    LearnRow *r = &rows[i];
+                    String entry;
+                    if (r->Locked || r->isMarked == r->wasMarked)
+                        continue;
+                    entry = Format("%s (%s, L%d)", (const char*)r->Spell,
+                        (const char*)r->Source, (int)r->Level);
+                    if (r->isMarked) {
+                        g = r->Immediate ? 2 : 0;
+                        if (cnt[g] < 64)
+                            ent[g][cnt[g]++] = entry;
+                    } else {
+                        if (cnt[1] < 64)
+                            ent[1][cnt[1]++] = entry;
+                    }
+                }
+
+                /* Build the box's content lines. Empty groups are left out,
+                   and a section is left out when it has no line. */
+                CW = WinSizeX() - 8;
+                if (CW < 20)
+                    CW = 20;
+                nSL = 0;
+                if ((cnt[0] || cnt[1]) && nSL < 64)
+                    sLines[nSL++] = "At your next full rest:";
+                for (g = 0; g < 3; g++) {
+                    const char *pfx;
+                    String cur;
+                    bool firstEnt;
+                    if (!cnt[g])
+                        continue;
+                    if (g == 2) {
+                        if (nSL < 64)
+                            sLines[nSL++] = "Now, permanently:";
+                        pfx = "  Learn:   ";
+                    } else if (g == 0)
+                        pfx = "  Learn:   ";
+                    else
+                        pfx = "  Forget:  ";
+                    cur = pfx;
+                    firstEnt = true;
+                    for (e = 0; e < cnt[g]; e++) {
+                        String cand;
+                        cand = cur;
+                        if (!firstEnt)
+                            cand += ", ";
+                        cand += (const char*)ent[g][e];
+                        if (firstEnt || cand.GetLength() <= CW) {
+                            cur = cand;
+                            firstEnt = false;
+                        } else {
+                            if (nSL < 64)
+                                sLines[nSL++] = cur;
+                            cur = "           ";   /* col after "Learn:   " */
+                            cur += (const char*)ent[g][e];
+                        }
+                    }
+                    if (nSL < 64)
+                        sLines[nSL++] = cur;
+                }
+                if (nSL < 64)
+                    sLines[nSL++] = "[Enter] Confirm  [ESC] Back to the list";
+
+                /* Size the box to its content, and centre it. */
+                CW = 0;
+                for (i = 0; i < nSL; i++)
+                    if ((int16)sLines[i].GetLength() > CW)
+                        CW = (int16)sLines[i].GetLength();
+                bleft = (WinSizeX() - (CW + 4)) / 2;
+                if (bleft < 1)
+                    bleft = 1;
+                btop = (WinSizeY() - (nSL + 2)) / 2;
+                if (btop < 1)
+                    btop = 1;
+                bright = bleft + CW + 3;
+                bbot = btop + nSL + 1;
+
+                SetWin(WIN_SCREEN);
+                Color(EMERALD);
+                for (i = bleft; i <= bright; i++) {
+                    PutChar(i, btop, GLYPH_STORE_HWALL);
+                    PutChar(i, bbot, GLYPH_STORE_HWALL);
+                }
+                for (i = btop; i <= bbot; i++) {
+                    PutChar(bleft, i, GLYPH_STORE_VWALL);
+                    PutChar(bright, i, GLYPH_STORE_VWALL);
+                }
+                Color(YELLOW);
+                PutChar(bleft, btop, GLYPH_SOLID);
+                PutChar(bright, btop, GLYPH_SOLID);
+                PutChar(bleft, bbot, GLYPH_SOLID);
+                PutChar(bright, bbot, GLYPH_SOLID);
+                /* inc-g045 phase 4: blank every cell inside the walls before
+                   writing, so the table underneath cannot show through. One
+                   blank column is left after the left wall, where the text
+                   lines begin at bleft+2. */
+                {
+                    int16 bx, by;
+                    Color(WHITE);
+                    for (by = btop + 1; by <= bbot - 1; by++)
+                        for (bx = bleft + 1; bx <= bright - 1; bx++)
+                            PutChar(bx, by, ' ');
+                }
+                Color(WHITE);
+                for (i = 0; i < nSL; i++) {
+                    GotoXY(bleft + 2, btop + 1 + i);
+                    Write((const char*)sLines[i]);
+                }
+
+                /* Modal: Enter confirms, ESC returns to the table, anything
+                   else is ignored. */
+                {
+                    int16 bch;
+                    bool confirmed = false;
+                    do {
+                        int16 oldMode;
+                        oldMode = GetMode();
+                        SetMode(MO_DIALOG);
+                        bch = GetCharCmd(KY_CMD_ARROW_MODE);
+                        SetMode(oldMode);
+                        if (bch == KY_ESC)
+                            break;
+                        if (bch == KY_ENTER) {
+                            confirmed = true;
+                            break;
+                        }
+                    } while (1);
+
+                    if (confirmed) {
+                        Restore();
+                        if (Mode == MO_CREATE) {
+                            int16 n = 0;
+                            for (i = 0; i < nRows; i++)
+                                if (rows[i].isMarked && !rows[i].Locked)
+                                    n++;
+                            if (RInf.nRsp + n + 1 > 128)
+                                Error("LearnTable: replay record full");
+                            else {
+                                for (i = 0; i < nRows; i++)
+                                    if (rows[i].isMarked && !rows[i].Locked) {
+                                        strncpy(RInf.Rsp[RInf.nRsp].Question,
+                                            rkey,31);
+                                        RInf.Rsp[RInf.nRsp].Question[31] = 0;
+                                        RInf.Rsp[RInf.nRsp].Answer = rows[i].Val;
+                                        RInf.nRsp++;
+                                    }
+                                strncpy(RInf.Rsp[RInf.nRsp].Question,rkey,31);
+                                RInf.Rsp[RInf.nRsp].Question[31] = 0;
+                                RInf.Rsp[RInf.nRsp].Answer = -1;
+                                RInf.nRsp++;
+                            }
+                        }
+                        return true;
+                    }
+                    /* ESC: fall out and let the loop redraw the table on the
+                       same page, cursor, scroll and marks. */
+                }
+            }
+            break;
+        case KY_ESC:
+            if (!creation) {
+                Restore();
+                return false;
+            }
+            break;
+        case KY_HELP:
+            if (help) {
+                Restore();
+                if (!strchr(help,','))
+                    HelpTopic(help);
+                else {
+                    static String a, b;
+                    a = Upto(help,",/");
+                    b = Right(help,strlen(help) - (a.GetLength()+1));
+                    HelpTopic(a,b);
+                }
+                /* inc-g045 phase 2: after help, redraw with the page, cursor
+                   and list scroll where they were; do not reset to the first
+                   row (Restart would). */
+            }
+            break;
+        }
+    }
+    while(1);
+}
+
 int32 TextTerm::FirstSelected()
   {
     cOption = 0;

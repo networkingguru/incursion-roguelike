@@ -64,7 +64,7 @@ a       # Personality archetype
 
 # A bard chooses spells as he levels, which a rogue never does. Every menu
 # below must be answered or the keys after it are spent inside it.
-@expect "(Space marks,"    # the starting-spells checklist
+@expect "Learn Spells: Level"    # the starting-spells checklist
 SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
 SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
 ENTER
@@ -83,31 +83,31 @@ d                       # character sheet
 G
 @while "Bonus To Which Attribute" a
 @while "Choose a feat" a
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 G
 @while "Bonus To Which Attribute" a
 @while "Choose a feat" a
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 G
 @while "Bonus To Which Attribute" a
 @while "Choose a feat" a
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 G
 @while "Bonus To Which Attribute" a
 @while "Choose a feat" a
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 G
 @while "Bonus To Which Attribute" a
 @while "Choose a feat" a
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 G
 @while "Bonus To Which Attribute" a
 @while "Choose a feat" a
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 G
 @while "Bonus To Which Attribute" a
 @while "Choose a feat" a
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @expect "Bard 7"
 @dump:bard7
 

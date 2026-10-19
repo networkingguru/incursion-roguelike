@@ -56,7 +56,7 @@ a       # Personality archetype
 # attempts fill the three slots and ENTER confirms. Character generation asks
 # again until the slots are full, and the run ends on the room description
 # rather than on a spell list when they are.
-@expect "(Space marks,"    # the starting-spells checklist
+@expect "Learn Spells: Level"    # the starting-spells checklist
 SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
 SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
 ENTER
