@@ -96,7 +96,7 @@ ENTER
 
 # --- CAST UNDEATH TO DEATH, AIMED AT T --------------------------------------
 m
-@choose "(pri)Undeath to Death"
+@choose "Undeath to Death"
 RIGHT*3
 @dump:target-prompt
 ENTER

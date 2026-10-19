@@ -20,8 +20,8 @@
 #
 # THE ORACLES:
 #   A (screen). tools/keys/cast-version-dual.keys opens the cast menu ('m'). The
-#     menu must show TWO Protection from Evil rows, tagged "(arc)" and "(div)"
-#     (phase 5: the tag leads every row). A run with no dump exits 2.
+#     menu must show TWO Protection from Evil rows, with Src "arc" and "div"
+#     (the Src column, inc-ympc). A run with no dump exits 2.
 #   B (probe). INCURSION_CAST_PROBE=1 makes Creature::Cast write one errors.log
 #     line at entry per player cast: CAST_PROBE spell=<name> source=<...>. The
 #     script casts the arcane row then the divine row of Protection from Evil.
@@ -63,8 +63,8 @@ LOG="$CHECK_RUN/logs/errors.log"
 
 # A. the menu lists the two held versions of one spell, told apart by tag.
 check_screens '*-cast-menu'
-check_expect "(arc)Protection from" "A: the arcane version is a menu row of its own"
-check_expect "(div)Protection from" "A: the divine version is a menu row of its own"
+check_expect "Protection from Evil   arc" "A: the arcane version is a menu row of its own"
+check_expect "Protection from Evil   div" "A: the divine version is a menu row of its own"
 
 # B. each chosen version reaches Creature::Cast with its own source.
 FAIL=0

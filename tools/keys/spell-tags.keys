@@ -1,5 +1,5 @@
-# inc-4999 phase 5: every player-facing spell list leads each spell row with
-# its short source tag, before the name. Read by tools/check_spell_tags.sh.
+# inc-ympc: the Spell Manager shows each held source in a Src column and no
+# spell list prefixes the name with "(arc)". Read by tools/check_spell_tags.sh.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
 #   INCURSION_LOAD=tools/fixtures/chars/human-priest-mage-dual-seed4-gate.sav \
@@ -13,15 +13,14 @@
 # THE ROUTE (each @dump label is one assertion screen in the check):
 #   1. 's' searches: one real turn, so the session counts as gameplay.
 #   2. 'm' opens the cast menu (the Spell Manager): the two versions
-#      of Protection from Evil read "(arc)Protection from E" and
-#      "(div)Protection from E".                              cast-menu
+#      of Protection from Evil read "Protection from Evil   arc" and
+#      "Protection from Evil   div".                          cast-menu
 #   3. 'd' opens the character sheet, 'L' the Learn Spells
-#      checklist: the Protection from Evil rows lead with "(arc)"
-#      and "(div)".                                           learn-spells
+#      checklist: the Source column reads Arcane and Divine.  learn-spells
 #   4. ESC, ESC return to play; ESC opens the System Menu, 'b' is
 #      Save and Continue, which (under INCURSION_CHAR_PROBE=1)
 #      writes logs/charprobe.txt -- the character sheet's full
-#      "Known Spells" dump, where the two tagged lines show.  saved
+#      "Known Spells" dump, where the two bare-name lines show.  saved
 #
 # Keys that bite: the checklist is reached from the character sheet with 'L'
 # (see tools/keys/mage-loadout-rest.keys). Lowercase 'd' is the character

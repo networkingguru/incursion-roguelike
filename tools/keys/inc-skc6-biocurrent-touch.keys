@@ -26,7 +26,7 @@ w
 ENTER
 
 m
-@choose "(pri)Biocurrent"
+@choose "Biocurrent"
 @dump:after-cast
 
 w

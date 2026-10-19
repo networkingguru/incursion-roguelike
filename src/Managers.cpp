@@ -24,10 +24,22 @@
 
 /* inc-4999 phase 4a: the source kinds a spell can be held from, in the order
    arcane, divine, primal, bardic. SpellHeldSrcs returns the subset of these the
-   spell's flags carry; the tag name comes from SpellSrcTagName (inc/Creature.h,
-   inc-4999 phase 5). */
+   spell's flags carry; the Src column text comes from SpellSrcColumnName below. */
 static const uint16 SpellHeldKinds[4] =
     { SP_ARCANE, SP_DIVINE, SP_PRIMAL, SP_BARDIC };
+
+/* inc-ympc: the Src column text. A held source wins; SP_INNATE names an entry
+   held from no source; anything else (staff, domain, grant) is blank. The
+   SpellSrcTagName is gone: no list prefixes the name. */
+static const char *SpellSrcColumnName(uint16 kind, uint32 flags) {
+    switch (kind) {
+        case SP_ARCANE: return "arc";
+        case SP_DIVINE: return "div";
+        case SP_PRIMAL: return "pri";
+        case SP_BARDIC: return "brd";
+        default:        return (flags & SP_INNATE) ? "inn" : "";
+    }
+}
 
 int16 TextTerm::SpellManager(int16 Purpose) {
     String FeatList, FeatKeys; EventInfo e; String sch, the_name, desc; int16 Key, abKey;
@@ -186,7 +198,7 @@ ProcessSpells:
                             if ((int32)p->QuickKeys[k].Value == version)
                                 Key = '0' + k;
                     }
-                    // Write(0,1,"  Key Spell                  Mana Time Succ CLev Save DC Power & Feats");
+                    // Write(0,1,"  Key Spell                  Src Mana Time Succ CLev Save DC Power & Feats");
                     String myline;
                     String save_string;
                     int KY_color = Key ? -YELLOW : -GREY; 
@@ -249,7 +261,7 @@ ProcessSpells:
                             e.saveDC);
                     } 
 
-                    the_name = String(SpellSrcTagName(srcKind)) + NAME(theGame->SpellID(i));
+                    the_name = String(NAME(theGame->SpellID(i)));
 
                     /* Yes, we want == here -- the fatigue cost does not 
                     apply if you know the spell AND get it from the
@@ -261,13 +273,14 @@ ProcessSpells:
                             the_name += Format(" {%d}",fat);
                     }
 
-                    /* inc-4999 phase 5: the tag leads, so it survives the cut;
-                       a long name loses its end, never the tag. */
+                    /* inc-ympc: the source has its own Src column; the name
+                       is bare and a long one loses its end. */
                     the_name = the_name.Left(22);
                     if (TEFF(e.eID)->HasFlag(EF_VARMANA))
-                        myline = Format("[%c%c%c] %c%-22s%c    %cV%c %c%4d%c %c%3d~%c %c%4d%c %c%.7s%c %s",
+                        myline = Format("[%c%c%c] %c%-22s%c %-3s    %cV%c %c%4d%c %c%3d~%c %c%4d%c %c%.7s%c %s",
                             KY_color, Key ? Key : (ch <= 'z' ? ch : ' '), -GREY,
                             name_color, (const char*)the_name, -GREY,
+                            SpellSrcColumnName(srcKind, p->Spells[i]),
                             -AZURE, -GREY,
                             time_color, time_cost, -GREY,
                             succ_color, j, -GREY,
@@ -276,9 +289,10 @@ ProcessSpells:
                             (const char*)(TEFF(theGame->SpellID(i))->Power(0,p,theGame->SpellID(i)))
                             );
                     else
-                        myline = Format("[%c%c%c] %c%-22s%c %c%4d%c %c%4d%c %c%3d~%c %c%4d%c %c%.7s%c %s",
+                        myline = Format("[%c%c%c] %c%-22s%c %-3s %c%4d%c %c%4d%c %c%3d~%c %c%4d%c %c%.7s%c %s",
                             KY_color, Key ? Key : (ch <= 'z' ? ch : ' '), -GREY,
                             name_color, (const char*)the_name, -GREY,
+                            SpellSrcColumnName(srcKind, p->Spells[i]),
                             mana_color, mana, -GREY,
                             time_color, time_cost, -GREY,
                             succ_color, j, -GREY,
@@ -338,7 +352,7 @@ ProcessSpells:
         Write(WinLeft() + (WinSizeX() / 2) - (strlen(WinTitle)/2),0,WinTitle);
 
         Color(WHITE);
-        Write(0,1,"  Key Spell                  Mana Time Succ CLev Save DC Power & Metamagic");
+        Write(0,1,"  Key Spell                  Src Mana Time Succ CLev Save DC Power & Metamagic");
         Color(GREY);
         for(i=2;i!=WinSizeY()-10;i++)
             // Write(2,i,Text[i + offset - 2]);

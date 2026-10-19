@@ -1,0 +1,81 @@
+# inc-e5ke: get one creature hit by primordial chaos (AD_CHAO) in a seeded
+# session, so the converted EV_DAMAGE the engine re-delivers can be counted.
+# Read the result with tools/check_dmgpost_once.sh.
+#
+#   INCURSION_DMGPOST_PROBE=1 \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav \
+#       tools/headless.sh tools/keys/dmgpost-chaos.keys <seed>
+#
+# THE STAGING. The loaded character is a Lawful Good lizardfolk monk, so a
+# Lawful target: Chaos Hammer ("primordial chaos", lib/pspells.irh, xval
+# AD_CHAO) damages it and then converts to AD_NORM and re-throws the event.
+# Wizard mode (src/Player.cpp KY_CMD_WIZMODE) makes the monk able to cast:
+# Infinite Mana (switch row 7) removes the mana limit and "Learn Any Spell"
+# (src/Debug.cpp case 17) gives him Chaos Hammer. A human (MA_HUMAN, no
+# MA_CHAOTIC and no MA_LAWFUL), summoned one square east with "Monster
+# Summoning" (src/Debug.cpp case 6), stands in the burst so the spell has a
+# creature to strike. The target must NOT be chaotic: src/Fight.cpp:8689
+# breaks out of the AD_CHAO case for a MA_CHAOTIC victim, so a demon such as a
+# ghour converts nothing. A human is neutral, so it takes half damage and
+# still converts, exactly the path this probe counts.
+#
+# THE LEVEL. The spell's damage is (LEVEL_SCALED2)d8, which is 0d8 for a
+# level 1 caster, so the blast must be cast from level 2 or higher. The script
+# turns on Free Advancement and gains one level first (seed 1: two conversions,
+# the player's and the human's, each with two post lines).
+#
+# The spell is aimed one square east with RIGHT ENTER (Q_LOC), the same gesture
+# tools/keys/xsummon-priest-loaded.keys uses for its summoned outsider.
+SPACE*80
+ESC*20
+
+# Wizard mode, Infinite Mana: row 7 of the switch list.
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*2
+SPACE
+DOWN*5
+SPACE
+ESC
+
+# Free Advancement (switch row 2) lets the sheet's G command give the monk a
+# level. At character level 1 the spell's (LEVEL_SCALED2)d8 is 0d8, so the
+# blast does no damage and never reaches the AD_CHAO conversion.
+d
+@dump:sheet-before
+G
+@until "Monk 2" a
+@dump:sheet-after
+ESC
+
+# Learn Chaos Hammer. "Learn Any Spell" opens a text prompt, not a menu, so
+# the name is typed, exactly as tools/keys/xsummon-priest.keys types its spell.
+w
+@choose "Learn Any Spell"
+"Chaos Hammer" ENTER
+@dump:learned
+
+# A human, one square east, standing in the burst. Unlike a demon it is not
+# chaotic, so it takes the AD_CHAO conversion instead of breaking out of the
+# case.
+w
+@choose "Monster Summoning"
+@choose "Humans"
+@choose "human"
+RIGHT ENTER
+@until "HP:" ESC
+@dump:summoned
+
+# Cast Chaos Hammer at the human's square. The cast menu prefixes the school,
+# so the row reads "(pri)Chaos Hammer" and a name-based @choose cannot see it;
+# the single learned spell's key is 'a'.
+m
+a
+RIGHT ENTER
+@dump:cast
+SPACE*3
+@dump:after
+
+@quit

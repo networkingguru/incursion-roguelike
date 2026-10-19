@@ -34,6 +34,11 @@
 #include "Incursion.h"
 #include "HideCheck.h"
 
+/* inc-e5ke: probe the converted damage events Creature::Damage re-delivers
+   with ReThrow(EV_DAMAGE,e). Defined in src/DmgPostProbe.cpp; off unless
+   INCURSION_DMGPOST_PROBE is set. */
+extern void DmgPostConvertProbe(EventInfo &e, int from);
+
 /* inc-1xr3: the nauseated "use Concentration to attack?" confirmation, in
    one place for the three combat sites that ask it. The odds come from
    SkillCheckChance with the same skill and DC the deciding
@@ -8468,10 +8473,12 @@ WoundIgnored:
                                     case AD_VAMP:
                                         if (!e.EActor)
                                         {
+                                            DmgPostConvertProbe(e,AD_VAMP);
                                             e.DType = AD_NORM;
                                             return ReThrow(EV_DAMAGE,e);
                                         }
                                         n = cHP;
+                                        DmgPostConvertProbe(e,AD_VAMP);
                                         e.DType = AD_NECR;
                                         r = ReThrow(EV_DAMAGE,e);
                                         e.DType = AD_VAMP;
@@ -8675,6 +8682,7 @@ WoundIgnored:
                                         if (!e.Terse)
                                             VPrint(e,"Malevolent energies burn at your spirit!",
                                             "Malevolent energies burn at the <EVictim>!");
+                                        DmgPostConvertProbe(e,AD_EVIL);
                                         ReThrow(EV_DAMAGE,e);
                                         break; 
                                     case AD_CHAO:
@@ -8686,6 +8694,7 @@ WoundIgnored:
                                         if (!e.Terse)
                                             VPrint(e,"Primordial chaos lashes at you!", 
                                             "Primordial chaos lashes at the <EVictim>!");
+                                        DmgPostConvertProbe(e,AD_CHAO);
                                         ReThrow(EV_DAMAGE,e);
                                         break;           
                                     case AD_LAWF:
@@ -8697,6 +8706,7 @@ WoundIgnored:
                                         if (!e.Terse)
                                             VPrint(e,"Order's fury binds you!", 
                                             "Order's fury binds the <EVictim>.");
+                                        DmgPostConvertProbe(e,AD_LAWF);
                                         ReThrow(EV_DAMAGE,e);
                                         break;           
                                     case AD_HOLY:
@@ -8714,6 +8724,7 @@ WoundIgnored:
                                         if (!e.Terse)
                                             VPrint(e,"Holy power smites you!",
                                             "Holy power smites the <EVictim>!");
+                                        DmgPostConvertProbe(e,AD_HOLY);
                                         ReThrow(EV_DAMAGE,e);
                                         break;                   
                                     case AD_DRST:
@@ -9171,6 +9182,7 @@ SkipTripSave:
                                             if (!e.Terse)
                                                 VPrint(e,"You choke and cannot breathe!",
                                                 "The <EVictim> chokes and cannot breathe!");
+                                            DmgPostConvertProbe(e,AD_CHOK);
                                             ReThrow(EV_DAMAGE,e);
                                             break; 
                                         } 
@@ -9282,6 +9294,7 @@ SkipSplat:;
                                            arm. The SRD gives falling no stun; Brian ruled on
                                            2026-09-11 that the stun goes from every fall, not just
                                            pits. See bead inc-0hma. */
+                                        DmgPostConvertProbe(e,AD_FALL);
                                         return ReThrow(EV_DAMAGE,e);
                                     case AD_DISN:
                                         xID = FIND("disintegrate");

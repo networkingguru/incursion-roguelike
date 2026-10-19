@@ -41,7 +41,7 @@ RIGHT RIGHT ENTER
 @dump:before-cast
 
 m
-@choose "(pri)Dispel Evil"
+@choose "Dispel Evil"
 @dump:after-cast
 
 RIGHT
