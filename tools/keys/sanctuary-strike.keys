@@ -87,7 +87,7 @@ w
 ENTER
 
 m
-@choose "(pri)Sanctuary"
+@choose "Sanctuary"
 @dump:after-cast
 
 # What the traps actually are, before anything disturbs them.

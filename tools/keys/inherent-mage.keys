@@ -14,7 +14,7 @@ ESC
 @dump:before-cast
 m
 @dump:cast-menu
-@choose "(arc)Mage Armour"
+@choose "Mage Armour"
 @dump:after-cast
 v
 @dump:msgs

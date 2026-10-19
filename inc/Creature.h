@@ -41,20 +41,6 @@ static inline int16 SpellKindSrcCode(uint16 kind) {
         default:        return SP_SRC_NONE;
     }
 }
-/* inc-4999 phase 5: the short source tag shown BEFORE a spell's name in every
-   spell menu, so a long name cannot hide which source the row is held from:
-   "(arc)", "(div)", "(pri)", "(brd)", "(sor)". A kind bit of 0 (innate, staff,
-   a script grant with no kind bit; SP_SORCERY is itself 0) gets no tag. */
-static inline const char *SpellSrcTagName(uint16 kind) {
-    switch (kind) {
-        case SP_ARCANE: return "(arc)";
-        case SP_DIVINE: return "(div)";
-        case SP_PRIMAL: return "(pri)";
-        case SP_BARDIC: return "(brd)";
-        default:        return "";
-    }
-}
-
 struct ActionInfo 
   {
     int8 Act;

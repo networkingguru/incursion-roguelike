@@ -3620,9 +3620,9 @@ Text "help::magic"
      every spell on your class list, and you need no spellbook. Your marks
      work as a Mage's do: a change takes effect at your next full rest, and
      the spells marked 'memorized' are the ones you can cast now. A spell on
-     two of your class lists shows twice, once for each source, such as
-     '(arc)Detect Evil' and '(div)Detect Evil'. Each version you mark uses its
-     own slot. Spells that your class, specialty school or domain grants show
+     two of your class lists shows twice, once for each source. The Source
+     column in the Learn Spells table and the Src column in the Spell Manager
+     tell the two apart. Each version you mark uses its own slot. Spells that your class, specialty school or domain grants show
      locked. They use no slot and need no spellbook.\n\n
      __If you are a Bard, a spell you learn is yours for good. It takes effect
      at once, and the checklist shows it locked. You can mark spells only for
@@ -4058,9 +4058,9 @@ Text "help::magic"
     penalty, is able to cast freely in armor and needs a holy symbol.\n
     __<9>Magic Weapon<3> is on both the Mage and Priest spell lists as a
     1st-level spell, so she can learn it twice, once from each list. Each
-    version uses its own slot and shows its source before its name:
-    '(arc)Magic Weapon' and '(div)Magic Weapon'. The version she casts decides
-    every rule. Cast as arcane, it takes her specialist modifier, suffers the
+    version uses its own slot and has its own row, and the Source column in
+    the Learn Spells table and the Src column in the Spell Manager tell the two
+    apart. The version she casts decides every rule. Cast as arcane, it takes her specialist modifier, suffers the
     armor penalty, uses Intelligence for its save DC and needs no focus. Cast
     as divine, it takes no specialist modifier, has no armor penalty, uses
     Wisdom for its save DC and needs a holy symbol.\n\n

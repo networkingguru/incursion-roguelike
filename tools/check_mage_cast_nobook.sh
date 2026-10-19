@@ -35,8 +35,8 @@ PRIEST=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav
 SEED=1
 
 check_mutation tools/keys/mage-cast-nobook.keys \
-'@choose "(arc)Shield"' \
-'@choose "(arc)Magic Missile"'
+'@choose "Shield"' \
+'@choose "Magic Missile"'
 
 [ -f "$MAGE" ]   || _check_die 2 "no $MAGE to load."
 [ -f "$PRIEST" ] || _check_die 2 "no $PRIEST to load."
@@ -46,7 +46,7 @@ export INCURSION_LOAD="$MAGE"
 check_run tools/keys/mage-cast-nobook.keys "$SEED"
 
 check_screens '*-cast-menu'
-check_expect "] (arc)Shield"                  "A: Shield is in the cast menu (the run got there)"
+check_expect "] Shield"                  "A: Shield is in the cast menu (the run got there)"
 check_screens '*-after-cast'
 check_expect "Mana:"                          "A: the status line is on the dump"
 check_screens '*-after-cast'
