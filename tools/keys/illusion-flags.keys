@@ -81,7 +81,7 @@ SPACE SPACE
 RIGHT
 
 @until "Select Spell" m
-@choose "Improved Spectral Force"
+@choose "Improved Spectral"
 i
 @expect "Target Illusion"
 ENTER

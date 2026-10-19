@@ -16,13 +16,15 @@
 # tools/check_rest_per_source.sh case b.
 #
 # THE ORACLE is the cast menu (the Spell Manager opened with 'm'): it lists only
-# HELD spells. Tracing: the fixture Henk (orc-priest-seed4-gate.sav) is Priest 1;
-# the key script gains Priest 2, whose Learn Spells screen reads "Level 1 - 4 of
-# 5 slots". It marks Detect Evil, confirms, and opens the cast menu without a
-# rest. Preconditions are asserted, so a drifted run exits 2, never 1:
-#   - the Learn screen showed Detect Evil marked ("[*] (div)Detect Evil")
+# HELD spells, by bare name with a Src column. Tracing: the fixture Henk
+# (orc-priest-seed4-gate.sav) is Priest 1; the key script gains Priest 2, whose
+# Learn Spells table reads "Learn Spells: Level 1 (4 of 5 slots used)". It marks
+# Detect Evil, Enter opens the summary box, Enter confirms, and the cast menu
+# opens without a rest. Preconditions are asserted, so a drifted run exits 2:
+#   - the table showed 4 of 5 slots used, then Detect Evil marked ("[*]")
+#   - the summary box named the Detect Evil learn
 #   - the cast menu opened and lists Bane (an already-held spell)
-# Then the verdict: the cast menu must list "(div)Detect Evil".
+# Then the verdict: the cast menu must list "Detect Evil".
 #
 # Usage: tools/check_newlevel_divine_spell.sh
 #   0 the new pick is castable at once   1 it is not   2 could not measure
@@ -36,13 +38,16 @@ export INCURSION_LOAD="$FIXTURE"
 check_run tools/keys/newlevel-divine-mark.keys 4
 
 check_screens '*-before-mark'
-check_expect "Level 1 - 4 of 5 slots" "precondition: the new level has a free level-1 slot" ||
+check_expect "Learn Spells: Level 1 (4 of 5 slots used)" "precondition: the new level has a free level-1 slot" ||
     _check_die 2 "precondition failed: no free slot, so the case is not what it claims."
 check_screens '*-marked'
-check_expect "[*] (div)Detect Evil" "precondition: Detect Evil is marked" ||
+check_expect "[*]  Detect Evil" "precondition: Detect Evil is marked" ||
     _check_die 2 "precondition failed: the mark was not made."
+check_screens '*-summary'
+check_expect "Detect Evil" "precondition: the summary box names Detect Evil" ||
+    _check_die 2 "precondition failed: the summary box did not open on the pick."
 check_screens '*-castmenu'
-check_expect "(div)Bane" "precondition: the cast menu opened and lists a held spell" ||
+check_expect "Bane" "precondition: the cast menu opened and lists a held spell" ||
     _check_die 2 "precondition failed: the cast menu did not open."
-check_expect "(div)Detect Evil" "the new pick is castable with no rest"
+check_expect "Detect Evil" "the new pick is castable with no rest"
 check_done "a divine spell picked into a free slot at level-up is castable without a rest"

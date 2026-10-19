@@ -1,44 +1,31 @@
-#!/bin/bash
 # gate: live
-# inc-4999 phase 5: does every player-facing spell list lead each spell row with
-# its short source tag, before the name?
+# inc-ympc (replaces inc-4999 phase 5's "(arc)" name prefix): does the Spell
+# Manager show each held source in its own Src column, and do the other spell
+# lists show the bare name?
 #
 # WHAT IS BEING GUARDED. A spell is HELD from one or more sources
-# (SP_ARCANE/SP_DIVINE/SP_PRIMAL/SP_BARDIC). Phase 4a gave the Spell Manager and
-# the Learn Spell checklist one row per (spell, source), told apart by a
-# " (Arcane)"/" (Divine)" SUFFIX, and only when a spell had two rows. Phase 5
-# (owner ruling, bead inc-4999 rule 5) puts a SHORT tag BEFORE the name on EVERY
-# row that has a source -- "(arc)", "(div)", "(pri)", "(brd)", "(sor)" -- so a
-# long name cannot hide it. The one helper is Creature.h's SpellSrcTagName
-# (beside the SpellVersion* helpers); a row with no source keeps no tag.
+# (SP_ARCANE/SP_DIVINE/SP_PRIMAL/SP_BARDIC). The Spell Manager ('m',
+# src/Managers.cpp) gives one row per (spell, source). The owner's ruling: a
+# three-letter Src column between Spell and Mana holds arc/div/pri/brd (or inn
+# for an innate entry), and NO spell list prefixes the name with "(arc)".
 #
 # THE CHARACTER is tools/fixtures/chars/human-priest-mage-dual-seed4-gate.sav:
 # Kethad, Priest 1 / Mage 1, holding Protection from Evil from BOTH sources
-# (arcane=1 divine=1), saved in wizard mode at depth 2.
+# (arcane=1 divine=1), saved in wizard mode at depth 2. The innate row is
+# checked by tools/check_spell_src_column.sh (a fixture with SP_INNATE spells).
 #
 # THE ORACLES:
-#   A (cast menu). The Spell Manager ('m') shows the two Protection from Evil
-#     versions as "(arc)Protection from E" and "(div)Protection from E". The
-#     name column is cut to 22 characters (src/Managers.cpp) and the tag leads,
-#     so the arcane row also proves the tag survives the cut on a long name:
-#     tag+name is 25 characters, the name's tail is lost, the tag is not.
-#   B (Learn Spells). The Learn Spells table (Term::LearnTable, src/TextTerm.cpp)
-#     shows each held version of Protection from Evil as a table row carrying its
-#     source in the Source column, rather than a tag before the name: one row
-#     reads "Protection from Evil   Arcane" and the other
-#     "Protection from Evil   Divine". A row with no source still keeps no tag
-#     (there is no Source column entry to read either way).
-#   C (character sheet). ESC leaves the sheet, then ESC opens the System Menu
-#     and 'b' is Save and Continue. INCURSION_CHAR_PROBE=1 makes Game::SaveGame
-#     write logs/charprobe.txt -- the character sheet's full "Known Spells"
-#     dump (TextTerm::CreateCharDump, src/Sheet.cpp) -- whose two Protection
-#     from Evil lines each carry their own tag and rating. The file is copied
-#     beside the screen dumps so check_expect reads it like any other screen.
+#   A (cast menu). The header reads "Spell   Src Mana"; Protection from Evil has
+#     two rows, "Protection from Evil   arc" and "...   div"; no "(arc)" prefix
+#     is drawn; no dumped line is wider than 80 columns.
+#   B (Learn Spells). Unchanged: the Source column reads Arcane / Divine.
+#   C (character sheet). logs/charprobe.txt (INCURSION_CHAR_PROBE=1, written by
+#     Game::SaveGame) lists Protection from Evil twice, each with its own
+#     rating, and no line leads with "(arc)" or "(div)".
 #
 # PROVED RED with --prove-red (docs/VERIFICATION.md step 2). The mutation makes
-# Creature.h's SpellSrcTagName return "" for the arcane case, so every arcane
-# row loses its tag; the "(arc)Protection from" assertions then fail and the
-# check exits 1.
+# SpellSrcColumnName return "" for the arcane case, so the arcane row loses its
+# Src text; the "Protection from Evil   arc" assertion then fails.
 #
 # Usage: tools/check_spell_tags.sh [--prove-red]
 #   0 every expectation holds   1 one fails   2 could not measure
@@ -49,8 +36,8 @@ FIXTURE=tools/fixtures/chars/human-priest-mage-dual-seed4-gate.sav
 KEYS=tools/keys/spell-tags.keys
 SEED=4
 
-check_mutation inc/Creature.h \
-'        case SP_ARCANE: return "(arc)";' \
+check_mutation src/Managers.cpp \
+'        case SP_ARCANE: return "arc";' \
 '        case SP_ARCANE: return "";'
 
 [ -f "$FIXTURE" ] || _check_die 2 "no $FIXTURE to load."
@@ -60,16 +47,23 @@ export INCURSION_LOAD="$FIXTURE"
 export INCURSION_CHAR_PROBE=1
 check_run "$KEYS" "$SEED"
 
-# A. the cast menu leads each held version with its tag, before the name.
+# A. the cast menu: the Src column, the bare name, nothing wider than the box.
 check_screens '*-cast-menu'
-check_expect "(arc)Protection from" "A: the arcane cast-menu row leads with its tag"
-check_expect "(div)Protection from" "A: the divine cast-menu row leads with its tag"
-
-# A2. a long name: tag+name exceeds the 22-character column, so the tag must
-# survive the cut. "(arc)Protection from E" is exactly what the 22-char cut
-# leaves -- the tag is intact and the name's tail is gone.
-check_expect "(arc)Protection from E" \
-    "A2: the tag survives the 22-character name column on a long name"
+check_expect "Spell                  Src Mana" "A: the header puts Src between Spell and Mana"
+check_expect "Protection from Evil   arc" "A: the arcane row has Src arc beside the bare name"
+check_expect "Protection from Evil   div" "A: the divine row has Src div beside the bare name"
+check_reject "(arc)" "A: the cast menu draws no (arc) name prefix"
+check_reject "(div)" "A: the cast menu draws no (div) name prefix"
+for f in "${CHECK_SCREENS[@]}"; do
+    wide="$(awk 'length($0) > 80 { n++ } END { print n + 0 }' "$f")"
+    if [ "$wide" -ne 0 ]; then
+        echo "  FAIL  $wide line(s) wider than 80 columns in $f"
+        CHECK_FAIL=1
+    else
+        CHECK_EXPECTS=$((CHECK_EXPECTS + 1))
+        echo "  ok    no line wider than 80 columns in $(basename "$f")"
+    fi
+done
 
 # B. the Learn Spells table names each held version's source in its Source
 # column (the table replaced the old "(arc)"/"(div)"-prefixed checklist rows).
@@ -77,15 +71,22 @@ check_screens '*-learn-spells'
 check_expect "Protection from Evil   Arcane" "B: the arcane table row names its source"
 check_expect "Protection from Evil   Divine" "B: the divine table row names its source"
 
-# C. the character sheet's Known Spells list leads each held version with its
-# own tag (and rates that version). charprobe.txt is that whole sheet.
+# C. the character sheet's Known Spells list has one line per held version. charprobe.txt is that whole sheet.
 PROBE="$CHECK_RUN/logs/charprobe.txt"
 [ -f "$PROBE" ] || _check_die 2 \
     "no logs/charprobe.txt -- INCURSION_CHAR_PROBE=1 should have made" \
     "Game::SaveGame write one. See $CHECK_RUN."
 cp "$PROBE" "$CHECK_RUN/logs/screens/charprobe-sheet.txt"
 check_screens 'charprobe-sheet'
-check_expect "(arc)Protection from Evil" "C: the sheet's Known Spells has the arcane tagged line"
-check_expect "(div)Protection from Evil" "C: the sheet's Known Spells has the divine tagged line"
+n="$(grep -c 'Protection from Evil' "$PROBE")"
+if [ "$n" -eq 2 ]; then
+    CHECK_EXPECTS=$((CHECK_EXPECTS + 1))
+    echo "  ok    C: the sheet lists Protection from Evil once per held source"
+else
+    echo "  FAIL  C: the sheet has $n Protection from Evil lines, not 2"
+    CHECK_FAIL=1
+fi
+check_reject "(arc)" "C: the sheet draws no (arc) name prefix"
+check_reject "(div)" "C: the sheet draws no (div) name prefix"
 
-check_done "every spell row with a source leads with its tag, and the tag survives a long-name cut"
+check_done "the Spell Manager shows each source in its Src column and no list prefixes the name"

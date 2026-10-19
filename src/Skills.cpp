@@ -190,16 +190,9 @@ void Player::UseMenu(int32 SuppliedIndex) {
 					Lookup(ClassAbilities, ActiveTraits[i] % 1000),
 					total - GetStatiMag(FLAWLESS_DODGE)), i);
 			} else if (ActiveTraits[i] == CA_INNATE_SPELL + ABIL_VAL) {
-				static const uint16 innateHeldKinds[4] =
-					{ SP_ARCANE, SP_DIVINE, SP_PRIMAL, SP_BARDIC };
 				for (j = 0; j != MAX_SPELLS; j++)
 					if (Spells[j] & SP_INNATE) {
-						String tag;
-						for (k = 0; k != 4; k++)
-							if (Spells[j] & innateHeldKinds[k])
-								tag += SpellSrcTagName(innateHeldKinds[k]);
 						str = "Innate <6>";
-						str += tag;
 						str += NAME(theGame->SpellID(j));
 						str += "<7>";
 						MyTerm->LOption(XPrint(str), i + j * 1000);
@@ -209,12 +202,7 @@ void Player::UseMenu(int32 SuppliedIndex) {
 					for (rID sID = tm->FirstRes(AN_INNATE); sID;
 						sID = tm->NextRes(AN_INNATE)) {
 						j = theGame->SpellNum(sID);
-						String tag;
-						for (k = 0; k != 4; k++)
-							if (Spells[j] & innateHeldKinds[k])
-								tag += SpellSrcTagName(innateHeldKinds[k]);
 						str = Format("Innate (%s) <6>", NAME(mID));
-						str += tag;
 						str += NAME(theGame->SpellID(j));
 						str += "<7>";
 						MyTerm->LOption(XPrint(str), i + j * 1000);

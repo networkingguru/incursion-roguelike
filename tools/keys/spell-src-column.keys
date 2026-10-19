@@ -1,0 +1,12 @@
+# inc-ympc: the Spell Manager (cast menu 'm') has a Src column between Spell
+# and Mana. Read by tools/check_spell_tags.sh and tools/check_spell_src_column.sh.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=<fixture>.sav tools/headless.sh tools/keys/spell-src-column.keys 4
+#
+# 's' searches (one real turn), 'm' opens the cast menu, @dump captures it.
+
+s
+m
+@dump:cast-menu
+ESC

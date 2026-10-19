@@ -1396,9 +1396,6 @@ void HelpCustom(String &helpText, Player *p)
                       helpText += XPrint("<15>Level <Str> -- <1>",LNames[l]);
                     }
                   found = true;
-                  /* inc-4999 phase 5: tag each access-list entry with its
-                     source before the name. */
-                  helpText += SpellSrcTagName(ls[i].Type);
                   helpText += NAME(ls[i].spID);
                   helpText += ", ";
                 }
@@ -1415,24 +1412,8 @@ void HelpCustom(String &helpText, Player *p)
             spList[n++] = theGame->SpellID(i);
         
         qsort(spList,n,sizeof(rID),HelpResourceSort);
-        static const uint16 helpHeldKinds[4] =
-            { SP_ARCANE, SP_DIVINE, SP_PRIMAL, SP_BARDIC };
         for (i=0;i!=n;i++)
           {
-            /* inc-4999 phase 5: the tags of every source this spell is held
-               from, e.g. "(arc)(div)". Describe() opens with a colour markup
-               then the name, so a tag cannot be slipped in before the name
-               cleanly; put the tags on a line of their own just above. */
-            int16 spn = theGame->SpellNum(spList[i]);
-            String tags;
-            for (int16 hk=0; hk!=4; hk++)
-                if (p->Spells[spn] & helpHeldKinds[hk])
-                    tags += SpellSrcTagName(helpHeldKinds[hk]);
-            if (tags.GetLength())
-              {
-                helpText += tags;
-                helpText += "\n";
-              }
             helpText += XPrint(TEFF(spList[i])->Describe(p));
             helpText += "\n\n";
           }

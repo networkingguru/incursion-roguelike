@@ -1,10 +1,12 @@
 s
 m
-@choose "(arc)Protection from"
+@cursorto:mark "Protection from Evil   arc" DOWN
+ENTER
 @until "HP:" ESC
 @dump:after-arcane
 m
-@choose "(div)Protection from"
+@cursorto:mark "Protection from Evil   div" DOWN
+ENTER
 @until "HP:" ESC
 @dump:after-divine
 v
