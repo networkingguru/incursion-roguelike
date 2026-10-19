@@ -119,11 +119,9 @@ if run lucubration-mage "$MAGE"; then
     observe books-before "spellbook [Adventurers' Arts]" 'the control book is carried before dropping'
     observe books-gone 'Wand of Identify' 'post-drop inventory was reached'
     observe books-gone 'spellbook [' 'all six books have left the pack' absent
-    # Old row "[*] (arc)Alarm (memorized) (no book)": the table does not append
-    # a no-book marker to a memorized row's Status; Alarm still reads
-    # "Memorized" (old meaning: Alarm remains selected with its unstudied book
-    # absent).
-    observe pending-nobook '[*]  Alarm                  Arcane  Weavecraft      1   Memorized' \
+    # Old row "[*] (arc)Alarm (memorized) (no book)": a held, marked arcane
+    # row whose book is missing reads "Needs book" (inc-g045 ruling).
+    observe pending-nobook '[*]  Alarm                  Arcane  Weavecraft      1   Needs book' \
         'Alarm remains selected with its unstudied book absent'
     # Old "[*] (arc)Endure Cold" among the pending rows.
     observe pending-nobook '[*]  Endure Cold            Arcane  Abjuration      2   Learn at rest' \
