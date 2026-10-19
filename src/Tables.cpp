@@ -4263,11 +4263,12 @@ struct AbilityInfoStruct AbilInfo[] = {
     "cold blast. This bonus does not apply when you cast the spell from a "
     "wand, staff, or scroll rather than from your own known spell list." },
   { CA_FASTING, "Fasting",
-    "You grow hungry more slowly. Each time hunger would advance, the "
-    "chance it does is cut by an amount based on your ability level against "
-    "your challenge rating, roughly two-thirds of that ratio. While merely "
-    "Hungry, if you have gained experience recently, that same drive builds "
-    "your Constitution instead of wearing it down." },
+    "You grow hungry more slowly. Your hunger drain is cut by two-thirds of the "
+    "share of your total levels that grant Fasting, so a character whose every "
+    "level grants it gets hungry at about one-third the normal rate. Normally, "
+    "hunger strains Constitution, but for a character with Fasting who is gaining "
+    "experience, it trains Constitution, so long as the character does not let "
+    "hunger escalate past the Hungry stage." },
   { CA_THIEF_IN_THE_NIGHT, "Thief in the Night",
     "If you handle every piece of magic treasure and coin in a dungeon "
     "region, then leave it without a single monster there ever becoming "
