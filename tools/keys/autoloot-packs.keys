@@ -1,0 +1,8 @@
+# The AutoLootPacksProbe moves the player, so the room-description box opens
+# first: the first SPACE closes it. The macro's loot menu then gets SPACE
+# (mark the one item) and ENTER; ESC leaves any inventory screen.
+SPACE
+SPACE
+ENTER
+ESC*10
+@quit
