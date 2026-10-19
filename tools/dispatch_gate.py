@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse gate for Agent/Task dispatches (bead inc-xiqb).
+"""PreToolUse gate for Agent/Task dispatches (bead inc-xiqb, bead inc-cfnm).
 
 THE RULE. An Agent/Task dispatch that names the DeepSeek-led subagent models
 (the ones this project pays for or inherits) must carry a label, unless it is
@@ -16,6 +16,7 @@ explicitly a haiku dispatch or the emergency bypass is set:
                                        research:
                                        repro-design:
                                        fallback: <run-id>
+                                       budget:
 
   `fallback: <run-id>` spends the DeepSeek retry budget a stopped run left
   behind, and it is only valid when TWO stopped DeepSeek runs exist for the
@@ -25,6 +26,11 @@ explicitly a haiku dispatch or the emergency bypass is set:
   words a fallback needs two stopped DeepSeek runs for the same worktree --
   the earlier one is the right to try again, the named one is what is being
   spent. (`provider` is a run the provider stopped with 429/5xx.)
+
+  `budget: <...>` spends the coding-route budget (bead inc-cfnm) and is
+  allowed ONLY when BOTH hold: the dispatch's `model` is exactly `sonnet`, and
+  tools/claude_budget.py reports `sonnet-first` for the current week. Any other
+  model (or no model) is blocked, and so is a `normal`/`unknown` budget state.
 
 Every Agent/Task call is appended to the dispatch log as one JSON line, so a
 human can see what was dispatched and why it was let through.
@@ -51,7 +57,7 @@ from pathlib import Path
 DEFAULT_LOG = "~/Scripts/Incursion/logs/dispatch-log.jsonl"
 DEFAULT_LEDGER = "~/Scripts/Incursion/logs/deepseek-ledger.jsonl"
 
-LABELS = ("research:", "repro-design:", "fallback:")
+LABELS = ("research:", "repro-design:", "fallback:", "budget:")
 STOPPED = ("loop", "context", "provider")
 
 BLOCK_MESSAGE = (
@@ -60,9 +66,11 @@ BLOCK_MESSAGE = (
     "  research: <...>\n"
     "  repro-design: <...>\n"
     "  fallback: <run-id>\n"
+    "  budget: <...>\n"
     "Only a haiku dispatch is exempt. A fallback needs two stopped DeepSeek\n"
     "runs for the same worktree: an earlier run stopped by `loop`, `context` or\n"
-    "`provider`, and the named run also stopped by one of those.\n"
+    "`provider`, and the named run also stopped by one of those. A budget\n"
+    "dispatch needs model sonnet and a `sonnet-first` weekly budget.\n"
 )
 
 
@@ -98,6 +106,8 @@ def classify_label(description):
         rest = original[len("fallback:"):].strip()
         run = rest.split()[0] if rest.split() else ""
         return "fallback", (run or None)
+    if lowered.startswith("budget:"):
+        return "budget", None
     return "none", None
 
 
@@ -256,6 +266,29 @@ def main():
         reason = check_fallback(rows, run)
         if reason is not None:
             decision = "block"
+    elif label == "budget":
+        if model_raw != "sonnet":
+            decision = "block"
+            reason = "budget label needs model sonnet"
+        else:
+            try:
+                sys.path.insert(0, str(Path(__file__).resolve().parent))
+                import claude_budget
+                verdict = claude_budget.verdict()
+            except Exception as exc:
+                decision = "block"
+                reason = f"budget verdict unavailable: {exc}"
+            else:
+                if verdict.get("state") == "sonnet-first":
+                    pass
+                else:
+                    decision = "block"
+                    state = verdict.get("state")
+                    detail = verdict.get("reason") or (
+                        f"day {verdict.get('day')}, used "
+                        f"{verdict.get('used')}, threshold "
+                        f"{verdict.get('threshold')}")
+                    reason = f"budget is {state}: {detail}"
     else:
         decision = "block"
         reason = "no label"
