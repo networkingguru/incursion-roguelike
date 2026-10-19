@@ -38,7 +38,7 @@ RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
 ENTER y                 # leave the Skill Manager and accept the allocation
 
 @choose "The Witty Thrillseeker"    # personality archetype
-@expect "(Space marks,"    # the bard's first spell: Sleep is row 27 of level 1 by name
+@expect "Learn Spells: Level"    # the bard's first spell: Sleep is row 27 of level 1 by name
 DOWN*26
 SPACE
 @expect "[*] Sleep"

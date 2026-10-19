@@ -1,0 +1,24 @@
+# inc-g045 T7: run by check_learn_table.sh on Kethad's dual-source fixture,
+# seed 4, options-2026-08-22.dat. His only book is pack item 08, Mystic Aegis.
+# Show the held/pending row first, then drop the book without resting and
+# reopen via the character sheet. Dropping it hides unheld arcane rows;
+# DOWN selects the held arcane row.
+# Unmarking a missing-book row remains allowed; its Pick cell then goes blank.
+s
+m
+ESC
+d
+L
+@dump:t7-with-book
+ESC
+@until "Things in View" ESC
+i
+0 8 d
+ESC
+@until "Things in View" ESC
+d
+L
+DOWN
+@dump:t7-needs-book
+SPACE
+@dump:t7-forget

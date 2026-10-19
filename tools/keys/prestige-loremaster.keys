@@ -76,7 +76,7 @@ RIGHT*3
 ENTER y
 
 a       # Personality archetype
-@expect "(Space marks,"    # the starting-spells checklist
+@expect "Learn Spells: Level"    # the starting-spells checklist
 SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
 SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
 ENTER
@@ -96,28 +96,28 @@ d                               # character sheet
 # the sheet, so the level never becomes visible, and 'g' is itself a menu
 # letter, so the stray presses pick spells at random.
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 @expect "Mage 5"
 
@@ -165,7 +165,7 @@ P                               # [P]restige Classes
 # is there, so it has to be stowed before any other key is spent.
 @until "class do you wish to advance" G
 @choose "Loremaster"
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a feat" a
 ESC
 @while "Air':?" s
@@ -173,7 +173,7 @@ ESC
 @until "Skill Ratings" d
 @until "class do you wish to advance" G
 @choose "Loremaster"
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a feat" a
 ESC
 @while "Air':?" s
@@ -181,7 +181,7 @@ ESC
 @until "Skill Ratings" d
 @until "class do you wish to advance" G
 @choose "Loremaster"
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a feat" a
 ESC
 @while "Air':?" s
@@ -189,7 +189,7 @@ ESC
 @until "Skill Ratings" d
 @until "class do you wish to advance" G
 @choose "Loremaster"
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a feat" a
 ESC
 @while "Air':?" s
@@ -197,7 +197,7 @@ ESC
 @until "Skill Ratings" d
 @until "class do you wish to advance" G
 @choose "Loremaster"
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a feat" a
 ESC
 @while "Air':?" s

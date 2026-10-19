@@ -251,6 +251,28 @@ typedef struct LMenuOption {
   int16 Cap;     // inc-j5yo: header group cap; -1 = no cap
 } LMenuOption;
 
+/* inc-g045 phase 1: one row of the Learn Spells table widget (LearnTable).
+   A flat array of these is handed to Term::LearnTable; the widget groups them
+   by Level into one page per level. */
+typedef struct LearnRow {
+  int32 Val;         /* returned to the caller: FirstSelected/NextSelected */
+  int8 Level;        /* 1-9 */
+  String Spell;
+  String Source;
+  String School;
+  int16 Mana;
+  bool isMarked;     /* the live mark */
+  bool wasMarked;    /* the mark when the table opened */
+  bool Locked;       /* cannot mark or unmark */
+  bool NoMark;       /* cannot mark; can unmark */
+  bool Immediate;    /* a pick that takes effect at once */
+  int8 Color;        /* 0 = default menu color */
+  String Reason;     /* refusal text for Space */
+  String Desc;       /* description text, as LMultiSelect's Option Desc */
+  String StatusMarked;
+  String StatusUnmarked;
+} LearnRow;
+
 typedef struct WViewListElt {
   Thing *t;
   int32 dist;
@@ -401,6 +423,7 @@ public:
     /* Formatted Menus (TextTerm.cpp) */
     virtual int32 LMenu(uint16 fl, const char*title,int8 MWin=WIN_MENUBOX, const char*help=NULL, int8 pos = 0)=0;
     virtual bool  LMultiSelect(uint16 fl, const char*title,int8 MWin=WIN_MENUBOX, const char*help=NULL, int8 pos = 0)=0;
+    virtual bool  LearnTable(LearnRow *rows, int16 nRows, const int16 *cap, bool creation, const char *replayKey, const char *help)=0;
     void SetQKeyType(QuickKey *qk, int16 typ) {
         QKeyType = typ;
         QuickKeys = qk;
@@ -677,6 +700,8 @@ public:
         const char*help=NULL, int8 pos = 0);
     virtual bool  LMultiSelect(uint16 fl, const char*title,int8 MWin=WIN_MENUBOX,
         const char*help=NULL, int8 pos = 0);
+    virtual bool  LearnTable(LearnRow *rows, int16 nRows, const int16 *cap,
+        bool creation, const char *replayKey, const char *help);
     virtual void SetQKeyType(QuickKey *qk, int16 typ) { QKeyType = typ;
     QuickKeys = qk; }
 

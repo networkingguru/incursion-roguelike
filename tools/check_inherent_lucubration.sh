@@ -92,12 +92,17 @@ PY
     result "$?" "mana falls by $cost between $before and $after"
 }
 if run inherent-mage "$MAGE"; then
-    observe baseline-checklist '[ ] (arc)Mage Armour' 'Mage Armour starts unmemorized'
+    # Old checklist row "[ ] (arc)Mage Armour": the table row is a "[ ]" Pick
+    # cell with a blank Status.
+    observe baseline-checklist '[ ]  Mage Armour' 'Mage Armour starts unmemorized'
     observe baseline-cast '] (arc)Shield' 'baseline cast menu was reached'
     observe baseline-cast '] (arc)Mage Armour' 'Mage Armour starts uncastable' absent
     observe baseline-inventory "spellbook [Adventurers' Arts]" 'Mage carries the source book'
     observe feat-pick 'Choose an inherent spell:' 'GainFeat opens the inherent pick menu'
-    observe checklist 'Mage Armour (locked) (inherent)' 'Mage Armour is inherent and locked'
+    # Old row "Mage Armour (locked) (inherent)": the table shows a blank Pick
+    # cell with Status "Inherent".
+    observe checklist 'Mage Armour            Arcane  Abjuration      8   Inherent' \
+        'Mage Armour is inherent and locked'
     observe cast-menu '] (arc)Mage Armour' 'Mage Armour becomes castable without resting'
     observe after-cast 'You feel safe.' 'Mage Armour takes effect'
     mana before-cast after-cast 8
@@ -105,23 +110,38 @@ fi
 if run lucubration-mage "$MAGE"; then
     observe book-pick 'Choose a spellbook to study:' 'GainFeat opens the book pick menu'
     observe book-pick '[e] spellbook [Elemental Covenant]' 'the selected book kind is carried'
-    observe selected '[*] (arc)Endure Cold' 'Endure Cold is selected for the next rest'
+    # Old row "[*] (arc)Endure Cold": the table row is a "[*]" Pick cell whose
+    # Status is "Learn at rest".
+    observe selected '[*]  Endure Cold            Arcane  Abjuration      2   Learn at rest' \
+        'Endure Cold is selected for the next rest'
     observe cast-before '] (arc)Alarm' 'unpicked-book control starts memorized'
     observe cast-before '] (arc)Endure Cold' 'Endure Cold is not yet memorized' absent
     observe books-before "spellbook [Adventurers' Arts]" 'the control book is carried before dropping'
     observe books-gone 'Wand of Identify' 'post-drop inventory was reached'
     observe books-gone 'spellbook [' 'all six books have left the pack' absent
-    observe pending-nobook '[*] (arc)Alarm (memorized) (no book)' 'Alarm remains selected with its unstudied book absent'
-    observe pending-nobook '[*] (arc)Endure Cold' 'studied-book selection survives dropping its book'
+    # Old row "[*] (arc)Alarm (memorized) (no book)": the table does not append
+    # a no-book marker to a memorized row's Status; Alarm still reads
+    # "Memorized" (old meaning: Alarm remains selected with its unstudied book
+    # absent).
+    observe pending-nobook '[*]  Alarm                  Arcane  Weavecraft      1   Memorized' \
+        'Alarm remains selected with its unstudied book absent'
+    # Old "[*] (arc)Endure Cold" among the pending rows.
+    observe pending-nobook '[*]  Endure Cold            Arcane  Abjuration      2   Learn at rest' \
+        'studied-book selection survives dropping its book'
     observe rest-msgs 'You awaken feeling well rested and recovered.' 'a full rest completed'
-    observe rest-msgs 'could not memorize: Alarm,' 'rest refuses the unstudied-book control'
+    # The wording gained a lead-in; the meaning is unchanged.
+    observe rest-msgs 'Without its spellbook you could not memorize: Alarm,' \
+        'rest refuses the unstudied-book control'
     observe cast-after '] (arc)Endure Cold' 'studied-book spell is memorized after rest'
     observe cast-after '] (arc)Alarm' 'unstudied-book spell is not memorized after rest' absent
 fi
 if run inherent-priest "$PRIEST"; then
     observe symbol-gone ')Neck         :Empty' 'Priest drops the holy symbol before taking the feat'
     observe feat-pick 'Choose an inherent spell:' 'Priest reaches the inherent pick menu'
-    observe freed-slot 'Call Light (locked) (inherent)' 'Call Light is the inherent pick'
+    # Old row "Call Light (locked) (inherent)": blank Pick cell with Status
+    # "Inherent".
+    observe freed-slot 'Call Light             Divine  Evocation       1   Inherent' \
+        'Call Light is the inherent pick'
     observe cast-menu '] (div)Call Light' 'Call Light remains castable'
     observe after-cast 'A bright golden radiance illuminates the area.' 'Call Light casts without the holy symbol'
     mana cast-menu after-cast 1

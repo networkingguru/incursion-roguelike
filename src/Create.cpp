@@ -5887,20 +5887,42 @@ static void SpellSyncKnown(uint32 *f) {
         *f &= ~SP_KNOWN;
 }
 
+/* inc-g045 phase 2: the Learn Spells table labels each row with a long source
+   name and orders rows by that label, alphabetically. */
+static const char *LearnSrcLabel(uint16 kind) {
+    switch (kind) {
+        case SP_ARCANE: return "Arcane";
+        case SP_DIVINE: return "Divine";
+        case SP_PRIMAL: return "Primal";
+        case SP_BARDIC: return "Bardic";
+        default:        return "";
+    }
+}
+static int16 LearnSrcRank(uint16 kind) {
+    switch (kind) {
+        case SP_ARCANE: return 0;   /* Arcane */
+        case SP_BARDIC: return 1;   /* Bardic */
+        case SP_DIVINE: return 2;   /* Divine */
+        case SP_PRIMAL: return 3;   /* Primal */
+        default:        return 4;
+    }
+}
+
 bool Player::LearnSpell(bool left) {
     bool areSpells, noBook, hasBook, known, marked, reMem, locked, inherent;
     bool anyReMem, changed, learnedFill, reChanged, markable;
     int16 i, n, L, cap, bardHeld, nRows, nEmitted;
-    int32 sn, v;
+    int32 sn;
     uint32 f, before, fl, pendBit;
     int8 color;
     Item *it;
     LearnableSpell *ls = CalcSpellAccess();
     unsigned char *st = NULL;
     int16 *ord = NULL, k;
-    String menu_name;
+    LearnRow *rows = NULL;
+    int16 myCap[10];
     String levelReason[10];
-    const char *title, *reason;
+    const char *replayKey, *reason;
 
     /* Row state, one byte per ls entry. */
     enum { LS_PASS = 1, LS_REMEM = 2, LS_LOCKED = 4, LS_NOBOOK = 8,
@@ -5930,8 +5952,9 @@ bool Player::LearnSpell(bool left) {
         free(ls);
         return false;
     }
-    /* Row order inside a level: by spell name, case-insensitive (the old
-       menu was MENU_SORTED), so "mark the first K rows" is deterministic. */
+    /* inc-g045 phase 2: row order inside a level is by source (alphabetical by
+       the source label: Arcane, Bardic, Divine, Primal), then by spell name,
+       case-insensitive. "Mark the first K rows" stays deterministic. */
     ord = (int16*)calloc(n + 1, sizeof(int16));
     if (!ord) {
         Error("LearnSpell: out of memory");
@@ -5942,7 +5965,10 @@ bool Player::LearnSpell(bool left) {
     }
     for (i = 0; i < n; i++) {
         for (k = i; k > 0; k--) {
-            int cmp = strcasecmp(NAME(ls[ord[k-1]].spID), NAME(ls[i].spID));
+            int sr = LearnSrcRank(ls[ord[k-1]].Type)
+                   - LearnSrcRank(ls[i].Type);
+            int cmp = sr ? sr
+                         : strcasecmp(NAME(ls[ord[k-1]].spID), NAME(ls[i].spID));
             if (cmp < 0 || (cmp == 0 && ls[ord[k-1]].Type <= ls[i].Type))
                 break;
             ord[k] = ord[k-1];
@@ -6042,10 +6068,15 @@ bool Player::LearnSpell(bool left) {
             st[i] |= LS_NOBOOK;
     }
 
-    /* Emit one header per level that has a row, then its rows. */
+    /* inc-g045 phase 2: build the LearnRow array, one row per emitted spell,
+       grouped by level 1-9 in the new sort order, plus cap[L]. */
     anyReMem = false;
     markable = false;
     nEmitted = 0;
+    myCap[0] = 0;
+    for (L = 1; L <= 9; L++)
+        myCap[L] = 0;
+    rows = new LearnRow[n + 1];
     for (L = 1; L <= 9; L++) {
         nRows = 0;
         bardHeld = 0;
@@ -6072,12 +6103,9 @@ bool Player::LearnSpell(bool left) {
         cap = SpellSlots[L-1] + BonusSlots[L-1] - bardHeld;
         if (cap < 0)
             cap = 0;
+        myCap[L] = cap;
 
         levelReason[L] = Format("Level %d has no free slot.", (int)L);
-        MyTerm->LOption(Format("Level %d - %%d of %%d slots", (int)L), 1000 + L, "", 0);
-        MyTerm->LOptionFlags(MO_HEADER, 0);
-        MyTerm->LOptionCap(cap);
-        MyTerm->LOptionReason((const char*)levelReason[L]);
 
         for (k = 0; k < n; k++) {
             i = ord[k];
@@ -6092,18 +6120,6 @@ bool Player::LearnSpell(bool left) {
             pendBit = SpellPendBit(ls[i].Type);
             known = (f & ls[i].Type) != 0;
             inherent = (f & SP_INHERENT) != 0;
-
-            /* inc-4999 phase 5: every row leads with its source tag, so a long
-               name cannot hide it; a source-less row (no kind bit) gets none. */
-            menu_name = String(SpellSrcTagName(ls[i].Type)) + NAME(ls[i].spID);
-            if (reMem && known)
-                menu_name += " (memorized)";
-            if (locked)
-                menu_name += " (locked)";
-            if (inherent)
-                menu_name += " (inherent)";
-            if (noBook)
-                menu_name += " (no book)";
 
             fl = 0;
             color = 0;
@@ -6146,11 +6162,63 @@ bool Player::LearnSpell(bool left) {
             if ((fl & MO_NOMARK) && marked)
                 markable = true;
 
-            MyTerm->LOption(menu_name, i + 1, TEFF(ls[i].spID)->Describe(thisp), 0);
-            MyTerm->LOptionFlags(fl, color);
-            MyTerm->LOptionMark(marked);
-            if (reason)
-                MyTerm->LOptionReason(reason);
+            {
+                LearnRow *r = &rows[nEmitted];
+                bool imm = (!reMem && !locked) || left;
+                bool isNoMark = (fl & MO_NOMARK) != 0;
+
+                r->Val = i + 1;
+                r->Level = ls[i].Level;
+                r->Spell = NAME(ls[i].spID);
+                r->Source = LearnSrcLabel(ls[i].Type);
+                r->School = "";
+                for (int32 si = 0; SchoolNames[si].Text; si++)
+                    if (TEFF(ls[i].spID)->Schools & SchoolNames[si].Val) {
+                        r->School = SchoolNames[si].Text;
+                        break;
+                    }
+                r->Mana = getSpellMana(ls[i].spID, 0, NULL, ls[i].Type);
+                r->isMarked = marked;
+                r->wasMarked = marked;
+                r->Locked = locked;
+                r->NoMark = isNoMark;
+                r->Immediate = imm;
+                r->Color = color;
+                r->Reason = reason ? reason : "";
+                r->Desc = TEFF(ls[i].spID)->Describe(thisp);
+
+                /* Status strings, first match wins. */
+                if (inherent) {
+                    r->StatusMarked = "Inherent";
+                    r->StatusUnmarked = "Inherent";
+                } else if (f & (SP_GRANTED|SP_DOMAIN)) {
+                    r->StatusMarked = "Class grant";
+                    r->StatusUnmarked = "Class grant";
+                } else if (locked) {
+                    r->StatusMarked = "Bardic";
+                    r->StatusUnmarked = "Bardic";
+                } else if (isNoMark && !known) {
+                    r->StatusMarked = "No spellbook";
+                    r->StatusUnmarked = "No spellbook";
+                } else if (imm) {
+                    if (left && known) {
+                        r->StatusMarked = "Memorized";
+                        r->StatusUnmarked = "";
+                    } else {
+                        r->StatusMarked = "Learn now";
+                        r->StatusUnmarked = "";
+                    }
+                } else if (reMem && known) {
+                    r->StatusMarked = noBook ? "Needs book" : "Memorized";
+                    r->StatusUnmarked = "Forget at rest";
+                } else if (reMem && !known) {
+                    r->StatusMarked = "Learn at rest";
+                    r->StatusUnmarked = "";
+                } else {
+                    r->StatusMarked = "";
+                    r->StatusUnmarked = "";
+                }
+            }
             st[i] |= LS_EMIT;
             nEmitted++;
             if (reMem)
@@ -6165,34 +6233,34 @@ bool Player::LearnSpell(bool left) {
         else
             IPrint("You have no spellbooks with unlearned spells for the "
                 "spell slots you have open.");
+        delete[] rows;
         free(ls);
         free(st);
         free(ord);
         return false;
     }
 
-    if (left)
-        title = "Choose your starting spells (Space marks, Tab next level, Enter confirms)";
-    else if (anyReMem)
-        title = "Choose spells for your next rest (Space marks, Tab next level, Enter confirms)";
-    else
-        title = "Learn spells (Space marks, Tab next level, Enter confirms)";
+    replayKey = left
+        ? "Choose your starting spells (Space marks, Tab next level, Enter confirms)"
+        : (anyReMem
+            ? "Choose spells for your next rest (Space marks, Tab next level, Enter confirms)"
+            : "Learn spells (Space marks, Tab next level, Enter confirms)");
 
-    fl = MENU_DESC | MENU_BORDER;
-    if (!left)
-        fl |= MENU_ESC;
-    if (!MyTerm->LMultiSelect(fl, title, WIN_MENUBOX, "help::magic,LE")) {
-        MyTerm->LOptionClear();
+    if (!MyTerm->LearnTable(rows, nEmitted, myCap, left, replayKey,
+                            "help::magic,LE")) {
+        delete[] rows;
         free(ls);
         free(st);
         free(ord);
         return false;
     }
 
-    for (v = MyTerm->FirstSelected(); v; v = MyTerm->NextSelected())
-        if (v >= 1 && v < 1000 && v <= n && (st[v-1] & LS_EMIT))
-            st[v-1] |= LS_MARK;
-    MyTerm->LOptionClear();
+    /* A row's LS_MARK is set when its LearnRow is marked after the table. */
+    for (i = 0; i < nEmitted; i++)
+        if (rows[i].isMarked && rows[i].Val >= 1 && rows[i].Val <= n
+            && (st[rows[i].Val - 1] & LS_EMIT))
+            st[rows[i].Val - 1] |= LS_MARK;
+    delete[] rows;
 
     /* Apply the marks. Locked rows never change. */
     changed = false;

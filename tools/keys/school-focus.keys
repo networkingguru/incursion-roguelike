@@ -89,7 +89,7 @@ a       # Personality archetype
 # outright -- it is the one first-level illusion the offered list does NOT
 # carry -- so these picks are whatever the list opens on, and the cast below
 # is what proves the spell is really known.
-@expect "(Space marks,"    # the starting-spells checklist
+@expect "Learn Spells: Level"    # the starting-spells checklist
 SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
 SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
 ENTER

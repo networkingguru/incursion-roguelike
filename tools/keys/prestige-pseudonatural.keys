@@ -84,7 +84,7 @@ a       # Personality archetype
 # five marked spells are the five the old menu produced: Alarm, Mount and
 # Spiritwrack by name, then the first two rows left. The guard below stops the
 # run if a row moved.
-@expect "(Space marks,"
+@expect "Learn Spells: Level"
 SPACE DOWN SPACE DOWN SPACE
 DOWN*9
 SPACE
@@ -108,28 +108,28 @@ d                               # character sheet
 # menus cover the sheet -- so the level never becomes visible, and 'g' is
 # itself a menu letter, so the stray presses pick spells at random.
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 G
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 @expect "Mage 5"
 
@@ -157,32 +157,32 @@ P                               # [P]restige Classes
 @choose "Alienist"
 @expect "Alienist 0"            # the gate let him in
 
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @until "class do you wish to advance" G
 @choose "Alienist"
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @until "class do you wish to advance" G
 @choose "Alienist"
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @until "class do you wish to advance" G
 @choose "Alienist"
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @until "class do you wish to advance" G
 @choose "Alienist"
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @until "class do you wish to advance" G
 @choose "Alienist"
-@while "(Space marks," ESC
+@while "Learn Spells: Level" ESC
 @while "Choose a bonus metamagic" a
 @while "Choose a feat" a
 @expect "Alienist 5"

@@ -130,7 +130,7 @@ if [ "$(bit 1 $OLD divine)" != "1" ] || [ "$(bit 1 $NEW divine)" = "1" ]; then
         "The fixture or the key script drifted."
 fi
 if ! cat "$CHECK_RUN"/logs/screens/*swapped.txt 2>/dev/null |
-        grep -q '\[\*\] (div)Detect Evil'; then
+        grep -qF '[*]  Detect Evil            Divine'; then
     _check_die 2 "case b: the Learn Spells screen did not show Detect Evil" \
         "marked, so the swap was not made. See $CHECK_RUN."
 fi

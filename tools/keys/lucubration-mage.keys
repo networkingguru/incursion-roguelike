@@ -18,6 +18,8 @@ L
 DOWN*3 SPACE
 @dump:selected
 ENTER
+@dump:summary
+ENTER
 @until "Things in View" ESC
 m
 @dump:cast-before
