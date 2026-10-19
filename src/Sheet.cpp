@@ -657,6 +657,14 @@ void TextTerm::CreateCharSheet(CharSheet &cs)
       case WATER_WALKING: 
         cs.sSpecials += ("  Water Walking\n");
         break;
+      // upstream: this switch and the Perception section below had no branch for
+      // WATER_BREATHING / TRUE_SIGHT, so the sheet hid both from every source;
+      // a data/logic omission, identical on Win32 with the original typedefs
+      // and compiler. Observed (tools/check_sheet_water_true_sight.sh red,
+      // then green); bd inc-frhx; not sent to rmtew.
+      case WATER_BREATHING:
+        cs.sSpecials += ("  Water Breathing\n");
+        break;
       case SEE_INVIS: 
         cs.sSpecials += ("  See Invisibility\n");
         break;
@@ -739,6 +747,8 @@ void TextTerm::CreateCharSheet(CharSheet &cs)
 
   if (p->HasStati(SEE_INVIS) || p->HasMFlag(M_SEE_INVIS)) 
     cs.sPerception += ("  Sees Invisibility\n");
+  if (p->TrueSightRange() > 0) cs.sPerception +=
+    Format("  True Sight Range:   %3d ft\n", p->TrueSightRange() * 10);
   if (p->HasAbility(CA_NATURE_SENSE))
     cs.sPerception += ("  Sees Through Obscuring Terrain\n");
 
