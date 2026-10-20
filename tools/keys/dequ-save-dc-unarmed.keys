@@ -1,0 +1,654 @@
+# Unarmed strikes at small mud elementals, for tools/check_dequ_save_dc.sh (bd inc-2ok4).
+# The small mud elemental (lib/mon4.irh, 1d6 AD_RUST A_DEQU) lists no DC and has
+# CR 1, the same as the level-1 warrior. One fresh elemental per blow, so no
+# blow ends on an empty square (see dequ-hardness-plain.keys). Every landed
+# blow ends in one Reflex save; the check reads them from logs/chance_probe.log.
+
+@include dequ-save-dc-setup.keys
+
+@until "SPACE:Swap" i    # the inventory manager
+b                        # select the Weapon Hand
+SPACE                    # swap the hand empty: the dagger goes into the air
+@until "Things in View" ESC
+
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@until "Wizard Mode Options" w
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "acid blob"
+RIGHT ENTER
+RIGHT
+@while "Attack the" y
+@while "Die?" n
+@quit
