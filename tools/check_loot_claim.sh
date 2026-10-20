@@ -10,7 +10,9 @@
 #    player stands in the room and sees the drop.
 # B  a hostile orc takes a drop of the player's kill while the claim is live,
 #    then flees (Cause Fear). Attacking it must raise no fleeing-victim prompt
-#    and no "guilty" penalty for the Lawful Good paladin.
+#    and no "guilty" penalty for the Lawful Good paladin. The orc is made to
+#    loot by hiding the paladin (Invisibility), so a visible enemy does not win
+#    the AI's target draw; the pickup is awaited with a bound, not a turn count.
 # B0 control: the same fleeing orc holding no claimed item. The prompt or the
 #    penalty MUST still appear, before and after the feature.
 # C  control: a drop that is NOT from a party kill is still taken. It proves the
@@ -27,7 +29,7 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-SEED=4
+SEED="${SEED:-4}"
 OPTS=tools/fixtures/options-2026-08-22-noroomdesc.dat
 CHAR=tools/fixtures/chars/human-paladin-seed4-opt0822.sav
 STAMP="$(date +%Y%m%d-%H%M%S)-$$"
@@ -239,15 +241,15 @@ try:
     seen = [i for i in items if i in floor_items(outside)]
     if seen:
         raise ValueError('the player still sees the drops from outside: %s' % seen)
-    back = screen('D', 'back')
-    gone = [i for i in items if i not in floor_items(back)]
+    waited = screen('D', 'waited')
+    gone = [i for i in items if i not in floor_items(waited)]
     attack = screen('D', 'attack')
     prompt = [t for t in (l.split('|')[0].strip() for l in attack)
               if t.startswith('Confirm attack the human')]
     declined = screen('D', 'declined')
     if not any('Confirm attack' in l.split('|')[0] for l in attack):
         raise ValueError('no attack prompt and no attack was captured')
-    ev = 'floor after the kill: %s; gone after the player returned: %s; prompt: %s' % (
+    ev = 'floor after the kill: %s; gone after the human looted: %s; prompt: %s' % (
         items, gone or 'none', prompt or 'none')
     if not gone:
         results['D'] = ('FAIL', 'the claim never ended: the human did not take the drops while the player was out of view. ' + ev)

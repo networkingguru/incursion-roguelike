@@ -11,12 +11,17 @@
 #
 # SCENARIO B. The paladin kills a kobold and steps three squares east of the
 # stairs, still in the room and in view of the drops. A black orc is summoned
-# ON the drop square, so it need not walk or choose between throwing and
-# moving. Monsters unfreeze for ONE turn: the orc takes the drops while the
-# claim is live (only a hostile creature may). Monsters freeze again, the
-# paladin casts Cause Fear on the orc until the log says it is terrified, walks
-# up and attacks it. With the feature the orc is a thief and the attack raises
-# no prompt and no penalty. Today it asks "Confirm attack fleeing victim?".
+# ON the drop square, so it need not walk. The paladin casts Invisibility on
+# itself FIRST: a visible player is a high-priority enemy target and the orc
+# throws its javelin at him instead of looting (measured: seed 4, "black orc
+# throws a ? orcish javelin"). With the player unseen, the only rated target is
+# the floor item, so the orc takes the drop (only a hostile creature may). The
+# wait is BOUNDED by "@until ... picks up" rather than a fixed turn count, so
+# the pickup does not depend on which random candidate the AI draws. Monsters
+# freeze again, the paladin casts Cause Fear on the orc until the log says it
+# is terrified, walks up and attacks it. With the feature the orc is a thief
+# and the attack raises no prompt and no penalty. Today it asks "Confirm attack
+# fleeing victim?".
 
 @dump:arrival
 w
@@ -46,17 +51,26 @@ LEFT*4 ENTER
 
 
 w
+@choose "Learn Any Spell"
+"Invisibility"
+ENTER
+m
+@choose "Invisibility"
+ENTER
+@dump:invisible
+
+w
 @choose "Wizard Mode Switches"
 DOWN*10 SPACE           # Freeze Monsters OFF
 @dump:switches-2
 ESC
-.                       # one turn: the orc acts once, standing on the drops
+@until "black orc picks up" .   # bounded: the orc loots instead of attacking
+@dump:taken
 w
 @choose "Wizard Mode Switches"
 DOWN*10 SPACE           # Freeze Monsters ON again
 @dump:switches-3
 ESC
-@dump:taken
 
 w
 @choose "Learn Any Spell"
