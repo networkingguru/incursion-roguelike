@@ -55,7 +55,7 @@ A `Glyph` is a `uint32`: 12 bits of glyph id, 4 of foreground, 4 of background
 backend cannot do that — it stores the character its glyph table produced, so
 `GetGlyph` → `PutGlyph` round trips lose the glyph id. The callers
 (`src/Term.cpp:2276`, `src/Magic.cpp:1635`, `src/Skills.cpp:2129`,
-`src/Skills.cpp:3098`) mask with `GLYPH_ID_MASK` and put the result back, so
+`src/Skills.cpp:3099`) mask with `GLYPH_ID_MASK` and put the result back, so
 exactness is what they want.
 
 This also means the rendering target is not the screen model. The same array
@@ -85,7 +85,7 @@ comment. Tokens:
 | `@dump` `@dump:label` | write the current screen to `logs/screens/` |
 | `@quit` | leave the game at the next key read |
 
-SHIFT matters and is not cosmetic. `StandardKeySet` (`src/Tables.cpp:5337`)
+SHIFT matters and is not cosmetic. `StandardKeySet` (`src/Tables.cpp:5350`)
 matches `toupper(ch)` against `raw_key` and then compares the modifier flags
 exactly, so `{ KY_CMD_ALL_ALLIES, 'A', 0 }` is reached by lowercase `a` and
 *not* by `A`. A script that ignored SHIFT would silently dispatch the wrong
