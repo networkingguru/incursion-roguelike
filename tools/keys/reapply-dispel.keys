@@ -6,6 +6,21 @@
 # and that nested removal drops an unrelated row (inc-2k0c, not this bead).
 # The spell targets the wearer, suppressing the item via its SS_ITEM row.
 # Wait for the named fade message, rather than assuming a duration elapsed.
+#
+# THE DECIPHER ROLL. Reading any scroll first rolls SkillCheck(SK_DECIPHER,
+# 10 + sLevel + rlm) (src/Magic.cpp:6032). A 1st-level orc barbarian has a
+# tiny Decipher bonus (the passing run reads it as +1), and on this seed the
+# check has failed, printing "The magic runs amok!" and spending the scroll
+# with no Dispel at all -- so S4 measured nothing. The roll is staged around
+# instead of fixed: the pack is stocked with several Scrolls of Dispel Magic
+# (they stack) and the read is retried, bounded, until one succeeds. Success
+# removes the Bloodspear's SS_ITEM row and sets the item's DISPELLED temp
+# stati (src/Effects.cpp:1172), so a later successful read finds no SS_ITEM
+# row left to dispel and prints no second aura; the retry therefore stops on
+# the first success, leaving the "dull grey aura" line as the last message
+# for the `dispelled` dump. @while bodies admit only ordinary keys, so the
+# retry body names the menu letter directly: with a single readable stack the
+# use menu offers it as [a] (checked in logs/screens/.../read-menu.txt).
 @include chargen.keys
 
 d
@@ -36,24 +51,73 @@ ESC
 d
 @dump:orc-sheet-with-bloodspear
 ESC
+# Five Scrolls of Dispel Magic, bought one at a time. They stack, so the
+# pack holds one entry whose count drops with each read; the retry body below
+# names the menu letter, not the count. A buy that will not stack (the first,
+# with an empty pack) opens the inventory manager, whose two lines stow it and
+# close; a later buy that stacks opens nothing and both lines fire zero times.
 w
 @choose "Item Acquisition"
 RIGHT
 @until "Scroll of Dispel Magic" DOWN
 DOWN
 ENTER
-s
-ESC
+@while "In the Air':Scroll" s
+@while "Ready Hand" ESC
+w
+@choose "Item Acquisition"
+RIGHT
+@until "Scroll of Dispel Magic" DOWN
+DOWN
+ENTER
+@while "In the Air':Scroll" s
+@while "Ready Hand" ESC
+w
+@choose "Item Acquisition"
+RIGHT
+@until "Scroll of Dispel Magic" DOWN
+DOWN
+ENTER
+@while "In the Air':Scroll" s
+@while "Ready Hand" ESC
+w
+@choose "Item Acquisition"
+RIGHT
+@until "Scroll of Dispel Magic" DOWN
+DOWN
+ENTER
+@while "In the Air':Scroll" s
+@while "Ready Hand" ESC
+w
+@choose "Item Acquisition"
+RIGHT
+@until "Scroll of Dispel Magic" DOWN
+DOWN
+ENTER
+@while "In the Air':Scroll" s
+@while "Ready Hand" ESC
 w
 @choose "Examine Player Data"
 @until "Inventory:" DOWN
 @dump:stati-before
 @until "hObj" UP        # the next scroll view inherits this offset
 ESC
+# First read, then retry until the suppression aura shows. The read has two
+# ways to fail on this seed: a failed Decipher roll ("The magic runs amok!")
+# and, once read, an opposed caster-level check the level-10 Bloodspear can
+# win ("You resist the dispelling."). Neither leaves the aura line, so a single
+# @until on it retries both kinds of failure; the loop stops on the first
+# success, before a second read could print a second aura. The match is "dull
+# grey", not the full "dull grey aura": the message wraps at the screen edge
+# and ScreenShows (src/Wposix.cpp:931) matches within one rendered row only, so
+# a longer phrase that straddles the wrap is never seen. @choose "(in pack)"
+# names the stack without its count, and the loop body names the single
+# readable entry's letter [a].
 r
-@choose "(in pack) Scroll of Dispel Magic"
+@choose "(in pack)"
 @dump:dispel-target
 *
+@until "dull grey" r a *
 @while "Stop reading?" n
 @dump:dispelled
 @while "[more]" SPACE

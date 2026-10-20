@@ -7,12 +7,15 @@
 #
 # With monsters frozen the paladin kills a kobold beside the stairs and a
 # wizard-summoned human (non-hostile) stands next to the drops. The paladin
-# walks out the south door, which closes behind him, so the drops are out of
-# the room and out of view ("Things in View" must no longer list them). Monsters
-# unfreeze for three turns and the human takes the drops. Monsters freeze, the
-# paladin walks back to the stairs and attacks the human. The claim ended
-# before the pickup, so the human is not a thief and the game must still ask
-# "Confirm attack the human?". The script answers n.
+# walks out the south door and back in again WHILE MONSTERS STAY FROZEN: the
+# claim ends on the first tick he is out of the room and out of view of the
+# drop (LootClaimLive, src/Inv.cpp), and the human never moved, so it is still
+# beside the drops when the paladin returns. Monsters then unfreeze and the
+# human takes a drop; the wait is BOUNDED by "@until ... picks up" rather than a
+# fixed turn count, and it stops on the FIRST pickup, while the human still
+# stands on the drop square with the paladin beside it. Freeze again, attack the
+# human: the claim had already ended, so the human is not a thief and the game
+# must still ask "Confirm attack the human?". The script answers n.
 
 @dump:arrival
 w
@@ -41,20 +44,22 @@ LEFT ENTER              # the victim, adjacent west
 DOWN*13                 # 10 rows to the bottom, open the door, onto it, past it
 @dump:outside
 
+@until "(cave entrance)" UP     # back to the stairs: the status line names the square
+@dump:back
+
 w
 @choose "Wizard Mode Switches"
 DOWN*10 SPACE           # Freeze Monsters OFF
 @dump:switches-2
 ESC
-.*3                     # three turns out of the room and out of view
+@until "A human picks up" .     # bounded: ends when the human takes a drop
+@dump:waited
 w
 @choose "Wizard Mode Switches"
 DOWN*10 SPACE           # Freeze Monsters ON again
 @dump:switches-3
 ESC
 
-@until "(cave entrance)" UP     # back to the stairs: the status line names the square
-@dump:back
 @until "h@" LEFT        # stand next to the human if it is not already
 LEFT                    # attack west
 @dump:attack            # must show "Confirm attack the human? [yn]"

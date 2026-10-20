@@ -63,6 +63,10 @@ u
 @choose "Storycraft"
 @dump:augment-menu
 @choose "a Periapt of Proof"
+y                       # "Spend the charge? [yn]" (src/Skills.cpp:3721): a
+                        # Storycraft spend is confirmed, and `@while "[more]"`
+                        # never answered it, so the enchant aborted
+@while "[more]" SPACE
 @dump:augmented
 @while "[more]" SPACE
 d
