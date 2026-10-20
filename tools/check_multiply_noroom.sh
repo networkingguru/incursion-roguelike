@@ -10,12 +10,20 @@
 # switch INCURSION_MULTIPLY_NOROOM makes PlaceNear refuse the copy Multiply is
 # placing, so the state is reached on demand and the switch line is countable.
 #
-# Pinned seeds 6 and 10, tools/gates/Options.Dat, tools/keys/dive.keys: each
-# produced refused copies (4 and 2). Raise the build first:
+# STAGED, not seeded (inc-40l9). Waiting for encounter generation to place a
+# water-adjacent gremlin made this check depend on the RNG stream: every
+# RNG-shifting commit that moved the level layout (the header used to record two
+# such re-pins) left it INCONCLUSIVE. The guard it protects -- the
+# `if (!mn->m || mn->isDead())` check in Creature::Multiply before it re-places
+# the copy -- is unchanged. INCURSION_MULTIPLY_STAGE (MultiplyNoroomProbe,
+# src/MultiplyNoroomProbe.cpp) now places a gremlin beside the player and water
+# beside the gremlin, so the game's own EV_TURN trigger calls Multiply whatever
+# the seed. The seed only drives the rest of the dive; it is no longer the
+# staging. tools/gates/Options.Dat, tools/keys/dive.keys. Raise the build first:
 #   BACKEND=posix ./build_macos.sh
 #
 # Exit: 0 PASS (guard held, no Map.h:275 assert); 1 FAIL (the assert fired);
-#       2 UNMEASURED (the switch reached no copy, so nothing was measured).
+#       2 INCONCLUSIVE (no copy was refused, so nothing was measured).
 # Usage: tools/check_multiply_noroom.sh
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -25,13 +33,11 @@ cd "$ROOT" || exit 2
     exit 2
 }
 
-# Re-pinned 2026-10-07 (bd inc-pl4b, seed drift): on the old seeds 11 and 23 the
-# level-1 Barbarian died near key 369 of dive.keys after commits 3a2d0ab2 and
-# bf526e50 moved the random draws, so no copy was ever refused.
-# Re-pinned again for inc-uwxp: commit 127e63ef made CanAddTemplate refuse a
-# two-alignment template, shifting the monster population and the RNG stream, so
-# seeds 6 and 10 now refuse no copy (the refusal path is never reached). Seeds 1
-# and 7 each refuse two copies with no Map.h:275 assert.
+# Two seeds only, and no longer for coverage: inc-40l9 removed the dependency
+# on the stream staging a water-adjacent gremlin, so INCURSION_MULTIPLY_STAGE
+# refuses its copy on any seed. The pair still exercises two different dives and
+# shows the staging is seed-independent. (The old re-pin history: inc-pl4b,
+# 2026-10-07, seeds 11/23; inc-uwxp, seeds 6/10 -- both were seed drift.)
 SEEDS="1 7"
 RUNDIR="$ROOT/logs/multiply-noroom"
 mkdir -p "$RUNDIR"
@@ -43,6 +49,7 @@ for s in $SEEDS; do
     rm -rf "$RUN"
     INCURSION_OPTIONS=tools/gates/Options.Dat \
     INCURSION_MULTIPLY_NOROOM=1 \
+    INCURSION_MULTIPLY_STAGE=1 \
     INCURSION_RUN_DIR="$RUN" \
         tools/headless.sh tools/keys/dive.keys "$s" > "$RUN.out" 2>&1
     h="$(grep -c 'INCURSION_MULTIPLY_NOROOM: refused a copy' \
