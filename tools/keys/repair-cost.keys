@@ -8,7 +8,9 @@
 #
 # HOW THE ARMOUR GETS DAMAGED. A wizard-made "minor decay trap" is placed on the
 # square to the east and walked onto. At seed 1 the trap hits the armour and
-# leaves it at 78/86 hit points. The first RIGHT after the placement is eaten by
+# leaves it at 78/86 hit points (seed 5: 84/86; seeds 2-4 avoid the trap). The
+# seed is pinned in check_repair_cost.sh; inc-9622 shifted the RNG stream, so
+# re-check it after any change that does. The first RIGHT after the placement is eaten by
 # the "You find a trap" interrupt; the second RIGHT opens the confirm prompt.
 #
 # WHAT IS DUMPED. exam: the item's description ("base value of N gp", "N out of
