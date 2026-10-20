@@ -1123,16 +1123,26 @@ Terrain "acid fog"
  ************************************************************************/
 
 Terrain "pool of grease"
-  { Image: yellow GLYPH_WATER on brown; Mat:MAT_OIL; /* Flammable! */
+  { Image: yellow GLYPH_WATER on brown; Mat:MAT_OIL; Mov: 50%; /* Flammable! */
     Flags: TF_WARN, TF_SPECIAL, TF_NOGEN, TF_SHOWNAME; 
     Constants:
-      /* inc-1xr3 phase 2j: the Balance DC is max(15, the map square's
-         TerraDC), because a grease spell can be cast at a higher DC. The
-         handler reads WARN_DC and the map; WARN_DC_FROM_MAP tells the note to
-         do the same. No damage -- a failure trips. */
+      /* upstream: this terrain rolled Balance at max(15, the square's
+         TerraDC) on every move, attack, jump-off and landing, and any failure
+         tripped. The SRD Grease spell asks a DC 10 Balance check only to
+         walk within or through the grease at half speed; a failure stops
+         movement for the round and calls for a Reflex save (the spell's DC)
+         or a fall, and failing by 5 or more falls outright. A creature that
+         stands still or attacks rolls nothing. Script logic with no
+         platform or typedef dependence, so Win32 behaves the same way.
+         Tier Observed, tools/check_grease_srd.sh. inc-ckw0. Not sent.
+         The handler reads these same constants, so the note and the roll
+         cannot drift: WARN_MARGIN 4 means a failure by 5 or more falls with
+         no save, and WARN_SAVE 2 is Reflex (type 1, plus 1). */
       * WARN_SKILL SK_BALANCE,
-      * WARN_DC 15,
-      * WARN_DC_FROM_MAP 1;
+      * WARN_DC 10,
+      * WARN_MARGIN 4,
+      * WARN_SAVE 2,
+      * WARN_SAVE_DC_FROM_MAP 1;
     hObj mount;
     On Event EV_MON_CONSIDER {
       if (EActor->HasStati(ON_BRIDGE))
@@ -1160,46 +1170,64 @@ Terrain "pool of grease"
           return -1; 
       } 
     } ;
-    Desc: "You (or your mount) must make a Balance skill check (DC
-    typically 15) to avoid slipping on the grease when you move, attack,
-    jump off it or land on it. Flying creatures, jellies, incorporeal
+    Desc: "A creature (or its mount) that moves out of the grease, on foot or
+    by jumping, must make a Balance skill check (DC 10). Moving through
+    the grease is at half speed. On a failure the creature cannot move that
+    round and must make a Reflex save (the spell's DC) or fall; failing the
+    check by 5 or more means it falls with no save. Standing still and
+    attacking need no check. Flying creatures, jellies, incorporeal
     creatures, and creatures with the Woodland Stride ability are immune."; 
-    On Event EV_MOVE, PRE(EV_STRIKE), EV_JUMP_OFF, EV_LAND {
+    On Event EV_MOVE, EV_JUMP_OFF {
+      int16 res, sk, dc, margin, svdc;
+      hObj subj;
       if (EActor->isIllusion())
         return NOTHING;
       if (EActor->HasStati(ON_BRIDGE))
         return NOTHING;
       mount = EActor->GetStatiObj(MOUNTED);
-      if (mount) {
-        if (mount->HasStati(PRONE) ||
-            mount->HasAbility(CA_WOODLAND_STRIDE) ||
-            mount->isAerial() ||
-            mount->isMType(MA_OOZE) ||
-            mount->HasMFlag(M_INCOR))
-          return NOTHING; 
-        if (!mount->SkillCheck(SK_BALANCE,max($"pool of grease"->GetConst(WARN_DC),EMap->GetTerraDC(EActor->x,EActor->y)),true,false)) {
-          DPrint(e,"Your mount slips and falls!", 
-                   "An <EActor>'s mount slips and falls!");
-          ThrowTerraDmg(EV_DAMAGE,AD_TRIP,-1,"pool of grease",mount, $"pool of grease"); 
-          EActor->Timeout += 10;
-          return DONE; 
-        } 
-      } else { 
-        if (EActor->HasStati(PRONE)
-            || EActor->HasAbility(CA_WOODLAND_STRIDE) 
-            || EActor->isMType(MA_OOZE) 
-            || EActor->HasMFlag(M_INCOR) 
-            || EActor->isAerial())
-          return NOTHING;
-        if (!EActor->SkillCheck(SK_BALANCE,max($"pool of grease"->GetConst(WARN_DC),EMap->GetTerraDC(EActor->x,EActor->y)),true,false)) {
-          DPrint(e,"You slip and fall!",
-              "An <EActor> slips and falls!");
-          ThrowTerraDmg(EV_DAMAGE,AD_TRIP,-1,"pool of grease",EActor, $"pool of grease"); 
-          EActor->Timeout += 10;
+      if (mount)
+        subj = mount;
+      else
+        subj = EActor;
+      if (subj->HasStati(PRONE) ||
+          subj->HasAbility(CA_WOODLAND_STRIDE) ||
+          subj->isAerial() ||
+          subj->isMType(MA_OOZE) ||
+          subj->HasMFlag(M_INCOR))
+        return NOTHING; 
+      sk = $"pool of grease"->GetConst(WARN_SKILL);
+      dc = $"pool of grease"->GetConst(WARN_DC);
+      margin = $"pool of grease"->GetConst(WARN_MARGIN);
+      subj->SkillCheck(sk,dc,true,false);
+      res = LastSkillCheckResult() - dc;
+      if (res >= 0)
+        return NOTHING;
+      EActor->Timeout += 10;
+      if (res >= -margin) {
+        svdc = EMap->GetTerraDC(EActor->x,EActor->y);
+        if (subj->SavingThrow(REF,svdc)) {
+          if (mount)
+            DPrint(e,"Your mount slips on the grease but keeps its footing.",
+                     "An <EActor>'s mount slips on the grease but keeps its footing.");
+          else
+            DPrint(e,"You slip on the grease but keep your footing.",
+                     "An <EActor> slips on the grease but keeps its footing.");
           return ABORT;
         }
       }
-      return NOTHING;
+      /* ThrowTerraDmg(AD_TRIP,-1) is resisted by the trip code's own
+         "DC < 1" test (src/Fight.cpp), so it never knocked anyone prone;
+         the fall is granted directly, as "Testing Terrain" does. */
+      if (mount)
+        DPrint(e,"Your mount slips and falls!", 
+                 "An <EActor>'s mount slips and falls!");
+      else
+        DPrint(e,"You slip and fall!",
+                 "An <EActor> slips and falls!");
+      subj->GainPermStati(PRONE,NULL,SS_ATTK);
+      if (mount)
+        return DONE;
+      return ABORT;
     };
   }
 
