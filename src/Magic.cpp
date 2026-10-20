@@ -3809,6 +3809,10 @@ static int   bestowRawKeyCount = 0, bestowRawKeyAt = 0;
    comparing it against the number of ticks a run drove proves the guard,
    where bestowHesLost alone cannot. */
 static int   bestowHesLost = 0, bestowRollCount = 0;
+/* inc-w3xn: true only for the duration of BestowProbe, so src/Wposix.cpp's
+   normal-mode hook can answer every read the probe provokes (see
+   BestowProbeKey) instead of letting a stray prompt eat a harness key. */
+static bool  bestowProbeActive = false;
 
 bool BestowProbeMenuAnswer(const char *title, int32 *out) {
     ++bestowMenuCalls;
@@ -3819,6 +3823,21 @@ bool BestowProbeMenuAnswer(const char *title, int32 *out) {
 }
 
 int BestowProbeKey() {
+    /* inc-w3xn: while the probe itself is running, EVERY normal-mode read
+       must be answered from here, not from the harness key script. The
+       probe casts spells at a kobold that fights back; each strike prints
+       attack messages, and once the message window fills, TextTerm::Message
+       shows "-- more --" and reads GetCharCmd(KY_CMD_NORMAL_MODE)
+       (src/TextTerm.cpp:362). That read used to fall through to dive.keys
+       and eat the script one key per attack -- on seed 2 it swallowed the
+       "w y" that enters wizard mode, so the later "Enter wizard mode? [yn]"
+       prompt spun through the rest of the script and the session stalled.
+       bestowKeyCount is only armed for the deliberate player-turn loop, so
+       it did not cover the monster loop or the cast/dispel cases; the
+       active flag covers all of them. On the player loop this returns the
+       same KY_CMD_REST it did before, so that measurement is unchanged. */
+    if (bestowProbeActive)
+        return KY_CMD_REST;
     if (bestowKeyCount <= 0)
         return 0;
     --bestowKeyCount;
@@ -3876,6 +3895,10 @@ void BestowProbe(Player *caster) {
     }
     const bool wasInPlay = theGame->PlayMode;
     theGame->PlayMode = true;
+    /* inc-w3xn: from here until the drain at the end, every normal-mode key
+       read is answered by BestowProbeKey, so no probe prompt can consume a
+       harness key (see bestowProbeActive's definition). */
+    bestowProbeActive = true;
     Monster *target = new Monster(monsterID);
     TMON(monsterID)->GrantGear(target,monsterID,true);
     TMON(monsterID)->PEvent(EV_BIRTH,target,monsterID);
@@ -4086,6 +4109,13 @@ void BestowProbe(Player *caster) {
         const int stdCost = 3000 / max((100 + c->Attr[A_SPD_MELEE]*5),10);
         int observedLossCost = -1, extraCalls = 0, extraRolls = 0;
         for (int i = 0; i < runs; ++i) {
+            /* inc-w3xn: in the monster case the live caster is the kobold's
+               attack target, and its own attacks can drop a level-1 character
+               to 0 mid-probe (seed 2), which raises the "Die? [yn]" prompt and
+               strands the whole session. Top the caster back up to full every
+               iteration so no random sequence can kill him here; the player
+               case never damages him, so this is a no-op for it. */
+            caster->cHP = caster->mHP;
             theGame->Turn++;
             c->Timeout = 0;
             const int lostBefore = bestowHesLost;
@@ -4227,6 +4257,19 @@ void BestowProbe(Player *caster) {
     target->Remove(true);
     monsterCaster->Remove(true);
     theGame->PlayMode = wasInPlay;
+    /* inc-w3xn: the probe is over; stop answering normal-mode reads so the
+       live session reads the harness key script again. Then drain every
+       input queue the probe armed. src/Wposix.cpp's LMenu and GetCharCmd
+       consult these queues for ANY menu or key read while
+       INCURSION_BESTOW_PROBE is set, so a leftover answer is fed to the
+       next REAL prompt -- on seed 2 the dive key script's "Enter wizard
+       mode? [yn]" got a stale menu answer instead of 'y' and the session
+       stalled, never completing a turn. Clearing them hands the live
+       session back its own keys. */
+    bestowProbeActive = false;
+    bestowKeyCount = 0;
+    bestowRawKeyAt = bestowRawKeyCount = 0;
+    bestowMenuAt = bestowMenuCount = 0;
 }
 
 /* inc-7xcu: opt-in live Bane radius oracle; no spell data is overridden. */

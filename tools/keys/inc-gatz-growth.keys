@@ -16,19 +16,37 @@ w
 @choose "Genocide Everything"
 @until "HP:" ESC
 
+# Lay plain ground ("Loose-Packed Earth": a dry, walkable terrain) under the
+# player and the two squares east before staging, so the walk below cannot be
+# blocked by whatever terrain the generator chose. On seed 1 depth 2 the
+# player starts in deep water, and the deep-water handler (lib/dungeon.irh)
+# aborts a move whenever the Swim check fails, so the earlier fixed walk out
+# of the start square never reached the field on that terrain.
+w
+@choose "Change terrain type"
+ENTER
+@choose "Loose-Packed Earth"
+w
+@choose "Change terrain type"
+RIGHT ENTER
+@choose "Loose-Packed Earth"
+w
+@choose "Change terrain type"
+RIGHT*2 ENTER
+@choose "Loose-Packed Earth"
+
+# Summon the growth archon two squares east. Its field (ADJUST_CIRC, radius
+# 1) covers the square one east of the player, so stepping there enters it:
+# that Thing::Move is the path whose relink the fix guards. Dump the screen
+# while the "You swell enormously!" message is up, so the check can see the
+# field was entered.
 w
 @choose "Monster Summoning"
 @choose "Celestials"
 @choose "gatz growth archon"
-RIGHT*4 ENTER
+RIGHT*2 ENTER
 @dump:summoned
 
 RIGHT
 @dump:step1
-RIGHT
-@dump:step2
-RIGHT
-@dump:step3
-RIGHT
-@dump:step4
 @quit

@@ -40,7 +40,7 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-SEED=1
+SEED="${SEED:-1}"
 BIN="${INCURSION_BIN:-./incursion-headless}"
 
 [ -x "$BIN" ] || {

@@ -22,9 +22,21 @@
 # arrives templated. On seed 1 it arrives a young adult, Power 5, and breathes
 # 0 + 2*5 = 10 dice of d12.
 #
-# Six squares east: near enough to be in sight when it is summoned, far enough
-# that placing a gargantuan dragon does not shove the player out of his own
-# square. At three squares it does.
+# Two squares east, so the summoning square is ADJACENT to the player. This is
+# the fix for inc-w3xn. The old script placed the dragon six squares east and
+# then walked RIGHT five times to close the distance, but the gargantuan dragon
+# is summoned into an "unnaturally shadowed" region that cuts the player's
+# sight to one square, and the effect-prompt cursor does not land the dragon on
+# the row the player expects. The player therefore ended a diagonal square and
+# sometimes a full square off, never beside it: with no target in melee the
+# dragon took its disguise form (src/Monster.cpp:713, the !inMelee arm) and
+# stood still as an unseen shape for all eighty waits, so it never breathed and
+# the check was INCONCLUSIVE. At two squares the monster is placed beside the
+# player (isBeside, src/Display.cpp:1640, includes diagonals), so it takes its
+# War Form and breathes on its own; the walk loop is gone and there is no
+# random-sequence-dependent movement to get wrong. A gargantuan dragon does
+# shove the player when placed this close, which only ever helps: it leaves the
+# two of them adjacent.
 @include chargen.keys
 
 # chargen.keys ends in play mode, so the first key here is a game command and
@@ -38,8 +50,9 @@ y
 # Clear the level first so the dragon's only target is the player. Without
 # this, a level-generated monster (a wolf zombie on seed 1) outranks the player
 # as a target and the dragon walks off to it instead of breathing. With the
-# level empty the dragon still needs many turns to find the player: it first
-# breathed after more than 20 waits on seed 1, so the loop below waits 80.
+# level empty and the dragon beside the player, it breathes within a few turns;
+# the loop below waits 80, far more than it needs, so the evidence does not
+# depend on the random sequence.
 @choose "Genocide Everything"
 w
 @choose "Wizard Mode Switches"
@@ -50,7 +63,7 @@ w
 @choose "Monster Summoning"
 @choose "Dragon"
 @choose "red dragon"
-RIGHT*6
+RIGHT*2
 ENTER
 @dump:dragon-summoned
 
