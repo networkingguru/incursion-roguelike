@@ -24,8 +24,12 @@ CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 
 # inc-kbws: was seed 1; the opposed hide check (inc-u3dp) shifted the shared
 # RNG stream, so seed 1 no longer walks the decay trap onto the armour at tip.
-# Seeds 2-5 stage it; seed 2 is used.
-SEED=2
+# Seeds 2-5 staged it; seed 2 was used.
+# inc-bs7h: the inc-9622 landing shifted the RNG stream again. Seed 2 now avoids
+# the trap (armour stays 86/86, "You have no damaged items."), so the check was
+# INCONCLUSIVE. Observed after inc-9622: seeds 1 (78/86) and 5 (84/86) are hit,
+# seeds 2-4 avoid. Seed 1 is used.
+SEED=1
 KEYS=tools/keys/repair-cost.keys
 LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav
 

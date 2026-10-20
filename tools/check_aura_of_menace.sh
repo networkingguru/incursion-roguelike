@@ -138,7 +138,7 @@ fi   # end CASE A (skipped entirely under --hit)
 # Exit 1 only when a blow landed over a live penalty and the state never changed.
 HITRC=0
 if [ -f "$HITKEYS" ]; then
-    HSEED="${HITSEED:-4}"
+    HSEED="${HITSEED:-5}"  # was 4; seed 4 now makes the save (INCONCLUSIVE) since inc-dp5u shifted the RNG stream
     HRUN="$ROOT/logs/runs/check-aura-of-menace-hit-$TOKEN-seed$HSEED"
     rm -rf "$HRUN"
     hout="$(INCURSION_RUN_DIR="$HRUN" INCURSION_OPTIONS="$OPTIONS" \
