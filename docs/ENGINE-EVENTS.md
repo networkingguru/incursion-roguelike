@@ -21,7 +21,7 @@ preload, all in `src/Event.cpp`: `Throw` (506), `ThrowField` (521), `ThrowDir` (
 `EventSP`, adding C++ depth the event stack does not see.
 
 ## Order of execution
-`RealThrow` (`src/Event.cpp:422`) runs the recipient sweep three times: `PRE(Ev)`=Ev+500, then `Ev`, then `POST(Ev)`=Ev+1000
+`RealThrow` (`src/Event.cpp:432`) runs the recipient sweep three times: `PRE(Ev)`=Ev+500, then `Ev`, then `POST(Ev)`=Ev+1000
 (`:446-459`). `ABORT`/`DONE` in PRE skips the main pass; `ABORT` also skips POST. The sweep is `ThrowEvent` (`:152`), in this
 order: Region under the subject (`:172`), special Terrain (`:192`), illusory Terrain (`:206`); dungeon `EMap->dID` (`:223`);
 `EField->eID` else `e.eID` (`:236`, `:249`); every god twice, `GODWATCH(Ev)` for the actor (`:266`) and `GODWATCH(EVICTIM(Ev))`
@@ -34,8 +34,8 @@ creature is the victim (`:739`), then as the plain event if it is the actor (`:7
 A handler changes the outcome four ways. `DONE`/`ABORT` stop dispatch at every level above (`src/Event.cpp:179`, `:245`, `:315`,
 `:382`); `NOMSG` sets `e.Terse` and continues (`:181`); `NOTHING` continues, and a whole sweep of `NOTHING` reaches the
 unhandled-event `Fatal` block in `RealThrow` (`:460-469`), which logs and `exit(1)` (`src/Wposix.cpp:1810-1826`) — but the guard
-at `src/Event.cpp:462` returns first whenever the POST pass ran, because `e.Event` then holds `POST(Ev)`, so that `Fatal` is dead on every
-normal path; fourth, handlers mutate `EventInfo` in place, and `ReThrow` copies the frame back into the caller's `e` (`src/Event.cpp:487-490`).
+at `src/Event.cpp:485` returns first whenever the POST pass ran, because `e.Event` then holds `POST(Ev)`, so that `Fatal` is dead on every
+normal path; fourth, handlers mutate `EventInfo` in place, and `ReThrow` copies the frame back into the caller's `e` (`src/Event.cpp:510-513`).
 
 ## The C++ / script boundary
 The boundary is exactly `Resource::Event` (`src/Annot.cpp:1109`); above it is C++, below it is bytecode. It rejects fast on a
@@ -52,10 +52,10 @@ The build's handlers and the source text are not the same set: `#if 0` at `lib/m
 in the build.**
 
 ## The event stack
-`EventInfo EventStack[EVENT_STACK_SIZE]`, `EventSP` starting at -1 (`src/Event.cpp:130-131`); the size is 128
-(`inc/Defines.h:80`). The only bound is `CHECK_OVERFLOW` (`src/Event.cpp:128`), which calls `Fatal("Event Stack Overflow!")` and
+`EventInfo EventStack[EVENT_STACK_SIZE]`, `EventSP` starting at -1 (`src/Event.cpp:135-136`); the size is 128
+(`inc/Defines.h:80`). The only bound is `CHECK_OVERFLOW` (`src/Event.cpp:133`), which calls `Fatal("Event Stack Overflow!")` and
 exits. There is no depth budget, no recursion counter and no cycle detection in `src/Event.cpp`. Unrelated code reads frames
-assuming the enclosing context: `src/Fight.cpp:826-833`, `src/Prayer.cpp:589`, `src/Skills.cpp:1763`, `src/Target.cpp:1765`.
+assuming the enclosing context: `src/Fight.cpp:831-838`, `src/Prayer.cpp:589`, `src/Skills.cpp:1751`, `src/Target.cpp:1765`.
 
 ## Re-entrancy
 **The system has no general protection against re-entrancy.** Shared by every nested event: `VMachine::Regs[64]`, `SRegs[64]`,
@@ -92,7 +92,7 @@ down path read `RES(0)` whenever `BELOW_DUNGEON` is unset, which is every dungeo
 `src/Feature.cpp:1420` stops it.
 
 **3. Wild resource id crashes `Game::Get` inside `Magic::Blast`. Fixed (inc-upw.16).** Handlers get ids from three unvalidated
-places: the `eID` a caller put in the frame (`src/Event.cpp:602`), script assignment `pe->eID = val` (`lib/dispatch.h:3517`), and
+places: the `eID` a caller put in the frame (`src/Event.cpp:631`), script assignment `pe->eID = val` (`lib/dispatch.h:3517`), and
 script `ThrowEff` with an arbitrary int32 (`lib/dispatch.h:2637`). *Invariant violated:* `Game::Get` indexed the module table by
 the top byte, `Modules[(xID >> 24)-1]`, `MAX_MODULES` being 126 (`inc/Defines.h:4506`), so an id with a zero top byte indexed
 `Modules[-1]`. The guard was `ASSERT(Modules[(xID >> 24)-1])`, and `ASSERT` only calls `Error` and falls through
@@ -126,5 +126,5 @@ shape at `src/Creature.cpp:880`, `src/Magic.cpp:1427`.
 7. `inc/Events.h:77-78` (`PEVENT`) and `src/Annot.cpp:1082-1083` assign `e.EXVal` twice, `e.EYVal` never.
 8. Fixed. The map sweep's `ERROR` branch (`src/Event.cpp:325`) indexed `e.p[i]` with the god loop counter `i`; since inc-kxc6
 it names `e.EMap` instead.
-9. `src/Event.cpp:462` returns before the unhandled-event `Fatal` calls at `:464-469`, because `e.Event` holds `POST(Ev)` there.
+9. `src/Event.cpp:485` returns before the unhandled-event `Fatal` calls at `:464-469`, because `e.Event` holds `POST(Ev)` there.
 The three calls are dead on every normal path, and the two that name `PRE_` and `POST_` have those two names swapped.

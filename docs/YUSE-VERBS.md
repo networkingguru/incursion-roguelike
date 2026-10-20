@@ -16,7 +16,7 @@ anywhere else. This file is that listing.
 **24 of its 57 distinct verbs have no implementation**, filling 27 of the 63
 entries. The menu no longer offers them: `Player::YuseMenu` drops any entry
 whose `MissingImplementation` flag is set (`src/Player.cpp:1828-1835`,
-`inc/Creature.h:90`). Until that gate was added, a dead verb was offered like
+`inc/Creature.h:76`). Until that gate was added, a dead verb was offered like
 every other, took your prompts and your target, and did nothing. They are
 listed below because the table still carries them, and because which verbs are
 dead is what this file exists to record.
