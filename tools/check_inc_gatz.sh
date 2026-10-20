@@ -20,7 +20,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 2
 
 OPTIONS=tools/fixtures/options-2026-08-22.dat
-SEED=1
+SEED="${SEED:-1}"
 MODULE="$ROOT/logs/inc-gatz-module"
 RUN="$ROOT/logs/inc-gatz-run"
 

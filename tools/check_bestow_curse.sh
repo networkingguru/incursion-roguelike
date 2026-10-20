@@ -10,11 +10,8 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-# inc-uwxp: seed moved 1 -> 2. Merge 127e63ef (inc-n0ie) made CanAddTemplate
-# refuse a template that gives a monster two opposed alignments, which shifts
-# level generation and the RNG stream. On seed 1 the session never entered a
-# map (headless exit 5, no log); seed 2 stages the scenario at this tip.
-SEED=2
+# Override SEED to exercise staging against a different random stream.
+SEED="${SEED:-2}"
 KEYS=tools/keys/dive.keys
 OPTIONS=tools/fixtures/options-2026-08-22.dat
 
