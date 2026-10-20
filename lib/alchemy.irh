@@ -890,6 +890,8 @@ AI_ALCHEMY Effect "eggshell flash-bomb" : EA_INFLICT
     On Event EV_CALC_EFFECT {
       e.vCasterLev = max(10,e.vAlchemy);
       e.saveDC = 10 + e.vAlchemy / 2 + EActor->Mod(A_DEX);
+      // upstream: rounds passed as units. Traced; inc-trfo; not sent.
+      e.vDuration = RoundsToUnits(e.vDuration);
       return NOTHING;
       },
     PRE(EV_EFFECT)
@@ -2600,7 +2602,8 @@ AI_TATTOO Effect "Dragonfly" : EA_INFLICT
     On Event PRE(EV_MAGIC_HIT) {
       if (!EActor->LoseFatigue(2,true))
         return ABORT;
-      e.vDuration = EActor->LevelAs($"Tattoo Mystic")*2;
+      // upstream: rounds passed as units. Traced; inc-trfo; not sent.
+      e.vDuration = RoundsToUnits(EActor->LevelAs($"Tattoo Mystic")*2);
       return NOTHING;
       };
     xval: ADJUST; yval: A_SPD; pval: 30;

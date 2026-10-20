@@ -2737,6 +2737,10 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         ASSERT(REGS(63) >= 4)
         SetPVal(*pe, (int16)STACK(2), (int16)STACK(3), (int16)STACK(4));
         return;
+    case 532:
+        ASSERT(REGS(63) >= 1)
+        REGS(n) = RoundsToUnits((int16)STACK(1));
+        return;
       default:
         Error("Illegal member function call!");
       }

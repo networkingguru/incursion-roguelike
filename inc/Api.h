@@ -1095,6 +1095,8 @@ system int32  LevelAdjust(int16 val, int16 level, int16 spec = 1);
 system int16  LastSkillCheckResult();
 
 system void    SetPVal(hObj:T_EVENTINFO e, int16 b, int16 n=0, int16 s=0);
+
+system int16   RoundsToUnits(int16 rounds);
  
  
 /* functions with variable-type parameters handled by macro type-cast */
