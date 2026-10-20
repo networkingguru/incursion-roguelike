@@ -60,8 +60,9 @@ else
         printf '  ok    log has no INCONCLUSIVE line\n'
     fi
 
-    want='case=promote rung=skilled cr=0 tally=0 flag=0 rating=20 base=-2 need=400
-case=remainder rung=skilled cr=0 tally=123 flag=0 rating=20
+    # cr values carry inc-dp5u's unfloored template CR (a negative sum is no longer clamped to 0).
+    want='case=promote rung=skilled cr=-1 tally=0 flag=0 rating=20 base=-2 need=400
+case=remainder rung=skilled cr=-1 tally=123 flag=0 rating=20
 case=multi rung=veteran cr=2 tally=31167 flag=1 rating=20
 case=ceiling rung=none cr=-2 tally=32767 flag=2 rating=-2
 case=budget rung=none cr=-2 tally=32767 flag=1 rating=30 over=1 pool=4968 max=125
