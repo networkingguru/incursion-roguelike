@@ -199,6 +199,7 @@ String & Pluralize(const char* s, rID iID=0);
 String & Replace(const char* str, const char* find, const char* rep);
 
 String & Capitalize(const char*s, bool all = false);
+int16 RoundsToUnits(int16 rounds);
 String & Left(const char*s, int32 sz);
 String & Right(const char*s, int32 sz);
 String & Trim(const char*s);

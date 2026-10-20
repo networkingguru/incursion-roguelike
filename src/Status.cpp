@@ -88,6 +88,22 @@ void Thing::UpdateStati() {
     StatiIterEnd(this)
 }
 
+/* upstream: a status Duration unit is 60 ticks, two six-second rounds, but
+   rules text and dice give durations in rounds and pass them to
+   GainTempStati as units, so they last twice as long. This converts rounds
+   to units; odd input rounds up with 50% chance so the mean is rounds/2.
+   Non-positive input (-1 permanent, -2 persistent) passes through unchanged.
+   Evidence: Observed, tools/repro_light_trap.sh. Tracking: inc-trfo. Not sent. */
+int16 RoundsToUnits(int16 rounds) {
+    int16 u;
+    if (rounds <= 0)
+        return rounds;
+    u = rounds / 2;
+    if ((rounds & 1) && random(2))
+        u++;
+    return max(1, u);
+}
+
 int32 __max = 0;
 
 void Thing::GainTempStati(int16 n, Thing *t, int16 Duration, int8 Cause, int16 Val, int16 Mag, rID eID, int8 clev) {

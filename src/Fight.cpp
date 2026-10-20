@@ -7318,7 +7318,8 @@ AfterEffects:
                 {
                   VPrint(e,"The <EActor>'s nerve strike paralyzes you!",
                       "The <EVictim> is paralyzed!");
-                  e.EVictim->GainTempStati(PARALYSIS,NULL,Dice::Roll(1,4)+2,SS_ATTK);
+                  /* upstream: 1d4+2 is rounds, a Duration unit is two rounds; Traced; inc-trfo; not sent */
+                  e.EVictim->GainTempStati(PARALYSIS,NULL,RoundsToUnits(Dice::Roll(1,4)+2),SS_ATTK);
                 }
     
     if ((e.AType == A_PUNC || e.AType == A_KICK) && !e.EVictim->isDead())
@@ -7367,7 +7368,8 @@ AfterEffects:
             can get a ADJUST_CIRC/A_AID/SS_ATTK Stati, but
             given that effects don't use SS_ATTK and very
             little else gives ADJUST_CIRC, I think that's fine. */
-          dur = Dice::Roll(1,4,1);
+          /* upstream: 1d4+1 is rounds, a Duration unit is two rounds; Traced; inc-trfo; not sent */
+          dur = RoundsToUnits(Dice::Roll(1,4,1));
           
           StatiIter(e.EVictim)
             if (S->Nature == ADJUST_CIRC && 
@@ -8589,7 +8591,8 @@ WoundIgnored:
                                         else if (!e.EVictim->SavingThrow(FORT,e.saveDC)) {
                                             if (!e.Terse)
                                                 VPrint(e,"You are blinded!", "The <EVictim> is blinded!"); 
-                                            e.EVictim->GainTempStati(BLIND,e.EActor,e.vDmg, SS_ATTK);
+                                            /* upstream: vDmg is rounds, a Duration unit is two rounds; Observed via tools/repro_light_trap.sh; inc-trfo; not sent */
+                                            e.EVictim->GainTempStati(BLIND,e.EActor,RoundsToUnits(e.vDmg), SS_ATTK);
                                         }
                                         else
                                             e.Resist = true;
@@ -8602,7 +8605,8 @@ WoundIgnored:
                                         if (!e.EVictim->SavingThrow(FORT,e.saveDC,SA_PARA)) {
                                             if (!e.Terse)
                                                 e.EVictim->StatiMessage(PARALYSIS,0,false);
-                                            e.EVictim->GainTempStati(PARALYSIS,e.EActor,e.vDmg,SS_ATTK,PARA_HELD);
+                                            /* upstream: vDmg is rounds, a Duration unit is two rounds; Traced; inc-trfo; not sent */
+                                            e.EVictim->GainTempStati(PARALYSIS,e.EActor,RoundsToUnits(e.vDmg),SS_ATTK,PARA_HELD);
                                         }
                                         else
                                             e.Resist = true;
@@ -8635,7 +8639,8 @@ WoundIgnored:
                                                    the stati's Mag gives that row a real number: a monster whose
                                                    attack DC is 13 no longer reads as hard to escape as one whose
                                                    DC is 20. Traced. inc-18q6. Not sent. */
-                                                e.EVictim->GainTempStati(STUCK,e.EActor,e.vDmg,SS_ATTK,stuckKind,e.saveDC);
+                                                /* upstream: vDmg is rounds, a Duration unit is two rounds; Traced; inc-trfo; not sent */
+                                                e.EVictim->GainTempStati(STUCK,e.EActor,RoundsToUnits(e.vDmg),SS_ATTK,stuckKind,e.saveDC);
                                             }
                                         } else e.Resist = true;
                                         break;
@@ -8666,7 +8671,8 @@ WoundIgnored:
                                             if (!e.Terse)
                                                 VPrint(e,"Your suddenly feel disoriented!", 
                                                 "The <EVictim> staggers..."); 
-                                            e.EVictim->GainTempStati(CONFUSED,NULL,e.vDmg,SS_ATTK);
+                                            /* upstream: vDmg is rounds, a Duration unit is two rounds; Traced; inc-trfo; not sent */
+                                            e.EVictim->GainTempStati(CONFUSED,NULL,RoundsToUnits(e.vDmg),SS_ATTK);
                                         }
                                         else
                                             e.Resist = true;
@@ -8678,7 +8684,8 @@ WoundIgnored:
                                             if (!e.Terse)
                                                 VPrint(e,"Your suddenly feel nauseated!", 
                                                 "The <EVictim> retches..."); 
-                                            e.EVictim->GainTempStati(NAUSEA,NULL,e.vDmg,SS_ATTK);
+                                            /* upstream: vDmg is rounds, a Duration unit is two rounds; Traced; inc-trfo; not sent */
+                                            e.EVictim->GainTempStati(NAUSEA,NULL,RoundsToUnits(e.vDmg),SS_ATTK);
                                         }
                                         else
                                             e.Resist = true;
@@ -9175,7 +9182,8 @@ SkipTripSave:
                                             /* upstream: Duration and Cause were swapped, so every AD_STUN
                                                stun lasted SS_ATTK (6) rounds. Wrong against GainTempStati's
                                                signature on any platform/compiler. Observed; inc-q33r; not sent. */
-                                            e.EVictim->GainTempStati(STUNNED,NULL,max(1,(int)e.vDmg),SS_ATTK);
+                                            /* upstream: vDmg is rounds, a Duration unit is two rounds; Traced; inc-trfo; not sent */
+                                            e.EVictim->GainTempStati(STUNNED,NULL,max(1,(int)RoundsToUnits(e.vDmg)),SS_ATTK);
                                         }
                                         else
                                             e.Resist = true;
