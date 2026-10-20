@@ -60,6 +60,10 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# inc-2ok4: a bare A_DEQU attack now allows a Reflex save (DequSaveDC, 11 + CR/3).
+# This check is about hardness, not the save, so it forces every d20 to 1 (a
+# natural 1 always fails) and the blob's retaliation lands on every blow as before.
+export INCURSION_FORCE_SAVE_ROLL=1
 
 check_mutation src/Fight.cpp \
     'e2.ignoreHardness = (e2.saveDC <= 0 && !it->isMagic());' \
