@@ -65,9 +65,9 @@ A v0 save, a v1 save and a `.Mod` all start the same way:
 
 The `Version` stamp tells them apart: `"IS1."` + revision is v1;
 `"SF"` + eight hex digits of `SaveLayoutDigest()` is v0; the bare
-`"0.6.9Y19"` `VERSION_STRING` is a pre-digest v0 file that
-`SaveFormatMatches` (src/Registry.cpp:61-70) still accepts under a
-migration allowance that is marked for deletion.
+`"0.6.9Y19"` `VERSION_STRING` is a pre-digest v0 file. Since inc-vqla
+`SaveFormatMatches` (src/Registry.cpp:61-71) refuses it, and
+`IsOldV0Stamp` (src/Registry.cpp:79) marks it so the player is told why.
 
 `fh.Compression` was declared and never assigned or tested in the original
 code; **v1 gave it a meaning**: 1 = the payload is zlib level 6
@@ -417,7 +417,7 @@ Repaired on load, and nothing else is:
 | vptr | placement new, src/Registry.cpp:950-992 |
 | pointer to an owned heap block | src/Registry.cpp:376, via the 7 direct `r.Block` sites plus every `FIELD_BLOB`/`FIELD_OBJ` line's v0 branch (inc/Base.h:792-797) |
 | `Thing::m` from `Thing::hm` | inc/Map.h:967 |
-| `Player::MyTerm = T1` | inc/Creature.h:1488 |
+| `Player::MyTerm = T1` | inc/Creature.h:1558 |
 | `Module` resource caches zeroed | inc/Res.h:840-841, in `Module::Serialize`, which runs on load as well as save. A load builds the object with the empty `ARCHIVE_CLASS` constructor (inc/Base.h:804), so the zeroing in `Module()` (inc/Res.h:923-924) runs only for the module the resource compiler creates (src/RComp.cpp:141) |
 | module text segment un-inverted | inc/Res.h:912-916 |
 | garbage payload in a loaded `Target` | src/Registry.cpp:1017-1018, src/Target.cpp:1577 |
@@ -483,9 +483,10 @@ the digest, and still true for the resource tables.**
   `typeSize()` can return, and `SaveFormatID()` renders it as "SF" plus
   eight hex digits. A change to `sizeof(Player)` or `sizeof(Module)` moves
   it by itself.
-- `SaveFormatMatches` also accepts the old `VERSION_STRING` literal (src/Registry.cpp:76),
-  so files written before the digest existed still load. That branch is
-  marked for deletion in the source.
+- `SaveFormatMatches` refuses the old `VERSION_STRING` literal since
+  inc-vqla (src/Registry.cpp:66): widening `Character::Spells[]` changed the
+  layout. `IsOldV0Stamp` (src/Registry.cpp:79) recognizes such a file, so the
+  load list and `-convert` tell the player it cannot be read.
 - A change to `sizeof(Module)` is caught twice: by the digest, and by the
   `SIGNATURE_TWO` separator, which a shifted reader misses and raises
   `ECORRUPT` (src/Registry.cpp:1030-1031).
@@ -503,7 +504,7 @@ grep -rn "ARCHIVE_CLASS(" inc | wc -l                                   # 21 (20
 grep -rn "r\.Block(" inc src | wc -l                                    # 7 (the rest went through FIELD_BLOB)
 grep -rn "numDependencies" src inc | wc -l                              # 1, the declaration; nothing uses it
 grep -n  "Compression" src/SaveV1.cpp | head -3                         # the field v1 gave a meaning
-grep -rn "VERSION_STRING" src inc | wc -l                               # 15; only src/Registry.cpp:76 compares
+grep -rn "VERSION_STRING" src inc | wc -l                               # 17; only src/Registry.cpp:82 compares
 grep -rn "SaveFormatID\|SaveFormatMatches" src inc                      # the v0 stamp that does compare
 grep -n  "SCHEMA_REV" src/SaveV1.cpp | head -2                          # 3 today -> "IS1.3"
 xxd -l 16 mod/Incursion.Mod                                             # Sig + "SF" digest stamp
