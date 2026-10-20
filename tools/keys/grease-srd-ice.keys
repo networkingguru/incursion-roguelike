@@ -1,0 +1,21 @@
+# inc-ckw0. Control: attack from an Ice Floor square (Ice Floor is [g] on the
+# first page of the terrain menu). Its DC 10 Balance check on an attack must
+# not change with the grease fix.
+@include grease-srd-setup.keys
+w
+@choose "Monster Summoning"
+@choose "Kobolds"
+c
+RIGHT*2 ENTER
+w
+K
+RIGHT
+ENTER
+g
+RIGHT
+@while "Confirm" y
+@dump:in
+RIGHT
+@dump:attack
+v
+@dump:history

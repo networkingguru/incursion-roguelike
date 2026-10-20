@@ -27,6 +27,10 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# inc-2ok4: a bare A_DEQU attack now allows a Reflex save (DequSaveDC, 11 + CR/3).
+# This check is about item quality, not the save, so it forces every d20 to 1
+# (a natural 1 always fails) and the blob's retaliation lands on every blow.
+export INCURSION_FORCE_SAVE_ROLL=1
 
 screen() { # <glob> -> first matching screen of the current run, or exit 2
     local f

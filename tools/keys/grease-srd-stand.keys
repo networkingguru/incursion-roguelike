@@ -1,0 +1,21 @@
+# inc-ckw0. Stand still inside a square of grease for three turns.
+@include grease-srd-setup.keys
+w
+@choose "Monster Summoning"
+@choose "Kobolds"
+c
+RIGHT*6 ENTER
+w
+K
+RIGHT
+ENTER
+W
+RIGHT
+@while "Confirm" y
+@dump:in
+s
+s
+s
+@dump:stood
+v
+@dump:history

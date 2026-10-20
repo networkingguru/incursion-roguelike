@@ -956,9 +956,16 @@ static int32 DualWieldTimeout(int16 spdA, int16 spdB)
    PLAYER, and the monster with A_DEQU is e.EVictim, so the prompt passes
    e.EVictim. SaveChance is therefore also asked of e.EVictim, the creature
    whose SavingThrow(REF,...) the handler runs. */
+/* inc-2ok4: an attack that lists no DC gets 11 + CR/3 (integer division, CR
+   floored at 0, template CR included). A Warrior of level equal to CR with a
+   poor Reflex save and a Dex modifier of -1..+2 then passes 45-60%. A listed
+   DC is unchanged. The data keeps DC 0 because the handler and the prompt read
+   a listed DC of 0 as "hardness is bypassed" (e2.ignoreHardness below). */
 static int DequSaveDC(Creature *actor, TAttack *ta)
 {
-  return (int8)actor->GetPower(ta->u.a.DC);
+  if (ta->u.a.DC > 0)
+    return (int8)actor->GetPower(ta->u.a.DC);
+  return 11 + actor->ChallengeRating() / 3;
 }
 
 /* inc-m2zi: confirm each item at risk; unarmed retaliation damages the
@@ -3828,7 +3835,10 @@ SkipSoundAttack:
             e2.DType  = ta->DType;
             e2.isHit = true; 
             e2.strDmg = ""; 
-            e2.saveDC = (int8)DequSaveDC(e2.EActor,ta);
+            /* saveDC is the LISTED DC only (0 for a bare attack), which is what
+               ignoreHardness below reads; the DC rolled is rollDC (inc-2ok4). */
+            e2.saveDC = (int8)e2.EActor->GetPower(ta->u.a.DC);
+            int rollDC = DequSaveDC(e2.EActor,ta);
             /* inc-m2zi: retaliation cannot target the responder's own item. */
             it = e.EItem2;
             if (it && it->Owner() == e.EActor)
@@ -3842,8 +3852,8 @@ SkipSoundAttack:
                 // ok, apply to attacker
                 e2.Dmg    = ta->u.a.Dmg;
                 e2.vDmg   = e2.Dmg.Roll();
-                if (e2.saveDC > 0)
-                    if (e2.EVictim->SavingThrow(REF,e2.saveDC)) {
+                if (rollDC > 0)
+                    if (e2.EVictim->SavingThrow(REF,rollDC)) {
                         VPrint(e2,"You avoid harm to yourself when striking the <EActor>.",
                             "The <EVictim> avoids harm when striking the <EActor>.");
                         return DONE;
@@ -3926,8 +3936,8 @@ SkipSoundAttack:
                    screen: VPrint gives msg1 only to e.EVictim and msg2 only to
                    somebody who is NOT e.EVictim. Reading msg1 on the player's
                    own screen therefore proves he is e.EVictim again. */
-                if (e2.saveDC > 0)
-                    if (e2.EVictim->SavingThrow(REF,e2.saveDC)
+                if (rollDC > 0)
+                    if (e2.EVictim->SavingThrow(REF,rollDC)
 #ifdef DEQU_PROBE
                         || getenv("INCURSION_DEQU_FORCE_SAVE")
 #endif
