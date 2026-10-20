@@ -983,6 +983,20 @@ void Creature::Shapeshift(rID _mID, bool merge, Item* PolySource) {
     }
 
 
+    /* upstream: a character returning to its own form took the monster
+       CalcHP() roll for its maximum, and CalcValues swapped that for the real
+       maximum, losing a random part of the HP and risking "Belatedly, you
+       drop dead". Plain C++ logic, same on Win32. Observed, inc-zgww, NOT
+       sent. Take the share (percent, rounded down) now, after any fall
+       damage, hold cHP at the old maximum so each CalcValues swap nets to
+       zero, apply the share below. */
+    bool endForm = isCharacter() && _mID == tmID && mID != _mID;
+    int16 pct = 0;
+    if (endForm) {
+        pct = (cHP * 100) / max(1, mHP + Attr[A_THP]);
+        cHP = mHP;
+    }
+
     GainStatiFromBody(_mID);
 
     if (_mID == mID) {
@@ -1064,6 +1078,14 @@ void Creature::Shapeshift(rID _mID, bool merge, Item* PolySource) {
 
     mID = _mID;
     SetImage();
+    if (endForm) {
+        CalcValues(true);
+        CalcValues(false);
+        cHP = max((pct*(mHP + Attr[A_THP])) / 100, 1);
+        if (m && m->InBounds(x, y))
+            m->Update(x, y);
+        return;
+    }
     cHP = (cHP * 100) / max(1, mHP + Attr[A_THP]);
     CalcHP();
     cHP = max((cHP*(mHP + Attr[A_THP])) / 100, 1);

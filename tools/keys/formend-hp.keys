@@ -1,0 +1,50 @@
+# inc-zgww: what happens to hit points when a changed form ends?
+# Real Wild Shape (src/Skills.cpp:5565) from a LOADED druid, so every seed
+# starts from the same character. Run through tools/formend_hp.sh, or:
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+#       tools/headless.sh tools/keys/formend-hp.keys <seed>
+# The fixture is already in wizard mode, so 'w' opens the wizard menu with no
+# y/n question. Free Advancement + Cheat Death are the first and third switches.
+# Druid 3 (three druid levels) is the Wild Shape threshold.
+@dump:arrival
+w
+@choose "Wizard Mode Switches"
+SPACE DOWN DOWN SPACE
+ESC
+w
+@choose "Genocide Everything"
+d
+G
+a
+a
+ESC
+@dump:druid3
+# Wild Shape into a black bear
+u
+@choose "Wild Shape"
+@choose "black bear"
+@dump:formed
+.
+.
+@dump:formed2
+# an ogre adjacent west, to hurt the form; WAITS is replaced by tools/formend_hp.sh
+# with the number of turns the ogre gets before the form is ended
+w
+@choose "Monster Summoning"
+@choose "Giants"
+@choose "ogre"
+LEFT ENTER
+.*WAITS
+@dump:hurt
+@until "Wizard Mode Options" w
+@choose "Genocide Everything"
+.
+@dump:before-end
+# cancel menu: "Return to <race> form"
+x
+@dump:cancel-menu
+@choose "Return to"
+@dump:after-end
+.
+@dump:after-end-2
