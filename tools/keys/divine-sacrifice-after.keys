@@ -46,8 +46,12 @@
 
 # Cast Divine Sacrifice on the caster (self-target), before anything stands
 # beside him. The menu must offer all five choices, and nothing is paid now.
+# Pick the spell by moving the cursor, not by @choose: the Spell Manager lists
+# two rows (domain divine + wizard primal), @choose refuses the ambiguous
+# name, and either row casts the same spell for this check.
 m
-@choose "Divine Sacrifice"
+@until "Divine Sacrifice (" DOWN
+ENTER
 *
 @dump:menu
 5
@@ -92,7 +96,8 @@ w
 
 ENTER
 m
-@choose "Divine Sacrifice"
+@until "Divine Sacrifice (" DOWN
+ENTER
 *
 5
 
@@ -122,7 +127,8 @@ w
 
 ENTER
 m
-@choose "Divine Sacrifice"
+@until "Divine Sacrifice (" DOWN
+ENTER
 *
 5
 
@@ -152,7 +158,8 @@ w
 
 ENTER
 m
-@choose "Divine Sacrifice"
+@until "Divine Sacrifice (" DOWN
+ENTER
 *
 5
 
