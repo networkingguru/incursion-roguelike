@@ -14,26 +14,26 @@ Preprocessed ruleset: `lib/program.i`. Event numbers and `PRE`/`POST`/`META`/`GO
 
 ## Raising an event
 14 functions push a frame then call `RealThrow`; each starts `EventSP++; CHECK_OVERFLOW;`. They differ only in the fields they
-preload, all in `src/Event.cpp`: `Throw` (506), `ThrowField` (521), `ThrowDir` (537), `ThrowXY` (554), `ThrowVal` (572),
-`ThrowEff` (588), `ThrowEffDir` (604), `ThrowEffXY` (622), `ThrowLoc` (696), `ThrowDmg` (717), `ThrowTerraDmg` (737),
-`ThrowDmgEff` (773), `ReThrow` (472, reuses the caller's `EventInfo`), `RedirectEff` (666, copies outer to inner only).
+preload, all in `src/Event.cpp`: `Throw` (539), `ThrowField` (554), `ThrowDir` (570), `ThrowXY` (587), `ThrowVal` (605),
+`ThrowEff` (621), `ThrowEffDir` (637), `ThrowEffXY` (655), `ThrowLoc` (729), `ThrowDmg` (750), `ThrowTerraDmg` (770),
+`ThrowDmgEff` (806), `ReThrow` (499, reuses the caller's `EventInfo`), `RedirectEff` (699, copies outer to inner only).
 `Resource::PEvent` (`src/Annot.cpp:1070`) and `PEVENT` (`inc/Events.h:65`) call `Resource::Event` directly and never touch
 `EventSP`, adding C++ depth the event stack does not see.
 
 ## Order of execution
 `RealThrow` (`src/Event.cpp:432`) runs the recipient sweep three times: `PRE(Ev)`=Ev+500, then `Ev`, then `POST(Ev)`=Ev+1000
-(`:446-459`). `ABORT`/`DONE` in PRE skips the main pass; `ABORT` also skips POST. The sweep is `ThrowEvent` (`:152`), in this
-order: Region under the subject (`:172`), special Terrain (`:192`), illusory Terrain (`:206`); dungeon `EMap->dID` (`:223`);
-`EField->eID` else `e.eID` (`:236`, `:249`); every god twice, `GODWATCH(Ev)` for the actor (`:266`) and `GODWATCH(EVICTIM(Ev))`
-for the victim (`:288`); the map object (`:309`); then `e.p[3]` down to `e.p[0]` — item2, item, victim, actor (`:330`), each
-preceded by its `TRAP_EVENT` stati matching `META(S->Mag)` (`:333-347`). `ThrowTo` (`:371`) then walks the class hierarchy upward
-— Player -> Character -> Creature -> Thing, Weapon -> Item -> Thing (`HIER` macro, `:379-415`); any level may stop it.
+(`:458-482`). `ABORT`/`DONE` in PRE skips the main pass; `ABORT` also skips POST. The sweep is `ThrowEvent` (`:162`), in this
+order: Region under the subject (`:182`), special Terrain (`:202`), illusory Terrain (`:216`); dungeon `EMap->dID` (`:233`);
+`EField->eID` else `e.eID` (`:246`, `:259`); every god twice, `GODWATCH(Ev)` for the actor (`:276`) and `GODWATCH(EVICTIM(Ev))`
+for the victim (`:298`); the map object (`:319`); then `e.p[3]` down to `e.p[0]` — item2, item, victim, actor (`:340`), each
+preceded by its `TRAP_EVENT` stati matching `META(S->Mag)` (`:343-357`). `ThrowTo` (`:381`) then walks the class hierarchy upward
+— Player -> Character -> Creature -> Thing, Weapon -> Item -> Thing (`HIER` macro, `:389-425`); any level may stop it.
 `Creature::Event` (`src/Creature.cpp:736`) asks the monster resource and each `TEMPLATE` stati, first as `EVICTIM(Ev)` if this
 creature is the victim (`:739`), then as the plain event if it is the actor (`:757`).
 
-A handler changes the outcome four ways. `DONE`/`ABORT` stop dispatch at every level above (`src/Event.cpp:179`, `:245`, `:315`,
-`:382`); `NOMSG` sets `e.Terse` and continues (`:181`); `NOTHING` continues, and a whole sweep of `NOTHING` reaches the
-unhandled-event `Fatal` block in `RealThrow` (`:460-469`), which logs and `exit(1)` (`src/Wposix.cpp:1810-1826`) — but the guard
+A handler changes the outcome four ways. `DONE`/`ABORT` stop dispatch at every level above (`src/Event.cpp:189`, `:255`, `:325`,
+`:392`); `NOMSG` sets `e.Terse` and continues (`:191`); `NOTHING` continues, and a whole sweep of `NOTHING` reaches the
+unhandled-event `Fatal` block in `RealThrow` (`:483-492`), which logs and `exit(1)` (`src/Wposix.cpp:1810-1826`) — but the guard
 at `src/Event.cpp:485` returns first whenever the POST pass ran, because `e.Event` then holds `POST(Ev)`, so that `Fatal` is dead on every
 normal path; fourth, handlers mutate `EventInfo` in place, and `ReThrow` copies the frame back into the caller's `e` (`src/Event.cpp:510-513`).
 
@@ -124,7 +124,7 @@ shape at `src/Creature.cpp:880`, `src/Magic.cpp:1427`.
 `szMemory` (`:461-465`), leaving a cross-module outer script on the inner module's data segment.
 6. `src/Annot.cpp:1113` declares `res` as `uint32`; `:1141` casts it to `int8`, so a script returning 256 becomes `NOTHING`.
 7. `inc/Events.h:77-78` (`PEVENT`) and `src/Annot.cpp:1082-1083` assign `e.EXVal` twice, `e.EYVal` never.
-8. Fixed. The map sweep's `ERROR` branch (`src/Event.cpp:325`) indexed `e.p[i]` with the god loop counter `i`; since inc-kxc6
+8. Fixed. The map sweep's `ERROR` branch (`src/Event.cpp:335`) indexed `e.p[i]` with the god loop counter `i`; since inc-kxc6
 it names `e.EMap` instead.
-9. `src/Event.cpp:485` returns before the unhandled-event `Fatal` calls at `:464-469`, because `e.Event` holds `POST(Ev)` there.
+9. `src/Event.cpp:485` returns before the unhandled-event `Fatal` calls at `:487-492`, because `e.Event` holds `POST(Ev)` there.
 The three calls are dead on every normal path, and the two that name `PRE_` and `POST_` have those two names swapped.
