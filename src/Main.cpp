@@ -434,6 +434,14 @@ void Game::Play() {
     extern void HideDistProbe(Player *pl);
     HideDistProbe(pp);
 
+    /* inc-40l9: off unless INCURSION_MULTIPLY_STAGE is set. Places a gremlin
+       beside the player and water beside the gremlin so the game's EV_TURN
+       trigger calls Creature::Multiply, letting tools/check_multiply_noroom.sh
+       reach the INCURSION_MULTIPLY_NOROOM refusal whatever the seed. See
+       MultiplyNoroomProbe (src/MultiplyNoroomProbe.cpp). */
+    extern void MultiplyNoroomProbe(Player *pl);
+    MultiplyNoroomProbe(pp);
+
     /* Off unless INCURSION_MANA_FLOOR_PROBE is set, and run here because it
        needs a live loaded player. See Character::ManaFloorProbe and
        tools/check_mana_regen_floor.sh. inc-41kg. */
