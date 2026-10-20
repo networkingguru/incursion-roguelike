@@ -1026,6 +1026,7 @@ static void EnsureBlobMinimum(Map *m, Rect &r, rID regID) {
 }
 
 static void ProbeBlobMinimum(Map *m, Rect &r, rID regID, unsigned before) {
+    /* inc-nhgh: probe for tools/check_limestone_water.sh. */
     const char *enabled = getenv("INCURSION_BLOB_MIN_PROBE");
     unsigned minimum = TREG(regID)->GetConst(BLOB_MIN);
     if (!enabled || !*enabled || *enabled == '0' || !minimum)

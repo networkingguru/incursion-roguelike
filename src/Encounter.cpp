@@ -512,6 +512,7 @@ int16 maxAmtByCR(int16 CR)
   }
 
 EvReturn Map::enGenerate(EventInfo &e) {
+    /* inc-nhgh: probe for tools/check_encounter_skip_reset.sh. */
     static const bool encSkipProbe = getenv("INCURSION_ENCSKIP_PROBE") != NULL;
     unsigned encSkipPass = 0;
     int16 i, j;
