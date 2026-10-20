@@ -1,0 +1,39 @@
+/* rest-disease-god.irh -- fixture for tools/check_rest_disease.sh (bd
+   inc-d8i7). Same one-shot route as rest-poison-god.irh: joining the god via
+   wizard mode "Become Divine Champion" fires EV_BLESSING once, and the
+   handler stages the case with no dice rolled.
+
+   The line "@@CASE@@" below is replaced by the check script with one of
+   three statements, so one key script serves all three cases:
+     nosoul   DISEASED, no Strong Soul
+     soul     DISEASED plus Strong Soul (EXTRA_ABILITY, as Fight.cpp:2419)
+     healthy  neither
+   Every case then halves cHP and gives A_STR and A_DEX 3 points of ability
+   damage (ADJUST_DMG, Mag -3, as Fight.cpp:8816), so rest has wounds and
+   damage to recover. NOT shipped: spliced onto a scratch copy of
+   lib/main.irc only. */
+
+God "Rest Disease Test God"
+  {
+    Lists:
+      * FAVOUR_CHART
+          1000
+          50000
+          60000
+          70000
+          80000
+          90000
+          100000
+          110000
+          120000
+          130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Rest Disease Test God") == 1) {
+        @@CASE@@
+        EActor->GainPermStati(ADJUST_DMG,NULL,SS_ATTK,A_STR,-3);
+        EActor->GainPermStati(ADJUST_DMG,NULL,SS_ATTK,A_DEX,-3);
+        EActor->cHP = EActor->mHP / 2;
+        }
+      return NOTHING;
+      };
+  }

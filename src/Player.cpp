@@ -2542,18 +2542,20 @@ EvReturn Player::Rest(EventInfo &e) {
                         if (!(e.EParam & REST_NOHEAL) || t != this) {
 
                             j = t->HasAbility(CA_STRONG_SOUL) ? 2 : 1;
+                            /* rules: disease blocks only ability-damage recovery
+                               on rest, not HP (bd inc-d8i7, ruling inc-g69h row 2).
+                               Tier Observed, not sent (design ruling, not upstream). */
                             if (t->HasStati(DISEASED))
                                 j--;
-                            if (!j)
-                                goto SkipHeal;
-                            for (i = 0; i != 7; i++)
-                                if (t->HasStati(ADJUST_DMG, i)) {
-                                    if ((-t->SumStatiMag(ADJUST_DMG, i)) <= j)
-                                        t->RemoveStati(ADJUST_DMG, -1, i);
-                                    else
-                                        t->SetStatiMag(ADJUST_DMG, i, NULL,
-                                        t->GetStatiMag(ADJUST_DMG, i) + j);
-                                }
+                            if (j)
+                                for (i = 0; i != 7; i++)
+                                    if (t->HasStati(ADJUST_DMG, i)) {
+                                        if ((-t->SumStatiMag(ADJUST_DMG, i)) <= j)
+                                            t->RemoveStati(ADJUST_DMG, -1, i);
+                                        else
+                                            t->SetStatiMag(ADJUST_DMG, i, NULL,
+                                            t->GetStatiMag(ADJUST_DMG, i) + j);
+                                    }
                             if (j == 2 && Percent == 100)
                                 t->RestoreXP(100 + 100 * t->AbilityLevel(CA_STRONG_SOUL));
 
@@ -2576,7 +2578,6 @@ EvReturn Player::Rest(EventInfo &e) {
                                         500);
                                 }
                             }
-                        SkipHeal:
                             if (t->HasStati(FLAWLESS_DODGE))
                                 t->SetStatiMag(FLAWLESS_DODGE, -1, NULL, 0);
 

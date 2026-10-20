@@ -1,0 +1,59 @@
+# Rest while DISEASED: does the rest still heal hit points, and how much ability
+# damage does it restore? Read by tools/check_rest_disease.sh. bd inc-d8i7.
+# Same route, same traps ('z' lowercase, depth 2, genocide, armour off) as
+# rest-poison.keys -- read that header. The check script splices a god from
+# tools/fixtures/rest-disease-god.irh whose handler stages one of three cases.
+# before/after dump "Examine Player Data": HP line plus the Stati list
+# (ADJUST_DMG rows carry Val:A_STR / Mag:-n).
+
+@include chargen.keys
+@until "HP:" ESC
+
+# STRIP THE WORN ARMOUR. Since the starting kit arranges a proficient
+# character's armour onto its body (bd inc-zzwm), the orc barbarian now sleeps
+# in its orcish hide armour, and Player::Rest prints "You take off your armour
+# to rest." (and puts it back on waking) -- extra lines that push the wake
+# message off the 'woke' screen this check reads. Taking the armour off into
+# the pack here, before any game time is spent, restores the route the check
+# was written for: no armour to doff or don during the night. 'i' opens the
+# inventory, 'j' is the Armour slot letter (src/Managers.cpp:441 SlotLetters;
+# SL_ARMOUR is 9), SPACE lifts the suit into the air, 's' stows it in the pack
+# (the medium backpack the kit grants), and ESC returns to play.
+i
+j
+SPACE
+s
+ESC
+
+w y
+@choose "Ascend / Descend Depth"
+"2" ENTER
+@until "HP:" ESC
+
+w
+@choose "Genocide Everything"
+@until "HP:" ESC
+
+w
+@choose "Become Divine Champion"
+"Rest Disease Test God" ENTER
+@while "more --" SPACE
+@while "ESC:Done" ESC
+
+w
+@choose "Examine Player Data"
+DOWN*10
+@dump:before
+ESC
+
+z
+y
+SPACE SPACE
+@dump:woke
+
+w
+@choose "Examine Player Data"
+DOWN*10
+@dump:after
+ESC
+@quit
