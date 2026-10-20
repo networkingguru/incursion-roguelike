@@ -2869,7 +2869,8 @@ Region "Limestone Cave" : RF_ROOM
     Walls: $"Dungeon Wall"; Floor: $"Floor"; 
     Door: $"darkwood door"; RoomTypes: RM_LIFECAVE;     
     Constants:
-      * BLOB_WITH $"shallow water";
+      * BLOB_WITH $"shallow water",
+      * BLOB_MIN 9;
     Lists:
       * WALL_COLOURS GREEN, 
       * FLOOR_COLOURS GREEN,

@@ -512,6 +512,8 @@ int16 maxAmtByCR(int16 CR)
   }
 
 EvReturn Map::enGenerate(EventInfo &e) {
+    static const bool encSkipProbe = getenv("INCURSION_ENCSKIP_PROBE") != NULL;
+    unsigned encSkipPass = 0;
     int16 i, j;
     int32 q, c, w, n, enWeight[1024], tWeight;
     int16 nParts, regTries; uint16 old_enAlign;
@@ -746,6 +748,20 @@ EvReturn Map::enGenerate(EventInfo &e) {
         e.isAquaticContext = true;
     if (te->HasFlag(NF_AQUATIC))
       e.enFlags |= EN_AQUATIC;
+    /* upstream: each Stage 4 pass starts with no part skipped. Plain logic,
+       no platform or typedef dependence; Win32 misbehaves identically.
+       Observed; inc-nhgh; not sent. */
+    for (i=0;i!=MAX_PARTS;i++)
+      e.enSkipPart[i] = false;
+    ++encSkipPass;
+    if (encSkipProbe) {
+      int dirty = 0;
+      for (i=0;i!=MAX_PARTS;i++)
+        if (e.enSkipPart[i])
+          ++dirty;
+      Error("ENCSKIP enID=%u pass=%u nested=%d dirty=%d",
+        (unsigned)e.enID, encSkipPass, (e.enFlags & EN_NESTED) ? 1 : 0, dirty);
+    }
     for (i=0;i!=MAX_PARTS && (te->Parts[i].xID || te->Parts[i].Flags);i++)
       {
         if (te->Parts[i].minCR > e.enCR)

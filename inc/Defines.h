@@ -3743,6 +3743,7 @@ typedef signed int        hObj;
 #define PATRON_DEITY          59 /* Unused? */
 #define MOOD_STRINGS          60 /* Unused? */
 #define BLOB_WITH             61 /* What terrain to furnish a generated panel with. */
+#define BLOB_MIN              80 /* Minimum number of BLOB_WITH squares a generated panel must hold. */
 #define MIN_CHASM_DEPTH       62 /* The minimum depth at which regions flagged as chasms can be spawned. */
 #define MIN_RIVER_DEPTH       63 /* The minimum depth at which regions flagged as rivers can be spawned. */
 #define TREASURE_CHANCE       64 /* Chance of furnishing treasure in an area. */ 

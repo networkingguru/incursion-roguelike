@@ -1,0 +1,43 @@
+# inc-nhgh: generate each Goblin Caves depth without wandering into prompts.
+# Fresh character required: a saved fixture would pin the dungeon layout.
+@include chargen.keys
+@until "HP:" ENTER
+w y
+@choose "Ascend / Descend Depth"
+"2" ENTER
+@until "HP:" ENTER
+@until "Wizard Mode Options:" w
+@choose "Ascend / Descend Depth"
+"3" ENTER
+@until "HP:" ENTER
+@until "Wizard Mode Options:" w
+@choose "Ascend / Descend Depth"
+"4" ENTER
+@until "HP:" ENTER
+@until "Wizard Mode Options:" w
+@choose "Ascend / Descend Depth"
+"5" ENTER
+@until "HP:" ENTER
+@until "Wizard Mode Options:" w
+@choose "Ascend / Descend Depth"
+"6" ENTER
+@until "HP:" ENTER
+@until "Wizard Mode Options:" w
+@choose "Ascend / Descend Depth"
+"7" ENTER
+@until "HP:" ENTER
+@until "Wizard Mode Options:" w
+@choose "Ascend / Descend Depth"
+"8" ENTER
+@until "HP:" ENTER
+@until "Wizard Mode Options:" w
+@choose "Ascend / Descend Depth"
+"9" ENTER
+@until "HP:" ENTER
+@until "Wizard Mode Options:" w
+@choose "Ascend / Descend Depth"
+"10" ENTER
+@until "HP:" ENTER
+@expect "100m"
+@dump:depth10
+@quit

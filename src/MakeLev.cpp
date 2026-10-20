@@ -33,6 +33,7 @@
      String Map::Describe(Player* p)
 */
 
+#include <vector>
 #include "Incursion.h"
 
 #ifdef INCURSION_OOB_PROBE
@@ -950,6 +951,96 @@ void Map::WriteStreamer(Rect &r, uint8 sx, uint8 sy, Dir d, rID regID) {
     }
 }
 
+static bool BlobFloor(Map *m, int x, int y, rID regID, rID blob) {
+    return m->InBounds(x, y) && m->RegionAt(x, y) == regID &&
+        !m->At(x, y).Solid && !m->FFeatureAt(x, y) &&
+        (m->TerrainAt(x, y) == TREG(regID)->Floor ||
+         m->TerrainAt(x, y) == blob) &&
+        m->At(x, y).Priority <= PRIO_ROOM_FURNITURE;
+}
+
+static unsigned BlobCount(Map *m, Rect &r, rID regID, rID blob) {
+    unsigned count = 0;
+    for (int y = r.y1; y <= r.y2; ++y)
+        for (int x = r.x1; x <= r.x2; ++x)
+            if (m->InBounds(x, y) && m->RegionAt(x, y) == regID &&
+                m->TerrainAt(x, y) == blob)
+                ++count;
+    return count;
+}
+
+static void EnsureBlobMinimum(Map *m, Rect &r, rID regID) {
+    rID blob = TREG(regID)->GetConst(BLOB_WITH);
+    unsigned minimum = TREG(regID)->GetConst(BLOB_MIN);
+    if (!blob || !minimum)
+        return;
+    unsigned count = BlobCount(m, r, regID, blob);
+    /* upstream: Water-only Limestone Cave encounters require water after furnishing.
+       Original data/random blobs also fail on Win32; no platform/typedef dependence.
+       Observed (seed 52 dry panel); inc-nhgh; not sent. */
+    for (int retry = 0; count < minimum && retry < 3; ++retry) {
+        m->WriteBlobs(r, regID, blob);
+        count = BlobCount(m, r, regID, blob);
+    }
+    const int width = r.x2 - r.x1 + 1, height = r.y2 - r.y1 + 1;
+    std::vector<bool> visited(width * height, false);
+    std::vector<int> queue;
+    while (count < minimum) {
+        int start = -1, nearest = width + height;
+        for (int y = r.y1; y <= r.y2; ++y)
+            for (int x = r.x1; x <= r.x2; ++x) {
+                int index = (y - r.y1) * width + x - r.x1;
+                int distance = abs(x - (r.x1 + r.x2) / 2) +
+                               abs(y - (r.y1 + r.y2) / 2);
+                if (!visited[index] && BlobFloor(m, x, y, regID, blob) &&
+                    distance < nearest) {
+                    start = index;
+                    nearest = distance;
+                }
+            }
+        if (start < 0)
+            break;
+        queue.clear();
+        queue.push_back(start);
+        visited[start] = true;
+        for (size_t i = 0; i < queue.size() && count < minimum; ++i) {
+            int x = r.x1 + queue[i] % width, y = r.y1 + queue[i] / width;
+            if (m->TerrainAt(x, y) != blob) {
+                m->WriteAt(r, x, y, blob, regID, PRIO_ROOM_FURNITURE);
+                if (m->TerrainAt(x, y) == blob)
+                    ++count;
+            }
+            const int dx[] = {1, 0, -1, 0}, dy[] = {0, 1, 0, -1};
+            for (int d = 0; d < 4; ++d) {
+                int nx = x + dx[d], ny = y + dy[d];
+                if (nx < r.x1 || nx > r.x2 || ny < r.y1 || ny > r.y2)
+                    continue;
+                int index = (ny - r.y1) * width + nx - r.x1;
+                if (!visited[index] && BlobFloor(m, nx, ny, regID, blob)) {
+                    visited[index] = true;
+                    queue.push_back(index);
+                }
+            }
+        }
+    }
+}
+
+static void ProbeBlobMinimum(Map *m, Rect &r, rID regID, unsigned before) {
+    const char *enabled = getenv("INCURSION_BLOB_MIN_PROBE");
+    unsigned minimum = TREG(regID)->GetConst(BLOB_MIN);
+    if (!enabled || !*enabled || *enabled == '0' || !minimum)
+        return;
+    char path[1024];
+    snprintf(path, sizeof(path), "%slogs/blob-min.log",
+             (const char *)T1->IncursionDirectory);
+    FILE *f = fopen(path, "a");
+    if (f) {
+        fprintf(f, "BLOB_MIN region=\"%s\" before=%u count=%u min=%u\n", NAME(regID), before,
+                BlobCount(m, r, regID, TREG(regID)->GetConst(BLOB_WITH)), minimum);
+        fclose(f);
+    }
+}
+
 void Map::WriteBlobs(Rect &r, rID regID, rID bID) {
     uint8 i, j, x, y;
 
@@ -985,7 +1076,9 @@ void Map::WriteBlobs(Rect &r, rID regID, rID bID) {
             j = At(x, y).Visibility;
             At(x, y).Visibility = 0;
             if (j)
-                if (!At(x, y).Solid && (regID <= 0 || RegionAt(x, y) == regID))
+                if (!At(x, y).Solid && (regID <= 0 || RegionAt(x, y) == regID) &&
+                    (regID <= 0 || !TREG(regID)->GetConst(BLOB_MIN) ||
+                     BlobFloor(this, x, y, regID, bID)))
                     WriteAt(r, x, y, bID, RegionAt(x, y), PRIO_ROOM_FURNITURE);
         }
 }
@@ -3126,6 +3219,10 @@ DoBasicRoom:
 
             if (!anything)
                 FurnishArea(NULL_RECT);
+            unsigned blobBefore = TREG(regID)->GetConst(BLOB_MIN) ?
+                BlobCount(this, cPanel, regID, TREG(regID)->GetConst(BLOB_WITH)) : 0;
+            EnsureBlobMinimum(this, cPanel, regID);
+            ProbeBlobMinimum(this, cPanel, regID, blobBefore);
             FindOpenAreas(cPanel, regID,
                 FOA_ALLOW_WATER | FOA_ALLOW_WARN | FOA_ALLOW_FALL | FOA_ALLOW_SPEC);
             PopulatePanel(cPanel);
