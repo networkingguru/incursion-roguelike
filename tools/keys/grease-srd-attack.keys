@@ -1,0 +1,20 @@
+# inc-ckw0. Attack from inside a square of grease. Grease one east, kobold two
+# east. Step into the grease (free), then attack the kobold.
+@include grease-srd-setup.keys
+w
+@choose "Monster Summoning"
+@choose "Kobolds"
+c
+RIGHT*2 ENTER
+w
+K
+RIGHT
+ENTER
+W
+RIGHT
+@while "Confirm" y
+@dump:in
+RIGHT
+@dump:attack
+v
+@dump:history

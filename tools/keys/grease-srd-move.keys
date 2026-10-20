@@ -1,0 +1,31 @@
+# inc-ckw0. Leave a square of grease on foot. One grease square, one east of
+# the character. Step 1 enters it (no check at any build); step 2 leaves it,
+# and that is the move the terrain judges. Step 3 tries to leave again: a
+# creature knocked prone rolls nothing that time, so the count of Balance
+# lines in the message history shows whether the first attempt dropped it.
+# The kobold stands six east.
+# INCURSION_RUNTO_SKILL_ROLL pins the d20 and INCURSION_FORCE_SAVE_ROLL pins
+# the Reflex save; see tools/check_grease_srd.sh.
+@include grease-srd-setup.keys
+w
+@choose "Monster Summoning"
+@choose "Kobolds"
+c
+RIGHT*6 ENTER
+w
+K
+RIGHT
+ENTER
+W
+@dump:start
+RIGHT
+@while "Confirm" y
+@dump:in
+RIGHT
+@while "Confirm" y
+@dump:out
+RIGHT
+@while "Confirm" y
+@dump:out2
+v
+@dump:history
