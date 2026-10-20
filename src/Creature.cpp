@@ -3911,6 +3911,10 @@ String Creature::TerrainRiskNote(rID terrain, Map *map, int16 x, int16 y)
 inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
                                     int16 cmod, const char *cmod_desc)
 { 
+  if (isPlayer() && getenv("INCURSION_LIGHT_TRAP_PROBE"))
+    fprintf(stderr, "LIGHT_TRAP save type=%s dc=%d rolls_die=%d clock=%ld\n",
+        type == FORT ? "FORT" : type == REF ? "REF" : "WILL", (int)DC,
+        DC > 0, (long)theGame->Turn);
   int16 Bonus, i;
   static const char *save_name[3] = { "Fortitude", "Reflex", "Will" };
   /* inc-1xr3: predicted chance with the same arguments, before any die. */

@@ -145,6 +145,20 @@ void Player::ResetOptions() {
 Character::Character(rID mID, int16 _Type) : Creature(mID, _Type) {
 }
 
+/* inc-trfo: reproduction only; real trap/save/duration paths, one trigger. */
+static void LightTrapProbeArrange(Player *pp)
+{
+    static bool done = false;
+    if (!getenv("INCURSION_LIGHT_TRAP_PROBE") || done || !pp->m) return;
+    done = true;
+    pp->Options[OPT_FREEZE_MON] = 1;
+    Trap *trap = new Trap(FIND("trap"), FIND("light trap"));
+    trap->PlaceAt(pp->m, pp->x, pp->y);
+    EventInfo e; e.Clear(); e.EActor = pp;
+    fprintf(stderr, "LIGHT_TRAP trigger clock=%ld\n", (long)theGame->Turn);
+    trap->TriggerTrap(e, false);
+}
+
 /* Temporary diagnostic: set INCURSION_RIDER_PROBE=1 to arrange, once, the one
    state inc-upw.32 is about -- a natural attack whose primary blow kills the
    victim before its rider is thrown.
@@ -440,6 +454,7 @@ void Player::ChooseAction() {
 
     GameTimeInfo.actions++;
 
+    LightTrapProbeArrange(this);
     RiderProbeArrange(this);
     AoOProbeArrange(this);
     EludeProbeArrange(this);
@@ -1464,6 +1479,9 @@ FindNonReachVictim:
             /*if (Opt(OPT_REST_BEHAVE))
             GainPermStati(ACTING,NULL,SS_MISC,EV_REST);
             else*/
+            if (getenv("INCURSION_LIGHT_TRAP_PROBE"))
+                fprintf(stderr, "LIGHT_TRAP wait clock=%ld blind=%d\n",
+                    (long)theGame->Turn, HasStati(BLIND) ? 1 : 0);
             Timeout += 15;
             return;
         case KY_CMD_RUN:
