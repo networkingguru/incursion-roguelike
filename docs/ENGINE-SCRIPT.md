@@ -77,8 +77,8 @@ only works in debug builds" -- holds for Windows Release and for
    `src/Registry.cpp:61`). The stamp is `SaveFormatID()`, an FNV digest of every size the save
    format depends on (`src/AbiCheck.cpp:185`, `:144`), so adding a field to a
    serialised class rejects old files by itself. The old stamp `VERSION_STRING`,
-   `"0.6.9Y19"` (`inc/Defines.h:23`), is still accepted as a migration
-   allowance, and that branch is marked for deletion (`src/Registry.cpp:66`).
+   `"0.6.9Y19"` (`inc/Defines.h:23`), is refused since inc-vqla
+   (`src/Registry.cpp:66`).
    The text segment is also stored bitwise-inverted, negated on save and again
    on load (`inc/Res.h:844`, `inc/Res.h:916`), so `strings` on the file shows nothing.
 

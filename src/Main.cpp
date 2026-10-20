@@ -414,6 +414,10 @@ void Game::Play() {
     extern void HideTriggerProbe(Player *pl);
     HideTriggerProbe(pp);
 
+    /* inc-f99j: opt-in AutoLoot multi-pack reproduction; see tools/check_autoloot_packs.sh. */
+    extern void AutoLootPacksProbe(Player *pl);
+    AutoLootPacksProbe(pp);
+
     /* inc-u3dp phase 5: searching finds hidden creatures. Off unless
        INCURSION_HIDE_SEARCH_PROBE is set. See HideSearchProbe
        (src/HideSearchProbe.cpp) and tools/check_hide_search.sh. */

@@ -2,7 +2,7 @@
    INCURSION_HIDE_SEARCH_PROBE is set. Caller: Game::Play (src/Main.cpp),
    beside HideTriggerProbe. Reader: tools/check_hide_search.sh.
 
-   The probe plays three scenes:
+   The probe plays three scenes (run in the order DOOR, MON, SCENE):
      DOOR  a secret door beside the player, found through the real
            Creature::Search (Throw of EV_SEARCH);
      SCENE a hidden monster in the player's sight with a stored "not spotted"
@@ -86,35 +86,8 @@ void HideSearchProbe(Player *pl) {
         pl->Options[OPT_AUTOMORE] = autoMore; theGame->PlayMode = wasInPlay; return;
     }
 
-    /* --- SCENE: a hidden monster the player will find by searching. --- */
-    int hx, hy;
-    if (!hsAtDist(mp, pl->x, pl->y, 2, &hx, &hy)) {
-        Error("HIDE_SEARCH INCONCLUSIVE no open square at distance 2");
-        pl->Options[OPT_AUTOMORE] = autoMore; theGame->PlayMode = wasInPlay; return;
-    }
-    Monster *hid = hsSpawn(mp, "giant rat", hx, hy);
-    if (!hid) {
-        Error("HIDE_SEARCH INCONCLUSIVE no giant rat");
-        pl->Options[OPT_AUTOMORE] = autoMore; theGame->PlayMode = wasInPlay; return;
-    }
-    hid->GainPermStati(HIDING, NULL, SS_CLAS, HI_SHADOWS, 1);
-    HideStarted(hid, false);
-    if (!HideCanWatch(pl, hid)) {
-        Error("HIDE_SEARCH INCONCLUSIVE player cannot watch the hidden monster");
-        pl->Options[OPT_AUTOMORE] = autoMore; theGame->PlayMode = wasInPlay; return;
-    }
-    /* A stored "not spotted" verdict for the monster's current epoch. */
-    HideSetKey(pl, HK_SPOT_RESULT, hid, (int16)(((hid->HideVal & 0xFF) << 1) | 0));
-    /* The player searches far better than the rat hides, so repeated searches
-       spot it. */
-    pl->GainPermStati(SKILL_BONUS, NULL, SS_MISC, SK_SPOT, 100);
-    pl->CalcVision();
-    if (pl->Perceives(hid)) {
-        Error("HIDE_SEARCH INCONCLUSIVE player still perceives the hidden monster");
-        pl->Options[OPT_AUTOMORE] = autoMore; theGame->PlayMode = wasInPlay; return;
-    }
-
-    /* --- MON: 60 real ChooseAction calls for each monster. --- */
+    /* --- MON: 60 real ChooseAction calls for each monster. Runs before SCENE
+       so a loss monster cannot walk to the hidden rat and kill it. --- */
     /* The player hides, so a monster that targets it cannot see it (ts vis ==
        0) -- the "lost sight" case. */
     pl->RemoveStati(HIDING);
@@ -144,14 +117,44 @@ void HideSearchProbe(Player *pl) {
             ctrl->ChooseAction();
         }
     }
-    Error("HIDE_SEARCH SCENE player=%d hidden=%d loss=%d ctrl=%d",
-        (int)pl->myHandle, (int)hid->myHandle,
-        (int)(loss ? loss->myHandle : 0), (int)(ctrl ? ctrl->myHandle : 0));
-
-    /* Remove the scenario-3 monsters: a visible hostile near the player would
-       halt the key-driven search in ExtendedAction. Their actions are logged. */
+    const int lossH = loss ? (int)loss->myHandle : 0;
+    const int ctrlH = ctrl ? (int)ctrl->myHandle : 0;
+    /* Remove the monsters: a visible hostile near the player would halt the
+       key-driven search in ExtendedAction. Their actions are logged. */
     if (loss) loss->Remove(true);
     if (ctrl) ctrl->Remove(true);
+
+    /* --- SCENE: a hidden monster the player will find by searching. --- */
+    int hx, hy;
+    if (!hsAtDist(mp, pl->x, pl->y, 2, &hx, &hy)) {
+        Error("HIDE_SEARCH INCONCLUSIVE no open square at distance 2");
+        pl->Options[OPT_AUTOMORE] = autoMore; theGame->PlayMode = wasInPlay; return;
+    }
+    Monster *hid = hsSpawn(mp, "giant rat", hx, hy);
+    if (!hid) {
+        Error("HIDE_SEARCH INCONCLUSIVE no giant rat");
+        pl->Options[OPT_AUTOMORE] = autoMore; theGame->PlayMode = wasInPlay; return;
+    }
+    hid->GainPermStati(HIDING, NULL, SS_CLAS, HI_SHADOWS, 1);
+    HideStarted(hid, false);
+    if (!HideCanWatch(pl, hid)) {
+        Error("HIDE_SEARCH INCONCLUSIVE player cannot watch the hidden monster");
+        pl->Options[OPT_AUTOMORE] = autoMore; theGame->PlayMode = wasInPlay; return;
+    }
+    /* A stored "not spotted" verdict for the monster's current epoch. */
+    HideSetKey(pl, HK_SPOT_RESULT, hid, (int16)(((hid->HideVal & 0xFF) << 1) | 0));
+    /* The player searches far better than the rat hides, so repeated searches
+       spot it. */
+    pl->GainPermStati(SKILL_BONUS, NULL, SS_MISC, SK_SPOT, 100);
+    pl->CalcVision();
+    if (pl->Perceives(hid)) {
+        Error("HIDE_SEARCH INCONCLUSIVE player still perceives the hidden monster");
+        pl->Options[OPT_AUTOMORE] = autoMore; theGame->PlayMode = wasInPlay; return;
+    }
+
+    Error("HIDE_SEARCH SCENE player=%d hidden=%d loss=%d ctrl=%d",
+        (int)pl->myHandle, (int)hid->myHandle,
+        lossH, ctrlH);
 
     pl->Options[OPT_AUTOMORE] = autoMore;
     theGame->PlayMode = wasInPlay;

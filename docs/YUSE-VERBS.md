@@ -16,7 +16,7 @@ anywhere else. This file is that listing.
 **24 of its 57 distinct verbs have no implementation**, filling 27 of the 63
 entries. The menu no longer offers them: `Player::YuseMenu` drops any entry
 whose `MissingImplementation` flag is set (`src/Player.cpp:1828-1835`,
-`inc/Creature.h:90`). Until that gate was added, a dead verb was offered like
+`inc/Creature.h:76`). Until that gate was added, a dead verb was offered like
 every other, took your prompts and your target, and did nothing. They are
 listed below because the table still carries them, and because which verbs are
 dead is what this file exists to record.
@@ -174,9 +174,9 @@ steed do (`lib/wspells.irh:1813` and `:1908`, `lib/pspells.irh:3585`). Once
 picked it runs a full validation path — Ride skill, humanoid form, the
 target's `M_MOUNTABLE` flag, hostility, prone/stuck/grappled/asleep, plane,
 size, challenge rating, and whether the creature will accept you at all
-(`src/Skills.cpp:4503-4568`).
+(`src/Skills.cpp:4491-4563`).
 **Dismount** has a second route: the Cancel (`x`) command drops a standing
-`MOUNTED` stati (`src/Skills.cpp:456`).
+`MOUNTED` stati (`src/Skills.cpp:461`).
 
 **Shoot and Throw are the same event**, `EV_RATTACK`, differing only in
 prompt wording.
