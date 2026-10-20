@@ -174,9 +174,9 @@ steed do (`lib/wspells.irh:1813` and `:1908`, `lib/pspells.irh:3585`). Once
 picked it runs a full validation path — Ride skill, humanoid form, the
 target's `M_MOUNTABLE` flag, hostility, prone/stuck/grappled/asleep, plane,
 size, challenge rating, and whether the creature will accept you at all
-(`src/Skills.cpp:4503-4568`).
+(`src/Skills.cpp:4491-4563`).
 **Dismount** has a second route: the Cancel (`x`) command drops a standing
-`MOUNTED` stati (`src/Skills.cpp:456`).
+`MOUNTED` stati (`src/Skills.cpp:461`).
 
 **Shoot and Throw are the same event**, `EV_RATTACK`, differing only in
 prompt wording.
