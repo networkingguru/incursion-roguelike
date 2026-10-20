@@ -69,6 +69,8 @@ void Thing::UpdateStati() {
                 S->Duration--;
 
             if (S->Duration <= 0) {
+                if (isPlayer() && S->Nature == BLIND && getenv("INCURSION_LIGHT_TRAP_PROBE"))
+                    fprintf(stderr, "LIGHT_TRAP expiry clock=%ld\n", (long)theGame->Turn);
                 if (S->Nature == ACTING) {
                     s = *S;
                     if (s.h && oThing(s.h)->isCreature()) 
@@ -89,6 +91,8 @@ void Thing::UpdateStati() {
 int32 __max = 0;
 
 void Thing::GainTempStati(int16 n, Thing *t, int16 Duration, int8 Cause, int16 Val, int16 Mag, rID eID, int8 clev) {
+    if (isPlayer() && n == BLIND && getenv("INCURSION_LIGHT_TRAP_PROBE"))
+        fprintf(stderr, "LIGHT_TRAP gain raw=%d clock=%ld\n", (int)Duration, (long)theGame->Turn);
     if (isPlayer())
         thisp->statiChanged = true;
 

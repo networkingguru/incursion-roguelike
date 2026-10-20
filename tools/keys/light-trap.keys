@@ -1,0 +1,4 @@
+# inc-trfo: loaded fixture, one real trap trigger, ordinary waits (Timeout=15; observed spacing=16 clock ticks).
+.*300
+@dump:light-trap-ended
+@quit
