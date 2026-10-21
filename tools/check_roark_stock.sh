@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# gate-serial: --prove-red overwrites tracked src files and rebuilds the shared binaries
 # inc-icp3: Roark's necessities stock.
 #
 #   tools/check_roark_stock.sh               exit 0 every point holds, 1 a point fails,

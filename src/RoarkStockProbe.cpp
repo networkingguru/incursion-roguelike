@@ -241,6 +241,7 @@ static void CraftMode(Player *p) {
     Error("ROARK_STOCK done");
 }
 
+/* inc-icp3: the hook below serves the Roark stock check, tools/check_roark_stock.sh. */
 void RoarkStockProbe(Player *p) {
     const char *s = getenv("INCURSION_ROARK_STOCK_PROBE");
     if (!s || !*s) return;
