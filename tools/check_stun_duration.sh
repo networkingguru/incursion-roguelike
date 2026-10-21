@@ -1,14 +1,15 @@
 #!/bin/bash
 # gate: live
-# inc-q33r: AD_STUN stun duration, measured live.
+# inc-q33r/inc-trfo: AD_STUN stun duration, measured live.
 # Loaded priest, forced natural-1 saves, one kobold on an open square adjacent
 # to the player. ThrowDmg(EV_DAMAGE, AD_STUN, amount, ...) with EActor=player
 # and EVictim=kobold reaches the AD_STUN branch (EActor=p[0], EVictim=p[1];
-# inc/Events.h). For each amount in {3, 9} the stun must last exactly that
-# many rounds and its cause must be SS_ATTK. Before the fix the Duration and
+# inc/Events.h). The stun lasts the amount halved into two-round units
+# (inc-trfo) and its cause must be SS_ATTK. Before the fix the Duration and
 # Cause arguments were swapped, so every stun lasted SS_ATTK (6) and carried
-# the rolled amount as its cause. FAIL, INCONCLUSIVE or missing results exit
-# nonzero.
+# the rolled amount as its cause. The swap stays detected because 6 is outside
+# both ranges (amount=3 gives 1..2, amount=9 gives 4..5).
+# FAIL, INCONCLUSIVE or missing results exit nonzero.
 # Usage: tools/check_stun_duration.sh
 set -uo pipefail
 
@@ -59,4 +60,4 @@ if ! grep -q 'STUN_DUR_PROBE: PASS' <<< "$lines"; then
     exit 1
 fi
 
-echo "PASS: AD_STUN stun lasts the rolled amount with cause SS_ATTK."
+echo "PASS: AD_STUN stun lasts the amount halved into two-round units (inc-trfo) with cause SS_ATTK."
