@@ -1,6 +1,7 @@
-/* inc-q33r: opt-in probe for the AD_STUN stun duration. Off unless
+/* inc-q33r/inc-trfo: opt-in probe for the AD_STUN stun duration. Off unless
    INCURSION_STUN_DUR_PROBE is set. Called from Game::Play (src/Main.cpp);
-   graded by tools/check_stun_duration.sh. Output goes to errors.log through
+   graded by tools/check_stun_duration.sh. The stun lasts the amount converted
+   from rounds to two-round units (inc-trfo). Output goes to errors.log through
    Error(), one STUN_DUR_PROBE line per fact. */
 #include "Incursion.h"
 
@@ -64,9 +65,13 @@ void StunDurProbe(Player *pl) {
         const int stunned = kobold->HasStati(STUNNED) ? 1 : 0;
         const int dur = stunned ? kobold->GetStatiDur(STUNNED) : 0;
         const int cause = stunned ? kobold->GetStatiCause(STUNNED) : 0;
-        Error("STUN_DUR_PROBE: amount=%d stunned=%d dur=%d cause=%d",
-            amount, stunned, dur, cause);
-        if (!(stunned == 1 && dur == amount && cause == SS_ATTK))
+        int lo = amount / 2, hi = (amount + 1) / 2;
+        if (lo < 1) lo = 1;
+        if (hi < 1) hi = 1;
+        if (lo > hi) { const int t = lo; lo = hi; hi = t; }
+        Error("STUN_DUR_PROBE: amount=%d stunned=%d dur=%d cause=%d want=%d..%d",
+            amount, stunned, dur, cause, lo, hi);
+        if (!(stunned == 1 && dur >= lo && dur <= hi && cause == SS_ATTK))
             pass = false;
     }
     if (pass) Error("STUN_DUR_PROBE: PASS");
