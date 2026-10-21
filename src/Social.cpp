@@ -2028,6 +2028,11 @@ int32 Item::getShopCost(Creature *Buyer, Creature *Seller) {
     bool plusPriced;
     int32 priceList[10];
 
+    /* inc-1qyv: a fixed-price effect costs its first ITEM_COST in gp, everywhere. */
+    if (eID && TEFF(eID)->HasFlag(EF_FIXED_PRICE) &&
+        TEFF(eID)->GetList(ITEM_COST, (rID*)priceList, 10))
+        return priceList[0] * Quantity;
+
     plusPriced = false;
     cost = TITEM(iID)->Cost;
     if (TITEM(iID)->GetList(ITEM_COST, (rID*)priceList, 10)) {
