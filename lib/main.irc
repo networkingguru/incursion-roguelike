@@ -640,3 +640,39 @@ AI_POTION Effect "Elemental Resistance" : EA_GENERIC
   Lists:
     * ITEM_COST 50;
   }
+
+/* APPEND-ONLY: last Effect in parse order, after Elemental Resistance. inc-w6t0. */
+Wizard / Potion / Scroll Spell "Stone to Flesh" : EA_GENERIC
+  { SC_THA; Base: SP_HARD; Cost: 20; Level: 6; qval: Q_TAR|Q_NEAR;
+    Flags: EF_AFFECTS_ITEMS, EF_LIM_ITYPE; tval: T_STATUE;
+    Purpose: EP_FIX_TROUBLE (TROUBLE_STONING);
+    Desc: "Turns stone back into living flesh. Cast on a creature that
+      is turning to stone, the spell stops the change and does no
+      harm. Cast on a statue, it turns the statue into a living
+      creature of the kind it shows. A statue that shows no kind
+      becomes a creature found at the current depth.";
+    On Event EV_MAGIC_HIT {
+      rID mid; hObj mon; int16 sx, sy;
+      if (ETarget->isType(T_STATUE)) {
+        /* A statue becomes a NEW monster of its type; nothing from before
+           the petrification is kept. A statue with no type gets one the way
+           the level generator picks it. */
+        mid = ETarget->GetCorpseType();
+        if (!mid)
+          mid = EMap->CorpseMonID();
+        if (!mid)
+          return DONE;
+        sx = ETarget->x;
+        sy = ETarget->y;
+        ETarget->Remove(true);
+        mon = EMap->BuildMonster(mid,sx,sy);
+        /* System shock: a DC 15 Fortitude save, or the new body dies. */
+        if (!mon->SavingThrow(FORT,15,SA_MAGIC))
+          ThrowDmg(EV_DEATH,AD_NORM,0,"system shock",EActor,mon);
+        return DONE;
+        }
+      /* RemoveStati prints "You feel more limber now." (src/Status.cpp:1306). */
+      EVictim->RemoveStati(STONING);
+      return DONE;
+      };
+  }

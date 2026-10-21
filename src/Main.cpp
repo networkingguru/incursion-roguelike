@@ -389,6 +389,10 @@ void Game::Play() {
     extern void ElementalResistanceProbe(Player *p);
     ElementalResistanceProbe(pp);
 
+    /* inc-w6t0: opt-in Stone to Flesh reproduction. */
+    extern void StoneToFleshProbe(Player *p);
+    StoneToFleshProbe(pp);
+
     /* inc-3lsp: off unless INCURSION_ACT_OVERFLOW_PROBE is set. See
        ActOverflowProbe (src/ActOverflowProbe.cpp) and
        tools/check_act_overflow.sh. */
@@ -529,6 +533,7 @@ Resurrected:
         * loaded by whatever moved the player.
         */
         PurgeStrings();
+        { extern void StoneToFleshPoll(Player *p); StoneToFleshPoll(pp); } /* inc-w6t0 */
         if (pp->m != mp) {
             /* GameRegistry->UnloadGroup(m[0]); */
             m[0] = pp->m->myHandle;
