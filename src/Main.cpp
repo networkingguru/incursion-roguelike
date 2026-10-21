@@ -393,6 +393,10 @@ void Game::Play() {
     extern void StoneToFleshProbe(Player *p);
     StoneToFleshProbe(pp);
 
+    /* inc-8rrt: opt-in proof the random potion generator makes Stone to Flesh. */
+    extern void StoneToFleshLootProbe(Player *p);
+    StoneToFleshLootProbe(pp);
+
     /* inc-3lsp: off unless INCURSION_ACT_OVERFLOW_PROBE is set. See
        ActOverflowProbe (src/ActOverflowProbe.cpp) and
        tools/check_act_overflow.sh. */
