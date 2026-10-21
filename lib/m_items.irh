@@ -768,7 +768,7 @@ and EA_GRANT
 AI_SCROLL Spell "Identify;scroll" : EA_GENERIC
   { SC_DIV; Level: 1; qval: Q_INV;
   // ww: we want Identify wands to be *easy* to use! 
-    Flags: EF_AFFECTS_ITEMS, EF_ITEMS_ONLY, EF_STAPLE;
+    Flags: EF_AFFECTS_ITEMS, EF_ITEMS_ONLY, EF_STAPLE, EF_FIXED_PRICE;
     Desc: "This scroll identifies the basic magical nature of one chosen
       item when fired."; Purpose: EP_PLAYER_ONLY;
     On Event 
@@ -797,6 +797,8 @@ AI_SCROLL Spell "Identify;scroll" : EA_GENERIC
         EActor->IPrint("That is an <hObj>.",ETarget);
         return DONE;
       };
+  Lists:
+    * ITEM_COST 100;
   }
 
 AI_SCROLL Spell "*Identify*;scroll" : EA_GENERIC
@@ -1135,11 +1137,15 @@ AI_POTION Effect "Fury" : EA_INFLICT
 
 AI_POTION Effect "Valour;potion" : EA_INFLICT
   { SC_ENC; xval: IMMUNITY; yval: AD_FEAR; Level: 1;
-    Flags: EF_USERID, EF_DLONG, EF_NOTBAD; Purpose: EP_COUNTER (VS_FEAR); }
+    Flags: EF_USERID, EF_DLONG, EF_NOTBAD, EF_FIXED_PRICE;
+    Purpose: EP_COUNTER (VS_FEAR); }
   and EA_HEALING
   { xval: HEAL_MALADY; yval: AFRAID; 
     Desc: "This potion removes fear, and renders you immune to fear
-      for a long period after drinking it."; }
+      for a long period after drinking it.";
+  Lists:
+    * ITEM_COST 50;
+  }
 
 AI_POTION Effect "Neutralize Poison;potion" : EA_INFLICT
   { xval: RESIST; yval: AD_TOXI; pval: 7;
@@ -1182,9 +1188,12 @@ AI_POTION Effect "True-Healing" : EA_HEALING
 AI_POTION Effect "Mana" : EA_HEALING
   { SC_THA; Level: 1; xval: HEAL_MANA; pval: 3d8+8; 
     Purpose: EP_FIX_TROUBLE (TROUBLE_LOWMANA);
-    Flags: EF_STAPLE; Level: 1; 
+    Flags: EF_STAPLE, EF_FIXED_PRICE; Level: 1; 
     Desc: "This potion restores 3d8+8 points of mana when 
-      drunk."; }
+      drunk.";
+  Lists:
+    * ITEM_COST 50;
+  }
 
 AI_POTION Effect "*Mana*" : EA_HEALING
   { SC_THA; Level: 3; xval: HEAL_MANA; pval: 5d12+12; 
@@ -1241,7 +1250,7 @@ AI_POTION Effect "Silversheen" : EA_GENERIC // ww: it's in the SRD
 
 AI_POTION Effect "Remove Curse;potion" : EA_GENERIC
   { SC_ABJ; Level: 2; qval: Q_INV | Q_TAR;
-    Flags: EF_LOSEMANA, EF_STAPLE, EF_AFFECTS_ITEMS;
+    Flags: EF_LOSEMANA, EF_STAPLE, EF_AFFECTS_ITEMS, EF_FIXED_PRICE;
     Purpose: EP_PLAYER_ONLY;
     Desc: "Drinking this potion lifts a curse from a single chosen
       item or individual.\n
@@ -1293,6 +1302,8 @@ AI_POTION Effect "Remove Curse;potion" : EA_GENERIC
             return ABORT;
         return NOTHING;
       };
+  Lists:
+    * ITEM_COST 50;
   }
 
 AI_POTION Effect "Giant Strength;potion" : EA_INFLICT

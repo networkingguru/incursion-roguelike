@@ -138,7 +138,8 @@ void ElementalResistanceProbe(Player *p) {
     Item *er = NULL, *ctl = NULL;
     for (Item *it = shop->FirstInv(); it; it = shop->NextInv()) {
         if (it->eID == effect && !er) er = it;
-        else if (it->isType(T_POTION) && it->eID && it->eID != effect && it->eID != blows && !ctl) ctl = it;
+        else if (it->isType(T_POTION) && it->eID && it->eID != effect && it->eID != blows && !ctl &&
+                 !TEFF(it->eID)->HasFlag(EF_FIXED_PRICE)) ctl = it;
     }
     if (!er || !ctl) {
         Error("ELEM_RESIST INCONCLUSIVE shop stock er=%d ctl=%d", er ? 1 : 0, ctl ? 1 : 0);

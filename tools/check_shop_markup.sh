@@ -5,7 +5,7 @@
 #
 # Item::getShopCost (src/Social.cpp) multiplies the list price by
 # ShopPrices[index + 10] / 100 for an M_SELLER. This check reads the asking
-# price of five items (a dagger, a +1 long sword, a scroll of identify, a potion
+# price of five items (a dagger, a +1 long sword, a scroll of *identify* (Identify;scroll is fixed-price since inc-icp3), a potion
 # of true-healing, a +5 ring mail) at every index -10..+30, and at the index the
 # loaded character really gets ("natural").
 #
@@ -85,7 +85,7 @@ EOF_TO
 )
 check_mutation src/Social.cpp "$_from" "$_to"
 
-ITEMS="dagger long_sword+1 scroll_identify potion_true_healing ring_mail+5"
+ITEMS="dagger long_sword+1 scroll_star_identify potion_true_healing ring_mail+5"
 INDEXES="-10 -9 -8 -7 -6 -5 -4 -3 -2 -1 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 natural"
 
 INCURSION_SHOP_MARKUP_PROBE=1 check_run tools/keys/load-char-sheet.keys "$SEED"

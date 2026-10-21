@@ -3204,7 +3204,10 @@ typedef signed int        hObj;
 #define LOOT_CLAIMS       241
 #define LOOT_THIEF        242
 #define SENESCHAL_TALLY   243
-#define LAST_STATI        244
+/* inc-icp3: Mag holds the game day (turn / (24*HOUR_TURNS)) a shop last
+   refilled its necessities. */
+#define RESTOCK_DAY       245
+#define LAST_STATI        246
   
 
 
@@ -3663,6 +3666,7 @@ typedef signed int        hObj;
 #define ALLOWED_GODS          33
 #define TEXT_LIST             34
 #define SPECIALTY_SPELLS      35 /* two spells per specialist school, school order 0-8 */
+#define NECESSITIES           36 /* Roark: rows of item, effect (0 for none), tier size; inc-icp3 */
 
 #define GROUP_LEADER          100
 #define GROUP_FOLLOWER        101
