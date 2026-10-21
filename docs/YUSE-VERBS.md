@@ -74,7 +74,7 @@ carries up to three prompts and a flag word:
 
 You cannot pick one from this menu any more, because the menu does not list it.
 The path is still there for an event thrown by any other route: nothing handles
-it, so it falls through to `Creature::HandleVerb` (`src/Player.cpp:1826` via
+it, so it falls through to `Creature::HandleVerb` (`src/Player.cpp:2001` via
 `src/Creature.cpp:1093`), which prints **"That verb can't be used that way."**
 for post-phase events and otherwise returns silently.
 
@@ -149,7 +149,7 @@ far less ground than its name suggests. Verified by reading the script.
   glass vial onto a weapon (`lib/mundane.irh:1016`), the weapon oils
   (`lib/m_items.irh:1477`) and the lantern below.
 - **Dip** has four handlers in the build and they cover two targets: a
-  **fountain** (`lib/dungeon.irh:2362` and `:2507`) and an **alchemical
+  **fountain** (`lib/dungeon.irh:2362` and `:2535`) and an **alchemical
   flask**, where only acid does anything (`lib/alchemy.irh:97` and
   `lib/alchemy.irh:648`). A fifth handler, the Spell Storing ring dipped in a
   fountain, is written but not compiled: `#if 0` at `lib/m_items.irh:5235`
