@@ -376,6 +376,10 @@ void Game::Play() {
     extern void TrueBlowsProbe(Player *p);
     TrueBlowsProbe(pp);
 
+    /* inc-2rws: opt-in Water Walking potion reproduction. */
+    extern void WaterWalkingProbe(Player *p);
+    WaterWalkingProbe(pp);
+
     /* inc-3lsp: off unless INCURSION_ACT_OVERFLOW_PROBE is set. See
        ActOverflowProbe (src/ActOverflowProbe.cpp) and
        tools/check_act_overflow.sh. */
