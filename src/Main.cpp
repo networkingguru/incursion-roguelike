@@ -372,9 +372,22 @@ void Game::Play() {
     extern void WeaponTypeProbe(Player *p);
     WeaponTypeProbe(pp);
 
+    /* inc-nel5: off unless INCURSION_SHOP_MARKUP_PROBE is set. See
+       ShopMarkupProbe (src/ShopMarkupProbe.cpp), tools/check_shop_markup.sh. */
+    extern void ShopMarkupProbe(Player *p);
+    ShopMarkupProbe(pp);
+
     /* inc-1qyv: opt-in True Blows reproduction. */
     extern void TrueBlowsProbe(Player *p);
     TrueBlowsProbe(pp);
+
+    /* inc-2rws: opt-in Water Walking potion reproduction. */
+    extern void WaterWalkingProbe(Player *p);
+    WaterWalkingProbe(pp);
+
+    /* inc-gzkn: opt-in elemental resistance potion reproduction. */
+    extern void ElementalResistanceProbe(Player *p);
+    ElementalResistanceProbe(pp);
 
     /* inc-w6t0: opt-in Stone to Flesh reproduction. */
     extern void StoneToFleshProbe(Player *p);
