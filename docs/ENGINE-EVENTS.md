@@ -8,7 +8,7 @@ inc-s6m: inc-upw.5 (P1), inc-upw.16 (P1) and inc-upw.15 (P0). inc-s6m is closed 
 ## Where it lives
 Event stack and `Throw*`: `src/Event.cpp`. `EventInfo` and the `PEVENT`/`DAMAGE`/`THROW` macros: `inc/Events.h`. C++ -> script
 boundary: `src/Annot.cpp:1109`. Bytecode VM: `src/VMachine.cpp:413`. Generated script-callable C++ API: `lib/dispatch.h`.
-Preprocessed ruleset: `lib/program.i`. Event numbers and `PRE`/`POST`/`META`/`GODWATCH`/`EVICTIM`: `inc/Defines.h:4536-4542`; 183
+Preprocessed ruleset: `lib/program.i`. Event numbers and `PRE`/`POST`/`META`/`GODWATCH`/`EVICTIM`: `inc/Defines.h:4562-4568`; 183
 `EV_` numbers exist. `EvReturn` is `int8` (`inc/Defines.h:58`): `ERROR -1`, `NOTHING 0`, `DONE 1`, `ABORT 2`, `NOMSG 3`
 (`inc/Defines.h:141-145`).
 
@@ -42,8 +42,8 @@ The boundary is exactly `Resource::Event` (`src/Annot.cpp:1109`); above it is C+
 16-bucket mask, `EventMask & BIT((e.Event%16)+1)` (`:1121`) — a coarse filter, not a match — then walks the annotation chain, 5
 events per record (`:1124-1127`). A positive match runs `theGame->VM.Execute` and returns its value cast to `EvReturn`
 (`:1136-1141`); a negative match (`-e.Event`) is a message, not code (`:1143`), printed at `:1157-1183`. Script code reaches C++
-through `lib/dispatch.h`: it calls `ThrowEff` (`:2533`), `ThrowEffDir` (`:2537`), `ThrowEffXY` (`:2541`), and assigns `pe->eID =
-val` (`:3413`), with no validation.
+through `lib/dispatch.h`: it calls `ThrowEff` (`:2637`), `ThrowEffDir` (`:2641`), `ThrowEffXY` (`:2645`), and assigns `pe->eID =
+val` (`:3521`), with no validation.
 
 The `.irh`/`.irc` sources held 1469 `On Event` occurrences on 2026-08-16, when this page was written — the figure quoted in
 the issue. That figure is a record and stays as written; both live counts have moved since (see "How to check this page").
@@ -75,7 +75,7 @@ and `lib/mon3.irh:2316`; id moss `lib/mon3.irh:2270` has one too, but `#if 0` at
 or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3352`)
 calls `Multiply` -> `Creature::Multiply` (`src/Creature.cpp:532`) -> `mn->PlaceAt` (`:604`)
 throws `EV_PLACE` (`src/Display.cpp:240`, `:264`) and `EV_FIELDON` (`:330`) -> `Creature::FieldOn` re-throws `EV_EFFECT` for
-`FI_MODIFIER` (`src/Status.cpp:1812`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1431`).
+`FI_MODIFIER` (`src/Status.cpp:1832`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1470`).
 *Invariant violated:* `Creature::FieldOn` sets `EActor` to the field's creator, so the script calls `Multiply` on the same
 generation-0 parent every time, and the generation cap at `src/Creature.cpp:556` can never apply to it. Only `m->BreedCount >= 50`
 (`:560`) survives, far above the 128-frame stack. *Fix:* a nesting cap of 4 on `Multiply` (`:544`); `GENERATION` is now stamped at
@@ -94,7 +94,7 @@ down path read `RES(0)` whenever `BELOW_DUNGEON` is unset, which is every dungeo
 **3. Wild resource id crashes `Game::Get` inside `Magic::Blast`. Fixed (inc-upw.16).** Handlers get ids from three unvalidated
 places: the `eID` a caller put in the frame (`src/Event.cpp:631`), script assignment `pe->eID = val` (`lib/dispatch.h:3521`), and
 script `ThrowEff` with an arbitrary int32 (`lib/dispatch.h:2637`). *Invariant violated:* `Game::Get` indexed the module table by
-the top byte, `Modules[(xID >> 24)-1]`, `MAX_MODULES` being 126 (`inc/Defines.h:4506`), so an id with a zero top byte indexed
+the top byte, `Modules[(xID >> 24)-1]`, `MAX_MODULES` being 126 (`inc/Defines.h:4532`), so an id with a zero top byte indexed
 `Modules[-1]`. The guard was `ASSERT(Modules[(xID >> 24)-1])`, and `ASSERT` only calls `Error` and falls through
 (`inc/Defines.h:101`) — it did not stop the next line's dereference. Hence SIGBUS with no log: if the out-of-range slot held
 non-zero garbage, `ASSERT` passed silently and `->GetResource` ran on a garbage `Module*`. *Fix:* `Game::Get` range-checks the
@@ -117,8 +117,8 @@ below the source count, because the `#if 0` and comment blocks above remove more
 1. Fixed. `src/Creature.cpp:599` now stamps `GENERATION` before `:604` places the child, and `:544` caps `Multiply` nesting at 4.
 2. `src/Display.cpp:448` `static Creature* Displace[64]` in a function re-entering itself at `:594`; `Displace[dc++]` (`:554`) has
 no bound check and `dc` is `uint8`.
-3. `src/Effects.cpp:162` states `e.eID` may be 0 for breath weapons; `:172` then reads `TEFF(e.eID)->Schools` unchecked. Same
-shape at `src/Creature.cpp:880`, `src/Magic.cpp:1427`.
+3. `src/Effects.cpp:162` states `e.eID` may be 0 for breath weapons; `:175` then reads `TEFF(e.eID)->Schools` unchecked. Same
+shape at `src/Creature.cpp:880`, `src/Magic.cpp:1430`.
 4. Fixed. `src/Res.cpp:348-353` range-checks the module slot and returns NULL, so `ASSERT` no longer guards the dereference.
 5. `src/VMachine.cpp:529` restores `xID` after `CMEM` because the call may have re-entered `Execute`, but not `mn`, `Memory` or
 `szMemory` (`:461-465`), leaving a cross-module outer script on the inner module's data segment.
