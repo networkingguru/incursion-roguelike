@@ -401,6 +401,8 @@ class Map: public Object
     void DrawPanel(uint8 x, uint8 y,rID regID=0);
     void PopulatePanel(Rect &r, uint16 extraFlags=0); /* HACKFIX */
     void FurnishArea(Rect &r);
+    Monster* BuildMonster(rID mID, int16 x, int16 y); /* inc-w6t0 */
+    rID CorpseMonID(); /* inc-w6t0: a statue's monster type at this depth */
     void LightPanel(Rect &r, rID regID);
     void PopulateChest(Container *c); 
     int16 isTorched(uint8 x, uint8 y, int16 t);

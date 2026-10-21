@@ -1,0 +1,24 @@
+# inc-w6t0: (creature target) one wait turn first, so the goblin the probe
+# placed is perceived and the aiming key can select it. Otherwise as
+# stone-to-flesh-statue.keys:
+# inc-w6t0: the player learns Stone to Flesh (wizard Learn Any Spell, an innate
+# ability: always succeeds, costs no mana), then casts it at the statue the
+# probe put one square east (INCURSION_STONE_FLESH_PROBE=statue). RIGHT is the
+# aiming key that selects the nearest candidate to the east; ENTER confirms.
+w
+y
+@choose "Learn Any Spell"
+"Stone to Flesh" ENTER
+@dump:learned
+.
+@while "more --" SPACE
+m
+@choose "Stone to Flesh"
+@dump:aiming
+RIGHT
+@dump:aimed
+ENTER
+@dump:cast
+.
+@dump:after
+@quit
