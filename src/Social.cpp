@@ -2022,11 +2022,18 @@ GiveStacks:
     }
 }
   
+int32 ShopIndexOverride = -999;
+
 int32 Item::getShopCost(Creature *Buyer, Creature *Seller) {
     double cost;
     int16 i;
     bool plusPriced;
     int32 priceList[10];
+
+    /* inc-1qyv: a fixed-price effect costs its first ITEM_COST in gp, everywhere. */
+    if (eID && TEFF(eID)->HasFlag(EF_FIXED_PRICE) &&
+        TEFF(eID)->GetList(ITEM_COST, (rID*)priceList, 10))
+        return priceList[0] * Quantity;
 
     plusPriced = false;
     cost = TITEM(iID)->Cost;
@@ -2083,30 +2090,31 @@ int32 Item::getShopCost(Creature *Buyer, Creature *Seller) {
     if (!Seller || !Buyer)
         return (int32)cost;
 
+    /* inc-nel5: Roark's markup runs from x3 at -10 to x1.1 at +30 (hundredths). */
     double ShopPrices[] = {
         /* -10 to -6*/
-        5000, 4750, 4500, 4250, 4000,
+        300, 290, 280, 270, 260,
 
         /* -5 to -1*/
-        3750, 3500, 3250, 3000, 2750,
+        250, 240, 230, 220, 210,
 
         /* 0 to +4 */
-        2500, 2250, 2000, 1500, 1000,
+        200, 195, 190, 185, 180,
 
         /* +5 to +9 */
-        900, 800, 700, 600, 500,
+        175, 170, 165, 160, 155,
 
         /* +10 to +14 */
-        450, 400, 350, 300, 250,
+        150, 147.5, 145, 142.5, 140,
 
         /* +15 to +19 */
-        225, 200, 190, 180, 170,
+        137.5, 135, 132.5, 130, 127.5,
 
         /* +20 to +24 */
-        160, 155, 150, 145, 140,
+        125, 123.5, 122, 120.5, 119,
 
         /* +25 to +30 */
-        135, 130, 125, 123, 122, 120 };
+        117.5, 116, 114.5, 113, 111.5, 110 };
     double BarterPrices[] = {
         /* -10 to -6 */
         500, 450, 400, 350, 300,
@@ -2139,6 +2147,7 @@ int32 Item::getShopCost(Creature *Buyer, Creature *Seller) {
     index += Buyer->getSocialMod(Seller, false);
     index = max(index, -10);
     index = min(index, +30);
+    if (ShopIndexOverride != -999) index = ShopIndexOverride; /* inc-nel5 probe hook */
 
     if (Seller->HasMFlag(M_SELLER))
         cost *= ShopPrices[index + 10];

@@ -1084,6 +1084,36 @@ void Map::WriteBlobs(Rect &r, rID regID, rID bID) {
         }
 }
 
+/* inc-w6t0: the depth CR WriteMap uses for a statue with no type. Con[] is
+   filled only by Generate, so a map loaded from a save reads the dungeon's
+   constants itself; the arithmetic is WriteMap's. */
+rID Map::CorpseMonID() {
+    uint32 initialCR = TDUN(dID)->GetConst(INITIAL_CR), speed = TDUN(dID)->GetConst(DUN_SPEED);
+    return theGame->GetCorpseMonID((int8)AdjustCR((int16)(initialCR + (Depth*speed) / 100 - 1)));
+}
+
+/* inc-w6t0: builds a monster of type mID the way WriteMap's 'm' vault tile
+   does (new Monster, PartyID, GrantGear, EV_BIRTH, a dragon's age template,
+   PlaceAt, Initialize), minus that tile's MS_GUARDING. Returns the monster. */
+Monster* Map::BuildMonster(rID mID, int16 x, int16 y) {
+    uint32 initialCR = TDUN(dID)->GetConst(INITIAL_CR), speed = TDUN(dID)->GetConst(DUN_SPEED);
+    int16 maxlev = AdjustCR((int16)(initialCR + (Depth*speed) / 100 - 1));
+    rID xID;
+    Monster *mn = new Monster(mID);
+    mn->PartyID = MAX_PLAYERS + 10 + random(200);
+    TMON(mID)->GrantGear(mn, mID, true);
+    TMON(mID)->PEvent(EV_BIRTH, mn, mID);
+    if (mn->isMType(MA_DRAGON)) {
+        xID = theGame->GetTempID(TM_AGECAT, mn->mID, (int8)maxlev);
+        if (!xID)
+            xID = FIND("young adult");
+        mn->AddTemplate(xID);
+    }
+    mn->PlaceAt(this, x, y);
+    mn->Initialize();
+    return mn;
+}
+
 void Map::WriteMap(Rect &r, rID regID) {
     TRegion *m = TREG(regID); Creature *mn; Item *it; Feature *ft;
     int16 i, x, y, maxlev, PartyID; Tile *t;
@@ -1162,9 +1192,7 @@ void Map::WriteMap(Rect &r, rID regID) {
 
                     // ww: don't make corpses for NOCORPSE monsters
                     if ((TITEM(xID)->IType == T_STATUE || TITEM(xID)->IType == T_CORPSE || TITEM(xID)->IType == T_FIGURE) && (t->fl & TILE_RANDOM_EFF)) {
-                        do {
-                            xID2 = theGame->GetMonID(PUR_DUNGEON, 0, (int8)DepthCR, (int8)DepthCR, 0);
-                        } while (TMON(xID2)->HasFlag(M_NO_CORPSE) || TMON(xID2)->isMType(xID2, MA_DRAGON));
+                        xID2 = theGame->GetCorpseMonID((int8)DepthCR);
                     } else if (t->fl & TILE_RANDOM_EFF)
                         xID2 = theGame->GetEffectID(PUR_DUNGEON, (int8)(t->xID2 % 256), (int8)(t->xID2 / 256));
                     else
@@ -3368,11 +3396,7 @@ void Map::FurnishArea(Rect &r) {
           it = Item::Create(furn[i+1]);          \
           if (it->isType(T_CORPSE) ||            \
               it->isType(T_STATUE)) {            \
-            rID cID;                             \
-            do {                                 \
-              cID = theGame->GetMonID(PUR_DUNGEON,0,(int8)DepthCR,(int8)DepthCR,0); \
-            } while (TMON(cID)->HasFlag(M_NO_CORPSE) ||  \
-                     TMON(cID)->isMType(cID,MA_DRAGON)    ); \
+            rID cID = theGame->GetCorpseMonID((int8)DepthCR); \
             ((Corpse*)it)->SetCorpseType(cID);   \
           } else if (it && it->isType(T_CHEST)) { \
             PopulateChest((Container *)it); \

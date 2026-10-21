@@ -1,0 +1,10 @@
+# inc-8rrt: make a fresh character and enter play so Game::Play runs
+# StoneToFleshLootProbe (src/StoneToFleshLootProbe.cpp) once. This is a NEW
+# game, not a load, so SetFlavors assigns every potion its flavour and
+# "Insufficient flavours" can be seen if the pool is short. Used by
+# tools/check_stone_to_flesh_loot.sh.
+@include chargen.keys
+
+@dump:arrival
+.*2
+@dump:end

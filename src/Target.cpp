@@ -571,14 +571,20 @@ Hostility TargetSystem::RacialHostility(Creature *me, Creature *t)
   h.quantity = Apathy;
   h.why.type = HostilityDefault;
 
-  if (me->HasMFlag(M_MINDLESS)) 
-    goto try_self_love; // unless we're both undead, do a mindless attack!
-
+  /* upstream: a peaceful creature, or one with a be-friendly order, is not
+     hostile, mindless or not, so the test must run before the mindless jump.
+     Upstream orders the jump before the test and behaves the same on Win32
+     with the original typedefs and compiler. Observed --
+     tools/check_peaceful_mindless.sh: rats pacified by Animal Empathy still
+     read hostile. inc-nypm, not sent. */
   if (me->StateFlags & MS_PEACEFUL || hasTargetOfType(OrderBeFriendly)) {
     h.why.type = HostilityPeaceful;
     h.quantity = Weak;
     return h;
   } 
+
+  if (me->HasMFlag(M_MINDLESS)) 
+    goto try_self_love; // unless we're both undead, do a mindless attack!
 
   /* outsiders from different planes hate each other */
   if (me->isMType(MA_OUTSIDER) && t->isPMType(MA_OUTSIDER,me)) {

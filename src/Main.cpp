@@ -372,6 +372,31 @@ void Game::Play() {
     extern void WeaponTypeProbe(Player *p);
     WeaponTypeProbe(pp);
 
+    /* inc-nel5: off unless INCURSION_SHOP_MARKUP_PROBE is set. See
+       ShopMarkupProbe (src/ShopMarkupProbe.cpp), tools/check_shop_markup.sh. */
+    extern void ShopMarkupProbe(Player *p);
+    ShopMarkupProbe(pp);
+
+    /* inc-1qyv: opt-in True Blows reproduction. */
+    extern void TrueBlowsProbe(Player *p);
+    TrueBlowsProbe(pp);
+
+    /* inc-2rws: opt-in Water Walking potion reproduction. */
+    extern void WaterWalkingProbe(Player *p);
+    WaterWalkingProbe(pp);
+
+    /* inc-gzkn: opt-in elemental resistance potion reproduction. */
+    extern void ElementalResistanceProbe(Player *p);
+    ElementalResistanceProbe(pp);
+
+    /* inc-w6t0: opt-in Stone to Flesh reproduction. */
+    extern void StoneToFleshProbe(Player *p);
+    StoneToFleshProbe(pp);
+
+    /* inc-8rrt: opt-in proof the random potion generator makes Stone to Flesh. */
+    extern void StoneToFleshLootProbe(Player *p);
+    StoneToFleshLootProbe(pp);
+
     /* inc-3lsp: off unless INCURSION_ACT_OVERFLOW_PROBE is set. See
        ActOverflowProbe (src/ActOverflowProbe.cpp) and
        tools/check_act_overflow.sh. */
@@ -512,6 +537,7 @@ Resurrected:
         * loaded by whatever moved the player.
         */
         PurgeStrings();
+        { extern void StoneToFleshPoll(Player *p); StoneToFleshPoll(pp); } /* inc-w6t0 */
         if (pp->m != mp) {
             /* GameRegistry->UnloadGroup(m[0]); */
             m[0] = pp->m->myHandle;
