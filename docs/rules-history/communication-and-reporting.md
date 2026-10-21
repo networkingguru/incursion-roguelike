@@ -142,3 +142,15 @@ identical (and in desc that is explaining mechanics, they BETTER be if the same
 mech is being explained), then just present the new part: THis skill is blah.
 <REPEATED DESC>. Last lines I need to approve. Like that". Asked whether to
 write it down as a rule, he said: "y, add it."
+
+## ruling-conflict-flag-once-then-keep
+
+2026-10-21, bead inc-icp3. While settling Roark's necessities list, Brian put
+the potion of stone to flesh in the Small stack tier (3) and then ruled that it
+uses its normal list price. The session found that inc-8rrt recorded an earlier
+ruling (2026-10-20) of 12 at a fixed 50 gp, which inc-icp3's notes did not
+carry, and asked whether today's ruling replaced it. Brian said: "My goodness,
+let's just set this in stone right here. If I rule somethign, you say 'hey this
+conflicts'. If I say, keep my ruling, KEEP IT. Do not relitigate." and "KEEP
+MYRULING. NORMAL PRICE. 3". Asked whether to write it down as a rule, he said
+"y".
