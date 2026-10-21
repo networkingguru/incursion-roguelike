@@ -13,8 +13,8 @@
 #
 # The watchdog polls the byte size of --out. Three limits stop a stalled run:
 #
-#   startup  -- if --out is still 0 bytes after INCURSION_WATCHDOG_STARTUP
-#               seconds (default 180), stop.
+#   startup  -- if --out is still 0 bytes INCURSION_WATCHDOG_STARTUP seconds
+#               (default 180) after launch, stop.
 #   idle     -- once --out is non-empty, if its size has not changed for
 #               INCURSION_WATCHDOG_IDLE seconds (default 1800), stop.
 #   canary   -- when --canary <file> is given, `<file> --out <file>` is run on
@@ -24,6 +24,10 @@
 #               warning line is printed to the watchdog's stderr the first
 #               time). This catches a run that keeps writing but is stuck in a
 #               loop the idle limit never sees.
+#
+# The startup and idle limits are wall-clock seconds, measured with bash's
+# $SECONDS from launch and from the last growth of --out. Time the machine
+# spends asleep counts.
 #
 # Env vars (each a positive integer; anything else exits 2):
 #
@@ -172,11 +176,13 @@ CHILD_PID=$!
 PGID="$CHILD_PID"
 
 # --- poll -----------------------------------------------------------------
+# inc-3obq: limits compare $SECONDS (wall clock, runs through system sleep),
+# never a count of polls.
 OUT_SIZE=0
 LAST_SIZE=0
 NONEMPTY=0
-IDLE_ELAPSED=0
-STARTUP_ELAPSED=0
+LAUNCH_AT="$SECONDS"
+LAST_GROWTH_AT="$SECONDS"
 CANARY_WARNED=0
 
 # canary_stop runs the canary against --out (only after a caller has confirmed
@@ -216,26 +222,24 @@ while kill -0 "$CHILD_PID" 2>/dev/null; do
         if [ "$OUT_SIZE" -gt 0 ]; then
             NONEMPTY=1
             LAST_SIZE="$OUT_SIZE"
-            IDLE_ELAPSED=0
+            LAST_GROWTH_AT="$SECONDS"
             if [ -n "$CANARY" ]; then
                 canary_stop
             fi
         else
-            STARTUP_ELAPSED=$((STARTUP_ELAPSED + POLL))
-            if [ "$STARTUP_ELAPSED" -ge "$STARTUP" ]; then
+            if [ $((SECONDS - LAUNCH_AT)) -ge "$STARTUP" ]; then
                 stop_run "startup" "$STARTUP"
             fi
         fi
     else
         if [ "$OUT_SIZE" -ne "$LAST_SIZE" ]; then
             LAST_SIZE="$OUT_SIZE"
-            IDLE_ELAPSED=0
+            LAST_GROWTH_AT="$SECONDS"
             if [ -n "$CANARY" ]; then
                 canary_stop
             fi
         else
-            IDLE_ELAPSED=$((IDLE_ELAPSED + POLL))
-            if [ "$IDLE_ELAPSED" -ge "$IDLE" ]; then
+            if [ $((SECONDS - LAST_GROWTH_AT)) -ge "$IDLE" ]; then
                 stop_run "idle" "$IDLE"
             fi
         fi

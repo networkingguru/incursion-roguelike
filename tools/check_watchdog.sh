@@ -15,7 +15,7 @@
 # harnesses; limits of 1-3 seconds via INCURSION_WATCHDOG_* keep the whole
 # check quick. No network request ever leaves this machine.
 #
-#   tools/check_watchdog.sh               run the twelve assertions
+#   tools/check_watchdog.sh               run the thirteen assertions
 #   tools/check_watchdog.sh --prove-red   neuter the watchdog's kill, confirm
 #                                         assertions a and b go red, restore
 #
@@ -480,8 +480,52 @@ else
     fail "canary exit 5: rc=$RC status-exists=$([ -f "$STATUS" ] && echo yes || echo no) err=$(cat "$ERR.watchdog")"
 fi
 
+# --- i. idle is wall-clock time: machine sleep counts (bead inc-3obq) ------
+# Stopping the watchdog with SIGSTOP stands in for the Mac sleeping: its poll
+# sleep does not advance, but $SECONDS does. IDLE=8, stopped 10 s after the
+# first write. Wall-clock timing fires within ~1 s of the CONT; poll counting
+# would need ~6 more polls, so the 3 s bound separates the two by 2 s or more.
+OUT="$TMP/i.out"; ERR="$TMP/i.err"; STATUS="$TMP/i.status"
+STUB_SELF_PID="$TMP/i.self"; STUB_GRAND_PID="$TMP/i.grand"
+rm -f "$OUT" "$ERR" "$STATUS" "$STUB_SELF_PID" "$STUB_GRAND_PID"
+env STUB_MODE=oneline STUB_SELF_PID="$STUB_SELF_PID" STUB_GRAND_PID="$STUB_GRAND_PID" \
+    INCURSION_WATCHDOG_STARTUP=5 INCURSION_WATCHDOG_IDLE=8 INCURSION_WATCHDOG_POLL=1 \
+    INCURSION_WATCHDOG_GRACE=2 \
+    "$WATCHDOG" --out "$OUT" --err "$ERR" --status "$STATUS" -- "$STUB" &
+WDPID=$!
+sleep 2
+kill -STOP "$WDPID" 2>/dev/null
+sleep 10
+kill -CONT "$WDPID" 2>/dev/null
+I_WAITED=0
+while kill -0 "$WDPID" 2>/dev/null && [ "$I_WAITED" -lt 12 ]; do
+    sleep 0.25
+    I_WAITED=$((I_WAITED + 1))
+done
+if kill -0 "$WDPID" 2>/dev/null; then
+    I_LATE=1
+    kill -KILL "$WDPID" 2>/dev/null
+else
+    I_LATE=0
+fi
+wait "$WDPID" 2>/dev/null
+RC=$?
+I_STUB="$(cat "$STUB_SELF_PID" 2>/dev/null)"
+if [ -n "$I_STUB" ]; then
+    if [ "$I_LATE" -eq 1 ]; then kill -KILL -- "-$I_STUB" 2>/dev/null; fi
+fi
+sleep 1
+I_GROUP_DEAD=0
+if [ -n "$I_STUB" ] && ! kill -0 -- "-$I_STUB" 2>/dev/null; then I_GROUP_DEAD=1; fi
+if [ "$I_LATE" -eq 0 ] && [ "$RC" -eq 124 ] && [ "$(cat "$STATUS" 2>/dev/null)" = "idle" ] \
+    && [ "$I_GROUP_DEAD" -eq 1 ]; then
+    pass "idle wall-clock: stopped watchdog resumed past the limit, stopped within 3 s, group dead"
+else
+    fail "idle wall-clock: late=$I_LATE rc=$RC status=$(cat "$STATUS" 2>/dev/null) group-dead=$I_GROUP_DEAD"
+fi
+
 if [ "$FAIL" -eq 0 ]; then
-    echo "PASS: check_watchdog.sh, all twelve assertions"
+    echo "PASS: check_watchdog.sh, all thirteen assertions"
     exit 0
 else
     echo "FAIL: check_watchdog.sh, at least one assertion failed above"
