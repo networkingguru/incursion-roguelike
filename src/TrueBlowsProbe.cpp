@@ -39,6 +39,7 @@ static void Measure(Player *p, const char *scene, const char *phase,
 
 struct Scene { const char *name; const char *mon; bool phased; int wil; };
 
+/* inc-1qyv: off unless INCURSION_TRUE_BLOWS_PROBE is set; run by tools/check_true_blows.sh. */
 void TrueBlowsProbe(Player *p) {
     if (!getenv("INCURSION_TRUE_BLOWS_PROBE")) return;
     Error("TRUE_BLOWS setup begin");
