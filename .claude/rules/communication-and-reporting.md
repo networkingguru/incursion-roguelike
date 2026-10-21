@@ -43,3 +43,8 @@ History: docs/rules-history/communication-and-reporting.md#feedback-one-paragrap
 When text for Brian's approval repeats text he already approved, show ONLY the new part and write `<REPEATED DESC>` where the approved text goes; the last lines shown are the ones he must approve. Example: "Identifies magic items you find, without a spellbook. <REPEATED DESC>. It does not work on corpses, chests, coins, or statues." Two texts that explain the same mechanic (class help and ability entry, help and Desc) MUST state it identically, so the repeated part needs no second read.
 Why: re-reading an approved description to find the few changed words wastes his time and hides what he is approving.
 History: docs/rules-history/communication-and-reporting.md#approval-text-show-only-the-new-part. Bead inc-ybiw.
+
+## ruling-conflict-flag-once-then-keep
+When a new ruling of Brian's conflicts with an earlier recorded ruling, state the conflict ONCE, in one sentence, at the moment he makes the new ruling. When he keeps the new ruling, record it, overwrite the old ruling on every bead that carries it, and MUST NOT raise that conflict again or ask him to confirm it.
+Why: a ruling he has already confirmed, raised again, costs him a round trip and reads as relitigating his decision.
+History: docs/rules-history/communication-and-reporting.md#ruling-conflict-flag-once-then-keep. Bead inc-67q5.
