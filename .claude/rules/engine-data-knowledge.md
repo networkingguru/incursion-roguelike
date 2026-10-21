@@ -18,3 +18,8 @@ Normative text: `docs/SAVE-SCHEMA-SPEC.md` Amendment 1. A save reference is a pl
 Format: a per-module manifest carries each array's length in fixed order plus every entry's NAME in position order (names, not just lengths, because alphabetising changes no length). Reader converts saved rID -> (array, position) via the manifest, then via the loaded module, deferred to `SaveV1_ResolveNames`. Drift detection refuses only on a SLIDE (2+ consecutive positions shifted one slot) or a SHUFFLE (same name set, different position) — a bare rename loads silently. The engine's `Module::__GetResource` (`src/Res.cpp:102-215`) is NOT touched; the save layer alone converts.
 Why: lets a save survive `lib/*.irh` reordering (which shifts rIDs) without an engine-side rewrite.
 History: docs/rules-history/engine-data-knowledge.md#save-schema-append-only-supersedes-name-keys.
+
+## nothing-is-sellable-except-gems
+A character in this game can sell NOTHING except gems. NEVER raise loot resale, selling gear, or a sell-for-gold loop as a design risk, an exploit, or a question, in god design or anywhere else. An item still has a gold value (`SacrificeValue()`); only selling does not exist.
+Why: the owner ruled that selling is not a mechanic, and raising it wastes his time.
+History: docs/rules-history/engine-data-knowledge.md#nothing-is-sellable-except-gems. Bead inc-vpf9.
