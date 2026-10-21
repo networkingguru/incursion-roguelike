@@ -580,3 +580,23 @@ Effect "Aura of Menace" : EA_GENERIC
       must make a Will save or suffer a -2 penalty on attack rolls,
       defense and saving throws for the next 24 hours.";
   }
+
+/* APPEND-ONLY: last Effect in parse order. inc-1qyv. The status lasts
+   7200 stati units: one day, MENACE_DURATION in inc/Defines.h (the script compiler gives a syntax error on the name). */
+AI_POTION Effect "True Blows" : EA_GENERIC
+  { SC_THA; Level: 3; Flags: EF_AUTOID, EF_NOTBAD, EF_FIXED_PRICE;
+    On Event MSG_STATINAME "True Blows" / "TrBl";
+    On Event EV_MAGIC_HIT {
+      EActor->GainTempStati(IGNORES_WEAPON_IMMUNITY,NULL,7200,
+        SS_MISC,0,0,$"true blows");
+      EActor->IPrint("Your hands tingle with a force that nothing can turn aside.");
+      return DONE;
+      };
+    Desc: "When drunk, this potion lets the drinker's blows harm
+      creatures that ordinary or weakly enchanted weapons cannot, and
+      strike incorporeal creatures as a magic weapon does. The effect
+      lasts one day. It works with any weapon and with bare hands, but
+      gives no bonus to hit or to damage.";
+  Lists:
+    * ITEM_COST 50;
+  }

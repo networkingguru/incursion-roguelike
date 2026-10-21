@@ -372,6 +372,10 @@ void Game::Play() {
     extern void WeaponTypeProbe(Player *p);
     WeaponTypeProbe(pp);
 
+    /* inc-1qyv: opt-in True Blows reproduction. */
+    extern void TrueBlowsProbe(Player *p);
+    TrueBlowsProbe(pp);
+
     /* inc-3lsp: off unless INCURSION_ACT_OVERFLOW_PROBE is set. See
        ActOverflowProbe (src/ActOverflowProbe.cpp) and
        tools/check_act_overflow.sh. */
