@@ -3347,7 +3347,10 @@ typedef signed int        hObj;
    of Death, has 9; if a second HD-pool spell needs a different cap, promote
    this to an effect field rather than growing the constant. inc-kgzx. */
 #define EF_HD_POOL_CAP 9
-#define EF_LAST       109
+/* inc-1qyv: Item::getShopCost returns this effect's first ITEM_COST value in
+   gold pieces, with no level formula and no shop markup. */
+#define EF_FIXED_PRICE 109
+#define EF_LAST       110
 
 
 #define EA_BLAST    1      /* xval = DType, pval = Damage */
