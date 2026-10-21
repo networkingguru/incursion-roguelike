@@ -396,6 +396,7 @@ Monster "Roark Ironbeard" : MA_DWARF, MA_ADVENTURER
       50% 1d4 $"potion" of $"restore luck",
       1d2+1 $"potion" of $"restoration",
       12d1 $"potion" of $"true blows",
+      12d1 $"potion" of $"water walking;potion",
       1d2+1 $"potion" of $"detect stairs",
       1d3 $"wand" of $"identify;wand",
       50% $"climbing rig",
