@@ -601,6 +601,24 @@ AI_POTION Effect "True Blows" : EA_GENERIC
     * ITEM_COST 50;
   }
 
+/* APPEND-ONLY: last Effect in parse order. inc-2rws. The status lasts
+   (20d4+1)/2 stati units: 20d4 rounds at 2 rounds per unit, rounded up
+   (10 to 40 units). */
+AI_POTION Effect "Water Walking;potion" : EA_GENERIC
+  { SC_THA|SC_WATER; Level: 3; Flags: EF_AUTOID, EF_NOTBAD, EF_FIXED_PRICE;
+    On Event MSG_STATINAME "WtrWlk" / "WW";
+    On Event EV_MAGIC_HIT {
+      EActor->GainTempStati(WATER_WALKING,NULL,(20d4+1)/2,
+        SS_MISC,0,0,$"water walking;potion");
+      return DONE;
+      };
+    Desc: "When drunk, this potion lets the drinker walk on the surface
+      of deep and turbulent water, with no need to swim. The effect lasts
+      20d4 rounds.";
+  Lists:
+    * ITEM_COST 50;
+  }
+
 /* APPEND-ONLY: last Effect in parse order. inc-gzkn. One duration roll, 20d4
    rounds, is shared by the four statuses; one status unit is 2 rounds, so the
    roll converts as (20d4+1)/2 units, 10 to 40. */

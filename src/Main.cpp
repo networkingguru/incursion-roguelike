@@ -376,6 +376,10 @@ void Game::Play() {
     extern void TrueBlowsProbe(Player *p);
     TrueBlowsProbe(pp);
 
+    /* inc-2rws: opt-in Water Walking potion reproduction. */
+    extern void WaterWalkingProbe(Player *p);
+    WaterWalkingProbe(pp);
+
     /* inc-gzkn: opt-in elemental resistance potion reproduction. */
     extern void ElementalResistanceProbe(Player *p);
     ElementalResistanceProbe(pp);
