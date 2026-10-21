@@ -127,9 +127,9 @@ modifier flags of 0, so `W` is a different keystroke that reaches nothing
 
 `[M] Create Altar` is there for the harness. A sacrifice needs the player to
 be standing on an altar, and the only other source of one is `MakeLev`'s
-random assignment (`src/MakeLev.cpp:2150-2166`), which picks from seven gods
+random assignment (`src/MakeLev.cpp:2244-2260`), which picks from seven gods
 and cannot be asked for a particular one. The command prompts for a god name
-and builds the feature exactly as `MakeLev.cpp:1163-1165` does.
+and builds the feature exactly as `MakeLev.cpp:1257-1259` does.
 `check_sacrifice.sh` is the first thing to use it.
 
 The Watery Double fixtures use seed `20260905` and
@@ -1255,7 +1255,7 @@ number rather than a yes or no: they read the hardness off the game's own
 combat-numbers line, which `Item::Damage` prints AFTER adding the bearer's gear
 resistance to it. Those two silver a magic warhammer for the ordering
 `Item::Damage` used to have: a no-save A_DEQU sets `ignoreHardness` on a plain
-item (`src/Fight.cpp:3939`), and the bearer's grant was added before the bypass
+item (`src/Fight.cpp:3949`), and the bearer's grant was added before the bypass
 emptied it, so a resistance was unmeasurable on ordinary gear. inc-kapn
 inverted that -- the bypass now empties only what `Hardness()` returned -- and
 `check_gear_bypass_survives.sh` measures a resistance on a plain iron maul. The
