@@ -124,6 +124,7 @@ void StoneToFleshPoll(Player *p) {
         weapons, rweapons, innate, rinnate);
 }
 
+/* inc-w6t0: entry point of the Stone to Flesh reproduction probe. */
 void StoneToFleshProbe(Player *p) {
     const char *mode = getenv("INCURSION_STONE_FLESH_PROBE");
     if (!mode) return;
