@@ -1384,6 +1384,8 @@ class Game : public Object
       rID RandomResource(uint8 typ, int8 Level=-1, int8 Range=-1);
       rID GetItemID(int16 Purpose, int8 minlev, int8 maxlev, int8 IType=-1);
       rID GetMonID(int16 Purpose, int8 minlev, int8 maxlev, int8 Depth, int32 MType=-1);
+      /* A monster type for a statue or corpse made without one (inc-w6t0). */
+      rID GetCorpseMonID(int8 cr);
       /* Select a random effect for a given purpose with the specified source. */
       rID GetEffectID(int16 Purpose, int8 minlev, int8 maxlev, int8 Source = 0);
       rID GetEncounterID(int16 CR, uint32 Types, uint32 Terrain);
