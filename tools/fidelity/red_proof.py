@@ -63,6 +63,12 @@ MUTATIONS = [
      '    pass  # mut: both sequence assertions removed'),
     ("mark_ledger.py", "break-missing-id",
      'raise MissingId(hid)', 'pass'),
+    ("build_pairs.py", "break-bd-global-flags",
+     'r"\\bbd(?:\\s+" + flag + r")*\\s+update\\s+"',
+     'r"\\bbd\\s+update\\s+"'),
+    ("build_pairs.py", "break-per-ruling-split",
+     'if len(starts) <= 1:',
+     'if True:'),
 ]
 
 

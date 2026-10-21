@@ -310,9 +310,23 @@ def extract_notes(command, frozen_text="", next_ruling=""):
         return command, False, "command"
 
     if rest.startswith("'"):
-        end = rest.find("'", 1)
-        if end >= 0:
-            return rest[1:end], True, "command"
+        # Scan a single-quoted argument, honouring the shell splice
+        # ``'"'"'`` (close quote, double-quoted apostrophe, reopen quote)
+        # that carries a literal apostrophe; it must not terminate the
+        # argument. The argument ends at the first single quote that is not
+        # part of such a splice.
+        i = 1
+        buf = []
+        while i < len(rest):
+            c = rest[i]
+            if c == "'":
+                if rest.startswith("'\"'\"'", i):
+                    buf.append("'")
+                    i += len("'\"'\"'")
+                    continue
+                return "".join(buf), True, "command"
+            buf.append(c)
+            i += 1
         return command, False, "command"
 
     return command, False, "command"
@@ -351,15 +365,43 @@ def _blocks(event):
 def bead_update_re(bead):
     """Regex matching ``bd update <bead>`` with a boundary after the id.
 
-    The id must be followed by a space, tab or newline, so ``inc-pu6v.9``
-    never matches ``inc-pu6v.91``.
+    Zero or more bd global flags may appear between ``bd`` and ``update``,
+    each flag optionally followed by one argument (``-q``, ``--quiet``,
+    ``-C <path>``, ``--db <path>``). The id must be followed by a space,
+    tab or newline, so ``inc-pu6v.9`` never matches ``inc-pu6v.91``.
     """
-    return re.compile(r"\bbd\s+update\s+" + re.escape(bead) + r"(?=[ \t\n])")
+    flag = r"--?[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[^ \t\n]+)?"
+    return re.compile(
+        r"\bbd(?:\s+" + flag + r")*\s+update\s+"
+        + re.escape(bead) + r"(?=[ \t\n])")
 
 
 # --------------------------------------------------------------------------
 # core builder
 # --------------------------------------------------------------------------
+RULING_START_RE = re.compile(r"^(?:DOSSIER\s+)?R\d{1,3}\s*\(")
+
+
+def split_ruling_parts(text):
+    """Split one write's extracted text into one part per ruling.
+
+    A part starts at each line beginning with ``R<n> (`` or
+    ``DOSSIER R<n> (``. Text before the first such line is dropped (it is
+    not part of any ruling). When there is at most one ruling-start line
+    the whole text is returned unchanged, so a single-ruling write behaves
+    exactly as before.
+    """
+    lines = text.split("\n")
+    starts = [i for i, ln in enumerate(lines) if RULING_START_RE.match(ln)]
+    if len(starts) <= 1:
+        return [text]
+    parts = []
+    for n, i in enumerate(starts):
+        end = starts[n + 1] if n + 1 < len(starts) else len(lines)
+        parts.append("\n".join(lines[i:end]))
+    return parts
+
+
 def build_from_events(events, session, frozen_text="", bead=None):
     """Return (pairs, bad_json_count). events is a list of parsed objects.
 
@@ -423,58 +465,62 @@ def build_from_events(events, session, frozen_text="", bead=None):
     for k, w in enumerate(writes):
         next_ruling = raw_texts[k + 1] if k + 1 < len(raw_texts) else ""
         text, ok, src = extract_notes(w["cmd"], frozen_text, next_ruling)
-        n += 1
-        # Only Brian messages seen up to the moment this write's event was
-        # reached are eligible: a write can never pair with a later message.
-        earlier_brian = brian[:w.get("brian_count", len(brian))]
-        frags = extract_brian_fragments(text)
-        idx, pairing = match_brian(frags, earlier_brian)
-        if idx is None:
-            idx = len(earlier_brian) - 1  # last Brian message so far (or none)
-        if idx < 0:
-            idx = None
-        # A quote match can land on an early message of a multi-turn
-        # exchange.  When it does, `i` is that message and `L` is the last
-        # Brian message before the write; the pair must carry the whole
-        # span i..L, not just message i.
-        span_end = None
-        if idx is not None and pairing == "quote":
-            last_before = len(earlier_brian) - 1
-            if idx < last_before:
-                span_end = last_before
-                pairing = "quote-span"
-        pair = {
-            "pair_id": "%s-%d" % (session, n),
-            "session": session,
-            "write_ts": w["ts"],
-            "ruling_text": text,
-            "extract_ok": ok,
-            "extract_src": src,
-            "brian_ts": "",
-            "brian_text": "",
-            "question_ts": "",
-            "question_text": "",
-            "r_numbers": _extract_rulings(text),
-            "pairing": pairing,
-            "brian_reused": False,
-            "brian_index": -1 if idx is None else idx,
-            "brian_index_end": -1 if idx is None else idx,
-        }
-        if idx is not None:
-            chosen = brian[idx]
-            pair["brian_ts"] = chosen["ts"] if chosen["ts"] else ""
-            if span_end is not None:
-                pair["brian_text"] = "\n---\n".join(
-                    brian[j]["text"] for j in range(idx, span_end + 1))
-                pair["brian_index_end"] = span_end
-            else:
-                pair["brian_text"] = chosen["text"]
-            pair["question_ts"] = chosen["ts"] if chosen["ts"] else ""
-            pair["question_text"] = chosen["q_text"]
-            if idx in used:
-                pair["brian_reused"] = True
-            used.add(idx)
-        pairs.append(pair)
+        # A single write may carry several rulings, one per line. Emit one
+        # pair per ruling, all sharing this write's ts and brian_count and
+        # each paired by its own quoted words.
+        for part in split_ruling_parts(text):
+            n += 1
+            # Only Brian messages seen up to the moment this write's event was
+            # reached are eligible: a write can never pair with a later message.
+            earlier_brian = brian[:w.get("brian_count", len(brian))]
+            frags = extract_brian_fragments(part)
+            idx, pairing = match_brian(frags, earlier_brian)
+            if idx is None:
+                idx = len(earlier_brian) - 1  # last Brian message so far (or none)
+            if idx < 0:
+                idx = None
+            # A quote match can land on an early message of a multi-turn
+            # exchange.  When it does, `i` is that message and `L` is the last
+            # Brian message before the write; the pair must carry the whole
+            # span i..L, not just message i.
+            span_end = None
+            if idx is not None and pairing == "quote":
+                last_before = len(earlier_brian) - 1
+                if idx < last_before:
+                    span_end = last_before
+                    pairing = "quote-span"
+            pair = {
+                "pair_id": "%s-%d" % (session, n),
+                "session": session,
+                "write_ts": w["ts"],
+                "ruling_text": part,
+                "extract_ok": ok,
+                "extract_src": src,
+                "brian_ts": "",
+                "brian_text": "",
+                "question_ts": "",
+                "question_text": "",
+                "r_numbers": _extract_rulings(part),
+                "pairing": pairing,
+                "brian_reused": False,
+                "brian_index": -1 if idx is None else idx,
+                "brian_index_end": -1 if idx is None else idx,
+            }
+            if idx is not None:
+                chosen = brian[idx]
+                pair["brian_ts"] = chosen["ts"] if chosen["ts"] else ""
+                if span_end is not None:
+                    pair["brian_text"] = "\n---\n".join(
+                        brian[j]["text"] for j in range(idx, span_end + 1))
+                    pair["brian_index_end"] = span_end
+                else:
+                    pair["brian_text"] = chosen["text"]
+                pair["question_ts"] = chosen["ts"] if chosen["ts"] else ""
+                pair["question_text"] = chosen["q_text"]
+                if idx in used:
+                    pair["brian_reused"] = True
+                used.add(idx)
+            pairs.append(pair)
     return pairs, 0
 
 
@@ -966,6 +1012,77 @@ def _selftest():
     assert pairs_i2 == [], \
         "fixtureI2: inc-pu6v.91 must NOT match bead inc-pu6v.9, got %d" % (
             len(pairs_i2))
+
+    # ------------------------------------------------------------------
+    # (k) bd global flags between ``bd`` and ``update``: a bare flag (-q),
+    # and a flag that takes a separate argument (-C <path>).
+    cmd_k1 = 'bd -q update inc-pu6v.9 --append-notes "R30 quiet flag"'
+    events_k1 = [_bmsg("k0", "brian"), _aq("k1", "q", cmd_k1)]
+    pairs_k1, _ = build_from_events(events_k1, "fixtureK1", bead="inc-pu6v.9")
+    assert len(pairs_k1) == 1, \
+        "fixtureK1: -q flag write must pair, got %d" % len(pairs_k1)
+    assert pairs_k1[0]["r_numbers"] == [30], \
+        "fixtureK1: r_numbers must be [30], got %r" % pairs_k1[0]["r_numbers"]
+
+    cmd_k2 = ('bd -C /some/path update inc-pu6v.9 '
+              '--append-notes "R31 chdir flag"')
+    events_k2 = [_bmsg("k0", "brian"), _aq("k1", "q", cmd_k2)]
+    pairs_k2, _ = build_from_events(events_k2, "fixtureK2", bead="inc-pu6v.9")
+    assert len(pairs_k2) == 1, \
+        "fixtureK2: -C <path> flag write must pair, got %d" % len(pairs_k2)
+    assert pairs_k2[0]["r_numbers"] == [31], \
+        "fixtureK2: r_numbers must be [31], got %r" % pairs_k2[0]["r_numbers"]
+
+    cmd_k3 = ('bd --quiet --db /some/db update inc-pu6v.9 '
+              '--append-notes "R32 long flags"')
+    events_k3 = [_bmsg("k0", "brian"), _aq("k1", "q", cmd_k3)]
+    pairs_k3, _ = build_from_events(events_k3, "fixtureK3", bead="inc-pu6v.9")
+    assert len(pairs_k3) == 1, \
+        "fixtureK3: long-flag write must pair, got %d" % len(pairs_k3)
+    assert pairs_k3[0]["r_numbers"] == [32], \
+        "fixtureK3: r_numbers must be [32], got %r" % pairs_k3[0]["r_numbers"]
+
+    # ------------------------------------------------------------------
+    # (l) One command carrying two rulings in one --append-notes, each with
+    # a shell-splice apostrophe ('"'"'), must give two pairs, each with only
+    # its own ruling number and its own text.
+    splice = "'\"'\"'"
+    cmd_l = (
+        "bd update inc-pu6v.9 --append-notes "
+        "'R40 (Brian" + splice + "s words: \"forty\"): first ruling"
+        "\nR41 (Brian" + splice + "s words: \"forty one\"): second ruling'")
+    events_l = [
+        _aq("l0", "prose forty", None),
+        _bmsg("l1", "forty"),
+        _aq("l2", "prose forty one", None),
+        _bmsg("l3", "forty one"),
+        _aq("l4", "claude question", cmd_l),
+    ]
+    pairs_l, _ = build_from_events(events_l, "fixtureL", bead="inc-pu6v.9")
+    assert len(pairs_l) == 2, \
+        "fixtureL: two rulings must give two pairs, got %d" % len(pairs_l)
+    assert pairs_l[0]["pair_id"] == "fixtureL-1", \
+        "fixtureL: first pair id wrong: %r" % pairs_l[0]["pair_id"]
+    assert pairs_l[1]["pair_id"] == "fixtureL-2", \
+        "fixtureL: second pair id wrong: %r" % pairs_l[1]["pair_id"]
+    assert pairs_l[0]["r_numbers"] == [40], \
+        "fixtureL: first r_numbers wrong: %r" % pairs_l[0]["r_numbers"]
+    assert pairs_l[1]["r_numbers"] == [41], \
+        "fixtureL: second r_numbers wrong: %r" % pairs_l[1]["r_numbers"]
+    assert "first ruling" in pairs_l[0]["ruling_text"] \
+        and "second ruling" not in pairs_l[0]["ruling_text"], \
+        "fixtureL: first text wrong: %r" % pairs_l[0]["ruling_text"]
+    assert "second ruling" in pairs_l[1]["ruling_text"] \
+        and "first ruling" not in pairs_l[1]["ruling_text"], \
+        "fixtureL: second text wrong: %r" % pairs_l[1]["ruling_text"]
+    assert "Brian's words: \"forty\"" in pairs_l[0]["ruling_text"], \
+        "fixtureL: first splice not reconstructed: %r" % pairs_l[0]["ruling_text"]
+    assert pairs_l[1]["brian_text"] == "forty one", \
+        "fixtureL: second brian_text wrong: %r" % pairs_l[1]["brian_text"]
+    assert pairs_l[0]["question_text"] == "prose forty", \
+        "fixtureL: first question_text wrong: %r" % pairs_l[0]["question_text"]
+    assert pairs_l[1]["question_text"] == "prose forty one", \
+        "fixtureL: second question_text wrong: %r" % pairs_l[1]["question_text"]
 
     # ------------------------------------------------------------------
     # (j) Duplicate 8-character session prefixes use the full file stem.
