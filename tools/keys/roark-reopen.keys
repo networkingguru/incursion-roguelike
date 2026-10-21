@@ -1,0 +1,15 @@
+# inc-icp3: open Roark's store, leave, open it again. The second [s] takes the
+# RestockShopDaily branch of the cave entrance (lib/dungeon.irh) on a live
+# script call. Same day, so it refills nothing; it must not crash.
+@include chargen.keys
+
+@until "Store, Inn, Retire or Descend" <
+s
+@dump:reopen-first
+ESC
+
+@until "Store, Inn, Retire or Descend" <
+s
+@dump:reopen-second
+ESC
+@quit

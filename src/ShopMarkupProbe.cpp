@@ -45,7 +45,7 @@ void ShopMarkupProbe(Player *p) {
     struct { const char *label, *base, *eff; int plus; } C[] = {
         { "dagger",        "dagger",     NULL,           0 },
         { "long_sword+1",  "long sword", NULL,           1 },
-        { "scroll_identify","scroll",    "Identify;scroll", 0 },
+        { "scroll_star_identify","scroll", "*Identify*;scroll", 0 },
         { "potion_true_healing","potion","True-Healing", 0 },
         { "ring_mail+5",   "ring mail",  NULL,           5 },
     };

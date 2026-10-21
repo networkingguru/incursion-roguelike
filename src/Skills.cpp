@@ -3394,6 +3394,46 @@ void Creature::Devour(Corpse * c) {
 	 Craft (create item), etc.
 
 */
+/* inc-icp3: the XP and gold cost CraftItem quotes, before the Artificer and
+   Master Artisan discounts. The game path and tools/check_roark_stock.sh's
+   probe both call this. An effect with EF_FIXED_PRICE ignores its ITEM_COST
+   list here and uses the level table; ruled by the owner. */
+void CraftCosts(Item *it, int16 itemType, int16 itemSource, int16 acqVal,
+		int16 quan, int32 *XPCostOut, int32 *gpCostOut) {
+	static const int16 XPCostTable[] = {
+		0, 80, 160, 320, 540, 720, 1280, 1670,
+		2000, 2880, 3920, 5120, 6480, 8165,
+		12050, 15400, 17200, 19400, 21300,
+		23750, 25000 };
+	int32 XPCost, gpCost;
+	XPCost = XPCostTable[min(20, max(it->ItemLevel(), 1))];
+	rID icList[10];
+	if (it->eID && !TEFF(it->eID)->HasFlag(EF_FIXED_PRICE) &&
+	    TEFF(it->eID)->GetList(ITEM_COST, icList, 9))
+		XPCost = icList[max(0, it->GetInherentPlus() - 1)] / 25;
+
+	if (itemType == T_MISSILE)
+		XPCost /= 20;
+	if (itemType == T_SCROLL)
+		XPCost /= 10;
+	if (itemSource == AI_POTION)
+		XPCost /= 5;
+
+	XPCost *= quan;
+
+	gpCost = XPCost * 8; /* Was 25 */
+
+	if (itemSource == AI_ALCHEMY || itemSource == AI_POISON || acqVal == ACQ_CRAFT) {
+		XPCost = 0;
+		gpCost /= 5;
+	}
+
+	if (acqVal == ACQ_CRAFT)
+		gpCost = it->getShopCost(NULL, NULL) * quan;
+	*XPCostOut = XPCost;
+	*gpCostOut = gpCost;
+}
+
 EvReturn Character::CraftItem(int16 abil) {
 	int8 i;
 	int16 new_lev, c, max_lev, qual, old_lev,
@@ -3845,30 +3885,7 @@ Create:
 	else
 		craftDC += it->ItemLevel();
 
-	XPCost = XPCostTable[min(20, max(it->ItemLevel(), 1))];
-	rID icList[10];
-	if (it->eID && TEFF(it->eID)->GetList(ITEM_COST, icList, 9))
-		XPCost = icList[max(0, it->GetInherentPlus() - 1)] / 25;
-
-	if (itemType == T_MISSILE)
-		XPCost /= 20;
-	if (itemType == T_SCROLL)
-		XPCost /= 10;
-	if (itemSource == AI_POTION)
-		XPCost /= 5;
-
-	XPCost *= quan;
-
-	gpCost = XPCost * 8; /* Was 25 */
-
-
-	if (itemSource == AI_ALCHEMY || itemSource == AI_POISON || acqVal == ACQ_CRAFT) {
-		XPCost = 0;
-		gpCost /= 5;
-	}
-
-	if (acqVal == ACQ_CRAFT)
-		gpCost = it->getShopCost(NULL, NULL) * quan;
+	CraftCosts(it, itemType, itemSource, acqVal, quan, &XPCost, &gpCost);
 
 	if (itemType == T_MISSILE)
 		hours = 2 + quan / 5;

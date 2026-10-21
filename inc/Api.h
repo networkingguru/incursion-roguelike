@@ -1099,6 +1099,10 @@ system int16  LastSkillCheckResult();
 system void    SetPVal(hObj:T_EVENTINFO e, int16 b, int16 n=0, int16 s=0);
 
 system int16   RoundsToUnits(int16 rounds);
+
+/* inc-icp3: refill the shopkeeper's necessities if the game day is later than
+   the day of the last refill. Returns true when it refilled. */
+system bool    RestockShopDaily(hObj:T_CREATURE shop);
  
  
 /* functions with variable-type parameters handled by macro type-cast */

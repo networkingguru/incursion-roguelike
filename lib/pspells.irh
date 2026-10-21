@@ -3044,12 +3044,14 @@ Priest / Sorcerer / Druid Spell "Cure Serious Wounds" : EA_HEALING
 // it's not like the potion version is all that rare ...
 Priest / Druid / Potion / Scroll Spell "Cure Disease" : EA_HEALING
   { SC_THE; Base: SP_TRIVIAL; Cost: 12; Level: 3; qval: Q_TAR|Q_NEAR;
-    xval: HEAL_MALADY; yval: DISEASED; Flags: EF_STAPLE;
+    xval: HEAL_MALADY; yval: DISEASED; Flags: EF_STAPLE, EF_FIXED_PRICE;
     Purpose: EP_FIX_TROUBLE (TROUBLE_DISEASE);
     Desc: "Removes all diseases, natural or magical, from 
       one subject."; 
     Constants:
       * SERVICE_SPELL_COST 250;  
+    Lists:
+      * ITEM_COST 200;
   }
 
 Priest / Scroll Spell "Create Food and Water" : EA_CREATION

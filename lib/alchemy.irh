@@ -461,10 +461,12 @@ AI_ALCHEMY Effect "Antitoxin" : EA_INFLICT
       return NOTHING;
       };
     xval: SAVE_BONUS; yval: SN_POISON; 
-    Flags: EF_NAMEONLY, EF_MUNDANE;
+    Flags: EF_NAMEONLY, EF_MUNDANE, EF_FIXED_PRICE;
     Constants:
       * BASE_ITEM $"potion",
       * ITEM_COST 300;
+    Lists:
+      * ITEM_COST 100;
     
   }
   

@@ -123,7 +123,8 @@ void TrueBlowsProbe(Player *p) {
     Item *tb = NULL, *ctlItem = NULL;
     for (Item *it = shop->FirstInv(); it; it = shop->NextInv()) {
         if (it->eID == effect && !tb) tb = it;
-        else if (it->isType(T_POTION) && it->eID && it->eID != effect && !ctlItem) ctlItem = it;
+        else if (it->isType(T_POTION) && it->eID && it->eID != effect && !ctlItem &&
+                 !TEFF(it->eID)->HasFlag(EF_FIXED_PRICE)) ctlItem = it;
     }
     if (!tb || !ctlItem) {
         Error("TRUE_BLOWS INCONCLUSIVE shop stock tb=%d ctl=%d", tb ? 1 : 0, ctlItem ? 1 : 0);

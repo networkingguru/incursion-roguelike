@@ -377,6 +377,10 @@ void Game::Play() {
     extern void ShopMarkupProbe(Player *p);
     ShopMarkupProbe(pp);
 
+    /* inc-icp3: opt-in Roark necessities stock reproduction. */
+    extern void RoarkStockProbe(Player *p);
+    RoarkStockProbe(pp);
+
     /* inc-1qyv: opt-in True Blows reproduction. */
     extern void TrueBlowsProbe(Player *p);
     TrueBlowsProbe(pp);
