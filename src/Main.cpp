@@ -385,6 +385,10 @@ void Game::Play() {
     extern void WaterWalkingProbe(Player *p);
     WaterWalkingProbe(pp);
 
+    /* inc-gzkn: opt-in elemental resistance potion reproduction. */
+    extern void ElementalResistanceProbe(Player *p);
+    ElementalResistanceProbe(pp);
+
     /* inc-3lsp: off unless INCURSION_ACT_OVERFLOW_PROBE is set. See
        ActOverflowProbe (src/ActOverflowProbe.cpp) and
        tools/check_act_overflow.sh. */
