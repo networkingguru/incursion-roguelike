@@ -35,10 +35,10 @@ I ran; commands at the bottom). Normative spec: `docs/SAVE-SCHEMA-SPEC.md`.
 
 | Thing | File:line |
 |---|---|
-| `fileHeader` / `groupHeader` (both formats) | inc/Base.h:725 / :734 |
+| `fileHeader` / `groupHeader` (both formats) | inc/Base.h:725 / :735 |
 | v1 wire kinds `K_*`, pool ids `SP_*`, tag ranges | inc/Base.h:748-777 |
 | `FIELD_*` macros (one line, four duties) | inc/Base.h:783-801 |
-| `ARCHIVE_CLASS` / `END_ARCHIVE` | inc/Base.h:803 / :809 |
+| `ARCHIVE_CLASS` / `END_ARCHIVE` | inc/Base.h:803 / :810 |
 | `class Registry` (`saveMode`, `loadMode`, `hCurrent`) | inc/Base.h:814 |
 | v0 `Registry::SaveGroup` / `LoadGroup` (+ v1 dispatch) | src/Registry.cpp:673 / :839 (:862-867) |
 | v1 `Registry::SaveGroupV1` / `LoadGroupV1` | src/SaveV1.cpp:3117 / :3246 |
