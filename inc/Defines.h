@@ -3207,7 +3207,11 @@ typedef signed int        hObj;
 /* inc-icp3: Mag holds the game day (turn / (24*HOUR_TURNS)) a shop last
    refilled its necessities. */
 #define RESTOCK_DAY       245
-#define LAST_STATI        246
+/* inc-59lq phase A1: the caster is concentrating on a maintained spell. Its
+   eID is the spell, Val the tail units to apply if concentration is stopped
+   early, and Duration the cap. */
+#define CONCENTRATING     247
+#define LAST_STATI        248
   
 
 
