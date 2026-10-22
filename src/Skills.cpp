@@ -317,11 +317,28 @@ void Player::CancelMenu() {
 	 */
 	rID spells[1024] = { 0, };
 	Field *fields[100] = { 0, };
+	/* inc-59lq phase A1: one Cancel entry per concentration. */
+	rID concSpells[64] = { 0, };
+	int num_conc = 0;
 	int num_spell = 1, num_field = 1;
 	int i, j, c = 0;
 
 	StatiIter(this)
-		if (S->eID && RES(S->eID)->Type == T_TEFFECT) {
+		if (S->Nature == CONCENTRATING && S->eID) {
+			bool found = false;
+			for (i = 0; i < num_conc; i++)
+				if (concSpells[i] == S->eID)
+					found = true;
+			if (found)
+				continue;
+
+			concSpells[num_conc] = S->eID;
+			MyTerm->LOption(XPrint("Stop concentrating on <9><Res><7>.",
+				S->eID), 2048 + num_conc);
+			num_conc++;
+			c++;
+		}
+		else if (S->eID && RES(S->eID)->Type == T_TEFFECT) {
 			if (S->h && oThing(S->h)->isItem())
 				if (oItem(S->h)->Owner() != this)
 					continue;
@@ -446,7 +463,10 @@ void Player::CancelMenu() {
 
 	if (c > 0) {
 		/* it's an eID */
-		if (c < 1024) { /* Spell */
+		if (c >= 2048) { /* inc-59lq phase A1: stop concentrating */
+			StopConcentration(concSpells[c - 2048], true);
+		}
+		else if (c < 1024) { /* Spell */
 			IPrint("Dropping <Res>.", spells[c]);
 			RemoveEffStati(spells[c], EV_ELAPSED);
 		}

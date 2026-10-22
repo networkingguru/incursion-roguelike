@@ -1,0 +1,53 @@
+# inc-59lq: cast Improved Phantasmal Force (tail 1 unit), stop concentrating,
+# then wait one turn at a time and photograph each. Read by
+# tools/check_concentration.sh for the tail: the illusory monitor must survive
+# the Cancel and then end by itself. Each wait is 16 ticks (the turn counter in
+# every dump's header); see the check for the timing it measured.
+# Lowercase x opens the Cancel menu; see concentration-core.keys.
+@until "Select Spell" m
+@choose "Improved Phantasmal Fo"
+c
+@expect "Target Illusion"
+ENTER
+@while "more --" SPACE
+@dump:started
+x
+@choose "Stop concentrating on Improved"
+@while "more --" SPACE
+@dump:cancelled
+.
+@while "more --" SPACE
+@dump:w01
+.
+@while "more --" SPACE
+@dump:w02
+.
+@while "more --" SPACE
+@dump:w03
+.
+@while "more --" SPACE
+@dump:w04
+.
+@while "more --" SPACE
+@dump:w05
+.
+@while "more --" SPACE
+@dump:w06
+.
+@while "more --" SPACE
+@dump:w07
+.
+@while "more --" SPACE
+@dump:w08
+.
+@while "more --" SPACE
+@dump:w09
+.
+@while "more --" SPACE
+@dump:w10
+.
+@while "more --" SPACE
+@dump:w11
+.
+@while "more --" SPACE
+@dump:w12
