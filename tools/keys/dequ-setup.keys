@@ -62,7 +62,11 @@ ENTER   # Try to enter something here; the game refuses.
 y       # Open the dungeon verb menu.
 @expect "What do you want to do?"
 a       # In-game [a] Apply: keep this key before ESC closes the menu.
-@until "Things in View" ESC
+# Three plain ESCs close the Apply menu and any follow-up prompt whatever the
+# starting kit, because a narrow menu leaves "Things in View" visible.
+ESC
+ESC
+ESC
 
 # 'w' opens wizard mode and 'y' confirms it the first time. The pair is driven
 # by @until rather than written out, because a keystroke swallowed by a prompt

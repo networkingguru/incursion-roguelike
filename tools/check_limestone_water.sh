@@ -1,7 +1,8 @@
 #!/bin/bash
 # gate: live
 # inc-nhgh: fresh maps, since saved characters also pin their dungeon.
-# Seed 52 includes a naturally dry panel (before=0); wet-only samples are UNMEASURED.
+# inc-s1qj: natural seeds may roll only wet panels, so one extra run sets
+# INCURSION_BLOB_MIN_PROBE=dry (natural water removed before the top-up) and always measures before=0.
 # Override LIMESTONE_SEEDS to widen the deterministic dive sample.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -22,6 +23,15 @@ for seed in ${LIMESTONE_SEEDS:-7 1 2 52}; do
         run_failed=1
     fi
 done
+run="$RUN_ROOT/seed-dry"
+rc=0
+INCURSION_BLOB_MIN_PROBE=dry INCURSION_RUN_DIR="$run" \
+    INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+    tools/headless.sh tools/keys/limestone-water.keys "${LIMESTONE_DRY_SEED:-7}" > "$RUN_ROOT/seed-dry.log" 2>&1 || rc=$?
+if [ "$rc" -ne 0 ] && [ "$rc" -ne 7 ]; then
+    echo "UNMEASURED: dry run harness exit $rc"
+    run_failed=1
+fi
 python3 - "$RUN_ROOT" "$run_failed" <<'PY'
 import pathlib, re, sys
 root = pathlib.Path(sys.argv[1])

@@ -27,19 +27,35 @@
 # hardness 10 averages 32 points, and a battleaxe (26 hit points) was measured
 # being destroyed outright by the first retaliation, which left no page to read.
 #
+# THE SAVE IS FORCED SO THE CHECK DOES NOT RIDE ON A DIE. The column's A_DEQU
+# retaliation attacks the striker's maul, and the striker then rolls a Reflex
+# save (src/Fight.cpp:3940); the maul only loses hit points when that save
+# FAILS. On the current tree, seed 5, the maul made its save on the FIRST blow
+# (the strike-1 screen read "unharmed! You avoid harm to your maul." and the
+# column's sword was untouched), so a check that read only after-1 saw no
+# damage and went red for a reason that had nothing to do with the fix under
+# test. Appending any resource to lib/main.irc shifts the random stream on a
+# pinned seed, so re-pinning would only move which run is unlucky. Instead
+# INCURSION_FORCE_SAVE_ROLL=1 forces the SavingThrow die to a natural 1
+# (src/Fight.cpp:401-428, consumed at src/Creature.cpp:3936-3938, and a
+# natural 1 always fails per the SRD rule at src/Creature.cpp:3961-3974). The
+# retaliation therefore always lands, on the first blow, every run.
+#
 # THE ORACLE is the maul's own description page, reached from the inventory by
 # selecting the Weapon Hand and pressing 'x'. Measured on the current tree,
-# seed 5:
+# seed 5, with the save forced:
 #
 #   before  The Uncursed Maul ('v')                  It has 262 out of 262 hit
-#   after   The Mildly Damaged Uncursed Maul ('v')   It has 218 out of 262 hit
+#   after   The Mildly Damaged Uncursed Maul ('v')   It has 214 out of 262 hit
 #
 # Under the old behaviour the maul is untouched, because the column shattered
 # its own sword instead.
 #
-# PROVED RED on 2026-09-10 by putting the old two lines back. The inner run
-# printed:
+# PROVED RED on 2026-09-10, and again on 2026-10-22 with the save forced, by
+# putting the old two lines back. The inner run printed:
 #
+#   |   FAIL  0/1 screens carry: maul is damaged
+#   |         it should prove: and the retaliation that followed named the striker's maul
 #   |   FAIL  0/1 screens carry: Damaged Uncursed Maul
 #   |         it should prove: the column's retaliation shattered the striker's maul
 #   |   FAIL  1/1 screens still carry: It has 262 out of 262 hit
@@ -63,6 +79,12 @@ check_mutation src/Fight.cpp \
 '            it = e.EItem2;
             if (!it)
                 it = e.EItem;'
+
+# The maul only takes damage when the striker's Reflex save against the column's
+# A_DEQU retaliation fails, and that save is a die roll the check must not ride
+# on (see the header). Force it to a natural 1, which always fails. The hook is
+# in the shipped binary, so no probe build is needed.
+export INCURSION_FORCE_SAVE_ROLL=1
 
 check_run tools/keys/dequ-sunder.keys 5
 

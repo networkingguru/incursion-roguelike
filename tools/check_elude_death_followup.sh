@@ -147,6 +147,28 @@ check_mutation src/Fight.cpp \
 FAILED=0
 INCONCLUSIVE=0
 
+# screen_shows <text> <screen...> -- true if a screen carries <text>.
+#
+# The sidebar starts at the first '|' on a line and the message region is what
+# is left of it. A long message wraps at the 64-column boundary, so
+# "The world shifts!" can be split as "The " / "world shifts!" over two lines
+# (inc-6vrn: a preceding message pushes it past the boundary). Joining the
+# message region of every line with single spaces makes the match independent
+# of that wrapping: the phrase then appears contiguously.
+screen_shows() {
+    local text="$1" f
+    shift
+    for f in "$@"; do
+        [ -f "$f" ] || continue
+        awk -v want="$text" '
+            { sub(/\|.*/, ""); buf = buf $0 " " }
+            END { gsub(/[ \t]+/, " ", buf)
+                  exit (index(buf, want) ? 0 : 1) }
+        ' "$f" && return 0
+    done
+    return 1
+}
+
 # judge <label> <main|rider>   -- reads $CHECK_RUN
 judge() {
     local label="$1" kind="$2" log="$CHECK_RUN/logs/elude.log" last0 killer next post
@@ -159,7 +181,7 @@ judge() {
         echo "INCONCLUSIVE: no 'result: ... moved=1' line, so Elude Death never moved him."
         echo "specimen: $log"; INCONCLUSIVE=1; return
     fi
-    if ! grep -qlF 'The world shifts!' "$CHECK_RUN"/logs/screens/*.txt 2>/dev/null; then
+    if ! screen_shows 'The world shifts!' "$CHECK_RUN"/logs/screens/*.txt; then
         echo "INCONCLUSIVE: no screen dump shows 'The world shifts!'."
         echo "specimen: $CHECK_RUN"; INCONCLUSIVE=1; return
     fi
