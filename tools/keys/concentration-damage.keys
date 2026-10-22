@@ -1,0 +1,57 @@
+# inc-59lq: concentrate on an illusory ITEM (Phantasmal Force, arm 'i', so no
+# illusory creature draws the goblin's blows), summon a goblin next to the
+# caster, bump it, and wait while it hits the caster. Read by
+# tools/check_concentration.sh for the blocked attack and the damage check.
+#
+# Wizard mode: "Wizard Mode Switches" row 11 is Freeze Monsters, which the
+# frozen options file has ON; DOWN*10 SPACE turns it off so the goblin fights
+# (the same switch tools/keys/sanctuary-strike.keys sets, the other way).
+# Lowercase keys only; see concentration-core.keys.
+@until "Select Spell" m
+@choose "Phantasmal Force"
+i
+@expect "Target Illusion"
+ENTER
+@while "more --" SPACE
+@dump:started
+
+w
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+@while "more --" SPACE
+@dump:goblin
+
+RIGHT
+@while "more --" SPACE
+@dump:attack
+.
+@while "more --" SPACE
+@dump:t1
+.
+@while "more --" SPACE
+@dump:t2
+.
+@while "more --" SPACE
+@dump:t3
+.
+@while "more --" SPACE
+@dump:t4
+.
+@while "more --" SPACE
+@dump:t5
+.
+@while "more --" SPACE
+@dump:t6
+.
+@while "more --" SPACE
+@dump:t7
+.
+@while "more --" SPACE
+@dump:t8

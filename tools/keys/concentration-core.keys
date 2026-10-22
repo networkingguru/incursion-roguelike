@@ -1,0 +1,27 @@
+# inc-59lq: cast Phantasmal Force (an illusory creature), then stop concentrating
+# from the Cancel menu. Read by
+# tools/check_concentration.sh.
+#
+#   INCURSION_CONCENT_PROBE=1 \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/elf-mage-illusions-seed1.sav \
+#       tools/headless.sh tools/keys/concentration-core.keys 1
+#
+# The prompt after the spell menu is Magic::Illusion's "citf" choice; 'c' is
+# the creature arm. The Cancel menu is the LOWERCASE x: StandardKeySet matches
+# a command with no SHIFT, so an uppercase X is a different key and opens
+# nothing (docs/HEADLESS-SPEC.md, "Input comes from a script").
+# SPACE, never ESC, clears "-- more --"; ESC in play mode opens the System Menu.
+@until "Select Spell" m
+@choose "Phantasmal Force"
+c
+@expect "Target Illusion"
+ENTER
+@while "more --" SPACE
+@dump:started
+
+x
+@dump:cancel-menu
+@choose "Stop concentrating on Phan"
+@while "more --" SPACE
+@dump:cancelled

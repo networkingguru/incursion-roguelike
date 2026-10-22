@@ -1,0 +1,17 @@
+# inc-59lq: cast Phantasmal Force, then try to cast it again while
+# concentrating. Read by tools/check_concentration.sh. This is its own session,
+# and the second cast is the LAST key, because a build that fails to refuse it
+# opens the Illusion prompt and a later @choose would stop the run as
+# "script drifted" (exit 6), which reads as could-not-measure and not as red.
+# Keys as in concentration-core.keys.
+@until "Select Spell" m
+@choose "Phantasmal Force"
+c
+@expect "Target Illusion"
+ENTER
+@while "more --" SPACE
+
+m
+@choose "Phantasmal Force"
+@while "more --" SPACE
+@dump:block-cast

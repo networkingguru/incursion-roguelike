@@ -5400,6 +5400,7 @@ String & TEffect::Describe(Player *p) {
     else if (HasFlag(EF_DLONG)) s += ("Long duration. ");
     else if (HasFlag(EF_DXLONG)) s += ("Extended duration. ");
     else if (HasFlag(EF_PERSISTANT)) s += ("Persistant. ");
+    s += ConcentHelpLine(spID);
     if (HasFlag(EF_NO_BONUS_DMG)) s += ("No bonus damage. ");
     if (HasFlag(EF_DEFENSIVE)) s += "No AoO. ";
 
