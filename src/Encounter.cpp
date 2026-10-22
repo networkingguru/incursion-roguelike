@@ -1563,7 +1563,16 @@ EvReturn Map::enChooseMID(EventInfo &e) {
                 continue;
               if (tm->HasFlag(M_NOGEN) && e.enConstraint < 0x01000000)
                 continue;
-              if (tm->Depth > e.enDepth)
+              /* upstream: an exact-monster request (e.enConstraint >= 0x01000000,
+               * a monster rID) is never filtered out by the monster's native
+               * depth, just as the M_NOGEN test just above exempts it. This test,
+               * and the same depth test in the TM_PLANAR loop and in the
+               * named-list loop below, lacked that exemption, so the list went
+               * empty and a random group was built.
+               * The code is unchanged since the import, so Win32 with the
+               * original typedefs behaves the same (upstream's defect).
+               * Observed: tools/check_exact_monster_depth.sh; inc-6qmk; not sent. */
+              if (tm->Depth > e.enDepth && e.enConstraint < 0x01000000)
                 continue;
               if (tm->HasFlag(M_AQUATIC) != isAquatic)
                 if (!tm->HasFlag(M_AMPHIB))
@@ -1631,7 +1640,7 @@ EvReturn Map::enChooseMID(EventInfo &e) {
                           continue;
                         if (tm->HasFlag(M_NOGEN) && e.enConstraint < 0x01000000)
                           continue;
-                        if (tm->Depth > e.enDepth)
+                        if (tm->Depth > e.enDepth && e.enConstraint < 0x01000000)
                           continue;
                         if (tm->HasFlag(M_AQUATIC) != isAquatic)
                           if (!tm->HasFlag(M_AMPHIB))
@@ -1687,7 +1696,7 @@ EvReturn Map::enChooseMID(EventInfo &e) {
                     }
                   if (tm->CR > maxCR && !e.isGetMinCR)
                     continue;
-                  if (tm->Depth > e.enDepth)
+                  if (tm->Depth > e.enDepth && e.enConstraint < 0x01000000)
                     continue;
                   if (tm->HasFlag(M_AQUATIC) && !isAquatic)
                     if (!tm->HasFlag(M_AMPHIB))

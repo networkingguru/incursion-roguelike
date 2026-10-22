@@ -71,6 +71,10 @@ void Thing::UpdateStati() {
             if (S->Duration <= 0) {
                 if (isPlayer() && S->Nature == BLIND && getenv("INCURSION_LIGHT_TRAP_PROBE"))
                     fprintf(stderr, "LIGHT_TRAP expiry clock=%ld\n", (long)theGame->Turn);
+                /* inc-59lq phase A1: the concentration cap has been reached;
+                   the spell's effects end at once, with no tail. */
+                if (S->Nature == CONCENTRATING && isCreature())
+                    thisc->ConcentrationExpired(S->eID);
                 if (S->Nature == ACTING) {
                     s = *S;
                     if (s.h && oThing(s.h)->isCreature()) 

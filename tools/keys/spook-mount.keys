@@ -68,8 +68,11 @@ ENTER y
 @while "Focus on which Weapon" a
 @while "|  *" RIGHT RIGHT RIGHT DOWN
 ENTER y
-a       # Personality archetype
-@until "Things in View" ESC
+# Close any menu or message left open after character creation, whatever the
+# starting kit.
+ESC
+ESC
+ESC
 
 w       # wizard mode
 y       # "Enter wizard mode?" -- yes

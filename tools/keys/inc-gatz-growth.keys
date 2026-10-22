@@ -8,20 +8,15 @@
 @until "HP:" ESC
 
 w y
-@choose "Ascend / Descend Depth"
-"2" ENTER
-@until "HP:" ESC
-
-w
 @choose "Genocide Everything"
 @until "HP:" ESC
 
-# Lay plain ground ("Loose-Packed Earth": a dry, walkable terrain) under the
-# player and the two squares east before staging, so the walk below cannot be
-# blocked by whatever terrain the generator chose. On seed 1 depth 2 the
-# player starts in deep water, and the deep-water handler (lib/dungeon.irh)
-# aborts a move whenever the Swim check fails, so the earlier fixed walk out
-# of the start square never reached the field on that terrain.
+# Stay on the starting level (depth 1): a wizard-mode depth change lands the
+# player by a fall behind a modal "Press [ENTER]" prompt, and which level a
+# seed generates shifts whenever a resource is appended to lib/. Do not depend
+# on that level: lay plain ground ("Loose-Packed Earth": dry, walkable) under
+# the player and the two squares east, so whatever the generator put there
+# (deep water, a wall) cannot block the walk below.
 w
 @choose "Change terrain type"
 ENTER
@@ -34,6 +29,16 @@ w
 @choose "Change terrain type"
 RIGHT*2 ENTER
 @choose "Loose-Packed Earth"
+
+# Put solid rock north of the square the player will step onto. A Huge mover
+# cannot stand where its bulk touches rock, so the growth makes PlaceNear move
+# it to another square: that move is the divergence the fix guards. Without
+# rock in reach, PlaceNear leaves the mover where it is and no relink goes
+# wrong, so the check would pass with the fix removed.
+w
+@choose "Change terrain type"
+RIGHT UP ENTER
+@choose "Solid Rock"
 
 # Summon the growth archon two squares east. Its field (ADJUST_CIRC, radius
 # 1) covers the square one east of the player, so stepping there enters it:

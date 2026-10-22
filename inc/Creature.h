@@ -640,6 +640,16 @@ class Creature: public Thing, public Magic
       virtual EvReturn Taunt(EventInfo &e);     
       virtual EvReturn Cast(EventInfo &e);
       virtual EvReturn Invoke(EventInfo &e);
+      /* inc-59lq phase A1: concentration core (src/Concentration.cpp). */
+      void StartConcentration(EventInfo &e);
+      void StopConcentration(rID eID, bool applyTail);
+      void ConcentrationEndEffects(rID eID, int16 tail);
+      void ConcentrationExpired(rID eID);
+      /* inc-59lq phase A2 */
+      bool ConcentrationBlocks(const char *kind);
+      void ConcentrationDamageCheck(int16 dmg);
+      /* inc-59lq phase C: does spell S still reach an enemy? */
+      bool ConcentrationStillAffectsEnemy(rID eID);
       virtual EvReturn Counterspell (EventInfo &e, Counterspeller *cs);
  			virtual EvReturn Hide(EventInfo &e);
       virtual EvReturn Turn(EventInfo &e);
@@ -1826,3 +1836,8 @@ class Monster: public Creature
       FIELD_ARRAY(643, Recent, sizeof(uint8), 6);
     END_ARCHIVE
 	};
+
+/* inc-59lq phase D: the concentration help line for a spell, or "" when the
+   spell is not in the concentration table. Implemented in
+   src/Concentration.cpp. */
+String ConcentHelpLine(rID eID);

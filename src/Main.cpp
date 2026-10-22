@@ -293,6 +293,10 @@ void Game::Play() {
     extern void RangedIllusionProbe(Player *shooter);
     RangedIllusionProbe(pp);
 
+    /* Off unless INCURSION_CONCENT_MONSTER_PROBE is set. inc-59lq. */
+    extern void ConcentMonsterProbe(Player *pl);
+    ConcentMonsterProbe(pp);
+
     /* Off unless INCURSION_SAVECHANCE_PROBE is set, and run here because it
        needs a live player. See SaveChanceProbe (src/Fight.cpp) and
        tools/check_save_chance.sh. inc-o6xj. */
@@ -343,6 +347,10 @@ void Game::Play() {
     /* inc-pp9w: opt-in template chooser/builder pair oracle. */
     extern void TemplatePairProbe(Player *pl);
     TemplatePairProbe(pp);
+
+    /* inc-6qmk: opt-in exact-monster depth oracle; see ExactMonProbe. */
+    extern void ExactMonProbe(Player *pl);
+    ExactMonProbe(pp);
 
     /* inc-e46n: opt-in Seneschal follower-ladder oracle. */
     extern void SeneschalProbe(Player *pl);
