@@ -4108,6 +4108,13 @@ void BestowProbe(Player *caster) {
         const int runs = 200;
         const int stdCost = 3000 / max((100 + c->Attr[A_SPD_MELEE]*5),10);
         int observedLossCost = -1, extraCalls = 0, extraRolls = 0;
+        /* The probe freezes time, so timed stati never expire (inc-rgqd):
+           clear the states PreStrike (src/Fight.cpp:5999) turns into a
+           HIT_WHILE_UNREADY stati, or 200 attacks overflow the array. */
+        c->RemoveStati(STUCK);
+        c->RemoveStati(PRONE);
+        c->RemoveStati(BLIND);
+        c->RemoveStati(PARALYSIS);
         for (int i = 0; i < runs; ++i) {
             /* inc-w3xn: in the monster case the live caster is the kobold's
                attack target, and its own attacks can drop a level-1 character
@@ -4140,6 +4147,11 @@ void BestowProbe(Player *caster) {
                 if (bestowRollCount > rollsBefore2)
                     extraRolls++;
             }
+            /* The probe freezes time, so timed stati never expire
+               (inc-rgqd): drop any HIT_WHILE_UNREADY the attack just added
+               so the count cannot grow across the 200 iterations. */
+            while (c->HasStati(HIT_WHILE_UNREADY))
+                c->RemoveStati(HIT_WHILE_UNREADY);
         }
         const int lost = bestowHesLost;
         const int pct = (100 * lost) / runs;
