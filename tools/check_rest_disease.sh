@@ -27,6 +27,16 @@
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 SEED=1
 
+# Pin the DISEASED pulse's FORT save to a success (INCURSION_FORCE_SAVE_ROLL,
+# src/Fight.cpp:415 -> Creature::SavingThrow, src/Creature.cpp:3936). The rest
+# calls DiseasePulse once (src/Player.cpp:2584); on a FAILED save the disease
+# rolls its own damage -- devil chills is pval 1d2 STR (lib/threats.irh:69) --
+# and that unrelated 1d2 moves the STR total under the check's feet whenever an
+# appended resource shifts the random stream. Forcing the save keeps the
+# character DISEASED (S->Mag only reaches 1 of its 3) while isolating the
+# question the check asks: how much ability damage does the REST restore.
+export INCURSION_FORCE_SAVE_ROLL=20
+
 [ -x ./incursion-headless ] || _check_die 2 \
     "./incursion-headless is not built. Run: BACKEND=posix ./build_macos.sh"
 
@@ -53,11 +63,17 @@ _rd_stage() {
 
 # <screen file> -> current HP
 _rd_hp() { sed -n 's/.*HP:[^0-9]*\([0-9][0-9]*\)\/[0-9].*/\1/p' "$1" | head -1; }
-# <screen file> <ability const> -> ability damage magnitude (0 when absent)
+# <screen file> <ability const> -> total ability damage magnitude, summing
+# every ADJUST_DMG row for that ability (0 when absent). A single ability can
+# carry more than one damage stati (e.g. the disease's own pulse), so reading
+# only the first row would misreport the total.
 _rd_dmg() {
-    local m
-    m=$(grep "ADJUST DMG" "$1" | grep "Val:$2 " | sed -n 's/.*Mag:\(-[0-9]*\).*/\1/p' | head -1)
-    echo "${m:-0}"
+    local total=0 m
+    while IFS= read -r m; do
+        [ -n "$m" ] && total=$((total + m))
+    done < <(grep "ADJUST DMG" "$1" | grep "Val:$2 " \
+        | sed -n 's/.*Mag:\(-[0-9]*\).*/\1/p')
+    echo "$total"
 }
 
 _rd_case() { # <name> <statement> <expect HP rise: 1> <expected damage drop per ability>
