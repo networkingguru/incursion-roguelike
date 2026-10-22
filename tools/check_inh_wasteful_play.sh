@@ -48,10 +48,14 @@ cd "$ROOT"
     exit 2
 }
 
-# Seed pinned 3 (was 1) for inc-uwxp: commit 127e63ef made CanAddTemplate refuse
-# a two-alignment template, shifting the monster population and the RNG stream,
-# so on seed 1 the grid bug's electric bite now misses and the character is never
-# pushed above the cap. Seed 3 lands the bite and stages the over-cap read.
+# The over-cap push depends on the grid bug's electric bite landing, and an
+# unrelated change that appends any resource to lib/main.irc shifts the RNG
+# stream on a pinned seed, so the bite's attack roll moves. Pinning a seed
+# cannot keep that roll a hit. Force it instead, with the existing hook
+# INCURSION_LOF_FORCE_ROLL (src/Fight.cpp:358-367): once nonzero it replaces
+# e.vRoll for every Creature::Strike() with a fixed d20 result, so the bite
+# hits deterministically whatever the RNG stream does. The old seed-3 pin only
+# happened to land the bite; the force makes the check independent of it.
 SEED=3
 KEYS=tools/keys/inh-wasteful-play.keys
 OPTIONS="${INCURSION_OPTIONS:-tools/fixtures/options-2026-08-18.dat}"
@@ -60,11 +64,19 @@ OPTIONS="${INCURSION_OPTIONS:-tools/fixtures/options-2026-08-18.dat}"
     exit 2
 }
 
+# Force the grid bug's attack roll. The bug is +2 vs. the mound's Def 12, so
+# any d20 of 10..19 lands a plain [hit]; 15 is used so the result is a clean
+# hit, not the [threat] a natural 20 would print, and not the automatic miss a
+# natural 1 would. This is the only attack roll in the script (the player never
+# swings), so nothing else in the run is affected.
+FORCE_ROLL=15
+
 TOKEN="${INCURSION_CHECK_TOKEN:-$$-$(date +%s)}"
 RUN="$ROOT/logs/runs/check-inh-wasteful-play-$TOKEN-seed$SEED"
 rm -rf "$RUN"
 
 OUT="$(env INCURSION_RUN_DIR="$RUN" INCURSION_OPTIONS="$OPTIONS" \
+       INCURSION_LOF_FORCE_ROLL="$FORCE_ROLL" \
        tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
 if [ -z "$RUN" ] || [ ! -d "$RUN" ]; then
