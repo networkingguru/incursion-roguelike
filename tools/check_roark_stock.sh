@@ -62,9 +62,9 @@ t = log('count')
 rows = re.findall(r'ROARK_STOCK count seed=(\d+) item=([\w ]+) have=(\d+) need=(\d+)', t)
 sums = re.findall(r'ROARK_STOCK seed=(\d+) short=(\d+) over=(\d+) total=(\d+)', t)
 need(len(sums) == 20 and 'ROARK_STOCK done' in t, 'count: want 20 seeds, got %d' % len(sums))
-need(len(rows) == 20 * 31, 'count: want 620 rows, got %d' % len(rows))
+need(len(rows) == 20 * 33, 'count: want 660 rows, got %d' % len(rows))
 for seed, short, over, total in sums:
-    need((short, over, total) == ('0', '0', '31'), 'count seed %s: short=%s over=%s total=%s' % (seed, short, over, total))
+    need((short, over, total) == ('0', '0', '33'), 'count seed %s: short=%s over=%s total=%s' % (seed, short, over, total))
 for seed, item, have, nd in rows:
     need(have == nd, 'count seed %s %s: have %s need %s' % (seed, item, have, nd))
 print('count: %d seeds, %d rows, short=%d over=%d' % (len(sums), len(rows),
@@ -83,7 +83,8 @@ for k, gp in FIX.items():
     if r:
         need(r[2] == gp and r[3] == gp and r[4] == gp, 'price %s: want %d got low=%d high=%d null=%d' % (k, gp, r[2], r[3], r[4]))
         need(r[0] <= 0 and r[1] >= 20, 'price %s: Diplomacy not low/high (%d,%d)' % (k, r[0], r[1]))
-for k in ('restoration', 'restore strength', 'dimension door'):
+for k in ('restoration', 'restore strength', 'dimension door', 'dispel magic scroll',
+          'transmute rock to mud scroll', 'pickaxe'):
     r = P.get(k)
     need(r is not None and r[2] > r[3], 'price control %s does not fall with Diplomacy: oracle blind (%r)' % (k, r))
 print('price:', ' '.join('%s=%d/%d' % (k, P[k][2], P[k][3]) for k in FIX if k in P))
