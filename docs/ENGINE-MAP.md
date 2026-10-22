@@ -3,7 +3,7 @@
 # Engine map: the frame
 
 One C++ binary. One global game object (`Game`, `inc/Res.h:1146`), one global terminal
-(`extern Term *T1`, `inc/Globals.h:319`), and a ruleset that is data, not code:
+(`extern Term *T1`, `inc/Globals.h:322`), and a ruleset that is data, not code:
 `lib/*.irh` compiles to a `.Mod` the binary loads at run time. No threads, no callback
 loop; control flows down one stack from `main()` and back up. Four subsystems have their
 own pages and are not repeated here: `docs/ENGINE-MAP-CREATURE.md` (map grid, creature
@@ -39,9 +39,9 @@ The spine. Every hop is a direct call; nothing is queued or deferred.
 9. `Creature::Walk()` `src/Move.cpp:85` is the handler `EV_MOVE` reaches (`:208`); it ends at `Move(tx, ty, ...)` (`src/Move.cpp:1075`).
 10. `Thing::Move()` `src/Display.cpp:1773` relinks square contents, calls `M->Update()` on both changed squares (`:1898-1899`), and sets the player's `UpdateMap` (`:1914`).
 11. `Map::Update(x,y)` `src/Term.cpp:748` picks one square's glyph and pushes it to `PutChar`.
-12. Next pass, `TextTerm::AdjustMap()` `src/Term.cpp:1026` (from `RefreshMap()` `inc/Term.h:729`, and from `src/Main.cpp:522`) scrolls the viewport and calls `ShowMap()` when the offset moved or `UpdateMap` is set (`src/Term.cpp:1097-1098`).
+12. Next pass, `TextTerm::AdjustMap()` `src/Term.cpp:1026` (from `RefreshMap()` `inc/Term.h:729`, and from `src/Main.cpp:552`) scrolls the viewport and calls `ShowMap()` when the offset moved or `UpdateMap` is set (`src/Term.cpp:1097-1098`).
 13. `TextTerm::ShowMap()` `src/Term.cpp:917` calls `p->CalcVision()` (`src/Term.cpp:955`, defined `src/Vision.cpp:289`), clears `UpdateMap` (`src/Term.cpp:956`), loops the window calling `PutChar`/`PutGlyph` (`src/Term.cpp:970-994`, `src/Term.cpp:1255`).
-14. `posixTerm::Update()` `src/Wposix.cpp:705` blits the 80x48 buffer to the terminal; with no terminal it only sets a flag (`:708,729`). Then `Turn++` `src/Main.cpp:703`.
+14. `posixTerm::Update()` `src/Wposix.cpp:705` blits the 80x48 buffer to the terminal; with no terminal it only sets a flag (`:708,729`). Then `Turn++` `src/Main.cpp:733`.
 
 **Invariant.** `Player::UpdateMap` is a one-bit dirty flag. Only `ShowMap` clears it (`src/Term.cpp:956`); every world change sets it (`src/Display.cpp:1914,1692`). A map that will not redraw is nearly always a lost set of that flag, not a broken draw call.
 
@@ -49,7 +49,7 @@ The spine. Every hop is a direct call; nothing is queued or deferred.
 
 ## 3. Boundaries, and what crosses them
 
-- **Object ↔ handle.** Nothing stores a `Thing*` across a turn; it stores an `hObj` and resolves it through `oThing(h)`, `oMap(h)` and friends (`inc/Base.h:283-287`) over `class Registry` (`inc/Base.h:814`) and the globals `MainRegistry`/`ResourceRegistry` (`inc/Globals.h:142`). `theRegistry` switches to `ResourceRegistry` while modules load, and back after (`src/Registry.cpp:1535,1548`).
+- **Object ↔ handle.** Nothing stores a `Thing*` across a turn; it stores an `hObj` and resolves it through `oThing(h)`, `oMap(h)` and friends (`inc/Base.h:283-287`) over `class Registry` (`inc/Base.h:814`) and the globals `MainRegistry`/`ResourceRegistry` (`inc/Globals.h:145`). `theRegistry` switches to `ResourceRegistry` while modules load, and back after (`src/Registry.cpp:1535,1548`).
 - **Game ↔ ruleset.** Resources are reached only by `rID` through `RES()`, `TMON()`, `TEFF()` (`inc/Res.h:10-13`). Every override point is an `EventInfo`.
 - **C++ ↔ script.** One door: `Resource::Event()` (`src/Annot.cpp:1109`) calls `theGame->VM.Execute()` (`:1136`); `VMachine::Execute` (`src/VMachine.cpp:413`) calls back into C++ through generated `lib/dispatch.h` (`:175`). Constants are shared, not copied: `lib/main.irc:1-2` includes `Defines.h` and `Api.h`.
 - **Game ↔ display.** Above `Term` everything speaks glyphs and window ids. `Term` declares 135 pure virtuals; `TextTerm` implements all but 48, and those 48 are the backend contract (`inc/Term.h:795-860`).
@@ -92,7 +92,7 @@ Section 2 was traced by reading the listed call sites. It was not observed under
 
 - `src/Player.cpp:625` — `ch != KY_CMD_NAME && KY_CMD_WIZMODE &&` is missing its `ch !=`. `KY_CMD_WIZMODE` is a non-zero enumerator (`inc/Term.h:186`), so the term is always true and has no effect: the wizard key is the one key in the list that is NOT exempt, and pressing it while charging asks "Break off your charge?". The eight neighbouring tests all use `ch !=`. (Corrected 2026-08-15: the page first said the opposite.)
 - `src/Event.cpp:236` — inside a branch guarded by `e.EMap && e.EMap->dID`, the error text dereferences `e.EActor->m->dID`. `ThrowEvent` reaches it with `e.EActor == NULL` when `e.EMap` came from `e.EVictim` (`:173`), so the error path crashes instead of reporting.
-- `src/Main.cpp:643` — `min(20048, DestroyCount+1)`; the array holds 20480 (`inc/Res.h:1311,1313`). Digits transposed. It clamps low so it cannot overrun, but 432 queued deletions per pass would be dropped silently.
+- `src/Main.cpp:673` — `min(20048, DestroyCount+1)`; the array holds 20480 (`inc/Res.h:1311,1313`). Digits transposed. It clamps low so it cannot overrun, but 432 queued deletions per pass would be dropped silently.
 - `src/Event.cpp:485-490` — `if (e.Event >= 500) return r;` makes the two following `Fatal` branches for unhandled PRE and POST events unreachable.
 - `inc/Term.h:729` — `RefreshMap()` dereferences `p` unchecked and is called as `T1->RefreshMap()` (`src/Magic.cpp:1679`, `src/Skills.cpp:2134`); `ClearPlayer()` (`inc/Term.h:825`) sets `p` to NULL, so the state is reachable.
 - `src/Term.cpp:6` — the header says "80x50 text mode"; the code is 80x48 (`src/Wposix.cpp:74-75`, asserted `src/TextTerm.cpp:102-103`). Stale prose.

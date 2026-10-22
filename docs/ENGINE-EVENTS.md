@@ -55,7 +55,7 @@ in the build.**
 `EventInfo EventStack[EVENT_STACK_SIZE]`, `EventSP` starting at -1 (`src/Event.cpp:135-136`); the size is 128
 (`inc/Defines.h:80`). The only bound is `CHECK_OVERFLOW` (`src/Event.cpp:133`), which calls `Fatal("Event Stack Overflow!")` and
 exits. There is no depth budget, no recursion counter and no cycle detection in `src/Event.cpp`. Unrelated code reads frames
-assuming the enclosing context: `src/Fight.cpp:831-838`, `src/Prayer.cpp:589`, `src/Skills.cpp:1751`, `src/Target.cpp:1765`.
+assuming the enclosing context: `src/Fight.cpp:831-838`, `src/Prayer.cpp:589`, `src/Skills.cpp:1751`, `src/Target.cpp:1771`.
 
 ## Re-entrancy
 **The system has no general protection against re-entrancy.** Shared by every nested event: `VMachine::Regs[64]`, `SRegs[64]`,
@@ -92,8 +92,8 @@ down path read `RES(0)` whenever `BELOW_DUNGEON` is unset, which is every dungeo
 `src/Feature.cpp:1420` stops it.
 
 **3. Wild resource id crashes `Game::Get` inside `Magic::Blast`. Fixed (inc-upw.16).** Handlers get ids from three unvalidated
-places: the `eID` a caller put in the frame (`src/Event.cpp:631`), script assignment `pe->eID = val` (`lib/dispatch.h:3521`), and
-script `ThrowEff` with an arbitrary int32 (`lib/dispatch.h:2637`). *Invariant violated:* `Game::Get` indexed the module table by
+places: the `eID` a caller put in the frame (`src/Event.cpp:631`), script assignment `pe->eID = val` (`lib/dispatch.h:3536`), and
+script `ThrowEff` with an arbitrary int32 (`lib/dispatch.h:2648`). *Invariant violated:* `Game::Get` indexed the module table by
 the top byte, `Modules[(xID >> 24)-1]`, `MAX_MODULES` being 126 (`inc/Defines.h:4532`), so an id with a zero top byte indexed
 `Modules[-1]`. The guard was `ASSERT(Modules[(xID >> 24)-1])`, and `ASSERT` only calls `Error` and falls through
 (`inc/Defines.h:101`) — it did not stop the next line's dereference. Hence SIGBUS with no log: if the out-of-range slot held

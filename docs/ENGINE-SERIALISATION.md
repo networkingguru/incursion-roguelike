@@ -420,7 +420,7 @@ Repaired on load, and nothing else is:
 | `Player::MyTerm = T1` | inc/Creature.h:1558 |
 | `Module` resource caches zeroed | inc/Res.h:840-841, in `Module::Serialize`, which runs on load as well as save. A load builds the object with the empty `ARCHIVE_CLASS` constructor (inc/Base.h:804), so the zeroing in `Module()` (inc/Res.h:923-924) runs only for the module the resource compiler creates (src/RComp.cpp:141) |
 | module text segment un-inverted | inc/Res.h:912-916 |
-| garbage payload in a loaded `Target` | src/Registry.cpp:1017-1018, src/Target.cpp:1577 |
+| garbage payload in a loaded `Target` | src/Registry.cpp:1017-1018, src/Target.cpp:1583 |
 
 NOT repaired on the v0 path, whose only validation is the group-header
 range check at src/Registry.cpp:912-922:
@@ -441,7 +441,7 @@ range check at src/Registry.cpp:912-922:
   load branch (:372) discards its `sz` argument entirely.
 - **Whatever a `Serialize` body omits.** The canonical example,
   `TargetSystem::Serialize`, is still empty on the v0 path
-  (src/Target.cpp:1463-1465, `upstream:` mark below it) — harmless there
+  (src/Target.cpp:1469-1471, `upstream:` mark below it) — harmless there
   because v0 dumps the embedding `Creature` raw. The v1 field list beside
   it is the real one, so the omission cannot recur silently on the path
   that ships.

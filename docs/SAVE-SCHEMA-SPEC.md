@@ -118,7 +118,7 @@ The format MUST satisfy four properties.
   unchanged. No type used across the app changes at all.
 - **No change to in-memory representation.** An `rID` stays a 32-bit index at
   run time. `RES()`, `NAME()` and range tests such as
-  `xID >= EffectID(0) && xID <= EffectID(szEff-1)` (`src/Res.cpp:772`) keep
+  `xID >= EffectID(0) && xID <= EffectID(szEff-1)` (`src/Res.cpp:784`) keep
   working untouched. Only the bytes on disk change.
 - **The engine's `rID` arithmetic is not touched.** Re-slicing the id inside the
   engine would fix the renumbering too, at the cost of auditing about 70 sites
@@ -368,8 +368,8 @@ diff.
 (`inc/Res.h:1266-1267`). The block is the module's script data segment followed
 by the per-player resource memory: `MonMem[szMon]`, `ItemMem[szItm]`,
 `EffMem[szEff]`, `RegMem[szReg]`, addressed arithmetically from the resource's
-position (`Module::GetMemoryPtr`, `src/Res.cpp:742`). `EffMem`
-(`inc/Res.h:1447`) carries `FlavorID` and `PFlavorID` — whole flavour `rID`s,
+position (`Module::GetMemoryPtr`, `src/Res.cpp:754`). `EffMem`
+(`inc/Res.h:1449`) carries `FlavorID` and `PFlavorID` — whole flavour `rID`s,
 assigned by the per-game shuffle in `Game::SetFlavors` (`src/Item.cpp:343`).
 This is the identification state: which potion looks like what, and what the
 player has tried and knows.
@@ -655,7 +655,7 @@ be converted.
    its constructed default. Mitigated by the round-trip test below, and by a
    debug-build check that every byte of the object is covered by exactly one
    field declaration.
-2. **`TargetSystem::Serialize` is empty** (`src/Target.cpp:1463-1465`) and
+2. **`TargetSystem::Serialize` is empty** (`src/Target.cpp:1469-1471`) and
    correct only by luck, as `docs/ENGINE-SERIALISATION.md` records. It gains a
    real field list here.
 3. **`T_STAFF` and `T_COIN` change vtable across a save today** (defects 2 and 3
