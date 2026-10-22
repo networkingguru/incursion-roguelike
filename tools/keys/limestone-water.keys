@@ -5,39 +5,57 @@
 w y
 @choose "Ascend / Descend Depth"
 "2" ENTER
+@while "Die? [yn]" n
 @until "HP:" ENTER
+@while "Die? [yn]" n
 @until "Wizard Mode Options:" w
 @choose "Ascend / Descend Depth"
 "3" ENTER
+@while "Die? [yn]" n
 @until "HP:" ENTER
+@while "Die? [yn]" n
 @until "Wizard Mode Options:" w
 @choose "Ascend / Descend Depth"
 "4" ENTER
+@while "Die? [yn]" n
 @until "HP:" ENTER
+@while "Die? [yn]" n
 @until "Wizard Mode Options:" w
 @choose "Ascend / Descend Depth"
 "5" ENTER
+@while "Die? [yn]" n
 @until "HP:" ENTER
+@while "Die? [yn]" n
 @until "Wizard Mode Options:" w
 @choose "Ascend / Descend Depth"
 "6" ENTER
+@while "Die? [yn]" n
 @until "HP:" ENTER
+@while "Die? [yn]" n
 @until "Wizard Mode Options:" w
 @choose "Ascend / Descend Depth"
 "7" ENTER
+@while "Die? [yn]" n
 @until "HP:" ENTER
+@while "Die? [yn]" n
 @until "Wizard Mode Options:" w
 @choose "Ascend / Descend Depth"
 "8" ENTER
+@while "Die? [yn]" n
 @until "HP:" ENTER
+@while "Die? [yn]" n
 @until "Wizard Mode Options:" w
 @choose "Ascend / Descend Depth"
 "9" ENTER
+@while "Die? [yn]" n
 @until "HP:" ENTER
+@while "Die? [yn]" n
 @until "Wizard Mode Options:" w
 @choose "Ascend / Descend Depth"
 "10" ENTER
+@while "Die? [yn]" n
 @until "HP:" ENTER
+@while "Die? [yn]" n
 @expect "100m"
 @dump:depth10
 @quit

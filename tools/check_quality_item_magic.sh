@@ -31,6 +31,20 @@ CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # This check is about item quality, not the save, so it forces every d20 to 1
 # (a natural 1 always fails) and the blob's retaliation lands on every blow.
 export INCURSION_FORCE_SAVE_ROLL=1
+# inc-s1qj: the A_DEQU retaliation only fires on a blow that HITS
+# (src/Fight.cpp:6575 `if (at->AType == A_DEQU && !e.isHit) continue`), so the
+# subject's strike must not be allowed to miss. That hit roll is not what this
+# check measures, and appending anything to lib/main.irc shifts the pinned
+# stream and can turn the one blow we read from a hit into a miss. Force the
+# player's melee d20 to a fixed value with the line-of-fire hook
+# (src/Fight.cpp:6020-6023 reads INCURSION_LOF_FORCE_ROLL once; the header at
+# :340 documents it as forcing e.vRoll). 18 is chosen to be independent of the
+# attack bonus and the blob's defence: Hit 7 + 18 = 25 clears any acid blob's
+# Def with room to spare, and 18 is below the long sword's threat range (19),
+# so the blow is an ordinary hit -- not a critical, whose longer message spills
+# the retaliation onto a "-- more --" page and eats the next keystroke. A
+# natural 20 was tried first and is rejected for exactly that reason.
+export INCURSION_LOF_FORCE_ROLL=18
 
 screen() { # <glob> -> first matching screen of the current run, or exit 2
     local f
