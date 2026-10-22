@@ -832,13 +832,19 @@ EvReturn Creature::Event(EventInfo &e) {
             return OfferTerms(e);
         return NOTHING;    
     case EV_CAST:
-        if (e.EActor==this)
+        if (e.EActor==this) {
+            if (ConcentrationBlocks("cast"))
+                return ABORT;
             return Cast(e);
+        }
         else
             return NOTHING;
     case EV_INVOKE:
-        if (e.EActor==this)
+        if (e.EActor==this) {
+            if (ConcentrationBlocks("invoke"))
+                return ABORT;
             return Invoke(e);
+        }
         else
             return NOTHING;
     case EV_DISGUISE:
@@ -883,18 +889,27 @@ EvReturn Creature::Event(EventInfo &e) {
         return MagicEvent(e);
     case EV_NATTACK:
         //EVerify(T_CREATURE, T_CREATURE, 0, 0);
-        if(e.EActor==this)
+        if(e.EActor==this) {
+            if (ConcentrationBlocks("attack"))
+                return ABORT;
             return NAttack(e);
+        }
         break;
     case EV_WATTACK:
         //EVerify(T_CREATURE, T_CREATURE, 0, 0);
-        if(e.EActor==this)
+        if(e.EActor==this) {
+            if (ConcentrationBlocks("attack"))
+                return ABORT;
             return WAttack(e);
+        }
         break;
     case EV_RATTACK:
         //EVerify(T_CREATURE, 0, T_ITEM, T_ITEM);
-        if(e.EActor==this)
+        if(e.EActor==this) {
+            if (ConcentrationBlocks("attack"))
+                return ABORT;
             return RAttack(e);
+        }
         break;
     case EV_LOADXBOW:
         //EVerify(T_CREATURE,0,T_ITEM,0);
@@ -903,13 +918,19 @@ EvReturn Creature::Event(EventInfo &e) {
         break;
     case EV_SATTACK:
         //EVerify(T_CREATURE, 0, T_ITEM, T_ITEM);
-        if(e.EActor==this)
+        if(e.EActor==this) {
+            if (ConcentrationBlocks("attack"))
+                return ABORT;
             return SAttack(e);
+        }
         break;
     case EV_OATTACK:
         EVerify(T_CREATURE, T_CREATURE, 0, 0);
-        if(e.EActor==this)
+        if(e.EActor==this) {
+            if (ConcentrationBlocks("attack"))
+                return ABORT;
             return OAttack(e);
+        }
         break;
     case PRE(EV_STRIKE):
         EVerify(T_CREATURE, 0, 0, 0);
@@ -988,6 +1009,12 @@ EvReturn Creature::Event(EventInfo &e) {
     case POST(EV_DAMAGE):
         if (isPlayer() && theGame->InPlay())
             thisp->ShowStats();
+        /* inc-59lq phase A2 Part 2: damage taken forces a Concentration check.
+           Hooking POST(EV_DAMAGE) rolls once per wound even for a converted
+           damage type, whose inner EV_DAMAGE runs this step and whose outer
+           event then skips it (inc-e5ke). */
+        if (e.EVictim == this)
+            ConcentrationDamageCheck(e.aDmg);
         if (e.DType == AD_SLEE)
             break; 
         // fall through

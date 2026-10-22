@@ -64,6 +64,24 @@ def sections(label):
         raise ValueError(label + ': complete Target System/Hostility not captured')
     return match.groups()
 
+def player_name(label):
+    # The character's name is random, so it must be read from the run rather
+    # than pinned. The sidebar prints it on its first line, right of the '|'
+    # that divides the map pane from the sidebar.
+    for line in screen(label):
+        if '|' not in line:
+            continue
+        candidate = line.split('|', 1)[1].strip()
+        if not candidate:
+            continue
+        # A personal name: letters, spaces, apostrophes, hyphens. Reject
+        # anything else rather than match on a status word or a corpse line.
+        if not re.fullmatch(r"[A-Za-z][A-Za-z' -]*", candidate):
+            raise ValueError(label + ': sidebar name is unrecognizable: '
+                             + repr(candidate))
+        return candidate
+    raise ValueError(label + ': no player name on the sidebar')
+
 def inconclusive(reason, control_passed=False):
     if not control_passed:
         print('A CONTROL: INCONCLUSIVE -- ' + reason)
@@ -80,15 +98,21 @@ try:
     if not re.search(r'Class +Mage 9\b', '\n'.join(screen('level'))):
         raise ValueError('Mage 9 not verified')
     control_id = identity('control-top')
+    # Target::Dump names this player by its rolled name, not "you" on this
+    # build. Read that name from the run so the check does not depend on the
+    # random stream that produced it.
+    name = player_name('control-top')
+    name_re = re.escape(name)
     control, _ = sections('control')
-    # Target::Dump names this player Volgar, not "you" on this build.
-    enemy = re.search(r'With priority \d+ it views Volgar as an enemy\b', control)
+    enemy = re.search(r'With priority \d+ it views ' + name_re
+                      + r' as an enemy\b', control)
     if not enemy:
-        raise ValueError('control does not name Volgar as an enemy; key script has rotted')
+        raise ValueError('control does not name ' + name + ' as an enemy; key '
+                         'script has rotted')
 except ValueError as exc:
     inconclusive(str(exc))
 
-print('A CONTROL: PASS -- creature 1 views Volgar as an enemy before domination.')
+print('A CONTROL: PASS -- creature 1 views ' + name + ' as an enemy before domination.')
 print('  ' + enemy.group(0))
 
 try:
@@ -99,7 +123,7 @@ try:
     for label in ('one', 'two'):
         status = debug(label + '-after-status')
         if not (re.search(r'CHARMED from SS_ENCH \(Val:CH_DOMINATE', status)
-                and '(h:Volgar) (eID:Dominate Monster)' in status):
+                and '(h:' + name + ') (eID:Dominate Monster)' in status):
             raise ValueError(label + ': player-sourced Dominate Monster status missing')
     targets1, hostility1 = sections('one-after')
     _, hostility2 = sections('two-after')
@@ -120,11 +144,12 @@ try:
 except ValueError as exc:
     inconclusive(str(exc), control_passed=True)
 
-summoner = re.search(r'views\s+Volgar\s+as\s+its\s+summoner\b', targets1)
+summoner = re.search(r'views\s+' + name_re + r'\s+as\s+its\s+summoner\b', targets1)
 if summoner:
-    print('B SUMMONER: PASS -- creature 1 retains Volgar as its summoner.')
+    print('B SUMMONER: PASS -- creature 1 retains ' + name + ' as its summoner.')
 else:
-    print('B SUMMONER: FAIL -- creature 1 has no "its summoner" entry naming Volgar after both dominations.')
+    print('B SUMMONER: FAIL -- creature 1 has no "its summoner" entry naming '
+          + name + ' after both dominations.')
 
 # Hostility::Dump calls Enemy "enmity" (Target::Dump calls it "an enemy").
 # Checking only the latter word here would pass while measuring hostility.
