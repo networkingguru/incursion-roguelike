@@ -50,6 +50,11 @@ if ! grep -rqs "You swell enormously" "$D/logs/screens"; then
     echo "INCONCLUSIVE: no screen shows 'You swell enormously!' -- the field was never entered"
     exit 1
 fi
+if grep -q "Contents list wierdless" "$D/logs/errors.log" 2>/dev/null; then
+    echo "RED: Thing::Move hit the corrupt Contents list (the same defect, caught as a fatal before the audit):"
+    grep "wierdless" "$D/logs/errors.log" | head -2
+    exit 1
+fi
 if [ ! -f "$D/logs/mapaudit.log" ]; then
     echo "INCONCLUSIVE: no logs/mapaudit.log"; exit 1
 fi

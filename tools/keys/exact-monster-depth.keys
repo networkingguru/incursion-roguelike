@@ -1,0 +1,8 @@
+# Clear messages, complete a loaded-session turn, then quit.
+# Oracle: logs/exactmon.log written by ExactMonProbe (INCURSION_EXACTMON_PROBE).
+SPACE*80
+ESC*20
+
+s
+
+@quit
