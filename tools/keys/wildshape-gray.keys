@@ -1,0 +1,32 @@
+# inc-5v47: selecting an unavailable Wild Shape must leave the druid alive.
+# Real Wild Shape (src/Skills.cpp:5565) from a LOADED druid, so every seed
+# starts from the same character. Run through tools/check_wildshape_gray.sh, or:
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+#       tools/headless.sh tools/keys/wildshape-gray.keys <seed>
+# The fixture is already in wizard mode, so 'w' opens the wizard menu with no
+# y/n question. Free Advancement + Cheat Death are the first and third switches.
+# Druid 3 (three druid levels) is the Wild Shape threshold.
+@dump:arrival
+w
+@choose "Wizard Mode Switches"
+SPACE DOWN DOWN SPACE
+ESC
+w
+@choose "Genocide Everything"
+d
+G
+a
+a
+ESC
+@dump:druid3
+# Giant badger is SHADOW: HD 5 and Tiny are unavailable at Druid 3.
+# Inspect the second Wild Shape page before selecting it.
+u
+@choose "Wild Shape"
+TAB
+@dump:gray-menu
+@choose "giant badger"
+@dump:post-pick
+.
+@dump:after-action
