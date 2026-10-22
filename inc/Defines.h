@@ -1511,6 +1511,7 @@ typedef signed int        hObj;
 #define ECON_ARMOUR     5 /* heavy armour pulse */
 #define ECON_FATIGUE   6 /* spending fatigue up to 0 */
 #define ECON_ESSIAH    7
+#define ECON_HEAL      8 /* natural waking healing */
 
 #define EINT_CASTING   1
 #define EINT_IDENT     2

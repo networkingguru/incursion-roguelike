@@ -3226,6 +3226,72 @@ void Character::ManaFloorProbe()
     }
 }
 
+/* INCURSION_NATHEAL_PROBE -- the runnable check behind waking natural healing
+   (Creature::DoTurn; bd inc-wrfz). For one game hour it sets Turn to each of
+   the 300 EV_TURN steps (60 ticks apart) and calls the live DoTurn() once per
+   step. Three cases, one Error() line each: no Heal skill, Heal ranks, and
+   full HP. tools/check_natural_healing.sh reads them. */
+void Character::NatHealProbe()
+{
+    if (!getenv("INCURSION_NATHEAL_PROBE"))
+        return;
+
+    static const char *CASE[3] = {"noheal","heal","full"};
+    uint32 oldTurn = theGame->Turn;
+    int16 oldHP = cHP;
+    int8 oldRanks = SkillRanks[SK_HEAL];
+    int16 oldHunger = HasStati(HUNGER) ? GetStatiDur(HUNGER) : -1;
+    int16 oldGain[15];
+    int16 c, i;
+    bool addedHeal = false;
+    uint32 hour0 = ((oldTurn / HOUR_TURNS) + 1) * HOUR_TURNS;
+
+    for (i = 0; i < 15; i++)
+        oldGain[i] = GainAttr[A_CON][i];
+
+    for (c = 0; c < 3; c++) {
+        int32 hpBefore, hpAfter, exBefore = 0, exAfter = 0, X;
+        int16 a_hp = A_CON;
+        bool one_body = (HasFeat(FT_ONE_BODY_ONE_SOUL) || Attr[A_CON] == 0);
+        if (one_body && Mod(A_WIS) > Mod(A_CON))
+            a_hp = A_WIS;
+        SkillRanks[SK_HEAL] = (c == 1) ? 30 : 0;
+        if (c == 1 && !HasSkill(SK_HEAL, true)) {
+            GainPermStati(EXTRA_SKILL, NULL, SS_MISC, SK_HEAL, 0, 0);
+            addedHeal = true;
+        }
+        for (i = 0; i < 15; i++)
+            GainAttr[A_CON][i] = 0;
+        cHP = (c == 2) ? mHP + Attr[A_THP] : 1;
+        X = (ChallengeRating() + 3) * Attr[a_hp] * 5;
+        if (HasSkill(SK_HEAL, true))
+            X += SkillLevel(SK_HEAL) * Attr[a_hp] * 8;
+        hpBefore = cHP;
+        exBefore = GainAttr[A_CON][ECON_HEAL];
+        for (int32 t = 0; t < HOUR_TURNS / 60; t++) {
+            theGame->Turn = hour0 + t * 60;
+            /* keep hunger CONTENT: SATIATED/HUNGRY abuse CON, which undoes exercise */
+            SetStatiDur(HUNGER, -1, NULL, (SATIATED + HUNGRY) / 2);
+            DoTurn();
+        }
+        hpAfter = cHP;
+        exAfter = GainAttr[A_CON][ECON_HEAL];
+        Error("NATHEAL_PROBE case=%s heal=%d X=%d mHP=%d hpBefore=%d hpAfter=%d exBefore=%d exAfter=%d",
+            CASE[c], (int)SkillLevel(SK_HEAL), (int)X, (int)mHP,
+            (int)hpBefore, (int)hpAfter, (int)exBefore, (int)exAfter);
+    }
+
+    if (addedHeal)
+        RemoveStati(EXTRA_SKILL, -1, SK_HEAL);
+    SkillRanks[SK_HEAL] = oldRanks;
+    for (i = 0; i < 15; i++)
+        GainAttr[A_CON][i] = oldGain[i];
+    cHP = oldHP;
+    if (oldHunger >= 0)
+        SetStatiDur(HUNGER, -1, NULL, oldHunger);
+    theGame->Turn = oldTurn;
+}
+
 /* INCURSION_HUNGER_PROBE -- the runnable check behind the per-turn hunger
    clock (inc-i9q.2). Drives the SAME drain the live update runs,
    Creature::GetHungrier, for 17000 updates (the base drain is 6 hundredths

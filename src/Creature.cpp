@@ -1964,6 +1964,37 @@ NoIntervention:;
         }
     }
 
+    /* rules: waking natural healing, 1/16 of the full-rest amount per game
+       hour, no message, not during a rest (Rest jumps Turn without DoTurn).
+       The hour's total is exact: floor(X*(k+1)/D)-floor(X*k/D) over the 300
+       EV_TURN steps k of an hour, k read from the clock, so no saved state.
+       A Character trains CON per HP healed. bd inc-wrfz, ruling inc-g69h
+       row 2. Tier Observed (tools/check_natural_healing.sh), not upstream. */
+    if (!isMType(MA_UNDEAD) && !isMType(MA_CONSTRUCT) && !isDead() &&
+            cHP < mHP + Attr[A_THP]) {
+        bool one_body = (HasFeat(FT_ONE_BODY_ONE_SOUL) || Attr[A_CON] == 0);
+        int16 a_hp = (one_body && Mod(A_WIS) > Mod(A_CON)) ? A_WIS : A_CON;
+        int32 X = (ChallengeRating() + 3) * Attr[a_hp] * 5;
+        if (HasSkill(SK_HEAL, true)) {
+            Creature *healer = MostSkilledAlly(SK_HEAL);
+            if (healer)
+                X += healer->SkillLevel(SK_HEAL) * Attr[a_hp] * 8;
+        }
+        if (X > 0) {
+            const int32 steps = HOUR_TURNS / 60;
+            const int32 D = 640 * steps;
+            int32 k = (int32)((theGame->Turn % HOUR_TURNS) / 60);
+            int32 heal = (int32)(((long long)X * (k + 1)) / D - ((long long)X * k) / D);
+            heal = min(heal, (int32)(mHP + Attr[A_THP] - cHP));
+            if (heal > 0) {
+                cHP += heal;
+                if (isCharacter())
+                    for (int32 n = 0; n < heal; n++)
+                        Exercise(A_CON, 1, ECON_HEAL, 100);
+            }
+        }
+    }
+
     /* inc-i9q.2: one drain per update, after the CA_REGEN block so the heal
        above is known. Burning Hunger is a factor inside HungerDrainPercent. */
     if (isCreature() && HasStati(HUNGER) && GetStatiDur(HUNGER) > 0)
