@@ -28,8 +28,9 @@
 # WHY THE CHECK ALSO DEMANDS A GOBLIN ATTACKING THE PLAYER. Deleting the
 # ProvokeAoO call would drive self=1 to zero as surely as fixing the argument,
 # and would silently remove a rule the game documents. So the run must show the
-# tripped foe answering: actor=<goblin> victim=<Rathak>, Rathak being seed 2's
-# character. Both columns are read for that reason.
+# tripped foe answering: actor=<goblin> victim=<the player>, the player's name
+# read from the run because chargen rolls it off the RNG stream (see below).
+# Both columns are read for that reason.
 #
 # Measured 2026-09-18, seed 2, tools/fixtures/options-2026-08-22.dat, two
 # binaries differing only by -DINCURSION_TRIP_AOO_UNFIXED. Two attacks of
@@ -37,10 +38,10 @@
 # on the COUNT, but the second differs by build (198170 fixed, 198191
 # unfixed) -- a self-targeted attack resolves differently from a two-party
 # one and so consumes the RNG stream differently downstream, moving the next
-# scheduled event. Seed 2's character is named Rathak (chargen names him; the
-# seed decides the name, not this script), so the match below is against
-# Rathak, not the seed 5 character Holg -- a re-seed changes the name being
-# matched along with everything else the world generates:
+# scheduled event. Chargen names the character off the RNG stream, so the name
+# is not stable across builds even on a pinned seed (seed 2 was Rathak on the
+# 2026-09-18 build and Garta once a later change shifted the stream). The
+# match below therefore reads the name from the run rather than fixing it:
 #
 #   unfixed  self=1 x2   actor=<Rathak> victim=<Rathak> both times; the
 #                        player's own attack of opportunity strikes himself.
@@ -126,7 +127,35 @@ fi
 
 # A fix that deleted the call would also show zero self-attacks. The tripped
 # foe must be seen answering the trip.
-answered="$(grep -c 'actor=<goblin> victim=<Rathak>' "$log")"
+#
+# The victim's name is READ FROM THE RUN, not hard-coded. Chargen rolls the
+# character's name off the same RNG stream as everything else, so any change
+# that shifts the stream (appending a resource to lib/, editing a key script)
+# renames him: on seed 2 the offender is "Rathak" on one build and "Garta" on
+# another. Hard-coding the name makes the check report INCONCLUSIVE on a run
+# that plainly shows the goblin answering. The name is the banner at the top
+# of any screen dump, the field after the last '|' on the row below the dump
+# header line. See the project owner's re-stage rule, 2026-10-22.
+player="$(python3 - "$run/logs/screens" <<'PY'
+import glob, os, sys
+d = sys.argv[1]
+names = set()
+for f in sorted(glob.glob(os.path.join(d, '*.txt'))):
+    lines = open(f, errors='replace').read().splitlines()
+    if len(lines) >= 2 and '|' in lines[1]:
+        toks = lines[1].split('|')[-1].split()
+        if toks:
+            names.add(toks[0])
+print(next(iter(names)) if len(names) == 1 else '')
+PY
+)"
+if [ -z "$player" ]; then
+    echo "INCONCLUSIVE: the run's screens do not agree on the character's name,"
+    echo "              so the goblin's answer cannot be matched to the player."
+    echo "              Run dir: $run"
+    exit 2
+fi
+answered="$(grep -c "actor=<goblin> victim=<$player>" "$log")"
 if [ "$answered" -lt 1 ]; then
     echo "INCONCLUSIVE: no self-attack, but no goblin answered a trip either, so"
     echo "              this run cannot tell a corrected argument from a deleted"

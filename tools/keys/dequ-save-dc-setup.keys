@@ -1,8 +1,10 @@
 # Setup for tools/check_dequ_save_dc.sh (bd inc-2ok4): tools/keys/dequ-setup.keys
-# with two changes. (1) The FIFTH attribute set, not the first: on seed 5 it
-# gives the orc warrior DEX 13, a +1 modifier, a mid-Dex melee build. The first
-# set gives DEX 17 (+3), which would pass a Reflex save about 70% of the time at
-# any level and say nothing about a typical tank. (2) Cheat Death is switched on
+# with two changes. (1) A DEX-13 attribute set, not the first: a +1 modifier, a
+# mid-Dex melee build. The first set gives DEX 17 (+3), which would pass a
+# Reflex save about 70% of the time at any level and say nothing about a
+# typical tank. The set is picked by its shown values, not its position, because
+# the five sets are rolled and any RNG shift moves them (inc-s1qj): use
+# @cursorto:mark on the DEX-13 row. (2) Cheat Death is switched on
 # before Freeze Monsters, so a long run of failed saves cannot end the session.
 # Everything else is dequ-setup.keys verbatim.
 #
@@ -44,7 +46,14 @@ y       # Yes: this is a yes/no question.
 @choose "Orc (Standard)"
 @choose "Warrior"
 @expect "Which of the five attribute sets"
-e       # Fifth offered set: DEX 13 (+1) on seed 5, a mid-Dex melee build
+# Select the set whose DEX is 13, a mid-Dex melee build, by the values it
+# shows and not by its position. The five sets are rolled, so any change to
+# the RNG stream (appending a resource to lib/, for one) moves them: on seed 5
+# the DEX-13 set was fifth and is now fourth (inc-s1qj). The row reads
+# "16 13 15 14 13 10 14" (STR DEX CON INT WIS CHA LUC); walk the marker onto
+# it and confirm. Selecting by letter here would be selecting by position.
+@cursorto:mark "16  13  15  14  13  10  14" DOWN
+ENTER
 @choose "Chaotic Good"
 @while "Choose a feat" a
 @while "Focus on which Weapon" a
@@ -70,7 +79,11 @@ ENTER   # Try to enter something here; the game refuses.
 y       # Open the dungeon verb menu.
 @expect "What do you want to do?"
 a       # In-game [a] Apply: keep this key before ESC closes the menu.
-@until "Things in View" ESC
+# Three plain ESCs close the Apply menu and any follow-up prompt whatever the
+# starting kit, because a narrow menu leaves "Things in View" visible.
+ESC
+ESC
+ESC
 
 # 'w' opens wizard mode and 'y' confirms it the first time. The pair is driven
 # by @until rather than written out, because a keystroke swallowed by a prompt

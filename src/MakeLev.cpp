@@ -1025,6 +1025,20 @@ static void EnsureBlobMinimum(Map *m, Rect &r, rID regID) {
     }
 }
 
+static void DryBlobsForProbe(Map *m, Rect &r, rID regID) {
+    /* inc-s1qj: INCURSION_BLOB_MIN_PROBE=dry removes the natural blobs before
+       the top-up, so tools/check_limestone_water.sh measures before=0 on any seed. */
+    const char *mode = getenv("INCURSION_BLOB_MIN_PROBE");
+    rID blob = TREG(regID)->GetConst(BLOB_WITH);
+    if (!mode || strcmp(mode, "dry") || !blob || !TREG(regID)->GetConst(BLOB_MIN))
+        return;
+    for (int y = r.y1; y <= r.y2; ++y)
+        for (int x = r.x1; x <= r.x2; ++x)
+            if (m->InBounds(x, y) && m->RegionAt(x, y) == regID &&
+                m->TerrainAt(x, y) == blob)
+                m->WriteAt(r, x, y, TREG(regID)->Floor, regID, PRIO_ROOM_FURNITURE);
+}
+
 static void ProbeBlobMinimum(Map *m, Rect &r, rID regID, unsigned before) {
     /* inc-nhgh: probe for tools/check_limestone_water.sh. */
     const char *enabled = getenv("INCURSION_BLOB_MIN_PROBE");
@@ -3248,6 +3262,7 @@ DoBasicRoom:
 
             if (!anything)
                 FurnishArea(NULL_RECT);
+            DryBlobsForProbe(this, cPanel, regID);
             unsigned blobBefore = TREG(regID)->GetConst(BLOB_MIN) ?
                 BlobCount(this, cPanel, regID, TREG(regID)->GetConst(BLOB_WITH)) : 0;
             EnsureBlobMinimum(this, cPanel, regID);

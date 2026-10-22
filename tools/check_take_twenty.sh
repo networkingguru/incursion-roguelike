@@ -25,6 +25,21 @@
 # (Escape Artist DC 22) he has no ranks in and cannot buy any in. His
 # Escape Artist total after taking 20 is below that DC on every attempt.
 #
+# BECOMING STUCK MUST NOT DEPEND ON A LUCKY SAVE. tanglefoot strands stick
+# the walker only when its Reflex DC 15 save FAILS (lib/alchemy.irh:339);
+# on a success he is merely entangled and never makes the Escape Artist
+# check this check harvests. That save used to be left to the die, so the
+# result rode on the random stream: appending any resource to lib/main.irc
+# shifted the pinned-seed roll and the save passed, and the check went
+# INCONCLUSIVE on a change that had nothing to do with taking 20. The save
+# is now forced to fail through the existing probe hook
+# INCURSION_FORCE_SAVE_ROLL=1 (src/Fight.cpp:412, read at
+# src/Creature.cpp:3932-3938): Creature::SavingThrow substitutes that value
+# for its own die for every save in the process, and SRD's
+# natural-1-always-fails rule then makes this one fail however the stream
+# has moved. Forcing the roll removes the dependence without loosening any
+# assertion.
+#
 # TWO PROPERTIES, read off every "took 20" line the harvest finds:
 #
 #   1. THE REGRESSION THIS FIX CREATES: a total below the DC must read
@@ -58,6 +73,12 @@ check_mutation src/Skills.cpp \
 
 HARVEST="$(mktemp -t take_twenty_harvest)" || _check_die 2 "no temp file"
 trap 'rm -f "$HARVEST"' EXIT
+
+# Fail the tanglefoot Reflex save deterministically (see the header): a
+# forced natural 1 always fails, so the paladin is always STUCK and always
+# reaches the Escape Artist check this check reads. Exported, so headless.sh
+# hands it to the game through the environment.
+export INCURSION_FORCE_SAVE_ROLL=1
 
 check_run "$KEYS" "$SEED"
 check_screens '*'

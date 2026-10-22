@@ -348,6 +348,10 @@ void Game::Play() {
     extern void TemplatePairProbe(Player *pl);
     TemplatePairProbe(pp);
 
+    /* inc-6qmk: opt-in exact-monster depth oracle; see ExactMonProbe. */
+    extern void ExactMonProbe(Player *pl);
+    ExactMonProbe(pp);
+
     /* inc-e46n: opt-in Seneschal follower-ladder oracle. */
     extern void SeneschalProbe(Player *pl);
     SeneschalProbe(pp);
