@@ -36,7 +36,7 @@ sed -n '3152,3470p' src/Tables.cpp |
 
 ## How the menu works
 
-The verbs live in `YuseCommands[]`, `src/Tables.cpp:3152-3470`. Each entry
+The verbs live in `YuseCommands[]`, `src/Tables.cpp:3157-3475`. Each entry
 carries up to three prompts and a flag word:
 
 ```c
@@ -147,13 +147,13 @@ far less ground than its name suggests. Verified by reading the script.
   effect to that target". Nothing else answers `EV_APPLY` except three
   alchemical liquids (`lib/alchemy.irh:82`), poison from a small
   glass vial onto a weapon (`lib/mundane.irh:1016`), the weapon oils
-  (`lib/m_items.irh:1477`) and the lantern below.
+  (`lib/m_items.irh:1488`) and the lantern below.
 - **Dip** has four handlers in the build and they cover two targets: a
   **fountain** (`lib/dungeon.irh:2380` and `:2535`) and an **alchemical
   flask**, where only acid does anything (`lib/alchemy.irh:97` and
-  `lib/alchemy.irh:648`). A fifth handler, the Spell Storing ring dipped in a
-  fountain, is written but not compiled: `#if 0` at `lib/m_items.irh:5235`
-  encloses the whole ring through `:5349`, so neither the ring nor its Dip
+  `lib/alchemy.irh:650`). A fifth handler, the Spell Storing ring dipped in a
+  fountain, is written but not compiled: `#if 0` at `lib/m_items.irh:5246`
+  encloses the whole ring through `:5360`, so neither the ring nor its Dip
   handler reaches `lib/program.i`. Dipping into anything else has nothing
   behind it.
 - **Fill / Pour** (`lib/mundane.irh:640`) — the only combination implemented
@@ -174,9 +174,9 @@ steed do (`lib/wspells.irh:1780` and `:1908`, `lib/pspells.irh:3587`). Once
 picked it runs a full validation path — Ride skill, humanoid form, the
 target's `M_MOUNTABLE` flag, hostility, prone/stuck/grappled/asleep, plane,
 size, challenge rating, and whether the creature will accept you at all
-(`src/Skills.cpp:4491-4563`).
+(`src/Skills.cpp:4528-4600`).
 **Dismount** has a second route: the Cancel (`x`) command drops a standing
-`MOUNTED` stati (`src/Skills.cpp:461`).
+`MOUNTED` stati (`src/Skills.cpp:481`).
 
 **Shoot and Throw are the same event**, `EV_RATTACK`, differing only in
 prompt wording.
