@@ -39,6 +39,7 @@ void DurationProbe(Player *pl) {
     uint8 saved[sizeof(te->EFlags)];
     memcpy(saved, te->EFlags, sizeof(saved));
 
+    /* inc-nt3z: forces one duration flag for the probe. */
     const char *force = getenv("INCURSION_DURATION_PROBE_FLAG");
     const char *label = "own";
     if (force && *force) {
@@ -73,12 +74,15 @@ void DurationProbe(Player *pl) {
 
     memcpy(te->EFlags, saved, sizeof(saved));
 
+    /* inc-nt3z: gates the handler probe. */
     if (!getenv("INCURSION_DURATION_PROBE_HANDLER"))
         return;
+    /* inc-nt3z: sample count for the handler probe. */
     const char *sn = getenv("INCURSION_DURATION_PROBE_SAMPLES");
     const int samples = (sn && atoi(sn) > 0) ? atoi(sn) : 1;
     /* INCURSION_DURATION_PROBE_EFNUM=<n> runs the handler for effect part n
        (a spell with several parts, such as Music of the Spheres). */
+    /* inc-nt3z: effect-part selector for the handler probe. */
     const char *en = getenv("INCURSION_DURATION_PROBE_EFNUM");
     const int efNum = en ? atoi(en) : 0;
     for (int li = 0; li < 3; ++li)
@@ -168,6 +172,7 @@ static void BlasLine(const char *tag, const char *tier, Monster *m, const char *
 }
 
 void BlasTierProbe(Player *pl) {
+    /* inc-nt3z: sample count for the Blasphemy tier probe. */
     const char *sn = getenv("INCURSION_DURATION_PROBE_BLASPHEMY");
     if (!sn || atoi(sn) <= 0)
         return;
@@ -177,6 +182,7 @@ void BlasTierProbe(Player *pl) {
         Error("BLASPHEMY_TIER: INCONCLUSIVE -- no Blasphemy or no live map");
         return;
     }
+    /* inc-nt3z: caster-level cap for the Blasphemy tier probe. */
     const char *cn = getenv("INCURSION_DURATION_PROBE_BLASPHEMY_CL");
     const int CL = (cn && atoi(cn) > 0) ? atoi(cn) : 12;
     if (pl->CasterLev() > CL) {

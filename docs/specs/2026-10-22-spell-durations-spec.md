@@ -53,7 +53,7 @@ Other readers of the duration flags:
   the time) and buff-all (src/Creature.cpp:1293, where it always qualifies)
   treat `EF_DHOUR` and `EF_D10MIN` as each site treats `EF_DLONG`. `EF_DMIN` and
   `EF_DROUND` do not qualify a spell for a pre-buff.
-- Spell help (src/Help.cpp:5398-5401) prints "1 round per level.",
+- Spell help (src/Help.cpp, the duration-text block) prints "1 round per level.",
   "1 minute per level.", "10 minutes per level." and "1 hour per level."
   for the new flags.
 
@@ -189,7 +189,7 @@ already converted on master (189d53a6, inc-trfo).
 
 Music of the Spheres conditions (pspells.irh:5216, 5241) go through
 `ThrowDmg` to `AD_CONF`, `AD_NAUS` and `AD_STUN`, which halve them since
-inc-trfo; `AD_SLOW` (master Fight.cpp:8647) ignores the value. Ruled
+inc-trfo; `AD_SLOW` (src/Fight.cpp) ignores the value. Ruled
 2026-10-23: the god's condition lasts 1 round per caster level, converted
 with `RoundsToUnits`, for all four gods. The choir already adds to the caster
 level and MUST NOT add a separate duration bonus (drop `2*choir`). Slow MUST
@@ -210,7 +210,7 @@ metamagic rules as the duration chain in section 2: Anchor and Extend double
 it, Persistent applies only at 10 units or more, and a result above 32767
 becomes -2 (ruled 2026-10-23).
 
-### 5d. Blasphemy (pspells.irh:6058)
+### 5d. Blasphemy (lib/pspells.irh)
 
 Blasphemy becomes the SRD spell (d20srd.org/srd/spells/blasphemy.htm). It
 affects nonevil creatures in range by Hit Dice against caster level, with no
@@ -360,7 +360,7 @@ Every item below is ruled.
 | Command | pspells.irh:245 | `EF_DSHORT` |
 | Charm Monster | wspells.irh:6148 | `EF_DLONG` |
 | Dominate Person | wspells.irh:7795 | `EF_DLONG` |
-| Dominate Monster | wspells.irh:9329 | `EF_DLONG` |
+| Dominate Monster | wspells.irh, by name | `EF_DLONG` |
 | Control Plant | pspells.irh:4389 | `EF_DLONG` |
 | Consecrate | pspells.irh:1879 | `EF_DLONG` |
 | Spectral Hand | wspells.irh:3300 | none |
