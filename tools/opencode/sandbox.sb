@@ -31,3 +31,7 @@
     (subpath (string-append (param "HOME") "/Library/Cookies"))
     (literal (string-append (param "HOME") "/.git-credentials"))
     (literal (string-append (param "HOME") "/.netrc")))
+; Signal guard (bead inc-7zpw): an implementer may signal ONLY processes inside
+; its own sandbox, so it cannot stop a process it did not start.
+(deny signal)
+(allow signal (target same-sandbox))

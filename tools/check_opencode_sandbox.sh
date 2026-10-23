@@ -3,7 +3,8 @@
 # gate-serial: races INCURSION_WATCHDOG_STARTUP=2 and a SECONDS deadline while sampling ps; CPU load could flip it
 #
 # Does the DeepSeek implementer harness keep its secrets out of reach (bead
-# inc-k4wc)? Two halves:
+# inc-k4wc) and stop it signalling a process it did not start (bead inc-7zpw)?
+# Three parts:
 #
 #   Part 1 -- secrets unreadable under the real Seatbelt profile
 #   (tools/opencode/sandbox.sb): the login Keychain, ~/.ssh, the gh token and
@@ -22,6 +23,16 @@
 #   under the worktree's logs/ may hold it. The watchdog MUST have stopped the
 #   run (the stop message present), or the leak path was never exercised and
 #   the part is UNMEASURED (non-zero).
+#
+#   Part 3 -- an implementer cannot signal a process it did not start (bead
+#   inc-7zpw). Applying the REAL profile exactly as tools/opencode_ds.sh does
+#   (-D WORKDIR= -D CACHEDIR= -D HOME=), an outside /bin/sleep must survive both
+#   `kill <pid>` and `pkill -f <unique marker>` (reporting "Operation not
+#   permitted"), while a process the sandboxed shell starts itself must be
+#   killable (its `wait` reporting rc 143). A temp copy of the profile with the
+#   two signal lines removed is the red control: it MUST let the outside kill
+#   succeed, or the denial is not what saves the victim and Part 3 is
+#   UNMEASURED.
 #
 #   tools/check_opencode_sandbox.sh
 #
@@ -42,10 +53,14 @@ TMP="$(mktemp -d)" || exit 2
 WORKDIR=""
 CACHEDIR=""
 PART2_PIDS=""
+PART3_PIDS=""
 
 cleanup() {
     if [ -n "$PART2_PIDS" ]; then
         for p in $PART2_PIDS; do kill -KILL "$p" 2>/dev/null; done
+    fi
+    if [ -n "$PART3_PIDS" ]; then
+        for p in $PART3_PIDS; do kill -KILL "$p" 2>/dev/null; done
     fi
     rm -rf "$TMP"
     if [ -n "$WORKDIR" ]; then rm -rf "$WORKDIR"; fi
@@ -228,7 +243,94 @@ else
     fail "the canary key leaked into an output, log, ledger or runs dir"
 fi
 
+# --- Part 3: an implementer cannot signal an outside process --------------
+# Applying the REAL profile exactly as tools/opencode_ds.sh does. The outside
+# victim is started HERE, outside any sandbox, so the sandboxed shell did not
+# start it and the two signal rules must deny both a kill by pid and a pkill by
+# name. A process the sandboxed shell starts itself must still die.
+echo "# Part 3: an implementer cannot signal a process it did not start"
+
+# apply_real <cmd...>: run a command under the real profile with the three
+# definitions tools/opencode_ds.sh passes. Output is captured by the caller.
+real_sandbox() {
+    sandbox-exec -f "$PROFILE" \
+        -D WORKDIR="$WORKDIR" -D CACHEDIR="$CACHEDIR" -D HOME="$HOME" \
+        "$@"
+}
+
+# start_outside <cmd...>: start a process outside any sandbox, remember its pid,
+# and print it. stdout/stderr go to /dev/null so a command substitution that
+# captures the pid does not wait for the child to close the pipe.
+start_outside() {
+    "$@" >/dev/null 2>&1 &
+    local pid=$!
+    PART3_PIDS="$PART3_PIDS $pid"
+    printf '%s' "$pid"
+}
+
+# alive <pid>: 0 if the process is still running.
+alive() { kill -0 "$1" 2>/dev/null; }
+
+# A temp copy of the profile with the two signal lines removed is the red
+# control: the outside kill MUST succeed under it.
+PROFILE_NOSIG="$TMP/sandbox-nosig.sb"
+grep -v -E '^\(deny signal\)|^\(allow signal ' "$PROFILE" > "$PROFILE_NOSIG"
+
+if [ "$CONTROL_OK" -eq 0 ]; then
+    unmeasured "signal guard: NOT evaluated (the sandbox did not apply; see the positive control)"
+else
+    # (a) kill by pid: the outside sleep must survive.
+    P3_PID="$(start_outside /bin/sleep 300)"
+    if ! alive "$P3_PID"; then
+        unmeasured "signal guard: could not start the outside /bin/sleep for the kill test"
+    else
+        real_sandbox kill "$P3_PID" >/dev/null 2>&1
+        if alive "$P3_PID"; then
+            pass "signal guard: kill of an outside pid failed and the process is alive"
+        else
+            fail "signal guard: kill of an outside pid SUCCEEDED (the process died)"
+        fi
+
+        # Red control: the same kill under the profile with the signal lines
+        # removed MUST kill the victim. The victim is killed here for real, so
+        # it cannot be reused; start a fresh one for the pkill test below.
+        sandbox-exec -f "$PROFILE_NOSIG" \
+            -D WORKDIR="$WORKDIR" -D CACHEDIR="$CACHEDIR" -D HOME="$HOME" \
+            kill "$P3_PID" >/dev/null 2>&1
+        if ! alive "$P3_PID"; then
+            pass "signal guard red control: with the two signal lines removed, the outside kill succeeded"
+        else
+            unmeasured "signal guard red control: the outside kill was refused even with the signal lines removed; the denial is not what saves the victim"
+        fi
+    fi
+
+    # (b) pkill -f by a unique marker: the outside marker process must survive.
+    P3_MARK="inc-7zpw-opencode-marker-$$"
+    P3_MPID="$(start_outside /bin/bash -c "exec -a '$P3_MARK' /bin/sleep 301")"
+    sleep 0.3
+    if ! alive "$P3_MPID"; then
+        unmeasured "signal guard: could not start the outside marker process for the pkill test"
+    else
+        real_sandbox pkill -f "$P3_MARK" >/dev/null 2>&1
+        if alive "$P3_MPID"; then
+            pass "signal guard: pkill -f of an outside marker failed and the process is alive"
+        else
+            fail "signal guard: pkill -f of an outside marker SUCCEEDED (the process died)"
+        fi
+    fi
+
+    # (c) own process: a sleep the sandboxed shell starts must still be killable.
+    P3_OWN="$(real_sandbox /bin/sh -c 'sleep 300 & k=$!; kill "$k"; wait "$k"; echo rc=$?' 2>&1)"
+    case "$P3_OWN" in
+        *"rc=143"*)
+            pass "signal guard: the sandboxed shell killed its own sleep (rc=143)" ;;
+        *)
+            fail "signal guard: expected rc=143 for the sandboxed shell's own kill, got: $P3_OWN" ;;
+    esac
+fi
+
 echo
+
 if [ "$FAIL" -ne 0 ]; then
     echo "FAIL: check_opencode_sandbox.sh, at least one assertion failed above"
     exit 1

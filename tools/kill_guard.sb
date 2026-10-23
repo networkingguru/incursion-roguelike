@@ -1,0 +1,8 @@
+; Seatbelt profile for the Claude subagent kill guard (bead inc-7zpw).
+; A Bash command a SUBAGENT runs is wrapped in sandbox-exec with this profile.
+; It allows a signal only to a process in the same sandbox, so a subagent
+; cannot signal a process it did not start. The main session is not wrapped.
+(version 1)
+(allow default)
+(deny signal)
+(allow signal (target same-sandbox))
