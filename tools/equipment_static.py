@@ -53,7 +53,7 @@ def run(rule, root):
         s = body(s, r'\bcase\s+A_DEQU\s*:')
         # Both naked-striker and equipment branches must load and immediately
         # roll the declared dice; this excludes any intervening rescaling.
-        pairs = re.findall(r'(\w+)\s*\.\s*Dmg\s*=\s*\w+\s*->\s*u\s*\.\s*a\s*\.\s*Dmg\s*;\s*\1\s*\.\s*vDmg\s*=\s*\1\s*\.\s*Dmg\s*\.\s*Roll\s*\(\s*\)\s*;', s)
+        pairs = re.findall(r'(\w+)\s*\.\s*Dmg\s*=\s*\w+\s*->\s*u\s*\.\s*a\s*\.\s*Dmg\s*;\s*\1\s*\.\s*vDmg\s*=\s*(?:\1\s*\.\s*Dmg\s*\.\s*Roll\s*\(\s*\)|ForcedDmgRoll\s*\(\s*\1\s*\.\s*Dmg\s*\))\s*;', s)
         writes = re.findall(r'\.\s*Dmg(?:\s*\.\s*\w+)?\s*(?:[+*/%-]=|=(?!=)|\+\+|--)', s)
         return measure(len(pairs) == 2 and len(writes) == 2,
                        f'A_DEQU declared-dice immediate rolls={len(pairs)}/2; dice writes={len(writes)}/2')

@@ -1,0 +1,23 @@
+# tools/keys/dequ-save-dc-setup.keys with its chargen removed: the DEX-13 orc warrior
+# comes from tools/fixtures/chars/dequ-save-dc-seed5-opt0822.sav (INCURSION_LOAD),
+# so no attribute set is picked by its shown values. What the setup did AFTER
+# chargen is kept: wizard mode on, Cheat Death on (a long run of failed saves
+# cannot end the session), Freeze Monsters on. bd inc-cr8v.
+
+@until "Things in View" ESC
+
+# 'w' opens wizard mode and 'y' confirms it the first time. The pair is driven
+# by @until rather than written out, because a keystroke swallowed by a prompt
+# that was still up would spend every key after it on the wrong thing.
+@until "Wizard Mode Options" w y
+@expect "Wizard Mode Switches"
+w       # Open Wizard Mode Switches.
+# The switch list draws no cursor a screen dump can see, so this counts rows:
+# Freeze Monsters is the eleventh, and the cursor opens on the first.
+@expect "Freeze Monsters"
+SPACE   # Cheat Death: NO -> YES, so retaliation cannot end the run
+DOWN*10
+@expect "all monsters are denied their"
+SPACE   # Freeze Monsters: NO -> YES
+@expect "Wizard Mode Options"
+ESC     # Close the switches list: a control key, not a named choice.

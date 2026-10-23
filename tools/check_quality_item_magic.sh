@@ -23,10 +23,29 @@
 # A control that misbehaves, or a subject that never took acid on the sword, or
 # a sword that is not flaming at 15 of 15 at the start, exits 2.
 #
+# fact: character (orc warrior) -- fixture quality-item-magic-seed5-opt0822, INCURSION_LOAD
+# fact: the blobs and the sword -- wizard Monster Summoning and Item Acquisition
+# fact: Freeze Monsters on -- wizard Wizard Mode Switches (tools/keys/dequ-setup-loaded.keys)
+# fact: the first blow hits the blob -- INCURSION_LOF_FORCE_ROLL=18
+# fact: the blob's Reflex save fails -- INCURSION_FORCE_SAVE_ROLL=1
+# fact: the first blow does not kill the blob -- INCURSION_FORCE_DAMAGE_ROLL=1 and
+#       the fixture's Monsters Maximum Hit Points = DOUBLE
+# fact: the message text -- screen_shows (message region) joins wrapped lines (tools/check_lib.sh)
+#
 # Usage: tools/check_quality_item_magic.sh    (0 pass, 1 fail, 2 could not measure)
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# The character is loaded, so no attribute roll decides him. He was generated
+# with "Monsters Maximum Hit Points" on DOUBLE (tools/keys/quality-item-magic-save.keys):
+# that setting belongs to the character generation block, which a loaded game
+# keeps from its save, so an options file cannot set it.
+export INCURSION_LOAD=tools/fixtures/chars/quality-item-magic-seed5-opt0822.sav
+# Diagnosed 2026-10-23 (Observed, seed 101): the first swing KILLED the blob
+# ("you swing, killing the acid blob. Acid splashes you!"), so the sword never
+# took acid. A blob that survives needs its hit points at the maximum
+# (DOUBLE, in the fixture) and every damage die at its minimum.
+export INCURSION_FORCE_DAMAGE_ROLL=1
 # inc-2ok4: a bare A_DEQU attack now allows a Reflex save (DequSaveDC, 11 + CR/3).
 # This check is about item quality, not the save, so it forces every d20 to 1
 # (a natural 1 always fails) and the blob's retaliation lands on every blow.
@@ -55,11 +74,14 @@ screen() { # <glob> -> first matching screen of the current run, or exit 2
 need() { # <file> <literal> <why>: exit 2 when the literal is absent
     grep -qF -- "$2" "$1" || _check_die 2 "$3: no \"$2\" in $1"
 }
+need_msg() { # <file> <literal> <why>: like need, for the message region (wrap-proof)
+    screen_shows "$2" "$1" || _check_die 2 "$3: no \"$2\" in $1"
+}
 
 echo "--- control: a plain long sword is melted ---"
 check_run tools/keys/dequ-hardness-plain.keys 5
 need "$(screen '*-plain-before.txt')" "It has 15 out of 15 hit" "control sword not at full hit points"
-need "$(screen '*-plain-strike-1.txt')" "splashes the long sword" "control sword never took acid"
+need_msg "$(screen '*-plain-strike-1.txt')" "splashes the long sword" "control sword never took acid"
 after="$(screen '*-plain-after.txt')"
 if grep -qF "It has 15 out of 15 hit" "$after"; then
     _check_die 2 "control misbehaves: the plain sword kept its hit points ($after)"
@@ -68,7 +90,7 @@ echo "  ok    the plain sword lost hit points"
 
 echo "--- control: a Holy Avenger keeps its hit points ---"
 check_run tools/keys/dequ-hardness-magic.keys 5
-need "$(screen '*-magic-strike-1.txt')" "splashes the Long Sword, Holy Avenger" "control sword never took acid"
+need_msg "$(screen '*-magic-strike-1.txt')" "splashes the Long Sword, Holy Avenger" "control sword never took acid"
 after="$(screen '*-magic-after.txt')"
 need "$after" "It has 38 out of 35 hit" "control misbehaves: the Holy Avenger lost hit points"
 echo "  ok    the Holy Avenger kept 38 of 35"
@@ -81,7 +103,7 @@ need "$before" "It has 15 out of 15 hit" "subject not at full hit points"
 if grep -qE "Long Sword, .*[+-][0-9]" "$before"; then
     _check_die 2 "subject carries a plus; it must be +0 ($before)"
 fi
-need "$(screen '*-quality-strike-1.txt')" "splashes the flaming long sword" "subject never took acid"
+need_msg "$(screen '*-quality-strike-1.txt')" "splashes the flaming long sword" "subject never took acid"
 after="$(screen '*-quality-after.txt')"
 if grep -qF "It has 15 out of 15 hit" "$after"; then
     CHECK_EXPECTS=$((CHECK_EXPECTS + 1))

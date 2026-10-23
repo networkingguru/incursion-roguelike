@@ -4,7 +4,7 @@
 # blow ends on an empty square (see dequ-hardness-plain.keys). Every landed
 # blow ends in one Reflex save; the check reads them from logs/chance_probe.log.
 
-@include dequ-save-dc-setup.keys
+@include dequ-save-dc-setup-loaded.keys
 
 @until "SPACE:Swap" i    # the inventory manager
 b                        # select the Weapon Hand
