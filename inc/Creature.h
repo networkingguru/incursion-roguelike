@@ -927,6 +927,10 @@ class Character: public Creature
          gate. Off unless INCURSION_MANA_FLOOR_PROBE is set. Driven by
          tools/check_mana_regen_floor.sh. inc-41kg. */
       void ManaFloorProbe();
+      /* Self-check for waking natural healing in DoTurn. Off unless
+         INCURSION_NATHEAL_PROBE is set. Driven by
+         tools/check_natural_healing.sh. inc-wrfz. */
+      void NatHealProbe();
       /* Self-check for the per-turn hunger clock. Off unless
          INCURSION_HUNGER_PROBE is set. Driven by tools/check_hunger_clock.sh.
          inc-i9q.2. */

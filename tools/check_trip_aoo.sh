@@ -32,31 +32,17 @@
 # read from the run because chargen rolls it off the RNG stream (see below).
 # Both columns are read for that reason.
 #
-# Measured 2026-09-18, seed 2, tools/fixtures/options-2026-08-22.dat, two
-# binaries differing only by -DINCURSION_TRIP_AOO_UNFIXED. Two attacks of
-# opportunity on each build; both open at turn 198149 and both builds agree
-# on the COUNT, but the second differs by build (198170 fixed, 198191
-# unfixed) -- a self-targeted attack resolves differently from a two-party
-# one and so consumes the RNG stream differently downstream, moving the next
-# scheduled event. Chargen names the character off the RNG stream, so the name
-# is not stable across builds even on a pinned seed (seed 2 was Rathak on the
-# 2026-09-18 build and Garta once a later change shifted the stream). The
-# match below therefore reads the name from the run rather than fixing it:
+# Measured with two binaries differing only by -DINCURSION_TRIP_AOO_UNFIXED, on
+# the loaded fixture character:
 #
-#   unfixed  self=1 x2   actor=<Rathak> victim=<Rathak> both times; the
+#   unfixed  self=1 x2   actor=<player> victim=<player> both times; the
 #                        player's own attack of opportunity strikes himself.
-#   fixed    self=0 x2   actor=<goblin> victim=<Rathak> both times (the
+#   fixed    self=0 x2   actor=<goblin> victim=<player> both times (the
 #                        tripped goblin delivers the attack, as documented).
 #
 # The COUNT is identical on both builds, which is the control: the fix
-# redirects the attack and does not remove it. Seeds swept in order
-# 1-4, 6-30 (5 is the broken one, see above): most (1, 3, 4, 6-8, 10-12, 14,
-# 15, 17-23, 26, 28-30) ended the session before the trips, because chargen
-# diverges from what dequ-setup.keys expects on that world; seed 9 completed
-# but no trip landed; seeds 13, 16, 24, 25 and 27 completed and had a goblin
-# answer a trip, each under its own chargen-assigned name (Shobri, Shong,
-# Rathak and Zol). Seed 2 is the first seed tried, in order, that both
-# completes and has the tripped goblin answer.
+# redirects the attack and does not remove it. The player's name is read from
+# the run, not hard-coded.
 #
 # HOW TO PROVE THIS RED AGAIN. There is no --prove-red switch, because the red
 # side is a whole build rather than one mutated line:
@@ -76,7 +62,14 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 2
 
+# fact: character (orc warrior) -- fixture dequ-save-message-seed5-opt0822, INCURSION_LOAD
+# fact: four goblins beside the player -- wizard Monster Summoning
+# fact: Freeze Monsters on -- wizard Wizard Mode Switches (tools/keys/dequ-setup-loaded.keys)
+# fact: each trip wins its opposed check -- INCURSION_LOF_FORCE_ROLL=18
+# fact: the player's name in the probe log -- read from the run (fixture name is fixed)
 SEED="${SEED:-2}"
+export INCURSION_LOAD=tools/fixtures/chars/dequ-save-message-seed5-opt0822.sav
+export INCURSION_LOF_FORCE_ROLL=18
 export INCURSION_OPTIONS="${INCURSION_OPTIONS:-tools/fixtures/options-2026-08-22.dat}"
 export INCURSION_TRIP_AOO_PROBE=1
 
@@ -128,14 +121,13 @@ fi
 # A fix that deleted the call would also show zero self-attacks. The tripped
 # foe must be seen answering the trip.
 #
-# The victim's name is READ FROM THE RUN, not hard-coded. Chargen rolls the
-# character's name off the same RNG stream as everything else, so any change
-# that shifts the stream (appending a resource to lib/, editing a key script)
-# renames him: on seed 2 the offender is "Rathak" on one build and "Garta" on
-# another. Hard-coding the name makes the check report INCONCLUSIVE on a run
-# that plainly shows the goblin answering. The name is the banner at the top
-# of any screen dump, the field after the last '|' on the row below the dump
-# header line. See the project owner's re-stage rule, 2026-10-22.
+# The victim's name is READ FROM THE RUN, not hard-coded. The character is a
+# loaded fixture, so his name no longer moves with the RNG stream, but reading it
+# keeps the match valid if the fixture is ever regenerated or swapped. (Before the
+# fixture, chargen named him off the stream: seed 2 gave "Rathak" on one build
+# and "Garta" on another.) The name is the banner at the top of any screen dump,
+# the field after the last '|' on the row below the dump header line. See the
+# project owner's re-stage rule, 2026-10-22.
 player="$(python3 - "$run/logs/screens" <<'PY'
 import glob, os, sys
 d = sys.argv[1]

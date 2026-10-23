@@ -40,7 +40,7 @@ export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
 export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@example.invalid
 export GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@example.invalid
 unset NIGHTLY_VERIFY_STATE NIGHTLY_BISECT_REPO NIGHTLY_BISECT_BUILD_CMD \
-      NIGHTLY_BISECT_DATE INCURSION_BISECT_BUDGET
+      NIGHTLY_BISECT_DATE INCURSION_BISECT_BUDGET NIGHTLY_BISECT_NO_SWEEP
 
 REPO="$TMP/repo"
 GIT="git -c user.name=t -c user.email=t@example.invalid"
@@ -299,6 +299,11 @@ make_stubs() {
     cat > "$dir/bead_new_stub.sh" <<EOF
 #!/usr/bin/env bash
 printf '%s\n' "\$*" >> "$dir/bead_new.log"
+prev=""
+for a in "\$@"; do
+    [ "\$prev" = "--body-file" ] && cp "\$a" "$dir/body.copy"
+    prev="\$a"
+done
 if [ "\${STUB_DUP:-0}" = "1" ]; then
     echo "candidates: inc-yy9 0.91"
     exit 3
@@ -670,6 +675,83 @@ caseD() {
     return 0
 }
 
+# ------------------------------------------------------------ cases S1-S3 ----
+# Seed-sweep classification (inc-ug5y). check_s is NOT cheap, so the script
+# sweeps it at the landing. mk_sweep_repo <dir> <rc|none> builds G, a filler
+# landing, the breaking landing (merge subject names inc-sw) and a last filler;
+# a stub tools/seed_sweep.sh exits with the number in the file sweep_rc.
+mk_sweep_repo() {
+    local dir="$1" rc="$2"
+    mkdir -p "$dir/tools" || return 1
+    cat > "$dir/tools/check_s.sh" <<'CHK'
+#!/usr/bin/env bash
+if grep -qw broken state.txt 2> /dev/null; then exit 1; fi
+exit 0
+CHK
+    chmod +x "$dir/tools/check_s.sh"
+    if [ "$rc" != "none" ]; then
+        printf '%s\n' "$rc" > "$dir/sweep_rc"
+        cat > "$dir/tools/seed_sweep.sh" <<'STUB'
+#!/usr/bin/env bash
+[ "$1" = "--classify" ] || exit 2
+echo "stub sweep output"
+exit "$(cat sweep_rc)"
+STUB
+        chmod +x "$dir/tools/seed_sweep.sh"
+    fi
+    printf 'ok\n' > "$dir/state.txt"
+    printf 'a0\n' > "$dir/a.txt"
+    ( cd "$dir" && $GIT init -q -b master . && $GIT add -A && $GIT commit -q -m 'base' \
+        && $GIT checkout -q -b f1 && printf 'a1\n' > a.txt && $GIT add -A \
+        && $GIT commit -q -m f1 && $GIT checkout -q master \
+        && $GIT merge -q --no-ff -m 'f1 merge' f1 \
+        && $GIT checkout -q -b bad master && printf 'broken\n' > state.txt \
+        && $GIT add -A && $GIT commit -q -m bad && $GIT checkout -q master \
+        && $GIT merge -q --no-ff -m 'Merge inc-sw: broke state' bad \
+        && $GIT checkout -q -b f2 master && printf 'a2\n' > a.txt && $GIT add -A \
+        && $GIT commit -q -m f2 && $GIT checkout -q master \
+        && $GIT merge -q --no-ff -m 'f2 merge' f2 ) > /dev/null 2>&1 || return 1
+}
+
+# sweep_case <name> <rc|none> <title-suffix> <body-fragment>: file a bead for
+# check_s and assert the title ends with the suffix (empty = unchanged) and
+# the body holds the fragment.
+sweep_case() {
+    local name="$1" rc="$2" suffix="$3" frag="$4"
+    local d; d="$(fresh_state_dir "$name")" || return 1
+    local stubs bn bd r="$TMP/repo-$name"
+    stubs="$(make_stubs "$d/stubs")"; bn="${stubs%%	*}"; bd="${stubs##*	}"
+    mk_sweep_repo "$r" "$rc" || { note FAIL "$name: repo build"; return 1; }
+    local g; g="$( cd "$r" && $GIT rev-list --max-parents=0 HEAD )"
+    printf '1\ttools/check_s.sh\n' > "$d/state.txt"
+    printf 'tools/check_s.sh\t%s\t%s\n' "$g" "$(date +%Y-%m-%d)" > "$d/nightly-last-good.tsv"
+    run_bisect "$d" "$r" "$bn" "$bd"
+    local src=$?
+    [ "$src" -eq 0 ] || { note FAIL "$name: exit $src"; return 1; }
+    [ "$(wc -l < "$d/stubs/bead_new.log" | tr -d ' ')" -eq 1 ] \
+        || { note FAIL "$name: bead_new not called once"; return 1; }
+    local call title
+    call="$(sed -n 1p "$d/stubs/bead_new.log")"
+    title="${call%% --type*}"
+    case "$title" in
+        *"$suffix") ;;
+        *) note FAIL "$name: title '$title' lacks suffix '$suffix'"; return 1 ;;
+    esac
+    if [ -z "$suffix" ]; then
+        case "$title" in
+            *"("*) note FAIL "$name: title changed: $title"; return 1 ;;
+        esac
+    fi
+    grep -qF -- "$frag" "$d/stubs/body.copy" \
+        || { note FAIL "$name: body lacks '$frag'"; return 1; }
+    note ok "$name: $suffix"
+    return 0
+}
+
+sweepS1() { sweep_case S1-seed 1 ' (seed-dependent)' 'the check depends on the seed'; }
+sweepS2() { sweep_case S2-unknown 3 ' (cause unknown)' 'The cause is unknown'; }
+sweepS3() { sweep_case S3-nostub none '' 'not classified: tools/seed_sweep.sh is missing'; }
+
 # ------------------------------------------------------------------- drive ----
 run_case() {
     local name="$1" fn="$2"
@@ -696,6 +778,9 @@ run_case caseA caseA
 run_case caseB caseB
 run_case caseC caseC
 run_case caseD caseD
+run_case S1 sweepS1
+run_case S2 sweepS2
+run_case S3 sweepS3
 
 echo "check_nightly_bisect: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ] || exit 1

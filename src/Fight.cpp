@@ -427,6 +427,50 @@ int8 LOFGetForcedSaveThrowRoll()
     return LOFForcedSaveThrowRoll;
 }
 
+/* inc-cr8v test-only control: INCURSION_FORCE_DAMAGE_ROLL=<n> forces every
+   damage die rolled at the two Creature::Hit sites below to show
+   min(n,Sides) instead of a random value (0 = off). Harness only; not a
+   base-code fix and it never touches Dice::Roll (which also rolls hit
+   points, mana, items and levels). */
+static int8 ForceDamageRoll = 0;
+static inline int8 GetForceDamageRoll()
+{
+    static bool done = false;
+    if (!done) {
+        done = true;
+        const char *s = getenv("INCURSION_FORCE_DAMAGE_ROLL");
+        if (s && *s) {
+            int v = atoi(s);
+            if (v >= 1)
+                ForceDamageRoll = (int8)min(v, 127);
+        }
+    }
+    return ForceDamageRoll;
+}
+
+/* Mirrors Dice::Roll() exactly except that each die shows min(n,Sides)
+   instead of random(Sides)+1 when the forced roll is on. */
+static inline int16 ForcedDmgRoll(Dice &d)
+{
+    int n = GetForceDamageRoll();
+    if (n < 1 || d.Sides <= 0)
+        return d.Roll();
+    int i, total;
+    total = 0;
+    for (i = 0; i != abs(d.Number); i++)
+        total += min(n, d.Sides);
+    if (d.Number < 0)
+        total -= d.Bonus;
+    else
+        total += d.Bonus;
+    if (d.Number > 0)
+        return max(total, 0);
+    else if (d.Number < 0)
+        return min(total, 0);
+    else
+        return total;
+}
+
 /* inc-30ps: the cover-and-band rule ("The rule", docs/specs/2026-09-21-
    line-of-fire-spec.md), shared by every ranged attack that can find a
    body in its way -- an arrow (Creature::RAttack, below) and a spell bolt
@@ -3851,7 +3895,7 @@ SkipSoundAttack:
             if (!it) {
                 // ok, apply to attacker
                 e2.Dmg    = ta->u.a.Dmg;
-                e2.vDmg   = e2.Dmg.Roll();
+                e2.vDmg   = ForcedDmgRoll(e2.Dmg);
                 if (rollDC > 0)
                     if (e2.EVictim->SavingThrow(REF,rollDC)) {
                         VPrint(e2,"You avoid harm to yourself when striking the <EActor>.",
@@ -3871,7 +3915,7 @@ SkipSoundAttack:
                    arithmetic is wrong on Win32 with the original toolchain.
                    Tier Reasoned; tracking inc-m2zi. Not sent to rmtew. */
                 e2.Dmg    = ta->u.a.Dmg;
-                e2.vDmg   = e2.Dmg.Roll();
+                e2.vDmg   = ForcedDmgRoll(e2.Dmg);
                 e2.EItem = it;
                 e2.EItem2 = NULL;
                 /* upstream: base-code defect, the fix is ours. Tier Observed;
@@ -7048,11 +7092,11 @@ EvReturn Creature::Hit(EventInfo &e) /* this == EVictim!! */
       e.Dmg.Number *= e.vCrit;
       e.Dmg.Bonus  *= e.vCrit; 
       }
-    e.vDmg = e.Dmg.Roll() + 
+    e.vDmg = ForcedDmgRoll(e.Dmg) + 
                e.bDmg * e.vCrit;
     }
   else
-    e.vDmg = e.Dmg.Roll() + e.bDmg;
+    e.vDmg = ForcedDmgRoll(e.Dmg) + e.bDmg;
   
   e.vDmg = max(1,e.vDmg);
   ASSERT(e.vDmg > 0)

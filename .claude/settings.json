@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CLAUDE_CODE_SHELL_PREFIX": "/Users/brianhill/Scripts/Incursion/tools/kill_guard_prefix.sh"
+  },
   "hooks": {
     "SessionStart": [
       {
@@ -58,6 +61,10 @@
         "hooks": [
           {
             "command": "tools/close_gate.py",
+            "type": "command"
+          },
+          {
+            "command": "tools/kill_guard.py",
             "type": "command"
           }
         ],

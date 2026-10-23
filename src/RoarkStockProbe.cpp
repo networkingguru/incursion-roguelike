@@ -13,7 +13,7 @@ static const Need NEEDS[] = {
     { "climbing rig",       "climbing rig",   NULL, 1 },
     { "mechanical tools",   "mechanical tools", NULL, 1 },
     { "alchemy set",        "alchemy set",    NULL, 1 },
-    { "pickaxe",            "pickaxe",        NULL, 1 },
+    { "pickaxe",            "pickaxe",        NULL, 6 },
     { "craftsmans tools",   "craftsman's tools", NULL, 1 },
     { "brass lantern",      "brass lantern",  NULL, 1 },
     { "restoration",        "potion", "restoration", 3 },
@@ -35,6 +35,8 @@ static const Need NEEDS[] = {
     { "dimension door",     "potion", "dimension door", 6 },
     { "flask of oil",       "potion", "flask of oil", 6 },
     { "identify scroll",    "scroll", "identify;scroll", 12 },
+    { "dispel magic scroll","scroll", "dispel magic", 3 },
+    { "transmute rock to mud scroll","scroll", "transmute rock to mud", 6 },
     { "mana",               "potion", "mana", 12 },
     { "food ration",        "food ration", NULL, 12 },
     { "torch",              "torch",          NULL, 12 },
@@ -94,7 +96,7 @@ static void PriceMode(Player *p) {
         { "valour", 50 }, { "identify scroll", 100 }, { "mana", 50 },
         { "true blows", 50 }, { "water walking", 50 }, { "elemental resistance", 50 },
     };
-    static const char *CTLNAMES[] = { "restoration", "restore strength", "dimension door" };
+    static const char *CTLNAMES[] = { "restoration", "restore strength", "dimension door", "dispel magic scroll", "transmute rock to mud scroll", "pickaxe" };
     rID roark = FIND("Roark Ironbeard");
     p->storeSeed = 1;
     Creature *shop = InitShopkeeper(roark, 100000);

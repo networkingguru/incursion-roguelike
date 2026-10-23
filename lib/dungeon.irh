@@ -395,7 +395,7 @@ Monster "Roark Ironbeard" : MA_DWARF, MA_ADVENTURER
           $"climbing rig" 0 1
           $"mechanical tools" 0 1
           $"alchemy set" 0 1
-          $"pickaxe" 0 1
+          $"pickaxe" 0 6
           $"craftsman's tools" 0 1
           $"brass lantern" 0 1
           $"potion" $"restoration" 3
@@ -417,6 +417,8 @@ Monster "Roark Ironbeard" : MA_DWARF, MA_ADVENTURER
           $"potion" $"dimension door" 6
           $"potion" $"flask of oil" 6
           $"scroll" $"identify;scroll" 12
+          $"scroll" $"dispel magic" 3
+          $"scroll" $"transmute rock to mud" 6
           $"potion" $"mana" 12
           $"food ration" 0 12
           $"torch" 0 12

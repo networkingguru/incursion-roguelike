@@ -484,6 +484,10 @@ void Game::Play() {
        tools/check_mana_regen_floor.sh. inc-41kg. */
     pp->ManaFloorProbe();
 
+    /* Off unless INCURSION_NATHEAL_PROBE is set; needs a live loaded player.
+       See Character::NatHealProbe and tools/check_natural_healing.sh. inc-wrfz. */
+    pp->NatHealProbe();
+
     /* Off unless INCURSION_HUNGER_PROBE is set, and run here because it needs
        a live loaded player. See Character::HungerProbe and
        tools/check_hunger_clock.sh. inc-i9q.2. */

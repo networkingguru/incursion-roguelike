@@ -42,11 +42,11 @@
 # retaliation therefore always lands, on the first blow, every run.
 #
 # THE ORACLE is the maul's own description page, reached from the inventory by
-# selecting the Weapon Hand and pressing 'x'. Measured on the current tree,
-# seed 5, with the save forced:
+# selecting the Weapon Hand and pressing 'x'. The damage roll is not forced, so
+# the check asserts "below 262", never an exact number:
 #
 #   before  The Uncursed Maul ('v')                  It has 262 out of 262 hit
-#   after   The Mildly Damaged Uncursed Maul ('v')   It has 214 out of 262 hit
+#   after   The Mildly Damaged Uncursed Maul ('v')   It has <n> out of 262 hit, n < 262
 #
 # Under the old behaviour the maul is untouched, because the column shattered
 # its own sword instead.
@@ -62,6 +62,13 @@
 #   |         it should prove: the maul lost hit points
 #   | FAIL: a sunder still turns the retaliation on the striker's own weapon
 #   PROVED RED: with src/Fight.cpp mutated, this check exits 1.
+#
+# fact: character (orc warrior, STR 19) -- fixture dequ-save-message-seed5-opt0822, INCURSION_LOAD
+# fact: the maul and the caryatid column -- wizard Item Acquisition and Monster Summoning
+# fact: Freeze Monsters on -- wizard Wizard Mode Switches (tools/keys/dequ-setup-loaded.keys)
+# fact: the sunder blow hits the column (Def 20) -- INCURSION_LOF_FORCE_ROLL=18
+# fact: the retaliation's Reflex save fails -- INCURSION_FORCE_SAVE_ROLL=1
+# fact: damage dealt to the maul -- asserted only as "below 262", never as a number
 #
 # Usage: tools/check_dequ_sunder.sh [--prove-red]
 . "$(dirname "$0")/check_lib.sh"
@@ -85,6 +92,11 @@ check_mutation src/Fight.cpp \
 # on (see the header). Force it to a natural 1, which always fails. The hook is
 # in the shipped binary, so no probe build is needed.
 export INCURSION_FORCE_SAVE_ROLL=1
+# The sunder must hit the column (Def 20), and the retaliation only fires on a
+# hit: force the attack die to 18.
+export INCURSION_LOF_FORCE_ROLL=18
+# The character is loaded, so no attribute roll decides him.
+export INCURSION_LOAD=tools/fixtures/chars/dequ-save-message-seed5-opt0822.sav
 
 check_run tools/keys/dequ-sunder.keys 5
 

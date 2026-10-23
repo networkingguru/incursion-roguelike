@@ -36,7 +36,7 @@
 # measurement, because every choice below is a menu letter and menu letters
 # move when a list changes. tools/check_pray_aid_int32.sh supplies both.
 
-@include dequ-setup.keys
+@include dequ-setup-loaded.keys
 
 @until "Wizard Mode Options" w
 @choose "Become Divine Champion"

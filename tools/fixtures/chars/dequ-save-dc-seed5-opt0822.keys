@@ -1,0 +1,66 @@
+# Freeze the DEX-13 orc warrior tools/keys/dequ-save-dc-setup.keys builds, so
+# tools/check_dequ_save_dc.sh loads him instead of rolling him again (bd inc-cr8v).
+#
+#   tools/make_char_fixture.sh dequ-save-dc-seed5-opt0822 \
+#       tools/keys/dequ-save-dc-save.keys 5 tools/fixtures/options-2026-08-22.dat
+#
+# THE CHARGEN BELOW IS A COPY of tools/keys/dequ-save-dc-setup.keys up to the
+# point where it opens wizard mode, unchanged. The attribute row
+# "16 13 15 14 13 10 14" (STR 16, DEX 13) exists only on seed 5, which is why the
+# fixture is made on seed 5 and why the check no longer rolls him: on any other
+# seed the row is absent and @cursorto:mark finds nothing. Part A of the check
+# wants a mid-DEX Reflex save (a +1 modifier, a predicted 45-60% pass rate).
+
+@expect "Initial Choices"
+a       # Initial Choices: start menu is not a screen @choose reads.
+@expect "Alter the character generation options?"
+n       # No: this is a yes/no question.
+@expect "Explore Mode. Continue?"
+y       # Yes: this is a yes/no question.
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Warrior"
+@expect "Which of the five attribute sets"
+# Select the set whose DEX is 13, a mid-Dex melee build, by the values it
+# shows and not by its position. The five sets are rolled, so any change to
+# the RNG stream (appending a resource to lib/, for one) moves them: on seed 5
+# the DEX-13 set was fifth and is now fourth (inc-s1qj). The row reads
+# "16 13 15 14 13 10 14" (STR DEX CON INT WIS CHA LUC); walk the marker onto
+# it and confirm. Selecting by letter here would be selecting by position.
+@cursorto:mark "16  13  15  14  13  10  14" DOWN
+ENTER
+@choose "Chaotic Good"
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+@expect "Skill Manager"
+ENTER   # Finish allocating ranks: a control key, not a named choice.
+@expect "Confirm keep changes to skill ranks?"
+y       # Keep the ranks: this is a yes/no question.
+@while "wish to worship" y
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+@expect "Your personality archetype"
+# Personality affects only the sheet banner, so its selection is not pinned.
+ENTER   # Accept the selected personality archetype.
+@expect "Entry Chamber"
+y       # Dismiss the Entry Chamber description.
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+@expect "Things in View"
+ENTER   # Try to enter something here; the game refuses.
+@expect "You can't go in anything here."
+y       # Open the dungeon verb menu.
+@expect "What do you want to do?"
+a       # In-game [a] Apply: keep this key before ESC closes the menu.
+# Three plain ESCs close the Apply menu and any follow-up prompt whatever the
+# starting kit, because a narrow menu leaves "Things in View" visible.
+ESC
+ESC
+ESC
+
+
+@until "System Menu" ESC
+@expect "System Menu"
+b       # [b] Save and Continue; no @quit, so the run ends with one save.

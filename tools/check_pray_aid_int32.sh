@@ -46,11 +46,12 @@ check_mutation src/Prayer.cpp \
 '    int32 cFavour;' \
 '    int16 cFavour;'
 
-# inc-uwxp: seed moved 5 -> 2. Merge 127e63ef (inc-n0ie) made CanAddTemplate
-# refuse a template that gives a monster two opposed alignments, which shifts
-# level generation and the RNG stream. On seed 5 the prayer skill roll fails,
-# so no aid appears; seed 2 stages it (screens show the prayer message, the
-# fatigue refresh and the mana replenishment).
+# fact: character (orc warrior) -- fixture dequ-save-message-seed5-opt0822, INCURSION_LOAD
+# fact: favour 120000 and the god Hesani -- wizard Become Divine Champion
+# fact: the prayer's skill roll succeeds -- INCURSION_RUNTO_SKILL_ROLL=20
+# fact: the aid granted at 120000 favour -- Hesani's AID_CHART (lib/religion.irh), fixed data
+export INCURSION_LOAD=tools/fixtures/chars/dequ-save-message-seed5-opt0822.sav
+export INCURSION_RUNTO_SKILL_ROLL=20
 check_run tools/keys/pray-aid-int32.keys 2
 
 check_screens '*-prayed'

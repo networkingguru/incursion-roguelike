@@ -32,7 +32,7 @@
 #
 # ONE BLOB PER BLOW, for the reasons dequ-hardness-plain.keys sets out.
 
-@include dequ-setup.keys
+@include dequ-setup-loaded.keys
 
 w
 @choose "Item Acquisition"
