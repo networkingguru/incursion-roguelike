@@ -11,9 +11,11 @@ spell by name.
 ## 1. Units
 
 One status unit is 60 ticks, which is two 6-second rounds (inc/Defines.h:132-136).
-The unit does not change. A duration in rounds converts to units as
-ceil(rounds/2). Do not reuse `RoundsToUnits` (master src/Status.cpp:101) for
-this: it rounds an odd count up only half the time, at random.
+The unit does not change. A duration in rounds converts to units with
+`RoundsToUnits` (master src/Status.cpp:101, built in inc-trfo). It halves the
+count. An odd count rounds up at random half the time. The minimum is 1. A
+count of 0 or less passes through unchanged. Scripts call it through
+lib/dispatch.h, as lib/alchemy.irh does.
 
 ## 2. Engine: four new duration flags
 
@@ -121,7 +123,7 @@ rules change (561e0ca1, inc-l8ws), not upstream code, so it gets no
 ### 5a. Dice in rounds
 
 A spell whose SRD or Desc gives a duration as dice in rounds rolls those dice
-and converts the result with ceil(rounds/2). It does not use `EF_DSHORT`.
+and converts the result with `RoundsToUnits`. It does not use `EF_DSHORT`.
 
 | Spell | Dice (rounds) |
 |---|---|
@@ -136,7 +138,7 @@ and converts the result with ceil(rounds/2). It does not use `EF_DSHORT`.
 ### 5b. Script dice already written in rounds
 
 Every script-set duration whose Desc states rounds converts with
-ceil(rounds/2): Scare (wspells.irh:3201), Power Word: Stun (wspells.irh:9063,
+`RoundsToUnits`: Scare (wspells.irh:3201), Power Word: Stun (wspells.irh:9063,
 9065, 9067), Music of the Spheres paralysis (pspells.irh:5212), Convulsion
 (wspells.irh:1728), Chromatic Orb (wspells.irh:1238, 1252, 1263), Stinking
 Cloud nausea (wspells.irh:~3972, Desc "2d4 additional rounds"), Improved
@@ -179,7 +181,7 @@ save, and the effects stack:
 
 - HD equal to CL: dazed 1 round (2 units, the `EF_D1ROUND` value).
 - HD up to CL-1: also weakened, -2d6 Str for 2d4 rounds, converted with
-  ceil(rounds/2) (a temporary penalty, not ability damage; confirm on the SRD
+  `RoundsToUnits` (a temporary penalty, not ability damage; confirm on the SRD
   page).
 - HD up to CL-5: also paralyzed 1d10 minutes (5-50 units).
 - HD up to CL-10: also killed; undead destroyed.
