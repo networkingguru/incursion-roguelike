@@ -55,7 +55,7 @@ in the build.**
 `EventInfo EventStack[EVENT_STACK_SIZE]`, `EventSP` starting at -1 (`src/Event.cpp:135-136`); the size is 128
 (`inc/Defines.h:80`). The only bound is `CHECK_OVERFLOW` (`src/Event.cpp:133`), which calls `Fatal("Event Stack Overflow!")` and
 exits. There is no depth budget, no recursion counter and no cycle detection in `src/Event.cpp`. Unrelated code reads frames
-assuming the enclosing context: `src/Fight.cpp:831-838`, `src/Prayer.cpp:589`, `src/Skills.cpp:1751`, `src/Target.cpp:1771`.
+assuming the enclosing context: `src/Fight.cpp:831-838`, `src/Prayer.cpp:589`, `src/Skills.cpp:1771`, `src/Target.cpp:1771`.
 
 ## Re-entrancy
 **The system has no general protection against re-entrancy.** Shared by every nested event: `VMachine::Regs[64]`, `SRegs[64]`,
@@ -118,7 +118,7 @@ below the source count, because the `#if 0` and comment blocks above remove more
 2. `src/Display.cpp:448` `static Creature* Displace[64]` in a function re-entering itself at `:594`; `Displace[dc++]` (`:554`) has
 no bound check and `dc` is `uint8`.
 3. `src/Effects.cpp:162` states `e.eID` may be 0 for breath weapons; `:175` then reads `TEFF(e.eID)->Schools` unchecked. Same
-shape at `src/Creature.cpp:880`, `src/Magic.cpp:1430`.
+shape at `src/Creature.cpp:886`, `src/Magic.cpp:1430`.
 4. Fixed. `src/Res.cpp:348-353` range-checks the module slot and returns NULL, so `ASSERT` no longer guards the dereference.
 5. `src/VMachine.cpp:529` restores `xID` after `CMEM` because the call may have re-entered `Execute`, but not `mn`, `Memory` or
 `szMemory` (`:461-465`), leaving a cross-module outer script on the inner module's data segment.

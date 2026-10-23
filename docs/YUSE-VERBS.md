@@ -53,7 +53,7 @@ carries up to three prompts and a flag word:
   that returns false for you (`src/Player.cpp:1846-1853`). Two entries carry a
   prerequisite today: **Mount** needs the Ride skill, a humanoid body with
   limbs, and no mount under you already; **Dismount** needs you mounted
-  (`src/Tables.cpp:3144-3153`). If nothing survives both rules the command
+  (`src/Tables.cpp:3146-3155`). If nothing survives both rules the command
   says *"You have no usable verbs."* `tools/check_command_menu_gating.sh`
   reads the `y` screen and fails if a dead verb is on it.
 - **The prompts run in table order**, target first, unless the entry carries
@@ -75,7 +75,7 @@ carries up to three prompts and a flag word:
 You cannot pick one from this menu any more, because the menu does not list it.
 The path is still there for an event thrown by any other route: nothing handles
 it, so it falls through to `Creature::HandleVerb` (`src/Player.cpp:2001` via
-`src/Creature.cpp:1093`), which prints **"That verb can't be used that way."**
+`src/Creature.cpp:1120`), which prints **"That verb can't be used that way."**
 for post-phase events and otherwise returns silently.
 
 ---
@@ -123,19 +123,19 @@ or friendly.
 | Eat | eat food | `src/Item.cpp:2052` |
 | Read | read a scroll or book | `src/Item.cpp:868` |
 | Zap | aim a wand at a target | `src/Item.cpp:849` |
-| Wield | equip a weapon | `src/Creature.cpp:1009` |
-| Shoot / Throw | ranged attack — **one event**, `EV_RATTACK` | `src/Creature.cpp:894` |
+| Wield | equip a weapon | `src/Creature.cpp:1036` |
+| Shoot / Throw | ranged attack — **one event**, `EV_RATTACK` | `src/Creature.cpp:906` |
 | Insert | put an item into a container | `src/Inv.cpp:1144` |
 | Divide | split a stack; refuses singular items; the new stack is `DROPPED` for 10 turns | `src/Player.cpp:2011` |
 | Open / Open With | doors and containers | `src/Feature.cpp:732` |
 | Close | shut a door | `src/Feature.cpp:829` |
 | Enter | portals and the like | `src/Feature.cpp:334` |
-| Break | break a target | `src/Creature.cpp:1073` |
-| Push | shove a target | `src/Creature.cpp:855` |
-| Dig | dig in a direction | `src/Creature.cpp:1033` |
+| Break | break a target | `src/Creature.cpp:1100` |
+| Push | shove a target | `src/Creature.cpp:861` |
+| Dig | dig in a direction | `src/Creature.cpp:1060` |
 | Talk | open conversation | `src/Creature.cpp:778` |
-| **Mount** | ride a creature — full validation, see below | `src/Creature.cpp:1050` |
-| **Dismount** | get off; takes no target | `src/Creature.cpp:1054` |
+| **Mount** | ride a creature — full validation, see below | `src/Creature.cpp:1077` |
+| **Dismount** | get off; takes no target | `src/Creature.cpp:1081` |
 
 ### Verbs that work but are narrower than they look
 
@@ -149,7 +149,7 @@ far less ground than its name suggests. Verified by reading the script.
   glass vial onto a weapon (`lib/mundane.irh:1016`), the weapon oils
   (`lib/m_items.irh:1477`) and the lantern below.
 - **Dip** has four handlers in the build and they cover two targets: a
-  **fountain** (`lib/dungeon.irh:2378` and `:2535`) and an **alchemical
+  **fountain** (`lib/dungeon.irh:2380` and `:2535`) and an **alchemical
   flask**, where only acid does anything (`lib/alchemy.irh:97` and
   `lib/alchemy.irh:648`). A fifth handler, the Spell Storing ring dipped in a
   fountain, is written but not compiled: `#if 0` at `lib/m_items.irh:5235`
@@ -168,9 +168,9 @@ cannot be divided."* The new stack is marked `DROPPED` for 10 turns
 
 **Mount** is offered only to a character who could ride: the Ride skill, a
 humanoid body with limbs, and no mount already under you
-(`src/Tables.cpp:3144-3148`). It is the only command that rides a creature: no
+(`src/Tables.cpp:3146-3150`). It is the only command that rides a creature: no
 key binding throws `EV_MOUNT`, and only this verb and the spells that summon a
-steed do (`lib/wspells.irh:1813` and `:1908`, `lib/pspells.irh:3587`). Once
+steed do (`lib/wspells.irh:1780` and `:1908`, `lib/pspells.irh:3587`). Once
 picked it runs a full validation path — Ride skill, humanoid form, the
 target's `M_MOUNTABLE` flag, hostility, prone/stuck/grappled/asleep, plane,
 size, challenge rating, and whether the creature will accept you at all
