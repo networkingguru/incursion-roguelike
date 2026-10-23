@@ -31,7 +31,7 @@
 # retaliations that land on the character rather than on his sword cost him
 # 2d4 hit points each and a level-one orc cannot pay for both halves.
 
-@include dequ-setup.keys
+@include dequ-setup-loaded.keys
 
 w
 @choose "Item Acquisition"

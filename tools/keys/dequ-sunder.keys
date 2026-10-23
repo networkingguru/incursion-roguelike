@@ -32,7 +32,7 @@
 # THE PAGE IS DUMPED AFTER EVERY BLOW, so that a run in which the maul is
 # destroyed still leaves one readable page behind.
 
-@include dequ-setup.keys
+@include dequ-setup-loaded.keys
 
 # The starting kit now readies a shield, and a two-handed weapon will not go
 # into a hand pair that holds one (inc-zzwm): stow it before the swap below.

@@ -399,6 +399,29 @@ check_reject() { # <text> [description]
     CHECK_FAIL=1
     return 1
 }
+# screen_shows <text> <screen...> -- true if a screen carries <text>.
+#
+# The sidebar starts at the first '|' on a line and the message region is what
+# is left of it. A long message wraps at the 64-column boundary, so
+# "The world shifts!" can be split as "The " / "world shifts!" over two lines
+# (inc-6vrn: a preceding message pushes it past the boundary). Joining the
+# message region of every line with single spaces makes the match independent
+# of that wrapping: the phrase then appears contiguously. (Moved here from
+# check_elude_death_followup.sh, bd inc-cr8v.)
+screen_shows() {
+    local text="$1" f
+    shift
+    for f in "$@"; do
+        [ -f "$f" ] || continue
+        awk -v want="$text" '
+            { sub(/\|.*/, ""); buf = buf $0 " " }
+            END { gsub(/[ \t]+/, " ", buf)
+                  exit (index(buf, want) ? 0 : 1) }
+        ' "$f" && return 0
+    done
+    return 1
+}
+
 
 _check_have_screens() { # <caller name>
     [ "${#CHECK_SCREENS[@]}" -gt 0 ] || _check_die 2 \

@@ -4,6 +4,14 @@
 # inc-s1qj: natural seeds may roll only wet panels, so one extra run sets
 # INCURSION_BLOB_MIN_PROBE=dry (natural water removed before the top-up) and always measures before=0.
 # Override LIMESTONE_SEEDS to widen the deterministic dive sample.
+#
+# This check tests level generation, so it cannot fix the world: it asserts an
+# invariant that must hold on every seed (a Limestone Cave panel never ends below
+# its minimum water count), and it exits 2 when no panel needed the top-up.
+# fact: the rolled character survives the dive -- wizard Cheat Death on (tools/keys/limestone-water.keys)
+# fact: nothing attacks him on the way -- wizard Freeze Monsters on
+# fact: the levels -- NOT fixed, they are what is measured (an invariant, not a pinned map)
+# fact: the character -- NOT loaded: a saved character pins the dungeon (inc-nhgh)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
