@@ -178,7 +178,7 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
        then cannot succeed and would flood the region before returning false.
        Same answer as the full search, reached without the flood. */
     if ((sx != tx || sy != ty) &&
-        RunOver(tx,ty,true,runner,dangerFactor,Incor,Meld) == 0)
+        RunOver(tx,ty,true,runner,dangerFactor,Incor,Meld,true) == 0)
       {
 #ifdef PATH_PROBE
         PP_Prechk++;
@@ -245,7 +245,8 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
 #ifdef PATH_PROBE
           PP_RunOver++;
 #endif
-          int baseCost = RunOver(nx&0xFF,ny&0xFF,true,runner,dangerFactor,Incor,Meld);
+          int baseCost = RunOver(nx&0xFF,ny&0xFF,true,runner,dangerFactor,Incor,Meld,
+                                (nx == (int16)tx && ny == (int16)ty));
           if (!baseCost)
             continue;
           if (DirX[i] && DirY[i])
@@ -349,7 +350,7 @@ static bool RegionTooSmallFor(Map *m, int16 x, int16 y, Creature *c)
 }
 
 uint16 Map::RunOver(uint8 x, uint8 y, bool memonly, Creature *c,
-                  int32 dangerFactor, bool Incor, bool Meld)
+                  int32 dangerFactor, bool Incor, bool Meld, bool isTarget)
 {
   if (!Incor && SolidAt(x,y)) {
     if (Meld) {
@@ -372,9 +373,16 @@ uint16 Map::RunOver(uint8 x, uint8 y, bool memonly, Creature *c,
     return 0;
   if (At(x,y).Contents) {
     Creature *ca; Trap *tr; Door *dr;
-    for (ca=FCreatureAt(x,y);ca;ca=NCreatureAt(x,y))
-      if (ca && c->Perceives(ca) && ca->isHostileTo(c))
-        return 0;
+    /* upstream: base-code defect. Observed. inc-rabe. Not sent.
+         Invariant: a search's target square is enterable even when a
+       perceived hostile stands on it; every other square still blocks. A
+       chased target stands on that square, so without the exemption no route
+       to a hostile target exists. The test is in the original v0.6.5B source
+       (7b8504a3) and fails identically on Win32. */
+    if (!isTarget)
+      for (ca=FCreatureAt(x,y);ca;ca=NCreatureAt(x,y))
+        if (ca && c->Perceives(ca) && ca->isHostileTo(c))
+          return 0;
     for (tr=FTrapAt(x,y);tr;tr=NTrapAt(x,y)) {
       if (tr->TrapFlags & TS_FOUND)
         if (!(tr->TrapFlags & TS_DISARMED)) {
@@ -516,13 +524,15 @@ int Map::RunToFailReason(Creature *runner, int16 tx, int16 ty)
           {
             int16 x = (int16)(node % sx), y = (int16)(node / sx);
             if (RunOver((uint8)x, (uint8)y, true, runner,
-                        DF_IGNORE_TRAPS | DF_IGNORE_TERRAIN, Incor, Meld))
+                        DF_IGNORE_TRAPS | DF_IGNORE_TERRAIN, Incor, Meld,
+                        node == ti))
               continue;                 /* this square passes the gate */
             if (!At(x, y).Memory)
               { reason = RTF_UNEXPLORED; continue; }
             reason = RTF_UNEXPLORED;     /* default if the scans below find nothing */
             bool named = false;
-            for (Creature *ca = FCreatureAt(x, y); ca; ca = NCreatureAt(x, y))
+            if (node != ti)   /* the target's own hostile occupant is not a blocker */
+             for (Creature *ca = FCreatureAt(x, y); ca; ca = NCreatureAt(x, y))
               if (ca && runner->Perceives(ca) && ca->isHostileTo(runner))
                 { reason = RTF_HOSTILE; named = true; break; }
             if (!named)

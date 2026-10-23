@@ -525,7 +525,8 @@ class Map: public Object
 
     uint16 PathPoint(int16 n);
     uint16 RunOver(uint8 x, uint8 y, bool memonly, Creature *c,
-                   int32 dangerFactor, bool Incor, bool Meld);
+                   int32 dangerFactor, bool Incor, bool Meld,
+                   bool isTarget = false);
 
 /* Why RunTo (src/Creature.cpp) refused a destination, so the overview-map 'R'
    command can name the cause instead of one catch-all line. See

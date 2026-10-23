@@ -1,0 +1,79 @@
+# inc-rabe: stage, then sample after each of 24 one-turn rests.
+.*2
+l o
+# Dismiss the staged region description, then close the overview.
+ESC*2
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+.
+l o
+ESC
+@dump:route-observed
+@quit
