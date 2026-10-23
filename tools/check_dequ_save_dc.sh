@@ -20,11 +20,28 @@
 #         expected DC (11 + CR/3 for the 9 that list none; the listed DC for
 #         the 4 that do) and at least one save was rolled.
 # Exit 0 pass, 1 fail ("measured nothing" counts as fail).
+#
+# fact: character (orc warrior, DEX 13) -- fixture dequ-save-dc-seed5-opt0822, INCURSION_LOAD
+# fact: Cheat Death and Freeze Monsters on -- wizard Wizard Mode Switches (tools/keys/dequ-save-dc-setup-loaded.keys)
+# fact: the monsters -- wizard Monster Summoning
+# fact: where a multi-square monster (remorhaz, magma creeper) lands against him -- the roster tries all eight directions
+# fact: each blow hits (A_DEQU answers only a hit) -- INCURSION_LOF_FORCE_ROLL=18
+# fact: each save's DC and predicted% -- read from chance_probe.log, the engine's own record
+# fact: each save's die -- Part A asserts the observed rate within 3 sd of the predicted, never an exact count
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 [ -x ./incursion-headless ] || { echo 'FAIL: measured nothing; build with BACKEND=posix ./build_macos.sh'; exit 1; }
 OPTS=tools/fixtures/options-2026-08-22.dat
+# The character is loaded: no attribute row decides him (headless.sh copies the
+# save into each run's own sandbox).
+export INCURSION_LOAD=tools/fixtures/chars/dequ-save-dc-seed5-opt0822.sav
+# A_DEQU answers only a blow that HITS (src/Fight.cpp, `at->AType == A_DEQU && !e.isHit`),
+# so a miss rolls no save. Force the player's melee d20 to 18: an ordinary hit
+# (below the long sword's threat range of 19) that the roster's defences do not
+# turn away. Without it a roster run could see every blow miss. The save is
+# a different die and stays free, which is what Part A measures.
+export INCURSION_LOF_FORCE_ROLL=18
 SEED=5
 SCRATCH="$ROOT/logs/dequ-save-dc-keys.$$"
 mkdir -p "$SCRATCH"
@@ -72,7 +89,14 @@ PY
 done
 [ "$pooled_n" -gt 0 ] && echo "A pooled: $pooled_s/$pooled_n = $((100 * pooled_s / pooled_n))%"
 
-# name|menu category|expected DC
+# name|menu category|expected DC|keys that strike it
+# A multi-square monster (the remorhaz, the magma creeper) is placed by the
+# summon on a random free spot two squares off the player, never on the square
+# the cursor names, and its body touches him on a different side each seed. So
+# the script tries all eight directions for those two: a direction with nothing
+# in it just moves the player a step, and the next summon places a fresh
+# monster beside wherever he stands. Seeds 303 (remorhaz, due north) and 404
+# (magma creeper) found no monster on the one or four directions tried before.
 ROSTER='shattering ur-dragon|Dragons|>=11
 firebat|Bats|11
 small mud elemental|Elementals|11
@@ -80,19 +104,24 @@ vaporighu|Hominids|14
 caryatid column|Constructs|12
 acid blob|Jellies|11
 brown pudding|Jellies|14
-magma creeper|Jellies|14
+magma creeper|Jellies|14|ALL8
 babau|Demons|24
 grey ooze|Jellies|19
-remorhaz|Beasts|20
+remorhaz|Beasts|20|ALL8
 rust monster|Beasts|25'
 i=0
-while IFS='|' read -r name cat want; do
+while IFS='|' read -r name cat want dirs; do
+    [ -n "$dirs" ] || dirs=RIGHT
+    [ "$dirs" = ALL8 ] && dirs="RIGHT LEFT UP DOWN HOME PGUP END PGDN"
     i=$((i + 1))
     k="$SCRATCH/roster-$i.keys"
     {
-        echo "@include $ROOT/tools/keys/dequ-save-dc-setup.keys"
+        echo "@include $ROOT/tools/keys/dequ-save-dc-setup-loaded.keys"
         for c in 1 2 3 4 5 6 7 8; do
-            printf '@until "Wizard Mode Options" w\n@choose "Monster Summoning"\n@choose "%s"\n@choose "%s"\nRIGHT ENTER\nRIGHT\n@while "Attack the" y\n@while "Confirm attack" y\n@while "Abort, Flee" a\n@while "Die?" n\n' "$cat" "$name"
+            printf '@until "Wizard Mode Options" w\n@choose "Monster Summoning"\n@choose "%s"\n@choose "%s"\nRIGHT ENTER\n' "$cat" "$name"
+            for d in $dirs; do
+                printf '%s\n@while "Attack the" y\n@while "Confirm attack" y\n@while "Abort, Flee" a\n@while "Die?" n\n' "$d"
+            done
         done
         echo '@quit'
     } > "$k"

@@ -55,7 +55,7 @@ known hole.
 
 | Fact | Control |
 |---|---|
-| Character: race, class, stats, kit, name | Load a fixture: `INCURSION_LOAD=tools/fixtures/chars/<name>.sav` (51 exist; `tools/fixtures/README.md`). No wizard command sets stats. |
+| Character: race, class, stats, kit, name | Load a fixture: `INCURSION_LOAD=tools/fixtures/chars/<name>.sav` (53 exist; `tools/fixtures/README.md`). No wizard command sets stats. |
 | A monster where you need it | Wizard menu, "Monster Summoning". Clear the level first with "Genocide Everything". |
 | An item | Wizard menu, "Item Acquisition". |
 | Terrain | Wizard menu, "Change terrain type"; or a probe that builds the map (`INCURSION_RUNTO_STAGE`). |
@@ -64,7 +64,8 @@ known hole.
 | Attack roll (d20) | `INCURSION_LOF_FORCE_ROLL` (`src/Fight.cpp`). It applies to every attacker. |
 | Saving throw (d20) | `INCURSION_FORCE_SAVE_ROLL`, 1 to 20. It applies to every creature. |
 | Skill check (d20) | `INCURSION_RUNTO_SKILL_ROLL`, 1 to 20. |
-| Damage roll | *none* |
+| Damage roll | `INCURSION_FORCE_DAMAGE_ROLL=<n>`. Each damage die at `Creature::Hit`, and in the A_DEQU retaliation (acid blob and kin damaging the striker or the struck item), shows `min(n, sides)`; 1 = minimum, 99 = maximum. Does not cover sneak-attack dice, weapon-quality extra dice such as flaming 1d6, area attacks or spells. |
+| Monster hit points | The "Monsters Maximum Hit Points" option (`OPT_MON_MAX_HP`, `src/Values.cpp:2355`) set to any value but NO. It is a character-generation option, so a loaded game takes it from its save, not from the options file: set it in the options file used to make the check's fixture (`tools/make_char_fixture.sh`). |
 | Percent-chance roll | *none* |
 | Monster AI choice | *none* |
 | A save for one creature only | *none* |

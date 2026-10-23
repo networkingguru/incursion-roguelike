@@ -2,54 +2,75 @@
 # Fresh character required: a saved fixture would pin the dungeon layout.
 @include chargen.keys
 @until "HP:" ENTER
-w y
+# The rolled character must survive the dive on every seed, and nothing may
+# attack him on the way: Cheat Death and Freeze Monsters are switched on through
+# wizard mode, as tools/keys/dequ-setup.keys does. bd inc-cr8v.
+@until "Wizard Mode Options" w y
+@expect "Wizard Mode Switches"
+w       # Open Wizard Mode Switches.
+@expect "Freeze Monsters"
+SPACE   # Cheat Death: NO -> YES
+DOWN*10
+@expect "all monsters are denied their"
+SPACE   # Freeze Monsters: NO -> YES
+@expect "Wizard Mode Options"
+ESC     # Close the switches list.
+@until "Wizard Mode Options" w
 @choose "Ascend / Descend Depth"
 "2" ENTER
 @while "Die? [yn]" n
 @until "HP:" ENTER
 @while "Die? [yn]" n
+@while "Press [ENTER] to continue" ENTER
 @until "Wizard Mode Options:" w
 @choose "Ascend / Descend Depth"
 "3" ENTER
 @while "Die? [yn]" n
 @until "HP:" ENTER
 @while "Die? [yn]" n
+@while "Press [ENTER] to continue" ENTER
 @until "Wizard Mode Options:" w
 @choose "Ascend / Descend Depth"
 "4" ENTER
 @while "Die? [yn]" n
 @until "HP:" ENTER
 @while "Die? [yn]" n
+@while "Press [ENTER] to continue" ENTER
 @until "Wizard Mode Options:" w
 @choose "Ascend / Descend Depth"
 "5" ENTER
 @while "Die? [yn]" n
 @until "HP:" ENTER
 @while "Die? [yn]" n
+@while "Press [ENTER] to continue" ENTER
 @until "Wizard Mode Options:" w
 @choose "Ascend / Descend Depth"
 "6" ENTER
 @while "Die? [yn]" n
 @until "HP:" ENTER
 @while "Die? [yn]" n
+@while "Press [ENTER] to continue" ENTER
 @until "Wizard Mode Options:" w
 @choose "Ascend / Descend Depth"
 "7" ENTER
 @while "Die? [yn]" n
 @until "HP:" ENTER
 @while "Die? [yn]" n
+@while "Press [ENTER] to continue" ENTER
 @until "Wizard Mode Options:" w
 @choose "Ascend / Descend Depth"
 "8" ENTER
 @while "Die? [yn]" n
 @until "HP:" ENTER
 @while "Die? [yn]" n
+@while "Press [ENTER] to continue" ENTER
 @until "Wizard Mode Options:" w
 @choose "Ascend / Descend Depth"
 "9" ENTER
 @while "Die? [yn]" n
 @until "HP:" ENTER
 @while "Die? [yn]" n
+@while "Press [ENTER] to continue" ENTER
 @until "Wizard Mode Options:" w
 @choose "Ascend / Descend Depth"
 "10" ENTER
@@ -57,5 +78,9 @@ w y
 @until "HP:" ENTER
 @while "Die? [yn]" n
 @expect "100m"
+# A room's description box can be open on arrival (seed 202: "Jagged Chasm"). It
+# eats the quit key below, so no game turn passes and the harness reads the run as
+# NO GAMEPLAY. A box has a "#---" border; the map never draws one.
+@while "#---" ESC
 @dump:depth10
 @quit

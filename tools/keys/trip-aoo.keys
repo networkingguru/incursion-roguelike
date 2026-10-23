@@ -46,7 +46,7 @@
 # the screen is dumped after every trip. A run that ends early still leaves its
 # evidence behind, and the probe log is written and flushed line by line.
 
-@include dequ-setup.keys
+@include dequ-setup-loaded.keys
 
 # Summon a goblin one square east.
 w
