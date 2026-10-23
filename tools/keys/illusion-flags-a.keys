@@ -1,0 +1,20 @@
+# One rung of tools/check_illusion_flags.sh (bd inc-pu6v.43): cast one illusion
+# spell, try to pick up the illusory item, photograph what the game says.
+# One spell per session because a cast starts concentration (inc-59lq), which
+# refuses every later cast. The oracle and the spell ladder are described in
+# tools/check_illusion_flags.sh.
+#
+# SPACE, NEVER ESC, to clear the "-- more --" prompt. In play mode ESC opens
+# the System Menu, whose [a] is Save and Quit; a stray ESC ends the run and
+# still exits 0.
+
+@dump:arrival
+
+@until "Select Spell" m
+@choose "Phantasmal Force"
+i
+@expect "Target Illusion"
+ENTER
+SPACE
+g
+@dump:il-a-plain

@@ -19,8 +19,9 @@
 # (src/Creature.cpp:2278-2285), so the defect inverted that ruling on half of
 # all illusions.
 #
-# WHAT THIS CHECK MEASURES. A frozen elf casts four illusion spells that sit one
-# level apart. Their save DCs therefore rise by exactly 1 per rung while their
+# WHAT THIS CHECK MEASURES. A frozen elf casts four illusion spells, each in its
+# own session (a cast starts concentration, inc-59lq, which refuses every later
+# cast), that sit one level apart. Their save DCs therefore rise by exactly 1 per rung while their
 # declared flags alternate, so any code that reads the flag out of the DC must
 # disagree with the declaration on some rung:
 #
@@ -73,26 +74,23 @@ check_mutation src/Creature.cpp \
     'if (!(getIllusionFlags() & IL_IMPROVED)) {' \
     'if (!(s->Val & IL_IMPROVED)) {'
 
-check_run tools/keys/illusion-flags.keys 1
+check_rung() { # <letter> <screen glob> <expected text> <description> <rejected text>
+    check_run "tools/keys/illusion-flags-$1.keys" 1
+    check_screens "$2"
+    check_expect "$3" "$4"
+    check_reject "$5"
+}
 
-check_screens '*-il-a-plain'
-check_expect "can't pick up an illusionary item" \
-    "Phantasmal Force declares no flags, so sharp senses pierce it"
-check_reject "winks out of existence"
+PIERCED="can't pick up an illusionary item"
+NOT_PIERCED="winks out of existence"
 
-check_screens '*-il-b-improved'
-check_expect "winks out of existence" \
-    "Improved Phantasmal Force declares IL_IMPROVED, so sharp senses do not"
-check_reject "can't pick up an illusionary item"
-
-check_screens '*-il-c-spectral'
-check_expect "can't pick up an illusionary item" \
-    "Spectral Force declares IL_SPECTRAL but not IL_IMPROVED"
-check_reject "winks out of existence"
-
-check_screens '*-il-d-spectral-improved'
-check_expect "winks out of existence" \
-    "Improved Spectral Force declares IL_IMPROVED"
-check_reject "can't pick up an illusionary item"
+check_rung a '*-il-a-plain' "$PIERCED" \
+    "Phantasmal Force declares no flags, so sharp senses pierce it" "$NOT_PIERCED"
+check_rung b '*-il-b-improved' "$NOT_PIERCED" \
+    "Improved Phantasmal Force declares IL_IMPROVED, so sharp senses do not" "$PIERCED"
+check_rung c '*-il-c-spectral' "$PIERCED" \
+    "Spectral Force declares IL_SPECTRAL but not IL_IMPROVED" "$NOT_PIERCED"
+check_rung d '*-il-d-spectral-improved' "$NOT_PIERCED" \
+    "Improved Spectral Force declares IL_IMPROVED" "$PIERCED"
 
 check_done "the declared IL_IMPROVED flag decides who pierces an illusion, on all four rungs"
