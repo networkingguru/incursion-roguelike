@@ -94,18 +94,34 @@ Invisibility (wspells.irh:2884), Levitation (wspells.irh:3399), Divine Power
 (pspells.irh:590), Neutralize Poison (pspells.irh:4166).
 
 Use the flags directly. Do not switch a spell to `IS_A_BUFF`, because the
-macro also changes its base cost, purpose and other flags.
+macro also changes its base chance and purpose (ruled 2026-10-23). Each spell
+also gets `EF_CANCEL`, `EF_SHOWNAME` and `EF_NOTBAD` where it lacks them, so
+the player can end it. Each keeps its `Base` and `Purpose`.
+
+Mana cost rises to the standard `IS_A_BUFF` cost for the spell's level
+(ruled 2026-10-23):
+
+| Spell | Level | Old cost | New cost |
+|---|---|---|---|
+| Invisibility | 2 | 5 | 15 (`COST_2`) |
+| Levitation | 2 | 4 | 15 (`COST_2`) |
+| Shield Other | 2 | 3 | 15 (`COST_2`) |
+| Slow Poison | 1 | 3 | 5 (`COST_1`) |
+| Divine Power | 4 | 17 | 35 (`COST_4`) |
+| Righteous Might | 5 | 20 | 45 (`COST_5`) |
+| Tevlar's Transformation | 6 | 36 | 55 (`COST_6`) |
+| Neutralize Poison | 4 | 7 | 7 (unchanged) |
 
 ## 4. Class flags
 
 | Flag | Spells (old flag removed where present) |
 |---|---|
 | `EF_DROUND` | Grease, Halt Undead, Hold Person, Hold Monster, Hold Beast, Slow, Confusion, Fear, Glitterdust, Dominate Animal, Dominate Reptile (mon1.irh:752), Wind Wall, Hideous Laughter, Ethereal Jaunt, Dispel Evil, Spiritual Hammer, Flaming Sphere, Calm Emotions, Divine Sacrifice |
-| `EF_DMIN` | Wall of Fog, Sleep, Deep Slumber, Bane, Doom, Polymorph Other, Polymorph Self (its existing `EF_LOSEMANA` stays), Reduce, Mirror Image, Clairvoyance, Solid Fog, Crushing Despair, Dimensional Anchor, Faerie Fire |
+| `EF_DMIN` | Wall of Fog, Sleep, Deep Slumber, Bane, Doom, Polymorph Other, Polymorph Self (its existing `EF_LOSEMANA` stays), Reduce, Mirror Image, Clairvoyance, Solid Fog, Crushing Despair, Dimensional Anchor, Faerie Fire, Spectral Hand (ruled 2026-10-23; out of inc-n470) |
 | `EF_D10MIN` | Change Self, Web, Fire Seeds |
 | `EF_DHOUR` | Charm Person |
 | `EF_D1ROUND` | Holy Smite, Order's Wrath, Command (each loses `EF_DSHORT`) |
-| `EF_PERSISTANT` (day class) | Charm Monster, Dominate Person, Dominate Monster, Control Plant |
+| `EF_PERSISTANT` (day class) | Charm Monster, Dominate Person, Dominate Monster, Control Plant, Consecrate (pspells.irh:1879; SRD 2 hours/level, ruled 2026-10-23 to last until rest like Desecrate) |
 | `EF_PERMANANT` | Wall of Stone |
 
 File and line for each row: appendix A.
@@ -156,14 +172,30 @@ through `AD_BLND` and is already converted.
 
 These fail the Desc test and stay unchanged: Icelance (its stun is
 `EF_DSHORT` on a chained part, and `EF_DSHORT` does not change), Colour Spray
-(Desc says "turns"), Colour Burst (Desc says "briefly"), Emotion: Despair (no
-duration in its Desc), the Dancing Lights globes, and the Pyrotechnics fear
-(`10d6`, Desc "much longer duration").
+(Desc says "turns"), Colour Burst (Desc says "briefly"), the Dancing Lights
+globes, and the Pyrotechnics fear (`10d6`, Desc "much longer duration").
+
+Emotion's despair branch (wspells.irh:6227) has no duration in its Desc, but
+was ruled 2026-10-23 to convert: `RoundsToUnits(1d4)` replaces `1d4+1`, per
+the design comment at wspells.irh:6178 ("1d4 rounds"). Only the duration
+changes; the condition stays `PARALYSIS` with `PARA_HYPNOTIZED`.
+
+One non-spell duration converts in this bead (ruled 2026-10-23): the Dirty
+Fighting blindness (master src/Fight.cpp, the Dirty Fighting block) becomes
+`RoundsToUnits(Dice::Roll(1,4,1))`, matching the feat text "1d4+1 rounds"
+(src/FeatTab.cpp:1479). It is an upstream defect: it gets an `upstream:` mark
+and a docs/REPORTING-GATE.md ledger row. The small-barbarian rage penalty is
+already converted on master (189d53a6, inc-trfo).
 
 Music of the Spheres conditions (pspells.irh:5216, 5241) go through
 `ThrowDmg` to `AD_CONF`, `AD_NAUS` and `AD_STUN`, which halve them since
-inc-trfo; `AD_SLOW` (master Fight.cpp:8647) ignores the value. Whether the
-god's condition keeps today's length is open (section 11).
+inc-trfo; `AD_SLOW` (master Fight.cpp:8647) ignores the value. Ruled
+2026-10-23: the god's condition lasts 1 round per caster level, converted
+with `RoundsToUnits`, for all four gods. The choir already adds to the caster
+level and MUST NOT add a separate duration bonus (drop `2*choir`). Slow MUST
+last the same length as the other three conditions; the change MUST NOT alter
+the length of slow from any other source. `tools/check_music_spheres_area.sh`
+changes its expected condition length to match.
 
 ### 5c. Fixed durations
 
@@ -265,22 +297,17 @@ before the next phase.
 
 ## 11. Open rulings
 
-Each needs Brian's ruling before the phase that touches it.
+Every item below is ruled.
 
-1. Music of the Spheres: since inc-trfo, `AD_CONF`, `AD_NAUS` and `AD_STUN`
-   halve the god's condition (measured 13 against 26). Keep today's length
-   (pass twice the value), or accept the halving and change the check?
-2. Consecrate (pspells.irh:1879, `EF_DLONG`): SRD is 2 hours/level, which
-   fits no class. Desecrate is a buff and lasts until rest.
-3. Spectral Hand (wspells.irh:3300, `EA_SUMMON`): SRD 1 minute/level, or the
-   inc-n470 summon rule?
-4. Emotion: Despair (wspells.irh:6228): an inc-trfo WRONG-2x row; its comment
-   says "1d4 rounds" but its Desc gives no duration. Convert, or keep?
-5. Who owns the non-spell rounds dice in combat code (master
-   src/Fight.cpp:7370, 7509)?
-6. Three choices in this spec that no ruling made: the monster pre-buff rule
-   for the new flags (section 2), flags set directly instead of `IS_A_BUFF`
-   (section 3b), and every unnamed spell keeps its duration (section 6).
+1. Music of the Spheres god condition: RULED 2026-10-23, see section 5b.
+2. Consecrate: RULED 2026-10-23, see section 4.
+3. Spectral Hand: RULED 2026-10-23, see section 4.
+4. Emotion: Despair: RULED 2026-10-23, see section 5b.
+5. Non-spell rounds dice in combat code: RULED 2026-10-23, see section 5b.
+6. RULED 2026-10-23: the monster pre-buff rule for the new flags stands as
+   written in section 2 (monsters stop pre-casting Polymorph Self); flags are
+   set directly, with costs raised, per section 3b; every unnamed spell keeps
+   its duration (section 6), with no sweep for audit misses.
 
 ## Appendix A. File and line for section 4
 
@@ -330,4 +357,6 @@ Each needs Brian's ruling before the phase that touches it.
 | Dominate Person | wspells.irh:7795 | `EF_DLONG` |
 | Dominate Monster | wspells.irh:9329 | `EF_DLONG` |
 | Control Plant | pspells.irh:4389 | `EF_DLONG` |
+| Consecrate | pspells.irh:1879 | `EF_DLONG` |
+| Spectral Hand | wspells.irh:3300 | none |
 | Wall of Stone | wspells.irh:7533 | `EF_DLONG` |
