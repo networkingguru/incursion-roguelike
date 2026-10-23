@@ -526,6 +526,10 @@ Resurrected:
     pp->MyTerm->SetMode(MO_PLAY);
     pp->Timeout = 0;
     MaxDist = 30;
+    /* inc-9w9y measurement probe: INCURSION_ALL_ACT=1 lifts the MaxDist
+       distance gate below so every creature acts. Unset = unchanged. */
+    static const bool AllAct = getenv("INCURSION_ALL_ACT") &&
+        !strcmp(getenv("INCURSION_ALL_ACT"),"1");
     pp->MyTerm->RefreshMap();
 
     /* inc-o4y1 reproduction only: print ONE message whose format the __XPrint
@@ -595,7 +599,7 @@ Resurrected:
             ASSERT(theGame->inPerceive == 0);
             ASSERT(theGame->inCalcVal == 0);
 
-            if ((!(t->Flags & F_DELETE)) && dist(t->x,t->y,pp->x,pp->y) < MaxDist) {
+            if ((!(t->Flags & F_DELETE)) && (AllAct || dist(t->x,t->y,pp->x,pp->y) < MaxDist)) {
                 if (t->Timeout < 0)
                     continue;
                 if (t->isPlayer()) {
