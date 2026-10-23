@@ -200,6 +200,7 @@ String & Replace(const char* str, const char* find, const char* rep);
 
 String & Capitalize(const char*s, bool all = false);
 int16 RoundsToUnits(int16 rounds);
+int16 ApplyDurationMetamagic(int32 d, uint32 MM, bool mystic);
 String & Left(const char*s, int32 sz);
 String & Right(const char*s, int32 sz);
 String & Trim(const char*s);

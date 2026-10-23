@@ -35,16 +35,34 @@ void MusicAreaProbe(Player *pl) {
     extern void LOFSetForcedSaveThrowRoll(int8 r);
     extern void LOFClearForcedSaveThrowRoll();
 
-    /* The probe borrows Essiah so it measures one fixed condition (NAUSEA on
-       evil targets) whose duration reaches the stati intact and can show
-       10+2*CL. The god is restored at the end. */
-    const rID savedGod = pl->GodID, essiahID = FIND("Essiah");
-    if (!essiahID) {
-        Error("MUSIC_AREA_PROBE: INCONCLUSIVE -- missing Essiah");
+    /* inc-nt3z: INCURSION_MUSIC_AREA_PROBE_GOD names the god whose condition
+       is measured: Essiah (default, NAUSEA), Maeve (CONFUSED), Mara (slow) or
+       fixture (the loaded priest's own god, which takes the plain-stun branch).
+       The god is restored at the end. */
+    const char *mode = getenv("INCURSION_MUSIC_AREA_PROBE_GOD");
+    if (!mode || !*mode) mode = "Essiah";
+    const rID savedGod = pl->GodID;
+    const bool fixtureGod = !strcmp(mode, "fixture");
+    const rID modeGod = fixtureGod ? savedGod : FIND(mode);
+    const rID slowID = FIND("slow");
+    if (!modeGod || !slowID) {
+        Error("MUSIC_AREA_PROBE: INCONCLUSIVE -- missing god %s", mode);
         return;
     }
-    pl->GodID = essiahID;
-    const int16 targ = MA_EVIL, condStati = NAUSEA;
+    pl->GodID = modeGod;
+    const bool slow = !strcmp(mode, "Mara");
+    /* Kobolds are not lawful; Maeve's lawful target is a blue goblin. */
+    const rID tgtID = !strcmp(mode, "Maeve") ? FIND("blue goblin") : koboldID;
+    if (!tgtID) {
+        Error("MUSIC_AREA_PROBE: INCONCLUSIVE -- missing target monster");
+        pl->GodID = savedGod;
+        return;
+    }
+    const int16 targ = !strcmp(mode, "Maeve") ? MA_LAWFUL :
+        fixtureGod ? (pl->isMType(MA_EVIL) ? MA_GOOD : MA_EVIL) : MA_EVIL;
+    const int16 condStati = !strcmp(mode, "Maeve") ? CONFUSED :
+        !strcmp(mode, "Essiah") ? NAUSEA : STUNNED;
+    Error("MUSIC_AREA_PROBE: god=%s", mode);
     /* Straight orthogonal line: squares 1..9 all open floor. */
     static const int16 DX[4] = {1,-1,0,0}, DY[4] = {0,0,1,-1};
     Map *mp = pl->m;
@@ -73,7 +91,7 @@ void MusicAreaProbe(Player *pl) {
     const int dists[4] = {2, 3, 8, 9};
     Monster *t[4];
     for (int i = 0; i < 4; ++i)
-        t[i] = MakeKobold(mp, i == 1 ? koboldID : jackalID, pl, pl->x + DX[dir]*dists[i], pl->y + DY[dir]*dists[i], true);
+        t[i] = MakeKobold(mp, i == 1 ? tgtID : jackalID, pl, pl->x + DX[dir]*dists[i], pl->y + DY[dir]*dists[i], true);
     /* The ally stands off the line, within 8 of the caster. */
     Monster *ally = NULL;
     for (int k = 0; k < 4 && !ally; ++k) {
@@ -95,12 +113,13 @@ void MusicAreaProbe(Player *pl) {
     } else {
         bool pass = true;
         for (int c = 0; c < 2; ++c) {
-            const int choir = c ? 3 : 0;      /* a level-6 bard adds 6/2 */
+            const int choir = c ? 4 : 0;      /* a level-8 bard adds 8/2 */
             if (c)
-                ally->GainPermStati(EXTRA_ABILITY, NULL, SS_PERM, CA_BARDIC_MUSIC, 6, 0);
+                ally->GainPermStati(EXTRA_ABILITY, NULL, SS_PERM, CA_BARDIC_MUSIC, 8, 0);
             for (int i = 0; i < 4; ++i) {
                 t[i]->RemoveStati(PARALYSIS);
-                t[i]->RemoveStati(condStati);
+                if (slow) t[i]->RemoveEffStati(slowID);
+                else t[i]->RemoveStati(condStati);
             }
             EventInfo xe; xe.Clear();
             xe.EActor = pl; xe.ETarget = pl; xe.EVictim = pl;
@@ -108,12 +127,16 @@ void MusicAreaProbe(Player *pl) {
             LOFSetForcedSaveThrowRoll(1);
             ReThrow(EV_EFFECT, xe);
             LOFClearForcedSaveThrowRoll();
-            const int wantCond = 10 + 2*cl + 2*choir;
+            /* 1 round per caster level, the choir in the level, converted
+               once: the sum is even here, so RoundsToUnits is exact. */
+            const int wantCond = (cl + choir) / 2;
+            if ((cl + choir) % 2) { Error("MUSIC_AREA_PROBE: INCONCLUSIVE -- odd caster level"); pass = false; }
             for (int i = 0; i < 4; ++i) {
                 const int para = t[i]->HasStati(PARALYSIS) ? 1 : 0;
                 const int pdur = para ? t[i]->GetStatiDur(PARALYSIS) : 0;
-                const int cond = t[i]->HasStati(condStati) ? 1 : 0;
-                const int cdur = cond ? t[i]->GetStatiDur(condStati) : 0;
+                const int cond = (slow ? t[i]->HasEffStati(ADJUST, slowID) : t[i]->HasStati(condStati)) ? 1 : 0;
+                const int cdur = !cond ? 0 : slow ? t[i]->GetEffStatiDur(ADJUST, slowID) :
+                    t[i]->GetStatiDur(condStati);
                 Error("MUSIC_AREA_PROBE: choir=%d dist=%d para=%d paradur=%d cond=%d conddur=%d loss=%d",
                     choir, dists[i], para, pdur, cond, cdur, (int)(10000 - t[i]->cHP));
                 if (dists[i] == 8) pass = pass && para == 1;

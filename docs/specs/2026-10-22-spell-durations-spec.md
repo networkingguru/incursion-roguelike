@@ -203,7 +203,12 @@ changes its expected condition length to match.
 |---|---|
 | Chill Metal (pspells.irh:2238), Heat Metal (pspells.irh:2293) | 4 units at every caster level, set by the spell's handler. Per-turn damage is unchanged. |
 | Dancing Lights (wspells.irh:1438) | 5 units at every caster level. Its globes (wspells.irh:~1480, 1487) are unchanged. |
-| Vampiric Touch (wspells.irh:5029) | Temporary hit points last 300 units, set by an `EV_CALC_EFFECT` handler; loses `EF_DLONG`. The handler MUST keep Extend and Persistent working, or the report MUST say why not. |
+| Vampiric Touch (wspells.irh:5029) | Unchanged (ruled 2026-10-23, superseding 2026-10-21). The spell grants no temporary hit points; its only duration is the touch charge, which keeps `EF_DLONG`. Its healing MUST NOT change. |
+
+Every duration that a script sets in sections 5a and 5c keeps the same
+metamagic rules as the duration chain in section 2: Anchor and Extend double
+it, Persistent applies only at 10 units or more, and a result above 32767
+becomes -2 (ruled 2026-10-23).
 
 ### 5d. Blasphemy (pspells.irh:6058)
 

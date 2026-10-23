@@ -2743,7 +2743,8 @@ void Monster::PreBuff()
         !(Effs[i].Purpose & EP_PLAYER_ONLY) &&
          ((long)Effs[i].Source <= 1) && 
         (te->HasFlag(EF_DXLONG) || te->HasFlag(EF_PERSISTANT) ||
-          ( te->HasFlag(EF_DLONG) && random(100) < 25)) &&
+          ( (te->HasFlag(EF_DLONG) || te->HasFlag(EF_DHOUR) ||
+             te->HasFlag(EF_D10MIN)) && random(100) < 25)) &&
         (te->PEvent(EV_ISTARGET,this,eID) == SHOULD_CAST_IT) &&
         (!HasEffStati(-1,eID)) ) {
       if (te->HasFlag(EF_DOMAIN) && !te->HasSource(AI_DRUIDIC) &&

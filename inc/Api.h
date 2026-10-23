@@ -1103,6 +1103,10 @@ system int16   RoundsToUnits(int16 rounds);
 /* inc-icp3: refill the shopkeeper's necessities if the game day is later than
    the day of the last refill. Returns true when it refilled. */
 system bool    RestockShopDaily(hObj:T_CREATURE shop);
+
+/* inc-nt3z: Anchor, Mystic Preparation, Persistent and Extend on a base
+   duration in status units, as EffectDuration applies them. */
+system int16   ApplyDurationMetamagic(int32 dur, uint32 mm, bool mystic);
  
  
 /* functions with variable-type parameters handled by macro type-cast */

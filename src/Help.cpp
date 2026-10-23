@@ -5399,6 +5399,10 @@ String & TEffect::Describe(Player *p) {
     else if (HasFlag(EF_DSHORT)) s += ("Short duration. ");
     else if (HasFlag(EF_DLONG)) s += ("Long duration. ");
     else if (HasFlag(EF_DXLONG)) s += ("Extended duration. ");
+    else if (HasFlag(EF_DROUND)) s += ("1 round per level. ");
+    else if (HasFlag(EF_DMIN)) s += ("1 minute per level. ");
+    else if (HasFlag(EF_D10MIN)) s += ("10 minutes per level. ");
+    else if (HasFlag(EF_DHOUR)) s += ("1 hour per level. ");
     else if (HasFlag(EF_PERSISTANT)) s += ("Persistant. ");
     s += ConcentHelpLine(spID);
     if (HasFlag(EF_NO_BONUS_DMG)) s += ("No bonus damage. ");

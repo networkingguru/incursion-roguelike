@@ -3358,7 +3358,11 @@ typedef signed int        hObj;
 /* inc-1qyv: Item::getShopCost returns this effect's first ITEM_COST value in
    gold pieces, with no level formula and no shop markup. */
 #define EF_FIXED_PRICE 109
-#define EF_LAST       110
+#define EF_DROUND     110  /* (casterlevel+1)/2 units, minimum 1 */
+#define EF_DMIN       111  /* 5 * casterlevel units */
+#define EF_D10MIN     112  /* 50 * casterlevel units */
+#define EF_DHOUR      113  /* 300 * casterlevel units */
+#define EF_LAST       114
 
 
 #define EA_BLAST    1      /* xval = DType, pval = Damage */
