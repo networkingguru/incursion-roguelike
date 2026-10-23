@@ -1,0 +1,24 @@
+# Control: non-mindless animal (cave lion), pacified.
+# Read by tools/check_peaceful_mindless.sh (bd inc-nypm). Loads the frozen
+# Wood Elf Druid (already in wizard mode: 'w' opens the menu with no prompt),
+# summons one monster west of the player, optionally pacifies it with Animal
+# Empathy ('u', then 'p' = Pacify), waits three turns, then LOOKs at it. The
+# look line is the observation: "peaceful" alone means it is friendly to the
+# player; "hostile formerly peaceful" means MS_PEACEFUL is set yet the monster
+# still rates the player Enemy (src/Message.cpp:1038, src/Target.cpp:566).
+ENTER
+w
+@choose "Monster Summoning"
+@choose "Cats"
+@choose "cave lion"
+LEFT ENTER
+u
+@choose "Animal Empathy"
+LEFT ENTER
+p
+@dump:after-pacify
+.*3
+l
+LEFT
+@dump:look
+ESC

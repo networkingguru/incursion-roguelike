@@ -63,13 +63,30 @@ _class_line() { # <screen dump>
         -e 'q' "$1" 2>/dev/null
 }
 
+# Searing Light is EF_ATTACK / aval AR_BEAM, so it resolves through
+# Magic::MagicStrike's EF_ATTACK branch and Creature::Strike's own d20 attack
+# roll -- a normal ranged touch attack that misses on a natural 1 and prints no
+# Damage line at all (a miss means e.vDmg stays zero, so Effects.cpp never emits
+# the "Damage:" line this check reads). On the pinned seed that is exactly what
+# happens: "Searing Light: 1d20 (1) ... [miss]". Which face that roll lands on
+# is a property of the shared random stream, so appending any resource to
+# lib/main.irc shifts it and the check goes red for an unrelated change (ruled
+# 2026-10-22: do not re-pin the seed; remove the dependence). Strike() reads
+# LOFForcedRoll (src/Fight.cpp:6020) for e.vRoll, which INCURSION_LOF_FORCE_ROLL
+# seeds once at startup (:358), and Creature::Strike treats a forced natural 20
+# as an automatic hit; forcing 20 therefore makes every cast land, including the
+# control's second, robustness cast. The dice COUNT the check asserts is still
+# read off the game's own Damage line, so the assertion and its meaning are
+# unchanged -- only the to-hit roll is pinned.
+FORCE_ROLL=20
+
 # Run one key script in its own sandbox directory and echo the run directory on
 # success; the harness report goes to the caller's stdout untouched.
 _run_one() { # <keyscript> <tag>
     local keys="$1" tag="$2" out status
     local run="$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$$-$tag"
-    out="$(INCURSION_OPTIONS="$OPTIONS" INCURSION_RUN_DIR="$run" \
-        tools/headless.sh "$keys" "$SEED" 2>&1)"
+    out="$(INCURSION_LOF_FORCE_ROLL="$FORCE_ROLL" INCURSION_OPTIONS="$OPTIONS" \
+        INCURSION_RUN_DIR="$run" tools/headless.sh "$keys" "$SEED" 2>&1)"
     status=$?
     printf '%s\n' "$out"
     if [ "$status" -ne 0 ]; then

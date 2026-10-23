@@ -71,6 +71,10 @@ void Thing::UpdateStati() {
             if (S->Duration <= 0) {
                 if (isPlayer() && S->Nature == BLIND && getenv("INCURSION_LIGHT_TRAP_PROBE"))
                     fprintf(stderr, "LIGHT_TRAP expiry clock=%ld\n", (long)theGame->Turn);
+                /* inc-59lq phase A1: the concentration cap has been reached;
+                   the spell's effects end at once, with no tail. */
+                if (S->Nature == CONCENTRATING && isCreature())
+                    thisc->ConcentrationExpired(S->eID);
                 if (S->Nature == ACTING) {
                     s = *S;
                     if (s.h && oThing(s.h)->isCreature()) 
@@ -86,6 +90,22 @@ void Thing::UpdateStati() {
             }
         }
     StatiIterEnd(this)
+}
+
+/* upstream: a status Duration unit is 60 ticks, two six-second rounds, but
+   rules text and dice give durations in rounds and pass them to
+   GainTempStati as units, so they last twice as long. This converts rounds
+   to units; odd input rounds up with 50% chance so the mean is rounds/2.
+   Non-positive input (-1 permanent, -2 persistent) passes through unchanged.
+   Evidence: Observed, tools/repro_light_trap.sh. Tracking: inc-trfo. Not sent. */
+int16 RoundsToUnits(int16 rounds) {
+    int16 u;
+    if (rounds <= 0)
+        return rounds;
+    u = rounds / 2;
+    if ((rounds & 1) && random(2))
+        u++;
+    return max(1, u);
 }
 
 int32 __max = 0;

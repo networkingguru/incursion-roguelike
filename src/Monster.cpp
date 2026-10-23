@@ -385,6 +385,35 @@ void Monster::ChooseAction()
         }
     StatiIterEnd(this)
 
+  /* inc-59lq phase C: a concentrating monster now has a rule of its own.
+     Placed here, right after the compelled-monster early return and before
+     the hesitation/action-selection below, because it is a forced turn
+     decision (like the compulsion) that must pre-empt any chosen action:
+     while it concentrates the monster may not cast or attack (Creature::Event
+     refuses those), so without this it would just be stuck. If the spell
+     still reaches an enemy and the monster is above half its hit points it
+     keeps concentrating and spends a normal turn waiting (the same
+     Timeout += 15 the idle/NothingToDo path uses, src/Monster.cpp:1196);
+     otherwise it lets the spell go (tail applies) and chooses an action
+     normally on this same turn. */
+  if (HasStati(CONCENTRATING, -1, NULL))
+    {
+      rID cEID = GetStatiEID(CONCENTRATING, -1, NULL);
+      bool affects = cEID && ConcentrationStillAffectsEnemy(cEID);
+      bool keep = affects && (cHP > mHP / 2);
+      if (getenv("INCURSION_CONCENT_PROBE"))
+        Error("CONCENT monster=%s spell=%s decision=%s affects=%d hp=%d/%d",
+            (const char*)Name(0), cEID ? (const char*)NAME(cEID) : "?",
+            keep ? "keep" : "stop", affects ? 1 : 0, (int)cHP, (int)mHP);
+      if (keep)
+        {
+          Timeout += 15;
+          return;
+        }
+      if (cEID)
+        StopConcentration(cEID, true);
+    }
+
   /* inc-p0h1: a hesitation curse loses the action half the time, before
      any decision -- but only ONCE per game tick; see the matching comment
      in Player::ChooseAction (src/Player.cpp) for why the tick is recorded

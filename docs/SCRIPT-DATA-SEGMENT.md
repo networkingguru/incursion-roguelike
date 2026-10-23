@@ -49,8 +49,8 @@ The block has two parts, in this order (Traced):
    global variable is a bare index into it (`MEMORY(pv)` in `VMachine::Value1`,
    `src/VMachine.cpp:347`).
 2. **The per-player resource memory rows** — bytes `[szDataSeg, MDataSegSize)`.
-   `Module::GetMemoryPtr` (`src/Res.cpp:742`) addresses these arithmetically;
-   it starts its offset at `szDataSeg` (`src/Res.cpp:753`, `ptr = szDataSeg`)
+   `Module::GetMemoryPtr` (`src/Res.cpp:754`) addresses these arithmetically;
+   it starts its offset at `szDataSeg` (`src/Res.cpp:765`, `ptr = szDataSeg`)
    and adds `MonMem`/`ItemMem`/`EffMem`/`RegMem` rows keyed by the resource's
    position. Those rows are what the spec's "resource memory segment" section
    replaces with name-keyed records; this note is only about part 1 in front of
@@ -68,7 +68,7 @@ central finding.)
   compiler assigns its two siblings — `szCodeSeg` at `src/RComp.cpp:200` and
   `szTextSeg` at `src/RComp.cpp:449` — but never `szDataSeg`.
 - `Module` is created with `new Module`, and `Object::operator new` zeroes the
-  whole allocation (`inc/Base.h:692`, `memset(vp,0,sz + pad)`). So `szDataSeg`
+  whole allocation (`inc/Base.h:693`, `memset(vp,0,sz + pad)`). So `szDataSeg`
   starts at 0 and, absent any assignment, stays 0 through compile and through
   the serialize at `inc/Res.h:852`.
 - The VM's global-variable machinery does exist: the grammar assigns each

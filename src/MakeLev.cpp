@@ -1025,6 +1025,20 @@ static void EnsureBlobMinimum(Map *m, Rect &r, rID regID) {
     }
 }
 
+static void DryBlobsForProbe(Map *m, Rect &r, rID regID) {
+    /* inc-s1qj: INCURSION_BLOB_MIN_PROBE=dry removes the natural blobs before
+       the top-up, so tools/check_limestone_water.sh measures before=0 on any seed. */
+    const char *mode = getenv("INCURSION_BLOB_MIN_PROBE");
+    rID blob = TREG(regID)->GetConst(BLOB_WITH);
+    if (!mode || strcmp(mode, "dry") || !blob || !TREG(regID)->GetConst(BLOB_MIN))
+        return;
+    for (int y = r.y1; y <= r.y2; ++y)
+        for (int x = r.x1; x <= r.x2; ++x)
+            if (m->InBounds(x, y) && m->RegionAt(x, y) == regID &&
+                m->TerrainAt(x, y) == blob)
+                m->WriteAt(r, x, y, TREG(regID)->Floor, regID, PRIO_ROOM_FURNITURE);
+}
+
 static void ProbeBlobMinimum(Map *m, Rect &r, rID regID, unsigned before) {
     /* inc-nhgh: probe for tools/check_limestone_water.sh. */
     const char *enabled = getenv("INCURSION_BLOB_MIN_PROBE");
@@ -1082,6 +1096,36 @@ void Map::WriteBlobs(Rect &r, rID regID, rID bID) {
                      BlobFloor(this, x, y, regID, bID)))
                     WriteAt(r, x, y, bID, RegionAt(x, y), PRIO_ROOM_FURNITURE);
         }
+}
+
+/* inc-w6t0: the depth CR WriteMap uses for a statue with no type. Con[] is
+   filled only by Generate, so a map loaded from a save reads the dungeon's
+   constants itself; the arithmetic is WriteMap's. */
+rID Map::CorpseMonID() {
+    uint32 initialCR = TDUN(dID)->GetConst(INITIAL_CR), speed = TDUN(dID)->GetConst(DUN_SPEED);
+    return theGame->GetCorpseMonID((int8)AdjustCR((int16)(initialCR + (Depth*speed) / 100 - 1)));
+}
+
+/* inc-w6t0: builds a monster of type mID the way WriteMap's 'm' vault tile
+   does (new Monster, PartyID, GrantGear, EV_BIRTH, a dragon's age template,
+   PlaceAt, Initialize), minus that tile's MS_GUARDING. Returns the monster. */
+Monster* Map::BuildMonster(rID mID, int16 x, int16 y) {
+    uint32 initialCR = TDUN(dID)->GetConst(INITIAL_CR), speed = TDUN(dID)->GetConst(DUN_SPEED);
+    int16 maxlev = AdjustCR((int16)(initialCR + (Depth*speed) / 100 - 1));
+    rID xID;
+    Monster *mn = new Monster(mID);
+    mn->PartyID = MAX_PLAYERS + 10 + random(200);
+    TMON(mID)->GrantGear(mn, mID, true);
+    TMON(mID)->PEvent(EV_BIRTH, mn, mID);
+    if (mn->isMType(MA_DRAGON)) {
+        xID = theGame->GetTempID(TM_AGECAT, mn->mID, (int8)maxlev);
+        if (!xID)
+            xID = FIND("young adult");
+        mn->AddTemplate(xID);
+    }
+    mn->PlaceAt(this, x, y);
+    mn->Initialize();
+    return mn;
 }
 
 void Map::WriteMap(Rect &r, rID regID) {
@@ -1162,9 +1206,7 @@ void Map::WriteMap(Rect &r, rID regID) {
 
                     // ww: don't make corpses for NOCORPSE monsters
                     if ((TITEM(xID)->IType == T_STATUE || TITEM(xID)->IType == T_CORPSE || TITEM(xID)->IType == T_FIGURE) && (t->fl & TILE_RANDOM_EFF)) {
-                        do {
-                            xID2 = theGame->GetMonID(PUR_DUNGEON, 0, (int8)DepthCR, (int8)DepthCR, 0);
-                        } while (TMON(xID2)->HasFlag(M_NO_CORPSE) || TMON(xID2)->isMType(xID2, MA_DRAGON));
+                        xID2 = theGame->GetCorpseMonID((int8)DepthCR);
                     } else if (t->fl & TILE_RANDOM_EFF)
                         xID2 = theGame->GetEffectID(PUR_DUNGEON, (int8)(t->xID2 % 256), (int8)(t->xID2 / 256));
                     else
@@ -3220,6 +3262,7 @@ DoBasicRoom:
 
             if (!anything)
                 FurnishArea(NULL_RECT);
+            DryBlobsForProbe(this, cPanel, regID);
             unsigned blobBefore = TREG(regID)->GetConst(BLOB_MIN) ?
                 BlobCount(this, cPanel, regID, TREG(regID)->GetConst(BLOB_WITH)) : 0;
             EnsureBlobMinimum(this, cPanel, regID);
@@ -3368,11 +3411,7 @@ void Map::FurnishArea(Rect &r) {
           it = Item::Create(furn[i+1]);          \
           if (it->isType(T_CORPSE) ||            \
               it->isType(T_STATUE)) {            \
-            rID cID;                             \
-            do {                                 \
-              cID = theGame->GetMonID(PUR_DUNGEON,0,(int8)DepthCR,(int8)DepthCR,0); \
-            } while (TMON(cID)->HasFlag(M_NO_CORPSE) ||  \
-                     TMON(cID)->isMType(cID,MA_DRAGON)    ); \
+            rID cID = theGame->GetCorpseMonID((int8)DepthCR); \
             ((Corpse*)it)->SetCorpseType(cID);   \
           } else if (it && it->isType(T_CHEST)) { \
             PopulateChest((Container *)it); \

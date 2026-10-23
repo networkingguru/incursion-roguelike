@@ -470,6 +470,18 @@ rID Game::GetItemID(int16 Purpose, int8 minlev, int8 maxlev, int8 IType)
     return Candidates[random(n)];
   }
 
+/* inc-w6t0: the one loop that picks a statue's or corpse's monster type,
+   shared by Map::WriteMap, Map::FurnishArea and Map::CorpseMonID. */
+rID Game::GetCorpseMonID(int8 cr) {
+    rID mID;
+    do {
+        mID = GetMonID(PUR_DUNGEON, 0, cr, cr, 0);
+        if (!mID)
+            return 0; /* no candidate at all: TMON(0) is not a monster */
+    } while (TMON(mID)->HasFlag(M_NO_CORPSE) || TMON(mID)->isMType(mID, MA_DRAGON));
+    return mID;
+}
+
 rID Game::GetMonID(int16 Purpose, int8 minlev, int8 maxlev, int8 Depth, int32 MType) {
     int16 i,q,n,j,k, rarity;
     bool isListing;

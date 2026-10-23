@@ -117,6 +117,8 @@ system void    T_MAP::WriteBlobs(Rect r, rID regID, rID bID);
 system void    T_MAP::Generate(rID dunID, int16 Depth, hObj:T_MAP above, int8 Luck); 
 system void    T_MAP::DrawPanel(uint8 x, uint8 y);
 system void    T_MAP::PopulatePanel(Rect r,uint16 extraFlags=0);
+system rID     T_MAP::CorpseMonID();
+system hObj    T_MAP::BuildMonster(rID mID, int16 x, int16 y);
 system uint16  T_MAP::Tunnel(uint8 sx, uint8 sy, uint8 dx, uint8 dy, uint8 TFlags, Dir StartDir, int8 TType);
 system void    T_MAP::MakeDoor(uint8 x, uint8 y, rID fID);
 system bool    T_MAP::FindOpenAreas(Rect Area, uint16 Flags=0);
@@ -1095,6 +1097,12 @@ system int32  LevelAdjust(int16 val, int16 level, int16 spec = 1);
 system int16  LastSkillCheckResult();
 
 system void    SetPVal(hObj:T_EVENTINFO e, int16 b, int16 n=0, int16 s=0);
+
+system int16   RoundsToUnits(int16 rounds);
+
+/* inc-icp3: refill the shopkeeper's necessities if the game day is later than
+   the day of the last refill. Returns true when it refilled. */
+system bool    RestockShopDaily(hObj:T_CREATURE shop);
  
  
 /* functions with variable-type parameters handled by macro type-cast */

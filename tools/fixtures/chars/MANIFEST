@@ -34,6 +34,7 @@
 # frozen, and a check reads its expectations out of the fixture's own sheet.
 
 circle-stack-adjust-seed20260905-gate  tools/keys/circle-stack-adjust-save.keys   20260905    tools/gates/Options.Dat
+dequ-save-dc-seed5-opt0822             tools/keys/dequ-save-dc-save.keys          5           tools/fixtures/options-2026-08-22.dat
 dequ-save-message-seed5-opt0822        tools/keys/dequ-save-message-save.keys     5           tools/fixtures/options-2026-08-22.dat
 dragonkin-sheet-seed1-opt0818          tools/keys/dragonkin-sheet-save.keys       1           tools/fixtures/options-2026-08-18.dat
 elf-search-seed1-opt0818               tools/keys/elf-search-save.keys            1           tools/fixtures/options-2026-08-18.dat
@@ -70,6 +71,7 @@ prestige-earthsinger-seed3-opt0818     tools/keys/prestige-earthsinger-save.keys
 prestige-earthsinger-seed3-opt0822     tools/keys/prestige-earthsinger-save.keys  3           tools/fixtures/options-2026-08-22.dat
 prestige-geomancy-seed1-opt0822        tools/keys/prestige-geomancy-save.keys     1           tools/fixtures/options-2026-08-22.dat
 skill-by-name-seed1-opt0818            tools/keys/skill-by-name-save.keys         1           tools/fixtures/options-2026-08-18.dat
+quality-item-magic-seed5-opt0822      tools/keys/quality-item-magic-save.keys    5           tools/fixtures/options-2026-08-22.dat
 spook-ally-seed5-opt0822               tools/keys/spook-ally-save.keys            5           tools/fixtures/options-2026-08-22.dat
 spook-mount-seed5-opt0822              tools/keys/spook-mount-save.keys           5           tools/fixtures/options-2026-08-22.dat
 underdark-deepgnome-seed3-opt0818      tools/keys/underdark-deepgnome-save.keys   3           tools/fixtures/options-2026-08-18.dat

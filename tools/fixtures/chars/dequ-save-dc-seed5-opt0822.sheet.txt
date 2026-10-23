@@ -1,0 +1,232 @@
+=== fixture: dequ-save-dc-seed5-opt0822 ===
+
+This file is the audit record for
+  tools/fixtures/chars/dequ-save-dc-seed5-opt0822.sav
+and tools/make_char_fixture.sh writes the whole of it. Do not edit it
+by hand: it would then describe a character the .sav beside it does
+not hold, and that is the one failure tools/check_char_fixture.sh
+exists to catch.
+
+made on          2026-10-23 11:14:03 EDT
+made at commit   ca103944
+                 the working tree was dirty, so this fixture may hold changes that commit does not
+seed             5
+settings         tools/fixtures/options-2026-08-22.dat
+key script       tools/keys/dequ-save-dc-save.keys
+                 copied to tools/fixtures/chars/dequ-save-dc-seed5-opt0822.keys
+saved in game as Hurk.sav
+sha256 .sav      35daebbae5fa98756078a54c175431eee569e678489803afd8c0708387058673
+sha256 module    69197baeca7d9bcc4a5243b0cee507cd808fb8a63d4623f0a4bf899e72c48af1
+                 mod/Incursion.Mod is what the save's rID manifest
+                 was written against. A fixture that stops loading
+                 is worth comparing against the module that made it.
+
+regenerate with
+  tools/make_char_fixture.sh dequ-save-dc-seed5-opt0822 tools/keys/dequ-save-dc-save.keys 5 tools/fixtures/options-2026-08-22.dat --force
+Regenerating gives a BYTE-DIFFERENT .sav holding the SAME character:
+a save carries clocks and counters no second run repeats. Judge a
+regeneration by this sheet, never by the size of the diff.
+
+The character below is the engine's own dump. It was taken by LOADING
+the .sav beside this file and saving it again under
+INCURSION_CHAR_PROBE=1 (Game::SaveGame, src/Registry.cpp:1105-1111).
+A few of its lines belong to that reading session and not to the
+character: the torch's remaining turns, the Level Statistics table
+and the Messages at the end all move by the turns
+tools/keys/load-char-sheet.keys spends. Everything above Inventory is the
+character. For the resource ids behind the item names, which are what
+a module change moves, run:
+  tools/dump_save.sh tools/fixtures/chars/dequ-save-dc-seed5-opt0822.sav
+
+=== the character, as the engine writes him ===
+
+                        Hurk the Anathema, The Ambitious Conqueror (Explore Mode)
+
+Gender Male
+Race   Orc
+Class  Warrior 1
+Faith  Khasrach
+XP     0
+Next @ 1000
+Align  Chaotic Good
+
+
+STR: 20/00 [+5/+4] (base 16, +4 natural)
+DEX: 13/00 [+0/+0] (base 13)
+CON: 15/00 [+2/+2] (base 15)
+INT: 12/00 [+1/+0] (base 14, -2 natural)
+WIS: 15/00 [+2/+2] (base 13, +2 natural)
+CHA:  8/00 [-1/-1] (base 10, -2 natural)
+LUC: 14/00 [+2/+1] (base 14)
+Fortitude   +7(Warrior +2, +2 Con, +3 feat)
+Reflex      +0(Warrior +0)
+Will        +7(Warrior +2, +2 Wis, +3 morale)
+           (+4 vs. confusion)
+Melee   +toHit +6  (Warrior +1, +5 Str, +1 magic, -1 weapon)
+        Damage +7  (base 1d4 / 1d3, +5 Str, +1 magic, +1 weapon)
+        Speed  145%(base 100% +5% Warrior) x 105% magic x 135% weapon
+Size           Human-sized:
+  (base human-sized)
+
+Defense Class  17:
+  (base 10, +7 shield)
+
+Coverage       10:
+  (base 0, +10 armour)
+
+Movement Rate  70%:
+  (base 100%) x 65% armour x 120% skill x 90% shield x 90% encumbrance
+
+Hit Dice Rolls 40:
+   [20 + 1d10 (10) + 2 (CON bonus)] + 25% (Toughness)
+Mana Rolls     18:
+   10 + 1d6 (6) x 1 + 2 (WIS bonus)
+
+Encumbrance    Light:
+   (Light 66.6s, Moderate 200.0s, Heavy 400.0s, Extreme 600.0s, Max Press 800.0s)
+
+Special Abilities:
+  Darkvision (60 ft)
+  Scent (30 ft)
+  Lore of Arms (20 hits)
+  Spell Fury
+
+Feats:
+  Acrobatic
+  Alertness
+  Armour Proficiency: Light
+  Armour Proficiency: Medium
+  Armour Proficiency: Heavy
+  Great Fortitude
+  Shield Proficiency
+  Toughness
+  Weapon Focus
+  Cannibalism
+
+Resistances and Armour:
+  Slashing Damage 13
+  Piercing Damage 9
+  Blunt Damage 11
+
+Proficiencies Simple Weapons, Short Blades, Long Blades, Axes, Archery, Staves, Impact, Thrown, Polearms, Spears, Lances, Daggers, Flexible, Light Weapons, Flails, Light Armour, Medium Armour, Heavy Armour, arbalest (focused) and shotput
+
+Skill Ratings:
+  Appraise         +6  (2 ranks, +2 WIS, +2 train)
+  Athletics        +9  (2 ranks, +4 STR, +3 train)
+  Balance          -12 (0 ranks, -12 armour)
+  Bluff            +2  (1 ranks, -1 CHA, +2 train)
+  Climb            -6  (0 ranks, +4 STR, +2 train, -12 armour)
+  Craft            +2  (0 ranks, +2 train)
+  Diplomacy        +1  (0 ranks, -1 CHA, +2 train)
+  Escape Artist    -12 (0 ranks, -12 armour)
+  Find Weakness    +4  (0 ranks, +2 WIS, +2 train)
+  Healing          +4  (0 ranks, +2 WIS, +2 train)
+  Hide in Shadows  -12 (0 ranks, -12 armour)
+  Intimidate       +7  (0 ranks, +4 STR, +3 train)
+  Intuition        +4  (0 ranks, +2 WIS, +2 train)
+  Jump             -5  (0 ranks, +4 STR, +3 feat, -12 armour)
+  Knowledge (Theology) +6  (0 ranks, +2 WIS, +4 kit)
+  Listen           +5  (0 ranks, +2 WIS, +3 feat)
+  Move Silently    -12 (0 ranks, -12 armour)
+  Pick Pockets     -12 (0 ranks, -12 armour)
+  Ride             +2  (0 ranks, +2 train)
+  Seneschal        +2  (0 ranks, +2 train)
+  Spot             +7  (0 ranks, +2 WIS, +2 train, +3 feat)
+  Swimming         -24 (0 ranks, -24 armour)
+  Tumble           -9  (0 ranks, +3 feat, -12 armour)
+
+Spiritual State:
+__You are devoted to Khasrach.
+__Khasrach is noncommital.
+__Khasrach has not aided you.
+____(Favour 0, Lev 0, Pen 0%)
+__You are decisively Good.
+__You are decisively Chaotic.
+
+CharGen Options and Choices:
+__You are in Explore Mode.
+__Beginner's Kit: ON
+__Initial Rolling Method: 4d6 + Perks
+__Allow Rerolling: YES
+__Use the Subraces: YES
+__Disallow Wizard Mode: NO
+__Maximum Hit Points: YES
+__Maximum Mana: YES
+__Default Character Gender: MALE
+__Monsters Maximum Hit Points: NO
+__Roll Attributes First: NO
+__Gain Attributes With Levels: YES
+__Allow Rapid Intuition: WEAPONS
+__Monsters Use Djikstra: YES
+__Out-Of-Depth Monsters: YES
+__Transgression Hints: YES
+__Difficulty Level: BASELINE
+__Power Stats: EXTREME
+__Elude Death: SEVEN
+__Disable Complicity Transgressions: YES
+__Natural Weapon Speed: ORIGINAL
+
+
+Inventory:
+  orcish kite shield +1
+  orcish dagger +1
+  orcish longspear
+  uncocked flaming orcish arbalest +1
+  peasant garb
+  orcish banded mail of light fortification
+  Holy symbol of Khasrach
+  32 orcish crossbow bolts
+  5 Oils of Transformation
+  4 Antitoxins [+3]
+  3 Potions of See Invisibility
+  6 Potions of Remove Curse
+  medium backpack
+  312 gold pieces
+  9 food rations
+  11 strips of cured meat
+  4 Potions of Cure Disease [0]
+  2 Potions of Detect Stairs
+  2 Potions of Restoration [4d6]
+  3 Potions of Restore Constitution [6d8]
+  2 Potions of Restore Strength [6d8]
+  Wand of Identify (50 charges)
+  orcish knife
+  4 orcish shotputs
+
+On The Ground:
+
+Known Spells:
+
+Journal:
+
+12:00 AM, 1st of Suntide: Entry Chamber, 10' (H:40/40 M:18/18 XP:0) 
+  You arrive at 10' in the The Goblin Caves.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:40/40 M:18/18 XP:0) 
+  OOD monster nixie (CR 3) generated on dlev 1 by Encounter 'tribal warband' and the ENCOUNTER_LIST from 'Flooded Encampment' with the constraint 'Aquatic Creature'. [EN_SINGLE] [EN_AQUATIC]
+
+12:00 AM, 1st of Suntide: Unknown Location (H:40/40 M:18/18 XP:0) 
+  OOD monster elf (CR 3) generated on dlev 1 by Encounter 'adventurer'. [EN_SINGLE]
+
+12:00 AM, 1st of Suntide: Unknown Location (H:40/40 M:18/18 XP:0) 
+  OOD monster elf (CR 3) generated on dlev 1 by Encounter 'adventurer'. [EN_SINGLE]
+
+12:00 AM, 1st of Suntide: Unknown Location (H:15/22 M:12/12 XP:0) 
+  Starting Perks:
+     Save Bonus: +4 vs. Confusion.
+     Bonus Feat: Great Fortitude.
+
+Monsters Encountered:
+  Total: 0
+
+Level Statistics:
+
+Lvl | Act | Key | Turns | Secs |  XP | Explored
+----+-----+-----+-------+------+-----+------------------
+1   |    1|   38|      1|     0|    0| 121 / 5729 = 2%
+
+Messages:
+Welcome back to Incursion, Hurk!
+"Smite now your slave-chains with the primal fire of my wrath!"
+You find nothing of significance.
+Autosave... 

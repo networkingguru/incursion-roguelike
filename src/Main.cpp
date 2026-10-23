@@ -293,6 +293,10 @@ void Game::Play() {
     extern void RangedIllusionProbe(Player *shooter);
     RangedIllusionProbe(pp);
 
+    /* Off unless INCURSION_CONCENT_MONSTER_PROBE is set. inc-59lq. */
+    extern void ConcentMonsterProbe(Player *pl);
+    ConcentMonsterProbe(pp);
+
     /* Off unless INCURSION_SAVECHANCE_PROBE is set, and run here because it
        needs a live player. See SaveChanceProbe (src/Fight.cpp) and
        tools/check_save_chance.sh. inc-o6xj. */
@@ -344,6 +348,10 @@ void Game::Play() {
     extern void TemplatePairProbe(Player *pl);
     TemplatePairProbe(pp);
 
+    /* inc-6qmk: opt-in exact-monster depth oracle; see ExactMonProbe. */
+    extern void ExactMonProbe(Player *pl);
+    ExactMonProbe(pp);
+
     /* inc-e46n: opt-in Seneschal follower-ladder oracle. */
     extern void SeneschalProbe(Player *pl);
     SeneschalProbe(pp);
@@ -371,6 +379,35 @@ void Game::Play() {
        tools/check_weapon_types.sh. inc-f38k. */
     extern void WeaponTypeProbe(Player *p);
     WeaponTypeProbe(pp);
+
+    /* inc-nel5: off unless INCURSION_SHOP_MARKUP_PROBE is set. See
+       ShopMarkupProbe (src/ShopMarkupProbe.cpp), tools/check_shop_markup.sh. */
+    extern void ShopMarkupProbe(Player *p);
+    ShopMarkupProbe(pp);
+
+    /* inc-icp3: opt-in Roark necessities stock reproduction. */
+    extern void RoarkStockProbe(Player *p);
+    RoarkStockProbe(pp);
+
+    /* inc-1qyv: opt-in True Blows reproduction. */
+    extern void TrueBlowsProbe(Player *p);
+    TrueBlowsProbe(pp);
+
+    /* inc-2rws: opt-in Water Walking potion reproduction. */
+    extern void WaterWalkingProbe(Player *p);
+    WaterWalkingProbe(pp);
+
+    /* inc-gzkn: opt-in elemental resistance potion reproduction. */
+    extern void ElementalResistanceProbe(Player *p);
+    ElementalResistanceProbe(pp);
+
+    /* inc-w6t0: opt-in Stone to Flesh reproduction. */
+    extern void StoneToFleshProbe(Player *p);
+    StoneToFleshProbe(pp);
+
+    /* inc-8rrt: opt-in proof the random potion generator makes Stone to Flesh. */
+    extern void StoneToFleshLootProbe(Player *p);
+    StoneToFleshLootProbe(pp);
 
     /* inc-3lsp: off unless INCURSION_ACT_OVERFLOW_PROBE is set. See
        ActOverflowProbe (src/ActOverflowProbe.cpp) and
@@ -447,6 +484,10 @@ void Game::Play() {
        tools/check_mana_regen_floor.sh. inc-41kg. */
     pp->ManaFloorProbe();
 
+    /* Off unless INCURSION_NATHEAL_PROBE is set; needs a live loaded player.
+       See Character::NatHealProbe and tools/check_natural_healing.sh. inc-wrfz. */
+    pp->NatHealProbe();
+
     /* Off unless INCURSION_HUNGER_PROBE is set, and run here because it needs
        a live loaded player. See Character::HungerProbe and
        tools/check_hunger_clock.sh. inc-i9q.2. */
@@ -485,6 +526,10 @@ Resurrected:
     pp->MyTerm->SetMode(MO_PLAY);
     pp->Timeout = 0;
     MaxDist = 30;
+    /* inc-9w9y measurement probe: INCURSION_ALL_ACT=1 lifts the MaxDist
+       distance gate below so every creature acts. Unset = unchanged. */
+    static const bool AllAct = getenv("INCURSION_ALL_ACT") &&
+        !strcmp(getenv("INCURSION_ALL_ACT"),"1");
     pp->MyTerm->RefreshMap();
 
     /* inc-o4y1 reproduction only: print ONE message whose format the __XPrint
@@ -512,6 +557,7 @@ Resurrected:
         * loaded by whatever moved the player.
         */
         PurgeStrings();
+        { extern void StoneToFleshPoll(Player *p); StoneToFleshPoll(pp); } /* inc-w6t0 */
         if (pp->m != mp) {
             /* GameRegistry->UnloadGroup(m[0]); */
             m[0] = pp->m->myHandle;
@@ -553,7 +599,7 @@ Resurrected:
             ASSERT(theGame->inPerceive == 0);
             ASSERT(theGame->inCalcVal == 0);
 
-            if ((!(t->Flags & F_DELETE)) && dist(t->x,t->y,pp->x,pp->y) < MaxDist) {
+            if ((!(t->Flags & F_DELETE)) && (AllAct || dist(t->x,t->y,pp->x,pp->y) < MaxDist)) {
                 if (t->Timeout < 0)
                     continue;
                 if (t->isPlayer()) {

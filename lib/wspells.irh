@@ -1347,53 +1347,20 @@ Wizard / Scroll Spell "Phantasmal Force" : EA_ILLUSION
       or object. The illusion affects only one sense, and is
       therefore automatically disbelieved by any creature with
       tremorsense, sharpened senses, scent or blindsight. An
-      illusion created by this spell winks out of existance
+      illusion created by this spell winks out of existence
       if even one person (other than the caster) disbelieves 
       it.\n
-      __Sustaining a Phantasmal Force requires concentration --
-      the caster suffers a -2 general penalty while the illusion
-      is active, and suffering damage requires a Concentration
-      check (DC 11 + the amount of damage) to avoid the illusion 
-      winking out of existance."; 
+      __Sustaining a Phantasmal Force requires concentration. While
+      concentrating, the caster cannot cast another spell, attack, or use
+      a scroll, wand or staff, but can still move. Taking damage requires
+      a Concentration check (DC 10 + the damage + the spell's level), and
+      a failure ends the illusion at once. The caster can stop
+      concentrating from the Cancel menu, which also ends the illusion."; 
     Flags: EF_DLONG, EF_SHOWNAME;
     On Event PRE(EV_MAGIC_HIT) {
       SetPVal(e,max(1, (EActor->SkillLevel(SK_ILLUSION)/2)));
       return NOTHING;
-      },
-    POST(EV_MAGIC_HIT) {
-      hObj hPhantasm;
-      if (e.eID != $"Phantasmal Force")
-        return NOTHING;
-      if (e.illType != 'c')
-        return NOTHING;
-      hPhantasm = EMap->GetEncounterCreature(0);
-      if (hPhantasm == NULL_OBJ)
-        return NOTHING;
-      if (!hPhantasm->isCreature())
-        return NOTHING;
-      EActor->GainPermStati(ADJUST_CIRC,hPhantasm,SS_MISC,A_AID,-2, $"Phantasmal Force");
-      EActor->GainPermStati(TRAP_EVENT,hPhantasm,SS_MISC,POST(EVICTIM(EV_DAMAGE)),0, $"Phantasmal Force");
-      return NOTHING;
-      },
-    META(POST(EVICTIM(EV_DAMAGE))) {
-      hObj hPhantasm;
-      if (!EVictim->SkillCheck(SK_CONCENT,11 + e.aDmg,true)) {
-          //do {
-            hPhantasm = EVictim->GetEffStatiObj(
-              ADJUST_CIRC,$"Phantasmal Force");
-            if (hPhantasm == NULL_OBJ)
-              return NOTHING;
-            EVictim->IPrint("You lose concentration on the illusionary <hObj>!",
-              hPhantasm);
-            hPhantasm->Remove(true);
-          //  }
-          //while (EVictim->HasEffStati(ADJUST_CIRC,$"Phantasmal Force"));
-        }
-      else
-        EVictim->IPrint("You maintain concentration!");
-      return NOTHING;
-      },
-    MSG_STATINAME "Concentrating" / "Concent";
+      };
     Lists:
       * SPELL_LIST $"magic missile" $"force bolt" $"burning hands"
                    $"ice dagger" $"sandblast" $"sunscorch"
@@ -3018,45 +2985,7 @@ Wizard / Scroll Spell "Improved Phantasmal Force" : EA_ILLUSION
     On Event PRE(EV_MAGIC_HIT) {
       SetPVal(e,max(1, (EActor->SkillLevel(SK_ILLUSION)/2)));
       return NOTHING;
-      },
-    POST(EV_MAGIC_HIT) {
-      hObj hPhantasm;
-      if (e.eID != $"Improved Phantasmal Force")
-        return NOTHING;
-      if (e.illType != 'c')
-        return NOTHING;
-      hPhantasm = EMap->GetEncounterCreature(0);
-      if (hPhantasm == NULL_OBJ)
-        return NOTHING;
-      if (!hPhantasm->isCreature())
-        return NOTHING;
-      
-      EActor->GainPermStati(ADJUST_CIRC,hPhantasm,SS_MISC,
-        A_AID,-2, $"Phantasmal Force");
-      EActor->GainPermStati(TRAP_EVENT,hPhantasm,SS_MISC,
-        POST(EVICTIM(EV_DAMAGE)),0, $"Improved Phantasmal Force");
-      return NOTHING;
-      },
-    META(POST(EVICTIM(EV_DAMAGE))) {
-      hObj hPhantasm;
-      if (!EVictim->SkillCheck(SK_CONCENT,11 + e.aDmg,true))
-        {
-          //do {
-            hPhantasm = EVictim->GetEffStatiObj(
-              ADJUST_CIRC,$"Improved Phantasmal Force");
-            if (hPhantasm == NULL_OBJ)
-              return NOTHING;
-            EVictim->IPrint("You lose concentration on the illusionary <hObj>!",
-              hPhantasm);
-            hPhantasm->Remove(true);
-          //  }
-          //while (EVictim->HasEffStati(ADJUST_CIRC,$"Improved Phantasmal Force"));
-        }
-      else
-        EVictim->IPrint("You maintain concentration!");
-      return NOTHING;
-      },
-    MSG_STATINAME "Concentrating" / "Concent";
+      };
     Lists:
       * SPELL_LIST $"magic missile" $"force bolt" $"burning hands"
                    $"ice dagger" $"sandblast" $"sunscorch"
@@ -9103,6 +9032,7 @@ Wizard Spell "Mirage Arcana" : EA_GENERIC
         }
       
       ch = EActor->ChoicePrompt("Floor, Magma, Chasm, Slime, Pool or Webbing?","fmcspw", 'm', BLUE, AZURE);
+      e.vDuration = 300 * e.vCasterLev;
       EActor->GainTempStati(EFF_FLAG1,NULL,e.vDuration,SS_ENCH,ch,e.saveDC,$"Mirage Arcana");
       return NOTHING;
       },

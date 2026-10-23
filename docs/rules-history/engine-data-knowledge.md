@@ -47,3 +47,7 @@ DRIFT RULES: refuse only on positive evidence of movement. A SLIDE (a run of 2+ 
 WHY THE ENGINE IS NOT TOUCHED: Module::__GetResource (src/Res.cpp:102-215) decodes an rID by subtract-and-walk across 21 arrays, so appending one Effect shifts every later array's ids. Re-slicing inside the engine costs ~70 sites across 11 files; Brian rejected that blast radius. The save layer converts instead.
 
 See [[save-schema-order-ledger-design]] for the build-time half.
+
+## nothing-is-sellable-except-gems
+
+2026-10-21, during the Multitude design (inc-pu6v.17, Mammon hole A 3.4). The session raised the risk that a dead retainer's gear could be sold for gold. Brian, verbatim: "Nothing is sellable in this game except gems; write this down somewhere very durable so you fucking quit bringing this up." Earlier sessions had raised resale as a risk too. Bead inc-vpf9.

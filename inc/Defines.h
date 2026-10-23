@@ -1511,6 +1511,7 @@ typedef signed int        hObj;
 #define ECON_ARMOUR     5 /* heavy armour pulse */
 #define ECON_FATIGUE   6 /* spending fatigue up to 0 */
 #define ECON_ESSIAH    7
+#define ECON_HEAL      8 /* natural waking healing */
 
 #define EINT_CASTING   1
 #define EINT_IDENT     2
@@ -3204,7 +3205,14 @@ typedef signed int        hObj;
 #define LOOT_CLAIMS       241
 #define LOOT_THIEF        242
 #define SENESCHAL_TALLY   243
-#define LAST_STATI        244
+/* inc-icp3: Mag holds the game day (turn / (24*HOUR_TURNS)) a shop last
+   refilled its necessities. */
+#define RESTOCK_DAY       245
+/* inc-59lq phase A1: the caster is concentrating on a maintained spell. Its
+   eID is the spell, Val the tail units to apply if concentration is stopped
+   early, and Duration the cap. */
+#define CONCENTRATING     247
+#define LAST_STATI        248
   
 
 
@@ -3347,7 +3355,10 @@ typedef signed int        hObj;
    of Death, has 9; if a second HD-pool spell needs a different cap, promote
    this to an effect field rather than growing the constant. inc-kgzx. */
 #define EF_HD_POOL_CAP 9
-#define EF_LAST       109
+/* inc-1qyv: Item::getShopCost returns this effect's first ITEM_COST value in
+   gold pieces, with no level formula and no shop markup. */
+#define EF_FIXED_PRICE 109
+#define EF_LAST       110
 
 
 #define EA_BLAST    1      /* xval = DType, pval = Damage */
@@ -3660,6 +3671,7 @@ typedef signed int        hObj;
 #define ALLOWED_GODS          33
 #define TEXT_LIST             34
 #define SPECIALTY_SPELLS      35 /* two spells per specialist school, school order 0-8 */
+#define NECESSITIES           36 /* Roark: rows of item, effect (0 for none), tier size; inc-icp3 */
 
 #define GROUP_LEADER          100
 #define GROUP_FOLLOWER        101

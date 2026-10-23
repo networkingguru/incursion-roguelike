@@ -247,6 +247,8 @@ Feature "cave entrance" : T_PORTAL
               case 's':
                 if (hRoark == NULL_OBJ) 
                   hRoark = InitShopkeeper($"Roark Ironbeard",100000);
+                else
+                  RestockShopDaily(hRoark);
                   
                 Throw(EV_BARTER,EActor,hRoark);
                break;
@@ -306,12 +308,8 @@ Monster "Roark Ironbeard" : MA_DWARF, MA_ADVENTURER
     Feats: FT_SKILL_FOCUS, SK_DIPLOMACY, SK_SPOT, SK_INTUITION,
       SK_LISTEN, SK_APPRAISE;
     Gear:
-      5d10 $"potion" of $"mana",
-      2d6  $"potion" of $"see invisibility;potion",
-      5d10 $"potion" of $"dimension door",
       3d10 $"potion" of $"light;potion",
       50% 1d8 $"potion" of $"faerie;potion",
-      20d20 $"hemp rope",
       50% 5d20 $"silk rope",
       2d4  $"spellbook [Adventurers' Arts]",
       1d4  $"spellbook [Fundamentals of Magick]",
@@ -384,28 +382,48 @@ Monster "Roark Ironbeard" : MA_DWARF, MA_ADVENTURER
       50% random T_BOOK,
       50% random T_BOOK,
       50% random T_BOOK,
-      3d10 $"potion" of $"remove curse;potion",
-	    2d10 $"potion" of $"cure disease",
-	    50% 2d4 $"potion" of $"antitoxin",
-	    50% 1d4 $"potion" of $"restore strength",
-      50% 1d4 $"potion" of $"restore dexterity",
-      50% 1d4 $"potion" of $"restore constitution",
-      50% 1d4 $"potion" of $"restore intelligence",
-      50% 1d4 $"potion" of $"restore wisdom",
-      50% 1d4 $"potion" of $"restore charisma",
-      50% 1d4 $"potion" of $"restore luck",
-      1d2+1 $"potion" of $"restoration",
       1d2+1 $"potion" of $"detect stairs",
       1d3 $"wand" of $"identify;wand",
-      50% $"climbing rig",
-      66% $"alchemy set",
       50% $"viewing lens",
-      50% $"healing kit",
-      1d2 $"craftsman's tools",
-      50% $"mechanical tools",
-      30% $"disguise kit", 
-      75% 1d2 $"pickaxe",
-      3d10 $"food ration";
+      30% $"disguise kit";
+    /* inc-icp3: the necessities. Each row is item, effect (0 for none), tier
+       size. RestockShop (src/Social.cpp) stocks every row to its tier size when
+       the shop is built, and tops it up once per game day. */
+    Lists:
+      * NECESSITIES
+          $"healing kit" 0 1
+          $"climbing rig" 0 1
+          $"mechanical tools" 0 1
+          $"alchemy set" 0 1
+          $"pickaxe" 0 6
+          $"craftsman's tools" 0 1
+          $"brass lantern" 0 1
+          $"potion" $"restoration" 3
+          $"potion" $"see invisibility;potion" 3
+          $"potion" $"stone to flesh" 3
+          $"potion" $"restore strength" 6
+          $"potion" $"restore dexterity" 6
+          $"potion" $"restore constitution" 6
+          $"potion" $"restore intelligence" 6
+          $"potion" $"restore wisdom" 6
+          $"potion" $"restore charisma" 6
+          $"potion" $"restore luck" 6
+          $"potion" $"cure disease" 6
+          $"potion" $"antitoxin" 6
+          $"potion" $"remove curse;potion" 6
+          $"potion" $"elemental resistance" 6
+          $"potion" $"water walking;potion" 6
+          $"potion" $"valour;potion" 6
+          $"potion" $"dimension door" 6
+          $"potion" $"flask of oil" 6
+          $"scroll" $"identify;scroll" 12
+          $"scroll" $"dispel magic" 3
+          $"scroll" $"transmute rock to mud" 6
+          $"potion" $"mana" 12
+          $"food ration" 0 12
+          $"torch" 0 12
+          $"potion" $"true blows" 12
+          $"hemp rope" 0 20;
     On Event MSG_SHOPNAME
       "Roark Ironbeard's All-Purpose Adventurers' Store",
     EVICTIM(EV_WILLBUY) {

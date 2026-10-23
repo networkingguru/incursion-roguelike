@@ -832,13 +832,19 @@ EvReturn Creature::Event(EventInfo &e) {
             return OfferTerms(e);
         return NOTHING;    
     case EV_CAST:
-        if (e.EActor==this)
+        if (e.EActor==this) {
+            if (ConcentrationBlocks("cast"))
+                return ABORT;
             return Cast(e);
+        }
         else
             return NOTHING;
     case EV_INVOKE:
-        if (e.EActor==this)
+        if (e.EActor==this) {
+            if (ConcentrationBlocks("invoke"))
+                return ABORT;
             return Invoke(e);
+        }
         else
             return NOTHING;
     case EV_DISGUISE:
@@ -883,18 +889,27 @@ EvReturn Creature::Event(EventInfo &e) {
         return MagicEvent(e);
     case EV_NATTACK:
         //EVerify(T_CREATURE, T_CREATURE, 0, 0);
-        if(e.EActor==this)
+        if(e.EActor==this) {
+            if (ConcentrationBlocks("attack"))
+                return ABORT;
             return NAttack(e);
+        }
         break;
     case EV_WATTACK:
         //EVerify(T_CREATURE, T_CREATURE, 0, 0);
-        if(e.EActor==this)
+        if(e.EActor==this) {
+            if (ConcentrationBlocks("attack"))
+                return ABORT;
             return WAttack(e);
+        }
         break;
     case EV_RATTACK:
         //EVerify(T_CREATURE, 0, T_ITEM, T_ITEM);
-        if(e.EActor==this)
+        if(e.EActor==this) {
+            if (ConcentrationBlocks("attack"))
+                return ABORT;
             return RAttack(e);
+        }
         break;
     case EV_LOADXBOW:
         //EVerify(T_CREATURE,0,T_ITEM,0);
@@ -903,13 +918,19 @@ EvReturn Creature::Event(EventInfo &e) {
         break;
     case EV_SATTACK:
         //EVerify(T_CREATURE, 0, T_ITEM, T_ITEM);
-        if(e.EActor==this)
+        if(e.EActor==this) {
+            if (ConcentrationBlocks("attack"))
+                return ABORT;
             return SAttack(e);
+        }
         break;
     case EV_OATTACK:
         EVerify(T_CREATURE, T_CREATURE, 0, 0);
-        if(e.EActor==this)
+        if(e.EActor==this) {
+            if (ConcentrationBlocks("attack"))
+                return ABORT;
             return OAttack(e);
+        }
         break;
     case PRE(EV_STRIKE):
         EVerify(T_CREATURE, 0, 0, 0);
@@ -988,6 +1009,12 @@ EvReturn Creature::Event(EventInfo &e) {
     case POST(EV_DAMAGE):
         if (isPlayer() && theGame->InPlay())
             thisp->ShowStats();
+        /* inc-59lq phase A2 Part 2: damage taken forces a Concentration check.
+           Hooking POST(EV_DAMAGE) rolls once per wound even for a converted
+           damage type, whose inner EV_DAMAGE runs this step and whose outer
+           event then skips it (inc-e5ke). */
+        if (e.EVictim == this)
+            ConcentrationDamageCheck(e.aDmg);
         if (e.DType == AD_SLEE)
             break; 
         // fall through
@@ -1933,6 +1960,37 @@ NoIntervention:;
                     this, cHP == (mHP + Attr[A_THP]) ?
                     " fully" : "");
                 hungerHealed = true;
+            }
+        }
+    }
+
+    /* rules: waking natural healing, 1/16 of the full-rest amount per game
+       hour, no message, not during a rest (Rest jumps Turn without DoTurn).
+       The hour's total is exact: floor(X*(k+1)/D)-floor(X*k/D) over the 300
+       EV_TURN steps k of an hour, k read from the clock, so no saved state.
+       A Character trains CON per HP healed. bd inc-wrfz, ruling inc-g69h
+       row 2. Tier Observed (tools/check_natural_healing.sh), not upstream. */
+    if (!isMType(MA_UNDEAD) && !isMType(MA_CONSTRUCT) && !isDead() &&
+            cHP < mHP + Attr[A_THP]) {
+        bool one_body = (HasFeat(FT_ONE_BODY_ONE_SOUL) || Attr[A_CON] == 0);
+        int16 a_hp = (one_body && Mod(A_WIS) > Mod(A_CON)) ? A_WIS : A_CON;
+        int32 X = (ChallengeRating() + 3) * Attr[a_hp] * 5;
+        if (HasSkill(SK_HEAL, true)) {
+            Creature *healer = MostSkilledAlly(SK_HEAL);
+            if (healer)
+                X += healer->SkillLevel(SK_HEAL) * Attr[a_hp] * 8;
+        }
+        if (X > 0) {
+            const int32 steps = HOUR_TURNS / 60;
+            const int32 D = 640 * steps;
+            int32 k = (int32)((theGame->Turn % HOUR_TURNS) / 60);
+            int32 heal = (int32)(((long long)X * (k + 1)) / D - ((long long)X * k) / D);
+            heal = min(heal, (int32)(mHP + Attr[A_THP] - cHP));
+            if (heal > 0) {
+                cHP += heal;
+                if (isCharacter())
+                    for (int32 n = 0; n < heal; n++)
+                        Exercise(A_CON, 1, ECON_HEAL, 100);
             }
         }
     }

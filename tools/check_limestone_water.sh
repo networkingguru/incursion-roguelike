@@ -1,8 +1,17 @@
 #!/bin/bash
 # gate: live
 # inc-nhgh: fresh maps, since saved characters also pin their dungeon.
-# Seed 52 includes a naturally dry panel (before=0); wet-only samples are UNMEASURED.
+# inc-s1qj: natural seeds may roll only wet panels, so one extra run sets
+# INCURSION_BLOB_MIN_PROBE=dry (natural water removed before the top-up) and always measures before=0.
 # Override LIMESTONE_SEEDS to widen the deterministic dive sample.
+#
+# This check tests level generation, so it cannot fix the world: it asserts an
+# invariant that must hold on every seed (a Limestone Cave panel never ends below
+# its minimum water count), and it exits 2 when no panel needed the top-up.
+# fact: the rolled character survives the dive -- wizard Cheat Death on (tools/keys/limestone-water.keys)
+# fact: nothing attacks him on the way -- wizard Freeze Monsters on
+# fact: the levels -- NOT fixed, they are what is measured (an invariant, not a pinned map)
+# fact: the character -- NOT loaded: a saved character pins the dungeon (inc-nhgh)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -22,6 +31,15 @@ for seed in ${LIMESTONE_SEEDS:-7 1 2 52}; do
         run_failed=1
     fi
 done
+run="$RUN_ROOT/seed-dry"
+rc=0
+INCURSION_BLOB_MIN_PROBE=dry INCURSION_RUN_DIR="$run" \
+    INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+    tools/headless.sh tools/keys/limestone-water.keys "${LIMESTONE_DRY_SEED:-7}" > "$RUN_ROOT/seed-dry.log" 2>&1 || rc=$?
+if [ "$rc" -ne 0 ] && [ "$rc" -ne 7 ]; then
+    echo "UNMEASURED: dry run harness exit $rc"
+    run_failed=1
+fi
 python3 - "$RUN_ROOT" "$run_failed" <<'PY'
 import pathlib, re, sys
 root = pathlib.Path(sys.argv[1])

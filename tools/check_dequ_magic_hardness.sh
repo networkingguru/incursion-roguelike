@@ -60,9 +60,28 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-# inc-2ok4: a bare A_DEQU attack now allows a Reflex save (DequSaveDC, 11 + CR/3).
-# This check is about hardness, not the save, so it forces every d20 to 1 (a
-# natural 1 always fails) and the blob's retaliation lands on every blow as before.
+# fact: character (orc warrior) -- fixture quality-item-magic-seed5-opt0822, INCURSION_LOAD
+# fact: the blobs and the swords -- wizard Monster Summoning and Item Acquisition
+# fact: Freeze Monsters on -- wizard Wizard Mode Switches (tools/keys/dequ-setup-loaded.keys)
+# fact: every blow hits the blob -- INCURSION_LOF_FORCE_ROLL=18
+# fact: the blob's Reflex save fails -- INCURSION_FORCE_SAVE_ROLL=1
+# fact: no blow kills its blob -- INCURSION_FORCE_DAMAGE_ROLL=1 and the fixture's
+#       Monsters Maximum Hit Points = DOUBLE
+# fact: the acid damage to the plain sword -- INCURSION_FORCE_DAMAGE_ROLL=1
+# fact: the message text -- check_screens/check_expect match fixed literals
+#
+# Diagnosed 2026-10-23 from the seed sweep (Observed): seed 101 rolled 2d4 = 7+4+5
+# = 16 acid against the sword's 15 hit points, so the third blow destroyed it
+# ("melts away") and no "Melted" page existed; seed 303 killed every blob
+# ("killing the acid blob. Acid splashes you!"), so the acid never aimed at the
+# Holy Avenger. Forced damage 1 makes the acid 2d4 = 2 a blow: three blows leave
+# the plain sword at 9 of 15 ("Partly Melted"), never destroyed, and the blob
+# keeps its hit points. The A_DEQU bypass of hardness does not depend on the
+# amount, only that it is above 0.
+export INCURSION_LOAD=tools/fixtures/chars/quality-item-magic-seed5-opt0822.sav
+export INCURSION_FORCE_DAMAGE_ROLL=1
+export INCURSION_LOF_FORCE_ROLL=18
+# inc-2ok4: a bare A_DEQU attack allows a Reflex save; force every d20 to 1.
 export INCURSION_FORCE_SAVE_ROLL=1
 
 check_mutation src/Fight.cpp \

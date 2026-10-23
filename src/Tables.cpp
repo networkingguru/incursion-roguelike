@@ -525,6 +525,7 @@ TextVal StatiLineStats[] = {
   { ANC_MEM, "<10>Trance<7> " },
   { FLAWLESS_DODGE, "<10>Dodge<7> "},
   { FLURRYING, "<11>Flurry<7> "},
+  { CONCENTRATING, "<12>Concentrating<7> "},
   { 0, NULL } };
 
 TextVal StatiLineShorts[] = {
@@ -560,6 +561,7 @@ TextVal StatiLineShorts[] = {
   { ANC_MEM, "<10>Tran<7> " },
   { FLAWLESS_DODGE, "<10>Dg<7>"},
   { FLURRYING, "<11>Fy<7> "},
+  { CONCENTRATING, "<12>Conc<7> "},
   { 0, NULL } };
 
 
@@ -5283,6 +5285,8 @@ TextVal STATI_CONSTNAMES[] = {
   { LOOT_CLAIMS, "LOOT_CLAIMS" },
   { LOOT_THIEF, "LOOT_THIEF" },
   { SENESCHAL_TALLY, "SENESCHAL_TALLY" },
+  { RESTOCK_DAY, "RESTOCK_DAY" },
+  { CONCENTRATING, "CONCENTRATING" },
   { LAST_STATI, "LAST_STATI" },
 
   { 0, NULL } };

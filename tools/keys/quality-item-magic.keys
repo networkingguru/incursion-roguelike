@@ -11,7 +11,7 @@
 # passes e2.ignoreHardness = !isMagic() for a blob's A_DEQU acid, so a
 # "magical" sword keeps its hardness and a "mundane" one is melted.
 
-@include dequ-setup.keys
+@include dequ-setup-loaded.keys
 
 w
 @choose "Item Acquisition"

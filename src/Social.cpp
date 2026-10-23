@@ -2022,11 +2022,18 @@ GiveStacks:
     }
 }
   
+int32 ShopIndexOverride = -999;
+
 int32 Item::getShopCost(Creature *Buyer, Creature *Seller) {
     double cost;
     int16 i;
     bool plusPriced;
     int32 priceList[10];
+
+    /* inc-1qyv: a fixed-price effect costs its first ITEM_COST in gp, everywhere. */
+    if (eID && TEFF(eID)->HasFlag(EF_FIXED_PRICE) &&
+        TEFF(eID)->GetList(ITEM_COST, (rID*)priceList, 10))
+        return priceList[0] * Quantity;
 
     plusPriced = false;
     cost = TITEM(iID)->Cost;
@@ -2083,30 +2090,31 @@ int32 Item::getShopCost(Creature *Buyer, Creature *Seller) {
     if (!Seller || !Buyer)
         return (int32)cost;
 
+    /* inc-nel5: Roark's markup runs from x3 at -10 to x1.1 at +30 (hundredths). */
     double ShopPrices[] = {
         /* -10 to -6*/
-        5000, 4750, 4500, 4250, 4000,
+        300, 290, 280, 270, 260,
 
         /* -5 to -1*/
-        3750, 3500, 3250, 3000, 2750,
+        250, 240, 230, 220, 210,
 
         /* 0 to +4 */
-        2500, 2250, 2000, 1500, 1000,
+        200, 195, 190, 185, 180,
 
         /* +5 to +9 */
-        900, 800, 700, 600, 500,
+        175, 170, 165, 160, 155,
 
         /* +10 to +14 */
-        450, 400, 350, 300, 250,
+        150, 147.5, 145, 142.5, 140,
 
         /* +15 to +19 */
-        225, 200, 190, 180, 170,
+        137.5, 135, 132.5, 130, 127.5,
 
         /* +20 to +24 */
-        160, 155, 150, 145, 140,
+        125, 123.5, 122, 120.5, 119,
 
         /* +25 to +30 */
-        135, 130, 125, 123, 122, 120 };
+        117.5, 116, 114.5, 113, 111.5, 110 };
     double BarterPrices[] = {
         /* -10 to -6 */
         500, 450, 400, 350, 300,
@@ -2139,6 +2147,7 @@ int32 Item::getShopCost(Creature *Buyer, Creature *Seller) {
     index += Buyer->getSocialMod(Seller, false);
     index = max(index, -10);
     index = min(index, +30);
+    if (ShopIndexOverride != -999) index = ShopIndexOverride; /* inc-nel5 probe hook */
 
     if (Seller->HasMFlag(M_SELLER))
         cost *= ShopPrices[index + 10];
@@ -2154,11 +2163,70 @@ int32 Item::getShopCost(Creature *Buyer, Creature *Seller) {
     return (int32)cost;
 }
   
+/* inc-icp3: the shop's necessities. Each row of the shopkeeper's NECESSITIES
+   list is item, effect (0 for none), tier size. A row short of its tier size
+   is topped up to it; a row at or above it is left alone. Returns the number
+   of units added. */
+int RestockShop(Creature *shop) {
+    rID list[256];
+    int added = 0;
+    if (!TMON(shop->mID)->GetList(NECESSITIES, list, 256))
+        return 0;
+    for (int i = 0; i + 2 < 253 && list[i]; i += 3) {
+        rID iID = list[i], eID = list[i + 1];
+        int32 tier = (int32)list[i + 2], have = 0;
+        Item *stack = NULL, *it;
+        for (it = shop->FirstInv(); it; it = shop->NextInv())
+            if (it->iID == iID && it->eID == eID) {
+                have += (int32)it->GetQuantity();
+                if (!stack)
+                    stack = it;
+            }
+        if (have >= tier)
+            continue;
+        if (stack) {
+            stack->SetQuantity(stack->GetQuantity() + (tier - have));
+        } else {
+            it = Item::Create(iID);
+            if (!it)
+                continue;
+            it->MakeMagical(eID, it->GetInherentPlus());
+            it->SetQuantity(tier - have);
+            it->IFlags &= (IF_CURSED | IF_BLESSED);
+            shop->GainItem(it, true);
+        }
+        added += (int)(tier - have);
+    }
+    return added;
+}
+
+/* inc-icp3: the cave entrance calls this each time the player opens the store.
+   It refills only when the game day is later than the day of the last refill,
+   which RESTOCK_DAY (Mag) keeps on the shopkeeper so a save carries it.
+   ponytail: Mag is an int16, so the day count stops at 32767 (about 90 game
+   years); upgrade path is storing the day in Val and Mag together. */
+bool RestockShopDaily(Creature *shop) {
+    if (!shop)
+        return false;
+    uint32 d = theGame->GetTurn() / (24 * HOUR_TURNS);
+    int16 day = (int16)(d > 32767 ? 32767 : d);
+    Status *st = shop->GetStati(RESTOCK_DAY);
+    if (st && day <= st->Mag)
+        return false;
+    RestockShop(shop);
+    if (st)
+        st->Mag = day;
+    else
+        shop->GainPermStati(RESTOCK_DAY, NULL, SS_MISC, 0, day);
+    return true;
+}
+
 Creature * InitShopkeeper(rID mID, int32 gold) {
     Creature *cr; Item *gp, *it;
     cr = new Monster(mID);
     cr->CalcValues();
     TMON(mID)->GrantGear(cr, mID, true);
+    RestockShop(cr);
     gp = Item::Create(FIND("gold piece"));
     gp->SetQuantity(gold);
     cr->GainItem(gp, true);
@@ -2167,6 +2235,7 @@ Creature * InitShopkeeper(rID mID, int32 gold) {
         if (it->eID && TEFF(it->eID)->HasFlag(EF_CURSED))
             it->Remove(true);
     }
+    RestockShopDaily(cr);
     return cr;
 }
   

@@ -640,6 +640,16 @@ class Creature: public Thing, public Magic
       virtual EvReturn Taunt(EventInfo &e);     
       virtual EvReturn Cast(EventInfo &e);
       virtual EvReturn Invoke(EventInfo &e);
+      /* inc-59lq phase A1: concentration core (src/Concentration.cpp). */
+      void StartConcentration(EventInfo &e);
+      void StopConcentration(rID eID, bool applyTail);
+      void ConcentrationEndEffects(rID eID, int16 tail);
+      void ConcentrationExpired(rID eID);
+      /* inc-59lq phase A2 */
+      bool ConcentrationBlocks(const char *kind);
+      void ConcentrationDamageCheck(int16 dmg);
+      /* inc-59lq phase C: does spell S still reach an enemy? */
+      bool ConcentrationStillAffectsEnemy(rID eID);
       virtual EvReturn Counterspell (EventInfo &e, Counterspeller *cs);
  			virtual EvReturn Hide(EventInfo &e);
       virtual EvReturn Turn(EventInfo &e);
@@ -917,6 +927,10 @@ class Character: public Creature
          gate. Off unless INCURSION_MANA_FLOOR_PROBE is set. Driven by
          tools/check_mana_regen_floor.sh. inc-41kg. */
       void ManaFloorProbe();
+      /* Self-check for waking natural healing in DoTurn. Off unless
+         INCURSION_NATHEAL_PROBE is set. Driven by
+         tools/check_natural_healing.sh. inc-wrfz. */
+      void NatHealProbe();
       /* Self-check for the per-turn hunger clock. Off unless
          INCURSION_HUNGER_PROBE is set. Driven by tools/check_hunger_clock.sh.
          inc-i9q.2. */
@@ -1826,3 +1840,8 @@ class Monster: public Creature
       FIELD_ARRAY(643, Recent, sizeof(uint8), 6);
     END_ARCHIVE
 	};
+
+/* inc-59lq phase D: the concentration help line for a spell, or "" when the
+   spell is not in the concentration table. Implemented in
+   src/Concentration.cpp. */
+String ConcentHelpLine(rID eID);

@@ -1,0 +1,10 @@
+# inc-59lq: clear the arrival prompt and wait one turn (a run with no game time
+# is reported as NO GAMEPLAY). The monsters this check
+# watches are placed, and each one's ChooseAction run, by ConcentMonsterProbe
+# (src/ConcentMonsterProbe.cpp) before the first key is read. Read by
+# tools/check_concentration.sh.
+SPACE SPACE
+@dump:arrival
+.
+@while "more --" SPACE
+@dump:waited

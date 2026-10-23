@@ -159,7 +159,7 @@ judge() {
         echo "INCONCLUSIVE: no 'result: ... moved=1' line, so Elude Death never moved him."
         echo "specimen: $log"; INCONCLUSIVE=1; return
     fi
-    if ! grep -qlF 'The world shifts!' "$CHECK_RUN"/logs/screens/*.txt 2>/dev/null; then
+    if ! screen_shows 'The world shifts!' "$CHECK_RUN"/logs/screens/*.txt; then
         echo "INCONCLUSIVE: no screen dump shows 'The world shifts!'."
         echo "specimen: $CHECK_RUN"; INCONCLUSIVE=1; return
     fi
@@ -213,11 +213,20 @@ judge() {
     echo "specimen: $log"
 }
 
+# fact: character (orc warrior) -- fixture dequ-save-message-seed5-opt0822, INCURSION_LOAD
+# fact: the monster beside the player, and his hit points -- wizard Monster Summoning; INCURSION_ELUDE_PROBE sets hp
+# fact: Freeze Monsters on -- wizard Wizard Mode Switches (tools/keys/dequ-setup-loaded.keys)
+# fact: every natural attack hits -- INCURSION_LOF_FORCE_ROLL=18 (natural attacks threaten on 20, so 18 never threatens a critical)
+# fact: case (b) a claw leaves him alive, the rider kills -- INCURSION_FORCE_DAMAGE_ROLL=99 (claw 1d4 -> 4, rider 2d6 -> 12) with hp 5
+export INCURSION_LOAD=tools/fixtures/chars/dequ-save-message-seed5-opt0822.sav
+export INCURSION_LOF_FORCE_ROLL=18
+
 export INCURSION_ELUDE_PROBE="giant soldier ant:1"
 check_run tools/keys/elude-death-main.keys 5
 judge a main
 
 export INCURSION_ELUDE_PROBE="burning ghast:5"
+export INCURSION_FORCE_DAMAGE_ROLL=99
 check_run tools/keys/elude-death-rider.keys 5
 judge b rider
 

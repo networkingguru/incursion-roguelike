@@ -4108,6 +4108,13 @@ void BestowProbe(Player *caster) {
         const int runs = 200;
         const int stdCost = 3000 / max((100 + c->Attr[A_SPD_MELEE]*5),10);
         int observedLossCost = -1, extraCalls = 0, extraRolls = 0;
+        /* The probe freezes time, so timed stati never expire (inc-rgqd):
+           clear the states PreStrike (src/Fight.cpp:5999) turns into a
+           HIT_WHILE_UNREADY stati, or 200 attacks overflow the array. */
+        c->RemoveStati(STUCK);
+        c->RemoveStati(PRONE);
+        c->RemoveStati(BLIND);
+        c->RemoveStati(PARALYSIS);
         for (int i = 0; i < runs; ++i) {
             /* inc-w3xn: in the monster case the live caster is the kobold's
                attack target, and its own attacks can drop a level-1 character
@@ -4140,6 +4147,11 @@ void BestowProbe(Player *caster) {
                 if (bestowRollCount > rollsBefore2)
                     extraRolls++;
             }
+            /* The probe freezes time, so timed stati never expire
+               (inc-rgqd): drop any HIT_WHILE_UNREADY the attack just added
+               so the count cannot grow across the 200 iterations. */
+            while (c->HasStati(HIT_WHILE_UNREADY))
+                c->RemoveStati(HIT_WHILE_UNREADY);
         }
         const int lost = bestowHesLost;
         const int pct = (100 * lost) / runs;
@@ -5183,6 +5195,11 @@ SpellFails:
 
     res = ReThrow(EV_EFFECT,e);
 
+    /* inc-59lq phase A1: a listed maintained spell leaves the caster
+       concentrating once its effect has resolved. */
+    if (res != ABORT)
+        StartConcentration(e);
+
     if (e.MM && TEFF(e.eID)->HasFlag(EF_LOSEMANA))
         if (HasEffStati(-1,e.eID))
             GainTempStati(STORED_MM,
@@ -5289,7 +5306,11 @@ EvReturn Creature::Invoke(EventInfo &e)
     } 
 
     res = ReThrow(EV_EFFECT,e);
-    
+
+    /* inc-59lq: an innate (SP_INNATE) cast arrives here, not in Cast. */
+    if (res != ABORT)
+        StartConcentration(e);
+
     return res;
 
   }
@@ -6012,6 +6033,8 @@ EvReturn Item::ReadScroll(EventInfo &e)
     bool didRead = false;
     if (getenv("INCURSION_READ_LIGHT_PROBE"))
       ReadLightProbe(e);
+    if (e.EActor->ConcentrationBlocks("item"))
+      return ABORT;
     int16 rlm = e.EActor->ReadLightDCMod();
     if (rlm < 0)
       {
@@ -6109,6 +6132,11 @@ EvReturn Item::ReadScroll(EventInfo &e)
 
     result = ReThrow(EV_EFFECT,e);
 
+    /* inc-59lq phase A2 Part 3c: a scroll cast of a listed spell concentrates
+       the reader too -- the path reaches EV_EFFECT without Creature::Cast. */
+    if (result != ABORT)
+      e.EActor->StartConcentration(e);
+
     if (!e.EItem->isKnown(KN_MAGIC) && e.EActor->HasSkill(SK_KNOW_MAGIC))
       if (e.EActor->SkillCheck(SK_KNOW_MAGIC,10 + e.EItem->ItemLevel(),true))
         e.EActor->IdentByTrial(e.EItem);
@@ -6136,6 +6164,9 @@ EvReturn Item::Activate(EventInfo &e)
     if (!e.eID)
       e.eID = eID;
 
+    if (e.EActor->ConcentrationBlocks("item"))
+      return ABORT;
+
     e.EActor->Timeout += 30;
     e.EActor->AccessTime(e.EItem);
     
@@ -6151,6 +6182,11 @@ EvReturn Item::Activate(EventInfo &e)
       unit = e.EItem = e.EItem->TakeOne();
     e.isItem = true;
     r = ReThrow(EV_EFFECT,e);
+
+    /* inc-59lq phase A2 Part 3c: an activated item that casts a listed spell
+       concentrates the user too -- EV_EFFECT without Creature::Cast. */
+    if (r != ABORT)
+      e.EActor->StartConcentration(e);
 
     // upstream: plain control-flow, not a port artefact -- no typedef, pointer
     // width, endianness or compiler extension is involved, so a Win32/MSVC
@@ -6200,6 +6236,9 @@ EvReturn Item::ZapWand(EventInfo &e)
       e.eID = e.EItem->eID;
     if (!e.eID)
       goto Nothing;
+
+    if (e.EActor->ConcentrationBlocks("item"))
+      return ABORT;
 
     int16 zappingTimeout = 
             2000 / max(25,100+e.EActor->Mod(A_INT)*5);  
@@ -6338,6 +6377,11 @@ EvReturn Item::ZapWand(EventInfo &e)
     else
       r = DONE;
       
+    /* inc-59lq phase A2 Part 3c: a wand cast of a listed spell concentrates
+       the user too -- EV_EFFECT without Creature::Cast. */
+    if (r != ABORT)
+      e.EActor->StartConcentration(e);
+
     e.EItem->SetInherentPlus(e.EItem->GetInherentPlus() - Supercharge);
     
     //if (!Charges) { IPrint("The worn-out wand disappears!"); Remove(true); }
