@@ -26,6 +26,72 @@ Step 2 is the step that gets skipped, and it is the step that matters. Steps 1,
 3, 4 and 5 prove that a check passes. Only step 2 proves the check is measuring
 anything.
 
+## A check must not depend on the seed
+
+A seed MUST NOT be able to make a check fail. Appending one resource to
+`lib/*.irh` moves the random stream, so every pinned seed then plays a different
+game. A check that reads anything the seed decides breaks on that landing, even
+when no behavior changed. On 2026-10-22 four landings broke 15 checks this way,
+and none of them was a regression. A different seed is not the fix, because the
+next append moves the stream again. The fix is to make the check fix every fact
+it reads.
+
+Design the check before you write it. List every fact the check reads: the
+character, the world, each roll the scenario turns on, and any text it matches.
+Name the control that fixes each fact. Put the list in the check's header, one
+line per fact, under the line that names the defect:
+
+    # fact: character -- fixture orc-barbarian-seed1-opt0822
+    # fact: rust monster beside player -- wizard Monster Summoning
+    # fact: monster's Reflex save fails -- INCURSION_FORCE_SAVE_ROLL=1
+
+A fact with no control in the catalog below is a hole. Close the hole first:
+file the missing hook, or choose a different scenario. Do not write the check
+around the hole. A check that reads a fact its header does not list depends on
+the seed.
+
+**The controls catalog.** Use these to fix a fact. A row marked *none* is a
+known hole.
+
+| Fact | Control |
+|---|---|
+| Character: race, class, stats, kit, name | Load a fixture: `INCURSION_LOAD=tools/fixtures/chars/<name>.sav` (51 exist; `tools/fixtures/README.md`). No wizard command sets stats. |
+| A monster where you need it | Wizard menu, "Monster Summoning". Clear the level first with "Genocide Everything". |
+| An item | Wizard menu, "Item Acquisition". |
+| Terrain | Wizard menu, "Change terrain type"; or a probe that builds the map (`INCURSION_RUNTO_STAGE`). |
+| Depth | Wizard menu, "Ascend / Descend Depth". |
+| A known spell | Wizard menu, "Learn Any Spell". |
+| Attack roll (d20) | `INCURSION_LOF_FORCE_ROLL` (`src/Fight.cpp`). It applies to every attacker. |
+| Saving throw (d20) | `INCURSION_FORCE_SAVE_ROLL`, 1 to 20. It applies to every creature. |
+| Skill check (d20) | `INCURSION_RUNTO_SKILL_ROLL`, 1 to 20. |
+| Damage roll | *none* |
+| Percent-chance roll | *none* |
+| Monster AI choice | *none* |
+| A save for one creature only | *none* |
+| Text the seed decides | Do not assert on it. Read the name from the run, or fix its source with a fixture. |
+
+Some checks test the random output itself, such as level generation or encounter
+building. They cannot fix the world, because the world is what they test. Such a
+check asserts an invariant: a property that MUST hold on every seed. "No
+exact-monster encounter places a monster from a deeper level" is one example.
+When the seed does not exercise the path under test, the check exits 2 (could
+not measure). It MUST NOT pass, and it MUST NOT fail. A crash reproduction pinned
+to one seed is allowed only for a time. Its header names the seed and the bead.
+Once the cause is known, rewrite it to set up the cause directly.
+
+Prove it with `tools/seed_sweep.sh tools/check_<subject>.sh`. The tool runs the
+check on its own seed, then on five other seeds. It reports one of three results:
+
+- **0, seed-independent.** The check passed on every seed.
+- **1, seed-dependent.** On at least one other seed the check failed, or it could
+  not set up its scenario. Either way the seed changed the result, so the header
+  missed a fact.
+- **2, no answer.** The check failed on its own seed, so there is nothing to
+  compare against.
+
+Do not sweep a check that compares two sessions on different seeds. The tool
+forces every session onto one seed, so that check compares nothing.
+
 ## The tools
 
 `tools/headless.sh` plays one key script with no display and no keyboard, inside

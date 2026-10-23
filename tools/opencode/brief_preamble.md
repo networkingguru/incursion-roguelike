@@ -21,5 +21,6 @@ Your context is limited. When one step's context passes 100K tokens, the wrapper
 - Run NO git command that changes state. Read-only git (`status`, `diff`, `log`, `show`, `ls-files`, `rev-parse`) is allowed. Leave all changes in the working tree.
 - Run NO `bd` and NO `gh`.
 - Put a reproduction (key script, seed, options file, command) in `tools/`. Write any specimen (screen dump, log, save, crash report) under `logs/` only, and name its path in your report.
+- A new or changed check MUST NOT depend on the seed. Before you write it, list every fact it reads in its header (`# fact: <fact> -- <control>`), using the controls catalog in `docs/VERIFICATION.md`, "A check must not depend on the seed". If a fact has no control, stop and report it. Do not write the check around it.
 - Stay in scope: no edits to a spec or plan unless the brief says so, and no unrelated formatting changes. If the brief is wrong, say so with evidence; do not implement what you believe is wrong.
 - In your report, list every deletion separately from the additions.

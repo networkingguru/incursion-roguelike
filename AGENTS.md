@@ -30,6 +30,7 @@ This section binds every implementer Claude dispatches. Claude plans and reviews
 - NEVER invoke `./incursion` (SDL, no sandbox). Do NOT run/edit/report-failing: `check_flavor_stability.sh`, `check_convert_guard.sh`, `check_stair_warn.sh`, `check_dup_names.sh` — the main Claude session runs these, outside the sandbox; none needs Brian at the keyboard.
 - Run NO git command that changes state; leave changes in the working tree. Read-only git (`status`, `diff`, `log`, `show`, `ls-files`, `rev-parse`) is allowed. Never route a git command through a script to get around this.
 - Put a reproduction (key script, seed, options file, command) in `tools/`, and leave it in the working tree for the commit. Write no specimen (screen dump, log, save, crash report) outside `logs/`. Name each specimen path in your report.
+- A new or changed check MUST NOT depend on the seed. Before you write it, list every fact it reads in its header (`# fact: <fact> -- <control>`), using the controls catalog in `docs/VERIFICATION.md`, "A check must not depend on the seed". If a fact has no control, stop and report it. Do not write the check around it.
 - Run NO `bd`; do not open/close/claim/annotate issues.
 - Stay in scope: no spec/plan edits unless told; no unrelated formatting changes; if the spec/plan is wrong, say so with evidence, don't implement what you believe wrong.
 - Report every deletion separately from additions.
