@@ -245,6 +245,40 @@ selftest() {
     return 0
 }
 
+# STEP 4a helper (inc-ug5y). Report-only: it prints and returns 0 whatever a
+# sweep says, because a seed-dependent check MUST NOT stop a landing.
+# Usage: seed_sweep_report <worktree> [check-file...]
+seed_sweep_report() {
+    local wt="$1" f n=0 rc
+    local -a kept=() rcs=()
+    shift
+    for f in "$@"; do
+        [ -e "$wt/$f" ] || continue
+        grep -qxF -e '# gate: live' -e '# gate: smoke' <<< "$(sed -n '1,40p' "$wt/$f")" || continue
+        kept+=("$f")
+    done
+    if [ "${#kept[@]}" -eq 0 ]; then
+        echo "=== seed sweep: no added or changed live/smoke check ==="
+        return 0
+    fi
+    for f in "${kept[@]}"; do
+        echo "=== seed sweep: $f ==="
+        rc=0
+        ( cd "$wt" && tools/seed_sweep.sh "$f" ) || rc=$?
+        rcs+=("$rc")
+    done
+    echo "=== seed sweep: ${#kept[@]} check(s) ==="
+    for f in "${kept[@]}"; do
+        rc="${rcs[$n]}"; n=$((n + 1))
+        case "$rc" in
+            0) echo "$f: seed-independent" ;;
+            1) echo "$f: SEED-DEPENDENT -- see docs/VERIFICATION.md, \"A check must not depend on the seed\"" ;;
+            *) echo "$f: no answer (exit $rc)" ;;
+        esac
+    done
+    return 0
+}
+
 if [ "${1:-}" = "--selftest" ]; then
     selftest
     exit $?
@@ -477,6 +511,23 @@ say so in your report."
     fi
 else
     echo "=== gate SKIPPED (--no-gate) ==="
+fi
+
+# STEP 4a (inc-ug5y). Seed sweep of the live/smoke checks this bead adds or
+# changes. REPORT ONLY: nothing here may stop the landing.
+if [ "$RUN_GATE" -ne 1 ]; then
+    echo "=== seed sweep skipped: the gate did not run ==="
+elif [ "$GATE_CMD" = "tools/nightly_verify.sh --docs-only" ]; then
+    echo "=== seed sweep skipped: docs-only gate ==="
+elif [ "${INCURSION_NO_SEED_SWEEP:-0}" = "1" ]; then
+    echo "=== seed sweep skipped: INCURSION_NO_SEED_SWEEP=1 ==="
+elif [ ! -x "$WORKTREE/tools/seed_sweep.sh" ]; then
+    echo "=== seed sweep skipped: $WORKTREE/tools/seed_sweep.sh is not executable ==="
+elif ! SWEEP_LIST="$(git -C "$WORKTREE" diff --name-only --diff-filter=d "$BASE_BRANCH...HEAD" -- 'tools/check_*.sh')"; then
+    echo "=== seed sweep skipped: git could not list the changed checks ===" >&2
+else
+    # shellcheck disable=SC2086
+    seed_sweep_report "$WORKTREE" $SWEEP_LIST
 fi
 
 # STEP 4b (inc-fo8o). The gate builds the merged result and, on a green plain

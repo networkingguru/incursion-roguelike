@@ -71,6 +71,14 @@ if [ -z "$KEYS" ] || [ ! -f "$KEYS" ]; then
     echo "key scripts live in tools/keys/"
     exit 2
 fi
+# inc-ug5y: opt-in seed override and run log, for tools/seed_sweep.sh.
+if [ -n "${INCURSION_SEED_OVERRIDE:-}" ]; then
+    case "$INCURSION_SEED_OVERRIDE" in
+        ''|*[!0-9]*|0*) echo "INCURSION_SEED_OVERRIDE must be a positive integer" >&2; exit 2 ;;
+    esac
+    SEED="$INCURSION_SEED_OVERRIDE"
+fi
+[ -n "${INCURSION_SEED_LOG:-}" ] && echo "seed=$SEED keys=$KEYS" >> "$INCURSION_SEED_LOG"
 # INCURSION_BIN picks a different build -- the DIVERGE_PROBE one, say -- and
 # INCURSION_LAUNCHER puts something in front of it. Both exist for
 # tools/check_layout.sh, which has to run the probe build under lldb to switch

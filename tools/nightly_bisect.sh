@@ -28,6 +28,9 @@
 #                          after this many seconds since the script started.
 #   NIGHTLY_BISECT_DATE    default: today (YYYY-MM-DD). Tonight's date, used in
 #                          the report and the last-good file.
+#   NIGHTLY_BISECT_NO_SWEEP
+#                          set to 1 to skip the seed sweep that classifies a
+#                          break before its bead is filed (inc-ug5y).
 #
 # Exit: 2 when the state file is missing or unreadable; otherwise 0 whatever it
 # found. It never changes the branch it runs on, never commits, never pushes.
@@ -516,6 +519,48 @@ bisect_one() {
 # short <hash> -> its first 7 characters or as many as it has.
 short() { printf '%s' "$1" | cut -c1-7; }
 
+# classify_at <Lfull> <id>: sweep the check at the landing (inc-ug5y). Sets
+# CLASS_KIND (seed|unknown|none), CLASS_REASON and CLASS_LAST. Never fails.
+classify_at() {
+    local l="$1" id="$2" file tmp rc
+    local log="${TMPDIR:-/tmp}/nlb-sweep.$$"
+    CLASS_KIND="none"; CLASS_LAST=""
+    file="${id%% *}"
+    if [ "${NIGHTLY_BISECT_NO_SWEEP:-}" = "1" ]; then
+        CLASS_REASON="sweep disabled"; return 0; fi
+    if [ "$file" != "$id" ]; then
+        CLASS_REASON="the check takes arguments"; return 0; fi
+    tmp="$(mktemp -d "$TMP_RESERVED/nlb-wt.XXXXXX")" || {
+        CLASS_REASON="no scratch directory"; return 0; }
+    rmdir "$tmp" 2>/dev/null
+    git -C "$REPO" worktree add --detach "$tmp" "$l" > /dev/null 2>&1 || {
+        rm -rf "$tmp"; CLASS_REASON="no worktree at the landing"; return 0; }
+    WT_LIST="$WT_LIST $tmp"
+    if [ ! -e "$tmp/$file" ]; then
+        CLASS_REASON="the check is absent at the landing"
+    elif grep -qxF '# gate: cheap' <<< "$(sed -n '1,40p' "$tmp/$file")"; then
+        CLASS_REASON="the check is cheap, so a seed does not reach it"
+    elif [ ! -x "$tmp/tools/seed_sweep.sh" ]; then
+        CLASS_REASON="tools/seed_sweep.sh is missing at the landing"
+    elif ! ( cd "$tmp" && eval "$BUILD_CMD" ) > "$log.build" 2>&1; then
+        CLASS_REASON="the build failed at the landing"
+    else
+        ( cd "$tmp" && tools/seed_sweep.sh --classify "$file" ) > "$log" 2>&1
+        rc=$?
+        CLASS_LAST="$(tail -n 1 "$log" | cut -c1-200)"
+        case "$rc" in
+            1) CLASS_KIND="seed" ;;
+            3) CLASS_KIND="unknown" ;;
+            0) CLASS_REASON="passes on every seed at the landing (flaky?)" ;;
+            *) CLASS_REASON="sweep could not measure" ;;
+        esac
+    fi
+    git -C "$REPO" worktree remove --force "$tmp" > /dev/null 2>&1
+    WT_LIST="${WT_LIST% $tmp}"
+    rm -f "$log" "$log.build"
+    return 0
+}
+
 # file_landing <id> <Lfull> <second-pass sentence>: file one bead for a named
 # landing, per spec 5.6. Records the outcome in the report. Never fails the
 # script: any filing problem is written down and the run continues.
@@ -545,6 +590,12 @@ file_landing() {
         title="Nightly: $id broke at landing $(short "$Lfull")"
     fi
 
+    classify_at "$Lfull" "$id"
+    case "$CLASS_KIND" in
+        seed) title="$title (seed-dependent)" ;;
+        unknown) title="$title (cause unknown)" ;;
+    esac
+
     # What "build" means for this check: the literal build unless cheap there.
     local file buildword
     file="${id%% *}"
@@ -560,6 +611,11 @@ file_landing() {
             "$id" "$G_LASTGOOD" "$T"
         printf 'A bisect of the landings on master between them names %s\n' "$Lfull"
         printf '(%s). %s\n\n' "$subject" "$sent"
+        case "$CLASS_KIND" in
+            seed) printf 'A seed sweep at the landing passes on some seeds and fails on others, so the seed decides this check'"'"'s result: the check depends on the seed. Repair the check under docs/VERIFICATION.md, "A check must not depend on the seed"; the landing is not shown to be at fault. %s\n\n' "$CLASS_LAST" ;;
+            unknown) printf 'A seed sweep at the landing fails on every seed, so the seed is not the cause. The cause is unknown: a regression, or a fact the landing changed for every seed (kit, data, a menu). Read the landing'"'"'s diff against the facts the check reads. %s\n\n' "$CLASS_LAST" ;;
+            *) printf 'Seed sweep: not classified: %s. %s\n\n' "$CLASS_REASON" "$CLASS_LAST" ;;
+        esac
         printf '## Steps to Reproduce\n\n'
         printf '1. git worktree add --detach /tmp/a %s; %s; run %s: it passes.\n' \
             "$Lfull^1" "$buildword" "$id"
