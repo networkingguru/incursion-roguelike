@@ -7552,7 +7552,8 @@ AfterEffects:
         if (!e.EVictim->SavingThrow(REF,10 + e.EActor->GetBAB(e.EItem ? 
               S_MELEE : S_BRAWL) / 2 + e.EActor->Mod(A_WIS) - 
               e.EVictim->AbilityLevel(CA_NOBLE_AEGIS))) {
-          e.EVictim->GainTempStati(BLIND,NULL,Dice::Roll(1,4,1),SS_ATTK);
+          /* upstream: 1d4+1 is rounds (feat text), a Duration unit is two rounds; Traced; inc-nt3z; not sent */
+          e.EVictim->GainTempStati(BLIND,NULL,RoundsToUnits(Dice::Roll(1,4,1)),SS_ATTK);
           TPrint(e, "You briefly blind the <EVictim>!",
                     "The <EActor> briefly blinds you!",
                     "The <EActor> briefly blinds the <EVictim>!");

@@ -1318,6 +1318,7 @@ void Creature::ExtendedAction() {
                         !HasStati(DETECTING,ef->yval)) ||
                         (te->Purpose & EP_BUFF && 
                         (te->HasFlag(EF_DLONG) || te->HasFlag(EF_DXLONG) ||
+                        te->HasFlag(EF_DHOUR) || te->HasFlag(EF_D10MIN) ||
                         te->HasFlag(EF_PERSISTANT)) &&
                         !HasEffStati(-1,eID) &&
                         te->PEvent(EV_ISTARGET,this,eID) == SHOULD_CAST_IT))

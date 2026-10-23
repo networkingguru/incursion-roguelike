@@ -88,7 +88,7 @@ Priest Spell "Bane" : EA_INFLICT
        not sent. */
     aval: AR_GLOBE; lval: 5; cval: RED;
     xval: ADJUST_MOR; yval: A_AID; pval: -1; tval: MA_ENEMIES; 
-    Flags: EF_LIM_MTYPE, EF_DLONG, EF_SHOWNAME, EF_FEAR;
+    Flags: EF_LIM_MTYPE, EF_DMIN, EF_SHOWNAME, EF_FEAR;
     Purpose: EP_CURSE | AIM_AT_SELF;
     Desc: "Inflicts ill fortune in battle on all enemies within 50
       feet (5 squares) of you, causing them a -1 morale penalty to most
@@ -251,7 +251,7 @@ Priest / Sorcerer  Spell "Command" : EA_GENERIC
     // orc shamans and whatnot have this spell but can never really use
     // it because you are always of a higher level than they are. Let's
     // remove that limit. 
-    Flags: EF_DSHORT, EF_MENTAL, EF_COMPULSION; Purpose: EP_CURSE; 
+    Flags: EF_D1ROUND, EF_MENTAL, EF_COMPULSION; Purpose: EP_CURSE; 
     int16 choice; hText str; 
     On Event
       EV_EFFECT {       
@@ -381,7 +381,7 @@ Priest Spell "Detect Chaos" : EA_INFLICT
 Priest Spell "Doom" : EA_INFLICT
   { SC_THE; Base: SP_EASY; Cost: 2; Level: 1; 
     xval: ADJUST_MOR; yval: A_AID; pval: -4;
-    Flags: EF_DLONG, EF_SHOWNAME, EF_FEAR; sval: WILL; qval: Q_TAR;
+    Flags: EF_DMIN, EF_SHOWNAME, EF_FEAR; sval: WILL; qval: Q_TAR;
     Purpose: EP_CURSE | AIM_AT_SELF;
     Desc: "Inflicts severe ill fortune in battle on a single enemies, 
       causing them a -4 morale penalty to most rolls.";
@@ -588,8 +588,8 @@ Priest Spell "Shield of Faith" : EA_INFLICT
   }
 
 Priest / Druid / Sorcerer  Spell "Slow Poison" : EA_INFLICT
-  { SC_ABJ; Base: SP_TRIVIAL; Cost: 3; Level: 1; qval: Q_TAR;
-    xval: SLOW_POISON; Flags: EF_DLONG, EF_NOTBAD, EF_CANCEL;
+  { SC_ABJ; Base: SP_TRIVIAL; Cost: COST_1; Level: 1; qval: Q_TAR;
+    xval: SLOW_POISON; Flags: EF_PERSISTANT, EF_LOSEMANA, EF_NOTBAD, EF_CANCEL, EF_SHOWNAME;
     Purpose: EP_BUFF | EP_FIX_TROUBLE (TROUBLE_POISON);
     Desc: "Delays the continuing effects of poison in the target
       for the duration. The poison's effects continue as soon as
@@ -1071,7 +1071,7 @@ Druid  Spell "Faerie Fire" : EA_INFLICT
                "The <EVictim> is limned in flickering <hText> light.", str);
       return NOTHING;
       };
-    Flags: EF_SHOWNAME;
+    Flags: EF_SHOWNAME, EF_DMIN;
   }
 
 Wizard / Druid  Spell "Obscurement" : EA_INFLICT 
@@ -1166,15 +1166,8 @@ Effect "Divine Sacrifice" : EA_INFLICT
        the two attack hooks are TRAP_EVENT statis for EV_STRIKE (pay) and
        PRE(EV_HIT) (spend), the latter built from xval/yval. */
     int16 sac; xval: TRAP_EVENT; yval: PRE(EV_HIT);
-    Flags: EF_CANCEL;
-    On Event EV_CALC_EFFECT {
-      /* e.vDuration defaults to 10 + caster level*2 (src/Magic.cpp:536);
-         this spell's design lasts 1 round per caster level, and one
-         Duration unit is one round (src/Status.cpp:60). */
-      e.vDuration = e.vCasterLev;
-      return NOTHING;
-      },
-    EV_EFFECT {
+    Flags: EF_CANCEL, EF_DROUND;
+    On Event EV_EFFECT {
       int16 ch;
       ch = EActor->ChoicePrompt("How many extra dice of damage? (2 HP per die per attack)",
         "12345", '1');
@@ -1640,7 +1633,7 @@ Druid Spell "Snowstrike" : EA_BLAST
   }
 
 Druid Spell "Rainstorm" : EA_INFLICT { 
-    xval: NONDETECTION; yval: PER_SCENT|PER_BLIND; Flags: EF_DLONG; 
+    xval: NONDETECTION; yval: PER_SCENT|PER_BLIND; 
   } and EA_BLAST
   { SC_ARC|SC_WATER; IS_A_BUFF(COST_2X); 
     Level: 2; aval: AR_MFIELD;
@@ -1824,7 +1817,7 @@ and EA_INFLICT
   }
 
 Priest / Sorcerer Spell "Calm Emotions" : EA_INFLICT
-  { SC_ENC; Base: SP_EASY; Cost: 4; Level: 2; Flags: EF_MENTAL, EF_DLONG;
+  { SC_ENC; Base: SP_EASY; Cost: 4; Level: 2; Flags: EF_MENTAL, EF_DROUND;
     aval: AR_GLOBE; lval: 4; qval: Q_LOC | Q_TAR; cval: CYAN;
     xval: CHARMED; yval: CH_CALMED; sval: WILL; Purpose: EP_PLAYER_ONLY;
     Desc: "Causes hostile, intelligent creatures within a 40 foot
@@ -1880,7 +1873,7 @@ Priest  Spell "Consecrate" : EA_INFLICT
   { SC_THE; Base: SP_EASY; Cost: 3; Level: 2; qval: Q_LOC;
     aval: AR_GLOBE; lval: 6; cval: WHITE; tval: MA_UNDEAD;
     xval: ADJUST_SAC; yval: A_AID; pval: -2; 
-    Flags: EF_LIM_MTYPE, EF_DLONG, EF_GOOD; 
+    Flags: EF_LIM_MTYPE, EF_PERSISTANT, EF_GOOD; 
     Purpose: EP_COUNTER (VS_UNDEAD); 
     Desc: "Fills an area with holy energies, such that all undead
       therein suffer a -2 penalty to hit, damage and saves, and
@@ -2154,9 +2147,9 @@ Priest / Scroll Spell "Negative Plane Protection" : EA_INFLICT
 /* Priest Spell "Resist Fire/Acid/Cold/Lightning" -- see wspells.irc */
 
 Priest  Spell "Shield Other" : EA_INFLICT
-  { SC_THA; Base: SP_TRIVIAL; Cost: 3; Level: 2; qval: Q_TAR;
+  { SC_THA; Base: SP_TRIVIAL; Cost: COST_2; Level: 2; qval: Q_TAR;
     xval: TRAP_EVENT; yval: EVICTIM(EV_DAMAGE); tval: MA_LIVING;
-    Flags: EF_LIM_MTYPE, EF_DLONG, EF_NOTBAD; Purpose: EP_PLAYER_ONLY;
+    Flags: EF_LIM_MTYPE, EF_PERSISTANT, EF_LOSEMANA, EF_NOTBAD, EF_CANCEL, EF_SHOWNAME; Purpose: EP_PLAYER_ONLY;
     On Event META(EVICTIM(EV_DAMAGE)) {
       hObj sh;
       if (e.DType > AD_LAST_PHYSICAL)
@@ -2175,7 +2168,7 @@ Priest  Spell "Shield Other" : EA_INFLICT
 Priest  Spell "Spiritual Hammer" : EA_SUMMON
   { SC_EVO; Base: SP_MEDIUM; Cost: 4; Level: 2; qval: Q_LOC; pval: 3; 
     rval: $"spiritual hammer;monster"; Purpose: EP_SUMMON; 
-    Flags: EF_DLONG, EF_XSUMMON;
+    Flags: EF_DROUND, EF_XSUMMON;
     Desc: "Summons a warhammer-shaped manifestation of force
       (approximately CR 3) to strike at your enemies."; }
 
@@ -2280,14 +2273,18 @@ Druid Spell "Chill Metal" : EA_INFLICT
           killer->KillXP(EActor);
         }
       return NOTHING;
+      },
+    EV_CALC_EFFECT {
+      e.vDuration = ApplyDurationMetamagic(4, e.MM, 0);
+      return NOTHING;
       };
-    Desc: "Chills all the metal items a target carries, causing cold damage
-    and often inspiring non-immune targets to drop loose metal items. 
-    Each round, metal armour, boots and clothes cause 2d4 points of cold
-    damage. Other worn metal items (e.g., bracers, amulets, gauntlets,
-    girdles) cause 1d4 points of cold damage. Note that this spell
-    does not benefit from the Maximize Spell or Empower Spell metamagic
-    feats.";
+    Desc: "Chills all the metal items a target carries for 8 rounds,
+      causing cold damage and often inspiring non-immune targets to drop
+      loose metal items. Each round, metal armor, boots and clothes
+      cause 2d4 points of cold damage. Other worn metal items (e.g.,
+      bracers, amulets, gauntlets, girdles) cause 1d4 points of cold
+      damage. Note that this spell does not benefit from the Maximize
+      Spell or Empower Spell metamagic feats.";
   }
 
 Druid Spell "Heat Metal" : EA_INFLICT
@@ -2336,18 +2333,22 @@ Druid Spell "Heat Metal" : EA_INFLICT
           killer->KillXP(EActor);
         }
       return NOTHING;
+      },
+    EV_CALC_EFFECT {
+      e.vDuration = ApplyDurationMetamagic(4, e.MM, 0);
+      return NOTHING;
       };
-    Desc: "Heats all the metal items a target carries, causing fire damage
-    and often inspiring non-immune targets to drop loose metal items. 
-    Each round, metal armour, boots and clothes cause 2d4 points of fire
-    damage. Other worn metal items (e.g., bracers, amulets, gauntlets,
-    girdles) cause 1d4 points of fire damage. Note that this spell
-    does not benefit from the Maximize Spell or Empower Spell metamagic
-    feats.";
+    Desc: "Heats all the metal items a target carries for 8 rounds,
+      causing fire damage and often inspiring non-immune targets to drop
+      loose metal items. Each round, metal armor, boots and clothes
+      cause 2d4 points of fire damage. Other worn metal items (e.g.,
+      bracers, amulets, gauntlets, girdles) cause 1d4 points of fire
+      damage. Note that this spell does not benefit from the Maximize
+      Spell or Empower Spell metamagic feats.";
   }
 
 Druid Spell "Hold Beast" : EA_INFLICT
-  { SC_ENC; Level: 2; Cost: 4; Base: SP_MEDIUM; qval: Q_TAR;
+  { SC_ENC; Level: 2; Cost: 4; Base: SP_MEDIUM; qval: Q_TAR; Flags: EF_DROUND;
     xval: PARALYSIS; sval: FORT; Purpose: EP_CURSE (VS_MENTAL);
     Desc: "Paralyzes one chosen beast, provided they fail a Fortitude
       save.";
@@ -2456,7 +2457,7 @@ and EA_INFLICT
 
 Wizard / Druid  Spell "Flaming Sphere" : EA_SUMMON
   { SC_EVO|SC_FIRE; Level: 2; Cost: 4; Base: SP_MEDIUM; qval: Q_LOC; pval: 3; 
-    rval: $"flaming sphere;monster"; Flags: EF_DLONG, EF_XSUMMON;
+    rval: $"flaming sphere;monster"; Flags: EF_DROUND, EF_XSUMMON;
     Desc: "Conjures a boulder-sized globe of fire that rolls
       around and burns your enemies (approximate CR 3)."; Purpose: EP_SUMMON; }
 
@@ -3023,9 +3024,13 @@ Priest  Spell "Bestow Curse" : EA_GENERIC
 
 Priest / Sorcerer Spell "Cause Blindness" : EA_INFLICT
   { SC_THA; Base: SP_EASY; Cost: 6; Level: 3; qval: Q_TAR;
-    xval: BLIND; sval: FORT; Purpose: EP_CURSE; Flags: EF_DLONG;
+    xval: BLIND; sval: FORT; Purpose: EP_CURSE;
     Desc: "Blinds the target creature, assuming that they fail a
-      Fortitude save."; }
+      Fortitude save.";
+    On Event EV_CALC_EFFECT {
+      e.vDuration = ApplyDurationMetamagic(RoundsToUnits(3d4), e.MM, 0);
+      return NOTHING;
+      }; }
 
 Priest / Sorcerer / Druid Spell "Cure Serious Wounds" : EA_HEALING
   { SC_THE; Base: SP_EASY; Cost: 0; Level: 3; qval: Q_TAR|Q_NEAR;
@@ -3399,7 +3404,7 @@ Druid Spell "Dominate Animal" : EA_INFLICT
   { SC_ENC; Base: SP_EASY; Cost: 5; Level: 3; sval: WILL;
     Purpose: EP_CURSE (VS_MENTAL); tval: MA_ANIMAL; 
     xval: CHARMED; yval: CH_DOMINATE; qval: Q_TAR;
-    Flags: EF_DLONG, EF_MENTAL, EF_LIM_MTYPE; 
+    Flags: EF_DROUND, EF_MENTAL, EF_LIM_MTYPE; 
     Desc: "Causes a single true animal (not a beast or monster)
       to follow you, fight and even die at your behalf."; }
 
@@ -3503,7 +3508,7 @@ Druid Spell "Waterspout" : EA_BLAST
       if (EVictim->GetAttr(A_SIZ) <= SZ_LARGE && !e.isEvaded)
         ThrowDmg(EV_DAMAGE,AD_TRIP,-1,"waterspout",EActor,EVictim); 
       if (!e.Resist)
-        EVictim->GainTempStati(STUNNED,NULL,1d4+1,SS_MISC);
+        EVictim->GainTempStati(STUNNED,NULL,RoundsToUnits(1d4+1),SS_MISC);
       ThrowDmg(EV_DAMAGE,AD_SOAK,e.vDmg,"a waterspout",EActor,EVictim);
       return NOTHING;
       },
@@ -4033,10 +4038,10 @@ Priest / Sorcerer Spell "Dispel Fatigue" : EA_GENERIC
   }
 
 Priest Spell "Divine Power" : EA_INFLICT
-  { SC_THA; Cost: 17; Level: 4; 
-    Flags: EF_LOSEMANA, EF_SHOWNAME, EF_NOTBAD;
+  { SC_THA; Cost: COST_4; Level: 4; 
+    Flags: EF_PERSISTANT, EF_LOSEMANA, EF_SHOWNAME, EF_NOTBAD, EF_CANCEL;
     Desc: "Casting this spell imbues you with great combat prowess
-      for a brief period of time, giving you a sacred bonus to 
+      until the next full rest, giving you a sacred bonus to 
       hit sufficient to raise you Base Attack Bonus to that of a 
       warrior of similar character level, a sacred bonus to 
       Strength sufficient to give you a Strength score of 18 (not 
@@ -4106,7 +4111,7 @@ Priest Spell "Ethereal Jaunt" : EA_INFLICT
       invisible with regard to creatures on the material plane, 
       but can interact physically with other ethereal creatures.";
     xval: PHASED; yval: PHASE_ETHEREAL; 
-    Flags: EF_CANCEL, EF_SHOWNAME; 
+    Flags: EF_CANCEL, EF_SHOWNAME, EF_DROUND; 
     On Event EV_MAGIC_HIT
       "You cross into the ethereal plane.",
     EV_REMOVED
@@ -4167,12 +4172,12 @@ Priest / Druid Spell "Invocation" : EA_INFLICT
 // upstream: original comment claimed antitoxin covers this effect; Reasoned (lib/alchemy.irh antitoxin has no HEAL_MALADY); inc-gmrj; not sent.
 Priest / Druid / Scroll Spell "Neutralize Poison" : EA_INFLICT
   { SC_THE; Base: SP_TRIVIAL; Cost: 7; Level: 4; qval: Q_TAR;
-    Desc: "Purges all toxins from the subject's body, preventing
-      any further damage, and additionally giving the subject a
-      +5 bonus to save versus poisons for a number of rounds
-      following the casting equal to the caster level.";
+    Desc: "Purges all toxins from the subject's body, preventing any
+      further damage, and gives the subject a +5 bonus to saves against
+      poison until the next full rest.";
     xval: SAVE_BONUS; yval: SN_POISON; pval: +5;
-    Purpose: EP_FIX_TROUBLE (TROUBLE_POISON); Flags: EF_STAPLE;
+    Purpose: EP_FIX_TROUBLE (TROUBLE_POISON);
+    Flags: EF_STAPLE, EF_PERSISTANT, EF_LOSEMANA, EF_NOTBAD, EF_CANCEL, EF_SHOWNAME;
   }
 and EA_HEALING
   { xval: HEAL_MALADY; yval: POISONED; 
@@ -4392,7 +4397,7 @@ Druid Spell "Control Plant" : EA_INFLICT
   { SC_ENC; Base: SP_TRIVIAL; Cost: 8; Level: 4; sval: WILL;
     Purpose: EP_CURSE (VS_MENTAL); tval: MA_PLANT; 
     xval: CHARMED; yval: CH_DOMINATE; 
-    Flags: EF_DLONG, EF_MENTAL, EF_LIM_MTYPE; 
+    Flags: EF_PERSISTANT, EF_MENTAL, EF_LIM_MTYPE; 
     Desc: "Causes a single plant creature to follow you (if it
       can move), fight and even die at your behalf."; 
   }
@@ -4534,13 +4539,12 @@ Effect "Holy Smite" : EA_BLAST
     Purpose: EP_ATTACK; On Event EV_MAGIC_HIT
       "You are smote by holy power!" /
       "The <EVictim> is smote by holy power!";
-    Desc: "Calls down holy power to smite evil creatures,
-      inflicting 1d8 points of holy damage per two caster
-      levels and blinding evil creatures who fail a Fortitude
-      save for 1d4 rounds."; }
+    Desc: "Calls down holy power to smite evil creatures, inflicting 1d8
+      points of holy damage per two caster levels and blinding evil
+      creatures who fail a Fortitude save for 1 round."; }
 and EA_INFLICT
   { xval: BLIND; tval: MA_EVIL; sval: FORT; aval: AR_GLOBE;
-    Flags: EF_GOOD, EF_LIM_MTYPE, EF_DSHORT; lval: 6; }
+    Flags: EF_GOOD, EF_LIM_MTYPE, EF_D1ROUND; lval: 6; }
 
 Effect "Unholy Blight" : EA_BLAST
   { SC_EVO; Base: SP_MEDIUM; Cost: 8; Level: 4; aval: AR_GLOBE;
@@ -4553,7 +4557,11 @@ Effect "Unholy Blight" : EA_BLAST
       inflicting 1d8 points of evil damage per two caster
       levels and sickening (-2 to hit, damage and saving
       throws) good creatures who fail a Fortitude save 
-      for 1d4 rounds."; }
+      for 1d4 rounds.";
+    On Event EV_CALC_EFFECT {
+      e.vDuration = ApplyDurationMetamagic(RoundsToUnits(1d4), e.MM, 0);
+      return NOTHING;
+      }; }
 and EA_INFLICT
   /* upstream: base-code defect, fix is ours. This EA_INFLICT segment assigned
      xval TWICE -- `xval: ADJUST_CIRC` then `xval: A_AID` -- so the second write
@@ -4578,7 +4586,7 @@ and EA_INFLICT
      sent. */
   { xval: ADJUST_CIRC; tval: MA_GOOD; sval: FORT; aval: AR_GLOBE;
     lval: 6; yval: A_AID; pval: -2;
-    Flags: EF_EVIL, EF_LIM_MTYPE, EF_DSHORT, EF_SHOWNAME;
+    Flags: EF_EVIL, EF_LIM_MTYPE, EF_SHOWNAME;
     On Event MSG_STATINAME "Sickened" "Sick"; }
 
 Effect "Order's Wrath" : EA_BLAST
@@ -4588,13 +4596,12 @@ Effect "Order's Wrath" : EA_BLAST
       "You are struck by the judgement of law!" /
       "The <EVictim> is struck by the judgement of law!";
     xval: AD_LAWF; pval: (LEVEL_SCALED2)d8; lval: 6;
-    Desc: "Calls a matrix of aligned energies to strike against 
-      chaos, inflicting 1d8 points of lawful damage per two caster
-      levels and stunning chaotic creatures who fail a Fortitude
-      save for 1d4 rounds."; }
+    Desc: "Calls a matrix of aligned energies to strike against chaos,
+      inflicting 1d8 points of lawful damage per two caster levels and
+      stunning chaotic creatures who fail a Fortitude save for 1 round."; }
 and EA_INFLICT
   { xval: STUNNED; tval: MA_CHAOTIC; sval: FORT; aval: AR_GLOBE;
-    Flags: EF_LAWFUL, EF_LIM_MTYPE, EF_DSHORT; lval: 6; }
+    Flags: EF_LAWFUL, EF_LIM_MTYPE, EF_D1ROUND; lval: 6; }
 
 Effect "Chaos Hammer" : EA_BLAST
   { SC_EVO; Base: SP_MEDIUM; Cost: 8; Level: 4; aval: AR_GLOBE;
@@ -4603,13 +4610,17 @@ Effect "Chaos Hammer" : EA_BLAST
       "You are struck by primordial chaos!" /
       "The <EVictim> is struck by primordial chaos!";
     xval: AD_CHAO; pval: (LEVEL_SCALED2)d8; lval: 6;
-    Desc: "Unleashes a burst of primordial chaos to strike against 
-      law, inflicting 1d8 points of chaotic damage per two caster
-      levels and confusing lawful creatures who fail a Fortitude
-      save for 1d4 rounds."; }
+    Desc: "Unleashes a burst of primordial chaos to strike against law,
+      inflicting 1d8 points of chaotic damage per two caster levels and
+      confusing lawful creatures who fail a Fortitude save for 1d6
+      rounds.";
+    On Event EV_CALC_EFFECT {
+      e.vDuration = ApplyDurationMetamagic(RoundsToUnits(1d6), e.MM, 0);
+      return NOTHING;
+      }; }
 and EA_INFLICT
   { xval: CONFUSED; tval: MA_LAWFUL; sval: FORT; aval: AR_GLOBE;
-    Flags: EF_CHAOTIC, EF_LIM_MTYPE, EF_DSHORT; lval: 6; }
+    Flags: EF_CHAOTIC, EF_LIM_MTYPE; lval: 6; }
 
 
 
@@ -4701,7 +4712,7 @@ Priest Spell "Dispel Evil" : EA_INFLICT
       __One casting of this spell gives you a single touch. Once that touch
       lands on an evil creature, the spell ends, and the deflection bonus
       ends with it.";
-    Purpose: EP_BUFF; Flags: EF_GOOD;
+    Purpose: EP_BUFF; Flags: EF_GOOD, EF_DROUND;
     xval: TRAP_EVENT; yval: EVICTIM(EV_STRIKE);
     On Event META(EVICTIM(EV_STRIKE)) 
       {
@@ -4924,7 +4935,7 @@ Priest Spell "Holy Summoning V" : EA_SUMMON
     ALIENIST_CLAUSE(5) }
       
 Priest Spell "Righteous Might" : EA_INFLICT
-  { SC_THA; Cost: 20; Level: 5; Purpose: EP_BUFF;
+  { SC_THA; Cost: COST_5; Level: 5; Purpose: EP_BUFF;
     Desc: "Your height immediately doubles and your weight increases by a
       factor of eight. This increase changes your size category to the next
       larger one, and you gain a +4 size bonus to strength and a +2 size
@@ -4932,7 +4943,7 @@ Priest Spell "Righteous Might" : EA_INFLICT
       equal to 3 plus 1 for every 5 caster levels, and a +5 circumstance bonus
       to the Intimidate skill. When this spell expires, you lose two fatigue 
       points.";
-    Flags: EF_SHOWNAME, EF_LOSEMANA, EF_CANCEL; 
+    Flags: EF_SHOWNAME, EF_LOSEMANA, EF_CANCEL, EF_PERSISTANT, EF_NOTBAD; 
     On Event MSG_STATINAME "RMight";
     xval: ADJUST_SIZE; yval: A_STR; pval: +4; }
 and EA_INFLICT
@@ -5210,13 +5221,16 @@ Effect "Music of the Spheres" : EA_BLAST
          blast part runs first, so damage and the god's condition land before
          the paralysis and cannot free it (src/Fight.cpp:7877).
          Observed via tools/check_music_spheres_area.sh; inc-ctee, not sent. */
-      if (e.efNum == 1)
-        e.vDuration = 1d4;
-      if (choir > 0) {
+      /* inc-nt3z: rounds, converted once. The paralysis goes through a direct
+         GainTempStati, so it converts here. The god's condition goes through
+         ThrowDmg to AD_CONF, AD_NAUS or AD_STUN, which convert, so it stays in
+         rounds: 1 round per caster level, the choir already in the level. */
+      if (choir > 0)
         e.vCasterLev += choir;
-        if (e.efNum != 1)
-          e.vDuration += 2*choir;
-        }
+      if (e.efNum == 1)
+        e.vDuration = RoundsToUnits(1d4);
+      else
+        e.vDuration = e.vCasterLev;
       return NOTHING;
       },
     EV_ISTARGET {
@@ -5239,8 +5253,23 @@ and EA_INFLICT
     lval: 8; xval: PARALYSIS; yval: PARA_HYPNOTIZED; sval: WILL;
     On Event POST(EV_MAGIC_HIT)
       {
-        if (e.efNum == 0)
-          ThrowDmg(EV_DAMAGE,dtype,e.vDuration,"",EActor,EVictim);
+        int16 wasSlow;
+        if (e.efNum == 0) {
+          if (dtype != AD_SLOW)
+            ThrowDmg(EV_DAMAGE,dtype,e.vDuration,"",EActor,EVictim);
+          else if (!EVictim->SavingThrow(FORT,10 + EActor->ChallengeRating(),SA_PARA)) {
+            /* inc-nt3z: the same Fortitude save AD_SLOW makes, then the slow
+               effect with its own saves. AD_SLOW ignores its amount, so the
+               script sets the duration of the new slow itself, for the same
+               length as the other gods' conditions. */
+            wasSlow = EVictim->HasEffStati(ADJUST,$"slow");
+            ThrowEff(EV_MAGIC_STRIKE,$"slow",EActor,EVictim);
+            if (!wasSlow) {
+              EVictim->SetEffStatiDur(ADJUST,$"slow",RoundsToUnits(e.vDuration),A_SPD);
+              EVictim->SetEffStatiDur(ADJUST,$"slow",RoundsToUnits(e.vDuration),A_MOV);
+              }
+            }
+          }
         return NOTHING;
       };
   }
@@ -5450,7 +5479,7 @@ Druid Spell "Fire Seeds;spell" : EA_CREATION
   { SC_EVO; Base: SP_TRIVIAL; Cost: 12; Level: 6; 
     xval: CREA_WIELD | CREA_TEMP | CREA_MANY; rval: $"fire seeds"; 
     yval: 4; // make how many? 
-    Purpose: EP_BUFF (VS_MELEE); Flags: EF_DLONG; 
+    Purpose: EP_BUFF (VS_MELEE); Flags: EF_D10MIN; 
     pval: +15; // divided by 3 when making a magical item plus
     Desc: "Creates four fire seeds that count as +5 weapons and can be
     thrown to inflict 5d6+5 points of fire damage each."; 
@@ -6062,31 +6091,24 @@ Priest Spell "Blasphemy" : EA_GENERIC
     aval: AR_GLOBE; lval: 12; cval: RED; Flags: EF_EVIL;
     Desc: "Not dissimilar to the arcane Power Word spells, this spell
       allows a priest to speak a word resonating with such absolute
-      power that it stuns, weakens, paralyzes or kills good creatures,
-      and banishes good outsiders if used on their home plane. The
-      effects depend upon the creature's Challenge Rating in comparison
-      to the priest's caster level + Charisma modifier (henceforth 
-      called the blasphemy power), as follows:\n
-      __*_If the creature's CR exceeds the blasphemy power, it is 
-      unaffected.
-      __*_Otherwise, if the creature's [CR + 3] exceeds the blasphemy
-      power, it is only stunned for 1d4 rounds.\n
-      __*_Otherwise, if the creature's [CR + 6] exceeds the blasphemy
-      power, it is stunned for 3d6 rounds and also weakened, suffering
-      2d6 points of Strength damage.\n
-      __*_Otherwise, if the creature's [CR + 9] exceeds the blasphemy
-      power, it is stunned for 3d6 rounds, weakened for 2d6 Strength
-      damage and paralyzed for 3d6 rounds.\n
-      __*_Otherwise, the creature is killed. If it has some means of
-      avoiding death (such as a <9>death ward<1> spell, or an Amulet
-      of Life Saving), it is stunned, weakened and paralyzed as above.
-      __The speaking of a blasphemy spell affects all creatures within
-      120 feet of the caster, consumes two fatigue points and affects
-      neutral creatures at 1/2 normal blasphemy power. Evil creatures
-      are unaffected by the spell. In addition to the effects listed
-      above, good outsiders must succeed in a Will saving throw or be
-      banished instantly -- this is the only part of the spell subject
-      to a saving throw.";
+      power that it dazes, weakens, paralyzes or kills nonevil
+      creatures, and banishes nonevil outsiders. The effects depend upon
+      the creature's Challenge Rating compared with the priest's caster
+      level, and they stack:\n__*_If the creature's CR exceeds the
+      caster level, it is unaffected.\n__*_If its CR is equal to the
+      caster level or less, it is dazed for 1 round.\n__*_If its CR is 1
+      or more below the caster level, it is also weakened, suffering a
+      -2d6 penalty to Strength for 2d4 rounds.\n__*_If its CR is 5 or
+      more below the caster level, it is also paralyzed for 1d10
+      minutes.\n__*_If its CR is 10 or more below the caster level, it
+      is also killed; undead are destroyed. A creature with some means
+      of avoiding death (such as a <9>death ward<1> spell) suffers only
+      the other effects.\n__The speaking of a blasphemy spell affects
+      all creatures within 120 feet of the caster and consumes two
+      fatigue points. Evil creatures are unaffected. In addition,
+      nonevil outsiders must succeed in a Will saving throw at -4 or be
+      banished instantly; this is the only part of the spell subject to
+      a saving throw.";
     On Event EV_EFFECT {
       /* upstream: the Desc promised a two-point fatigue cost that the script
          never charged; Observed, inc-fdi2, not sent. */
@@ -6095,19 +6117,21 @@ Priest Spell "Blasphemy" : EA_GENERIC
       return NOTHING;
       },
     EV_MAGIC_HIT {
-      int16 vPower, vCR;
-      vPower = EActor->CasterLev() + EActor->Mod(A_CHA);
-      vCR    = EVictim->ChallengeRating();
+      /* inc-nt3z phase 6: the SRD spell (d20srd.org/srd/spells/blasphemy.htm).
+         HD is Creature::ChallengeRating, the measure the old script and
+         EF_LIM_LEVEL use. Every duration is built in status units and passes
+         ApplyDurationMetamagic once; GainTempStati does not convert. */
+      int16 vCL, vHD, vPen;
+      vCL = e.vCasterLev ? e.vCasterLev : EActor->CasterLev();
+      vHD = EVictim->ChallengeRating();
       if (EVictim->isMType(MA_EVIL))
         {
           e.Immune = true;
           return DONE;
         }
-      if (!EVictim->isMType(MA_GOOD))
-        vPower /= 2;
-      else if (EVictim->isMType(MA_OUTSIDER))
+      if (EVictim->isMType(MA_OUTSIDER))
         {
-          if (!EVictim->SavingThrow(WILL,e.saveDC,SA_MAGIC|SA_EVIL|SA_SPELLS))
+          if (!EVictim->SavingThrow(WILL,e.saveDC - 4,SA_MAGIC|SA_EVIL|SA_SPELLS))
             {
               VPrint(e,"You feel a strong urge to leave this plane!",
                        "The <EVictim> is scoured from this plane!");
@@ -6116,40 +6140,55 @@ Priest Spell "Blasphemy" : EA_GENERIC
                 return DONE;
             }
         }
-      
-      if (vPower >= vCR + 9 && EVictim->ResistLevel(AD_NECR) != -1)
+      if (vHD > vCL)
         {
-          VPrint(e,"You are slain by the blasphemy!",
-                   "The <EVictim> is slain!");
-          ThrowDmg(EV_DEATH,AD_NECR,0,"hearing a blasphemy spell",
-                     EActor, EVictim);        
-          if (EVictim->isDead())
-            return DONE;
+          e.Immune = true;
+          return DONE;
         }
-      if (vPower >= vCR + 6 && EVictim->ResistLevel(AD_PLYS) != -1)
+      if (vHD <= vCL - 10)
+        {
+          if (EVictim->isMType(MA_UNDEAD))
+            {
+              VPrint(e,"You are destroyed by the blasphemy!",
+                       "The <EVictim> is destroyed!");
+              ThrowDmg(EV_DEATH,AD_NORM,0,"hearing a blasphemy spell",
+                         EActor, EVictim);
+              if (EVictim->isDead())
+                return DONE;
+            }
+          else if (EVictim->ResistLevel(AD_NECR) != -1)
+            {
+              VPrint(e,"You are slain by the blasphemy!",
+                       "The <EVictim> is slain!");
+              ThrowDmg(EV_DEATH,AD_NECR,0,"hearing a blasphemy spell",
+                         EActor, EVictim);
+              if (EVictim->isDead())
+                return DONE;
+            }
+        }
+      if (vHD <= vCL - 5 && EVictim->ResistLevel(AD_PLYS) != -1)
         {
           VPrint(e,"You are paralyzed by the blasphemy!",
                    "The <EVictim> is paralyzed!");
-          EVictim->GainTempStati(PARALYSIS,NULL,3d6,SS_ATTK,PARA_HELD);
+          EVictim->GainTempStati(PARALYSIS,NULL,
+                     ApplyDurationMetamagic(5*1d10,e.MM,0),SS_ATTK,PARA_HELD);
         }
-      if (vPower >= vCR + 3)
+      if (vHD <= vCL - 1)
         {
           VPrint(e,"You are weakened by the blasphemy!",
                    "The <EVictim> is weakened!");
-          ThrowDmg(EV_DAMAGE, AD_DAST,2d6,"hearing a blasphemy spell",
-                         EActor, EVictim);
-          if (EVictim->isDead())
-            return DONE;
+          vPen = 2d6;
+          EVictim->GainTempStati(ADJUST,EActor,
+                     ApplyDurationMetamagic(RoundsToUnits(2d4),e.MM,0),
+                     SS_ENCH,A_STR,-vPen,e.eID);
         }
-      if (vPower >= vCR)
+      if (EVictim->ResistLevel(AD_PLYS) != -1)
         {
-          VPrint(e,"You are stunned by the blasphemy!",
-                   "The <EVictim> is stunned!");
-          EVictim->GainTempStati(STUNNED,NULL, (vPower >= vCR + 3) 
-                                    ? 3d6 : 1d4,SS_ATTK);
+          VPrint(e,"You are dazed by the blasphemy!",
+                   "The <EVictim> is dazed!");
+          EVictim->GainTempStati(PARALYSIS,NULL,
+                     ApplyDurationMetamagic(2,e.MM,0),SS_ATTK,PARA_DAZED);
         }
-      else
-        e.Immune = true;
       return DONE;
     },
   MSG_CAST
