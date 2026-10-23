@@ -1,0 +1,7 @@
+# inc-rabe: open overview to stage and call SmartDirTo once, before AI acts.
+.*2
+l o
+# Dismiss the staged region description, then close the overview.
+ESC*2
+@dump:route-scene
+@quit

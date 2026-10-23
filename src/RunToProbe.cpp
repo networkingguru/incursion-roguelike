@@ -108,6 +108,91 @@ static void RunToStageM(Map *m, Player *p) {
                (int)(mn->ts.getLeader() == p));
 }
 
+/* inc-rabe: opt-in route-function scene and rest-by-rest observations.
+   INCURSION_ROUTE_PROBE=missing deliberately omits the monster.
+   A U corridor has one first step (south); west is a wall. */
+static void RouteProbe(Map *m, Player *p) {
+    const char *mode = getenv("INCURSION_ROUTE_PROBE");
+    if (!mode || !*mode || !m || !p) return;
+    static bool staged = false;
+    static hObj watched = 0;
+    static int sample = 0;
+    static uint32 start = 0;
+    char path[1024];
+    snprintf(path, sizeof(path), "%slogs/routeprobe.log",
+             (const char*)T1->IncursionDirectory);
+    FILE *f = fopen(path, "a");
+    if (!f) return;
+    if (!staged) {
+        staged = true;
+        rID wall = FIND("Dungeon Wall"), floor_ = FIND("Floor");
+        rID region = FIND("Winding Corridor"), rat = FIND("giant rat");
+        if (!wall || !floor_ || !region || !rat || !m->InBounds(15, 15)) {
+            fprintf(f, "setup missing=1 reason=resources-or-bounds\n");
+            fclose(f); return;
+        }
+        // Clear the scene and all ambient creatures before positioning either actor.
+        for (int x = 0; x < m->SizeX(); ++x)
+            for (int y = 0; y < m->SizeY(); ++y)
+                for (Thing *t = oThing(m->At(x,y).Contents), *next; t; t = next) {
+                    next = oThing(t->Next);
+                    if (t != p && (t->isCreature() ||
+                        (x >= 9 && x <= 15 && y >= 9 && y <= 15)))
+                        t->Remove(true);
+                }
+        for (int x = 9; x <= 15; ++x)
+            for (int y = 9; y <= 15; ++y) {
+                bool open = ((x == 10 || x == 14) && y >= 10 && y <= 14) ||
+                            (y == 14 && x >= 10 && x <= 14);
+                m->WriteTerra(x, y, open ? floor_ : wall);
+                m->SetRegion(Rect(x,y,x,y), region);
+                m->At(x,y).Memory = m->At(x,y).Glyph;
+                m->At(x,y).Lit = true;
+            }
+        p->PlaceAt(m, 10, 10);
+        p->RemoveStati(NONDETECTION);
+        p->RemoveStati(HIDING);
+        p->Options[OPT_MON_DJIKSTRA] = 1;
+        p->Options[OPT_AUTOMORE] = 1;
+        p->cHP = p->mHP = 10000;
+        start = theGame->Turn;
+        if (!strcmp(mode, "missing")) {
+            fprintf(f, "setup missing=1 reason=requested\n");
+            fclose(f); return;
+        }
+        Monster *mn = new Monster(rat);
+        mn->PlaceAt(m, 14, 10);
+        mn->Initialize(true);
+        mn->RemoveStati(ASLEEP);
+        mn->RemoveStati(SLEEPING);
+        mn->GainPermStati(EXTRA_ABILITY, NULL, SS_MISC, CA_TELEPATHY, 30);
+        mn->CalcValues();
+        mn->ts.giveOrder(mn, NULL, OrderDoNotHide);
+        mn->ts.addCreatureTarget(p, TargetEnemy);
+        p->ts.addCreatureTarget(mn, TargetEnemy);
+        watched = mn->myHandle;
+        int lof = m->LineOfFire(mn->x, mn->y, p->x, p->y, mn);
+        int perceives = mn->Perceives(p);
+        int hostile = p->isHostileTo(mn) && mn->isHostileTo(p);
+        int straight = mn->DirTo(p->x, p->y);
+        int expected = mn->DirTo(14, 11);
+        int blocked = m->SolidAt(mn->x + DirX[straight], mn->y + DirY[straight]);
+        int dir = mn->SmartDirTo(p->x, p->y);
+        fprintf(f, "setup missing=0 mon=%d,%d player=%d,%d lof=%d perceives=%d "
+                "hostile=%d opt=%d telepathy=%d straight=%d blocked=%d expected=%d "
+                "center=%d dir=%d\n", mn->x, mn->y, p->x, p->y, lof, perceives,
+                hostile, theGame->Opt(OPT_MON_DJIKSTRA), mn->TelepRange,
+                straight, blocked, expected, CENTER, dir);
+    }
+    if (watched && isValidHandle(watched)) {
+        Creature *mn = oCreature(watched);
+        fprintf(f, "observe rest=%d tick=%u mon=%d,%d player=%d,%d adjacent=%d\n",
+                sample++, (unsigned)(theGame->Turn - start), mn->x, mn->y,
+                p->x, p->y, (int)(mn->m == p->m && dist(mn->x,mn->y,p->x,p->y) == 1));
+    }
+    fclose(f);
+}
+
 /* Build a sealed box around the player, once, when the overview map first
    opens: a one-square-wide corridor running east, ten squares long, with one
    hazard on its fifth square. Mode T a found armed trap, D deep water, S a corridor
@@ -115,6 +200,7 @@ static void RunToStageM(Map *m, Player *p) {
    ground, so every route to its far end crosses the hazard.
    Serves tools/check_runto_hazards.sh, inc-vmpk. */
 void RunToStage(Map *m, Player *p) {
+    RouteProbe(m, p);
     static bool done = false;
     const char *mode = getenv("INCURSION_RUNTO_STAGE");
     int px, py, x, y, hx;
