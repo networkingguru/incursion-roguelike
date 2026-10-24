@@ -1,0 +1,20 @@
+# inc-z1ba: the switches every tools/check_illusion_spotted.sh session needs.
+# Included by tools/keys/illusion-spotted-*.keys.
+#
+# Wizard switches (src/Tables.cpp, in menu order): Ignore Spell Failure is the
+# 6th, Infinite Mana the 8th, Freeze Monsters the 11th. The cursor opens on the
+# first, so the downs below are the gaps between them.
+s               # one real turn, so the load is in play
+w
+y           # "Enter wizard mode?" -- yes
+w           # [w] Wizard Mode Switches
+DOWN*5
+SPACE
+DOWN*2
+SPACE
+DOWN*3
+SPACE
+@dump:switches
+ESC
+@dump:afterswitch
+

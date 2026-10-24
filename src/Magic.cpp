@@ -56,6 +56,52 @@ static int16 OverchannelChance(int16 rating) {
     return (int16)((passing * 100) / 25);
 }
 
+/* inc-z1ba: the current illusion cast's Spellcraft identifier list. Non-NULL
+   only while Creature::Cast resolves an illusion, so a grant site reached in
+   that call can find the watchers that identified the cast. */
+struct Counterspeller;
+static Counterspeller *IllusSpottedCsp = NULL;
+
+/* inc-z1ba: clears the identifier list on every return path of Creature::Cast.
+   Constructed at the top of the function (so the SpellFails gotos never jump
+   over its initialization) and armed once the identifier loop has filled csp. */
+struct IllusSpottedScope {
+    IllusSpottedScope() { IllusSpottedCsp = NULL; }
+    void Arm(Counterspeller *csp, bool isIllusion)
+        { IllusSpottedCsp = isIllusion ? csp : NULL; }
+    ~IllusSpottedScope() { IllusSpottedCsp = NULL; }
+};
+
+/* inc-z1ba: the invariant -- identifying the cast earns +4 on this illusion's
+   disbelief save only. Obj is the illusion, eID the cast's spell. */
+void GrantIllusionSpotted(Thing *illusion, rID eID) {
+    if (!IllusSpottedCsp || !illusion)
+        return;
+    for (int16 i = 0; IllusSpottedCsp[i].cr; i++)
+        IllusSpottedCsp[i].cr->GainTempStati(ILLUS_SPOTTED, illusion, -2,
+            SS_MISC, 0, 0, eID);
+}
+
+/* inc-z1ba: the invariant -- a victim counts as having identified the illusion
+   cast in progress when it appears in the current cast's identifier list. */
+static bool IllusSpottedNow(Creature *c) {
+    if (!IllusSpottedCsp || !c)
+        return false;
+    for (int16 i = 0; IllusSpottedCsp[i].cr; i++)
+        if (IllusSpottedCsp[i].cr == c)
+            return true;
+    return false;
+}
+
+/* inc-z1ba: the terrain form; Obj is the field's creator, as DISB_TERRAIN uses. */
+void GrantIllusionSpottedTerrain(Creature *creator, rID eID) {
+    if (!IllusSpottedCsp || !creator)
+        return;
+    for (int16 i = 0; IllusSpottedCsp[i].cr; i++)
+        IllusSpottedCsp[i].cr->GainTempStati(ILLUS_SPOTTED, creator, -2,
+            SS_MISC, 0, 0, eID);
+}
+
 bool effectGivesStati(rID eID)
   {
     EffectValues *ev; int8 i;
@@ -1285,12 +1331,23 @@ EvReturn Magic::MagicStrike(EventInfo &e) {
               ill_focus = 2;
         StatiIterEnd(e.EActor)
 
-        if (e.EVictim->SavingThrow(WILL,10 + (Illusionist ? Illusionist->SkillLevel(SK_ILLUSION) / 2 : 10)
-            + ocast + (e.isArcaneTrickery ? 8 : 0) + ill_focus, saveFlags))
+        /* inc-z1ba: identifying the cast with Spellcraft gives +4 on its save. */
         {
+        int16 baseDC = 10 + (Illusionist ? Illusionist->SkillLevel(SK_ILLUSION) / 2 : 10)
+            + ocast + (e.isArcaneTrickery ? 8 : 0) + ill_focus;
+        bool spotted = IllusSpottedNow(e.EVictim)
+            || e.EVictim->HasStati(ILLUS_SPOTTED, -1, e.EActor);
+        int16 usedDC = spotted ? baseDC - 4 : baseDC;
+
+        if (e.EVictim->SavingThrow(WILL,usedDC, saveFlags))
+        {
+            DisbeliefProbeForce(e.EVictim, baseDC, spotted, usedDC, true);
             e.EActor->IPrint("The <Obj> disbelieves!", e.EVictim);
             e.effDisbelieved = true;
             goto DisbeliefMessageDone;
+        }
+
+        DisbeliefProbeForce(e.EVictim, baseDC, spotted, usedDC, false);
         }
 
 Disbelieved:
@@ -1569,7 +1626,7 @@ EvReturn Magic::MagicXY(EventInfo &e,int16 tx,int16 ty)
             break;
           case EA_TERRAFORM:          
             CalcEffect(e);
-            r2 = Terraform(e);
+            r2 = Terraform(e, true);
             if (r2 == ABORT)
               return ABORT;
             if (r2 != NOTHING && r2 != NOMSG)
@@ -1996,6 +2053,10 @@ EvReturn Magic::AField(EventInfo &e)
 
     e.EActor->m->NewField(e.EMagic->rval | (e.EMagic->aval == AR_MFIELD ? FI_MOBILE : 0),
         tx,ty,e.vRadius, g, e.vDuration,e.eID,e.EActor);
+    /* inc-z1ba: illusory terrain marks its identifiers against the field's
+       creator and spell, matching DISB_TERRAIN (src/Creature.cpp). */
+    if (e.EMagic->rval & FI_ITERRAIN)
+      GrantIllusionSpottedTerrain(e.EActor, e.eID);
     return DONE;
   }
 
@@ -4713,6 +4774,8 @@ EvReturn Creature::Cast(EventInfo &e) {
         TEFF(e.eID)->Level));
     int16 specMod; 
     Counterspeller csp[64]; int16 cc; EvReturn csr;
+    /* inc-z1ba: clears the illusion identifier pointer on every return path. */
+    IllusSpottedScope illusSpottedGuard;
     /* inc-4999 phase 4b: the focus this cast needs, for the CAST_RULES probe. */
     const char *focusReq = "none";
 
@@ -5073,7 +5136,9 @@ ContinueCasting:
     MapIterate(m,c,i)
         if (c->isCreature() && c != this)
             if (c->Perceives(this)) {
-                if (c->HasSkill(SK_SPELLCRAFT) && c->SkillCheck(SK_SPELLCRAFT,10+TEFF(e.eID)->Level,true)) {
+                bool identified = c->HasSkill(SK_SPELLCRAFT) && c->SkillCheck(SK_SPELLCRAFT,10+TEFF(e.eID)->Level,true);
+                DisbeliefProbeIdentify(c, this, e.eID, identified);
+                if (identified) {
                     c->IPrint("The <Obj> begins casting <Str><Str><5><Res><7><Str>.",this,
                         MMStr.GetLength() ? "a ":"", (const char*)MMStr,e.eID,
                         e.MM & MM_DEFENSIVE ? " defensively" : "");
@@ -5089,6 +5154,10 @@ ContinueCasting:
 
     csp[cc].cr = NULL;
     csp[cc].Check = 0;
+
+    /* inc-z1ba: expose this cast's identifiers to the illusion grant sites for
+       the rest of this call; the guard clears the pointer on every return. */
+    illusSpottedGuard.Arm(csp, (TEFF(e.eID)->Schools & SC_ILL) != 0);
 
     oHP = cHP;
 

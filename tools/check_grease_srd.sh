@@ -57,7 +57,7 @@ run_case() {
     RUNS+=("$dir")
     env INCURSION_RUNTO_SKILL_ROLL="$roll" ${save:+INCURSION_FORCE_SAVE_ROLL=$save} \
         INCURSION_OPTIONS="$OPTS" INCURSION_RUN_DIR="$dir" \
-        tools/headless.sh "tools/keys/$keys" 4 >"$dir.out" 2>&1
+        tools/headless.sh "tools/keys/$keys" "${CASE_SEED:-4}" >"$dir.out" 2>&1
     S="$dir/logs/screens"
     ls "$S"/*-history.txt >/dev/null 2>&1 || {
         echo "INCONCLUSIVE [$CASE]: no message history dumped. Output: $dir.out"; exit 2; }
@@ -115,7 +115,9 @@ has "knocked from your feet" || fail "failing by 5 or more did not knock the cre
 has "Reflex Save" && fail "a Reflex save was rolled after failing by 5 or more"
 
 # --- A1: attacking from grease rolls no Balance check
-CASE=A1; run_case grease-srd-attack.keys 1
+# A1 alone runs on seed 1 (the others stay on seed 4, whose paladin has Balance -1):
+# re-pinned for inc-rt8l (kit changes the random stream); A1 rolls no Balance check.
+CASE=A1; CASE_SEED=1 run_case grease-srd-attack.keys 1
 in_grease in || { echo "INCONCLUSIVE [$CASE]: the character never stood in grease"; exit 2; }
 has "killing the kobold" || fail "the attack from grease did not land"
 has "Balance Check" && fail "attacking from grease rolled a Balance check"

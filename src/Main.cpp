@@ -325,6 +325,21 @@ void Game::Play() {
     extern void StunDurProbe(Player *pl);
     StunDurProbe(pp);
 
+    /* inc-b2wd: off unless INCURSION_SOAK_TORCH_PROBE is set. See
+       SoakTorchProbe (src/SoakTorchProbe.cpp). */
+    extern void SoakTorchProbe(Player *pl);
+    SoakTorchProbe(pp);
+
+    /* inc-pt7h: off unless INCURSION_STONING_DUR_PROBE is set. See
+       StoningDurProbe (src/StoningDurProbe.cpp). */
+    extern void StoningDurProbe(Player *pl);
+    StoningDurProbe(pp);
+
+    /* inc-4hk3: off unless INCURSION_FEAR_DUR_PROBE is set. See
+       FearDurProbe (src/FearDurProbe.cpp). */
+    extern void FearDurProbe(Player *pl);
+    FearDurProbe(pp);
+
     /* inc-nt3z: off unless INCURSION_DURATION_PROBE is set. See
        DurationProbe (src/DurationProbe.cpp) and
        tools/check_spell_durations.sh. */
@@ -341,6 +356,8 @@ void Game::Play() {
        See AreaRadiusProbe (src/AreaRadiusProbe.cpp). */
     extern void AreaRadiusProbe(Player *pl);
     AreaRadiusProbe(pp);
+    extern void TerraformEdgeProbe(Player *pl);
+    TerraformEdgeProbe(pp);
     extern void TrapAttackProbe(Player *pl);
     TrapAttackProbe(pp);
 
@@ -357,6 +374,10 @@ void Game::Play() {
     /* inc-pp9w: opt-in template chooser/builder pair oracle. */
     extern void TemplatePairProbe(Player *pl);
     TemplatePairProbe(pp);
+
+    /* inc-u1xj: opt-in undead-mount oracle; see UndeadMountProbe. */
+    extern void UndeadMountProbe(Player *pl);
+    UndeadMountProbe(pp);
 
     /* inc-6qmk: opt-in exact-monster depth oracle; see ExactMonProbe. */
     extern void ExactMonProbe(Player *pl);

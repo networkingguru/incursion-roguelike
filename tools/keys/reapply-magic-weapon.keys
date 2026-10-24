@@ -67,8 +67,10 @@ w
 @choose "Genocide Everything"
 @until "HP:" ESC
 z y
-SPACE SPACE
-@dump:rested
+@dump:rested            # the wake message shows here, before any -- more --: a
+                        # disguised monster's reveal ("you realize that this giant
+                        # rat is really a plague rat!") can push it behind one
+@while "-- more --" SPACE
 d
 @dump:expired-sheet
 ESC

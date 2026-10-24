@@ -110,11 +110,12 @@ ESC
 # success, before a second read could print a second aura. The match is "dull
 # grey", not the full "dull grey aura": the message wraps at the screen edge
 # and ScreenShows (src/Wposix.cpp:931) matches within one rendered row only, so
-# a longer phrase that straddles the wrap is never seen. @choose "(in pack)"
-# names the stack without its count, and the loop body names the single
-# readable entry's letter [a].
+# a longer phrase that straddles the wrap is never seen. @choose is a prefix match: "(in pack) 5 Scrolls of Dispel Magic"
+# names the stack with the count the five acquisitions above make, and the loop body names the
+# Dispel Magic entry's letter [a]: the options fixture gives no Beginner's Kit,
+# so there are no Identify scrolls (re-pinned for inc-rt8l).
 r
-@choose "(in pack)"
+@choose "(in pack) 5 Scrolls of Dispel Magic"
 @dump:dispel-target
 *
 @until "dull grey" r a *

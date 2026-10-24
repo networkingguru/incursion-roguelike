@@ -6,13 +6,22 @@
 # pass a fit one (exit 0), and never wait or retry. Each condition is forced
 # through a FAKE variable so no case needs to load the machine.
 #
+# inc-p8bw: the pass path prints one ok line, and the bypass records a row in
+# the load-guard log.
+#
+# fact: load average, cpu count, memory pressure, running gate -- the
+#       INCURSION_LOAD_GUARD_FAKE_LOAD/_NCPU/_PRESSURE/_GATES variables
+# fact: the bypass log location -- INCURSION_LOAD_GUARD_LOG=<temp file>
+#
 # Exit: 0 every case behaved
 #       1 a case did not
 #       2 could not measure
 set -uo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-GUARD="$ROOT/tools/load_guard.sh"
+# The guard under test. Overridable ONLY so the red/green proof can point this
+# check at the pre-change script. Never set in normal use. inc-p8bw.
+GUARD="${INCURSION_CHECK_LOAD_GUARD_UNDER_TEST:-$ROOT/tools/load_guard.sh}"
 [ -x "$GUARD" ] || [ -r "$GUARD" ] || { echo "check_load_guard: no tools/load_guard.sh" >&2; exit 2; }
 
 fails=0
@@ -26,6 +35,7 @@ guard() {
               -u INCURSION_LOAD_GUARD_FAKE_NCPU \
               -u INCURSION_LOAD_GUARD_FAKE_PRESSURE \
               -u INCURSION_LOAD_GUARD_FAKE_GATES \
+              -u INCURSION_LOAD_GUARD_LOG \
               "$@" "$GUARD" 2>&1)
     RC=$?
 }
@@ -47,7 +57,7 @@ idle() { guard INCURSION_LOAD_GUARD_FAKE_LOAD=1.0 INCURSION_LOAD_GUARD_FAKE_NCPU
 
 idle
 expect "idle values pass" [ "$RC" = 0 ]
-expect "  and say nothing" clean
+expect "  and print the ok line" bash -c 'grep -q "^load_guard: ok (" <<<"$1"' _ "$OUT"
 
 guard INCURSION_LOAD_GUARD_FAKE_LOAD=10.5 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
       INCURSION_LOAD_GUARD_FAKE_PRESSURE=1 INCURSION_LOAD_GUARD_FAKE_GATES=0
@@ -81,6 +91,18 @@ guard INCURSION_LOAD_GUARD_OFF=1 INCURSION_LOAD_GUARD_FAKE_LOAD=9.0 \
       INCURSION_LOAD_GUARD_FAKE_GATES=3
 expect "the bypass overrides an overloaded machine" [ "$RC" = 0 ]
 expect "  and announces the bypass" says "bypassed by INCURSION_LOAD_GUARD_OFF=1"
+
+# inc-p8bw: the bypass must leave a record. Point the log at a temp file so the
+# case writes nothing under the shared checkout.
+LOG_TMP="$(mktemp "${TMPDIR:-/tmp}/load-guard-log.XXXXXX")" || { echo "check_load_guard: could not make a temp log" >&2; exit 2; }
+: >"$LOG_TMP"
+guard INCURSION_LOAD_GUARD_OFF=1 INCURSION_LOAD_GUARD_LOG="$LOG_TMP" \
+      INCURSION_LOAD_GUARD_FAKE_LOAD=9.0 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
+      INCURSION_LOAD_GUARD_FAKE_PRESSURE=4 INCURSION_LOAD_GUARD_FAKE_GATES=3
+expect "the bypass still exits 0" [ "$RC" = 0 ]
+expect "  and logs exactly one bypass row" \
+    bash -c '[ "$(grep -c "bypass INCURSION_LOAD_GUARD_OFF=1 caller=load_guard.sh" "$1")" = 1 ]' _ "$LOG_TMP"
+rm -f "$LOG_TMP"
 
 # No FAKE variables: the real sysctl and pgrep paths run. Anything other than a
 # clean 0 or 2 means the guard crashed or exited with a shell error.

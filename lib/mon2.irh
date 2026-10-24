@@ -2331,7 +2331,7 @@ Monster "androsphinx" : MA_MYTHIC, MA_BEAST
     Str 25, Dex 10, Con 19, Int 16, Wis 17, Cha 17;
     Attk: A_CLAW for 1d6  AD_SLASH,
           A_CLAW for 1d6  AD_SLASH,
-          A_ROAR for 3d10 AD_FEAR (DC 19),
+          A_ROAR for 2d6 AD_FEAR (DC 19),
           A_SEEM for $"sphinx";
     ABILITY(CA_INFRAVISION,6);
     Feats: FT_RAKE, FT_TRAMPLE, FT_POWER_ATTACK, FT_CLEAVE, 

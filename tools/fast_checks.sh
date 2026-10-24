@@ -105,6 +105,40 @@ for p in "${PIDS[@]}"; do
     wait "$p"
 done
 
+# Did any check fail? Use the same tests the report loop uses below: a non-0,
+# non-2 exit, or a TOO SLOW overrun. This must run BEFORE the report prints,
+# so a failure can be labelled.
+any_failed=0
+for i in "${!CHECKS[@]}"; do
+    rc="$(cat "$TMP/$i.exit" 2>/dev/null)"
+    [ -n "$rc" ] || rc=1
+    elapsed=$(( $(cat "$TMP/$i.end" 2>/dev/null || cat "$TMP/$i.start") - $(cat "$TMP/$i.start") ))
+    too_slow=0
+    [ "$rc" -eq 142 ] && too_slow=1
+    [ "$elapsed" -ge "$LIMIT" ] && too_slow=1
+    if [ "$too_slow" -eq 1 ]; then
+        any_failed=1
+    elif [ "$rc" -ne 0 ] && [ "$rc" -ne 2 ]; then
+        any_failed=1
+    fi
+done
+
+# Only when something failed, ask the load guard whether the machine was
+# overloaded when the checks ran (inc-p8bw). Never consult it on a clean set.
+GUARD_OUT=""
+guard_refused=0
+if [ "$any_failed" -eq 1 ]; then
+    GUARD_OUT="$( "$ROOT/tools/load_guard.sh" 2>&1 )"
+    guard_rc=$?
+    [ "$guard_rc" -eq 2 ] && guard_refused=1
+fi
+
+if [ "$guard_refused" -eq 1 ]; then
+    printf 'OVERLOADED: the machine was overloaded when the checks ran, so a failure below may be load and not a defect in the check; retry with:\n'
+    printf '    until tools/load_guard.sh; do sleep 30; done\n'
+    printf '%s\n' "$GUARD_OUT" | sed 's/^/    /'
+fi
+
 # Report in discovery order.
 failed=0
 for i in "${!CHECKS[@]}"; do
@@ -125,8 +159,13 @@ for i in "${!CHECKS[@]}"; do
     if [ "$rc" -eq 0 ] && [ "$too_slow" -eq 0 ]; then
         printf 'ok   %s (%ss)\n' "$name" "$elapsed"
     elif [ "$too_slow" -eq 1 ]; then
-        printf 'FAIL %s (TOO SLOW for the fast set (over %s s); fix it or remove its gate-fast marker)\n' \
-            "$name" "$LIMIT"
+        if [ "$guard_refused" -eq 1 ]; then
+            printf 'FAIL %s (TOO SLOW (over %s s) while the machine was overloaded; retry, do not change the check)\n' \
+                "$name" "$LIMIT"
+        else
+            printf 'FAIL %s (TOO SLOW for the fast set (over %s s); fix it or remove its gate-fast marker)\n' \
+                "$name" "$LIMIT"
+        fi
         tail -n 15 "$out" 2>/dev/null | sed 's/^/    /'
         failed=1
     elif [ "$rc" -eq 2 ]; then

@@ -45,7 +45,7 @@ class Magic
       EvReturn Inflict(EventInfo &e);
       EvReturn Grant(EventInfo &e);
       EvReturn Drain(EventInfo &e);
-      EvReturn Terraform(EventInfo &e);
+      EvReturn Terraform(EventInfo &e, bool squareGiven = false);
       EvReturn Travel(EventInfo &e);
       EvReturn Identify(EventInfo &e);
       EvReturn Illusion(EventInfo &e);
@@ -86,6 +86,24 @@ class Magic
 
 			//General Effects
 	};
+
+/* inc-z1ba: the +4 disbelief bonus a watcher earns by identifying an illusion
+   with Spellcraft at cast time. GrantIllusionSpotted marks every watcher in the
+   current cast's identifier list against this illusion; the terrain form marks
+   them against the illusory-terrain field's creator and spell. */
+void GrantIllusionSpotted(Thing *illusion, rID eID);
+void GrantIllusionSpottedTerrain(Creature *creator, rID eID);
+
+/* inc-z1ba: test-only disbelief probe entry points (src/DisbeliefProbe.cpp). */
+void DisbeliefProbeThing(Creature *watcher, Thing *illusion, int16 baseDC,
+    bool spotted, int16 usedDC, bool pass);
+void DisbeliefProbeTerrain(Creature *watcher, int16 baseDC, bool spotted,
+    int16 usedDC, bool pass);
+void DisbeliefProbeForce(Creature *watcher, int16 baseDC, bool spotted,
+    int16 usedDC, bool pass);
+void DisbeliefProbeIdentify(Creature *watcher, Creature *caster, rID eID,
+    bool identified);
+
 extern int16 ZapX[];
 extern int16 ZapY[];
 extern Map*  ZapMap;

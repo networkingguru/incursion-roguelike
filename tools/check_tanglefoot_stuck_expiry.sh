@@ -40,7 +40,7 @@
 # MOUNTED. Seeds 1..4 ride a horse (tanglefoot-wait50-mount.keys, paladin):
 # the mount takes the STUCK. It is read from the mount's stati in wizard
 # "Examine Player Data" (a "STUCK from SS ATTK ... [Dur -1]" line), one dump
-# after each wait. Unmounted (tanglefoot-wait50.keys, seeds 5..10) the oracle
+# after each wait. Unmounted (tanglefoot-wait50.keys, seeds 11 12 14 16 17; re-pinned for inc-rt8l) the oracle
 # is the "Stuck" word on the status line; Dur is not printed there.
 #
 # CAN'T-TELL IS NOT PASS (exit 2 when no case could be judged). A case counts
@@ -50,13 +50,13 @@
 # that is skipped; if every case is skipped the exit is 2, never 0.
 #
 # Usage: tools/check_tanglefoot_stuck_expiry.sh [UNMOUNTED_SEEDS [MOUNTED_SEEDS]]
-#        defaults "5 6 7 8 9 10" and "1 2 3 4" (quote a list, "" for none). 0 pass, 1 fail, 2 inconclusive.
+#        defaults "11 12 14 16 17" and "1 2 3 4" (quote a list, "" for none). 0 pass, 1 fail, 2 inconclusive.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 2
 
-UNSEEDS="${1-5 6 7 8 9 10}"
+UNSEEDS="${1-11 12 14 16 17}"   # re-pinned for inc-rt8l (kit changes the random stream)
 MSEEDS="${2-1 2 3 4}"
 OPTS=tools/fixtures/options-2026-08-22.dat
 WAITS=48   # per-key waits after the step: 48*16 = 768 ticks > R + 100

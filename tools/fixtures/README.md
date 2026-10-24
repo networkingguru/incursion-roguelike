@@ -8,19 +8,28 @@ against. Each is the exact `Options.Dat` blob from the named repository commit:
 | Fixture | Source commit | Contents |
 |---|---|---|
 | `options-2026-08-13.dat` | `41df62b` | The settings present on 2026-08-13. |
-| `options-2026-08-18.dat` | `2f58be3` | The 2026-08-13 settings plus the 21-byte character-generation profile described below. |
-| `options-2026-08-22.dat` | `2092592` | The 2026-08-18 settings with `OPT_AUTOOPEN` changed from 0 to 2. |
-| `options-sneak-invis.dat` | n/a (derived) | `tools/gates/Options.Dat` with `OPT_AUTOHIDE` (518) forced to 0. `tools/check_sneak_invis.sh` uses it: with Automatic Hide in Shadows on, a rogue auto-hides in the dark and every blow counts as an unseen attack even without a spell, which spoils the visible control. |
-| `options-2026-08-22-freeadv.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_FREE_ADV` (803) forced to 1. `tools/keys/levelup-caster-sheet.keys` uses it to buy a real level through the character sheet's `G`/`A` command (Player::AdvanceLevel) on a frozen XP-0 fixture; the inc-ngku no-study control otherwise gets its level-up through `INCURSION_LEVELUP_PROBE`. |
-| `options-2026-08-22-noroomdesc.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_DESC_ROOM` (407) forced from 2 to 0. `tools/check_crowd_turn_cost.sh` uses it: with the default, the first room a ghostwalking sweep enters opens a description box that eats keys. `OPT_MON_DJIKSTRA` (114) stays 1, which that check requires. |
+| `options-2026-08-18.dat` | `2f58be3` | The 2026-08-13 settings plus the 21-byte character-generation profile described below. Changed by inc-rt8l: `OPT_BEGINKIT` (101) is 0, the Beginner's Kit off. |
+| `options-2026-08-22.dat` | `2092592` | The 2026-08-18 settings with `OPT_AUTOOPEN` changed from 0 to 2. Changed by inc-rt8l: `OPT_BEGINKIT` (101) is now 0, the Beginner's Kit off. This keeps a change to Roark's NECESSITIES list from shifting seed-pinned checks. |
+| `options-sneak-invis.dat` | n/a (derived) | `tools/gates/Options.Dat` with `OPT_AUTOHIDE` (518) forced to 0. `tools/check_sneak_invis.sh` uses it: with Automatic Hide in Shadows on, a rogue auto-hides in the dark and every blow counts as an unseen attack even without a spell, which spoils the visible control. Changed by inc-rt8l: `OPT_BEGINKIT` (101) is 0, the Beginner's Kit off. |
+| `options-2026-08-22-freeadv.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_FREE_ADV` (803) forced to 1. `tools/keys/levelup-caster-sheet.keys` uses it to buy a real level through the character sheet's `G`/`A` command (Player::AdvanceLevel) on a frozen XP-0 fixture; the inc-ngku no-study control otherwise gets its level-up through `INCURSION_LEVELUP_PROBE`. Changed by inc-rt8l: `OPT_BEGINKIT` (101) is 0, the Beginner's Kit off, as in the base file. |
+| `options-2026-08-22-noroomdesc.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_DESC_ROOM` (407) forced from 2 to 0. `tools/check_crowd_turn_cost.sh` uses it: with the default, the first room a ghostwalking sweep enters opens a description box that eats keys. `OPT_MON_DJIKSTRA` (114) stays 1, which that check requires. Changed by inc-rt8l: `OPT_BEGINKIT` (101) is 0, the Beginner's Kit off, as in the base file. |
+| `options-2026-08-22-kit.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_BEGINKIT` (101) forced to 1. `tools/check_beginner_kit.sh` runs each build with it and with `options-2026-08-22.dat` (kit off), and reads the Beginner's Kit as the difference. |
 
-The 21 changed bytes in the 2026-08-18 fixture include `OPT_BEGINKIT` and
+The historical 21-byte profile in the 2026-08-18 fixture enabled
+`OPT_BEGINKIT`; inc-rt8l now sets it to 0. The profile also has
 `OPT_REROLL` enabled, `OPT_MAX_HP` and `OPT_MAX_MANA` set to 2,
 `OPT_ELUDE_DEATH` set to 3, `OPT_GENDER` set to 2, and `OPT_SUBRACES` enabled.
 These are historical harness inputs, not recommended player defaults.
 
 A fixture is frozen. If a check needs different settings, add a new fixture
 with its own provenance and date; never edit an existing fixture.
+
+`options-2026-08-22.dat` and the two files derived from it were edited once by
+inc-rt8l to turn the Beginner's Kit off. `options-2026-08-18.dat` and
+`options-sneak-invis.dat` were edited the same way, once, by inc-rt8l. With the kit on, a fixture's result
+depended on Roark's NECESSITIES list in `lib/dungeon.irh`, which changes. With
+the kit off, a fixture depends only on its bytes and the game code. A fixture
+MUST NOT turn on an option whose result depends on a game-data list that changes.
 
 ## Character fixtures
 

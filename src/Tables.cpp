@@ -2020,11 +2020,11 @@ Option OptionList[] = {
 
 /* Chargen Options */
   { OPT_BEGINKIT, "Beginner's Kit", "OFF/ON", 1, 0, 0,
-      "__This option allows you to begin play which some extra items designed "
-      "to make the game easier for people still learning its intricacies. "
-      "The kit includes Potions of Remove Curse, Cure Disease and Mana, and "
-      "a Wand of Identify. Turning on this switch places the game in Explore "
-      "Mode." },
+      "__This option gives you extra supplies to make the game easier while you "
+      "learn it. You start with a share of the necessities that Roark's store "
+      "always stocks: potions, scrolls of identify, food, torches if you cannot "
+      "see in the dark, and a climbing rig if you have ranks in Climb. Turning "
+      "on this switch places the game in Explore Mode." },
   { OPT_STATS, "Initial Rolling Method", "4d6/4d6 + Perks/Point Buy", 2, 1, 0,
       "__This option determines which method is used initially to generate your "
       "starting attribute scores, out of the following choices:\n"
@@ -5287,6 +5287,7 @@ TextVal STATI_CONSTNAMES[] = {
   { SENESCHAL_TALLY, "SENESCHAL_TALLY" },
   { RESTOCK_DAY, "RESTOCK_DAY" },
   { CONCENTRATING, "CONCENTRATING" },
+  { ILLUS_SPOTTED, "ILLUS_SPOTTED" },
   { LAST_STATI, "LAST_STATI" },
 
   { 0, NULL } };

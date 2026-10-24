@@ -1,5 +1,11 @@
 #!/bin/bash
 # gate: live
+# fact: character and spells -- fixture orc-mage-seed1-opt0822
+# fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# fact: depth and initial hostiles -- wizard Ascend / Descend Depth and Genocide Everything
+# fact: selected spells, slots and books -- checklist and inventory actions in mage-loadout-rest.keys
+# fact: rest completion and resulting spells -- positive message and cast-menu controls
+# fact: rest encounter rolls -- seed 3, temporary re-pin explicitly authorized by inc-rt8l
 # Does a Mage's spell checklist change his loadout only at the next full rest?
 # (bd inc-j5yo)
 #
@@ -32,7 +38,8 @@
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 FIXTURE=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
-SEED=1
+# re-pinned for inc-rt8l (kit turned off in the fixtures; the random stream shifted once)
+SEED=3
 
 check_mutation src/Player.cpp \
 '        ApplySpellSelection();' \

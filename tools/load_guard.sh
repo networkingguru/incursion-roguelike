@@ -11,8 +11,39 @@
 # already running. It exits 0 when the machine is fit. It never waits.
 set -uo pipefail
 
+# Append one bypass row to the load-guard log. The location defaults to
+# <shared checkout>/logs/load-guard.log so every worktree logs in one place
+# (a worktree's own logs/ is destroyed at landing). INCURSION_LOAD_GUARD_LOG
+# overrides it. A failure to write MUST NOT change the exit status; the
+# caller decides whether to warn. inc-p8bw.
+load_guard_log_path() {
+    if [ -n "${INCURSION_LOAD_GUARD_LOG:-}" ]; then
+        printf '%s\n' "$INCURSION_LOAD_GUARD_LOG"
+        return 0
+    fi
+    local common
+    common="$(git rev-parse --git-common-dir 2>/dev/null)"
+    if [ -n "$common" ]; then
+        printf '%s\n' "$(cd "$(dirname "$common")" 2>/dev/null && pwd)/logs/load-guard.log"
+        return 0
+    fi
+    printf '%s\n' "$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)/logs/load-guard.log"
+}
+
+# log_guard_bypass <row> -> 0 wrote, 1 could not. Never exits.
+log_guard_bypass() {
+    local row="$1" path
+    path="$(load_guard_log_path)" || return 1
+    mkdir -p "$(dirname "$path")" 2>/dev/null || return 1
+    printf '%s\n' "$row" >> "$path" 2>/dev/null || return 1
+    return 0
+}
+
 if [ "${INCURSION_LOAD_GUARD_OFF:-}" = "1" ]; then
     echo "load_guard: bypassed by INCURSION_LOAD_GUARD_OFF=1"
+    _row="$(date -u +%Y-%m-%dT%H:%M:%SZ) bypass INCURSION_LOAD_GUARD_OFF=1 caller=load_guard.sh cwd=$(pwd)"
+    log_guard_bypass "$_row" \
+        || echo "load_guard: WARNING: could not append to $(load_guard_log_path)" >&2
     exit 0
 fi
 
@@ -86,4 +117,9 @@ if [ -n "$gate_pid" ]; then
 fi
 
 [ "$trip" -eq 0 ] || exit 2
+if [ -z "${pressure:-}" ]; then
+    printf 'load_guard: ok (load %s / %s cpus, pressure unknown)\n' "$load" "$ncpu"
+else
+    printf 'load_guard: ok (load %s / %s cpus, pressure %s)\n' "$load" "$ncpu" "$pressure"
+fi
 exit 0

@@ -1,0 +1,243 @@
+=== fixture: elf-mage-spotted-seed1 ===
+
+This file is the audit record for
+  tools/fixtures/chars/elf-mage-spotted-seed1.sav
+and tools/make_char_fixture.sh writes the whole of it. Do not edit it
+by hand: it would then describe a character the .sav beside it does
+not hold, and that is the one failure tools/check_char_fixture.sh
+exists to catch.
+
+made on          2026-10-24 13:34:50 EDT
+made at commit   fe935297
+                 the working tree was dirty, so this fixture may hold changes that commit does not
+seed             1
+settings         tools/fixtures/options-2026-08-22.dat
+key script       tools/keys/elf-mage-spotted-save.keys
+                 copied to tools/fixtures/chars/elf-mage-spotted-seed1.keys
+saved in game as Faridhir.sav
+sha256 .sav      9d689e6372e2f9fd7a12b0ab6734b54d44e61646877d1b0bedb571cf41c2656e
+sha256 module    443646a136c9894327f11f2ad44309e0a71a45ee60998c2c7c01bf5e12acc1d7
+                 mod/Incursion.Mod is what the save's rID manifest
+                 was written against. A fixture that stops loading
+                 is worth comparing against the module that made it.
+
+regenerate with
+  tools/make_char_fixture.sh elf-mage-spotted-seed1 tools/keys/elf-mage-spotted-save.keys 1 tools/fixtures/options-2026-08-22.dat --force
+Regenerating gives a BYTE-DIFFERENT .sav holding the SAME character:
+a save carries clocks and counters no second run repeats. Judge a
+regeneration by this sheet, never by the size of the diff.
+
+The character below is the engine's own dump. It was taken by LOADING
+the .sav beside this file and saving it again under
+INCURSION_CHAR_PROBE=1 (Game::SaveGame, src/Registry.cpp:1105-1111).
+A few of its lines belong to that reading session and not to the
+character: the torch's remaining turns, the Level Statistics table
+and the Messages at the end all move by the turns
+tools/keys/load-char-sheet.keys spends. Everything above Inventory is the
+character. For the resource ids behind the item names, which are what
+a module change moves, run:
+  tools/dump_save.sh tools/fixtures/chars/elf-mage-spotted-seed1.sav
+
+=== the character, as the engine writes him ===
+
+                        Faridhir Moonbrook, The Ambitious Conqueror (Explore Mode)
+
+Gender Male
+Race   Elf
+Class  Mage 1
+Faith  Maeve
+XP     0
+Next @ 1000
+Align  Neutral
+
+
+STR: 11/00 [+0/+0] (base 12, -1 natural)
+DEX: 14/00 [+2/+1] (base 12, +2 natural)
+CON: 11/00 [+0/+0] (base 12, -1 natural)
+INT: 16/00 [+3/+2] (base 15, +1 natural)
+WIS: 16/00 [+3/+2] (base 14, +2 natural)
+CHA: 18/00 [+4/+3] (base 16, +2 natural)
+LUC: 15/00 [+2/+2] (base 15)
+Fortitude   +0(Mage +0)
+Reflex      +2(Mage +0, +2 Dex)
+Will        +5(Mage +2, +3 Wis)
+           (+2 vs. death magic, +2 vs. enchantment, +2 vs. theft)
+Melee   +toHit +2  (Mage +0, +2 weapon)
+        Damage +0  (base 1d8 / 1d8+1)
+        Speed  125%(base 100%) x 125% weapon
+Size           Human-sized:
+  (base human-sized)
+
+Defense Class  12:
+  (base 10, +2 Dex)
+_______________(8 while casting)
+
+Coverage       0:
+  (base 0)
+
+Movement Rate  90%:
+  (base 100%) x 90% encumbrance
+
+Hit Dice Rolls 24:
+   20 + 1d4 (4)
+Mana Rolls     38:
+   15 + 1d20 (20) x 1 + 3 (WIS bonus)
+
+Encumbrance    Light:
+   (Light 19.3s, Moderate 58.0s, Heavy 116.0s, Extreme 175.0s, Max Press 230.0s)
+
+Spell Slots    1st:
+  1+3
+
+Special Abilities:
+  Evasion
+  Lowlight Vision (20 ft)
+  Magical Nature +5
+  Manifestation
+  Reverie
+  Sharp Senses +2
+  Spellcasting (1st)
+  Specialist:
+    Illusion
+  Sylvan Affinity
+
+Feats:
+  Acrobatic
+  Alertness
+  Larcenous
+  Scribe Scroll
+
+Resistances and Armour:
+  Fire 2
+  Cold 2
+
+Complete Immunities:
+  Sleep
+
+Proficiencies Staves, Daggers, short bow, rapier, long bow and long sword
+
+Skill Ratings:
+  Alchemy          +8  (2 ranks, +2 INT, +2 train, +2 kit)
+  Appraise         +6  (2 ranks, +2 WIS, +2 train)
+  Bluff            +5  (0 ranks, +3 CHA, +2 train)
+  Concentration    +4  (2 ranks, +2 train)
+  Craft            +6  (1 ranks, +1 DEX, +2 train, +2 kit)
+  Decipher Script  +4  (0 ranks, +2 INT, +2 train)
+  Disguise         +5  (0 ranks, +3 CHA, +2 train)
+  Hide in Shadows  +4  (0 ranks, +1 DEX, +3 magic)
+  Illusioncraft    +4  (0 ranks, +2 INT, +2 train)
+  Intuition        +4  (0 ranks, +2 WIS, +2 train)
+  Jump             +4  (0 ranks, +1 DEX, +3 feat)
+  Knowledge (Theyra) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Infernal) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Magic) +5  (0 ranks, +2 INT, +3 train)
+  Knowledge (Mythology) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Nature) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Oceans) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Planes) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Theology) +8  (0 ranks, +2 WIS, +2 train, +4 kit)
+  Knowledge (Undead) +4  (0 ranks, +2 INT, +2 train)
+  Listen           +9  (0 ranks, +2 WIS, +2 train, +3 feat, +2 inherent)
+  Lockpicking      +4  (0 ranks, +1 DEX, +3 feat)
+  Metamagic        +4  (0 ranks, +2 INT, +2 train)
+  Move Silently    +3  (0 ranks, +1 DEX, +2 train)
+  Perform          +5  (0 ranks, +3 CHA, +2 train)
+  Pick Pockets     +8  (0 ranks, +3 CHA, +2 train, +3 feat)
+  Searching        +4  (0 ranks, +2 INT, +2 inherent)
+  Spellcraft       +4  (0 ranks, +2 INT, +2 train)
+  Spot             +7  (0 ranks, +2 WIS, +3 feat, +2 inherent)
+  Tumble           +4  (0 ranks, +1 DEX, +3 feat)
+  Use Magic        +5  (0 ranks, +3 CHA, +2 train)
+
+Spiritual State:
+__You are devoted to Maeve.
+__Maeve is noncommital.
+__Maeve has not aided you.
+____(Favour 0, Lev 0, Pen 0%)
+__You are perfectly neutral with
+____regard to Good and Evil.
+__You are perfectly neutral with
+____regard to Law and Chaos.
+
+CharGen Options and Choices:
+__You are in Explore Mode.
+__Beginner's Kit: OFF
+__Initial Rolling Method: 4d6 + Perks
+__Allow Rerolling: YES
+__Use the Subraces: YES
+__Disallow Wizard Mode: NO
+__Maximum Hit Points: YES
+__Maximum Mana: YES
+__Default Character Gender: MALE
+__Monsters Maximum Hit Points: NO
+__Roll Attributes First: NO
+__Gain Attributes With Levels: YES
+__Allow Rapid Intuition: WEAPONS
+__Monsters Use Djikstra: YES
+__Out-Of-Depth Monsters: YES
+__Transgression Hints: YES
+__Difficulty Level: BASELINE
+__Power Stats: EXTREME
+__Elude Death: SEVEN
+__Disable Complicity Transgressions: YES
+__Natural Weapon Speed: ORIGINAL
+
+
+Inventory:
+  elven long sword
+  torch (with 2999 turns of light left)
+  elven short bow
+  elven quarterstaff
+  robes
+  Cloak +1 of Elvenkind [+3]
+  Ring of Evasion
+  Holy symbol of Maeve
+  cracked wand +3 [3d4] (36 charges)
+  36 elven sheaf arrows
+  8 Potions of Mana [3d8+8]
+  medium backpack
+  spellbook [Adventurers' Arts]
+  spellbook [Ars Mortis]
+  spellbook [Elemental Endurance]
+  spellbook [Fundamentals of Magick]
+  spellbook [Magician's Manual]
+  spellbook [Tricks and Traps]
+  170 gold pieces
+  8 pieces of elven waybread
+  Stone +2 of Channeling [+8]
+  2 torches (with 3000 turns of light left)
+  8 Scrolls of Improved Phantasmal Force
+
+On The Ground:
+
+Known Spells:
+  Charm Person                    1   91%    3 
+  Chromatic Orb                   1   94%    0 
+  Phantasmal Force                1   94%    4 
+  Change Self                     1   97%    5 +10
+  Alarm                           1   92%    1 
+  Phase Door                      1   92%    2 1d4+4
+
+Journal:
+
+12:00 AM, 1st of Suntide: Entry Chamber, 10' (H:24/24 M:38/38 XP:0) 
+  You arrive at 10' in the The Goblin Caves.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:17/21 M:13/13 XP:0) 
+  Starting Perks:
+     Bonus Feat: Larcenous.
+  Starting Item: uncursed cracked wand +3.
+
+Monsters Encountered:
+  Total: 0
+
+Level Statistics:
+
+Lvl | Act | Key | Turns | Secs |  XP | Explored
+----+-----+-----+-------+------+-----+------------------
+1   |    1|   81|      1|    26|    0| 391 / 3826 = 10%
+
+Messages:
+Welcome back to Incursion, Faridhir!
+"And there shall be laughter and magic and blood, and we shall dance our dance until the end of time..."
+Autosave... 

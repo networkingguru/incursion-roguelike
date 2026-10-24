@@ -100,6 +100,8 @@ ESC
 
 z
 y
+@while "more --" SPACE
+@while "[more]" SPACE
 v
 @dump:msgs-rest1
 ESC
@@ -140,6 +142,8 @@ ESC
 
 z
 y
+@while "more --" SPACE
+@while "[more]" SPACE
 v
 @dump:msgs-rest2
 ESC

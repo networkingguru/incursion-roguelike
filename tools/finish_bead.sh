@@ -69,6 +69,31 @@ GATE_OVERRIDDEN=0
 die()    { echo "$1" >&2; exit 1; }
 cannot() { echo "INCONCLUSIVE: $1" >&2; exit 2; }
 
+# Append one load-guard bypass row to the same log load_guard.sh writes.
+# INCURSION_LOAD_GUARD_LOG overrides the default <shared checkout>/logs/
+# load-guard.log. A failure to write MUST NOT change the exit status. inc-p8bw.
+load_guard_log_path() {
+    if [ -n "${INCURSION_LOAD_GUARD_LOG:-}" ]; then
+        printf '%s\n' "$INCURSION_LOAD_GUARD_LOG"
+        return 0
+    fi
+    local common
+    common="$(git rev-parse --git-common-dir 2>/dev/null)"
+    if [ -n "$common" ]; then
+        printf '%s\n' "$(cd "$(dirname "$common")" 2>/dev/null && pwd)/logs/load-guard.log"
+        return 0
+    fi
+    printf '%s\n' "$ROOT/logs/load-guard.log"
+}
+
+load_guard_log_bypass() { # <row> -> 0 wrote, 1 could not. Never exits.
+    local row="$1" path
+    path="$(load_guard_log_path)" || return 1
+    mkdir -p "$(dirname "$path")" 2>/dev/null || return 1
+    printf '%s\n' "$row" >> "$path" 2>/dev/null || return 1
+    return 0
+}
+
 # ROOT is where this script's own file lives -- possibly the very worktree
 # STEP 6 below destroys. SHARED is the repository, resolved from git rather
 # than from $0, so it still names something real after that worktree is gone.
@@ -395,6 +420,9 @@ acquire_lock
 # trap above releases the lock. inc-rwha.
 if [ "${INCURSION_LOAD_GUARD_OFF:-}" = "1" ]; then
     echo "finish_bead: load guard bypassed by INCURSION_LOAD_GUARD_OFF=1"
+    _row="$(date -u +%Y-%m-%dT%H:%M:%SZ) bypass INCURSION_LOAD_GUARD_OFF=1 caller=finish_bead.sh cwd=$(pwd)"
+    load_guard_log_bypass "$_row" \
+        || echo "finish_bead: WARNING: could not append to $(load_guard_log_path)" >&2
 elif ! "$ROOT/tools/load_guard.sh"; then
     cannot "the machine is overloaded, so the gate would measure load, not the bead.
 Nothing reached $BASE_BRANCH. Retry when the machine is quieter."

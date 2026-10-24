@@ -321,7 +321,7 @@ Monster "bronze dragon" : MA_DRAGON, MA_WATER, MA_AIR
           A_CRUS for 2d8 AD_BLUNT,*/
           A_BREA for 0d8 AD_ELEC (DC 20), // 12d10 DC 26 adult
           A_BRE2 for 0d8 AD_KNOC (DC 20)
-                 and 0d8 AD_FEAR (DC 20),
+                 and 2d4 AD_FEAR (DC 20),
           A_SEEM for $"dragon",
           A_FORM for $"human";
     ABILITY(CA_BLINDSIGHT,6);
@@ -1346,7 +1346,7 @@ Template "young adult" : TM_AGECAT for MA_DRAGON
           A_CRIT for 0d0 AD_SWAL,
           A_CLAW for 1d8 AD_SLASH,
           A_CLAW for 1d8 AD_SLASH,
-          A_PROX for 1d1 AD_FEAR (DC 16), // really DC 21
+          A_PROX for 5d6 AD_FEAR (DC 16), // really DC 21
           A_DGST for 4d6 AD_ACID; 
   	Gear: 60% random T_RING of random 4 to 5,
           60% random T_WAND of random 4 to 5,
@@ -1367,7 +1367,7 @@ Template "adult" : TM_AGECAT for MA_DRAGON
           A_CRIT for 0d0 AD_SWAL,
           A_CLAW for 2d6 AD_SLASH,
           A_CLAW for 2d6 AD_SLASH,
-          A_PROX for 1d1 AD_FEAR (DC 18),
+          A_PROX for 5d6 AD_FEAR (DC 18),
           A_DGST for 5d6 AD_ACID; // really DC 24
 	  Gear: 70% random T_RING of random 5 to 6,
           70% random T_WAND of random 5 to 6,
@@ -3802,7 +3802,7 @@ Monster "spectral panther" : MA_CAT, MA_BEAST
     CR: OPT_CR(5,4); HD: 3; Hit: 2; Def: 15; Mov: 150%; Spd: 120%;
     Str 18, Dex 13, Con 16, Int 13, Wis 14, Cha 15;
     Attk: A_BITE for 1d8+6 AD_PIERCE,
-          A_CPRX for 1d1 AD_FEAR (DC 13),
+          A_CPRX for 2d4 AD_FEAR (DC 13),
           A_SEEM for $"leopard";
 	RACIAL_SKILL(SK_MOVE_SIL,4);
 	RACIAL_SKILL(SK_HIDE,8);
@@ -4724,7 +4724,14 @@ Monster "cave tyrannosaurus" : MA_REPTILE, MA_DINOSAUR
    (because they're fictional) nor hybrids, so I don't know
    where to put them but here. */
 
-Monster "winter wolf" : MA_DOG
+/* upstream: base-code defect, not a port artifact. Worg and winter wolf are
+   D&D 3.5 magical beasts, and this game marks magical beasts MA_BEAST
+   (displacer beast is MA_CAT, MA_BEAST). Both carried only MA_DOG, so every
+   template that tests for a beast refused them; graveborn, zombie and skeleton
+   refused a worg mount (inc-u1xj). Shared lib/ data, no platform dependence,
+   so Win32 is the same. Tier Observed -- lldb probe: CanAddTemplate false
+   before, true after. Tracking inc-u1xj. Covers the worg entry below too. Not sent. */
+Monster "winter wolf" : MA_DOG, MA_BEAST
   {
     Image: bright cyan 'd'; Size: SZ_LARGE; 
     CR: OPT_CR(6,5); HD: 7; Hit: 7; Def: 15; Mov: 175%; Spd: 120%;
@@ -4748,7 +4755,7 @@ Monster "winter wolf" : MA_DOG
       of a Clydesdale.";
   }
 
-Monster "worg" : MA_DOG
+Monster "worg" : MA_DOG, MA_BEAST
   {
     Image: red 'd'; Size: SZ_MEDIUM; 
     CR: OPT_CR(2,2); HD: 4; Hit: 3; Def: 10; Mov: 150%; Spd: 120%;
