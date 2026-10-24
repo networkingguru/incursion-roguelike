@@ -435,6 +435,11 @@ void Game::Play() {
     extern void DoorBoltProbe(Player *pl);
     DoorBoltProbe(pp);
 
+    /* inc-o37m: off unless INCURSION_GROW_NOROOM_PROBE is set. See
+       GrowNoRoomProbe (src/GrowNoRoomProbe.cpp) and tools/check_grow_noroom.sh. */
+    extern void GrowNoRoomProbe(Player *pl);
+    GrowNoRoomProbe(pp);
+
     /* Off unless INCURSION_TRUESIGHT_PROBE is set, and run here because it
        needs a live player and a live map. See Creature::TrueSightProbe and
        tools/check_true_sight.sh. inc-5bl3. */

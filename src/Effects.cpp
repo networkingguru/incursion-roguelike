@@ -1086,6 +1086,11 @@ void Creature::Shapeshift(rID _mID, bool merge, Item* PolySource) {
             m->Update(x, y);
         return;
     }
+    /* upstream: a shape change left Attr[] (A_SIZ in particular) from the old
+       form until some later recalculation; StatiOn POLYMORPH breaks before
+       its CalcValues. Same on Win32. Run on real hit points, before cHP
+       becomes a percentage. Observed, inc-o37m, not sent. */
+    CalcValues();
     cHP = (cHP * 100) / max(1, mHP + Attr[A_THP]);
     CalcHP();
     cHP = max((cHP*(mHP + Attr[A_THP])) / 100, 1);
