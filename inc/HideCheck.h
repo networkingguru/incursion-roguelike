@@ -142,12 +142,13 @@ void HideSearch(Creature *w);
 
 /* Begin a hide: bump h->HideVal (the epoch the stored HK_SPOT_RESULT keys are
    compared against), record the current light band under HK_HIDE_BAND, and, if
-   rollNow, run HideTrigger(h, 0). */
+   rollNow, run HideTrigger(h, 0). A new hide also marks h moved in the side
+   table, so every watcher's next scan re-tests the pair (inc-yp23). */
 void HideStarted(Creature *h, bool rollNow);
 
 /* inc-u3dp phase 2b: run checks when line of sight or light changes. The
-   per-action hook HideTurnStart is the only entry; it checks the hider against
-   watchers it can newly see and re-rolls when the hider's light band changed.
+   per-action hook HideTurnStart is the only entry; it re-rolls when the hider's
+   light band changed and runs HidePairsFor(x) for x as watcher (inc-yp23).
    All are writers (SpotCheck, the Hide*Key helpers). */
 
 /* True when w's HK_SPOT_RESULT key names h as its source and its epoch bits
@@ -161,17 +162,20 @@ bool HasCurrentResult(Creature *w, Creature *h);
    cannot watch, drop w's stale result key for h. */
 void HideUpdatePair(Creature *w, Creature *h);
 
-/* Re-check every creature that shares x's map after x's line of sight or light
-   may have changed: snapshot the others' handles, then for each still-live pair
-   run HideUpdatePair in both directions. Re-fetches x and the other creature
-   across each SpotCheck, whose event can delete either. */
+/* inc-yp23: x acts as a WATCHER only. Snapshot the others' handles, then for
+   each still-live in-range hiding y run HideUpdatePair(x, y) -- x never rolls
+   as a hider here, so a hider that reaches x's view and strikes before x acts
+   is unperceived. A pair is re-tested only when x or y moved, y started a new
+   hide, or x's own sight state changed, with a once-per-round backstop; the
+   per-creature state lives only in memory. Re-fetches x and y across each
+   SpotCheck, whose event can delete either. */
 void HidePairsFor(Creature *x);
 
 /* The per-action hook. (a) If x is HIDING and the light band on x's square
    differs from the band stored under HK_HIDE_BAND, re-stamp it and re-run the
-   trigger (light changed on the hider). (b) HidePairsFor(x) (x may gain or
-   regain line of sight). (c) Clear x's HK_DISTRACT key. Re-fetches x across
-   every call that can delete it. */
+   trigger (light changed on the hider). (b) Drop x's out-of-range HK_SPOT_RESULT
+   notes, then HidePairsFor(x), where x is the watcher only (inc-yp23). (c) Clear
+   x's HK_DISTRACT key. Re-fetches x across every call that can delete it. */
 void HideTurnStart(Creature *x);
 
 #endif

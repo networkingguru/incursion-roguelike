@@ -1,0 +1,5 @@
+# inc-yp23: loaded-character probe runs before the first command.
+ENTER
+@dump:hide-pairs
+s
+@dump:hide-pairs-after-turn
