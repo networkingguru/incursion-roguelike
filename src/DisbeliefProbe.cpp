@@ -3,7 +3,9 @@
    Map::TerrainDisbelief and the force save in Magic.cpp; appends one line per
    save to logs/disbelief-probe.log:
    DISBELIEF watcher=<name> illusion=<name or terrain> dc=<base> spotted=<0|1>
-   used_dc=<dc> result=<pass|fail>. No game effect. */
+   used_dc=<dc> result=<pass|fail> removed=<0|1>. removed=1 when the illusion is
+   gone after the save (inc-bvom); terrain and force lines write removed=0.
+   No game effect. */
 #include "Incursion.h"
 
 /* The game chdir()s constantly, so a relative path lands wherever the working
@@ -18,7 +20,7 @@ static FILE *DisbeliefProbeOpen()
 }
 
 static void DisbeliefProbeLine(const char *watcherName, const char *illusName,
-    int16 baseDC, bool spotted, int16 usedDC, bool pass)
+    int16 baseDC, bool spotted, int16 usedDC, bool pass, bool removed)
 {
     FILE *f;
     if (!getenv("INCURSION_DISBELIEF_PROBE"))
@@ -26,18 +28,18 @@ static void DisbeliefProbeLine(const char *watcherName, const char *illusName,
     if (!(f = DisbeliefProbeOpen()))
         return;
     fprintf(f, "DISBELIEF watcher=%s illusion=%s dc=%d spotted=%d used_dc=%d "
-        "result=%s\n", watcherName, illusName, (int)baseDC, spotted ? 1 : 0,
-        (int)usedDC, pass ? "pass" : "fail");
+        "result=%s removed=%d\n", watcherName, illusName, (int)baseDC,
+        spotted ? 1 : 0, (int)usedDC, pass ? "pass" : "fail", removed ? 1 : 0);
     fclose(f);
 }
 
 void DisbeliefProbeThing(Creature *watcher, Thing *illusion, int16 baseDC,
-    bool spotted, int16 usedDC, bool pass)
+    bool spotted, int16 usedDC, bool pass, bool removed)
 {
     if (!watcher || !illusion)
         return;
     DisbeliefProbeLine((const char*)watcher->Name(),
-        (const char*)illusion->Name(), baseDC, spotted, usedDC, pass);
+        (const char*)illusion->Name(), baseDC, spotted, usedDC, pass, removed);
 }
 
 void DisbeliefProbeTerrain(Creature *watcher, int16 baseDC, bool spotted,
@@ -46,7 +48,7 @@ void DisbeliefProbeTerrain(Creature *watcher, int16 baseDC, bool spotted,
     if (!watcher)
         return;
     DisbeliefProbeLine((const char*)watcher->Name(), "terrain", baseDC, spotted,
-        usedDC, pass);
+        usedDC, pass, false);
 }
 
 void DisbeliefProbeForce(Creature *watcher, int16 baseDC, bool spotted,
@@ -55,7 +57,7 @@ void DisbeliefProbeForce(Creature *watcher, int16 baseDC, bool spotted,
     if (!watcher)
         return;
     DisbeliefProbeLine((const char*)watcher->Name(), "force", baseDC, spotted,
-        usedDC, pass);
+        usedDC, pass, false);
 }
 
 /* One line per perceiving watcher of a cast: did its Spellcraft check identify

@@ -7,8 +7,7 @@
 # IL_SPECTRAL 1, IL_IMPROVED 2, IL_ADVANCED 4.
 #
 #   R1  Thing::DisbeliefCheck (src/Creature.cpp): a watcher that passes its Will
-#       save against an illusion WITHOUT IL_SPECTRAL ends it (RemoveStati, "winks
-#       out of existence"). Phantasmal Force, yval 0.
+#       save against an illusion WITHOUT IL_SPECTRAL ends it (RemoveStati). Phantasmal Force, yval 0.
 #   R2  Against an illusion WITH IL_SPECTRAL a passed save only gives that watcher
 #       DISBELIEVED. The illusion stays and every other watcher still saves.
 #       Spectral Force, yval IL_SPECTRAL.
@@ -23,9 +22,12 @@
 # THE ORACLE. With INCURSION_DISBELIEF_PROBE set the game appends one line per
 # save, pass or fail, to the run's logs/disbelief-probe.log (src/DisbeliefProbe.cpp):
 #
-#   DISBELIEF watcher=<n> illusion=<n> dc=<base> spotted=0|1 used_dc=<dc> result=pass|fail
+#   DISBELIEF watcher=<n> illusion=<n> dc=<base> spotted=0|1 used_dc=<dc> result=pass|fail removed=0|1
 #
-# R1 and R2 add the screen text "winks out of existence". R3 and R4 add
+# removed=1 says the illusion was gone once that save finished. R1 asserts a
+# watcher's pass line with removed=1. R2 asserts two watchers' pass lines, all
+# removed=0. No screen text is read (the seed decides the illusory creature, and
+# its name moves the message's line wrap). R3 and R4 add
 # logs/true-illusion.log (src/TrueIllusionProbe.cpp): SETUP names the player and
 # the spell's flags as the game reads them, SHOT / STRIKE says the hit landed or
 # the victim collapsed. A save line from the PLAYER after that is the assertion.
@@ -57,7 +59,7 @@
 # fact: the spell's tier (R1, R2) -- not read; R1 and R2 name the spell and assert on behavior, and the probe line's dc rises with the spell level
 # fact: where the probe puts the actors (R3, R4) -- the first clear line from the player on the fixture's map; the save pins the map
 # fact: the player's name -- read from the SETUP line, never matched as text
-# fact: the illusory creature's name (R1, R2) -- not read; the check does not match it
+# fact: the illusory creature's identity and name (R1, R2) -- decided by the seed -- not read; the oracle is the probe's removed field
 # fact: the base DC -- not read
 #
 # EXIT. 0 all assertions pass, 1 any fails, 2 when the check cannot establish what
@@ -98,13 +100,13 @@ export INCURSION_FORCE_DAMAGE_ROLL=99
 _pr=$CHECK_PROVE_RED
 [ "$_SITE" = r1 ] || CHECK_PROVE_RED=0
 check_mutation src/Creature.cpp \
-    'if (!(fl & IL_SPECTRAL)) {' \
-    'if (0) {'
+    'if (!(fl & IL_SPECTRAL))' \
+    'if (0)'
 CHECK_PROVE_RED=$_pr
 [ "$_SITE" = r2 ] || CHECK_PROVE_RED=0
 check_mutation src/Creature.cpp \
-    'if (!(fl & IL_SPECTRAL)) {' \
-    'if (1) {'
+    'if (!(fl & IL_SPECTRAL))' \
+    'if (1)'
 CHECK_PROVE_RED=$_pr
 [ "$_SITE" = r3 ] || CHECK_PROVE_RED=0
 check_mutation src/Fight.cpp \
@@ -119,38 +121,33 @@ check_mutation src/Fight.cpp \
           e.EActor->DisbeliefCheck();'
 CHECK_PROVE_RED=$_pr
 
-# verdict_cast <spell tier> <log> <screens dir>
+# verdict_cast <spell tier> <log>
 #   tier r1: want exactly the removal. tier r2: want two watchers saving, no removal.
 # verdict_probe <log> <probe log> <want flags> <event word>
 # Both print "<status> <text>": 0 pass, 1 fail, 2 could not measure.
 verdict_cast() {
     python3 -I - "$@" <<'PY'
-import glob, re, sys
-rule, log, screens = sys.argv[1:4]
+import re, sys
+rule, log = sys.argv[1:3]
 try:
     lines = open(log, errors="replace").read().splitlines()
 except OSError:
     print("2 no logs/disbelief-probe.log: no save was made"); sys.exit()
 saves = []
 for l in lines:
-    m = re.match(r"DISBELIEF watcher=(.+?) illusion=(.+?) dc=(-?\d+) spotted=(\d) used_dc=(-?\d+) result=(\w+)$", l)
+    m = re.match(r"DISBELIEF watcher=(.+?) illusion=(.+?) dc=(-?\d+) spotted=(\d) used_dc=(-?\d+) result=(\w+) removed=([01])$", l)
     if m and m.group(2) not in ("force", "terrain"):
         saves.append(m.groups())
 passes = [s for s in saves if s[5] == "pass"]
 if not passes:
     print("2 no watcher passed a save against the illusion (%d save lines); the cast or the walk did not reach it" % len(saves)); sys.exit()
-shots = sorted(glob.glob(screens + "/*-after.txt")) + sorted(glob.glob(screens + "/*-final.txt"))
-if not shots:
-    print("2 no after/final screen dump"); sys.exit()
-text = " ".join(open(f, errors="replace").read() for f in shots)
-text = re.sub(r"\s+", " ", text)
-winks = "winks out of existence" in text
 who = sorted(set(s[0] for s in passes))
-desc = "passes by %s; winks out %s" % (", ".join(who), "shown" if winks else "not shown")
+gone = [s for s in passes if s[6] == "1"]
+desc = "passes by %s; %d of %d pass lines removed the illusion" % (", ".join(who), len(gone), len(passes))
 if rule == "r1":
-    print(("0 " if winks else "1 ") + desc + ("" if winks else "; wanted the illusion gone"))
+    print(("0 " if gone else "1 ") + desc + ("" if gone else "; wanted the illusion gone"))
 else:
-    ok = len(who) >= 2 and not winks
+    ok = len(who) >= 2 and not gone
     print(("0 " if ok else "1 ") + desc + ("" if ok else "; wanted two watchers saving and the illusion still there"))
 PY
 }
@@ -214,12 +211,12 @@ unset INCURSION_TRUE_ILLUSION_PROBE INCURSION_TRUE_ILLUSION_SPELL
 echo "== R1 session: Phantasmal Force, two watchers pass"
 export INCURSION_FORCE_SAVE_ROLL=20
 check_run tools/keys/yam9-removal.keys 1
-verdict R1-REMOVED "$(verdict_cast r1 "$CHECK_RUN/logs/disbelief-probe.log" "$CHECK_RUN/logs/screens")" \
+verdict R1-REMOVED "$(verdict_cast r1 "$CHECK_RUN/logs/disbelief-probe.log")" \
     "a passed save against a non-Spectral illusion ends it"
 
 echo "== R2 session: Spectral Force, two watchers pass"
 check_run tools/keys/yam9-spectral.keys 1
-verdict R2-SPECTRAL-STAYS "$(verdict_cast r2 "$CHECK_RUN/logs/disbelief-probe.log" "$CHECK_RUN/logs/screens")" \
+verdict R2-SPECTRAL-STAYS "$(verdict_cast r2 "$CHECK_RUN/logs/disbelief-probe.log")" \
     "a passed save against Spectral Force leaves it, and the second watcher still saves"
 
 export INCURSION_FORCE_SAVE_ROLL=1

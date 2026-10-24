@@ -2713,8 +2713,8 @@ void Thing::DisbeliefCheck(Creature *watcher) {
     int16 baseDC = s->Val;
     bool spotted = watcher->HasStati(ILLUS_SPOTTED,-1,this);
     int16 usedDC = spotted ? baseDC - 4 : baseDC;
-    if (watcher->SavingThrow(WILL,usedDC,SA_ILLUS)) {
-        DisbeliefProbeThing(watcher, this, baseDC, spotted, usedDC, true);
+    bool passed = watcher->SavingThrow(WILL,usedDC,SA_ILLUS);
+    if (passed) {
         watcher->IPrint("You realize that the <Obj> is an illusion.", this);
         if (s->h && oThing(s->h)->isCreature())
           if (oCreature(s->h)->Perceives(watcher))
@@ -2729,13 +2729,12 @@ void Thing::DisbeliefCheck(Creature *watcher) {
         
         /* inc-yam9: one disbelieving viewer (other than the caster) ends a
            low-tier illusion; one with IL_SPECTRAL only immunizes that viewer. */
-        if (!(fl & IL_SPECTRAL)) {
+        if (!(fl & IL_SPECTRAL))
           RemoveStati(ILLUSION);
-          return;
-        }
-      } 
-    else
-        DisbeliefProbeThing(watcher, this, baseDC, spotted, usedDC, false);
+      }
+    /* inc-bvom: the probe line follows the removal and records its outcome. */
+    DisbeliefProbeThing(watcher, this, baseDC, spotted, usedDC, passed,
+        !m || !HasStati(ILLUSION));
     
  }
  
