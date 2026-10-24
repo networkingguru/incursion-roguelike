@@ -76,6 +76,7 @@ static bool OnPlayerSquare(Player *pl, Item *t) {
 }
 
 void SoakTorchProbe(Player *pl) {
+    /* inc-b2wd: opt-in hook for tools/check_soak_torch.sh. */
     if (!getenv("INCURSION_SOAK_TORCH_PROBE"))
         return;
     if (!pl || !pl->m) {
