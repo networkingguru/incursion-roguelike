@@ -133,6 +133,7 @@ disps = [
     ("2026-10-01T08:05:00Z", "sonnet", "do the thing", "block"),
     ("2026-10-01T08:06:00Z", "opus", "do the thing", "bypass"),
     ("2026-10-01T08:07:00Z", None, "do the thing", "allow"),
+    ("2026-10-01T08:08:00Z", "sonnet", "owner: do the thing", "allow"),
     # Outside the window.
     ("2026-09-30T08:00:00Z", "sonnet", "fallback: old", "allow"),
     ("2099-10-04T08:00:00Z", "sonnet", "fallback: new", "allow"),
@@ -179,8 +180,9 @@ assert_line "stopped by context: 1" '^  stopped by context: 1$'
 assert_line "stopped by idle: 0" '^  stopped by idle: 0$'
 assert_line "cost sum 0.850 (null counted 0)" '^DeepSeek total cost: \$0\.850 USD'
 assert_line "single requests excluded from runs (2)" '^DeepSeek single requests: 2$'
-assert_line "dispatches by decision" '^dispatches: allow 6, block 1, bypass 1$'
+assert_line "dispatches by decision" '^dispatches: allow 7, block 1, bypass 1$'
 assert_line "allowed sonnet fallback labelled" 'sonnet fallback 1'
+assert_line "allowed sonnet owner labelled" 'sonnet owner 1'
 assert_line "allowed+bypass opus unlabelled (2)" 'opus none 2'
 assert_line "allowed inherit unlabelled" 'inherit none 1'
 if grep -Eq 'sonnet none 1' "$TMP/out"; then
@@ -193,8 +195,8 @@ if grep -Eq 'sonnet research 1' "$TMP/out"; then
 else
     fail "research shown in the breakdown"
 fi
-assert_line "share: DeepSeek 4 runs, share 4 (blocked/research/haiku out), 50%" \
-    '^implementation share: DeepSeek 4 runs, sonnet/opus/inherit 4 \(fallback \+ bypass \+ unlabelled-allowed\), DeepSeek 50%$'
+assert_line "share: DeepSeek 4 runs, share 5 (blocked/research/haiku out), 44%" \
+    '^implementation share: DeepSeek 4 runs, sonnet/opus/inherit 5 \(fallback \+ bypass \+ unlabelled-allowed\), DeepSeek 44%$'
 
 # --- case: window excludes later day --------------------------------------
 rc=0
@@ -205,8 +207,8 @@ else
     pass "until window: report exit 0"
 fi
 assert_line "until window excludes 10-03 (runs 3)" '^DeepSeek runs: 3 total, 1 finished$'
-assert_line "until window excludes 10-04 but not 10-01 dispatches (share 4, 43%)" \
-    '^implementation share: DeepSeek 3 runs, sonnet/opus/inherit 4 \(fallback \+ bypass \+ unlabelled-allowed\), DeepSeek 43%$'
+assert_line "until window excludes 10-04 but not 10-01 dispatches (share 5, 38%)" \
+    '^implementation share: DeepSeek 3 runs, sonnet/opus/inherit 5 \(fallback \+ bypass \+ unlabelled-allowed\), DeepSeek 38%$'
 
 # --- case: --until default (up to now) counts everything from 10-01 on ----
 # The fixtures only reach 10-04, and "now" is later, so all post-since rows
@@ -220,8 +222,8 @@ else
 fi
 assert_line "default until counts the 10-04 rows (runs 4)" \
     '^DeepSeek runs: 4 total, 2 finished$'
-assert_line "default until counts the 10-03 rows but not 10-04 (share 4, 50%)" \
-    '^implementation share: DeepSeek 4 runs, sonnet/opus/inherit 4 \(fallback \+ bypass \+ unlabelled-allowed\), DeepSeek 50%$'
+assert_line "default until counts the 10-03 rows but not 10-04 (share 5, 44%)" \
+    '^implementation share: DeepSeek 4 runs, sonnet/opus/inherit 5 \(fallback \+ bypass \+ unlabelled-allowed\), DeepSeek 44%$'
 
 # --- case: both files missing -> exit 0, n/a ------------------------------
 MISS="$TMP/nope"

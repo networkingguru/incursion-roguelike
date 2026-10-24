@@ -1078,7 +1078,7 @@ Template "pseudonatural" : TM_PLANAR for MA_NLIVING
                  and AD_GRAB (DC 16),
           A_CRIT for AD_ENGL (DC 16),
           A_DGST for 2d6 AD_ACID,
-          A_GAZE for 6d12 AD_FEAR (DC 20)
+          A_GAZE for 3d6 AD_FEAR (DC 20)
                  and 1d6 AD_DAIN (DC 16),
           A_SPOR for 0d0 AD_DISE (DC 16);
     Spells: $"true strike", $"distance distortion",
@@ -1216,7 +1216,7 @@ Monster "mote of negative energy" : MA_VORTEX, MA_ELEMENTAL, MA_OUTSIDER
     Image: shadow 'v'; Size: SZ_TINY;             
     CR: OPT_CR(5,5); HD: 1; Hit: 1; Def: 15; Mov: 100%; Spd: 100%;    
     Dex 16, Wis 14;
-    Attk: A_TUCH for 1d2 AD_FEAR (DC 18),
+    Attk: A_TUCH for 2d4 AD_FEAR (DC 18),
           A_PROX for 1d6 AD_VAMP,
           A_DETH for 2d6 AD_NECR (DC 20);
 	ABILITY(CA_INFRAVISION,9);
@@ -4101,7 +4101,7 @@ Monster "shadow haunt" : MA_WRAITH
     CR: OPT_CR(7,8); HD: 6; Hit: +3; Def: 15;  Mov: 150%; Spd: 130%; 
     Dex 17, Int 14, Wis 13, Cha 21; Arm: 10; 
     Attk: A_TUCH for 1d8 AD_DRCH,
-          A_GAZE for 1d2 AD_FEAR (DC 18);
+          A_GAZE for 2d4 AD_FEAR (DC 18);
 	SPELL_RES(17);
 	ABILITY(CA_TELEPATHY,10);
 	ABILITY(CA_TURN_RESISTANCE,4);
@@ -4196,7 +4196,7 @@ Monster "wraith" : MA_WRAITH
     Dex 16, Int 14, Wis 14, Cha 15;
     Attk:  A_TUCH for 3d12 AD_DREX (DC 17)
                   and 1d6  AD_DACO (DC 17),
-           A_PROX for AD_FEAR (DC 15),
+           A_PROX for 2d4 AD_FEAR (DC 15),
            A_SEEM for $"spectral undead";
 	  ABILITY(CA_INFRAVISION,6);
            // A_ABIL for $"wight" CA_SPAWN;
@@ -4746,7 +4746,7 @@ Template "death knight" : TM_CLASS for MA_ADVENTURER
     // drow: 1/2 -> 6
     CR: +3 (Min 6); MType: MA_UNDEAD; 
     Str +4, Wis +2, Cha +2, Con =0; 
-    Attk:	A_PROX for AD_FEAR (DC 14);
+    Attk:	A_PROX for 2d4 AD_FEAR (DC 14);
         RACIAL_SKILL(SK_INTIMIDATE,8);
 	RACIAL_SKILL(SK_APPRAISE,8);
 	RACIAL_SKILL(SK_SPOT,8);
