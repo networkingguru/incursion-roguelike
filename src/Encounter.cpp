@@ -462,6 +462,71 @@ void Map::enAddMountTemp(EventInfo &e, rID tID)
     enCalcCurrPartXCR(e);
   }
 
+static bool MountCanTake(EventInfo &e, rID tID)
+  {
+    /* Build the mount as enBuildMon does: CalcValues before each AddTemplate. */
+    Monster *mt = new Monster(e.ep_hmID);
+    rID chosen[2] = { e.ep_htID, e.ep_htID2 };
+    for (int i = 0; i < 2; i++)
+      if (chosen[i] && chosen[i] > 0x01000000) {
+        mt->CalcValues();
+        mt->AddTemplate(chosen[i]);
+      }
+    mt->CalcValues();
+    bool ok = mt->CanAddTemplate(tID);
+    delete mt;
+    return ok;
+  }
+
+void Map::enUndeadMount(EventInfo &e)
+  {
+    bool riderIsUndead, mountIsUndead;
+    riderIsUndead = mountIsUndead = false;
+    if (TMON(e.ep_mID)->isMType(e.ep_mID, MA_UNDEAD))
+      riderIsUndead = true;
+    if (e.ep_tID && (TTEM(e.ep_tID)->TType & TM_UNDEAD))
+      riderIsUndead = true;
+    if (e.ep_tID2 && (TTEM(e.ep_tID2)->TType & TM_UNDEAD))
+      riderIsUndead = true;
+    if (e.ep_tID3 && (TTEM(e.ep_tID3)->TType & TM_UNDEAD))
+      riderIsUndead = true;
+
+    if (TMON(e.ep_hmID)->isMType(e.ep_hmID, MA_UNDEAD))
+      mountIsUndead = true;
+    if (e.ep_htID && (TTEM(e.ep_htID)->TType & TM_UNDEAD))
+      mountIsUndead = true;
+    if (e.ep_htID2 && (TTEM(e.ep_htID2)->TType & TM_UNDEAD))
+      mountIsUndead = true;
+
+    if (!riderIsUndead || mountIsUndead)
+      return;
+
+    /* upstream: a mount template the undead-rider rule picks MUST be one the
+       mount can take. The rule never asked CanAddTemplate, so enBuildMon's
+       AddTemplate refused the pick on a giant spider (ASSERT in a debug build,
+       mount left living in a release build). Same code on Win32. Tier: Observed
+       (tools/check_undead_mount.sh, red before, green after). Tracking:
+       inc-u1xj. Not sent. */
+    rID cand[3] = { FIND("graveborn;template"), FIND("zombie"), FIND("skeleton") };
+    for (int i = 2; i > 0; i--) {
+      int j = random(i + 1);
+      rID tmp = cand[i];
+      cand[i] = cand[j];
+      cand[j] = tmp;
+    }
+    for (int i = 0; i < 3; i++)
+      if (MountCanTake(e, cand[i])) {
+        enAddMountTemp(e, cand[i]);
+        return;
+      }
+
+    /* No template fits this mount: the mount is dropped, so its CR stops counting. */
+    e.ep_hmID = 0;
+    e.ep_htID = 0;
+    e.ep_htID2 = 0;
+    enCalcCurrPartXCR(e);
+  }
+
 void Map::enCalcCurrPartXCR(EventInfo &e)
   {
     e.ep_monCR = 0;
@@ -1457,38 +1522,8 @@ RetryPart:
         ASSERT(!e.ep_tID2 || (RES(e.ep_tID2)->Type == T_TTEMPLATE))
         ASSERT(!e.ep_tID3 || (RES(e.ep_tID3)->Type == T_TTEMPLATE))
 
-        if (e.ep_hmID) {
-            bool riderIsUndead, mountIsUndead;
-            riderIsUndead = mountIsUndead = false;
-            if (TMON(e.ep_mID)->isMType(e.ep_mID, MA_UNDEAD))
-                riderIsUndead = true;
-            if (e.ep_tID && (TTEM(e.ep_tID)->TType & TM_UNDEAD))
-                riderIsUndead = true;
-            if (e.ep_tID2 && (TTEM(e.ep_tID2)->TType & TM_UNDEAD))
-                riderIsUndead = true;
-            if (e.ep_tID3 && (TTEM(e.ep_tID3)->TType & TM_UNDEAD))
-                riderIsUndead = true;
-
-            if (TMON(e.ep_hmID)->isMType(e.ep_hmID, MA_UNDEAD))
-                mountIsUndead = true;
-            if (e.ep_htID && (TTEM(e.ep_htID)->TType & TM_UNDEAD))
-                mountIsUndead = true;
-            if (e.ep_htID2 && (TTEM(e.ep_htID2)->TType & TM_UNDEAD))
-                mountIsUndead = true;
-
-            if (riderIsUndead && !mountIsUndead)
-                switch (random(3)) {
-                case 0:
-                    enAddMountTemp(e, FIND("graveborn;template"));
-                    break;
-                case 1:
-                    enAddMountTemp(e, FIND("zombie"));
-                    break;
-                case 2:
-                    enAddMountTemp(e, FIND("skeleton"));
-                    break;
-            }
-        }
+        if (e.ep_hmID)
+            enUndeadMount(e);
 
         enAddMon(e);
         UpdateAlignRestrict(e);

@@ -4724,7 +4724,14 @@ Monster "cave tyrannosaurus" : MA_REPTILE, MA_DINOSAUR
    (because they're fictional) nor hybrids, so I don't know
    where to put them but here. */
 
-Monster "winter wolf" : MA_DOG
+/* upstream: base-code defect, not a port artifact. Worg and winter wolf are
+   D&D 3.5 magical beasts, and this game marks magical beasts MA_BEAST
+   (displacer beast is MA_CAT, MA_BEAST). Both carried only MA_DOG, so every
+   template that tests for a beast refused them; graveborn, zombie and skeleton
+   refused a worg mount (inc-u1xj). Shared lib/ data, no platform dependence,
+   so Win32 is the same. Tier Observed -- lldb probe: CanAddTemplate false
+   before, true after. Tracking inc-u1xj. Covers the worg entry below too. Not sent. */
+Monster "winter wolf" : MA_DOG, MA_BEAST
   {
     Image: bright cyan 'd'; Size: SZ_LARGE; 
     CR: OPT_CR(6,5); HD: 7; Hit: 7; Def: 15; Mov: 175%; Spd: 120%;
@@ -4748,7 +4755,7 @@ Monster "winter wolf" : MA_DOG
       of a Clydesdale.";
   }
 
-Monster "worg" : MA_DOG
+Monster "worg" : MA_DOG, MA_BEAST
   {
     Image: red 'd'; Size: SZ_MEDIUM; 
     CR: OPT_CR(2,2); HD: 4; Hit: 3; Def: 10; Mov: 150%; Spd: 120%;
