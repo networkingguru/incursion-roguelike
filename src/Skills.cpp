@@ -5032,12 +5032,28 @@ HasComponent:
 	return DONE;
 }
 
+/* upstream: base-code defect, the fix is ours. Plane names must be keyed by the
+   PHASE_ constants; the old Planes[] list had no PHASE_VORTEX slot, so every
+   name was one slot early, and it carried a "positive energy plane" no constant
+   names. Upstream's, because the list is the original game's and misbehaves on
+   any platform. Tier Observed, tools/repro_phase_plane_name.sh. inc-ef99; not
+   sent. */
+static const char * PhasePlaneName(int8 p)
+{
+	switch (p)
+	{
+	case PHASE_MATERIAL: return "material plane";
+	case PHASE_ASTRAL:   return "astral plane";
+	case PHASE_ETHEREAL: return "ethereal plane";
+	case PHASE_SHADOW:   return "plane of shadow";
+	case PHASE_NEGATIVE: return "negative energy plane";
+	default:             return "???";
+	}
+}
+
 EvReturn Creature::Phase(EventInfo &e) {
-	const char * Planes[8] = { "material plane", "astral plane",
-	  "ethereal plane", "plane of shadow", "negative energy plane",
-	  "positive energy plane", "???", "???" };
 	int16 i; bool vis[MAX_PLAYERS];
-	int8 phase_type = (int8)AbilityLevel(CA_PHASE);
+	int8 phase_type = (int8)PhasePlane();
 	ASSERT(phase_type);
 	if (HasStati(PHASED, phase_type))
 	{
@@ -5062,7 +5078,7 @@ EvReturn Creature::Phase(EventInfo &e) {
 		return ABORT;
 	}
 
-	IPrint("You phase into the <Str>.", Planes[phase_type]);
+	IPrint("You phase into the <Str>.", PhasePlaneName(phase_type));
 
 	for (i = 0; i != MAX_PLAYERS; i++)
 		if (m->pl[i] && m->pl[i] != myHandle)
@@ -5075,7 +5091,7 @@ EvReturn Creature::Phase(EventInfo &e) {
 			if (vis[i])
 				oCreature(m->pl[i])->IPrint(oCreature(m->pl[i])->Perceives(this) ?
 					"The <Obj> shifts into the <Str>." :
-					"An <Obj> winks out of existence!", this, Planes[phase_type]);
+					"An <Obj> winks out of existence!", this, PhasePlaneName(phase_type));
 
 	Timeout += 12;
 	return DONE;
