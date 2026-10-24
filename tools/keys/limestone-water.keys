@@ -77,10 +77,11 @@ ESC     # Close the switches list.
 @while "Die? [yn]" n
 @until "HP:" ENTER
 @while "Die? [yn]" n
-@expect "100m"
 # A room's description box can be open on arrival (seed 202: "Jagged Chasm"). It
 # eats the quit key below, so no game turn passes and the harness reads the run as
 # NO GAMEPLAY. A box has a "#---" border; the map never draws one.
+# The box also hides the "100m" depth line, so close it before the @expect (inc-8483).
 @while "#---" ESC
+@expect "100m"
 @dump:depth10
 @quit
