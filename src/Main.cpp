@@ -330,6 +330,11 @@ void Game::Play() {
     extern void StoningDurProbe(Player *pl);
     StoningDurProbe(pp);
 
+    /* inc-4hk3: off unless INCURSION_FEAR_DUR_PROBE is set. See
+       FearDurProbe (src/FearDurProbe.cpp). */
+    extern void FearDurProbe(Player *pl);
+    FearDurProbe(pp);
+
     /* inc-nt3z: off unless INCURSION_DURATION_PROBE is set. See
        DurationProbe (src/DurationProbe.cpp) and
        tools/check_spell_durations.sh. */

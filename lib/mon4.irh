@@ -1549,7 +1549,7 @@ Monster "osyluth" : MA_DEVIL
           A_STNG for 3d4 AD_PIERCE and AD_POIS (DC 14),
           A_SEEM for $"fiend",
           A_GATE for 50% MA_DEVIL (CR 6),
-          A_PROX for 3d6 AD_FEAR (DC 14);
+          A_PROX for 7d1 AD_FEAR (DC 14);
 	ABILITY(CA_WEAPON_IMMUNITY,1);
 	ABILITY(CA_INFRAVISION,12);
 	SPELL_RES(21);
@@ -1752,9 +1752,9 @@ Monster "hamatula" : MA_DEVIL
     CR: OPT_CR(9,8); HD: 9; Hit: +9; Def: 17; Mov: 100%; Spd: 100%;
     Str 17, Dex 11, Con 13, Int 12, Wis 14, Cha 10; Arm: 13;
     Attk: A_CLAW for 2d4 AD_SLASH 
-                 and 3d6 AD_FEAR (DC 14),
+                 and 9d1 AD_FEAR (DC 14),
           A_CLAW for 2d4 AD_SLASH 
-                 and 3d6 AD_FEAR (DC 14),
+                 and 9d1 AD_FEAR (DC 14),
           A_IMPA for 3d4 AD_PIERCE,
           A_AURA for 1d4 AD_PIERCE,
           A_SEEM for $"fiend",
@@ -1936,7 +1936,7 @@ Monster "cornugon" : MA_DEVIL
           A_TAIL for 1d3 AD_BLUNT,
           A_GATE for 50% MA_DEVIL (CR 10),
           A_SEEM for $"fiend",
-          A_PROX for 3d6 AD_FEAR (DC 14);
+          A_PROX for 15d1 AD_FEAR (DC 14);
 	ABILITY(CA_WEAPON_IMMUNITY,3);
 	ABILITY(CA_INFRAVISION,12);
 	SPELL_RES(24); 
