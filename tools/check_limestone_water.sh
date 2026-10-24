@@ -15,6 +15,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+mkdir -p "$ROOT/logs"
 RUN_ROOT="$(mktemp -d "$ROOT/logs/limestone-water-XXXXXX")"
 echo "specimens: $RUN_ROOT"
 run_failed=0
