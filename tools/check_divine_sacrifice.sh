@@ -13,15 +13,30 @@
 # buff lasts 1 round per caster level; and the spell can be ended from the
 # cancel menu.
 #
-# WHAT IS DRIVEN. tools/keys/divine-sacrifice-after.keys (seeds 1-5) casts
-# it with five dice, attacks a frozen froghemoth, takes a round with no
-# attack, checks the cancel menu lists it and dropping it ends it, then
-# casts it three more times (clearing and re-summoning the target between
-# castings, so recasting cannot provoke an attack of opportunity) to drain
-# the caster past the 10 HP sacrifice threshold, and finally checks the
-# cancel menu no longer lists it once its duration has run out. See that
-# key script's header for the measured HP trajectory and why four castings
-# are needed.
+# WHAT IS DRIVEN. tools/keys/divine-sacrifice-after.keys (seeds 1-5) advances
+# the priest to Priest 5, casts the spell with five dice, attacks a frozen
+# froghemoth, takes a round with no attack, checks the cancel menu lists it
+# and dropping it ends it, then casts it five more times (clearing and
+# re-summoning the target between castings, so recasting cannot provoke an
+# attack of opportunity) to drain the caster past the 10 HP sacrifice
+# threshold, and finally checks the cancel menu no longer lists it once its
+# duration has run out. See that key script's header for the measured HP
+# trajectory and why six castings are needed.
+#
+# inc-bwxt: inc-nt3z (spell durations) made this spell last (caster level+1)/2
+# status units (EF_DROUND), where it lasted one unit per caster level. At Priest 3
+# that is 1 unit, so the script runs the priest at Priest 5 (2 units).
+# fact: character -- built by the key script; Priest 5 via Free Advancement
+# fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# fact: caster level -- the cast is innate (Learn Any Spell), so CL is the
+#       priest's challenge rating; fixed by the Priest 5 advancement, and a
+#       duration of 2 units is asserted through the cancel menu, not assumed
+# fact: duration -- fixed by caster level; the cast turn is the same each run
+# fact: target -- frozen summoned froghemoth (Freeze Monsters switch)
+# fact: max HP -- rolled per seed (68 to 87 seen over seeds 1-5); castings 2-6
+#       drain it, and check 4 fails if HP never reaches the 10 HP threshold
+# fact: attack rolls -- hit or miss does not move the payment, so HP does not
+#       depend on the seed
 #
 # THE ORACLE IS THE SCREEN. Every @dump is a full screen: the five-choice
 # menu ("[12345]"), the message log ("Damage: ... +N DSac ..."), the HUD
@@ -91,7 +106,7 @@ for SEED in 1 2 3 4 5; do
     summon="$SCR"/*-c1-summoned.txt
     xactive="$SCR"/*-c1-xmenu-active.txt
     cancmsg="$SCR"/*-c1-cancel-messages.txt
-    xexpired="$SCR"/*-c4-xmenu-expired.txt
+    xexpired="$SCR"/*-c6-xmenu-expired.txt
 
     # 1. The dice menu offers all five choices, independent of class level.
     v="$(grep -h 'How many extra dice' $menu 2>/dev/null)"
@@ -105,7 +120,7 @@ for SEED in 1 2 3 4 5; do
     [ -n "$CHP" ] || fail "seed $SEED: no HP line on the cast screen"
     [ "$CHP" = "$SHP" ] || fail "seed $SEED: HP paid at cast: $SHP -> $CHP"
 
-    # 3. Build the combined HP trajectory across castings 2-4 (12 attacks,
+    # 3. Build the combined HP trajectory across castings 2-6 (20 attacks,
     #    no rests): a payment is a -10 HP step, a skip is 0. Every attack
     #    that costs 30 Timeout falls in the same 60-tick round as the one
     #    before it unless a round boundary was crossed meanwhile, so at
@@ -119,7 +134,7 @@ for SEED in 1 2 3 4 5; do
     HPS+=("$prev")
     paid=0
     casting2_skips=0
-    for f in c2-a1 c2-a2 c2-a3 c2-a4 c3-a1 c3-a2 c3-a3 c3-a4 c4-a1 c4-a2 c4-a3 c4-a4; do
+    for f in c2-a1 c2-a2 c2-a3 c2-a4 c3-a1 c3-a2 c3-a3 c3-a4 c4-a1 c4-a2 c4-a3 c4-a4 c5-a1 c5-a2 c5-a3 c5-a4 c6-a1 c6-a2 c6-a3 c6-a4; do
         hp="$(hp_of $SCR/*-$f.txt)"
         [ -n "$hp" ] || fail "seed $SEED: no HP line on the $f screen"
         HPS+=("$hp")
@@ -130,12 +145,12 @@ for SEED in 1 2 3 4 5; do
         [ "$delta" -eq 0 ] && [[ "$f" == c2-* ]] && casting2_skips=$((casting2_skips+1))
         prev="$hp"
     done
-    [ "$paid" -lt 12 ] || fail "seed $SEED: every one of the 12 attacks in castings 2-4 paid -- the once-per-round guard never fired"
-    # Casting 2 starts at 48 HP, well clear of the 10 HP low-HP guard even
-    # after two payments (48 -> 28), so a run of four back-to-back attacks
+    [ "$paid" -lt 20 ] || fail "seed $SEED: every one of the 20 attacks in castings 2-6 paid -- the once-per-round guard never fired"
+    # Casting 2 starts at 71 HP, well clear of the 10 HP low-HP guard even
+    # after four payments (71 -> 31), so a run of four back-to-back attacks
     # with no skip among them can only mean the once-per-round guard is
     # gone -- the low-HP guard cannot be masking it here.
-    [ "$casting2_skips" -ge 1 ] || fail "seed $SEED: all four of casting 2's back-to-back attacks paid (48 -> 8) -- the once-per-round guard never fired"
+    [ "$casting2_skips" -ge 1 ] || fail "seed $SEED: all four of casting 2's back-to-back attacks paid (71 -> 31) -- the once-per-round guard never fired"
 
     # 4. The sacrifice is skipped once it would bring the caster to 0 HP or
     #    below: HP must reach at or below the 10 HP sacrifice (the guard
@@ -151,10 +166,10 @@ for SEED in 1 2 3 4 5; do
     #    reports so. Once expired, the menu no longer lists it.
     grep -q 'Drop Divine Sacrifice' $xactive || fail "seed $SEED: no 'Drop Divine Sacrifice' while the buff was active"
     grep -q 'Dropping Divine Sacrifice\.' $cancmsg || fail "seed $SEED: cancel never reported 'Dropping Divine Sacrifice.'"
-    grep -q 'nothing active to cancel' $xexpired || fail "seed $SEED: the X menu still lists something after the buff's full duration (caster level 3 rounds) should have elapsed"
+    grep -q 'nothing active to cancel' $xexpired || fail "seed $SEED: the X menu still lists something after the buff's full duration (2 status units) should have elapsed"
     grep -q 'Drop Divine Sacrifice' $xexpired && fail "seed $SEED: 'Drop Divine Sacrifice' still listed after the buff should have expired"
 
-    # 6. Walk every attack dump in order (c1-a1, then castings 2-4),
+    # 6. Walk every attack dump in order (c1-a1, then castings 2-6),
     #    de-duplicating a stale repeated Damage line (a miss leaves the
     #    prior hit's line on screen). Each fresh DSac bonus must be within
     #    5d6's bounds (5 dice, chosen = 10 HP, chosen/2 = 5), and the number
@@ -162,7 +177,7 @@ for SEED in 1 2 3 4 5; do
     #    payment can be consumed by at most one hit).
     dsac_events=0
     prevline=""
-    for f in c1-a1 c2-a1 c2-a2 c2-a3 c2-a4 c3-a1 c3-a2 c3-a3 c3-a4 c4-a1 c4-a2 c4-a3 c4-a4; do
+    for f in c1-a1 c2-a1 c2-a2 c2-a3 c2-a4 c3-a1 c3-a2 c3-a3 c3-a4 c4-a1 c4-a2 c4-a3 c4-a4 c5-a1 c5-a2 c5-a3 c5-a4 c6-a1 c6-a2 c6-a3 c6-a4; do
         line="$(dmgline_of $SCR/*-$f.txt)"
         if [ -n "$line" ] && [ "$line" != "$prevline" ] && grep -q 'DSac' <<< "$line"; then
             dsac_events=$((dsac_events+1))
@@ -173,11 +188,11 @@ for SEED in 1 2 3 4 5; do
         fi
         [ -n "$line" ] && prevline="$line"
     done
-    total_paid=$((1 + paid))   # c1-a1's own payment, plus castings 2-4's.
+    total_paid=$((1 + paid))   # c1-a1's own payment, plus castings 2-6's.
     [ "$dsac_events" -le "$total_paid" ] || \
         fail "seed $SEED: $dsac_events DSac bonuses seen but only $total_paid payments -- a bonus applied with nothing banked"
 
-    echo "seed $SEED: PASS (menu [12345]; cast HP $CHP unchanged; $((total_paid)) payments, $((13-total_paid)) skips; drained to $min_hp and held; $dsac_events DSac bonus(es) in [5,30]; cancel while active, gone after expiry)"
+    echo "seed $SEED: PASS (menu [12345]; cast HP $CHP unchanged; $((total_paid)) payments, $((21-total_paid)) skips; drained to $min_hp and held; $dsac_events DSac bonus(es) in [5,30]; cancel while active, gone after expiry)"
     echo "           specimen: $SCR"
 done
 

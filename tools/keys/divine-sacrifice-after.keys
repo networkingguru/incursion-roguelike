@@ -7,29 +7,28 @@
 #     tools/headless.sh tools/keys/divine-sacrifice-after.keys 1
 #
 # ROUTE. tools/keys/divine-sacrifice-setup.keys builds a lawful good orc
-# priest of Kysul (Good domain) at Priest 3 (caster level 3, so the fixed
-# duration is exactly 3 rounds -- src/Magic.cpp's EV_CALC_EFFECT handler in
-# lib/pspells.irh sets e.vDuration = e.vCasterLev), with Free Advancement,
-# Infinite Mana and Freeze Monsters, learns Divine Sacrifice. The priest has
-# 58 HP.
+# priest of Kysul (Good domain) at Priest 3, with Free Advancement, Infinite
+# Mana and Freeze Monsters, and learns Divine Sacrifice. This script then
+# advances the priest to Priest 5 (81 HP): since inc-nt3z the spell lasts
+# (caster level + 1) / 2 status units (EF_DROUND, a unit is 60 ticks), and
+# Priest 3 gets 1 unit, too short for the first attack, a rest and the cancel
+# menu. Priest 5 gets 2 units.
 #
-# WHY FOUR CASTINGS. Each attack costs 30 Timeout at this priest's speed and
+# WHY SIX CASTINGS. Each attack costs 30 Timeout at this priest's speed and
 # a round is 60 GetTurn() units (src/Fight.cpp:3501; src/Main.cpp:898,1311),
 # so two back-to-back attacks with no rest fall in the same round: measured,
 # the first pays and the second does not (lib/pspells.irh's once-per-round
-# guard). Measured again, the buff is gone by the fourth back-to-back attack
-# of a casting (the X menu drops "Drop Divine Sacrifice" and prints "You have
-# nothing active to cancel."), and a resting turn between two attacks starts
-# a fresh pay-eligible round. One casting's own 10 HP-a-payment sacrifice (at
-# most two payments before it elapses) cannot drain 58 HP down to the 10 HP
-# skip threshold by itself, so the script casts four times, clearing the
-# frozen target between castings with the wizard "Genocide Everything" (no
-# adjacency at the moment of casting, so recasting cannot provoke the
-# froghemoth's grab attack of opportunity, the same reason the very first
-# cast happens before any target is summoned). Measured HP after each
-# casting: 58 -(pay)-> 48 (casting 1, cancelled here); 48 -(pay,skip,pay,
-# skip)-> 28 (casting 2); 28 -> 8 (casting 3, same pattern); casting 4 starts
-# at 8, below the 10 HP sacrifice, so every attack's payment is skipped.
+# guard). The buff is gone within the four back-to-back attacks of a casting
+# (the X menu drops "Drop Divine Sacrifice" and prints "You have nothing
+# active to cancel."), and a casting pays at most about three times. That
+# cannot drain 81 HP down to the 10 HP skip threshold, so the script casts six
+# times, clearing the frozen target between castings with the wizard "Genocide
+# Everything" (no adjacency at the moment of casting, so recasting cannot
+# provoke the froghemoth's grab attack of opportunity, the same reason the
+# very first cast happens before any target is summoned). Measured HP: 81
+# -(pay)-> 71 (casting 1, cancelled here); 41 after casting 3; 21 after
+# casting 4; 1 in casting 5, where the next payment would bring HP to 0 and is
+# skipped; castings 5 and 6 pay nothing more.
 #
 # THE ORACLE IS THE SCREEN. Every @dump is a full screen: the five-choice
 # menu ("[12345]"), the message log ("Damage: ... +N DSac ..." and
@@ -43,6 +42,30 @@
 # tools/check_divine_sacrifice.sh's header) and against the pre-fix
 # lib/pspells.irh.
 @include divine-sacrifice-setup.keys
+
+# Two more Free Advancements, Priest 3 to Priest 5. Divine Sacrifice lasts
+# (caster level + 1) / 2 status units since inc-nt3z (EF_DROUND; a unit is 60
+# ticks). This cast is innate (Learn Any Spell), so the caster level is the
+# priest's challenge rating. Measured: Priest 3 and 4 give 1 unit (the buff is
+# gone 48 ticks after the cast, before the cancel menu check), Priest 5 gives
+# 2 units. See the 'fact' lines in tools/check_divine_sacrifice.sh.
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+@dump:level5
+ESC
 
 # Cast Divine Sacrifice on the caster (self-target), before anything stands
 # beside him. The menu must offer all five choices, and nothing is paid now.
@@ -150,8 +173,7 @@ ENTER RIGHT
 ENTER RIGHT
 @dump:c3-a4
 
-# --- Casting 4: clear, recast at 8 HP -- every attack this casting starts
-#     at or below the 10 HP sacrifice, so every payment must be skipped. ---
+# --- Casting 4: clear, recast, keep draining. ---
 ENTER
 w
 @choose "Genocide Everything"
@@ -181,7 +203,68 @@ ENTER RIGHT
 ENTER RIGHT
 @dump:c4-a4
 
-# Rest four full rounds -- more than the 3-round duration can survive, so
+# --- Casting 5: clear, recast; HP falls to 1 and the sacrifice that would
+#     bring it to 0 is skipped. ---
+ENTER
+w
+@choose "Genocide Everything"
+
+ENTER
+m
+@until "Divine Sacrifice (" DOWN
+ENTER
+*
+5
+
+ENTER
+w
+@choose "Monster Summoning"
+@choose "Beasts"
+@choose "froghemoth"
+RIGHT ENTER
+@dump:c5-summoned
+
+ENTER RIGHT
+@while "Confirm attack" y
+@dump:c5-a1
+ENTER RIGHT
+@dump:c5-a2
+ENTER RIGHT
+@dump:c5-a3
+ENTER RIGHT
+@dump:c5-a4
+
+# --- Casting 6: clear, recast at 1 HP -- every payment this casting must be skipped. ---
+ENTER
+w
+@choose "Genocide Everything"
+
+ENTER
+m
+@until "Divine Sacrifice (" DOWN
+ENTER
+*
+5
+
+ENTER
+w
+@choose "Monster Summoning"
+@choose "Beasts"
+@choose "froghemoth"
+RIGHT ENTER
+@dump:c6-summoned
+
+ENTER RIGHT
+@while "Confirm attack" y
+@dump:c6-a1
+ENTER RIGHT
+@dump:c6-a2
+ENTER RIGHT
+@dump:c6-a3
+ENTER RIGHT
+@dump:c6-a4
+
+# Rest four full rounds -- more than the 2-unit duration can survive, so
 # this does not depend on how many of the four attacks above paid or on any
 # per-seed shift in round alignment -- then confirm the buff is gone.
 ENTER
@@ -194,6 +277,6 @@ ENTER
 .
 ENTER
 x
-@dump:c4-xmenu-expired
+@dump:c6-xmenu-expired
 
 @quit
