@@ -8742,7 +8742,11 @@ WoundIgnored:
                                         if (!e.EVictim->SavingThrow(REF,e.saveDC,SA_PETRI)) 
                                         {
                                             e.EVictim->StatiMessage(STONING,0,false);
-                                            e.EVictim->GainTempStati(STONING, e.EActor,  SS_ATTK, 20);
+                                            /* upstream: Duration and Cause were swapped, so every
+                                               petrification clock lasted SS_ATTK (6) units. Wrong
+                                               against GainTempStati's signature on any platform/compiler.
+                                               Observed via tools/check_stoning_duration.sh; inc-pt7h; not sent. */
+                                            e.EVictim->GainTempStati(STONING, e.EActor, 20, SS_ATTK);
                                         }
                                         else
                                             e.Resist = true;

@@ -325,6 +325,11 @@ void Game::Play() {
     extern void StunDurProbe(Player *pl);
     StunDurProbe(pp);
 
+    /* inc-pt7h: off unless INCURSION_STONING_DUR_PROBE is set. See
+       StoningDurProbe (src/StoningDurProbe.cpp). */
+    extern void StoningDurProbe(Player *pl);
+    StoningDurProbe(pp);
+
     /* inc-nt3z: off unless INCURSION_DURATION_PROBE is set. See
        DurationProbe (src/DurationProbe.cpp) and
        tools/check_spell_durations.sh. */
