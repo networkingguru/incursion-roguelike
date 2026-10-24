@@ -698,6 +698,7 @@ class Creature: public Thing, public Magic
       void ClimbFall();
       void FocusCheck(Creature *killer);
       virtual int16 onPlane();
+      int16 PhasePlane();
       virtual bool isHostileTo(Creature*c);
       virtual bool isFriendlyTo(Creature*c);
       virtual bool isHostileToPartyOf(Creature *c);

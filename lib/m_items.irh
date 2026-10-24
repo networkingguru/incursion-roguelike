@@ -3977,7 +3977,11 @@ and EA_GRANT
 
 AI_BOOTS Effect "Phasing" : EA_GRANT
   { SC_WEA; Flags: EF_AUTOID; /* Required for now... */
-    xval: EXTRA_ABILITY; yval: CA_PHASE; pval: 2;
+    /* upstream: the boots' grant was pval 2 (PHASE_ASTRAL) while their own
+       Desc says ethereal plane; a phase spider grants PHASE_ETHEREAL. Upstream's,
+       because the value is the original game's. Tier Observed,
+       tools/repro_phase_plane_name.sh. inc-ef99; not sent. */
+    xval: EXTRA_ABILITY; yval: CA_PHASE; pval: PHASE_ETHEREAL;
     Level: 14;
     Desc: "These boots grant you the ability to phase in and out
       of the ethereal plane, which can be accessed with the Use

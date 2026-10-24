@@ -1,0 +1,42 @@
+# Does Creature::Phase name the plane the character really enters? Read by
+# tools/repro_phase_plane_name.sh, bead inc-ef99.
+#
+# DEFECT (fixed): Phasing boots grant CA_PHASE with pval 2 = PHASE_ASTRAL
+# (lib/m_items.irh:3978) yet their Desc says ethereal plane. The repro now
+# requires the boots to grant PHASE_ETHEREAL and the printed name to match.
+#
+# fact: character -- fixture orc-barbarian-seed1-opt0822 (INCURSION_LOAD)
+# fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# fact: the item -- wizard Item Acquisition, boots walked to "Boots of Phasing"
+# fact: item level / plus -- typed 3 at the acquisition prompt
+# fact: the phase value -- AI_BOOTS Effect "Phasing" pval PHASE_ETHEREAL (data, not a roll)
+# fact: no roll is read -- use ability 'u' always succeeds (Creature::Phase)
+# fact: text matched -- fixed strings in src/Skills.cpp, not seed-decided
+#
+# Observations: the message "You phase into the ..." (@dump:after-phase) and
+# the boots' own page, which names the plane from the stored value
+# (src/Help.cpp:3857) (@dump:boots-page).
+
+w
+y
+@choose "Item Acquisition"
+RIGHT*20
+@until "Boots of Phasing" DOWN
+DOWN                    # the middle row is the selected one: step onto it
+ENTER
+3
+ENTER
+@dump:boots-acquired    # the acquisition wears them: slot k reads Boots of Phasing
+k
+x
+@dump:boots-page        # examine the boots: the page names the plane from the stored value
+ESC
+ESC
+u
+@dump:use-menu
+@choose "Phase"
+@dump:after-phase       # the message line is the oracle: "You phase into the <name>."
+w
+@choose "Examine Player Data"
+@until "PHASED" PGDN
+@dump:stati-phased      # wizard Creature::Dump prints the real plane: Val:PHASE_xxx

@@ -433,7 +433,10 @@ Monster "nabassu" : MA_DEMON
        because it's kind of a nabassu's "thing". */
 	ABILITY(CA_DEVOURING,10);
     ABILITY(CA_INFRAVISION,6);
-    ABILITY(CA_PHASE,6);
+    ABILITY(CA_PHASE,PHASE_ETHEREAL); /* upstream: 6 is not a PHASE_ plane
+       (PHASE_NEGATIVE is 5); a nabassu phases into the ethereal plane, as the
+       phase spider does. The value is the original game's. Tier Traced; inc-ef99;
+       not sent. */
     ABILITY(CA_TELEPATHY,10);
     ABILITY(CA_SPAWN, 6); 
     ABILITY(CA_SNEAK_ATTACK,3);
