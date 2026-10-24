@@ -1053,9 +1053,14 @@ Terrain "stinking cloud;terrain"
         EActor->GainTempStati(NAUSEA,EVictim,2d4,SS_ENCH,0,0,
           $"stinking cloud");
     } , EV_MON_CONSIDER {
+      /* upstream: the warning asks only a breather whose Fortitude bonus is
+         below WARN_SAVE_DC. The old `!` bound first, made the test always true,
+         so every breather was asked and every monster avoided the cloud.
+         Shared game data: Win32 and the upstream compiler misbehave the same.
+         Tier Observed (tools/check_stinking_cloud_prompt.sh). inc-uprr. NOT SENT. */
       if (EActor->onPlane() == PHASE_MATERIAL &&
-          EActor->isMType(MA_BREATHER) && 
-          !EActor->GetAttr(A_SAV_FORT) < 15)
+          EActor->isMType(MA_BREATHER) &&
+          EActor->GetAttr(A_SAV_FORT) < $"stinking cloud;terrain"->GetConst(WARN_SAVE_DC))
         return ABORT;
       else 
         return NOTHING;
