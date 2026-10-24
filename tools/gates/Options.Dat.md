@@ -52,6 +52,7 @@ are applied on top of it. Nothing else changed.
 | `OPT_AUTOKICK` | 209 | 0 | 1 | Kicks a door in after a failed pick instead of stalling; pairs with `OPT_REPEAT_KICK`, already on. |
 | `OPT_KILL_CHEST` | 211 | 0 | 1 (no-op here; base already had it) | Destroys an empty chest for free on contact instead of leaving a standing obstacle. |
 | `OPT_DWARVEN_AUTOFOCUS` | 214 | 0 | 1 (no-op here; base already had it) | Only affects dwarves; picks a target automatically instead of prompting. |
+| `OPT_BEGINKIT` | 101 | 1 | 0 | Set by inc-rt8l. The Beginner's Kit follows Roark's NECESSITIES list, so a change to that list would shift seed-pinned checks. Off here. `tools/check_beginner_kit.sh` turns it on with `tools/fixtures/options-2026-08-22-kit.dat`. |
 
 ## Explicitly NOT touched -- the death-semantics boundary
 

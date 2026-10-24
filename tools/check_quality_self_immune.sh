@@ -83,8 +83,9 @@ check_mutation src/Item.cpp \
 # --- ARM A: the same suit, with nothing on it ---------------------------
 # inc-kbws: was seed 5; the opposed hide check (inc-u3dp) shifted the shared
 # RNG stream, and the blast no longer reaches the armour on seed 5 at tip.
-# Seeds 1 and 3 stage both arms; seed 1 is used.
-check_run tools/keys/quality-self-immune-plain.keys 1
+# Seeds 1 and 3 staged both arms then. Re-pinned 1 -> 5 for inc-rt8l (kit changes
+# the random stream); seed 5 stages both arms again.
+check_run tools/keys/quality-self-immune-plain.keys 5
 check_screens '*-burn-before'
 check_expect "It has 56 out of 56 hit" "the plain suit starts undamaged"
 check_expect "Disintegration, Fire." "the plain suit's hardness table counts Fire among the types it resists by zero"
@@ -98,8 +99,8 @@ check_expect "Resistances and Armour" "the character sheet lists resistances"
 check_reject "Fire 6" "no quality, so the wearer gets no fire resistance"
 
 # --- ARM B: the same suit, carrying AQ_FIRE_RES --------------------------
-# inc-kbws: was seed 5; see the note on arm A above.
-check_run tools/keys/quality-self-immune-quality.keys 1
+# Seed 5 again (inc-rt8l); see the note on arm A above.
+check_run tools/keys/quality-self-immune-quality.keys 5
 check_screens '*-burn-before'
 check_expect "Leather Armour Of Fire Resistance" "the quality is on the suit before the fire"
 check_expect "Light Damage, Fire," "the quality makes the suit itself immune to fire"

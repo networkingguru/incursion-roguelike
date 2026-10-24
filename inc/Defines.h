@@ -3675,7 +3675,8 @@ typedef signed int        hObj;
 #define ALLOWED_GODS          33
 #define TEXT_LIST             34
 #define SPECIALTY_SPELLS      35 /* two spells per specialist school, school order 0-8 */
-#define NECESSITIES           36 /* Roark: rows of item, effect (0 for none), tier size; inc-icp3 */
+#define NECESSITIES           36 /* Roark: rows of item, effect (0 for none), tier size, kit count; inc-icp3, inc-rt8l */
+#define KIT_BY_TYPE         9999 /* NECESSITIES kit count: use the item-type rule; a plain -1 would parse as a subtraction in the list (inc-rt8l) */
 
 #define GROUP_LEADER          100
 #define GROUP_FOLLOWER        101

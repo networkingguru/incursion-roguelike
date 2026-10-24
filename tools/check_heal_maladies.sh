@@ -46,7 +46,7 @@
 # to prove anything, and it says so instead of running when there is no
 # green to start from.
 #
-# THE SEED IS PINNED AT 1, because of the paralysis measurement below:
+# THE SEED IS PINNED AT 5 (re-pinned for inc-rt8l: kit changes the random stream), because of the paralysis measurement below:
 # Hold Person rolls a real Will save against the kobold, and that roll is not
 # scripted. Which seeds let the kobold fail its save moves with the draws a
 # new character's starting kit consumes: seed 2 (the pin before the kit
@@ -118,9 +118,9 @@ _build_scratch() {
 # a $(...) capture would run it in a subshell and lose that.
 _read_run() {
     local dir="$1" mal
-    # inc-kbws: was seed 5; the opposed hide check (inc-u3dp) shifted the RNG
-    # stream and seed 1 now stages both halves at tip. See the header comment.
-    INCURSION_RUN_DIR="$dir" check_run tools/keys/heal-maladies.keys 1
+    # inc-kbws moved this 5 -> 1; re-pinned 1 -> 5 for inc-rt8l (kit changes the
+    # random stream). See the header comment.
+    INCURSION_RUN_DIR="$dir" check_run tools/keys/heal-maladies.keys 5
 
     CONTROL_MISSING=()
     check_screens '*control*'
