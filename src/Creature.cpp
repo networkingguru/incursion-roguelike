@@ -2686,8 +2686,11 @@ void Thing::DisbeliefCheck(Creature *watcher) {
           if (watcher->isCreature())
             if (watcher != this)
               if (watcher->DistFrom(this) <= 10)
-                if (watcher->Perceives(this))
+                if (watcher->Perceives(this)) {
                   DisbeliefCheck(watcher);
+                  if (!HasStati(ILLUSION))
+                    break;
+                }
         return;
     }
     
@@ -2723,13 +2726,13 @@ void Thing::DisbeliefCheck(Creature *watcher) {
            check as well. */
            
         SetStatiMag(ILLUSION,-1,NULL, GetStatiMag(ILLUSION)+1);
-        /*
-          Let's leave the "disbelief destroys illusions" out for
-          now and see how balance works. 
         
-        if (s->Mag > (fl & (IL_SPECTRAL) ? 0 :
-              oCreature(s->h)->Mod(A_INT)+1))
-          RemoveStati(ILLUSION);*/
+        /* inc-yam9: one disbelieving viewer (other than the caster) ends a
+           low-tier illusion; one with IL_SPECTRAL only immunizes that viewer. */
+        if (!(fl & IL_SPECTRAL)) {
+          RemoveStati(ILLUSION);
+          return;
+        }
       } 
     else
         DisbeliefProbeThing(watcher, this, baseDC, spotted, usedDC, false);

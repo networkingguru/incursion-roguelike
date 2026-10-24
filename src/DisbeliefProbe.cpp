@@ -6,13 +6,24 @@
    used_dc=<dc> result=<pass|fail>. No game effect. */
 #include "Incursion.h"
 
+/* The game chdir()s constantly, so a relative path lands wherever the working
+   directory is at that moment; inc-yam9 found it missing in a session that
+   fires a save before any menu runs. Name the run directory instead. */
+static FILE *DisbeliefProbeOpen()
+{
+    char path[1024];
+    snprintf(path, sizeof(path), "%slogs/disbelief-probe.log",
+        (const char*)T1->IncursionDirectory);
+    return fopen(path, "a");
+}
+
 static void DisbeliefProbeLine(const char *watcherName, const char *illusName,
     int16 baseDC, bool spotted, int16 usedDC, bool pass)
 {
     FILE *f;
     if (!getenv("INCURSION_DISBELIEF_PROBE"))
         return;
-    if (!(f = fopen("logs/disbelief-probe.log", "a")))
+    if (!(f = DisbeliefProbeOpen()))
         return;
     fprintf(f, "DISBELIEF watcher=%s illusion=%s dc=%d spotted=%d used_dc=%d "
         "result=%s\n", watcherName, illusName, (int)baseDC, spotted ? 1 : 0,
@@ -55,7 +66,7 @@ void DisbeliefProbeIdentify(Creature *watcher, Creature *caster, rID eID,
     FILE *f;
     if (!getenv("INCURSION_DISBELIEF_PROBE") || !watcher || !caster)
         return;
-    if (!(f = fopen("logs/disbelief-probe.log", "a")))
+    if (!(f = DisbeliefProbeOpen()))
         return;
     fprintf(f, "IDENTIFY watcher=%s caster=%s spell=%s result=%s\n",
         (const char*)watcher->Name(), (const char*)caster->Name(),

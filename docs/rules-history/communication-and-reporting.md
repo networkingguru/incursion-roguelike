@@ -143,6 +143,14 @@ mech is being explained), then just present the new part: THis skill is blah.
 <REPEATED DESC>. Last lines I need to approve. Like that". Asked whether to
 write it down as a rule, he said: "y, add it."
 
+2026-10-24, bead inc-yam9. The session brought the concentration paragraph of
+five spell descriptions one per turn, each the same approved pattern with only
+the spell name and the number of rounds changed. On the fifth, Brian said:
+"Look, you are repaeting the same thing over and over. Is it accurate? Then I
+approve. If you must show me the same thing with two words changied 50 times,
+do it all at once". Told the rule could say so, he said: "make the edit and
+commit". The rule gained its all-variants-in-one-message sentence.
+
 ## ruling-conflict-flag-once-then-keep
 
 2026-10-21, bead inc-icp3. While settling Roark's necessities list, Brian put

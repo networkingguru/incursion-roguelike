@@ -291,6 +291,10 @@ void Game::Play() {
     extern void RangedIllusionProbe(Player *shooter);
     RangedIllusionProbe(pp);
 
+    /* Off unless INCURSION_TRUE_ILLUSION_PROBE is set. inc-yam9. */
+    extern void TrueIllusionProbe(Player *pl);
+    TrueIllusionProbe(pp);
+
     /* Off unless INCURSION_CONCENT_MONSTER_PROBE is set. inc-59lq. */
     extern void ConcentMonsterProbe(Player *pl);
     ConcentMonsterProbe(pp);

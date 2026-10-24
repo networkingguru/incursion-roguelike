@@ -1,0 +1,7 @@
+# inc-yam9: session for INCURSION_TRUE_ILLUSION_PROBE (src/TrueIllusionProbe.cpp).
+# The probe runs once at the start of Game::Play, after the fixture loads, so
+# this script only needs a clean exit. Read by tools/check_true_illusions.sh.
+# SPACE, never ESC, clears a "-- more --"; the single ESC opens the System Menu
+# for the quit.
+SPACE*5
+@quit

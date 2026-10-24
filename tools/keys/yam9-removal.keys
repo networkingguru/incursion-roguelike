@@ -1,0 +1,37 @@
+# inc-yam9 R1: a watcher that passes its Will save against Phantasmal Force
+# (no IL_SPECTRAL) ends the illusion. Read by tools/check_true_illusions.sh.
+#
+#   INCURSION_DISBELIEF_PROBE=1 INCURSION_FORCE_SAVE_ROLL=20 \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/elf-mage-illusions-seed1.sav \
+#       tools/headless.sh tools/keys/yam9-removal.keys 1
+#
+# The fixture already has wizard mode, Infinite Mana and Freeze Monsters on, and
+# its spells are innate, so the cast needs no failure roll. Two goblins stand 4
+# squares to the right; the illusion is cast one square to the left. Walking
+# into it runs Thing::DisbeliefCheck for every watcher that perceives it. SPACE,
+# never ESC, clears a "-- more --".
+s               # one real turn, so the load is in play
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT*4 ENTER
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT*4 DOWN*2 ENTER
+@dump:summoned
+
+m
+@choose "Phantasmal Force"
+c
+@expect "Target Illusion"
+LEFT
+ENTER
+@while "more --" SPACE
+@dump:cast
+LEFT
+@while "more --" SPACE
+@dump:after

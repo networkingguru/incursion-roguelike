@@ -2973,11 +2973,19 @@ Wizard / Scroll Spell "Hypnotic Pattern" : EA_INFLICT
         return CANNOT_CAST_IT;
       return SHOULD_CAST_IT;
       };
-    Desc: "Causes creatures in a 20-foot globe to become entranced with
-      a display of weaving lines and images, standing rapt and motionless,
+    Desc: "Causes creatures in a 20-foot globe to become entranced with a
+      display of weaving lines and images, standing rapt and motionless,
       provided that their Intelligence is lower than 14, their CR is lower
       than half your caster level (rounded up) and they are able to see
-      the pattern normally. Attacking an entranced creature ends the trance.";
+      the pattern normally. Attacking an entranced creature ends the
+      trance.\n
+      __Sustaining a Hypnotic Pattern requires concentration. While
+      concentrating, the caster cannot cast another spell, attack, or use
+      a scroll, wand or staff, but can still move. Taking damage requires
+      a Concentration check (DC 10 + the damage + the spell's level), and
+      a failure ends concentration. When concentration ends, by a failed
+      check or from the Cancel menu, the trance lasts 2 more rounds and
+      then ends.";
     On Event MSG_CAST
       "A swirling pattern of lights appears!";
   }
@@ -2986,11 +2994,19 @@ Wizard / Scroll Spell "Improved Phantasmal Force" : EA_ILLUSION
   { SC_ILL; Base: SP_MEDIUM; Cost: 6; Level: 2;
     Purpose: EP_SUMMON; xval: MA_LIVING; yval: IL_IMPROVED; 
     rval: $"generic summons";
-    Desc: "This spell creates an illusionary creature, force 
-      or object, just as Phantasmal Force does, but the illusion
-      affects all natural and supernatural senses, and is thus
-      believable to creatures who have scent, tremorsense, sharp
-      senses or blindsight."; 
+    Desc: "This spell creates an illusory creature, force or object, just as
+      Phantasmal Force does, but the illusion affects all natural and
+      supernatural senses, and is thus believable to creatures who have
+      scent, tremorsense, sharp senses or blindsight. Like a Phantasmal
+      Force, it winks out of existence if even one viewer other than the
+      caster disbelieves it.\n
+      __Sustaining an Improved Phantasmal Force requires concentration.
+      While concentrating, the caster cannot cast another spell, attack,
+      or use a scroll, wand or staff, but can still move. Taking damage
+      requires a Concentration check (DC 10 + the damage + the spell's
+      level), and a failure ends concentration. When concentration ends,
+      by a failed check or from the Cancel menu, the illusion lasts 2 more
+      rounds and then winks out."; 
     Flags: EF_DLONG, EF_SHOWNAME;
     On Event PRE(EV_MAGIC_HIT) {
       SetPVal(e,max(1, (EActor->SkillLevel(SK_ILLUSION)/2)));
@@ -4690,14 +4706,19 @@ Wizard / Scroll Spell "Spectral Force" : EA_ILLUSION
   { SC_ILL; Base: SP_MEDIUM; Cost: 8; Level: 3; 
     Purpose: EP_SUMMON; xval: MA_LIVING; yval: IL_SPECTRAL; 
     rval: $"generic summons";
-    Desc: "This spell creates an illusionary creature, force 
-      or object, just as Phantasmal Force does, but the illusion
-      has a greater depth and independance to it -- it does not wink
-      out of existance when a single character sees through it,
-      and any psychosomatic damage it inflicts lasts for (3d6 x 100)
-      turns, as opposed to 3d6. More significantly, it is self-sustaining
-      -- the caster does not need to concentrate to keep it active, and
-      it can move outside the caster's line of sight."; 
+    Desc: "This spell creates an illusory creature, force or object, just as
+      Phantasmal Force does, but the illusion has greater depth and
+      independence. It does not wink out of existence when one viewer sees
+      through it; only that viewer stops believing it. Any psychosomatic
+      damage it inflicts lasts (3d6 x 100) turns instead of 3d6, and it
+      can move outside the caster's line of sight.\n
+      __Sustaining a Spectral Force requires concentration. While
+      concentrating, the caster cannot cast another spell, attack, or use
+      a scroll, wand or staff, but can still move. Taking damage requires
+      a Concentration check (DC 10 + the damage + the spell's level), and
+      a failure ends concentration. When concentration ends, by a failed
+      check or from the Cancel menu, the illusion lasts 4 more rounds and
+      then winks out."; 
     On Event PRE(EV_MAGIC_HIT) {
       SetPVal(e,max(1, (EActor->SkillLevel(SK_ILLUSION)/2)));
       return NOTHING;
@@ -6547,10 +6568,17 @@ Wizard Spell "Improved Spectral Force" : EA_ILLUSION
   { SC_ILL; Base: SP_MEDIUM; Cost: 10; Level: 4; 
     Purpose: EP_SUMMON; xval: MA_LIVING; yval: IL_SPECTRAL|IL_IMPROVED; 
     rval: $"generic summons";
-    Desc: "This spell creates an illusionary creature, force 
-      or object, combining the advantages of both Spectral
-      Force (resilience, independence, longer-lasting psychosomatic 
-      damage) and Improved Phantasmal Force (affecting all senses)."; 
+    Desc: "This spell creates an illusory creature, force or object, combining
+      the advantages of both Spectral Force (resilience, independence,
+      longer-lasting psychosomatic damage) and Improved Phantasmal Force
+      (affecting all senses).\n
+      __Sustaining an Improved Spectral Force requires concentration.
+      While concentrating, the caster cannot cast another spell, attack,
+      or use a scroll, wand or staff, but can still move. Taking damage
+      requires a Concentration check (DC 10 + the damage + the spell's
+      level), and a failure ends concentration. When concentration ends,
+      by a failed check or from the Cancel menu, the illusion lasts 4 more
+      rounds and then winks out."; 
     On Event PRE(EV_MAGIC_HIT) {
       SetPVal(e,max(1, (EActor->SkillLevel(SK_ILLUSION)/2)));
       return NOTHING;
@@ -7867,34 +7895,35 @@ Wizard Spell "Advanced Illusion" : EA_ILLUSION
   { SC_ILL; Base: SP_MEDIUM; Cost: 12; Level: 5; 
     Purpose: EP_SUMMON; xval: MA_LIVING; yval: IL_SPECTRAL|IL_IMPROVED|IL_ADVANCED; 
     rval: $"generic summons";
-    Desc: "An advanced illusion is a complex and responsive dwenomer
-      that includes all the properties of an <9>improved spectral force<1>,
-      as well as a powerful enhancement: the illusion can spawn secondary
-      illusionary effects that are consequences of its actions or existance.
-      This means that an illusionary monster can make use of that monster's
+    Desc: "An advanced illusion is a complex and responsive dwenomer that
+      includes all the properties of an <9>improved spectral force<1>, as
+      well as a powerful enhancement: the illusion can spawn secondary
+      illusory effects that are consequences of its actions or existence.
+      This means that an illusory monster can make use of that monster's
       special attacks or equipment typical to a monster of its type -- an
-      illusionary dragon can produce an illusionary blast of fire, and an
-      illusionary kobold can fire illusionary crossbow bolts. The illusion
-      is still unreal and can't affect inanimate matter in any way, but it
-      can simulate those effects remarkably -- an illusionary basilisk's
-      gaze would cause people to become paralyzed for a period, for example,
+      illusory dragon can produce an illusory blast of fire, and an
+      illusory kobold can fire illusory crossbow bolts. The illusion is
+      still unreal and can't affect inanimate matter in any way, but it
+      can simulate those effects remarkably -- an illusory basilisk's gaze
+      would cause people to become paralyzed for a period, for example,
       believing they had been petrified.\n
-      __This facility also allows the illusion takes active and
-      intelligent measures to preserve its own believability:
-      the shadows cast by an illusionary fountain change position
-      as new light sources manifest, an illusionary wall creates
-      illusionary dust as it is hacked apart, and even the illusion
-      of the scent of cooler air wafting in through a created hole
-      into the room beyond. Illusions that inflict damage create
-      illusionary blood and bruises rather than merely psychosomatic
-      shock. As a result of these improvements, advanced illusions are not
-      subject to disbelief checks when they appear out of nowhere, someone
-      passes through them or ignores their attacks, they cause a victim to
-      fall unconscious or so forth. The magic creates secondary illusions
-      to cover over the things which might cause disbelief checks -- an
-      adavanced illusion appearing out of nowhere might seem to jump out
-      of a previously unnoticed illusionary skylight in a shadowy area of
-      the ceiling, for example."; 
+      __This facility also lets the illusion take active and intelligent
+      measures to preserve its own believability: the shadows cast by an
+      illusory fountain change position as new light sources appear, an
+      illusory wall creates illusory dust as it is hacked apart, and the
+      scent of cooler air wafts in through a hole made in it. Illusions
+      that inflict damage create illusory blood and bruises rather than
+      merely psychosomatic shock. Even so, an advanced illusion is still
+      subject to disbelief: a viewer gets a save whenever it strikes the
+      illusion, passes through it, ignores its attacks, or collapses from
+      its damage instead of dying.\n
+      __Sustaining an Advanced Illusion requires concentration. While
+      concentrating, the caster cannot cast another spell, attack, or use
+      a scroll, wand or staff, but can still move. Taking damage requires
+      a Concentration check (DC 10 + the damage + the spell's level), and
+      a failure ends concentration. When concentration ends, by a failed
+      check or from the Cancel menu, the illusion lasts 4 more rounds and
+      then winks out."; 
     On Event PRE(EV_MAGIC_HIT) {
       SetPVal(e,max(1, (EActor->SkillLevel(SK_ILLUSION)/2)));
       return NOTHING;
