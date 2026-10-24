@@ -32,6 +32,7 @@
 #   # fact: the hook appends the marker once -- tools/kill_guard.py, driven with fixed JSON
 #   # fact: a marked command runs sandboxed -- tools/kill_guard_prefix.sh, given a fixed string
 #   # fact: an unmarked command runs -- tools/kill_guard_prefix.sh, given a fixed string
+#   # fact: a killed process is dead once kill -0 fails or ps shows state Z -- polled up to 5 s by dies_within
 #
 #   tools/check_kill_guard.sh
 #   tools/check_kill_guard.sh --selftest   # assertion (j): prove the check
@@ -91,6 +92,20 @@ start_outside() {
 
 # alive <pid>: 0 if the process is still running.
 alive() { kill -0 "$1" 2>/dev/null; }
+
+# dies_within <pid> <seconds>: 0 once the process is gone or a zombie. kill(2)
+# only posts the signal, and kill -0 succeeds on a zombie (inc-qi0g).
+dies_within() {
+    local pid="$1" tries=$(( $2 * 10 )) st
+    while [ "$tries" -gt 0 ]; do
+        alive "$pid" || return 0
+        st="$(ps -o stat= -p "$pid" 2>/dev/null)"
+        case "$st" in Z*) return 0 ;; esac
+        sleep 0.1
+        tries=$((tries - 1))
+    done
+    return 1
+}
 
 if [ ! -f "$HOOK" ]; then
     echo "UNMEASURED: check_kill_guard.sh ($HOOK missing)"
@@ -181,7 +196,7 @@ sys.stdout.write(json.dumps(doc))
         # NOT the prefix, and require the outside sleep to die.
         /bin/zsh -c "$C_CMD" >/dev/null 2>&1
         U_RC=$?
-        if [ "$U_RC" -eq 0 ] && ! alive "$SLEEP_PID"; then
+        if [ "$U_RC" -eq 0 ] && dies_within "$SLEEP_PID" 5; then
             pass "selftest: unwrapped kill killed the outside sleep (the check can go red)"
         elif [ "$U_RC" -ne 0 ]; then
             unmeasured "selftest: the unwrapped kill itself was denied (rc=$U_RC); run outside any sandbox to measure the red control"
@@ -230,7 +245,7 @@ sys.stdout.write(json.dumps(doc))
     elif [ "$SELFTEST" -eq 1 ]; then
         /bin/zsh -c "$D_CMD" >/dev/null 2>&1
         U_RC=$?
-        if [ "$U_RC" -eq 0 ] && ! alive "$DPID"; then
+        if [ "$U_RC" -eq 0 ] && dies_within "$DPID" 5; then
             pass "selftest: unwrapped pkill -f killed the outside marker process (the check can go red)"
         elif [ "$U_RC" -ne 0 ]; then
             unmeasured "selftest: the unwrapped pkill itself was denied (rc=$U_RC); run outside any sandbox to measure the red control"
@@ -365,7 +380,7 @@ if ! alive "$H4_PID"; then
     unmeasured "could not start the outside sleep for the main-session test"
 else
     "$PREFIX" "kill $H4_PID" >/dev/null 2>&1
-    if ! alive "$H4_PID"; then
+    if dies_within "$H4_PID" 5; then
         pass "unmarked: an outside process CAN be killed (the main session is not guarded)"
     else
         fail "unmarked: an outside process could not be killed (the prefix over-guards)"
