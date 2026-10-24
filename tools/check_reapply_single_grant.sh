@@ -13,7 +13,7 @@
 #    on this seed draws a permanent "Save Bonus: +4 vs. Poison" attribute-set
 #    perk (src/Create.cpp:1690's random(FT_LAST - FT_FIRST) draw, shifted by
 #    inc-08js's Cannibalism feat) that used to ride under every reading here.
-# S3 the Nine Lives Stealer SS_ENCH activation row (seed 4) is not a standing
+# S3 the Nine Lives Stealer SS_ENCH activation row (seed 1, re-pinned for inc-rt8l: kit changes the random stream) is not a standing
 #    grant and must survive a Magic Weapon re-apply.
 # S4 Dispel Magic on the Bloodspear wielder (seed 1): Will "vs. spells"
 #    4 -> 0 -> 4; aura and fade messages prove both transitions. Wizard stati
@@ -71,7 +71,7 @@ for section in S1 S2 S3 S4 S5; do
     case "$section" in
         S1) keys=magic-weapon; seed=4 ;;
         S2) keys=enchant; seed=1; load="$FIXTURE" ;;
-        S3) keys=activation; seed=4 ;;
+        S3) keys=activation; seed=1 ;;
         S4) keys=dispel; seed=1 ;;
         S5) keys=hp; seed=1; allow_death=1; load="$FIXTURE" ;;
     esac

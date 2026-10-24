@@ -1,23 +1,19 @@
 # Incursion regression baseline -- see tools/gate_compare.sh.
-# Recorded 2026-10-10 10:45 from 27d49e08.
+# Recorded 2026-10-23 20:55 from 071b69c0.
+# Re-recorded in inc-rt8l: tools/gates/Options.Dat now has the Beginner's
+# Kit off (byte 101 = 0), so a change to Roark's necessities list no longer
+# shifts the gate. Removing the kit shifts every later die, so each seed
+# plays a different game. Died 22/40 here against 28/40 in the previous
+# baseline (recorded 2026-10-10 from 27d49e08).
 # Metric: error volume and message-set membership. A message that is
 # not in this file is a regression; a message that has left it is a fix.
-# Re-recorded in inc-u3dp (hiding is an opposed d20 + Hide against
-# d20 + Spot check). The new rolls shift every later die, so each seed
-# plays a different game. Died 28/40 here against 16/40 on master
-# 627495f2: 14 seeds die only here, 2 only on master. On fresh seeds
-# 41-240 the rates are 55% on master and 59.5% here (z 0.91; 48 against
-# 39), and surprise attacks on the player are 72 against 70, so the
-# 40-seed jump is sampling, not a deadlier game. Drowning deaths rose
-# 27 -> 41 in that sample (z about 1.9); see the bead notes. The inc-gatz
-# audit message (seed 4) does not occur here.
 keys	tools/keys/dive.keys
 first	1
-options	7451fefbc35a76140100abf57a171bb82c129585d8ec58d55508c58c1467206d
+options	4f62631ed578169cb1a2ea3ed1f0b62628dae3098fe400457b980fdf684d671c
 sessions	40
 played	40
 exits	0=40
 lines	0
 findings	0
-died	28
+died	22
 threat_frozen	0

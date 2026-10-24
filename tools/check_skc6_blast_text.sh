@@ -1,5 +1,12 @@
 #!/bin/bash
 # gate: live
+# fact: character and combat rolls -- seed 6, temporary re-pin explicitly authorized by inc-rt8l
+# fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# fact: spells and victims -- wizard Learn Any Spell and Monster Summoning
+# fact: Lore of Storms -- scratch module's test god
+# fact: touch damage -- positive Lightning damage-line shape assertion
+# fact: two blast victims -- two distinct brown-bear damage lines required
+# fact: leftover Lore text -- each damage line checked for another victim's text
 # Assert the Magic::Blast Damage line is clean for bead inc-skc6.
 #
 #   tools/check_skc6_blast_text.sh      exit 0 pass, 1 a failed assertion,
@@ -67,11 +74,12 @@ echo "--- measurement 1: the shared-buffer abort (Biocurrent touch) ---"
 echo "options: $OPTIONS"
 echo "keys:    $KEYS"
 
+# re-pinned for inc-rt8l (kit turned off in the fixtures; the random stream shifted once)
 # Seed pinned 2 (was 1) for inc-uwxp: commit 127e63ef made CanAddTemplate refuse
 # a two-alignment template, shifting the monster population and the RNG stream,
 # so seed 1's Biocurrent touch now misses the giant rat and prints no Damage line.
 out="$(INCURSION_OPTIONS="$OPTIONS" INCURSION_RUN_DIR="$RUN_DIR" \
-        tools/headless.sh "$KEYS" 2 2>&1)"
+        tools/headless.sh "$KEYS" 6 2>&1)"
 STATUS=$?
 echo "$out" | sed 's/^/  | /'
 echo
@@ -139,12 +147,13 @@ echo "--- measurement 2: the leftover Lore text (two-victim AGlobe) ---"
 echo "options: $OPTIONS"
 echo "keys:    $LEFTOVER_KEYS"
 
+# re-pinned for inc-rt8l (kit turned off in the fixtures; the random stream shifted once)
 # Seed pinned 2 (was 1) for inc-uwxp: commit 127e63ef's CanAddTemplate refusal
 # shifted the RNG stream, so seed 1's Electric Loop now hits only one of the two
 # brown bears (one Damage line), which cannot show leftover text. Seed 2 gives
 # two distinct Lightning Damage lines.
 out2="$(INCURSION_OPTIONS="$OPTIONS" INCURSION_RUN_DIR="$SCRATCH_DIR" \
-        tools/headless.sh "$LEFTOVER_KEYS" 2 2>&1)"
+        tools/headless.sh "$LEFTOVER_KEYS" 6 2>&1)"
 STATUS2=$?
 echo "$out2" | sed 's/^/  | /'
 echo

@@ -30,7 +30,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-SEED=3
+SEED=1   # re-pinned for inc-rt8l (kit changes the random stream)
 OPTIONS=tools/fixtures/options-2026-08-22.dat
 
 [ -x ./incursion-headless ] || {

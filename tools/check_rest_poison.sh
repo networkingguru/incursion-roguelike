@@ -1,6 +1,11 @@
 #!/bin/bash
 # gate: live
-# gate-serial: writes a fixed scratch dir logs/rest-poison-scratch and rm -rf's it
+# fact: character and rest rolls -- seed 2, temporary re-pin explicitly authorized by inc-rt8l
+# fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# fact: depth and initial hostiles -- wizard Ascend / Descend Depth and Genocide Everything
+# fact: poison -- test god grants arsenic; POISONED control dump must show it
+# fact: rest and poison resolution -- confirm prompt, wake message, save message and after dump
+# gate-serial: retained for source-mutating --prove-red; ordinary scratch paths are unique
 # Does the player's Rest ('z', KY_CMD_SLEEP -> EV_REST) work while POISONED,
 # and do the poison's Fort saves roll during the rest? (bd inc-gmrj)
 #
@@ -40,8 +45,7 @@
 #            instead (OPT_SAFEREST is off in the pinned settings file).
 #   WOKE     'y' answers the prompt and the rest runs; "You awaken feeling
 #            well rested and recovered." is the rest-happened marker.
-#   AFTER    the same dump again; POISONED must be gone. Seed 1 (tried 1-4,
-#            all four resolve the poison with no encounter) reliably clears
+#   AFTER    the same dump again; POISONED must be gone. Seed 2 reliably clears
 #            arsenic's three-success threshold well inside one night's 360
 #            possible checks at cval 4, against a barbarian's Fortitude.
 #
@@ -75,7 +79,8 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-SEED=1
+# re-pinned for inc-rt8l (kit turned off in the fixtures; the random stream shifted once)
+SEED=2
 
 # Which of the two --prove-red mutations runs first (see the header). "loop"
 # survives check_lib.sh's own arg parsing (it strips only "--prove-red") and
@@ -93,7 +98,7 @@ done
 # onto the end of main.irc -- present for every run of this check, mutated or
 # not, because it is how the player gets poisoned, not part of what
 # --prove-red is proving. Never touches the tracked lib/.
-SCRATCH="$CHECK_ROOT/logs/rest-poison-scratch"
+SCRATCH="$(mktemp -d "$CHECK_ROOT/logs/rest-poison-rt8l.XXXXXX")"
 rm -rf "$SCRATCH"
 mkdir -p "$SCRATCH/mod" "$SCRATCH/save" "$SCRATCH/logs"
 cp -Rf "$CHECK_ROOT/lib" "$SCRATCH/lib" || _check_die 2 "could not copy lib/"

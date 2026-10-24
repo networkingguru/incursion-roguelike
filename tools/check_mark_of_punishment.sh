@@ -47,7 +47,7 @@ cd "$ROOT"
 # a two-alignment template, shifting the monster population and the RNG stream,
 # so on seed 2 an unscripted ogre now attacks at key 95 and the run stalls
 # (headless exit 6). Seed 4 stages the touch and the 1,2,3 Con-loss strikes.
-SEED=4
+SEED=11   # re-pinned for inc-rt8l (kit changes the random stream)
 KEYS=tools/keys/mark-of-punishment.keys
 OPTIONS=tools/gates/Options.Dat
 

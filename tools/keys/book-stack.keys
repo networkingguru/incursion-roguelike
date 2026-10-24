@@ -85,7 +85,7 @@ ENTER
 @while "Ready Hand" ESC
 
 i
-PGDN*1
+@until "Tome of Magic" PGDN
 @dump:pack
 ESC
 

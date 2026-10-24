@@ -387,43 +387,46 @@ Monster "Roark Ironbeard" : MA_DWARF, MA_ADVENTURER
       50% $"viewing lens",
       30% $"disguise kit";
     /* inc-icp3: the necessities. Each row is item, effect (0 for none), tier
-       size. RestockShop (src/Social.cpp) stocks every row to its tier size when
-       the shop is built, and tops it up once per game day. */
+       size, kit count. RestockShop (src/Social.cpp) stocks every row to its
+       tier size when the shop is built, and tops it up once per game day.
+       inc-rt8l: the kit count feeds the Beginner's Kit at creation: 0 keeps
+       the row out of the kit, N gives exactly N, KIT_BY_TYPE applies the rule
+       for the item's type (GrantBeginnerKit, src/Create.cpp). */
     Lists:
       * NECESSITIES
-          $"healing kit" 0 1
-          $"climbing rig" 0 1
-          $"mechanical tools" 0 1
-          $"alchemy set" 0 1
-          $"pickaxe" 0 6
-          $"craftsman's tools" 0 1
-          $"brass lantern" 0 1
-          $"potion" $"restoration" 3
-          $"potion" $"see invisibility;potion" 3
-          $"potion" $"stone to flesh" 3
-          $"potion" $"restore strength" 6
-          $"potion" $"restore dexterity" 6
-          $"potion" $"restore constitution" 6
-          $"potion" $"restore intelligence" 6
-          $"potion" $"restore wisdom" 6
-          $"potion" $"restore charisma" 6
-          $"potion" $"restore luck" 6
-          $"potion" $"cure disease" 6
-          $"potion" $"antitoxin" 6
-          $"potion" $"remove curse;potion" 6
-          $"potion" $"elemental resistance" 6
-          $"potion" $"water walking;potion" 6
-          $"potion" $"valour;potion" 6
-          $"potion" $"dimension door" 6
-          $"potion" $"flask of oil" 6
-          $"scroll" $"identify;scroll" 12
-          $"scroll" $"dispel magic" 3
-          $"scroll" $"transmute rock to mud" 6
-          $"potion" $"mana" 12
-          $"food ration" 0 12
-          $"torch" 0 12
-          $"potion" $"true blows" 12
-          $"hemp rope" 0 20;
+          $"healing kit" 0 1 KIT_BY_TYPE
+          $"climbing rig" 0 1 KIT_BY_TYPE
+          $"mechanical tools" 0 1 KIT_BY_TYPE
+          $"alchemy set" 0 1 KIT_BY_TYPE
+          $"pickaxe" 0 6 KIT_BY_TYPE
+          $"craftsman's tools" 0 1 KIT_BY_TYPE
+          $"brass lantern" 0 1 0
+          $"potion" $"restoration" 3 KIT_BY_TYPE
+          $"potion" $"see invisibility;potion" 3 KIT_BY_TYPE
+          $"potion" $"stone to flesh" 3 KIT_BY_TYPE
+          $"potion" $"restore strength" 6 KIT_BY_TYPE
+          $"potion" $"restore dexterity" 6 KIT_BY_TYPE
+          $"potion" $"restore constitution" 6 KIT_BY_TYPE
+          $"potion" $"restore intelligence" 6 KIT_BY_TYPE
+          $"potion" $"restore wisdom" 6 KIT_BY_TYPE
+          $"potion" $"restore charisma" 6 KIT_BY_TYPE
+          $"potion" $"restore luck" 6 KIT_BY_TYPE
+          $"potion" $"cure disease" 6 KIT_BY_TYPE
+          $"potion" $"antitoxin" 6 KIT_BY_TYPE
+          $"potion" $"remove curse;potion" 6 KIT_BY_TYPE
+          $"potion" $"elemental resistance" 6 KIT_BY_TYPE
+          $"potion" $"water walking;potion" 6 KIT_BY_TYPE
+          $"potion" $"valour;potion" 6 KIT_BY_TYPE
+          $"potion" $"dimension door" 6 KIT_BY_TYPE
+          $"potion" $"flask of oil" 6 0
+          $"scroll" $"identify;scroll" 12 24
+          $"scroll" $"dispel magic" 3 KIT_BY_TYPE
+          $"scroll" $"transmute rock to mud" 6 KIT_BY_TYPE
+          $"potion" $"mana" 12 KIT_BY_TYPE
+          $"food ration" 0 12 KIT_BY_TYPE
+          $"torch" 0 12 KIT_BY_TYPE
+          $"potion" $"true blows" 12 KIT_BY_TYPE
+          $"hemp rope" 0 20 0;
     On Event MSG_SHOPNAME
       "Roark Ironbeard's All-Purpose Adventurers' Store",
     EVICTIM(EV_WILLBUY) {
