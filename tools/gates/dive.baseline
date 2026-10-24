@@ -1,10 +1,5 @@
 # Incursion regression baseline -- see tools/gate_compare.sh.
-# Recorded 2026-10-23 20:55 from 071b69c0.
-# Re-recorded in inc-rt8l: tools/gates/Options.Dat now has the Beginner's
-# Kit off (byte 101 = 0), so a change to Roark's necessities list no longer
-# shifts the gate. Removing the kit shifts every later die, so each seed
-# plays a different game. Died 22/40 here against 28/40 in the previous
-# baseline (recorded 2026-10-10 from 27d49e08).
+# Recorded 2026-10-24 14:20 from fa509990.
 # Metric: error volume and message-set membership. A message that is
 # not in this file is a regression; a message that has left it is a fix.
 keys	tools/keys/dive.keys
@@ -15,5 +10,5 @@ played	40
 exits	0=40
 lines	0
 findings	0
-died	22
+died	24
 threat_frozen	0

@@ -1,0 +1,14 @@
+# inc-yp23: a hiding rogue steps east into a watcher's view, then strikes it.
+# The scene (INCURSION_HIDE_STRIKE_PROBE) places the watcher one square north-east
+# of the square east of the rogue. INCURSION_HIDE_STRIKE_PROBE=freeze: the
+# watcher cannot act between the step and the blow. =act: it acts in between
+# (5 ticks into the step).
+ENTER
+RIGHT
+@dump:hide-strike-stepped
+PGUP
+@while "Confirm attack" y
+@while "Take opportunity" y
+@while "Die?" n
+@dump:hide-strike-struck
+@quit
