@@ -2557,10 +2557,11 @@ Effect "flame blade;conjure" : EA_CREATION
   }
 
 Druid Spell "Soften Stone" : EA_TERRAFORM
-  { SC_ARC|SC_EARTH; Base: SP_TRIVIAL; Cost: 3; Level: 2; qval: Q_LOC;
+  { SC_ARC|SC_EARTH; Base: SP_TRIVIAL; Cost: 3; Level: 2; qval: Q_LOC|Q_TAR;
     rval: $"shallow mud"; Purpose: EP_PASSAGE; xval: TERRA_ROCK;
-    Desc: "Turns one terrain square of stone (i.e., a dungeon wall) 
-      into mud."; }
+    Desc: "Turns one square of stone (such as a dungeon wall) into mud.
+      Cast at a creature made of stone, it softens the creature's body
+      instead."; }
 
 Druid Spell "Stone Tell" : EA_GENERIC
   { SC_DIV|SC_EARTH; Base: SP_HARD; Cost: 15; Level: 2; pval: 20d1 + (LEVEL_1PER1);
