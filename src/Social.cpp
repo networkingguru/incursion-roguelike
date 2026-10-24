@@ -2164,7 +2164,8 @@ int32 Item::getShopCost(Creature *Buyer, Creature *Seller) {
 }
   
 /* inc-icp3: the shop's necessities. Each row of the shopkeeper's NECESSITIES
-   list is item, effect (0 for none), tier size. A row short of its tier size
+   list is item, effect (0 for none), tier size, kit count (inc-rt8l; the shop
+   ignores it, GrantBeginnerKit reads it). A row short of its tier size
    is topped up to it; a row at or above it is left alone. Returns the number
    of units added. */
 int RestockShop(Creature *shop) {
@@ -2172,7 +2173,7 @@ int RestockShop(Creature *shop) {
     int added = 0;
     if (!TMON(shop->mID)->GetList(NECESSITIES, list, 256))
         return 0;
-    for (int i = 0; i + 2 < 253 && list[i]; i += 3) {
+    for (int i = 0; i + 3 < 253 && list[i]; i += 4) {
         rID iID = list[i], eID = list[i + 1];
         int32 tier = (int32)list[i + 2], have = 0;
         Item *stack = NULL, *it;

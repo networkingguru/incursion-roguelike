@@ -71,7 +71,9 @@ m
 1 ENTER
 LEFT ENTER
 @while "resists your magic" 1 LEFT ENTER
+v
 @dump:dominate-giant
+ESC
 
 @until "Wizard Mode Options:" w
 @choose "Examine Player Data"

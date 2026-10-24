@@ -158,6 +158,20 @@ static void KitProbe(Player *p)
             ti->HasFlag(WT_REACH) ? 1 : 0, ti->HasFlag(WT_STRIKE_NEAR) ? 1 : 0,
             it->isType(T_ARMOUR) ? (int)KitArmourValue(it) : 0);
     }
+    /* inc-rt8l: the facts tools/check_beginner_kit.sh needs. dark is the
+       monster-torch predicate; ranks lists every skill with ranks. */
+    {
+        String ranks;
+        for (i = 0; i < SK_LASTSKILL; i++)
+            if (p->GetSkillRanks(i) > 0)
+                ranks += Format("%d,", (int)i);
+        Error("KIT_FACTS dark=%d ranks=%s",
+            (p->HasAbility(CA_INFRAVISION) || p->HasAbility(CA_TREMORSENSE) ||
+             p->HasAbility(CA_BLINDSIGHT)) ? 1 : 0, (const char*)ranks);
+        for (it = p->FirstInv(); it; it = p->NextInv())
+            Error("KIT_STACK item=\"%s\" eff=\"%s\" qty=%d", NAME(it->iID),
+                it->eID ? NAME(it->eID) : "", (int)it->Quantity);
+    }
     Error("KIT_PROBE end");
 }
 
@@ -509,6 +523,72 @@ static void DedupeStartingKit(Player *p)
                 snap[b]->Remove(true);
                 snap[b] = NULL;
             }
+    }
+}
+
+/* True when the character holds an item of base type `iID`, in the pack too. */
+static bool KitHolds(Player *p, rID iID)
+{
+    Item *it;
+    for (it = p->FirstInv(); it; it = p->NextInv())
+        if (it->iID == iID)
+            return true;
+    return false;
+}
+
+/* Beginner's Kit (OPT_BEGINKIT): a share of Roark's NECESSITIES list, read at
+   creation so a row added to the list reaches the kit by its item type. Kit
+   count 0 skips a row, N gives N, KIT_BY_TYPE applies the type rule. Must run
+   after the base skill-tool grant, which it does not duplicate. inc-rt8l. */
+static void GrantBeginnerKit(Player *p)
+{
+    rID list[256], rid = FIND("Roark Ironbeard");
+    rID klist[32];
+    int i, j;
+    if (!p->Opt(OPT_BEGINKIT))
+        return;
+    if (rid && TMON(rid)->GetList(NECESSITIES, list, 256))
+        for (i = 0; i + 3 < 253 && list[i]; i += 4)
+        {
+            rID iID = list[i], eID = list[i + 1];
+            int32 tier = (int32)list[i + 2], kit = (int32)list[i + 3], n;
+            int16 itype = TITEM(iID)->IType;
+            if (kit == 0 || itype == T_FOOD)
+                continue;
+            n = (kit == KIT_BY_TYPE) ? (tier + 1) / 2 : kit;
+            if (kit == KIT_BY_TYPE && itype != T_POTION && itype != T_SCROLL)
+            {
+                if (itype == T_LIGHT)
+                {
+                    if (p->HasAbility(CA_INFRAVISION) ||
+                        p->HasAbility(CA_TREMORSENSE) ||
+                        p->HasAbility(CA_BLINDSIGHT))
+                        continue;
+                }
+                else if (TEFF(iID)->GetList(SKILL_KIT_FOR, klist, 32))
+                {
+                    bool ranked = false;
+                    for (j = 0; j < 31 && klist[j]; j++)
+                        if (p->GetSkillRanks(klist[j]) > 0)
+                            ranked = true;
+                    if (!ranked || KitHolds(p, iID))
+                        continue;
+                    n = 1;
+                }
+            }
+            Item *it = Item::Create(iID);
+            if (!it)
+                continue;
+            it->MakeMagical(eID, it->GetInherentPlus());
+            it->SetQuantity(n);
+            it->IFlags &= (IF_CURSED | IF_BLESSED);
+            p->GainItem(it, true);
+        }
+    Item *food = Item::Create(FIND("food ration"));
+    if (food)
+    {
+        food->SetQuantity(Dice::Roll(3, 2, 4));
+        p->GainItem(food, true);
     }
 }
 
@@ -1165,10 +1245,6 @@ RepeatAlignment:
     TRACE(RaceID)->GrantGear(this,RaceID);
     TCLASS(ClassID[0])->GrantGear(this,ClassID[0]);
 
-    if (FIND("Beginner's Kit"))
-        if (Opt(OPT_BEGINKIT))
-            RES(FIND("Beginner's Kit"))->GrantGear(this,FIND("Beginner's Kit"));
-
     if (FIND("Universal Gear"))
         RES(FIND("Universal Gear"))->GrantGear(this,FIND("Universal Gear"));
 
@@ -1278,6 +1354,8 @@ SkipThisFocus:;
             Item * it = Item::Create(FIND(SkillKits[i].Text));
             GainItem(it,true);
         }
+
+    GrantBeginnerKit(this);
 
     /* ww: if you start the game with a healing potion, you can recognize
     * healing potions. */

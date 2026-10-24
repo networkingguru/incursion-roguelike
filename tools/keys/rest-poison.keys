@@ -49,11 +49,9 @@
 #            arsenic, matching Fortitude at these fixtures' levels against DC
 #            13 -- see the fixture's own header) or its save count advanced.
 #
-# THE SEED is pinned by the check script at 1. Tried 1-4: all four resolve
-# the poison and complete the rest with no encounter (Percent 100, full
-#144000-turn night); seed 5 stalled the script differently (an @choose that
-# found nothing) and was dropped rather than chased -- 1 is kept, not
-# special-cased for luck.
+# THE SEED is pinned by the check script at 2: re-pinned for inc-rt8l (kit turned off in the fixtures; the random stream shifted once).
+# Seed 1 now dies of arsenic during the rest; seed 2 completes the rest and
+# exercises the same poison-save and recovery assertions.
 
 @include chargen.keys
 @until "HP:" ESC

@@ -49,6 +49,7 @@ g
 # --- apply it to the loincloth ---------------------------------------------
 y
 @choose "Apply"
+@until "small glass vial" DOWN
 @choose "small glass vial"
 i
 @choose "loincloth"

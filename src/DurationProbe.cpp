@@ -123,6 +123,8 @@ static Monster *BlasMake(Map *mp, int16 x, int16 y, int cr, bool wantOut, bool w
     for (int idx = 0; idx < mod->szMon; idx++) {
         const rID id = mod->MonsterID(idx);
         if (TMON(id)->CR != cr && cr >= 0) continue;
+        // inc-rt8l: a Monster with no type is a gear list, not a creature; never build it as a probe target.
+        if (TMON(id)->MType[0] == 0) continue;
         mp->At(x, y).Lit = 1;
         Monster *mn = new Monster(id);
         TMON(mn->tmID)->GrantGear(mn, mn->tmID, true);
