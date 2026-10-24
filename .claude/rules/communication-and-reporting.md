@@ -40,7 +40,7 @@ Why: a long draft in the wrong voice is a whole piece to throw away, and he must
 History: docs/rules-history/communication-and-reporting.md#feedback-one-paragraph-at-a-time.
 
 ## approval-text-show-only-the-new-part
-When text for Brian's approval repeats text he already approved, show ONLY the new part and write `<REPEATED DESC>` where the approved text goes; the last lines shown are the ones he must approve. Example: "Identifies magic items you find, without a spellbook. <REPEATED DESC>. It does not work on corpses, chests, coins, or statues." Two texts that explain the same mechanic (class help and ability entry, help and Desc) MUST state it identically, so the repeated part needs no second read.
+When text for Brian's approval repeats text he already approved, show ONLY the new part and write `<REPEATED DESC>` where the approved text goes; the last lines shown are the ones he must approve. Example: "Identifies magic items you find, without a spellbook. <REPEATED DESC>. It does not work on corpses, chests, coins, or statues." Two texts that explain the same mechanic (class help and ability entry, help and Desc) MUST state it identically, so the repeated part needs no second read. When several texts follow one approved pattern and differ only in a few words (a spell name, a number of rounds), show EVERY variant in ONE message, naming only the differing words for each; this overrides `feedback-one-paragraph-at-a-time` for those variants. Do NOT send one variant per turn.
 Why: re-reading an approved description to find the few changed words wastes his time and hides what he is approving.
 History: docs/rules-history/communication-and-reporting.md#approval-text-show-only-the-new-part. Bead inc-ybiw.
 
