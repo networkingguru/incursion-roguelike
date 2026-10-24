@@ -554,6 +554,7 @@ class Map: public Object
     void  enAddMon(EventInfo &e);
     void  enAddTemp(EventInfo &e, rID tID);
     void  enAddMountTemp(EventInfo &e, rID tID);
+    void  enUndeadMount(EventInfo &e);
     void  enCalcCurrPartXCR(EventInfo &e);
     bool  enTemplateOk(EventInfo &e, rID tID, bool force=false);    
     void  enWarn(const char*msg,...);
