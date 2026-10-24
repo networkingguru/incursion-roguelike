@@ -1,0 +1,45 @@
+# Prompt form of the stinking cloud check (bd inc-uprr): the loaded elf mage
+# paints three "stinking cloud" squares east of himself, reads his Fortitude
+# bonus off the character sheet, then steps in. The step from plain floor into
+# the cloud asks "Confirm enter the stinking cloud?" only when the terrain's
+# EV_MON_CONSIDER handler (lib/dungeon.irh) returns ABORT. Read the result with
+# tools/check_stinking_cloud_prompt.sh. The step is photographed as @dump:entry
+# BEFORE any answer; the script then answers y if asked, steps once more so
+# the square he leaves rolls a save (logs/chance_probe.log) -- proof he
+# really stood in the cloud -- and walks back.
+SPACE
+# Farthest square first: a painted square obscures sight, and the cursor
+# cannot land on a square the player cannot see.
+w
+@choose "Change terrain type"
+RIGHT RIGHT RIGHT ENTER
+TAB
+@choose "stinking cloud"
+w
+@choose "Change terrain type"
+RIGHT RIGHT ENTER
+TAB
+@choose "stinking cloud"
+w
+@choose "Change terrain type"
+RIGHT ENTER
+TAB
+@choose "stinking cloud"
+@dump:terrain-made
+
+
+d               # Display Character Sheet
+@expect "Gender"
+@dump:sheet
+ESC
+
+RIGHT
+@dump:entry
+@while "Confirm" y
+@dump:entry-after
+RIGHT
+@while "Confirm" y
+LEFT*2
+@while "Confirm" y
+@dump:walked
+@quit
