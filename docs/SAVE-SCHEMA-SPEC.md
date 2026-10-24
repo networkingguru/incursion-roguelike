@@ -131,7 +131,7 @@ A v1 save is a header, a module manifest, and a stream of tagged records.
 
 ### Header
 
-The existing `fileHeader` (`inc/Base.h:725-733`) is kept for the fields the
+The existing `fileHeader` (`inc/Base.h:726-734`) is kept for the fields the
 load menu already reads — `Sig`, `Name`, `numGroups`. `Version[12]` carries
 `"IS1"` plus a decimal schema revision instead of the ABI digest. The reader
 MUST dispatch on this field: `"SF"` prefix means the v0 raw reader, `"IS"` means
@@ -188,10 +188,10 @@ failed with `SCHEMA COVERAGE` errors (inc-xlwa).
 
 ### How a class declares its fields
 
-`ARCHIVE_CLASS` (`inc/Base.h:803`) already generates a
+`ARCHIVE_CLASS` (`inc/Base.h:804`) already generates a
 `Serialize(Registry&, bool isSave)` that calls its base first, and 20 classes
 already use it. The bodies gain field declarations beside the fixups they
-already carry. `Thing` (`inc/Map.h:946-968`) becomes:
+already carry. `Thing` (`inc/Map.h:947-971`) becomes:
 
 ```cpp
 ARCHIVE_CLASS(Thing,Object,r)
@@ -215,7 +215,7 @@ as `Serialize` does today, so a field cannot be written and not read.
 
 ### The map grid
 
-`Map::Serialize` (`inc/Map.h:677-678`) writes `Grid` as one raw block of
+`Map::Serialize` (`inc/Map.h:680-681`) writes `Grid` as one raw block of
 `sizeof(LocationInfo)*sizeX*sizeY`. `LocationInfo` (`inc/Map.h:36-60`) is
 bitfields, whose order and packing the compiler chooses.
 
