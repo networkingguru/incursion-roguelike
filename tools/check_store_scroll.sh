@@ -18,11 +18,19 @@
 # Measured 2026-08-19, seed 1, same key script, src/Managers.cpp the only
 # file different between the two builds:
 #
-#   after DOWN*40   before: page still starts "00) coil of a hemp rope",
-#                           byte-identical to the opening screen
-#                   after:  page starts "06) an alchemy set", up-arrow shown
+#   after DOWN*40   before: page still starts at row 00, byte-identical to the
+#                           opening screen
+#                   after:  page starts past row 00 (row 00 gone), up-arrow shown
 #   after UP*40     before: unchanged (it never left row 0)
-#                   after:  back to "00) coil of a hemp rope"
+#                   after:  back to the opening screen, row 00 present again
+#
+# fact: character -- tools/keys/chargen.keys (the scenario reads no character fact)
+# fact: shop opens on row 00 -- tools/keys/store-scroll.keys reaches the store
+#   via the cave entrance's [s] prompt; row 00 text is read from the run, never
+#   hard-coded, so the ware that sorts first does not matter.
+# fact: DOWN/UP keys reach the menu -- tools/keys/store-scroll.keys DOWN*40,
+#   UP*40; the [x] descriptions differing is asserted to prove the selection
+#   moved.
 #
 # THE RUN CAN FAIL TO MEASURE ANYTHING, and that is reported as INCONCLUSIVE
 # rather than FAIL: a session that never reached the shop, or whose DOWN keys
@@ -36,7 +44,6 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 SEED=1
-ROW0="00) coil of a hemp rope"
 
 [ -x ./incursion-headless ] || {
     echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
@@ -53,6 +60,19 @@ for f in 0001-store-open 0002-examine-top 0003-store-down 0004-examine-down 0005
         exit 2
     }
 done
+
+# Row 00's text, read from the opened screen instead of hard-coded, so the
+# check does not pin the ware that happens to sort first. Take the line that
+# contains "00) " and keep from "00) " up to the price column (the run of
+# whitespace before "<n> gp").
+row0line="$(grep -F '00) ' "$S/0001-store-open.txt" | head -n 1)"
+ROW0="${row0line#*00) }"
+ROW0="00) ${ROW0%%  *}"
+
+[ -n "$row0line" ] && [ "$ROW0" != "00) " ] || {
+    echo "INCONCLUSIVE: no row 00 in the opening screen. Run dir: $run"
+    exit 2
+}
 
 # Did the shop open at all, and at the top of its list?
 grep -q "$ROW0" "$S/0001-store-open.txt" || {
