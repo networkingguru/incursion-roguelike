@@ -466,6 +466,14 @@ void Game::Play() {
     extern void HideTriggerProbe(Player *pl);
     HideTriggerProbe(pp);
 
+    /* inc-yp23: hide-strike scene, env-gated. */
+    extern void HideStrikeProbe(Player *pl);
+    HideStrikeProbe(pp);
+
+    /* inc-yp23: loaded-scene pair scan probe, env-gated at entry. */
+    extern void HidePairsProbe(Player *pl);
+    HidePairsProbe(pp);
+
     /* inc-f99j: opt-in AutoLoot multi-pack reproduction; see tools/check_autoloot_packs.sh. */
     extern void AutoLootPacksProbe(Player *pl);
     AutoLootPacksProbe(pp);

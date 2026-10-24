@@ -395,11 +395,10 @@ void HidePairsFor(Creature *x) {
     const int16 round = HideRoundStamp();
     const bool full = xt.fullRound != round ||
                       xt.movedAt > xt.scanAt || stateChanged;
-    /* Set scanAt after x's own hcTrackFor above (which, when x moved, bumped
-       movedAt to hcClock -- here now+1). With the strict test above, x's move
-       makes this scan full but the following scan (movedAt == scanAt) is not,
-       so each move costs one full scan, not two. A y moved later still counts,
-       as its movedAt is bumped past this value. */
+    /* inc-yp23: a hider re-tests when its move or new hide is later than
+       this watcher's PREVIOUS scan. Stamp this scan after refreshing x so
+       x's own move causes one full scan, not two. */
+    const uint32 prevScan = xt.scanAt;
     xt.scanAt = hcClock;
     if (full) xt.fullRound = round;
 
@@ -433,8 +432,13 @@ void HidePairsFor(Creature *x) {
         if (!yk->HasStati(HIDING)) continue;
         /* Detect y's move lazily, now, before deciding. */
         const HcTrack &yt = hcTrackFor(others[k], yk);
-        if (full || yt.movedAt > xt.scanAt)
+        if (full || yt.movedAt > prevScan) {
+            /* inc-yp23: observe pair re-tests, independent of cached verdicts. */
+            if (getenv("INCURSION_HIDE_PAIRS_PROBE"))
+                Error("HIDE_PAIRS CALL watcher=%d hider=%d",
+                    (int)xk->myHandle, (int)yk->myHandle);
             HideUpdatePair(xk, yk);
+        }
     }
 }
 
