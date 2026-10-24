@@ -325,6 +325,11 @@ void Game::Play() {
     extern void StunDurProbe(Player *pl);
     StunDurProbe(pp);
 
+    /* inc-b2wd: off unless INCURSION_SOAK_TORCH_PROBE is set. See
+       SoakTorchProbe (src/SoakTorchProbe.cpp). */
+    extern void SoakTorchProbe(Player *pl);
+    SoakTorchProbe(pp);
+
     /* inc-pt7h: off unless INCURSION_STONING_DUR_PROBE is set. See
        StoningDurProbe (src/StoningDurProbe.cpp). */
     extern void StoningDurProbe(Player *pl);
