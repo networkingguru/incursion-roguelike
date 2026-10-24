@@ -1257,7 +1257,10 @@ NothingToDo:
         {
           int16 tp = Acts[j].Tar->onPlane();
           if (HasAbility(CA_PHASE) && Acts[j].Act != ACT_CAST)
-            if (tp == 0 || tp == AbilityLevel(CA_PHASE))
+            /* upstream: base-code defect, the fix is ours. PhasePlane() returns
+               one grant, not the sum AbilityLevel(CA_PHASE) made. Tier Traced.
+               inc-ef99; not sent. */
+            if (tp == 0 || tp == PhasePlane())
               { res = Throw(EV_PHASE,this);
                 goto DonePhaseClause; }
           if (Acts[j].Act == ACT_NATTACK && !HasAttk(A_TUCH) &&
@@ -1706,7 +1709,10 @@ void Monster::Initialize(bool in_play)
 
     if (m && HasAbility(CA_PHASE) && !isIllusion())
       if (!HasStati(PHASED) && !HasStati(MOUNT)) 
-        GainPermStati(PHASED, NULL, SS_MISC, AbilityLevel(CA_PHASE));
+        /* upstream: base-code defect, the fix is ours. PhasePlane() returns one
+           grant, not the sum AbilityLevel(CA_PHASE) made. Tier Traced. inc-ef99;
+           not sent. */
+        GainPermStati(PHASED, NULL, SS_MISC, PhasePlane());
 
 
     /* upstream: a monster still being initialised must take no fall damage.

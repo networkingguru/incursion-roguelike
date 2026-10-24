@@ -3055,7 +3055,10 @@ Class "Twilight Huntsman"
       Stati[IMMUNITY,AD_STUK]       at 6th level,
       Stati[IMMUNITY,AD_SLOW]       at 6th level,
       Stati[IMMUNITY,AD_STON]       at 6th level,
-      Ability[CA_PHASE,+1]          at 7th level,
+      Ability[CA_PHASE,PHASE_ETHEREAL] at 7th level, /* upstream: granted plane 1
+        (vortex), but the 7th-level text says she phases into the ethereal plane
+        exactly as a phase spider does (which grants PHASE_ETHEREAL). The value is
+        the original game's. Tier Traced; inc-ef99; not sent. */
       Ability[CA_INNATE_SPELL,$"spook"] at 8th level,
       Ability[CA_FEED_UPON_PAIN,+1] at 9th level,
       Feat[FT_ONE_BODY_ONE_SOUL]    at 10th level;
