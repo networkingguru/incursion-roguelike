@@ -1,0 +1,78 @@
+# A creature NOT made of stone must take no effect from Soften Stone (inc-wqql,
+# step 5). Same session as tools/keys/soften-stone-golem.keys, but a cave orc
+# stands east instead of a stone golem. The before/after wizard dumps of the
+# orc (pressing W on the aimed creature; src/Term.cpp EffectPrompt) must show
+# no armour change, no soften stone stati and no slow stati; the caster's own
+# dump must be identical before and after; and the message log must show the
+# cast happened (V opens View Messages, src/Tables.cpp) with no "softens"/
+# "slows down" text.
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+#       tools/headless.sh tools/keys/soften-stone-orc.keys 1
+#
+# THE READ. While the "Soften Stone" aim prompt is up (mode 9), the cursor
+# starts on the caster himself, so W opens the CASTER's Thing::Dump(); RIGHT
+# moves the cursor onto the orc one square east and W opens the ORC's dump.
+# The dump prints "A ARM <v> (base ...)" and the Stati list, which is the
+# oracle for armour and slow, before and after the cast.
+SPACE
+w
+@choose "Learn Any Spell"
+"Soften Stone" ENTER
+w
+@choose "Monster Summoning"
+@choose "Orc"
+@choose "cave orc"
+RIGHT
+ENTER
+@dump:summoned
+@until "HP:" ESC
+
+# BEFORE: start the cast. The cursor starts on the caster, so dump the player
+# first, then RIGHT and dump the orc.
+@until "Select Spell" m
+@choose "Soften Stone"
+@dump:cast-aim
+w
+@dump:before-player
+DOWN*30
+@dump:before-player-stati
+ESC
+RIGHT
+@dump:cast-on-orc
+w
+@dump:before-orc
+DOWN*30
+@dump:before-orc-stati
+
+# CAST: ESC closes the wizard dump (still aiming at the orc); ENTER takes the
+# creature under the cursor and fires the spell.
+ESC
+@dump:cast-back
+ENTER
+@dump:cast-enter
+@until "HP:" ESC
+
+# AFTER: aim again; dump the player (cursor on self), then the orc.
+@until "Select Spell" m
+@choose "Soften Stone"
+@dump:cast-aim2
+w
+@dump:after-player
+DOWN*30
+@dump:after-player-stati
+ESC
+RIGHT
+w
+@dump:after-orc
+DOWN*30
+@dump:after-orc-stati
+# ESC closes the wizard dump, leaving the cast aim prompt still up; a second
+# ESC cancels the cast and returns to the map, where V opens the message log.
+ESC
+ESC
+@dump:map-back
+v
+@dump:msglog
+ESC
+@quit

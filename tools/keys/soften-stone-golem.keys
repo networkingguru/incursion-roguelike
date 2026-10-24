@@ -1,0 +1,62 @@
+# Does Soften Stone cast at a stone golem's square reach it as a spell hit, and
+# does it lower the golem's armour without slowing it? (inc-wqql)
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+#       tools/headless.sh tools/keys/soften-stone-golem.keys 1
+# The fixture druid has wizard mode, Infinite Mana and Freeze Monsters on.
+#
+# THE READ. While the "Soften Stone" aim prompt is up, pressing W (wizard mode)
+# on the aimed creature opens that creature's own Thing::Dump() (src/Term.cpp
+# EffectPrompt), which prints "A ARM <v> (base ...)" and its Stati list. That
+# dump is the oracle for armour and slow, before and after the cast. The aim
+# prompt is a location-or-target prompt; the golem sits one square east and
+# FREEZE holds it there, so RIGHT puts the cursor on its square every time.
+SPACE
+w
+@choose "Learn Any Spell"
+"Soften Stone" ENTER
+w
+@choose "Monster Summoning"
+@choose "Golems"
+@choose "stone golem"
+RIGHT
+ENTER
+@dump:summoned
+@until "HP:" ESC
+
+# BEFORE: start the cast, aim at the golem's square, dump the golem.
+@until "Select Spell" m
+@choose "Soften Stone"
+@dump:cast-aim
+RIGHT
+@dump:cast-on-golem
+w
+@dump:before-golem
+DOWN*30
+@dump:before-stati
+
+# CAST: ESC closes the wizard dump (still aiming); ENTER takes the creature
+# under the cursor and fires the spell.
+ESC
+@dump:cast-back
+ENTER
+@dump:cast-enter
+@until "HP:" ESC
+
+# AFTER: aim again and dump the golem, to read the armour change and the stati.
+@until "Select Spell" m
+@choose "Soften Stone"
+@dump:cast-aim2
+RIGHT
+w
+@dump:after-golem
+DOWN*30
+@dump:after-stati
+ESC
+@until "HP:" ESC
+
+# The message log, for the soften line and the absence of a slow line.
+v
+@dump:msglog
+ESC
+@quit
