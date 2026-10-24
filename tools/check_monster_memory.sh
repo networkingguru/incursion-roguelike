@@ -1,7 +1,19 @@
 #!/bin/bash
 # gate: live
 # Does the game record what the player has met, and show him only that?
-# (bd inc-q98a)
+# (bd inc-q98a; seed independence inc-gdhp)
+# fact: character, kit, options and initial empty memory -- INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav
+# fact: map and adjacent summon squares -- the loaded fixture
+# fact: no incidental creatures -- wizard Genocide Everything before summoning
+# fact: kobold north, ogre south, humans east -- wizard Monster Summoning
+# fact: monsters never attack or move -- wizard Freeze Monsters stays on
+# fact: ogre blow lands without a critical threat -- INCURSION_LOF_FORCE_ROLL=15 (seen session)
+# fact: every human blow lands (armor varies) -- INCURSION_LOF_FORCE_ROLL=20 (kills session; a natural 20 always hits)
+# fact: one ogre blow cannot kill -- INCURSION_FORCE_DAMAGE_ROLL=1; 6 damage < 13 minimum HP
+# fact: exactly ten human kills -- ten summons, each attacked until its killing message
+# fact: recall menus and descriptions -- named summoned kinds and controlled memory counts
+# fact: saved Seen/Fought/Kills rows -- Save and Continue, then tools/dump_save.sh
+# fact: writer, reader, recall filter and saturation guard -- exact source mutation literals
 #
 #   tools/check_monster_memory.sh                     the whole check
 #   tools/check_monster_memory.sh --prove-red seen    break one writer
@@ -65,6 +77,8 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
+export INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav
+export INCURSION_FORCE_DAMAGE_ROLL=1
 
 # --------------------------------------------------------------------------
 # Which mutation --prove-red performs. check_lib performs the FIRST mutation a
@@ -185,7 +199,7 @@ check_reject "  human: Seen" \
 # 2 and 3: seeing is not fighting, and fighting is not killing.
 echo
 echo "--- one kind seen, another struck once ---"
-check_run tools/keys/monster-memory-seen.keys 4
+INCURSION_LOF_FORCE_ROLL=15 check_run tools/keys/monster-memory-seen.keys 4
 read_memory
 check_screens '*savedump*'
 check_expect "  kobold: Seen=1 Fought=0 Kills=0" \
@@ -218,7 +232,7 @@ check_expect "The Ogre" \
 # 4 and 5: ten kills, and what they show him.
 echo
 echo "--- ten of one kind killed ---"
-check_run tools/keys/monster-memory-kills.keys 4
+INCURSION_LOF_FORCE_ROLL=20 check_run tools/keys/monster-memory-kills.keys 4
 read_memory
 check_screens '*savedump*'
 check_expect "  human: Seen=1 Fought=1 Kills=10" \
