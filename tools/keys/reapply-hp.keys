@@ -20,11 +20,22 @@
 # Monsters wizard switch holds a summoned froghemoth still so every bump is
 # an attack that can pay. Each round the caster attacks, Divine Sacrifice
 # pays the chosen 10 HP once (lib/pspells.irh's META(EV_STRIKE): at most
-# once per round, never a payment that would reach 0 HP or below), so four
-# recast-and-attack cycles settle HP at 85 mod 10 = 5 with no randomness,
-# whatever the exact per-cycle payment count. Below the pinned low-HP
+# once per round, never a payment that would reach 0 HP or below), so enough
+# recast-and-attack cycles settle HP at 85 mod 10 = 5 with no randomness.
+# inc-6ttb: the spell now lasts (caster level + 1) / 2 units of 60 ticks
+# (EF_DROUND, inc-nt3z), 3 units at level 6, half the old length. A recast
+# during a live cast pays nothing (observed: cycles 2 and 4 paid no HP), so only
+# every other cycle pays, two payments each. Seven cycles pay at least eight
+# times and reach 5 HP; a payment that would reach 0 HP is skipped, so extra
+# cycles are safe.
+# Below the pinned low-HP
 # threshold every drop raises a "Low Hitpoint Warning!" box that waits for a
 # key (src/Player.cpp:275-285).
+#
+# fact: duration of Divine Sacrifice -- seven cycles reach 5 HP at 3 units and at the old 6
+# fact: payments per cycle -- the loop stops paying at 5 HP, so more cycles never overshoot
+# fact: max HP 85 -- frozen fixture orc-bard-reapply-seed1.sav, girdle +2 CON 14
+# fact: froghemoth hit or miss -- payment needs a strike, not a hit
 #
 # THE RE-APPLY is Storycraft -> SetInherentPlus -> Item::ReApply, the same
 # path as reapply-enchant.keys, whose header cites it line by line. It spends
@@ -189,6 +200,56 @@ ENTER RIGHT
 @dump:c5-a3
 ENTER RIGHT
 @dump:c5-a4
+
+ENTER
+w
+@choose "Genocide Everything"
+
+ENTER
+u
+@choose "Innate Divine Sacrifice" 5
+
+ENTER
+w
+@choose "Monster Summoning"
+@choose "Beasts"
+@choose "froghemoth"
+RIGHT ENTER
+@dump:c6-summoned
+
+ENTER RIGHT
+@dump:c6-a1
+ENTER RIGHT
+@dump:c6-a2
+ENTER RIGHT
+@dump:c6-a3
+ENTER RIGHT
+@dump:c6-a4
+
+ENTER
+w
+@choose "Genocide Everything"
+
+ENTER
+u
+@choose "Innate Divine Sacrifice" 5
+
+ENTER
+w
+@choose "Monster Summoning"
+@choose "Beasts"
+@choose "froghemoth"
+RIGHT ENTER
+@dump:c7-summoned
+
+ENTER RIGHT
+@dump:c7-a1
+ENTER RIGHT
+@dump:c7-a2
+ENTER RIGHT
+@dump:c7-a3
+ENTER RIGHT
+@dump:c7-a4
 
 ENTER
 @dump:hp-before
