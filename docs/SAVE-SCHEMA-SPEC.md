@@ -191,7 +191,7 @@ failed with `SCHEMA COVERAGE` errors (inc-xlwa).
 `ARCHIVE_CLASS` (`inc/Base.h:804`) already generates a
 `Serialize(Registry&, bool isSave)` that calls its base first, and 20 classes
 already use it. The bodies gain field declarations beside the fixups they
-already carry. `Thing` (`inc/Map.h:946-968`) becomes:
+already carry. `Thing` (`inc/Map.h:947-971`) becomes:
 
 ```cpp
 ARCHIVE_CLASS(Thing,Object,r)
@@ -215,7 +215,7 @@ as `Serialize` does today, so a field cannot be written and not read.
 
 ### The map grid
 
-`Map::Serialize` (`inc/Map.h:677-678`) writes `Grid` as one raw block of
+`Map::Serialize` (`inc/Map.h:680-681`) writes `Grid` as one raw block of
 `sizeof(LocationInfo)*sizeX*sizeY`. `LocationInfo` (`inc/Map.h:36-60`) is
 bitfields, whose order and packing the compiler chooses.
 
