@@ -66,7 +66,10 @@ RIGHT ENTER
 
 # The measured blow: step east into the hag and swing the knife in melee.
 RIGHT
+# The green hag casts Invisibility on itself when it is created (EF_PERSISTANT
+# spells always pre-buff since inc-nt3z), so the walk can meet either prompt.
 @while "Confirm attack" y
+@while "Attack?" y
 @while "Take opportunity" y
 @while "Die?" n
 @until "HP:" ESC
