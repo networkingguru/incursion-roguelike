@@ -1,5 +1,7 @@
 # Kill ten humans, recall the human entry, and save. (bd inc-q98a)
 #
+#   INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav \
+#   INCURSION_LOF_FORCE_ROLL=20 INCURSION_FORCE_DAMAGE_ROLL=1 \
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
 #       tools/headless.sh tools/keys/monster-memory-kills.keys 4
 #
@@ -28,10 +30,13 @@
 # kind menu ("human") before the usual description box, rather than the old
 # glyph browser's bare ENTER.
 
-@include chargen.keys
+# Starts from the frozen opt0822 barbarian in play mode. Roll 20 always hits,
+# whatever armor a summoned human wears; minimum damage makes each take blows.
 
 w
 y
+@choose "Genocide Everything"
+w
 @choose "Wizard Mode Switches"
 DOWN*10
 SPACE

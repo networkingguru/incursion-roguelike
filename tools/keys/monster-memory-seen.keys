@@ -1,5 +1,7 @@
 # See one kind, strike a second once, kill neither, and save. (bd inc-q98a)
 #
+#   INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav \
+#   INCURSION_LOF_FORCE_ROLL=15 INCURSION_FORCE_DAMAGE_ROLL=1 \
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
 #       tools/headless.sh tools/keys/monster-memory-seen.keys 4
 #
@@ -13,10 +15,13 @@
 # claim it was killed. tools/dump_save.sh prints both rows from the save and
 # tools/check_monster_memory.sh reads them.
 #
-# THE OGRE, AND NOT A SECOND KOBOLD. This character hits for 1d3+4 and an
-# ogre's hit dice put it far out of reach of one blow, so the strike cannot
-# turn into a kill and quietly stop measuring what it is here to measure.
-#
+# The blow cannot kill. The fixture sheet gives damage 1d3+5 (the sidebar
+# in play reads 1d3+4); forced to its minimum that is at most 1+5 = 6.
+# lib/mon2.irh: ogre HD 4, Con 15 (+2), Large. Creature::CalcHP: minimum HP is
+# (4*1 + 4*2)*11/10 = 13, so 6 < 13.
+# The blow lands: roll 15 plus Hit +4 (sidebar) beats ogre Def 10. A roll of
+# 15 is below the 20 threat of an unarmed blow, so no critical doubles damage.
+
 # FREEZE MONSTERS FIRST, the eleventh row of the Wizard Mode Switches list.
 # Without it the ogre strikes back, and a blow from the ogre would set Fought
 # from the other direction -- which is real behaviour, and is not what this
@@ -35,10 +40,12 @@
 # that absence is what tools/check_monster_memory.sh asserts, and what its
 # `recall` mutation (an unfiltered MonsterPrompt) is built to break.
 
-@include chargen.keys
+# Starts from the frozen opt0822 barbarian in play mode.
 
 w
 y
+@choose "Genocide Everything"
+w
 @choose "Wizard Mode Switches"
 DOWN*10
 SPACE
@@ -63,9 +70,6 @@ ENTER
 DOWN
 @while "Confirm attack" y
 @dump:ogre-struck
-DOWN                    # swing again: the first can miss
-@while "Confirm attack" y
-@dump:ogre-struck-2
 
 d               # Display Character Sheet
 @expect "Gender"
