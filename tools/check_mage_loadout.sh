@@ -5,7 +5,9 @@
 # fact: depth and initial hostiles -- wizard Ascend / Descend Depth and Genocide Everything
 # fact: selected spells, slots and books -- checklist and inventory actions in mage-loadout-rest.keys
 # fact: rest completion and resulting spells -- positive message and cast-menu controls
-# fact: rest encounter rolls -- seed 3, temporary re-pin explicitly authorized by inc-rt8l
+# fact: arrival square after the wizard descent (a chasm makes the player fall) -- @while "You fall" ENTER in mage-loadout-rest.keys; the check needs only depth >= 2
+# fact: hostiles at a rest -- wizard Genocide Everything, run after the descent settles
+# fact: terrain under the player (water would sink the dropped books) -- wizard Change terrain type, Floor, on the player's square
 # Does a Mage's spell checklist change his loadout only at the next full rest?
 # (bd inc-j5yo)
 #
@@ -38,7 +40,7 @@
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 FIXTURE=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
-# re-pinned for inc-rt8l (kit turned off in the fixtures; the random stream shifted once)
+# any seed works (seed_sweep.sh); this one is only the default
 SEED=3
 
 check_mutation src/Player.cpp \

@@ -43,9 +43,20 @@ s                       # one real turn: this counts as a session
 w y                     # wizard mode, confirm
 @choose "Ascend / Descend Depth"
 "2" ENTER
+# The wizard descent keeps the player's x,y (Player::MoveDepth, safe=false), so a
+# chasm square there makes the player fall; each fall asks for ENTER. Any number
+# of falls is fine: the check needs only a level of depth 2 or more.
+@while "You fall" ENTER
 @until "HP:" ESC
 w
 @choose "Genocide Everything"
+@until "HP:" ESC
+# Stand on dry floor: the arrival square is the seed's (water would sink the
+# dropped spellbooks). Change terrain type, cursor starts on the player.
+w
+@choose "Change terrain type"
+ENTER
+e                       # the first "Floor" row (two rows share the name)
 @until "HP:" ESC
 
 d
