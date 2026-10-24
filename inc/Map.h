@@ -1035,6 +1035,7 @@ class Thing: public Object
       virtual void MoveDepth(int16 NewDepth, bool safe=false);
       Thing* ProjectTo(int16, int16, int8 range=127);
       void PlaceNear(int16, int16);
+      bool PlaceNearSearch(int16, int16, bool dryRun, int8 asSize);
       void PlaceAt(Map* _m,int16 _x,int16 _y, bool share_square=false);
       /* upstream: an empty OpenC must not place at the solid corner. Upstream's
          own body is `PlaceAt(_m,xy%256,xy/256);` with no test (inc/Map.h:723-725

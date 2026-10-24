@@ -445,14 +445,28 @@ void Thing::PlaceAt(Map*_m,int16 _x,int16 _y, bool share_square)
 
 void Thing::PlaceNear(int16 x,int16 y)
   {
-    static Creature* Displace[64], *cr; 
+    PlaceNearSearch(x,y,false,0);
+  }
+
+/* dryRun: only report whether a square exists, for a creature of size asSize
+   (0 = its current size). No Move, Remove, Displace, CalcValues or RNG call.
+   Tracking id inc-o37m. */
+bool Thing::PlaceNearSearch(int16 x,int16 y,bool dryRun,int8 asSize)
+  {
+    static Creature* Displace[64], *cr;
     bool isBig = false;
     uint8 i, ix, iy, sz, dc = 0;
     int16 r, tx, ty, c, cx[120], cy[120];
     
-    ASSERT(m); 
+    ASSERT(m);
 
-    if (isCreature())
+    if (isCreature() && asSize)
+      {
+        if (asSize >= SZ_HUGE)
+          { isBig = true;
+            sz = (uint8)asSize; }
+      }
+    else if (isCreature())
       {
         /* ASSUMPTION: Templates, magic, et al., won't cause creatures
            to grow more than one size category. This is wrong in a few
@@ -536,7 +550,8 @@ void Thing::PlaceNear(int16 x,int16 y)
             
         if (c)
           {
-            
+            if (dryRun)
+              return true;
             c = random(c);
             tx = cx[c];
             ty = cy[c];
@@ -561,7 +576,9 @@ void Thing::PlaceNear(int16 x,int16 y)
         isRetry = true; 
         goto TryAgain;
     }
-      
+    if (dryRun)
+        return false;
+
     /* So we've finished the loop and have not found any good
     place to put ourselves. */
     if (isPlayer()) {
@@ -577,8 +594,8 @@ void Thing::PlaceNear(int16 x,int16 y)
         */
         Remove(true);
     }
-    return;
-      
+    return false;
+
 FoundGoodPlace:
     if (isBig)
         for (i=0;i!=dc;i++)
@@ -603,6 +620,7 @@ FoundGoodPlace:
                     if (il->GetStatiObj(ILLUSION) == this)
                         il->IllusionLOSCheck(false);
     }
+    return true;
 }
 
 Map::Map() : Object(T_MAP), ov(myHandle)
