@@ -1190,6 +1190,10 @@ Restart:
         AddBonus(BONUS_ATTR,A_SAV_WILL, XMod(A_WIS));
         AddBonus(BONUS_ATTR,A_FAT,(IAttr(A_CON)-11)/2); 
     } 
+    // INCURSION_FORT_PROBE=N adds N to the player's Fortitude bonus (test hook for
+    // tools/check_stinking_cloud_prompt.sh, inc-uprr); unset, nothing changes.
+    if (isPlayer() && getenv("INCURSION_FORT_PROBE"))
+        AddBonus(BONUS_TEMP, A_SAV_FORT, atoi(getenv("INCURSION_FORT_PROBE")));
     AddBonus(BONUS_ATTR,A_SAV_REF , XMod(A_DEX));
 
     AddBonus(BONUS_ATTR,A_HIT_ARCHERY, XMod(A_DEX));
