@@ -1042,7 +1042,7 @@ Terrain "stinking cloud;terrain"
          handler rolls, so the number shown cannot drift from the number
          rolled. WARN_SAVE holds the save type + 1 (FORT is 0, so 0+1=1). */
       * WARN_SAVE 1,
-      * WARN_SAVE_DC 20;
+      * WARN_SAVE_DC 15;
     On Event EV_MOVE {
       int16 sv, svdc;
       sv = $"stinking cloud;terrain"->GetConst(WARN_SAVE) - 1;
@@ -1061,7 +1061,7 @@ Terrain "stinking cloud;terrain"
         return NOTHING;
     } ;
     Desc: "Any breathing creature in a stinking cloud must make a
-    Fortitude Save (DC 20) each round to avoid becoming nauseated for
+    Fortitude Save (DC 15) each round to avoid becoming nauseated for
     an additional 2d4 rounds. Nauseated creatures cannot attack or
     cast spells."; 
   }
