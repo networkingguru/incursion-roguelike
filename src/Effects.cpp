@@ -2047,6 +2047,7 @@ EvReturn Magic::Illusion(EventInfo &e)
           it = Item::GenItem(IG_GREAT,0,e.EActor->SkillLevel(SK_ILLUSION),10,IllusionItems);
           it->GainTempStati(ILLUSION,e.EActor,e.vDuration, SS_ENCH,e.saveDC, 0,
                               e.eID, e.vCasterLev);
+          GrantIllusionSpotted(it, e.eID);
           it->PlaceAt(e.EMap, e.EXVal, e.EYVal);          
           return DONE;
         case 'f':

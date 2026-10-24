@@ -2632,10 +2632,12 @@ EvReturn Map::enBuildMon(EventInfo &e)
       else if (e.enFlags & EN_ILLUSION) {
         mn->GainTempStati(ILLUSION, e.EActor, e.vDuration, SS_ENCH,
           e.saveDC, 0, e.eID, e.vCasterLev);
+        GrantIllusionSpotted(mn, e.eID);
         e.EActor->GainPermStati(DISBELIEVED,mn,SS_MISC);
         if (mt) {
           mt->GainTempStati(ILLUSION, e.EActor, e.vDuration, SS_ENCH,
             e.saveDC, 0, e.eID, e.vCasterLev);
+          GrantIllusionSpotted(mt, e.eID);
           e.EActor->GainPermStati(DISBELIEVED,mn,SS_MISC);
           if (true_leader) 
             mt->ts.addCreatureTarget(true_leader,TargetMaster);

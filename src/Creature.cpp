@@ -2706,7 +2706,12 @@ void Thing::DisbeliefCheck(Creature *watcher) {
     }
     if (watcher->HasStati(DISBELIEVED,-1,this))
       return;  
-    if (watcher->SavingThrow(WILL,s->Val,SA_ILLUS)) {
+    /* inc-z1ba: identifying this cast with Spellcraft gives +4 on its save. */
+    int16 baseDC = s->Val;
+    bool spotted = watcher->HasStati(ILLUS_SPOTTED,-1,this);
+    int16 usedDC = spotted ? baseDC - 4 : baseDC;
+    if (watcher->SavingThrow(WILL,usedDC,SA_ILLUS)) {
+        DisbeliefProbeThing(watcher, this, baseDC, spotted, usedDC, true);
         watcher->IPrint("You realize that the <Obj> is an illusion.", this);
         if (s->h && oThing(s->h)->isCreature())
           if (oCreature(s->h)->Perceives(watcher))
@@ -2726,6 +2731,8 @@ void Thing::DisbeliefCheck(Creature *watcher) {
               oCreature(s->h)->Mod(A_INT)+1))
           RemoveStati(ILLUSION);*/
       } 
+    else
+        DisbeliefProbeThing(watcher, this, baseDC, spotted, usedDC, false);
     
  }
  
@@ -2759,7 +2766,13 @@ void Map::TerrainDisbelief(int16 x, int16 y, Creature * watcher) {
           }
           if (watcher->HasStati(DISB_TERRAIN,-1,oCreature(Fields[i]->Creator)))
             return;  
-          if (watcher->SavingThrow(WILL,s->Mag,SA_ILLUS)) {
+          /* inc-z1ba: identifying this cast gives +4 on the terrain's save. */
+          int16 tBaseDC = s->Mag;
+          bool tSpotted = watcher->GetEffStati(ILLUS_SPOTTED, Fields[i]->eID, -1,
+              oCreature(Fields[i]->Creator)) != NULL;
+          int16 tUsedDC = tSpotted ? tBaseDC - 4 : tBaseDC;
+          if (watcher->SavingThrow(WILL,tUsedDC,SA_ILLUS)) {
+              DisbeliefProbeTerrain(watcher, tBaseDC, tSpotted, tUsedDC, true);
               watcher->IPrint("You realize that the <Res> is an illusion.", PTerrainAt(x,y,NULL));
               if (s->h && oThing(s->h)->isCreature())
                 if (oCreature(s->h)->Perceives(watcher))
@@ -2770,6 +2783,8 @@ void Map::TerrainDisbelief(int16 x, int16 y, Creature * watcher) {
                  and have all the watcher's party members make a disbelief
                  check as well. */
             }  
+          else
+              DisbeliefProbeTerrain(watcher, tBaseDC, tSpotted, tUsedDC, false);
         }  
 }
 
