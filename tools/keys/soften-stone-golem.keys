@@ -9,8 +9,23 @@
 # on the aimed creature opens that creature's own Thing::Dump() (src/Term.cpp
 # EffectPrompt), which prints "A ARM <v> (base ...)" and its Stati list. That
 # dump is the oracle for armour and slow, before and after the cast. The aim
-# prompt is a location-or-target prompt; the golem sits one square east and
-# FREEZE holds it there, so RIGHT puts the cursor on its square every time.
+# prompt is a location-or-target prompt; the target cursor starts on the player
+# square, so RIGHT enters the ring at the nearest candidate -- the golem --
+# every time, however far east it stands.
+#
+# KEEPING OUT OF REACH. A stone golem is Large and has reach 2, and casting in
+# its reach provokes a free attack: the old run died to "Catching you
+# off-guard, ... slams you" in its cast-enter screen. FREEZE stops the golem's
+# own turns but not that attack, and whether the attack lands is a roll of the
+# dice, so standing in reach makes the run flaky. Walking away does not help:
+# leaving the threatened area raises the "Abort, Flee or Disengage?" prompt and
+# provoking on the way out is again a roll (src/Move.cpp). So the golem is
+# SUMMONED out of reach instead. Wizard summoning places the monster with a
+# pure location prompt, "Summon where?", whose cursor starts on the player and
+# whose RIGHT steps it one square east (src/Debug.cpp Player::WizardOptions,
+# case 6: EffectPrompt(e,Q_LOC,...)). Four RIGHTs put the golem four squares
+# east: the summoned map reads "#..........@G.........#", open floor east of
+# the player, and distance 4 is clear of reach 2.
 SPACE
 w
 @choose "Learn Any Spell"
@@ -19,7 +34,7 @@ w
 @choose "Monster Summoning"
 @choose "Golems"
 @choose "stone golem"
-RIGHT
+RIGHT*4
 ENTER
 @dump:summoned
 @until "HP:" ESC
