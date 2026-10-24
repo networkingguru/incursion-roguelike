@@ -96,7 +96,7 @@ void GrantIllusionSpottedTerrain(Creature *creator, rID eID);
 
 /* inc-z1ba: test-only disbelief probe entry points (src/DisbeliefProbe.cpp). */
 void DisbeliefProbeThing(Creature *watcher, Thing *illusion, int16 baseDC,
-    bool spotted, int16 usedDC, bool pass);
+    bool spotted, int16 usedDC, bool pass, bool removed);
 void DisbeliefProbeTerrain(Creature *watcher, int16 baseDC, bool spotted,
     int16 usedDC, bool pass);
 void DisbeliefProbeForce(Creature *watcher, int16 baseDC, bool spotted,

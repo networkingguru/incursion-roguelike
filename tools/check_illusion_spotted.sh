@@ -16,7 +16,7 @@
 #
 #   IDENTIFY watcher=<n> caster=<n> spell=<S> result=pass|fail
 #   DISBELIEF watcher=<n> illusion=<name|force|terrain> dc=<base> spotted=0|1
-#             used_dc=<dc> result=pass|fail
+#             used_dc=<dc> result=pass|fail removed=0|1
 #
 # The probe writes a line whether the save passes or fails, so the check never
 # needs the save to come out a particular way.
@@ -130,7 +130,7 @@ if "result=%s" % ident not in ids[0]:
     print("2 the cast did not %s for %s: %s" % ("identify" if ident == "pass" else "stay unidentified", watcher, ids[0])); sys.exit()
 saves = []
 for l in lines:
-    m = re.match(r"DISBELIEF watcher=(.+?) illusion=(.+?) dc=(-?\d+) spotted=(\d) used_dc=(-?\d+) result=(\w+)$", l)
+    m = re.match(r"DISBELIEF watcher=(.+?) illusion=(.+?) dc=(-?\d+) spotted=(\d) used_dc=(-?\d+) result=(\w+)(?: removed=\d)?$", l)
     if m and m.group(1) == watcher and re.fullmatch(illus, m.group(2)):
         saves.append(m.groups())
 if not saves:
