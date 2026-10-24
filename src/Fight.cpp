@@ -9314,7 +9314,7 @@ SkipTripSave:
                                             if (it->Hardness(AD_SOAK) != -1) {
                                                 /* e.EVictim->IPrint(Format("Soaking %s for %d.", (const char*)(it->Name()),dmg)); */
                                                 ThrowDmg(EV_DAMAGE,e.DType,dmg,NULL,e.EActor,it);
-                                            } else if (it->Type == T_LIGHT && it->Material() != MAT_FORCE) {
+                                            } else if (!e.isHit && it->Type == T_LIGHT && it->Material() != MAT_FORCE) {
                                                 /* average water elemental soak = 3d4, average torch
                                                 * age = 3000, getting soaked once should destroy your
                                                 * torch */
@@ -9327,6 +9327,35 @@ SkipTripSave:
                                                         ((Player *)e.EVictim)->UpdateMap = true;
                                                 }
                                             } 
+                                        }
+                                        /* inc-b2wd: a hit soak never drains or destroys a
+                                           light; a failed Reflex (DC 10+dmg) moves the lit
+                                           light to the pack or floor, Age unchanged. Terrain
+                                           soaks (isHit false) keep the drain above. */
+                                        if (e.isHit) {
+                                            Item *light = e.EVictim->InSlot(SL_LIGHT);
+                                            if (light && light->Type == T_LIGHT && light->Material() != MAT_FORCE)
+                                                if (!e.EVictim->SavingThrow(REF,10 + e.vDmg)) {
+                                                    bool toPack = false;
+                                                    Item *pack = e.EVictim->InSlot(SL_PACK);
+                                                    if (pack && pack->Type == T_CONTAIN && !e.EVictim->isMonster()) {
+                                                        SetSilence();
+                                                        EvReturn r = Throw(EV_INSERT,e.EVictim,NULL,pack,light);
+                                                        UnsetSilence();
+                                                        toPack = (r == DONE);
+                                                    }
+                                                    if (toPack)
+                                                        e.EVictim->IDPrint("Your <Obj2> goes out.",
+                                                            "The <Obj1>'s <Obj2> goes out.",e.EVictim,light);
+                                                    else {
+                                                        e.EVictim->IDPrint("Your <Obj2> goes out and falls to the floor.",
+                                                            "The <Obj1>'s <Obj2> goes out and falls to the floor.",e.EVictim,light);
+                                                        light->Remove(false);
+                                                        light->PlaceAt(e.EVictim->m,e.EVictim->x,e.EVictim->y);
+                                                    }
+                                                    if (e.EVictim->isPlayer())
+                                                        ((Player *)e.EVictim)->UpdateMap = true;
+                                                }
                                         }
                                         if (e.EVictim->isMType(MA_ELEMENTAL) && e.EVictim->isMType(MA_FIRE))
                                             ThrowDmg(EV_DAMAGE,AD_NORM,e.vDmg*2,"getting soaked",e.EActor,e.EVictim);

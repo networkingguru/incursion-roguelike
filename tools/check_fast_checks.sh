@@ -15,6 +15,21 @@
 #      the fast one still prints ok
 #   h. a check exiting 2 alone           -> 0, output says UNMEASURED
 #   i. tools/check_worktree_untracked.sh lists "a b.txt" as one line
+#   j. a failing check + the guard faked to refuse -> an OVERLOADED: line, the
+#      TOO SLOW line says "retry, do not change the check", no line says
+#      "remove its gate-fast marker"; exit 1
+#   k. the same failing checks, guard faked idle   -> no OVERLOADED: line, the
+#      TOO SLOW line is the original text; exit 1
+#   l. all checks pass, guard faked to refuse       -> 0, no OVERLOADED: line
+#      (the guard is not consulted when nothing failed)
+#
+# inc-p8bw: the load guard is what tells a load failure from a defect. Every
+# fact this check reads, and the control that fixes it:
+# fact: machine load / cpu count / pressure / running gate -- the
+#       INCURSION_LOAD_GUARD_FAKE_LOAD/_NCPU/_PRESSURE/_GATES variables
+# fact: the bypass log location (guard OFF path) -- INCURSION_LOAD_GUARD_LOG
+# fact: which checks fail, and why -- fakes planted in a temp dir via --dir
+# fact: a check is too slow -- INCURSION_FAST_LIMIT in the temp runner env
 #
 # The fast runner globs tools/check_*.sh, so every fake here is one of those.
 # Each is `chmod +x` and carries a `# gate-fast: <reason>` marker unless the
@@ -191,6 +206,86 @@ else
     report FAIL "h: a check exiting 2 left the runner at exit $rc"; printf '%s\n' "$out"
 fi
 rm -f "$DIR/check_unmeasured.sh"
+
+# ---- j. a failing check and a slow one, guard faked to REFUSE:
+# an OVERLOADED: line, the "retry, do not change the check" TOO SLOW text, and
+# no "remove its gate-fast marker". A short limit keeps the slow fake quick.
+plant check_fail_j.sh "static test" 'echo "j failed"; exit 1'
+plant check_slow_j.sh "static test" 'sleep 5; exit 0'
+out="$(env INCURSION_LOAD_GUARD_FAKE_LOAD=10.5 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
+          INCURSION_LOAD_GUARD_FAKE_PRESSURE=1 INCURSION_LOAD_GUARD_FAKE_GATES=0 \
+          INCURSION_FAST_LIMIT=2 "$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
+if [ "$rc" -eq 1 ]; then
+    case "$out" in
+        OVERLOADED:*|*$'\n'OVERLOADED:*) overloaded=1 ;;
+        *) overloaded=0 ;;
+    esac
+    case "$out" in
+        *"retry, do not change the check"*) retry=1 ;;
+        *) retry=0 ;;
+    esac
+    case "$out" in
+        *"remove its gate-fast marker"*) nomarker=1 ;;
+        *) nomarker=0 ;;
+    esac
+    if [ "$overloaded" -eq 1 ] && [ "$retry" -eq 1 ] && [ "$nomarker" -eq 0 ]; then
+        report ok "j: a refusing guard labels the failure OVERLOADED and tells the reader to retry"
+    else
+        report FAIL "j: refusing guard (overloaded=$overloaded retry=$retry marker=$nomarker)"
+        printf '%s\n' "$out"
+    fi
+else
+    report FAIL "j: failing+slow under a refusing guard exits 1 (got $rc)"; printf '%s\n' "$out"
+fi
+rm -f "$DIR/check_fail_j.sh" "$DIR/check_slow_j.sh"
+
+# ---- k. the same failing checks, guard faked IDLE: no OVERLOADED: line, the
+# TOO SLOW line carries the original wording.
+plant check_fail_k.sh "static test" 'echo "k failed"; exit 1'
+plant check_slow_k.sh "static test" 'sleep 5; exit 0'
+out="$(env INCURSION_LOAD_GUARD_FAKE_LOAD=1.0 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
+          INCURSION_LOAD_GUARD_FAKE_PRESSURE=1 INCURSION_LOAD_GUARD_FAKE_GATES=0 \
+          INCURSION_FAST_LIMIT=2 "$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
+if [ "$rc" -eq 1 ]; then
+    case "$out" in
+        OVERLOADED:*|*$'\n'OVERLOADED:*) overloaded=1 ;;
+        *) overloaded=0 ;;
+    esac
+    case "$out" in
+        *"TOO SLOW for the fast set"*) original=1 ;;
+        *) original=0 ;;
+    esac
+    if [ "$overloaded" -eq 0 ] && [ "$original" -eq 1 ]; then
+        report ok "k: an idle guard leaves the original TOO SLOW text and no OVERLOADED: line"
+    else
+        report FAIL "k: idle guard (overloaded=$overloaded original=$original)"
+        printf '%s\n' "$out"
+    fi
+else
+    report FAIL "k: failing+slow under an idle guard exits 1 (got $rc)"; printf '%s\n' "$out"
+fi
+rm -f "$DIR/check_fail_k.sh" "$DIR/check_slow_k.sh"
+
+# ---- l. every check passes, guard faked to REFUSE: exit 0 and no OVERLOADED:
+# line, because the guard must not be consulted when nothing failed.
+plant check_pass_l.sh "static test" 'exit 0'
+out="$(env INCURSION_LOAD_GUARD_FAKE_LOAD=10.5 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
+          INCURSION_LOAD_GUARD_FAKE_PRESSURE=1 INCURSION_LOAD_GUARD_FAKE_GATES=0 \
+          "$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+    case "$out" in
+        OVERLOADED:*|*$'\n'OVERLOADED:*) overloaded=1 ;;
+        *) overloaded=0 ;;
+    esac
+    if [ "$overloaded" -eq 0 ]; then
+        report ok "l: a passing set never consults the guard (exit 0, no OVERLOADED:)"
+    else
+        report FAIL "l: a passing set printed OVERLOADED:"; printf '%s\n' "$out"
+    fi
+else
+    report FAIL "l: a passing set exits 0 (got $rc)"; printf '%s\n' "$out"
+fi
+rm -f "$DIR/check_pass_l.sh"
 
 echo
 if [ "$fails" -eq 0 ]; then
