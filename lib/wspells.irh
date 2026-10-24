@@ -3905,14 +3905,14 @@ Wizard / Scroll Spell "Stinking Cloud" : EA_GENERIC
     Purpose: EP_CURSE |AIM_AT_ENEMY;
     Desc: "Creates a 30 foot (3 square) radius cloud of noxious
       vapors, causing all breathing creatures within the cloud to make a
-      Fortitude save (DC 20) every round or suffer nausea for 2d4
+      Fortitude save (DC set by its caster) every round or suffer nausea for 2d4
       additional rounds.  Nauseated creatures cannot attack or cast spells
       and are considered off-guard for the purposes of sneak attacks. The
       caster is not immune!";
     On Event EV_MAGIC_STRIKE {
       if (EVictim->onPlane() == PHASE_MATERIAL &&
           EVictim->isMType(MA_BREATHER) && 
-          !EVictim->SavingThrow(FORT,20))
+          !EVictim->SavingThrow(FORT,e.saveDC))
         EVictim->GainTempStati(NAUSEA,EActor,RoundsToUnits(2d4),SS_ENCH,0,0,
           $"stinking cloud");
     }, 

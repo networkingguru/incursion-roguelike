@@ -114,6 +114,8 @@ class Trap: public Feature
       int16 TrapLevel()
         { return TEFF(tID)->Level; }
       EvReturn TriggerTrap(EventInfo &e, bool foundBefore);
+      EvReturn TriggerRemote(Creature *attacker);
+      rID RemoteEffect();
       void AvoidSave(bool foundBefore, uint32 &saveType, int16 &DC);
       int16 AvoidChance(Creature *cr, bool foundBefore);
   };
@@ -148,4 +150,3 @@ class Portal: public Feature
     EvReturn Enter(EventInfo &e);
     bool EnterDir(Dir d);
   };
-

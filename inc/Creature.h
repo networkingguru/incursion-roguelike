@@ -595,6 +595,8 @@ class Creature: public Thing, public Magic
 		  
       virtual EvReturn PreStrike(EventInfo &e);
       virtual EvReturn Strike(EventInfo &e);
+      EvReturn AttackTrap(EventInfo &e, Trap *trap, Item *weapon, Item *ammo = NULL,
+          bool chargeTime = true, bool ranged = false);
       virtual bool     ManeuverCheck(EventInfo &e);     
 		  virtual EvReturn Hit(EventInfo &e);
 		  virtual EvReturn Miss(EventInfo &e);

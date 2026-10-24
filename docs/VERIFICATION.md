@@ -61,6 +61,9 @@ known hole.
 | Terrain | Wizard menu, "Change terrain type"; or a probe that builds the map (`INCURSION_RUNTO_STAGE`). |
 | Depth | Wizard menu, "Ascend / Descend Depth". |
 | A known spell | Wizard menu, "Learn Any Spell". |
+| Character level | Wizard menu, "Wizard Mode Switches", "Free Advancement" set to YES; then G on the character sheet gains one level. It passes no turns. The level-up menus (feat, attribute, spells) are fixed by the fixture; the hit point roll is not, so do not assert on hit points. |
+| A god's favor | Wizard menu, "Set Favour" (`src/Debug.cpp`), then the god's name and the number. Only on the pantheon epic `inc-pu6v` until it lands. Crossing several favor ranks at once opens one message box per rank; close them with `@while "#------" SPACE`. |
+| A lit square | A scratch-module driver calls `m->NewField(FI_LIGHT,x,y,1,...)` on the square (the call Call Light makes). It passes no turns, and the square reads brightness 255. |
 | Attack roll (d20) | `INCURSION_LOF_FORCE_ROLL` (`src/Fight.cpp`). It applies to every attacker. |
 | Saving throw (d20) | `INCURSION_FORCE_SAVE_ROLL`, 1 to 20. It applies to every creature. |
 | Skill check (d20) | `INCURSION_RUNTO_SKILL_ROLL`, 1 to 20. |

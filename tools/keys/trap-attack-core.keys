@@ -1,0 +1,6 @@
+# ESC would open the System Menu, not cancel; the 's' is the one real turn.
+# Core probe has already fired the remote trap. Complete one gameplay turn.
+@while "-- more --" SPACE
+s
+@dump:trap-core
+@quit

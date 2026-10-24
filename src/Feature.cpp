@@ -1072,6 +1072,70 @@ int16 Trap::AvoidChance(Creature *cr, bool foundBefore) {
     return cr->SaveChance(te->ef.sval, DC, saveType);
 }
 
+rID Trap::RemoteEffect() {
+    // inc-w91w: redirects in threats.irh; classify the spell that actually fires.
+    static const char *redirects[][2] = {
+        {"faerie fire trap", "faerie fire"},
+        {"stinking cloud trap", "stinking cloud"},
+        {"sunscorch trap", "sunscorch"},
+        {"swarm of insects trap", "summon swarm"},
+        {"cold metal trap", "chill metal"},
+        {"heat metal trap", "heat metal"},
+        {"dispelling trap", "dispel magic"},
+        {"dispelling trap;2", "dispel magic"},
+        {"dispelling trap;3", "dispel magic"},
+        {"wasp nest trap", "insect plague"},
+        {"blackmantle trap", "blackmantle"},
+        {"cursing trap", "bestow curse"},
+        {"searing light trap", "searing light"},
+        {"hexing trap", "bestow curse"},
+        {"harm trap", "harm"}
+    };
+    for (unsigned i = 0; i < sizeof(redirects)/sizeof(redirects[0]); ++i)
+        if (tID == FIND(redirects[i][0]))
+            return FIND(redirects[i][1]);
+    return tID;
+}
+
+EvReturn Trap::TriggerRemote(Creature *attacker) {
+    if (TrapFlags & TS_DISARMED)
+        return NOTHING;
+    if (!attacker || !m)
+        return ABORT;
+    EventInfo e; e.Clear();
+    e.EActor = attacker; e.EMap = m;
+    e.EItem = (Item*)this; e.eID = tID;
+    e.isTrap = true; e.vCasterLev = 12;
+    Creature *occupant = m->FCreatureAt(x,y);
+    rID resolved = RemoteEffect();
+    int area = TEFF(resolved)->ef.aval;
+    if (area != AR_GLOBE && area != AR_FIELD && area != AR_MFIELD &&
+        area != AR_BALL && area != AR_BURST) {
+        EvReturn result = DONE;
+        if (occupant) {
+            e.EActor = occupant;
+            result = TriggerTrap(e,true);
+        } else
+            attacker->IPrint("The <Obj> goes off harmlessly.",this);
+        TrapFlags |= TS_DISARMED;
+        SetImage();
+        return result;
+    }
+    TrapFlags |= TS_DISARMED;
+    SetImage();
+    e.isLoc = true; e.EXVal = x; e.EYVal = y;
+    e.remoteTrapID = tID;
+    e.remoteTrapX = x; e.remoteTrapY = y;
+    e.EVictim = occupant;
+    // Resolve wrappers before MagicStrike's actor fallback; only the occupant
+    // receives the faerie-fire wrapper's duration override (inc-w91w).
+    EvReturn result = resolved == tID ? ReThrow(EV_EFFECT,e) :
+        RedirectEff(e,resolved,EV_EFFECT);
+    if (tID == FIND("faerie fire trap") && occupant && !occupant->isDead())
+        occupant->SetEffStatiDur(-1,resolved,-2);
+    return result;
+}
+
 EvReturn Trap::TriggerTrap(EventInfo &e, bool foundBefore) {
     EvReturn r; Creature *cr;
     // ww: if the trap is not mundane, you get a saving throw vs. magic to

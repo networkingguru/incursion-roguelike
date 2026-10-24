@@ -1,0 +1,16 @@
+# inc-w91w: fire the bow at the EMPTY square of a found trap, three squares
+# east, through the real fire key and the location cursor.
+# NOTE: lowercase f; uppercase F sets SHIFT and fires in a direction.
+# `s` passes one turn so the vision pass sees the room the probe rebuilt;
+# before it the prompt calls every square "unseen area".
+@while "-- more --" SPACE
+s
+f
+l
+RIGHT*3
+@dump:shot-cursor
+ENTER
+@while "Really fire" y
+@while "-- more --" SPACE
+@dump:shot-after
+@quit

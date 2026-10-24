@@ -271,6 +271,22 @@ start_outside() {
 # alive <pid>: 0 if the process is still running.
 alive() { kill -0 "$1" 2>/dev/null; }
 
+# dies_within <pid> <seconds>: 0 if the process is gone within the time,
+# polling every 0.1 s. Reaps it (it is this script's own child).
+dies_within() {
+    local pid="$1" tries=$(( $2 * 10 ))
+    while [ "$tries" -gt 0 ]; do
+        # kill -0 succeeds on a zombie, so a zombie counts as gone too.
+        if ! alive "$pid" || [ "$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ' | cut -c1)" = "Z" ]; then
+            wait "$pid" 2>/dev/null
+            return 0
+        fi
+        sleep 0.1
+        tries=$(( tries - 1 ))
+    done
+    return 1
+}
+
 # A temp copy of the profile with the two signal lines removed is the red
 # control: the outside kill MUST succeed under it.
 PROFILE_NOSIG="$TMP/sandbox-nosig.sb"
@@ -285,10 +301,10 @@ else
         unmeasured "signal guard: could not start the outside /bin/sleep for the kill test"
     else
         real_sandbox kill "$P3_PID" >/dev/null 2>&1
-        if alive "$P3_PID"; then
-            pass "signal guard: kill of an outside pid failed and the process is alive"
-        else
+        if dies_within "$P3_PID" 1; then
             fail "signal guard: kill of an outside pid SUCCEEDED (the process died)"
+        else
+            pass "signal guard: kill of an outside pid failed and the process is alive"
         fi
 
         # Red control: the same kill under the profile with the signal lines
@@ -297,7 +313,7 @@ else
         sandbox-exec -f "$PROFILE_NOSIG" \
             -D WORKDIR="$WORKDIR" -D CACHEDIR="$CACHEDIR" -D HOME="$HOME" \
             kill "$P3_PID" >/dev/null 2>&1
-        if ! alive "$P3_PID"; then
+        if dies_within "$P3_PID" 5; then
             pass "signal guard red control: with the two signal lines removed, the outside kill succeeded"
         else
             unmeasured "signal guard red control: the outside kill was refused even with the signal lines removed; the denial is not what saves the victim"
@@ -312,10 +328,10 @@ else
         unmeasured "signal guard: could not start the outside marker process for the pkill test"
     else
         real_sandbox pkill -f "$P3_MARK" >/dev/null 2>&1
-        if alive "$P3_MPID"; then
-            pass "signal guard: pkill -f of an outside marker failed and the process is alive"
-        else
+        if dies_within "$P3_MPID" 1; then
             fail "signal guard: pkill -f of an outside marker SUCCEEDED (the process died)"
+        else
+            pass "signal guard: pkill -f of an outside marker failed and the process is alive"
         fi
     fi
 

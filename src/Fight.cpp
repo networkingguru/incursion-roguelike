@@ -1494,8 +1494,25 @@ EvReturn Creature::RAttack(EventInfo &e)
     return ABORT;
 
   Creature *Intended; 
+  /* inc-w91w rule 2: when the shooter picked a found trap itself (e.ETarget
+     is a Trap), aim at its square and remember the trap, so the shot travels
+     the normal path and resolves ONLY against the trap. A Trap must never
+     reach the intended-creature search or any EVictim reader as a Creature. */
+  Trap *aimTrap = NULL;
+  if (e.ETarget && e.ETarget->isType(T_TRAP)) {
+    aimTrap = (Trap*)e.ETarget;
+    e.EXVal = aimTrap->x;
+    e.EYVal = aimTrap->y;
+    e.ETarget = NULL;
+    e.isLoc = true;
+  }
   if (e.isLoc) {
-    Intended = NULL; bool no_per = false; int16 c = 0; Creature *cr;
+    Intended = NULL;
+    /* inc-w91w rule 2: a shot explicitly aimed at a found trap resolves only
+       against that trap on its square, never at a creature standing there,
+       so the intended-creature search is skipped entirely. */
+    if (!aimTrap) {
+    bool no_per = false; int16 c = 0; Creature *cr;
     /* If you shoot at a spot with multiple creatures, you're shooting at
        the largest creature you perceive in that spot. But you might be
        shooting at a spot with no perceived creatures, because you suspect
@@ -1522,6 +1539,7 @@ EvReturn Creature::RAttack(EventInfo &e)
       }
     Intended = c ? oCreature(Candidates[random(c)]) : NULL;
     }
+    }
   else
     Intended = e.EVictim;
   if (Intended == e.EActor) {
@@ -1529,8 +1547,15 @@ EvReturn Creature::RAttack(EventInfo &e)
     return ABORT; 
     } 
 
-  e.vRange = max(1,(e.EItem ? e.EItem : e.EItem2)->RangeInc(e.EActor));
+  /* inc-w91w: the player's own aim kind, captured before the travel setup
+     below turns a cardinal aim at a square into a direction shot (the
+     degenerate-slope case). Rule 1's location aim and rule 3's direction
+     shot must be told apart by what the player chose, not by a conversion
+     RAttack made afterward. */
+  bool aimedLoc = e.isLoc;
+  bool aimedDir = e.isDir;
 
+  e.vRange = max(1,(e.EItem ? e.EItem : e.EItem2)->RangeInc(e.EActor));
   if (e.EActor->HasFeat(FT_FAR_SHOT))
     e.vRange *= 2;
 
@@ -1777,6 +1802,14 @@ hitNow:
   flight.pause = 30;
   flight.shooter = e.EActor;
   flight.drawn = false;
+  /* inc-w91w phase 2b: set true by a creature strike below. A shot aimed at
+     a found trap's square that strikes no creature in between then resolves
+     against the trap, after the creature resolution rather than before it. */
+  bool struckCreature = false;
+  /* inc-w91w phase 2b: the trap a shot that reaches its aim square resolves
+     against once the creature resolution below has run (rules 1 and 2).
+     Declared here, not at its use, so the gotos above cannot bypass it. */
+  Trap *targetTrap = NULL;
   /* inc-30ps phase 2: resolve the single strike now that the whole line (or,
      for a point-blank shot, no line at all -- lineCount is still 0) is
      known. Intended is NULL only when the player aimed at a location that
@@ -1945,7 +1978,27 @@ hitNow:
        here -- there is no intended target to supply a DC. Precise Shot is
        not consulted: the feat exists to secure the creature the shooter
        meant, and this shooter meant a square. */
-    const int8 penalty = (lineCount == 1) ? 0 : LineOfFireCoverPenalty(1);
+    /* inc-w91w phase 2b rule 2: when the shot was aimed at a found trap's
+       own square (aimTrap), that square's occupant is recorded in squares[]
+       because Intended is NULL, but it MUST NOT be a candidate -- the shot
+       resolves only against the trap there. The aim square is the last
+       square the walk recorded (the loop records it, then stops on the aim
+       coordinate); drop any trailing square whose head stands on the aim
+       square. For every shot not aimed at a trap candCount stays lineCount,
+       so squares[] and every count read from it are unchanged. */
+    int16 candCount = lineCount;
+    if (aimTrap) {
+      while (candCount > 0) {
+        Thing *h = squares[candCount - 1].member[0];
+        if (h && h->x == e.EXVal && h->y == e.EYVal) candCount--;
+        else break;
+      }
+    }
+    if (candCount == 0) {
+      /* rule 2 with no creature between the shooter and the trap: nothing
+         for this branch to strike; the trap is resolved below. */
+    } else {
+    const int8 penalty = (candCount == 1) ? 0 : LineOfFireCoverPenalty(1);
     e.ETarget = squares[0].member[0];
     e.vicIllusion = e.ETarget && e.ETarget->HasStati(ILLUSION); /* inc-6w5x: see above */
     int16 vicSize = e.ETarget->isCreature() ?
@@ -1999,6 +2052,7 @@ hitNow:
     if (e.isHit) {
       lx = tX0 * 2;
       ly = tY0 * 2;
+      struckCreature = true; /* inc-w91w phase 2b: the shot stopped on a body */
     } else {
       /* squares[0]'s head's own roll missed. Walk the rest of squares[]'
          heads with the SAME roll (e.vHit + e.vRoll, preserved from the
@@ -2009,7 +2063,7 @@ hitNow:
          already casts a Thing* mount or rider elsewhere in this file. */
       int16 total = e.vHit + e.vRoll;
       Thing *hitVictim = NULL;
-      for (int16 idx = 1; idx < lineCount; idx++) {
+      for (int16 idx = 1; idx < candCount; idx++) {
         Creature *cand = (Creature*)squares[idx].member[0];
         int8 Di = (int8)(cand->isCreature() ? cand->getDef() : 0);
         if (total >= Di + penalty) {
@@ -2020,6 +2074,7 @@ hitNow:
       if (hitVictim) {
         lx = hitVictim->x * 2;
         ly = hitVictim->y * 2;
+        struckCreature = true; /* inc-w91w phase 2b: the shot stopped on a body */
 
         /* item 3: recompute damage against the creature actually struck. */
         EventInfo strikeE = e;
@@ -2039,6 +2094,35 @@ hitNow:
         ReThrow(EV_ATTACKMSG, strikeE);
       }
     }
+    }
+  }
+  /* inc-w91w rules 1 and 2 (phase 2b): after the creature resolution above,
+     a shot that reached its aim square and struck no creature resolves
+     against a found trap on that square. Rule 2: the shooter picked the
+     trap itself (aimTrap). Rule 1: the shooter aimed at the empty square of
+     a found trap. A creature the line crossed stops the shot only if it was
+     HIT (struckCreature); a creature the shot missed does not prevent the
+     trap from being attacked. AttackTrap uses the ranged attribute and is
+     charged once by the Timeout at the foot of this function; the missile
+     then lands on the trap square. */
+  if (reachedAimSquare && !struckCreature) {
+    if (aimTrap)
+      targetTrap = aimTrap;
+    else if (aimedLoc && !aimedDir) {
+      Trap *found = m.FTrapAt(e.EXVal, e.EYVal);
+      if (found && (found->TrapFlags & TS_FOUND) &&
+          !(found->TrapFlags & TS_DISARMED))
+        targetTrap = found;
+    }
+  }
+  if (targetTrap) {
+    lx = targetTrap->x * 2;
+    ly = targetTrap->y * 2;
+    /* AttackTrap sets its own ETarget/EVictim union and reports its own
+       hit/miss/fumble. It must not run as a creature strike. */
+    EventInfo trapE; trapE.Clear();
+    AttackTrap(trapE, targetTrap, e.EItem, e.EItem2, false, true);
+    goto SkipAttack;
   }
 SkipAttack:
   /* inc-55jl: the decided landing square, before PlaceNear can nudge it
@@ -2112,6 +2196,8 @@ SkipAttack:
       e.EItem2->m->Update(e.EItem2->x,e.EItem2->y);
     }
   
+  extern void TrapAttackProbeShot(Creature*, EventInfo&);
+  TrapAttackProbeShot(this,e);
   return DONE;
 }
 
@@ -6041,6 +6127,53 @@ EvReturn Creature::PreStrike(EventInfo &e) /* this == EActor */
 
     return NOTHING;
   }
+
+EvReturn Creature::AttackTrap(EventInfo &e, Trap *trap, Item *weapon, Item *ammo,
+                              bool chargeTime, bool ranged) {
+    if (!trap || !(trap->TrapFlags & TS_FOUND) ||
+        (trap->TrapFlags & TS_DISARMED) || trap->m != m)
+        return ABORT;
+    CalcValues(false, ammo);
+    int hitAttr, speedAttr;
+    if (ranged) {
+        /* inc-w91w: a fired missile uses the archery attribute, a thrown
+           item the thrown attribute -- the same attribute RAttack already
+           uses for that shot (src/Fight.cpp, the e.EItem branch). */
+        hitAttr = weapon ? A_HIT_ARCHERY : A_HIT_THROWN;
+        speedAttr = weapon ? A_SPD_ARCHERY : A_SPD_THROWN;
+    } else {
+        hitAttr = weapon ? A_HIT_MELEE : A_HIT_BRAWL;
+        speedAttr = weapon ? A_SPD_MELEE : A_SPD_BRAWL;
+        if (weapon && weapon == EInSlot(SL_READY) && weapon != EInSlot(SL_WEAPON)) {
+            hitAttr = A_HIT_OFFHAND; speedAttr = A_SPD_OFFHAND;
+        }
+    }
+    e.EActor = this; e.ETarget = trap; e.EMap = m;
+    e.EItem = weapon; e.EItem2 = ammo;
+    e.vHit = Attr[hitAttr]; e.vDef = 10 + trap->TrapLevel();
+    LOFInitForcedRoll();
+    e.vRoll = LOFForcedRoll ? LOFForcedRoll : random(20)+1;
+    e.vtRoll = LOFForcedRoll ? LOFForcedRoll : random(20)+1;
+    e.isHit = e.vRoll == 20 || (e.vRoll != 1 && e.vRoll + e.vHit >= e.vDef);
+    e.isFumble = e.vRoll == 1 && e.vtRoll + e.vHit < e.vDef;
+    /* inc-w91w: a ranged shot charges its own time in RAttack, so it asks
+       AttackTrap to skip its melee Timeout and is not charged twice. */
+    if (chargeTime)
+        Timeout += 3000 / max(100 + Attr[speedAttr]*5,10);
+    if (e.isHit) {
+        IPrint("You strike the <Obj>.",trap);
+        trap->TriggerRemote(this);
+    } else if (e.isFumble) {
+        IPrint("You fumble and set off the <Obj>.",trap);
+        EventInfo trigger; trigger.Clear();
+        trigger.EActor = this; trigger.EMap = m;
+        trap->TriggerTrap(trigger,true);
+    } else
+        IPrint("You miss the <Obj>.",trap);
+    extern void TrapAttackProbeResult(Creature*, EventInfo&);
+    TrapAttackProbeResult(this,e);
+    return DONE;
+}
 
 EvReturn Creature::Strike(EventInfo &e) /* this == EActor */
 	{

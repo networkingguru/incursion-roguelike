@@ -205,6 +205,8 @@ struct EventInfo {
 
     uint16 Event;
     EvParam p[5];
+    rID remoteTrapID;
+    int16 remoteTrapX, remoteTrapY;
     Field *EField;
     Map   *EMap;
 #define EActor      p[0].c

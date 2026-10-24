@@ -341,6 +341,8 @@ void Game::Play() {
        See AreaRadiusProbe (src/AreaRadiusProbe.cpp). */
     extern void AreaRadiusProbe(Player *pl);
     AreaRadiusProbe(pp);
+    extern void TrapAttackProbe(Player *pl);
+    TrapAttackProbe(pp);
 
     /* inc-tmys: off unless INCURSION_MONINIT_PROBE is set; needs a live map.
        See MonsterInitProbe (src/MonsterInitProbe.cpp) and
