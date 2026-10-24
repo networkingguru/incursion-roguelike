@@ -45,7 +45,7 @@ class Magic
       EvReturn Inflict(EventInfo &e);
       EvReturn Grant(EventInfo &e);
       EvReturn Drain(EventInfo &e);
-      EvReturn Terraform(EventInfo &e);
+      EvReturn Terraform(EventInfo &e, bool squareGiven = false);
       EvReturn Travel(EventInfo &e);
       EvReturn Identify(EventInfo &e);
       EvReturn Illusion(EventInfo &e);

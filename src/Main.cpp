@@ -356,6 +356,8 @@ void Game::Play() {
        See AreaRadiusProbe (src/AreaRadiusProbe.cpp). */
     extern void AreaRadiusProbe(Player *pl);
     AreaRadiusProbe(pp);
+    extern void TerraformEdgeProbe(Player *pl);
+    TerraformEdgeProbe(pp);
     extern void TrapAttackProbe(Player *pl);
     TrapAttackProbe(pp);
 

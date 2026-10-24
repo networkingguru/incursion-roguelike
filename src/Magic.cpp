@@ -1569,7 +1569,7 @@ EvReturn Magic::MagicXY(EventInfo &e,int16 tx,int16 ty)
             break;
           case EA_TERRAFORM:          
             CalcEffect(e);
-            r2 = Terraform(e);
+            r2 = Terraform(e, true);
             if (r2 == ABORT)
               return ABORT;
             if (r2 != NOTHING && r2 != NOMSG)
