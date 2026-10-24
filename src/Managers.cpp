@@ -1182,14 +1182,100 @@ retry:
     }
 }
 
+/* inc-wkxf: the key BarterManager sorts an item group by. Takes the displayed
+   ware name and strips, in order: (1) one leading count or article
+   ("<digits> ", "a ", "an ", "the ", case-insensitive); (2) one leading
+   blessed/cursed marker ("uncursed ", "blessed ", "cursed ", "b ", "c ",
+   case-insensitive, long words tested first, the one-letter forms matched only
+   as a whole word so a name like "boots" is never cut); (3) one leading
+   "suit of ", "suits of ", "potion of ", "potions of ", "scroll of " or
+   "scrolls of " (case-insensitive); (4) if step 2 matched nothing, tries the
+   blessed/cursed marker once more (the marker can follow the phrase, as in
+   "a suit of c slick chainmail"). The displayed name is unchanged. */
+static void BarterSortKey(const char *name, char *key, int keySize) {
+    static const char *articles[] = { "an ", "a ", "the ", NULL };
+    static const char *phrases[] = {
+        "suits of ", "suit of ", "potions of ", "potion of ",
+        "scrolls of ", "scroll of ", NULL
+    };
+    static const char *markers[] = {
+        "uncursed ", "blessed ", "cursed ", "b ", "c ", NULL
+    };
+    const char *s = name ? name : "";
+    int k = 0, i;
+
+    if (isdigit((unsigned char)s[0])) {
+        while (isdigit((unsigned char)s[0]))
+            s++;
+        if (s[0] == ' ')
+            s++;
+    } else {
+        for (i = 0; articles[i]; i++) {
+            int len = (int)strlen(articles[i]);
+            if (!strncasecmp(s, articles[i], len)) {
+                s += len;
+                break;
+            }
+        }
+    }
+    {
+        int stripped = 0;
+        for (i = 0; markers[i]; i++) {
+            int len = (int)strlen(markers[i]);
+            if (!strncasecmp(s, markers[i], len)) {
+                /* the one-letter markers are "b " and "c ": the trailing
+                   space is what makes them whole-word, so "boots"/"club"
+                   is never cut */
+                s += len;
+                stripped = 1;
+                break;
+            }
+        }
+        for (i = 0; phrases[i]; i++) {
+            int len = (int)strlen(phrases[i]);
+            if (!strncasecmp(s, phrases[i], len)) {
+                s += len;
+                break;
+            }
+        }
+        if (!stripped) {
+            for (i = 0; markers[i]; i++) {
+                int len = (int)strlen(markers[i]);
+                if (!strncasecmp(s, markers[i], len)) {
+                    s += len;
+                    break;
+                }
+            }
+        }
+    }
+    while (s[k] && k < keySize - 1) {
+        key[k] = s[k];
+        k++;
+    }
+    key[k] = '\0';
+}
+
 void TextTerm::BarterManager(Creature *Seller) {
     static String WareNames[500];
 
     hObj Wares[500];
     Item *it;
     rID spID;
-    int16 i, c, n, width, lItem, lSpell, curr, top, vRows;
+    int16 i, c, n, width, lItem, lSpell, curr, top, vRows, nRows;
+    /* dispRow maps a ware index to its row in the scroll buffer: headings add
+       display rows, so ware index != display row (inc-wkxf). grpKey holds the
+       itemGroups[] index of each item ware, so a group change is a heading.
+       Both are sized for the wares array; headings live only in the scroll
+       buffer (MAX_SCROLL_LINES), never in these. */
+    int16 dispRow[500], grpKey[500];
+    /* inc-wkxf: SortKey[i] is WareNames[i] with a leading count/article, one
+       leading blessed/cursed marker ("uncursed "/"blessed "/"cursed "/"b "/
+       "c ") and one leading "suit(s) of "/"potion(s) of "/"scroll(s) of "
+       removed, for the in-group name sort. It is permuted in lockstep with
+       Wares/WareNames, and the screen still shows WareNames. */
+    static String SortKey[500];
     String ShopName, SellerName;
+    String footer, searchText;
     int16 ch, digit;
     int32 cost;
 
@@ -1234,6 +1320,85 @@ void TextTerm::BarterManager(Creature *Seller) {
             WareNames[i] = Decolorize(oItem(Wares[i])->Name(NA_A | NA_LONG)).Left(width - 18);
     }
 
+    {
+        char keyBuf[512];
+        for (i = 0; i != lItem + 1; i++) {
+            BarterSortKey((const char*)WareNames[i], keyBuf, (int)sizeof(keyBuf));
+            SortKey[i] = keyBuf;
+        }
+    }
+
+    /* inc-wkxf: the wares are listed by group, and within a group by name,
+       rather than in the merchant's inventory order. Wares[] and WareNames[]
+       must stay paired, so the insertion sort permutes both with the same
+       move. Items sort by the inventory screen's group order
+       (itemGroups[]/sortOrder(), src/Managers.cpp:499-509), and a ware whose
+       sortOrder() is 50 (no group) sorts into the T_ITEM group but after the
+       real T_ITEM wares, as InventoryManager does. Spells sort by NAME(). */
+    for (i = 1; i <= lItem; i++) {
+        hObj hIt = Wares[i];
+        String nmIt = WareNames[i];
+        String keyIt = SortKey[i];
+        int16 j = i - 1;
+        while (j >= 0) {
+            int16 oA = sortOrder(oItem(Wares[j])),
+                  oB = sortOrder(oItem(hIt));
+            int16 kA = (oA == 50) ? 12 : oA, kB = (oB == 50) ? 12 : oB;
+            bool gt;
+            if (kA != kB)
+                gt = kA > kB;
+            else if ((oA == 50) != (oB == 50))
+                gt = (oA != 50);        /* real T_ITEM before no-group */
+            else {
+                int ck = stricmp(SortKey[j], keyIt);
+                /* equal sort keys fall back to the full displayed name, so
+                   the order is deterministic. */
+                gt = ck > 0 || (ck == 0 && stricmp(WareNames[j], nmIt) > 0);
+            }
+            if (!gt)
+                break;
+            Wares[j + 1] = Wares[j];
+            WareNames[j + 1] = WareNames[j];
+            SortKey[j + 1] = SortKey[j];
+            j--;
+        }
+        Wares[j + 1] = hIt;
+        WareNames[j + 1] = nmIt;
+        SortKey[j + 1] = keyIt;
+    }
+
+    for (i = lItem + 2; i <= lSpell; i++) {
+        hObj hIt = Wares[i];
+        int16 j = i - 1;
+        while (j >= lItem + 1 && stricmp(NAME(Wares[j]), NAME(hIt)) > 0) {
+            Wares[j + 1] = Wares[j];
+            j--;
+        }
+        Wares[j + 1] = hIt;
+    }
+
+    for (i = 0; i <= lItem; i++) {
+        int16 o = sortOrder(oItem(Wares[i]));
+        grpKey[i] = (o == 50) ? 12 : o;
+    }
+
+    /* An unnumbered heading row precedes each item group and the service
+       spell block, so ware index and display row differ. */
+    nRows = 0;
+    for (i = 0; i <= lItem; i++) {
+        if (i == 0 || grpKey[i] != grpKey[i - 1])
+            nRows++;
+        dispRow[i] = nRows;
+        nRows++;
+    }
+    if (lSpell > lItem) {
+        nRows++;
+        for (i = lItem + 1; i <= lSpell; i++) {
+            dispRow[i] = nRows;
+            nRows++;
+        }
+    }
+
 Redraw:
 
     SetWin(WIN_INVEN);
@@ -1258,6 +1423,9 @@ Redraw:
     GotoXY(width / 2 - (int16)SellerName.GetLength() / 2, 1);
     Color(YELLOW);
     Write(SellerName);
+    GotoXY(2, 2);
+    Color(WHITE);
+    Write(Format("You have %d gp", p->getTotalMoney() / 100));
     GotoXY(2, 3);
     Color(WHITE);
     Write("Merchandise for Sale");
@@ -1265,7 +1433,8 @@ Redraw:
     Write("Cost");
     GotoXY(0, WinSizeY() - 1);
     Color(EMERALD);
-    Write(Format("[Num] Buy Item [B]uy Selected [S]ell Item [ESC] Quit %s", Seller->HasMFlag(M_SELLER) ? "Shopping" : "Bartering"));
+    footer = Format("[Num] Buy Item [B]uy Selected [S]ell Item [/] Search [ESC] Quit %s", Seller->HasMFlag(M_SELLER) ? "Shopping" : "Bartering");
+    Write(footer);
 
     curr = 0;
     offset = 0;
@@ -1282,21 +1451,51 @@ PartialRedraw:
 
 
     for (i = 0; i != c; i++) {
-        SGotoXY(2, i);
+        /* Heads every item group and the spell block, unnumbered. Colour and
+           the T_ITEM/T_ARMOUR special cases match InventoryManager
+           (src/Managers.cpp:606-613). */
         if (i <= lItem) {
+            if (i == 0 || grpKey[i] != grpKey[i - 1]) {
+                Color(YELLOW);
+                if (itemGroups[grpKey[i]] == T_ITEM)
+                    SWrite(0, dispRow[i] - 1, "Other Items");
+                else if (itemGroups[grpKey[i]] == T_ARMOUR)
+                    SWrite(0, dispRow[i] - 1, "Suits of Armour");
+                else
+                    SWrite(0, dispRow[i] - 1, Lookup(ITypeNames, itemGroups[grpKey[i]]));
+            }
+        } else if (i == lItem + 1) {
+            Color(YELLOW);
+            SWrite(0, dispRow[i] - 1, "Service Spells");
+        }
+
+        if (i <= lItem) {
+            int32 uniq = oItem(Wares[i])->getShopCost(p, Seller) / oItem(Wares[i])->GetQuantity();
+            int16 nameCol = (i == curr) ? YELLOW :
+                (uniq > p->getTotalMoney() / 100 ? SHADOW : GREY);
+            SGotoXY(2, dispRow[i]);
             Color(GREY);
-            SWrite(Format("%s%d) %c%s%c", i >= 10 ? "" : "0", i, (i == curr) ? -YELLOW : -GREY, (const char*)WareNames[i], -GREY));
-            SGotoXY(width - 10, i);
-            Color(GREY);
-            SWrite(Format("%d gp", oItem(Wares[i])->getShopCost(p, Seller) / oItem(Wares[i])->GetQuantity()));
+            SWrite(Format("%s%d) %c%s%c", i >= 10 ? "" : "0", i, -nameCol, (const char*)WareNames[i], -GREY));
+            SGotoXY(width - 10, dispRow[i]);
+            Color(nameCol);
+            SWrite(Format("%d gp", uniq));
         } else {
+            int16 nameCol;
             cost = TEFF(Wares[i])->GetConst(SERVICE_SPELL_COST);
             if (Seller && Seller->getLeader() == p)
                 cost = 0;
-            SWrite(Format("%s%d) Service Spell: %c%s%c", i >= 10 ? "" : "0", i,
-                (i == curr) ? -YELLOW : (TEFF(Wares[i])->ManaCost > Seller->cMana() ? -SHADOW : -AZURE),
-                NAME(Wares[i]), -GREY));
-            SGotoXY(width - 10, i);
+            if (i == curr)
+                nameCol = YELLOW;
+            else if (cost > p->getTotalMoney() / 100 ||
+                     TEFF(Wares[i])->ManaCost > Seller->cMana())
+                nameCol = SHADOW;
+            else
+                nameCol = AZURE;
+            SGotoXY(2, dispRow[i]);
+            Color(GREY);
+            SWrite(Format("%s%d) %c%s%c", i >= 10 ? "" : "0", i, -nameCol, NAME(Wares[i]), -GREY));
+            SGotoXY(width - 10, dispRow[i]);
+            Color((i == curr) ? YELLOW : (cost > p->getTotalMoney() / 100 ? SHADOW : GREY));
             SWrite(Format("%d gp", cost));
         }
     }
@@ -1314,10 +1513,25 @@ PartialRedraw:
        with the original typedefs. Observed -- 40 DOWN presses left the page
        byte-identical while the selection provably moved 40 rows; see
        tools/check_store_scroll.sh. inc-upw.23, not sent. */
-    if (curr < top)
-        top = curr;
-    if (curr > top + vRows - 1)
-        top = curr - (vRows - 1);
+    /* inc-wkxf: top is a display row, not a ware index -- headings make the
+       two differ. Keep the selected ware's display row on screen, and when
+       the selection is the first ware of its group (item or spell block),
+       keep its heading on screen too. */
+    if (c) {
+        int16 selRow = dispRow[curr], headRow = -1;
+        if (curr <= lItem) {
+            if (curr == 0 || grpKey[curr] != grpKey[curr - 1])
+                headRow = selRow - 1;
+        } else if (curr == lItem + 1) {
+            headRow = selRow - 1;
+        }
+        if (selRow < top)
+            top = selRow;
+        if (selRow > top + vRows - 1)
+            top = selRow - (vRows - 1);
+        if (headRow >= 0 && headRow < top)
+            top = headRow;
+    }
     UpdateScrollArea(top, WIN_CUSTOM);
     top = offset;
     do {
@@ -1357,6 +1571,53 @@ PartialRedraw:
             if (curr < lSpell)
                 curr++;
             goto PartialRedraw;
+        /* inc-wkxf: / searches the displayed names for the typed text,
+           case-insensitively, from the ware after the selection and wrapping.
+           The list is never filtered. An empty entry repeats the last search;
+           with no previous search there is nothing to do. The prompt is the
+           existing ReadLine, on the footer row. */
+        case '/': {
+            const char *line;
+            SetWin(WIN_INVEN);
+            line = ReadLine(0, WinSizeY() - 1);
+            if (line && *line)
+                searchText = line;
+            /* ReadLine writes on WIN_SCREEN and PartialRedraw does not repaint
+               the footer, so put it back before the redraw. ReadLine's blank
+               fill also runs past the 64-column store area and damages the
+               right status panel; restore it as KY_REDRAW does. */
+            ShowTraits();
+            ShowStatus();
+            SetWin(WIN_INVEN);
+            GotoXY(0, WinSizeY() - 1);
+            Color(EMERALD);
+            Write(footer);
+            if (searchText.GetLength() == 0)
+                goto PartialRedraw;
+            {
+                String needle = (const char*)searchText;
+                bool found = false;
+                int16 k;
+                needle = needle.Lower();
+                for (k = 1; k <= c; k++) {
+                    int16 idx = (curr + k) % c;
+                    String hay;
+                    if (idx <= lItem)
+                        hay = (const char*)WareNames[idx];
+                    else
+                        hay = Decolorize(NAME(Wares[idx]));
+                    hay = hay.Lower();
+                    if (strstr((const char*)hay, (const char*)needle)) {
+                        curr = idx;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                    p->IPrint("No ware matches that.");
+            }
+            goto PartialRedraw;
+        }
         case 'b': case KY_ENTER:
             if (curr <= lSpell)
                 goto BuyItem;

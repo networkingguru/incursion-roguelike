@@ -1,0 +1,11 @@
+# NOTE: lowercase c; uppercase C sets SHIFT and misses the table (flags 0).
+# inc-w91w: attack the found trap east of the fixture through the normal cursor.
+c
+@choose "Attack"
+L
+RIGHT
+ENTER
+@while "-- more --" SPACE
+@dump:trap-attack
+s
+@quit

@@ -1890,6 +1890,7 @@ NoIntervention:;
                     e.EVictim = this;
                     e.eID = m->Fields[i]->eID;
                     e.efNum = (int8)j;
+                    e.saveDC = (int8)m->Fields[i]->FieldDC();
                     ReThrow(EV_MAGIC_STRIKE,e);
                 }
     }
