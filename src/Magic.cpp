@@ -1159,6 +1159,10 @@ EvReturn Magic::MagicStrike(EventInfo &e) {
     e.MHMessageDone = false;
     e.BlastMessageDone = false;
 
+    // inc-w91w: an empty remote square has no victim, before the common fallback.
+    if (e.remoteTrapID && !e.ETarget)
+        return NOTHING;
+
     /* At this point we need to have one concrete target that we are effecting, even if it's the caster. Thus, ensure that we have a valid EVictim. */
     if (!e.ETarget)
         e.ETarget = e.EActor;
@@ -2124,6 +2128,11 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   bool hitSelf = false;
 
   wasEngulfed = false;
+  // inc-w91w: a remotely sprung ball/burst starts at the trap, without travel.
+  if (e.remoteTrapID && isBall && e.isLoc) {
+      sx=cx=e.remoteTrapX*2; sy=cy=e.remoteTrapY*2;
+      goto DoneProject;
+  }
   if (e.EActor->HasStati(ENGULFED))
     {
       if (isBall)
