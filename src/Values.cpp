@@ -263,6 +263,34 @@ static int16 NaturalSpeedFloor(Creature *c) {
 int8 Creature::AttrAdj[ATTR_LAST][BONUS_LAST];
 Item *Creature::missileWep, *Creature::thrownWep, *Creature::offhandWep, *Creature::meleeWep;
 
+/* Transient "growth blocked" marks (inc-o37m): the creatures whose last
+   recalculation was capped for want of room, so the message prints once per
+   blocked growth. Not saved; a load prints it once more. Held outside Creature
+   because a new member would move the save layout (SaveV1). ponytail: 64 marks,
+   the oldest is overwritten when full; the worst case is one repeated message. */
+static hObj GrowBlockedMarks[64];
+static int GrowBlockedNext = 0;
+int GrowBlockedMsgCount = 0; /* read by GrowNoRoomProbe */
+static bool GrowBlockedTest(hObj h) {
+    for (int k = 0; k < 64; k++)
+        if (GrowBlockedMarks[k] == h)
+            return true;
+    return false;
+}
+static void GrowBlockedSet(hObj h, bool on) {
+    int k;
+    for (k = 0; k < 64; k++)
+        if (GrowBlockedMarks[k] == h) {
+            if (!on)
+                GrowBlockedMarks[k] = 0;
+            return;
+        }
+    if (on) {
+        GrowBlockedMarks[GrowBlockedNext] = h;
+        GrowBlockedNext = (GrowBlockedNext + 1) % 64;
+    }
+}
+
 /* Probe for the phase-1 touch defence (inc-30ps). Set INCURSION_TOUCHDEF_PROBE
    and every real (non-KnownOnly) CalcValues() on the player writes one line to
    logs/touchdef.log naming A_DEF, TouchDef and the three subtracted terms, so
@@ -1580,6 +1608,26 @@ Restart:
                 (max(0,AttrAdj[A_DEF][BONUS_ARMOUR]) + max(0,AttrAdj[A_DEF][BONUS_SHIELD]));
         }
         TouchDefProbeNote(this);
+
+        /* upstream: growth into a bulk with no room deleted the creature in
+           PlaceNear (the FI_SIZE branch below) mid-action, and the caller
+           crashed on the NULL map; same on Win32. The creature keeps its old
+           size and the Enlarge stays, so a later recalculation retries
+           (the owner's ruling). Observed, inc-o37m, not sent. */
+        if (!KnownOnly && m && m->InBounds(x,y) && oldSize &&
+            FaceRadius[Attr[A_SIZ]] && !FaceRadius[oldSize]) {
+            if (!PlaceNearSearch(x,y,true,(int8)Attr[A_SIZ])) {
+                Attr[A_SIZ] = oldSize;
+                if (!GrowBlockedTest(myHandle)) {
+                    GrowBlockedSet(myHandle,true);
+                    GrowBlockedMsgCount++;
+                    IDPrint("You strain to grow, but there is no room.",
+                        "The <Obj> strains to grow, but there is no room.", this);
+                }
+            } else
+                GrowBlockedSet(myHandle,false);
+        } else if (!KnownOnly)
+            GrowBlockedSet(myHandle,false);
     }
 
     if (theGame->InPlay() && !KnownOnly) {

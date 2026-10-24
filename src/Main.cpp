@@ -325,6 +325,11 @@ void Game::Play() {
     extern void StunDurProbe(Player *pl);
     StunDurProbe(pp);
 
+    /* inc-pt7h: off unless INCURSION_STONING_DUR_PROBE is set. See
+       StoningDurProbe (src/StoningDurProbe.cpp). */
+    extern void StoningDurProbe(Player *pl);
+    StoningDurProbe(pp);
+
     /* inc-nt3z: off unless INCURSION_DURATION_PROBE is set. See
        DurationProbe (src/DurationProbe.cpp) and
        tools/check_spell_durations.sh. */
@@ -429,6 +434,11 @@ void Game::Play() {
        DoorBoltProbe (src/DoorBoltProbe.cpp) and tools/check_door_bolt.sh. */
     extern void DoorBoltProbe(Player *pl);
     DoorBoltProbe(pp);
+
+    /* inc-o37m: off unless INCURSION_GROW_NOROOM_PROBE is set. See
+       GrowNoRoomProbe (src/GrowNoRoomProbe.cpp) and tools/check_grow_noroom.sh. */
+    extern void GrowNoRoomProbe(Player *pl);
+    GrowNoRoomProbe(pp);
 
     /* Off unless INCURSION_TRUESIGHT_PROBE is set, and run here because it
        needs a live player and a live map. See Creature::TrueSightProbe and

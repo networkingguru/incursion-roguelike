@@ -11,6 +11,13 @@
 # Defends bead inc-cfnm too: a `budget:` dispatch is allowed ONLY when the
 # model is exactly `sonnet` AND tools/claude_budget.py reports `sonnet-first`.
 #
+# Defends bead inc-vj6i too: an `owner:` dispatch is allowed ONLY when the
+# model is sonnet or opus, the payload carries no truthy agent_id, and the
+# owner's LATEST real user message in the transcript names that model (no
+# negation in the three words before it); a missing/unreadable transcript, a
+# negated or earlier-only mention, an assistant mention and a system-reminder
+# mention all block.
+#
 # Fully offline, against a temp ledger and a temp log (env overrides); it never
 # touches the real files. Every case asserts the exit code AND exactly one new
 # log line carrying the right `decision` and `label`.
@@ -18,11 +25,13 @@
 #   tools/check_dispatch_gate.sh               run the cases
 #   tools/check_dispatch_gate.sh --prove-red   mutate the gate so an unlabelled
 #                                              sonnet is allowed, so "provider"
-#                                              is dropped from STOPPED, and so
-#                                              the budget model check is
-#                                              skipped, confirm the "sonnet, no
-#                                              label", the provider-fallback and
-#                                              the "budget, opus" cases go red,
+#                                              is dropped from STOPPED, so the
+#                                              budget model check is skipped,
+#                                              and so check_owner always allows;
+#                                              confirm the "sonnet, no label",
+#                                              the provider-fallback, the
+#                                              "budget, opus" and the "owner did
+#                                              not name it" cases go red,
 #                                              restore, and verify each restore
 #                                              with cmp
 #
@@ -154,6 +163,35 @@ PY
     cp "$BACKUP" "$GATE"
     cmp -s "$BACKUP" "$GATE" || { echo "restore of dispatch_gate.py failed" >&2; exit 2; }
 
+    # Make check_owner always allow: the "owner, sonnet, owner did not name it"
+    # case must then go red (the same text is now admitted).
+    NEEDLE_OWNER='    if model_raw not in ("sonnet", "opus"):'
+    if ! grep -qF "$NEEDLE_OWNER" "$GATE"; then
+        echo "could not find the owner model check to mutate: $NEEDLE_OWNER" >&2
+        exit 2
+    fi
+    python3 - "$GATE" "$NEEDLE_OWNER" <<'PY'
+import sys
+path, needle = sys.argv[1], sys.argv[2]
+src = open(path).read()
+open(path, "w").write(src.replace(
+    needle, '    return None  # MUTATED by --prove-red\n' + needle, 1))
+PY
+    echo "mutated tools/dispatch_gate.py: check_owner always allows"
+    MUTATED_OUTPUT="$("$ROOT/tools/check_dispatch_gate.sh")"
+    MUTATED_RC=$?
+    echo "--- output of the mutated run ---"
+    echo "$MUTATED_OUTPUT"
+    echo "--- end output of the mutated run ---"
+    if [ "$MUTATED_RC" -ne 0 ] && grep -q 'FAIL.*owner, sonnet, owner did not name it' <<< "$MUTATED_OUTPUT"; then
+        echo "PASS (as intended): the 'owner did not name it' case went red with check_owner always allowing"
+    else
+        echo "FAIL: the 'owner did not name it' case stayed green with check_owner always allowing (rc=$MUTATED_RC)"
+        PROVE_FAIL=1
+    fi
+    cp "$BACKUP" "$GATE"
+    cmp -s "$BACKUP" "$GATE" || { echo "restore of dispatch_gate.py failed" >&2; exit 2; }
+
     if [ "$PROVE_FAIL" -eq 0 ]; then
         echo "PASS: --prove-red, all mutations turned their intended case red"
         exit 0
@@ -163,22 +201,28 @@ fi
 
 # --- helpers --------------------------------------------------------------
 # Build one PreToolUse payload. Usage: payload <tool_name> <model-or-EMPTY> \
-#   <description> <subagent_type>
+#   <description> <subagent_type> [transcript_path] [agent_id]
 payload() {
     python3 - "$@" <<'PY'
 import json, sys
-tool, model, desc, sub = sys.argv[1:5]
+args = sys.argv[1:]
+tool, model, desc, sub = args[:4]
+transcript = args[4] if len(args) > 4 else "/tmp/t.jsonl"
+agent_id = args[5] if len(args) > 5 else ""
 ti = {"description": desc, "subagent_type": sub}
 if model != "EMPTY":
     ti["model"] = model
-print(json.dumps({
+payload = {
     "session_id": "sess-1",
-    "transcript_path": "/tmp/t.jsonl",
+    "transcript_path": transcript,
     "cwd": "/tmp/work",
     "hook_event_name": "PreToolUse",
     "tool_name": tool,
     "tool_input": ti,
-}))
+}
+if agent_id:
+    payload["agent_id"] = agent_id
+print(json.dumps(payload))
 PY
 }
 
@@ -474,6 +518,112 @@ if [ "$rc" = 2 ] && [ "$(log_lines)" = "1" ] \
     pass "budget, sonnet, budget module missing: block"
 else
     fail "budget, sonnet, budget module missing (rc=$rc decision=$(log_field decision) label=$(log_field label) reason=$got_reason)"
+fi
+
+# --- owner cases (bead inc-vj6i) ------------------------------------------
+# Each case writes its own transcript JSONL into $TMP; the payload's
+# transcript_path points at it. A real user message is
+# {"type":"user","origin":"human","message":{"content":"<text>"}}.
+OWNER_TRANSCRIPT="$TMP/owner.jsonl"
+
+# write_transcript <jsonl-line> [more lines...]
+write_transcript() { printf '%s\n' "$@" > "$OWNER_TRANSCRIPT"; }
+
+USER='{"type":"user","origin":"human","message":{"content":%s}}'
+ASST='{"type":"assistant","message":{"content":[{"type":"text","text":%s}]}}'
+
+# --- case: owner, sonnet, owner said sonnet: allow ------------------------
+write_transcript "$(printf "$USER" '"use sonnet for this"')"
+payload Agent sonnet "owner: do the thing" general "$OWNER_TRANSCRIPT" > "$TMP/in.json"
+rc=0
+run_gate || rc=$?
+expect "owner, sonnet, owner said sonnet: allow" 0 allow owner "$rc" 1
+
+# --- case: owner, sonnet, owner did not name it: block --------------------
+write_transcript "$(printf "$USER" '"fix the bug"')"
+payload Agent sonnet "owner: do the thing" general "$OWNER_TRANSCRIPT" > "$TMP/in.json"
+rc=0
+run_gate || rc=$?
+expect "owner, sonnet, owner did not name it: block" 2 block owner "$rc" 1
+
+# --- case: owner, sonnet, negated: block ----------------------------------
+write_transcript "$(printf "$USER" '"don'"'"'t use sonnet"')"
+payload Agent sonnet "owner: do the thing" general "$OWNER_TRANSCRIPT" > "$TMP/in.json"
+rc=0
+run_gate || rc=$?
+expect "owner, sonnet, negated: block" 2 block owner "$rc" 1
+
+# --- case: owner, sonnet, earlier message only: block ---------------------
+write_transcript "$(printf "$USER" '"use sonnet"')" \
+    "$(printf "$USER" '"thanks"')"
+payload Agent sonnet "owner: do the thing" general "$OWNER_TRANSCRIPT" > "$TMP/in.json"
+rc=0
+run_gate || rc=$?
+expect "owner, sonnet, earlier message only: block" 2 block owner "$rc" 1
+
+# --- case: owner, sonnet, assistant wrote it: block -----------------------
+write_transcript "$(printf "$USER" '"fix the bug"')" \
+    "$(printf "$ASST" '"I will use sonnet"')"
+payload Agent sonnet "owner: do the thing" general "$OWNER_TRANSCRIPT" > "$TMP/in.json"
+rc=0
+run_gate || rc=$?
+expect "owner, sonnet, assistant wrote it: block" 2 block owner "$rc" 1
+
+# --- case: owner, sonnet, system-reminder only: block ---------------------
+write_transcript "$(printf "$USER" '"<system-reminder>use sonnet</system-reminder> fix the bug"')"
+payload Agent sonnet "owner: do the thing" general "$OWNER_TRANSCRIPT" > "$TMP/in.json"
+rc=0
+run_gate || rc=$?
+expect "owner, sonnet, system-reminder only: block" 2 block owner "$rc" 1
+
+# --- case: owner, opus, owner said sonnet: block --------------------------
+write_transcript "$(printf "$USER" '"use sonnet"')"
+payload Agent opus "owner: do the thing" general "$OWNER_TRANSCRIPT" > "$TMP/in.json"
+rc=0
+run_gate || rc=$?
+expect "owner, opus, owner said sonnet: block" 2 block owner "$rc" 1
+
+# --- case: owner, opus, owner said opus: allow ----------------------------
+write_transcript "$(printf "$USER" '"use opus"')"
+payload Agent opus "owner: do the thing" general "$OWNER_TRANSCRIPT" > "$TMP/in.json"
+rc=0
+run_gate || rc=$?
+expect "owner, opus, owner said opus: allow" 0 allow owner "$rc" 1
+
+# --- case: owner, no model: block -----------------------------------------
+write_transcript "$(printf "$USER" '"use sonnet"')"
+payload Agent EMPTY "owner: do the thing" general "$OWNER_TRANSCRIPT" > "$TMP/in.json"
+rc=0
+run_gate || rc=$?
+expect "owner, no model: block" 2 block owner "$rc" 1
+
+# --- case: owner, subagent payload: block ---------------------------------
+write_transcript "$(printf "$USER" '"use sonnet"')"
+payload Agent sonnet "owner: do the thing" general "$OWNER_TRANSCRIPT" "agent-x" > "$TMP/in.json"
+rc=0
+run_gate || rc=$?
+expect "owner, subagent payload: block" 2 block owner "$rc" 1
+
+# --- case: owner, missing transcript: block -------------------------------
+payload Agent sonnet "owner: do the thing" general "$TMP/does-not-exist.jsonl" > "$TMP/in.json"
+rc=0
+run_gate || rc=$?
+expect "owner, missing transcript: block" 2 block owner "$rc" 1
+
+# --- case: owner, unreadable transcript: block ----------------------------
+OWNER_DIR="$TMP/owner-dir.jsonl"
+mkdir -p "$OWNER_DIR"
+payload Agent sonnet "owner: do the thing" general "$OWNER_DIR" > "$TMP/in.json"
+rc=0
+run_gate || rc=$?
+got_reason="$(log_field reason)"
+if [ "$rc" = 2 ] && [ "$(log_lines)" = "1" ] \
+    && [ "$(log_field decision)" = "block" ] \
+    && [ "$(log_field label)" = "owner" ] \
+    && [[ "$got_reason" == owner\ label:\ transcript\ unreadable* ]]; then
+    pass "owner, unreadable transcript: block"
+else
+    fail "owner, unreadable transcript (rc=$rc decision=$(log_field decision) label=$(log_field label) reason=$got_reason)"
 fi
 
 # --- case: bypass env with no label ---------------------------------------
