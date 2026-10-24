@@ -9802,7 +9802,10 @@ EvReturn Creature::Death(EventInfo &e)
             plane = PHASE_ETHEREAL;
           }
         else if (isMType(MA_OUTSIDER))
-          plane = AbilityLevel(CA_PHASE);
+          /* upstream: base-code defect, the fix is ours. PhasePlane() returns
+             one grant, not the sum AbilityLevel(CA_PHASE) made. Tier Traced.
+             inc-ef99; not sent. */
+          plane = PhasePlane();
         if (plane)
           c->GainPermStati(PHASED, NULL, SS_MISC, plane);
       }

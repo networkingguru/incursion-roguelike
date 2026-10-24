@@ -75,7 +75,6 @@ typedef signed int        hObj;
 #define MAX_PLAYERS         4
 #define MAX_SCROLL_LINES    8192
 #define SCROLL_WIDTH        120
-#define MAX_MONSTER_ACTIONS 15
 #define MAX_GALLERY_SIZE    16
 #define EVENT_STACK_SIZE    128
 /* Overridable so a probe build can force the queue full in seconds instead of

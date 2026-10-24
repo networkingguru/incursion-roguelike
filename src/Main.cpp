@@ -252,12 +252,10 @@ static void NoteGameplayReached() {
 }
 
 void Game::Play() {
-    Thing *t, *t2; int16 i,j,c;
+    Thing *t; int16 i,j;
     uint32 relative_turn;
-    int16 MaxDist;
     Map    *mp = oMap(m[0]);
     Player *pp = oPlayer(p[0]);
-    static int16 MonsterDensity[256];
     ASSERT(mp && pp)
 
     /* inc-s1m5: opt-in reproduction only; see tools/check_belt_potion_stack.sh. */
@@ -491,6 +489,14 @@ void Game::Play() {
     extern void HideTriggerProbe(Player *pl);
     HideTriggerProbe(pp);
 
+    /* inc-yp23: hide-strike scene, env-gated. */
+    extern void HideStrikeProbe(Player *pl);
+    HideStrikeProbe(pp);
+
+    /* inc-yp23: loaded-scene pair scan probe, env-gated at entry. */
+    extern void HidePairsProbe(Player *pl);
+    HidePairsProbe(pp);
+
     /* inc-f99j: opt-in AutoLoot multi-pack reproduction; see tools/check_autoloot_packs.sh. */
     extern void AutoLootPacksProbe(Player *pl);
     AutoLootPacksProbe(pp);
@@ -565,11 +571,6 @@ Resurrected:
 
     pp->MyTerm->SetMode(MO_PLAY);
     pp->Timeout = 0;
-    MaxDist = 30;
-    /* inc-9w9y measurement probe: INCURSION_ALL_ACT=1 lifts the MaxDist
-       distance gate below so every creature acts. Unset = unchanged. */
-    static const bool AllAct = getenv("INCURSION_ALL_ACT") &&
-        !strcmp(getenv("INCURSION_ALL_ACT"),"1");
     pp->MyTerm->RefreshMap();
 
     /* inc-o4y1 reproduction only: print ONE message whose format the __XPrint
@@ -639,24 +640,10 @@ Resurrected:
             ASSERT(theGame->inPerceive == 0);
             ASSERT(theGame->inCalcVal == 0);
 
-            if ((!(t->Flags & F_DELETE)) && (AllAct || dist(t->x,t->y,pp->x,pp->y) < MaxDist)) {
+            /* inc-yp23: every creature on the level acts each turn, at any distance. */
+            if (!(t->Flags & F_DELETE)) {
                 if (t->Timeout < 0)
                     continue;
-                if (t->isPlayer()) {
-                    memset(MonsterDensity,0,128*sizeof(int16));
-                    MapIterate(mp,t2,j)
-                        if (t2->Type == T_MONSTER)
-                            MonsterDensity[t2->DistFromPlayer()]++;
-
-                    c = 0;
-                    for(j=0;j!=60;j++) {
-                        c += MonsterDensity[j];
-                        if (c > MAX_MONSTER_ACTIONS)
-                            break;
-                    }
-
-                    MaxDist = j;
-                }
 NowDoTheMount:
                 if (t->Timeout) {
                     t->Timeout--;

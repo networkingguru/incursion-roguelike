@@ -3433,6 +3433,31 @@ int16 Creature::AbilityLevel(int16 n)
     return max(0,lv);
   }
 
+/* upstream: base-code defect, the fix is ours. The invariant is that the phase
+   plane comes from ONE grant, never a sum: AbilityLevel adds the class
+   Abilities[] value and every EXTRA_ABILITY stati, so a nightmare (astral 2 +
+   ethereal 3, lib/mon4.irh:3590-3591) sums to 5, negative energy. Upstream's,
+   because both the value and the summing are the original game's and misbehave
+   on any platform. Tier Traced. inc-ef99; not sent. */
+int16 Creature::PhasePlane()
+  {
+    if (isCharacter() && thisp->Abilities[CA_PHASE])
+      return thisp->Abilities[CA_PHASE];
+
+    StatiIterNature(this,EXTRA_ABILITY)
+        if (S->Val == CA_PHASE) {
+          if (S->h)
+            if (theRegistry->Exists(S->h) &&
+                oThing(S->h)->isItem())
+              if (!oItem(S->h)->isKnown(KN_MAGIC))
+                continue;
+          StatiIterBreakout(this,return S->Mag)
+          }
+    StatiIterEnd(this)
+
+    return 0;
+  }
+
 
 int16 Creature::Mod(int8 a)  { 
   int res = Attr[a] ? (Attr[a]-10)/2 : 0; 

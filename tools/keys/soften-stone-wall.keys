@@ -1,0 +1,48 @@
+# Shows the old use of Soften Stone still works: cast at a stone wall square
+# and that square becomes "shallow mud". (inc-wqql)
+#   INCURSION_RUN_DIR=logs/run-p4-<x> \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+#       tools/headless.sh tools/keys/soften-stone-wall.keys 1
+# The fixture druid has wizard mode, Infinite Mana and Freeze Monsters on.
+#
+# A stone wall is not a creature, so the aim prompt cannot reach it by
+# cycling targets. The player walks west until he stands beside the wall,
+# then 'l' (KY_CMD_LOOK, src/Term.cpp:2418) switches the cursor into
+# location mode, where each LEFT steps the cursor one square
+# (src/Term.cpp:2583). The cursor's speed on a far wall square is why the
+# walk comes first: the prompt names the terrain under the cursor, and one
+# LEFT from beside the wall lands on it ("Dungeon Wall"). ENTER takes that
+# square and the spell rewrites it to its rval terrain, "shallow mud".
+SPACE
+w
+@choose "Learn Any Spell"
+"Soften Stone" ENTER
+@until "HP:" ESC
+
+# Walk west until the player stands beside the west wall.
+LEFT*10
+@dump:walked
+
+# BEFORE: start the cast, switch to location mode, step onto the wall face.
+@until "Select Spell" m
+@choose "Soften Stone"
+l
+@dump:aim-self
+LEFT
+@dump:aim-wall
+
+# CAST at the wall square.
+ENTER
+@dump:cast-enter
+@until "HP:" ESC
+
+# AFTER: aim again at the same square and read its new terrain name.
+@until "Select Spell" m
+@choose "Soften Stone"
+l
+LEFT
+@dump:aim-mud
+ESC
+@until "HP:" ESC
+@quit

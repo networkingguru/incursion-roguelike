@@ -1549,8 +1549,14 @@ Monster "stone golem" : MA_GOLEM, MA_CONSTRUCT
     /*if (e.eID->HasFlag(EF_MUNDANE))
       return NOTHING;*/
     switch(e.eID) {
-      case $"transmute rock to mud":
       case $"soften stone":
+        if (!EVictim->HasEffStati(-1,$"soften stone")) {
+        VPrint(e,"Your body softens.","The <EVictim>'s stone body softens.");
+        EVictim->GainTempStati(ADJUST_ARM,EActor,2d6,SS_ENCH,A_ARM,-5,$"soften stone");
+        return DONE;
+        }
+        return DONE;
+      case $"transmute rock to mud":
       case $"shatter":
         if (!EVictim->HasEffStati(-1,$"slow")) {
         VPrint(e,"You feel yourself slowing down.","The <EVictim> slows down.");
@@ -1564,9 +1570,9 @@ Monster "stone golem" : MA_GOLEM, MA_CONSTRUCT
     return DONE;
     },
     MSG_SPECABIL
-      "It is <9>slow<7>ed by <9>transmute rock to mud<7>, <9>soften
-      stone<7> and <9>shatter<7> and is immune to all other direct-effect
-      spells.",
+      "It is <9>slow<7>ed by <9>transmute rock to mud<7> and <9>shatter<7>,
+      but casting <9>soften stone<7> halves its armor instead; it is immune
+      to all other direct-effect spells.",
     EVICTIM(EV_DEATH) {
       EMap->WriteTerra(EVictim->x,EVictim->y,$"pile of rubble");
       return NOTHING;
