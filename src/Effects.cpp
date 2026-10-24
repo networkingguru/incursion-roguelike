@@ -1555,7 +1555,7 @@ EvReturn Magic::Summon(EventInfo &e) {
     return DONE;
   }
 
-EvReturn Magic::Terraform(EventInfo &e)
+EvReturn Magic::Terraform(EventInfo &e, bool squareGiven)
   {                     
     Creature *cr;
     // WW: I'm not sure what the "Static" is doing here, but it is *really
@@ -1568,8 +1568,12 @@ EvReturn Magic::Terraform(EventInfo &e)
     /*if (e.EXVal == e.EActor->x-2 && e.EYVal == e.EActor->y-2)
       __asm int 3;*/
 
-    if (!e.EXVal)
+    /* upstream: column 0 is a real square, so EXVal==0 cannot mean "no square";
+       the original source has the same test on every platform. Observed,
+       tools/check_terraform_edge.sh. inc-07y9, not sent. */
+    if (!squareGiven && !e.EXVal)
       {
+        if (!e.ETarget) return ABORT;
         if (e.isDir) {
           e.EXVal = e.ETarget->x + DirX[e.EDir];
           e.EYVal = e.ETarget->y + DirY[e.EDir];
