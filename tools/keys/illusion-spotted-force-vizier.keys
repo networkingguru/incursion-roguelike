@@ -1,0 +1,28 @@
+# inc-z1ba: a non-innate caster casts Phantasmal Force as an illusory force at a goblin
+# vizier, which has Spellcraft and identifies the cast.
+# Read by tools/check_illusion_spotted.sh.
+#
+#   INCURSION_DISBELIEF_PROBE=1 INCURSION_RUNTO_SKILL_ROLL=1 \
+#   INCURSION_FORCE_SAVE_ROLL=1 \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/elf-mage-spotted-seed1.sav \
+#       tools/headless.sh tools/keys/illusion-spotted-force-vizier.keys 1
+#
+@include illusion-spotted-setup.keys
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin vizier"
+RIGHT*4 ENTER
+@dump:summoned
+
+m
+@choose "Phantasmal Force"
+f       # Create illusionary creature, item, trap or force? -- force
+@choose "Magic Missile"
+@expect "Choose your target"
+RIGHT*4 # the targeting cursor, four squares east, onto the monster
+ENTER
+@while "more --" SPACE
+@dump:cast

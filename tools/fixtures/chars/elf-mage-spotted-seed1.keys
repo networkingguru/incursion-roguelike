@@ -1,0 +1,15 @@
+# Build the elf mage who casts Phantasmal Force through Creature::Cast, and SAVE
+# him. inc-z1ba. This script makes tools/fixtures/chars/elf-mage-spotted-seed1.sav.
+# It is not a check; tools/check_illusion_spotted.sh loads the fixture.
+#
+# The Illusion specialty is granted Phantasmal Force outright at generation
+# (tools/keys/school-focus.keys). The spell is therefore known the ordinary way
+# and is NOT innate, so a player cast goes to EV_CAST (src/Player.cpp:1073) and
+# reaches Creature::Cast, where the Spellcraft identifiers are decided. The
+# sibling fixture elf-mage-illusions-seed1 learns its spells through wizard
+# mode, which marks them innate and sends them to Creature::Invoke.
+
+@include chargen-elf-mage.keys
+ESC
+
+ESC b           # System Menu, [b] Save and Continue (tools/fixtures/README.md).

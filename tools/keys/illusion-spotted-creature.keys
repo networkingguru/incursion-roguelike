@@ -1,0 +1,37 @@
+# inc-z1ba: a non-innate caster casts Phantasmal Force (an illusory creature)
+# with two monsters watching. Read by tools/check_illusion_spotted.sh.
+#
+#   INCURSION_DISBELIEF_PROBE=1 INCURSION_RUNTO_SKILL_ROLL=1 \
+#   INCURSION_FORCE_SAVE_ROLL=1 \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/elf-mage-spotted-seed1.sav \
+#       tools/headless.sh tools/keys/illusion-spotted-creature.keys 1
+#
+@include illusion-spotted-setup.keys
+
+# A goblin vizier has Spellcraft; a goblin has none.
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin vizier"
+RIGHT*4 ENTER
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT*4 DOWN*2 ENTER
+@dump:summoned
+
+m
+@choose "Phantasmal Force"
+c
+@expect "Target Illusion"
+LEFT
+ENTER
+@while "more --" SPACE
+@dump:cast
+# Walk into the illusion: Move.cpp:1110 runs DisbeliefCheck for every
+# watcher within 10 squares that perceives it.
+LEFT
+@while "more --" SPACE
+@dump:after
