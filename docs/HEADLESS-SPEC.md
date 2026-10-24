@@ -51,10 +51,10 @@ Both existing backends store the screen in their graphics library's own buffer
 `posixTerm` stores `Glyph scr[48][80]` directly.
 
 A `Glyph` is a `uint32`: 12 bits of glyph id, 4 of foreground, 4 of background
-(`inc/Defines.h:4350`). Storing it verbatim makes `AGetChar` exact. The libtcod
+(`inc/Defines.h:4354`). Storing it verbatim makes `AGetChar` exact. The libtcod
 backend cannot do that — it stores the character its glyph table produced, so
 `GetGlyph` → `PutGlyph` round trips lose the glyph id. The callers
-(`src/Term.cpp:2276`, `src/Magic.cpp:1674`, `src/Skills.cpp:2149`,
+(`src/Term.cpp:2276`, `src/Magic.cpp:1703`, `src/Skills.cpp:2149`,
 `src/Skills.cpp:3119`) mask with `GLYPH_ID_MASK` and put the result back, so
 exactness is what they want.
 
