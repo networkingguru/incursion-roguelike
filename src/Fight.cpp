@@ -8742,7 +8742,11 @@ WoundIgnored:
                                         if (!e.EVictim->SavingThrow(REF,e.saveDC,SA_PETRI)) 
                                         {
                                             e.EVictim->StatiMessage(STONING,0,false);
-                                            e.EVictim->GainTempStati(STONING, e.EActor,  SS_ATTK, 20);
+                                            /* upstream: Duration and Cause were swapped, so every
+                                               petrification clock lasted SS_ATTK (6) units. Wrong
+                                               against GainTempStati's signature on any platform/compiler.
+                                               Observed via tools/check_stoning_duration.sh; inc-pt7h; not sent. */
+                                            e.EVictim->GainTempStati(STONING, e.EActor, 20, SS_ATTK);
                                         }
                                         else
                                             e.Resist = true;
@@ -8755,7 +8759,11 @@ WoundIgnored:
                                         if (!e.EVictim->SavingThrow(WILL,e.saveDC,SA_FEAR)) {
                                             if (!e.Terse)
                                                 VPrint(e,"You are terrified!", "The <EVictim> seems terrified!"); 
-                                            e.EVictim->GainTempStati(AFRAID,e.EActor,SS_ATTK,(int8)e.vDmg,FEAR_MAGIC);
+                                            /* upstream: Duration and Cause were swapped, so every AD_FEAR
+                                               fear lasted SS_ATTK (6) units. Wrong against GainTempStati's
+                                               signature on any platform/compiler. Dice are rounds (inc-trfo).
+                                               Observed via tools/check_fear_duration.sh; inc-4hk3; not sent. */
+                                            e.EVictim->GainTempStati(AFRAID,e.EActor,max(1,(int)RoundsToUnits(e.vDmg)),SS_ATTK,FEAR_MAGIC);
                                         }
                                         else
                                             e.Resist = true;
