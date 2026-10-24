@@ -1,0 +1,41 @@
+# Terrain form of tools/check_stinking_cloud_dc.sh (bd inc-s64e): the loaded
+# elf mage paints three "stinking cloud" squares east of himself and walks
+# through them and back. Each square he leaves rolls a Fortitude save (the
+# EV_MOVE handler in lib/dungeon.irh), recorded in logs/chance_probe.log
+# (INCURSION_CHANCE_PROBE). The fixture already has wizard mode and Freeze
+# Monsters on. SPACE clears the "Welcome back" -- more -- prompt (ESC would
+# open the System Menu).
+SPACE
+# Farthest square first: a painted square obscures sight, and the cursor
+# cannot land on a square the player cannot see.
+w
+@choose "Change terrain type"
+RIGHT RIGHT RIGHT ENTER
+TAB
+@choose "stinking cloud"
+w
+@choose "Change terrain type"
+RIGHT RIGHT ENTER
+TAB
+@choose "stinking cloud"
+w
+@choose "Change terrain type"
+RIGHT ENTER
+TAB
+@choose "stinking cloud"
+@dump:terrain-made
+
+RIGHT
+@dump:entry
+@while "Confirm" y
+@dump:entry-after
+RIGHT*3
+@while "Confirm" y
+LEFT*3
+@while "Confirm" y
+RIGHT*3
+@while "Confirm" y
+LEFT*3
+@while "Confirm" y
+@dump:walked
+@quit

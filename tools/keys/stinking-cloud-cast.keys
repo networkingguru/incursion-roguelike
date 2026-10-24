@@ -1,0 +1,30 @@
+# Cast form of tools/check_stinking_cloud_dc.sh (bd inc-s64e): the loaded elf
+# mage learns Stinking Cloud, casts it at a square beside himself, and stands
+# in it for several rounds. Each round's Fortitude save lands in
+# logs/chance_probe.log (INCURSION_CHANCE_PROBE). The fixture already has
+# wizard mode, Infinite Mana and Freeze Monsters on; Cheat Death goes on here.
+# SPACE clears the "Welcome back" -- more -- prompt (ESC would open the System
+# Menu).
+SPACE
+w
+@choose "Wizard Mode Switches"
+SPACE           # Cheat Death: NO -> YES
+ESC
+w
+@choose "Genocide Everything"
+@until "HP:" ESC
+w
+@choose "Learn Any Spell"
+"Stinking Cloud" ENTER
+
+@until "Select Spell" m
+@choose "Stinking Cloud"
+@dump:cast-aim
+RIGHT*2
+ENTER
+@dump:cast-done
+SPACE
+@dump:cast-after
+s*12
+@dump:cast-rounds
+@quit
