@@ -209,7 +209,11 @@ if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
     _inc_fast=$?
     if [ $_inc_fast -eq 1 ]; then
       echo "$_inc_fast_out"
-      echo >&2 "pre-commit: a fast check failed (above). Fix it before committing; the landing gate runs the same checks and more."
+      if printf '%s\n' "$_inc_fast_out" | grep -q '^OVERLOADED:'; then
+        echo >&2 "pre-commit: the machine is overloaded, so a fast check may have failed on load (above). Retry the commit once tools/load_guard.sh passes."
+      else
+        echo >&2 "pre-commit: a fast check failed (above). Fix it before committing; the landing gate runs the same checks and more."
+      fi
       exit 1
     elif [ $_inc_fast -ne 0 ]; then
       echo >&2 "pre-commit: tools/fast_checks.sh could not measure (exit $_inc_fast); the commit CONTINUES."
