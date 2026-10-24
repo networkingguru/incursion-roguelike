@@ -1275,7 +1275,7 @@ number rather than a yes or no: they read the hardness off the game's own
 combat-numbers line, which `Item::Damage` prints AFTER adding the bearer's gear
 resistance to it. Those two silver a magic warhammer for the ordering
 `Item::Damage` used to have: a no-save A_DEQU sets `ignoreHardness` on a plain
-item (`src/Fight.cpp:3949`), and the bearer's grant was added before the bypass
+item (`src/Fight.cpp:3993`), and the bearer's grant was added before the bypass
 emptied it, so a resistance was unmeasurable on ordinary gear. inc-kapn
 inverted that -- the bypass now empties only what `Hardness()` returned -- and
 `check_gear_bypass_survives.sh` measures a resistance on a plain iron maul. The
