@@ -1,0 +1,18 @@
+# inc-w91w: throw the wielded dagger at the EMPTY square of a found trap,
+# three squares east: the throw key's "Throw what?" menu, then the location
+# cursor. Same `s` and lowercase-f notes as trap-shot-loc.keys.
+# The probe wields the dagger with an empty off hand, and the game asks.
+@while "two-handed" n
+@while "-- more --" SPACE
+s
+f
+@dump:throw-menu
+a
+l
+RIGHT*3
+@dump:shot-cursor
+ENTER
+@while "Really throw" y
+@while "-- more --" SPACE
+@dump:shot-after
+@quit

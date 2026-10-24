@@ -2461,9 +2461,19 @@ CantSee:
                 Thing *cr2;
                 e.EActor = p;
 
+                /* inc-w91w rule 2: a fired or thrown item (no effect id, an
+                   item in hand) may be aimed at a found trap under a lone
+                   creature; MCreatureAt is true only for TWO creatures, so
+                   without this the list never opens for a creature + trap. */
+                bool trapHere = false;
+                if (!e.eID && e.EItem2 && !isEngulfed) {
+                    Trap *tr = m->FTrapAt(cr->x,cr->y);
+                    trapHere = tr && (tr->TrapFlags & TS_FOUND) &&
+                        !(tr->TrapFlags & TS_DISARMED);
+                }
                 if ((cr->isCreature() && m->MCreatureAt(cr->x,cr->y)) ||
                     ((!cr->isCreature() && m->MultiAt(cr->x, cr->y))) && !cycled
-                    && !isEngulfed) 
+                    && !isEngulfed || trapHere) 
                     cr2 = ExamineSquare(cr->x,cr->y);
                 else 
                     cr2 = cr;

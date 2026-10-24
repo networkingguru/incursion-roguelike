@@ -1,0 +1,6 @@
+# The unchanged disarm routine asks its normal confirmation.
+y
+@while "-- more --" SPACE
+s
+@dump:trap-disarm
+@quit
