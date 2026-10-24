@@ -32,6 +32,14 @@ explicitly a haiku dispatch or the emergency bypass is set:
   tools/claude_budget.py reports `sonnet-first` for the current week. Any other
   model (or no model) is blocked, and so is a `normal`/`unknown` budget state.
 
+  `owner: <...>` lets the project owner authorize a dispatch himself (bead
+  inc-vj6i). It is allowed ONLY when ALL hold: the dispatch's `model` is exactly
+  `sonnet` or `opus`, the payload carries no truthy `agent_id` (a subagent
+  cannot carry the owner's authorization), and the owner's LATEST real user
+  message in the dispatch's `transcript_path` names that same model as a whole
+  word, with no negation among the three words before it. A missing or
+  unreadable transcript is blocked (fail closed).
+
 Every Agent/Task call is appended to the dispatch log as one JSON line, so a
 human can see what was dispatched and why it was let through.
 
@@ -51,14 +59,20 @@ reason shown to the calling agent. Standard library only.
 import datetime
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
 DEFAULT_LOG = "~/Scripts/Incursion/logs/dispatch-log.jsonl"
 DEFAULT_LEDGER = "~/Scripts/Incursion/logs/deepseek-ledger.jsonl"
 
-LABELS = ("research:", "repro-design:", "fallback:", "budget:")
+LABELS = ("research:", "repro-design:", "fallback:", "budget:", "owner:")
 STOPPED = ("loop", "context", "provider")
+
+# Transcript reader (mirrors the reader in ~/.claude/hooks/commit-gate.py).
+NEGATIONS = {"don't", "dont", "not", "never", "without"}
+TAG_RE = re.compile(r"<[A-Za-z][A-Za-z0-9_-]*>.*?</[A-Za-z][A-Za-z0-9_-]*>",
+                    re.DOTALL)
 
 BLOCK_MESSAGE = (
     "dispatch gate: this Agent/Task dispatch is unlabelled.\n"
@@ -67,10 +81,13 @@ BLOCK_MESSAGE = (
     "  repro-design: <...>\n"
     "  fallback: <run-id>\n"
     "  budget: <...>\n"
+    "  owner: <...>\n"
     "Only a haiku dispatch is exempt. A fallback needs two stopped DeepSeek\n"
     "runs for the same worktree: an earlier run stopped by `loop`, `context` or\n"
     "`provider`, and the named run also stopped by one of those. A budget\n"
-    "dispatch needs model sonnet and a `sonnet-first` weekly budget.\n"
+    "dispatch needs model sonnet and a `sonnet-first` weekly budget. An owner\n"
+    "dispatch needs model sonnet or opus and the owner's latest message naming\n"
+    "that model.\n"
 )
 
 
@@ -108,6 +125,8 @@ def classify_label(description):
         return "fallback", (run or None)
     if lowered.startswith("budget:"):
         return "budget", None
+    if lowered.startswith("owner:"):
+        return "owner", None
     return "none", None
 
 
@@ -187,6 +206,112 @@ def check_fallback(rows, run_id):
             f"no earlier stopped run for worktree {worktree_of(row.get('out'))}"
         )
     return None
+
+
+def iter_tail_lines(path, cap=8 * 1024 * 1024, chunk=256 * 1024):
+    """Yield complete, non-blank lines from the end of `path`, newest first."""
+    with open(path, "rb") as fh:
+        fh.seek(0, os.SEEK_END)
+        size = fh.tell()
+        pos = size
+        floor = max(0, size - cap)
+        held = b""
+        while pos > floor:
+            read = min(chunk, pos - floor)
+            pos -= read
+            fh.seek(pos)
+            piece = fh.read(read)
+            data = piece + held
+            parts = data.split(b"\n")
+            held = parts[0]
+            for line in reversed(parts[1:]):
+                line = line.strip()
+                if line:
+                    yield line.decode("utf-8", "replace")
+        if held.strip():
+            yield held.decode("utf-8", "replace")
+
+
+def is_real_user(entry):
+    """True only for a genuine human user message (mirrors the commit gate)."""
+    if entry.get("type") != "user":
+        return False
+    if entry.get("isMeta"):
+        return False
+    if "toolUseResult" in entry:
+        return False
+    message = entry.get("message")
+    content = message.get("content") if isinstance(message, dict) else None
+    if isinstance(content, list):
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "tool_result":
+                return False
+    origin = entry.get("origin")
+    if origin == "human":
+        return True
+    if isinstance(origin, dict) and origin.get("kind") == "human":
+        return True
+    return False
+
+
+def entry_text(entry):
+    """The plain text of an entry's message, with tags blanked."""
+    message = entry.get("message")
+    content = message.get("content") if isinstance(message, dict) else None
+    if isinstance(content, str):
+        text = content
+    elif isinstance(content, list):
+        text = "".join(
+            item.get("text", "")
+            for item in content
+            if isinstance(item, dict) and item.get("type") == "text")
+    else:
+        text = ""
+    return TAG_RE.sub(" ", text)
+
+
+def latest_owner_message(path):
+    """The text of the owner's latest real user message, or None."""
+    for line in iter_tail_lines(path):
+        try:
+            entry = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(entry, dict):
+            continue
+        if is_real_user(entry):
+            return entry_text(entry)
+    return None
+
+
+def check_owner(payload, model_raw):
+    """None when an `owner:` dispatch is authorized, else the reason.
+
+    The owner's authorization is the LATEST real user message in the dispatch's
+    transcript naming the dispatched model as a whole word, with no negation in
+    the three words before it."""
+    if model_raw not in ("sonnet", "opus"):
+        return "owner label needs model sonnet or opus"
+    if payload.get("agent_id"):
+        return "owner label refused in a subagent"
+    transcript_path = payload.get("transcript_path")
+    if not transcript_path:
+        return "owner label: no transcript"
+    try:
+        text = latest_owner_message(transcript_path)
+    except OSError as exc:
+        return f"owner label: transcript unreadable: {exc}"
+    if text is None:
+        return "owner label: no owner message found"
+    tokens = re.findall(r"[a-z']+", text.lower())
+    for i, token in enumerate(tokens):
+        if token != model_raw:
+            continue
+        preceding = tokens[max(0, i - 3):i]
+        if any(tok in NEGATIONS for tok in preceding):
+            continue
+        return None
+    return f"owner label: the owner's latest message does not name {model_raw}"
 
 
 def append_log(path, entry):
@@ -289,6 +414,10 @@ def main():
                         f"{verdict.get('used')}, threshold "
                         f"{verdict.get('threshold')}")
                     reason = f"budget is {state}: {detail}"
+    elif label == "owner":
+        reason = check_owner(payload, model_raw)
+        if reason is not None:
+            decision = "block"
     else:
         decision = "block"
         reason = "no label"

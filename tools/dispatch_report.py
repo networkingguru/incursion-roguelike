@@ -88,11 +88,11 @@ def in_window(ts, since, until):
 
 def label_of(description):
     """Reduce a description to its label word: research, repro-design,
-    fallback, or none."""
+    fallback, owner, budget, or none."""
     if not isinstance(description, str):
         return "none"
     stripped = description.lstrip().lower()
-    for word in ("research", "repro-design", "fallback"):
+    for word in ("research", "repro-design", "fallback", "owner", "budget"):
         if stripped.startswith(word + ":"):
             return word
     return "none"
