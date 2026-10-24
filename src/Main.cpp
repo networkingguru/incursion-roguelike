@@ -373,6 +373,10 @@ void Game::Play() {
     extern void TemplatePairProbe(Player *pl);
     TemplatePairProbe(pp);
 
+    /* inc-u1xj: opt-in undead-mount oracle; see UndeadMountProbe. */
+    extern void UndeadMountProbe(Player *pl);
+    UndeadMountProbe(pp);
+
     /* inc-6qmk: opt-in exact-monster depth oracle; see ExactMonProbe. */
     extern void ExactMonProbe(Player *pl);
     ExactMonProbe(pp);
