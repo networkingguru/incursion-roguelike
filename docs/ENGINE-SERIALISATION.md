@@ -35,11 +35,11 @@ I ran; commands at the bottom). Normative spec: `docs/SAVE-SCHEMA-SPEC.md`.
 
 | Thing | File:line |
 |---|---|
-| `fileHeader` / `groupHeader` (both formats) | inc/Base.h:725 / :735 |
-| v1 wire kinds `K_*`, pool ids `SP_*`, tag ranges | inc/Base.h:748-777 |
-| `FIELD_*` macros (one line, four duties) | inc/Base.h:783-801 |
-| `ARCHIVE_CLASS` / `END_ARCHIVE` | inc/Base.h:803 / :810 |
-| `class Registry` (`saveMode`, `loadMode`, `hCurrent`) | inc/Base.h:814 |
+| `fileHeader` / `groupHeader` (both formats) | inc/Base.h:726 / :735 |
+| v1 wire kinds `K_*`, pool ids `SP_*`, tag ranges | inc/Base.h:749-778 |
+| `FIELD_*` macros (one line, four duties) | inc/Base.h:784-802 |
+| `ARCHIVE_CLASS` / `END_ARCHIVE` | inc/Base.h:804 / :810 |
+| `class Registry` (`saveMode`, `loadMode`, `hCurrent`) | inc/Base.h:815 |
 | v0 `Registry::SaveGroup` / `LoadGroup` (+ v1 dispatch) | src/Registry.cpp:673 / :839 (:862-867) |
 | v1 `Registry::SaveGroupV1` / `LoadGroupV1` | src/SaveV1.cpp:3117 / :3246 |
 | `SCHEMA_REV`, `SaveSchemaID()`, `SaveV1_Raw()` | src/SaveV1.cpp:44-105 |
@@ -57,10 +57,10 @@ I ran; commands at the bottom). Normative spec: `docs/SAVE-SCHEMA-SPEC.md`.
 
 A v0 save, a v1 save and a `.Mod` all start the same way:
 
-- `fileHeader`, inc/Base.h:725-733. 96 bytes on LP64: `Sig`(4),
+- `fileHeader`, inc/Base.h:726-734. 96 bytes on LP64: `Sig`(4),
   `Version[12]`, `Name[72]`, `numGroups`(2), `Compression`(2),
   `numDependencies`(2), 2 pad.
-- `groupHeader`, inc/Base.h:735-744. 28 bytes: `Signature`, `hGroup`,
+- `groupHeader`, inc/Base.h:736-745. 28 bytes: `Signature`, `hGroup`,
   `groupSize`, `compSize`, `objCount`, `dataCount`, `LastHandle`.
 
 The `Version` stamp tells them apart: `"IS1."` + revision is v1;
@@ -115,7 +115,7 @@ uint32  length      bytes from the end of this field to the end of the record
   terminator tag 0 (uint16)
 ```
 
-The kinds, pool ids and tag-range registry live in inc/Base.h:746-777. Fixed
+The kinds, pool ids and tag-range registry live in inc/Base.h:747-778. Fixed
 sizes for `K_U8..K_I32`, `K_RID`, `K_H`; length-prefixed for
 `K_STR`/`K_BLOB`/`K_EMBED`; `count`/`elemSize` header for `K_ARRAY`;
 `K_EMBED` is a nested field stream with its own tag scope and terminator.
@@ -141,14 +141,14 @@ other than the one the field list declares is `ECORRUPT` — the file and the
 binary disagree about a field both claim to know; it is never coerced.
 
 **Field declarations.** `FIELD_*` macro lines inside the existing
-`ARCHIVE_CLASS` bodies (inc/Base.h:779-801) serve the v0 path (scalar macros
+`ARCHIVE_CLASS` bodies (inc/Base.h:780-802) serve the v0 path (scalar macros
 are no-ops there; `FIELD_STR`/`FIELD_BLOB`/`FIELD_OBJ` perform exactly the
 legacy `Serialize`/`Block` calls they replaced), the v1 write, the v1 read,
 and the DEBUG coverage map, from one declaration. Replay order is line
 order, not tag order: load-direction fixups sit below the fields they read
 (e.g. `Thing`'s `m = oMap(hm)`, inc/Map.h:969). Tag numbers are never
 reused and never change; a new field takes the next unused number in its
-class's range (inc/Base.h:768-777).
+class's range (inc/Base.h:769-778).
 
 **References travel as the plain `rID` (since IS1.3).** Every `rID` a record
 carries is written as `K_RID`: the engine's own 32-bit value, unchanged, with
@@ -365,7 +365,7 @@ stamp; `docs/evidence/inc-upw.13/Jaoin.sav` predates the stamp and carries
    (:196-197) runs the same `Restore()`, and `RegistryScope` (:738) clears
    `saveMode` and deletes the `CFile`.
 
-`ARCHIVE_CLASS` (inc/Base.h:803) generates `Serialize(Registry&, bool
+`ARCHIVE_CLASS` (inc/Base.h:804) generates `Serialize(Registry&, bool
 isSave)` that calls the base version first. 20 classes use it. On the v0
 path the body's job is unchanged from upstream: name the heap blocks the
 object owns and convert what a raw byte copy cannot carry — the scalar
@@ -415,7 +415,7 @@ Repaired on load, and nothing else is:
 | Repair | Where |
 |---|---|
 | vptr | placement new, src/Registry.cpp:950-992 |
-| pointer to an owned heap block | src/Registry.cpp:376, via the 7 direct `r.Block` sites plus every `FIELD_BLOB`/`FIELD_OBJ` line's v0 branch (inc/Base.h:793-798) |
+| pointer to an owned heap block | src/Registry.cpp:376, via the 7 direct `r.Block` sites plus every `FIELD_BLOB`/`FIELD_OBJ` line's v0 branch (inc/Base.h:794-799) |
 | `Thing::m` from `Thing::hm` | inc/Map.h:969 |
 | `Player::MyTerm = T1` | inc/Creature.h:1572 |
 | `Module` resource caches zeroed | inc/Res.h:840-841, in `Module::Serialize`, which runs on load as well as save. A load builds the object with the empty `ARCHIVE_CLASS` constructor (inc/Base.h:805), so the zeroing in `Module()` (inc/Res.h:923-924) runs only for the module the resource compiler creates (src/RComp.cpp:141) |
@@ -455,7 +455,7 @@ range check at src/Registry.cpp:912-922:
    is the invariant v1 exists to escape: a v1 record names its fields, so
    layout changes move the writer, not the file.)
 2. **The v0 bytes are not reproducible.** Padding is never written by any
-   assignment. `Object::operator new` memsets (inc/Base.h:693), but the
+   assignment. `Object::operator new` memsets (inc/Base.h:694), but the
    module resource tables come from `new TMonster[...]` (src/RComp.cpp:343)
    on a class with no zeroing allocator, and `LoadGroup` uses bare `malloc`
    (src/Registry.cpp:939 and :1042). A byte diff of `mod/Incursion.Mod` is therefore not a
@@ -555,7 +555,7 @@ grep -n "virtual" inc/Res.h | head -3                                   # first 
    immediately (src/RComp.cpp:227-235). The loading half is fine:
    `LoadGroup` runs its fixup pass with `loadMode` still true
    (src/Registry.cpp:1058-1061), so the un-inversion does fire.
-9. **Fixed.** `reg_log` is now declared unconditionally (inc/Base.h:840)
+9. **Fixed.** `reg_log` is now declared unconditionally (inc/Base.h:841)
    while its uses stay under `#ifdef DEBUG_OBJECTS`. It was declared under
    `#ifdef DEBUG`, which also changed `sizeof(Registry)` between build
    flavours and so changed the save stamp. inc-tm4.

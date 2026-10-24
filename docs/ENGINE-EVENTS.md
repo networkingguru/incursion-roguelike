@@ -55,7 +55,7 @@ in the build.**
 `EventInfo EventStack[EVENT_STACK_SIZE]`, `EventSP` starting at -1 (`src/Event.cpp:135-136`); the size is 128
 (`inc/Defines.h:80`). The only bound is `CHECK_OVERFLOW` (`src/Event.cpp:133`), which calls `Fatal("Event Stack Overflow!")` and
 exits. There is no depth budget, no recursion counter and no cycle detection in `src/Event.cpp`. Unrelated code reads frames
-assuming the enclosing context: `src/Fight.cpp:831-838`, `src/Prayer.cpp:589`, `src/Skills.cpp:1771`, `src/Target.cpp:1771`.
+assuming the enclosing context: `src/Fight.cpp:875-882`, `src/Prayer.cpp:589`, `src/Skills.cpp:1771`, `src/Target.cpp:1771`.
 
 ## Re-entrancy
 **The system has no general protection against re-entrancy.** Shared by every nested event: `VMachine::Regs[64]`, `SRegs[64]`,
@@ -70,9 +70,9 @@ mutex (`src/Vision.cpp:600-601`), and `Creature::Multiply` refuses to breed past
 
 ## The three crashes
 **1. Event Stack Overflow: blast -> Multiply -> place -> blast. Fixed (inc-upw.5).** `Magic::Blast` throws `EV_DAMAGE`
-(`src/Effects.cpp:276`) -> a script handler on `POST(EV_DAMAGE)`/`EVICTIM(EV_DAMAGE)` (brown mold `lib/mon3.irh:2308`
-and `lib/mon3.irh:2316`; id moss `lib/mon3.irh:2270` has one too, but `#if 0` at `:2250` keeps it out of the build)
-or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3352`)
+(`src/Effects.cpp:276`) -> a script handler on `POST(EV_DAMAGE)`/`EVICTIM(EV_DAMAGE)` (brown mold `lib/mon3.irh:2312`
+and `lib/mon3.irh:2320`; id moss `lib/mon3.irh:2274` has one too, but `#if 0` at `:2250` keeps it out of the build)
+or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3356`)
 calls `Multiply` -> `Creature::Multiply` (`src/Creature.cpp:532`) -> `mn->PlaceAt` (`:604`)
 throws `EV_PLACE` (`src/Display.cpp:240`, `:264`) and `EV_FIELDON` (`:330`) -> `Creature::FieldOn` re-throws `EV_EFFECT` for
 `FI_MODIFIER` (`src/Status.cpp:1836`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1470`).
@@ -92,7 +92,7 @@ down path read `RES(0)` whenever `BELOW_DUNGEON` is unset, which is every dungeo
 `src/Feature.cpp:1420` stops it.
 
 **3. Wild resource id crashes `Game::Get` inside `Magic::Blast`. Fixed (inc-upw.16).** Handlers get ids from three unvalidated
-places: the `eID` a caller put in the frame (`src/Event.cpp:631`), script assignment `pe->eID = val` (`lib/dispatch.h:3536`), and
+places: the `eID` a caller put in the frame (`src/Event.cpp:631`), script assignment `pe->eID = val` (`lib/dispatch.h:3540`), and
 script `ThrowEff` with an arbitrary int32 (`lib/dispatch.h:2648`). *Invariant violated:* `Game::Get` indexed the module table by
 the top byte, `Modules[(xID >> 24)-1]`, `MAX_MODULES` being 126 (`inc/Defines.h:4544`), so an id with a zero top byte indexed
 `Modules[-1]`. The guard was `ASSERT(Modules[(xID >> 24)-1])`, and `ASSERT` only calls `Error` and falls through
