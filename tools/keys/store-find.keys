@@ -1,0 +1,66 @@
+# Roark Ironbeard's store: search finds a ware, buying and selling still work.
+# This is the oracle for the store redesign of inc-wkxf; the check is
+# tools/check_store_find.sh and the facts it reads are listed in its header.
+#
+#   INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0818.sav \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat \
+#       tools/headless.sh tools/keys/store-find.keys 1
+#
+# The shop is reached without wizard mode: [<] on the cave entrance asks
+# "Store, Inn, Retire or Descend?" (lib/dungeon.irh:203) and [s] opens Roark's
+# store, as in tools/keys/store-scroll.keys. A loaded character carries its
+# own gold and its own stock for Roark, so no roll decides what is on sale.
+
+@until "Store, Inn, Retire or Descend" <
+s
+@dump:store-open
+
+# 1. SEARCH. The text is lower case on purpose: the store shows "Potions of
+#    Light", so a hit proves the match ignores case. [x] describes the
+#    SELECTED ware, so the description proves where the selection went.
+/
+"potions of light"
+ENTER
+@dump:search-light-result
+@while "No ware matches" ESC   # a failed search closes its box, so [x] still lands
+x
+@dump:search-light
+ESC
+
+# 1b. Text no ware has: the store says so.
+/
+"zzqqx"
+ENTER
+@dump:search-none
+ESC                 # close the message box; the store stays open
+
+# 2. BUY. Search moves to the next dagger after the selection, wrapping.
+/
+"dagger"
+ENTER
+@dump:search-dagger-result
+@while "No ware matches" ESC
+x
+@dump:search-dagger
+ESC
+b                   # [B]uy Selected
+o                   # One, some or all? -- one
+@dump:buy-confirm
+y                   # Confirm purchase
+@dump:after-buy     # the purchase opens the inventory screen
+@while "'In the Air'" ESC
+
+# 3. SELL. Reopen the store: "You have N gp" is the new gold. Then [s], pick
+#    the first item, and let every message box close until the store is gone.
+@until "Store, Inn, Retire or Descend" <
+s
+@dump:store-reopen
+s
+@dump:sell-menu
+a
+@dump:sell-1
+ESC
+@dump:sell-2
+@while "Proprietor" ESC
+@dump:sell-play
+@quit
