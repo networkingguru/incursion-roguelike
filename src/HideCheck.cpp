@@ -14,6 +14,7 @@
    tools/check_hide_no_spot_roll.sh and the other hide checks. Tracking:
    inc-u3dp. Not sent upstream. */
 
+#include <map>          /* before Incursion.h: it defines a macro named array */
 #include "Incursion.h"
 #include "HideCheck.h"
 
@@ -228,11 +229,14 @@ bool HideCanWatch(Creature *w, Creature *h) {
     if (!w->m || w->m != h->m) return false;
     if (w->x == -1 || h->x == -1) return false;
     if (w->isDead()) return false;
-    if (w->HasStati(ASLEEP)) return false;
+    /* inc-yp23: the distance tests run before HasStati(ASLEEP) and isLedBy so
+       pairs beyond sight range cost no status walk or leader lookup. Same
+       result for every input, only the order changed. */
     if (w->isBlind() || w->SightRange == 0) return false;
-    if (w->isLedBy(h) || h->isLedBy(w)) return false;
     const int16 d = dist(w->x, w->y, h->x, h->y);
     if (d > (int16)w->SightRange) return false;
+    if (w->HasStati(ASLEEP)) return false;
+    if (w->isLedBy(h) || h->isLedBy(w)) return false;
     return w->m->LineOfVisualSight(w->x, w->y, h->x, h->y, w);
 }
 
@@ -292,10 +296,58 @@ void HideSearch(Creature *w) {
     }
 }
 
+/* inc-yp23: what a watcher remembers about one creature between scans, so a
+   pair is re-tested only when something changed. In memory only: never a field
+   of Creature, so no class layout, FIELD_* list or save code changes. */
+struct HcTrack {
+    Creature *owner;      /* the pointer this entry was made for */
+    int16 lx, ly;         /* last position seen (lazy move detection) */
+    uint32 movedAt;       /* hcClock when this creature last changed square */
+    uint32 scanAt;        /* hcClock of the owner's last scan */
+    int16 fullRound;      /* last round the owner got a full re-test */
+    int16 sr;             /* owner's SightRange last seen */
+    bool blind;           /* owner's isBlind() last seen */
+    bool asleep;          /* owner's HasStati(ASLEEP) last seen */
+};
+/* Ordered by hObj so the keys are deterministic (a check must not depend on the
+   seed, and unordered iteration order could differ between runs). */
+/* ponytail: this table is never pruned -- one entry per creature handle ever
+   scanned, for the process lifetime. Ceiling is memory and log-n lookup on very
+   long sessions. Upgrade path: erase an entry when its creature is destroyed
+   (e.g. from the destroy queue in src/Main.cpp) or on map change. */
+static std::map<hObj, HcTrack> hcTracks;
+
+/* A module clock, bumped once per HidePairsFor: orders two scans in one tick. */
+static uint32 hcClock = 0;
+
+/* The track for the creature behind handle h and pointer c, made or repaired on
+   demand. A missing entry, or one whose stored pointer differs (the handle was
+   reused for a different creature), comes back changed -- which also covers a
+   fresh game load, since the table starts empty. */
+static HcTrack &hcTrackFor(hObj h, Creature *c) {
+    HcTrack &t = hcTracks[h];
+    if (t.owner != c) {
+        t.owner = c;
+        t.lx = c->x; t.ly = c->y;
+        t.movedAt = ++hcClock;
+        t.scanAt = 0;
+        t.fullRound = (int16)-1;
+        t.sr = c->SightRange;
+        t.blind = c->isBlind();
+        t.asleep = c->HasStati(ASLEEP);
+    } else if (c->x != t.lx || c->y != t.ly) {
+        t.lx = c->x; t.ly = c->y;
+        t.movedAt = ++hcClock;
+    }
+    return t;
+}
+
 void HideStarted(Creature *h, bool rollNow) {
     if (!h) return;
     h->HideVal = (int8)(h->HideVal + 1);
     HideSetKey(h, HK_HIDE_BAND, h, HideLightBand(HideLightAt(h->m, h->x, h->y)));
+    /* A new hide must be re-tested by every watcher: mark h moved now. */
+    hcTrackFor(h->myHandle, h).movedAt = ++hcClock;
     if (rollNow) HideTrigger(h, 0);
 }
 
@@ -323,25 +375,51 @@ void HideUpdatePair(Creature *w, Creature *h) {
 }
 
 void HidePairsFor(Creature *x) {
+    /* inc-yp23 invariants: (1) x is the WATCHER only -- no hider-side roll here;
+       (2) a pair is re-tested only when x moved, y moved, y began a new hide, or
+       x's own sight state changed; (3) a once-per-round backstop re-tests every
+       in-range pair regardless; (4) all state is in hcTracks, memory only. */
     if (!x || !x->m) return;
     Map *mx = x->m;
-    /* Cost gate: nothing on this map is hiding, so no pair can change. */
-    bool anyHiding = false;
-    { Creature *y; int i;
-      MapIterate(mx, y, i)
-          if (y && y->isCreature() && y != x && y->HasStati(HIDING)) {
-              anyHiding = true; break;
-          } }
-    if (!anyHiding) return;
     const hObj xHandle = x->myHandle;
+    const uint32 now = ++hcClock;
+
+    /* x's own track: refresh position, then decide whether this scan is full. */
+    HcTrack &xt = hcTrackFor(xHandle, x);
+    const bool stateChanged = xt.sr != x->SightRange ||
+                              xt.blind != x->isBlind() ||
+                              xt.asleep != x->HasStati(ASLEEP);
+    xt.sr = x->SightRange;
+    xt.blind = x->isBlind();
+    xt.asleep = x->HasStati(ASLEEP);
+    const int16 round = HideRoundStamp();
+    const bool full = xt.fullRound != round ||
+                      xt.movedAt > xt.scanAt || stateChanged;
+    /* Set scanAt after x's own hcTrackFor above (which, when x moved, bumped
+       movedAt to hcClock -- here now+1). With the strict test above, x's move
+       makes this scan full but the following scan (movedAt == scanAt) is not,
+       so each move costs one full scan, not two. A y moved later still counts,
+       as its movedAt is bumped past this value. */
+    xt.scanAt = hcClock;
+    if (full) xt.fullRound = round;
+
+    /* One map pass, creatures only, same map, not x, this watcher's range. */
     hObj others[HIDE_WATCH_MAX];
     int nOthers = 0;
+    bool anyHiding = false;
     { Creature *y; int i;
-      MapIterate(mx, y, i)
-          if (y && y->isCreature() && y != x) {
-              if (nOthers >= HIDE_WATCH_MAX) break;
-              others[nOthers++] = y->myHandle;
-          } }
+      MapIterate(mx, y, i) {
+          if (!y || !y->isCreature() || y == x) continue;
+          if (y->m != mx || y->x == -1) continue;
+          if (dist(x->x, x->y, y->x, y->y) > (int16)x->SightRange) continue;
+          if (y->HasStati(HIDING)) anyHiding = true;
+          if (nOthers >= HIDE_WATCH_MAX) break;
+          others[nOthers++] = y->myHandle;
+      } }
+    /* x's scanAt and track are already updated above, so a bare return here is
+       safe: with nothing hiding in range no pair can change this scan. */
+    if (!anyHiding) return;
+
     /* Each HideUpdatePair can run SpotCheck, whose event runs scripts that can
        delete any creature, so re-fetch both creatures from their handles every
        pass and never touch a pointer captured before an earlier check. */
@@ -352,14 +430,23 @@ void HidePairsFor(Creature *x) {
         Creature *yk = oCreature(others[k]);
         if (!yk || yk->isDead() || (yk->Flags & F_DELETE)) continue;
         if (yk->m != xk->m) continue;
-        if (xk->HasStati(HIDING)) HideUpdatePair(yk, xk);
-        if (!isValidHandle(xHandle) || !isValidHandle(others[k])) continue;
-        xk = oCreature(xHandle);
-        if (!xk || xk->isDead() || (xk->Flags & F_DELETE) || !xk->m) break;
-        yk = oCreature(others[k]);
-        if (!yk || yk->isDead() || (yk->Flags & F_DELETE)) continue;
-        if (yk->HasStati(HIDING)) HideUpdatePair(xk, yk);
+        if (!yk->HasStati(HIDING)) continue;
+        /* Detect y's move lazily, now, before deciding. */
+        const HcTrack &yt = hcTrackFor(others[k], yk);
+        if (full || yt.movedAt > xt.scanAt)
+            HideUpdatePair(xk, yk);
     }
+}
+
+/* inc-yp23: erase one TRIED note by (key, source handle) without a Thing*.
+   HideClearKey(c, key, NULL) would match every source, so the invalid-handle
+   case in HideTurnStart needs this handle-exact removal. */
+static void hcClearNoteByHandle(Creature *c, int16 key, hObj h) {
+    if (!c) return;
+    StatiIterNature(c, TRIED)
+        if (S->Val == key && S->h == h)
+            Stati_RemoveInline(S, c);
+    StatiIterEnd(c)
 }
 
 void HideTurnStart(Creature *x) {
@@ -376,7 +463,28 @@ void HideTurnStart(Creature *x) {
         }
     }
 
-    /* (b) Line of sight or light changed for x's neighbours. */
+    /* (b) Line of sight or light changed for x's neighbours. inc-yp23: a
+       watcher erases its own out-of-range notes here, at its own action, since
+       the range-filtered HidePairsFor no longer walks those pairs. */
+    if (!isValidHandle(xHandle)) return;
+    x = oCreature(xHandle);
+    if (!x || x->isDead() || (x->Flags & F_DELETE)) return;
+    if (x->m) {
+        hObj stale[HIDE_WATCH_MAX];
+        int nStale = 0;
+        StatiIterNature(x, TRIED)
+            if (S->Val == HK_SPOT_RESULT) {
+                Creature *h = isValidHandle(S->h) ? oCreature(S->h) : NULL;
+                if (!h || h->isDead() || (h->Flags & F_DELETE) ||
+                    h->m != x->m || h->x == -1 ||
+                    dist(x->x, x->y, h->x, h->y) > (int16)x->SightRange) {
+                    if (nStale < HIDE_WATCH_MAX) stale[nStale++] = S->h;
+                }
+            }
+        StatiIterEnd(x)
+        for (int k = 0; k < nStale; k++)
+            hcClearNoteByHandle(x, HK_SPOT_RESULT, stale[k]);
+    }
     if (!isValidHandle(xHandle)) return;
     x = oCreature(xHandle);
     if (!x || x->isDead() || (x->Flags & F_DELETE)) return;
