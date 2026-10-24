@@ -1,0 +1,8 @@
+# Feed -More- prompts to INCURSION_DURATION_PROBE_BLASPHEMY (inc-nt3z), then quit.
+# Oracle: BLASPHEMY_TIER lines in the isolated run errors.log.
+SPACE*40000
+ESC*20
+
+s
+
+@quit

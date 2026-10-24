@@ -594,7 +594,7 @@ Wizard / Scroll Spell "Feather Fall" : EA_INFLICT
 
 Wizard / Scroll Spell "Grease" : EA_TERRAFORM
   { SC_ARC; Base: SP_MEDIUM; Cost: 2; Level: 1; qval: Q_LOC; sval: NOSAVE;
-    Purpose: EP_FOIL_PURSUIT | AIM_AT_ENEMY; /* Flags: EF_DLONG;  */
+    Purpose: EP_FOIL_PURSUIT | AIM_AT_ENEMY; Flags: EF_DROUND;
     xval: TERRA_FLOOR; rval: $"pool of grease"; aval: AR_GLOBE; lval: 3;
     Desc: "Creates a patch of grease on open ground that can
       cause foes to slip and fall.";
@@ -676,7 +676,7 @@ Potion / Wizard / Scroll Spell "Mending" : EA_GENERIC
 Wizard / Druid Spell "Wall of Fog" : EA_TERRAFORM
   { SC_ARC|SC_AIR|SC_WATER; Base: SP_EASY; Cost: 1; Level: 1; qval: Q_DIR; aval: AR_BARRIER;
     Purpose: EP_FOIL_PURSUIT | EP_CURSE | AIM_AT_ENEMY (VS_MISSILES);
-    xval: TERRA_FLOOR; rval: $"fog"; Flags: EF_DLONG;
+    xval: TERRA_FLOOR; rval: $"fog"; Flags: EF_DMIN;
     Desc: "Conjures a curtain of fog useful for, among other things,
       blocking spellcasters and archers' lines of sight. Characters
       with true sight or Nature Sense can see through fog clearly, and
@@ -887,7 +887,7 @@ Wizard / Scroll Spell "Charm Person" : EA_INFLICT
   { SC_ENC; Base: SP_MEDIUM; Cost: 3; Level: 1; sval: WILL;
     Purpose: EP_CURSE (VS_MENTAL); tval: MA_PERSON; 
     xval: CHARMED; yval: CH_CHARM; qval: Q_TAR;
-    Flags: EF_DLONG, EF_MENTAL, EF_LIM_MTYPE, EF_CASTER_IMMUNE; 
+    Flags: EF_DHOUR, EF_MENTAL, EF_LIM_MTYPE, EF_CASTER_IMMUNE; 
     Desc: "Improves a hostile, sapient humanoid's temperment
       towards you, such that it ceases attacking and becomes a
       neutral creature."; 
@@ -904,9 +904,13 @@ Wizard / Scroll Spell "Cause Fear" : EA_INFLICT
   { SC_ENC; Base: SP_MEDIUM; Cost: 2; Level: 1; sval: WILL;
     Purpose: EP_CURSE (VS_MENTAL); qval: Q_TAR;
     xval: AFRAID; Flags: EF_MENTAL, EF_FEAR;
-    Desc: "Causes one target creature to be overcome with mortal
-      terror, such that it will flee from you to the best of its
-      ability for the spell's duration.";
+    Desc: "Causes one target creature to be overcome with mortal terror,
+      such that it will flee from you to the best of its ability for 1d4
+      rounds.";
+    On Event EV_CALC_EFFECT {
+      e.vDuration = ApplyDurationMetamagic(RoundsToUnits(1d4), e.MM, 0);
+      return NOTHING;
+      };
   }
 
 Wizard Spell "Friends" : EA_INFLICT
@@ -953,7 +957,7 @@ Wizard Spell "Nystrom's Magical Aura" : EA_INFLICT
 Wizard / Scroll Spell "Sleep" : EA_INFLICT
   { SC_ENC; SC_THA; Base: SP_MEDIUM; Cost: 3; Level: 1; sval: WILL; 
     Purpose: EP_CURSE (VS_MENTAL); qval: Q_TAR | Q_LOC; 
-    Flags: EF_DLONG, EF_MENTAL, EF_CASTER_IMMUNE; lval: 2;
+    Flags: EF_DMIN, EF_MENTAL, EF_CASTER_IMMUNE; lval: 2;
     xval: ASLEEP; yval: SLEEP_NATURAL; 
 	aval: AR_GLOBE; cval: AZURE;
 	On Event EV_ISTARGET {
@@ -962,11 +966,10 @@ Wizard / Scroll Spell "Sleep" : EA_INFLICT
 	              CANNOT_CAST_IT :
 	              SHOULD_CAST_IT;
 	  };
-    Desc: "Causes creatures whose levels are half your own 
-      or less within a 20 foot (2 square) radius globe to 
-      fall into slumber until woken or attacked; creatures
-      with two or fewer Hit Dice are affected regardless of 
-      their level.";
+    Desc: "Causes creatures whose levels are half your own or less
+      within a 20 foot (2 square) radius globe to fall into slumber for
+      1 minute per caster level, or until woken or attacked; creatures
+      with two or fewer Hit Dice are affected regardless of their level.";
   }
 
 /* upstream: base-code defect, fix is ours. Tier Observed -- EF_ALLIES_IMMUNE
@@ -1235,7 +1238,7 @@ Wizard / Scroll Spell "Chromatic Orb" : EA_GENERIC
          break;
         case 'w':
           if (EVictim->HasMFlag(M_LIGHT_AVERSE) || EVictim->isMType(MA_WRAITH))	{
-            EVictim->GainTempStati(AFRAID,EItem,1d4,SS_ENCH,FEAR_PANIC,-1);
+            EVictim->GainTempStati(AFRAID,EItem,RoundsToUnits(1d4),SS_ENCH,FEAR_PANIC,-1);
 		      	EVictim->StatiMessage(AFRAID);
     			  }		    
           ThrowDmg(EV_DAMAGE,AD_SUNL,i,"chromatic orb",EActor,EVictim);
@@ -1249,7 +1252,7 @@ Wizard / Scroll Spell "Chromatic Orb" : EA_GENERIC
          break;
         case 'o':
           if (!EVictim->SavingThrow(WILL,e.saveDC, SA_CONF|SA_SPELLS)) {
-            EVictim->GainTempStati(CONFUSED,EItem,1d6+1,SS_ENCH,-1,-1);
+            EVictim->GainTempStati(CONFUSED,EItem,RoundsToUnits(1d6+1),SS_ENCH,-1,-1);
 			      EVictim->StatiMessage(CONFUSED);
 	      		}		    
           ThrowDmg(EV_DAMAGE,AD_PSYC,i,"chromatic orb",EActor,EVictim);
@@ -1260,7 +1263,7 @@ Wizard / Scroll Spell "Chromatic Orb" : EA_GENERIC
           /* For now, all monster casters above 9th use the yellow orb,
              as the others aren't implemented yet. */
           if (!EVictim->SavingThrow(WILL,e.saveDC, SA_CONF|SA_SPELLS)) {
-            EVictim->GainTempStati(STUNNED,EItem,2d8,SS_ENCH,-1,-1);
+            EVictim->GainTempStati(STUNNED,EItem,RoundsToUnits(2d8),SS_ENCH,-1,-1);
 			      EVictim->StatiMessage(STUNNED);
 	      		}		    
           ThrowDmg(EV_DAMAGE,AD_ELEC,i,"chromatic orb",EActor,EVictim);
@@ -1391,7 +1394,7 @@ Wizard Spell "Change Self" : EA_INFLICT
       disguise, and removes the need for a disguise kit. However, the
       effect is an illusion, and is automatically penetrated by anything
       which penetrates illusions, including <9>true sight<1>."; 
-    xval: SKILL_BONUS; yval: SK_DISGUISE; pval: +10; Flags: EF_ONCEONLY;
+    xval: SKILL_BONUS; yval: SK_DISGUISE; pval: +10; Flags: EF_ONCEONLY, EF_D10MIN;
     On Event POST(EV_MAGIC_HIT) {
       EActor->GainPermStati(INNATE_KIT,NULL,SS_MISC,SK_DISGUISE);
       ReThrow(EV_DISGUISE,e);
@@ -1413,7 +1416,11 @@ Wizard / Scroll Spell "Dancing Lights" : EA_SUMMON
       critical hit, they can also blind. The globes are
       incorporeal, but very weak, possessing only one hit
       point and thus being easily dispelled by any attack
-      which can strike them."; }
+      which can strike them.";
+    On Event EV_CALC_EFFECT {
+      e.vDuration = ApplyDurationMetamagic(5, e.MM, 0);
+      return NOTHING;
+      }; }
       
 Monster "globes of light" : MA_CONSTRUCT
   { Image: bright cyan GLYPH_FLOOR2; Size: SZ_TINY; Mana: 0;
@@ -1542,7 +1549,7 @@ Wizard / Priest / Scroll Spell "Detect Undead" : EA_INFLICT
 Wizard Spell "Halt Undead" : EA_INFLICT
   { SC_NEC; Base: SP_EASY; Cost: 2; Level: 1; sval: FORT; lval: 9;
     xval: ADJUST; yval: A_MOV; pval: -40; tval: MA_UNDEAD; cval: BLUE;
-    Purpose: EP_CURSE | EP_FOIL_PURSUIT; Flags: EF_LIM_MTYPE; aval: AR_GLOBE;
+    Purpose: EP_CURSE | EP_FOIL_PURSUIT; Flags: EF_LIM_MTYPE, EF_DROUND; aval: AR_GLOBE;
     Desc: "Reduces the movement rate of any undead within 90 feet (9
       squares) of the caster to 0%, effectively freezing them in place
       and preventing them from approaching. A Fortitude save negates
@@ -1580,7 +1587,7 @@ Wizard / Priest / Scroll Spell "Protection from Undead" : EA_GENERIC
     Desc: "Evokes a mystical protection around you such that undead
       cannot physically strike you without first succeeding in a Will
       save against this spell.";
-    Flags: EF_SHOWNAME, EF_DLONG;
+    Flags: EF_SHOWNAME;
   }
 
 
@@ -1632,7 +1639,7 @@ Wizard / Scroll Spell "Expeditious Retreat" : EA_INFLICT
 Wizard Spell "Reduce" : EA_INFLICT
   { SC_THA; Base: SP_EASY; Cost: 2; Level: 1; qval: Q_TAR; sval: FORT;
     Purpose: EP_CURSE; xval: ADJUST; yval: A_SIZ; pval: -1;
-    Flags: EF_SHOWNAME;
+    Flags: EF_SHOWNAME, EF_DMIN;
     Desc: "Causes a target creature to become smaller, lowering their
       size category by one level.";
     On Event EV_MAGIC_HIT {
@@ -1692,7 +1699,7 @@ Wizard Spell "Convulsion" : EA_INFLICT
       effect. The effect lasts for only 1d4 rounds, causing the victim to
       suffer a -6 circumstance penalty to all rolls.";
     On Event EV_CALC_EFFECT {
-      e.vDuration = (e.MM & MM_ANCHOR) ? 2d4 : 1d4;
+      e.vDuration = (e.MM & MM_ANCHOR) ? RoundsToUnits(2d4) : RoundsToUnits(1d4);
       return NOTHING;
       },
     PRE(EV_MAGIC_STRIKE) {
@@ -1981,7 +1988,7 @@ Priest / Scroll / Wizard Spell "Magic Weapon" : EA_GENERIC
 
 Wizard / Scroll Spell "Gaze Reflection" : EA_INFLICT
   { SC_ABJ; IS_A_BUFF(COST_2); Level: 2; qval: Q_TAR;
-    xval: GAZE_REFLECTION; yval: GR_REFLECT; Flags: EF_DLONG;
+    xval: GAZE_REFLECTION; yval: GR_REFLECT;
     Purpose: EP_BUFF | EP_COUNTER (VS_GAZE);
     Desc: "Creates a reflective shield, redirecting
       any incoming gaze attacks back at the gazer. If both the attacker and
@@ -2002,7 +2009,7 @@ Wizard / Scroll Spell "Iron Mind" : EA_INFLICT
     Purpose: EP_BUFF | EP_COUNTER (VS_MENTAL);
     Desc: "Grants the chosen target a +10 enhancement bonus 
       to her next Will saving throw.";
-    Flags: EF_ONCEONLY, EF_NOTBAD, EF_DLONG, EF_SHOWNAME;
+    Flags: EF_ONCEONLY, EF_NOTBAD, EF_SHOWNAME;
   }
 
 Wizard / Scroll / Druid Spell "Resist Water" : EA_INFLICT
@@ -2061,7 +2068,7 @@ Wizard / Priest / Druid / Scroll Spell "Resist Sound" : EA_INFLICT
 Wizard Spell "Glitterdust" : EA_INFLICT
   { SC_ARC; Base: SP_MEDIUM; Cost: 4; Level: 2; sval: FORT; 
     qval: Q_TAR | Q_LOC | Q_DIR; 
-    Purpose: EP_CURSE | AIM_AT_SELF; Flags: EF_CASTER_IMMUNE;
+    Purpose: EP_CURSE | AIM_AT_SELF; Flags: EF_CASTER_IMMUNE, EF_DROUND;
     aval: AR_BALL; lval: 8; cval: COL_RAINBOW; xval: BLIND; }
   and EA_INFLICT {
     aval: AR_BALL; lval: 8; xval: ILLUMINATED; pval: +1; 
@@ -2117,7 +2124,7 @@ Wizard / Scroll Spell "Passwall" : EA_TRAVEL
 
  Wizard / Priest / Druid Spell "Wind Wall" : EA_TERRAFORM
   { SC_ARC|SC_AIR; Base: SP_EASY; Cost: 3; Level: 2; lval: 6;
-    xval: TERRA_OPEN; aval: AR_BARRIER; Flags: EF_DLONG;
+    xval: TERRA_OPEN; aval: AR_BARRIER; Flags: EF_DROUND;
     rval: $"strong updraft"; qval: Q_DIR;
     Purpose: EP_COUNTER | EP_CURSE | AIM_AT_ENEMY (VS_MISSILES);
     Desc: "Creates a vertical curtain of wind that deflects all
@@ -2142,7 +2149,7 @@ Terrain "strong updraft"
   }
 
  Wizard / Scroll Spell "Web" : EA_TERRAFORM
-  { SC_ARC; Base: SP_HARD; Cost: 4; Level: 2; aval: AR_GLOBE; lval : 2;
+  { SC_ARC; Base: SP_HARD; Cost: 4; Level: 2; aval: AR_GLOBE; lval : 2; Flags: EF_D10MIN;
     xval: TERRA_OPEN; rval: $"webbing"; qval: Q_LOC|Q_TAR; cval: GREY;
     Purpose: EP_FOIL_PURSUIT | EP_CURSE | AIM_AT_ENEMY; sval: NOSAVE;
 	  Desc: "Creates a mass of sticky webbing that holds enemies
@@ -2569,7 +2576,7 @@ Wizard Spell "Eagle's Splendour" : EA_INFLICT
 Wizard Spell "Hypnotism" : EA_INFLICT
   { SC_ENC; Base: SP_EASY; Cost: 4; Level: 2; qval: Q_TAR;
     xval: PARALYSIS; yval: PARA_HYPNOTIZED; sval: WILL;
-    Flags: EF_MENTAL, EF_DLONG, EF_CASTER_IMMUNE, EF_HARDSAVE4;
+    Flags: EF_MENTAL, EF_CASTER_IMMUNE, EF_HARDSAVE4;
     Purpose: EP_FOIL_PURSUIT | AIM_AT_ENEMY (VS_MENTAL);
     On Event PRE(EV_MAGIC_STRIKE) {
       if (!EActor->isBeside(EVictim))
@@ -2584,13 +2591,16 @@ Wizard Spell "Hypnotism" : EA_INFLICT
         if (!EActor->isBeside(EVictim))
           return CANNOT_CAST_IT;
       return SHOULD_CAST_IT;
+      },
+    EV_CALC_EFFECT {
+      e.vDuration = ApplyDurationMetamagic(RoundsToUnits(2d4), e.MM, 0);
+      return NOTHING;
       };
-    Desc: "Causes a creature immediately beside you to become
-      entranced if it fails a Will save, such that it will not
-      act until it suffers damage or is otherwise shocked back
-      to its senses (though it is not helpless as with Hold
-      Person, and cannot be Coup de Grace'd). This spell has a
-      +4 spell bonus to its save DC.";
+    Desc: "Causes a creature immediately beside you to become entranced
+      for 2d4 rounds if it fails a Will save, such that it will not act
+      until it suffers damage or is otherwise shocked back to its senses
+      (though it is not helpless as with Hold Person, and cannot be Coup
+      de Grace'd). This spell has a +4 spell bonus to its save DC.";
 
   }
 
@@ -2624,10 +2634,10 @@ Wizard Spell "Touch of Idiocy" : EA_DRAIN
 Wizard Spell "Hideous Laughter" : EA_INFLICT
   { SC_ENC; Base: SP_MEDIUM; Cost: 4; Level: 2; tval: MA_SAPIENT;
     Purpose: EP_CURSE (VS_MENTAL); xval: STUNNED; qval: Q_TAR;
-    Flags: EF_LIM_MTYPE, EF_SHOWNAME, EF_DSHORT, EF_MENTAL;
+    Flags: EF_LIM_MTYPE, EF_SHOWNAME, EF_DROUND, EF_MENTAL;
     On Event MSG_STATINAME "Laughing" / "Lau"; sval: WILL;
-    Desc: "Causes a sapient creature to be completely overcome
-      with uncontrollable laughter for 1d4 rounds.";
+    Desc: "Causes a sapient creature to be completely overcome with
+      uncontrollable laughter for 1 round per caster level.";
     On Event EV_MAGIC_HIT
       "You are overcome with uncontrollable laughter!" /
       "The <EVictim> is overcome with uncontrollable laughter!",
@@ -2849,9 +2859,9 @@ and EA_DRAIN
 /* --ILLUSION 2-- */
 
 Potion / Wizard / Scroll Spell "Invisibility" : EA_INFLICT
-  { SC_ILL; Base: SP_HARD; Cost: 5; Level: 2; qval: Q_TAR;
+  { SC_ILL; Base: SP_HARD; Cost: COST_2; Level: 2; qval: Q_TAR;
     xval: INVIS; yval: INV_NORMAL; pval: LEVEL_1PER1;
-    Flags: EF_DLONG, EF_NOTBAD; Purpose: EP_BUFF | EP_STEALTH;
+    Flags: EF_PERSISTANT, EF_LOSEMANA, EF_NOTBAD, EF_CANCEL, EF_SHOWNAME; Purpose: EP_BUFF | EP_STEALTH;
     Desc: "Renders a chosen character unseen by others. The
       the effect is cancelled if the character attacks. The
       magic creates a faint shimmering effect around the
@@ -2886,7 +2896,7 @@ Wizard / Scroll Spell "Blur" : EA_INFLICT
   }
 
 Wizard / Scroll Spell "Mirror Image" : EA_INFLICT
-  { SC_ILL; Base: SP_EASY; Cost: 5; Level: 2; Flags: EF_SHOWNAME, EF_SHOWVAL;
+  { SC_ILL; Base: SP_EASY; Cost: 5; Level: 2; Flags: EF_SHOWNAME, EF_SHOWVAL, EF_DMIN;
     xval: TRAP_EVENT; yval: EVICTIM(EV_HIT); pval: 1d4+LEVEL_1PER3;
     Purpose: EP_BUFF;
     Desc: "Creates 1d4 + 1 per three caster levels illusionary images
@@ -3127,7 +3137,7 @@ Wizard Spell "Scare" : EA_BLAST
       return SHOULD_CAST_IT;
       },
     EV_CALC_EFFECT {
-      e.vDuration = 1d4 + e.vCasterLev / 3;
+      e.vDuration = RoundsToUnits(1d4 + e.vCasterLev / 3);
       /* Number of Arcs */
       e.vChainMax = 1 + e.vCasterLev / 3;
       return NOTHING;
@@ -3178,9 +3188,13 @@ Wizard Spell "Bladethirst" : EA_INFLICT
 Wizard / Scroll Spell "Ghoul Touch" : EA_INFLICT
   { SC_NEC; Base: SP_TRIVIAL; Cost: 3; Level: 2; sval: FORT; 
     aval: AR_TOUCH; xval: PARALYSIS; 
-    Flags: EF_DLONG, EF_NOTBAD, EF_CANCEL; 
+    Flags: EF_NOTBAD, EF_CANCEL; 
     cval: BLUE; Purpose: EP_ATTACK;
-    On Event POST(EV_MAGIC_HIT) {
+    On Event EV_CALC_EFFECT {
+      e.vDuration = ApplyDurationMetamagic(RoundsToUnits(1d6+2), e.MM, 0);
+      return NOTHING;
+      },
+    POST(EV_MAGIC_HIT) {
       if (!e.Resist) {
         EMap->NewField(FI_MODIFIER,EVictim->x,EVictim->y,2,
           GLYPH_COLOUR(GREEN),e.vDuration,$"ghast stench",EActor);
@@ -3191,8 +3205,9 @@ Wizard / Scroll Spell "Ghoul Touch" : EA_INFLICT
     MSG_CAST
       "Your hands glow with a sickly green light." /
       "The <EActor>'s hands glow with a sickly green light.";
-    Desc: "Your touch can paralyze a creature (Fortitude negates) and
-      cause it to emit a stench similar to a ghast's.";
+    Desc: "Your touch can paralyze a creature for 1d6+2 rounds
+      (Fortitude negates) and cause it to emit a stench similar to a
+      ghast's.";
   }
   
 Wizard Spell "Choke" : EA_INFLICT
@@ -3228,7 +3243,7 @@ Wizard Spell "Choke" : EA_INFLICT
 
 Wizard Spell "Spectral Hand" : EA_SUMMON
   {
-    SC_NEC; Base: SP_MEDIUM; Cost: 6; Level: 2; qval: Q_LOC;
+    SC_NEC; Base: SP_MEDIUM; Cost: 6; Level: 2; qval: Q_LOC; Flags: EF_DMIN;
     Desc: "Casting this spell conjures a ghostly hand with a sympathetic
       bond to the caster's own life aura, such that any touch spell the
       caster has active can have its effects delivered at a distance by
@@ -3326,7 +3341,7 @@ Monster "spectral hand;mon" : MA_UNDEAD, MA_CONSTRUCT, MA_FORCE_D4
 /* --THAUMATURGY 2-- */
 
 Potion  / Wizard / Scroll Spell "Levitation" : EA_INFLICT
-  { SC_THA; Base: SP_MEDIUM; Cost: 4; Level: 2; 
+  { SC_THA; Base: SP_MEDIUM; Cost: COST_2; Level: 2; 
     xval: LEVITATION;
     Purpose: EP_PASSAGE; 
     Desc: "Allows you to float a foot off the ground and move normally,
@@ -3339,7 +3354,7 @@ Potion  / Wizard / Scroll Spell "Levitation" : EA_INFLICT
       Balance check to cast spells with somatic components and
       potentially suffering knockback when you are struck in
       combat."; 
-    Flags: EF_STAPLE, EF_DLONG, EF_NOTBAD, EF_CANCEL;
+    Flags: EF_STAPLE, EF_PERSISTANT, EF_LOSEMANA, EF_NOTBAD, EF_CANCEL, EF_SHOWNAME;
   }
 and EA_INFLICT
   { xval: ADJUST_CIRC; yval: A_HIT; pval: -2; }
@@ -3890,15 +3905,15 @@ Wizard / Scroll Spell "Stinking Cloud" : EA_GENERIC
     Purpose: EP_CURSE |AIM_AT_ENEMY;
     Desc: "Creates a 30 foot (3 square) radius cloud of noxious
       vapors, causing all breathing creatures within the cloud to make a
-      Fortitude save (DC 20) every round or suffer nausea for 2d4
+      Fortitude save (DC set by its caster) every round or suffer nausea for 2d4
       additional rounds.  Nauseated creatures cannot attack or cast spells
       and are considered off-guard for the purposes of sneak attacks. The
       caster is not immune!";
     On Event EV_MAGIC_STRIKE {
       if (EVictim->onPlane() == PHASE_MATERIAL &&
           EVictim->isMType(MA_BREATHER) && 
-          !EVictim->SavingThrow(FORT,20))
-        EVictim->GainTempStati(NAUSEA,EActor,2d4,SS_ENCH,0,0,
+          !EVictim->SavingThrow(FORT,e.saveDC))
+        EVictim->GainTempStati(NAUSEA,EActor,RoundsToUnits(2d4),SS_ENCH,0,0,
           $"stinking cloud");
     }, 
     MSG_CAST
@@ -4151,7 +4166,7 @@ Wizard Spell "Minor Creation" : EA_GENERIC
 /* --DIVINATION 3-- */
 
 Wizard / Sorcerer / Potion / Scroll Spell "Clairvoyance" : EA_VISION
-  { SC_DIV; Level: 3; Cost: 15; Base: SP_TRIVIAL; Purpose: EP_PLAYER_ONLY;
+  { SC_DIV; Level: 3; Cost: 15; Base: SP_TRIVIAL; Purpose: EP_PLAYER_ONLY; Flags: EF_DMIN;
     xval: VIS_MOBILE | VIS_LOS; pval: 30; yval: 5; 
     Desc: "Allows the caster to scry around the nearby area."; }
 
@@ -4366,18 +4381,18 @@ Wizard Spell "Heroism" : EA_INFLICT
 Wizard Spell "Deep Slumber" : EA_INFLICT
   { SC_ENC; Base: SP_MEDIUM; Cost: 7; Level: 3; sval: WILL; 
     Purpose: EP_CURSE (VS_MENTAL); qval: Q_TAR | Q_LOC; 
-    Flags: EF_DLONG, EF_MENTAL, EF_LIM_LEVEL, EF_CASTER_IMMUNE; lval: 2;
+    Flags: EF_DMIN, EF_MENTAL, EF_LIM_LEVEL, EF_CASTER_IMMUNE; lval: 2;
     xval: ASLEEP; yval: SLEEP_NATURAL; tval: LEVEL; 
 	aval: AR_GLOBE; cval: AZURE;
-    Desc: "Causes creatures whose levels are equal to your own 
-      or less within a 20 foot (2 square) radius globe to 
-      fall into slumber until woken or attacked.";
+    Desc: "Causes creatures whose levels are equal to your own or less
+      within a 20 foot (2 square) radius globe to fall into slumber for
+      1 minute per caster level, or until woken or attacked.";
   }     
         
 Wizard / Scroll / Priest Spell "Hold Person" : EA_INFLICT
   { SC_ENC; Level: 3; Cost: 6; Base: SP_MEDIUM; qval: Q_TAR;
     xval: PARALYSIS; sval: WILL; tval: MA_PERSON; 
-    Purpose: EP_CURSE (VS_MENTAL); Flags: EF_LIM_MTYPE, EF_MENTAL;
+    Purpose: EP_CURSE (VS_MENTAL); Flags: EF_LIM_MTYPE, EF_MENTAL, EF_DROUND;
     Desc: "Paralyzes one chosen humanoid, provided they fail a Will
       saving throw.";
   }
@@ -5218,7 +5233,7 @@ and EA_INFLICT
   { xval: ADJUST_CIRC; yval: A_DEF; pval: +4; }
 
 Wizard / Sorcerer  Spell "Slow" : EA_INFLICT
-  { SC_THA; Base: SP_EASY; Cost: 7; Level: 3; qval: Q_LOC; sval: WILL; 
+  { SC_THA; Base: SP_EASY; Cost: 7; Level: 3; qval: Q_LOC; sval: WILL; Flags: EF_DROUND; 
     aval: AR_GLOBE; lval: 3; xval: ADJUST; yval: A_SPD; pval: -10;
     cval: GREEN; Purpose: EP_CURSE | EP_FOIL_PURSUIT;
     Desc: "Slows the motion of all creatures in a 30 foot (3 square)
@@ -5253,7 +5268,7 @@ and EA_INFLICT
 
 Wizard / Scroll Spell "Polymorph Self" : EA_POLYMORPH
   { SC_THA; Base: SP_HARD; Cost: 10; Level: 3; 
-    Flags: EF_LOSEMANA, EF_DLONG, EF_CANCEL; Purpose: EP_BUFF; 
+    Flags: EF_LOSEMANA, EF_DMIN, EF_CANCEL; Purpose: EP_BUFF; 
     Desc: "Changes you into a random monster of your own challenge
       rating or lower, at the cost of 2 fatigue points."; 
     On Event PRE(EV_EFFECT) {
@@ -5596,13 +5611,13 @@ Wizard / Druid Spell "Endure the Elements" : EA_INFLICT
       1 per 2 caster levels against Fire, Cold, Lightning, Acid and Sound.
       The target's carried equipment is protected as well."; }
   and EA_INFLICT { xval: RESIST; yval: AD_FIRE; 
-                   flags: EF_DLONG; pval: 3d1+(LEVEL_1PER2); }
+                   pval: 3d1+(LEVEL_1PER2); }
   and EA_INFLICT { xval: RESIST; yval: AD_COLD; 
-                   flags: EF_DLONG; pval: 3d1+(LEVEL_1PER2); }
+                   pval: 3d1+(LEVEL_1PER2); }
   and EA_INFLICT { xval: RESIST; yval: AD_ELEC; 
-                   flags: EF_DLONG; pval: 3d1+(LEVEL_1PER2); }
+                   pval: 3d1+(LEVEL_1PER2); }
   and EA_INFLICT { xval: RESIST; yval: AD_ACID; 
-                   flags: EF_DLONG; pval: 3d1+(LEVEL_1PER2); }
+                   pval: 3d1+(LEVEL_1PER2); }
 
 Wizard Spell "Wandwierd" : EA_INFLICT
   { SC_ABJ; IS_A_BUFF(COST_4); Level: 4; aval: AR_MFIELD;
@@ -5686,7 +5701,7 @@ Wizard Spell "Aura of Abjuration" : EA_INFLICT
 
 Wizard / Druid / Scroll Spell "Solid Fog" : EA_TERRAFORM
   { SC_ARC|SC_AIR|SC_WATER; Base: SP_EASY; Cost: 8; Level: 4; qval: Q_LOC; sval: NOSAVE;
-    Purpose: EP_CURSE | EP_FOIL_PURSUIT | AIM_AT_ENEMY; /* Flags: EF_DLONG;  */
+    Purpose: EP_CURSE | EP_FOIL_PURSUIT | AIM_AT_ENEMY; Flags: EF_DMIN;
     xval: TERRA_OPEN; rval: $"solid fog bank"; aval: AR_GLOBE; lval: 4;
     Desc: "Creates a bank of solid fog. Solid fog reduces movement to 15~
     of normal and deflects all physical missiles.";
@@ -5991,7 +6006,7 @@ Wizard Spell "Nemesis Spell" : EA_GENERIC
       return SHOULD_CAST_IT;
       },
     EV_CALC_EFFECT {
-      e.vDuration = 13;
+      e.vDuration = RoundsToUnits(13);
       if (e.MM & MM_ANCHOR)
         e.vDuration *= 2;
         return NOTHING;
@@ -6077,7 +6092,7 @@ Spell "Mord's Lucubration" : EA_GENERIC
 Wizard / Scroll Spell "Charm Monster" : EA_INFLICT
   { SC_ENC; Base: SP_MEDIUM; Cost: 9; Level: 4; sval: WILL;
     Purpose: EP_CURSE (VS_MENTAL); qval: Q_TAR;
-    xval: CHARMED; yval: CH_CHARM; Flags: EF_DLONG, EF_MENTAL; 
+    xval: CHARMED; yval: CH_CHARM; Flags: EF_PERSISTANT, EF_MENTAL; 
     Desc: "Improves a hostile, sapient creature's temperment
       towards you, such that it ceases attacking and becomes a
       neutral creature."; 
@@ -6094,7 +6109,7 @@ Wizard Spell "Confusion" : EA_INFLICT
   { SC_ENC; Base: SP_MEDIUM; Cost: 8; Level: 4; sval: WILL;
     xval: CONFUSED; aval: AR_GLOBE; lval: 3; cval: CYAN;
     Purpose: EP_CURSE | EP_FOIL_PURSUIT; qval: Q_LOC;
-  	Flags: EF_CASTER_IMMUNE, EF_MENTAL;
+  	Flags: EF_CASTER_IMMUNE, EF_MENTAL, EF_DROUND;
     Desc: "Causes all living creatures within 30 feet of the target
       point to become confused, if they fail a Will saving throw.";
   }
@@ -6154,7 +6169,7 @@ Wizard / Scroll  Spell "Emotion" : EA_GENERIC
         case 'd':
           VPrint(e,"You are is overcome with despair.",
                    "The <EVictim> is overcome with despair.");          
-          EVictim->GainTempStati(PARALYSIS,EActor,1d4+1,SS_ENCH,PARA_HYPNOTIZED,0,$"emotion");
+          EVictim->GainTempStati(PARALYSIS,EActor,RoundsToUnits(1d4),SS_ENCH,PARA_HYPNOTIZED,0,$"emotion");
          break; 
         case 't':
           VPrint(e,"You feel panic overwhelm your reason.",
@@ -6192,7 +6207,7 @@ Wizard / Scroll  Spell "Emotion" : EA_GENERIC
 
 Wizard / Scroll Spell "Fear" : EA_GENERIC
   { SC_ENC; Base: SP_MEDIUM; Cost: 7; Level: 4; sval: WILL; 
-    qval: Q_DIR; Flags: EF_MENTAL, EF_HARDSAVE4, EF_FEAR; aval: AR_BEAM;
+    qval: Q_DIR; Flags: EF_MENTAL, EF_HARDSAVE4, EF_FEAR, EF_DROUND; aval: AR_BEAM;
     Purpose: EP_CURSE (VS_MENTAL); lval: 8; cval: PURPLE;
     On Event EV_MAGIC_HIT {
       hObj h;
@@ -6229,7 +6244,7 @@ Wizard / Scroll Spell "Fear" : EA_GENERIC
 Wizard / Sorcerer Spell "Crushing Despair" : EA_INFLICT
   { SC_ENC; Base: SP_MEDIUM; Cost: 7; Level: 4; aval: AR_BEAM; qval: Q_DIR|Q_TAR;
     xval: ADJUST_MOR; yval: A_AID; pval: -2; lval: 3;
-    Purpose: EP_CURSE; cval: SHADOW; Flags: EF_MENTAL;
+    Purpose: EP_CURSE; cval: SHADOW; Flags: EF_MENTAL, EF_DMIN;
     Desc: "Projects a ray of despair at the caster's enemies inflicting
       at -2 morale penalty on attack rolls, saving throws, 
       spellcasting, and weapon damage rolls. There is no resistance
@@ -6563,7 +6578,7 @@ Wizard Spell "Improved Invisibility" : EA_INFLICT
       or cancelled by means other than attacking, it does not
       recur.";
     On Event EV_REMOVED {
-      EActor->GainTempStati(EFF_FLAG1,NULL,1d4+1,SS_ENCH,0,0,
+      EActor->GainTempStati(EFF_FLAG1,NULL,RoundsToUnits(1d4+1),SS_ENCH,0,0,
           $"Improved Invisibility;renewal", EActor->CasterLev());
       return NOTHING;
       },
@@ -6805,7 +6820,7 @@ Wizard / Sorcerer  Spell "Summon Shadows" : EA_SUMMON
 
 Wizard / Scroll Spell "Polymorph Other" : EA_POLYMORPH
   { SC_THA; Base: SP_MEDIUM; Cost: 8; Level: 4; sval: FORT; qval: Q_TAR; 
-    Flags: EF_DXLONG; Purpose: EP_CURSE;
+    Flags: EF_DMIN; Purpose: EP_CURSE;
     Desc: "Changes one target creature into a different, random creature
       of the same challenge rating or lower.";
     On Event EV_MAGIC_HIT {
@@ -6996,7 +7011,7 @@ Wizard / Sorcerer  Spell "Monster Summoning IV" : EA_SUMMON
 Wizard / Priest Spell "Dimensional Anchor" : EA_INFLICT
   { SC_WEA; Base: SP_EASY; Cost: 7; Level: 4; qval: Q_TAR | Q_DIR;
     aval: AR_BOLT; Purpose: EP_CURSE | EP_COUNTER (VS_TELEPORT);
-    xval: ANCHORED; cval: EMERALD; Flags: EF_ATTACK;
+    xval: ANCHORED; cval: EMERALD; Flags: EF_ATTACK, EF_DMIN;
     Desc: "Produces a thin bolt of green energy that, upon
       striking a target (ranged attack roll), locks that
       target into place and prevents them from teleporting,
@@ -7423,13 +7438,13 @@ Wizard / Priest / Druid Spell "Resist the Elements" : EA_INFLICT
       The target's carried equipment is protected as well.";
     }
   and EA_INFLICT { xval: RESIST; yval: AD_COLD; 
-                   flags: EF_DLONG; pval: 5d1+(LEVEL_2PER3); }
+                   pval: 5d1+(LEVEL_2PER3); }
   and EA_INFLICT { xval: RESIST; yval: AD_ELEC; 
-                   flags: EF_DLONG; pval: 5d1+(LEVEL_2PER3); }
+                   pval: 5d1+(LEVEL_2PER3); }
   and EA_INFLICT { xval: RESIST; yval: AD_ACID; 
-                   flags: EF_DLONG; pval: 5d1+(LEVEL_2PER3); }
+                   pval: 5d1+(LEVEL_2PER3); }
   and EA_INFLICT { xval: RESIST; yval: AD_SONI; 
-                   flags: EF_DLONG; pval: 5d1+(LEVEL_2PER3); }
+                   pval: 5d1+(LEVEL_2PER3); }
 
 
 
@@ -7461,7 +7476,7 @@ Wizard / Scroll Spell "Cloudkill" : EA_BLAST
 
 Wizard / Druid / Priest  Spell "Wall of Stone" : EA_TERRAFORM
   { SC_ARC|SC_EARTH; Base: SP_EASY; Cost: 10; Level: 5; lval: 10; qval: Q_DIR;
-    xval: TERRA_OPEN; aval: AR_BARRIER; Flags: EF_DLONG;
+    xval: TERRA_OPEN; aval: AR_BARRIER; Flags: EF_PERMANANT;
     rval: $"dungeon wall"; pval: 2d6 + (LEVEL_MAX20); 
     Purpose: EP_FOIL_PURSUIT|EP_ESCAPE|EP_BARRIER|AIM_AT_ENEMY;
     Desc: "Conjures a solid stone wall, displacing any creatures in 
@@ -7725,7 +7740,7 @@ Wizard Spell "Dominate Person" : EA_INFLICT
   { SC_ENC; Base: SP_MEDIUM; Cost: 10; Level: 5; sval: WILL;
     Purpose: EP_CURSE (VS_MENTAL); qval: Q_TAR;
     xval: CHARMED; yval: CH_DOMINATE; tval: MA_PERSON;
-    Flags: EF_DLONG, EF_MENTAL, EF_LIM_MTYPE, EF_COMPULSION; 
+    Flags: EF_PERSISTANT, EF_MENTAL, EF_LIM_MTYPE, EF_COMPULSION; 
     Desc: "Gives you telepathic control over a single intelligent,
       medium-sized humanoid."; 
 	On Event EV_MAGIC_HIT
@@ -7739,7 +7754,7 @@ Wizard Spell "Dominate Person" : EA_INFLICT
 Wizard / Scroll / Priest Spell "Hold Monster" : EA_INFLICT
   { SC_ENC; Level: 5; Cost: 10; Base: SP_MEDIUM; qval: Q_TAR;
     xval: PARALYSIS; sval: FORT; 
-    Purpose: EP_CURSE (VS_MENTAL); Flags: EF_MENTAL;
+    Purpose: EP_CURSE (VS_MENTAL); Flags: EF_MENTAL, EF_DROUND;
     Desc: "Paralyzes one chosen creature, provided they fail a Fortitude
       save.";
   }
@@ -8679,16 +8694,16 @@ Wizard / Priest / Druid Spell "Protection from Elements" : EA_INFLICT
       The target's carried equipment is protected as well.";
     }
   and EA_INFLICT { xval: RESIST; yval: AD_COLD; 
-                   flags: EF_DLONG; pval: 10d1+(LEVEL_1PER1); }
+                   pval: 10d1+(LEVEL_1PER1); }
   and EA_INFLICT { xval: RESIST; yval: AD_ELEC; 
-                   flags: EF_DLONG; pval: 10d1+(LEVEL_1PER1); }
+                   pval: 10d1+(LEVEL_1PER1); }
   and EA_INFLICT { xval: RESIST; yval: AD_ACID; 
-                   flags: EF_DLONG; pval: 10d1+(LEVEL_1PER1); }
+                   pval: 10d1+(LEVEL_1PER1); }
   and EA_INFLICT { xval: RESIST; yval: AD_SONI; 
-                   flags: EF_DLONG; pval: 10d1+(LEVEL_1PER1); }
+                   pval: 10d1+(LEVEL_1PER1); }
 
 Wizard / Scroll Spell "Tevlar's Transformation" : EA_GRANT
-  { SC_THA; Base: SP_MEDIUM; Cost: 36; Level: 6;
+  { SC_THA; Base: SP_MEDIUM; Cost: COST_6; Level: 6;
     Desc: "Casting this spell, the mage becomes a veritable
       combat juggernaut. She adds her Wisdom modifier as a magic
       bonus to her Strength and Constitution, her Intelligence
@@ -8705,7 +8720,7 @@ Wizard / Scroll Spell "Tevlar's Transformation" : EA_GRANT
       hit points, she will die. Regardless, when the spell
       expires the caster loses three Fatigue points.\n
       __Tevlar's Transformation can be cancelled at will.";
-    Flags: EF_CANCEL;
+    Flags: EF_CANCEL, EF_PERSISTANT, EF_LOSEMANA, EF_SHOWNAME, EF_NOTBAD;
     xval: ADJUST; yval: A_THP; pval (LEVEL_1PER1)d10; }
 and EA_GRANT
   { xval: ADJUST; yval: A_STR; }
@@ -8989,11 +9004,11 @@ Wizard / Scroll Spell "Power Word: Stun" : EA_INFLICT
       if (GetHandle(EVictim) == NULL_OBJ)
         return NOTHING;
       if (EVictim->cHP >= 250)
-        e.vDuration = 1d4;
+        e.vDuration = RoundsToUnits(1d4);
       else if (EVictim->cHP >= 150)
-        e.vDuration = 3d6;
+        e.vDuration = RoundsToUnits(3d6);
       else if (EVictim->cHP >= 75)
-        e.vDuration = 10d6;
+        e.vDuration = RoundsToUnits(10d6);
       else
         e.vDuration = -2;
       return NOTHING;
@@ -9183,8 +9198,12 @@ Wizard Spell "Othello's Irresistable Dance" : EA_INFLICT
   { SC_ENC; Base: SP_MEDIUM; Cost: 75; Level: 8; tval: MA_HUMANOID;
     Purpose: EP_CURSE (VS_MENTAL); qval: Q_LOC; 
     aval: AR_GLOBE; cval: EMERALD; lval: 30;
-    Flags: EF_LIM_MTYPE, EF_SHOWNAME, EF_DSHORT, EF_MENTAL;
+    Flags: EF_LIM_MTYPE, EF_SHOWNAME, EF_MENTAL;
     On Event MSG_STATINAME "Dancing" / "Dan";
+    On Event EV_CALC_EFFECT {
+      e.vDuration = ApplyDurationMetamagic(RoundsToUnits(1d4+1), e.MM, 0);
+      return NOTHING;
+      };
     Desc: "Causes all humanoid creatures within a 30 foot radius
       globe to dance and caper wildly, inflicing a -6 penalty to 
       Defense Class, -6 to Reflex saves and halving attack speed 
@@ -9260,7 +9279,7 @@ Effect "Dominate Monster" : EA_INFLICT
   { SC_ENC; Base: SP_MEDIUM; Cost: 10; Level: 5; sval: WILL;
     Purpose: EP_CURSE (VS_MENTAL); qval: Q_TAR;
     xval: CHARMED; yval: CH_DOMINATE; 
-    Flags: EF_DLONG, EF_MENTAL, EF_COMPULSION; 
+    Flags: EF_PERSISTANT, EF_MENTAL, EF_COMPULSION; 
     Desc: "Gives you telepathic control over any single
       creature with a mind."; 
 	On Event EV_MAGIC_HIT

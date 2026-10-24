@@ -2756,6 +2756,10 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         ASSERT(REGS(63) >= 1)
         REGS(n) = RestockShopDaily(oCreature(STACK(1)));
         return;
+    case 536:
+        ASSERT(REGS(63) >= 3)
+        REGS(n) = ApplyDurationMetamagic(STACK(1), STACK(2), STACK(3)!=0);
+        return;
       default:
         Error("Illegal member function call!");
       }

@@ -1,6 +1,11 @@
 #!/bin/bash
 # gate: live
 # Do tanglefoot strands catch the MOUNT and leave the rider free? (bd inc-lxvv)
+# fact: character, adjacent western mount and name -- human-paladin-seed4-opt0822 fixture
+# fact: terrain -- wizard Change terrain type lays five strands squares
+# fact: creatures stay put -- wizard Freeze Monsters
+# fact: mount Reflex save fails -- INCURSION_FORCE_SAVE_ROLL=1
+# Frozen because the mount position followed the RNG stream (inc-pot9).
 #
 # THE RULE: a mounted character who rides through tanglefoot strands must not
 # become stuck himself; his mount must. The mount rolls the reflex save, so the
@@ -15,7 +20,7 @@
 # what the original report used. tools/keys/tanglefoot-mount.keys explains the
 # ride, the two scroll depths and why the strands catch a creature LEAVING them
 # rather than one entering.
-#
+
 # PROVED RED on 2026-09-11 (docs/VERIFICATION.md step 2). The mutation is the
 # one declared below -- lib/alchemy.irh's mounted ThrowDmg sent back to
 # EActor,EActor, which is exactly the edit dc6496a made, reversed -- the module
@@ -41,6 +46,8 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
+export INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav
+export INCURSION_FORCE_SAVE_ROLL=1
 
 # Undo exactly what dc6496a did: send the AD_STUK back to the rider while the
 # mount keeps rolling the save. That is the defect this check was written for.

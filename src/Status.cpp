@@ -1538,10 +1538,14 @@ uint8 Field::FieldDC()
 {
     if (!Creator || !eID)
         return 15;
-    /*if (TEFF(eID)->SType & (ARCANE | DIVINE | PRIMAL))
-    return 10 + TEFF(eID)->Level + (TEFF(eID)->SType & ARCANE ?
-    Creator->Mod(A_INT) : Creator->Mod(A_WIS));*/
-    return 10 + TEFF(eID)->Level;
+    /* ponytail: the field does not remember Heighten or arcane trickery from
+       the cast, so the cloud rolls the caster's base DC. The upgrade path is
+       to store the cast's DC on the Field when it is created (that changes the
+       save format, so it is out of scope). */
+    Creature *c = oCreature(Creator);
+    if (c)
+        return (uint8)c->getSpellDC(eID,false,false);
+    return 15;
 }
   
 bool Thing::HasEffField(rID eID)

@@ -753,7 +753,7 @@ Effect "Dominate Reptile" : EA_INFLICT
   { SC_ENC; sval: WILL;
     Purpose: EP_ATTACK (VS_MENTAL); tval: MA_REPTILE; 
     xval: CHARMED; yval: CH_DOMINATE; qval: Q_TAR;
-    Flags: EF_DLONG, EF_MENTAL, EF_LIM_MTYPE, EF_CASTER_IMMUNE, 
+    Flags: EF_DROUND, EF_MENTAL, EF_LIM_MTYPE, EF_CASTER_IMMUNE, 
            EF_SPECABIL; 
     Desc: "Causes a single reptile to serve you and fight in your
       name, if it fails a Will saving throw."; }

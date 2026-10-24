@@ -467,6 +467,56 @@ bool Magic::isTarget(EventInfo &_e, Thing *t) {
     else return false;
   }
 
+  /* Metamagic on a duration in status units (inc-nt3z). EffectDuration and the
+   scripts that set e.vDuration both call it. The sum is 32-bit through every
+   doubling; a result above 32767 does not fit vDuration (int16) and becomes
+   -2, persistent. */
+int16 ApplyDurationMetamagic(int32 d, uint32 MM, bool mystic) {
+    if ((MM & MM_ANCHOR) && d > 1)
+        d *= 2;
+    if (mystic && d > 1)
+        d *= 2;
+    if ((MM & MM_PERSISTANT) && d >= 10)
+        d = -2;
+    else if ((MM & MM_EXTEND) && d >= 1)
+        d *= 2;
+    if (d > 32767)
+        d = -2;
+    return (int16)d;
+}
+
+/* Duration of an effect in status units (inc-nt3z). CalcEffect and
+   DurationProbe both call it, so a check measures the code the game runs. The
+   sum is 32-bit through every doubling; a result above 32767 does not fit
+   vDuration (int16) and becomes -2, persistent. */
+int16 EffectDuration(TEffect *te, int casterLev, uint32 MM, bool mystic) {
+    int32 d;
+    if (te->HasFlag(EF_DSHORT))
+        d = Dice::Roll(1,4)+1;
+    else if (te->HasFlag(EF_D1ROUND))
+        d = 2;
+    else if (te->HasFlag(EF_DLONG))
+        d = 100 + casterLev*10;
+    else if (te->HasFlag(EF_DXLONG))
+        d = 1000 + casterLev*100;
+    else if (te->HasFlag(EF_DROUND))
+        d = max(1, (casterLev+1)/2);
+    else if (te->HasFlag(EF_DMIN))
+        d = 5*casterLev;
+    else if (te->HasFlag(EF_D10MIN))
+        d = 50*casterLev;
+    else if (te->HasFlag(EF_DHOUR))
+        d = 300*casterLev;
+    else if (te->HasFlag(EF_PERSISTANT))
+        d = -2;
+    else if (te->HasFlag(EF_PERMANANT))
+        d = -1;
+    else
+        d = 10 + casterLev*2;
+
+    return ApplyDurationMetamagic(d, MM, mystic);
+}
+
   void Magic::CalcEffect(EventInfo &e) {
       TEffect *te = TEFF(e.eID); 
       int32 sp_flags = 0;
@@ -573,30 +623,9 @@ bool Magic::isTarget(EventInfo &_e, Thing *t) {
          local light port only makes that removal visible as darkness.
          Observed, inc-hzy1, not sent. */
       if (!e.isEnter) {
-          if (te->HasFlag(EF_DSHORT))
-              e.vDuration = Dice::Roll(1,4)+1;
-          else if (te->HasFlag(EF_D1ROUND))
-              e.vDuration = 2;
-          else if (te->HasFlag(EF_DLONG))
-              e.vDuration = 100 + e.vCasterLev*10;
-          else if (te->HasFlag(EF_DXLONG))
-              e.vDuration = 1000 + e.vCasterLev*100;
-          else if (te->HasFlag(EF_PERSISTANT))
-              e.vDuration = -2;
-          else if (te->HasFlag(EF_PERMANANT))
-              e.vDuration = -1;
-          else
-              e.vDuration = 10 + e.vCasterLev*2;
-
-          if ((e.MM & MM_ANCHOR) && e.vDuration > 1)
-              e.vDuration *= 2;
-          if ((te->Purpose & EP_BUFF) && e.vDuration > 1 && 
-              e.EActor->HasFeat(FT_MYSTIC_PREPARATION))
-              e.vDuration *= 2; 
-          if ((e.MM & MM_PERSISTANT) && e.vDuration >= 10)
-              e.vDuration = -2;
-          else if ((e.MM & MM_EXTEND) && e.vDuration >= 1)
-              e.vDuration *= 2;
+          e.vDuration = EffectDuration(te, e.vCasterLev, e.MM,
+              (te->Purpose & EP_BUFF) && e.EActor &&
+              e.EActor->HasFeat(FT_MYSTIC_PREPARATION));
       }
 
       if (e.MM & MM_TRANSMUTE) {
@@ -1129,6 +1158,10 @@ EvReturn Magic::MagicStrike(EventInfo &e) {
     /* Kludge to prevent multiple EV_MAGIC_HIT messages for one target; see Resource::Event. */
     e.MHMessageDone = false;
     e.BlastMessageDone = false;
+
+    // inc-w91w: an empty remote square has no victim, before the common fallback.
+    if (e.remoteTrapID && !e.ETarget)
+        return NOTHING;
 
     /* At this point we need to have one concrete target that we are effecting, even if it's the caster. Thus, ensure that we have a valid EVictim. */
     if (!e.ETarget)
@@ -2095,6 +2128,11 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   bool hitSelf = false;
 
   wasEngulfed = false;
+  // inc-w91w: a remotely sprung ball/burst starts at the trap, without travel.
+  if (e.remoteTrapID && isBall && e.isLoc) {
+      sx=cx=e.remoteTrapX*2; sy=cy=e.remoteTrapY*2;
+      goto DoneProject;
+  }
   if (e.EActor->HasStati(ENGULFED))
     {
       if (isBall)
@@ -3521,17 +3559,16 @@ void BlasphemyProbe(Player *caster) {
         - caster->Mod(A_CHA) - oldCL;
     caster->GainAbility(CA_SPELLCASTING,adjustment,0,SS_PERM);
     /* The globe includes its own centre, so the caster would be one of its own
-       victims. STUNNED costs a further fatigue (src/Status.cpp:624), which
-       would mask the spell's charge. Raise only the caster's CR -- vPower is
-       CasterLev + CHA, which this does not touch -- so he is out of his own
-       spell's reach while the ponies stay in it. */
+       victims. Raise only the caster's CR, which the spell compares with its
+       caster level, so she is out of her own spell's reach while the ponies
+       stay in it. */
     caster->Level[1] = oldLevel1 + 30;
     caster->CalcValues();
     blasphemyProbeID = spell;
     const char *names[] = {"paid", "one-fatigue", "declined"};
     for (int test = 0; test < 3; ++test) {
-        for (int i = 0; i < 2; ++i) targets[i]->RemoveStati(STUNNED);
-        caster->RemoveStati(STUNNED);
+        for (int i = 0; i < 2; ++i) targets[i]->RemoveStati(PARALYSIS,-1,PARA_DAZED);
+        caster->RemoveStati(PARALYSIS,-1,PARA_DAZED);
         caster->cFP = test == 0 ? 20 : test == 1 ? 1 : -caster->Attr[A_FAT]-1;
         const int before = caster->cFP;
         blasphemyHits = blasphemyAnswers = 0;
@@ -3541,7 +3578,7 @@ void BlasphemyProbe(Player *caster) {
         cast.eID = spell; cast.isSpell = true;
         EvReturn result = ReThrow(EV_EFFECT,cast);
         int affected = 0;
-        for (int i = 0; i < 2; ++i) affected += targets[i]->HasStati(STUNNED) ? 1 : 0;
+        for (int i = 0; i < 2; ++i) affected += targets[i]->HasStati(PARALYSIS,PARA_DAZED) ? 1 : 0;
         bool pass = test == 2
             ? result == ABORT && caster->cFP == before && !blasphemyHits
                 && !affected && blasphemyAnswers == 1
@@ -3554,7 +3591,7 @@ void BlasphemyProbe(Player *caster) {
     }
     blasphemyProbeID = 0;
     for (int i = 0; i < 2; ++i) targets[i]->Remove(true);
-    caster->RemoveStati(STUNNED);
+    caster->RemoveStati(PARALYSIS,-1,PARA_DAZED);
     caster->GainAbility(CA_SPELLCASTING,-adjustment,0,SS_PERM);
     caster->SetStatiVal(ALIGNMENT,NULL,oldAlign);
     caster->Options[OPT_NO_FATIGUE] = oldOption;

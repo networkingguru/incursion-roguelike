@@ -1286,7 +1286,7 @@ CastSpell:
                 bool checkReach = false;
                 if (HasStati(TELEKINETIC)) {
                     e.vRange = (int8)HighStatiMag(TELEKINETIC);
-                    if (!MyTerm->EffectPrompt(e, Q_TAR | Q_CRE))
+                    if (!MyTerm->EffectPrompt(e, Q_TAR | (n == A_SWNG ? 0 : Q_CRE)))
                         break;
                     goto FindNonReachVictim;
                 } else {
@@ -1294,10 +1294,10 @@ CastSpell:
                     if (checkReach) {
                         /* ww: if you have a reach weapon, you should be able to great-blow something far away */
                         e.vRange = 2 + FaceRadius[Attr[A_SIZ]];
-                        if (!MyTerm->EffectPrompt(e, Q_TAR | Q_LOC | Q_CRE))
+                        if (!MyTerm->EffectPrompt(e, Q_TAR | Q_LOC | (n == A_SWNG ? 0 : Q_CRE)))
                             break;
                     } else {
-                        if (!MyTerm->EffectPrompt(e, Q_DIR | Q_TAR | Q_LOC | Q_CRE))
+                        if (!MyTerm->EffectPrompt(e, Q_DIR | Q_TAR | Q_LOC | (n == A_SWNG ? 0 : Q_CRE)))
                             break;
                     }
 FindNonReachVictim:
@@ -1331,6 +1331,15 @@ FindNonReachVictim:
 
                 if (!e.ETarget) {
                     IPrint("There's nothing there to use a tactic on!");
+                    break;
+                }
+                if (n == A_SWNG && e.ETarget->isType(T_TRAP)) {
+                    Trap *trap = (Trap*)e.ETarget;
+                    if (!(trap->TrapFlags & TS_FOUND) || !isBeside(trap)) {
+                        IPrint("You must be adjacent to a found trap to attack it.");
+                        break;
+                    }
+                    AttackTrap(e,trap,AttackMode() == S_BRAWL ? NULL : EInSlot(SL_WEAPON));
                     break;
                 }
                 if (!e.EVictim->isCreature())

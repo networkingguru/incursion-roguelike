@@ -325,6 +325,14 @@ void Game::Play() {
     extern void StunDurProbe(Player *pl);
     StunDurProbe(pp);
 
+    /* inc-nt3z: off unless INCURSION_DURATION_PROBE is set. See
+       DurationProbe (src/DurationProbe.cpp) and
+       tools/check_spell_durations.sh. */
+    extern void DurationProbe(Player *pl);
+    DurationProbe(pp);
+    extern void BlasTierProbe(Player *pl);
+    BlasTierProbe(pp);
+
     /* inc-7xcu: off unless INCURSION_BANE_PROBE is set; needs a live map. */
     extern void BaneRadiusProbe(Player *caster);
     BaneRadiusProbe(pp);
@@ -333,6 +341,8 @@ void Game::Play() {
        See AreaRadiusProbe (src/AreaRadiusProbe.cpp). */
     extern void AreaRadiusProbe(Player *pl);
     AreaRadiusProbe(pp);
+    extern void TrapAttackProbe(Player *pl);
+    TrapAttackProbe(pp);
 
     /* inc-tmys: off unless INCURSION_MONINIT_PROBE is set; needs a live map.
        See MonsterInitProbe (src/MonsterInitProbe.cpp) and
