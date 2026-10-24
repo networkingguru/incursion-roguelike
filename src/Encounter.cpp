@@ -2638,7 +2638,12 @@ EvReturn Map::enBuildMon(EventInfo &e)
           mt->GainTempStati(ILLUSION, e.EActor, e.vDuration, SS_ENCH,
             e.saveDC, 0, e.eID, e.vCasterLev);
           GrantIllusionSpotted(mt, e.eID);
-          e.EActor->GainPermStati(DISBELIEVED,mn,SS_MISC);
+          /* The caster holds DISBELIEVED against each illusion it makes, the
+             mount included. Upstream's: hex/master:src/Encounter.cpp:2495
+             carries the same line, a plain wrong-variable typo with no typedef,
+             platform or compiler dependence.
+             upstream: Tier Traced (read, not driven in play); id inc-yam9; Not sent. */
+          e.EActor->GainPermStati(DISBELIEVED,mt,SS_MISC);
           if (true_leader) 
             mt->ts.addCreatureTarget(true_leader,TargetMaster);
           }

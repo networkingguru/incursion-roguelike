@@ -8111,16 +8111,20 @@ IgnoreMorality:;
                                     if (e.effIllusion)
                                         if (e.DType > AD_LAST_PHYSICAL)
                                             return DONE;
-                                    /* When you trade blows with a non-Improved illusion, you
-                                    automatically get a chance to disbelieve it every hit
-                                    that lands, due to the absence of kinetics, smell, etc. */
+                                    /* inc-yam9: every tier of illusion gets a disbelief
+                                    save on every landed hit, due to the absence of
+                                    kinetics, smell, etc. */
                                     { extern void CleaveIllusionProbe(Creature*,Creature*,int,bool); /* inc-k0e1 */
                                       CleaveIllusionProbe(e.EActor,e.EVictim,2,e.vicIllusion); }
                                     { extern void RangedIllusionDamageProbe(Creature*,bool); /* inc-6w5x */
                                       RangedIllusionDamageProbe(e.EVictim,e.vicIllusion); }
                                     if (e.vicIllusion && e.EActor)
-                                        if (!(e.EVictim->getIllusionFlags() & IL_IMPROVED))
-                                            e.EVictim->DisbeliefCheck(e.EActor);
+                                        e.EVictim->DisbeliefCheck(e.EActor);
+
+                                    /* inc-yam9: a low-tier illusion that one viewer
+                                    disbelieved is gone; stop working on the victim. */
+                                    if (e.vicIllusion && !e.EVictim->HasStati(ILLUSION))
+                                        return DONE;
 
                                     e.EVictim->FFCount = 0;
                                     if (e.EVictim->isPlayer())
@@ -9571,19 +9575,18 @@ EvReturn Creature::PDamage(EventInfo &e)
         e.EVictim->GainTempStati(ASLEEP,NULL,Dice::Roll(3,6),SS_MISC,
            SLEEP_PSYCH,0,0,0);
         /* When someone collapses instead of dying, that's a good
-           cause for a disbelief check. Advanced illusions cover
-           this with an illusion of death or mortal wounding, 
-           however. */
+           cause for a disbelief check, at every tier of illusion. */
         /* upstream: same base-code defect as src/Creature.cpp:2278, same
            reasoning, same tier. GetStatiVal(ILLUSION) returns Status::Val,
            which is the save DC; IL_ADVANCED is 4, so this tested bit 2 of the
-           DC. e.actIllusion is only ever set where HasStati(ILLUSION) holds
+           DC. The IL_ADVANCED test here has since been removed (inc-yam9);
+           e.actIllusion is only ever set where HasStati(ILLUSION) holds
            (src/Fight.cpp:528, 801, 1234), so getIllusionFlags cannot fire its
            ASSERT here. Tier: Traced -- the three e.actIllusion assignments and
            the four ILLUSION grant sites were read; this arm was not driven in
            play, unlike the isRealTo site the same fix repairs. Tracked as
            inc-pu6v.43. Not sent. */
-        if (e.actIllusion && !(e.EActor->getIllusionFlags() & IL_ADVANCED))
+        if (e.actIllusion)
           e.EActor->DisbeliefCheck();
       }
     else

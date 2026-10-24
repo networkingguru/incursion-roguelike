@@ -181,9 +181,13 @@ EvReturn Monster::PickUp(EventInfo &e)
         
         /* This warrants a disbelief check! */
         MapIterate(m,t,i)
-          if (t->isCreature() && ((Creature*)t)->Perceives(e.EItem))
+          if (t->isCreature() && ((Creature*)t)->Perceives(e.EItem)) {
             e.EItem->DisbeliefCheck((Creature*)t);
-        e.EItem->Remove(true);
+            if (!e.EItem->HasStati(ILLUSION))  /* inc-yam9: removed by disbelief */
+              break;
+          }
+        if (e.EItem->HasStati(ILLUSION))  /* inc-yam9: already gone */
+          e.EItem->Remove(true);
         if (!HasFeat(FT_FASTER_THAN_THE_EYE)) {
           e.EActor->ProvokeAoO(); // WW: SRD Combat I
           if (e.EActor->isDead()) 
@@ -518,9 +522,13 @@ EvReturn Character::PickUp(EventInfo &e) {
 
         /* This warrants a disbelief check! */
         MapIterate(m,t,i)
-            if (t->isCreature() && ((Creature*)t)->Perceives(e.EItem))
+            if (t->isCreature() && ((Creature*)t)->Perceives(e.EItem)) {
                 e.EItem->DisbeliefCheck((Creature*)t);
-        e.EItem->Remove(true);
+                if (!e.EItem->HasStati(ILLUSION))  /* inc-yam9: removed by disbelief */
+                    break;
+            }
+        if (e.EItem->HasStati(ILLUSION))  /* inc-yam9: already gone */
+            e.EItem->Remove(true);
         if (!HasFeat(FT_FASTER_THAN_THE_EYE)) {
             e.EActor->ProvokeAoO(); // WW: SRD Combat I
             if (e.EActor->isDead()) 

@@ -1,0 +1,40 @@
+# inc-yam9 smoke: a low-tier illusion (Phantasmal Force, no IL_SPECTRAL) is
+# removed when one viewer succeeds on a disbelief save. Reproduces phase A.
+#
+#   INCURSION_DISBELIEF_PROBE=1 INCURSION_RUNTO_SKILL_ROLL=1 \
+#   INCURSION_FORCE_SAVE_ROLL=20 \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/elf-mage-spotted-seed1.sav \
+#       tools/headless.sh tools/keys/yam9-disbelief-removal.keys 1
+#
+# FORCE_SAVE_ROLL=20 forces every disbelief save to pass, so the goblin vizier
+# removes the illusory creature and the screen shows it "winks out of
+# existence". The same body as tools/keys/illusion-spotted-creature.keys; this
+# copy names the inc-yam9 run so the specimen is self-describing. Walking into
+# the illusion reaches Move.cpp:1110 -> Thing::DisbeliefCheck (no watcher).
+
+@include illusion-spotted-setup.keys
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin vizier"
+RIGHT*4 ENTER
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT*4 DOWN*2 ENTER
+@dump:summoned
+
+m
+@choose "Phantasmal Force"
+c
+@expect "Target Illusion"
+LEFT
+ENTER
+@while "more --" SPACE
+@dump:cast
+LEFT
+@while "more --" SPACE
+@dump:after
