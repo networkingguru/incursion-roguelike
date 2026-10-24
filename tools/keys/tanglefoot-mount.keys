@@ -18,21 +18,15 @@
 # script lays a STRIP of strands and rides along it: stepping onto the first
 # square rolls nothing, and each step after that rolls once.
 #
-# THE RIDE, on seed 4 under tools/fixtures/options-2026-08-22.dat:
-#
-#   step 1  cave entrance -> strands 1   no roll (he was not in the strands)
-#   step 2  strands 1 -> strands 2       Keeper's Reflex Save 20+1 = 21, success
-#                                        -> "Keeper seems to be entangled."
-#   step 3  strands 2 -> strands 3       Keeper's Reflex Save 14 vs DC 15,
-#                                        FAILURE -> the mount is stuck, the
-#                                        move is refused, and the pair stay on
-#                                        strands 2
+# THE RIDE starts from human-paladin-seed4-opt0822.sav with Keeper west.
+# The check forces Reflex rolls to 1: entering strands rolls nothing, and
+# attempting to leave them catches the mount. Repeated attempts remain stuck.
 #
 # Five strands squares are laid rather than three so that step 3 is a move
 # from strands INTO strands. A step off the end of the strip would roll too,
 # but it would also put the pair on clear ground, and the interesting state is
 # a stuck mount standing in the hazard.
-#
+
 # THE ORACLE is wizard mode's "Examine Player Data", which prints the rider's
 # whole stati list and then, under a "----MOUNT----" banner, the mount's
 # (src/Debug.cpp:1713-1718). Two screens are dumped out of that one scrolling
@@ -55,7 +49,6 @@
 #
 # Read by tools/check_tanglefoot_mount.sh.
 
-@include chargen-paladin.keys
 @until "Afoot" ESC
 
 w       # wizard mode
@@ -65,14 +58,10 @@ DOWN*10 # Freeze Monsters is the eleventh row; the cursor opens on the first
 SPACE   # Freeze Monsters: NO -> YES
 ESC
 
-# Climb on. The prompt's cursor starts on the player, and an arrow steps round
-# the ring of creatures in reach by bearing (src/Term.cpp, Q_TAR case): RIGHT
-# goes clockwise to the nearest one. The sacred mount spawns beside the '@' and
-# is the nearest creature, so RIGHT picks it wherever it stands. Do not use LEFT
-# here: that worked only while the mount happened to be west of the '@'.
+# Climb on the sacred mount frozen immediately west of the player.
 y
 @choose "Mount"
-RIGHT ENTER
+LEFT ENTER
 @dump:mounted
 SPACE SPACE
 
