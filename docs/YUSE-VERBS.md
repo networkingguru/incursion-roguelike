@@ -59,7 +59,7 @@ carries up to three prompts and a flag word:
 - **The prompts run in table order**, target first, unless the entry carries
   `YU_REVERSE`, which asks for the item first. `src/Player.cpp:1879`.
 - **`Q_INV` reaches inside containers.** The item picker walks
-  `FirstInv`/`NextInv`, which descends into packs (`src/Inv.cpp:844-847`), so
+  `FirstInv`/`NextInv`, which descends into packs (`src/Inv.cpp:852-855`), so
   verbs offer packed items without you unpacking them.
 - **The five most recent verbs float to the top** of the menu
   (`src/Player.cpp:1842`), so the list reorders as you use it. A recent verb
@@ -74,7 +74,7 @@ carries up to three prompts and a flag word:
 
 You cannot pick one from this menu any more, because the menu does not list it.
 The path is still there for an event thrown by any other route: nothing handles
-it, so it falls through to `Creature::HandleVerb` (`src/Player.cpp:2001` via
+it, so it falls through to `Creature::HandleVerb` (`src/Player.cpp:2010` via
 `src/Creature.cpp:1120`), which prints **"That verb can't be used that way."**
 for post-phase events and otherwise returns silently.
 
@@ -149,11 +149,11 @@ far less ground than its name suggests. Verified by reading the script.
   glass vial onto a weapon (`lib/mundane.irh:1016`), the weapon oils
   (`lib/m_items.irh:1488`) and the lantern below.
 - **Dip** has four handlers in the build and they cover two targets: a
-  **fountain** (`lib/dungeon.irh:2388` and `:2535`) and an **alchemical
+  **fountain** (`lib/dungeon.irh:2388` and `:2561`) and an **alchemical
   flask**, where only acid does anything (`lib/alchemy.irh:97` and
   `lib/alchemy.irh:650`). A fifth handler, the Spell Storing ring dipped in a
-  fountain, is written but not compiled: `#if 0` at `lib/m_items.irh:5246`
-  encloses the whole ring through `:5360`, so neither the ring nor its Dip
+  fountain, is written but not compiled: `#if 0` at `lib/m_items.irh:5250`
+  encloses the whole ring through `:5364`, so neither the ring nor its Dip
   handler reaches `lib/program.i`. Dipping into anything else has nothing
   behind it.
 - **Fill / Pour** (`lib/mundane.irh:640`) — the only combination implemented
