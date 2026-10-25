@@ -15,6 +15,7 @@
 
 */
 
+#include <vector>
 #include "Incursion.h"
 
 /*****************************************************************************\
@@ -39,6 +40,17 @@ static const char *SpellSrcColumnName(uint16 kind, uint32 flags) {
         case SP_BARDIC: return "brd";
         default:        return (flags & SP_INNATE) ? "inn" : "";
     }
+}
+
+/* Spell Manager row order: level 9 down to 0, then name A-Z (case-insensitive,
+   the name the row prints), then spell index. */
+static int SpellManagerRowCmp(const void *a, const void *b) {
+    int16 ia = *(const int16*)a, ib = *(const int16*)b;
+    int la = TEFF(theGame->SpellID(ia))->Level, lb = TEFF(theGame->SpellID(ib))->Level;
+    if (la != lb) return lb - la;
+    int c = stricmp(NAME(theGame->SpellID(ia)), NAME(theGame->SpellID(ib)));
+    if (c) return c;
+    return (int)ia - (int)ib;
 }
 
 int16 TextTerm::SpellManager(int16 Purpose) {
@@ -145,9 +157,16 @@ Redraw:
 ProcessSpells:
     Line = 0; ch = 'a';
     e.Clear(); e.EActor = p;
-    for (int desiredLev = 9; desiredLev >= 0; desiredLev--)
-        for (i=0;i!=theGame->LastSpell();i++)
-            if (TEFF(theGame->SpellID(i))->Level == desiredLev)
+    /* upstream: rows within a spell level are alphabetical; the original walked
+       effect-table order, identical on Win32. Observed; inc-o5ga; not sent. */
+    std::vector<int16> rowOrder;
+    for (i=0;i!=theGame->LastSpell();i++)
+        rowOrder.push_back(i);
+    qsort(&rowOrder[0], rowOrder.size(), sizeof(int16), SpellManagerRowCmp);
+    for (size_t rowIx = 0; rowIx != rowOrder.size(); rowIx++)
+        { i = rowOrder[rowIx];
+            if (TEFF(theGame->SpellID(i))->Level < 0 || TEFF(theGame->SpellID(i))->Level > 9)
+                continue;
                 if (1) {
                     /* inc-4999 phase 4a/4b: one menu entry per held version. A
                        spell held from no source gets a single entry with source
@@ -336,6 +355,7 @@ ProcessSpells:
                         ch++;
                     }
                 }
+        }
 
     Line++;
     do {
