@@ -1,0 +1,20 @@
+# inc-o5ga: load orc-mage-seed4-gate via INCURSION_LOAD (the check sets it).
+# Seven rows fit on one page. The check requires every Known Spells entry
+# to appear, so an incomplete capture cannot silently pass after fixture drift.
+# Search supplies the real turn required by headless.sh.
+s
+m
+@dump:spell-manager-order
+ESC
+
+d
+@expect "Gender"
+@dump:sheet
+ESC
+
+# Save the sandbox copy with INCURSION_CHAR_PROBE=1 to capture the FULL sheet,
+# including Known Spells and its level column, in logs/charprobe.txt.
+ESC
+@expect "System Menu"
+b
+@dump:saved
