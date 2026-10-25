@@ -10,7 +10,7 @@ Event stack and `Throw*`: `src/Event.cpp`. `EventInfo` and the `PEVENT`/`DAMAGE`
 boundary: `src/Annot.cpp:1109`. Bytecode VM: `src/VMachine.cpp:413`. Generated script-callable C++ API: `lib/dispatch.h`.
 Preprocessed ruleset: `lib/program.i`. Event numbers and `PRE`/`POST`/`META`/`GODWATCH`/`EVICTIM`: `inc/Defines.h:4578-4584`; 183
 `EV_` numbers exist. `EvReturn` is `int8` (`inc/Defines.h:58`): `ERROR -1`, `NOTHING 0`, `DONE 1`, `ABORT 2`, `NOMSG 3`
-(`inc/Defines.h:141-145`).
+(`inc/Defines.h:140-144`).
 
 ## Raising an event
 14 functions push a frame then call `RealThrow`; each starts `EventSP++; CHECK_OVERFLOW;`. They differ only in the fields they
@@ -53,7 +53,7 @@ in the build.**
 
 ## The event stack
 `EventInfo EventStack[EVENT_STACK_SIZE]`, `EventSP` starting at -1 (`src/Event.cpp:135-136`); the size is 128
-(`inc/Defines.h:80`). The only bound is `CHECK_OVERFLOW` (`src/Event.cpp:133`), which calls `Fatal("Event Stack Overflow!")` and
+(`inc/Defines.h:79`). The only bound is `CHECK_OVERFLOW` (`src/Event.cpp:133`), which calls `Fatal("Event Stack Overflow!")` and
 exits. There is no depth budget, no recursion counter and no cycle detection in `src/Event.cpp`. Unrelated code reads frames
 assuming the enclosing context: `src/Fight.cpp:875-882`, `src/Prayer.cpp:589`, `src/Skills.cpp:1771`, `src/Target.cpp:1771`.
 
@@ -70,9 +70,9 @@ mutex (`src/Vision.cpp:600-601`), and `Creature::Multiply` refuses to breed past
 
 ## The three crashes
 **1. Event Stack Overflow: blast -> Multiply -> place -> blast. Fixed (inc-upw.5).** `Magic::Blast` throws `EV_DAMAGE`
-(`src/Effects.cpp:276`) -> a script handler on `POST(EV_DAMAGE)`/`EVICTIM(EV_DAMAGE)` (brown mold `lib/mon3.irh:2312`
-and `lib/mon3.irh:2320`; id moss `lib/mon3.irh:2274` has one too, but `#if 0` at `:2254` keeps it out of the build)
-or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3356`)
+(`src/Effects.cpp:276`) -> a script handler on `POST(EV_DAMAGE)`/`EVICTIM(EV_DAMAGE)` (brown mold `lib/mon3.irh:2318`
+and `lib/mon3.irh:2326`; id moss `lib/mon3.irh:2280` has one too, but `#if 0` at `:2254` keeps it out of the build)
+or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3362`)
 calls `Multiply` -> `Creature::Multiply` (`src/Creature.cpp:532`) -> `mn->PlaceAt` (`:604`)
 throws `EV_PLACE` (`src/Display.cpp:240`, `:264`) and `EV_FIELDON` (`:330`) -> `Creature::FieldOn` re-throws `EV_EFFECT` for
 `FI_MODIFIER` (`src/Status.cpp:1840`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1499`).
@@ -82,21 +82,21 @@ generation-0 parent every time, and the generation cap at `src/Creature.cpp:556`
 `:599`, before the child is placed at `:604`.
 
 **2. `Player::MoveDepth` re-enters itself. Fixed (inc-upw.15, closed as a duplicate of inc-x9i).** `MoveDepth`
-(`src/Feature.cpp:1308`) calls `PlaceAt` (`:1582`) -> `PlaceAt` throws `EV_PLACE`/`EV_FIELDON` (`src/Display.cpp:240`, `:330`) and
+(`src/Feature.cpp:1372`) calls `PlaceAt` (`:1582`) -> `PlaceAt` throws `EV_PLACE`/`EV_FIELDON` (`src/Display.cpp:240`, `:330`) and
 calls `TerrainEffects` (`:393`) -> a portal or terrain handler calls `MoveDepth` again (`src/Feature.cpp:475`;
 `src/Move.cpp:1585`, inside `Creature::TerrainEffects` at `src/Move.cpp:1446`). The re-entry path is ordinary event dispatch; no
 C++ call from `MoveDepth` to `MoveDepth` exists. *Invariant violated:* a function its caller can re-enter must hold no
-call-lifetime state in `static` storage. The follower array is now local, `Thing *GoWith[64]` (`src/Feature.cpp:1328`), bounded at
+call-lifetime state in `static` storage. The follower array is now local, `Thing *GoWith[64]` (`src/Feature.cpp:1392`), bounded at
 `:1475`; `static Creature* Displace[64]` (`src/Display.cpp:448`) still violates it. *Fix:* the re-entry was not the cause. The
 down path read `RES(0)` whenever `BELOW_DUNGEON` is unset, which is every dungeon in `lib/`; the zero check at
-`src/Feature.cpp:1420` stops it.
+`src/Feature.cpp:1484` stops it.
 
 **3. Wild resource id crashes `Game::Get` inside `Magic::Blast`. Fixed (inc-upw.16).** Handlers get ids from three unvalidated
 places: the `eID` a caller put in the frame (`src/Event.cpp:631`), script assignment `pe->eID = val` (`lib/dispatch.h:3540`), and
 script `ThrowEff` with an arbitrary int32 (`lib/dispatch.h:2648`). *Invariant violated:* `Game::Get` indexed the module table by
 the top byte, `Modules[(xID >> 24)-1]`, `MAX_MODULES` being 126 (`inc/Defines.h:4548`), so an id with a zero top byte indexed
 `Modules[-1]`. The guard was `ASSERT(Modules[(xID >> 24)-1])`, and `ASSERT` only calls `Error` and falls through
-(`inc/Defines.h:101`) — it did not stop the next line's dereference. Hence SIGBUS with no log: if the out-of-range slot held
+(`inc/Defines.h:100`) — it did not stop the next line's dereference. Hence SIGBUS with no log: if the out-of-range slot held
 non-zero garbage, `ASSERT` passed silently and `->GetResource` ran on a garbage `Module*`. *Fix:* `Game::Get` range-checks the
 slot in signed arithmetic and returns NULL with a logged `Error` (`src/Res.cpp:348-353`). The three id sources stay unvalidated.
 

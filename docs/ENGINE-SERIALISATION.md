@@ -48,7 +48,7 @@ I ran; commands at the bottom). Normative spec: `docs/SAVE-SCHEMA-SPEC.md`.
 | `Game::SaveGame` / `LoadGame` | src/Registry.cpp:1120 / :1247 |
 | `Game::SaveModule` / `LoadModules` | src/Registry.cpp:1490 / :1480 |
 | Deferred v1 name resolution call sites | src/Registry.cpp:1430, src/Dump.cpp:376 |
-| `CFile` (v0 compressed payload buffer) | inc/Term.h:879, src/Term.cpp:3623-3769 |
+| `CFile` (v0 compressed payload buffer) | inc/Term.h:879, src/Term.cpp:3633-3779 |
 | ABI gate | src/AbiCheck.cpp |
 | `SaveFormatID()` / `SaveFormatMatches()` (the v0 stamp) | src/AbiCheck.cpp:185 / src/Registry.cpp:61 |
 | `SIGNATURE`, `SIGNATURE_TWO`, `VERSION_STRING` | inc/Defines.h:15, :16, :23 |
@@ -79,7 +79,7 @@ choice is a **caller argument, not a file field** — `SaveGroup`/`LoadGroup`
 take `use_lz`, the main save's own group is loaded with `false`
 (src/Registry.cpp:1373) — the v0 save path that once passed it is gone, since
 `Game::SaveGame` writes v1 now — while modules pass `true` on both save and
-load (:1385, :1467, :1498), and src/Term.cpp:3694-3699 picks
+load (:1385, :1467, :1498), and src/Term.cpp:3704-3709 picks
 the codec from that argument alone. `numDependencies` and `dependHeader`
 (src/Registry.cpp:50) remain unused by everything.
 
@@ -538,14 +538,14 @@ grep -n "virtual" inc/Res.h | head -3                                   # first 
    but `LoadGroup` has no case and 90 is outside the item range, so loading
    one hits `Fatal`. Dead today; annotations live in `Module::Annotations`.
 5. **Fixed.** `CFile::FRead` past the end used to zero-fill and report
-   nothing. It now throws `ECORRUPT` (src/Term.cpp:3656-3657). inc-l0t.
+   nothing. It now throws `ECORRUPT` (src/Term.cpp:3666-3667). inc-l0t.
 6. **Fixed.** `LoadCompressed` now range-checks both sizes
-   (src/Term.cpp:3720-3723), passes the real buffer capacity to the
+   (src/Term.cpp:3730-3733), passes the real buffer capacity to the
    decoder, and compares the produced length with `uncompressed_size`
-   (src/Term.cpp:3764-3765). `LoadGroup` checks the same header fields
+   (src/Term.cpp:3774-3775). `LoadGroup` checks the same header fields
    first (src/Registry.cpp:912-922). inc-l0t.
 7. **Fixed.** `CFile::Seek` now tests `realloc`'s return value and throws
-   `EMEMORY` (src/Term.cpp:3670-3681). It still has no caller in
+   `EMEMORY` (src/Term.cpp:3680-3691). It still has no caller in
    src/Registry.cpp, so it is unreached today.
 8. inc/Res.h:842-844 vs :912-916 — `SaveModule` inverts `QTextSeg` in
    place on the save pass, but the restore pass runs with `saveMode` and
