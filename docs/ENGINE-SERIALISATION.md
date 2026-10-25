@@ -146,7 +146,7 @@ are no-ops there; `FIELD_STR`/`FIELD_BLOB`/`FIELD_OBJ` perform exactly the
 legacy `Serialize`/`Block` calls they replaced), the v1 write, the v1 read,
 and the DEBUG coverage map, from one declaration. Replay order is line
 order, not tag order: load-direction fixups sit below the fields they read
-(e.g. `Thing`'s `m = oMap(hm)`, inc/Map.h:970). Tag numbers are never
+(e.g. `Thing`'s `m = oMap(hm)`, inc/Map.h:971). Tag numbers are never
 reused and never change; a new field takes the next unused number in its
 class's range (inc/Base.h:769-778).
 
@@ -416,8 +416,8 @@ Repaired on load, and nothing else is:
 |---|---|
 | vptr | placement new, src/Registry.cpp:950-992 |
 | pointer to an owned heap block | src/Registry.cpp:376, via the 7 direct `r.Block` sites plus every `FIELD_BLOB`/`FIELD_OBJ` line's v0 branch (inc/Base.h:794-799) |
-| `Thing::m` from `Thing::hm` | inc/Map.h:970 |
-| `Player::MyTerm = T1` | inc/Creature.h:1572 |
+| `Thing::m` from `Thing::hm` | inc/Map.h:971 |
+| `Player::MyTerm = T1` | inc/Creature.h:1575 |
 | `Module` resource caches zeroed | inc/Res.h:840-841, in `Module::Serialize`, which runs on load as well as save. A load builds the object with the empty `ARCHIVE_CLASS` constructor (inc/Base.h:806), so the zeroing in `Module()` (inc/Res.h:923-924) runs only for the module the resource compiler creates (src/RComp.cpp:141) |
 | module text segment un-inverted | inc/Res.h:912-916 |
 | garbage payload in a loaded `Target` | src/Registry.cpp:1017-1018, src/Target.cpp:1583 |
@@ -426,7 +426,7 @@ NOT repaired on the v0 path, whose only validation is the group-header
 range check at src/Registry.cpp:912-922:
 
 - **Every `hObj` and `rID` field.** `Thing::Next`, `Thing::hm`
-  (inc/Map.h:974), `Item::Parent` (inc/Item.h:44), `Container::Contents`
+  (inc/Map.h:975), `Item::Parent` (inc/Item.h:44), `Container::Contents`
   (inc/Item.h:359), `Game::m[]`, `Game::p[]` (inc/Res.h:1308),
   `TargetSystem`'s per-target `data` (inc/Target.h:169-187). These are
   plain numbers and the v0 loader reproduces them byte for byte. **A handle
