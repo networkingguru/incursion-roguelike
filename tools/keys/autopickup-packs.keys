@@ -1,0 +1,4 @@
+# Close scene-description or unexpected inventory prompts; probe runs on load.
+SPACE
+ESC*10
+@quit

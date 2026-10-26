@@ -506,6 +506,10 @@ void Game::Play() {
     extern void AutoLootPacksProbe(Player *pl);
     AutoLootPacksProbe(pp);
 
+    /* inc-4reo: opt-in AutoPickupFloor multi-pack reproduction. */
+    extern void AutoPickupPacksProbe(Player *pl);
+    AutoPickupPacksProbe(pp);
+
     /* inc-u3dp phase 5: searching finds hidden creatures. Off unless
        INCURSION_HIDE_SEARCH_PROBE is set. See HideSearchProbe
        (src/HideSearchProbe.cpp) and tools/check_hide_search.sh. */
