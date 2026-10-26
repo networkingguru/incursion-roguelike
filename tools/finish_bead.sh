@@ -119,7 +119,8 @@ scratch_dir() {
 # checkout's master worktree needs its own throwaway repo: a real merge, a
 # real "master already checked out elsewhere" worktree, and a copy of THIS
 # script (so its ROOT/SHARED resolve inside the throwaway repo, not the real
-# one). Prints "<script-copy> <master-checkout>" on success.
+# one). Prints "<tmp> <script-copy> <master-checkout> <fake-bd-dir>" on success.
+# The fake bd (inc-v4xe) answers `show <id> --json` from $tmp/beads/<id>.json.
 selftest_merge_repo() {
     local tmp bead="inc-slftst"
 
@@ -153,8 +154,27 @@ selftest_merge_repo() {
     cp "$ROOT/tools/docs_only_change.sh" \
         "$tmp/work/Incursion/tools/docs_only_change.sh" || return 1
 
-    printf '%s %s %s\n' "$tmp" "$tmp/work/Incursion/tools/finish_bead.sh" \
-        "$tmp/work/master-checkout"
+    cp "$ROOT/tools/check_bead_evidence.py" \
+        "$tmp/work/Incursion/tools/check_bead_evidence.py" || return 1
+    mkdir -p "$tmp/bin" "$tmp/beads" || return 1
+    cat >"$tmp/bin/bd" <<FAKE || return 1
+#!/bin/sh
+[ "\$1" = show ] && [ "\$3" = --json ] && [ -f "$tmp/beads/\$2.json" ] && exec cat "$tmp/beads/\$2.json"
+echo "unknown bead" >&2
+exit 1
+FAKE
+    chmod +x "$tmp/bin/bd" || return 1
+    printf '[{"id":"%s","status":"open","description":"","notes":""}]\n' "$bead" \
+        >"$tmp/beads/$bead.json" || return 1
+
+    printf '%s %s %s %s\n' "$tmp" "$tmp/work/Incursion/tools/finish_bead.sh" \
+        "$tmp/work/master-checkout" "$tmp/bin"
+}
+
+# Give the throwaway repo's bead two acceptance criteria (inc-v4xe).
+selftest_two_ac() {
+    printf '[{"id":"inc-slftst","status":"open","description":"## Acceptance Criteria\\n- alpha works\\n- beta works\\n","notes":""}]\n' \
+        >"$1/beads/inc-slftst.json"
 }
 
 selftest() {
@@ -184,12 +204,12 @@ selftest() {
     # STEP 5's dirty check on the shared checkout's master worktree, all three
     # verdicts. Each case gets its own throwaway repo, since a landing that
     # succeeds destroys the bead branch and worktree it used.
-    local tmp copy masterco line
+    local tmp copy masterco bindir line
 
     line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the merge-dirty repo (untracked case)"; return 1; }
-    read -r tmp copy masterco <<<"$line"
+    read -r tmp copy masterco bindir <<<"$line"
     echo stray >"$masterco/unrelated-untracked.txt"
-    out="$(INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    out="$(PATH="$bindir:$PATH" INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
     rm -rf "$tmp"
     [ "$status" -eq 0 ] || { echo "SELFTEST FAIL: an untracked file in master's worktree refused the merge: $out"; return 1; }
     case "$out" in *"Landed."*) ;; *) echo "SELFTEST FAIL: untracked-file case did not land: $out"; return 1;; esac
@@ -198,17 +218,17 @@ selftest() {
     # from inc-oe6h's split: a dirty tracked path that is not documentation
     # refuses exactly as before, whether or not the bead touches it.
     line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the merge-dirty repo (tracked case)"; return 1; }
-    read -r tmp copy masterco <<<"$line"
+    read -r tmp copy masterco bindir <<<"$line"
     echo changed >"$masterco/base.txt"
-    out="$(INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    out="$(PATH="$bindir:$PATH" INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
     rm -rf "$tmp"
     [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: a modified TRACKED file in master's worktree did not refuse, status $status: $out"; return 1; }
     case "$out" in *"REFUSED"*"is checked out at"*"uncommitted"*"tracked"*) ;; *) echo "SELFTEST FAIL: tracked-file case said: $out"; return 1;; esac
 
     line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the merge-dirty repo (collision case)"; return 1; }
-    read -r tmp copy masterco <<<"$line"
+    read -r tmp copy masterco bindir <<<"$line"
     echo collide >"$masterco/bead-work.txt"
-    out="$(INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    out="$(PATH="$bindir:$PATH" INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
     rm -rf "$tmp"
     [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: an untracked file colliding with the merge did not stop the run, status $status: $out"; return 1; }
     case "$out" in *"does not merge cleanly"*) ;; *) echo "SELFTEST FAIL: collision case said: $out"; return 1;; esac
@@ -217,10 +237,10 @@ selftest() {
     # NOT touch is allowed through -- it must land, and the edit must still be
     # there afterwards, uncommitted and byte-identical.
     line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the merge-dirty repo (doc-allowed case)"; return 1; }
-    read -r tmp copy masterco <<<"$line"
+    read -r tmp copy masterco bindir <<<"$line"
     echo "local docs edit" >>"$masterco/DOCS.md"
     want_sum="$(shasum -a 256 "$masterco/DOCS.md" | awk '{print $1}')"
-    out="$(INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    out="$(PATH="$bindir:$PATH" INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
     if [ "$status" -ne 0 ]; then
         echo "SELFTEST FAIL: an uncommitted .md edit the bead does not touch refused the merge, status $status: $out"
         rm -rf "$tmp"; return 1
@@ -236,14 +256,14 @@ selftest() {
     # touches is refused BEFORE the merge, names the path, and leaves master
     # exactly where it was.
     line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the merge-dirty repo (doc-conflict case)"; return 1; }
-    read -r tmp copy masterco <<<"$line"
+    read -r tmp copy masterco bindir <<<"$line"
     bead_wt="$tmp/work/Incursion-inc-slftst"
     echo "bead also edits docs" >>"$bead_wt/DOCS.md"
     git -C "$bead_wt" commit -q -am "bead touches DOCS.md" \
         || { echo "SELFTEST FAIL: could not extend the bead branch (doc-conflict case)"; rm -rf "$tmp"; return 1; }
     echo "local docs edit" >>"$masterco/DOCS.md"
     before_head="$(git -C "$masterco" rev-parse HEAD)"
-    out="$(INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    out="$(PATH="$bindir:$PATH" INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
     after_head="$(git -C "$masterco" rev-parse HEAD)"
     rm -rf "$tmp"
     [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: an uncommitted .md edit the bead ALSO touches did not refuse, status $status: $out"; return 1; }
@@ -255,16 +275,49 @@ selftest() {
     # the ORIGINAL message. Only checking the new name would let a code
     # file's removal ride through as "a doc edit".
     line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the merge-dirty repo (rename case)"; return 1; }
-    read -r tmp copy masterco <<<"$line"
+    read -r tmp copy masterco bindir <<<"$line"
     git -C "$masterco" mv src/Foo.cpp notes.md \
         || { echo "SELFTEST FAIL: could not stage the rename (rename case)"; rm -rf "$tmp"; return 1; }
     before_head="$(git -C "$masterco" rev-parse HEAD)"
-    out="$(INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    out="$(PATH="$bindir:$PATH" INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
     after_head="$(git -C "$masterco" rev-parse HEAD)"
     rm -rf "$tmp"
     [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: a rename hiding a non-.md ORIG_PATH did not refuse, status $status: $out"; return 1; }
     case "$out" in *"REFUSED"*"uncommitted tracked changes"*"Foo.cpp"*) ;; *) echo "SELFTEST FAIL: rename case said: $out"; return 1;; esac
     [ "$before_head" = "$after_head" ] || { echo "SELFTEST FAIL: rename case moved master despite refusing"; return 1; }
+
+    # inc-v4xe STEP 2b: a bead with two criteria needs AC1 and AC2 lines.
+    line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the repo (ac-missing case)"; return 1; }
+    read -r tmp copy masterco bindir <<<"$line"
+    selftest_two_ac "$tmp"
+    before_head="$(git -C "$masterco" rev-parse HEAD)"
+    out="$(PATH="$bindir:$PATH" INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    after_head="$(git -C "$masterco" rev-parse HEAD)"
+    rm -rf "$tmp"
+    [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: missing AC lines did not refuse, status $status: $out"; return 1; }
+    case "$out" in *AC1*AC2*) ;; *) echo "SELFTEST FAIL: ac-missing case said: $out"; return 1;; esac
+    [ "$before_head" = "$after_head" ] || { echo "SELFTEST FAIL: ac-missing case moved master despite refusing"; return 1; }
+
+    line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the repo (ac-present case)"; return 1; }
+    read -r tmp copy masterco bindir <<<"$line"
+    selftest_two_ac "$tmp"
+    git -C "$tmp/work/Incursion-inc-slftst" commit -q --allow-empty \
+        -m "evidence" -m "AC1: observed alpha in a seeded run" -m "AC2: observed beta in a seeded run" \
+        || { echo "SELFTEST FAIL: could not extend the bead branch (ac-present case)"; rm -rf "$tmp"; return 1; }
+    out="$(PATH="$bindir:$PATH" INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    rm -rf "$tmp"
+    [ "$status" -eq 0 ] || { echo "SELFTEST FAIL: AC lines present did not land, status $status: $out"; return 1; }
+    case "$out" in *"Landed."*) ;; *) echo "SELFTEST FAIL: ac-present case did not land: $out"; return 1;; esac
+
+    line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the repo (bd-fails case)"; return 1; }
+    read -r tmp copy masterco bindir <<<"$line"
+    rm -f "$tmp/beads/inc-slftst.json"
+    before_head="$(git -C "$masterco" rev-parse HEAD)"
+    out="$(PATH="$bindir:$PATH" INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    after_head="$(git -C "$masterco" rev-parse HEAD)"
+    rm -rf "$tmp"
+    [ "$status" -eq 2 ] || { echo "SELFTEST FAIL: a failing bd did not give exit 2, status $status: $out"; return 1; }
+    [ "$before_head" = "$after_head" ] || { echo "SELFTEST FAIL: bd-fails case moved master"; return 1; }
 
     echo "SELFTEST PASS"
     return 0
@@ -458,6 +511,18 @@ AHEAD="$(git -C "$SHARED" rev-list --count "$BASE_BRANCH..$BEAD" 2>/dev/null)"
 [ -n "$AHEAD" ] || cannot "could not count commits between $BASE_BRANCH and $BEAD"
 [ "$AHEAD" -gt 0 ] || die "REFUSED: $BEAD has no commits that $BASE_BRANCH lacks.
 Either the work is not committed, or it already landed. Nothing to do."
+
+# STEP 2b (inc-v4xe). Every acceptance criterion needs an AC<n>: line. Runs
+# with or without --no-gate; there is no bypass.
+"$ROOT/tools/check_bead_evidence.py" "$BEAD" "$BASE_BRANCH" --repo "$SHARED"
+_inc_evidence=$?
+if [ "$_inc_evidence" -eq 1 ]; then
+    die "REFUSED: $BEAD lacks evidence for its acceptance criteria (see above).
+Nothing reached $BASE_BRANCH. Put each 'AC<n>: <evidence>' line in a commit
+message on $BEAD (git commit --amend, or a new commit), then run this again."
+elif [ "$_inc_evidence" -ne 0 ]; then
+    cannot "tools/check_bead_evidence.py could not measure $BEAD (exit $_inc_evidence)"
+fi
 
 # STEP 3. Bring master in FIRST, so the gate measures what master will actually
 # have. A conflict stops here, with the branch and the worktree untouched apart
