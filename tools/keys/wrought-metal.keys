@@ -1,0 +1,4 @@
+# Probe measures all setups immediately after fixture load, without turns.
+SPACE
+ESC*10
+@quit

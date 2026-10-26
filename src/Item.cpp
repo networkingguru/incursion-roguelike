@@ -1399,7 +1399,8 @@ int16 Item::Hardness(int8 DType)
 
 bool MaterialIsMetallic(int8 mat)
 {
-    return (mat == MAT_IRON || mat == MAT_COPPER || mat == MAT_GOLD ||
+    // upstream: MAT_WROUGHT (wrought and orcish iron) is metal; same on Win32, not a port artefact. Observed, inc-8fl6, not sent.
+    return (mat == MAT_IRON || mat == MAT_WROUGHT || mat == MAT_COPPER || mat == MAT_GOLD ||
             mat == MAT_SILVER || mat == MAT_METAL || mat == MAT_MITHRIL ||
             mat == MAT_ADAMANT || mat == MAT_PLATINUM); 
 }
