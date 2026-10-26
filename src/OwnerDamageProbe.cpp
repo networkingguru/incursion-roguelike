@@ -42,6 +42,7 @@ static int OwnerDmgRun(Player *pl, const OwnerDmgCase &c, int dmg, bool wantImmu
 }
 
 void OwnerDamageProbe(Player *pl) {
+    /* inc-nm59: off unless INCURSION_OWNER_DAMAGE_PROBE is set. */
     if (!getenv("INCURSION_OWNER_DAMAGE_PROBE"))
         return;
     if (!pl || !pl->m) {
