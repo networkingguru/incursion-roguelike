@@ -4789,7 +4789,7 @@ SkillInfoStruct SkillInfo[] = {
     "environment. If you fail, you can't try to spot that hidden feature until you rest.", 
      A_INT, A_INT, true, 0}, 
 
-  { SK_SENESCHAL, "Seneschal", false, false, 
+  { SK_SENESCHAL, "Seneschal", true, false, 
     "__This skill lets the intelligent creatures who follow you grow in skill "
     "through their own fighting. Each follower keeps track of the foes it "
     "kills itself, and when it has fought enough, it advances one rank: "
