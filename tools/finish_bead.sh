@@ -302,7 +302,7 @@ selftest() {
     read -r tmp copy masterco bindir <<<"$line"
     selftest_two_ac "$tmp"
     git -C "$tmp/work/Incursion-inc-slftst" commit -q --allow-empty \
-        -m "evidence" -m "AC1: observed alpha in a seeded run" -m "AC2: observed beta in a seeded run" \
+        -m "evidence (inc-slftst)" -m "AC1: observed alpha in a seeded run" -m "AC2: observed beta in a seeded run" \
         || { echo "SELFTEST FAIL: could not extend the bead branch (ac-present case)"; rm -rf "$tmp"; return 1; }
     out="$(PATH="$bindir:$PATH" INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
     rm -rf "$tmp"
