@@ -1,5 +1,5 @@
 /* inc-icp3: opt-in reproduction of Roark's necessities stock
-   (INCURSION_ROARK_STOCK_PROBE=count|price|refill). Caller: Game::Play
+   (INCURSION_ROARK_STOCK_PROBE=count|price|refill|craft|cost). Caller: Game::Play
    (src/Main.cpp). Reader: tools/check_roark_stock.sh.
    The table below is the ruled list, kept here on purpose and NOT read from
    Roark's resource: the probe must stay an independent oracle for it.
@@ -42,6 +42,12 @@ static const Need NEEDS[] = {
     { "torch",              "torch",          NULL, 12 },
     { "true blows",         "potion", "true blows", 12 },
     { "hemp rope",          "hemp rope",      NULL, 20 },
+    { "sheaf arrow",        "sheaf arrow",    NULL, 50 },
+    { "flight arrow",       "flight arrow",   NULL, 50 },
+    { "crossbow bolt",      "crossbow bolt",  NULL, 50 },
+    { "hand crossbow dart", "hand crossbow dart", NULL, 50 },
+    { "dart",               "dart",           NULL, 50 },
+    { "sling stone",        "sling stone",    NULL, 50 },
 };
 static const int NN = sizeof(NEEDS) / sizeof(NEEDS[0]);
 
@@ -77,6 +83,18 @@ static void CountMode(Player *p) {
             else if (have > NEEDS[i].tier) over++;
             Error("ROARK_STOCK count seed=%d item=%s have=%d need=%d",
                 seed, NEEDS[i].label, have, NEEDS[i].tier);
+        }
+        /* mundane: every stack of a no-effect row has no effect and plus 0 */
+        for (int i = 0; i < NN; i++) {
+            if (NEEDS[i].eff) continue;
+            rID iID = FIND(NEEDS[i].item);
+            int plus = 0, eff = 0;
+            for (Item *it = shop->FirstInv(); it; it = shop->NextInv()) {
+                if (it->iID != iID) continue;
+                if (it->eID) eff++;
+                if (it->GetInherentPlus() > plus) plus = it->GetInherentPlus();
+            }
+            Error("ROARK_STOCK mundane seed=%d item=%s plus=%d eff=%d", seed, NEEDS[i].label, plus, eff);
         }
         Error("ROARK_STOCK seed=%d short=%d over=%d total=%d", seed, short_, over, NN);
         shop->Remove(true);
@@ -200,6 +218,8 @@ static void RefillMode(Player *p) {
     SetHave(shop, "restore strength", 2);
     SetHave(shop, "stone to flesh", 1);
     SetHave(shop, "antitoxin", 9);                /* above the tier size of 6 */
+    SetHave(shop, "sheaf arrow", 20);             /* ammunition: partly spent */
+    SetHave(shop, "sling stone", 0);              /* ammunition: all spent */
     Report(shop, "spent", -1);
     theGame->Turn = 5 * DAY + DAY - 1;            /* last tick of day 5 */
     Report(shop, "sameday", RestockShopDaily(shop) ? 1 : 0);
@@ -243,6 +263,19 @@ static void CraftMode(Player *p) {
     Error("ROARK_STOCK done");
 }
 
+/* List cost: the base Cost field every shop price derives from
+   (Item::getShopCost starts from TITEM(iID)->Cost), in hundredths of a gp. */
+static void CostMode(Player *p) {
+    static const char *NAMES[] = { "dart", "sling stone", "sheaf arrow", "crossbow bolt" };
+    (void)p;
+    for (size_t k = 0; k < sizeof(NAMES) / sizeof(NAMES[0]); k++) {
+        rID iID = FIND(NAMES[k]);
+        if (!iID) { Error("ROARK_STOCK INCONCLUSIVE cost cannot resolve %s", NAMES[k]); return; }
+        Error("ROARK_STOCK cost item=%s list=%d", NAMES[k], (int)TITEM(iID)->Cost);
+    }
+    Error("ROARK_STOCK done");
+}
+
 /* inc-icp3: the hook below serves the Roark stock check, tools/check_roark_stock.sh. */
 void RoarkStockProbe(Player *p) {
     const char *s = getenv("INCURSION_ROARK_STOCK_PROBE");
@@ -255,5 +288,6 @@ void RoarkStockProbe(Player *p) {
     else if (!strcmp(s, "price")) PriceMode(p);
     else if (!strcmp(s, "refill")) RefillMode(p);
     else if (!strcmp(s, "craft")) CraftMode(p);
+    else if (!strcmp(s, "cost")) CostMode(p);
     else Error("ROARK_STOCK INCONCLUSIVE unknown mode %s", s);
 }
