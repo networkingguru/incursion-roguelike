@@ -4578,20 +4578,15 @@ EvReturn Creature::Mount(EventInfo &e) {
 			IPrint("You fear that creature is too mighty to be handled well with your current degree of riding skill.");
 			return ABORT;
 		}
-		else if (e.EVictim->GetAttr(A_SIZ) <= e.EActor->GetAttr(A_SIZ) &&
-			(e.EVictim->GetAttr(A_SIZ) != SZ_SMALL || e.EActor->GetAttr(A_SIZ) != SZ_SMALL) &&
-			!(e.EVictim->GetAttr(A_SIZ) == SZ_MEDIUM && e.EActor->isMType(MA_DWARF))) {
+		/* upstream: mount and recalculation size tests disagreed (Small-on-Small,
+		 * dwarf-on-Medium, quadruped-only upper limit; a typo compared the mount's
+		 * size with itself). Rule: a mount must be larger than its rider, no upper
+		 * limit. Plain type checks, same on Win32. Observed; inc-2mea; not sent. */
+		else if (e.EVictim->GetAttr(A_SIZ) <= e.EActor->GetAttr(A_SIZ)) {
 			IPrint(Format("That %s %s is not large enough to support your (%s) weight.",
 				Lookup(SizeNames, e.EVictim->GetAttr(A_SIZ)),
 				(const char*)e.EVictim->Name(0),
 				Lookup(SizeNames, e.EActor->GetAttr(A_SIZ))));
-			return ABORT;
-		}
-		else if (e.EVictim->GetAttr(A_SIZ) > e.EActor->GetAttr(A_SIZ) + 1 && e.EVictim->isMType(MA_ANIMAL) && e.EVictim->isMType(MA_QUADRUPED)) {
-			/* Anyone can ride dragons, gryphons, et al., but halflings and kobolds
-			 * must use warponies or war dogs instead of warhorses. Maybe this should
-			 * just be a penalty of some kind? */
-			IPrint("That kind of animal is too large for you to ride effectively.");
 			return ABORT;
 		}
 		else if (TREG(e.EActor->m->RegionAt(e.EActor->x, e.EActor->y))->Size <= e.EActor->GetAttr(A_SIZ)) {
