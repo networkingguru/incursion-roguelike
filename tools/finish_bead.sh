@@ -518,8 +518,9 @@ Either the work is not committed, or it already landed. Nothing to do."
 _inc_evidence=$?
 if [ "$_inc_evidence" -eq 1 ]; then
     die "REFUSED: $BEAD lacks evidence for its acceptance criteria (see above).
-Nothing reached $BASE_BRANCH. Put each 'AC<n>: <evidence>' line in a commit
-message on $BEAD (git commit --amend, or a new commit), then run this again."
+Nothing reached $BASE_BRANCH. Put each 'AC<n>: <evidence>' line in the message
+of a commit on the branch whose subject names $BEAD (git commit --amend, or a
+new commit), then run this again."
 elif [ "$_inc_evidence" -ne 0 ]; then
     cannot "tools/check_bead_evidence.py could not measure $BEAD (exit $_inc_evidence)"
 fi
