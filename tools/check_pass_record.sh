@@ -59,7 +59,22 @@ TOUCH_LIVE="$TMP/touch-live" # while this exists, the live check edits a tracked
 
 mkdir -p "$REPO/tools" "$REPO/src"
 cp "$ROOT/tools/nightly_verify.sh" "$ROOT/tools/finish_bead.sh" \
-   "$ROOT/tools/docs_only_change.sh" "$REPO/tools/" || exit 2
+   "$ROOT/tools/docs_only_change.sh" "$ROOT/tools/check_bead_evidence.py" \
+   "$REPO/tools/" || exit 2
+# STEP 2b of finish_bead.sh runs bd show; this fake gives every bead no
+# acceptance criteria and never reaches the real bead database (inc-v4xe).
+mkdir -p "$TMP/bin"
+cat > "$TMP/bin/bd" <<'FAKE'
+#!/bin/sh
+if [ "$1" = show ] && [ "$3" = --json ]; then
+    printf '[{"id":"%s","status":"open","description":"","notes":""}]\n' "$2"
+    exit 0
+fi
+echo "unknown bead" >&2
+exit 1
+FAKE
+chmod +x "$TMP/bin/bd"
+export PATH="$TMP/bin:$PATH"
 printf '#!/bin/sh\necho build >> "%s"\n' "$LOG" > "$REPO/build_macos.sh"
 # The three steps that run beside the builds. No gate marker, so not checks.
 for step in check_linux_build.sh check_layout_sweep.sh gate_compare.sh; do

@@ -277,6 +277,22 @@ finish_repo() { # prints "<tmp> <script-copy> "
 
     cp "$ROOT/tools/finish_bead.sh" "$tmp/work/Incursion/tools/finish_bead.sh" || return 1
     cp "$ROOT/tools/docs_only_change.sh" "$tmp/work/Incursion/tools/docs_only_change.sh" || return 1
+    # STEP 2b runs check_bead_evidence.py, which runs bd show. The fake bd
+    # gives every bead no acceptance criteria and never reaches the real
+    # bead database (inc-v4xe).
+    cp "$ROOT/tools/check_bead_evidence.py" \
+        "$tmp/work/Incursion/tools/check_bead_evidence.py" || return 1
+    mkdir -p "$tmp/bin" || return 1
+    cat >"$tmp/bin/bd" <<'FAKE' || return 1
+#!/bin/sh
+if [ "$1" = show ] && [ "$3" = --json ]; then
+    printf '[{"id":"%s","status":"open","description":"","notes":""}]\n' "$2"
+    exit 0
+fi
+echo "unknown bead" >&2
+exit 1
+FAKE
+    chmod +x "$tmp/bin/bd" || return 1
 
     printf '%s %s\n' "$tmp" "$tmp/work/Incursion/tools/finish_bead.sh"
 }
@@ -308,7 +324,7 @@ run_finish() { # run_finish <line> <engine-rc|absent>
     else
         finish_stub_engine "$shared" "$rc"
     fi
-    INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1
+    PATH="$tmp/bin:$PATH" INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1
     local out=$?
     rm -rf "$tmp"
     return $out

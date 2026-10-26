@@ -69,6 +69,22 @@ build_repo() { # build_repo <bead>... ; prints the scratch root
 
     cp "$SCRIPT" "$tmp/work/Incursion/tools/finish_bead.sh" || return 1
     cp "$DOCS_ONLY" "$tmp/work/Incursion/tools/docs_only_change.sh" || return 1
+    # STEP 2b runs check_bead_evidence.py, which runs bd show. The fake bd
+    # gives every bead no acceptance criteria and never reaches the real
+    # bead database (inc-v4xe).
+    cp "$ROOT/tools/check_bead_evidence.py" \
+        "$tmp/work/Incursion/tools/check_bead_evidence.py" || return 1
+    mkdir -p "$tmp/bin" || return 1
+    cat >"$tmp/bin/bd" <<'FAKE' || return 1
+#!/bin/sh
+if [ "$1" = show ] && [ "$3" = --json ]; then
+    printf '[{"id":"%s","status":"open","description":"","notes":""}]\n' "$2"
+    exit 0
+fi
+echo "unknown bead" >&2
+exit 1
+FAKE
+    chmod +x "$tmp/bin/bd" || return 1
 
     for bead in "$@"; do
         git -C "$tmp/work/Incursion" worktree add -q -b "$bead" \
@@ -133,7 +149,7 @@ case_serialisation() {
     sha_a="$(bead_sha "$tmp" inc-lcka)" || { bad "case 1: no inc-lcka commit"; rm -rf "$tmp"; return 2; }
     sha_b="$(bead_sha "$tmp" inc-lckb)" || { bad "case 1: no inc-lckb commit"; rm -rf "$tmp"; return 2; }
 
-    INCURSION_FINISH_GATE="sleep 6" INCURSION_FINISH_LOCK_POLL=1 \
+    PATH="$tmp/bin:$PATH" INCURSION_FINISH_GATE="sleep 6" INCURSION_FINISH_LOCK_POLL=1 \
         "$copy" inc-lcka >"$tmp/a.out" 2>&1 &
     pida=$!
     CHILD_PIDS+=("$pida")
@@ -142,7 +158,7 @@ case_serialisation() {
         bad "case 1: inc-lcka never took the lock (could not measure)"; rm -rf "$tmp"; return 2
     fi
 
-    INCURSION_FINISH_GATE="true" INCURSION_FINISH_LOCK_POLL=1 \
+    PATH="$tmp/bin:$PATH" INCURSION_FINISH_GATE="true" INCURSION_FINISH_LOCK_POLL=1 \
         "$copy" inc-lckb >"$tmp/b.out" 2>&1 &
     pidb=$!
     CHILD_PIDS+=("$pidb")
@@ -204,7 +220,7 @@ case_stale() {
     printf '%s\n' "inc-dead" >"$lock/bead"
     printf '%s\n' "stale" >"$lock/started"
 
-    INCURSION_FINISH_GATE="true" INCURSION_FINISH_LOCK_POLL=1 \
+    PATH="$tmp/bin:$PATH" INCURSION_FINISH_GATE="true" INCURSION_FINISH_LOCK_POLL=1 \
         "$copy" inc-lckc >"$tmp/c.out" 2>&1 &
     local pid=$!
     CHILD_PIDS+=("$pid")
@@ -245,7 +261,7 @@ case_per_branch() {
     printf '%s\n' "check_finish_bead_lock" >"$other/bead"
     ps -o lstart= -p "$$" >"$other/started" 2>/dev/null || printf 'live\n' >"$other/started"
 
-    INCURSION_FINISH_GATE="true" INCURSION_FINISH_LOCK_POLL=1 \
+    PATH="$tmp/bin:$PATH" INCURSION_FINISH_GATE="true" INCURSION_FINISH_LOCK_POLL=1 \
         "$copy" inc-lckd >"$tmp/d.out" 2>&1 &
     local pid=$!
     CHILD_PIDS+=("$pid")
@@ -281,7 +297,7 @@ case_interrupt() {
     local copy="$tmp/work/Incursion/tools/finish_bead.sh"
     sha="$(bead_sha "$tmp" inc-lcke)" || { bad "case 4: no inc-lcke commit"; rm -rf "$tmp"; return 2; }
 
-    INCURSION_FINISH_GATE="sleep 3" INCURSION_FINISH_LOCK_POLL=1 \
+    PATH="$tmp/bin:$PATH" INCURSION_FINISH_GATE="sleep 3" INCURSION_FINISH_LOCK_POLL=1 \
         "$copy" inc-lcke >"$tmp/e.out" 2>&1 &
     pid=$!
     CHILD_PIDS+=("$pid")
@@ -332,7 +348,7 @@ case_live_no_started() {
     printf '%s\n' "$$" >"$lock/pid"
     printf '%s\n' "inc-midwrite" >"$lock/bead"
 
-    INCURSION_FINISH_GATE="true" INCURSION_FINISH_LOCK_POLL=1 \
+    PATH="$tmp/bin:$PATH" INCURSION_FINISH_GATE="true" INCURSION_FINISH_LOCK_POLL=1 \
         "$copy" inc-lckf >"$tmp/f.out" 2>&1 &
     pid=$!
     CHILD_PIDS+=("$pid")
