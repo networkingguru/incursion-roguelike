@@ -18,10 +18,12 @@ number AC1, AC2, ... in that order. Each commit message on the bead's branch
 (not a merge commit) MAY carry lines `AC<n>: <evidence>`. The newest commit's
 line for a number wins.
 
-A commit's `AC<n>:` lines count ONLY when its message names the bead being
-landed as a whole id (`inc-abc` does not match inside `inc-abcd`, `inc-abc.2`
-or `xinc-abc`). A bead branch can carry commits of another bead, such as a
-cherry-pick; their lines are ignored, even an out-of-range number.
+A commit's `AC<n>:` lines count ONLY when its SUBJECT (first line of the
+message) names the bead being landed as a whole id (`inc-abc` does not match
+inside `inc-abcd`, `inc-abc.2` or `xinc-abc`). The body does not matter: a body
+that mentions the bead does not make the commit count. A bead branch can carry
+commits of another bead, such as a cherry-pick; their lines are ignored, even
+an out-of-range number.
 
 REFUSED (exit 1), every fault reported in one run:
   - a criterion has no `AC<n>:` line;
@@ -112,14 +114,14 @@ def names_bead(text, bead):
 
 
 def commit_lines(base, bead, repo):
-    """Message lines of the non-merge commits in base..bead that name bead, newest first."""
+    """Message lines of the non-merge commits in base..bead whose subject names bead, newest first."""
     p = subprocess.run(["git", "-C", repo, "log", "--no-merges", "--format=%B%x1e",
                         "%s..%s" % (base, bead)], capture_output=True, text=True)
     if p.returncode != 0:
         raise Unmeasured("git log %s..%s failed: %s" % (base, bead, p.stderr.strip()))
     lines = []
     for msg in p.stdout.split("\x1e"):
-        if names_bead(msg, bead):
+        if names_bead(msg.lstrip("\n").split("\n", 1)[0], bead):
             lines += msg.splitlines()
     return lines
 
@@ -146,8 +148,8 @@ def evaluate(bead_id, base, repo):
         notes = (bead.get("notes") or "").splitlines()
         for n, text in enumerate(crit, 1):
             if n not in evidence:
-                faults.append("AC%d: %s -- no AC%d: line in the commit messages of %s"
-                              % (n, text, n, bead_id))
+                faults.append("AC%d: %s -- no AC%d: line in a commit message on %s "
+                              "whose subject names %s" % (n, text, n, bead_id, bead_id))
                 continue
             ev = evidence[n]
             if len(ev) < MIN_EVIDENCE:
@@ -243,8 +245,8 @@ def run_cases(here, tmp):
         if not ok:
             print("      " + out.strip().replace("\n", "\n      "))
 
-    good = "fix: x\n\nAC1: observed alpha in a seeded run\nAC2: observed beta in a seeded run\nAC3: observed gamma in a seeded run"
-    bead("inc-t01", description=three); branch("inc-t01", good + "\n\n(inc-t01)")
+    good = "fix: x (inc-t01)\n\nAC1: observed alpha in a seeded run\nAC2: observed beta in a seeded run\nAC3: observed gamma in a seeded run"
+    bead("inc-t01", description=three); branch("inc-t01", good)
     case("1 all lines present", "inc-t01", 0, "AC3 ok")
 
     bead("inc-t02", description=three)
@@ -299,7 +301,7 @@ def run_cases(here, tmp):
     case("12 bd fails for the bead", "inc-t12", 2, "bd show inc-t12 failed")
 
     bead("inc-t13", description=three)
-    branch("inc-t13", good + "\n(inc-t13)\nAC9: observed something unrelated")
+    branch("inc-t13", good.replace("inc-t01", "inc-t13") + "\nAC9: observed something unrelated")
     case("13 AC9 with three criteria", "inc-t13", 1, "AC9")
 
     wrapped = "## Acceptance Criteria\n- alpha works\n  and keeps working\n- beta works\n\n## Other\n- not a criterion\n"
@@ -338,6 +340,16 @@ def run_cases(here, tmp):
     bead("inc-t32", description=one)
     branch("inc-t32", "x (inc-t32x)\n\nAC1: observed alpha in a seeded run")
     case("32 longer id does not match", "inc-t32", 1, "AC1: alpha works")
+
+    bead("inc-t33", description=two)
+    branch("inc-t33", "x (inc-other)\n\nfor inc-t33\n\nAC1: observed alpha in a seeded run\nAC2: observed beta in a seeded run\n"
+           "AC3: observed gamma in a seeded run\nAC4: observed delta in a seeded run\nAC5: observed more in a seeded run",
+           "own (inc-t33)\n\nAC1: observed alpha in a seeded run\nAC2: observed beta in a seeded run")
+    case("33 other bead's subject, target in body only", "inc-t33", 0, "AC2 ok")
+
+    bead("inc-t34", description=one)
+    branch("inc-t34", "x\n\nfor inc-t34\n\nAC1: observed alpha in a seeded run")
+    case("34 target only in a body", "inc-t34", 1, "AC1: alpha works")
 
     with open(os.path.join(here, "finish_bead.sh")) as f:
         wired = re.search(r'^"\$ROOT/tools/check_bead_evidence\.py" ', f.read(), re.M) is not None
