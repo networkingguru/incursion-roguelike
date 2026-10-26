@@ -758,10 +758,16 @@ Domain "Spider;domain" : 0
 
 Domain "Strength" : 0
   {
-    Desc: "<15>Granted Power:<7> You gain a sacred bonus to your Strength every
-      five priest levels. Additionally, at the cost of four fatigue points, 
-      you can gain a sacred bonus to your strength equal to your full priest 
-      level that lasts for one single turn."; 
+    /* upstream: the Desc must state what the code gives: Feat of Strength
+       is +1 plus +1 per four priest levels after 1st; passive +1 at levels
+       1, 6, 11, 16. Data text with no platform dependence, so the original
+       build shows the same text. Traced, inc-tek.3.3
+       (networkingguru/incursion-roguelike#265), not sent. */
+    Desc: "<15>Granted Power:<7> You gain a sacred bonus of +1 to your Strength
+      at 1st priest level and every five priest levels after. Additionally,
+      at the cost of four fatigue points, you can gain a sacred bonus to your
+      Strength for one turn: +1 at 1st priest level, and +1 more every four
+      priest levels after.";
     Grants:
       Stati[ADJUST_SAC,A_STR,+1] at every 5th level starting at 1st, 
       Ability[CA_FEAT_OF_STRENGTH] at every 4th level starting at 1st;
