@@ -548,7 +548,12 @@ RestartTargetLoop:
                 mtarg = (Creature*)it;
                 mtp = ts.t[i].priority;
               }
-            } else { // not beside us
+            } else if (ts.t[i].vis != PER_TRACK) { // not beside us
+              /* upstream: a tracking-only enemy (Perceives() == PER_TRACK)
+                 became rtarg, so the monster cast and shot at a target it
+                 only tracked; wrong on upstream's own targeting code too.
+                 Observed: tools/check_track_only_no_cast.sh. Tracking
+                 inc-8c3k. Not sent. */
               if (ts.t[i].priority > rtp) { 
                 rtarg = (Creature*)it;
                 rtp = ts.t[i].priority;
