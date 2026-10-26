@@ -3215,7 +3215,12 @@ typedef signed int        hObj;
    the illusion (creature, item or terrain creator) and eID the cast's spell, so
    the +4 disbelief bonus applies only to the illusion that cast made. */
 #define ILLUS_SPOTTED     249
-#define LAST_STATI        250
+/* inc-w6n5: mana a caster holds for one casting of a holding (EF_LOSEMANA)
+   spell. eID = the spell, Mag = mana held for it, Duration 0 while held and
+   -1 once the buff ended and the mana was released (Mag then = released mana
+   not yet regenerated). Permanent. Generic scans by eID skip this Nature. */
+#define HELD_MANA         250
+#define LAST_STATI        251
   
 
 

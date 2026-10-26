@@ -1741,7 +1741,7 @@ BuySpell:
        let's just fudge that little detail... */
 
     Seller->Timeout += 30;
-    Seller->LoseMana(TEFF(spID)->ManaCost, TEFF(spID)->HasFlag(EF_LOSEMANA));
+    Seller->SpendSpellMana(spID, TEFF(spID)->ManaCost, TEFF(spID)->HasFlag(EF_LOSEMANA));
     p->Timeout += 30;
 
     {
@@ -2827,6 +2827,8 @@ void TextTerm::DisplayCharSheet() {
                         -GREY, XPrint(DESC(S->eID)));
                     s += Format(" You have made %d successful saving throws against this affliction to date.\n\n", S->Mag);
                 }
+            if (S->Nature == HELD_MANA)
+                continue;
             if (S->eID) {
                 bool found = false;
                 for (i = 0; i < num_men; i++)

@@ -2391,7 +2391,7 @@ EvReturn Magic::Healing(EventInfo &e)
         if (!amt)
           goto SkipHeal;
         if (e.EMagic->yval)
-          e.EActor->LoseMana((amt*10)/e.EMagic->yval,true);
+          e.EActor->LoseMana((amt*10)/e.EMagic->yval,false); /* inc-ygxe: healing spends mana, it does not hold it */
           
         if (e.EVictim->isMType(MA_UNDEAD)) {
           // ouchy!

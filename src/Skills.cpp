@@ -338,7 +338,7 @@ void Player::CancelMenu() {
 			num_conc++;
 			c++;
 		}
-		else if (S->eID && RES(S->eID)->Type == T_TEFFECT) {
+		else if (S->eID && S->Nature != HELD_MANA && RES(S->eID)->Type == T_TEFFECT) {
 			if (S->h && oThing(S->h)->isItem())
 				if (oItem(S->h)->Owner() != this)
 					continue;

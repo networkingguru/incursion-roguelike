@@ -3292,6 +3292,7 @@ void Character::ManaFloorProbe()
     for (i = 0; i < 2; i++) {
         SkillRanks[SK_CONCENT] = RANKS[i];
         hMana = 0;
+        RemoveStati(HELD_MANA);
         uMana = tMana() - (tMana()*40/100);
         ManaPulse = 0;
         lvl = SkillLevel(SK_CONCENT);

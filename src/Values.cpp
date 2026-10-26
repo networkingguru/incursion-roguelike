@@ -3040,7 +3040,7 @@ uint32 Creature::getArmourType(bool count_shield)
       }
       
     StatiIter(this)
-      if (S->eID && (RES(S->eID)->Type == T_TEFFECT))
+      if (S->eID && S->Nature != HELD_MANA && (RES(S->eID)->Type == T_TEFFECT))
         {
           TEffect *te = TEFF(S->eID);
           if (te->HasFlag(EF_LARMOUR))

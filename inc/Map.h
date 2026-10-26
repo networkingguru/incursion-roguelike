@@ -712,6 +712,8 @@ extern Map* TheMainMap;
 #define NO_STATI_ENTRY 0xFFFF
 
                                 
+void ReleaseHeldMana(const Status &s, Thing *holder); /* src/Status.cpp */
+
 #define Stati_RemoveInline_(s, targ, logic) {             \
     Status sCopy = *s;                                    \
     targ->__Stati.Removed++;                              \
@@ -719,6 +721,7 @@ extern Map* TheMainMap;
     s->h = NULL;                                          \
     logic;                                                \
     targ->StatiOff(sCopy);                                \
+    ReleaseHeldMana(sCopy, targ);                         \
 }
 
 #define Stati_RemoveInline(s, targ)                    \
@@ -744,7 +747,8 @@ extern Map* TheMainMap;
     if (targ->__Stati.Removed == 0)
 
 #define StatiIter_RemoveCurrent_(targ, _EV) {         \
-    if (S->eID && RES(S->eID)->Type == T_TEFFECT)     \
+    if (S->eID && S->Nature != HELD_MANA &&           \
+        RES(S->eID)->Type == T_TEFFECT)               \
         targ->RemoveEffStati(S->eID, _EV);            \
     else                                              \
         Stati_RemoveInline(S, targ);                  \

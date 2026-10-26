@@ -930,6 +930,7 @@ EvReturn Character::GiveAid(EventInfo &e) {
         break;
     case AID_MANA:
         uMana = 0;
+        HeldManaRest(0);
         break;
     case AID_CLARITY:
         IPrint("Divine clarity restores focus to your thoughts!");
@@ -1555,6 +1556,7 @@ EvReturn Player::GodRaise(EventInfo &e)
     RemoveStati(ADJUST_DMG);
     cHP = mHP + GetAttr(A_THP);
     uMana = hMana = 0;
+    RemoveStati(HELD_MANA);
     
     /* Do the actual raising */
     Flags &= ~(F_DELETE|F_INVIS);

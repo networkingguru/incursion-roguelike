@@ -5114,7 +5114,7 @@ ContinueCasting:
     }
 
     if (Type != T_PLAYER || !thisp->Opt(OPT_INF_MANA)) 
-        LoseMana(mCost,TEFF(e.eID)->HasFlag(EF_LOSEMANA));
+        SpendSpellMana(e.eID,mCost,TEFF(e.eID)->HasFlag(EF_LOSEMANA));
 
     MMStr = "";
     if (e.MM & MM_QUICKEN)
@@ -5378,7 +5378,7 @@ EvReturn Creature::Invoke(EventInfo &e)
     if (TEFF(e.eID)->Purpose & EP_BUFF && HasFeat(FT_MYSTIC_PREPARATION)) {
       mCost = max( (mCost-2), 1);
     }
-    LoseMana(mCost,TEFF(e.eID)->HasFlag(EF_LOSEMANA));
+    SpendSpellMana(e.eID,mCost,TEFF(e.eID)->HasFlag(EF_LOSEMANA));
     } 
 
     Timeout += 20;
@@ -6255,7 +6255,7 @@ Failed:
         if (e.EActor->cMana() <= (TEFF(eID)->ManaCost*2)/3) 
           ThrowDmg(EV_DAMAGE,AD_NORM,TEFF(eID)->Level*2,
             "scroll strain",e.EActor,e.EActor,e.EItem);
-        e.EActor->LoseMana((TEFF(eID)->ManaCost*2)/3,TEFF(eID)->HasFlag(EF_LOSEMANA));
+        e.EActor->SpendSpellMana(eID,(TEFF(eID)->ManaCost*2)/3,TEFF(eID)->HasFlag(EF_LOSEMANA));
       }   
     DisposeScroll(e.EItem, e.EActor, preserved);
     if (didRead && e.EActor && e.EActor->m)
@@ -6376,13 +6376,13 @@ EvReturn Item::ZapWand(EventInfo &e)
               e.EActor->yn(Format("Fire it anyway? (takes %dd4 damage)", drainDice),true))
             {
               ThrowDmg(EV_DAMAGE,AD_NORM,Dice::Roll(drainDice, 4,0),"wand drain",NULL,e.EActor,e.EItem);
-              e.EActor->LoseMana(Cost,TEFF(e.eID)->HasFlag(EF_LOSEMANA));
+              e.EActor->SpendSpellMana(e.eID,Cost,TEFF(e.eID)->HasFlag(EF_LOSEMANA));
               goto Success;
             }
           }
         if (!(e.EItem->isKnown(KN_PLUS|KN_MAGIC))) {
           e.EActor->IPrint("Your remaining mana fails to activate the wand.");
-          e.EActor->LoseMana(Cost,TEFF(e.eID)->HasFlag(EF_LOSEMANA));
+          e.EActor->SpendSpellMana(e.eID,Cost,TEFF(e.eID)->HasFlag(EF_LOSEMANA));
           }
         return DONE;
                   
@@ -6459,7 +6459,7 @@ EvReturn Item::ZapWand(EventInfo &e)
     else if (Rating + roll >= 10 + Lev/2) { /* normal success */ }
     else goto Failure; 
 
-    e.EActor->LoseMana(Cost + (Cost * Supercharge / ((Cost+1) * (Supercharge+1))),
+    e.EActor->SpendSpellMana(e.eID,Cost + (Cost * Supercharge / ((Cost+1) * (Supercharge+1))),
                         TEFF(e.eID)->HasFlag(EF_LOSEMANA));
 
     Charges--;
@@ -6495,7 +6495,7 @@ EvReturn Item::ZapWand(EventInfo &e)
     return r;
 
     Failure:
-    e.EActor->LoseMana(Cost/3,TEFF(e.eID)->HasFlag(EF_LOSEMANA));
+    e.EActor->SpendSpellMana(e.eID,Cost/3,TEFF(e.eID)->HasFlag(EF_LOSEMANA));
     Charges--;
     e.eID = eID;
     DPrint(e,"You fail to activate the <EItem>.",

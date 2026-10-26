@@ -2597,6 +2597,7 @@ EvReturn Player::Rest(EventInfo &e) {
                         if (!(e.EParam & REST_NOMANA) || t != this) {
                             t->uMana = (t->uMana*(100 - Percent)) / 100;
                             t->hMana = (t->hMana*(100 - Percent)) / 100;
+                            t->HeldManaRest(Percent);
                         }
 
 #if 0

@@ -1,0 +1,18 @@
+# Property 1, step 3: cast Shield, drop it, cast it again, then save. Held
+# mana must equal one casting's cost. Run: tools/check_held_mana.sh
+@until "Select Spell" m
+@choose "Shield"
+@while "more --" SPACE
+@dump:cast1
+x
+@choose "Drop Shield"
+@while "more --" SPACE
+@dump:dropped
+@until "Select Spell" m
+@choose "Shield"
+@while "more --" SPACE
+@dump:cast2
+ESC
+@expect "System Menu"
+b
+@dump:saved

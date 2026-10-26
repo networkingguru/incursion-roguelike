@@ -1380,7 +1380,7 @@ String & Item::Name(int16 Flags) {
 
     xe.Event = META(EV_GETNAME);
     StatiIter(this)
-        if (S->eID) {
+        if (S->eID && S->Nature != HELD_MANA) {
             TEFF(S->eID)->Event(xe, S->eID);
             if (xe.nOf.GetLength())
                 ofWords[ofCount++] = xe.nOf;

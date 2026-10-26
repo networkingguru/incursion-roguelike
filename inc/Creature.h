@@ -318,6 +318,13 @@ class Creature: public Thing, public Magic
             uMana = min(tMana() - hMana,uMana + amt); }
       void GainMana(int32 amt)
         { uMana = max(0,uMana - amt); } 
+      /* inc-w6n5: spend or hold a spell's cost and keep the HELD_MANA
+         bookkeeping (src/Status.cpp). */
+      void  SpendSpellMana(rID eID, int32 cost, bool hold);
+      Status* HeldManaMarker(rID eID, bool released);
+      bool  HasReleasedMana();
+      void  ReleasedManaRegenerated();
+      void  HeldManaRest(int32 Percent);
       bool hasMana(int32 amt)
         { return cMana() > amt; }
       int32 nhMana()
@@ -326,7 +333,7 @@ class Creature: public Thing, public Magic
          ticks at all: starts at 80%, falls 2 points per Concentration rank,
          floors at 35%. See Creature::DoTurn (src/Creature.cpp). */
       int32 ManaRegenFloor()
-        { return max(80 - SkillLevel(SK_CONCENT)*2, 35); }
+        { return HasReleasedMana() ? 0 : max(80 - SkillLevel(SK_CONCENT)*2, 35); } /* inc-ygxe: released mana regenerates below the floor */
       void GainStatiFromBody(rID _mID);
       void GainStatiFromTemplate(rID _tID, bool turn_on);
       /* Use of an attribute can lead to gains. */
