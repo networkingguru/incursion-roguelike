@@ -386,6 +386,10 @@ void Game::Play() {
     extern void UndeadMountProbe(Player *pl);
     UndeadMountProbe(pp);
 
+    /* inc-2mea: opt-in mount-size reproduction. */
+    extern void MountSizeProbe(Player *pl);
+    MountSizeProbe(pp);
+
     /* inc-6qmk: opt-in exact-monster depth oracle; see ExactMonProbe. */
     extern void ExactMonProbe(Player *pl);
     ExactMonProbe(pp);

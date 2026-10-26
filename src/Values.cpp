@@ -1813,9 +1813,11 @@ Restart:
         rider = this;
 
 MountChecks:
-        if (mount->GetAttr(A_SIZ) <= rider->GetAttr(A_SIZ) && (mount->GetAttr(A_SIZ) != SZ_SMALL || mount->GetAttr(A_SIZ) != SZ_SMALL))
-            ThrowVal(EV_DISMOUNT,DSM_THROWN,rider,mount);
-        else if (mount->GetAttr(A_SIZ) > rider->GetAttr(A_SIZ)+1 && mount->isMType(MA_ANIMAL))
+        /* upstream: mount and recalculation size tests disagreed (Small-on-Small,
+         * dwarf-on-Medium, quadruped-only upper limit; a typo compared the mount's
+         * size with itself). Rule: a mount must be larger than its rider, no upper
+         * limit. Plain type checks, same on Win32. Observed; inc-2mea; not sent. */
+        if (mount->GetAttr(A_SIZ) <= rider->GetAttr(A_SIZ))
             ThrowVal(EV_DISMOUNT,DSM_THROWN,rider,mount);
     }
 
