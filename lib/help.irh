@@ -1111,7 +1111,12 @@ Text "help::commands"
      \n__The Combat Options command brings up a menu listing a variety
      of special maneuvers and combat choices available to your character,
      such as performing a Great Blow, Fighting Defensively, Sprinting or
-     making a Called Shot.\n\n
+     making a Called Shot.
+     \n__One option, Avert Eyes, makes you look away from your foes. Gaze
+     attacks against you then fail half the time, but you cannot always
+     see what you strike: about one attack in four misses, or one in
+     eight with the Blind-Fight feat. You keep averting your eyes until
+     you stop with the Cancel Active Power ('x') command.\n\n
 
      <15>Display Character Sheet ('<13>d<15>')<6> {D}
      \n__Takes you to the character sheet screen, where you can examine
@@ -1266,7 +1271,15 @@ Text "help::commands"
      Most spells have a set duration and can't be shut off, but a few
      can. Use this command to get your Druid to shapeshift back to his
      natural form, your bard to stop singing or your psionicist to turn
-     off one of his active powers.\n\n
+     off one of his active powers.
+     \n__The menu lists only what you can stop at that moment. It can
+     include concentration on a spell, a spell or field you created that
+     allows cancelling, mining, tumbling, sprinting, hiding, singing,
+     raging, a charge or automatic charging, fighting defensively,
+     Flurry of Blows, Flawless Dodge, a disguise, riding a mount,
+     averted or closed eyes, and a polymorph you caused yourself. It
+     cannot end a polymorph caused by a curse, such as a cursed Ring of
+     Polymorphing.\n\n
      
      <15>'Yuse' an Item ('<13>y<15>')<6> {Y}
      \n__This command allows you to access the nonstandard functions 
