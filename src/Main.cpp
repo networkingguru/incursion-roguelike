@@ -327,6 +327,11 @@ void Game::Play() {
     extern void StunDurProbe(Player *pl);
     StunDurProbe(pp);
 
+    /* inc-nm59: off unless INCURSION_OWNER_DAMAGE_PROBE is set. See
+       OwnerDamageProbe (src/OwnerDamageProbe.cpp). */
+    extern void OwnerDamageProbe(Player *pl);
+    OwnerDamageProbe(pp);
+
     /* inc-b2wd: off unless INCURSION_SOAK_TORCH_PROBE is set. See
        SoakTorchProbe (src/SoakTorchProbe.cpp). */
     extern void SoakTorchProbe(Player *pl);
