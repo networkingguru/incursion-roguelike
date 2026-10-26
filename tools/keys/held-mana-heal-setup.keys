@@ -1,0 +1,16 @@
+# Property 2 setup (included by held-mana-heal-pre.keys and
+# held-mana-heal-cast.keys): wound the character with a summoned goblin.
+# The goblin fights back because tools/gates/Options.Dat has Freeze Monsters
+# NO (read off the wizard switches screen). Do NOT toggle that switch here:
+# a toggle turns it ON.
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+@while "more --" SPACE
+@dump:goblin
+RIGHT
+@while "more --" SPACE
+@until "HP:2" .
+@dump:hurt

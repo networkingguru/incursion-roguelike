@@ -172,7 +172,7 @@ void TextTerm::ShowStatus() {
             if (LookupOnly(StatiLineShorts, S->Nature)) {
                 SStatLine += XPrint(Lookup(StatiLineShorts, S->Nature));
             }
-        } else if (S->eID &&
+        } else if (S->eID && S->Nature != HELD_MANA &&
             S->Nature != WEP_SKILL && S->Nature != TEMPLATE &&
             S->Nature != SUSPEND_ATTK &&
             (S->Duration > 0 || S->Duration < 0) &&

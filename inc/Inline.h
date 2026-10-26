@@ -301,7 +301,7 @@ inline bool Thing::HasEffStati(int16 n,rID eID, int16 Val, Thing *t)
     if (n == -1) {
       StatiIter(this)
         if ((n == INNATE_SPELL || S->Nature != INNATE_SPELL) &&
-            (S->eID == eID)) 
+            S->Nature != HELD_MANA && (S->eID == eID)) 
           if ((Val == -1) || (Val == S->Val) ||
               (S->Nature == TRAP_EVENT && S->Mag == Val))
             if ((!t) || (t->myHandle == S->h))
@@ -327,7 +327,7 @@ inline int16 Thing::CountEffStati(int16 n,rID eID, int16 Val)
     if (n == -1) {
       StatiIter(this)
         if ((n == INNATE_SPELL || S->Nature != INNATE_SPELL) &&
-            (S->eID == eID)) 
+            S->Nature != HELD_MANA && (S->eID == eID)) 
           if ((Val == -1) || (Val == S->Val))
             c++;
       StatiIterEnd(this)

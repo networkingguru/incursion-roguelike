@@ -3705,14 +3705,19 @@ Text "help::magic"
      unable to respond, resulting in seemingly random death.\n
      __Some spells, such as <9>Resist Fire<3> and <9>Bull's Strength<3>, offer
      protection or enhancement that lasts a full day. Mana spent on these spells is
-     referred to as <11>Held Mana<3> and never regenerates, but ALSO is not counted
-     against the character's total mana for determining if and how quickly a
+     referred to as <11>Held Mana<3>. It does not regenerate while the spell lasts,
+     but it is ALSO not counted against the character's total mana for determining
+     if and how quickly a
      character regenerates Mana. For example, if a character with 100 Mana and no
      skill in Concentration spends thirty points on self-enhancement spells, her
      total Mana pool not counting held Mana is 70. She can then spend another 14
      Mana Points on attack or miscellaneous spells and still regenerate, because 56
-     is 80% of 70; one point more and her Mana will not return until she rests. On
-     the Mana bar in the traits window, held Mana is shown in brown.
+     is 80% of 70; one point more and her Mana will not return until she rests.
+     When the spell ends, whether it expires, is dispelled or is dropped, its held
+     Mana becomes spent Mana and regenerates, even while her Mana is below the
+     line. Casting the same spell again while its Mana is still held does not hold
+     more; the new casting's Mana is simply spent.
+     On the Mana bar in the traits window, held Mana is shown in brown.
      \n\n
 
      <11>METAMAGIC {ME}\n

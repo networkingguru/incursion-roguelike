@@ -1,0 +1,13 @@
+# Property 2: the same wounding as held-mana-heal-pre.keys, then cast Cure
+# Light Wounds on the caster ('*' = Target Self), then save.
+@include held-mana-heal-setup.keys
+@until "Select Spell" m
+@choose "Cure Light Wounds"
+@dump:clw-prompt
+*
+@while "more --" SPACE
+@dump:healed
+ESC
+@expect "System Menu"
+b
+@dump:saved

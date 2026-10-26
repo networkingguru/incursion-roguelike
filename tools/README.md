@@ -622,6 +622,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_grounded_stance_live.sh` | Does the Earthsinger's Grounded Stance add its damage term to a landed blow when every condition it names is met? | LIVE |
 | `check_headless.sh` | Do the five properties every unattended run depends on still hold? | LIVE |
 | `check_heal_maladies.sh` | Does the priest spell Heal remove the maladies its own description promises? It promised poison, disease and stunning and removed nothing at all. A test god afflicts the player with nine maladies at once; he then learns Heal in wizard mode and casts it on himself. A second measurement has him paralyse a kobold with Hold Person and cure that, because a paralysed character cannot cast on himself. The unfixed declaration leaves all ten standing. | LIVE |
+| `check_held_mana.sh` | Do the held-mana rules hold under real play? A mage casts Shield, drops it and casts it again: held mana must fall to 0 on the drop and rise by one casting's cost, not two. Cure Light Wounds must spend its mana and hold none. Mana released by a dropped buff must regenerate while current mana sits below the regen floor. `--prove-red` takes `HELD_MUT=A`, `D` or `C` to break each rule in turn. | LIVE |
 | `check_hide_carried_light.sh` | Can a creature carrying a lit light source still hide in shadows (it must not)? | LIVE |
 | `check_hide_distraction.sh` | Do an attack and a heard noise distract a watcher (-5 to Spot and Listen, counted once, gone at its next action), does a roar give -10 for 3 rounds to every creature it reaches, does a countersong remove it, and does the step check use the Listen modifiers? inc-u3dp. | LIVE |
 | `check_hide_dynamic_light.sh` | Does a creature hiding in a cell lit only by a dynamic external source -- magma, a live wall torch, or another creature's torch, with no static `.Bright` and no carried light -- get its hide broken and warned? | LIVE |
@@ -1274,6 +1275,7 @@ tools/check_portal_reach.sh         # every portal shares one door-aware compone
 tools/check_special_room_overlap.sh # the Parthenion never lands on the Ancient Library (depth 2)
 tools/check_mana_regen_floor.sh     # the mana-regen floor starts high and falls with Concentration, not the reverse
 tools/check_mana_regen_cast.sh      # the same fix under real play: cast, wait without resting, mana does not rise
+tools/check_held_mana.sh            # a dropped buff releases its held mana, a recast holds once, healing spends
 tools/check_multiply_noroom.sh      # Multiply must not re-place, initialise or heal a copy PlaceNear deleted
 tools/check_undeath_to_death.sh     # Undeath to Death pools one (caster level)d4 of Hit Dice, fewest first, 9-HD cap, Will save
 tools/check_undeath_to_death_pool.sh # the same pool short: fewest-first order, wasted remainder, 9-HD bodak cap

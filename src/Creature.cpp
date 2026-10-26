@@ -1818,6 +1818,7 @@ NoIntervention:;
                 // IPrint(Format("ManaPulse -- %d, %d.",ManaPulse,theGame->Turn));
             } else {
                 uMana--; 
+                ReleasedManaRegenerated();
                 // if you are down 5*N%, it takes you N turns to get back 1%
                 int N = (tMana() - (cMana() + hMana)) * 20 / max(1,tMana());
                 ManaPulse = N * 100 / max(1,tMana()); 

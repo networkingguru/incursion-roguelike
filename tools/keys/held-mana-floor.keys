@@ -1,0 +1,118 @@
+# Property 3: mana released by a dropped buff must regenerate even below the
+# regen floor. Henk (orc-mage-seed4-gate, Concentration +3) casts Shield
+# (holds its cost), then 30 Burning Hands aimed RIGHT into open floor (2 mana
+# each, no hold; the recipe of tools/keys/mana-regen-cast.keys) so current mana
+# sits below the floor, then drops Shield and waits by searching (no rest).
+# Generated body: 30 x (m, @choose "Burning Hands", RIGHT).
+#
+#   INCURSION_OPTIONS=tools/gates/Options.Dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav \
+#       tools/headless.sh tools/keys/held-mana-floor.keys 4
+@dump:arrival
+@until "Select Spell" m
+@choose "Shield"
+@while "more --" SPACE
+@dump:shield-cast
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+m
+@choose "Burning Hands"
+RIGHT
+@dump:before-drop
+x
+@choose "Drop Shield"
+@while "more --" SPACE
+@dump:after-drop
+s
+s
+s
+@dump:after-wait
+ESC
+@expect "System Menu"
+b
+@dump:saved

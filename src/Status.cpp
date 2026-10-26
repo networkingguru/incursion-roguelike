@@ -268,6 +268,7 @@ void Thing::GainPermStati(int16 n,Thing *t,int8 Cause, int16 Val,int16 Mag,rID e
 void Thing::CopyStati(Thing *t, int16 n) {
     ASSERT(n != TRAP_EVENT);
     StatiIter(t)
+      if (S->Nature != HELD_MANA)
       GainTempStati(S->Nature,oThing(S->h),S->Duration,S->Source,S->Val,S->Mag,S->eID,S->CLev);
     StatiIterEnd(t)
   }
@@ -407,7 +408,7 @@ void Thing::RemoveEffStati(rID eID, int16 ev, int16 butNotNature, Thing *source)
     int16 oNested = __Stati.Nested;
 
     StatiIter(this)
-        if (S->Nature == INNATE_SPELL || S->Nature == butNotNature) 
+        if (S->Nature == INNATE_SPELL || S->Nature == butNotNature || S->Nature == HELD_MANA) 
             continue; 
         if (S->Source != SS_MONI && S->eID == eID &&
             (!source ? (S->h == 0 || butNotNature != -1) :
@@ -602,7 +603,7 @@ Status* Thing::GetStati(int16 n,int16 Val, Thing *t) {
 Status* Thing::GetEffStati(int16 n,rID xID, int16 Val, Thing *t) {
     if (n == -1) {
         StatiIter(this)
-            if (S->eID == xID && S->Nature != INNATE_SPELL)
+            if (S->eID == xID && S->Nature != INNATE_SPELL && S->Nature != HELD_MANA)
                 if ((Val == -1) || (Val == S->Val))
                     if (!t || t->myHandle == S->h)
                         StatiIterBreakout(this,return S)
@@ -902,6 +903,7 @@ void Creature::StatiOn(Status s) {
       case SEEN_RIPPLE:
       case CRIT_WOUNDED_BY:
       case STORED_MM:
+      case HELD_MANA:
           // these stati are known to NOT require a CalcValues
           break;
       default: 
@@ -1881,4 +1883,112 @@ EvReturn Creature::FieldOff(EventInfo &e) {
                 break;               
         }
     return DONE;
+}
+
+/* ---- inc-w6n5: held mana follows the buff that holds it ----
+   A HELD_MANA stati (inc/Defines.h) on the caster records the mana one
+   casting of a holding spell put into hMana. eID is the spell, so a save
+   converts it with the manifest; every generic scan by eID skips this Nature. */
+
+Status* Creature::HeldManaMarker(rID eID, bool released) {
+    if (!eID)
+        return NULL;
+    StatiIterNature(this, HELD_MANA)
+        if (S->eID == eID && (S->Duration < 0) == released)
+            StatiIterBreakout(this, return S)
+    StatiIterEnd(this)
+    return NULL;
+}
+
+/* upstream: a holding spell cast again while its buff stands holds its cost
+   again, so hMana grows by one cost per casting and a dropped buff never gives
+   the held mana back; the identical LoseMana(cost, EF_LOSEMANA) calls stand in
+   hex/master and use plain integer arithmetic, so a Win32 0.6.9 build behaves
+   the same. Observed, tools/check_held_mana.sh, inc-w6n5, not sent. */
+void Creature::SpendSpellMana(rID eID, int32 cost, bool hold) {
+    if (!hold || cost <= 0 || !eID) {
+        LoseMana(cost, hold);
+        return;
+    }
+    if (HeldManaMarker(eID, false)) {
+        LoseMana(cost, false);
+        return;
+    }
+    int32 before = hMana;
+    LoseMana(cost, true);
+    if (hMana > before)
+        GainPermStati(HELD_MANA, NULL, SS_MISC, 0,
+                      (int16)min(hMana - before, 32767), eID);
+}
+
+/* A buff that lost its last stati stops holding its mana: the held amount
+   becomes spent mana, so cMana() does not change and the mana regenerates
+   later. ponytail: a buff cast on several targets releases its whole hold when
+   the FIRST target loses it, and a holding spell that leaves no stati keeps its
+   hold until rest. Upgrade path: count targets in the marker. */
+void ReleaseHeldMana(const Status &s, Thing *holder) {
+    if (s.Nature == HELD_MANA || !s.eID || !s.h)
+        return;
+    if (RES(s.eID)->Type != T_TEFFECT || !TEFF(s.eID)->HasFlag(EF_LOSEMANA))
+        return;
+    if (!theRegistry->Exists(s.h))
+        return;
+    Thing *t = oThing(s.h);
+    if (!t || !t->isCreature())
+        return;
+    Creature *c = (Creature*)t;
+    Status *m = c->HeldManaMarker(s.eID, false);
+    if (!m)
+        return;
+    bool other = false;
+    StatiIter(holder)
+        if (S->Nature != HELD_MANA && S->eID == s.eID && S->h == s.h)
+            other = true;
+    StatiIterEnd(holder)
+    if (other)
+        return;
+    m = c->HeldManaMarker(s.eID, false); /* the loop above may have moved it */
+    if (!m)
+        return;
+    int32 amt = max(0, min((int32)m->Mag, c->hMana));
+    c->hMana -= amt;
+    c->uMana += amt;
+    m->Mag = (int16)amt;
+    m->Duration = -1;
+}
+
+bool Creature::HasReleasedMana() {
+    StatiIterNature(this, HELD_MANA)
+        if (S->Duration < 0 && S->Mag > 0)
+            StatiIterBreakout(this, return true)
+    StatiIterEnd(this)
+    return false;
+}
+
+/* One point of spent mana regenerated: it came out of released mana first.
+   Markers with nothing left are removed. inc-ygxe */
+void Creature::ReleasedManaRegenerated() {
+    bool credited = false;
+    StatiIterNature(this, HELD_MANA)
+        if (S->Duration < 0) {
+            if (!credited && S->Mag > 0) {
+                S->Mag--;
+                credited = true;
+            }
+            if (S->Mag <= 0 || uMana <= 0)
+                Stati_RemoveInline(S, this);
+        }
+    StatiIterEnd(this)
+}
+
+/* Rest lowers held mana by Percent; scale every marker the same way and drop
+   released markers once no spent mana is left. */
+void Creature::HeldManaRest(int32 Percent) {
+    StatiIterNature(this, HELD_MANA)
+        S->Mag = (int16)((S->Mag * (100 - Percent)) / 100);
+        if (S->Duration < 0)
+            S->Mag = (int16)min((int32)S->Mag, uMana);
+        if (S->Mag <= 0 || (S->Duration < 0 && uMana <= 0))
+            Stati_RemoveInline(S, this);
+    StatiIterEnd(this)
 }

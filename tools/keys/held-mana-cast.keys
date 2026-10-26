@@ -1,0 +1,11 @@
+# Property 1, step 1: cast Shield once on the caster, then save so the check
+# reads spent and held mana. Fixture human-priest-mage-seed4-gate. Run:
+# tools/check_held_mana.sh
+@until "Select Spell" m
+@choose "Shield"
+@while "more --" SPACE
+@dump:cast
+ESC
+@expect "System Menu"
+b
+@dump:saved

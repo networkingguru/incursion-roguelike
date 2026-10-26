@@ -1,0 +1,16 @@
+# Property 1, step 2: cast Shield, drop it from the Cancel Standing Ability
+# menu (lowercase x; see concentration-core.keys), then save. Run:
+# tools/check_held_mana.sh
+@until "Select Spell" m
+@choose "Shield"
+@while "more --" SPACE
+@dump:cast
+x
+@dump:cancel-menu
+@choose "Drop Shield"
+@while "more --" SPACE
+@dump:dropped
+ESC
+@expect "System Menu"
+b
+@dump:saved

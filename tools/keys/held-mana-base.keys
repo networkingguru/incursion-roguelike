@@ -1,0 +1,7 @@
+# Baseline for tools/check_held_mana.sh: cast nothing, save, so the check
+# reads the fixture's own spent and held mana.
+@dump:arrival
+ESC
+@expect "System Menu"
+b
+@dump:saved
