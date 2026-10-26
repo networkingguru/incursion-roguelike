@@ -1051,7 +1051,7 @@ Item "blowpipe" : T_BOW {
 
 Item "dart" : T_MISSILE {
 	Image: green GLYPH_ARROW; Group: WG_SIMPLE | WG_THROWN; Range: 2;
-    Mat: MAT_IRON; Size: SZ_TINY; Weight: 0; Cost: 0;
+    Mat: MAT_IRON; Size: SZ_TINY; Weight: 0; Cost: 5 COPPER;
     SDmg: 1d3; LDmg: 1d4; Acc: 0; Crit: x2; Threat: 2; Spd: 150%;
     Flags: WT_PIERCING, WT_NO_MELEE, IT_BGROUP;
     Desc: "The dart is a simple missile weapon. It may be thrown or launched with a blowpipe."; 
@@ -1084,7 +1084,7 @@ Item "sling" : T_BOW {
 
 Item "sling stone" : T_MISSILE {
     Image: green '*'; Group: WG_THROWN; 
-    Mat: MAT_GRANITE; Size: SZ_MINISCULE; Weight: 0; Cost: 5 COPPER;
+    Mat: MAT_GRANITE; Size: SZ_MINISCULE; Weight: 0; Cost: 1 COPPER;
     Flags: IT_BGROUP;
     Desc: "This tiny rock has a surprising weight for its size, and has been carefully smoothed down to fly straight.";
 }
