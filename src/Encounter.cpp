@@ -3089,6 +3089,22 @@ static int16 NumQualities(int plusLevel)
   return numQual; 
 }
 
+// A quality whose bonus scales only with the plus: armour qualities flag
+// their quality:: effect EF_NEEDS_PLUS; the weapon quality defending has no
+// effect resource (its benefit is GetPlus() in Values.cpp).
+static bool QualityNeedsPlus(Item *it, int qual)
+{
+  if (!it->isArmour())
+    return qual == WQ_DEFENDING;
+  String str = "quality::";
+  if (LookupOnly(APreQualNames,qual))
+    str += Lookup(APreQualNames,qual);
+  else
+    str += Lookup(APostQualNames,qual);
+  rID eID = FIND(str);
+  return eID && TEFF(eID)->HasFlag(EF_NEEDS_PLUS);
+}
+
 // this procedure gives It some combination of true plusses and weapon
 // qualities that equal exactly plusLevel
 static void MakeMagicWeaponArmour(Item *it, int _plusLevel, 
@@ -3099,6 +3115,7 @@ static void MakeMagicWeaponArmour(Item *it, int _plusLevel,
   int table[2048];
   int max;
   int plusLevel = _plusLevel;
+  bool needPlus = false;
   if (plusLevel <= 0) return; 
 
   plusLevel -= reserve; 
@@ -3113,7 +3130,11 @@ static void MakeMagicWeaponArmour(Item *it, int _plusLevel,
     for (i=0; QualityMods[i][0] != -1; i++) {
       int qual = QualityMods[i][0];
       int cost = QualityMods[i][1];
-      if (plusLevel >= cost && it->QualityOK(qual)) {
+      // upstream: a plus-scaled quality is worth nothing at plus 0, so the
+      // budget keeps 1 point for the plus once one is bought. Observed:
+      // tools/check_quality_plus.sh, 5411 of 200000 items. inc-qt2c, not sent.
+      int keep = (needPlus || QualityNeedsPlus(it,qual)) ? 1 : 0;
+      if (plusLevel - cost >= keep && it->QualityOK(qual)) {
         if (qual == WQ_MIGHTY || qual == WQ_BURST) cost += 20; 
         for (j=0; j < cost + 1 ; j++)  {
           table[max++] = qual; 
@@ -3127,6 +3148,8 @@ static void MakeMagicWeaponArmour(Item *it, int _plusLevel,
     int qual = table[choice]; 
     if (it->QualityOK(qual))
       it->AddQuality(qual);
+    if (QualityNeedsPlus(it,qual))
+      needPlus = true;
     for (i=0; QualityMods[i][0] != -1; i++) 
       if (QualityMods[i][0] == qual)
         { plusLevel -= QualityMods[i][1]; break; }

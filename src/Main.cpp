@@ -447,6 +447,10 @@ void Game::Play() {
     extern void StoneToFleshLootProbe(Player *p);
     StoneToFleshLootProbe(pp);
 
+    /* inc-qt2c: opt-in generated quality/plus invariant. */
+    extern void QualityPlusProbe(Player *p);
+    QualityPlusProbe(pp);
+
     /* inc-3lsp: off unless INCURSION_ACT_OVERFLOW_PROBE is set. See
        ActOverflowProbe (src/ActOverflowProbe.cpp) and
        tools/check_act_overflow.sh. */
