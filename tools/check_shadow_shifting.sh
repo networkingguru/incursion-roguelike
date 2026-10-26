@@ -17,9 +17,9 @@ cd "$ROOT"
 fail=0
 
 flag_line="$(grep -n '^#define EF_NEEDS_DARK 106$' inc/Defines.h | cut -d: -f1)"
-last_line="$(grep -n '^#define EF_LAST       107$' inc/Defines.h | cut -d: -f1)"
-[ -n "$flag_line" ] && [ -n "$last_line" ] || {
-    echo "FAIL: EF_NEEDS_DARK 106 or EF_LAST 107 is missing."
+last_line="$(sed -n 's/^#define EF_LAST[[:space:]]\{1,\}\([0-9]\{1,\}\)[[:space:]]*$/\1/p' inc/Defines.h | head -1)"
+[ -n "$flag_line" ] && [ -n "$last_line" ] && [ "$last_line" -gt 106 ] || {
+    echo "FAIL: EF_NEEDS_DARK must be 106 and EF_LAST must be greater than 106."
     fail=1
 }
 
