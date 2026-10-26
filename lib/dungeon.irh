@@ -391,7 +391,8 @@ Monster "Roark Ironbeard" : MA_DWARF, MA_ADVENTURER
        tier size when the shop is built, and tops it up once per game day.
        inc-rt8l: the kit count feeds the Beginner's Kit at creation: 0 keeps
        the row out of the kit, N gives exactly N, KIT_BY_TYPE applies the rule
-       for the item's type (GrantBeginnerKit, src/Create.cpp). */
+       for the item's type (GrantBeginnerKit, src/Create.cpp).
+       inc-6i0x: ammunition for every launcher, kit count 0. */
     Lists:
       * NECESSITIES
           $"healing kit" 0 1 KIT_BY_TYPE
@@ -426,6 +427,12 @@ Monster "Roark Ironbeard" : MA_DWARF, MA_ADVENTURER
           $"food ration" 0 12 KIT_BY_TYPE
           $"torch" 0 12 KIT_BY_TYPE
           $"potion" $"true blows" 12 KIT_BY_TYPE
+          $"sheaf arrow" 0 50 0
+          $"flight arrow" 0 50 0
+          $"crossbow bolt" 0 50 0
+          $"hand crossbow dart" 0 50 0
+          $"dart" 0 50 0
+          $"sling stone" 0 50 0
           $"hemp rope" 0 20 0;
     On Event MSG_SHOPNAME
       "Roark Ironbeard's All-Purpose Adventurers' Store",
