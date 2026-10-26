@@ -3202,6 +3202,29 @@ void Player::AddJournalEntry(const char* s) {
     Journal = (when + where + stat + best + SC(s) + SC("\n")) + Journal;
 }
 
+/* inc-4reo: auto-pickup candidates are packs held in inventory slots, the Pack
+   slot first (k == -1), then every other slot in order. A pack inside another
+   pack is not held in a slot, so it is never a candidate. A locked pack is
+   skipped, since inserting would start a lock-pick. */
+static Container* AutoPickupPack(Player *p, hObj packH, int k, bool wildOK) {
+    Item *it;
+    if (k == -1) {
+        if (!packH || oItem(packH)->Type != T_CONTAIN)
+            return NULL;
+        if (!p->InSlot(SL_PACK) && !(wildOK && p->AbilityLevel(CA_WILD_SHAPE)))
+            return NULL;
+        if (oItem(packH)->HasStati(LOCKED))
+            return NULL;
+        return (Container*)oItem(packH);
+    }
+    if (k == SL_PACK)
+        return NULL;
+    it = p->InSlot(k);
+    if (!it || it->Type != T_CONTAIN || it->HasStati(LOCKED))
+        return NULL;
+    return (Container*)it;
+}
+
 /* pick up all items that would stack with something we are carrying */
 void Player::AutoPickupFloor() {
     Thing * t;
@@ -3285,25 +3308,30 @@ start_again:
                     } 
                 }
 
-                if (auto_pickup == 2 && Inv[SL_PACK] && oItem(Inv[SL_PACK])->Type == T_CONTAIN && InSlot(SL_PACK)) { 
-                    // also check pack
-                    pack = (Container*)oItem(Inv[SL_PACK]);
-                    if (pack)
-                        for (j=0; (*pack)[j] != NULL; j++) {
-                            if (*((*pack)[j]) == *i) {
-                                IPrint("AutoPickup: <Obj>.",i);
-                                SetSilence();
-                                if (Throw(EV_PICKUP,this,NULL,i) == ABORT)
-                                    UnsetSilence(); // return;
-                                else { 
-                                    UnsetSilence(); // return;
-                                    did_anything = true; 
-                                    LegendIdent(i);
-                                    goto start_again; // because Remove() will change the linked 
-                                } 
-                                // list of items here 
-                            }
-                        } 
+                if (auto_pickup == 2) {
+                    // also check every pack held in a slot
+                    for (int k=-1;k<SL_LAST;k++) {
+                        pack = AutoPickupPack(this,Inv[SL_PACK],k,false);
+                        if (!pack)
+                            continue;
+                        for (j=0; (*pack)[j] != NULL; j++)
+                            if (*((*pack)[j]) == *i)
+                                break;
+                        if ((*pack)[j] == NULL)
+                            continue;
+                        IPrint("AutoPickup: <Obj>.",i);
+                        SetSilence();
+                        // the Pack slot stacks through EV_PICKUP; other packs need EV_INSERT
+                        if ((k == -1 ? Throw(EV_PICKUP,this,NULL,i)
+                                     : Throw(EV_INSERT,this,NULL,pack,i)) == ABORT)
+                            UnsetSilence();
+                        else {
+                            UnsetSilence();
+                            did_anything = true;
+                            LegendIdent(i);
+                            goto start_again; // because Remove() will change the linked
+                        }
+                    }
                 }
             }
 
@@ -3332,23 +3360,28 @@ start_again:
                tools/check_mundane_autopickup.sh. inc-mc37, not sent. */
             if (i->PItemLevel(this) >= 0 && i->eID && !i->isKnown() && !i->isFlavorGodMark()
                 && !(TEFF(i->eID) && TEFF(i->eID)->HasFlag(EF_MUNDANE))) {
-                if (auto_pickup == 2 && Inv[SL_PACK] && oItem(Inv[SL_PACK])->Type == T_CONTAIN && (InSlot(SL_PACK) || AbilityLevel(CA_WILD_SHAPE))) { 
-                    pack = (Container*)oItem(Inv[SL_PACK]);
-                    if (pack) {
-                        IPrint("AutoStowing: <Obj>.",i);
+                if (auto_pickup == 2) {
+                    bool tried = false;
+                    for (int k=-1;k<SL_LAST;k++) {
+                        pack = AutoPickupPack(this,Inv[SL_PACK],k,true);
+                        if (!pack)
+                            continue;
+                        if (!tried)
+                            IPrint("AutoStowing: <Obj>.",i);
+                        tried = true;
                         SetSilence();
-                        if (Throw(EV_INSERT,this,NULL,pack,i) == ABORT) {
+                        if (Throw(EV_INSERT,this,NULL,pack,i) != ABORT) {
                             UnsetSilence(); // return;
-                            IPrint("AutoStowing failed.");
-                        } else { 
-                            UnsetSilence(); // return;
-                            did_anything = true; 
+                            did_anything = true;
                             LegendIdent(i);
-                            goto start_again; // because Remove() will change the linked 
-                        } 
-                    } 
+                            goto start_again; // because Remove() will change the linked
+                        }
+                        UnsetSilence(); // return;
+                    }
+                    if (tried)
+                        IPrint("AutoStowing failed.");
                 }
-            } 
+            }
             LegendIdent(i);
         }
     }
