@@ -1514,8 +1514,12 @@ EvReturn Item::Damage(EventInfo &e) {
 
         posthard = e.vDmg - hard; 
 
-        /* If you are attacking your own items, ignore their hardness. */
-        if ((e.EActor == owner) && !e.isTrap && !e.eID) {
+        /* If you are attacking your own items, ignore their hardness.
+           upstream: the owner override must not erase the -1 immunity
+           sentinel; present since the 2014 import (7b8504a3), so wrong on
+           every platform. Traced, then Observed by tools/check_owner_damage_immune.sh,
+           inc-nm59, not sent. */
+        if ((e.EActor == owner) && !e.isTrap && !e.eID && hard >= 0) {
             posthard = e.vDmg;
             hard = 0;
         }
