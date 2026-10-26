@@ -510,6 +510,10 @@ void Game::Play() {
     extern void AutoPickupPacksProbe(Player *pl);
     AutoPickupPacksProbe(pp);
 
+    /* inc-8fl6: off unless INCURSION_WROUGHT_METAL_PROBE=1. */
+    extern void WroughtMetalProbe(Player *pl);
+    WroughtMetalProbe(pp);
+
     /* inc-u3dp phase 5: searching finds hidden creatures. Off unless
        INCURSION_HIDE_SEARCH_PROBE is set. See HideSearchProbe
        (src/HideSearchProbe.cpp) and tools/check_hide_search.sh. */
