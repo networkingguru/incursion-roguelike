@@ -103,7 +103,7 @@
 1 tools/check_sanctuary_strike.sh
 6 tools/check_shadow_shifting.sh
 2 tools/check_sharp_senses.sh
-3 tools/check_sigpipe_status.sh
+2 tools/check_sigpipe_status.sh
 2 tools/check_snowstrike.sh
 3 tools/check_springblade.sh
 2 tools/check_springblade_label.sh
