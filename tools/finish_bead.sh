@@ -121,8 +121,10 @@ scratch_dir() {
 # script (so its ROOT/SHARED resolve inside the throwaway repo, not the real
 # one). Prints "<tmp> <script-copy> <master-checkout> <fake-bd-dir>" on success.
 # The fake bd (inc-v4xe) answers `show <id> --json` from $tmp/beads/<id>.json.
+# inc-ut6bb: STEP 2b refuses a bead with no criteria, so the bead carries one
+# criterion and an evidence commit. Argument "bare" builds it with neither.
 selftest_merge_repo() {
-    local tmp bead="inc-slftst"
+    local tmp bead="inc-slftst" mode="${1:-}"
 
     tmp="$(mktemp -d "${TMPDIR:-/tmp}/finish-bead-selftest.XXXXXX")" || return 1
     mkdir -p "$tmp/work/Incursion/tools" "$tmp/work/Incursion/src" || return 1
@@ -146,6 +148,10 @@ selftest_merge_repo() {
     echo bead >"$tmp/work/Incursion-$bead/bead-work.txt" || return 1
     git -C "$tmp/work/Incursion-$bead" add bead-work.txt || return 1
     git -C "$tmp/work/Incursion-$bead" commit -q -m "bead work" || return 1
+    if [ "$mode" != bare ]; then
+        git -C "$tmp/work/Incursion-$bead" commit -q --allow-empty \
+            -m "evidence ($bead)" -m "AC1: observed the scratch bead work" || return 1
+    fi
 
     git -C "$tmp/work/Incursion" worktree add -q \
         "$tmp/work/master-checkout" master || return 1
@@ -167,8 +173,13 @@ echo "unknown bead" >&2
 exit 1
 FAKE
     chmod +x "$tmp/bin/bd" || return 1
-    printf '[{"id":"%s","status":"open","description":"","notes":""}]\n' "$bead" \
-        >"$tmp/beads/$bead.json" || return 1
+    if [ "$mode" = bare ]; then
+        printf '[{"id":"%s","status":"open","description":"","notes":""}]\n' "$bead" \
+            >"$tmp/beads/$bead.json" || return 1
+    else
+        printf '[{"id":"%s","status":"open","description":"## Acceptance Criteria\\n- the scratch bead lands\\n","notes":""}]\n' "$bead" \
+            >"$tmp/beads/$bead.json" || return 1
+    fi
 
     printf '%s %s %s %s\n' "$tmp" "$tmp/work/Incursion/tools/finish_bead.sh" \
         "$tmp/work/master-checkout" "$tmp/bin"
@@ -297,7 +308,7 @@ selftest() {
     [ "$before_head" = "$after_head" ] || { echo "SELFTEST FAIL: rename case moved master despite refusing"; return 1; }
 
     # inc-v4xe STEP 2b: a bead with two criteria needs AC1 and AC2 lines.
-    line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the repo (ac-missing case)"; return 1; }
+    line="$(selftest_merge_repo bare)" || { echo "SELFTEST FAIL: could not build the repo (ac-missing case)"; return 1; }
     read -r tmp copy masterco bindir <<<"$line"
     selftest_two_ac "$tmp"
     before_head="$(git -C "$masterco" rev-parse HEAD)"
@@ -318,6 +329,17 @@ selftest() {
     rm -rf "$tmp"
     [ "$status" -eq 0 ] || { echo "SELFTEST FAIL: AC lines present did not land, status $status: $out"; return 1; }
     case "$out" in *"Landed."*) ;; *) echo "SELFTEST FAIL: ac-present case did not land: $out"; return 1;; esac
+
+    # inc-ut6bb: a bead with no criteria is refused at STEP 2b, and master stays put.
+    line="$(selftest_merge_repo bare)" || { echo "SELFTEST FAIL: could not build the repo (no-criteria case)"; return 1; }
+    read -r tmp copy masterco bindir <<<"$line"
+    before_head="$(git -C "$masterco" rev-parse HEAD)"
+    out="$(PATH="$bindir:$PATH" INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    after_head="$(git -C "$masterco" rev-parse HEAD)"
+    rm -rf "$tmp"
+    [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: a bead with no criteria did not refuse, status $status: $out"; return 1; }
+    case "$out" in *"has no acceptance criteria"*) ;; *) echo "SELFTEST FAIL: no-criteria case said: $out"; return 1;; esac
+    [ "$before_head" = "$after_head" ] || { echo "SELFTEST FAIL: no-criteria case moved master despite refusing"; return 1; }
 
     line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the repo (bd-fails case)"; return 1; }
     read -r tmp copy masterco bindir <<<"$line"

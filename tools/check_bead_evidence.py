@@ -34,7 +34,8 @@ REFUSED (exit 1), every fault reported in one run:
     bead that is not closed AND whose description or notes hold the id of the
     bead being landed (a whole id), or it says `exception:` and the bead's notes hold a line that starts
     `AC<n> exception (Brian`.
-A bead with no criteria passes. Ends: 0 pass, 1 refused, 2 could not measure.
+  - the bead has no criteria at all, docs-only or not (inc-ut6bb).
+Ends: 0 pass, 1 refused, 2 could not measure.
 """
 import json
 import os
@@ -132,7 +133,11 @@ def evaluate(bead_id, base, repo):
         bead = bd_show(bead_id, repo)
         crit = criteria_of(bead)
         if not crit:
-            return 0, ["%s has no acceptance criteria; nothing to check" % bead_id], []
+            # inc-ut6bb: no criteria means no landing, docs-only beads included.
+            return 1, [], [
+                "%s has no acceptance criteria. Add a '## Acceptance Criteria' bullet list "
+                "to the bead description (bd update %s --body-file <file>), then give each "
+                "bullet an 'AC<n>: <evidence>' line in a commit message." % (bead_id, bead_id)]
         evidence = {}
         faults = []
         for line in commit_lines(base, bead_id, repo):
@@ -276,9 +281,22 @@ def run_cases(here, tmp):
     branch("inc-t07b", "x (inc-t07b)\n\nAC1: deferred, exception: Brian ruled in notes")
     case("7b deferred, exception without notes line", "inc-t07b", 1, "AC1")
 
+    # inc-ut6bb: a bead with no criteria is refused, whatever its diff holds.
     bead("inc-t08", description="plain text, no heading")
     branch("inc-t08", "x")
-    case("8 no criteria anywhere", "inc-t08", 0, "no acceptance criteria")
+    case("8 no criteria anywhere", "inc-t08", 1, "has no acceptance criteria")
+
+    bead("inc-t08b", description="## Acceptance Criteria\n\nnothing listed\n", acceptance_criteria="  ")
+    branch("inc-t08b", "x (inc-t08b)")
+    case("8b heading without bullets", "inc-t08b", 1, "## Acceptance Criteria")
+
+    bead("inc-t08c", description="Fix the typo in the README.")
+    git("checkout", "-q", "-b", "inc-t08c", "master")
+    with open(os.path.join(repo, "README.md"), "w") as f:
+        f.write("docs only\n")
+    git("add", "README.md")
+    git("commit", "-q", "-m", "docs: fix typo (inc-t08c)")
+    case("8c docs-only bead, no criteria", "inc-t08c", 1, "bd update inc-t08c --body-file")
 
     bead("inc-t09", acceptance_criteria="The whole sentence is one criterion.")
     branch("inc-t09", "x")

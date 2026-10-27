@@ -61,13 +61,15 @@ mkdir -p "$REPO/tools" "$REPO/src"
 cp "$ROOT/tools/nightly_verify.sh" "$ROOT/tools/finish_bead.sh" \
    "$ROOT/tools/docs_only_change.sh" "$ROOT/tools/check_bead_evidence.py" \
    "$REPO/tools/" || exit 2
-# STEP 2b of finish_bead.sh runs bd show; this fake gives every bead no
-# acceptance criteria and never reaches the real bead database (inc-v4xe).
+# STEP 2b of finish_bead.sh runs bd show; this fake gives every bead one
+# acceptance criterion and never reaches the real bead database (inc-v4xe).
+# bead() adds the matching AC1 evidence commit; a bead with none is refused
+# (inc-ut6bb).
 mkdir -p "$TMP/bin"
 cat > "$TMP/bin/bd" <<'FAKE'
 #!/bin/sh
 if [ "$1" = show ] && [ "$3" = --json ]; then
-    printf '[{"id":"%s","status":"open","description":"","notes":""}]\n' "$2"
+    printf '[{"id":"%s","status":"open","description":"## Acceptance Criteria\\n- the scratch bead lands\\n","notes":""}]\n' "$2"
     exit 0
 fi
 echo "unknown bead" >&2
@@ -99,7 +101,9 @@ fails=0
 OUT=""; RC=0; BUILT=0
 calls()  { grep -c "^$1\$" "$LOG"; }
 commit() { git -C "$1" add -A && git -C "$1" commit -q --no-verify -m "$2"; }
-bead()   { git -C "$REPO" worktree add -q -b "$1" "$TMP/Incursion-$1" master; }
+bead()   { git -C "$REPO" worktree add -q -b "$1" "$TMP/Incursion-$1" master \
+    && git -C "$TMP/Incursion-$1" commit -q --no-verify --allow-empty \
+        -m "evidence ($1)" -m "AC1: observed the scratch bead work"; }
 record() { printf '%s/logs/nightly-verify-pass.txt' "$1"; }
 
 # run <dir> <command...> -> OUT, RC, and BUILT: the builds this run made
