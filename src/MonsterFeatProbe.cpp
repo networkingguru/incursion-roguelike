@@ -184,6 +184,7 @@ static void log_great_blow(const char *tag, const char *name, Monster *mn) {
 }
 
 void MonsterFeatProbe(Player *pl) {
+    /* inc-4trf: opt-in probe for tools/check_monster_feats_live.sh. */
     if (!getenv("INCURSION_MONSTER_FEAT_PROBE"))
         return;
     if (!pl || !pl->m) {
