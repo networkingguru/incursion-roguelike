@@ -1809,9 +1809,9 @@ TextVal QualityDescs[] = {
   { WQ_WOUNDING, "A weapon of wounding causes its victim to bleed after being struck "
              "for 1 hp of added damage per rounds for 2d12 rounds thereafter. This "
              "effect can be staunched with the Heal skill." },
-  { WQ_SLEEP, "These missiles render unconscious a target whom they hit if that "
-             "target is suceptable to sleep effects, fails a Fortitude save (DC %d) and "
-             "if the attack roll exceeds that target's Defense Class by 5 or more points." },
+  { WQ_SLEEP, "A sleep weapon puts a target it hits to sleep for 3d4 rounds if the "
+             "attack roll beats the target's Defense Class by 5 or more, the target "
+             "is not immune to sleep, and the target fails a Fortitude save (DC 10+%d)." },
   { WQ_STUNNING, "This weapon may stun its victims for 1d4+1 rounds on a critical hit, "
              "assuming that they fail a Fortitude saving throw (DC %d)." },
   { WQ_TERROR, "On a critical hit, this weapon fills its target with a mortal terror, "

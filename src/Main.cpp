@@ -390,6 +390,10 @@ void Game::Play() {
     extern void MountSizeProbe(Player *pl);
     MountSizeProbe(pp);
 
+    /* inc-30ur: opt-in WQ_SLEEP oracle; see SleepQualityProbe. */
+    extern void SleepQualityProbe(Player *pl);
+    SleepQualityProbe(pp);
+
     /* inc-6qmk: opt-in exact-monster depth oracle; see ExactMonProbe. */
     extern void ExactMonProbe(Player *pl);
     ExactMonProbe(pp);
