@@ -1,4 +1,4 @@
-# Generate as many dungeon levels as one session can, and walk each one.
+# Generate as many dungeon levels as one session can, and pass turns on each one.
 #
 #   tools/headless.sh tools/keys/dive.keys 1
 #
@@ -23,91 +23,147 @@
 # depth 25 and back up", which was wrong; corrected 2026-08-17. Do not size a
 # measurement on the number of jump lines in this file.
 #
+# THE WAITS. Between jumps the character waits ('.') instead of walking. The
+# walk keys used to lead into whatever terrain the seed put in their path, and
+# a step into warning terrain asks "Confirm enter the ...?" (src/Move.cpp),
+# which this script never answered, so the session stalled and the gate counted
+# it as NO GAMEPLAY. Waiting passes the same number of turns, so monsters still
+# move and their AI still runs, and no movement prompt can appear. Each wait
+# count equals the number of movement keys it replaced. inc-nx0z.
+#
+# THE DEATH PROMPT. The gate settings turn on OPT_NODEATH, so a death asks
+# "You die... Die? [yn]" (src/Fight.cpp). Unanswered, it swallowed every later
+# key, and no session played its whole script. The @while line before each
+# jump answers n, so the character cheats death and the dive goes on; it sends
+# nothing when no death prompt is on screen. inc-nx0z.
+#
+# THE LAST BOX. The last jump can land in a room that opens a description box
+# ("#------" border). The line before the final dump closes any such box, so
+# the final screen shows the map on every seed; it sends nothing when no box is
+# open and spends no game turn. inc-nx0z.
+#
 # Generated the same way as explore.keys, seeded 20260816.
 
 @include chargen.keys
 
 @dump:arrival
 
+@while "You die... Die?" n
 w y p "2" ENTER
-PGDN*3 PGDN*3 UP*3 PGUP*2 END*4 END*4 s .*2
+.*19 s .*2
+@while "You die... Die?" n
 w p "3" ENTER
-PGUP*2 UP*2 LEFT*4 LEFT*3 HOME*5 PGUP*1 s .*2
+.*17 s .*2
+@while "You die... Die?" n
 w p "4" ENTER
-LEFT*1 HOME*3 UP*2 END*1 RIGHT*1 UP*5 s .*2
+.*13 s .*2
+@while "You die... Die?" n
 w p "5" ENTER
-PGUP*3 RIGHT*4 HOME*5 END*2 UP*5 RIGHT*5 s .*2
+.*24 s .*2
+@while "You die... Die?" n
 w p "6" ENTER
 @dump:depth6
-UP*5 END*1 RIGHT*1 LEFT*4 LEFT*1 UP*5 s .*2
+.*17 s .*2
+@while "You die... Die?" n
 w p "7" ENTER
-RIGHT*4 PGUP*2 RIGHT*2 UP*3 PGDN*1 HOME*5 s .*2
+.*17 s .*2
+@while "You die... Die?" n
 w p "8" ENTER
-RIGHT*3 LEFT*4 HOME*1 PGDN*1 END*3 END*1 s .*2
+.*13 s .*2
+@while "You die... Die?" n
 w p "9" ENTER
-DOWN*3 END*1 LEFT*5 PGUP*3 DOWN*2 DOWN*3 s .*2
+.*17 s .*2
+@while "You die... Die?" n
 w p "10" ENTER
-HOME*2 END*4 HOME*1 UP*2 LEFT*3 HOME*5 s .*2
+.*17 s .*2
+@while "You die... Die?" n
 w p "11" ENTER
-HOME*4 LEFT*2 DOWN*5 END*5 RIGHT*5 HOME*2 s .*2
+.*23 s .*2
+@while "You die... Die?" n
 w p "12" ENTER
 @dump:depth12
-PGUP*3 END*5 END*3 END*1 PGDN*3 RIGHT*3 s .*2
+.*18 s .*2
+@while "You die... Die?" n
 w p "13" ENTER
-PGUP*4 DOWN*1 PGDN*3 UP*1 UP*4 PGUP*5 s .*2
+.*18 s .*2
+@while "You die... Die?" n
 w p "14" ENTER
-LEFT*2 PGDN*4 UP*5 END*1 UP*2 UP*3 s .*2
+.*17 s .*2
+@while "You die... Die?" n
 w p "15" ENTER
-UP*3 PGDN*4 UP*3 DOWN*4 PGDN*2 RIGHT*4 s .*2
+.*20 s .*2
+@while "You die... Die?" n
 w p "16" ENTER
-UP*2 LEFT*4 PGDN*4 HOME*4 END*3 END*5 s .*2
+.*22 s .*2
+@while "You die... Die?" n
 w p "17" ENTER
-END*4 END*3 PGUP*3 RIGHT*4 PGUP*2 DOWN*2 s .*2
+.*18 s .*2
+@while "You die... Die?" n
 w p "18" ENTER
 @dump:depth18
-LEFT*5 DOWN*3 HOME*3 PGDN*2 PGDN*3 PGDN*5 s .*2
+.*21 s .*2
+@while "You die... Die?" n
 w p "19" ENTER
-HOME*5 DOWN*2 RIGHT*1 LEFT*4 RIGHT*3 UP*2 s .*2
+.*17 s .*2
+@while "You die... Die?" n
 w p "20" ENTER
-RIGHT*2 END*2 HOME*2 PGDN*1 HOME*1 PGDN*4 s .*2
+.*12 s .*2
+@while "You die... Die?" n
 w p "21" ENTER
-PGUP*2 RIGHT*3 DOWN*2 END*5 PGDN*2 PGUP*1 s .*2
+.*15 s .*2
+@while "You die... Die?" n
 w p "22" ENTER
-LEFT*2 PGUP*3 PGDN*5 DOWN*2 UP*1 LEFT*5 s .*2
+.*18 s .*2
+@while "You die... Die?" n
 w p "23" ENTER
-PGUP*4 UP*4 HOME*4 RIGHT*2 END*2 PGDN*5 s .*2
+.*21 s .*2
+@while "You die... Die?" n
 w p "24" ENTER
 @dump:depth24
-LEFT*3 LEFT*3 END*5 PGDN*1 LEFT*2 PGDN*5 s .*2
+.*19 s .*2
+@while "You die... Die?" n
 w p "25" ENTER
-DOWN*3 PGUP*5 DOWN*4 PGUP*3 PGUP*3 PGDN*4 s .*2
+.*22 s .*2
+@while "You die... Die?" n
 w p "24" ENTER
 @dump:depth24
-END*5 HOME*1 LEFT*5 LEFT*4 LEFT*2 UP*2 s .*2
+.*19 s .*2
+@while "You die... Die?" n
 w p "22" ENTER
-PGDN*2 PGDN*2 END*1 DOWN*3 PGDN*2 HOME*1 s .*2
+.*11 s .*2
+@while "You die... Die?" n
 w p "20" ENTER
-HOME*1 PGDN*1 UP*3 DOWN*1 LEFT*1 PGDN*2 s .*2
+.*9 s .*2
+@while "You die... Die?" n
 w p "18" ENTER
 @dump:depth18
-RIGHT*1 LEFT*4 PGUP*1 UP*5 UP*3 END*3 s .*2
+.*17 s .*2
+@while "You die... Die?" n
 w p "16" ENTER
-PGDN*5 HOME*5 PGDN*4 DOWN*1 END*5 PGDN*5 s .*2
+.*25 s .*2
+@while "You die... Die?" n
 w p "14" ENTER
-DOWN*3 PGUP*4 PGDN*5 PGUP*2 RIGHT*4 UP*4 s .*2
+.*22 s .*2
+@while "You die... Die?" n
 w p "12" ENTER
 @dump:depth12
-HOME*3 END*3 END*5 DOWN*4 LEFT*3 LEFT*5 s .*2
+.*23 s .*2
+@while "You die... Die?" n
 w p "10" ENTER
-PGUP*2 HOME*3 RIGHT*4 END*5 HOME*5 UP*3 s .*2
+.*22 s .*2
+@while "You die... Die?" n
 w p "8" ENTER
-END*1 DOWN*2 DOWN*2 UP*4 RIGHT*3 PGUP*3 s .*2
+.*15 s .*2
+@while "You die... Die?" n
 w p "6" ENTER
 @dump:depth6
-DOWN*4 DOWN*2 PGUP*5 UP*2 PGUP*1 DOWN*5 s .*2
+.*19 s .*2
+@while "You die... Die?" n
 w p "4" ENTER
-PGUP*1 PGUP*4 PGDN*2 RIGHT*5 PGDN*5 PGDN*2 s .*2
+.*19 s .*2
+@while "You die... Die?" n
 w p "2" ENTER
 
+@while "#------" SPACE
 @dump:final
 @quit
