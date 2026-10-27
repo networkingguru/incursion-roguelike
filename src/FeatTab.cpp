@@ -70,6 +70,8 @@ struct FeatInfoStruct FeatInfo[] = {
   { FT_ALERTNESS, 0, "Alertness",
     "You are exceptionally alert, receiving a +3 circumstance bonus on "
     "all Spot and Listen checks." },
+  { FT_PERSUASIVE, FF_MONSTER, "Persuasive",
+    "You get a +2 bonus on Bluff and Intimidate checks." },
   { FT_ACROBATIC, 0, "Acrobatic",
     "You have a natural agility and grace in motion, and receive a +3 "
     "skill bonus to all Jump and Tumble checks. Additionally, you do not "
@@ -271,6 +273,14 @@ struct FeatInfoStruct FeatInfo[] = {
     "When making your second and further attacks in your natural attack "
       "sequence, you suffer only a -2 penalty, rather than a -5.",
     {{{FP_ATTACK, A_CLAW, 0}}}},
+  { FT_DASH,        FF_MONSTER, "Dash",
+    "You move 15% faster while you wear light armor or none and carry a light load." },
+  { FT_GREAT_BLOW,  FF_MONSTER, "Great Blow",
+    "You sometimes strike a great blow in melee. You execute a titanically "
+    "powerful blow, doubling your Strength modifier to damage, granting a +2 "
+    "bonus to both the attack roll and damage, and lowering your threat range "
+    "by 3 -- but it takes 1 1/2 times as long as a normal attack, costs two "
+    "Fatigue points and leaves you off-balance and Exposed for a full round." },
   { FT_POUNCE,       FF_MONSTER, "Pounce",
     "When you attack an off-guard enemy, you may make all of the attacks "
     "in your natural attack sequence at your full base attack bonus. Normally "

@@ -367,12 +367,20 @@ void Game::Play() {
     TerraformEdgeProbe(pp);
     extern void TrapAttackProbe(Player *pl);
     TrapAttackProbe(pp);
+    extern void CompanionTrapProbe(Player *pl);
+    CompanionTrapProbe(pp);
 
     /* inc-tmys: off unless INCURSION_MONINIT_PROBE is set; needs a live map.
        See MonsterInitProbe (src/MonsterInitProbe.cpp) and
        tools/check_monster_init_hp.sh. */
     extern void MonsterInitProbe(Player *pl);
     MonsterInitProbe(pp);
+
+    /* inc-4trf: off unless INCURSION_MONSTER_FEAT_PROBE is set; needs a live
+       map. See MonsterFeatProbe (src/MonsterFeatProbe.cpp) and
+       tools/check_monster_feats_live.sh. */
+    extern void MonsterFeatProbe(Player *pl);
+    MonsterFeatProbe(pp);
 
     /* inc-n0ie: opt-in template alignment reproduction. */
     extern void TemplateAlignmentProbe(Player *pl);
@@ -798,6 +806,12 @@ restartDestroyCount:
            square and distance and re-clear its room's memory. Off unless
            INCURSION_ROUTE_UNSEEN is set. */
         { extern void RouteUnseenPerTurn(Player *); RouteUnseenPerTurn(pp); }
+
+        /* inc-nx0z: off unless INCURSION_GRAVESTONE_PROBE is set; fires once,
+           after the first completed turn. See GravestoneProbe
+           (src/GravestoneProbe.cpp) and tools/check_gravestone.sh. */
+        extern void GravestoneProbe(Player *pl);
+        GravestoneProbe(pp);
 
         Turn++;
     } while(1);

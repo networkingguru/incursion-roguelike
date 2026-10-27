@@ -1795,6 +1795,13 @@ class Monster: public Creature
           Acts[nAct].Act = act; Acts[nAct].Pri = pri;
           Acts[nAct].Tar = tar; Acts[nAct].Val = subval; nAct++;
         }
+      /* inc-4trf probe access: whether the last ChooseAction offered a special
+         attack. The candidate list is otherwise protected. */
+      bool OfferedSpecial(int8 act, int32 val) {
+        for (int i = 0; i < nAct; ++i)
+          if (Acts[i].Act == act && Acts[i].Val == val) return true;
+        return false;
+      }
       int16 RateAsTarget(Thing *t);
 
       virtual void Initialize(bool in_play = false);

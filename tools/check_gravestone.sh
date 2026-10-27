@@ -17,13 +17,26 @@
 # check therefore reads a real screen dump and asserts on the whole epitaph
 # LINE, indentation included -- not just on the word.
 #
-# Getting there. tools/keys/gravestone.keys replays the one reproducible
-# confirmed death this repository already keeps -- tools/keys/dive.keys at seed
-# 11 under the pinned gate settings, the scenario tools/check_headless.sh:395
-# uses -- and then answers the "You die... Die? [yn]" prompt and presses ENTER
-# until Player::Gravestone() has drawn. The settings must be pinned: the live
-# Options.Dat is whatever Brian last played with, and OPT_NODEATH is what turns
-# the killing blow into that prompt.
+# Getting there. src/GravestoneProbe.cpp, switched on by INCURSION_GRAVESTONE_PROBE,
+# deals 30000 AD_NORM damage to the loaded character after his first completed
+# turn, through ThrowDmg(EV_DAMAGE) -- the path a monster's blow takes -- with
+# the fixed killer text "gravestone probe". No roll is involved. The pinned gate
+# settings run with OPT_NODEATH on, so the killing blow asks "You die... Die?
+# [yn]" and tools/keys/gravestone.keys answers it, presses ENTER until
+# Player::Gravestone() has drawn, and dumps the screen. The settings must be
+# pinned: OPT_NODEATH is what turns the killing blow into that prompt. The
+# harness reports the death as confirmed twice (the probe's damage ends in
+# Creature::CalcValues' "Belatedly, you drop dead", which throws EV_DEATH again);
+# the check requires at least one.
+#
+# Seed-independent (inc-nx0z; this check used to replay dive.keys at seed 11 and
+# fail the day that walk stopped killing him). Facts the check reads:
+# fact: character (name, class, turn of death) -- fixture orc-barbarian-seed1-gate (INCURSION_LOAD)
+# fact: settings, OPT_NODEATH on -- INCURSION_OPTIONS=tools/gates/Options.Dat
+# fact: the killing blow and its roll -- GravestoneProbe, 30000 damage, no roll
+# fact: killer text on the stone -- the probe's fixed string "gravestone probe"
+# fact: the day carved on the stone -- derived from the dump header's turn
+# fact: the Die? prompt and the screen's timing -- keys y*3, ENTER, @dump
 #
 # Proved RED before it was believed: run against a binary built with the word
 # spelt REQUISCANT, this fails on the assertion below.
@@ -34,9 +47,10 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-SEED=11
+SEED=1
 KEYS=tools/keys/gravestone.keys
 OPTS="$ROOT/tools/gates/Options.Dat"
+LOAD="$ROOT/tools/fixtures/chars/orc-barbarian-seed1-gate.sav"
 
 # The epitaph line exactly as the screen must show it. The leading spaces are
 # part of the assertion: they are what proves the fix did not shift the
@@ -48,12 +62,18 @@ WANT='      |       REQUIESCAT IN PACE,       |'
     echo "FAIL: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
     exit 1
 }
+[ -f "$LOAD" ] || {
+    echo "FAIL: the character fixture is missing: $LOAD"
+    exit 1
+}
 [ -f "$OPTS" ] || {
     echo "FAIL: the pinned gate settings are missing: $OPTS"
     exit 1
 }
 
-OUT="$(INCURSION_OPTIONS="$OPTS" tools/headless.sh "$KEYS" "$SEED" 2>&1 < /dev/null)"
+RUN_DIR="$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$$-gravestone"
+OUT="$(INCURSION_GRAVESTONE_PROBE=1 INCURSION_RUN_DIR="$RUN_DIR" INCURSION_OPTIONS="$OPTS" \
+    INCURSION_LOAD="$LOAD" tools/headless.sh "$KEYS" "$SEED" 2>&1 < /dev/null)"
 RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
 
 # A session that measured nothing must never read as a pass -- that mistake is
@@ -72,10 +92,7 @@ if ! echo "$OUT" | grep -q '^death:.*confirmed'; then
     exit 1
 fi
 
-SCREEN="$RUN/logs/screens/0011-gravestone.txt"
-if [ ! -f "$SCREEN" ]; then
-    SCREEN="$(ls "$RUN"/logs/screens/*-gravestone.txt 2>/dev/null | tail -1)"
-fi
+SCREEN="$(ls "$RUN"/logs/screens/*-gravestone.txt 2>/dev/null | tail -1)"
 if [ -z "$SCREEN" ] || [ ! -f "$SCREEN" ]; then
     echo "FAIL: the session dumped no gravestone screen under $RUN/logs/screens"
     exit 1
@@ -86,6 +103,13 @@ fi
 # without telling anybody why.
 if ! grep -q "WAS KILLED BY" "$SCREEN"; then
     echo "FAIL: $SCREEN is not the gravestone screen"
+    exit 1
+fi
+
+# The killer is the probe's fixed text, so it is asserted whole.
+if ! grep -qxF '      |        gravestone probe         |' "$SCREEN"; then
+    echo "FAIL: the stone does not name the killer 'gravestone probe'"
+    grep -n -A2 "WAS KILLED BY" "$SCREEN"
     exit 1
 fi
 
