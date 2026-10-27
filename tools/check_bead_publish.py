@@ -106,10 +106,10 @@ GAME_WORDS = [
 ]
 
 
-def run(cmd):
+def run(cmd, cwd=ROOT):
     """Run a command, return stdout, or None when it fails."""
     try:
-        p = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
+        p = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
     except OSError:
         return None
     return p.stdout if p.returncode == 0 else None
@@ -128,7 +128,9 @@ def load_beads():
 
 def head_time():
     """HEAD's commit time, in seconds. None when git cannot be asked."""
-    out = run(["git", "-C", ROOT, "log", "-1", "--format=%ct"])
+    # HEAD of the CALLER's checkout, not of ROOT: the hook runs this script from
+    # the shared checkout while the commit is in a worktree (inc-x604).
+    out = run(["git", "log", "-1", "--format=%ct"], cwd=None)
     if not out:
         return None
     try:

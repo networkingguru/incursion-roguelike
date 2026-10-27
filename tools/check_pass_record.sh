@@ -59,7 +59,24 @@ TOUCH_LIVE="$TMP/touch-live" # while this exists, the live check edits a tracked
 
 mkdir -p "$REPO/tools" "$REPO/src"
 cp "$ROOT/tools/nightly_verify.sh" "$ROOT/tools/finish_bead.sh" \
-   "$ROOT/tools/docs_only_change.sh" "$REPO/tools/" || exit 2
+   "$ROOT/tools/docs_only_change.sh" "$ROOT/tools/check_bead_evidence.py" \
+   "$REPO/tools/" || exit 2
+# STEP 2b of finish_bead.sh runs bd show; this fake gives every bead one
+# acceptance criterion and never reaches the real bead database (inc-v4xe).
+# bead() adds the matching AC1 evidence commit; a bead with none is refused
+# (inc-ut6bb).
+mkdir -p "$TMP/bin"
+cat > "$TMP/bin/bd" <<'FAKE'
+#!/bin/sh
+if [ "$1" = show ] && [ "$3" = --json ]; then
+    printf '[{"id":"%s","status":"open","description":"## Acceptance Criteria\\n- the scratch bead lands\\n","notes":""}]\n' "$2"
+    exit 0
+fi
+echo "unknown bead" >&2
+exit 1
+FAKE
+chmod +x "$TMP/bin/bd"
+export PATH="$TMP/bin:$PATH"
 printf '#!/bin/sh\necho build >> "%s"\n' "$LOG" > "$REPO/build_macos.sh"
 # The three steps that run beside the builds. No gate marker, so not checks.
 for step in check_linux_build.sh check_layout_sweep.sh gate_compare.sh; do
@@ -84,7 +101,9 @@ fails=0
 OUT=""; RC=0; BUILT=0
 calls()  { grep -c "^$1\$" "$LOG"; }
 commit() { git -C "$1" add -A && git -C "$1" commit -q --no-verify -m "$2"; }
-bead()   { git -C "$REPO" worktree add -q -b "$1" "$TMP/Incursion-$1" master; }
+bead()   { git -C "$REPO" worktree add -q -b "$1" "$TMP/Incursion-$1" master \
+    && git -C "$TMP/Incursion-$1" commit -q --no-verify --allow-empty \
+        -m "evidence ($1)" -m "AC1: observed the scratch bead work"; }
 record() { printf '%s/logs/nightly-verify-pass.txt' "$1"; }
 
 # run <dir> <command...> -> OUT, RC, and BUILT: the builds this run made
@@ -98,7 +117,7 @@ gate() { run "$1" tools/nightly_verify.sh "${@:2}"; }
 # A direct landing run needs a diff ref, exactly as finish_bead.sh supplies it.
 # finish_bead.sh sets it to $BASE_BRANCH (master here), so the record's env
 # fingerprint matches the reuse a landing makes.
-landgate() { run "$1" env INCURSION_LANDING_DIFF_REF=master tools/nightly_verify.sh --landing; }
+landgate() { run "$1" env INCURSION_LANDING_VIA_SHARED=1 INCURSION_LANDING_DIFF_REF=master tools/nightly_verify.sh --landing; }
 land() { run "$REPO" tools/finish_bead.sh "$1"; }
 land_in() { run "$1" tools/finish_bead.sh "$2"; }
 # "! git ..." passed through expect's "$@" loses its negation -- bash looks up

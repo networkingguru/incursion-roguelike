@@ -190,6 +190,19 @@ if [ "$PRINT_MODE" = 1 ]; then
     exit 0
 fi
 
+# A landing run exports INCURSION_LANDING_DIFF_REF. Only the current
+# tools/finish_bead.sh, run from the shared checkout, also exports
+# INCURSION_LANDING_VIA_SHARED=1. A diff ref without it came from a stale
+# worktree copy that skips the load guard and the evidence check, so nothing may
+# pass. No diff ref (by hand, the nightly) is unaffected. inc-x604.
+if [ "$MODE" != "selftest" ] && [ -n "${INCURSION_LANDING_DIFF_REF:-}" ] \
+    && [ "${INCURSION_LANDING_VIA_SHARED:-}" != "1" ]; then
+    echo "nightly_verify: REFUSED. This landing was not started by the shared checkout's finish_bead.sh," >&2
+    echo "so the load guard and the evidence check may have been skipped. Run:" >&2
+    echo "  /Users/brianhill/Scripts/Incursion/tools/finish_bead.sh <bead>" >&2
+    exit 2
+fi
+
 # The name of the gate a run that cannot reuse a pass falls through to. With
 # --landing that is the short landing gate; every other mode runs the full
 # gate. Kept as one small function so the fallback line and the selftest read
@@ -1471,7 +1484,7 @@ selftest() {
         rm -f "$smoke_marker" "$live_same_marker" "$live_changed_marker"
         out="$(cd "$repo" && NIGHTLY_CHECK_DIR="$d" \
             NIGHTLY_VERIFY_STATE="$repo/base.txt" \
-            INCURSION_LANDING_DIFF_REF=base "$self" --landing 2>&1)"
+            INCURSION_LANDING_VIA_SHARED=1 INCURSION_LANDING_DIFF_REF=base "$self" --landing 2>&1)"
         rc=$?
         if [ "$rc" = 0 ] && [ -e "$smoke_marker" ] \
             && [ -e "$live_changed_marker" ] && [ ! -e "$live_same_marker" ]; then
@@ -1497,7 +1510,7 @@ selftest() {
         fi
         out="$(cd "$repo" && NIGHTLY_CHECK_DIR="$d" \
             NIGHTLY_VERIFY_STATE="$repo/base.txt" \
-            INCURSION_LANDING_DIFF_REF=no-such-ref "$self" --landing 2>&1)"
+            INCURSION_LANDING_VIA_SHARED=1 INCURSION_LANDING_DIFF_REF=no-such-ref "$self" --landing 2>&1)"
         rc=$?
         if [ "$rc" = 2 ]; then
             printf '  ok    --landing with an unknown diff ref exits 2\n'
@@ -1564,7 +1577,7 @@ selftest() {
         # A full record is NOT reused by the landing gate.
         out="$(cd "$repo" && NIGHTLY_CHECK_DIR="$d" \
             NIGHTLY_VERIFY_STATE="$repo/logs/nightly-verify-base.txt" \
-            INCURSION_LANDING_DIFF_REF=base "$self" --landing --reuse-pass 2>&1)"
+            INCURSION_LANDING_VIA_SHARED=1 INCURSION_LANDING_DIFF_REF=base "$self" --landing --reuse-pass 2>&1)"
         rc=$?
         if grep -q 'the pass record is from the full gate' <<<"$out"; then
             printf '  ok    a full record is refused by --landing --reuse-pass\n'

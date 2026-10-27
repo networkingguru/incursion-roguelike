@@ -191,7 +191,7 @@ failed with `SCHEMA COVERAGE` errors (inc-xlwa).
 `ARCHIVE_CLASS` (`inc/Base.h:804`) already generates a
 `Serialize(Registry&, bool isSave)` that calls its base first, and 20 classes
 already use it. The bodies gain field declarations beside the fixups they
-already carry. `Thing` (`inc/Map.h:948-972`) becomes:
+already carry. `Thing` (`inc/Map.h:952-976`) becomes:
 
 ```cpp
 ARCHIVE_CLASS(Thing,Object,r)
