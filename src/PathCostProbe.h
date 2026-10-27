@@ -123,6 +123,7 @@ static bool PP_WallReach(Map *m, int sx, int sy, int tx, int ty, bool Incor, boo
     }
     return false;
 }
+/* inc-vhkei: writes the step-1 classification to $INCURSION_RUN_DIR/pathprobe-detail.txt. */
 static void PP_Detail() {
     const char *rd = getenv("INCURSION_RUN_DIR");
     if (!rd) return;
