@@ -455,16 +455,16 @@ run_gate || rc=$?
 expect "two stopped rows in DIFFERENT worktrees: block" 2 block fallback "$rc" 1
 
 # --- case: budget, sonnet, under the day-1 threshold ----------------------
-# Day 1 threshold is 5%, so 4% is under it and a sonnet budget dispatch passes.
-write_usage 4 $R_DAY1
+# Day 1 threshold is 10%, so 9% is under it and a sonnet budget dispatch passes.
+write_usage 9 $R_DAY1
 payload Agent sonnet "budget: x" general > "$TMP/in.json"
 rc=0
 run_gate_budget || rc=$?
 expect "budget, sonnet, under threshold: allow" 0 allow budget "$rc" 1
 
 # --- case: budget, sonnet, at the day-1 threshold -------------------------
-# At 5% (not under it) the weekly budget blocks the dispatch.
-write_usage 5 $R_DAY1
+# At 10% (not under it) the weekly budget blocks the dispatch.
+write_usage 10 $R_DAY1
 payload Agent sonnet "budget: x" general > "$TMP/in.json"
 rc=0
 run_gate_budget || rc=$?

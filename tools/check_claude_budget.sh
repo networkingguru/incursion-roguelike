@@ -3,7 +3,7 @@
 # Does tools/claude_budget.py decide the coding route from Claude Code's
 # seven-day rate-limit window exactly as specified? Defends bead inc-cfnm: the
 # boundary is strict (used < threshold), the day is derived from `resets_at`
-# and clamped to 1..7, day 7 has a flat 90% threshold, a passed `resets_at`
+# and clamped to 1..7, day 7 has a flat 100% threshold, a passed `resets_at`
 # resets the window to day 1 with used 0, a missing/non-JSON/no-seven_day file
 # or a stale mtime (more than 3600s) is UNKNOWN (exit 2), and a verdict line is
 # printed as `claude-budget: day D, weekly used U%, threshold T% -> WORD`.
@@ -14,8 +14,8 @@
 #
 #   tools/check_claude_budget.sh               run the cases
 #   tools/check_claude_budget.sh --prove-red   mutate the day-7 threshold from
-#                                              90 to 65, confirm the
-#                                              "day 7, used 89" case goes red,
+#                                              100 to 65, confirm the
+#                                              "day 7, used 99" case goes red,
 #                                              restore, and verify the restore
 #                                              with cmp
 #
@@ -53,7 +53,7 @@ if [ "${1:-}" = "--prove-red" ]; then
     BACKUP="$TMP/claude_budget.py.orig"
     cp "$GATE" "$BACKUP"
 
-    NEEDLE='threshold = 90 if day == 7 else 10 * day - 5'
+    NEEDLE=$'day = max(1, min(7, day))\n\n    threshold = THRESHOLDS[day - 1]'
     if ! grep -qF "$NEEDLE" "$GATE"; then
         echo "could not find the day-7 threshold to mutate: $NEEDLE" >&2
         exit 2
@@ -63,9 +63,9 @@ import sys
 path, needle = sys.argv[1], sys.argv[2]
 src = open(path).read()
 open(path, "w").write(src.replace(
-    needle, 'threshold = 65 if day == 7 else 10 * day - 5  # MUTATED by --prove-red', 1))
+    needle, 'day = max(1, min(7, day))\n\n    threshold = 65 if day == 7 else THRESHOLDS[day - 1]  # MUTATED by --prove-red', 1))
 PY
-    echo "mutated tools/claude_budget.py: day-7 threshold 90 -> 65"
+    echo "mutated tools/claude_budget.py: day-7 threshold 100 -> 65"
 
     MUTATED_OUTPUT="$("$ROOT/tools/check_claude_budget.sh")"
     MUTATED_RC=$?
@@ -73,10 +73,10 @@ PY
     echo "$MUTATED_OUTPUT"
     echo "--- end output of the mutated run ---"
 
-    if [ "$MUTATED_RC" -ne 0 ] && grep -q 'FAIL.*day 7, used 89' <<< "$MUTATED_OUTPUT"; then
-        echo "PASS (as intended): the 'day 7, used 89' case went red under the mutation"
+    if [ "$MUTATED_RC" -ne 0 ] && grep -q 'FAIL.*day 7, used 99' <<< "$MUTATED_OUTPUT"; then
+        echo "PASS (as intended): the 'day 7, used 99' case went red under the mutation"
     else
-        echo "FAIL: the 'day 7, used 89' case did not go red with the day-7 threshold lowered (rc=$MUTATED_RC)"
+        echo "FAIL: the 'day 7, used 99' case did not go red with the day-7 threshold lowered (rc=$MUTATED_RC)"
         PROVE_FAIL=1
     fi
 
@@ -172,35 +172,35 @@ R_DAY7=$((NOW + 604800 - 561600))
 R_PAST=$((NOW - 3600))
 
 # --- case: day 1 boundary is strict --------------------------------------
-write_usage 4 "$R_DAY1"; set_mtime 60 "$NOW"
+write_usage 9 "$R_DAY1"; set_mtime 60 "$NOW"
 rc=0; run_verdict "$NOW" || rc=$?
-expect "day 1, used 4: sonnet-first" 0 sonnet-first "$rc"
+expect "day 1, used 9: sonnet-first" 0 sonnet-first "$rc"
 
-write_usage 5 "$R_DAY1"; set_mtime 60 "$NOW"
+write_usage 10 "$R_DAY1"; set_mtime 60 "$NOW"
 rc=0; run_verdict "$NOW" || rc=$?
-expect "day 1, used 5: normal" 1 normal "$rc"
+expect "day 1, used 10: normal" 1 normal "$rc"
 
 # --- case: day 3 boundary ------------------------------------------------
-write_usage 24 "$R_DAY3"; set_mtime 60 "$NOW"
+write_usage 34 "$R_DAY3"; set_mtime 60 "$NOW"
 rc=0; run_verdict "$NOW" || rc=$?
-expect "day 3, used 24: sonnet-first" 0 sonnet-first "$rc"
+expect "day 3, used 34: sonnet-first" 0 sonnet-first "$rc"
 
-write_usage 25 "$R_DAY3"; set_mtime 60 "$NOW"
+write_usage 35 "$R_DAY3"; set_mtime 60 "$NOW"
 rc=0; run_verdict "$NOW" || rc=$?
-expect "day 3, used 25: normal" 1 normal "$rc"
+expect "day 3, used 35: normal" 1 normal "$rc"
 
 # --- case: day 6 and day 7 thresholds ------------------------------------
-write_usage 54 "$R_DAY6"; set_mtime 60 "$NOW"
+write_usage 64 "$R_DAY6"; set_mtime 60 "$NOW"
 rc=0; run_verdict "$NOW" || rc=$?
-expect "day 6, used 54: sonnet-first" 0 sonnet-first "$rc"
+expect "day 6, used 64: sonnet-first" 0 sonnet-first "$rc"
 
-write_usage 89 "$R_DAY7"; set_mtime 60 "$NOW"
+write_usage 99 "$R_DAY7"; set_mtime 60 "$NOW"
 rc=0; run_verdict "$NOW" || rc=$?
-expect "day 7, used 89: sonnet-first" 0 sonnet-first "$rc"
+expect "day 7, used 99: sonnet-first" 0 sonnet-first "$rc"
 
-write_usage 90 "$R_DAY7"; set_mtime 60 "$NOW"
+write_usage 100 "$R_DAY7"; set_mtime 60 "$NOW"
 rc=0; run_verdict "$NOW" || rc=$?
-expect "day 7, used 90: normal" 1 normal "$rc"
+expect "day 7, used 100: normal" 1 normal "$rc"
 
 # --- case: window already reset ------------------------------------------
 write_usage 99 "$R_PAST"; set_mtime 60 "$NOW"
