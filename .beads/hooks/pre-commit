@@ -142,9 +142,10 @@ fi
 # (inc-pu6v, 2026-09-24). The reason, the gated path and the escape hatch are
 # in tools/check_epic_merge.sh, whose --selftest proves each case.
 if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
-  _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
-  if [ -x "$_inc_root/tools/check_epic_merge.sh" ]; then
-    "$_inc_root/tools/check_epic_merge.sh"
+  # Process script: runs from the shared checkout (inc-x604).
+  _inc_shared=$(dirname "$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd -P)")
+  if [ -x "$_inc_shared/tools/check_epic_merge.sh" ]; then
+    "$_inc_shared/tools/check_epic_merge.sh"
     _inc_epic=$?
     if [ $_inc_epic -ne 0 ]; then exit $_inc_epic; fi
   fi
@@ -172,9 +173,10 @@ if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
 fi
 
 if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
-  _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
-  if [ -x "$_inc_root/tools/check_bead_publish.py" ]; then
-    BD_GIT_HOOK_NESTED=1 "$_inc_root/tools/check_bead_publish.py"
+  # Process script: runs from the shared checkout (inc-x604).
+  _inc_shared=$(dirname "$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd -P)")
+  if [ -x "$_inc_shared/tools/check_bead_publish.py" ]; then
+    BD_GIT_HOOK_NESTED=1 "$_inc_shared/tools/check_bead_publish.py"
     _inc_pub=$?
     if [ $_inc_pub -eq 1 ]; then
       if [ "$_inc_nightly" -eq 1 ]; then
