@@ -1,0 +1,6 @@
+# inc-47ws: the player stays put. 30 single "wait one turn" keys give the
+# companion time to walk the scene; the probe logs one line per player action.
+@while "-- more --" SPACE
+.*30
+@dump:companion-trap
+@quit
