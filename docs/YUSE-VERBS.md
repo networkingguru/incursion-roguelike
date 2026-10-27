@@ -149,7 +149,7 @@ far less ground than its name suggests. Verified by reading the script.
   glass vial onto a weapon (`lib/mundane.irh:1016`), the weapon oils
   (`lib/m_items.irh:1488`) and the lantern below.
 - **Dip** has four handlers in the build and they cover two targets: a
-  **fountain** (`lib/dungeon.irh:2395` and `:2561`) and an **alchemical
+  **fountain** (`lib/dungeon.irh:2395` and `:2568`) and an **alchemical
   flask**, where only acid does anything (`lib/alchemy.irh:97` and
   `lib/alchemy.irh:650`). A fifth handler, the Spell Storing ring dipped in a
   fountain, is written but not compiled: `#if 0` at `lib/m_items.irh:5250`
