@@ -418,6 +418,20 @@ if [ "${1:-}" = "--selftest" ]; then
     exit $?
 fi
 
+# Process machinery runs from the shared checkout (inc-x604). Each worktree
+# carries the tools/ it was made with, so a landing started from an old one would
+# skip the load guard and STEP 2b. A copy that is not the shared checkout's hands
+# the run over before it does any work, before the lock. INCURSION_FINISH_HANDED_OVER
+# stops a loop. --selftest returned above: it must test the copy under edit.
+ROOT_PHYS="$(cd "$ROOT" && pwd -P)"
+SHARED_PHYS="$(cd "$SHARED" 2>/dev/null && pwd -P)"
+if [ "$ROOT_PHYS" != "$SHARED_PHYS" ] && [ -z "${INCURSION_FINISH_HANDED_OVER:-}" ]; then
+    [ -x "$SHARED/tools/finish_bead.sh" ] \
+        || cannot "$SHARED/tools/finish_bead.sh is missing or not executable; cannot hand the landing over"
+    echo "=== finish_bead: handing over to $SHARED/tools/finish_bead.sh (this copy is $ROOT) ==="
+    INCURSION_FINISH_HANDED_OVER=1 exec "$SHARED/tools/finish_bead.sh" "$@"
+fi
+
 BEAD="${1:-}"
 RUN_GATE=1
 [ "${2:-}" = "--no-gate" ] && RUN_GATE=0
@@ -661,7 +675,10 @@ fi
 
 if [ "$RUN_GATE" -eq 1 ]; then
     echo "=== gate: $GATE_CMD ==="
-    if ! ( cd "$WORKTREE" && export INCURSION_LANDING_DIFF_REF="$BASE_BRANCH" && eval "$GATE_CMD" ); then
+    # INCURSION_LANDING_VIA_SHARED is the marker nightly_verify.sh demands next to
+    # a diff ref: a copy that predates the hand-over cannot set it. inc-x604.
+    if ! ( cd "$WORKTREE" && export INCURSION_LANDING_DIFF_REF="$BASE_BRANCH" \
+            INCURSION_LANDING_VIA_SHARED=1 && eval "$GATE_CMD" ); then
         die "STOPPED: the gate is red on $BEAD after merging $BASE_BRANCH.
 Nothing has reached $BASE_BRANCH. Fix it in $WORKTREE and run this again.
 If the gate cannot measure here rather than failing, re-run with --no-gate and

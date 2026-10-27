@@ -117,7 +117,7 @@ gate() { run "$1" tools/nightly_verify.sh "${@:2}"; }
 # A direct landing run needs a diff ref, exactly as finish_bead.sh supplies it.
 # finish_bead.sh sets it to $BASE_BRANCH (master here), so the record's env
 # fingerprint matches the reuse a landing makes.
-landgate() { run "$1" env INCURSION_LANDING_DIFF_REF=master tools/nightly_verify.sh --landing; }
+landgate() { run "$1" env INCURSION_LANDING_VIA_SHARED=1 INCURSION_LANDING_DIFF_REF=master tools/nightly_verify.sh --landing; }
 land() { run "$REPO" tools/finish_bead.sh "$1"; }
 land_in() { run "$1" tools/finish_bead.sh "$2"; }
 # "! git ..." passed through expect's "$@" loses its negation -- bash looks up
