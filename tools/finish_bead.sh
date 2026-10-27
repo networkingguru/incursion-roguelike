@@ -156,6 +156,9 @@ selftest_merge_repo() {
 
     cp "$ROOT/tools/check_bead_evidence.py" \
         "$tmp/work/Incursion/tools/check_bead_evidence.py" || return 1
+    # inc-bs4q: the real guard runs in the scratch repo too.
+    cp "$ROOT/tools/load_guard.sh" \
+        "$tmp/work/Incursion/tools/load_guard.sh" || return 1
     mkdir -p "$tmp/bin" "$tmp/beads" || return 1
     cat >"$tmp/bin/bd" <<FAKE || return 1
 #!/bin/sh
@@ -179,6 +182,13 @@ selftest_two_ac() {
 
 selftest() {
     local out status
+
+    # inc-bs4q: pin every load_guard.sh input to calm, whatever the caller
+    # exported, and keep its log out of the shared checkout.
+    unset INCURSION_LOAD_GUARD_OFF
+    export INCURSION_LOAD_GUARD_FAKE_LOAD=0 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
+        INCURSION_LOAD_GUARD_FAKE_PRESSURE=0 INCURSION_LOAD_GUARD_FAKE_GATES=0 \
+        INCURSION_LOAD_GUARD_LOG=/dev/null
 
     out="$("$SCRIPT" 2>&1)"; status=$?
     [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: no argument returned $status, expected 1"; return 1; }
@@ -318,6 +328,30 @@ selftest() {
     rm -rf "$tmp"
     [ "$status" -eq 2 ] || { echo "SELFTEST FAIL: a failing bd did not give exit 2, status $status: $out"; return 1; }
     [ "$before_head" = "$after_head" ] || { echo "SELFTEST FAIL: bd-fails case moved master"; return 1; }
+
+    # inc-bs4q: the guard pinned to overload refuses with the overload message.
+    line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the repo (overload case)"; return 1; }
+    read -r tmp copy masterco bindir <<<"$line"
+    before_head="$(git -C "$masterco" rev-parse HEAD)"
+    out="$(PATH="$bindir:$PATH" INCURSION_FINISH_GATE=true INCURSION_LOAD_GUARD_FAKE_LOAD=99 "$copy" inc-slftst 2>&1)"; status=$?
+    after_head="$(git -C "$masterco" rev-parse HEAD)"
+    rm -rf "$tmp"
+    [ "$status" -eq 2 ] || { echo "SELFTEST FAIL: overload did not give exit 2, status $status: $out"; return 1; }
+    case "$out" in *"machine is overloaded"*) ;; *) echo "SELFTEST FAIL: overload case said: $out"; return 1;; esac
+    [ "$before_head" = "$after_head" ] || { echo "SELFTEST FAIL: overload case moved master"; return 1; }
+
+    # inc-bs4q: a missing guard is "could not run", never "overloaded".
+    line="$(selftest_merge_repo)" || { echo "SELFTEST FAIL: could not build the repo (guard-missing case)"; return 1; }
+    read -r tmp copy masterco bindir <<<"$line"
+    rm -f "$tmp/work/Incursion/tools/load_guard.sh"
+    before_head="$(git -C "$masterco" rev-parse HEAD)"
+    out="$(PATH="$bindir:$PATH" INCURSION_FINISH_GATE=true "$copy" inc-slftst 2>&1)"; status=$?
+    after_head="$(git -C "$masterco" rev-parse HEAD)"
+    rm -rf "$tmp"
+    [ "$status" -eq 2 ] || { echo "SELFTEST FAIL: a missing guard did not give exit 2, status $status: $out"; return 1; }
+    case "$out" in *"load guard could not run"*"exit 127"*) ;; *) echo "SELFTEST FAIL: guard-missing case said: $out"; return 1;; esac
+    case "$out" in *"overloaded"*) echo "SELFTEST FAIL: guard-missing case called it overload: $out"; return 1;; esac
+    [ "$before_head" = "$after_head" ] || { echo "SELFTEST FAIL: guard-missing case moved master"; return 1; }
 
     echo "SELFTEST PASS"
     return 0
@@ -476,9 +510,17 @@ if [ "${INCURSION_LOAD_GUARD_OFF:-}" = "1" ]; then
     _row="$(date -u +%Y-%m-%dT%H:%M:%SZ) bypass INCURSION_LOAD_GUARD_OFF=1 caller=finish_bead.sh cwd=$(pwd)"
     load_guard_log_bypass "$_row" \
         || echo "finish_bead: WARNING: could not append to $(load_guard_log_path)" >&2
-elif ! "$ROOT/tools/load_guard.sh"; then
-    cannot "the machine is overloaded, so the gate would measure load, not the bead.
+else
+    # inc-bs4q: only load_guard.sh exit 2 means overload. Any other non-zero
+    # exit (127 for a missing file) means the guard could not run.
+    "$ROOT/tools/load_guard.sh"; _guard=$?
+    if [ "$_guard" -eq 2 ]; then
+        cannot "the machine is overloaded, so the gate would measure load, not the bead.
 Nothing reached $BASE_BRANCH. Retry when the machine is quieter."
+    elif [ "$_guard" -ne 0 ]; then
+        cannot "the load guard could not run (tools/load_guard.sh exit $_guard).
+Nothing reached $BASE_BRANCH."
+    fi
 fi
 
 git -C "$SHARED" show-ref --verify --quiet "refs/heads/$BEAD" \
