@@ -1,0 +1,10 @@
+# inc-qylz: the Ancestral Memory skill menu must list Seneschal.
+# The lizardfolk monk has the ability from his race. The menu opens before
+# the ability costs anything.
+s
+u
+@choose "Ancestral Memory"
+@expect "Choose a skill to augment:"
+@dump:ancestral-memory
+ESC
+@quit

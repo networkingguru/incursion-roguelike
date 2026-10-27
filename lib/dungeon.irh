@@ -4827,6 +4827,7 @@ Monster "Murgash, the Goblin King" : MA_GOBLIN, MA_FORCE_D10, MA_ADVENTURER
     // actually, it doesn't work so well now, so we'll take it out
     Immune: DF_DISE, DF_FEAR;
     Feats: 
+          /* upstream: FT_GREAT_BLOW had no FeatInfo row, so it printed "---N (below ...)---" and did nothing. Observed, inc-4trf, not sent. */
           FT_ALERTNESS,
           FT_BLIND_FIGHT,
           FT_WEAPON_FINESSE,

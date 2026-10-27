@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gate: cheap
-# gate-fast: static, reads files only, ~3 s
+# gate-fast: static, reads files only, ~2 s
 #
 #   tools/check_sigpipe_status.sh              scan every file, then selftest
 #   tools/check_sigpipe_status.sh --record     re-record tools/sigpipe_status.baseline
@@ -470,29 +470,32 @@ PYEOF
 }
 
 # scope_files -- every tools/*.sh containing "pipefail", relative paths,
-# LC_ALL=C order. A direct (unpiped) grep, so scanning the scope list is
-# itself exempt from the class of bug this tool hunts for.
+# LC_ALL=C order. One grep over the whole glob (no fork per file), then
+# parameter expansion strips the directory. A direct (unpiped) grep reads
+# each file, so scanning the scope list is itself exempt from the class of
+# bug this tool hunts for.
 scope_files() {
     local f
-    for f in "$ROOT"/tools/*.sh; do
-        [ -f "$f" ] || continue
-        grep -q "pipefail" "$f" && printf 'tools/%s\n' "$(basename "$f")"
-    done | LC_ALL=C sort
+    grep -l "pipefail" "$ROOT"/tools/*.sh 2> /dev/null | LC_ALL=C sort | while IFS= read -r f; do
+        printf 'tools/%s\n' "${f##*/}"
+    done
 }
 
-# baseline_for <baseline-file> <path> -- the recorded count, or 0 if absent.
-baseline_for() {
-    awk -v p="$2" '$2 == p { print $1; found=1 } END { if (!found) print 0 }' "$1" | head -1
-}
-
-# verdict <count> <baseline> -> NEW|STALE|OK. The whole ratchet decision,
-# copied in shape from tools/check_doc_citations.sh's verdict(), isolated so
-# the selftest can drive it directly with made-up numbers.
-verdict() {
+# verdict_set <count> <baseline> -- sets REPLY to NEW|STALE|OK. The whole
+# ratchet decision, copied in shape from tools/check_doc_citations.sh's
+# verdict(). It forks nothing, so do_scan can call it once per file.
+verdict_set() {
     local n="$1" w="$2"
-    if [ "$n" -gt "$w" ]; then echo NEW
-    elif [ "$n" -lt "$w" ]; then echo STALE
-    else echo OK; fi
+    if [ "$n" -gt "$w" ]; then REPLY=NEW
+    elif [ "$n" -lt "$w" ]; then REPLY=STALE
+    else REPLY=OK; fi
+}
+
+# verdict <count> <baseline> -> NEW|STALE|OK, for a caller that wants stdout
+# (the selftest drives it directly with made-up numbers).
+verdict() {
+    verdict_set "$@"
+    echo "$REPLY"
 }
 
 # ------------------------------------------------------------------ record ---
@@ -515,17 +518,17 @@ do_scan() {
         echo "    tools/check_sigpipe_status.sh --record"
         return 2
     }
-    local files out path count w v new=0 stale=0 checked=0
+    local files out path count w new=0 stale=0 checked=0
     files="$(scope_files)"
     out="$(py_scan $files)" || return 2
-    while read -r path; do
+    # One awk joins every COUNT row (argv order) with the baseline: it prints
+    # "<path> <count> <baseline>" per file, absent from the baseline reads 0.
+    # The verdict then runs in this shell, with no fork per file.
+    while IFS=$'\t' read -r path count w; do
         [ -n "$path" ] || continue
         checked=$((checked + 1))
-        count="$(printf '%s\n' "$out" | awk -F'\t' -v p="$path" '$1 == "COUNT" && $3 == p { print $2 }')"
-        [ -n "$count" ] || count=0
-        w="$(baseline_for "$BASELINE" "$path")"
-        v="$(verdict "$count" "$w")"
-        case "$v" in
+        verdict_set "$count" "$w"
+        case "$REPLY" in
             NEW)
                 echo "NEW SITE    $path: $count site(s), baseline $w"
                 # Reads the SAME $out this file's count came from -- no second
@@ -536,7 +539,9 @@ do_scan() {
                 ;;
             STALE) echo "STALE       $path: $count site(s), baseline $w -- lower the baseline"; stale=$((stale + 1)) ;;
         esac
-    done <<< "$files"
+    done < <(printf '%s\n' "$out" | awk -F'\t' -v base="$BASELINE" '
+        BEGIN { while ((getline line < base) > 0) { split(line, a, " "); if (!(a[2] in w)) w[a[2]] = a[1] } }
+        $1 == "COUNT" { printf "%s\t%s\t%s\n", $3, $2, ($3 in w) ? w[$3] : 0 }')
 
     echo "checked $checked file(s) against $BASELINE"
     if [ "$new" -gt 0 ]; then

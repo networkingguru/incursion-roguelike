@@ -1,0 +1,7 @@
+# inc-qylz: the Natural Aptitude skill menu must list Seneschal.
+@include seneschal-levelup-feat.keys
+@choose "Natural Aptitude"
+@expect "Choose a skill:"
+@dump:natural-aptitude
+ESC
+@quit

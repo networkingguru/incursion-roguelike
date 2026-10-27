@@ -2576,13 +2576,16 @@ Option OptionList[] = {
   { OPT_DWARVEN_AUTOFOCUS, "Dwarven Auto-Focus", "NO/YES", 1, 0, 0,
       "__When this option is active and you are playing a dwarf, the game will "
       "automatically choose appropriate targets for your Dwarven Focus."},
+  /* upstream: NATURAL mode's text promised a speed bonus ListAttacks never
+     applied; the damage bonus is the whole of it. Upstream's text. Traced;
+     inc-lhb; not sent. */
   { OPT_MONK_MODE, "Monk Preferred Attack Form", "NATURAL/MARTIAL", 1, 1, 0,
       "__This option determines how a character who has both a natural attack "
       "sequence and a monk's unarmed attack will behave when attacking unarmed. "
       "With MARTIAL, the character will use the monk unarmed strike table and "
       "gain all the normal benefits thereof, including stunning. With NATURAL, "
       "the character uses their natural attack sequence (usually claw/claw/bite) "
-      "and gains a +1 skill bonus to speed and damage for every odd monk level. "
+      "and gains a +1 bonus to damage for every odd monk level. "
       "They do not gain any of the other normal benefits of a monk's unarmed "
       "strike, such as the stunning attack." },
   { OPT_OVERCAST, "Overcast Illusions", "NO/+1/+2/+3/+4/+5/+6/+7/+8/+9/+10/+11/+12", 12, 0, 0,

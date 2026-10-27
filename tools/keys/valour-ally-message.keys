@@ -1,0 +1,50 @@
+# Reproduction for inc-vc44: Aura of Valour's gain message reaches the player
+# when an ALLY gains the buff. Run by tools/check_valour_ally_message.sh with
+#   INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav
+# The paladin is level 1; the aura starts at level 2, so Free Advancement and
+# the character sheet's G give him that level (the player's OWN gain line is
+# the control). A tamed monster then stands inside the radius while the
+# paladin walks out of it and back in.
+
+@until "Things in View" ESC
+
+w
+y
+@choose "Wizard Mode Switches"
+DOWN*2
+SPACE                   # row 3: Free Advancement ON
+DOWN*8
+SPACE                   # row 11: Freeze Monsters ON
+ESC
+
+w
+@choose "Genocide Everything"
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "You feel" ESC
+ESC
+v
+@dump:after-level
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Kobold"
+@choose "kobold"
+RIGHT ENTER
+w
+@choose "Make Player Master of Monster"
+RIGHT ENTER
+v
+@dump:after-tame
+ESC
+
+# Out of the radius (three), then back in.
+LEFT LEFT LEFT LEFT LEFT
+RIGHT RIGHT RIGHT RIGHT RIGHT
+v
+@dump:after-reentry
+ESC
+@quit

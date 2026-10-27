@@ -1096,7 +1096,9 @@ Monster "water genasi" : MA_PLANETOUCHED, MA_ADVENTURER
     Flags: M_CARNI, M_HERBI, M_HUMANOID, M_AQUATIC, M_AMPHIB;
     Spells: $"water walking", $"create water";
     RACIAL_SKILL(SK_SWIM,+6);
-    Feats: FT_MASTER_THROW, SK_SWIM, SK_KNOW_OCEANS;
+    /* upstream: FT_MASTER_THROW has no FeatInfo row and no effect; cut here.
+       Observed, inc-4trf, not sent. */
+    Feats: SK_SWIM, SK_KNOW_OCEANS;
     Gear: random T_WEAPON,
           25% $"food ration"; 
     Desc: "Planetouched are the offspring of human or demihumans
