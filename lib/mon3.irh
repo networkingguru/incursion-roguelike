@@ -4443,11 +4443,12 @@ Template "vampire" : TM_UNDEAD for MA_NLIVING
     Spells: $"spider climb", $"Summon Rats", $"Summon Bats", 
             $"Summon Wolves";
     Feats: 
+      /* upstream: FT_PERSUASIVE had no FeatInfo row, so it printed "---N (below ...)---" and gave no Bluff/Intimidate bonus. Observed, inc-4trf, not sent. */
       SK_CLIMB, SK_BLUFF, SK_HIDE, SK_JUMP, SK_LISTEN,
       SK_MOVE_SIL, SK_SEARCH, SK_APPRAISE, SK_SPOT, 
       FT_ALERTNESS, FT_COMBAT_REFLEXES, FT_DODGE, FT_POWER_ATTACK,
       FT_PERSUASIVE, FT_NATURAL_GRAB;
-    Immune: UNDEAD_IMMUNITIES; 
+    Immune: UNDEAD_IMMUNITIES;
     Resists: DF_COLD, DF_ELEC;
     Flags: M_UNDEAD, M_EVIL, !M_GOOD, M_CHAOTIC, !M_LAWFUL, M_IALIGN,
            M_LIGHT_AVERSE, TMF_BODY_ONLY,

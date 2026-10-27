@@ -1097,6 +1097,16 @@ SkipShifting:
           disChance += disChance + 30; 
         if (random(100) < disChance)
           AddAct(ACT_DISARM,P_HIGH,mtarg);
+
+        /* upstream: a monster with FT_GREAT_BLOW never used the A_GREA
+           maneuver, so the feat listed on Murgash and the malebranche did
+           nothing. Observed, inc-4trf, not sent. A_GREA needs an attack
+           method (a wielded weapon or a first natural attack) and aborts
+           while already Exposed (src/Fight.cpp A_GREA). */
+        if (HasFeat(FT_GREAT_BLOW) && !HasStati(EXPOSED) &&
+            (InSlot(SL_WEAPON) || TMON(mID)->Attk[0].AType))
+          if (getenv("INCURSION_GREAT_BLOW_FORCE") || (random(100) < 25))
+            AddAct(ACT_SATTACK,P_HIGH,mtarg,A_GREA);
       }
     }
 

@@ -5415,6 +5415,10 @@ int16 Creature::SkillLevel(int16 sk)
        per-source buckets below discard any negative with max(). inc-p0h1. */
     int16 s_curse = 0;
 #define FEAT_SKILL_BONUS        3
+/* upstream: FT_PERSUASIVE (3.5 SRD) granted no Bluff/Intimidate bonus because
+   it had no FeatInfo row or skill entry; a mourner or vampire template listed
+   it and nothing happened. Observed, inc-4trf, not sent. */
+#define FEAT_SKILL_BONUS_PERSUASIVE 2
 
 
     s_racial = s_feat = s_enhance = s_domain = s_armour = s_kit = s_syn = 
@@ -5423,6 +5427,9 @@ int16 Creature::SkillLevel(int16 sk)
     if (sk == SK_LISTEN || sk == SK_SPOT)
         if (HasFeat(FT_ALERTNESS))
             s_feat = FEAT_SKILL_BONUS;
+    if (sk == SK_BLUFF || sk == SK_INTIMIDATE)
+        if (HasFeat(FT_PERSUASIVE))
+            s_feat = FEAT_SKILL_BONUS_PERSUASIVE;
     if (sk == SK_JUMP || sk == SK_TUMBLE)
         if (HasFeat(FT_ACROBATIC))
             s_feat = FEAT_SKILL_BONUS;

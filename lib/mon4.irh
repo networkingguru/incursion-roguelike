@@ -1815,6 +1815,7 @@ Monster "malebranche" : MA_DEVIL
 	SPELL_RES(20);
 	ABILITY(CA_INFRAVISION,12);
     Feats: SK_BLUFF, SK_CLIMB, SK_INTIMIDATE, SK_JUMP, SK_LISTEN,
+           /* upstream: FT_GREAT_BLOW had no FeatInfo row, so it printed "---N (below ...)---" and did nothing. Observed, inc-4trf, not sent. */
            FT_CLEAVE, FT_FLYBY_ATTACK, FT_POWER_ATTACK, FT_KNOCK_PRONE, 
            FT_MULTIATTACK, FT_MASTER_BULL_RUSH, FT_GREAT_BLOW,
            FT_NATURAL_GRAB;
@@ -2248,7 +2249,8 @@ Monster word  " fire elemental" : MA_ELEMENTAL                                  
           A_AURA for 2d(cr) AD_FIRE;                                                  \
     ABILITY(CA_INFRAVISION,6);                                                        \
     Immune: DF_POIS, DF_SLEE, DF_STUN, DF_PLYS, DF_CRIT, DF_FIRE;                     \
-    Feats: SK_LISTEN, SK_SPOT, FT_DODGE, FT_COMBAT_FINESSE,                           \
+    /* upstream: entry named FT_COMBAT_FINESSE; now FT_WEAPON_FINESSE. Observed, inc-4trf, not sent. */                 \
+    Feats: SK_LISTEN, SK_SPOT, FT_DODGE, FT_WEAPON_FINESSE,                           \
              FT_COMBAT_REFLEXES, ft1, ft2, ft3;                                       \
     Flags: M_NEUTER, M_AMORPH, M_NOHANDS, M_NOLIMBS, M_NOHEAD,                        \
       M_NOBODY, M_NO_CORPSE, M_FIRE;                                                  \

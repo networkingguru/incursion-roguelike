@@ -1871,6 +1871,7 @@ Monster "juvenile arrowhawk" : MA_BIRD, MA_BEAST, MA_OUTSIDER
     Attk: A_TUCH for 2d6 AD_ELEC,
           A_BITE for 1d6+1 AD_PIERCE;
 	ABILITY(CA_INFRAVISION,6);
+    /* upstream: FT_DASH had no FeatInfo row, so it printed "---N (below ...)---". Observed, inc-4trf, not sent. */
     Feats: FT_DODGE, FT_DASH,
            SK_SPOT, SK_LISTEN, SK_MOVE_SIL, SK_SEARCH;
     Flags:  M_NATURAL, M_CARNI, M_NOHANDS, 
@@ -3606,7 +3607,8 @@ Monster "cheetah" : MA_CAT, MA_ANIMAL
           A_CLAW for 1d2 AD_SLASH and AD_TRIP (DC 19);
 	ABILITY(CA_SCENT,5);
 	ABILITY(CA_INFRAVISION,6);
-    Feats: FT_ALERTNESS, FT_DASH, FT_RUN,
+    /* upstream: FT_DASH had no FeatInfo row, so it printed "---N (below ...)---". Observed, inc-4trf, not sent. */
+    Feats: FT_ALERTNESS, FT_RUN, FT_DASH,
            SK_HIDE, SK_LISTEN, SK_MOVE_SIL, SK_SPOT; 
     Flags: M_CARNI, M_NATURAL, M_NOHANDS, M_PLAINS, M_CHARGE, M_MOUNTABLE;
     Desc: "Cheetahs are swift feline predators of the plains. A cheetah is
@@ -4705,7 +4707,9 @@ Monster "cave tyrannosaurus" : MA_REPTILE, MA_DINOSAUR
       A_BITE for 2d6 AD_PIERCE,
       A_CRIT for 0d0 AD_SWAL (DC 18);
     ABILITY(CA_INFRAVISION, 6);
-    Feats: FT_RUN, FT_TRACK, FT_WEAPON_FOCUS_BITE,
+    /* upstream: entry named FT_TRACK and FT_WEAPON_FOCUS_BITE; now CA_TRACKING,15 and FT_WEAPON_FOCUS. Observed, inc-4trf, not sent. */
+    ABILITY(CA_TRACKING,15);
+    Feats: FT_RUN, FT_WEAPON_FOCUS,
            SK_LISTEN, SK_SPOT, SK_WILD_LORE;
     Flags: M_NATURAL, M_CARNI, M_NOHANDS, M_MOUNTABLE;
     Desc: "The mighty tyrant lizard is often referred to as
@@ -5237,6 +5241,7 @@ Monster "plague of rats" : MA_SWARM, MA_RODENT, MA_ANIMAL
 	RACIAL_SKILL(SK_BALANCE,8);
 	RACIAL_SKILL(SK_CLIMB,8);
 	RACIAL_SKILL(SK_SWIM,8);
+  /* upstream: FT_DASH had no FeatInfo row, so it printed "---N (below ...)---". Observed, inc-4trf, not sent. */
   Feats: FT_ALERTNESS, FT_DASH,
         SK_BALANCE, SK_CLIMB, SK_HIDE, SK_LISTEN, SK_SPOT, SK_SWIM;
   Immune: DF_MIND; 
