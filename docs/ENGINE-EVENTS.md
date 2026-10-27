@@ -8,7 +8,7 @@ inc-s6m: inc-upw.5 (P1), inc-upw.16 (P1) and inc-upw.15 (P0). inc-s6m is closed 
 ## Where it lives
 Event stack and `Throw*`: `src/Event.cpp`. `EventInfo` and the `PEVENT`/`DAMAGE`/`THROW` macros: `inc/Events.h`. C++ -> script
 boundary: `src/Annot.cpp:1109`. Bytecode VM: `src/VMachine.cpp:413`. Generated script-callable C++ API: `lib/dispatch.h`.
-Preprocessed ruleset: `lib/program.i`. Event numbers and `PRE`/`POST`/`META`/`GODWATCH`/`EVICTIM`: `inc/Defines.h:4582-4588`; 183
+Preprocessed ruleset: `lib/program.i`. Event numbers and `PRE`/`POST`/`META`/`GODWATCH`/`EVICTIM`: `inc/Defines.h:4587-4593`; 183
 `EV_` numbers exist. `EvReturn` is `int8` (`inc/Defines.h:58`): `ERROR -1`, `NOTHING 0`, `DONE 1`, `ABORT 2`, `NOMSG 3`
 (`inc/Defines.h:140-144`).
 
@@ -65,7 +65,7 @@ are `static` on `Resource` (`inc/Res.h:228-229`) — one annotation cursor for t
 FAnnot/NAnnot doesn't normally [work]" (`src/Annot.cpp:619-621`); `FAnnot2` is a one-level kludge, and depth 3 has no cursor.
 `Thing::PlaceNear` holds `static Creature* Displace[64]` (`src/Display.cpp:456`) and re-enters itself via `PlaceAt` (`:611`),
 which the code notes can overflow the C stack (`:605-607`). Only three places are protected: `StatiCollection::Nested` defers
-stati fixups to the outermost iteration (`inc/Map.h:735-740`, field at `:825`), `Creature::Perceives` uses a static counter as a recursion
+stati fixups to the outermost iteration (`inc/Map.h:738-743`, field at `:829`), `Creature::Perceives` uses a static counter as a recursion
 mutex (`src/Vision.cpp:600-601`), and `Creature::Multiply` refuses to breed past a nesting depth of 4 (`src/Creature.cpp:544`).
 
 ## The three crashes
@@ -75,7 +75,7 @@ and `lib/mon3.irh:2326`; id moss `lib/mon3.irh:2280` has one too, but `#if 0` at
 or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3362`)
 calls `Multiply` -> `Creature::Multiply` (`src/Creature.cpp:532`) -> `mn->PlaceAt` (`:604`)
 throws `EV_PLACE` (`src/Display.cpp:240`, `:264`) and `EV_FIELDON` (`:330`) -> `Creature::FieldOn` re-throws `EV_EFFECT` for
-`FI_MODIFIER` (`src/Status.cpp:1840`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1560`).
+`FI_MODIFIER` (`src/Status.cpp:1842`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1560`).
 *Invariant violated:* `Creature::FieldOn` sets `EActor` to the field's creator, so the script calls `Multiply` on the same
 generation-0 parent every time, and the generation cap at `src/Creature.cpp:556` can never apply to it. Only `m->BreedCount >= 50`
 (`:560`) survives, far above the 128-frame stack. *Fix:* a nesting cap of 4 on `Multiply` (`:544`); `GENERATION` is now stamped at
@@ -94,7 +94,7 @@ down path read `RES(0)` whenever `BELOW_DUNGEON` is unset, which is every dungeo
 **3. Wild resource id crashes `Game::Get` inside `Magic::Blast`. Fixed (inc-upw.16).** Handlers get ids from three unvalidated
 places: the `eID` a caller put in the frame (`src/Event.cpp:631`), script assignment `pe->eID = val` (`lib/dispatch.h:3540`), and
 script `ThrowEff` with an arbitrary int32 (`lib/dispatch.h:2648`). *Invariant violated:* `Game::Get` indexed the module table by
-the top byte, `Modules[(xID >> 24)-1]`, `MAX_MODULES` being 126 (`inc/Defines.h:4552`), so an id with a zero top byte indexed
+the top byte, `Modules[(xID >> 24)-1]`, `MAX_MODULES` being 126 (`inc/Defines.h:4557`), so an id with a zero top byte indexed
 `Modules[-1]`. The guard was `ASSERT(Modules[(xID >> 24)-1])`, and `ASSERT` only calls `Error` and falls through
 (`inc/Defines.h:100`) — it did not stop the next line's dereference. Hence SIGBUS with no log: if the out-of-range slot held
 non-zero garbage, `ASSERT` passed silently and `->GetResource` ran on a garbage `Module*`. *Fix:* `Game::Get` range-checks the
