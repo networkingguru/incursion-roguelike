@@ -1,0 +1,9 @@
+# inc-qylz: the Skill Focus skill menu must list Seneschal.
+# Skill Focus is on the second page of the feat menu.
+@include seneschal-levelup-feat.keys
+TAB
+@choose "Skill Focus"
+@expect "Choose a skill:"
+@dump:skill-focus
+ESC
+@quit
