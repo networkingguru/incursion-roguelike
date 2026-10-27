@@ -48,6 +48,8 @@ THE FIXED ORDER WAS REPLACED BY A ROUTING TABLE ON 2026-10-01 (bead inc-rtit). B
 
 2026-10-15 (bead inc-m627). A `bd remember` note said Codex was out on its usage limit until 2026-10-18, so a session routed observation work away from it. Brian reported Codex showed 89% usage left. Codex's own session log for a run on 2026-10-14 already recorded the weekly window at 14% used, so the note was stale a day after it was written. Brian ruled: "Check codex's last usage before dispatching it. If it is over 50%, Codex becomes the Tier 1 coding agent for anything too difficult for Haiku." Asked whether "over 50%" meant left or used, and which window, he answered: "y, over 50% weekly left-> codex gets used". The usage record is read from the newest `~/.codex/sessions` log (`rate_limits.secondary`); it is only as fresh as the last Codex run.
 
+2026-10-27 (bead inc-e1vjz). The sonnet-first thresholds were 10 × day − 5 percent on days 1–6 (5, 15, 25, 35, 45, 55) and 90% on day 7. Brian reported that the previous week ended with a lot of Claude usage left and no DeepSeek or Codex left. He said: "Let's increase sonnet usage by sliding the caps. Day 1: up to 10%. 2: 25, 3:35, 45, 55, 65, All." The thresholds became 10, 25, 35, 45, 55, 65 and 100 percent for days 1–7.
+
 ## feedback-claude-dispatches-never-writes-code
 CLAUDE DOES NOT WRITE CODE ON THIS PROJECT. Brian stated it as a standing order on 2026-08-24, in capitals, with the reason: 'I do not want to spend my whole day clearing fucking context.'
 

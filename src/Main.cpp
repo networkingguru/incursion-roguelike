@@ -367,6 +367,8 @@ void Game::Play() {
     TerraformEdgeProbe(pp);
     extern void TrapAttackProbe(Player *pl);
     TrapAttackProbe(pp);
+    extern void CompanionTrapProbe(Player *pl);
+    CompanionTrapProbe(pp);
 
     /* inc-tmys: off unless INCURSION_MONINIT_PROBE is set; needs a live map.
        See MonsterInitProbe (src/MonsterInitProbe.cpp) and

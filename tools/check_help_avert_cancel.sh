@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gate: cheap
-# gate-fast: static, reads lib/help.irh only, under 1 s
+# gate-fast: static, reads lib/help.irh only, about 0.14 s
 #
 # Guards bead inc-ih2.8: the in-game help names the Avert Eyes stance in the
 # Combat Options entry, and lists what Cancel Active Power ends (with the
@@ -21,9 +21,17 @@ ALL=$(tr '\n' ' ' < "$F" | tr -s ' \t' ' ')
 
 # An entry runs from its heading to the next "<15>" heading.
 entry() {
-    local rest=${ALL#*"$1"}
-    [ "$rest" != "$ALL" ] || return 1
-    printf '%s' "${rest%%<15>*}"
+    printf '%s' "$ALL" | H="$1" awk '
+        { text = $0 }
+        END {
+            h = ENVIRON["H"]
+            i = index(text, h)
+            if (i == 0) exit 1
+            rest = substr(text, i + length(h))
+            j = index(rest, "<15>")
+            if (j == 0) print rest; else print substr(rest, 1, j - 1)
+        }
+    '
 }
 
 FAIL=0
