@@ -8,13 +8,14 @@ the seven-day rate-limit window:
                                    "resets_at": 1792436400}}, ...}
 
 Only `rate_limits.seven_day` is read. The window is seven days long and ends
-at `resets_at` (Unix seconds). The threshold paces about 10% of the window a
-day, and day 7 allows up to 90% so spare usage is not lost at the reset:
+at `resets_at` (Unix seconds). A fixed per-day table paces the window, and day
+7 allows up to 100% so the window is fully used before the reset:
 
   * If now >= resets_at the window has reset: used = 0, day = 1.
   * Otherwise start = resets_at - 604800 and
     day = clamp(floor((now - start) / 86400) + 1, 1, 7).
-  * threshold = 90 when day == 7, else 10 * day - 5 (5, 15, ... 55).
+  * THRESHOLDS = (10, 25, 35, 45, 55, 65, 100), days 1-7;
+    threshold = THRESHOLDS[day - 1].
 
 `sonnet` goes first when the weekly used percentage is STRICTLY BELOW the
 threshold for the current day. The verdict is UNKNOWN (exit 2) when the file
@@ -41,6 +42,7 @@ DEFAULT_USAGE = "~/.claude/usage/statusline.json"
 STALE_SECONDS = 3600
 WEEK_SECONDS = 604800
 DAY_SECONDS = 86400
+THRESHOLDS = (10, 25, 35, 45, 55, 65, 100)
 
 
 def resolve_path(env_name, default):
@@ -128,7 +130,7 @@ def verdict(path=None, now=None):
         day = int(math.floor((now - start) / DAY_SECONDS)) + 1
         day = max(1, min(7, day))
 
-    threshold = 90 if day == 7 else 10 * day - 5
+    threshold = THRESHOLDS[day - 1]
     state = "sonnet-first" if used < threshold else "normal"
     return {"state": state, "day": day, "used": used,
             "threshold": threshold, "reason": None}
