@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gate: cheap
-# gate-fast: static, reads lib/races.irh and src/Skills.cpp only, under 1 s
+# gate-fast: static, reads lib/races.irh and src/Skills.cpp only, about 0.08 s
 #
 # Guards bead inc-dq3: the orc Devouring paragraph in lib/races.irh pairs each
 # ability score with a monster type, and Creature::DevourMonster
@@ -27,10 +27,21 @@ SLOTS=($(grep -o 'MA_[A-Z_]*' <<< "$ARR"))
 
 # Paragraph: flattened, from "rare monsters" to "Dragons can convey".
 ALL=$(tr '\n' ' ' < "$R" | tr -s ' \t' ' ')
-rest=${ALL#*"certain rare monsters"}
-[ "$rest" != "$ALL" ] || { echo "UNMEASURED: no Devouring attribute paragraph in $R"; exit 2; }
-PARA=${rest%%"Dragons can convey"*}
-[ "$PARA" != "$rest" ] || { echo "UNMEASURED: paragraph end not found in $R"; exit 2; }
+PARA=$(printf '%s' "$ALL" | H="certain rare monsters" E="Dragons can convey" awk '
+    { text = $0 }
+    END {
+        h = ENVIRON["H"]; e = ENVIRON["E"]
+        i = index(text, h)
+        if (i == 0) exit 2
+        rest = substr(text, i + length(h))
+        j = index(rest, e)
+        if (j == 0) exit 3
+        print substr(rest, 1, j - 1)
+    }
+')
+rc=$?
+[ "$rc" -ne 2 ] || { echo "UNMEASURED: no Devouring attribute paragraph in $R"; exit 2; }
+[ "$rc" -ne 3 ] || { echo "UNMEASURED: paragraph end not found in $R"; exit 2; }
 
 # slot-order: prose phrase, attribute, expected type
 PHRASES=("Giants are so tied to" "cats" "trolls" "mind flayers" "nagas" "faeries" "mythic hybrids")
