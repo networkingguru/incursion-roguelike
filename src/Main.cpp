@@ -794,6 +794,11 @@ restartDestroyCount:
            is what tells an unattended run that the session played at all. */
         NoteGameplayReached();
 
+        /* inc-vhkei: once per player turn, log the RouteUnseenProbe creature's
+           square and distance and re-clear its room's memory. Off unless
+           INCURSION_ROUTE_UNSEEN is set. */
+        { extern void RouteUnseenPerTurn(Player *); RouteUnseenPerTurn(pp); }
+
         Turn++;
     } while(1);
 
