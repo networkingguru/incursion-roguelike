@@ -794,6 +794,12 @@ restartDestroyCount:
            is what tells an unattended run that the session played at all. */
         NoteGameplayReached();
 
+        /* inc-nx0z: off unless INCURSION_GRAVESTONE_PROBE is set; fires once,
+           after the first completed turn. See GravestoneProbe
+           (src/GravestoneProbe.cpp) and tools/check_gravestone.sh. */
+        extern void GravestoneProbe(Player *pl);
+        GravestoneProbe(pp);
+
         Turn++;
     } while(1);
 
