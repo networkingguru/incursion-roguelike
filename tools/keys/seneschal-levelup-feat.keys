@@ -1,0 +1,23 @@
+# inc-qylz: reach the level-up feat menu of the frozen lizardfolk monk.
+# Run by tools/check_seneschal_implemented.sh with
+# INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav.
+#
+# Free Advancement (wizard mode switches, third row) lets G on the character
+# sheet gain a level with no experience points. The level-up menus are fixed by
+# the fixture, so no roll decides this path. @expect makes a missed menu fail
+# the run (exit 6) instead of dumping the wrong screen.
+s
+w y
+@choose "Wizard Mode Switches"
+DOWN*2
+SPACE
+@expect "Free Advancement                           YES"
+ESC
+@until "Things in View" ESC
+d
+@expect "Gender"
+G
+@while "Choose Spells" ENTER
+@while "You feel" ESC
+G
+@expect "Choose a feat; the following are available"
