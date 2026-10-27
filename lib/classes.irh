@@ -1739,8 +1739,14 @@ Class "Paladin"
     Purpose: EP_BUFF; 
     Flags: EF_LIM_MTYPE, EF_PERMANANT;
     On Event 
+      /* upstream: a bare string prints to every player who perceives the
+         creature gaining the buff, so an ally's gain told the player.
+         Same on Win32 (data, no typedef). Traced; inc-vc44; not sent. */
       EV_GAIN_STATI
-        "You feel a sacred courage come over you.",
+        {
+          EActor->IPrint("You feel a sacred courage come over you.");
+          return NOTHING;
+        },
       EV_REMOVED
         {
           if (GetHandle(EActor) != GetHandle(EVictim))
