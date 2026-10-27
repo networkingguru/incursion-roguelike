@@ -68,7 +68,7 @@ known hole.
 | Saving throw (d20) | `INCURSION_FORCE_SAVE_ROLL`, 1 to 20. It applies to every creature. |
 | Skill check (d20) | `INCURSION_RUNTO_SKILL_ROLL`, 1 to 20. |
 | Damage roll | `INCURSION_FORCE_DAMAGE_ROLL=<n>`. Each damage die at `Creature::Hit`, and in the A_DEQU retaliation (acid blob and kin damaging the striker or the struck item), shows `min(n, sides)`; 1 = minimum, 99 = maximum. Does not cover sneak-attack dice, weapon-quality extra dice such as flaming 1d6, area attacks or spells. |
-| Monster hit points | The "Monsters Maximum Hit Points" option (`OPT_MON_MAX_HP`, `src/Values.cpp:2355`) set to any value but NO. It is a character-generation option, so a loaded game takes it from its save, not from the options file: set it in the options file used to make the check's fixture (`tools/make_char_fixture.sh`). |
+| Monster hit points | The "Monsters Maximum Hit Points" option (`OPT_MON_MAX_HP`, `src/Values.cpp:2357`) set to any value but NO. It is a character-generation option, so a loaded game takes it from its save, not from the options file: set it in the options file used to make the check's fixture (`tools/make_char_fixture.sh`). |
 | Percent-chance roll | *none* |
 | Monster AI choice | *none* |
 | A save for one creature only | *none* |

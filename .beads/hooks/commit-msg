@@ -8,7 +8,9 @@ if [ "${INCURSION_NO_LANE_CHECK:-}" = "1" ]; then
 fi
 
 _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
-_inc_check="$_inc_root/tools/check_commit_lane.sh"
+# Process script: runs from the shared checkout, not the worktree's copy (inc-x604).
+_inc_shared=$(dirname "$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd -P)")
+_inc_check="$_inc_shared/tools/check_commit_lane.sh"
 if [ -z "$_inc_root" ] || [ ! -x "$_inc_check" ]; then
   echo >&2 "commit-msg: WARNING: tools/check_commit_lane.sh is missing or not executable; allowing commit."
   exit 0

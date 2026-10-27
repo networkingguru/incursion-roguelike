@@ -70,15 +70,16 @@ build_repo() { # build_repo <bead>... ; prints the scratch root
     cp "$SCRIPT" "$tmp/work/Incursion/tools/finish_bead.sh" || return 1
     cp "$DOCS_ONLY" "$tmp/work/Incursion/tools/docs_only_change.sh" || return 1
     # STEP 2b runs check_bead_evidence.py, which runs bd show. The fake bd
-    # gives every bead no acceptance criteria and never reaches the real
-    # bead database (inc-v4xe).
+    # gives every bead one acceptance criterion and never reaches the real
+    # bead database (inc-v4xe). Each bead branch carries the AC1 evidence
+    # commit its criterion needs; with none, the landing refuses (inc-ut6bb).
     cp "$ROOT/tools/check_bead_evidence.py" \
         "$tmp/work/Incursion/tools/check_bead_evidence.py" || return 1
     mkdir -p "$tmp/bin" || return 1
     cat >"$tmp/bin/bd" <<'FAKE' || return 1
 #!/bin/sh
 if [ "$1" = show ] && [ "$3" = --json ]; then
-    printf '[{"id":"%s","status":"open","description":"","notes":""}]\n' "$2"
+    printf '[{"id":"%s","status":"open","description":"## Acceptance Criteria\\n- the scratch bead lands\\n","notes":""}]\n' "$2"
     exit 0
 fi
 echo "unknown bead" >&2
@@ -92,6 +93,8 @@ FAKE
         echo "$bead" >"$tmp/work/Incursion-$bead/$bead.txt" || return 1
         git -C "$tmp/work/Incursion-$bead" add "$bead.txt" || return 1
         git -C "$tmp/work/Incursion-$bead" commit -q -m "$bead work" || return 1
+        git -C "$tmp/work/Incursion-$bead" commit -q --allow-empty \
+            -m "evidence ($bead)" -m "AC1: observed the scratch bead work" || return 1
     done
 
     git -C "$tmp/work/Incursion" worktree add -q \

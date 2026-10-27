@@ -56,9 +56,10 @@ fi
 # an unlabelled bead, no token, a bead linked to a rehearsal repo. Warn and let
 # the push through. Set INCURSION_NO_BEAD_SYNC=1 to skip it.
 if [ -z "${INCURSION_NO_BEAD_SYNC:-}" ] && [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
-  _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
-  if [ -x "$_inc_root/tools/sync_issues.sh" ]; then
-    BD_GIT_HOOK_NESTED=1 "$_inc_root/tools/sync_issues.sh" || \
+  # Process script: runs from the shared checkout (inc-x604).
+  _inc_shared=$(dirname "$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd -P)")
+  if [ -x "$_inc_shared/tools/sync_issues.sh" ]; then
+    BD_GIT_HOOK_NESTED=1 "$_inc_shared/tools/sync_issues.sh" || \
       echo >&2 "pre-push: bead publication failed; the push CONTINUES. Run tools/sync_issues.sh to see why."
   fi
 fi
@@ -70,8 +71,9 @@ fi
 # the background and this hook does not wait for it. Set INCURSION_NO_WIKI=1
 # to skip it.
 if [ -z "${INCURSION_NO_WIKI:-}" ] && [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
-  _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
-  if [ -x "$_inc_root/tools/publish_wiki.sh" ]; then
-    nohup "$_inc_root/tools/publish_wiki.sh" >/dev/null 2>&1 &
+  # Process script: runs from the shared checkout (inc-x604).
+  _inc_shared=$(dirname "$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd -P)")
+  if [ -x "$_inc_shared/tools/publish_wiki.sh" ]; then
+    nohup "$_inc_shared/tools/publish_wiki.sh" >/dev/null 2>&1 &
   fi
 fi
