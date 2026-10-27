@@ -549,6 +549,7 @@ Monster "scarab swarm" : MA_SWARM, MA_VERMIN
 	ABILITY(CA_WEAPON_IMMUNITY,1);
 	ABILITY(CA_TREMORSENSE,12);
 	RACIAL_SKILL(SK_CLIMB,8);
+    /* upstream: FT_DASH had no FeatInfo row, so it printed "---N (below ...)---". Observed, inc-4trf, not sent. */
   Feats: FT_DASH, SK_CLIMB;
   Immune: DF_MIND;
   Flags: M_SWARM, M_NO_SIZE_HP, M_NO_CORPSE, M_CARNI, M_NOPOLY,

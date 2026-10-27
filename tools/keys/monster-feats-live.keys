@@ -1,0 +1,14 @@
+# inc-4trf: run MonsterFeatProbe inside a loaded Game::Play, then quit.
+# Oracle: MONSTER_FEAT lines in the isolated run errors.log, and MONSTER_FEAT DONE.
+# Run with a loaded character (INCURSION_LOAD), so no character generation runs.
+# KNOWN: the harness still reports NO GAMEPLAY (exit 5) with these keys. The probe
+# runs in play (screen mode 9) but no turn completes, so logs/session.log is never
+# written. tools/check_monster_feats_live.sh reads the MONSTER_FEAT lines anyway.
+# ESC is not sent: in play it opens the System Menu. Search 's' stops at once
+# with monsters in view. The '.' is one wait; it did not complete a turn either.
+
+@dump:arrival
+SPACE*80
+
+.
+@quit

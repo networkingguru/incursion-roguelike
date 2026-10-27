@@ -374,6 +374,12 @@ void Game::Play() {
     extern void MonsterInitProbe(Player *pl);
     MonsterInitProbe(pp);
 
+    /* inc-4trf: off unless INCURSION_MONSTER_FEAT_PROBE is set; needs a live
+       map. See MonsterFeatProbe (src/MonsterFeatProbe.cpp) and
+       tools/check_monster_feats_live.sh. */
+    extern void MonsterFeatProbe(Player *pl);
+    MonsterFeatProbe(pp);
+
     /* inc-n0ie: opt-in template alignment reproduction. */
     extern void TemplateAlignmentProbe(Player *pl);
     TemplateAlignmentProbe(pp);

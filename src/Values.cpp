@@ -1098,6 +1098,13 @@ Restart:
     if (HasFeat(FT_RUN) )
         AddBonus(BONUS_FEAT,A_MOV,4);
 
+    /* upstream: FT_DASH listed on monsters with no effect; a Dash bonus MUST
+       stack with Run's (StackBonus, not AddBonus, which takes the highest).
+       Observed, inc-4trf, not sent. */
+    if (HasFeat(FT_DASH) && (Encumbrance() <= EN_LIGHT) &&
+        (ArmourType() == 0 || (ArmourType() & WG_LARMOUR)))
+        StackBonus(BONUS_FEAT,A_MOV,3);
+
     /*
     if (HasFeat(FT_FAST_STRIDE) &&
     (Encumbrance() <= EN_MODERATE) &&
