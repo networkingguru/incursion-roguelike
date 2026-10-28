@@ -3,7 +3,7 @@
 # against the baseline.
 #
 # Usage: tools/gate_compare.sh                       (every recorded baseline)
-#        tools/gate_compare.sh tools/gates/dive.baseline
+#        tools/gate_compare.sh tools/gates/dive-short.baseline
 #
 # Ends: 0 nothing got worse, 1 a regression, 2 the comparison could not be run.
 #
