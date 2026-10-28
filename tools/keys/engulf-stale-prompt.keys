@@ -1,0 +1,60 @@
+# A character is engulfed, dies, and answers the death prompt "n": does the
+# prompt leave the screen? (bd inc-djbtl) Read the result with
+# tools/check_stale_death_prompt.sh.
+#
+#   INCURSION_OPTIONS=tools/gates/Options.Dat \
+#   INCURSION_LOAD=tools/fixtures/chars/low-dex-orc-barbarian-seed18-gate.sav \
+#       tools/headless.sh tools/keys/engulf-stale-prompt.keys <seed>
+#
+# THE DEFECT. While the player is engulfed, the map pane shows the engulfer's
+# inside instead of the dungeon. TextTerm::ShowMap's engulfed branch never
+# cleared UpdateMap, and TextTerm::yn cleared the wrong window, so an answered
+# yes/no prompt stayed on screen. (src/Term.cpp)
+#
+# THE STAGING. A frozen character (Hurk, an orc barbarian with DEX 7, Reflex -1;
+# tools/fixtures/chars/low-dex-orc-barbarian-seed18-gate.sheet.txt) is loaded, so
+# no chargen or lib change can alter him. His low Dex is why the Reflex save
+# fails often. Wizard mode (w, y) offers
+# "Monster Summoning" (src/Debug.cpp case 6); the stunjelly lands one square
+# east, RIGHT ENTER picks that square. The jelly engulfs on a hit followed by a
+# failed Reflex save (DC 15). The settings file tools/gates/Options.Dat sets
+# OPT_ELUDE_DEATH to 3, which makes the game ask "Die? [yn]" at death instead of
+# ending the game.
+#
+# WHY THE LOOPS ARE ON SCREEN TEXT. Whether and when the jelly hits, the save
+# fails, and the character dies are rolls no control fixes (the catalog in
+# docs/VERIFICATION.md has none for monster AI or a save for one creature).
+# So each wait is "@until <text> ." : pass a turn (.) until the text appears.
+# @until is bounded by SK_LOOP_MAX (src/Wposix.cpp), and a bound hit ends the
+# session with "the key script looked for something", which the check reports
+# as could-not-measure, never as pass or fail.
+#
+# THE DUMPS, in order: summoned (jelly in view, before the wait), engulfed
+# (the word "Engulfed" is on screen), prompt (the live "Die? [yn]"), answered
+# (after "n"; the defect is "Die? [yn]" still on this one).
+
+@dump:arrival
+
+# Wizard mode: summon a stunjelly one square east.
+w
+y
+@choose "Monster Summoning"
+@choose "Jellies"
+@choose "stunjelly"
+RIGHT
+ENTER
+@until "HP:" ESC
+@dump:summoned
+
+# Wait, a turn at a time, until the jelly engulfs.
+@until "Engulfed" .
+@dump:engulfed
+
+# Wait until the character dies and the game asks.
+@until "Die? [yn]" .
+@dump:prompt
+
+# Decline to die. The prompt must leave the screen.
+n
+@dump:answered
+@quit
