@@ -7705,6 +7705,34 @@ AfterEffects:
         ThrowDmg(EV_DAMAGE,AD_BLUNT,(int16)bonus,"the strain of being used in a charge",e.EActor,e.EItem);
     } 
 
+    /* inc-30ur: WQ_SLEEP acts once, after every damage or push this hit can
+       cause, because damage and pushes wake a sleeper (Creature::Awaken). */
+    {
+      Item *sl = NULL;
+      if (e.EItem && (e.EItem->isType(T_WEAPON) || e.EItem->isType(T_BOW)) &&
+          e.EItem->HasQuality(WQ_SLEEP))
+        sl = e.EItem;
+      if (e.EItem2 && e.AType != A_SUND &&
+          (e.EItem2->isType(T_WEAPON) || e.EItem2->isType(T_MISSILE)) &&
+          e.EItem2->HasQuality(WQ_SLEEP) &&
+          (!sl || e.EItem2->ItemLevel() > sl->ItemLevel()))
+        sl = e.EItem2;
+      if (sl && !e.EVictim->isDead() && e.ETarget->isCreature() &&
+          (e.isCrit ? e.vtRoll : e.vRoll) + e.vHit - e.vDef >= 5)
+      {
+        if (e.EVictim->ResistLevel(AD_SLEE) == -1)
+          e.Immune = true;
+        else if (e.EVictim->SavingThrow(FORT,10+sl->ItemLevel(),SA_PARA))
+          e.Resist = true;
+        else
+        {
+          e.EVictim->GainTempStati(ASLEEP,NULL,Dice::Roll(3,4),SS_ENCH,SLEEP_MAGIC);
+          VPrint(e,"You fall asleep.","The <EVictim> falls asleep.");
+          sl->VisibleID(e.EActor);
+        }
+      }
+    }
+
   DoneHit:
 
     
@@ -10447,6 +10475,8 @@ ElemQuality:
         id = true;
       }
       break; 
+    case WQ_SLEEP: /* acts once at the end of Creature::Hit; inc-30ur */
+      break;
     case WQ_WEAKENING:
     case WQ_NUMBING:
     case WQ_WITHERING:
