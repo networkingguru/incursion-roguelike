@@ -283,10 +283,22 @@ discover_checks() {
                 # LANDING_CHANGED, so a check can never be kept by a substring
                 # of another's name. The tier is still the marker on disk.
                 if [ "$LANDING" = 1 ]; then
-                    local _lc _kept=0
+                    # A check that tests other scripts may declare them in its
+                    # first 40 lines: `# gate-subject: <file> [<file> ...]`,
+                    # names relative to the check directory. A landing that
+                    # changes a subject keeps the check, because the check must
+                    # run when the scripts it tests change (bead inc-b0ziu.4).
+                    # ponytail: a subject can only name a file under the check
+                    # directory, because LANDING_CHANGED is relative to it;
+                    # upgrade path: diff from the repo root.
+                    local _lc _kept=0 _names _n
+                    _names="$(basename "$f") $(sed -n '1,40p' "$f" | sed -n 's/^#[[:space:]]*gate-subject:[[:space:]]*//p' | head -1)"
                     while IFS= read -r _lc; do
                         [ -n "$_lc" ] || continue
-                        [ "$(basename "$f")" = "$_lc" ] && _kept=1 && break
+                        for _n in $_names; do
+                            [ "$_n" = "$_lc" ] && _kept=1 && break
+                        done
+                        [ "$_kept" = 1 ] && break
                     done <<EOF
 $LANDING_CHANGED
 EOF
@@ -1521,6 +1533,57 @@ selftest() {
         fi
     }
     _run_case_landing_set
+
+    # ---- a live check is kept when a gate-subject file changes (inc-b0ziu.4) -
+    # A live check that declares `# gate-subject: subj.sh` runs under --landing
+    # when subj.sh changes, though the check itself did not. A bead that changes
+    # neither must drop it.
+    _run_case_landing_subject() {
+        local repo d self out rc marker pass
+        self="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+        for pass in subject other; do
+            repo="$dir/landsubj-$pass"
+            d="$repo/tools"
+            mkdir -p "$d"
+            marker="$d/subj-touched"
+            printf '#!/bin/sh\n# gate: live\n# gate-subject: subj.sh\ntouch "%s"\nexit 0\n' "$marker" \
+                > "$d/check_dd_subject.sh"
+            printf '#!/bin/sh\n# gate: smoke\nexit 0\n' > "$d/check_aa_smoke.sh"
+            printf '#!/bin/sh\nexit 0\n' > "$d/subj.sh"
+            printf '#!/bin/sh\nexit 0\n' > "$d/unrelated.sh"
+            chmod +x "$d/check_dd_subject.sh" "$d/check_aa_smoke.sh" "$d/subj.sh" "$d/unrelated.sh"
+            git -C "$repo" init -q
+            git -C "$repo" config user.email selftest@example.invalid
+            git -C "$repo" config user.name selftest
+            git -C "$repo" checkout -q -b base
+            git -C "$repo" add -A
+            git -C "$repo" commit -q -m base
+            git -C "$repo" checkout -q -b bead
+            if [ "$pass" = subject ]; then
+                printf '\n# changed by the bead\n' >> "$d/subj.sh"
+            else
+                printf '\n# changed by the bead\n' >> "$d/unrelated.sh"
+            fi
+            git -C "$repo" add -A
+            git -C "$repo" commit -q -m bead
+            rm -f "$marker"
+            out="$(cd "$repo" && NIGHTLY_CHECK_DIR="$d" \
+                NIGHTLY_VERIFY_STATE="$repo/base.txt" \
+                INCURSION_LANDING_VIA_SHARED=1 INCURSION_LANDING_DIFF_REF=base "$self" --landing 2>&1)"
+            rc=$?
+            if [ "$pass" = subject ] && [ "$rc" = 0 ] && [ -e "$marker" ]; then
+                printf '  ok    --landing keeps a live check whose gate-subject changed\n'
+            elif [ "$pass" = other ] && [ "$rc" = 0 ] && [ ! -e "$marker" ]; then
+                printf '  ok    --landing drops a live check when neither it nor its subject changed\n'
+            else
+                printf '  FAIL  landing subject (%s): rc=%s ran=%s\n' "$pass" "$rc" \
+                    "$([ -e "$marker" ] && echo yes || echo no)"
+                printf '%s\n' "$out" | sed 's/^/      | /'
+                fails=$((fails + 1))
+            fi
+        done
+    }
+    _run_case_landing_subject
 
     # ---- a pass record says which gate passed (inc-t3iu) -------------------
     # A pass of the short landing gate must never be reused by a full run and

@@ -1,0 +1,24 @@
+# Generate the frozen dwarf for inc-8p2j; no focus is selected.
+a
+n
+y
+@choose "Dwarf"
+@choose "Dwarf (Standard)"
+@choose "Barbarian"
+a
+@choose "Neutral"
+a
+a
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+y
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+@until "Afoot" ESC
+
+ESC
+@expect "System Menu"
+b
+@dump:saved

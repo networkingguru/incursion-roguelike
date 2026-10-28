@@ -87,7 +87,6 @@
 2 tools/check_planes_sword_prose.sh
 1 tools/check_precision_prose.sh
 2 tools/check_prestige_profs.sh
-2 tools/check_probe_hooks.sh
 3 tools/check_python_rod_prose.sh
 1 tools/check_race_feats.sh
 1 tools/check_rider_corpse.sh

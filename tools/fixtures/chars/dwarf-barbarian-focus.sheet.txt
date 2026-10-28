@@ -1,0 +1,220 @@
+=== fixture: dwarf-barbarian-focus ===
+
+This file is the audit record for
+  tools/fixtures/chars/dwarf-barbarian-focus.sav
+and tools/make_char_fixture.sh writes the whole of it. Do not edit it
+by hand: it would then describe a character the .sav beside it does
+not hold, and that is the one failure tools/check_char_fixture.sh
+exists to catch.
+
+made on          2026-10-28 14:04:11 EDT
+made at commit   0e1c0466
+                 the working tree was dirty, so this fixture may hold changes that commit does not
+seed             1
+settings         tools/fixtures/options-dwarven-focus.dat
+key script       tools/keys/dwarven-focus-save.keys
+                 copied to tools/fixtures/chars/dwarf-barbarian-focus.keys
+saved in game as Brottor.sav
+sha256 .sav      5be5ccb6a2e31d72c1baf27e6f51c67ab6901e781fc30dfb03354376900be52a
+sha256 module    eaddac51183226871ca4ded088e84028105bf97fecce22568d1505c41ae843d1
+                 mod/Incursion.Mod is what the save's rID manifest
+                 was written against. A fixture that stops loading
+                 is worth comparing against the module that made it.
+
+regenerate with
+  tools/make_char_fixture.sh dwarf-barbarian-focus tools/keys/dwarven-focus-save.keys 1 tools/fixtures/options-dwarven-focus.dat --force
+Regenerating gives a BYTE-DIFFERENT .sav holding the SAME character:
+a save carries clocks and counters no second run repeats. Judge a
+regeneration by this sheet, never by the size of the diff.
+
+The character below is the engine's own dump. It was taken by LOADING
+the .sav beside this file and saving it again under
+INCURSION_CHAR_PROBE=1 (Game::SaveGame, src/Registry.cpp:1105-1111).
+A few of its lines belong to that reading session and not to the
+character: the torch's remaining turns, the Level Statistics table
+and the Messages at the end all move by the turns
+tools/keys/load-char-sheet.keys spends. Everything above Inventory is the
+character. For the resource ids behind the item names, which are what
+a module change moves, run:
+  tools/dump_save.sh tools/fixtures/chars/dwarf-barbarian-focus.sav
+
+=== the character, as the engine writes him ===
+
+                        Brottor Ashrager, The Manipulative Plotter (Explore Mode)
+
+Gender Male
+Race   Dwarf
+Class  Barbarian 1
+Faith  Ekliazeh
+XP     0
+Next @ 1000
+Align  Neutral
+
+
+STR: 14/00 [+2/+1] (base 12, +2 inherent)
+DEX: 12/00 [+1/+0] (base 12)
+CON: 15/00 [+2/+2] (base 12, +1 inherent, +2 natural)
+INT: 15/00 [+2/+2] (base 15)
+WIS: 14/00 [+2/+1] (base 14)
+CHA: 14/00 [+2/+1] (base 16, -2 natural)
+LUC: 15/00 [+2/+2] (base 15)
+Fortitude   +4(Barbarian +2, +2 Con)
+Reflex      +1(Barbarian +0, +1 Dex)
+Will        +2(Barbarian +0, +2 Wis)
+           (+2 vs. magic, +2 vs. poison, +2 vs. traps, +4 vs. knockdown)
+Melee   +toHit +5  (Barbarian +1, +2 Str, +2 weapon)
+        Damage +2  (base 2d6 / 3d6, +2 Str)
+        Speed  90% (base 100%) x 90% weapon
+Size           Human-sized:
+  (base human-sized)
+
+Defense Class  11:
+  (base 10, +1 Dex)
+
+Coverage       10:
+  (base 0, +10 armour)
+
+Movement Rate  65%:
+  (base 75%) x 70% armour x 115% skill
+
+Hit Dice Rolls 36:
+   20 + 1d12 (12) + 4 (CON bonus)
+Mana Rolls     16:
+   10 + 1d4 (4) x 1 + 2 (WIS bonus)
+
+Encumbrance    Moderate:
+   (Light 28.6s, Moderate 86.0s, Heavy 173.0s, Extreme 260.0s, Max Press 350.0s)
+
+Special Abilities:
+  Berserk Rage
+  Dwarven Focus
+  Favoured Enemies:
+    +1 vs. Orcs
+  Giant Killer
+  Darkvision (60 ft)
+  Stonework Sense +2
+  Tough as Hell
+  Fatigue Regeneration
+  Spellbreaker
+
+Feats:
+  Acrobatic
+  Alertness
+  Armour Proficiency: Light
+  Armour Proficiency: Medium
+  Larcenous
+  Loadbearer
+
+Resistances and Armour:
+  Slashing Damage 12
+  Piercing Damage 8
+  Blunt Damage 10
+
+Proficiencies Simple Weapons, Long Blades, Axes, Impact, Polearms, Spears, Flails, Light Armour, Medium Armour, Heavy Armour and dwarven waraxe
+
+Skill Ratings:
+  Athletics        +6  (2 ranks, +2 CON, +2 train)
+  Balance          -6  (0 ranks, -6 armour)
+  Climb            -1  (2 ranks, +1 STR, +2 train, -6 armour)
+  Craft            +9  (2 ranks, +3 train, +2 racial, +2 kit)
+  Escape Artist    -6  (0 ranks, -6 armour)
+  Healing          +7  (2 ranks, +1 WIS, +2 train, +2 kit)
+  Hide in Shadows  -6  (0 ranks, -6 armour)
+  Intimidate       +3  (0 ranks, +1 CHA, +2 train)
+  Intuition        +3  (0 ranks, +1 WIS, +2 train)
+  Jump             +0  (0 ranks, +1 STR, +2 train, +3 feat, -6 armour)
+  Knowledge (Nature) +4  (0 ranks, +2 INT, +2 train)
+  Knowledge (Theology) +6  (0 ranks, +2 INT, +4 kit)
+  Listen           +6  (0 ranks, +1 WIS, +2 train, +3 feat)
+  Lockpicking      +3  (0 ranks, +3 feat)
+  Mining           +7  (0 ranks, +1 WIS, +2 train, +2 racial, +2 kit)
+  Move Silently    -6  (0 ranks, -6 armour)
+  Pick Pockets     -2  (0 ranks, +1 CHA, +3 feat, -6 armour)
+  Searching        +6  (0 ranks, +2 INT, +2 racial, +2 inherent)
+  Spot             +6  (0 ranks, +1 WIS, +2 train, +3 feat)
+  Swimming         -10 (0 ranks, +2 train, -12 armour)
+  Tumble           -3  (0 ranks, +3 feat, -6 armour)
+  Wilderness Lore  +3  (0 ranks, +1 WIS, +2 train)
+
+Spiritual State:
+__You are devoted to Ekliazeh.
+__Ekliazeh is noncommital.
+__Ekliazeh has not aided you.
+____(Favour 245, Lev 0, Pen 0%)
+__You are perfectly neutral with
+____regard to Good and Evil.
+__You are perfectly neutral with
+____regard to Law and Chaos.
+
+CharGen Options and Choices:
+__You are in Explore Mode.
+__Beginner's Kit: OFF
+__Initial Rolling Method: 4d6 + Perks
+__Allow Rerolling: YES
+__Use the Subraces: YES
+__Disallow Wizard Mode: NO
+__Maximum Hit Points: YES
+__Maximum Mana: YES
+__Default Character Gender: MALE
+__Monsters Maximum Hit Points: NO
+__Roll Attributes First: NO
+__Gain Attributes With Levels: YES
+__Allow Rapid Intuition: WEAPONS
+__Monsters Use Djikstra: YES
+__Out-Of-Depth Monsters: YES
+__Transgression Hints: YES
+__Difficulty Level: BASELINE
+__Power Stats: EXTREME
+__Elude Death: SEVEN
+__Disable Complicity Transgressions: YES
+__Natural Weapon Speed: ORIGINAL
+
+
+Inventory:
+  dwarven waraxe
+  dwarven greataxe
+  loincloth
+  dwarven banded mail
+  Holy symbol of Ekliazeh
+  cracked wand +3 [3d4] (36 charges)
+  medium backpack
+  16 gold pieces
+  5 food rations
+  craftsman's tools
+  healing kit
+  dwarven pickaxe
+
+On The Ground:
+
+Known Spells:
+
+Journal:
+
+12:00 AM, 1st of Suntide: Entry Chamber, 10' (H:36/36 M:16/16 XP:0) 
+  You arrive at 10' in the The Goblin Caves.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:36/36 M:16/16 XP:0) 
+  OOD monster elf (CR 3) generated on dlev 1 by Encounter 'adventurer'. [EN_SINGLE]
+
+12:00 AM, 1st of Suntide: Unknown Location (H:36/36 M:16/16 XP:0) 
+  OOD monster elf (CR 3) generated on dlev 1 by Encounter 'adventurer'.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:18/22 M:12/12 XP:0) 
+  Starting Perks:
+     Bonus Feat: Larcenous.
+  Starting Item: uncursed cracked wand +3.
+
+Monsters Encountered:
+  Total: 0
+
+Level Statistics:
+
+Lvl | Act | Key | Turns | Secs |  XP | Explored
+----+-----+-----+-------+------+-----+------------------
+1   |    1|  112|      1|     0|    0| 121 / 3937 = 3%
+
+Messages:
+Welcome back to Incursion, Brottor!
+"By the forge and the hammer, we stand united!"
+You find nothing of significance.
+Autosave... 

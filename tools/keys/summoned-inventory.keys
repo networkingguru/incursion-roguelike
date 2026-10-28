@@ -1,0 +1,5 @@
+# The synchronous probe has already measured and cleaned up its scene.
+# Complete one turn for headless.sh's gameplay witness, then quit.
+SPACE*8
+s
+@quit

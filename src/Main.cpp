@@ -262,6 +262,10 @@ void Game::Play() {
     extern void BeltPotionProbe(Player *pl);
     BeltPotionProbe(pp);
 
+    // inc-yj4cz: opt-in summoned inventory reproductions.
+    extern void SummonInvProbe(Player *pl);
+    SummonInvProbe(pp);
+
     /* Off unless INCURSION_QUIET_PROBE is set, and run here because it needs a
        registry with objects in it. See Registry::QuietProbe and
        tools/check_quiet_lookup.sh. inc-upw.39. */
@@ -454,6 +458,10 @@ void Game::Play() {
     /* inc-gzkn: opt-in elemental resistance potion reproduction. */
     extern void ElementalResistanceProbe(Player *p);
     ElementalResistanceProbe(pp);
+
+    /* Off unless INCURSION_CLOAK_DMG_PROBE is set. inc-7s7n. */
+    extern void CloakDamageProbe(Player *p);
+    CloakDamageProbe(pp);
 
     /* inc-w6t0: opt-in Stone to Flesh reproduction. */
     extern void StoneToFleshProbe(Player *p);
