@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# gate: cheap
+# gate: live
+# gate-subject: nightly_verify.sh finish_bead.sh docs_only_change.sh check_bead_evidence.py
 #
 # The scratch-repo suite for tools/finish_bead.sh landings. It asks two
 # questions: does a landing reuse a full gate pass on the same files, and
