@@ -24,6 +24,7 @@ rest until you need them.
 | `check_buckler_size.sh` | A buckler costs -1 to Balance on both Medium and enlarged Large bearers (inc-drmm). |
 | `check_headless.sh` | The regression check for that harness. If this fails, no other measurement means anything. |
 | `soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about. |
+| `soak_coverage.sh` | Plays the gate soak (`dive.keys`, gate settings) on a clang coverage build and lists the C++ functions and script routines it reached. Slow: about 700 s a session. |
 | `gate_record.sh` + `gate_compare.sh` + `gate_lib.sh` | The regression gate. `gate_record.sh` freezes a build's behaviour into `tools/gates/*.baseline`; `gate_compare.sh` re-runs the same seeds and says what got worse. |
 | `package_macos_app.sh` + `check_app.sh` | Builds `Incursion.app` and then verifies that a stranger who downloads it can open it. |
 
