@@ -70,21 +70,72 @@ hooks="$(grep -rhoE 'getenv\("INCURSION_[A-Z_]+"' src/ inc/ 2>/dev/null |
 # The bead a hook serves is the nearest tracking id above one of its call
 # sites. Forty lines is the window: these hooks sit under a block comment that
 # explains them, and the id lives in that comment.
+# One scan of src/ and inc/ builds "<hook> <id>" lines, same answer as the old
+# per-hook greps: files in grep -r order, first getenv line per file, last id in
+# the window; the first file that yields an id wins (inc-b0ziu.4).
+HOOK_BEAD="$(grep -rlE 'getenv\("INCURSION_[A-Z_]+"' src/ inc/ 2>/dev/null |
+    python3 -c '
+import re, sys
+seen = {}
+for path in sys.stdin.read().split("\n"):
+    if not path:
+        continue
+    lines = open(path, encoding="latin-1").read().split("\n")
+    first = {}
+    for n, text in enumerate(lines, 1):
+        for h in re.findall(r"getenv\(\"(INCURSION_[A-Z_]+)\"", text):
+            first.setdefault(h, n)
+    for h, n in first.items():
+        if h in seen:
+            continue
+        window = "\n".join(lines[max(n - 40, 1) - 1:n])
+        ids = re.findall(r"inc-[a-z0-9]+(?:\.[0-9]+)*", window)
+        if ids:
+            seen[h] = ids[-1]
+for h, i in seen.items():
+    print(h, i)
+')"
+
 bead_for() {
-    local hook="$1" file line id
-    grep -rlE "getenv\(\"$hook\"" src/ inc/ 2>/dev/null | while read -r file; do
-        line="$(grep -nE "getenv\(\"$hook\"" "$file" | head -1 | cut -d: -f1)"
-        [ -n "$line" ] || continue
-        id="$(sed -n "$((line > 40 ? line - 40 : 1)),${line}p" "$file" |
-              grep -oE 'inc-[a-z0-9]+(\.[0-9]+)*' | tail -1)"
-        [ -n "$id" ] && { echo "$id"; return; }
-    done | head -1
+    printf '%s\n' "$HOOK_BEAD" | awk -v h="$1" '$1 == h { print $2; exit }'
 }
 
+# Read every status once: one bd call costs about as much as the whole list,
+# and 142 calls cost ~100 s (inc-b0ziu.4). STATUS_MAP holds "<id> <STATUS>" lines.
+if ! STATUS_MAP="$(bd list --all --json --limit 0 2>/dev/null | python3 -c '
+import json, sys
+for b in json.load(sys.stdin):
+    print(b["id"], str(b.get("status", "")).upper())
+' 2>/dev/null)" || [ -z "$STATUS_MAP" ]; then
+    echo "COULD NOT MEASURE: bd list --all --json failed or printed no JSON list of beads."
+    exit 2
+fi
+
 status_of() {
-    bd show "$1" 2>/dev/null | head -1 |
-        grep -oE '(OPEN|IN_PROGRESS|CLOSED|DEFERRED|BLOCKED)' | head -1
+    printf '%s\n' "$STATUS_MAP" | awk -v id="$1" '$1 == id { print $2; exit }'
 }
+
+# One scan per question (inc-b0ziu.4). A hook matches only as a whole word, as
+# grep -w did: tokens are maximal [A-Za-z0-9_]+ runs, so INCURSION_X never
+# matches INCURSION_X_XX. Output "<hook>TAB<files, space-joined>", files in the
+# order grep -r lists them.
+WORD_SCAN='
+import re, sys
+files = [f for f in sys.stdin.read().split("\n") if f]
+out = {}
+for path in files:
+    text = open(path, encoding="latin-1").read()
+    for tok in set(re.findall(r"[A-Za-z0-9_]+", text)):
+        if tok.startswith("INCURSION_"):
+            out.setdefault(tok, []).append(path)
+for tok, fs in out.items():
+    print(tok + "\t" + " ".join(fs))
+'
+DRIVEN_MAP="$(grep -rl INCURSION_ tools --include='*.sh' 2>/dev/null |
+    grep -v 'check_probe_hooks\.sh$' | python3 -c "$WORD_SCAN")"
+CITED_MAP="$( { grep -l INCURSION_ docs/REPORTING-GATE.md 2>/dev/null
+                grep -rl INCURSION_ docs/evidence 2>/dev/null; } |
+    python3 -c "$WORD_SCAN")"
 
 # Which check script, if any, drives this hook? Prints the scripts, or nothing.
 #
@@ -114,8 +165,7 @@ status_of() {
 # -w requires a word boundary, and `_` counts as a word character to grep, so
 # the longer name no longer matches the shorter one.
 driven_by() {
-    grep -rlw "$1" tools --include='*.sh' 2>/dev/null |
-        grep -v 'check_probe_hooks\.sh$' | tr '\n' ' ' | sed 's/ $//'
+    printf '%s\n' "$DRIVEN_MAP" | awk -F'\t' -v h="$1" '$1 == h { print $2; exit }'
 }
 
 # A hook can be load-bearing with no script driving it, because it IS the
@@ -129,8 +179,7 @@ driven_by() {
 # sits in the same file as the getenv it describes, so a match there would
 # prove nothing. -w for the same reason driven_by uses it.
 cited_by() {
-    grep -rlw "$1" docs/REPORTING-GATE.md docs/evidence 2>/dev/null |
-        tr '\n' ' ' | sed 's/ $//'
+    printf '%s\n' "$CITED_MAP" | awk -F'\t' -v h="$1" '$1 == h { print $2; exit }'
 }
 
 if [ "${1:-}" = "--baseline" ]; then
