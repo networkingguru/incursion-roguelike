@@ -641,35 +641,11 @@ Restart:
                 StackBonus(BONUS_ARMOUR, A_PRI, -16);
             }
 
-        if (it->HasQuality(WQ_HOLY) && isMType(MA_EVIL)) {
+        if (opposesAlignmentOf(it)) {
             AddBonus(BONUS_NEGLEV,A_HIT_ARCHERY+i,-2);
             AddBonus(BONUS_NEGLEV,A_DMG_ARCHERY+i,-2);
             AddBonus(BONUS_NEGLEV,A_SPD_ARCHERY+i,-4);
         }
-
-        if (it->HasQuality(WQ_UNHOLY) && isMType(MA_GOOD)) {
-            AddBonus(BONUS_NEGLEV,A_HIT_ARCHERY+i,-2);  
-            AddBonus(BONUS_NEGLEV,A_DMG_ARCHERY+i,-2);
-            AddBonus(BONUS_NEGLEV,A_SPD_ARCHERY+i,-4);
-        }
-
-        if (it->HasQuality(WQ_CHAOTIC) && isMType(MA_LAWFUL)) {
-            AddBonus(BONUS_NEGLEV,A_HIT_ARCHERY+i,-2); 
-            AddBonus(BONUS_NEGLEV,A_DMG_ARCHERY+i,-2);
-            AddBonus(BONUS_NEGLEV,A_SPD_ARCHERY+i,-4);
-        }
-
-        if (it->HasQuality(WQ_LAWFUL) && isMType(MA_CHAOTIC)) {
-            AddBonus(BONUS_NEGLEV,A_HIT_ARCHERY+i,-2);   
-            AddBonus(BONUS_NEGLEV,A_DMG_ARCHERY+i,-2);
-            AddBonus(BONUS_NEGLEV,A_SPD_ARCHERY+i,-4);
-        }
-
-        if (it->HasQuality(WQ_BALANCE) && (isMType(MA_LAWFUL) || isMType(MA_CHAOTIC)) && (isMType(MA_GOOD) || isMType(MA_EVIL))) {
-            AddBonus(BONUS_NEGLEV,A_HIT_ARCHERY+i,-2);   
-            AddBonus(BONUS_NEGLEV,A_DMG_ARCHERY+i,-2);
-            AddBonus(BONUS_NEGLEV,A_SPD_ARCHERY+i,-4);
-        } 
     }
 
     if (meleeWep && meleeWep->HasQuality(WQ_SPEED))
@@ -2524,6 +2500,23 @@ void TMonster::InitializeMTypeCache(rID tmid)
   delete m;
   return; 
 } 
+
+/* upstream: an alignment weapon (holy, unholy, chaotic, lawful, balance) must
+   be judged against the wielder by one rule everywhere: the weapon penalty
+   below, the "uneasy" message and the level drain in Inv.cpp. The help text
+   (src/Tables.cpp:1736-1757) and the code disagree on every platform, with
+   no typedef or compiler dependence. Observed via
+   tools/check_alignment_drain.sh; inc-qaav4; not sent. */
+bool Creature::opposesAlignmentOf(Item *it)
+{
+    return (it->HasQuality(WQ_HOLY) && isMType(MA_EVIL)) ||
+           (it->HasQuality(WQ_UNHOLY) && isMType(MA_GOOD)) ||
+           (it->HasQuality(WQ_CHAOTIC) && isMType(MA_LAWFUL)) ||
+           (it->HasQuality(WQ_LAWFUL) && isMType(MA_CHAOTIC)) ||
+           (it->HasQuality(WQ_BALANCE) &&
+            (isMType(MA_LAWFUL) || isMType(MA_CHAOTIC)) &&
+            (isMType(MA_GOOD) || isMType(MA_EVIL)));
+}
 
 bool Creature::isMType(int32 mt) 
 {
