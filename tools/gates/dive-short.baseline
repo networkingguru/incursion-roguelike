@@ -1,5 +1,5 @@
 # Incursion regression baseline -- see tools/gate_compare.sh.
-# Recorded 2026-10-28 15:39 from 717b1b1c.
+# Recorded 2026-10-28 16:03 from 9af09fa2.
 # Metric: error volume and message-set membership. A message that is
 # not in this file is a regression; a message that has left it is a fix.
 # Recorded for inc-b0ziu.5 (re-record of inc-b0ziu.2's baseline: the death prompt is now answered before every wait, so no session ends stuck at "Die? [yn]"). Replaces dive.baseline (the 40-session soak of tools/keys/dive.keys).
