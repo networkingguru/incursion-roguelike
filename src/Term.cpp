@@ -944,6 +944,10 @@ void TextTerm::ShowMap() {
         /* Later, draw other creature perceived by
            telepathy, etc -- but get this working
            first! */
+        /* upstream: engulfed ShowMap never cleared UpdateMap, so every
+           key read refreshed the map again; the same chain is in the
+           original code. Traced; inc-djbtl; not sent. */
+        p->UpdateMap = 0;
         return;
     }
 
@@ -3404,6 +3408,10 @@ bool TextTerm::yn(const char*msg) {
     if (ch == KY_REDRAW)
       { ch = 0; goto Redraw; }
     CursorOff();
+    /* upstream: the clear hit whichever window was active, not the prompt's
+       own; the same chain is in the original code. Traced; inc-djbtl; not
+       sent. */
+    SetWin(WIN_INPUT);
     Clear();
 
     if (Mode == MO_CREATE)
