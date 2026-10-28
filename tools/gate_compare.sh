@@ -3,7 +3,7 @@
 # against the baseline.
 #
 # Usage: tools/gate_compare.sh                       (every recorded baseline)
-#        tools/gate_compare.sh tools/gates/dive.baseline
+#        tools/gate_compare.sh tools/gates/dive-short.baseline
 #
 # Ends: 0 nothing got worse, 1 a regression, 2 the comparison could not be run.
 #
@@ -37,6 +37,8 @@
 #                                                   would otherwise read as an
 #                                                   improvement.
 #   More sessions ended in Fatal() or the watchdog  regression.
+#   More sessions killed by a signal (exit       regression. A crash after the
+#   128 or above: 139 SIGSEGV, 134 SIGABRT)     first map still counts as played.
 #   More sessions died, or got stuck at the         regression, and see below.
 #   OPT_NODEATH death prompt, than the baseline
 #   More sessions frozen at the threat-disengage     regression, and see below.
@@ -192,6 +194,17 @@ for BASE in "${BASELINES[@]}"; do
         echo
         VERDICT=1
     done
+
+    # A session killed by a signal exits 128+N and gate_collect still counts it
+    # as played, so the 1/4 loop above never sees it (inc-b0ziu.3).
+    B_SIG="$(awk -F'\t' '$1=="exits" { for (i=2;i<=NF;i++) { split($i,p,"="); if (p[1]+0>=128) n+=p[2] } } END { print n+0 }' "$BASE")"
+    N_SIG="$(awk '$2+0>=128' "$SOAK/exits" | wc -l | tr -d ' ')"
+    if [ "$N_SIG" -gt "$B_SIG" ]; then
+        echo "  REGRESSION: $N_SIG sessions crashed on a signal (exit >= 128), baseline had $B_SIG."
+        awk '$2+0>=128 { print "    seed " $1 " exit " $2 }' "$SOAK/exits"
+        echo
+        VERDICT=1
+    fi
 
     # inc-loa.3: a session whose character died, or got stuck at the
     # OPT_NODEATH "You die... Die? [yn]" prompt, generates no more real
