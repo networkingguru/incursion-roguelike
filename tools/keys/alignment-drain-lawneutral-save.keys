@@ -1,0 +1,32 @@
+# inc-qaav4: freeze a level 1 Lawful Neutral human warrior for tools/check_alignment_drain_balance.sh.
+#   tools/make_char_fixture.sh alignment-drain-lawful-neutral tools/keys/alignment-drain-lawneutral-save.keys 1 tools/fixtures/options-2026-08-22.dat
+# The alignment menu lists the nine alignments in order (Lawful Good, Neutral Good, Chaotic Good,
+# Lawful Neutral, ...), so [d] is Lawful Neutral. The sheet's Align line is checked after the build.
+a
+n
+y
+@choose "Human"
+@choose "Athletics"
+@choose "Diplomacy"
+@choose "Warrior"
+a
+d
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "Choose a feat" a
+@while "Focus on which Weapon" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "wish to worship" y
+@while "Choose a God" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+@while "personality archetype" a
+@until "System Menu" ESC
+ESC
+@until "Wizard Mode Options" w y
+@choose "Genocide Everything"
+ESC
+@expect "System Menu"
+b
+@dump:saved

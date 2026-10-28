@@ -3251,6 +3251,23 @@ void Character::DrainXP(int32 amt)
 
 }
 
+/* Drains exactly the XP that lowers the effective level by n. A target below
+   level 1 drains one XP more than remains, so DrainXP's own death rule fires. */
+void Character::DrainLevels(int n)
+{
+    int32 lev, target, remaining;
+    remaining = (int32)XP - (int32)XP_Drained;
+    lev = 0;
+    while (remaining >= ExperienceChart[lev+1])
+        lev++;
+    lev = min(lev, (int32)TotalLevel());
+    target = lev - n;
+    if (target >= 0)
+        DrainXP(remaining - ExperienceChart[target]);
+    else
+        DrainXP(remaining + 1);
+}
+
 /* INCURSION_XPDRAIN_PROBE -- the runnable check behind the RestoreXP fix
    below. tools/check_xp_drain.sh drives it; read that script for the pass
    condition. Measures effective XP (TotalXP() - XPDrained()) where it lands,
