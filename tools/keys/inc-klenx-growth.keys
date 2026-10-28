@@ -1,0 +1,75 @@
+# inc-klenx: loaded Medium paladin, frozen actors, explicit clear terrain.
+@until "Afoot" ESC
+w y
+@choose "Genocide Everything"
+@until "HP:" ESC
+w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE ESC
+w
+@choose "Change terrain type"
+ ENTER
+@choose "Loose-Packed Earth"
+w
+@choose "Change terrain type"
+UP ENTER
+@choose "Loose-Packed Earth"
+w
+@choose "Change terrain type"
+DOWN ENTER
+@choose "Loose-Packed Earth"
+w
+@choose "Change terrain type"
+LEFT ENTER
+@choose "Loose-Packed Earth"
+w
+@choose "Change terrain type"
+RIGHT ENTER
+@choose "Loose-Packed Earth"
+w
+@choose "Change terrain type"
+RIGHT*2 ENTER
+@choose "Loose-Packed Earth"
+w
+@choose "Change terrain type"
+UP RIGHT ENTER
+@choose "Loose-Packed Earth"
+w
+@choose "Change terrain type"
+DOWN RIGHT ENTER
+@choose "Loose-Packed Earth"
+w
+@choose "Change terrain type"
+UP LEFT ENTER
+@choose "Loose-Packed Earth"
+w
+@choose "Change terrain type"
+DOWN LEFT ENTER
+@choose "Loose-Packed Earth"
+
+w
+@choose "Monster Summoning"
+@choose "Celestials"
+@choose "klenx test mount"
+LEFT ENTER
+w
+@choose "Make Player Master of Monster"
+LEFT ENTER
+SPACE
+y
+@choose "Mount"
+LEFT ENTER
+@dump:mounted
+SPACE SPACE
+w
+@choose "Monster Summoning"
+@choose "Celestials"
+@choose "klenx growth archon"
+RIGHT*2 ENTER
+@dump:before-step
+RIGHT
+@dump:after-step
+# Let the scheduler reach its end-of-turn map audit.
+.
+@dump:audited
+@quit
