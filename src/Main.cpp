@@ -451,6 +451,10 @@ void Game::Play() {
     extern void ElementalResistanceProbe(Player *p);
     ElementalResistanceProbe(pp);
 
+    /* Off unless INCURSION_CLOAK_DMG_PROBE is set. inc-7s7n. */
+    extern void CloakDamageProbe(Player *p);
+    CloakDamageProbe(pp);
+
     /* inc-w6t0: opt-in Stone to Flesh reproduction. */
     extern void StoneToFleshProbe(Player *p);
     StoneToFleshProbe(pp);
