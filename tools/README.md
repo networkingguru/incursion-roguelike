@@ -24,6 +24,7 @@ rest until you need them.
 | `check_buckler_size.sh` | A buckler costs -1 to Balance on both Medium and enlarged Large bearers (inc-drmm). |
 | `check_headless.sh` | The regression check for that harness. If this fails, no other measurement means anything. |
 | `soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about. |
+| `soak_coverage.sh` | Plays the gate soak (`dive.keys`, gate settings) on a clang coverage build and lists the C++ functions and script routines it reached. Slow: about 700 s a session. |
 | `gate_record.sh` + `gate_compare.sh` + `gate_lib.sh` | The regression gate. `gate_record.sh` freezes a build's behaviour into `tools/gates/*.baseline`; `gate_compare.sh` re-runs the same seeds and says what got worse. |
 | `package_macos_app.sh` + `check_app.sh` | Builds `Incursion.app` and then verifies that a stranger who downloads it can open it. |
 
@@ -449,6 +450,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? | LIVE |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? | LIVE |
 | `check_area_radius.sh` | Does a globe or field with radius value N reach N squares? `INCURSION_AREA_PROBE=1` casts Bless (radius 6) at allies at distances 5, 6 and 7, and Silence (radius 4) to compare its first pulse with its lasting field at distances 3, 4 and 5. FAIL, INCONCLUSIVE or missing results exit nonzero (inc-lmw4). | LIVE |
+| `check_wake_all.sh` | Does the wizard command "Wake Every Creature" leave no sleeping creature on the level? `INCURSION_WAKE_PROBE=1` puts every creature to sleep first (23 on the fixture's level), then the command runs; the check needs a nonzero count before and zero after (inc-b0ziu.2). | LIVE |
 | `check_armour_model.sh` | Does the armour model penetrate coverage by grade and subtract from damage, with natural armour and a worn suit penetrated independently? | LIVE |
 | `check_aura_of_menace.sh` | Does a hostile creature entering an Aura of Menace (a lantern archon summoned in wizard mode) get the save and its -2 penalty or immunity, and (hit mode) does landing a blow on the owner end the penalty? Seeds 4 and 5. | LIVE |
 | `check_auto_terms.sh` | With Auto-Offer Terms on, does a lawful good paladin who attacks a fleeing ogre offer terms first, skip the attack when the ogre accepts, and attack with no prompt when it refuses? Does magic fear (a rules refusal) still give the "Confirm attack fleeing victim?" prompt, and does option off give the prompt and no offer? Seeds 1..40; `--prove-red` forces the option off and expects a failure (inc-gfq2). | LIVE |
@@ -505,6 +507,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_claude_budget.sh` | Does `tools/claude_budget.py` put `sonnet` first in the coding route only while Claude weekly usage is below the day's threshold (10, 25, 35, 45, 55, 65, 100 percent on days 1–7), with the boundary strict and a reset window counted as 0% used? A missing, non-JSON, non-UTF-8, out-of-range or hour-old usage file must give unknown (exit 2), never `sonnet-first`. Fully offline against temp files and a pinned clock. `--prove-red` moves the day-7 threshold to 65 and the day-7 case must fail (inc-cfnm). | LIVE |
 | `check_cleanup_removal_event.sh` | Does reference cleanup narrow removal to the rows referring to the dying source, and keep the inline fallback that guarantees forward progress? The `EV_REMOVED` event on this path is not new -- the base code already delivered it, measured on a clean HEAD build. Structural only: the narrowing's behavioural oracles are `check_circle_creator_death.sh` and `check_overlapping_modifier_fields.sh`, and the fallback guards a restart loop nobody has reproduced. | LIVE |
 | `check_cleave_illusion.sh` | Does Cleave from a killed illusion crash `Creature::Damage` (`getIllusionFlags` ASSERT `'s'`, then null dereference)? Probe `INCURSION_CLEAVE_ILLUSION_PROBE` runs ILLUSION (first victim an illusion at 1 HP, real bugbear beside) and CONTROL (first victim real), and requires a logged Cleave with no crash in both. Passes since the inc-k0e1 fix. | LIVE |
+| `check_cloak_damage_live.sh` | Do the cursed cloaks Frostbite and Fireburn change the damage their wearer takes? Probe `INCURSION_CLOAK_DMG_PROBE` wears each cloak through `EV_WIELD`, proves the TRAP_EVENT status was granted, and takes fixed 20-point cold and fire hits through the real `EV_DAMAGE`: Frostbite must make cold 30 and leave fire 20, Fireburn must make fire 25 and leave cold 20, against a no-cloak baseline of 20 (inc-7s7n). | LIVE |
 | `check_cloak_resistance.sh` | Does a +3 Cloak of Resistance grant resistance rather than magic? One session reads all three saving throws with the cloak alone and with auspicious +2 armour; the control stays fixed and the smaller same-type bonus must not stack. | LIVE |
 | `check_clock_advance.sh` | Does the game-time oracle still catch a scripted run that burns keys while no game time passes? | LIVE |
 | `check_close_gate.sh` | Does `tools/close_gate.py` refuse `bd close <id>` while the bead's branch `refs/heads/<id>` is still unlanded, allow an unknown id, honour the `-r`/`--reason`/`-m`/`--message` option values, ignore `cd` chains and non-close subcommands, honour the `INCURSION_CLOSE_GATE_OFF=1` bypass, ignore non-Bash tools and allow on garbage input (inc-79p2)? | LIVE |
@@ -1077,7 +1080,7 @@ one (`package_macos_app.sh:5-13`).
 | Path | What it is |
 |---|---|
 | `keys/*.keys` | Key scripts read by both backends. `headless.sh` uses the full POSIX harness format; the SDL build uses only the shared movement subset. `keys/trailer-demo.keys` demonstrates SDL movement, `@pause` and `@quit`. Read the header of a script before using it. |
-| `gates/dive.baseline` | The committed regression baseline. `gate_record.sh` overwrites it. |
+| `gates/dive-short.baseline` | The committed regression baseline. `gate_record.sh` overwrites it. |
 | `gates/Options.Dat` | The pinned settings file every gate run plays with. Committed on purpose. |
 | `gates/Options.Dat.md` | What is in that settings file and why. |
 | `fixtures/options-*.dat` | Frozen, dated settings files that scripted checks select explicitly. |
@@ -1422,7 +1425,7 @@ the builds, so a full run costs its minute and reports a regression in the shape
 no single check can -- a complaint appearing in several sessions at once, fewer
 sessions reaching a map, more deaths or freezes.
 
-`tools/gates/dive.baseline` is committed, so a clone can run `gate_compare.sh`
+`tools/gates/dive-short.baseline` is committed, so a clone can run `gate_compare.sh`
 without recording anything. Do NOT run `gate_record.sh` unless you mean to
 replace that baseline — see below.
 
@@ -1511,8 +1514,8 @@ reporter's own words.
 **`tools/gate_record.sh` OVERWRITES a committed baseline.** Verified:
 `:37-38` build `OUT="$ROOT/tools/gates/$NAME.baseline"` from the key script's
 name, and `:71-80` truncate that path with `>`. The default key script is
-`tools/keys/dive.keys` (`gate_record.sh:21`), so a bare `tools/gate_record.sh` replaces
-`tools/gates/dive.baseline`. Record a baseline only from a build you believe in:
+`tools/keys/dive.keys` (`gate_record.sh:21`), so a bare `tools/gate_record.sh` writes a new `tools/gates/dive.baseline`; the committed baseline comes from `tools/keys/dive-short.keys` and `tools/gate_record.sh tools/keys/dive-short.keys 40 1` replaces
+`tools/gates/dive-short.baseline`. Record a baseline only from a build you believe in:
 a baseline taken from a broken build makes the gate defend the breakage
 (`gate_record.sh:13-14`). `git diff tools/gates/` afterwards, always.
 

@@ -5736,7 +5736,10 @@ AI_CLOAK Effect "Mantle of Magic Resistance" : EA_GRANT
 AI_CLOAK Effect "Frostbite" : EA_GRANT
   { SC_ENC; xval: TRAP_EVENT; yval: EVICTIM(EV_DAMAGE);
     Flags: EF_CURSED; Level: 0;
-    On Event EVICTIM(EV_DAMAGE) {
+    /* upstream: the handler declared EVICTIM(EV_DAMAGE) but Event.cpp hands a
+       victim's TRAP_EVENT handler META(EVICTIM(EV_DAMAGE)), so it never ran;
+       base-game script data, identical on Win32. Observed, inc-7s7n, not sent. */
+    On Event META(EVICTIM(EV_DAMAGE)) {
       if (e.DType == AD_COLD)
         e.vDmg = (e.vDmg * 150) / 100;
       return NOTHING;
@@ -5748,7 +5751,10 @@ AI_CLOAK Effect "Frostbite" : EA_GRANT
 AI_CLOAK Effect "Fireburn" : EA_GRANT
   { SC_ENC; xval: TRAP_EVENT; yval: EVICTIM(EV_DAMAGE);
     Flags: EF_CURSED; Level: 0;
-    On Event EVICTIM(EV_DAMAGE) {
+    /* upstream: the handler declared EVICTIM(EV_DAMAGE) but Event.cpp hands a
+       victim's TRAP_EVENT handler META(EVICTIM(EV_DAMAGE)), so it never ran;
+       base-game script data, identical on Win32. Observed, inc-7s7n, not sent. */
+    On Event META(EVICTIM(EV_DAMAGE)) {
       if (e.DType == AD_FIRE)
         e.vDmg = (e.vDmg * 125) / 100;
       return NOTHING;

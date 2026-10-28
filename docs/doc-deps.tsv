@@ -544,8 +544,8 @@ tools/flickerthumbs.py	TOOLS
 tools/gate_compare.sh	TOOLS
 tools/gate_lib.sh	TOOLS
 tools/gate_record.sh	TOOLS
-tools/gates/dive.baseline	REPORTING-GATE
-tools/gates/dive.baseline	TOOLS
+tools/gates/dive-short.baseline	REPORTING-GATE
+tools/gates/dive-short.baseline	TOOLS
 tools/gates/Options.Dat	TOOLS
 tools/gates/Options.Dat.md	TOOLS
 tools/fixtures/options-2026-08-13.dat	TOOLS

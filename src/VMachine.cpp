@@ -18,6 +18,9 @@
 
 */
                                          
+#include <set>
+#include <string>
+#include <stdlib.h>
 #include "Incursion.h"
 
 #define CAST_RECT(r)  (*((Rect*)&r))
@@ -410,9 +413,39 @@ String * VMachine::oString(hObj h)
 
 */
 
+/* inc-b0ziu.1: INCURSION_SCRIPT_COV records each distinct (resource, event)
+   pair Execute runs, as "<resource name>\t<event name>" lines in
+   <run dir>/logs/scriptcov.log, written at exit. Names, not rIDs: an rID is a
+   position. Unset, the cost is one cached branch. Used by
+   tools/soak_coverage.sh. */
+static std::set<long long> ScriptCovSeen;
+static std::set<std::string> ScriptCovNames;
+
+static void ScriptCovWrite()
+  {
+    const char *dir = getenv("INCURSIONPATH");
+    std::string path = std::string(dir ? dir : "./") + "logs/scriptcov.log";
+    FILE *f = fopen(path.c_str(), "w");
+    if (!f) return;
+    for (const std::string &n : ScriptCovNames)
+      fprintf(f, "%s\n", n.c_str());
+    fclose(f);
+  }
+
+static void ScriptCovNote(rID x, int16 ev)
+  {
+    long long key = ((long long)x << 16) | (unsigned short)ev;
+    if (!ScriptCovSeen.insert(key).second) return;
+    if (ScriptCovNames.empty()) atexit(ScriptCovWrite);
+    ScriptCovNames.insert(std::string(NAME(x)) + "\t" +
+                          (const char*)EventName(ev));
+  }
+
 int32 VMachine::Execute(EventInfo *e, rID _xID, hCode CP)
   {
     int8 table_size, i; int32 val;
+    static const bool scriptCov = getenv("INCURSION_SCRIPT_COV") != NULL;
+    if (scriptCov) ScriptCovNote(_xID, e->Event);
 
 
     // weimer: paranoia! -- incursion code seems to slowly reg[63] (the
