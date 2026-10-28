@@ -111,6 +111,18 @@ EvReturn Monster::Wield(EventInfo &e) {
 
     DPrint(e,NULL,"An <EActor> readies an <EItem>."); 
     e.EItem->IFlags |= IF_WORN;
+    if (theGame->InPlay() && opposesAlignmentOf(e.EItem)) {
+        /* Two levels, as for a character: lower the A_AID neglev total by 2. */
+        if (HasStati(ADJUST_DMG,A_AID))
+            GetStati(ADJUST_DMG,A_AID)->Mag -= 2;
+        else
+            GainPermStati(ADJUST_DMG,NULL,SS_ATTK,A_AID,-2);
+        if (max(1,ChallengeRating()) + SumStatiMag(ADJUST_DMG,A_AID) <= 0) {
+            ThrowDmg(EV_DEATH,AD_DREX,0,"negative energy",this,this);
+            if (Flags & F_DELETE)
+                return DONE;
+        }
+    }
     if (HasFeat(FT_SOULBLADE) && e.EItem->activeSlot(paramslot))
         wieldSoulblade(e.EItem);
 
@@ -398,12 +410,14 @@ EvReturn Character::Wield(EventInfo &e) {
         DPrint(e,NULL,"An <EActor> readies an <EItem>."); 
     }
 
-    if ((e.EItem->HasQuality(WQ_UNHOLY) && isMType(MA_GOOD)) ||
-        (e.EItem->HasQuality(WQ_HOLY) && isMType(MA_EVIL)) ||
-        (e.EItem->HasQuality(WQ_CHAOTIC) && isMType(MA_LAWFUL)) ||
-        (e.EItem->HasQuality(WQ_LAWFUL) && isMType(MA_CHAOTIC)) ||
-        (e.EItem->HasQuality(WQ_BALANCE) && !isMType(MA_NEUTRAL))) {
-            IPrint("Wielding the <Obj> makes you feel uneasy.",e.EItem);
+    if (opposesAlignmentOf(e.EItem)) {
+        IPrint("Wielding the <Obj> makes you feel uneasy.",e.EItem);
+        /* One wield event drains two levels, even when it fills two slots. */
+        if (theGame->InPlay() && e.EItem->activeSlot(paramslot))
+            DrainLevels(2);
+        /* A death ends the wield: nothing below may touch a dead wielder. */
+        if (isDead())
+            return DONE;
     }
 
     if (HasFeat(FT_SOULBLADE) && e.EItem->activeSlot(paramslot))
@@ -770,6 +784,11 @@ bool Character::Swap(int8 s) {
             return false;
         }
 
+    /* The wield may have killed the wielder; CalcValues on a dead character
+       reads stale item handles. */
+    if (isDead())
+        return true;
+
     if (i && thisp->MyTerm->AltDown() && i->GetQuantity() > 1 && !Inv[SL_INAIR]) {
         Item *_i;
         _i = OneSomeAll(i,this);
@@ -1062,6 +1081,8 @@ void Character::Exchange()
       Inv[SL_INAIR] = new2->myHandle;
       if (!Swap(SL_READY))
         goto Abort;
+      if (isDead())
+        return;
       Inv[SL_WEAPON] = 0;
       if ((Inv[SL_READY] != new2->myHandle) || Inv[SL_INAIR])
         Error("Weapon Exchange wierdness");
@@ -1074,6 +1095,8 @@ void Character::Exchange()
       Inv[SL_INAIR] = new1->myHandle;
       if (!Swap(SL_WEAPON))
         { Inv[SL_INAIR] = 0; goto Abort; }
+      if (isDead())
+        return;
       if ((Inv[SL_WEAPON] != new1->myHandle) || Inv[SL_INAIR])
         Error("Weapon Exchange wierdness");
       }

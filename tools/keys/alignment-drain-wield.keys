@@ -1,0 +1,73 @@
+# inc-qaav4: wield a wrong-alignment weapon twice and photograph the sheet at
+# each stage. Read by tools/check_alignment_drain.sh.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/alignment-drain-warrior.sav \
+#       tools/headless.sh tools/keys/alignment-drain-wield.keys 1
+#
+# THE CHARACTER is the fixture alignment-drain-warrior: a level 5 Chaotic Good
+# orc warrior with 10000 XP. Chaotic Good is wrong for an UNHOLY weapon
+# (src/Inv.cpp:401), and level 5 leaves effective level 1 even after four
+# drained levels. The fixture is a save the wizard flag is already set in,
+# so [w] opens the wizard menu directly.
+#
+# THE WEAPON is Nine Lives Stealer, a +2 unholy keen long sword with no wield
+# handler of its own (lib/m_items.irh). "@until ... DOWN" stops one row early
+# because the browser lists the row ABOVE the cursor when it first prints the
+# name, so one more DOWN lands on it.
+#
+# SHEETS, one [d] each; the inventory manager must be closed first, or [d] is Drop:
+#   sheet-0-baseline   nothing yet wielded
+#   sheet-1-wield      first wield
+#   sheet-2-unwield    unwielded again (the sword is stowed in the pack)
+#   sheet-3-rewield    second wield, same sword, picked as pack row 04
+# Pack row 04 is the sword because the fixture's pack holds three weapons in
+# front of it; the @expect below fails the script if that ever changes.
+
+s                       # one real turn, so this counts as a session
+d
+@expect "Align  Chaotic Good"
+@dump:sheet-0-baseline
+ESC
+
+w
+@choose "Genocide Everything"    # no monster can reach the character while the turns pass
+w
+@choose "Item Acquisition"
+RIGHT*10                # specific weapons
+@until "Nine Lives Stealer" DOWN
+DOWN
+ENTER
+2                       # INITIAL_PLUS
+ENTER
+b                       # Weapon Hand
+SPACE
+@while "two-handed" n
+s                       # stow the displaced starting weapon
+@expect "Weapon Hand  :mildly damaged Long Sword, Nine Lives"
+ESC
+d
+@dump:sheet-1-wield
+ESC
+
+i
+@until ">>b)Weapon" b
+SPACE                   # unwield: the sword goes "In the Air"
+s                       # stow it in the pack
+@expect "04) mildly damaged Long Sword, Nine Lives"
+ESC
+d
+@dump:sheet-2-unwield
+ESC
+
+i
+0
+4                       # pick the sword in the pack
+SPACE                   # take it out, into the air
+@until ">>b)Weapon" b
+SPACE                   # swap it into the Weapon Hand
+@expect "Weapon Hand  :mildly damaged Long Sword, Nine Lives"
+ESC
+d
+@dump:sheet-3-rewield
+ESC

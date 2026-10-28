@@ -1,0 +1,229 @@
+=== fixture: alignment-drain-level2 ===
+
+This file is the audit record for
+  tools/fixtures/chars/alignment-drain-level2.sav
+and tools/make_char_fixture.sh writes the whole of it. Do not edit it
+by hand: it would then describe a character the .sav beside it does
+not hold, and that is the one failure tools/check_char_fixture.sh
+exists to catch.
+
+made on          2026-10-28 14:42:34 EDT
+made at commit   0e1c0466
+                 the working tree was dirty, so this fixture may hold changes that commit does not
+seed             5
+settings         tools/fixtures/options-2026-08-22.dat
+key script       tools/keys/alignment-drain-level2-fixture.keys
+                 copied to tools/fixtures/chars/alignment-drain-level2.keys
+saved in game as Hurk.sav
+sha256 .sav      116064d2534b839e7f8cd37dcaa4cd6a3c86be7d738ca39482c2278cda21236a
+sha256 module    0e11374e713133fa5429f3b7794ef607c91516418eb57fefac2c4e3cef492a7f
+                 mod/Incursion.Mod is what the save's rID manifest
+                 was written against. A fixture that stops loading
+                 is worth comparing against the module that made it.
+
+regenerate with
+  tools/make_char_fixture.sh alignment-drain-level2 tools/keys/alignment-drain-level2-fixture.keys 5 tools/fixtures/options-2026-08-22.dat --force
+Regenerating gives a BYTE-DIFFERENT .sav holding the SAME character:
+a save carries clocks and counters no second run repeats. Judge a
+regeneration by this sheet, never by the size of the diff.
+
+The character below is the engine's own dump. It was taken by LOADING
+the .sav beside this file and saving it again under
+INCURSION_CHAR_PROBE=1 (Game::SaveGame, src/Registry.cpp:1105-1111).
+A few of its lines belong to that reading session and not to the
+character: the torch's remaining turns, the Level Statistics table
+and the Messages at the end all move by the turns
+tools/keys/load-char-sheet.keys spends. Everything above Inventory is the
+character. For the resource ids behind the item names, which are what
+a module change moves, run:
+  tools/dump_save.sh tools/fixtures/chars/alignment-drain-level2.sav
+
+=== the character, as the engine writes him ===
+
+                        Hurk the Anathema, The Ambitious Conqueror (Wizard Mode) (Explore Mode)
+
+Gender Male
+Race   Orc
+Class  Warrior 2
+Faith  Khasrach
+XP     1000
+Next @ 2250
+Align  Chaotic Good
+
+
+STR: 18/01 [+4/+3] (base 14, +4 natural)
+DEX: 17/00 [+0/+0] (base 17)
+CON:  7/01 [-1/-2] (base 7)
+INT: 12/00 [+1/+0] (base 14, -2 natural)
+WIS: 17/00 [+3/+3] (base 15, +2 natural)
+CHA: 13/00 [+1/+1] (base 15, -2 natural)
+LUC: 14/00 [+2/+1] (base 14)
+Fortitude   +2(Warrior +3, -1 Con)
+Reflex      +0(Warrior +0)
+Will        +9(Warrior +3, +3 Wis, +3 morale)
+Melee   +toHit +6  (Warrior +2, +4 Str, +1 magic, -1 weapon)
+        Damage +6  (base 1d4 / 1d3, +4 Str, +1 magic, +1 weapon)
+        Speed  145%(base 100% +5% Warrior) x 105% magic x 135% weapon
+Size           Human-sized:
+  (base human-sized)
+
+Defense Class  17:
+  (base 10, +7 shield)
+
+Coverage       10:
+  (base 0, +10 armour)
+
+Movement Rate  70%:
+  (base 100%) x 65% armour x 120% skill x 90% shield x 90% encumbrance
+
+Hit Dice Rolls 47:
+   [20 + 2d10 (10, 10) - 2 (CON bonus)] + 25% (Toughness)
+Mana Rolls     40:
+   10 + 2d6 (6, 6) x 2 + 6 (WIS bonus)
+
+Encumbrance    Light:
+   (Light 51.0s, Moderate 153.0s, Heavy 306.0s, Extreme 460.0s, Max Press 600.0s)
+
+Special Abilities:
+  Darkvision (60 ft)
+  Innate Spells:
+    Faerie Fire
+  Lowlight Vision (40 ft)
+  Scent (30 ft)
+  Lore of Arms (15 hits)
+  Spell Fury
+
+Feats:
+  Acrobatic
+  Aimed Shot
+  Alertness
+  Ambidexterity
+  Armour Proficiency: Light
+  Armour Proficiency: Medium
+  Armour Proficiency: Heavy
+  Precise Shot
+  Shield Proficiency
+  Toughness
+  Weapon Focus
+  Cannibalism
+
+Resistances and Armour:
+  Slashing Damage 13
+  Piercing Damage 9
+  Blunt Damage 11
+
+Proficiencies Simple Weapons, Short Blades, Long Blades, Axes, Archery, Staves, Impact, Thrown, Polearms, Spears, Lances, Daggers, Flexible, Light Weapons, Flails, Light Armour, Medium Armour, Heavy Armour, arbalest (focused) and shotput
+
+Skill Ratings:
+  Appraise         +7  (2 ranks, +3 WIS, +2 train)
+  Athletics        +8  (2 ranks, +3 STR, +3 train)
+  Balance          -12 (0 ranks, -12 armour)
+  Bluff            +4  (1 ranks, +1 CHA, +2 train)
+  Climb            -7  (0 ranks, +3 STR, +2 train, -12 armour)
+  Craft            +5  (0 ranks, +3 WIS, +2 train)
+  Diplomacy        +3  (0 ranks, +1 CHA, +2 train)
+  Escape Artist    -12 (0 ranks, -12 armour)
+  Find Weakness    +5  (0 ranks, +3 WIS, +2 train)
+  Healing          +5  (0 ranks, +3 WIS, +2 train)
+  Hide in Shadows  -12 (0 ranks, -12 armour)
+  Intimidate       +6  (0 ranks, +3 STR, +3 train)
+  Intuition        +5  (0 ranks, +3 WIS, +2 train)
+  Jump             -6  (0 ranks, +3 STR, +3 feat, -12 armour)
+  Knowledge (Theology) +7  (0 ranks, +3 WIS, +4 kit)
+  Listen           +6  (0 ranks, +3 WIS, +3 feat)
+  Move Silently    -12 (0 ranks, -12 armour)
+  Pick Pockets     -12 (0 ranks, -12 armour)
+  Ride             +2  (0 ranks, +2 train)
+  Seneschal        +2  (0 ranks, +2 train)
+  Spot             +8  (0 ranks, +3 WIS, +2 train, +3 feat)
+  Swimming         -24 (0 ranks, -24 armour)
+  Tumble           -9  (0 ranks, +3 feat, -12 armour)
+
+Spiritual State:
+__You are devoted to Khasrach.
+__Khasrach is noncommital.
+__Khasrach has not aided you.
+____(Favour 0, Lev 0, Pen 0%)
+__You are decisively Good.
+__You are decisively Chaotic.
+
+CharGen Options and Choices:
+__You are in Wizard Mode.
+__Beginner's Kit: ON
+__Initial Rolling Method: 4d6 + Perks
+__Allow Rerolling: YES
+__Use the Subraces: YES
+__Disallow Wizard Mode: NO
+__Maximum Hit Points: YES
+__Maximum Mana: YES
+__Default Character Gender: MALE
+__Monsters Maximum Hit Points: DOUBLE
+__Roll Attributes First: NO
+__Gain Attributes With Levels: YES
+__Allow Rapid Intuition: WEAPONS
+__Monsters Use Djikstra: YES
+__Out-Of-Depth Monsters: YES
+__Transgression Hints: YES
+__Difficulty Level: BASELINE
+__Power Stats: EXTREME
+__Elude Death: SEVEN
+__Disable Complicity Transgressions: YES
+__Natural Weapon Speed: ORIGINAL
+
+
+Inventory:
+  orcish kite shield +1
+  orcish dagger +1
+  orcish longspear
+  uncocked orcish arbalest +2
+  Lenses +2 of Precision
+  peasant garb
+  orcish banded mail of light fortification
+  Holy symbol of Khasrach
+  37 orcish crossbow bolts
+  5 Oils of Transformation
+  4 Antitoxins [+3]
+  3 Potions of See Invisibility
+  6 Potions of Remove Curse
+  medium backpack
+  312 gold pieces
+  9 food rations
+  11 strips of cured meat
+  4 Potions of Cure Disease [0]
+  2 Potions of Detect Stairs
+  2 Potions of Restoration [4d6]
+  3 Potions of Restore Constitution [6d8]
+  2 Potions of Restore Strength [6d8]
+  Wand of Identify (50 charges)
+  orcish knife
+  6 orcish shotputs
+
+On The Ground:
+
+Known Spells:
+  Faerie Fire                     1  100%    1 
+
+Journal:
+
+12:00 AM, 1st of Suntide: Entry Chamber, 10' (H:36/36 M:19/19 XP:0) 
+  You arrive at 10' in the The Goblin Caves.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:14/21 M:13/13 XP:0) 
+  Starting Perks:
+   Innate Spell: Faerie Fire.
+  Starting Item: uncursed Lenses +2 of Precision.
+
+Monsters Encountered:
+  Total: 0
+
+Level Statistics:
+
+Lvl | Act | Key | Turns | Secs |  XP | Explored
+----+-----+-----+-------+------+-----+------------------
+1   |    2|   93|      2|     4| 1000| 121 / 4755 = 2%
+
+Messages:
+Welcome back to Incursion, Hurk!
+"Smite now your slave-chains with the primal fire of my wrath!"
+You find nothing of significance.
+Autosave... 

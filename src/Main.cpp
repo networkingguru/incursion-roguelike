@@ -277,6 +277,12 @@ void Game::Play() {
     extern void DoorPickProbe(Player *pl);
     DoorPickProbe(pp);
 
+    /* inc-qaav4: off unless INCURSION_MONWIELD_PROBE is set; needs a live
+       player and map. See MonWieldProbe (src/MonWieldProbe.cpp) and
+       tools/check_monwield_drain.sh. */
+    extern void MonWieldProbe(Player *pl);
+    MonWieldProbe(pp);
+
     /* Off unless INCURSION_XPDRAIN_PROBE is set, and run here because it
        needs a live player. See Character::XPDrainProbe and
        tools/check_xp_drain.sh. inc-3gli. */
@@ -401,6 +407,10 @@ void Game::Play() {
     /* inc-2mea: opt-in mount-size reproduction. */
     extern void MountSizeProbe(Player *pl);
     MountSizeProbe(pp);
+
+    /* inc-30ur: opt-in WQ_SLEEP oracle; see SleepQualityProbe. */
+    extern void SleepQualityProbe(Player *pl);
+    SleepQualityProbe(pp);
 
     /* inc-6qmk: opt-in exact-monster depth oracle; see ExactMonProbe. */
     extern void ExactMonProbe(Player *pl);

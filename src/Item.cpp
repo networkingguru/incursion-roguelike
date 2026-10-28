@@ -2683,9 +2683,10 @@ bool Weapon::QualityOK(int8 q,uint8 lev) {
             return false;
          break;
         case WQ_SLEEP:
-          return false; // not implemented yet ?
-          if (!isType(T_MISSILE) && !isType(T_BOW))
-            return false;
+          /* upstream: the original source refused WQ_SLEEP unconditionally and
+             applied no on-hit effect, so no weapon (Kysul's blessed trident
+             included) ever got it; identical on Win32 and the original
+             compiler. Observed, inc-30ur, NOT sent. */
          break;
         case WQ_DANCING:
         case WQ_PARRYING:
