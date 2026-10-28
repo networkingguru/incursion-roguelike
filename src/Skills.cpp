@@ -2428,7 +2428,8 @@ void Character::UseAbility(uint8 ab, int16 pa) {
 			IPrint("There is no honour in slaying inanimate opponents.");
 			break;
 		}
-		if (ChallengeRating() < ((Creature*)targ)->ChallengeRating()) {
+		// upstream: a worthy foe has CR at least the character's own (help text, Auto-Focus); upstream refused the opposite. Win32 same. Observed, inc-8p2j, not sent.
+		if (ChallengeRating() > ((Creature*)targ)->ChallengeRating()) {
 			IPrint("That's hardly a worthy foe for you!");
 			break;
 		}
