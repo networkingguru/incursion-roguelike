@@ -262,6 +262,10 @@ void Game::Play() {
     extern void BeltPotionProbe(Player *pl);
     BeltPotionProbe(pp);
 
+    // inc-yj4cz: opt-in summoned inventory reproductions.
+    extern void SummonInvProbe(Player *pl);
+    SummonInvProbe(pp);
+
     /* Off unless INCURSION_QUIET_PROBE is set, and run here because it needs a
        registry with objects in it. See Registry::QuietProbe and
        tools/check_quiet_lookup.sh. inc-upw.39. */

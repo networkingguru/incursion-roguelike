@@ -9381,6 +9381,12 @@ SkipTripSave:
                                                 it->Quantity = e.vDmg;
                                             }
                                             it->Remove(false);
+                                            /* upstream: a stolen item is no longer anyone's own gear.
+                                               Remove(false) skips the item-lost event that clears
+                                               IF_PROPERTY (src/Item.cpp:845). Upstream's (same on
+                                               Win32). Observed (tools/check_summoned_inventory.sh
+                                               case b). inc-yj4cz. Not sent. */
+                                            it->IFlags &= ~IF_PROPERTY;
                                             e.EActor->IPrint("You stole an <Obj>!",it);
                                             e.EVictim->IPrint("Your <Obj1> <Str2> stolen!",it,
                                                 it->Quantity > 1 ? "were" : "was");

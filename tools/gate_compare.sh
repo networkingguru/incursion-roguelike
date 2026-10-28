@@ -178,16 +178,21 @@ for BASE in "${BASELINES[@]}"; do
         VERDICT=1
     fi
 
-    # A build that dies before it can log looks quiet. Read the exit tally too.
-    for CODE in 1 4; do
+    # A build that dies before it can log looks quiet. Read the exit tally too,
+    # for every code except 0 (clean), 2 (could not start) and 5 (no gameplay);
+    # the last two are counted by 'played' above. A crash on a signal (139
+    # SIGSEGV, 134 abort) must fail here too (inc-yj4cz).
+    for CODE in $(awk -F'\t' '$1=="exits" { for (i=2;i<=NF;i++) { split($i,p,"="); print p[1] } }' "$WORK/new" | sort -n); do
+        case "$CODE" in 0|2|5) continue ;; esac
         B_N="$(awk -F'\t' -v c="$CODE" '$1=="exits" { for (i=2;i<=NF;i++) { split($i,p,"="); if (p[1]==c) print p[2] } }' "$BASE")"
         N_N="$(awk -F'\t' -v c="$CODE" '$1=="exits" { for (i=2;i<=NF;i++) { split($i,p,"="); if (p[1]==c) print p[2] } }' "$WORK/new")"
         B_N="${B_N:-0}"; N_N="${N_N:-0}"
         [ "$N_N" -le "$B_N" ] && continue
-        case "$CODE" in
-            1) WHAT="ended in Fatal()" ;;
-            4) WHAT="hit the watchdog -- the game stopped asking for keystrokes" ;;
-        esac
+        if [ "$CODE" = 1 ]; then WHAT="ended in Fatal()"
+        elif [ "$CODE" = 4 ]; then WHAT="hit the watchdog -- the game stopped asking for keystrokes"
+        elif [ "$CODE" -ge 128 ]; then WHAT="crashed on signal $((CODE - 128))"
+        else WHAT="exited with code $CODE"
+        fi
         echo "  REGRESSION: $N_N sessions $WHAT, baseline had $B_N."
         echo
         VERDICT=1
