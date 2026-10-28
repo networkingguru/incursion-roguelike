@@ -208,6 +208,23 @@ elif ! grep -q "predates that count" "$W/out6f"; then
     fail "a baseline with no 'threat_frozen' field gave no warning about the missing count"
 fi
 
+# 6c. inc-b0ziu.3: a session killed by a signal exits 128+N. gate_collect
+#    counts it as played, so only an exits comparison can see it.
+cp -R "$W/base" "$W/sig"
+sed -i.bak 's/^5 0$/5 139/' "$W/sig/exits"
+rm -f "$W/sig/exits.bak"
+if ./tools/gate_compare.sh --from "$W/sig" "$W/base.baseline" > "$W/out6g" 2>&1; then
+    tail -20 "$W/out6g"
+    fail "a run with one session exiting 139 against a baseline with none passed"
+elif ! grep -q "REGRESSION: 1 sessions crashed on a signal (exit >= 128), baseline had 0" "$W/out6g"; then
+    fail "the signal crash was not named as the reason for the fail"
+fi
+make_baseline "$W/sig.baseline" "$W/sig"
+if ! ./tools/gate_compare.sh --from "$W/sig" "$W/sig.baseline" > "$W/out6h" 2>&1; then
+    tail -20 "$W/out6h"
+    fail "a run with the same signal count as its own baseline did not pass"
+fi
+
 # 7. The settings the run plays with are an input to the result, so a baseline
 #    recorded with different ones cannot be compared against. See inc-w43: the
 #    finding count moved 4386 -> 4416 because Brian played mid-session and the
