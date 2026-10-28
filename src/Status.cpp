@@ -993,8 +993,15 @@ RestartDropItems:
                 it->Remove(false);
                 it->PlaceAt(m,x,y);
                 goto RestartDropItems;
-            } else
+            } else {
+                /* upstream: every item of a vanishing summoned/illusory creature is dropped or deleted.
+                   Remove(true) runs CalcValues, which walks the inventory with FirstInv() and
+                   resets Monster::GetInv's static cursor, so the walk restarts. Upstream's
+                   (plain control flow, same on Win32). Observed (lldb seed 5,
+                   tools/check_summoned_inventory.sh case a). inc-yj4cz. Not sent. */
                 it->Remove(true);
+                goto RestartDropItems;
+            }
         }
         if (!isDead())
             Remove(true);
