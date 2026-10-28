@@ -1,0 +1,32 @@
+/* Scratch-only inc-klenx fixture: a static +1 size field triggers the
+   mounted entrant's size-check dismount inside Thing::Move.
+   Only humans grow: the celestial mount stays Large, avoiding Huge/PlaceNear. */
+Monster "klenx growth archon" : MA_CELESTIAL
+  { Image: brown 'A'; Size: SZ_SMALL; Mana: 1;
+    CR: 0; HD: 1; Hit: +1; Def: 14; Mov: 100%; Spd: 100%;
+    Str 1, Dex 11, Con 10, Int 6, Wis 11, Cha 10;
+    Flags: M_LAWFUL, M_GOOD, M_IALIGN, M_NOHANDS, M_NOLIMBS,
+      M_NOBODY, M_NO_CORPSE, M_NEUTER, M_NO_BLOOD;
+    On Event EV_INITIALIZE {
+      EMap->NewField(FI_MODIFIER,EActor->x,EActor->y,1,
+        GLYPH_VALUE(GLYPH_FLOOR2, GREEN),-1,$"klenx growth aura",EActor);
+      };
+    Desc: "A test fixture for bead inc-klenx.";
+  }
+
+Effect "klenx growth aura" : EA_INFLICT
+  { aval: AR_MFIELD; rval: FI_MODIFIER;
+    xval: ADJUST_CIRC; yval: A_SIZ; pval: +1;
+    tval: MA_HUMAN; Purpose: EP_BUFF; Flags: EF_CASTER_IMMUNE, EF_LIM_MTYPE;
+    On Event
+      EV_FIELDON "You grow one size category!",
+      EV_FIELDOFF "You shrink back.";
+  }
+
+Monster "klenx test mount" : MA_CELESTIAL
+  { Image: brown 'h'; Size: SZ_LARGE; Mana: 1;
+    CR: 0; HD: 1; Hit: +1; Def: 14; Mov: 100%; Spd: 100%;
+    Str 18, Dex 11, Con 10, Int 6, Wis 11, Cha 10;
+    Flags: M_LAWFUL, M_GOOD, M_IALIGN, M_MOUNTABLE;
+    Desc: "A Large mount fixture for bead inc-klenx.";
+  }
