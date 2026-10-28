@@ -50,6 +50,8 @@ THE FIXED ORDER WAS REPLACED BY A ROUTING TABLE ON 2026-10-01 (bead inc-rtit). B
 
 2026-10-27 (bead inc-e1vjz). The sonnet-first thresholds were 10 × day − 5 percent on days 1–6 (5, 15, 25, 35, 45, 55) and 90% on day 7. Brian reported that the previous week ended with a lot of Claude usage left and no DeepSeek or Codex left. He said: "Let's increase sonnet usage by sliding the caps. Day 1: up to 10%. 2: 25, 3:35, 45, 55, 65, All." The thresholds became 10, 25, 35, 45, 55, 65 and 100 percent for days 1–7.
 
+2026-10-28 (bead inc-9che1). Brian asked how much useful work Codex completes against DeepSeek on a cost basis. Claude read `~/.codex/sessions` and `logs/deepseek-ledger.jsonl` for 2026-09-26 to 2026-10-27 and counted a run as useful when its worktree's bead later merged. Codex ($20/month plan): 253 runs, 119 landed beads, about $0.17 per landed bead, and 90-100% of its weekly window used after 20-35 sessions in most weeks. DeepSeek: 1,451 runs, 374 landed beads, $39.43 by the opencode estimate, about $0.105 per landed bead. 99 beads had runs from both, so the landing does not attribute the code to either. Brian said: "OK, remove codex from the coding routing. Keep it for repros". The coding row lost its Codex rung and the Codex weekly-window check; the reproduction-design row keeps Codex first.
+
 ## feedback-claude-dispatches-never-writes-code
 CLAUDE DOES NOT WRITE CODE ON THIS PROJECT. Brian stated it as a standing order on 2026-08-24, in capitals, with the reason: 'I do not want to spend my whole day clearing fucking context.'
 
