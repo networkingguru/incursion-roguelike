@@ -134,6 +134,7 @@ static void siB(Map *mp, int x, int y) {
 }
 
 void SummonInvProbe(Player *pl) {
+    // inc-yj4cz: INCURSION_SUMMON_INV_PROBE=a|b, driven by tools/check_summoned_inventory.sh.
     const char *mode = getenv("INCURSION_SUMMON_INV_PROBE");
     static bool ran = false;
     if (!mode || ran) return;
