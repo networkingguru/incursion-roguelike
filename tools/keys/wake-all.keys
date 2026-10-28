@@ -1,0 +1,19 @@
+# inc-b0ziu.2: summon one human beside the player, then run the wizard command
+# "Wake Every Creature". Oracle: the WAKE_PROBE line in the run's errors.log
+# (INCURSION_WAKE_PROBE=1 first puts every creature to sleep).
+# Run by tools/check_wake_all.sh against a loaded character.
+w y
+@choose "Monster Summoning"
+@choose "Humans"
+@choose "human"
+RIGHT ENTER
+@dump:summoned
+w
+@choose "Wake Every Creature"
+@dump:woken
+SPACE*20
+ESC*20
+
+s
+
+@quit

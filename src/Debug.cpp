@@ -570,6 +570,8 @@ void Player::WizardOptions() {
     MyTerm->LOption("Change terrain type", 36);
 	MyTerm->LOption("View glyphs", 37);
     MyTerm->LOption("Create Altar", 38);
+    /* inc-b0ziu.2: appended last so no existing entry's menu letter moves. */
+    MyTerm->LOption("Wake Every Creature", 39);
 
     switch(MyTerm->LMenu(MENU_ESC|MENU_BORDER|MENU_2COLS,"Wizard Mode Options:",WIN_MENUBOX)) {
     case -1:
@@ -1054,6 +1056,39 @@ Restart:
             t->PlaceAt(m,e.EXVal,e.EYVal);
         } else IPrint("Aborting Trap Summoning.");
         break;
+    case 39: {
+        /* inc-b0ziu.2: wake every sleeping creature on the level.
+           INCURSION_WAKE_PROBE (tools/check_wake_all.sh) first puts every
+           creature but the player to sleep, then logs sleepers before/after. */
+        int16 woke = 0, before = 0, after = 0;
+        bool probe = getenv("INCURSION_WAKE_PROBE") != NULL;
+        if (probe)
+            MapIterate(m,t,i) {
+                if (t->isCreature() && !t->isPlayer() &&
+                    !((Creature *)t)->HasStati(SLEEPING))
+                    ((Creature *)t)->GainPermStati(SLEEPING,NULL,SS_MISC,
+                        SLEEP_NATURAL);
+            }
+        MapIterate(m,t,i) {
+            if (t->isCreature() && !t->isPlayer() &&
+                ((Creature *)t)->HasStati(SLEEPING)) {
+                before++;
+                ((Creature *)t)->Awaken(SLEEP_NATURAL);
+                ((Creature *)t)->RemoveStati(SLEEPING);
+                woke++;
+            }
+        }
+        if (probe) {
+            MapIterate(m,t,i) {
+                if (t->isCreature() && !t->isPlayer() &&
+                    ((Creature *)t)->HasStati(SLEEPING))
+                    after++;
+            }
+            Error("WAKE_PROBE: before=%d after=%d", (int)before, (int)after);
+        }
+        IPrint(Format("Woke %d creatures.", (int)woke));
+        break;
+    }
     case 38: {
         /* Put an altar of a named god under the player. This exists so the
            religion code can be exercised on demand: a sacrifice needs the

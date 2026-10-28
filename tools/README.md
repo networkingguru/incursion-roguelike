@@ -450,6 +450,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? | LIVE |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? | LIVE |
 | `check_area_radius.sh` | Does a globe or field with radius value N reach N squares? `INCURSION_AREA_PROBE=1` casts Bless (radius 6) at allies at distances 5, 6 and 7, and Silence (radius 4) to compare its first pulse with its lasting field at distances 3, 4 and 5. FAIL, INCONCLUSIVE or missing results exit nonzero (inc-lmw4). | LIVE |
+| `check_wake_all.sh` | Does the wizard command "Wake Every Creature" leave no sleeping creature on the level? `INCURSION_WAKE_PROBE=1` puts every creature to sleep first (23 on the fixture's level), then the command runs; the check needs a nonzero count before and zero after (inc-b0ziu.2). | LIVE |
 | `check_armour_model.sh` | Does the armour model penetrate coverage by grade and subtract from damage, with natural armour and a worn suit penetrated independently? | LIVE |
 | `check_aura_of_menace.sh` | Does a hostile creature entering an Aura of Menace (a lantern archon summoned in wizard mode) get the save and its -2 penalty or immunity, and (hit mode) does landing a blow on the owner end the penalty? Seeds 4 and 5. | LIVE |
 | `check_auto_terms.sh` | With Auto-Offer Terms on, does a lawful good paladin who attacks a fleeing ogre offer terms first, skip the attack when the ogre accepts, and attack with no prompt when it refuses? Does magic fear (a rules refusal) still give the "Confirm attack fleeing victim?" prompt, and does option off give the prompt and no offer? Seeds 1..40; `--prove-red` forces the option off and expects a failure (inc-gfq2). | LIVE |
@@ -1076,7 +1077,7 @@ one (`package_macos_app.sh:5-13`).
 | Path | What it is |
 |---|---|
 | `keys/*.keys` | Key scripts read by both backends. `headless.sh` uses the full POSIX harness format; the SDL build uses only the shared movement subset. `keys/trailer-demo.keys` demonstrates SDL movement, `@pause` and `@quit`. Read the header of a script before using it. |
-| `gates/dive.baseline` | The committed regression baseline. `gate_record.sh` overwrites it. |
+| `gates/dive-short.baseline` | The committed regression baseline. `gate_record.sh` overwrites it. |
 | `gates/Options.Dat` | The pinned settings file every gate run plays with. Committed on purpose. |
 | `gates/Options.Dat.md` | What is in that settings file and why. |
 | `fixtures/options-*.dat` | Frozen, dated settings files that scripted checks select explicitly. |
@@ -1421,7 +1422,7 @@ the builds, so a full run costs its minute and reports a regression in the shape
 no single check can -- a complaint appearing in several sessions at once, fewer
 sessions reaching a map, more deaths or freezes.
 
-`tools/gates/dive.baseline` is committed, so a clone can run `gate_compare.sh`
+`tools/gates/dive-short.baseline` is committed, so a clone can run `gate_compare.sh`
 without recording anything. Do NOT run `gate_record.sh` unless you mean to
 replace that baseline — see below.
 
@@ -1510,8 +1511,8 @@ reporter's own words.
 **`tools/gate_record.sh` OVERWRITES a committed baseline.** Verified:
 `:37-38` build `OUT="$ROOT/tools/gates/$NAME.baseline"` from the key script's
 name, and `:71-80` truncate that path with `>`. The default key script is
-`tools/keys/dive.keys` (`gate_record.sh:21`), so a bare `tools/gate_record.sh` replaces
-`tools/gates/dive.baseline`. Record a baseline only from a build you believe in:
+`tools/keys/dive.keys` (`gate_record.sh:21`), so a bare `tools/gate_record.sh` writes a new `tools/gates/dive.baseline`; the committed baseline comes from `tools/keys/dive-short.keys` and `tools/gate_record.sh tools/keys/dive-short.keys 40 1` replaces
+`tools/gates/dive-short.baseline`. Record a baseline only from a build you believe in:
 a baseline taken from a broken build makes the gate defend the breakage
 (`gate_record.sh:13-14`). `git diff tools/gates/` afterwards, always.
 
