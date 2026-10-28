@@ -742,6 +742,7 @@ class Creature: public Thing, public Magic
          typedef or width of this port is involved. Observed; inc-rgzr; not sent. */
       virtual void gainFavour(rID gID, int32 amt, bool advance=false, bool stack=true) { }
       bool isMType(int32 MType);
+      bool opposesAlignmentOf(Item *it);
       bool isPMType(int32 MType, Creature *cr);
       bool isSameRaceAs(rID corpseMonID);
 
@@ -930,6 +931,7 @@ class Character: public Creature
         }
       int16 XPPenalty();
       void DrainXP(int32 xp);
+      void DrainLevels(int n);
       /* Self-check for RestoreXP below. Off unless INCURSION_XPDRAIN_PROBE is
          set. Driven by tools/check_xp_drain.sh. inc-3gli. */
       void XPDrainProbe();

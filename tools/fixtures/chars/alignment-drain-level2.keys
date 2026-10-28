@@ -1,0 +1,76 @@
+# inc-qaav4: derive a level-2, 1000-XP Chaotic Good warrior fixture.
+# Generate with INCURSION_LOAD=tools/fixtures/chars/quality-item-magic-seed5-opt0822.sav
+# tools/make_char_fixture.sh alignment-drain-level2 tools/keys/alignment-drain-level2-fixture.keys 5 tools/fixtures/options-2026-08-22.dat
+@until "Wizard Mode Options" w y
+@choose "Genocide Everything"
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+d
+@expect "Align  Chaotic Good"
+@expect "XP     1000"
+G
+@until "Class  Warrior 2" a
+@dump:fixture-level2
+ESC
+ESC
+@expect "System Menu"
+b
+@dump:saved
