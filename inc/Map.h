@@ -515,16 +515,10 @@ class Map: public Object
     bool   PQPopMin();
     /* outCost, when given, receives the total cost of the route found. It is
        written only when the function returns true. Callers that must compare
-       two destinations need this; the path itself does not carry the cost.
-       memonly, when true, floods over the player's map MEMORY only: a square
-       the player has not seen is impassable. The default is the player's own
-       travel (RunTo, travel), which must route on the player's memory. A
-       monster's own route search passes memonly=false so it uses the real
-       map; see Monster::SmartDirTo. */
+       two destinations need this; the path itself does not carry the cost. */
     bool   ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
                         Creature *c, int32 dangerFactor,
-                        uint16 *ThePath = NULL, int32 *outCost = NULL,
-                        bool memonly = true);
+                        uint16 *ThePath = NULL, int32 *outCost = NULL);
 #define DF_ALL_SAFE             0
 #define DF_IGNORE_TRAPS         1
 #define DF_IGNORE_TERRAIN       2

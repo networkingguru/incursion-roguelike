@@ -802,11 +802,6 @@ restartDestroyCount:
            is what tells an unattended run that the session played at all. */
         NoteGameplayReached();
 
-        /* inc-vhkei: once per player turn, log the RouteUnseenProbe creature's
-           square and distance and re-clear its room's memory. Off unless
-           INCURSION_ROUTE_UNSEEN is set. */
-        { extern void RouteUnseenPerTurn(Player *); RouteUnseenPerTurn(pp); }
-
         /* inc-nx0z: off unless INCURSION_GRAVESTONE_PROBE is set; fires once,
            after the first completed turn. See GravestoneProbe
            (src/GravestoneProbe.cpp) and tools/check_gravestone.sh. */

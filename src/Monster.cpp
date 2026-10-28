@@ -1647,10 +1647,7 @@ void Monster::AlertNew(Thing *nt)
       if (!nt->m->InBounds(xx,yy))
         continue; 
       for (Creature * cr = nt->m->FCreatureAt(xx,yy) ; cr ; cr = nt->m->NCreatureAt(xx,yy)) {
-        /* inc-vhkei: a monster is told of a new item only if it sees it. */
-        if (nt->isItem() && !(cr->Perceives(nt) & PER_VISUAL))
-          continue;
-        cr->ts.Consider(cr,nt);
+        cr->ts.Consider(cr,nt); 
       }
     }
 }
@@ -1867,20 +1864,18 @@ void Monster::Initialize(bool in_play)
 
 
 
-/* FAILED-ROUTE MEMORY. inc-gst2, inc-vhkei.
+/* FAILED-ROUTE MEMORY. inc-gst2.
    Invariant: within FAILED_ROUTE_WINDOW_ROUNDS of a failed ShortestPath to a
    square on this map, a monster does not search that same square again; it
    returns CENTER immediately. Successes are never memoed. The table is
    file-static (no saved class gains a member), keyed by the monster's and the
    map's stable handles plus the target square, and is bounded: an entry
-   expires after the window, and a new record reuses a free or expired slot.
-   When every probed slot is live, the new record is dropped, not stored, so
-   the table cannot grow. A recycled handle can inherit a live entry for at
-   most one window (30 rounds); the only effect is that one monster waits
-   instead of searching for that one square. */
-#define FAILED_ROUTE_WINDOW_ROUNDS 30
+   expires after the window and the fixed table overwrites its oldest slot on
+   collision, so it cannot grow without bound. The window is short enough that
+   a recycled handle cannot inherit a live entry that matters. */
+#define FAILED_ROUTE_WINDOW_ROUNDS 5
 #define FAILED_ROUTE_WINDOW_TICKS  (FAILED_ROUTE_WINDOW_ROUNDS * 60)
-#define FAILED_ROUTE_SLOTS         8192
+#define FAILED_ROUTE_SLOTS         256
 
 struct FailedRoute { hObj mon, map; int16 tx, ty; uint32 expiry; };
 static FailedRoute FailedRoutes[FAILED_ROUTE_SLOTS];
@@ -1918,93 +1913,9 @@ static void FailedRouteRecord(hObj mon, hObj map, int16 tx, int16 ty, uint32 now
             || (e.mon == mon && e.map == map && e.tx == tx && e.ty == ty))
           {
             e.mon = mon; e.map = map; e.tx = tx; e.ty = ty; e.expiry = expire;
-#ifdef PATH_PROBE
-            { extern unsigned long long PP_RecOK; PP_RecOK++; }
-#endif
             return;
           }
       }
-#ifdef PATH_PROBE
-    { extern unsigned long long PP_RecDrops; PP_RecDrops++; }
-#endif
-  }
-
-/* ROUTE REUSE. inc-vhkei.
-   Invariant: a reused step is the next square of a route this monster's own
-   search found within ROUTE_REUSE_WINDOW_ROUNDS, the monster stands on that
-   route now, and the next square passes RunOver now. Otherwise a fresh search
-   runs. The table is file-static, keyed like the failed-route table, with a
-   per-target entry; a new record reuses a free, expired or same-key slot and
-   is dropped when every probed slot is live. Accepted cost: a shorter route
-   that opens later is noticed only after at most ROUTE_REUSE_LEN steps or
-   ROUTE_REUSE_WINDOW_ROUNDS rounds. */
-#define ROUTE_REUSE_SLOTS 4096
-#define ROUTE_REUSE_LEN 24
-#define ROUTE_REUSE_WINDOW_ROUNDS 20
-#define ROUTE_REUSE_WINDOW_TICKS (ROUTE_REUSE_WINDOW_ROUNDS * 60)
-
-struct RouteReuse { hObj mon, map; int16 tx, ty; uint32 expiry; uint8 len; uint16 sq[ROUTE_REUSE_LEN]; };
-static RouteReuse RouteReuses[ROUTE_REUSE_SLOTS];
-
-#ifdef REUSE_SELFCHECK
-static unsigned long RR_Reuses, RR_Bad, RR_Unreach;
-static void RR_Report()
-  {
-    fprintf(stderr, "REUSE_SELFCHECK reuses=%lu bad=%lu unreachable=%lu\n",
-            RR_Reuses, RR_Bad, RR_Unreach);
-    fflush(stderr);
-  }
-#endif
-
-static unsigned RouteReuseHash(hObj mon, hObj map, int16 tx, int16 ty)
-  {
-    unsigned h = (unsigned)mon * 2654435761u;
-    h ^= (unsigned)map * 2246822519u;
-    h ^= (unsigned)(uint16)tx * 3266489917u;
-    h ^= (unsigned)(uint16)ty * 668265263u;
-    return h % ROUTE_REUSE_SLOTS;
-  }
-
-/* Returns the entry for the key, or NULL. */
-static RouteReuse *RouteReuseFind(hObj mon, hObj map, int16 tx, int16 ty)
-  {
-    unsigned i, s = RouteReuseHash(mon, map, tx, ty);
-    for (i = 0; i < ROUTE_REUSE_SLOTS; i++)
-      {
-        RouteReuse &e = RouteReuses[(s + i) % ROUTE_REUSE_SLOTS];
-        if (!e.mon) return NULL;
-        if (e.mon == mon && e.map == map && e.tx == tx && e.ty == ty)
-          return &e;
-      }
-    return NULL;
-  }
-
-static void RouteReuseRecord(hObj mon, hObj map, int16 tx, int16 ty, uint32 now,
-                             const uint16 *path)
-  {
-    unsigned i, s = RouteReuseHash(mon, map, tx, ty);
-    for (i = 0; i < ROUTE_REUSE_SLOTS; i++)
-      {
-        RouteReuse &e = RouteReuses[(s + i) % ROUTE_REUSE_SLOTS];
-        if (!e.mon || !(e.expiry > now)
-            || (e.mon == mon && e.map == map && e.tx == tx && e.ty == ty))
-          {
-            int n = 0;
-            while (n < ROUTE_REUSE_LEN && path[n]) { e.sq[n] = path[n]; n++; }
-            e.mon = mon; e.map = map; e.tx = tx; e.ty = ty;
-            e.expiry = now + ROUTE_REUSE_WINDOW_TICKS; e.len = (uint8)n;
-            return;
-          }
-      }
-#ifdef PATH_PROBE
-    { extern unsigned long long PP_ReuseDrop; PP_ReuseDrop++; }
-#endif
-  }
-
-static void RouteReuseInvalidate(hObj mon, hObj map, int16 tx, int16 ty)
-  {
-    RouteReuse *e = RouteReuseFind(mon, map, tx, ty);
-    if (e) e->expiry = 0;
   }
 
 Dir Monster::SmartDirTo(int16 tx, int16 ty, bool is_pet)
@@ -2019,107 +1930,26 @@ Dir Monster::SmartDirTo(int16 tx, int16 ty, bool is_pet)
                    (int)is_pet); }
     if (theGame->Opt(OPT_MON_DJIKSTRA) == 1 || 
         (theGame->Opt(OPT_MON_DJIKSTRA) == 2 && is_pet)) {
-      if (m->LineOfFire(x,y,tx,ty,this)) {
-        { extern void RouteUnseenSmartDirTo(Monster*, int16, int16, bool, const char*, Dir);
-          RouteUnseenSmartDirTo(this, tx, ty, is_pet, "lof", DirTo(tx,ty)); }
+      if (m->LineOfFire(x,y,tx,ty,this))
         return DirTo(tx,ty);
-      }
-      if (FailedRouteRecent(myHandle,m->myHandle,tx,ty,theGame->Turn)) {
-#ifdef PATH_PROBE
-        { extern unsigned long long PP_RecentHits; PP_RecentHits++; }
-#endif
-        { extern void RouteUnseenSmartDirTo(Monster*, int16, int16, bool, const char*, Dir);
-          RouteUnseenSmartDirTo(this, tx, ty, is_pet, "failedrecent", CENTER); }
+      if (FailedRouteRecent(myHandle,m->myHandle,tx,ty,theGame->Turn))
         return CENTER;
-      }
       bool blocked; int16 dx, dy;
-      { /* ROUTE REUSE: see the block comment above. */
-        RouteReuse *re = RouteReuseFind(myHandle,m->myHandle,tx,ty);
-        int why = 0, j = -1;
-        if (!re) why = 1;
-        else if (!(re->expiry > theGame->Turn)) why = 2;
-        else {
-          uint16 here = (uint16)(x + y*256);
-          for (int k = 0; k < re->len; k++)
-            if (re->sq[k] == here) { j = k; break; }
-          if (j < 0) why = 3;
-          else if (j + 1 >= re->len) why = 4;
-          else {
-            int nx = re->sq[j+1] % 256, ny = re->sq[j+1] / 256;
-            bool Incor = HasMFlag(M_INCOR) || HasStati(PHASED);
-            bool Meld = HasAbility(CA_EARTHMELD);
-#ifdef REUSE_BREAK
-            bool ok = true;
-#else
-            bool ok = m->RunOver(nx,ny,false,this,0,Incor,Meld,(nx==tx && ny==ty)) != 0;
-#endif
-            if (!ok) why = 5;
-          }
-        }
-#ifdef PATH_PROBE
-        { extern unsigned long long PP_ReuseHit, PP_ReuseMiss[6];
-          if (why) PP_ReuseMiss[why]++; else PP_ReuseHit++; }
-#endif
-        if (!why) {
-          int16 rx = re->sq[j+1] % 256, ry = re->sq[j+1] / 256;
-          Dir rd = DirTo(rx,ry);
-#ifdef REUSE_SELFCHECK
-          { static bool reg = false; if (!reg) { reg = true; atexit(RR_Report); }
-            bool onroute = false; uint16 here2 = (uint16)(x + y*256);
-            for (int k = 0; k + 1 < re->len; k++)
-              if (re->sq[k] == here2 && re->sq[k+1] == (uint16)(rx + ry*256)) onroute = true;
-            bool Inc2 = HasMFlag(M_INCOR) || HasStati(PHASED);
-            bool Mel2 = HasAbility(CA_EARTHMELD);
-            bool pass = m->RunOver(rx,ry,false,this,0,Inc2,Mel2,(rx==tx && ry==ty)) != 0;
-            static uint16 scratch[MAX_PATH_LENGTH];
-            if (!m->ShortestPath((uint8)x,(uint8)y,(uint8)tx,(uint8)ty,this,0,scratch,NULL,false))
-              RR_Unreach++;
-            RR_Reuses++;
-            if (!onroute) RR_Bad++;
-            if (!pass) RR_Bad++;
-            if (RR_Reuses % 1000 == 0) RR_Report(); }
-#endif
-          { extern hObj RunToWatched; extern void RunToProbe(const char *, ...);
-            if (RunToWatched && myHandle == RunToWatched && is_pet)
-              RunToProbe("plan at=%d,%d tgt=%d,%d next=%d,%d pet=%d\n", (int)x, (int)y,
-                         (int)tx, (int)ty, (int)rx, (int)ry, (int)is_pet); }
-          { extern void RouteUnseenSmartDirTo(Monster*, int16, int16, bool, const char*, Dir);
-            RouteUnseenSmartDirTo(this, tx, ty, is_pet, "spok", rd); }
-          return rd;
-        }
-      }
-      /* upstream: base-code defect. Observed. inc-vhkei. Not sent.
-           The route search used to flood over the player's map MEMORY only
-         (RunOver memonly=true), so every square the player had not seen --
-         the hard-wired memory-only flood in upstream's Djikstra.cpp and this
-         call in SmartDirTo, commit 7b8504a3 -- was impassable to it. A monster
-         standing in ground the player never saw finds no route and waits. It
-         misbehaves on upstream too: the flood reads the player's memory, not
-         the real map, with no platform or compiler dependence. */
-      blocked = !m->ShortestPath((uint8)x,(uint8)y,(uint8)tx,(uint8)ty,this,0,thePath,NULL,false);
+      blocked = !m->ShortestPath((uint8)x,(uint8)y,(uint8)tx,(uint8)ty,this,0,thePath);
       if (blocked) {
-        RouteReuseInvalidate(myHandle,m->myHandle,tx,ty);
         FailedRouteRecord(myHandle,m->myHandle,tx,ty,theGame->Turn);
-        { extern void RouteUnseenSmartDirTo(Monster*, int16, int16, bool, const char*, Dir);
-          RouteUnseenSmartDirTo(this, tx, ty, is_pet, "spblocked", CENTER); }
         return CENTER;
         }
-      RouteReuseRecord(myHandle,m->myHandle,tx,ty,theGame->Turn,thePath);
       dx = thePath[1] % 256;
       dy = thePath[1] / 256;
       { extern hObj RunToWatched; extern void RunToProbe(const char *, ...);
         if (RunToWatched && myHandle == RunToWatched && is_pet)
           RunToProbe("plan at=%d,%d tgt=%d,%d next=%d,%d pet=%d\n", (int)x, (int)y,
                      (int)tx, (int)ty, (int)dx, (int)dy, (int)is_pet); }
-      { extern void RouteUnseenSmartDirTo(Monster*, int16, int16, bool, const char*, Dir);
-        RouteUnseenSmartDirTo(this, tx, ty, is_pet, "spok", DirTo(dx,dy)); }
       return DirTo(dx,dy);
       }
-    else {
-      { extern void RouteUnseenSmartDirTo(Monster*, int16, int16, bool, const char*, Dir);
-        RouteUnseenSmartDirTo(this, tx, ty, is_pet, "straight", DirTo(tx,ty)); }
+    else
       return DirTo(tx, ty);
-    }
   }
 
 
@@ -2277,11 +2107,6 @@ RetryTargets:
 
         ASSERT(i >= 0);
         ASSERT(i < ts.tCount);
-        { extern void RouteUnseenTargetLoop(Monster*, int, int, int);
-          RouteUnseenTargetLoop(this, (int)ts.t[i].type, (int)ts.t[i].X(), (int)ts.t[i].Y()); }
-#ifdef PATH_PROBE
-        { extern int PP_Purpose; PP_Purpose = (int)ts.t[i].type; }
-#endif
         tDir = SmartDirTo(ts.t[i].X(), ts.t[i].Y());
         if (tDir == CENTER)
             continue;
@@ -2296,9 +2121,6 @@ RetryTargets:
 
     if (ts.hasTargetOfType(OrderWalkToPoint)) {
         Target * t = ts.getTargetOfType(OrderWalkToPoint);
-#ifdef PATH_PROBE
-        { extern int PP_Purpose; PP_Purpose = 40; }
-#endif
         tDir = SmartDirTo(t->X(),t->Y(),true);
         if (tDir != CENTER) {
             wx = DirX[tDir];
@@ -2317,9 +2139,6 @@ RetryTargets:
         Dir lastDir = follow->LastMoveDir;
         tx = follow->x + (DirX[lastDir] * 3);
         ty = follow->y + (DirY[lastDir] * 3);
-#ifdef PATH_PROBE
-        { extern int PP_Purpose; PP_Purpose = 41; }
-#endif
         tDir = SmartDirTo(tx,ty,follow->isPlayer());
         if (tDir != CENTER) {
             wx = DirX[tDir];
@@ -2338,9 +2157,6 @@ RetryTargets:
         Dir lastDir = follow->LastMoveDir;
         tx = follow->x - (DirX[lastDir]);
         ty = follow->y - (DirY[lastDir]);
-#ifdef PATH_PROBE
-        { extern int PP_Purpose; PP_Purpose = 42; }
-#endif
         tDir = SmartDirTo(tx,ty,follow->isPlayer());
         if (tDir != CENTER) {
             wx = DirX[tDir];
@@ -2355,9 +2171,6 @@ RetryTargets:
         if (!follow)
             goto DoneFollow;
 
-#ifdef PATH_PROBE
-        { extern int PP_Purpose; PP_Purpose = 43; }
-#endif
         tDir = SmartDirTo(follow->x,follow->y,follow->isPlayer());
         if (tDir != CENTER) {
             wx = DirX[tDir];
@@ -2368,9 +2181,6 @@ RetryTargets:
 
     if ((follow = ts.getLeader()) && 
         (dist(x,y,follow->x,follow->y) > 3)) { 
-#ifdef PATH_PROBE
-        { extern int PP_Purpose; PP_Purpose = 44; }
-#endif
             tDir = SmartDirTo(follow->x,follow->y,follow->isPlayer());
             if (tDir != CENTER) {
                 wx = DirX[tDir];
@@ -2379,8 +2189,6 @@ RetryTargets:
             } 
     }
 DoneFollow:
-    { extern void RouteUnseenMovement(Monster*, const char*, int, int);
-      RouteUnseenMovement(this, "donefollow", (int)wx, (int)wy); }
 
     if (abs(wx)*2 < abs(wy))
         wx = 0;
