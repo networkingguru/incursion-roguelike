@@ -1906,7 +1906,13 @@ void Thing::Move(int16 newx,int16 newy, bool is_walk)
     INC6D5_PROBE_CALL("Move:doneContentsAdd", this, "");
     INC6D5_PROBE_SETTLED(this);
 
-    if (mount) {
+    /* upstream: a field event during this step can end the ride (CalcValues ->
+       EV_DISMOUNT -> Creature::Dismount places the mount near the rider). The
+       mount position is written only to a mount still ridden; a stale write
+       would claim the rider's square while the mount stays linked elsewhere.
+       Plain control flow, fails the same way on Win32 with the original
+       typedefs. Observed, inc-klenx, not sent. */
+    if (mount && HasStati(MOUNTED) && GetStatiObj(MOUNTED) == mount) {
       mount->m = M;
       mount->x = x;
       mount->y = y;
@@ -2195,7 +2201,11 @@ FoundAndRemoved:
             m->Update(ox,oy);
     }
     m = NULL; x = y = -1; Next = 0;
-    if (mount) {
+    /* upstream: a field event above can end the ride (EV_DISMOUNT places the
+       mount near the rider). The mount is unplaced only while still ridden.
+       Plain control flow, fails the same way on Win32 with the original
+       typedefs. Traced, inc-klenx, not sent. */
+    if (mount && HasStati(MOUNTED) && GetStatiObj(MOUNTED) == mount) {
         mount->m = NULL;
         mount->x = -1;
         mount->y = -1;

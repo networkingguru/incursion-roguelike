@@ -1,0 +1,31 @@
+# inc-8p2j: inspect CRs, then use the real manual ability on one summoned ogre.
+.
+w
+y
+@choose "Genocide Everything"
+w
+@choose "Wizard Mode Switches"
+DOWN*10
+SPACE
+ESC
+w
+@choose "Examine Player Data"
+@dump:player-cr
+ESC
+w
+@choose "Monster Summoning"
+@choose "Giants"
+@choose "ogre"
+RIGHT
+ENTER
+w
+@choose "Examine Nearby Things"
+@until ": ogre (" RIGHT
+@dump:target-cr
+ESC
+u
+@choose "Dwarven Focus"
+RIGHT
+@dump:target-prompt
+ENTER
+@dump:focus-result

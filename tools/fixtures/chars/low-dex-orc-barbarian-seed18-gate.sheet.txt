@@ -1,0 +1,210 @@
+=== fixture: low-dex-orc-barbarian-seed18-gate ===
+
+This file is the audit record for
+  tools/fixtures/chars/low-dex-orc-barbarian-seed18-gate.sav
+and tools/make_char_fixture.sh writes the whole of it. Do not edit it
+by hand: it would then describe a character the .sav beside it does
+not hold, and that is the one failure tools/check_char_fixture.sh
+exists to catch.
+
+made on          2026-10-28 15:02:06 EDT
+made at commit   0e1c0466
+                 the working tree was dirty, so this fixture may hold changes that commit does not
+seed             18
+settings         tools/gates/Options.Dat
+key script       tools/keys/low-dex-orc-barbarian-save.keys
+                 copied to tools/fixtures/chars/low-dex-orc-barbarian-seed18-gate.keys
+saved in game as Hurk.sav
+sha256 .sav      f46384ada21acb783146072002cbd0841dd5e6302225703f0d14fb3d86847137
+sha256 module    78e9f63e4d4aa03c96eba15ba2d0872adcc199ff68b61dafa40715ca425d41b8
+                 mod/Incursion.Mod is what the save's rID manifest
+                 was written against. A fixture that stops loading
+                 is worth comparing against the module that made it.
+
+regenerate with
+  tools/make_char_fixture.sh low-dex-orc-barbarian-seed18-gate tools/keys/low-dex-orc-barbarian-save.keys 18 tools/gates/Options.Dat --force
+Regenerating gives a BYTE-DIFFERENT .sav holding the SAME character:
+a save carries clocks and counters no second run repeats. Judge a
+regeneration by this sheet, never by the size of the diff.
+
+The character below is the engine's own dump. It was taken by LOADING
+the .sav beside this file and saving it again under
+INCURSION_CHAR_PROBE=1 (Game::SaveGame, src/Registry.cpp:1105-1111).
+A few of its lines belong to that reading session and not to the
+character: the torch's remaining turns, the Level Statistics table
+and the Messages at the end all move by the turns
+tools/keys/load-char-sheet.keys spends. Everything above Inventory is the
+character. For the resource ids behind the item names, which are what
+a module change moves, run:
+  tools/dump_save.sh tools/fixtures/chars/low-dex-orc-barbarian-seed18-gate.sav
+
+=== the character, as the engine writes him ===
+
+                        Hurk the Berzerker, The Manipulative Plotter (Explore Mode)
+
+Gender Male
+Race   Orc
+Class  Barbarian 1
+Faith  Khasrach
+XP     0
+Next @ 1000
+Align  Neutral
+
+
+STR: 20/00 [+5/+4] (base 15, +1 inherent, +4 natural)
+DEX:  7/00 [-1/-2] (base 7)
+CON: 19/00 [+4/+4] (base 17, +2 inherent)
+INT: 12/00 [+1/+0] (base 14, -2 natural)
+WIS: 17/00 [+3/+3] (base 15, +2 natural)
+CHA: 10/00 [+0/+0] (base 12, -2 natural)
+LUC: 15/00 [+2/+2] (base 15)
+Fortitude   +6(Barbarian +2, +4 Con)
+Reflex      -1(Barbarian +0, -1 Dex)
+Will        +3(Barbarian +0, +3 Wis)
+Melee   +toHit +6  (Barbarian +1, +5 Str)
+        Damage +9  (base 2d8 / 2d10, +8 Str, +1 weapon)
+        Speed  80% (base 100%) x 80% weapon
+Size           Human-sized:
+  (base human-sized)
+
+Defense Class  9:
+  (base 10, -1 Dex)
+
+Coverage       8:
+  (base 0, +8 armour)
+
+Movement Rate  90%:
+  (base 100%) x 80% armour x 120% skill x 90% encumbrance
+
+Hit Dice Rolls 50:
+   [20 + 1d12 (12) + 8 (CON bonus)] + 25% (Toughness)
+Mana Rolls     17:
+   10 + 1d4 (4) x 1 + 3 (WIS bonus)
+
+Encumbrance    Light:
+   (Light 66.6s, Moderate 200.0s, Heavy 400.0s, Extreme 600.0s, Max Press 800.0s)
+
+Special Abilities:
+  Berserk Rage
+  Darkvision (60 ft)
+  Scent (30 ft)
+  Tough as Hell
+  Spellbreaker
+  Spell Fury
+
+Feats:
+  Acrobatic
+  Alertness
+  Armour Proficiency: Light
+  Armour Proficiency: Medium
+  Improved Initiative
+  Toughness
+  Cannibalism
+
+Resistances and Armour:
+  Slashing Damage 5
+  Piercing Damage 6
+  Blunt Damage 6
+
+Proficiencies Simple Weapons, Long Blades, Axes, Impact, Polearms, Spears, Flails, Light Armour, Medium Armour and shotput
+
+Skill Ratings:
+  Athletics        +9  (2 ranks, +4 STR, +3 train)
+  Balance          -6  (0 ranks, -2 DEX, -4 armour)
+  Craft            +4  (2 ranks, -2 DEX, +2 train, +2 kit)
+  Escape Artist    -6  (0 ranks, -2 DEX, -4 armour)
+  Healing          +8  (1 ranks, +3 WIS, +2 train, +2 kit)
+  Hide in Shadows  -6  (0 ranks, -2 DEX, -4 armour)
+  Intimidate       +7  (0 ranks, +4 STR, +3 train)
+  Intuition        +5  (0 ranks, +3 WIS, +2 train)
+  Jump             +5  (0 ranks, +4 STR, +2 train, +3 feat, -4 armour)
+  Knowledge (Nature) +2  (0 ranks, +2 train)
+  Knowledge (Theology) +7  (0 ranks, +3 WIS, +4 kit)
+  Listen           +8  (0 ranks, +3 WIS, +2 train, +3 feat)
+  Move Silently    -6  (0 ranks, -2 DEX, -4 armour)
+  Pick Pockets     -4  (0 ranks, -4 armour)
+  Spot             +8  (0 ranks, +3 WIS, +2 train, +3 feat)
+  Swimming         -8  (0 ranks, -2 DEX, +2 train, -8 armour)
+  Tumble           -3  (0 ranks, -2 DEX, +3 feat, -4 armour)
+  Wilderness Lore  +5  (0 ranks, +3 WIS, +2 train)
+
+Spiritual State:
+__You are devoted to Khasrach.
+__Khasrach is noncommital.
+__Khasrach has not aided you.
+____(Favour 0, Lev 0, Pen 0%)
+__You are perfectly neutral with
+____regard to Good and Evil.
+__You are perfectly neutral with
+____regard to Law and Chaos.
+
+CharGen Options and Choices:
+__You are in Explore Mode.
+__Beginner's Kit: OFF
+__Initial Rolling Method: 4d6 + Perks
+__Allow Rerolling: YES
+__Use the Subraces: YES
+__Disallow Wizard Mode: NO
+__Maximum Hit Points: YES
+__Maximum Mana: YES
+__Default Character Gender: MALE
+__Monsters Maximum Hit Points: NO
+__Roll Attributes First: NO
+__Gain Attributes With Levels: YES
+__Allow Rapid Intuition: WEAPONS
+__Monsters Use Djikstra: YES
+__Out-Of-Depth Monsters: YES
+__Transgression Hints: YES
+__Difficulty Level: BASELINE
+__Power Stats: EXTREME
+__Elude Death: SEVEN
+__Disable Complicity Transgressions: YES
+__Natural Weapon Speed: ORIGINAL
+
+
+Inventory:
+  orcish greataxe
+  orcish longspear
+  loincloth
+  orcish hide armour
+  Holy symbol of Khasrach
+  5 orcish shotputs
+  medium backpack
+  35 gold pieces
+  10 strips of cured meat
+  orcish silver proficient tower shield +3
+  craftsman's tools
+  healing kit
+  orcish knife
+
+On The Ground:
+
+Known Spells:
+
+Journal:
+
+12:00 AM, 1st of Suntide: Entry Chamber, 10' (H:50/50 M:17/17 XP:0) 
+  You arrive at 10' in the The Goblin Caves.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:50/50 M:17/17 XP:0) 
+  OOD monster elf (CR 3) generated on dlev 1 by Encounter 'druid, with plants' and the ENCOUNTER_LIST from 'Underground Farm'.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:19/23 M:13/13 XP:0) 
+  Starting Perks:
+     Bonus Feat: Improved Initiative.
+  Starting Item: uncursed silver proficient tower shield +3.
+
+Monsters Encountered:
+  Total: 0
+
+Level Statistics:
+
+Lvl | Act | Key | Turns | Secs |  XP | Explored
+----+-----+-----+-------+------+-----+------------------
+1   |    1|  112|      1|     0|    0| 121 / 5183 = 2%
+
+Messages:
+Welcome back to Incursion, Hurk!
+"Smite now your slave-chains with the primal fire of my wrath!"
+You find nothing of significance.
+Autosave... 
