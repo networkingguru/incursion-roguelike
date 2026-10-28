@@ -1,0 +1,38 @@
+# inc-4trf: highlight the cheetah in the Wild Shape menu and dump the screen,
+# so the monster's description (built by Monster::Describe -> FeatName) can be
+# read. Before the fix the description carries a "---103 (below 102 = Dance of
+# Tukima)---" debug fallback; after, only real feat names.
+#
+# The menu is MENU_DESC, so the description pane shows the highlighted entry.
+# @cursorto moves the cursor by name WITHOUT selecting, so the menu stays open
+# and the description can be photographed.
+#
+# Real Wild Shape (src/Skills.cpp:5615) from a LOADED druid, so the character is
+# fixed. The fixture is a Druid 1; the wizard-switch and Genocide prefix (copied
+# from tools/keys/wildshape-gray.keys, which reaches a Druid 3 the same way)
+# brings it to the three druid levels Wild Shape needs.
+#
+# Run through tools/check_wildshape_cheetah_desc.sh, or:
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+#       tools/headless.sh tools/keys/wildshape-cheetah-desc.keys <seed>
+@dump:arrival
+w
+@choose "Wizard Mode Switches"
+SPACE DOWN DOWN SPACE
+ESC
+w
+@choose "Genocide Everything"
+d
+G
+a
+a
+ESC
+@dump:druid3
+u
+@choose "Wild Shape"
+@dump:wildshape-menu
+@cursorto "cheetah" DOWN
+@dump:cheetah-desc
+ESC
+@dump:after-esc

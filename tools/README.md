@@ -24,6 +24,7 @@ rest until you need them.
 | `check_buckler_size.sh` | A buckler costs -1 to Balance on both Medium and enlarged Large bearers (inc-drmm). |
 | `check_headless.sh` | The regression check for that harness. If this fails, no other measurement means anything. |
 | `soak.sh` | Runs many sandboxed sessions over many seeds and groups what they complained about. |
+| `soak_coverage.sh` | Plays the gate soak (`dive.keys`, gate settings) on a clang coverage build and lists the C++ functions and script routines it reached. Slow: about 700 s a session. |
 | `gate_record.sh` + `gate_compare.sh` + `gate_lib.sh` | The regression gate. `gate_record.sh` freezes a build's behaviour into `tools/gates/*.baseline`; `gate_compare.sh` re-runs the same seeds and says what got worse. |
 | `package_macos_app.sh` + `check_app.sh` | Builds `Incursion.app` and then verifies that a stranger who downloads it can open it. |
 
@@ -449,6 +450,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_api_arity.py` | Does any script API declaration in `inc/Api.h` bind an argument to the wrong C++ parameter? | LIVE |
 | `check_app.sh` | Can a stranger download `Incursion.app` and open it? | LIVE |
 | `check_area_radius.sh` | Does a globe or field with radius value N reach N squares? `INCURSION_AREA_PROBE=1` casts Bless (radius 6) at allies at distances 5, 6 and 7, and Silence (radius 4) to compare its first pulse with its lasting field at distances 3, 4 and 5. FAIL, INCONCLUSIVE or missing results exit nonzero (inc-lmw4). | LIVE |
+| `check_wake_all.sh` | Does the wizard command "Wake Every Creature" leave no sleeping creature on the level? `INCURSION_WAKE_PROBE=1` puts every creature to sleep first (23 on the fixture's level), then the command runs; the check needs a nonzero count before and zero after (inc-b0ziu.2). | LIVE |
 | `check_armour_model.sh` | Does the armour model penetrate coverage by grade and subtract from damage, with natural armour and a worn suit penetrated independently? | LIVE |
 | `check_aura_of_menace.sh` | Does a hostile creature entering an Aura of Menace (a lantern archon summoned in wizard mode) get the save and its -2 penalty or immunity, and (hit mode) does landing a blow on the owner end the penalty? Seeds 4 and 5. | LIVE |
 | `check_auto_terms.sh` | With Auto-Offer Terms on, does a lawful good paladin who attacks a fleeing ogre offer terms first, skip the attack when the ogre accepts, and attack with no prompt when it refuses? Does magic fear (a rules refusal) still give the "Confirm attack fleeing victim?" prompt, and does option off give the prompt and no offer? Seeds 1..40; `--prove-red` forces the option off and expects a failure (inc-gfq2). | LIVE |
@@ -709,6 +711,8 @@ A new check adds its row to this table, in alphabetical order.
 | `check_music_choir.sh` | Maximized live Music of the Spheres damage at caster level 8, with and without a level-6 bardic ally; Chain Lightning full damage on each of three hostile targets; Shadow Step's calculated range at shadowdancer level 0 (`SHADOW0`, expected 12) and at a temporary shadowdancer level 3 (`SHADOW3`, hard-coded expected 18). Loads a frozen priest through `MusicChoirProbe` (`src/Magic.cpp`), logs actual arc counts, and requires every case to pass. | LIVE |
 | `check_music_spheres_area.sh` | inc-ctee: does Music of the Spheres reach a hostile CR 5 creature 8 squares away but not 9, paralyze for 1d4 rounds (with or without a choir), and keep the god's condition at 10+2*CL (+2 per choir level)? Opt-in `MusicAreaProbe` (`src/MusicAreaProbe.cpp`) casts from a loaded priest with forced natural-1 saves. FAIL, INCONCLUSIVE or missing results exit nonzero. | LIVE |
 | `check_bane_radius.sh` | Live Bane morale status at engine distances 5, 6, 7 and 9 from a loaded priest. Requires only distance 5 affected; FAIL, INCONCLUSIVE or missing results exit nonzero. Opt-in `BaneRadiusProbe` dispatches the spell effect directly, bypassing learned-spell selection. | LIVE |
+| `check_monster_feats_exist.sh` | inc-4trf: does every feat in a monster's `Feats:` list, read from `lib/program.i` (the built module source, where `#if 0` blocks are gone) and numbers mapped back to `FT_` names through `inc/Defines.h`, have a row in `src/FeatTab.cpp`'s `FeatInfo[]`? A name with no row makes `FeatName()` print its `---N (below ...)---` debug fallback in the monster's description where the feat's name belongs. Static, reads no seed; FAILs when `lib/program.i` is missing or older than any `lib/*.irh`/`lib/*.irc` (rebuild with `BACKEND=posix ./build_macos.sh`); fails naming the resource, line and feat. | LIVE |
+| `check_monster_feats_live.sh` | inc-4trf: in a live game, does each Dash monster (cheetah, juvenile arrowhawk, plague of rats, scarab swarm) move faster with Dash on than off on the same creature, does the cave tyrannosaurus's Weapon Focus add 1 to `hit_brawl`, does the medium fire elemental have Weapon Finesse, and does the water genasi lack `FT_MASTER_THROW`? Runs `INCURSION_MONSTER_FEAT_PROBE` on a loaded fixture; accepts the known exit 5 when the probe reports DONE. Fails naming the monster. | LIVE |
 | `check_monster_init_hp.sh` | inc-tmys: does `Monster::Initialize` keep `cHP == mHP + Attr[A_THP]` for a tree-elevated elf that takes the "wildshaped druid" template? Builds that monster in a loaded session through opt-in `MonsterInitProbe` (`src/MonsterInitProbe.cpp`, forces `ELEVATED` in place of a tree square) and fails while the ASSERT at the end of the EV_INITIALIZE events fires, or when the probe does not complete the path. Green once the fix lands; `--prove-red` restores the fall damage inside Initialize. | LIVE |
 | `check_menu_overflow.sh` | Does a menu with more than 52 options still draw and select every row, rather than losing the ones past the alphabet? | LIVE |
 | `check_menu_page_arrows.sh` | Does the RIGHT arrow page a long selection menu forward, so a Steam Deck player who has a stick but no Tab key can reach a row on the second page and still pick it? | LIVE |
@@ -955,6 +959,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_wizard_aggravate.sh` | Does the wizard menu's "All Monster Aggravate" entry crash the session? `src/Debug.cpp` case 29 passed `myHandle` -- an object handle -- as the sixth argument of `GainPermStati`, which is a resource id (`rID eID`, inc/Map.h), so `Thing::GainPermStati`'s `ASSERT(theGame->Get(eID))` failed and the process segfaulted. On seed 5 the fixed build completes the aggravate and the "All Monsters Retarget" entry that follows it, takes its next turn and writes the after-turn dump with no error; the defect crashes before the dump with the ASSERT and "resource id 129 names module slot -1" lines in errors.log. `--prove-red` restores `myHandle`. | LIVE |
 | `check_weapon_immunity_live.sh` | Is a bare fist tested against Weapon Immunity, and does Ki Strike beat it? One wizard-mode-summoned lemure, punched by the same character at Monk 1 and at Monk 4: `Your weapon fails to penetrate.` then no such line. | LIVE |
 | `check_wiki.py` | Does the wiki export (`incursion-headless -wikihelp`) produce a Home page, a sidebar, a non-empty index for every kind, no empty page, no broken `[[link]]`, valid UTF-8, no raw colour tag and balanced bold on every line? `--selftest` proves each fault fails (inc-k2le). | LIVE |
+| `check_wildshape_cheetah_desc.sh` | inc-4trf: does the cheetah's Wild Shape menu description name only real feats, with none of the `FeatName()` `---N (below ...)---` debug fallback? Loads the Druid fixture, raises it to Druid 3, opens Wild Shape, highlights the cheetah by name with `@cursorto` and reads the description pane. Before the fix it read "Alertness, ---103 (below 102 = Dance of Tukima)--- and Run". | LIVE |
 | `check_wildshape_gray.sh` | Does picking a gray (not yet allowed) form in the Wild Shape menu return safely? Loads the Druid fixture, raises it to Druid 3, picks the gray "giant badger" entry and takes one more action: the session must exit cleanly with no form change, unchanged HP and no turn spent on the pick. Before the fix the game crashed with signal 11 (inc-5v47). | LIVE |
 | `check_worktree_untracked.sh` | Does the worktree hold an untracked file? `git status --porcelain --untracked-files=all` lists it with `??`; the check exits 1 and says a reproduction belongs in `tools/` and a specimen (log, dump, save) in `logs/` or `docs/evidence/<bead>/`, never loose in the worktree. `gate: none` so the landing gate does not run it where untracked evidence is legitimate; the fast set does. | NONE |
 | `check_xp_drain.sh` | Does restoring drained XP clear the drain once, rather than also crediting the same amount back onto XP -- so draining 500 and restoring it returns effective XP exactly to where it started, not 500 above? | LIVE |
@@ -1073,7 +1078,7 @@ one (`package_macos_app.sh:5-13`).
 | Path | What it is |
 |---|---|
 | `keys/*.keys` | Key scripts read by both backends. `headless.sh` uses the full POSIX harness format; the SDL build uses only the shared movement subset. `keys/trailer-demo.keys` demonstrates SDL movement, `@pause` and `@quit`. Read the header of a script before using it. |
-| `gates/dive.baseline` | The committed regression baseline. `gate_record.sh` overwrites it. |
+| `gates/dive-short.baseline` | The committed regression baseline. `gate_record.sh` overwrites it. |
 | `gates/Options.Dat` | The pinned settings file every gate run plays with. Committed on purpose. |
 | `gates/Options.Dat.md` | What is in that settings file and why. |
 | `fixtures/options-*.dat` | Frozen, dated settings files that scripted checks select explicitly. |
@@ -1418,7 +1423,7 @@ the builds, so a full run costs its minute and reports a regression in the shape
 no single check can -- a complaint appearing in several sessions at once, fewer
 sessions reaching a map, more deaths or freezes.
 
-`tools/gates/dive.baseline` is committed, so a clone can run `gate_compare.sh`
+`tools/gates/dive-short.baseline` is committed, so a clone can run `gate_compare.sh`
 without recording anything. Do NOT run `gate_record.sh` unless you mean to
 replace that baseline — see below.
 
@@ -1507,8 +1512,8 @@ reporter's own words.
 **`tools/gate_record.sh` OVERWRITES a committed baseline.** Verified:
 `:37-38` build `OUT="$ROOT/tools/gates/$NAME.baseline"` from the key script's
 name, and `:71-80` truncate that path with `>`. The default key script is
-`tools/keys/dive.keys` (`gate_record.sh:21`), so a bare `tools/gate_record.sh` replaces
-`tools/gates/dive.baseline`. Record a baseline only from a build you believe in:
+`tools/keys/dive.keys` (`gate_record.sh:21`), so a bare `tools/gate_record.sh` writes a new `tools/gates/dive.baseline`; the committed baseline comes from `tools/keys/dive-short.keys` and `tools/gate_record.sh tools/keys/dive-short.keys 40 1` replaces
+`tools/gates/dive-short.baseline`. Record a baseline only from a build you believe in:
 a baseline taken from a broken build makes the gate defend the breakage
 (`gate_record.sh:13-14`). `git diff tools/gates/` afterwards, always.
 
