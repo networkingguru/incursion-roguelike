@@ -1,5 +1,5 @@
 #!/bin/bash
-# gate: cheap
+# gate: live
 # Regression check for inc-4trf: every feat in a monster's `Feats:` list in the
 # built module must have a row in src/FeatTab.cpp's FeatInfo[] table.
 #
