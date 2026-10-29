@@ -399,7 +399,7 @@ check_log_path() {
 # back to /dev/null -- the behaviour of every run before this one -- rather than
 # let the gate's answer depend on a directory.
 run_check() {
-    local log rc timefile
+    local log rc timefile t0=$SECONDS
     log="$(check_log_path "$1")"
     mkdir -p "$LOG_DIR" 2> /dev/null
     ( : > "$log" ) 2> /dev/null || log="/dev/null"
@@ -423,6 +423,11 @@ run_check() {
     fi
     rc=$?
     printf '\n=== exit %s\n' "$rc" >> "$log" 2> /dev/null
+    # inc-b0ziu.8: one timing row per check, beside the machine state. The
+    # helper never fails; its output must not mix into the echoed exit code.
+    [ -x "$(dirname "${BASH_SOURCE[0]}")/timing_log.sh" ] \
+        && "$(dirname "${BASH_SOURCE[0]}")/timing_log.sh" gate "$1" "$rc" "$((SECONDS - t0))" > /dev/null
+    :
     echo "$rc"
 }
 
@@ -969,6 +974,8 @@ selftest() {
     state="$dir/base.txt"
     # Expanded now, not at exit: $dir is local and gone by the time EXIT fires.
     trap "rm -rf '$dir'" EXIT
+    # inc-b0ziu.8: the selftest must not write the real timing log.
+    export INCURSION_CHECK_TIMING_LOG="$dir/check-timing.tsv"
 
     # Each made-up check says one recognisable sentence before it exits, so the
     # selftest can prove the gate KEPT the words of a check that failed and not

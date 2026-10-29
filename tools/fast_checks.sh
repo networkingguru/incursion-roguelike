@@ -123,8 +123,17 @@ for i in "${!CHECKS[@]}"; do
     fi
 done
 
+# Log each check's timing beside the machine state (inc-b0ziu.8).
+for i in "${!CHECKS[@]}"; do
+    rc="$(cat "$TMP/$i.exit" 2>/dev/null)"
+    [ -n "$rc" ] || rc=1
+    elapsed=$(( $(cat "$TMP/$i.end" 2>/dev/null || cat "$TMP/$i.start") - $(cat "$TMP/$i.start") ))
+    [ -x "$ROOT/tools/timing_log.sh" ] && "$ROOT/tools/timing_log.sh" fast "$(basename "${CHECKS[$i]}")" "$rc" "$elapsed" >/dev/null
+done
+
 # Only when something failed, ask the load guard whether the machine was
-# overloaded when the checks ran (inc-p8bw). Never consult it on a clean set.
+# under memory pressure when the checks ran (inc-p8bw). Never consult it on a
+# clean set.
 GUARD_OUT=""
 guard_refused=0
 if [ "$any_failed" -eq 1 ]; then
@@ -134,7 +143,7 @@ if [ "$any_failed" -eq 1 ]; then
 fi
 
 if [ "$guard_refused" -eq 1 ]; then
-    printf 'OVERLOADED: the machine was overloaded when the checks ran, so a failure below may be load and not a defect in the check; retry with:\n'
+    printf 'OVERLOADED: the machine was under memory pressure when the checks ran, so a failure below may be memory and not a defect in the check; retry with:\n'
     printf '    until tools/load_guard.sh; do sleep 30; done\n'
     printf '%s\n' "$GUARD_OUT" | sed 's/^/    /'
 fi
@@ -160,7 +169,7 @@ for i in "${!CHECKS[@]}"; do
         printf 'ok   %s (%ss)\n' "$name" "$elapsed"
     elif [ "$too_slow" -eq 1 ]; then
         if [ "$guard_refused" -eq 1 ]; then
-            printf 'FAIL %s (TOO SLOW (over %s s) while the machine was overloaded; retry, do not change the check)\n' \
+            printf 'FAIL %s (TOO SLOW (over %s s) while the machine was under memory pressure; retry, do not change the check)\n' \
                 "$name" "$LIMIT"
         else
             printf 'FAIL %s (TOO SLOW for the fast set (over %s s); fix it or remove its gate-fast marker)\n' \

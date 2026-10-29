@@ -56,6 +56,8 @@ report() { # report <ok|FAIL> <label>
 
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/check_fast_checks.XXXXXX")" || exit 2
 trap 'rm -rf "$TMP"' EXIT
+# inc-b0ziu.8: no case may write the real timing log.
+export INCURSION_CHECK_TIMING_LOG="$TMP/check-timing.tsv"
 
 DIR="$TMP/checks"
 mkdir -p "$DIR"
@@ -207,13 +209,13 @@ else
 fi
 rm -f "$DIR/check_unmeasured.sh"
 
-# ---- j. a failing check and a slow one, guard faked to REFUSE:
+# ---- j. a failing check and a slow one, guard faked to REFUSE (memory pressure 2):
 # an OVERLOADED: line, the "retry, do not change the check" TOO SLOW text, and
 # no "remove its gate-fast marker". A short limit keeps the slow fake quick.
 plant check_fail_j.sh "static test" 'echo "j failed"; exit 1'
 plant check_slow_j.sh "static test" 'sleep 5; exit 0'
-out="$(env INCURSION_LOAD_GUARD_FAKE_LOAD=10.5 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
-          INCURSION_LOAD_GUARD_FAKE_PRESSURE=1 INCURSION_LOAD_GUARD_FAKE_GATES=0 \
+out="$(env INCURSION_LOAD_GUARD_FAKE_LOAD=1.0 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
+          INCURSION_LOAD_GUARD_FAKE_PRESSURE=2 \
           INCURSION_FAST_LIMIT=2 "$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
 if [ "$rc" -eq 1 ]; then
     case "$out" in
@@ -238,13 +240,20 @@ else
     report FAIL "j: failing+slow under a refusing guard exits 1 (got $rc)"; printf '%s\n' "$out"
 fi
 rm -f "$DIR/check_fail_j.sh" "$DIR/check_slow_j.sh"
+# inc-b0ziu.8: the runs above logged one row per check, after a header row.
+if [ "$(head -1 "$INCURSION_CHECK_TIMING_LOG" 2>/dev/null | cut -f1)" = "utc_time" ] \
+   && [ "$(grep -c "	fast	" "$INCURSION_CHECK_TIMING_LOG" 2>/dev/null)" -ge 2 ]; then
+    report ok "j2: fast_checks.sh logs a timing row per check"
+else
+    report FAIL "j2: no timing rows in $INCURSION_CHECK_TIMING_LOG"
+fi
 
 # ---- k. the same failing checks, guard faked IDLE: no OVERLOADED: line, the
 # TOO SLOW line carries the original wording.
 plant check_fail_k.sh "static test" 'echo "k failed"; exit 1'
 plant check_slow_k.sh "static test" 'sleep 5; exit 0'
 out="$(env INCURSION_LOAD_GUARD_FAKE_LOAD=1.0 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
-          INCURSION_LOAD_GUARD_FAKE_PRESSURE=1 INCURSION_LOAD_GUARD_FAKE_GATES=0 \
+          INCURSION_LOAD_GUARD_FAKE_PRESSURE=1 \
           INCURSION_FAST_LIMIT=2 "$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
 if [ "$rc" -eq 1 ]; then
     case "$out" in
@@ -266,11 +275,11 @@ else
 fi
 rm -f "$DIR/check_fail_k.sh" "$DIR/check_slow_k.sh"
 
-# ---- l. every check passes, guard faked to REFUSE: exit 0 and no OVERLOADED:
+# ---- l. every check passes, guard faked to REFUSE (memory pressure 2): exit 0 and no OVERLOADED:
 # line, because the guard must not be consulted when nothing failed.
 plant check_pass_l.sh "static test" 'exit 0'
-out="$(env INCURSION_LOAD_GUARD_FAKE_LOAD=10.5 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
-          INCURSION_LOAD_GUARD_FAKE_PRESSURE=1 INCURSION_LOAD_GUARD_FAKE_GATES=0 \
+out="$(env INCURSION_LOAD_GUARD_FAKE_LOAD=1.0 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
+          INCURSION_LOAD_GUARD_FAKE_PRESSURE=2 \
           "$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ]; then
     case "$out" in
