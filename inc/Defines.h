@@ -4800,6 +4800,7 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define MSG_ROARVERB    213
 #define MSG_XSUMMON     214
 #define MSG_SHOPNAME    215
+#define MSG_DEFNOTE     216  /* "sheet line" / "bonus": digits, or "*" when it varies by attacker (inc-7v2i) */
 
 #ifndef ICOMP
 

@@ -1,0 +1,46 @@
+# inc-7v2i: learn the psionic power Combat Mind through the wizard menu, use it,
+# and read the sidebar and the character sheet.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav \
+#       tools/headless.sh tools/keys/defnote-combatmind.keys 4
+#
+# Read by tools/check_defnote.sh. A real player reaches the power only through a
+# random perk at character creation (src/Create.cpp PERK_TALENT, case at ~2244
+# grants CA_INNATE_SPELL), so this script takes the wizard-menu route to the
+# same innate spell (src/Debug.cpp case 17). The power refuses outside combat,
+# so a summoned goblin stands next to him and he swings at it first
+# (Combat Mind refuses while isFlatFooted, lib/alchemy.irh PRE(EV_EFFECT)).
+
+@dump:arrival
+
+w
+y
+@choose "Learn Any Spell"
+"Combat Mind"
+ENTER
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+@until "HP:" ESC
+
+RIGHT*2                 # swing at the goblin; flat-footed ends once he has acted
+m
+@dump:menu
+@choose "Combat Mind"
+@dump:after
+
+d
+@expect "Defense Class"
+@dump:sheet
+ESC
+
+RIGHT
+@dump:step1
+RIGHT
+@dump:step2
+RIGHT
+@dump:step3

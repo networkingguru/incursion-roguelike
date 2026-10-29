@@ -666,6 +666,7 @@ Effect "quality::bashing" : EA_GENERIC { }
 
 Effect "quality::blinding" : EA_GRANT
   { xval: TRAP_EVENT; yval: EVICTIM(EV_STRIKE); 
+    On Event MSG_DEFNOTE "Blinding: +2 vs. attackers who can see you." / "2";
     On Event META(EVICTIM(EV_STRIKE)) {
       if (EActor->Perceives(EVictim) & PER_VISUAL)
         {

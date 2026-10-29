@@ -1,0 +1,26 @@
+# inc-7v2i: stand in water and read the sidebar and the character sheet.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav \
+#       tools/headless.sh tools/keys/defnote-water.keys 4
+#
+# Read by tools/check_defnote.sh. One square east of the player becomes shallow
+# water (lib/dungeon.irh, macro WATER_COMBAT), the player steps in, and the
+# screens before and after show the Water note.
+
+@dump:arrival
+
+w
+y
+@choose "Change terrain type"
+RIGHT ENTER
+@until "shallow water" TAB
+@choose "shallow water"
+@dump:pool
+
+RIGHT
+@dump:in
+d
+@expect "Defense Class"
+@dump:sheet
+ESC
