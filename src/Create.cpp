@@ -5611,37 +5611,53 @@ FoundFocus:
     else if (sk == SK_SPOT || sk == SK_LISTEN)
         sr = ChallengeRating() / 2;
 
+    /* upstream: each bucket kept max(bucket,Mag) from zero, so a negative
+       grant (Staff of Winter -6 Appraise) was discarded. Invariant: the
+       highest positive grant of a bucket counts alone, every negative grant
+       adds. Observed, inc-e7wp, tools/check_skill_bucket_rule.sh; not sent. */
+    int16 n_feat = 0, n_racial = 0, n_domain = 0, n_item = 0, n_focus = 0,
+        n_enhance = 0;
     StatiIterNature(this,SKILL_BONUS)
-        if (S->Val == sk || S->Val == -1)
+        if (S->Val == sk || S->Val == -1) {
+            int16 *pos = &s_enhance, *neg = &n_enhance;
             switch (S->Source) {
           case SS_CLAS:
-              s_feat = max(s_feat,S->Mag);
+              pos = &s_feat; neg = &n_feat;
               break;
           case SS_BODY:
           case SS_TMPL:
           case SS_RACE:
-              s_racial = max(s_racial,S->Mag);
+              pos = &s_racial; neg = &n_racial;
               break;
           case SS_DOMA:
-              s_domain = max(s_domain,S->Mag);
+              pos = &s_domain; neg = &n_domain;
               break;
           case SS_ITEM:
-              s_item = max(s_item,S->Mag);
+              pos = &s_item; neg = &n_item;
               break;
           case SS_PERM:
-              s_focus = max(s_focus,S->Mag);
+              pos = &s_focus; neg = &n_focus;
               break;
           /* upstream: every other bucket takes max(), which discards the
              negative skill penalties of a bestow curse; sum them instead.
              Traced; inc-p0h1; not sent. */
           case SS_CURS:
               s_curse += S->Mag;
+              pos = NULL;
               break;
           default:
-              s_enhance = max(s_enhance,S->Mag);
               break;
+            }
+            if (pos) {
+                if (S->Mag < 0)
+                    *neg += S->Mag;
+                else
+                    *pos = max(*pos,S->Mag);
+            }
         }
         StatiIterEnd(this)
+        s_feat += n_feat; s_racial += n_racial; s_domain += n_domain;
+        s_item += n_item; s_focus += n_focus; s_enhance += n_enhance;
 
             if (sk == SK_HIDE)
                 s_size = (SZ_MEDIUM - Attr[A_SIZ])*4;

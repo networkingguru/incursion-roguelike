@@ -1,0 +1,111 @@
+# Does a negative item grant ADD to a skill bucket that already holds a
+# positive one? Read by tools/check_skill_bucket_rule.sh (bd inc-e7wp).
+#
+# A Headband +3 of Magical Aptitude puts +6 Concentration in the item bucket;
+# then the Staff of the Goblin Queen adds -4 Concentration to the same bucket.
+# The sheet is dumped after the headband and again after the staff. The goblin
+# queen gate (caster level 3 and goblinoid) is the one described in
+# staff-goblin-queen-penalties.keys. Levels are gained as there.
+
+@include chargen-mage.keys
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d       # character sheet
+G
+@while "Learn Spells: Level" ESC
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+G
+@while "Learn Spells: Level" ESC
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@expect "Mage 3"
+@dump:mage3
+ESC
+
+# --- the reading before the staff ---
+@until "Skill Ratings" d
+@dump:sheet-before
+ESC
+w
+@choose "Examine Player Data"
+@until "Stati (" DOWN
+@dump:stati-before-1
+DOWN*12
+@dump:stati-before-2
+DOWN*12
+@dump:stati-before-3
+DOWN*12
+@dump:stati-before-4
+ESC
+
+# --- a Headband +3 of Magical Aptitude: +6 Concentration, item bucket ---
+#   RIGHT*19   Headbands in the acquisition glyph row (counted by a dump run)
+#   @until     stop when the row below Magical Aptitude shows
+#   3 ENTER    the item level, so the grant is 2 per plus = +6
+#   q SPACE    'q' is the Helmet slot
+w
+@choose "Item Acquisition"
+RIGHT*19
+@until "Circlet of Blasting" DOWN
+ENTER
+3
+ENTER
+q
+SPACE
+@dump:headband-worn
+ESC
+@until "Skill Ratings" d
+@dump:sheet-headband
+ESC
+
+# --- take a Staff of the Goblin Queen and put it in the weapon hand ---
+#   RIGHT*3      walks the acquisition's glyph row to Staves (ItemGlyphs,
+#                src/Tables.cpp:320-323).
+#   @until       the candidate list has no menu letters, so the cursor is
+#     "Staff of  walked. Three rows show and the MIDDLE one is selected, so
+#     Exorcism"  the run stops on the pass where the row BELOW the wanted one
+#     DOWN       appears. Exorcism is the entity after the Goblin Queen in
+#                lib/m_items.irh; the check reads the name back anyway.
+#   ENTER 0      this staff has no inherent plus, so the acquisition asks for
+#                no item level (src/Debug.cpp:610). The pick-up leaves the
+#                staff in the in-air slot.
+#   b SPACE      'b' is the Weapon Hand slot; SPACE swaps the staff into it
+#                and pushes the mage's starting knife into the air.
+#   s            stows the knife (src/Managers.cpp:873-886); the manager will
+#                not close while anything is held in the air.
+w
+@choose "Item Acquisition"
+RIGHT*3
+@until "Staff of Exorcism" DOWN
+ENTER
+0
+@dump:staff-selected
+b
+SPACE
+s
+@dump:staff-wielded
+ESC
+
+# --- the same reading with the staff in hand ---
+@until "Skill Ratings" d
+@dump:sheet-after
+ESC
+w
+@choose "Examine Player Data"
+@until "Stati (" DOWN
+@dump:stati-after-1
+DOWN*12
+@dump:stati-after-2
+DOWN*12
+@dump:stati-after-3
+DOWN*12
+@dump:stati-after-4
+ESC
