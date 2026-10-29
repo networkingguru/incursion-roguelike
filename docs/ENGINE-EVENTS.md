@@ -7,7 +7,7 @@ inc-s6m: inc-upw.5 (P1), inc-upw.16 (P1) and inc-upw.15 (P0). inc-s6m is closed 
 
 ## Where it lives
 Event stack and `Throw*`: `src/Event.cpp`. `EventInfo` and the `PEVENT`/`DAMAGE`/`THROW` macros: `inc/Events.h`. C++ -> script
-boundary: `src/Annot.cpp:1109`. Bytecode VM: `src/VMachine.cpp:413`. Generated script-callable C++ API: `lib/dispatch.h`.
+boundary: `src/Annot.cpp:1109`. Bytecode VM: `src/VMachine.cpp:444`. Generated script-callable C++ API: `lib/dispatch.h`.
 Preprocessed ruleset: `lib/program.i`. Event numbers and `PRE`/`POST`/`META`/`GODWATCH`/`EVICTIM`: `inc/Defines.h:4587-4593`; 183
 `EV_` numbers exist. `EvReturn` is `int8` (`inc/Defines.h:58`): `ERROR -1`, `NOTHING 0`, `DONE 1`, `ABORT 2`, `NOMSG 3`
 (`inc/Defines.h:140-144`).
@@ -60,7 +60,7 @@ assuming the enclosing context: `src/Fight.cpp:875-882`, `src/Prayer.cpp:589`, `
 ## Re-entrancy
 **The system has no general protection against re-entrancy.** Shared by every nested event: `VMachine::Regs[64]`, `SRegs[64]`,
 `Stack[8192]`, `Memory`, `szMemory` are `static` (`inc/Res.h:66-74`) with one VM instance, `theGame->VM` (`inc/Res.h:1324`);
-`Execute` saves and restores only `Regs[63]` (`src/VMachine.cpp:426`, `:489-497`). `Resource::cAnnot`, `cAnnot2` and `EvMsg[64]`
+`Execute` saves and restores only `Regs[63]` (`src/VMachine.cpp:459`, `:489-497`). `Resource::cAnnot`, `cAnnot2` and `EvMsg[64]`
 are `static` on `Resource` (`inc/Res.h:228-229`) — one annotation cursor for the whole game. The code says so: "Nested
 FAnnot/NAnnot doesn't normally [work]" (`src/Annot.cpp:619-621`); `FAnnot2` is a one-level kludge, and depth 3 has no cursor.
 `Thing::PlaceNear` holds `static Creature* Displace[64]` (`src/Display.cpp:456`) and re-enters itself via `PlaceAt` (`:611`),

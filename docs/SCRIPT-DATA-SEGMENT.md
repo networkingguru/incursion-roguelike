@@ -45,9 +45,9 @@ The block has two parts, in this order (Traced):
 
 1. **The script data segment** — bytes `[0, szDataSeg)`. This is the module's
    VM global-variable storage. The virtual machine reads it as `int32 Memory[]`
-   (`src/VMachine.cpp:464`, `Memory = (int32*)theGame->MDataSeg[mn]`), and a
+   (`src/VMachine.cpp:497`, `Memory = (int32*)theGame->MDataSeg[mn]`), and a
    global variable is a bare index into it (`MEMORY(pv)` in `VMachine::Value1`,
-   `src/VMachine.cpp:347`).
+   `src/VMachine.cpp:350`).
 2. **The per-player resource memory rows** — bytes `[szDataSeg, MDataSegSize)`.
    `Module::GetMemoryPtr` (`src/Res.cpp:754`) addresses these arithmetically;
    it starts its offset at `szDataSeg` (`src/Res.cpp:765`, `ptr = szDataSeg`)
