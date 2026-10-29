@@ -225,6 +225,25 @@ if ! ./tools/gate_compare.sh --from "$W/sig" "$W/sig.baseline" > "$W/out6h" 2>&1
     fail "a run with the same signal count as its own baseline did not pass"
 fi
 
+# 6d. inc-b0ziu.7: exit 6 means the key script lost sync, so the session
+#    stopped playing. It must not read as a quieter run.
+cp -R "$W/base" "$W/desync"
+sed -i.bak 's/^5 0$/5 6/' "$W/desync/exits"
+rm -f "$W/desync/exits.bak"
+if ./tools/gate_compare.sh --from "$W/desync" "$W/base.baseline" > "$W/out6i" 2>&1; then
+    tail -20 "$W/out6i"
+    fail "a run with one session exiting 6 against a baseline with none passed"
+elif ! grep -q "REGRESSION: 1 sessions lost script sync (exit 6), baseline had 0" "$W/out6i"; then
+    fail "the lost script sync was not named as the reason for the fail"
+elif ! grep -q "seed 5 exit 6" "$W/out6i"; then
+    fail "the desynced seed was not named"
+fi
+make_baseline "$W/desync.baseline" "$W/desync"
+if ! ./tools/gate_compare.sh --from "$W/desync" "$W/desync.baseline" > "$W/out6j" 2>&1; then
+    tail -20 "$W/out6j"
+    fail "a run with the same exit-6 count as its own baseline did not pass"
+fi
+
 # 7. The settings the run plays with are an input to the result, so a baseline
 #    recorded with different ones cannot be compared against. See inc-w43: the
 #    finding count moved 4386 -> 4416 because Brian played mid-session and the
