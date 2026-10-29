@@ -1,0 +1,12 @@
+# inc-nk27: full-topic help from the title menu; no character or world.
+# tools/gates/Options.Dat selects BOOK help. PGDN*512 exceeds the
+# 8192-line scroll buffer at the headless screen height. One more page
+# and a second dump let the check verify that scrolling has stopped.
+@choose "General Help"
+@choose "Class Descriptions"
+@dump:class-help-start
+PGDN*512
+@dump:class-help-end
+PGDN
+@dump:class-help-end-confirm
+@quit
