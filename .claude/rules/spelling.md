@@ -6,6 +6,6 @@ Why: one spelling standard for the whole project, and the owner chose American.
 History: new rule, no prior narrative to archive. Bead inc-ur36.
 
 ## prose-follows-the-elements-of-style
-ALL prose in this project, as listed in `all-prose-uses-american-spelling`, MUST follow The Elements of Style (Strunk and White): omit needless words, use the active voice, put statements in positive form, use definite, specific, concrete language. Exclamation marks MUST be rare. A game message MUST NOT end in `!` unless the event is truly startling; a creature beginning a song, calming or planting its feet is not.
+ALL prose in this project, as listed in `all-prose-uses-american-spelling`, MUST follow The Elements of Style (Strunk and White): omit needless words, use the active voice, put statements in positive form, use definite, specific, concrete language. Exclamation marks MUST be rare. A game message MUST NOT end in `!` unless the event is truly startling; a creature beginning a song, calming or planting its feet is not. Game text MUST keep one point of view in each line, with no head-hopping. A draft MUST take Brian's voice from his examples, and MUST NOT copy their sentence shapes.
 Why: the owner chose this style standard, and drafts that put `!` on routine messages cost him a correction round.
 History: new rule, no prior narrative to archive. Bead inc-zl35.
