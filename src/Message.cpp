@@ -37,8 +37,8 @@
 #include <stdint.h>
 
 static int16 xprint_lev = 0;
-char  XPrintBuff1[130000];
-char  XPrintBuff2[130000];
+char  XPrintBuff1[1048576];
+char  XPrintBuff2[1048576];
 char  XPrintBuff3[4096];
 char  XPrintBuff4[4096];
 char  XPrintBuff5[4096];
@@ -74,6 +74,7 @@ const char* __XPrint(Player *POV, const char *msg, va_list args) {
     char Tag1[24], Tag2[24];
     const char *cc, *ts;
     char *p, *tag, *Out;
+    size_t cap;
     int32 n = 0, i, j;
     EventInfo *oev;
     String str, l;
@@ -90,18 +91,23 @@ const char* __XPrint(Player *POV, const char *msg, va_list args) {
     switch (++xprint_lev) {
     case 1:
         Out = XPrintBuff1;
+        cap = sizeof(XPrintBuff1) - 1000;
         break;
     case 2:
         Out = XPrintBuff2;
+        cap = sizeof(XPrintBuff2) - 1000;
         break;
     case 3:
         Out = XPrintBuff3;
+        cap = sizeof(XPrintBuff3) - 96;
         break;
     case 4:
         Out = XPrintBuff4;
+        cap = sizeof(XPrintBuff4) - 96;
         break;
     case 5:
         Out = XPrintBuff5;
+        cap = sizeof(XPrintBuff5) - 96;
         break;
     default:
         Error("XPrint recursion is too deep!");
@@ -112,8 +118,14 @@ const char* __XPrint(Player *POV, const char *msg, va_list args) {
     cc = msg;
     p = Out;
     while (*cc) {
-        if (p >= Out + (xprint_lev < 3 ? 129000 : 4000))
+        /* upstream: a fixed 129000-char cap silently truncated long help text
+           (upstream rmtew/master has the same cap); output must never stop
+           without a log line. Observed, inc-nk27, not sent. */
+        if (p >= Out + cap) {
+            Error("XPrint truncation at nesting level %d: output reached %d chars",
+                (int)xprint_lev, (int)cap);
             break;
+        }
 
         if (*cc == '<' && (cc == msg || cc == (msg + 1) || (*(cc - 2) != LITERAL_CHAR))) {
             tag = Tag1;
