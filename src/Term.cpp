@@ -1418,6 +1418,7 @@ void TextTerm::ShowMapOverview() {
        is an inconclusive session; the second is the inc-pw1.5 regression. */
     StairProbe("open at=%d,%d\n", (int)p->x, (int)p->y);
     { extern void RunToStage(Map *, Player *); RunToStage(m, p); }
+    { extern void RouteUnseenStage(Map *, Player *); RouteUnseenStage(m, p); }
 
     /* Tell the gamepad poller we are on the overview map, so the left stick
        repeats (hold to pan) and the right stick zooms. The flag clears at the
