@@ -1,0 +1,118 @@
+# Do two POSITIVE grants in one skill bucket stay un-stacked? Read by
+# tools/check_skill_bucket_rule.sh (bd inc-e7wp).
+#
+# The Staff of Winter gives +4 Intimidate and Lenses of Terror give +5, both in
+# the item bucket. Only the larger may count. The session is
+# staff-winter-grants.keys (Mage 3, staff wielded, sheet dumped) followed by
+# the lenses and a second sheet dump.
+
+@include chargen-mage.keys
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d       # character sheet
+G
+@while "Learn Spells: Level" ESC
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+G
+@while "Learn Spells: Level" ESC
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@expect "Mage 3"
+@dump:mage3
+ESC
+
+# --- the reading before the staff ---
+@until "Skill Ratings" d
+@dump:sheet-before
+ESC
+w
+@choose "Examine Player Data"
+@until "Stati (" DOWN
+@dump:stati-before-1
+DOWN*12
+@dump:stati-before-2
+DOWN*12
+@dump:stati-before-3
+DOWN*12
+@dump:stati-before-4
+ESC
+
+# --- take a Staff of Winter and put it in the weapon hand ---
+#   RIGHT*3      walks the acquisition's glyph row to Staves: ItemGlyphs
+#                (src/Tables.cpp:320-323) puts -AI_STAFF three steps along.
+#   @until       the candidate list has no menu letters, so the cursor is
+#     "Staff of  walked. Three rows show and the MIDDLE one is selected, so
+#     the Abyss" the run stops on the pass where the row BELOW the wanted one
+#     DOWN       appears. The Abyss is the entity after Winter in
+#                lib/m_items.irh. The check does not trust that ordering: it
+#                reads the staff's name back off the inventory screen.
+#   2 ENTER      the acquisition asks for the item level, which is the plus
+#                (src/Debug.cpp:619). +2 is the staff's own INITIAL_PLUS and
+#                the plus its page states.
+#   0 2          the acquisition drops the staff into the backpack, not into
+#                a hand, so it is taken back out by its two-digit container
+#                number (src/Managers.cpp:1044-1072), which lifts it into the
+#                in-air slot. 02 is its row; the check does not trust that
+#                either -- it reads the name off the Weapon Hand line.
+#   b SPACE      'b' is the Weapon Hand slot and SPACE swaps the staff into
+#                it. The slot letters skip 'd', which is the Drop key, so the
+#                lettering is not simply SlotNames counted from 'a'.
+#   s            the mage's starting knife is pushed out by that swap, and
+#                the manager will not close while anything is held in the
+#                air. 's' stows it in the pack (src/Managers.cpp:873-886).
+w
+@choose "Item Acquisition"
+RIGHT*3
+@until "Staff of the Abyss" DOWN
+ENTER
+2
+ENTER
+0
+2
+@dump:staff-selected
+b
+SPACE
+s
+@dump:staff-wielded
+ESC
+
+# --- the same reading with the staff in hand ---
+@until "Skill Ratings" d
+@dump:sheet-after
+ESC
+w
+@choose "Examine Player Data"
+@until "Stati (" DOWN
+@dump:stati-after-1
+DOWN*12
+@dump:stati-after-2
+DOWN*12
+@dump:stati-after-3
+DOWN*12
+@dump:stati-after-4
+ESC
+
+# --- Lenses of Terror: +5 Intimidate, the same item bucket as the staff's +4 ---
+#   RIGHT*5    Eyes in the acquisition glyph row
+#   @until     stop when the row below Terror shows
+#   h SPACE    'h' is the On Eyes slot
+w
+@choose "Item Acquisition"
+RIGHT*5
+@until "Lenses of Stone" DOWN
+ENTER
+h
+SPACE
+@dump:lenses-worn
+ESC
+@until "Skill Ratings" d
+@dump:sheet-lenses
+ESC

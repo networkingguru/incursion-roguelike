@@ -1,0 +1,113 @@
+# Does the Staff of the Goblin Queen cost its wielder the -4 Spot, Listen and
+# Concentration its page promises? Read by
+# tools/check_staff_goblin_queen_penalties.sh (bd inc-e7wp).
+#
+# WHY A GOBLINOID MAGE 3. The entity's EV_MAGIC_HIT handler (lib/m_items.irh)
+# returns DONE, swallowing every grant of the whole effect, unless the wielder
+# has caster level 3 (ItemPrereq CLEV_VAL) AND is a goblinoid (MTYPE_VAL +
+# MA_GOBLINOID). chargen-mage.keys builds an orc mage, and the check proves the
+# door opened by the STAFF_SPELLS stati, so a wielder the staff ignores reads
+# INCONCLUSIVE, never "no penalty". Levels are gained as in
+# staff-winter-grants.keys.
+#
+# THE ORACLE is read twice, before and after the staff: the sheet's Skill
+# Ratings block and wizard mode's "Examine Player Data" stati dump.
+
+@include chargen-mage.keys
+
+ESC     # dismiss the arrival-room description; now in play
+w       # wizard mode
+y       # "Enter wizard mode?" -- yes
+w       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d       # character sheet
+G
+@while "Learn Spells: Level" ESC
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+G
+@while "Learn Spells: Level" ESC
+@while "Choose a bonus metamagic" a
+@while "Choose a feat" a
+@expect "Mage 3"
+@dump:mage3
+ESC
+
+# --- the reading before the staff ---
+@until "Skill Ratings" d
+@dump:sheet-before
+PGDN*15
+@dump:sheet-before-p2
+PGDN*15
+@dump:sheet-before-p3
+PGDN*15
+@dump:sheet-before-p4
+PGDN*15
+@dump:sheet-before-p5
+ESC
+w
+@choose "Examine Player Data"
+@until "Stati (" DOWN
+@dump:stati-before-1
+DOWN*12
+@dump:stati-before-2
+DOWN*12
+@dump:stati-before-3
+DOWN*12
+@dump:stati-before-4
+ESC
+
+# --- take a Staff of the Goblin Queen and put it in the weapon hand ---
+#   RIGHT*3      walks the acquisition's glyph row to Staves (ItemGlyphs,
+#                src/Tables.cpp:320-323).
+#   @until       the candidate list has no menu letters, so the cursor is
+#     "Staff of  walked. Three rows show and the MIDDLE one is selected, so
+#     Exorcism"  the run stops on the pass where the row BELOW the wanted one
+#     DOWN       appears. Exorcism is the entity after the Goblin Queen in
+#                lib/m_items.irh; the check reads the name back anyway.
+#   ENTER 0      this staff has no inherent plus, so the acquisition asks for
+#                no item level (src/Debug.cpp:610). The pick-up leaves the
+#                staff in the in-air slot.
+#   b SPACE      'b' is the Weapon Hand slot; SPACE swaps the staff into it
+#                and pushes the mage's starting knife into the air.
+#   s            stows the knife (src/Managers.cpp:873-886); the manager will
+#                not close while anything is held in the air.
+w
+@choose "Item Acquisition"
+RIGHT*3
+@until "Staff of Exorcism" DOWN
+ENTER
+0
+@dump:staff-selected
+b
+SPACE
+s
+@dump:staff-wielded
+ESC
+
+# --- the same reading with the staff in hand ---
+@until "Skill Ratings" d
+@dump:sheet-after
+PGDN*15
+@dump:sheet-after-p2
+PGDN*15
+@dump:sheet-after-p3
+PGDN*15
+@dump:sheet-after-p4
+PGDN*15
+@dump:sheet-after-p5
+ESC
+w
+@choose "Examine Player Data"
+@until "Stati (" DOWN
+@dump:stati-after-1
+DOWN*12
+@dump:stati-after-2
+DOWN*12
+@dump:stati-after-3
+DOWN*12
+@dump:stati-after-4
+ESC
