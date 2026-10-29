@@ -1642,6 +1642,7 @@ Terrain "Summoning Circle"
  ************************************************************************/
 
 #define WATER_COMBAT                                                     \
+    On Event MSG_DEFNOTE "Water: +8 vs. attackers outside the water, unless you are flying." / "8"; \
     On Event EVICTIM(EV_DAMAGE) {                                        \
       if ((!EVictim->isAerial()) && (!EVictim->HasStati(ON_BRIDGE))) {   \
         if (e.AType == A_HURL) {                                         \

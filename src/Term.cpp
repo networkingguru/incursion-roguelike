@@ -622,12 +622,35 @@ void TextTerm::ShowTraits() {
       ;  // do nothing, don't display this
     else 
       Write(Format("Enc:%s\r",EncumbranceNames[p->Encumbrance()]));
-    if (p->StateFlags & MS_CASTING)
-      Write(Format("Def:%d (cast)\r",p->KAttr[A_CDEF]));
-    else if (p->KAttr[A_COV])
-      Write(Format("Def:%d Cov:%d\r",p->KAttr[A_DEF],p->KAttr[A_COV]));
-    else
-      Write(Format("Def:%d\r",p->KAttr[A_DEF]));
+    {
+      /* inc-7v2i: Def:N stays the stored value. A suffix shows the per-strike
+         bonuses the stored value leaves out: +F is the sum of the constant
+         ones, * marks one that depends on the attacker. The 15-column
+         sidebar cannot always hold the whole line, so the tail goes to a
+         second line when it would overflow. */
+      DefNote dn[MAX_DEFNOTES];
+      int nd = DefenseNotes(p, dn, MAX_DEFNOTES);
+      int32 flat = 0; bool var = false;
+      for (int i = 0; i < nd; i++) {
+        flat += dn[i].Val;
+        if (dn[i].Variable) var = true;
+      }
+      String head, tail;
+      bool casting = (p->StateFlags & MS_CASTING) != 0;
+      head = Format("Def:%d", casting ? p->KAttr[A_CDEF] : p->KAttr[A_DEF]);
+      if (flat) head += Format("%+d", (int)flat);
+      if (var) head += "*";
+      if (casting)
+        tail = "(cast)";
+      else if (p->KAttr[A_COV])
+        tail = Format("Cov:%d", p->KAttr[A_COV]);
+      if (!tail.GetLength())
+        Write(Format("%s\r", (const char*)head));
+      else if (head.GetLength() + 1 + tail.GetLength() <= WinSizeX())
+        Write(Format("%s %s\r", (const char*)head, (const char*)tail));
+      else
+        Write(Format("%s\r    %s\r", (const char*)head, (const char*)tail));
+    }
     
     Write(Format("Arm:%c%2d Slash\r    %2d Pierce\r    %2d Blunt%c\r", (p->InSlot(SL_ARMOUR) 
         && p->WepSkill(p->InSlot(SL_ARMOUR)) == WS_NOT_PROF) ? -RED : -GREY,

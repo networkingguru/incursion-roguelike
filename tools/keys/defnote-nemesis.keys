@@ -1,0 +1,44 @@
+# inc-7v2i: cast Nemesis Spell on a summoned goblin, then read the sidebar, the
+# character sheet and the goblin's attack line.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav \
+#       tools/headless.sh tools/keys/defnote-nemesis.keys 4
+#
+# Read by tools/check_defnote.sh. "Learn Any Spell" (src/Debug.cpp case 17)
+# gives the spell the fixture mage does not know; "Monster Summoning" puts a
+# goblin next to him, as tools/keys/defnote-shield-hit.keys does. The cast
+# takes the adjacent goblin as its only target.
+
+@dump:arrival
+
+w
+y
+@choose "Learn Any Spell"
+"Nemesis Spell"
+ENTER
+
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+@until "HP:" ESC
+
+m
+@choose "Nemesis Spell"
+@dump:after
+
+d
+@expect "Defense Class"
+@dump:sheet
+ESC
+
+RIGHT
+@dump:step1
+RIGHT
+@dump:step2
+RIGHT
+@dump:step3
+RIGHT
+@dump:step4

@@ -14,6 +14,49 @@
 
 #include "Incursion.h"
 
+/* inc-7v2i: collect every defense bonus the player has that lives in a
+   per-strike script. Sources: a stati whose effect declares MSG_DEFNOTE (a
+   worn item's quality grants such a stati while worn), and the terrain under
+   the player. Used by the sidebar and the sheet, so they cannot disagree. */
+int DefenseNotes(Player *p, DefNote *out, int max)
+  {
+    int n = 0;
+    rID seen[MAX_DEFNOTES * 4]; int nseen = 0;
+    if (!p) return 0;
+
+    StatiIter(p)
+      if (!S->eID || n >= max || nseen >= MAX_DEFNOTES * 4) continue;
+      if (RES(S->eID)->Type != T_TEFFECT) continue;
+      bool dup = false;
+      for (int j = 0; j < nseen; j++)
+        if (seen[j] == S->eID) dup = true;
+      if (dup) continue;
+      String *sp = RES(S->eID)->GetMessages(MSG_DEFNOTE);
+      if (!sp[0].GetLength()) continue;
+      seen[nseen++] = S->eID;
+      out[n].Line = sp[0];
+      out[n].Variable = (sp[1].GetLength() && ((const char*)sp[1])[0] == '*');
+      out[n].Val = out[n].Variable ? 0 : (int16)atoi((const char*)sp[1]);
+      out[n].Line = out[n].Line.Replace("<N>", Format("%d", (int)p->GetEffStatiVal(TRAP_EVENT, S->eID)));
+      n++;
+    StatiIterEnd(p)
+
+    if (p->m && n < max && p->m->InBounds(p->x, p->y) &&
+        !p->isAerial() && !p->HasStati(ON_BRIDGE)) {
+      rID tID = p->m->TerrainAt(p->x, p->y);
+      if (tID) {
+        String *sp = RES(tID)->GetMessages(MSG_DEFNOTE);
+        if (sp[0].GetLength()) {
+          out[n].Line = sp[0];
+          out[n].Variable = (sp[1].GetLength() && ((const char*)sp[1])[0] == '*');
+          out[n].Val = out[n].Variable ? 0 : (int16)atoi((const char*)sp[1]);
+          n++;
+        }
+      }
+    }
+    return n;
+  }
+
 void TextTerm::CreateCharSheet(CharSheet &cs)
 {
   int16 i, j, k, first; String str, str2; String skname;
@@ -215,6 +258,29 @@ void TextTerm::CreateCharSheet(CharSheet &cs)
                   -GREY, (const char*) p->BonusBreakdown(A_DEF));
   if (p->CasterLev())
     cs.sDefense += Format("_______________(%d while casting)\n",p->KAttr[A_CDEF]);
+  {
+    /* inc-7v2i: one sheet line per active per-strike bonus. The text is wrapped
+       by hand so each continuation line keeps the indent. */
+    DefNote dn[MAX_DEFNOTES];
+    int nd = DefenseNotes(p, dn, MAX_DEFNOTES);
+    for (int i = 0; i < nd; i++) {
+      String rest = dn[i].Line;
+      while (rest.GetLength()) {
+        const char *rp = (const char*)rest;
+        int32 cut = rest.GetLength();
+        if (cut > 62) {
+          cut = 62;
+          while (cut > 0 && rp[cut] != ' ') cut--;
+          if (!cut) cut = 62;
+        }
+        String piece = rest.Left(cut);
+        cs.sDefense += Format("_______________%s\n", (const char*)piece);
+        int32 skip = cut;
+        while (skip < rest.GetLength() && rp[skip] == ' ') skip++;
+        rest = rest.Right(rest.GetLength() - skip);
+      }
+    }
+  }
 
   cs.sCoverage = Format("%cCoverage       %c%-3d %c%c%s\n",
                   -YELLOW, -MAGENTA, p->KAttr[A_COV], WRAP_INDENT,

@@ -4715,6 +4715,7 @@ Priest Spell "Dispel Evil" : EA_INFLICT
       ends with it.";
     Purpose: EP_BUFF; Flags: EF_GOOD, EF_DROUND;
     xval: TRAP_EVENT; yval: EVICTIM(EV_STRIKE);
+    On Event MSG_DEFNOTE "Dispel Evil: +4 vs. evil attackers, +6 vs. creatures evil by nature. This bonus does not stack with a deflection bonus." / "*";
     On Event META(EVICTIM(EV_STRIKE)) 
       {
         int16 bonus, curr;
