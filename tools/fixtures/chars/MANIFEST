@@ -76,3 +76,4 @@ spook-ally-seed5-opt0822               tools/keys/spook-ally-save.keys          
 spook-mount-seed5-opt0822              tools/keys/spook-mount-save.keys           5           tools/fixtures/options-2026-08-22.dat
 underdark-deepgnome-seed3-opt0818      tools/keys/underdark-deepgnome-save.keys   3           tools/fixtures/options-2026-08-18.dat
 xsummon-priest-seed5-opt0822           tools/keys/xsummon-priest-save.keys        5           tools/fixtures/options-2026-08-22.dat
+gnome-warrior-wis3-pickaxe-seed1-opt0822 tools/keys/gnome-warrior-pickaxe-save.keys 1           tools/fixtures/options-2026-08-22.dat

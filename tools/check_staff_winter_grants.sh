@@ -23,16 +23,19 @@
 #      block prints an item's share as ", +N magic" (src/Sheet.cpp:949-950)
 #      and its Charisma line the same way (src/Sheet.cpp:93-101).
 #
-# WHY THE SHEET IS NOT ASKED ABOUT APPRAISE. Creature::SkillLevel collects an
-# item's skill bonus with s_item = max(s_item,S->Mag) from a zero start
-# (src/Create.cpp:4091 and :4268), so a NEGATIVE item bonus loses to the zero
-# and never reaches the total. The -6 is on the character -- the stati dump
-# shows it -- and the engine then drops it on the way to the number. That is
-# an engine defect of its own, older than this fix and shared with the Staff
-# of the Goblin Queen, whose page promises three -4 penalties by the same
-# means (lib/m_items.irh:3278-3282). It is tracked as inc-e7wp. This check
-# therefore holds the sheet to the two bonuses the engine can carry and holds
-# the stati dump to all three.
+# THE SHEET IS ASKED ABOUT APPRAISE TOO. Creature::SkillLevel once collected a
+# skill bonus per source with max(bucket,S->Mag) from a zero start
+# (src/Create.cpp), so a NEGATIVE item bonus lost to the zero and never reached
+# the total: the stati dump showed the -6, the sheet ignored it. That defect
+# (inc-e7wp, shared with the Staff of the Goblin Queen) is fixed: negative
+# grants in a bucket now add. The sheet's Appraise total with the staff in hand
+# MUST be 6 lower than without it.
+#
+# Facts this check reads:
+# fact: character -- fixture tools/keys/chargen-mage.keys plus INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat; asserts only a DIFFERENCE between two reads of one session
+# fact: Appraise total before/after -- both read in the one session; only their difference (-6) is asserted
+# fact: staff plus (+2) -- set by the key script's acquisition prompt, not by the seed
+# fact: Staff of Winter row in the acquisition list -- the key script walks to it by name and the check reads the name back from the Weapon Hand
 #
 # THE GATE. The entity refuses everything to a wielder below caster level
 # three -- its EV_MAGIC_HIT handler returns DONE, which swallows the event
@@ -148,6 +151,20 @@ sheet_says() { # <regex> <what the page promises>
         rc=1
     }
 }
+total_of() { # <skill> <file> -> the signed total on that skill's sheet row
+    awk -v k="$1" '$1 == k {print $2; exit}' "$2"
+}
+a_before="$(total_of Appraise "$before")"
+a_after="$(total_of Appraise "$after")"
+if [ -z "$a_before" ] || [ -z "$a_after" ]; then
+    echo "INCONCLUSIVE: no Appraise row on the sheet (before='$a_before' after='$a_after')."
+    exit 2
+fi
+if [ "$((a_after - a_before))" != -6 ]; then
+    echo "FAIL: Appraise on the sheet moved by $((a_after - a_before)) with the staff in hand; the page promises -6."
+    echo "      before: $a_before   after: $a_after"
+    rc=1
+fi
 sheet_says '^ *Intimidate +\+8 .*\+4 magic' \
     "Intimidate at +8 with +4 magic from the staff"
 sheet_says 'CHA: 16/00 .*\+2 magic' \
@@ -156,6 +173,7 @@ sheet_says 'CHA: 16/00 .*\+2 magic' \
 if [ "$rc" = 0 ]; then
     echo "  ok: the Staff of Winter grants +2 Charisma, +4 Intimidate and -6"
     echo "      Appraise, as its page says."
+    echo "      Appraise: $a_before before, $a_after after"
     echo "      before: $(grep -E '^ *Intimidate' "$before" | tr -s ' ')"
     echo "      after:  $(grep -E '^ *Intimidate' "$after"  | tr -s ' ')"
     echo "      before: $(grep -oE 'CHA: [0-9]+/[0-9]+ .*' "$before" | tr -s ' ')"

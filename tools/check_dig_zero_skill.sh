@@ -12,11 +12,11 @@
 # immune material with -1, not with a large number, so -1 > 0 is false and an
 # untrained digger goes straight through.
 #
-# THE CHARACTER. tools/keys/dig-zero-skill.keys builds a gnome warrior with
-# Wisdom 3 and a plain pickaxe. Every term of his Mining rating is known and
-# they sum to exactly zero -- training +2, skill kit +2, attribute modifier -4,
-# racial bonus 0 (the gnome template is the one Mining race that has none).
-# Its header explains each term.
+# THE CHARACTER is a frozen fixture (bd inc-inr80), a gnome warrior with Wisdom 3
+# and a plain pickaxe in the weapon hand. Every term of his Mining rating is
+# known and they sum to exactly zero -- training +2, skill kit +2, attribute
+# modifier -4, racial bonus 0. tools/keys/gnome-warrior-pickaxe-save.keys
+# builds him and explains each term.
 #
 # THE ORACLE is the message Creature::Dig prints when the dig finishes:
 # "Done. (<Num>~ structural integrity remaining.)", which is
@@ -50,7 +50,13 @@
 #   ... which on the unguarded source aborts the run with
 #   "src/Skills.cpp:NNNN: runtime error: division by zero".
 #
-# Usage: tools/check_dig_zero_skill.sh      (exits 0 on pass, 1 on fail)
+# fact: character, kit, pickaxe in the weapon hand -- fixture gnome-warrior-wis3-pickaxe-seed1-opt0822
+# fact: Mining rating 0 (the divisor) -- fixture; its sheet reads "Mining +0 (0 ranks, -4 WIS, +2 train, +2 kit)"
+# fact: dig target is square (0,0), Indestructable Rock -- Player::YuseMenu leaves e.EXVal/e.EYVal at 0; the fixture pins the dungeon
+# fact: the result message -- deterministic arithmetic, max(0, 100 - PercentSI), no roll
+# fact: settings -- INCURSION_OPTIONS tools/fixtures/options-2026-08-22.dat
+#
+# Usage: tools/check_dig_zero_skill.sh      (exits 0 pass, 1 fail, 2 inconclusive)
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -58,23 +64,25 @@ cd "$ROOT"
 
 KEYS=tools/keys/dig-zero-skill.keys
 SEED=1
+OPTIONS=tools/fixtures/options-2026-08-22.dat
+FIXTURE=tools/fixtures/chars/gnome-warrior-wis3-pickaxe-seed1-opt0822.sav
 
 [ -x ./incursion-headless ] || {
-    echo "FAIL: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
-    exit 1
+    echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
+    exit 2
 }
 
-# Pinned settings, not the live Options.Dat. Character generation reads the
-# power-stats option, and this script types a point-buy total that only balances
-# at the pinned value.
-OUT="$(INCURSION_OPTIONS=tools/gates/Options.Dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
+# FIXTURE may be overridden only to prove the INCONCLUSIVE path.
+FIXTURE="${DIG_ZERO_FIXTURE:-$FIXTURE}"
+
+OUT="$(INCURSION_OPTIONS=$OPTIONS INCURSION_LOAD=$FIXTURE tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"
 
 # A session that measured nothing must never read as a pass -- inc-loa.3.
 if echo "$OUT" | grep -q "NO GAMEPLAY"; then
-    echo "FAIL: the run never entered a map, so it measured nothing"
+    echo "INCONCLUSIVE: the run never entered a map, so it measured nothing"
     echo "$OUT" | sed 's/^/      /'
-    exit 1
+    exit 2
 fi
 
 WIELDED="$RUN/logs/screens/0001-wielded.txt"
@@ -82,30 +90,29 @@ RESULT="$RUN/logs/screens/0002-digresult.txt"
 
 for f in "$WIELDED" "$RESULT"; do
     if [ ! -f "$f" ]; then
-        echo "FAIL: expected screen dump missing: $f"
-        exit 1
+        echo "INCONCLUSIVE: expected screen dump missing: $f"
+        exit 2
     fi
 done
 
 # The character must really be holding the pickaxe, or Dig aborts at its first
-# gate and the run proves nothing. Its own abort message would then be the only
-# thing on screen, and this check would still see no "structural integrity".
+# gate and the run proves nothing.
 if ! grep -q "Weapon Hand *:pickaxe" "$WIELDED"; then
-    echo "FAIL: the pickaxe is not in the weapon hand, so Dig never got past"
+    echo "INCONCLUSIVE: the pickaxe is not in the weapon hand, so Dig never got past"
     echo "      its 'You need to wield a digging implement first' gate."
     echo "      dump: $WIELDED"
-    exit 1
+    exit 2
 fi
 
 # The message wraps across two screen rows, so match only as far as the word
 # the number is attached to. The engine writes '~' and the terminal draws '%'.
 LINE="$(tr -s ' ' < "$RESULT" | grep -o "([0-9]*% structural" | head -1)"
 if [ -z "$LINE" ]; then
-    echo "FAIL: the dig never completed -- no 'structural integrity remaining'"
+    echo "INCONCLUSIVE: the dig never completed -- no 'structural integrity remaining'"
     echo "      message on the last screen. Either an earlier gate aborted it or"
     echo "      the key script no longer reaches the verb menu."
     echo "      dump: $RESULT"
-    exit 1
+    exit 2
 fi
 
 SI="$(echo "$LINE" | grep -o "[0-9]*" | head -1)"
