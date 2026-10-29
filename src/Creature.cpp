@@ -4047,6 +4047,11 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
   }
 
   Bonus = SaveBonus(type, Subtype, cmod, show ? &bStr : NULL);
+  /* inc-67gh: record the real theft save die; checks never assert its value. */
+  if (getenv("INCURSION_SWARM_THEFT_PROBE") && (Subtype & SA_THEFT))
+    fprintf(stderr, "SWARM_THEFT save turn=%lu victim=%u roll=%d bonus=%d total=%d\n",
+        (unsigned long)theGame->Turn, (unsigned)myHandle, roll, Bonus, roll + Bonus);
+
   if (cmod)
     bStr += Format(" %s", cmod_desc);
 

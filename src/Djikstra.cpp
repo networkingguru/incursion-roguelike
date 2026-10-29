@@ -110,12 +110,10 @@ bool Map::PQPopMin()
 
 
 #ifdef PATH_PROBE
-/* Sizing the gap inc-gst2. Counts what one pathfinding call actually does,
-   so the pre-check and the early stop can be argued from numbers. Not compiled
-   by default. */
-unsigned long long PP_Calls=0, PP_RunOver=0, PP_Pops=0,
-                   PP_TgtHit=0, PP_TgtUnreach=0, PP_Prechk=0;
-void PP_Report(void);
+int PP_Purpose = 63;
+unsigned long long PP_RecDrops, PP_RecOK, PP_RecentHits;
+unsigned long long PP_ReuseHit, PP_ReuseMiss[6], PP_ReuseDrop;
+#include "PathCostProbe.h"
 #endif
 
 /* THE MONSTER-CONSIDER CACHE. See inc-2k3.
@@ -143,9 +141,94 @@ static int      MCCacheN  = 0;
 static rID      MCCacheID[MC_CACHE_MAX];
 static EvReturn MCCacheVal[MC_CACHE_MAX];
 
+#ifdef ASTAR_SELFCHECK
+#include "AStarSelfCheck.h"
+#endif
+
+/* A* heuristic: octile distance at the cheapest step costs (orthogonal 2,
+   diagonal 3). Never overestimates and is consistent. ASTAR_OVERESTIMATE is a
+   deliberately inadmissible variant, used only to prove the self-check can
+   fail. */
+static inline int AStarH(int x, int y, int tx, int ty)
+  {
+    int dx = x > tx ? x - tx : tx - x, dy = y > ty ? y - ty : ty - y;
+    int h = 2 * (dx > dy ? dx : dy) + (dx > dy ? dy : dx);
+#ifdef ASTAR_OVERESTIMATE
+    h *= 4;
+#endif
+    return h;
+  }
+
+
+/* inc-vhkei: wall-connected areas. WallLabel[x][y] numbers each 8-connected
+   component of squares a !Incor, !Meld runner can enter (InBounds, not (0,0),
+   not SolidAt); solid squares get 0. */
+static uint16 WallLabel[256][256];
+static uint32 WallLabelMap = 0;
+static uint32 WallLabelTurn = 0;
+static bool   WallLabelValid = false;
+#ifdef LABEL_SELFCHECK
+static unsigned long LS_Refusals, LS_Mismatch;
+static void LS_Report()
+  {
+    fprintf(stderr, "LABEL_SELFCHECK refusals=%lu mismatches=%lu\n",
+            LS_Refusals, LS_Mismatch);
+    fflush(stderr);
+  }
+#endif
+
+static void BuildWallLabels(Map *m, int16 sizeX, int16 sizeY)
+  {
+#ifdef PATH_PROBE
+    double ppT0 = PP_Now();
+#endif
+    static uint32 Queue[65536];
+    int lx = min((int16)256, sizeX), ly = min((int16)256, sizeY);
+    int x, y, k;
+    uint16 next = 0;
+    for (x = 0; x != 256; x++)
+      for (y = 0; y != 256; y++)
+        WallLabel[x][y] = 0;
+    for (x = 0; x != lx; x++)
+      for (y = 0; y != ly; y++)
+        {
+          if (WallLabel[x][y] || (x == 0 && y == 0) || m->SolidAt(x,y))
+            continue;
+          next++;
+          int qh = 0, qt = 0;
+          WallLabel[x][y] = next;
+          Queue[qt++] = x + y*256;
+          while (qh != qt)
+            {
+              int cx = Queue[qh] % 256, cy = Queue[qh] / 256;
+              qh++;
+              for (k = 0; k != 8; k++)
+                {
+#ifdef LABEL_BREAK
+                  if (DirX[k] && DirY[k]) continue;
+#endif
+                  int nx = cx + DirX[k], ny = cy + DirY[k];
+                  if (nx < 0 || ny < 0 || nx >= lx || ny >= ly) continue;
+                  if (nx == 0 && ny == 0) continue;
+                  if (WallLabel[nx][ny] || !m->InBounds(nx,ny)) continue;
+                  if (m->SolidAt(nx,ny)) continue;
+                  WallLabel[nx][ny] = next;
+                  Queue[qt++] = nx + ny*256;
+                }
+            }
+        }
+    WallLabelMap = m->myHandle;
+    WallLabelTurn = theGame->Turn;
+    WallLabelValid = true;
+#ifdef PATH_PROBE
+    PP_LabelRebuilds++;
+    PP_LabelSecs += PP_Now() - ppT0;
+#endif
+  }
+
 bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
                        Creature *runner, int32 dangerFactor,
-                       uint16 *ThePath, int32 *outCost)
+                       uint16 *ThePath, int32 *outCost, bool memonly)
   {
     int32 xy, i, c; int16 x, y, nx, ny;
     static int16 Dist[256][256];
@@ -155,8 +238,7 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
       ThePath = ::ThePath;
 
 #ifdef PATH_PROBE
-    { if (!PP_Calls) { extern int atexit(void (*)(void)); atexit(PP_Report); }
-      PP_Calls++; }
+    PP_Call ppCall;
 #endif
     ASSERT(InBounds(sx,sy))
     ASSERT(InBounds(tx,ty))
@@ -172,21 +254,59 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
     bool Meld = 
       runner->HasAbility(CA_EARTHMELD);
 
-    /* Pre-check: a search enters a square only when RunOver(nx,ny,true,...)
+    /* Pre-check: a search enters a square only when RunOver(nx,ny,memonly,...)
        returns non-zero with exactly these arguments, so if the target itself
        fails RunOver it can never be entered. Unless start==target, the search
        then cannot succeed and would flood the region before returning false.
        Same answer as the full search, reached without the flood. */
     if ((sx != tx || sy != ty) &&
-        RunOver(tx,ty,true,runner,dangerFactor,Incor,Meld,true) == 0)
+        RunOver(tx,ty,memonly,runner,dangerFactor,Incor,Meld,true) == 0)
       {
 #ifdef PATH_PROBE
         PP_Prechk++;
+        { Creature *pc = FCreatureAt(tx,ty);
+          PP_Classify(2, runner, PP_Purpose, 0, !pc ? 0 : pc->isPlayer() ? 2 : 1,
+                      0, 0, 0.0, tx, ty, myHandle); }
 #endif
         MCCacheOn = false;
         return false;
       }
 
+    /* inc-vhkei: refuse only when walls alone separate start and target, on
+       labels built just now (solid squares change as doors open and close,
+       even within one Turn, so a refusal never rests on older labels). A
+       same-area answer is only a hint, so the search runs. Exact for
+       !Incor && !Meld runners. */
+#ifdef LABEL_SELFCHECK
+    bool labelCut = false;
+#endif
+    if (!Incor && !Meld)
+      {
+        if (!WallLabelValid || WallLabelMap != (uint32)myHandle)
+          BuildWallLabels(this,sizeX,sizeY);
+        if (WallLabel[sx][sy] && WallLabel[sx][sy] != WallLabel[tx][ty])
+          {
+            BuildWallLabels(this,sizeX,sizeY);
+            if (WallLabel[sx][sy] && WallLabel[sx][sy] != WallLabel[tx][ty])
+              {
+#ifdef PATH_PROBE
+                PP_LabelCut++;
+#endif
+#ifdef LABEL_SELFCHECK
+                static bool lreg = false;
+                if (!lreg) { lreg = true; atexit(LS_Report); }
+                labelCut = true;
+#else
+                MCCacheOn = false;
+                return false;
+#endif
+              }
+          }
+      }
+
+#ifdef PATH_PROBE
+    ppCall.ResetStart();
+#endif
     /* Only the squares this map has. The arrays are dimensioned for the
        largest map the engine allows and this loop used to clear all of both,
        65,536 cells and 131,072 writes, whatever the level's real size. A
@@ -203,9 +323,12 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
           }
     }
 
+#ifdef PATH_PROBE
+    ppCall.FloodStart();
+#endif
     Dist[sx][sy] = 0;
 
-    PQInsert(sx+sy*256,0);
+    PQInsert(sx+sy*256,AStarH(sx,sy,tx,ty));
 
     while ((xy = PQPeekMin()) != -1)
       {
@@ -216,15 +339,15 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
 
         /* Lazily discard a stale entry: the node was relaxed to a smaller
            distance after this copy was inserted, so this pop is a ghost. */
-        if (PW > Dist[x][y])
+        if (PW > Dist[x][y] + AStarH(x,y,tx,ty))
           continue;
 
 #ifdef PATH_PROBE
         PP_Pops++;
 #endif
 
-        /* Early stop: the queue is ordered by weight, so the first time the
-           target is popped its Dist is final. */
+        /* Early stop: the queue is ordered by Dist + h, and h is consistent,
+           so the first time the target is popped (h = 0) its Dist is final. */
         if (x == (int16)tx && y == (int16)ty)
           {
 #ifdef PATH_PROBE
@@ -245,10 +368,28 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
 #ifdef PATH_PROBE
           PP_RunOver++;
 #endif
-          int baseCost = RunOver(nx&0xFF,ny&0xFF,true,runner,dangerFactor,Incor,Meld,
+          int baseCost = RunOver(nx&0xFF,ny&0xFF,memonly,runner,dangerFactor,Incor,Meld,
                                 (nx == (int16)tx && ny == (int16)ty));
           if (!baseCost)
-            continue;
+            {
+#ifdef PATH_PROBE
+              if (!SolidAt(nx&0xFF,ny&0xFF))
+                {
+                  Door *pd = FDoorAt(nx&0xFF,ny&0xFF); int k = 3;
+                  if (pd && !pd->isPassable())
+                    k = (pd->DoorFlags & DF_SECRET) ? 1 : 0;
+                  else
+                    for (Creature *pa=FCreatureAt(nx&0xFF,ny&0xFF);pa;pa=NCreatureAt(nx&0xFF,ny&0xFF))
+                      if (runner->Perceives(pa) && pa->isHostileTo(runner)) { k = 2; break; }
+                  ppCall.rej[k]++;
+                  { int rr = PP_RefuseReason(this,nx,ny,memonly,runner,dangerFactor,Incor,Meld,
+                                (nx == (int16)tx && ny == (int16)ty));
+                    ppCall.rr[rr]++;
+                    if (rr == PPR_WARN) { int ws = PP_WarnSlot(PP_LastWarn); if (ws >= 0) ppCall.wn[ws]++; } }
+                }
+#endif
+              continue;
+            }
           if (DirX[i] && DirY[i])
             baseCost = (baseCost * 3) / 2;
 
@@ -256,11 +397,84 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
             {
               Dist[nx][ny] = min(30000,Dist[x][y] + baseCost);
               Parent[nx][ny] = x+y*256;
-              PQInsert(nx+ny*256,Dist[nx][ny]);
+              PQInsert(nx+ny*256,Dist[nx][ny] + AStarH(nx,ny,tx,ty));
             }
           }
       }
 
+#ifdef PATH_PROBE
+    ppCall.FloodEnd(xy != -1);
+    { int nbr = 0, reached = (Dist[tx][ty] != 30000);
+      for (i=0;i<8;i++)
+        { int16 ax = tx + DirX[i], ay = ty + DirY[i];
+          if (InBounds(ax,ay) && !(ax == 0 && ay == 0) && Dist[ax][ay] != 30000) nbr = 1; }
+      Creature *pc = FCreatureAt(tx,ty);
+      int strict = RunOver(tx,ty,false,runner,dangerFactor,Incor,Meld,false) != 0;
+      int cls = reached ? 0 : 1;
+      for (i=0;i<4;i++) PP_Rej[cls][i] += ppCall.rej[i];
+      for (i=0;i<PPR_N;i++) PP_RR[cls][i] += ppCall.rr[i];
+      if (cls) { for (i=0;i<64;i++) PP_WN[i].n[cls] += ppCall.wn[i];
+        int best = -1; unsigned long long bn = 0;
+        for (i=0;i<PPR_N;i++) if (ppCall.rr[i] > bn) { bn = ppCall.rr[i]; best = i; }
+        if (best >= 0) PP_Dom[cls][best]++;
+        int wp = (PP_Purpose < 0 || PP_Purpose > 63) ? 63 : PP_Purpose;
+        int open = PP_WallReach(this,sx,sy,tx,ty,Incor,Meld,runner) ? 1 : 0;
+        PP_WallN[wp][open]++; PP_WallT[wp][open] += ppCall.lastT; }
+      PP_Classify(cls, runner, PP_Purpose, strict, !pc ? 0 : pc->isPlayer() ? 2 : 1,
+                  nbr, ppCall.lastPops, ppCall.lastT, tx, ty, myHandle); }
+#endif
+#ifdef ASTAR_SELFCHECK
+    { /* rerun as plain Dijkstra (weight = Dist) and compare to the A* result */
+      static bool reg = false;
+      if (!reg) { reg = true; atexit(AS_Report); }
+      int16 lx = min((int16)256, sizeX), ly = min((int16)256, sizeY);
+      for (int16 ax = 0; ax != lx; ax++)
+        for (int16 ay = 0; ay != ly; ay++) AS_D[ax][ay] = 30000;
+      PQHeapN = 0; PQSeq = 0;
+      AS_D[sx][sy] = 0; PQInsert(sx+sy*256,0);
+      while ((xy = PQPeekMin()) != -1)
+        {
+          int16 pw = PQHeap[0].Weight; PQPopMin();
+          int16 ax = xy % 256, ay = xy / 256;
+          if (pw > AS_D[ax][ay]) continue;
+          if (ax == (int16)tx && ay == (int16)ty) break;
+          for (int k=0;k!=8;k++)
+            {
+              int16 bx = ax + DirX[k], by = ay + DirY[k];
+              if ((bx == 0 && by == 0) || !InBounds(bx,by)) continue;
+              int bc = RunOver(bx&0xFF,by&0xFF,memonly,runner,dangerFactor,Incor,Meld,
+                               (bx == (int16)tx && by == (int16)ty));
+              if (!bc) continue;
+              if (DirX[k] && DirY[k]) bc = (bc * 3) / 2;
+              if (AS_D[ax][ay] + bc < AS_D[bx][by])
+                { AS_D[bx][by] = min(30000,AS_D[ax][ay] + bc);
+                  PQInsert(bx+by*256,AS_D[bx][by]); }
+            }
+        }
+      if (++AS_Calls % 1000 == 0) AS_Report(); /* a timed-out run never reaches atexit */
+      if (AS_D[tx][ty] != Dist[tx][ty])
+        { AS_Mismatch++;
+          fprintf(stderr, "ASTAR_MISMATCH %d,%d %d,%d astar=%d dijkstra=%d\n",
+                  (int)sx,(int)sy,(int)tx,(int)ty,(int)Dist[tx][ty],(int)AS_D[tx][ty]); }
+      PQHeapN = 0;
+    }
+#endif
+#ifdef LABEL_SELFCHECK
+    if (labelCut)
+      {
+        LS_Refusals++;
+        if (Dist[tx][ty] != 30000)
+          { LS_Mismatch++;
+            { uint16 l1 = WallLabel[sx][sy], l2 = WallLabel[tx][ty]; uint32 t0 = WallLabelTurn;
+              BuildWallLabels(this,sizeX,sizeY);
+              fprintf(stderr, "LABEL_MISMATCH %d,%d %d,%d old=%d/%d@%u now=%d/%d@%u\n",
+                    (int)sx,(int)sy,(int)tx,(int)ty,(int)l1,(int)l2,(unsigned)t0,
+                    (int)WallLabel[sx][sy],(int)WallLabel[tx][ty],(unsigned)theGame->Turn); } }
+        if (LS_Refusals % 1000 == 0) LS_Report();
+        MCCacheOn = false;
+        return false;
+      }
+#endif
     x = tx;
     y = ty;
     c = 0;
@@ -549,15 +763,3 @@ int Map::RunToFailReason(Creature *runner, int16 tx, int16 ty)
     delete [] queue;
     return reason;
   }
-
-#ifdef PATH_PROBE
-#include <stdio.h>
-void PP_Report(void) {
-  if (!PP_Calls) return;
-  fprintf(stderr,
-    "PATHPROBE calls=%llu prechk=%llu runover=%llu pops=%llu"
-    " hit=%llu unreach=%llu\n",
-    PP_Calls, PP_Prechk, PP_RunOver, PP_Pops, PP_TgtHit, PP_TgtUnreach);
-  fflush(stderr);
-}
-#endif
