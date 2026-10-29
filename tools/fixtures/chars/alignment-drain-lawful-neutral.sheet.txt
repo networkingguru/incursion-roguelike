@@ -1,0 +1,208 @@
+=== fixture: alignment-drain-lawful-neutral ===
+
+This file is the audit record for
+  tools/fixtures/chars/alignment-drain-lawful-neutral.sav
+and tools/make_char_fixture.sh writes the whole of it. Do not edit it
+by hand: it would then describe a character the .sav beside it does
+not hold, and that is the one failure tools/check_char_fixture.sh
+exists to catch.
+
+made on          2026-10-28 14:44:48 EDT
+made at commit   0e1c0466
+                 the working tree was dirty, so this fixture may hold changes that commit does not
+seed             1
+settings         tools/fixtures/options-2026-08-22.dat
+key script       tools/keys/alignment-drain-lawneutral-save.keys
+                 copied to tools/fixtures/chars/alignment-drain-lawful-neutral.keys
+saved in game as David.sav
+sha256 .sav      04694de441002ae06edc13de5bca9c131da28d7622971b22e26e344509a799e0
+sha256 module    0e11374e713133fa5429f3b7794ef607c91516418eb57fefac2c4e3cef492a7f
+                 mod/Incursion.Mod is what the save's rID manifest
+                 was written against. A fixture that stops loading
+                 is worth comparing against the module that made it.
+
+regenerate with
+  tools/make_char_fixture.sh alignment-drain-lawful-neutral tools/keys/alignment-drain-lawneutral-save.keys 1 tools/fixtures/options-2026-08-22.dat --force
+Regenerating gives a BYTE-DIFFERENT .sav holding the SAME character:
+a save carries clocks and counters no second run repeats. Judge a
+regeneration by this sheet, never by the size of the diff.
+
+The character below is the engine's own dump. It was taken by LOADING
+the .sav beside this file and saving it again under
+INCURSION_CHAR_PROBE=1 (Game::SaveGame, src/Registry.cpp:1105-1111).
+A few of its lines belong to that reading session and not to the
+character: the torch's remaining turns, the Level Statistics table
+and the Messages at the end all move by the turns
+tools/keys/load-char-sheet.keys spends. Everything above Inventory is the
+character. For the resource ids behind the item names, which are what
+a module change moves, run:
+  tools/dump_save.sh tools/fixtures/chars/alignment-drain-lawful-neutral.sav
+
+=== the character, as the engine writes him ===
+
+                        David Faravis, The Ambitious Conqueror (Wizard Mode) (Explore Mode)
+
+Gender Male
+Race   Human
+Class  Warrior 1
+XP     0
+Next @ 1000
+Align  Lawful Neutral
+
+
+STR: 12/00 [+1/+0] (base 12)
+DEX: 12/00 [+1/+0] (base 12)
+CON: 12/00 [+1/+0] (base 12)
+INT: 15/00 [+2/+2] (base 15)
+WIS: 14/00 [+2/+1] (base 14)
+CHA: 16/00 [+3/+2] (base 16)
+LUC: 15/00 [+2/+2] (base 15)
+Fortitude   +3(Warrior +2, +1 Con)
+Reflex      +1(Warrior +0, +1 Dex)
+Will        +4(Warrior +2, +2 Wis)
+Melee   +toHit +2  (Warrior +1, +1 Str)
+        Damage +1  (base 1d4 / 1d3, +1 Str)
+        Speed  140%(base 100% +5% Warrior) x 135% weapon
+Size           Human-sized:
+  (base human-sized)
+
+Defense Class  17:
+  (base 10, +1 Dex, +7 shield, -1 encumbrance)
+
+Coverage       11:
+  (base 0, +11 armour)
+
+Movement Rate  65%:
+  (base 100%) x 75% armour x 110% skill x 90% shield x 80% encumbrance
+
+Hit Dice Rolls 31:
+   20 + 1d10 (10) + 1 (CON bonus)
+Mana Rolls     18:
+   10 + 1d6 (6) x 1 + 2 (WIS bonus)
+
+Encumbrance    Moderate:
+   (Light 22.0s, Moderate 66.0s, Heavy 133.0s, Extreme 200.0s, Max Press 260.0s)
+
+Special Abilities:
+  Inherent Potential +3
+  Versatility
+  Lore of Arms (20 hits)
+
+Feats:
+  Acrobatic
+  Acute Senses
+  Alertness
+  Armour Proficiency: Light
+  Armour Proficiency: Medium
+  Armour Proficiency: Heavy
+  Larcenous
+  Shield Proficiency
+  Weapon Focus
+
+Resistances and Armour:
+  Slashing Damage 7
+  Piercing Damage 8
+  Blunt Damage 10
+  Lightning 10
+
+Proficiencies Simple Weapons, Short Blades, Long Blades, Axes, Archery, Staves, Impact, Thrown, Polearms, Spears, Lances, Daggers, Flexible, Light Weapons, Flails, Light Armour, Medium Armour, Heavy Armour and arbalest (focused)
+
+Skill Ratings:
+  Appraise         +5  (2 ranks, +1 WIS, +2 train)
+  Athletics        +4  (2 ranks, +2 train)
+  Balance          -9  (0 ranks, -9 armour)
+  Bluff            +6  (2 ranks, +2 CHA, +2 train)
+  Climb            -5  (2 ranks, +2 train, -9 armour)
+  Craft            +2  (0 ranks, +2 train)
+  Diplomacy        +4  (0 ranks, +2 CHA, +2 train)
+  Escape Artist    -9  (0 ranks, -9 armour)
+  Find Weakness    +3  (0 ranks, +1 WIS, +2 train)
+  Healing          +3  (0 ranks, +1 WIS, +2 train)
+  Hide in Shadows  -9  (0 ranks, -9 armour)
+  Intimidate       +4  (0 ranks, +2 CHA, +2 train)
+  Intuition        +3  (0 ranks, +1 WIS, +2 train)
+  Jump             -6  (0 ranks, +3 feat, -9 armour)
+  Listen           +4  (0 ranks, +1 WIS, +3 feat)
+  Lockpicking      +3  (0 ranks, +3 feat)
+  Move Silently    -9  (0 ranks, -9 armour)
+  Pick Pockets     -4  (0 ranks, +2 CHA, +3 feat, -9 armour)
+  Ride             +2  (0 ranks, +2 train)
+  Seneschal        +4  (0 ranks, +2 INT, +2 train)
+  Spot             +6  (0 ranks, +1 WIS, +2 train, +3 feat)
+  Swimming         -18 (0 ranks, -18 armour)
+  Tumble           -6  (0 ranks, +3 feat, -9 armour)
+
+Spiritual State:
+__You are not devoted to a
+____single god.
+__You are perfectly neutral with
+____regard to Good and Evil.
+__You are decisively Lawful.
+
+CharGen Options and Choices:
+__You are in Wizard Mode.
+__Beginner's Kit: OFF
+__Initial Rolling Method: 4d6 + Perks
+__Allow Rerolling: YES
+__Use the Subraces: YES
+__Disallow Wizard Mode: NO
+__Maximum Hit Points: YES
+__Maximum Mana: YES
+__Default Character Gender: MALE
+__Monsters Maximum Hit Points: NO
+__Roll Attributes First: NO
+__Gain Attributes With Levels: YES
+__Allow Rapid Intuition: WEAPONS
+__Monsters Use Djikstra: YES
+__Out-Of-Depth Monsters: YES
+__Transgression Hints: YES
+__Difficulty Level: BASELINE
+__Power Stats: EXTREME
+__Elude Death: SEVEN
+__Disable Complicity Transgressions: YES
+__Natural Weapon Speed: ORIGINAL
+
+
+Inventory:
+  kite shield +1
+  dagger
+  torch (with 2974 turns of light left)
+  uncocked frost arbalest +1
+  peasant garb
+  splint mail +1
+  cracked wand +3 [3d4] (36 charges)
+  3 Oils of Transformation
+  36 crossbow bolts
+  medium backpack
+  290 gold pieces
+  6 food rations
+  3 torches (with 3000 turns of light left)
+
+On The Ground:
+
+Known Spells:
+
+Journal:
+
+12:00 AM, 1st of Suntide: Entry Chamber, 10' (H:31/31 M:18/18 XP:0) 
+  You arrive at 10' in the The Goblin Caves.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:17/21 M:12/12 XP:0) 
+  Starting Perks:
+     Bonus Feat: Larcenous.
+  Starting Item: uncursed cracked wand +3.
+     Resistance: Lightning +10.
+
+Monsters Encountered:
+  Total: 0
+
+Level Statistics:
+
+Lvl | Act | Key | Turns | Secs |  XP | Explored
+----+-----+-----+-------+------+-----+------------------
+1   |    1|   39|      1|     0|    0| 389 / 4833 = 8%
+
+Messages:
+Welcome back to Incursion, David!
+You find nothing of significance.
+Autosave... 

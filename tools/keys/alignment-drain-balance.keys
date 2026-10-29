@@ -1,0 +1,31 @@
+# inc-qaav4: stamp WQ_BALANCE on the weapon the character starts with, take it off and wield it again.
+# Read by tools/check_alignment_drain_edges.sh. Run on a Lawful Neutral fixture (balance is not wrong for him) and a Chaotic Good fixture (it is).
+#
+# No balance weapon can be wished for (no lib/*.irh item carries WQ_BALANCE; the only balance
+# sources are a god's gift weapon and a disabled spell). The wizard command "Add Quality to
+# Weapon" (src/Debug.cpp:722) stamps a quality on the weapon in the Weapon Hand. The inventory
+# manager's SPACE on the Weapon Hand puts the weapon "In the Air"; a second SPACE swaps it back,
+# which is a wield (Character::Wield).
+#
+# Dumps: sheet-0-baseline, stamped, wielded (the message line shows "uneasy" or not), sheet-1-wielded.
+s
+d
+@expect "Align  "
+@dump:sheet-0-baseline
+ESC
+
+w
+@choose "Add Quality to Weapon"
+"WQ_BALANCE"
+ENTER
+@expect "Quality added"
+@dump:stamped
+i
+@until ">>b)Weapon" b
+SPACE
+SPACE
+@dump:wielded
+ESC
+d
+@dump:sheet-1-wielded
+ESC

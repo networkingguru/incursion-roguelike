@@ -1012,7 +1012,8 @@ InventorySwap:
                 p->Swap(CurrSlot);
             InvShowSlots(true);
             changed = false;
-            p->CalcValues();
+            if (!p->isDead())
+                p->CalcValues();
             Update();
             PrePrompt();
             break;

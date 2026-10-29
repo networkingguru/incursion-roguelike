@@ -1,0 +1,31 @@
+# inc-qaav4: wield the unholy Nine Lives Stealer ONCE and ANSWER "y" to Die? on a loaded wrong-alignment (Chaotic Good)
+# character and photograph what follows. Level 1 fixture only: the wield must kill him.
+# Read by tools/check_alignment_drain_death.sh.
+#
+# Dumps: die-prompt (the "Die? [yn]" question), then four more after the answer. The game's Explore Mode
+# asks before it kills; "y" lets the death run.
+s
+d
+@expect "Align  Chaotic Good"
+@dump:sheet-0-baseline
+ESC
+w
+@choose "Genocide Everything"
+w
+@choose "Item Acquisition"
+RIGHT*10
+@until "Nine Lives Stealer" DOWN
+DOWN
+ENTER
+2
+ENTER
+b
+SPACE
+@dump:die-prompt
+@expect "Die? [yn]"
+y
+@dump:after-y-1
+SPACE
+@dump:after-y-2
+ESC
+@dump:after-y-3

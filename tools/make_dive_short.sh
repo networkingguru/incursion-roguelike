@@ -8,7 +8,10 @@
 # so every jump is accepted), wakes every creature with the wizard command added
 # in inc-b0ziu.2, and waits. The "." after each jump clears the jump's message so the
 # next "w" opens the menu; the @while lines answer a fall or death prompt a wait caused. tools/keys/dive-short.keys is the 20-wait file.
-# Each level ends ".*N s .*2": the "s" (search) mirrors dive.keys, which ends every level the same way;
+# Each level ends with N "." waits, one "s", and 2 more "." waits, each key line preceded by
+# @while "You die... Die?" n (inc-b0ziu.5: a @while fires only where it sits, so one before a
+# run of waits missed a death mid-run and the prompt swallowed every later "." and "s").
+# The "s" (search) mirrors dive.keys, which ends every level the same way;
 # without it the session never reaches Creature::Search, ExtendedAction or HaltAction.
 # The "1 w" body of the @until answers a paralysis prompt ("Pray, magic or wait") that a woken creature can raise while the loop runs; "w" alone cannot answer it.
 set -euo pipefail
@@ -43,9 +46,19 @@ for waits in 2 5 10 20; do
             echo '@while "Do you want to stop searching" y'
             echo '@until "Wizard Mode Options" 1 w'
             echo '@choose "Wake Every Creature"'
-            echo ".*$waits s .*2"
+            for ((i = 0; i < waits; i++)); do
+                echo '@while "You die... Die?" n'
+                echo "."
+            done
+            echo '@while "You die... Die?" n'
+            echo "s"
+            for i in 1 2; do
+                echo '@while "You die... Die?" n'
+                echo "."
+            done
         done
         echo
+        echo '@while "You die... Die?" n'
         echo '@while "#------" SPACE'
         echo "@dump:final"
         echo "@quit"

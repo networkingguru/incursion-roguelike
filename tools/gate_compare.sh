@@ -206,6 +206,19 @@ for BASE in "${BASELINES[@]}"; do
         VERDICT=1
     fi
 
+    # inc-b0ziu.7: exit 6 means the key script lost sync, so nothing after
+    # that is gameplay. A desynced session stops exercising the game and must
+    # not read as a quieter one.
+    B_DES="$(awk -F'\t' '$1=="exits" { for (i=2;i<=NF;i++) { split($i,p,"="); if (p[1]==6) print p[2] } }' "$BASE")"
+    B_DES="${B_DES:-0}"
+    N_DES="$(awk '$2+0==6' "$SOAK/exits" | wc -l | tr -d ' ')"
+    if [ "$N_DES" -gt "$B_DES" ]; then
+        echo "  REGRESSION: $N_DES sessions lost script sync (exit 6), baseline had $B_DES."
+        awk '$2+0==6 { print "    seed " $1 " exit " $2 }' "$SOAK/exits"
+        echo
+        VERDICT=1
+    fi
+
     # inc-loa.3: a session whose character died, or got stuck at the
     # OPT_NODEATH "You die... Die? [yn]" prompt, generates no more real
     # gameplay from that point on -- so it undercounts its own error and

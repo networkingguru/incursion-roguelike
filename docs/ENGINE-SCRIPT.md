@@ -118,7 +118,7 @@ No claim here needed a binary run.
    `FIND("mage") && FIND("shocker lizard")`. A user module built per
    `docs/modules.md` fails that test, prints "Forgoing save." (`src/RComp.cpp:230`) and
    produces no `.Mod`, yet `ResourceCompiler` returns success (`src/RComp.cpp:236`).
-2. **A missing `lib/dispatch.h` degrades silently.** `src/VMachine.cpp:195-199`
+2. **A missing `lib/dispatch.h` degrades silently.** `src/VMachine.cpp:198-202`
    defines empty `CallMemberFunc`, `GetMemberVar` and `SetMemberVar` when
    `DISPATCH` is undefined -- no warning, scripts just stop having effects.
 3. **`GenerateDispatch` checks the `fopen` and nothing after it**

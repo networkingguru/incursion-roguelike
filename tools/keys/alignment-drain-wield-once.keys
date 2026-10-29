@@ -1,0 +1,31 @@
+# inc-qaav4: wield the unholy Nine Lives Stealer ONCE on a loaded wrong-alignment (Chaotic Good)
+# character and photograph what follows. Used with the level 1 fixture (the wield must kill him)
+# and the level 2 fixture (he must live at 0 effective XP). Read by tools/check_alignment_drain_edges.sh.
+#
+# Dumps: sheet-0-baseline before the wield; wield-prompt right after it (the message line shows
+# "uneasy", and "You die... Die? [yn]" when the wield kills him); sheet-1-after after it. A dead
+# character cannot open the sheet, so on the level 1 fixture sheet-1-after still shows the prompt.
+s
+d
+@expect "Align  Chaotic Good"
+@dump:sheet-0-baseline
+ESC
+w
+@choose "Genocide Everything"
+w
+@choose "Item Acquisition"
+RIGHT*10
+@until "Nine Lives Stealer" DOWN
+DOWN
+ENTER
+2
+ENTER
+b
+SPACE
+@dump:wield-prompt
+@while "two-handed" n
+s
+ESC
+d
+@dump:sheet-1-after
+ESC

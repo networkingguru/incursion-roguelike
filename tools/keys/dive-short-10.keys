@@ -21,7 +21,32 @@ w y p "2" ENTER
 @while "Do you want to stop searching" y
 @until "Wizard Mode Options" 1 w
 @choose "Wake Every Creature"
-.*10 s .*2
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+s
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
 @while "Press [ENTER] to continue" ENTER
 @while "#------" SPACE
 @while "Pray, magic or wait" 1
@@ -36,7 +61,32 @@ w p "3" ENTER
 @while "Do you want to stop searching" y
 @until "Wizard Mode Options" 1 w
 @choose "Wake Every Creature"
-.*10 s .*2
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+s
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
 @while "Press [ENTER] to continue" ENTER
 @while "#------" SPACE
 @while "Pray, magic or wait" 1
@@ -51,7 +101,32 @@ w p "4" ENTER
 @while "Do you want to stop searching" y
 @until "Wizard Mode Options" 1 w
 @choose "Wake Every Creature"
-.*10 s .*2
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+s
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
 @while "Press [ENTER] to continue" ENTER
 @while "#------" SPACE
 @while "Pray, magic or wait" 1
@@ -66,7 +141,32 @@ w p "5" ENTER
 @while "Do you want to stop searching" y
 @until "Wizard Mode Options" 1 w
 @choose "Wake Every Creature"
-.*10 s .*2
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+s
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
 @while "Press [ENTER] to continue" ENTER
 @while "#------" SPACE
 @while "Pray, magic or wait" 1
@@ -82,7 +182,32 @@ w p "6" ENTER
 @while "Do you want to stop searching" y
 @until "Wizard Mode Options" 1 w
 @choose "Wake Every Creature"
-.*10 s .*2
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+s
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
 @while "Press [ENTER] to continue" ENTER
 @while "#------" SPACE
 @while "Pray, magic or wait" 1
@@ -97,7 +222,32 @@ w p "7" ENTER
 @while "Do you want to stop searching" y
 @until "Wizard Mode Options" 1 w
 @choose "Wake Every Creature"
-.*10 s .*2
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+s
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
 @while "Press [ENTER] to continue" ENTER
 @while "#------" SPACE
 @while "Pray, magic or wait" 1
@@ -112,7 +262,32 @@ w p "8" ENTER
 @while "Do you want to stop searching" y
 @until "Wizard Mode Options" 1 w
 @choose "Wake Every Creature"
-.*10 s .*2
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+s
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
 @while "Press [ENTER] to continue" ENTER
 @while "#------" SPACE
 @while "Pray, magic or wait" 1
@@ -127,7 +302,32 @@ w p "9" ENTER
 @while "Do you want to stop searching" y
 @until "Wizard Mode Options" 1 w
 @choose "Wake Every Creature"
-.*10 s .*2
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+s
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
 @while "Press [ENTER] to continue" ENTER
 @while "#------" SPACE
 @while "Pray, magic or wait" 1
@@ -143,8 +343,34 @@ w p "10" ENTER
 @while "Do you want to stop searching" y
 @until "Wizard Mode Options" 1 w
 @choose "Wake Every Creature"
-.*10 s .*2
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+s
+@while "You die... Die?" n
+.
+@while "You die... Die?" n
+.
 
+@while "You die... Die?" n
 @while "#------" SPACE
 @dump:final
 @quit
