@@ -412,6 +412,9 @@ void LOFClearForcedSave() { LOFForcedSaveOn = false; }
 static int8 LOFForcedSaveThrowRoll = 0;
 void LOFSetForcedSaveThrowRoll(int8 r) { LOFForcedSaveThrowRoll = r; }
 void LOFClearForcedSaveThrowRoll() { LOFForcedSaveThrowRoll = 0; }
+/* inc-67gh: the one neighbor a swarm may steal from in this DoProxAttack call. */
+static hObj gSwarmTheftTarget = 0;
+
 int8 LOFGetForcedSaveThrowRoll()
 {
     static bool done = false;
@@ -3828,6 +3831,9 @@ SkipSoundAttack:
                     // all normal attacks from a swarm are not
                     // proximity attacks
                         (e.EActor->HasMFlag(M_SWARM) && (is_postgrab_attk(ta->AType) || is_standard_attk(ta->AType) || ta->AType == A_ALSO))) {
+                    if (ta->DType == AD_STEA && e.EActor->HasMFlag(M_SWARM) &&
+                        e.ETarget->myHandle != gSwarmTheftTarget)
+                        continue;
                     e.EActor->Reveal(true);
                     EventInfo e2 = e; 
                     e2.Dmg    = ta->u.a.Dmg;
@@ -5101,6 +5107,33 @@ void Creature::DoProxAttack()
   {
     Creature *c; int16 i;
     if (!m || isDead()) return;
+    /* inc-67gh: observe eligible neighbours without drawing dice or changing state. */
+    if (getenv("INCURSION_SWARM_THEFT_PROBE") && HasMFlag(M_SWARM)) {
+      int adjacent = 0;
+      MapIterate(m,c,i)
+        if (c->isCreature() && c != this && c->tmID != tmID && isBeside(c) &&
+            (isHostileTo(c) || c->isHostileTo(this)) && Perceives(c))
+          ++adjacent;
+      fprintf(stderr, "SWARM_THEFT adjacency turn=%lu thief=%u name=[%s] enemies=%d cr=%d summoned=%d player_hp=%d player_dead=%d\n",
+          (unsigned long)theGame->Turn, (unsigned)myHandle, (const char*)Name(0),
+          adjacent, ChallengeRating(), HasStati(SUMMONED),
+          theGame->GetPlayer(0)->cHP, theGame->GetPlayer(0)->isDead());
+    }
+    /* inc-67gh: a swarm's AD_STEA hits one eligible neighbor per call. */
+    hObj savedTheft = gSwarmTheftTarget;
+    gSwarmTheftTarget = 0;
+    if (HasMFlag(M_SWARM)) {
+      int n = 0, pick;
+      MapIterate(m,c,i)
+        if (c->isCreature() && c != this && c->tmID != tmID && isBeside(c) &&
+            (isHostileTo(c) || c->isHostileTo(this)) && Perceives(c))
+          ++n;
+      pick = n ? random(n) : 0;
+      MapIterate(m,c,i)
+        if (c->isCreature() && c != this && c->tmID != tmID && isBeside(c) &&
+            (isHostileTo(c) || c->isHostileTo(this)) && Perceives(c))
+          if (pick-- == 0) { gSwarmTheftTarget = c->myHandle; break; }
+    }
     MapIterate(m,c,i)
       if (c->isCreature())
         if (c != this && c->tmID != tmID)
@@ -5111,6 +5144,7 @@ void Creature::DoProxAttack()
               ThrowVal(EV_SATTACK,A_CPRX,this,c);
             }
           }
+    gSwarmTheftTarget = savedTheft;
   }
 
 EvReturn Creature::HandleNegate(EventInfo &e)
@@ -9394,8 +9428,45 @@ SkipTripSave:
                                         break;
                                     case AD_STEA:
                                         ASSERT(e.EActor);
+                                        /* inc-67gh: a swarm's theft is an opposed roll; ties favor the victim. */
+                                        if (e.EActor->HasMFlag(M_SWARM)) {
+                                            int16 tHit = e.EActor->GetBAB(S_MELEE), tDex = e.EActor->Mod(A_DEX);
+                                            int16 tBonus = tHit + tDex;
+                                            int16 vBab = e.EVictim->GetBAB(S_MELEE);
+                                            int16 vStr = e.EVictim->Mod(A_STR), vDex = e.EVictim->Mod(A_DEX);
+                                            int16 vLev = e.EVictim->isCharacter() ? ((Character*)e.EVictim)->TotalLevel()
+                                                         : e.EVictim->ChallengeRating();
+                                            int16 vHalf = vLev / 2;
+                                            int16 vPick = e.EVictim->HasSkill(SK_PICK_POCKET) ?
+                                                max(0, e.EVictim->SkillLevel(SK_PICK_POCKET) / 3) : 0;
+                                            int16 vTheft = e.EVictim->SumStatiMag(SAVE_BONUS, SN_THEFT);
+                                            int16 vBonus = vBab + max(vStr, vDex) + vHalf + vPick + vTheft;
+                                            int16 tRoll = Dice::Roll(1,20);
+                                            int16 vRoll = Dice::Roll(1,20);
+                                            { int8 fsr = LOFGetForcedSaveThrowRoll(); if (fsr) vRoll = fsr; }
+                                            int16 tTotal = tRoll + tBonus, vTotal = vRoll + vBonus;
+                                            if (getenv("INCURSION_SWARM_THEFT_PROBE"))
+                                                fprintf(stderr, "SWARM_THEFT attempt turn=%lu thief=%u thief_name=[%s] victim=%u victim_name=[%s] swarm=1 player=%d kind=opposed thief_hit=%d thief_dex=%d thief_bonus=%d thief_roll=%d thief_total=%d victim_bab=%d victim_str=%d victim_dex=%d victim_half_level=%d victim_pick=%d victim_theft=%d victim_bonus=%d victim_roll=%d victim_total=%d\n",
+                                                    (unsigned long)theGame->Turn, (unsigned)e.EActor->myHandle,
+                                                    (const char*)e.EActor->Name(0), (unsigned)e.EVictim->myHandle,
+                                                    (const char*)e.EVictim->Name(0), e.EVictim->isPlayer(),
+                                                    tHit, tDex, tBonus, tRoll, tTotal,
+                                                    vBab, vStr, vDex, vHalf, vPick, vTheft, vBonus, vRoll, vTotal);
+                                            e.EVictim->IPrint("Theft: thief 1d20 (<Str1>) <Str2> vs. you 1d20 (<Str3>) <Str4>.",
+                                                (const char*)Format("%d",tRoll), (const char*)Format("%+d = %d",tBonus,tTotal),
+                                                (const char*)Format("%d",vRoll), (const char*)Format("%+d = %d",vBonus,vTotal));
+                                            if (tTotal <= vTotal)
+                                            { e.Resist = true; break; }
+                                        } else {
+                                        if (getenv("INCURSION_SWARM_THEFT_PROBE"))
+                                            fprintf(stderr, "SWARM_THEFT attempt turn=%lu thief=%u thief_name=[%s] victim=%u victim_name=[%s] swarm=0 player=%d kind=save dc=%d\n",
+                                                (unsigned long)theGame->Turn, (unsigned)e.EActor->myHandle,
+                                                (const char*)e.EActor->Name(0), (unsigned)e.EVictim->myHandle,
+                                                (const char*)e.EVictim->Name(0),
+                                                e.EVictim->isPlayer(), e.saveDC);
                                         if (e.EVictim->SavingThrow(REF,e.saveDC,SA_THEFT)) 
                                         { e.Resist = true; break; }
+                                        }
                                         for(c=0,it=e.EVictim->FirstInv();it;it=e.EVictim->NextInv())
                                             if (it != EInSlot(SL_PACK) && it != EInSlot(SL_ARMOUR) && it != EInSlot(SL_WEAPON) &&
                                                 it->GetParent() == e.EVictim && it != EInSlot(SL_BRACERS) && it !=
@@ -9419,6 +9490,11 @@ SkipTripSave:
                                             e.EVictim->IPrint("Your <Obj1> <Str2> stolen!",it,
                                                 it->Quantity > 1 ? "were" : "was");
                                             e.EActor->GainItem(it,false);
+                                            if (getenv("INCURSION_SWARM_THEFT_PROBE"))
+                                                fprintf(stderr, "SWARM_THEFT transfer turn=%lu thief=%u victim=%u player=%d item=%u quantity=%u\n",
+                                                    (unsigned long)theGame->Turn, (unsigned)e.EActor->myHandle,
+                                                    (unsigned)e.EVictim->myHandle, e.EVictim->isPlayer(),
+                                                    (unsigned)it->myHandle, (unsigned)it->Quantity);
                                             e.EActor->StateFlags &= ~MS_INVEN_GOOD;
                                             if (e.EActor->isMonster() && e.EActor->HasMFlag(M_SKIRMISH))
                                                 if (!HasStati(AFRAID) && !random(2))

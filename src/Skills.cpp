@@ -3010,6 +3010,12 @@ EvReturn Creature::PickPocket(EventInfo &e) {
 		IPrint("You snare the <Obj>'s <Obj>!", e.EVictim, it);
 		it->Remove(false);
 		GainItem(it, false);
+        /* inc-67gh: observe real recovery, including the summon/liveness controls. */
+        if (getenv("INCURSION_SWARM_THEFT_PROBE"))
+            fprintf(stderr, "SWARM_THEFT recovery turn=%lu victim=%u item=%u swarm=%d summoned=%d dead=%d success=1\n",
+                (unsigned long)theGame->Turn, (unsigned)e.EVictim->myHandle,
+                (unsigned)it->myHandle, e.EVictim->HasMFlag(M_SWARM),
+                e.EVictim->HasStati(SUMMONED), e.EVictim->isDead());
 	}
 	else
 	{
