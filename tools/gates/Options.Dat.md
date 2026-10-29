@@ -67,25 +67,25 @@ die... Die? [yn]" prompt inc-loa.3 instrumented:
 * `OPT_ELUDE_DEATH` (idx 119): **3** (SEVEN free deaths), unchanged. Not
   named by inc-loa.4's text, but it is the mechanism actually firing the
   prompt here since `OPT_NODEATH` is 0 -- see `if (thisp->Opt(OPT_NODEATH))
-  ... else if (Opt(OPT_ELUDE_DEATH))` at src/Fight.cpp:9439-9455. Left as
+  ... else if (Opt(OPT_ELUDE_DEATH))` at src/Fight.cpp:10051-10067. Left as
   pinned rather than defaulted (game default is 0/NO) because changing it
   changes whether a soak character can die at all, which is exactly the
   decision the boundary reserves for Brian.
 
 ## What this does NOT fix, and why
 
-* **"Invalid depth."** (Debug.cpp:808) -- refused wizard depth-jumps past
+* **"Invalid depth."** (Debug.cpp:810) -- refused wizard depth-jumps past
   `DUN_DEPTH`. Not gated by any option; it is `tools/keys/dive.keys` asking
   for depths the dungeon does not have. inc-loa.2's territory.
-* **"Abort, Flee or Disengage?"** (Move.cpp:970) -- confirmed by reading
+* **"Abort, Flee or Disengage?"** (Move.cpp:971) -- confirmed by reading
   every `Opt(OPT_` check in Move.cpp that no option gates it. Worse than a
-  single eaten keystroke: `ChoicePrompt` (Term.cpp:2839) blocks in its input
-  loop (`:2874`) until the key is one of `a`/`f`/`d`/`?`, or ESC. See
+  single eaten keystroke: `ChoicePrompt` (Term.cpp:2861) blocks in its input
+  loop (`:2887`) until the key is one of `a`/`f`/`d`/`?`, or ESC. See
   inc-loa.5, filed the night this file was written, with the repro.
   **The freeze claim this paragraph carried is no longer safe.** It said the
   session was frozen for the rest of its run because `dive.keys` presses none
   of those keys. `f7ff2d7` (2026-08-28) added arrow-key navigation and made
-  ENTER take the highlighted choice (`src/Term.cpp:2878-2879`), and this call
+  ENTER take the highlighted choice (`src/Term.cpp:2901-2902`), and this call
   passes four choices (`"afd?"`), so ENTER now leaves the prompt -- and
   `dive.keys` presses ENTER 36 times. Whether a session still freezes depends
   on where in the queue the prompt fires, and that has not been re-measured.
