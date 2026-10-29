@@ -433,6 +433,9 @@ Domain "Knowledge" : 0
         $"Eldritch Tongue",
         $"Foresight"; */
     On Event EV_ADVANCE {
+      /* upstream: only priest levels grant the Knowledge point; the shared
+         event logic also advances on Win32. Observed, inc-iwix, not sent. */
+      if (e.eID != $"priest") return NOTHING;
       EActor->GainBonusSkills($"priest",1);
       return NOTHING;
       };
