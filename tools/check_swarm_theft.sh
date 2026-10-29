@@ -5,7 +5,8 @@
 # fact: positive Pick Pockets defense -- skill-by-name-seed1-opt0818 fixture/sheet
 # fact: swarm position and identity -- wizard Monster Summoning after Genocide Everything
 # fact: CR and resolver kind -- INCURSION_SWARM_THEFT_PROBE observes live code
-# fact: eligible adjacent enemies -- probe count; absent two-enemy turn is exit 2
+# fact: eligible adjacent enemies -- probe count; fewer than 3 two-enemy turns is exit 2
+# fact: second enemy stays adjacent -- caryatid column (Mov 0%) summoned beside the swarm; probe count is the control
 # fact: attempts per turn -- invariant for every roll; d20 values never asserted
 # fact: damage/AI cannot invalidate an assertion -- survival/adjacency controls, exit 2
 # fact: bonus components -- independently parsed frozen sheet; no random total asserted

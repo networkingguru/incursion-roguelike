@@ -85,7 +85,8 @@ result('a', 'PASS' if adj and all(r['cr'] == '4' for r in adj) else 'FAIL' if ad
 adj = [r for r in runs['crowd'] if r['event'] == 'adjacency' and int(r['enemies']) >= 2]
 counts = collections.Counter((r['turn'], r['thief']) for r in runs['crowd'] if r['event'] == 'attempt' and r['swarm'] == '1')
 maximum = max((counts[r['turn'], r['thief']] for r in adj), default=0)
-result('b', 'FAIL' if maximum > 1 else 'PASS' if adj and maximum else 'INCONCLUSIVE',
+# Fewer than 3 eligible turns is too thin to show a per-turn cap (inc-67gh).
+result('b', 'FAIL' if maximum > 1 else 'PASS' if len(adj) >= 3 and maximum else 'INCONCLUSIVE',
        f'eligible turns={len(adj)}, maximum attempts={maximum}')
 for name, fixture in [('warrior', 'alignment-drain-warrior'), ('defense', 'skill-by-name-seed1-opt0818')]:
     attempts = [r for r in runs[name] if r['event'] == 'attempt' and r['swarm'] == '1' and r['player'] == '1']
