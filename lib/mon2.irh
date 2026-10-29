@@ -4749,6 +4749,11 @@ Template "giant-rider" : TM_CLASS for MA_GOBLINOID
           ;
   } 
 
+/* upstream: base-code defect, not a port artefact. The paladin, twilight
+   huntsman and shadowdancer templates add an alignment flag without removing
+   the opposite one, so the original game made Good-and-Evil creatures from
+   them on any platform. Observed (tools/check_template_alignment.sh).
+   Tracking inc-j35aw. Not sent. */
 Template "paladin;template" : TM_CLASS for MA_SAPIENT 
   {
     Flags: TMF_POSTSCRIPT;
@@ -4760,7 +4765,7 @@ Template "paladin;template" : TM_CLASS for MA_SAPIENT
 	  ABILITY(CA_AURA_OF_VALOUR,2);
 	  ABILITY(CA_LAY_ON_HANDS,2);
     Immune: DF_DISE, DF_FEAR;
-    Flags: M_LAWFUL, M_GOOD, M_IALIGN, M_CLOSEID, M_RIDER;
+    Flags: M_LAWFUL, M_GOOD, !M_EVIL, !M_CHAOTIC, M_IALIGN, M_CLOSEID, M_RIDER;
     Feats: FT_POWER_ATTACK, FT_MASTER_GREAT_BLOW,
            FT_AP_LIGHT, FT_AP_MEDIUM, FT_AP_HEAVY,
            SK_ATHLETICS, SK_HEALING, SK_RIDE, SK_CONCENT, SK_SPOT;
@@ -5645,7 +5650,7 @@ Template "twilight huntsman;temp" : TM_CLASS for MA_ELF
           SK_SPOT, SK_HEALING, FT_SKILL_FOCUS, SK_ATHLETICS, SK_ANIMAL_EMP,
           SK_HIDE, SK_JUMP, SK_LISTEN, SK_MOVE_SIL, SK_RIDE, SK_SEARCH,
           SK_SWIMMING, SK_WILD_LORE, SK_FIND_WEAKNESS;
-    Flags: M_AVOID_MELEE, TMF_POSTSCRIPT, M_CHAOTIC, M_EVIL, M_RIDER;
+    Flags: M_AVOID_MELEE, TMF_POSTSCRIPT, M_CHAOTIC, M_EVIL, !M_GOOD, !M_LAWFUL, M_RIDER;
     Gear: 33% $"studded leather" of random 2 to 4 with [IQ_ELVEN] else
             50% $"leather armour" of random 2 to 4 with [IQ_ELVEN] else
             $"chainmail shirt" of random 2 to 4 with [IQ_ELVEN] ,
@@ -5710,7 +5715,7 @@ Template "shadowdancer;template" : TM_CLASS for MA_SAPIENT
       SK_SPOT, SK_ATHLETICS, SK_BALANCE, SK_HIDE, SK_JUMP, SK_LISTEN,
       SK_LOCKPICKING, SK_MOVE_SIL, SK_PICK_POCKET, SK_POISON_USE,
       SK_HANDLE_DEV, SK_USE_MAGIC, SK_FIND_WEAKNESS;
-    Flags: M_CHAOTIC, M_EVIL;
+    Flags: M_CHAOTIC, M_EVIL, !M_GOOD, !M_LAWFUL;
     Spells: $"shadow step", $"summon shadows";
     Gear: 25% $"studded leather" of random 2 to 4 else
             33% $"leather armour" of random 2 to 4 else
