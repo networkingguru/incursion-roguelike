@@ -1299,6 +1299,10 @@ int16 MaterialHardness(int8 mat, int8 DType)
     case MAT_IRONWOOD:
       return 10;
     case MAT_IRON:
+    /* upstream: wrought and orcish iron must not reach the -1 immunity
+       sentinel; same switch on Win32, not a port artefact. Observed (bead
+       2026-09-11 combat line) and Traced, inc-dwfc, not sent. */
+    case MAT_WROUGHT:
       return 10;
     case MAT_MITHRIL:
       return 15;
