@@ -15,9 +15,9 @@ History: docs/rules-history/bead-and-commit-hygiene.md#commit-gate-stage-before-
 History: docs/rules-history/bead-and-commit-hygiene.md#commit-means-land-the-bead.
 
 ## wait-on-the-load-guard-before-a-commit
-Before `git commit` and before `tools/finish_bead.sh`, wait until the machine is fit: `until tools/load_guard.sh; do sleep 30; done`, in a background Bash call. `tools/load_guard.sh` refuses (exit 2) while the 1-minute load average is above the CPU count, memory pressure is high, or another `tools/nightly_verify.sh` runs; it never waits on its own. A fast check that fails "TOO SLOW" on an overloaded machine is a timing failure, not a defect: wait on the guard and commit again. NEVER bypass it with `--no-verify` or `INCURSION_LOAD_GUARD_OFF=1`. `tools/load_guard.sh` is the only wait: MUST NOT wait for an idle machine, which never occurs.
-Why: on an overloaded machine a correct timed check fails on time alone, and the pre-commit hook does not call the guard.
-History: new rule, no prior narrative to archive. Bead inc-r80o.
+Before `git commit` and before `tools/finish_bead.sh`, wait until the machine is fit: `until tools/load_guard.sh; do sleep 30; done`, in a background Bash call. `tools/load_guard.sh` refuses (exit 2) only while kernel memory pressure is 2 (warn) or higher; it prints the load average but does not refuse on it, and it never waits on its own. Every gate and fast check run appends its load and elapsed time to `logs/check-timing.tsv` in the shared checkout; read that log before you call a failure load-caused. NEVER bypass it with `--no-verify` or `INCURSION_LOAD_GUARD_OFF=1`. `tools/load_guard.sh` is the only wait: MUST NOT wait for an idle machine, which never occurs.
+Why: memory pressure slows every session at once, while no failure caused by load alone has been measured; the timing log is the evidence any future load limit needs.
+History: docs/rules-history/bead-and-commit-hygiene.md#wait-on-the-load-guard-before-a-commit. Beads inc-r80o, inc-b0ziu.8.
 
 ## beads-blocking-a-commit-fix-the-bead
 A bead blocking your commit: LOOK IT UP AND FIX IT, don't stop/ask/present options. Write missing `## Steps to Reproduce`/`## Acceptance Criteria` from the bead's own description, even if another session filed it. Block only if truly unable to work it out. NEVER `git commit --no-verify`.

@@ -1,14 +1,17 @@
 #!/bin/bash
 #
-# inc-rwha: refuse a landing on an overloaded machine, once, without waiting.
-# The 2026-10-05 load flakes (inc-g9wz, inc-xn7g, inc-fdkz) are why: a
+# inc-rwha: refuse a landing on a machine under memory pressure, once, without
+# waiting. The 2026-10-05 flakes (inc-g9wz, inc-xn7g, inc-fdkz) are why: a
 # landing started while the box was thrashing timed out checks that were
 # correct, then reported a red gate nobody had actually failed.
 #
-# It refuses, printing one line per tripped condition to stderr and exiting
-# 2, when the 1-minute load average is above hw.ncpu, when kernel memory
-# pressure is 2 (warn) or higher, or when another tools/nightly_verify.sh is
-# already running. It exits 0 when the machine is fit. It never waits.
+# inc-b0ziu.8: it refuses, printing one line to stderr and exiting 2, ONLY when
+# kernel memory pressure is 2 (warn) or higher. It exits 0 otherwise. It never
+# waits. The 1-minute load average is measured and printed on a line that is
+# not a refusal; it does not decide the exit. tools/timing_log.sh records
+# load beside each check's elapsed time, so a later load limit has data.
+# It does not look for another running gate: finish_bead.sh serializes
+# landings with a per-base-branch lock.
 set -uo pipefail
 
 # Append one bypass row to the load-guard log. The location defaults to
@@ -63,13 +66,7 @@ else
     ncpu="$(sysctl -n hw.ncpu 2>/dev/null)"
 fi
 
-limit="$(awk -v n="$ncpu" 'BEGIN { printf "%.1f", n }' 2>/dev/null)"
-above="$(awk -v l="$load" -v lim="$limit" 'BEGIN { print (l > lim) ? 1 : 0 }' 2>/dev/null)"
-if [ "${above:-0}" = "1" ]; then
-    printf 'REFUSED (overload): 1-min load average %s is above the limit %s (%s CPUs)\n' \
-        "$load" "$limit" "$ncpu" >&2
-    trip=1
-fi
+printf 'load_guard: 1-min load %s, %s CPUs (not a refusal)\n' "$load" "$ncpu"
 
 if [ -n "${INCURSION_LOAD_GUARD_FAKE_PRESSURE:-}" ]; then
     pressure="$INCURSION_LOAD_GUARD_FAKE_PRESSURE"
@@ -77,49 +74,15 @@ else
     pressure="$(sysctl -n kern.memorystatus_vm_pressure_level 2>/dev/null)"
 fi
 if [ -n "$pressure" ] && [ "$pressure" -ge 2 ] 2>/dev/null; then
-    printf 'REFUSED (overload): kernel memory pressure level %s is 2 (warn) or higher\n' \
+    printf 'REFUSED (memory): kernel memory pressure level %s is 2 (warn) or higher\n' \
         "$pressure" >&2
-    trip=1
-fi
-
-gate_pid=""
-if [ -n "${INCURSION_LOAD_GUARD_FAKE_GATES:-}" ]; then
-    if [ "${INCURSION_LOAD_GUARD_FAKE_GATES}" -ge 1 ] 2>/dev/null; then
-        gate_pid="fake"
-    fi
-else
-    while read -r pid; do
-        [ -n "$pid" ] || continue
-        cmd="$(ps -o command= -p "$pid" 2>/dev/null)"
-        [ -n "$cmd" ] || continue
-        # Match only a shell whose second word is the gate script, so a shell
-        # whose command line merely mentions the pattern text does not count.
-        set -- $cmd
-        first="$1"
-        second="${2:-}"
-        case "$first" in
-            *bash|*sh|*zsh) ;;
-            *) continue ;;
-        esac
-        case "$second" in
-            *nightly_verify.sh)
-                if [ -z "$gate_pid" ] || { [ "$gate_pid" != "fake" ] && [ "$pid" -lt "$gate_pid" ] 2>/dev/null; }; then
-                    gate_pid="$pid"
-                fi
-                ;;
-        esac
-    done < <(pgrep -f 'tools/nightly_verify.sh' 2>/dev/null)
-fi
-if [ -n "$gate_pid" ]; then
-    printf 'REFUSED (overload): another tools/nightly_verify.sh gate is running (pid %s)\n' \
-        "$gate_pid" >&2
     trip=1
 fi
 
 [ "$trip" -eq 0 ] || exit 2
 if [ -z "${pressure:-}" ]; then
-    printf 'load_guard: ok (load %s / %s cpus, pressure unknown)\n' "$load" "$ncpu"
+    printf 'load_guard: ok (pressure unknown)\n'
 else
-    printf 'load_guard: ok (load %s / %s cpus, pressure %s)\n' "$load" "$ncpu" "$pressure"
+    printf 'load_guard: ok (pressure %s)\n' "$pressure"
 fi
 exit 0

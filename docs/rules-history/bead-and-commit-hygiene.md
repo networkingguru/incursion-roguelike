@@ -98,3 +98,23 @@ themselves, where it already lives. Commit only code, tests, tooling and
 documentation that a user of the project would want. If asked to "write notes
 and commit", the commit means the pending *work*, not the notes -- ask if
 unsure. See `bd memories resume-2026-08-14-overnight`.
+
+## wait-on-the-load-guard-before-a-commit
+
+Added under bead inc-r80o. The rule then said tools/load_guard.sh refused while
+the 1-minute load average was above the CPU count, memory pressure was high, or
+another tools/nightly_verify.sh ran. Why line then: "on an overloaded machine a
+correct timed check fails on time alone, and the pre-commit hook does not call
+the guard."
+
+2026-10-29, bead inc-b0ziu.8. Sessions queued behind the guard for hours. About
+311 of about 600 refusals in that day's session transcripts came from the
+another-gate clause, which repeated finish_bead.sh's per-base-branch lock, and
+about 280 from the load clause. Load was above 10 (the CPU count) in 23 of 42
+samples taken 10:35-10:46, while the slowest fast check took 6-7 s at loads
+4-20 against its 15 s limit. Brian: "This shit is all to protect one check,
+right? How about we remove the guard but add a log, so that any failures have
+data about the load and time involved so we can intelligently reenable it",
+then "y" to keeping the memory-pressure refusal. The gate and load refusals
+were removed, and every gate and fast check run now logs its load and time to
+logs/check-timing.tsv.
