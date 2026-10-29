@@ -46,6 +46,7 @@ static bool WhHardness(const char *role, Item *it, int want, bool *inconclusive)
 }
 
 void WroughtHardnessProbe(Player *pl) {
+    /* inc-dwfc: off unless INCURSION_WROUGHT_HARDNESS_PROBE is set. */
     if (!getenv("INCURSION_WROUGHT_HARDNESS_PROBE"))
         return;
     if (!pl || !pl->m) {
