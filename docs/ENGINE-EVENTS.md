@@ -60,7 +60,7 @@ assuming the enclosing context: `src/Fight.cpp:875-882`, `src/Prayer.cpp:589`, `
 ## Re-entrancy
 **The system has no general protection against re-entrancy.** Shared by every nested event: `VMachine::Regs[64]`, `SRegs[64]`,
 `Stack[8192]`, `Memory`, `szMemory` are `static` (`inc/Res.h:66-74`) with one VM instance, `theGame->VM` (`inc/Res.h:1324`);
-`Execute` saves and restores only `Regs[63]` (`src/VMachine.cpp:459`, `:489-497`). `Resource::cAnnot`, `cAnnot2` and `EvMsg[64]`
+`Execute` saves and restores only `Regs[63]` (`src/VMachine.cpp:459`, `:522-530`). `Resource::cAnnot`, `cAnnot2` and `EvMsg[64]`
 are `static` on `Resource` (`inc/Res.h:228-229`) — one annotation cursor for the whole game. The code says so: "Nested
 FAnnot/NAnnot doesn't normally [work]" (`src/Annot.cpp:619-621`); `FAnnot2` is a one-level kludge, and depth 3 has no cursor.
 `Thing::PlaceNear` holds `static Creature* Displace[64]` (`src/Display.cpp:456`) and re-enters itself via `PlaceAt` (`:611`),
@@ -75,7 +75,7 @@ and `lib/mon3.irh:2326`; id moss `lib/mon3.irh:2280` has one too, but `#if 0` at
 or on `POST(EVICTIM(EV_HIT))` (white worm mass `lib/mon3.irh:3362`)
 calls `Multiply` -> `Creature::Multiply` (`src/Creature.cpp:532`) -> `mn->PlaceAt` (`:604`)
 throws `EV_PLACE` (`src/Display.cpp:240`, `:264`) and `EV_FIELDON` (`:330`) -> `Creature::FieldOn` re-throws `EV_EFFECT` for
-`FI_MODIFIER` (`src/Status.cpp:1842`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1560`).
+`FI_MODIFIER` (`src/Status.cpp:1849`) -> `Magic::MagicHit` dispatches `EA_BLAST` back into `Blast` (`src/Magic.cpp:1560`).
 *Invariant violated:* `Creature::FieldOn` sets `EActor` to the field's creator, so the script calls `Multiply` on the same
 generation-0 parent every time, and the generation cap at `src/Creature.cpp:556` can never apply to it. Only `m->BreedCount >= 50`
 (`:560`) survives, far above the 128-frame stack. *Fix:* a nesting cap of 4 on `Multiply` (`:544`); `GENERATION` is now stamped at
@@ -120,7 +120,7 @@ no bound check and `dc` is `uint8`.
 3. `src/Effects.cpp:162` states `e.eID` may be 0 for breath weapons; `:175` then reads `TEFF(e.eID)->Schools` unchecked. Same
 shape at `src/Creature.cpp:886`, `src/Magic.cpp:1520`.
 4. Fixed. `src/Res.cpp:348-353` range-checks the module slot and returns NULL, so `ASSERT` no longer guards the dereference.
-5. `src/VMachine.cpp:529` restores `xID` after `CMEM` because the call may have re-entered `Execute`, but not `mn`, `Memory` or
+5. `src/VMachine.cpp:562` restores `xID` after `CMEM` because the call may have re-entered `Execute`, but not `mn`, `Memory` or
 `szMemory` (`:461-465`), leaving a cross-module outer script on the inner module's data segment.
 6. `src/Annot.cpp:1113` declares `res` as `uint32`; `:1141` casts it to `int8`, so a script returning 256 becomes `NOTHING`.
 7. `inc/Events.h:77-78` (`PEVENT`) and `src/Annot.cpp:1082-1083` assign `e.EXVal` twice, `e.EYVal` never.
