@@ -1,0 +1,21 @@
+# Route-unseen probe, bd inc-vhkei. Read by tools/check_route_unseen.sh.
+#
+#   INCURSION_ROUTE_UNSEEN=<hostile|companion|neutral> \
+#   INCURSION_ROUTE_OPT=<0|1|2> INCURSION_ROUTE_TURNS=30 \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#       tools/headless.sh tools/keys/route-unseen.keys 3
+#
+# [l] [o] opens the overview map, and opening it stages the scene
+# (src/RouteUnseenProbe.cpp): a sealed L corridor with the player at one end and
+# the watched creature at the other, route squares memory-cleared. ESC closes
+# it. The character then waits one turn at a time ('.', Wait One Turn, which
+# always ends); the creature's OWN AI (Monster::Movement -> Monster::SmartDirTo)
+# moves it, and a per-turn hook logs its square and distance.
+.*2
+l o
+ESC
+@dump:scene
+.*40
+@dump:after-wait
+@quit
