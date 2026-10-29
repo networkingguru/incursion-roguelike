@@ -342,6 +342,11 @@ void Game::Play() {
     extern void OwnerDamageProbe(Player *pl);
     OwnerDamageProbe(pp);
 
+    /* inc-dwfc: off unless INCURSION_WROUGHT_HARDNESS_PROBE is set. See
+       WroughtHardnessProbe (src/WroughtHardnessProbe.cpp). */
+    extern void WroughtHardnessProbe(Player *pl);
+    WroughtHardnessProbe(pp);
+
     /* inc-b2wd: off unless INCURSION_SOAK_TORCH_PROBE is set. See
        SoakTorchProbe (src/SoakTorchProbe.cpp). */
     extern void SoakTorchProbe(Player *pl);
