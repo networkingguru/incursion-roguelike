@@ -1,0 +1,28 @@
+# inc-iwix: a Priest/Mage with the Knowledge domain gains a PRIEST level. Read by
+# tools/check_knowledge_domain_sp.sh, which counts the Priest rank pool in the
+# Skill Manager before and after.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/human-priest-mage-seed4-gate.sav \
+#       tools/headless.sh tools/keys/knowledge-sp-priest.keys 4
+#
+# The fixture was saved in wizard mode, so `w` opens the wizard menu directly
+# (no `w y`). Free Advancement lets `G` on the sheet gain the level. The
+# Skill Manager opens on the first class, Priest; ESC y leaves it.
+
+s                       # one real turn: this counts as a session
+w                       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE                   # Free Advancement: NO -> YES
+ESC
+d                       # character sheet
+s                       # Skill Manager, Priest pool
+@dump:before
+ESC y
+G                       # gain a level
+@choose "Priest"
+@until "Priest 2" a      # answer the feat menu, wait for the new class line
+s                       # Skill Manager again
+@dump:after
+ESC y
+@quit
