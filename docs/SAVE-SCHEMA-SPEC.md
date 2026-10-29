@@ -328,7 +328,7 @@ Otherwise step 4 always succeeds for any position the manifest covers, because
 an array can only have grown.
 
 **Sequencing.** Both load paths reload modules only after the save group is read
-(`src/Registry.cpp:1353-1396`, `src/Dump.cpp:324-368`), so `Game::Modules` is
+(`src/Registry.cpp:1372-1415`, `src/Dump.cpp:324-368`), so `Game::Modules` is
 stale or zeroed while records are being replayed. The manifest MUST be parsed
 with the records and the conversion MUST be deferred to `SaveV1_ResolveNames()`,
 which already runs after the reload.
