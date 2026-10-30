@@ -401,6 +401,11 @@ void Game::Play() {
     extern void TemplateAlignmentProbe(Player *pl);
     TemplateAlignmentProbe(pp);
 
+    /* inc-946vn: opt-in KillXP loop scene; see src/KillXPProbe.cpp and
+       tools/check_killxp_loop.sh. */
+    extern void KillXPLoopProbe(Player *pl);
+    KillXPLoopProbe(pp);
+
     /* inc-pp9w: opt-in template chooser/builder pair oracle. */
     extern void TemplatePairProbe(Player *pl);
     TemplatePairProbe(pp);
