@@ -14,11 +14,27 @@ w
 LEFT ENTER
 u
 @choose "Animal Empathy"
-LEFT ENTER
+# Pick the pacify target by name too: LEFT alone takes the nearest creature west,
+# which is not the summoned one if another creature stands nearer.
+@until "A plague of rats" UP
+@until "A plague of rats" RIGHT
+@until "A plague of rats" DOWN
+@until "A plague of rats" LEFT
+@expect "A plague of rats"
+ENTER
 p
 @dump:after-pacify
 .*3
+# Select the monster by name, not by an offset: where a summon lands is not fixed.
+# t = target mode; the first arrow press picks the nearest candidate in that
+# direction, later presses walk the ring. Each @until stops once the look line
+# shows the name; "uninjured" keeps it off the side legend, which lists the name too.
 l
-LEFT
+t
+@until "uninjured plague of rats" UP
+@until "uninjured plague of rats" RIGHT
+@until "uninjured plague of rats" DOWN
+@until "uninjured plague of rats" LEFT
+@expect "uninjured plague of rats"
 @dump:look
 ESC

@@ -13,7 +13,16 @@ w
 @choose "plague of rats"
 LEFT ENTER
 .*3
+# Select the monster by name, not by an offset: where a summon lands is not fixed.
+# t = target mode; the first arrow press picks the nearest candidate in that
+# direction, later presses walk the ring. Each @until stops once the look line
+# shows the name; "uninjured" keeps it off the side legend, which lists the name too.
 l
-LEFT
+t
+@until "uninjured plague of rats" UP
+@until "uninjured plague of rats" RIGHT
+@until "uninjured plague of rats" DOWN
+@until "uninjured plague of rats" LEFT
+@expect "uninjured plague of rats"
 @dump:look
 ESC
