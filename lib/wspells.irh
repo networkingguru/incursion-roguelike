@@ -334,6 +334,7 @@ Wizard Spell "Shield" : EA_INFLICT
       physical attacks that you are aware of, so long as you are
       not being flanked, and rendering you immune to Magic Missiles.
       This bonus persists even during a spellcasting timeout."; 
+    On Event MSG_DEFNOTE "Shield: +5 vs. physical attacks, unless you are flanked, surprised or flat-footed." / "5";
     On Event META(EVICTIM(EV_STRIKE)) {
       if (!e.isFlanking && !e.isSurprise && !e.isFlatFoot)
         {
@@ -6062,6 +6063,7 @@ Wizard Spell "Nemesis Spell" : EA_GENERIC
         }
       return NOTHING;
       },
+    MSG_DEFNOTE "Nemesis Spell: +<N> vs. your nemesis, unless it is shielded from divination; -<N> vs. all other attackers." / "*",
     META(EVICTIM(EV_STRIKE)) {
       int16 bonus;
       bonus = EVictim->GetEffStatiVal(TRAP_EVENT,$"Nemesis Spell");

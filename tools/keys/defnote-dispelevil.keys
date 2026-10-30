@@ -1,0 +1,26 @@
+# inc-7v2i: learn Dispel Evil through the wizard menu, cast it, and read the
+# sidebar and the character sheet.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav \
+#       tools/headless.sh tools/keys/defnote-dispelevil.keys 4
+#
+# Read by tools/check_defnote.sh. The spell is a priest spell, and the fixture
+# is a mage, so "Learn Any Spell" (src/Debug.cpp case 17) makes it innate.
+
+@dump:arrival
+
+w
+y
+@choose "Learn Any Spell"
+"Dispel Evil"
+ENTER
+
+m
+@choose "Dispel Evil"
+@dump:after
+
+d
+@expect "Defense Class"
+@dump:sheet
+ESC

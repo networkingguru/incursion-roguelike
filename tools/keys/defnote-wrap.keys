@@ -1,0 +1,58 @@
+# inc-7v2i: stack Shield, Blinding armor, water and Dispel Evil so the sidebar
+# line "Def:N+F* Cov:C" is longer than the sidebar is wide, and photograph the
+# wrap onto a second line.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav \
+#       tools/headless.sh tools/keys/defnote-wrap.keys 4
+#
+# Read by tools/check_defnote.sh. Each step is the same as in the single-source
+# scripts defnote-blinding, defnote-water, defnote-dispelevil and defnote-shield.
+
+@dump:arrival
+
+w
+y
+@choose "Item Acquisition"
+RIGHT*15                # Armours
+ENTER
+ENTER                   # padded armor, worn
+ESC
+
+w
+@choose "Add Quality to Armour"
+A Q _ B L I N D I N G ENTER
+
+w
+@choose "All Creatures CalcValues"
+
+i
+j
+SPACE
+j
+SPACE                   # armor off and on again, so the grant applies
+ESC
+
+w
+@choose "Learn Any Spell"
+"Dispel Evil"
+ENTER
+
+m
+@choose "Shield"
+s*12                    # let the casting timeout run out; a second cast waits for it
+m
+@choose "Dispel Evil"
+
+w
+@choose "Change terrain type"
+RIGHT ENTER
+@until "shallow water" TAB
+@choose "shallow water"
+RIGHT
+@dump:wrapped
+
+d
+@expect "Defense Class"
+@dump:sheet
+ESC

@@ -1,0 +1,34 @@
+# inc-7v2i: stand in water while levitating. The Water note says "unless you
+# are flying", so the sidebar must show no bonus and the sheet no Water line.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav \
+#       tools/headless.sh tools/keys/defnote-water-aerial.keys 4
+#
+# Read by tools/check_defnote.sh. Levitation is learned through the wizard menu
+# (src/Debug.cpp case 17) and cast before the terrain changes and the player
+# steps east onto it.
+
+@dump:arrival
+
+w
+y
+@choose "Learn Any Spell"
+"Levitation"
+ENTER
+
+m
+@choose "Levitation"
+
+w
+@choose "Change terrain type"
+RIGHT ENTER
+@until "shallow water" TAB
+@choose "shallow water"
+RIGHT
+@dump:in
+
+d
+@expect "Defense Class"
+@dump:sheet
+ESC
