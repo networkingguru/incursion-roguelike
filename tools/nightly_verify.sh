@@ -605,7 +605,10 @@ STEP_TRAP=0
 arm_gate_trap() {
     [ "$STEP_TRAP" = 1 ] && return 0
     STEP_TRAP=1
-    trap 'kill_gate_jobs' INT TERM
+    # inc-b0ziu.6: kill the jobs, then EXIT, so gate_on_exit removes the status
+    # file and writes the total row. The exit code is the shell's 128 + signal.
+    trap 'kill_gate_jobs; exit 130' INT
+    trap 'kill_gate_jobs; exit 143' TERM
 }
 
 # live_count <pid...>: how many of these pids are still running. The throttle
@@ -753,6 +756,7 @@ fi
 
 # An array of "<pid><TAB><name><TAB><rerun>" for the steps now running.
 STEP_PIDS=()
+STEP_CMDS=()
 
 step_log_path() { # <command> -> a per-step log beside the check logs
     local name
@@ -768,23 +772,31 @@ start_background_steps() { # <array name>
     eval 'list=( ${'"$name"'[@]+"${'"$name"'[@]}"} )'
     mkdir -p "$LOG_DIR" 2> /dev/null
     STEP_PIDS=()
+    STEP_CMDS=()
     for step in ${list[@]+"${list[@]}"}; do
         cmd="${step%%	*}"
         rerun="${step#*	}"
         log="$(step_log_path "$cmd")"
-        ( eval "$cmd" ) > "$log" 2>&1 &
+        # The wrapper records the step's own wall time beside its log
+        # (inc-b0ziu.6), because wait_background_steps reaps in order.
+        rm -f "$log.elapsed" 2> /dev/null
+        ( t0=$SECONDS; ( eval "$cmd" ); r=$?; echo "$((SECONDS - t0))" > "$log.elapsed" 2> /dev/null; exit $r ) > "$log" 2>&1 &
         STEP_PIDS+=( "$!	${cmd%% *}	$rerun" )
+        STEP_CMDS+=( "$cmd" )
         GATE_STEPS="$GATE_STEPS $!"
     done
 }
 
 wait_background_steps() {
-    local entry pid name rerun rc
+    local entry pid name rerun rc i=0 selapsed
     for entry in ${STEP_PIDS[@]+"${STEP_PIDS[@]}"}; do
         pid="${entry%%	*}"; entry="${entry#*	}"
         name="${entry%%	*}"; rerun="${entry#*	}"
         wait "$pid"
         rc=$?
+        selapsed="$(cat "$(step_log_path "${STEP_CMDS[$i]}").elapsed" 2> /dev/null)"
+        [ -n "$selapsed" ] && gate_timing "stage:${STEP_CMDS[$i]}" "$rc" "$selapsed"
+        i=$((i + 1))
         printf '%s ... ' "$name"
         case "$rc" in
             0) echo "ok" ;;
@@ -795,6 +807,7 @@ wait_background_steps() {
         esac
     done
     STEP_PIDS=()
+    STEP_CMDS=()
     GATE_STEPS=""
 }
 
@@ -1697,6 +1710,184 @@ if [ "$MODE" = "selftest" ]; then
     exit $?
 fi
 
+# ------------------------------------------- prediction, status, total row ---
+# inc-b0ziu.6. Every function here is best effort: a failure in the predictor,
+# the timing log or the status file MUST NOT change the gate's verdict or exit
+# code, so each one swallows its errors.
+GATE_ANNOUNCED=0
+GATE_TYPE=""
+GATE_STATUS_FILE=""
+GATE_STAGES=()
+GATE_STATUS_JSON_PRE=""
+
+gate_timing() { # <name> <rc> <elapsed_s>: one runner=gate row
+    local t; t="$(dirname "${BASH_SOURCE[0]}")/timing_log.sh"
+    [ -x "$t" ] && "$t" gate "$1" "$2" "$3" > /dev/null 2>&1
+    return 0
+}
+
+# The status directory: INCURSION_GATE_STATUS_DIR, else gate-status beside the
+# timing log when INCURSION_CHECK_TIMING_LOG is set, else
+# <git common dir's parent>/logs/gate-status (the shared checkout).
+gate_status_dir() {
+    local common
+    if [ -n "${INCURSION_GATE_STATUS_DIR:-}" ]; then
+        printf '%s\n' "$INCURSION_GATE_STATUS_DIR"
+    elif [ -n "${INCURSION_CHECK_TIMING_LOG:-}" ]; then
+        printf '%s\n' "$(dirname "$INCURSION_CHECK_TIMING_LOG")/gate-status"
+    else
+        common="$(git rev-parse --git-common-dir 2> /dev/null)"
+        if [ -n "$common" ]; then
+            printf '%s\n' "$(cd "$(dirname "$common")" 2> /dev/null && pwd)/logs/gate-status"
+        else
+            printf '%s\n' "$(cd "$(dirname "$0")/.." 2> /dev/null && pwd)/logs/gate-status"
+        fi
+    fi
+}
+
+GATE_STAGE_NAME=""
+GATE_STAGE_INDEX=0
+GATE_STAGE_STARTED=0
+GATE_PREDICTED_S=""
+GATE_NCHECKS=0
+GATE_STARTED=0
+
+gate_write_status() { # atomic: temp file in the same directory, then mv -f
+    [ -n "$GATE_STATUS_FILE" ] || return 0
+    local branch end tmp
+    branch="$(git rev-parse --abbrev-ref HEAD 2> /dev/null)"; branch="${branch//[\"\\]/}"
+    if [ -n "$GATE_PREDICTED_S" ]; then end=$((GATE_STARTED + GATE_PREDICTED_S)); else end=null; fi
+    tmp="$GATE_STATUS_FILE.tmp.$$"
+    {
+        printf '{"pid": %s, "type": "%s", "branch": "%s", "checks": %s, "stage": "%s", ' \
+            "$$" "$GATE_TYPE" "$branch" "$GATE_NCHECKS" "$GATE_STAGE_NAME"
+        printf '"stage_index": %s, "stage_count": %s, "started": %s, "stage_started": %s, ' \
+            "$GATE_STAGE_INDEX" "${#GATE_STAGES[@]}" "$GATE_STARTED" "$GATE_STAGE_STARTED"
+        printf '"predicted_s": %s, "predicted_end": %s}\n' "${GATE_PREDICTED_S:-null}" "$end"
+    } > "$tmp" 2> /dev/null && mv -f "$tmp" "$GATE_STATUS_FILE" 2> /dev/null
+    rm -f "$tmp" 2> /dev/null
+    return 0
+}
+
+gate_stage() { # <name>: enter a stage of this run's plan (ignored when not in it)
+    [ "$GATE_ANNOUNCED" = 1 ] || return 0
+    local i=0 n
+    for n in ${GATE_STAGES[@]+"${GATE_STAGES[@]}"}; do
+        i=$((i + 1))
+        if [ "$n" = "$1" ]; then
+            GATE_STAGE_NAME="$n"; GATE_STAGE_INDEX=$i
+            GATE_STAGE_STARTED=$(date +%s 2> /dev/null)
+            gate_write_status
+            return 0
+        fi
+    done
+    return 0
+}
+
+gate_on_exit() {
+    local rc=$?
+    if [ "$GATE_ANNOUNCED" = 1 ]; then
+        [ -n "$GATE_STATUS_FILE" ] && rm -f "$GATE_STATUS_FILE" "$GATE_STATUS_FILE.tmp.$$" 2> /dev/null
+        local t; t="$(dirname "${BASH_SOURCE[0]}")/timing_log.sh"
+        [ -x "$t" ] && "$t" total "$GATE_TYPE#$$" "$rc" "$SECONDS" > /dev/null 2>&1
+    fi
+    return 0
+}
+
+# gate_announce <builds 0|1> <steps array name or ""> <stage names...>
+# Prints the one start line, logs the predict row, writes the first status.
+gate_announce() {
+    local with_builds="$1" steps_name="$2"; shift 2
+    local mode="compare" flags=() in="" e id tier serial n=0 b s out p_s p_chk p_part M
+    local steps=()
+    GATE_STAGES=( "$@" )
+    if [ "$MODE" = "record" ]; then
+        GATE_TYPE="record"; mode="record"
+    else
+        if [ "$LANDING" = 1 ]; then GATE_TYPE="landing"; else GATE_TYPE="compare"; fi
+        if [ "$REUSED" = 1 ]; then GATE_TYPE="$GATE_TYPE-reused"
+        elif [ "$SKIP_BUILDS" = 1 ] && [ "$SKIP_LIVE" = 1 ]; then GATE_TYPE="$GATE_TYPE-docs-only"
+        elif [ "$SKIP_BUILDS" = 1 ]; then GATE_TYPE="$GATE_TYPE-checks-only"
+        fi
+    fi
+    [ "$with_builds" = 1 ] || flags+=( --no-builds )
+    [ "$SKIP_LIVE" = 1 ] && flags+=( --no-live )
+    for e in "${CHECKS[@]}"; do
+        id="${e%%	*}"; e="${e#*	}"; e="${e#*	}"; tier="${e%%	*}"; serial="${e##*	}"
+        in="$in$(printf 'check\t%s\t%s\t%s' "$id" "$tier" "$serial")
+"
+    done
+    if [ "$with_builds" = 1 ]; then
+        for b in ${BUILDS[@]+"${BUILDS[@]}"}; do
+            n=$((n + 1)); in="$in$(printf 'build\tstage:build:%s\t\t0' "$n")
+"
+        done
+        if [ -n "$steps_name" ]; then
+            eval 'steps=( ${'"$steps_name"'[@]+"${'"$steps_name"'[@]}"} )'
+            for s in ${steps[@]+"${steps[@]}"}; do
+                in="$in$(printf 'step\tstage:%s\t\t0' "${s%%	*}")
+"
+            done
+        fi
+    fi
+    GATE_NCHECKS=${#CHECKS[@]}
+    GATE_STARTED=$(date +%s 2> /dev/null)
+    out="$(printf '%s' "$in" | python3 "$(dirname "${BASH_SOURCE[0]}")/gate_predict.py" \
+        --mode "$mode" --jobs "$(gate_jobs)" ${flags[@]+"${flags[@]}"} 2> /dev/null)"
+    p_s=""; p_part=0
+    case "$out" in
+        predicted_s=*)
+            p_s="$(sed -n 's/^predicted_s=\([0-9]*\) .*/\1/p' <<<"$out")"
+            p_chk="$(sed -n 's/.* checks=\([0-9]*\) .*/\1/p' <<<"$out")"
+            p_part="$(sed -n 's/.* partial=\([01]\).*/\1/p' <<<"$out")"
+            [ -n "$p_chk" ] && GATE_NCHECKS="$p_chk" ;;
+    esac
+    GATE_PREDICTED_S="$p_s"
+    if [ -n "$p_s" ]; then
+        M="$(printf '%d:%02d' $((p_s / 60)) $((p_s % 60)))"
+    else
+        M="?"
+    fi
+    echo "--- gate: $GATE_TYPE · $GATE_NCHECKS checks · expected $M$([ "$p_part" = 1 ] && echo ' (partial)') ---"
+    GATE_ANNOUNCED=1
+    [ -n "$p_s" ] && gate_timing_runner predict "$GATE_TYPE#$$" 0 "$p_s"
+    local d; d="$(gate_status_dir)"
+    if mkdir -p "$d" 2> /dev/null; then
+        GATE_STATUS_FILE="$d/$$.json"
+        GATE_STAGE_STARTED=$GATE_STARTED
+        gate_write_status
+    fi
+    trap gate_on_exit EXIT
+    # Until the runner arms its own INT/TERM trap, end through the EXIT trap.
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    return 0
+}
+
+gate_timing_runner() { # <runner> <name> <rc> <value>
+    local t; t="$(dirname "${BASH_SOURCE[0]}")/timing_log.sh"
+    [ -x "$t" ] && "$t" "$1" "$2" "$3" "$4" > /dev/null 2>&1
+    return 0
+}
+
+# Which stages will this run do? Fills GATE_STAGES in run order.
+gate_plan_compare() {
+    GATE_PLAN=()
+    phase_entries cheap;  [ "${#PHASE_ENTRIES[@]}" -gt 0 ] && GATE_PLAN+=( cheap )
+    serial_phase_entries cheap; [ "${#SERIAL_PHASE_ENTRIES[@]}" -gt 0 ] && GATE_PLAN+=( cheap-serial )
+    [ "$SKIP_BUILDS" = 0 ] && GATE_PLAN+=( builds )
+    local any=0
+    [ "$SKIP_BUILDS" = 0 ] && any=1
+    phase_entries smoke; [ "${#PHASE_ENTRIES[@]}" -gt 0 ] && any=1
+    phase_entries live;  [ "${#PHASE_ENTRIES[@]}" -gt 0 ] && any=1
+    [ "$any" = 1 ] && GATE_PLAN+=( smoke+live )
+    serial_phase_entries smoke; [ "${#SERIAL_PHASE_ENTRIES[@]}" -gt 0 ] && GATE_PLAN+=( smoke-serial )
+    serial_phase_entries live;  [ "${#SERIAL_PHASE_ENTRIES[@]}" -gt 0 ] && GATE_PLAN+=( live-serial )
+    return 0
+}
+GATE_PLAN=()
+
+
 # Decided before discovery, because a reused pass drops the live tier.
 REUSED=0
 if [ "$REUSE" = 1 ]; then
@@ -1806,13 +1997,28 @@ if [ "$MODE" = "record" ]; then
     # The real steps need the binary, so build when any step is present; an
     # empty step list never forces a build.
     [ "${#STEPS[@]}" -gt 0 ] && record_live=1
+    GATE_PLAN=()
+    [ "$record_live" = 1 ] && GATE_PLAN+=( builds )
+    phase_entries cheap; [ "${#PHASE_ENTRIES[@]}" -gt 0 ] && GATE_PLAN+=( cheap )
+    serial_phase_entries cheap; [ "${#SERIAL_PHASE_ENTRIES[@]}" -gt 0 ] && GATE_PLAN+=( cheap-serial )
+    phase_entries smoke; [ "${#PHASE_ENTRIES[@]}" -gt 0 ] && GATE_PLAN+=( smoke )
+    serial_phase_entries smoke; [ "${#SERIAL_PHASE_ENTRIES[@]}" -gt 0 ] && GATE_PLAN+=( smoke-serial )
+    phase_entries live; [ "${#PHASE_ENTRIES[@]}" -gt 0 ] && GATE_PLAN+=( live )
+    serial_phase_entries live; [ "${#SERIAL_PHASE_ENTRIES[@]}" -gt 0 ] && GATE_PLAN+=( live-serial )
+    [ "${#STEPS[@]}" -gt 0 ] && GATE_PLAN+=( steps )
+    gate_announce "$record_live" STEPS "${GATE_PLAN[@]}"
     if [ "$record_live" = 1 ]; then
+        gate_stage builds
         echo "--- builds (a base is only a base when this source built the binary) ---"
+        bn=0
         for build in ${BUILDS[@]+"${BUILDS[@]}"}; do
+            bn=$((bn + 1)); bt0=$SECONDS
             printf '%s ... ' "$build"
             if ( eval "$build" ) > /dev/null 2>&1; then
+                gate_timing "stage:build:$bn" 0 "$((SECONDS - bt0))"
                 echo "ok"
             else
+                gate_timing "stage:build:$bn" 1 "$((SECONDS - bt0))"
                 echo "FAILED"
                 echo "    re-run it to see why: $build"
                 rm -f "$STATE"
@@ -1833,12 +2039,13 @@ if [ "$MODE" = "record" ]; then
     # by check, and a reader diffs it against a later one line by line, so its
     # lines come out in discovery order however the phases ran.
     RESDIR="$(mktemp -d "${TMPDIR:-/tmp}/nvrec.XXXXXX")" || exit 2
-    collect_phase_parallel cheap "$RESDIR"
-    collect_serial cheap "$RESDIR"
-    collect_phase_parallel smoke "$RESDIR"
-    collect_serial smoke "$RESDIR"
-    collect_phase_parallel live "$RESDIR"
-    collect_serial live "$RESDIR"
+    gate_stage cheap;         collect_phase_parallel cheap "$RESDIR"
+    gate_stage cheap-serial;  collect_serial cheap "$RESDIR"
+    gate_stage smoke;         collect_phase_parallel smoke "$RESDIR"
+    gate_stage smoke-serial;  collect_serial smoke "$RESDIR"
+    gate_stage live;          collect_phase_parallel live "$RESDIR"
+    gate_stage live-serial;   collect_serial live "$RESDIR"
+    gate_stage steps
     # Every step runs here, one after another, each writing its own log. A step
     # that fails or exits 2 only records its code: it never stops --record and
     # never deletes the base. Only a failed build does that, above.
@@ -1846,8 +2053,10 @@ if [ "$MODE" = "record" ]; then
     for step in ${STEPS[@]+"${STEPS[@]}"}; do
         cmd="${step%%	*}"
         log="$(step_log_path "$cmd")"
+        st0=$SECONDS
         ( eval "$cmd" ) > "$log" 2>&1
         rc=$?
+        gate_timing "stage:$cmd" "$rc" "$((SECONDS - st0))"
         STEP_RCS+=( "$rc	${cmd%% *}" )
     done
     for entry in "${CHECKS[@]}"; do
@@ -1882,6 +2091,10 @@ fi
 # only when each one is printed has moved.
 FAILED=0
 
+gate_plan_compare
+gate_announce "$([ "$SKIP_BUILDS" = 0 ] && echo 1 || echo 0)" \
+    "$([ "$LANDING" = 1 ] && echo LANDING_STEPS || echo STEPS)" "${GATE_PLAN[@]+"${GATE_PLAN[@]}"}"
+
 echo
 if [ "$LANDING" = 1 ]; then
     echo "--- landing gate: cheap, builds, soak, smoke, and $LANDING_LIVE_KEPT changed live check(s) ---"
@@ -1894,6 +2107,7 @@ else
 fi
 
 # 1. The cheap tier, through the parallel runner.
+gate_stage cheap
 run_phase_parallel cheap
 
 # 1b. The SERIAL cheap checks, one at a time. They run here, before the builds,
@@ -1903,6 +2117,7 @@ run_phase_parallel cheap
 #     at the end. Nothing else is running yet, so the alone-run rule holds. Both
 #     sets' verdicts print before the STOPPED line, so a reader sees the whole
 #     cheap tier whether it passed or broke.
+gate_stage cheap-serial
 run_phase_serial cheap
 if [ "$FAILED" = 1 ]; then
     echo "=== STOPPED: the cheap tier broke a check; the builds and the live tier were not run ==="
@@ -1927,11 +2142,16 @@ else
         echo "    (the Linux cross-build follows as a background step)"
     fi
     build_failed=0
+    gate_stage builds
+    bn=0
     for build in ${BUILDS[@]+"${BUILDS[@]}"}; do
+        bn=$((bn + 1)); bt0=$SECONDS
         printf '%s ... ' "$build"
         if ( eval "$build" ) > /dev/null 2>&1; then
+            gate_timing "stage:build:$bn" 0 "$((SECONDS - bt0))"
             echo "ok"
         else
+            gate_timing "stage:build:$bn" 1 "$((SECONDS - bt0))"
             echo "FAILED"
             echo "    re-run it to see why: $build"
             build_failed=1
@@ -1957,6 +2177,7 @@ fi
 
 # 4. The smoke tier, through the parallel runner, then the live tier, while the
 #    steps run. Smoke "plays the game briefly" and needs the builds like live.
+gate_stage smoke+live
 run_phase_parallel smoke
 run_phase_parallel live
 
@@ -1968,7 +2189,9 @@ fi
 # 6. The SERIAL smoke then live checks, one at a time, nothing else running. The
 #    serial cheap checks already ran in step 1b; this is only the smoke and live
 #    half.
+gate_stage smoke-serial
 run_phase_serial smoke
+gate_stage live-serial
 run_phase_serial live
 
 echo

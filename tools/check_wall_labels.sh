@@ -13,7 +13,9 @@
 # fact: which routes are refused -- none; the self-check compares every label refusal with the full search, whatever the seed plays
 # fact: settings -- tools/gates/Options.Dat
 # fact: run isolation -- unique INCURSION_RUN_DIR per run
-# fact: a hang -- 60 s wall timeout per run
+# fact: how long a seed runs -- 60 s is a per-seed sampling budget (the summary line prints every
+#   1000 calls, so a cut run still counts); tools/run_capped.py enforces it on the whole process
+#   group, and a hang is bounded by the same limit
 #
 # Usage: tools/check_wall_labels.sh [--no-build] [--prove-red]
 # --prove-red: build with -DLABEL_BREAK (labels flood 4-connected, so areas
@@ -41,19 +43,21 @@ if [ $BUILD = 1 ]; then
 fi
 [ -x "./$OUT" ] || { echo "no binary ./$OUT"; exit 2; }
 BASE="logs/$OUT-runs-$$"; mkdir -p "$BASE"
-calls=0; mis=0
+calls=0; mis=0; cut=0
 for seed in 1 3 6 8 16; do
   outf="$BASE/seed-$seed.out"
   INCURSION_BIN="./$OUT" INCURSION_OPTIONS=tools/gates/Options.Dat \
     INCURSION_RUN_DIR="$BASE/run-$seed" INCURSION_MAP_AUDIT=0 \
-    perl -e 'alarm 60; exec @ARGV' tools/headless.sh tools/keys/dive.keys $seed >"$outf" 2>&1
+    tools/run_capped.py 60 tools/headless.sh tools/keys/dive.keys $seed >"$outf" 2>&1
+  rc=$?
+  if [ "$rc" -eq 124 ]; then cut=$((cut+1)); echo "seed $seed: budget reached at 60 s (partial counts)"; fi
   line=$(grep -a '^LABEL_SELFCHECK ' "$outf" | tail -1)
   if [ -z "$line" ]; then echo "seed $seed: no LABEL_SELFCHECK line (see $outf)"; exit 2; fi
   c=${line#*refusals=}; c=${c%% *}; m=${line##*mismatches=}
   echo "seed $seed: refusals=$c mismatches=$m"
   calls=$((calls+c)); mis=$((mis+m))
 done
-echo "total refusals=$calls mismatches=$mis"
+echo "total refusals=$calls mismatches=$mis budget-cut seeds=$cut of 5"
 [ "$calls" -gt 100 ] || { echo "FAIL: too few refusals to judge"; exit 2; }
 if [ $RED = 1 ]; then
   if [ "$mis" -gt 0 ]; then echo "PROVED RED"; exit 0; fi
