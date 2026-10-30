@@ -52,10 +52,22 @@
 # headroom, and a level-1 wight already overflows it, so no level-1 run
 # separates them.
 #
+# fact: character race, class, school, stats -- generated in the run (a fixture cannot go red on a chargen-time mutation); Point Buy, STR 14 DEX 16 CON 18 INT 18 WIS 12 CHA 16 LUC 17 (orc: CHA 14), identical in both key scripts
+# fact: settings -- options-2026-08-22.dat (CHECK_OPTIONS)
+# fact: the corpses and their squares -- wizard "Monster Summoning" of five ghouls on squares 1 to 5 east of the player, then "Genocide Everything"
+# fact: casting mana -- wizard "Wizard Mode Switches", Infinite Mana
+# fact: the spell, known -- wizard "Learn Any Spell"
+# fact: a Knowledge message ahead of a refusal -- INCURSION_RUNTO_SKILL_ROLL=20
+# fact: the pool readings and the cast verdicts -- the dumped Group CR Totals block and cast screen; no dice
+#
 # Usage: tools/check_necro_undead_pool.sh [--prove-red]
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
+
+# Every skill check rolls a 1, so no Knowledge check identifies a corpse and no
+# Knowledge message pushes the refusal sentence across a line break.
+export INCURSION_RUNTO_SKILL_ROLL=20
 
 # Break the fix at its site: put the grant back on PHD_COMMAND, where the
 # mage has no ability to carry it. The Necromancer's PHD UNDEAD max

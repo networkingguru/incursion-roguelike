@@ -9,7 +9,7 @@
 # not go red on the lib mutation (see tools/check_necro_undead_pool.sh).
 #
 # The chargen below is tools/keys/chargen-mage.keys' character (male orc mage,
-# neutral, first attribute set, first two feats, three RIGHTs per skill) with
+# neutral, Point Buy attributes, first two feats, three RIGHTs per skill) with
 # one change: the school is Evocation. It is the comparison to
 # tools/keys/necro-undead-pool-necro.keys, which is the same file with
 # Necromancy, so the only difference between the two characters is the school.
@@ -28,25 +28,33 @@
 # The mutated run (tools/check_necro_undead_pool.sh --prove-red) sends the
 # PHD_UNDEAD case back to the generic branch, which never refuses here.
 #
-# TARGETING. The corpses are the level's own, at fixed offsets from the player
-# (the player never moves); the entry chamber scatters several of them at
-# positions that move with the seed, and the offsets below are the ones read
-# on seed 1. Create Corporeal Undead's target prompt takes 'l' to move the
-# location cursor, then arrow keys to the square: UP*3 LEFT is the elf
-# corpse, DOWN LEFT*4 the human, DOWN*4 the dwarf, DOWN*3 LEFT the gnome,
-# DOWN*2 RIGHT*3 the kobold. (Read again on seed 1 after the spell checklist
-# replaced the starting-spell menu: the level now comes out mirrored left to
-# right, so every horizontal offset changed sign.) The ring arrows cannot be used here -- after the
-# first wight they include the wights themselves, and the prompt stops on one.
+# TARGETING. Every cast aims at a corpse this script made itself. Five ghouls
+# are summoned on the squares 1 to 5 east of the player, and Genocide
+# Everything kills them where they stand, so each leaves a corpse on a known
+# square whatever the seed. A ghoul has no Gear: line, so nothing it drops
+# lies on top of its corpse; the target prompt reads only the first thing on a
+# square (Term.cpp, m->FirstAt), and a pile whose top is a dagger or a torch
+# is an Invalid Target. A black orc or a human carries gear and fails here.
+# Ghoul corpses are valid for the spell: the ghoul is a medium humanoid.
+# Create Corporeal Undead's target prompt takes 'l' to move the location
+# cursor, then RIGHT*n to the nth ghoul corpse. The ring arrows
+# cannot be used here -- after the first wight they include the wights
+# themselves, and the prompt stops on one.
 #
-# CAST 3 IS PHOTOGRAPHED SEVERAL TIMES. A refused cast prints "The <corpse>
-# shifts briefly, but does not move." and sometimes, ahead of it, a Knowledge
-# message ("Using your knowledge of the undead, you realize ...") that pushes
-# the sentence across a line break and a -more- prompt, so no one screen holds
-# the whole phrase. Whether that message fires is a roll, so the same refusal
-# is repeated on the same corpse (a refusal consumes nothing and moves no pool)
-# and every attempt is dumped under a name ending -cast3; the check reads
-# whichever one carries the sentence on one line.
+# ATTRIBUTES. Point Buy, not a rolled set, so no seed changes them. The party
+# pool is TotalLevel + Mod(CHA) (src/Social.cpp, Player::MaxGroupCR), and a
+# rolled Charisma moved the count at which cast 2 is refused.
+#
+# THE KNOWLEDGE MESSAGE IS PINNED ON. A refused cast prints "The <corpse> shifts
+# briefly, but does not move." The corpse name carries "(fresh, DC 25)", which
+# makes the sentence 66 columns wide against a 64-column message window, so it
+# wraps and no screen holds the whole phrase -- unless the line already holds
+# an earlier message, which moves the wrap. A Knowledge message ("Using your
+# knowledge of the undead, you realize ...") is that earlier message, and it
+# fires only when a skill check passes. tools/check_necro_undead_pool.sh sets
+# INCURSION_RUNTO_SKILL_ROLL=20, so the check always passes and the sentence
+# always lands whole on the cast screen. Pinned to 1 the message never fires and
+# no screen carries the phrase.
 
 a       # Initial Choices: [a] Create a New Character
 n       # Alter the character generation options? -- no
@@ -54,7 +62,12 @@ y       # Explore Mode. Continue? -- yes
 @choose "Orc"
 @choose "Orc (Standard)"
 @choose "Mage"
-a       # Attributes
+p       # Abort to Point Buy; every attribute starts at 8, with 75 points
+        # STR 14, DEX 16, CON 18, INT 18, WIS 12, CHA 16, LUC 17 == exactly 75
+        # (the orc takes -2 Charisma: the character reads CHA 14, as the seed-1 one did)
+RIGHT*6 DOWN RIGHT*8 DOWN RIGHT*10 DOWN RIGHT*10 DOWN RIGHT*4 DOWN RIGHT*8 DOWN RIGHT*9
+ENTER
+y       # Are these your final stats? -- yes
 @choose "Neutral"
 @choose "Evocation"
 a       # First feat
@@ -84,14 +97,37 @@ ESC
 @choose "Learn Any Spell"
 "Create Corporeal Undead" ENTER
 
-# A black orc east of the player, so the level holds a medium humanoid corpse.
+# Five ghouls on known squares east of the player, one corpse apiece after the
+# genocide below. Summon lands on the Q_LOC cursor square (src/Debug.cpp:679).
 @until "Wizard Mode Options:" w
 @choose "Monster Summoning"
-@choose "Orc"
-a
+@choose "Corporeal Undead"
+@choose "ghoul"
+RIGHT*1 ENTER
+@until "Wizard Mode Options:" w
+@choose "Monster Summoning"
+@choose "Corporeal Undead"
+@choose "ghoul"
+RIGHT*2 ENTER
+@until "Wizard Mode Options:" w
+@choose "Monster Summoning"
+@choose "Corporeal Undead"
+@choose "ghoul"
 RIGHT*3 ENTER
+@until "Wizard Mode Options:" w
+@choose "Monster Summoning"
+@choose "Corporeal Undead"
+@choose "ghoul"
+RIGHT*4 ENTER
+@until "Wizard Mode Options:" w
+@choose "Monster Summoning"
+@choose "Corporeal Undead"
+@choose "ghoul"
+RIGHT*5 ENTER
 
-# Clear the level, leaving the corpse(s) and nothing else that makes a pool move.
+# Clear the level. Every monster dies where it stands and leaves a corpse: the
+# five orcs' corpses are on the known squares, the level's own are scattered
+# wherever the seed put them and are never aimed at.
 @until "Wizard Mode Options:" w
 @choose "Genocide Everything"
 SPACE*40                 # dismiss the genocide message chain
@@ -104,12 +140,12 @@ DOWN*200
 ESC
 SPACE*4
 
-# Cast 1: the elf corpse. This is a real Monster::MakeCompanion(PHD_UNDEAD)
+# Cast 1: the first ghoul's corpse. This is a real Monster::MakeCompanion(PHD_UNDEAD)
 # caller (lib/abilities.irh:177).
 m
 a
 l
-UP*3 LEFT ENTER
+RIGHT*1 ENTER
 @choose "Wight"
 @dump:raised
 @until "Wizard Mode Options:" w
@@ -119,11 +155,11 @@ DOWN*200
 ESC
 SPACE*4
 
-# Cast 2: the human corpse. Kept under the fixed code.
+# Cast 2: the second ghoul's corpse. Kept under the fixed code.
 m
 a
 l
-DOWN LEFT*4 ENTER
+RIGHT*2 ENTER
 @choose "Wight"
 @dump:cast2
 @until "Wizard Mode Options:" w
@@ -133,55 +169,13 @@ DOWN*200
 ESC
 SPACE*4
 
-# Cast 3: the dwarf corpse. REFUSED under the fixed code.
+# Cast 3: the third ghoul's corpse. REFUSED under the fixed code.
 m
 a
 l
-DOWN*4 ENTER
+RIGHT*3 ENTER
 @choose "Wight"
 @dump:cast3
-SPACE*3
-m
-a
-l
-DOWN*4 ENTER
-@choose "Wight"
-@dump:retry1-cast3
-SPACE*3
-m
-a
-l
-DOWN*4 ENTER
-@choose "Wight"
-@dump:retry2-cast3
-SPACE*3
-m
-a
-l
-DOWN*4 ENTER
-@choose "Wight"
-@dump:retry3-cast3
-SPACE*3
-m
-a
-l
-DOWN*4 ENTER
-@choose "Wight"
-@dump:retry4-cast3
-SPACE*3
-m
-a
-l
-DOWN*4 ENTER
-@choose "Wight"
-@dump:retry5-cast3
-SPACE*3
-m
-a
-l
-DOWN*4 ENTER
-@choose "Wight"
-@dump:retry6-cast3
 SPACE*3
 @until "Wizard Mode Options:" w
 @choose "Examine Player Data"
@@ -190,11 +184,11 @@ DOWN*200
 ESC
 SPACE*4
 
-# Cast 4: the gnome corpse. REFUSED under the fixed code.
+# Cast 4: the fourth ghoul's corpse. REFUSED under the fixed code.
 m
 a
 l
-DOWN*3 LEFT ENTER
+RIGHT*4 ENTER
 @choose "Wight"
 @dump:cast4
 @until "Wizard Mode Options:" w
@@ -204,11 +198,11 @@ DOWN*200
 ESC
 SPACE*4
 
-# Cast 5: the kobold corpse. REFUSED under the fixed code.
+# Cast 5: the fifth ghoul's corpse. REFUSED under the fixed code.
 m
 a
 l
-DOWN*2 RIGHT*3 ENTER
+RIGHT*5 ENTER
 @choose "Wight"
 @dump:cast5
 @until "Wizard Mode Options:" w

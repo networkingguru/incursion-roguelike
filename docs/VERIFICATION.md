@@ -56,6 +56,7 @@ known hole.
 | Fact | Control |
 |---|---|
 | Character: race, class, stats, kit, name | Load a fixture: `INCURSION_LOAD=tools/fixtures/chars/<name>.sav` (53 exist; `tools/fixtures/README.md`). No wizard command sets stats. |
+| Attribute scores, when the check MUST generate the character in the run (a fixture cannot go red on a chargen-time mutation) | Point Buy: on the attribute screen press `p` ("Abort to Point Buy", src/Create.cpp:2306) and buy fixed scores. Every attribute starts at 8 with 75 points under the frozen options (`options-2026-08-22.dat`); in the keys, RIGHT raises the highlighted score by one, DOWN moves to the next of STR DEX CON INT WIS CHA LUC, ENTER leaves the screen after every point is spent, and `y` answers "Are these your final stats?". The race then adds its modifier to the score shown. Example: tools/keys/necro-undead-pool-necro.keys. |
 | A monster where you need it | Wizard menu, "Monster Summoning". Clear the level first with "Genocide Everything". |
 | An item | Wizard menu, "Item Acquisition". |
 | Terrain | Wizard menu, "Change terrain type"; or a probe that builds the map (`INCURSION_RUNTO_STAGE`). |
