@@ -59,6 +59,7 @@ static void Scene(Player *pl, const char *name, bool back)
     delete A; delete B; delete C;
 }
 
+/* inc-946vn: the scene behind tools/check_killxp_loop.sh. */
 void KillXPLoopProbe(Player *pl)
 {
     if (!getenv("INCURSION_KILLXP_PROBE")) return;
