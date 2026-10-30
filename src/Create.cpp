@@ -3030,8 +3030,27 @@ void Character::LoseXP(uint32 _XP)
 // Note that it might be tempted to divide it by two (or something), but
 // that will just encourage players to waste time micromanaging things so
 // that they get the last blow in. 
+void KillXPProbe(Creature *me, Creature *kill, bool enter);
 void Creature::KillXP(Creature *kill, int16 percent)
 {
+    /* upstream: a loop in the leader/diplomacy links (A leads B, B holds a
+       DIPLOMACY_TAG on A) recursed without end on any platform, so this is not
+       a port artefact. Observed, inc-946vn, not sent. Each creature now takes
+       one pass per top-level kill. */
+    static hObj visited[256];
+    static int nVisited = 0, depth = 0;
+    int i;
+
+    if (depth == 0)
+        nVisited = 0;
+    for (i = 0; i < nVisited; i++)
+        if (visited[i] == myHandle)
+            return;
+    if (nVisited >= 256)
+        return;
+    visited[nVisited++] = myHandle;
+    depth++;
+    KillXPProbe(this, kill, true);
     Creature * c = ts.getLeader();
     if (c && kill != this)
         ((Creature *)c)->KillXP(kill);
@@ -3039,6 +3058,8 @@ void Creature::KillXP(Creature *kill, int16 percent)
         if (S->h && oCreature(S->h))
             oCreature(S->h)->KillXP(kill,75);
     StatiIterEnd(this)
+    KillXPProbe(this, kill, false);
+    depth--;
 }
 
 void Character::KillXP(Creature *kill, int16 percent)

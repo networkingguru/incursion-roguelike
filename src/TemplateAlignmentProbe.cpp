@@ -1,4 +1,4 @@
-/* inc-n0ie: observe real template eligibility and alignment; off unless
+/* inc-n0ie, inc-j35aw: observe real template eligibility and alignment; off unless
    INCURSION_TEMPLATE_ALIGNMENT_PROBE is set. No eligibility rules live here. */
 #include "Incursion.h"
 
@@ -19,6 +19,9 @@ void TemplateAlignmentProbe(Player *pl)
         { "dwarf",    "vampire" },
         { "dwarf",    "paladin;template" },
         { "sahuagin", "blackguard;template" },
+        { "elf",      "twilight huntsman;temp" },
+        { "dwarf",    "shadowdancer;template" },
+        { "elf",      "paladin;template" },
     };
     const int nCases = (int)(sizeof(cases)/sizeof(cases[0]));
 
