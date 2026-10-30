@@ -54,6 +54,13 @@ echo "at a time: $JOBS"
 echo "into:      $SOAK"
 echo
 
+# live_count <pid...>: how many of these pids are still running.
+live_count() {
+    local p n=0
+    for p in "$@"; do kill -0 "$p" 2>/dev/null && n=$((n + 1)); done
+    printf '%s' "$n"
+}
+
 run_one() {
     local seed="$1"
     INCURSION_RUN_DIR="$SOAK/seed-$seed" \
@@ -61,14 +68,12 @@ run_one() {
     echo "$seed $?" >> "$SOAK/exits"
 }
 
-running=0
+# bash 3.2 (macOS /bin/bash) has no `wait -n`, so poll the pids instead.
+pids=""
 for seed in $(seq "$FIRST" $((FIRST + SESSIONS - 1))); do
+    while [ "$(live_count $pids)" -ge "$JOBS" ]; do sleep 0.2; done
     run_one "$seed" &
-    running=$((running + 1))
-    if [ "$running" -ge "$JOBS" ]; then
-        wait -n 2>/dev/null || wait
-        running=$((running - 1))
-    fi
+    pids="$pids $!"
 done
 wait
 
