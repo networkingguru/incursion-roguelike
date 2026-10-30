@@ -66,7 +66,7 @@ known hole.
 | A lit square | A scratch-module driver calls `m->NewField(FI_LIGHT,x,y,1,...)` on the square (the call Call Light makes). It passes no turns, and the square reads brightness 255. |
 | Attack roll (d20) | `INCURSION_LOF_FORCE_ROLL` (`src/Fight.cpp`). It applies to every attacker. |
 | Saving throw (d20) | `INCURSION_FORCE_SAVE_ROLL`, 1 to 20. It applies to every creature. |
-| Skill check (d20) | `INCURSION_RUNTO_SKILL_ROLL`, 1 to 20. |
+| Skill check (d20) | `INCURSION_RUNTO_SKILL_ROLL`, 1 to 20. It also sets the Animal Empathy pacify roll. |
 | Damage roll | `INCURSION_FORCE_DAMAGE_ROLL=<n>`. Each damage die at `Creature::Hit`, and in the A_DEQU retaliation (acid blob and kin damaging the striker or the struck item), shows `min(n, sides)`; 1 = minimum, 99 = maximum. Does not cover sneak-attack dice, weapon-quality extra dice such as flaming 1d6, area attacks or spells. |
 | Monster hit points | The "Monsters Maximum Hit Points" option (`OPT_MON_MAX_HP`, `src/Values.cpp:2392`) set to any value but NO. It is a character-generation option, so a loaded game takes it from its save, not from the options file: set it in the options file used to make the check's fixture (`tools/make_char_fixture.sh`). |
 | Percent-chance roll | *none* |

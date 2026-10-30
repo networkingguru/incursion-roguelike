@@ -14,11 +14,27 @@ w
 LEFT ENTER
 u
 @choose "Animal Empathy"
-LEFT ENTER
+# Pick the pacify target by name too: LEFT alone takes the nearest creature west,
+# which is not the summoned one if another creature stands nearer.
+@until "A cave lion" UP
+@until "A cave lion" RIGHT
+@until "A cave lion" DOWN
+@until "A cave lion" LEFT
+@expect "A cave lion"
+ENTER
 p
 @dump:after-pacify
 .*3
+# Select the monster by name, not by an offset: where a summon lands is not fixed.
+# t = target mode; the first arrow press picks the nearest candidate in that
+# direction, later presses walk the ring. Each @until stops once the look line
+# shows the name; "uninjured" keeps it off the side legend, which lists the name too.
 l
-LEFT
+t
+@until "uninjured cave lion" UP
+@until "uninjured cave lion" RIGHT
+@until "uninjured cave lion" DOWN
+@until "uninjured cave lion" LEFT
+@expect "uninjured cave lion"
 @dump:look
 ESC
