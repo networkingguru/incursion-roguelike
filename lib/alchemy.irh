@@ -1978,6 +1978,7 @@ AI_PSIONIC Effect "Combat Mind" : EA_INFLICT
       exceeds theirs. If they are a humanoid, this bonus is doubled.
       This state requires focus; it can only be activated in combat and
       ceases as soon as you become off-guard."; 
+    On Event MSG_DEFNOTE "Combat Mind: your Intelligence minus the attacker's, doubled vs. humanoids, vs. sapient attackers only." / "*";
     On Event META(EVICTIM(EV_STRIKE)) {
       int16 bonus;
       if (EActor->isMType(MA_SAPIENT))

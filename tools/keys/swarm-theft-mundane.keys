@@ -1,0 +1,33 @@
+# inc-67gh: frozen Warrior, cleared map, wizard-created (not SUMMONED) swarm.
+@until "System Menu" ESC
+ESC
+w
+@while "Enter wizard mode" y
+@choose "Genocide Everything"
+w
+@choose "Wizard Mode Switches"
+DOWN*10
+@dump:freeze-option
+ESC
+w
+@choose "Monster Summoning"
+@choose "Aberrations"
+@choose "ethereal filcher"
+RIGHT ENTER
+@dump:swarm-created
+.
+@while "more --" SPACE
+.
+@while "more --" SPACE
+.
+@while "more --" SPACE
+.
+@while "more --" SPACE
+.
+@while "more --" SPACE
+.
+@while "more --" SPACE
+.*20
+@while "more --" SPACE
+@dump:swarm-end
+@quit

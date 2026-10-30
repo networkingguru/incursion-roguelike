@@ -1,0 +1,31 @@
+# inc-7v2i: cast Shield, let a goblin hit the player, and photograph the attack
+# line. Its "+5 shield" is the engine's own sum of the strike-time bonus, so the
+# sidebar's Def:N+5 can be read against it (AC5 of inc-7v2i).
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav \
+#       tools/headless.sh tools/keys/defnote-shield-hit.keys 4
+
+@dump:arrival
+
+m
+@choose "Shield"
+@dump:cast
+
+w
+y
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+@until "HP:" ESC
+@dump:summoned
+
+RIGHT
+@dump:step1
+RIGHT
+@dump:step2
+RIGHT
+@dump:step3
+RIGHT
+@dump:step4

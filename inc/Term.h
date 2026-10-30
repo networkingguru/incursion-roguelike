@@ -282,6 +282,19 @@ typedef struct WViewListElt {
 
 extern KeySetItem StandardKeySet[]; 
 
+/* inc-7v2i: a defense bonus a resource adds inside each strike (script
+   e.vDef += ...), which the stored defense does not hold. The resource names
+   its own sheet line with MSG_DEFNOTE; Val is the constant bonus, and Variable
+   is set when the bonus depends on the attacker. */
+struct DefNote {
+    String Line;
+    int16  Val;
+    bool   Variable;
+};
+#define MAX_DEFNOTES 16
+class Player;
+int DefenseNotes(Player *p, DefNote *out, int max);
+
 struct CharSheet {
     String Banner;
     String Basics;

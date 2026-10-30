@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.brianhill.incursion.seed-sweep</string>
+    <!-- ProcessType=Interactive: launchd's default QoS gets the job niced and
+         throttled, which starves a long unattended run. -->
+    <key>ProcessType</key>
+    <string>Interactive</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-c</string>
+        <string>cd /Users/brianhill/Scripts/Incursion &amp;&amp; exec tools/nightly_seed_sweep.sh --budget 14400</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>23</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/Users/brianhill/Library/Logs/incursion-seed-sweep.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/brianhill/Library/Logs/incursion-seed-sweep.log</string>
+</dict>
+</plist>
