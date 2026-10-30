@@ -16,7 +16,19 @@
 # with INCURSION_FORCE_SAVE_ROLL, so each outcome is forced, not hoped for.
 # A frozen kobold in sight makes the character "threatened"; an unthreatened
 # creature takes 20 on Balance and the die never matters.
-# Balance modifier of the seed-4 paladin is -1, so roll R gives total R-1.
+# Balance modifier of the fixture paladin (human-paladin-seed4-grease-opt0822) is -1,
+# so roll R gives total R-1.
+#
+# fact: character, Balance -1 -- fixture human-paladin-seed4-grease-opt0822 (INCURSION_LOAD)
+# fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# fact: kobold, grease and ice squares, wizard mode -- wizard Monster Summoning / Change terrain type / Freeze Monsters
+# fact: d20 of every Balance check -- INCURSION_RUNTO_SKILL_ROLL
+# fact: Reflex save after a failed check -- INCURSION_FORCE_SAVE_ROLL
+# fact: A1 attack hits -- INCURSION_LOF_FORCE_ROLL=20
+# fact: A1 damage kills the kobold -- INCURSION_FORCE_DAMAGE_ROLL=99
+# fact: A1 and I1 close-with-kobold Reflex save (the kobold's weapon decides if one is asked) -- INCURSION_FORCE_SAVE_ROLL=20
+# fact: I1 attack on ice (slip, DC 10 check) -- INCURSION_RUNTO_SKILL_ROLL=1
+# fact: message text matched -- fixed strings from the engine, not seed-decided
 #
 # CASES (a run each; the key scripts are tools/keys/grease-srd-*.keys):
 #   M1  roll 20  leave grease: check is DC 10, passes; the step costs twice the
@@ -44,6 +56,8 @@ cd "$ROOT"
 }
 
 OPTS=tools/fixtures/options-2026-08-22.dat
+FIXTURE=tools/fixtures/chars/human-paladin-seed4-grease-opt0822.sav
+CASE_ENV=""
 rc=0
 STAMP="$$-$RANDOM"
 RUNS=()
@@ -56,8 +70,9 @@ run_case() {
     dir="logs/runs/grease-srd-$STAMP-$CASE"
     RUNS+=("$dir")
     env INCURSION_RUNTO_SKILL_ROLL="$roll" ${save:+INCURSION_FORCE_SAVE_ROLL=$save} \
+        INCURSION_LOAD="$FIXTURE" $CASE_ENV \
         INCURSION_OPTIONS="$OPTS" INCURSION_RUN_DIR="$dir" \
-        tools/headless.sh "tools/keys/$keys" "${CASE_SEED:-4}" >"$dir.out" 2>&1
+        tools/headless.sh "tools/keys/$keys" 4 >"$dir.out" 2>&1
     S="$dir/logs/screens"
     ls "$S"/*-history.txt >/dev/null 2>&1 || {
         echo "INCONCLUSIVE [$CASE]: no message history dumped. Output: $dir.out"; exit 2; }
@@ -115,9 +130,10 @@ has "knocked from your feet" || fail "failing by 5 or more did not knock the cre
 has "Reflex Save" && fail "a Reflex save was rolled after failing by 5 or more"
 
 # --- A1: attacking from grease rolls no Balance check
-# A1 alone runs on seed 1 (the others stay on seed 4, whose paladin has Balance -1):
-# re-pinned for inc-rt8l (kit changes the random stream); A1 rolls no Balance check.
-CASE=A1; CASE_SEED=1 run_case grease-srd-attack.keys 1
+# A1 forces the attack roll to 20 and every damage die to its maximum, so the
+# kobold dies on any seed; A1 rolls no Balance check.
+CASE=A1; CASE_ENV="INCURSION_LOF_FORCE_ROLL=20 INCURSION_FORCE_DAMAGE_ROLL=99 INCURSION_FORCE_SAVE_ROLL=20" run_case grease-srd-attack.keys 1
+CASE_ENV=""
 in_grease in || { echo "INCONCLUSIVE [$CASE]: the character never stood in grease"; exit 2; }
 has "killing the kobold" || fail "the attack from grease did not land"
 has "Balance Check" && fail "attacking from grease rolled a Balance check"
@@ -128,7 +144,8 @@ in_grease in || { echo "INCONCLUSIVE [$CASE]: the character never stood in greas
 has "Balance Check" && fail "standing still in grease rolled a Balance check"
 
 # --- I1: Ice Floor is untouched: DC 10 Balance check on attack, then a slip
-CASE=I1; run_case grease-srd-ice.keys 1
+CASE=I1; CASE_ENV="INCURSION_FORCE_SAVE_ROLL=20" run_case grease-srd-ice.keys 1
+CASE_ENV=""
 has "Balance Check:.*vs DC 10 \[failure\]" ||
     fail "no failed DC 10 Balance check when attacking from Ice Floor"
 has "You slip on the ice" || fail "Ice Floor did not make the attacker slip"
