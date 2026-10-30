@@ -59,16 +59,19 @@ run_one() {
 }
 
 START=$(date +%s)
-running=0
+# bash 3.2 (macOS /bin/bash) has no `wait -n`, so poll the pids instead.
+live_count() {
+    local p n=0
+    for p in "$@"; do kill -0 "$p" 2>/dev/null && n=$((n + 1)); done
+    printf '%s' "$n"
+}
+pids=""
 for seed in $(seq 1 "$N"); do
     [ "${SOAK_COV_REUSE:-0}" = 1 ] && break
     mkdir -p "$RUNS/seed-$seed/logs"
+    while [ "$(live_count $pids)" -ge "$JOBS" ]; do sleep 0.2; done
     run_one "$seed" &
-    running=$((running + 1))
-    if [ "$running" -ge "$JOBS" ]; then
-        wait -n 2>/dev/null || wait
-        running=$((running - 1))
-    fi
+    pids="$pids $!"
 done
 wait
 ELAPSED=$(( $(date +%s) - START ))
@@ -91,11 +94,11 @@ export_one() {
     LC_ALL=C sort -u "$d/logs/scriptcov.log" > "$d/routines.txt"
 }
 XSTART=$(date +%s)
-running=0
+pids=""
 for seed in $(seq 1 "$N"); do
+    while [ "$(live_count $pids)" -ge "$JOBS" ]; do sleep 0.2; done
     export_one "$seed" || { echo "seed $seed: coverage export failed"; exit 2; } &
-    running=$((running + 1))
-    if [ "$running" -ge "$JOBS" ]; then wait -n 2>/dev/null || wait; running=$((running - 1)); fi
+    pids="$pids $!"
 done
 wait
 for seed in $(seq 1 "$N"); do
