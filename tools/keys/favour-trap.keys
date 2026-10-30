@@ -3,7 +3,7 @@
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
 #   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
-#       tools/headless.sh tools/keys/favour-trap.keys 3
+#       tools/headless.sh tools/keys/favour-trap.keys 1
 #
 # Trap::TriggerTrap (src/Feature.cpp) pays the character who RESET the trap
 # when it springs on a creature hostile to him: CR * 50 favour to Semirath if
@@ -20,7 +20,9 @@
 #
 # THE STEPS, and why each one is there:
 #
-#   Freeze Monsters      on at once, off only while a kill is awaited.
+#   Freeze Monsters      on for the whole session. The manes never walks, so
+#                        no monster-AI choice decides whether it reaches the
+#                        trap.
 #   Become Divine        Semirath the patron. His EV_CALC_FAVOUR scales by
 #     Champion           ranks in Perform and Bluff; this fixture has none.
 #   Create Trap          a deathblade scythe one square east. It is level 8:
@@ -29,26 +31,31 @@
 #   @until "A trap!" s   a created trap is hidden; search until it is found.
 #                        DisarmTrap refuses a trap that is not found.
 #   u Handle Device y    disarm it -- a reset needs a disarmed trap.
-#   u Handle Device r y  reset it. RESET_BY is what the awards read.
-#   Monster Summoning    a manes two squares east, beyond the trap. A manes is
-#                        mindless and evil, so it is hostile without being
-#                        struck (TargetSystem::RacialHostility), and it has no
-#                        ranged attack. Nothing strikes it, so Semirath's own
-#                        script award for a surprise strike on an evil
-#                        creature cannot fire.
-#   @while "Hiding" h    step out of the shadows. A rogue in the dark hides by
-#                        himself (OPT_AUTOHIDE), and a manes does not come for
-#                        what it cannot see. It does not rehide while a hostile
-#                        creature has a line of fire to him (Player.cpp).
-#   @until "slain by a   pass turns until the manes walks onto the trap. A
-#     deathblade" s      monster with a line of fire steps straight at its
-#                        target (Monster::SmartDirTo) and does not avoid traps.
+#   u Handle Device r y  reset it, standing beside it. RESET_BY is what the
+#                        awards read.
+#   Learn Any Spell      Force Bolt. Its knockback (AD_KNOC, EV_PUSH) moves
+#                        the target through Creature::Walk, which fires traps.
+#   LEFT                 the trap is now two squares east.
+#   Monster Summoning    a manes one square east, between the kobold and the
+#                        trap. A summoned creature on the trap square does
+#                        not fire it, so the manes is placed beside it. A
+#                        manes is mindless and evil, so it is hostile without
+#                        being struck (TargetSystem::RacialHostility).
+#   m Force Bolt RIGHT   the bolt pushes the manes 1d4 squares east. The trap
+#                        is the first square it enters, so the distance does
+#                        not matter. The game prints "Your force bolt kills a
+#                        manes" for the death, because the pusher gets the
+#                        credit; the trap's own Reflex save line (DC 23) is
+#                        what shows the trap sprang.
+#   s                    one turn, so the sidebar redraws its XP total. The
+#                        manes is frozen, so the turn changes nothing else.
+#   RIGHT, reset         the second kill: step back beside the trap and reset
+#                        it, then repeat the summon and the bolt.
 #
-# THE SEED MATTERS MORE HERE THAN ANYWHERE ELSE IN THE CHECK. The search, both
-# resets and both Reflex saves are rolls. Seed 3 passes every one of them on
-# the 2026-09-13 tree; a different seed may fail a reset, and a failed reset
-# cannot be retried. tools/check_favour_awards.sh reports such a run as
-# INCONCLUSIVE, not as a failure.
+# THE ROLLS are forced by tools/check_favour_awards.sh, not left to the seed:
+# INCURSION_FORCE_SAVE_ROLL=1 (the manes fails its Reflex save),
+# INCURSION_LOF_FORCE_ROLL=20 (the bolt hits), INCURSION_RUNTO_SKILL_ROLL=20
+# (the search and every Handle Device check succeed).
 
 w
 @while "Enter wizard mode" y
@@ -90,14 +97,21 @@ u
 y
 @dump:reset
 
+w
+@choose "Learn Any Spell"
+"Force Bolt" ENTER
+@until "HP:" ESC
+
 # --- the first kill: the kill award and the once-per-trap award -----------
+LEFT
 w
 @choose "Monster Summoning"
 @choose "Demons"
 @choose "manes"
-RIGHT RIGHT
+RIGHT
 ENTER
-@while "Hiding" h
+@while "more --" SPACE
+s
 @dump:armed
 
 d
@@ -105,19 +119,13 @@ DOWN*20
 @dump:favour-armed
 ESC
 
-w
-@choose "Wizard Mode Switches"
-DOWN*10
-SPACE
-ESC
-@until "slain by a deathblade" s
-@dump:kill1
+m
+@cursorto:mark "Force Bolt" DOWN
+ENTER
+RIGHT ENTER
 @while "more --" SPACE
-w
-@choose "Wizard Mode Switches"
-DOWN*10
-SPACE
-ESC
+s
+@dump:kill1
 @while "more --" SPACE
 
 d
@@ -126,6 +134,7 @@ DOWN*20
 ESC
 
 # --- the second kill, on the same trap: the kill award alone ----------------
+RIGHT
 u
 @choose "Handle Device"
 @while "Reset trap or salvage" r
@@ -133,13 +142,15 @@ u
 y
 @dump:reset2
 
+LEFT
 w
 @choose "Monster Summoning"
 @choose "Demons"
 @choose "manes"
-RIGHT RIGHT
+RIGHT
 ENTER
-@while "Hiding" h
+@while "more --" SPACE
+s
 @dump:armed2
 
 d
@@ -147,19 +158,13 @@ DOWN*20
 @dump:favour-armed2
 ESC
 
-w
-@choose "Wizard Mode Switches"
-DOWN*10
-SPACE
-ESC
-@until "slain by a deathblade" s
-@dump:kill2
+m
+@cursorto:mark "Force Bolt" DOWN
+ENTER
+RIGHT ENTER
 @while "more --" SPACE
-w
-@choose "Wizard Mode Switches"
-DOWN*10
-SPACE
-ESC
+s
+@dump:kill2
 @while "more --" SPACE
 
 d
