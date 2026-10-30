@@ -406,6 +406,10 @@ void Game::Play() {
     extern void KillXPLoopProbe(Player *pl);
     KillXPLoopProbe(pp);
 
+    /* inc-5lval: opt-in Remove/EV_FIELDOFF scenes; see src/RemoveProbe.cpp. */
+    extern void RemoveFieldScenes(Player *pl);
+    RemoveFieldScenes(pp);
+
     /* inc-pp9w: opt-in template chooser/builder pair oracle. */
     extern void TemplatePairProbe(Player *pl);
     TemplatePairProbe(pp);

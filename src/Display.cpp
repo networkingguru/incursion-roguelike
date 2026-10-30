@@ -2078,6 +2078,7 @@ EvReturn Thing::Event(EventInfo &e) {
     return ERROR;
 }
 
+void RemoveProbe(Thing *t, rID eID, hObj creator, bool after);
 void Thing::Remove(bool isDelete, bool keepMobileFields) {
     int16 ox = x, oy = y,i; Thing *th;
     Creature *mount;
@@ -2157,12 +2158,25 @@ FoundAndRemoved2:
                     i--;
                 }
 
+    /* upstream: a field event can take this Thing off the map -- the
+       Rainstorm leave-effect kills a creature, and Creature::Death calls
+       Remove -- which clears m and has already thrown EV_FIELDOFF for every
+       field at this square. Stop at once: m->Fields is read through a NULL
+       pointer otherwise. Plain control flow, no port dependence. Observed
+       (seed 22, tools/check_remove_field_event.sh), inc-5lval, not sent. */
     if (m && m->At(x,y).hasField)
         for(i=0;m->Fields[i];i++)
             if (m->Fields[i]->inArea(x,y)) {
+                rID fe = m->Fields[i]->eID; hObj fc = m->Fields[i]->Creator;
+                RemoveProbe(this,fe,fc,false);
                 ThrowField(EV_FIELDOFF,m->Fields[i],this);
+                RemoveProbe(this,fe,fc,true);
+                if (!m)
+                    break;
                 if (mount)
                     ThrowField(EV_FIELDOFF,m->Fields[i],mount);
+                if (!m)
+                    break;
             }
 
     if (ox > -1 && m != NULL && !HasStati(MOUNT)) {
