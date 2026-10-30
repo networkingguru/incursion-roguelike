@@ -1,12 +1,12 @@
 # inc-ckw0. Shared start for the grease and ice floor scenarios: a human
-# paladin (chargen-paladin.keys, seed 4), wizard mode with Freeze Monsters on.
+# paladin LOADED from tools/fixtures/chars/human-paladin-seed4-grease-opt0822.sav
+# (the caller passes INCURSION_LOAD; Balance -1), wizard mode with Freeze
+# Monsters on. No chargen: a seed then cannot change the character.
 # A frozen hostile kobold stands in sight, so the character counts as
 # threatened: an unthreatened creature TAKES 20 on a Balance check
 # (Creature::SkillCheckTarget) and the die never matters. The including
 # script chooses the terrain and the kobold's distance (the kobold is
 # summoned by the including script, after this file).
-@include chargen-paladin.keys
-@until "Afoot" ESC
 w
 y
 @choose "Wizard Mode Switches"
