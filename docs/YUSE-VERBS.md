@@ -149,11 +149,11 @@ far less ground than its name suggests. Verified by reading the script.
   glass vial onto a weapon (`lib/mundane.irh:1016`), the weapon oils
   (`lib/m_items.irh:1489`) and the lantern below.
 - **Dip** has four handlers in the build and they cover two targets: a
-  **fountain** (`lib/dungeon.irh:2396` and `:2568`) and an **alchemical
+  **fountain** (`lib/dungeon.irh:2396` and `:2569`) and an **alchemical
   flask**, where only acid does anything (`lib/alchemy.irh:97` and
   `lib/alchemy.irh:650`). A fifth handler, the Spell Storing ring dipped in a
   fountain, is written but not compiled: `#if 0` at `lib/m_items.irh:5251`
-  encloses the whole ring through `:5364`, so neither the ring nor its Dip
+  encloses the whole ring through `:5365`, so neither the ring nor its Dip
   handler reaches `lib/program.i`. Dipping into anything else has nothing
   behind it.
 - **Fill / Pour** (`lib/mundane.irh:640`) — the only combination implemented
@@ -170,7 +170,7 @@ cannot be divided."* The new stack is marked `DROPPED` for 10 turns
 humanoid body with limbs, and no mount already under you
 (`src/Tables.cpp:3149-3153`). It is the only command that rides a creature: no
 key binding throws `EV_MOUNT`, and only this verb and the spells that summon a
-steed do (`lib/wspells.irh:1788` and `:1882`, `lib/pspells.irh:3593`). Once
+steed do (`lib/wspells.irh:1788` and `:1883`, `lib/pspells.irh:3593`). Once
 picked it runs a full validation path — Ride skill, humanoid form, the
 target's `M_MOUNTABLE` flag, hostility, prone/stuck/grappled/asleep, plane,
 size, challenge rating, and whether the creature will accept you at all
