@@ -13,7 +13,9 @@
 # fact: which routes are searched -- none; the self-check compares A* with Dijkstra on every call, whatever the seed plays
 # fact: settings -- tools/gates/Options.Dat
 # fact: run isolation -- unique INCURSION_RUN_DIR per run
-# fact: a hang -- 60 s wall timeout per run
+# fact: how long a seed runs -- 60 s is a per-seed sampling budget (the summary line prints every
+#   1000 calls, so a cut run still counts); tools/run_capped.py enforces it on the whole process
+#   group, and a hang is bounded by the same limit
 #
 # Usage: tools/check_astar_cost.sh [--no-build] [--prove-red]
 # --prove-red: build with -DASTAR_OVERESTIMATE (heuristic x4, inadmissible) and
@@ -40,19 +42,21 @@ if [ $BUILD = 1 ]; then
 fi
 [ -x "./$OUT" ] || { echo "no binary ./$OUT"; exit 2; }
 BASE="logs/$OUT-runs-$$"; mkdir -p "$BASE"
-calls=0; mis=0
+calls=0; mis=0; cut=0
 for seed in 1 3 6 8 16; do
   outf="$BASE/seed-$seed.out"
   INCURSION_BIN="./$OUT" INCURSION_OPTIONS=tools/gates/Options.Dat \
     INCURSION_RUN_DIR="$BASE/run-$seed" INCURSION_MAP_AUDIT=0 \
-    perl -e 'alarm 60; exec @ARGV' tools/headless.sh tools/keys/dive.keys $seed >"$outf" 2>&1
+    tools/run_capped.py 60 tools/headless.sh tools/keys/dive.keys $seed >"$outf" 2>&1
+  rc=$?
+  if [ "$rc" -eq 124 ]; then cut=$((cut+1)); echo "seed $seed: budget reached at 60 s (partial counts)"; fi
   line=$(grep -a '^ASTAR_SELFCHECK ' "$outf" | tail -1)
   if [ -z "$line" ]; then echo "seed $seed: no ASTAR_SELFCHECK line (see $outf)"; exit 2; fi
   c=${line#*calls=}; c=${c%% *}; m=${line##*mismatches=}
   echo "seed $seed: calls=$c mismatches=$m"
   calls=$((calls+c)); mis=$((mis+m))
 done
-echo "total calls=$calls mismatches=$mis"
+echo "total calls=$calls mismatches=$mis budget-cut seeds=$cut of 5"
 [ "$calls" -gt 1000 ] || { echo "FAIL: too few calls to judge"; exit 2; }
 if [ $RED = 1 ]; then
   if [ "$mis" -gt 0 ]; then echo "PROVED RED"; exit 0; fi
