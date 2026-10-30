@@ -1854,7 +1854,9 @@ EvReturn Creature::FieldOn(EventInfo &e) {
         return DONE;
 }
 
+void RemoveProbeDelivered(Thing *t);
 EvReturn Creature::FieldOff(EventInfo &e) {
+    RemoveProbeDelivered(this);
     for(int8 i=1;i!=17;i++)
         if (BIT(i) & e.EField->FType)
             switch(BIT(i)) {              

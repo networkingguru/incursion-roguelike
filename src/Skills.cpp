@@ -1144,6 +1144,7 @@ void Character::UseSkill(uint8 sk) {
 		e.EActor = this;
 		e.EMap = e.EActor->m;
 		Check = (int8)Dice::Roll(1, 20);
+		{ extern int RunToSkillRoll(); int f = RunToSkillRoll(); if (f) Check = (int8)f; } /* inc-b4l3g.13: pacify d20 honors the skill-roll override */
 		if (isPlayer()) {
 			if (!thisp->MyTerm->EffectPrompt(e, Q_TAR | Q_CRE))
 				return /*ABORT*/;
