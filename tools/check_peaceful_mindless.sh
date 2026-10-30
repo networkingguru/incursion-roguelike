@@ -6,17 +6,22 @@
 # Animal Empathy has pacified still rates the player Enemy and attacks.
 # Observation, not a source grep: the LOOK line of a real monster in a real
 # session. "peaceful" = friendly; "hostile ... formerly peaceful" = the defect.
-#   A  mindless + pacified   MUST read peaceful, not hostile   (RED now)
+#   A  mindless + pacified   MUST read peaceful, not hostile   (GREEN since inc-nypm)
 #   B  non-mindless + pacified   MUST read peaceful            (control, GREEN)
 #   C  mindless, not pacified    MUST read hostile             (control, GREEN)
-# Needs: BACKEND=posix ./build_macos.sh. Frozen druid, seed 7 (the pacify roll
-# succeeds on that seed for both A and B; any run where it does not is FAIL).
+# Needs: BACKEND=posix ./build_macos.sh. Frozen druid; any seed (inc-b4l3g.13).
+# fact: the Animal Empathy pacify d20 -- INCURSION_RUNTO_SKILL_ROLL=20 (exported below)
+# fact: where the summoned monster lands -- the summon square is the cursor square the script picks (src/Debug.cpp:679, Q_LOC); the pacify and look steps select the monster by name
+# fact: the character (stats, skills, position) -- INCURSION_LOAD fixture
+# fact: the settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# fact: the monster's hostility text -- read from the look line, asserted, not controlled
 # 0 all pass; 1 any FAIL (including: could not observe).
 set -uo pipefail
 cd "$(dirname "$0")/.."
 SEED="${1:-7}"
 OPTS=tools/fixtures/options-2026-08-22.dat
 FIX=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav
+export INCURSION_RUNTO_SKILL_ROLL=20   # the pacify roll always succeeds: cave lion DC 21, druid +6
 [ -x ./incursion-headless ] || { echo "FAIL: ./incursion-headless missing; run BACKEND=posix ./build_macos.sh"; exit 1; }
 mkdir -p logs
 BASE="$(mktemp -d "$PWD/logs/peaceful-mindless-XXXXXX")"
