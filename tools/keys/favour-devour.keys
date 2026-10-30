@@ -21,6 +21,9 @@
 # Khasrach's script pays for kills too (GODWATCH(POST(EV_DEATH)),
 # lib/religion.irh), through the dispatcher path that never had this defect.
 #
+# Genocide Everything first: a monster of the level in view refuses the meal or
+# interrupts the walk, and which monsters a level holds is the seed's.
+#
 # THE IDIOMS, all borrowed from tools/keys/devour-negative-cr.keys:
 #
 #   Freeze Monsters      the eleventh row of the Wizard Mode Switches, so the
@@ -37,6 +40,8 @@
 #                        identified -- and each swallows one key. Lowercase e:
 #                        see that script.
 
+w
+@choose "Genocide Everything"
 w
 @choose "Wizard Mode Switches"
 DOWN*10

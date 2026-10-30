@@ -19,6 +19,29 @@
 #                                              character reset kills a hostile
 #   src/Feature.cpp  Trap::TriggerTrap         Semirath CR * 50, once per trap
 #
+# Every fact this check reads, and the control that fixes it
+# (docs/VERIFICATION.md, "A check must not depend on the seed"):
+#
+# fact: monk character (Xavias, Khasrach, Zurvash sessions) -- fixture lizardfolk-monk-seed1.sav
+# fact: kobold rogue character (Semirath session) -- fixture kobold-rogue-seed1.sav
+# fact: settings -- CHECK_OPTIONS tools/fixtures/options-2026-08-22.dat
+# fact: patron god of each session -- wizard Become Divine Champion
+# fact: the trap, its level and its square -- wizard Create Trap (deathblade scythe, one square east)
+# fact: the trap is found, disarmed and reset -- Searching and Handle Device skill rolls, INCURSION_RUNTO_SKILL_ROLL=20
+# fact: Knowledge (Theology) insight check passes DC 15 -- INCURSION_RUNTO_SKILL_ROLL=20
+# fact: each skill award amount -- computed from the roll, total and DC the session printed
+# fact: the tabaxi in the devour sessions -- wizard Monster Summoning
+# fact: other monsters on the level (the devour sessions) -- wizard Genocide Everything
+# fact: the tabaxi does not fight back -- wizard Freeze Monsters
+# fact: how many blows kill the tabaxi -- the key script repeats blows until the corpse is listed, so the count does not matter (INCURSION_LOF_FORCE_ROLL=20 is NOT used here: it makes a one-blow kill that the script's step onto the corpse mishandles on seed 303)
+# fact: the tabaxi dies and leaves a corpse -- a kill always makes one (Creature::Die, src/Fight.cpp, "c = new Corpse(this)" under "if (m)"); no percent chance
+# fact: each manes in the trap session -- wizard Monster Summoning, placed beside the trap
+# fact: the manes does not walk -- wizard Freeze Monsters; Force Bolt knockback pushes it onto the trap
+# fact: the bolt reaches the manes -- INCURSION_LOF_FORCE_ROLL=20
+# fact: the manes' Reflex saves fail -- INCURSION_FORCE_SAVE_ROLL=1 (applies to every creature; no one else saves in these sessions)
+# fact: the knockback distance (1d4) -- no control needed: the trap is the first square the manes enters
+# fact: the manes' challenge rating -- read back from the game's own payout (MANES_CR check)
+#
 # THE ORACLE is the character sheet's own favour line for the patron god,
 # "(Favour N, Lev L, Pen P%)" (src/Sheet.cpp), photographed either side of each
 # event. The patron's line is the first one under "Spiritual State:". The
@@ -33,29 +56,35 @@
 #   favour-insight.keys       lizardfolk monk, Xavias     seed 12
 #   favour-devour-khasrach    lizardfolk monk, Khasrach   seed 5
 #   favour-devour-zurvash     lizardfolk monk, Zurvash    seed 5
-#   favour-trap.keys          kobold rogue,    Semirath   seed 1  # inc-kbws: was 3, re-staged after the opposed hide check shifted the RNG stream
+#   favour-trap.keys          kobold rogue,    Semirath   seed 1
+#
+# The seed is an argument only; every roll a session turns on is forced.
 #
 # The trap session measures the favoured-skill award a second time, for a
 # second god: Semirath lists Handle Device, and a reset takes two Handle Device
 # checks. It also kills twice on one trap, so the kill award is measured once
-# with the once-per-trap award and once without it.
+# with the once-per-trap award and once without it. The kobold casts Force Bolt
+# at a frozen manes; the knockback pushes it onto the trap (Creature::Walk
+# fires traps), so no monster walk decides whether the trap springs.
 #
 # A SESSION THAT DID NOT REACH ITS EVENT IS INCONCLUSIVE, never a failure: a
-# skill check that failed or paid nothing, a reset that failed, a manes that
-# made its save. Each of those is a roll, and a module change can move it.
+# skill check that failed or paid nothing, a reset that failed, a trap that did
+# not kill. The rolls behind those are forced above, so on a healthy tree none
+# of them happens; INCONCLUSIVE now means a key script or a game rule moved.
 #
-# PROVED RED on 2026-09-13 by putting int16 back in the base declaration and
-# rebuilding the posix target. Every award assertion failed and both controls
-# held, so the sessions still reached every event and only the favour was gone:
+# PROVED RED on 2026-10-30 (bead inc-b4l3g.1) by putting int16 back in the base
+# declaration and rebuilding the posix target. Every award assertion failed and
+# both controls held, so the sessions still reached every event and only the
+# favour was gone:
 #
-#   FAIL  Xavias, Knowledge (Theology) 21 vs DC 15     30000 -> 30000: rose 0, want +60
+#   FAIL  Xavias, Knowledge (Theology) 24 vs DC 15     30000 -> 30000: rose 0, want +90
 #   ok    the kill paid Khasrach +2 through his script, as always
 #   FAIL  Khasrach, devour, 10 x CR 2                  30002 -> 30002: rose 0, want +20
 #   FAIL  Zurvash, devour, 5 x CR 2                    30000 -> 30000: rose 0, want +10
-#   FAIL  Semirath, Handle Device disarm + reset       30000 -> 30000: rose 0, want +370
+#   FAIL  Semirath, Handle Device disarm + reset       30000 -> 30000: rose 0, want +520
 #   ok    the once-per-trap branch paid +125 XP on kill 1 only, as always
 #   FAIL  Semirath, first kill: kill + once-per-trap   30000 -> 30000: rose 0, want +100
-#   FAIL  Semirath, Handle Device second reset         30000 -> 30000: rose 0, want +250
+#   FAIL  Semirath, Handle Device second reset         30000 -> 30000: rose 0, want +260
 #   FAIL  Semirath, second kill: kill award alone      30000 -> 30000: rose 0, want +50
 #
 # The mutation is not declared with check_mutation, because that guard stops
@@ -66,6 +95,10 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# Every skill check rolls a natural 20. A 20 still meets the award rule "a
+# natural 1 would have failed" (1 + 4 < 15), so skill_award() pays, and it
+# computes the amount from the screen.
+export INCURSION_RUNTO_SKILL_ROLL=20
 MONK=tools/fixtures/chars/lizardfolk-monk-seed1.sav
 KOBOLD=tools/fixtures/chars/kobold-rogue-seed1.sav
 
@@ -177,17 +210,10 @@ rises() { # <what> <before> <after> <want>
 
 # --- 1. A favoured skill: Knowledge (Theology), which Xavias lists ---------
 #
-# SEED 12, NOT 5. This session needs its Knowledge (Theology) check to SUCCEED
-# before there is an award to measure at all, and the roll is an ordinary draw
-# off the shared random stream. inc-i1eo moved that stream once, when it stopped
-# Character::GodMessage spending a random number per character of every god
-# message, and seed 5's roll fell from a success to 1d20 (9) +4 = 13 vs DC 15.
-# The check reported INCONCLUSIVE, which is correct and is not a regression in
-# what it measures. Seed 12 rolls 1d20 (19) +4 = 23, the widest margin in seeds
-# 1-24; the assertion below is unchanged. Note that margin buys nothing against
-# a FUTURE stream move: any shift redraws the die uniformly, and about 45% of
-# seeds fail this DC. If that becomes tiresome, the durable repair is to stop
-# the award depending on a rolled check, not to hunt for another seed.
+# The check is forced to a natural 20 (INCURSION_RUNTO_SKILL_ROLL, exported
+# above), so the roll no longer depends on the seed. A 20 still pays: the award
+# needs "a natural 1 would have failed", and 1 + 4 < 15. The seed (12) is kept
+# only because the sweep records it; any seed gives the same award.
 echo "Xavias, a Knowledge (Theology) success"
 session "$MONK" tools/keys/favour-insight.keys 12
 check_line insight "Knowledge (Theology)"
@@ -229,11 +255,11 @@ rises "Zurvash, devour, 5 x CR $TABAXI_CR" "$z1" "$z2" $((5 * TABAXI_CR))
 
 # --- 4 and 5. A trap the character reset, killing twice --------------------
 echo "Semirath, Handle Device and a reset trap"
-# inc-kbws: seed 3 no longer stages the trap session after the opposed hide
-# check (inc-u3dp) shifted the shared RNG stream; the favour-trap session pins
-# no RNG-sensitive event beyond reaching the trap, and seed 1 does stage it at
-# tip. See the header table.
+# The manes fails every Reflex save, and the bolt that pushes it hits. Both are
+# forced for this session only (header, "fact:" lines).
+export INCURSION_FORCE_SAVE_ROLL=1 INCURSION_LOF_FORCE_ROLL=20
 session "$KOBOLD" tools/keys/favour-trap.keys 1
+unset INCURSION_FORCE_SAVE_ROLL INCURSION_LOF_FORCE_ROLL
 hd=0
 for label in disarm reset; do
     check_line "$label" "Handle Device"
@@ -247,15 +273,24 @@ favour favour-champion Semirath; s0="$FAV"
 favour favour-armed Semirath;    s1="$FAV"
 rises "Semirath, Handle Device disarm + reset" "$s0" "$s1" "$hd"
 
-for n in 1 2; do
-    screen "kill$n"
-    grep -qF "slain by a deathblade scythe" "$SCREEN" ||
-        inconclusive "the manes of kill $n was never slain by the trap."
-done
-turn_on armed2; t0="$TURN"
-turn_on kill2;  t1="$TURN"
-[ "$t1" -gt "$t0" ] || inconclusive \
-    "the second wait took no turns, so its 'slain' line is the first kill's."
+# The trap killed both manes. Force Bolt pushes the manes onto the trap, and
+# the game credits the death to the pusher ("Your force bolt kills a manes"),
+# so that line does not show the trap sprang. The trap's own Reflex save does:
+# the trap is level 8, so its save is DC 23, where the bolt's own save is DC 19.
+# Each kill therefore prints one "vs DC 23 [failure]" line, and the favour
+# assertions below pay only when the trap's code saw the creature dead.
+screen messages
+n="$(grep -c "Reflex Save: .* vs DC 23 \[failure\]" "$SCREEN")"
+[ "$n" -eq 2 ] || inconclusive \
+    "the message log shows $n failed trap saves (DC 23), not 2: the trap did not kill both manes."
+n="$(grep -c "force bolt kills a manes" "$SCREEN")"
+[ "$n" -eq 2 ] || inconclusive "the message log shows $n manes killed, not 2."
+# kill 2's evidence is not kill 1's: it came later in game time.
+turn_on kill1; t0="$TURN"
+turn_on armed2; t1="$TURN"
+turn_on kill2;  t2="$TURN"
+[ "$t1" -ge "$t0" ] && [ "$t2" -gt "$t1" ] || inconclusive \
+    "the second kill took no turns after its manes was placed (turns $t0, $t1, $t2)."
 # The once-per-trap branch also pays 100 + 25 * CR experience, through
 # GainXP, which works. It must be in the first kill's experience and not in
 # the second's; the difference is that branch alone, and it reads the CR back.
