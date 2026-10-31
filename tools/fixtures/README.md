@@ -152,6 +152,24 @@ new fixture with its own key script and its own name; never edit an existing
 one, and never hand-edit a `.sheet.txt`, which would leave it describing a
 character the `.sav` beside it does not hold.
 
+**`human-paladin-damaged-armour-opt0822`** (bd inc-vouo) is
+`human-paladin-seed4-opt0822` after a wizard-made decay trap hit his leather
+armour +3: the armour holds 81 of 86 hit points. `tools/check_repair_cost.sh`
+loads it, so the repair price does not depend on a trap's random roll. It is
+derived from another fixture, not from chargen, so its recipe needs
+`INCURSION_LOAD`, and the sheet's own "regenerate with" line leaves it out:
+
+```sh
+INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav \
+tools/make_char_fixture.sh human-paladin-damaged-armour-opt0822 \
+    tools/keys/repair-cost-damage-save.keys 2 \
+    tools/fixtures/options-2026-08-22.dat --force
+```
+
+Seed 2 is the seed on which the trap hit the armour (seeds 2, 3 and 6 hit; seed
+8 missed). A regeneration on another seed can miss, and then the armour is
+undamaged; `tools/check_repair_cost.sh` exits 2 on that.
+
 ## Tool-check fixtures
 
 | Fixture | Contents |
