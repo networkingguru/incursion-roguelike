@@ -39,7 +39,7 @@ The spine. Every hop is a direct call; nothing is queued or deferred.
 9. `Creature::Walk()` `src/Move.cpp:85` is the handler `EV_MOVE` reaches (`:208`); it ends at `Move(tx, ty, ...)` (`src/Move.cpp:1075`).
 10. `Thing::Move()` `src/Display.cpp:1791` relinks square contents, calls `M->Update()` on both changed squares (`:1922-1923`), and sets the player's `UpdateMap` (`:1938`).
 11. `Map::Update(x,y)` `src/Term.cpp:748` picks one square's glyph and pushes it to `PutChar`.
-12. Next pass, `TextTerm::AdjustMap()` `src/Term.cpp:1030` (from `RefreshMap()` `inc/Term.h:729`, and from `src/Main.cpp:656`) scrolls the viewport and calls `ShowMap()` when the offset moved or `UpdateMap` is set (`src/Term.cpp:1101-1102`).
+12. Next pass, `TextTerm::AdjustMap()` `src/Term.cpp:1030` (from `RefreshMap()` `inc/Term.h:729`, and from `src/Main.cpp:665`) scrolls the viewport and calls `ShowMap()` when the offset moved or `UpdateMap` is set (`src/Term.cpp:1101-1102`).
 13. `TextTerm::ShowMap()` `src/Term.cpp:917` calls `p->CalcVision()` (`src/Term.cpp:959`, defined `src/Vision.cpp:289`), clears `UpdateMap` (`src/Term.cpp:960`), loops the window calling `PutChar`/`PutGlyph` (`src/Term.cpp:974-998`, `src/Term.cpp:1259`).
 14. `posixTerm::Update()` `src/Wposix.cpp:705` blits the 80x48 buffer to the terminal; with no terminal it only sets a flag (`:708,729`). Then `Turn++` `src/Main.cpp:829`.
 
@@ -92,7 +92,7 @@ Section 2 was traced by reading the listed call sites. It was not observed under
 
 - `src/Player.cpp:626` — `ch != KY_CMD_NAME && KY_CMD_WIZMODE &&` is missing its `ch !=`. `KY_CMD_WIZMODE` is a non-zero enumerator (`inc/Term.h:186`), so the term is always true and has no effect: the wizard key is the one key in the list that is NOT exempt, and pressing it while charging asks "Break off your charge?". The eight neighbouring tests all use `ch !=`. (Corrected 2026-08-15: the page first said the opposite.)
 - `src/Event.cpp:236` — inside a branch guarded by `e.EMap && e.EMap->dID`, the error text dereferences `e.EActor->m->dID`. `ThrowEvent` reaches it with `e.EActor == NULL` when `e.EMap` came from `e.EVictim` (`:173`), so the error path crashes instead of reporting.
-- `src/Main.cpp:763` — `min(20048, DestroyCount+1)`; the array holds 20480 (`inc/Res.h:1311,1313`). Digits transposed. It clamps low so it cannot overrun, but 432 queued deletions per pass would be dropped silently.
+- `src/Main.cpp:772` — `min(20048, DestroyCount+1)`; the array holds 20480 (`inc/Res.h:1311,1313`). Digits transposed. It clamps low so it cannot overrun, but 432 queued deletions per pass would be dropped silently.
 - `src/Event.cpp:485-490` — `if (e.Event >= 500) return r;` makes the two following `Fatal` branches for unhandled PRE and POST events unreachable.
-- `inc/Term.h:729` — `RefreshMap()` dereferences `p` unchecked and is called as `T1->RefreshMap()` (`src/Magic.cpp:1769`, `src/Skills.cpp:2154`); `ClearPlayer()` (`inc/Term.h:825`) sets `p` to NULL, so the state is reachable.
+- `inc/Term.h:729` — `RefreshMap()` dereferences `p` unchecked and is called as `T1->RefreshMap()` (`src/Magic.cpp:1769`, `src/Skills.cpp:2155`); `ClearPlayer()` (`inc/Term.h:825`) sets `p` to NULL, so the state is reachable.
 - `src/Term.cpp:6` — the header says "80x50 text mode"; the code is 80x48 (`src/Wposix.cpp:74-75`, asserted `src/TextTerm.cpp:102-103`). Stale prose.

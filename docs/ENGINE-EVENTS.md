@@ -55,7 +55,7 @@ in the build.**
 `EventInfo EventStack[EVENT_STACK_SIZE]`, `EventSP` starting at -1 (`src/Event.cpp:135-136`); the size is 128
 (`inc/Defines.h:79`). The only bound is `CHECK_OVERFLOW` (`src/Event.cpp:133`), which calls `Fatal("Event Stack Overflow!")` and
 exits. There is no depth budget, no recursion counter and no cycle detection in `src/Event.cpp`. Unrelated code reads frames
-assuming the enclosing context: `src/Fight.cpp:875-882`, `src/Prayer.cpp:589`, `src/Skills.cpp:1771`, `src/Target.cpp:1771`.
+assuming the enclosing context: `src/Fight.cpp:875-882`, `src/Prayer.cpp:589`, `src/Skills.cpp:1772`, `src/Target.cpp:1771`.
 
 ## Re-entrancy
 **The system has no general protection against re-entrancy.** Shared by every nested event: `VMachine::Regs[64]`, `SRegs[64]`,
