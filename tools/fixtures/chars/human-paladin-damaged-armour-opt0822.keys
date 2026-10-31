@@ -1,0 +1,34 @@
+# Damage the frozen paladin's leather armour +3 and SAVE him, so the damage can
+# be frozen into tools/fixtures/chars/ (bd inc-vouo). Start from the paladin
+# human-paladin-seed4-opt0822.sav, loaded, not generated:
+#
+#   INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav \
+#   tools/make_char_fixture.sh human-paladin-damaged-armour-opt0822 \
+#       tools/keys/repair-cost-damage-save.keys <seed> \
+#       tools/fixtures/options-2026-08-22.dat
+#
+# A wizard-made "minor decay trap" goes on the square to the east and is walked
+# onto. The trap picks a random equipped item, so only some seeds hit the
+# armour; tools/check_char_fixture.sh and the sheet show which. The first RIGHT
+# after the placement is eaten by the "You find a trap" interrupt; the second
+# RIGHT opens the confirm prompt.
+
+w
+@while "Enter wizard mode" y
+@until "Wizard Mode Options" w
+@choose "Create Trap"
+"minor decay trap" ENTER
+RIGHT
+ENTER
+RIGHT
+RIGHT
+y
+
+i
+@dump:damaged
+ESC
+
+@until "System Menu" ESC
+@expect "System Menu"
+b                       # [b] Save and Continue; no @quit, so exactly one save
+@dump:saved

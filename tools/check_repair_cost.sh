@@ -7,34 +7,37 @@
 # complementary tenths of HP LOST. The cost line lacked the "10 -", so a
 # nearly destroyed item cost almost nothing and a scratched one cost the most.
 #
-# THE ORACLE is the game's own text, no probe. A frozen paladin walks onto a
-# wizard-made decay trap that damages his leather armour +3. Three screens give
-# the facts: the item's description ("base value of S gp", "H out of M hit
-# points"), the "Repair which item?" menu ("(H/M)"), and the repair's own
-# "That would cost N gp in materials" message. The engine's integer arithmetic
-# is repeated here: lost = 10 - (H*10)/M, expected N = S * lost / 30.
-# The unfixed build prices the armour at S * 9 / 30 = 640 gp, the fixed build at
-# S * 1 / 30 = 71 gp. The check FAILS (exit 2) when a screen or number is
-# missing, so it cannot pass by never reaching the code.
+# THE ORACLE is the game's own text, no probe. A frozen paladin whose leather
+# armour +3 is already damaged is loaded. Three screens give the facts: the
+# item's description ("base value of S gp", "H out of M hit points"), the
+# "Repair which item?" menu ("(H/M)"), and the repair's own "That would cost N
+# gp in materials" message. The engine's integer arithmetic is repeated here:
+# lost = 10 - (H*10)/M, expected N = S * lost / 30. The check FAILS (exit 2)
+# when a screen or number is missing, so it cannot pass by never reaching the
+# code.
+#
+# fact: the character, a human paladin wearing leather armour +3 -- frozen save human-paladin-damaged-armour-opt0822.sav, loaded (INCURSION_LOAD)
+# fact: the armour's damage, below its maximum hit points -- frozen in that save; no trap or roll runs here, and the check dies (exit 2) when H >= M
+# fact: the armour's base value S -- read from the examine screen, not typed here
+# fact: the armour's hit points H and M -- read from the examine screen and checked against the repair menu
+# fact: the repair price N -- read from the "That would cost N gp in materials" message
+# fact: the settings -- tools/fixtures/options-2026-08-22.dat via CHECK_OPTIONS
+# fact: the seed -- irrelevant to the price (no roll between load and the cost message); pinned only so the run is repeatable
+# fact: the gold carried, 11 gp -- frozen in the save; the repair stops at the message, spending nothing
+# fact: the screen texts (exam, menu, cost) -- the keys dump them, and the check dies (exit 2) when one is missing
+# fact: lost = 5 tenths cannot tell the two formulas apart -- the check dies (exit 2) on it
 #
 # Usage: tools/check_repair_cost.sh
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 
-# inc-kbws: was seed 1; the opposed hide check (inc-u3dp) shifted the shared
-# RNG stream, so seed 1 no longer walks the decay trap onto the armour at tip.
-# Seeds 2-5 staged it; seed 2 was used.
-# inc-bs7h: the inc-9622 landing shifted the RNG stream again. Seed 2 now avoids
-# the trap (armour stays 86/86, "You have no damaged items."), so the check was
-# INCONCLUSIVE. Observed after inc-9622: seeds 1 (78/86) and 5 (84/86) are hit,
-# seeds 2-4 avoid. Seed 1 is used.
 SEED=1
 KEYS=tools/keys/repair-cost.keys
-LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav
+LOAD=tools/fixtures/chars/human-paladin-damaged-armour-opt0822.sav
 
 [ -f "$LOAD" ] || _check_die 2 \
-    "no $LOAD, so there is no frozen paladin with leather armour +3."
+    "no $LOAD, so there is no frozen paladin with damaged leather armour +3."
 
 export INCURSION_RUN_DIR="$CHECK_ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$$-repair-cost"
 export INCURSION_LOAD="$LOAD"

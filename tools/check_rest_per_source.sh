@@ -33,6 +33,17 @@
 #      PASS nor FAIL). It becomes exit 2 if a book ever appears in the
 #      inventory, because then d needs a key script this check does not have.
 #
+# FACTS the check reads (docs/VERIFICATION.md, "A check must not depend on the seed"):
+# fact: character -- fixtures human-priest-mage-seed4-gate, orc-priest-seed4-gate, orc-bard-reapply-seed1 (INCURSION_LOAD)
+# fact: settings -- tools/fixtures/options-2026-08-22.dat
+# fact: depth 2 and no hostile in view (a rest needs both) -- wizard Ascend/Descend Depth, Genocide Everything
+# fact: arrival square may be a chasm ("You fall..." waits for ENTER) -- key scripts answer it with @while "You fall" ENTER
+# fact: the wizard key after "Done." (can be swallowed) -- key scripts press w @until the menu shows
+# fact: a disguised monster's reveal puts -- more -- in the rest message -- key scripts @while "-- more --" SPACE
+# fact: spell source bits at load and after rest -- INCURSION_SPELLFLAG_PROBE=1 over the fixture's frozen spells
+# fact: Learn Spells row order -- frozen fixture, LearnSpell sorts rows by name
+# fact: fixture inventory holds no spellbook -- fixture .sheet.txt, checked (exit 2 if it changes)
+#
 # PROVED RED with --prove-red (docs/VERIFICATION.md step 2). The mutation makes
 # the row loop of ApplySpellSelection skip every row whose Type is not
 # SP_ARCANE. A divine row is then never applied, so case b keeps Bane divine=1

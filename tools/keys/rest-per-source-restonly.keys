@@ -22,8 +22,12 @@ s                       # one real turn: this counts as a session (exit 5 otherw
 w                       # wizard menu (already in wizard mode)
 @choose "Ascend / Descend Depth"
 "2" ENTER
+# The wizard descent keeps x,y, so a chasm square there makes the player fall (inc-mj17);
+# each fall waits for ENTER. Any number of falls is fine.
+@while "You fall" ENTER
 @until "HP:" ESC
-w
+# The first w can be swallowed by the pending "Done." message (inc-mj17): press it until the menu shows.
+@until "Genocide Everything" w
 @choose "Genocide Everything"
 @until "HP:" ESC
 
@@ -31,4 +35,7 @@ w
 z
 y
 @dump:after-rest
+# A disguised monster's reveal can put a -- more -- in the rest message; the rest finishes (and
+# the probe logs) only after it is answered (inc-mj17).
+@while "-- more --" SPACE
 @dump:end
