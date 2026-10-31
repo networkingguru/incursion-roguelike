@@ -2673,7 +2673,13 @@ TargetChosen:
                     (int)cr->x, (int)cr->y, (int)p->x, (int)p->y,
                     aiming ? "-- entering the ring" : "");
                 MapIterate(m,th,i)
-                    if (XOff < th->x && YOff < th->y)
+                    /* upstream: base-code defect, fix is ours. The candidate
+                       bounds MUST equal the bounds PutGlyph draws, which
+                       include the window's first row and column. Plain C
+                       comparison, so Win32 and the original compiler drop the
+                       same things. Tier Observed. Tracking inc-3k0nv. Not sent
+                       to rmtew. */
+                    if (XOff <= th->x && YOff <= th->y)
                         if (XOff+Windows[WIN_MAP].Right >= th->x && YOff+(Windows[WIN_MAP].Bottom-Windows[WIN_MAP].Top) >= th->y)
                             if ((p->Perceives(th) || (m->At(th->x,th->y).Visibility & VI_DEFINED)))
                                 if (GLYPH_ID_VALUE(th->Image) != GLYPH_TREE &&
