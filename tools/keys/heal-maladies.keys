@@ -71,10 +71,19 @@
 # fully refreshed!", and the after-dump showed all nine gone. Nothing here
 # forced a per-malady run.
 
-@include chargen.keys
+# The character is LOADED (tools/check_heal_maladies.sh sets INCURSION_LOAD), so
+# no chargen is included. SPACE clears the "Welcome back" -- more -- prompt.
+SPACE
 
 w
 y                       # Enter wizard mode? [yn] -- only asked once
+
+# Clear the level so the kobold below is the only monster and nothing else
+# interferes (inc-xh3k).
+@choose "Genocide Everything"
+SPACE*40                 # dismiss the genocide message chain
+
+w
 
 # FIRST MEASUREMENT: PARALYSIS. A paralysed character cannot act, so he
 # cannot cast Heal on himself -- the patient and the caster must be two
