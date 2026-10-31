@@ -1417,6 +1417,16 @@ SkipThisFocus:;
        shield and a Universal Gear shield, so the character started with two;
        upstream because it is plain resource data and misbehaves identically on
        Win32; Observed; tracking inc-6fii; not sent. */
+    /* INCURSION_KIT_GRANT=<item name>: test hook. Adds that item to the
+       starting kit as a perk item is added, before the kit is arranged. An
+       unresolved name logs an Error and adds nothing. inc-b4l3g.20. */
+    if (const char *grant = getenv("INCURSION_KIT_GRANT")) {
+        rID gID = FIND(grant);
+        if (gID)
+            GainItem(Item::Create(gID), true);
+        else
+            Error("INCURSION_KIT_GRANT: no item named \"%s\"", grant);
+    }
     DedupeStartingKit(this);
     ArrangeStartingKit(this);
 
