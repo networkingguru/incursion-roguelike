@@ -1,11 +1,14 @@
 #!/bin/bash
 # gate: live
-# fact: character and combat rolls -- seed 6, temporary re-pin explicitly authorized by inc-rt8l
+# fact: character, class, god and map -- fixture xsummon-priest-seed5-opt0822 (INCURSION_LOAD)
 # fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# fact: Biocurrent touch attack roll -- INCURSION_LOF_FORCE_ROLL=20
 # fact: spells and victims -- wizard Learn Any Spell and Monster Summoning
 # fact: Lore of Storms -- scratch module's test god
 # fact: touch damage -- positive Lightning damage-line shape assertion
-# fact: two blast victims -- two distinct brown-bear damage lines required
+# fact: two blast victims -- summoned bears on UP and LEFT squares; two brown-bear damage lines required in the message log, not de-duplicated
+# fact: bear Reflex save -- INCURSION_FORCE_SAVE_ROLL=1 (both bears fail)
+# fact: spell damage dice -- not asserted on (only the count of lines and the Lore-term count are read)
 # fact: leftover Lore text -- each damage line checked for another victim's text
 # Assert the Magic::Blast Damage line is clean for bead inc-skc6.
 #
@@ -64,6 +67,11 @@ cd "$ROOT"
 OPTIONS="${INCURSION_OPTIONS:-tools/fixtures/options-2026-08-22.dat}"
 [ -f "$OPTIONS" ] || { echo "INCONCLUSIVE: settings file $OPTIONS is not there"; exit 2; }
 KEYS=tools/keys/inc-skc6-biocurrent-touch.keys
+FIXTURE=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav
+[ -f "$FIXTURE" ] || { echo "INCONCLUSIVE: fixture $FIXTURE is not there"; exit 2; }
+export INCURSION_LOAD="$FIXTURE"
+export INCURSION_LOF_FORCE_ROLL=20
+export INCURSION_FORCE_SAVE_ROLL=1
 [ -f "$KEYS" ] || { echo "INCONCLUSIVE: key script $KEYS is not there"; exit 2; }
 
 TOKEN="${INCURSION_CHECK_TOKEN:-$$-$(date +%s)}"
@@ -163,7 +171,11 @@ if [ "$STATUS2" -ne 0 ]; then
     exit 1
 fi
 
-DMG_LINES="$(grep -ahoE "Brown bear's Damage: [^|]*" "$SCRATCH_DIR"/logs/screens/*.txt 2>/dev/null | sort -u)"
+# One line per bear, read from the message log screen alone and NOT de-duplicated:
+# two bears can roll the same damage, and `sort -u` then folded them into one line
+# (the seed decides the roll). The cast screens repeat the last line, so they are
+# not read.
+DMG_LINES="$(grep -ahoE "Brown bear's Damage: [^|]*" "$SCRATCH_DIR"/logs/screens/*message-log.txt 2>/dev/null)"
 
 if [ -z "$DMG_LINES" ]; then
     echo "FAIL: no brown bear Damage line at all in $SCRATCH_DIR/logs/screens --"
@@ -173,7 +185,7 @@ fi
 
 HIT_COUNT="$(printf '%s\n' "$DMG_LINES" | grep -c 'Lightning')"
 if [ "$HIT_COUNT" -lt 2 ]; then
-    echo "FAIL: only $HIT_COUNT distinct brown bear Damage line(s) seen; need one"
+    echo "FAIL: only $HIT_COUNT brown bear Damage line(s) seen; need one"
     echo "      per bear (two) to say anything about leftover text"
     printf '%s\n' "$DMG_LINES" | sed 's/^/        /'
     exit 1
