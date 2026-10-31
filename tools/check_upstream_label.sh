@@ -56,20 +56,21 @@ ID_RE="inc-[a-z0-9]+(\.[0-9]+)*"
 # the text after the row's final pipe separator, so a cell naming several ids
 # yields all of them.
 ledger_ids() {
-    local reg=$1 in_table=0 row last
-    while IFS= read -r row; do
-        case "$row" in
-            "### Base-code bugs fixed locally"*) in_table=1; continue ;;
-            "#"*) in_table=0; continue ;;
-        esac
-        [ "$in_table" = 1 ] || continue
-        case "$row" in "|"*) ;; *) continue ;; esac
-
-        last=${row%"${row##*[![:space:]]}"}   # strip trailing whitespace
-        last=${last%|}                         # drop the trailing pipe
-        last=${last##*|}                       # everything after the last separator
-        printf '%s\n' "$last" | grep -oE "$ID_RE"
-    done < "$reg"
+    awk -v re="$ID_RE" '
+        /^### Base-code bugs fixed locally/ { in_table = 1; next }
+        /^#/ { in_table = 0; next }
+        !in_table || !/^\|/ { next }
+        {
+            last = $0
+            sub(/[ \t\r]+$/, "", last)   # strip trailing whitespace
+            sub(/\|$/, "", last)          # drop the trailing pipe
+            sub(/.*\|/, "", last)         # everything after the last separator
+            while (match(last, re)) {
+                print substr(last, RSTART, RLENGTH)
+                last = substr(last, RSTART + RLENGTH)
+            }
+        }
+    ' "$1"
 }
 
 # The set of beads that carry the `upstream` label, one id per line. Overridable
@@ -117,11 +118,11 @@ run_check() {
     fi
     labelled=$(printf '%s\n' "$labelled" | sort -u)
 
+    # One pass: every ledger id that is not in the labelled set (inc-7382r).
     local missing="" id
-    while IFS= read -r id; do
-        [ -n "$id" ] || continue
-        grep -qxF "$id" <<< "$labelled" || missing="$missing $id"
-    done <<< "$ids"
+    missing=$(awk 'NR == FNR { l[$0] = 1; next } $0 != "" && !($0 in l)' \
+                  <(printf '%s\n' "$labelled") <(printf '%s\n' "$ids") | tr '\n' ' ')
+    [ -z "${missing// /}" ] && missing=""
 
     local total checked
     total=$(printf '%s\n' "$ids" | grep -c .)

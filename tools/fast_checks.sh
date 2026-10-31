@@ -74,18 +74,22 @@ if [ "${#CHECKS[@]}" -eq 0 ]; then
     exit 2
 fi
 
-command -v perl >/dev/null 2>&1 || {
-    echo "COULD NOT MEASURE: perl is needed to enforce the time limit" >&2
+CAPPED="$ROOT/tools/run_capped.py"
+command -v python3 >/dev/null 2>&1 && [ -f "$CAPPED" ] || {
+    echo "COULD NOT MEASURE: python3 and tools/run_capped.py are needed to enforce the time limit" >&2
     exit 2
 }
 
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/fast_checks.XXXXXX")" || exit 2
 trap 'rm -rf "$TMP"' EXIT
 
-# Launch every check in parallel. Each is wrapped in perl's alarm so a check
-# that overruns is killed even though macOS ships no timeout(1); alarm
-# survives the exec into the check. The wrapper records the exit code so the
-# report can be printed in a stable order once every job is done.
+# Launch every check in parallel. Each runs under tools/run_capped.py so a check
+# that overruns is stopped even though macOS ships no timeout(1). run_capped.py
+# starts the check in its own session and stops the WHOLE process group at the
+# limit (SIGTERM, 2 s, SIGKILL), so a child of the check does not outlive it
+# (inc-7382r; perl's alarm killed only the check's own process). It exits 124
+# at the limit. The wrapper records the exit code so the report can be printed
+# in a stable order once every job is done.
 PIDS=()
 for i in "${!CHECKS[@]}"; do
     out="$TMP/$i.out"
@@ -94,7 +98,7 @@ for i in "${!CHECKS[@]}"; do
     end="$TMP/$i.end"
     date +%s > "$start"
     (
-        perl -e 'alarm shift; exec @ARGV' "$LIMIT" "${CHECKS[$i]}" > "$out" 2>&1
+        "$CAPPED" "$LIMIT" "${CHECKS[$i]}" > "$out" 2>&1
         echo $? > "$st"
         date +%s > "$end"
     ) &
@@ -114,7 +118,7 @@ for i in "${!CHECKS[@]}"; do
     [ -n "$rc" ] || rc=1
     elapsed=$(( $(cat "$TMP/$i.end" 2>/dev/null || cat "$TMP/$i.start") - $(cat "$TMP/$i.start") ))
     too_slow=0
-    [ "$rc" -eq 142 ] && too_slow=1
+    [ "$rc" -eq 124 ] && too_slow=1
     [ "$elapsed" -ge "$LIMIT" ] && too_slow=1
     if [ "$too_slow" -eq 1 ]; then
         any_failed=1
@@ -159,10 +163,10 @@ for i in "${!CHECKS[@]}"; do
     [ -n "$rc" ] || rc=1
     elapsed=$(( $(cat "$TMP/$i.end" 2>/dev/null || cat "$TMP/$i.start") - $(cat "$TMP/$i.start") ))
 
-    # TOO SLOW is per check: perl's alarm kills the check with SIGALRM (142),
-    # or the check's own elapsed reached the limit. Never report time.
+    # TOO SLOW is per check: run_capped.py stopped the check at the limit
+    # (exit 124), or the check's own elapsed reached the limit.
     too_slow=0
-    [ "$rc" -eq 142 ] && too_slow=1
+    [ "$rc" -eq 124 ] && too_slow=1
     [ "$elapsed" -ge "$LIMIT" ] && too_slow=1
 
     if [ "$rc" -eq 0 ] && [ "$too_slow" -eq 0 ]; then
