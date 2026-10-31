@@ -44,7 +44,6 @@
 2 tools/check_flame_tongue_large.sh
 2 tools/check_flame_tongue_range_prose.sh
 4 tools/check_flame_tongue_undead.sh
-1 tools/check_gate_membership.sh
 3 tools/check_gcc_o2_char_create.sh
 1 tools/check_gear_protection_roster.sh
 3 tools/check_geomancy.sh
