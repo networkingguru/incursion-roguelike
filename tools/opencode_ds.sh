@@ -15,7 +15,8 @@
 #
 # Exit 0 success; 2 could not run or opencode failed; 3 the run was stopped as
 # a DeepSeek repetition loop; 4 the run was stopped because its context passed
-# the ceiling; 5 the run was stopped by a provider error (429 or 5xx).
+# the ceiling; 5 the run was stopped by a provider error (429 or 5xx); 6 the
+# budget route refused the launch (bead inc-3vyok).
 #
 # The wrapper reuses tools/deepseek.py's resolve_ledger_path and resolve_key --
 # it imports the module rather than copying the logic, so the ledger row format
@@ -71,6 +72,16 @@ fi
 
 ARG_WORKTREE="$1"
 BRIEF_FILE="$2"
+
+# --- 0. budget route (bead inc-3vyok) ------------------------------------
+# Under a `sonnet-first` weekly budget a DeepSeek run needs INCURSION_DS_FALLBACK
+# and a Sonnet attempt in the dispatch log. The same decision the Bash hook makes
+# (tools/dispatch_gate.py); a refusal or a crash of the check exits 6, before any
+# spend or launch. INCURSION_DISPATCH_GATE_OFF=1 bypasses it (logged).
+if ! python3 "$(dirname "$0")/dispatch_gate.py" --check-launch deepseek; then
+    echo "refused: the budget route bars a DeepSeek launch (exit 6)." >&2
+    exit 6
+fi
 
 # --- paths ----------------------------------------------------------------
 # REPO is the repository this script lives in, never the worktree.
