@@ -14,7 +14,7 @@
 # Con damage of N, the count of its unlawful strikes so far (1, 2, 3, ...).
 # The lawful creature struck takes none.
 #
-# THE ORACLE. tools/keys/mark-of-punishment.keys plays the real game on seed 2:
+# THE ORACLE. tools/keys/mark-of-punishment.keys plays the real game from a loaded paladin:
 # a lawful paladin touches a hostile ogre (the mark), then waits eight turns
 # while the ogre strikes him. INCURSION_FORCE_SAVE_ROLL=1 makes every saving
 # throw a natural 1, which always fails, so every unlawful strike takes damage.
@@ -37,17 +37,25 @@
 # script-thrown event, so ThrowDmg(...,AD_DACO,N,...) takes 1 point whatever N is.
 # A fix that passes N and nothing else reads 1,1,1 here and FAILs.
 #
+# fact: character -- fixture human-paladin-seed4-gate (INCURSION_LOAD); no chargen in the key script
+# fact: the map and other monsters -- wizard "Genocide Everything", then "Monster Summoning" of one ogre
+# fact: the ogre's gear and blows -- INCURSION_SUMMON_NO_GEAR=1 (the ogre punches)
+# fact: the touch hits -- INCURSION_LOF_FORCE_ROLL=15 (attack roll)
+# fact: the ogre's blows hit the paladin -- INCURSION_LOF_FORCE_ROLL=15 (attack roll)
+# fact: the Will save fails -- INCURSION_FORCE_SAVE_ROLL=1
+# fact: a killing blow on the paladin -- wizard switch Cheat Death; "Die?" answered n
+# fact: settings -- tools/gates/Options.Dat (OPTIONS)
+# fact: session length -- tools/keys/mark-of-punishment.keys, 8 waits, @quit; the ogre may die of Con loss at strike 5 and the readings stop there
+# fact: text matched -- "You have marked the ogre", A_CON and sidebar CON lines; none depends on the seed
+#
 # Exit 0 pass, 1 the defect (or any other wrong behavior), 2 could not measure.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-# Seed pinned 4 (was 2) for inc-uwxp: commit 127e63ef made CanAddTemplate refuse
-# a two-alignment template, shifting the monster population and the RNG stream,
-# so on seed 2 an unscripted ogre now attacks at key 95 and the run stalls
-# (headless exit 6). Seed 4 stages the touch and the 1,2,3 Con-loss strikes.
-SEED=11   # re-pinned for inc-rt8l (kit changes the random stream)
+SEED=11   # any seed gives the same verdict (inc-nea6j); the controls below fix the facts
+export INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-gate.sav
 KEYS=tools/keys/mark-of-punishment.keys
 OPTIONS=tools/gates/Options.Dat
 
@@ -58,7 +66,7 @@ OPTIONS=tools/gates/Options.Dat
 [ -f "$KEYS" ] || { echo "INCONCLUSIVE(2): $KEYS is missing"; exit 2; }
 
 RUN_DIR="$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$$-mark-of-punishment"
-out="$(INCURSION_FORCE_SAVE_ROLL=1 INCURSION_RUN_DIR="$RUN_DIR" \
+out="$(INCURSION_FORCE_SAVE_ROLL=1 INCURSION_LOF_FORCE_ROLL=15 INCURSION_SUMMON_NO_GEAR=1 INCURSION_RUN_DIR="$RUN_DIR" \
     INCURSION_OPTIONS="$OPTIONS" tools/headless.sh "$KEYS" "$SEED" 2>&1 </dev/null)"
 status=$?
 SHOTS="$RUN_DIR/logs/screens"
@@ -99,6 +107,12 @@ PAIRS=""
 for f in "${STATES[@]}"; do
     ogre="$(grep -oE '^A_CON +[0-9]+ \(base [0-9]+' "$f" | grep -oE '[0-9]+' | sed -n '1p;2p' | tr '\n' ' ')"
     pal="$(grep -oE '\|CON: *[0-9]+' "$f" | grep -oE '[0-9]+$' | sed -n '1p')"
+    # The ogre dies when its cumulative Con loss reaches its Con (1+2+3+4+5 = 15):
+    # the Examine page then shows the paladin, so the ogre read is empty. That ends
+    # the readings; the strike count below still has to reach 3.
+    if [ -z "$ogre" ] && [ -n "$PAIRS" ] && [ -n "$pal" ]; then
+        break
+    fi
     if [ -z "$ogre" ] || [ -z "$pal" ]; then
         echo "INCONCLUSIVE(2): could not read Constitution from $f (ogre='$ogre' paladin='$pal')."
         exit 2
@@ -117,8 +131,8 @@ print("PALADIN_CON", " ".join(map(str, pal)))
 e = 1                      # the damage the next strike must do
 ok = True
 why = ""
-for i in range(1, len(loss)):
-    d = loss[i] - loss[i - 1]
+for i in range(len(loss)):
+    d = loss[i] - (loss[i - 1] if i else 0)   # strikes before the first read count too
     if d < 0:
         ok, why = False, "ogre Con rose between reads"
         break

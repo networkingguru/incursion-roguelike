@@ -22,6 +22,8 @@
 #      TOO SLOW line is the original text; exit 1
 #   l. all checks pass, guard faked to refuse       -> 0, no OVERLOADED: line
 #      (the guard is not consulted when nothing failed)
+#   m. a check that starts a child and overruns -> TOO SLOW, and the child is
+#      dead within 3 s (the cap stops the whole process group; inc-7382r)
 #
 # inc-p8bw: the load guard is what tells a load failure from a defect. Every
 # fact this check reads, and the control that fixes it:
@@ -30,6 +32,8 @@
 # fact: the bypass log location (guard OFF path) -- INCURSION_LOAD_GUARD_LOG
 # fact: which checks fail, and why -- fakes planted in a temp dir via --dir
 # fact: a check is too slow -- INCURSION_FAST_LIMIT in the temp runner env
+# fact: the child's liveness after the cap -- polled by PID for up to 3 s, so
+#       only the child's death matters, not how fast it dies
 #
 # The fast runner globs tools/check_*.sh, so every fake here is one of those.
 # Each is `chmod +x` and carries a `# gate-fast: <reason>` marker unless the
@@ -295,6 +299,29 @@ else
     report FAIL "l: a passing set exits 0 (got $rc)"; printf '%s\n' "$out"
 fi
 rm -f "$DIR/check_pass_l.sh"
+
+# ---- m. a check that starts a child, then overruns: the child must not outlive
+# the cap. Run through the runner's real launch path.
+CHILDPID="$TMP/childpid"
+plant check_child_m.sh "static test" "sleep 60 & echo \$! > '$CHILDPID'; sleep 30; exit 0"
+out="$(INCURSION_FAST_LIMIT=1 "$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
+child="$(cat "$CHILDPID" 2>/dev/null)"
+alive=1
+if [ -n "$child" ]; then
+    for _ in 1 2 3 4 5 6; do
+        kill -0 "$child" 2>/dev/null || { alive=0; break; }
+        sleep 0.5
+    done
+    # Our own sleep: stop it so a RED run leaves nothing behind.
+    [ "$alive" -eq 1 ] && kill "$child" 2>/dev/null
+fi
+case "$out" in *"TOO SLOW"*) slow=1 ;; *) slow=0 ;; esac
+if [ "$rc" -eq 1 ] && [ "$slow" -eq 1 ] && [ -n "$child" ] && [ "$alive" -eq 0 ]; then
+    report ok "m: a capped check's child process is dead after TOO SLOW"
+else
+    report FAIL "m: child case (exit $rc, slow=$slow, child='$child', alive=$alive)"; printf '%s\n' "$out"
+fi
+rm -f "$DIR/check_child_m.sh"
 
 echo
 if [ "$fails" -eq 0 ]; then
