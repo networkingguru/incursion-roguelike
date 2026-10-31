@@ -1,0 +1,51 @@
+# Window-edge target probe, bd inc-3k0nv. Read by tools/check_edge_target.sh.
+#
+#   INCURSION_TARGET_PROBE=1 \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav \
+#       tools/headless.sh tools/keys/edge-target.keys 1
+#
+# THE SCENE. On load the map window's first row is nine rows north of the
+# paladin. A wall torch at the seventh row north lights that row. A flesh golem
+# stands on the window's first row (the EDGE golem), and a second one stands
+# two rows below it (the CONTROL golem), on the other side of the torch. Both
+# are drawn and listed in "Things in View". The torch is only there to make the
+# golems visible; the paladin's own torch does not reach nine rows.
+#
+# THE PRESSES. [t] UP, [l] UP and [l][t] UP, each from the player's square.
+#
+# Shared key subset only, so the SDL build can replay it. In the wizard menu
+# [y] enters wizard mode and leaves the menu open: [K] Change terrain type,
+# cursor, ENTER, [p] Wall Torch; then [g] Monster Summoning, [A] Golems, [a]
+# flesh golem, cursor, ENTER.
+
+.
+@dump:arrival
+w y
+K UP*8 RIGHT*4 ENTER p
+w g
+A
+a
+UP*9 RIGHT*2 ENTER
+w g
+A
+a
+UP*7 RIGHT*3 ENTER
+@dump:scene
+
+t
+UP
+@dump:target-up
+ESC
+
+l
+UP
+@dump:look-up
+ESC
+
+l
+t
+UP
+@dump:look-target-up
+ESC
+@quit
