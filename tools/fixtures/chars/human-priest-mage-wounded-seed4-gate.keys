@@ -1,0 +1,103 @@
+# FIXTURE SOURCE for bead inc-b4l3g.5 (tools/check_held_mana.sh property 2): the
+# human Priest 1 / Mage 1 of tools/keys/chargen-human-priest-mage-save.keys
+# (seed 4, tools/gates/Options.Dat), knowing Shield and Cure Light Wounds,
+# wounded to 31/36 hit points. Build it with
+#
+#   INCURSION_LOF_FORCE_ROLL=20 INCURSION_FORCE_DAMAGE_ROLL=3 \
+#   tools/make_char_fixture.sh human-priest-mage-wounded-seed4-gate \
+#       tools/keys/priest-mage-wounded-save.keys 4 tools/gates/Options.Dat
+#
+# The two INCURSION_* variables are part of the recipe (the fixture sheet cannot
+# record them): they make a summoned giant rat bite for a known amount.
+#
+# WHY NO SPELL FAILURE. Cure Light Wounds fails on a roll the seed decides (92%
+# success); the switch makes the cast certain.
+# WHY WOUNDED. Cure Light Wounds heals only a wounded caster, so the held-mana
+# check needs one. A fight inside the check is seed-driven; a wound built here
+# is the same on every seed. The rat bites while the character waits; the
+# wait is cut short while a hostile is in view, so many waits are sent. Then
+# every monster is cleared, and the character searches until the status bar
+# reads Exploring (a loaded game still in Fighting makes the next key vanish).
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Human"
+@choose "Poison Use"
+@choose "Spot"
+@choose "Priest"
+@choose "Aiswin"        # God, asked here rather than after the skill ranks,
+c                       # Attributes: the third of the five offered sets. The
+@choose "Lawful Good"   # Alignment. The god decides which are on offer.
+a                       # First feat. Which feats the game offers depends on
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y # Done, and confirm keeping the ranks
+y       # Do you wish to worship <god>? -- yes
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+a a
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+a       # Personality archetype
+@expect "Learn Spells: Level"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
+@dump:chargen-done
+@while "personality archetype" a
+@until "System Menu" ESC
+@expect "System Menu"
+ESC
+s
+w
+y
+w
+DOWN DOWN
+SPACE
+ESC
+d
+@expect "Class  Priest 1"
+M
+@choose "Mage"
+@dump:trained
+G
+@choose "Mage"
+@until "Mage 1" a
+@dump:sheet-after
+ESC
+@dump:unhurt
+
+# Ignore Spell Failure (the 6th wizard switch; the cursor opens on the 1st) is
+# stored in the save, so the check's Cure Light Wounds always casts.
+w
+@choose "Wizard Mode Switches"
+DOWN*5
+SPACE
+@dump:switches
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "giant rat"
+RIGHT ENTER
+@while "more --" SPACE
+@until "HP:" ESC
+. . . . . . . . . .
+. . . . . . . . . .
+. . . . .
+@dump:wounded
+
+w
+@choose "Genocide Everything"
+@dump:cleared
+s
+@dump:calm
+
+@until "System Menu" ESC
+@expect "System Menu"
+b
+@dump:saved

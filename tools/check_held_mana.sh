@@ -24,10 +24,11 @@
 #
 # fact: priest-mage character, knows Shield and Cure Light Wounds -- fixture human-priest-mage-seed4-gate, INCURSION_LOAD
 # fact: mage character, knows Shield and Burning Hands, Concentration +3 -- fixture orc-mage-seed4-gate, INCURSION_LOAD
-# fact: settings -- CHECK_OPTIONS=tools/gates/Options.Dat (Freeze Monsters NO, so the goblin fights)
+# fact: settings -- CHECK_OPTIONS=tools/gates/Options.Dat 
 # fact: Shield's cost in mana -- derived: held after one casting minus held at baseline, both read from the save dump; INCONCLUSIVE when not positive
 # fact: Cure Light Wounds' cost -- derived: spent after the cast minus spent before it; it varies with the wound, so it is never hard-coded
-# fact: the wound -- wizard Monster Summoning (goblin) then waits until HP shows 20-29; INCONCLUSIVE if the pre and cast sessions disagree on HP before the cure, or HP is full
+# fact: the wound -- fixture human-priest-mage-wounded-seed4-gate (wounded at build time with forced rolls), INCURSION_LOAD; INCONCLUSIVE if the pre and cast sessions disagree on HP before the cure, or HP is full
+# fact: Cure Light Wounds can fail -- wizard switch Ignore Spell Failure, set YES in the fixture human-priest-mage-wounded-seed4-gate (stored in the save)
 # fact: spent mana regenerating in the few turns between casts -- tolerated by 1 point on spent only (current mana is above the floor then); held mana is compared exactly
 # fact: current mana below the floor for property 3 -- 30 casts of Burning Hands aimed RIGHT; the check computes the percentage and is INCONCLUSIVE unless it is under 74 (max(80-2*3,35))
 # fact: wait without resting -- three searches ('s'), about 25 turns each
@@ -43,6 +44,7 @@ CHECK_OPTIONS=tools/gates/Options.Dat
 SEED=4
 PM=tools/fixtures/chars/human-priest-mage-seed4-gate.sav
 OM=tools/fixtures/chars/orc-mage-seed4-gate.sav
+PMW=tools/fixtures/chars/human-priest-mage-wounded-seed4-gate.sav
 
 # --prove-red performs the FIRST declared mutation only (tools/check_lib.sh), so
 # HELD_MUT chooses which one is first: A (default) = no release, D = undo the
@@ -61,7 +63,7 @@ case "${HELD_MUT:-A}" in
 esac
 _mut_a; _mut_d; _mut_c
 
-[ -f "$PM" ] && [ -f "$OM" ] || _check_die 2 "a fixture is missing: $PM or $OM"
+[ -f "$PM" ] && [ -f "$OM" ] && [ -f "$PMW" ] || _check_die 2 "a fixture is missing: $PM, $OM or $PMW"
 
 # <run dir> -> "spent held" from the session's own save
 _dump() {
@@ -119,8 +121,8 @@ else
 fi
 
 echo "== property 2: healing does not hold =="
-_session "$PM" tools/keys/held-mana-heal-pre.keys;  PRE_RUN="$CHECK_RUN"; read -r P_SPENT P_HELD <<<"$(_dump "$CHECK_RUN")"
-_session "$PM" tools/keys/held-mana-heal-cast.keys; CAST_RUN="$CHECK_RUN"; read -r H_SPENT H_HELD <<<"$(_dump "$CHECK_RUN")"
+_session "$PMW" tools/keys/held-mana-heal-pre.keys;  PRE_RUN="$CHECK_RUN"; read -r P_SPENT P_HELD <<<"$(_dump "$CHECK_RUN")"
+_session "$PMW" tools/keys/held-mana-heal-cast.keys; CAST_RUN="$CHECK_RUN"; read -r H_SPENT H_HELD <<<"$(_dump "$CHECK_RUN")"
 HP_PRE="$(_hp_of "$PRE_RUN" hurt)"; HP_CAST_BEFORE="$(_hp_of "$CAST_RUN" hurt)"; HP_AFTER="$(_hp_of "$CAST_RUN" healed)"
 [ -n "$HP_PRE" ] && [ -n "$HP_CAST_BEFORE" ] && [ -n "$HP_AFTER" ] || _check_die 2 "cannot read HP off the hurt/healed screens."
 [ "$HP_PRE" -eq "$HP_CAST_BEFORE" ] || _check_die 2 "the pre and cast sessions were wounded differently ($HP_PRE vs $HP_CAST_BEFORE HP)."
