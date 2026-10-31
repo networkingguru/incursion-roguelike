@@ -11,7 +11,10 @@ y       # Your options will place the game in Explore Mode. Continue? -- yes
 @choose "Orc"
 @choose "Orc (Standard)"
 @choose "Rogue"
-a       # Attributes: the first offered set
+p       # Attributes: abort to Point Buy, so no roll and no perk decides the build (inc-b4l3g.20)
+RIGHT*6 DOWN RIGHT*8 DOWN RIGHT*10 DOWN RIGHT*10 DOWN RIGHT*4 DOWN RIGHT*8 DOWN RIGHT*9
+ENTER   # every point spent
+y       # Are these your final stats? -- yes
 a       # Alignment: the first offered
 
 @while "Choose a feat" a
