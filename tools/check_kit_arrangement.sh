@@ -21,6 +21,14 @@
 #   R6 no base item outside the exempt kinds appears more than once or with
 #      qty > 1 (inc-6fii)
 #
+# Facts this check reads, and the control that fixes each (docs/VERIFICATION.md):
+# fact: attribute scores -- Point Buy in every tools/keys/kit-*.keys (no roll)
+# fact: perks -- none under Point Buy
+# fact: non-proficient armor in the kit -- INCURSION_KIT_GRANT (mage, rogue)
+# fact: class and race kit -- fixed by the named class and race
+# fact: feat list page (Two-Weapon Style, Weapon Focus targets) -- Point Buy fixes stats
+# fact: settings -- the pinned options file tools/fixtures/options-2026-08-22.dat
+#
 # THE ORACLE is INCURSION_KIT_PROBE (src/Create.cpp KitProbe): at the end of
 # creation it logs one KIT_ITEM line per stack to logs/errors.log with its slot,
 # type, group, WepSkill, damage dice and grip. It is read-only and silent with
@@ -35,8 +43,8 @@
 #   paladin   Human Paladin   armour and shield, a paladin's weapon choice
 #   twf       Human Rogue     Two-Weapon Style feat, three one-handed blades
 #   halfling  Halfling Warrior   a Small race
-#   mage      Orc Mage        seed 37: rolls field plate armour it cannot use
-#   rogue     Orc Rogue       seed 25: non-proficient armour worn, proficient packed
+#   mage      Orc Mage        INCURSION_KIT_GRANT adds field plate armour it cannot use
+#   rogue     Orc Rogue       INCURSION_KIT_GRANT adds field plate armour; kit armour is worn
 #   ranger    Human Ranger    a bow, arrows, a melee weapon
 #
 # Usage: tools/check_kit_arrangement.sh [build ...]   (default: all builds)
@@ -49,14 +57,14 @@
 [ "${1:-}" = "--selftest" ] && exec python3 tools/check_kit_arrangement.py --selftest
 
 OPTIONS=tools/fixtures/options-2026-08-22.dat
-# name:seed:what the kit must exercise
+# name:seed:what the kit must exercise:item INCURSION_KIT_GRANT adds (optional)
 BUILDS="warrior:1:R1-worn,R2,R3-worn
 warrior2h:1:R3-blocked
 paladin:1:R2,R3-worn|R3-blocked
 twf:1:R3-twf
 halfling:1:R2,R3-worn
-mage:37:R1-nonprof
-rogue:25:R1-nonprof,R1-worn,R2-choice
+mage:37:R1-nonprof:field plate armour
+rogue:25:R1-nonprof,R1-worn,R2-choice:field plate armour
 ranger:1:R2,R4-bow,R5"
 
 [ -x ./incursion-headless ] || _check_die 2 "incursion-headless is not built." \
@@ -65,10 +73,11 @@ ranger:1:R2,R4-bow,R5"
 WANT=" $* "
 FAIL=0; UNMEAS=0; N=0
 STAMP="$(date +%Y%m%d-%H%M%S)-$$"
-while IFS=: read -r name seed tags; do
+while IFS=: read -r name seed tags grant; do
     [ "$WANT" = "  " ] || case "$WANT" in *" $name "*) ;; *) continue ;; esac
     N=$((N + 1))
     RUN="$PWD/logs/runs/$STAMP-kit-$name"
+    if [ -n "$grant" ]; then export INCURSION_KIT_GRANT="$grant"; else unset INCURSION_KIT_GRANT; fi
     INCURSION_OPTIONS="$OPTIONS" INCURSION_KIT_PROBE=1 INCURSION_RUN_DIR="$RUN" \
         tools/headless.sh "tools/keys/kit-$name.keys" "$seed" > "$RUN.out" 2>&1
     rc=$?
