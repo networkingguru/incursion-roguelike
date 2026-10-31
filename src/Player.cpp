@@ -552,9 +552,12 @@ void Player::ChooseAction() {
 
         if (HasStati(PARALYSIS)) {
         IsParalyzed:
-            switch (ChoicePrompt("You are paralyzed. Pray, magic or wait 10/20/30?", "pm123", '1')) {
+            /* upstream: a paralyzed player MUST be able to open the character sheet, which takes no game time; the 2014 prompt offered only p, m, 1-3, so it was unreachable on Win32 too.
+               Observed; inc-sg8d4; not sent. */
+            switch (ChoicePrompt("Paralyzed: pray, magic, wait 10/20/30, or d for sheet?", "pmd123", '1')) {
             case 'p': goto DoPrayer;
             case 'm': goto DoMagic;
+            case 'd': MyTerm->DisplayCharSheet(); goto IsParalyzed;
             case '1': Timeout += 10; return;
             case '2': Timeout += 20; return;
             case '3': Timeout += 30; return;
