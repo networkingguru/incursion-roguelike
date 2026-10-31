@@ -1,0 +1,23 @@
+# Make the orc rogue tools/check_sneak_invis.sh loads, and SAVE him (bead
+# inc-b4l3g.30). Chargen is tools/keys/sneak-invis-chargen.keys (Move Silently
+# ranks); the seed only has to give a kit that holds an orcish knife.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-sneak-invis-maxhp.dat \
+#       tools/headless.sh tools/keys/sneak-invis-rogue-save.keys <seed>
+#
+# Automatic Hide in Shadows (option 518) is a chargen option stored in the
+# save, so the settings file above MUST be the one the fixture is made with.
+
+@include sneak-invis-chargen.keys
+
+@dump:arrival
+
+@while "personality archetype" a
+
+@until "System Menu" ESC
+
+@expect "System Menu"
+b                       # [b] Save and Continue (src/Player.cpp:843)
+
+@dump:saved
+# No @quit: it is Save and Quit and would save a second time.
