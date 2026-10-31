@@ -8,6 +8,16 @@
 #   ILLUSION first victim an illusion at 1 HP, real bugbear beside : MUST NOT crash
 #   CONTROL  first victim real at 1 HP, real bugbear beside        : MUST NOT crash
 # INCURSION_LOF_FORCE_ROLL=20 (existing hook, Fight.cpp) makes every attack roll hit.
+# Every fact this check reads, and the control that fixes it
+# (docs/VERIFICATION.md, "A check must not depend on the seed"):
+# fact: character (race, class, stats, kit) -- fixture orc-barbarian-seed1-opt0822 (INCURSION_LOAD)
+# fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# fact: other monsters and corpses on the level -- wizard Genocide Everything, before the summon
+# fact: the first victim (goblin) and its square -- wizard Monster Summoning, one square east of the player
+# fact: the Cleave feat, the bugbear beside the player, the victim at 1 HP, the ILLUSION status -- INCURSION_CLEAVE_ILLUSION_PROBE (src/CleaveIllusionProbe.cpp)
+# fact: the player's attack hits -- INCURSION_LOF_FORCE_ROLL=20 (src/Fight.cpp)
+# fact: the player does not disbelieve the illusion (Will save vs DC 15, else the illusion vanishes unhit and no Cleave fires) -- INCURSION_FORCE_SAVE_ROLL=1 (natural 1 always fails; src/Fight.cpp)
+# fact: the damage roll -- no control needed: the goblin is held at 1 HP, so any hit kills it
 # A case where no CLEAVE line is logged is UNMEASURED (exit 3), never PASS.
 # Exit 0 only when every case passes; 1 on a crash; 3 when unmeasured.
 set -u
@@ -25,6 +35,8 @@ run_case() {
     mkdir -p "$rd"
     env INCURSION_BIN="$ROOT/incursion-headless" \
         INCURSION_CLEAVE_ILLUSION_PROBE=$mode INCURSION_LOF_FORCE_ROLL=20 \
+        INCURSION_FORCE_SAVE_ROLL=1 \
+        INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav \
         INCURSION_RUN_DIR="$rd" \
         INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
         tools/headless.sh tools/keys/cleave-illusion.keys 1 > "$rd.harness.txt" 2>&1
