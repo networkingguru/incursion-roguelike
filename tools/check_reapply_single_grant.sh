@@ -26,6 +26,19 @@
 #    unfixed engine and guards a fix that strips rows without guarding HP.
 # All measured values print even when an assertion fails. Missing gameplay,
 # routes, expected text or measurement screens fail as "measured nothing".
+# inc-frim: the verdict must not depend on the seed. Facts the check reads:
+# fact: character (S2, S5) -- fixture orc-bard-reapply-seed1 (INCURSION_LOAD)
+# fact: character (S1, S3, S4) -- fixture orc-barbarian-reapply-seed4 (INCURSION_LOAD)
+# fact: items (Bloodspear, Periapt, Girdle, Nine Lives Stealer, scrolls) -- wizard menu "Item Acquisition"
+# fact: scroll read succeeds (Decipher d20, "The magic runs amok!") -- INCURSION_RUNTO_SKILL_ROLL=20
+# fact: Dispel Magic read succeeds (same Decipher roll) -- INCURSION_RUNTO_SKILL_ROLL=20, plus the key script's bounded retry
+# fact: Storycraft use (S2, S5) -- no skill roll on the path; fixture fixes the bard
+# fact: arrival at depth 2 (S1) -- fall prompt and level-description box are dismissed by @while in the key script
+# fact: line wrap of the wake message (S1 "rested and recovered") -- pattern allows the wrap and the side panel between "and" and "recovered"
+# fact: no interrupting monster during rest/Dispel -- wizard "Genocide Everything"; S5 froghemoth by "Monster Summoning"
+# fact: S5 HP arithmetic (max HP with/without girdle) -- read from the sheets in the run and printed; no fixed number asserted
+# fact: Dispel "Stop reading?" Will save (scroll level above Decipher) -- key script answers n whenever the prompt appears
+# fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -35,7 +48,7 @@ cd "$ROOT"
 }
 run_keys() { # run_keys <keys> <seed> [allow-death] [load-fixture]; S5 judges death itself
     local keys="$1" seed="$2" allow_death="${3:-}" load="${4:-}" out run rc
-    out="$(INCURSION_BIN=./incursion-headless INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+    out="$(INCURSION_RUNTO_SKILL_ROLL=20 INCURSION_BIN=./incursion-headless INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
            INCURSION_LOAD="$load" tools/headless.sh "$keys" "$seed" 2>&1)"
     rc=$?
     run="$(echo "$out" | awk '/^run:/ {print $2}')"
@@ -64,15 +77,18 @@ need_screen() {
 # building one fresh each run; see check_reapply_single_grant.sh's S2 comment
 # above for why.
 FIXTURE=tools/fixtures/chars/orc-bard-reapply-seed1.sav
+# S1, S3 and S4 share a frozen orc barbarian (inc-frim), for the same reason:
+# a fresh chargen.keys build drew a different character on every seed.
+BARB=tools/fixtures/chars/orc-barbarian-reapply-seed4.sav
 status=0
 for section in S1 S2 S3 S4 S5; do
     allow_death=
     load=
     case "$section" in
-        S1) keys=magic-weapon; seed=4 ;;
+        S1) keys=magic-weapon; seed=4; load="$BARB" ;;
         S2) keys=enchant; seed=1; load="$FIXTURE" ;;
-        S3) keys=activation; seed=1 ;;
-        S4) keys=dispel; seed=1 ;;
+        S3) keys=activation; seed=1; load="$BARB" ;;
+        S4) keys=dispel; seed=1; load="$BARB" ;;
         S5) keys=hp; seed=1; allow_death=1; load="$FIXTURE" ;;
     esac
     echo "$section seed=$seed"
@@ -182,7 +198,7 @@ if section == 'S1':
         text = screen(label)
         require('Cost: It has a base value' in text, label + ' description footer not reached')
         value(label + ' Magic Weapon description count', text.count('Magic Weapon:'), expected)
-    evidence('rested', r'You awaken feeling well.*rested and recovered', 'rest completed')
+    evidence('rested', r'You awaken feeling well.*rested and\b.*?\brecovered', 'rest completed')
 elif section == 'S2':
     will('sheet-without-periapt', 0, 'poison')
     will('sheet-with-periapt', 2, 'poison')

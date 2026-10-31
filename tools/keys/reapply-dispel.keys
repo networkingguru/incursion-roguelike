@@ -21,7 +21,9 @@
 # for the `dispelled` dump. @while bodies admit only ordinary keys, so the
 # retry body names the menu letter directly: with a single readable stack the
 # use menu offers it as [a] (checked in logs/screens/.../read-menu.txt).
-@include chargen.keys
+# inc-frim: no chargen. The check loads the frozen orc barbarian
+# tools/fixtures/chars/orc-barbarian-reapply-seed4.sav (INCURSION_LOAD), so
+# the character no longer follows the seed.
 
 d
 @dump:orc-sheet-without-bloodspear
