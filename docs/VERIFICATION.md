@@ -94,8 +94,10 @@ check on its own seed, then on five other seeds. It reports one of three results
 - **2, no answer.** The check failed on its own seed, so there is nothing to
   compare against.
 
-Do not sweep a check that compares two sessions on different seeds. The tool
-forces every session onto one seed, so that check compares nothing.
+The tool forces every session onto one seed, so a check that compares two
+sessions on different seeds compares nothing. Such a check is sweepable only when
+it passes its own `INCURSION_SEED_OVERRIDE` to the second-seed run and unsets
+`INCURSION_SEED_LOG` for that run. `tools/check_headless.sh` does this.
 
 ## The tools
 
