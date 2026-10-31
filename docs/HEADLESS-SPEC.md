@@ -54,8 +54,8 @@ A `Glyph` is a `uint32`: 12 bits of glyph id, 4 of foreground, 4 of background
 (`inc/Defines.h:4363`). Storing it verbatim makes `AGetChar` exact. The libtcod
 backend cannot do that — it stores the character its glyph table produced, so
 `GetGlyph` → `PutGlyph` round trips lose the glyph id. The callers
-(`src/Term.cpp:2280`, `src/Magic.cpp:1764`, `src/Skills.cpp:2149`,
-`src/Skills.cpp:3120`) mask with `GLYPH_ID_MASK` and put the result back, so
+(`src/Term.cpp:2304`, `src/Magic.cpp:1764`, `src/Skills.cpp:2150`,
+`src/Skills.cpp:3127`) mask with `GLYPH_ID_MASK` and put the result back, so
 exactness is what they want.
 
 This also means the rendering target is not the screen model. The same array

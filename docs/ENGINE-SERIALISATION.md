@@ -48,7 +48,7 @@ I ran; commands at the bottom). Normative spec: `docs/SAVE-SCHEMA-SPEC.md`.
 | `Game::SaveGame` / `LoadGame` | src/Registry.cpp:1120 / :1247 |
 | `Game::SaveModule` / `LoadModules` | src/Registry.cpp:1490 / :1480 |
 | Deferred v1 name resolution call sites | src/Registry.cpp:1430, src/Dump.cpp:376 |
-| `CFile` (v0 compressed payload buffer) | inc/Term.h:879, src/Term.cpp:3633-3787 |
+| `CFile` (v0 compressed payload buffer) | inc/Term.h:892, src/Term.cpp:3657-3811 |
 | ABI gate | src/AbiCheck.cpp |
 | `SaveFormatID()` / `SaveFormatMatches()` (the v0 stamp) | src/AbiCheck.cpp:185 / src/Registry.cpp:61 |
 | `SIGNATURE`, `SIGNATURE_TWO`, `VERSION_STRING` | inc/Defines.h:15, :16, :23 |
@@ -79,7 +79,7 @@ choice is a **caller argument, not a file field** — `SaveGroup`/`LoadGroup`
 take `use_lz`, the main save's own group is loaded with `false`
 (src/Registry.cpp:1373) — the v0 save path that once passed it is gone, since
 `Game::SaveGame` writes v1 now — while modules pass `true` on both save and
-load (:1385, :1467, :1498), and src/Term.cpp:3712-3717 picks
+load (:1385, :1467, :1498), and src/Term.cpp:3736-3741 picks
 the codec from that argument alone. `numDependencies` and `dependHeader`
 (src/Registry.cpp:50) remain unused by everything.
 
@@ -146,7 +146,7 @@ are no-ops there; `FIELD_STR`/`FIELD_BLOB`/`FIELD_OBJ` perform exactly the
 legacy `Serialize`/`Block` calls they replaced), the v1 write, the v1 read,
 and the DEBUG coverage map, from one declaration. Replay order is line
 order, not tag order: load-direction fixups sit below the fields they read
-(e.g. `Thing`'s `m = oMap(hm)`, inc/Map.h:975). Tag numbers are never
+(e.g. `Thing`'s `m = oMap(hm)`, inc/Map.h:981). Tag numbers are never
 reused and never change; a new field takes the next unused number in its
 class's range (inc/Base.h:769-778).
 
@@ -416,7 +416,7 @@ Repaired on load, and nothing else is:
 |---|---|
 | vptr | placement new, src/Registry.cpp:950-992 |
 | pointer to an owned heap block | src/Registry.cpp:376, via the 7 direct `r.Block` sites plus every `FIELD_BLOB`/`FIELD_OBJ` line's v0 branch (inc/Base.h:794-799) |
-| `Thing::m` from `Thing::hm` | inc/Map.h:975 |
+| `Thing::m` from `Thing::hm` | inc/Map.h:981 |
 | `Player::MyTerm = T1` | inc/Creature.h:1584 |
 | `Module` resource caches zeroed | inc/Res.h:840-841, in `Module::Serialize`, which runs on load as well as save. A load builds the object with the empty `ARCHIVE_CLASS` constructor (inc/Base.h:806), so the zeroing in `Module()` (inc/Res.h:923-924) runs only for the module the resource compiler creates (src/RComp.cpp:141) |
 | module text segment un-inverted | inc/Res.h:912-916 |
@@ -426,7 +426,7 @@ NOT repaired on the v0 path, whose only validation is the group-header
 range check at src/Registry.cpp:912-922:
 
 - **Every `hObj` and `rID` field.** `Thing::Next`, `Thing::hm`
-  (inc/Map.h:979), `Item::Parent` (inc/Item.h:44), `Container::Contents`
+  (inc/Map.h:985), `Item::Parent` (inc/Item.h:44), `Container::Contents`
   (inc/Item.h:359), `Game::m[]`, `Game::p[]` (inc/Res.h:1308),
   `TargetSystem`'s per-target `data` (inc/Target.h:169-187). These are
   plain numbers and the v0 loader reproduces them byte for byte. **A handle
@@ -538,14 +538,14 @@ grep -n "virtual" inc/Res.h | head -3                                   # first 
    but `LoadGroup` has no case and 90 is outside the item range, so loading
    one hits `Fatal`. Dead today; annotations live in `Module::Annotations`.
 5. **Fixed.** `CFile::FRead` past the end used to zero-fill and report
-   nothing. It now throws `ECORRUPT` (src/Term.cpp:3674-3675). inc-l0t.
+   nothing. It now throws `ECORRUPT` (src/Term.cpp:3698-3699). inc-l0t.
 6. **Fixed.** `LoadCompressed` now range-checks both sizes
-   (src/Term.cpp:3738-3741), passes the real buffer capacity to the
+   (src/Term.cpp:3762-3765), passes the real buffer capacity to the
    decoder, and compares the produced length with `uncompressed_size`
-   (src/Term.cpp:3782-3783). `LoadGroup` checks the same header fields
+   (src/Term.cpp:3806-3807). `LoadGroup` checks the same header fields
    first (src/Registry.cpp:912-922). inc-l0t.
 7. **Fixed.** `CFile::Seek` now tests `realloc`'s return value and throws
-   `EMEMORY` (src/Term.cpp:3688-3699). It still has no caller in
+   `EMEMORY` (src/Term.cpp:3712-3723). It still has no caller in
    src/Registry.cpp, so it is unreached today.
 8. inc/Res.h:842-844 vs :912-916 — `SaveModule` inverts `QTextSeg` in
    place on the save pass, but the restore pass runs with `saveMode` and

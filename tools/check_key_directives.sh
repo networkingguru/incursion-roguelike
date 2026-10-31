@@ -11,6 +11,13 @@
 # of the four assertions below are therefore not "the directive worked" but "the
 # directive reached somewhere counting could not have reached".
 #
+# fact: attribute scores -- Point Buy in tools/keys/skill-by-name.keys (INT 16 fixes the 18 ranks)
+# fact: settings -- pinned options file tools/fixtures/options-2026-08-18.dat
+# fact: race, class, alignment, feats -- chosen by name in the key script (@choose, first two feats)
+# fact: skill list and its order -- lib/ data, not seed-driven
+# fact: skill rank text on the sheet -- written by the run's Write Dump, a function of the facts above
+# fact: failing-closed scripts end 6 -- the directives stop before any roll is read
+#
 # Usage: tools/check_key_directives.sh    (exits 0 on pass, 1 on fail)
 set -uo pipefail
 

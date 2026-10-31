@@ -18,9 +18,13 @@
 # Skill Manager stops at the end of the list (src/Managers.cpp:1753-1760)
 # rather than returning to the top, so @cursorto:mark can only walk forward.
 #
-# Nine skills at a maximum of two ranks each is exactly the eighteen an elf
-# rogue starts with, and character generation will not let go while any rank
-# is unspent.
+# Nine skills at a maximum of two ranks each is eighteen ranks, and character
+# generation will not let go while any rank is unspent. The count must not
+# depend on the seed, so the attributes are bought, not rolled: Point Buy gives
+# STR 14 DEX 16 CON 18 INT 16 WIS 16 CHA 16 LUC 17 (all 75 points spent, elf
+# modifiers already included in INT 16), and INT 16 gives an elf rogue exactly
+# eighteen ranks (src/Values.cpp:2469-2470). A rolled set moved INT by seed
+# (bd inc-b4l3g.19): too few ranks left Tumble empty, too many blocked ENTER.
 
 a       # Initial Choices: [a] Create a New Character
 n       # Alter the character generation options? -- no
@@ -29,7 +33,10 @@ y       # Your options will place the game in Explore Mode. Continue? -- yes
 @choose "Elf"
 @choose "Elf (Standard)"
 @choose "Rogue"
-a                       # Attributes: the first of the five offered sets
+p                       # Attributes: abort to Point Buy
+RIGHT*6 DOWN RIGHT*8 DOWN RIGHT*10 DOWN RIGHT*8 DOWN RIGHT*8 DOWN RIGHT*8 DOWN RIGHT*9
+ENTER                   # leave the screen, every point spent
+y                       # Are these your final stats? -- yes
 @choose "Neutral"
 a                       # First feat
 a                       # Second feat

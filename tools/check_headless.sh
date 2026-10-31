@@ -32,6 +32,11 @@
 # Each assertion below is exercised against known-bad input by --selftest, so
 # a check that has quietly stopped testing anything says so.
 #
+# fact: character and level -- generated in the run by tools/keys/smoke.keys; asserted only as invariants (map shown, no death, not stuck)
+# fact: settings -- tools/fixtures/options-2026-08-22.dat (SMOKE_OPTS) for assertions 1-7; tools/gates/Options.Dat (GATE_OPTS) for 8-10
+# fact: character for assertions 8-10 -- fixture tools/fixtures/chars/engaged-hostile.sav (INCURSION_LOAD)
+# fact: second seed of assertion 4 -- 99, or INCURSION_SEED_OVERRIDE set per run under tools/seed_sweep.sh
+#
 # Usage: tools/check_headless.sh              (exits 0 on pass, 1 on fail)
 #        tools/check_headless.sh --selftest   (proves the assertions bite)
 set -uo pipefail
@@ -324,8 +329,17 @@ fi
 
 # 4. A different seed must play a different game, or the seed is being ignored
 #    and assertion 3 above would pass on a build that had lost it entirely.
+# Under tools/seed_sweep.sh, INCURSION_SEED_OVERRIDE forces every session onto
+# one seed. This session then takes a different override of its own, and its
+# seed is not logged, because the sweep reads each logged seed as the sweep seed.
+SEED3=99
+SEED3_ENV=()
+if [ -n "${INCURSION_SEED_OVERRIDE:-}" ]; then
+    [ "$INCURSION_SEED_OVERRIDE" = "99" ] && SEED3=98
+    SEED3_ENV=(env -u INCURSION_SEED_LOG "INCURSION_SEED_OVERRIDE=$SEED3")
+fi
 INCURSION_RUN_DIR="$WORK/run3" INCURSION_OPTIONS="$SMOKE_OPTS" \
-    ./tools/headless.sh "$KEYS" 99 > "$WORK/out3" 2>&1 < /dev/null
+    ${SEED3_ENV[@]+"${SEED3_ENV[@]}"} ./tools/headless.sh "$KEYS" "$SEED3" > "$WORK/out3" 2>&1 < /dev/null
 if assert_reproducible "$WORK/run1/logs/screens" "$WORK/run3/logs/screens"; then
     fail "two different seeds drew identical screens; the seed is being ignored"
 fi
