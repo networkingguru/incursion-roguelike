@@ -681,7 +681,11 @@ void Player::WizardOptions() {
                     IPrint("Aborting Monster Summoning.");
                     delete mn; break; 
                 }
-                TMON(mn->tmID)->GrantGear(mn,mn->tmID,true);
+                /* inc-b4l3g.2, test-only: INCURSION_SUMMON_NO_GEAR=1 skips the
+                   summoned monster's starting Gear, so its blows are fixed. */
+                static const bool noGear = getenv("INCURSION_SUMMON_NO_GEAR") != NULL;
+                if (!noGear)
+                    TMON(mn->tmID)->GrantGear(mn,mn->tmID,true);
                 TMON(mn->tmID)->PEvent(EV_BIRTH,mn,mn->tmID);
                 mn->PlaceAt(m,e.EXVal,e.EYVal);
                 mn->Initialize(true);

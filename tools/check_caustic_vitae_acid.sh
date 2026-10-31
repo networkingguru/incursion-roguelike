@@ -8,7 +8,7 @@
 # src/Effects.cpp:251 sends BOTH halves as AD_NORM. An acid-immune victim
 # therefore takes the full damage; with `xval: AD_ACID;` it takes only the
 # unresistible half. The control run is the same cast at the same level on a
-# bugbear with no acid resistance, which must still take the full damage.
+# hill giant with no acid resistance, which must still take the full damage.
 #
 # WHAT THE NUMBERS ARE. Caustic Vitae at effective caster level 2 rolls
 # 2d8 + Wis mod (3), and the EF_HALF_UNTYPED split damages the victim twice,
@@ -21,6 +21,21 @@
 # D is at least 3 at this level (min roll 2+3 = 5, halved to 3), which is what
 # separates D from 2*D by a margin no rounding can bridge.
 #
+# Every fact this check reads, and the control that fixes it
+# (docs/VERIFICATION.md, "A check must not depend on the seed"):
+#
+# fact: character (race, class, stats, Wis mod 3) -- fixture orc-mage-seed1-opt0822
+# fact: settings -- OPTIONS tools/fixtures/options-2026-08-22.dat
+# fact: other monsters and corpses on the level -- wizard Genocide Everything, before the summon
+# fact: the victim (magma creeper / hill giant) and its square -- wizard Monster Summoning, four squares east (a Huge or Gargantuan victim summoned nearer pushes the player off the firing line); found in Examine Nearby Things by @until "T_MONSTER" RIGHT
+# fact: the victim does not act or dodge -- wizard Freeze Monsters
+# fact: the bolt hits (attack d20) -- INCURSION_LOF_FORCE_ROLL=20 (Creature::Strike, src/Fight.cpp)
+# fact: the corpses Genocide leaves, ahead of the victim in Examine order -- the keys skip them with @until "T_MONSTER"
+# fact: the damage roll 2d8 -- no control needed: D is read from the game's own damage line and every bound is relative to D; neither victim can die (magma creeper >= 84 HP, hill giant >= 78 HP, against at most 20)
+# fact: the mana to cast -- wizard Infinite Mana
+# fact: the caster level 2 -- wizard Free Advancement, then G on the sheet
+# fact: the acid half is negated (immunity message) -- the magma creeper's Immune: DF_ACID, no roll
+#
 # A run that cannot produce the victim's HP before and after, or the game's
 # damage line, or a hit at all, is a FAIL and never a pass: a green result from
 # a session that never reached the state under test is the mistake this
@@ -30,8 +45,10 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-SEED=1   # re-pinned for inc-rt8l (kit changes the random stream)
+SEED=1   # an argument only: the character is loaded and every roll below is forced
 OPTIONS=tools/fixtures/options-2026-08-22.dat
+export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
+export INCURSION_LOF_FORCE_ROLL=20
 
 [ -x ./incursion-headless ] || {
     echo "FAIL: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
@@ -91,13 +108,13 @@ _measure() { # <run dir>
 }
 
 fail=0
-echo "=== acid run: tools/keys/caustic-vitae-acid.keys (stunjelly, acid-immune) ==="
+echo "=== acid run: tools/keys/caustic-vitae-acid.keys (magma creeper, acid-immune) ==="
 acid="$(_run_one tools/keys/caustic-vitae-acid.keys caustic-vitae-acid)" || exit 1
 acid_run="$(printf '%s\n' "$acid" | tail -1)"
 printf '%s\n' "$acid" | sed '$d'
 
 echo
-echo "=== control run: tools/keys/caustic-vitae-control.keys (bugbear, no acid resistance) ==="
+echo "=== control run: tools/keys/caustic-vitae-control.keys (hill giant, no acid resistance) ==="
 ctl="$(_run_one tools/keys/caustic-vitae-control.keys caustic-vitae-control)" || exit 1
 ctl_run="$(printf '%s\n' "$ctl" | tail -1)"
 printf '%s\n' "$ctl" | sed '$d'
@@ -145,16 +162,16 @@ fi
 # The acid-immune victim must NOT take both halves. Taking 2*D is exactly the
 # defect: no xval, so the acid half lands as a second untyped half.
 if [ "$acid_loss" -ge "$((2 * acid_d - 1))" ]; then
-    echo "FAIL: the acid-immune stunjelly lost $acid_loss, the full $((2 * acid_d)) ="
+    echo "FAIL: the acid-immune magma creeper lost $acid_loss, the full $((2 * acid_d)) ="
     echo "      2*D, not the unresistible half D=$acid_d; Caustic Vitae's damage is"
     echo "      not acid, so its immunity never applies."
     fail=1
 elif [ "$acid_loss" -gt "$((acid_d + 1))" ]; then
-    echo "FAIL: the acid-immune stunjelly lost $acid_loss, more than the half D=$acid_d"
+    echo "FAIL: the acid-immune magma creeper lost $acid_loss, more than the half D=$acid_d"
     echo "      plus rounding; part of the acid half leaked through."
     fail=1
 elif [ "$acid_loss" -lt 1 ]; then
-    echo "FAIL: the acid-immune stunjelly lost nothing; the unresistible half must"
+    echo "FAIL: the acid-immune magma creeper lost nothing; the unresistible half must"
     echo "      still land even when the acid half is negated."
     fail=1
 fi
@@ -163,13 +180,13 @@ fi
 # own words, not merely a small number.
 if ! grep -qiE '(unaffected|resists)' "$acid_run"/logs/screens/*-messages.txt 2>/dev/null; then
     echo "FAIL: the acid run's messages never name an immunity ('unaffected'/'resists')"
-    echo "      for the acid-immune stunjelly, so the acid half was not negated."
+    echo "      for the acid-immune magma creeper, so the acid half was not negated."
     fail=1
 fi
 
 if [ "$fail" = 0 ]; then
-    echo "PASS: Caustic Vitae deals acid damage (immune stunjelly takes D=$acid_d,"
-    echo "      unresisting bugbear takes 2D=$((2 * ctl_d)))."
+    echo "PASS: Caustic Vitae deals acid damage (immune magma creeper takes D=$acid_d,"
+    echo "      unresisting hill giant takes 2D=$((2 * ctl_d)))."
     exit 0
 fi
 exit 1

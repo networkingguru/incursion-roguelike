@@ -17,20 +17,25 @@
 # chargen-mage.keys; Free Advancement buys one level, Infinite Mana makes the
 # cast free, and Freeze Monsters stops the victim acting on its own.
 #
-# TARGET. A stunjelly (lib/mon3.irh:2855, MA_JELLY, HD 4, ~31 HP) carries
-# "Immune: OOZE_IMMUNITIES, DF_ACID", so it is acid-immune and survives both
-# the full and the half hit, keeping its HP readable. It is summoned two
-# squares east; Freeze Monsters strips its Dex (Def 17 -> 11), so the bolt's
-# +7 attack lands. The bolt is fired east with D RIGHT.
+# TARGET. A magma creeper (lib/mon3.irh:2833, MA_JELLY, HD 12, Con 22) carries
+# "Immune: OOZE_IMMUNITIES, DF_FIRE, DF_ACID, DF_ELEC", so it is acid-immune.
+# Its hit points are never below 84 whatever the roll (12 HD at 1 each + 12 x
+# the Con 22 modifier of 6), far above the 10 that one half can take, so it
+# survives and its HP stays readable. It is summoned one square east; the bolt
+# is fired east with D RIGHT and the attack roll is forced to 20.
 #
 # ORACLE. (1) The victim's own HP line in "Examine Nearby Things" (wizard menu
-# item 1), read before and after the cast: the summoned monster is the second
-# thing in map order, one RIGHT after the player. (2) The game's own combat
+# item 1), read before and after the cast: the summoned monster is the first
+# T_MONSTER after the player; Genocide leaves corpses ahead of it, so the
+# script presses RIGHT until the header names T_MONSTER. (2) The game's own combat
 # numbers, printed to the message history ('v'): before the fix both halves
 # read "Physical Damage" and sum to the full amount; after the fix the second
 # half is "Acid Damage" and the acid-immune victim is unaffected by it.
-@include chargen-mage.keys
-ESC
+# The character is LOADED, not generated (INCURSION_LOAD, set by
+# tools/check_caustic_vitae_acid.sh): tools/fixtures/chars/orc-mage-seed1-opt0822.sav,
+# the male orc mage chargen-mage.keys builds, WIS 16 (mod +3). Nothing here
+# reads a rolled attribute.
+@until "Things in View" ESC
 
 w
 y
@@ -56,17 +61,23 @@ w
 ENTER
 @dump:learned
 
+# Clear the level first, so the summoned monster is the only other thing the
+# Examine screen can reach in one RIGHT, whatever the level holds.
+w
+@choose "Genocide Everything"
+SPACE*40                 # dismiss the genocide message chain
+
 w
 @choose "Monster Summoning"
 @choose "Jellies"
-@choose "stunjelly"
-RIGHT RIGHT ENTER
+@choose "magma creeper"
+RIGHT*4 ENTER
 @dump:summoned
 
 w
 @choose "Examine Nearby Things"
 @dump:target-before-player
-RIGHT
+@until "T_MONSTER" RIGHT   # skip the corpses Genocide left; the victim is the one monster
 @dump:target-before
 ESC
 
@@ -83,7 +94,7 @@ ESC
 w
 @choose "Examine Nearby Things"
 @dump:target-after-player
-RIGHT
+@until "T_MONSTER" RIGHT   # skip the corpses Genocide left; the victim is the one monster
 @dump:target-after
 ESC
 

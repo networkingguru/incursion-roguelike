@@ -51,15 +51,6 @@
       {
         "hooks": [
           {
-            "command": "tools/dispatch_gate.py",
-            "type": "command"
-          }
-        ],
-        "matcher": "Agent|Task"
-      },
-      {
-        "hooks": [
-          {
             "command": "tools/close_gate.py",
             "type": "command"
           },

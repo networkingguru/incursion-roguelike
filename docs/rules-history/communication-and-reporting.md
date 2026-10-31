@@ -162,3 +162,12 @@ let's just set this in stone right here. If I rule somethign, you say 'hey this
 conflicts'. If I say, keep my ruling, KEEP IT. Do not relitigate." and "KEEP
 MYRULING. NORMAL PRICE. 3". Asked whether to write it down as a rule, he said
 "y".
+
+## check-plan-purpose-method-changes
+
+2026-10-31, bead inc-b4l3g.2. The session presented the repair plan for
+tools/check_feed_upon_pain.sh as per-seed causes, then plan bullets, then one
+decision. Brian said: "I cannot undfewrstand the fucking plan. This is common,
+because3 of the method you present it. Here's what I need, and WRITE THIS DOWN:
+1. What is the check supposed to check 2. HOw do you intend to do that 3. What
+do you have to change for 2."
