@@ -430,6 +430,26 @@ int8 LOFGetForcedSaveThrowRoll()
     return LOFForcedSaveThrowRoll;
 }
 
+/* Test-only control (inc-b4l3g.30): INCURSION_SNEAK_FORCE_LISTEN=heard|unheard
+   decides the Move Silently vs Listen contest in PreStrike. Unset, or any
+   other value, runs the contest as before (same two Dice::Roll calls). */
+static int8 SneakForceListen = 0;
+static bool SneakListenHeard(int16 moveSil, int16 listen)
+{
+    static bool done = false;
+    if (!done) {
+        done = true;
+        const char *s = getenv("INCURSION_SNEAK_FORCE_LISTEN");
+        if (s && !strcmp(s,"heard"))
+            SneakForceListen = 1;
+        else if (s && !strcmp(s,"unheard"))
+            SneakForceListen = 2;
+    }
+    if (SneakForceListen)
+        return SneakForceListen == 1;
+    return moveSil + Dice::Roll(1,20,0) < listen + Dice::Roll(1,20,0);
+}
+
 /* inc-cr8v test-only control: INCURSION_FORCE_DAMAGE_ROLL=<n> forces every
    damage die rolled at the two Creature::Hit sites below to show
    min(n,Sides) instead of a random value (0 = off). Harness only; not a
@@ -5364,8 +5384,8 @@ EvReturn Creature::PreStrike(EventInfo &e) /* this == EActor */
 
     if (e.isSurprise && !e.EVictim->HasStati(SLEEPING) &&
         (e.EActor->onPlane() == e.EVictim->onPlane()))
-      if (e.EActor->SkillLevel(SK_MOVE_SIL) + Dice::Roll(1,20,0) <
-             e.EVictim->SkillLevel(SK_LISTEN) + Dice::Roll(1,20,0)) {
+      if (SneakListenHeard(e.EActor->SkillLevel(SK_MOVE_SIL),
+                           e.EVictim->SkillLevel(SK_LISTEN))) {
         e.EActor->IPrint("The <Obj> hears you!",e.EVictim);
         e.isSurprise = false;
         SneakProbeNote("hears-you", e);

@@ -2,77 +2,77 @@
 # gate: live
 # Assert the sneak-attack-from-invisibility rules for bead inc-nkf2.
 #
-#   tools/check_sneak_invis.sh [trials]      exit 0 all pass, 1 a failed
-#                                            assertion, 2 a case measured
-#                                            nothing
+#   tools/check_sneak_invis.sh     exit 0 all pass, 1 a failed assertion,
+#                                  2 a case measured nothing
 #
 # Bead inc-nkf2. Two defects fixed in src/Fight.cpp:
 #
 #   FIX 1  Creature::Hit's sneak gate did not read e.actUnseen, so an invisible
-#          first blow the victim HEARD (the Move Silently vs Listen contest at
-#          src/Fight.cpp:4184 cleared isSurprise) got no sneak dice, even though
-#          the defence block at :4270 already treats actUnseen as no-Dex.
-#   FIX 2  Creature::PreStrike set e.actUnseen and e.isSurprise together behind
-#          "!Perceives && !HasFeat(FT_BLIND_FIGHT)". Blind-Fight protects only
-#          against a MELEE unseen attacker (SRD), so a RANGED attack from an
-#          unperceived attacker must still count as unseen.
+#          first blow the victim HEARD got no sneak dice.
+#   FIX 2  Creature::PreStrike set e.actUnseen and e.isSurprise together; a
+#          RANGED attack from an unperceived attacker must count as unseen
+#          even when the victim has Blind-Fight (SRD: melee only).
+
+# SEED-INDEPENDENT (bead inc-b4l3g.30). One run per case, loading the frozen
+# rogue tools/fixtures/chars/orc-rogue-sneak-seed1.sav (knife in the pack, Move
+# Silently ranks; made by tools/keys/sneak-invis-rogue-save.keys). Every run
+# forces INCURSION_LOF_FORCE_ROLL=20 (every attack lands) and
+# INCURSION_FORCE_DAMAGE_ROLL=1; the Move Silently vs Listen contest is forced
+# by INCURSION_SNEAK_FORCE_LISTEN=heard|unheard. Counts are exact, so
+# MIN_COUNT is 1.
 #
-# INCURSION_OPTIONS overrides the settings fixture; the default is
-# tools/fixtures/options-sneak-invis.dat, tools/gates/Options.Dat with
-# Automatic Hide in Shadows (option 518) forced OFF. With auto-hide on, the
-# rogue hides in the dark and every blow would be an unseen attack without a
-# spell, spoiling the visible control.
-#
-# THE PROBE. src/Fight.cpp's SneakProbeNote writes logs/sneak.log in a run
-# directory: "pre" once per PreStrike (the moment the sneak gate will read the
-# fields, before the Listen contest and before damage) and "attack" once per
-# Creature::Hit, after the sneak gate. Set INCURSION_SNEAK_PROBE=1; this script
-# sets it. Each run gets a FRESH directory (the probe appends), so two
-# invocations of this script tally the same counts.
-#
+# THE PROBE. src/Fight.cpp's SneakProbeNote writes logs/sneak.log: "pre" once
+# per PreStrike, "hears-you" when the contest is lost, "attack" once per
+# Creature::Hit after the sneak gate. This script sets INCURSION_SNEAK_PROBE=1.
+# Each run gets a FRESH directory, because the probe appends.
+
 # THE CASES, each read out of logs/sneak.log:
-#
-#   A   invisible MELEE first blow, victim HEARD the rogue, blow landed, victim
-#       not flat-footed: sneak=1 on every such blow. FIX 1. RED before the fix.
-#   A2  invisible MELEE first blow, victim did NOT hear: sneak=1. Green on the
-#       old code too (isSurprise held); guards against a regression.
-#   B   visible control blow at a non-flat-footed victim: sneak=0 always.
-#   C   invisible RANGED first blow at a Blind-Fight victim: actUnseen=1 and
-#       surprise=0 on every "pre". FIX 2. RED before the fix. Where a blow
-#       lands on a non-flat-footed victim, sneak=1; if no such blow is measured
-#       in the trial set the script says so and does not assert it.
+#   A   invisible MELEE first blow, victim HEARD (listen=heard), landed, not
+#       flat-footed: sneak=1. FIX 1.
+#   A2  same, victim did NOT hear (listen=unheard): sneak=1. Regression guard.
+#   B   visible control blow at a non-flat-footed victim: sneak=0. Read from
+#       both melee runs. No contest occurs: the rogue is visible.
+#   C   invisible RANGED first blow at a Blind-Fight victim: actUnseen=1,
+#       surprise=0. FIX 2. A visible melee setup blow clears the hag's
+#       flat-footed state first; the landed throw then needs
+#       sneak=1, and none landed exits 2. No contest occurs (Blind-Fight
+#       keeps isSurprise off); switch unset. Only the first invisible blow
+#       is read (the throw). True Seeing stops the 50% unseen-victim miss.
 #   D   invisible MELEE first blow at a Blind-Fight victim: actUnseen=0 and
-#       surprise=0 on every "pre". Green on the old code too; guards that
-#       Blind-Fight still protects in melee after FIX 2.
-#
-# A case that produces no probe line at all for its victim exits 2: nothing was
-# measured. Every asserted denominator must reach MIN_COUNT, or exit 1 -- a
-# count of 0 or 2 is not evidence.
-#
-# The victim is named in the log, so a player attack is one whose
-# "victim=<name>"; the victim's own blows name the player and are ignored.
-#
-# Commands (Brian's brief, docs/VERIFICATION.md):
+#       surprise=0. Guards that Blind-Fight still protects in melee. Same: no
+#       contest, switch unset.
+# A case with no probe line exits 2. A count below MIN_COUNT exits 1.
+
+# fact: character, kit, skills (Move Silently ranks, orcish knife) -- fixture orc-rogue-sneak-seed1
+# fact: settings (Auto Hide off, monster max hit points) -- INCURSION_OPTIONS options-sneak-invis-maxhp.dat, saved in the fixture
+# fact: victim (brown bear, green hag) and its position -- wizard Monster Summoning
+# fact: victim hit points (a kill ends the case) -- OPT_MON_MAX_HP DOUBLE, plus INCURSION_FORCE_DAMAGE_ROLL=1
+# fact: victim flat-footed state (case C sneak half) -- visible setup blow in the key script
+# fact: rogue sees the invisible hag (else a 50% wild miss, src/Fight.cpp vicUnseen) -- True Seeing cast in the ranged key script
+# fact: lit arena for the visible control -- Call Light cast in the key script
+# fact: hit or miss -- INCURSION_LOF_FORCE_ROLL=20
+# fact: victim hears the rogue -- INCURSION_SNEAK_FORCE_LISTEN=heard|unheard
+# fact: Blind-Fight, See Invisible, infravision of the victim -- species data (lib/mon1.irh, lib/mon2.irh)
+# fact: Cheat Death, mana for Improved Invisibility -- wizard mode switches in the key script
+# fact: killing blow -- excluded by the awk (vx=-1 vy=-1) and counted
+# fact: the session seed -- not read; every run passes seed 1
+
+# Commands:
 #   BACKEND=posix ./build_macos.sh
-#   tools/check_sneak_invis.sh            # green on the fixed build
-#   tools/check_sneak_invis.sh            # second run: identical counts
+#   tools/check_sneak_invis.sh
+#   tools/seed_sweep.sh tools/check_sneak_invis.sh
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 [ -x ./incursion-headless ] || { echo "INCONCLUSIVE: build with BACKEND=posix ./build_macos.sh"; exit 2; }
 
-# inc-kbws: the opposed hide roll (inc-u3dp) shifted the RNG stream, so the
-# old 25-trial default sampled too few heard blows for case A. 50 trials clears
-# the MIN_COUNT=5 threshold with margin; the threshold itself is unchanged.
-TRIALS="${1:-50}"
-MIN_COUNT=5
-# SEED_BASE: the trials run seeds SEED_BASE+1 .. SEED_BASE+TRIALS. Seeds 1-25
-# gave only 3 heard-and-landed blows for case A (need 5) once the new-character
-# kit rearrangement changed the draws; seeds 26-50 give 7.
-SEED_BASE=25
-OPTIONS="${INCURSION_OPTIONS:-tools/fixtures/options-sneak-invis.dat}"
+# Exact counts: every forced case yields one blow, so one is enough.
+MIN_COUNT=1
+FIXTURE=tools/fixtures/chars/orc-rogue-sneak-seed1.sav
+OPTIONS=tools/fixtures/options-sneak-invis-maxhp.dat
 [ -f "$OPTIONS" ] || { echo "INCONCLUSIVE: settings file $OPTIONS is not there"; exit 2; }
+[ -f "$FIXTURE" ] || { echo "INCONCLUSIVE: fixture $FIXTURE is not there"; exit 2; }
 
 MELEE_KEY=tools/keys/sneak-invis-melee.keys
 RANGED_KEY=tools/keys/sneak-invis-ranged.keys
@@ -101,13 +101,16 @@ A_KILLED=0; C_KILLED=0; D_KILLED=0
 # invocations distinct and the rm makes a repeated one fresh. (inc-nkf2)
 TOKEN="${INCURSION_CHECK_TOKEN:-$$-$(date +%s)}"
 RUN_SEQ=0
-run_one() { # <keyscript> <seed> <label> -> prints the run directory
-    local keys="$1" seed="$2" label="$3" out run
+run_one() { # <keyscript> <listen: heard|unheard|-> <label> -> prints the run directory
+    local keys="$1" listen="$2" label="$3" out run seed=1
     RUN_SEQ=$((RUN_SEQ+1))
-    local RUN_DIR="$ROOT/logs/runs/check-sneak-$TOKEN-$(printf '%02d' "$RUN_SEQ")-$label-seed$seed"
+    local RUN_DIR="$ROOT/logs/runs/check-sneak-$TOKEN-$(printf '%02d' "$RUN_SEQ")-$label"
     rm -rf "$RUN_DIR"
     export INCURSION_RUN_DIR="$RUN_DIR"
-    out="$(INCURSION_OPTIONS="$OPTIONS" INCURSION_SNEAK_PROBE=1 \
+    local lv=(); [ "$listen" != "-" ] && lv=(INCURSION_SNEAK_FORCE_LISTEN="$listen")
+    out="$(env INCURSION_OPTIONS="$OPTIONS" INCURSION_LOAD="$FIXTURE" \
+            INCURSION_SNEAK_PROBE=1 INCURSION_LOF_FORCE_ROLL=20 \
+            INCURSION_FORCE_DAMAGE_ROLL=1 ${lv[@]+"${lv[@]}"} \
             tools/headless.sh "$keys" "$seed" 2>&1)"
     run="$(echo "$out" | awk '/^run:/ {print $2}')"
     if grep -qE 'NO GAMEPLAY|the key script looked for something|WATCHDOG|FATAL' <<< "$out"; then
@@ -116,13 +119,13 @@ run_one() { # <keyscript> <seed> <label> -> prints the run directory
     echo "$run"
 }
 
-echo "sneak-attack from invisibility (inc-nkf2), $TRIALS trials each"
+echo "sneak-attack from invisibility (inc-nkf2), one forced run per case"
 echo "options: $OPTIONS"
 echo
 
 # ---------------------------------------------------------------- cases A/B
-for seed in $(seq $((SEED_BASE+1)) $((SEED_BASE+TRIALS))); do
-    RUN="$(run_one "$MELEE_KEY" "$seed" melee)"
+for listen in heard unheard; do
+    RUN="$(run_one "$MELEE_KEY" "$listen" melee-$listen)"
     LOG="$RUN/logs/sneak.log"
     [ -f "$LOG" ] || continue
     read -r ah ahnff ahnffsn ahsn au aunff aunffsn ausn setup bh bok bbad akilled lines < <(awk -v v="$MELEE_VICTIM" '
@@ -173,14 +176,14 @@ echo "     (setup blows, flatfoot=1, not counted as control):        $SETUP_HIT"
 echo
 
 # ---------------------------------------------------------------- case C
-for seed in $(seq $((SEED_BASE+1)) $((SEED_BASE+TRIALS))); do
-    RUN="$(run_one "$RANGED_KEY" "$seed" ranged)"
+for once in 1; do
+    RUN="$(run_one "$RANGED_KEY" - ranged)"
     LOG="$RUN/logs/sneak.log"
     [ -f "$LOG" ] || continue
     read -r cp cpau cpsu ch cnff cnffsn ckilled lines < <(awk -v v="$RANGED_VICTIM" '
         $0 ~ ("victim=<" v ">") {
-            if (/ pre /) { lines++; if (/invisVal=1/ && /dist=[23]/) { invisSeen=1; cp++; if (/actUnseen=1/) cpau++; if (/surprise=1/) cpsu++ } }
-            if (/ attack / && /dist=[23]/) {
+            if (/ pre /) { lines++; if (/invisVal=1/ && !first) { first=1; invisSeen=1; cp++; if (/actUnseen=1/) cpau++; if (/surprise=1/) cpsu++ } }
+            if (/ attack /) {
                 lines++
                 # inc-kbws: exclude a killing blow (victim off map): the engine
                 # adds no sneak dice once isDead() (src/Fight.cpp:7211).
@@ -196,26 +199,18 @@ for seed in $(seq $((SEED_BASE+1)) $((SEED_BASE+TRIALS))); do
     RANGED_LINES=$((RANGED_LINES+lines))
 done
 
-C_SNEAK_MEASURED=0
-[ "$C_NFF" -ge "$MIN_COUNT" ] && C_SNEAK_MEASURED=1
-
 echo "C. invisible RANGED first blow at a Blind-Fight victim:"
-echo "     invisVal=1 pre lines (distance 2-3):                      $C_PRE"
+echo "     invisVal=1 pre lines (first one only):                 $C_PRE"
 echo "     ...of those, actUnseen=1 (must be all):                   $C_PRE_AU"
 echo "     ...of those, surprise=1 (must be 0):                      $C_PRE_SU"
-if [ "$C_SNEAK_MEASURED" -eq 1 ]; then
-    echo "     landed blows at a non-flat-footed victim:                 $C_NFF"
-    echo "     ...of those, sneak=1 (must be all):                       $C_NFF_SN"
-else
-    echo "     landed blows at a non-flat-footed victim:                 $C_NFF"
-    echo "     SNEAK HALF OF C UNMEASURED: fewer than $MIN_COUNT such blows; not asserted"
-fi
+echo "     landed blows at a non-flat-footed victim:                 $C_NFF"
+echo "     ...of those, sneak=1 (must be all):                       $C_NFF_SN"
 echo "     excluded killing blows (victim off map, vx=-1 vy=-1):     $C_KILLED"
 echo
 
 # ---------------------------------------------------------------- case D
-for seed in $(seq $((SEED_BASE+1)) $((SEED_BASE+TRIALS))); do
-    RUN="$(run_one "$BLINDFIGHT_KEY" "$seed" blindfight)"
+for once in 1; do
+    RUN="$(run_one "$BLINDFIGHT_KEY" - blindfight)"
     LOG="$RUN/logs/sneak.log"
     [ -f "$LOG" ] || continue
     read -r dp dpau dpsu dh dkilled lines < <(awk -v v="$BLINDFIGHT_VICTIM" '
@@ -287,7 +282,11 @@ fi
 if [ "$C_PRE_SU" -ne 0 ]; then
     fail "case C: $C_PRE_SU invisible ranged pre line(s) read surprise=1 (must be 0)"
 fi
-if [ "$C_SNEAK_MEASURED" -eq 1 ] && [ "$C_NFF_SN" -ne "$C_NFF" ]; then
+if [ "$C_NFF" -lt "$MIN_COUNT" ]; then
+    echo "FAIL: case C measured only $C_NFF landed non-flat-footed invisible ranged blows (need >= $MIN_COUNT); nothing measured"
+    exit 2
+fi
+if [ "$C_NFF_SN" -ne "$C_NFF" ]; then
     fail "case C: $C_NFF landed non-flat-footed blows, only $C_NFF_SN got sneak dice"
 fi
 # D: Blind-Fight must suppress both unseen flags in melee.

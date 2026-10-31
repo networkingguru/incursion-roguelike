@@ -59,6 +59,7 @@ known hole.
 | Attribute scores, when the check MUST generate the character in the run (a fixture cannot go red on a chargen-time mutation) | Point Buy: on the attribute screen press `p` ("Abort to Point Buy", src/Create.cpp:2306) and buy fixed scores. Every attribute starts at 8 with 75 points under the frozen options (`options-2026-08-22.dat`); in the keys, RIGHT raises the highlighted score by one, DOWN moves to the next of STR DEX CON INT WIS CHA LUC, ENTER leaves the screen after every point is spent, and `y` answers "Are these your final stats?". The race then adds its modifier to the score shown. Example: tools/keys/necro-undead-pool-necro.keys. |
 | A non-proficient armor in a starting kit | `INCURSION_KIT_GRANT=<item name>` (`src/Create.cpp`). Character creation adds that item to the starting kit as a perk item, before the kit is arranged. An unknown name logs an Error and adds nothing. Used by tools/check_kit_arrangement.sh. |
 | A monster where you need it | Wizard menu, "Monster Summoning". Clear the level first with "Genocide Everything". |
+| Summoned monster's gear | `INCURSION_SUMMON_NO_GEAR=1` (`src/Debug.cpp`). A monster made by the wizard "Monster Summoning" gets no starting Gear (no weapon, armor or items), so its blows do not vary with random enchantment. Other monster creation is untouched. Used by tools/check_feed_upon_pain.sh. |
 | An item | Wizard menu, "Item Acquisition". |
 | Terrain | Wizard menu, "Change terrain type"; or a probe that builds the map (`INCURSION_RUNTO_STAGE`). |
 | Depth | Wizard menu, "Ascend / Descend Depth". |
@@ -69,6 +70,7 @@ known hole.
 | Attack roll (d20) | `INCURSION_LOF_FORCE_ROLL` (`src/Fight.cpp`). It applies to every attacker. |
 | Saving throw (d20) | `INCURSION_FORCE_SAVE_ROLL`, 1 to 20. It applies to every creature. |
 | Skill check (d20) | `INCURSION_RUNTO_SKILL_ROLL`, 1 to 20. It also sets the Animal Empathy pacify roll. |
+| Move Silently vs Listen contest (victim hears an attacker) | `INCURSION_SNEAK_FORCE_LISTEN=heard` or `unheard` (`src/Fight.cpp`, `PreStrike`). It applies to every attack that reaches the contest; unset, the dice decide. |
 | Damage roll | `INCURSION_FORCE_DAMAGE_ROLL=<n>`. Each damage die at `Creature::Hit`, and in the A_DEQU retaliation (acid blob and kin damaging the striker or the struck item), shows `min(n, sides)`; 1 = minimum, 99 = maximum. Does not cover sneak-attack dice, weapon-quality extra dice such as flaming 1d6, area attacks or spells. |
 | Monster hit points | The "Monsters Maximum Hit Points" option (`OPT_MON_MAX_HP`, `src/Values.cpp:2392`) set to any value but NO. It is a character-generation option, so a loaded game takes it from its save, not from the options file: set it in the options file used to make the check's fixture (`tools/make_char_fixture.sh`). |
 | Percent-chance roll | *none* |

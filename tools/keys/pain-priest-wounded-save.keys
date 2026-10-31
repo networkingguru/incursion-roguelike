@@ -1,0 +1,78 @@
+# FIXTURE SOURCE for bead inc-b4l3g.2 (tools/check_feed_upon_pain.sh): an orc
+# priest of Khasrach with the Pain domain (Feed upon Pain, ability level 1),
+# EMPTY weapon hand (so AttackMode() brawls: Punch 1d3+3), wounded to about 30/36
+# hit points, carrying a Feed upon Pain tally of 6. Build it with
+#
+#   INCURSION_LOF_FORCE_ROLL=20 INCURSION_FORCE_DAMAGE_ROLL=3 \
+#   tools/make_char_fixture.sh orc-priest-pain-seed1-sneakopts \
+#       tools/keys/pain-priest-wounded-save.keys 1 tools/fixtures/options-sneak-invis.dat
+#
+# The two INCURSION_* variables are part of the recipe (the fixture sheet cannot
+# record them): they make a summoned giant rat bite for a known 2 and make the
+# priest's one punch deal a known 6, which is the carried tally.
+#
+# WHY WOUNDED. Feed upon Pain heals only up to max HP, so a full-HP priest reads
+# healed=0 on every blow and the heal cannot be asserted. Seed 1 deals this kit
+# with both hands empty, so no weapon swap is needed.
+# WHY A TALLY OF 6. The first blow then always crosses a 10 (6+4 at least; a
+# fatigued, unsurprised blow deals 4), so the check sees a heal whatever the
+# target's hit points.
+# The rat bites while the priest rests; resting is cut short while a hostile is
+# in view, so many rests are sent. Then the priest punches the rat once, kills
+# every monster, and searches until the status bar reads Exploring (a loaded
+# game still in Fighting makes tools/keys/load-char-sheet.keys' search eat a key).
+
+a
+n
+y
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Priest"
+@choose "Khasrach"
+a
+@choose "Chaotic Evil"
+a
+d
+a
+a
+a a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+y
+a
+@expect "Learn Spells: Level"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
+
+SPACE
+@dump:played
+
+w
+y
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "giant rat"
+RIGHT ENTER
+@until "HP:" ESC
+. . . . . . . . . .
+. . . . . . . . . .
+. . . . .
+@dump:wounded
+RIGHT
+@while "Die?" n
+@dump:punched
+
+w
+@choose "Genocide Everything"
+@dump:cleared
+s
+@dump:calm
+
+@until "System Menu" ESC
+@expect "System Menu"
+b
+@dump:saved
