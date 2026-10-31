@@ -47,9 +47,8 @@
 # the feat needs caster level 5 (src/FeatTab.cpp), which no scripted level-1
 # character reaches on its own.
 
-@include chargen-priest.keys
-
-ESC
+# The character is a LOADED fixture (INCURSION_LOAD, set by tools/check_skc6_blast_text.sh):
+# an orc priest of Aiswin already standing on the saved map, so no chargen runs.
 
 # Freeze Monsters, the eleventh row of the switches list (see
 # tools/keys/sanctuary-strike.keys) -- stops the bears acting on their own

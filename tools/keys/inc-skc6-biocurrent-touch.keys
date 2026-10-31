@@ -9,9 +9,8 @@
 #
 # THIS IS A THROWAWAY DIAGNOSTIC SCRIPT, not a committed check.
 
-@include chargen-priest.keys
-
-ESC
+# The character is a LOADED fixture (INCURSION_LOAD, set by tools/check_skc6_blast_text.sh):
+# an orc priest of Aiswin already standing on the saved map, so no chargen runs.
 
 w
 y
