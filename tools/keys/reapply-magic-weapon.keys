@@ -4,7 +4,9 @@
 # removes it. Genocide prevents interrupted rest; depth 1 refuses sleeping.
 # Acquisition and chargen follow bloodspear-orc-save.keys, seed 4.
 # Description scrolling must reach Cost, below the outside-enchantment text.
-@include chargen.keys
+# inc-frim: no chargen. The check loads the frozen orc barbarian
+# tools/fixtures/chars/orc-barbarian-reapply-seed4.sav (INCURSION_LOAD), so
+# the character no longer follows the seed.
 
 d
 @dump:orc-sheet-without-bloodspear
@@ -62,6 +64,8 @@ ESC
 w
 @choose "Ascend / Descend Depth"
 "2" ENTER
+@while "Press [ENTER]" ENTER   # the arrival square decides whether "You fall..." waits here
+@while "#------" SPACE         # ...and whether a level-description box (or "Splat.") opens
 @until "HP:" ESC
 w
 @choose "Genocide Everything"

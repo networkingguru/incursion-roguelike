@@ -1,0 +1,13 @@
+# inc-frim: builds the orc barbarian that S1, S3 and S4 of
+# tools/check_reapply_single_grant.sh used to build fresh from chargen.keys on
+# three different seeds, and SAVES him for tools/make_char_fixture.sh to freeze
+# (fixture orc-barbarian-reapply-seed4). A fresh build drew a different
+# character per seed, and the check's verdict followed it. Not included by
+# anything; the three key scripts load the frozen fixture instead.
+# Seed 4 is the seed S1 passed on. Ends like lizardfolk-monk-save.keys: no
+# @quit, so the session holds exactly one save.
+@include chargen.keys
+ESC                     # System Menu
+@expect "System Menu"
+b                       # [b] Save and Continue
+@dump:saved
