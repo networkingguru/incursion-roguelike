@@ -1,0 +1,28 @@
+# inc-sg8d4: a paralyzed player can open the character sheet (d) and C, and ESC back.
+# Loaded by tools/check_paralyzed_sheet.sh with orc-barbarian-seed1-opt0822.
+# Dumps: 0001 prompt, 0002 after non-offered keys, 0003 sheet, 0004 Conditions,
+# 0005 after ESC ESC, 0006 after 1 (wait 10).
+w
+@while "Enter wizard mode" y
+@choose "Genocide Everything"
+s
+w
+@choose "Become Divine Champion"
+"Paralyzed Sheet Test God" ENTER
+@while "more --" SPACE
+@while "ESC:Done" ESC
+@expect "ray, magic"
+@dump:prompt
+h
+i
+@dump:ignored
+d
+@dump:sheet
+C
+@dump:conditions
+ESC
+ESC
+@dump:back
+1
+@dump:waited
+@quit
