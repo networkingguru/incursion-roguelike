@@ -14,6 +14,10 @@
 # in the direction of the first press. WHICH things are candidates did not
 # change; that is the calling prompt's business and the filters are untouched.
 #
+# fact: character -- fixture orc-barbarian-seed1-opt0818
+# fact: map, player square (111,110), nine corpses in view -- same fixture (a save pins the dungeon)
+# fact: no monster acts, no roll is made -- Look and the target cursor take no game turn
+#
 # Measured 2026-08-19, seed 1, same key script, src/Term.cpp the only file
 # different between the two builds. The player stands at (111,110) with nine
 # corpses in view:
@@ -29,8 +33,8 @@
 # The three assertions below are all red on the old build.
 #
 # THE RUN CAN FAIL TO MEASURE ANYTHING, and that is reported as INCONCLUSIVE
-# rather than FAIL: a session that never reached the caves, or whose [t] never
-# opened the target cursor, says nothing about the bug. Sending somebody
+# rather than FAIL: a session that failed to load the fixture, or whose [t]
+# never opened the target cursor, says nothing about the bug. Sending somebody
 # hunting a regression that a dead session invented is the mistake of
 # inc-loa.3.
 #
@@ -47,7 +51,7 @@ SEED=1
     exit 2
 }
 
-out="$(INCURSION_TARGET_PROBE=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh tools/keys/target-ring.keys "$SEED" 2>&1)"
+out="$(INCURSION_TARGET_PROBE=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0818.sav tools/headless.sh tools/keys/target-ring.keys "$SEED" 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 log="$run/logs/targetprobe.log"
 
