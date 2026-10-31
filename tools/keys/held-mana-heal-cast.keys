@@ -1,6 +1,6 @@
-# Property 2: the same wounding as held-mana-heal-pre.keys, then cast Cure
+# Property 2: the fixture is already wounded; then cast Cure
 # Light Wounds on the caster ('*' = Target Self), then save.
-@include held-mana-heal-setup.keys
+@dump:hurt
 @until "Select Spell" m
 @choose "Cure Light Wounds"
 @dump:clw-prompt

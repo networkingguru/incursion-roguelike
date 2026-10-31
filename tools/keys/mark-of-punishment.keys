@@ -1,6 +1,7 @@
 # Observe Mark of Punishment, for bd inc-7mkt.
 #
-#   INCURSION_OPTIONS=tools/gates/Options.Dat INCURSION_FORCE_SAVE_ROLL=1 \
+#   INCURSION_OPTIONS=tools/gates/Options.Dat INCURSION_FORCE_SAVE_ROLL=1 INCURSION_LOF_FORCE_ROLL=15 \
+#       INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-gate.sav \
 #       tools/headless.sh tools/keys/mark-of-punishment.keys 2
 #
 # WHAT IS MEASURED. Mark of Punishment (lib/pspells.irh) puts a TRAP_EVENT stati
@@ -36,22 +37,7 @@
 # Constitution. Labels: state-00 right after the touch, state-NN after the NNth
 # turn of waiting. The message log is dumped last.
 
-a       # Initial Choices: [a] Create a New Character
-n       # Alter the character generation options? -- no
-y       # Your options will place the game in Explore Mode. Continue? -- yes
-@choose "Human"
-@choose "Athletics"      # first racial skill
-@choose "Diplomacy"      # second racial skill
-@choose "Paladin"
-@choose "Erich"
-a       # Attributes: the first of the offered sets
-a       # Alignment: the first offered (lawful good, so MA_LAWFUL holds)
-@while "Choose a feat" a
-@while "|  *" RIGHT RIGHT RIGHT DOWN
-ENTER y # Done, and confirm keeping the ranks
-@while "wish to worship" y
-@while "personality archetype" a
-@until "Afoot" ESC
+# The session starts in play mode with the frozen paladin loaded (INCURSION_LOAD).
 
 # Wizard switches, rows from 0: Cheat Death (0). First wizard entry needs the
 # "Enter wizard mode? [yn]" confirm (w y).

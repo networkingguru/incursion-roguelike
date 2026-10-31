@@ -1,6 +1,6 @@
-# Property 2, baseline: wounded, nothing cast, then save so the check reads
+# Property 2, baseline: the fixture is already wounded (tools/keys/priest-mage-wounded-save.keys), nothing cast, then save so the check reads
 # spent and held mana. Run: tools/check_held_mana.sh.
-@include held-mana-heal-setup.keys
+@dump:hurt
 ESC
 @expect "System Menu"
 b
