@@ -1,0 +1,9 @@
+# One turn on a loaded character. tools/check_monwield_drain.sh (bd inc-oiuvu).
+# The probe (INCURSION_MONWIELD_PROBE) logs its result before the first key, so
+# the script only has to complete a turn, or headless.sh reports NO GAMEPLAY.
+# It expects nothing from the screen: the probe's troll and kobold stand beside
+# the player and can put a "-- more --" prompt on it, which the seed decides.
+@dump:arrival
+
+s               # search: one real turn, so this counts as a session
+@dump:played

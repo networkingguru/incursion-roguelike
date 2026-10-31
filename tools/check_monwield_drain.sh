@@ -13,6 +13,8 @@
 # fact: monsters -- troll and kobold made by the probe; alignment forced by ALIGNMENT stati
 # fact: the weapon -- long sword + WQ_UNHOLY made by the probe
 # fact: settings -- options-2026-08-22.dat (CHECK_OPTIONS)
+# fact: character and map -- fixture orc-mage-seed1-opt0822 (INCURSION_LOAD); the probe reads neither
+# fact: session length -- tools/keys/monwield-probe.keys, one turn, no @expect; the probe fires before the first key
 # fact: the player's position -- the probe places monsters with PlaceNear; the log line reads only stati and death
 # fact: dice -- none read; a stati sum and a death flag
 #
@@ -21,7 +23,8 @@
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 SEED=3
-KEYS=tools/keys/dive.keys
+KEYS=tools/keys/monwield-probe.keys
+export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
 
 # The mutation removes the drain: Monster::Wield no longer lowers the stati.
 check_mutation src/Inv.cpp \
