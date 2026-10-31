@@ -48,3 +48,8 @@ History: docs/rules-history/communication-and-reporting.md#approval-text-show-on
 When a new ruling of Brian's conflicts with an earlier recorded ruling, state the conflict ONCE, in one sentence, at the moment he makes the new ruling. When he keeps the new ruling, record it, overwrite the old ruling on every bead that carries it, and MUST NOT raise that conflict again or ask him to confirm it.
 Why: a ruling he has already confirmed, raised again, costs him a round trip and reads as relitigating his decision.
 History: docs/rules-history/communication-and-reporting.md#ruling-conflict-flag-once-then-keep. Bead inc-67q5.
+
+## check-plan-purpose-method-changes
+A plan to repair or build a check MUST answer three numbered questions, in this order, and nothing before them: (1) What is the check supposed to check? State the game behavior in plain words. (2) How will the check do that? Describe the test as a player would see it run. (3) What must change to do (2)? List each file or tool to change, one line each. Causes, evidence and open decisions come AFTER the three answers, and each one MUST say which answer it belongs to.
+Why: a plan presented as causes, bullets and a decision cannot be followed by a reader who does not know what the check is for.
+History: docs/rules-history/communication-and-reporting.md#check-plan-purpose-method-changes. Bead inc-dmzlq.
