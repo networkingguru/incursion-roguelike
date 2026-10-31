@@ -10,6 +10,8 @@
 # its minimum water count), and it exits 2 when no panel needed the top-up.
 # fact: the rolled character survives the dive -- wizard Cheat Death on (tools/keys/limestone-water.keys)
 # fact: nothing attacks him on the way -- wizard Freeze Monsters on
+# fact: a fall or drowning on arrival asks "Die? [yn]" at a turn the script cannot predict -- @while "Die? [yn]" n before every wizard-menu @until (tools/keys/limestone-water.keys)
+# fact: the dry run has no natural water, so some panel always needs the top-up -- INCURSION_BLOB_MIN_PROBE=dry
 # fact: the levels -- NOT fixed, they are what is measured (an invariant, not a pinned map)
 # fact: the character -- NOT loaded: a saved character pins the dungeon (inc-nhgh)
 set -euo pipefail

@@ -5,14 +5,18 @@
 #   tools/headless.sh tools/keys/caustic-vitae-control.keys 1
 #
 # The control for tools/keys/caustic-vitae-acid.keys: the same cast, the same
-# character, the same level, but the victim is a bugbear (lib/mon2.irh:747,
-# HD 3) with no acid resistance at all. It must take the full damage both
+# character, the same level, but the victim is a hill giant (lib/mon2.irh:2372,
+# HD 12, Con 19, never under 78 hit points, so 2D of at most 20 cannot kill
+# it) with no acid resistance at all. It must take the full damage both
 # before and after the fix, and its message must name the spell's own damage
 # type (Acid) after the fix -- the acid-immune run is read against this.
 #
 # Every choice and its reason is the acid script's; see that file's header.
-@include chargen-mage.keys
-ESC
+# The character is LOADED, not generated (INCURSION_LOAD, set by
+# tools/check_caustic_vitae_acid.sh): tools/fixtures/chars/orc-mage-seed1-opt0822.sav,
+# the male orc mage chargen-mage.keys builds, WIS 16 (mod +3). Nothing here
+# reads a rolled attribute.
+@until "Things in View" ESC
 
 w
 y
@@ -37,17 +41,23 @@ w
 ENTER
 @dump:learned
 
+# Clear the level first, so the summoned monster is the only other thing the
+# Examine screen can reach in one RIGHT, whatever the level holds.
+w
+@choose "Genocide Everything"
+SPACE*40                 # dismiss the genocide message chain
+
 w
 @choose "Monster Summoning"
-@choose "Goblinkin"
-@choose "bugbear"
-RIGHT RIGHT ENTER
+@choose "Giants"
+@choose "hill giant"
+RIGHT*4 ENTER
 @dump:summoned
 
 w
 @choose "Examine Nearby Things"
 @dump:target-before-player
-RIGHT
+@until "T_MONSTER" RIGHT   # skip the corpses Genocide left; the victim is the one monster
 @dump:target-before
 ESC
 
@@ -64,7 +74,7 @@ ESC
 w
 @choose "Examine Nearby Things"
 @dump:target-after-player
-RIGHT
+@until "T_MONSTER" RIGHT   # skip the corpses Genocide left; the victim is the one monster
 @dump:target-after
 ESC
 

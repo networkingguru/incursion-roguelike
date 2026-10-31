@@ -11,6 +11,11 @@
 # Defends bead inc-cfnm too: a `budget:` dispatch is allowed ONLY when the
 # model is exactly `sonnet` AND tools/claude_budget.py reports `sonnet-first`.
 #
+# Defends bead inc-3vyok too: a Bash command that launches a model (DeepSeek,
+# Codex, claude -p) is decided and logged; a DeepSeek launch under a
+# `sonnet-first` budget is blocked without INCURSION_DS_FALLBACK plus a recent
+# Sonnet `budget` row, and tools/opencode_ds.sh refuses itself with exit 6.
+#
 # Defends bead inc-vj6i too: an `owner:` dispatch is allowed ONLY when the
 # model is sonnet or opus, the payload carries no truthy agent_id, and the
 # owner's LATEST real user message in the transcript names that model (no
@@ -27,7 +32,8 @@
 #                                              sonnet is allowed, so "provider"
 #                                              is dropped from STOPPED, so the
 #                                              budget model check is skipped,
-#                                              and so check_owner always allows;
+#                                              so check_owner always allows, and
+#                                              so the Bash branch is removed;
 #                                              confirm the "sonnet, no label",
 #                                              the provider-fallback, the
 #                                              "budget, opus" and the "owner did
@@ -192,6 +198,64 @@ PY
     cp "$BACKUP" "$GATE"
     cmp -s "$BACKUP" "$GATE" || { echo "restore of dispatch_gate.py failed" >&2; exit 2; }
 
+    # Remove the Bash branch: every Bash call is allowed at once, so the AC1
+    # case (a DeepSeek launch under sonnet-first) must go red.
+    NEEDLE_BASH='    if tool_name == "Bash":'
+    if ! grep -qF "$NEEDLE_BASH" "$GATE"; then
+        echo "could not find the Bash branch to mutate: $NEEDLE_BASH" >&2
+        exit 2
+    fi
+    python3 - "$GATE" "$NEEDLE_BASH" <<'PY'
+import sys
+path, needle = sys.argv[1], sys.argv[2]
+src = open(path).read()
+open(path, "w").write(src.replace(
+    needle, needle + '\n        sys.exit(0)  # MUTATED by --prove-red', 1))
+PY
+    echo "mutated tools/dispatch_gate.py: Bash branch returns 0 for every call"
+    MUTATED_OUTPUT="$("$ROOT/tools/check_dispatch_gate.sh")"
+    MUTATED_RC=$?
+    echo "--- output of the mutated run ---"
+    echo "$MUTATED_OUTPUT"
+    echo "--- end output of the mutated run ---"
+    if [ "$MUTATED_RC" -ne 0 ] && grep -q 'FAIL.*AC1 bash opencode_ds.sh' <<< "$MUTATED_OUTPUT"; then
+        echo "PASS (as intended): the AC1 case went red with the Bash branch removed"
+    else
+        echo "FAIL: the AC1 case stayed green with the Bash branch removed (rc=$MUTATED_RC)"
+        PROVE_FAIL=1
+    fi
+    cp "$BACKUP" "$GATE"
+    cmp -s "$BACKUP" "$GATE" || { echo "restore of dispatch_gate.py failed" >&2; exit 2; }
+
+    # Disable the folder test: the unlabelled sonnet in another project is then
+    # blocked, so scope case (a) must go red.
+    NEEDLE_SCOPE='    if not is_incursion_folder(cwd):'
+    if ! grep -qF "$NEEDLE_SCOPE" "$GATE"; then
+        echo "could not find the folder test to mutate: $NEEDLE_SCOPE" >&2
+        exit 2
+    fi
+    python3 - "$GATE" "$NEEDLE_SCOPE" <<'PY'
+import sys
+path, needle = sys.argv[1], sys.argv[2]
+src = open(path).read()
+open(path, "w").write(src.replace(
+    needle, '    if False:  # MUTATED by --prove-red', 1))
+PY
+    echo "mutated tools/dispatch_gate.py: folder test disabled"
+    MUTATED_OUTPUT="$("$ROOT/tools/check_dispatch_gate.sh")"
+    MUTATED_RC=$?
+    echo "--- output of the mutated run ---"
+    echo "$MUTATED_OUTPUT"
+    echo "--- end output of the mutated run ---"
+    if [ "$MUTATED_RC" -ne 0 ] && grep -q 'FAIL.*scope (a)' <<< "$MUTATED_OUTPUT"; then
+        echo "PASS (as intended): scope case (a) went red with the folder test disabled"
+    else
+        echo "FAIL: scope case (a) stayed green with the folder test disabled (rc=$MUTATED_RC)"
+        PROVE_FAIL=1
+    fi
+    cp "$BACKUP" "$GATE"
+    cmp -s "$BACKUP" "$GATE" || { echo "restore of dispatch_gate.py failed" >&2; exit 2; }
+
     if [ "$PROVE_FAIL" -eq 0 ]; then
         echo "PASS: --prove-red, all mutations turned their intended case red"
         exit 0
@@ -204,7 +268,7 @@ fi
 #   <description> <subagent_type> [transcript_path] [agent_id]
 payload() {
     python3 - "$@" <<'PY'
-import json, sys
+import json, os, sys
 args = sys.argv[1:]
 tool, model, desc, sub = args[:4]
 transcript = args[4] if len(args) > 4 else "/tmp/t.jsonl"
@@ -215,7 +279,7 @@ if model != "EMPTY":
 payload = {
     "session_id": "sess-1",
     "transcript_path": transcript,
-    "cwd": "/tmp/work",
+    "cwd": os.environ.get("GATE_CWD", os.path.expanduser("~/Scripts/Incursion-inc-3vyok")),
     "hook_event_name": "PreToolUse",
     "tool_name": tool,
     "tool_input": ti,
@@ -624,6 +688,252 @@ if [ "$rc" = 2 ] && [ "$(log_lines)" = "1" ] \
     pass "owner, unreadable transcript: block"
 else
     fail "owner, unreadable transcript (rc=$rc decision=$(log_field decision) label=$(log_field label) reason=$got_reason)"
+fi
+
+# --- Bash launch cases (bead inc-3vyok) -----------------------------------
+# bash_payload <command> builds a Bash PreToolUse payload in $TMP/in.json.
+bash_payload() {
+    python3 - "$1" "$OWNER_TRANSCRIPT" > "$TMP/in.json" <<'PY'
+import json, os, sys
+print(json.dumps({"session_id": "sess-1", "transcript_path": sys.argv[2],
+                  "cwd": os.environ.get("GATE_CWD", os.path.expanduser("~/Scripts/Incursion-inc-3vyok")), "hook_event_name": "PreToolUse",
+                  "tool_name": "Bash", "tool_input": {"command": sys.argv[1]}}))
+PY
+}
+
+# Like run_gate_budget but keeps the log (a case may seed it first).
+run_gate_budget_keep() {
+    INCURSION_DISPATCH_LOG="$LOG" INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
+        INCURSION_CLAUDE_USAGE="$USAGE" INCURSION_CLAUDE_BUDGET_NOW="$BUDGET_NOW" \
+        python3 "$GATE" < "$TMP/in.json" > "$TMP/last.out" 2> "$TMP/last.stderr"
+    return $?
+}
+
+# seed_sonnet_row <hours-ago>: one allow/sonnet/budget row in the temp log.
+seed_sonnet_row() {
+    python3 - "$LOG" "$1" <<'PY'
+import datetime, json, sys
+ts = (datetime.datetime.now(datetime.timezone.utc)
+      - datetime.timedelta(hours=float(sys.argv[2]))).strftime("%Y-%m-%dT%H:%M:%SZ")
+open(sys.argv[1], "a").write(json.dumps({
+    "ts": ts, "model": "sonnet", "label": "budget", "decision": "allow"}) + "\n")
+PY
+}
+
+# Seeded rows add one line, so the gate's own line makes it two.
+# AC1: DeepSeek launch under sonnet-first is blocked.
+write_usage 4 $R_DAY1
+bash_payload "tools/opencode_ds.sh /x brief.md"
+rc=0
+run_gate_budget || rc=$?
+expect "AC1 bash opencode_ds.sh under sonnet-first: block" 2 block launch "$rc" 1
+if grep -q "sonnet-first" "$TMP/last.stderr" && grep -q "INCURSION_DS_FALLBACK" "$TMP/last.stderr"; then
+    pass "AC1 block message names the route and the way through"
+else
+    fail "AC1 block message (stderr=$(head -2 "$TMP/last.stderr"))"
+fi
+
+# AC2: fallback plus a recent Sonnet attempt passes; no such row blocks.
+bash_payload "INCURSION_DS_FALLBACK=sonnet-stopped tools/opencode_ds.sh /x brief.md"
+: > "$LOG"; seed_sonnet_row 1
+rc=0
+run_gate_budget_keep || rc=$?
+expect "AC2 fallback + recent sonnet row: allow" 0 allow launch "$rc" 2
+rc=0
+run_gate_budget || rc=$?
+expect "AC2 fallback, no sonnet row: block" 2 block launch "$rc" 1
+: > "$LOG"; seed_sonnet_row 30
+rc=0
+run_gate_budget_keep || rc=$?
+expect "AC2 fallback + sonnet row older than 24h: block" 2 block launch "$rc" 2
+
+# AC3: Agent budget label unchanged.
+write_usage 50 $R_DAY1
+payload Agent sonnet "budget: x" general > "$TMP/in.json"
+rc=0
+run_gate_budget || rc=$?
+expect "AC3 budget sonnet under normal: block" 2 block budget "$rc" 1
+write_ledger \
+    "{\"ts\":\"2026-10-03T12:00:00Z\",\"out\":\"$EARLIER\",\"killed\":\"loop\"}" \
+    "{\"ts\":\"2026-10-03T13:18:20Z\",\"out\":\"$LATER\",\"killed\":\"context\"}"
+payload Agent sonnet "fallback: 20261003T131816Z-74757" general > "$TMP/in.json"
+rc=0
+run_gate_budget || rc=$?
+expect "AC3 valid fallback label under normal: allow" 0 allow fallback "$rc" 1
+
+# AC4: haiku always passes, Agent and claude -p, under both verdicts.
+for used in 4 50; do
+    write_usage $used $R_DAY1
+    payload Agent haiku "quick search" explore > "$TMP/in.json"
+    rc=0
+    run_gate_budget || rc=$?
+    expect "AC4 Agent haiku, usage $used: allow" 0 allow none "$rc" 1
+    bash_payload "claude -p --model claude-haiku-5-5 < brief.md > out.json"
+    rc=0
+    run_gate_budget || rc=$?
+    expect "AC4 claude -p haiku, usage $used: allow" 0 allow launch "$rc" 1
+done
+
+# claude -p sonnet / opus / no model.
+write_usage 4 $R_DAY1
+bash_payload "claude -p --model sonnet < brief.md"
+rc=0
+run_gate_budget || rc=$?
+expect "claude -p sonnet under sonnet-first: allow" 0 allow launch "$rc" 1
+write_usage 50 $R_DAY1
+write_transcript "$(printf "$USER" '"fix the bug"')"
+rc=0
+run_gate_budget || rc=$?
+expect "claude -p sonnet under normal, owner silent: block" 2 block launch "$rc" 1
+write_transcript "$(printf "$USER" '"use sonnet"')"
+rc=0
+run_gate_budget || rc=$?
+expect "claude -p sonnet under normal, owner named sonnet: allow" 0 allow launch "$rc" 1
+bash_payload "claude -p --model opus < brief.md"
+rc=0
+run_gate_budget || rc=$?
+expect "claude -p opus, owner named only sonnet: block" 2 block launch "$rc" 1
+bash_payload "claude -p < brief.md"
+rc=0
+run_gate_budget || rc=$?
+expect "claude -p no model counts as opus, owner named only sonnet: block" 2 block launch "$rc" 1
+write_transcript "$(printf "$USER" '"use opus"')"
+rc=0
+run_gate_budget || rc=$?
+expect "claude -p no model, owner named opus: allow" 0 allow launch "$rc" 1
+bash_payload "claude -p --model fable < brief.md"
+rc=0
+run_gate_budget || rc=$?
+expect "claude -p fable: block" 2 block launch "$rc" 1
+
+# Under normal a DeepSeek launch passes; a Codex launch passes under both.
+bash_payload "tools/opencode_ds.sh /x brief.md"
+rc=0
+run_gate_budget || rc=$?
+expect "deepseek launch under normal: allow" 0 allow launch "$rc" 1
+bash_payload "python3 tools/deepseek.py --prompt x"
+write_usage 4 $R_DAY1
+rc=0
+run_gate_budget || rc=$?
+expect "python3 deepseek.py under sonnet-first: block" 2 block launch "$rc" 1
+bash_payload "cd /x && FOO=1 nohup tools/codex_exec.sh /x brief.md"
+rc=0
+run_gate_budget || rc=$?
+expect "codex_exec.sh under sonnet-first: allow" 0 allow launch "$rc" 1
+
+# AC5: commands that launch no model exit 0 with no log line and no budget read.
+# The runner fails with exit 99 when the gate imported claude_budget.
+NO_READ_RUNNER='
+import runpy, sys
+try:
+    runpy.run_path(sys.argv[1], run_name="__main__")
+except SystemExit as e:
+    rc = e.code or 0
+else:
+    rc = 0
+if "claude_budget" in sys.modules:
+    print("claude_budget was imported", file=sys.stderr)
+    sys.exit(99)
+sys.exit(rc)
+'
+for cmd in "ls" "grep opencode_ds.sh tools/x" "cat tools/deepseek.py" \
+    "sed -n 1,5p tools/deepseek.py" "git status" "claude --version"; do
+    bash_payload "$cmd"
+    : > "$LOG"
+    rc=0
+    INCURSION_DISPATCH_LOG="$LOG" INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
+        INCURSION_CLAUDE_USAGE="$TMP/never-read.json" \
+        python3 -c "$NO_READ_RUNNER" "$GATE" < "$TMP/in.json" \
+        > "$TMP/last.out" 2> "$TMP/last.stderr" || rc=$?
+    expect "AC5 no launch ($cmd): exit 0, no log, no budget read" 0 "" "" "$rc" 0
+done
+
+# Bypass covers the Bash branch.
+bash_payload "tools/opencode_ds.sh /x brief.md"
+rc=0
+export INCURSION_DISPATCH_GATE_OFF=1
+run_gate_budget || rc=$?
+unset INCURSION_DISPATCH_GATE_OFF
+expect "bash launch with bypass env: exit 0, decision bypass" 0 bypass launch "$rc" 1
+
+# AC7: the wrapper refuses itself (exit 6) under sonnet-first, opencode never starts.
+STUB_BIN="$TMP/stub-opencode"
+printf '#!/bin/sh\ntouch "%s/stub-ran"\n' "$TMP" > "$STUB_BIN"
+chmod +x "$STUB_BIN"
+rm -f "$TMP/stub-ran"
+: > "$LOG"
+rc=0
+env -u INCURSION_DS_FALLBACK INCURSION_DISPATCH_LOG="$LOG" \
+    INCURSION_CLAUDE_USAGE="$USAGE" INCURSION_CLAUDE_BUDGET_NOW="$BUDGET_NOW" \
+    INCURSION_OPENCODE_BIN="$STUB_BIN" \
+    "$ROOT/tools/opencode_ds.sh" "$TMP" "$TMP/in.json" \
+    > "$TMP/last.out" 2> "$TMP/last.stderr" || rc=$?
+if [ "$rc" = 6 ] && [ ! -e "$TMP/stub-ran" ] && [ "$(log_lines)" = "1" ] \
+    && [ "$(log_field decision)" = "block" ]; then
+    pass "AC7 wrapper under sonnet-first, no fallback: exit 6, opencode not started"
+else
+    fail "AC7 wrapper (rc=$rc stub-ran=$([ -e "$TMP/stub-ran" ] && echo yes || echo no) lines=$(log_lines))"
+fi
+# Under normal the wrapper gets past the gate (it then fails on the bad worktree: 2, not 6).
+write_usage 50 $R_DAY1
+rc=0
+env -u INCURSION_DS_FALLBACK INCURSION_DISPATCH_LOG="$LOG" \
+    INCURSION_CLAUDE_USAGE="$USAGE" INCURSION_CLAUDE_BUDGET_NOW="$BUDGET_NOW" \
+    INCURSION_OPENCODE_BIN="$STUB_BIN" \
+    "$ROOT/tools/opencode_ds.sh" "$TMP/no-such-dir" "$TMP/in.json" \
+    > "$TMP/last.out" 2> "$TMP/last.stderr" || rc=$?
+if [ "$rc" = 2 ] && [ ! -e "$TMP/stub-ran" ]; then
+    pass "AC7 wrapper under normal: passes the gate (rc 2 from the worktree check)"
+else
+    fail "AC7 wrapper under normal (rc=$rc)"
+fi
+
+# --- scope cases (bead inc-3vyok) -----------------------------------------
+write_usage 4 $R_DAY1
+# (a) unlabelled sonnet Agent dispatch in another project: ignored.
+GATE_CWD="$HOME/Scripts/other-project" payload Agent sonnet "do the thing" general > "$TMP/in.json"
+rc=0
+run_gate_budget || rc=$?
+expect "scope (a) sonnet no label, cwd other-project: exit 0, no log" 0 "" "" "$rc" 0
+# (b) DeepSeek launch in ~/Scripts/IncursionX: not an Incursion folder.
+GATE_CWD="$HOME/Scripts/IncursionX" bash_payload "tools/opencode_ds.sh /x brief.md"
+rc=0
+run_gate_budget || rc=$?
+expect "scope (b) deepseek launch, cwd IncursionX: exit 0, no log" 0 "" "" "$rc" 0
+GATE_CWD="$HOME/Scripts/Incursion-foo/../other" bash_payload "tools/opencode_ds.sh /x brief.md"
+rc=0
+run_gate_budget || rc=$?
+expect "scope (b2) deepseek launch, cwd Incursion-foo/../other: exit 0, no log" 0 "" "" "$rc" 0
+# (c) same launch below an Incursion worktree: enforced.
+GATE_CWD="$HOME/Scripts/Incursion-inc-pu6v/src" bash_payload "tools/opencode_ds.sh /x brief.md"
+rc=0
+run_gate_budget || rc=$?
+expect "scope (c) deepseek launch, cwd Incursion-inc-pu6v/src: block" 2 block launch "$rc" 1
+GATE_CWD="$HOME/Scripts/Incursion" bash_payload "tools/opencode_ds.sh /x brief.md"
+rc=0
+run_gate_budget || rc=$?
+expect "scope (c2) deepseek launch, cwd Incursion: block" 2 block launch "$rc" 1
+# (d) payload with no cwd: the process cwd decides.
+python3 - "$TMP/in.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1])); d.pop("cwd", None)
+json.dump(d, open(sys.argv[1], "w"))
+PY
+: > "$LOG"; rc=0
+( cd "$ROOT" && INCURSION_DISPATCH_LOG="$LOG" INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
+    INCURSION_CLAUDE_USAGE="$USAGE" INCURSION_CLAUDE_BUDGET_NOW="$BUDGET_NOW" \
+    python3 "$GATE" < "$TMP/in.json" > "$TMP/last.out" 2> "$TMP/last.stderr" ) || rc=$?
+expect "scope (d) no cwd in payload, run from an Incursion folder: block" 2 block launch "$rc" 1
+: > "$LOG"; rc=0
+( cd "$TMP" && INCURSION_DISPATCH_LOG="$LOG" INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
+    INCURSION_CLAUDE_USAGE="$USAGE" INCURSION_CLAUDE_BUDGET_NOW="$BUDGET_NOW" \
+    python3 "$GATE" < "$TMP/in.json" > "$TMP/last.out" 2> "$TMP/last.stderr" ) || rc=$?
+expect "scope (d2) no cwd in payload, run from elsewhere: exit 0, no log" 0 "" "" "$rc" 0
+# (e) the project settings no longer register the gate.
+if grep -q dispatch_gate "$ROOT/.claude/settings.json"; then
+    fail "scope (e) .claude/settings.json still names dispatch_gate"
+else
+    pass "scope (e) .claude/settings.json does not name dispatch_gate"
 fi
 
 # --- case: bypass env with no label ---------------------------------------

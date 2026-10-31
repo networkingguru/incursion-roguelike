@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""PreToolUse gate for Agent/Task dispatches (bead inc-xiqb, bead inc-cfnm).
+"""PreToolUse gate for Agent/Task dispatches (bead inc-xiqb, bead inc-cfnm)
+and for Bash commands that launch a model (bead inc-3vyok).
 
 THE RULE. An Agent/Task dispatch that names the DeepSeek-led subagent models
 (the ones this project pays for or inherits) must carry a label, unless it is
@@ -43,9 +44,39 @@ explicitly a haiku dispatch or the emergency bypass is set:
 Every Agent/Task call is appended to the dispatch log as one JSON line, so a
 human can see what was dispatched and why it was let through.
 
+BASH BRANCH (bead inc-3vyok). A Bash command is checked only to see whether it
+LAUNCHES a model: a simple command (split on ; && || | & and newlines, leading
+VAR=value, env, exec, nohup, time stripped; bash/sh/zsh/python3 skipped) whose
+program is opencode_ds.sh, deepseek.py, opencode (DeepSeek), codex_exec.sh,
+codex (Codex), or `claude` with -p/--print. A command that only MENTIONS those
+names is not a launch: exit 0, no budget read, no log line. A launch is decided
+and logged (label `launch`, plus `launch`, `command` and `route` fields):
+
+  * DeepSeek -> blocked while tools/claude_budget.py says `sonnet-first`,
+    unless the command carries INCURSION_DS_FALLBACK=<text> AND the dispatch log
+    holds an `allow` row with model sonnet and label budget from the last 24h.
+    Under `normal`, `unknown` or a verdict error it is allowed.
+  * Codex -> allowed (repro design only; outside the budget route).
+  * claude -p -> a `haiku` --model is allowed; `sonnet` is allowed under
+    `sonnet-first` or when check_owner passes; `opus`, `fable` or no --model
+    (counts as opus) need check_owner to pass.
+
+tools/opencode_ds.sh calls `dispatch_gate.py --check-launch deepseek` before it
+does anything (exit 0 or 2, the wrapper turns 2 into its exit 6), so the one
+decision function serves both the hook and the wrapper.
+
+SCOPE. The hook is registered in ~/.claude/settings.json, so it runs in every
+session. After reading its input it exits 0 at once (no log line, no budget
+read) unless the session folder is an Incursion folder: the payload `cwd`
+(else the process cwd), resolved, equals ~/Scripts/Incursion or
+~/Scripts/Incursion-<name>, or lies below one. `--check-launch` is never
+scoped out.
+
 ENV VARS.
   INCURSION_DISPATCH_GATE_OFF=1  emergency bypass: allow every dispatch and
                                  record the decision as `bypass`.
+  INCURSION_DS_FALLBACK           reason text that lets a DeepSeek launch pass
+                                 under `sonnet-first` after a Sonnet attempt.
   INCURSION_DISPATCH_LOG          override the dispatch log path.
                                   Default: ~/Scripts/Incursion/logs/dispatch-log.jsonl
   INCURSION_DEEPSEEK_LEDGER       override the ledger path (the same variable
@@ -60,6 +91,7 @@ import datetime
 import json
 import os
 import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -344,9 +376,189 @@ def make_entry(payload, model, subagent_type, description, label, run, decision,
     }
 
 
+ROUTE_HINT = (
+    "dispatch Sonnet with a `budget:` label first, or set "
+    "INCURSION_DS_FALLBACK=<why> after a Sonnet attempt"
+)
+WRAPPERS = ("env", "exec", "nohup", "time")
+INTERPRETERS = ("bash", "sh", "zsh", "python", "python3")
+ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+SPLIT_RE = re.compile(r";|&&|\|\||\||&|\n")
+DEEPSEEK_PROGS = ("opencode_ds.sh", "deepseek.py", "opencode")
+CODEX_PROGS = ("codex_exec.sh", "codex")
+
+
+def classify_launch(command):
+    """(kind, model, assigns, segment) for the first model launch in a Bash
+    command, or None. kind is deepseek, codex or claude."""
+    if not any(w in command for w in ("opencode", "deepseek", "codex", "claude")):
+        return None
+    for seg in SPLIT_RE.split(command):
+        try:
+            words = shlex.split(seg)
+        except ValueError:
+            words = seg.split()
+        assigns = {}
+        i = 0
+        while i < len(words):
+            w = words[i]
+            if ASSIGN_RE.match(w):
+                k, _, v = w.partition("=")
+                assigns[k] = v
+            elif os.path.basename(w) in WRAPPERS or (
+                    w.startswith("-") and i > 0
+                    and os.path.basename(words[i - 1]) == "env"):
+                pass
+            else:
+                break
+            i += 1
+        rest = words[i:]
+        if rest and os.path.basename(rest[0]) in INTERPRETERS:
+            rest = [w for w in rest[1:] if not w.startswith("-")]
+        if not rest:
+            continue
+        prog = os.path.basename(rest[0])
+        if prog in DEEPSEEK_PROGS:
+            return "deepseek", prog, assigns, seg
+        if prog in CODEX_PROGS:
+            return "codex", prog, assigns, seg
+        if prog == "claude":
+            args = words[i + 1:]
+            if "-p" in args or "--print" in args:
+                model = None
+                for j, a in enumerate(args):
+                    if a == "--model" and j + 1 < len(args):
+                        model = args[j + 1]
+                    elif a.startswith("--model="):
+                        model = a[len("--model="):]
+                return "claude", model, assigns, seg
+    return None
+
+
+def recent_sonnet_attempt(log_path, hours=24):
+    """True when the dispatch log holds an allow row, model sonnet, label
+    budget, from the last `hours` hours."""
+    if not log_path.exists():
+        return False
+    cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+        hours=hours)
+    try:
+        for line in iter_tail_lines(log_path):
+            try:
+                row = json.loads(line)
+                ts = datetime.datetime.strptime(
+                    row["ts"], "%Y-%m-%dT%H:%M:%SZ").replace(
+                        tzinfo=datetime.timezone.utc)
+            except (ValueError, KeyError, TypeError):
+                continue
+            if ts < cutoff:
+                break
+            if (row.get("decision") == "allow" and row.get("model") == "sonnet"
+                    and row.get("label") == "budget"):
+                return True
+    except OSError:
+        return False
+    return False
+
+
+def budget_state():
+    """(state, detail). state is the verdict state, or `error`."""
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import claude_budget
+        verdict = claude_budget.verdict()
+    except Exception as exc:
+        return "error", f"budget verdict unavailable: {exc}"
+    return verdict.get("state"), verdict.get("reason") or ""
+
+
+def decide_launch(payload, kind, model, assigns, log_path):
+    """(decision, reason, route). One implementation for the hook and the
+    wrapper."""
+    if kind == "codex":
+        return "allow", "codex is outside the budget route", None
+    if kind == "claude" and model and "haiku" in model:
+        return "allow", "haiku is outside the budget route", None
+    state, detail = budget_state()
+    if kind == "deepseek":
+        if state != "sonnet-first":
+            return "allow", f"route is {state}", state
+        fb = assigns.get("INCURSION_DS_FALLBACK")
+        if fb and recent_sonnet_attempt(log_path):
+            return "allow", f"fallback: {fb}", state
+        why = ("INCURSION_DS_FALLBACK is set but the dispatch log holds no "
+               "Sonnet `budget` allow from the last 24 hours" if fb else
+               "no INCURSION_DS_FALLBACK")
+        return "block", f"route is sonnet-first; {why}; {ROUTE_HINT}", state
+    # claude -p, sonnet / opus / fable / unnamed
+    name = (model or "opus").lower()
+    if "sonnet" in name:
+        if state == "sonnet-first":
+            return "allow", "route is sonnet-first", state
+        owner_model = "sonnet"
+    elif "opus" in name or not model:
+        owner_model = "opus"
+    else:
+        owner_model = name
+    why = check_owner(payload, owner_model)
+    if why is None:
+        return "allow", f"owner named {owner_model}", state
+    return "block", (f"route is {state}; claude -p --model {model or '(none)'}: "
+                     f"{why}; needs the owner to name the model"), state
+
+
+def launch_entry(payload, kind, model, command, decision, reason, route):
+    entry = make_entry(payload, model or kind, None, command, "launch", None,
+                       decision, reason)
+    entry["launch"] = kind
+    entry["command"] = command
+    entry["route"] = route
+    entry["tool"] = payload.get("tool_name") or "wrapper"
+    return entry
+
+
+def run_launch(payload, kind, model, assigns, command, log_path):
+    """Decide, log, and exit 0 or 2 for one launch."""
+    if os.environ.get("INCURSION_DISPATCH_GATE_OFF") == "1":
+        append_log(log_path, launch_entry(payload, kind, model, command,
+                                          "bypass", None, None))
+        sys.exit(0)
+    decision, reason, route = decide_launch(payload, kind, model, assigns,
+                                            log_path)
+    append_log(log_path, launch_entry(payload, kind, model, command, decision,
+                                      reason, route))
+    if decision == "block":
+        print(f"dispatch gate: model launch refused ({kind}).", file=sys.stderr)
+        print(f"reason: {reason}", file=sys.stderr)
+        sys.exit(2)
+    sys.exit(0)
+
+
+def is_incursion_folder(cwd):
+    """True when `cwd` (resolved) is ~/Scripts/Incursion or
+    ~/Scripts/Incursion-<anything>, or lies below one of them. Compares path
+    parts, never string prefixes."""
+    try:
+        parts = Path(cwd).expanduser().resolve().parts
+        base = (Path.home() / "Scripts").resolve().parts
+    except (OSError, RuntimeError, ValueError):
+        return False
+    if len(parts) <= len(base) or parts[:len(base)] != base:
+        return False
+    top = parts[len(base)]
+    return top == "Incursion" or top.startswith("Incursion-")
+
+
 def main():
     log_path = resolve_path("INCURSION_DISPATCH_LOG", DEFAULT_LOG)
     ledger_path = resolve_path("INCURSION_DEEPSEEK_LEDGER", DEFAULT_LEDGER)
+
+    if sys.argv[1:2] == ["--check-launch"]:
+        kind = sys.argv[2] if len(sys.argv) > 2 else "deepseek"
+        assigns = {"INCURSION_DS_FALLBACK":
+                   os.environ.get("INCURSION_DS_FALLBACK", "")}
+        run_launch({"tool_name": "wrapper"}, kind, None, assigns,
+                   "tools/opencode_ds.sh", log_path)
 
     payload = parse_stdin()
     if payload is None:
@@ -357,13 +569,28 @@ def main():
         )
         sys.exit(2)
 
-    tool_name = payload.get("tool_name")
-    if tool_name not in ("Agent", "Task"):
+    # Scope (bead inc-3vyok): registered at user level, the gate acts only in an
+    # Incursion folder. Elsewhere: exit 0, no log line, no budget read.
+    cwd = payload.get("cwd")
+    if not (isinstance(cwd, str) and cwd):
+        cwd = os.getcwd()
+    if not is_incursion_folder(cwd):
         sys.exit(0)
 
+    tool_name = payload.get("tool_name")
     tool_input = payload.get("tool_input")
     if not isinstance(tool_input, dict):
         tool_input = {}
+
+    if tool_name == "Bash":
+        command = tool_input.get("command")
+        launch = classify_launch(command) if isinstance(command, str) else None
+        if launch is None:
+            sys.exit(0)
+        kind, model, assigns, _seg = launch
+        run_launch(payload, kind, model, assigns, command, log_path)
+    if tool_name not in ("Agent", "Task"):
+        sys.exit(0)
 
     model_raw = tool_input.get("model")
     model = model_raw if model_raw else "inherit"

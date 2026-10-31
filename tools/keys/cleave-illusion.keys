@@ -2,10 +2,16 @@
 # The probe (INCURSION_CLEAVE_ILLUSION_PROBE) gives the player Cleave, spawns a real
 # bugbear beside the player, holds the goblin at 1 HP and, in illusion mode, makes it
 # an illusion.
-@include chargen.keys
-.*2
+# The character is LOADED (INCURSION_LOAD, set by tools/check_cleave_illusion.sh), not
+# generated: tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav.
+@until "Things in View" ESC
+
 w
 y
+@choose "Genocide Everything"
+SPACE*40                 # dismiss the genocide message chain; the summoned goblin is then the only monster
+
+w
 @choose "Monster Summoning"
 @choose "Goblinkin"
 @choose "goblin"
