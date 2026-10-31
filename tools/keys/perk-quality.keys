@@ -1,0 +1,11 @@
+# Build the standard character and play one turn. tools/check_perk_quality.sh (bd inc-b4l3g.25).
+# INCURSION_PERK_QUALITY_PROBE logs its result at the end of Player::Create,
+# before the first key below. The script only has to complete a turn, or
+# headless.sh reports NO GAMEPLAY. The 923-key dive.keys session that this
+# replaces ran for minutes and could crash after the probe had already logged.
+@include chargen.keys
+
+@dump:arrival
+
+s               # search: one real turn, so this counts as a session
+@dump:played
