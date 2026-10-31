@@ -46,16 +46,17 @@
 # to prove anything, and it says so instead of running when there is no
 # green to start from.
 #
-# THE SEED IS PINNED AT 5 (re-pinned for inc-rt8l: kit changes the random stream), because of the paralysis measurement below:
-# Hold Person rolls a real Will save against the kobold, and that roll is not
-# scripted. Which seeds let the kobold fail its save moves with the draws a
-# new character's starting kit consumes: seed 2 (the pin before the kit
-# rearrangement) and seeds 3 and 4 leave the kobold unheld or an affliction
-# unlanded, while seeds 1 and 5 measure both halves. inc-kbws: the opposed
-# hide check (inc-u3dp) shifted the shared RNG stream, and at tip seed 5 no
-# longer stages both halves while seeds 1-4 do; the pin moves from 5 to 1. The
-# nine-malady half is seed-dependent too: on seeds 2 and 3 the control dump
-# lacked DISEASED (and on seed 2 WOUNDED).
+# SEED INDEPENDENCE (bd inc-xh3k; docs/VERIFICATION.md, "A check must not depend
+# on the seed"). The seed no longer decides this check's verdict:
+# fact: character (race, class, stats, kit) -- fixture orc-barbarian-seed1-opt0822 (INCURSION_LOAD)
+# fact: settings -- CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# fact: other monsters and corpses on the level -- wizard Genocide Everything, before the summon
+# fact: the kobold beside the player -- wizard Monster Summoning, after the genocide
+# fact: the kobold's Will save against Hold Person fails -- INCURSION_FORCE_SAVE_ROLL=1 (natural 1 always fails; src/Fight.cpp)
+# fact: the nine maladies land on the player -- the test god's EV_BLESSING calls GainPermStati directly, no roll (tools/fixtures/heal-maladies-god.irh)
+# fact: the innate Heal cast succeeds -- Character::SpellRating returns 100 for SP_INNATE, no roll (src/Magic.cpp)
+# fact: the text matched ("<MALADY> from ", "PARALYSIS from ") -- the debug Stati dump names constants, not seed-chosen text
+# The seed argument below stays 5 only because check_run needs one.
 #
 # Usage: tools/check_heal_maladies.sh [--prove-red]
 . "$(dirname "$0")/check_lib.sh"
@@ -118,8 +119,9 @@ _build_scratch() {
 # a $(...) capture would run it in a subshell and lose that.
 _read_run() {
     local dir="$1" mal
-    # inc-kbws moved this 5 -> 1; re-pinned 1 -> 5 for inc-rt8l (kit changes the
-    # random stream). See the header comment.
+    # The seed no longer matters: see the header's "# fact:" lines (inc-xh3k).
+    INCURSION_FORCE_SAVE_ROLL=1 \
+    INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav \
     INCURSION_RUN_DIR="$dir" check_run tools/keys/heal-maladies.keys 5
 
     CONTROL_MISSING=()
