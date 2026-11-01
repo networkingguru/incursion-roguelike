@@ -30,7 +30,7 @@ present. SHA256s and the exact one-line intervention are in
 `logs/inc-wn6m/input-comparison.txt`. Tip's options differ from the historical
 options; the A/B/intervention comparisons use the historical options unchanged.
 
-**Observed cause:** the new duration flag at `lib/pspells.irh:4715` invalidates
+**Observed cause:** the new duration flag at `lib/pspells.irh:4716` invalidates
 the check's assumption that a level-1 casting remains active until the goblin
 attacks. The landing's flag is at the same line. Removing only that flag in
 the archived landing restores the whole check, without changing its inputs or
@@ -60,7 +60,7 @@ Goblin's Attack: 1d20 (6) +1 = 7 vs. Def 14 -1 noDex -3 noDodge = 10 [miss]
 ```
 
 The landing's approved duration specification explicitly lists Dispel Evil
-under EF_DROUND (`docs/specs/2026-10-22-spell-durations-spec.md:119`). This
+under EF_DROUND (`docs/specs/2026-10-22-spell-durations-spec.md`, the `EF_DROUND` row of its flag table). This
 comparison establishes an obsolete scenario assumption, not grounds to undo
 the duration rule. Whether global update-boundary timing warrants a separate
 engine change is outside this reproduction.
