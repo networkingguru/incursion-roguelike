@@ -171,3 +171,12 @@ decision. Brian said: "I cannot undfewrstand the fucking plan. This is common,
 because3 of the method you present it. Here's what I need, and WRITE THIS DOWN:
 1. What is the check supposed to check 2. HOw do you intend to do that 3. What
 do you have to change for 2."
+
+2026-11-01, bead inc-3xgmg. The session presented the repair plan for
+tools/check_hide_distraction.sh (inc-b4l3g.6) in the three-question shape, with
+the cause and the remaining risk after it. Brian said: "You are doing this
+again. I need tyo know specific things to rule: 1. What is the test suppsioed
+to do. 2. Why is it not doing that 3. How will you fix that 4. Does this leave
+any other 'non-conformant' holes in the test". The session answered in that
+shape and asked whether to change the rule to the four questions; Brian
+answered "y". The rule went from three questions to four.

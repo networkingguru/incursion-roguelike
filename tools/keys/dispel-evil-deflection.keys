@@ -2,17 +2,19 @@
 # TRAP_EVENT, yval EVICTIM(EV_STRIKE)) actually apply on a REAL attack, not
 # just get read from code?
 #
-# THE SCENE. A fresh orc priest of Aiswin (chargen-priest.keys) turns on
-# Infinite Mana only (Wizard Mode Switches row 8 -- src/Tables.cpp's Wizard
-# Options list: Cheat Death, Auto-Identify Items, Free Advancement, Infinite
-# Fatigue, Always Rest Safely, Ignore Spell Failure, Know All Spells,
-# Infinite Mana is the 8th), so casting the level-5, 16-mana spell is never
-# refused for mana. Learns Dispel Evil through Learn Any Spell and casts it
-# -- no Free Advancement, because the deflection bonus is a flat +4/+6, not
-# scaled by caster level. Freeze Monsters is left OFF on purpose: a summoned
-# goblin one square east (RIGHT ENTER, adjacent) is hostile and, left
+# THE SCENE. The loaded orc priest of Aiswin (INCURSION_LOAD, set by
+# tools/check_dispel_evil.sh) turns on Free Advancement and Infinite Mana
+# (Wizard Mode Switches rows 3 and 8 -- src/Tables.cpp's Wizard Options list:
+# Cheat Death, Auto-Identify Items, Free Advancement, Infinite Fatigue,
+# Always Rest Safely, Ignore Spell Failure, Know All Spells, Infinite Mana),
+# so casting the level-5, 16-mana spell is never refused for mana. He rises
+# to character level 11 (inc-wn6m: Dispel Evil carries EF_DROUND, so it lasts
+# (CL+1)/2 rounds, src/Magic.cpp; at level 1 it ended before the goblin could
+# strike; at level 11 it lasts 6). Freeze Monsters is left OFF on purpose. A
+# goblin is summoned one square east BEFORE the cast (RIGHT ENTER, adjacent),
+# so it is already in reach when the spell starts. It is hostile and, left
 # unfrozen, attacks the caster on its own turn. '.' (Wait One Turn) lets it
-# act three times, which is more than enough for one goblin turn.
+# act three times, inside the six-round duration.
 #
 # THE ORACLE is the game's own combat-roll line, already stored in the
 # message log because OPT_STORE_ROLLS is on in tools/gates/Options.Dat
@@ -24,30 +26,33 @@
 # only creature in the scene that can attack the caster, so any such line is
 # unambiguous.
 
-@include chargen-priest.keys
-ESC
-w
-y
+s
+w y
 @choose "Wizard Mode Switches"
-DOWN*7
-SPACE
+DOWN*2 SPACE
+DOWN*5 SPACE
 ESC
+@include dispel-evil-levelup.keys
 
 w
 @choose "Learn Any Spell"
 "Dispel Evil" ENTER
 @dump:learned
 
-m
-@choose "Dispel Evil"
-@dump:after-cast
-
 w
 @choose "Monster Summoning"
 @choose "Goblinkin"
 @choose "goblin"
 RIGHT ENTER
+@while "more --" SPACE
+w
+@choose "Wake Every Creature"
+@while "more --" SPACE
 @dump:goblin-summoned
+
+m
+@choose "Dispel Evil"
+@dump:after-cast
 
 .
 @while "more --" SPACE

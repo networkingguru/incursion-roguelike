@@ -3477,8 +3477,9 @@ Text "help::combat"
       is the 'Charge, Automatic' command in the Combat Options menu. The Mounted Combat 
       feat tree allows characters to make the best use of their mount in combat.\n
       __Casting a spell with somatic gestures while mounted requires 15 phases extra,
-      since the character must control her mount. This does not apply if the spell
-      is Stilled, or the character has a Balance skill of 20+.\n\n 
+      since the character must control the mount. This does not apply if the spell
+      is Stilled, or if the character has a Ride skill of 10+ or a Balance skill
+      of 20+.\n\n 
 
       <11>Mounts and Terrain<3>\n
       __Difficult terrain will pay attention to whether you are mounted or not. If

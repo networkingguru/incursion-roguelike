@@ -272,6 +272,9 @@ void HideDistProbe(Player *pl) {
                                       CA_BARDIC_MUSIC, 5);
                     pl->PlaceAt(mp, roarer->x + 2 <= mp->SizeX() - 1 ?
                         roarer->x + 2 : roarer->x - 2, roarer->y);
+                    /* inc-b4l3g.6: the player is immune to fear, so the roar's
+                       Will save never rolls (ResistLevel -1 skips it). */
+                    pl->GainPermStati(IMMUNITY, NULL, SS_MISC, AD_FEAR, 0);
                     ThrowVal(EV_SATTACK, A_ROAR, roarer, NULL);
                     hdEmit("roar_re_marked", 1,
                         near1->HasStati(TRIED, HK_ROAR) ? 1 : 0);

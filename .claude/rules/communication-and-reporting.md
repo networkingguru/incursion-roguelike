@@ -50,6 +50,6 @@ Why: a ruling he has already confirmed, raised again, costs him a round trip and
 History: docs/rules-history/communication-and-reporting.md#ruling-conflict-flag-once-then-keep. Bead inc-67q5.
 
 ## check-plan-purpose-method-changes
-A plan to repair or build a check MUST answer three numbered questions, in this order, and nothing before them: (1) What is the check supposed to check? State the game behavior in plain words. (2) How will the check do that? Describe the test as a player would see it run. (3) What must change to do (2)? List each file or tool to change, one line each. Causes, evidence and open decisions come AFTER the three answers, and each one MUST say which answer it belongs to.
-Why: a plan presented as causes, bullets and a decision cannot be followed by a reader who does not know what the check is for.
-History: docs/rules-history/communication-and-reporting.md#check-plan-purpose-method-changes. Bead inc-dmzlq.
+A plan to repair or build a check MUST answer four numbered questions, in this order, and nothing before them: (1) What is the test supposed to do? State the game behavior in plain words. (2) Why is it not doing that? State the cause as a player would see it happen; for a new check, say what is missing. (3) How will you fix that? Describe the changed test as a player would see it run, then list each file or tool to change, one line each. (4) Does this leave any other hole in the test that does not conform to `docs/VERIFICATION.md`? Name each fact the check reads that has no control, or say there is none and why. Evidence and open decisions come AFTER the four answers, and each one MUST say which answer it belongs to.
+Why: Brian rules on a check plan from these four answers, and a plan in any other shape cannot be ruled on.
+History: docs/rules-history/communication-and-reporting.md#check-plan-purpose-method-changes. Beads inc-dmzlq, inc-3xgmg.

@@ -26,6 +26,9 @@ w
 @choose "goblin"
 RIGHT ENTER
 @while "more --" SPACE
+w
+@choose "Wake Every Creature"
+@while "more --" SPACE
 @dump:goblin
 
 RIGHT
