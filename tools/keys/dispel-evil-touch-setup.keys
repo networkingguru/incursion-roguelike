@@ -14,8 +14,7 @@
 # photographed.
 #
 # NOT RUN DIRECTLY; included by dispel-evil-touch.keys.
-@include chargen-priest.keys
-ESC
+s
 w y
 @choose "Wizard Mode Switches"
 DOWN*2 SPACE
@@ -23,79 +22,7 @@ DOWN*5 SPACE
 DOWN*3 SPACE
 UP SPACE
 ESC
-d
-G
-@while "Bonus To Which Attribute" a
-@while "Choose a feat" a
-@while "Choose a bonus" a
-@while "Focus on which Weapon" a
-@while "You feel" ESC
-@while "more --" SPACE
-G
-@while "Bonus To Which Attribute" a
-@while "Choose a feat" a
-@while "Choose a bonus" a
-@while "Focus on which Weapon" a
-@while "You feel" ESC
-@while "more --" SPACE
-G
-@while "Bonus To Which Attribute" a
-@while "Choose a feat" a
-@while "Choose a bonus" a
-@while "Focus on which Weapon" a
-@while "You feel" ESC
-@while "more --" SPACE
-G
-@while "Bonus To Which Attribute" a
-@while "Choose a feat" a
-@while "Choose a bonus" a
-@while "Focus on which Weapon" a
-@while "You feel" ESC
-@while "more --" SPACE
-G
-@while "Bonus To Which Attribute" a
-@while "Choose a feat" a
-@while "Choose a bonus" a
-@while "Focus on which Weapon" a
-@while "You feel" ESC
-@while "more --" SPACE
-G
-@while "Bonus To Which Attribute" a
-@while "Choose a feat" a
-@while "Choose a bonus" a
-@while "Focus on which Weapon" a
-@while "You feel" ESC
-@while "more --" SPACE
-G
-@while "Bonus To Which Attribute" a
-@while "Choose a feat" a
-@while "Choose a bonus" a
-@while "Focus on which Weapon" a
-@while "You feel" ESC
-@while "more --" SPACE
-G
-@while "Bonus To Which Attribute" a
-@while "Choose a feat" a
-@while "Choose a bonus" a
-@while "Focus on which Weapon" a
-@while "You feel" ESC
-@while "more --" SPACE
-G
-@while "Bonus To Which Attribute" a
-@while "Choose a feat" a
-@while "Choose a bonus" a
-@while "Focus on which Weapon" a
-@while "You feel" ESC
-@while "more --" SPACE
-G
-@while "Bonus To Which Attribute" a
-@while "Choose a feat" a
-@while "Choose a bonus" a
-@while "Focus on which Weapon" a
-@while "You feel" ESC
-@while "more --" SPACE
-@dump:level
-ESC
+@include dispel-evil-levelup.keys
 w
 @choose "Learn Any Spell"
 "Dispel Evil" ENTER
