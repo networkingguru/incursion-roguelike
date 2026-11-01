@@ -240,6 +240,13 @@ if [ -z "${BD_GIT_HOOK_NESTED:-}" ] && [ ! -e "$(git rev-parse --git-path MERGE_
     if [ -x "$_inc_root/tools/order_guard.sh" ]; then
       "$_inc_root/tools/order_guard.sh" >&2 || exit 1
     fi
+    # no-shared-tail 4.1: a new resource or module-level variable goes in
+    # lib/landed-<bead-id>.irh. Only on a bead branch; master and nightly/ skip.
+    _inc_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+    if printf '%s' "$_inc_branch" | grep -Eq '^inc-[a-z0-9]+(\.[0-9]+)*$' \
+       && [ -x "$_inc_root/tools/check_landed_files.py" ]; then
+      "$_inc_root/tools/check_landed_files.py" >&2 || exit 1
+    fi
     # inc-fo8o: the guard above passes on a legal append too, so it cannot see
     # that the STAGED ledger still lags the module. Only when the plain check is
     # green (no Brian-approved break is in play) demand the staged ledger record
