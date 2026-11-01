@@ -16,6 +16,18 @@
 # check used mod=-5. RED: any mismatch. INCONCLUSIVE: no COMPLETE line, an
 # INCONCLUSIVE line, a wrong case count, or an abnormal headless exit.
 #
+# fact: character -- fixture orc-rogue-seed1-opt0822 (INCURSION_LOAD)
+# fact: settings -- tools/fixtures/options-2026-08-22.dat (INCURSION_OPTIONS)
+# fact: every creature and its placement -- placed by the probe (hdSpawn, hdNear)
+# fact: the map and free squares near the player -- the fixture save pins the map; the probe finds squares with hdNear
+# fact: the attack-of-opportunity prompt beside a rat -- the probe clears HIDING and INVIS and fights far from the player
+# fact: absolute spot and listen modifiers (light terms) -- the fixture save pins the map and its light
+# fact: round timing -- the probe sets theGame->Turn
+# fact: Bardic Music menu order -- the probe grants CA_BARDIC_MUSIC level 5; keys pick Countersong
+# fact: the player's Will save against the roar -- the probe grants fear immunity (IMMUNITY AD_FEAR)
+# fact: the step case's Listen roll -- logged as roll=, never read; the check reads only mod=
+# fact: the yes/no prompt the step case raises -- answered by the first key n
+#
 # Usage: tools/check_hide_distraction.sh [seed]
 set -uo pipefail
 cd "$(dirname "$0")/.."

@@ -61,6 +61,8 @@ build_repo() { # build_repo <bead>... ; prints the scratch root
     git -C "$tmp/work/Incursion" init -q -b trunk || return 1
     git -C "$tmp/work/Incursion" config user.email test@example.invalid || return 1
     git -C "$tmp/work/Incursion" config user.name "finish_bead lock check" || return 1
+    git -C "$tmp/work/Incursion" config merge.landed.driver true || return 1
+    git -C "$tmp/work/Incursion" config merge.landed-ledger.driver true || return 1
     echo base >"$tmp/work/Incursion/base.txt" || return 1
     echo "base docs" >"$tmp/work/Incursion/DOCS.md" || return 1
     git -C "$tmp/work/Incursion" add base.txt DOCS.md || return 1
