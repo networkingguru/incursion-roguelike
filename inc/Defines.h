@@ -2336,7 +2336,10 @@ typedef signed int        hObj;
 #define FT_AB                  (SK_LAST + 1)
 #define FT_ACROBATIC           (FT_AB + 1)
 #define FT_ACUTE_SENSES        (FT_AB + 2)
-#define FT_AIM_FOR_THE_EYES    (FT_AB + 3
+/* upstream: this define lacked its closing paren, identical on Win32 (plain
+   preprocessor text); no code expands it, so no behavior changes. Traced.
+   inc-mhn1w; not sent. */
+#define FT_AIM_FOR_THE_EYES    (FT_AB + 3)
 #define FT_AIMED_SHOT          (FT_AB + 4)
 #define FT_ALERTNESS           (FT_AB + 5)
 #define FT_ALLURING            (FT_AB + 6)

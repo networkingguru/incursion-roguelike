@@ -840,8 +840,7 @@ struct FeatInfoStruct FeatInfo[] = {
       "Weapons, Martial Arts Weapons or Light Weapons.\n"
       "__Additionally, you can use your Dexterity modifier instead of Strength "
       "on unarmed attacks and grapple checks.",
-    {{{FP_ATTR,A_DEX,13,  FP_BAB,S_MELEE,1},
-      {FP_ABILITY,CA_UNARMED_STRIKE,1}}}},
+    {{{FP_ALWAYS}}}}, /* inc-dkbaw: no prerequisites, per Pathfinder 1e */
 
 /******************************************************************************\
  *                               METAMAGIC FEATS                              *
