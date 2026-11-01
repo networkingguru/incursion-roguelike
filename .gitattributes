@@ -3,3 +3,8 @@
 # On a conflict here, take either side and run
 # BACKEND=posix ./build_macos.sh TWICE, then commit what the compiler produced.
 lib/dispatch.h -merge
+# lib/landed.irc lists the per-bead resource files, one include line each.
+# Two beads append there; tools/merge_landed.py merges the lines in order and
+# refuses a malformed one. The ledger always takes master's copy.
+lib/landed.irc merge=landed
+tools/resource_order.ledger merge=landed-ledger

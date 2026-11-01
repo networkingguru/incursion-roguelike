@@ -144,6 +144,7 @@ holder_is_stale() {
 
 selftest() {
     local out status
+    export INCURSION_WORKTREE_NO_DRIVER_CONFIG=1
 
     out="$("$SCRIPT" 2>&1)"; status=$?
     [ "$status" -eq 1 ] || { echo "SELFTEST FAIL: no argument returned $status, expected 1"; return 1; }
@@ -240,6 +241,22 @@ STUB
 if [ "$FIRST_ARG" = "--selftest" ]; then
     selftest
     exit $?
+fi
+
+# Merge drivers for lib/landed.irc and tools/resource_order.ledger
+# (tools/merge_landed.py, .gitattributes). Set on EVERY run, before any early
+# exit, so an old worktree gets them too. The command path is relative: git runs
+# a driver from the worktree root, so each branch uses its own copy of the tool.
+# The selftest sets INCURSION_WORKTREE_NO_DRIVER_CONFIG so it never writes the
+# real repository's config.
+if [ -z "${INCURSION_WORKTREE_NO_DRIVER_CONFIG:-}" ]; then
+    set_merge_driver() {
+        git -C "$ROOT" config "merge.$1.name" "$2" \
+            && git -C "$ROOT" config "merge.$1.driver" "python3 tools/merge_landed.py $1 %O %A %B" \
+            || echo "worktree: warning: could not set merge.$1 driver" >&2
+    }
+    set_merge_driver landed "lib/landed.irc include order (tools/merge_landed.py)"
+    set_merge_driver landed-ledger "tools/resource_order.ledger is master's (tools/merge_landed.py)"
 fi
 
 BEAD="$FIRST_ARG"
