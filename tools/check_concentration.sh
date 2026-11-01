@@ -23,7 +23,7 @@
 #   CONCENT monster=<name> spell=<S> decision=keep|stop affects=0|1 hp=<c>/<m>
 #
 # and the screen dumps (status line "Concentrating", the refusal message, the
-# illusory monitor in "Things in View", the HP on the bottom status row).
+# illusory copy in "Things in View", the HP on the bottom status row).
 #
 # THE FIXTURE is the frozen elf mage (tools/fixtures/chars/
 # elf-mage-illusions-seed1.sav), whose illusion spells are INNATE, so a player
@@ -50,6 +50,14 @@
 # Usage: tools/check_concentration.sh [--prove-red]
 # Exit: 0 all pass, 1 any fail, 2 could not measure.
 
+# fact: character -- fixture elf-mage-illusions-seed1 (INCURSION_LOAD)
+# fact: settings -- options-2026-08-22.dat (CHECK_OPTIONS)
+# fact: what the illusion copies (species, glyph) -- not fixed; the check reads the "illusory" entry in Things in View by shape
+# fact: the goblin's blows hit the caster -- INCURSION_LOF_FORCE_ROLL=20 (damage session only)
+# fact: the goblin is awake -- wizard "Wake Every Creature" in the key script
+# fact: the goblin's damage -- read from the HP row; the DC is checked against whatever it dealt
+# fact: the monsters in the monster session -- src/ConcentMonsterProbe.cpp (INCURSION_CONCENT_MONSTER_PROBE=1)
+
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
@@ -59,6 +67,39 @@ export INCURSION_CONCENT_PROBE=1
 # The mutations. --prove-red performs the FIRST; the other two are proved by
 # hand the same way (docs/VERIFICATION.md step 2) and are declared here so an
 # ordinary run still proves each site exists exactly once.
+# The illusion copies a monster that the game picks by challenge rating, so the
+# check reads its entry in "Things in View" by shape: one glyph, then "illusory" and a space or the row end (a long name wraps).
+# The message "The illusory X winks out of existence" has no glyph before it.
+ILLUSION_RE='\|[^ |] illusory( |$)'
+expect_illusion() { # <what it proves>
+    local n
+    _check_have_screens expect_illusion
+    n="$(grep -lE -- "$ILLUSION_RE" "${CHECK_SCREENS[@]}" 2>/dev/null | wc -l | tr -d ' ')"
+    if [ "$n" -gt 0 ]; then
+        CHECK_EXPECTS=$((CHECK_EXPECTS + 1))
+        printf '  ok    %d/%d screens: %s\n' "$n" "${#CHECK_SCREENS[@]}" "$1"
+        return 0
+    fi
+    printf '  FAIL  0/%d screens carry an illusory entry in Things in View\n        it should prove: %s\n' \
+        "${#CHECK_SCREENS[@]}" "$1"
+    CHECK_FAIL=1
+    return 1
+}
+reject_illusion() { # <what it proves>
+    local n
+    _check_have_screens reject_illusion
+    CHECK_REJECTS=$((CHECK_REJECTS + 1))
+    n="$(grep -lE -- "$ILLUSION_RE" "${CHECK_SCREENS[@]}" 2>/dev/null | wc -l | tr -d ' ')"
+    if [ "$n" -eq 0 ]; then
+        printf '  ok    0/%d screens: %s\n' "${#CHECK_SCREENS[@]}" "$1"
+        return 0
+    fi
+    printf '  FAIL  %d/%d screens still carry an illusory entry in Things in View\n        it should prove: %s\n' \
+        "$n" "${#CHECK_SCREENS[@]}" "$1"
+    CHECK_FAIL=1
+    return 1
+}
+
 check_mutation src/Concentration.cpp \
     'dc = 10 + dmg + (eID ? TEFF(eID)->Level : 0);' \
     'dc = 12 + dmg + (eID ? TEFF(eID)->Level : 0);'
@@ -111,12 +152,12 @@ check_expect "Concentrating" "the status line says the caster is concentrating"
 
 echo "-- 4 CANCEL+TAIL0"
 check_screens '*-cancel-menu'
-check_expect "R illusory" "the illusion exists when the Cancel menu opens"
+expect_illusion "the illusion exists when the Cancel menu opens"
 check_expect "Stop concentrating on" "the Cancel menu offers the entry"
 log_expect CANCEL 'CONCENT stop spell=Phantasmal Force reason=cancel tail=0' \
     "the entry stops concentration with tail 0"
 check_screens '*-cancelled'
-check_reject "R illusory" "the illusion is gone at once, not after a tail"
+reject_illusion "the illusion is gone at once, not after a tail"
 check_reject "Concentrating" "the status line no longer says concentrating"
 
 # ---------------------------------------------------------------------------
@@ -132,7 +173,7 @@ check_expect "You cannot do that while concentrating on" \
 
 # ---------------------------------------------------------------------------
 echo "== damage session"
-check_run tools/keys/concentration-damage.keys 1
+INCURSION_LOF_FORCE_ROLL=20 check_run tools/keys/concentration-damage.keys 1
 
 echo "-- 3 BLOCK-ATTACK"
 log_expect BLOCK-ATTACK 'CONCENT block event=attack spell=Phantasmal Force' \
@@ -202,7 +243,7 @@ for f in sorted(glob.glob(run + "/logs/screens/*.txt")):
     txt = open(f, errors="replace").read()
     m = re.search(r"=== screen \d+ (\S+)\s+key \d+\s+mode \d+\s+turn (\d+)", txt)
     if m:
-        rows.append((m.group(1), int(m.group(2)), "R illusory" in txt))
+        rows.append((m.group(1), int(m.group(2)), re.search(r"\|[^ |] illusory( |$)", txt, re.M) is not None))
 by = {r[0]: r for r in rows}
 if "cancelled" not in by:
     print("1 no dump after the Cancel")
