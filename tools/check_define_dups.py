@@ -24,9 +24,7 @@ bare words with no operator or number (a type such as `unsigned char`). A
 single bare word counts only when it names an earlier integer define; any
 other single bare word is skipped as a type alias. Anything else that looks
 like an integer expression but cannot be evaluated (unknown name, operator
-outside the list) exits 2 naming the line. It is never skipped. Only
-KNOWN_MALFORMED (one unused define with a missing ")", FT_AIM_FOR_THE_EYES)
-is read as repaired, with a NOTE on stderr.
+outside the list) exits 2 naming the line. It is never skipped.
 
 FAMILIES. Lines from `#define SICKNESS` to `#define LAST_STATI`, inclusive,
 form the family `stati`, whatever the names (a sub-define inside the block
@@ -115,14 +113,6 @@ TOKEN = re.compile(r"\s*(0[xX][0-9a-fA-F]+[uUlL]*|\d+[uUlL]*|'(?:\\.|[^'\\])'"
 
 STMT_TOKENS = set(";{}[].,=")
 
-# Known-malformed defines in inc/Defines.h: exact body -> the body it was meant
-# to have. Nothing in src/ inc/ lib/ mod/ uses the name, so the compiler never
-# sees the missing ")". An entry applies only to this exact text; a changed
-# body exits 2 as usual. Each use prints a NOTE.
-KNOWN_MALFORMED = {
-    ("FT_AIM_FOR_THE_EYES", "(FT_AB + 3"): "(FT_AB + 3)",
-}
-
 
 def tokens(body):
     pos, out = 0, []
@@ -207,11 +197,6 @@ def read_defines(path):
             in_stati = False
         if paren or not body.strip() or '"' in body:
             continue
-        fixed = KNOWN_MALFORMED.get((name, body.strip()))
-        if fixed:
-            print("check_define_dups: NOTE: line %d: %s is malformed in the file "
-                  "(%s); read as %s" % (no, name, body.strip(), fixed), file=sys.stderr)
-            body = fixed
         toks = tokens(body)
         if any(t in STMT_TOKENS or t in ("this", "sizeof") for t in toks):
             continue  # a statement or initializer, not an expression
