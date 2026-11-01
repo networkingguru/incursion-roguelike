@@ -45,6 +45,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import resource_order_check as roc  # noqa: E402
 
+ROOT_OVERRIDDEN = False  # --root: run this copy against another checkout
 BEAD_RE = re.compile(r"^inc-[a-z0-9]+(\.[0-9]+)*$")
 INCLUDE_RE = re.compile(r'^#include "(landed-inc-[a-z0-9]+(?:\.[0-9]+)*\.irh)"$')
 
@@ -178,7 +179,7 @@ def run(bead, dump_path, base_path, lib):
         try:
             if not roc.BIN.exists():
                 raise Cannot("%s not built; run BACKEND=posix ./build_macos.sh" % roc.BIN.name)
-            dump = roc.parse(roc.module_report(None))
+            dump = roc.parse(roc.module_report(ROOT if ROOT_OVERRIDDEN else None))
         except SystemExit as e:
             raise Cannot(str(e.code))
         except (OSError, ValueError) as e:
@@ -284,7 +285,12 @@ def main():
     ap.add_argument("--dump")
     ap.add_argument("--base-ledger")
     ap.add_argument("--lib")
+    ap.add_argument("--root", help="checkout to measure (its branch, lib/ and module); default is this copy's")
     a = ap.parse_args()
+    if a.root:
+        global ROOT, ROOT_OVERRIDDEN
+        ROOT = pathlib.Path(a.root).resolve()
+        ROOT_OVERRIDDEN = True
     if a.selftest:
         return selftest()
     lib = pathlib.Path(a.lib) if a.lib else ROOT / "lib"

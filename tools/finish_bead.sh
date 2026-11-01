@@ -132,6 +132,8 @@ selftest_merge_repo() {
     git -C "$tmp/work/Incursion" init -q -b trunk || return 1
     git -C "$tmp/work/Incursion" config user.email test@example.invalid || return 1
     git -C "$tmp/work/Incursion" config user.name "finish_bead selftest" || return 1
+    git -C "$tmp/work/Incursion" config merge.landed.driver true || return 1
+    git -C "$tmp/work/Incursion" config merge.landed-ledger.driver true || return 1
     echo base >"$tmp/work/Incursion/base.txt" || return 1
     # DOCS.md exists on master from the start and the bead branch below never
     # touches it, so the inc-oe6h cases can dirty it at the master checkout
@@ -569,9 +571,34 @@ elif [ "$_inc_evidence" -ne 0 ]; then
     cannot "tools/check_bead_evidence.py could not measure $BEAD (exit $_inc_evidence)"
 fi
 
+# inc-mhn1w: the ledger and landed-file merge drivers are repository config,
+# not tracked. tools/worktree.sh sets them. Without them a ledger conflict stops
+# the landing in a way the driver would have settled.
+_inc_driver_missing() {
+    local k
+    for k in merge.landed.driver merge.landed-ledger.driver; do
+        [ -n "$(git -C "$1" config --get "$k" 2>/dev/null)" ] || { echo "$k"; return 0; }
+    done
+    return 1
+}
+
+# inc-mhn1w: make the worktree ledger record the module. One sequence, used
+# after the gate: plain check green -> demand it records the module -> else
+# record. A break (plain check red) leaves the ledger untouched.
+_inc_record_worktree_ledger() {
+    local bin="$WORKTREE/incursion-headless" chk="$WORKTREE/tools/resource_order_check.py"
+    INCURSION_ORDER_BIN="$bin" python3 "$chk" || return 0
+    INCURSION_ORDER_BIN="$bin" python3 "$chk" --require-recorded && return 0
+    INCURSION_ORDER_BIN="$bin" python3 "$chk" --record
+}
+
 # STEP 3. Bring master in FIRST, so the gate measures what master will actually
 # have. A conflict stops here, with the branch and the worktree untouched apart
 # from the merge git leaves in progress, which the message explains how to undo.
+_inc_missing="$(_inc_driver_missing "$SHARED")" \
+    && die "STOPPED: $SHARED has no git config $_inc_missing, so a ledger or landed-file
+conflict would not merge by its driver. Run tools/worktree.sh $BEAD once to set the
+merge drivers, then run this again. Nothing has reached $BASE_BRANCH."
 BEHIND="$(git -C "$SHARED" rev-list --count "$BEAD..$BASE_BRANCH" 2>/dev/null)"
 if [ "${BEHIND:-0}" -gt 0 ]; then
     echo "=== bringing $BASE_BRANCH ($BEHIND commit(s)) into $BEAD ==="
@@ -644,7 +671,7 @@ if [ "$RUN_GATE" -eq 1 ]; then
     # INCURSION_LANDING_VIA_SHARED is the marker nightly_verify.sh demands next to
     # a diff ref: a copy that predates the hand-over cannot set it. inc-x604.
     if ! ( cd "$WORKTREE" && export INCURSION_LANDING_DIFF_REF="$BASE_BRANCH" \
-            INCURSION_LANDING_VIA_SHARED=1 && eval "$GATE_CMD" ); then
+            INCURSION_LANDING_VIA_SHARED=1 INCURSION_RECORD_LEDGER=1 && eval "$GATE_CMD" ); then
         die "STOPPED: the gate is red on $BEAD after merging $BASE_BRANCH.
 Nothing has reached $BASE_BRANCH. Fix it in $WORKTREE and run this again.
 If the gate cannot measure here rather than failing, re-run with --no-gate and
@@ -654,12 +681,48 @@ else
     echo "=== gate SKIPPED (--no-gate) ==="
 fi
 
+# STEP 4a (inc-mhn1w). Only this script writes tools/resource_order.ledger. The
+# gate's build recorded it when the gate built; --no-gate, --docs-only and
+# --reuse-pass may not have. Make sure the worktree ledger records the module,
+# then commit it on the bead branch when it changed. Nothing has reached
+# $BASE_BRANCH yet, so a failure here costs nothing.
+if [ -x "$WORKTREE/incursion-headless" ] && [ -f "$WORKTREE/mod/Incursion.Mod" ] \
+   && [ -z "$(find "$WORKTREE/lib" -type f -newer "$WORKTREE/mod/Incursion.Mod" 2>/dev/null | head -1)" ]; then
+    _inc_module_fresh=1
+else
+    _inc_module_fresh=0
+fi
+if [ "$_inc_module_fresh" -eq 0 ] \
+   && ! git -C "$WORKTREE" diff --quiet "$BASE_BRANCH" HEAD -- lib 2>/dev/null; then
+    echo "=== module stale or unbuilt and $BEAD changed lib/: building to record the ledger ==="
+    ( cd "$WORKTREE" && INCURSION_RECORD_LEDGER=1 BACKEND=posix ./build_macos.sh >/dev/null ) \
+        || die "STOPPED: the build in $WORKTREE failed, so the ledger is not recorded.
+Nothing has reached $BASE_BRANCH. Fix it and run this again."
+    _inc_module_fresh=1
+fi
+if [ "$_inc_module_fresh" -eq 1 ]; then
+    _inc_record_worktree_ledger \
+        || die "STOPPED: could not record tools/resource_order.ledger in $WORKTREE.
+Nothing has reached $BASE_BRANCH."
+fi
+if [ -n "$(git -C "$WORKTREE" status --porcelain tools/resource_order.ledger)" ]; then
+    git -C "$WORKTREE" add tools/resource_order.ledger \
+        || die "STOPPED: could not stage tools/resource_order.ledger in $WORKTREE. Nothing has reached $BASE_BRANCH."
+    git -C "$WORKTREE" commit -q -m "tools: $BEAD records its resource ledger at landing
+
+Recorded by tools/finish_bead.sh." \
+        || die "STOPPED: could not commit tools/resource_order.ledger in $WORKTREE.
+Nothing has reached $BASE_BRANCH. Fix the commit failure and run this again."
+    echo "=== committed the recorded ledger on $BEAD ==="
+fi
+
 # STEP 4b (inc-fo8o). The gate builds the merged result and, on a green plain
 # check, records any legal append into the worktree's ledger -- so the module
 # has been built by the time we get here. The order guard in the worktree only
 # compares the module with THAT ledger, which the bead may have just moved. Load
-# the ledger $BASE_BRANCH actually records and run the same guard against it:
-# a slot the base branch recorded and this bead moved is a save-format break the
+# MASTER's ledger (inc-mhn1w: ledger merges always take master's copy, and an
+# epic base's ledger is not the authority) and run the same guard against it:
+# a slot master recorded and this bead moved is a save-format break the
 # bead's own ledger cannot show. Absent on the base branch is not an error --
 # most branches predate the ledger -- so warn and go on.
 #
@@ -670,15 +733,15 @@ fi
 # shared checker at the worktree's built module; --bead names the approval to
 # look for, since the shared checkout is on $BASE_BRANCH, not the bead.
 BASE_LEDGER_TMP="$(mktemp "${TMPDIR:-/tmp}/finish-bead-order-ledger.XXXXXX")" \
-    || cannot "could not create a scratch file for $BASE_BRANCH's ledger"
-if ! git -C "$SHARED" cat-file -e "$BASE_BRANCH:tools/resource_order.ledger" 2>/dev/null; then
-    echo "=== $BASE_BRANCH has no tools/resource_order.ledger; skipping the order guard against it ==="
+    || cannot "could not create a scratch file for master's ledger"
+if ! git -C "$SHARED" cat-file -e "master:tools/resource_order.ledger" 2>/dev/null; then
+    echo "=== master has no tools/resource_order.ledger; skipping the order guard against it ==="
 elif [ ! -x "$WORKTREE/incursion-headless" ] || [ ! -f "$WORKTREE/mod/Incursion.Mod" ]; then
     # --no-gate (or a gate that reused a pass) can leave the tree unbuilt.
-    echo "=== $WORKTREE has no built module; skipping the order guard against $BASE_BRANCH's ledger ==="
+    echo "=== $WORKTREE has no built module; skipping the order guard against master's ledger ==="
 else
-    git -C "$SHARED" show "$BASE_BRANCH:tools/resource_order.ledger" > "$BASE_LEDGER_TMP" \
-        || { rm -f "$BASE_LEDGER_TMP"; cannot "could not read $BASE_BRANCH's tools/resource_order.ledger"; }
+    git -C "$SHARED" show "master:tools/resource_order.ledger" > "$BASE_LEDGER_TMP" \
+        || { rm -f "$BASE_LEDGER_TMP"; cannot "could not read master's tools/resource_order.ledger"; }
     INCURSION_ORDER_BIN="$WORKTREE/incursion-headless" \
         "$SHARED/tools/order_guard.sh" --module-root "$WORKTREE" \
         --ledger "$BASE_LEDGER_TMP" --bead "$BEAD"
@@ -688,9 +751,9 @@ else
             ;;
         1)
             rm -f "$BASE_LEDGER_TMP"
-            die "STOPPED: this bead moved a slot that $BASE_BRANCH had recorded in
+            die "STOPPED: this bead moved a slot that master had recorded in
 tools/resource_order.ledger. A save written before the move will not load on
-$BASE_BRANCH. The gate ran against the bead's own ledger, which hides the move.
+master. The gate ran against the bead's own ledger, which hides the move.
 Nothing has reached $BASE_BRANCH. Fix the order in $WORKTREE (an append at the
 END only) and run this again."
             ;;
@@ -704,6 +767,29 @@ or a bad bead id). This is not a slot move. Re-run once the cause is fixed."
     esac
 fi
 rm -f "$BASE_LEDGER_TMP"
+
+# STEP 4c (inc-mhn1w, no-shared-tail 4.2). A new resource or module-level
+# variable must sit in lib/landed-<bead>.irh. Measure the WORKTREE's module,
+# lib/ and branch, with the shared copy of the tool when it exists.
+if [ ! -x "$WORKTREE/incursion-headless" ] || [ ! -f "$WORKTREE/mod/Incursion.Mod" ]; then
+    echo "=== $WORKTREE has no built module; skipping the landed-file check ==="
+else
+    _inc_clf="$SHARED/tools/check_landed_files.py"
+    [ -f "$_inc_clf" ] || _inc_clf="$WORKTREE/tools/check_landed_files.py"
+    if [ ! -f "$_inc_clf" ]; then
+        echo "=== no check_landed_files.py anywhere; skipping the landed-file check ==="
+    else
+        INCURSION_ORDER_BIN="$WORKTREE/incursion-headless" \
+            python3 "$_inc_clf" --root "$WORKTREE" --bead "$BEAD"
+        _inc_clf_rc=$?
+        if [ "$_inc_clf_rc" -eq 1 ]; then
+            die "STOPPED: $BEAD adds a resource or module-level variable outside
+lib/landed-$BEAD.irh. Nothing has reached $BASE_BRANCH. Move it there in $WORKTREE and run this again."
+        elif [ "$_inc_clf_rc" -ne 0 ]; then
+            cannot "tools/check_landed_files.py could not measure $BEAD (exit $_inc_clf_rc)"
+        fi
+    fi
+fi
 
 # STEP 5. Merge to master. In scratch space unless master is already checked
 # out somewhere, in which case git would refuse a second checkout of it anyway.
