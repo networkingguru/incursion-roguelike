@@ -1,0 +1,87 @@
+/* inc-2zpv6: scratch gods for tools/check_mounted_cast_time.sh. The blessing
+   sets Ride and Balance to exact totals (a SKILL_BONUS equal to the target
+   minus the current rating) and grants Still Spell, Ride and Balance as skills the mage may use. */
+
+God "Mounted Cast Test God R9B0"
+  {
+    Lists:
+      * FAVOUR_CHART 1000 50000 60000 70000 80000 90000
+          100000 110000 120000 130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Mounted Cast Test God R9B0") == 1) {
+        EActor->GainPermStati(EXTRA_FEAT,NULL,SS_PERM,FT_STILL_SPELL,0);
+        EActor->GainPermStati(EXTRA_SKILL,NULL,SS_PERM,SK_RIDE,0);
+        EActor->GainPermStati(EXTRA_SKILL,NULL,SS_PERM,SK_BALANCE,0);
+        EActor->GainPermStati(SKILL_BONUS,NULL,SS_PERM,SK_RIDE,
+          9 - EActor->SkillLevel(SK_RIDE));
+        EActor->GainPermStati(SKILL_BONUS,NULL,SS_PERM,SK_BALANCE,
+          0 - EActor->SkillLevel(SK_BALANCE));
+        EActor->IPrint("MCT skills Ride <Num> Balance <Num>.",
+          EActor->SkillLevel(SK_RIDE), EActor->SkillLevel(SK_BALANCE));
+        }
+      return NOTHING;
+      };
+  }
+
+God "Mounted Cast Test God R10B0"
+  {
+    Lists:
+      * FAVOUR_CHART 1000 50000 60000 70000 80000 90000
+          100000 110000 120000 130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Mounted Cast Test God R10B0") == 1) {
+        EActor->GainPermStati(EXTRA_FEAT,NULL,SS_PERM,FT_STILL_SPELL,0);
+        EActor->GainPermStati(EXTRA_SKILL,NULL,SS_PERM,SK_RIDE,0);
+        EActor->GainPermStati(EXTRA_SKILL,NULL,SS_PERM,SK_BALANCE,0);
+        EActor->GainPermStati(SKILL_BONUS,NULL,SS_PERM,SK_RIDE,
+          10 - EActor->SkillLevel(SK_RIDE));
+        EActor->GainPermStati(SKILL_BONUS,NULL,SS_PERM,SK_BALANCE,
+          0 - EActor->SkillLevel(SK_BALANCE));
+        EActor->IPrint("MCT skills Ride <Num> Balance <Num>.",
+          EActor->SkillLevel(SK_RIDE), EActor->SkillLevel(SK_BALANCE));
+        }
+      return NOTHING;
+      };
+  }
+
+God "Mounted Cast Test God R0B20"
+  {
+    Lists:
+      * FAVOUR_CHART 1000 50000 60000 70000 80000 90000
+          100000 110000 120000 130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Mounted Cast Test God R0B20") == 1) {
+        EActor->GainPermStati(EXTRA_FEAT,NULL,SS_PERM,FT_STILL_SPELL,0);
+        EActor->GainPermStati(EXTRA_SKILL,NULL,SS_PERM,SK_RIDE,0);
+        EActor->GainPermStati(EXTRA_SKILL,NULL,SS_PERM,SK_BALANCE,0);
+        EActor->GainPermStati(SKILL_BONUS,NULL,SS_PERM,SK_RIDE,
+          0 - EActor->SkillLevel(SK_RIDE));
+        EActor->GainPermStati(SKILL_BONUS,NULL,SS_PERM,SK_BALANCE,
+          20 - EActor->SkillLevel(SK_BALANCE));
+        EActor->IPrint("MCT skills Ride <Num> Balance <Num>.",
+          EActor->SkillLevel(SK_RIDE), EActor->SkillLevel(SK_BALANCE));
+        }
+      return NOTHING;
+      };
+  }
+
+God "Mounted Cast Test God R0B0"
+  {
+    Lists:
+      * FAVOUR_CHART 1000 50000 60000 70000 80000 90000
+          100000 110000 120000 130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Mounted Cast Test God R0B0") == 1) {
+        EActor->GainPermStati(EXTRA_FEAT,NULL,SS_PERM,FT_STILL_SPELL,0);
+        EActor->GainPermStati(EXTRA_SKILL,NULL,SS_PERM,SK_RIDE,0);
+        EActor->GainPermStati(EXTRA_SKILL,NULL,SS_PERM,SK_BALANCE,0);
+        EActor->GainPermStati(SKILL_BONUS,NULL,SS_PERM,SK_RIDE,
+          0 - EActor->SkillLevel(SK_RIDE));
+        EActor->GainPermStati(SKILL_BONUS,NULL,SS_PERM,SK_BALANCE,
+          0 - EActor->SkillLevel(SK_BALANCE));
+        EActor->IPrint("MCT skills Ride <Num> Balance <Num>.",
+          EActor->SkillLevel(SK_RIDE), EActor->SkillLevel(SK_BALANCE));
+        }
+      return NOTHING;
+      };
+  }
