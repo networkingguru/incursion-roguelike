@@ -2,7 +2,7 @@
 # This is the oracle for the store redesign of inc-wkxf; the check is
 # tools/check_store_find.sh and the facts it reads are listed in its header.
 #
-#   INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0818.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0818-store.sav \
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat \
 #       tools/headless.sh tools/keys/store-find.keys 1
 #

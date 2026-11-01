@@ -19,20 +19,21 @@
 #      session returns to play.
 #
 # fact: character, gold, inventory -- INCURSION_LOAD=tools/fixtures/chars/
-#   orc-barbarian-seed1-opt0818.sav (gold is read from the "You have N gp"
+#   orc-barbarian-seed1-opt0818-store.sav (gold is read from the "You have N gp"
 #   line, never hard-coded)
-# fact: Roark's stock (a potion of light, daggers) -- the fixture's save pins
-#   the dungeon and the shopkeeper's stock; lib/dungeon.irh:300 lists both
-#   as unconditional Gear lines, so a fresh stock holds them too
+# fact: Roark's stock (names, enchantments, order) -- the fixture was saved AFTER
+#   Roark was created and his Gear rolled (tools/keys/chargen-default-store-save.keys
+#   opens the store once before saving), so the save holds the stock and no
+#   run generates it; see the fixture's .sheet.txt (bead inc-bw1xe)
 # fact: dagger price -- read from the "Confirm purchase" prompt
 # fact: sell outcome -- Roark's EV_WILLBUY script and the SellItem branch
 #   decide it; the check accepts every outcome message in that branch
 # fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat
 # fact: weapon stock order -- the fixture save (INCURSION_LOAD) pins Roark's
 #   stock; the sort key (src/Managers.cpp BarterSortKey) must place the blessed
-#   and cursed one-letter markers by their bare names, so "a b knife" sorts
-#   after "a battleaxe" and before a later long sword, and "a c halberd" sorts
-#   before "b knife"
+#   and cursed one-letter markers by their bare names, so "a b thirsty
+#   proficient knife +5" sorts after "a battleaxe" and "a c halberd" (all
+#   three are in the frozen stock)
 # fact: no roll -- buying, selling and searching draw no random number the
 #   check reads
 #
@@ -46,7 +47,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 SEED=1
-FIXTURE=tools/fixtures/chars/orc-barbarian-seed1-opt0818.sav
+FIXTURE=tools/fixtures/chars/orc-barbarian-seed1-opt0818-store.sav
 
 [ -x ./incursion-headless ] || {
     echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
@@ -90,19 +91,19 @@ if ! grep -q "ended: *cleanly" <<<"$out"; then
 fi
 
 # 0. SORT. Roark's Weapon group must be sorted by the BarterSortKey, which
-# strips the blessed/cursed "b "/"c " markers. A store that lists "a b knife"
-# before "a battleaxe" (or "a b knife" before "a c halberd") failed to strip.
+# strips the blessed/cursed "b "/"c " markers. A store that lists "a b thirsty proficient knife"
+# before "a battleaxe" (or it before "a c halberd") failed to strip.
 fail=0
 line_of() { scr store-open | grep -n -- "$1" | head -n 1 | cut -d: -f1; }
 lb="$(line_of "a battleaxe")"
 lc="$(line_of "c halberd")"
-lk="$(line_of "b knife")"
+lk="$(line_of "b thirsty proficient knife")"
 if [ -z "$lb" ] || [ -z "$lc" ] || [ -z "$lk" ]; then
-    echo "INCONCLUSIVE: the Weapon group is missing a battleaxe, a c halberd or a b knife. Run dir: $run"
+    echo "INCONCLUSIVE: the Weapon group is missing a battleaxe, a c halberd or a b thirsty proficient knife. Run dir: $run"
     exit 2
 fi
 if [ "$lb" -ge "$lk" ] || [ "$lc" -ge "$lk" ]; then
-    echo "FAIL: the Weapon group is misorted: battleaxe at line $lb, c halberd at line $lc, b knife at line $lk (want battleaxe and c halberd before b knife)."
+    echo "FAIL: the Weapon group is misorted: battleaxe at line $lb, c halberd at line $lc, b thirsty proficient knife at line $lk (want battleaxe and c halberd before it)."
     fail=1
 fi
 # An INCONCLUSIVE after a FAIL is still a FAIL: the earlier assertion already

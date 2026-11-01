@@ -170,6 +170,26 @@ Seed 2 is the seed on which the trap hit the armour (seeds 2, 3 and 6 hit; seed
 8 missed). A regeneration on another seed can miss, and then the armour is
 undamaged; `tools/check_repair_cost.sh` exits 2 on that.
 
+**`orc-barbarian-seed1-opt0818-store`** (bd inc-bw1xe) is the chargen orc barbarian
+(Rathak) saved AFTER he opened Roark Ironbeard's store once, so Roark exists and
+his rolled stock is in the save. `tools/check_store_find.sh` loads it. A save made
+before the first visit rolls a fresh stock in every run, and a landing that
+changes item generation (cd55ecd8 enabled sleep weapons) then changes the stock.
+He holds 21 gp. Roark's Weapons group is: a battleaxe +2; a b chaotic elven
+boomerang +5 of sleep; 57 daggers; a c halberd -3; a long sword +3; an orcish
+long sword +2 of balance; a b Outsiderbane vicious hunga-munga +5; 6 pickaxes;
+a b thirsty proficient knife +5; a b vicious hunga-munga +5 of wounding. It
+also holds 18 Potions of Light. Recipe:
+
+```sh
+tools/make_char_fixture.sh orc-barbarian-seed1-opt0818-store \
+    tools/keys/chargen-default-store-save.keys 1 \
+    tools/fixtures/options-2026-08-18.dat --force
+```
+
+A regeneration rolls a new stock; read the new Weapons group from the store
+screen and update the literals in `tools/check_store_find.sh`.
+
 ## Tool-check fixtures
 
 | Fixture | Contents |

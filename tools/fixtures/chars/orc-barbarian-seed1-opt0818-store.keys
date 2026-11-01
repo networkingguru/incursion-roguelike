@@ -1,0 +1,32 @@
+# Make the chargen.keys orc barbarian, open Roark Ironbeard's store ONCE so his
+# stock exists, and SAVE the game, so the stock is frozen into the fixture.
+#
+#   tools/make_char_fixture.sh orc-barbarian-seed1-opt0818-store \
+#       tools/keys/chargen-default-store-save.keys 1 tools/fixtures/options-2026-08-18.dat
+#
+# WHY: lib/dungeon.irh:248 creates Roark when the store is first opened, and his
+# Gear is rolled then (random weapon qualities included). A character saved
+# before that visit rolls a fresh stock in every run, so a check that reads
+# the stock depends on the generator. tools/check_store_find.sh loads this
+# fixture instead. See bd inc-bw1xe. The save tail is explained in
+# chargen-default-save.keys.
+
+@include chargen.keys
+
+@dump:arrival
+
+@while "personality archetype" a
+
+@until "System Menu" ESC
+
+# Visit the store: [<] on the cave entrance, then [s].
+@until "Store, Inn, Retire or Descend" <
+s
+@dump:store-visited
+@while "Proprietor" ESC
+
+@until "System Menu" ESC
+@expect "System Menu"
+b                       # [b] Save and Continue (src/Player.cpp:843)
+
+@dump:saved
