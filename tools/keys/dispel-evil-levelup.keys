@@ -1,0 +1,77 @@
+# Raises the loaded character to the game's hard maximum character level (11)
+# through Free Advancement (the caller turns that switch on first). Ten G
+# presses, each answering the level-up menus with the first choice. Passes no
+# turns. Included by dispel-evil-touch-setup.keys and dispel-evil-deflection.keys.
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" a
+@while "Choose a bonus" a
+@while "Focus on which Weapon" a
+@while "You feel" ESC
+@while "more --" SPACE
+@dump:level
+ESC

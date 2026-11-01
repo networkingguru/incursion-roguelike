@@ -98,6 +98,20 @@
 # stale binary and is safe beside other checks in the parallel gate. It needs
 # ./incursion-headless and mod/Incursion.Mod from the gate's normal build; the
 # probe build reads that module rather than rewriting it.
+#
+# inc-wn6m: the deflection scene's caster is level 11, not level 1. Dispel
+# Evil lasts (CL+1)/2 rounds (EF_DROUND, src/Magic.cpp), so a level-1 caster
+# had one round and the spell ended before the goblin struck. The goblin is
+# also summoned BEFORE the cast, so it is in reach while the spell runs.
+#
+# fact: character -- fixture orc-priest-seed4-gate (INCURSION_LOAD, both scenes)
+# fact: settings -- tools/gates/Options.Dat (INCURSION_OPTIONS)
+# fact: caster level 11 -- wizard Free Advancement + ten G presses (dispel-evil-levelup.keys)
+# fact: spell known, mana never refuses -- wizard Learn Any Spell, Infinite Mana
+# fact: goblin beside the caster, evil, hostile -- wizard Monster Summoning "goblin" (RIGHT ENTER); data fixes its alignment
+# fact: touch scene, goblin frozen in place -- wizard Freeze Monsters switch
+# fact: touch scene, the touch lands -- INCURSION_LOF_FORCE_ROLL=20
+# fact: deflection scene, goblin is awake and its blows land -- wizard "Wake Every Creature" after the summon (dispel-evil-deflection.keys); INCURSION_LOF_FORCE_ROLL=20. The goblin is adjacent and unfrozen with 6 rounds of spell left; any "Attack:" line carrying DispEv counts.
 # Usage: tools/check_dispel_evil.sh
 set -uo pipefail
 
@@ -109,6 +123,7 @@ TOUCH_KEYS=tools/keys/dispel-evil-touch.keys
 DEFL_KEYS=tools/keys/dispel-evil-deflection.keys
 SEED=1
 OPTIONS=tools/gates/Options.Dat
+FIXTURE=tools/fixtures/chars/orc-priest-seed4-gate.sav
 
 field() { # field "<line>" "<prefix>"  ->  value, or empty if absent
     awk -v p="$2" '{for(i=1;i<=NF;i++) if (index($i,p)==1) {print substr($i,length(p)+1); exit}}' <<< "$1"
@@ -141,7 +156,7 @@ fi
 # --- scene 1: the touch (assertions a and c) ---------------------------
 RUN="$TMP/touch-run"
 
-OUT="$(INCURSION_BIN="$BIN" INCURSION_OPTIONS="$OPTIONS" INCURSION_RUN_DIR="$RUN" \
+OUT="$(INCURSION_BIN="$BIN" INCURSION_OPTIONS="$OPTIONS" INCURSION_LOAD="$FIXTURE" INCURSION_LOF_FORCE_ROLL=20 INCURSION_RUN_DIR="$RUN" \
     tools/headless.sh "$TOUCH_KEYS" "$SEED" 2>&1)"
 STATUS=$?
 
@@ -188,7 +203,7 @@ echo "Dispel Evil touch scene: $BEFORE_COUNT landed touch(es), first touch=$BEFO
 # --- scene 2: the deflection bonus on a real attack (assertion b) ------
 DEFL_RUN="$TMP/deflection-run"
 
-DEFL_OUT="$(INCURSION_BIN="$BIN" INCURSION_OPTIONS="$OPTIONS" INCURSION_RUN_DIR="$DEFL_RUN" \
+DEFL_OUT="$(INCURSION_BIN="$BIN" INCURSION_OPTIONS="$OPTIONS" INCURSION_LOAD="$FIXTURE" INCURSION_LOF_FORCE_ROLL=20 INCURSION_RUN_DIR="$DEFL_RUN" \
     tools/headless.sh "$DEFL_KEYS" "$SEED" 2>&1)"
 DEFL_STATUS=$?
 
