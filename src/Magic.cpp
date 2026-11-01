@@ -5108,7 +5108,8 @@ ContinueCasting:
         e.EActor->IPrint("Your awkward perch causes casting to take extra time.");
         castingTimeout += 15;
     }
-    if (HasStati(MOUNTED) && !(e.MM & MM_STILL) && SkillLevel(SK_BALANCE) < 20) {
+    if (HasStati(MOUNTED) && !(e.MM & MM_STILL) && SkillLevel(SK_BALANCE) < 20
+            && SkillLevel(SK_RIDE) < 10) {
         e.EActor->IPrint("Casting on a moving mount takes you extra time.");
         castingTimeout += 15;
     }
