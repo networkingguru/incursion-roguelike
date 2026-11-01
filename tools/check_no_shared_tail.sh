@@ -1,5 +1,6 @@
 #!/bin/bash
-# gate: live builds a scratch clone with the posix backend and merges two branches in it; runs when the bead changes this file, and in the nightly
+# gate: live
+# It builds a scratch clone with the posix backend and merges two branches in it; it runs when the bead changes this file, and in the nightly.
 # Do two branches that each add one effect merge with no conflict, and do both
 # effects land after every position the base ledger records?
 #
