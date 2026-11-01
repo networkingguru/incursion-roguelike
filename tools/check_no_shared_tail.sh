@@ -131,18 +131,18 @@ for n in a b; do
     fi
 done
 
-( cd "$CL" && env -u INCURSION_RECORD_LEDGER BACKEND=posix ./build_macos.sh ) >"$WORK/build.log" 2>&1 \
+( cd "$CL" && env -u INCURSION_RECORD_LEDGER BACKEND=posix OUT=incursion-ntail EXTRA_CXXFLAGS=-DNO_SHARED_TAIL_CLONE ./build_macos.sh ) >"$WORK/build.log" 2>&1 \
     || { tail -n 25 "$WORK/build.log" >&2; unmeasured "build in the clone failed (log kept only with --keep)"; }
-[ -x "$CL/incursion-headless" ] && [ -f "$CL/mod/Incursion.Mod" ] \
-    || unmeasured "the build left no incursion-headless or no mod/Incursion.Mod"
+[ -x "$CL/incursion-ntail" ] && [ -f "$CL/mod/Incursion.Mod" ] \
+    || unmeasured "the build left no incursion-ntail or no mod/Incursion.Mod"
 
 if [ -n "$(g diff --name-only -- tools/resource_order.ledger)" ]; then
     echo "FAIL: the build rewrote tools/resource_order.ledger; only finish_bead.sh may record it"
     exit 1
 fi
 
-( cd "$CL" && ./incursion-headless -resorder ) >"$WORK/module.txt" 2>"$WORK/module.err" \
-    || { cat "$WORK/module.err" >&2; unmeasured "incursion-headless -resorder failed"; }
+( cd "$CL" && ./incursion-ntail -resorder ) >"$WORK/module.txt" 2>"$WORK/module.err" \
+    || { cat "$WORK/module.err" >&2; unmeasured "incursion-ntail -resorder failed"; }
 
 python3 - "$WORK/module.txt" "$CL/tools/resource_order.ledger" <<'PY'
 import sys
@@ -177,7 +177,7 @@ rc=$?
 [ "$rc" = 2 ] && exit 2
 [ "$rc" = 0 ] || exit 1
 
-( cd "$CL" && tools/check_resource_order.sh ) >"$WORK/order.out" 2>&1
+( cd "$CL" && INCURSION_ORDER_BIN="$CL/incursion-ntail" tools/check_resource_order.sh ) >"$WORK/order.out" 2>&1
 rc=$?
 tail -n 3 "$WORK/order.out"
 if [ "$rc" = 2 ]; then unmeasured "check_resource_order.sh could not establish"; fi
