@@ -317,7 +317,7 @@ tells you nothing about which run was which.
 ## 5. The depth ceiling: no session reaches depth 11
 
 Wizard mode's `Ascend / Descend Depth` refuses any depth above the dungeon's
-`DUN_DEPTH` constant. `src/Debug.cpp:807-810` reads:
+`DUN_DEPTH` constant. `src/Debug.cpp:811-814` reads:
 
 ```c
 if (i < 1 || RES(m->dID)->Type != T_TDUNGEON ||
