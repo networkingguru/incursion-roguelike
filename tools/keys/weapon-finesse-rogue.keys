@@ -1,0 +1,56 @@
+# A new orc Rogue 1 with Dexterity 11 takes Weapon Finesse in his first feat
+# choice, then saves so the check can read the feat off the character sheet.
+# bd inc-dkbaw, tools/check_weapon_finesse_prereq.sh.
+#
+# THE RULE UNDER TEST: Weapon Finesse has no prerequisites (Pathfinder 1e Core
+# Rulebook). Before inc-dkbaw src/FeatTab.cpp required Dexterity 13 and melee BAB
+# +1, or CA_UNARMED_STRIKE. A Rogue 1 has melee BAB +0, so the feat was never
+# offered to him. This script RUNS the chargen: the offer is computed at
+# generation time, so a frozen .sav would hide a FeatTab change.
+#
+# ATTRIBUTES: Point Buy, so no seed changes them. Costs rise with the score:
+# DEX 8->11 is 3 points, STR 8->17 is the rest. The attribute screen's totals
+# are STR 17, DEX 11, CON 18, INT 18, WIS 12, CHA 16, LUC 17 (the orc modifies
+# STR, INT, WIS and CHA; DEX stays 11, below the old requirement of 13).
+#
+# THE FEAT LIST HAS TWO PAGES (51 of 55 feats on the first). "Weapon Finesse"
+# sorts after "Talented", so TAB moves to the page that holds it, and it is the
+# first row there ([a]). It is chosen by letter and not by @choose, because
+# @choose aborts the whole script (harness exit 6) when the feat is not offered,
+# and the check needs a finished session to fail on, not a script error. When
+# the feat is not offered, [a] is Weapon Focus and the check reads the menu.
+# ponytail: the page split (51 per page) and the sort order fix the letter; if
+# either moves, the check's "[a] Weapon Finesse" menu assertion fails loudly.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Explore Mode. Continue? -- yes
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Rogue"
+p       # Abort to Point Buy; every attribute starts at 8, with 75 points
+RIGHT*9 DOWN RIGHT*3 DOWN RIGHT*10 DOWN RIGHT*10 DOWN RIGHT*4 DOWN RIGHT*8 DOWN RIGHT*9
+@dump:points
+ENTER
+y       # Are these your final stats? -- yes
+@choose "Neutral"
+@dump:feat-page1
+TAB
+@dump:feat-page2
+a       # [a] Weapon Finesse, the first row of page 2
+# Second feat, and any prompt the first choice raised (Weapon Focus, taken when
+# Weapon Finesse is not offered, asks for a weapon group): press [a] until the
+# Skill Manager opens, so a failing run still finishes chargen.
+@until "Skill Manager" a
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+y       # Do you wish to worship <god>? -- yes
+@while "personality archetype" a
+
+@until "System Menu" ESC
+@expect "System Menu"
+b       # [b] Save and Continue
+@dump:saved

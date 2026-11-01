@@ -36,23 +36,45 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DIR="${GATE_MEMBERSHIP_DIR:-$ROOT/tools}"
 BASELINE="${GATE_MEMBERSHIP_BASELINE:-$ROOT/tools/gate_membership.baseline}"
 
-marker_of() { # marker_of <file> -> the marker text, or nothing
-    sed -n '1,40p' "$1" | sed -n 's/^#[[:space:]]*gate:[[:space:]]*//p' | head -1
+# One awk pass reads the marker of every file (first 40 lines, first
+# `# gate:` line), so the check forks nothing per file (inc-7382r). Output:
+# <basename> FS (034) <marker>, one line per file, marker empty when there is none.
+markers_of() { # markers_of <file>...
+    awk '
+        function flush() { if (name != "") printf "%s\034%s\n", name, marker }
+        FNR == 1 {
+            flush()
+            name = FILENAME; sub(/.*\//, "", name); marker = ""; seen = 0
+        }
+        FNR <= 40 && !seen && /^#[ \t]*gate:/ {
+            line = $0
+            sub(/^#[ \t]*gate:[ \t]*/, "", line)
+            marker = line; seen = 1
+        }
+        END { flush() }
+    ' "$@"
 }
 
+BASELINE_TEXT=""
+[ -r "$BASELINE" ] && BASELINE_TEXT=$'\n'"$(cat "$BASELINE")"$'\n'
+
 in_baseline() { # in_baseline <basename>
-    [ -r "$BASELINE" ] || return 1
-    grep -qx -- "$1" "$BASELINE"
+    case "$BASELINE_TEXT" in
+        *$'\n'"$1"$'\n'*) return 0 ;;
+    esac
+    return 1
 }
 
 run() {
-    local f base marker tier rest
+    local f base marker tier rest files=()
     local unmarked=0 bad=0 marked=0 graduated=0 stale=0
 
     for f in "$DIR"/check_*.sh "$DIR"/check_*.py; do
-        [ -f "$f" ] || continue
-        base="$(basename "$f")"
-        marker="$(marker_of "$f")"
+        [ -f "$f" ] && files+=( "$f" )
+    done
+
+    while IFS=$'\034' read -r base marker; do
+        [ -n "$base" ] || continue
 
         if [ -z "$marker" ]; then
             if in_baseline "$base"; then
@@ -89,7 +111,7 @@ run() {
             echo "      $(basename "$BASELINE")"
             graduated=$((graduated + 1))
         fi
-    done
+    done < <([ "${#files[@]}" -eq 0 ] || markers_of "${files[@]}")
 
     if [ -r "$BASELINE" ]; then
         while read -r base; do

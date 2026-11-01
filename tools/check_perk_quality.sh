@@ -19,6 +19,12 @@
 # that logs a probe error, or that measured nothing useful (withq=0 or
 # nocapture>0) measured nothing (exit 2).
 #
+# fact: perk rolls -- none controlled; the probe rolls 120 perks and asserts an invariant (mismatch=0, withq>0 else exit 2)
+# fact: character -- chargen.keys rolls it from the seed; the probe reads only the perk qualities it rolls
+# fact: settings -- options-2026-08-22.dat (CHECK_OPTIONS)
+# fact: session length -- tools/keys/perk-quality.keys, one turn after chargen; the probe fires inside Player::Create, before the first play key
+# fact: map and monsters -- none read; the probe logs before any turn passes
+#
 # Usage: tools/check_perk_quality.sh
 #   0 every seed's granted qualities matched the generated qualities
 #   1 at least one seed matched nothing (mismatch > 0)
@@ -41,7 +47,7 @@ for seed in $SEEDS; do
     RUN="$PWD/logs/runs/$STAMP-perk-quality-$seed"
     INCURSION_OPTIONS="$OPTIONS" INCURSION_PERK_QUALITY_PROBE=40 \
         INCURSION_RUN_DIR="$RUN" \
-        tools/headless.sh tools/keys/dive.keys "$seed" > "$RUN.out" 2>&1
+        tools/headless.sh tools/keys/perk-quality.keys "$seed" > "$RUN.out" 2>&1
     rc=$?
     if [ "$rc" -ne 0 ]; then
         echo "seed $seed: UNMEASURED headless.sh exited $rc (see $RUN.out)"
