@@ -263,6 +263,8 @@ finish_repo() { # prints "<tmp> <script-copy> "
     git -C "$tmp/work/Incursion" init -q -b trunk || return 1
     git -C "$tmp/work/Incursion" config user.email test@example.invalid || return 1
     git -C "$tmp/work/Incursion" config user.name "wiring selftest" || return 1
+    git -C "$tmp/work/Incursion" config merge.landed.driver true || return 1
+    git -C "$tmp/work/Incursion" config merge.landed-ledger.driver true || return 1
     echo base >"$tmp/work/Incursion/base.txt" || return 1
     echo "int Foo() { return 1; }" >"$tmp/work/Incursion/src/Foo.cpp" || return 1
     git -C "$tmp/work/Incursion" add base.txt src/Foo.cpp || return 1

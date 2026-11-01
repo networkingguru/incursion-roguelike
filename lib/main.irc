@@ -677,3 +677,5 @@ Wizard / Potion / Scroll Spell "Stone to Flesh" : EA_GENERIC
       return DONE;
       };
   }
+
+#include "landed.irc"

@@ -93,6 +93,8 @@ echo 'int main(void) { return 0; }' > "$REPO/src/game.c"
 git init -q "$REPO" || exit 2
 git -C "$REPO" symbolic-ref HEAD refs/heads/master
 git -C "$REPO" config user.name "gate"
+git -C "$REPO" config merge.landed.driver true
+git -C "$REPO" config merge.landed-ledger.driver true
 git -C "$REPO" config user.email "gate@example.invalid"
 git -C "$REPO" config commit.gpgsign false
 git -C "$REPO" add -A
