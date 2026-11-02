@@ -458,6 +458,11 @@ void Game::Play() {
     extern void WeaponTypeProbe(Player *p);
     WeaponTypeProbe(pp);
 
+    /* inc-0t9ol: off unless INCURSION_ZEN_DEFENSE_PROBE is set. See
+       ZenDefenseProbe (src/ZenDefenseProbe.cpp), tools/check_zen_defense.sh. */
+    extern void ZenDefenseProbe(Player *p);
+    ZenDefenseProbe(pp);
+
     /* inc-nel5: off unless INCURSION_SHOP_MARKUP_PROBE is set. See
        ShopMarkupProbe (src/ShopMarkupProbe.cpp), tools/check_shop_markup.sh. */
     extern void ShopMarkupProbe(Player *p);
