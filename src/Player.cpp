@@ -3230,6 +3230,39 @@ static Container* AutoPickupPack(Player *p, hObj packH, int k, bool wildOK) {
     return (Container*)it;
 }
 
+/* inc-j12i0: an automatic pickup first offers the item to each candidate pack
+   (the inc-4reo order) that already holds a stack the item would join, through
+   EV_INSERT with messages off, so the pack's own limits still apply. Returns
+   true when a pack took the item; false leaves the caller's own order to run.
+   A stack merge can free `item`, so a caller MUST NOT touch it after true.
+   Exposed to scripts as AutoStackIntoPack (inc/Api.h). */
+bool AutoStackIntoPack(Creature *c, Item *item, bool wildOK) {
+    if (!c || !item || !c->isPlayer())
+        return false;
+    return ((Player*)c)->AutoStackIntoPack(item,wildOK);
+}
+
+bool Player::AutoStackIntoPack(Item *item, bool wildOK) {
+    Container *pack; int j;
+    Player *p = this;
+    for (int k=-1;k<SL_LAST;k++) {
+        pack = AutoPickupPack(p,Inv[SL_PACK],k,wildOK);
+        if (!pack || (Item*)pack == item)
+            continue;
+        for (j=0; (*pack)[j] != NULL; j++)
+            if (*((*pack)[j]) == *item)
+                break;
+        if ((*pack)[j] == NULL)
+            continue;
+        SetSilence();
+        EvReturn r = Throw(EV_INSERT,p,NULL,pack,item);
+        UnsetSilence();
+        if (r == DONE)
+            return true;
+    }
+    return false;
+}
+
 /* pick up all items that would stack with something we are carrying */
 void Player::AutoPickupFloor() {
     Thing * t;
@@ -3367,13 +3400,21 @@ start_again:
                 && !(TEFF(i->eID) && TEFF(i->eID)->HasFlag(EF_MUNDANE))) {
                 if (auto_pickup == 2) {
                     bool tried = false;
+                    for (int k=-1;k<SL_LAST && !tried;k++)
+                        if (AutoPickupPack(this,Inv[SL_PACK],k,true))
+                            tried = true;
+                    if (tried)
+                        IPrint("AutoStowing: <Obj>.",i);
+                    // inc-j12i0: a pack already holding a matching stack comes first
+                    if (AutoStackIntoPack(i,true)) {
+                        did_anything = true;
+                        LegendIdent(i);
+                        goto start_again; // because Remove() will change the linked
+                    }
                     for (int k=-1;k<SL_LAST;k++) {
                         pack = AutoPickupPack(this,Inv[SL_PACK],k,true);
                         if (!pack)
                             continue;
-                        if (!tried)
-                            IPrint("AutoStowing: <Obj>.",i);
-                        tried = true;
                         SetSilence();
                         if (Throw(EV_INSERT,this,NULL,pack,i) != ABORT) {
                             UnsetSilence(); // return;

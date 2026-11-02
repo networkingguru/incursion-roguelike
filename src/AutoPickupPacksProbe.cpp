@@ -38,7 +38,7 @@ void AutoPickupPacksProbe(Player *pl) {
     };
     const char cs = *mode;
     fprintf(lg, "CASE %c\n", cs);
-    if (!pl || !pl->m || cs < 'a' || cs > 'g' || mode[1]) {
+    if (!pl || !pl->m || cs < 'a' || cs > 'h' || mode[1]) {
         stop("invalid setup"); return;
     }
     Map *mp = pl->m;
@@ -66,7 +66,7 @@ void AutoPickupPacksProbe(Player *pl) {
     } else if (cs != 'd' && cs != 'g')
         B = appBag(pl,SL_LSHOULDER,cs == 'e' ? "small backpack" : "medium backpack");
     if (cs == 'e') C = appBag(pl,SL_RSHOULDER,"medium backpack");
-    const bool magic = cs == 'f' || cs == 'g';
+    const bool magic = cs == 'f' || cs == 'g' || cs == 'h';
     if (!magic) {
         if (cs == 'd') sa = appStack(pl,A);
         else sb = appStack(pl,B);
@@ -75,13 +75,19 @@ void AutoPickupPacksProbe(Player *pl) {
             stop("stack setup"); return;
         }
     }
+    if (cs == 'h') {   /* inc-j12i0: matching unidentified-magic stack in the second bag */
+        /* A T_TOOL: the stacking step skips tools, so only auto-stow can place it. */
+        sb = Item::Create(FIND("viewing lens"));
+        sb->MakeMagical(FIND("healing")); sb->Known = 0; sb->Quantity = 3;
+        if (!appInsert(pl,B,sb)) { stop("magic stack setup"); return; }
+    }
     if (cs == 'b') B->GainPermStati(LOCKED,B,SS_MISC);
     if (cs == 'f') {
         Item *ballast = Item::Create(FIND("long sword"));
         ballast->Quantity = 100;
         if (!appInsert(pl,A,ballast)) { stop("ballast setup"); return; }
     }
-    Item *floor = Item::Create(FIND(magic ? "potion" : "long sword"));
+    Item *floor = Item::Create(FIND(cs == 'h' ? "viewing lens" : magic ? "potion" : "long sword"));
     if (magic) { floor->MakeMagical(FIND("healing")); floor->Known = 0; }
     else floor->MakeKnown(0xff);
     floor->Quantity = 1;

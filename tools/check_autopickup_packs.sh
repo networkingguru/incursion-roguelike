@@ -8,6 +8,7 @@
 # fact: refusal/acceptance -- probe verifies FitsNormal against fixture's packrat feat; size in e, weight in f
 # fact: matching stacks and eligible magic -- probe verifies equality and AutoPickupFloor prerequisites before call
 # fact: result text -- probe emits literal labels and measured parent/quantity; no generated names or rolls
+# fact: auto-stow stacking (case h, inc-j12i0) -- probe makes a matching unidentified magic viewing-lens (T_TOOL, skipped by the stacking step) stack in a shoulder bag and verifies equality before the call
 # Builds nothing. Each case uses a fresh fixture and private run directory.
 set -uo pipefail
 export LC_ALL=C
@@ -16,7 +17,7 @@ cd "$ROOT"
 base="$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$$-autopickup-packs"
 mkdir -p "$base"
 failed=0
-for c in a b c d e f g; do
+for c in a b c d e f g h; do
     run="$base/$c"
     INCURSION_AUTOPICKUP_PACKS_PROBE="$c" INCURSION_RUN_DIR="$run" \
         INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
@@ -36,6 +37,7 @@ for c in a b c d e f g; do
         e) want='where=bagC stackA=0 stackB=3 stackC=4 floor=0' ;;
         f) want='where=bagB stackA=0 stackB=0 stackC=0 floor=0' ;;
         g) want='where=bagA stackA=0 stackB=0 stackC=0 floor=0' ;;
+        h) want='where=bagB stackA=0 stackB=4 stackC=0 floor=0' ;;
     esac
     if [ "$res" = "RESULT $want" ]; then
         echo "PASS case=$c: $res; specimen $log"

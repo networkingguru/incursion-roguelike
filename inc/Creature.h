@@ -1441,6 +1441,7 @@ class Player: public Character
       virtual int16 getMaxDepth(rID dID);
 
       virtual void AutoPickupFloor(); 
+      bool AutoStackIntoPack(Item *item, bool wildOK);
       bool ChooseGod(bool required = true); 
 
       /* Display a formatted message in the player's message window. */
