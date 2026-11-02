@@ -316,6 +316,12 @@ static void KitToPack(Player *p, Item *it)
     Item *pack = p->InSlot(SL_PACK);
     SetSilence();
     it->Remove(false);
+    /* inc-j12i0: a held pack that already holds a stack the item joins comes first */
+    if (pack && pack->isType(T_CONTAIN) && p->AutoStackIntoPack(it,false))
+    {
+        UnsetSilence();
+        return;
+    }
     if (pack && pack->isType(T_CONTAIN))
         Throw(EV_INSERT,p,NULL,pack,it);
     else if (!p->InSlot(SL_PACK))

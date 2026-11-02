@@ -4,7 +4,16 @@
 # Opt-in AutoLootPacksProbe (src/AutoLootPacksProbe.cpp) runs the macro on a
 # long sword with: a) full pack-slot bag + a second bag in a belt slot, b) a
 # locked bag before an open bag, c) a bag nested inside the pack-slot bag,
-# d) every candidate too small. Builds nothing; needs incursion-headless.
+# d) every candidate too small. inc-j12i0 adds e) Pack-slot bag has room and a
+# belt bag holds a matching stack (floor item), f) the same for an item taken
+# out of a chest, g) the matching bag refuses on weight, h) no matching stack.
+# Builds nothing; needs incursion-headless.
+# fact: character and abilities -- fixture orc-rogue-seed1-opt0822.sav
+# fact: options -- options-2026-08-22.dat (AutoLoot macro does not read AUTOPICKUP)
+# fact: terrain and absence of threats -- probe picks an isolated empty floor cell
+# fact: items, quantities, identification, slots, chest -- probe Item::Create, MakeKnown, forced Insert
+# fact: refusal/acceptance -- probe asserts FitsNormal (FITS for A and B; B FITS_WEIGHT in g) and stack equality before the run
+# fact: result text -- probe emits literal labels and measured parent/quantity
 set -uo pipefail
 export LC_ALL=C
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -12,7 +21,7 @@ cd "$ROOT"
 base="$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$$-autoloot-packs"
 mkdir -p "$base"
 failed=0
-for c in a b c d; do
+for c in a b c d e f g h; do
     run="$base/$c"
     INCURSION_AUTOLOOT_PACKS_PROBE="$c" INCURSION_RUN_DIR="$run" \
         INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
@@ -30,10 +39,13 @@ for c in a b c d; do
         b) want="where=bagC taken=1 toolarge=0 canonlyhold=0 locked=0" ;;
         c) want="NOT where=bagB" ;;
         d) want="toolarge=1, item in neither bag" ;;
+        e|f) want="where=bagB taken=1 stackB=4" ;;
+        g) want="where=bagA taken=1 stackB=100" ;;
+        h) want="where=bagA taken=1 stackB=3" ;;
     esac
     ok=1
     case "$c" in
-        a|b) [ "$res" = "RESULT $want" ] || ok=0 ;;
+        a|b|e|f|g|h) [ "$res" = "RESULT $want" ] || ok=0 ;;
         c) case "$res" in *where=bagB*) ok=0 ;; esac
            case "$res" in *where=bagA*) ok=0 ;; esac ;;
         d) case "$res" in *toolarge=1*) ;; *) ok=0 ;; esac

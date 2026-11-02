@@ -1213,8 +1213,9 @@ AI_MACRO Effect "AutoLoot" : EA_GENERIC
       __Once all chests are unlocked, the macro will display a list of all
       the items in your square, both those in chests and on the ground, and
       allow you to mark the ones you would like to pick up. Then it will
-      pick the selected items up one by one, placing them in your pack if
-      possible. If your pack cannot take an item, it tries any other
+      pick the selected items up one by one. An item goes first into any
+      container you hold that already has a stack it can join. Otherwise it
+      goes into your pack if possible. If your pack cannot take an item, it tries any other
       container you hold in a slot, such as a second pack or a bag on your
       belt, skipping locked ones. Only when none will take the item does it
       bring up the inventory screen to allow you to select where to put the
@@ -1379,6 +1380,12 @@ AI_MACRO Effect "AutoLoot" : EA_GENERIC
             }
           if (EActor->isCharacter())
             EActor->SetInvSlot(SL_INAIR,NULL_OBJ);
+          /* inc-j12i0: a pack already holding a stack this item would join
+             takes it first, whichever slot the pack is in. */
+          if (AutoStackIntoPack(EActor,it)) {
+            EActor->IPrint("<hObj> taken.", it);
+            return DONE;
+            }
           /* Try the pack slot first, then every other slot in order, with
              messages off. A locked container is skipped, because inserting
              into it would start a lock-pick. */
